@@ -1,0 +1,2410 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, user-scalable=yes"
+    />
+    <title>Wazeefa1 Invoice Pro | 2026 Premium</title>
+
+    <!-- Google Fonts -->
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700;14..32,800&display=swap"
+      rel="stylesheet"
+    />
+
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+
+    <!-- Flatpickr -->
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css"
+    />
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+
+    <style>
+      /* ========================================
+       2026 PREMIUM INVOICE SYSTEM
+    ========================================= */
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family:
+          "Inter",
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          system-ui,
+          sans-serif;
+        background: linear-gradient(135deg, #f0f4f9 0%, #e6ecf3 100%);
+        padding: 28px;
+        min-height: 100vh;
+      }
+
+      /* Toast Notifications */
+      .toast-notification {
+        position: fixed;
+        bottom: 32px;
+        right: 32px;
+        background: #1a1a2e;
+        color: white;
+        padding: 14px 28px;
+        border-radius: 50px;
+        font-size: 14px;
+        font-weight: 500;
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+        z-index: 10000;
+        animation:
+          slideIn 0.3s cubic-bezier(0.2, 0.9, 0.4, 1.1),
+          fadeOut 0.3s ease 2.7s forwards;
+        backdrop-filter: blur(10px);
+        background: rgba(26, 26, 46, 0.95);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+      }
+      .toast-notification.error {
+        background: rgba(220, 38, 38, 0.95);
+      }
+      .toast-notification.success {
+        background: rgba(16, 185, 129, 0.95);
+      }
+
+      @keyframes slideIn {
+        from {
+          transform: translateX(100%);
+          opacity: 0;
+        }
+        to {
+          transform: translateX(0);
+          opacity: 1;
+        }
+      }
+      @keyframes fadeOut {
+        to {
+          opacity: 0;
+          visibility: hidden;
+        }
+      }
+
+      /* Main Container */
+      .container {
+        display: grid;
+        grid-template-columns: 500px 1fr;
+        gap: 28px;
+        max-width: 1600px;
+        margin: 0 auto;
+        align-items: start;
+      }
+
+      /* LEFT PANEL */
+      .left-panel {
+        background: #ffffff;
+        border-radius: 32px;
+        box-shadow:
+          0 20px 40px -12px rgba(0, 0, 0, 0.08),
+          0 1px 2px rgba(0, 0, 0, 0.02);
+        position: sticky;
+        top: 28px;
+        max-height: calc(100vh - 56px);
+        overflow-y: auto;
+        border: 1px solid rgba(226, 232, 240, 0.8);
+      }
+
+      .left-panel::-webkit-scrollbar {
+        width: 6px;
+      }
+      .left-panel::-webkit-scrollbar-track {
+        background: #f1f5f9;
+        border-radius: 10px;
+      }
+      .left-panel::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 10px;
+      }
+
+      .panel-header {
+        padding: 28px 28px 0 28px;
+        border-bottom: 1px solid #eef2ff;
+      }
+      .panel-header h3 {
+        font-size: 1.6rem;
+        font-weight: 700;
+        background: linear-gradient(135deg, #1e293b, #3b82f6);
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+        margin-bottom: 8px;
+        letter-spacing: -0.3px;
+      }
+      .panel-header p {
+        font-size: 13px;
+        color: #64748b;
+        margin-bottom: 20px;
+      }
+
+      .panel-content {
+        padding: 24px 28px 28px 28px;
+      }
+
+      /* Form Groups */
+      .form-group {
+        margin-bottom: 20px;
+      }
+      .form-group label {
+        display: block;
+        font-weight: 600;
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.6px;
+        color: #475569;
+        margin-bottom: 8px;
+      }
+      .form-group input,
+      .form-group textarea,
+      .form-group select {
+        width: 100%;
+        padding: 14px 16px;
+        border: 1.5px solid #e2e8f0;
+        border-radius: 16px;
+        font-size: 14px;
+        font-weight: 500;
+        transition: all 0.2s;
+        background: #ffffff;
+        font-family: "Inter", sans-serif;
+        color: #1e293b;
+      }
+      .form-group input:focus,
+      .form-group textarea:focus,
+      .form-group select:focus {
+        outline: none;
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.08);
+      }
+      .form-group input::placeholder {
+        color: #94a3b8;
+        font-weight: 400;
+      }
+
+      /* Buttons */
+      .btn {
+        padding: 12px 24px;
+        border-radius: 44px;
+        font-weight: 600;
+        font-size: 13px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        border: none;
+        width: 100%;
+        margin-top: 6px;
+        font-family: "Inter", sans-serif;
+      }
+      .btn-primary {
+        background: #3b82f6;
+        color: white;
+      }
+      .btn-primary:hover {
+        background: #2563eb;
+        transform: translateY(-2px);
+        box-shadow: 0 6px 14px rgba(59, 130, 246, 0.3);
+      }
+      .btn-success {
+        background: #10b981;
+        color: white;
+      }
+      .btn-success:hover {
+        background: #059669;
+        transform: translateY(-2px);
+      }
+      .btn-warning {
+        background: #f59e0b;
+        color: white;
+      }
+      .btn-warning:hover {
+        background: #d97706;
+      }
+      .btn-outline {
+        background: transparent;
+        border: 2px solid #e2e8f0;
+        color: #475569;
+      }
+      .btn-outline:hover {
+        border-color: #3b82f6;
+        color: #3b82f6;
+        background: rgba(59, 130, 246, 0.05);
+      }
+      .btn-purple {
+        background: #8b5cf6;
+        color: white;
+      }
+      .btn-purple:hover {
+        background: #7c3aed;
+        transform: translateY(-2px);
+      }
+
+      .button-group {
+        display: flex;
+        gap: 12px;
+        margin-top: 8px;
+      }
+      .button-group .btn {
+        flex: 1;
+      }
+
+      /* Client Wrapper */
+      .client-wrapper {
+        position: relative;
+      }
+      .client-dropdown {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        background: white;
+        border: 1px solid #e2e8f0;
+        border-radius: 16px;
+        max-height: 240px;
+        overflow-y: auto;
+        z-index: 100;
+        display: none;
+        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+      }
+      .client-dropdown div {
+        padding: 12px 16px;
+        cursor: pointer;
+        border-bottom: 1px solid #f1f5f9;
+      }
+      .client-dropdown div:hover {
+        background: #eff6ff;
+      }
+      .client-dropdown .client-name {
+        font-weight: 700;
+        color: #1e293b;
+      }
+      .client-dropdown .client-address {
+        font-size: 11px;
+        color: #64748b;
+        margin-top: 4px;
+      }
+
+      /* Currency Section */
+      .currency-section {
+        margin-top: 8px;
+      }
+      .currency-search-container {
+        position: relative;
+      }
+      .currency-top-section {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin: 10px 0 8px 0;
+      }
+      .currency-badge {
+        background: #f1f5f9;
+        padding: 8px 18px;
+        border-radius: 40px;
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+      .currency-badge:hover {
+        background: #3b82f6;
+        color: white;
+        transform: translateY(-1px);
+      }
+      .currency-dropdown {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        background: white;
+        border: 1px solid #e2e8f0;
+        border-radius: 16px;
+        max-height: 200px;
+        overflow-y: auto;
+        z-index: 100;
+        display: none;
+        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+      }
+      .currency-dropdown div {
+        padding: 12px 16px;
+        cursor: pointer;
+      }
+      .currency-dropdown div:hover {
+        background: #eff6ff;
+      }
+
+      /* GST Section */
+      .gst-card {
+        background: linear-gradient(135deg, #f0fdf4, #dcfce7);
+        border-radius: 24px;
+        padding: 20px;
+        margin: 20px 0;
+        border: 1px solid #bbf7d0;
+        display: none;
+      }
+      .gst-card.visible {
+        display: block;
+      }
+      .gst-row {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        flex-wrap: wrap;
+        justify-content: space-between;
+      }
+      .paid-checkbox {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-weight: 600;
+        cursor: pointer;
+      }
+      .paid-row {
+        margin-top: 16px;
+        padding-top: 16px;
+        border-top: 1px dashed #bbf7d0;
+        display: none;
+        gap: 12px;
+        align-items: center;
+        flex-wrap: wrap;
+      }
+      .paid-row.visible {
+        display: flex;
+      }
+
+      /* ADD ITEM SECTION */
+      .item-card {
+        background: #ffffff;
+        border-radius: 24px;
+        margin: 20px 0;
+        border: 1px solid #e2e8f0;
+        overflow: hidden;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
+      }
+      .item-card-header {
+        background: #f8fafc;
+        padding: 16px 20px;
+        border-bottom: 1px solid #e2e8f0;
+      }
+      .item-card-header h4 {
+        font-size: 1rem;
+        font-weight: 700;
+        color: #1e293b;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .item-card-body {
+        padding: 20px;
+      }
+      .item-name-wrapper {
+        position: relative;
+        margin-bottom: 16px;
+      }
+      .item-name-wrapper input {
+        width: 100%;
+        padding: 16px 18px;
+        border: 1.5px solid #e2e8f0;
+        border-radius: 20px;
+        font-size: 15px;
+        font-weight: 500;
+        transition: all 0.2s;
+        background: #ffffff;
+        font-family: "Inter", sans-serif;
+      }
+      .item-name-wrapper input:focus {
+        outline: none;
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.08);
+      }
+      .item-name-wrapper input::placeholder {
+        color: #94a3b8;
+        font-weight: 400;
+      }
+
+      .item-desc-input {
+        width: 100%;
+        padding: 16px 18px;
+        border: 1.5px solid #e2e8f0;
+        border-radius: 20px;
+        font-size: 14px;
+        font-family: "Inter", sans-serif;
+        resize: vertical;
+        margin-bottom: 16px;
+        transition: all 0.2s;
+      }
+      .item-desc-input:focus {
+        outline: none;
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.08);
+      }
+
+      .row-fields {
+        display: flex;
+        gap: 14px;
+        margin-bottom: 16px;
+        flex-wrap: wrap;
+      }
+      .field {
+        flex: 1;
+        min-width: 100px;
+      }
+      .field label {
+        font-size: 11px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: #64748b;
+        display: block;
+        margin-bottom: 6px;
+      }
+      .field input {
+        width: 100%;
+        padding: 14px 14px;
+        border: 1.5px solid #e2e8f0;
+        border-radius: 16px;
+        font-size: 14px;
+        font-weight: 500;
+        transition: all 0.2s;
+        font-family: "Inter", sans-serif;
+      }
+      .field input:focus {
+        outline: none;
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.08);
+      }
+      .gst-field {
+        display: none;
+      }
+      .gst-field.visible {
+        display: block;
+      }
+
+      .item-buttons {
+        display: flex;
+        gap: 12px;
+        margin-top: 8px;
+      }
+      .item-buttons button {
+        flex: 1;
+        margin-top: 0;
+      }
+
+      /* Sync Status */
+      .sync-status {
+        margin-top: 20px;
+        padding: 12px 16px;
+        border-radius: 60px;
+        text-align: center;
+        font-size: 12px;
+        font-weight: 600;
+      }
+      .sync-status.connected {
+        background: #d1fae5;
+        color: #065f46;
+      }
+      .sync-status.disconnected {
+        background: #fef3c7;
+        color: #92400e;
+      }
+
+      /* Search Section */
+      .search-section {
+        margin-top: 24px;
+        padding-top: 20px;
+        border-top: 2px solid #e2e8f0;
+      }
+      .invoice-history-list {
+        max-height: 260px;
+        overflow-y: auto;
+        margin-top: 12px;
+        border-radius: 20px;
+        border: 1px solid #e2e8f0;
+        background: white;
+      }
+      .invoice-history-item {
+        padding: 14px 18px;
+        border-bottom: 1px solid #f1f5f9;
+        cursor: pointer;
+        transition: background 0.1s;
+      }
+      .invoice-history-item:hover {
+        background: #eff6ff;
+      }
+      .invoice-history-item strong {
+        color: #3b82f6;
+      }
+
+      /* Item Name Dropdown */
+      .item-dropdown {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        background: white;
+        border: 1px solid #e2e8f0;
+        border-radius: 16px;
+        max-height: 220px;
+        overflow-y: auto;
+        z-index: 100;
+        display: none;
+        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+      }
+      .item-dropdown div {
+        padding: 12px 16px;
+        cursor: pointer;
+        border-bottom: 1px solid #f1f5f9;
+      }
+      .item-dropdown div:hover {
+        background: #eff6ff;
+      }
+      .item-dropdown strong {
+        color: #1e293b;
+      }
+      .item-dropdown small {
+        font-size: 11px;
+        color: #64748b;
+        display: block;
+        margin-top: 4px;
+      }
+
+      /* ========================================
+       INVOICE PREVIEW - RIGHT PANEL
+    ========================================= */
+      .invoice-preview {
+        background: white;
+        border-radius: 32px;
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.15);
+        overflow: hidden;
+      }
+      .invoice-preview.pdf-mode .action-cell,
+      .invoice-preview.pdf-mode th:last-child,
+      .invoice-preview.pdf-mode td:last-child {
+        display: none;
+      }
+
+      .invoice-header {
+        padding: 28px 32px;
+        background: linear-gradient(135deg, #ffffff, #f8fafc);
+        border-bottom: 1px solid #e2e8f0;
+      }
+      .invoice-header-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 20px;
+      }
+      .company-info img.logo {
+        max-width: 180px;
+        max-height: 70px;
+        object-fit: contain;
+      }
+      .company-url a {
+        color: #64748b;
+        text-decoration: none;
+        font-size: 12px;
+        margin-top: 8px;
+        display: inline-block;
+      }
+      .invoice-title-section {
+        text-align: right;
+      }
+      .invoice-title-section h2 {
+        font-size: 1.5rem;
+        font-weight: 700;
+        letter-spacing: 1px;
+        color: #3b82f6;
+        margin-bottom: 12px;
+        text-transform: uppercase;
+      }
+      .invoice-meta {
+        font-size: 13px;
+        color: #475569;
+        margin-top: 4px;
+      }
+      .invoice-meta strong {
+        color: #1e293b;
+      }
+
+      .bill-section {
+        display: flex;
+        gap: 24px;
+        padding: 28px 32px;
+        background: #ffffff;
+        flex-wrap: wrap;
+      }
+      .bill-box {
+        flex: 1;
+        background: #f8fafc;
+        padding: 18px 22px;
+        border-radius: 24px;
+        border: 1px solid #e2e8f0;
+      }
+      .bill-title {
+        font-weight: 800;
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        color: #3b82f6;
+        margin-bottom: 14px;
+      }
+      .bill-address {
+        font-size: 10px;
+        line-height: 1.5;
+        color: #475569;
+        margin-top: 10px;
+      }
+      .bill-box strong {
+        font-size: 13px;
+        display: block;
+        margin-bottom: 4px;
+      }
+
+      .table-wrapper {
+        padding: 0 32px;
+        overflow-x: auto;
+      }
+      .invoice-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 13px;
+      }
+      .invoice-table th {
+        background: #f8fafc;
+        padding: 14px 12px;
+        text-align: center;
+        font-weight: 700;
+        font-size: 12px;
+        text-transform: uppercase;
+        color: #475569;
+        border-bottom: 2px solid #e2e8f0;
+      }
+      .invoice-table td {
+        padding: 14px 12px;
+        border-bottom: 1px solid #e2e8f0;
+        text-align: center;
+        vertical-align: top;
+      }
+      .item-name-cell {
+        font-weight: 700;
+        color: #1e293b;
+        display: block;
+        margin-bottom: 4px;
+        font-size: 13px;
+      }
+      .item-desc-cell {
+        font-size: 11px;
+        color: #64748b;
+        display: block;
+      }
+      .edit-btn,
+      .delete-btn {
+        background: none;
+        border: none;
+        font-size: 16px;
+        cursor: pointer;
+        padding: 8px;
+        border-radius: 12px;
+        transition: all 0.1s;
+      }
+      .edit-btn:hover {
+        background: #fef3c7;
+      }
+      .delete-btn:hover {
+        background: #fee2e2;
+      }
+
+      .bottom-section {
+        display: flex;
+        gap: 28px;
+        padding: 28px 32px;
+        flex-wrap: wrap;
+      }
+      .bank-details {
+        flex: 1;
+        background: #f8fafc;
+        border-radius: 24px;
+        padding: 18px;
+        border: 1px solid #e2e8f0;
+      }
+      .total-section {
+        flex: 1;
+      }
+      .gst-summary {
+        background: #f8fafc;
+        border-radius: 20px;
+        overflow: hidden;
+        border: 1px solid #e2e8f0;
+      }
+      .summary-row {
+        display: flex;
+        justify-content: space-between;
+        padding: 14px 18px;
+        border-bottom: 1px solid #e2e8f0;
+        font-size: 14px;
+      }
+      .summary-row.total {
+        background: #eff6ff;
+        font-weight: 800;
+        font-size: 16px;
+      }
+
+      /* FIXED: PAID Stamp on same line with text - inline-flex prevents line break */
+      .amount-words {
+        background: #fef3c7;
+        padding: 16px 20px;
+        border-radius: 20px;
+        margin-top: 16px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: nowrap;
+        gap: 16px;
+        font-size: 12px;
+        font-weight: 600;
+        color: #92400e;
+      }
+      .paid-stamp {
+        background: #10b981;
+        color: white;
+        padding: 6px 16px;
+        border-radius: 40px;
+        font-size: 12px;
+        font-weight: 700;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        white-space: nowrap;
+      }
+      @media (max-width: 600px) {
+        .amount-words {
+          flex-wrap: wrap;
+        }
+      }
+
+      .invoice-footer {
+        padding: 18px 32px;
+        text-align: center;
+        font-size: 11px;
+        color: #94a3b8;
+        border-top: 1px solid #e2e8f0;
+      }
+
+      .back-link {
+        display: inline-block;
+        margin-bottom: 24px;
+        color: #3b82f6;
+        text-decoration: none;
+        font-weight: 600;
+        padding: 10px 20px;
+        background: white;
+        border-radius: 50px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        font-size: 14px;
+      }
+      .back-link:hover {
+        text-decoration: underline;
+      }
+      .url-no-underline a {
+        text-decoration: none;
+      }
+
+      /* Modals */
+      .modal {
+        display: none;
+        position: fixed;
+        z-index: 10000;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.5);
+        backdrop-filter: blur(4px);
+        justify-content: center;
+        align-items: center;
+      }
+      .modal-content {
+        background: white;
+        border-radius: 36px;
+        width: 650px;
+        max-width: 95%;
+        max-height: 85vh;
+        overflow-y: auto;
+        box-shadow: 0 40px 80px rgba(0, 0, 0, 0.3);
+      }
+      .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 22px 28px;
+        border-bottom: 2px solid #e2e8f0;
+        position: sticky;
+        top: 0;
+        background: white;
+        border-radius: 36px 36px 0 0;
+      }
+      .modal-header h3 {
+        font-size: 1.3rem;
+        font-weight: 700;
+        color: #1e293b;
+      }
+      .close-modal {
+        font-size: 28px;
+        cursor: pointer;
+        color: #94a3b8;
+        transition: color 0.1s;
+      }
+      .close-modal:hover {
+        color: #ef4444;
+      }
+      .modal-body {
+        padding: 24px 28px;
+      }
+
+      .bank-card,
+      .account-card {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 20px;
+        padding: 18px;
+        margin-bottom: 16px;
+        transition: all 0.2s;
+      }
+      .bank-card:hover,
+      .account-card:hover {
+        border-color: #3b82f6;
+        box-shadow: 0 4px 12px rgba(59, 130, 246, 0.08);
+      }
+      .bank-name,
+      .account-name {
+        font-weight: 700;
+        font-size: 1rem;
+        color: #1e293b;
+        margin-bottom: 10px;
+      }
+      .bank-details-text {
+        font-size: 11px;
+        color: #475569;
+        background: white;
+        padding: 12px;
+        border-radius: 14px;
+        margin: 10px 0;
+        white-space: pre-line;
+        font-family: monospace;
+      }
+      .card-actions {
+        display: flex;
+        gap: 12px;
+        margin-top: 12px;
+      }
+      .card-actions button {
+        padding: 8px 20px;
+        font-size: 12px;
+        border-radius: 40px;
+        cursor: pointer;
+        border: none;
+        font-weight: 600;
+      }
+      .edit-card {
+        background: #f59e0b;
+        color: white;
+      }
+      .edit-card:hover {
+        background: #d97706;
+      }
+      .delete-card {
+        background: #ef4444;
+        color: white;
+      }
+      .delete-card:hover {
+        background: #dc2626;
+      }
+      .add-form {
+        background: #f1f5f9;
+        border-radius: 20px;
+        padding: 20px;
+        margin-top: 20px;
+      }
+      .add-form h4 {
+        margin-bottom: 16px;
+        font-size: 1rem;
+        color: #1e293b;
+      }
+      .add-form input,
+      .add-form textarea {
+        width: 100%;
+        padding: 12px 14px;
+        border: 1.5px solid #e2e8f0;
+        border-radius: 14px;
+        margin-bottom: 12px;
+        font-family: "Inter", sans-serif;
+      }
+      .add-form input:focus,
+      .add-form textarea:focus {
+        outline: none;
+        border-color: #3b82f6;
+      }
+      .client-manage-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 14px 18px;
+        border: 1px solid #e2e8f0;
+        border-radius: 20px;
+        margin-bottom: 12px;
+        background: #f8fafc;
+        transition: all 0.2s;
+      }
+      .client-manage-item:hover {
+        border-color: #3b82f6;
+      }
+
+      @media (max-width: 1000px) {
+        .container {
+          grid-template-columns: 1fr;
+        }
+        body {
+          padding: 16px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div style="max-width: 1600px; margin: 0 auto">
+      <a href="../index.html" class="back-link">← Back to Portfolio</a>
+    </div>
+
+    <div class="container">
+      <!-- LEFT PANEL -->
+      <div class="left-panel">
+        <div class="panel-header">
+          <h3>📄 Invoice Manager</h3>
+          <p>Cloud sync • Real-time • Multi-device</p>
+        </div>
+        <div class="panel-content">
+          <div class="form-group">
+            <label>Document Type</label>
+            <select id="docType">
+              <option>Invoice</option>
+              <option>PROFORMA INVOICE</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label>Invoice Date</label>
+            <input type="text" id="invoiceDate" placeholder="Select date" />
+          </div>
+
+          <div class="form-group">
+            <label>Invoice Number</label>
+            <input type="text" id="invoiceNumber" placeholder="e.g., INV-001" />
+          </div>
+
+          <div class="form-group">
+            <label>Billed To (Client Name)</label>
+            <div class="client-wrapper">
+              <input
+                type="text"
+                id="clientName"
+                placeholder="Start typing client name..."
+                autocomplete="off"
+              />
+              <div id="clientDropdown" class="client-dropdown"></div>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Client Address</label>
+            <textarea
+              id="clientAddress"
+              rows="3"
+              placeholder="Full address..."
+            ></textarea>
+          </div>
+
+          <div class="button-group">
+            <button id="saveClientBtn" class="btn btn-success">
+              💾 Save New Client
+            </button>
+            <button id="manageClientsBtn" class="btn btn-purple">
+              📋 Manage Clients
+            </button>
+          </div>
+
+          <!-- Currency Section -->
+          <div class="currency-section">
+            <div class="form-group">
+              <label>Currency</label>
+              <div class="currency-search-container">
+                <input
+                  type="text"
+                  id="currencySearch"
+                  placeholder="Search currency..."
+                  autocomplete="off"
+                />
+                <div id="currencyTop" class="currency-top-section"></div>
+                <div id="currencyDropdown" class="currency-dropdown"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- GST Section -->
+          <div id="gstCard" class="gst-card">
+            <h4 style="margin-bottom: 16px">🧾 GST Settings</h4>
+            <div class="gst-row">
+              <label>Customer's State:</label>
+              <select
+                id="customerState"
+                style="width: auto; min-width: 140px; padding: 10px"
+              >
+                <option value="Kerala">Kerala</option>
+                <option value="Other">Other State</option>
+              </select>
+              <label class="paid-checkbox">
+                <input type="checkbox" id="showPaidStamp" /> ✓ PAID Stamp
+              </label>
+            </div>
+            <div id="paidOnRow" class="paid-row">
+              <label>📅 Paid Date:</label>
+              <input type="text" id="paidOnDate" style="flex: 1" />
+            </div>
+            <div id="paidAccountRow" class="paid-row">
+              <label>🏷️ Paid To Account:</label>
+              <select id="paidAccountSelect" style="flex: 1"></select>
+            </div>
+          </div>
+
+          <!-- ADD ITEM SECTION -->
+          <div class="item-card">
+            <div class="item-card-header">
+              <h4>📦 Add Line Item</h4>
+            </div>
+            <div class="item-card-body">
+              <div class="item-name-wrapper">
+                <input
+                  type="text"
+                  id="itemName"
+                  placeholder="Item name (e.g., Web Hosting, SEO Services...)"
+                  autocomplete="off"
+                />
+                <div id="itemDropdown" class="item-dropdown"></div>
+              </div>
+              <textarea
+                id="itemDesc"
+                class="item-desc-input"
+                rows="2"
+                placeholder="Description / Notes"
+              ></textarea>
+              <div class="row-fields">
+                <div class="field">
+                  <label>📦 QUANTITY</label>
+                  <input
+                    type="number"
+                    id="itemQty"
+                    value="1"
+                    step="any"
+                    placeholder="Qty"
+                  />
+                </div>
+                <div class="field">
+                  <label>💰 RATE</label>
+                  <input
+                    type="number"
+                    id="itemRate"
+                    value="0"
+                    step="any"
+                    placeholder="Rate"
+                  />
+                </div>
+                <div class="field gst-field" id="gstField">
+                  <label>🧾 GST %</label>
+                  <input
+                    type="number"
+                    id="itemGst"
+                    value="18"
+                    step="any"
+                    placeholder="GST %"
+                  />
+                </div>
+              </div>
+              <div class="row-fields">
+                <div class="field">
+                  <label>🏷️ HSN / SAC</label>
+                  <input type="text" id="itemHsn" placeholder="HSN/SAC code" />
+                </div>
+              </div>
+              <div class="item-buttons">
+                <button id="addItemBtn" class="btn btn-primary">
+                  ➕ Add Item
+                </button>
+                <button id="clearItemsBtn" class="btn btn-outline">
+                  🧹 Clear All
+                </button>
+                <button
+                  id="updateItemBtn"
+                  class="btn btn-warning"
+                  style="display: none"
+                >
+                  ✏️ Update
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Bank Account</label>
+            <select id="bankSelect"></select>
+            <button
+              id="manageBanksBtn"
+              class="btn btn-purple"
+              style="margin-top: 8px"
+            >
+              🏦 Manage Banks (Add/Edit/Delete)
+            </button>
+            <button
+              id="manageAccountsBtn"
+              class="btn"
+              style="background: #f59e0b; color: white; margin-top: 8px"
+            >
+              📋 Manage Paid Accounts (Add/Edit/Delete)
+            </button>
+            <button
+              id="savePdfBtn"
+              class="btn btn-primary"
+              style="margin-top: 16px"
+            >
+              🖨️ Save as PDF & Cloud
+            </button>
+          </div>
+
+          <div class="search-section">
+            <label>📋 Previous Invoices (Cloud)</label>
+            <input
+              type="text"
+              id="searchInvoices"
+              placeholder="Search by invoice # or client..."
+              style="margin-top: 8px"
+            />
+            <div id="invoiceHistory" class="invoice-history-list"></div>
+          </div>
+
+          <div id="syncStatus" class="sync-status disconnected">
+            🔄 Connecting to cloud...
+          </div>
+        </div>
+      </div>
+
+      <!-- RIGHT PANEL - INVOICE PREVIEW -->
+      <div class="invoice-preview" id="invoicePreview">
+        <div class="invoice-header">
+          <div class="invoice-header-top">
+            <div class="company-info">
+              <img
+                src="https://i.ibb.co/1tGgfWfX/Logo-Latest.png"
+                class="logo"
+                alt="Wazeefa1 Logo"
+                onerror="this.style.display = 'none'"
+              />
+              <div class="company-url url-no-underline">
+                <a href="https://www.wazeefa.in/" target="_blank"
+                  >🌐 www.wazeefa.in</a
+                >
+              </div>
+            </div>
+            <div class="invoice-title-section">
+              <h2 id="previewDocTitle">INVOICE</h2>
+              <div class="invoice-meta">
+                <strong>Invoice No.:</strong> <span id="previewInvNo"></span>
+              </div>
+              <div class="invoice-meta">
+                <strong>Invoice Date:</strong> <span id="previewDate"></span>
+              </div>
+              <div
+                class="invoice-meta"
+                id="previewPaidDateRow"
+                style="display: none"
+              >
+                <strong>Paid Date:</strong> <span id="previewPaidDate"></span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="bill-section">
+          <div class="bill-box">
+            <div class="bill-title">BILL FROM</div>
+            <strong>Wazeefa1 Technologies Private Limited</strong>
+            <div class="bill-address">
+              First Floor, Rajamalli Building<br />Infopark Thrissur, Koratty
+              P.O.<br />Thrissur – 680308, Kerala, India.<br />GSTIN:
+              32AABCW6940M1Z2
+            </div>
+          </div>
+          <div class="bill-box">
+            <div class="bill-title">BILL TO</div>
+            <strong id="previewClientName"></strong>
+            <div
+              id="previewClientAddress"
+              style="
+                white-space: pre-line;
+                font-size: 12px;
+                margin-top: 8px;
+                color: #475569;
+              "
+            ></div>
+          </div>
+        </div>
+
+        <div class="table-wrapper">
+          <table class="invoice-table" id="itemsTable">
+            <thead id="tableHeader"></thead>
+            <tbody id="itemsBody"></tbody>
+          </table>
+        </div>
+
+        <div class="bottom-section">
+          <div class="bank-details">
+            <strong>🏦 Bank Account Details</strong>
+            <div
+              id="previewBankDetails"
+              style="
+                margin-top: 12px;
+                white-space: pre-line;
+                font-size: 11px;
+                color: #475569;
+              "
+            ></div>
+          </div>
+          <div class="total-section">
+            <div id="previewGstSummary"></div>
+            <div id="previewAmountWords" class="amount-words"></div>
+          </div>
+        </div>
+
+        <div class="invoice-footer">
+          This is electronically generated document, no signature required.
+        </div>
+      </div>
+    </div>
+
+    <!-- MODALS -->
+    <div id="bankModal" class="modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>🏦 Bank Management</h3>
+          <span class="close-modal" data-modal="bankModal">&times;</span>
+        </div>
+        <div class="modal-body" id="bankModalBody"></div>
+      </div>
+    </div>
+
+    <div id="accountsModal" class="modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>📋 Paid Accounts Management</h3>
+          <span class="close-modal" data-modal="accountsModal">&times;</span>
+        </div>
+        <div class="modal-body" id="accountsModalBody"></div>
+      </div>
+    </div>
+
+    <div id="clientsModal" class="modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>📋 Client Management</h3>
+          <span class="close-modal" data-modal="clientsModal">&times;</span>
+        </div>
+        <div class="modal-body" id="clientsModalBody"></div>
+      </div>
+    </div>
+
+    <script>
+      // ========================================
+      // FIREBASE & APPLICATION CODE
+      // ========================================
+      const firebaseConfig = {
+        apiKey: "AIzaSyChRXwRjPV4KwdpgzKOycMA7L1BhZ_KKf4",
+        authDomain: "wazeefa1-invoice-system.firebaseapp.com",
+        projectId: "wazeefa1-invoice-system",
+        storageBucket: "wazeefa1-invoice-system.firebasestorage.app",
+        messagingSenderId: "728004738275",
+        appId: "1:728004738275:web:a6317429e5e2731df559d6",
+      };
+
+      const CURRENCIES = [
+        { code: "USD", name: "US Dollar", symbol: "$", gst: false },
+        { code: "EUR", name: "Euro", symbol: "€", gst: false },
+        { code: "GBP", name: "British Pound", symbol: "£", gst: false },
+        { code: "JPY", name: "Japanese Yen", symbol: "¥", gst: false },
+        { code: "INR", name: "Indian Rupee", symbol: "₹", gst: true },
+        { code: "AED", name: "UAE Dirham", symbol: "د.إ", gst: false },
+      ];
+      const TOP_CURRENCIES = CURRENCIES.filter((c) =>
+        ["USD", "EUR", "GBP", "JPY", "INR"].includes(c.code),
+      );
+
+      const DEFAULT_BANKS = {
+        "HDFC Bank":
+          "WAZEEFA1 TECHNOLOGIES PRIVATE LIMITED\nCurrent Account No.: 50200015915894\nHDFC Bank, Koratty Branch\nIFSC: HDFC0001543",
+        "Kotak Mahindra Bank":
+          "WAZEEFA1 TECHNOLOGIES PRIVATE LIMITED\nCurrent Account No.: 1846344815\nKotak Mahindra Bank, Aluva Branch\nIFSC: KKBK0009290",
+      };
+      const DEFAULT_PAID_ACCOUNTS = [
+        "Cash Samar",
+        "Cash Navas",
+        "Samar",
+        "Navas",
+        "HDFC",
+        "KOTAK",
+      ];
+      const DEFAULT_ITEMS = [
+        {
+          name: "Registration / Renewal Domain",
+          desc: "Domain name registration or renewal",
+          hsn: "",
+          gst: 18,
+        },
+        {
+          name: "Web Hosting",
+          desc: "Website hosting services",
+          hsn: "",
+          gst: 18,
+        },
+        {
+          name: "IT Services",
+          desc: "IT support and services",
+          hsn: "",
+          gst: 18,
+        },
+        {
+          name: "Email Setup",
+          desc: "Professional email configuration",
+          hsn: "",
+          gst: 18,
+        },
+        {
+          name: "Website Development",
+          desc: "Custom website design",
+          hsn: "",
+          gst: 18,
+        },
+        {
+          name: "SEO Services",
+          desc: "Search engine optimization",
+          hsn: "",
+          gst: 18,
+        },
+      ];
+
+      let db = null,
+        cloudEnabled = false;
+      let banksData = {},
+        paidAccountsList = [],
+        allClients = [];
+      let itemsData = [];
+      let currentCurrency = {
+        code: "USD",
+        name: "US Dollar",
+        symbol: "$",
+        gst: false,
+      };
+      let editingIndex = null;
+
+      function showToast(msg, isError = false) {
+        const toast = document.createElement("div");
+        toast.className =
+          "toast-notification" + (isError ? " error" : " success");
+        toast.textContent = msg;
+        document.body.appendChild(toast);
+        setTimeout(() => toast.remove(), 3000);
+      }
+
+      function escapeHtml(str) {
+        if (!str) return "";
+        return str.replace(
+          /[&<>]/g,
+          (m) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" })[m],
+        );
+      }
+
+      function formatMoney(amount) {
+        const s = currentCurrency.symbol;
+        if (currentCurrency.code === "INR")
+          return `${s}${Number(amount).toLocaleString("en-IN", { minimumFractionDigits: 2 })}`;
+        return `${s}${Number(amount).toLocaleString("en-US", { minimumFractionDigits: 2 })}`;
+      }
+
+      function numberToWords(num) {
+        if (num === 0) return "Zero";
+        const ones = [
+          "",
+          "One",
+          "Two",
+          "Three",
+          "Four",
+          "Five",
+          "Six",
+          "Seven",
+          "Eight",
+          "Nine",
+          "Ten",
+          "Eleven",
+          "Twelve",
+          "Thirteen",
+          "Fourteen",
+          "Fifteen",
+          "Sixteen",
+          "Seventeen",
+          "Eighteen",
+          "Nineteen",
+        ];
+        const tens = [
+          "",
+          "",
+          "Twenty",
+          "Thirty",
+          "Forty",
+          "Fifty",
+          "Sixty",
+          "Seventy",
+          "Eighty",
+          "Ninety",
+        ];
+        const convert = (n) => {
+          if (n < 20) return ones[n];
+          if (n < 100)
+            return (
+              tens[Math.floor(n / 10)] + (n % 10 ? " " + ones[n % 10] : "")
+            );
+          return (
+            ones[Math.floor(n / 100)] +
+            " Hundred" +
+            (n % 100 ? " " + convert(n % 100) : "")
+          );
+        };
+        const crore = Math.floor(num / 10000000);
+        const lakh = Math.floor((num % 10000000) / 100000);
+        const thousand = Math.floor((num % 100000) / 1000);
+        const rem = num % 1000;
+        let res = "";
+        if (crore) res += convert(crore) + " Crore ";
+        if (lakh) res += convert(lakh) + " Lakh ";
+        if (thousand) res += convert(thousand) + " Thousand ";
+        if (rem) res += convert(rem);
+        return res.trim();
+      }
+
+      function isGstApplicable() {
+        return currentCurrency.gst;
+      }
+
+      function updateGstVisibility() {
+        const showGst = isGstApplicable();
+        const gstCard = document.getElementById("gstCard");
+        const gstField = document.getElementById("gstField");
+        if (showGst) {
+          gstCard.classList.add("visible");
+          gstField.classList.add("visible");
+        } else {
+          gstCard.classList.remove("visible");
+          gstField.classList.remove("visible");
+        }
+        updateTableHeaders();
+        rebuildItemsTable();
+      }
+
+      function updateTableHeaders() {
+        const useGst = isGstApplicable();
+        const headers = useGst
+          ? [
+              "Item/Description",
+              "HSN/SAC",
+              "Qty",
+              "Rate",
+              "GST%",
+              "Taxable",
+              "GST Amt.",
+              "Total",
+              "Action",
+            ]
+          : ["Item/Description", "HSN/SAC", "Qty", "Rate", "Total", "Action"];
+        document.getElementById("tableHeader").innerHTML =
+          "<tr>" + headers.map((h) => `<th>${h}</th>`).join("") + "</tr>";
+      }
+
+      function rebuildItemsTable() {
+        const tbody = document.getElementById("itemsBody");
+        tbody.innerHTML = "";
+        const useGst = isGstApplicable();
+        for (let i = 0; i < itemsData.length; i++) {
+          const item = itemsData[i];
+          const taxable = item.qty * item.rate;
+          const row = tbody.insertRow();
+          if (useGst && item.gst > 0) {
+            const gstAmount = (taxable * item.gst) / 100;
+            const total = taxable + gstAmount;
+            row.innerHTML = `
+          <td style="text-align:left"><span class="item-name-cell">${escapeHtml(item.name)}</span><span class="item-desc-cell">${escapeHtml(item.desc).replace(/\n/g, "<br>")}</span></td>
+          <td contenteditable="true">${escapeHtml(item.hsn)}</td>
+          <td contenteditable="true">${item.qty}</td>
+          <td contenteditable="true">${formatMoney(item.rate)}</td>
+          <td contenteditable="true">${item.gst}</td>
+          <td>${formatMoney(taxable)}</td>
+          <td>${formatMoney(gstAmount)}</td>
+          <td>${formatMoney(total)}</td>
+          <td class="action-cell"><button class="edit-btn" data-idx="${i}">✏️</button> <button class="delete-btn" data-idx="${i}">🗑️</button></td>
+        `;
+          } else {
+            row.innerHTML = `
+          <td style="text-align:left"><span class="item-name-cell">${escapeHtml(item.name)}</span><span class="item-desc-cell">${escapeHtml(item.desc).replace(/\n/g, "<br>")}</span></td>
+          <td contenteditable="true">${escapeHtml(item.hsn)}</td>
+          <td contenteditable="true">${item.qty}</td>
+          <td contenteditable="true">${formatMoney(item.rate)}</td>
+          <td>${formatMoney(taxable)}</td>
+          <td class="action-cell"><button class="edit-btn" data-idx="${i}">✏️</button> <button class="delete-btn" data-idx="${i}">🗑️</button></td>
+        `;
+          }
+        }
+        attachItemEvents();
+        calculateTotals();
+      }
+
+      function attachItemEvents() {
+        document.querySelectorAll("#itemsBody .edit-btn").forEach((btn) => {
+          btn.onclick = () => {
+            const idx = parseInt(btn.dataset.idx);
+            if (!isNaN(idx)) editItem(idx);
+          };
+        });
+        document.querySelectorAll("#itemsBody .delete-btn").forEach((btn) => {
+          btn.onclick = () => {
+            const idx = parseInt(btn.dataset.idx);
+            if (!isNaN(idx) && confirm("Delete this item?")) {
+              itemsData.splice(idx, 1);
+              rebuildItemsTable();
+            }
+          };
+        });
+        document
+          .querySelectorAll("#itemsBody td[contenteditable='true']")
+          .forEach((cell) => {
+            cell.onblur = () => {
+              const row = cell.parentElement;
+              const idx = row.rowIndex - 1;
+              if (idx >= 0 && idx < itemsData.length) {
+                const cells = row.cells;
+                if (cells[1] && cells[1].isContentEditable)
+                  itemsData[idx].hsn = cells[1].innerText;
+                if (cells[2] && cells[2].isContentEditable)
+                  itemsData[idx].qty = parseFloat(cells[2].innerText) || 0;
+                if (cells[3] && cells[3].isContentEditable) {
+                  let raw =
+                    parseFloat(cells[3].innerText.replace(/[^0-9.-]/g, "")) ||
+                    0;
+                  itemsData[idx].rate = raw;
+                  cells[3].innerText = formatMoney(raw);
+                }
+                if (isGstApplicable() && cells[4] && cells[4].isContentEditable)
+                  itemsData[idx].gst = parseFloat(cells[4].innerText) || 0;
+                rebuildItemsTable();
+              }
+            };
+          });
+      }
+
+      function editItem(idx) {
+        const item = itemsData[idx];
+        document.getElementById("itemName").value = item.name;
+        document.getElementById("itemDesc").value = item.desc;
+        document.getElementById("itemHsn").value = item.hsn;
+        document.getElementById("itemQty").value = item.qty;
+        document.getElementById("itemRate").value = item.rate;
+        document.getElementById("itemGst").value = item.gst;
+        editingIndex = idx;
+        document.getElementById("addItemBtn").style.display = "none";
+        document.getElementById("updateItemBtn").style.display = "block";
+      }
+
+      function calculateTotals() {
+        let grandTotal = 0;
+        const useGst = isGstApplicable();
+        for (const item of itemsData) {
+          const taxable = item.qty * item.rate;
+          if (useGst && item.gst > 0)
+            grandTotal += taxable + (taxable * item.gst) / 100;
+          else grandTotal += taxable;
+        }
+        const gstSummaryDiv = document.getElementById("previewGstSummary");
+        gstSummaryDiv.innerHTML = `<div class="gst-summary"><div class="summary-row total"><span>${useGst ? "Grand Total" : "Total Amount"}</span><span>${formatMoney(grandTotal)}</span></div></div>`;
+        const showPaid = document.getElementById("showPaidStamp").checked;
+        const words = `Amount in Words: ${numberToWords(Math.floor(grandTotal))} ${currentCurrency.name}`;
+        // FIXED: ✓ PAID (tick before text, both on same line)
+        document.getElementById("previewAmountWords").innerHTML = showPaid
+          ? `<span>${words}</span><span class="paid-stamp">✓ PAID</span>`
+          : words;
+      }
+
+      function updatePreview() {
+        document.getElementById("previewClientName").innerHTML =
+          escapeHtml(document.getElementById("clientName").value) || "";
+        document.getElementById("previewClientAddress").innerHTML = escapeHtml(
+          document.getElementById("clientAddress").value,
+        ).replace(/\n/g, "<br>");
+        document.getElementById("previewInvNo").innerText =
+          document.getElementById("invoiceNumber").value || "";
+        document.getElementById("previewDate").innerText =
+          document.getElementById("invoiceDate").value;
+        document.getElementById("previewDocTitle").innerText =
+          document.getElementById("docType").value;
+        const showPaid = document.getElementById("showPaidStamp").checked;
+        const paidDate = document.getElementById("paidOnDate").value;
+        if (showPaid && paidDate) {
+          document.getElementById("previewPaidDateRow").style.display = "block";
+          document.getElementById("previewPaidDate").innerText = paidDate;
+        } else {
+          document.getElementById("previewPaidDateRow").style.display = "none";
+        }
+      }
+
+      function updateBankSelect() {
+        const sel = document.getElementById("bankSelect");
+        sel.innerHTML = "";
+        Object.keys(banksData).forEach((name) => {
+          const opt = document.createElement("option");
+          opt.value = name;
+          opt.textContent = name;
+          sel.appendChild(opt);
+        });
+        if (Object.keys(banksData).length) {
+          sel.value = Object.keys(banksData)[0];
+          document.getElementById("previewBankDetails").innerHTML = banksData[
+            sel.value
+          ].replace(/\n/g, "<br>");
+        }
+        sel.onchange = () => {
+          document.getElementById("previewBankDetails").innerHTML = (
+            banksData[sel.value] || ""
+          ).replace(/\n/g, "<br>");
+        };
+      }
+
+      function updatePaidAccountSelect() {
+        const sel = document.getElementById("paidAccountSelect");
+        sel.innerHTML = '<option value="">-- Select Account --</option>';
+        paidAccountsList.forEach((acc) => {
+          const opt = document.createElement("option");
+          opt.value = acc;
+          opt.textContent = acc;
+          sel.appendChild(opt);
+        });
+      }
+
+      function togglePaidVisibility() {
+        const ck = document.getElementById("showPaidStamp").checked;
+        const paidOnRow = document.getElementById("paidOnRow");
+        const paidAccountRow = document.getElementById("paidAccountRow");
+        if (ck) {
+          paidOnRow.classList.add("visible");
+          paidAccountRow.classList.add("visible");
+        } else {
+          paidOnRow.classList.remove("visible");
+          paidAccountRow.classList.remove("visible");
+        }
+        calculateTotals();
+        updatePreview();
+      }
+
+      function initCurrency() {
+        const input = document.getElementById("currencySearch");
+        const drop = document.getElementById("currencyDropdown");
+        const topDiv = document.getElementById("currencyTop");
+        topDiv.innerHTML = TOP_CURRENCIES.map(
+          (c) =>
+            `<span class="currency-badge" data-code="${c.code}" data-symbol="${c.symbol}" data-gst="${c.gst}" data-name="${c.name}">${c.code}</span>`,
+        ).join("");
+        document
+          .querySelectorAll("#currencyTop .currency-badge")
+          .forEach((b) => {
+            b.onclick = () => {
+              const cur = CURRENCIES.find((c) => c.code === b.dataset.code);
+              if (cur) {
+                currentCurrency = cur;
+                input.value = `${cur.code} - ${cur.name} (${cur.symbol})`;
+                updateGstVisibility();
+                drop.style.display = "none";
+              }
+            };
+          });
+        input.addEventListener("input", () => {
+          const term = input.value.toLowerCase();
+          if (!term) {
+            drop.style.display = "none";
+            return;
+          }
+          const filtered = CURRENCIES.filter(
+            (c) =>
+              c.code.toLowerCase().includes(term) ||
+              c.name.toLowerCase().includes(term),
+          );
+          if (!filtered.length) {
+            drop.style.display = "none";
+            return;
+          }
+          drop.innerHTML = filtered
+            .map(
+              (c) =>
+                `<div data-code="${c.code}" data-symbol="${c.symbol}" data-gst="${c.gst}" data-name="${c.name}"><strong>${c.code}</strong> - ${c.name} (${c.symbol})</div>`,
+            )
+            .join("");
+          drop.style.display = "block";
+          drop.querySelectorAll("div").forEach((div) => {
+            div.onclick = () => {
+              const cur = CURRENCIES.find((c) => c.code === div.dataset.code);
+              if (cur) {
+                currentCurrency = cur;
+                input.value = `${cur.code} - ${cur.name} (${cur.symbol})`;
+                updateGstVisibility();
+                drop.style.display = "none";
+              }
+            };
+          });
+        });
+        document.addEventListener("click", (e) => {
+          if (!input.contains(e.target) && !drop.contains(e.target))
+            drop.style.display = "none";
+        });
+        input.value = "USD - US Dollar ($)";
+        updateGstVisibility();
+      }
+
+      function initItemAutocomplete() {
+        const input = document.getElementById("itemName");
+        const drop = document.getElementById("itemDropdown");
+        input.addEventListener("input", () => {
+          const term = input.value.toLowerCase();
+          if (!term) {
+            drop.style.display = "none";
+            return;
+          }
+          const filtered = DEFAULT_ITEMS.filter((i) =>
+            i.name.toLowerCase().includes(term),
+          );
+          if (!filtered.length) {
+            drop.style.display = "none";
+            return;
+          }
+          drop.innerHTML = filtered
+            .map(
+              (i) =>
+                `<div data-name="${escapeHtml(i.name)}" data-desc="${escapeHtml(i.desc)}" data-hsn="${i.hsn}" data-gst="${i.gst}"><strong>${escapeHtml(i.name)}</strong><small>${escapeHtml(i.desc)}</small></div>`,
+            )
+            .join("");
+          drop.style.display = "block";
+          drop.querySelectorAll("div").forEach((div) => {
+            div.onclick = () => {
+              input.value = div.dataset.name;
+              document.getElementById("itemDesc").value = div.dataset.desc;
+              document.getElementById("itemHsn").value = div.dataset.hsn;
+              document.getElementById("itemGst").value = div.dataset.gst;
+              drop.style.display = "none";
+            };
+          });
+        });
+        document.addEventListener("click", (e) => {
+          if (!input.contains(e.target) && !drop.contains(e.target))
+            drop.style.display = "none";
+        });
+      }
+
+      function setupClientAutocomplete() {
+        const input = document.getElementById("clientName");
+        const drop = document.getElementById("clientDropdown");
+        input.oninput = () => {
+          const term = input.value.toLowerCase();
+          if (!term) {
+            drop.style.display = "none";
+            return;
+          }
+          const filtered = allClients.filter(
+            (c) => c.name && c.name.toLowerCase().includes(term),
+          );
+          if (!filtered.length) {
+            drop.style.display = "none";
+            return;
+          }
+          drop.innerHTML = filtered
+            .map(
+              (c) =>
+                `<div data-id="${c.id}" data-name="${escapeHtml(c.name)}" data-address="${escapeHtml(c.address || "")}"><div class="client-name">${escapeHtml(c.name)}</div><div class="client-address">${escapeHtml((c.address || "").substring(0, 80))}</div></div>`,
+            )
+            .join("");
+          drop.style.display = "block";
+          drop.querySelectorAll("div").forEach((div) => {
+            div.onclick = () => {
+              input.value = div.dataset.name;
+              document.getElementById("clientAddress").value =
+                div.dataset.address;
+              updatePreview();
+              drop.style.display = "none";
+              showToast(`Loaded: ${div.dataset.name}`);
+            };
+          });
+        };
+        document.addEventListener("click", (e) => {
+          if (!input.contains(e.target) && !drop.contains(e.target))
+            drop.style.display = "none";
+        });
+      }
+
+      async function initFirebase() {
+        try {
+          if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+          db = firebase.firestore();
+          await db.collection("test").doc("connection").set({ ts: Date.now() });
+          cloudEnabled = true;
+          document.getElementById("syncStatus").innerHTML =
+            "✅ Cloud Connected - Data Shared";
+          document.getElementById("syncStatus").className =
+            "sync-status connected";
+          showToast("Connected to cloud");
+
+          const banksDoc = await db.collection("settings").doc("banks").get();
+          if (banksDoc.exists) banksData = banksDoc.data();
+          else {
+            banksData = { ...DEFAULT_BANKS };
+            await db.collection("settings").doc("banks").set(banksData);
+          }
+          updateBankSelect();
+
+          const accDoc = await db
+            .collection("settings")
+            .doc("paidAccounts")
+            .get();
+          if (accDoc.exists)
+            paidAccountsList = accDoc.data().accounts || DEFAULT_PAID_ACCOUNTS;
+          else {
+            paidAccountsList = [...DEFAULT_PAID_ACCOUNTS];
+            await db
+              .collection("settings")
+              .doc("paidAccounts")
+              .set({ accounts: paidAccountsList });
+          }
+          updatePaidAccountSelect();
+
+          await loadAllClients();
+
+          db.collection("settings")
+            .doc("banks")
+            .onSnapshot((doc) => {
+              if (doc.exists) {
+                banksData = doc.data();
+                updateBankSelect();
+              }
+            });
+          db.collection("settings")
+            .doc("paidAccounts")
+            .onSnapshot((doc) => {
+              if (doc.exists) {
+                paidAccountsList = doc.data().accounts || DEFAULT_PAID_ACCOUNTS;
+                updatePaidAccountSelect();
+              }
+            });
+          db.collection("clients").onSnapshot(() => loadAllClients());
+          db.collection("invoices").onSnapshot(() => renderInvoiceHistory());
+
+          renderInvoiceHistory();
+        } catch (e) {
+          cloudEnabled = false;
+          document.getElementById("syncStatus").innerHTML = "⚠️ Offline Mode";
+          document.getElementById("syncStatus").className =
+            "sync-status disconnected";
+          banksData = { ...DEFAULT_BANKS };
+          paidAccountsList = [...DEFAULT_PAID_ACCOUNTS];
+          updateBankSelect();
+          updatePaidAccountSelect();
+        }
+      }
+
+      async function loadAllClients() {
+        if (!db) return;
+        const snapshot = await db.collection("clients").get();
+        allClients = [];
+        snapshot.forEach((doc) =>
+          allClients.push({ id: doc.id, ...doc.data() }),
+        );
+        setupClientAutocomplete();
+      }
+
+      async function saveNewClient() {
+        const name = document.getElementById("clientName").value.trim();
+        const address = document.getElementById("clientAddress").value.trim();
+        if (!name) {
+          showToast("Enter client name", true);
+          return;
+        }
+        if (!db) {
+          showToast("Cloud not available", true);
+          return;
+        }
+        try {
+          const clientId = name.replace(/[^a-zA-Z0-9]/g, "_");
+          await db
+            .collection("clients")
+            .doc(clientId)
+            .set({ name, address, createdAt: new Date().toISOString() });
+          await loadAllClients();
+          showToast(`✅ Client "${name}" saved!`);
+        } catch (e) {
+          showToast("Failed: " + e.message, true);
+        }
+      }
+
+      async function saveToCloud() {
+        const invNum = document.getElementById("invoiceNumber").value.trim();
+        if (!invNum) {
+          showToast("Invoice number required", true);
+          return false;
+        }
+        const data = {
+          invoiceNumber: invNum,
+          date: document.getElementById("invoiceDate").value,
+          clientName: document.getElementById("clientName").value,
+          clientAddress: document.getElementById("clientAddress").value,
+          currencyCode: currentCurrency.code,
+          docType: document.getElementById("docType").value,
+          showPaidStamp: document.getElementById("showPaidStamp").checked,
+          paidOnDate: document.getElementById("paidOnDate").value,
+          paidToAccount: document.getElementById("paidAccountSelect").value,
+          items: itemsData,
+          updatedAt: new Date().toISOString(),
+        };
+        if (db && cloudEnabled) {
+          try {
+            await db
+              .collection("invoices")
+              .doc(invNum.replace(/\//g, "_"))
+              .set(data);
+            showToast("Saved to cloud!");
+            renderInvoiceHistory();
+            return true;
+          } catch (e) {
+            showToast("Cloud save failed", true);
+            return false;
+          }
+        }
+        return false;
+      }
+
+      async function generatePDF(download = true) {
+        const invNum =
+          document.getElementById("invoiceNumber").value.trim() || "draft";
+        const cloneContainer = document.createElement("div");
+        cloneContainer.style.cssText =
+          "position:fixed;top:-9999px;left:-9999px;opacity:0;pointer-events:none;background:white;width:800px;";
+        const clone = document.getElementById("invoicePreview").cloneNode(true);
+        clone.classList.add("pdf-mode");
+        cloneContainer.appendChild(clone);
+        document.body.appendChild(cloneContainer);
+        await new Promise((r) => setTimeout(r, 150));
+        const opt = {
+          margin: [0.5, 0.5, 0.5, 0.5],
+          filename: `Invoice_${invNum}.pdf`,
+          image: { type: "jpeg", quality: 0.98 },
+          html2canvas: { scale: 2, useCORS: true, backgroundColor: "#ffffff" },
+          jsPDF: { unit: "in", format: "a4", orientation: "portrait" },
+        };
+        try {
+          const blob = await html2pdf().set(opt).from(clone).outputPdf("blob");
+          document.body.removeChild(cloneContainer);
+          if (download && blob) {
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = `Invoice_${invNum}.pdf`;
+            a.click();
+            URL.revokeObjectURL(url);
+            showToast("PDF downloaded!");
+          }
+        } catch (e) {
+          if (cloneContainer.parentNode)
+            document.body.removeChild(cloneContainer);
+          showToast("PDF failed", true);
+        }
+      }
+
+      async function handleSavePdf() {
+        const ok = await saveToCloud();
+        if (ok) await generatePDF(true);
+      }
+
+      function renderInvoiceHistory() {
+        const term = document
+          .getElementById("searchInvoices")
+          .value.toLowerCase();
+        if (!db) return;
+        db.collection("invoices")
+          .get()
+          .then((snapshot) => {
+            const invoices = [];
+            snapshot.forEach((doc) => invoices.push(doc.data()));
+            const container = document.getElementById("invoiceHistory");
+            if (!term) {
+              container.innerHTML =
+                "<div style='padding:20px;text-align:center;color:#94a3b8;'>🔍 Type to search</div>";
+              return;
+            }
+            const filtered = invoices.filter(
+              (i) =>
+                i.invoiceNumber?.toLowerCase().includes(term) ||
+                i.clientName?.toLowerCase().includes(term),
+            );
+            if (filtered.length === 0) {
+              container.innerHTML =
+                "<div style='padding:20px;text-align:center;'>📭 No matches</div>";
+              return;
+            }
+            container.innerHTML = filtered
+              .map(
+                (i) =>
+                  `<div class="invoice-history-item" data-id="${escapeHtml(i.invoiceNumber)}"><strong>🧾 ${escapeHtml(i.invoiceNumber)}</strong><br><small>${escapeHtml(i.clientName)} | ${i.date}</small></div>`,
+              )
+              .join("");
+            document.querySelectorAll(".invoice-history-item").forEach((el) => {
+              el.onclick = async () => {
+                const doc = await db
+                  .collection("invoices")
+                  .doc(el.dataset.id.replace(/\//g, "_"))
+                  .get();
+                if (doc.exists) {
+                  const inv = doc.data();
+                  document.getElementById("invoiceNumber").value =
+                    inv.invoiceNumber;
+                  document.getElementById("invoiceDate").value = inv.date;
+                  document.getElementById("clientName").value = inv.clientName;
+                  document.getElementById("clientAddress").value =
+                    inv.clientAddress;
+                  const cur = CURRENCIES.find(
+                    (c) => c.code === inv.currencyCode,
+                  );
+                  if (cur) {
+                    currentCurrency = cur;
+                    document.getElementById("currencySearch").value =
+                      `${cur.code} - ${cur.name} (${cur.symbol})`;
+                    updateGstVisibility();
+                  }
+                  document.getElementById("docType").value =
+                    inv.docType || "Invoice";
+                  document.getElementById("showPaidStamp").checked =
+                    inv.showPaidStamp || false;
+                  document.getElementById("paidOnDate").value =
+                    inv.paidOnDate || "";
+                  if (
+                    inv.paidToAccount &&
+                    paidAccountsList.includes(inv.paidToAccount)
+                  )
+                    document.getElementById("paidAccountSelect").value =
+                      inv.paidToAccount;
+                  itemsData = inv.items ? inv.items.map((i) => ({ ...i })) : [];
+                  rebuildItemsTable();
+                  updatePreview();
+                  togglePaidVisibility();
+                  editingIndex = null;
+                  document.getElementById("addItemBtn").style.display = "block";
+                  document.getElementById("updateItemBtn").style.display =
+                    "none";
+                  showToast(`Loaded: ${inv.invoiceNumber}`);
+                }
+              };
+            });
+          });
+      }
+
+      function renderBankModal() {
+        const container = document.getElementById("bankModalBody");
+        let html = `<div id="banksList">`;
+        Object.entries(banksData).forEach(([name, details]) => {
+          html += `
+        <div class="bank-card">
+          <div class="bank-name">🏦 ${escapeHtml(name)}</div>
+          <div class="bank-details-text">${escapeHtml(details)}</div>
+          <div class="card-actions">
+            <button class="edit-card" data-name="${escapeHtml(name)}" data-details="${escapeHtml(details)}">✏️ Edit</button>
+            <button class="delete-card" data-name="${escapeHtml(name)}">🗑️ Delete</button>
+          </div>
+        </div>
+      `;
+        });
+        html += `</div>
+      <div class="add-form">
+        <h4>➕ Add / Edit Bank</h4>
+        <input type="text" id="bankNameInput" placeholder="Bank Name">
+        <textarea id="bankDetailsInput" rows="3" placeholder="Account details..."></textarea>
+        <button id="saveBankBtn" class="btn btn-success">💾 Save Bank</button>
+        <button id="cancelBankEdit" class="btn btn-outline" style="margin-top:8px;">Cancel</button>
+      </div>`;
+        container.innerHTML = html;
+
+        document.querySelectorAll(".edit-card").forEach((btn) => {
+          btn.onclick = () => {
+            document.getElementById("bankNameInput").value = btn.dataset.name;
+            document.getElementById("bankDetailsInput").value =
+              btn.dataset.details;
+          };
+        });
+        document.querySelectorAll(".delete-card").forEach((btn) => {
+          btn.onclick = async () => {
+            if (confirm(`Delete "${btn.dataset.name}"?`)) {
+              delete banksData[btn.dataset.name];
+              if (db)
+                await db.collection("settings").doc("banks").set(banksData);
+              updateBankSelect();
+              renderBankModal();
+              showToast("Deleted");
+            }
+          };
+        });
+        document.getElementById("saveBankBtn").onclick = async () => {
+          const name = document.getElementById("bankNameInput").value.trim();
+          const details = document
+            .getElementById("bankDetailsInput")
+            .value.trim();
+          if (name && details) {
+            banksData[name] = details;
+            if (db) await db.collection("settings").doc("banks").set(banksData);
+            updateBankSelect();
+            renderBankModal();
+            showToast(`Bank "${name}" saved`);
+          } else {
+            showToast("Enter both name and details", true);
+          }
+        };
+        document.getElementById("cancelBankEdit").onclick = () => {
+          document.getElementById("bankNameInput").value = "";
+          document.getElementById("bankDetailsInput").value = "";
+        };
+      }
+
+      function renderAccountsModal() {
+        const container = document.getElementById("accountsModalBody");
+        let html = `<div id="accountsList">`;
+        paidAccountsList.forEach((acc) => {
+          html += `
+        <div class="account-card">
+          <div class="account-name">📋 ${escapeHtml(acc)}</div>
+          <div class="card-actions">
+            <button class="edit-account" data-name="${escapeHtml(acc)}">✏️ Edit</button>
+            <button class="delete-account" data-name="${escapeHtml(acc)}">🗑️ Delete</button>
+          </div>
+        </div>
+      `;
+        });
+        html += `</div>
+      <div class="add-form">
+        <h4>➕ Add / Edit Account</h4>
+        <input type="text" id="accountNameInput" placeholder="Account name">
+        <button id="saveAccountBtn" class="btn btn-success">💾 Save Account</button>
+        <button id="cancelAccountEdit" class="btn btn-outline" style="margin-top:8px;">Cancel</button>
+      </div>`;
+        container.innerHTML = html;
+
+        document.querySelectorAll(".edit-account").forEach((btn) => {
+          btn.onclick = () => {
+            document.getElementById("accountNameInput").value =
+              btn.dataset.name;
+          };
+        });
+        document.querySelectorAll(".delete-account").forEach((btn) => {
+          btn.onclick = async () => {
+            if (confirm(`Delete "${btn.dataset.name}"?`)) {
+              paidAccountsList = paidAccountsList.filter(
+                (a) => a !== btn.dataset.name,
+              );
+              if (db)
+                await db
+                  .collection("settings")
+                  .doc("paidAccounts")
+                  .set({ accounts: paidAccountsList });
+              updatePaidAccountSelect();
+              renderAccountsModal();
+              showToast("Deleted");
+            }
+          };
+        });
+        document.getElementById("saveAccountBtn").onclick = async () => {
+          const name = document.getElementById("accountNameInput").value.trim();
+          if (name && !paidAccountsList.includes(name)) {
+            paidAccountsList.push(name);
+            if (db)
+              await db
+                .collection("settings")
+                .doc("paidAccounts")
+                .set({ accounts: paidAccountsList });
+            updatePaidAccountSelect();
+            renderAccountsModal();
+            showToast(`Account "${name}" added`);
+            document.getElementById("accountNameInput").value = "";
+          } else {
+            showToast("Enter unique name", true);
+          }
+        };
+        document.getElementById("cancelAccountEdit").onclick = () => {
+          document.getElementById("accountNameInput").value = "";
+        };
+      }
+
+      function renderClientsModal() {
+        const container = document.getElementById("clientsModalBody");
+        if (allClients.length === 0) {
+          container.innerHTML =
+            "<p style='text-align:center;padding:40px;'>📭 No clients saved yet.</p>";
+          return;
+        }
+        container.innerHTML = "";
+        allClients.forEach((client) => {
+          const div = document.createElement("div");
+          div.className = "client-manage-item";
+          div.innerHTML = `
+        <div><strong>${escapeHtml(client.name)}</strong><br><small>${escapeHtml(client.address || "No address")}</small></div>
+        <div><button class="use-client" data-id="${client.id}" data-name="${escapeHtml(client.name)}" data-address="${escapeHtml(client.address || "")}">📋 Use</button></div>
+      `;
+          container.appendChild(div);
+        });
+        document.querySelectorAll(".use-client").forEach((btn) => {
+          btn.onclick = () => {
+            document.getElementById("clientName").value = btn.dataset.name;
+            document.getElementById("clientAddress").value =
+              btn.dataset.address;
+            updatePreview();
+            document.getElementById("clientsModal").style.display = "none";
+            showToast(`Loaded: ${btn.dataset.name}`);
+          };
+        });
+      }
+
+      function init() {
+        initCurrency();
+        initItemAutocomplete();
+        flatpickr("#invoiceDate", {
+          dateFormat: "d-m-Y",
+          defaultDate: "today",
+          onChange: updatePreview,
+        });
+        flatpickr("#paidOnDate", {
+          dateFormat: "d-m-Y",
+          onChange: () => {
+            updatePreview();
+            calculateTotals();
+          },
+        });
+        const today = new Date();
+        document.getElementById("invoiceDate").value =
+          `${String(today.getDate()).padStart(2, "0")}-${String(today.getMonth() + 1).padStart(2, "0")}-${today.getFullYear()}`;
+        updatePreview();
+
+        document
+          .getElementById("clientName")
+          .addEventListener("input", updatePreview);
+        document
+          .getElementById("clientAddress")
+          .addEventListener("input", updatePreview);
+        document
+          .getElementById("invoiceNumber")
+          .addEventListener("input", updatePreview);
+        document
+          .getElementById("docType")
+          .addEventListener("change", updatePreview);
+        document
+          .getElementById("showPaidStamp")
+          .addEventListener("change", togglePaidVisibility);
+        document
+          .getElementById("customerState")
+          .addEventListener("change", () => calculateTotals());
+
+        document.getElementById("addItemBtn").onclick = () => {
+          const name = document.getElementById("itemName").value.trim();
+          if (!name) {
+            showToast("Enter item name", true);
+            return;
+          }
+          const newItem = {
+            name: name,
+            desc: document.getElementById("itemDesc").value,
+            hsn: document.getElementById("itemHsn").value,
+            qty: parseFloat(document.getElementById("itemQty").value) || 0,
+            rate: parseFloat(document.getElementById("itemRate").value) || 0,
+            gst: parseFloat(document.getElementById("itemGst").value) || 0,
+          };
+          if (editingIndex !== null) {
+            itemsData[editingIndex] = newItem;
+            editingIndex = null;
+            document.getElementById("addItemBtn").style.display = "block";
+            document.getElementById("updateItemBtn").style.display = "none";
+          } else {
+            itemsData.push(newItem);
+          }
+          rebuildItemsTable();
+          document.getElementById("itemName").value = "";
+          document.getElementById("itemDesc").value = "";
+          document.getElementById("itemHsn").value = "";
+          document.getElementById("itemGst").value = "18";
+          document.getElementById("itemQty").value = "1";
+          document.getElementById("itemRate").value = "0";
+        };
+        document.getElementById("updateItemBtn").onclick = () =>
+          document.getElementById("addItemBtn").click();
+        document.getElementById("clearItemsBtn").onclick = () => {
+          if (confirm("Clear all items?")) {
+            itemsData = [];
+            rebuildItemsTable();
+          }
+        };
+        document.getElementById("saveClientBtn").onclick = saveNewClient;
+        document.getElementById("manageClientsBtn").onclick = () => {
+          renderClientsModal();
+          document.getElementById("clientsModal").style.display = "flex";
+        };
+        document.getElementById("manageBanksBtn").onclick = () => {
+          renderBankModal();
+          document.getElementById("bankModal").style.display = "flex";
+        };
+        document.getElementById("manageAccountsBtn").onclick = () => {
+          renderAccountsModal();
+          document.getElementById("accountsModal").style.display = "flex";
+        };
+        document.getElementById("savePdfBtn").onclick = handleSavePdf;
+        document
+          .getElementById("searchInvoices")
+          .addEventListener("input", renderInvoiceHistory);
+
+        document.querySelectorAll(".close-modal").forEach((el) => {
+          el.onclick = () => {
+            document.getElementById("bankModal").style.display = "none";
+            document.getElementById("accountsModal").style.display = "none";
+            document.getElementById("clientsModal").style.display = "none";
+          };
+        });
+        window.onclick = (e) => {
+          if (e.target.classList.contains("modal"))
+            e.target.style.display = "none";
+        };
+
+        updateTableHeaders();
+        togglePaidVisibility();
+        initFirebase();
+      }
+
+      window.onload = init;
+    </script>
+  </body>
+</html>
