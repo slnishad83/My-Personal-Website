@@ -63,21 +63,69 @@
 
         <!-- Chat Type Tabs -->
         <div class="chat-tabs">
-          <button class="chat-tab active" data-tab="groups">💬 Groups</button>
-          <button class="chat-tab" data-tab="direct">👤 Direct</button>
+          <button class="chat-tab active" data-tab="direct">👤 Personal</button>
+          <button class="chat-tab" data-tab="groups">💬 Groups</button>
         </div>
 
         <!-- Global Search -->
         <div class="global-search">
-          <input
-            type="text"
-            id="globalSearch"
-            placeholder="🔍 Search messages..."
-          />
+          <div class="search-wrapper">
+            <input
+              type="text"
+              id="globalSearch"
+              placeholder="🔍 Search messages across all chats..."
+            />
+            <button
+              id="clearGlobalSearchBtn"
+              class="clear-search-btn"
+              style="display: none"
+            >
+              ✖
+            </button>
+          </div>
+          <div
+            id="globalSearchResults"
+            class="search-results-dropdown"
+            style="display: none"
+          ></div>
         </div>
 
-        <!-- Groups List -->
-        <div id="groupsPanel" class="chat-panel active">
+        <!-- Direct Messages Panel (PERSONAL TAB) -->
+        <div id="directPanel" class="chat-panel active">
+          <div class="panel-header">
+            <h3>Team Members</h3>
+          </div>
+          <div class="search-users">
+            <div class="search-wrapper">
+              <input
+                type="text"
+                id="searchUsers"
+                placeholder="🔍 Search by name, email, or phone..."
+              />
+              <button
+                id="clearUserSearchBtn"
+                class="clear-search-btn"
+                style="display: none"
+              >
+                ✖
+              </button>
+            </div>
+            <div
+              id="searchError"
+              class="search-error"
+              style="display: none"
+            ></div>
+          </div>
+          <div id="usersList" class="items-list">
+            <div class="empty-users">
+              <div class="empty-icon">🔍</div>
+              <p>Search by name, email, or phone to find users</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Groups Panel (GROUPS TAB) -->
+        <div id="groupsPanel" class="chat-panel">
           <div class="panel-header">
             <h3>Your Groups</h3>
             <button id="createGroupBtn" class="icon-btn" title="Create Group">
@@ -94,19 +142,6 @@
               placeholder="Enter group code to join"
             />
             <button id="joinGroupBtn" class="btn-small">Join</button>
-          </div>
-        </div>
-
-        <!-- Direct Messages Panel -->
-        <div id="directPanel" class="chat-panel">
-          <div class="panel-header">
-            <h3>Team Members</h3>
-          </div>
-          <div class="search-users">
-            <input type="text" id="searchUsers" placeholder="Search users..." />
-          </div>
-          <div id="usersList" class="items-list">
-            <div class="loading">Loading users...</div>
           </div>
         </div>
       </div>
@@ -130,7 +165,7 @@
             <button
               id="searchInChatBtn"
               class="icon-btn"
-              title="Search in chat"
+              title="Search in this chat"
             >
               🔍
             </button>
@@ -139,18 +174,32 @@
 
         <!-- In-Chat Search Bar -->
         <div id="inChatSearchBar" class="in-chat-search" style="display: none">
-          <input
-            type="text"
-            id="inChatSearch"
-            placeholder="Search in this conversation..."
-          />
-          <button id="closeSearchBtn" class="close-search">✖</button>
+          <div class="search-wrapper">
+            <input
+              type="text"
+              id="inChatSearch"
+              placeholder="🔍 Search in this conversation..."
+            />
+            <button
+              id="clearInChatSearchBtn"
+              class="clear-search-btn"
+              style="display: none"
+            >
+              ✖
+            </button>
+          </div>
+          <div class="in-chat-search-nav" style="display: none">
+            <span id="searchResultCount">0 results</span>
+            <button id="prevResultBtn" class="search-nav-btn">←</button>
+            <button id="nextResultBtn" class="search-nav-btn">→</button>
+            <button id="closeSearchBtn" class="close-search">✖</button>
+          </div>
         </div>
 
         <div class="messages-area" id="messagesArea">
           <div class="empty-state">
             <div class="empty-icon">💬</div>
-            <p>Select a group or user to start chatting</p>
+            <p>Select a chat to start messaging</p>
           </div>
         </div>
 
@@ -164,12 +213,6 @@
             <button id="removeFileBtn" class="remove-file">✖</button>
           </div>
           <div class="input-row">
-            <button id="emojiBtn" class="emoji-btn" title="Add emoji">
-              😊
-            </button>
-            <button id="stickerBtn" class="sticker-btn" title="Add sticker">
-              🎨
-            </button>
             <button id="attachFileBtn" class="attach-btn" title="Attach file">
               📎
             </button>
@@ -188,63 +231,113 @@
       </div>
     </div>
 
-    <!-- Full Emoji Picker Modal -->
-    <div id="emojiPickerModal" class="modal" style="display: none">
-      <div class="modal-content emoji-modal-content">
+    <!-- First Login Phone Number Prompt Modal -->
+    <div id="phonePromptModal" class="modal" style="display: none">
+      <div class="modal-content" style="max-width: 400px">
         <div class="modal-header">
-          <h3>Emojis</h3>
-          <span class="close-modal emoji-close">&times;</span>
+          <h3>📱 Add Your Phone Number (Optional)</h3>
+          <button
+            id="closePhonePromptBtn"
+            class="close-modal-btn"
+            style="
+              background: none;
+              border: none;
+              font-size: 20px;
+              cursor: pointer;
+            "
+          >
+            &times;
+          </button>
         </div>
         <div class="modal-body">
-          <div class="emoji-categories">
-            <button class="emoji-cat-btn active" data-cat="smileys">😀</button>
-            <button class="emoji-cat-btn" data-cat="people">👋</button>
-            <button class="emoji-cat-btn" data-cat="animals">🐶</button>
-            <button class="emoji-cat-btn" data-cat="food">🍔</button>
-            <button class="emoji-cat-btn" data-cat="activities">⚽</button>
-            <button class="emoji-cat-btn" data-cat="travel">✈️</button>
-            <button class="emoji-cat-btn" data-cat="objects">💡</button>
-            <button class="emoji-cat-btn" data-cat="symbols">❤️</button>
-            <button class="emoji-cat-btn" data-cat="flags">🏁</button>
+          <p style="margin-bottom: 16px">
+            Help your team members find you easily.
+          </p>
+          <div class="form-group">
+            <label>Phone Number</label>
+            <div class="phone-input-group">
+              <select id="phoneCountryCode" class="country-code-select">
+                <option value="+91">🇮🇳 +91 (India)</option>
+                <option value="+1">🇺🇸 +1 (USA)</option>
+                <option value="+44">🇬🇧 +44 (UK)</option>
+                <option value="+61">🇦🇺 +61 (Australia)</option>
+                <option value="+971">🇦🇪 +971 (UAE)</option>
+                <option value="+966">🇸🇦 +966 (Saudi Arabia)</option>
+                <option value="+968">🇴🇲 +968 (Oman)</option>
+                <option value="+974">🇶🇦 +974 (Qatar)</option>
+                <option value="+965">🇰🇼 +965 (Kuwait)</option>
+                <option value="+973">🇧🇭 +973 (Bahrain)</option>
+                <option value="+33">🇫🇷 +33 (France)</option>
+                <option value="+49">🇩🇪 +49 (Germany)</option>
+                <option value="+81">🇯🇵 +81 (Japan)</option>
+                <option value="+86">🇨🇳 +86 (China)</option>
+              </select>
+              <input
+                type="tel"
+                id="promptPhoneNumber"
+                placeholder="Enter 10-digit phone number"
+                style="flex: 1"
+              />
+            </div>
           </div>
-          <div class="emoji-search">
+        </div>
+        <div
+          class="modal-footer"
+          style="display: flex; gap: 12px; padding: 16px 24px"
+        >
+          <button id="savePhonePromptBtn" class="btn btn-primary">Save</button>
+          <button id="skipPhonePromptBtn" class="btn btn-outline">
+            Skip for now
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Edit Message Modal -->
+    <div id="editMessageModal" class="modal" style="display: none">
+      <div class="modal-content" style="max-width: 400px">
+        <div class="modal-header">
+          <h3>Edit Message</h3>
+          <span class="close-modal edit-close">&times;</span>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label>Edit your message</label>
             <input
               type="text"
-              id="emojiSearch"
-              placeholder="Search emojis..."
+              id="editMessageInput"
+              placeholder="Edit message..."
             />
           </div>
-          <div id="emojiList" class="emoji-list-full"></div>
+          <button id="saveEditBtn" class="btn btn-primary">Save Changes</button>
         </div>
       </div>
     </div>
 
-    <!-- Sticker Picker Modal -->
-    <div id="stickerPickerModal" class="modal" style="display: none">
-      <div class="modal-content sticker-modal-content">
+    <!-- Create Group Modal -->
+    <div id="createGroupModal" class="modal" style="display: none">
+      <div class="modal-content">
         <div class="modal-header">
-          <h3>Stickers</h3>
-          <span class="close-modal sticker-close">&times;</span>
+          <h3>Create New Group</h3>
+          <span class="close-modal">&times;</span>
         </div>
         <div class="modal-body">
-          <div class="sticker-packs">
-            <button class="sticker-pack-btn active" data-pack="smiley">
-              😊 Smiley
-            </button>
-            <button class="sticker-pack-btn" data-pack="celebration">
-              🎉 Celebration
-            </button>
-            <button class="sticker-pack-btn" data-pack="love">❤️ Love</button>
-            <button class="sticker-pack-btn" data-pack="sad">😢 Sad</button>
-            <button class="sticker-pack-btn" data-pack="angry">😠 Angry</button>
-            <button class="sticker-pack-btn" data-pack="funny">😂 Funny</button>
+          <div class="form-group">
+            <label>Group Name</label>
+            <input
+              type="text"
+              id="newGroupName"
+              placeholder="e.g., Marketing Team"
+            />
           </div>
-          <div id="stickerList" class="sticker-list"></div>
+          <button id="confirmCreateGroup" class="btn btn-primary">
+            Create Group
+          </button>
         </div>
       </div>
     </div>
 
-    <!-- Profile Modal (View & Edit Status) -->
+    <!-- Profile Modal -->
     <div id="profileModal" class="modal" style="display: none">
       <div class="modal-content profile-modal-content">
         <div class="modal-header">
@@ -271,7 +364,8 @@
           </div>
           <div class="profile-info">
             <h3 id="profileName">Loading...</h3>
-            <p id="profileEmail"></p>
+            <p id="profileEmail" class="profile-view-only"></p>
+            <p id="profilePhone" class="profile-view-only"></p>
             <div class="profile-status-section">
               <label>Status (Bio)</label>
               <div class="profile-status-edit">
@@ -280,18 +374,8 @@
                   ✏️
                 </button>
               </div>
-              <div id="statusEditInput" style="display: none">
-                <input
-                  type="text"
-                  id="statusEditField"
-                  maxlength="100"
-                  placeholder="Your status..."
-                />
-                <button id="saveStatusBtn" class="btn-small">Save</button>
-                <button id="cancelStatusBtn" class="btn-small">Cancel</button>
-              </div>
             </div>
-            <div class="profile-online-section">
+            <div class="profile-status-section">
               <label>Online Status</label>
               <div id="profileOnlineStatus" class="online-status-display">
                 🟢 Online
@@ -300,9 +384,6 @@
           </div>
         </div>
         <div class="modal-footer">
-          <button id="profileSendMsgBtn" class="btn btn-primary">
-            Send Message
-          </button>
           <button id="profileCloseBtn" class="btn btn-outline">Close</button>
         </div>
       </div>
@@ -323,11 +404,12 @@
           <div class="profile-info">
             <h3 id="userProfileName">Loading...</h3>
             <p id="userProfileEmail"></p>
+            <p id="userProfilePhone"></p>
             <div class="profile-status-section">
               <label>Status</label>
               <div id="userProfileStatusText">No status</div>
             </div>
-            <div class="profile-online-section">
+            <div class="profile-status-section">
               <label>Online Status</label>
               <div id="userProfileOnlineStatus">🟢 Online</div>
             </div>
@@ -339,6 +421,48 @@
           </button>
           <button id="userProfileCloseBtn" class="btn btn-outline">
             Close
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Change Phone Number Modal -->
+    <div id="changePhoneModal" class="modal" style="display: none">
+      <div class="modal-content" style="max-width: 350px">
+        <div class="modal-header">
+          <h3>Change Phone Number</h3>
+          <span class="close-modal phone-close">&times;</span>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label>Phone Number (10 digits only)</label>
+            <div class="phone-input-group">
+              <select id="changePhoneCountryCode" class="country-code-select">
+                <option value="+91">🇮🇳 +91 (India)</option>
+                <option value="+1">🇺🇸 +1 (USA)</option>
+                <option value="+44">🇬🇧 +44 (UK)</option>
+                <option value="+61">🇦🇺 +61 (Australia)</option>
+                <option value="+971">🇦🇪 +971 (UAE)</option>
+                <option value="+966">🇸🇦 +966 (Saudi Arabia)</option>
+                <option value="+968">🇴🇲 +968 (Oman)</option>
+                <option value="+974">🇶🇦 +974 (Qatar)</option>
+                <option value="+965">🇰🇼 +965 (Kuwait)</option>
+                <option value="+973">🇧🇭 +973 (Bahrain)</option>
+                <option value="+33">🇫🇷 +33 (France)</option>
+                <option value="+49">🇩🇪 +49 (Germany)</option>
+                <option value="+81">🇯🇵 +81 (Japan)</option>
+                <option value="+86">🇨🇳 +86 (China)</option>
+              </select>
+              <input
+                type="tel"
+                id="changePhoneNumber"
+                placeholder="Enter 10-digit phone number"
+                style="flex: 1"
+              />
+            </div>
+          </div>
+          <button id="savePhoneChangeBtn" class="btn btn-primary">
+            Save Changes
           </button>
         </div>
       </div>
@@ -368,29 +492,6 @@
             style="margin-top: 8px"
           >
             Remove Avatar
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <!-- Create Group Modal -->
-    <div id="createGroupModal" class="modal" style="display: none">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h3>Create New Group</h3>
-          <span class="close-modal">&times;</span>
-        </div>
-        <div class="modal-body">
-          <div class="form-group">
-            <label>Group Name</label>
-            <input
-              type="text"
-              id="newGroupName"
-              placeholder="e.g., Marketing Team"
-            />
-          </div>
-          <button id="confirmCreateGroup" class="btn btn-primary">
-            Create Group
           </button>
         </div>
       </div>
@@ -473,6 +574,9 @@
       <div class="context-menu-item" id="changeStatusMenuItem">
         📝 Update Status (Bio)
       </div>
+      <div class="context-menu-item" id="changePhoneMenuItem">
+        📱 Change Phone Number
+      </div>
       <div class="context-menu-item" id="changePasswordMenuItem">
         🔐 Change Password
       </div>
@@ -486,6 +590,7 @@
 
     <!-- Message Context Menu -->
     <div id="messageMenu" class="context-menu" style="display: none">
+      <div class="context-menu-item" id="editMessageBtn">✏️ Edit Message</div>
       <div class="context-menu-item" id="deleteMessageBtn">
         🗑️ Delete Message
       </div>

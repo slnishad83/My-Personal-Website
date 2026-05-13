@@ -1389,3 +1389,514 @@ body.dark .profile-online-section {
 .messages-area {
   -webkit-overflow-scrolling: touch;
 }
+/* Document Attachment Styles */
+.document-attachment {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: rgba(0,0,0,0.05);
+  border-radius: 12px;
+  padding: 10px 12px;
+  margin-top: 8px;
+  min-width: 220px;
+}
+
+.document-icon {
+  font-size: 32px;
+}
+
+.document-info {
+  flex: 1;
+}
+
+.document-name {
+  font-size: 13px;
+  font-weight: 500;
+  word-break: break-all;
+}
+
+.document-badge {
+  font-size: 10px;
+  opacity: 0.7;
+  margin-top: 2px;
+}
+
+.download-btn {
+  background: #667eea;
+  border: none;
+  color: white;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.download-btn:hover {
+  background: #5a67d8;
+  transform: scale(1.02);
+}
+
+.image-attachment {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  background: none;
+  padding: 0;
+}
+
+.message-image {
+  max-width: 200px;
+  max-height: 200px;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: transform 0.1s;
+}
+
+.message-image:hover {
+  transform: scale(1.02);
+}
+
+.attachment-filename {
+  font-size: 10px;
+  opacity: 0.7;
+  text-align: center;
+}
+
+.video-attachment, .audio-attachment {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: none;
+  padding: 0;
+}
+
+/* PDF specific */
+.pdf-attachment .document-icon { font-size: 36px; }
+.word-attachment .document-icon { font-size: 36px; }
+.excel-attachment .document-icon { font-size: 36px; }
+.ppt-attachment .document-icon { font-size: 36px; }
+.archive-attachment .document-icon { font-size: 36px; }
+/* ========================================
+   STATUS DOT STYLES
+   ========================================= */
+
+/* Status dot on user avatar in personal tab */
+.item-avatar {
+  position: relative;
+  width: 44px;
+  height: 44px;
+}
+
+.online-dot-small {
+  position: absolute;
+  bottom: 2px;
+  right: 2px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 2px solid #ffffff;
+  background-color: #10b981;
+}
+
+.online-dot-small.busy {
+  background-color: #f59e0b;
+}
+
+.online-dot-small.away {
+  background-color: #ef4444;
+}
+
+/* Dark theme support */
+body.dark .online-dot-small {
+  border-color: #2d2d44;
+}
+
+/* Document Attachment Styles */
+.document-attachment {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: rgba(0,0,0,0.05);
+  border-radius: 12px;
+  padding: 10px 12px;
+  margin-top: 8px;
+  min-width: 220px;
+}
+
+.document-icon {
+  font-size: 32px;
+}
+
+.document-info {
+  flex: 1;
+}
+
+.document-name {
+  font-size: 13px;
+  font-weight: 500;
+  word-break: break-all;
+}
+
+.document-badge {
+  font-size: 10px;
+  opacity: 0.7;
+  margin-top: 2px;
+}
+
+.download-btn {
+  background: #667eea;
+  border: none;
+  color: white;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.download-btn:hover {
+  background: #5a67d8;
+  transform: scale(1.02);
+}
+
+.image-attachment {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  background: none;
+  padding: 0;
+}
+
+.message-image {
+  max-width: 200px;
+  max-height: 200px;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: transform 0.1s;
+}
+
+.message-image:hover {
+  transform: scale(1.02);
+}
+
+.attachment-filename {
+  font-size: 10px;
+  opacity: 0.7;
+  text-align: center;
+}
+
+.video-attachment, .audio-attachment {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: none;
+  padding: 0;
+}
+
+/* File type specific icons */
+.pdf-attachment .document-icon { font-size: 36px; }
+.word-attachment .document-icon { font-size: 36px; }
+.excel-attachment .document-icon { font-size: 36px; }
+.ppt-attachment .document-icon { font-size: 36px; }
+.archive-attachment .document-icon { font-size: 36px; }
+
+/* Edited message indicator */
+.message-edited {
+  font-size: 9px;
+  opacity: 0.6;
+  margin-left: 6px;
+}
+
+/* Dark theme support for attachments */
+body.dark .document-attachment {
+  background: rgba(255,255,255,0.08);
+}
+
+body.dark .download-btn {
+  background: #8b5cf6;
+}
+
+body.dark .download-btn:hover {
+  background: #7c3aed;
+}
+/* ========================================
+   SEARCH RESULTS & CLEAR BUTTON STYLES
+   ========================================= */
+
+/* Search wrapper with clear button */
+.search-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.search-wrapper input {
+  width: 100%;
+  padding-right: 35px;
+}
+
+.clear-search-btn {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  font-size: 16px;
+  cursor: pointer;
+  color: #888;
+  padding: 4px 8px;
+  border-radius: 20px;
+  transition: all 0.2s;
+}
+
+.clear-search-btn:hover {
+  color: #dc2626;
+  background: #fee2e2;
+}
+
+body.dark .clear-search-btn:hover {
+  color: #ef4444;
+  background: #2d2d44;
+}
+
+/* Global Search Results Dropdown */
+.search-results-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  max-height: 300px;
+  overflow-y: auto;
+  z-index: 1000;
+  box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1);
+  margin-top: 4px;
+}
+
+body.dark .search-results-dropdown {
+  background: #1a1a2e;
+  border-color: #2d2d44;
+}
+
+.search-result-item {
+  padding: 12px 16px;
+  border-bottom: 1px solid #eef2ff;
+  cursor: pointer;
+  transition: background 0.1s;
+}
+
+.search-result-item:hover {
+  background: #eff6ff;
+}
+
+body.dark .search-result-item:hover {
+  background: #2d2d44;
+}
+
+.search-result-item:last-child {
+  border-bottom: none;
+}
+
+.search-result-preview {
+  font-size: 12px;
+  color: #64748b;
+  margin-top: 4px;
+}
+
+.search-result-chat {
+  font-size: 11px;
+  color: #667eea;
+  margin-top: 4px;
+}
+
+body.dark .search-result-preview {
+  color: #94a3b8;
+}
+
+/* In-Chat Search Navigation */
+.in-chat-search {
+  padding: 12px 20px;
+  background: white;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+body.dark .in-chat-search {
+  background: #16213e;
+  border-bottom-color: #2d2d44;
+}
+
+.in-chat-search .search-wrapper {
+  margin-bottom: 8px;
+}
+
+.in-chat-search-nav {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+.search-nav-btn {
+  background: #667eea;
+  border: none;
+  color: white;
+  padding: 4px 12px;
+  border-radius: 20px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.search-nav-btn:hover {
+  background: #5a67d8;
+}
+
+#searchResultCount {
+  font-size: 12px;
+  color: #64748b;
+}
+
+body.dark #searchResultCount {
+  color: #94a3b8;
+}
+
+/* Highlighted search result in messages */
+.message-bubble.highlighted {
+  background: #fef3c7;
+  animation: highlightFlash 1s ease;
+  position: relative;
+}
+
+.message-bubble.highlighted.active {
+  background: #fde68a;
+  box-shadow: 0 0 0 2px #f59e0b;
+}
+
+.my-message .message-bubble.highlighted {
+  background: #f59e0b;
+}
+
+.my-message .message-bubble.highlighted.active {
+  background: #d97706;
+  box-shadow: 0 0 0 2px #fbbf24;
+}
+
+@keyframes highlightFlash {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.02); }
+  100% { transform: scale(1); }
+}
+
+/* Global search position */
+.global-search {
+  position: relative;
+  padding: 12px;
+  border-bottom: 1px solid #2d2d44;
+}
+
+/* Empty state for search */
+.empty-search-state {
+  text-align: center;
+  padding: 30px 20px;
+  color: #888;
+}
+
+.empty-search-state .empty-icon {
+  font-size: 36px;
+  margin-bottom: 12px;
+}
+/* ========================================
+   PHONE NUMBER, COUNTRY PICKER & SEARCH ERROR STYLES
+   ========================================= */
+
+.phone-input-group {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.country-code-select {
+  width: 120px;
+  padding: 12px;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 14px;
+  font-size: 14px;
+  font-family: 'Inter', sans-serif;
+  background: white;
+  cursor: pointer;
+}
+
+body.dark .country-code-select {
+  background: #2d2d44;
+  border-color: #3d3d5c;
+  color: white;
+}
+
+.profile-view-only {
+  color: #64748b;
+  font-size: 13px;
+  margin: 5px 0;
+  padding: 8px 12px;
+  background: #f8fafc;
+  border-radius: 12px;
+  word-break: break-all;
+}
+
+body.dark .profile-view-only {
+  background: #2d2d44;
+  color: #94a3b8;
+}
+
+.modal-footer {
+  display: flex;
+  gap: 12px;
+  padding: 16px 24px;
+  border-top: 1px solid #e2e8f0;
+}
+
+.modal-footer .btn {
+  margin-top: 0;
+}
+
+.close-modal-btn {
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  color: #888;
+  transition: color 0.2s;
+}
+
+.close-modal-btn:hover {
+  color: #dc2626;
+}
+
+body.dark .close-modal-btn:hover {
+  color: #ef4444;
+}
+
+/* Search Error Message */
+.search-error {
+  margin-top: 8px;
+  padding: 8px 12px;
+  background: #fee2e2;
+  border-radius: 10px;
+  font-size: 12px;
+  color: #dc2626;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.search-error::before {
+  content: "⚠️";
+}
+
+body.dark .search-error {
+  background: #7f1d1d;
+  color: #fca5a5;
+}
