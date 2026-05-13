@@ -1,0 +1,499 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, user-scalable=yes"
+    />
+    <title>Team Chat - Messages</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body class="chat-page light">
+    <div class="chat-container">
+      <!-- Sidebar -->
+      <div class="chat-sidebar">
+        <div class="sidebar-header">
+          <div class="user-info" id="userInfoBtn">
+            <div class="user-avatar-wrapper" id="avatarWrapper">
+              <div class="user-avatar" id="userAvatar">👤</div>
+              <div class="online-dot" id="onlineDot"></div>
+              <div
+                class="status-ring"
+                id="statusRing"
+                style="display: none"
+              ></div>
+            </div>
+            <div>
+              <span id="userName">Loading...</span>
+              <div class="user-status-text" id="userStatusText"></div>
+              <div class="online-status-label" id="onlineStatusLabel">
+                Online
+              </div>
+            </div>
+          </div>
+          <div class="header-buttons">
+            <button
+              id="themeToggleBtn"
+              class="icon-btn"
+              title="Dark/Light Mode"
+            >
+              🌙
+            </button>
+            <button id="statusMenuBtn" class="icon-btn" title="Set Status">
+              🔘
+            </button>
+            <button id="settingsBtn" class="icon-btn" title="Settings">
+              ⚙️
+            </button>
+            <button id="logoutBtn" class="icon-btn" title="Logout">🚪</button>
+          </div>
+        </div>
+
+        <!-- Status Selector Menu -->
+        <div id="statusSelectorMenu" class="context-menu" style="display: none">
+          <div class="context-menu-item" data-status="online">🟢 Online</div>
+          <div class="context-menu-item" data-status="busy">🟠 Busy</div>
+          <div class="context-menu-item" data-status="away">🔴 Away</div>
+        </div>
+
+        <!-- Chat Type Tabs -->
+        <div class="chat-tabs">
+          <button class="chat-tab active" data-tab="groups">💬 Groups</button>
+          <button class="chat-tab" data-tab="direct">👤 Direct</button>
+        </div>
+
+        <!-- Global Search -->
+        <div class="global-search">
+          <input
+            type="text"
+            id="globalSearch"
+            placeholder="🔍 Search messages..."
+          />
+        </div>
+
+        <!-- Groups List -->
+        <div id="groupsPanel" class="chat-panel active">
+          <div class="panel-header">
+            <h3>Your Groups</h3>
+            <button id="createGroupBtn" class="icon-btn" title="Create Group">
+              +
+            </button>
+          </div>
+          <div id="groupsList" class="items-list">
+            <div class="loading">Loading groups...</div>
+          </div>
+          <div class="join-section">
+            <input
+              type="text"
+              id="joinGroupCode"
+              placeholder="Enter group code to join"
+            />
+            <button id="joinGroupBtn" class="btn-small">Join</button>
+          </div>
+        </div>
+
+        <!-- Direct Messages Panel -->
+        <div id="directPanel" class="chat-panel">
+          <div class="panel-header">
+            <h3>Team Members</h3>
+          </div>
+          <div class="search-users">
+            <input type="text" id="searchUsers" placeholder="Search users..." />
+          </div>
+          <div id="usersList" class="items-list">
+            <div class="loading">Loading users...</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Main Chat Area -->
+      <div class="chat-main">
+        <div class="chat-header" id="chatHeader">
+          <div>
+            <h2 id="currentChatName">Select a chat</h2>
+            <div class="chat-header-details">
+              <span id="chatType" class="chat-type-badge"></span>
+              <span class="chat-status-badge" id="chatStatusBadge"></span>
+              <span
+                id="typingIndicator"
+                class="typing-indicator"
+                style="display: none"
+              ></span>
+            </div>
+          </div>
+          <div class="chat-actions">
+            <button
+              id="searchInChatBtn"
+              class="icon-btn"
+              title="Search in chat"
+            >
+              🔍
+            </button>
+          </div>
+        </div>
+
+        <!-- In-Chat Search Bar -->
+        <div id="inChatSearchBar" class="in-chat-search" style="display: none">
+          <input
+            type="text"
+            id="inChatSearch"
+            placeholder="Search in this conversation..."
+          />
+          <button id="closeSearchBtn" class="close-search">✖</button>
+        </div>
+
+        <div class="messages-area" id="messagesArea">
+          <div class="empty-state">
+            <div class="empty-icon">💬</div>
+            <p>Select a group or user to start chatting</p>
+          </div>
+        </div>
+
+        <div
+          class="message-input-area"
+          id="messageInputArea"
+          style="display: none"
+        >
+          <div class="file-preview" id="filePreview" style="display: none">
+            <span id="fileName"></span>
+            <button id="removeFileBtn" class="remove-file">✖</button>
+          </div>
+          <div class="input-row">
+            <button id="emojiBtn" class="emoji-btn" title="Add emoji">
+              😊
+            </button>
+            <button id="stickerBtn" class="sticker-btn" title="Add sticker">
+              🎨
+            </button>
+            <button id="attachFileBtn" class="attach-btn" title="Attach file">
+              📎
+            </button>
+            <input
+              type="text"
+              id="messageInput"
+              placeholder="Type your message..."
+              class="message-input"
+            />
+            <button id="sendBtn" class="send-btn" title="Send message">
+              ➤
+            </button>
+          </div>
+          <input type="file" id="fileInput" style="display: none" />
+        </div>
+      </div>
+    </div>
+
+    <!-- Full Emoji Picker Modal -->
+    <div id="emojiPickerModal" class="modal" style="display: none">
+      <div class="modal-content emoji-modal-content">
+        <div class="modal-header">
+          <h3>Emojis</h3>
+          <span class="close-modal emoji-close">&times;</span>
+        </div>
+        <div class="modal-body">
+          <div class="emoji-categories">
+            <button class="emoji-cat-btn active" data-cat="smileys">😀</button>
+            <button class="emoji-cat-btn" data-cat="people">👋</button>
+            <button class="emoji-cat-btn" data-cat="animals">🐶</button>
+            <button class="emoji-cat-btn" data-cat="food">🍔</button>
+            <button class="emoji-cat-btn" data-cat="activities">⚽</button>
+            <button class="emoji-cat-btn" data-cat="travel">✈️</button>
+            <button class="emoji-cat-btn" data-cat="objects">💡</button>
+            <button class="emoji-cat-btn" data-cat="symbols">❤️</button>
+            <button class="emoji-cat-btn" data-cat="flags">🏁</button>
+          </div>
+          <div class="emoji-search">
+            <input
+              type="text"
+              id="emojiSearch"
+              placeholder="Search emojis..."
+            />
+          </div>
+          <div id="emojiList" class="emoji-list-full"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sticker Picker Modal -->
+    <div id="stickerPickerModal" class="modal" style="display: none">
+      <div class="modal-content sticker-modal-content">
+        <div class="modal-header">
+          <h3>Stickers</h3>
+          <span class="close-modal sticker-close">&times;</span>
+        </div>
+        <div class="modal-body">
+          <div class="sticker-packs">
+            <button class="sticker-pack-btn active" data-pack="smiley">
+              😊 Smiley
+            </button>
+            <button class="sticker-pack-btn" data-pack="celebration">
+              🎉 Celebration
+            </button>
+            <button class="sticker-pack-btn" data-pack="love">❤️ Love</button>
+            <button class="sticker-pack-btn" data-pack="sad">😢 Sad</button>
+            <button class="sticker-pack-btn" data-pack="angry">😠 Angry</button>
+            <button class="sticker-pack-btn" data-pack="funny">😂 Funny</button>
+          </div>
+          <div id="stickerList" class="sticker-list"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Profile Modal (View & Edit Status) -->
+    <div id="profileModal" class="modal" style="display: none">
+      <div class="modal-content profile-modal-content">
+        <div class="modal-header">
+          <h3>Profile</h3>
+          <span class="close-modal profile-close">&times;</span>
+        </div>
+        <div class="modal-body">
+          <div class="profile-avatar-container">
+            <div class="profile-avatar" id="profileAvatar">👤</div>
+            <div class="profile-status-dot" id="profileStatusDot"></div>
+            <button
+              id="changeProfileAvatarBtn"
+              class="btn-small"
+              style="margin-top: 10px"
+            >
+              Change Photo
+            </button>
+            <input
+              type="file"
+              id="profileAvatarUpload"
+              accept="image/*"
+              style="display: none"
+            />
+          </div>
+          <div class="profile-info">
+            <h3 id="profileName">Loading...</h3>
+            <p id="profileEmail"></p>
+            <div class="profile-status-section">
+              <label>Status (Bio)</label>
+              <div class="profile-status-edit">
+                <span id="profileStatusText">No status</span>
+                <button id="editStatusBtn" class="icon-btn" title="Edit status">
+                  ✏️
+                </button>
+              </div>
+              <div id="statusEditInput" style="display: none">
+                <input
+                  type="text"
+                  id="statusEditField"
+                  maxlength="100"
+                  placeholder="Your status..."
+                />
+                <button id="saveStatusBtn" class="btn-small">Save</button>
+                <button id="cancelStatusBtn" class="btn-small">Cancel</button>
+              </div>
+            </div>
+            <div class="profile-online-section">
+              <label>Online Status</label>
+              <div id="profileOnlineStatus" class="online-status-display">
+                🟢 Online
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button id="profileSendMsgBtn" class="btn btn-primary">
+            Send Message
+          </button>
+          <button id="profileCloseBtn" class="btn btn-outline">Close</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- View Other User's Profile Modal -->
+    <div id="userProfileModal" class="modal" style="display: none">
+      <div class="modal-content profile-modal-content">
+        <div class="modal-header">
+          <h3>User Profile</h3>
+          <span class="close-modal user-profile-close">&times;</span>
+        </div>
+        <div class="modal-body">
+          <div class="profile-avatar-container">
+            <div class="profile-avatar" id="userProfileAvatar">👤</div>
+            <div class="profile-status-dot" id="userProfileStatusDot"></div>
+          </div>
+          <div class="profile-info">
+            <h3 id="userProfileName">Loading...</h3>
+            <p id="userProfileEmail"></p>
+            <div class="profile-status-section">
+              <label>Status</label>
+              <div id="userProfileStatusText">No status</div>
+            </div>
+            <div class="profile-online-section">
+              <label>Online Status</label>
+              <div id="userProfileOnlineStatus">🟢 Online</div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button id="userProfileSendMsgBtn" class="btn btn-primary">
+            Send Message
+          </button>
+          <button id="userProfileCloseBtn" class="btn btn-outline">
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Avatar Upload Modal -->
+    <div id="avatarModal" class="modal" style="display: none">
+      <div class="modal-content" style="max-width: 350px">
+        <div class="modal-header">
+          <h3>Update Profile Picture</h3>
+          <span class="close-modal avatar-close">&times;</span>
+        </div>
+        <div class="modal-body">
+          <div class="avatar-preview">
+            <div class="current-avatar" id="currentAvatarDisplay">👤</div>
+          </div>
+          <div class="form-group">
+            <label>Upload Image</label>
+            <input type="file" id="avatarUpload" accept="image/*" />
+          </div>
+          <button id="saveAvatarBtn" class="btn btn-primary">
+            Save Avatar
+          </button>
+          <button
+            id="removeAvatarBtn"
+            class="btn btn-outline"
+            style="margin-top: 8px"
+          >
+            Remove Avatar
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Create Group Modal -->
+    <div id="createGroupModal" class="modal" style="display: none">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>Create New Group</h3>
+          <span class="close-modal">&times;</span>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label>Group Name</label>
+            <input
+              type="text"
+              id="newGroupName"
+              placeholder="e.g., Marketing Team"
+            />
+          </div>
+          <button id="confirmCreateGroup" class="btn btn-primary">
+            Create Group
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Change Password Modal -->
+    <div id="changePasswordModal" class="modal" style="display: none">
+      <div class="modal-content" style="max-width: 350px">
+        <div class="modal-header">
+          <h3>Change Password</h3>
+          <span class="close-modal password-close">&times;</span>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label>Current Password</label>
+            <input
+              type="password"
+              id="currentPassword"
+              placeholder="Current password"
+            />
+          </div>
+          <div class="form-group">
+            <label>New Password</label>
+            <input
+              type="password"
+              id="newPassword"
+              placeholder="New password (min 6 chars)"
+            />
+          </div>
+          <div class="form-group">
+            <label>Confirm New Password</label>
+            <input
+              type="password"
+              id="confirmNewPassword"
+              placeholder="Confirm new password"
+            />
+          </div>
+          <button id="confirmChangePasswordBtn" class="btn btn-primary">
+            Update Password
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Change Email Modal -->
+    <div id="changeEmailModal" class="modal" style="display: none">
+      <div class="modal-content" style="max-width: 350px">
+        <div class="modal-header">
+          <h3>Change Email</h3>
+          <span class="close-modal email-close">&times;</span>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label>Current Password</label>
+            <input
+              type="password"
+              id="emailCurrentPassword"
+              placeholder="Current password"
+            />
+          </div>
+          <div class="form-group">
+            <label>New Email</label>
+            <input type="email" id="newEmail" placeholder="new@email.com" />
+          </div>
+          <button id="confirmChangeEmailBtn" class="btn btn-primary">
+            Update Email
+          </button>
+          <p class="auth-note">
+            Verification email will be sent to new address.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Settings Menu -->
+    <div id="settingsMenu" class="context-menu" style="display: none">
+      <div class="context-menu-item" id="changeAvatarMenuItem">
+        🖼️ Change Profile Picture
+      </div>
+      <div class="context-menu-item" id="changeStatusMenuItem">
+        📝 Update Status (Bio)
+      </div>
+      <div class="context-menu-item" id="changePasswordMenuItem">
+        🔐 Change Password
+      </div>
+      <div class="context-menu-item" id="changeEmailMenuItem">
+        📧 Change Email
+      </div>
+      <div class="context-menu-item" id="soundToggleMenuItem">
+        🔊 Toggle Sound
+      </div>
+    </div>
+
+    <!-- Message Context Menu -->
+    <div id="messageMenu" class="context-menu" style="display: none">
+      <div class="context-menu-item" id="deleteMessageBtn">
+        🗑️ Delete Message
+      </div>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+    <script src="app.js"></script>
+  </body>
+</html>
