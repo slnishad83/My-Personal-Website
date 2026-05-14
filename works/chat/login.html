@@ -4,7 +4,19 @@
     <meta charset="UTF-8" />
     <meta
       name="viewport"
-      content="width=device-width, initial-scale=1.0, user-scalable=yes"
+      content="width=device-width, initial-scale=1.0, user-scalable=yes, viewport-fit=cover"
+    />
+    <meta name="theme-color" content="#667eea" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta
+      name="apple-mobile-web-app-status-bar-style"
+      content="black-translucent"
+    />
+    <meta name="apple-mobile-web-app-title" content="Team Chat" />
+    <link rel="manifest" href="manifest.json" />
+    <link
+      rel="apple-touch-icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%23667eea'/%3E%3Ctext x='50' y='68' font-size='50' text-anchor='middle' fill='white' font-family='Arial'%3E💬%3C/text%3E%3C/svg%3E"
     />
     <title>Team Chat - Login</title>
     <link
@@ -12,8 +24,118 @@
       rel="stylesheet"
     />
     <link rel="stylesheet" href="style.css" />
+    <style>
+      .pwa-prompt {
+        position: fixed;
+        bottom: 20px;
+        left: 20px;
+        right: 20px;
+        background: white;
+        border-radius: 16px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+        z-index: 10000;
+        animation: slideUp 0.3s ease;
+        max-width: 400px;
+        margin: 0 auto;
+      }
+      @keyframes slideUp {
+        from {
+          transform: translateY(100%);
+          opacity: 0;
+        }
+        to {
+          transform: translateY(0);
+          opacity: 1;
+        }
+      }
+      .pwa-prompt-content {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 16px;
+      }
+      .pwa-prompt-icon {
+        font-size: 40px;
+      }
+      .pwa-prompt-text {
+        flex: 1;
+      }
+      .pwa-prompt-text strong {
+        display: block;
+        font-size: 14px;
+      }
+      .pwa-prompt-text span {
+        font-size: 12px;
+        color: #666;
+      }
+      .pwa-prompt-buttons {
+        display: flex;
+        gap: 8px;
+      }
+      .pwa-install-btn {
+        background: #667eea;
+        border: none;
+        padding: 8px 16px;
+        border-radius: 40px;
+        color: white;
+        font-weight: 600;
+        font-size: 12px;
+        cursor: pointer;
+      }
+      .pwa-continue-btn {
+        background: #e2e8f0;
+        border: none;
+        padding: 8px 16px;
+        border-radius: 40px;
+        color: #475569;
+        font-weight: 600;
+        font-size: 12px;
+        cursor: pointer;
+      }
+      .pwa-close-btn {
+        background: none;
+        border: none;
+        font-size: 18px;
+        cursor: pointer;
+        color: #888;
+        padding: 4px;
+      }
+      body.dark .pwa-prompt {
+        background: #1e293b;
+      }
+      body.dark .pwa-prompt-text span {
+        color: #94a3b8;
+      }
+      body.dark .pwa-continue-btn {
+        background: #334155;
+        color: #cbd5e1;
+      }
+      @media (max-width: 768px) {
+        .pwa-prompt {
+          left: 16px;
+          right: 16px;
+          bottom: 16px;
+        }
+      }
+    </style>
   </head>
   <body class="auth-page">
+    <!-- PWA Install Prompt -->
+    <div id="pwaPrompt" class="pwa-prompt" style="display: none">
+      <div class="pwa-prompt-content">
+        <div class="pwa-prompt-icon">💬</div>
+        <div class="pwa-prompt-text">
+          <strong>Install Team Chat</strong>
+          <span>Get app-like experience with offline support</span>
+        </div>
+        <div class="pwa-prompt-buttons">
+          <button id="installAppBtn" class="pwa-install-btn">Install</button>
+          <button id="continueWebBtn" class="pwa-continue-btn">Web</button>
+        </div>
+        <button id="closePwaPrompt" class="pwa-close-btn">✖</button>
+      </div>
+    </div>
+
     <div class="auth-container">
       <div class="auth-card">
         <div class="auth-header">
@@ -112,6 +234,60 @@
         </div>
       </div>
     </div>
+
+    <script>
+      // PWA Install Prompt
+      let deferredPrompt = null;
+      const pwaPrompt = document.getElementById("pwaPrompt");
+      const installBtn = document.getElementById("installAppBtn");
+      const continueBtn = document.getElementById("continueWebBtn");
+      const closePwaBtn = document.getElementById("closePwaPrompt");
+
+      const pwaDismissed = localStorage.getItem("pwaDismissed");
+      const isStandalone =
+        window.matchMedia("(display-mode: standalone)").matches ||
+        window.navigator.standalone;
+
+      if (!isStandalone && !pwaDismissed) {
+        setTimeout(() => {
+          pwaPrompt.style.display = "block";
+        }, 1000);
+      }
+
+      window.addEventListener("beforeinstallprompt", (e) => {
+        e.preventDefault();
+        deferredPrompt = e;
+        if (
+          !isStandalone &&
+          !pwaDismissed &&
+          pwaPrompt.style.display !== "block"
+        ) {
+          pwaPrompt.style.display = "block";
+        }
+      });
+
+      installBtn?.addEventListener("click", async () => {
+        if (deferredPrompt) {
+          deferredPrompt.prompt();
+          const { outcome } = await deferredPrompt.userChoice;
+          if (outcome === "accepted") {
+            localStorage.setItem("pwaDismissed", "true");
+            pwaPrompt.style.display = "none";
+          }
+          deferredPrompt = null;
+        }
+      });
+
+      continueBtn?.addEventListener("click", () => {
+        localStorage.setItem("pwaDismissed", "true");
+        pwaPrompt.style.display = "none";
+      });
+
+      closePwaBtn?.addEventListener("click", () => {
+        localStorage.setItem("pwaDismissed", "true");
+        pwaPrompt.style.display = "none";
+      });
+    </script>
 
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
