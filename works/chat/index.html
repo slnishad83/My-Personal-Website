@@ -12,318 +12,218 @@
       name="apple-mobile-web-app-status-bar-style"
       content="black-translucent"
     />
-    <meta name="apple-mobile-web-app-title" content="Team Chat" />
-    <link rel="manifest" href="manifest.json" />
     <title>Team Chat - Complete</title>
     <link
       href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700&display=swap"
       rel="stylesheet"
     />
     <link rel="stylesheet" href="style.css" />
+    <link rel="manifest" href="manifest.json" />
+    <style>
+      .toast {
+        position: fixed;
+        bottom: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: #10b981;
+        color: white;
+        padding: 12px 24px;
+        border-radius: 40px;
+        font-size: 14px;
+        z-index: 10000;
+        opacity: 0;
+        transition: opacity 0.3s;
+        pointer-events: none;
+      }
+      .toast.error {
+        background: #ef4444;
+      }
+    </style>
   </head>
-  <body class="chat-page light">
-    <!-- Mobile Menu Overlay -->
-    <div
-      id="mobileMenuOverlay"
-      class="mobile-overlay"
-      style="display: none"
-    ></div>
-
+  <body>
     <div class="chat-container">
-      <!-- Sidebar / Drawer (Mobile) -->
-      <div class="chat-sidebar" id="chatSidebar">
+      <!-- Sidebar -->
+      <div class="sidebar" id="sidebar">
         <div class="sidebar-header">
-          <div class="user-info" id="userInfoBtn">
-            <div class="user-avatar-wrapper" id="avatarWrapper">
-              <div class="user-avatar" id="userAvatar">👤</div>
-              <div class="online-dot" id="onlineDot"></div>
-              <div
-                class="status-ring"
-                id="statusRing"
-                style="display: none"
-              ></div>
-            </div>
+          <div class="user-info" id="profileBtn">
+            <div class="user-avatar" id="userAvatar">👤</div>
             <div>
-              <span id="userName">Loading...</span>
-              <div class="user-status-text" id="userStatusText"></div>
-              <div class="online-status-label" id="onlineStatusLabel">
-                Online
-              </div>
+              <div class="user-name" id="userName">Loading...</div>
+              <div class="user-status-text" id="userStatusText">Online</div>
             </div>
           </div>
-          <div class="header-buttons">
-            <button
-              id="menuToggleBtn"
-              class="icon-btn mobile-menu-toggle"
-              style="display: none"
-            >
-              ☰
-            </button>
-            <button
-              id="themeToggleBtn"
-              class="icon-btn"
-              title="Dark/Light Mode"
-            >
+          <div style="display: flex; gap: 8px">
+            <button class="icon-btn" id="darkModeBtn" title="Dark Mode">
               🌙
             </button>
-            <button id="statusMenuBtn" class="icon-btn" title="Set Status">
-              🔘
-            </button>
-            <button id="settingsBtn" class="icon-btn" title="Settings">
-              ⚙️
-            </button>
-            <button id="logoutBtn" class="icon-btn" title="Logout">🚪</button>
+            <button class="logout-btn" id="logoutBtn" title="Logout">🚪</button>
           </div>
         </div>
 
-        <!-- Status Selector Menu -->
-        <div id="statusSelectorMenu" class="context-menu" style="display: none">
-          <div class="context-menu-item" data-status="online">🟢 Online</div>
-          <div class="context-menu-item" data-status="busy">🟠 Busy</div>
-          <div class="context-menu-item" data-status="away">🔴 Away</div>
+        <div class="search-box">
+          <input
+            type="text"
+            id="searchInput"
+            placeholder="🔍 Search users by name, phone, or email..."
+          />
         </div>
 
-        <!-- Wallpaper Selector -->
+        <div class="request-section">
+          <div class="request-header">
+            💌 Chat Requests
+            <span id="requestBadge" class="badge" style="display: none"></span>
+          </div>
+          <div id="requestList" class="list">
+            <div class="empty-state">No requests</div>
+          </div>
+        </div>
+
+        <div class="archive-section">
+          <div class="archive-header" id="archiveHeader">
+            <span>📦 Archived Chats</span>
+            <span id="archiveToggle">▼</span>
+          </div>
+          <div id="archiveList" class="archive-list"></div>
+        </div>
+
         <div
-          id="wallpaperSelector"
-          class="wallpaper-selector"
-          style="display: none"
-        >
-          <div class="wallpaper-header">
-            <span>Chat Wallpaper</span>
-            <button id="closeWallpaperBtn" class="close-wallpaper">✖</button>
-          </div>
-          <div class="wallpaper-options">
-            <div
-              class="wallpaper-option"
-              data-wallpaper="default"
-              style="background: #f8fafc"
-            >
-              Default
-            </div>
-            <div
-              class="wallpaper-option"
-              data-wallpaper="dark"
-              style="background: #1a1a2e; color: white"
-            >
-              Dark
-            </div>
-            <div
-              class="wallpaper-option"
-              data-wallpaper="forest"
-              style="background: #2d5a27; color: white"
-            >
-              🌲 Forest
-            </div>
-            <div
-              class="wallpaper-option"
-              data-wallpaper="ocean"
-              style="background: #1a4a6e; color: white"
-            >
-              🌊 Ocean
-            </div>
-            <div
-              class="wallpaper-option"
-              data-wallpaper="sunset"
-              style="background: #8b4513; color: white"
-            >
-              🌅 Sunset
-            </div>
-            <div
-              class="wallpaper-option"
-              data-wallpaper="mountains"
-              style="background: #4a5568; color: white"
-            >
-              ⛰️ Mountains
-            </div>
-          </div>
-        </div>
-
-        <!-- Main Tabs (No Pinned tab anymore) -->
-        <div class="main-tabs">
-          <button class="main-tab active" data-tab="chats">💬 Chats</button>
-          <button class="main-tab" data-tab="groups">👥 Groups</button>
-          <button class="main-tab" data-tab="archive">📦 Archive</button>
-          <button class="main-tab" data-tab="requests">🔔 Requests</button>
-        </div>
-
-        <!-- Chats Tab (Personal) -->
-        <div id="chatsTab" class="tab-panel active">
-          <div class="search-users">
-            <div class="search-wrapper">
-              <input
-                type="text"
-                id="searchUsers"
-                placeholder="🔍 Search by name, email, or phone..."
-              />
-              <button
-                id="clearUserSearchBtn"
-                class="clear-search-btn"
-                style="display: none"
-              >
-                ✖
-              </button>
-            </div>
-            <div
-              id="searchError"
-              class="search-error"
-              style="display: none"
-            ></div>
-          </div>
-          <div id="usersList" class="items-list">
-            <div class="empty-users">
-              <div class="empty-icon">🔍</div>
-              <p>Search by name, email, or phone to find users</p>
-            </div>
-          </div>
-        </div>
-
-        <!-- Groups Tab -->
-        <div id="groupsTab" class="tab-panel">
-          <div class="panel-header">
-            <h3>Your Groups</h3>
-            <button id="createGroupBtn" class="icon-btn" title="Create Group">
-              +
-            </button>
-          </div>
-          <div id="groupsList" class="items-list">
-            <div class="loading">Loading groups...</div>
-          </div>
-          <div class="join-section">
-            <input
-              type="text"
-              id="joinGroupCode"
-              placeholder="Enter group code to join"
-            />
-            <button id="joinGroupBtn" class="btn-small">Join</button>
-          </div>
-        </div>
-
-        <!-- Archive Tab -->
-        <div id="archiveTab" class="tab-panel">
-          <div class="panel-header">
-            <h3>Archived Chats</h3>
-          </div>
-          <div id="archiveList" class="items-list">
-            <div class="empty-users">
-              <div class="empty-icon">📦</div>
-              <p>No archived chats</p>
-            </div>
-          </div>
-        </div>
-
-        <!-- Requests Tab -->
-        <div id="requestsTab" class="tab-panel">
-          <div class="panel-header">
-            <h3>Chat Requests</h3>
-          </div>
-          <div id="requestsList" class="items-list">
-            <div class="empty-users">
-              <div class="empty-icon">🔔</div>
-              <p>No pending requests</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Main Chat Area -->
-      <div class="chat-main" id="chatMain">
-        <div class="chat-header" id="chatHeader">
-          <div class="chat-header-info">
-            <div class="chat-avatar" id="chatAvatar">👤</div>
-            <div>
-              <h2 id="currentChatName">Select a chat</h2>
-              <div class="chat-header-details">
-                <span id="chatType" class="chat-type-badge"></span>
-                <span class="chat-status-badge" id="chatStatusBadge"></span>
-                <span
-                  id="typingIndicator"
-                  class="typing-indicator"
-                  style="display: none"
-                ></span>
-                <span
-                  id="lastSeenBadge"
-                  class="last-seen-badge"
-                  style="display: none"
-                ></span>
-              </div>
-            </div>
-          </div>
-          <div class="chat-actions">
-            <button id="wallpaperBtn" class="icon-btn" title="Change Wallpaper">
-              🖼️
-            </button>
-            <button
-              id="groupInfoBtn"
-              class="icon-btn"
-              title="Group Info"
-              style="display: none"
-            >
-              ℹ️
-            </button>
-            <button
-              id="searchInChatBtn"
-              class="icon-btn"
-              title="Search in this chat"
-            >
-              🔍
-            </button>
-          </div>
-        </div>
-
-        <!-- Reply Preview Bar -->
-        <div
-          id="replyPreviewBar"
-          class="reply-preview-bar"
-          style="display: none"
-        >
-          <div class="reply-preview-content">
-            <div class="reply-preview-text">
-              <span class="reply-preview-label">Replying to</span>
-              <span id="replyPreviewSender" class="reply-preview-sender"></span>
-              <span
-                id="replyPreviewMessage"
-                class="reply-preview-message"
-              ></span>
-            </div>
-            <button id="cancelReplyBtn" class="cancel-reply-btn">✖</button>
-          </div>
-        </div>
-
-        <!-- Pinned Messages Section (appears at top of chat) -->
-        <div
-          id="pinnedMessagesSection"
           class="pinned-messages-section"
+          id="pinnedSection"
           style="display: none"
         >
           <div class="pinned-header">
             <span>📌 Pinned Messages</span>
-            <span id="pinnedCount" class="pinned-count">0/3</span>
+            <span class="pinned-count" id="pinnedCount">0</span>
           </div>
           <div id="pinnedMessagesList" class="pinned-messages-list"></div>
         </div>
 
-        <!-- In-Chat Search Bar -->
-        <div id="inChatSearchBar" class="in-chat-search" style="display: none">
-          <div class="search-wrapper">
+        <div class="tabs">
+          <button class="tab active" data-tab="all">All</button>
+          <button class="tab" data-tab="unread">🔔 Unread</button>
+          <button class="tab" data-tab="favorites">⭐ Favorites</button>
+          <button class="tab" data-tab="groups">👥 Groups</button>
+        </div>
+
+        <div id="chatsList" class="list">
+          <div class="empty-state">No chats yet</div>
+        </div>
+        <div id="groupsList" class="list" style="display: none">
+          <div class="empty-state">No groups yet</div>
+        </div>
+
+        <div class="group-actions" id="groupActions" style="display: none">
+          <button
+            id="createGroupBtn"
+            class="join-btn"
+            style="flex: 1; background: #10b981"
+          >
+            ➕ New Group
+          </button>
+          <button id="showJoinGroupBtn" class="join-btn" style="flex: 1">
+            🔗 Join Group
+          </button>
+        </div>
+      </div>
+      <!-- This closes the sidebar -->
+
+      <!-- Main Chat Area -->
+      <div class="chat-main">
+        <div class="chat-header">
+          <button
+            class="mobile-menu-btn"
+            id="mobileMenuBtn"
+            style="
+              display: none;
+              background: none;
+              border: none;
+              font-size: 24px;
+              cursor: pointer;
+              color: white;
+              padding: 8px;
+            "
+          >
+            ☰
+          </button>
+          <div>
+            <h2 id="currentChatName">Select a chat</h2>
+            <div class="chat-status" id="chatStatus"></div>
+          </div>
+          <div class="chat-actions">
+            <button class="icon-btn" id="searchChatBtn" title="Search in chat">
+              🔍
+            </button>
+            <button
+              class="icon-btn"
+              id="groupInfoBtn"
+              style="display: none"
+              title="Group Info"
+            >
+              ℹ️
+            </button>
+            <button class="icon-btn" id="wallpaperBtn" title="Change Wallpaper">
+              🖼️
+            </button>
+          </div>
+        </div>
+
+        <div
+          id="inChatSearchBar"
+          style="
+            display: none;
+            padding: 12px 20px;
+            background: white;
+            border-bottom: 1px solid #e2e8f0;
+          "
+        >
+          <div style="display: flex; gap: 8px; align-items: center">
             <input
               type="text"
-              id="inChatSearch"
-              placeholder="🔍 Search in this conversation..."
+              id="inChatSearchInput"
+              placeholder="Search in this chat..."
+              style="
+                flex: 1;
+                padding: 8px 12px;
+                border: 1px solid #e2e8f0;
+                border-radius: 20px;
+              "
             />
             <button
-              id="clearInChatSearchBtn"
-              class="clear-search-btn"
-              style="display: none"
+              id="prevSearchBtn"
+              style="
+                padding: 6px 12px;
+                background: #667eea;
+                color: white;
+                border: none;
+                border-radius: 20px;
+              "
+            >
+              ←
+            </button>
+            <button
+              id="nextSearchBtn"
+              style="
+                padding: 6px 12px;
+                background: #667eea;
+                color: white;
+                border: none;
+                border-radius: 20px;
+              "
+            >
+              →
+            </button>
+            <span id="searchResultCount" style="font-size: 12px"></span>
+            <button
+              id="closeSearchBtn"
+              style="
+                background: none;
+                border: none;
+                font-size: 20px;
+                cursor: pointer;
+              "
             >
               ✖
             </button>
-          </div>
-          <div class="in-chat-search-nav" style="display: none">
-            <span id="searchResultCount">0 results</span>
-            <button id="prevResultBtn" class="search-nav-btn">←</button>
-            <button id="nextResultBtn" class="search-nav-btn">→</button>
-            <button id="closeSearchBtn" class="close-search">✖</button>
           </div>
         </div>
 
@@ -334,247 +234,154 @@
           </div>
         </div>
 
-        <!-- Message Info Modal -->
-        <div id="messageInfoModal" class="modal" style="display: none">
-          <div class="modal-content" style="max-width: 350px">
-            <div class="modal-header">
-              <h3>Message Info</h3>
-              <span class="close-modal info-close">&times;</span>
-            </div>
-            <div class="modal-body">
-              <div class="info-row">
-                <strong>Sent:</strong> <span id="infoSentTime"></span>
-              </div>
-              <div class="info-row">
-                <strong>Delivered:</strong>
-                <span id="infoDeliveredTime">Not delivered yet</span>
-              </div>
-              <div class="info-row">
-                <strong>Read:</strong>
-                <span id="infoReadTime">Not read yet</span>
-              </div>
-              <div class="info-row">
-                <strong>Edited:</strong> <span id="infoEditedTime">No</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Forward Message Modal -->
-        <div id="forwardModal" class="modal" style="display: none">
-          <div class="modal-content" style="max-width: 400px">
-            <div class="modal-header">
-              <h3>Forward Message</h3>
-              <span class="close-modal forward-close">&times;</span>
-            </div>
-            <div class="modal-body">
-              <div class="form-group">
-                <label>Search contacts or groups</label>
-                <input type="text" id="forwardSearch" placeholder="Search..." />
-              </div>
-              <div id="forwardList" class="forward-list"></div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Mention Dropdown -->
         <div
-          id="mentionDropdown"
-          class="mention-dropdown"
-          style="display: none"
+          id="replyPreviewBar"
+          style="
+            display: none;
+            background: #f1f5f9;
+            border-left: 4px solid #667eea;
+            padding: 8px 16px;
+            margin: 0 20px;
+            border-radius: 12px;
+          "
         >
-          <div class="mention-dropdown-list" id="mentionList"></div>
-        </div>
-
-        <!-- Voice Recording Indicator -->
-        <div
-          id="voiceRecordingIndicator"
-          class="voice-recording-indicator"
-          style="display: none"
-        >
-          <div class="recording-content">
-            <div class="recording-wave">🎤 ●●●●</div>
-            <div class="recording-timer" id="recordingTimer">0:00</div>
-            <button id="cancelRecordingBtn" class="cancel-recording-btn">
-              Cancel
-            </button>
-          </div>
-        </div>
-
-        <div
-          class="message-input-area"
-          id="messageInputArea"
-          style="display: none"
-        >
-          <div class="file-preview" id="filePreview" style="display: none">
-            <span id="fileName"></span>
-            <button id="removeFileBtn" class="remove-file">✖</button>
-          </div>
-          <div class="input-row">
+          <div
+            style="
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+            "
+          >
+            <div>
+              <span style="font-size: 11px; color: #667eea; font-weight: 600"
+                >Replying to</span
+              >
+              <span
+                id="replyPreviewSender"
+                style="font-size: 12px; font-weight: 600"
+              ></span>
+              <div
+                id="replyPreviewText"
+                style="font-size: 11px; color: #64748b"
+              ></div>
+            </div>
             <button
-              id="voiceMsgBtn"
-              class="voice-msg-btn"
-              title="Voice message"
+              id="cancelReplyBtn"
+              style="
+                background: none;
+                border: none;
+                font-size: 18px;
+                cursor: pointer;
+              "
             >
-              🎤
-            </button>
-            <button id="attachFileBtn" class="attach-btn" title="Attach file">
-              📎
-            </button>
-            <input
-              type="text"
-              id="messageInput"
-              placeholder="Type a message..."
-              class="message-input"
-            />
-            <button id="sendBtn" class="send-btn" title="Send message">
-              ➤
+              ✖
             </button>
           </div>
-          <input type="file" id="fileInput" style="display: none" />
-          <audio id="audioPlayer" style="display: none"></audio>
+        </div>
+
+        <div class="input-area" id="inputArea" style="display: none">
+          <div style="position: relative">
+            <button class="emoji-btn" id="emojiBtn" title="Emoji">😊</button>
+            <div id="emojiPicker" class="emoji-picker"></div>
+          </div>
+          <button
+            class="voice-msg-btn"
+            id="voiceMsgBtn"
+            title="Hold to record voice"
+          >
+            🎤
+          </button>
+          <button class="attach-btn" id="attachBtn" title="Attach file">
+            📎
+          </button>
+          <input
+            type="text"
+            id="messageInput"
+            placeholder="Type a message..."
+          />
+          <button class="send-btn" id="sendBtn">➤</button>
         </div>
       </div>
     </div>
 
-    <!-- Chat Context Menu -->
-    <div id="chatContextMenu" class="context-menu" style="display: none">
-      <div class="context-menu-item" id="deleteChatMenuItem">
-        🗑️ Delete Chat
-      </div>
-      <div class="context-menu-item" id="archiveChatMenuItem">
-        📦 Archive Chat
-      </div>
-      <div class="context-menu-item" id="muteChatMenuItem">
-        🔇 Mute Notifications
-      </div>
-      <div class="context-menu-item" id="blockUserMenuItem">🚫 Block User</div>
-    </div>
-
-    <!-- Archived Chat Context Menu -->
-    <div id="archiveContextMenu" class="context-menu" style="display: none">
-      <div class="context-menu-item" id="unarchiveMenuItem">📤 Unarchive</div>
-      <div class="context-menu-item" id="deleteArchiveMenuItem">
-        🗑️ Delete Permanently
-      </div>
-    </div>
-
-    <!-- Group Context Menu -->
-    <div id="groupContextMenu" class="context-menu" style="display: none">
-      <div class="context-menu-item" id="groupInfoMenuItem">ℹ️ Group Info</div>
-      <div class="context-menu-item" id="editGroupNameMenuItem">
-        ✏️ Edit Group Name
-      </div>
-      <div class="context-menu-item" id="addMemberMenuItem">👤 Add Member</div>
-      <div class="context-menu-item" id="leaveGroupMenuItem">
-        🚪 Leave Group
-      </div>
-      <div class="context-menu-item" id="archiveGroupMenuItem">
-        📦 Archive Group
-      </div>
-      <div class="context-menu-item" id="deleteGroupMenuItem">
-        🗑️ Delete Group
-      </div>
-    </div>
-
-    <!-- Member Context Menu -->
-    <div id="memberContextMenu" class="context-menu" style="display: none">
-      <div class="context-menu-item" id="makeAdminMenuItem">👑 Make Admin</div>
-      <div class="context-menu-item" id="removeMemberMenuItem">
-        ❌ Remove Member
-      </div>
-    </div>
-
-    <!-- Chat Request Notification -->
-    <div
-      id="requestNotification"
-      class="request-notification"
+    <input
+      type="file"
+      id="fileInput"
+      accept="image/*,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
       style="display: none"
-    >
-      <div class="request-content">
-        <div class="request-info">
-          <strong id="requestUserName">User</strong>
-          <span>wants to chat with you</span>
-        </div>
-        <div class="request-actions">
-          <button id="acceptRequestBtn" class="request-accept">Accept</button>
-          <button id="rejectRequestBtn" class="request-reject">Reject</button>
-          <button id="blockRequestBtn" class="request-block">Block</button>
-        </div>
+    />
+    <input
+      type="file"
+      id="avatarInput"
+      accept="image/*"
+      style="display: none"
+    />
+    <input
+      type="file"
+      id="groupIconInput"
+      accept="image/*"
+      style="display: none"
+    />
+    <input
+      type="file"
+      id="wallpaperUploadInput"
+      accept="image/*"
+      style="display: none"
+    />
+
+    <div id="voiceRecordingIndicator" class="voice-recording-indicator">
+      <div style="display: flex; align-items: center; gap: 16px">
+        <span>🎙️ Recording...</span>
+        <span id="recordingTimer">0:00</span>
+        <button
+          id="cancelRecordingBtn"
+          style="
+            background: #1e293b;
+            border: none;
+            color: white;
+            padding: 6px 16px;
+            border-radius: 40px;
+            cursor: pointer;
+          "
+        >
+          Cancel
+        </button>
       </div>
     </div>
 
-    <!-- Group Info Modal -->
-    <div id="groupInfoModal" class="modal" style="display: none">
-      <div class="modal-content" style="max-width: 400px">
+    <!-- First Time Phone Modal -->
+    <div id="firstTimePhoneModal" class="modal" style="display: none">
+      <div class="modal-content">
         <div class="modal-header">
-          <h3>Group Info</h3>
-          <span class="close-modal group-info-close">&times;</span>
+          <h3>📱 Add Your Phone Number (Optional)</h3>
         </div>
         <div class="modal-body">
-          <div class="group-avatar-container">
-            <div class="group-avatar" id="groupAvatarModal">👥</div>
-            <button id="changeGroupAvatarBtn" class="btn-small">
-              Change Icon
+          <p style="margin-bottom: 16px">
+            Your teammates can find you by phone number.
+          </p>
+          <input
+            type="tel"
+            id="firstTimePhone"
+            placeholder="Enter 10-digit phone number (Indian)"
+            style="
+              width: 100%;
+              padding: 12px;
+              border: 1px solid #e2e8f0;
+              border-radius: 12px;
+            "
+          />
+          <div style="display: flex; gap: 12px; margin-top: 20px">
+            <button id="skipPhoneBtn" class="btn btn-outline" style="flex: 1">
+              Skip for now
             </button>
-            <input
-              type="file"
-              id="groupAvatarUpload"
-              accept="image/*"
-              style="display: none"
-            />
+            <button
+              id="savePhoneFirstBtn"
+              class="btn btn-primary"
+              style="flex: 1"
+            >
+              Save
+            </button>
           </div>
-          <div class="form-group">
-            <label>Group Name</label>
-            <input
-              type="text"
-              id="editGroupNameInput"
-              placeholder="Group name"
-            />
-          </div>
-          <div class="form-group">
-            <label>Group Code</label>
-            <input type="text" id="groupCodeDisplay" readonly />
-          </div>
-          <div class="form-group">
-            <label>Members</label>
-            <div id="membersList" class="members-list"></div>
-          </div>
-          <div class="form-group">
-            <label>Add Member</label>
-            <div class="add-member-input">
-              <input
-                type="text"
-                id="addMemberEmail"
-                placeholder="Enter email address"
-              />
-              <button id="addMemberBtn" class="btn-small">Add</button>
-            </div>
-          </div>
-        </div>
-        <div class="modal-footer">
-          <button id="closeGroupInfoBtn" class="btn btn-outline">Close</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- Edit Message Modal -->
-    <div id="editMessageModal" class="modal" style="display: none">
-      <div class="modal-content" style="max-width: 400px">
-        <div class="modal-header">
-          <h3>Edit Message</h3>
-          <span class="close-modal edit-close">&times;</span>
-        </div>
-        <div class="modal-body">
-          <div class="form-group">
-            <label>Edit your message</label>
-            <input
-              type="text"
-              id="editMessageInput"
-              placeholder="Edit message..."
-            />
-          </div>
-          <button id="saveEditBtn" class="btn btn-primary">Save Changes</button>
         </div>
       </div>
     </div>
@@ -584,346 +391,482 @@
       <div class="modal-content">
         <div class="modal-header">
           <h3>Create New Group</h3>
-          <span class="close-modal">&times;</span>
+          <span class="close-modal closeCreateModal">&times;</span>
         </div>
         <div class="modal-body">
-          <div class="form-group">
-            <label>Group Name</label>
+          <input
+            type="text"
+            id="newGroupName"
+            placeholder="Group name"
+            style="
+              width: 100%;
+              padding: 12px;
+              margin-bottom: 16px;
+              border: 1px solid #e2e8f0;
+              border-radius: 12px;
+            "
+          />
+          <input
+            type="text"
+            id="newGroupMembers"
+            placeholder="Add members (email addresses, comma separated)"
+            style="
+              width: 100%;
+              padding: 12px;
+              border: 1px solid #e2e8f0;
+              border-radius: 12px;
+            "
+          />
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-outline cancelGroupBtn">Cancel</button
+          ><button class="btn btn-primary confirmGroupBtn">Create</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Join Group Modal -->
+    <div id="joinGroupModal" class="modal" style="display: none">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>Join Group</h3>
+          <span class="close-modal closeJoinModal">&times;</span>
+        </div>
+        <div class="modal-body">
+          <input
+            type="text"
+            id="joinGroupCodeInput"
+            placeholder="Enter group code"
+            style="
+              width: 100%;
+              padding: 12px;
+              border: 1px solid #e2e8f0;
+              border-radius: 12px;
+            "
+          />
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-outline closeJoinModal">Cancel</button
+          ><button class="btn btn-primary confirmJoinBtn">Join</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Group Info Modal -->
+    <div id="groupInfoModal" class="modal" style="display: none">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3 id="groupInfoTitle">Group Info</h3>
+          <span class="close-modal closeGroupInfoModal">&times;</span>
+        </div>
+        <div class="modal-body">
+          <div style="text-align: center">
+            <div class="group-avatar-large" id="groupAvatarLarge">👥</div>
             <input
               type="text"
-              id="newGroupName"
-              placeholder="e.g., Marketing Team"
+              id="editGroupNameInput"
+              placeholder="Group name"
+              style="
+                text-align: center;
+                width: 100%;
+                margin-bottom: 8px;
+                padding: 8px;
+                border: 1px solid #e2e8f0;
+                border-radius: 12px;
+              "
             />
+            <p style="font-size: 12px; color: #888">
+              Invite Code: <strong id="groupCodeDisplay"></strong>
+              <button
+                id="copyGroupCodeBtn"
+                style="background: none; border: none; cursor: pointer"
+              >
+                📋
+              </button>
+            </p>
           </div>
-          <div class="form-group">
-            <label>Add Members (optional)</label>
+          <div style="margin-top: 20px">
+            <h4>Members</h4>
+            <div id="groupMembersList" class="member-list"></div>
+          </div>
+          <div style="margin-top: 16px; display: flex; gap: 8px">
             <input
               type="text"
-              id="newGroupMembers"
-              placeholder="Enter email addresses separated by commas"
-            />
+              id="addMemberEmail"
+              placeholder="Email to add"
+              style="
+                flex: 1;
+                padding: 10px;
+                border: 1px solid #e2e8f0;
+                border-radius: 12px;
+              "
+            /><button id="addMemberBtn" class="btn btn-outline">Add</button>
           </div>
-          <button id="confirmCreateGroup" class="btn btn-primary">
-            Create Group
-          </button>
+          <div style="margin-top: 20px">
+            <button
+              id="leaveGroupBtn"
+              class="btn btn-outline"
+              style="background: #fee2e2; color: #dc2626; width: 100%"
+            >
+              Leave Group
+            </button>
+            <button
+              id="deleteGroupBtn"
+              class="btn btn-danger"
+              style="margin-top: 8px; width: 100%; display: none"
+            >
+              Delete Group
+            </button>
+          </div>
         </div>
       </div>
     </div>
 
     <!-- Profile Modal -->
     <div id="profileModal" class="modal" style="display: none">
-      <div class="modal-content profile-modal-content">
+      <div class="modal-content">
         <div class="modal-header">
           <h3>Profile</h3>
-          <span class="close-modal profile-close">&times;</span>
+          <span class="close-modal closeProfileModal">&times;</span>
         </div>
         <div class="modal-body">
-          <div class="profile-avatar-container">
+          <div style="text-align: center">
             <div class="profile-avatar" id="profileAvatar">👤</div>
-            <div class="profile-status-dot" id="profileStatusDot"></div>
-            <button id="changeProfileAvatarBtn" class="btn-small">
-              Change Photo
+            <button
+              id="changeAvatarBtn"
+              class="btn btn-outline"
+              style="margin-top: 8px; font-size: 12px"
+            >
+              Change Avatar
             </button>
-            <input
-              type="file"
-              id="profileAvatarUpload"
-              accept="image/*"
-              style="display: none"
-            />
           </div>
-          <div class="profile-info">
-            <h3 id="profileName">Loading...</h3>
-            <p id="profileEmail" class="profile-view-only"></p>
-            <p id="profilePhone" class="profile-view-only"></p>
-            <div class="profile-status-section">
-              <label>Status (Bio)</label>
-              <div class="profile-status-edit">
-                <span id="profileStatusText">No status</span>
-                <button id="editStatusBtn" class="icon-btn">✏️</button>
-              </div>
-            </div>
-            <div class="profile-status-section">
-              <label>Online Status</label>
-              <div id="profileOnlineStatus" class="online-status-display">
-                🟢 Online
-              </div>
-            </div>
-          </div>
-        </div>
-        <div class="modal-footer">
-          <button id="profileCloseBtn" class="btn btn-outline">Close</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- View Other User's Profile Modal -->
-    <div id="userProfileModal" class="modal" style="display: none">
-      <div class="modal-content profile-modal-content">
-        <div class="modal-header">
-          <h3>User Profile</h3>
-          <span class="close-modal user-profile-close">&times;</span>
-        </div>
-        <div class="modal-body">
-          <div class="profile-avatar-container">
-            <div class="profile-avatar" id="userProfileAvatar">👤</div>
-            <div class="profile-status-dot" id="userProfileStatusDot"></div>
-          </div>
-          <div class="profile-info">
-            <h3 id="userProfileName">Loading...</h3>
-            <p id="userProfileEmail"></p>
-            <p id="userProfilePhone"></p>
-            <div class="profile-status-section">
-              <label>Status</label>
-              <div id="userProfileStatusText">No status</div>
-            </div>
-            <div class="profile-status-section">
-              <label>Online Status</label>
-              <div id="userProfileOnlineStatus">🟢 Online</div>
-              <div id="userProfileLastSeen" class="last-seen-text"></div>
-            </div>
-          </div>
-        </div>
-        <div class="modal-footer">
-          <button id="userProfileSendMsgBtn" class="btn btn-primary">
-            Send Message
-          </button>
-          <button id="blockFromProfileBtn" class="btn btn-danger">
-            Block User
-          </button>
-          <button id="userProfileCloseBtn" class="btn btn-outline">
-            Close
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <!-- Change Phone Number Modal -->
-    <div id="changePhoneModal" class="modal" style="display: none">
-      <div class="modal-content" style="max-width: 350px">
-        <div class="modal-header">
-          <h3>Change Phone Number</h3>
-          <span class="close-modal phone-close">&times;</span>
-        </div>
-        <div class="modal-body">
-          <div class="form-group">
-            <label>Phone Number (10 digits only)</label>
-            <div class="phone-input-group">
-              <select id="changePhoneCountryCode" class="country-code-select">
-                <option value="+91">🇮🇳 +91 (India)</option>
-                <option value="+1">🇺🇸 +1 (USA)</option>
-                <option value="+44">🇬🇧 +44 (UK)</option>
-                <option value="+61">🇦🇺 +61 (Australia)</option>
-                <option value="+971">🇦🇪 +971 (UAE)</option>
-                <option value="+966">🇸🇦 +966 (Saudi Arabia)</option>
-                <option value="+968">🇴🇲 +968 (Oman)</option>
-                <option value="+974">🇶🇦 +974 (Qatar)</option>
-                <option value="+965">🇰🇼 +965 (Kuwait)</option>
-                <option value="+973">🇧🇭 +973 (Bahrain)</option>
-                <option value="+33">🇫🇷 +33 (France)</option>
-                <option value="+49">🇩🇪 +49 (Germany)</option>
-                <option value="+81">🇯🇵 +81 (Japan)</option>
-                <option value="+86">🇨🇳 +86 (China)</option>
-              </select>
-              <input
-                type="tel"
-                id="changePhoneNumber"
-                placeholder="Enter 10-digit phone number"
-                style="flex: 1"
-              />
-            </div>
-          </div>
-          <button id="savePhoneChangeBtn" class="btn btn-primary">
-            Save Changes
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <!-- Avatar Upload Modal -->
-    <div id="avatarModal" class="modal" style="display: none">
-      <div class="modal-content" style="max-width: 350px">
-        <div class="modal-header">
-          <h3>Update Profile Picture</h3>
-          <span class="close-modal avatar-close">&times;</span>
-        </div>
-        <div class="modal-body">
-          <div class="avatar-preview">
-            <div class="current-avatar" id="currentAvatarDisplay">👤</div>
-          </div>
-          <div class="form-group">
-            <label>Upload Image</label>
-            <input type="file" id="avatarUpload" accept="image/*" />
-          </div>
-          <button id="saveAvatarBtn" class="btn btn-primary">
-            Save Avatar
-          </button>
-          <button id="removeAvatarBtn" class="btn btn-outline">
-            Remove Avatar
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <!-- Change Password Modal -->
-    <div id="changePasswordModal" class="modal" style="display: none">
-      <div class="modal-content" style="max-width: 350px">
-        <div class="modal-header">
-          <h3>Change Password</h3>
-          <span class="close-modal password-close">&times;</span>
-        </div>
-        <div class="modal-body">
-          <div class="form-group">
-            <label>Current Password</label>
-            <input
-              type="password"
-              id="currentPassword"
-              placeholder="Current password"
-            />
-          </div>
-          <div class="form-group">
-            <label>New Password</label>
-            <input
-              type="password"
-              id="newPassword"
-              placeholder="New password (min 6 chars)"
-            />
-          </div>
-          <div class="form-group">
-            <label>Confirm New Password</label>
-            <input
-              type="password"
-              id="confirmNewPassword"
-              placeholder="Confirm new password"
-            />
-          </div>
-          <button id="confirmChangePasswordBtn" class="btn btn-primary">
-            Update Password
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <!-- Change Email Modal -->
-    <div id="changeEmailModal" class="modal" style="display: none">
-      <div class="modal-content" style="max-width: 350px">
-        <div class="modal-header">
-          <h3>Change Email</h3>
-          <span class="close-modal email-close">&times;</span>
-        </div>
-        <div class="modal-body">
-          <div class="form-group">
-            <label>Current Password</label>
-            <input
-              type="password"
-              id="emailCurrentPassword"
-              placeholder="Current password"
-            />
-          </div>
-          <div class="form-group">
-            <label>New Email</label>
-            <input type="email" id="newEmail" placeholder="new@email.com" />
-          </div>
-          <button id="confirmChangeEmailBtn" class="btn btn-primary">
-            Update Email
-          </button>
-          <p class="auth-note">
-            Verification email will be sent to new address.
+          <p><strong>Name:</strong> <span id="profileName"></span></p>
+          <p>
+            <strong>Email:</strong> <span id="profileEmail"></span>
+            <button
+              id="changeEmailBtn"
+              style="
+                font-size: 10px;
+                background: none;
+                border: 1px solid #e2e8f0;
+                border-radius: 20px;
+                padding: 2px 8px;
+              "
+            >
+              Change
+            </button>
           </p>
-        </div>
-      </div>
-    </div>
+          <p>
+            <strong>Phone:</strong> <span id="profilePhone"></span>
+            <button
+              id="changePhoneBtn"
+              style="
+                font-size: 10px;
+                background: none;
+                border: 1px solid #e2e8f0;
+                border-radius: 20px;
+                padding: 2px 8px;
+              "
+            >
+              Edit
+            </button>
+          </p>
+          <div style="margin: 16px 0">
+            <label><strong>Status message</strong></label
+            ><input
+              type="text"
+              id="profileStatusText"
+              placeholder="Your status..."
+              style="
+                width: 100%;
+                margin-top: 5px;
+                padding: 10px;
+                border: 1px solid #e2e8f0;
+                border-radius: 12px;
+              "
+            />
+          </div>
 
-    <!-- Phone Prompt Modal -->
-    <div id="phonePromptModal" class="modal" style="display: none">
-      <div class="modal-content" style="max-width: 400px">
-        <div class="modal-header">
-          <h3>📱 Add Your Phone Number (Optional)</h3>
-          <button id="closePhonePromptBtn" class="close-modal-btn">
-            &times;
-          </button>
-        </div>
-        <div class="modal-body">
-          <p>Help your team members find you easily.</p>
-          <div class="form-group">
-            <label>Phone Number</label>
-            <div class="phone-input-group">
-              <select id="phoneCountryCode" class="country-code-select">
-                <option value="+91">🇮🇳 +91 (India)</option>
-                <option value="+1">🇺🇸 +1 (USA)</option>
-                <option value="+44">🇬🇧 +44 (UK)</option>
-                <option value="+61">🇦🇺 +61 (Australia)</option>
-                <option value="+971">🇦🇪 +971 (UAE)</option>
-                <option value="+966">🇸🇦 +966 (Saudi Arabia)</option>
-                <option value="+968">🇴🇲 +968 (Oman)</option>
-                <option value="+974">🇶🇦 +974 (Qatar)</option>
-                <option value="+965">🇰🇼 +965 (Kuwait)</option>
-                <option value="+973">🇧🇭 +973 (Bahrain)</option>
-                <option value="+33">🇫🇷 +33 (France)</option>
-                <option value="+49">🇩🇪 +49 (Germany)</option>
-                <option value="+81">🇯🇵 +81 (Japan)</option>
-                <option value="+86">🇨🇳 +86 (China)</option>
-              </select>
-              <input
-                type="tel"
-                id="promptPhoneNumber"
-                placeholder="Enter 10-digit phone number"
-                style="flex: 1"
-              />
+          <div
+            style="
+              margin: 16px 0;
+              border-top: 1px solid #e2e8f0;
+              padding-top: 16px;
+            "
+          >
+            <h4>Privacy Settings</h4>
+            <div class="privacy-row">
+              <span>Hide Read Receipts (blue ticks)</span
+              ><label class="switch"
+                ><input type="checkbox" id="hideReadReceipts" /><span
+                  class="slider"
+                ></span
+              ></label>
+            </div>
+            <div class="privacy-row">
+              <span>Hide Typing Indicator</span
+              ><label class="switch"
+                ><input type="checkbox" id="hideTypingIndicator" /><span
+                  class="slider"
+                ></span
+              ></label>
+            </div>
+            <div class="privacy-row">
+              <span>Hide Last Seen</span
+              ><label class="switch"
+                ><input type="checkbox" id="hideLastSeen" /><span
+                  class="slider"
+                ></span
+              ></label>
             </div>
           </div>
-        </div>
-        <div class="modal-footer">
-          <button id="savePhonePromptBtn" class="btn btn-primary">Save</button>
-          <button id="skipPhonePromptBtn" class="btn btn-outline">
-            Skip for now
+
+          <button id="blockedUsersBtn" class="setting-item">
+            🚫 Blocked Users
+          </button>
+          <button id="quickRepliesSettingsBtn" class="setting-item">
+            ⚡ Quick Replies
+          </button>
+          <button id="wallpaperSettingsBtn" class="setting-item">
+            🖼️ Change Wallpaper (All Chats)
+          </button>
+          <button id="currentChatWallpaperBtn" class="setting-item">
+            🎨 Change Wallpaper (Current Chat Only)
+          </button>
+          <button id="exportChatsBtn" class="setting-item">
+            📤 Export Current Chat
+          </button>
+          <button id="clearAllChatsBtn" class="setting-item danger">
+            🗑️ Clear All Chats
+          </button>
+          <button id="deactivateAccountBtn" class="setting-item danger">
+            ⚠️ Deactivate Account
           </button>
         </div>
       </div>
     </div>
 
-    <!-- Settings Menu -->
-    <div id="settingsMenu" class="context-menu" style="display: none">
-      <div class="context-menu-item" id="changeAvatarMenuItem">
-        🖼️ Change Profile Picture
+    <!-- Blocked Users Modal -->
+    <div id="blockedModal" class="modal" style="display: none">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>Blocked Users</h3>
+          <span class="close-modal closeBlockedModal">&times;</span>
+        </div>
+        <div class="modal-body"><div id="blockedUsersList"></div></div>
       </div>
-      <div class="context-menu-item" id="changeStatusMenuItem">
-        📝 Update Status (Bio)
+    </div>
+
+    <!-- Quick Replies Modal -->
+    <div id="quickRepliesModal" class="modal" style="display: none">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>Quick Replies</h3>
+          <span class="close-modal closeQuickRepliesModal">&times;</span>
+        </div>
+        <div class="modal-body">
+          <div style="display: flex; gap: 8px; margin-bottom: 16px">
+            <input
+              type="text"
+              id="newQuickReplyText"
+              placeholder="New quick reply..."
+              style="
+                flex: 1;
+                padding: 10px;
+                border: 1px solid #e2e8f0;
+                border-radius: 12px;
+              "
+            /><button id="addQuickReplyBtn" class="btn btn-primary">Add</button>
+          </div>
+          <div id="quickRepliesList"></div>
+        </div>
       </div>
-      <div class="context-menu-item" id="changePhoneMenuItem">
-        📱 Change Phone Number
+    </div>
+
+    <!-- Wallpaper Modal (Global) -->
+    <div id="wallpaperModal" class="modal" style="display: none">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3 id="wallpaperModalTitle">Chat Wallpaper (All Chats)</h3>
+          <span class="close-modal closeWallpaperModal">&times;</span>
+        </div>
+        <div class="modal-body">
+          <div
+            style="
+              display: grid;
+              grid-template-columns: repeat(3, 1fr);
+              gap: 12px;
+            "
+          >
+            <div
+              class="wallpaper-option"
+              data-wallpaper="default"
+              style="
+                background: #f8fafc;
+                height: 60px;
+                border-radius: 12px;
+                border: 2px solid #667eea;
+              "
+            ></div>
+            <div
+              class="wallpaper-option"
+              data-wallpaper="dark"
+              style="background: #1a1a2e; height: 60px; border-radius: 12px"
+            ></div>
+            <div
+              class="wallpaper-option"
+              data-wallpaper="forest"
+              style="background: #2d5a27; height: 60px; border-radius: 12px"
+            ></div>
+            <div
+              class="wallpaper-option"
+              data-wallpaper="ocean"
+              style="background: #1e3a5f; height: 60px; border-radius: 12px"
+            ></div>
+            <div
+              class="wallpaper-option"
+              data-wallpaper="sunset"
+              style="background: #7c2d12; height: 60px; border-radius: 12px"
+            ></div>
+            <div
+              class="wallpaper-option"
+              data-wallpaper="purple"
+              style="background: #4c1d95; height: 60px; border-radius: 12px"
+            ></div>
+          </div>
+          <button
+            id="uploadWallpaperBtn"
+            class="btn btn-outline"
+            style="margin-top: 16px"
+          >
+            Upload Custom Image
+          </button>
+        </div>
       </div>
-      <div class="context-menu-item" id="changePasswordMenuItem">
-        🔐 Change Password
+    </div>
+
+    <!-- Forward Modal -->
+    <div id="forwardModal" class="modal" style="display: none">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>Forward to...</h3>
+          <span class="close-modal closeForwardModal">&times;</span>
+        </div>
+        <div class="modal-body">
+          <input
+            type="text"
+            id="forwardSearch"
+            placeholder="Search chats..."
+            style="
+              width: 100%;
+              margin-bottom: 12px;
+              padding: 10px;
+              border: 1px solid #e2e8f0;
+              border-radius: 12px;
+            "
+          />
+          <div
+            id="forwardChatsList"
+            style="max-height: 300px; overflow-y: auto"
+          ></div>
+        </div>
       </div>
-      <div class="context-menu-item" id="changeEmailMenuItem">
-        📧 Change Email
-      </div>
-      <div class="context-menu-item" id="soundToggleMenuItem">
-        🔊 Toggle Sound
-      </div>
-      <div class="context-menu-item" id="wallpaperMenuItem">
-        🖼️ Change Wallpaper
+    </div>
+
+    <div id="toast" class="toast"></div>
+
+    <!-- Context Menu for Chats -->
+    <div
+      id="chatContextMenu"
+      class="context-menu"
+      style="
+        display: none;
+        position: fixed;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        z-index: 10000;
+        min-width: 200px;
+      "
+    >
+      <div
+        class="context-menu-item"
+        id="pinChatMenuItem"
+        style="
+          padding: 12px 16px;
+          cursor: pointer;
+          border-bottom: 1px solid #eee;
+          border-radius: 8px 8px 0 0;
+        "
+      >
+        📌 Pin Chat
       </div>
       <div
         class="context-menu-item"
-        id="deactivateAccountMenuItem"
-        style="color: #dc2626"
+        id="muteChatMenuItem"
+        style="
+          padding: 12px 16px;
+          cursor: pointer;
+          border-bottom: 1px solid #eee;
+        "
       >
-        🚫 Deactivate Account
+        🔇 Mute
       </div>
-    </div>
-
-    <!-- Message Context Menu -->
-    <div id="messageMenu" class="context-menu" style="display: none">
-      <div class="context-menu-item" id="messageInfoMenuItem">ℹ️ Info</div>
-      <div class="context-menu-item" id="replyMessageBtn">↩️ Reply</div>
-      <div class="context-menu-item" id="forwardMessageBtn">➡️ Forward</div>
-      <div class="context-menu-item" id="pinMessageMenuItem">
-        📌 Pin Message
+      <div
+        class="context-menu-item"
+        id="archiveChatMenuItem"
+        style="
+          padding: 12px 16px;
+          cursor: pointer;
+          border-bottom: 1px solid #eee;
+        "
+      >
+        📦 Archive
       </div>
-      <div class="context-menu-item" id="editMessageBtn">✏️ Edit Message</div>
-      <div class="context-menu-item" id="deleteMessageBtn">
-        🗑️ Delete Message
+      <div
+        class="context-menu-item"
+        id="favoriteChatMenuItem"
+        style="
+          padding: 12px 16px;
+          cursor: pointer;
+          border-bottom: 1px solid #eee;
+        "
+      >
+        ⭐ Add to favorite
+      </div>
+      <div
+        class="context-menu-item"
+        id="markReadMenuItem"
+        style="
+          padding: 12px 16px;
+          cursor: pointer;
+          border-bottom: 1px solid #eee;
+        "
+      >
+        📩 Mark as unread
+      </div>
+      <div
+        class="context-menu-item"
+        id="blockUserMenuItem"
+        style="
+          padding: 12px 16px;
+          cursor: pointer;
+          border-bottom: 1px solid #eee;
+        "
+      >
+        🚫 Block
+      </div>
+      <div
+        class="context-menu-item"
+        id="deleteChatMenuItem"
+        style="
+          padding: 12px 16px;
+          cursor: pointer;
+          color: #dc2626;
+          border-radius: 0 0 8px 8px;
+        "
+      >
+        🗑️ Delete
       </div>
     </div>
 
@@ -932,5 +875,51 @@
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-storage-compat.js"></script>
     <script src="app.js"></script>
+
+    <!-- Service Worker Registration -->
+    <script>
+      // Register Service Worker for PWA functionality
+      if ("serviceWorker" in navigator) {
+        window.addEventListener("load", () => {
+          navigator.serviceWorker
+            .register("sw.js")
+            .then((reg) => {
+              console.log("✅ Service Worker registered successfully");
+            })
+            .catch((err) => {
+              console.log("❌ Service Worker registration failed:", err);
+            });
+        });
+      }
+
+      // Handle PWA Install Prompt
+      let deferredPrompt;
+      const installBtn = document.getElementById("installAppBtn");
+
+      window.addEventListener("beforeinstallprompt", (e) => {
+        e.preventDefault();
+        deferredPrompt = e;
+        if (installBtn) {
+          installBtn.style.display = "block";
+        }
+      });
+
+      if (installBtn) {
+        installBtn.addEventListener("click", async () => {
+          if (deferredPrompt) {
+            deferredPrompt.prompt();
+            const { outcome } = await deferredPrompt.userChoice;
+            console.log(`User response to the install prompt: ${outcome}`);
+            deferredPrompt = null;
+            installBtn.style.display = "none";
+          }
+        });
+      }
+
+      window.addEventListener("appinstalled", () => {
+        console.log("✅ PWA installed successfully");
+        deferredPrompt = null;
+      });
+    </script>
   </body>
 </html>
