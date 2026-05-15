@@ -233,6 +233,33 @@
               placeholder="your@email.com"
               required
             />
+            <div
+              id="emailError"
+              style="
+                color: #dc2626;
+                font-size: 12px;
+                margin-top: 4px;
+                display: none;
+              "
+            ></div>
+          </div>
+          <div class="form-group">
+            <label>Phone Number</label>
+            <input
+              type="tel"
+              id="registerPhone"
+              placeholder="e.g., +1234567890 or 9876543210"
+              required
+            />
+            <div
+              id="phoneError"
+              style="
+                color: #dc2626;
+                font-size: 12px;
+                margin-top: 4px;
+                display: none;
+              "
+            ></div>
           </div>
           <div class="form-group">
             <label>Password</label>
@@ -242,8 +269,17 @@
               placeholder="•••••••• (min 6 characters)"
               required
             />
+            <div
+              id="passwordError"
+              style="
+                color: #dc2626;
+                font-size: 12px;
+                margin-top: 4px;
+                display: none;
+              "
+            ></div>
           </div>
-          <button type="submit" class="btn btn-primary">
+          <button type="submit" class="btn btn-primary" id="registerBtn">
             Create Account →
           </button>
           <p class="auth-note">
@@ -253,6 +289,13 @@
 
         <div id="authError" class="auth-error" style="display: none"></div>
         <div id="authSuccess" class="auth-success" style="display: none"></div>
+        <button
+          id="installAppBtn"
+          class="btn btn-outline"
+          style="display: none; margin-top: 16px"
+        >
+          Install App
+        </button>
       </div>
     </div>
 
@@ -285,6 +328,38 @@
       const auth = firebase.auth();
       const db = firebase.firestore();
 
+      // Validation Functions
+      function validateEmail(email) {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        return emailRegex.test(email);
+      }
+
+      function validatePhone(phone) {
+        const phoneRegex = /^[\d\s\+\-\(\)]{7,}$/;
+        return phoneRegex.test(phone.replace(/\s/g, ""));
+      }
+
+      function validatePassword(password) {
+        return password.length >= 6;
+      }
+
+      // Clear validation errors
+      function clearValidationErrors() {
+        document.getElementById("emailError").style.display = "none";
+        document.getElementById("phoneError").style.display = "none";
+        document.getElementById("passwordError").style.display = "none";
+      }
+
+      // Show validation error
+      function showValidationError(fieldId, message) {
+        const errorDiv = document.getElementById(fieldId);
+        if (errorDiv) {
+          errorDiv.textContent = message;
+          errorDiv.style.display = "block";
+        }
+      }
+
+      // Tab switching
       document.querySelectorAll(".auth-tab").forEach((tab) => {
         tab.addEventListener("click", () => {
           document
@@ -294,42 +369,56 @@
           document
             .querySelectorAll(".auth-form")
             .forEach((form) => form.classList.remove("active"));
+          document.getElementById("authError").style.display = "none";
+          document.getElementById("authSuccess").style.display = "none";
           document
             .getElementById(`${tab.dataset.tab}Form`)
             .classList.add("active");
         });
       });
 
+      // Login Form
       document
         .getElementById("loginForm")
         .addEventListener("submit", async (e) => {
           e.preventDefault();
-          const email = document.getElementById("loginEmail").value;
+          const email = document.getElementById("loginEmail").value.trim();
           const password = document.getElementById("loginPassword").value;
           const errorDiv = document.getElementById("authError");
+          const btn = e.target.querySelector("button[type='submit']");
+
           errorDiv.style.display = "none";
+          btn.disabled = true;
+          btn.textContent = "Logging in...";
+
           try {
             const userCred = await auth.signInWithEmailAndPassword(
               email,
               password,
             );
+
             if (!userCred.user.emailVerified) {
               await auth.signOut();
               errorDiv.textContent =
-                "Please verify your email first! Check your inbox.";
+                "📧 Please verify your email first! Check your inbox for the verification link.";
               errorDiv.style.display = "block";
+              btn.disabled = false;
+              btn.textContent = "Login →";
               return;
             }
+
             const userDoc = await db
               .collection("users")
               .doc(userCred.user.uid)
               .get();
+
             if (userDoc.exists && userDoc.data().isActive === false) {
               await db
                 .collection("users")
                 .doc(userCred.user.uid)
                 .update({ isActive: true, deactivatedAt: null });
             }
+
             await db.collection("users").doc(userCred.user.uid).set(
               {
                 onlineStatus: "online",
@@ -337,30 +426,72 @@
               },
               { merge: true },
             );
+
             window.location.href = "index.html";
           } catch (error) {
-            errorDiv.textContent = error.message;
+            errorDiv.textContent = "❌ " + (error.message || "Login failed");
             errorDiv.style.display = "block";
+            btn.disabled = false;
+            btn.textContent = "Login →";
           }
         });
 
+      // Register Form
       document
         .getElementById("registerForm")
         .addEventListener("submit", async (e) => {
           e.preventDefault();
-          const name = document.getElementById("registerName").value;
-          const email = document.getElementById("registerEmail").value;
+          clearValidationErrors();
+
+          const name = document.getElementById("registerName").value.trim();
+          const email = document.getElementById("registerEmail").value.trim();
+          const phone = document.getElementById("registerPhone").value.trim();
           const password = document.getElementById("registerPassword").value;
           const errorDiv = document.getElementById("authError");
           const successDiv = document.getElementById("authSuccess");
+          const btn = e.target.querySelector("button[type='submit']");
+
           errorDiv.style.display = "none";
           successDiv.style.display = "none";
+
+          // Validation
+          let hasError = false;
+          if (!validateEmail(email)) {
+            showValidationError("emailError", "❌ Please enter a valid email");
+            hasError = true;
+          }
+          if (!validatePhone(phone)) {
+            showValidationError(
+              "phoneError",
+              "❌ Please enter a valid phone number",
+            );
+            hasError = true;
+          }
+          if (!validatePassword(password)) {
+            showValidationError(
+              "passwordError",
+              "❌ Password must be at least 6 characters",
+            );
+            hasError = true;
+          }
+          if (!name) {
+            errorDiv.textContent = "❌ Please enter your name";
+            errorDiv.style.display = "block";
+            hasError = true;
+          }
+
+          if (hasError) return;
+
+          btn.disabled = true;
+          btn.textContent = "Creating account...";
+
           try {
             const userCred = await auth.createUserWithEmailAndPassword(
               email,
               password,
             );
             await userCred.user.updateProfile({ displayName: name });
+
             await db
               .collection("users")
               .doc(userCred.user.uid)
@@ -368,6 +499,7 @@
                 uid: userCred.user.uid,
                 email: email,
                 displayName: name,
+                phone: phone,
                 createdAt: new Date(),
                 isActive: true,
                 isFirstTime: true,
@@ -378,17 +510,30 @@
                   hideLastSeen: false,
                 },
               });
+
             await userCred.user.sendEmailVerification();
             successDiv.textContent =
-              "Account created! Please verify your email before logging in.";
+              "✅ Account created! Check your email to verify before logging in.";
             successDiv.style.display = "block";
             document.getElementById("registerForm").reset();
+            btn.disabled = false;
+            btn.textContent = "Create Account →";
           } catch (error) {
-            errorDiv.textContent = error.message;
+            let errorMsg = "❌ " + (error.message || "Registration failed");
+            if (error.code === "auth/email-already-in-use") {
+              errorMsg =
+                "❌ This email is already registered. Please login or use a different email.";
+            } else if (error.code === "auth/weak-password") {
+              errorMsg = "❌ Password is too weak. Use at least 6 characters.";
+            }
+            errorDiv.textContent = errorMsg;
             errorDiv.style.display = "block";
+            btn.disabled = false;
+            btn.textContent = "Create Account →";
           }
         });
 
+      // Password Reset
       const resetModal = document.getElementById("resetModal");
       document
         .getElementById("forgotPasswordBtn")
@@ -404,13 +549,27 @@
       document
         .getElementById("sendResetBtn")
         .addEventListener("click", async () => {
-          const email = document.getElementById("resetEmail").value;
+          const email = document.getElementById("resetEmail").value.trim();
+          const btn = document.getElementById("sendResetBtn");
+
+          if (!email) {
+            alert("Please enter your email");
+            return;
+          }
+
+          btn.disabled = true;
+          btn.textContent = "Sending...";
+
           try {
             await auth.sendPasswordResetEmail(email);
-            alert("Password reset email sent!");
+            alert("✅ Password reset email sent! Check your inbox.");
             resetModal.style.display = "none";
+            btn.disabled = false;
+            btn.textContent = "Send Reset Link";
           } catch (error) {
-            alert(error.message);
+            alert("❌ " + (error.message || "Failed to send reset email"));
+            btn.disabled = false;
+            btn.textContent = "Send Reset Link";
           }
         });
     </script>

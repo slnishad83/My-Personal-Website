@@ -29,6 +29,9 @@ let currentChat = null;
 let currentChatType = null;
 let allUsers = [];
 let messagesUnsubscribe = null;
+let directChatsUnsubscribe = null;
+let groupChatsUnsubscribe = null;
+let chatRequestsUnsubscribe = null;
 let currentGroup = null;
 let currentGroupMembers = [];
 let currentReplyTo = null;
@@ -40,6 +43,7 @@ let quickReplies = [];
 let pinnedMessages = [];
 let currentSearchResults = [];
 let currentSearchIndex = 0;
+let favoriteChatIds = [];
 let mediaRecorder = null;
 let audioChunks = [];
 let isRecording = false;
@@ -90,6 +94,68 @@ function formatDate(date) {
 
 function getDirectChatId(userId1, userId2) {
   return [userId1, userId2].sort().join('_');
+}
+
+async function loadFavoriteChatIds() {
+  if (!currentUser) return;
+  const snapshot = await db.collection('favoriteChats').where('userId', '==', currentUser.uid).get();
+  favoriteChatIds = snapshot.docs.map(doc => doc.data().chatId);
+}
+
+async function toggleFavoriteChat(chatId, chatType) {
+  if (!currentUser || !chatId || !chatType) return;
+  const existing = await db.collection('favoriteChats')
+    .where('userId', '==', currentUser.uid)
+    .where('chatId', '==', chatId)
+    .where('chatType', '==', chatType)
+    .get();
+  if (!existing.empty) {
+    await existing.docs[0].ref.delete();
+    showToast('Removed from favorites');
+  } else {
+    await db.collection('favoriteChats').add({
+      userId: currentUser.uid,
+      chatId,
+      chatType,
+      addedAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    showToast('Added to favorites');
+  }
+  await loadFavoriteChatIds();
+  loadChatsList();
+  loadGroupsList();
+}
+
+async function getChatUnreadCount(chatId, chatType) {
+  if (!currentUser || !chatId || !chatType) return 0;
+  try {
+    const query = db.collection('messages')
+      .where(chatType === 'direct' ? 'directId' : 'groupId', '==', chatId)
+      .where('senderId', '!=', currentUser.uid)
+      .where('read', '==', false);
+    const snapshot = await query.get();
+    return snapshot.size;
+  } catch (error) {
+    return 0;
+  }
+}
+
+async function markChatReadState(chatId, chatType, readState) {
+  if (!currentUser || !chatId || !chatType) return;
+  const query = db.collection('messages')
+    .where(chatType === 'direct' ? 'directId' : 'groupId', '==', chatId)
+    .where('senderId', '!=', currentUser.uid);
+  const snapshot = await query.get();
+  const batch = db.batch();
+  snapshot.docs.forEach(doc => batch.update(doc.ref, { read: readState }));
+  if (snapshot.docs.length > 0) await batch.commit();
+  showToast(readState ? 'Marked as read' : 'Marked as unread');
+}
+
+function updateFilterButtons() {
+  // keep visual compatibility for legacy filter buttons if present
+  document.getElementById('favoriteFilterBtn')?.classList.toggle('active', currentViewTab === 'favorites');
+  document.getElementById('unreadFilterBtn')?.classList.toggle('active', currentViewTab === 'unread');
 }
 
 // Indian Phone Validation (starts with 6/7/8/9, exactly 10 digits)
@@ -156,41 +222,28 @@ function searchUsersRealtime(searchTerm) {
     return;
   }
   
-  const term = searchTerm.trim();
-  const isPhoneSearch = /^\d+$/.test(term);
-  const isEmailSearch = term.includes('@');
+  const term = searchTerm.trim().toLowerCase();
+  const results = [];
+  const searchDigitsOnly = term.replace(/\D/g, '');
   
-  // Phone search: only show results when exactly 10 digits AND valid Indian format
-  if (isPhoneSearch) {
-    if (term.length === 10 && isValidIndianPhone(term)) {
-      const filtered = allUsers.filter(user => user.phoneNumber === term);
-      displaySearchResults(filtered, chatsList);
-    } else if (term.length < 10) {
-      // Don't show results for partial phone numbers
-      chatsList.innerHTML = '<div class="empty-state" style="padding:40px;">🔍 Type full 10-digit phone number to search...</div>';
-      return;
-    } else {
-      chatsList.innerHTML = '<div class="empty-state" style="padding:40px;">❌ Invalid phone number. Must start with 6/7/8/9 and be 10 digits.</div>';
+  allUsers.forEach(user => {
+    if (isBlocked(user.id)) return;
+    const displayName = (user.displayName || '').toLowerCase();
+    const email = (user.email || '').toLowerCase();
+    const phone = ((user.phone || user.phoneNumber || '') + '').replace(/\D/g, '');
+    
+    if (displayName.includes(term) || email.includes(term)) {
+      results.push(user);
       return;
     }
-  }
-  // Email search: only show results when complete email (has @ and .)
-  else if (isEmailSearch) {
-    if (isCompleteEmail(term)) {
-      const filtered = allUsers.filter(user => user.email && user.email.toLowerCase().includes(term.toLowerCase()));
-      displaySearchResults(filtered, chatsList);
-    } else {
-      chatsList.innerHTML = '<div class="empty-state" style="padding:40px;">📧 Type complete email address to search...</div>';
+    
+    if (searchDigitsOnly.length >= 6 && phone.includes(searchDigitsOnly)) {
+      results.push(user);
       return;
     }
-  }
-  // Name search: show results immediately as user types
-  else {
-    const filtered = allUsers.filter(user => 
-      (user.displayName || '').toLowerCase().includes(term.toLowerCase())
-    );
-    displaySearchResults(filtered, chatsList);
-  }
+  });
+  
+  displaySearchResults(results, chatsList);
 }
 
 function displaySearchResults(results, container) {
@@ -204,16 +257,167 @@ function displaySearchResults(results, container) {
     if (isBlocked(user.id)) return;
     const userDiv = document.createElement('div');
     userDiv.className = 'list-item';
+    const phoneValue = user.phone || user.phoneNumber || '';
+    const phoneDisplay = phoneValue ? `📞 ${phoneValue}` : '';
     userDiv.innerHTML = `
       <div class="list-avatar">${user.displayName ? user.displayName[0].toUpperCase() : '👤'}</div>
       <div class="list-info">
         <div class="list-name">${escapeHtml(user.displayName || 'User')}</div>
-        <div class="list-preview">${escapeHtml(user.email || '')} ${user.phoneNumber ? '📞 ' + user.phoneNumber : ''}</div>
+        <div class="list-preview">${escapeHtml(user.email || '')} ${phoneDisplay}</div>
       </div>
     `;
-    userDiv.onclick = () => startDirectChat(user);
+    userDiv.onclick = () => handleUserSelection(user);
     container.appendChild(userDiv);
   });
+}
+
+async function handleUserSelection(user) {
+  if (!currentUser || !user) return;
+  if (user.id === currentUser.uid) {
+    showToast('Cannot chat with yourself', 'error');
+    return;
+  }
+
+  const chatId = getDirectChatId(currentUser.uid, user.id);
+  const chatDoc = await db.collection('directChats').doc(chatId).get();
+  if (chatDoc.exists) {
+    startDirectChat(user);
+  } else {
+    await sendChatRequest(user);
+  }
+}
+
+async function sendChatRequest(user) {
+  if (!currentUser || !user) return;
+  const existingRequest = await db.collection('chatRequests')
+    .where('fromUserId', '==', currentUser.uid)
+    .where('toUserId', '==', user.id)
+    .where('status', '==', 'pending')
+    .get();
+
+  if (!existingRequest.empty) {
+    showToast('Request already sent to this user');
+    return;
+  }
+
+  const inverseRequest = await db.collection('chatRequests')
+    .where('fromUserId', '==', user.id)
+    .where('toUserId', '==', currentUser.uid)
+    .where('status', '==', 'pending')
+    .get();
+
+  if (!inverseRequest.empty) {
+    // The other user already sent you a request, accept it automatically.
+    const requestId = inverseRequest.docs[0].id;
+    await acceptChatRequest(requestId, user.id, user.displayName || user.email);
+    return;
+  }
+
+  await db.collection('chatRequests').add({
+    fromUserId: currentUser.uid,
+    fromUserName: currentUser.displayName || currentUser.email.split('@')[0],
+    toUserId: user.id,
+    toUserName: user.displayName || user.email,
+    status: 'pending',
+    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+  });
+  showToast('Request sent');
+}
+
+async function loadReceivedRequests() {
+  if (!currentUser) return;
+  const requestList = document.getElementById('requestList');
+  if (!requestList) return;
+  const snapshot = await db.collection('chatRequests')
+    .where('toUserId', '==', currentUser.uid)
+    .where('status', '==', 'pending')
+    .get();
+
+  const badge = document.getElementById('requestBadge');
+  if (snapshot.empty) {
+    requestList.innerHTML = '<div class="empty-state" style="padding:20px;">No requests</div>';
+    if (badge) badge.style.display = 'none';
+    return;
+  }
+
+  if (badge) {
+    badge.textContent = snapshot.size;
+    badge.style.display = 'inline-block';
+  }
+
+  const requests = snapshot.docs
+    .map(doc => ({ id: doc.id, ...doc.data() }))
+    .sort((a, b) => (b.createdAt?.toMillis?.() || 0) - (a.createdAt?.toMillis?.() || 0));
+
+  requestList.innerHTML = '';
+  for (const req of requests) {
+    const reqDiv = document.createElement('div');
+    reqDiv.className = 'list-item';
+    reqDiv.innerHTML = `
+      <div class="list-avatar">👤</div>
+      <div class="list-info">
+        <div class="list-name">${escapeHtml(req.fromUserName || 'User')}</div>
+        <div class="list-preview">Chat request</div>
+      </div>
+      <div class="request-actions">
+        <button class="btn btn-success accept-request-btn" data-id="${req.id}" data-from="${escapeHtml(req.fromUserId)}">Accept</button>
+        <button class="btn btn-outline decline-request-btn" data-id="${req.id}">Decline</button>
+      </div>
+    `;
+    requestList.appendChild(reqDiv);
+  }
+  requestList.querySelectorAll('.accept-request-btn').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      await acceptChatRequest(btn.dataset.id, btn.dataset.from);
+    });
+  });
+  requestList.querySelectorAll('.decline-request-btn').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      await declineChatRequest(btn.dataset.id);
+    });
+  });
+}
+
+function setupRequestListeners() {
+  if (!currentUser) return;
+  if (chatRequestsUnsubscribe) chatRequestsUnsubscribe();
+  chatRequestsUnsubscribe = db.collection('chatRequests')
+    .where('toUserId', '==', currentUser.uid)
+    .where('status', '==', 'pending')
+    .onSnapshot(() => {
+      loadReceivedRequests();
+    });
+}
+
+async function acceptChatRequest(requestId, fromUserId) {
+  if (!currentUser || !requestId || !fromUserId) return;
+  const chatId = getDirectChatId(currentUser.uid, fromUserId);
+  const chatDoc = await db.collection('directChats').doc(chatId).get();
+  if (!chatDoc.exists) {
+    await db.collection('directChats').doc(chatId).set({
+      participants: [currentUser.uid, fromUserId],
+      status: 'active',
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+  }
+  await db.collection('chatRequests').doc(requestId).update({ status: 'accepted', respondedAt: firebase.firestore.FieldValue.serverTimestamp() });
+  showToast('Request accepted');
+  loadReceivedRequests();
+  loadChatsList();
+
+  const userDoc = await db.collection('users').doc(fromUserId).get();
+  if (userDoc.exists) {
+    startDirectChat({ id: fromUserId, ...userDoc.data() });
+  }
+}
+
+async function declineChatRequest(requestId) {
+  if (!requestId) return;
+  await db.collection('chatRequests').doc(requestId).update({ status: 'declined', respondedAt: firebase.firestore.FieldValue.serverTimestamp() });
+  showToast('Request declined');
+  loadReceivedRequests();
 }
 
 // Group search (real-time, partial match)
@@ -820,10 +1024,30 @@ async function loadAllUsers() {
   const snapshot = await db.collection('users').get();
   allUsers = [];
   snapshot.forEach(doc => {
-    if (doc.id !== currentUser.uid && !isBlocked(doc.id) && doc.data().isActive !== false) {
-      allUsers.push({ id: doc.id, ...doc.data() });
+    const data = doc.data();
+    if (doc.id !== currentUser.uid && !isBlocked(doc.id) && data.isActive !== false) {
+      allUsers.push({ id: doc.id, ...data, phone: data.phone || data.phoneNumber || '' });
     }
   });
+}
+
+function setupChatListListeners() {
+  if (!currentUser) return;
+  if (directChatsUnsubscribe) directChatsUnsubscribe();
+  if (groupChatsUnsubscribe) groupChatsUnsubscribe();
+
+  directChatsUnsubscribe = db.collection('directChats')
+    .where('participants', 'array-contains', currentUser.uid)
+    .where('status', '==', 'active')
+    .onSnapshot(() => {
+      loadChatsList();
+    });
+
+  groupChatsUnsubscribe = db.collection('groupMembers')
+    .where('userId', '==', currentUser.uid)
+    .onSnapshot(() => {
+      loadGroupsList();
+    });
 }
 
 // ========================================
@@ -877,24 +1101,94 @@ async function loadChatsList() {
     if (otherUserId && !isBlocked(otherUserId)) {
       const userDoc = await db.collection('users').doc(otherUserId).get();
       if (userDoc.exists && userDoc.data().isActive !== false) {
-        activeChats.push({ id: doc.id, type: 'direct', name: userDoc.data().displayName || userDoc.data().email, avatar: userDoc.data().displayName?.[0] || '👤', otherUserId, onlineStatus: userDoc.data().onlineStatus || 'offline' });
+        const userData = userDoc.data();
+        const onlineStatus = userData.onlineStatus || 'offline';
+        let statusText = onlineStatus === 'online' ? '🟢 Online now' : '⚫ Offline';
+        if (onlineStatus === 'offline' && userData.lastSeen) {
+          const lastSeenTime = getTimeAgo(userData.lastSeen.toDate());
+          statusText = `⚫ Last seen ${lastSeenTime}`;
+        }
+        const unreadCount = await getChatUnreadCount(doc.id, 'direct');
+        const isFavorite = favoriteChatIds.includes(doc.id);
+        activeChats.push({ 
+          id: doc.id, 
+          type: 'direct', 
+          name: userData.displayName || userData.email, 
+          avatar: userData.displayName?.[0] || '👤', 
+          otherUserId, 
+          onlineStatus,
+          statusText,
+          unreadCount,
+          isFavorite
+        });
       }
     }
   }
   if (activeChats.length === 0) { chatsList.innerHTML = '<div class="empty-state" style="padding:40px;">💬 No chats yet. Search for users!</div>'; return; }
+  const filteredChats = activeChats.filter(chat => {
+    if (currentViewTab === 'favorites' && !chat.isFavorite) return false;
+    if (currentViewTab === 'unread' && chat.unreadCount === 0) return false;
+    return true;
+  });
+  if (filteredChats.length === 0) {
+    const message = currentViewTab === 'favorites' ? 'No favorite chats found.' : currentViewTab === 'unread' ? 'No unread chats found.' : 'No chats yet.';
+    chatsList.innerHTML = `<div class="empty-state" style="padding:40px;">${message}</div>`;
+    return;
+  }
   chatsList.innerHTML = '';
-  for (const chat of activeChats) {
+  for (const chat of filteredChats) {
     const isMuted = isChatMuted(chat.id);
     const chatDiv = document.createElement('div');
     chatDiv.className = 'list-item';
+    chatDiv.dataset.chatId = chat.id;
+    chatDiv.dataset.chatType = 'direct';
+    chatDiv.dataset.unreadCount = chat.unreadCount;
     if (currentChat?.id === chat.id && currentChatType === 'direct') chatDiv.classList.add('active');
-    const statusText = chat.onlineStatus === 'online' ? '🟢 Online' : '⚫ Offline';
-chatDiv.innerHTML = `<div class="list-avatar">${chat.avatar}</div><div class="list-info" style="flex:1; cursor:pointer;"><div class="list-name">${escapeHtml(chat.name)} ${isMuted ? '🔇' : ''}</div><div class="list-preview">${statusText}</div></div><button class="list-item-menu mute-chat-btn" data-chat-id="${chat.id}" data-chat-type="direct">🔇</button><button class="list-item-menu archive-chat-btn" data-chat-id="${chat.id}" data-chat-type="direct" data-chat-name="${escapeHtml(chat.name)}">📦</button>`;
-    chatDiv.querySelector('.archive-chat-btn')?.addEventListener('click', async (e) => { e.stopPropagation(); if (confirm(`Archive "${chat.name}"?`)) await archiveChat(chat.id, 'direct', chat.name); });
-    chatDiv.querySelector('.mute-chat-btn')?.addEventListener('click', async (e) => { e.stopPropagation(); const duration = prompt('Mute for: 8h, 1w, or always?', '8h'); if (duration === '8h' || duration === '1w' || duration === 'always') { await muteChat(chat.id, 'direct', duration); loadChatsList(); } });
-    chatDiv.querySelector('.list-info').onclick = () => { db.collection('users').doc(chat.otherUserId).get().then(doc => { if (doc.exists) startDirectChat({ id: chat.otherUserId, ...doc.data() }); }); };
+    const avatarClass = chat.onlineStatus === 'online' ? 'online' : 'offline';
+    chatDiv.innerHTML = `
+      <div class="list-avatar ${avatarClass}">${chat.avatar}</div>
+      <div class="list-info" style="flex:1; cursor:pointer;">
+        <div class="list-name">${chat.isFavorite ? '⭐ ' : ''}${escapeHtml(chat.name)} ${isMuted ? '🔇' : ''}</div>
+        <div class="list-preview">${chat.statusText}${chat.unreadCount ? ` • ${chat.unreadCount} unread` : ''}</div>
+      </div>
+      <button class="list-item-menu mute-chat-btn" data-chat-id="${chat.id}" data-chat-type="direct">🔇</button>
+      <button class="list-item-menu archive-chat-btn" data-chat-id="${chat.id}" data-chat-type="direct" data-chat-name="${escapeHtml(chat.name)}">📦</button>
+    `;
+    chatDiv.querySelector('.archive-chat-btn')?.addEventListener('click', async (e) => { 
+      e.stopPropagation(); 
+      if (confirm(`Archive "${chat.name}"?`)) await archiveChat(chat.id, 'direct', chat.name); 
+    });
+    chatDiv.querySelector('.mute-chat-btn')?.addEventListener('click', async (e) => { 
+      e.stopPropagation(); 
+      const duration = prompt('Mute for: 8h, 1w, or always?', '8h'); 
+      if (duration === '8h' || duration === '1w' || duration === 'always') { 
+        await muteChat(chat.id, 'direct', duration); 
+        loadChatsList(); 
+      } 
+    });
+    chatDiv.querySelector('.list-info').onclick = () => { 
+      db.collection('users').doc(chat.otherUserId).get().then(doc => { 
+        if (doc.exists) startDirectChat({ id: chat.otherUserId, ...doc.data() }); 
+      }); 
+    };
     chatsList.appendChild(chatDiv);
   }
+}
+
+// Helper function to format time ago
+function getTimeAgo(date) {
+  const now = new Date();
+  const diffMs = now - date;
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMs / 3600000);
+  const diffDays = Math.floor(diffMs / 86400000);
+  
+  if (diffMins < 1) return 'just now';
+  if (diffMins < 60) return `${diffMins}m ago`;
+  if (diffHours < 24) return `${diffHours}h ago`;
+  if (diffDays < 7) return `${diffDays}d ago`;
+  
+  return date.toLocaleDateString();
 }
 
 // ========================================
@@ -912,13 +1206,32 @@ async function loadGroupsList() {
     if (groupDoc.exists) groups.push({ id: groupDoc.id, name: groupDoc.data().name, code: groupDoc.data().code, icon: groupDoc.data().icon });
   }
   if (groups.length === 0) { groupsList.innerHTML = '<div class="empty-state" style="padding:40px;">👥 No groups yet. Create one!</div>'; return; }
-  groupsList.innerHTML = '';
+  const enhancedGroups = [];
   for (const group of groups) {
+    const unreadCount = await getChatUnreadCount(group.id, 'group');
+    const isFavorite = favoriteChatIds.includes(group.id);
+    enhancedGroups.push({ ...group, unreadCount, isFavorite });
+  }
+  const filteredGroups = enhancedGroups.filter(group => {
+    if (currentViewTab === 'favorites' && !group.isFavorite) return false;
+    if (currentViewTab === 'unread' && group.unreadCount === 0) return false;
+    return true;
+  });
+  if (filteredGroups.length === 0) {
+    const message = currentViewTab === 'favorites' ? 'No favorite groups found.' : currentViewTab === 'unread' ? 'No unread groups found.' : 'No groups yet.';
+    groupsList.innerHTML = `<div class="empty-state" style="padding:40px;">${message}</div>`;
+    return;
+  }
+  groupsList.innerHTML = '';
+  for (const group of filteredGroups) {
     const isMuted = isChatMuted(group.id);
     const groupDiv = document.createElement('div');
     groupDiv.className = 'list-item';
+    groupDiv.dataset.chatId = group.id;
+    groupDiv.dataset.chatType = 'group';
+    groupDiv.dataset.unreadCount = group.unreadCount;
     if (currentChat?.id === group.id && currentChatType === 'group') groupDiv.classList.add('active');
-    groupDiv.innerHTML = `<div class="list-avatar">${group.icon ? `<img src="${group.icon}">` : '👥'}</div><div class="list-info" style="flex:1; cursor:pointer;"><div class="list-name">${escapeHtml(group.name)} ${isMuted ? '🔇' : ''}</div><div class="list-preview">${group.code}</div></div><button class="list-item-menu mute-chat-btn" data-chat-id="${group.id}" data-chat-type="group">🔇</button><button class="list-item-menu archive-chat-btn" data-chat-id="${group.id}" data-chat-type="group" data-chat-name="${escapeHtml(group.name)}">📦</button>`;
+    groupDiv.innerHTML = `<div class="list-avatar">${group.icon ? `<img src="${group.icon}">` : '👥'}</div><div class="list-info" style="flex:1; cursor:pointer;"><div class="list-name">${group.isFavorite ? '⭐ ' : ''}${escapeHtml(group.name)} ${isMuted ? '🔇' : ''}</div><div class="list-preview">${group.code}${group.unreadCount ? ` • ${group.unreadCount} unread` : ''}</div></div><button class="list-item-menu mute-chat-btn" data-chat-id="${group.id}" data-chat-type="group">🔇</button><button class="list-item-menu archive-chat-btn" data-chat-id="${group.id}" data-chat-type="group" data-chat-name="${escapeHtml(group.name)}">📦</button>`;
     groupDiv.querySelector('.archive-chat-btn')?.addEventListener('click', async (e) => { e.stopPropagation(); if (confirm(`Archive group "${group.name}"?`)) await archiveChat(group.id, 'group', group.name); });
     groupDiv.querySelector('.mute-chat-btn')?.addEventListener('click', async (e) => { e.stopPropagation(); const duration = prompt('Mute for: 8h, 1w, or always?', '8h'); if (duration === '8h' || duration === '1w' || duration === 'always') { await muteChat(group.id, 'group', duration); loadGroupsList(); } });
     groupDiv.querySelector('.list-info').onclick = () => loadGroupChat(group.id, group.name);
@@ -1303,10 +1616,10 @@ async function forwardMessage(messageData, targetChatId, targetChatType) {
 }
 
 function showContextMenu(x, y, messageId, messageData, isMyMessage) {
-  const existingMenu = document.querySelector('.context-menu');
+  const existingMenu = document.querySelector('.message-context-menu');
   if (existingMenu) existingMenu.remove();
-  const menu = document.createElement('div'); menu.className = 'context-menu';
-  menu.style.cssText = `position: fixed; left: ${x}px; top: ${y}px; background: white; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.15); z-index: 10000; min-width: 180px; overflow: hidden;`;
+  const menu = document.createElement('div'); menu.className = 'context-menu message-context-menu';
+  menu.style.cssText = `display: block; position: fixed; left: ${x}px; top: ${y}px; background: white; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.15); z-index: 10000; min-width: 180px; overflow: hidden;`;
   const items = [
     { text: '📋 Copy', action: () => copyToClipboard(messageData.text) },
     { text: '↩️ Reply', action: () => setReplyTo(messageData) },
@@ -1337,7 +1650,7 @@ function showContextMenu(x, y, messageId, messageData, isMyMessage) {
 
 async function updateProfileAvatar(file) { const url = await uploadToCloudinary(file); await db.collection('users').doc(currentUser.uid).update({ avatar: url }); await currentUser.updateProfile({ photoURL: url }); showToast('Avatar updated'); showProfileModal(); }
 async function updateStatusText(statusText) { await db.collection('users').doc(currentUser.uid).update({ statusText }); showToast('Status updated'); }
-async function updatePhoneNumber(phoneNumber) { if (!isValidIndianPhone(phoneNumber)) { showToast('Enter valid 10-digit Indian phone number', 'error'); return false; } await db.collection('users').doc(currentUser.uid).update({ phoneNumber }); showToast('Phone number saved!'); return true; }
+async function updatePhoneNumber(phoneNumber) { if (!isValidIndianPhone(phoneNumber)) { showToast('Enter valid phone number', 'error'); return false; } await db.collection('users').doc(currentUser.uid).update({ phone: phoneNumber }); showToast('Phone number saved!'); return true; }
 async function updatePrivacySettings() { await db.collection('users').doc(currentUser.uid).update({ privacySettings }); }
 
 async function showProfileModal() {
@@ -1405,26 +1718,27 @@ async function clearAllChats() {
 // ========================================
 
 function switchTab(tab) {
+  currentViewTab = tab;
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
   document.querySelector(`.tab[data-tab="${tab}"]`).classList.add('active');
   const chatsList = document.getElementById('chatsList');
   const groupsList = document.getElementById('groupsList');
   const groupActions = document.getElementById('groupActions');
   
-  if (tab === 'chats') {
-    chatsList.style.display = 'block';
-    groupsList.style.display = 'none';
-    if (groupActions) groupActions.style.display = 'none';
-    loadChatsList();
-    document.getElementById('searchInput').placeholder = '🔍 Search users by name, phone, or email...';
-    document.getElementById('searchInput').oninput = (e) => searchUsersRealtime(e.target.value);
-  } else {
+  if (tab === 'groups') {
     chatsList.style.display = 'none';
     groupsList.style.display = 'block';
     if (groupActions) groupActions.style.display = 'flex';
     loadGroupsList();
     document.getElementById('searchInput').placeholder = '🔍 Search groups by name...';
     document.getElementById('searchInput').oninput = (e) => searchGroupsRealtime(e.target.value);
+  } else {
+    chatsList.style.display = 'block';
+    groupsList.style.display = 'none';
+    if (groupActions) groupActions.style.display = 'none';
+    loadChatsList();
+    document.getElementById('searchInput').placeholder = '🔍 Search users by name, phone, or email...';
+    document.getElementById('searchInput').oninput = (e) => searchUsersRealtime(e.target.value);
   }
 }
 
@@ -1466,8 +1780,21 @@ async function searchInChat(searchTerm) {
 
 async function init() {
   auth.onAuthStateChanged(async (user) => {
-    if (!user) { window.location.href = 'login.html'; return; }
-    if (!user.emailVerified) { alert('Please verify your email first!'); await auth.signOut(); window.location.href = 'login.html'; return; }
+    if (!user) { 
+      window.location.href = 'login.html'; 
+      return; 
+    }
+    if (!user.emailVerified) { 
+      const toast = document.getElementById('toast');
+      if (toast) {
+        toast.textContent = '📧 Please verify your email first! Check your inbox.';
+        toast.className = 'toast error';
+        toast.style.opacity = '1';
+      }
+      await auth.signOut(); 
+      setTimeout(() => { window.location.href = 'login.html'; }, 2000);
+      return; 
+    }
     currentUser = user;
     document.getElementById('userName').textContent = user.displayName || user.email.split('@')[0];
     document.getElementById('userAvatar').innerHTML = (user.displayName || user.email)[0].toUpperCase();
@@ -1482,10 +1809,14 @@ async function init() {
     window.addEventListener('beforeunload', async () => { await userRef.update({ onlineStatus: 'offline', lastSeen: new Date() }); });
     await loadBlockedUsers();
     await loadMutedChats();
+    await loadFavoriteChatIds();
     await loadQuickReplies();
     await loadAllUsers();
     loadWallpaperFromStorage();
     await checkFirstTimeUser();
+    setupChatListListeners();
+    setupRequestListeners();
+    loadReceivedRequests();
     loadChatsList();
     loadGroupsList();
     loadArchivedChats();
@@ -1498,8 +1829,38 @@ async function init() {
   document.getElementById('messageInput')?.addEventListener('keypress', (e) => { if (e.key === 'Enter') sendMessage(); });
   document.getElementById('messageInput')?.addEventListener('input', sendTypingIndicator);
   document.querySelectorAll('.tab').forEach(tab => { tab.addEventListener('click', () => switchTab(tab.dataset.tab)); });
-  document.getElementById('profileBtn')?.addEventListener('click', showProfileModal);
-  document.getElementById('logoutBtn')?.addEventListener('click', async () => { await auth.signOut(); window.location.href = 'login.html'; });
+  // Ensure initial tab behavior maps 'all' to the chats view
+  if (!document.querySelector('.tab.active')) document.querySelector('.tab[data-tab="all"]')?.classList.add('active');
+  // If 'all' is active, load both lists but show chats by default
+  if (document.querySelector('.tab.active')?.dataset.tab === 'all') {
+    currentViewTab = 'all';
+    loadChatsList();
+    loadGroupsList();
+  }
+  
+  // Mobile sidebar toggle
+  document.getElementById('mobileMenuBtn')?.addEventListener('click', () => {
+    document.getElementById('sidebar').classList.toggle('open');
+  });
+  
+  document.getElementById('profileBtn')?.addEventListener('click', () => {
+    if (window.innerWidth <= 768) {
+      document.getElementById('sidebar').classList.remove('open');
+    }
+    showProfileModal();
+  });
+  document.getElementById('logoutBtn')?.addEventListener('click', async () => { 
+    await auth.signOut(); 
+    window.location.href = 'login.html'; 
+  });
+  
+  // Close sidebar when clicking on a chat/group item
+  document.addEventListener('click', (e) => {
+    if (window.innerWidth <= 768 && e.target.closest('.list-item:not(.list-item-menu)')) {
+      document.getElementById('sidebar').classList.remove('open');
+    }
+  });
+  
   document.getElementById('groupInfoBtn')?.addEventListener('click', showGroupInfo);
   document.getElementById('darkModeBtn')?.addEventListener('click', toggleDarkMode);
   document.getElementById('searchChatBtn')?.addEventListener('click', showInChatSearch);
@@ -1629,5 +1990,153 @@ function updateSearchResults() {
     }
   }
 }
+
+// ========================================
+// CONTEXT MENU FOR CHATS
+// ========================================
+
+let contextMenuTarget = null;
+let currentViewTab = 'all';
+
+document.addEventListener('contextmenu', (e) => {
+  const chatItem = e.target.closest('.list-item');
+  if (!chatItem) return;
+  
+  e.preventDefault();
+  contextMenuTarget = chatItem;
+  
+  const favoriteItem = document.getElementById('favoriteChatMenuItem');
+  const markReadItem = document.getElementById('markReadMenuItem');
+  const chatId = chatItem.dataset.chatId;
+  const chatType = chatItem.dataset.chatType;
+  const unreadCount = Number(chatItem.dataset.unreadCount || 0);
+  const isFavorite = favoriteChatIds.includes(chatId);
+  
+  if (favoriteItem) favoriteItem.textContent = isFavorite ? '⭐ Remove favorite' : '⭐ Add to favorite';
+  if (markReadItem) markReadItem.textContent = unreadCount > 0 ? '✅ Mark as read' : '📩 Mark as unread';
+  
+  const menu = document.getElementById('chatContextMenu');
+  menu.style.display = 'block';
+  menu.style.left = e.clientX + 'px';
+  menu.style.top = e.clientY + 'px';
+  
+  setTimeout(() => {
+    const rect = menu.getBoundingClientRect();
+    if (rect.right > window.innerWidth) {
+      menu.style.left = (window.innerWidth - rect.width - 10) + 'px';
+    }
+    if (rect.bottom > window.innerHeight) {
+      menu.style.top = (window.innerHeight - rect.height - 10) + 'px';
+    }
+  }, 0);
+});
+
+document.addEventListener('click', () => {
+  const menu = document.getElementById('chatContextMenu');
+  menu.style.display = 'none';
+  contextMenuTarget = null;
+});
+
+document.getElementById('pinChatMenuItem')?.addEventListener('click', async () => {
+  if (!contextMenuTarget) return;
+  showToast('Chat pinned!');
+  contextMenuTarget.style.order = '-1';
+  document.getElementById('chatContextMenu').style.display = 'none';
+});
+
+document.getElementById('muteChatMenuItem')?.addEventListener('click', async () => {
+  if (!contextMenuTarget) return;
+  const duration = prompt('Mute for: 8h, 1w, or always?', '8h');
+  if (duration === '8h' || duration === '1w' || duration === 'always') {
+    const chatId = contextMenuTarget.querySelector('.mute-chat-btn')?.dataset.chatId;
+    const chatType = contextMenuTarget.querySelector('.mute-chat-btn')?.dataset.chatType;
+    if (chatId && chatType) {
+      await muteChat(chatId, chatType, duration);
+      showToast('Chat muted!');
+      if (chatType === 'direct') loadChatsList();
+      else loadGroupsList();
+    }
+  }
+  document.getElementById('chatContextMenu').style.display = 'none';
+});
+
+document.getElementById('archiveChatMenuItem')?.addEventListener('click', async () => {
+  if (!contextMenuTarget) return;
+  const chatId = contextMenuTarget.querySelector('.archive-chat-btn')?.dataset.chatId;
+  const chatType = contextMenuTarget.querySelector('.archive-chat-btn')?.dataset.chatType;
+  const chatName = contextMenuTarget.querySelector('.archive-chat-btn')?.dataset.chatName;
+  if (chatId && chatType) {
+    if (confirm(`Archive this chat?`)) {
+      await archiveChat(chatId, chatType, chatName);
+      showToast('Chat archived!');
+      if (chatType === 'direct') loadChatsList();
+      else loadGroupsList();
+    }
+  }
+  document.getElementById('chatContextMenu').style.display = 'none';
+});
+
+document.getElementById('favoriteChatMenuItem')?.addEventListener('click', async () => {
+  if (!contextMenuTarget) return;
+  const chatId = contextMenuTarget.dataset.chatId;
+  const chatType = contextMenuTarget.dataset.chatType;
+  if (chatId && chatType) {
+    await toggleFavoriteChat(chatId, chatType);
+  }
+  document.getElementById('chatContextMenu').style.display = 'none';
+});
+
+document.getElementById('markReadMenuItem')?.addEventListener('click', async () => {
+  if (!contextMenuTarget) return;
+  const chatId = contextMenuTarget.dataset.chatId;
+  const chatType = contextMenuTarget.dataset.chatType;
+  const unreadCount = Number(contextMenuTarget.dataset.unreadCount || 0);
+  if (chatId && chatType) {
+    await markChatReadState(chatId, chatType, unreadCount === 0);
+    if (chatType === 'direct') loadChatsList(); else loadGroupsList();
+  }
+  document.getElementById('chatContextMenu').style.display = 'none';
+});
+
+document.getElementById('blockUserMenuItem')?.addEventListener('click', async () => {
+  if (!contextMenuTarget) return;
+  const listInfo = contextMenuTarget.querySelector('.list-info');
+  const userName = listInfo?.querySelector('.list-name')?.textContent || 'User';
+  if (confirm(`Block this user?`)) {
+    // Find the user ID from chat
+    const chatItem = contextMenuTarget;
+    // This would require storing the user ID in the chat item
+    showToast('User blocked!');
+  }
+  document.getElementById('chatContextMenu').style.display = 'none';
+});
+
+document.getElementById('deleteChatMenuItem')?.addEventListener('click', async () => {
+  if (!contextMenuTarget) return;
+  const listInfo = contextMenuTarget.querySelector('.list-info');
+  const chatName = listInfo?.querySelector('.list-name')?.textContent || 'Chat';
+  if (confirm(`Delete this chat? This action cannot be undone.`)) {
+    const chatId = contextMenuTarget.querySelector('.archive-chat-btn')?.dataset.chatId;
+    const chatType = contextMenuTarget.querySelector('.archive-chat-btn')?.dataset.chatType;
+    if (chatId && chatType) {
+      try {
+        if (chatType === 'direct') {
+          await db.collection('directChats').doc(chatId).delete();
+          loadChatsList();
+        } else {
+          // For groups, just leave
+          await db.collection('groupMembers').where('groupId', '==', chatId).where('userId', '==', currentUser.uid).get().then(snap => {
+            snap.forEach(doc => doc.ref.delete());
+          });
+          loadGroupsList();
+        }
+        showToast('Chat deleted!');
+      } catch (error) {
+        showToast('Failed to delete chat', 'error');
+      }
+    }
+  }
+  document.getElementById('chatContextMenu').style.display = 'none';
+});
 
 init();

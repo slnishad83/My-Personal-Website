@@ -68,6 +68,16 @@
           />
         </div>
 
+        <div class="request-section">
+          <div class="request-header">
+            💌 Chat Requests
+            <span id="requestBadge" class="badge" style="display: none"></span>
+          </div>
+          <div id="requestList" class="list">
+            <div class="empty-state">No requests</div>
+          </div>
+        </div>
+
         <div class="archive-section">
           <div class="archive-header" id="archiveHeader">
             <span>📦 Archived Chats</span>
@@ -89,7 +99,9 @@
         </div>
 
         <div class="tabs">
-          <button class="tab active" data-tab="chats">💬 Chats</button>
+          <button class="tab active" data-tab="all">All</button>
+          <button class="tab" data-tab="unread">🔔 Unread</button>
+          <button class="tab" data-tab="favorites">⭐ Favorites</button>
           <button class="tab" data-tab="groups">👥 Groups</button>
         </div>
 
@@ -100,18 +112,39 @@
           <div class="empty-state">No groups yet</div>
         </div>
 
-                 <div class="group-actions" id="groupActions" style="display: none;">
-          <button id="createGroupBtn" class="join-btn" style="flex: 1; background: #10b981">➕ New Group</button>
-          <button id="showJoinGroupBtn" class="join-btn" style="flex: 1">🔗 Join Group</button>
+        <div class="group-actions" id="groupActions" style="display: none">
+          <button
+            id="createGroupBtn"
+            class="join-btn"
+            style="flex: 1; background: #10b981"
+          >
+            ➕ New Group
+          </button>
+          <button id="showJoinGroupBtn" class="join-btn" style="flex: 1">
+            🔗 Join Group
+          </button>
         </div>
-      </div>  <!-- This closes the sidebar -->
-
-      <!-- Main Chat Area -->
-      <div class="chat-main">
+      </div>
+      <!-- This closes the sidebar -->
 
       <!-- Main Chat Area -->
       <div class="chat-main">
         <div class="chat-header">
+          <button
+            class="mobile-menu-btn"
+            id="mobileMenuBtn"
+            style="
+              display: none;
+              background: none;
+              border: none;
+              font-size: 24px;
+              cursor: pointer;
+              color: white;
+              padding: 8px;
+            "
+          >
+            ☰
+          </button>
           <div>
             <h2 id="currentChatName">Select a chat</h2>
             <div class="chat-status" id="chatStatus"></div>
@@ -247,21 +280,30 @@
         </div>
 
         <div class="input-area" id="inputArea" style="display: none">
-  <div style="position: relative;">
-    <button class="emoji-btn" id="emojiBtn" title="Emoji">😊</button>
-    <div id="emojiPicker" class="emoji-picker"></div>
-  </div>
-  <button class="voice-msg-btn" id="voiceMsgBtn" title="Hold to record voice">🎤</button>
-  <button class="attach-btn" id="attachBtn" title="Attach file">📎</button>
-  <input type="text" id="messageInput" placeholder="Type a message..." />
-  <button class="send-btn" id="sendBtn">➤</button>
-</div>
+          <div style="position: relative">
+            <button class="emoji-btn" id="emojiBtn" title="Emoji">😊</button>
+            <div id="emojiPicker" class="emoji-picker"></div>
+          </div>
+          <button
+            class="voice-msg-btn"
+            id="voiceMsgBtn"
+            title="Hold to record voice"
+          >
+            🎤
+          </button>
+          <button class="attach-btn" id="attachBtn" title="Attach file">
+            📎
+          </button>
+          <input
+            type="text"
+            id="messageInput"
+            placeholder="Type a message..."
+          />
+          <button class="send-btn" id="sendBtn">➤</button>
+        </div>
       </div>
     </div>
 
-    <div style="position: relative;">
-  <div id="emojiPicker" class="emoji-picker"></div>
-</div>
     <input
       type="file"
       id="fileInput"
@@ -733,10 +775,151 @@
 
     <div id="toast" class="toast"></div>
 
+    <!-- Context Menu for Chats -->
+    <div
+      id="chatContextMenu"
+      class="context-menu"
+      style="
+        display: none;
+        position: fixed;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        z-index: 10000;
+        min-width: 200px;
+      "
+    >
+      <div
+        class="context-menu-item"
+        id="pinChatMenuItem"
+        style="
+          padding: 12px 16px;
+          cursor: pointer;
+          border-bottom: 1px solid #eee;
+          border-radius: 8px 8px 0 0;
+        "
+      >
+        📌 Pin Chat
+      </div>
+      <div
+        class="context-menu-item"
+        id="muteChatMenuItem"
+        style="
+          padding: 12px 16px;
+          cursor: pointer;
+          border-bottom: 1px solid #eee;
+        "
+      >
+        🔇 Mute
+      </div>
+      <div
+        class="context-menu-item"
+        id="archiveChatMenuItem"
+        style="
+          padding: 12px 16px;
+          cursor: pointer;
+          border-bottom: 1px solid #eee;
+        "
+      >
+        📦 Archive
+      </div>
+      <div
+        class="context-menu-item"
+        id="favoriteChatMenuItem"
+        style="
+          padding: 12px 16px;
+          cursor: pointer;
+          border-bottom: 1px solid #eee;
+        "
+      >
+        ⭐ Add to favorite
+      </div>
+      <div
+        class="context-menu-item"
+        id="markReadMenuItem"
+        style="
+          padding: 12px 16px;
+          cursor: pointer;
+          border-bottom: 1px solid #eee;
+        "
+      >
+        📩 Mark as unread
+      </div>
+      <div
+        class="context-menu-item"
+        id="blockUserMenuItem"
+        style="
+          padding: 12px 16px;
+          cursor: pointer;
+          border-bottom: 1px solid #eee;
+        "
+      >
+        🚫 Block
+      </div>
+      <div
+        class="context-menu-item"
+        id="deleteChatMenuItem"
+        style="
+          padding: 12px 16px;
+          cursor: pointer;
+          color: #dc2626;
+          border-radius: 0 0 8px 8px;
+        "
+      >
+        🗑️ Delete
+      </div>
+    </div>
+
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-storage-compat.js"></script>
     <script src="app.js"></script>
+
+    <!-- Service Worker Registration -->
+    <script>
+      // Register Service Worker for PWA functionality
+      if ("serviceWorker" in navigator) {
+        window.addEventListener("load", () => {
+          navigator.serviceWorker
+            .register("sw.js")
+            .then((reg) => {
+              console.log("✅ Service Worker registered successfully");
+            })
+            .catch((err) => {
+              console.log("❌ Service Worker registration failed:", err);
+            });
+        });
+      }
+
+      // Handle PWA Install Prompt
+      let deferredPrompt;
+      const installBtn = document.getElementById("installAppBtn");
+
+      window.addEventListener("beforeinstallprompt", (e) => {
+        e.preventDefault();
+        deferredPrompt = e;
+        if (installBtn) {
+          installBtn.style.display = "block";
+        }
+      });
+
+      if (installBtn) {
+        installBtn.addEventListener("click", async () => {
+          if (deferredPrompt) {
+            deferredPrompt.prompt();
+            const { outcome } = await deferredPrompt.userChoice;
+            console.log(`User response to the install prompt: ${outcome}`);
+            deferredPrompt = null;
+            installBtn.style.display = "none";
+          }
+        });
+      }
+
+      window.addEventListener("appinstalled", () => {
+        console.log("✅ PWA installed successfully");
+        deferredPrompt = null;
+      });
+    </script>
   </body>
 </html>
