@@ -29,9 +29,11 @@ let currentChat = null;
 let currentChatType = null;
 let allUsers = [];
 let messagesUnsubscribe = null;
+let typingUnsubscribe = null;
 let directChatsUnsubscribe = null;
 let groupChatsUnsubscribe = null;
 let chatRequestsUnsubscribe = null;
+let groupInvitesUnsubscribe = null;
 let currentGroup = null;
 let currentGroupMembers = [];
 let currentReplyTo = null;
@@ -50,6 +52,25 @@ let isRecording = false;
 let recordingStartTime = null;
 let recordingTimer = null;
 let wallpaperModalMode = 'global';
+let chatListRefreshTimer = null;
+let statusImageAttachment = null;
+let activeCall = null;
+let peerConnection = null;
+let localCallStream = null;
+let remoteCallStream = null;
+let incomingCallsUnsubscribe = null;
+let callDocUnsubscribe = null;
+let callCandidatesUnsubscribe = null;
+let currentCallType = 'voice';
+let micMuted = false;
+let cameraOff = false;
+
+const rtcConfig = {
+  iceServers: [
+    { urls: 'stun:stun.l.google.com:19302' },
+    { urls: 'stun:stun1.l.google.com:19302' }
+  ]
+};
 
 // Privacy Settings
 let privacySettings = {
@@ -89,6 +110,330 @@ function closeMobileChatPanel() {
   document.querySelector('.chat-container')?.classList.remove('chat-open');
 }
 
+function resetChatPanel() {
+  currentChat = null;
+  currentChatType = null;
+  currentGroup = null;
+  currentGroupMembers = [];
+  currentReplyTo = null;
+  if (messagesUnsubscribe) {
+    messagesUnsubscribe();
+    messagesUnsubscribe = null;
+  }
+  if (typingUnsubscribe) {
+    typingUnsubscribe();
+    typingUnsubscribe = null;
+  }
+  document.getElementById('currentChatName').textContent = 'Select a chat';
+  document.getElementById('chatStatus').textContent = '';
+  document.getElementById('currentChatAvatar').innerHTML = '?';
+  document.getElementById('voiceCallBtn').style.display = 'none';
+  document.getElementById('videoCallBtn').style.display = 'none';
+  document.getElementById('messagesArea').innerHTML = '<div class="empty-state"><div class="empty-icon">💬</div><p>Select a chat to start messaging</p></div>';
+  document.getElementById('inputArea').style.display = 'none';
+  document.getElementById('groupInfoBtn').style.display = 'none';
+  closeMobileChatPanel();
+}
+
+function setChatHeaderAvatar(content) {
+  const avatar = document.getElementById('currentChatAvatar');
+  if (avatar) avatar.innerHTML = content || '?';
+}
+
+function setBadgeText(elementId, count) {
+  const badge = document.getElementById(elementId);
+  if (!badge) return;
+  badge.textContent = count > 99 ? '99+' : String(count);
+  badge.style.display = count > 0 ? 'inline-flex' : 'none';
+}
+
+function updateUnreadBadges(items = []) {
+  const totalUnread = items.reduce((total, item) => total + (Number(item.unreadCount) || 0), 0);
+  setBadgeText('allUnreadBadge', totalUnread);
+  setBadgeText('unreadTabBadge', totalUnread);
+  document.title = totalUnread > 0 ? `(${totalUnread}) Team Chat` : 'Team Chat - Complete';
+}
+
+function scheduleChatListRefresh(delay = 600) {
+  clearTimeout(chatListRefreshTimer);
+  chatListRefreshTimer = setTimeout(() => {
+    if (!currentUser) return;
+    loadCurrentChatList();
+  }, delay);
+}
+
+function setAttachmentPreview() {
+  const preview = document.getElementById('attachmentPreview');
+  if (!preview) return;
+  if (!currentAttachment) {
+    preview.style.display = 'none';
+    preview.innerHTML = '';
+    return;
+  }
+  const isImage = currentAttachment.type === 'image';
+  preview.style.display = 'flex';
+  preview.innerHTML = `
+    ${isImage ? `<img src="${currentAttachment.url}" alt="Attachment preview">` : '<span style="font-size:24px">📎</span>'}
+    <div style="min-width:0">
+      <strong>${escapeHtml(currentAttachment.filename || (isImage ? 'Image ready' : 'Document ready'))}</strong>
+      <div class="list-preview">${isImage ? 'Image attachment' : 'Document attachment'}</div>
+    </div>
+    <button type="button" id="clearAttachmentBtn">Remove</button>
+  `;
+  document.getElementById('clearAttachmentBtn')?.addEventListener('click', () => {
+    currentAttachment = null;
+    setAttachmentPreview();
+  });
+}
+
+function setConnectionBanner() {
+  const banner = document.getElementById('connectionBanner');
+  if (!banner) return;
+  banner.style.display = navigator.onLine ? 'none' : 'block';
+}
+
+function setSendingState(isSending) {
+  const sendBtn = document.getElementById('sendBtn');
+  const input = document.getElementById('messageInput');
+  if (sendBtn) {
+    sendBtn.disabled = isSending;
+    sendBtn.textContent = isSending ? '…' : '➤';
+  }
+  if (input) input.disabled = isSending;
+}
+
+function setCallUi({ mode = 'outgoing', type = 'voice', title = 'Calling...', status = 'Connecting' } = {}) {
+  const modal = document.getElementById('callModal');
+  const localVideo = document.getElementById('localVideo');
+  const remoteVideo = document.getElementById('remoteVideo');
+  const audioAvatar = document.getElementById('callAudioAvatar');
+  if (!modal) return;
+  modal.style.display = 'flex';
+  document.getElementById('callTitle').textContent = title;
+  document.getElementById('callStatusText').textContent = status;
+  document.getElementById('acceptCallBtn').style.display = mode === 'incoming' ? 'inline-flex' : 'none';
+  document.getElementById('rejectCallBtn').style.display = mode === 'incoming' ? 'inline-flex' : 'none';
+  document.getElementById('endCallBtn').style.display = mode === 'incoming' ? 'none' : 'inline-flex';
+  document.getElementById('toggleCameraBtn').style.display = type === 'video' ? 'inline-flex' : 'none';
+  if (localVideo) localVideo.style.display = type === 'video' ? 'block' : 'none';
+  if (remoteVideo) remoteVideo.style.display = type === 'video' ? 'block' : 'none';
+  if (audioAvatar) {
+    audioAvatar.style.display = type === 'voice' ? 'flex' : 'none';
+    audioAvatar.textContent = (currentChat?.otherUserName || activeCall?.fromUserName || activeCall?.toUserName || '?')[0]?.toUpperCase() || '?';
+  }
+}
+
+function stopLocalCallStream() {
+  if (localCallStream) {
+    localCallStream.getTracks().forEach(track => track.stop());
+    localCallStream = null;
+  }
+  const localVideo = document.getElementById('localVideo');
+  const remoteVideo = document.getElementById('remoteVideo');
+  if (localVideo) localVideo.srcObject = null;
+  if (remoteVideo) remoteVideo.srcObject = null;
+}
+
+function cleanupCallUi() {
+  document.getElementById('callModal').style.display = 'none';
+  stopLocalCallStream();
+  if (peerConnection) {
+    peerConnection.close();
+    peerConnection = null;
+  }
+  if (callDocUnsubscribe) callDocUnsubscribe();
+  if (callCandidatesUnsubscribe) callCandidatesUnsubscribe();
+  callDocUnsubscribe = null;
+  callCandidatesUnsubscribe = null;
+  activeCall = null;
+  micMuted = false;
+  cameraOff = false;
+}
+
+async function preparePeerConnection(callId, role) {
+  peerConnection = new RTCPeerConnection(rtcConfig);
+  remoteCallStream = new MediaStream();
+  document.getElementById('remoteVideo').srcObject = remoteCallStream;
+  localCallStream = await navigator.mediaDevices.getUserMedia({
+    audio: true,
+    video: currentCallType === 'video'
+  });
+  document.getElementById('localVideo').srcObject = localCallStream;
+  localCallStream.getTracks().forEach(track => peerConnection.addTrack(track, localCallStream));
+  peerConnection.ontrack = event => {
+    event.streams[0].getTracks().forEach(track => remoteCallStream.addTrack(track));
+  };
+  peerConnection.onicecandidate = event => {
+    if (event.candidate) {
+      db.collection('calls').doc(callId).collection(role === 'caller' ? 'callerCandidates' : 'calleeCandidates').add(event.candidate.toJSON());
+    }
+  };
+}
+
+async function startCall(type = 'voice') {
+  if (!currentUser || !currentChat || currentChatType !== 'direct') {
+    showToast('Calls are available for personal chats only', 'error');
+    return;
+  }
+  if (!window.RTCPeerConnection || !navigator.mediaDevices?.getUserMedia) {
+    showToast('Calls are not supported in this browser', 'error');
+    return;
+  }
+  currentCallType = type;
+  const callRef = db.collection('calls').doc();
+  activeCall = {
+    id: callRef.id,
+    type,
+    fromUserId: currentUser.uid,
+    fromUserName: currentUser.displayName || currentUser.email,
+    toUserId: currentChat.otherUserId,
+    toUserName: currentChat.otherUserName || currentChat.name || 'Contact'
+  };
+  setCallUi({ mode: 'outgoing', type, title: activeCall.toUserName, status: type === 'video' ? 'Video calling...' : 'Voice calling...' });
+  try {
+    await preparePeerConnection(callRef.id, 'caller');
+    const offer = await peerConnection.createOffer();
+    await peerConnection.setLocalDescription(offer);
+    await callRef.set({
+      ...activeCall,
+      status: 'ringing',
+      offer,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    callDocUnsubscribe = callRef.onSnapshot(snapshot => {
+      const data = snapshot.data();
+      if (!data) return;
+      if (data.answer && !peerConnection.currentRemoteDescription) {
+        peerConnection.setRemoteDescription(new RTCSessionDescription(data.answer));
+        document.getElementById('callStatusText').textContent = 'Connected';
+      }
+      if (['ended', 'rejected', 'missed'].includes(data.status)) cleanupCallUi();
+    });
+    callCandidatesUnsubscribe = callRef.collection('calleeCandidates').onSnapshot(snapshot => {
+      snapshot.docChanges().forEach(change => {
+        if (change.type === 'added') peerConnection.addIceCandidate(new RTCIceCandidate(change.doc.data()));
+      });
+    });
+  } catch (error) {
+    showToast('Unable to start call. Check camera/microphone permission.', 'error');
+    await callRef.set({ ...activeCall, status: 'failed', error: error.message, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
+    cleanupCallUi();
+  }
+}
+
+async function acceptIncomingCall() {
+  if (!activeCall?.id) return;
+  currentCallType = activeCall.type || 'voice';
+  const callRef = db.collection('calls').doc(activeCall.id);
+  setCallUi({ mode: 'active', type: currentCallType, title: activeCall.fromUserName || 'Caller', status: 'Connecting...' });
+  try {
+    await preparePeerConnection(activeCall.id, 'callee');
+    await peerConnection.setRemoteDescription(new RTCSessionDescription(activeCall.offer));
+    const answer = await peerConnection.createAnswer();
+    await peerConnection.setLocalDescription(answer);
+    await callRef.update({ answer, status: 'accepted', acceptedAt: firebase.firestore.FieldValue.serverTimestamp() });
+    callCandidatesUnsubscribe = callRef.collection('callerCandidates').onSnapshot(snapshot => {
+      snapshot.docChanges().forEach(change => {
+        if (change.type === 'added') peerConnection.addIceCandidate(new RTCIceCandidate(change.doc.data()));
+      });
+    });
+    callDocUnsubscribe = callRef.onSnapshot(snapshot => {
+      if (['ended', 'rejected', 'missed'].includes(snapshot.data()?.status)) cleanupCallUi();
+    });
+  } catch (error) {
+    showToast('Unable to accept call. Check permission.', 'error');
+    await callRef.update({ status: 'failed', error: error.message });
+    cleanupCallUi();
+  }
+}
+
+async function endActiveCall(status = 'ended') {
+  if (activeCall?.id) {
+    await db.collection('calls').doc(activeCall.id).update({
+      status,
+      endedAt: firebase.firestore.FieldValue.serverTimestamp()
+    }).catch(() => {});
+  }
+  cleanupCallUi();
+}
+
+function listenForIncomingCalls() {
+  if (!currentUser) return;
+  if (incomingCallsUnsubscribe) incomingCallsUnsubscribe();
+  incomingCallsUnsubscribe = db.collection('calls')
+    .where('toUserId', '==', currentUser.uid)
+    .where('status', '==', 'ringing')
+    .onSnapshot(snapshot => {
+      const call = snapshot.docs[0];
+      if (!call || activeCall) return;
+      activeCall = { id: call.id, ...call.data() };
+      currentCallType = activeCall.type || 'voice';
+      setCallUi({ mode: 'incoming', type: currentCallType, title: activeCall.fromUserName || 'Incoming call', status: currentCallType === 'video' ? 'Incoming video call' : 'Incoming voice call' });
+    });
+}
+
+function getOfflineQueue() {
+  try {
+    return JSON.parse(localStorage.getItem('offlineMessageQueue') || '[]');
+  } catch {
+    return [];
+  }
+}
+
+function saveOfflineQueue(queue) {
+  localStorage.setItem('offlineMessageQueue', JSON.stringify(queue));
+}
+
+function queueOfflineMessage(messageData, chatSnapshot) {
+  const queue = getOfflineQueue();
+  queue.push({
+    id: `${Date.now()}_${Math.random().toString(36).slice(2)}`,
+    messageData: {
+      ...messageData,
+      timestamp: new Date().toISOString(),
+      readBy: { [currentUser.uid]: new Date().toISOString() }
+    },
+    chatSnapshot,
+    queuedAt: new Date().toISOString()
+  });
+  saveOfflineQueue(queue);
+}
+
+async function flushOfflineQueue() {
+  if (!navigator.onLine || !currentUser) return;
+  const queue = getOfflineQueue();
+  if (!queue.length) return;
+  const remaining = [];
+  for (const item of queue) {
+    try {
+      const messageData = {
+        ...item.messageData,
+        timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+        readBy: { [currentUser.uid]: new Date(item.messageData.readBy?.[currentUser.uid] || Date.now()) }
+      };
+      await db.collection('messages').add(messageData);
+      if (item.chatSnapshot?.type === 'direct') {
+        await db.collection('directChats').doc(item.chatSnapshot.id).update({
+          lastMessage: messageData.text || (messageData.attachment ? 'Attachment' : ''),
+          lastMessageTime: firebase.firestore.FieldValue.serverTimestamp()
+        });
+      } else if (item.chatSnapshot?.type === 'group') {
+        await db.collection('groups').doc(item.chatSnapshot.id).update({
+          updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+      }
+    } catch (error) {
+      remaining.push(item);
+    }
+  }
+  saveOfflineQueue(remaining);
+  if (queue.length !== remaining.length) {
+    showToast('Queued messages sent');
+    loadMessages();
+    loadCurrentChatList();
+  }
+}
+
 function formatTime(timestamp) {
   if (!timestamp) return '';
   const date = timestamp.toDate();
@@ -102,6 +447,147 @@ function formatDate(date) {
 
 function getDirectChatId(userId1, userId2) {
   return [userId1, userId2].sort().join('_');
+}
+
+function getContactMergeKey(item) {
+  const email = (item.email || item.user?.email || '').trim().toLowerCase();
+  if (email) return `email:${email}`;
+  const phone = ((item.phone || item.user?.phone || item.user?.phoneNumber || '') + '').replace(/\D/g, '');
+  if (phone.length >= 6) return `phone:${phone}`;
+  return `name:${(item.name || '').trim().toLowerCase()}`;
+}
+
+function findProfileByFallbackName(name) {
+  const cleanName = (name || '').trim().toLowerCase();
+  if (!cleanName || cleanName === 'unknown contact') return null;
+  return allUsers.find(user =>
+    (user.displayName || '').trim().toLowerCase() === cleanName ||
+    (user.email || '').trim().toLowerCase() === cleanName
+  ) || null;
+}
+
+function mergeDirectContactItems(items) {
+  const merged = [];
+  const groups = new Map();
+
+  for (const item of items) {
+    if (item.type !== 'direct') {
+      merged.push(item);
+      continue;
+    }
+
+    const key = getContactMergeKey(item);
+    if (!key || key === 'name:') {
+      merged.push(item);
+      continue;
+    }
+
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(item);
+  }
+
+  for (const groupItems of groups.values()) {
+    if (groupItems.length === 1) {
+      merged.push(groupItems[0]);
+      continue;
+    }
+
+    const sorted = [...groupItems].sort((a, b) => b.lastMessageTime - a.lastMessageTime);
+    const profileBacked = sorted.find(item => item.hasUserProfile);
+    const primary = { ...(profileBacked || sorted[0]) };
+    const latest = sorted[0];
+    primary.id = profileBacked?.id || latest.id;
+    primary.preview = latest.preview;
+    primary.lastMessageTime = latest.lastMessageTime;
+    primary.unreadCount = groupItems.reduce((total, item) => total + (item.unreadCount || 0), 0);
+    primary.isFavorite = groupItems.some(item => item.isFavorite);
+    primary.isMuted = groupItems.some(item => item.isMuted);
+    primary.aliasDirectIds = [...new Set(groupItems.flatMap(item => item.aliasDirectIds || [item.id]))];
+    primary.mergedContactCount = groupItems.length;
+    merged.push(primary);
+  }
+
+  return merged;
+}
+
+window.chatDebug = async function chatDebug() {
+  const user = auth.currentUser;
+  if (!user) {
+    console.log('CHAT_DEBUG: not logged in');
+    return null;
+  }
+
+  const report = {
+    uid: user.uid,
+    email: user.email,
+    directChats: [],
+    acceptedRequestsSent: [],
+    acceptedRequestsReceived: [],
+    messagesWithParticipants: [],
+    sentDirectMessages: [],
+    allUsers: [],
+    builtAllItems: []
+  };
+
+  const directChats = await db.collection('directChats')
+    .where('participants', 'array-contains', user.uid)
+    .get();
+  report.directChats = directChats.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+  const sentAccepted = await db.collection('chatRequests')
+    .where('fromUserId', '==', user.uid)
+    .where('status', '==', 'accepted')
+    .get();
+  report.acceptedRequestsSent = sentAccepted.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+  const receivedAccepted = await db.collection('chatRequests')
+    .where('toUserId', '==', user.uid)
+    .where('status', '==', 'accepted')
+    .get();
+  report.acceptedRequestsReceived = receivedAccepted.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+  try {
+    const messagesWithParticipants = await db.collection('messages')
+      .where('participants', 'array-contains', user.uid)
+      .limit(20)
+      .get();
+    report.messagesWithParticipants = messagesWithParticipants.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  } catch (error) {
+    report.messagesWithParticipantsError = error.message;
+  }
+
+  const sentDirectMessages = await db.collection('messages')
+    .where('senderId', '==', user.uid)
+    .limit(20)
+    .get();
+  report.sentDirectMessages = sentDirectMessages.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+  const users = await db.collection('users').limit(20).get();
+  report.allUsers = users.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+  try {
+    report.builtAllItems = await buildDirectChatItems();
+  } catch (error) {
+    report.builtAllItemsError = error.message;
+  }
+
+  console.log('CHAT_DEBUG_REPORT', report);
+  return report;
+};
+
+async function renderChatDebugPanel() {
+  if (!new URLSearchParams(window.location.search).has('debugChats')) return;
+  const panel = document.createElement('pre');
+  panel.id = 'chatDebugPanel';
+  panel.style.cssText = 'position:fixed;inset:12px;z-index:99999;overflow:auto;background:#111b21;color:#e9edef;padding:16px;border-radius:8px;font:12px/1.4 monospace;white-space:pre-wrap;';
+  panel.textContent = 'Loading chat debug report...';
+  document.body.appendChild(panel);
+  try {
+    const report = await window.chatDebug();
+    panel.textContent = JSON.stringify(report, null, 2);
+  } catch (error) {
+    panel.textContent = `Debug failed: ${error.message || error}`;
+  }
 }
 
 async function loadFavoriteChatIds() {
@@ -260,15 +746,16 @@ function searchUsersRealtime(searchTerm) {
   displaySearchResults(results, chatsList);
 }
 
-function displaySearchResults(results, container) {
+async function displaySearchResults(results, container) {
   if (results.length === 0) {
     container.innerHTML = '<div class="empty-state" style="padding:40px;">👤 No users found</div>';
     return;
   }
   
   container.innerHTML = '';
-  results.forEach(user => {
-    if (isBlocked(user.id)) return;
+  for (const user of results) {
+    if (isBlocked(user.id)) continue;
+    const requestState = await getContactRequestState(user.id);
     const userDiv = document.createElement('div');
     userDiv.className = 'list-item';
     const phoneValue = user.phone || user.phoneNumber || '';
@@ -279,10 +766,11 @@ function displaySearchResults(results, container) {
         <div class="list-name">${escapeHtml(user.displayName || 'User')}</div>
         <div class="list-preview">${escapeHtml(user.email || '')} ${phoneDisplay}</div>
       </div>
+      <span class="status-chip ${requestState.status}">${requestState.label}</span>
     `;
     userDiv.onclick = () => handleUserSelection(user);
     container.appendChild(userDiv);
-  });
+  }
 }
 
 async function handleUserSelection(user) {
@@ -338,6 +826,10 @@ async function ensureDirectChatExists(otherUserId) {
 
 async function sendChatRequest(user) {
   if (!currentUser || !user) return;
+  if (await isBlockedByUser(user.id)) {
+    showToast('Request cannot be sent to this user', 'error');
+    return;
+  }
   const existingRequest = await db.collection('chatRequests')
     .where('fromUserId', '==', currentUser.uid)
     .where('toUserId', '==', user.id)
@@ -356,9 +848,7 @@ async function sendChatRequest(user) {
     .get();
 
   if (!inverseRequest.empty) {
-    // The other user already sent you a request, accept it automatically.
-    const requestId = inverseRequest.docs[0].id;
-    await acceptChatRequest(requestId, user.id, user.displayName || user.email);
+    showToast(`${user.displayName || user.email} already sent you a request. Accept it from Requests.`);
     return;
   }
 
@@ -371,6 +861,20 @@ async function sendChatRequest(user) {
     createdAt: firebase.firestore.FieldValue.serverTimestamp()
   });
   showToast('Request sent');
+}
+
+async function isBlockedByUser(userId) {
+  if (!currentUser || !userId) return false;
+  try {
+    const snapshot = await db.collection('blockedUsers')
+      .where('userId', '==', userId)
+      .where('blockedUserId', '==', currentUser.uid)
+      .limit(1)
+      .get();
+    return !snapshot.empty;
+  } catch (error) {
+    return false;
+  }
 }
 
 async function loadReceivedRequests() {
@@ -469,6 +973,170 @@ async function declineChatRequest(requestId) {
   loadReceivedRequests();
 }
 
+async function loadReceivedRequests() {
+  if (!currentUser) return;
+  const requestList = document.getElementById('requestList');
+  if (!requestList) return;
+  const requestSection = document.querySelector('.request-section');
+  const requestToggle = document.getElementById('requestToggle');
+
+  const chatSnapshot = await db.collection('chatRequests')
+    .where('toUserId', '==', currentUser.uid)
+    .where('status', '==', 'pending')
+    .get();
+  const groupSnapshot = await db.collection('groupInvites')
+    .where('toUserId', '==', currentUser.uid)
+    .where('status', '==', 'pending')
+    .get();
+
+  const requests = [
+    ...chatSnapshot.docs.map(doc => ({ id: doc.id, requestType: 'chat', ...doc.data() })),
+    ...groupSnapshot.docs.map(doc => ({ id: doc.id, requestType: 'group', ...doc.data() }))
+  ].sort((a, b) => (b.createdAt?.toMillis?.() || 0) - (a.createdAt?.toMillis?.() || 0));
+
+  const badge = document.getElementById('requestBadge');
+  if (requests.length === 0) {
+    requestList.innerHTML = '<div class="empty-state" style="padding:20px;">No requests</div>';
+    if (badge) badge.style.display = 'none';
+    if (requestToggle) requestToggle.textContent = '▼';
+    requestSection?.classList.remove('expanded');
+    return;
+  }
+
+  if (badge) {
+    badge.textContent = requests.length;
+    badge.style.display = 'inline-block';
+  }
+  if (requestToggle) requestToggle.textContent = requestSection?.classList.contains('expanded') ? '▲' : '▼';
+
+  requestList.innerHTML = '';
+  for (const req of requests) {
+    const isGroupInvite = req.requestType === 'group';
+    const reqDiv = document.createElement('div');
+    reqDiv.className = 'list-item';
+    reqDiv.innerHTML = `
+      <div class="list-avatar">${isGroupInvite ? 'G' : 'C'}</div>
+      <div class="list-info">
+        <div class="list-name">${escapeHtml(isGroupInvite ? (req.groupName || 'Group invite') : (req.fromUserName || 'User'))}</div>
+        <div class="list-preview">${isGroupInvite ? `Group invite from ${escapeHtml(req.fromUserName || 'User')}` : 'Chat request'}</div>
+      </div>
+      <div class="request-actions">
+        <button class="btn btn-success accept-request-btn" data-type="${req.requestType}" data-id="${req.id}" data-from="${escapeHtml(req.fromUserId || '')}">Accept</button>
+        <button class="btn btn-outline delete-request-btn" data-type="${req.requestType}" data-id="${req.id}">Delete</button>
+        <button class="btn btn-outline block-request-btn" data-type="${req.requestType}" data-id="${req.id}" data-from="${escapeHtml(req.fromUserId || '')}" data-name="${escapeHtml(req.fromUserName || 'User')}">Block</button>
+      </div>
+    `;
+    requestList.appendChild(reqDiv);
+  }
+
+  requestList.querySelectorAll('.accept-request-btn').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      if (btn.dataset.type === 'group') await acceptGroupInvite(btn.dataset.id);
+      else await acceptChatRequest(btn.dataset.id, btn.dataset.from);
+    });
+  });
+  requestList.querySelectorAll('.delete-request-btn').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      if (btn.dataset.type === 'group') await deleteGroupInvite(btn.dataset.id);
+      else await deleteChatRequest(btn.dataset.id);
+    });
+  });
+  requestList.querySelectorAll('.block-request-btn').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      await blockRequestSender(btn.dataset.type, btn.dataset.id, btn.dataset.from, btn.dataset.name);
+    });
+  });
+}
+
+function setupRequestListeners() {
+  if (!currentUser) return;
+  if (chatRequestsUnsubscribe) chatRequestsUnsubscribe();
+  if (groupInvitesUnsubscribe) groupInvitesUnsubscribe();
+  chatRequestsUnsubscribe = db.collection('chatRequests')
+    .where('toUserId', '==', currentUser.uid)
+    .where('status', '==', 'pending')
+    .onSnapshot(() => loadReceivedRequests());
+  groupInvitesUnsubscribe = db.collection('groupInvites')
+    .where('toUserId', '==', currentUser.uid)
+    .where('status', '==', 'pending')
+    .onSnapshot(() => loadReceivedRequests());
+}
+
+async function acceptGroupInvite(inviteId) {
+  if (!currentUser || !inviteId) return;
+  const inviteRef = db.collection('groupInvites').doc(inviteId);
+  const inviteDoc = await inviteRef.get();
+  if (!inviteDoc.exists) return;
+  const invite = inviteDoc.data();
+
+  const existing = await db.collection('groupMembers')
+    .where('groupId', '==', invite.groupId)
+    .where('userId', '==', currentUser.uid)
+    .get();
+  if (existing.empty) {
+    await db.collection('groupMembers').add({
+      groupId: invite.groupId,
+      userId: currentUser.uid,
+      role: 'member',
+      joinedAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    await db.collection('groups').doc(invite.groupId).update({
+      memberCount: firebase.firestore.FieldValue.increment(1)
+    });
+  }
+
+  await inviteRef.update({
+    status: 'accepted',
+    respondedAt: firebase.firestore.FieldValue.serverTimestamp()
+  });
+  showToast(`Joined ${invite.groupName || 'group'}`);
+  loadReceivedRequests();
+  loadGroupsList();
+}
+
+async function declineGroupInvite(inviteId) {
+  if (!inviteId) return;
+  await db.collection('groupInvites').doc(inviteId).update({
+    status: 'declined',
+    respondedAt: firebase.firestore.FieldValue.serverTimestamp()
+  });
+  showToast('Group invite declined');
+  loadReceivedRequests();
+}
+
+async function deleteChatRequest(requestId) {
+  if (!requestId) return;
+  await db.collection('chatRequests').doc(requestId).update({
+    status: 'deleted',
+    respondedAt: firebase.firestore.FieldValue.serverTimestamp()
+  });
+  showToast('Request deleted');
+  loadReceivedRequests();
+}
+
+async function deleteGroupInvite(inviteId) {
+  if (!inviteId) return;
+  await db.collection('groupInvites').doc(inviteId).update({
+    status: 'deleted',
+    respondedAt: firebase.firestore.FieldValue.serverTimestamp()
+  });
+  showToast('Invite deleted');
+  loadReceivedRequests();
+}
+
+async function blockRequestSender(type, requestId, fromUserId, fromUserName) {
+  if (!fromUserId) return;
+  if (!confirm(`Block ${fromUserName || 'this user'} from sending requests?`)) return;
+  await blockUser(fromUserId, fromUserName || 'User');
+  await loadBlockedUsers();
+  if (type === 'group') await deleteGroupInvite(requestId);
+  else await deleteChatRequest(requestId);
+  showToast(`${fromUserName || 'User'} blocked`);
+}
+
 // Group search (real-time, partial match)
 function searchGroupsRealtime(searchTerm) {
   const groupsList = document.getElementById('groupsList');
@@ -524,6 +1192,7 @@ async function loadBlockedUsers() {
 }
 
 async function blockUser(userId, userName) {
+  if (!userId || isBlocked(userId)) return;
   await db.collection('blockedUsers').add({
     userId: currentUser.uid,
     blockedUserId: userId,
@@ -542,6 +1211,36 @@ async function unblockUser(blockId) {
 
 function isBlocked(userId) {
   return blockedUsers.some(b => b.blockedUserId === userId);
+}
+
+async function getCurrentDirectMessages() {
+  if (!currentChat || currentChatType !== 'direct') return [];
+  const directIds = currentChat.aliasDirectIds?.length ? currentChat.aliasDirectIds : [currentChat.id];
+  const messages = [];
+  for (const directId of directIds) {
+    const snapshot = await db.collection('messages')
+      .where('directId', '==', directId)
+      .limit(80)
+      .get();
+    snapshot.docs.forEach(doc => messages.push({ id: doc.id, ...doc.data() }));
+  }
+  return messages.sort((a, b) => (b.timestamp?.toMillis?.() || 0) - (a.timestamp?.toMillis?.() || 0));
+}
+
+function extractLinks(text = '') {
+  return text.match(/https?:\/\/[^\s]+/g) || [];
+}
+
+function formatBytes(bytes) {
+  if (!bytes) return '';
+  const units = ['B', 'KB', 'MB', 'GB'];
+  let size = bytes;
+  let unit = 0;
+  while (size >= 1024 && unit < units.length - 1) {
+    size /= 1024;
+    unit += 1;
+  }
+  return `${size.toFixed(size >= 10 || unit === 0 ? 0 : 1)} ${units[unit]}`;
 }
 
 // ========================================
@@ -823,6 +1522,22 @@ async function sendTypingIndicator() {
   typingTimeout = setTimeout(async () => { await typingRef.delete(); }, 2000);
 }
 
+function listenForTypingIndicator() {
+  if (!currentChat || !currentUser) return;
+  if (typingUnsubscribe) {
+    typingUnsubscribe();
+    typingUnsubscribe = null;
+  }
+  const chatStatus = document.getElementById('chatStatus');
+  const baseStatus = chatStatus?.textContent || '';
+  typingUnsubscribe = db.collection('typingIndicators')
+    .where('chatId', '==', currentChat.id)
+    .onSnapshot(snapshot => {
+      const someoneTyping = snapshot.docs.some(doc => doc.data().userId !== currentUser.uid);
+      if (chatStatus) chatStatus.textContent = someoneTyping ? 'typing...' : baseStatus;
+    });
+}
+
 // ========================================
 // NOTIFICATIONS
 // ========================================
@@ -1079,6 +1794,102 @@ async function loadAllUsers() {
       allUsers.push({ id: doc.id, ...data, phone: data.phone || data.phoneNumber || '' });
     }
   });
+  populateGroupMemberSuggestions();
+}
+
+function populateGroupMemberSuggestions() {
+  updateGroupMemberSuggestions();
+}
+
+function findUserByMemberInput(input) {
+  const term = (input || '').trim().toLowerCase();
+  if (!term) return null;
+  const digits = term.replace(/\D/g, '');
+  return allUsers.find(user => {
+    const name = (user.displayName || '').toLowerCase();
+    const email = (user.email || '').toLowerCase();
+    const phone = ((user.phone || user.phoneNumber || '') + '').replace(/\D/g, '');
+    return email === term ||
+      name === term ||
+      (digits.length >= 6 && phone === digits) ||
+      email.includes(term) ||
+      name.includes(term) ||
+      (digits.length >= 6 && phone.includes(digits));
+  }) || null;
+}
+
+function searchUsersByIdentity(input) {
+  const term = (input || '').trim().toLowerCase();
+  if (!term) return [];
+  const digits = term.replace(/\D/g, '');
+  return allUsers.filter(user => {
+    if (isBlocked(user.id)) return false;
+    const name = (user.displayName || '').toLowerCase();
+    const email = (user.email || '').toLowerCase();
+    const phone = ((user.phone || user.phoneNumber || '') + '').replace(/\D/g, '');
+    return name.includes(term) ||
+      email.includes(term) ||
+      (digits.length > 0 && phone.includes(digits));
+  });
+}
+
+async function getContactRequestState(userId) {
+  if (!currentUser || !userId) return { status: 'none', label: '' };
+
+  const sentPending = await db.collection('chatRequests')
+    .where('fromUserId', '==', currentUser.uid)
+    .where('toUserId', '==', userId)
+    .where('status', '==', 'pending')
+    .limit(1)
+    .get();
+  if (!sentPending.empty) return { status: 'sent', label: 'Request sent' };
+
+  const receivedPending = await db.collection('chatRequests')
+    .where('fromUserId', '==', userId)
+    .where('toUserId', '==', currentUser.uid)
+    .where('status', '==', 'pending')
+    .limit(1)
+    .get();
+  if (!receivedPending.empty) return { status: 'received', label: 'Accept request' };
+
+  if (await hasAcceptedChatRelationship(userId)) return { status: 'accepted', label: 'Connected' };
+  return { status: 'none', label: 'Send chat request' };
+}
+
+async function getGroupInviteState(groupId, userId) {
+  if (!groupId || !userId) return { status: 'none', label: '' };
+  const member = await db.collection('groupMembers')
+    .where('groupId', '==', groupId)
+    .where('userId', '==', userId)
+    .limit(1)
+    .get();
+  if (!member.empty) return { status: 'member', label: 'Member' };
+
+  const pending = await db.collection('groupInvites')
+    .where('groupId', '==', groupId)
+    .where('toUserId', '==', userId)
+    .where('status', '==', 'pending')
+    .limit(1)
+    .get();
+  if (!pending.empty) return { status: 'pending', label: 'Invite pending' };
+  return { status: 'none', label: 'Send invite' };
+}
+
+function updateGroupMemberSuggestions(searchTerm = '') {
+  const datalist = document.getElementById('groupMemberSuggestions');
+  if (!datalist) return;
+  const users = searchTerm.trim() ? searchUsersByIdentity(searchTerm) : allUsers;
+  datalist.innerHTML = '';
+  users.slice(0, 20).forEach(user => {
+    const label = user.displayName || user.email || user.phone || 'User';
+    const values = [user.displayName, user.email, user.phone, user.phoneNumber].filter(Boolean);
+    [...new Set(values)].forEach(value => {
+      const option = document.createElement('option');
+      option.value = value;
+      option.label = label === value ? value : `${label} (${value})`;
+      datalist.appendChild(option);
+    });
+  });
 }
 
 function setupChatListListeners() {
@@ -1137,18 +1948,44 @@ async function getArchivedChatIds() {
   return new Set(snapshot.docs.map(doc => doc.data().chatId));
 }
 
+async function getDeletedChatIds() {
+  if (!currentUser) return new Set();
+  const snapshot = await db.collection('deletedChats')
+    .where('userId', '==', currentUser.uid)
+    .get();
+  return new Set(snapshot.docs.map(doc => doc.data().chatId));
+}
+
+async function deleteChatForMe(chatId, chatType, chatName = 'Chat') {
+  if (!currentUser || !chatId || !chatType) return;
+  await db.collection('deletedChats').doc(`${currentUser.uid}_${chatId}`).set({
+    userId: currentUser.uid,
+    chatId,
+    chatType,
+    chatName,
+    deletedAt: firebase.firestore.FieldValue.serverTimestamp()
+  });
+  if (currentChat?.id === chatId && currentChatType === chatType) {
+    resetChatPanel();
+  }
+  showToast('Chat deleted for you');
+  loadCurrentChatList();
+}
+
 async function loadArchivedChats() {
   const archiveList = document.getElementById('archiveList');
   if (!archiveList) return;
-  const snapshot = await db.collection('archivedChats').where('userId', '==', currentUser.uid).orderBy('archivedAt', 'desc').get();
+  const snapshot = await db.collection('archivedChats').where('userId', '==', currentUser.uid).get();
   if (snapshot.empty) { archiveList.innerHTML = '<div class="empty-state" style="padding:20px;">No archived chats</div>'; return; }
   archiveList.innerHTML = '';
-  for (const doc of snapshot.docs) {
-    const archive = doc.data();
+  const archivedChats = snapshot.docs
+    .map(doc => ({ id: doc.id, ...doc.data() }))
+    .sort((a, b) => (b.archivedAt?.toMillis?.() || 0) - (a.archivedAt?.toMillis?.() || 0));
+  for (const archive of archivedChats) {
     const archiveDiv = document.createElement('div');
     archiveDiv.className = 'list-item';
     archiveDiv.style.opacity = '0.7';
-    archiveDiv.innerHTML = `<div class="list-avatar">${archive.chatType === 'group' ? '👥' : '👤'}</div><div class="list-info"><div class="list-name">${escapeHtml(archive.chatName)}</div><div class="list-preview">Archived</div></div><button class="list-item-menu unarchive-btn" data-id="${doc.id}">📤</button>`;
+    archiveDiv.innerHTML = `<div class="list-avatar">${archive.chatType === 'group' ? '👥' : '👤'}</div><div class="list-info"><div class="list-name">${escapeHtml(archive.chatName)}</div><div class="list-preview">Archived</div></div><button class="list-item-menu unarchive-btn" data-id="${archive.id}">📤</button>`;
     archiveList.appendChild(archiveDiv);
   }
   document.querySelectorAll('.unarchive-btn').forEach(btn => {
@@ -1159,6 +1996,7 @@ async function loadArchivedChats() {
 async function buildDirectChatItems() {
   if (!currentUser) return [];
   const archivedChatIds = await getArchivedChatIds();
+  const deletedChatIds = await getDeletedChatIds();
   const directChats = await db.collection('directChats')
     .where('participants', 'array-contains', currentUser.uid)
     .get();
@@ -1253,41 +2091,56 @@ async function buildDirectChatItems() {
     const chatData = chat.data;
     if (chatData.status && chatData.status !== 'active') continue;
     if (archivedChatIds.has(chat.id)) continue;
+    if (deletedChatIds.has(chat.id)) continue;
     const participants = chatData.participants || chat.id.split('_');
     const otherUserId = participants.find(id => id !== currentUser.uid);
     if (!otherUserId || isBlocked(otherUserId)) continue;
+    const fallbackName = chatData.participantNames?.[otherUserId] || 'Unknown contact';
     const userDoc = await db.collection('users').doc(otherUserId).get();
-    if (!userDoc.exists || userDoc.data().isActive === false) continue;
-    const userData = userDoc.data();
+    const profileMatch = userDoc.exists ? null : findProfileByFallbackName(fallbackName);
+    const resolvedUserId = userDoc.exists ? otherUserId : (profileMatch?.id || otherUserId);
+    const userData = userDoc.exists ? userDoc.data() : (profileMatch || {});
+    if ((userDoc.exists || profileMatch) && userData.isActive === false) continue;
+    const displayName = userData.displayName || userData.email || fallbackName;
     const onlineStatus = userData.onlineStatus || 'offline';
-    const preview = getPresenceText(userData);
+    const presenceText = getPresenceText(userData);
+    const preview = chatData.lastMessage || 'Tap to open chat';
     items.push({
       id: chat.id,
       type: 'direct',
-      name: userData.displayName || userData.email,
-      avatar: userData.avatar ? `<img src="${userData.avatar}">` : escapeHtml((userData.displayName || userData.email || '?')[0].toUpperCase()),
+      name: displayName,
+      avatar: userData.avatar ? `<img src="${userData.avatar}">` : escapeHtml((displayName || '?')[0].toUpperCase()),
       preview,
       unreadCount: await getChatUnreadCount(chat.id, 'direct'),
       isFavorite: favoriteChatIds.includes(chat.id),
       isMuted: isChatMuted(chat.id),
-      otherUserId,
+      otherUserId: resolvedUserId,
+      legacyOtherUserId: resolvedUserId !== otherUserId ? otherUserId : '',
+      user: { id: resolvedUserId, ...userData, displayName },
+      email: userData.email || '',
+      phone: userData.phone || userData.phoneNumber || '',
+      hasUserProfile: userDoc.exists || !!profileMatch,
+      aliasDirectIds: [chat.id],
       onlineStatus,
+      presenceText,
       lastMessageTime: chatData.lastMessageTime?.toDate?.() || new Date(0)
     });
   }
 
-  return items;
+  return mergeDirectContactItems(items);
 }
 
 async function buildGroupChatItems() {
   if (!currentUser) return [];
   const archivedChatIds = await getArchivedChatIds();
+  const deletedChatIds = await getDeletedChatIds();
   const memberSnapshot = await db.collection('groupMembers').where('userId', '==', currentUser.uid).get();
   const items = [];
 
   for (const memberDoc of memberSnapshot.docs) {
     const groupId = memberDoc.data().groupId;
     if (archivedChatIds.has(groupId)) continue;
+    if (deletedChatIds.has(groupId)) continue;
     const groupDoc = await db.collection('groups').doc(groupId).get();
     if (!groupDoc.exists) continue;
     const group = groupDoc.data();
@@ -1321,15 +2174,19 @@ function renderChatListItems(items, container) {
     chatDiv.dataset.chatId = item.id;
     chatDiv.dataset.chatType = item.type;
     chatDiv.dataset.unreadCount = item.unreadCount || 0;
+    if (item.otherUserId || item.user?.id) chatDiv.dataset.otherUserId = item.otherUserId || item.user.id;
+    chatDiv.dataset.chatName = item.name || '';
     if (currentChat?.id === item.id && currentChatType === item.type) chatDiv.classList.add('active');
-    const avatarClass = item.type === 'direct' ? (item.onlineStatus === 'online' ? 'online' : 'offline') : '';
+    const avatarClass = '';
     const unread = item.unreadCount ? `<span class="unread-pill">${item.unreadCount}</span>` : '';
+    const statusChip = item.requestState ? `<span class="status-chip ${item.requestState.status}">${escapeHtml(item.requestState.label)}</span>` : '';
     chatDiv.innerHTML = `
       <div class="list-avatar ${avatarClass}">${item.avatar}</div>
       <div class="list-info" style="flex:1; cursor:pointer;">
         <div class="list-name">${item.isFavorite ? '★ ' : ''}${escapeHtml(item.name)} ${item.isMuted ? '🔇' : ''}</div>
         <div class="list-preview">${escapeHtml(item.preview || '')}</div>
       </div>
+      ${statusChip}
       ${unread}
       <button class="list-item-menu mute-chat-btn" data-chat-id="${item.id}" data-chat-type="${item.type}">🔇</button>
       <button class="list-item-menu archive-chat-btn" data-chat-id="${item.id}" data-chat-type="${item.type}" data-chat-name="${escapeHtml(item.name)}">📦</button>
@@ -1352,8 +2209,9 @@ function renderChatListItems(items, container) {
     chatDiv.querySelector('.list-info').onclick = () => {
       if (item.type === 'user') handleUserSelection(item.user);
       else if (item.type === 'group') loadGroupChat(item.id, item.name);
+      else if (item.user) startDirectChat({ ...item.user, aliasDirectIds: item.aliasDirectIds });
       else db.collection('users').doc(item.otherUserId).get().then(doc => {
-        if (doc.exists) startDirectChat({ id: item.otherUserId, ...doc.data() });
+        startDirectChat(doc.exists ? { id: item.otherUserId, ...doc.data(), aliasDirectIds: item.aliasDirectIds } : { id: item.otherUserId, displayName: item.name, aliasDirectIds: item.aliasDirectIds });
       });
     };
     container.appendChild(chatDiv);
@@ -1363,7 +2221,9 @@ function renderChatListItems(items, container) {
 async function loadAllChatsList(searchTerm = '') {
   const chatsList = document.getElementById('chatsList');
   if (!chatsList) return;
-  let items = [...await buildDirectChatItems(), ...await buildGroupChatItems()];
+  const allItems = [...await buildDirectChatItems(), ...await buildGroupChatItems()];
+  updateUnreadBadges(allItems);
+  let items = [...allItems];
   if (currentViewTab === 'favorites') items = items.filter(item => item.isFavorite);
   if (currentViewTab === 'unread') items = items.filter(item => item.unreadCount > 0);
   const term = searchTerm.trim().toLowerCase();
@@ -1374,29 +2234,41 @@ async function loadAllChatsList(searchTerm = '') {
       (item.code || '').toLowerCase().includes(term)
     );
     const existingUserIds = new Set(items.map(item => item.otherUserId).filter(Boolean));
-    const searchDigitsOnly = term.replace(/\D/g, '');
-    const userMatches = allUsers
+    const existingContactKeys = new Set(items.map(item => getContactMergeKey(item)).filter(Boolean));
+    const existingContactNames = new Set(items
+      .filter(item => item.type === 'direct')
+      .map(item => (item.name || '').trim().toLowerCase())
+      .filter(Boolean));
+    const userMatches = await Promise.all(searchUsersByIdentity(term)
       .filter(user => {
-        if (isBlocked(user.id) || existingUserIds.has(user.id)) return false;
-        const displayName = (user.displayName || '').toLowerCase();
-        const email = (user.email || '').toLowerCase();
-        const phone = ((user.phone || user.phoneNumber || '') + '').replace(/\D/g, '');
-        return displayName.includes(term) ||
-          email.includes(term) ||
-          (searchDigitsOnly.length >= 6 && phone.includes(searchDigitsOnly));
+        const userKey = getContactMergeKey({
+          type: 'direct',
+          name: user.displayName || user.email,
+          email: user.email,
+          phone: user.phone || user.phoneNumber,
+          user
+        });
+        const userName = (user.displayName || '').trim().toLowerCase();
+        return !existingUserIds.has(user.id) &&
+          !existingContactKeys.has(userKey) &&
+          !existingContactNames.has(userName);
       })
-      .map(user => ({
-        id: `user_${user.id}`,
-        type: 'user',
-        name: user.displayName || user.email || 'User',
-        avatar: user.avatar ? `<img src="${user.avatar}">` : escapeHtml((user.displayName || user.email || '?')[0].toUpperCase()),
-        preview: user.email || user.phone || user.phoneNumber || 'Tap to send chat request',
-        unreadCount: 0,
-        isFavorite: false,
-        isMuted: false,
-        onlineStatus: user.onlineStatus || 'offline',
-        user,
-        lastMessageTime: new Date(0)
+      .map(async user => {
+        const requestState = await getContactRequestState(user.id);
+        return {
+          id: `user_${user.id}`,
+          type: 'user',
+          name: user.displayName || user.email || 'User',
+          avatar: user.avatar ? `<img src="${user.avatar}">` : escapeHtml((user.displayName || user.email || '?')[0].toUpperCase()),
+          preview: user.email || user.phone || user.phoneNumber || 'Tap to send chat request',
+          requestState,
+          unreadCount: 0,
+          isFavorite: false,
+          isMuted: false,
+          onlineStatus: user.onlineStatus || 'offline',
+          user,
+          lastMessageTime: new Date(0)
+        };
       }));
     items = [...chatMatches, ...userMatches];
   }
@@ -1409,6 +2281,12 @@ function loadCurrentChatList() {
   else loadAllChatsList(document.getElementById('searchInput')?.value || '');
 }
 
+async function refreshUnreadSummary() {
+  if (!currentUser) return;
+  const items = [...await buildDirectChatItems(), ...await buildGroupChatItems()];
+  updateUnreadBadges(items);
+}
+
 // ========================================
 // LOAD CHATS LIST
 // ========================================
@@ -1419,21 +2297,19 @@ async function loadChatsList() {
   if (!chatsList) return;
   const activeChats = [];
   const archivedChatIds = await getArchivedChatIds();
+  const deletedChatIds = await getDeletedChatIds();
   const directChats = await db.collection('directChats').where('participants', 'array-contains', currentUser.uid).get();
   for (const doc of directChats.docs) {
     if (doc.data().status && doc.data().status !== 'active') continue;
     if (archivedChatIds.has(doc.id)) continue;
+    if (deletedChatIds.has(doc.id)) continue;
     const otherUserId = doc.data().participants.find(id => id !== currentUser.uid);
     if (otherUserId && !isBlocked(otherUserId)) {
       const userDoc = await db.collection('users').doc(otherUserId).get();
       if (userDoc.exists && userDoc.data().isActive !== false) {
         const userData = userDoc.data();
         const onlineStatus = userData.onlineStatus || 'offline';
-        let statusText = onlineStatus === 'online' ? '🟢 Online now' : '⚫ Offline';
-        if (onlineStatus === 'offline' && userData.lastSeen) {
-          const lastSeenTime = getTimeAgo(userData.lastSeen.toDate());
-          statusText = `⚫ Last seen ${lastSeenTime}`;
-        }
+        const statusText = getPresenceText(userData);
         const unreadCount = await getChatUnreadCount(doc.id, 'direct');
         const isFavorite = favoriteChatIds.includes(doc.id);
         activeChats.push({ 
@@ -1469,8 +2345,10 @@ async function loadChatsList() {
     chatDiv.dataset.chatId = chat.id;
     chatDiv.dataset.chatType = 'direct';
     chatDiv.dataset.unreadCount = chat.unreadCount;
+    chatDiv.dataset.otherUserId = chat.otherUserId;
+    chatDiv.dataset.chatName = chat.name || '';
     if (currentChat?.id === chat.id && currentChatType === 'direct') chatDiv.classList.add('active');
-    const avatarClass = chat.onlineStatus === 'online' ? 'online' : 'offline';
+    const avatarClass = '';
     chatDiv.innerHTML = `
       <div class="list-avatar ${avatarClass}">${chat.avatar}</div>
       <div class="list-info" style="flex:1; cursor:pointer;">
@@ -1517,12 +2395,26 @@ function getTimeAgo(date) {
   return date.toLocaleDateString();
 }
 
+function formatLastSeen(timestamp) {
+  if (!timestamp) return '';
+  const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+  const now = new Date();
+  const yesterday = new Date(now);
+  yesterday.setDate(now.getDate() - 1);
+  const time = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+  if (date.toDateString() === now.toDateString()) return `last seen today at ${time}`;
+  if (date.toDateString() === yesterday.toDateString()) return `last seen yesterday at ${time}`;
+  return `last seen ${date.toLocaleDateString()} at ${time}`;
+}
+
 function getPresenceText(userData) {
   if (!userData) return '';
   const canSeePresence = !privacySettings.hideLastSeen && !userData.privacySettings?.hideLastSeen;
-  if (canSeePresence && userData.onlineStatus === 'online') return 'online';
-  if (canSeePresence && userData.lastSeen) return `last seen ${getTimeAgo(userData.lastSeen.toDate())}`;
-  return userData.statusText || '';
+  if (!canSeePresence) return 'last seen hidden';
+  if (userData.onlineStatus === 'online') return 'online';
+  if (userData.lastSeen) return formatLastSeen(userData.lastSeen);
+  return '';
 }
 
 // ========================================
@@ -1536,8 +2428,10 @@ async function loadGroupsList() {
   const memberSnapshot = await db.collection('groupMembers').where('userId', '==', currentUser.uid).get();
   const groups = [];
   const archivedChatIds = await getArchivedChatIds();
+  const deletedChatIds = await getDeletedChatIds();
   for (const doc of memberSnapshot.docs) {
     if (archivedChatIds.has(doc.data().groupId)) continue;
+    if (deletedChatIds.has(doc.data().groupId)) continue;
     const groupDoc = await db.collection('groups').doc(doc.data().groupId).get();
     if (groupDoc.exists) groups.push({ id: groupDoc.id, name: groupDoc.data().name, code: groupDoc.data().code, icon: groupDoc.data().icon });
   }
@@ -1548,6 +2442,7 @@ async function loadGroupsList() {
     const isFavorite = favoriteChatIds.includes(group.id);
     enhancedGroups.push({ ...group, unreadCount, isFavorite });
   }
+  refreshUnreadSummary();
   const filteredGroups = enhancedGroups.filter(group => {
     if (currentViewTab === 'favorites' && !group.isFavorite) return false;
     if (currentViewTab === 'unread' && group.unreadCount === 0) return false;
@@ -1566,8 +2461,12 @@ async function loadGroupsList() {
     groupDiv.dataset.chatId = group.id;
     groupDiv.dataset.chatType = 'group';
     groupDiv.dataset.unreadCount = group.unreadCount;
+    groupDiv.dataset.chatName = group.name || '';
     if (currentChat?.id === group.id && currentChatType === 'group') groupDiv.classList.add('active');
     groupDiv.innerHTML = `<div class="list-avatar">${group.icon ? `<img src="${group.icon}">` : '👥'}</div><div class="list-info" style="flex:1; cursor:pointer;"><div class="list-name">${group.isFavorite ? '⭐ ' : ''}${escapeHtml(group.name)} ${isMuted ? '🔇' : ''}</div><div class="list-preview">${group.code}${group.unreadCount ? ` • ${group.unreadCount} unread` : ''}</div></div><button class="list-item-menu mute-chat-btn" data-chat-id="${group.id}" data-chat-type="group">🔇</button><button class="list-item-menu archive-chat-btn" data-chat-id="${group.id}" data-chat-type="group" data-chat-name="${escapeHtml(group.name)}">📦</button>`;
+    if (group.unreadCount) {
+      groupDiv.insertAdjacentHTML('beforeend', `<span class="unread-pill">${group.unreadCount}</span>`);
+    }
     groupDiv.querySelector('.archive-chat-btn')?.addEventListener('click', async (e) => { e.stopPropagation(); if (confirm(`Archive group "${group.name}"?`)) await archiveChat(group.id, 'group', group.name); });
     groupDiv.querySelector('.mute-chat-btn')?.addEventListener('click', async (e) => { e.stopPropagation(); const duration = prompt('Mute for: 8h, 1w, or always?', '8h'); if (duration === '8h' || duration === '1w' || duration === 'always') { await muteChat(group.id, 'group', duration); loadGroupsList(); } });
     groupDiv.querySelector('.list-info').onclick = () => loadGroupChat(group.id, group.name);
@@ -1589,15 +2488,25 @@ async function startDirectChat(user) {
       createdAt: firebase.firestore.FieldValue.serverTimestamp()
     });
   }
-  currentChat = { id: chatId, otherUserId: user.id, otherUserName: user.displayName || user.email, type: 'direct' };
+  currentChat = {
+    id: chatId,
+    otherUserId: user.id,
+    otherUserName: user.displayName || user.email,
+    type: 'direct',
+    aliasDirectIds: [...new Set([chatId, ...(user.aliasDirectIds || [])])]
+  };
   currentChatType = 'direct';
   document.getElementById('currentChatName').textContent = user.displayName || user.email;
   document.getElementById('chatStatus').textContent = getPresenceText(user);
+  setChatHeaderAvatar(user.avatar ? `<img src="${user.avatar}">` : escapeHtml((user.displayName || user.email || '?')[0].toUpperCase()));
   document.getElementById('inputArea').style.display = 'flex';
   document.getElementById('groupInfoBtn').style.display = 'none';
+  document.getElementById('voiceCallBtn').style.display = 'inline-flex';
+  document.getElementById('videoCallBtn').style.display = 'inline-flex';
   document.getElementById('replyPreviewBar').style.display = 'none';
   currentReplyTo = null;
   loadMessages();
+  listenForTypingIndicator();
   loadPinnedMessages();
   applyCurrentChatWallpaper();
   openMobileChatPanel();
@@ -1610,43 +2519,94 @@ async function startDirectChat(user) {
 
 async function createGroup(groupName, memberEmails = '') {
   if (!groupName.trim()) return;
+  const adminsOnlySend = !!document.getElementById('newGroupAdminsOnlySend')?.checked;
   const groupCode = Math.random().toString(36).substring(2, 10).toUpperCase();
-  const members = [currentUser.uid];
+  const invitedUsers = [];
   if (memberEmails.trim()) {
-    const emails = memberEmails.split(',').map(e => e.trim().toLowerCase());
-    for (const email of emails) {
-      const userQuery = await db.collection('users').where('email', '==', email).get();
-      if (!userQuery.empty && !isBlocked(userQuery.docs[0].id)) members.push(userQuery.docs[0].id);
+    const entries = memberEmails.split(',').map(entry => entry.trim()).filter(Boolean);
+    for (const entry of entries) {
+      const matchedUser = findUserByMemberInput(entry);
+      if (matchedUser && !invitedUsers.some(user => user.id === matchedUser.id) && !isBlocked(matchedUser.id)) {
+        invitedUsers.push(matchedUser);
+      }
     }
   }
   const groupRef = await db.collection('groups').add({
     name: groupName.trim(), code: groupCode, createdBy: currentUser.uid,
-    createdAt: firebase.firestore.FieldValue.serverTimestamp(), memberCount: members.length
+    createdAt: firebase.firestore.FieldValue.serverTimestamp(), memberCount: 1,
+    onlyAdminsCanSend: adminsOnlySend,
+    onlyAdminsCanEdit: true
   });
-  for (const memberId of members) {
-    await db.collection('groupMembers').add({
-      groupId: groupRef.id, userId: memberId, role: memberId === currentUser.uid ? 'admin' : 'member',
-      joinedAt: firebase.firestore.FieldValue.serverTimestamp()
-    });
+  await db.collection('groupMembers').add({
+    groupId: groupRef.id, userId: currentUser.uid, role: 'admin',
+    joinedAt: firebase.firestore.FieldValue.serverTimestamp()
+  });
+  for (const user of invitedUsers) {
+    await sendGroupInvite(groupRef.id, groupName.trim(), user);
   }
-  showToast(`Group "${groupName}" created! Code: ${groupCode}`);
+  showToast(invitedUsers.length ? `Group created. ${invitedUsers.length} invite sent.` : `Group "${groupName}" created! Code: ${groupCode}`);
   loadGroupsList();
   return groupRef.id;
+}
+
+async function sendGroupInvite(groupId, groupName, user) {
+  if (!currentUser || !groupId || !user?.id) return;
+  const memberExists = await db.collection('groupMembers')
+    .where('groupId', '==', groupId)
+    .where('userId', '==', user.id)
+    .limit(1)
+    .get();
+  if (!memberExists.empty) {
+    showToast(`${user.displayName || user.email} is already in the group`);
+    return;
+  }
+
+  const existingInvite = await db.collection('groupInvites')
+    .where('groupId', '==', groupId)
+    .where('toUserId', '==', user.id)
+    .where('status', '==', 'pending')
+    .limit(1)
+    .get();
+  if (!existingInvite.empty) {
+    showToast(`Invite already sent to ${user.displayName || user.email}`);
+    return;
+  }
+
+  await db.collection('groupInvites').add({
+    groupId,
+    groupName,
+    fromUserId: currentUser.uid,
+    fromUserName: currentUser.displayName || currentUser.email.split('@')[0],
+    toUserId: user.id,
+    toUserName: user.displayName || user.email,
+    status: 'pending',
+    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+  });
+  showToast(`Invite sent to ${user.displayName || user.email}`);
 }
 
 async function loadGroupChat(groupId, groupName) {
   const groupDoc = await db.collection('groups').doc(groupId).get();
   currentChat = { id: groupId, name: groupName, type: 'group' };
   currentChatType = 'group';
-  currentGroup = { id: groupId, name: groupName, icon: groupDoc.data()?.icon };
+  const groupData = groupDoc.data() || {};
+  currentGroup = { id: groupId, name: groupName, icon: groupData.icon, ...groupData };
   document.getElementById('currentChatName').textContent = groupName;
   document.getElementById('chatStatus').textContent = 'Group Chat';
+  setChatHeaderAvatar(groupData.icon ? `<img src="${groupData.icon}">` : '👥');
   document.getElementById('inputArea').style.display = 'flex';
   document.getElementById('groupInfoBtn').style.display = 'block';
+  document.getElementById('voiceCallBtn').style.display = 'none';
+  document.getElementById('videoCallBtn').style.display = 'none';
   document.getElementById('replyPreviewBar').style.display = 'none';
   currentReplyTo = null;
   await loadGroupMembers(groupId);
+  const inputArea = document.getElementById('inputArea');
+  const canSend = !currentGroup.onlyAdminsCanSend || isCurrentUserGroupAdmin();
+  if (inputArea) inputArea.style.display = canSend ? 'flex' : 'none';
+  if (!canSend) showToast('Only admins can send messages in this group');
   loadMessages();
+  listenForTypingIndicator();
   loadPinnedMessages();
   applyCurrentChatWallpaper();
   openMobileChatPanel();
@@ -1668,6 +2628,10 @@ async function loadGroupMembers(groupId) {
   return currentGroupMembers;
 }
 
+function isCurrentUserGroupAdmin() {
+  return currentGroupMembers.some(member => member.id === currentUser?.uid && member.role === 'admin');
+}
+
 async function showGroupInfo() {
   if (!currentGroup) return;
   const groupDoc = await db.collection('groups').doc(currentGroup.id).get();
@@ -1679,9 +2643,16 @@ async function showGroupInfo() {
   
   const currentUserRole = currentGroupMembers.find(m => m.id === currentUser.uid)?.role;
   const isAdmin = currentUserRole === 'admin';
+  const canEditInfo = isAdmin && group.onlyAdminsCanEdit !== false;
   document.getElementById('addMemberBtn').style.display = isAdmin ? 'block' : 'none';
   document.getElementById('addMemberEmail').style.display = isAdmin ? 'inline-block' : 'none';
   document.getElementById('deleteGroupBtn').style.display = isAdmin ? 'block' : 'none';
+  document.getElementById('editGroupNameInput').disabled = !canEditInfo;
+  document.getElementById('groupAvatarLarge').style.pointerEvents = canEditInfo ? 'auto' : 'none';
+  document.getElementById('groupSendPermissionRow').style.display = isAdmin ? 'flex' : 'none';
+  document.getElementById('groupEditPermissionRow').style.display = isAdmin ? 'flex' : 'none';
+  document.getElementById('groupAdminsOnlySend').checked = !!group.onlyAdminsCanSend;
+  document.getElementById('groupAdminsOnlyEdit').checked = group.onlyAdminsCanEdit !== false;
   
   const membersList = document.getElementById('groupMembersList');
   membersList.innerHTML = '';
@@ -1694,9 +2665,247 @@ async function showGroupInfo() {
     memberDiv.innerHTML = `<div class="member-info"><div class="member-avatar">${member.avatar ? `<img src="${member.avatar}" style="width:36px;height:36px;border-radius:50%;">` : (member.name?.[0]?.toUpperCase() || '👤')}</div><div><span>${escapeHtml(member.name)}</span>${isMemberAdmin ? '<span style="font-size:10px; color:#667eea; margin-left:8px;">Admin</span>' : ''}${isCurrentUser ? '<span style="font-size:10px; color:#888; margin-left:8px;">You</span>' : ''}</div></div>${canModify ? `<div class="member-actions">${!isMemberAdmin ? `<button class="make-admin-btn" data-id="${member.id}" data-name="${escapeHtml(member.name)}">👑</button>` : ''}<button class="remove-member-btn" data-id="${member.id}" data-name="${escapeHtml(member.name)}">❌</button></div>` : ''}`;
     membersList.appendChild(memberDiv);
   }
+  await renderPendingGroupInvites(currentGroup.id, membersList, isAdmin);
   document.querySelectorAll('.make-admin-btn').forEach(btn => { btn.addEventListener('click', () => makeAdmin(currentGroup.id, btn.dataset.id, btn.dataset.name)); });
   document.querySelectorAll('.remove-member-btn').forEach(btn => { btn.addEventListener('click', () => removeMember(currentGroup.id, btn.dataset.id, btn.dataset.name)); });
   document.getElementById('groupInfoModal').style.display = 'flex';
+}
+
+async function showChatInfo() {
+  if (!currentChat) return;
+  if (currentChatType === 'group') {
+    await showGroupInfo();
+    return;
+  }
+
+  const modal = document.getElementById('chatInfoModal');
+  if (!modal) return;
+  const userDoc = currentChat.otherUserId ? await db.collection('users').doc(currentChat.otherUserId).get() : null;
+  const user = userDoc?.exists ? userDoc.data() : {};
+  const displayName = user.displayName || currentChat.otherUserName || 'Contact';
+  const avatar = user.avatar ? `<img src="${user.avatar}">` : escapeHtml((displayName || '?')[0].toUpperCase());
+
+  document.getElementById('chatInfoAvatar').innerHTML = avatar;
+  document.getElementById('chatInfoName').textContent = displayName;
+  document.getElementById('chatInfoPresence').textContent = getPresenceText(user) || 'No status';
+  document.getElementById('chatInfoDetails').innerHTML = `
+    <div class="chat-info-detail-row"><span>Email</span><strong>${escapeHtml(user.email || 'Not available')}</strong></div>
+    <div class="chat-info-detail-row"><span>Phone</span><strong>${escapeHtml(user.phone || user.phoneNumber || 'Not set')}</strong></div>
+    <div class="chat-info-detail-row"><span>About</span><strong>${escapeHtml(user.statusText || 'Hey there! I am using Team Chat')}</strong></div>
+  `;
+
+  document.getElementById('chatInfoMuteBtn').onclick = async () => {
+    await muteChat(currentChat.id, 'direct', '8h');
+    showToast('Muted for 8 hours');
+  };
+  document.getElementById('chatInfoWallpaperBtn').onclick = () => openWallpaperModal('current');
+  document.getElementById('chatInfoBlockBtn').onclick = async () => {
+    if (!confirm(`Block ${displayName}?`)) return;
+    await blockUser(currentChat.otherUserId, displayName);
+    await loadBlockedUsers();
+    modal.style.display = 'none';
+    loadCurrentChatList();
+    showToast(`${displayName} blocked`);
+  };
+
+  modal.style.display = 'flex';
+  await renderSharedContent('media');
+}
+
+async function renderSharedContent(type) {
+  const container = document.getElementById('sharedContent');
+  if (!container || !currentChat) return;
+  document.querySelectorAll('.shared-tab').forEach(tab => {
+    tab.classList.toggle('active', tab.dataset.sharedTab === type);
+  });
+  container.innerHTML = '<div class="empty-state" style="padding:18px;">Loading...</div>';
+  let messages = [];
+  try {
+    messages = currentChatType === 'direct'
+      ? await getCurrentDirectMessages()
+      : (await db.collection('messages').where('groupId', '==', currentChat.id).limit(80).get()).docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  } catch (error) {
+    container.innerHTML = '<div class="empty-state" style="padding:18px;">Unable to load shared items</div>';
+    console.warn('Unable to load shared items:', error);
+    return;
+  }
+  messages.sort((a, b) => (b.timestamp?.toMillis?.() || 0) - (a.timestamp?.toMillis?.() || 0));
+
+  if (type === 'media') {
+    const media = messages.filter(message => message.attachment?.type === 'image');
+    if (!media.length) {
+      container.innerHTML = '<div class="empty-state" style="padding:18px;">No media shared yet</div>';
+      return;
+    }
+    container.innerHTML = `<div class="shared-grid">${media.map(message => `<a class="shared-media-item" href="${message.attachment.url}" target="_blank"><img src="${message.attachment.url}" alt="${escapeHtml(message.attachment.filename || 'Shared image')}"></a>`).join('')}</div>`;
+    return;
+  }
+
+  if (type === 'docs') {
+    const docs = messages.filter(message => message.attachment && message.attachment.type !== 'image' && message.attachment.type !== 'voice');
+    if (!docs.length) {
+      container.innerHTML = '<div class="empty-state" style="padding:18px;">No documents shared yet</div>';
+      return;
+    }
+    container.innerHTML = docs.map(message => `<a class="shared-list-item" href="${message.attachment.url}" target="_blank"><strong>${escapeHtml(message.attachment.filename || 'Document')}</strong><br><span>${formatBytes(message.attachment.size)}</span></a>`).join('');
+    return;
+  }
+
+  const links = messages.flatMap(message => extractLinks(message.text).map(url => ({ url, senderName: message.senderName })));
+  if (!links.length) {
+    container.innerHTML = '<div class="empty-state" style="padding:18px;">No links shared yet</div>';
+    return;
+  }
+  container.innerHTML = links.map(link => `<a class="shared-list-item" href="${link.url}" target="_blank"><strong>${escapeHtml(link.url)}</strong><br><span>${escapeHtml(link.senderName || '')}</span></a>`).join('');
+}
+
+async function loadStatusList() {
+  const statusList = document.getElementById('statusList');
+  if (!statusList || !currentUser) return;
+  statusList.innerHTML = '<div class="empty-state" style="padding:24px;">Loading status...</div>';
+  const cutoff = Date.now() - 24 * 60 * 60 * 1000;
+  let statuses = [];
+  const withTimeout = (promise, ms = 5000) => Promise.race([
+    promise,
+    new Promise((_, reject) => setTimeout(() => reject(new Error('Status load timeout')), ms))
+  ]);
+  try {
+    const snapshot = await withTimeout(db.collection('statuses').where('expiresAt', '>', new Date()).get());
+    statuses = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  } catch (error) {
+    try {
+      const snapshot = await withTimeout(db.collection('statuses').get());
+      statuses = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
+        .filter(status => (status.createdAt?.toMillis?.() || 0) >= cutoff);
+    } catch (fallbackError) {
+      statusList.innerHTML = '<div class="empty-state" style="padding:24px;">Unable to load status updates. Publish Firebase rules and try again.</div>';
+      return;
+    }
+  }
+  statuses.sort((a, b) => (b.createdAt?.toMillis?.() || 0) - (a.createdAt?.toMillis?.() || 0));
+  if (!statuses.length) {
+    statusList.innerHTML = '<div class="empty-state" style="padding:24px;">No status updates</div>';
+    return;
+  }
+  const byUser = new Map();
+  statuses.forEach(status => {
+    if (!byUser.has(status.userId)) byUser.set(status.userId, []);
+    byUser.get(status.userId).push(status);
+  });
+  statusList.innerHTML = '';
+  for (const userStatuses of byUser.values()) {
+    const latest = userStatuses[0];
+    const item = document.createElement('div');
+    item.className = 'list-item';
+    item.dataset.statusId = latest.id;
+    const viewedAll = userStatuses.every(status => status.viewedBy?.[currentUser.uid] || status.userId === currentUser.uid);
+    item.innerHTML = `
+      <div class="list-avatar ${viewedAll ? 'offline' : 'online'}">${latest.userAvatar ? `<img src="${latest.userAvatar}">` : escapeHtml((latest.userName || '?')[0].toUpperCase())}</div>
+      <div class="list-info">
+        <div class="list-name">${latest.userId === currentUser.uid ? 'My status' : escapeHtml(latest.userName || 'Status')}</div>
+        <div class="list-preview">${formatTime(latest.createdAt)}${userStatuses.length > 1 ? ` · ${userStatuses.length} updates` : ''}</div>
+      </div>
+    `;
+    item.addEventListener('click', () => showStatusViewer(userStatuses, 0));
+    statusList.appendChild(item);
+  }
+}
+
+async function publishStatus() {
+  const text = document.getElementById('statusTextInput')?.value.trim() || '';
+  if (!text && !statusImageAttachment) {
+    showToast('Add text or an image', 'error');
+    return;
+  }
+  const userDoc = await db.collection('users').doc(currentUser.uid).get();
+  const user = userDoc.exists ? userDoc.data() : {};
+  await db.collection('statuses').add({
+    userId: currentUser.uid,
+    userName: user.displayName || currentUser.displayName || currentUser.email,
+    userAvatar: user.avatar || currentUser.photoURL || '',
+    text,
+    image: statusImageAttachment,
+    viewedBy: { [currentUser.uid]: new Date() },
+    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+    expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000)
+  });
+  statusImageAttachment = null;
+  document.getElementById('statusTextInput').value = '';
+  document.getElementById('statusImagePreview').style.display = 'none';
+  document.getElementById('createStatusModal').style.display = 'none';
+  showToast('Status published');
+  loadStatusList();
+}
+
+async function showStatusViewer(statuses, index = 0) {
+  const status = statuses[index];
+  if (!status) return;
+  const modal = document.getElementById('statusViewerModal');
+  document.getElementById('statusViewerAvatar').innerHTML = status.userAvatar ? `<img src="${status.userAvatar}">` : escapeHtml((status.userName || '?')[0].toUpperCase());
+  document.getElementById('statusViewerName').textContent = status.userId === currentUser.uid ? 'My status' : (status.userName || 'Status');
+  document.getElementById('statusViewerTime').textContent = formatLastSeen(status.createdAt).replace('last seen ', '');
+  document.getElementById('statusViewerBody').innerHTML = status.image
+    ? `<img src="${status.image.url}" alt="Status image">`
+    : `<div class="status-viewer-text">${escapeHtml(status.text || '')}</div>`;
+  if (status.image && status.text) {
+    document.getElementById('statusViewerBody').insertAdjacentHTML('beforeend', `<div class="status-viewer-text" style="position:absolute;bottom:58px;left:18px;right:18px;font-size:22px;">${escapeHtml(status.text)}</div>`);
+  }
+  const seenCount = Object.keys(status.viewedBy || {}).filter(id => id !== status.userId).length;
+  document.getElementById('statusViewerSeen').textContent = status.userId === currentUser.uid ? `${seenCount} viewed` : 'Tap status list to view updates';
+  modal.style.display = 'flex';
+  if (status.userId !== currentUser.uid && !status.viewedBy?.[currentUser.uid]) {
+    await db.collection('statuses').doc(status.id).update({
+      [`viewedBy.${currentUser.uid}`]: firebase.firestore.FieldValue.serverTimestamp()
+    });
+  }
+}
+
+async function renderPendingGroupInvites(groupId, membersList, isAdmin) {
+  const pendingSnapshot = await db.collection('groupInvites')
+    .where('groupId', '==', groupId)
+    .where('status', '==', 'pending')
+    .get();
+  if (pendingSnapshot.empty) return;
+
+  const header = document.createElement('div');
+  header.className = 'member-section-label';
+  header.textContent = 'Pending invites';
+  membersList.appendChild(header);
+
+  pendingSnapshot.docs
+    .map(doc => ({ id: doc.id, ...doc.data() }))
+    .sort((a, b) => (a.toUserName || '').localeCompare(b.toUserName || ''))
+    .forEach(invite => {
+      const inviteDiv = document.createElement('div');
+      inviteDiv.className = 'member-item pending';
+      inviteDiv.innerHTML = `
+        <div class="member-info">
+          <div class="member-avatar">${escapeHtml((invite.toUserName || '?')[0].toUpperCase())}</div>
+          <div>
+            <span>${escapeHtml(invite.toUserName || 'Invited user')}</span>
+            <span class="status-chip pending">Invite pending</span>
+          </div>
+        </div>
+        ${isAdmin ? `<button class="cancel-invite-btn" data-id="${invite.id}">Cancel</button>` : ''}
+      `;
+      membersList.appendChild(inviteDiv);
+    });
+
+  membersList.querySelectorAll('.cancel-invite-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      await cancelGroupInvite(btn.dataset.id);
+    });
+  });
+}
+
+async function cancelGroupInvite(inviteId) {
+  if (!inviteId) return;
+  await db.collection('groupInvites').doc(inviteId).update({
+    status: 'cancelled',
+    respondedAt: firebase.firestore.FieldValue.serverTimestamp()
+  });
+  showToast('Invite cancelled');
+  showGroupInfo();
 }
 
 async function makeAdmin(groupId, memberId, memberName) {
@@ -1725,21 +2934,21 @@ async function removeMember(groupId, memberId, memberName) {
 
 async function addMemberToGroup(email) {
   if (!email.trim()) return;
-  const userQuery = await db.collection('users').where('email', '==', email.toLowerCase()).get();
-  if (userQuery.empty) { showToast('User not found', 'error'); return; }
-  const newMemberId = userQuery.docs[0].id;
+  if (!isCurrentUserGroupAdmin()) { showToast('Only admins can invite members', 'error'); return; }
+  const matchedUser = findUserByMemberInput(email);
+  if (!matchedUser) { showToast('User not found', 'error'); return; }
+  const newMemberId = matchedUser.id;
   if (isBlocked(newMemberId)) { showToast('Cannot add blocked user', 'error'); return; }
   const existing = await db.collection('groupMembers').where('groupId', '==', currentGroup.id).where('userId', '==', newMemberId).get();
   if (!existing.empty) { showToast('User already in group', 'error'); return; }
-  await db.collection('groupMembers').add({ groupId: currentGroup.id, userId: newMemberId, role: 'member', joinedAt: firebase.firestore.FieldValue.serverTimestamp() });
-  await db.collection('groups').doc(currentGroup.id).update({ memberCount: firebase.firestore.FieldValue.increment(1) });
-  showToast('Member added!');
+  await sendGroupInvite(currentGroup.id, currentGroup.name, matchedUser);
   await loadGroupMembers(currentGroup.id);
   showGroupInfo();
 }
 
 async function updateGroupName(newName) {
   if (!newName.trim()) return;
+  if (!isCurrentUserGroupAdmin() || currentGroup?.onlyAdminsCanEdit === false) { showToast('Only admins can edit group info', 'error'); return; }
   await db.collection('groups').doc(currentGroup.id).update({ name: newName.trim() });
   showToast('Group name updated');
   if (currentChat?.id === currentGroup.id) document.getElementById('currentChatName').textContent = newName;
@@ -1747,6 +2956,7 @@ async function updateGroupName(newName) {
 }
 
 async function updateGroupIcon(file) {
+  if (!isCurrentUserGroupAdmin() || currentGroup?.onlyAdminsCanEdit === false) { showToast('Only admins can edit group info', 'error'); return; }
   const url = await uploadToCloudinary(file);
   await db.collection('groups').doc(currentGroup.id).update({ icon: url });
   showToast('Group icon updated');
@@ -1805,12 +3015,33 @@ async function joinGroup(groupCode) {
 
 async function markMessagesAsRead() {
   if (!currentChat || privacySettings.hideReadReceipts) return;
-  let query;
   if (currentChatType === 'direct') {
-    query = db.collection('messages').where('directId', '==', currentChat.id).where('senderId', '!=', currentUser.uid);
-  } else {
-    query = db.collection('messages').where('groupId', '==', currentChat.id).where('senderId', '!=', currentUser.uid);
+    const directIds = currentChat.aliasDirectIds?.length ? currentChat.aliasDirectIds : [currentChat.id];
+    for (const directId of directIds) {
+      const snapshot = await db.collection('messages')
+        .where('directId', '==', directId)
+        .where('senderId', '!=', currentUser.uid)
+        .get();
+      const batch = db.batch();
+      let hasWrites = false;
+      snapshot.docs.forEach(doc => {
+        const data = doc.data();
+        if (data.readBy?.[currentUser.uid]) return;
+        batch.update(doc.ref, {
+          read: true,
+          [`readBy.${currentUser.uid}`]: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        hasWrites = true;
+      });
+      if (hasWrites) {
+        await batch.commit();
+        scheduleChatListRefresh();
+      }
+    }
+    return;
   }
+
+  const query = db.collection('messages').where('groupId', '==', currentChat.id).where('senderId', '!=', currentUser.uid);
   const snapshot = await query.get();
   const batch = db.batch();
   let hasWrites = false;
@@ -1823,21 +3054,51 @@ async function markMessagesAsRead() {
     });
     hasWrites = true;
   });
-  if (hasWrites) await batch.commit();
+  if (hasWrites) {
+    await batch.commit();
+    scheduleChatListRefresh();
+  }
 }
 
 function getMessageReceiptHtml(msg, isMyMessage) {
   if (!isMyMessage || privacySettings.hideReadReceipts) return '';
+  if (msg.failed) return '<span class="message-status failed">failed</span>';
+  if (msg.pending) return '<span class="message-status">sending</span>';
   const readBy = msg.readBy || {};
   const readerIds = Object.keys(readBy).filter(id => id !== currentUser.uid);
-  const isRead = msg.read || readerIds.length > 0;
-  return `<span class="read-receipt ${isRead ? 'read' : 'delivered'}">${isRead ? '✓✓' : '✓'}</span>`;
+  const otherParticipants = currentChatType === 'group'
+    ? currentGroupMembers.filter(member => member.id !== currentUser.uid).map(member => member.id)
+    : [currentChat?.otherUserId].filter(Boolean);
+  const allSeen = otherParticipants.length > 0 && otherParticipants.every(userId => readBy[userId]);
+  const isSeen = msg.read || allSeen || (currentChatType === 'direct' && readerIds.length > 0);
+  const isDelivered = !!msg.timestamp || readerIds.length > 0;
+  if (isSeen) return '<span class="read-receipt seen" title="Seen">✓✓</span>';
+  if (isDelivered) return '<span class="read-receipt delivered" title="Delivered">✓✓</span>';
+  return '<span class="read-receipt sent" title="Sent">✓</span>';
 }
 
 function loadMessages() {
   if (!currentChat) return;
   const messagesArea = document.getElementById('messagesArea');
   if (messagesUnsubscribe) messagesUnsubscribe();
+
+  if (currentChatType === 'direct' && currentChat.aliasDirectIds?.length > 1) {
+    const directIds = currentChat.aliasDirectIds;
+    const messageDocs = new Map();
+    const unsubscribers = directIds.map(directId => db.collection('messages')
+      .where('directId', '==', directId)
+      .orderBy('timestamp', 'asc')
+      .onSnapshot(async snapshot => {
+        snapshot.docChanges().forEach(change => {
+          if (change.type === 'removed') messageDocs.delete(change.doc.id);
+          else messageDocs.set(change.doc.id, change.doc);
+        });
+        await renderMessageSnapshotDocs([...messageDocs.values()], messagesArea);
+      }));
+    messagesUnsubscribe = () => unsubscribers.forEach(unsubscribe => unsubscribe());
+    return;
+  }
+
   let query;
   if (currentChatType === 'direct') {
     query = db.collection('messages').where('directId', '==', currentChat.id).orderBy('timestamp', 'asc');
@@ -1850,10 +3111,13 @@ function loadMessages() {
     if (snapshot.empty) { messagesArea.innerHTML = '<div class="empty-state"><div class="empty-icon">💬</div><p>No messages yet. Say hello!</p></div>'; return; }
     for (const doc of snapshot.docs) {
       const msg = doc.data();
+      if (msg.deletedFor?.[currentUser.uid]) continue;
       if (isBlocked(msg.senderId)) continue;
       const isMyMessage = msg.senderId === currentUser.uid;
       const messageDiv = document.createElement('div');
       messageDiv.className = `message ${isMyMessage ? 'my-message' : ''}`;
+      if (msg.deletedForEveryone) messageDiv.classList.add('deleted');
+      if (msg.failed) messageDiv.classList.add('failed');
       messageDiv.dataset.messageId = doc.id;
       let attachmentHtml = '';
       if (msg.attachment) {
@@ -1869,7 +3133,9 @@ function loadMessages() {
       if (msg.replyTo) {
         replyHtml = `<div class="reply-preview"><div class="reply-sender">↩️ Replying to ${escapeHtml(msg.replyTo.senderName)}</div><div class="reply-text">${escapeHtml(msg.replyTo.text ? msg.replyTo.text.substring(0, 50) : 'Media')}</div></div>`;
       }
-      messageDiv.innerHTML = `<div class="message-bubble">${!isMyMessage ? `<div class="message-sender">${escapeHtml(msg.senderName)}</div>` : ''}${replyHtml}<div class="message-text">${escapeHtml(msg.text || '')}</div>${attachmentHtml}<div class="message-footer"><span class="message-time">${msg.timestamp ? formatTime(msg.timestamp) : ''}</span>${getMessageReceiptHtml(msg, isMyMessage)}</div></div>`;
+      const messageText = msg.deletedForEveryone ? 'This message was deleted' : (msg.text || '');
+      if (msg.deletedForEveryone) attachmentHtml = '';
+      messageDiv.innerHTML = `<div class="message-bubble">${!isMyMessage ? `<div class="message-sender">${escapeHtml(msg.senderName)}</div>` : ''}${replyHtml}<div class="message-text">${escapeHtml(messageText)}</div>${attachmentHtml}<div class="message-footer"><span class="message-time">${msg.timestamp ? formatTime(msg.timestamp) : ''}</span>${getMessageReceiptHtml(msg, isMyMessage)}</div></div>`;
       const reactionsContainer = document.createElement('div');
       messageDiv.querySelector('.message-bubble').appendChild(reactionsContainer);
       await loadReactions(doc.id, reactionsContainer);
@@ -1882,6 +3148,56 @@ function loadMessages() {
   });
 }
 
+async function renderMessageSnapshotDocs(docs, messagesArea) {
+  if (!messagesArea) return;
+  messagesArea.innerHTML = '';
+  const sortedDocs = [...docs].sort((a, b) => {
+    const aTime = a.data().timestamp?.toMillis?.() || 0;
+    const bTime = b.data().timestamp?.toMillis?.() || 0;
+    return aTime - bTime;
+  });
+  if (sortedDocs.length === 0) {
+    messagesArea.innerHTML = '<div class="empty-state"><div class="empty-icon">ðŸ’¬</div><p>No messages yet. Say hello!</p></div>';
+    return;
+  }
+  for (const doc of sortedDocs) {
+    const msg = doc.data();
+    if (msg.deletedFor?.[currentUser.uid]) continue;
+    if (isBlocked(msg.senderId)) continue;
+    const isMyMessage = msg.senderId === currentUser.uid;
+    const messageDiv = document.createElement('div');
+    messageDiv.className = `message ${isMyMessage ? 'my-message' : ''}`;
+    if (msg.deletedForEveryone) messageDiv.classList.add('deleted');
+    if (msg.failed) messageDiv.classList.add('failed');
+    messageDiv.dataset.messageId = doc.id;
+    let attachmentHtml = '';
+    if (msg.attachment) {
+      if (msg.attachment.type === 'image') {
+        attachmentHtml = `<div class="message-attachment"><img src="${msg.attachment.url}" style="max-width:200px; max-height:200px; border-radius:12px; cursor:pointer;" onclick="window.open('${msg.attachment.url}','_blank')"></div>`;
+      } else if (msg.attachment.type === 'voice') {
+        attachmentHtml = `<div class="voice-message"><button class="voice-play-btn" data-url="${msg.attachment.url}">â–¶ï¸</button><div class="voice-waveform"></div><span class="voice-duration">${Math.floor(msg.attachment.duration / 60)}:${(msg.attachment.duration % 60).toString().padStart(2, '0')}</span></div>`;
+      } else {
+        attachmentHtml = `<div class="message-attachment"><a href="${msg.attachment.url}" target="_blank">ðŸ“Ž Download</a></div>`;
+      }
+    }
+    let replyHtml = '';
+    if (msg.replyTo) {
+      replyHtml = `<div class="reply-preview"><div class="reply-sender">â†©ï¸ Replying to ${escapeHtml(msg.replyTo.senderName)}</div><div class="reply-text">${escapeHtml(msg.replyTo.text ? msg.replyTo.text.substring(0, 50) : 'Media')}</div></div>`;
+    }
+    const messageText = msg.deletedForEveryone ? 'This message was deleted' : (msg.text || '');
+    if (msg.deletedForEveryone) attachmentHtml = '';
+    messageDiv.innerHTML = `<div class="message-bubble">${!isMyMessage ? `<div class="message-sender">${escapeHtml(msg.senderName)}</div>` : ''}${replyHtml}<div class="message-text">${escapeHtml(messageText)}</div>${attachmentHtml}<div class="message-footer"><span class="message-time">${msg.timestamp ? formatTime(msg.timestamp) : ''}</span>${getMessageReceiptHtml(msg, isMyMessage)}</div></div>`;
+    const reactionsContainer = document.createElement('div');
+    messageDiv.querySelector('.message-bubble').appendChild(reactionsContainer);
+    await loadReactions(doc.id, reactionsContainer);
+    messageDiv.addEventListener('contextmenu', (e) => { e.preventDefault(); showContextMenu(e.clientX, e.clientY, doc.id, msg, isMyMessage); });
+    messagesArea.appendChild(messageDiv);
+  }
+  document.querySelectorAll('.voice-play-btn').forEach(btn => { btn.addEventListener('click', () => { const audio = new Audio(btn.dataset.url); audio.play(); }); });
+  messagesArea.scrollTop = messagesArea.scrollHeight;
+  markMessagesAsRead();
+}
+
 // ========================================
 // SEND MESSAGE & CONTEXT MENU
 // ========================================
@@ -1890,6 +3206,7 @@ async function sendMessage() {
   const input = document.getElementById('messageInput');
   const text = input ? input.value.trim() : '';
   if ((!text && !currentAttachment) || !currentChat) return;
+  setSendingState(true);
   const messageData = {
     senderId: currentUser.uid, senderName: currentUser.displayName || currentUser.email.split('@')[0],
     text: text || '', timestamp: firebase.firestore.FieldValue.serverTimestamp(), read: false,
@@ -1898,41 +3215,103 @@ async function sendMessage() {
   if (currentReplyTo) {
     messageData.replyTo = { messageId: currentReplyTo.id, text: currentReplyTo.text, senderName: currentReplyTo.senderName };
   }
-  if (currentAttachment) { messageData.attachment = currentAttachment; currentAttachment = null; }
-  if (currentChatType === 'direct') {
-    messageData.directId = currentChat.id;
-    messageData.participants = [currentUser.uid, currentChat.otherUserId];
-  } else {
-    messageData.groupId = currentChat.id;
+  if (currentAttachment) messageData.attachment = currentAttachment;
+  if (currentChatType === 'group' && currentGroup?.onlyAdminsCanSend && !isCurrentUserGroupAdmin()) {
+    showToast('Only admins can send messages in this group', 'error');
+    setSendingState(false);
+    return;
   }
-  await db.collection('messages').add(messageData);
-  if (input) input.value = '';
-  currentReplyTo = null;
-  document.getElementById('replyPreviewBar').style.display = 'none';
-  if (currentChatType === 'direct') {
-    await db.collection('directChats').doc(currentChat.id).update({ lastMessage: text, lastMessageTime: firebase.firestore.FieldValue.serverTimestamp() });
-  } else {
-    await db.collection('groups').doc(currentChat.id).update({ updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
+  try {
+    if (currentChatType === 'direct') {
+      messageData.directId = currentChat.id;
+      messageData.participants = [currentUser.uid, currentChat.otherUserId];
+    } else {
+      messageData.groupId = currentChat.id;
+    }
+    if (!navigator.onLine) {
+      queueOfflineMessage(messageData, { id: currentChat.id, type: currentChatType });
+      currentAttachment = null;
+      setAttachmentPreview();
+      if (input) input.value = '';
+      currentReplyTo = null;
+      document.getElementById('replyPreviewBar').style.display = 'none';
+      setConnectionBanner();
+      showToast('Message queued. It will send when you are back online.');
+      return;
+    }
+    await db.collection('messages').add(messageData);
+    currentAttachment = null;
+    setAttachmentPreview();
+    if (input) input.value = '';
+    currentReplyTo = null;
+    document.getElementById('replyPreviewBar').style.display = 'none';
+    if (currentChatType === 'direct') {
+      await db.collection('directChats').doc(currentChat.id).update({ lastMessage: text || (messageData.attachment ? 'Attachment' : ''), lastMessageTime: firebase.firestore.FieldValue.serverTimestamp() });
+    } else {
+      await db.collection('groups').doc(currentChat.id).update({ updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
+    }
+    scheduleChatListRefresh();
+    if (!isChatMuted(currentChat.id)) sendNotification(currentChat.name || currentChat.otherUserName, text || 'Attachment');
+  } catch (error) {
+    showToast('Message failed to send. Please try again.', 'error');
+  } finally {
+    setSendingState(false);
   }
-  if (!isChatMuted(currentChat.id)) sendNotification(currentChat.name || currentChat.otherUserName, text);
 }
 
 async function handleFileUpload(file) {
-  if (file.type.startsWith('image/')) {
-    const url = await uploadToCloudinary(file);
-    currentAttachment = { type: 'image', url };
-    showToast('Image ready to send. Click send.');
-  } else {
-    const url = await uploadDocument(file);
-    currentAttachment = { type: 'document', url, filename: file.name };
-    showToast('Document ready to send. Click send.');
+  if (!file) return;
+  const maxSize = 10 * 1024 * 1024;
+  if (file.size > maxSize) {
+    showToast('File must be 10 MB or smaller', 'error');
+    return;
+  }
+  const attachBtn = document.getElementById('attachBtn');
+  if (attachBtn) {
+    attachBtn.disabled = true;
+    attachBtn.textContent = '…';
+  }
+  try {
+    if (file.type.startsWith('image/')) {
+      const url = await uploadToCloudinary(file);
+      currentAttachment = { type: 'image', url, filename: file.name, size: file.size };
+      showToast('Image ready to send');
+    } else {
+      const url = await uploadDocument(file);
+      currentAttachment = { type: 'document', url, filename: file.name, size: file.size };
+      showToast('Document ready to send');
+    }
+    setAttachmentPreview();
+  } catch (error) {
+    showToast('Upload failed. Please try again.', 'error');
+  } finally {
+    if (attachBtn) {
+      attachBtn.disabled = false;
+      attachBtn.textContent = '📎';
+    }
   }
 }
 
 function copyToClipboard(text) { navigator.clipboard.writeText(text); showToast('Copied to clipboard'); }
 function setReplyTo(messageData) { currentReplyTo = messageData; document.getElementById('replyPreviewBar').style.display = 'block'; document.getElementById('replyPreviewSender').textContent = messageData.senderName; document.getElementById('replyPreviewText').textContent = messageData.text ? messageData.text.substring(0, 100) : 'Media'; }
 async function editMessage(messageId, oldText) { const newText = prompt('Edit message:', oldText); if (newText && newText !== oldText) { await db.collection('messages').doc(messageId).update({ text: newText, edited: true, editedAt: firebase.firestore.FieldValue.serverTimestamp() }); showToast('Message edited'); } }
-async function deleteMessage(messageId) { if (confirm('Delete this message for everyone?')) { await db.collection('messages').doc(messageId).delete(); showToast('Message deleted'); } }
+async function deleteMessageForMe(messageId) {
+  if (!messageId || !currentUser) return;
+  const updates = {};
+  updates[`deletedFor.${currentUser.uid}`] = true;
+  await db.collection('messages').doc(messageId).update(updates);
+  showToast('Message deleted for you');
+}
+async function deleteMessage(messageId) {
+  if (!confirm('Delete this message for everyone?')) return;
+  await db.collection('messages').doc(messageId).update({
+    text: '',
+    attachment: firebase.firestore.FieldValue.delete(),
+    deletedForEveryone: true,
+    deletedAt: firebase.firestore.FieldValue.serverTimestamp()
+  });
+  showToast('Message deleted for everyone');
+}
 async function starMessage(messageId, messageData) { const existing = await db.collection('starredMessages').where('messageId', '==', messageId).where('userId', '==', currentUser.uid).get(); if (!existing.empty) { await existing.docs[0].ref.delete(); showToast('Message unstarred'); } else { await db.collection('starredMessages').add({ messageId, userId: currentUser.uid, chatId: currentChat.id, text: messageData.text, senderName: messageData.senderName, timestamp: messageData.timestamp, starredAt: firebase.firestore.FieldValue.serverTimestamp() }); showToast('Message starred'); } }
 
 async function showForwardModal(messageData) {
@@ -2047,10 +3426,13 @@ function showContextMenu(x, y, messageId, messageData, isMyMessage) {
   ];
   if (isMyMessage) {
     items.push({ text: 'Info', action: () => showMessageInfo(messageId, messageData) });
-    items.push({ text: 'Edit', action: () => editMessage(messageId, messageData.text) });
-    items.push({ text: '🗑️ Delete for everyone', action: () => deleteMessage(messageId) });
+    if (!messageData.deletedForEveryone) {
+      items.push({ text: 'Edit', action: () => editMessage(messageId, messageData.text) });
+      items.push({ text: '🗑️ Delete for everyone', action: () => deleteMessage(messageId) });
+    }
   }
-  items.push({ text: '🚫 Block user', action: () => blockUser(messageData.senderId, messageData.senderName) });
+  items.push({ text: 'Delete for me', action: () => deleteMessageForMe(messageId) });
+  if (!isMyMessage) items.push({ text: '🚫 Block user', action: () => blockUser(messageData.senderId, messageData.senderName) });
   items.forEach(item => {
     const div = document.createElement('div'); div.className = 'context-menu-item'; div.style.cssText = `padding: 12px 16px; cursor: pointer; font-size: 14px; ${item.text.includes('Delete') || item.text.includes('Block') ? 'color: #dc2626;' : ''}`;
     div.textContent = item.text;
@@ -2068,6 +3450,19 @@ function showContextMenu(x, y, messageId, messageData, isMyMessage) {
 // ========================================
 
 async function updateProfileAvatar(file) { const url = await uploadToCloudinary(file); await db.collection('users').doc(currentUser.uid).update({ avatar: url }); await currentUser.updateProfile({ photoURL: url }); showToast('Avatar updated'); showProfileModal(); }
+async function updateDisplayName(displayName) {
+  const cleanName = (displayName || '').trim();
+  if (cleanName.length < 2) {
+    showToast('Name must be at least 2 characters', 'error');
+    return false;
+  }
+  await db.collection('users').doc(currentUser.uid).update({ displayName: cleanName });
+  await currentUser.updateProfile({ displayName: cleanName });
+  showToast('Name updated');
+  showProfileModal();
+  loadCurrentChatList();
+  return true;
+}
 async function updateStatusText(statusText) { await db.collection('users').doc(currentUser.uid).update({ statusText }); showToast('Status updated'); }
 async function updatePhoneNumber(phoneNumber) { if (!isValidIndianPhone(phoneNumber)) { showToast('Enter valid phone number', 'error'); return false; } await db.collection('users').doc(currentUser.uid).update({ phone: phoneNumber }); showToast('Phone number saved!'); return true; }
 async function updatePrivacySettings() { await db.collection('users').doc(currentUser.uid).update({ privacySettings }); }
@@ -2077,7 +3472,7 @@ async function showProfileModal() {
   const userData = userDoc.data();
   document.getElementById('profileName').textContent = userData.displayName || currentUser.displayName;
   document.getElementById('profileEmail').textContent = userData.email || currentUser.email;
-  document.getElementById('profilePhone').textContent = userData.phoneNumber || 'Not set';
+  document.getElementById('profilePhone').textContent = userData.phone || userData.phoneNumber || 'Not set';
   document.getElementById('profileStatusText').value = userData.statusText || 'Hey there! I am using Team Chat';
   document.getElementById('profileAvatar').innerHTML = userData.avatar ? `<img src="${userData.avatar}">` : (userData.displayName ? userData.displayName[0].toUpperCase() : '👤');
   document.getElementById('hideReadReceipts').checked = privacySettings.hideReadReceipts;
@@ -2089,6 +3484,31 @@ async function showProfileModal() {
 async function showBlockedUsersModal() {
   const modal = document.getElementById('blockedModal'); const list = document.getElementById('blockedUsersList');
   modal.style.display = 'flex'; list.innerHTML = '';
+  await loadBlockedUsers();
+  if (!blockedUsers.length) {
+    list.innerHTML = '<div class="empty-state" style="padding:24px;">No blocked users</div>';
+    return;
+  }
+  for (const block of blockedUsers) {
+    let detail = '';
+    let avatar = '👤';
+    try {
+      const userDoc = await db.collection('users').doc(block.blockedUserId).get();
+      if (userDoc.exists) {
+        const user = userDoc.data();
+        detail = [user.email, user.phone || user.phoneNumber].filter(Boolean).join(' · ');
+        avatar = user.avatar ? `<img src="${user.avatar}">` : escapeHtml((user.displayName || block.blockedUserName || '?')[0].toUpperCase());
+      }
+    } catch (error) {
+      detail = '';
+    }
+    const div = document.createElement('div');
+    div.className = 'blocked-user-card';
+    div.innerHTML = `<div class="list-avatar">${avatar}</div><div class="list-info"><div class="list-name">${escapeHtml(block.blockedUserName || 'Blocked user')}</div><div class="list-preview">${escapeHtml(detail || 'Blocked contact')}</div></div><button class="unblock-btn" data-id="${block.id}">Unblock</button>`;
+    list.appendChild(div);
+  }
+  document.querySelectorAll('.unblock-btn').forEach(btn => { btn.addEventListener('click', async () => { await unblockUser(btn.dataset.id); showBlockedUsersModal(); loadCurrentChatList(); }); });
+  return;
   for (const block of blockedUsers) {
     const div = document.createElement('div'); div.className = 'list-item';
     div.innerHTML = `<div class="list-avatar">👤</div><div class="list-info"><div class="list-name">${escapeHtml(block.blockedUserName)}</div></div><button class="unblock-btn" data-id="${block.id}" style="background:#ef4444; color:white; border:none; padding:4px 12px; border-radius:20px;">Unblock</button>`;
@@ -2143,19 +3563,34 @@ function switchTab(tab) {
   document.querySelector(`.tab[data-tab="${tab}"]`)?.classList.add('active');
   const chatsList = document.getElementById('chatsList');
   const groupsList = document.getElementById('groupsList');
+  const statusList = document.getElementById('statusList');
   const groupActions = document.getElementById('groupActions');
+  const statusActions = document.getElementById('statusActions');
   
   if (tab === 'groups') {
     chatsList.style.display = 'none';
     groupsList.style.display = 'block';
+    if (statusList) statusList.style.display = 'none';
     if (groupActions) groupActions.style.display = 'flex';
+    if (statusActions) statusActions.style.display = 'none';
     loadGroupsList();
     document.getElementById('searchInput').placeholder = '🔍 Search groups by name...';
     document.getElementById('searchInput').oninput = (e) => searchGroupsRealtime(e.target.value);
+  } else if (tab === 'status') {
+    chatsList.style.display = 'none';
+    groupsList.style.display = 'none';
+    if (statusList) statusList.style.display = 'block';
+    if (groupActions) groupActions.style.display = 'none';
+    if (statusActions) statusActions.style.display = 'flex';
+    loadStatusList();
+    document.getElementById('searchInput').placeholder = 'Search status updates';
+    document.getElementById('searchInput').oninput = () => {};
   } else {
     chatsList.style.display = 'block';
     groupsList.style.display = 'none';
+    if (statusList) statusList.style.display = 'none';
     if (groupActions) groupActions.style.display = 'none';
+    if (statusActions) statusActions.style.display = 'none';
     loadAllChatsList();
     document.getElementById('searchInput').placeholder = 'Search or start a new chat';
     document.getElementById('searchInput').oninput = (e) => searchUsersRealtime(e.target.value);
@@ -2227,6 +3662,13 @@ async function init() {
       if (userDoc.data().privacySettings) privacySettings = userDoc.data().privacySettings;
     }
     window.addEventListener('beforeunload', async () => { await userRef.update({ onlineStatus: 'offline', lastSeen: new Date() }); });
+    document.addEventListener('visibilitychange', async () => {
+      if (!currentUser) return;
+      await userRef.update({
+        onlineStatus: document.hidden ? 'away' : 'online',
+        lastSeen: new Date()
+      });
+    });
     await loadBlockedUsers();
     await loadMutedChats();
     await loadFavoriteChatIds();
@@ -2236,11 +3678,18 @@ async function init() {
     await checkFirstTimeUser();
     setupChatListListeners();
     setupRequestListeners();
+    listenForIncomingCalls();
     loadReceivedRequests();
     switchTab('all');
     loadArchivedChats();
+    renderChatDebugPanel();
     if (Notification.permission === 'default') Notification.requestPermission();
-    setInterval(async () => { await db.collection('users').doc(currentUser.uid).update({ lastSeen: new Date() }); }, 60000);
+    setInterval(async () => {
+      await db.collection('users').doc(currentUser.uid).update({
+        onlineStatus: document.hidden ? 'away' : 'online',
+        lastSeen: new Date()
+      });
+    }, 60000);
   });
 
   // Event Listeners
@@ -2281,6 +3730,29 @@ async function init() {
   });
   
   document.getElementById('groupInfoBtn')?.addEventListener('click', showGroupInfo);
+  document.getElementById('chatHeaderInfo')?.addEventListener('click', showChatInfo);
+  document.getElementById('voiceCallBtn')?.addEventListener('click', () => startCall('voice'));
+  document.getElementById('videoCallBtn')?.addEventListener('click', () => startCall('video'));
+  document.getElementById('acceptCallBtn')?.addEventListener('click', acceptIncomingCall);
+  document.getElementById('rejectCallBtn')?.addEventListener('click', () => endActiveCall('rejected'));
+  document.getElementById('endCallBtn')?.addEventListener('click', () => endActiveCall('ended'));
+  document.getElementById('closeCallBtn')?.addEventListener('click', () => endActiveCall('ended'));
+  document.getElementById('muteMicBtn')?.addEventListener('click', () => {
+    micMuted = !micMuted;
+    localCallStream?.getAudioTracks().forEach(track => { track.enabled = !micMuted; });
+    document.getElementById('muteMicBtn').style.opacity = micMuted ? '0.55' : '1';
+  });
+  document.getElementById('toggleCameraBtn')?.addEventListener('click', () => {
+    cameraOff = !cameraOff;
+    localCallStream?.getVideoTracks().forEach(track => { track.enabled = !cameraOff; });
+    document.getElementById('toggleCameraBtn').style.opacity = cameraOff ? '0.55' : '1';
+  });
+  document.getElementById('requestHeader')?.addEventListener('click', () => {
+    const section = document.querySelector('.request-section');
+    const toggle = document.getElementById('requestToggle');
+    section?.classList.toggle('expanded');
+    if (toggle && section) toggle.textContent = section.classList.contains('expanded') ? '▲' : '▼';
+  });
   document.getElementById('darkModeBtn')?.addEventListener('click', toggleDarkMode);
   document.getElementById('searchChatBtn')?.addEventListener('click', showInChatSearch);
   document.getElementById('closeSearchBtn')?.addEventListener('click', () => { document.getElementById('inChatSearchBar').style.display = 'none'; document.querySelectorAll('.message').forEach(msg => msg.classList.remove('highlighted')); });
@@ -2301,6 +3773,11 @@ async function init() {
   document.getElementById('cancelRecordingBtn')?.addEventListener('click', cancelVoiceRecording);
   document.getElementById('attachBtn')?.addEventListener('click', () => { document.getElementById('fileInput').click(); });
   document.getElementById('fileInput')?.addEventListener('change', async (e) => { if (e.target.files[0]) await handleFileUpload(e.target.files[0]); });
+  window.addEventListener('online', setConnectionBanner);
+  window.addEventListener('offline', setConnectionBanner);
+  window.addEventListener('online', flushOfflineQueue);
+  setConnectionBanner();
+  flushOfflineQueue();
 
   // Emoji Picker
 // Emoji Picker
@@ -2327,7 +3804,7 @@ document.addEventListener('click', (e) => {
   const createGroupModal = document.getElementById('createGroupModal');
   document.getElementById('createGroupBtn')?.addEventListener('click', () => { createGroupModal.style.display = 'flex'; });
   document.querySelectorAll('.closeCreateModal, .cancelGroupBtn').forEach(btn => { btn.addEventListener('click', () => { createGroupModal.style.display = 'none'; }); });
-  document.querySelector('.confirmGroupBtn')?.addEventListener('click', async () => { const groupName = document.getElementById('newGroupName').value; const members = document.getElementById('newGroupMembers').value; if (groupName.trim()) { await createGroup(groupName, members); createGroupModal.style.display = 'none'; document.getElementById('newGroupName').value = ''; document.getElementById('newGroupMembers').value = ''; } });
+  document.querySelector('.confirmGroupBtn')?.addEventListener('click', async () => { const groupName = document.getElementById('newGroupName').value; const members = document.getElementById('newGroupMembers').value; if (groupName.trim()) { await createGroup(groupName, members); createGroupModal.style.display = 'none'; document.getElementById('newGroupName').value = ''; document.getElementById('newGroupMembers').value = ''; document.getElementById('newGroupAdminsOnlySend').checked = false; } });
   
   const joinGroupModal = document.getElementById('joinGroupModal');
   document.getElementById('showJoinGroupBtn')?.addEventListener('click', () => { joinGroupModal.style.display = 'flex'; });
@@ -2335,18 +3812,56 @@ document.addEventListener('click', (e) => {
   document.querySelector('.confirmJoinBtn')?.addEventListener('click', async () => { const code = document.getElementById('joinGroupCodeInput').value; await joinGroup(code); joinGroupModal.style.display = 'none'; document.getElementById('joinGroupCodeInput').value = ''; });
   
   document.querySelectorAll('.closeGroupInfoModal').forEach(btn => { btn.addEventListener('click', () => { document.getElementById('groupInfoModal').style.display = 'none'; }); });
+  document.querySelectorAll('.closeChatInfoModal').forEach(btn => { btn.addEventListener('click', () => { document.getElementById('chatInfoModal').style.display = 'none'; }); });
+  document.querySelectorAll('.shared-tab').forEach(btn => { btn.addEventListener('click', () => renderSharedContent(btn.dataset.sharedTab)); });
   document.getElementById('editGroupNameInput')?.addEventListener('change', async (e) => { await updateGroupName(e.target.value); });
+  document.getElementById('groupAdminsOnlySend')?.addEventListener('change', async (e) => {
+    if (!isCurrentUserGroupAdmin()) return;
+    await db.collection('groups').doc(currentGroup.id).update({ onlyAdminsCanSend: e.target.checked });
+    currentGroup.onlyAdminsCanSend = e.target.checked;
+    showToast('Group permission updated');
+  });
+  document.getElementById('groupAdminsOnlyEdit')?.addEventListener('change', async (e) => {
+    if (!isCurrentUserGroupAdmin()) return;
+    await db.collection('groups').doc(currentGroup.id).update({ onlyAdminsCanEdit: e.target.checked });
+    currentGroup.onlyAdminsCanEdit = e.target.checked;
+    showToast('Group permission updated');
+    showGroupInfo();
+  });
   document.getElementById('groupAvatarLarge')?.addEventListener('click', () => { document.getElementById('groupIconInput').click(); });
   document.getElementById('groupIconInput')?.addEventListener('change', async (e) => { if (e.target.files[0]) await updateGroupIcon(e.target.files[0]); });
   document.getElementById('addMemberBtn')?.addEventListener('click', async () => { const email = document.getElementById('addMemberEmail').value; await addMemberToGroup(email); document.getElementById('addMemberEmail').value = ''; });
+  document.getElementById('newGroupMembers')?.addEventListener('input', (e) => {
+    const currentEntry = e.target.value.split(',').pop();
+    updateGroupMemberSuggestions(currentEntry);
+  });
+  document.getElementById('addMemberEmail')?.addEventListener('input', (e) => {
+    updateGroupMemberSuggestions(e.target.value);
+  });
   document.getElementById('leaveGroupBtn')?.addEventListener('click', leaveGroup);
   document.getElementById('deleteGroupBtn')?.addEventListener('click', deleteGroup);
   document.getElementById('copyGroupCodeBtn')?.addEventListener('click', () => { const code = document.getElementById('groupCodeDisplay').textContent; navigator.clipboard.writeText(code); showToast('Group code copied!'); });
+
+  document.getElementById('createStatusBtn')?.addEventListener('click', () => { document.getElementById('createStatusModal').style.display = 'flex'; });
+  document.querySelectorAll('.closeStatusModal').forEach(btn => { btn.addEventListener('click', () => { document.getElementById('createStatusModal').style.display = 'none'; }); });
+  document.querySelectorAll('.closeStatusViewer').forEach(btn => { btn.addEventListener('click', () => { document.getElementById('statusViewerModal').style.display = 'none'; loadStatusList(); }); });
+  document.getElementById('statusImageBtn')?.addEventListener('click', () => { document.getElementById('statusImageInput').click(); });
+  document.getElementById('statusImageInput')?.addEventListener('change', async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const url = await uploadToCloudinary(file);
+    statusImageAttachment = { type: 'image', url, filename: file.name, size: file.size };
+    const preview = document.getElementById('statusImagePreview');
+    preview.style.display = 'block';
+    preview.innerHTML = `<img src="${url}" alt="Status image preview">`;
+  });
+  document.getElementById('publishStatusBtn')?.addEventListener('click', publishStatus);
 
   // Profile Modal
   document.querySelectorAll('.closeProfileModal').forEach(btn => { btn.addEventListener('click', () => { document.getElementById('profileModal').style.display = 'none'; }); });
   document.getElementById('changeAvatarBtn')?.addEventListener('click', () => { document.getElementById('avatarInput').click(); });
   document.getElementById('avatarInput')?.addEventListener('change', async (e) => { if (e.target.files[0]) await updateProfileAvatar(e.target.files[0]); });
+  document.getElementById('changeNameBtn')?.addEventListener('click', async () => { const name = prompt('Enter your display name:', document.getElementById('profileName')?.textContent || currentUser.displayName || ''); if (name !== null) await updateDisplayName(name); });
   document.getElementById('changePhoneBtn')?.addEventListener('click', async () => { const phone = prompt('Enter 10-digit Indian phone number:'); if (phone && isValidIndianPhone(phone)) await updatePhoneNumber(phone); else if (phone) showToast('Invalid phone number', 'error'); });
   document.getElementById('changeEmailBtn')?.addEventListener('click', changeEmail);
   document.getElementById('profileStatusText')?.addEventListener('change', async (e) => { await updateStatusText(e.target.value); });
@@ -2426,14 +3941,18 @@ document.addEventListener('contextmenu', (e) => {
   
   const favoriteItem = document.getElementById('favoriteChatMenuItem');
   const markReadItem = document.getElementById('markReadMenuItem');
+  const blockItem = document.getElementById('blockUserMenuItem');
   const chatId = chatItem.dataset.chatId;
   const chatType = chatItem.dataset.chatType;
+  if (!chatId || !chatType) return;
   const unreadCount = Number(chatItem.dataset.unreadCount || 0);
   const isFavorite = favoriteChatIds.includes(chatId);
   
   if (favoriteItem) favoriteItem.textContent = isFavorite ? '⭐ Remove favorite' : '⭐ Add to favorite';
   if (markReadItem) markReadItem.textContent = unreadCount > 0 ? '✅ Mark as read' : '📩 Mark as unread';
   
+  if (blockItem) blockItem.style.display = chatType === 'direct' && chatItem.dataset.otherUserId ? 'block' : 'none';
+
   const menu = document.getElementById('chatContextMenu');
   menu.style.display = 'block';
   menu.style.left = e.clientX + 'px';
@@ -2461,6 +3980,29 @@ document.getElementById('pinChatMenuItem')?.addEventListener('click', async () =
   showToast('Chat pinned!');
   contextMenuTarget.style.order = '-1';
   document.getElementById('chatContextMenu').style.display = 'none';
+});
+
+document.getElementById('chatInfoMenuItem')?.addEventListener('click', async () => {
+  if (!contextMenuTarget) return;
+  const chatId = contextMenuTarget.dataset.chatId;
+  const chatType = contextMenuTarget.dataset.chatType;
+  document.getElementById('chatContextMenu').style.display = 'none';
+  if (!chatId || !chatType) return;
+  if (chatType === 'group') {
+    const chatName = contextMenuTarget.dataset.chatName || contextMenuTarget.querySelector('.list-name')?.textContent || 'Group';
+    await loadGroupChat(chatId, chatName);
+    await showGroupInfo();
+    return;
+  }
+  const otherUserId = contextMenuTarget.dataset.otherUserId;
+  if (!otherUserId) return;
+  const userDoc = await db.collection('users').doc(otherUserId).get();
+  const user = userDoc.exists ? { id: otherUserId, ...userDoc.data() } : {
+    id: otherUserId,
+    displayName: contextMenuTarget.dataset.chatName || contextMenuTarget.querySelector('.list-name')?.textContent || 'Contact'
+  };
+  await startDirectChat(user);
+  await showChatInfo();
 });
 
 document.getElementById('muteChatMenuItem')?.addEventListener('click', async () => {
@@ -2519,40 +4061,30 @@ document.getElementById('markReadMenuItem')?.addEventListener('click', async () 
 
 document.getElementById('blockUserMenuItem')?.addEventListener('click', async () => {
   if (!contextMenuTarget) return;
-  const listInfo = contextMenuTarget.querySelector('.list-info');
-  const userName = listInfo?.querySelector('.list-name')?.textContent || 'User';
-  if (confirm(`Block this user?`)) {
-    // Find the user ID from chat
-    const chatItem = contextMenuTarget;
-    // This would require storing the user ID in the chat item
-    showToast('User blocked!');
+  const userId = contextMenuTarget.dataset.otherUserId;
+  const userName = contextMenuTarget.dataset.chatName || contextMenuTarget.querySelector('.list-name')?.textContent || 'User';
+  if (!userId) {
+    showToast('Only personal chats can be blocked here', 'error');
+  } else if (confirm(`Block ${userName}?`)) {
+    await blockUser(userId, userName);
+    await loadBlockedUsers();
+    if (currentChatType === 'direct' && currentChat?.otherUserId === userId) resetChatPanel();
+    loadCurrentChatList();
+    showToast(`${userName} blocked`);
   }
   document.getElementById('chatContextMenu').style.display = 'none';
 });
 
 document.getElementById('deleteChatMenuItem')?.addEventListener('click', async () => {
   if (!contextMenuTarget) return;
-  const listInfo = contextMenuTarget.querySelector('.list-info');
-  const chatName = listInfo?.querySelector('.list-name')?.textContent || 'Chat';
-  if (confirm(`Delete this chat? This action cannot be undone.`)) {
-    const chatId = contextMenuTarget.querySelector('.archive-chat-btn')?.dataset.chatId;
-    const chatType = contextMenuTarget.querySelector('.archive-chat-btn')?.dataset.chatType;
-    if (chatId && chatType) {
-      try {
-        if (chatType === 'direct') {
-          await db.collection('directChats').doc(chatId).delete();
-          loadChatsList();
-        } else {
-          // For groups, just leave
-          await db.collection('groupMembers').where('groupId', '==', chatId).where('userId', '==', currentUser.uid).get().then(snap => {
-            snap.forEach(doc => doc.ref.delete());
-          });
-          loadGroupsList();
-        }
-        showToast('Chat deleted!');
-      } catch (error) {
-        showToast('Failed to delete chat', 'error');
-      }
+  const chatId = contextMenuTarget.dataset.chatId;
+  const chatType = contextMenuTarget.dataset.chatType;
+  const chatName = contextMenuTarget.dataset.chatName || contextMenuTarget.querySelector('.list-name')?.textContent || 'Chat';
+  if (chatId && chatType && confirm(`Delete "${chatName}" from your chat list? Messages are not deleted for other people.`)) {
+    try {
+      await deleteChatForMe(chatId, chatType, chatName);
+    } catch (error) {
+      showToast('Failed to delete chat', 'error');
     }
   }
   document.getElementById('chatContextMenu').style.display = 'none';

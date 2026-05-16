@@ -69,9 +69,12 @@
         </div>
 
         <div class="request-section">
-          <div class="request-header">
+          <div class="request-header" id="requestHeader">
             💌 Chat Requests
-            <span id="requestBadge" class="badge" style="display: none"></span>
+            <span style="display: inline-flex; align-items: center; gap: 8px">
+              <span id="requestBadge" class="badge" style="display: none"></span>
+              <span id="requestToggle">▼</span>
+            </span>
           </div>
           <div id="requestList" class="list">
             <div class="empty-state">No requests</div>
@@ -99,10 +102,11 @@
         </div>
 
         <div class="tabs">
-          <button class="tab active" data-tab="all">All</button>
-          <button class="tab" data-tab="unread">🔔 Unread</button>
+          <button class="tab active" data-tab="all">All <span id="allUnreadBadge" class="tab-badge" style="display: none"></span></button>
+          <button class="tab" data-tab="unread">🔔 Unread <span id="unreadTabBadge" class="tab-badge" style="display: none"></span></button>
           <button class="tab" data-tab="favorites">⭐ Favorites</button>
           <button class="tab" data-tab="groups">👥 Groups</button>
+          <button class="tab" data-tab="status">Status</button>
         </div>
 
         <div id="chatsList" class="list">
@@ -110,6 +114,9 @@
         </div>
         <div id="groupsList" class="list" style="display: none">
           <div class="empty-state">No groups yet</div>
+        </div>
+        <div id="statusList" class="list status-list" style="display: none">
+          <div class="empty-state">No status updates</div>
         </div>
 
         <div class="group-actions" id="groupActions" style="display: none">
@@ -124,6 +131,11 @@
             🔗 Join Group
           </button>
         </div>
+        <div class="group-actions" id="statusActions" style="display: none">
+          <button id="createStatusBtn" class="join-btn" style="flex: 1">
+            Add Status
+          </button>
+        </div>
       </div>
       <!-- This closes the sidebar -->
 
@@ -135,13 +147,16 @@
             id="mobileMenuBtn"
             title="Back to chats"
           >
-            ☰
+            &larr;
           </button>
-          <div>
+          <div id="chatHeaderInfo" class="chat-header-info" title="Chat info">
+            <div id="currentChatAvatar" class="list-avatar chat-header-avatar">?</div>
             <h2 id="currentChatName">Select a chat</h2>
             <div class="chat-status" id="chatStatus"></div>
           </div>
           <div class="chat-actions">
+            <button class="icon-btn" id="voiceCallBtn" title="Voice call">📞</button>
+            <button class="icon-btn" id="videoCallBtn" title="Video call">🎥</button>
             <button class="icon-btn" id="searchChatBtn" title="Search in chat">
               🔍
             </button>
@@ -272,6 +287,10 @@
         </div>
 
         <div class="input-area" id="inputArea" style="display: none">
+          <div id="connectionBanner" class="connection-banner" style="display: none">
+            Offline. Messages will send when your connection is back.
+          </div>
+          <div id="attachmentPreview" class="attachment-preview" style="display: none"></div>
           <div style="position: relative">
             <button class="emoji-btn" id="emojiBtn" title="Emoji">😊</button>
             <div id="emojiPicker" class="emoji-picker"></div>
@@ -401,7 +420,8 @@
           <input
             type="text"
             id="newGroupMembers"
-            placeholder="Add members (email addresses, comma separated)"
+            list="groupMemberSuggestions"
+            placeholder="Add members by name, email, or phone"
             style="
               width: 100%;
               padding: 12px;
@@ -409,6 +429,13 @@
               border-radius: 12px;
             "
           />
+          <p class="form-hint">
+            Members receive an invite and join only after accepting.
+          </p>
+          <div class="privacy-row">
+            <span>Only admins can send messages</span>
+            <label class="switch"><input type="checkbox" id="newGroupAdminsOnlySend" /><span class="slider"></span></label>
+          </div>
         </div>
         <div class="modal-footer">
           <button class="btn btn-outline cancelGroupBtn">Cancel</button
@@ -477,6 +504,14 @@
               </button>
             </p>
           </div>
+          <div class="privacy-row" id="groupSendPermissionRow">
+            <span>Only admins can send messages</span>
+            <label class="switch"><input type="checkbox" id="groupAdminsOnlySend" /><span class="slider"></span></label>
+          </div>
+          <div class="privacy-row" id="groupEditPermissionRow">
+            <span>Only admins can edit group info</span>
+            <label class="switch"><input type="checkbox" id="groupAdminsOnlyEdit" /><span class="slider"></span></label>
+          </div>
           <div style="margin-top: 20px">
             <h4>Members</h4>
             <div id="groupMembersList" class="member-list"></div>
@@ -485,7 +520,8 @@
             <input
               type="text"
               id="addMemberEmail"
-              placeholder="Email to add"
+              list="groupMemberSuggestions"
+              placeholder="Name, email, or phone"
               style="
                 flex: 1;
                 padding: 10px;
@@ -494,6 +530,7 @@
               "
             /><button id="addMemberBtn" class="btn btn-outline">Add</button>
           </div>
+          <datalist id="groupMemberSuggestions"></datalist>
           <div style="margin-top: 20px">
             <button
               id="leaveGroupBtn"
@@ -509,6 +546,37 @@
             >
               Delete Group
             </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Chat Info Modal -->
+    <div id="chatInfoModal" class="modal" style="display: none">
+      <div class="modal-content chat-info-modal">
+        <div class="modal-header">
+          <h3>Contact Info</h3>
+          <span class="close-modal closeChatInfoModal">&times;</span>
+        </div>
+        <div class="modal-body">
+          <div class="chat-info-profile">
+            <div class="profile-avatar" id="chatInfoAvatar">?</div>
+            <h3 id="chatInfoName">Contact</h3>
+            <p id="chatInfoPresence"></p>
+          </div>
+          <div class="chat-info-details" id="chatInfoDetails"></div>
+          <div class="chat-info-actions">
+            <button id="chatInfoMuteBtn" class="setting-item">Mute notifications</button>
+            <button id="chatInfoWallpaperBtn" class="setting-item">Wallpaper</button>
+            <button id="chatInfoBlockBtn" class="setting-item danger">Block contact</button>
+          </div>
+          <div class="shared-section">
+            <div class="shared-tabs">
+              <button class="shared-tab active" data-shared-tab="media">Media</button>
+              <button class="shared-tab" data-shared-tab="docs">Docs</button>
+              <button class="shared-tab" data-shared-tab="links">Links</button>
+            </div>
+            <div id="sharedContent" class="shared-content"></div>
           </div>
         </div>
       </div>
@@ -532,7 +600,21 @@
               Change Avatar
             </button>
           </div>
-          <p><strong>Name:</strong> <span id="profileName"></span></p>
+          <p>
+            <strong>Name:</strong> <span id="profileName"></span>
+            <button
+              id="changeNameBtn"
+              style="
+                font-size: 10px;
+                background: none;
+                border: 1px solid #e2e8f0;
+                border-radius: 20px;
+                padding: 2px 8px;
+              "
+            >
+              Edit
+            </button>
+          </p>
           <p>
             <strong>Email:</strong> <span id="profileEmail"></span>
             <button
@@ -645,7 +727,10 @@
           <h3>Blocked Users</h3>
           <span class="close-modal closeBlockedModal">&times;</span>
         </div>
-        <div class="modal-body"><div id="blockedUsersList"></div></div>
+        <div class="modal-body">
+          <p class="modal-helper">Blocked users cannot send you new chat requests.</p>
+          <div id="blockedUsersList"></div>
+        </div>
       </div>
     </div>
 
@@ -767,6 +852,65 @@
 
     <div id="toast" class="toast"></div>
 
+    <div id="callModal" class="modal call-modal" style="display: none">
+      <div class="call-shell">
+        <div class="call-top">
+          <div>
+            <h3 id="callTitle">Calling...</h3>
+            <p id="callStatusText">Connecting</p>
+          </div>
+          <button id="closeCallBtn" class="call-icon-btn">×</button>
+        </div>
+        <div class="call-video-stage">
+          <video id="remoteVideo" autoplay playsinline></video>
+          <video id="localVideo" autoplay playsinline muted></video>
+          <div id="callAudioAvatar" class="call-audio-avatar">?</div>
+        </div>
+        <div class="call-controls">
+          <button id="muteMicBtn" class="call-icon-btn" title="Mute microphone">🎙️</button>
+          <button id="toggleCameraBtn" class="call-icon-btn" title="Camera">📷</button>
+          <button id="acceptCallBtn" class="call-icon-btn accept-call" title="Accept">✓</button>
+          <button id="rejectCallBtn" class="call-icon-btn end-call" title="Reject">✕</button>
+          <button id="endCallBtn" class="call-icon-btn end-call" title="End call">⏹</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="createStatusModal" class="modal" style="display: none">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>Add Status</h3>
+          <span class="close-modal closeStatusModal">&times;</span>
+        </div>
+        <div class="modal-body">
+          <textarea id="statusTextInput" placeholder="Type a status..." rows="4"></textarea>
+          <div id="statusImagePreview" class="attachment-preview-inline" style="display: none"></div>
+          <button id="statusImageBtn" class="setting-item">Add image</button>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-outline closeStatusModal">Cancel</button>
+          <button id="publishStatusBtn" class="btn btn-primary">Publish</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="statusViewerModal" class="modal status-viewer-modal" style="display: none">
+      <div class="status-viewer">
+        <button class="status-viewer-close closeStatusViewer">&times;</button>
+        <div class="status-viewer-head">
+          <div class="list-avatar" id="statusViewerAvatar">?</div>
+          <div>
+            <div id="statusViewerName" class="list-name"></div>
+            <div id="statusViewerTime" class="list-preview"></div>
+          </div>
+        </div>
+        <div id="statusViewerBody" class="status-viewer-body"></div>
+        <div id="statusViewerSeen" class="status-viewer-seen"></div>
+      </div>
+    </div>
+
+    <input type="file" id="statusImageInput" accept="image/*" style="display: none" />
+
     <!-- Context Menu for Chats -->
     <div
       id="chatContextMenu"
@@ -792,6 +936,17 @@
         "
       >
         📌 Pin Chat
+      </div>
+      <div
+        class="context-menu-item"
+        id="chatInfoMenuItem"
+        style="
+          padding: 12px 16px;
+          cursor: pointer;
+          border-bottom: 1px solid #eee;
+        "
+      >
+        Info
       </div>
       <div
         class="context-menu-item"
