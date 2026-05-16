@@ -65,13 +65,50 @@ let currentCallType = 'voice';
 let micMuted = false;
 let cameraOff = false;
 let pendingRemoteIceCandidates = [];
+let activeCallMode = null;
+let callTimeoutTimer = null;
+let callStartedAt = null;
+let callDurationTimer = null;
+let ringtoneAudioContext = null;
+let ringtoneTimer = null;
+let vibrationTimer = null;
+let wakeLock = null;
+let cameraSender = null;
+let callLogWritten = false;
+let lastHandledRenegotiationSdp = '';
 
-const rtcConfig = {
+const defaultRtcConfig = {
   iceServers: [
     { urls: 'stun:stun.l.google.com:19302' },
     { urls: 'stun:stun1.l.google.com:19302' }
   ]
 };
+
+async function getRtcConfig() {
+  try {
+    const meteredAppUrl = localStorage.getItem('teamChatMeteredAppUrl') || '';
+    const meteredApiKey = localStorage.getItem('teamChatMeteredApiKey') || '';
+    if (meteredAppUrl && meteredApiKey) {
+      const cleanUrl = meteredAppUrl.replace(/^https?:\/\//, '').replace(/\/$/, '');
+      const response = await fetch(`https://${cleanUrl}/api/v1/turn/credentials?apiKey=${encodeURIComponent(meteredApiKey)}`);
+      if (response.ok) {
+        const iceServers = await response.json();
+        if (Array.isArray(iceServers) && iceServers.length) return { iceServers };
+      }
+    }
+    const configuredServers = JSON.parse(localStorage.getItem('teamChatTurnServers') || '[]');
+    if (Array.isArray(configuredServers) && configuredServers.length) {
+      return { iceServers: [...defaultRtcConfig.iceServers, ...configuredServers] };
+    }
+  } catch (error) {
+    console.warn('Invalid TURN server config:', error);
+  }
+  return defaultRtcConfig;
+}
+
+function updateTurnServerSettings() {
+  window.location.href = 'turn.html';
+}
 
 // Privacy Settings
 let privacySettings = {
@@ -159,6 +196,18 @@ function renderAttachment(attachment = {}) {
       <span class="file-attachment-action">Download</span>
     </a>
   `;
+}
+
+function getCallIcon(type = 'voice', status = 'ended') {
+  if (status === 'missed' || status === 'failed') return '↯';
+  if (status === 'rejected') return '✕';
+  return type === 'video' ? '🎥' : '📞';
+}
+
+function renderCallMessage(msg = {}) {
+  const text = escapeHtml(msg.text || getCallHistoryText(msg.callStatus || 'ended', msg.callType || 'voice', msg.callDurationMs || 0));
+  const icon = getCallIcon(msg.callType, msg.callStatus);
+  return `<div class="message-bubble"><span>${icon}</span><span>${text}</span></div>`;
 }
 
 function openMobileChatPanel() {
@@ -270,23 +319,229 @@ function setSendingState(isSending) {
   if (input) input.disabled = isSending;
 }
 
+function getCallPermissionMessage(error, type = 'voice') {
+  const device = type === 'video' ? 'camera and microphone' : 'microphone';
+  if (!error) return `Please allow ${device} access to continue.`;
+  if (error.name === 'NotAllowedError' || error.name === 'SecurityError') {
+    return `${device[0].toUpperCase()}${device.slice(1)} access was blocked. Allow permission in the browser and try again.`;
+  }
+  if (error.name === 'NotFoundError' || error.name === 'DevicesNotFoundError') {
+    return `No ${type === 'video' ? 'camera/microphone' : 'microphone'} was found on this device.`;
+  }
+  if (error.name === 'NotReadableError' || error.name === 'TrackStartError') {
+    return `The ${device} is already in use by another app.`;
+  }
+  return `Unable to access ${device}. Check device permission and try again.`;
+}
+
+function setCallStatus(status) {
+  const statusEl = document.getElementById('callStatusText');
+  if (statusEl) statusEl.textContent = status;
+}
+
+function formatCallDuration(ms) {
+  const totalSeconds = Math.max(0, Math.floor(ms / 1000));
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+}
+
+function startCallDuration() {
+  callStartedAt = Date.now();
+  const durationEl = document.getElementById('callDuration');
+  if (durationEl) {
+    durationEl.style.display = 'block';
+    durationEl.textContent = '0:00';
+  }
+  clearInterval(callDurationTimer);
+  callDurationTimer = setInterval(() => {
+    if (durationEl && callStartedAt) {
+      durationEl.textContent = formatCallDuration(Date.now() - callStartedAt);
+    }
+  }, 1000);
+}
+
+function stopCallDuration() {
+  clearInterval(callDurationTimer);
+  callDurationTimer = null;
+  callStartedAt = null;
+  const durationEl = document.getElementById('callDuration');
+  if (durationEl) {
+    durationEl.style.display = 'none';
+    durationEl.textContent = '0:00';
+  }
+}
+
+function startIncomingRingtone() {
+  stopIncomingRingtone();
+  if (navigator.vibrate) {
+    navigator.vibrate([260, 180, 260]);
+    vibrationTimer = setInterval(() => navigator.vibrate?.([260, 180, 260]), 1400);
+  }
+  try {
+    const AudioContextCtor = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContextCtor) return;
+    ringtoneAudioContext = new AudioContextCtor();
+    const playTone = () => {
+      if (!ringtoneAudioContext) return;
+      const oscillator = ringtoneAudioContext.createOscillator();
+      const gain = ringtoneAudioContext.createGain();
+      oscillator.type = 'sine';
+      oscillator.frequency.value = 880;
+      gain.gain.setValueAtTime(0.0001, ringtoneAudioContext.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.08, ringtoneAudioContext.currentTime + 0.03);
+      gain.gain.exponentialRampToValueAtTime(0.0001, ringtoneAudioContext.currentTime + 0.42);
+      oscillator.connect(gain);
+      gain.connect(ringtoneAudioContext.destination);
+      oscillator.start();
+      oscillator.stop(ringtoneAudioContext.currentTime + 0.45);
+    };
+    playTone();
+    ringtoneTimer = setInterval(playTone, 1500);
+  } catch (error) {
+    console.warn('Incoming call tone could not start:', error);
+  }
+}
+
+function notifyIncomingCall(call) {
+  if (!document.hidden || Notification.permission !== 'granted') return;
+  try {
+    new Notification(call.type === 'video' ? 'Incoming video call' : 'Incoming voice call', {
+      body: call.fromUserName || 'Team Chat',
+      tag: `call-${call.id}`,
+      requireInteraction: true
+    });
+  } catch (error) {
+    console.warn('Incoming call notification could not be shown:', error);
+  }
+}
+
+async function requestCallWakeLock() {
+  if (!('wakeLock' in navigator)) return;
+  try {
+    wakeLock = await navigator.wakeLock.request('screen');
+    wakeLock.addEventListener?.('release', () => {
+      wakeLock = null;
+    });
+  } catch (error) {
+    console.warn('Screen wake lock unavailable:', error);
+  }
+}
+
+async function releaseCallWakeLock() {
+  if (!wakeLock) return;
+  try {
+    await wakeLock.release();
+  } catch (error) {
+    console.warn('Screen wake lock release failed:', error);
+  } finally {
+    wakeLock = null;
+  }
+}
+
+function stopIncomingRingtone() {
+  clearInterval(ringtoneTimer);
+  clearInterval(vibrationTimer);
+  ringtoneTimer = null;
+  vibrationTimer = null;
+  navigator.vibrate?.(0);
+  if (ringtoneAudioContext) {
+    ringtoneAudioContext.close().catch(() => {});
+    ringtoneAudioContext = null;
+  }
+}
+
+function clearCallTimeout() {
+  clearTimeout(callTimeoutTimer);
+  callTimeoutTimer = null;
+}
+
+function getCallHistoryText(status, type, durationMs = 0) {
+  const label = type === 'video' ? 'Video call' : 'Voice call';
+  if (status === 'missed') return `Missed ${label.toLowerCase()}`;
+  if (status === 'rejected') return `${label} declined`;
+  if (status === 'failed') return `${label} failed`;
+  if (status === 'ended' && durationMs > 0) return `${label} ended · ${formatCallDuration(durationMs)}`;
+  return `${label} ended`;
+}
+
+async function writeCallHistory(status) {
+  if (!activeCall?.id || callLogWritten || !currentUser) return;
+  callLogWritten = true;
+  const durationMs = callStartedAt ? Date.now() - callStartedAt : 0;
+  const type = activeCall.type || currentCallType || 'voice';
+  const directId = getDirectChatId(activeCall.fromUserId, activeCall.toUserId);
+  const text = getCallHistoryText(status, type, durationMs);
+  await db.collection('messages').doc(`call_${activeCall.id}`).set({
+    type: 'call',
+    callId: activeCall.id,
+    callType: type,
+    callStatus: status,
+    callDurationMs: durationMs,
+    directId,
+    senderId: currentUser.uid,
+    senderName: currentUser.displayName || currentUser.email,
+    text,
+    timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+    readBy: { [currentUser.uid]: firebase.firestore.FieldValue.serverTimestamp() }
+  }, { merge: true }).catch(error => {
+    console.warn('Could not write call history:', error);
+  });
+  await db.collection('directChats').doc(directId).set({
+    participants: [activeCall.fromUserId, activeCall.toUserId],
+    status: 'active',
+    lastMessage: text,
+    lastMessageTime: firebase.firestore.FieldValue.serverTimestamp()
+  }, { merge: true }).catch(() => {});
+}
+
+function scheduleCallTimeout(callRef, ownerRole) {
+  clearCallTimeout();
+  callTimeoutTimer = setTimeout(async () => {
+    let shouldCleanup = false;
+    try {
+      const snapshot = await callRef.get();
+      const data = snapshot.data();
+      if (!data || data.status !== 'ringing') return;
+      await callRef.update({
+        status: 'missed',
+        missedBy: data.toUserId,
+        endedAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      shouldCleanup = true;
+      if (ownerRole === 'caller' && activeCall) await writeCallHistory('missed');
+      if (ownerRole === 'caller') showToast('Call not answered', 'error');
+    } catch (error) {
+      console.warn('Could not mark missed call:', error);
+    } finally {
+      if (shouldCleanup) cleanupCallUi();
+    }
+  }, 45000);
+}
+
 function setCallUi({ mode = 'outgoing', type = 'voice', title = 'Calling...', status = 'Connecting' } = {}) {
   const modal = document.getElementById('callModal');
+  const shell = modal?.querySelector('.call-shell');
   const localVideo = document.getElementById('localVideo');
   const remoteVideo = document.getElementById('remoteVideo');
   const audioAvatar = document.getElementById('callAudioAvatar');
   if (!modal) return;
+  activeCallMode = mode;
   modal.style.display = 'flex';
+  shell?.classList.toggle('incoming', mode === 'incoming');
+  document.getElementById('callTypeLabel').textContent = type === 'video' ? 'Video call' : 'Voice call';
   document.getElementById('callTitle').textContent = title;
   document.getElementById('callStatusText').textContent = status;
   document.getElementById('acceptCallBtn').style.display = mode === 'incoming' ? 'inline-flex' : 'none';
   document.getElementById('rejectCallBtn').style.display = mode === 'incoming' ? 'inline-flex' : 'none';
   document.getElementById('endCallBtn').style.display = mode === 'incoming' ? 'none' : 'inline-flex';
-  document.getElementById('toggleCameraBtn').style.display = type === 'video' ? 'inline-flex' : 'none';
+  document.getElementById('muteMicBtn').style.display = mode === 'incoming' ? 'none' : 'inline-flex';
+  document.getElementById('toggleCameraBtn').style.display = mode === 'incoming' ? 'none' : 'inline-flex';
   if (localVideo) localVideo.style.display = type === 'video' ? 'block' : 'none';
   if (remoteVideo) remoteVideo.style.display = type === 'video' ? 'block' : 'none';
   if (audioAvatar) {
     audioAvatar.style.display = type === 'voice' ? 'flex' : 'none';
+    audioAvatar.classList.toggle('ringing', mode === 'incoming' || mode === 'outgoing');
     audioAvatar.textContent = (currentChat?.otherUserName || activeCall?.fromUserName || activeCall?.toUserName || '?')[0]?.toUpperCase() || '?';
   }
 }
@@ -298,12 +553,21 @@ function stopLocalCallStream() {
   }
   const localVideo = document.getElementById('localVideo');
   const remoteVideo = document.getElementById('remoteVideo');
+  const remoteAudio = document.getElementById('remoteAudio');
   if (localVideo) localVideo.srcObject = null;
   if (remoteVideo) remoteVideo.srcObject = null;
+  if (remoteAudio) remoteAudio.srcObject = null;
 }
 
 function cleanupCallUi() {
-  document.getElementById('callModal').style.display = 'none';
+  clearCallTimeout();
+  stopIncomingRingtone();
+  stopCallDuration();
+  releaseCallWakeLock();
+  const modal = document.getElementById('callModal');
+  modal.style.display = 'none';
+  modal.querySelector('.call-shell')?.classList.remove('incoming');
+  document.getElementById('callAudioAvatar')?.classList.remove('ringing');
   stopLocalCallStream();
   if (peerConnection) {
     peerConnection.close();
@@ -314,9 +578,15 @@ function cleanupCallUi() {
   callDocUnsubscribe = null;
   callCandidatesUnsubscribe = null;
   activeCall = null;
+  activeCallMode = null;
+  cameraSender = null;
+  callLogWritten = false;
+  lastHandledRenegotiationSdp = '';
   micMuted = false;
   cameraOff = false;
   pendingRemoteIceCandidates = [];
+  document.getElementById('muteMicBtn')?.classList.remove('active');
+  document.getElementById('toggleCameraBtn')?.classList.remove('active');
 }
 
 async function preparePeerConnection(callId, role) {
@@ -325,17 +595,52 @@ async function preparePeerConnection(callId, role) {
     peerConnection = null;
   }
   pendingRemoteIceCandidates = [];
-  peerConnection = new RTCPeerConnection(rtcConfig);
+  peerConnection = new RTCPeerConnection(await getRtcConfig());
   remoteCallStream = new MediaStream();
-  document.getElementById('remoteVideo').srcObject = remoteCallStream;
+  const remoteVideo = document.getElementById('remoteVideo');
+  const remoteAudio = document.getElementById('remoteAudio');
+  if (remoteVideo) remoteVideo.srcObject = remoteCallStream;
+  if (remoteAudio) remoteAudio.srcObject = remoteCallStream;
   localCallStream = await navigator.mediaDevices.getUserMedia({
     audio: true,
     video: currentCallType === 'video'
   });
   document.getElementById('localVideo').srcObject = localCallStream;
-  localCallStream.getTracks().forEach(track => peerConnection.addTrack(track, localCallStream));
+  localCallStream.getTracks().forEach(track => {
+    const sender = peerConnection.addTrack(track, localCallStream);
+    if (track.kind === 'video') cameraSender = sender;
+  });
   peerConnection.ontrack = event => {
     event.streams[0].getTracks().forEach(track => remoteCallStream.addTrack(track));
+    remoteAudio?.play?.().catch(() => {});
+    remoteVideo?.play?.().catch(() => {});
+  };
+  peerConnection.onconnectionstatechange = async () => {
+    if (!peerConnection) return;
+    const state = peerConnection.connectionState;
+    if (state === 'connected') {
+      clearCallTimeout();
+      stopIncomingRingtone();
+      document.getElementById('callAudioAvatar')?.classList.remove('ringing');
+      setCallStatus('Connected');
+      if (!callStartedAt) startCallDuration();
+      requestCallWakeLock();
+      if (activeCall?.id) {
+        await db.collection('calls').doc(activeCall.id).set({
+          status: 'connected',
+          connectedAt: firebase.firestore.FieldValue.serverTimestamp()
+        }, { merge: true }).catch(() => {});
+      }
+    } else if (state === 'connecting') {
+      setCallStatus('Connecting...');
+    } else if (state === 'disconnected') {
+      setCallStatus('Reconnecting...');
+    } else if (state === 'failed') {
+      setCallStatus('Call failed');
+      if (activeCall?.id) await endActiveCall('failed');
+    } else if (state === 'closed') {
+      cleanupCallUi();
+    }
   };
   peerConnection.onicecandidate = event => {
     if (event.candidate) {
@@ -344,8 +649,77 @@ async function preparePeerConnection(callId, role) {
   };
 }
 
+async function upgradeVoiceCallToVideo() {
+  if (!activeCall?.id || !peerConnection || !localCallStream) return;
+  const existingVideo = localCallStream.getVideoTracks()[0];
+  if (existingVideo) {
+    cameraOff = !cameraOff;
+    existingVideo.enabled = !cameraOff;
+    document.getElementById('toggleCameraBtn').classList.toggle('active', cameraOff);
+    return;
+  }
+  try {
+    setCallStatus('Starting camera...');
+    const videoStream = await navigator.mediaDevices.getUserMedia({ video: true });
+    const videoTrack = videoStream.getVideoTracks()[0];
+    if (!videoTrack) throw new Error('No camera track available');
+    localCallStream.addTrack(videoTrack);
+    cameraSender = peerConnection.addTrack(videoTrack, localCallStream);
+    const localVideo = document.getElementById('localVideo');
+    const remoteVideo = document.getElementById('remoteVideo');
+    if (localVideo) {
+      localVideo.srcObject = localCallStream;
+      localVideo.style.display = 'block';
+      localVideo.play?.().catch(() => {});
+    }
+    if (remoteVideo) remoteVideo.style.display = 'block';
+    currentCallType = 'video';
+    if (activeCall) activeCall.type = 'video';
+    document.getElementById('callTypeLabel').textContent = 'Video call';
+    await renegotiateActiveCall();
+  } catch (error) {
+    showToast(getCallPermissionMessage(error, 'video'), 'error');
+    setCallStatus(callStartedAt ? 'Connected' : 'Connecting...');
+  }
+}
+
+async function renegotiateActiveCall() {
+  if (!activeCall?.id || !peerConnection) return;
+  const callRef = db.collection('calls').doc(activeCall.id);
+  const offer = await peerConnection.createOffer();
+  await peerConnection.setLocalDescription(offer);
+  await callRef.set({
+    offer,
+    renegotiatedBy: currentUser.uid,
+    type: currentCallType,
+    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+  }, { merge: true });
+  setCallStatus('Updating call...');
+}
+
+async function handleRemoteRenegotiation(data) {
+  if (!data?.offer || !data.renegotiatedBy || data.renegotiatedBy === currentUser.uid || !peerConnection) return;
+  if (data.offer.sdp && data.offer.sdp === lastHandledRenegotiationSdp) return;
+  lastHandledRenegotiationSdp = data.offer.sdp || '';
+  await peerConnection.setRemoteDescription(new RTCSessionDescription(data.offer));
+  const answer = await peerConnection.createAnswer();
+  await peerConnection.setLocalDescription(answer);
+  await db.collection('calls').doc(activeCall.id).set({
+    answer,
+    type: data.type || 'video',
+    answeredRenegotiationBy: currentUser.uid,
+    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+  }, { merge: true });
+  currentCallType = data.type || 'video';
+  if (activeCall) activeCall.type = currentCallType;
+  document.getElementById('callTypeLabel').textContent = currentCallType === 'video' ? 'Video call' : 'Voice call';
+  document.getElementById('remoteVideo').style.display = currentCallType === 'video' ? 'block' : 'none';
+}
+
 async function setPeerRemoteDescription(description) {
-  if (!peerConnection || !description || peerConnection.currentRemoteDescription) return;
+  if (!peerConnection || !description) return;
+  const type = description.type || description.sdp?.type;
+  if (peerConnection.currentRemoteDescription && !(type === 'answer' && peerConnection.signalingState === 'have-local-offer')) return;
   await peerConnection.setRemoteDescription(new RTCSessionDescription(description));
   const candidates = [...pendingRemoteIceCandidates];
   pendingRemoteIceCandidates = [];
@@ -387,7 +761,7 @@ async function startCall(type = 'voice') {
     toUserId: currentChat.otherUserId,
     toUserName: currentChat.otherUserName || currentChat.name || 'Contact'
   };
-  setCallUi({ mode: 'outgoing', type, title: activeCall.toUserName, status: type === 'video' ? 'Video calling...' : 'Voice calling...' });
+  setCallUi({ mode: 'outgoing', type, title: activeCall.toUserName, status: 'Calling...' });
   try {
     await preparePeerConnection(callRef.id, 'caller');
     const offer = await peerConnection.createOffer();
@@ -398,12 +772,28 @@ async function startCall(type = 'voice') {
       offer,
       createdAt: firebase.firestore.FieldValue.serverTimestamp()
     });
+    setCallStatus('Ringing...');
+    scheduleCallTimeout(callRef, 'caller');
     callDocUnsubscribe = callRef.onSnapshot(snapshot => {
       const data = snapshot.data();
       if (!data) return;
       if (data.answer && !peerConnection.currentRemoteDescription) {
         setPeerRemoteDescription(data.answer);
-        document.getElementById('callStatusText').textContent = 'Connected';
+        setCallStatus('Connecting...');
+      }
+      if (data.answer && data.answeredRenegotiationBy && data.answeredRenegotiationBy !== currentUser.uid && peerConnection?.signalingState === 'have-local-offer') {
+        setPeerRemoteDescription(data.answer);
+      }
+      handleRemoteRenegotiation(data);
+      if (data.status === 'connected') {
+        setCallStatus('Connected');
+        if (!callStartedAt) startCallDuration();
+      }
+      if (data.status === 'rejected') {
+        showToast('Call rejected', 'error');
+      }
+      if (data.status === 'missed') {
+        showToast('Call missed', 'error');
       }
       if (['ended', 'rejected', 'missed', 'failed'].includes(data.status)) cleanupCallUi();
     });
@@ -413,7 +803,7 @@ async function startCall(type = 'voice') {
       });
     });
   } catch (error) {
-    showToast('Unable to start call. Check camera/microphone permission.', 'error');
+    showToast(getCallPermissionMessage(error, type), 'error');
     await callRef.set({ ...activeCall, status: 'failed', error: error.message, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
     cleanupCallUi();
   }
@@ -424,23 +814,31 @@ async function acceptIncomingCall() {
   currentCallType = activeCall.type || 'voice';
   const callRef = db.collection('calls').doc(activeCall.id);
   setCallUi({ mode: 'active', type: currentCallType, title: activeCall.fromUserName || 'Caller', status: 'Connecting...' });
+  stopIncomingRingtone();
+  clearCallTimeout();
   try {
     await preparePeerConnection(activeCall.id, 'callee');
     await setPeerRemoteDescription(activeCall.offer);
     const answer = await peerConnection.createAnswer();
     await peerConnection.setLocalDescription(answer);
     await callRef.update({ answer, status: 'accepted', acceptedAt: firebase.firestore.FieldValue.serverTimestamp() });
-    document.getElementById('callStatusText').textContent = 'Connected';
+    setCallStatus('Connecting...');
     callCandidatesUnsubscribe = callRef.collection('callerCandidates').onSnapshot(snapshot => {
       snapshot.docChanges().forEach(change => {
         if (change.type === 'added') addRemoteIceCandidate(change.doc.data());
       });
     });
     callDocUnsubscribe = callRef.onSnapshot(snapshot => {
+      handleRemoteRenegotiation(snapshot.data());
+      const status = snapshot.data()?.status;
+      if (status === 'connected') {
+        setCallStatus('Connected');
+        if (!callStartedAt) startCallDuration();
+      }
       if (['ended', 'rejected', 'missed', 'failed'].includes(snapshot.data()?.status)) cleanupCallUi();
     });
   } catch (error) {
-    showToast('Unable to accept call. Check permission.', 'error');
+    showToast(getCallPermissionMessage(error, currentCallType), 'error');
     await callRef.update({ status: 'failed', error: error.message });
     cleanupCallUi();
   }
@@ -448,6 +846,7 @@ async function acceptIncomingCall() {
 
 async function endActiveCall(status = 'ended') {
   if (activeCall?.id) {
+    await writeCallHistory(status);
     await db.collection('calls').doc(activeCall.id).update({
       status,
       endedAt: firebase.firestore.FieldValue.serverTimestamp()
@@ -464,11 +863,26 @@ function listenForIncomingCalls() {
     .where('status', '==', 'ringing')
     .onSnapshot(snapshot => {
       const call = snapshot.docs[0];
+      if (!call && activeCallMode === 'incoming') {
+        cleanupCallUi();
+        return;
+      }
       if (!call || activeCall) return;
       activeCall = { id: call.id, ...call.data() };
       currentCallType = activeCall.type || 'voice';
       setCallUi({ mode: 'incoming', type: currentCallType, title: activeCall.fromUserName || 'Incoming call', status: currentCallType === 'video' ? 'Incoming video call' : 'Incoming voice call' });
+      notifyIncomingCall(activeCall);
+      startIncomingRingtone();
+      scheduleCallTimeout(db.collection('calls').doc(activeCall.id), 'receiver');
     });
+}
+
+function handleCallCloseAction() {
+  if (activeCallMode === 'incoming') {
+    endActiveCall('rejected');
+    return;
+  }
+  endActiveCall('ended');
 }
 
 function getOfflineQueue() {
@@ -3230,6 +3644,13 @@ function loadMessages() {
       const isMyMessage = msg.senderId === currentUser.uid;
       const messageDiv = document.createElement('div');
       messageDiv.className = `message ${isMyMessage ? 'my-message' : ''}`;
+      if (msg.type === 'call') {
+        messageDiv.className = 'message call-message';
+        messageDiv.dataset.messageId = doc.id;
+        messageDiv.innerHTML = renderCallMessage(msg);
+        messagesArea.appendChild(messageDiv);
+        continue;
+      }
       if (msg.deletedForEveryone) messageDiv.classList.add('deleted');
       if (msg.failed) messageDiv.classList.add('failed');
       messageDiv.dataset.messageId = doc.id;
@@ -3272,7 +3693,7 @@ async function renderMessageSnapshotDocs(docs, messagesArea) {
     return aTime - bTime;
   });
   if (sortedDocs.length === 0) {
-    messagesArea.innerHTML = '<div class="empty-state"><div class="empty-icon">ðŸ’¬</div><p>No messages yet. Say hello!</p></div>';
+    messagesArea.innerHTML = '<div class="empty-state"><div class="empty-icon">💬</div><p>No messages yet. Say hello!</p></div>';
     return;
   }
   for (const doc of sortedDocs) {
@@ -3282,13 +3703,20 @@ async function renderMessageSnapshotDocs(docs, messagesArea) {
     const isMyMessage = msg.senderId === currentUser.uid;
     const messageDiv = document.createElement('div');
     messageDiv.className = `message ${isMyMessage ? 'my-message' : ''}`;
+    if (msg.type === 'call') {
+      messageDiv.className = 'message call-message';
+      messageDiv.dataset.messageId = doc.id;
+      messageDiv.innerHTML = renderCallMessage(msg);
+      messagesArea.appendChild(messageDiv);
+      continue;
+    }
     if (msg.deletedForEveryone) messageDiv.classList.add('deleted');
     if (msg.failed) messageDiv.classList.add('failed');
     messageDiv.dataset.messageId = doc.id;
     let attachmentHtml = msg.attachment ? renderAttachment(msg.attachment) : '';
     let replyHtml = '';
     if (msg.replyTo) {
-      replyHtml = `<div class="reply-preview"><div class="reply-sender">â†©ï¸ Replying to ${escapeHtml(msg.replyTo.senderName)}</div><div class="reply-text">${escapeHtml(msg.replyTo.text ? msg.replyTo.text.substring(0, 50) : 'Media')}</div></div>`;
+      replyHtml = `<div class="reply-preview"><div class="reply-sender">↩️ Replying to ${escapeHtml(msg.replyTo.senderName)}</div><div class="reply-text">${escapeHtml(msg.replyTo.text ? msg.replyTo.text.substring(0, 50) : 'Media')}</div></div>`;
     }
     const messageText = msg.deletedForEveryone ? 'This message was deleted' : (msg.text || '');
     if (msg.deletedForEveryone) attachmentHtml = '';
@@ -3851,16 +4279,14 @@ async function init() {
   document.getElementById('acceptCallBtn')?.addEventListener('click', acceptIncomingCall);
   document.getElementById('rejectCallBtn')?.addEventListener('click', () => endActiveCall('rejected'));
   document.getElementById('endCallBtn')?.addEventListener('click', () => endActiveCall('ended'));
-  document.getElementById('closeCallBtn')?.addEventListener('click', () => endActiveCall('ended'));
+  document.getElementById('closeCallBtn')?.addEventListener('click', handleCallCloseAction);
   document.getElementById('muteMicBtn')?.addEventListener('click', () => {
     micMuted = !micMuted;
     localCallStream?.getAudioTracks().forEach(track => { track.enabled = !micMuted; });
-    document.getElementById('muteMicBtn').style.opacity = micMuted ? '0.55' : '1';
+    document.getElementById('muteMicBtn').classList.toggle('active', micMuted);
   });
   document.getElementById('toggleCameraBtn')?.addEventListener('click', () => {
-    cameraOff = !cameraOff;
-    localCallStream?.getVideoTracks().forEach(track => { track.enabled = !cameraOff; });
-    document.getElementById('toggleCameraBtn').style.opacity = cameraOff ? '0.55' : '1';
+    upgradeVoiceCallToVideo();
   });
   document.getElementById('requestHeader')?.addEventListener('click', () => {
     const section = document.querySelector('.request-section');
@@ -3991,6 +4417,7 @@ document.addEventListener('click', (e) => {
   document.getElementById('wallpaperSettingsBtn')?.addEventListener('click', () => { openWallpaperModal('global'); });
   document.getElementById('wallpaperBtn')?.addEventListener('click', () => { openWallpaperModal('current'); });
   document.getElementById('currentChatWallpaperBtn')?.addEventListener('click', () => { openWallpaperModal('current'); });
+  document.getElementById('callNetworkSettingsBtn')?.addEventListener('click', updateTurnServerSettings);
   document.querySelectorAll('.closeWallpaperModal').forEach(btn => { btn.addEventListener('click', () => { document.getElementById('wallpaperModal').style.display = 'none'; }); });
   document.querySelectorAll('.wallpaper-option').forEach(opt => { opt.addEventListener('click', () => {
     const wallpaper = normalizeWallpaperType(opt.dataset.wallpaper);

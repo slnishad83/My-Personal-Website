@@ -707,6 +707,9 @@
           <button id="currentChatWallpaperBtn" class="setting-item">
             🎨 Change Wallpaper (Current Chat Only)
           </button>
+          <button id="callNetworkSettingsBtn" class="setting-item">
+            📡 Call Network Settings
+          </button>
           <button id="exportChatsBtn" class="setting-item">
             📤 Export Current Chat
           </button>
@@ -856,6 +859,7 @@
       <div class="call-shell">
         <div class="call-top">
           <div>
+            <div id="callTypeLabel" class="call-type-label">Voice call</div>
             <h3 id="callTitle">Calling...</h3>
             <p id="callStatusText">Connecting</p>
           </div>
@@ -864,11 +868,13 @@
         <div class="call-video-stage">
           <video id="remoteVideo" autoplay playsinline></video>
           <video id="localVideo" autoplay playsinline muted></video>
+          <audio id="remoteAudio" autoplay playsinline></audio>
           <div id="callAudioAvatar" class="call-audio-avatar">?</div>
+          <div id="callDuration" class="call-duration" style="display: none">0:00</div>
         </div>
         <div class="call-controls">
           <button id="muteMicBtn" class="call-icon-btn" title="Mute microphone">🎙️</button>
-          <button id="toggleCameraBtn" class="call-icon-btn" title="Camera">📷</button>
+          <button id="toggleCameraBtn" class="call-icon-btn" title="Turn camera on/off">📷</button>
           <button id="acceptCallBtn" class="call-icon-btn accept-call" title="Accept">✓</button>
           <button id="rejectCallBtn" class="call-icon-btn end-call" title="Reject">✕</button>
           <button id="endCallBtn" class="call-icon-btn end-call" title="End call">⏹</button>

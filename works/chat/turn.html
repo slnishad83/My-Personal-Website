@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Call Network Settings</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      padding: 20px;
+      font-family: Arial, sans-serif;
+      background: #0b141a;
+      color: #e9edef;
+    }
+
+    main {
+      width: min(720px, 100%);
+      padding: 24px;
+      border-radius: 14px;
+      background: #111b21;
+      box-shadow: 0 18px 44px rgba(0, 0, 0, 0.28);
+    }
+
+    h1 {
+      margin: 0 0 8px;
+      font-size: 24px;
+    }
+
+    p {
+      color: #aebac1;
+      line-height: 1.5;
+    }
+
+    input,
+    textarea {
+      width: 100%;
+      margin: 14px 0;
+      padding: 14px;
+      border: 1px solid #2a3942;
+      border-radius: 10px;
+      background: #202c33;
+      color: #e9edef;
+      font: 14px Consolas, monospace;
+      resize: vertical;
+    }
+
+    input {
+      min-height: 48px;
+      font-family: Arial, sans-serif;
+    }
+
+    textarea {
+      min-height: 150px;
+    }
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    button,
+    a {
+      min-height: 42px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0 16px;
+      border: 0;
+      border-radius: 999px;
+      background: #00a884;
+      color: white;
+      cursor: pointer;
+      font-weight: 700;
+      text-decoration: none;
+    }
+
+    .secondary {
+      background: #202c33;
+      color: #e9edef;
+      border: 1px solid #2a3942;
+    }
+
+    .message {
+      min-height: 22px;
+      margin-top: 12px;
+      color: #00a884;
+      font-weight: 700;
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Call Network Settings</h1>
+    <p>Use the simple fields if you create a Metered/OpenRelay account. The app will fetch TURN settings automatically before each call.</p>
+    <label for="meteredAppUrl">Metered app URL</label>
+    <input id="meteredAppUrl" placeholder="example: yourappname.metered.live">
+    <label for="meteredApiKey">Metered API key</label>
+    <input id="meteredApiKey" placeholder="Paste API key">
+    <div class="actions">
+      <button id="saveMeteredBtn">Save Metered Settings</button>
+      <button id="clearMeteredBtn" class="secondary">Clear Metered</button>
+    </div>
+    <p>Advanced: paste TURN server JSON here only if your provider gives direct TURN username/password details.</p>
+    <textarea id="turnConfig" spellcheck="false">[]</textarea>
+    <div class="actions">
+      <button id="saveBtn">Save Advanced JSON</button>
+      <button id="clearBtn" class="secondary">Clear</button>
+      <a href="index.html" class="secondary">Back to Chat</a>
+    </div>
+    <div id="message" class="message"></div>
+    <p>Example:</p>
+    <textarea readonly spellcheck="false">[{"urls":"turn:your-turn-server.com:3478","username":"user","credential":"password"}]</textarea>
+  </main>
+  <script>
+    const appUrl = document.getElementById('meteredAppUrl');
+    const apiKey = document.getElementById('meteredApiKey');
+    const textarea = document.getElementById('turnConfig');
+    const message = document.getElementById('message');
+    appUrl.value = localStorage.getItem('teamChatMeteredAppUrl') || '';
+    apiKey.value = localStorage.getItem('teamChatMeteredApiKey') || '';
+    textarea.value = localStorage.getItem('teamChatTurnServers') || '[]';
+
+    document.getElementById('saveMeteredBtn').addEventListener('click', () => {
+      const cleanUrl = appUrl.value.trim().replace(/^https?:\/\//, '').replace(/\/$/, '');
+      const cleanKey = apiKey.value.trim();
+      if (!cleanUrl || !cleanKey) {
+        message.textContent = 'Enter both Metered app URL and API key.';
+        message.style.color = '#ef4444';
+        return;
+      }
+      localStorage.setItem('teamChatMeteredAppUrl', cleanUrl);
+      localStorage.setItem('teamChatMeteredApiKey', cleanKey);
+      message.textContent = 'Metered TURN settings saved. Future calls will use them automatically.';
+      message.style.color = '#00a884';
+    });
+
+    document.getElementById('clearMeteredBtn').addEventListener('click', () => {
+      appUrl.value = '';
+      apiKey.value = '';
+      localStorage.removeItem('teamChatMeteredAppUrl');
+      localStorage.removeItem('teamChatMeteredApiKey');
+      message.textContent = 'Metered TURN settings cleared.';
+      message.style.color = '#00a884';
+    });
+
+    document.getElementById('saveBtn').addEventListener('click', () => {
+      try {
+        const parsed = JSON.parse(textarea.value || '[]');
+        if (!Array.isArray(parsed)) throw new Error('Config must be a JSON array');
+        localStorage.setItem('teamChatTurnServers', JSON.stringify(parsed));
+        message.textContent = parsed.length ? 'TURN settings saved.' : 'TURN settings saved as empty.';
+      } catch (error) {
+        message.textContent = 'Invalid JSON. Please check the format.';
+        message.style.color = '#ef4444';
+      }
+    });
+
+    document.getElementById('clearBtn').addEventListener('click', () => {
+      textarea.value = '[]';
+      localStorage.setItem('teamChatTurnServers', '[]');
+      message.textContent = 'TURN settings cleared.';
+      message.style.color = '#00a884';
+    });
+  </script>
+</body>
+</html>
