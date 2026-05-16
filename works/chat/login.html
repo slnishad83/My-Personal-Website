@@ -121,6 +121,11 @@
         margin-top: 12px;
         color: #667eea;
       }
+      .btn-secondary {
+        background: #e7fce3;
+        color: #008069;
+        margin-top: 12px;
+      }
       .auth-error {
         margin-top: 16px;
         padding: 12px;
@@ -212,6 +217,14 @@
           <button type="submit" class="btn btn-primary">Login →</button>
           <button type="button" id="forgotPasswordBtn" class="btn btn-link">
             Forgot Password?
+          </button>
+          <button
+            type="button"
+            id="resendVerificationBtn"
+            class="btn btn-secondary"
+            style="display: none"
+          >
+            Resend verification email
           </button>
         </form>
 
@@ -315,6 +328,9 @@
       </div>
     </div>
 
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
     <script>
       const firebaseConfig = {
         apiKey: "AIzaSyCdbut_FdscAjl-OVSlAUhb7TOTiRNkh34",
@@ -327,6 +343,46 @@
       firebase.initializeApp(firebaseConfig);
       const auth = firebase.auth();
       const db = firebase.firestore();
+      let lastUnverifiedEmail = "";
+      let lastUnverifiedPassword = "";
+
+      auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
+
+      function cleanEmail(email) {
+        return email.trim().toLowerCase();
+      }
+
+      function setButtonLoading(btn, isLoading, label, loadingLabel) {
+        btn.disabled = isLoading;
+        btn.textContent = isLoading ? loadingLabel : label;
+      }
+
+      function getFriendlyAuthError(error, fallback) {
+        const code = error && error.code;
+        if (
+          code === "auth/invalid-credential" ||
+          code === "auth/wrong-password" ||
+          code === "auth/user-not-found"
+        ) {
+          return "Incorrect email or password. Please check and try again.";
+        }
+        if (code === "auth/too-many-requests") {
+          return "Too many attempts. Please wait a few minutes, then try again.";
+        }
+        if (code === "auth/network-request-failed") {
+          return "Network problem. Check your internet connection and try again.";
+        }
+        if (code === "auth/invalid-email") {
+          return "Please enter a valid email address.";
+        }
+        if (code === "auth/email-already-in-use") {
+          return "This email is already registered. Login or use a different email.";
+        }
+        if (code === "auth/weak-password") {
+          return "Password is too weak. Use at least 6 characters.";
+        }
+        return fallback || "Something went wrong. Please try again.";
+      }
 
       // Validation Functions
       function validateEmail(email) {
@@ -342,6 +398,14 @@
       function validatePassword(password) {
         return password.length >= 6;
       }
+
+      auth.onAuthStateChanged(async (user) => {
+        if (!user) return;
+        await user.reload();
+        if (user.emailVerified) {
+          window.location.href = "index.html";
+        }
+      });
 
       // Clear validation errors
       function clearValidationErrors() {
@@ -382,28 +446,34 @@
         .getElementById("loginForm")
         .addEventListener("submit", async (e) => {
           e.preventDefault();
-          const email = document.getElementById("loginEmail").value.trim();
+          const email = cleanEmail(document.getElementById("loginEmail").value);
           const password = document.getElementById("loginPassword").value;
           const errorDiv = document.getElementById("authError");
+          const successDiv = document.getElementById("authSuccess");
+          const resendBtn = document.getElementById("resendVerificationBtn");
           const btn = e.target.querySelector("button[type='submit']");
 
           errorDiv.style.display = "none";
-          btn.disabled = true;
-          btn.textContent = "Logging in...";
+          successDiv.style.display = "none";
+          resendBtn.style.display = "none";
+          setButtonLoading(btn, true, "Login ->", "Logging in...");
 
           try {
             const userCred = await auth.signInWithEmailAndPassword(
               email,
               password,
             );
+            await userCred.user.reload();
 
             if (!userCred.user.emailVerified) {
+              lastUnverifiedEmail = email;
+              lastUnverifiedPassword = password;
               await auth.signOut();
               errorDiv.textContent =
-                "📧 Please verify your email first! Check your inbox for the verification link.";
+                "Please verify your email first. Check your inbox, then login again.";
               errorDiv.style.display = "block";
-              btn.disabled = false;
-              btn.textContent = "Login →";
+              resendBtn.style.display = "block";
+              setButtonLoading(btn, false, "Login ->", "Logging in...");
               return;
             }
 
@@ -429,10 +499,42 @@
 
             window.location.href = "index.html";
           } catch (error) {
-            errorDiv.textContent = "❌ " + (error.message || "Login failed");
+            errorDiv.textContent = getFriendlyAuthError(error, "Login failed. Please try again.");
             errorDiv.style.display = "block";
-            btn.disabled = false;
-            btn.textContent = "Login →";
+            setButtonLoading(btn, false, "Login ->", "Logging in...");
+          }
+        });
+
+      document
+        .getElementById("resendVerificationBtn")
+        .addEventListener("click", async () => {
+          const errorDiv = document.getElementById("authError");
+          const successDiv = document.getElementById("authSuccess");
+          const btn = document.getElementById("resendVerificationBtn");
+          const email = lastUnverifiedEmail || cleanEmail(document.getElementById("loginEmail").value);
+          const password = lastUnverifiedPassword || document.getElementById("loginPassword").value;
+
+          errorDiv.style.display = "none";
+          successDiv.style.display = "none";
+
+          if (!email || !password) {
+            errorDiv.textContent = "Enter your email and password first, then resend verification.";
+            errorDiv.style.display = "block";
+            return;
+          }
+
+          setButtonLoading(btn, true, "Resend verification email", "Sending...");
+          try {
+            const userCred = await auth.signInWithEmailAndPassword(email, password);
+            await userCred.user.sendEmailVerification();
+            await auth.signOut();
+            successDiv.textContent = "Verification email sent. Please check your inbox.";
+            successDiv.style.display = "block";
+          } catch (error) {
+            errorDiv.textContent = getFriendlyAuthError(error, "Could not send verification email. Please try again.");
+            errorDiv.style.display = "block";
+          } finally {
+            setButtonLoading(btn, false, "Resend verification email", "Sending...");
           }
         });
 
@@ -444,7 +546,7 @@
           clearValidationErrors();
 
           const name = document.getElementById("registerName").value.trim();
-          const email = document.getElementById("registerEmail").value.trim();
+          const email = cleanEmail(document.getElementById("registerEmail").value);
           const phone = document.getElementById("registerPhone").value.trim();
           const password = document.getElementById("registerPassword").value;
           const errorDiv = document.getElementById("authError");
@@ -512,6 +614,7 @@
               });
 
             await userCred.user.sendEmailVerification();
+            await auth.signOut();
             successDiv.textContent =
               "✅ Account created! Check your email to verify before logging in.";
             successDiv.style.display = "block";
@@ -519,17 +622,9 @@
             btn.disabled = false;
             btn.textContent = "Create Account →";
           } catch (error) {
-            let errorMsg = "❌ " + (error.message || "Registration failed");
-            if (error.code === "auth/email-already-in-use") {
-              errorMsg =
-                "❌ This email is already registered. Please login or use a different email.";
-            } else if (error.code === "auth/weak-password") {
-              errorMsg = "❌ Password is too weak. Use at least 6 characters.";
-            }
-            errorDiv.textContent = errorMsg;
+            errorDiv.textContent = getFriendlyAuthError(error, "Registration failed. Please try again.");
             errorDiv.style.display = "block";
-            btn.disabled = false;
-            btn.textContent = "Create Account →";
+            setButtonLoading(btn, false, "Create Account ->", "Creating account...");
           }
         });
 

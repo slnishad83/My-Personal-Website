@@ -81,6 +81,14 @@ function escapeHtml(text) {
   return div.innerHTML;
 }
 
+function openMobileChatPanel() {
+  document.querySelector('.chat-container')?.classList.add('chat-open');
+}
+
+function closeMobileChatPanel() {
+  document.querySelector('.chat-container')?.classList.remove('chat-open');
+}
+
 function formatTime(timestamp) {
   if (!timestamp) return '';
   const date = timestamp.toDate();
@@ -131,10 +139,9 @@ async function getChatUnreadCount(chatId, chatType) {
   try {
     const query = db.collection('messages')
       .where(chatType === 'direct' ? 'directId' : 'groupId', '==', chatId)
-      .where('senderId', '!=', currentUser.uid)
-      .where('read', '==', false);
+      .where('senderId', '!=', currentUser.uid);
     const snapshot = await query.get();
-    return snapshot.size;
+    return snapshot.docs.filter(doc => !doc.data().readBy?.[currentUser.uid]).length;
   } catch (error) {
     return 0;
   }
@@ -147,7 +154,10 @@ async function markChatReadState(chatId, chatType, readState) {
     .where('senderId', '!=', currentUser.uid);
   const snapshot = await query.get();
   const batch = db.batch();
-  snapshot.docs.forEach(doc => batch.update(doc.ref, { read: readState }));
+  snapshot.docs.forEach(doc => batch.update(doc.ref, {
+    read: readState,
+    [`readBy.${currentUser.uid}`]: readState ? firebase.firestore.FieldValue.serverTimestamp() : firebase.firestore.FieldValue.delete()
+  }));
   if (snapshot.docs.length > 0) await batch.commit();
   showToast(readState ? 'Marked as read' : 'Marked as unread');
 }
@@ -214,6 +224,10 @@ async function uploadDocument(file) {
 // ========================================
 
 function searchUsersRealtime(searchTerm) {
+  if (currentViewTab !== 'groups') {
+    loadAllChatsList(searchTerm);
+    return;
+  }
   const chatsList = document.getElementById('chatsList');
   if (!chatsList) return;
   
@@ -750,6 +764,7 @@ async function sendVoiceMessage(audioUrl, duration) {
   const messageData = {
     senderId: currentUser.uid, senderName: currentUser.displayName || currentUser.email.split('@')[0],
     timestamp: firebase.firestore.FieldValue.serverTimestamp(), read: false,
+    readBy: { [currentUser.uid]: new Date() },
     attachment: { type: 'voice', url: audioUrl, duration }
   };
   if (currentChatType === 'direct') messageData.directId = currentChat.id;
@@ -1038,15 +1053,14 @@ function setupChatListListeners() {
 
   directChatsUnsubscribe = db.collection('directChats')
     .where('participants', 'array-contains', currentUser.uid)
-    .where('status', '==', 'active')
     .onSnapshot(() => {
-      loadChatsList();
+      loadCurrentChatList();
     });
 
   groupChatsUnsubscribe = db.collection('groupMembers')
     .where('userId', '==', currentUser.uid)
     .onSnapshot(() => {
-      loadGroupsList();
+      loadCurrentChatList();
     });
 }
 
@@ -1059,12 +1073,33 @@ async function archiveChat(chatId, chatType, chatName) {
     userId: currentUser.uid, chatId, chatType, chatName,
     archivedAt: firebase.firestore.FieldValue.serverTimestamp()
   });
+  if (currentChat?.id === chatId) {
+    currentChat = null;
+    currentChatType = null;
+    if (messagesUnsubscribe) {
+      messagesUnsubscribe();
+      messagesUnsubscribe = null;
+    }
+    document.getElementById('currentChatName').textContent = 'Select a chat';
+    document.getElementById('chatStatus').textContent = '';
+    document.getElementById('messagesArea').innerHTML = '<div class="empty-state"><div class="empty-icon">💬</div><p>Select a chat to start messaging</p></div>';
+    document.getElementById('inputArea').style.display = 'none';
+    closeMobileChatPanel();
+  }
   loadChatsList(); loadGroupsList(); loadArchivedChats();
 }
 
 async function unarchiveChat(archiveId) {
   await db.collection('archivedChats').doc(archiveId).delete();
   loadChatsList(); loadGroupsList(); loadArchivedChats();
+}
+
+async function getArchivedChatIds() {
+  if (!currentUser) return new Set();
+  const snapshot = await db.collection('archivedChats')
+    .where('userId', '==', currentUser.uid)
+    .get();
+  return new Set(snapshot.docs.map(doc => doc.data().chatId));
 }
 
 async function loadArchivedChats() {
@@ -1086,6 +1121,217 @@ async function loadArchivedChats() {
   });
 }
 
+async function buildDirectChatItems() {
+  if (!currentUser) return [];
+  const archivedChatIds = await getArchivedChatIds();
+  const directChats = await db.collection('directChats')
+    .where('participants', 'array-contains', currentUser.uid)
+    .get();
+  const directChatDocs = new Map();
+  directChats.docs.forEach(doc => directChatDocs.set(doc.id, { id: doc.id, data: doc.data() }));
+
+  try {
+    const legacyMessages = await db.collection('messages')
+      .where('participants', 'array-contains', currentUser.uid)
+      .get();
+    legacyMessages.docs.forEach(messageDoc => {
+      const message = messageDoc.data();
+      if (!message.directId || directChatDocs.has(message.directId)) return;
+      directChatDocs.set(message.directId, {
+        id: message.directId,
+        data: {
+          participants: message.participants || message.directId.split('_'),
+          lastMessageTime: message.timestamp,
+          status: 'active'
+        }
+      });
+    });
+  } catch (error) {
+    console.warn('Could not load legacy message-backed chats:', error);
+  }
+
+  try {
+    const sentLegacyMessages = await db.collection('messages')
+      .where('senderId', '==', currentUser.uid)
+      .get();
+    sentLegacyMessages.docs.forEach(messageDoc => {
+      const message = messageDoc.data();
+      if (!message.directId || directChatDocs.has(message.directId)) return;
+      directChatDocs.set(message.directId, {
+        id: message.directId,
+        data: {
+          participants: message.participants || message.directId.split('_'),
+          lastMessageTime: message.timestamp,
+          status: 'active'
+        }
+      });
+    });
+  } catch (error) {
+    console.warn('Could not load sent legacy chats:', error);
+  }
+
+  const items = [];
+
+  for (const chat of directChatDocs.values()) {
+    const chatData = chat.data;
+    if (chatData.status && chatData.status !== 'active') continue;
+    if (archivedChatIds.has(chat.id)) continue;
+    const participants = chatData.participants || chat.id.split('_');
+    const otherUserId = participants.find(id => id !== currentUser.uid);
+    if (!otherUserId || isBlocked(otherUserId)) continue;
+    const userDoc = await db.collection('users').doc(otherUserId).get();
+    if (!userDoc.exists || userDoc.data().isActive === false) continue;
+    const userData = userDoc.data();
+    const onlineStatus = userData.onlineStatus || 'offline';
+    const preview = getPresenceText(userData);
+    items.push({
+      id: chat.id,
+      type: 'direct',
+      name: userData.displayName || userData.email,
+      avatar: userData.avatar ? `<img src="${userData.avatar}">` : escapeHtml((userData.displayName || userData.email || '?')[0].toUpperCase()),
+      preview,
+      unreadCount: await getChatUnreadCount(chat.id, 'direct'),
+      isFavorite: favoriteChatIds.includes(chat.id),
+      isMuted: isChatMuted(chat.id),
+      otherUserId,
+      onlineStatus,
+      lastMessageTime: chatData.lastMessageTime?.toDate?.() || new Date(0)
+    });
+  }
+
+  return items;
+}
+
+async function buildGroupChatItems() {
+  if (!currentUser) return [];
+  const archivedChatIds = await getArchivedChatIds();
+  const memberSnapshot = await db.collection('groupMembers').where('userId', '==', currentUser.uid).get();
+  const items = [];
+
+  for (const memberDoc of memberSnapshot.docs) {
+    const groupId = memberDoc.data().groupId;
+    if (archivedChatIds.has(groupId)) continue;
+    const groupDoc = await db.collection('groups').doc(groupId).get();
+    if (!groupDoc.exists) continue;
+    const group = groupDoc.data();
+    items.push({
+      id: groupDoc.id,
+      type: 'group',
+      name: group.name,
+      avatar: group.icon ? `<img src="${group.icon}">` : '👥',
+      preview: group.memberCount ? `${group.memberCount} members` : `Invite code ${group.code || ''}`.trim(),
+      unreadCount: await getChatUnreadCount(groupDoc.id, 'group'),
+      isFavorite: favoriteChatIds.includes(groupDoc.id),
+      isMuted: isChatMuted(groupDoc.id),
+      code: group.code || '',
+      lastMessageTime: group.updatedAt?.toDate?.() || group.createdAt?.toDate?.() || new Date(0)
+    });
+  }
+
+  return items;
+}
+
+function renderChatListItems(items, container) {
+  container.innerHTML = '';
+  if (items.length === 0) {
+    container.innerHTML = '<div class="empty-state" style="padding:40px;">No chats yet. Search for people or create a group.</div>';
+    return;
+  }
+
+  items.forEach(item => {
+    const chatDiv = document.createElement('div');
+    chatDiv.className = 'list-item';
+    chatDiv.dataset.chatId = item.id;
+    chatDiv.dataset.chatType = item.type;
+    chatDiv.dataset.unreadCount = item.unreadCount || 0;
+    if (currentChat?.id === item.id && currentChatType === item.type) chatDiv.classList.add('active');
+    const avatarClass = item.type === 'direct' ? (item.onlineStatus === 'online' ? 'online' : 'offline') : '';
+    const unread = item.unreadCount ? `<span class="unread-pill">${item.unreadCount}</span>` : '';
+    chatDiv.innerHTML = `
+      <div class="list-avatar ${avatarClass}">${item.avatar}</div>
+      <div class="list-info" style="flex:1; cursor:pointer;">
+        <div class="list-name">${item.isFavorite ? '★ ' : ''}${escapeHtml(item.name)} ${item.isMuted ? '🔇' : ''}</div>
+        <div class="list-preview">${escapeHtml(item.preview || '')}</div>
+      </div>
+      ${unread}
+      <button class="list-item-menu mute-chat-btn" data-chat-id="${item.id}" data-chat-type="${item.type}">🔇</button>
+      <button class="list-item-menu archive-chat-btn" data-chat-id="${item.id}" data-chat-type="${item.type}" data-chat-name="${escapeHtml(item.name)}">📦</button>
+    `;
+    if (item.type === 'user') {
+      chatDiv.querySelectorAll('.mute-chat-btn, .archive-chat-btn').forEach(btn => btn.remove());
+    }
+    chatDiv.querySelector('.archive-chat-btn')?.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      if (confirm(`Archive "${item.name}"?`)) await archiveChat(item.id, item.type, item.name);
+    });
+    chatDiv.querySelector('.mute-chat-btn')?.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      const duration = prompt('Mute for: 8h, 1w, or always?', '8h');
+      if (duration === '8h' || duration === '1w' || duration === 'always') {
+        await muteChat(item.id, item.type, duration);
+        loadCurrentChatList();
+      }
+    });
+    chatDiv.querySelector('.list-info').onclick = () => {
+      if (item.type === 'user') handleUserSelection(item.user);
+      else if (item.type === 'group') loadGroupChat(item.id, item.name);
+      else db.collection('users').doc(item.otherUserId).get().then(doc => {
+        if (doc.exists) startDirectChat({ id: item.otherUserId, ...doc.data() });
+      });
+    };
+    container.appendChild(chatDiv);
+  });
+}
+
+async function loadAllChatsList(searchTerm = '') {
+  const chatsList = document.getElementById('chatsList');
+  if (!chatsList) return;
+  let items = [...await buildDirectChatItems(), ...await buildGroupChatItems()];
+  if (currentViewTab === 'favorites') items = items.filter(item => item.isFavorite);
+  if (currentViewTab === 'unread') items = items.filter(item => item.unreadCount > 0);
+  const term = searchTerm.trim().toLowerCase();
+  if (term) {
+    const chatMatches = items.filter(item =>
+      item.name.toLowerCase().includes(term) ||
+      (item.preview || '').toLowerCase().includes(term) ||
+      (item.code || '').toLowerCase().includes(term)
+    );
+    const existingUserIds = new Set(items.map(item => item.otherUserId).filter(Boolean));
+    const searchDigitsOnly = term.replace(/\D/g, '');
+    const userMatches = allUsers
+      .filter(user => {
+        if (isBlocked(user.id) || existingUserIds.has(user.id)) return false;
+        const displayName = (user.displayName || '').toLowerCase();
+        const email = (user.email || '').toLowerCase();
+        const phone = ((user.phone || user.phoneNumber || '') + '').replace(/\D/g, '');
+        return displayName.includes(term) ||
+          email.includes(term) ||
+          (searchDigitsOnly.length >= 6 && phone.includes(searchDigitsOnly));
+      })
+      .map(user => ({
+        id: `user_${user.id}`,
+        type: 'user',
+        name: user.displayName || user.email || 'User',
+        avatar: user.avatar ? `<img src="${user.avatar}">` : escapeHtml((user.displayName || user.email || '?')[0].toUpperCase()),
+        preview: user.email || user.phone || user.phoneNumber || 'Tap to send chat request',
+        unreadCount: 0,
+        isFavorite: false,
+        isMuted: false,
+        onlineStatus: user.onlineStatus || 'offline',
+        user,
+        lastMessageTime: new Date(0)
+      }));
+    items = [...chatMatches, ...userMatches];
+  }
+  items.sort((a, b) => b.lastMessageTime - a.lastMessageTime || a.name.localeCompare(b.name));
+  renderChatListItems(items, chatsList);
+}
+
+function loadCurrentChatList() {
+  if (currentViewTab === 'groups') loadGroupsList();
+  else loadAllChatsList(document.getElementById('searchInput')?.value || '');
+}
+
 // ========================================
 // LOAD CHATS LIST
 // ========================================
@@ -1095,8 +1341,11 @@ async function loadChatsList() {
   const chatsList = document.getElementById('chatsList');
   if (!chatsList) return;
   const activeChats = [];
-  const directChats = await db.collection('directChats').where('participants', 'array-contains', currentUser.uid).where('status', '==', 'active').get();
+  const archivedChatIds = await getArchivedChatIds();
+  const directChats = await db.collection('directChats').where('participants', 'array-contains', currentUser.uid).get();
   for (const doc of directChats.docs) {
+    if (doc.data().status && doc.data().status !== 'active') continue;
+    if (archivedChatIds.has(doc.id)) continue;
     const otherUserId = doc.data().participants.find(id => id !== currentUser.uid);
     if (otherUserId && !isBlocked(otherUserId)) {
       const userDoc = await db.collection('users').doc(otherUserId).get();
@@ -1191,6 +1440,14 @@ function getTimeAgo(date) {
   return date.toLocaleDateString();
 }
 
+function getPresenceText(userData) {
+  if (!userData) return '';
+  const canSeePresence = !privacySettings.hideLastSeen && !userData.privacySettings?.hideLastSeen;
+  if (canSeePresence && userData.onlineStatus === 'online') return 'online';
+  if (canSeePresence && userData.lastSeen) return `last seen ${getTimeAgo(userData.lastSeen.toDate())}`;
+  return userData.statusText || '';
+}
+
 // ========================================
 // LOAD GROUPS LIST
 // ========================================
@@ -1201,7 +1458,9 @@ async function loadGroupsList() {
   if (!groupsList) return;
   const memberSnapshot = await db.collection('groupMembers').where('userId', '==', currentUser.uid).get();
   const groups = [];
+  const archivedChatIds = await getArchivedChatIds();
   for (const doc of memberSnapshot.docs) {
+    if (archivedChatIds.has(doc.data().groupId)) continue;
     const groupDoc = await db.collection('groups').doc(doc.data().groupId).get();
     if (groupDoc.exists) groups.push({ id: groupDoc.id, name: groupDoc.data().name, code: groupDoc.data().code, icon: groupDoc.data().icon });
   }
@@ -1256,7 +1515,7 @@ async function startDirectChat(user) {
   currentChat = { id: chatId, otherUserId: user.id, otherUserName: user.displayName || user.email, type: 'direct' };
   currentChatType = 'direct';
   document.getElementById('currentChatName').textContent = user.displayName || user.email;
-  document.getElementById('chatStatus').textContent = user.onlineStatus === 'online' ? '🟢 Online' : '🔴 Offline';
+  document.getElementById('chatStatus').textContent = getPresenceText(user);
   document.getElementById('inputArea').style.display = 'flex';
   document.getElementById('groupInfoBtn').style.display = 'none';
   document.getElementById('replyPreviewBar').style.display = 'none';
@@ -1264,8 +1523,8 @@ async function startDirectChat(user) {
   loadMessages();
   loadPinnedMessages();
   applyCurrentChatWallpaper();
-  loadChatsList();
-  loadGroupsList();
+  openMobileChatPanel();
+  loadCurrentChatList();
 }
 
 // ========================================
@@ -1313,8 +1572,8 @@ async function loadGroupChat(groupId, groupName) {
   loadMessages();
   loadPinnedMessages();
   applyCurrentChatWallpaper();
-  loadChatsList();
-  loadGroupsList();
+  openMobileChatPanel();
+  loadCurrentChatList();
 }
 
 async function loadGroupMembers(groupId) {
@@ -1471,12 +1730,31 @@ async function markMessagesAsRead() {
   if (!currentChat || privacySettings.hideReadReceipts) return;
   let query;
   if (currentChatType === 'direct') {
-    query = db.collection('messages').where('directId', '==', currentChat.id).where('senderId', '!=', currentUser.uid).where('read', '==', false);
+    query = db.collection('messages').where('directId', '==', currentChat.id).where('senderId', '!=', currentUser.uid);
   } else {
-    query = db.collection('messages').where('groupId', '==', currentChat.id).where('senderId', '!=', currentUser.uid).where('read', '==', false);
+    query = db.collection('messages').where('groupId', '==', currentChat.id).where('senderId', '!=', currentUser.uid);
   }
   const snapshot = await query.get();
-  snapshot.forEach(doc => doc.ref.update({ read: true }));
+  const batch = db.batch();
+  let hasWrites = false;
+  snapshot.docs.forEach(doc => {
+    const data = doc.data();
+    if (data.readBy?.[currentUser.uid]) return;
+    batch.update(doc.ref, {
+      read: true,
+      [`readBy.${currentUser.uid}`]: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    hasWrites = true;
+  });
+  if (hasWrites) await batch.commit();
+}
+
+function getMessageReceiptHtml(msg, isMyMessage) {
+  if (!isMyMessage || privacySettings.hideReadReceipts) return '';
+  const readBy = msg.readBy || {};
+  const readerIds = Object.keys(readBy).filter(id => id !== currentUser.uid);
+  const isRead = msg.read || readerIds.length > 0;
+  return `<span class="read-receipt ${isRead ? 'read' : 'delivered'}">${isRead ? '✓✓' : '✓'}</span>`;
 }
 
 function loadMessages() {
@@ -1514,7 +1792,7 @@ function loadMessages() {
       if (msg.replyTo) {
         replyHtml = `<div class="reply-preview"><div class="reply-sender">↩️ Replying to ${escapeHtml(msg.replyTo.senderName)}</div><div class="reply-text">${escapeHtml(msg.replyTo.text ? msg.replyTo.text.substring(0, 50) : 'Media')}</div></div>`;
       }
-      messageDiv.innerHTML = `<div class="message-bubble">${!isMyMessage ? `<div class="message-sender">${escapeHtml(msg.senderName)}</div>` : ''}${replyHtml}<div class="message-text">${escapeHtml(msg.text || '')}</div>${attachmentHtml}<div class="message-footer"><span class="message-time">${msg.timestamp ? formatTime(msg.timestamp) : ''}</span>${!privacySettings.hideReadReceipts && isMyMessage ? `<span class="read-receipt ${msg.read ? 'read' : 'delivered'}">${msg.read ? '✓✓' : '✓'}</span>` : ''}</div></div>`;
+      messageDiv.innerHTML = `<div class="message-bubble">${!isMyMessage ? `<div class="message-sender">${escapeHtml(msg.senderName)}</div>` : ''}${replyHtml}<div class="message-text">${escapeHtml(msg.text || '')}</div>${attachmentHtml}<div class="message-footer"><span class="message-time">${msg.timestamp ? formatTime(msg.timestamp) : ''}</span>${getMessageReceiptHtml(msg, isMyMessage)}</div></div>`;
       const reactionsContainer = document.createElement('div');
       messageDiv.querySelector('.message-bubble').appendChild(reactionsContainer);
       await loadReactions(doc.id, reactionsContainer);
@@ -1537,7 +1815,8 @@ async function sendMessage() {
   if ((!text && !currentAttachment) || !currentChat) return;
   const messageData = {
     senderId: currentUser.uid, senderName: currentUser.displayName || currentUser.email.split('@')[0],
-    text: text || '', timestamp: firebase.firestore.FieldValue.serverTimestamp(), read: false
+    text: text || '', timestamp: firebase.firestore.FieldValue.serverTimestamp(), read: false,
+    readBy: { [currentUser.uid]: new Date() }
   };
   if (currentReplyTo) {
     messageData.replyTo = { messageId: currentReplyTo.id, text: currentReplyTo.text, senderName: currentReplyTo.senderName };
@@ -1555,6 +1834,8 @@ async function sendMessage() {
   document.getElementById('replyPreviewBar').style.display = 'none';
   if (currentChatType === 'direct') {
     await db.collection('directChats').doc(currentChat.id).update({ lastMessage: text, lastMessageTime: firebase.firestore.FieldValue.serverTimestamp() });
+  } else {
+    await db.collection('groups').doc(currentChat.id).update({ updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
   }
   if (!isChatMuted(currentChat.id)) sendNotification(currentChat.name || currentChat.otherUserName, text);
 }
@@ -1606,6 +1887,7 @@ async function forwardMessage(messageData, targetChatId, targetChatType) {
   const newMessage = {
     senderId: currentUser.uid, senderName: currentUser.displayName || currentUser.email.split('@')[0],
     text: messageData.text, timestamp: firebase.firestore.FieldValue.serverTimestamp(), read: false,
+    readBy: { [currentUser.uid]: new Date() },
     isForwarded: true, originalSender: messageData.senderName
   };
   if (targetChatType === 'direct') newMessage.directId = targetChatId;
@@ -1613,6 +1895,65 @@ async function forwardMessage(messageData, targetChatId, targetChatType) {
   if (messageData.attachment) newMessage.attachment = messageData.attachment;
   await db.collection('messages').add(newMessage);
   showToast('Message forwarded');
+}
+
+function formatReadAt(value) {
+  if (!value) return '';
+  const date = value.toDate ? value.toDate() : new Date(value);
+  return date.toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' });
+}
+
+async function showMessageInfo(messageId, messageData) {
+  let participantIds = [];
+  if (currentChatType === 'direct') {
+    participantIds = [currentUser.uid, currentChat.otherUserId].filter(Boolean);
+  } else {
+    const members = await db.collection('groupMembers').where('groupId', '==', currentChat.id).get();
+    participantIds = members.docs.map(doc => doc.data().userId);
+  }
+
+  const readBy = messageData.readBy || {};
+  const rows = [];
+  for (const userId of participantIds) {
+    const userDoc = await db.collection('users').doc(userId).get();
+    const user = userDoc.exists ? userDoc.data() : {};
+    rows.push({
+      name: userId === currentUser.uid ? 'You' : (user.displayName || user.email || 'Unknown user'),
+      seenAt: readBy[userId],
+      isSender: userId === messageData.senderId
+    });
+  }
+
+  let modal = document.getElementById('messageInfoModal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'messageInfoModal';
+    modal.className = 'modal';
+    modal.innerHTML = `
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>Message info</h3>
+          <span class="close-modal messageInfoClose">&times;</span>
+        </div>
+        <div class="modal-body" id="messageInfoBody"></div>
+      </div>
+    `;
+    document.body.appendChild(modal);
+    modal.querySelector('.messageInfoClose').addEventListener('click', () => {
+      modal.style.display = 'none';
+    });
+  }
+
+  const seenRows = rows.filter(row => row.seenAt && !row.isSender);
+  const pendingRows = rows.filter(row => !row.seenAt && !row.isSender);
+  document.getElementById('messageInfoBody').innerHTML = `
+    <div class="message-info-preview">${escapeHtml(messageData.text || (messageData.attachment ? 'Media message' : ''))}</div>
+    <h4>Seen by</h4>
+    ${seenRows.length ? seenRows.map(row => `<div class="info-row"><span>${escapeHtml(row.name)}</span><span>${formatReadAt(row.seenAt)}</span></div>`).join('') : '<div class="empty-state" style="padding:16px;">Not seen yet</div>'}
+    <h4 style="margin-top:16px;">Delivered to</h4>
+    ${pendingRows.length ? pendingRows.map(row => `<div class="info-row"><span>${escapeHtml(row.name)}</span><span>Not seen</span></div>`).join('') : '<div class="empty-state" style="padding:16px;">Everyone has seen it</div>'}
+  `;
+  modal.style.display = 'flex';
 }
 
 function showContextMenu(x, y, messageId, messageData, isMyMessage) {
@@ -1628,7 +1969,8 @@ function showContextMenu(x, y, messageId, messageData, isMyMessage) {
     { text: '➡️ Forward', action: () => showForwardModal(messageData) }
   ];
   if (isMyMessage) {
-    items.push({ text: '✏️ Edit', action: () => editMessage(messageId, messageData.text) });
+    items.push({ text: 'Info', action: () => showMessageInfo(messageId, messageData) });
+    items.push({ text: 'Edit', action: () => editMessage(messageId, messageData.text) });
     items.push({ text: '🗑️ Delete for everyone', action: () => deleteMessage(messageId) });
   }
   items.push({ text: '🚫 Block user', action: () => blockUser(messageData.senderId, messageData.senderName) });
@@ -1718,9 +2060,10 @@ async function clearAllChats() {
 // ========================================
 
 function switchTab(tab) {
+  if (tab === 'chats') tab = 'all';
   currentViewTab = tab;
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-  document.querySelector(`.tab[data-tab="${tab}"]`).classList.add('active');
+  document.querySelector(`.tab[data-tab="${tab}"]`)?.classList.add('active');
   const chatsList = document.getElementById('chatsList');
   const groupsList = document.getElementById('groupsList');
   const groupActions = document.getElementById('groupActions');
@@ -1736,8 +2079,8 @@ function switchTab(tab) {
     chatsList.style.display = 'block';
     groupsList.style.display = 'none';
     if (groupActions) groupActions.style.display = 'none';
-    loadChatsList();
-    document.getElementById('searchInput').placeholder = '🔍 Search users by name, phone, or email...';
+    loadAllChatsList();
+    document.getElementById('searchInput').placeholder = 'Search or start a new chat';
     document.getElementById('searchInput').oninput = (e) => searchUsersRealtime(e.target.value);
   }
 }
@@ -1817,8 +2160,7 @@ async function init() {
     setupChatListListeners();
     setupRequestListeners();
     loadReceivedRequests();
-    loadChatsList();
-    loadGroupsList();
+    switchTab('all');
     loadArchivedChats();
     if (Notification.permission === 'default') Notification.requestPermission();
     setInterval(async () => { await db.collection('users').doc(currentUser.uid).update({ lastSeen: new Date() }); }, 60000);
@@ -1834,13 +2176,13 @@ async function init() {
   // If 'all' is active, load both lists but show chats by default
   if (document.querySelector('.tab.active')?.dataset.tab === 'all') {
     currentViewTab = 'all';
-    loadChatsList();
-    loadGroupsList();
+    loadAllChatsList();
   }
   
-  // Mobile sidebar toggle
+  // Mobile chat navigation
   document.getElementById('mobileMenuBtn')?.addEventListener('click', () => {
-    document.getElementById('sidebar').classList.toggle('open');
+    if (window.innerWidth <= 900) closeMobileChatPanel();
+    else document.getElementById('sidebar').classList.toggle('open');
   });
   
   document.getElementById('profileBtn')?.addEventListener('click', () => {
@@ -1856,7 +2198,7 @@ async function init() {
   
   // Close sidebar when clicking on a chat/group item
   document.addEventListener('click', (e) => {
-    if (window.innerWidth <= 768 && e.target.closest('.list-item:not(.list-item-menu)')) {
+    if (window.innerWidth <= 900 && e.target.closest('.list-item:not(.list-item-menu)')) {
       document.getElementById('sidebar').classList.remove('open');
     }
   });
@@ -1971,7 +2313,7 @@ document.addEventListener('click', (e) => {
   document.getElementById('archiveHeader')?.addEventListener('click', () => { const archiveList = document.getElementById('archiveList'); const toggle = document.getElementById('archiveToggle'); if (archiveList.classList.contains('show')) { archiveList.classList.remove('show'); toggle.textContent = '▼'; } else { archiveList.classList.add('show'); toggle.textContent = '▲'; loadArchivedChats(); } });
   document.getElementById('messagesArea')?.addEventListener('scroll', () => { markMessagesAsRead(); });
   if (localStorage.getItem('darkMode') === 'true') document.body.classList.add('dark');
-  switchTab('chats');
+  switchTab('all');
 }
 
 function updateSearchResults() {
