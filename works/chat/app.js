@@ -64,6 +64,7 @@ let callCandidatesUnsubscribe = null;
 let currentCallType = 'voice';
 let micMuted = false;
 let cameraOff = false;
+let pendingRemoteIceCandidates = [];
 
 const rtcConfig = {
   iceServers: [
@@ -100,6 +101,64 @@ function escapeHtml(text) {
   const div = document.createElement('div');
   div.textContent = text;
   return div.innerHTML;
+}
+
+function getFileNameFromUrl(url) {
+  if (!url) return '';
+  try {
+    const path = new URL(url).pathname;
+    const lastPart = decodeURIComponent(path.split('/').pop() || '');
+    return lastPart || '';
+  } catch (error) {
+    const cleanUrl = String(url).split('?')[0];
+    return decodeURIComponent(cleanUrl.split('/').pop() || '');
+  }
+}
+
+function getFileExtension(filename = '', url = '') {
+  const source = filename || getFileNameFromUrl(url);
+  const match = source.match(/\.([a-z0-9]{1,8})$/i);
+  return match ? match[1].toUpperCase() : 'FILE';
+}
+
+function getAttachmentLabel(attachment = {}) {
+  if (attachment.type === 'image') return 'Image';
+  if (attachment.type === 'voice') return 'Voice message';
+  const ext = getFileExtension(attachment.filename, attachment.url);
+  if (ext === 'PDF') return 'PDF document';
+  if (['DOC', 'DOCX'].includes(ext)) return 'Word document';
+  if (['XLS', 'XLSX', 'CSV'].includes(ext)) return `${ext} spreadsheet`;
+  if (['PPT', 'PPTX'].includes(ext)) return 'Presentation';
+  if (['ZIP', 'RAR', '7Z'].includes(ext)) return 'Archive';
+  return `${ext} file`;
+}
+
+function renderAttachment(attachment = {}) {
+  if (!attachment.url) return '';
+  const url = escapeHtml(attachment.url);
+  const filename = escapeHtml(attachment.filename || getFileNameFromUrl(attachment.url) || 'Attachment');
+
+  if (attachment.type === 'image') {
+    return `<div class="message-attachment"><a class="image-attachment-link" href="${url}" target="_blank" rel="noopener"><img src="${url}" alt="${filename}"></a></div>`;
+  }
+
+  if (attachment.type === 'voice') {
+    const duration = Number(attachment.duration) || 0;
+    return `<div class="voice-message"><button class="voice-play-btn" data-url="${url}" type="button">Play</button><div class="voice-waveform"></div><span class="voice-duration">${Math.floor(duration / 60)}:${(duration % 60).toString().padStart(2, '0')}</span></div>`;
+  }
+
+  const ext = getFileExtension(attachment.filename, attachment.url);
+  const detail = [getAttachmentLabel(attachment), formatBytes(attachment.size)].filter(Boolean).join(' · ');
+  return `
+    <a class="file-attachment-card" href="${url}" target="_blank" rel="noopener">
+      <span class="file-attachment-icon">${escapeHtml(ext)}</span>
+      <span class="file-attachment-info">
+        <span class="file-attachment-name">${filename}</span>
+        <span class="file-attachment-meta">${escapeHtml(detail || 'File')}</span>
+      </span>
+      <span class="file-attachment-action">Download</span>
+    </a>
+  `;
 }
 
 function openMobileChatPanel() {
@@ -171,15 +230,24 @@ function setAttachmentPreview() {
     return;
   }
   const isImage = currentAttachment.type === 'image';
+  const attachmentType = isImage ? 'Image attachment' : getAttachmentLabel(currentAttachment);
   preview.style.display = 'flex';
   preview.innerHTML = `
     ${isImage ? `<img src="${currentAttachment.url}" alt="Attachment preview">` : '<span style="font-size:24px">📎</span>'}
     <div style="min-width:0">
       <strong>${escapeHtml(currentAttachment.filename || (isImage ? 'Image ready' : 'Document ready'))}</strong>
-      <div class="list-preview">${isImage ? 'Image attachment' : 'Document attachment'}</div>
+      <div class="list-preview">${escapeHtml(attachmentType)}${currentAttachment.size ? ` · ${formatBytes(currentAttachment.size)}` : ''}</div>
     </div>
     <button type="button" id="clearAttachmentBtn">Remove</button>
   `;
+  if (!isImage) {
+    const icon = preview.querySelector('span[style]');
+    if (icon) {
+      icon.removeAttribute('style');
+      icon.className = 'attachment-file-icon';
+      icon.textContent = getFileExtension(currentAttachment.filename, currentAttachment.url);
+    }
+  }
   document.getElementById('clearAttachmentBtn')?.addEventListener('click', () => {
     currentAttachment = null;
     setAttachmentPreview();
@@ -248,9 +316,15 @@ function cleanupCallUi() {
   activeCall = null;
   micMuted = false;
   cameraOff = false;
+  pendingRemoteIceCandidates = [];
 }
 
 async function preparePeerConnection(callId, role) {
+  if (peerConnection) {
+    peerConnection.close();
+    peerConnection = null;
+  }
+  pendingRemoteIceCandidates = [];
   peerConnection = new RTCPeerConnection(rtcConfig);
   remoteCallStream = new MediaStream();
   document.getElementById('remoteVideo').srcObject = remoteCallStream;
@@ -268,6 +342,30 @@ async function preparePeerConnection(callId, role) {
       db.collection('calls').doc(callId).collection(role === 'caller' ? 'callerCandidates' : 'calleeCandidates').add(event.candidate.toJSON());
     }
   };
+}
+
+async function setPeerRemoteDescription(description) {
+  if (!peerConnection || !description || peerConnection.currentRemoteDescription) return;
+  await peerConnection.setRemoteDescription(new RTCSessionDescription(description));
+  const candidates = [...pendingRemoteIceCandidates];
+  pendingRemoteIceCandidates = [];
+  for (const candidate of candidates) {
+    await addRemoteIceCandidate(candidate);
+  }
+}
+
+async function addRemoteIceCandidate(candidateData) {
+  if (!peerConnection || !candidateData) return;
+  try {
+    const candidate = new RTCIceCandidate(candidateData);
+    if (!peerConnection.currentRemoteDescription) {
+      pendingRemoteIceCandidates.push(candidateData);
+      return;
+    }
+    await peerConnection.addIceCandidate(candidate);
+  } catch (error) {
+    console.warn('Could not add ICE candidate:', error);
+  }
 }
 
 async function startCall(type = 'voice') {
@@ -304,14 +402,14 @@ async function startCall(type = 'voice') {
       const data = snapshot.data();
       if (!data) return;
       if (data.answer && !peerConnection.currentRemoteDescription) {
-        peerConnection.setRemoteDescription(new RTCSessionDescription(data.answer));
+        setPeerRemoteDescription(data.answer);
         document.getElementById('callStatusText').textContent = 'Connected';
       }
-      if (['ended', 'rejected', 'missed'].includes(data.status)) cleanupCallUi();
+      if (['ended', 'rejected', 'missed', 'failed'].includes(data.status)) cleanupCallUi();
     });
     callCandidatesUnsubscribe = callRef.collection('calleeCandidates').onSnapshot(snapshot => {
       snapshot.docChanges().forEach(change => {
-        if (change.type === 'added') peerConnection.addIceCandidate(new RTCIceCandidate(change.doc.data()));
+        if (change.type === 'added') addRemoteIceCandidate(change.doc.data());
       });
     });
   } catch (error) {
@@ -328,17 +426,18 @@ async function acceptIncomingCall() {
   setCallUi({ mode: 'active', type: currentCallType, title: activeCall.fromUserName || 'Caller', status: 'Connecting...' });
   try {
     await preparePeerConnection(activeCall.id, 'callee');
-    await peerConnection.setRemoteDescription(new RTCSessionDescription(activeCall.offer));
+    await setPeerRemoteDescription(activeCall.offer);
     const answer = await peerConnection.createAnswer();
     await peerConnection.setLocalDescription(answer);
     await callRef.update({ answer, status: 'accepted', acceptedAt: firebase.firestore.FieldValue.serverTimestamp() });
+    document.getElementById('callStatusText').textContent = 'Connected';
     callCandidatesUnsubscribe = callRef.collection('callerCandidates').onSnapshot(snapshot => {
       snapshot.docChanges().forEach(change => {
-        if (change.type === 'added') peerConnection.addIceCandidate(new RTCIceCandidate(change.doc.data()));
+        if (change.type === 'added') addRemoteIceCandidate(change.doc.data());
       });
     });
     callDocUnsubscribe = callRef.onSnapshot(snapshot => {
-      if (['ended', 'rejected', 'missed'].includes(snapshot.data()?.status)) cleanupCallUi();
+      if (['ended', 'rejected', 'missed', 'failed'].includes(snapshot.data()?.status)) cleanupCallUi();
     });
   } catch (error) {
     showToast('Unable to accept call. Check permission.', 'error');
@@ -780,15 +879,20 @@ async function handleUserSelection(user) {
     return;
   }
 
-  const chatId = getDirectChatId(currentUser.uid, user.id);
-  const chatDoc = await db.collection('directChats').doc(chatId).get();
-  if (chatDoc.exists) {
-    startDirectChat(user);
-  } else if (await hasAcceptedChatRelationship(user.id)) {
-    await ensureDirectChatExists(user.id);
-    startDirectChat(user);
-  } else {
-    await sendChatRequest(user);
+  try {
+    const chatId = getDirectChatId(currentUser.uid, user.id);
+    const chatDoc = await db.collection('directChats').doc(chatId).get();
+    if (chatDoc.exists) {
+      startDirectChat(user);
+    } else if (await hasAcceptedChatRelationship(user.id)) {
+      await ensureDirectChatExists(user.id);
+      startDirectChat(user);
+    } else {
+      await sendChatRequest(user);
+    }
+  } catch (error) {
+    console.error('Could not open user or send request:', error);
+    showToast(error?.message || 'Could not send request. Please try again.', 'error');
   }
 }
 
@@ -946,23 +1050,28 @@ function setupRequestListeners() {
 
 async function acceptChatRequest(requestId, fromUserId) {
   if (!currentUser || !requestId || !fromUserId) return;
-  const chatId = getDirectChatId(currentUser.uid, fromUserId);
-  const chatDoc = await db.collection('directChats').doc(chatId).get();
-  if (!chatDoc.exists) {
-    await db.collection('directChats').doc(chatId).set({
-      participants: [currentUser.uid, fromUserId],
-      status: 'active',
-      createdAt: firebase.firestore.FieldValue.serverTimestamp()
-    });
-  }
-  await db.collection('chatRequests').doc(requestId).update({ status: 'accepted', respondedAt: firebase.firestore.FieldValue.serverTimestamp() });
-  showToast('Request accepted');
-  loadReceivedRequests();
-  loadChatsList();
+  try {
+    const chatId = getDirectChatId(currentUser.uid, fromUserId);
+    const chatDoc = await db.collection('directChats').doc(chatId).get();
+    if (!chatDoc.exists) {
+      await db.collection('directChats').doc(chatId).set({
+        participants: [currentUser.uid, fromUserId],
+        status: 'active',
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+    }
+    await db.collection('chatRequests').doc(requestId).update({ status: 'accepted', respondedAt: firebase.firestore.FieldValue.serverTimestamp() });
+    showToast('Request accepted');
+    loadReceivedRequests();
+    loadCurrentChatList();
 
-  const userDoc = await db.collection('users').doc(fromUserId).get();
-  if (userDoc.exists) {
-    startDirectChat({ id: fromUserId, ...userDoc.data() });
+    const userDoc = await db.collection('users').doc(fromUserId).get();
+    if (userDoc.exists) {
+      startDirectChat({ id: fromUserId, ...userDoc.data() });
+    }
+  } catch (error) {
+    console.error('Could not accept chat request:', error);
+    showToast(error?.message || 'Could not accept request. Please try again.', 'error');
   }
 }
 
@@ -1032,8 +1141,13 @@ async function loadReceivedRequests() {
   requestList.querySelectorAll('.accept-request-btn').forEach(btn => {
     btn.addEventListener('click', async (e) => {
       e.stopPropagation();
-      if (btn.dataset.type === 'group') await acceptGroupInvite(btn.dataset.id);
-      else await acceptChatRequest(btn.dataset.id, btn.dataset.from);
+      btn.disabled = true;
+      try {
+        if (btn.dataset.type === 'group') await acceptGroupInvite(btn.dataset.id);
+        else await acceptChatRequest(btn.dataset.id, btn.dataset.from);
+      } finally {
+        btn.disabled = false;
+      }
     });
   });
   requestList.querySelectorAll('.delete-request-btn').forEach(btn => {
@@ -2206,14 +2320,14 @@ function renderChatListItems(items, container) {
         loadCurrentChatList();
       }
     });
-    chatDiv.querySelector('.list-info').onclick = () => {
+    chatDiv.addEventListener('click', () => {
       if (item.type === 'user') handleUserSelection(item.user);
       else if (item.type === 'group') loadGroupChat(item.id, item.name);
       else if (item.user) startDirectChat({ ...item.user, aliasDirectIds: item.aliasDirectIds });
       else db.collection('users').doc(item.otherUserId).get().then(doc => {
         startDirectChat(doc.exists ? { id: item.otherUserId, ...doc.data(), aliasDirectIds: item.aliasDirectIds } : { id: item.otherUserId, displayName: item.name, aliasDirectIds: item.aliasDirectIds });
       });
-    };
+    });
     container.appendChild(chatDiv);
   });
 }
@@ -3133,6 +3247,7 @@ function loadMessages() {
       if (msg.replyTo) {
         replyHtml = `<div class="reply-preview"><div class="reply-sender">↩️ Replying to ${escapeHtml(msg.replyTo.senderName)}</div><div class="reply-text">${escapeHtml(msg.replyTo.text ? msg.replyTo.text.substring(0, 50) : 'Media')}</div></div>`;
       }
+      attachmentHtml = msg.attachment ? renderAttachment(msg.attachment) : '';
       const messageText = msg.deletedForEveryone ? 'This message was deleted' : (msg.text || '');
       if (msg.deletedForEveryone) attachmentHtml = '';
       messageDiv.innerHTML = `<div class="message-bubble">${!isMyMessage ? `<div class="message-sender">${escapeHtml(msg.senderName)}</div>` : ''}${replyHtml}<div class="message-text">${escapeHtml(messageText)}</div>${attachmentHtml}<div class="message-footer"><span class="message-time">${msg.timestamp ? formatTime(msg.timestamp) : ''}</span>${getMessageReceiptHtml(msg, isMyMessage)}</div></div>`;
@@ -3170,16 +3285,7 @@ async function renderMessageSnapshotDocs(docs, messagesArea) {
     if (msg.deletedForEveryone) messageDiv.classList.add('deleted');
     if (msg.failed) messageDiv.classList.add('failed');
     messageDiv.dataset.messageId = doc.id;
-    let attachmentHtml = '';
-    if (msg.attachment) {
-      if (msg.attachment.type === 'image') {
-        attachmentHtml = `<div class="message-attachment"><img src="${msg.attachment.url}" style="max-width:200px; max-height:200px; border-radius:12px; cursor:pointer;" onclick="window.open('${msg.attachment.url}','_blank')"></div>`;
-      } else if (msg.attachment.type === 'voice') {
-        attachmentHtml = `<div class="voice-message"><button class="voice-play-btn" data-url="${msg.attachment.url}">â–¶ï¸</button><div class="voice-waveform"></div><span class="voice-duration">${Math.floor(msg.attachment.duration / 60)}:${(msg.attachment.duration % 60).toString().padStart(2, '0')}</span></div>`;
-      } else {
-        attachmentHtml = `<div class="message-attachment"><a href="${msg.attachment.url}" target="_blank">ðŸ“Ž Download</a></div>`;
-      }
-    }
+    let attachmentHtml = msg.attachment ? renderAttachment(msg.attachment) : '';
     let replyHtml = '';
     if (msg.replyTo) {
       replyHtml = `<div class="reply-preview"><div class="reply-sender">â†©ï¸ Replying to ${escapeHtml(msg.replyTo.senderName)}</div><div class="reply-text">${escapeHtml(msg.replyTo.text ? msg.replyTo.text.substring(0, 50) : 'Media')}</div></div>`;
@@ -3415,8 +3521,11 @@ async function showMessageInfo(messageId, messageData) {
 function showContextMenu(x, y, messageId, messageData, isMyMessage) {
   const existingMenu = document.querySelector('.message-context-menu');
   if (existingMenu) existingMenu.remove();
-  const menu = document.createElement('div'); menu.className = 'context-menu message-context-menu';
-  menu.style.cssText = `display: block; position: fixed; left: ${x}px; top: ${y}px; background: white; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.15); z-index: 10000; min-width: 180px; overflow: hidden;`;
+  const menu = document.createElement('div');
+  menu.className = 'context-menu message-context-menu';
+  menu.style.display = 'block';
+  menu.style.left = `${x}px`;
+  menu.style.top = `${y}px`;
   const items = [
     { text: '📋 Copy', action: () => copyToClipboard(messageData.text) },
     { text: '↩️ Reply', action: () => setReplyTo(messageData) },
@@ -3434,14 +3543,20 @@ function showContextMenu(x, y, messageId, messageData, isMyMessage) {
   items.push({ text: 'Delete for me', action: () => deleteMessageForMe(messageId) });
   if (!isMyMessage) items.push({ text: '🚫 Block user', action: () => blockUser(messageData.senderId, messageData.senderName) });
   items.forEach(item => {
-    const div = document.createElement('div'); div.className = 'context-menu-item'; div.style.cssText = `padding: 12px 16px; cursor: pointer; font-size: 14px; ${item.text.includes('Delete') || item.text.includes('Block') ? 'color: #dc2626;' : ''}`;
+    const div = document.createElement('div');
+    div.className = 'context-menu-item';
+    if (item.text.includes('Delete') || item.text.includes('Block')) div.classList.add('danger');
     div.textContent = item.text;
-    div.onmouseenter = () => div.style.background = '#f1f5f9';
-    div.onmouseleave = () => div.style.background = 'white';
     div.onclick = () => { item.action(); menu.remove(); };
     menu.appendChild(div);
   });
   document.body.appendChild(menu);
+  const margin = 8;
+  const rect = menu.getBoundingClientRect();
+  const maxLeft = window.innerWidth - rect.width - margin;
+  const maxTop = window.innerHeight - rect.height - margin;
+  menu.style.left = `${Math.max(margin, Math.min(x, maxLeft))}px`;
+  menu.style.top = `${Math.max(margin, Math.min(y, maxTop))}px`;
   setTimeout(() => { document.addEventListener('click', () => menu.remove(), { once: true }); }, 100);
 }
 
