@@ -296,9 +296,44 @@ async function handleUserSelection(user) {
   const chatDoc = await db.collection('directChats').doc(chatId).get();
   if (chatDoc.exists) {
     startDirectChat(user);
+  } else if (await hasAcceptedChatRelationship(user.id)) {
+    await ensureDirectChatExists(user.id);
+    startDirectChat(user);
   } else {
     await sendChatRequest(user);
   }
+}
+
+async function hasAcceptedChatRelationship(otherUserId) {
+  if (!currentUser || !otherUserId) return false;
+  const sent = await db.collection('chatRequests')
+    .where('fromUserId', '==', currentUser.uid)
+    .where('toUserId', '==', otherUserId)
+    .where('status', '==', 'accepted')
+    .limit(1)
+    .get();
+  if (!sent.empty) return true;
+
+  const received = await db.collection('chatRequests')
+    .where('fromUserId', '==', otherUserId)
+    .where('toUserId', '==', currentUser.uid)
+    .where('status', '==', 'accepted')
+    .limit(1)
+    .get();
+  return !received.empty;
+}
+
+async function ensureDirectChatExists(otherUserId) {
+  const chatId = getDirectChatId(currentUser.uid, otherUserId);
+  const chatDoc = await db.collection('directChats').doc(chatId).get();
+  if (!chatDoc.exists) {
+    await db.collection('directChats').doc(chatId).set({
+      participants: [currentUser.uid, otherUserId],
+      status: 'active',
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+  }
+  return chatId;
 }
 
 async function sendChatRequest(user) {
@@ -1168,6 +1203,48 @@ async function buildDirectChatItems() {
     });
   } catch (error) {
     console.warn('Could not load sent legacy chats:', error);
+  }
+
+  try {
+    const sentAccepted = await db.collection('chatRequests')
+      .where('fromUserId', '==', currentUser.uid)
+      .where('status', '==', 'accepted')
+      .get();
+    sentAccepted.docs.forEach(requestDoc => {
+      const request = requestDoc.data();
+      if (!request.toUserId) return;
+      const chatId = getDirectChatId(currentUser.uid, request.toUserId);
+      if (directChatDocs.has(chatId)) return;
+      directChatDocs.set(chatId, {
+        id: chatId,
+        data: {
+          participants: [currentUser.uid, request.toUserId],
+          lastMessageTime: request.respondedAt || request.createdAt,
+          status: 'active'
+        }
+      });
+    });
+
+    const receivedAccepted = await db.collection('chatRequests')
+      .where('toUserId', '==', currentUser.uid)
+      .where('status', '==', 'accepted')
+      .get();
+    receivedAccepted.docs.forEach(requestDoc => {
+      const request = requestDoc.data();
+      if (!request.fromUserId) return;
+      const chatId = getDirectChatId(currentUser.uid, request.fromUserId);
+      if (directChatDocs.has(chatId)) return;
+      directChatDocs.set(chatId, {
+        id: chatId,
+        data: {
+          participants: [currentUser.uid, request.fromUserId],
+          lastMessageTime: request.respondedAt || request.createdAt,
+          status: 'active'
+        }
+      });
+    });
+  } catch (error) {
+    console.warn('Could not load accepted request chats:', error);
   }
 
   const items = [];
