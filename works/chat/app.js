@@ -77,6 +77,10 @@ let wakeLock = null;
 let cameraSender = null;
 let callLogWritten = false;
 let lastHandledRenegotiationSdp = '';
+let seenPendingChatRequestIds = new Set();
+let seenPendingGroupInviteIds = new Set();
+let chatRequestListenerReady = false;
+let groupInviteListenerReady = false;
 
 const defaultRtcConfig = {
   iceServers: [
@@ -1485,6 +1489,7 @@ async function sendChatRequest(user) {
     createdAt: firebase.firestore.FieldValue.serverTimestamp()
   });
   showToast('Request sent');
+  loadCurrentChatList();
 }
 
 async function isBlockedByUser(userId) {
@@ -1689,14 +1694,44 @@ function setupRequestListeners() {
   if (!currentUser) return;
   if (chatRequestsUnsubscribe) chatRequestsUnsubscribe();
   if (groupInvitesUnsubscribe) groupInvitesUnsubscribe();
+  seenPendingChatRequestIds = new Set();
+  seenPendingGroupInviteIds = new Set();
+  chatRequestListenerReady = false;
+  groupInviteListenerReady = false;
   chatRequestsUnsubscribe = db.collection('chatRequests')
     .where('toUserId', '==', currentUser.uid)
     .where('status', '==', 'pending')
-    .onSnapshot(() => loadReceivedRequests());
+    .onSnapshot(snapshot => {
+      const currentIds = new Set(snapshot.docs.map(doc => doc.id));
+      const newRequests = snapshot.docs
+        .filter(doc => chatRequestListenerReady && !seenPendingChatRequestIds.has(doc.id))
+        .map(doc => ({ id: doc.id, ...doc.data() }));
+
+      seenPendingChatRequestIds = currentIds;
+      loadReceivedRequests();
+
+      newRequests.forEach(request => {
+        showToast(`New chat request from ${request.fromUserName || 'User'}`);
+      });
+      chatRequestListenerReady = true;
+    });
   groupInvitesUnsubscribe = db.collection('groupInvites')
     .where('toUserId', '==', currentUser.uid)
     .where('status', '==', 'pending')
-    .onSnapshot(() => loadReceivedRequests());
+    .onSnapshot(snapshot => {
+      const currentIds = new Set(snapshot.docs.map(doc => doc.id));
+      const newInvites = snapshot.docs
+        .filter(doc => groupInviteListenerReady && !seenPendingGroupInviteIds.has(doc.id))
+        .map(doc => ({ id: doc.id, ...doc.data() }));
+
+      seenPendingGroupInviteIds = currentIds;
+      loadReceivedRequests();
+
+      newInvites.forEach(invite => {
+        showToast(`New group invite: ${invite.groupName || 'Group'}`);
+      });
+      groupInviteListenerReady = true;
+    });
 }
 
 async function acceptGroupInvite(inviteId) {
