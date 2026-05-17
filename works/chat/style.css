@@ -610,6 +610,9 @@ button {
 
 .call-modal {
   background: rgba(11, 20, 26, 0.82);
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
 }
 
 .call-shell {
@@ -644,6 +647,12 @@ button {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 12px;
+}
+
+.call-top > div {
+  min-width: 0;
+  flex: 1;
 }
 
 .call-top h3,
@@ -651,9 +660,21 @@ button {
   margin: 0;
 }
 
+.call-top h3 {
+  overflow: hidden;
+  color: #fff;
+  font-size: 18px;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .call-top p {
   color: rgba(255, 255, 255, 0.72);
   font-size: 13px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .call-type-label {
@@ -747,10 +768,11 @@ button {
 
 .call-controls {
   min-height: 86px;
-  padding: 14px;
+  padding: 14px 14px calc(14px + var(--safe-bottom));
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-wrap: wrap;
   gap: 12px;
   background: #111b21;
 }
@@ -764,6 +786,26 @@ button {
   color: #fff;
   cursor: pointer;
   font-size: 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  transition:
+    background 0.18s ease,
+    transform 0.18s ease,
+    opacity 0.18s ease;
+}
+
+.call-icon-btn:hover,
+.call-icon-btn:focus-visible {
+  background: rgba(255, 255, 255, 0.22);
+  outline: none;
+  transform: translateY(-1px);
+}
+
+.call-icon-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
 }
 
 .call-icon-btn.active {
@@ -1032,6 +1074,77 @@ body.dark .message.call-message .message-bubble {
   box-shadow: 0 1px 2px rgba(11, 20, 26, 0.1);
   font-size: 11px;
   cursor: pointer;
+}
+
+.mention-highlight {
+  display: inline;
+  padding: 0 3px;
+  border-radius: 5px;
+  background: rgba(0, 168, 132, 0.16);
+  color: var(--brand-dark);
+  font-weight: 700;
+}
+
+.poll-card {
+  min-width: min(260px, 74vw);
+  margin-top: 4px;
+}
+
+.poll-question {
+  margin-bottom: 10px;
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 1.35;
+}
+
+.poll-option {
+  width: 100%;
+  min-height: 38px;
+  margin-top: 7px;
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--panel);
+  color: var(--text);
+  cursor: pointer;
+  text-align: left;
+}
+
+.poll-option:hover {
+  background: var(--panel-hover);
+}
+
+.poll-option-top {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.poll-option-bar {
+  height: 5px;
+  margin-top: 6px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--panel-soft);
+}
+
+.poll-option-fill {
+  height: 100%;
+  border-radius: inherit;
+  background: var(--brand);
+}
+
+.poll-option.selected {
+  border-color: var(--brand);
+  background: rgba(0, 168, 132, 0.09);
+}
+
+.poll-meta {
+  margin-top: 8px;
+  color: var(--muted);
+  font-size: 11px;
 }
 
 .input-area {
@@ -1817,6 +1930,19 @@ body.dark .read-receipt {
   color: #aebac1;
 }
 
+@media (display-mode: standalone) {
+  body {
+    background: var(--panel);
+  }
+
+  .chat-container {
+    width: 100vw;
+    height: 100dvh;
+    margin: 0;
+    box-shadow: none;
+  }
+}
+
 @media (max-width: 900px) {
   body {
     background: var(--panel);
@@ -1873,8 +1999,44 @@ body.dark .read-receipt {
 
   .chat-actions {
     gap: 0;
-    max-width: 38vw;
+    max-width: 44vw;
     overflow: hidden;
+  }
+
+  .call-modal {
+    align-items: center;
+    padding: 0;
+  }
+
+  .call-shell {
+    width: 100vw;
+    height: 100dvh;
+    border-radius: 0;
+  }
+
+  .call-top {
+    min-height: 68px;
+    padding: 12px 14px;
+  }
+
+  .call-video-stage {
+    min-height: 260px;
+  }
+
+  #localVideo {
+    right: 10px;
+    bottom: 10px;
+    width: min(30vw, 112px);
+  }
+
+  .call-controls {
+    min-height: 78px;
+    gap: 10px;
+  }
+
+  .call-icon-btn {
+    width: 44px;
+    height: 44px;
   }
 
   .messages-area {
@@ -1983,8 +2145,39 @@ body.dark .read-receipt {
   }
 
   .chat-actions .icon-btn {
-    width: 34px;
-    height: 34px;
+    width: 32px;
+    height: 32px;
+  }
+
+  .call-type-label {
+    min-height: 20px;
+    margin-bottom: 4px;
+    padding: 0 8px;
+    font-size: 10px;
+  }
+
+  .call-top h3 {
+    font-size: 16px;
+  }
+
+  .call-top p {
+    font-size: 12px;
+  }
+
+  .call-audio-avatar {
+    width: 96px;
+    height: 96px;
+    font-size: 38px;
+  }
+
+  .call-controls {
+    gap: 8px;
+  }
+
+  .call-icon-btn {
+    width: 42px;
+    height: 42px;
+    font-size: 18px;
   }
 
   .emoji-btn,

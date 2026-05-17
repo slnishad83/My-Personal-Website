@@ -38,6 +38,31 @@
       line-height: 1.5;
     }
 
+    .guide {
+      margin: 18px 0;
+      padding: 16px;
+      border: 1px solid #2a3942;
+      border-radius: 12px;
+      background: #17232b;
+    }
+
+    .guide ol {
+      margin: 10px 0 0;
+      padding-left: 22px;
+      color: #d1d7db;
+      line-height: 1.6;
+    }
+
+    .guide a {
+      min-height: auto;
+      display: inline;
+      padding: 0;
+      border-radius: 0;
+      background: transparent;
+      color: #00a884;
+      text-decoration: underline;
+    }
+
     input,
     textarea {
       width: 100%;
@@ -94,18 +119,33 @@
       color: #00a884;
       font-weight: 700;
     }
+
+    .hint {
+      margin-top: 8px;
+      font-size: 13px;
+    }
   </style>
 </head>
 <body>
   <main>
     <h1>Call Network Settings</h1>
-    <p>Use the simple fields if you create a Metered/OpenRelay account. The app will fetch TURN settings automatically before each call.</p>
+    <p>TURN helps voice and video calls connect across mobile data, office Wi-Fi, strict routers, and different networks.</p>
+    <div class="guide">
+      <strong>Simple free setup</strong>
+      <ol>
+        <li>Open <a href="https://www.metered.ca/tools/openrelay/" target="_blank" rel="noopener">Metered OpenRelay</a> and create a free account.</li>
+        <li>Copy your app URL, for example <strong>yourappname.metered.live</strong>.</li>
+        <li>Copy your TURN API key.</li>
+        <li>Paste both below, then click <strong>Test & Save Metered Settings</strong>.</li>
+      </ol>
+      <p class="hint">No card should be needed for the free allowance. If your app grows heavily, TURN usage may need a paid plan later.</p>
+    </div>
     <label for="meteredAppUrl">Metered app URL</label>
     <input id="meteredAppUrl" placeholder="example: yourappname.metered.live">
     <label for="meteredApiKey">Metered API key</label>
     <input id="meteredApiKey" placeholder="Paste API key">
     <div class="actions">
-      <button id="saveMeteredBtn">Save Metered Settings</button>
+      <button id="saveMeteredBtn">Test & Save Metered Settings</button>
       <button id="clearMeteredBtn" class="secondary">Clear Metered</button>
     </div>
     <p>Advanced: paste TURN server JSON here only if your provider gives direct TURN username/password details.</p>
@@ -128,7 +168,15 @@
     apiKey.value = localStorage.getItem('teamChatMeteredApiKey') || '';
     textarea.value = localStorage.getItem('teamChatTurnServers') || '[]';
 
-    document.getElementById('saveMeteredBtn').addEventListener('click', () => {
+    async function testMeteredSettings(cleanUrl, cleanKey) {
+      const response = await fetch(`https://${cleanUrl}/api/v1/turn/credentials?apiKey=${encodeURIComponent(cleanKey)}`);
+      if (!response.ok) throw new Error('Could not verify these settings.');
+      const iceServers = await response.json();
+      if (!Array.isArray(iceServers) || iceServers.length === 0) throw new Error('No TURN servers were returned.');
+      return iceServers;
+    }
+
+    document.getElementById('saveMeteredBtn').addEventListener('click', async () => {
       const cleanUrl = appUrl.value.trim().replace(/^https?:\/\//, '').replace(/\/$/, '');
       const cleanKey = apiKey.value.trim();
       if (!cleanUrl || !cleanKey) {
@@ -136,10 +184,18 @@
         message.style.color = '#ef4444';
         return;
       }
-      localStorage.setItem('teamChatMeteredAppUrl', cleanUrl);
-      localStorage.setItem('teamChatMeteredApiKey', cleanKey);
-      message.textContent = 'Metered TURN settings saved. Future calls will use them automatically.';
-      message.style.color = '#00a884';
+      message.textContent = 'Testing TURN settings...';
+      message.style.color = '#aebac1';
+      try {
+        const iceServers = await testMeteredSettings(cleanUrl, cleanKey);
+        localStorage.setItem('teamChatMeteredAppUrl', cleanUrl);
+        localStorage.setItem('teamChatMeteredApiKey', cleanKey);
+        message.textContent = `TURN settings saved. ${iceServers.length} server entries verified. Future calls will use them automatically on this device/browser.`;
+        message.style.color = '#00a884';
+      } catch (error) {
+        message.textContent = error.message || 'Could not verify these TURN settings.';
+        message.style.color = '#ef4444';
+      }
     });
 
     document.getElementById('clearMeteredBtn').addEventListener('click', () => {

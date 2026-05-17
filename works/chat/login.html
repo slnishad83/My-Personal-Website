@@ -7,7 +7,13 @@
       content="width=device-width, initial-scale=1.0, user-scalable=yes"
     />
     <meta name="theme-color" content="#667eea" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta
+      name="apple-mobile-web-app-status-bar-style"
+      content="black-translucent"
+    />
     <title>Team Chat - Login</title>
+    <link rel="manifest" href="manifest.json" />
     <link
       href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700&display=swap"
       rel="stylesheet"
@@ -125,6 +131,19 @@
         background: #e7fce3;
         color: #008069;
         margin-top: 12px;
+      }
+      .btn-outline {
+        border: 1px solid #d7dce5;
+        background: #ffffff;
+        color: #1f2937;
+      }
+      .install-note {
+        display: none;
+        margin-top: 10px;
+        color: #667085;
+        font-size: 12px;
+        line-height: 1.4;
+        text-align: center;
       }
       .auth-error {
         margin-top: 16px;
@@ -305,10 +324,13 @@
         <button
           id="installAppBtn"
           class="btn btn-outline"
+          type="button"
+          data-install-app
           style="display: none; margin-top: 16px"
         >
           Install App
         </button>
+        <p id="installHelpText" class="install-note" data-install-help></p>
       </div>
     </div>
 
@@ -668,5 +690,6 @@
           }
         });
     </script>
+    <script src="pwa-install.js"></script>
   </body>
 </html>

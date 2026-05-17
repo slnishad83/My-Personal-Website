@@ -53,6 +53,16 @@
             </div>
           </div>
           <div style="display: flex; gap: 8px">
+            <button
+              class="icon-btn install-app-btn"
+              id="installAppBtn"
+              type="button"
+              data-install-app
+              title="Install app"
+              style="display: none"
+            >
+              &#x2B07;
+            </button>
             <button class="icon-btn" id="darkModeBtn" title="Dark Mode">
               🌙
             </button>
@@ -155,9 +165,9 @@
             <div class="chat-status" id="chatStatus"></div>
           </div>
           <div class="chat-actions">
-            <button class="icon-btn" id="voiceCallBtn" title="Voice call">📞</button>
-            <button class="icon-btn" id="videoCallBtn" title="Video call">🎥</button>
-            <button class="icon-btn" id="searchChatBtn" title="Search in chat">
+            <button class="icon-btn" id="voiceCallBtn" title="Voice call" aria-label="Voice call">📞</button>
+            <button class="icon-btn" id="videoCallBtn" title="Video call" aria-label="Video call">🎥</button>
+            <button class="icon-btn" id="searchChatBtn" title="Search in chat" aria-label="Search in chat">
               🔍
             </button>
             <button
@@ -165,10 +175,11 @@
               id="groupInfoBtn"
               style="display: none"
               title="Group Info"
+              aria-label="Group Info"
             >
               ℹ️
             </button>
-            <button class="icon-btn" id="wallpaperBtn" title="Change Wallpaper">
+            <button class="icon-btn" id="wallpaperBtn" title="Change Wallpaper" aria-label="Change Wallpaper">
               🖼️
             </button>
           </div>
@@ -304,6 +315,9 @@
           </button>
           <button class="attach-btn" id="attachBtn" title="Attach file">
             📎
+          </button>
+          <button class="attach-btn" id="pollBtn" title="Create poll" aria-label="Create poll">
+            ▦
           </button>
           <input
             type="text"
@@ -863,7 +877,7 @@
             <h3 id="callTitle">Calling...</h3>
             <p id="callStatusText">Connecting</p>
           </div>
-          <button id="closeCallBtn" class="call-icon-btn">×</button>
+          <button id="closeCallBtn" class="call-icon-btn" title="Close call" aria-label="Close call">×</button>
         </div>
         <div class="call-video-stage">
           <video id="remoteVideo" autoplay playsinline></video>
@@ -873,11 +887,11 @@
           <div id="callDuration" class="call-duration" style="display: none">0:00</div>
         </div>
         <div class="call-controls">
-          <button id="muteMicBtn" class="call-icon-btn" title="Mute microphone">🎙️</button>
-          <button id="toggleCameraBtn" class="call-icon-btn" title="Turn camera on/off">📷</button>
-          <button id="acceptCallBtn" class="call-icon-btn accept-call" title="Accept">✓</button>
-          <button id="rejectCallBtn" class="call-icon-btn end-call" title="Reject">✕</button>
-          <button id="endCallBtn" class="call-icon-btn end-call" title="End call">⏹</button>
+          <button id="muteMicBtn" class="call-icon-btn" title="Mute microphone" aria-label="Mute microphone">🎙️</button>
+          <button id="toggleCameraBtn" class="call-icon-btn" title="Turn camera on/off" aria-label="Turn camera on or off">📷</button>
+          <button id="acceptCallBtn" class="call-icon-btn accept-call" title="Accept" aria-label="Accept call">✓</button>
+          <button id="rejectCallBtn" class="call-icon-btn end-call" title="Reject" aria-label="Reject call">✕</button>
+          <button id="endCallBtn" class="call-icon-btn end-call" title="End call" aria-label="End call">⏹</button>
         </div>
       </div>
     </div>
@@ -1028,51 +1042,6 @@
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-storage-compat.js"></script>
     <script src="app.js"></script>
-
-    <!-- Service Worker Registration -->
-    <script>
-      // Register Service Worker for PWA functionality
-      if ("serviceWorker" in navigator) {
-        window.addEventListener("load", () => {
-          navigator.serviceWorker
-            .register("sw.js")
-            .then((reg) => {
-              console.log("✅ Service Worker registered successfully");
-            })
-            .catch((err) => {
-              console.log("❌ Service Worker registration failed:", err);
-            });
-        });
-      }
-
-      // Handle PWA Install Prompt
-      let deferredPrompt;
-      const installBtn = document.getElementById("installAppBtn");
-
-      window.addEventListener("beforeinstallprompt", (e) => {
-        e.preventDefault();
-        deferredPrompt = e;
-        if (installBtn) {
-          installBtn.style.display = "block";
-        }
-      });
-
-      if (installBtn) {
-        installBtn.addEventListener("click", async () => {
-          if (deferredPrompt) {
-            deferredPrompt.prompt();
-            const { outcome } = await deferredPrompt.userChoice;
-            console.log(`User response to the install prompt: ${outcome}`);
-            deferredPrompt = null;
-            installBtn.style.display = "none";
-          }
-        });
-      }
-
-      window.addEventListener("appinstalled", () => {
-        console.log("✅ PWA installed successfully");
-        deferredPrompt = null;
-      });
-    </script>
+    <script src="pwa-install.js"></script>
   </body>
 </html>

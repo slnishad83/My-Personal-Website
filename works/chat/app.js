@@ -210,6 +210,92 @@ function renderCallMessage(msg = {}) {
   return `<div class="message-bubble"><span>${icon}</span><span>${text}</span></div>`;
 }
 
+function getSavedMessagesChatId() {
+  return currentUser ? `saved_${currentUser.uid}` : '';
+}
+
+function getSavedMessagesItem() {
+  const displayName = currentUser?.displayName || currentUser?.email || 'Me';
+  return {
+    id: getSavedMessagesChatId(),
+    type: 'saved',
+    name: 'Saved Messages',
+    avatar: '&#9733;',
+    preview: `Private notes and files for ${displayName}`,
+    unreadCount: 0,
+    isFavorite: false,
+    isMuted: false,
+    lastMessageTime: new Date(8640000000000000)
+  };
+}
+
+function renderMessageText(text = '', mentions = []) {
+  let html = escapeHtml(text);
+  mentions.forEach(mention => {
+    const label = escapeHtml(mention.label || mention.name || '');
+    if (!label) return;
+    const escapedPattern = label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    html = html.replace(new RegExp(`@${escapedPattern}`, 'g'), `<span class="mention-highlight">@${label}</span>`);
+  });
+  return html;
+}
+
+function getMessageMentions(text = '') {
+  if (currentChatType !== 'group' || !text.includes('@')) return [];
+  const lowerText = text.toLowerCase();
+  return currentGroupMembers
+    .filter(member => member.id !== currentUser.uid && member.name && lowerText.includes(`@${member.name.toLowerCase()}`))
+    .map(member => ({ id: member.id, name: member.name, label: member.name }));
+}
+
+function renderPollMessage(messageId, msg = {}) {
+  const poll = msg.poll || {};
+  const options = Array.isArray(poll.options) ? poll.options : [];
+  const votes = poll.votes || {};
+  const voteValues = Object.values(votes);
+  const totalVotes = voteValues.length;
+  const myVote = votes[currentUser?.uid];
+  const optionsHtml = options.map((option, index) => {
+    const count = voteValues.filter(value => Number(value) === index).length;
+    const percent = totalVotes ? Math.round((count / totalVotes) * 100) : 0;
+    const selected = Number(myVote) === index ? ' selected' : '';
+    return `
+      <button class="poll-option${selected}" data-message-id="${escapeHtml(messageId)}" data-option-index="${index}" type="button">
+        <span class="poll-option-top"><span>${escapeHtml(option)}</span><span>${percent}%</span></span>
+        <span class="poll-option-bar"><span class="poll-option-fill" style="width:${percent}%"></span></span>
+      </button>
+    `;
+  }).join('');
+  return `
+    <div class="poll-card">
+      <div class="poll-question">${escapeHtml(poll.question || 'Poll')}</div>
+      ${optionsHtml}
+      <div class="poll-meta">${totalVotes} vote${totalVotes === 1 ? '' : 's'}</div>
+    </div>
+  `;
+}
+
+async function votePoll(messageId, optionIndex) {
+  if (!currentUser || !messageId || Number.isNaN(optionIndex)) return;
+  const updates = {};
+  updates[`poll.votes.${currentUser.uid}`] = Number(optionIndex);
+  await db.collection('messages').doc(messageId).update(updates);
+}
+
+function bindRenderedMessageActions() {
+  document.querySelectorAll('.voice-play-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const audio = new Audio(btn.dataset.url);
+      audio.play();
+    });
+  });
+  document.querySelectorAll('.poll-option').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      await votePoll(btn.dataset.messageId, Number(btn.dataset.optionIndex));
+    });
+  });
+}
+
 function openMobileChatPanel() {
   document.querySelector('.chat-container')?.classList.add('chat-open');
 }
@@ -2613,7 +2699,7 @@ async function buildDirectChatItems() {
     console.warn('Could not load accepted request chats:', error);
   }
 
-  const items = [];
+  const items = [getSavedMessagesItem()];
 
   for (const chat of directChatDocs.values()) {
     const chatData = chat.data;
@@ -2655,7 +2741,7 @@ async function buildDirectChatItems() {
     });
   }
 
-  return mergeDirectContactItems(items);
+  return [getSavedMessagesItem(), ...mergeDirectContactItems(items.filter(item => item.type !== 'saved'))];
 }
 
 async function buildGroupChatItems() {
@@ -2704,7 +2790,7 @@ function renderChatListItems(items, container) {
     chatDiv.dataset.unreadCount = item.unreadCount || 0;
     if (item.otherUserId || item.user?.id) chatDiv.dataset.otherUserId = item.otherUserId || item.user.id;
     chatDiv.dataset.chatName = item.name || '';
-    if (currentChat?.id === item.id && currentChatType === item.type) chatDiv.classList.add('active');
+    if (currentChat?.id === item.id && (currentChatType === item.type || (item.type === 'saved' && currentChat?.isSaved))) chatDiv.classList.add('active');
     const avatarClass = '';
     const unread = item.unreadCount ? `<span class="unread-pill">${item.unreadCount}</span>` : '';
     const statusChip = item.requestState ? `<span class="status-chip ${item.requestState.status}">${escapeHtml(item.requestState.label)}</span>` : '';
@@ -2719,7 +2805,7 @@ function renderChatListItems(items, container) {
       <button class="list-item-menu mute-chat-btn" data-chat-id="${item.id}" data-chat-type="${item.type}">🔇</button>
       <button class="list-item-menu archive-chat-btn" data-chat-id="${item.id}" data-chat-type="${item.type}" data-chat-name="${escapeHtml(item.name)}">📦</button>
     `;
-    if (item.type === 'user') {
+    if (item.type === 'user' || item.type === 'saved') {
       chatDiv.querySelectorAll('.mute-chat-btn, .archive-chat-btn').forEach(btn => btn.remove());
     }
     chatDiv.querySelector('.archive-chat-btn')?.addEventListener('click', async (e) => {
@@ -2736,6 +2822,7 @@ function renderChatListItems(items, container) {
     });
     chatDiv.addEventListener('click', () => {
       if (item.type === 'user') handleUserSelection(item.user);
+      else if (item.type === 'saved') startSavedMessages();
       else if (item.type === 'group') loadGroupChat(item.id, item.name);
       else if (item.user) startDirectChat({ ...item.user, aliasDirectIds: item.aliasDirectIds });
       else db.collection('users').doc(item.otherUserId).get().then(doc => {
@@ -3005,6 +3092,45 @@ async function loadGroupsList() {
 // ========================================
 // START DIRECT CHAT
 // ========================================
+
+async function startSavedMessages() {
+  const chatId = getSavedMessagesChatId();
+  if (!chatId) return;
+  const chatRef = db.collection('directChats').doc(chatId);
+  const chatDoc = await chatRef.get();
+  if (!chatDoc.exists) {
+    await chatRef.set({
+      participants: [currentUser.uid],
+      status: 'active',
+      saved: true,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+  }
+
+  currentChat = {
+    id: chatId,
+    otherUserId: currentUser.uid,
+    otherUserName: 'Saved Messages',
+    type: 'direct',
+    isSaved: true,
+    aliasDirectIds: [chatId]
+  };
+  currentChatType = 'direct';
+  document.getElementById('currentChatName').textContent = 'Saved Messages';
+  document.getElementById('chatStatus').textContent = 'Private notes, files, and reminders';
+  setChatHeaderAvatar('&#9733;');
+  document.getElementById('inputArea').style.display = 'flex';
+  document.getElementById('groupInfoBtn').style.display = 'none';
+  document.getElementById('voiceCallBtn').style.display = 'none';
+  document.getElementById('videoCallBtn').style.display = 'none';
+  document.getElementById('replyPreviewBar').style.display = 'none';
+  currentReplyTo = null;
+  loadMessages();
+  loadPinnedMessages();
+  applyCurrentChatWallpaper();
+  openMobileChatPanel();
+  loadCurrentChatList();
+}
 
 async function startDirectChat(user) {
   if (isBlocked(user.id)) { showToast('You have blocked this user.', 'error'); return; }
@@ -3590,6 +3716,7 @@ async function markMessagesAsRead() {
 
 function getMessageReceiptHtml(msg, isMyMessage) {
   if (!isMyMessage || privacySettings.hideReadReceipts) return '';
+  if (currentChat?.isSaved) return '';
   if (msg.failed) return '<span class="message-status failed">failed</span>';
   if (msg.pending) return '<span class="message-status">sending</span>';
   const readBy = msg.readBy || {};
@@ -3670,15 +3797,17 @@ function loadMessages() {
       }
       attachmentHtml = msg.attachment ? renderAttachment(msg.attachment) : '';
       const messageText = msg.deletedForEveryone ? 'This message was deleted' : (msg.text || '');
+      const messageTextHtml = msg.deletedForEveryone ? escapeHtml(messageText) : renderMessageText(messageText, msg.mentions || []);
+      const pollHtml = !msg.deletedForEveryone && msg.type === 'poll' ? renderPollMessage(doc.id, msg) : '';
       if (msg.deletedForEveryone) attachmentHtml = '';
-      messageDiv.innerHTML = `<div class="message-bubble">${!isMyMessage ? `<div class="message-sender">${escapeHtml(msg.senderName)}</div>` : ''}${replyHtml}<div class="message-text">${escapeHtml(messageText)}</div>${attachmentHtml}<div class="message-footer"><span class="message-time">${msg.timestamp ? formatTime(msg.timestamp) : ''}</span>${getMessageReceiptHtml(msg, isMyMessage)}</div></div>`;
+      messageDiv.innerHTML = `<div class="message-bubble">${!isMyMessage ? `<div class="message-sender">${escapeHtml(msg.senderName)}</div>` : ''}${replyHtml}${messageText ? `<div class="message-text">${messageTextHtml}</div>` : ''}${pollHtml}${attachmentHtml}<div class="message-footer"><span class="message-time">${msg.timestamp ? formatTime(msg.timestamp) : ''}</span>${getMessageReceiptHtml(msg, isMyMessage)}</div></div>`;
       const reactionsContainer = document.createElement('div');
       messageDiv.querySelector('.message-bubble').appendChild(reactionsContainer);
       await loadReactions(doc.id, reactionsContainer);
       messageDiv.addEventListener('contextmenu', (e) => { e.preventDefault(); showContextMenu(e.clientX, e.clientY, doc.id, msg, isMyMessage); });
       messagesArea.appendChild(messageDiv);
     }
-    document.querySelectorAll('.voice-play-btn').forEach(btn => { btn.addEventListener('click', () => { const audio = new Audio(btn.dataset.url); audio.play(); }); });
+    bindRenderedMessageActions();
     messagesArea.scrollTop = messagesArea.scrollHeight;
     markMessagesAsRead();
   });
@@ -3719,15 +3848,17 @@ async function renderMessageSnapshotDocs(docs, messagesArea) {
       replyHtml = `<div class="reply-preview"><div class="reply-sender">↩️ Replying to ${escapeHtml(msg.replyTo.senderName)}</div><div class="reply-text">${escapeHtml(msg.replyTo.text ? msg.replyTo.text.substring(0, 50) : 'Media')}</div></div>`;
     }
     const messageText = msg.deletedForEveryone ? 'This message was deleted' : (msg.text || '');
+    const messageTextHtml = msg.deletedForEveryone ? escapeHtml(messageText) : renderMessageText(messageText, msg.mentions || []);
+    const pollHtml = !msg.deletedForEveryone && msg.type === 'poll' ? renderPollMessage(doc.id, msg) : '';
     if (msg.deletedForEveryone) attachmentHtml = '';
-    messageDiv.innerHTML = `<div class="message-bubble">${!isMyMessage ? `<div class="message-sender">${escapeHtml(msg.senderName)}</div>` : ''}${replyHtml}<div class="message-text">${escapeHtml(messageText)}</div>${attachmentHtml}<div class="message-footer"><span class="message-time">${msg.timestamp ? formatTime(msg.timestamp) : ''}</span>${getMessageReceiptHtml(msg, isMyMessage)}</div></div>`;
+    messageDiv.innerHTML = `<div class="message-bubble">${!isMyMessage ? `<div class="message-sender">${escapeHtml(msg.senderName)}</div>` : ''}${replyHtml}${messageText ? `<div class="message-text">${messageTextHtml}</div>` : ''}${pollHtml}${attachmentHtml}<div class="message-footer"><span class="message-time">${msg.timestamp ? formatTime(msg.timestamp) : ''}</span>${getMessageReceiptHtml(msg, isMyMessage)}</div></div>`;
     const reactionsContainer = document.createElement('div');
     messageDiv.querySelector('.message-bubble').appendChild(reactionsContainer);
     await loadReactions(doc.id, reactionsContainer);
     messageDiv.addEventListener('contextmenu', (e) => { e.preventDefault(); showContextMenu(e.clientX, e.clientY, doc.id, msg, isMyMessage); });
     messagesArea.appendChild(messageDiv);
   }
-  document.querySelectorAll('.voice-play-btn').forEach(btn => { btn.addEventListener('click', () => { const audio = new Audio(btn.dataset.url); audio.play(); }); });
+  bindRenderedMessageActions();
   messagesArea.scrollTop = messagesArea.scrollHeight;
   markMessagesAsRead();
 }
@@ -3736,16 +3867,58 @@ async function renderMessageSnapshotDocs(docs, messagesArea) {
 // SEND MESSAGE & CONTEXT MENU
 // ========================================
 
+function parsePollDraft(text = '') {
+  const parts = text.replace(/^\/poll\s+/i, '').split('|').map(part => part.trim()).filter(Boolean);
+  if (parts.length < 3) return null;
+  return {
+    question: parts[0],
+    options: parts.slice(1, 11),
+    votes: {}
+  };
+}
+
+function createPollFromPrompt() {
+  if (!currentChat) {
+    showToast('Open a chat first', 'error');
+    return;
+  }
+  const question = prompt('Poll question:');
+  if (!question || !question.trim()) return;
+  const optionsText = prompt('Poll options, separated by commas:', 'Yes, No');
+  if (!optionsText) return;
+  const options = optionsText.split(',').map(option => option.trim()).filter(Boolean);
+  if (options.length < 2) {
+    showToast('Add at least two poll options', 'error');
+    return;
+  }
+  const input = document.getElementById('messageInput');
+  if (input) {
+    input.value = `/poll ${question.trim()} | ${options.slice(0, 10).join(' | ')}`;
+    input.focus();
+  }
+}
+
 async function sendMessage() {
   const input = document.getElementById('messageInput');
   const text = input ? input.value.trim() : '';
   if ((!text && !currentAttachment) || !currentChat) return;
+  const pollDraft = text.startsWith('/poll ') ? parsePollDraft(text) : null;
+  if (text.startsWith('/poll ') && !pollDraft) {
+    showToast('Use: /poll Question | Option 1 | Option 2', 'error');
+    return;
+  }
   setSendingState(true);
   const messageData = {
     senderId: currentUser.uid, senderName: currentUser.displayName || currentUser.email.split('@')[0],
-    text: text || '', timestamp: firebase.firestore.FieldValue.serverTimestamp(), read: false,
+    text: pollDraft ? '' : (text || ''), timestamp: firebase.firestore.FieldValue.serverTimestamp(), read: false,
     readBy: { [currentUser.uid]: new Date() }
   };
+  if (pollDraft) {
+    messageData.type = 'poll';
+    messageData.poll = pollDraft;
+  }
+  const mentions = getMessageMentions(text);
+  if (mentions.length) messageData.mentions = mentions;
   if (currentReplyTo) {
     messageData.replyTo = { messageId: currentReplyTo.id, text: currentReplyTo.text, senderName: currentReplyTo.senderName };
   }
@@ -3758,7 +3931,7 @@ async function sendMessage() {
   try {
     if (currentChatType === 'direct') {
       messageData.directId = currentChat.id;
-      messageData.participants = [currentUser.uid, currentChat.otherUserId];
+      messageData.participants = currentChat.isSaved ? [currentUser.uid] : [currentUser.uid, currentChat.otherUserId];
     } else {
       messageData.groupId = currentChat.id;
     }
@@ -3780,7 +3953,7 @@ async function sendMessage() {
     currentReplyTo = null;
     document.getElementById('replyPreviewBar').style.display = 'none';
     if (currentChatType === 'direct') {
-      await db.collection('directChats').doc(currentChat.id).update({ lastMessage: text || (messageData.attachment ? 'Attachment' : ''), lastMessageTime: firebase.firestore.FieldValue.serverTimestamp() });
+      await db.collection('directChats').doc(currentChat.id).update({ lastMessage: pollDraft ? 'Poll' : (text || (messageData.attachment ? 'Attachment' : '')), lastMessageTime: firebase.firestore.FieldValue.serverTimestamp() });
     } else {
       await db.collection('groups').doc(currentChat.id).update({ updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
     }
@@ -3883,6 +4056,14 @@ async function forwardMessage(messageData, targetChatId, targetChatType) {
   if (targetChatType === 'direct') newMessage.directId = targetChatId;
   else newMessage.groupId = targetChatId;
   if (messageData.attachment) newMessage.attachment = messageData.attachment;
+  if (messageData.type === 'poll' && messageData.poll) {
+    newMessage.type = 'poll';
+    newMessage.poll = {
+      question: messageData.poll.question,
+      options: messageData.poll.options || [],
+      votes: {}
+    };
+  }
   await db.collection('messages').add(newMessage);
   showToast('Message forwarded');
 }
@@ -3954,8 +4135,9 @@ function showContextMenu(x, y, messageId, messageData, isMyMessage) {
   menu.style.display = 'block';
   menu.style.left = `${x}px`;
   menu.style.top = `${y}px`;
+  const copyText = messageData.type === 'poll' ? (messageData.poll?.question || 'Poll') : (messageData.text || '');
   const items = [
-    { text: '📋 Copy', action: () => copyToClipboard(messageData.text) },
+    { text: '📋 Copy', action: () => copyToClipboard(copyText) },
     { text: '↩️ Reply', action: () => setReplyTo(messageData) },
     { text: '⭐ Star', action: () => starMessage(messageId, messageData) },
     { text: '📌 Pin', action: () => pinMessage(messageId, messageData) },
@@ -3963,9 +4145,11 @@ function showContextMenu(x, y, messageId, messageData, isMyMessage) {
   ];
   if (isMyMessage) {
     items.push({ text: 'Info', action: () => showMessageInfo(messageId, messageData) });
-    if (!messageData.deletedForEveryone) {
+    if (!messageData.deletedForEveryone && messageData.type !== 'poll') {
       items.push({ text: 'Edit', action: () => editMessage(messageId, messageData.text) });
       items.push({ text: '🗑️ Delete for everyone', action: () => deleteMessage(messageId) });
+    } else if (!messageData.deletedForEveryone) {
+      items.push({ text: 'Delete for everyone', action: () => deleteMessage(messageId) });
     }
   }
   items.push({ text: 'Delete for me', action: () => deleteMessageForMe(messageId) });
@@ -4313,6 +4497,7 @@ async function init() {
   }
   document.getElementById('cancelRecordingBtn')?.addEventListener('click', cancelVoiceRecording);
   document.getElementById('attachBtn')?.addEventListener('click', () => { document.getElementById('fileInput').click(); });
+  document.getElementById('pollBtn')?.addEventListener('click', createPollFromPrompt);
   document.getElementById('fileInput')?.addEventListener('change', async (e) => { if (e.target.files[0]) await handleFileUpload(e.target.files[0]); });
   window.addEventListener('online', setConnectionBanner);
   window.addEventListener('offline', setConnectionBanner);

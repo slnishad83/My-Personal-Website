@@ -1,21 +1,22 @@
-const CACHE_NAME = 'team-chat-v87';
+const CACHE_NAME = 'team-chat-v88';
 const urlsToCache = [
   'index.html',
   'login.html',
   'turn.html',
   'style.css',
   'app.js',
+  'pwa-install.js',
   'manifest.json',
-  'https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js',
-  'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js',
-  'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js',
-  'https://www.gstatic.com/firebasejs/10.8.0/firebase-storage-compat.js',
-  'https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700&display=swap'
+  'app-icon.svg'
 ];
 
 self.addEventListener('install', event => {
   self.skipWaiting();
-  event.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(urlsToCache)));
+  event.waitUntil(
+    caches.open(CACHE_NAME).then(cache => (
+      Promise.all(urlsToCache.map(url => cache.add(url).catch(() => null)))
+    ))
+  );
 });
 
 self.addEventListener('fetch', event => {
