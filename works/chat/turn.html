@@ -205,7 +205,16 @@
           }
         });
 
-        if (!response.ok) throw new Error(`Secure TURN test failed (${response.status}).`);
+        if (!response.ok) {
+          let errorText = '';
+          try {
+            const errorBody = await response.json();
+            errorText = errorBody?.error ? ` ${errorBody.error}` : '';
+          } catch (error) {
+            errorText = '';
+          }
+          throw new Error(`Secure TURN test failed (${response.status}).${errorText}`);
+        }
 
         const iceServers = await response.json();
         if (!Array.isArray(iceServers) || !iceServers.length) {
@@ -214,7 +223,10 @@
 
         setMessage(`Secure TURN is working. ${iceServers.length} server entries verified.`, false);
       } catch (error) {
-        setMessage(error.message || 'Could not verify secure TURN settings.', true);
+        const message = error instanceof TypeError && error.message === 'Failed to fetch'
+          ? 'Could not reach the secure TURN backend. Deploy getTurnCredentials and make sure CORS is enabled.'
+          : error.message || 'Could not verify secure TURN settings.';
+        setMessage(message, true);
       } finally {
         testButton.disabled = false;
       }
