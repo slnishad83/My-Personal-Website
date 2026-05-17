@@ -22,6 +22,7 @@ const storage = firebase.storage();
 // Cloudinary Configuration
 const CLOUDINARY_CLOUD_NAME = 'du2dsimyz';
 const CLOUDINARY_UPLOAD_PRESET = 'chat_app_uploads';
+const TURN_CREDENTIALS_ENDPOINT = 'https://us-central1-my-team-chat-2255.cloudfunctions.net/getTurnCredentials';
 
 // Global Variables
 let currentUser = null;
@@ -84,18 +85,37 @@ const defaultRtcConfig = {
   ]
 };
 
+async function getBackendTurnServers() {
+  if (!currentUser) return [];
+
+  const token = await currentUser.getIdToken();
+  const response = await fetch(TURN_CREDENTIALS_ENDPOINT, {
+    headers: {
+      Authorization: `Bearer ${token}`
+    }
+  });
+
+  if (!response.ok) {
+    throw new Error(`TURN backend returned ${response.status}`);
+  }
+
+  const iceServers = await response.json();
+  if (!Array.isArray(iceServers) || !iceServers.length) {
+    throw new Error('TURN backend returned no servers');
+  }
+
+  return iceServers;
+}
+
 async function getRtcConfig() {
   try {
-    const meteredAppUrl = localStorage.getItem('teamChatMeteredAppUrl') || '';
-    const meteredApiKey = localStorage.getItem('teamChatMeteredApiKey') || '';
-    if (meteredAppUrl && meteredApiKey) {
-      const cleanUrl = meteredAppUrl.replace(/^https?:\/\//, '').replace(/\/$/, '');
-      const response = await fetch(`https://${cleanUrl}/api/v1/turn/credentials?apiKey=${encodeURIComponent(meteredApiKey)}`);
-      if (response.ok) {
-        const iceServers = await response.json();
-        if (Array.isArray(iceServers) && iceServers.length) return { iceServers };
-      }
-    }
+    const backendTurnServers = await getBackendTurnServers();
+    if (backendTurnServers.length) return { iceServers: backendTurnServers };
+  } catch (error) {
+    console.warn('Could not load secure TURN config:', error);
+  }
+
+  try {
     const configuredServers = JSON.parse(localStorage.getItem('teamChatTurnServers') || '[]');
     if (Array.isArray(configuredServers) && configuredServers.length) {
       return { iceServers: [...defaultRtcConfig.iceServers, ...configuredServers] };

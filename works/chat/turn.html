@@ -33,9 +33,19 @@
       font-size: 24px;
     }
 
+    h2 {
+      margin: 22px 0 8px;
+      font-size: 16px;
+    }
+
     p {
       color: #aebac1;
       line-height: 1.5;
+    }
+
+    code {
+      color: #d1f4ee;
+      word-break: break-word;
     }
 
     .guide {
@@ -53,19 +63,9 @@
       line-height: 1.6;
     }
 
-    .guide a {
-      min-height: auto;
-      display: inline;
-      padding: 0;
-      border-radius: 0;
-      background: transparent;
-      color: #00a884;
-      text-decoration: underline;
-    }
-
-    input,
     textarea {
       width: 100%;
+      min-height: 150px;
       margin: 14px 0;
       padding: 14px;
       border: 1px solid #2a3942;
@@ -74,15 +74,6 @@
       color: #e9edef;
       font: 14px Consolas, monospace;
       resize: vertical;
-    }
-
-    input {
-      min-height: 48px;
-      font-family: Arial, sans-serif;
-    }
-
-    textarea {
-      min-height: 150px;
     }
 
     .actions {
@@ -107,6 +98,11 @@
       text-decoration: none;
     }
 
+    button:disabled {
+      cursor: wait;
+      opacity: 0.7;
+    }
+
     .secondary {
       background: #202c33;
       color: #e9edef;
@@ -129,82 +125,105 @@
 <body>
   <main>
     <h1>Call Network Settings</h1>
-    <p>TURN helps voice and video calls connect across mobile data, office Wi-Fi, strict routers, and different networks.</p>
+    <p>Calls now use secure TURN credentials from Firebase. The Metered secret key stays in Firebase and is never stored in this browser.</p>
+
     <div class="guide">
-      <strong>Simple free setup</strong>
+      <strong>Secure public setup</strong>
       <ol>
-        <li>Open <a href="https://www.metered.ca/tools/openrelay/" target="_blank" rel="noopener">Metered OpenRelay</a> and create a free account.</li>
-        <li>Copy your app URL, for example <strong>yourappname.metered.live</strong>.</li>
-        <li>Copy your TURN API key.</li>
-        <li>Paste both below, then click <strong>Test & Save Metered Settings</strong>.</li>
+        <li>Metered domain: <code>teamchatnishad.metered.live</code></li>
+        <li>Store the Metered secret in Firebase as <code>METERED_API_KEY</code>.</li>
+        <li>Deploy the Firebase Function named <code>getTurnCredentials</code>.</li>
+        <li>Click <strong>Test Secure TURN</strong> below while logged in.</li>
       </ol>
-      <p class="hint">No card should be needed for the free allowance. If your app grows heavily, TURN usage may need a paid plan later.</p>
+      <p class="hint">This works the same from desktop browsers, mobile browsers, and the installed web app because every client calls the same secure endpoint.</p>
     </div>
-    <label for="meteredAppUrl">Metered app URL</label>
-    <input id="meteredAppUrl" placeholder="example: yourappname.metered.live">
-    <label for="meteredApiKey">Metered API key</label>
-    <input id="meteredApiKey" placeholder="Paste API key">
+
     <div class="actions">
-      <button id="saveMeteredBtn">Test & Save Metered Settings</button>
-      <button id="clearMeteredBtn" class="secondary">Clear Metered</button>
-    </div>
-    <p>Advanced: paste TURN server JSON here only if your provider gives direct TURN username/password details.</p>
-    <textarea id="turnConfig" spellcheck="false">[]</textarea>
-    <div class="actions">
-      <button id="saveBtn">Save Advanced JSON</button>
-      <button id="clearBtn" class="secondary">Clear</button>
+      <button id="testSecureTurnBtn">Test Secure TURN</button>
+      <button id="clearLegacyBtn" class="secondary">Clear Old Browser Keys</button>
       <a href="index.html" class="secondary">Back to Chat</a>
     </div>
     <div id="message" class="message"></div>
-    <p>Example:</p>
-    <textarea readonly spellcheck="false">[{"urls":"turn:your-turn-server.com:3478","username":"user","credential":"password"}]</textarea>
+
+    <h2>Advanced manual fallback</h2>
+    <p>Use this only if a TURN provider gives direct server, username, and password JSON. Leave it as <code>[]</code> for the secure Metered setup.</p>
+    <textarea id="turnConfig" spellcheck="false">[]</textarea>
+    <div class="actions">
+      <button id="saveBtn">Save Advanced JSON</button>
+      <button id="clearBtn" class="secondary">Clear Advanced JSON</button>
+    </div>
   </main>
+
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
   <script>
-    const appUrl = document.getElementById('meteredAppUrl');
-    const apiKey = document.getElementById('meteredApiKey');
+    const firebaseConfig = {
+      apiKey: "AIzaSyCdbut_FdscAjl-OVSlAUhb7TOTiRNkh34",
+      authDomain: "my-team-chat-2255.firebaseapp.com",
+      projectId: "my-team-chat-2255",
+      storageBucket: "my-team-chat-2255.firebasestorage.app",
+      messagingSenderId: "805016891521",
+      appId: "1:805016891521:web:ac9bc7a252bcf33686dd80"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+
+    const TURN_CREDENTIALS_ENDPOINT = 'https://us-central1-my-team-chat-2255.cloudfunctions.net/getTurnCredentials';
     const textarea = document.getElementById('turnConfig');
     const message = document.getElementById('message');
-    appUrl.value = localStorage.getItem('teamChatMeteredAppUrl') || '';
-    apiKey.value = localStorage.getItem('teamChatMeteredApiKey') || '';
+    const testButton = document.getElementById('testSecureTurnBtn');
+    let currentUser = null;
+
     textarea.value = localStorage.getItem('teamChatTurnServers') || '[]';
 
-    async function testMeteredSettings(cleanUrl, cleanKey) {
-      const response = await fetch(`https://${cleanUrl}/api/v1/turn/credentials?apiKey=${encodeURIComponent(cleanKey)}`);
-      if (!response.ok) throw new Error('Could not verify these settings.');
-      const iceServers = await response.json();
-      if (!Array.isArray(iceServers) || iceServers.length === 0) throw new Error('No TURN servers were returned.');
-      return iceServers;
+    function setMessage(text, isError) {
+      message.textContent = text;
+      message.style.color = isError ? '#ef4444' : '#00a884';
     }
 
-    document.getElementById('saveMeteredBtn').addEventListener('click', async () => {
-      const cleanUrl = appUrl.value.trim().replace(/^https?:\/\//, '').replace(/\/$/, '');
-      const cleanKey = apiKey.value.trim();
-      if (!cleanUrl || !cleanKey) {
-        message.textContent = 'Enter both Metered app URL and API key.';
-        message.style.color = '#ef4444';
-        return;
-      }
-      message.textContent = 'Testing TURN settings...';
-      message.style.color = '#aebac1';
-      try {
-        const iceServers = await testMeteredSettings(cleanUrl, cleanKey);
-        localStorage.setItem('teamChatMeteredAppUrl', cleanUrl);
-        localStorage.setItem('teamChatMeteredApiKey', cleanKey);
-        message.textContent = `TURN settings saved. ${iceServers.length} server entries verified. Future calls will use them automatically on this device/browser.`;
-        message.style.color = '#00a884';
-      } catch (error) {
-        message.textContent = error.message || 'Could not verify these TURN settings.';
-        message.style.color = '#ef4444';
+    firebase.auth().onAuthStateChanged((user) => {
+      currentUser = user;
+      if (!user) {
+        setMessage('Please log in before testing secure TURN settings.', true);
       }
     });
 
-    document.getElementById('clearMeteredBtn').addEventListener('click', () => {
-      appUrl.value = '';
-      apiKey.value = '';
+    document.getElementById('testSecureTurnBtn').addEventListener('click', async () => {
+      if (!currentUser) {
+        setMessage('Please log in before testing secure TURN settings.', true);
+        return;
+      }
+
+      testButton.disabled = true;
+      setMessage('Testing secure TURN settings...', false);
+
+      try {
+        const token = await currentUser.getIdToken();
+        const response = await fetch(TURN_CREDENTIALS_ENDPOINT, {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        });
+
+        if (!response.ok) throw new Error(`Secure TURN test failed (${response.status}).`);
+
+        const iceServers = await response.json();
+        if (!Array.isArray(iceServers) || !iceServers.length) {
+          throw new Error('Secure TURN returned no server entries.');
+        }
+
+        setMessage(`Secure TURN is working. ${iceServers.length} server entries verified.`, false);
+      } catch (error) {
+        setMessage(error.message || 'Could not verify secure TURN settings.', true);
+      } finally {
+        testButton.disabled = false;
+      }
+    });
+
+    document.getElementById('clearLegacyBtn').addEventListener('click', () => {
       localStorage.removeItem('teamChatMeteredAppUrl');
       localStorage.removeItem('teamChatMeteredApiKey');
-      message.textContent = 'Metered TURN settings cleared.';
-      message.style.color = '#00a884';
+      setMessage('Old browser-stored Metered keys cleared on this device.', false);
     });
 
     document.getElementById('saveBtn').addEventListener('click', () => {
@@ -212,18 +231,16 @@
         const parsed = JSON.parse(textarea.value || '[]');
         if (!Array.isArray(parsed)) throw new Error('Config must be a JSON array');
         localStorage.setItem('teamChatTurnServers', JSON.stringify(parsed));
-        message.textContent = parsed.length ? 'TURN settings saved.' : 'TURN settings saved as empty.';
+        setMessage(parsed.length ? 'Advanced TURN JSON saved.' : 'Advanced TURN JSON saved as empty.', false);
       } catch (error) {
-        message.textContent = 'Invalid JSON. Please check the format.';
-        message.style.color = '#ef4444';
+        setMessage('Invalid JSON. Please check the format.', true);
       }
     });
 
     document.getElementById('clearBtn').addEventListener('click', () => {
       textarea.value = '[]';
       localStorage.setItem('teamChatTurnServers', '[]');
-      message.textContent = 'TURN settings cleared.';
-      message.style.color = '#00a884';
+      setMessage('Advanced TURN JSON cleared.', false);
     });
   </script>
 </body>

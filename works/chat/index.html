@@ -17,8 +17,9 @@
       href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="style.css" />
-    <link rel="manifest" href="manifest.json" />
+    <link rel="stylesheet" href="style.css?v=89" />
+    <link rel="manifest" href="manifest.json?v=89" />
+    <link rel="apple-touch-icon" href="app-icon-192.png" />
     <style>
       .toast {
         position: fixed;
@@ -52,16 +53,23 @@
               <div class="user-status-text" id="userStatusText">Online</div>
             </div>
           </div>
-          <div style="display: flex; gap: 8px">
+          <div class="sidebar-actions">
             <button
-              class="icon-btn install-app-btn"
+              class="install-app-btn"
               id="installAppBtn"
               type="button"
               data-install-app
-              title="Install app"
+              aria-label="Install Team Chat app"
+              title="Install Team Chat app"
               style="display: none"
             >
-              &#x2B07;
+              <span class="install-app-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" focusable="false">
+                  <path d="M8 5.75A2.75 2.75 0 0 1 10.75 3h2.5A2.75 2.75 0 0 1 16 5.75v12.5A2.75 2.75 0 0 1 13.25 21h-2.5A2.75 2.75 0 0 1 8 18.25V5.75Zm2.75-1.25c-.69 0-1.25.56-1.25 1.25v12.5c0 .69.56 1.25 1.25 1.25h2.5c.69 0 1.25-.56 1.25-1.25V5.75c0-.69-.56-1.25-1.25-1.25h-2.5Zm.25 12.25h2v1.5h-2v-1.5Z" />
+                  <path d="M12 7.25c.41 0 .75.34.75.75v3.19l.72-.72a.75.75 0 1 1 1.06 1.06l-2 2a.75.75 0 0 1-1.06 0l-2-2a.75.75 0 1 1 1.06-1.06l.72.72V8c0-.41.34-.75.75-.75Z" />
+                </svg>
+              </span>
+              <span class="install-app-label">Install App</span>
             </button>
             <button class="icon-btn" id="darkModeBtn" title="Dark Mode">
               🌙
@@ -1042,6 +1050,6 @@
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-storage-compat.js"></script>
     <script src="app.js"></script>
-    <script src="pwa-install.js"></script>
+    <script src="pwa-install.js?v=89"></script>
   </body>
 </html>

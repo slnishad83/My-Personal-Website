@@ -1,9 +1,21 @@
 (function () {
   let deferredInstallPrompt = null;
-  const isIos = /iphone|ipad|ipod/i.test(window.navigator.userAgent);
-  const isStandalone =
-    window.matchMedia("(display-mode: standalone)").matches ||
-    window.navigator.standalone === true;
+  const userAgent = window.navigator.userAgent;
+  const platform = window.navigator.platform || "";
+  const isIos =
+    /iphone|ipad|ipod/i.test(userAgent) ||
+    (platform === "MacIntel" && window.navigator.maxTouchPoints > 1);
+  const isSafari =
+    /^((?!chrome|android|crios|fxios|edg|opr).)*safari/i.test(userAgent);
+  const isEdge = /edg/i.test(userAgent);
+  const isFirefox = /firefox|fxios/i.test(userAgent);
+
+  function isStandaloneApp() {
+    return (
+      window.matchMedia("(display-mode: standalone)").matches ||
+      window.navigator.standalone === true
+    );
+  }
 
   function getInstallButtons() {
     return Array.from(
@@ -15,6 +27,13 @@
     getInstallButtons().forEach((button) => {
       button.style.display = isVisible ? "" : "none";
       button.disabled = false;
+    });
+  }
+
+  function setButtonsBusy(isBusy) {
+    getInstallButtons().forEach((button) => {
+      button.disabled = isBusy;
+      button.setAttribute("aria-busy", isBusy ? "true" : "false");
     });
   }
 
@@ -47,48 +66,63 @@
     window.alert(message);
   }
 
+  function getManualInstallMessage() {
+    if (isIos) {
+      return "On iPhone or iPad, tap Share, then Add to Home Screen.";
+    }
+
+    if (isEdge) {
+      return "Open the Edge menu, choose Apps, then Install this site as an app.";
+    }
+
+    if (isFirefox) {
+      return "Firefox does not support one-tap web app install here. Add Team Chat from your browser menu or use Chrome or Edge for the app install prompt.";
+    }
+
+    if (isSafari) {
+      return "Open Safari Share, then choose Add to Dock or Add to Home Screen.";
+    }
+
+    return "Open your browser menu and choose Install app, Add to desktop, or Add to Home Screen.";
+  }
+
   function updateInstallUi() {
-    if (isStandalone) {
+    if (isStandaloneApp()) {
       setButtonsVisible(false);
       setHelp("");
       return;
     }
 
     setButtonsVisible(true);
-    if (isIos) {
-      setHelp("On iPhone or iPad, use Share, then Add to Home Screen.");
-    }
+    setHelp(isIos ? getManualInstallMessage() : "");
   }
 
   async function installApp(event) {
     event.preventDefault();
 
-    if (isStandalone) {
+    if (isStandaloneApp()) {
       notify("Team Chat is already installed on this device.");
       return;
     }
 
     if (deferredInstallPrompt) {
-      const button = event.currentTarget;
-      button.disabled = true;
-      deferredInstallPrompt.prompt();
-      const choice = await deferredInstallPrompt.userChoice;
-      deferredInstallPrompt = null;
-      button.disabled = false;
+      setButtonsBusy(true);
+      try {
+        deferredInstallPrompt.prompt();
+        const choice = await deferredInstallPrompt.userChoice;
+        deferredInstallPrompt = null;
 
-      if (choice.outcome === "accepted") {
-        setButtonsVisible(false);
-        setHelp("");
+        if (choice.outcome === "accepted") {
+          setButtonsVisible(false);
+          setHelp("");
+        }
+      } finally {
+        setButtonsBusy(false);
       }
       return;
     }
-
-    if (isIos) {
-      notify("Use Share, then Add to Home Screen to install Team Chat.");
-      return;
-    }
-
-    notify("Use your browser menu and choose Install app or Add to desktop.");
+    setHelp(getManualInstallMessage());
+    notify(getManualInstallMessage());
   }
 
   if ("serviceWorker" in navigator) {

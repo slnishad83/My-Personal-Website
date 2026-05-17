@@ -80,12 +80,25 @@ button {
   justify-content: space-between;
 }
 
+.sidebar-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
+}
+
 .user-info {
   display: flex;
   align-items: center;
   gap: 12px;
   min-width: 0;
+  flex: 1 1 auto;
+  margin-right: 8px;
   cursor: pointer;
+}
+
+.user-info > div:not(.user-avatar) {
+  min-width: 0;
 }
 
 .user-avatar,
@@ -176,6 +189,58 @@ button {
 .mobile-menu-btn:hover,
 .list-item-menu:hover {
   background: #e6e9eb;
+}
+
+.install-app-btn {
+  min-width: 96px;
+  height: 40px;
+  padding: 0 12px 0 10px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--brand);
+  color: #fff;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1;
+  white-space: nowrap;
+  box-shadow: 0 2px 8px rgba(0, 128, 105, 0.24);
+}
+
+.install-app-btn:hover,
+.install-app-btn:focus-visible {
+  background: var(--brand-dark);
+  outline: none;
+}
+
+.install-app-btn:disabled {
+  cursor: wait;
+  opacity: 0.7;
+}
+
+.install-app-icon {
+  width: 18px;
+  height: 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+}
+
+.install-app-icon svg {
+  width: 18px;
+  height: 18px;
+  display: block;
+  fill: currentColor;
+}
+
+.install-app-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .mobile-menu-btn {
@@ -2142,6 +2207,13 @@ body.dark .read-receipt {
   .mobile-menu-btn {
     width: 36px;
     height: 36px;
+  }
+
+  .install-app-btn {
+    height: 36px;
+    min-width: 92px;
+    padding: 0 10px;
+    font-size: 12px;
   }
 
   .chat-actions .icon-btn {

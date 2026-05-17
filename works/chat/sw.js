@@ -1,4 +1,4 @@
-const CACHE_NAME = 'team-chat-v88';
+const CACHE_NAME = 'team-chat-v90';
 const urlsToCache = [
   'index.html',
   'login.html',
@@ -7,7 +7,9 @@ const urlsToCache = [
   'app.js',
   'pwa-install.js',
   'manifest.json',
-  'app-icon.svg'
+  'app-icon.svg',
+  'app-icon-192.png',
+  'app-icon-512.png'
 ];
 
 self.addEventListener('install', event => {
