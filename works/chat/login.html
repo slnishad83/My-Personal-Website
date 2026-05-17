@@ -410,7 +410,12 @@
           await user.sendEmailVerification(getEmailVerificationSettings());
         } catch (error) {
           console.warn("Custom verification link failed, sending standard Firebase verification email.", error);
-          await user.sendEmailVerification();
+          try {
+            await user.sendEmailVerification();
+          } catch (fallbackError) {
+            fallbackError.message = `Verification email failed (${fallbackError.code || "unknown"}). ${fallbackError.message || ""}`;
+            throw fallbackError;
+          }
         }
       }
 
@@ -692,7 +697,7 @@
             if (createdUser) {
               await auth.signOut().catch(() => {});
               successDiv.textContent =
-                "Account created, but the verification email could not be sent. Try logging in and use Resend verification email.";
+                `${getFriendlyAuthError(error, error.message || "Verification email could not be sent.")} The account was created, but email verification was not sent.`;
               successDiv.style.display = "block";
             } else {
               errorDiv.textContent = getFriendlyAuthError(error, "Registration failed. Please try again.");
