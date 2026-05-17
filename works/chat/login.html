@@ -398,6 +398,13 @@
         btn.textContent = isLoading ? loadingLabel : label;
       }
 
+      function getEmailVerificationSettings() {
+        return {
+          url: new URL("verify.html", window.location.href).href,
+          handleCodeInApp: false,
+        };
+      }
+
       function getFriendlyAuthError(error, fallback) {
         const code = error && error.code;
         if (
@@ -567,7 +574,7 @@
           setButtonLoading(btn, true, "Resend verification email", "Sending...");
           try {
             const userCred = await auth.signInWithEmailAndPassword(email, password);
-            await userCred.user.sendEmailVerification();
+            await userCred.user.sendEmailVerification(getEmailVerificationSettings());
             await auth.signOut();
             successDiv.textContent = "Verification email sent. Please check your inbox.";
             successDiv.style.display = "block";
@@ -654,7 +661,7 @@
                 },
               });
 
-            await userCred.user.sendEmailVerification();
+            await userCred.user.sendEmailVerification(getEmailVerificationSettings());
             await auth.signOut();
             successDiv.textContent =
               "✅ Account created! Check your email to verify before logging in.";
