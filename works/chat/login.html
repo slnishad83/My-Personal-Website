@@ -405,6 +405,21 @@
         };
       }
 
+      async function sendVerificationEmail(user) {
+        try {
+          await user.sendEmailVerification(getEmailVerificationSettings());
+        } catch (error) {
+          if (
+            error?.code === "auth/unauthorized-continue-uri" ||
+            error?.code === "auth/invalid-continue-uri"
+          ) {
+            await user.sendEmailVerification();
+            return;
+          }
+          throw error;
+        }
+      }
+
       function getFriendlyAuthError(error, fallback) {
         const code = error && error.code;
         if (
@@ -428,6 +443,12 @@
         }
         if (code === "auth/weak-password") {
           return "Password is too weak. Use at least 6 characters.";
+        }
+        if (
+          code === "auth/unauthorized-continue-uri" ||
+          code === "auth/invalid-continue-uri"
+        ) {
+          return "Verification link setup needs Firebase authorized domain access. A standard verification email can still be sent.";
         }
         return fallback || "Something went wrong. Please try again.";
       }
@@ -574,7 +595,7 @@
           setButtonLoading(btn, true, "Resend verification email", "Sending...");
           try {
             const userCred = await auth.signInWithEmailAndPassword(email, password);
-            await userCred.user.sendEmailVerification(getEmailVerificationSettings());
+            await sendVerificationEmail(userCred.user);
             await auth.signOut();
             successDiv.textContent = "Verification email sent. Please check your inbox.";
             successDiv.style.display = "block";
@@ -635,11 +656,13 @@
           btn.disabled = true;
           btn.textContent = "Creating account...";
 
+          let createdUser = null;
           try {
             const userCred = await auth.createUserWithEmailAndPassword(
               email,
               password,
             );
+            createdUser = userCred.user;
             await userCred.user.updateProfile({ displayName: name });
 
             await db
@@ -661,7 +684,7 @@
                 },
               });
 
-            await userCred.user.sendEmailVerification(getEmailVerificationSettings());
+            await sendVerificationEmail(userCred.user);
             await auth.signOut();
             successDiv.textContent =
               "✅ Account created! Check your email to verify before logging in.";
@@ -670,8 +693,15 @@
             btn.disabled = false;
             btn.textContent = "Create Account →";
           } catch (error) {
-            errorDiv.textContent = getFriendlyAuthError(error, "Registration failed. Please try again.");
-            errorDiv.style.display = "block";
+            if (createdUser) {
+              await auth.signOut().catch(() => {});
+              successDiv.textContent =
+                "Account created, but the verification email could not be sent. Try logging in and use Resend verification email.";
+              successDiv.style.display = "block";
+            } else {
+              errorDiv.textContent = getFriendlyAuthError(error, "Registration failed. Please try again.");
+              errorDiv.style.display = "block";
+            }
             setButtonLoading(btn, false, "Create Account ->", "Creating account...");
           }
         });
