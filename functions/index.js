@@ -30,6 +30,7 @@ async function verifyFirebaseUser(request) {
 exports.getTurnCredentials = onRequest(
   {
     region: 'us-central1',
+    invoker: 'public',
     secrets: [meteredApiKey]
   },
   async (request, response) => {
