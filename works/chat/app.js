@@ -16,6 +16,11 @@ const firebaseConfig = {
 
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
+
+auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL)
+  .catch(error => {
+    console.error('Persistence error:', error);
+  });
 const db = firebase.firestore();
 const storage = firebase.storage();
 
@@ -131,7 +136,7 @@ async function getRtcConfig() {
 }
 
 function updateTurnServerSettings() {
-  window.location.href = 'turn.html';
+  window.location.replace('turn.html');
 }
 
 // Privacy Settings
@@ -2261,7 +2266,7 @@ async function deactivateAccount() {
     isActive: false, deactivatedAt: firebase.firestore.FieldValue.serverTimestamp(), onlineStatus: 'offline'
   });
   await auth.signOut();
-  window.location.href = 'login.html';
+  window.location.replace('login.html');
 }
 
 async function changeEmail() {
@@ -4418,7 +4423,7 @@ async function searchInChat(searchTerm) {
 async function init() {
   auth.onAuthStateChanged(async (user) => {
     if (!user) { 
-      window.location.href = 'login.html'; 
+      window.location.replace('login.html'); 
       return; 
     }
     if (!user.emailVerified) { 
@@ -4429,7 +4434,7 @@ async function init() {
         toast.style.opacity = '1';
       }
       await auth.signOut(); 
-      setTimeout(() => { window.location.href = 'login.html'; }, 2000);
+      setTimeout(() => { window.location.replace('login.html'); }, 2000);
       return; 
     }
     currentUser = user;
@@ -4501,7 +4506,7 @@ async function init() {
   });
   document.getElementById('logoutBtn')?.addEventListener('click', async () => { 
     await auth.signOut(); 
-    window.location.href = 'login.html'; 
+    window.location.replace('login.html'); 
   });
   
   // Close sidebar when clicking on a chat/group item
