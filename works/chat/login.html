@@ -409,14 +409,8 @@
         try {
           await user.sendEmailVerification(getEmailVerificationSettings());
         } catch (error) {
-          if (
-            error?.code === "auth/unauthorized-continue-uri" ||
-            error?.code === "auth/invalid-continue-uri"
-          ) {
-            await user.sendEmailVerification();
-            return;
-          }
-          throw error;
+          console.warn("Custom verification link failed, sending standard Firebase verification email.", error);
+          await user.sendEmailVerification();
         }
       }
 
