@@ -74,7 +74,7 @@ async function getCredentialApiKeyFromSecret(secretKey) {
 
   if (listResult.ok && Array.isArray(listResult.body?.data)) {
     const credential = listResult.body.data.find((item) => item?.apiKey && !item.expired) || listResult.body.data[0];
-    if (credential?.apiKey) return credential.apiKey;
+    if (credential?.apiKey) return { apiKey: credential.apiKey };
   }
 
   const createResult = await fetchMeteredJson(
@@ -87,10 +87,12 @@ async function getCredentialApiKeyFromSecret(secretKey) {
   );
 
   if (!createResult.ok || !createResult.body?.apiKey) {
-    return null;
+    return {
+      error: createResult.body?.message || createResult.body?.error || listResult.body?.message || listResult.body?.error
+    };
   }
 
-  return createResult.body.apiKey;
+  return { apiKey: createResult.body.apiKey };
 }
 
 async function getMeteredIceServers(configuredKey) {
@@ -101,16 +103,16 @@ async function getMeteredIceServers(configuredKey) {
     return directResult;
   }
 
-  const credentialApiKey = await getCredentialApiKeyFromSecret(configuredKey);
-  if (!credentialApiKey) {
+  const credentialResult = await getCredentialApiKeyFromSecret(configuredKey);
+  if (!credentialResult?.apiKey) {
     return {
       ok: false,
       status: directResult.status,
-      error: 'Metered key is not a valid TURN credential API key or secret key'
+      error: credentialResult?.error || 'Metered key is not a valid TURN credential API key or secret key'
     };
   }
 
-  return fetchIceServersWithCredentialApiKey(credentialApiKey);
+  return fetchIceServersWithCredentialApiKey(credentialResult.apiKey);
 }
 
 exports.getTurnCredentials = onRequest(
