@@ -406,17 +406,7 @@
       }
 
       async function sendVerificationEmail(user) {
-        try {
-          await user.sendEmailVerification(getEmailVerificationSettings());
-        } catch (error) {
-          console.warn("Custom verification link failed, sending standard Firebase verification email.", error);
-          try {
-            await user.sendEmailVerification();
-          } catch (fallbackError) {
-            fallbackError.message = `Verification email failed (${fallbackError.code || "unknown"}). ${fallbackError.message || ""}`;
-            throw fallbackError;
-          }
-        }
+        await user.sendEmailVerification();
       }
 
       function getFriendlyAuthError(error, fallback) {
