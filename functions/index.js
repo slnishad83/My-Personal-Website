@@ -136,7 +136,7 @@ exports.getTurnCredentials = onRequest(
     try {
       await verifyFirebaseUser(request);
 
-      const apiKey = meteredApiKey.value();
+      const apiKey = meteredApiKey.value().trim();
       if (!apiKey) {
         response.status(500).json({ error: 'TURN secret is not configured' });
         return;
