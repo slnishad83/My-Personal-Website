@@ -1,5 +1,7 @@
 (function () {
   let deferredInstallPrompt = null;
+  let serviceWorkerReadyPromise = null;
+  const INSTALL_RELOAD_KEY = "teamChatInstallReloaded";
   const userAgent = window.navigator.userAgent;
   const platform = window.navigator.platform || "";
   const isIos =
@@ -43,6 +45,27 @@
       help.textContent = message || "";
       help.style.display = message ? "block" : "none";
     }
+  }
+
+  function prepareServiceWorker() {
+    if (!("serviceWorker" in navigator)) {
+      return Promise.resolve(null);
+    }
+
+    if (!serviceWorkerReadyPromise) {
+      serviceWorkerReadyPromise = navigator.serviceWorker
+        .register("sw.js", { scope: "./" })
+        .then((registration) => {
+          registration.update?.().catch(() => {});
+          return navigator.serviceWorker.ready;
+        })
+        .catch((error) => {
+          console.log("Service Worker registration failed:", error);
+          return null;
+        });
+    }
+
+    return serviceWorkerReadyPromise;
   }
 
   function notify(message, isError) {
@@ -121,17 +144,23 @@
       }
       return;
     }
+
+    await prepareServiceWorker();
+    if (
+      !navigator.serviceWorker?.controller &&
+      !sessionStorage.getItem(INSTALL_RELOAD_KEY)
+    ) {
+      sessionStorage.setItem(INSTALL_RELOAD_KEY, "1");
+      setHelp("Preparing app install. The page will refresh once.");
+      window.location.reload();
+      return;
+    }
+
     setHelp(getManualInstallMessage());
     notify(getManualInstallMessage());
   }
 
-  if ("serviceWorker" in navigator) {
-    window.addEventListener("load", () => {
-      navigator.serviceWorker.register("sw.js").catch((error) => {
-        console.log("Service Worker registration failed:", error);
-      });
-    });
-  }
+  window.addEventListener("load", prepareServiceWorker);
 
   window.addEventListener("beforeinstallprompt", (event) => {
     event.preventDefault();
