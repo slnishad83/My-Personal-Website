@@ -653,6 +653,7 @@
             );
             createdUser = userCred.user;
             await userCred.user.updateProfile({ displayName: name });
+            await sendVerificationEmail(userCred.user);
 
             await db
               .collection("users")
@@ -665,6 +666,8 @@
                 createdAt: new Date(),
                 isActive: true,
                 isFirstTime: true,
+                emailVerified: false,
+                pendingVerification: true,
                 onlineStatus: "offline",
                 privacySettings: {
                   hideReadReceipts: false,
@@ -673,22 +676,20 @@
                 },
               });
 
-            await sendVerificationEmail(userCred.user);
             await auth.signOut();
             successDiv.textContent =
-              "✅ Account created! Check your email to verify before logging in.";
-            successDiv.style.display = "block";
-            successDiv.textContent =
               "Account created! Check Inbox, Spam, and Promotions for the verification email. If it does not arrive in a few minutes, try logging in and tap Resend verification email.";
+            successDiv.style.display = "block";
             document.getElementById("registerForm").reset();
             btn.disabled = false;
             btn.textContent = "Create Account →";
           } catch (error) {
             if (createdUser) {
+              await createdUser.delete().catch(() => {});
               await auth.signOut().catch(() => {});
-              successDiv.textContent =
-                `${getFriendlyAuthError(error, error.message || "Verification email could not be sent.")} The account was created, but email verification was not sent.`;
-              successDiv.style.display = "block";
+              errorDiv.textContent =
+                `${getFriendlyAuthError(error, error.message || "Verification email could not be sent.")} Please wait a few minutes and register again.`;
+              errorDiv.style.display = "block";
             } else {
               errorDiv.textContent = getFriendlyAuthError(error, "Registration failed. Please try again.");
               errorDiv.style.display = "block";

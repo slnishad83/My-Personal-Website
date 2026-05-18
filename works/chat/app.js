@@ -86,6 +86,8 @@ let seenPendingChatRequestIds = new Set();
 let seenPendingGroupInviteIds = new Set();
 let chatRequestListenerReady = false;
 let groupInviteListenerReady = false;
+let mobileBackGuardReady = false;
+let mobileChatHistoryOpen = false;
 
 const defaultRtcConfig = {
   iceServers: [
@@ -327,10 +329,40 @@ function bindRenderedMessageActions() {
 
 function openMobileChatPanel() {
   document.querySelector('.chat-container')?.classList.add('chat-open');
+  pushMobileChatHistory();
 }
 
 function closeMobileChatPanel() {
   document.querySelector('.chat-container')?.classList.remove('chat-open');
+  mobileChatHistoryOpen = false;
+}
+
+function shouldUseMobileBackGuard() {
+  return window.matchMedia('(max-width: 768px)').matches || window.matchMedia('(display-mode: standalone)').matches;
+}
+
+function pushMobileChatHistory() {
+  if (!shouldUseMobileBackGuard() || mobileChatHistoryOpen) return;
+  history.pushState({ teamChatView: 'chat' }, '', window.location.href);
+  mobileChatHistoryOpen = true;
+}
+
+function setupMobileBackGuard() {
+  if (mobileBackGuardReady) return;
+  mobileBackGuardReady = true;
+  if (history.state?.teamChatView !== 'home') {
+    history.replaceState({ teamChatView: 'home' }, '', window.location.href);
+  }
+  window.addEventListener('popstate', () => {
+    if (!shouldUseMobileBackGuard()) return;
+    const chatContainer = document.querySelector('.chat-container');
+    if (chatContainer?.classList.contains('chat-open')) {
+      closeMobileChatPanel();
+      history.replaceState({ teamChatView: 'home' }, '', window.location.href);
+      return;
+    }
+    history.pushState({ teamChatView: 'home' }, '', window.location.href);
+  });
 }
 
 function resetChatPanel() {
@@ -643,6 +675,7 @@ function setCallUi({ mode = 'outgoing', type = 'voice', title = 'Calling...', st
   if (!modal) return;
   activeCallMode = mode;
   modal.style.display = 'flex';
+  resetLocalVideoPreviewPosition();
   shell?.classList.toggle('incoming', mode === 'incoming');
   document.getElementById('callTypeLabel').textContent = type === 'video' ? 'Video call' : 'Voice call';
   document.getElementById('callTitle').textContent = title;
@@ -659,6 +692,80 @@ function setCallUi({ mode = 'outgoing', type = 'voice', title = 'Calling...', st
     audioAvatar.classList.toggle('ringing', mode === 'incoming' || mode === 'outgoing');
     audioAvatar.textContent = (currentChat?.otherUserName || activeCall?.fromUserName || activeCall?.toUserName || '?')[0]?.toUpperCase() || '?';
   }
+}
+
+function resetLocalVideoPreviewPosition() {
+  const localVideo = document.getElementById('localVideo');
+  if (!localVideo) return;
+  localVideo.style.left = '';
+  localVideo.style.top = '';
+  localVideo.style.right = '';
+  localVideo.style.bottom = '';
+}
+
+function swapCallVideoViews() {
+  const localVideo = document.getElementById('localVideo');
+  const remoteVideo = document.getElementById('remoteVideo');
+  if (!localVideo || !remoteVideo || localVideo.style.display === 'none') return;
+  const localStream = localVideo.srcObject;
+  localVideo.srcObject = remoteVideo.srcObject;
+  remoteVideo.srcObject = localStream;
+  localVideo.dataset.swapped = localVideo.dataset.swapped === 'true' ? 'false' : 'true';
+}
+
+function setupCallPreviewInteractions() {
+  const localVideo = document.getElementById('localVideo');
+  const stage = document.querySelector('.call-video-stage');
+  if (!localVideo || !stage || localVideo.dataset.previewReady === 'true') return;
+  localVideo.dataset.previewReady = 'true';
+
+  let dragStart = null;
+  let pointerMoved = false;
+  const clamp = (value, min, max) => Math.max(min, Math.min(value, max));
+
+  localVideo.addEventListener('pointerdown', event => {
+    if (localVideo.style.display === 'none') return;
+    const rect = localVideo.getBoundingClientRect();
+    pointerMoved = false;
+    dragStart = {
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startY: event.clientY,
+      offsetX: event.clientX - rect.left,
+      offsetY: event.clientY - rect.top
+    };
+    localVideo.setPointerCapture?.(event.pointerId);
+  });
+
+  localVideo.addEventListener('pointermove', event => {
+    if (!dragStart || dragStart.pointerId !== event.pointerId) return;
+    if (Math.abs(event.clientX - dragStart.startX) > 4 || Math.abs(event.clientY - dragStart.startY) > 4) {
+      pointerMoved = true;
+    }
+    const stageRect = stage.getBoundingClientRect();
+    const width = localVideo.offsetWidth;
+    const height = localVideo.offsetHeight;
+    const left = clamp(event.clientX - stageRect.left - dragStart.offsetX, 8, stageRect.width - width - 8);
+    const top = clamp(event.clientY - stageRect.top - dragStart.offsetY, 8, stageRect.height - height - 8);
+    localVideo.style.left = `${left}px`;
+    localVideo.style.top = `${top}px`;
+    localVideo.style.right = 'auto';
+    localVideo.style.bottom = 'auto';
+  });
+
+  localVideo.addEventListener('pointerup', event => {
+    if (dragStart?.pointerId === event.pointerId) dragStart = null;
+  });
+  localVideo.addEventListener('pointercancel', () => {
+    dragStart = null;
+  });
+  localVideo.addEventListener('click', event => {
+    if (pointerMoved) {
+      event.preventDefault();
+      return;
+    }
+    swapCallVideoViews();
+  });
 }
 
 function stopLocalCallStream() {
@@ -2461,13 +2568,24 @@ function applyCurrentChatWallpaper() {
 async function loadAllUsers() {
   if (!currentUser) return;
   const snapshot = await db.collection('users').get();
-  allUsers = [];
+  const userMap = new Map();
+  const getUserSortTime = data => data.createdAt?.toMillis?.() || data.createdAt?.getTime?.() || 0;
   snapshot.forEach(doc => {
     const data = doc.data();
-    if (doc.id !== currentUser.uid && !isBlocked(doc.id) && data.isActive !== false) {
-      allUsers.push({ id: doc.id, ...data, phone: data.phone || data.phoneNumber || '' });
+    if (doc.id === currentUser.uid || isBlocked(doc.id) || data.isActive === false) return;
+    if (data.pendingVerification && data.emailVerified !== true) return;
+
+    const phone = data.phone || data.phoneNumber || '';
+    const dedupeKey = (data.email || '').trim().toLowerCase()
+      || String(phone).replace(/\D/g, '')
+      || doc.id;
+    const user = { id: doc.id, ...data, phone };
+    const existing = userMap.get(dedupeKey);
+    if (!existing || getUserSortTime(data) >= getUserSortTime(existing)) {
+      userMap.set(dedupeKey, user);
     }
   });
+  allUsers = [...userMap.values()];
   populateGroupMemberSuggestions();
 }
 
@@ -4438,14 +4556,15 @@ async function init() {
       return; 
     }
     currentUser = user;
+    setupMobileBackGuard();
     document.getElementById('userName').textContent = user.displayName || user.email.split('@')[0];
     document.getElementById('userAvatar').innerHTML = (user.displayName || user.email)[0].toUpperCase();
     const userRef = db.collection('users').doc(user.uid);
     const userDoc = await userRef.get();
     if (!userDoc.exists) {
-      await userRef.set({ uid: user.uid, email: user.email, displayName: user.displayName || user.email.split('@')[0], createdAt: new Date(), isActive: true, isFirstTime: true, onlineStatus: 'online', privacySettings: { hideReadReceipts: false, hideTypingIndicator: false, hideLastSeen: false } });
+      await userRef.set({ uid: user.uid, email: user.email, displayName: user.displayName || user.email.split('@')[0], createdAt: new Date(), isActive: true, isFirstTime: true, emailVerified: true, pendingVerification: false, onlineStatus: 'online', privacySettings: { hideReadReceipts: false, hideTypingIndicator: false, hideLastSeen: false } });
     } else {
-      await userRef.update({ onlineStatus: 'online', lastSeen: new Date() });
+      await userRef.update({ onlineStatus: 'online', lastSeen: new Date(), emailVerified: true, pendingVerification: false });
       if (userDoc.data().privacySettings) privacySettings = userDoc.data().privacySettings;
     }
     window.addEventListener('beforeunload', async () => { await userRef.update({ onlineStatus: 'offline', lastSeen: new Date() }); });
@@ -4524,6 +4643,7 @@ async function init() {
   document.getElementById('rejectCallBtn')?.addEventListener('click', () => endActiveCall('rejected'));
   document.getElementById('endCallBtn')?.addEventListener('click', () => endActiveCall('ended'));
   document.getElementById('closeCallBtn')?.addEventListener('click', handleCallCloseAction);
+  setupCallPreviewInteractions();
   document.getElementById('muteMicBtn')?.addEventListener('click', () => {
     micMuted = !micMuted;
     localCallStream?.getAudioTracks().forEach(track => { track.enabled = !micMuted; });

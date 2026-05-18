@@ -788,6 +788,13 @@ button {
   border: 2px solid rgba(255, 255, 255, 0.75);
   border-radius: 10px;
   background: #1f2c33;
+  cursor: grab;
+  touch-action: none;
+  z-index: 2;
+}
+
+#localVideo:active {
+  cursor: grabbing;
 }
 
 .call-audio-avatar {
