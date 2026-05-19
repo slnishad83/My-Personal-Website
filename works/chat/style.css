@@ -2308,3 +2308,62 @@ body.dark .read-receipt {
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(102, 119, 129, 0.58);
 }
+.badge,
+#requestBadge {
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 999px;
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  font-size: 12px;
+  font-weight: 700;
+}
+.request-section #requestList {
+  display: none;
+}
+
+.request-section.expanded #requestList {
+  display: block;
+}
+#requestBadge {
+  width: 22px !important;
+  min-width: 22px !important;
+  height: 22px !important;
+  padding: 0 !important;
+  border-radius: 50% !important;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1 !important;
+  text-align: center;
+}
+.request-header {
+  cursor: pointer;
+  user-select: none;
+  position: relative;
+  z-index: 5;
+}
+
+#requestList {
+  position: relative;
+  z-index: 4;
+}
+
+.request-section.expanded #requestList {
+  display: block !important;
+}
+#requestBadge {
+  width: 22px !important;
+  min-width: 22px !important;
+  height: 22px !important;
+  padding: 0 !important;
+  border-radius: 50% !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  text-align: center !important;
+  line-height: 1 !important;
+}

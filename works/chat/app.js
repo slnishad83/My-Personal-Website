@@ -465,6 +465,7 @@ function resetChatPanel() {
   document.getElementById('inputArea').style.display = 'none';
   document.getElementById('groupInfoBtn').style.display = 'none';
   closeMobileChatPanel();
+  
 }
 
 function setChatHeaderAvatar(content) {
@@ -1755,7 +1756,7 @@ async function loadReceivedRequests() {
 
   if (badge) {
     badge.textContent = requests.length;
-    badge.style.display = 'inline-block';
+    badge.style.display = 'inline-flex';
   }
   if (requestToggle) requestToggle.textContent = requestSection?.classList.contains('expanded') ? '▲' : '▼';
 
@@ -1807,6 +1808,19 @@ async function loadReceivedRequests() {
 }
 
 function setupRequestListeners() {
+  document.getElementById("requestHeader")?.addEventListener("click", () => {
+  const section = document.querySelector(".request-section");
+  const toggle = document.getElementById("requestToggle");
+
+  section?.classList.toggle("expanded");
+
+  if (toggle) {
+    toggle.textContent =
+      section?.classList.contains("expanded") ? "▲" : "▼";
+  }
+
+  loadReceivedRequests();
+});
   if (!currentUser) return;
   if (chatRequestsUnsubscribe) chatRequestsUnsubscribe();
   if (groupInvitesUnsubscribe) groupInvitesUnsubscribe();
@@ -1849,7 +1863,6 @@ function setupRequestListeners() {
       groupInviteListenerReady = true;
     });
 }
-
 async function acceptGroupInvite(inviteId) {
   if (!currentUser || !inviteId) return;
   const inviteRef = db.collection('groupInvites').doc(inviteId);
