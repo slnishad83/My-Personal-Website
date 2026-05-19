@@ -1513,7 +1513,7 @@ async function uploadDocument(file) {
 }
 
 // ========================================================================
-// REFACTOR SEARCH LOGIC (Fixes Real-time, Duplicates & Request Chips)
+// FIXED: REAL-TIME GLOBAL DIRECTORY SEARCH
 // ========================================================================
 async function searchUsersRealtime(searchTerm) {
   const chatsList = document.getElementById('chatsList');
@@ -1524,50 +1524,31 @@ async function searchUsersRealtime(searchTerm) {
     return;
   }
   
-  const term = searchTerm.trim();
+  const term = searchTerm.trim().toLowerCase();
   
+  // Handle group searching explicitly if on the group workspace tab
   if (currentViewTab === 'groups') {
     searchGroupsRealtime(term);
     return;
   }
 
-  loadAllChatsList(term);
-}
-
-async function loadAllChatsList(searchTerm = '') {
-  const chatsList = document.getElementById('chatsList');
-  if (!chatsList) return;
-
-  const directItems = await buildDirectChatItems();
-  const groupItems = await buildGroupChatItems();
-  
-  const allItems = [...directItems, ...groupItems];
-  updateUnreadBadges(allItems);
-  
-  let items = [...allItems];
-  if (currentViewTab === 'favorites') items = items.filter(item => item.isFavorite);
-  if (currentViewTab === 'unread') items = items.filter(item => item.unreadCount > 0);
-  
-  const term = searchTerm.trim().toLowerCase();
-  
-  if (term) {
-    const chatMatches = items.filter(item =>
+  // For 'all', 'unread', or 'favorites', query the directory directly in real-time
+  try {
+    // Cross-reference existing chats locally to separate established records
+    const directItems = await buildDirectChatItems();
+    const existingUserIds = new Set(directItems.map(item => item.otherUserId).filter(Boolean));
+    
+    // Filter local active conversations matching search criteria
+    const localMatches = directItems.filter(item => 
       (item.name || '').toLowerCase().includes(term) ||
-      (item.preview || '').toLowerCase().includes(term) ||
-      (item.code || '').toLowerCase().includes(term)
+      (item.preview || '').toLowerCase().includes(term)
     );
-    
-    // Track unique IDs that ALREADY have an established history thread row
-    const existingUserIds = new Set();
-    allItems.forEach(item => {
-      if (item.otherUserId) existingUserIds.add(item.otherUserId);
-      if (item.user?.id) existingUserIds.add(item.user.id);
-    });
 
-    const userMatches = [];
-    
+    const directoryMatches = [];
+
+    // Search the global directory array for any registered users who aren't in our active chats
     for (const user of allUsers) {
-      if (existingUserIds.has(user.id)) continue; // Bypass showing request prompts for active contacts
+      if (existingUserIds.has(user.id)) continue; // Skip if we already have an active chat row
       
       const displayName = (user.displayName || '').toLowerCase();
       const email = (user.email || '').toLowerCase();
@@ -1575,57 +1556,59 @@ async function loadAllChatsList(searchTerm = '') {
       const digitsOnly = term.replace(/\D/g, '');
       
       if (displayName.includes(term) || email.includes(term) || (digitsOnly.length >= 6 && phone.includes(digitsOnly))) {
-        userMatches.push({
+        const requestState = await getContactRequestState(user.id);
+        
+        directoryMatches.push({
           id: `user_${user.id}`,
           type: 'user',
           name: user.displayName || user.email || 'User',
           avatar: user.avatar ? `<img src="${user.avatar}">` : escapeHtml((user.displayName || '?')[0].toUpperCase()),
           preview: user.email || user.phone || 'Tap to connect',
+          requestState, // Explicit relationship status object
           unreadCount: 0,
           isFavorite: false,
           isMuted: false,
-          onlineStatus: user.onlineStatus || 'offline',
           user,
           lastMessageTime: new Date(0)
         });
       }
     }
-    
-    const cleanUserMatches = Array.from(new Map(userMatches.map(u => [u.user.id, u])).values());
-    items = [...chatMatches, ...cleanUserMatches];
+
+    // Combine local conversational history rows with global user search rows
+    const completeCombinedItems = [...localMatches, ...directoryMatches];
+    renderChatListItems(completeCombinedItems, chatsList);
+
+  } catch (error) {
+    console.error("Error performing directory search query sync:", error);
   }
+}
+
+// ========================================================================
+// FIXED: LOAD ALL CHATS LIST (Fallback Core Sync Engine)
+// ========================================================================
+async function loadAllChatsList(searchTerm = '') {
+  const chatsList = document.getElementById('chatsList');
+  if (!chatsList) return;
+
+  // If the user is actively typing, let the search function take complete control
+  if (searchTerm.trim() !== '') {
+    searchUsersRealtime(searchTerm);
+    return;
+  }
+
+  // Normal, non-search view implementation
+  const directItems = await buildDirectChatItems();
+  const groupItems = await buildGroupChatItems();
+  const allItems = [...directItems, ...groupItems];
+  updateUnreadBadges(allItems);
+  
+  let items = [...allItems];
+  if (currentViewTab === 'favorites') items = items.filter(item => item.isFavorite);
+  if (currentViewTab === 'unread') items = items.filter(item => item.unreadCount > 0);
   
   items.sort((a, b) => b.lastMessageTime - a.lastMessageTime || a.name.localeCompare(b.name));
   renderChatListItems(items, chatsList);
 }
-
-async function displaySearchResults(results, container) {
-  if (results.length === 0) {
-    container.innerHTML = '<div class="empty-state" style="padding:40px;">👤 No users found</div>';
-    return;
-  }
-  
-  container.innerHTML = '';
-  for (const user of results) {
-    if (isBlocked(user.id)) continue;
-    const requestState = await getContactRequestState(user.id);
-    const userDiv = document.createElement('div');
-    userDiv.className = 'list-item';
-    const phoneValue = user.phone || user.phoneNumber || '';
-    const phoneDisplay = phoneValue ? `📞 ${phoneValue}` : '';
-    userDiv.innerHTML = `
-      <div class="list-avatar">${user.displayName ? user.displayName[0].toUpperCase() : '👤'}</div>
-      <div class="list-info">
-        <div class="list-name">${escapeHtml(user.displayName || 'User')}</div>
-        <div class="list-preview">${escapeHtml(user.email || '')} ${phoneDisplay}</div>
-      </div>
-      <span class="status-chip ${requestState.status}">${requestState.label}</span>
-    `;
-    userDiv.onclick = () => handleUserSelection(user);
-    container.appendChild(userDiv);
-  }
-}
-
 async function handleUserSelection(user) {
   if (!currentUser || !user) return;
   if (user.id === currentUser.uid) {
