@@ -2057,7 +2057,7 @@ async function sendChatRequest(user) {
   scheduleChatListRefresh();
 }
 
-async async function handleUserSelection(user) {
+async function handleUserSelection(user) {
   if (!currentUser || !user?.id) return;
   if (isBlocked(user.id)) {
     showToast("You have blocked this user.", "error");
@@ -3204,7 +3204,7 @@ function searchUsersByIdentity(input) {
   );
 }
 
-async async function getContactRequestState(userId) {
+async function getContactRequestState(userId) {
   if (!currentUser || !userId) return { status: "none", label: "" };
 
   const sentPending = await db
