@@ -2367,3 +2367,6 @@ body.dark .read-receipt {
   text-align: center !important;
   line-height: 1 !important;
 }
+#requestBadge:empty {
+  display: none !important;
+}

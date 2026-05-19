@@ -1758,6 +1758,11 @@ async function loadReceivedRequests() {
     badge.textContent = requests.length;
     badge.style.display = 'inline-flex';
   }
+  if (badge) {
+  badge.textContent = "";
+  badge.style.display = "none";
+}
+
   if (requestToggle) requestToggle.textContent = requestSection?.classList.contains('expanded') ? '▲' : '▼';
 
   requestList.innerHTML = '';
