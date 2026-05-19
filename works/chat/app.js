@@ -1746,13 +1746,16 @@ async function loadReceivedRequests() {
   ].sort((a, b) => (b.createdAt?.toMillis?.() || 0) - (a.createdAt?.toMillis?.() || 0));
 
   const badge = document.getElementById('requestBadge');
-  if (requests.length === 0) {
-    requestList.innerHTML = '<div class="empty-state" style="padding:20px;">No requests</div>';
-    if (badge) badge.style.display = 'none';
-    if (requestToggle) requestToggle.textContent = '▼';
-    requestSection?.classList.remove('expanded');
-    return;
+
+if (badge) {
+  if (requests.length > 0) {
+    badge.textContent = requests.length > 99 ? '99+' : String(requests.length);
+    badge.classList.add('show');
+  } else {
+    badge.textContent = '';
+    badge.classList.remove('show');
   }
+}
 
   if (badge) {
     badge.textContent = requests.length;
@@ -1762,7 +1765,6 @@ async function loadReceivedRequests() {
   badge.textContent = "";
   badge.style.display = "none";
 }
-
   if (requestToggle) requestToggle.textContent = requestSection?.classList.contains('expanded') ? '▲' : '▼';
 
   requestList.innerHTML = '';
