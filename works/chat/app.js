@@ -1442,44 +1442,61 @@ async function uploadDocument(file) {
 }
 
 // ========================================
-// SEARCH FUNCTIONALITY (Real-time with validation)
+// REFACTOR: SERVER-SIDE REAL-TIME SEARCH
 // ========================================
-
-function searchUsersRealtime(searchTerm) {
-  if (currentViewTab !== 'groups') {
-    loadAllChatsList(searchTerm);
-    return;
-  }
+async function searchUsersRealtime(searchTerm) {
   const chatsList = document.getElementById('chatsList');
   if (!chatsList) return;
   
   if (!searchTerm || searchTerm.trim() === '') {
-    loadChatsList();
+    loadCurrentChatList();
     return;
   }
   
-  const term = searchTerm.trim().toLowerCase();
-  const results = [];
-  const searchDigitsOnly = term.replace(/\D/g, '');
+  const term = searchTerm.trim();
+  const lowerTerm = term.toLowerCase();
   
-  allUsers.forEach(user => {
-    if (isBlocked(user.id)) return;
-    const displayName = (user.displayName || '').toLowerCase();
-    const email = (user.email || '').toLowerCase();
-    const phone = ((user.phone || user.phoneNumber || '') + '').replace(/\D/g, '');
-    
-    if (displayName.includes(term) || email.includes(term)) {
-      results.push(user);
-      return;
-    }
-    
-    if (searchDigitsOnly.length >= 6 && phone.includes(searchDigitsOnly)) {
-      results.push(user);
-      return;
-    }
-  });
-  
-  displaySearchResults(results, chatsList);
+  if (currentViewTab === 'groups') {
+    searchGroupsRealtime(term);
+    return;
+  }
+
+  try {
+    // 1. Fetch users matching criteria directly from Firestore
+    // Note: For advanced partial matching, a backend/Algolia setup is ideal, 
+    // but this direct fetch guarantees newly registered users are caught.
+    const snapshot = await db.collection('users')
+      .where('isActive', '==', true)
+      .limit(20)
+      .get();
+      
+    const results = [];
+    const searchDigitsOnly = term.replace(/\D/g, '');
+
+    snapshot.forEach(doc => {
+      const user = { id: doc.id, ...doc.data() };
+      
+      // Don't show yourself or anyone you have blocked
+      if (user.id === currentUser.uid || isBlocked(user.id)) return;
+      
+      const displayName = (user.displayName || '').toLowerCase();
+      const email = (user.email || '').toLowerCase();
+      const phone = String(user.phone || user.phoneNumber || '').replace(/\D/g, '');
+      
+      // Match against Name, Email, or Phone Number
+      if (displayName.includes(lowerTerm) || email.includes(lowerTerm)) {
+        results.push(user);
+      } else if (searchDigitsOnly.length >= 6 && phone.includes(searchDigitsOnly)) {
+        results.push(user);
+      }
+    });
+
+    // 2. Display the fresh real-time results
+    await displaySearchResults(results, chatsList);
+
+  } catch (error) {
+    console.error("Error performing real-time search: ", error);
+  }
 }
 
 async function displaySearchResults(results, container) {
@@ -2568,28 +2585,31 @@ function applyCurrentChatWallpaper() {
 
 async function loadAllUsers() {
   if (!currentUser) return;
-  const snapshot = await db.collection('users').get();
-  const userMap = new Map();
-  const getUserSortTime = data => data.createdAt?.toMillis?.() || data.createdAt?.getTime?.() || 0;
-  snapshot.forEach(doc => {
-    const data = doc.data();
-    if (doc.id === currentUser.uid || isBlocked(doc.id) || data.isActive === false) return;
+  
+  // Changed from .get() to .onSnapshot() for active tracking of new registrations
+  db.collection('users').onSnapshot(snapshot => {
+    const userMap = new Map();
+    const getUserSortTime = data => data.createdAt?.toMillis?.() || data.createdAt?.getTime?.() || 0;
+    
+    snapshot.forEach(doc => {
+      const data = doc.data();
+      if (doc.id === currentUser.uid || isBlocked(doc.id) || data.isActive === false) return;
 
-    const phone = data.phone || data.phoneNumber || '';
-    const displayName = data.displayName || data.name || data.fullName || (data.email || '').split('@')[0] || 'User';
-    const dedupeKey = (data.email || '').trim().toLowerCase()
-      || String(phone).replace(/\D/g, '')
-      || doc.id;
-    const user = { id: doc.id, ...data, displayName, phone };
-    const existing = userMap.get(dedupeKey);
-    if (!existing || getUserSortTime(data) >= getUserSortTime(existing)) {
-      userMap.set(dedupeKey, user);
-    }
+      const phone = data.phone || data.phoneNumber || '';
+      const displayName = data.displayName || data.name || data.fullName || (data.email || '').split('@')[0] || 'User';
+      const dedupeKey = (data.email || '').trim().toLowerCase()
+        || String(phone).replace(/\D/g, '')
+        || doc.id;
+      const user = { id: doc.id, ...data, displayName, phone };
+      const existing = userMap.get(dedupeKey);
+      if (!existing || getUserSortTime(data) >= getUserSortTime(existing)) {
+        userMap.set(dedupeKey, user);
+      }
+    });
+    allUsers = [...userMap.values()];
+    populateGroupMemberSuggestions();
   });
-  allUsers = [...userMap.values()];
-  populateGroupMemberSuggestions();
 }
-
 function populateGroupMemberSuggestions() {
   updateGroupMemberSuggestions();
 }
