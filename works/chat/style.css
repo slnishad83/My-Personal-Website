@@ -256,10 +256,22 @@ button {
 }
 
 .search-box {
+  position: relative;
   order: 2;
   padding: 8px 12px;
   background: var(--panel);
   border-bottom: 1px solid var(--border);
+}
+
+.search-box::before {
+  content: "\1F50D";
+  position: absolute;
+  left: 26px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--muted);
+  font-size: 14px;
+  pointer-events: none;
 }
 
 .search-box input,
@@ -278,7 +290,7 @@ button {
 .search-box input {
   height: 40px;
   border-radius: 8px;
-  padding: 0 14px;
+  padding: 0 14px 0 38px;
   font-size: 14px;
 }
 

@@ -88,6 +88,7 @@ let chatRequestListenerReady = false;
 let groupInviteListenerReady = false;
 let mobileBackGuardReady = false;
 let mobileChatHistoryOpen = false;
+let lastSearchValue = '';
 
 const defaultRtcConfig = {
   iceServers: [
@@ -2573,13 +2574,13 @@ async function loadAllUsers() {
   snapshot.forEach(doc => {
     const data = doc.data();
     if (doc.id === currentUser.uid || isBlocked(doc.id) || data.isActive === false) return;
-    if (data.pendingVerification && data.emailVerified !== true) return;
 
     const phone = data.phone || data.phoneNumber || '';
+    const displayName = data.displayName || data.name || data.fullName || (data.email || '').split('@')[0] || 'User';
     const dedupeKey = (data.email || '').trim().toLowerCase()
       || String(phone).replace(/\D/g, '')
       || doc.id;
-    const user = { id: doc.id, ...data, phone };
+    const user = { id: doc.id, ...data, displayName, phone };
     const existing = userMap.get(dedupeKey);
     if (!existing || getUserSortTime(data) >= getUserSortTime(existing)) {
       userMap.set(dedupeKey, user);
@@ -2598,7 +2599,7 @@ function findUserByMemberInput(input) {
   if (!term) return null;
   const digits = term.replace(/\D/g, '');
   return allUsers.find(user => {
-    const name = (user.displayName || '').toLowerCase();
+    const name = (user.displayName || user.name || user.fullName || '').toLowerCase();
     const email = (user.email || '').toLowerCase();
     const phone = ((user.phone || user.phoneNumber || '') + '').replace(/\D/g, '');
     return email === term ||
@@ -2616,11 +2617,21 @@ function searchUsersByIdentity(input) {
   const digits = term.replace(/\D/g, '');
   return allUsers.filter(user => {
     if (isBlocked(user.id)) return false;
-    const name = (user.displayName || '').toLowerCase();
+    const name = (user.displayName || user.name || user.fullName || '').toLowerCase();
     const email = (user.email || '').toLowerCase();
     const phone = ((user.phone || user.phoneNumber || '') + '').replace(/\D/g, '');
+    const searchable = [
+      user.displayName,
+      user.name,
+      user.fullName,
+      user.email,
+      user.phone,
+      user.phoneNumber,
+      user.username
+    ].filter(Boolean).join(' ').toLowerCase();
     return name.includes(term) ||
       email.includes(term) ||
+      searchable.includes(term) ||
       (digits.length > 0 && phone.includes(digits));
   });
 }
@@ -3014,6 +3025,9 @@ function renderChatListItems(items, container) {
 async function loadAllChatsList(searchTerm = '') {
   const chatsList = document.getElementById('chatsList');
   if (!chatsList) return;
+  if (searchTerm.trim()) {
+    await loadAllUsers();
+  }
   const allItems = [...await buildDirectChatItems(), ...await buildGroupChatItems()];
   updateUnreadBadges(allItems);
   let items = [...allItems];
@@ -4496,11 +4510,59 @@ function switchTab(tab) {
     if (statusList) statusList.style.display = 'none';
     if (groupActions) groupActions.style.display = 'none';
     if (statusActions) statusActions.style.display = 'none';
-    loadAllChatsList();
-    document.getElementById('searchInput').placeholder = 'Search or start a new chat';
+    const searchInput = document.getElementById('searchInput');
+    loadAllChatsList(searchInput?.value || '');
+    searchInput.placeholder = 'Search people or groups';
     document.getElementById('searchInput').oninput = (e) => searchUsersRealtime(e.target.value);
   }
 }
+
+function bindSearchInput() {
+  const searchInput = document.getElementById('searchInput');
+  if (!searchInput || searchInput.dataset.bound === 'true') return;
+  searchInput.dataset.bound = 'true';
+  const runSearch = () => {
+    const value = searchInput.value || '';
+    lastSearchValue = value;
+    if (currentViewTab === 'groups') {
+      searchGroupsRealtime(value);
+    } else if (currentViewTab === 'status') {
+      loadStatusList();
+    } else {
+      searchUsersRealtime(value);
+    }
+  };
+  ['input', 'keyup', 'change', 'search'].forEach(eventName => {
+    searchInput.addEventListener(eventName, runSearch);
+  });
+  setInterval(() => {
+    if (document.activeElement !== searchInput) return;
+    if ((searchInput.value || '') === lastSearchValue) return;
+    runSearch();
+  }, 350);
+}
+
+window.teamChatDebugState = function teamChatDebugState() {
+  return {
+    currentUser: currentUser ? {
+      uid: currentUser.uid,
+      email: currentUser.email,
+      emailVerified: currentUser.emailVerified
+    } : null,
+    currentViewTab,
+    searchValue: document.getElementById('searchInput')?.value || '',
+    allUsersCount: allUsers.length,
+    allUsers: allUsers.map(user => ({
+      id: user.id,
+      displayName: user.displayName || '',
+      email: user.email || '',
+      phone: user.phone || user.phoneNumber || '',
+      isActive: user.isActive,
+      pendingVerification: user.pendingVerification,
+      emailVerified: user.emailVerified
+    }))
+  };
+};
 
 function toggleDarkMode() {
   document.body.classList.toggle('dark');
@@ -4539,6 +4601,7 @@ async function searchInChat(searchTerm) {
 // ========================================
 
 async function init() {
+  bindSearchInput();
   auth.onAuthStateChanged(async (user) => {
     if (!user) { 
       window.location.replace('login.html'); 
