@@ -1607,9 +1607,9 @@ async function loadAllChatsList(searchTerm = '') {
       }
 
       if (isMatch) {
-        const requestState = await getContactRequestState(user.id); //
-        
-        userMatches.push({
+  const requestState = await getContactRequestState(user.id); // Fixed reference pass
+  
+  userMatches.push({
           id: `user_${user.id}`,
           type: 'user',
           name: user.displayName || user.email || 'User',
