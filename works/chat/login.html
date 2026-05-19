@@ -455,11 +455,7 @@
 
       function validatePhone(phone) {
         // Strict Indian format validation rule: exactly 10 digits starting with 6, 7, 8, or 9
-        const cleanPhone = phone.replace(/\s/g, "").replace(/\D/g, "");
-        if (cleanPhone.length === 12 && cleanPhone.startsWith("91")) {
-          return /^[6-9]\d{9}$/.test(cleanPhone.substring(2));
-        }
-        return /^[6-9]\d{9}$/.test(cleanPhone);
+        return /^[6-9]\d{9}$/.test(phone.trim());
       }
 
       function validatePassword(password) {
@@ -700,16 +696,6 @@
             await userCred.user.updateProfile({ displayName: name });
             await sendVerificationEmail(userCred.user);
 
-            // Clean country prefixes to keep database entries uniform
-            const sanitizedPhoneDigits = phone
-              .replace(/\s/g, "")
-              .replace(/\D/g, "");
-            const formattedDbPhone =
-              sanitizedPhoneDigits.length === 12 &&
-              sanitizedPhoneDigits.startsWith("91")
-                ? sanitizedPhoneDigits.substring(2)
-                : sanitizedPhoneDigits;
-
             await db
               .collection("users")
               .doc(userCred.user.uid)
@@ -717,7 +703,7 @@
                 uid: userCred.user.uid,
                 email: email,
                 displayName: name,
-                phone: formattedDbPhone,
+                phone,
                 createdAt: new Date(),
                 isActive: true,
                 isFirstTime: true,
@@ -797,6 +783,6 @@
           }
         });
     </script>
-    <script src="pwa-install.js?v=100"></script>
+    <script src="pwa-install.js?v=109"></script>
   </body>
 </html>
