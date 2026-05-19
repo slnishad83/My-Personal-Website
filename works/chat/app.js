@@ -3411,7 +3411,6 @@ window.addEventListener('click', () => {
   if (menu) menu.style.display = 'none';
 });
 
-// Listening for long-press or right-click context events on chat rows
 document.getElementById('chatsList')?.addEventListener('contextmenu', (e) => {
   const item = e.target.closest('.list-item');
   if (!item) return;
@@ -3442,7 +3441,6 @@ document.getElementById('markReadMenuItem')?.addEventListener('click', async () 
   const chatType = contextMenuTarget.dataset.chatType;
   const unreadCount = Number(contextMenuTarget.dataset.unreadCount || 0);
   if (chatId && chatType) {
-    // Toggle state: if unreadCount > 0, mark as read, else mark as unread
     await markChatReadState(chatId, chatType, unreadCount > 0);
     loadCurrentChatList();
   }
