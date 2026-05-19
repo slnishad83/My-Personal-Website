@@ -89,6 +89,7 @@ let groupInviteListenerReady = false;
 let mobileBackGuardReady = false;
 let mobileChatHistoryOpen = false;
 let lastSearchValue = "";
+let currentViewTab = "all";
 
 const defaultRtcConfig = {
   iceServers: [
@@ -296,9 +297,14 @@ function renderChatListItems(items, container) {
       ? `<span class="unread-pill">${item.unreadCount}</span>`
       : "";
 
-    // VISUAL BUG FIX: Skip rendering action prompt chips for verified active logs
     let statusChip = "";
-    if (item.type !== "direct" && item.type !== "saved" && item.requestState) {
+    let requestAction = "";
+    if (item.type === "user" && item.requestState) {
+      const state = item.requestState.status || "none";
+      const label = item.requestState.label || "Send request";
+      const disabled = state === "sent" ? "disabled" : "";
+      requestAction = `<button class="request-action-btn status-chip ${state}" data-user-id="${escapeHtml(item.user?.id || item.rawUser?.id || item.id.replace(/^user_/, ""))}" ${disabled} type="button">${escapeHtml(label)}</button>`;
+    } else if (item.type !== "direct" && item.type !== "saved" && item.requestState) {
       statusChip = `<span class="status-chip ${item.requestState.status}">${escapeHtml(item.requestState.label)}</span>`;
     }
 
@@ -308,7 +314,7 @@ function renderChatListItems(items, container) {
         <div class="list-name">${item.isFavorite ? "★ " : ""}${escapeHtml(item.name)} ${item.isMuted ? "🔇" : ""}</div>
         <div class="list-preview">${escapeHtml(item.preview || "")}</div>
       </div>
-      ${statusChip}
+      ${requestAction || statusChip}
       ${unread}
       <button class="list-item-menu mute-chat-btn" data-chat-id="${item.id}" data-chat-type="${item.type}">🔇</button>
       <button class="list-item-menu archive-chat-btn" data-chat-id="${item.id}" data-chat-type="${item.type}" data-chat-name="${escapeHtml(item.name)}">📦</button>
@@ -319,6 +325,14 @@ function renderChatListItems(items, container) {
         .querySelectorAll(".mute-chat-btn, .archive-chat-btn")
         .forEach((btn) => btn.remove());
     }
+
+    chatDiv.querySelector(".request-action-btn")?.addEventListener("click", async (e) => {
+      e.stopPropagation();
+      await handleUserSelection({
+        ...(item.user || item.rawUser || item),
+        requestState: item.requestState,
+      });
+    });
 
     chatDiv
       .querySelector(".archive-chat-btn")
@@ -341,7 +355,10 @@ function renderChatListItems(items, container) {
 
     chatDiv.addEventListener("click", () => {
       if (item.type === "user")
-        handleUserSelection(item.user || item.rawUser || item);
+        handleUserSelection({
+          ...(item.user || item.rawUser || item),
+          requestState: item.requestState,
+        });
       else if (item.type === "saved") startSavedMessages();
       else if (item.type === "group") loadGroupChat(item.id, item.name);
       else if (item.user)
@@ -1561,40 +1578,40 @@ function matchesUserSearch(user, rawTerm) {
   const term = normalizeSearchText(rawTerm);
   if (!term) return false;
 
-  if (term.includes("@")) {
-    return (
-      isFullEmailSearch(term) &&
-      normalizeSearchText(user.email || "") === term
-    );
-  }
+  const name = getUserSearchName(user);
+  const email = normalizeSearchText(user.email || "");
+  const phone = String(user.phone || user.phoneNumber || "").replace(/\D/g, "");
+  const digits = term.replace(/\D/g, "");
 
-  if (/^\d+$/.test(term)) {
-    const phone = String(user.phone || user.phoneNumber || "").replace(/\D/g, "");
-    return isFullIndianPhoneSearch(term) && phone === term;
-  }
+  if (matchesNameSearch(name, term)) return true;
 
-  return matchesNameSearch(getUserSearchName(user), term);
+  // Search registered users by partial email after at least 3 characters.
+  if (term.length >= 3 && email.includes(term)) return true;
+
+  // Search registered users by partial phone after at least 3 digits.
+  if (digits.length >= 3 && phone.includes(digits)) return true;
+
+  return false;
 }
 
 function matchesChatItemSearch(item, rawTerm) {
   const term = normalizeSearchText(rawTerm);
   if (!term) return true;
 
-  if (term.includes("@")) {
-    return (
-      isFullEmailSearch(term) &&
-      normalizeSearchText(item.email || item.user?.email || "") === term
-    );
-  }
+  const name = normalizeSearchText(item.name || "");
+  const email = normalizeSearchText(item.email || item.user?.email || "");
+  const phone = String(
+    item.phone || item.user?.phone || item.user?.phoneNumber || "",
+  ).replace(/\D/g, "");
+  const digits = term.replace(/\D/g, "");
+  const preview = normalizeSearchText(item.preview || "");
 
-  if (/^\d+$/.test(term)) {
-    const phone = String(
-      item.phone || item.user?.phone || item.user?.phoneNumber || "",
-    ).replace(/\D/g, "");
-    return isFullIndianPhoneSearch(term) && phone === term;
-  }
+  if (matchesNameSearch(name, term)) return true;
+  if (term.length >= 3 && email.includes(term)) return true;
+  if (digits.length >= 3 && phone.includes(digits)) return true;
+  if (term.length >= 2 && preview.includes(term)) return true;
 
-  return matchesNameSearch(item.name, term);
+  return false;
 }
 
 function mergeDirectContactItems(items) {
@@ -1928,7 +1945,8 @@ async function loadAllChatsList(searchTerm = "") {
   if (currentViewTab === "unread")
     items = items.filter((item) => item.unreadCount > 0);
 
-  const term = searchTerm.trim().toLowerCase();
+  const term = normalizeSearchText(searchTerm);
+  lastSearchValue = searchTerm || "";
 
   if (term) {
     // MATCH 1: Search your existing active chat logs
@@ -1962,8 +1980,8 @@ async function loadAllChatsList(searchTerm = "") {
           isFavorite: false,
           isMuted: false,
           onlineStatus: user.onlineStatus || "offline",
-          user,
-          rawUser: user, // renamed tracker internally to completely avoid property conflicts
+          user: { ...user, requestState },
+          rawUser: { ...user, requestState },
           lastMessageTime: new Date(0),
         });
       }
@@ -1986,7 +2004,9 @@ async function loadAllChatsList(searchTerm = "") {
   // Sort chronologically and update layout view
   items.sort(
     (a, b) =>
-      b.lastMessageTime - a.lastMessageTime || a.name.localeCompare(b.name),
+      (b.lastMessageTime?.getTime?.() || b.lastMessageTime || 0) -
+        (a.lastMessageTime?.getTime?.() || a.lastMessageTime || 0) ||
+      (a.name || "").localeCompare(b.name || ""),
   );
   renderChatListItems(items, chatsList);
 }
@@ -2032,17 +2052,20 @@ async function sendChatRequest(user) {
     createdAt: firebase.firestore.FieldValue.serverTimestamp(),
   });
   showToast("Request sent");
+  lastSearchValue = document.getElementById("searchInput")?.value || lastSearchValue;
   loadCurrentChatList();
+  scheduleChatListRefresh();
 }
 
-async function handleUserSelection(user) {
+async async function handleUserSelection(user) {
   if (!currentUser || !user?.id) return;
   if (isBlocked(user.id)) {
     showToast("You have blocked this user.", "error");
     return;
   }
 
-  const requestState = await getContactRequestState(user.id);
+  const requestState = user.requestState || (await getContactRequestState(user.id));
+
   if (requestState.status === "accepted") {
     await ensureDirectChatDocument(user);
     startDirectChat(user);
@@ -2050,7 +2073,11 @@ async function handleUserSelection(user) {
   }
 
   if (requestState.status === "received") {
-    showToast("Accept this user's request from Requests first");
+    if (requestState.requestId) {
+      await acceptChatRequest(requestState.requestId, user.id);
+    } else {
+      showToast("Accept this user's request from Requests first");
+    }
     return;
   }
 
@@ -2108,11 +2135,20 @@ async function acceptChatRequest(requestId, fromUserId) {
       await db
         .collection("directChats")
         .doc(chatId)
-        .set({
-          participants: [currentUser.uid, fromUserId],
-          status: "active",
-          createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-        });
+        .set(
+          {
+            participants: [currentUser.uid, fromUserId],
+            participantNames: {
+              [currentUser.uid]:
+                currentUser.displayName || currentUser.email?.split("@")[0] || "Me",
+              [fromUserId]: "Contact",
+            },
+            status: "active",
+            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+          },
+          { merge: true },
+        );
     }
     await db
       .collection("chatRequests")
@@ -2122,8 +2158,10 @@ async function acceptChatRequest(requestId, fromUserId) {
         respondedAt: firebase.firestore.FieldValue.serverTimestamp(),
       });
     showToast("Request accepted");
-    loadReceivedRequests();
+    await loadReceivedRequests();
+    lastSearchValue = document.getElementById("searchInput")?.value || lastSearchValue;
     loadCurrentChatList();
+    scheduleChatListRefresh();
 
     const userDoc = await db.collection("users").doc(fromUserId).get();
     if (userDoc.exists) {
@@ -3166,8 +3204,9 @@ function searchUsersByIdentity(input) {
   );
 }
 
-async function getContactRequestState(userId) {
+async async function getContactRequestState(userId) {
   if (!currentUser || !userId) return { status: "none", label: "" };
+
   const sentPending = await db
     .collection("chatRequests")
     .where("fromUserId", "==", currentUser.uid)
@@ -3175,7 +3214,12 @@ async function getContactRequestState(userId) {
     .where("status", "==", "pending")
     .limit(1)
     .get();
-  if (!sentPending.empty) return { status: "sent", label: "Request sent" };
+  if (!sentPending.empty)
+    return {
+      status: "sent",
+      label: "Request sent",
+      requestId: sentPending.docs[0].id,
+    };
 
   const receivedPending = await db
     .collection("chatRequests")
@@ -3185,11 +3229,16 @@ async function getContactRequestState(userId) {
     .limit(1)
     .get();
   if (!receivedPending.empty)
-    return { status: "received", label: "Accept request" };
+    return {
+      status: "received",
+      label: "Accept request",
+      requestId: receivedPending.docs[0].id,
+    };
 
   if (await hasAcceptedChatRelationship(userId))
     return { status: "accepted", label: "Connected" };
-  return { status: "none", label: "Send chat request" };
+
+  return { status: "none", label: "Send request" };
 }
 
 async function hasAcceptedChatRelationship(userId) {
@@ -4434,30 +4483,44 @@ async function clearAllChats() {
 
 function switchTab(tab) {
   if (tab === "chats") tab = "all";
-  currentViewTab = tab;
+  currentViewTab = tab || "all";
   document
     .querySelectorAll(".tab")
     .forEach((t) => t.classList.remove("active"));
-  document.querySelector(`.tab[data-tab="${tab}"]`)?.classList.add("active");
+  document
+    .querySelector(`.tab[data-tab="${currentViewTab}"]`)
+    ?.classList.add("active");
 
   const chatsList = document.getElementById("chatsList");
   const groupsList = document.getElementById("groupsList");
   const statusList = document.getElementById("statusList");
+  const groupActions = document.getElementById("groupActions");
+  const statusActions = document.getElementById("statusActions");
 
-  chatsList.style.display =
-    tab === "groups" || tab === "status" ? "none" : "block";
-  groupsList.style.display = tab === "groups" ? "block" : "none";
+  if (chatsList)
+    chatsList.style.display =
+      currentViewTab === "groups" || currentViewTab === "status"
+        ? "none"
+        : "block";
+  if (groupsList)
+    groupsList.style.display = currentViewTab === "groups" ? "block" : "none";
   if (statusList)
-    statusList.style.display = tab === "status" ? "block" : "none";
+    statusList.style.display = currentViewTab === "status" ? "block" : "none";
+  if (groupActions)
+    groupActions.style.display = currentViewTab === "groups" ? "flex" : "none";
+  if (statusActions)
+    statusActions.style.display = currentViewTab === "status" ? "flex" : "none";
 
   loadCurrentChatList();
 }
 
 function bindSearchInput() {
   const input = document.getElementById("searchInput");
-  if (!input) return;
+  if (!input || input.dataset.searchBound === "true") return;
+  input.dataset.searchBound = "true";
   input.addEventListener("input", (e) => {
-    searchUsersRealtime(e.target.value);
+    lastSearchValue = e.target.value || "";
+    searchUsersRealtime(lastSearchValue);
   });
 }
 

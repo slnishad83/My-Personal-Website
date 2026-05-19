@@ -2,9 +2,9 @@
   "name": "Team Chat",
   "short_name": "TeamChat",
   "description": "Complete team chat application",
-  "id": "/works/chat/",
-  "start_url": "/works/chat/index.html",
-  "scope": "/works/chat/",
+  "id": "./",
+"start_url": "./index.html",
+"scope": "./"
   "display": "standalone",
   "display_override": ["standalone", "minimal-ui"],
   "theme_color": "#008069",
