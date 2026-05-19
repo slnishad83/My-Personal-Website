@@ -65,8 +65,12 @@
             >
               <span class="install-app-icon" aria-hidden="true">
                 <svg viewBox="0 0 24 24" focusable="false">
-                  <path d="M8 5.75A2.75 2.75 0 0 1 10.75 3h2.5A2.75 2.75 0 0 1 16 5.75v12.5A2.75 2.75 0 0 1 13.25 21h-2.5A2.75 2.75 0 0 1 8 18.25V5.75Zm2.75-1.25c-.69 0-1.25.56-1.25 1.25v12.5c0 .69.56 1.25 1.25 1.25h2.5c.69 0 1.25-.56 1.25-1.25V5.75c0-.69-.56-1.25-1.25-1.25h-2.5Zm.25 12.25h2v1.5h-2v-1.5Z" />
-                  <path d="M12 7.25c.41 0 .75.34.75.75v3.19l.72-.72a.75.75 0 1 1 1.06 1.06l-2 2a.75.75 0 0 1-1.06 0l-2-2a.75.75 0 1 1 1.06-1.06l.72.72V8c0-.41.34-.75.75-.75Z" />
+                  <path
+                    d="M8 5.75A2.75 2.75 0 0 1 10.75 3h2.5A2.75 2.75 0 0 1 16 5.75v12.5A2.75 2.75 0 0 1 13.25 21h-2.5A2.75 2.75 0 0 1 8 18.25V5.75Zm2.75-1.25c-.69 0-1.25.56-1.25 1.25v12.5c0 .69.56 1.25 1.25 1.25h2.5c.69 0 1.25-.56 1.25-1.25V5.75c0-.69-.56-1.25-1.25-1.25h-2.5Zm.25 12.25h2v1.5h-2v-1.5Z"
+                  />
+                  <path
+                    d="M12 7.25c.41 0 .75.34.75.75v3.19l.72-.72a.75.75 0 1 1 1.06 1.06l-2 2a.75.75 0 0 1-1.06 0l-2-2a.75.75 0 1 1 1.06-1.06l.72.72V8c0-.41.34-.75.75-.75Z"
+                  />
                 </svg>
               </span>
               <span class="install-app-label">Install App</span>
@@ -90,7 +94,11 @@
           <div class="request-header" id="requestHeader">
             💌 Chat Requests
             <span style="display: inline-flex; align-items: center; gap: 8px">
-              <span id="requestBadge" class="badge" style="display: none"></span>
+              <span
+                id="requestBadge"
+                class="badge"
+                style="display: none"
+              ></span>
               <span id="requestToggle">▼</span>
             </span>
           </div>
@@ -120,8 +128,22 @@
         </div>
 
         <div class="tabs">
-          <button class="tab active" data-tab="all">All <span id="allUnreadBadge" class="tab-badge" style="display: none"></span></button>
-          <button class="tab" data-tab="unread">🔔 Unread <span id="unreadTabBadge" class="tab-badge" style="display: none"></span></button>
+          <button class="tab active" data-tab="all">
+            All
+            <span
+              id="allUnreadBadge"
+              class="tab-badge"
+              style="display: none"
+            ></span>
+          </button>
+          <button class="tab" data-tab="unread">
+            🔔 Unread
+            <span
+              id="unreadTabBadge"
+              class="tab-badge"
+              style="display: none"
+            ></span>
+          </button>
           <button class="tab" data-tab="favorites">⭐ Favorites</button>
           <button class="tab" data-tab="groups">👥 Groups</button>
           <button class="tab" data-tab="status">Status</button>
@@ -168,14 +190,35 @@
             &larr;
           </button>
           <div id="chatHeaderInfo" class="chat-header-info" title="Chat info">
-            <div id="currentChatAvatar" class="list-avatar chat-header-avatar">?</div>
+            <div id="currentChatAvatar" class="list-avatar chat-header-avatar">
+              ?
+            </div>
             <h2 id="currentChatName">Select a chat</h2>
             <div class="chat-status" id="chatStatus"></div>
           </div>
           <div class="chat-actions">
-            <button class="icon-btn" id="voiceCallBtn" title="Voice call" aria-label="Voice call">📞</button>
-            <button class="icon-btn" id="videoCallBtn" title="Video call" aria-label="Video call">🎥</button>
-            <button class="icon-btn" id="searchChatBtn" title="Search in chat" aria-label="Search in chat">
+            <button
+              class="icon-btn"
+              id="voiceCallBtn"
+              title="Voice call"
+              aria-label="Voice call"
+            >
+              📞
+            </button>
+            <button
+              class="icon-btn"
+              id="videoCallBtn"
+              title="Video call"
+              aria-label="Video call"
+            >
+              🎥
+            </button>
+            <button
+              class="icon-btn"
+              id="searchChatBtn"
+              title="Search in chat"
+              aria-label="Search in chat"
+            >
               🔍
             </button>
             <button
@@ -187,7 +230,12 @@
             >
               ℹ️
             </button>
-            <button class="icon-btn" id="wallpaperBtn" title="Change Wallpaper" aria-label="Change Wallpaper">
+            <button
+              class="icon-btn"
+              id="wallpaperBtn"
+              title="Change Wallpaper"
+              aria-label="Change Wallpaper"
+            >
               🖼️
             </button>
           </div>
@@ -306,10 +354,18 @@
         </div>
 
         <div class="input-area" id="inputArea" style="display: none">
-          <div id="connectionBanner" class="connection-banner" style="display: none">
+          <div
+            id="connectionBanner"
+            class="connection-banner"
+            style="display: none"
+          >
             Offline. Messages will send when your connection is back.
           </div>
-          <div id="attachmentPreview" class="attachment-preview" style="display: none"></div>
+          <div
+            id="attachmentPreview"
+            class="attachment-preview"
+            style="display: none"
+          ></div>
           <div style="position: relative">
             <button class="emoji-btn" id="emojiBtn" title="Emoji">😊</button>
             <div id="emojiPicker" class="emoji-picker"></div>
@@ -324,7 +380,12 @@
           <button class="attach-btn" id="attachBtn" title="Attach file">
             📎
           </button>
-          <button class="attach-btn" id="pollBtn" title="Create poll" aria-label="Create poll">
+          <button
+            class="attach-btn"
+            id="pollBtn"
+            title="Create poll"
+            aria-label="Create poll"
+          >
             ▦
           </button>
           <input
@@ -456,7 +517,11 @@
           </p>
           <div class="privacy-row">
             <span>Only admins can send messages</span>
-            <label class="switch"><input type="checkbox" id="newGroupAdminsOnlySend" /><span class="slider"></span></label>
+            <label class="switch"
+              ><input type="checkbox" id="newGroupAdminsOnlySend" /><span
+                class="slider"
+              ></span
+            ></label>
           </div>
         </div>
         <div class="modal-footer">
@@ -528,11 +593,19 @@
           </div>
           <div class="privacy-row" id="groupSendPermissionRow">
             <span>Only admins can send messages</span>
-            <label class="switch"><input type="checkbox" id="groupAdminsOnlySend" /><span class="slider"></span></label>
+            <label class="switch"
+              ><input type="checkbox" id="groupAdminsOnlySend" /><span
+                class="slider"
+              ></span
+            ></label>
           </div>
           <div class="privacy-row" id="groupEditPermissionRow">
             <span>Only admins can edit group info</span>
-            <label class="switch"><input type="checkbox" id="groupAdminsOnlyEdit" /><span class="slider"></span></label>
+            <label class="switch"
+              ><input type="checkbox" id="groupAdminsOnlyEdit" /><span
+                class="slider"
+              ></span
+            ></label>
           </div>
           <div style="margin-top: 20px">
             <h4>Members</h4>
@@ -588,13 +661,21 @@
           </div>
           <div class="chat-info-details" id="chatInfoDetails"></div>
           <div class="chat-info-actions">
-            <button id="chatInfoMuteBtn" class="setting-item">Mute notifications</button>
-            <button id="chatInfoWallpaperBtn" class="setting-item">Wallpaper</button>
-            <button id="chatInfoBlockBtn" class="setting-item danger">Block contact</button>
+            <button id="chatInfoMuteBtn" class="setting-item">
+              Mute notifications
+            </button>
+            <button id="chatInfoWallpaperBtn" class="setting-item">
+              Wallpaper
+            </button>
+            <button id="chatInfoBlockBtn" class="setting-item danger">
+              Block contact
+            </button>
           </div>
           <div class="shared-section">
             <div class="shared-tabs">
-              <button class="shared-tab active" data-shared-tab="media">Media</button>
+              <button class="shared-tab active" data-shared-tab="media">
+                Media
+              </button>
               <button class="shared-tab" data-shared-tab="docs">Docs</button>
               <button class="shared-tab" data-shared-tab="links">Links</button>
             </div>
@@ -753,7 +834,9 @@
           <span class="close-modal closeBlockedModal">&times;</span>
         </div>
         <div class="modal-body">
-          <p class="modal-helper">Blocked users cannot send you new chat requests.</p>
+          <p class="modal-helper">
+            Blocked users cannot send you new chat requests.
+          </p>
           <div id="blockedUsersList"></div>
         </div>
       </div>
@@ -885,21 +968,65 @@
             <h3 id="callTitle">Calling...</h3>
             <p id="callStatusText">Connecting</p>
           </div>
-          <button id="closeCallBtn" class="call-icon-btn" title="Close call" aria-label="Close call">×</button>
+          <button
+            id="closeCallBtn"
+            class="call-icon-btn"
+            title="Close call"
+            aria-label="Close call"
+          >
+            ×
+          </button>
         </div>
         <div class="call-video-stage">
           <video id="remoteVideo" autoplay playsinline></video>
           <video id="localVideo" autoplay playsinline muted></video>
           <audio id="remoteAudio" autoplay playsinline></audio>
           <div id="callAudioAvatar" class="call-audio-avatar">?</div>
-          <div id="callDuration" class="call-duration" style="display: none">0:00</div>
+          <div id="callDuration" class="call-duration" style="display: none">
+            0:00
+          </div>
         </div>
         <div class="call-controls">
-          <button id="muteMicBtn" class="call-icon-btn" title="Mute microphone" aria-label="Mute microphone">🎙️</button>
-          <button id="toggleCameraBtn" class="call-icon-btn" title="Turn camera on/off" aria-label="Turn camera on or off">📷</button>
-          <button id="acceptCallBtn" class="call-icon-btn accept-call" title="Accept" aria-label="Accept call">✓</button>
-          <button id="rejectCallBtn" class="call-icon-btn end-call" title="Reject" aria-label="Reject call">✕</button>
-          <button id="endCallBtn" class="call-icon-btn end-call" title="End call" aria-label="End call">⏹</button>
+          <button
+            id="muteMicBtn"
+            class="call-icon-btn"
+            title="Mute microphone"
+            aria-label="Mute microphone"
+          >
+            🎙️
+          </button>
+          <button
+            id="toggleCameraBtn"
+            class="call-icon-btn"
+            title="Turn camera on/off"
+            aria-label="Turn camera on or off"
+          >
+            📷
+          </button>
+          <button
+            id="acceptCallBtn"
+            class="call-icon-btn accept-call"
+            title="Accept"
+            aria-label="Accept call"
+          >
+            ✓
+          </button>
+          <button
+            id="rejectCallBtn"
+            class="call-icon-btn end-call"
+            title="Reject"
+            aria-label="Reject call"
+          >
+            ✕
+          </button>
+          <button
+            id="endCallBtn"
+            class="call-icon-btn end-call"
+            title="End call"
+            aria-label="End call"
+          >
+            ⏹
+          </button>
         </div>
       </div>
     </div>
@@ -911,8 +1038,16 @@
           <span class="close-modal closeStatusModal">&times;</span>
         </div>
         <div class="modal-body">
-          <textarea id="statusTextInput" placeholder="Type a status..." rows="4"></textarea>
-          <div id="statusImagePreview" class="attachment-preview-inline" style="display: none"></div>
+          <textarea
+            id="statusTextInput"
+            placeholder="Type a status..."
+            rows="4"
+          ></textarea>
+          <div
+            id="statusImagePreview"
+            class="attachment-preview-inline"
+            style="display: none"
+          ></div>
           <button id="statusImageBtn" class="setting-item">Add image</button>
         </div>
         <div class="modal-footer">
@@ -922,7 +1057,11 @@
       </div>
     </div>
 
-    <div id="statusViewerModal" class="modal status-viewer-modal" style="display: none">
+    <div
+      id="statusViewerModal"
+      class="modal status-viewer-modal"
+      style="display: none"
+    >
       <div class="status-viewer">
         <button class="status-viewer-close closeStatusViewer">&times;</button>
         <div class="status-viewer-head">
@@ -937,7 +1076,12 @@
       </div>
     </div>
 
-    <input type="file" id="statusImageInput" accept="image/*" style="display: none" />
+    <input
+      type="file"
+      id="statusImageInput"
+      accept="image/*"
+      style="display: none"
+    />
 
     <!-- Context Menu for Chats -->
     <div
@@ -1045,6 +1189,7 @@
       </div>
     </div>
 
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>

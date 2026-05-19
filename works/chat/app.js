@@ -1535,16 +1535,17 @@ function searchUsersRealtime(searchTerm) {
   loadAllChatsList(term);
 }
 
+// ========================================================================
+// FIXED: COMBINED REAL-TIME HISTORY & DIRECTORY LOOKUP ENGINE
+// ========================================================================
+// ========================================================================
+// FIXED: COMBINED REAL-TIME HISTORY & DIRECTORY LOOKUP ENGINE
+// ========================================================================
 async function loadAllChatsList(searchTerm = '') {
   const chatsList = document.getElementById('chatsList');
   if (!chatsList) return;
 
-  // 1. Core Synchronization: Pre-load directory cache if a search term is present
-  if (searchTerm.trim()) {
-    await loadAllUsers();
-  }
-
-  // 2. Compile structural layouts from active histories
+  // 1. Compile conversations from active chat histories
   const directItems = await buildDirectChatItems();
   const groupItems = await buildGroupChatItems();
   const allItems = [...directItems, ...groupItems];
@@ -1557,30 +1558,25 @@ async function loadAllChatsList(searchTerm = '') {
   const term = searchTerm.trim().toLowerCase();
   
   if (term) {
-    // Check if the search term looks like a valid phone input or a completed email format
     const isEmailSearch = term.includes('@') && term.includes('.');
     const cleanDigitsOnly = term.replace(/\D/g, '');
-    const isPhoneSearch = cleanDigitsOnly.length === 10; // Exactly 10 digits required
+    const isPhoneSearch = cleanDigitsOnly.length === 10;
 
-    // FILTER LOCAL HISTORY CHATS
+    // MATCH 1: Search your existing active chat logs
     const chatMatches = items.filter(item => {
       const nameLower = (item.name || '').toLowerCase();
       const emailLower = (item.email || '').toLowerCase();
       const phoneClean = String(item.phone || '').replace(/\D/g, '');
 
-      if (isEmailSearch) {
-        return emailLower === term; // Exact email validation match
-      }
-      if (isPhoneSearch) {
-        return phoneClean === cleanDigitsOnly; // Exact phone validation match
-      }
+      if (isEmailSearch) return emailLower === term;
+      if (isPhoneSearch) return phoneClean === cleanDigitsOnly;
 
-      // STRICT PREFIX MATCH BY NAME: Match if any individual name word starts with the search phrase
+      // Typeahead match: Check if any word starts with your search term
       const nameParts = nameLower.split(/\s+/).filter(Boolean);
       return nameParts.some(part => part.startsWith(term));
     });
     
-    // Create a Set tracking the unique IDs currently on screen to completely prevent duplications
+    // Track unique IDs that are already matching in your chat history view
     const visibleUserIds = new Set();
     chatMatches.forEach(item => {
       if (item.otherUserId) visibleUserIds.add(item.otherUserId);
@@ -1589,10 +1585,10 @@ async function loadAllChatsList(searchTerm = '') {
 
     const userMatches = [];
     
-    // SCAN THE REAL-TIME IDENTITY CACHE FOR MISSING DIRECTORY USER RECORDS
-    // SCAN THE REAL-TIME IDENTITY CACHE FOR MISSING DIRECTORY USER RECORDS
+    // MATCH 2: Look through the directory for users you haven't messaged yet
     for (const user of allUsers) {
-      if (visibleUserIds.has(user.id)) continue; // Bypass if already matched locally
+      // PREVENT CONFLICTS: Skip if this user is already visible in chatMatches
+      if (visibleUserIds.has(user.id)) continue;
 
       const displayNameLower = (user.displayName || '').toLowerCase();
       const emailLower = (user.email || '').toLowerCase();
@@ -1601,12 +1597,11 @@ async function loadAllChatsList(searchTerm = '') {
       let isMatch = false;
 
       if (isEmailSearch) {
-        isMatch = (emailLower === term); // Must match email fully
+        isMatch = (emailLower === term);
       } else if (isPhoneSearch) {
-        isMatch = (phoneClean === cleanDigitsOnly); // Must match phone fully
+        isMatch = (phoneClean === cleanDigitsOnly);
       } else {
-        // STRICT PREFIX MATCH BY NAME
-        // Splits "Muhammed Halid" into ["muhammed", "halid"] and checks if any word starts with "hal"
+        // Multi-part name prefix match
         const nameParts = displayNameLower.split(/\s+/).filter(Boolean);
         isMatch = nameParts.some(part => part.startsWith(term));
       }
@@ -1617,39 +1612,33 @@ async function loadAllChatsList(searchTerm = '') {
         userMatches.push({
           id: `user_${user.id}`,
           type: 'user',
-          name: user.displayName || user.email || 'User', //
-          avatar: user.avatar ? `<img src="${user.avatar}">` : escapeHtml((user.displayName || '?')[0].toUpperCase()), //
-          preview: user.email || user.phone || 'Tap to connect', //
+          name: user.displayName || user.email || 'User',
+          avatar: user.avatar ? `<img src="${user.avatar}">` : escapeHtml((user.displayName || '?')[0].toUpperCase()),
+          preview: user.email || user.phone || 'Tap to connect',
           requestState,
           unreadCount: 0,
           isFavorite: false,
           isMuted: false,
-          onlineStatus: user.onlineStatus || 'offline', //
-          user,
-          lastMessageTime: new Date(0) //
+          onlineStatus: user.onlineStatus || 'offline',
+          rawUser: user, // renamed tracker internally to completely avoid property conflicts
+          lastMessageTime: new Date(0)
         });
       }
     }
     
-    const cleanUserMatches = Array.from(new Map(userMatches.map(u => [u.user.id, u])).values());
+    // FIXED CORRECTION LAYER: Read directly from item.id to completely avoid mapping crashes
+    const cleanUserMatches = Array.from(new Map(userMatches.map(u => [u.id, u])).values());
     items = [...chatMatches, ...cleanUserMatches];
+  } else {
+    // Whitelist core operational fallback: when no search text is active, default back to showing WhatsApp style history list
+    items = [...allItems];
+    if (currentViewTab === 'favorites') items = items.filter(item => item.isFavorite);
+    if (currentViewTab === 'unread') items = items.filter(item => item.unreadCount > 0);
   }
   
+  // Sort chronologically and update layout view
   items.sort((a, b) => b.lastMessageTime - a.lastMessageTime || a.name.localeCompare(b.name));
   renderChatListItems(items, chatsList);
-}
-
-async function ensureDirectChatExists(otherUserId) {
-  const chatId = getDirectChatId(currentUser.uid, otherUserId);
-  const chatDoc = await db.collection('directChats').doc(chatId).get();
-  if (!chatDoc.exists) {
-    await db.collection('directChats').doc(chatId).set({
-      participants: [currentUser.uid, otherUserId],
-      status: 'active',
-      createdAt: firebase.firestore.FieldValue.serverTimestamp()
-    });
-  }
-  return chatId;
 }
 
 async function sendChatRequest(user) {
