@@ -1513,9 +1513,9 @@ async function uploadDocument(file) {
 }
 
 // ========================================================================
-// FIXED: REAL-TIME GLOBAL DIRECTORY SEARCH
+// FIXED: STRICT PREFIX & EXACT MULTI-CRITERIA SEARCH ENGINE
 // ========================================================================
-async function searchUsersRealtime(searchTerm) {
+function searchUsersRealtime(searchTerm) {
   const chatsList = document.getElementById('chatsList');
   if (!chatsList) return;
   
@@ -1526,77 +1526,25 @@ async function searchUsersRealtime(searchTerm) {
   
   const term = searchTerm.trim().toLowerCase();
   
-  // Handle group searching explicitly if on the group workspace tab
   if (currentViewTab === 'groups') {
     searchGroupsRealtime(term);
     return;
   }
 
-  // For 'all', 'unread', or 'favorites', query the directory directly in real-time
-  try {
-    // Cross-reference existing chats locally to separate established records
-    const directItems = await buildDirectChatItems();
-    const existingUserIds = new Set(directItems.map(item => item.otherUserId).filter(Boolean));
-    
-    // Filter local active conversations matching search criteria
-    const localMatches = directItems.filter(item => 
-      (item.name || '').toLowerCase().includes(term) ||
-      (item.preview || '').toLowerCase().includes(term)
-    );
-
-    const directoryMatches = [];
-
-    // Search the global directory array for any registered users who aren't in our active chats
-    for (const user of allUsers) {
-      if (existingUserIds.has(user.id)) continue; // Skip if we already have an active chat row
-      
-      const displayName = (user.displayName || '').toLowerCase();
-      const email = (user.email || '').toLowerCase();
-      const phone = String(user.phone || user.phoneNumber || '').replace(/\D/g, '');
-      const digitsOnly = term.replace(/\D/g, '');
-      
-      if (displayName.includes(term) || email.includes(term) || (digitsOnly.length >= 6 && phone.includes(digitsOnly))) {
-        const requestState = await getContactRequestState(user.id);
-        
-        directoryMatches.push({
-          id: `user_${user.id}`,
-          type: 'user',
-          name: user.displayName || user.email || 'User',
-          avatar: user.avatar ? `<img src="${user.avatar}">` : escapeHtml((user.displayName || '?')[0].toUpperCase()),
-          preview: user.email || user.phone || 'Tap to connect',
-          requestState, // Explicit relationship status object
-          unreadCount: 0,
-          isFavorite: false,
-          isMuted: false,
-          user,
-          lastMessageTime: new Date(0)
-        });
-      }
-    }
-
-    // Combine local conversational history rows with global user search rows
-    const completeCombinedItems = [...localMatches, ...directoryMatches];
-    renderChatListItems(completeCombinedItems, chatsList);
-
-  } catch (error) {
-    console.error("Error performing directory search query sync:", error);
-  }
+  // Pass control straight to our updated combining engine
+  loadAllChatsList(term);
 }
 
-// ========================================================================
-// FIXED: LOAD ALL CHATS LIST (Fallback Core Sync Engine)
-// ========================================================================
 async function loadAllChatsList(searchTerm = '') {
   const chatsList = document.getElementById('chatsList');
   if (!chatsList) return;
 
-  // If the user is actively typing, let the search function take complete control
-  if (searchTerm.trim() !== '') {
-    searchUsersRealtime(searchTerm);
-    return;
+  // 1. Core Synchronization: Pre-load directory cache if a search term is present
+  if (searchTerm.trim()) {
+    await loadAllUsers();
   }
 
-  // Normal, non-search view implementation
+  // 2. Compile structural layouts from active histories
   const directItems = await buildDirectChatItems();
   const groupItems = await buildGroupChatItems();
   const allItems = [...directItems, ...groupItems];
@@ -1606,50 +1554,87 @@ async function loadAllChatsList(searchTerm = '') {
   if (currentViewTab === 'favorites') items = items.filter(item => item.isFavorite);
   if (currentViewTab === 'unread') items = items.filter(item => item.unreadCount > 0);
   
+  const term = searchTerm.trim().toLowerCase();
+  
+  if (term) {
+    // Check if the search term looks like a valid phone input or a completed email format
+    const isEmailSearch = term.includes('@') && term.includes('.');
+    const cleanDigitsOnly = term.replace(/\D/g, '');
+    const isPhoneSearch = cleanDigitsOnly.length === 10; // Exactly 10 digits required
+
+    // FILTER LOCAL HISTORY CHATS
+    const chatMatches = items.filter(item => {
+      const nameLower = (item.name || '').toLowerCase();
+      const emailLower = (item.email || '').toLowerCase();
+      const phoneClean = String(item.phone || '').replace(/\D/g, '');
+
+      if (isEmailSearch) {
+        return emailLower === term; // Exact email validation match
+      }
+      if (isPhoneSearch) {
+        return phoneClean === cleanDigitsOnly; // Exact phone validation match
+      }
+
+      // STRICT PREFIX MATCH BY NAME: Match if any individual name word starts with the search phrase
+      const nameParts = nameLower.split(/\s+/).filter(Boolean);
+      return nameParts.some(part => part.startsWith(term));
+    });
+    
+    // Create a Set tracking the unique IDs currently on screen to completely prevent duplications
+    const visibleUserIds = new Set();
+    chatMatches.forEach(item => {
+      if (item.otherUserId) visibleUserIds.add(item.otherUserId);
+      if (item.user?.id) visibleUserIds.add(item.user.id);
+    });
+
+    const userMatches = [];
+    
+    // SCAN THE REAL-TIME IDENTITY CACHE FOR MISSING DIRECTORY USER RECORDS
+    for (const user of allUsers) {
+      if (visibleUserIds.has(user.id)) continue; // Bypass if already matched locally
+
+      const displayNameLower = (user.displayName || '').toLowerCase();
+      const emailLower = (user.email || '').toLowerCase();
+      const phoneClean = String(user.phone || user.phoneNumber || '').replace(/\D/g, '');
+
+      let isMatch = false;
+
+      if (isEmailSearch) {
+        isMatch = (emailLower === term); // Must match fully
+      } else if (isPhoneSearch) {
+        isMatch = (phoneClean === cleanDigitsOnly); // Must match fully
+      } else if (!term.includes('@') && cleanDigitsOnly.length < 6) {
+        // STRICT PREFIX MATCH BY NAME: Words must start with the search letter/phrase
+        const nameParts = displayNameLower.split(/\s+/).filter(Boolean);
+        isMatch = nameParts.some(part => part.startsWith(term));
+      }
+
+      if (isMatch) {
+        const requestState = await getContactRequestState(user.id);
+        
+        userMatches.push({
+          id: `user_${user.id}`,
+          type: 'user',
+          name: user.displayName || user.email || 'User',
+          avatar: user.avatar ? `<img src="${user.avatar}">` : escapeHtml((user.displayName || '?')[0].toUpperCase()),
+          preview: user.email || user.phone || 'Tap to connect',
+          requestState,
+          unreadCount: 0,
+          isFavorite: false,
+          isMuted: false,
+          onlineStatus: user.onlineStatus || 'offline',
+          user,
+          lastMessageTime: new Date(0)
+        });
+      }
+    }
+    
+    const cleanUserMatches = Array.from(new Map(userMatches.map(u => [u.user.id, u])).values());
+    items = [...chatMatches, ...cleanUserMatches];
+  }
+  
   items.sort((a, b) => b.lastMessageTime - a.lastMessageTime || a.name.localeCompare(b.name));
   renderChatListItems(items, chatsList);
-}
-async function handleUserSelection(user) {
-  if (!currentUser || !user) return;
-  if (user.id === currentUser.uid) {
-    showToast('Cannot chat with yourself', 'error');
-    return;
-  }
-
-  try {
-    const chatId = getDirectChatId(currentUser.uid, user.id);
-    const chatDoc = await db.collection('directChats').doc(chatId).get();
-    if (chatDoc.exists) {
-      startDirectChat(user);
-    } else if (await hasAcceptedChatRelationship(user.id)) {
-      await ensureDirectChatExists(user.id);
-      startDirectChat(user);
-    } else {
-      await sendChatRequest(user);
-    }
-  } catch (error) {
-    console.error('Could not open user or send request:', error);
-    showToast(error?.message || 'Could not send request. Please try again.', 'error');
-  }
-}
-
-async function hasAcceptedChatRelationship(otherUserId) {
-  if (!currentUser || !otherUserId) return false;
-  const sent = await db.collection('chatRequests')
-    .where('fromUserId', '==', currentUser.uid)
-    .where('toUserId', '==', otherUserId)
-    .where('status', '==', 'accepted')
-    .limit(1)
-    .get();
-  if (!sent.empty) return true;
-
-  const received = await db.collection('chatRequests')
-    .where('fromUserId', '==', otherUserId)
-    .where('toUserId', '==', currentUser.uid)
-    .where('status', '==', 'accepted')
-    .limit(1)
-    .get();
-  return !received.empty;
 }
 
 async function ensureDirectChatExists(otherUserId) {

@@ -373,370 +373,367 @@
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
     <script>
-      const firebaseConfig = {
-        apiKey: "AIzaSyCdbut_FdscAjl-OVSlAUhb7TOTiRNkh34",
-        authDomain: "my-team-chat-2255.firebaseapp.com",
-        projectId: "my-team-chat-2255",
-        storageBucket: "my-team-chat-2255.firebasestorage.app",
-        messagingSenderId: "805016891521",
-        appId: "1:805016891521:web:ac9bc7a252bcf33686dd80",
-      };
-      firebase.initializeApp(firebaseConfig);
-      const auth = firebase.auth();
-      const db = firebase.firestore();
-      let lastUnverifiedEmail = "";
-      let lastUnverifiedPassword = "";
+            const firebaseConfig = {
+              apiKey: "AIzaSyCdbut_FdscAjl-OVSlAUhb7TOTiRNkh34",
+              authDomain: "my-team-chat-2255.firebaseapp.com",
+              projectId: "my-team-chat-2255",
+              storageBucket: "my-team-chat-2255.firebasestorage.app",
+              messagingSenderId: "805016891521",
+              appId: "1:805016891521:web:ac9bc7a252bcf33686dd80",
+            };
+            firebase.initializeApp(firebaseConfig);
+            const auth = firebase.auth();
+            const db = firebase.firestore();
+            let lastUnverifiedEmail = "";
+            let lastUnverifiedPassword = "";
 
-      auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
+            auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
 
-      function cleanEmail(email) {
-        return email.trim().toLowerCase();
-      }
-
-      function setButtonLoading(btn, isLoading, label, loadingLabel) {
-        btn.disabled = isLoading;
-        btn.textContent = isLoading ? loadingLabel : label;
-      }
-
-      function getEmailVerificationSettings() {
-        return {
-          url: new URL("verify.html", window.location.href).href,
-          handleCodeInApp: false,
-        };
-      }
-
-      async function sendVerificationEmail(user) {
-        await user.sendEmailVerification();
-      }
-
-      function getFriendlyAuthError(error, fallback) {
-        const code = error && error.code;
-        if (
-          code === "auth/invalid-credential" ||
-          code === "auth/wrong-password" ||
-          code === "auth/user-not-found"
-        ) {
-          return "Incorrect email or password. Please check and try again.";
-        }
-        if (code === "auth/too-many-requests") {
-          return "Too many attempts. Please wait a few minutes, then try again.";
-        }
-        if (code === "auth/network-request-failed") {
-          return "Network problem. Check your internet connection and try again.";
-        }
-        if (code === "auth/invalid-email") {
-          return "Please enter a valid email address.";
-        }
-        if (code === "auth/email-already-in-use") {
-          return "This email is already registered. Login or use a different email.";
-        }
-        if (code === "auth/weak-password") {
-          return "Password is too weak. Use at least 6 characters.";
-        }
-        if (
-          code === "auth/unauthorized-continue-uri" ||
-          code === "auth/invalid-continue-uri"
-        ) {
-          return "Verification link setup needs Firebase authorized domain access. A standard verification email can still be sent.";
-        }
-        return fallback || "Something went wrong. Please try again.";
-      }
-
-      // Validation Functions
-      function validateEmail(email) {
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        return emailRegex.test(email);
-      }
-
-      function validatePhone(phone) {
-        const phoneRegex = /^[\d\s\+\-\(\)]{7,}$/;
-        return phoneRegex.test(phone.replace(/\s/g, ""));
-      }
-
-      function validatePassword(password) {
-        return password.length >= 6;
-      }
-
-      auth.onAuthStateChanged(async (user) => {
-        if (!user) return;
-        await user.reload();
-        if (user.emailVerified) {
-          window.location.href = "index.html";
-        }
-      });
-
-      // Clear validation errors
-      function clearValidationErrors() {
-        document.getElementById("emailError").style.display = "none";
-        document.getElementById("phoneError").style.display = "none";
-        document.getElementById("passwordError").style.display = "none";
-      }
-
-      // Show validation error
-      function showValidationError(fieldId, message) {
-        const errorDiv = document.getElementById(fieldId);
-        if (errorDiv) {
-          errorDiv.textContent = message;
-          errorDiv.style.display = "block";
-        }
-      }
-
-      // Tab switching
-      document.querySelectorAll(".auth-tab").forEach((tab) => {
-        tab.addEventListener("click", () => {
-          document
-            .querySelectorAll(".auth-tab")
-            .forEach((t) => t.classList.remove("active"));
-          tab.classList.add("active");
-          document
-            .querySelectorAll(".auth-form")
-            .forEach((form) => form.classList.remove("active"));
-          document.getElementById("authError").style.display = "none";
-          document.getElementById("authSuccess").style.display = "none";
-          document
-            .getElementById(`${tab.dataset.tab}Form`)
-            .classList.add("active");
-        });
-      });
-
-      // Login Form
-      document
-        .getElementById("loginForm")
-        .addEventListener("submit", async (e) => {
-          e.preventDefault();
-          const email = cleanEmail(document.getElementById("loginEmail").value);
-          const password = document.getElementById("loginPassword").value;
-          const errorDiv = document.getElementById("authError");
-          const successDiv = document.getElementById("authSuccess");
-          const resendBtn = document.getElementById("resendVerificationBtn");
-          const btn = e.target.querySelector("button[type='submit']");
-
-          errorDiv.style.display = "none";
-          successDiv.style.display = "none";
-          resendBtn.style.display = "none";
-          setButtonLoading(btn, true, "Login ->", "Logging in...");
-
-          try {
-            const userCred = await auth.signInWithEmailAndPassword(
-              email,
-              password,
-            );
-            await userCred.user.reload();
-
-            if (!userCred.user.emailVerified) {
-              lastUnverifiedEmail = email;
-              lastUnverifiedPassword = password;
-              await auth.signOut();
-              errorDiv.textContent =
-                "Please verify your email first. Check your inbox, then login again.";
-              errorDiv.style.display = "block";
-              resendBtn.style.display = "block";
-              setButtonLoading(btn, false, "Login ->", "Logging in...");
-              return;
+            function cleanEmail(email) {
+              return email.trim().toLowerCase();
             }
 
-            const userDoc = await db
-              .collection("users")
-              .doc(userCred.user.uid)
-              .get();
-
-            if (userDoc.exists && userDoc.data().isActive === false) {
-              await db
-                .collection("users")
-                .doc(userCred.user.uid)
-                .update({ isActive: true, deactivatedAt: null });
+            function setButtonLoading(btn, isLoading, label, loadingLabel) {
+              btn.disabled = isLoading;
+              btn.textContent = isLoading ? loadingLabel : label;
             }
 
-            await db.collection("users").doc(userCred.user.uid).set(
-              {
-                onlineStatus: "online",
-                lastSeen: new Date(),
-              },
-              { merge: true },
-            );
+            function getEmailVerificationSettings() {
+              return {
+                url: new URL("verify.html", window.location.href).href,
+                handleCodeInApp: false,
+              };
+            }
 
-            window.location.href = "index.html";
-          } catch (error) {
-            errorDiv.textContent = getFriendlyAuthError(error, "Login failed. Please try again.");
-            errorDiv.style.display = "block";
-            setButtonLoading(btn, false, "Login ->", "Logging in...");
-          }
-        });
+            async function sendVerificationEmail(user) {
+              await user.sendEmailVerification();
+            }
 
-      document
-        .getElementById("resendVerificationBtn")
-        .addEventListener("click", async () => {
-          const errorDiv = document.getElementById("authError");
-          const successDiv = document.getElementById("authSuccess");
-          const btn = document.getElementById("resendVerificationBtn");
-          const email = lastUnverifiedEmail || cleanEmail(document.getElementById("loginEmail").value);
-          const password = lastUnverifiedPassword || document.getElementById("loginPassword").value;
+            function getFriendlyAuthError(error, fallback) {
+              const code = error && error.code;
+              if (
+                code === "auth/invalid-credential" ||
+                code === "auth/wrong-password" ||
+                code === "auth/user-not-found"
+              ) {
+                return "Incorrect email or password. Please check and try again.";
+              }
+              if (code === "auth/too-many-requests") {
+                return "Too many attempts. Please wait a few minutes, then try again.";
+              }
+              if (code === "auth/network-request-failed") {
+                return "Network problem. Check your internet connection and try again.";
+              }
+              if (code === "auth/invalid-email") {
+                return "Please enter a valid email address.";
+              }
+              if (code === "auth/email-already-in-use") {
+                return "This email is already registered. Login or use a different email.";
+              }
+              if (code === "auth/weak-password") {
+                return "Password is too weak. Use at least 6 characters.";
+              }
+              if (
+                code === "auth/unauthorized-continue-uri" ||
+                code === "auth/invalid-continue-uri"
+              ) {
+                return "Verification link setup needs Firebase authorized domain access. A standard verification email can still be sent.";
+              }
+              return fallback || "Something went wrong. Please try again.";
+            }
 
-          errorDiv.style.display = "none";
-          successDiv.style.display = "none";
 
-          if (!email || !password) {
-            errorDiv.textContent = "Enter your email and password first, then resend verification.";
-            errorDiv.style.display = "block";
-            return;
-          }
 
-          setButtonLoading(btn, true, "Resend verification email", "Sending...");
-          try {
-            const userCred = await auth.signInWithEmailAndPassword(email, password);
-            await sendVerificationEmail(userCred.user);
-            await auth.signOut();
-            successDiv.textContent = "Verification email sent. Please check your inbox.";
-            successDiv.style.display = "block";
-          } catch (error) {
-            errorDiv.textContent = getFriendlyAuthError(error, "Could not send verification email. Please try again.");
-            errorDiv.style.display = "block";
-          } finally {
-            setButtonLoading(btn, false, "Resend verification email", "Sending...");
-          }
-        });
 
-      // Register Form
-      document
-        .getElementById("registerForm")
-        .addEventListener("submit", async (e) => {
-          e.preventDefault();
-          clearValidationErrors();
+            // ========================================================================
+      // STRICT APP VALIDATION, TAB SYSTEMS & SUBMISSION CONTROLLERS
+      // ========================================================================
 
-          const name = document.getElementById("registerName").value.trim();
-          const email = cleanEmail(document.getElementById("registerEmail").value);
-          const phone = document.getElementById("registerPhone").value.trim();
-          const password = document.getElementById("registerPassword").value;
-          const errorDiv = document.getElementById("authError");
-          const successDiv = document.getElementById("authSuccess");
-          const btn = e.target.querySelector("button[type='submit']");
+            // Real-time Regular Expression Validators
+            function validateEmail(email) {
+              // Enforces strict syntax standard format
+              const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+              return emailRegex.test(email);
+            }
 
-          errorDiv.style.display = "none";
-          successDiv.style.display = "none";
+            function validatePhone(phone) {
+              // Strict Indian format validation rule: exactly 10 digits starting with 6, 7, 8, or 9
+              const cleanPhone = phone.replace(/\s/g, "").replace(/\D/g, "");
+              if (cleanPhone.length === 12 && cleanPhone.startsWith("91")) {
+                return /^[6-9]\d{9}$/.test(cleanPhone.substring(2));
+              }
+              return /^[6-9]\d{9}$/.test(cleanPhone);
+            }
 
-          // Validation
-          let hasError = false;
-          if (!validateEmail(email)) {
-            showValidationError("emailError", "❌ Please enter a valid email");
-            hasError = true;
-          }
-          if (!validatePhone(phone)) {
-            showValidationError(
-              "phoneError",
-              "❌ Please enter a valid phone number",
-            );
-            hasError = true;
-          }
-          if (!validatePassword(password)) {
-            showValidationError(
-              "passwordError",
-              "❌ Password must be at least 6 characters",
-            );
-            hasError = true;
-          }
-          if (!name) {
-            errorDiv.textContent = "❌ Please enter your name";
-            errorDiv.style.display = "block";
-            hasError = true;
-          }
+            function validatePassword(password) {
+              return password.length >= 6;
+            }
 
-          if (hasError) return;
+            auth.onAuthStateChanged(async (user) => {
+              if (!user) return;
+              await user.reload();
+              if (user.emailVerified) {
+                window.location.href = "index.html";
+              }
+            });
 
-          btn.disabled = true;
-          btn.textContent = "Creating account...";
+            // Clear validation errors
+            function clearValidationErrors() {
+              document.getElementById("emailError").style.display = "none";
+              document.getElementById("phoneError").style.display = "none";
+              document.getElementById("passwordError").style.display = "none";
+            }
 
-          let createdUser = null;
-          try {
-            const userCred = await auth.createUserWithEmailAndPassword(
-              email,
-              password,
-            );
-            createdUser = userCred.user;
-            await userCred.user.updateProfile({ displayName: name });
-            await sendVerificationEmail(userCred.user);
+            // Show validation error
+            function showValidationError(fieldId, message) {
+              const errorDiv = document.getElementById(fieldId);
+              if (errorDiv) {
+                errorDiv.textContent = message;
+                errorDiv.style.display = "block";
+              }
+            }
 
-            await db
-              .collection("users")
-              .doc(userCred.user.uid)
-              .set({
-                uid: userCred.user.uid,
-                email: email,
-                displayName: name,
-                phone: phone,
-                createdAt: new Date(),
-                isActive: true,
-                isFirstTime: true,
-                emailVerified: false,
-                pendingVerification: true,
-                onlineStatus: "offline",
-                privacySettings: {
-                  hideReadReceipts: false,
-                  hideTypingIndicator: false,
-                  hideLastSeen: false,
-                },
+            // Tab switching controller interaction setup
+            document.querySelectorAll(".auth-tab").forEach((tab) => {
+              tab.addEventListener("click", () => {
+                document
+                  .querySelectorAll(".auth-tab")
+                  .forEach((t) => t.classList.remove("active"));
+                tab.classList.add("active");
+                document
+                  .querySelectorAll(".auth-form")
+                  .forEach((form) => form.classList.remove("active"));
+                document.getElementById("authError").style.display = "none";
+                document.getElementById("authSuccess").style.display = "none";
+                document
+                  .getElementById(`${tab.dataset.tab}Form`)
+                  .classList.add("active");
+              });
+            });
+
+            // Login Form submission router execution
+            document
+              .getElementById("loginForm")
+              .addEventListener("submit", async (e) => {
+                e.preventDefault();
+                const email = cleanEmail(document.getElementById("loginEmail").value);
+                const password = document.getElementById("loginPassword").value;
+                const errorDiv = document.getElementById("authError");
+                const successDiv = document.getElementById("authSuccess");
+                const resendBtn = document.getElementById("resendVerificationBtn");
+                const btn = e.target.querySelector("button[type='submit']");
+
+                errorDiv.style.display = "none";
+                successDiv.style.display = "none";
+                resendBtn.style.display = "none";
+                setButtonLoading(btn, true, "Login ->", "Logging in...");
+
+                try {
+                  const userCred = await auth.signInWithEmailAndPassword(email, password);
+                  await userCred.user.reload();
+
+                  if (!userCred.user.emailVerified) {
+                    lastUnverifiedEmail = email;
+                    lastUnverifiedPassword = password;
+                    await auth.signOut();
+                    errorDiv.textContent = "Please verify your email first. Check your inbox, then login again.";
+                    errorDiv.style.display = "block";
+                    resendBtn.style.display = "block";
+                    setButtonLoading(btn, false, "Login ->", "Logging in...");
+                    return;
+                  }
+
+                  const userDoc = await db.collection("users").doc(userCred.user.uid).get();
+                  if (userDoc.exists && userDoc.data().isActive === false) {
+                    await db.collection("users").doc(userCred.user.uid).update({ isActive: true, deactivatedAt: null });
+                  }
+
+                  await db.collection("users").doc(userCred.user.uid).set(
+                    { onlineStatus: "online", lastSeen: new Date() },
+                    { merge: true }
+                  );
+
+                  window.location.href = "index.html";
+                } catch (error) {
+                  errorDiv.textContent = getFriendlyAuthError(error, "Login failed. Please try again.");
+                  errorDiv.style.display = "block";
+                  setButtonLoading(btn, false, "Login ->", "Logging in...");
+                }
               });
 
-            await auth.signOut();
-            successDiv.textContent =
-              "Account created! Check Inbox, Spam, and Promotions for the verification email. If it does not arrive in a few minutes, try logging in and tap Resend verification email.";
-            successDiv.style.display = "block";
-            document.getElementById("registerForm").reset();
-            btn.disabled = false;
-            btn.textContent = "Create Account →";
-          } catch (error) {
-            if (createdUser) {
-              await createdUser.delete().catch(() => {});
-              await auth.signOut().catch(() => {});
-              errorDiv.textContent =
-                `${getFriendlyAuthError(error, error.message || "Verification email could not be sent.")} Please wait a few minutes and register again.`;
-              errorDiv.style.display = "block";
-            } else {
-              errorDiv.textContent = getFriendlyAuthError(error, "Registration failed. Please try again.");
-              errorDiv.style.display = "block";
-            }
-            setButtonLoading(btn, false, "Create Account ->", "Creating account...");
-          }
-        });
+            document
+              .getElementById("resendVerificationBtn")
+              .addEventListener("click", async () => {
+                const errorDiv = document.getElementById("authError");
+                const successDiv = document.getElementById("authSuccess");
+                const btn = document.getElementById("resendVerificationBtn");
+                const email = lastUnverifiedEmail || cleanEmail(document.getElementById("loginEmail").value);
+                const password = lastUnverifiedPassword || document.getElementById("loginPassword").value;
 
-      // Password Reset
-      const resetModal = document.getElementById("resetModal");
-      document
-        .getElementById("forgotPasswordBtn")
-        .addEventListener("click", () => {
-          resetModal.style.display = "flex";
-        });
-      document.querySelectorAll(".resetClose").forEach((btn) => {
-        btn.addEventListener(
-          "click",
-          () => (resetModal.style.display = "none"),
-        );
-      });
-      document
-        .getElementById("sendResetBtn")
-        .addEventListener("click", async () => {
-          const email = document.getElementById("resetEmail").value.trim();
-          const btn = document.getElementById("sendResetBtn");
+                errorDiv.style.display = "none";
+                successDiv.style.display = "none";
 
-          if (!email) {
-            alert("Please enter your email");
-            return;
-          }
+                if (!email || !password) {
+                  errorDiv.textContent = "Enter your email and password first, then resend verification.";
+                  errorDiv.style.display = "block";
+                  return;
+                }
 
-          btn.disabled = true;
-          btn.textContent = "Sending...";
+                setButtonLoading(btn, true, "Resend verification email", "Sending...");
+                try {
+                  const userCred = await auth.signInWithEmailAndPassword(email, password);
+                  await sendVerificationEmail(userCred.user);
+                  await auth.signOut();
+                  successDiv.textContent = "Verification email sent. Please check your inbox.";
+                  successDiv.style.display = "block";
+                } catch (error) {
+                  errorDiv.textContent = getFriendlyAuthError(error, "Could not send verification email. Please try again.");
+                  errorDiv.style.display = "block";
+                } finaly {
+                  setButtonLoading(btn, false, "Resend verification email", "Sending...");
+                }
+              });
 
-          try {
-            await auth.sendPasswordResetEmail(email);
-            alert("✅ Password reset email sent! Check your inbox.");
-            resetModal.style.display = "none";
-            btn.disabled = false;
-            btn.textContent = "Send Reset Link";
-          } catch (error) {
-            alert("❌ " + (error.message || "Failed to send reset email"));
-            btn.disabled = false;
-            btn.textContent = "Send Reset Link";
-          }
-        });
+            // Register Form submission interceptor
+            document
+              .getElementById("registerForm")
+              .addEventListener("submit", async (e) => {
+                e.preventDefault();
+                clearValidationErrors();
+
+                const name = document.getElementById("registerName").value.trim();
+                const email = cleanEmail(document.getElementById("registerEmail").value);
+                const phone = document.getElementById("registerPhone").value.trim();
+                const password = document.getElementById("registerPassword").value;
+                const errorDiv = document.getElementById("authError");
+                const successDiv = document.getElementById("authSuccess");
+                const btn = e.target.querySelector("button[type='submit']");
+
+                errorDiv.style.display = "none";
+                successDiv.style.display = "none";
+
+                let hasError = false;
+
+                // 1. Strict Name Length Check
+                if (!name || name.length < 2) {
+                  errorDiv.textContent = "❌ Please enter your full display name.";
+                  errorDiv.style.display = "block";
+                  hasError = true;
+                }
+
+                // 2. Strict Syntax Email Validation
+                if (!validateEmail(email)) {
+                  showValidationError("emailError", "❌ Please provide a valid email format address (e.g. name@domain.com).");
+                  hasError = true;
+                }
+
+                // 3. Strict 10-Digit Indian Phone Validation
+                if (!validatePhone(phone)) {
+                  showValidationError("phoneError", "❌ Enter a valid 10-digit phone number starting with 6, 7, 8, or 9.");
+                  hasError = true;
+                }
+
+                // 4. Strict Security Password Length Check
+                if (!validatePassword(password)) {
+                  showValidationError("passwordError", "❌ Password requirement unmet. Must contain at least 6 characters.");
+                  hasError = true;
+                }
+
+                if (hasError) return;
+
+                btn.disabled = true;
+                btn.textContent = "Creating account...";
+
+                let createdUser = null;
+                try {
+                  const userCred = await auth.createUserWithEmailAndPassword(email, password);
+                  createdUser = userCred.user;
+                  await userCred.user.updateProfile({ displayName: name });
+                  await sendVerificationEmail(userCred.user);
+
+                  // Clean country prefixes to keep database entries uniform
+                  const sanitizedPhoneDigits = phone.replace(/\s/g, "").replace(/\D/g, "");
+                  const formattedDbPhone = sanitizedPhoneDigits.length === 12 && sanitizedPhoneDigits.startsWith("91")
+                    ? sanitizedPhoneDigits.substring(2)
+                    : sanitizedPhoneDigits;
+
+                  await db
+                    .collection("users")
+                    .doc(userCred.user.uid)
+                    .set({
+                      uid: userCred.user.uid,
+                      email: email,
+                      displayName: name,
+                      phone: formattedDbPhone,
+                      createdAt: new Date(),
+                      isActive: true,
+                      isFirstTime: true,
+                      emailVerified: false,
+                      pendingVerification: true,
+                      onlineStatus: "offline",
+                      privacySettings: {
+                        hideReadReceipts: false,
+                        hideTypingIndicator: false,
+                        hideLastSeen: false,
+                      },
+                    });
+
+                  await auth.signOut();
+                  successDiv.textContent = "Account created! Check Inbox, Spam, and Promotions for the verification email. Please verify your email before logging in.";
+                  successDiv.style.display = "block";
+                  document.getElementById("registerForm").reset();
+                  btn.disabled = false;
+                  btn.textContent = "Create Account →";
+                } catch (error) {
+                  if (createdUser) {
+                    await createdUser.delete().catch(() => {});
+                    await auth.signOut().catch(() => {});
+                  }
+                  errorDiv.textContent = getFriendlyAuthError(error, "Registration failed. Please try again.");
+                  errorDiv.style.display = "block";
+                  setButtonLoading(btn, false, "Create Account ->", "Creating account...");
+                }
+              });
+
+            // Password Reset
+            const resetModal = document.getElementById("resetModal");
+            document
+              .getElementById("forgotPasswordBtn")
+              .addEventListener("click", () => {
+                resetModal.style.display = "flex";
+              });
+            document.querySelectorAll(".resetClose").forEach((btn) => {
+              btn.addEventListener(
+                "click",
+                () => (resetModal.style.display = "none"),
+              );
+            });
+            document
+              .getElementById("sendResetBtn")
+              .addEventListener("click", async () => {
+                const email = document.getElementById("resetEmail").value.trim();
+                const btn = document.getElementById("sendResetBtn");
+
+                if (!email) {
+                  alert("Please enter your email");
+                  return;
+                }
+
+                btn.disabled = true;
+                btn.textContent = "Sending...";
+
+                try {
+                  await auth.sendPasswordResetEmail(email);
+                  alert("✅ Password reset email sent! Check your inbox.");
+                  resetModal.style.display = "none";
+                  btn.disabled = false;
+                  btn.textContent = "Send Reset Link";
+                } catch (error) {
+                  alert("❌ " + (error.message || "Failed to send reset email"));
+                  btn.disabled = false;
+                  btn.textContent = "Send Reset Link";
+                }
+              });
     </script>
     <script src="pwa-install.js?v=100"></script>
   </body>
