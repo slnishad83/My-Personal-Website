@@ -1590,6 +1590,7 @@ async function loadAllChatsList(searchTerm = '') {
     const userMatches = [];
     
     // SCAN THE REAL-TIME IDENTITY CACHE FOR MISSING DIRECTORY USER RECORDS
+    // SCAN THE REAL-TIME IDENTITY CACHE FOR MISSING DIRECTORY USER RECORDS
     for (const user of allUsers) {
       if (visibleUserIds.has(user.id)) continue; // Bypass if already matched locally
 
@@ -1600,31 +1601,32 @@ async function loadAllChatsList(searchTerm = '') {
       let isMatch = false;
 
       if (isEmailSearch) {
-        isMatch = (emailLower === term); // Must match fully
+        isMatch = (emailLower === term); // Must match email fully
       } else if (isPhoneSearch) {
-        isMatch = (phoneClean === cleanDigitsOnly); // Must match fully
-      } else if (!term.includes('@') && cleanDigitsOnly.length < 6) {
-        // STRICT PREFIX MATCH BY NAME: Words must start with the search letter/phrase
+        isMatch = (phoneClean === cleanDigitsOnly); // Must match phone fully
+      } else {
+        // STRICT PREFIX MATCH BY NAME
+        // Splits "Muhammed Halid" into ["muhammed", "halid"] and checks if any word starts with "hal"
         const nameParts = displayNameLower.split(/\s+/).filter(Boolean);
         isMatch = nameParts.some(part => part.startsWith(term));
       }
 
       if (isMatch) {
-        const requestState = await getContactRequestState(user.id);
+        const requestState = await getContactRequestState(user.id); //
         
         userMatches.push({
           id: `user_${user.id}`,
           type: 'user',
-          name: user.displayName || user.email || 'User',
-          avatar: user.avatar ? `<img src="${user.avatar}">` : escapeHtml((user.displayName || '?')[0].toUpperCase()),
-          preview: user.email || user.phone || 'Tap to connect',
+          name: user.displayName || user.email || 'User', //
+          avatar: user.avatar ? `<img src="${user.avatar}">` : escapeHtml((user.displayName || '?')[0].toUpperCase()), //
+          preview: user.email || user.phone || 'Tap to connect', //
           requestState,
           unreadCount: 0,
           isFavorite: false,
           isMuted: false,
-          onlineStatus: user.onlineStatus || 'offline',
+          onlineStatus: user.onlineStatus || 'offline', //
           user,
-          lastMessageTime: new Date(0)
+          lastMessageTime: new Date(0) //
         });
       }
     }
