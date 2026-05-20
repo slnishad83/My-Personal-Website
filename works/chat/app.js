@@ -564,6 +564,95 @@ function setCallStatus(status) {
   if (statusEl) statusEl.textContent = status;
 }
 
+function updateCallControlState() {
+  const muteBtn = document.getElementById('muteMicBtn');
+  const cameraBtn = document.getElementById('toggleCameraBtn');
+  const localVideo = document.getElementById('localVideo');
+  const cameraControl = document.getElementById('toggleCameraControl');
+
+  if (muteBtn) {
+    muteBtn.classList.toggle('active', micMuted);
+    muteBtn.title = micMuted ? 'Turn microphone on' : 'Mute microphone';
+    muteBtn.setAttribute('aria-label', muteBtn.title);
+    muteBtn.dataset.controlLabel = micMuted ? 'Muted' : 'Unmuted';
+  }
+
+  if (cameraBtn) {
+    cameraBtn.classList.toggle('active', cameraOff);
+    cameraBtn.title = cameraOff ? 'Turn camera on' : 'Turn camera off';
+    cameraBtn.setAttribute('aria-label', cameraBtn.title);
+    cameraBtn.dataset.state = cameraOff ? 'off' : 'on';
+    cameraBtn.dataset.controlLabel = cameraOff ? 'CAM OFF' : 'CAM ON';
+  }
+
+  if (localVideo) {
+    localVideo.classList.toggle('camera-off', cameraOff);
+    localVideo.style.visibility = cameraOff ? 'hidden' : '';
+  }
+
+  if (cameraControl) {
+    cameraControl.dataset.state = cameraOff ? 'off' : 'on';
+  }
+}
+
+function setMicrophoneMuted(isMuted) {
+  const audioTrack = localCallStream?.getAudioTracks?.()[0];
+
+  if (!audioTrack) {
+    showCallControlHint('No microphone available');
+    return;
+  }
+
+  micMuted = Boolean(isMuted);
+  audioTrack.enabled = !micMuted;
+  updateCallControlState();
+}
+
+async function setCameraOff(isOff) {
+  const videoTrack = localCallStream?.getVideoTracks?.()[0];
+
+  if (!videoTrack && isOff) {
+    showCallControlHint('No camera available');
+    return;
+  }
+
+  cameraOff = Boolean(isOff);
+
+  if (cameraOff) {
+    if (videoTrack) {
+      videoTrack.stop();
+      localCallStream.removeTrack(videoTrack);
+    }
+    await cameraSender?.replaceTrack?.(null);
+    const localVideo = document.getElementById('localVideo');
+    if (localVideo) localVideo.srcObject = null;
+  } else {
+    try {
+      const videoStream = await navigator.mediaDevices.getUserMedia({ video: true });
+      const nextVideoTrack = videoStream.getVideoTracks()[0];
+      if (!nextVideoTrack) throw new Error('No camera track available');
+      localCallStream.addTrack(nextVideoTrack);
+      if (cameraSender?.replaceTrack) {
+        await cameraSender.replaceTrack(nextVideoTrack);
+      } else if (peerConnection) {
+        cameraSender = peerConnection.addTrack(nextVideoTrack, localCallStream);
+        await renegotiateActiveCall();
+      }
+      const localVideo = document.getElementById('localVideo');
+      if (localVideo) {
+        localVideo.srcObject = localCallStream;
+        localVideo.style.visibility = '';
+        localVideo.play?.().catch(() => {});
+      }
+    } catch (error) {
+      cameraOff = true;
+      showToast(getCallPermissionMessage(error, 'video'), 'error');
+    }
+  }
+
+  updateCallControlState();
+}
+
 function formatCallDuration(ms) {
   const totalSeconds = Math.max(0, Math.floor(ms / 1000));
   const minutes = Math.floor(totalSeconds / 60);
@@ -763,7 +852,7 @@ function setCallUi({ mode = 'outgoing', type = 'voice', title = 'Calling...', st
   document.getElementById('endCallBtn').style.display = mode === 'incoming' ? 'none' : 'inline-flex';
   document.getElementById('muteMicBtn').style.display = mode === 'incoming' ? 'none' : 'inline-flex';
   document.getElementById('toggleCameraBtn').style.display =
-  mode === 'active' && type === 'video' ? 'inline-flex' : 'none';
+    mode !== 'incoming' && type === 'video' ? 'inline-flex' : 'none';
   if (localVideo) localVideo.style.display = type === 'video' ? 'block' : 'none';
   if (remoteVideo) remoteVideo.style.display = type === 'video' ? 'block' : 'none';
   if (audioAvatar) {
@@ -771,6 +860,7 @@ function setCallUi({ mode = 'outgoing', type = 'voice', title = 'Calling...', st
     audioAvatar.classList.toggle('ringing', mode === 'incoming' || mode === 'outgoing');
     audioAvatar.textContent = (currentChat?.otherUserName || activeCall?.fromUserName || activeCall?.toUserName || '?')[0]?.toUpperCase() || '?';
   }
+  updateCallControlState();
 }
 
 function resetLocalVideoPreviewPosition() {
@@ -901,8 +991,7 @@ function cleanupCallUi() {
   micMuted = false;
   cameraOff = false;
   pendingRemoteIceCandidates = [];
-  document.getElementById('muteMicBtn')?.classList.remove('active');
-  document.getElementById('toggleCameraBtn')?.classList.remove('active');
+  updateCallControlState();
 }
 
 async function preparePeerConnection(callId, role) {
@@ -921,6 +1010,9 @@ async function preparePeerConnection(callId, role) {
     audio: true,
     video: currentCallType === 'video'
   });
+  micMuted = false;
+  cameraOff = false;
+  updateCallControlState();
   document.getElementById('localVideo').srcObject = localCallStream;
   setTimeout(() => {
   setupCallPreviewInteractions();
@@ -940,7 +1032,9 @@ async function preparePeerConnection(callId, role) {
     if (state === 'connected') {
       clearCallTimeout();
       stopIncomingRingtone();
+      activeCallMode = 'active';
       document.getElementById('callAudioAvatar')?.classList.remove('ringing');
+      document.getElementById('toggleCameraBtn').style.display = currentCallType === 'video' ? 'inline-flex' : 'none';
       setCallStatus('Connected');
       if (!callStartedAt) startCallDuration();
       requestCallWakeLock();
@@ -986,8 +1080,11 @@ async function upgradeVoiceCallToVideo() {
     }
     if (remoteVideo) remoteVideo.style.display = 'block';
     currentCallType = 'video';
+    cameraOff = false;
     if (activeCall) activeCall.type = 'video';
     document.getElementById('callTypeLabel').textContent = 'Video call';
+    document.getElementById('toggleCameraBtn').style.display = 'inline-flex';
+    updateCallControlState();
     await renegotiateActiveCall();
   } catch (error) {
     showToast(getCallPermissionMessage(error, 'video'), 'error');
@@ -3409,25 +3506,6 @@ async function init() {
   document.getElementById('rejectCallBtn')?.addEventListener('click', () => endActiveCall('rejected'));
   document.getElementById('endCallBtn')?.addEventListener('click', () => endActiveCall('ended'));
   document.getElementById('darkModeBtn')?.addEventListener('click', toggleDarkMode);
-  document.getElementById('toggleCameraBtn')?.addEventListener('click', () => {
-  if (!localCallStream) return;
-
-  const videoTrack = localCallStream.getVideoTracks()[0];
-
-  if (!videoTrack) {
-    showToast('No camera available', 'error');
-    return;
-  }
-
-  cameraOff = !cameraOff;
-  videoTrack.enabled = !cameraOff;
-
-  document
-    .getElementById('toggleCameraBtn')
-    ?.classList.toggle('active', cameraOff);
-
-  showToast(cameraOff ? 'Camera off' : 'Camera on');
-});
   
   document.querySelectorAll('.closeProfileModal').forEach(b => b.addEventListener('click', () => document.getElementById('profileModal').style.display = 'none'));
   document.getElementById('fileInput')?.addEventListener('change', (e) => handleFileUpload(e.target.files[0]));
@@ -3555,40 +3633,12 @@ function setupCallControlButtons() {
   if (muteBtn && muteBtn.dataset.ready !== 'true') {
     muteBtn.dataset.ready = 'true';
 
-    muteBtn.addEventListener('click', () => {
-      const audioTrack = localCallStream?.getAudioTracks?.()[0];
-
-      if (!audioTrack) {
-        showCallControlHint('No microphone available');
-        return;
-      }
-
-      audioTrack.enabled = !audioTrack.enabled;
-      micMuted = !audioTrack.enabled;
-
-      muteBtn.classList.toggle('active', micMuted);
-      showCallControlHint(micMuted ? 'Microphone muted' : 'Microphone on');
-    });
+    muteBtn.addEventListener('click', () => setMicrophoneMuted(!micMuted));
   }
 
   if (cameraBtn && cameraBtn.dataset.ready !== 'true') {
     cameraBtn.dataset.ready = 'true';
 
-    cameraBtn.addEventListener('click', () => {
-      const videoTrack = localCallStream?.getVideoTracks?.()[0];
-
-      if (!videoTrack) {
-        showCallControlHint('No camera available');
-        return;
-      }
-
-      videoTrack.enabled = !videoTrack.enabled;
-      cameraOff = !videoTrack.enabled;
-
-      cameraBtn.classList.toggle('active', cameraOff);
-
-      // IMPORTANT: keep button icon/text unchanged
-      showCallControlHint(cameraOff ? 'Camera off' : 'Camera on');
-    });
+    cameraBtn.addEventListener('click', () => setCameraOff(!cameraOff));
   }
 }
