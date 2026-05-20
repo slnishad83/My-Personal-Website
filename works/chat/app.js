@@ -752,6 +752,7 @@ function setCallUi({ mode = 'outgoing', type = 'voice', title = 'Calling...', st
   if (!modal) return;
   activeCallMode = mode;
   modal.style.display = 'flex';
+  setupCallControlButtons();
   resetLocalVideoPreviewPosition();
   shell?.classList.toggle('incoming', mode === 'incoming');
   document.getElementById('callTypeLabel').textContent = type === 'video' ? 'Video call' : 'Voice call';
@@ -3540,3 +3541,49 @@ document.getElementById('deleteChatMenuItem')?.addEventListener('click', async (
   }
   document.getElementById('chatContextMenu').style.display = 'none';
 });
+function setupCallControlButtons() {
+  const muteBtn = document.getElementById('muteMicBtn');
+  const cameraBtn = document.getElementById('toggleCameraBtn');
+
+  if (muteBtn && muteBtn.dataset.ready !== 'true') {
+    muteBtn.dataset.ready = 'true';
+
+    muteBtn.addEventListener('click', () => {
+      if (!localCallStream) return;
+
+      const audioTrack = localCallStream.getAudioTracks()[0];
+
+      if (!audioTrack) {
+        showToast('No microphone available', 'error');
+        return;
+      }
+
+      micMuted = !micMuted;
+      audioTrack.enabled = !micMuted;
+
+      muteBtn.classList.toggle('active', micMuted);
+      showToast(micMuted ? 'Microphone muted' : 'Microphone on');
+    });
+  }
+
+  if (cameraBtn && cameraBtn.dataset.ready !== 'true') {
+    cameraBtn.dataset.ready = 'true';
+
+    cameraBtn.addEventListener('click', () => {
+      if (!localCallStream) return;
+
+      const videoTrack = localCallStream.getVideoTracks()[0];
+
+      if (!videoTrack) {
+        showToast('No camera available', 'error');
+        return;
+      }
+
+      cameraOff = !cameraOff;
+      videoTrack.enabled = !cameraOff;
+
+      cameraBtn.classList.toggle('active', cameraOff);
+      showToast(cameraOff ? 'Camera off' : 'Camera on');
+    });
+  }
+}
