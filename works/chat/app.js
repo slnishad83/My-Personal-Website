@@ -3535,6 +3535,19 @@ document.getElementById('deleteChatMenuItem')?.addEventListener('click', async (
   }
   document.getElementById('chatContextMenu').style.display = 'none';
 });
+function showCallControlHint(message) {
+  const statusEl = document.getElementById('callStatusText');
+  if (!statusEl) return;
+
+  const previous = statusEl.textContent;
+  statusEl.textContent = message;
+
+  clearTimeout(statusEl._hintTimer);
+  statusEl._hintTimer = setTimeout(() => {
+    statusEl.textContent = previous || 'Connected';
+  }, 1200);
+}
+
 function setupCallControlButtons() {
   const muteBtn = document.getElementById('muteMicBtn');
   const cameraBtn = document.getElementById('toggleCameraBtn');
@@ -3543,20 +3556,18 @@ function setupCallControlButtons() {
     muteBtn.dataset.ready = 'true';
 
     muteBtn.addEventListener('click', () => {
-      if (!localCallStream) return;
-
-      const audioTrack = localCallStream.getAudioTracks()[0];
+      const audioTrack = localCallStream?.getAudioTracks?.()[0];
 
       if (!audioTrack) {
-        showToast('No microphone available', 'error');
+        showCallControlHint('No microphone available');
         return;
       }
 
-      micMuted = !micMuted;
-      audioTrack.enabled = !micMuted;
+      audioTrack.enabled = !audioTrack.enabled;
+      micMuted = !audioTrack.enabled;
 
       muteBtn.classList.toggle('active', micMuted);
-      showToast(micMuted ? 'Microphone muted' : 'Microphone on');
+      showCallControlHint(micMuted ? 'Microphone muted' : 'Microphone on');
     });
   }
 
@@ -3564,21 +3575,20 @@ function setupCallControlButtons() {
     cameraBtn.dataset.ready = 'true';
 
     cameraBtn.addEventListener('click', () => {
-  const videoTrack = localCallStream?.getVideoTracks?.()[0];
+      const videoTrack = localCallStream?.getVideoTracks?.()[0];
 
-  if (!videoTrack) {
-    showToast('No camera available', 'error');
-    return;
-  }
+      if (!videoTrack) {
+        showCallControlHint('No camera available');
+        return;
+      }
 
-  const shouldTurnOff = videoTrack.enabled === true;
-  videoTrack.enabled = !shouldTurnOff;
-  cameraOff = shouldTurnOff;
+      videoTrack.enabled = !videoTrack.enabled;
+      cameraOff = !videoTrack.enabled;
 
-  cameraBtn.classList.toggle('active', cameraOff);
-  cameraBtn.textContent = cameraOff ? '📷 Off' : '📷';
+      cameraBtn.classList.toggle('active', cameraOff);
 
-  showToast(cameraOff ? 'Camera off' : 'Camera on');
-});
+      // IMPORTANT: keep button icon/text unchanged
+      showCallControlHint(cameraOff ? 'Camera off' : 'Camera on');
+    });
   }
 }
