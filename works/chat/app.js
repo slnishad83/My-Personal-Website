@@ -762,7 +762,7 @@ function setCallUi({ mode = 'outgoing', type = 'voice', title = 'Calling...', st
   document.getElementById('rejectCallBtn').style.display = mode === 'incoming' ? 'inline-flex' : 'none';
   document.getElementById('endCallBtn').style.display = mode === 'incoming' ? 'none' : 'inline-flex';
   document.getElementById('muteMicBtn').style.display = mode === 'incoming' ? 'none' : 'inline-flex';
-  document.getElementById('toggleCameraBtn').style.display = mode === 'incoming' ? 'none' : 'inline-flex';
+  // document.getElementById('toggleCameraBtn').style.display = mode === 'incoming' ? 'none' : 'inline-flex';
   if (localVideo) localVideo.style.display = type === 'video' ? 'block' : 'none';
   if (remoteVideo) remoteVideo.style.display = type === 'video' ? 'block' : 'none';
   if (audioAvatar) {
