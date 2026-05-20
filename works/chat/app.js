@@ -970,13 +970,6 @@ async function preparePeerConnection(callId, role) {
 
 async function upgradeVoiceCallToVideo() {
   if (!activeCall?.id || !peerConnection || !localCallStream) return;
-  const existingVideo = localCallStream.getVideoTracks()[0];
-  if (existingVideo) {
-    cameraOff = !cameraOff;
-    existingVideo.enabled = !cameraOff;
-    document.getElementById('toggleCameraBtn').classList.toggle('active', cameraOff);
-    return;
-  }
   try {
     setCallStatus('Starting camera...');
     const videoStream = await navigator.mediaDevices.getUserMedia({ video: true });
