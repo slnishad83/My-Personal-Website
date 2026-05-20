@@ -793,7 +793,7 @@ function swapCallVideoViews() {
 function setupCallPreviewInteractions() {
   const localVideo = document.getElementById('localVideo');
   const stage = document.querySelector('.call-video-stage');
-  if (!localVideo || !stage || localVideo.dataset.previewReady === 'true') return;
+  if (!localVideo || !stage) return;
 
   localVideo.dataset.previewReady = 'true';
   localVideo.style.touchAction = 'none';
@@ -920,6 +920,9 @@ async function preparePeerConnection(callId, role) {
     video: currentCallType === 'video'
   });
   document.getElementById('localVideo').srcObject = localCallStream;
+  setTimeout(() => {
+  setupCallPreviewInteractions();
+}, 300);
   localCallStream.getTracks().forEach(track => {
     const sender = peerConnection.addTrack(track, localCallStream);
     if (track.kind === 'video') cameraSender = sender;
