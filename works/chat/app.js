@@ -3584,5 +3584,6 @@ function setupCallControlButtons() {
     showToast(
       cameraOff ? 'Camera turned off' : 'Camera turned on'
     );
-  });
+   });
+  }
 }
