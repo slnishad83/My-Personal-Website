@@ -762,7 +762,8 @@ function setCallUi({ mode = 'outgoing', type = 'voice', title = 'Calling...', st
   document.getElementById('rejectCallBtn').style.display = mode === 'incoming' ? 'inline-flex' : 'none';
   document.getElementById('endCallBtn').style.display = mode === 'incoming' ? 'none' : 'inline-flex';
   document.getElementById('muteMicBtn').style.display = mode === 'incoming' ? 'none' : 'inline-flex';
-  // document.getElementById('toggleCameraBtn').style.display = mode === 'incoming' ? 'none' : 'inline-flex';
+  document.getElementById('toggleCameraBtn').style.display =
+  mode === 'active' && type === 'video' ? 'inline-flex' : 'none';
   if (localVideo) localVideo.style.display = type === 'video' ? 'block' : 'none';
   if (remoteVideo) remoteVideo.style.display = type === 'video' ? 'block' : 'none';
   if (audioAvatar) {
@@ -3570,20 +3571,21 @@ function setupCallControlButtons() {
     cameraBtn.dataset.ready = 'true';
 
     cameraBtn.addEventListener('click', () => {
-      if (!localCallStream) return;
+  const videoTrack = localCallStream?.getVideoTracks?.()[0];
 
-      const videoTrack = localCallStream.getVideoTracks()[0];
+  if (!videoTrack) {
+    showToast('No camera available', 'error');
+    return;
+  }
 
-      if (!videoTrack) {
-        showToast('No camera available', 'error');
-        return;
-      }
+  const shouldTurnOff = videoTrack.enabled === true;
+  videoTrack.enabled = !shouldTurnOff;
+  cameraOff = shouldTurnOff;
 
-      cameraOff = !cameraOff;
-      videoTrack.enabled = !cameraOff;
+  cameraBtn.classList.toggle('active', cameraOff);
+  cameraBtn.textContent = cameraOff ? '📷 Off' : '📷';
 
-      cameraBtn.classList.toggle('active', cameraOff);
-      showToast(cameraOff ? 'Camera off' : 'Camera on');
-    });
+  showToast(cameraOff ? 'Camera off' : 'Camera on');
+});
   }
 }
