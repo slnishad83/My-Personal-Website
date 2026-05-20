@@ -70,6 +70,7 @@ let callCandidatesUnsubscribe = null;
 let currentCallType = 'voice';
 let micMuted = false;
 let cameraOff = false;
+let preferredCameraFacingMode = 'user';
 let pendingRemoteIceCandidates = [];
 let activeCallMode = null;
 let callTimeoutTimer = null;
@@ -567,6 +568,7 @@ function setCallStatus(status) {
 function updateCallControlState() {
   const muteBtn = document.getElementById('muteMicBtn');
   const cameraBtn = document.getElementById('toggleCameraBtn');
+  const switchCameraBtn = document.getElementById('switchCameraBtn');
   const localVideo = document.getElementById('localVideo');
   const cameraControl = document.getElementById('toggleCameraControl');
 
@@ -583,6 +585,13 @@ function updateCallControlState() {
     cameraBtn.setAttribute('aria-label', cameraBtn.title);
     cameraBtn.dataset.state = cameraOff ? 'off' : 'on';
     cameraBtn.dataset.controlLabel = cameraOff ? 'CAM OFF' : 'CAM ON';
+  }
+
+  if (switchCameraBtn) {
+    switchCameraBtn.disabled = cameraOff || currentCallType !== 'video';
+    switchCameraBtn.dataset.controlLabel = preferredCameraFacingMode === 'user' ? 'FRONT' : 'BACK';
+    switchCameraBtn.title = preferredCameraFacingMode === 'user' ? 'Switch to back camera' : 'Switch to front camera';
+    switchCameraBtn.setAttribute('aria-label', switchCameraBtn.title);
   }
 
   if (localVideo) {
@@ -628,7 +637,9 @@ async function setCameraOff(isOff) {
     if (localVideo) localVideo.srcObject = null;
   } else {
     try {
-      const videoStream = await navigator.mediaDevices.getUserMedia({ video: true });
+      const videoStream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: preferredCameraFacingMode }
+      });
       const nextVideoTrack = videoStream.getVideoTracks()[0];
       if (!nextVideoTrack) throw new Error('No camera track available');
       localCallStream.addTrack(nextVideoTrack);
@@ -651,6 +662,54 @@ async function setCameraOff(isOff) {
   }
 
   updateCallControlState();
+}
+
+async function switchCameraFacingMode() {
+  if (currentCallType !== 'video') return;
+  if (cameraOff) {
+    showCallControlHint('Turn camera on first');
+    return;
+  }
+
+  const previousFacingMode = preferredCameraFacingMode;
+  preferredCameraFacingMode = preferredCameraFacingMode === 'user' ? 'environment' : 'user';
+
+  try {
+    const videoStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: { exact: preferredCameraFacingMode } }
+    }).catch(() => navigator.mediaDevices.getUserMedia({
+      video: { facingMode: preferredCameraFacingMode }
+    }));
+    const nextVideoTrack = videoStream.getVideoTracks()[0];
+    if (!nextVideoTrack) throw new Error('No camera track available');
+
+    const oldVideoTrack = localCallStream?.getVideoTracks?.()[0];
+    if (oldVideoTrack) {
+      oldVideoTrack.stop();
+      localCallStream.removeTrack(oldVideoTrack);
+    }
+
+    localCallStream.addTrack(nextVideoTrack);
+    if (cameraSender?.replaceTrack) {
+      await cameraSender.replaceTrack(nextVideoTrack);
+    } else if (peerConnection) {
+      cameraSender = peerConnection.addTrack(nextVideoTrack, localCallStream);
+      await renegotiateActiveCall();
+    }
+
+    const localVideo = document.getElementById('localVideo');
+    if (localVideo) {
+      localVideo.srcObject = localCallStream;
+      localVideo.style.visibility = '';
+      localVideo.play?.().catch(() => {});
+    }
+
+    updateCallControlState();
+  } catch (error) {
+    preferredCameraFacingMode = previousFacingMode;
+    updateCallControlState();
+    showToast('Could not switch camera on this device', 'error');
+  }
 }
 
 function formatCallDuration(ms) {
@@ -853,6 +912,10 @@ function setCallUi({ mode = 'outgoing', type = 'voice', title = 'Calling...', st
   document.getElementById('muteMicBtn').style.display = mode === 'incoming' ? 'none' : 'inline-flex';
   document.getElementById('toggleCameraBtn').style.display =
     mode !== 'incoming' && type === 'video' ? 'inline-flex' : 'none';
+  const switchCameraBtn = document.getElementById('switchCameraBtn');
+  if (switchCameraBtn) {
+    switchCameraBtn.style.display = mode !== 'incoming' && type === 'video' ? 'inline-flex' : 'none';
+  }
   if (localVideo) localVideo.style.display = type === 'video' ? 'block' : 'none';
   if (remoteVideo) remoteVideo.style.display = type === 'video' ? 'block' : 'none';
   if (audioAvatar) {
@@ -1008,7 +1071,7 @@ async function preparePeerConnection(callId, role) {
   if (remoteAudio) remoteAudio.srcObject = remoteCallStream;
   localCallStream = await navigator.mediaDevices.getUserMedia({
     audio: true,
-    video: currentCallType === 'video'
+    video: currentCallType === 'video' ? { facingMode: preferredCameraFacingMode } : false
   });
   micMuted = false;
   cameraOff = false;
@@ -1035,6 +1098,8 @@ async function preparePeerConnection(callId, role) {
       activeCallMode = 'active';
       document.getElementById('callAudioAvatar')?.classList.remove('ringing');
       document.getElementById('toggleCameraBtn').style.display = currentCallType === 'video' ? 'inline-flex' : 'none';
+      const switchCameraBtn = document.getElementById('switchCameraBtn');
+      if (switchCameraBtn) switchCameraBtn.style.display = currentCallType === 'video' ? 'inline-flex' : 'none';
       setCallStatus('Connected');
       if (!callStartedAt) startCallDuration();
       requestCallWakeLock();
@@ -1066,7 +1131,9 @@ async function upgradeVoiceCallToVideo() {
   if (!activeCall?.id || !peerConnection || !localCallStream) return;
   try {
     setCallStatus('Starting camera...');
-    const videoStream = await navigator.mediaDevices.getUserMedia({ video: true });
+    const videoStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: preferredCameraFacingMode }
+    });
     const videoTrack = videoStream.getVideoTracks()[0];
     if (!videoTrack) throw new Error('No camera track available');
     localCallStream.addTrack(videoTrack);
@@ -1084,6 +1151,8 @@ async function upgradeVoiceCallToVideo() {
     if (activeCall) activeCall.type = 'video';
     document.getElementById('callTypeLabel').textContent = 'Video call';
     document.getElementById('toggleCameraBtn').style.display = 'inline-flex';
+    const switchCameraBtn = document.getElementById('switchCameraBtn');
+    if (switchCameraBtn) switchCameraBtn.style.display = 'inline-flex';
     updateCallControlState();
     await renegotiateActiveCall();
   } catch (error) {
@@ -3640,5 +3709,12 @@ function setupCallControlButtons() {
     cameraBtn.dataset.ready = 'true';
 
     cameraBtn.addEventListener('click', () => setCameraOff(!cameraOff));
+  }
+
+  const switchCameraBtn = document.getElementById('switchCameraBtn');
+
+  if (switchCameraBtn && switchCameraBtn.dataset.ready !== 'true') {
+    switchCameraBtn.dataset.ready = 'true';
+    switchCameraBtn.addEventListener('click', switchCameraFacingMode);
   }
 }
