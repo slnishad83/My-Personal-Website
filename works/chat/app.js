@@ -970,7 +970,14 @@ async function preparePeerConnection(callId, role) {
 
 async function upgradeVoiceCallToVideo() {
   if (!activeCall?.id || !peerConnection || !localCallStream) return;
-    try {
+  const existingVideo = localCallStream.getVideoTracks()[0];
+  if (existingVideo) {
+    cameraOff = !cameraOff;
+    existingVideo.enabled = !cameraOff;
+    document.getElementById('toggleCameraBtn').classList.toggle('active', cameraOff);
+    return;
+  }
+  try {
     setCallStatus('Starting camera...');
     const videoStream = await navigator.mediaDevices.getUserMedia({ video: true });
     const videoTrack = videoStream.getVideoTracks()[0];
@@ -3561,29 +3568,24 @@ function setupCallControlButtons() {
   }
 
   if (cameraBtn && cameraBtn.dataset.ready !== 'true') {
-  cameraBtn.dataset.ready = 'true';
+    cameraBtn.dataset.ready = 'true';
 
-  cameraBtn.addEventListener('click', async () => {
-    if (!localCallStream) return;
+    cameraBtn.addEventListener('click', () => {
+  const videoTrack = localCallStream?.getVideoTracks?.()[0];
 
-    let videoTrack = localCallStream.getVideoTracks()[0];
+  if (!videoTrack) {
+    showToast('No camera available', 'error');
+    return;
+  }
 
-    // Upgrade voice call to video
-    if (!videoTrack) {
-      await upgradeVoiceCallToVideo();
-      return;
-    }
+  const shouldTurnOff = videoTrack.enabled === true;
+  videoTrack.enabled = !shouldTurnOff;
+  cameraOff = shouldTurnOff;
 
-    // Proper camera toggle
-    videoTrack.enabled = !videoTrack.enabled;
+  cameraBtn.classList.toggle('active', cameraOff);
+  cameraBtn.textContent = cameraOff ? '📷 Off' : '📷';
 
-    cameraOff = !videoTrack.enabled;
-
-    cameraBtn.classList.toggle('active', cameraOff);
-
-    showToast(
-      cameraOff ? 'Camera turned off' : 'Camera turned on'
-    );
-   });
+  showToast(cameraOff ? 'Camera off' : 'Camera on');
+});
   }
 }
