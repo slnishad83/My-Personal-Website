@@ -569,6 +569,7 @@ function updateCallControlState() {
   const muteBtn = document.getElementById('muteMicBtn');
   const cameraBtn = document.getElementById('toggleCameraBtn');
   const switchCameraBtn = document.getElementById('switchCameraBtn');
+  const addParticipantBtn = document.getElementById('addCallParticipantBtn');
   const localVideo = document.getElementById('localVideo');
   const cameraControl = document.getElementById('toggleCameraControl');
 
@@ -594,6 +595,10 @@ function updateCallControlState() {
     switchCameraBtn.setAttribute('aria-label', switchCameraBtn.title);
   }
 
+  if (addParticipantBtn) {
+    addParticipantBtn.dataset.controlLabel = 'Add people';
+  }
+
   if (localVideo) {
     localVideo.classList.toggle('camera-off', cameraOff);
     localVideo.style.visibility = cameraOff ? 'hidden' : '';
@@ -602,6 +607,16 @@ function updateCallControlState() {
   if (cameraControl) {
     cameraControl.dataset.state = cameraOff ? 'off' : 'on';
   }
+}
+
+function flashCallControlLabel(button, message) {
+  if (!button) return;
+  if (message) button.dataset.controlLabel = message;
+  button.classList.add('show-control-label');
+  clearTimeout(button._labelTimer);
+  button._labelTimer = setTimeout(() => {
+    button.classList.remove('show-control-label');
+  }, 1200);
 }
 
 function setMicrophoneMuted(isMuted) {
@@ -615,6 +630,7 @@ function setMicrophoneMuted(isMuted) {
   micMuted = Boolean(isMuted);
   audioTrack.enabled = !micMuted;
   updateCallControlState();
+  flashCallControlLabel(document.getElementById('muteMicBtn'), micMuted ? 'Muted' : 'Unmuted');
 }
 
 async function setCameraOff(isOff) {
@@ -662,6 +678,7 @@ async function setCameraOff(isOff) {
   }
 
   updateCallControlState();
+  flashCallControlLabel(document.getElementById('toggleCameraBtn'), cameraOff ? 'CAM OFF' : 'CAM ON');
 }
 
 async function switchCameraFacingMode() {
@@ -705,6 +722,7 @@ async function switchCameraFacingMode() {
     }
 
     updateCallControlState();
+    flashCallControlLabel(document.getElementById('switchCameraBtn'), preferredCameraFacingMode === 'user' ? 'FRONT' : 'BACK');
   } catch (error) {
     preferredCameraFacingMode = previousFacingMode;
     updateCallControlState();
@@ -910,6 +928,10 @@ function setCallUi({ mode = 'outgoing', type = 'voice', title = 'Calling...', st
   document.getElementById('rejectCallBtn').style.display = mode === 'incoming' ? 'inline-flex' : 'none';
   document.getElementById('endCallBtn').style.display = mode === 'incoming' ? 'none' : 'inline-flex';
   document.getElementById('muteMicBtn').style.display = mode === 'incoming' ? 'none' : 'inline-flex';
+  const addParticipantBtn = document.getElementById('addCallParticipantBtn');
+  if (addParticipantBtn) {
+    addParticipantBtn.style.display = mode === 'active' ? 'inline-flex' : 'none';
+  }
   document.getElementById('toggleCameraBtn').style.display =
     mode !== 'incoming' && type === 'video' ? 'inline-flex' : 'none';
   const switchCameraBtn = document.getElementById('switchCameraBtn');
@@ -939,10 +961,12 @@ function swapCallVideoViews() {
   const localVideo = document.getElementById('localVideo');
   const remoteVideo = document.getElementById('remoteVideo');
   if (!localVideo || !remoteVideo || localVideo.style.display === 'none') return;
+  if (!localVideo.srcObject || !remoteVideo.srcObject) return;
   const localStream = localVideo.srcObject;
   localVideo.srcObject = remoteVideo.srcObject;
   remoteVideo.srcObject = localStream;
   localVideo.dataset.swapped = localVideo.dataset.swapped === 'true' ? 'false' : 'true';
+  localVideo.title = localVideo.dataset.swapped === 'true' ? 'Tap to show your camera large' : 'Tap to show contact large';
 }
 
 function setupCallPreviewInteractions() {
@@ -1100,6 +1124,8 @@ async function preparePeerConnection(callId, role) {
       document.getElementById('toggleCameraBtn').style.display = currentCallType === 'video' ? 'inline-flex' : 'none';
       const switchCameraBtn = document.getElementById('switchCameraBtn');
       if (switchCameraBtn) switchCameraBtn.style.display = currentCallType === 'video' ? 'inline-flex' : 'none';
+      const addParticipantBtn = document.getElementById('addCallParticipantBtn');
+      if (addParticipantBtn) addParticipantBtn.style.display = 'inline-flex';
       setCallStatus('Connected');
       if (!callStartedAt) startCallDuration();
       requestCallWakeLock();
@@ -1221,6 +1247,10 @@ async function addRemoteIceCandidate(candidateData) {
 }
 
 async function startCall(type = 'voice') {
+  if (currentChatType === 'group') {
+    showToast('Group calls need conference signaling support before they can work safely.', 'error');
+    return;
+  }
   if (!currentUser || !currentChat || currentChatType !== 'direct') {
     showToast('Calls are available for personal chats only', 'error');
     return;
@@ -3103,8 +3133,8 @@ async function loadGroupChat(groupId, groupName) {
   const canSend = !currentGroup.onlyAdminsCanSend || isCurrentUserGroupAdmin();
   if (inputArea) inputArea.style.display = canSend ? 'flex' : 'none';
   document.getElementById('groupInfoBtn').style.display = 'block';
-  document.getElementById('voiceCallBtn').style.display = 'none';
-  document.getElementById('videoCallBtn').style.display = 'none';
+  document.getElementById('voiceCallBtn').style.display = 'inline-flex';
+  document.getElementById('videoCallBtn').style.display = 'inline-flex';
   loadMessages();
   listenForTypingIndicator();
   loadPinnedMessages();
@@ -3716,5 +3746,15 @@ function setupCallControlButtons() {
   if (switchCameraBtn && switchCameraBtn.dataset.ready !== 'true') {
     switchCameraBtn.dataset.ready = 'true';
     switchCameraBtn.addEventListener('click', switchCameraFacingMode);
+  }
+
+  const addParticipantBtn = document.getElementById('addCallParticipantBtn');
+
+  if (addParticipantBtn && addParticipantBtn.dataset.ready !== 'true') {
+    addParticipantBtn.dataset.ready = 'true';
+    addParticipantBtn.addEventListener('click', () => {
+      flashCallControlLabel(addParticipantBtn, 'Not ready');
+      showToast('Adding people to an active call needs group-call signaling support.', 'error');
+    });
   }
 }

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'team-chat-v113';
+const CACHE_NAME = 'team-chat-v114';
 const urlsToCache = [
   'index.html',
   'login.html',

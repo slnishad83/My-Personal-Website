@@ -915,6 +915,16 @@ button {
   text-align: center;
   white-space: nowrap;
   pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    opacity 0.16s ease,
+    visibility 0.16s ease;
+}
+
+.call-icon-btn.show-control-label::after {
+  opacity: 1;
+  visibility: visible;
 }
 
 .call-icon-btn.active::before {
