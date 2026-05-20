@@ -2363,6 +2363,7 @@ async function checkFirstTimeUser() {
 function showFirstTimePhoneModal() {
   const modal = document.getElementById('firstTimePhoneModal');
   if (!modal) return;
+  setupCallPreviewInteractions();
   modal.style.display = 'flex';
   
   document.getElementById('skipPhoneBtn').onclick = async () => {
