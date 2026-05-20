@@ -1517,7 +1517,7 @@ async function uploadDocument(file) {
 // ========================================================================
 // FIXED: STRICT PREFIX & EXACT MULTI-CRITERIA SEARCH ENGINE
 // ========================================================================
-function searchUsersRealtime(searchTerm) {
+async function searchUsersRealtime(searchTerm) {
   const chatsList = document.getElementById('chatsList');
   if (!chatsList) return;
   
@@ -1534,7 +1534,11 @@ function searchUsersRealtime(searchTerm) {
   }
 
   // Pass control straight to our updated combining engine
-  loadAllChatsList(term);
+  if (!allUsers || allUsers.length === 0) {
+  await loadAllUsers();
+}
+
+loadAllChatsList(term);
 }
 
 // ========================================================================
