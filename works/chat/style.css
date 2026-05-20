@@ -2378,3 +2378,8 @@ body.dark .read-receipt {
 #requestBadge:empty {
   display: none !important;
 }
+#localVideo {
+  touch-action: none !important;
+  pointer-events: auto !important;
+  z-index: 50 !important;
+}

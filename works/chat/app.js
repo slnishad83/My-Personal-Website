@@ -794,51 +794,66 @@ function setupCallPreviewInteractions() {
   const localVideo = document.getElementById('localVideo');
   const stage = document.querySelector('.call-video-stage');
   if (!localVideo || !stage || localVideo.dataset.previewReady === 'true') return;
-  localVideo.dataset.previewReady = 'true';
 
-  let dragStart = null;
-  let pointerMoved = false;
+  localVideo.dataset.previewReady = 'true';
+  localVideo.style.touchAction = 'none';
+  localVideo.style.cursor = 'grab';
+  localVideo.style.zIndex = '50';
+
+  let dragging = false;
+  let moved = false;
+  let offsetX = 0;
+  let offsetY = 0;
+
   const clamp = (value, min, max) => Math.max(min, Math.min(value, max));
 
-  localVideo.addEventListener('pointerdown', event => {
-    if (localVideo.style.display === 'none') return;
+  localVideo.addEventListener('pointerdown', (e) => {
+    dragging = true;
+    moved = false;
+
     const rect = localVideo.getBoundingClientRect();
-    pointerMoved = false;
-    dragStart = {
-      pointerId: event.pointerId,
-      startX: event.clientX,
-      startY: event.clientY,
-      offsetX: event.clientX - rect.left,
-      offsetY: event.clientY - rect.top
-    };
-    localVideo.setPointerCapture?.(event.pointerId);
+    offsetX = e.clientX - rect.left;
+    offsetY = e.clientY - rect.top;
+
+    localVideo.setPointerCapture?.(e.pointerId);
+    localVideo.style.cursor = 'grabbing';
+    e.preventDefault();
   });
 
-  localVideo.addEventListener('pointermove', event => {
-    if (!dragStart || dragStart.pointerId !== event.pointerId) return;
-    if (Math.abs(event.clientX - dragStart.startX) > 4 || Math.abs(event.clientY - dragStart.startY) > 4) {
-      pointerMoved = true;
-    }
+  localVideo.addEventListener('pointermove', (e) => {
+    if (!dragging) return;
+
+    moved = true;
+
     const stageRect = stage.getBoundingClientRect();
     const width = localVideo.offsetWidth;
     const height = localVideo.offsetHeight;
-    const left = clamp(event.clientX - stageRect.left - dragStart.offsetX, 8, stageRect.width - width - 8);
-    const top = clamp(event.clientY - stageRect.top - dragStart.offsetY, 8, stageRect.height - height - 8);
+
+    const left = clamp(e.clientX - stageRect.left - offsetX, 8, stageRect.width - width - 8);
+    const top = clamp(e.clientY - stageRect.top - offsetY, 8, stageRect.height - height - 8);
+
     localVideo.style.left = `${left}px`;
     localVideo.style.top = `${top}px`;
     localVideo.style.right = 'auto';
     localVideo.style.bottom = 'auto';
+
+    e.preventDefault();
   });
 
-  localVideo.addEventListener('pointerup', event => {
-    if (dragStart?.pointerId === event.pointerId) dragStart = null;
+  localVideo.addEventListener('pointerup', (e) => {
+    dragging = false;
+    localVideo.releasePointerCapture?.(e.pointerId);
+    localVideo.style.cursor = 'grab';
   });
+
   localVideo.addEventListener('pointercancel', () => {
-    dragStart = null;
+    dragging = false;
+    localVideo.style.cursor = 'grab';
   });
-  localVideo.addEventListener('click', event => {
-    if (pointerMoved) {
-      event.preventDefault();
+
+  localVideo.addEventListener('click', (e) => {
+    if (moved) {
+      e.preventDefault();
       return;
     }
     swapCallVideoViews();
