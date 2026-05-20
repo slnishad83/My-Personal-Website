@@ -3414,6 +3414,25 @@ async function init() {
   document.getElementById('rejectCallBtn')?.addEventListener('click', () => endActiveCall('rejected'));
   document.getElementById('endCallBtn')?.addEventListener('click', () => endActiveCall('ended'));
   document.getElementById('darkModeBtn')?.addEventListener('click', toggleDarkMode);
+  document.getElementById('toggleCameraBtn')?.addEventListener('click', () => {
+  if (!localCallStream) return;
+
+  const videoTrack = localCallStream.getVideoTracks()[0];
+
+  if (!videoTrack) {
+    showToast('No camera available', 'error');
+    return;
+  }
+
+  cameraOff = !cameraOff;
+  videoTrack.enabled = !cameraOff;
+
+  document
+    .getElementById('toggleCameraBtn')
+    ?.classList.toggle('active', cameraOff);
+
+  showToast(cameraOff ? 'Camera off' : 'Camera on');
+});
   
   document.querySelectorAll('.closeProfileModal').forEach(b => b.addEventListener('click', () => document.getElementById('profileModal').style.display = 'none'));
   document.getElementById('fileInput')?.addEventListener('change', (e) => handleFileUpload(e.target.files[0]));
