@@ -540,24 +540,30 @@
               return;
             }
 
-            const userDoc = await db
-              .collection("users")
-              .doc(userCred.user.uid)
-              .get();
-            if (userDoc.exists && userDoc.data().isActive === false) {
-              await db
-                .collection("users")
-                .doc(userCred.user.uid)
-                .update({ isActive: true, deactivatedAt: null });
-            }
+            try {
+              const userRef = db.collection("users").doc(userCred.user.uid);
 
-            await db
-              .collection("users")
-              .doc(userCred.user.uid)
-              .set(
-                { onlineStatus: "online", lastSeen: new Date() },
+              const userDoc = await userRef.get();
+
+              if (userDoc.exists && userDoc.data().isActive === false) {
+                await userRef.update({
+                  isActive: true,
+                  deactivatedAt: null,
+                });
+              }
+
+              await userRef.set(
+                {
+                  onlineStatus: "online",
+                  lastSeen: new Date(),
+                  emailVerified: true,
+                  pendingVerification: false,
+                },
                 { merge: true },
               );
+            } catch (firestoreError) {
+              console.warn("Profile update skipped:", firestoreError);
+            }
 
             window.location.href = "index.html";
           } catch (error) {
@@ -783,6 +789,6 @@
           }
         });
     </script>
-    <script src="pwa-install.js?v=109"></script>
+    <script src="pwa-install.js?v=114"></script>
   </body>
 </html>
