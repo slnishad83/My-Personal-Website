@@ -161,7 +161,7 @@ exports.getTurnCredentials = onRequest(
 
 // ========================================
 // Incoming call push notification via FCM
-// Triggers when a new ringing call document is created.
+// Strongest web/PWA notification allowed by Chrome/Android.
 // ========================================
 exports.sendIncomingCallNotification = onDocumentCreated(
   {
@@ -186,8 +186,8 @@ exports.sendIncomingCallNotification = onDocumentCreated(
       return null;
     }
 
-    const title = call.type === 'video' ? 'Incoming video call' : 'Incoming voice call';
-    const body = call.fromUserName || 'Team Chat';
+    const title = call.type === 'video' ? '📹 Incoming video call' : '📞 Incoming voice call';
+    const body = `${call.fromUserName || 'Team Chat'} is calling. Tap to open Team Chat.`;
 
     const message = {
       tokens,
@@ -217,7 +217,7 @@ exports.sendIncomingCallNotification = onDocumentCreated(
       webpush: {
         headers: {
           Urgency: 'high',
-          TTL: '45'
+          TTL: '120'
         },
         notification: {
           title,
@@ -227,10 +227,13 @@ exports.sendIncomingCallNotification = onDocumentCreated(
           tag: `call-${callId}`,
           requireInteraction: true,
           renotify: true,
-          vibrate: [260, 180, 260, 180, 260],
+          silent: false,
+          timestamp: Date.now(),
+          vibrate: [700, 250, 700, 250, 700, 250, 700, 250, 700],
           data: {
             url: 'https://nishadsl.com/works/chat/',
-            callId
+            callId,
+            kind: 'call'
           },
           actions: [
             { action: 'open', title: 'Open' }
