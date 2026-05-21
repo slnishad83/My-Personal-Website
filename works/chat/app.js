@@ -967,26 +967,8 @@ function startIncomingRingtone() {
 }
 
 function notifyIncomingCall(call) {
-  if (!document.hidden || Notification.permission !== 'granted') return;
-  try {
-    new Notification(call.type === 'video' ? '📹 Incoming video call' : '📞 Incoming voice call', {
-      body: `${call.fromUserName || 'Team Chat'} is calling. Tap to open Team Chat.`,
-      tag: `call-${call.id}`,
-      requireInteraction: true,
-      renotify: true,
-      silent: false,
-      icon: 'app-icon-192.png',
-      badge: 'app-icon-192.png',
-      timestamp: Date.now(),
-      vibrate: [700, 250, 700, 250, 700, 250, 700],
-      data: {
-        url: './index.html',
-        callId: call.id,
-        kind: 'call'
-      }
-    });
-  } catch (error) {
-    console.warn('Incoming call notification could not be shown:', error);
+  if (Notification.permission === 'granted') {
+    showStrongIncomingCallNotification(call);
   }
 }
 
@@ -997,6 +979,169 @@ function hasValidFcmVapidKey() {
     !FCM_VAPID_KEY.includes('PASTE_YOUR_FIREBASE_WEB_PUSH_PUBLIC_VAPID_KEY_HERE')
   );
 }
+
+// ========================================
+// Strong FCM registration for background call notifications
+// ========================================
+function getFcmTokenStorageKey() {
+  return currentUser ? `teamChatFcmTokenRegisteredAt_${currentUser.uid}` : 'teamChatFcmTokenRegisteredAt';
+}
+
+function shouldRefreshFcmToken() {
+  try {
+    const registeredAt = Number(localStorage.getItem(getFcmTokenStorageKey()) || 0);
+    return !registeredAt || (Date.now() - registeredAt) > 1000 * 60 * 60 * 24 * 6;
+  } catch (error) {
+    return true;
+  }
+}
+
+async function ensureCallNotificationPermission({ force = false } = {}) {
+  if (!currentUser || !('Notification' in window) || !('serviceWorker' in navigator)) return false;
+
+  if (Notification.permission === 'denied') {
+    showToast('Notifications are blocked. Enable them in Chrome site settings to receive calls when the app is closed.', 'error');
+    return false;
+  }
+
+  if (Notification.permission !== 'granted') {
+    if (!force) return false;
+    const permission = await Notification.requestPermission();
+    if (permission !== 'granted') {
+      showToast('Allow notifications to receive calls when the app is minimized or screen is locked.', 'error');
+      return false;
+    }
+  }
+
+  return true;
+}
+
+async function registerFcmTokenForCurrentUser({ force = false } = {}) {
+  if (!currentUser || pushSetupStarted) return;
+  if (!hasValidFcmVapidKey()) {
+    console.warn('FCM VAPID key is missing or invalid.');
+    return;
+  }
+
+  if (!force && pushSetupDone && !shouldRefreshFcmToken()) return;
+
+  pushSetupStarted = true;
+  try {
+    const permissionReady = await ensureCallNotificationPermission({ force });
+    if (!permissionReady) return;
+
+    if (!firebase.messaging) {
+      console.warn('Firebase Messaging SDK is not loaded.');
+      return;
+    }
+
+    messaging = messaging || firebase.messaging();
+
+    const registration = await navigator.serviceWorker.register('sw.js?v=134-call-bg', { scope: './' });
+    await registration.update?.().catch(() => {});
+    const readyRegistration = await navigator.serviceWorker.ready;
+
+    const token = await messaging.getToken({
+      vapidKey: FCM_VAPID_KEY,
+      serviceWorkerRegistration: readyRegistration
+    });
+
+    if (!token) {
+      console.warn('FCM did not return a token.');
+      return;
+    }
+
+    const tokenKey = token.replace(/[^a-zA-Z0-9]/g, '').slice(-120);
+    await db.collection('users').doc(currentUser.uid).set({
+      fcmTokens: {
+        [tokenKey]: {
+          token,
+          platform: navigator.userAgent || 'web',
+          updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+          permission: Notification.permission,
+          scope: readyRegistration.scope || './',
+          purpose: 'incoming-calls'
+        }
+      },
+      notificationsEnabled: true,
+      lastFcmTokenUpdateAt: firebase.firestore.FieldValue.serverTimestamp()
+    }, { merge: true });
+
+    localStorage.setItem(getFcmTokenStorageKey(), String(Date.now()));
+    pushSetupDone = true;
+
+    if (messaging.onMessage && !window.__teamChatForegroundFcmBound) {
+      window.__teamChatForegroundFcmBound = true;
+      messaging.onMessage((payload) => {
+        const data = payload.data || {};
+        if (data.kind === 'call') {
+          showStrongIncomingCallNotification({
+            id: data.callId,
+            type: data.type,
+            fromUserName: data.fromUserName
+          });
+        }
+      });
+    }
+  } catch (error) {
+    console.warn('FCM registration failed:', error);
+    showToast('Could not enable call notifications. Check Chrome notification permission.', 'error');
+  } finally {
+    pushSetupStarted = false;
+  }
+}
+
+async function showStrongIncomingCallNotification(call = {}) {
+  if (!('serviceWorker' in navigator) || Notification.permission !== 'granted') return;
+  try {
+    const reg = await navigator.serviceWorker.ready;
+    await reg.showNotification(call.type === 'video' ? '📹 Incoming video call' : '📞 Incoming voice call', {
+      body: `${call.fromUserName || 'Team Chat'} is calling. Tap to open Team Chat.`,
+      tag: `call-${call.id || Date.now()}`,
+      renotify: true,
+      requireInteraction: true,
+      silent: false,
+      icon: 'app-icon-192.png',
+      badge: 'app-icon-192.png',
+      timestamp: Date.now(),
+      vibrate: [700, 250, 700, 250, 700, 250, 700, 250, 700],
+      data: {
+        url: './index.html',
+        callId: call.id || '',
+        kind: 'call'
+      },
+      actions: [
+        { action: 'open', title: 'Open' }
+      ]
+    });
+  } catch (error) {
+    console.warn('Could not show incoming call notification:', error);
+  }
+}
+
+function setupCallNotificationRefreshHooks() {
+  if (window.__teamChatCallNotificationHooksBound) return;
+  window.__teamChatCallNotificationHooksBound = true;
+
+  window.addEventListener('focus', () => {
+    if (currentUser && Notification.permission === 'granted') {
+      registerFcmTokenForCurrentUser({ force: false });
+    }
+  });
+
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden && currentUser && Notification.permission === 'granted') {
+      registerFcmTokenForCurrentUser({ force: false });
+    }
+  });
+
+  window.addEventListener('online', () => {
+    if (currentUser && Notification.permission === 'granted') {
+      registerFcmTokenForCurrentUser({ force: false });
+    }
+  });
+}
+
 
 function getFcmTokenMapKey(token = '') {
   return String(token).replace(/[.#$/\[\]]/g, '_').slice(0, 160);
@@ -1089,9 +1234,6 @@ async function setupCallPushNotifications({ forcePrompt = false } = {}) {
   }
 }
 
-async function ensureCallNotificationPermission() {
-  await setupCallPushNotifications({ forcePrompt: true });
-}
 
 
 async function requestCallWakeLock() {
@@ -4653,6 +4795,9 @@ function redirectToLogin() {
 async function init() {
   await authPersistenceReady;
   setupMobileBackGuard();
+  setupCallNotificationRefreshHooks();
+  registerFcmTokenForCurrentUser({ force: Notification.permission !== 'granted' });
+
   bindSearchInput();
   auth.onAuthStateChanged(async (user) => {
     if (!user) { redirectToLogin(); return; }
@@ -4889,3 +5034,7 @@ document.addEventListener('visibilitychange', () => {
   }
   if (!document.hidden && currentChat) markMessagesAsRead();
 });
+
+window.enableTeamChatCallNotifications = function enableTeamChatCallNotifications() {
+  return registerFcmTokenForCurrentUser({ force: true });
+};

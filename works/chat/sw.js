@@ -56,7 +56,7 @@ self.addEventListener('notificationclick', event => {
   );
 });
 
-const CACHE_NAME = 'team-chat-v134-max-call-notification';
+const CACHE_NAME = 'team-chat-v135-background-call-final';
 const urlsToCache = [
   'index.html',
   'login.html',

@@ -177,9 +177,7 @@ exports.sendIncomingCallNotification = onDocumentCreated(
     const userSnap = await admin.firestore().collection('users').doc(call.toUserId).get();
     const user = userSnap.data() || {};
     const tokenEntries = Object.values(user.fcmTokens || {});
-    const tokens = tokenEntries
-      .map((entry) => entry && entry.token)
-      .filter(Boolean);
+    const tokens = tokenEntries.map((entry) => entry && entry.token).filter(Boolean);
 
     if (!tokens.length) {
       console.log('No FCM tokens for receiver', call.toUserId);
@@ -191,10 +189,7 @@ exports.sendIncomingCallNotification = onDocumentCreated(
 
     const message = {
       tokens,
-      notification: {
-        title,
-        body
-      },
+      notification: { title, body },
       data: {
         kind: 'call',
         callId,
@@ -235,9 +230,7 @@ exports.sendIncomingCallNotification = onDocumentCreated(
             callId,
             kind: 'call'
           },
-          actions: [
-            { action: 'open', title: 'Open' }
-          ]
+          actions: [{ action: 'open', title: 'Open' }]
         },
         fcmOptions: {
           link: 'https://nishadsl.com/works/chat/'
@@ -268,9 +261,7 @@ exports.sendIncomingCallNotification = onDocumentCreated(
           updates[`fcmTokens.${key}`] = admin.firestore.FieldValue.delete();
         }
       });
-      if (Object.keys(updates).length) {
-        await userSnap.ref.update(updates);
-      }
+      if (Object.keys(updates).length) await userSnap.ref.update(updates);
     }
 
     return null;
