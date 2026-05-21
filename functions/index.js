@@ -1,5 +1,6 @@
 const admin = require('firebase-admin');
 const { onRequest } = require('firebase-functions/v2/https');
+const { onDocumentCreated } = require('firebase-functions/v2/firestore');
 const { defineSecret } = require('firebase-functions/params');
 
 if (!admin.apps.length) {
@@ -156,3 +157,120 @@ exports.getTurnCredentials = onRequest(
     }
   }
 );
+
+
+// ========================================
+// Incoming call push notification via FCM
+// Triggers when a new ringing call document is created.
+// ========================================
+exports.sendIncomingCallNotification = onDocumentCreated(
+  {
+    document: 'calls/{callId}',
+    region: 'us-central1'
+  },
+  async (event) => {
+    const call = event.data?.data() || {};
+    const callId = event.params.callId;
+
+    if (!call.toUserId || call.status !== 'ringing') return null;
+
+    const userSnap = await admin.firestore().collection('users').doc(call.toUserId).get();
+    const user = userSnap.data() || {};
+    const tokenEntries = Object.values(user.fcmTokens || {});
+    const tokens = tokenEntries
+      .map((entry) => entry && entry.token)
+      .filter(Boolean);
+
+    if (!tokens.length) {
+      console.log('No FCM tokens for receiver', call.toUserId);
+      return null;
+    }
+
+    const title = call.type === 'video' ? 'Incoming video call' : 'Incoming voice call';
+    const body = call.fromUserName || 'Team Chat';
+
+    const message = {
+      tokens,
+      notification: {
+        title,
+        body
+      },
+      data: {
+        kind: 'call',
+        callId,
+        type: call.type || 'voice',
+        fromUserId: call.fromUserId || '',
+        fromUserName: call.fromUserName || '',
+        toUserId: call.toUserId || ''
+      },
+      android: {
+        priority: 'high',
+        notification: {
+          channelId: 'incoming-calls',
+          priority: 'max',
+          defaultSound: true,
+          defaultVibrateTimings: true,
+          tag: `call-${callId}`,
+          clickAction: 'https://nishadsl.com/works/chat/'
+        }
+      },
+      webpush: {
+        headers: {
+          Urgency: 'high',
+          TTL: '45'
+        },
+        notification: {
+          title,
+          body,
+          icon: '/works/chat/app-icon-192.png',
+          badge: '/works/chat/app-icon-192.png',
+          tag: `call-${callId}`,
+          requireInteraction: true,
+          renotify: true,
+          vibrate: [260, 180, 260, 180, 260],
+          data: {
+            url: 'https://nishadsl.com/works/chat/',
+            callId
+          },
+          actions: [
+            { action: 'open', title: 'Open' }
+          ]
+        },
+        fcmOptions: {
+          link: 'https://nishadsl.com/works/chat/'
+        }
+      }
+    };
+
+    const response = await admin.messaging().sendEachForMulticast(message);
+    const staleTokens = [];
+
+    response.responses.forEach((result, index) => {
+      if (!result.success) {
+        const code = result.error && result.error.code;
+        console.warn('FCM send failed', code, result.error && result.error.message);
+        if (
+          code === 'messaging/registration-token-not-registered' ||
+          code === 'messaging/invalid-registration-token'
+        ) {
+          staleTokens.push(tokens[index]);
+        }
+      }
+    });
+
+    if (staleTokens.length) {
+      const updates = {};
+      Object.entries(user.fcmTokens || {}).forEach(([key, entry]) => {
+        if (entry && staleTokens.includes(entry.token)) {
+          updates[`fcmTokens.${key}`] = admin.firestore.FieldValue.delete();
+        }
+      });
+      if (Object.keys(updates).length) {
+        await userSnap.ref.update(updates);
+      }
+    }
+
+    return null;
+  }
+);
+

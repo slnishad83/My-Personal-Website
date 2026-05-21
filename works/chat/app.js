@@ -41,6 +41,13 @@ const authPersistenceReady = auth.setPersistence(getAuthPersistence())
 const db = firebase.firestore();
 const storage = firebase.storage();
 
+// Firebase Cloud Messaging (FCM)
+// IMPORTANT: replace this with your Firebase Console > Project settings > Cloud Messaging > Web Push certificate public key.
+const FCM_VAPID_KEY = 'BDVoTx6AbM3T_AdVKV6IYFt3bbXiWRF5I7c5s-4w5AuUvYIzYPQYiODmJxnjH0DOLj-NhL83jiKMQ6RjkCvUALQ';
+let messaging = null;
+let pushSetupStarted = false;
+let pushSetupDone = false;
+
 // Cloudinary Configuration
 const CLOUDINARY_CLOUD_NAME = 'du2dsimyz';
 const CLOUDINARY_UPLOAD_PRESET = 'chat_app_uploads';
@@ -951,6 +958,103 @@ function notifyIncomingCall(call) {
   }
 }
 
+function hasValidFcmVapidKey() {
+  return Boolean(
+    typeof FCM_VAPID_KEY === 'string' &&
+    FCM_VAPID_KEY &&
+    !FCM_VAPID_KEY.includes('BDVoTx6AbM3T_AdVKV6IYFt3bbXiWRF5I7c5s-4w5AuUvYIzYPQYiODmJxnjH0DOLj-NhL83jiKMQ6RjkCvUALQ')
+  );
+}
+
+function getFcmTokenMapKey(token = '') {
+  return String(token).replace(/[.#$/\[\]]/g, '_').slice(0, 160);
+}
+
+async function setupCallPushNotifications({ forcePrompt = false } = {}) {
+  if (!currentUser || pushSetupStarted || pushSetupDone) return;
+  if (!('Notification' in window) || !('serviceWorker' in navigator)) return;
+  if (!firebase.messaging || !hasValidFcmVapidKey()) {
+    console.warn('FCM is not ready. Add firebase-messaging-compat.js and set FCM_VAPID_KEY.');
+    return;
+  }
+
+  if (Notification.permission === 'denied') {
+    console.warn('Notification permission is denied by the user/browser.');
+    return;
+  }
+
+  // Avoid surprising permission popups unless the user has already granted permission
+  // or the caller intentionally asks from a user action.
+  if (Notification.permission === 'default' && !forcePrompt) return;
+
+  pushSetupStarted = true;
+  try {
+    const permission = Notification.permission === 'granted'
+      ? 'granted'
+      : await Notification.requestPermission();
+
+    if (permission !== 'granted') return;
+
+    const registration = await navigator.serviceWorker.register('sw.js');
+    messaging = firebase.messaging();
+
+    const token = await messaging.getToken({
+      vapidKey: FCM_VAPID_KEY,
+      serviceWorkerRegistration: registration
+    });
+
+    if (!token) return;
+
+    await db.collection('users').doc(currentUser.uid).set({
+      fcmTokens: {
+        [getFcmTokenMapKey(token)]: {
+          token,
+          userAgent: navigator.userAgent,
+          platform: navigator.platform || '',
+          updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        }
+      },
+      notificationPermission: 'granted',
+      notificationUpdatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    }, { merge: true });
+
+    pushSetupDone = true;
+
+    messaging.onMessage(payload => {
+      const data = payload?.data || {};
+      if (data.kind === 'call' && data.callId && data.toUserId === currentUser.uid) {
+        // Foreground FCM backup. Firestore listener normally opens the call UI;
+        // this keeps a visible notification if the tab is backgrounded but still alive.
+        if (document.hidden && Notification.permission === 'granted') {
+          navigator.serviceWorker.ready.then(reg => {
+            reg.showNotification(data.type === 'video' ? 'Incoming video call' : 'Incoming voice call', {
+              body: data.fromUserName || 'Team Chat',
+              tag: `call-${data.callId}`,
+              renotify: true,
+              requireInteraction: true,
+              icon: 'app-icon-192.png',
+              badge: 'app-icon-192.png',
+              data: {
+                url: './index.html',
+                callId: data.callId
+              }
+            });
+          }).catch(() => {});
+        }
+      }
+    });
+  } catch (error) {
+    console.warn('Could not setup call push notifications:', error);
+  } finally {
+    pushSetupStarted = false;
+  }
+}
+
+async function ensureCallNotificationPermission() {
+  await setupCallPushNotifications({ forcePrompt: true });
+}
+
+
 async function requestCallWakeLock() {
   if (!('wakeLock' in navigator)) return;
   try {
@@ -994,6 +1098,7 @@ function clearCallTimeout() {
 function getCallHistoryText(status, type, durationMs = 0) {
   const label = type === 'video' ? 'Video call' : 'Voice call';
   if (status === 'missed' || status === 'failed') return `Missed ${label.toLowerCase()}`;
+  if (status === 'cancelled') return `${label} cancelled`;
   if (status === 'rejected') return `${label} declined`;
   if (status === 'ended' && durationMs > 0) return `${label} ended · ${formatCallDuration(durationMs)}`;
   return `${label} ended`;
@@ -1403,6 +1508,11 @@ async function startCall(type = 'voice') {
     showToast('Calls are not supported in this browser', 'error');
     return;
   }
+
+  // Ask once for notification permission from the caller's user action.
+  // This also stores this device's FCM token so future incoming calls can wake this device.
+  ensureCallNotificationPermission().catch(() => {});
+
   currentCallType = type;
   const callRef = db.collection('calls').doc();
   activeCall = {
@@ -1447,7 +1557,7 @@ async function startCall(type = 'voice') {
       if (data.status === 'missed') {
         showToast('Call missed', 'error');
       }
-      if (['ended', 'rejected', 'missed', 'failed'].includes(data.status)) cleanupCallUi();
+      if (['ended', 'cancelled', 'rejected', 'missed', 'failed'].includes(data.status)) cleanupCallUi();
     });
     callCandidatesUnsubscribe = callRef.collection('calleeCandidates').onSnapshot(snapshot => {
       snapshot.docChanges().forEach(change => {
@@ -1487,7 +1597,7 @@ async function acceptIncomingCall() {
         setCallStatus('Connected');
         if (!callStartedAt) startCallDuration();
       }
-      if (['ended', 'rejected', 'missed', 'failed'].includes(snapshot.data()?.status)) cleanupCallUi();
+      if (['ended', 'cancelled', 'rejected', 'missed', 'failed'].includes(snapshot.data()?.status)) cleanupCallUi();
     });
   } catch (error) {
     showToast(getCallPermissionMessage(error, currentCallType), 'error');
@@ -1497,14 +1607,48 @@ async function acceptIncomingCall() {
 }
 
 async function endActiveCall(status = 'ended') {
-  if (activeCall?.id) {
-    await writeCallHistory(status);
-    await db.collection('calls').doc(activeCall.id).update({
-      status,
-      endedAt: firebase.firestore.FieldValue.serverTimestamp()
-    }).catch(() => {});
+  const call = activeCall ? { ...activeCall } : null;
+  const callId = call?.id;
+  const mode = activeCallMode;
+  const endBtn = document.getElementById('endCallBtn');
+  const closeBtn = document.getElementById('closeCallBtn');
+  const rejectBtn = document.getElementById('rejectCallBtn');
+
+  [endBtn, closeBtn, rejectBtn].forEach(btn => {
+    if (btn) btn.disabled = true;
+  });
+  setCallStatus(status === 'rejected' ? 'Rejecting...' : 'Ending call...');
+
+  try {
+    if (callId) {
+      const callRef = db.collection('calls').doc(callId);
+      const snapshot = await callRef.get().catch(() => null);
+      const currentStatus = snapshot?.data?.()?.status || call.status || 'ringing';
+
+      let finalStatus = status;
+      if (status === 'ended' && currentStatus === 'ringing' && mode === 'outgoing') {
+        finalStatus = 'cancelled';
+      }
+
+      if (['ended', 'missed', 'failed'].includes(finalStatus) && currentStatus !== 'ringing') {
+        await writeCallHistory(finalStatus).catch(error => console.warn('Call history failed:', error));
+      }
+
+      await callRef.set({
+        status: finalStatus,
+        endedAt: firebase.firestore.FieldValue.serverTimestamp(),
+        endedBy: currentUser?.uid || null
+      }, { merge: true });
+    }
+  } catch (error) {
+    console.warn('Could not end call cleanly:', error);
+    showToast('Could not update call status, closing call screen', 'error');
+  } finally {
+    [endBtn, closeBtn, rejectBtn].forEach(btn => {
+      if (btn) btn.disabled = false;
+    });
+    cleanupCallUi();
   }
-  cleanupCallUi();
 }
 
 function listenForIncomingCalls() {
@@ -1515,17 +1659,38 @@ function listenForIncomingCalls() {
     .where('status', '==', 'ringing')
     .onSnapshot(snapshot => {
       const call = snapshot.docs[0];
-      if (!call && activeCallMode === 'incoming') {
-        cleanupCallUi();
+
+      if (!call) {
+        if (activeCallMode === 'incoming') cleanupCallUi();
         return;
       }
-      if (!call || activeCall) return;
-      activeCall = { id: call.id, ...call.data() };
-      currentCallType = activeCall.type || 'voice';
-      setCallUi({ mode: 'incoming', type: currentCallType, title: activeCall.fromUserName || 'Incoming call', status: currentCallType === 'video' ? 'Incoming video call' : 'Incoming voice call' });
-      notifyIncomingCall(activeCall);
-      startIncomingRingtone();
-      scheduleCallTimeout(db.collection('calls').doc(activeCall.id), 'receiver');
+
+      // If another active connected/outgoing call is running, do not interrupt it.
+      if (activeCall && activeCall.id !== call.id && activeCallMode !== 'incoming') return;
+
+      if (!activeCall || activeCall.id !== call.id) {
+        activeCall = { id: call.id, ...call.data() };
+        currentCallType = activeCall.type || 'voice';
+        setCallUi({
+          mode: 'incoming',
+          type: currentCallType,
+          title: activeCall.fromUserName || 'Incoming call',
+          status: currentCallType === 'video' ? 'Incoming video call' : 'Incoming voice call'
+        });
+        notifyIncomingCall(activeCall);
+        startIncomingRingtone();
+        scheduleCallTimeout(db.collection('calls').doc(activeCall.id), 'receiver');
+
+        if (callDocUnsubscribe) callDocUnsubscribe();
+        callDocUnsubscribe = db.collection('calls').doc(activeCall.id).onSnapshot(callSnapshot => {
+          const status = callSnapshot.data()?.status;
+          if (['ended', 'cancelled', 'rejected', 'missed', 'failed'].includes(status)) {
+            cleanupCallUi();
+          }
+        });
+      }
+    }, error => {
+      console.warn('Incoming call listener failed:', error);
     });
 }
 
@@ -4283,6 +4448,7 @@ async function init() {
     setupChatListListeners();
     setupRequestListeners();
     listenForIncomingCalls();
+    setupCallPushNotifications().catch(() => {});
     switchTab('all');
     revealAuthenticatedApp();
   });
@@ -4299,6 +4465,7 @@ async function init() {
   document.getElementById('acceptCallBtn')?.addEventListener('click', acceptIncomingCall);
   document.getElementById('rejectCallBtn')?.addEventListener('click', () => endActiveCall('rejected'));
   document.getElementById('endCallBtn')?.addEventListener('click', () => endActiveCall('ended'));
+  document.getElementById('closeCallBtn')?.addEventListener('click', handleCallCloseAction);
   document.getElementById('darkModeBtn')?.addEventListener('click', toggleDarkMode);
   
   document.querySelectorAll('.closeProfileModal').forEach(b => b.addEventListener('click', () => document.getElementById('profileModal').style.display = 'none'));
