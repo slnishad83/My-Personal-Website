@@ -292,6 +292,7 @@ function renderChatListItems(items, container) {
     chatDiv.dataset.unreadCount = item.unreadCount || 0;
     if (item.otherUserId || item.user?.id) chatDiv.dataset.otherUserId = item.otherUserId || item.user.id;
     chatDiv.dataset.chatName = item.name || '';
+    chatDiv.dataset.aliasDirectIds = (item.aliasDirectIds || []).join(',');
     
     if (currentChat?.id === item.id && (currentChatType === item.type || (item.type === 'saved' && currentChat?.isSaved))) {
       chatDiv.classList.add('active');
@@ -3086,6 +3087,41 @@ async function deleteChatForMe(chatId, chatType, chatName = 'Chat') {
   loadCurrentChatList();
 }
 
+async function clearChatHistoryForMe(chatId, chatType, chatName = 'Chat') {
+  if (!currentUser || !chatId || !chatType) return;
+
+  const targetIds = chatType === 'direct'
+    ? [...new Set([chatId, ...(contextMenuTarget?.dataset.aliasDirectIds || '').split(',').filter(Boolean)])].slice(0, 10)
+    : [chatId];
+  const fieldName = chatType === 'direct' ? 'directId' : 'groupId';
+  const snapshot = await db.collection('messages')
+    .where(fieldName, targetIds.length > 1 ? 'in' : '==', targetIds.length > 1 ? targetIds : targetIds[0])
+    .get();
+
+  if (snapshot.empty) {
+    showToast('No chat history to clear');
+    return;
+  }
+
+  const docs = snapshot.docs;
+  for (let index = 0; index < docs.length; index += 400) {
+    const batch = db.batch();
+    docs.slice(index, index + 400).forEach(doc => {
+      batch.update(doc.ref, {
+        [`deletedFor.${currentUser.uid}`]: true,
+        [`deletedForAt.${currentUser.uid}`]: firebase.firestore.FieldValue.serverTimestamp()
+      });
+    });
+    await batch.commit();
+  }
+
+  if (currentChat?.id === chatId && currentChatType === chatType) {
+    loadMessages();
+  }
+  showToast(`Chat history cleared for ${chatName}`);
+  loadCurrentChatList();
+}
+
 async function loadArchivedChats() {
   const archiveList = document.getElementById('archiveList');
   if (!archiveList) return;
@@ -3974,6 +4010,21 @@ document.getElementById('blockUserMenuItem')?.addEventListener('click', async ()
     if (currentChatType === 'direct' && currentChat?.otherUserId === userId) resetChatPanel();
     loadCurrentChatList();
     showToast(`${userName} blocked`);
+  }
+  document.getElementById('chatContextMenu').style.display = 'none';
+});
+
+document.getElementById('clearChatMenuItem')?.addEventListener('click', async () => {
+  if (!contextMenuTarget) return;
+  const chatId = contextMenuTarget.dataset.chatId;
+  const chatType = contextMenuTarget.dataset.chatType;
+  const chatName = contextMenuTarget.dataset.chatName || contextMenuTarget.querySelector('.list-name')?.textContent || 'Chat';
+  if (chatId && chatType && confirm(`Clear all messages in "${chatName}" for your account only?`)) {
+    try {
+      await clearChatHistoryForMe(chatId, chatType, chatName);
+    } catch (error) {
+      showToast('Failed to clear chat history', 'error');
+    }
   }
   document.getElementById('chatContextMenu').style.display = 'none';
 });
