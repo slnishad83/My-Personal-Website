@@ -45,6 +45,13 @@ const storage = firebase.storage();
 const CLOUDINARY_CLOUD_NAME = 'du2dsimyz';
 const CLOUDINARY_UPLOAD_PRESET = 'chat_app_uploads';
 const TURN_CREDENTIALS_ENDPOINT = 'https://us-central1-my-team-chat-2255.cloudfunctions.net/getTurnCredentials';
+const AUTH_DIRECTORY_FALLBACKS = [
+  { id: 'ArOfySQ0wBbemcCpwxQKaybBFmA2', email: 'rakeshjit18@gmail.com' },
+  { id: 'N5KfNSSYXDYbbevELbuhpgS06Ez1', email: 'alwynwilson187@gmail.com' },
+  { id: 'w8yFWAJS3aRgBlcRPV9ta7ig52M2', email: 'ashwatitharavath@gmail.com' },
+  { id: 'gXTqQwmqmjhicXVwUqLauTqXw8O2', email: 'halid480@gmail.com' },
+  { id: 'eAgAyBTqvwdnuiNremGtig4gbE1', email: 'sl.nishad@gmail.com' }
+];
 
 // Global Variables
 let currentUser = null;
@@ -1507,6 +1514,25 @@ function normalizeUserDoc(doc) {
   return { id: doc.id || data.id || data.uid, ...data, email, displayName, phone };
 }
 
+function getFallbackDirectoryUsers() {
+  return AUTH_DIRECTORY_FALLBACKS
+    .filter(user => user.id !== currentUser?.uid)
+    .map(user => {
+      const email = normalizeEmail(user.email);
+      return {
+        ...user,
+        email,
+        uid: user.id,
+        displayName: user.displayName || email.split('@')[0] || 'User',
+        emailVerified: true,
+        pendingVerification: false,
+        isActive: true,
+        onlineStatus: 'offline',
+        source: 'authFallback'
+      };
+    });
+}
+
 function getUserDedupeKey(user = {}) {
   const email = normalizeEmail(user.email);
   if (email) return `email:${email}`;
@@ -1961,6 +1987,7 @@ async function sendChatRequest(user) {
     showToast('Request cannot be sent to this user', 'error');
     return;
   }
+  await ensureDirectoryUserProfile(user);
   const existingRequest = await db.collection('chatRequests')
     .where('fromUserId', '==', currentUser.uid)
     .where('toUserId', '==', user.id)
@@ -1995,6 +2022,24 @@ async function sendChatRequest(user) {
   });
   showToast('Request sent');
   loadCurrentChatList();
+}
+
+async function ensureDirectoryUserProfile(user) {
+  if (!user?.id || !user?.email) return;
+  try {
+    await db.collection('users').doc(user.id).set({
+      uid: user.id,
+      email: normalizeEmail(user.email),
+      displayName: user.displayName || normalizeEmail(user.email).split('@')[0],
+      emailVerified: user.emailVerified !== false,
+      pendingVerification: false,
+      isActive: true,
+      onlineStatus: user.onlineStatus || 'offline',
+      repairedAt: firebase.firestore.FieldValue.serverTimestamp()
+    }, { merge: true });
+  } catch (error) {
+    console.warn('Could not repair directory profile:', error);
+  }
 }
 
 async function isBlockedByUser(userId) {
@@ -2852,15 +2897,16 @@ async function loadAllUsers() {
 function normalizeUsersSnapshot(snapshot) {
   const userMap = new Map();
   const getUserSortTime = user => user.lastSeen?.toMillis?.() || user.createdAt?.toMillis?.() || user.createdAt?.getTime?.() || 0;
-  snapshot.forEach(doc => {
-    const user = normalizeUserDoc(doc);
+  const addUser = user => {
     if (!isSearchableUser(user)) return;
     const key = getUserDedupeKey(user);
     const existing = userMap.get(key);
-    if (!existing || getUserSortTime(user) >= getUserSortTime(existing)) {
+    if (!existing || (existing.source === 'authFallback' && user.source !== 'authFallback') || getUserSortTime(user) >= getUserSortTime(existing)) {
       userMap.set(key, user);
     }
-  });
+  };
+  snapshot.forEach(doc => addUser(normalizeUserDoc(doc)));
+  getFallbackDirectoryUsers().forEach(addUser);
   return [...userMap.values()].sort((a, b) => (a.displayName || '').localeCompare(b.displayName || ''));
 }
 

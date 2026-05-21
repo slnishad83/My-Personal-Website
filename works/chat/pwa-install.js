@@ -54,7 +54,7 @@
 
     if (!serviceWorkerReadyPromise) {
       serviceWorkerReadyPromise = navigator.serviceWorker
-        .register("sw.js?v=116", { scope: "./" })
+        .register("sw.js?v=117", { scope: "./" })
         .then((registration) => {
           registration.update?.().catch(() => {});
           return navigator.serviceWorker.ready;
