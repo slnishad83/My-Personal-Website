@@ -2814,3 +2814,62 @@ body {
     display: none;
   }
 }
+
+
+/* Final 5-state message receipt system: sending, sent, delivered, read, failed + retry */
+.message-footer {
+  flex-wrap: wrap;
+}
+.message-status.pending {
+  color: #667781;
+  font-size: 11px;
+  font-weight: 800;
+}
+.message-status.failed {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  color: var(--danger);
+  font-size: 10px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+.message.my-message.failed .message-bubble,
+.local-failed-message .message-bubble {
+  border: 1px solid rgba(239, 68, 68, 0.28);
+}
+.message-error-text {
+  width: 100%;
+  margin-top: 4px;
+  color: var(--danger);
+  font-size: 11px;
+  line-height: 1.25;
+  text-align: right;
+}
+.retry-message-btn {
+  border: 0;
+  border-radius: 999px;
+  padding: 2px 8px;
+  background: rgba(239, 68, 68, 0.12);
+  color: var(--danger);
+  font-size: 10px;
+  font-weight: 800;
+  cursor: pointer;
+}
+.retry-message-btn:hover,
+.retry-message-btn:focus-visible {
+  background: rgba(239, 68, 68, 0.2);
+  outline: none;
+}
+.retry-message-btn:disabled {
+  cursor: wait;
+  opacity: 0.7;
+}
+.read-receipt.sent,
+.read-receipt.delivered {
+  color: #667781;
+}
+.read-receipt.read,
+.read-receipt.seen {
+  color: #53bdeb;
+}

@@ -3662,6 +3662,67 @@ async function renderSharedContent(type) {
 // REAL-TIME MESSAGES SUBSCRIBERS LISTENER
 // ========================================
 
+
+function getCurrentChatFailedKey() {
+  if (!currentUser || !currentChat || !currentChatType) return '';
+  return `teamChatFailedMessages:${currentUser.uid}:${currentChatType}:${currentChat.id}`;
+}
+
+function getLocalFailedMessages() {
+  const key = getCurrentChatFailedKey();
+  if (!key) return [];
+  try {
+    const items = JSON.parse(localStorage.getItem(key) || '[]');
+    return Array.isArray(items) ? items : [];
+  } catch (error) {
+    return [];
+  }
+}
+
+function saveLocalFailedMessages(items = []) {
+  const key = getCurrentChatFailedKey();
+  if (!key) return;
+  localStorage.setItem(key, JSON.stringify(items.slice(-40)));
+}
+
+function addLocalFailedMessage(text = '', attachment = null, extra = {}) {
+  const failed = {
+    localId: `failed_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+    text: text || '',
+    attachment: attachment || null,
+    createdAt: new Date().toISOString(),
+    ...extra
+  };
+  const items = getLocalFailedMessages();
+  items.push(failed);
+  saveLocalFailedMessages(items);
+  return failed;
+}
+
+function removeLocalFailedMessage(localId) {
+  if (!localId) return;
+  const items = getLocalFailedMessages().filter(item => item.localId !== localId);
+  saveLocalFailedMessages(items);
+}
+
+function getReceiptTargetIds(msg = {}) {
+  if (!currentUser) return [];
+  if (currentChatType === 'direct') {
+    const target = currentChat?.otherUserId || (Array.isArray(msg.participants) ? msg.participants.find(uid => uid !== currentUser.uid) : '');
+    return target ? [target] : [];
+  }
+  if (Array.isArray(currentGroupMembers) && currentGroupMembers.length) {
+    return currentGroupMembers.map(member => member.id).filter(uid => uid && uid !== currentUser.uid);
+  }
+  return [];
+}
+
+function receiptMapHasTarget(map = {}, targetIds = []) {
+  if (!map || typeof map !== 'object') return false;
+  if (targetIds.length) return targetIds.some(uid => Boolean(map?.[uid]));
+  return hasReceiptFromOtherUser(map);
+}
+
 async function markMessagesAsDelivered(markAsRead = false) {
   if (!currentChat || !currentUser) return;
 
@@ -3669,9 +3730,6 @@ async function markMessagesAsDelivered(markAsRead = false) {
   const readFieldKey = `readBy.${currentUser.uid}`;
   const directIds = getDirectChatIdsForCurrentChat();
 
-  // Important fix: do NOT use senderId != currentUser in the Firestore query.
-  // That query can fail or need an index, so read/delivered receipts may never be written.
-  // We fetch the current chat messages first, then filter sender-side in JavaScript.
   let query;
   if (currentChatType === 'direct' && directIds.length > 1) {
     query = db.collection('messages').where('directId', 'in', directIds);
@@ -3686,10 +3744,9 @@ async function markMessagesAsDelivered(markAsRead = false) {
 
     snapshot.docs.forEach(doc => {
       const data = doc.data() || {};
-
-      // Only mark messages received from the other person. Never mark my own messages as delivered/read by me.
       if (!data.senderId || data.senderId === currentUser.uid) return;
       if (data.deletedFor?.[currentUser.uid]) return;
+      if (data.deletedForEveryone) return;
 
       const updates = {};
       if (!data.deliveredTo?.[currentUser.uid]) {
@@ -3697,8 +3754,14 @@ async function markMessagesAsDelivered(markAsRead = false) {
       }
 
       if (markAsRead && !privacySettings.hideReadReceipts && !data.readBy?.[currentUser.uid]) {
-        updates.read = true;
         updates[readFieldKey] = firebase.firestore.FieldValue.serverTimestamp();
+      }
+
+      if (markAsRead && !privacySettings.hideReadReceipts) {
+        updates.read = true;
+        updates.status = 'read';
+      } else if (!data.status || data.status === 'sent') {
+        updates.status = 'delivered';
       }
 
       if (Object.keys(updates).length) {
@@ -3718,45 +3781,110 @@ async function markMessagesAsRead() {
 }
 
 function hasReceiptFromOtherUser(map = {}) {
-  if (!currentUser || !map) return false;
+  if (!currentUser || !map || typeof map !== 'object') return false;
   return Object.keys(map).some(uid => uid && uid !== currentUser.uid);
 }
 
 function getMessageReceiptHtml(msg, isMyMessage) {
   if (!isMyMessage || currentChat?.isSaved) return '';
   if (msg.failed || msg.status === 'failed') {
-    return '<span class="message-status failed" title="Message failed to send">⚠ Not sent</span>';
+    return '<span class="message-status failed" title="Message failed to send">⚠ Failed</span>';
   }
-  if (msg.pending || msg.status === 'pending' || !msg.timestamp) {
+  if (msg.pending || msg.status === 'sending' || msg.status === 'pending' || !msg.timestamp) {
     return '<span class="message-status pending" title="Sending">◷</span>';
   }
-  if (!privacySettings.hideReadReceipts && hasReceiptFromOtherUser(msg.readBy)) {
+
+  const targets = getReceiptTargetIds(msg);
+  const readByTarget = !privacySettings.hideReadReceipts && receiptMapHasTarget(msg.readBy, targets);
+  const deliveredToTarget = receiptMapHasTarget(msg.deliveredTo, targets);
+
+  if (readByTarget || (!privacySettings.hideReadReceipts && msg.status === 'read' && (targets.length === 0 || msg.read))) {
     return '<span class="read-receipt read" title="Read">✓✓</span>';
   }
-  if (hasReceiptFromOtherUser(msg.deliveredTo)) {
+  if (deliveredToTarget || msg.status === 'delivered') {
     return '<span class="read-receipt delivered" title="Delivered">✓✓</span>';
   }
   return '<span class="read-receipt sent" title="Sent">✓</span>';
 }
 
-function appendFailedMessage(text = '', attachment = null) {
-  const messagesArea = document.getElementById('messagesArea');
-  if (!messagesArea) return;
-  const messageDiv = document.createElement('div');
-  messageDiv.className = 'message my-message failed';
-  messageDiv.innerHTML = `
-    <div class="message-bubble">
-      <div class="message-text">${escapeHtml(text || (attachment ? 'Attachment' : 'Message'))}</div>
-      ${attachment ? renderAttachment(attachment) : ''}
-      <div class="message-footer">
-        <span class="message-time">${formatTime(new Date())}</span>
-        <span class="message-status failed" title="Message failed to send">⚠ Not sent</span>
+function renderFailedLocalMessage(item = {}) {
+  const localId = escapeHtml(item.localId || '');
+  return `
+    <div class="message my-message failed local-failed-message" data-local-failed-id="${localId}">
+      <div class="message-bubble">
+        <div class="message-text">${escapeHtml(item.text || (item.attachment ? 'Attachment' : 'Message'))}</div>
+        ${item.attachment ? renderAttachment(item.attachment) : ''}
+        <div class="message-footer">
+          <span class="message-time">${formatTime(new Date(item.createdAt || Date.now()))}</span>
+          <span class="message-status failed" title="Message failed to send">⚠ Failed</span>
+          <button class="retry-message-btn" type="button" data-local-failed-id="${localId}" title="Retry sending this message">Retry</button>
+        </div>
+        <div class="message-error-text">Message failed to send. Check your connection and tap Retry.</div>
       </div>
-      <div class="message-error-text">Message failed to send. Check your connection and try again.</div>
     </div>
   `;
-  messagesArea.appendChild(messageDiv);
+}
+
+function appendFailedMessage(text = '', attachment = null) {
+  const failed = addLocalFailedMessage(text, attachment);
+  const messagesArea = document.getElementById('messagesArea');
+  if (!messagesArea) return;
+  messagesArea.insertAdjacentHTML('beforeend', renderFailedLocalMessage(failed));
+  bindFailedMessageRetryActions();
   messagesArea.scrollTop = messagesArea.scrollHeight;
+}
+
+async function retryFailedMessage(localId) {
+  if (!localId || !currentChat || !currentUser) return;
+  const failed = getLocalFailedMessages().find(item => item.localId === localId);
+  if (!failed) return;
+
+  const retryButton = document.querySelector(`.retry-message-btn[data-local-failed-id="${CSS.escape(localId)}"]`);
+  if (retryButton) {
+    retryButton.disabled = true;
+    retryButton.textContent = 'Sending...';
+  }
+
+  const messageData = {
+    senderId: currentUser.uid,
+    senderName: currentUser.displayName || currentUser.email,
+    text: failed.text || '',
+    timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+    status: 'sent',
+    read: false,
+    readBy: { [currentUser.uid]: firebase.firestore.FieldValue.serverTimestamp() },
+    deliveredTo: {}
+  };
+
+  if (failed.attachment) messageData.attachment = failed.attachment;
+  if (failed.replyTo) messageData.replyTo = failed.replyTo;
+  if (currentChatType === 'direct') messageData.directId = currentChat.id;
+  else messageData.groupId = currentChat.id;
+
+  try {
+    await db.collection('messages').add(messageData);
+    removeLocalFailedMessage(localId);
+    document.querySelector(`.local-failed-message[data-local-failed-id="${CSS.escape(localId)}"]`)?.remove();
+    showToast('Message sent');
+  } catch (error) {
+    if (retryButton) {
+      retryButton.disabled = false;
+      retryButton.textContent = 'Retry';
+    }
+    showToast('Retry failed. Check your connection and try again.', 'error');
+  }
+}
+
+function bindFailedMessageRetryActions() {
+  document.querySelectorAll('.retry-message-btn').forEach(button => {
+    if (button.dataset.bound === 'true') return;
+    button.dataset.bound = 'true';
+    button.addEventListener('click', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      retryFailedMessage(button.dataset.localFailedId);
+    });
+  });
 }
 
 function loadMessages() {
@@ -3812,6 +3940,13 @@ function loadMessages() {
       messageDiv.addEventListener('contextmenu', (e) => { e.preventDefault(); showContextMenu(e.clientX, e.clientY, doc.id, msg, isMyMessage); });
       messagesArea.appendChild(messageDiv);
     });
+    const failedItems = getLocalFailedMessages();
+    if (failedItems.length) {
+      failedItems.forEach(item => {
+        messagesArea.insertAdjacentHTML('beforeend', renderFailedLocalMessage(item));
+      });
+      bindFailedMessageRetryActions();
+    }
     messagesArea.scrollTop = messagesArea.scrollHeight;
     markMessagesAsRead();
   });
@@ -3834,8 +3969,8 @@ async function sendMessage() {
     timestamp: firebase.firestore.FieldValue.serverTimestamp(),
     status: 'sent',
     read: false,
-    readBy: { [currentUser.uid]: new Date() },
-    deliveredTo: { [currentUser.uid]: new Date() }
+    readBy: { [currentUser.uid]: firebase.firestore.FieldValue.serverTimestamp() },
+    deliveredTo: {}
   };
   if (currentReplyTo) {
     messageData.replyTo = { messageId: currentReplyTo.id, text: currentReplyTo.text, senderName: currentReplyTo.senderName };
