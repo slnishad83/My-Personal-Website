@@ -1501,6 +1501,46 @@ function normalizeEmail(email = '') {
   return String(email || '').trim().toLowerCase();
 }
 
+function normalizeSearchText(value = '') {
+  return String(value || '').trim().toLowerCase().replace(/\s+/g, ' ');
+}
+
+function getNameTokens(value = '') {
+  return normalizeSearchText(value)
+    .split(' ')
+    .map(part => part.trim())
+    .filter(Boolean);
+}
+
+function isExactNameBlockMatch(name = '', term = '') {
+  const cleanTerm = normalizeSearchText(term);
+  if (!cleanTerm) return false;
+  return getNameTokens(name).some(part => part === cleanTerm);
+}
+
+function matchesIdentitySearch(entity = {}, rawTerm = '') {
+  const term = normalizeSearchText(rawTerm);
+  if (!term) return false;
+
+  const digits = term.replace(/\D/g, '');
+  const email = normalizeEmail(entity.email || '');
+  const phone = String(entity.phone || entity.phoneNumber || '').replace(/\D/g, '');
+  const names = [entity.displayName, entity.name, entity.fullName].filter(Boolean);
+
+  // Phone search remains partial, but only when the user types numbers.
+  if (digits.length > 0 && phone) return phone.includes(digits);
+
+  // Email search remains partial, but only when the query clearly looks like an email search.
+  // This prevents name typing like "N", "Ni", or "Nish" from exposing users through email matches.
+  const looksLikeEmailSearch = term.includes('@') || term.includes('.');
+  if (looksLikeEmailSearch) return email.includes(term);
+
+  // Name search is strict: show only when a full name block is typed.
+  // Examples: "Nishad", "Halid", "Meera" match. "N", "Ni", "Nish" do not.
+  // If multiple users have the same full name block, all of them are shown.
+  return names.some(name => isExactNameBlockMatch(name, term));
+}
+
 function isSearchableUser(user = {}) {
   if (!user.id || user.id === currentUser?.uid || isBlocked(user.id) || user.isActive === false) return false;
   if (user.pendingVerification === true && user.emailVerified === false) return false;
@@ -1894,23 +1934,14 @@ async function loadAllChatsList(searchTerm = '') {
   const term = searchTerm.trim().toLowerCase();
   
   if (term) {
-    const isEmailSearch = term.includes('@') && term.includes('.');
-    const cleanDigitsOnly = term.replace(/\D/g, '');
-    const isPhoneSearch = cleanDigitsOnly.length === 10;
-
-    // MATCH 1: Search your existing active chat logs
-    const chatMatches = items.filter(item => {
-      const nameLower = (item.name || '').toLowerCase();
-      const emailLower = (item.email || '').toLowerCase();
-      const phoneClean = String(item.phone || '').replace(/\D/g, '');
-
-      if (isEmailSearch) return emailLower === term;
-      if (isPhoneSearch) return phoneClean === cleanDigitsOnly;
-
-      // Typeahead match: Check if any word starts with your search term
-      const nameParts = nameLower.split(/\s+/).filter(Boolean);
-      return nameParts.some(part => part.startsWith(term));
-    });
+    // MATCH 1: Search existing active chat logs.
+    // Name matching is intentionally strict and only matches a complete name block.
+    const chatMatches = items.filter(item => matchesIdentitySearch({
+      displayName: item.name,
+      name: item.name,
+      email: item.email,
+      phone: item.phone
+    }, term));
     
     // Track unique IDs that are already matching in your chat history view
     const visibleUserIds = new Set();
@@ -1928,24 +1959,7 @@ async function loadAllChatsList(searchTerm = '') {
       // PREVENT CONFLICTS: Skip if this user is already visible in chatMatches
       if (visibleUserIds.has(user.id)) continue;
 
-      const displayNameLower = (user.displayName || '').toLowerCase();
-      const emailLower = (user.email || '').toLowerCase();
-      const phoneClean = String(user.phone || user.phoneNumber || '').replace(/\D/g, '');
-      const searchable = [user.displayName, user.name, user.fullName, user.email, user.phone, user.phoneNumber]
-        .filter(Boolean)
-        .join(' ')
-        .toLowerCase();
-
-      let isMatch = false;
-
-      if (isEmailSearch) {
-        isMatch = emailLower === term || emailLower.includes(term);
-      } else if (isPhoneSearch) {
-        isMatch = phoneClean === cleanDigitsOnly || phoneClean.includes(cleanDigitsOnly);
-      } else {
-        const nameParts = displayNameLower.split(/\s+/).filter(Boolean);
-        isMatch = searchable.includes(term) || nameParts.some(part => part.startsWith(term));
-      }
+      const isMatch = matchesIdentitySearch(user, term);
 
       if (isMatch) {
         const requestState = await getContactRequestState(user.id); // Fixed reference pass
@@ -2100,88 +2114,97 @@ async function loadReceivedRequests() {
   if (!requestList) return;
   const requestSection = document.querySelector('.request-section');
   const requestToggle = document.getElementById('requestToggle');
-
-  const chatSnapshot = await db.collection('chatRequests')
-    .where('toUserId', '==', currentUser.uid)
-    .where('status', '==', 'pending')
-    .get();
-  const groupSnapshot = await db.collection('groupInvites')
-    .where('toUserId', '==', currentUser.uid)
-    .where('status', '==', 'pending')
-    .get();
-
-  const requests = [
-    ...chatSnapshot.docs.map(doc => ({ id: doc.id, requestType: 'chat', ...doc.data() })),
-    ...groupSnapshot.docs.map(doc => ({ id: doc.id, requestType: 'group', ...doc.data() }))
-  ].sort((a, b) => (b.createdAt?.toMillis?.() || 0) - (a.createdAt?.toMillis?.() || 0));
-
   const badge = document.getElementById('requestBadge');
 
-if (badge) {
-  if (requests.length > 0) {
-    badge.textContent = requests.length > 99 ? '99+' : String(requests.length);
-    badge.classList.add('show');
-  } else {
-    badge.textContent = '';
-    badge.classList.remove('show');
-  }
-}
+  try {
+    const [chatSnapshot, groupSnapshot] = await Promise.all([
+      db.collection('chatRequests')
+        .where('toUserId', '==', currentUser.uid)
+        .where('status', '==', 'pending')
+        .get(),
+      db.collection('groupInvites')
+        .where('toUserId', '==', currentUser.uid)
+        .where('status', '==', 'pending')
+        .get()
+    ]);
 
-  if (badge) {
-    badge.textContent = requests.length;
-    badge.style.display = 'inline-flex';
-  }
-  if (badge) {
-  badge.textContent = "";
-  badge.style.display = "none";
-}
-  if (requestToggle) requestToggle.textContent = requestSection?.classList.contains('expanded') ? '▲' : '▼';
+    const requests = [
+      ...chatSnapshot.docs.map(doc => ({ id: doc.id, requestType: 'chat', ...doc.data() })),
+      ...groupSnapshot.docs.map(doc => ({ id: doc.id, requestType: 'group', ...doc.data() }))
+    ].sort((a, b) => (b.createdAt?.toMillis?.() || 0) - (a.createdAt?.toMillis?.() || 0));
 
-  requestList.innerHTML = '';
-  for (const req of requests) {
-    const isGroupInvite = req.requestType === 'group';
-    const reqDiv = document.createElement('div');
-    reqDiv.className = 'list-item';
-    reqDiv.innerHTML = `
-      <div class="list-avatar">${isGroupInvite ? 'G' : 'C'}</div>
-      <div class="list-info">
-        <div class="list-name">${escapeHtml(isGroupInvite ? (req.groupName || 'Group invite') : (req.fromUserName || 'User'))}</div>
-        <div class="list-preview">${isGroupInvite ? `Group invite from ${escapeHtml(req.fromUserName || 'User')}` : 'Chat request'}</div>
-      </div>
-      <div class="request-actions">
-        <button class="btn btn-success accept-request-btn" data-type="${req.requestType}" data-id="${req.id}" data-from="${escapeHtml(req.fromUserId || '')}">Accept</button>
-        <button class="btn btn-outline delete-request-btn" data-type="${req.requestType}" data-id="${req.id}">Delete</button>
-        <button class="btn btn-outline block-request-btn" data-type="${req.requestType}" data-id="${req.id}" data-from="${escapeHtml(req.fromUserId || '')}" data-name="${escapeHtml(req.fromUserName || 'User')}">Block</button>
-      </div>
-    `;
-    requestList.appendChild(reqDiv);
-  }
-
-  requestList.querySelectorAll('.accept-request-btn').forEach(btn => {
-    btn.addEventListener('click', async (e) => {
-      e.stopPropagation();
-      btn.disabled = true;
-      try {
-        if (btn.dataset.type === 'group') await acceptGroupInvite(btn.dataset.id);
-        else await acceptChatRequest(btn.dataset.id, btn.dataset.from);
-      } finally {
-        btn.disabled = false;
+    if (badge) {
+      if (requests.length > 0) {
+        badge.textContent = requests.length > 99 ? '99+' : String(requests.length);
+        badge.classList.add('show');
+        badge.style.display = 'inline-flex';
+      } else {
+        badge.textContent = '';
+        badge.classList.remove('show');
+        badge.style.display = 'none';
       }
+    }
+
+    if (requestToggle) requestToggle.textContent = requestSection?.classList.contains('expanded') ? '▲' : '▼';
+
+    requestList.innerHTML = '';
+    if (!requests.length) {
+      requestList.innerHTML = '<div class="empty-state">No requests</div>';
+      return;
+    }
+
+    for (const req of requests) {
+      const isGroupInvite = req.requestType === 'group';
+      const reqDiv = document.createElement('div');
+      reqDiv.className = 'list-item';
+      reqDiv.innerHTML = `
+        <div class="list-avatar">${isGroupInvite ? 'G' : 'C'}</div>
+        <div class="list-info">
+          <div class="list-name">${escapeHtml(isGroupInvite ? (req.groupName || 'Group invite') : (req.fromUserName || 'User'))}</div>
+          <div class="list-preview">${isGroupInvite ? `Group invite from ${escapeHtml(req.fromUserName || 'User')}` : 'Chat request'}</div>
+        </div>
+        <div class="request-actions">
+          <button class="btn btn-success accept-request-btn" data-type="${req.requestType}" data-id="${req.id}" data-from="${escapeHtml(req.fromUserId || '')}">Accept</button>
+          <button class="btn btn-outline delete-request-btn" data-type="${req.requestType}" data-id="${req.id}">Delete</button>
+          <button class="btn btn-outline block-request-btn" data-type="${req.requestType}" data-id="${req.id}" data-from="${escapeHtml(req.fromUserId || '')}" data-name="${escapeHtml(req.fromUserName || 'User')}">Block</button>
+        </div>
+      `;
+      requestList.appendChild(reqDiv);
+    }
+
+    requestList.querySelectorAll('.accept-request-btn').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        btn.disabled = true;
+        try {
+          if (btn.dataset.type === 'group') await acceptGroupInvite(btn.dataset.id);
+          else await acceptChatRequest(btn.dataset.id, btn.dataset.from);
+        } finally {
+          btn.disabled = false;
+        }
+      });
     });
-  });
-  requestList.querySelectorAll('.delete-request-btn').forEach(btn => {
-    btn.addEventListener('click', async (e) => {
-      e.stopPropagation();
-      if (btn.dataset.type === 'group') await deleteGroupInvite(btn.dataset.id);
-      else await deleteChatRequest(btn.dataset.id);
+    requestList.querySelectorAll('.delete-request-btn').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        if (btn.dataset.type === 'group') await deleteGroupInvite(btn.dataset.id);
+        else await deleteChatRequest(btn.dataset.id);
+      });
     });
-  });
-  requestList.querySelectorAll('.block-request-btn').forEach(btn => {
-    btn.addEventListener('click', async (e) => {
-      e.stopPropagation();
-      await blockRequestSender(btn.dataset.type, btn.dataset.id, btn.dataset.from, btn.dataset.name);
+    requestList.querySelectorAll('.block-request-btn').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        await blockRequestSender(btn.dataset.type, btn.dataset.id, btn.dataset.from, btn.dataset.name);
+      });
     });
-  });
+  } catch (error) {
+    console.error('Could not load requests:', error);
+    if (badge) {
+      badge.textContent = '';
+      badge.classList.remove('show');
+      badge.style.display = 'none';
+    }
+  }
 }
 
 function setupRequestListeners() {
@@ -2942,17 +2965,9 @@ function findUserByMemberInput(input) {
 }
 
 function searchUsersByIdentity(input) {
-  const term = (input || '').trim().toLowerCase();
+  const term = normalizeSearchText(input);
   if (!term) return [];
-  const digits = term.replace(/\D/g, '');
-  return allUsers.filter(user => {
-    if (isBlocked(user.id)) return false;
-    const name = (user.displayName || user.name || user.fullName || '').toLowerCase();
-    const email = (user.email || '').toLowerCase();
-    const phone = ((user.phone || user.phoneNumber || '') + '').replace(/\D/g, '');
-    const searchable = [user.displayName, user.name, user.fullName, user.email, user.phone, user.phoneNumber].filter(Boolean).join(' ').toLowerCase();
-    return name.includes(term) || email.includes(term) || searchable.includes(term) || (digits.length > 0 && phone.includes(digits));
-  });
+  return allUsers.filter(user => !isBlocked(user.id) && isSearchableUser(user) && matchesIdentitySearch(user, term));
 }
 
 async function hasAcceptedChatRelationship(userId) {
@@ -2988,17 +3003,11 @@ async function handleUserSelection(user) {
   }
 
   if (state.status === 'received') {
-    const pending = await db.collection('chatRequests')
-      .where('fromUserId', '==', user.id)
-      .where('toUserId', '==', currentUser.uid)
-      .where('status', '==', 'pending')
-      .limit(1)
-      .get();
-    if (!pending.empty) {
-      await acceptChatRequest(pending.docs[0].id, user.id);
-    } else {
-      showToast('Request no longer exists', 'error');
-    }
+    document.querySelector('.request-section')?.classList.add('expanded');
+    const toggle = document.getElementById('requestToggle');
+    if (toggle) toggle.textContent = '▲';
+    await loadReceivedRequests();
+    showToast(`${user.displayName || user.email || 'This user'} already sent you a request. Accept it from Chat Requests.`);
     return;
   }
 
@@ -3781,56 +3790,12 @@ function setReplyTo(msg) { currentReplyTo = msg; document.getElementById('replyP
 async function deleteMessage(id) { await db.collection('messages').doc(id).update({ text: 'This message was deleted', deletedForEveryone: true }); }
 async function starMessage(id, data) { await db.collection('starredMessages').add({ userId: currentUser.uid, messageId: id, text: data.text }); showToast('Starred'); }
 
-
-function positionFloatingMenu(menu, x, y) {
-  if (!menu) return;
-  const margin = 8;
-  menu.style.position = 'fixed';
-  menu.style.zIndex = '2147483647';
-  menu.style.display = 'block';
-  menu.style.visibility = 'hidden';
-  menu.style.left = '0px';
-  menu.style.top = '0px';
-  menu.style.maxWidth = `calc(100vw - ${margin * 2}px)`;
-  menu.style.maxHeight = `calc(100dvh - ${margin * 2}px)`;
-  menu.style.overflowY = 'auto';
-  menu.style.overscrollBehavior = 'contain';
-
-  const rect = menu.getBoundingClientRect();
-  const viewportWidth = window.visualViewport?.width || window.innerWidth;
-  const viewportHeight = window.visualViewport?.height || window.innerHeight;
-  const viewportLeft = window.visualViewport?.offsetLeft || 0;
-  const viewportTop = window.visualViewport?.offsetTop || 0;
-
-  let left = x;
-  let top = y;
-
-  if (left + rect.width + margin > viewportLeft + viewportWidth) {
-    left = viewportLeft + viewportWidth - rect.width - margin;
-  }
-  if (top + rect.height + margin > viewportTop + viewportHeight) {
-    top = viewportTop + viewportHeight - rect.height - margin;
-  }
-
-  left = Math.max(viewportLeft + margin, left);
-  top = Math.max(viewportTop + margin, top);
-
-  menu.style.left = `${Math.round(left)}px`;
-  menu.style.top = `${Math.round(top)}px`;
-  menu.style.visibility = 'visible';
-}
-
-function closeAllContextMenus() {
-  document.querySelectorAll('.message-context-menu').forEach(menu => menu.remove());
-  const chatMenu = document.getElementById('chatContextMenu');
-  if (chatMenu) chatMenu.style.display = 'none';
-}
-
 function showContextMenu(x, y, messageId, messageData, isMyMessage) {
   const existing = document.querySelector('.message-context-menu');
   if (existing) existing.remove();
   const menu = document.createElement('div');
   menu.className = 'context-menu message-context-menu';
+  menu.style.display = 'block'; menu.style.left = `${x}px`; menu.style.top = `${y}px`;
   
   const items = [
     { text: '📋 Copy Text', action: () => copyToClipboard(messageData.text) },
@@ -3848,7 +3813,6 @@ function showContextMenu(x, y, messageId, messageData, isMyMessage) {
     menu.appendChild(div);
   });
   document.body.appendChild(menu);
-  positionFloatingMenu(menu, x, y);
 }
 
 // ========================================
@@ -3924,6 +3888,12 @@ async function init() {
   bindSearchInput();
   auth.onAuthStateChanged(async (user) => {
     if (!user) { redirectToLogin(); return; }
+    try {
+      await user.reload();
+      user = auth.currentUser || user;
+    } catch (error) {
+      console.warn('Could not refresh auth user:', error);
+    }
     currentUser = user;
     
     document.getElementById('userName').textContent = user.displayName || user.email.split('@')[0];
@@ -4002,9 +3972,9 @@ init();
 // ========================================
 let contextMenuTarget = null;
 
-window.addEventListener('click', (event) => {
-  if (event.target.closest('.context-menu')) return;
-  closeAllContextMenus();
+window.addEventListener('click', () => {
+  const menu = document.getElementById('chatContextMenu');
+  if (menu) menu.style.display = 'none';
 });
 
 document.getElementById('chatsList')?.addEventListener('contextmenu', (e) => {
@@ -4015,26 +3985,10 @@ document.getElementById('chatsList')?.addEventListener('contextmenu', (e) => {
   contextMenuTarget = item;
   const menu = document.getElementById('chatContextMenu');
   if (menu) {
-    positionFloatingMenu(menu, e.clientX, e.clientY);
+    menu.style.display = 'block';
+    menu.style.left = `${e.clientX}px`;
+    menu.style.top = `${e.clientY}px`;
   }
-});
-
-
-let chatMenuLongPressTimer = null;
-document.getElementById('chatsList')?.addEventListener('touchstart', (e) => {
-  const item = e.target.closest('.list-item');
-  if (!item) return;
-  chatMenuLongPressTimer = setTimeout(() => {
-    contextMenuTarget = item;
-    const touch = e.touches[0];
-    const menu = document.getElementById('chatContextMenu');
-    if (menu && touch) positionFloatingMenu(menu, touch.clientX, touch.clientY);
-  }, 550);
-}, { passive: true });
-['touchend', 'touchmove', 'touchcancel'].forEach(eventName => {
-  document.getElementById('chatsList')?.addEventListener(eventName, () => {
-    clearTimeout(chatMenuLongPressTimer);
-  }, { passive: true });
 });
 
 document.getElementById('favoriteChatMenuItem')?.addEventListener('click', async () => {
