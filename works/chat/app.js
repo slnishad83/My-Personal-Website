@@ -38,6 +38,8 @@ let messagesUnsubscribe = null;
 let typingUnsubscribe = null;
 let directChatsUnsubscribe = null;
 let groupChatsUnsubscribe = null;
+let usersUnsubscribe = null;
+let allUsersReadyPromise = null;
 let chatRequestsUnsubscribe = null;
 let groupInvitesUnsubscribe = null;
 let currentGroup = null;
@@ -1470,8 +1472,39 @@ function getDirectChatId(userId1, userId2) {
   return [userId1, userId2].sort().join('_');
 }
 
+function normalizeEmail(email = '') {
+  return String(email || '').trim().toLowerCase();
+}
+
+function isSearchableUser(user = {}) {
+  if (!user.id || user.id === currentUser?.uid || isBlocked(user.id) || user.isActive === false) return false;
+  if (user.pendingVerification === true && user.emailVerified === false) return false;
+  return Boolean(user.email || user.displayName || user.phone || user.phoneNumber);
+}
+
+function normalizeUserDoc(doc) {
+  const data = doc.data ? doc.data() : doc;
+  const phone = data.phone || data.phoneNumber || '';
+  const email = normalizeEmail(data.email);
+  const displayName = data.displayName || data.name || data.fullName || (email || '').split('@')[0] || 'User';
+  return { id: doc.id || data.id || data.uid, ...data, email, displayName, phone };
+}
+
+function getUserDedupeKey(user = {}) {
+  const email = normalizeEmail(user.email);
+  if (email) return `email:${email}`;
+  const phone = String(user.phone || user.phoneNumber || '').replace(/\D/g, '');
+  if (phone.length >= 6) return `phone:${phone}`;
+  return `uid:${user.id}`;
+}
+
+function getDirectChatIdsForCurrentChat() {
+  if (!currentChat || currentChatType !== 'direct') return [];
+  return [...new Set([currentChat.id, ...(currentChat.aliasDirectIds || [])].filter(Boolean))].slice(0, 10);
+}
+
 function getContactMergeKey(item) {
-  const email = (item.email || item.user?.email || '').trim().toLowerCase();
+  const email = normalizeEmail(item.email || item.user?.email || '');
   if (email) return `email:${email}`;
   const phone = ((item.phone || item.user?.phone || item.user?.phoneNumber || '') + '').replace(/\D/g, '');
   if (phone.length >= 6) return `phone:${phone}`;
@@ -1485,6 +1518,12 @@ function findProfileByFallbackName(name) {
     (user.displayName || '').trim().toLowerCase() === cleanName ||
     (user.email || '').trim().toLowerCase() === cleanName
   ) || null;
+}
+
+function findProfileByEmail(email) {
+  const cleanEmail = normalizeEmail(email);
+  if (!cleanEmail) return null;
+  return allUsers.find(user => normalizeEmail(user.email) === cleanEmail) || null;
 }
 
 function mergeDirectContactItems(items) {
@@ -1611,6 +1650,46 @@ async function renderChatDebugPanel() {
   }
 }
 
+async function reconnectSameEmailProfile() {
+  if (!currentUser?.email) return;
+  const email = normalizeEmail(currentUser.email);
+  const sameEmailUsers = await db.collection('users').where('email', '==', email).get();
+  const oldUserIds = sameEmailUsers.docs
+    .map(doc => doc.id)
+    .filter(id => id && id !== currentUser.uid);
+  if (!oldUserIds.length) return;
+
+  for (const oldUserId of oldUserIds) {
+    const oldChats = await db.collection('directChats').where('participants', 'array-contains', oldUserId).get();
+    for (const oldChatDoc of oldChats.docs) {
+      const oldChat = oldChatDoc.data();
+      const otherUserId = (oldChat.participants || []).find(id => id !== oldUserId);
+      if (!otherUserId || otherUserId === currentUser.uid) continue;
+
+      const newChatId = getDirectChatId(currentUser.uid, otherUserId);
+      const newChatRef = db.collection('directChats').doc(newChatId);
+      const newChatDoc = await newChatRef.get();
+      const aliasDirectIds = [...new Set([newChatId, oldChatDoc.id, ...(oldChat.aliasDirectIds || []), ...(newChatDoc.data()?.aliasDirectIds || [])])];
+      await newChatRef.set({
+        ...oldChat,
+        participants: [currentUser.uid, otherUserId],
+        participantEmails: {
+          ...(oldChat.participantEmails || {}),
+          [currentUser.uid]: email
+        },
+        participantNames: {
+          ...(oldChat.participantNames || {}),
+          [currentUser.uid]: currentUser.displayName || currentUser.email
+        },
+        aliasDirectIds,
+        migratedFromUserIds: firebase.firestore.FieldValue.arrayUnion(oldUserId),
+        restoredAt: firebase.firestore.FieldValue.serverTimestamp(),
+        status: 'active'
+      }, { merge: true });
+    }
+  }
+}
+
 async function loadFavoriteChatIds() {
   if (!currentUser) return;
   const snapshot = await db.collection('favoriteChats').where('userId', '==', currentUser.uid).get();
@@ -1644,8 +1723,9 @@ async function toggleFavoriteChat(chatId, chatType) {
 async function getChatUnreadCount(chatId, chatType) {
   if (!currentUser || !chatId || !chatType) return 0;
   try {
+    const directIds = chatType === 'direct' && Array.isArray(chatId) ? chatId.filter(Boolean).slice(0, 10) : null;
     const query = db.collection('messages')
-      .where(chatType === 'direct' ? 'directId' : 'groupId', '==', chatId)
+      .where(chatType === 'direct' ? 'directId' : 'groupId', directIds ? 'in' : '==', directIds || chatId)
       .where('senderId', '!=', currentUser.uid);
     const snapshot = await query.get();
     return snapshot.docs.filter(doc => !doc.data().readBy?.[currentUser.uid]).length;
@@ -1656,8 +1736,9 @@ async function getChatUnreadCount(chatId, chatType) {
 
 async function markChatReadState(chatId, chatType, readState) {
   if (!currentUser || !chatId || !chatType) return;
+  const directIds = chatType === 'direct' && Array.isArray(chatId) ? chatId.filter(Boolean).slice(0, 10) : null;
   const query = db.collection('messages')
-    .where(chatType === 'direct' ? 'directId' : 'groupId', '==', chatId)
+    .where(chatType === 'direct' ? 'directId' : 'groupId', directIds ? 'in' : '==', directIds || chatId)
     .where('senderId', '!=', currentUser.uid);
   const snapshot = await query.get();
   const batch = db.batch();
@@ -1742,12 +1823,8 @@ async function searchUsersRealtime(searchTerm) {
     return;
   }
 
-  // Pass control straight to our updated combining engine
-  if (!allUsers || allUsers.length === 0) {
-  await loadAllUsers();
-}
-
-loadAllChatsList(term);
+  await refreshAllUsersOnce();
+  loadAllChatsList(term);
 }
 
 // ========================================================================
@@ -1800,25 +1877,30 @@ async function loadAllChatsList(searchTerm = '') {
 
     const userMatches = [];
     
+    await refreshAllUsersOnce();
+
     // MATCH 2: Look through the directory for users you haven't messaged yet
-    for (const user of allUsers) {
+    for (const user of allUsers.filter(isSearchableUser)) {
       // PREVENT CONFLICTS: Skip if this user is already visible in chatMatches
       if (visibleUserIds.has(user.id)) continue;
 
       const displayNameLower = (user.displayName || '').toLowerCase();
       const emailLower = (user.email || '').toLowerCase();
       const phoneClean = String(user.phone || user.phoneNumber || '').replace(/\D/g, '');
+      const searchable = [user.displayName, user.name, user.fullName, user.email, user.phone, user.phoneNumber]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase();
 
       let isMatch = false;
 
       if (isEmailSearch) {
-        isMatch = (emailLower === term);
+        isMatch = emailLower === term || emailLower.includes(term);
       } else if (isPhoneSearch) {
-        isMatch = (phoneClean === cleanDigitsOnly);
+        isMatch = phoneClean === cleanDigitsOnly || phoneClean.includes(cleanDigitsOnly);
       } else {
-        // Multi-part name prefix match
         const nameParts = displayNameLower.split(/\s+/).filter(Boolean);
-        isMatch = nameParts.some(part => part.startsWith(term));
+        isMatch = searchable.includes(term) || nameParts.some(part => part.startsWith(term));
       }
 
       if (isMatch) {
@@ -1887,8 +1969,10 @@ async function sendChatRequest(user) {
   await db.collection('chatRequests').add({
     fromUserId: currentUser.uid,
     fromUserName: currentUser.displayName || currentUser.email.split('@')[0],
+    fromUserEmail: normalizeEmail(currentUser.email),
     toUserId: user.id,
     toUserName: user.displayName || user.email,
+    toUserEmail: normalizeEmail(user.email),
     status: 'pending',
     createdAt: firebase.firestore.FieldValue.serverTimestamp()
   });
@@ -1913,11 +1997,21 @@ async function isBlockedByUser(userId) {
 async function acceptChatRequest(requestId, fromUserId) {
   if (!currentUser || !requestId || !fromUserId) return;
   try {
+    const requestDoc = await db.collection('chatRequests').doc(requestId).get();
+    const requestData = requestDoc.exists ? requestDoc.data() : {};
     const chatId = getDirectChatId(currentUser.uid, fromUserId);
     const chatDoc = await db.collection('directChats').doc(chatId).get();
     if (!chatDoc.exists) {
       await db.collection('directChats').doc(chatId).set({
         participants: [currentUser.uid, fromUserId],
+        participantEmails: {
+          [currentUser.uid]: normalizeEmail(currentUser.email),
+          [fromUserId]: normalizeEmail(requestData.fromUserEmail)
+        },
+        participantNames: {
+          [currentUser.uid]: currentUser.displayName || currentUser.email,
+          [fromUserId]: requestData.fromUserName || ''
+        },
         status: 'active',
         createdAt: firebase.firestore.FieldValue.serverTimestamp()
       });
@@ -2724,25 +2818,47 @@ function applyCurrentChatWallpaper() {
 
 async function loadAllUsers() {
   if (!currentUser) return;
-  db.collection('users').onSnapshot(snapshot => {
-    const userMap = new Map();
-    const getUserSortTime = data => data.createdAt?.toMillis?.() || data.createdAt?.getTime?.() || 0;
-    snapshot.forEach(doc => {
-      const data = doc.data();
-      if (doc.id === currentUser.uid || isBlocked(doc.id) || data.isActive === false) return;
-
-      const phone = data.phone || data.phoneNumber || '';
-      const displayName = data.displayName || data.name || data.fullName || (data.email || '').split('@')[0] || 'User';
-      const dedupeKey = (data.email || '').trim().toLowerCase() || String(phone).replace(/\D/g, '') || doc.id;
-      const user = { id: doc.id, ...data, displayName, phone };
-      const existing = userMap.get(dedupeKey);
-      if (!existing || getUserSortTime(data) >= getUserSortTime(existing)) {
-        userMap.set(dedupeKey, user);
-      }
+  if (usersUnsubscribe) return allUsersReadyPromise;
+  allUsersReadyPromise = new Promise(resolve => {
+    usersUnsubscribe = db.collection('users').onSnapshot(snapshot => {
+      allUsers = normalizeUsersSnapshot(snapshot);
+      populateGroupMemberSuggestions();
+      resolve(allUsers);
+    }, error => {
+      console.warn('User directory listener failed:', error);
+      resolve(allUsers);
     });
-    allUsers = [...userMap.values()];
-    populateGroupMemberSuggestions();
   });
+  return allUsersReadyPromise;
+}
+
+function normalizeUsersSnapshot(snapshot) {
+  const userMap = new Map();
+  const getUserSortTime = user => user.lastSeen?.toMillis?.() || user.createdAt?.toMillis?.() || user.createdAt?.getTime?.() || 0;
+  snapshot.forEach(doc => {
+    const user = normalizeUserDoc(doc);
+    if (!isSearchableUser(user)) return;
+    const key = getUserDedupeKey(user);
+    const existing = userMap.get(key);
+    if (!existing || getUserSortTime(user) >= getUserSortTime(existing)) {
+      userMap.set(key, user);
+    }
+  });
+  return [...userMap.values()].sort((a, b) => (a.displayName || '').localeCompare(b.displayName || ''));
+}
+
+async function refreshAllUsersOnce() {
+  if (!currentUser) return [];
+  try {
+    const snapshot = await db.collection('users').get();
+    allUsers = normalizeUsersSnapshot(snapshot);
+    populateGroupMemberSuggestions();
+  } catch (error) {
+    console.warn('Could not refresh user directory:', error);
+    if (!allUsersReadyPromise) await loadAllUsers();
+    else await allUsersReadyPromise;
+  }
+  return allUsers;
 }
 
 function populateGroupMemberSuggestions() {
@@ -2773,6 +2889,61 @@ function searchUsersByIdentity(input) {
     const searchable = [user.displayName, user.name, user.fullName, user.email, user.phone, user.phoneNumber].filter(Boolean).join(' ').toLowerCase();
     return name.includes(term) || email.includes(term) || searchable.includes(term) || (digits.length > 0 && phone.includes(digits));
   });
+}
+
+async function hasAcceptedChatRelationship(userId) {
+  if (!currentUser || !userId) return false;
+  const directId = getDirectChatId(currentUser.uid, userId);
+  const directDoc = await db.collection('directChats').doc(directId).get();
+  if (directDoc.exists && directDoc.data().status !== 'deleted') return true;
+
+  const sentAccepted = await db.collection('chatRequests')
+    .where('fromUserId', '==', currentUser.uid)
+    .where('toUserId', '==', userId)
+    .where('status', '==', 'accepted')
+    .limit(1)
+    .get();
+  if (!sentAccepted.empty) return true;
+
+  const receivedAccepted = await db.collection('chatRequests')
+    .where('fromUserId', '==', userId)
+    .where('toUserId', '==', currentUser.uid)
+    .where('status', '==', 'accepted')
+    .limit(1)
+    .get();
+  return !receivedAccepted.empty;
+}
+
+async function handleUserSelection(user) {
+  if (!currentUser || !user?.id) return;
+  const state = await getContactRequestState(user.id);
+
+  if (state.status === 'accepted') {
+    await startDirectChat(user);
+    return;
+  }
+
+  if (state.status === 'received') {
+    const pending = await db.collection('chatRequests')
+      .where('fromUserId', '==', user.id)
+      .where('toUserId', '==', currentUser.uid)
+      .where('status', '==', 'pending')
+      .limit(1)
+      .get();
+    if (!pending.empty) {
+      await acceptChatRequest(pending.docs[0].id, user.id);
+    } else {
+      showToast('Request no longer exists', 'error');
+    }
+    return;
+  }
+
+  if (state.status === 'sent') {
+    showToast('Request already sent');
+    return;
+  }
+
+  await sendChatRequest(user);
 }
 
 async function getContactRequestState(userId) {
@@ -2888,9 +3059,10 @@ async function buildDirectChatItems() {
     const participants = chatData.participants || chat.id.split('_');
     const otherUserId = participants.find(id => id !== currentUser.uid);
     if (!otherUserId || isBlocked(otherUserId)) continue;
-    const fallbackName = chatData.participantNames?.[otherUserId] || 'Unknown contact';
+    const fallbackEmail = chatData.participantEmails?.[otherUserId] || '';
+    const fallbackName = chatData.participantNames?.[otherUserId] || fallbackEmail || 'Unknown contact';
     const userDoc = await db.collection('users').doc(otherUserId).get();
-    const profileMatch = userDoc.exists ? null : findProfileByFallbackName(fallbackName);
+    const profileMatch = userDoc.exists ? null : (findProfileByEmail(fallbackEmail) || findProfileByFallbackName(fallbackName));
     const resolvedUserId = userDoc.exists ? otherUserId : (profileMatch?.id || otherUserId);
     const userData = userDoc.exists ? userDoc.data() : (profileMatch || {});
     if ((userDoc.exists || profileMatch) && userData.isActive === false) continue;
@@ -2905,15 +3077,15 @@ async function buildDirectChatItems() {
       name: displayName,
       avatar: userData.avatar ? `<img src="${userData.avatar}">` : escapeHtml((displayName || '?')[0].toUpperCase()),
       preview,
-      unreadCount: await getChatUnreadCount(chat.id, 'direct'),
+      unreadCount: await getChatUnreadCount([chat.id, ...(chatData.aliasDirectIds || [])], 'direct'),
       isFavorite: favoriteChatIds.includes(chat.id),
       isMuted: isChatMuted(chat.id),
       otherUserId: resolvedUserId,
       user: { id: resolvedUserId, ...userData, displayName },
-      email: userData.email || '',
+      email: userData.email || fallbackEmail || '',
       phone: userData.phone || userData.phoneNumber || '',
       hasUserProfile: userDoc.exists || !!profileMatch,
-      aliasDirectIds: [chat.id],
+      aliasDirectIds: [...new Set([chat.id, ...(chatData.aliasDirectIds || [])])],
       onlineStatus,
       presenceText,
       lastMessageTime: chatData.lastMessageTime?.toDate?.() || new Date(0)
@@ -3059,6 +3231,18 @@ async function startDirectChat(user) {
   if (isBlocked(user.id)) { showToast('You have blocked this user.', 'error'); return; }
   const chatId = getDirectChatId(currentUser.uid, user.id);
   currentChat = { id: chatId, otherUserId: user.id, otherUserName: user.displayName || user.email, type: 'direct', aliasDirectIds: [...new Set([chatId, ...(user.aliasDirectIds || [])])] };
+  await db.collection('directChats').doc(chatId).set({
+    participants: [currentUser.uid, user.id],
+    participantEmails: {
+      [currentUser.uid]: normalizeEmail(currentUser.email),
+      [user.id]: normalizeEmail(user.email)
+    },
+    participantNames: {
+      [currentUser.uid]: currentUser.displayName || currentUser.email,
+      [user.id]: user.displayName || user.email || 'User'
+    },
+    status: 'active'
+  }, { merge: true });
   currentChatType = 'direct';
   document.getElementById('currentChatName').textContent = user.displayName || user.email;
   document.getElementById('chatStatus').textContent = getPresenceText(user);
@@ -3368,7 +3552,10 @@ async function renderSharedContent(type) {
 async function markMessagesAsRead() {
   if (!currentChat || privacySettings.hideReadReceipts) return;
   const fieldKey = `readBy.${currentUser.uid}`;
-  let query = db.collection('messages').where(currentChatType === 'direct' ? 'directId' : 'groupId', '==', currentChat.id).where('senderId', '!=', currentUser.uid);
+  const directIds = getDirectChatIdsForCurrentChat();
+  let query = currentChatType === 'direct' && directIds.length > 1
+    ? db.collection('messages').where('directId', 'in', directIds).where('senderId', '!=', currentUser.uid)
+    : db.collection('messages').where(currentChatType === 'direct' ? 'directId' : 'groupId', '==', currentChat.id).where('senderId', '!=', currentUser.uid);
   const snapshot = await query.get();
   const batch = db.batch();
   let updatesMade = false;
@@ -3392,14 +3579,23 @@ function loadMessages() {
   const messagesArea = document.getElementById('messagesArea');
   if (messagesUnsubscribe) messagesUnsubscribe();
 
-  let query = db.collection('messages').where(currentChatType === 'direct' ? 'directId' : 'groupId', '==', currentChat.id).orderBy('timestamp', 'asc');
+  const directIds = getDirectChatIdsForCurrentChat();
+  let query = currentChatType === 'direct' && directIds.length > 1
+    ? db.collection('messages').where('directId', 'in', directIds)
+    : db.collection('messages').where(currentChatType === 'direct' ? 'directId' : 'groupId', '==', currentChat.id).orderBy('timestamp', 'asc');
   
   messagesUnsubscribe = query.onSnapshot(snapshot => {
     if (!messagesArea) return;
     messagesArea.innerHTML = '';
     if (snapshot.empty) { messagesArea.innerHTML = '<div class="empty-state">No messages here yet.</div>'; return; }
     
-    snapshot.docs.forEach(doc => {
+    const docs = [...snapshot.docs].sort((a, b) => {
+      const aTime = a.data().timestamp?.toMillis?.() || 0;
+      const bTime = b.data().timestamp?.toMillis?.() || 0;
+      return aTime - bTime;
+    });
+
+    docs.forEach(doc => {
       const msg = doc.data();
       if (msg.deletedFor?.[currentUser.uid] || isBlocked(msg.senderId)) return;
       const isMyMessage = msg.senderId === currentUser.uid;
@@ -3578,7 +3774,17 @@ async function init() {
     
     document.getElementById('userName').textContent = user.displayName || user.email.split('@')[0];
     const userRef = db.collection('users').doc(user.uid);
-    await userRef.set({ uid: user.uid, email: user.email, displayName: user.displayName || user.email.split('@')[0], onlineStatus: 'online', lastSeen: new Date() }, { merge: true });
+    await userRef.set({
+      uid: user.uid,
+      email: normalizeEmail(user.email),
+      displayName: user.displayName || user.email.split('@')[0],
+      emailVerified: user.emailVerified === true,
+      pendingVerification: user.emailVerified !== true,
+      isActive: true,
+      onlineStatus: 'online',
+      lastSeen: new Date()
+    }, { merge: true });
+    await reconnectSameEmailProfile();
     
     await loadBlockedUsers();
     await loadMutedChats();
