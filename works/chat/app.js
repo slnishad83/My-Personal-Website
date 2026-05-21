@@ -1,5 +1,5 @@
 // ========================================
-// COMPLETE CHAT APP - FINAL REFACTOR VERSION
+// COMPLETE CHAT APP - FINAL BEST WEB/PWA VERSION
 // All WhatsApp features + extras
 // Works on all devices, all browsers
 // ========================================

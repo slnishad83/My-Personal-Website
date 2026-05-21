@@ -56,7 +56,7 @@ self.addEventListener('notificationclick', event => {
   );
 });
 
-const CACHE_NAME = 'team-chat-v135-background-call-final';
+const CACHE_NAME = 'team-chat-v136-final-best-web-pwa';
 const urlsToCache = [
   'index.html',
   'login.html',
