@@ -3707,14 +3707,35 @@ function removeLocalFailedMessage(localId) {
 
 function getReceiptTargetIds(msg = {}) {
   if (!currentUser) return [];
+
+  const ids = new Set();
+  const addId = (uid) => {
+    if (uid && typeof uid === 'string' && uid !== currentUser.uid) ids.add(uid);
+  };
+  const addIdsFromDirectId = (directId = '') => {
+    String(directId || '')
+      .split('_')
+      .filter(Boolean)
+      .forEach(addId);
+  };
+
+  if (Array.isArray(msg.participants)) msg.participants.forEach(addId);
+  if (msg.receiverId) addId(msg.receiverId);
+  if (msg.toUserId) addId(msg.toUserId);
+
   if (currentChatType === 'direct') {
-    const target = currentChat?.otherUserId || (Array.isArray(msg.participants) ? msg.participants.find(uid => uid !== currentUser.uid) : '');
-    return target ? [target] : [];
+    addId(currentChat?.otherUserId);
+    addIdsFromDirectId(currentChat?.id);
+    (currentChat?.aliasDirectIds || []).forEach(addIdsFromDirectId);
+    addIdsFromDirectId(msg.directId);
+    return [...ids];
   }
+
   if (Array.isArray(currentGroupMembers) && currentGroupMembers.length) {
-    return currentGroupMembers.map(member => member.id).filter(uid => uid && uid !== currentUser.uid);
+    currentGroupMembers.forEach(member => addId(member.id));
   }
-  return [];
+
+  return [...ids];
 }
 
 function receiptMapHasTarget(map = {}, targetIds = []) {
@@ -3845,6 +3866,10 @@ async function retryFailedMessage(localId) {
     retryButton.textContent = 'Sending...';
   }
 
+  const directParticipants = currentChatType === 'direct'
+    ? [...new Set([currentUser.uid, ...(String(currentChat?.id || '').split('_').filter(Boolean)), currentChat?.otherUserId].filter(Boolean))]
+    : [];
+
   const messageData = {
     senderId: currentUser.uid,
     senderName: currentUser.displayName || currentUser.email,
@@ -3853,7 +3878,8 @@ async function retryFailedMessage(localId) {
     status: 'sent',
     read: false,
     readBy: { [currentUser.uid]: firebase.firestore.FieldValue.serverTimestamp() },
-    deliveredTo: {}
+    deliveredTo: {},
+    participants: currentChatType === 'direct' ? directParticipants : [currentUser.uid]
   };
 
   if (failed.attachment) messageData.attachment = failed.attachment;
@@ -3962,6 +3988,10 @@ async function sendMessage() {
   if (!text && !currentAttachment || !currentChat) return;
   setSendingState(true);
   
+  const directParticipants = currentChatType === 'direct'
+    ? [...new Set([currentUser.uid, ...(String(currentChat?.id || '').split('_').filter(Boolean)), currentChat?.otherUserId].filter(Boolean))]
+    : [];
+
   const messageData = {
     senderId: currentUser.uid,
     senderName: currentUser.displayName || currentUser.email,
@@ -3970,7 +4000,8 @@ async function sendMessage() {
     status: 'sent',
     read: false,
     readBy: { [currentUser.uid]: firebase.firestore.FieldValue.serverTimestamp() },
-    deliveredTo: {}
+    deliveredTo: {},
+    participants: currentChatType === 'direct' ? directParticipants : [currentUser.uid]
   };
   if (currentReplyTo) {
     messageData.replyTo = { messageId: currentReplyTo.id, text: currentReplyTo.text, senderName: currentReplyTo.senderName };
