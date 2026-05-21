@@ -3664,31 +3664,53 @@ async function renderSharedContent(type) {
 
 async function markMessagesAsDelivered(markAsRead = false) {
   if (!currentChat || !currentUser) return;
+
   const deliveredFieldKey = `deliveredTo.${currentUser.uid}`;
   const readFieldKey = `readBy.${currentUser.uid}`;
   const directIds = getDirectChatIdsForCurrentChat();
-  let query = currentChatType === 'direct' && directIds.length > 1
-    ? db.collection('messages').where('directId', 'in', directIds).where('senderId', '!=', currentUser.uid)
-    : db.collection('messages').where(currentChatType === 'direct' ? 'directId' : 'groupId', '==', currentChat.id).where('senderId', '!=', currentUser.uid);
-  const snapshot = await query.get();
-  const batch = db.batch();
-  let updatesMade = false;
-  snapshot.docs.forEach(doc => {
-    const data = doc.data() || {};
-    const updates = {};
-    if (!data.deliveredTo?.[currentUser.uid]) {
-      updates[deliveredFieldKey] = firebase.firestore.FieldValue.serverTimestamp();
-    }
-    if (markAsRead && !privacySettings.hideReadReceipts && !data.readBy?.[currentUser.uid]) {
-      updates.read = true;
-      updates[readFieldKey] = firebase.firestore.FieldValue.serverTimestamp();
-    }
-    if (Object.keys(updates).length) {
-      batch.update(doc.ref, updates);
-      updatesMade = true;
-    }
-  });
-  if (updatesMade) await batch.commit();
+
+  // Important fix: do NOT use senderId != currentUser in the Firestore query.
+  // That query can fail or need an index, so read/delivered receipts may never be written.
+  // We fetch the current chat messages first, then filter sender-side in JavaScript.
+  let query;
+  if (currentChatType === 'direct' && directIds.length > 1) {
+    query = db.collection('messages').where('directId', 'in', directIds);
+  } else {
+    query = db.collection('messages').where(currentChatType === 'direct' ? 'directId' : 'groupId', '==', currentChat.id);
+  }
+
+  try {
+    const snapshot = await query.get();
+    const batch = db.batch();
+    let updatesMade = false;
+
+    snapshot.docs.forEach(doc => {
+      const data = doc.data() || {};
+
+      // Only mark messages received from the other person. Never mark my own messages as delivered/read by me.
+      if (!data.senderId || data.senderId === currentUser.uid) return;
+      if (data.deletedFor?.[currentUser.uid]) return;
+
+      const updates = {};
+      if (!data.deliveredTo?.[currentUser.uid]) {
+        updates[deliveredFieldKey] = firebase.firestore.FieldValue.serverTimestamp();
+      }
+
+      if (markAsRead && !privacySettings.hideReadReceipts && !data.readBy?.[currentUser.uid]) {
+        updates.read = true;
+        updates[readFieldKey] = firebase.firestore.FieldValue.serverTimestamp();
+      }
+
+      if (Object.keys(updates).length) {
+        batch.update(doc.ref, updates);
+        updatesMade = true;
+      }
+    });
+
+    if (updatesMade) await batch.commit();
+  } catch (error) {
+    console.warn('Could not update message receipt state:', error);
+  }
 }
 
 async function markMessagesAsRead() {
@@ -4167,3 +4189,12 @@ function setupCallControlButtons() {
     });
   }
 }
+
+
+// Keep read receipts reliable when mobile browsers/PWA pause and resume the page.
+window.addEventListener('focus', () => {
+  if (currentChat) markMessagesAsRead();
+});
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden && currentChat) markMessagesAsRead();
+});
