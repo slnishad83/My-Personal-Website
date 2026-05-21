@@ -432,47 +432,159 @@ function bindRenderedMessageActions() {
   });
 }
 
-function openMobileChatPanel() {
-  document.querySelector('.chat-container')?.classList.add('chat-open');
-  pushMobileChatHistory();
+function getChatContainer() {
+  return document.querySelector('.chat-container');
 }
 
-function closeMobileChatPanel() {
-  document.querySelector('.chat-container')?.classList.remove('chat-open');
-  mobileChatHistoryOpen = false;
+function isChatPanelOpen() {
+  return Boolean(getChatContainer()?.classList.contains('chat-open'));
+}
+
+function isStandaloneAppMode() {
+  return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
 }
 
 function shouldUseMobileBackGuard() {
-  return window.matchMedia('(max-width: 768px)').matches || window.matchMedia('(display-mode: standalone)').matches;
+  return window.matchMedia('(max-width: 768px)').matches || isStandaloneAppMode();
+}
+
+function normalizeMobileBackButton() {
+  const backBtn = document.getElementById('mobileMenuBtn');
+  if (!backBtn) return;
+
+  // Keep exactly one in-app back arrow. Some CSS adds ::before while the HTML also had &larr;,
+  // which produced two arrows on mobile. This clears the HTML arrow and lets CSS draw one.
+  backBtn.textContent = '';
+  backBtn.setAttribute('aria-label', 'Back to chats');
+  backBtn.setAttribute('title', 'Back to chats');
+
+  if (!document.getElementById('mobileBackButtonFixStyle')) {
+    const style = document.createElement('style');
+    style.id = 'mobileBackButtonFixStyle';
+    style.textContent = `
+      @media (max-width: 768px), (display-mode: standalone) {
+        #mobileMenuBtn {
+          display: inline-flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+          flex: 0 0 40px !important;
+          width: 40px !important;
+          min-width: 40px !important;
+          height: 40px !important;
+          font-size: 0 !important;
+        }
+        #mobileMenuBtn::before {
+          content: "\\2190" !important;
+          display: inline-block !important;
+          font-size: 24px !important;
+          line-height: 1 !important;
+        }
+        .chat-container:not(.chat-open) #mobileMenuBtn {
+          display: none !important;
+        }
+      }
+    `;
+    document.head.appendChild(style);
+  }
+}
+
+function openMobileChatPanel() {
+  const container = getChatContainer();
+  if (!container) return;
+  container.classList.add('chat-open');
+  normalizeMobileBackButton();
+  pushMobileChatHistory();
+}
+
+function closeMobileChatPanel({ fromPopState = false } = {}) {
+  const container = getChatContainer();
+  if (container) container.classList.remove('chat-open');
+
+  // The chat list is now visible. Do not trap the next back press here:
+  // browser/PWA back from the chat list should behave normally and exit/minimize.
+  mobileChatHistoryOpen = false;
+
+  if (!fromPopState && shouldUseMobileBackGuard() && history.state?.teamChatView === 'chat') {
+    // Header back button should behave like Android/browser back from an open chat.
+    history.back();
+  }
 }
 
 function pushMobileChatHistory() {
-  if (!shouldUseMobileBackGuard() || mobileChatHistoryOpen) return;
+  if (!shouldUseMobileBackGuard()) return;
+
+  // Make the current entry represent the chat-list/home state, then push exactly one chat entry.
+  if (!history.state || history.state.teamChatView !== 'home') {
+    history.replaceState({ teamChatView: 'home' }, '', window.location.href);
+  }
+
+  if (history.state?.teamChatView === 'chat' || mobileChatHistoryOpen) return;
+
   history.pushState({ teamChatView: 'chat' }, '', window.location.href);
   mobileChatHistoryOpen = true;
+}
+
+function handleMobileChatBack(event) {
+  event?.preventDefault?.();
+  event?.stopPropagation?.();
+
+  if (!shouldUseMobileBackGuard()) return;
+
+  if (isChatPanelOpen()) {
+    if (history.state?.teamChatView === 'chat') {
+      history.back();
+    } else {
+      closeMobileChatPanel({ fromPopState: true });
+      if (!history.state || history.state.teamChatView !== 'home') {
+        history.replaceState({ teamChatView: 'home' }, '', window.location.href);
+      }
+    }
+  }
+}
+
+function syncMobileBackState() {
+  if (!shouldUseMobileBackGuard()) return;
+  const container = getChatContainer();
+  if (!container) return;
+
+  const shouldBeOpen = Boolean(currentChat) && Boolean(currentChatType);
+  container.classList.toggle('chat-open', shouldBeOpen);
+
+  if (shouldBeOpen) {
+    normalizeMobileBackButton();
+  } else {
+    mobileChatHistoryOpen = false;
+  }
 }
 
 function setupMobileBackGuard() {
   if (mobileBackGuardReady) return;
   mobileBackGuardReady = true;
 
-  // Mobile/PWA behavior:
-  // - Back from an open conversation returns to the chat list.
-  // - Back from the chat list is NOT trapped, so Android/browser can naturally minimize/exit.
+  normalizeMobileBackButton();
+
   if (!history.state?.teamChatView) {
     history.replaceState({ teamChatView: 'home' }, '', window.location.href);
   }
 
+  document.getElementById('mobileMenuBtn')?.addEventListener('click', handleMobileChatBack);
+
+  // Android back button / browser back / mobile swipe-back:
+  // - If a conversation is open, return to chat list.
+  // - If already on chat list, do not block anything; browser/PWA exits naturally.
   window.addEventListener('popstate', () => {
     if (!shouldUseMobileBackGuard()) return;
-    const chatContainer = document.querySelector('.chat-container');
-    if (chatContainer?.classList.contains('chat-open')) {
-      closeMobileChatPanel();
-      if (!history.state?.teamChatView) {
-        history.replaceState({ teamChatView: 'home' }, '', window.location.href);
-      }
+
+    if (isChatPanelOpen()) {
+      closeMobileChatPanel({ fromPopState: true });
+      return;
     }
+
+    mobileChatHistoryOpen = history.state?.teamChatView === 'chat';
   });
+
+  window.addEventListener('resize', syncMobileBackState);
+  window.addEventListener('orientationchange', syncMobileBackState);
 }
 
 function resetChatPanel() {
@@ -4136,6 +4248,7 @@ function redirectToLogin() {
 
 async function init() {
   await authPersistenceReady;
+  setupMobileBackGuard();
   bindSearchInput();
   auth.onAuthStateChanged(async (user) => {
     if (!user) { redirectToLogin(); return; }

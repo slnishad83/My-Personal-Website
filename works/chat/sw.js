@@ -1,4 +1,4 @@
-const CACHE_NAME = 'team-chat-v131-receipts-target-fix';
+const CACHE_NAME = 'team-chat-v132-mobile-back-fix';
 const urlsToCache = [
   'index.html',
   'login.html',
