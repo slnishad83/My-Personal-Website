@@ -387,7 +387,24 @@
       let lastUnverifiedEmail = "";
       let lastUnverifiedPassword = "";
 
-      auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
+      function isLikelyPrivateSession() {
+        try {
+          const testKey = "teamChatStorageProbe";
+          localStorage.setItem(testKey, testKey);
+          localStorage.removeItem(testKey);
+          return false;
+        } catch (error) {
+          return true;
+        }
+      }
+
+      function getAuthPersistence() {
+        return isLikelyPrivateSession()
+          ? firebase.auth.Auth.Persistence.SESSION
+          : firebase.auth.Auth.Persistence.LOCAL;
+      }
+
+      const authPersistenceReady = auth.setPersistence(getAuthPersistence());
 
       function cleanEmail(email) {
         return email.trim().toLowerCase();
@@ -463,6 +480,7 @@
       }
 
       auth.onAuthStateChanged(async (user) => {
+        await authPersistenceReady.catch(() => {});
         if (!user) return;
         await user.reload();
         if (user.emailVerified) {
@@ -522,6 +540,7 @@
           setButtonLoading(btn, true, "Login ->", "Logging in...");
 
           try {
+            await authPersistenceReady;
             const userCred = await auth.signInWithEmailAndPassword(
               email,
               password,
@@ -606,6 +625,7 @@
             "Sending...",
           );
           try {
+            await authPersistenceReady;
             const userCred = await auth.signInWithEmailAndPassword(
               email,
               password,
@@ -694,6 +714,7 @@
 
           let createdUser = null;
           try {
+            await authPersistenceReady;
             const userCred = await auth.createUserWithEmailAndPassword(
               email,
               password,
@@ -789,6 +810,6 @@
           }
         });
     </script>
-    <script src="pwa-install.js?v=115"></script>
+    <script src="pwa-install.js?v=116"></script>
   </body>
 </html>

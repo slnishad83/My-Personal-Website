@@ -17,7 +17,24 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 
-auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL)
+function isLikelyPrivateSession() {
+  try {
+    const testKey = 'teamChatStorageProbe';
+    localStorage.setItem(testKey, testKey);
+    localStorage.removeItem(testKey);
+    return false;
+  } catch (error) {
+    return true;
+  }
+}
+
+function getAuthPersistence() {
+  return isLikelyPrivateSession()
+    ? firebase.auth.Auth.Persistence.SESSION
+    : firebase.auth.Auth.Persistence.LOCAL;
+}
+
+const authPersistenceReady = auth.setPersistence(getAuthPersistence())
   .catch(error => {
     console.error('Persistence error:', error);
   });
@@ -3766,10 +3783,20 @@ function toggleDarkMode() {
   localStorage.setItem('darkMode', document.body.classList.contains('dark'));
 }
 
+function revealAuthenticatedApp() {
+  document.body.classList.add('auth-ready');
+}
+
+function redirectToLogin() {
+  document.body.classList.remove('auth-ready');
+  window.location.replace('login.html');
+}
+
 async function init() {
+  await authPersistenceReady;
   bindSearchInput();
   auth.onAuthStateChanged(async (user) => {
-    if (!user) { window.location.replace('login.html'); return; }
+    if (!user) { redirectToLogin(); return; }
     currentUser = user;
     
     document.getElementById('userName').textContent = user.displayName || user.email.split('@')[0];
@@ -3796,6 +3823,7 @@ async function init() {
     setupRequestListeners();
     listenForIncomingCalls();
     switchTab('all');
+    revealAuthenticatedApp();
   });
 
   // Attach Event Handlers

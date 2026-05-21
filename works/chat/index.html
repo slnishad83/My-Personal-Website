@@ -39,9 +39,29 @@
       .toast.error {
         background: #ef4444;
       }
+      .auth-gate {
+        position: fixed;
+        inset: 0;
+        z-index: 99999;
+        display: grid;
+        place-items: center;
+        background:
+          linear-gradient(#008069 0 128px, #d1d7db 128px 100%);
+        color: #111b21;
+        font: 600 15px "Inter", sans-serif;
+      }
+
+      body.auth-ready .auth-gate {
+        display: none;
+      }
+
+      body:not(.auth-ready) .chat-container {
+        visibility: hidden;
+      }
     </style>
   </head>
   <body>
+    <div class="auth-gate" id="authGate">Checking session...</div>
     <div class="chat-container">
       <!-- Sidebar -->
       <div class="sidebar" id="sidebar">
@@ -1212,7 +1232,7 @@
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-storage-compat.js"></script>
-    <script src="app.js?v=131"></script>
-    <script src="pwa-install.js?v=121"></script>
+    <script src="app.js?v=132"></script>
+    <script src="pwa-install.js?v=122"></script>
   </body>
 </html>
