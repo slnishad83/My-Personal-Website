@@ -917,8 +917,8 @@ function stopCallDuration() {
 function startIncomingRingtone() {
   stopIncomingRingtone();
   if (navigator.vibrate) {
-    navigator.vibrate([260, 180, 260]);
-    vibrationTimer = setInterval(() => navigator.vibrate?.([260, 180, 260]), 1400);
+    navigator.vibrate([700, 250, 700, 250, 700]);
+    vibrationTimer = setInterval(() => navigator.vibrate?.([700, 250, 700, 250, 700]), 1600);
   }
   try {
     const AudioContextCtor = window.AudioContext || window.webkitAudioContext;
@@ -929,17 +929,17 @@ function startIncomingRingtone() {
       const oscillator = ringtoneAudioContext.createOscillator();
       const gain = ringtoneAudioContext.createGain();
       oscillator.type = 'sine';
-      oscillator.frequency.value = 880;
+      oscillator.frequency.value = 920;
       gain.gain.setValueAtTime(0.0001, ringtoneAudioContext.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.08, ringtoneAudioContext.currentTime + 0.03);
+      gain.gain.exponentialRampToValueAtTime(0.18, ringtoneAudioContext.currentTime + 0.03);
       gain.gain.exponentialRampToValueAtTime(0.0001, ringtoneAudioContext.currentTime + 0.42);
       oscillator.connect(gain);
       gain.connect(ringtoneAudioContext.destination);
       oscillator.start();
-      oscillator.stop(ringtoneAudioContext.currentTime + 0.45);
+      oscillator.stop(ringtoneAudioContext.currentTime + 0.75);
     };
     playTone();
-    ringtoneTimer = setInterval(playTone, 1500);
+    ringtoneTimer = setInterval(playTone, 1100);
   } catch (error) {
     console.warn('Incoming call tone could not start:', error);
   }
@@ -948,10 +948,21 @@ function startIncomingRingtone() {
 function notifyIncomingCall(call) {
   if (!document.hidden || Notification.permission !== 'granted') return;
   try {
-    new Notification(call.type === 'video' ? 'Incoming video call' : 'Incoming voice call', {
-      body: call.fromUserName || 'Team Chat',
+    new Notification(call.type === 'video' ? '📹 Incoming video call' : '📞 Incoming voice call', {
+      body: `${call.fromUserName || 'Team Chat'} is calling. Tap to open Team Chat.`,
       tag: `call-${call.id}`,
-      requireInteraction: true
+      requireInteraction: true,
+      renotify: true,
+      silent: false,
+      icon: 'app-icon-192.png',
+      badge: 'app-icon-192.png',
+      timestamp: Date.now(),
+      vibrate: [700, 250, 700, 250, 700, 250, 700],
+      data: {
+        url: './index.html',
+        callId: call.id,
+        kind: 'call'
+      }
     });
   } catch (error) {
     console.warn('Incoming call notification could not be shown:', error);
@@ -961,8 +972,8 @@ function notifyIncomingCall(call) {
 function hasValidFcmVapidKey() {
   return Boolean(
     typeof FCM_VAPID_KEY === 'string' &&
-    FCM_VAPID_KEY &&
-    !FCM_VAPID_KEY.includes('BDVoTx6AbM3T_AdVKV6IYFt3bbXiWRF5I7c5s-4w5AuUvYIzYPQYiODmJxnjH0DOLj-NhL83jiKMQ6RjkCvUALQ')
+    FCM_VAPID_KEY.trim().length > 50 &&
+    !FCM_VAPID_KEY.includes('PASTE_YOUR_FIREBASE_WEB_PUSH_PUBLIC_VAPID_KEY_HERE')
   );
 }
 
@@ -1027,17 +1038,24 @@ async function setupCallPushNotifications({ forcePrompt = false } = {}) {
         // this keeps a visible notification if the tab is backgrounded but still alive.
         if (document.hidden && Notification.permission === 'granted') {
           navigator.serviceWorker.ready.then(reg => {
-            reg.showNotification(data.type === 'video' ? 'Incoming video call' : 'Incoming voice call', {
-              body: data.fromUserName || 'Team Chat',
+            reg.showNotification(data.type === 'video' ? '📹 Incoming video call' : '📞 Incoming voice call', {
+              body: `${data.fromUserName || 'Team Chat'} is calling. Tap to open Team Chat.`,
               tag: `call-${data.callId}`,
               renotify: true,
               requireInteraction: true,
+              silent: false,
               icon: 'app-icon-192.png',
               badge: 'app-icon-192.png',
+              timestamp: Date.now(),
+              vibrate: [700, 250, 700, 250, 700, 250, 700],
               data: {
                 url: './index.html',
-                callId: data.callId
-              }
+                callId: data.callId,
+                kind: 'call'
+              },
+              actions: [
+                { action: 'open', title: 'Open' }
+              ]
             });
           }).catch(() => {});
         }

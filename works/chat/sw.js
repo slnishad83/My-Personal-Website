@@ -16,17 +16,19 @@ const messaging = firebase.messaging();
 messaging.onBackgroundMessage(payload => {
   const data = payload.data || {};
   const isCall = data.kind === 'call';
-  const title = payload.notification?.title || (data.type === 'video' ? 'Incoming video call' : 'Incoming voice call');
-  const body = payload.notification?.body || data.fromUserName || 'Team Chat';
+  const title = payload.notification?.title || (data.type === 'video' ? '📹 Incoming video call' : '📞 Incoming voice call');
+  const body = payload.notification?.body || `${data.fromUserName || 'Team Chat'} is calling. Tap to open Team Chat.`;
 
   self.registration.showNotification(title, {
     body,
     tag: isCall && data.callId ? `call-${data.callId}` : 'team-chat',
     renotify: true,
     requireInteraction: Boolean(isCall),
+    silent: false,
     icon: 'app-icon-192.png',
     badge: 'app-icon-192.png',
-    vibrate: isCall ? [260, 180, 260, 180, 260] : [120, 80, 120],
+    timestamp: Date.now(),
+    vibrate: isCall ? [700, 250, 700, 250, 700, 250, 700, 250, 700] : [180, 80, 180],
     data: {
       url: './index.html',
       callId: data.callId || '',
@@ -54,7 +56,7 @@ self.addEventListener('notificationclick', event => {
   );
 });
 
-const CACHE_NAME = 'team-chat-v133-call-fcm-fix';
+const CACHE_NAME = 'team-chat-v134-max-call-notification';
 const urlsToCache = [
   'index.html',
   'login.html',
