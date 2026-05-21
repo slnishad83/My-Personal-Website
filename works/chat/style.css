@@ -2433,64 +2433,18 @@ body.dark .read-receipt {
 }
 
 
-/* =========================================================
-   COMPLETE RESPONSIVE / OVERFLOW HARDENING PATCH
-   Keeps all major chat UI surfaces inside the visible screen.
-   ========================================================= */
-html,
-body {
-  max-width: 100%;
-  overscroll-behavior: none;
-}
-
-.chat-container,
-.sidebar,
-.chat-main,
-.chat-header,
-.sidebar-header,
-.messages-area,
-.input-area,
-.modal,
-.modal-content,
+/* FINAL RESPONSIVE SAFETY PATCH: keep all popup menus inside the visible screen */
 .context-menu,
-.emoji-picker,
-.file-attachment-card,
-.poll-card,
-.message-bubble,
-.message-text,
-.attachment-preview,
-#inChatSearchBar {
-  max-width: 100%;
-}
-
-.chat-container,
-.sidebar,
-.chat-main,
-.list,
-.messages-area,
-.input-area,
-.chat-header-info,
-.list-info,
-.message,
-.message-bubble,
-.modal-content,
-.file-attachment-info {
-  min-width: 0;
-}
-
-.chat-main,
-.sidebar,
-.messages-area,
-.list {
-  min-height: 0;
-}
-
-.context-menu {
+#chatContextMenu,
+.message-context-menu {
+  position: fixed !important;
+  z-index: 2147483647 !important;
   width: max-content;
-  max-width: calc(100vw - 16px);
-  max-height: calc(100dvh - 16px);
-  overflow-y: auto;
-  overflow-x: hidden;
+  min-width: 210px;
+  max-width: calc(100vw - 16px) !important;
+  max-height: calc(100dvh - 16px) !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
   overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;
 }
@@ -2500,260 +2454,51 @@ body {
   white-space: nowrap;
 }
 
-.message-context-menu {
-  z-index: 10001;
+.chat-container,
+.sidebar,
+.chat-main,
+.messages-area,
+.input-area {
+  min-width: 0;
 }
 
+.chat-main {
+  flex: 1 1 auto;
+  overflow: hidden;
+}
+
+.messages-area {
+  overflow-x: hidden;
+}
+
+.message,
 .message-bubble,
 .message-text,
-.file-attachment-card,
-.poll-card,
-.shared-list-item,
-.attachment-preview,
-.reply-preview,
-#replyPreviewText {
+.list-info,
+.chat-header-info {
+  min-width: 0;
   overflow-wrap: anywhere;
-  word-break: break-word;
 }
 
-.message-attachment img,
-.image-attachment-link img {
-  max-width: 100%;
-  height: auto;
-}
-
-.modal {
-  max-height: 100dvh;
-  overflow: auto;
-  -webkit-overflow-scrolling: touch;
-}
-
-.modal-content {
-  max-width: min(520px, calc(100vw - 24px));
-  max-height: calc(100dvh - 24px);
-  overflow-y: auto;
-  overscroll-behavior: contain;
-}
-
-.toast,
-.voice-recording-indicator {
-  max-width: calc(100vw - 24px);
-}
-
-@media (max-width: 900px) {
-  html,
-  body {
-    width: 100%;
-    height: 100%;
-    overflow: hidden;
-  }
-
+@media (max-width: 768px) {
   .chat-container {
-    width: 100vw;
-    height: 100dvh;
-    max-width: 100vw;
-    max-height: 100dvh;
-    margin: 0;
-    border-radius: 0;
+    width: 100vw !important;
+    height: 100dvh !important;
+    margin: 0 !important;
+    border-radius: 0 !important;
   }
 
   .sidebar,
   .chat-main {
-    width: 100vw;
-    max-width: 100vw;
-    min-width: 0;
+    width: 100% !important;
+    min-width: 0 !important;
   }
 
-  .chat-header {
-    width: 100%;
-    gap: 6px;
-  }
-
-  .chat-header-info {
-    grid-template-columns: 40px minmax(0, 1fr);
-    flex: 1 1 auto;
-    overflow: hidden;
-  }
-
-  .chat-header h2,
-  .chat-status,
-  .list-name,
-  .list-preview,
-  .user-name,
-  .file-attachment-name,
-  .file-attachment-meta {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .chat-actions {
-    flex: 0 0 auto;
-    max-width: 42vw;
-    overflow: hidden;
-    gap: 0;
-  }
-
-  .chat-actions .icon-btn {
-    flex: 0 0 auto;
-  }
-
-  .messages-area {
-    width: 100%;
-    overflow-x: hidden;
-    -webkit-overflow-scrolling: touch;
-  }
-
-  .message {
-    max-width: min(92%, 560px);
-  }
-
-  .input-area {
-    width: 100%;
-    overflow: hidden;
-    align-items: flex-end;
-  }
-
-  #messageInput {
-    min-width: 0;
-    flex: 1 1 auto;
-  }
-
-  #replyPreviewBar {
-    margin-left: 8px !important;
-    margin-right: 8px !important;
-  }
-
-  .attachment-preview {
-    left: 8px;
-    right: 8px;
-  }
-
-  .modal {
-    align-items: flex-end;
-    padding: 0;
-  }
-
-  .modal-content {
-    width: 100%;
-    max-width: 100%;
-    max-height: 92dvh;
-    border-radius: 14px 14px 0 0;
-  }
-
-  .context-menu {
-    min-width: 200px;
-    max-width: calc(100vw - 16px);
-  }
-}
-
-@media (max-width: 600px) {
-  .sidebar-header {
-    gap: 6px;
-  }
-
-  .sidebar-actions {
-    gap: 4px;
-  }
-
-  .install-app-btn {
-    min-width: 0;
-    padding: 0 10px;
-  }
-
-  .install-app-label {
-    display: none;
-  }
-
-  .tabs {
-    gap: 6px;
-    padding-left: 8px;
-    padding-right: 8px;
-  }
-
-  .tab {
-    padding: 0 10px;
-    font-size: 12px;
-  }
-
-  .list-item {
-    gap: 8px;
-  }
-
-  .list-item-menu {
-    width: 34px;
-    height: 34px;
-    font-size: 15px;
-  }
-
-  .status-chip {
-    max-width: 92px;
-  }
-
-  .file-attachment-card {
-    grid-template-columns: 38px minmax(0, 1fr);
-  }
-
-  .file-attachment-action {
-    display: none;
-  }
-}
-
-@media (max-width: 480px) {
-  .chat-header {
-    padding-left: 6px;
-    padding-right: 6px;
-  }
-
-  .chat-header-info {
-    padding: 2px 3px;
-    column-gap: 7px;
-  }
-
-  .chat-header-avatar,
-  .chat-header-info .list-avatar {
-    width: 36px;
-    height: 36px;
-  }
-
-  .chat-actions {
-    max-width: 38vw;
-  }
-
-  .chat-actions .icon-btn,
-  .mobile-menu-btn {
-    width: 30px;
-    height: 30px;
-    font-size: 15px;
-  }
-
-  .messages-area {
-    padding-left: 6px;
-    padding-right: 6px;
-  }
-
-  .message {
-    max-width: 94%;
-  }
-
-  .input-area {
-    padding-left: 6px;
-    padding-right: 6px;
-  }
-
-  .emoji-btn,
-  .voice-msg-btn,
-  .attach-btn,
-  .send-btn {
-    flex: 0 0 auto;
-  }
-}
-
-@supports (height: 100svh) {
-  @media (max-width: 900px) {
-    .chat-container {
-      height: 100svh;
-      max-height: 100svh;
-    }
+  .context-menu,
+  #chatContextMenu,
+  .message-context-menu {
+    min-width: 190px;
+    max-width: calc(100vw - 12px) !important;
+    max-height: calc(100dvh - 12px) !important;
   }
 }
