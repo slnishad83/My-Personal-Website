@@ -534,6 +534,12 @@ function pushMobileChatHistory() {
 }
 
 function handleMobileChatBack(event) {
+  if (hasLiveCallSession()) {
+    event?.preventDefault?.();
+    event?.stopPropagation?.();
+    minimizeActiveCallUi();
+    return;
+  }
   event?.preventDefault?.();
   event?.stopPropagation?.();
 
@@ -588,6 +594,13 @@ function setupMobileBackGuard() {
   // - If a conversation is open, return to chat list.
   // - If already on chat list, do not block anything; browser/PWA exits naturally.
   window.addEventListener('popstate', () => {
+    if (hasLiveCallSession()) {
+      minimizeActiveCallUi();
+      try {
+        history.pushState({ teamChatView: 'call-minimized' }, '', window.location.href);
+      } catch (error) {}
+      return;
+    }
     if (!shouldUseMobileBackGuard()) return;
 
     if (activeCall && activeCallMode !== 'incoming') {
@@ -609,6 +622,183 @@ function setupMobileBackGuard() {
 
   window.addEventListener('resize', syncMobileBackState);
   window.addEventListener('orientationchange', syncMobileBackState);
+}
+
+
+// ========================================
+// Active call safe back/minimize handling
+// Best possible for web/PWA: prevents in-app back from ending calls.
+// ========================================
+function hasLiveCallSession() {
+  return Boolean(
+    activeCall ||
+    peerConnection ||
+    localCallStream ||
+    activeCallMode === 'active' ||
+    activeCallMode === 'outgoing' ||
+    activeCallMode === 'incoming'
+  );
+}
+
+function ensureMiniCallBar() {
+  let bar = document.getElementById('miniCallBar');
+  if (bar) return bar;
+
+  bar = document.createElement('div');
+  bar.id = 'miniCallBar';
+  bar.className = 'mini-call-bar';
+  bar.innerHTML = `
+    <button type="button" id="miniCallOpenBtn" class="mini-call-main">
+      <span class="mini-call-dot"></span>
+      <span id="miniCallText">Call in progress</span>
+    </button>
+    <button type="button" id="miniCallEndBtn" class="mini-call-end" aria-label="End call">✕</button>
+  `;
+  document.body.appendChild(bar);
+
+  const styleId = 'miniCallBarStyle';
+  if (!document.getElementById(styleId)) {
+    const style = document.createElement('style');
+    style.id = styleId;
+    style.textContent = `
+      .mini-call-bar {
+        position: fixed;
+        left: max(12px, env(safe-area-inset-left));
+        right: max(12px, env(safe-area-inset-right));
+        top: max(10px, env(safe-area-inset-top));
+        z-index: 100000;
+        display: none;
+        align-items: center;
+        gap: 8px;
+        padding: 8px;
+        border-radius: 999px;
+        background: #008069;
+        color: #fff;
+        box-shadow: 0 8px 24px rgba(0,0,0,.24);
+      }
+      .mini-call-bar.show {
+        display: flex;
+      }
+      .mini-call-main {
+        flex: 1;
+        min-width: 0;
+        height: 40px;
+        border: 0;
+        border-radius: 999px;
+        background: transparent;
+        color: inherit;
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        padding: 0 12px;
+        font-weight: 700;
+        cursor: pointer;
+      }
+      .mini-call-dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: #50ffb1;
+        box-shadow: 0 0 0 0 rgba(80,255,177,.75);
+        animation: miniCallPulse 1.15s infinite;
+      }
+      @keyframes miniCallPulse {
+        70% { box-shadow: 0 0 0 10px rgba(80,255,177,0); }
+        100% { box-shadow: 0 0 0 0 rgba(80,255,177,0); }
+      }
+      .mini-call-end {
+        width: 40px;
+        height: 40px;
+        border: 0;
+        border-radius: 50%;
+        background: #ef4444;
+        color: #fff;
+        font-size: 18px;
+        font-weight: 900;
+        cursor: pointer;
+      }
+      body.call-minimized #callModal {
+        display: none !important;
+      }
+    `;
+    document.head.appendChild(style);
+  }
+
+  document.getElementById('miniCallOpenBtn')?.addEventListener('click', restoreActiveCallUi);
+  document.getElementById('miniCallEndBtn')?.addEventListener('click', async (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    if (typeof endActiveCall === 'function') {
+      await endActiveCall('ended');
+    } else {
+      cleanupCallUi();
+    }
+  });
+
+  return bar;
+}
+
+function updateMiniCallBarText() {
+  const text = document.getElementById('miniCallText');
+  if (!text) return;
+  const type = currentCallType === 'video' || activeCall?.type === 'video' ? 'Video call' : 'Voice call';
+  const name = activeCall?.fromUserName || activeCall?.toUserName || currentChat?.otherUserName || currentChat?.name || '';
+  text.textContent = `${type}${name ? ` with ${name}` : ''}`;
+}
+
+function minimizeActiveCallUi() {
+  if (!hasLiveCallSession()) return false;
+  const modal = document.getElementById('callModal');
+  const bar = ensureMiniCallBar();
+
+  updateMiniCallBarText();
+  document.body.classList.add('call-minimized');
+  if (modal) modal.style.display = 'none';
+  bar.classList.add('show');
+
+  // Important: do not cleanup streams or peer connection here.
+  // Only hide/minimize the call interface.
+  return true;
+}
+
+function restoreActiveCallUi() {
+  if (!hasLiveCallSession()) return false;
+  const modal = document.getElementById('callModal');
+  const bar = ensureMiniCallBar();
+
+  document.body.classList.remove('call-minimized');
+  bar.classList.remove('show');
+  if (modal) modal.style.display = 'flex';
+
+  return true;
+}
+
+function hideMiniCallBar() {
+  document.body.classList.remove('call-minimized');
+  const bar = document.getElementById('miniCallBar');
+  if (bar) bar.classList.remove('show');
+}
+
+function setupActiveCallBackProtection() {
+  if (window.__teamChatActiveCallBackProtectionReady) return;
+  window.__teamChatActiveCallBackProtectionReady = true;
+
+  window.addEventListener('popstate', (event) => {
+    if (hasLiveCallSession()) {
+      minimizeActiveCallUi();
+      // Put the user back on an app state so repeated back does not immediately destroy UI.
+      try {
+        history.pushState({ teamChatView: 'call-minimized' }, '', window.location.href);
+      } catch (error) {}
+    }
+  });
+
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && hasLiveCallSession()) {
+      event.preventDefault();
+      minimizeActiveCallUi();
+    }
+  });
 }
 
 function resetChatPanel() {
@@ -1340,6 +1530,7 @@ function scheduleCallTimeout(callRef, ownerRole) {
 }
 
 function setCallUi({ mode = 'outgoing', type = 'voice', title = 'Calling...', status = 'Connecting' } = {}) {
+  hideMiniCallBar();
   const modal = document.getElementById('callModal');
   const shell = modal?.querySelector('.call-shell');
   const localVideo = document.getElementById('localVideo');
@@ -1680,6 +1871,7 @@ function stopLocalCallStream() {
 }
 
 function cleanupCallUi() {
+  hideMiniCallBar();
   clearCallTimeout();
   clearCallConnectionFailureTimer();
   hideCallMiniBar();
@@ -4795,6 +4987,7 @@ function redirectToLogin() {
 async function init() {
   await authPersistenceReady;
   setupMobileBackGuard();
+  setupActiveCallBackProtection();
   setupCallNotificationRefreshHooks();
   registerFcmTokenForCurrentUser({ force: Notification.permission !== 'granted' });
 
