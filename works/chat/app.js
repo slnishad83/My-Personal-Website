@@ -455,18 +455,23 @@ function pushMobileChatHistory() {
 function setupMobileBackGuard() {
   if (mobileBackGuardReady) return;
   mobileBackGuardReady = true;
-  if (history.state?.teamChatView !== 'home') {
+
+  // Mobile/PWA behavior:
+  // - Back from an open conversation returns to the chat list.
+  // - Back from the chat list is NOT trapped, so Android/browser can naturally minimize/exit.
+  if (!history.state?.teamChatView) {
     history.replaceState({ teamChatView: 'home' }, '', window.location.href);
   }
+
   window.addEventListener('popstate', () => {
     if (!shouldUseMobileBackGuard()) return;
     const chatContainer = document.querySelector('.chat-container');
     if (chatContainer?.classList.contains('chat-open')) {
       closeMobileChatPanel();
-      history.replaceState({ teamChatView: 'home' }, '', window.location.href);
-      return;
+      if (!history.state?.teamChatView) {
+        history.replaceState({ teamChatView: 'home' }, '', window.location.href);
+      }
     }
-    history.pushState({ teamChatView: 'home' }, '', window.location.href);
   });
 }
 
@@ -3657,9 +3662,10 @@ async function renderSharedContent(type) {
 // REAL-TIME MESSAGES SUBSCRIBERS LISTENER
 // ========================================
 
-async function markMessagesAsRead() {
-  if (!currentChat || privacySettings.hideReadReceipts) return;
-  const fieldKey = `readBy.${currentUser.uid}`;
+async function markMessagesAsDelivered(markAsRead = false) {
+  if (!currentChat || !currentUser) return;
+  const deliveredFieldKey = `deliveredTo.${currentUser.uid}`;
+  const readFieldKey = `readBy.${currentUser.uid}`;
   const directIds = getDirectChatIdsForCurrentChat();
   let query = currentChatType === 'direct' && directIds.length > 1
     ? db.collection('messages').where('directId', 'in', directIds).where('senderId', '!=', currentUser.uid)
@@ -3668,18 +3674,67 @@ async function markMessagesAsRead() {
   const batch = db.batch();
   let updatesMade = false;
   snapshot.docs.forEach(doc => {
-    if (!doc.data().readBy?.[currentUser.uid]) {
-      batch.update(doc.ref, { read: true, [fieldKey]: firebase.firestore.FieldValue.serverTimestamp() });
+    const data = doc.data() || {};
+    const updates = {};
+    if (!data.deliveredTo?.[currentUser.uid]) {
+      updates[deliveredFieldKey] = firebase.firestore.FieldValue.serverTimestamp();
+    }
+    if (markAsRead && !privacySettings.hideReadReceipts && !data.readBy?.[currentUser.uid]) {
+      updates.read = true;
+      updates[readFieldKey] = firebase.firestore.FieldValue.serverTimestamp();
+    }
+    if (Object.keys(updates).length) {
+      batch.update(doc.ref, updates);
       updatesMade = true;
     }
   });
   if (updatesMade) await batch.commit();
 }
 
+async function markMessagesAsRead() {
+  return markMessagesAsDelivered(true);
+}
+
+function hasReceiptFromOtherUser(map = {}) {
+  if (!currentUser || !map) return false;
+  return Object.keys(map).some(uid => uid && uid !== currentUser.uid);
+}
+
 function getMessageReceiptHtml(msg, isMyMessage) {
-  if (!isMyMessage || privacySettings.hideReadReceipts || currentChat?.isSaved) return '';
-  if (msg.failed) return '❌'; if (msg.pending) return '...';
-  return msg.read ? '<span class="read-receipt seen">✓✓</span>' : '<span class="read-receipt sent">✓</span>';
+  if (!isMyMessage || currentChat?.isSaved) return '';
+  if (msg.failed || msg.status === 'failed') {
+    return '<span class="message-status failed" title="Message failed to send">⚠ Not sent</span>';
+  }
+  if (msg.pending || msg.status === 'pending' || !msg.timestamp) {
+    return '<span class="message-status pending" title="Sending">◷</span>';
+  }
+  if (!privacySettings.hideReadReceipts && hasReceiptFromOtherUser(msg.readBy)) {
+    return '<span class="read-receipt read" title="Read">✓✓</span>';
+  }
+  if (hasReceiptFromOtherUser(msg.deliveredTo)) {
+    return '<span class="read-receipt delivered" title="Delivered">✓✓</span>';
+  }
+  return '<span class="read-receipt sent" title="Sent">✓</span>';
+}
+
+function appendFailedMessage(text = '', attachment = null) {
+  const messagesArea = document.getElementById('messagesArea');
+  if (!messagesArea) return;
+  const messageDiv = document.createElement('div');
+  messageDiv.className = 'message my-message failed';
+  messageDiv.innerHTML = `
+    <div class="message-bubble">
+      <div class="message-text">${escapeHtml(text || (attachment ? 'Attachment' : 'Message'))}</div>
+      ${attachment ? renderAttachment(attachment) : ''}
+      <div class="message-footer">
+        <span class="message-time">${formatTime(new Date())}</span>
+        <span class="message-status failed" title="Message failed to send">⚠ Not sent</span>
+      </div>
+      <div class="message-error-text">Message failed to send. Check your connection and try again.</div>
+    </div>
+  `;
+  messagesArea.appendChild(messageDiv);
+  messagesArea.scrollTop = messagesArea.scrollHeight;
 }
 
 function loadMessages() {
@@ -3751,7 +3806,14 @@ async function sendMessage() {
   setSendingState(true);
   
   const messageData = {
-    senderId: currentUser.uid, senderName: currentUser.displayName || currentUser.email, text, timestamp: firebase.firestore.FieldValue.serverTimestamp(), read: false, readBy: { [currentUser.uid]: new Date() }
+    senderId: currentUser.uid,
+    senderName: currentUser.displayName || currentUser.email,
+    text,
+    timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+    status: 'sent',
+    read: false,
+    readBy: { [currentUser.uid]: new Date() },
+    deliveredTo: { [currentUser.uid]: new Date() }
   };
   if (currentReplyTo) {
     messageData.replyTo = { messageId: currentReplyTo.id, text: currentReplyTo.text, senderName: currentReplyTo.senderName };
@@ -3768,7 +3830,8 @@ async function sendMessage() {
     document.getElementById('replyPreviewBar').style.display = 'none';
     setAttachmentPreview();
   } catch (e) {
-    showToast('Failed to deliver message', 'error');
+    appendFailedMessage(text, currentAttachment);
+    showToast('Message failed to send', 'error');
   } finally {
     setSendingState(false);
   }
