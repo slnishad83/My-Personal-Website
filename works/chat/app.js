@@ -193,6 +193,58 @@ function showToast(message, type = 'success') {
   setTimeout(() => { toast.style.opacity = '0'; }, 3000);
 }
 
+
+
+// ========================================
+// RESPONSIVE FLOATING MENU / VIEWPORT HELPERS
+// Keeps popups inside the visible screen on desktop, mobile browsers, and PWA mode.
+// ========================================
+function getViewportSize() {
+  const vv = window.visualViewport;
+  return {
+    width: vv?.width || window.innerWidth || document.documentElement.clientWidth,
+    height: vv?.height || window.innerHeight || document.documentElement.clientHeight,
+    offsetLeft: vv?.offsetLeft || 0,
+    offsetTop: vv?.offsetTop || 0
+  };
+}
+
+function clampNumber(value, min, max) {
+  if (max < min) return min;
+  return Math.max(min, Math.min(value, max));
+}
+
+function positionFloatingMenu(menu, clientX, clientY) {
+  if (!menu) return;
+
+  const padding = 8;
+  const viewport = getViewportSize();
+
+  menu.style.display = 'block';
+  menu.style.left = '0px';
+  menu.style.top = '0px';
+  menu.style.right = 'auto';
+  menu.style.bottom = 'auto';
+
+  const rect = menu.getBoundingClientRect();
+  const maxLeft = viewport.offsetLeft + viewport.width - rect.width - padding;
+  const maxTop = viewport.offsetTop + viewport.height - rect.height - padding;
+
+  const left = clampNumber(clientX, viewport.offsetLeft + padding, maxLeft);
+  const top = clampNumber(clientY, viewport.offsetTop + padding, maxTop);
+
+  menu.style.left = `${left}px`;
+  menu.style.top = `${top}px`;
+}
+
+function getEventClientPoint(event) {
+  const point = event?.touches?.[0] || event?.changedTouches?.[0] || event;
+  return {
+    x: point?.clientX || window.innerWidth / 2,
+    y: point?.clientY || window.innerHeight / 2
+  };
+}
+
 function escapeHtml(text) {
   if (!text) return '';
   const div = document.createElement('div');
@@ -3723,7 +3775,20 @@ function loadMessages() {
           </div>
         </div>
       `;
-      messageDiv.addEventListener('contextmenu', (e) => { e.preventDefault(); showContextMenu(e.clientX, e.clientY, doc.id, msg, isMyMessage); });
+      messageDiv.addEventListener('contextmenu', (e) => {
+        e.preventDefault();
+        const point = getEventClientPoint(e);
+        showContextMenu(point.x, point.y, doc.id, msg, isMyMessage);
+      });
+      messageDiv.addEventListener('touchstart', (e) => {
+        clearTimeout(messageDiv._longPressTimer);
+        const point = getEventClientPoint(e);
+        messageDiv._longPressTimer = setTimeout(() => {
+          showContextMenu(point.x, point.y, doc.id, msg, isMyMessage);
+        }, 550);
+      }, { passive: true });
+      messageDiv.addEventListener('touchend', () => clearTimeout(messageDiv._longPressTimer), { passive: true });
+      messageDiv.addEventListener('touchmove', () => clearTimeout(messageDiv._longPressTimer), { passive: true });
       messagesArea.appendChild(messageDiv);
     });
     messagesArea.scrollTop = messagesArea.scrollHeight;
@@ -3784,12 +3849,12 @@ async function starMessage(id, data) { await db.collection('starredMessages').ad
 function showContextMenu(x, y, messageId, messageData, isMyMessage) {
   const existing = document.querySelector('.message-context-menu');
   if (existing) existing.remove();
+
   const menu = document.createElement('div');
   menu.className = 'context-menu message-context-menu';
-  menu.style.display = 'block'; menu.style.left = `${x}px`; menu.style.top = `${y}px`;
-  
+
   const items = [
-    { text: '📋 Copy Text', action: () => copyToClipboard(messageData.text) },
+    { text: '📋 Copy Text', action: () => copyToClipboard(messageData.text || '') },
     { text: '↩️ Thread Reply', action: () => setReplyTo(messageData) },
     { text: '⭐ Star Message', action: () => starMessage(messageId, messageData) },
     { text: '📌 Pin Message', action: () => pinMessage(messageId, messageData) }
@@ -3797,13 +3862,17 @@ function showContextMenu(x, y, messageId, messageData, isMyMessage) {
   if (isMyMessage) {
     items.push({ text: '🗑️ Delete Everyone', action: () => deleteMessage(messageId) });
   }
-  
+
   items.forEach(item => {
-    const div = document.createElement('div'); div.className = 'context-menu-item';
-    div.textContent = item.text; div.onclick = () => { item.action(); menu.remove(); };
+    const div = document.createElement('div');
+    div.className = 'context-menu-item';
+    div.textContent = item.text;
+    div.onclick = () => { item.action(); menu.remove(); };
     menu.appendChild(div);
   });
+
   document.body.appendChild(menu);
+  positionFloatingMenu(menu, x, y);
 }
 
 // ========================================
@@ -3960,20 +4029,56 @@ let contextMenuTarget = null;
 window.addEventListener('click', () => {
   const menu = document.getElementById('chatContextMenu');
   if (menu) menu.style.display = 'none';
+  document.querySelectorAll('.message-context-menu').forEach(menuEl => menuEl.remove());
 });
 
-document.getElementById('chatsList')?.addEventListener('contextmenu', (e) => {
-  const item = e.target.closest('.list-item');
-  if (!item) return;
-  e.preventDefault();
-  
-  contextMenuTarget = item;
+window.addEventListener('resize', () => {
   const menu = document.getElementById('chatContextMenu');
-  if (menu) {
-    menu.style.display = 'block';
-    menu.style.left = `${e.clientX}px`;
-    menu.style.top = `${e.clientY}px`;
-  }
+  if (menu) menu.style.display = 'none';
+  document.querySelectorAll('.message-context-menu').forEach(menuEl => menuEl.remove());
+});
+
+function openChatContextMenu(event) {
+  const item = event.target.closest('.list-item');
+  if (!item) return;
+
+  // Only open the chat action menu for real chat/user/group rows.
+  if (!item.dataset.chatId && !item.dataset.otherUserId) return;
+
+  event.preventDefault();
+  event.stopPropagation();
+
+  contextMenuTarget = item;
+  const point = getEventClientPoint(event);
+  positionFloatingMenu(document.getElementById('chatContextMenu'), point.x, point.y);
+}
+
+['chatsList', 'groupsList', 'archiveList', 'requestList'].forEach((listId) => {
+  const list = document.getElementById(listId);
+  if (!list) return;
+
+  list.addEventListener('contextmenu', openChatContextMenu);
+
+  list.addEventListener('touchstart', (event) => {
+    const item = event.target.closest('.list-item');
+    if (!item || (!item.dataset.chatId && !item.dataset.otherUserId)) return;
+    clearTimeout(item._longPressTimer);
+    const point = getEventClientPoint(event);
+    item._longPressTimer = setTimeout(() => {
+      contextMenuTarget = item;
+      positionFloatingMenu(document.getElementById('chatContextMenu'), point.x, point.y);
+    }, 550);
+  }, { passive: true });
+
+  list.addEventListener('touchend', (event) => {
+    const item = event.target.closest('.list-item');
+    if (item) clearTimeout(item._longPressTimer);
+  }, { passive: true });
+
+  list.addEventListener('touchmove', (event) => {
+    const item = event.target.closest('.list-item');
+    if (item) clearTimeout(item._longPressTimer);
+  }, { passive: true });
 });
 
 document.getElementById('favoriteChatMenuItem')?.addEventListener('click', async () => {
