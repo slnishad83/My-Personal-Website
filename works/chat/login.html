@@ -107,6 +107,37 @@
         outline: none;
         border-color: #667eea;
       }
+      .password-field {
+        position: relative;
+      }
+      .password-field input {
+        padding-right: 48px;
+      }
+      .password-toggle {
+        position: absolute;
+        right: 10px;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 34px;
+        height: 34px;
+        border: 0;
+        border-radius: 50%;
+        background: transparent;
+        color: #667085;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 17px;
+        line-height: 1;
+      }
+      .password-toggle:hover,
+      .password-toggle:focus-visible {
+        background: #eef2ff;
+        color: #667eea;
+        outline: none;
+      }
+
       .btn {
         width: 100%;
         padding: 14px;
@@ -244,12 +275,23 @@
           </div>
           <div class="form-group">
             <label>Password</label>
-            <input
-              type="password"
-              id="loginPassword"
-              placeholder="••••••••"
-              required
-            />
+            <div class="password-field">
+              <input
+                type="password"
+                id="loginPassword"
+                placeholder="••••••••"
+                required
+              />
+              <button
+                type="button"
+                class="password-toggle"
+                data-password-toggle="loginPassword"
+                aria-label="Show password"
+                title="Show password"
+              >
+                👁️
+              </button>
+            </div>
           </div>
           <button type="submit" class="btn btn-primary">Login →</button>
           <button type="button" id="forgotPasswordBtn" class="btn btn-link">
@@ -313,12 +355,23 @@
           </div>
           <div class="form-group">
             <label>Password</label>
-            <input
-              type="password"
-              id="registerPassword"
-              placeholder="•••••••• (min 6 characters)"
-              required
-            />
+            <div class="password-field">
+              <input
+                type="password"
+                id="registerPassword"
+                placeholder="•••••••• (min 6 characters)"
+                required
+              />
+              <button
+                type="button"
+                class="password-toggle"
+                data-password-toggle="registerPassword"
+                aria-label="Show password"
+                title="Show password"
+              >
+                👁️
+              </button>
+            </div>
             <div
               id="passwordError"
               style="
@@ -521,6 +574,27 @@
             .classList.add("active");
         });
       });
+
+      // Password show/hide toggle
+      document
+        .querySelectorAll("[data-password-toggle]")
+        .forEach((toggleBtn) => {
+          toggleBtn.addEventListener("click", () => {
+            const input = document.getElementById(
+              toggleBtn.dataset.passwordToggle,
+            );
+            if (!input) return;
+
+            const isHidden = input.type === "password";
+            input.type = isHidden ? "text" : "password";
+            toggleBtn.textContent = isHidden ? "🙈" : "👁️";
+            toggleBtn.setAttribute(
+              "aria-label",
+              isHidden ? "Hide password" : "Show password",
+            );
+            toggleBtn.title = isHidden ? "Hide password" : "Show password";
+          });
+        });
 
       // Login Form submission router execution
       document
