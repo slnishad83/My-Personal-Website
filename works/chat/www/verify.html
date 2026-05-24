@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Email Verification - Team Chat</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      padding: 20px;
+      font-family: Arial, sans-serif;
+      background: #0b141a;
+      color: #e9edef;
+    }
+
+    main {
+      width: min(440px, 100%);
+      padding: 28px;
+      border: 1px solid #2a3942;
+      border-radius: 14px;
+      background: #111b21;
+      box-shadow: 0 18px 44px rgba(0, 0, 0, 0.28);
+      text-align: center;
+    }
+
+    .status-mark {
+      width: 56px;
+      height: 56px;
+      display: grid;
+      place-items: center;
+      margin: 0 auto 18px;
+      border-radius: 50%;
+      background: #00a884;
+      color: #ffffff;
+      font-size: 30px;
+      font-weight: 700;
+    }
+
+    .status-mark.error {
+      background: #ef4444;
+    }
+
+    h1 {
+      margin: 0 0 10px;
+      font-size: 24px;
+    }
+
+    p {
+      margin: 0 0 20px;
+      color: #aebac1;
+      line-height: 1.5;
+    }
+
+    a {
+      min-height: 44px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0 18px;
+      border-radius: 999px;
+      background: #00a884;
+      color: #ffffff;
+      font-weight: 700;
+      text-decoration: none;
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <div id="statusMark" class="status-mark">&#10003;</div>
+    <h1 id="title">Email verified successfully</h1>
+    <p id="message">You can now log in to use Team Chat.</p>
+    <a href="login.html">Go to Login</a>
+  </main>
+
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyCdbut_FdscAjl-OVSlAUhb7TOTiRNkh34",
+      authDomain: "my-team-chat-2255.firebaseapp.com",
+      projectId: "my-team-chat-2255",
+      storageBucket: "my-team-chat-2255.firebasestorage.app",
+      messagingSenderId: "805016891521",
+      appId: "1:805016891521:web:ac9bc7a252bcf33686dd80",
+    };
+
+    firebase.initializeApp(firebaseConfig);
+
+    const params = new URLSearchParams(window.location.search);
+    const mode = params.get("mode");
+    const code = params.get("oobCode");
+    const title = document.getElementById("title");
+    const message = document.getElementById("message");
+    const statusMark = document.getElementById("statusMark");
+
+    function showError(text) {
+      statusMark.textContent = "!";
+      statusMark.classList.add("error");
+      title.textContent = "Verification link could not be used";
+      message.textContent = text;
+    }
+
+    async function verifyEmail() {
+      if (!code) {
+        title.textContent = "Email verified successfully";
+        message.textContent = "You can now log in to use Team Chat.";
+        return;
+      }
+
+      if (mode && mode !== "verifyEmail") {
+        showError("This link is not an email verification link. Please use the latest verification email from Team Chat.");
+        return;
+      }
+
+      try {
+        await firebase.auth().applyActionCode(code);
+        title.textContent = "Email verified successfully";
+        message.textContent = "You can now log in to use Team Chat.";
+      } catch (error) {
+        showError("This verification link is invalid or already used. Try logging in, or request a new verification email.");
+      }
+    }
+
+    verifyEmail();
+  </script>
+</body>
+</html>

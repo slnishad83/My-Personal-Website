@@ -1,0 +1,889 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, user-scalable=yes"
+    />
+    <meta name="theme-color" content="#667eea" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta
+      name="apple-mobile-web-app-status-bar-style"
+      content="black-translucent"
+    />
+    <title>Team Chat - Login</title>
+    <link rel="manifest" href="manifest.json?v=96" />
+    <link rel="apple-touch-icon" href="app-icon-192.png" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      body {
+        font-family: "Inter", sans-serif;
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      }
+      .auth-container {
+        width: 100%;
+        max-width: 400px;
+        padding: 20px;
+      }
+      .auth-card {
+        background: white;
+        border-radius: 24px;
+        padding: 32px;
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+      }
+      .auth-header {
+        text-align: center;
+        margin-bottom: 32px;
+      }
+      .auth-header h1 {
+        font-size: 28px;
+        font-weight: 700;
+        color: #1a1a2e;
+        margin-bottom: 8px;
+      }
+      .auth-header p {
+        font-size: 14px;
+        color: #666;
+      }
+      .auth-tabs {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 24px;
+        border-bottom: 2px solid #eef2ff;
+      }
+      .auth-tab {
+        flex: 1;
+        padding: 12px;
+        background: none;
+        border: none;
+        font-size: 16px;
+        font-weight: 600;
+        color: #666;
+        cursor: pointer;
+      }
+      .auth-tab.active {
+        color: #667eea;
+        border-bottom: 2px solid #667eea;
+        margin-bottom: -2px;
+      }
+      .auth-form {
+        display: none;
+      }
+      .auth-form.active {
+        display: block;
+      }
+      .form-group {
+        margin-bottom: 20px;
+      }
+      .form-group label {
+        display: block;
+        font-size: 13px;
+        font-weight: 600;
+        color: #333;
+        margin-bottom: 8px;
+      }
+      .form-group input {
+        width: 100%;
+        padding: 14px 16px;
+        border: 1.5px solid #e2e8f0;
+        border-radius: 14px;
+        font-size: 14px;
+        font-family: inherit;
+      }
+      .form-group input:focus {
+        outline: none;
+        border-color: #667eea;
+      }
+      .password-field {
+        position: relative;
+      }
+      .password-field input {
+        padding-right: 48px;
+      }
+      .password-toggle {
+        position: absolute;
+        right: 10px;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 34px;
+        height: 34px;
+        border: 0;
+        border-radius: 50%;
+        background: transparent;
+        color: #667085;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 17px;
+        line-height: 1;
+      }
+      .password-toggle:hover,
+      .password-toggle:focus-visible {
+        background: #eef2ff;
+        color: #667eea;
+        outline: none;
+      }
+
+      .btn {
+        width: 100%;
+        padding: 14px;
+        border: none;
+        border-radius: 14px;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+      }
+      .btn-primary {
+        background: #667eea;
+        color: white;
+      }
+      .btn-primary:hover {
+        background: #5a67d8;
+      }
+      .btn-link {
+        background: none;
+        margin-top: 12px;
+        color: #667eea;
+      }
+      .btn-secondary {
+        background: #e7fce3;
+        color: #008069;
+        margin-top: 12px;
+      }
+      .btn-outline {
+        border: 1px solid #d7dce5;
+        background: #ffffff;
+        color: #1f2937;
+      }
+      .login-install-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+      }
+      .login-install-icon {
+        width: 18px;
+        height: 18px;
+        border: 2px solid currentColor;
+        border-radius: 5px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 9px;
+        line-height: 1;
+      }
+      .install-note {
+        display: none;
+        margin-top: 10px;
+        color: #667085;
+        font-size: 12px;
+        line-height: 1.4;
+        text-align: center;
+      }
+      .auth-error {
+        margin-top: 16px;
+        padding: 12px;
+        background: #fee2e2;
+        color: #dc2626;
+        border-radius: 12px;
+        font-size: 13px;
+        text-align: center;
+      }
+      .auth-success {
+        margin-top: 16px;
+        padding: 12px;
+        background: #d1fae5;
+        color: #065f46;
+        border-radius: 12px;
+        font-size: 13px;
+        text-align: center;
+      }
+      .auth-note {
+        font-size: 11px;
+        color: #888;
+        text-align: center;
+        margin-top: 12px;
+      }
+      .modal {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.5);
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+      }
+      .modal-content {
+        background: white;
+        border-radius: 24px;
+        width: 350px;
+        max-width: 90%;
+        padding: 24px;
+      }
+      .modal-header {
+        margin-bottom: 16px;
+      }
+      .modal-header h3 {
+        font-size: 18px;
+      }
+      .close-modal {
+        float: right;
+        font-size: 24px;
+        cursor: pointer;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="auth-container">
+      <div class="auth-card">
+        <div class="auth-header">
+          <h1>💬 Team Chat</h1>
+          <p>Internal communication for your team</p>
+        </div>
+
+        <div class="auth-tabs">
+          <button class="auth-tab active" data-tab="login">Login</button>
+          <button class="auth-tab" data-tab="register">Register</button>
+        </div>
+
+        <form id="loginForm" class="auth-form active">
+          <div class="form-group">
+            <label>Email</label>
+            <input
+              type="email"
+              id="loginEmail"
+              placeholder="your@email.com"
+              required
+            />
+          </div>
+          <div class="form-group">
+            <label>Password</label>
+            <div class="password-field">
+              <input
+                type="password"
+                id="loginPassword"
+                placeholder="••••••••"
+                required
+              />
+              <button
+                type="button"
+                class="password-toggle"
+                data-password-toggle="loginPassword"
+                aria-label="Show password"
+                title="Show password"
+              >
+                👁️
+              </button>
+            </div>
+          </div>
+          <button type="submit" class="btn btn-primary">Login →</button>
+          <button type="button" id="forgotPasswordBtn" class="btn btn-link">
+            Forgot Password?
+          </button>
+          <button
+            type="button"
+            id="resendVerificationBtn"
+            class="btn btn-secondary"
+            style="display: none"
+          >
+            Resend verification email
+          </button>
+        </form>
+
+        <form id="registerForm" class="auth-form">
+          <div class="form-group">
+            <label>Full Name</label>
+            <input
+              type="text"
+              id="registerName"
+              placeholder="Your name"
+              required
+            />
+          </div>
+          <div class="form-group">
+            <label>Email</label>
+            <input
+              type="email"
+              id="registerEmail"
+              placeholder="your@email.com"
+              required
+            />
+            <div
+              id="emailError"
+              style="
+                color: #dc2626;
+                font-size: 12px;
+                margin-top: 4px;
+                display: none;
+              "
+            ></div>
+          </div>
+          <div class="form-group">
+            <label>Phone Number</label>
+            <input
+              type="tel"
+              id="registerPhone"
+              placeholder="e.g., +1234567890 or 9876543210"
+              required
+            />
+            <div
+              id="phoneError"
+              style="
+                color: #dc2626;
+                font-size: 12px;
+                margin-top: 4px;
+                display: none;
+              "
+            ></div>
+          </div>
+          <div class="form-group">
+            <label>Password</label>
+            <div class="password-field">
+              <input
+                type="password"
+                id="registerPassword"
+                placeholder="•••••••• (min 6 characters)"
+                required
+              />
+              <button
+                type="button"
+                class="password-toggle"
+                data-password-toggle="registerPassword"
+                aria-label="Show password"
+                title="Show password"
+              >
+                👁️
+              </button>
+            </div>
+            <div
+              id="passwordError"
+              style="
+                color: #dc2626;
+                font-size: 12px;
+                margin-top: 4px;
+                display: none;
+              "
+            ></div>
+          </div>
+          <button type="submit" class="btn btn-primary" id="registerBtn">
+            Create Account →
+          </button>
+          <p class="auth-note">
+            📧 Verification email will be sent. Please verify before logging in.
+          </p>
+        </form>
+
+        <div id="authError" class="auth-error" style="display: none"></div>
+        <div id="authSuccess" class="auth-success" style="display: none"></div>
+        <button
+          id="installAppBtn"
+          class="btn btn-outline login-install-btn"
+          type="button"
+          data-install-app
+          style="display: none; margin-top: 16px"
+        >
+          <span class="login-install-icon" aria-hidden="true">▣</span>
+          Install App
+        </button>
+        <p id="installHelpText" class="install-note" data-install-help></p>
+      </div>
+    </div>
+
+    <div id="resetModal" class="modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <span class="close-modal resetClose">&times;</span>
+          <h3>Reset Password</h3>
+        </div>
+        <div class="form-group">
+          <label>Email</label>
+          <input type="email" id="resetEmail" placeholder="your@email.com" />
+        </div>
+        <button id="sendResetBtn" class="btn btn-primary">
+          Send Reset Link
+        </button>
+      </div>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+    <script>
+      const firebaseConfig = {
+        apiKey: "AIzaSyCdbut_FdscAjl-OVSlAUhb7TOTiRNkh34",
+        authDomain: "my-team-chat-2255.firebaseapp.com",
+        projectId: "my-team-chat-2255",
+        storageBucket: "my-team-chat-2255.firebasestorage.app",
+        messagingSenderId: "805016891521",
+        appId: "1:805016891521:web:ac9bc7a252bcf33686dd80",
+      };
+      firebase.initializeApp(firebaseConfig);
+      const auth = firebase.auth();
+      const db = firebase.firestore();
+      let lastUnverifiedEmail = "";
+      let lastUnverifiedPassword = "";
+
+      function isLikelyPrivateSession() {
+        try {
+          const testKey = "teamChatStorageProbe";
+          localStorage.setItem(testKey, testKey);
+          localStorage.removeItem(testKey);
+          return false;
+        } catch (error) {
+          return true;
+        }
+      }
+
+      function getAuthPersistence() {
+        return isLikelyPrivateSession()
+          ? firebase.auth.Auth.Persistence.SESSION
+          : firebase.auth.Auth.Persistence.LOCAL;
+      }
+
+      const authPersistenceReady = auth.setPersistence(getAuthPersistence());
+
+      function cleanEmail(email) {
+        return email.trim().toLowerCase();
+      }
+
+      function setButtonLoading(btn, isLoading, label, loadingLabel) {
+        btn.disabled = isLoading;
+        btn.textContent = isLoading ? loadingLabel : label;
+      }
+
+      function getEmailVerificationSettings() {
+        return {
+          url: new URL("verify.html", window.location.href).href,
+          handleCodeInApp: false,
+        };
+      }
+
+      async function sendVerificationEmail(user) {
+        await user.sendEmailVerification();
+      }
+
+      function getFriendlyAuthError(error, fallback) {
+        const code = error && error.code;
+        if (
+          code === "auth/invalid-credential" ||
+          code === "auth/wrong-password" ||
+          code === "auth/user-not-found"
+        ) {
+          return "Incorrect email or password. Please check and try again.";
+        }
+        if (code === "auth/too-many-requests") {
+          return "Too many attempts. Please wait a few minutes, then try again.";
+        }
+        if (code === "auth/network-request-failed") {
+          return "Network problem. Check your internet connection and try again.";
+        }
+        if (code === "auth/invalid-email") {
+          return "Please enter a valid email address.";
+        }
+        if (code === "auth/email-already-in-use") {
+          return "This email is already registered. Login or use a different email.";
+        }
+        if (code === "auth/weak-password") {
+          return "Password is too weak. Use at least 6 characters.";
+        }
+        if (
+          code === "auth/unauthorized-continue-uri" ||
+          code === "auth/invalid-continue-uri"
+        ) {
+          return "Verification link setup needs Firebase authorized domain access. A standard verification email can still be sent.";
+        }
+        return fallback || "Something went wrong. Please try again.";
+      }
+
+      // ========================================================================
+      // STRICT APP VALIDATION, TAB SYSTEMS & SUBMISSION CONTROLLERS
+      // ========================================================================
+
+      // Real-time Regular Expression Validators
+      function validateEmail(email) {
+        // Enforces strict syntax standard format
+        const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+        return emailRegex.test(email);
+      }
+
+      function validatePhone(phone) {
+        // Strict Indian format validation rule: exactly 10 digits starting with 6, 7, 8, or 9
+        return /^[6-9]\d{9}$/.test(phone.trim());
+      }
+
+      function validatePassword(password) {
+        return password.length >= 6;
+      }
+
+      auth.onAuthStateChanged(async (user) => {
+        await authPersistenceReady.catch(() => {});
+        if (!user) return;
+        await user.reload();
+        if (user.emailVerified) {
+          window.location.href = "index.html";
+        }
+      });
+
+      // Clear validation errors
+      function clearValidationErrors() {
+        document.getElementById("emailError").style.display = "none";
+        document.getElementById("phoneError").style.display = "none";
+        document.getElementById("passwordError").style.display = "none";
+      }
+
+      // Show validation error
+      function showValidationError(fieldId, message) {
+        const errorDiv = document.getElementById(fieldId);
+        if (errorDiv) {
+          errorDiv.textContent = message;
+          errorDiv.style.display = "block";
+        }
+      }
+
+      // Tab switching controller interaction setup
+      document.querySelectorAll(".auth-tab").forEach((tab) => {
+        tab.addEventListener("click", () => {
+          document
+            .querySelectorAll(".auth-tab")
+            .forEach((t) => t.classList.remove("active"));
+          tab.classList.add("active");
+          document
+            .querySelectorAll(".auth-form")
+            .forEach((form) => form.classList.remove("active"));
+          document.getElementById("authError").style.display = "none";
+          document.getElementById("authSuccess").style.display = "none";
+          document
+            .getElementById(`${tab.dataset.tab}Form`)
+            .classList.add("active");
+        });
+      });
+
+      // Password show/hide toggle
+      document
+        .querySelectorAll("[data-password-toggle]")
+        .forEach((toggleBtn) => {
+          toggleBtn.addEventListener("click", () => {
+            const input = document.getElementById(
+              toggleBtn.dataset.passwordToggle,
+            );
+            if (!input) return;
+
+            const isHidden = input.type === "password";
+            input.type = isHidden ? "text" : "password";
+            toggleBtn.textContent = isHidden ? "🙈" : "👁️";
+            toggleBtn.setAttribute(
+              "aria-label",
+              isHidden ? "Hide password" : "Show password",
+            );
+            toggleBtn.title = isHidden ? "Hide password" : "Show password";
+          });
+        });
+
+      // Login Form submission router execution
+      document
+        .getElementById("loginForm")
+        .addEventListener("submit", async (e) => {
+          e.preventDefault();
+          const email = cleanEmail(document.getElementById("loginEmail").value);
+          const password = document.getElementById("loginPassword").value;
+          const errorDiv = document.getElementById("authError");
+          const successDiv = document.getElementById("authSuccess");
+          const resendBtn = document.getElementById("resendVerificationBtn");
+          const btn = e.target.querySelector("button[type='submit']");
+
+          errorDiv.style.display = "none";
+          successDiv.style.display = "none";
+          resendBtn.style.display = "none";
+          setButtonLoading(btn, true, "Login ->", "Logging in...");
+
+          try {
+            await authPersistenceReady;
+            const userCred = await auth.signInWithEmailAndPassword(
+              email,
+              password,
+            );
+            await userCred.user.reload();
+
+            if (!userCred.user.emailVerified) {
+              lastUnverifiedEmail = email;
+              lastUnverifiedPassword = password;
+              await auth.signOut();
+              errorDiv.textContent =
+                "Please verify your email first. Check your inbox, then login again.";
+              errorDiv.style.display = "block";
+              resendBtn.style.display = "block";
+              setButtonLoading(btn, false, "Login ->", "Logging in...");
+              return;
+            }
+
+            try {
+              const userRef = db.collection("users").doc(userCred.user.uid);
+
+              const userDoc = await userRef.get();
+
+              if (userDoc.exists && userDoc.data().isActive === false) {
+                await userRef.update({
+                  isActive: true,
+                  deactivatedAt: null,
+                });
+              }
+
+              await userRef.set(
+                {
+                  onlineStatus: "online",
+                  lastSeen: new Date(),
+                  emailVerified: true,
+                  pendingVerification: false,
+                },
+                { merge: true },
+              );
+            } catch (firestoreError) {
+              console.warn("Profile update skipped:", firestoreError);
+            }
+
+            window.location.href = "index.html";
+          } catch (error) {
+            errorDiv.textContent = getFriendlyAuthError(
+              error,
+              "Login failed. Please try again.",
+            );
+            errorDiv.style.display = "block";
+            setButtonLoading(btn, false, "Login ->", "Logging in...");
+          }
+        });
+
+      document
+        .getElementById("resendVerificationBtn")
+        .addEventListener("click", async () => {
+          const errorDiv = document.getElementById("authError");
+          const successDiv = document.getElementById("authSuccess");
+          const btn = document.getElementById("resendVerificationBtn");
+          const email =
+            lastUnverifiedEmail ||
+            cleanEmail(document.getElementById("loginEmail").value);
+          const password =
+            lastUnverifiedPassword ||
+            document.getElementById("loginPassword").value;
+
+          errorDiv.style.display = "none";
+          successDiv.style.display = "none";
+
+          if (!email || !password) {
+            errorDiv.textContent =
+              "Enter your email and password first, then resend verification.";
+            errorDiv.style.display = "block";
+            return;
+          }
+
+          setButtonLoading(
+            btn,
+            true,
+            "Resend verification email",
+            "Sending...",
+          );
+          try {
+            await authPersistenceReady;
+            const userCred = await auth.signInWithEmailAndPassword(
+              email,
+              password,
+            );
+            await sendVerificationEmail(userCred.user);
+            await auth.signOut();
+            successDiv.textContent =
+              "Verification email sent. Please check your inbox.";
+            successDiv.style.display = "block";
+          } catch (error) {
+            errorDiv.textContent = getFriendlyAuthError(
+              error,
+              "Could not send verification email. Please try again.",
+            );
+            errorDiv.style.display = "block";
+          } finally {
+            setButtonLoading(
+              btn,
+              false,
+              "Resend verification email",
+              "Sending...",
+            );
+          }
+        });
+
+      // Register Form submission interceptor
+      document
+        .getElementById("registerForm")
+        .addEventListener("submit", async (e) => {
+          e.preventDefault();
+          clearValidationErrors();
+
+          const name = document.getElementById("registerName").value.trim();
+          const email = cleanEmail(
+            document.getElementById("registerEmail").value,
+          );
+          const phone = document.getElementById("registerPhone").value.trim();
+          const password = document.getElementById("registerPassword").value;
+          const errorDiv = document.getElementById("authError");
+          const successDiv = document.getElementById("authSuccess");
+          const btn = e.target.querySelector("button[type='submit']");
+
+          errorDiv.style.display = "none";
+          successDiv.style.display = "none";
+
+          let hasError = false;
+
+          // 1. Strict Name Length Check
+          if (!name || name.length < 2) {
+            errorDiv.textContent = "❌ Please enter your full display name.";
+            errorDiv.style.display = "block";
+            hasError = true;
+          }
+
+          // 2. Strict Syntax Email Validation
+          if (!validateEmail(email)) {
+            showValidationError(
+              "emailError",
+              "❌ Please provide a valid email format address (e.g. name@domain.com).",
+            );
+            hasError = true;
+          }
+
+          // 3. Strict 10-Digit Indian Phone Validation
+          if (!validatePhone(phone)) {
+            showValidationError(
+              "phoneError",
+              "❌ Enter a valid 10-digit phone number starting with 6, 7, 8, or 9.",
+            );
+            hasError = true;
+          }
+
+          // 4. Strict Security Password Length Check
+          if (!validatePassword(password)) {
+            showValidationError(
+              "passwordError",
+              "❌ Password requirement unmet. Must contain at least 6 characters.",
+            );
+            hasError = true;
+          }
+
+          if (hasError) return;
+
+          btn.disabled = true;
+          btn.textContent = "Creating account...";
+
+          let createdUser = null;
+          try {
+            await authPersistenceReady;
+            const userCred = await auth.createUserWithEmailAndPassword(
+              email,
+              password,
+            );
+            createdUser = userCred.user;
+            await userCred.user.updateProfile({ displayName: name });
+            await sendVerificationEmail(userCred.user);
+
+            await db
+              .collection("users")
+              .doc(userCred.user.uid)
+              .set({
+                uid: userCred.user.uid,
+                email: email,
+                displayName: name,
+                phone,
+                createdAt: new Date(),
+                isActive: true,
+                isFirstTime: true,
+                emailVerified: false,
+                pendingVerification: true,
+                onlineStatus: "offline",
+                privacySettings: {
+                  hideReadReceipts: false,
+                  hideTypingIndicator: false,
+                  hideLastSeen: false,
+                },
+              });
+
+            await auth.signOut();
+            successDiv.textContent =
+              "Account created! Check Inbox, Spam, and Promotions for the verification email. Please verify your email before logging in.";
+            successDiv.style.display = "block";
+            document.getElementById("registerForm").reset();
+            btn.disabled = false;
+            btn.textContent = "Create Account →";
+          } catch (error) {
+            if (createdUser) {
+              await createdUser.delete().catch(() => {});
+              await auth.signOut().catch(() => {});
+            }
+            errorDiv.textContent = getFriendlyAuthError(
+              error,
+              "Registration failed. Please try again.",
+            );
+            errorDiv.style.display = "block";
+            setButtonLoading(
+              btn,
+              false,
+              "Create Account ->",
+              "Creating account...",
+            );
+          }
+        });
+
+      // Password Reset
+      const resetModal = document.getElementById("resetModal");
+      document
+        .getElementById("forgotPasswordBtn")
+        .addEventListener("click", () => {
+          resetModal.style.display = "flex";
+        });
+      document.querySelectorAll(".resetClose").forEach((btn) => {
+        btn.addEventListener(
+          "click",
+          () => (resetModal.style.display = "none"),
+        );
+      });
+      document
+        .getElementById("sendResetBtn")
+        .addEventListener("click", async () => {
+          const email = document.getElementById("resetEmail").value.trim();
+          const btn = document.getElementById("sendResetBtn");
+
+          if (!email) {
+            alert("Please enter your email");
+            return;
+          }
+
+          btn.disabled = true;
+          btn.textContent = "Sending...";
+
+          try {
+            await auth.sendPasswordResetEmail(email);
+            alert("✅ Password reset email sent! Check your inbox.");
+            resetModal.style.display = "none";
+            btn.disabled = false;
+            btn.textContent = "Send Reset Link";
+          } catch (error) {
+            alert("❌ " + (error.message || "Failed to send reset email"));
+            btn.disabled = false;
+            btn.textContent = "Send Reset Link";
+          }
+        });
+    </script>
+    <script src="pwa-install.js?v=118"></script>
+  </body>
+</html>

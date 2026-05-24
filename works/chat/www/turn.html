@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Call Network Settings</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      padding: 20px;
+      font-family: Arial, sans-serif;
+      background: #0b141a;
+      color: #e9edef;
+    }
+
+    main {
+      width: min(720px, 100%);
+      padding: 24px;
+      border-radius: 14px;
+      background: #111b21;
+      box-shadow: 0 18px 44px rgba(0, 0, 0, 0.28);
+    }
+
+    h1 {
+      margin: 0 0 8px;
+      font-size: 24px;
+    }
+
+    h2 {
+      margin: 22px 0 8px;
+      font-size: 16px;
+    }
+
+    p {
+      color: #aebac1;
+      line-height: 1.5;
+    }
+
+    code {
+      color: #d1f4ee;
+      word-break: break-word;
+    }
+
+    .guide {
+      margin: 18px 0;
+      padding: 16px;
+      border: 1px solid #2a3942;
+      border-radius: 12px;
+      background: #17232b;
+    }
+
+    .guide ol {
+      margin: 10px 0 0;
+      padding-left: 22px;
+      color: #d1d7db;
+      line-height: 1.6;
+    }
+
+    textarea {
+      width: 100%;
+      min-height: 150px;
+      margin: 14px 0;
+      padding: 14px;
+      border: 1px solid #2a3942;
+      border-radius: 10px;
+      background: #202c33;
+      color: #e9edef;
+      font: 14px Consolas, monospace;
+      resize: vertical;
+    }
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    button,
+    a {
+      min-height: 42px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0 16px;
+      border: 0;
+      border-radius: 999px;
+      background: #00a884;
+      color: white;
+      cursor: pointer;
+      font-weight: 700;
+      text-decoration: none;
+    }
+
+    button:disabled {
+      cursor: wait;
+      opacity: 0.7;
+    }
+
+    .secondary {
+      background: #202c33;
+      color: #e9edef;
+      border: 1px solid #2a3942;
+    }
+
+    .message {
+      min-height: 22px;
+      margin-top: 12px;
+      color: #00a884;
+      font-weight: 700;
+    }
+
+    .hint {
+      margin-top: 8px;
+      font-size: 13px;
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Call Network Settings</h1>
+    <p>Calls now use secure TURN credentials from Firebase. The Metered secret key stays in Firebase and is never stored in this browser.</p>
+
+    <div class="guide">
+      <strong>Secure public setup</strong>
+      <ol>
+        <li>Metered domain: <code>teamchatnishad.metered.live</code></li>
+        <li>Store the Metered secret in Firebase as <code>METERED_API_KEY</code>.</li>
+        <li>Deploy the Firebase Function named <code>getTurnCredentials</code>.</li>
+        <li>Click <strong>Test Secure TURN</strong> below while logged in.</li>
+      </ol>
+      <p class="hint">This works the same from desktop browsers, mobile browsers, and the installed web app because every client calls the same secure endpoint.</p>
+    </div>
+
+    <div class="actions">
+      <button id="testSecureTurnBtn">Test Secure TURN</button>
+      <button id="clearLegacyBtn" class="secondary">Clear Old Browser Keys</button>
+      <a href="index.html" class="secondary">Back to Chat</a>
+    </div>
+    <div id="message" class="message"></div>
+
+    <h2>Advanced manual fallback</h2>
+    <p>Use this only if a TURN provider gives direct server, username, and password JSON. Leave it as <code>[]</code> for the secure Metered setup.</p>
+    <textarea id="turnConfig" spellcheck="false">[]</textarea>
+    <div class="actions">
+      <button id="saveBtn">Save Advanced JSON</button>
+      <button id="clearBtn" class="secondary">Clear Advanced JSON</button>
+    </div>
+  </main>
+
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyCdbut_FdscAjl-OVSlAUhb7TOTiRNkh34",
+      authDomain: "my-team-chat-2255.firebaseapp.com",
+      projectId: "my-team-chat-2255",
+      storageBucket: "my-team-chat-2255.firebasestorage.app",
+      messagingSenderId: "805016891521",
+      appId: "1:805016891521:web:ac9bc7a252bcf33686dd80"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+
+    const TURN_CREDENTIALS_ENDPOINT = 'https://us-central1-my-team-chat-2255.cloudfunctions.net/getTurnCredentials';
+    const textarea = document.getElementById('turnConfig');
+    const message = document.getElementById('message');
+    const testButton = document.getElementById('testSecureTurnBtn');
+    let currentUser = null;
+
+    textarea.value = localStorage.getItem('teamChatTurnServers') || '[]';
+
+    function setMessage(text, isError) {
+      message.textContent = text;
+      message.style.color = isError ? '#ef4444' : '#00a884';
+    }
+
+    firebase.auth().onAuthStateChanged((user) => {
+      currentUser = user;
+      if (!user) {
+        setMessage('Please log in before testing secure TURN settings.', true);
+      }
+    });
+
+    document.getElementById('testSecureTurnBtn').addEventListener('click', async () => {
+      if (!currentUser) {
+        setMessage('Please log in before testing secure TURN settings.', true);
+        return;
+      }
+
+      testButton.disabled = true;
+      setMessage('Testing secure TURN settings...', false);
+
+      try {
+        const token = await currentUser.getIdToken();
+        const response = await fetch(TURN_CREDENTIALS_ENDPOINT, {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        });
+
+        if (!response.ok) {
+          let errorText = '';
+          try {
+            const errorBody = await response.json();
+            errorText = errorBody?.error ? ` ${errorBody.error}` : '';
+          } catch (error) {
+            errorText = '';
+          }
+          throw new Error(`Secure TURN test failed (${response.status}).${errorText}`);
+        }
+
+        const iceServers = await response.json();
+        if (!Array.isArray(iceServers) || !iceServers.length) {
+          throw new Error('Secure TURN returned no server entries.');
+        }
+
+        setMessage(`Secure TURN is working. ${iceServers.length} server entries verified.`, false);
+      } catch (error) {
+        const message = error instanceof TypeError && error.message === 'Failed to fetch'
+          ? 'Could not reach the secure TURN backend. Deploy getTurnCredentials and make sure CORS is enabled.'
+          : error.message || 'Could not verify secure TURN settings.';
+        setMessage(message, true);
+      } finally {
+        testButton.disabled = false;
+      }
+    });
+
+    document.getElementById('clearLegacyBtn').addEventListener('click', () => {
+      localStorage.removeItem('teamChatMeteredAppUrl');
+      localStorage.removeItem('teamChatMeteredApiKey');
+      setMessage('Old browser-stored Metered keys cleared on this device.', false);
+    });
+
+    document.getElementById('saveBtn').addEventListener('click', () => {
+      try {
+        const parsed = JSON.parse(textarea.value || '[]');
+        if (!Array.isArray(parsed)) throw new Error('Config must be a JSON array');
+        localStorage.setItem('teamChatTurnServers', JSON.stringify(parsed));
+        setMessage(parsed.length ? 'Advanced TURN JSON saved.' : 'Advanced TURN JSON saved as empty.', false);
+      } catch (error) {
+        setMessage('Invalid JSON. Please check the format.', true);
+      }
+    });
+
+    document.getElementById('clearBtn').addEventListener('click', () => {
+      textarea.value = '[]';
+      localStorage.setItem('teamChatTurnServers', '[]');
+      setMessage('Advanced TURN JSON cleared.', false);
+    });
+  </script>
+</body>
+</html>
