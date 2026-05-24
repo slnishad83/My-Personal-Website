@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "805016891521",
+    "project_id": "my-team-chat-2255",
+    "storage_bucket": "my-team-chat-2255.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:805016891521:android:839749e21eaf0b9486dd80",
+        "android_client_info": {
+          "package_name": "com.nishad.myteamchat"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "805016891521-m8si9sgpj7gj9lt6hhckltstmrkb0p9e.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyANMgnzt1Pg6aMCr9_LRIOORZGkgitV3tU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "805016891521-m8si9sgpj7gj9lt6hhckltstmrkb0p9e.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
