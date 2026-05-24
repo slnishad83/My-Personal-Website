@@ -42,7 +42,11 @@ const authPersistenceReady = Promise.race([
 });registerFcmTokenForCurrentUser
 const db = firebase.firestore();
 const storage = firebase.storage();
+const isNativeAndroidApp =
+  window.Capacitor?.isNativePlatform?.() === true &&
+  window.Capacitor?.getPlatform?.() === 'android';
 
+const PushNotifications = window.Capacitor?.Plugins?.PushNotifications;
 // Firebase Cloud Messaging (FCM)
 // IMPORTANT: replace this with your Firebase Console > Project settings > Cloud Messaging > Web Push certificate public key.
 const FCM_VAPID_KEY = 'BDVoTx6AbM3T_AdVKV6IYFt3bbXiWRF5I7c5s-4w5AuUvYIzYPQYiODmJxnjH0DOLj-NhL83jiKMQ6RjkCvUALQ';
@@ -5008,6 +5012,7 @@ registerFcmTokenForCurrentUser({
       console.warn('Could not refresh auth user:', error);
     }
     currentUser = user;
+    requestNativeNotificationPermission();
     
     document.getElementById('userName').textContent = user.displayName || user.email.split('@')[0];
     const userRef = db.collection('users').doc(user.uid);
@@ -5079,7 +5084,21 @@ registerFcmTokenForCurrentUser({
 
   if (localStorage.getItem('darkMode') === 'true') document.body.classList.add('dark');
 }
+async function requestNativeNotificationPermission() {
+  if (!isNativeAndroidApp || !PushNotifications) return;
 
+  try {
+    let permission = await PushNotifications.checkPermissions();
+
+    if (permission.receive !== 'granted') {
+      permission = await PushNotifications.requestPermissions();
+    }
+
+    console.log('Native notification permission:', permission.receive);
+  } catch (error) {
+    console.warn('Native notification permission failed:', error);
+  }
+}
 // Run framework initializes
 init();
 // ========================================
