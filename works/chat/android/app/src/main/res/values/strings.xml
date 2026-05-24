@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">My Team Chat</string>
-    <string name="title_activity_main">My Team Chat</string>
+    <string name="app_name">NSL Chat</string>
+    <string name="title_activity_main">NSL Chat</string>
     <string name="package_name">com.nishad.myteamchat</string>
     <string name="custom_url_scheme">com.nishad.myteamchat</string>
 </resources>
