@@ -363,6 +363,18 @@ exports.sendMessageNotification = onDocumentCreated(
       };
 
       const response = await admin.messaging().sendEachForMulticast(fcmMessage);
+const hasSuccessfulDelivery = response.responses.some((result) => result.success);
+
+if (hasSuccessfulDelivery) {
+  const deliveryUpdates = {};
+  deliveryUpdates[`deliveredTo.${receiverId}`] = admin.firestore.FieldValue.serverTimestamp();
+  deliveryUpdates.status = 'delivered';
+
+  await admin.firestore()
+    .collection('messages')
+    .doc(messageId)
+    .set(deliveryUpdates, { merge: true });
+}
 
       const staleTokens = [];
       response.responses.forEach((result, index) => {
