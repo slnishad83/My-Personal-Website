@@ -4752,7 +4752,18 @@ async function markMessagesAsDelivered(markAsRead = false) {
   }
 }
 
+function shouldMarkCurrentChatAsRead() {
+  if (!currentChat || !currentUser) return false;
+  if (document.hidden) return false;
+  if (typeof document.hasFocus === 'function' && !document.hasFocus()) return false;
+  if (typeof isChatPanelOpen === 'function' && !isChatPanelOpen()) return false;
+  return true;
+}
+
 async function markMessagesAsRead() {
+  if (!shouldMarkCurrentChatAsRead()) {
+    return markMessagesAsDelivered(false);
+  }
   return markMessagesAsDelivered(true);
 }
 
