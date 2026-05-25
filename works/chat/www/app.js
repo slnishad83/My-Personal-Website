@@ -4193,6 +4193,7 @@ async function buildGroupChatItems() {
 }
 
 function loadCurrentChatList() {
+markIncomingMessagesAsDeliveredFromInbox();
   if (currentViewTab === 'groups') loadGroupsList();
   else loadAllChatsList(document.getElementById('searchInput')?.value || '');
 }
@@ -4758,6 +4759,72 @@ function shouldMarkCurrentChatAsRead() {
   if (typeof document.hasFocus === 'function' && !document.hasFocus()) return false;
   if (typeof isChatPanelOpen === 'function' && !isChatPanelOpen()) return false;
   return true;
+}
+
+async function markIncomingMessagesAsDeliveredFromInbox() {
+  if (!currentUser) return;
+
+  try {
+    const chatIds = [];
+
+    const directSnapshot = await db.collection('directChats')
+      .where('participants', 'array-contains', currentUser.uid)
+      .get();
+
+    directSnapshot.docs.forEach(doc => {
+      if (doc.id) chatIds.push({ type: 'direct', id: doc.id });
+    });
+
+    const groupSnapshot = await db.collection('groupMembers')
+      .where('userId', '==', currentUser.uid)
+      .get();
+
+    groupSnapshot.docs.forEach(doc => {
+      const groupId = doc.data()?.groupId;
+      if (groupId) chatIds.push({ type: 'group', id: groupId });
+    });
+
+    if (!chatIds.length) return;
+
+    for (const chat of chatIds.slice(0, 40)) {
+      const fieldName = chat.type === 'direct' ? 'directId' : 'groupId';
+
+      const snapshot = await db.collection('messages')
+        .where(fieldName, '==', chat.id)
+        .limit(30)
+        .get();
+
+      if (snapshot.empty) continue;
+
+      const batch = db.batch();
+      let updatesMade = false;
+
+      snapshot.docs.forEach(doc => {
+        const data = doc.data() || {};
+
+        if (!data.senderId || data.senderId === currentUser.uid) return;
+        if (data.deletedFor?.[currentUser.uid]) return;
+        if (data.deletedForEveryone) return;
+        if (data.deliveredTo?.[currentUser.uid]) return;
+        if (data.readBy?.[currentUser.uid]) return;
+
+        const updates = {};
+        updates[`deliveredTo.${currentUser.uid}`] =
+          firebase.firestore.FieldValue.serverTimestamp();
+
+        if (!data.status || data.status === 'sent') {
+          updates.status = 'delivered';
+        }
+
+        batch.update(doc.ref, updates);
+        updatesMade = true;
+      });
+
+      if (updatesMade) await batch.commit();
+    }
+  } catch (error) {
+    console.warn('Inbox delivery update failed:', error);
+  }
 }
 
 async function markMessagesAsRead() {
