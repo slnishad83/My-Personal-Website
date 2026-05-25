@@ -2873,3 +2873,43 @@ body {
 .read-receipt.seen {
   color: #53bdeb;
 }
+/* FINAL MOBILE SAFE TOP FIX - keeps Android status bar away from chat header */
+:root {
+  --safe-top: env(safe-area-inset-top, 0px);
+}
+
+@media (max-width: 900px), (display-mode: standalone) {
+  .chat-container {
+    height: 100dvh;
+  }
+
+  .chat-header {
+    min-height: calc(64px + var(--safe-top)) !important;
+    padding-top: calc(10px + var(--safe-top)) !important;
+    padding-right: 10px !important;
+    padding-bottom: 8px !important;
+    padding-left: 10px !important;
+    position: relative !important;
+    z-index: 50 !important;
+  }
+
+  .sidebar-header {
+    min-height: calc(58px + var(--safe-top)) !important;
+    padding-top: calc(8px + var(--safe-top)) !important;
+  }
+
+  .mobile-menu-btn,
+  .chat-actions .icon-btn,
+  .chat-header-info {
+    position: relative !important;
+    z-index: 100 !important;
+    pointer-events: auto !important;
+  }
+
+  .mobile-menu-btn {
+    min-width: 42px !important;
+    width: 42px !important;
+    height: 42px !important;
+    flex: 0 0 42px !important;
+  }
+}

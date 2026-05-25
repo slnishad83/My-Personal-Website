@@ -5360,3 +5360,46 @@ document.addEventListener('visibilitychange', () => {
 window.enableTeamChatCallNotifications = function enableTeamChatCallNotifications() {
   return registerFcmTokenForCurrentUser({ force: true });
 };
+// FINAL CAPACITOR ANDROID BACK BUTTON FIX
+(function setupCapacitorAndroidBackButtonFix() {
+  if (window.__capacitorAndroidBackFixReady) return;
+  window.__capacitorAndroidBackFixReady = true;
+
+  const AppPlugin = window.Capacitor?.Plugins?.App;
+  if (!AppPlugin?.addListener) return;
+
+  AppPlugin.addListener('backButton', () => {
+    const container = document.querySelector('.chat-container');
+    const chatIsOpen = container?.classList.contains('chat-open');
+
+    if (chatIsOpen) {
+      container.classList.remove('chat-open');
+      currentChat = null;
+      currentChatType = null;
+      currentGroup = null;
+      currentGroupMembers = [];
+
+      if (messagesUnsubscribe) {
+        messagesUnsubscribe();
+        messagesUnsubscribe = null;
+      }
+
+      if (typingUnsubscribe) {
+        typingUnsubscribe();
+        typingUnsubscribe = null;
+      }
+
+      document.getElementById('currentChatName').textContent = 'Select a chat';
+      document.getElementById('chatStatus').textContent = '';
+      document.getElementById('currentChatAvatar').innerHTML = '?';
+      document.getElementById('messagesArea').innerHTML =
+        '<div class="empty-state"><div class="empty-icon">💬</div><p>Select a chat to start messaging</p></div>';
+      document.getElementById('inputArea').style.display = 'none';
+      document.getElementById('groupInfoBtn').style.display = 'none';
+
+      return;
+    }
+
+    AppPlugin.minimizeApp();
+  });
+})();
