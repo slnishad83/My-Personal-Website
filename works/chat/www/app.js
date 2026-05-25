@@ -5218,9 +5218,11 @@ processPendingNotificationTap();
     setupChatListListeners();
     setupRequestListeners();
     listenForIncomingCalls();
-    setupCallPushNotifications().catch(() => {});
-    switchTab('all');
-    revealAuthenticatedApp();
+    registerFcmTokenForCurrentUser({ force: Notification.permission !== 'granted' }).catch(() => {});
+setupCallPushNotifications({ forcePrompt: Notification.permission !== 'granted' }).catch(() => {});
+setupCallNotificationRefreshHooks();
+switchTab('all');
+revealAuthenticatedApp();
   });
 
   // Attach Event Handlers
