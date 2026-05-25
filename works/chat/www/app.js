@@ -187,11 +187,77 @@ async function initializeNativePushAfterLogin() {
       showToast(notification.title || 'New notification');
     });
 
-    PushNotifications.addListener('pushNotificationActionPerformed', (event) => {
-      console.log('Notification tapped:', event.notification?.data);
-    });
+    PushNotifications.addListener('pushNotificationActionPerformed', async (event) => {
+  const data = event.notification?.data || {};
+  console.log('Notification tapped:', data);
+
+  setTimeout(() => {
+    handleNotificationTap(data);
+  }, 1200);
+});
   } catch (error) {
     console.warn('Native push setup failed:', error);
+  }
+}
+
+function getOtherUserIdFromDirectId(directId = '') {
+  if (!currentUser || !directId) return '';
+  return String(directId)
+    .split('_')
+    .find((uid) => uid && uid !== currentUser.uid) || '';
+}
+
+async function handleNotificationTap(data = {}) {
+  try {
+    if (!currentUser) {
+      sessionStorage.setItem('pendingNotificationTap', JSON.stringify(data));
+      return;
+    }
+
+    const kind = data.kind || '';
+    const chatType = data.chatType || '';
+    const chatId = data.chatId || '';
+
+    if (kind !== 'message' || !chatId) return;
+
+    if (chatType === 'group') {
+      const groupDoc = await db.collection('groups').doc(chatId).get();
+      const groupName = groupDoc.exists
+        ? (groupDoc.data().name || 'Group')
+        : 'Group';
+      await loadGroupChat(chatId, groupName);
+      return;
+    }
+
+    const otherUserId = data.senderId || getOtherUserIdFromDirectId(chatId);
+    if (!otherUserId) return;
+
+    const userDoc = await db.collection('users').doc(otherUserId).get();
+    if (!userDoc.exists) {
+      showToast('Could not open chat from notification', 'error');
+      return;
+    }
+
+    await startDirectChat({
+      id: otherUserId,
+      ...userDoc.data(),
+      aliasDirectIds: [chatId]
+    });
+  } catch (error) {
+    console.warn('Could not open notification chat:', error);
+    showToast('Could not open notification chat', 'error');
+  }
+}
+
+function processPendingNotificationTap() {
+  try {
+    const raw = sessionStorage.getItem('pendingNotificationTap');
+    if (!raw || !currentUser) return;
+    sessionStorage.removeItem('pendingNotificationTap');
+    const data = JSON.parse(raw);
+    setTimeout(() => handleNotificationTap(data), 1200);
+  } catch (error) {
+    console.warn('Could not process pending notification tap:', error);
   }
 }
 
@@ -5047,6 +5113,7 @@ registerFcmTokenForCurrentUser({
     currentUser = user;
 setTimeout(() => {
   initializeNativePushAfterLogin();
+processPendingNotificationTap();
 }, 3000);
     requestNativeNotificationPermission();
     

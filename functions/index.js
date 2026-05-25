@@ -327,15 +327,14 @@ exports.sendMessageNotification = onDocumentCreated(
           senderId: message.senderId || ''
         },
         android: {
-          priority: 'high',
-          notification: {
-            channelId: 'default',
-            defaultSound: true,
-            defaultVibrateTimings: true,
-            tag: `message-${messageId}`,
-            clickAction: 'https://nishadsl.com/works/chat/'
-          }
-        },
+  priority: 'high',
+  notification: {
+    channelId: 'default',
+    defaultSound: true,
+    defaultVibrateTimings: true,
+    tag: `message-${messageId}`
+  }
+},
         webpush: {
           headers: {
             Urgency: 'high',
