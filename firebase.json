@@ -2,8 +2,11 @@
   "firestore": {
     "rules": "firestore.rules"
   },
-  "functions": {
-    "source": "functions",
-    "runtime": "nodejs20"
-  }
+  "functions": [
+    {
+      "codebase": "default",
+      "source": "functions",
+      "runtime": "nodejs20"
+    }
+  ]
 }

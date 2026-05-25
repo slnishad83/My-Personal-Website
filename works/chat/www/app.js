@@ -39,7 +39,7 @@ const authPersistenceReady = Promise.race([
   new Promise(resolve => setTimeout(resolve, 3000))
 ]).catch(error => {
   console.error('Persistence error:', error);
-});registerFcmTokenForCurrentUser
+});
 const db = firebase.firestore();
 const storage = firebase.storage();
 const isNativeAndroidApp =
@@ -160,6 +160,39 @@ async function getBackendTurnServers() {
   }
 
   return iceServers;
+}
+
+async function initializeNativePushAfterLogin() {
+  if (!isNativeAndroidApp || !currentUser || !PushNotifications) return;
+
+  try {
+    const permission = await PushNotifications.requestPermissions();
+    if (permission.receive !== 'granted') return;
+
+    await PushNotifications.register();
+
+    PushNotifications.addListener('registration', async (token) => {
+      await db.collection('users').doc(currentUser.uid).set({
+        pushToken: token.value,
+        pushPlatform: 'android',
+        pushTokenUpdatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      }, { merge: true });
+    });
+
+    PushNotifications.addListener('registrationError', (error) => {
+      console.warn('Native push registration failed:', error);
+    });
+
+    PushNotifications.addListener('pushNotificationReceived', (notification) => {
+      showToast(notification.title || 'New notification');
+    });
+
+    PushNotifications.addListener('pushNotificationActionPerformed', (event) => {
+      console.log('Notification tapped:', event.notification?.data);
+    });
+  } catch (error) {
+    console.warn('Native push setup failed:', error);
+  }
 }
 
 async function getRtcConfig() {
@@ -5012,6 +5045,9 @@ registerFcmTokenForCurrentUser({
       console.warn('Could not refresh auth user:', error);
     }
     currentUser = user;
+setTimeout(() => {
+  initializeNativePushAfterLogin();
+}, 3000);
     requestNativeNotificationPermission();
     
     document.getElementById('userName').textContent = user.displayName || user.email.split('@')[0];

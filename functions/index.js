@@ -267,4 +267,132 @@ exports.sendIncomingCallNotification = onDocumentCreated(
     return null;
   }
 );
+// ========================================
+// New chat message push notification via FCM
+// ========================================
+exports.sendMessageNotification = onDocumentCreated(
+  {
+    document: 'messages/{messageId}',
+    region: 'us-central1'
+  },
+  async (event) => {
+    const message = event.data?.data() || {};
+    const messageId = event.params.messageId;
 
+    if (!message.senderId) return null;
+
+    let receiverIds = [];
+
+    if (Array.isArray(message.participants)) {
+      receiverIds = message.participants.filter((uid) => uid && uid !== message.senderId);
+    }
+
+    if (!receiverIds.length && message.receiverId && message.receiverId !== message.senderId) {
+      receiverIds = [message.receiverId];
+    }
+
+    if (!receiverIds.length && message.directId) {
+      receiverIds = String(message.directId)
+        .split('_')
+        .filter((uid) => uid && uid !== message.senderId);
+    }
+
+    if (!receiverIds.length) {
+      console.log('No receiver found for message', messageId);
+      return null;
+    }
+
+    const title = message.senderName || 'New message';
+    const body = message.text || 'Sent an attachment';
+
+    const sendTasks = receiverIds.map(async (receiverId) => {
+      const userSnap = await admin.firestore().collection('users').doc(receiverId).get();
+      const user = userSnap.data() || {};
+      const tokenEntries = Object.values(user.fcmTokens || {});
+      const tokens = tokenEntries.map((entry) => entry && entry.token).filter(Boolean);
+
+      if (!tokens.length) {
+        console.log('No FCM tokens for receiver', receiverId);
+        return null;
+      }
+
+      const fcmMessage = {
+        tokens,
+        notification: { title, body },
+        data: {
+          kind: 'message',
+          messageId,
+          chatId: message.directId || message.groupId || '',
+          chatType: message.groupId ? 'group' : 'direct',
+          senderId: message.senderId || ''
+        },
+        android: {
+          priority: 'high',
+          notification: {
+            channelId: 'default',
+            defaultSound: true,
+            defaultVibrateTimings: true,
+            tag: `message-${messageId}`,
+            clickAction: 'https://nishadsl.com/works/chat/'
+          }
+        },
+        webpush: {
+          headers: {
+            Urgency: 'high',
+            TTL: '120'
+          },
+          notification: {
+            title,
+            body,
+            icon: '/works/chat/app-icon-192.png',
+            badge: '/works/chat/app-icon-192.png',
+            tag: `message-${messageId}`,
+            renotify: true,
+            silent: false,
+            timestamp: Date.now(),
+            data: {
+              url: 'https://nishadsl.com/works/chat/',
+              messageId,
+              kind: 'message'
+            },
+            actions: [{ action: 'open', title: 'Open' }]
+          },
+          fcmOptions: {
+            link: 'https://nishadsl.com/works/chat/'
+          }
+        }
+      };
+
+      const response = await admin.messaging().sendEachForMulticast(fcmMessage);
+
+      const staleTokens = [];
+      response.responses.forEach((result, index) => {
+        if (!result.success) {
+          const code = result.error && result.error.code;
+          console.warn('Message FCM send failed', code, result.error && result.error.message);
+          if (
+            code === 'messaging/registration-token-not-registered' ||
+            code === 'messaging/invalid-registration-token'
+          ) {
+            staleTokens.push(tokens[index]);
+          }
+        }
+      });
+
+      if (staleTokens.length) {
+        const updates = {};
+        Object.entries(user.fcmTokens || {}).forEach(([key, entry]) => {
+          if (entry && staleTokens.includes(entry.token)) {
+            updates[`fcmTokens.${key}`] = admin.firestore.FieldValue.delete();
+          }
+        });
+        if (Object.keys(updates).length) await userSnap.ref.update(updates);
+      }
+
+      return null;
+    });
+
+    await Promise.all(sendTasks);
+    return null;
+  }
+);
