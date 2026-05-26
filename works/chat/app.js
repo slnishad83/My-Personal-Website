@@ -313,10 +313,23 @@ function getDraftPreviewForItem(item = {}) {
   const chatType = item.type === 'saved' ? 'direct' : item.type;
   if (!chatType) return '';
 
-  const draftText = getDraftTextForChat(item.id, chatType).trim();
+  const possibleIds = [
+    item.id,
+    item.otherUserId,
+    ...(item.aliasDirectIds || [])
+  ].filter(Boolean);
+
+  let draftText = '';
+
+  for (const id of possibleIds) {
+    draftText = getDraftTextForChat(id, chatType).trim();
+    if (draftText) break;
+  }
+
   if (!draftText) return '';
 
   const compactText = draftText.replace(/\s+/g, ' ').slice(0, 80);
+
   return `<span class="draft-label">Draft:</span> ${escapeHtml(compactText)}`;
 }
 
@@ -326,13 +339,16 @@ function saveCurrentDraft() {
   if (!input || !key) return;
 
   const value = input.value || '';
+
   if (value.trim()) {
     localStorage.setItem(key, value);
   } else {
     localStorage.removeItem(key);
   }
 
-  scheduleChatListRefresh(150);
+  if (currentChat) {
+    scheduleChatListRefresh(150);
+  }
 }
 
 function restoreCurrentDraft() {
