@@ -287,6 +287,10 @@ function renderCallMessage(msg = {}) {
 
 let activeDraftKey = '';
 
+function getSavedMessagesChatId() {
+  return currentUser ? `saved_${currentUser.uid}` : '';
+}
+
 function getDraftStorageKey(chatId = currentChat?.id, chatType = currentChatType) {
   if (!currentUser || !chatId || !chatType) return '';
   return `nslChatDraft_${currentUser.uid}_${chatType}_${chatId}`;
@@ -294,6 +298,26 @@ function getDraftStorageKey(chatId = currentChat?.id, chatType = currentChatType
 
 function setActiveDraftKey() {
   activeDraftKey = getDraftStorageKey();
+}
+
+function getDraftTextForChat(chatId, chatType) {
+  const key = getDraftStorageKey(chatId, chatType);
+  if (!key) return '';
+  return localStorage.getItem(key) || '';
+}
+
+function getDraftPreviewForItem(item = {}) {
+  if (!currentUser || !item?.id) return '';
+  if (item.type === 'user') return '';
+
+  const chatType = item.type === 'saved' ? 'direct' : item.type;
+  if (!chatType) return '';
+
+  const draftText = getDraftTextForChat(item.id, chatType).trim();
+  if (!draftText) return '';
+
+  const compactText = draftText.replace(/\s+/g, ' ').slice(0, 80);
+  return `<span class="draft-label">Draft:</span> ${escapeHtml(compactText)}`;
 }
 
 function saveCurrentDraft() {
@@ -307,6 +331,8 @@ function saveCurrentDraft() {
   } else {
     localStorage.removeItem(key);
   }
+
+  scheduleChatListRefresh(150);
 }
 
 function restoreCurrentDraft() {
@@ -320,16 +346,27 @@ function restoreCurrentDraft() {
 function clearCurrentDraft() {
   const key = activeDraftKey || getDraftStorageKey();
   if (key) localStorage.removeItem(key);
+  scheduleChatListRefresh(100);
 }
 
-function restoreCurrentDraftSoon(delay = 250) {
-  setTimeout(restoreCurrentDraft, delay);
+function ensureDraftPreviewStyle() {
+  if (document.getElementById('draftPreviewStyle')) return;
+  const style = document.createElement('style');
+  style.id = 'draftPreviewStyle';
+  style.textContent = `
+    .draft-label {
+      color: #d93025;
+      font-weight: 700;
+    }
+  `;
+  document.head.appendChild(style);
 }
 
 // ========================================
 // CORE LIST RENDERING (Unified Fix)
 // ========================================
 function renderChatListItems(items, container) {
+  ensureDraftPreviewStyle();
   container.innerHTML = '';
   if (items.length === 0) {
     container.innerHTML = '<div class="empty-state" style="padding:40px;">No chats yet. Search for people or create a group.</div>';
@@ -351,6 +388,8 @@ function renderChatListItems(items, container) {
     }
     
     const unread = item.unreadCount ? `<span class="unread-pill">${item.unreadCount}</span>` : '';
+    const draftPreview = getDraftPreviewForItem(item);
+    const previewHtml = draftPreview || escapeHtml(item.preview || '');
     
     // VISUAL BUG FIX: Skip rendering action prompt chips for verified active logs
     let statusChip = '';
@@ -362,7 +401,7 @@ function renderChatListItems(items, container) {
       <div class="list-avatar">${item.avatar}</div>
       <div class="list-info" style="flex:1; cursor:pointer;">
         <div class="list-name">${item.isFavorite ? '★ ' : ''}${escapeHtml(item.name)} ${item.isMuted ? '🔇' : ''}</div>
-        <div class="list-preview">${escapeHtml(item.preview || '')}</div>
+        <div class="list-preview">${previewHtml}</div>
       </div>
       ${statusChip}
       ${unread}
@@ -400,10 +439,6 @@ function renderChatListItems(items, container) {
     
     container.appendChild(chatDiv);
   });
-}
-
-function getSavedMessagesChatId() {
-  return currentUser ? `saved_${currentUser.uid}` : '';
 }
 
 function getSavedMessagesItem() {
@@ -849,7 +884,6 @@ function setupActiveCallBackProtection() {
 }
 
 function resetChatPanel() {
-  saveCurrentDraft();
   currentChat = null;
   currentChatType = null;
   currentGroup = null;
@@ -4335,7 +4369,7 @@ async function startSavedMessages() {
   document.getElementById('replyPreviewBar').style.display = 'none';
   currentReplyTo = null;
   loadMessages();
-  restoreCurrentDraftSoon();
+  setTimeout(restoreCurrentDraft, 300);
   loadPinnedMessages();
   applyCurrentChatWallpaper();
   openMobileChatPanel();
@@ -4371,7 +4405,7 @@ async function startDirectChat(user) {
   document.getElementById('replyPreviewBar').style.display = 'none';
   currentReplyTo = null;
   loadMessages();
-  restoreCurrentDraftSoon();
+  setTimeout(restoreCurrentDraft, 300);
   listenForTypingIndicator();
   loadPinnedMessages();
   applyCurrentChatWallpaper();
@@ -4440,7 +4474,7 @@ async function loadGroupChat(groupId, groupName) {
   document.getElementById('voiceCallBtn').style.display = 'inline-flex';
   document.getElementById('videoCallBtn').style.display = 'inline-flex';
   loadMessages();
-  restoreCurrentDraftSoon();
+  setTimeout(restoreCurrentDraft, 300);
   listenForTypingIndicator();
   loadPinnedMessages();
   applyCurrentChatWallpaper();
@@ -5064,6 +5098,7 @@ async function sendMessage() {
 
     if (input) input.value = '';
     clearCurrentDraft();
+clearCurrentDraft();
     currentAttachment = null;
     currentReplyTo = null;
 
@@ -5244,9 +5279,9 @@ registerFcmTokenForCurrentUser({
   document.getElementById('sendBtn')?.addEventListener('click', sendMessage);
   document.getElementById('messageInput')?.addEventListener('keypress', (e) => { if (e.key === 'Enter') sendMessage(); });
   document.getElementById('messageInput')?.addEventListener('input', () => {
-    saveCurrentDraft();
-    sendTypingIndicator();
-  });
+  saveCurrentDraft();
+  sendTypingIndicator();
+});
   document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () => switchTab(t.dataset.tab)));
   document.getElementById('profileBtn')?.addEventListener('click', showProfileModal);
   document.getElementById('logoutBtn')?.addEventListener('click', () => auth.signOut().then(() => window.location.replace('login.html')));
