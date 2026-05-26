@@ -39,7 +39,7 @@ const authPersistenceReady = Promise.race([
   new Promise(resolve => setTimeout(resolve, 3000))
 ]).catch(error => {
   console.error('Persistence error:', error);
-});
+});registerFcmTokenForCurrentUser
 const db = firebase.firestore();
 const storage = firebase.storage();
 const isNativeAndroidApp =
@@ -160,105 +160,6 @@ async function getBackendTurnServers() {
   }
 
   return iceServers;
-}
-
-async function initializeNativePushAfterLogin() {
-  if (!isNativeAndroidApp || !currentUser || !PushNotifications) return;
-
-  try {
-    const permission = await PushNotifications.requestPermissions();
-    if (permission.receive !== 'granted') return;
-
-    await PushNotifications.register();
-
-    PushNotifications.addListener('registration', async (token) => {
-      await db.collection('users').doc(currentUser.uid).set({
-        pushToken: token.value,
-        pushPlatform: 'android',
-        pushTokenUpdatedAt: firebase.firestore.FieldValue.serverTimestamp()
-      }, { merge: true });
-    });
-
-    PushNotifications.addListener('registrationError', (error) => {
-      console.warn('Native push registration failed:', error);
-    });
-
-    PushNotifications.addListener('pushNotificationReceived', (notification) => {
-      showToast(notification.title || 'New notification');
-    });
-
-    PushNotifications.addListener('pushNotificationActionPerformed', async (event) => {
-  const data = event.notification?.data || {};
-  console.log('Notification tapped:', data);
-
-  setTimeout(() => {
-    handleNotificationTap(data);
-  }, 1200);
-});
-  } catch (error) {
-    console.warn('Native push setup failed:', error);
-  }
-}
-
-function getOtherUserIdFromDirectId(directId = '') {
-  if (!currentUser || !directId) return '';
-  return String(directId)
-    .split('_')
-    .find((uid) => uid && uid !== currentUser.uid) || '';
-}
-
-async function handleNotificationTap(data = {}) {
-  try {
-    if (!currentUser) {
-      sessionStorage.setItem('pendingNotificationTap', JSON.stringify(data));
-      return;
-    }
-
-    const kind = data.kind || '';
-    const chatType = data.chatType || '';
-    const chatId = data.chatId || '';
-
-    if (kind !== 'message' || !chatId) return;
-
-    if (chatType === 'group') {
-      const groupDoc = await db.collection('groups').doc(chatId).get();
-      const groupName = groupDoc.exists
-        ? (groupDoc.data().name || 'Group')
-        : 'Group';
-      await loadGroupChat(chatId, groupName);
-      return;
-    }
-
-    const otherUserId = data.senderId || getOtherUserIdFromDirectId(chatId);
-    if (!otherUserId) return;
-
-    const userDoc = await db.collection('users').doc(otherUserId).get();
-    if (!userDoc.exists) {
-      showToast('Could not open chat from notification', 'error');
-      return;
-    }
-
-    await startDirectChat({
-      id: otherUserId,
-      ...userDoc.data(),
-      aliasDirectIds: [chatId]
-    });
-  } catch (error) {
-    console.warn('Could not open notification chat:', error);
-    showToast('Could not open notification chat', 'error');
-  }
-}
-
-function processPendingNotificationTap() {
-  try {
-    const raw = sessionStorage.getItem('pendingNotificationTap');
-    if (!raw || !currentUser) return;
-    sessionStorage.removeItem('pendingNotificationTap');
-    const data = JSON.parse(raw);
-    setTimeout(() => handleNotificationTap(data), 1200);
-  } catch (error) {
-    console.warn('Could not process pending notification tap:', error);
-  }
 }
 
 async function getRtcConfig() {
@@ -2766,32 +2667,80 @@ async function toggleFavoriteChat(chatId, chatType) {
 
 async function getChatUnreadCount(chatId, chatType) {
   if (!currentUser || !chatId || !chatType) return 0;
+
   try {
-    const directIds = chatType === 'direct' && Array.isArray(chatId) ? chatId.filter(Boolean).slice(0, 10) : null;
+    const fieldName = chatType === 'direct' ? 'directId' : 'groupId';
+    const directIds = chatType === 'direct' && Array.isArray(chatId)
+      ? chatId.filter(Boolean).slice(0, 10)
+      : null;
+
     const query = db.collection('messages')
-      .where(chatType === 'direct' ? 'directId' : 'groupId', directIds ? 'in' : '==', directIds || chatId)
-      .where('senderId', '!=', currentUser.uid);
+      .where(fieldName, directIds ? 'in' : '==', directIds || chatId);
+
     const snapshot = await query.get();
-    return snapshot.docs.filter(doc => !doc.data().readBy?.[currentUser.uid]).length;
+
+    return snapshot.docs.filter(doc => {
+      const data = doc.data() || {};
+
+      if (!data.senderId || data.senderId === currentUser.uid) return false;
+      if (data.deletedFor?.[currentUser.uid]) return false;
+      if (data.deletedForEveryone) return false;
+      if (data.readBy?.[currentUser.uid]) return false;
+
+      return true;
+    }).length;
   } catch (error) {
+    console.warn('Could not calculate unread count:', error);
     return 0;
   }
 }
-
 async function markChatReadState(chatId, chatType, readState) {
   if (!currentUser || !chatId || !chatType) return;
-  const directIds = chatType === 'direct' && Array.isArray(chatId) ? chatId.filter(Boolean).slice(0, 10) : null;
-  const query = db.collection('messages')
-    .where(chatType === 'direct' ? 'directId' : 'groupId', directIds ? 'in' : '==', directIds || chatId)
-    .where('senderId', '!=', currentUser.uid);
-  const snapshot = await query.get();
-  const batch = db.batch();
-  snapshot.docs.forEach(doc => batch.update(doc.ref, {
-    read: readState,
-    [`readBy.${currentUser.uid}`]: readState ? firebase.firestore.FieldValue.serverTimestamp() : firebase.firestore.FieldValue.delete()
-  }));
-  if (snapshot.docs.length > 0) await batch.commit();
-  showToast(readState ? 'Marked as read' : 'Marked as unread');
+
+  try {
+    const fieldName = chatType === 'direct' ? 'directId' : 'groupId';
+    const directIds = chatType === 'direct' && Array.isArray(chatId)
+      ? chatId.filter(Boolean).slice(0, 10)
+      : null;
+
+    const query = db.collection('messages')
+      .where(fieldName, directIds ? 'in' : '==', directIds || chatId);
+
+    const snapshot = await query.get();
+    const batch = db.batch();
+    let updatesMade = false;
+
+    snapshot.docs.forEach(doc => {
+      const data = doc.data() || {};
+
+      if (!data.senderId || data.senderId === currentUser.uid) return;
+      if (data.deletedFor?.[currentUser.uid]) return;
+      if (data.deletedForEveryone) return;
+
+      const updates = {
+        read: readState
+      };
+
+      if (readState) {
+        updates[`readBy.${currentUser.uid}`] = firebase.firestore.FieldValue.serverTimestamp();
+        updates.status = 'read';
+      } else {
+        updates[`readBy.${currentUser.uid}`] = firebase.firestore.FieldValue.delete();
+        updates.status = data.deliveredTo?.[currentUser.uid] ? 'delivered' : 'sent';
+      }
+
+      batch.update(doc.ref, updates);
+      updatesMade = true;
+    });
+
+    if (updatesMade) await batch.commit();
+
+    showToast(readState ? 'Marked as read' : 'Marked as unread');
+    loadCurrentChatList();
+  } catch (error) {
+    console.warn('Could not change read state:', error);
+    showToast('Could not update read state', 'error');
+  }
 }
 
 function updateFilterButtons() {
@@ -4193,7 +4142,6 @@ async function buildGroupChatItems() {
 }
 
 function loadCurrentChatList() {
-markIncomingMessagesAsDeliveredFromInbox();
   if (currentViewTab === 'groups') loadGroupsList();
   else loadAllChatsList(document.getElementById('searchInput')?.value || '');
 }
@@ -4236,6 +4184,10 @@ async function loadGroupsList() {
     if (currentViewTab === 'unread' && group.unreadCount === 0) return false;
     return true;
   });
+
+filteredGroups.sort((a, b) =>
+  b.lastMessageTime - a.lastMessageTime || a.name.localeCompare(b.name)
+);
 
   if (filteredGroups.length === 0) {
     groupsList.innerHTML = `<div class="empty-state" style="padding:40px;">No groups found.</div>`;
@@ -4753,84 +4705,7 @@ async function markMessagesAsDelivered(markAsRead = false) {
   }
 }
 
-function shouldMarkCurrentChatAsRead() {
-  if (!currentChat || !currentUser) return false;
-  if (document.hidden) return false;
-  if (typeof document.hasFocus === 'function' && !document.hasFocus()) return false;
-  if (typeof isChatPanelOpen === 'function' && !isChatPanelOpen()) return false;
-  return true;
-}
-
-async function markIncomingMessagesAsDeliveredFromInbox() {
-  if (!currentUser) return;
-
-  try {
-    const chatIds = [];
-
-    const directSnapshot = await db.collection('directChats')
-      .where('participants', 'array-contains', currentUser.uid)
-      .get();
-
-    directSnapshot.docs.forEach(doc => {
-      if (doc.id) chatIds.push({ type: 'direct', id: doc.id });
-    });
-
-    const groupSnapshot = await db.collection('groupMembers')
-      .where('userId', '==', currentUser.uid)
-      .get();
-
-    groupSnapshot.docs.forEach(doc => {
-      const groupId = doc.data()?.groupId;
-      if (groupId) chatIds.push({ type: 'group', id: groupId });
-    });
-
-    if (!chatIds.length) return;
-
-    for (const chat of chatIds.slice(0, 40)) {
-      const fieldName = chat.type === 'direct' ? 'directId' : 'groupId';
-
-      const snapshot = await db.collection('messages')
-        .where(fieldName, '==', chat.id)
-        .limit(30)
-        .get();
-
-      if (snapshot.empty) continue;
-
-      const batch = db.batch();
-      let updatesMade = false;
-
-      snapshot.docs.forEach(doc => {
-        const data = doc.data() || {};
-
-        if (!data.senderId || data.senderId === currentUser.uid) return;
-        if (data.deletedFor?.[currentUser.uid]) return;
-        if (data.deletedForEveryone) return;
-        if (data.deliveredTo?.[currentUser.uid]) return;
-        if (data.readBy?.[currentUser.uid]) return;
-
-        const updates = {};
-        updates[`deliveredTo.${currentUser.uid}`] =
-          firebase.firestore.FieldValue.serverTimestamp();
-
-        if (!data.status || data.status === 'sent') {
-          updates.status = 'delivered';
-        }
-
-        batch.update(doc.ref, updates);
-        updatesMade = true;
-      });
-
-      if (updatesMade) await batch.commit();
-    }
-  } catch (error) {
-    console.warn('Inbox delivery update failed:', error);
-  }
-}
-
 async function markMessagesAsRead() {
-  if (!shouldMarkCurrentChatAsRead()) {
-    return markMessagesAsDelivered(false);
-  }
   return markMessagesAsDelivered(true);
 }
 
@@ -5018,11 +4893,16 @@ function loadMessages() {
 async function sendMessage() {
   const input = document.getElementById('messageInput');
   const text = input ? input.value.trim() : '';
-  if (!text && !currentAttachment || !currentChat) return;
+  if ((!text && !currentAttachment) || !currentChat) return;
+
   setSendingState(true);
-  
+
   const directParticipants = currentChatType === 'direct'
-    ? [...new Set([currentUser.uid, ...(String(currentChat?.id || '').split('_').filter(Boolean)), currentChat?.otherUserId].filter(Boolean))]
+    ? [...new Set([
+        currentUser.uid,
+        ...(String(currentChat?.id || '').split('_').filter(Boolean)),
+        currentChat?.otherUserId
+      ].filter(Boolean))]
     : [];
 
   const messageData = {
@@ -5032,24 +4912,64 @@ async function sendMessage() {
     timestamp: firebase.firestore.FieldValue.serverTimestamp(),
     status: 'sent',
     read: false,
-    readBy: { [currentUser.uid]: firebase.firestore.FieldValue.serverTimestamp() },
+    readBy: {
+      [currentUser.uid]: firebase.firestore.FieldValue.serverTimestamp()
+    },
     deliveredTo: {},
     participants: currentChatType === 'direct' ? directParticipants : [currentUser.uid]
   };
+
   if (currentReplyTo) {
-    messageData.replyTo = { messageId: currentReplyTo.id, text: currentReplyTo.text, senderName: currentReplyTo.senderName };
+    messageData.replyTo = {
+      messageId: currentReplyTo.id,
+      text: currentReplyTo.text,
+      senderName: currentReplyTo.senderName
+    };
   }
-  if (currentAttachment) messageData.attachment = currentAttachment;
-  
-  if (currentChatType === 'direct') messageData.directId = currentChat.id;
-  else messageData.groupId = currentChat.id;
+
+  if (currentAttachment) {
+    messageData.attachment = currentAttachment;
+  }
+
+  if (currentChatType === 'direct') {
+    messageData.directId = currentChat.id;
+  } else {
+    messageData.groupId = currentChat.id;
+  }
 
   try {
     await db.collection('messages').add(messageData);
+
+    const previewText = text || (currentAttachment ? getAttachmentLabel(currentAttachment) : 'Message');
+
+    if (currentChatType === 'direct') {
+      await db.collection('directChats').doc(currentChat.id).set({
+        participants: directParticipants,
+        lastMessage: previewText,
+        lastMessageSenderId: currentUser.uid,
+        lastMessageTime: firebase.firestore.FieldValue.serverTimestamp(),
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+        status: 'active'
+      }, { merge: true });
+    }
+
+    if (currentChatType === 'group') {
+      await db.collection('groups').doc(currentChat.id).set({
+        lastMessage: previewText,
+        lastMessageSenderId: currentUser.uid,
+        lastMessageSenderName: currentUser.displayName || currentUser.email,
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      }, { merge: true });
+    }
+
     if (input) input.value = '';
-    currentAttachment = null; currentReplyTo = null;
+    currentAttachment = null;
+    currentReplyTo = null;
+
     document.getElementById('replyPreviewBar').style.display = 'none';
     setAttachmentPreview();
+
+    loadCurrentChatList();
   } catch (e) {
     appendFailedMessage(text, currentAttachment);
     showToast('Message failed to send', 'error');
@@ -5189,10 +5109,6 @@ registerFcmTokenForCurrentUser({
       console.warn('Could not refresh auth user:', error);
     }
     currentUser = user;
-setTimeout(() => {
-  initializeNativePushAfterLogin();
-processPendingNotificationTap();
-}, 3000);
     requestNativeNotificationPermission();
     
     document.getElementById('userName').textContent = user.displayName || user.email.split('@')[0];
@@ -5218,11 +5134,9 @@ processPendingNotificationTap();
     setupChatListListeners();
     setupRequestListeners();
     listenForIncomingCalls();
-    registerFcmTokenForCurrentUser({ force: Notification.permission !== 'granted' }).catch(() => {});
-setupCallPushNotifications({ forcePrompt: Notification.permission !== 'granted' }).catch(() => {});
-setupCallNotificationRefreshHooks();
-switchTab('all');
-revealAuthenticatedApp();
+    setupCallPushNotifications().catch(() => {});
+    switchTab('all');
+    revealAuthenticatedApp();
   });
 
   // Attach Event Handlers
@@ -5440,46 +5354,3 @@ document.addEventListener('visibilitychange', () => {
 window.enableTeamChatCallNotifications = function enableTeamChatCallNotifications() {
   return registerFcmTokenForCurrentUser({ force: true });
 };
-// FINAL CAPACITOR ANDROID BACK BUTTON FIX
-(function setupCapacitorAndroidBackButtonFix() {
-  if (window.__capacitorAndroidBackFixReady) return;
-  window.__capacitorAndroidBackFixReady = true;
-
-  const AppPlugin = window.Capacitor?.Plugins?.App;
-  if (!AppPlugin?.addListener) return;
-
-  AppPlugin.addListener('backButton', () => {
-    const container = document.querySelector('.chat-container');
-    const chatIsOpen = container?.classList.contains('chat-open');
-
-    if (chatIsOpen) {
-      container.classList.remove('chat-open');
-      currentChat = null;
-      currentChatType = null;
-      currentGroup = null;
-      currentGroupMembers = [];
-
-      if (messagesUnsubscribe) {
-        messagesUnsubscribe();
-        messagesUnsubscribe = null;
-      }
-
-      if (typingUnsubscribe) {
-        typingUnsubscribe();
-        typingUnsubscribe = null;
-      }
-
-      document.getElementById('currentChatName').textContent = 'Select a chat';
-      document.getElementById('chatStatus').textContent = '';
-      document.getElementById('currentChatAvatar').innerHTML = '?';
-      document.getElementById('messagesArea').innerHTML =
-        '<div class="empty-state"><div class="empty-icon">💬</div><p>Select a chat to start messaging</p></div>';
-      document.getElementById('inputArea').style.display = 'none';
-      document.getElementById('groupInfoBtn').style.display = 'none';
-
-      return;
-    }
-
-    AppPlugin.minimizeApp();
-  });
-})();

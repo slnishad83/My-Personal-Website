@@ -2667,32 +2667,80 @@ async function toggleFavoriteChat(chatId, chatType) {
 
 async function getChatUnreadCount(chatId, chatType) {
   if (!currentUser || !chatId || !chatType) return 0;
+
   try {
-    const directIds = chatType === 'direct' && Array.isArray(chatId) ? chatId.filter(Boolean).slice(0, 10) : null;
+    const fieldName = chatType === 'direct' ? 'directId' : 'groupId';
+    const directIds = chatType === 'direct' && Array.isArray(chatId)
+      ? chatId.filter(Boolean).slice(0, 10)
+      : null;
+
     const query = db.collection('messages')
-      .where(chatType === 'direct' ? 'directId' : 'groupId', directIds ? 'in' : '==', directIds || chatId)
-      .where('senderId', '!=', currentUser.uid);
+      .where(fieldName, directIds ? 'in' : '==', directIds || chatId);
+
     const snapshot = await query.get();
-    return snapshot.docs.filter(doc => !doc.data().readBy?.[currentUser.uid]).length;
+
+    return snapshot.docs.filter(doc => {
+      const data = doc.data() || {};
+
+      if (!data.senderId || data.senderId === currentUser.uid) return false;
+      if (data.deletedFor?.[currentUser.uid]) return false;
+      if (data.deletedForEveryone) return false;
+      if (data.readBy?.[currentUser.uid]) return false;
+
+      return true;
+    }).length;
   } catch (error) {
+    console.warn('Could not calculate unread count:', error);
     return 0;
   }
 }
-
 async function markChatReadState(chatId, chatType, readState) {
   if (!currentUser || !chatId || !chatType) return;
-  const directIds = chatType === 'direct' && Array.isArray(chatId) ? chatId.filter(Boolean).slice(0, 10) : null;
-  const query = db.collection('messages')
-    .where(chatType === 'direct' ? 'directId' : 'groupId', directIds ? 'in' : '==', directIds || chatId)
-    .where('senderId', '!=', currentUser.uid);
-  const snapshot = await query.get();
-  const batch = db.batch();
-  snapshot.docs.forEach(doc => batch.update(doc.ref, {
-    read: readState,
-    [`readBy.${currentUser.uid}`]: readState ? firebase.firestore.FieldValue.serverTimestamp() : firebase.firestore.FieldValue.delete()
-  }));
-  if (snapshot.docs.length > 0) await batch.commit();
-  showToast(readState ? 'Marked as read' : 'Marked as unread');
+
+  try {
+    const fieldName = chatType === 'direct' ? 'directId' : 'groupId';
+    const directIds = chatType === 'direct' && Array.isArray(chatId)
+      ? chatId.filter(Boolean).slice(0, 10)
+      : null;
+
+    const query = db.collection('messages')
+      .where(fieldName, directIds ? 'in' : '==', directIds || chatId);
+
+    const snapshot = await query.get();
+    const batch = db.batch();
+    let updatesMade = false;
+
+    snapshot.docs.forEach(doc => {
+      const data = doc.data() || {};
+
+      if (!data.senderId || data.senderId === currentUser.uid) return;
+      if (data.deletedFor?.[currentUser.uid]) return;
+      if (data.deletedForEveryone) return;
+
+      const updates = {
+        read: readState
+      };
+
+      if (readState) {
+        updates[`readBy.${currentUser.uid}`] = firebase.firestore.FieldValue.serverTimestamp();
+        updates.status = 'read';
+      } else {
+        updates[`readBy.${currentUser.uid}`] = firebase.firestore.FieldValue.delete();
+        updates.status = data.deliveredTo?.[currentUser.uid] ? 'delivered' : 'sent';
+      }
+
+      batch.update(doc.ref, updates);
+      updatesMade = true;
+    });
+
+    if (updatesMade) await batch.commit();
+
+    showToast(readState ? 'Marked as read' : 'Marked as unread');
+    loadCurrentChatList();
+  } catch (error) {
+    console.warn('Could not change read state:', error);
+    showToast('Could not update read state', 'error');
+  }
 }
 
 function updateFilterButtons() {
@@ -4137,6 +4185,10 @@ async function loadGroupsList() {
     return true;
   });
 
+filteredGroups.sort((a, b) =>
+  b.lastMessageTime - a.lastMessageTime || a.name.localeCompare(b.name)
+);
+
   if (filteredGroups.length === 0) {
     groupsList.innerHTML = `<div class="empty-state" style="padding:40px;">No groups found.</div>`;
     return;
@@ -4841,11 +4893,16 @@ function loadMessages() {
 async function sendMessage() {
   const input = document.getElementById('messageInput');
   const text = input ? input.value.trim() : '';
-  if (!text && !currentAttachment || !currentChat) return;
+  if ((!text && !currentAttachment) || !currentChat) return;
+
   setSendingState(true);
-  
+
   const directParticipants = currentChatType === 'direct'
-    ? [...new Set([currentUser.uid, ...(String(currentChat?.id || '').split('_').filter(Boolean)), currentChat?.otherUserId].filter(Boolean))]
+    ? [...new Set([
+        currentUser.uid,
+        ...(String(currentChat?.id || '').split('_').filter(Boolean)),
+        currentChat?.otherUserId
+      ].filter(Boolean))]
     : [];
 
   const messageData = {
@@ -4855,24 +4912,64 @@ async function sendMessage() {
     timestamp: firebase.firestore.FieldValue.serverTimestamp(),
     status: 'sent',
     read: false,
-    readBy: { [currentUser.uid]: firebase.firestore.FieldValue.serverTimestamp() },
+    readBy: {
+      [currentUser.uid]: firebase.firestore.FieldValue.serverTimestamp()
+    },
     deliveredTo: {},
     participants: currentChatType === 'direct' ? directParticipants : [currentUser.uid]
   };
+
   if (currentReplyTo) {
-    messageData.replyTo = { messageId: currentReplyTo.id, text: currentReplyTo.text, senderName: currentReplyTo.senderName };
+    messageData.replyTo = {
+      messageId: currentReplyTo.id,
+      text: currentReplyTo.text,
+      senderName: currentReplyTo.senderName
+    };
   }
-  if (currentAttachment) messageData.attachment = currentAttachment;
-  
-  if (currentChatType === 'direct') messageData.directId = currentChat.id;
-  else messageData.groupId = currentChat.id;
+
+  if (currentAttachment) {
+    messageData.attachment = currentAttachment;
+  }
+
+  if (currentChatType === 'direct') {
+    messageData.directId = currentChat.id;
+  } else {
+    messageData.groupId = currentChat.id;
+  }
 
   try {
     await db.collection('messages').add(messageData);
+
+    const previewText = text || (currentAttachment ? getAttachmentLabel(currentAttachment) : 'Message');
+
+    if (currentChatType === 'direct') {
+      await db.collection('directChats').doc(currentChat.id).set({
+        participants: directParticipants,
+        lastMessage: previewText,
+        lastMessageSenderId: currentUser.uid,
+        lastMessageTime: firebase.firestore.FieldValue.serverTimestamp(),
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+        status: 'active'
+      }, { merge: true });
+    }
+
+    if (currentChatType === 'group') {
+      await db.collection('groups').doc(currentChat.id).set({
+        lastMessage: previewText,
+        lastMessageSenderId: currentUser.uid,
+        lastMessageSenderName: currentUser.displayName || currentUser.email,
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      }, { merge: true });
+    }
+
     if (input) input.value = '';
-    currentAttachment = null; currentReplyTo = null;
+    currentAttachment = null;
+    currentReplyTo = null;
+
     document.getElementById('replyPreviewBar').style.display = 'none';
     setAttachmentPreview();
+
+    loadCurrentChatList();
   } catch (e) {
     appendFailedMessage(text, currentAttachment);
     showToast('Message failed to send', 'error');
