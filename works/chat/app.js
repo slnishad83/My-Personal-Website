@@ -2692,44 +2692,51 @@ async function renderChatDebugPanel() {
 
 async function reconnectSameEmailProfile() {
   if (!currentUser?.email) return;
-  const email = normalizeEmail(currentUser.email);
-  const sameEmailUsers = await db.collection('users').where('email', '==', email).get();
-  const oldUserIds = sameEmailUsers.docs
-    .map(doc => doc.id)
-    .filter(id => id && id !== currentUser.uid);
-  if (!oldUserIds.length) return;
 
-  for (const oldUserId of oldUserIds) {
-    const oldChats = await db.collection('directChats').where('participants', 'array-contains', oldUserId).get();
-    for (const oldChatDoc of oldChats.docs) {
-      const oldChat = oldChatDoc.data();
-      const otherUserId = (oldChat.participants || []).find(id => id !== oldUserId);
-      if (!otherUserId || otherUserId === currentUser.uid) continue;
+  try {
+    const email = normalizeEmail(currentUser.email);
+    const sameEmailUsers = await db.collection('users')
+      .where('email', '==', email)
+      .get();
 
-      const newChatId = getDirectChatId(currentUser.uid, otherUserId);
-      const newChatRef = db.collection('directChats').doc(newChatId);
-      const newChatDoc = await newChatRef.get();
-      const aliasDirectIds = [...new Set([newChatId, oldChatDoc.id, ...(oldChat.aliasDirectIds || []), ...(newChatDoc.data()?.aliasDirectIds || [])])];
-      await newChatRef.set({
-        ...oldChat,
-        participants: [currentUser.uid, otherUserId],
-        participantEmails: {
-          ...(oldChat.participantEmails || {}),
-          [currentUser.uid]: email
-        },
-        participantNames: {
-          ...(oldChat.participantNames || {}),
-          [currentUser.uid]: currentUser.displayName || currentUser.email
-        },
-        aliasDirectIds,
-        migratedFromUserIds: firebase.firestore.FieldValue.arrayUnion(oldUserId),
-        restoredAt: firebase.firestore.FieldValue.serverTimestamp(),
-        status: 'active'
-      }, { merge: true });
+    const oldUserIds = sameEmailUsers.docs
+      .map(doc => doc.id)
+      .filter(id => id && id !== currentUser.uid);
+
+    if (!oldUserIds.length) return;
+
+    for (const oldUserId of oldUserIds) {
+      const oldChats = await db.collection('directChats')
+        .where('participants', 'array-contains', oldUserId)
+        .get();
+
+      for (const oldChatDoc of oldChats.docs) {
+        const oldChat = oldChatDoc.data();
+        const otherUserId = (oldChat.participants || []).find(id => id !== oldUserId);
+        if (!otherUserId || otherUserId === currentUser.uid) continue;
+
+        const newChatId = getDirectChatId(currentUser.uid, otherUserId);
+        await db.collection('directChats').doc(newChatId).set({
+          participants: [currentUser.uid, otherUserId],
+          participantEmails: {
+            [currentUser.uid]: normalizeEmail(currentUser.email),
+            [otherUserId]: oldChat.participantEmails?.[otherUserId] || ''
+          },
+          participantNames: {
+            [currentUser.uid]: currentUser.displayName || currentUser.email,
+            [otherUserId]: oldChat.participantNames?.[otherUserId] || 'User'
+          },
+          status: 'active',
+          aliasDirectIds: firebase.firestore.FieldValue.arrayUnion(oldChatDoc.id),
+          lastMessage: oldChat.lastMessage || '',
+          lastMessageTime: oldChat.lastMessageTime || firebase.firestore.FieldValue.serverTimestamp()
+        }, { merge: true });
+      }
     }
+  } catch (error) {
+    console.warn('reconnectSameEmailProfile skipped:', error);
   }
 }
-
 async function loadFavoriteChatIds() {
   if (!currentUser) return;
   const snapshot = await db.collection('favoriteChats').where('userId', '==', currentUser.uid).get();
@@ -2926,8 +2933,20 @@ async function loadAllChatsList(searchTerm = '') {
   if (!chatsList) return;
 
   // 1. Compile conversations from active chat histories
-  const directItems = await buildDirectChatItems();
-  const groupItems = await buildGroupChatItems();
+  let directItems = [];
+let groupItems = [];
+
+try {
+  directItems = await buildDirectChatItems();
+} catch (error) {
+  console.error('buildDirectChatItems failed:', error);
+}
+
+try {
+  groupItems = await buildGroupChatItems();
+} catch (error) {
+  console.error('buildGroupChatItems failed:', error);
+}
   const allItems = [...directItems, ...groupItems];
   updateUnreadBadges(allItems);
   
@@ -4127,17 +4146,34 @@ async function unarchiveChat(archiveId) {
 }
 
 async function getArchivedChatIds() {
-  if (!currentUser) return new Set();
-  const snapshot = await db.collection('archivedChats').where('userId', '==', currentUser.uid).get();
-  return new Set(snapshot.docs.map(doc => doc.data().chatId));
+  try {
+    if (!currentUser) return new Set();
+
+    const snapshot = await db.collection('archivedChats')
+      .where('userId', '==', currentUser.uid)
+      .get();
+
+    return new Set(snapshot.docs.map(doc => doc.data().chatId));
+  } catch (error) {
+    console.error('getArchivedChatIds failed:', error);
+    return new Set();
+  }
 }
 
 async function getDeletedChatIds() {
-  if (!currentUser) return new Set();
-  const snapshot = await db.collection('deletedChats').where('userId', '==', currentUser.uid).get();
-  return new Set(snapshot.docs.map(doc => doc.data().chatId));
-}
+  try {
+    if (!currentUser) return new Set();
 
+    const snapshot = await db.collection('deletedChats')
+      .where('userId', '==', currentUser.uid)
+      .get();
+
+    return new Set(snapshot.docs.map(doc => doc.data().chatId));
+  } catch (error) {
+    console.error('getDeletedChatIds failed:', error);
+    return new Set();
+  }
+}
 async function deleteChatForMe(chatId, chatType, chatName = 'Chat') {
   if (!currentUser || !chatId || !chatType) return;
   await db.collection('deletedChats').doc(`${currentUser.uid}_${chatId}`).set({
