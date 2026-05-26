@@ -285,8 +285,45 @@ function renderCallMessage(msg = {}) {
   return `<div class="message-bubble"><span>${icon}</span><span>${text}</span></div>`;
 }
 
-function getSavedMessagesChatId() {
-  return currentUser ? `saved_${currentUser.uid}` : '';
+let activeDraftKey = '';
+
+function getDraftStorageKey(chatId = currentChat?.id, chatType = currentChatType) {
+  if (!currentUser || !chatId || !chatType) return '';
+  return `nslChatDraft_${currentUser.uid}_${chatType}_${chatId}`;
+}
+
+function setActiveDraftKey() {
+  activeDraftKey = getDraftStorageKey();
+}
+
+function saveCurrentDraft() {
+  const input = document.getElementById('messageInput');
+  const key = activeDraftKey || getDraftStorageKey();
+  if (!input || !key) return;
+
+  const value = input.value || '';
+  if (value.trim()) {
+    localStorage.setItem(key, value);
+  } else {
+    localStorage.removeItem(key);
+  }
+}
+
+function restoreCurrentDraft() {
+  const input = document.getElementById('messageInput');
+  const key = activeDraftKey || getDraftStorageKey();
+  if (!input || !key) return;
+
+  input.value = localStorage.getItem(key) || '';
+}
+
+function clearCurrentDraft() {
+  const key = activeDraftKey || getDraftStorageKey();
+  if (key) localStorage.removeItem(key);
+}
+
+function restoreCurrentDraftSoon(delay = 250) {
+  setTimeout(restoreCurrentDraft, delay);
 }
 
 // ========================================
@@ -363,6 +400,10 @@ function renderChatListItems(items, container) {
     
     container.appendChild(chatDiv);
   });
+}
+
+function getSavedMessagesChatId() {
+  return currentUser ? `saved_${currentUser.uid}` : '';
 }
 
 function getSavedMessagesItem() {
@@ -808,6 +849,7 @@ function setupActiveCallBackProtection() {
 }
 
 function resetChatPanel() {
+  saveCurrentDraft();
   currentChat = null;
   currentChatType = null;
   currentGroup = null;
@@ -2339,6 +2381,7 @@ async function flushOfflineQueue() {
   if (queue.length !== remaining.length) {
     showToast('Queued messages sent');
     loadMessages();
+loadMessages();
     loadCurrentChatList();
   }
 }
@@ -3281,6 +3324,7 @@ function searchGroupsRealtime(searchTerm) {
         </div>
       `;
       groupDiv.onclick = () => loadGroupChat(group.id, group.name);
+saveCurrentDraft();
       groupsList.appendChild(groupDiv);
     });
   });
@@ -3626,17 +3670,44 @@ async function sendTypingIndicator() {
 
 function listenForTypingIndicator() {
   if (!currentChat || !currentUser) return;
+
   if (typingUnsubscribe) {
     typingUnsubscribe();
     typingUnsubscribe = null;
   }
+
   const chatStatus = document.getElementById('chatStatus');
   const baseStatus = chatStatus?.textContent || '';
+
   typingUnsubscribe = db.collection('typingIndicators')
     .where('chatId', '==', currentChat.id)
     .onSnapshot(snapshot => {
-      const someoneTyping = snapshot.docs.some(doc => doc.data().userId !== currentUser.uid);
-      if (chatStatus) chatStatus.textContent = someoneTyping ? 'typing...' : baseStatus;
+      const typingUsers = snapshot.docs
+        .map(doc => doc.data())
+        .filter(data => data.userId !== currentUser.uid && data.isTyping);
+
+      if (!chatStatus) return;
+
+      if (!typingUsers.length) {
+        chatStatus.textContent = baseStatus;
+        return;
+      }
+
+      if (currentChatType === 'group') {
+        const names = typingUsers
+          .map(user => user.userName || 'Someone')
+          .filter(Boolean);
+
+        if (names.length === 1) {
+          chatStatus.textContent = `${names[0]} is typing...`;
+        } else if (names.length === 2) {
+          chatStatus.textContent = `${names[0]} and ${names[1]} are typing...`;
+        } else {
+          chatStatus.textContent = `${names.length} people are typing...`;
+        }
+      } else {
+        chatStatus.textContent = 'typing...';
+      }
     });
 }
 
@@ -3959,11 +4030,31 @@ function updateGroupMemberSuggestions(searchTerm = '') {
 
 function setupChatListListeners() {
   if (!currentUser) return;
+
   if (directChatsUnsubscribe) directChatsUnsubscribe();
   if (groupChatsUnsubscribe) groupChatsUnsubscribe();
 
-  directChatsUnsubscribe = db.collection('directChats').where('participants', 'array-contains', currentUser.uid).onSnapshot(() => { loadCurrentChatList(); });
-  groupChatsUnsubscribe = db.collection('groupMembers').where('userId', '==', currentUser.uid).onSnapshot(() => { loadCurrentChatList(); });
+  directChatsUnsubscribe = db.collection('directChats')
+    .where('participants', 'array-contains', currentUser.uid)
+    .onSnapshot(() => {
+      loadCurrentChatList();
+    });
+
+  groupChatsUnsubscribe = db.collection('groupMembers')
+    .where('userId', '==', currentUser.uid)
+    .onSnapshot(() => {
+      loadCurrentChatList();
+    });
+
+  if (window.__messageListRefreshUnsubscribe) {
+    window.__messageListRefreshUnsubscribe();
+  }
+
+  window.__messageListRefreshUnsubscribe = db.collection('messages')
+    .where('participants', 'array-contains', currentUser.uid)
+    .onSnapshot(() => {
+      loadCurrentChatList();
+    });
 }
 
 // ========================================
@@ -4220,6 +4311,7 @@ filteredGroups.sort((a, b) =>
 // ========================================
 
 async function startSavedMessages() {
+  saveCurrentDraft();
   const chatId = getSavedMessagesChatId();
   if (!chatId) return;
   const chatRef = db.collection('directChats').doc(chatId);
@@ -4232,6 +4324,7 @@ async function startSavedMessages() {
 
   currentChat = { id: chatId, otherUserId: currentUser.uid, otherUserName: 'Saved Messages', type: 'direct', isSaved: true, aliasDirectIds: [chatId] };
   currentChatType = 'direct';
+  setActiveDraftKey();
   document.getElementById('currentChatName').textContent = 'Saved Messages';
   document.getElementById('chatStatus').textContent = 'Private notes, files, and reminders';
   setChatHeaderAvatar('&#9733;');
@@ -4242,6 +4335,7 @@ async function startSavedMessages() {
   document.getElementById('replyPreviewBar').style.display = 'none';
   currentReplyTo = null;
   loadMessages();
+  restoreCurrentDraftSoon();
   loadPinnedMessages();
   applyCurrentChatWallpaper();
   openMobileChatPanel();
@@ -4249,6 +4343,7 @@ async function startSavedMessages() {
 }
 
 async function startDirectChat(user) {
+  saveCurrentDraft();
   if (isBlocked(user.id)) { showToast('You have blocked this user.', 'error'); return; }
   const chatId = getDirectChatId(currentUser.uid, user.id);
   currentChat = { id: chatId, otherUserId: user.id, otherUserName: user.displayName || user.email, type: 'direct', aliasDirectIds: [...new Set([chatId, ...(user.aliasDirectIds || [])])] };
@@ -4265,6 +4360,7 @@ async function startDirectChat(user) {
     status: 'active'
   }, { merge: true });
   currentChatType = 'direct';
+  setActiveDraftKey();
   document.getElementById('currentChatName').textContent = user.displayName || user.email;
   document.getElementById('chatStatus').textContent = getPresenceText(user);
   setChatHeaderAvatar(user.avatar ? `<img src="${user.avatar}">` : escapeHtml((user.displayName || user.email || '?')[0].toUpperCase()));
@@ -4275,6 +4371,7 @@ async function startDirectChat(user) {
   document.getElementById('replyPreviewBar').style.display = 'none';
   currentReplyTo = null;
   loadMessages();
+  restoreCurrentDraftSoon();
   listenForTypingIndicator();
   loadPinnedMessages();
   applyCurrentChatWallpaper();
@@ -4325,9 +4422,11 @@ async function sendGroupInvite(groupId, groupName, user) {
 }
 
 async function loadGroupChat(groupId, groupName) {
+  saveCurrentDraft();
   const groupDoc = await db.collection('groups').doc(groupId).get();
   currentChat = { id: groupId, name: groupName, type: 'group' };
   currentChatType = 'group';
+  setActiveDraftKey();
   const groupData = groupDoc.data() || {};
   currentGroup = { id: groupId, name: groupName, icon: groupData.icon, ...groupData };
   document.getElementById('currentChatName').textContent = groupName;
@@ -4341,6 +4440,7 @@ async function loadGroupChat(groupId, groupName) {
   document.getElementById('voiceCallBtn').style.display = 'inline-flex';
   document.getElementById('videoCallBtn').style.display = 'inline-flex';
   loadMessages();
+  restoreCurrentDraftSoon();
   listenForTypingIndicator();
   loadPinnedMessages();
   applyCurrentChatWallpaper();
@@ -4963,6 +5063,7 @@ async function sendMessage() {
     }
 
     if (input) input.value = '';
+    clearCurrentDraft();
     currentAttachment = null;
     currentReplyTo = null;
 
@@ -5142,7 +5243,10 @@ registerFcmTokenForCurrentUser({
   // Attach Event Handlers
   document.getElementById('sendBtn')?.addEventListener('click', sendMessage);
   document.getElementById('messageInput')?.addEventListener('keypress', (e) => { if (e.key === 'Enter') sendMessage(); });
-  document.getElementById('messageInput')?.addEventListener('input', sendTypingIndicator);
+  document.getElementById('messageInput')?.addEventListener('input', () => {
+    saveCurrentDraft();
+    sendTypingIndicator();
+  });
   document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () => switchTab(t.dataset.tab)));
   document.getElementById('profileBtn')?.addEventListener('click', showProfileModal);
   document.getElementById('logoutBtn')?.addEventListener('click', () => auth.signOut().then(() => window.location.replace('login.html')));
