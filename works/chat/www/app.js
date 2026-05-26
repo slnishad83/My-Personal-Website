@@ -405,7 +405,9 @@ function renderChatListItems(items, container) {
     
     const unread = item.unreadCount ? `<span class="unread-pill">${item.unreadCount}</span>` : '';
     const draftPreview = getDraftPreviewForItem(item);
-    const previewHtml = draftPreview || escapeHtml(item.preview || '');
+    const normalPreview = item.preview || '';
+const missedPreviewPattern = /missed\s+(voice|video|audio)?\s*(call|note)?/i;
+const previewHtml = draftPreview || (missedPreviewPattern.test(normalPreview) ? escapeHtml(normalPreview) : '');
     
     // VISUAL BUG FIX: Skip rendering action prompt chips for verified active logs
     let statusChip = '';
