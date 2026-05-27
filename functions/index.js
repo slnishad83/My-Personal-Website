@@ -188,9 +188,8 @@ exports.sendIncomingCallNotification = onDocumentCreated(
     const body = `${call.fromUserName || 'Team Chat'} is calling. Tap to open Team Chat.`;
 
     const message = {
-      tokens,
-      notification: { title, body },
-      data: {
+  tokens,
+  data: {
         kind: 'call',
         callId,
         type: call.type || 'voice',
@@ -199,16 +198,8 @@ exports.sendIncomingCallNotification = onDocumentCreated(
         toUserId: call.toUserId || ''
       },
       android: {
-        priority: 'high',
-        notification: {
-          channelId: 'incoming-calls',
-          priority: 'max',
-          defaultSound: true,
-          defaultVibrateTimings: true,
-          tag: `call-${callId}`,
-          clickAction: 'https://nishadsl.com/works/chat/'
-        }
-      },
+  priority: 'high'
+},
       webpush: {
         headers: {
           Urgency: 'high',
