@@ -39,7 +39,9 @@ const authPersistenceReady = Promise.race([
   new Promise(resolve => setTimeout(resolve, 3000))
 ]).catch(error => {
   console.error('Persistence error:', error);
-}); registerFcmTokenForCurrentUser
+});
+
+registerFcmTokenForCurrentUser({ force: false });
 const db = firebase.firestore();
 const storage = firebase.storage();
 const isNativeAndroidApp =
