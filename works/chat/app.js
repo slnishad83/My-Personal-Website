@@ -6271,16 +6271,19 @@ init();
 // ========================================
 let contextMenuTarget = null;
 // ADD THIS NEW CODE HERE:
+// This tells the app to hide the menu whenever you click anywhere else
 window.addEventListener('click', (e) => {
-  const menu = document.querySelector('.message-context-menu');
-  if (menu && !e.target.closest('.message-context-menu')) {
-    menu.remove();
+  // Hide the message menu
+  const msgMenu = document.querySelector('.message-context-menu');
+  if (msgMenu && !e.target.closest('.message-context-menu')) {
+    msgMenu.remove();
   }
-});
 
-window.addEventListener('click', () => {
-  const menu = document.getElementById('chatContextMenu');
-  if (menu) menu.style.display = 'none';
+  // Hide the sidebar menu
+  const sidebarMenu = document.getElementById('chatContextMenu');
+  if (sidebarMenu && !e.target.closest('#chatContextMenu')) {
+    sidebarMenu.style.display = 'none';
+  }
 });
 
 document.getElementById('chatsList')?.addEventListener('contextmenu', (e) => {
