@@ -6452,6 +6452,51 @@ document.addEventListener('visibilitychange', () => {
   if (!document.hidden && currentChat) markMessagesAsRead();
 });
 
+// Keep read receipts reliable when mobile browsers/PWA pause and resume the page.
+window.addEventListener('focus', () => {
+  if (currentChat) markMessagesAsRead();
+});
+
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden && activeCall && activeCallMode !== 'incoming') {
+    minimizeActiveCallUi('background');
+  }
+  if (!document.hidden && activeCall && callMiniBar?.classList.contains('show')) {
+    updateCallMiniBar(callStartedAt ? 'Connected' : 'Call running');
+  }
+  if (!document.hidden && currentChat) markMessagesAsRead();
+});
+
+// Keep read receipts reliable when mobile browsers/PWA pause and resume the page.
+window.addEventListener('focus', () => {
+  if (currentChat) markMessagesAsRead();
+});
+
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden && activeCall && activeCallMode !== 'incoming') {
+    minimizeActiveCallUi('background');
+  }
+  if (!document.hidden && activeCall && callMiniBar?.classList.contains('show')) {
+    updateCallMiniBar(callStartedAt ? 'Connected' : 'Call running');
+  }
+  if (!document.hidden && currentChat) markMessagesAsRead();
+});
+
 window.enableTeamChatCallNotifications = function enableTeamChatCallNotifications() {
   return registerFcmTokenForCurrentUser({ force: true });
 };
+
+// GLOBAL CLICK HANDLER (This fixes your menu issue)
+window.addEventListener('click', (e) => {
+  // Hide the message context menu if clicked outside
+  const msgMenu = document.querySelector('.message-context-menu');
+  if (msgMenu && !e.target.closest('.message-context-menu')) {
+    msgMenu.remove();
+  }
+
+  // Hide the sidebar context menu if clicked outside
+  const sidebarMenu = document.getElementById('chatContextMenu');
+  if (sidebarMenu && !e.target.closest('#chatContextMenu')) {
+    sidebarMenu.style.display = 'none';
+  }
+});
