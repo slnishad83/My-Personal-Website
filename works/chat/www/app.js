@@ -423,7 +423,7 @@ const isOpenChatRow = currentChat && rowIds.some(id => activeIds.includes(id));
 
 const previewHtml = isOpenChatRow
   ? ''
-  : (draftPreview || (missedPreviewPattern.test(normalPreview) ? escapeHtml(normalPreview) : ''));
+  : (draftPreview || escapeHtml(normalPreview));
     
     // VISUAL BUG FIX: Skip rendering action prompt chips for verified active logs
     let statusChip = '';
@@ -507,6 +507,74 @@ function getMessageMentions(text = '') {
   return currentGroupMembers
     .filter(member => member.id !== currentUser.uid && member.name && lowerText.includes(`@${member.name.toLowerCase()}`))
     .map(member => ({ id: member.id, name: member.name, label: member.name }));
+}
+
+function getMentionQuery(input) {
+  const cursor = input.selectionStart ?? input.value.length;
+  const beforeCursor = input.value.slice(0, cursor);
+  const match = beforeCursor.match(/(^|\s)@([^\s@]{0,32})$/);
+  if (!match) return null;
+  return {
+    query: match[2].toLowerCase(),
+    start: cursor - match[2].length - 1,
+    end: cursor
+  };
+}
+
+function hideMentionSuggestions() {
+  const box = document.getElementById('mentionSuggestions');
+  if (!box) return;
+  box.style.display = 'none';
+  box.innerHTML = '';
+}
+
+function insertMention(member, range) {
+  const input = document.getElementById('messageInput');
+  if (!input || !member || !range) return;
+  const before = input.value.slice(0, range.start);
+  const after = input.value.slice(range.end);
+  const mention = `@${member.name} `;
+  input.value = `${before}${mention}${after}`;
+  const cursor = before.length + mention.length;
+  input.focus();
+  input.setSelectionRange(cursor, cursor);
+  saveCurrentDraft();
+  hideMentionSuggestions();
+}
+
+function updateMentionSuggestions() {
+  const input = document.getElementById('messageInput');
+  const box = document.getElementById('mentionSuggestions');
+  if (!input || !box || currentChatType !== 'group') {
+    hideMentionSuggestions();
+    return;
+  }
+  const range = getMentionQuery(input);
+  if (!range) {
+    hideMentionSuggestions();
+    return;
+  }
+  const matches = currentGroupMembers
+    .filter(member => member.id !== currentUser.uid && member.name)
+    .filter(member => member.name.toLowerCase().includes(range.query))
+    .slice(0, 6);
+  if (!matches.length) {
+    hideMentionSuggestions();
+    return;
+  }
+  box.innerHTML = '';
+  matches.forEach(member => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'mention-suggestion';
+    button.innerHTML = `<span class="list-avatar">${member.avatar ? `<img src="${member.avatar}">` : escapeHtml(member.name[0]?.toUpperCase() || '?')}</span><span>${escapeHtml(member.name)}</span>`;
+    button.addEventListener('mousedown', event => {
+      event.preventDefault();
+      insertMention(member, range);
+    });
+    box.appendChild(button);
+  });
+  box.style.display = 'block';
 }
 
 function renderPollMessage(messageId, msg = {}) {
@@ -2626,7 +2694,11 @@ function mergeDirectContactItems(items) {
   return merged;
 }
 
-window.chatDebug = async function chatDebug() {
+function isChatDebugEnabled() {
+  return localStorage.getItem('teamChatDebug') === 'true';
+}
+
+async function chatDebug() {
   const user = auth.currentUser;
   if (!user) {
     console.log('CHAT_DEBUG: not logged in');
@@ -2689,17 +2761,17 @@ window.chatDebug = async function chatDebug() {
 
   console.log('CHAT_DEBUG_REPORT', report);
   return report;
-};
+}
 
 async function renderChatDebugPanel() {
-  if (!new URLSearchParams(window.location.search).has('debugChats')) return;
+  if (!isChatDebugEnabled() || !new URLSearchParams(window.location.search).has('debugChats')) return;
   const panel = document.createElement('pre');
   panel.id = 'chatDebugPanel';
   panel.style.cssText = 'position:fixed;inset:12px;z-index:99999;overflow:auto;background:#111b21;color:#e9edef;padding:16px;border-radius:8px;font:12px/1.4 monospace;white-space:pre-wrap;';
   panel.textContent = 'Loading chat debug report...';
   document.body.appendChild(panel);
   try {
-    const report = await window.chatDebug();
+    const report = await chatDebug();
     panel.textContent = JSON.stringify(report, null, 2);
   } catch (error) {
     panel.textContent = `Debug failed: ${error.message || error}`;
@@ -3022,7 +3094,8 @@ try {
     
     // FIXED CORRECTION LAYER: Read directly from item.id to completely avoid mapping crashes
     const cleanUserMatches = Array.from(new Map(userMatches.map(u => [u.id, u])).values());
-    items = [...chatMatches, ...cleanUserMatches];
+    const messageMatches = await searchMessagesInChats(allItems, term);
+    items = [...chatMatches, ...messageMatches, ...cleanUserMatches];
   } else {
     // Whitelist core operational fallback: when no search text is active, default back to showing WhatsApp style history list
     items = [...allItems];
@@ -3033,6 +3106,40 @@ try {
   // Sort chronologically and update layout view
   items.sort((a, b) => b.lastMessageTime - a.lastMessageTime || a.name.localeCompare(b.name));
   renderChatListItems(items, chatsList);
+}
+
+async function searchMessagesInChats(chatItems = [], term = '') {
+  if (!currentUser || !term || term.length < 2) return [];
+  const results = [];
+  const uniqueChats = Array.from(new Map(
+    chatItems
+      .filter(item => item.type === 'direct' || item.type === 'group' || item.type === 'saved')
+      .map(item => [`${item.type}:${item.id}`, item])
+  ).values()).slice(0, 30);
+
+  for (const item of uniqueChats) {
+    try {
+      const field = item.type === 'group' ? 'groupId' : 'directId';
+      const snapshot = await db.collection('messages').where(field, '==', item.id).limit(60).get();
+      const match = snapshot.docs
+        .map(doc => doc.data())
+        .filter(msg => !msg.deletedFor?.[currentUser.uid] && !msg.deletedForEveryone)
+        .find(msg => {
+          const body = [msg.text, msg.attachment?.filename, msg.poll?.question].filter(Boolean).join(' ').toLowerCase();
+          return body.includes(term);
+        });
+      if (match) {
+        results.push({
+          ...item,
+          preview: `Message: ${(match.text || match.attachment?.filename || match.poll?.question || 'match').replace(/\s+/g, ' ').slice(0, 90)}`,
+          lastMessageTime: match.timestamp?.toDate?.() || item.lastMessageTime || new Date(0)
+        });
+      }
+    } catch (error) {
+      console.warn('Message search skipped for chat:', item.id, error);
+    }
+  }
+  return results;
 }
 
 async function sendChatRequest(user) {
@@ -4592,7 +4699,7 @@ async function showGroupInfo() {
     const canModify = isAdmin && !isCurrentUser;
     const memberDiv = document.createElement('div');
     memberDiv.className = 'member-item';
-    memberDiv.innerHTML = `<div class="member-info"><div class="member-avatar">${member.avatar ? `<img src="${member.avatar}" style="width:36px;height:36px;border-radius:50%;">` : (member.name?.[0]?.toUpperCase() || '👤')}</div><div><span>${escapeHtml(member.name)}</span>${isMemberAdmin ? '<span style="font-size:10px; color:#667eea; margin-left:8px;">Admin</span>' : ''}</div></div>${canModify ? `<div class="member-actions">${!isMemberAdmin ? `<button class="make-admin-btn" data-id="${member.id}" data-name="${escapeHtml(member.name)}">👑</button>` : ''}<button class="remove-member-btn" data-id="${member.id}" data-name="${escapeHtml(member.name)}">❌</button></div>` : ''}`;
+    memberDiv.innerHTML = `<div class="member-info"><div class="member-avatar">${member.avatar ? `<img src="${member.avatar}" style="width:36px;height:36px;border-radius:50%;">` : (member.name?.[0]?.toUpperCase() || '👤')}</div><div><span>${escapeHtml(member.name)}</span>${isMemberAdmin ? '<span style="font-size:10px; color:#667eea; margin-left:8px;">Admin</span>' : ''}</div></div>${canModify ? `<div class="member-actions">${!isMemberAdmin ? `<button class="make-admin-btn" data-id="${member.id}" data-name="${escapeHtml(member.name)}" title="Make admin">👑</button>` : `<button class="remove-admin-btn" data-id="${member.id}" data-name="${escapeHtml(member.name)}" title="Remove admin">Admin -</button>`}<button class="remove-member-btn" data-id="${member.id}" data-name="${escapeHtml(member.name)}" title="Remove member">❌</button></div>` : ''}`;
     membersList.appendChild(memberDiv);
   }
   await renderPendingGroupInvites(currentGroup.id, membersList, isAdmin);
@@ -4604,6 +4711,15 @@ async function makeAdmin(groupId, memberId, memberName) {
   const memberDoc = await db.collection('groupMembers').where('groupId', '==', groupId).where('userId', '==', memberId).get();
   memberDoc.forEach(doc => doc.ref.update({ role: 'admin' }));
   showToast(`${memberName} is now admin`);
+  showGroupInfo();
+}
+
+async function removeAdmin(groupId, memberId, memberName) {
+  if (!confirm(`Remove admin rights from ${memberName}?`)) return;
+  const memberDoc = await db.collection('groupMembers').where('groupId', '==', groupId).where('userId', '==', memberId).get();
+  memberDoc.forEach(doc => doc.ref.update({ role: 'member' }));
+  showToast(`${memberName} is now a member`);
+  await loadGroupMembers(groupId);
   showGroupInfo();
 }
 
@@ -4774,10 +4890,18 @@ async function renderSharedContent(type) {
   } else if (type === 'links') {
     const links = messages.flatMap(m => extractLinks(m.text || ''));
     container.innerHTML = links.length ? links.map(link => `<a class="shared-link" href="${escapeHtml(link)}" target="_blank" rel="noopener">${escapeHtml(link)}</a>`).join('') : 'No shared links found';
+  } else if (type === 'voice') {
+    const voice = messages.filter(m => m.attachment?.type === 'voice');
+    container.innerHTML = voice.length ? voice.map(m => renderAttachment(m.attachment)).join('') : 'No voice notes found';
+    bindRenderedMessageActions();
   } else {
     const docs = messages.filter(m => m.attachment?.type === 'document');
     container.innerHTML = docs.length ? docs.map(m => `<a class="shared-link" href="${escapeHtml(m.attachment.url)}" target="_blank" rel="noopener">${escapeHtml(m.attachment.filename || getFileNameFromUrl(m.attachment.url) || 'Document')}</a>`).join('') : 'No shared documents found';
   }
+}
+
+if (isChatDebugEnabled()) {
+  window.chatDebug = chatDebug;
 }
 
 // ========================================
@@ -5371,7 +5495,25 @@ function startScheduledMessageWorker() {
 
 function copyToClipboard(text) { navigator.clipboard.writeText(text); showToast('Copied text!'); }
 function setReplyTo(msg) { currentReplyTo = msg; document.getElementById('replyPreviewBar').style.display = 'block'; document.getElementById('replyPreviewSender').textContent = msg.senderName; document.getElementById('replyPreviewText').textContent = msg.text || 'Media'; }
-async function deleteMessage(id) { await db.collection('messages').doc(id).update({ text: 'This message was deleted', deletedForEveryone: true }); }
+async function deleteMessageForMe(id) {
+  if (!id || !currentUser) return;
+  await db.collection('messages').doc(id).update({
+    [`deletedFor.${currentUser.uid}`]: true,
+    [`deletedForAt.${currentUser.uid}`]: firebase.firestore.FieldValue.serverTimestamp()
+  });
+  showToast('Message deleted for you');
+}
+async function deleteMessageForEveryone(id) {
+  if (!id || !confirm('Delete this message for everyone?')) return;
+  await db.collection('messages').doc(id).update({
+    text: '',
+    attachment: firebase.firestore.FieldValue.delete(),
+    poll: firebase.firestore.FieldValue.delete(),
+    deletedForEveryone: true,
+    deletedForEveryoneAt: firebase.firestore.FieldValue.serverTimestamp()
+  });
+  showToast('Message deleted for everyone');
+}
 async function starMessage(id, data) {
   await db.collection('starredMessages').add({
     userId: currentUser.uid,
@@ -5524,9 +5666,10 @@ function showContextMenu(x, y, messageId, messageData, isMyMessage) {
     { text: '⭐ Star Message', action: () => starMessage(messageId, messageData) },
     { text: '📌 Pin Message', action: () => pinMessage(messageId, messageData) }
   ];
+  items.push({ text: 'Delete For Me', action: () => deleteMessageForMe(messageId) });
   if (isMyMessage) {
     items.push({ text: 'Edit Message', action: () => editMessage(messageId, messageData) });
-    items.push({ text: '🗑️ Delete Everyone', action: () => deleteMessage(messageId) });
+    items.push({ text: '🗑️ Delete Everyone', action: () => deleteMessageForEveryone(messageId) });
   }
   
   items.forEach(item => {
@@ -5796,6 +5939,7 @@ registerFcmTokenForCurrentUser({
   // Attach Event Handlers
   document.getElementById('sendBtn')?.addEventListener('click', sendMessage);
   document.getElementById('messageInput')?.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') hideMentionSuggestions();
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       sendMessage();
@@ -5803,8 +5947,12 @@ registerFcmTokenForCurrentUser({
   });
   document.getElementById('messageInput')?.addEventListener('input', () => {
   saveCurrentDraft();
+  updateMentionSuggestions();
   sendTypingIndicator();
 });
+  document.addEventListener('click', event => {
+    if (!event.target.closest('#mentionSuggestions') && event.target.id !== 'messageInput') hideMentionSuggestions();
+  });
   window.addEventListener('beforeunload', saveCurrentDraft);
   document.getElementById('cancelReplyBtn')?.addEventListener('click', () => {
     currentReplyTo = null;
@@ -5984,8 +6132,10 @@ registerFcmTokenForCurrentUser({
   });
   document.getElementById('groupMembersList')?.addEventListener('click', event => {
     const adminBtn = event.target.closest('.make-admin-btn');
+    const removeAdminBtn = event.target.closest('.remove-admin-btn');
     const removeBtn = event.target.closest('.remove-member-btn');
     if (adminBtn) makeAdmin(currentGroup.id, adminBtn.dataset.id, adminBtn.dataset.name);
+    if (removeAdminBtn) removeAdmin(currentGroup.id, removeAdminBtn.dataset.id, removeAdminBtn.dataset.name);
     if (removeBtn) removeMember(currentGroup.id, removeBtn.dataset.id, removeBtn.dataset.name);
   });
   document.getElementById('chatHeaderInfo')?.addEventListener('click', showChatInfo);

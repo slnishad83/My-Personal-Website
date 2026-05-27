@@ -1284,6 +1284,38 @@ body.dark .message.call-message .message-bubble {
   font-weight: 700;
 }
 
+.mention-suggestions {
+  position: absolute;
+  left: 96px;
+  right: 64px;
+  bottom: calc(100% + 8px);
+  z-index: 30;
+  display: none;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--panel);
+  box-shadow: var(--shadow);
+}
+
+.mention-suggestion {
+  width: 100%;
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  text-align: left;
+}
+
+.mention-suggestion:hover {
+  background: var(--panel-hover);
+}
+
 .poll-card {
   min-width: min(260px, 74vw);
   margin-top: 4px;
