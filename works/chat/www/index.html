@@ -408,6 +408,14 @@
           >
             ▦
           </button>
+          <button
+            class="attach-btn"
+            id="scheduleMsgBtn"
+            title="Schedule message"
+            aria-label="Schedule message"
+          >
+            â—´
+          </button>
           <input
             type="text"
             id="messageInput"
@@ -824,6 +832,9 @@
           <button id="quickRepliesSettingsBtn" class="setting-item">
             ⚡ Quick Replies
           </button>
+          <button id="starredMessagesBtn" class="setting-item">
+            â­ Starred Messages
+          </button>
           <button id="wallpaperSettingsBtn" class="setting-item">
             🖼️ Change Wallpaper (All Chats)
           </button>
@@ -884,6 +895,19 @@
             /><button id="addQuickReplyBtn" class="btn btn-primary">Add</button>
           </div>
           <div id="quickRepliesList"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Starred Messages Modal -->
+    <div id="starredMessagesModal" class="modal" style="display: none">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>Starred Messages</h3>
+          <span class="close-modal closeStarredModal">&times;</span>
+        </div>
+        <div class="modal-body">
+          <div id="starredMessagesList"></div>
         </div>
       </div>
     </div>

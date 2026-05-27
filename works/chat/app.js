@@ -98,6 +98,7 @@ let recordingStartTime = null;
 let recordingTimer = null;
 let wallpaperModalMode = 'global';
 let chatListRefreshTimer = null;
+let scheduledMessagesTimer = null;
 let statusImageAttachment = null;
 let activeCall = null;
 let peerConnection = null;
@@ -286,6 +287,7 @@ function renderCallMessage(msg = {}) {
 }
 
 let activeDraftKey = '';
+let currentForwardMessage = null;
 
 function getSavedMessagesChatId() {
   return currentUser ? `saved_${currentUser.uid}` : '';
@@ -329,10 +331,8 @@ function getDraftPreviewForItem(item = {}) {
   if (!draftText) return '';
 
   const compactText = draftText.replace(/\s+/g, ' ').slice(0, 80);
-
   return `<span class="draft-label">Draft:</span> ${escapeHtml(compactText)}`;
 }
-
 function saveCurrentDraft() {
   const input = document.getElementById('messageInput');
   const key = activeDraftKey || getDraftStorageKey();
@@ -407,7 +407,23 @@ function renderChatListItems(items, container) {
     const draftPreview = getDraftPreviewForItem(item);
     const normalPreview = item.preview || '';
 const missedPreviewPattern = /missed\s+(voice|video|audio)?\s*(call|note)?/i;
-const previewHtml = draftPreview || (missedPreviewPattern.test(normalPreview) ? escapeHtml(normalPreview) : '');
+const activeIds = [
+  currentChat?.id,
+  currentChat?.otherUserId,
+  ...(currentChat?.aliasDirectIds || [])
+].filter(Boolean).map(String);
+
+const rowIds = [
+  item.id,
+  item.otherUserId,
+  ...(item.aliasDirectIds || [])
+].filter(Boolean).map(String);
+
+const isOpenChatRow = currentChat && rowIds.some(id => activeIds.includes(id));
+
+const previewHtml = isOpenChatRow
+  ? ''
+  : (draftPreview || (missedPreviewPattern.test(normalPreview) ? escapeHtml(normalPreview) : ''));
     
     // VISUAL BUG FIX: Skip rendering action prompt chips for verified active logs
     let statusChip = '';
@@ -3395,7 +3411,6 @@ function searchGroupsRealtime(searchTerm) {
         </div>
       `;
       groupDiv.onclick = () => loadGroupChat(group.id, group.name);
-saveCurrentDraft();
       groupsList.appendChild(groupDiv);
     });
   });
@@ -4423,7 +4438,7 @@ async function startSavedMessages() {
   document.getElementById('replyPreviewBar').style.display = 'none';
   currentReplyTo = null;
   loadMessages();
-  setTimeout(restoreCurrentDraft, 300);
+  restoreCurrentDraft();
   loadPinnedMessages();
   applyCurrentChatWallpaper();
   openMobileChatPanel();
@@ -4459,7 +4474,7 @@ async function startDirectChat(user) {
   document.getElementById('replyPreviewBar').style.display = 'none';
   currentReplyTo = null;
   loadMessages();
-  setTimeout(restoreCurrentDraft, 300);
+  restoreCurrentDraft();
   listenForTypingIndicator();
   loadPinnedMessages();
   applyCurrentChatWallpaper();
@@ -4528,7 +4543,7 @@ async function loadGroupChat(groupId, groupName) {
   document.getElementById('voiceCallBtn').style.display = 'inline-flex';
   document.getElementById('videoCallBtn').style.display = 'inline-flex';
   loadMessages();
-  setTimeout(restoreCurrentDraft, 300);
+  restoreCurrentDraft();
   listenForTypingIndicator();
   loadPinnedMessages();
   applyCurrentChatWallpaper();
@@ -4560,6 +4575,8 @@ async function showGroupInfo() {
   document.getElementById('groupAvatarLarge').innerHTML = group.icon ? `<img src="${group.icon}">` : '👥';
   document.getElementById('editGroupNameInput').value = group.name;
   document.getElementById('groupCodeDisplay').textContent = group.code;
+  document.getElementById('groupAdminsOnlySend').checked = !!group.onlyAdminsCanSend;
+  document.getElementById('groupAdminsOnlyEdit').checked = group.onlyAdminsCanEdit !== false;
   
   const currentUserRole = currentGroupMembers.find(m => m.id === currentUser.uid)?.role;
   const isAdmin = currentUserRole === 'admin';
@@ -4697,6 +4714,8 @@ async function publishStatus() {
   });
   statusImageAttachment = null;
   document.getElementById('statusTextInput').value = '';
+  document.getElementById('statusImagePreview').style.display = 'none';
+  document.getElementById('statusImagePreview').innerHTML = '';
   document.getElementById('createStatusModal').style.display = 'none';
   loadStatusList();
 }
@@ -4706,7 +4725,10 @@ async function showStatusViewer(statuses, index = 0) {
   if (!status) return;
   const modal = document.getElementById('statusViewerModal');
   document.getElementById('statusViewerName').textContent = status.userName;
+  document.getElementById('statusViewerTime').textContent = formatTime(status.createdAt);
+  document.getElementById('statusViewerAvatar').innerHTML = status.userAvatar ? `<img src="${status.userAvatar}">` : escapeHtml((status.userName || '?')[0]);
   document.getElementById('statusViewerBody').innerHTML = status.image ? `<img src="${status.image.url}">` : `<div class="status-viewer-text">${escapeHtml(status.text)}</div>`;
+  document.getElementById('statusViewerSeen').textContent = status.userId === currentUser.uid ? `${Object.keys(status.viewedBy || {}).length} viewed` : '';
   modal.style.display = 'flex';
   if (status.userId !== currentUser.uid) {
     await db.collection('statuses').doc(status.id).update({ [`viewedBy.${currentUser.uid}`]: firebase.firestore.FieldValue.serverTimestamp() });
@@ -4749,8 +4771,12 @@ async function renderSharedContent(type) {
   if (type === 'media') {
     const media = messages.filter(m => m.attachment?.type === 'image');
     container.innerHTML = media.length ? `<div class="shared-grid">${media.map(m => `<img src="${m.attachment.url}">`).join('')}</div>` : 'No media';
+  } else if (type === 'links') {
+    const links = messages.flatMap(m => extractLinks(m.text || ''));
+    container.innerHTML = links.length ? links.map(link => `<a class="shared-link" href="${escapeHtml(link)}" target="_blank" rel="noopener">${escapeHtml(link)}</a>`).join('') : 'No shared links found';
   } else {
-    container.innerHTML = 'No shared documents found';
+    const docs = messages.filter(m => m.attachment?.type === 'document');
+    container.innerHTML = docs.length ? docs.map(m => `<a class="shared-link" href="${escapeHtml(m.attachment.url)}" target="_blank" rel="noopener">${escapeHtml(m.attachment.filename || getFileNameFromUrl(m.attachment.url) || 'Document')}</a>`).join('') : 'No shared documents found';
   }
 }
 
@@ -4975,7 +5001,8 @@ async function retryFailedMessage(localId) {
     read: false,
     readBy: { [currentUser.uid]: firebase.firestore.FieldValue.serverTimestamp() },
     deliveredTo: {},
-    participants: currentChatType === 'direct' ? directParticipants : [currentUser.uid]
+    participants: currentChatType === 'direct' ? directParticipants : [currentUser.uid],
+    mentions: getMessageMentions(text)
   };
 
   if (failed.attachment) messageData.attachment = failed.attachment;
@@ -5045,16 +5072,19 @@ function loadMessages() {
       
       let replyHtml = msg.replyTo ? `<div class="reply-preview"><strong>${escapeHtml(msg.replyTo.senderName)}</strong>: ${escapeHtml(msg.replyTo.text || 'Media')}</div>` : '';
       let attachmentHtml = msg.attachment ? renderAttachment(msg.attachment) : '';
+      let pollHtml = msg.poll ? renderPollMessage(doc.id, msg) : '';
       let textContent = msg.deletedForEveryone ? 'This message was deleted' : (msg.text || '');
       
       messageDiv.innerHTML = `
         <div class="message-bubble">
           ${!isMyMessage ? `<div class="message-sender">${escapeHtml(msg.senderName)}</div>` : ''}
           ${replyHtml}
-          <div class="message-text">${escapeHtml(textContent)}</div>
+          ${textContent ? `<div class="message-text">${renderMessageText(textContent, msg.mentions || [])}</div>` : ''}
           ${attachmentHtml}
+          ${pollHtml}
           <div class="message-footer">
             <span class="message-time">${msg.timestamp ? formatTime(msg.timestamp) : ''}</span>
+            ${msg.editedAt ? '<span class="message-edited">edited</span>' : ''}
             ${getMessageReceiptHtml(msg, isMyMessage)}
           </div>
         </div>
@@ -5070,6 +5100,7 @@ function loadMessages() {
       bindFailedMessageRetryActions();
     }
     messagesArea.scrollTop = messagesArea.scrollHeight;
+    bindRenderedMessageActions();
     markMessagesAsRead();
   });
 }
@@ -5152,7 +5183,6 @@ async function sendMessage() {
 
     if (input) input.value = '';
     clearCurrentDraft();
-clearCurrentDraft();
     currentAttachment = null;
     currentReplyTo = null;
 
@@ -5179,10 +5209,306 @@ async function handleFileUpload(file) {
   }
 }
 
+async function sendPoll() {
+  if (!currentChat || !currentUser) return;
+  const question = prompt('Poll question');
+  if (!question || !question.trim()) return;
+  const options = (prompt('Options, separated by commas') || '')
+    .split(',')
+    .map(option => option.trim())
+    .filter(Boolean)
+    .slice(0, 10);
+  if (options.length < 2) {
+    showToast('Add at least two poll options', 'error');
+    return;
+  }
+
+  const messageData = {
+    senderId: currentUser.uid,
+    senderName: currentUser.displayName || currentUser.email,
+    text: '',
+    poll: { question: question.trim(), options, votes: {} },
+    timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+    status: 'sent',
+    read: false,
+    readBy: { [currentUser.uid]: firebase.firestore.FieldValue.serverTimestamp() },
+    deliveredTo: {},
+    participants: currentChatType === 'direct'
+      ? [...new Set([currentUser.uid, currentChat.otherUserId, ...(String(currentChat.id || '').split('_'))].filter(Boolean))]
+      : [currentUser.uid]
+  };
+  if (currentChatType === 'direct') messageData.directId = currentChat.id;
+  else messageData.groupId = currentChat.id;
+
+  await db.collection('messages').add(messageData);
+  const previewText = `Poll: ${question.trim()}`;
+  if (currentChatType === 'direct') {
+    await db.collection('directChats').doc(currentChat.id).set({
+      lastMessage: previewText,
+      lastMessageSenderId: currentUser.uid,
+      lastMessageTime: firebase.firestore.FieldValue.serverTimestamp(),
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+      status: 'active'
+    }, { merge: true });
+  } else {
+    await db.collection('groups').doc(currentChat.id).set({
+      lastMessage: previewText,
+      lastMessageSenderId: currentUser.uid,
+      lastMessageSenderName: currentUser.displayName || currentUser.email,
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    }, { merge: true });
+  }
+  loadCurrentChatList();
+}
+
+function parseScheduledDate(value = '') {
+  const normalized = value.trim().replace('T', ' ');
+  const match = normalized.match(/^(\d{4})-(\d{2})-(\d{2})\s+(\d{1,2}):(\d{2})$/);
+  if (!match) return null;
+  const [, y, m, d, h, min] = match.map(Number);
+  const date = new Date(y, m - 1, d, h, min, 0, 0);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+async function scheduleCurrentMessage() {
+  if (!currentChat || !currentUser) {
+    showToast('Open a chat before scheduling', 'error');
+    return;
+  }
+  const input = document.getElementById('messageInput');
+  const text = (input?.value || '').trim();
+  if (!text) {
+    showToast('Type a text message before scheduling', 'error');
+    return;
+  }
+  const whenText = prompt('Send when? Use YYYY-MM-DD HH:mm', '');
+  if (!whenText) return;
+  const dueAt = parseScheduledDate(whenText);
+  if (!dueAt || dueAt <= new Date()) {
+    showToast('Choose a future date and time', 'error');
+    return;
+  }
+  await db.collection('scheduledMessages').add({
+    userId: currentUser.uid,
+    chatId: currentChat.id,
+    chatType: currentChatType,
+    otherUserId: currentChat.otherUserId || '',
+    text,
+    status: 'pending',
+    dueAt,
+    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+  });
+  input.value = '';
+  clearCurrentDraft();
+  showToast('Message scheduled');
+}
+
+async function sendScheduledMessage(item) {
+  const data = item.data || {};
+  const directParticipants = data.chatType === 'direct'
+    ? [...new Set([currentUser.uid, data.otherUserId, ...(String(data.chatId || '').split('_'))].filter(Boolean))]
+    : [currentUser.uid];
+  const messageData = {
+    senderId: currentUser.uid,
+    senderName: currentUser.displayName || currentUser.email,
+    text: data.text || '',
+    scheduled: true,
+    timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+    status: 'sent',
+    read: false,
+    readBy: { [currentUser.uid]: firebase.firestore.FieldValue.serverTimestamp() },
+    deliveredTo: {},
+    participants: directParticipants
+  };
+  if (data.chatType === 'direct') messageData.directId = data.chatId;
+  else messageData.groupId = data.chatId;
+  await db.collection('messages').add(messageData);
+  if (data.chatType === 'direct') {
+    await db.collection('directChats').doc(data.chatId).set({
+      lastMessage: data.text || 'Scheduled message',
+      lastMessageSenderId: currentUser.uid,
+      lastMessageTime: firebase.firestore.FieldValue.serverTimestamp(),
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+      status: 'active'
+    }, { merge: true });
+  } else {
+    await db.collection('groups').doc(data.chatId).set({
+      lastMessage: data.text || 'Scheduled message',
+      lastMessageSenderId: currentUser.uid,
+      lastMessageSenderName: currentUser.displayName || currentUser.email,
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    }, { merge: true });
+  }
+  await db.collection('scheduledMessages').doc(item.id).update({
+    status: 'sent',
+    sentAt: firebase.firestore.FieldValue.serverTimestamp()
+  });
+}
+
+async function processScheduledMessages() {
+  if (!currentUser) return;
+  const snapshot = await db.collection('scheduledMessages')
+    .where('userId', '==', currentUser.uid)
+    .where('status', '==', 'pending')
+    .where('dueAt', '<=', new Date())
+    .limit(10)
+    .get()
+    .catch(() => null);
+  if (!snapshot || snapshot.empty) return;
+  for (const doc of snapshot.docs) {
+    await sendScheduledMessage({ id: doc.id, data: doc.data() }).catch(async () => {
+      await doc.ref.update({ status: 'failed', failedAt: firebase.firestore.FieldValue.serverTimestamp() }).catch(() => {});
+    });
+  }
+  loadCurrentChatList();
+}
+
+function startScheduledMessageWorker() {
+  clearInterval(scheduledMessagesTimer);
+  processScheduledMessages().catch(() => {});
+  scheduledMessagesTimer = setInterval(() => processScheduledMessages().catch(() => {}), 60000);
+}
+
 function copyToClipboard(text) { navigator.clipboard.writeText(text); showToast('Copied text!'); }
 function setReplyTo(msg) { currentReplyTo = msg; document.getElementById('replyPreviewBar').style.display = 'block'; document.getElementById('replyPreviewSender').textContent = msg.senderName; document.getElementById('replyPreviewText').textContent = msg.text || 'Media'; }
 async function deleteMessage(id) { await db.collection('messages').doc(id).update({ text: 'This message was deleted', deletedForEveryone: true }); }
-async function starMessage(id, data) { await db.collection('starredMessages').add({ userId: currentUser.uid, messageId: id, text: data.text }); showToast('Starred'); }
+async function starMessage(id, data) {
+  await db.collection('starredMessages').add({
+    userId: currentUser.uid,
+    messageId: id,
+    text: data.text || getAttachmentLabel(data.attachment) || 'Message',
+    senderName: data.senderName || '',
+    chatId: currentChat?.id || '',
+    chatType: currentChatType || '',
+    starredAt: firebase.firestore.FieldValue.serverTimestamp()
+  });
+  showToast('Starred');
+}
+async function showStarredMessagesModal() {
+  if (!currentUser) return;
+  const modal = document.getElementById('starredMessagesModal');
+  const list = document.getElementById('starredMessagesList');
+  if (!modal || !list) return;
+  list.innerHTML = '<div class="empty-state">Loading starred messages...</div>';
+  modal.style.display = 'flex';
+  let snapshot;
+  try {
+    snapshot = await db.collection('starredMessages')
+      .where('userId', '==', currentUser.uid)
+      .orderBy('starredAt', 'desc')
+      .get();
+  } catch (error) {
+    snapshot = await db.collection('starredMessages')
+      .where('userId', '==', currentUser.uid)
+      .get();
+  }
+  const items = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  items.sort((a, b) => (b.starredAt?.toMillis?.() || 0) - (a.starredAt?.toMillis?.() || 0));
+  if (!items.length) {
+    list.innerHTML = '<div class="empty-state">No starred messages</div>';
+    return;
+  }
+  list.innerHTML = '';
+  items.forEach(item => {
+    const row = document.createElement('div');
+    row.className = 'starred-message-card';
+    row.innerHTML = `
+      <div class="list-info">
+        <div class="list-name">${escapeHtml(item.senderName || 'Message')}</div>
+        <div class="list-preview">${escapeHtml(item.text || 'Media')}</div>
+      </div>
+      <button class="btn btn-outline" data-id="${escapeHtml(item.id)}">Remove</button>
+    `;
+    row.querySelector('button')?.addEventListener('click', async () => {
+      await db.collection('starredMessages').doc(item.id).delete();
+      showStarredMessagesModal();
+    });
+    list.appendChild(row);
+  });
+}
+async function editMessage(id, data) {
+  if (!data || data.deletedForEveryone) return;
+  const nextText = prompt('Edit message', data.text || '');
+  if (nextText === null) return;
+  await db.collection('messages').doc(id).update({
+    text: nextText.trim(),
+    editedAt: firebase.firestore.FieldValue.serverTimestamp()
+  });
+}
+
+function openForwardModal(messageId, messageData) {
+  currentForwardMessage = { id: messageId, ...messageData };
+  document.getElementById('forwardModal').style.display = 'flex';
+  renderForwardChats();
+}
+
+async function renderForwardChats(searchTerm = '') {
+  const list = document.getElementById('forwardChatsList');
+  if (!list || !currentUser) return;
+  list.innerHTML = '<div class="empty-state">Loading chats...</div>';
+  const term = normalizeSearchText(searchTerm);
+  const items = [
+    ...(await buildDirectChatItems()),
+    ...(await buildGroupChatItems())
+  ].filter(item => !term || normalizeSearchText(item.name).includes(term));
+  if (!items.length) {
+    list.innerHTML = '<div class="empty-state">No chats found</div>';
+    return;
+  }
+  list.innerHTML = '';
+  items.forEach(item => {
+    const row = document.createElement('button');
+    row.type = 'button';
+    row.className = 'forward-chat-row';
+    row.innerHTML = `<span class="list-avatar">${item.avatar || '?'}</span><span>${escapeHtml(item.name || 'Chat')}</span>`;
+    row.addEventListener('click', () => forwardMessageTo(item));
+    list.appendChild(row);
+  });
+}
+
+async function forwardMessageTo(chatItem) {
+  if (!currentForwardMessage || !chatItem || !currentUser) return;
+  const messageData = {
+    senderId: currentUser.uid,
+    senderName: currentUser.displayName || currentUser.email,
+    text: currentForwardMessage.text || '',
+    forwarded: true,
+    timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+    status: 'sent',
+    read: false,
+    readBy: { [currentUser.uid]: firebase.firestore.FieldValue.serverTimestamp() },
+    deliveredTo: {}
+  };
+  if (currentForwardMessage.attachment) messageData.attachment = currentForwardMessage.attachment;
+  if (currentForwardMessage.poll) messageData.poll = { ...currentForwardMessage.poll, votes: {} };
+
+  const preview = messageData.text || getAttachmentLabel(messageData.attachment) || 'Forwarded message';
+  if (chatItem.type === 'direct' || chatItem.type === 'saved') {
+    messageData.directId = chatItem.id;
+    messageData.participants = [...new Set([currentUser.uid, chatItem.otherUserId, ...(String(chatItem.id || '').split('_'))].filter(Boolean))];
+    await db.collection('messages').add(messageData);
+    await db.collection('directChats').doc(chatItem.id).set({
+      lastMessage: preview,
+      lastMessageSenderId: currentUser.uid,
+      lastMessageTime: firebase.firestore.FieldValue.serverTimestamp(),
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+      status: 'active'
+    }, { merge: true });
+  } else {
+    messageData.groupId = chatItem.id;
+    messageData.participants = [currentUser.uid];
+    await db.collection('messages').add(messageData);
+    await db.collection('groups').doc(chatItem.id).set({
+      lastMessage: preview,
+      lastMessageSenderId: currentUser.uid,
+      lastMessageSenderName: currentUser.displayName || currentUser.email,
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    }, { merge: true });
+  }
+  currentForwardMessage = null;
+  document.getElementById('forwardModal').style.display = 'none';
+  showToast('Message forwarded');
+}
 
 function showContextMenu(x, y, messageId, messageData, isMyMessage) {
   const existing = document.querySelector('.message-context-menu');
@@ -5192,12 +5518,14 @@ function showContextMenu(x, y, messageId, messageData, isMyMessage) {
   menu.style.display = 'block'; menu.style.left = `${x}px`; menu.style.top = `${y}px`;
   
   const items = [
+    { text: 'Forward', action: () => openForwardModal(messageId, messageData) },
     { text: '📋 Copy Text', action: () => copyToClipboard(messageData.text) },
     { text: '↩️ Thread Reply', action: () => setReplyTo(messageData) },
     { text: '⭐ Star Message', action: () => starMessage(messageId, messageData) },
     { text: '📌 Pin Message', action: () => pinMessage(messageId, messageData) }
   ];
   if (isMyMessage) {
+    items.push({ text: 'Edit Message', action: () => editMessage(messageId, messageData) });
     items.push({ text: '🗑️ Delete Everyone', action: () => deleteMessage(messageId) });
   }
   
@@ -5221,20 +5549,118 @@ async function updatePrivacySettings() { await db.collection('users').doc(curren
 async function showProfileModal() {
   const doc = await db.collection('users').doc(currentUser.uid).get();
   const d = doc.data() || {};
+  privacySettings = { ...privacySettings, ...(d.privacySettings || {}) };
   document.getElementById('profileName').textContent = d.displayName || currentUser.email;
   document.getElementById('profileEmail').textContent = d.email;
-  document.getElementById('profilePhone').textContent = d.phone || 'Not set';
+  document.getElementById('profilePhone').textContent = d.phone || d.phoneNumber || 'Not set';
+  document.getElementById('profileStatusText').value = d.statusText || '';
+  document.getElementById('hideReadReceipts').checked = !!privacySettings.hideReadReceipts;
+  document.getElementById('hideTypingIndicator').checked = !!privacySettings.hideTypingIndicator;
+  document.getElementById('hideLastSeen').checked = !!privacySettings.hideLastSeen;
   document.getElementById('profileModal').style.display = 'flex';
 }
 
 async function showBlockedUsersModal() {
+  await loadBlockedUsers();
+  const list = document.getElementById('blockedUsersList');
+  if (list) {
+    list.innerHTML = blockedUsers.length ? '' : '<div class="empty-state">No blocked users</div>';
+    blockedUsers.forEach(user => {
+      const row = document.createElement('div');
+      row.className = 'blocked-user-card';
+      row.innerHTML = `<div class="list-info"><div class="list-name">${escapeHtml(user.blockedUserName || 'User')}</div><div class="list-preview">Blocked contact</div></div><button class="btn btn-outline" data-id="${escapeHtml(user.id)}">Unblock</button>`;
+      row.querySelector('button')?.addEventListener('click', async () => {
+        await unblockUser(user.id);
+        showBlockedUsersModal();
+      });
+      list.appendChild(row);
+    });
+  }
   document.getElementById('blockedModal').style.display = 'flex';
 }
 function showQuickRepliesModal() {
+  const list = document.getElementById('quickRepliesList');
+  if (list) {
+    list.innerHTML = quickReplies.length ? '' : '<div class="empty-state">No quick replies yet</div>';
+    quickReplies.forEach(reply => {
+      const row = document.createElement('div');
+      row.className = 'quick-reply-card';
+      row.innerHTML = `<button type="button" class="quick-reply-text">${escapeHtml(reply.text)}</button><button type="button" class="btn btn-outline" data-id="${escapeHtml(reply.id)}">Delete</button>`;
+      row.querySelector('.quick-reply-text')?.addEventListener('click', () => {
+        const input = document.getElementById('messageInput');
+        if (input) {
+          input.value = `${input.value || ''}${input.value ? ' ' : ''}${reply.text}`;
+          saveCurrentDraft();
+        }
+        document.getElementById('quickRepliesModal').style.display = 'none';
+      });
+      row.querySelector('.btn')?.addEventListener('click', () => deleteQuickReply(reply.id));
+      list.appendChild(row);
+    });
+  }
   document.getElementById('quickRepliesModal').style.display = 'flex';
 }
-async function exportCurrentChat() { showToast('Chat framework configuration exported'); }
-async function clearAllChats() { if (confirm('Clear chat records?')) showToast('Wiped local active text references'); }
+async function getCurrentChatMessages() {
+  if (!currentChat || !currentChatType) return [];
+  const directIds = getDirectChatIdsForCurrentChat();
+  const query = currentChatType === 'direct' && directIds.length > 1
+    ? db.collection('messages').where('directId', 'in', directIds)
+    : db.collection('messages').where(currentChatType === 'direct' ? 'directId' : 'groupId', '==', currentChat.id);
+  const snapshot = await query.get();
+  return snapshot.docs
+    .map(doc => ({ id: doc.id, ...doc.data() }))
+    .filter(msg => !msg.deletedFor?.[currentUser.uid] && !msg.deletedForEveryone)
+    .sort((a, b) => (a.timestamp?.toMillis?.() || 0) - (b.timestamp?.toMillis?.() || 0));
+}
+
+async function exportCurrentChat() {
+  if (!currentChat) {
+    showToast('Open a chat to export it', 'error');
+    return;
+  }
+  const messages = await getCurrentChatMessages();
+  const title = document.getElementById('currentChatName')?.textContent || 'Chat';
+  const lines = [`Export: ${title}`, `Created: ${new Date().toLocaleString()}`, ''];
+  messages.forEach(msg => {
+    const when = msg.timestamp?.toDate?.()?.toLocaleString?.() || '';
+    const body = msg.poll ? `Poll: ${msg.poll.question}` : (msg.text || getAttachmentLabel(msg.attachment) || 'Message');
+    lines.push(`[${when}] ${msg.senderName || 'User'}: ${body}`);
+  });
+  const blob = new Blob([lines.join('\n')], { type: 'text/plain;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `${title.replace(/[^a-z0-9_-]+/gi, '_') || 'chat'}-export.txt`;
+  link.click();
+  URL.revokeObjectURL(url);
+  showToast('Chat exported');
+}
+
+async function clearMessagesForChat(chatId, chatType) {
+  const query = db.collection('messages').where(chatType === 'direct' ? 'directId' : 'groupId', '==', chatId);
+  const snapshot = await query.get();
+  for (let index = 0; index < snapshot.docs.length; index += 400) {
+    const batch = db.batch();
+    snapshot.docs.slice(index, index + 400).forEach(doc => {
+      batch.update(doc.ref, {
+        [`deletedFor.${currentUser.uid}`]: true,
+        [`deletedForAt.${currentUser.uid}`]: firebase.firestore.FieldValue.serverTimestamp()
+      });
+    });
+    await batch.commit();
+  }
+}
+
+async function clearAllChats() {
+  if (!currentUser || !confirm('Clear all message history from your account? This will not delete messages for other people.')) return;
+  const directSnapshot = await db.collection('directChats').where('participants', 'array-contains', currentUser.uid).get();
+  for (const doc of directSnapshot.docs) await clearMessagesForChat(doc.id, 'direct');
+  const memberSnapshot = await db.collection('groupMembers').where('userId', '==', currentUser.uid).get();
+  for (const memberDoc of memberSnapshot.docs) await clearMessagesForChat(memberDoc.data().groupId, 'group');
+  resetChatPanel();
+  loadCurrentChatList();
+  showToast('Chat history cleared for you');
+}
 
 // ========================================
 // CORE CONTROLLERS & APP INITIALIZATIONS
@@ -5249,18 +5675,53 @@ function switchTab(tab) {
   const chatsList = document.getElementById('chatsList');
   const groupsList = document.getElementById('groupsList');
   const statusList = document.getElementById('statusList');
+  const statusActions = document.getElementById('statusActions');
   
   chatsList.style.display = tab === 'groups' || tab === 'status' ? 'none' : 'block';
   groupsList.style.display = tab === 'groups' ? 'block' : 'none';
   if (statusList) statusList.style.display = tab === 'status' ? 'block' : 'none';
+  if (statusActions) statusActions.style.display = tab === 'status' ? 'flex' : 'none';
   
-  loadCurrentChatList();
+  if (tab === 'status') loadStatusList();
+  else loadCurrentChatList();
 }
 
 function bindSearchInput() {
   const input = document.getElementById('searchInput');
   if (!input) return;
   input.addEventListener('input', (e) => { searchUsersRealtime(e.target.value); });
+}
+
+function updateInChatSearch() {
+  const term = (document.getElementById('inChatSearchInput')?.value || '').trim().toLowerCase();
+  document.querySelectorAll('.message.search-hit, .message.search-current').forEach(el => {
+    el.classList.remove('search-hit', 'search-current');
+  });
+  currentSearchResults = [];
+  currentSearchIndex = 0;
+  if (!term) {
+    document.getElementById('searchResultCount').textContent = '';
+    return;
+  }
+  currentSearchResults = [...document.querySelectorAll('#messagesArea .message')]
+    .filter(el => el.textContent.toLowerCase().includes(term));
+  currentSearchResults.forEach(el => el.classList.add('search-hit'));
+  focusCurrentSearchResult();
+}
+
+function focusCurrentSearchResult() {
+  const count = currentSearchResults.length;
+  const countEl = document.getElementById('searchResultCount');
+  if (!count) {
+    if (countEl) countEl.textContent = '0/0';
+    return;
+  }
+  currentSearchResults.forEach(el => el.classList.remove('search-current'));
+  currentSearchIndex = (currentSearchIndex + count) % count;
+  const item = currentSearchResults[currentSearchIndex];
+  item.classList.add('search-current');
+  item.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  if (countEl) countEl.textContent = `${currentSearchIndex + 1}/${count}`;
 }
 
 function toggleDarkMode() {
@@ -5313,6 +5774,8 @@ registerFcmTokenForCurrentUser({
       onlineStatus: 'online',
       lastSeen: new Date()
     }, { merge: true });
+    const latestUserDoc = await userRef.get();
+    privacySettings = { ...privacySettings, ...(latestUserDoc.data()?.privacySettings || {}) };
     await reconnectSameEmailProfile();
     
     await loadBlockedUsers();
@@ -5325,17 +5788,68 @@ registerFcmTokenForCurrentUser({
     setupRequestListeners();
     listenForIncomingCalls();
     setupCallPushNotifications().catch(() => {});
+    startScheduledMessageWorker();
     switchTab('all');
     revealAuthenticatedApp();
   });
 
   // Attach Event Handlers
   document.getElementById('sendBtn')?.addEventListener('click', sendMessage);
-  document.getElementById('messageInput')?.addEventListener('keypress', (e) => { if (e.key === 'Enter') sendMessage(); });
+  document.getElementById('messageInput')?.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
+    }
+  });
   document.getElementById('messageInput')?.addEventListener('input', () => {
   saveCurrentDraft();
   sendTypingIndicator();
 });
+  window.addEventListener('beforeunload', saveCurrentDraft);
+  document.getElementById('cancelReplyBtn')?.addEventListener('click', () => {
+    currentReplyTo = null;
+    document.getElementById('replyPreviewBar').style.display = 'none';
+  });
+  document.getElementById('searchChatBtn')?.addEventListener('click', () => {
+    document.getElementById('inChatSearchBar').style.display = 'flex';
+    document.getElementById('inChatSearchInput')?.focus();
+  });
+  document.getElementById('inChatSearchInput')?.addEventListener('input', updateInChatSearch);
+  document.getElementById('prevSearchBtn')?.addEventListener('click', () => {
+    currentSearchIndex -= 1;
+    focusCurrentSearchResult();
+  });
+  document.getElementById('nextSearchBtn')?.addEventListener('click', () => {
+    currentSearchIndex += 1;
+    focusCurrentSearchResult();
+  });
+  document.getElementById('closeSearchBtn')?.addEventListener('click', () => {
+    document.getElementById('inChatSearchBar').style.display = 'none';
+    document.getElementById('inChatSearchInput').value = '';
+    updateInChatSearch();
+  });
+  document.getElementById('pollBtn')?.addEventListener('click', () => sendPoll().catch(() => showToast('Could not create poll', 'error')));
+  document.getElementById('scheduleMsgBtn')?.addEventListener('click', () => scheduleCurrentMessage().catch(() => showToast('Could not schedule message', 'error')));
+  const voiceButton = document.getElementById('voiceMsgBtn');
+  voiceButton?.addEventListener('pointerdown', event => {
+    event.preventDefault();
+    startVoiceRecording();
+  });
+  voiceButton?.addEventListener('pointerup', event => {
+    event.preventDefault();
+    stopVoiceRecording();
+  });
+  voiceButton?.addEventListener('pointerleave', () => {
+    if (isRecording) stopVoiceRecording();
+  });
+  document.getElementById('cancelRecordingBtn')?.addEventListener('click', cancelVoiceRecording);
+  document.getElementById('emojiBtn')?.addEventListener('click', () => {
+    const input = document.getElementById('messageInput');
+    if (!input) return;
+    input.value += '🙂';
+    input.focus();
+    saveCurrentDraft();
+  });
   document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () => switchTab(t.dataset.tab)));
   document.getElementById('profileBtn')?.addEventListener('click', showProfileModal);
   document.getElementById('logoutBtn')?.addEventListener('click', () => auth.signOut().then(() => window.location.replace('login.html')));
@@ -5350,6 +5864,78 @@ registerFcmTokenForCurrentUser({
   document.querySelectorAll('.closeProfileModal').forEach(b => b.addEventListener('click', () => document.getElementById('profileModal').style.display = 'none'));
   document.getElementById('fileInput')?.addEventListener('change', (e) => handleFileUpload(e.target.files[0]));
   document.getElementById('attachBtn')?.addEventListener('click', () => document.getElementById('fileInput').click());
+  document.getElementById('blockedUsersBtn')?.addEventListener('click', showBlockedUsersModal);
+  document.getElementById('quickRepliesSettingsBtn')?.addEventListener('click', showQuickRepliesModal);
+  document.getElementById('starredMessagesBtn')?.addEventListener('click', showStarredMessagesModal);
+  document.querySelectorAll('.closeStarredModal').forEach(btn => btn.addEventListener('click', () => document.getElementById('starredMessagesModal').style.display = 'none'));
+  document.getElementById('addQuickReplyBtn')?.addEventListener('click', async () => {
+    const input = document.getElementById('newQuickReplyText');
+    const text = input?.value?.trim();
+    if (!text) return;
+    input.value = '';
+    await addQuickReply(text);
+  });
+  document.querySelectorAll('.closeBlockedModal').forEach(btn => btn.addEventListener('click', () => document.getElementById('blockedModal').style.display = 'none'));
+  document.querySelectorAll('.closeQuickRepliesModal').forEach(btn => btn.addEventListener('click', () => document.getElementById('quickRepliesModal').style.display = 'none'));
+  document.getElementById('exportChatsBtn')?.addEventListener('click', exportCurrentChat);
+  document.getElementById('clearAllChatsBtn')?.addEventListener('click', clearAllChats);
+  document.getElementById('changeNameBtn')?.addEventListener('click', async () => {
+    const name = prompt('Enter display name', document.getElementById('profileName')?.textContent || '');
+    if (!name || !name.trim()) return;
+    await updateDisplayName(name.trim());
+    await currentUser.updateProfile({ displayName: name.trim() }).catch(() => {});
+    document.getElementById('profileName').textContent = name.trim();
+    document.getElementById('userName').textContent = name.trim();
+  });
+  document.getElementById('changeEmailBtn')?.addEventListener('click', changeEmail);
+  document.getElementById('changePhoneBtn')?.addEventListener('click', async () => {
+    const phone = prompt('Enter 10-digit Indian phone number', document.getElementById('profilePhone')?.textContent || '');
+    if (!phone) return;
+    if (!isValidIndianPhone(phone)) {
+      showToast('Enter a valid 10-digit Indian phone number', 'error');
+      return;
+    }
+    await db.collection('users').doc(currentUser.uid).update({ phone, phoneNumber: phone });
+    document.getElementById('profilePhone').textContent = phone;
+    showToast('Phone updated');
+  });
+  document.getElementById('deactivateAccountBtn')?.addEventListener('click', deactivateAccount);
+  document.getElementById('callNetworkSettingsBtn')?.addEventListener('click', updateTurnServerSettings);
+  document.getElementById('profileStatusText')?.addEventListener('change', (event) => updateStatusText(event.target.value.trim()));
+  ['hideReadReceipts', 'hideTypingIndicator', 'hideLastSeen'].forEach(id => {
+    document.getElementById(id)?.addEventListener('change', async (event) => {
+      privacySettings[id] = event.target.checked;
+      await updatePrivacySettings();
+      showToast('Privacy updated');
+    });
+  });
+  document.getElementById('createStatusBtn')?.addEventListener('click', () => {
+    document.getElementById('createStatusModal').style.display = 'flex';
+  });
+  document.querySelectorAll('.closeStatusModal').forEach(btn => btn.addEventListener('click', () => document.getElementById('createStatusModal').style.display = 'none'));
+  document.querySelectorAll('.closeStatusViewer').forEach(btn => btn.addEventListener('click', () => document.getElementById('statusViewerModal').style.display = 'none'));
+  document.getElementById('publishStatusBtn')?.addEventListener('click', () => publishStatus().catch(() => showToast('Could not publish status', 'error')));
+  document.getElementById('statusImageBtn')?.addEventListener('click', () => document.getElementById('statusImageInput').click());
+  document.getElementById('statusImageInput')?.addEventListener('change', async (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    try {
+      const url = await uploadToCloudinary(file);
+      statusImageAttachment = { type: 'image', url, filename: file.name, size: file.size };
+      const preview = document.getElementById('statusImagePreview');
+      preview.innerHTML = `<img src="${url}" alt="">`;
+      preview.style.display = 'block';
+    } catch (error) {
+      showToast('Status image upload failed', 'error');
+    } finally {
+      event.target.value = '';
+    }
+  });
+  document.querySelectorAll('.closeForwardModal').forEach(btn => btn.addEventListener('click', () => {
+    currentForwardMessage = null;
+    document.getElementById('forwardModal').style.display = 'none';
+  }));
+  document.getElementById('forwardSearch')?.addEventListener('input', event => renderForwardChats(event.target.value));
 
   // Setup Modals
   const createGroupModal = document.getElementById('createGroupModal');
@@ -5359,6 +5945,84 @@ registerFcmTokenForCurrentUser({
     const groupName = document.getElementById('newGroupName').value; 
     const members = document.getElementById('newGroupMembers').value; 
     if (groupName.trim()) { await createGroup(groupName, members); createGroupModal.style.display = 'none'; } 
+  });
+  const joinGroupModal = document.getElementById('joinGroupModal');
+  document.getElementById('showJoinGroupBtn')?.addEventListener('click', () => { joinGroupModal.style.display = 'flex'; });
+  document.querySelectorAll('.closeJoinModal').forEach(btn => btn.addEventListener('click', () => { joinGroupModal.style.display = 'none'; }));
+  document.querySelector('.confirmJoinBtn')?.addEventListener('click', async () => {
+    await joinGroup(document.getElementById('joinGroupCodeInput')?.value || '');
+    joinGroupModal.style.display = 'none';
+  });
+  document.getElementById('groupInfoBtn')?.addEventListener('click', showGroupInfo);
+  document.querySelectorAll('.closeGroupInfoModal').forEach(btn => btn.addEventListener('click', () => document.getElementById('groupInfoModal').style.display = 'none'));
+  document.getElementById('copyGroupCodeBtn')?.addEventListener('click', () => copyToClipboard(document.getElementById('groupCodeDisplay')?.textContent || ''));
+  document.getElementById('addMemberBtn')?.addEventListener('click', async () => {
+    await addMemberToGroup(document.getElementById('addMemberEmail')?.value || '');
+    document.getElementById('addMemberEmail').value = '';
+    showGroupInfo();
+  });
+  document.getElementById('leaveGroupBtn')?.addEventListener('click', leaveGroup);
+  document.getElementById('deleteGroupBtn')?.addEventListener('click', deleteGroup);
+  document.getElementById('editGroupNameInput')?.addEventListener('change', event => updateGroupName(event.target.value));
+  document.getElementById('groupAvatarLarge')?.addEventListener('click', () => document.getElementById('groupIconInput')?.click());
+  document.getElementById('groupIconInput')?.addEventListener('change', event => {
+    const file = event.target.files?.[0];
+    if (file) updateGroupIcon(file).catch(() => showToast('Group icon upload failed', 'error'));
+    event.target.value = '';
+  });
+  document.getElementById('groupAdminsOnlySend')?.addEventListener('change', async event => {
+    if (!currentGroup || !isCurrentUserGroupAdmin()) return;
+    await db.collection('groups').doc(currentGroup.id).update({ onlyAdminsCanSend: event.target.checked });
+    currentGroup.onlyAdminsCanSend = event.target.checked;
+    showToast('Group permissions updated');
+  });
+  document.getElementById('groupAdminsOnlyEdit')?.addEventListener('change', async event => {
+    if (!currentGroup || !isCurrentUserGroupAdmin()) return;
+    await db.collection('groups').doc(currentGroup.id).update({ onlyAdminsCanEdit: event.target.checked });
+    currentGroup.onlyAdminsCanEdit = event.target.checked;
+    showToast('Group permissions updated');
+  });
+  document.getElementById('groupMembersList')?.addEventListener('click', event => {
+    const adminBtn = event.target.closest('.make-admin-btn');
+    const removeBtn = event.target.closest('.remove-member-btn');
+    if (adminBtn) makeAdmin(currentGroup.id, adminBtn.dataset.id, adminBtn.dataset.name);
+    if (removeBtn) removeMember(currentGroup.id, removeBtn.dataset.id, removeBtn.dataset.name);
+  });
+  document.getElementById('chatHeaderInfo')?.addEventListener('click', showChatInfo);
+  document.getElementById('chatInfoMenuItem')?.addEventListener('click', () => {
+    document.getElementById('chatContextMenu').style.display = 'none';
+    showChatInfo();
+  });
+  document.querySelectorAll('.closeChatInfoModal').forEach(btn => btn.addEventListener('click', () => document.getElementById('chatInfoModal').style.display = 'none'));
+  document.querySelectorAll('.shared-tab').forEach(tabBtn => tabBtn.addEventListener('click', () => {
+    document.querySelectorAll('.shared-tab').forEach(btn => btn.classList.remove('active'));
+    tabBtn.classList.add('active');
+    renderSharedContent(tabBtn.dataset.sharedTab);
+  }));
+  document.getElementById('chatInfoMuteBtn')?.addEventListener('click', async () => {
+    if (!currentChat) return;
+    await muteChat(currentChat.id, currentChatType, 'always');
+    showToast('Chat muted');
+  });
+  document.getElementById('chatInfoWallpaperBtn')?.addEventListener('click', () => openWallpaperModal('current'));
+  document.getElementById('wallpaperBtn')?.addEventListener('click', () => openWallpaperModal('current'));
+  document.getElementById('chatInfoBlockBtn')?.addEventListener('click', async () => {
+    if (currentChatType !== 'direct' || !currentChat?.otherUserId) return;
+    await blockUser(currentChat.otherUserId, currentChat.otherUserName || 'User');
+    document.getElementById('chatInfoModal').style.display = 'none';
+    resetChatPanel();
+  });
+  document.getElementById('muteChatMenuItem')?.addEventListener('click', async () => {
+    if (!contextMenuTarget) return;
+    await muteChat(contextMenuTarget.dataset.chatId, contextMenuTarget.dataset.chatType, 'always');
+    document.getElementById('chatContextMenu').style.display = 'none';
+    loadCurrentChatList();
+  });
+  document.getElementById('archiveChatMenuItem')?.addEventListener('click', async () => {
+    if (!contextMenuTarget) return;
+    await archiveChat(contextMenuTarget.dataset.chatId, contextMenuTarget.dataset.chatType, contextMenuTarget.dataset.chatName || 'Chat');
+    document.getElementById('chatContextMenu').style.display = 'none';
+    loadCurrentChatList();
   });
 
   // Wallpaper settings attachments
@@ -5371,6 +6035,21 @@ registerFcmTokenForCurrentUser({
     else setGlobalWallpaper(wp);
     document.getElementById('wallpaperModal').style.display = 'none';
   }));
+  document.getElementById('uploadWallpaperBtn')?.addEventListener('click', () => document.getElementById('wallpaperUploadInput')?.click());
+  document.getElementById('wallpaperUploadInput')?.addEventListener('change', async (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    try {
+      const url = await uploadToCloudinary(file);
+      if (wallpaperModalMode === 'current' && currentChat) setWallpaperForChat(currentChat.id, url);
+      else setGlobalWallpaper(url);
+      document.getElementById('wallpaperModal').style.display = 'none';
+    } catch (error) {
+      showToast('Wallpaper upload failed', 'error');
+    } finally {
+      event.target.value = '';
+    }
+  });
 
   if (localStorage.getItem('darkMode') === 'true') document.body.classList.add('dark');
 }
@@ -5416,6 +6095,16 @@ document.getElementById('chatsList')?.addEventListener('contextmenu', (e) => {
 });
 
 document.getElementById('favoriteChatMenuItem')?.addEventListener('click', async () => {
+  if (!contextMenuTarget) return;
+  const chatId = contextMenuTarget.dataset.chatId;
+  const chatType = contextMenuTarget.dataset.chatType;
+  if (chatId && chatType) {
+    await toggleFavoriteChat(chatId, chatType);
+  }
+  document.getElementById('chatContextMenu').style.display = 'none';
+});
+
+document.getElementById('pinChatMenuItem')?.addEventListener('click', async () => {
   if (!contextMenuTarget) return;
   const chatId = contextMenuTarget.dataset.chatId;
   const chatType = contextMenuTarget.dataset.chatType;
@@ -5522,9 +6211,10 @@ function setupCallControlButtons() {
 
   if (addParticipantBtn && addParticipantBtn.dataset.ready !== 'true') {
     addParticipantBtn.dataset.ready = 'true';
+    addParticipantBtn.disabled = true;
+    addParticipantBtn.title = 'Group calls are not available yet';
     addParticipantBtn.addEventListener('click', () => {
-      flashCallControlLabel(addParticipantBtn, 'Not ready');
-      showToast('Adding people to an active call needs group-call signaling support.', 'error');
+      flashCallControlLabel(addParticipantBtn, 'Group calls unavailable');
     });
   }
 }
