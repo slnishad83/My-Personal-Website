@@ -39,7 +39,9 @@ const authPersistenceReady = Promise.race([
   new Promise(resolve => setTimeout(resolve, 3000))
 ]).catch(error => {
   console.error('Persistence error:', error);
-});registerFcmTokenForCurrentUser
+});
+
+registerFcmTokenForCurrentUser({ force: false });
 const db = firebase.firestore();
 const storage = firebase.storage();
 const isNativeAndroidApp =
@@ -398,39 +400,39 @@ function renderChatListItems(items, container) {
     if (item.otherUserId || item.user?.id) chatDiv.dataset.otherUserId = item.otherUserId || item.user.id;
     chatDiv.dataset.chatName = item.name || '';
     chatDiv.dataset.aliasDirectIds = (item.aliasDirectIds || []).join(',');
-    
+
     if (currentChat?.id === item.id && (currentChatType === item.type || (item.type === 'saved' && currentChat?.isSaved))) {
       chatDiv.classList.add('active');
     }
-    
+
     const unread = item.unreadCount ? `<span class="unread-pill">${item.unreadCount}</span>` : '';
     const draftPreview = getDraftPreviewForItem(item);
     const normalPreview = item.preview || '';
-const missedPreviewPattern = /missed\s+(voice|video|audio)?\s*(call|note)?/i;
-const activeIds = [
-  currentChat?.id,
-  currentChat?.otherUserId,
-  ...(currentChat?.aliasDirectIds || [])
-].filter(Boolean).map(String);
+    const missedPreviewPattern = /missed\s+(voice|video|audio)?\s*(call|note)?/i;
+    const activeIds = [
+      currentChat?.id,
+      currentChat?.otherUserId,
+      ...(currentChat?.aliasDirectIds || [])
+    ].filter(Boolean).map(String);
 
-const rowIds = [
-  item.id,
-  item.otherUserId,
-  ...(item.aliasDirectIds || [])
-].filter(Boolean).map(String);
+    const rowIds = [
+      item.id,
+      item.otherUserId,
+      ...(item.aliasDirectIds || [])
+    ].filter(Boolean).map(String);
 
-const isOpenChatRow = currentChat && rowIds.some(id => activeIds.includes(id));
+    const isOpenChatRow = currentChat && rowIds.some(id => activeIds.includes(id));
 
-const previewHtml = isOpenChatRow
-  ? ''
-  : (draftPreview || escapeHtml(normalPreview));
-    
+    const previewHtml = isOpenChatRow
+      ? ''
+      : (draftPreview || escapeHtml(normalPreview));
+
     // VISUAL BUG FIX: Skip rendering action prompt chips for verified active logs
     let statusChip = '';
     if (item.type !== 'direct' && item.type !== 'saved' && item.requestState) {
       statusChip = `<span class="status-chip ${item.requestState.status}">${escapeHtml(item.requestState.label)}</span>`;
     }
-    
+
     chatDiv.innerHTML = `
       <div class="list-avatar">${item.avatar}</div>
       <div class="list-info" style="flex:1; cursor:pointer;">
@@ -442,16 +444,16 @@ const previewHtml = isOpenChatRow
       <button class="list-item-menu mute-chat-btn" data-chat-id="${item.id}" data-chat-type="${item.type}">🔇</button>
       <button class="list-item-menu archive-chat-btn" data-chat-id="${item.id}" data-chat-type="${item.type}" data-chat-name="${escapeHtml(item.name)}">📦</button>
     `;
-    
+
     if (item.type === 'user' || item.type === 'saved') {
       chatDiv.querySelectorAll('.mute-chat-btn, .archive-chat-btn').forEach(btn => btn.remove());
     }
-    
+
     chatDiv.querySelector('.archive-chat-btn')?.addEventListener('click', async (e) => {
       e.stopPropagation();
       if (confirm(`Archive "${item.name}"?`)) await archiveChat(item.id, item.type, item.name);
     });
-    
+
     chatDiv.querySelector('.mute-chat-btn')?.addEventListener('click', async (e) => {
       e.stopPropagation();
       const duration = prompt('Mute for: 8h, 1w, or always?', '8h');
@@ -460,7 +462,7 @@ const previewHtml = isOpenChatRow
         loadCurrentChatList();
       }
     });
-    
+
     chatDiv.addEventListener('click', () => {
       if (item.type === 'user') handleUserSelection(item.user || item.rawUser || item);
       else if (item.type === 'saved') startSavedMessages();
@@ -470,7 +472,7 @@ const previewHtml = isOpenChatRow
         startDirectChat(doc.exists ? { id: item.otherUserId, ...doc.data(), aliasDirectIds: item.aliasDirectIds } : { id: item.otherUserId, displayName: item.name, aliasDirectIds: item.aliasDirectIds });
       });
     });
-    
+
     container.appendChild(chatDiv);
   });
 }
@@ -782,7 +784,7 @@ function setupMobileBackGuard() {
       minimizeActiveCallUi();
       try {
         history.pushState({ teamChatView: 'call-minimized' }, '', window.location.href);
-      } catch (error) {}
+      } catch (error) { }
       return;
     }
     if (!shouldUseMobileBackGuard()) return;
@@ -973,7 +975,7 @@ function setupActiveCallBackProtection() {
       // Put the user back on an app state so repeated back does not immediately destroy UI.
       try {
         history.pushState({ teamChatView: 'call-minimized' }, '', window.location.href);
-      } catch (error) {}
+      } catch (error) { }
     }
   });
 
@@ -1008,7 +1010,7 @@ function resetChatPanel() {
   document.getElementById('inputArea').style.display = 'none';
   document.getElementById('groupInfoBtn').style.display = 'none';
   closeMobileChatPanel();
-  
+
 }
 
 function setChatHeaderAvatar(content) {
@@ -1212,7 +1214,7 @@ async function setCameraOff(isOff) {
       if (localVideo) {
         localVideo.srcObject = localCallStream;
         localVideo.style.visibility = '';
-        localVideo.play?.().catch(() => {});
+        localVideo.play?.().catch(() => { });
       }
     } catch (error) {
       cameraOff = true;
@@ -1261,7 +1263,7 @@ async function switchCameraFacingMode() {
     if (localVideo) {
       localVideo.srcObject = localCallStream;
       localVideo.style.visibility = '';
-      localVideo.play?.().catch(() => {});
+      localVideo.play?.().catch(() => { });
     }
 
     updateCallControlState();
@@ -1412,7 +1414,7 @@ async function registerFcmTokenForCurrentUser({ force = false } = {}) {
     messaging = messaging || firebase.messaging();
 
     const registration = await navigator.serviceWorker.register('sw.js?v=134-call-bg', { scope: './' });
-    await registration.update?.().catch(() => {});
+    await registration.update?.().catch(() => { });
     const readyRegistration = await navigator.serviceWorker.ready;
 
     const token = await messaging.getToken({
@@ -1597,7 +1599,7 @@ async function setupCallPushNotifications({ forcePrompt = false } = {}) {
                 { action: 'open', title: 'Open' }
               ]
             });
-          }).catch(() => {});
+          }).catch(() => { });
         }
       }
     });
@@ -1640,7 +1642,7 @@ function stopIncomingRingtone() {
   vibrationTimer = null;
   navigator.vibrate?.(0);
   if (ringtoneAudioContext) {
-    ringtoneAudioContext.close().catch(() => {});
+    ringtoneAudioContext.close().catch(() => { });
     ringtoneAudioContext = null;
   }
 }
@@ -1686,7 +1688,7 @@ async function writeCallHistory(status) {
     status: 'active',
     lastMessage: text,
     lastMessageTime: firebase.firestore.FieldValue.serverTimestamp()
-  }, { merge: true }).catch(() => {});
+  }, { merge: true }).catch(() => { });
 }
 
 function scheduleCallTimeout(callRef, ownerRole) {
@@ -2108,16 +2110,16 @@ async function preparePeerConnection(callId, role) {
   updateCallControlState();
   document.getElementById('localVideo').srcObject = localCallStream;
   setTimeout(() => {
-  setupCallPreviewInteractions();
-}, 300);
+    setupCallPreviewInteractions();
+  }, 300);
   localCallStream.getTracks().forEach(track => {
     const sender = peerConnection.addTrack(track, localCallStream);
     if (track.kind === 'video') cameraSender = sender;
   });
   peerConnection.ontrack = event => {
     event.streams[0].getTracks().forEach(track => remoteCallStream.addTrack(track));
-    remoteAudio?.play?.().catch(() => {});
-    remoteVideo?.play?.().catch(() => {});
+    remoteAudio?.play?.().catch(() => { });
+    remoteVideo?.play?.().catch(() => { });
   };
   peerConnection.onconnectionstatechange = async () => {
     if (!peerConnection) return;
@@ -2140,7 +2142,7 @@ async function preparePeerConnection(callId, role) {
         await db.collection('calls').doc(activeCall.id).set({
           status: 'connected',
           connectedAt: firebase.firestore.FieldValue.serverTimestamp()
-        }, { merge: true }).catch(() => {});
+        }, { merge: true }).catch(() => { });
       }
     } else if (state === 'connecting') {
       setCallStatus('Connecting...');
@@ -2175,7 +2177,7 @@ async function upgradeVoiceCallToVideo() {
     if (localVideo) {
       localVideo.srcObject = localCallStream;
       localVideo.style.display = 'block';
-      localVideo.play?.().catch(() => {});
+      localVideo.play?.().catch(() => { });
     }
     if (remoteVideo) remoteVideo.style.display = 'block';
     currentCallType = 'video';
@@ -2268,7 +2270,7 @@ async function startCall(type = 'voice') {
 
   // Ask once for notification permission from the caller's user action.
   // This also stores this device's FCM token so future incoming calls can wake this device.
-  ensureCallNotificationPermission().catch(() => {});
+  ensureCallNotificationPermission().catch(() => { });
 
   currentCallType = type;
   const callRef = db.collection('calls').doc();
@@ -2517,7 +2519,7 @@ async function flushOfflineQueue() {
   if (queue.length !== remaining.length) {
     showToast('Queued messages sent');
     loadMessages();
-loadMessages();
+    loadMessages();
     loadCurrentChatList();
   }
 }
@@ -2959,12 +2961,12 @@ async function uploadToCloudinary(file) {
       method: 'POST',
       body: formData
     })
-    .then(res => res.json())
-    .then(data => {
-      if (data.secure_url) resolve(data.secure_url);
-      else reject('Upload failed');
-    })
-    .catch(reject);
+      .then(res => res.json())
+      .then(data => {
+        if (data.secure_url) resolve(data.secure_url);
+        else reject('Upload failed');
+      })
+      .catch(reject);
   });
 }
 
@@ -2978,12 +2980,12 @@ async function uploadDocument(file) {
       method: 'POST',
       body: formData
     })
-    .then(res => res.json())
-    .then(data => {
-      if (data.secure_url) resolve(data.secure_url);
-      else reject('Upload failed');
-    })
-    .catch(reject);
+      .then(res => res.json())
+      .then(data => {
+        if (data.secure_url) resolve(data.secure_url);
+        else reject('Upload failed');
+      })
+      .catch(reject);
   });
 }
 
@@ -2993,14 +2995,14 @@ async function uploadDocument(file) {
 async function searchUsersRealtime(searchTerm) {
   const chatsList = document.getElementById('chatsList');
   if (!chatsList) return;
-  
+
   if (!searchTerm || searchTerm.trim() === '') {
     loadCurrentChatList();
     return;
   }
-  
+
   const term = searchTerm.trim().toLowerCase();
-  
+
   if (currentViewTab === 'groups') {
     searchGroupsRealtime(term);
     return;
@@ -3022,28 +3024,28 @@ async function loadAllChatsList(searchTerm = '') {
 
   // 1. Compile conversations from active chat histories
   let directItems = [];
-let groupItems = [];
+  let groupItems = [];
 
-try {
-  directItems = await buildDirectChatItems();
-} catch (error) {
-  console.error('buildDirectChatItems failed:', error);
-}
+  try {
+    directItems = await buildDirectChatItems();
+  } catch (error) {
+    console.error('buildDirectChatItems failed:', error);
+  }
 
-try {
-  groupItems = await buildGroupChatItems();
-} catch (error) {
-  console.error('buildGroupChatItems failed:', error);
-}
+  try {
+    groupItems = await buildGroupChatItems();
+  } catch (error) {
+    console.error('buildGroupChatItems failed:', error);
+  }
   const allItems = [...directItems, ...groupItems];
   updateUnreadBadges(allItems);
-  
+
   let items = [...allItems];
   if (currentViewTab === 'favorites') items = items.filter(item => item.isFavorite);
   if (currentViewTab === 'unread') items = items.filter(item => item.unreadCount > 0);
-  
+
   const term = searchTerm.trim().toLowerCase();
-  
+
   if (term) {
     // MATCH 1: Search existing active chat logs.
     // Name matching is intentionally strict and only matches a complete name block.
@@ -3053,7 +3055,7 @@ try {
       email: item.email,
       phone: item.phone
     }, term));
-    
+
     // Track unique IDs that are already matching in your chat history view
     const visibleUserIds = new Set();
     chatMatches.forEach(item => {
@@ -3062,7 +3064,7 @@ try {
     });
 
     const userMatches = [];
-    
+
     await refreshAllUsersOnce();
 
     // MATCH 2: Look through the directory for users you haven't messaged yet
@@ -3074,7 +3076,7 @@ try {
 
       if (isMatch) {
         const requestState = await getContactRequestState(user.id); // Fixed reference pass
-        
+
         userMatches.push({
           id: `user_${user.id}`,
           type: 'user',
@@ -3091,7 +3093,7 @@ try {
         });
       }
     }
-    
+
     // FIXED CORRECTION LAYER: Read directly from item.id to completely avoid mapping crashes
     const cleanUserMatches = Array.from(new Map(userMatches.map(u => [u.id, u])).values());
     const messageMatches = await searchMessagesInChats(allItems, term);
@@ -3102,7 +3104,7 @@ try {
     if (currentViewTab === 'favorites') items = items.filter(item => item.isFavorite);
     if (currentViewTab === 'unread') items = items.filter(item => item.unreadCount > 0);
   }
-  
+
   // Sort chronologically and update layout view
   items.sort((a, b) => b.lastMessageTime - a.lastMessageTime || a.name.localeCompare(b.name));
   renderChatListItems(items, chatsList);
@@ -3355,18 +3357,18 @@ async function loadReceivedRequests() {
 
 function setupRequestListeners() {
   document.getElementById("requestHeader")?.addEventListener("click", () => {
-  const section = document.querySelector(".request-section");
-  const toggle = document.getElementById("requestToggle");
+    const section = document.querySelector(".request-section");
+    const toggle = document.getElementById("requestToggle");
 
-  section?.classList.toggle("expanded");
+    section?.classList.toggle("expanded");
 
-  if (toggle) {
-    toggle.textContent =
-      section?.classList.contains("expanded") ? "▲" : "▼";
-  }
+    if (toggle) {
+      toggle.textContent =
+        section?.classList.contains("expanded") ? "▲" : "▼";
+    }
 
-  loadReceivedRequests();
-});
+    loadReceivedRequests();
+  });
   if (!currentUser) return;
   if (chatRequestsUnsubscribe) chatRequestsUnsubscribe();
   if (groupInvitesUnsubscribe) groupInvitesUnsubscribe();
@@ -3484,15 +3486,15 @@ async function blockRequestSender(type, requestId, fromUserId, fromUserName) {
 function searchGroupsRealtime(searchTerm) {
   const groupsList = document.getElementById('groupsList');
   if (!groupsList) return;
-  
+
   if (!searchTerm || searchTerm.trim() === '') {
     loadGroupsList();
     return;
   }
-  
+
   const term = searchTerm.toLowerCase().trim();
   const allGroups = [];
-  
+
   db.collection('groupMembers').where('userId', '==', currentUser.uid).get().then(async snapshot => {
     for (const doc of snapshot.docs) {
       const groupDoc = await db.collection('groups').doc(doc.data().groupId).get();
@@ -3500,12 +3502,12 @@ function searchGroupsRealtime(searchTerm) {
         allGroups.push({ id: groupDoc.id, name: groupDoc.data().name, code: groupDoc.data().code, icon: groupDoc.data().icon });
       }
     }
-    
+
     if (allGroups.length === 0) {
       groupsList.innerHTML = '<div class="empty-state" style="padding:40px;">👥 No matching groups</div>';
       return;
     }
-    
+
     groupsList.innerHTML = '';
     allGroups.forEach(group => {
       const groupDiv = document.createElement('div');
@@ -3599,7 +3601,7 @@ async function muteChat(chatId, chatType, duration) {
   let muteUntil = null;
   if (duration === '8h') muteUntil = new Date(Date.now() + 8 * 60 * 60 * 1000);
   else if (duration === '1w') muteUntil = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
-  
+
   await db.collection('mutedChats').add({
     userId: currentUser.uid, chatId, chatType, muteUntil,
     mutedAt: firebase.firestore.FieldValue.serverTimestamp()
@@ -3656,12 +3658,12 @@ async function deleteQuickReply(replyId) {
 async function pinMessage(messageId, messageData) {
   const existing = await db.collection('pinnedMessages')
     .where('chatId', '==', currentChat.id).where('userId', '==', currentUser.uid).get();
-  
+
   if (existing.size >= 5) {
     showToast('You can only pin up to 5 messages', 'error');
     return;
   }
-  
+
   await db.collection('pinnedMessages').add({
     chatId: currentChat.id, messageId, userId: currentUser.uid,
     text: messageData.text, senderName: messageData.senderName,
@@ -3678,7 +3680,7 @@ async function unpinMessage(pinId) {
 
 async function loadPinnedMessages() {
   if (!currentChat) return;
-  
+
   let snapshot;
   try {
     snapshot = await db.collection('pinnedMessages')
@@ -3700,18 +3702,18 @@ async function loadPinnedMessages() {
     });
     snapshot.docs = docs;
   }
-  
+
   pinnedMessages = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
   const pinnedSection = document.getElementById('pinnedSection');
   const pinnedList = document.getElementById('pinnedMessagesList');
   const pinnedCount = document.getElementById('pinnedCount');
   if (!pinnedSection) return;
-  
+
   if (pinnedMessages.length === 0) {
     pinnedSection.style.display = 'none';
     return;
   }
-  
+
   pinnedSection.style.display = 'block';
   if (pinnedCount) pinnedCount.textContent = pinnedMessages.length;
   if (pinnedList) {
@@ -3733,7 +3735,7 @@ async function loadPinnedMessages() {
 async function addReaction(messageId, reaction) {
   const reactionRef = db.collection('messageReactions').doc(`${messageId}_${currentUser.uid}`);
   const existing = await reactionRef.get();
-  
+
   if (existing.exists && existing.data().reaction === reaction) {
     await reactionRef.delete();
   } else {
@@ -3749,9 +3751,9 @@ async function loadReactions(messageId, container) {
   const snapshot = await db.collection('messageReactions').where('messageId', '==', messageId).get();
   const reactions = {};
   snapshot.forEach(doc => { reactions[doc.data().reaction] = (reactions[doc.data().reaction] || 0) + 1; });
-  
+
   if (Object.keys(reactions).length === 0) return;
-  
+
   const reactionDiv = document.createElement('div');
   reactionDiv.className = 'reactions-container';
   for (const [reaction, count] of Object.entries(reactions)) {
@@ -3772,11 +3774,11 @@ async function startVoiceRecording() {
   try {
     const stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, sampleRate: 44100 } });
     if (!window.MediaRecorder) { showToast('Voice recording not supported', 'error'); return; }
-    
+
     const mimeType = MediaRecorder.isTypeSupported('audio/mp4') ? 'audio/mp4' : 'audio/webm';
     mediaRecorder = new MediaRecorder(stream, { mimeType });
     audioChunks = [];
-    
+
     mediaRecorder.ondataavailable = event => { if (event.data.size > 0) audioChunks.push(event.data); };
     mediaRecorder.onstop = async () => {
       const audioBlob = new Blob(audioChunks, { type: mimeType === 'audio/mp4' ? 'audio/mp4' : 'audio/webm' });
@@ -3794,12 +3796,12 @@ async function startVoiceRecording() {
       } catch (error) { showToast('Failed to send voice message', 'error'); }
       stream.getTracks().forEach(track => track.stop());
     };
-    
+
     mediaRecorder.start(100);
     isRecording = true;
     recordingStartTime = Date.now();
     document.getElementById('voiceRecordingIndicator')?.classList.add('show');
-    
+
     recordingTimer = setInterval(() => {
       const elapsed = Math.floor((Date.now() - recordingStartTime) / 1000);
       const minutes = Math.floor(elapsed / 60);
@@ -3824,7 +3826,7 @@ function stopVoiceRecording() {
 
 function cancelVoiceRecording() {
   if (mediaRecorder && isRecording) {
-    mediaRecorder.onstop = () => {};
+    mediaRecorder.onstop = () => { };
     mediaRecorder.stop();
     isRecording = false;
     clearInterval(recordingTimer);
@@ -3927,12 +3929,12 @@ function showFirstTimePhoneModal() {
   if (!modal) return;
   setupCallPreviewInteractions();
   modal.style.display = 'flex';
-  
+
   document.getElementById('skipPhoneBtn').onclick = async () => {
     await db.collection('users').doc(currentUser.uid).update({ isFirstTime: false });
     modal.style.display = 'none';
   };
-  
+
   document.getElementById('savePhoneFirstBtn').onclick = async () => {
     const phone = document.getElementById('firstTimePhone').value;
     if (isValidIndianPhone(phone)) {
@@ -4040,13 +4042,13 @@ function openWallpaperModal(mode) {
 function applyCurrentChatWallpaper() {
   const messagesArea = document.getElementById('messagesArea');
   if (!messagesArea || !currentChat) return;
-  
+
   messagesArea.style.cssText = '';
   messagesArea.style.backgroundImage = '';
   messagesArea.style.backgroundColor = '';
-  
+
   let wallpaper = chatWallpapers[currentChat.id] || chatWallpapers['global'];
-  
+
   if (!wallpaper || wallpaper === 'default') {
     messagesArea.style.backgroundColor = document.body.classList.contains('dark') ? '#1a1a2e' : '#f8fafc';
   } else if (wallpaper === 'dark') {
@@ -4064,7 +4066,7 @@ function applyCurrentChatWallpaper() {
     messagesArea.style.backgroundSize = 'cover';
     messagesArea.style.backgroundPosition = 'center';
   }
-  
+
   messagesArea.style.display = 'none';
   messagesArea.offsetHeight; // Force layouts
   messagesArea.style.display = 'flex';
@@ -4388,7 +4390,7 @@ async function buildDirectChatItems() {
     const onlineStatus = userData.onlineStatus || 'offline';
     const presenceText = getPresenceText(userData);
     const preview = chatData.lastMessage || 'Tap to open chat';
-    
+
     items.push({
       id: chat.id,
       type: 'direct',
@@ -4479,22 +4481,22 @@ async function loadGroupsList() {
   const groupsList = document.getElementById('groupsList');
   if (!groupsList) return;
   const enhancedGroups = await buildGroupChatItems();
-  
+
   const filteredGroups = enhancedGroups.filter(group => {
     if (currentViewTab === 'favorites' && !group.isFavorite) return false;
     if (currentViewTab === 'unread' && group.unreadCount === 0) return false;
     return true;
   });
 
-filteredGroups.sort((a, b) =>
-  b.lastMessageTime - a.lastMessageTime || a.name.localeCompare(b.name)
-);
+  filteredGroups.sort((a, b) =>
+    b.lastMessageTime - a.lastMessageTime || a.name.localeCompare(b.name)
+  );
 
   if (filteredGroups.length === 0) {
     groupsList.innerHTML = `<div class="empty-state" style="padding:40px;">No groups found.</div>`;
     return;
   }
-  
+
   groupsList.innerHTML = '';
   for (const group of filteredGroups) {
     const isMuted = isChatMuted(group.id);
@@ -4684,13 +4686,13 @@ async function showGroupInfo() {
   document.getElementById('groupCodeDisplay').textContent = group.code;
   document.getElementById('groupAdminsOnlySend').checked = !!group.onlyAdminsCanSend;
   document.getElementById('groupAdminsOnlyEdit').checked = group.onlyAdminsCanEdit !== false;
-  
+
   const currentUserRole = currentGroupMembers.find(m => m.id === currentUser.uid)?.role;
   const isAdmin = currentUserRole === 'admin';
   document.getElementById('addMemberBtn').style.display = isAdmin ? 'block' : 'none';
   document.getElementById('addMemberEmail').style.display = isAdmin ? 'inline-block' : 'none';
   document.getElementById('deleteGroupBtn').style.display = isAdmin ? 'block' : 'none';
-  
+
   const membersList = document.getElementById('groupMembersList');
   membersList.innerHTML = '';
   for (const member of currentGroupMembers) {
@@ -4794,7 +4796,7 @@ async function loadStatusList() {
   } catch (e) {
     statuses = [];
   }
-  
+
   if (!statuses.length) {
     statusList.innerHTML = '<div class="empty-state">No stories shared</div>';
     return;
@@ -5169,12 +5171,12 @@ function loadMessages() {
   let query = currentChatType === 'direct' && directIds.length > 1
     ? db.collection('messages').where('directId', 'in', directIds)
     : db.collection('messages').where(currentChatType === 'direct' ? 'directId' : 'groupId', '==', currentChat.id).orderBy('timestamp', 'asc');
-  
+
   messagesUnsubscribe = query.onSnapshot(snapshot => {
     if (!messagesArea) return;
     messagesArea.innerHTML = '';
     if (snapshot.empty) { messagesArea.innerHTML = '<div class="empty-state">No messages here yet.</div>'; return; }
-    
+
     const docs = [...snapshot.docs].sort((a, b) => {
       const aTime = a.data().timestamp?.toMillis?.() || 0;
       const bTime = b.data().timestamp?.toMillis?.() || 0;
@@ -5187,18 +5189,18 @@ function loadMessages() {
       const isMyMessage = msg.senderId === currentUser.uid;
       const messageDiv = document.createElement('div');
       messageDiv.className = `message ${isMyMessage ? 'my-message' : ''}`;
-      
+
       if (msg.type === 'call') {
         messageDiv.className = 'message call-message';
         messageDiv.innerHTML = renderCallMessage(msg);
         messagesArea.appendChild(messageDiv); return;
       }
-      
+
       let replyHtml = msg.replyTo ? `<div class="reply-preview"><strong>${escapeHtml(msg.replyTo.senderName)}</strong>: ${escapeHtml(msg.replyTo.text || 'Media')}</div>` : '';
       let attachmentHtml = msg.attachment ? renderAttachment(msg.attachment) : '';
       let pollHtml = msg.poll ? renderPollMessage(doc.id, msg) : '';
       let textContent = msg.deletedForEveryone ? 'This message was deleted' : (msg.text || '');
-      
+
       messageDiv.innerHTML = `
         <div class="message-bubble">
           ${!isMyMessage ? `<div class="message-sender">${escapeHtml(msg.senderName)}</div>` : ''}
@@ -5242,10 +5244,10 @@ async function sendMessage() {
 
   const directParticipants = currentChatType === 'direct'
     ? [...new Set([
-        currentUser.uid,
-        ...(String(currentChat?.id || '').split('_').filter(Boolean)),
-        currentChat?.otherUserId
-      ].filter(Boolean))]
+      currentUser.uid,
+      ...(String(currentChat?.id || '').split('_').filter(Boolean)),
+      currentChat?.otherUserId
+    ].filter(Boolean))]
     : [];
 
   const messageData = {
@@ -5511,7 +5513,7 @@ async function processScheduledMessages() {
   if (!snapshot || snapshot.empty) return;
   for (const doc of snapshot.docs) {
     await sendScheduledMessage({ id: doc.id, data: doc.data() }).catch(async () => {
-      await doc.ref.update({ status: 'failed', failedAt: firebase.firestore.FieldValue.serverTimestamp() }).catch(() => {});
+      await doc.ref.update({ status: 'failed', failedAt: firebase.firestore.FieldValue.serverTimestamp() }).catch(() => { });
     });
   }
   loadCurrentChatList();
@@ -5519,8 +5521,8 @@ async function processScheduledMessages() {
 
 function startScheduledMessageWorker() {
   clearInterval(scheduledMessagesTimer);
-  processScheduledMessages().catch(() => {});
-  scheduledMessagesTimer = setInterval(() => processScheduledMessages().catch(() => {}), 60000);
+  processScheduledMessages().catch(() => { });
+  scheduledMessagesTimer = setInterval(() => processScheduledMessages().catch(() => { }), 60000);
 }
 
 function copyToClipboard(text) { navigator.clipboard.writeText(text); showToast('Copied text!'); }
@@ -5687,7 +5689,7 @@ function showContextMenu(x, y, messageId, messageData, isMyMessage) {
   if (existing) existing.remove();
   const menu = document.createElement('div');
   menu.className = 'context-menu message-context-menu';
-  
+
   const items = [
     { text: 'Forward', action: () => openForwardModal(messageId, messageData) },
     { text: '📋 Copy Text', action: () => copyToClipboard(messageData.text) },
@@ -5700,7 +5702,7 @@ function showContextMenu(x, y, messageId, messageData, isMyMessage) {
     items.push({ text: 'Edit Message', action: () => editMessage(messageId, messageData) });
     items.push({ text: '🗑️ Delete Everyone', action: () => deleteMessageForEveryone(messageId) });
   }
-  
+
   items.forEach(item => {
     const div = document.createElement('div'); div.className = 'context-menu-item';
     div.textContent = item.text; div.onclick = () => { item.action(); menu.remove(); };
@@ -5858,17 +5860,17 @@ function switchTab(tab) {
   currentViewTab = tab;
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
   document.querySelector(`.tab[data-tab="${tab}"]`)?.classList.add('active');
-  
+
   const chatsList = document.getElementById('chatsList');
   const groupsList = document.getElementById('groupsList');
   const statusList = document.getElementById('statusList');
   const statusActions = document.getElementById('statusActions');
-  
+
   chatsList.style.display = tab === 'groups' || tab === 'status' ? 'none' : 'block';
   groupsList.style.display = tab === 'groups' ? 'block' : 'none';
   if (statusList) statusList.style.display = tab === 'status' ? 'block' : 'none';
   if (statusActions) statusActions.style.display = tab === 'status' ? 'flex' : 'none';
-  
+
   if (tab === 'status') loadStatusList();
   else loadCurrentChatList();
 }
@@ -5931,11 +5933,11 @@ async function init() {
   setupActiveCallBackProtection();
   setupCallNotificationRefreshHooks();
   const notificationPermission =
-  typeof Notification !== 'undefined' ? Notification.permission : 'denied';
+    typeof Notification !== 'undefined' ? Notification.permission : 'denied';
 
-registerFcmTokenForCurrentUser({
-  force: notificationPermission !== 'granted'
-});
+  registerFcmTokenForCurrentUser({
+    force: notificationPermission !== 'granted'
+  });
 
   bindSearchInput();
   auth.onAuthStateChanged(async (user) => {
@@ -5948,7 +5950,7 @@ registerFcmTokenForCurrentUser({
     }
     currentUser = user;
     requestNativeNotificationPermission();
-    
+
     document.getElementById('userName').textContent = user.displayName || user.email.split('@')[0];
     const userRef = db.collection('users').doc(user.uid);
     await userRef.set({
@@ -5964,7 +5966,7 @@ registerFcmTokenForCurrentUser({
     const latestUserDoc = await userRef.get();
     privacySettings = { ...privacySettings, ...(latestUserDoc.data()?.privacySettings || {}) };
     await reconnectSameEmailProfile();
-    
+
     await loadBlockedUsers();
     await loadMutedChats();
     await loadFavoriteChatIds();
@@ -5974,7 +5976,7 @@ registerFcmTokenForCurrentUser({
     setupChatListListeners();
     setupRequestListeners();
     listenForIncomingCalls();
-    setupCallPushNotifications().catch(() => {});
+    setupCallPushNotifications().catch(() => { });
     startScheduledMessageWorker();
     switchTab('all');
     revealAuthenticatedApp();
@@ -5990,10 +5992,10 @@ registerFcmTokenForCurrentUser({
     }
   });
   document.getElementById('messageInput')?.addEventListener('input', () => {
-  saveCurrentDraft();
-  updateMentionSuggestions();
-  sendTypingIndicator();
-});
+    saveCurrentDraft();
+    updateMentionSuggestions();
+    sendTypingIndicator();
+  });
   document.addEventListener('click', event => {
     if (!event.target.closest('#mentionSuggestions') && event.target.id !== 'messageInput') hideMentionSuggestions();
   });
@@ -6054,7 +6056,7 @@ registerFcmTokenForCurrentUser({
   document.getElementById('endCallBtn')?.addEventListener('click', () => endActiveCall('ended'));
   document.getElementById('closeCallBtn')?.addEventListener('click', handleCallCloseAction);
   document.getElementById('darkModeBtn')?.addEventListener('click', toggleDarkMode);
-  
+
   document.querySelectorAll('.closeProfileModal').forEach(b => b.addEventListener('click', () => document.getElementById('profileModal').style.display = 'none'));
   document.getElementById('fileInput')?.addEventListener('change', (e) => handleFileUpload(e.target.files[0]));
   document.getElementById('attachBtn')?.addEventListener('click', () => document.getElementById('fileInput').click());
@@ -6077,7 +6079,7 @@ registerFcmTokenForCurrentUser({
     const name = prompt('Enter display name', document.getElementById('profileName')?.textContent || '');
     if (!name || !name.trim()) return;
     await updateDisplayName(name.trim());
-    await currentUser.updateProfile({ displayName: name.trim() }).catch(() => {});
+    await currentUser.updateProfile({ displayName: name.trim() }).catch(() => { });
     document.getElementById('profileName').textContent = name.trim();
     document.getElementById('userName').textContent = name.trim();
   });
@@ -6135,10 +6137,10 @@ registerFcmTokenForCurrentUser({
   const createGroupModal = document.getElementById('createGroupModal');
   document.getElementById('createGroupBtn')?.addEventListener('click', () => { createGroupModal.style.display = 'flex'; });
   document.querySelectorAll('.closeCreateModal, .cancelGroupBtn').forEach(btn => { btn.addEventListener('click', () => { createGroupModal.style.display = 'none'; }); });
-  document.querySelector('.confirmGroupBtn')?.addEventListener('click', async () => { 
-    const groupName = document.getElementById('newGroupName').value; 
-    const members = document.getElementById('newGroupMembers').value; 
-    if (groupName.trim()) { await createGroup(groupName, members); createGroupModal.style.display = 'none'; } 
+  document.querySelector('.confirmGroupBtn')?.addEventListener('click', async () => {
+    const groupName = document.getElementById('newGroupName').value;
+    const members = document.getElementById('newGroupMembers').value;
+    if (groupName.trim()) { await createGroup(groupName, members); createGroupModal.style.display = 'none'; }
   });
   const joinGroupModal = document.getElementById('joinGroupModal');
   document.getElementById('showJoinGroupBtn')?.addEventListener('click', () => { joinGroupModal.style.display = 'flex'; });
@@ -6270,17 +6272,27 @@ init();
 // SIDEBAR CONTEXT MENU HANDLERS
 // ========================================
 let contextMenuTarget = null;
+// ADD THIS NEW CODE HERE:
+// This tells the app to hide the menu whenever you click anywhere else
+window.addEventListener('click', (e) => {
+  // Hide the message menu
+  const msgMenu = document.querySelector('.message-context-menu');
+  if (msgMenu && !e.target.closest('.message-context-menu')) {
+    msgMenu.remove();
+  }
 
-window.addEventListener('click', () => {
-  const menu = document.getElementById('chatContextMenu');
-  if (menu) menu.style.display = 'none';
+  // Hide the sidebar menu
+  const sidebarMenu = document.getElementById('chatContextMenu');
+  if (sidebarMenu && !e.target.closest('#chatContextMenu')) {
+    sidebarMenu.style.display = 'none';
+  }
 });
 
 document.getElementById('chatsList')?.addEventListener('contextmenu', (e) => {
   const item = e.target.closest('.list-item');
   if (!item) return;
   e.preventDefault();
-  
+
   contextMenuTarget = item;
   const menu = document.getElementById('chatContextMenu');
   if (menu) {
@@ -6440,6 +6452,51 @@ document.addEventListener('visibilitychange', () => {
   if (!document.hidden && currentChat) markMessagesAsRead();
 });
 
+// Keep read receipts reliable when mobile browsers/PWA pause and resume the page.
+window.addEventListener('focus', () => {
+  if (currentChat) markMessagesAsRead();
+});
+
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden && activeCall && activeCallMode !== 'incoming') {
+    minimizeActiveCallUi('background');
+  }
+  if (!document.hidden && activeCall && callMiniBar?.classList.contains('show')) {
+    updateCallMiniBar(callStartedAt ? 'Connected' : 'Call running');
+  }
+  if (!document.hidden && currentChat) markMessagesAsRead();
+});
+
+// Keep read receipts reliable when mobile browsers/PWA pause and resume the page.
+window.addEventListener('focus', () => {
+  if (currentChat) markMessagesAsRead();
+});
+
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden && activeCall && activeCallMode !== 'incoming') {
+    minimizeActiveCallUi('background');
+  }
+  if (!document.hidden && activeCall && callMiniBar?.classList.contains('show')) {
+    updateCallMiniBar(callStartedAt ? 'Connected' : 'Call running');
+  }
+  if (!document.hidden && currentChat) markMessagesAsRead();
+});
+
 window.enableTeamChatCallNotifications = function enableTeamChatCallNotifications() {
   return registerFcmTokenForCurrentUser({ force: true });
 };
+
+// GLOBAL CLICK HANDLER (This fixes your menu issue)
+window.addEventListener('click', (e) => {
+  // Hide the message context menu if clicked outside
+  const msgMenu = document.querySelector('.message-context-menu');
+  if (msgMenu && !e.target.closest('.message-context-menu')) {
+    msgMenu.remove();
+  }
+
+  // Hide the sidebar context menu if clicked outside
+  const sidebarMenu = document.getElementById('chatContextMenu');
+  if (sidebarMenu && !e.target.closest('#chatContextMenu')) {
+    sidebarMenu.style.display = 'none';
+  }
+});
