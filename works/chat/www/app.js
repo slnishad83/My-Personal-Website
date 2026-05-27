@@ -5394,7 +5394,12 @@ function parseScheduledDate(value = '') {
   return Number.isNaN(date.getTime()) ? null : date;
 }
 
-async function scheduleCurrentMessage() {
+function toLocalDateTimeValue(date = new Date()) {
+  const pad = value => String(value).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
+function openScheduleMessageModal() {
   if (!currentChat || !currentUser) {
     showToast('Open a chat before scheduling', 'error');
     return;
@@ -5405,9 +5410,33 @@ async function scheduleCurrentMessage() {
     showToast('Type a text message before scheduling', 'error');
     return;
   }
-  const whenText = prompt('Send when? Use YYYY-MM-DD HH:mm', '');
-  if (!whenText) return;
-  const dueAt = parseScheduledDate(whenText);
+  const modal = document.getElementById('scheduleMessageModal');
+  const textInput = document.getElementById('scheduleMessageText');
+  const timeInput = document.getElementById('scheduleMessageTime');
+  if (!modal || !textInput || !timeInput) return;
+  const defaultDate = new Date(Date.now() + 10 * 60 * 1000);
+  textInput.value = text;
+  timeInput.min = toLocalDateTimeValue(new Date(Date.now() + 60 * 1000));
+  timeInput.value = toLocalDateTimeValue(defaultDate);
+  modal.style.display = 'flex';
+}
+
+function closeScheduleMessageModal() {
+  const modal = document.getElementById('scheduleMessageModal');
+  if (modal) modal.style.display = 'none';
+}
+
+async function scheduleCurrentMessage() {
+  if (!currentChat || !currentUser) return;
+  const textInput = document.getElementById('scheduleMessageText');
+  const timeInput = document.getElementById('scheduleMessageTime');
+  const composer = document.getElementById('messageInput');
+  const text = (textInput?.value || '').trim();
+  if (!text) {
+    showToast('Type a message before scheduling', 'error');
+    return;
+  }
+  const dueAt = parseScheduledDate(timeInput?.value || '');
   if (!dueAt || dueAt <= new Date()) {
     showToast('Choose a future date and time', 'error');
     return;
@@ -5422,8 +5451,9 @@ async function scheduleCurrentMessage() {
     dueAt,
     createdAt: firebase.firestore.FieldValue.serverTimestamp()
   });
-  input.value = '';
+  if (composer && composer.value.trim() === text) composer.value = '';
   clearCurrentDraft();
+  closeScheduleMessageModal();
   showToast('Message scheduled');
 }
 
@@ -5657,7 +5687,6 @@ function showContextMenu(x, y, messageId, messageData, isMyMessage) {
   if (existing) existing.remove();
   const menu = document.createElement('div');
   menu.className = 'context-menu message-context-menu';
-  menu.style.display = 'block'; menu.style.left = `${x}px`; menu.style.top = `${y}px`;
   
   const items = [
     { text: 'Forward', action: () => openForwardModal(messageId, messageData) },
@@ -5678,6 +5707,21 @@ function showContextMenu(x, y, messageId, messageData, isMyMessage) {
     menu.appendChild(div);
   });
   document.body.appendChild(menu);
+  positionContextMenu(menu, x, y);
+}
+
+function positionContextMenu(menu, x, y) {
+  if (!menu) return;
+  const margin = 8;
+  menu.style.display = 'block';
+  menu.style.left = '0px';
+  menu.style.top = '0px';
+  menu.style.maxHeight = `${Math.max(180, window.innerHeight - margin * 2)}px`;
+  const rect = menu.getBoundingClientRect();
+  const left = Math.min(Math.max(margin, x), Math.max(margin, window.innerWidth - rect.width - margin));
+  const top = Math.min(Math.max(margin, y), Math.max(margin, window.innerHeight - rect.height - margin));
+  menu.style.left = `${left}px`;
+  menu.style.top = `${top}px`;
 }
 
 // ========================================
@@ -5977,7 +6021,9 @@ registerFcmTokenForCurrentUser({
     updateInChatSearch();
   });
   document.getElementById('pollBtn')?.addEventListener('click', () => sendPoll().catch(() => showToast('Could not create poll', 'error')));
-  document.getElementById('scheduleMsgBtn')?.addEventListener('click', () => scheduleCurrentMessage().catch(() => showToast('Could not schedule message', 'error')));
+  document.getElementById('scheduleMsgBtn')?.addEventListener('click', openScheduleMessageModal);
+  document.getElementById('confirmScheduleMsgBtn')?.addEventListener('click', () => scheduleCurrentMessage().catch(() => showToast('Could not schedule message', 'error')));
+  document.querySelectorAll('.closeScheduleModal').forEach(btn => btn.addEventListener('click', closeScheduleMessageModal));
   const voiceButton = document.getElementById('voiceMsgBtn');
   voiceButton?.addEventListener('pointerdown', event => {
     event.preventDefault();
@@ -6238,9 +6284,19 @@ document.getElementById('chatsList')?.addEventListener('contextmenu', (e) => {
   contextMenuTarget = item;
   const menu = document.getElementById('chatContextMenu');
   if (menu) {
-    menu.style.display = 'block';
-    menu.style.left = `${e.clientX}px`;
-    menu.style.top = `${e.clientY}px`;
+    positionContextMenu(menu, e.clientX, e.clientY);
+  }
+});
+
+document.getElementById('groupsList')?.addEventListener('contextmenu', (e) => {
+  const item = e.target.closest('.list-item');
+  if (!item) return;
+  e.preventDefault();
+
+  contextMenuTarget = item;
+  const menu = document.getElementById('chatContextMenu');
+  if (menu) {
+    positionContextMenu(menu, e.clientX, e.clientY);
   }
 });
 

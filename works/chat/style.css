@@ -1445,6 +1445,18 @@ body.dark .message.call-message .message-bubble {
   font-size: 21px;
 }
 
+#scheduleMsgBtn {
+  background: rgba(0, 168, 132, 0.1);
+  color: var(--brand-dark);
+  font-size: 0;
+}
+
+#scheduleMsgBtn::before {
+  content: "⏱";
+  font-size: 18px;
+  line-height: 1;
+}
+
 .emoji-btn:hover,
 .voice-msg-btn:hover,
 .attach-btn:hover {
@@ -1466,6 +1478,31 @@ body.dark .message.call-message .message-bubble {
   color: var(--muted);
   font-size: 12px;
   line-height: 1.35;
+}
+
+.form-label {
+  display: block;
+  margin: 0 0 6px;
+  color: var(--muted-strong);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.schedule-modal-content textarea,
+.schedule-modal-content input[type="datetime-local"] {
+  width: 100%;
+  margin-bottom: 14px;
+  padding: 11px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--panel);
+  color: var(--text);
+  font: inherit;
+}
+
+.schedule-modal-content textarea {
+  resize: vertical;
+  min-height: 96px;
 }
 
 .send-btn {
@@ -1685,8 +1722,11 @@ body.dark .message.call-message .message-bubble {
   z-index: 10000;
   display: none;
   min-width: 210px;
+  width: max-content;
+  max-width: min(280px, calc(100vw - 16px));
   max-height: calc(100vh - 16px);
   overflow-y: auto;
+  overscroll-behavior: contain;
   border: 1px solid var(--border);
   border-radius: 8px;
   background: var(--panel);
@@ -1697,10 +1737,13 @@ body.dark .message.call-message .message-bubble {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 12px 16px;
+  min-height: 42px;
+  padding: 10px 14px;
   border-bottom: 1px solid var(--border);
   color: var(--text);
   font-size: 14px;
+  line-height: 1.25;
+  white-space: nowrap;
   cursor: pointer;
 }
 
@@ -1714,6 +1757,11 @@ body.dark .message.call-message .message-bubble {
 
 .context-menu-item.danger,
 .setting-item.danger {
+  color: #b42318;
+}
+
+#deleteChatMenuItem,
+.message-context-menu .context-menu-item:last-child {
   color: #b42318;
 }
 

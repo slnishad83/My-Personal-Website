@@ -1147,118 +1147,79 @@
       style="display: none"
     />
 
+    <div id="scheduleMessageModal" class="modal" style="display: none">
+      <div class="modal-content schedule-modal-content">
+        <div class="modal-header">
+          <h3>Schedule Message</h3>
+          <span class="close-modal closeScheduleModal">&times;</span>
+        </div>
+        <div class="modal-body">
+          <label class="form-label" for="scheduleMessageText">Message</label>
+          <textarea id="scheduleMessageText" rows="4" placeholder="Type a message..."></textarea>
+          <label class="form-label" for="scheduleMessageTime">Send time</label>
+          <input id="scheduleMessageTime" type="datetime-local" />
+          <p class="form-hint">Scheduled messages send when this app is open and online.</p>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-outline closeScheduleModal">Cancel</button>
+          <button id="confirmScheduleMsgBtn" class="btn btn-primary">Schedule</button>
+        </div>
+      </div>
+    </div>
+
     <!-- Context Menu for Chats -->
-    <div
-      id="chatContextMenu"
-      class="context-menu"
-      style="
-        display: none;
-        position: fixed;
-        background: white;
-        border-radius: 8px;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-        z-index: 10000;
-        min-width: 200px;
-      "
-    >
+    <div id="chatContextMenu" class="context-menu" style="display: none">
       <div
         class="context-menu-item"
         id="pinChatMenuItem"
-        style="
-          padding: 12px 16px;
-          cursor: pointer;
-          border-bottom: 1px solid #eee;
-          border-radius: 8px 8px 0 0;
-        "
       >
         📌 Pin Chat
       </div>
       <div
         class="context-menu-item"
         id="chatInfoMenuItem"
-        style="
-          padding: 12px 16px;
-          cursor: pointer;
-          border-bottom: 1px solid #eee;
-        "
       >
         Info
       </div>
       <div
         class="context-menu-item"
         id="muteChatMenuItem"
-        style="
-          padding: 12px 16px;
-          cursor: pointer;
-          border-bottom: 1px solid #eee;
-        "
       >
         🔇 Mute
       </div>
       <div
         class="context-menu-item"
         id="archiveChatMenuItem"
-        style="
-          padding: 12px 16px;
-          cursor: pointer;
-          border-bottom: 1px solid #eee;
-        "
       >
         📦 Archive
       </div>
       <div
         class="context-menu-item"
         id="favoriteChatMenuItem"
-        style="
-          padding: 12px 16px;
-          cursor: pointer;
-          border-bottom: 1px solid #eee;
-        "
       >
         ⭐ Add to favorite
       </div>
       <div
         class="context-menu-item"
         id="markReadMenuItem"
-        style="
-          padding: 12px 16px;
-          cursor: pointer;
-          border-bottom: 1px solid #eee;
-        "
       >
         📩 Mark as unread
       </div>
       <div
         class="context-menu-item"
         id="blockUserMenuItem"
-        style="
-          padding: 12px 16px;
-          cursor: pointer;
-          border-bottom: 1px solid #eee;
-        "
       >
         🚫 Block
       </div>
       <div
         class="context-menu-item"
         id="clearChatMenuItem"
-        style="
-          padding: 12px 16px;
-          cursor: pointer;
-          border-bottom: 1px solid #eee;
-        "
       >
         Clear chat
       </div>
       <div
         class="context-menu-item"
         id="deleteChatMenuItem"
-        style="
-          padding: 12px 16px;
-          cursor: pointer;
-          color: #dc2626;
-          border-radius: 0 0 8px 8px;
-        "
       >
         🗑️ Delete
       </div>
