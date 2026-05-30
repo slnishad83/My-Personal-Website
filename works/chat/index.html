@@ -68,7 +68,7 @@
       <div class="sidebar" id="sidebar">
         <div class="sidebar-header">
           <div class="user-info" id="profileBtn">
-            <div class="user-avatar" id="userAvatar">ðŸ‘¤</div>
+            <div class="user-avatar" id="userAvatar">U</div>
             <div>
               <div class="user-name" id="userName">Loading...</div>
               <div class="user-status-text" id="userStatusText">Online</div>
@@ -96,10 +96,8 @@
               </span>
               <span class="install-app-label">Install App</span>
             </button>
-            <button class="icon-btn" id="darkModeBtn" title="Dark Mode">
-              ðŸŒ™
-            </button>
-            <button class="logout-btn" id="logoutBtn" title="Logout">ðŸšª</button>
+            <button class="icon-btn" id="darkModeBtn" title="Dark Mode">◐</button>
+            <button class="logout-btn" id="logoutBtn" title="Logout">⎋</button>
           </div>
         </div>
 
@@ -113,14 +111,14 @@
 
         <div class="request-section">
           <div class="request-header" id="requestHeader">
-            ðŸ’Œ Chat Requests
+            Chat Requests
             <span style="display: inline-flex; align-items: center; gap: 8px">
               <span
                 id="requestBadge"
                 class="badge"
                 style="display: none"
               ></span>
-              <span id="requestToggle">â–¼</span>
+              <span id="requestToggle">▼</span>
             </span>
           </div>
           <div id="requestList" class="list">
@@ -130,8 +128,8 @@
 
         <div class="archive-section">
           <div class="archive-header" id="archiveHeader">
-            <span>ðŸ“¦ Archived Chats</span>
-            <span id="archiveToggle">â–¼</span>
+            <span>Archived Chats</span>
+            <span id="archiveToggle">▼</span>
           </div>
           <div id="archiveList" class="archive-list"></div>
         </div>
@@ -142,7 +140,7 @@
           style="display: none"
         >
           <div class="pinned-header">
-            <span>ðŸ“Œ Pinned Messages</span>
+            <span>Pinned Messages</span>
             <span class="pinned-count" id="pinnedCount">0</span>
           </div>
           <div id="pinnedMessagesList" class="pinned-messages-list"></div>
@@ -158,15 +156,15 @@
             ></span>
           </button>
           <button class="tab" data-tab="unread">
-            ðŸ”” Unread
+            Unread
             <span
               id="unreadTabBadge"
               class="tab-badge"
               style="display: none"
             ></span>
           </button>
-          <button class="tab" data-tab="favorites">â­ Favorites</button>
-          <button class="tab" data-tab="groups">ðŸ‘¥ Groups</button>
+          <button class="tab" data-tab="favorites">Favorites</button>
+          <button class="tab" data-tab="groups">Groups</button>
           <button class="tab" data-tab="status">Status</button>
         </div>
 
@@ -1171,60 +1169,15 @@
 
     <!-- Context Menu for Chats -->
     <div id="chatContextMenu" class="context-menu" style="display: none">
-      <div
-        class="context-menu-item"
-        id="pinChatMenuItem"
-      >
-        ðŸ“Œ Pin Chat
-      </div>
-      <div
-        class="context-menu-item"
-        id="chatInfoMenuItem"
-      >
-        Info
-      </div>
-      <div
-        class="context-menu-item"
-        id="muteChatMenuItem"
-      >
-        ðŸ”‡ Mute
-      </div>
-      <div
-        class="context-menu-item"
-        id="archiveChatMenuItem"
-      >
-        ðŸ“¦ Archive
-      </div>
-      <div
-        class="context-menu-item"
-        id="favoriteChatMenuItem"
-      >
-        â­ Add to favorite
-      </div>
-      <div
-        class="context-menu-item"
-        id="markReadMenuItem"
-      >
-        ðŸ“© Mark as unread
-      </div>
-      <div
-        class="context-menu-item"
-        id="blockUserMenuItem"
-      >
-        ðŸš« Block
-      </div>
-      <div
-        class="context-menu-item"
-        id="clearChatMenuItem"
-      >
-        Clear chat
-      </div>
-      <div
-        class="context-menu-item"
-        id="deleteChatMenuItem"
-      >
-        ðŸ—‘ï¸ Delete
-      </div>
+      <div class="context-menu-item" id="pinChatMenuItem">Pin Chat</div>
+      <div class="context-menu-item" id="chatInfoMenuItem">Info</div>
+      <div class="context-menu-item" id="muteChatMenuItem">Mute</div>
+      <div class="context-menu-item" id="archiveChatMenuItem">Archive</div>
+      <div class="context-menu-item" id="favoriteChatMenuItem">Add to Favorite</div>
+      <div class="context-menu-item" id="markReadMenuItem">Mark as Unread</div>
+      <div class="context-menu-item" id="blockUserMenuItem">Block</div>
+      <div class="context-menu-item" id="clearChatMenuItem">Clear Chat</div>
+      <div class="context-menu-item" id="deleteChatMenuItem">Delete</div>
     </div>
 
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-compat.js"></script>

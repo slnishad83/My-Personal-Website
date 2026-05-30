@@ -5739,13 +5739,19 @@ function showContextMenu(x, y, messageId, messageData, isMyMessage) {
 function positionContextMenu(menu, x, y) {
   if (!menu) return;
   const margin = 8;
+  const touchBottomInset = window.matchMedia?.('(pointer: coarse)').matches ? 56 : 0;
+  const viewportWidth = window.visualViewport?.width || window.innerWidth;
+  const viewportHeight = window.visualViewport?.height || window.innerHeight;
+  const viewportOffsetTop = window.visualViewport?.offsetTop || 0;
   menu.style.display = 'block';
   menu.style.left = '0px';
   menu.style.top = '0px';
-  menu.style.maxHeight = `${Math.max(180, window.innerHeight - margin * 2)}px`;
+  menu.style.maxHeight = `${Math.max(180, viewportHeight - margin * 2 - touchBottomInset)}px`;
   const rect = menu.getBoundingClientRect();
-  const left = Math.min(Math.max(margin, x), Math.max(margin, window.innerWidth - rect.width - margin));
-  const top = Math.min(Math.max(margin, y), Math.max(margin, window.innerHeight - rect.height - margin));
+  const left = Math.min(Math.max(margin, x), Math.max(margin, viewportWidth - rect.width - margin));
+  const topMin = viewportOffsetTop + margin;
+  const topMax = viewportOffsetTop + viewportHeight - rect.height - margin - touchBottomInset;
+  const top = Math.min(Math.max(topMin, y), Math.max(topMin, topMax));
   menu.style.left = `${left}px`;
   menu.style.top = `${top}px`;
 }
@@ -5753,7 +5759,7 @@ function positionContextMenu(menu, x, y) {
 function getHomePanelHtml() {
   return `
     <div class="home-panel">
-      <div class="home-panel-icon">💬</div>
+      <div class="home-panel-icon">TC</div>
       <h3 class="home-panel-title">Team Chat for Web</h3>
       <p class="home-panel-text">Select a chat from the list to start messaging.</p>
       <p class="home-panel-note">Keep your phone and browser connected to stay in sync.</p>
