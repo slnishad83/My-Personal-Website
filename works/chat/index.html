@@ -1,4 +1,4 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
@@ -68,7 +68,7 @@
       <div class="sidebar" id="sidebar">
         <div class="sidebar-header">
           <div class="user-info" id="profileBtn">
-            <div class="user-avatar" id="userAvatar">👤</div>
+            <div class="user-avatar" id="userAvatar">ðŸ‘¤</div>
             <div>
               <div class="user-name" id="userName">Loading...</div>
               <div class="user-status-text" id="userStatusText">Online</div>
@@ -97,9 +97,9 @@
               <span class="install-app-label">Install App</span>
             </button>
             <button class="icon-btn" id="darkModeBtn" title="Dark Mode">
-              🌙
+              ðŸŒ™
             </button>
-            <button class="logout-btn" id="logoutBtn" title="Logout">🚪</button>
+            <button class="logout-btn" id="logoutBtn" title="Logout">ðŸšª</button>
           </div>
         </div>
 
@@ -113,14 +113,14 @@
 
         <div class="request-section">
           <div class="request-header" id="requestHeader">
-            💌 Chat Requests
+            ðŸ’Œ Chat Requests
             <span style="display: inline-flex; align-items: center; gap: 8px">
               <span
                 id="requestBadge"
                 class="badge"
                 style="display: none"
               ></span>
-              <span id="requestToggle">▼</span>
+              <span id="requestToggle">â–¼</span>
             </span>
           </div>
           <div id="requestList" class="list">
@@ -130,8 +130,8 @@
 
         <div class="archive-section">
           <div class="archive-header" id="archiveHeader">
-            <span>📦 Archived Chats</span>
-            <span id="archiveToggle">▼</span>
+            <span>ðŸ“¦ Archived Chats</span>
+            <span id="archiveToggle">â–¼</span>
           </div>
           <div id="archiveList" class="archive-list"></div>
         </div>
@@ -142,7 +142,7 @@
           style="display: none"
         >
           <div class="pinned-header">
-            <span>📌 Pinned Messages</span>
+            <span>ðŸ“Œ Pinned Messages</span>
             <span class="pinned-count" id="pinnedCount">0</span>
           </div>
           <div id="pinnedMessagesList" class="pinned-messages-list"></div>
@@ -158,15 +158,15 @@
             ></span>
           </button>
           <button class="tab" data-tab="unread">
-            🔔 Unread
+            ðŸ”” Unread
             <span
               id="unreadTabBadge"
               class="tab-badge"
               style="display: none"
             ></span>
           </button>
-          <button class="tab" data-tab="favorites">⭐ Favorites</button>
-          <button class="tab" data-tab="groups">👥 Groups</button>
+          <button class="tab" data-tab="favorites">â­ Favorites</button>
+          <button class="tab" data-tab="groups">ðŸ‘¥ Groups</button>
           <button class="tab" data-tab="status">Status</button>
         </div>
 
@@ -186,10 +186,10 @@
             class="join-btn"
             style="flex: 1; background: #10b981"
           >
-            ➕ New Group
+            âž• New Group
           </button>
           <button id="showJoinGroupBtn" class="join-btn" style="flex: 1">
-            🔗 Join Group
+            ðŸ”— Join Group
           </button>
         </div>
         <div class="group-actions" id="statusActions" style="display: none">
@@ -223,7 +223,7 @@
               title="Voice call"
               aria-label="Voice call"
             >
-              📞
+              ðŸ“ž
             </button>
             <button
               class="icon-btn"
@@ -231,7 +231,7 @@
               title="Video call"
               aria-label="Video call"
             >
-              🎥
+              ðŸŽ¥
             </button>
             <button
               class="icon-btn"
@@ -239,7 +239,7 @@
               title="Search in chat"
               aria-label="Search in chat"
             >
-              🔍
+              ðŸ”
             </button>
             <button
               class="icon-btn"
@@ -248,7 +248,7 @@
               title="Group Info"
               aria-label="Group Info"
             >
-              ℹ️
+              â„¹ï¸
             </button>
             <button
               class="icon-btn"
@@ -256,7 +256,7 @@
               title="Change Wallpaper"
               aria-label="Change Wallpaper"
             >
-              🖼️
+              ðŸ–¼ï¸
             </button>
           </div>
         </div>
@@ -292,7 +292,7 @@
                 border-radius: 20px;
               "
             >
-              ←
+              â†
             </button>
             <button
               id="nextSearchBtn"
@@ -304,7 +304,7 @@
                 border-radius: 20px;
               "
             >
-              →
+              â†’
             </button>
             <span id="searchResultCount" style="font-size: 12px"></span>
             <button
@@ -316,15 +316,17 @@
                 cursor: pointer;
               "
             >
-              ✖
+              âœ–
             </button>
           </div>
         </div>
 
         <div class="messages-area" id="messagesArea">
-          <div class="empty-state">
-            <div class="empty-icon">💬</div>
-            <p>Select a chat to start messaging</p>
+          <div class="home-panel">
+            <div class="home-panel-icon">💬</div>
+            <h3 class="home-panel-title">Team Chat for Web</h3>
+            <p class="home-panel-text">Select a chat from the list to start messaging.</p>
+            <p class="home-panel-note">Keep your phone and browser connected to stay in sync.</p>
           </div>
         </div>
 
@@ -368,7 +370,7 @@
                 cursor: pointer;
               "
             >
-              ✖
+              âœ–
             </button>
           </div>
         </div>
@@ -387,7 +389,7 @@
             style="display: none"
           ></div>
           <div style="position: relative">
-            <button class="emoji-btn" id="emojiBtn" title="Emoji">😊</button>
+            <button class="emoji-btn" id="emojiBtn" title="Emoji">ðŸ˜Š</button>
             <div id="emojiPicker" class="emoji-picker"></div>
           </div>
           <button
@@ -395,10 +397,10 @@
             id="voiceMsgBtn"
             title="Hold to record voice"
           >
-            🎤
+            ðŸŽ¤
           </button>
           <button class="attach-btn" id="attachBtn" title="Attach file">
-            📎
+            ðŸ“Ž
           </button>
           <button
             class="attach-btn"
@@ -406,7 +408,7 @@
             title="Create poll"
             aria-label="Create poll"
           >
-            ▦
+            â–¦
           </button>
           <button
             class="attach-btn"
@@ -414,7 +416,7 @@
             title="Schedule message"
             aria-label="Schedule message"
           >
-            â—´
+            Ã¢â€”Â´
           </button>
           <input
             type="text"
@@ -422,7 +424,7 @@
             placeholder="Type a message..."
           />
           <div id="mentionSuggestions" class="mention-suggestions"></div>
-          <button class="send-btn" id="sendBtn">➤</button>
+          <button class="send-btn" id="sendBtn">âž¤</button>
         </div>
       </div>
     </div>
@@ -454,7 +456,7 @@
 
     <div id="voiceRecordingIndicator" class="voice-recording-indicator">
       <div style="display: flex; align-items: center; gap: 16px">
-        <span>🎙️ Recording...</span>
+        <span>ðŸŽ™ï¸ Recording...</span>
         <span id="recordingTimer">0:00</span>
         <button
           id="cancelRecordingBtn"
@@ -476,7 +478,7 @@
     <div id="firstTimePhoneModal" class="modal" style="display: none">
       <div class="modal-content">
         <div class="modal-header">
-          <h3>📱 Add Your Phone Number (Optional)</h3>
+          <h3>ðŸ“± Add Your Phone Number (Optional)</h3>
         </div>
         <div class="modal-body">
           <p style="margin-bottom: 16px">
@@ -596,7 +598,7 @@
         </div>
         <div class="modal-body">
           <div style="text-align: center">
-            <div class="group-avatar-large" id="groupAvatarLarge">👥</div>
+            <div class="group-avatar-large" id="groupAvatarLarge">ðŸ‘¥</div>
             <input
               type="text"
               id="editGroupNameInput"
@@ -616,7 +618,7 @@
                 id="copyGroupCodeBtn"
                 style="background: none; border: none; cursor: pointer"
               >
-                📋
+                ðŸ“‹
               </button>
             </p>
           </div>
@@ -724,7 +726,7 @@
         </div>
         <div class="modal-body">
           <div style="text-align: center">
-            <div class="profile-avatar" id="profileAvatar">👤</div>
+            <div class="profile-avatar" id="profileAvatar">ðŸ‘¤</div>
             <button
               id="changeAvatarBtn"
               class="btn btn-outline"
@@ -829,31 +831,31 @@
           </div>
 
           <button id="blockedUsersBtn" class="setting-item">
-            🚫 Blocked Users
+            ðŸš« Blocked Users
           </button>
           <button id="quickRepliesSettingsBtn" class="setting-item">
-            ⚡ Quick Replies
+            âš¡ Quick Replies
           </button>
           <button id="starredMessagesBtn" class="setting-item">
-            â­ Starred Messages
+            Ã¢Â­Â Starred Messages
           </button>
           <button id="wallpaperSettingsBtn" class="setting-item">
-            🖼️ Change Wallpaper (All Chats)
+            ðŸ–¼ï¸ Change Wallpaper (All Chats)
           </button>
           <button id="currentChatWallpaperBtn" class="setting-item">
-            🎨 Change Wallpaper (Current Chat Only)
+            ðŸŽ¨ Change Wallpaper (Current Chat Only)
           </button>
           <button id="callNetworkSettingsBtn" class="setting-item">
-            📡 Call Network Settings
+            ðŸ“¡ Call Network Settings
           </button>
           <button id="exportChatsBtn" class="setting-item">
-            📤 Export Current Chat
+            ðŸ“¤ Export Current Chat
           </button>
           <button id="clearAllChatsBtn" class="setting-item danger">
-            🗑️ Clear All Chats
+            ðŸ—‘ï¸ Clear All Chats
           </button>
           <button id="deactivateAccountBtn" class="setting-item danger">
-            ⚠️ Deactivate Account
+            âš ï¸ Deactivate Account
           </button>
         </div>
       </div>
@@ -1020,7 +1022,7 @@
             title="Close call"
             aria-label="Close call"
           >
-            ×
+            Ã—
           </button>
         </div>
         <div class="call-video-stage">
@@ -1039,7 +1041,7 @@
             title="Mute microphone"
             aria-label="Mute microphone"
           >
-            🎙️
+            ðŸŽ™ï¸
           </button>
           <button
             id="toggleCameraBtn"
@@ -1047,7 +1049,7 @@
             title="Turn camera on/off"
             aria-label="Turn camera on or off"
           >
-            📷
+            ðŸ“·
           </button>
           <button
             id="switchCameraBtn"
@@ -1056,7 +1058,7 @@
             aria-label="Switch camera"
             style="display: none"
           >
-            ⇄
+            â‡„
           </button>
           <button
             id="addCallParticipantBtn"
@@ -1073,7 +1075,7 @@
             title="Accept"
             aria-label="Accept call"
           >
-            ✓
+            âœ“
           </button>
           <button
             id="rejectCallBtn"
@@ -1081,7 +1083,7 @@
             title="Reject"
             aria-label="Reject call"
           >
-            ✕
+            âœ•
           </button>
           <button
             id="endCallBtn"
@@ -1089,7 +1091,7 @@
             title="End call"
             aria-label="End call"
           >
-            ⏹
+            â¹
           </button>
         </div>
       </div>
@@ -1173,7 +1175,7 @@
         class="context-menu-item"
         id="pinChatMenuItem"
       >
-        📌 Pin Chat
+        ðŸ“Œ Pin Chat
       </div>
       <div
         class="context-menu-item"
@@ -1185,31 +1187,31 @@
         class="context-menu-item"
         id="muteChatMenuItem"
       >
-        🔇 Mute
+        ðŸ”‡ Mute
       </div>
       <div
         class="context-menu-item"
         id="archiveChatMenuItem"
       >
-        📦 Archive
+        ðŸ“¦ Archive
       </div>
       <div
         class="context-menu-item"
         id="favoriteChatMenuItem"
       >
-        ⭐ Add to favorite
+        â­ Add to favorite
       </div>
       <div
         class="context-menu-item"
         id="markReadMenuItem"
       >
-        📩 Mark as unread
+        ðŸ“© Mark as unread
       </div>
       <div
         class="context-menu-item"
         id="blockUserMenuItem"
       >
-        🚫 Block
+        ðŸš« Block
       </div>
       <div
         class="context-menu-item"
@@ -1221,7 +1223,7 @@
         class="context-menu-item"
         id="deleteChatMenuItem"
       >
-        🗑️ Delete
+        ðŸ—‘ï¸ Delete
       </div>
     </div>
 
@@ -1235,3 +1237,4 @@
     <script src="pwa-install.js?v=124"></script>
   </body>
 </html>
+

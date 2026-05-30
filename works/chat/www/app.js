@@ -1006,7 +1006,7 @@ function resetChatPanel() {
   document.getElementById('currentChatAvatar').innerHTML = '?';
   document.getElementById('voiceCallBtn').style.display = 'none';
   document.getElementById('videoCallBtn').style.display = 'none';
-  document.getElementById('messagesArea').innerHTML = '<div class="empty-state"><div class="empty-icon">💬</div><p>Select a chat to start messaging</p></div>';
+  document.getElementById('messagesArea').innerHTML = getHomePanelHtml();
   document.getElementById('inputArea').style.display = 'none';
   document.getElementById('groupInfoBtn').style.display = 'none';
   closeMobileChatPanel();
@@ -2362,6 +2362,30 @@ async function acceptIncomingCall() {
     showToast(getCallPermissionMessage(error, currentCallType), 'error');
     await callRef.update({ status: 'failed', error: error.message });
     cleanupCallUi();
+  }
+}
+
+async function autoAcceptNativeCall(callId) {
+  if (!callId || !currentUser) return;
+
+  try {
+    const callRef = db.collection('calls').doc(callId);
+    const snap = await callRef.get();
+
+    if (!snap.exists) return;
+
+    const callData = snap.data() || {};
+
+    if (callData.toUserId !== currentUser.uid) return;
+    if (!['ringing', 'accepted'].includes(callData.status)) return;
+
+    activeCall = { id: snap.id, ...callData };
+    currentCallType = activeCall.type || 'voice';
+
+    await acceptIncomingCall();
+  } catch (error) {
+    console.warn('autoAcceptNativeCall failed:', error);
+    showToast('Could not open accepted call. Please try again.', 'error');
   }
 }
 
@@ -5692,15 +5716,15 @@ function showContextMenu(x, y, messageId, messageData, isMyMessage) {
 
   const items = [
     { text: 'Forward', action: () => openForwardModal(messageId, messageData) },
-    { text: '📋 Copy Text', action: () => copyToClipboard(messageData.text) },
-    { text: '↩️ Thread Reply', action: () => setReplyTo(messageData) },
-    { text: '⭐ Star Message', action: () => starMessage(messageId, messageData) },
-    { text: '📌 Pin Message', action: () => pinMessage(messageId, messageData) }
+    { text: 'Copy Text', action: () => copyToClipboard(messageData.text) },
+    { text: 'Thread Reply', action: () => setReplyTo(messageData) },
+    { text: 'Star Message', action: () => starMessage(messageId, messageData) },
+    { text: 'Pin Message', action: () => pinMessage(messageId, messageData) }
   ];
   items.push({ text: 'Delete For Me', action: () => deleteMessageForMe(messageId) });
   if (isMyMessage) {
     items.push({ text: 'Edit Message', action: () => editMessage(messageId, messageData) });
-    items.push({ text: '🗑️ Delete Everyone', action: () => deleteMessageForEveryone(messageId) });
+    items.push({ text: 'Delete Everyone', action: () => deleteMessageForEveryone(messageId) });
   }
 
   items.forEach(item => {
@@ -5724,6 +5748,17 @@ function positionContextMenu(menu, x, y) {
   const top = Math.min(Math.max(margin, y), Math.max(margin, window.innerHeight - rect.height - margin));
   menu.style.left = `${left}px`;
   menu.style.top = `${top}px`;
+}
+
+function getHomePanelHtml() {
+  return `
+    <div class="home-panel">
+      <div class="home-panel-icon">💬</div>
+      <h3 class="home-panel-title">Team Chat for Web</h3>
+      <p class="home-panel-text">Select a chat from the list to start messaging.</p>
+      <p class="home-panel-note">Keep your phone and browser connected to stay in sync.</p>
+    </div>
+  `;
 }
 
 // ========================================
@@ -6052,6 +6087,25 @@ async function init() {
   document.getElementById('voiceCallBtn')?.addEventListener('click', () => startCall('voice'));
   document.getElementById('videoCallBtn')?.addEventListener('click', () => startCall('video'));
   document.getElementById('acceptCallBtn')?.addEventListener('click', acceptIncomingCall);
+  if (window.Capacitor?.Plugins?.App && !window.__nativeCallOpenHandlerBound) {
+  window.__nativeCallOpenHandlerBound = true;
+
+  window.Capacitor.Plugins.App.addListener('appUrlOpen', async (event) => {
+    const url = event?.url || '';
+    const match = url.match(/[?&]callId=([^&]+)/);
+    if (match?.[1]) {
+      await autoAcceptNativeCall(decodeURIComponent(match[1]));
+    }
+  });
+
+  window.Capacitor.Plugins.App.addListener('appStateChange', async () => {
+    const pendingCallId = localStorage.getItem('pendingNativeCallId');
+    if (pendingCallId) {
+      localStorage.removeItem('pendingNativeCallId');
+      await autoAcceptNativeCall(pendingCallId);
+    }
+  });
+}
   document.getElementById('rejectCallBtn')?.addEventListener('click', () => endActiveCall('rejected'));
   document.getElementById('endCallBtn')?.addEventListener('click', () => endActiveCall('ended'));
   document.getElementById('closeCallBtn')?.addEventListener('click', handleCallCloseAction);
@@ -6272,9 +6326,11 @@ init();
 // SIDEBAR CONTEXT MENU HANDLERS
 // ========================================
 let contextMenuTarget = null;
+let contextMenuOpenedAt = 0;
 // ADD THIS NEW CODE HERE:
 // This tells the app to hide the menu whenever you click anywhere else
 window.addEventListener('click', (e) => {
+  if (Date.now() - contextMenuOpenedAt < 180) return;
   // Hide the message menu
   const msgMenu = document.querySelector('.message-context-menu');
   if (msgMenu && !e.target.closest('.message-context-menu')) {
@@ -6296,6 +6352,7 @@ document.getElementById('chatsList')?.addEventListener('contextmenu', (e) => {
   contextMenuTarget = item;
   const menu = document.getElementById('chatContextMenu');
   if (menu) {
+    contextMenuOpenedAt = Date.now();
     positionContextMenu(menu, e.clientX, e.clientY);
   }
 });
@@ -6308,6 +6365,7 @@ document.getElementById('groupsList')?.addEventListener('contextmenu', (e) => {
   contextMenuTarget = item;
   const menu = document.getElementById('chatContextMenu');
   if (menu) {
+    contextMenuOpenedAt = Date.now();
     positionContextMenu(menu, e.clientX, e.clientY);
   }
 });
@@ -6452,51 +6510,6 @@ document.addEventListener('visibilitychange', () => {
   if (!document.hidden && currentChat) markMessagesAsRead();
 });
 
-// Keep read receipts reliable when mobile browsers/PWA pause and resume the page.
-window.addEventListener('focus', () => {
-  if (currentChat) markMessagesAsRead();
-});
-
-document.addEventListener('visibilitychange', () => {
-  if (document.hidden && activeCall && activeCallMode !== 'incoming') {
-    minimizeActiveCallUi('background');
-  }
-  if (!document.hidden && activeCall && callMiniBar?.classList.contains('show')) {
-    updateCallMiniBar(callStartedAt ? 'Connected' : 'Call running');
-  }
-  if (!document.hidden && currentChat) markMessagesAsRead();
-});
-
-// Keep read receipts reliable when mobile browsers/PWA pause and resume the page.
-window.addEventListener('focus', () => {
-  if (currentChat) markMessagesAsRead();
-});
-
-document.addEventListener('visibilitychange', () => {
-  if (document.hidden && activeCall && activeCallMode !== 'incoming') {
-    minimizeActiveCallUi('background');
-  }
-  if (!document.hidden && activeCall && callMiniBar?.classList.contains('show')) {
-    updateCallMiniBar(callStartedAt ? 'Connected' : 'Call running');
-  }
-  if (!document.hidden && currentChat) markMessagesAsRead();
-});
-
 window.enableTeamChatCallNotifications = function enableTeamChatCallNotifications() {
   return registerFcmTokenForCurrentUser({ force: true });
 };
-
-// GLOBAL CLICK HANDLER (This fixes your menu issue)
-window.addEventListener('click', (e) => {
-  // Hide the message context menu if clicked outside
-  const msgMenu = document.querySelector('.message-context-menu');
-  if (msgMenu && !e.target.closest('.message-context-menu')) {
-    msgMenu.remove();
-  }
-
-  // Hide the sidebar context menu if clicked outside
-  const sidebarMenu = document.getElementById('chatContextMenu');
-  if (sidebarMenu && !e.target.closest('#chatContextMenu')) {
-    sidebarMenu.style.display = 'none';
-  }
-});
