@@ -50,6 +50,124 @@
         min-height: 100vh;
       }
 
+      body.login-locked {
+        padding: 0;
+        overflow: hidden;
+      }
+
+      body.login-locked .app-shell {
+        display: none;
+      }
+
+      .login-screen {
+        position: fixed;
+        inset: 0;
+        z-index: 20000;
+        display: none;
+        place-items: center;
+        padding: 24px;
+        background:
+          radial-gradient(circle at 20% 15%, rgba(59, 130, 246, 0.16), transparent 28%),
+          linear-gradient(135deg, #eef4ff 0%, #f8fafc 42%, #e8eef8 100%);
+      }
+
+      body.login-locked .login-screen {
+        display: grid;
+      }
+
+      .login-card {
+        width: min(440px, 100%);
+        padding: 34px;
+        border: 1px solid rgba(226, 232, 240, 0.9);
+        border-radius: 30px;
+        background: rgba(255, 255, 255, 0.9);
+        box-shadow: 0 26px 70px rgba(15, 23, 42, 0.14);
+        backdrop-filter: blur(18px);
+      }
+
+      .login-brand {
+        width: 58px;
+        height: 58px;
+        margin-bottom: 18px;
+        border-radius: 20px;
+        background: linear-gradient(135deg, #2563eb, #10b981);
+        color: white;
+        display: grid;
+        place-items: center;
+        font-weight: 800;
+        letter-spacing: 0;
+      }
+
+      .login-card h1 {
+        color: #0f172a;
+        font-size: 1.8rem;
+        line-height: 1.1;
+        margin-bottom: 8px;
+        letter-spacing: -0.4px;
+      }
+
+      .login-card p {
+        color: #64748b;
+        font-size: 14px;
+        line-height: 1.5;
+        margin-bottom: 24px;
+      }
+
+      .login-card label {
+        display: block;
+        margin-bottom: 8px;
+        color: #334155;
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 0.5px;
+        text-transform: uppercase;
+      }
+
+      .login-card input {
+        width: 100%;
+        margin-bottom: 16px;
+        padding: 15px 16px;
+        border: 1.5px solid #dbe4ef;
+        border-radius: 16px;
+        background: #ffffff;
+        color: #0f172a;
+        font: inherit;
+      }
+
+      .login-card input:focus {
+        outline: none;
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
+      }
+
+      .login-error {
+        min-height: 20px;
+        margin: -4px 0 12px;
+        color: #dc2626;
+        font-size: 13px;
+        font-weight: 600;
+      }
+
+      .top-actions {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 14px;
+        max-width: 1600px;
+        margin: 0 auto 24px;
+      }
+
+      .top-actions .back-link {
+        margin-bottom: 0;
+      }
+
+      .logout-link {
+        width: auto;
+        margin: 0;
+        padding: 10px 18px;
+        border-radius: 999px;
+      }
+
       /* Toast Notifications */
       .toast-notification {
         position: fixed;
@@ -205,6 +323,11 @@
         width: 100%;
         margin-top: 6px;
         font-family: "Inter", sans-serif;
+      }
+      .btn:disabled {
+        cursor: not-allowed;
+        opacity: 0.7;
+        transform: none !important;
       }
       .btn-primary {
         background: #3b82f6;
@@ -970,6 +1093,80 @@
         border-color: #3b82f6;
       }
 
+
+      .form-hint {
+        display: block;
+        margin-top: 8px;
+        color: #64748b;
+        font-size: 12px;
+        line-height: 1.4;
+      }
+
+      .mini-action-btn {
+        border: 1px solid #dbe4ef;
+        border-radius: 999px;
+        background: #ffffff;
+        color: #334155;
+        font-weight: 700;
+        padding: 7px 12px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+      }
+
+      .mini-action-btn:hover {
+        border-color: #3b82f6;
+        color: #1d4ed8;
+      }
+
+      .mini-action-btn.danger {
+        color: #dc2626;
+        border-color: #fecaca;
+      }
+
+      .empty-state {
+        padding: 28px 18px;
+        text-align: center;
+        color: #64748b;
+        background: #f8fafc;
+        border: 1px dashed #cbd5e1;
+        border-radius: 18px;
+      }
+
+      @media (max-width: 640px) {
+        body {
+          padding: 10px;
+        }
+        .top-actions {
+          margin-bottom: 12px;
+        }
+        .left-panel,
+        .invoice-preview {
+          border-radius: 20px;
+        }
+        .panel-header,
+        .panel-content {
+          padding-left: 18px;
+          padding-right: 18px;
+        }
+        .button-group,
+        .item-buttons,
+        .row-fields {
+          grid-template-columns: 1fr;
+        }
+        .modal-content {
+          width: calc(100vw - 20px);
+          margin: 10px auto;
+          border-radius: 20px;
+        }
+        .modal-body {
+          max-height: calc(100vh - 120px);
+          overflow-y: auto;
+        }
+        .login-card {
+          padding: 26px;
+          border-radius: 24px;
+        }
+      }
       @media (max-width: 1000px) {
         .container {
           grid-template-columns: 1fr;
@@ -980,17 +1177,35 @@
       }
     </style>
   </head>
-  <body>
-    <div style="max-width: 1600px; margin: 0 auto">
-      <a href="../index.html" class="back-link">← Back to Portfolio</a>
+  <body class="login-locked">
+    <div class="login-screen" id="loginScreen">
+      <form class="login-card" id="loginForm" autocomplete="off">
+        <div class="login-brand">W1</div>
+        <h1>Invoice Manager</h1>
+        <p>Sign in to create, search, and save invoices securely on this device.</p>
+        <label for="loginUsername">Username</label>
+        <input id="loginUsername" type="text" inputmode="numeric" placeholder="Enter username" />
+        <label for="loginPassword">Password</label>
+        <input id="loginPassword" type="password" inputmode="numeric" placeholder="Enter password" />
+        <div class="login-error" id="loginError"></div>
+        <button class="btn btn-primary" type="submit">Login</button>
+      </form>
+    </div>
+
+    <div class="app-shell">
+    <div class="top-actions">
+      <a href="../index.html" class="back-link">Back to Portfolio</a>
+      <button id="logoutBtn" class="btn btn-outline logout-link" type="button">
+        Logout
+      </button>
     </div>
 
     <div class="container">
       <!-- LEFT PANEL -->
       <div class="left-panel">
         <div class="panel-header">
-          <h3>📄 Invoice Manager</h3>
-          <p>Cloud sync • Real-time • Multi-device</p>
+          <h3>Invoice Manager</h3>
+          <p>Cloud sync - Real-time - Multi-device</p>
         </div>
         <div class="panel-content">
           <div class="form-group">
@@ -1009,6 +1224,7 @@
           <div class="form-group">
             <label>Invoice Number</label>
             <input type="text" id="invoiceNumber" placeholder="e.g., INV-001" />
+            <small id="lastInvoiceHint" class="form-hint">Last saved invoice will appear here.</small>
           </div>
 
           <div class="form-group">
@@ -1034,12 +1250,8 @@
           </div>
 
           <div class="button-group">
-            <button id="saveClientBtn" class="btn btn-success">
-              💾 Save New Client
-            </button>
-            <button id="manageClientsBtn" class="btn btn-purple">
-              📋 Manage Clients
-            </button>
+            <button id="saveClientBtn" class="btn btn-success">Save New Client</button>
+            <button id="manageClientsBtn" class="btn btn-purple">Manage Clients</button>
           </div>
 
           <!-- Currency Section -->
@@ -1061,7 +1273,7 @@
 
           <!-- GST Section -->
           <div id="gstCard" class="gst-card">
-            <h4 style="margin-bottom: 16px">🧾 GST Settings</h4>
+            <h4 style="margin-bottom: 16px">GST Settings</h4>
             <div class="gst-row">
               <label>Customer's State:</label>
               <select
@@ -1072,15 +1284,15 @@
                 <option value="Other">Other State</option>
               </select>
               <label class="paid-checkbox">
-                <input type="checkbox" id="showPaidStamp" /> ✓ PAID Stamp
+                <input type="checkbox" id="showPaidStamp" /> PAID Stamp
               </label>
             </div>
             <div id="paidOnRow" class="paid-row">
-              <label>📅 Paid Date:</label>
+              <label>Paid Date:</label>
               <input type="text" id="paidOnDate" style="flex: 1" />
             </div>
             <div id="paidAccountRow" class="paid-row">
-              <label>🏷️ Paid To Account:</label>
+              <label>Paid To Account:</label>
               <select id="paidAccountSelect" style="flex: 1"></select>
             </div>
           </div>
@@ -1088,7 +1300,7 @@
           <!-- ADD ITEM SECTION -->
           <div class="item-card">
             <div class="item-card-header">
-              <h4>📦 Add Line Item</h4>
+              <h4>Add Line Item</h4>
             </div>
             <div class="item-card-body">
               <div class="item-name-wrapper">
@@ -1108,7 +1320,7 @@
               ></textarea>
               <div class="row-fields">
                 <div class="field">
-                  <label>📦 QUANTITY</label>
+                  <label>QUANTITY</label>
                   <input
                     type="number"
                     id="itemQty"
@@ -1118,7 +1330,7 @@
                   />
                 </div>
                 <div class="field">
-                  <label>💰 RATE</label>
+                  <label>RATE</label>
                   <input
                     type="number"
                     id="itemRate"
@@ -1128,7 +1340,7 @@
                   />
                 </div>
                 <div class="field gst-field" id="gstField">
-                  <label>🧾 GST %</label>
+                  <label>GST %</label>
                   <input
                     type="number"
                     id="itemGst"
@@ -1140,24 +1352,18 @@
               </div>
               <div class="row-fields">
                 <div class="field">
-                  <label>🏷️ HSN / SAC</label>
+                  <label>HSN / SAC</label>
                   <input type="text" id="itemHsn" placeholder="HSN/SAC code" />
                 </div>
               </div>
               <div class="item-buttons">
-                <button id="addItemBtn" class="btn btn-primary">
-                  ➕ Add Item
-                </button>
-                <button id="clearItemsBtn" class="btn btn-outline">
-                  🧹 Clear All
-                </button>
+                <button id="addItemBtn" class="btn btn-primary">Add Item</button>
+                <button id="clearItemsBtn" class="btn btn-outline">Clear All</button>
                 <button
                   id="updateItemBtn"
                   class="btn btn-warning"
                   style="display: none"
-                >
-                  ✏️ Update
-                </button>
+                >Update</button>
               </div>
             </div>
           </div>
@@ -1169,27 +1375,29 @@
               id="manageBanksBtn"
               class="btn btn-purple"
               style="margin-top: 8px"
-            >
-              🏦 Manage Banks (Add/Edit/Delete)
-            </button>
+            >Manage Banks (Add/Edit/Delete)</button>
             <button
               id="manageAccountsBtn"
               class="btn"
               style="background: #f59e0b; color: white; margin-top: 8px"
-            >
-              📋 Manage Paid Accounts (Add/Edit/Delete)
-            </button>
+            >Manage Paid Accounts (Add/Edit/Delete)</button>
             <button
               id="savePdfBtn"
               class="btn btn-primary"
               style="margin-top: 16px"
+            >Save as PDF & Cloud</button>
+            <button
+              id="newInvoiceBtn"
+              class="btn btn-outline"
+              style="margin-top: 8px"
+              type="button"
             >
-              🖨️ Save as PDF & Cloud
+              New Invoice
             </button>
           </div>
 
           <div class="search-section">
-            <label>📋 Previous Invoices (Cloud)</label>
+            <label>Previous Invoices (Cloud)</label>
             <input
               type="text"
               id="searchInvoices"
@@ -1199,9 +1407,7 @@
             <div id="invoiceHistory" class="invoice-history-list"></div>
           </div>
 
-          <div id="syncStatus" class="sync-status disconnected">
-            🔄 Connecting to cloud...
-          </div>
+          <div id="syncStatus" class="sync-status disconnected">Connecting to cloud...</div>
         </div>
       </div>
 
@@ -1218,7 +1424,7 @@
               />
               <div class="company-url url-no-underline">
                 <a href="https://www.wazeefa.in/" target="_blank"
-                  >🌐 www.wazeefa.in</a
+                  >www.wazeefa.in</a
                 >
               </div>
             </div>
@@ -1246,8 +1452,7 @@
             <div class="bill-title">BILL FROM</div>
             <strong>Wazeefa1 Technologies Private Limited</strong>
             <div class="bill-address">
-              First Floor, Rajamalli Building<br />Infopark Thrissur, Koratty
-              P.O.<br />Thrissur – 680308, Kerala, India.<br />GSTIN:
+              First Floor, Rajamalli Building<br />Infopark Thrissur, Koratty P.O.<br />Thrissur - 680308, Kerala, India.<br />GSTIN:
               32AABCW6940M1Z2
             </div>
           </div>
@@ -1275,7 +1480,7 @@
 
         <div class="bottom-section">
           <div class="bank-details">
-            <strong>🏦 Bank Account Details</strong>
+            <strong>Bank Account Details</strong>
             <div
               id="previewBankDetails"
               style="
@@ -1302,7 +1507,7 @@
     <div id="bankModal" class="modal">
       <div class="modal-content">
         <div class="modal-header">
-          <h3>🏦 Bank Management</h3>
+          <h3>Bank Management</h3>
           <span class="close-modal" data-modal="bankModal">&times;</span>
         </div>
         <div class="modal-body" id="bankModalBody"></div>
@@ -1312,7 +1517,7 @@
     <div id="accountsModal" class="modal">
       <div class="modal-content">
         <div class="modal-header">
-          <h3>📋 Paid Accounts Management</h3>
+          <h3>Paid Accounts Management</h3>
           <span class="close-modal" data-modal="accountsModal">&times;</span>
         </div>
         <div class="modal-body" id="accountsModalBody"></div>
@@ -1322,11 +1527,12 @@
     <div id="clientsModal" class="modal">
       <div class="modal-content">
         <div class="modal-header">
-          <h3>📋 Client Management</h3>
+          <h3>Client Management</h3>
           <span class="close-modal" data-modal="clientsModal">&times;</span>
         </div>
         <div class="modal-body" id="clientsModalBody"></div>
       </div>
+    </div>
     </div>
 
     <script>
@@ -1344,11 +1550,11 @@
 
       const CURRENCIES = [
         { code: "USD", name: "US Dollar", symbol: "$", gst: false },
-        { code: "EUR", name: "Euro", symbol: "€", gst: false },
-        { code: "GBP", name: "British Pound", symbol: "£", gst: false },
-        { code: "JPY", name: "Japanese Yen", symbol: "¥", gst: false },
-        { code: "INR", name: "Indian Rupee", symbol: "₹", gst: true },
-        { code: "AED", name: "UAE Dirham", symbol: "د.إ", gst: false },
+        { code: "EUR", name: "Euro", symbol: "EUR", gst: false },
+        { code: "GBP", name: "British Pound", symbol: "GBP", gst: false },
+        { code: "JPY", name: "Japanese Yen", symbol: "JPY", gst: false },
+        { code: "INR", name: "Indian Rupee", symbol: "INR", gst: true },
+        { code: "AED", name: "UAE Dirham", symbol: "AED", gst: false },
       ];
       const TOP_CURRENCIES = CURRENCIES.filter((c) =>
         ["USD", "EUR", "GBP", "JPY", "INR"].includes(c.code),
@@ -1420,6 +1626,10 @@
         gst: false,
       };
       let editingIndex = null;
+      const LOGIN_SESSION_KEY = "wazeefaInvoiceLoggedIn";
+      const LAST_INVOICE_KEY = "wazeefaLastSavedInvoiceNumber";
+      const LOGIN_USER = "123";
+      const LOGIN_PASS = "321";
 
       function showToast(msg, isError = false) {
         const toast = document.createElement("div");
@@ -1436,6 +1646,60 @@
           /[&<>]/g,
           (m) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" })[m],
         );
+      }
+
+      function unlockInvoiceApp() {
+        document.body.classList.remove("login-locked");
+        document.getElementById("loginUsername").value = "";
+        document.getElementById("loginPassword").value = "";
+        document.getElementById("loginError").textContent = "";
+      }
+
+      function setupLogin() {
+        if (localStorage.getItem(LOGIN_SESSION_KEY) === "true") {
+          unlockInvoiceApp();
+        }
+
+        document.getElementById("loginForm").addEventListener("submit", (event) => {
+          event.preventDefault();
+          const username = document.getElementById("loginUsername").value.trim();
+          const password = document.getElementById("loginPassword").value.trim();
+          if (username === LOGIN_USER && password === LOGIN_PASS) {
+            localStorage.setItem(LOGIN_SESSION_KEY, "true");
+            unlockInvoiceApp();
+            showToast("Logged in");
+            return;
+          }
+          document.getElementById("loginError").textContent =
+            "Invalid username or password";
+        });
+
+        document.getElementById("logoutBtn").addEventListener("click", () => {
+          localStorage.removeItem(LOGIN_SESSION_KEY);
+          document.body.classList.add("login-locked");
+          showToast("Logged out");
+        });
+      }
+
+      function updateInvoiceNumberPlaceholder(number = "") {
+        const input = document.getElementById("invoiceNumber");
+        const hint = document.getElementById("lastInvoiceHint");
+        if (!input) return;
+        const lastNumber = number || localStorage.getItem(LAST_INVOICE_KEY) || "";
+        input.placeholder = lastNumber
+          ? `Last saved: ${lastNumber}`
+          : "e.g., INV-001";
+        if (hint) {
+          hint.textContent = lastNumber
+            ? `Last saved invoice: ${lastNumber}`
+            : "Last saved invoice will appear here.";
+        }
+      }
+
+      function rememberLastSavedInvoice(number) {
+        if (!number) return;
+        localStorage.setItem(LAST_INVOICE_KEY, number);
+        updateInvoiceNumberPlaceholder(number);
       }
 
       function formatMoney(amount) {
@@ -1563,7 +1827,7 @@
           <td>${formatMoney(taxable)}</td>
           <td>${formatMoney(gstAmount)}</td>
           <td>${formatMoney(total)}</td>
-          <td class="action-cell"><button class="edit-btn" data-idx="${i}">✏️</button> <button class="delete-btn" data-idx="${i}">🗑️</button></td>
+          <td class="action-cell"><button class="mini-action-btn edit-btn" data-idx="${i}">Edit</button> <button class="mini-action-btn danger delete-btn" data-idx="${i}">Delete</button></td>
         `;
           } else {
             row.innerHTML = `
@@ -1572,7 +1836,7 @@
           <td contenteditable="true">${item.qty}</td>
           <td contenteditable="true">${formatMoney(item.rate)}</td>
           <td>${formatMoney(taxable)}</td>
-          <td class="action-cell"><button class="edit-btn" data-idx="${i}">✏️</button> <button class="delete-btn" data-idx="${i}">🗑️</button></td>
+          <td class="action-cell"><button class="mini-action-btn edit-btn" data-idx="${i}">Edit</button> <button class="mini-action-btn danger delete-btn" data-idx="${i}">Delete</button></td>
         `;
           }
         }
@@ -1874,7 +2138,7 @@
           await db.collection("test").doc("connection").set({ ts: Date.now() });
           cloudEnabled = true;
           document.getElementById("syncStatus").innerHTML =
-            "✅ Cloud Connected - Data Shared";
+            "Cloud Connected - Data Shared";
           document.getElementById("syncStatus").className =
             "sync-status connected";
           showToast("Connected to cloud");
@@ -1923,16 +2187,38 @@
           db.collection("clients").onSnapshot(() => loadAllClients());
           db.collection("invoices").onSnapshot(() => renderInvoiceHistory());
 
+          await updateInvoicePlaceholderFromCloud();
           renderInvoiceHistory();
         } catch (e) {
           cloudEnabled = false;
-          document.getElementById("syncStatus").innerHTML = "⚠️ Offline Mode";
+          document.getElementById("syncStatus").innerHTML = "Offline Mode";
           document.getElementById("syncStatus").className =
             "sync-status disconnected";
           banksData = { ...DEFAULT_BANKS };
           paidAccountsList = [...DEFAULT_PAID_ACCOUNTS];
           updateBankSelect();
           updatePaidAccountSelect();
+        }
+      }
+
+      async function updateInvoicePlaceholderFromCloud() {
+        updateInvoiceNumberPlaceholder();
+        if (!db || !cloudEnabled) return;
+        try {
+          const snapshot = await db.collection("invoices").get();
+          let latest = null;
+          snapshot.forEach((doc) => {
+            const data = doc.data();
+            const time = Date.parse(data.updatedAt || data.createdAt || "") || 0;
+            if (!latest || time > latest.time) {
+              latest = { number: data.invoiceNumber, time };
+            }
+          });
+          if (latest?.number) {
+            rememberLastSavedInvoice(latest.number);
+          }
+        } catch (error) {
+          console.warn("Could not load latest invoice number", error);
         }
       }
 
@@ -1964,7 +2250,7 @@
             .doc(clientId)
             .set({ name, address, createdAt: new Date().toISOString() });
           await loadAllClients();
-          showToast(`✅ Client "${name}" saved!`);
+          showToast(`Client "${name}" saved!`);
         } catch (e) {
           showToast("Failed: " + e.message, true);
         }
@@ -1991,10 +2277,13 @@
         };
         if (db && cloudEnabled) {
           try {
-            await db
+            const invoiceRef = db
               .collection("invoices")
-              .doc(invNum.replace(/\//g, "_"))
-              .set(data);
+              .doc(invNum.replace(/\//g, "_"));
+            const existing = await invoiceRef.get();
+            data.createdAt =
+              existing.data()?.createdAt || new Date().toISOString();
+            await invoiceRef.set(data);
             showToast("Saved to cloud!");
             renderInvoiceHistory();
             return true;
@@ -2036,48 +2325,101 @@
             URL.revokeObjectURL(url);
             showToast("PDF downloaded!");
           }
+          return true;
         } catch (e) {
           if (cloneContainer.parentNode)
             document.body.removeChild(cloneContainer);
           showToast("PDF failed", true);
+          return false;
         }
       }
 
       async function handleSavePdf() {
-        const ok = await saveToCloud();
-        if (ok) await generatePDF(true);
+        const btn = document.getElementById("savePdfBtn");
+        const invNum = document.getElementById("invoiceNumber").value.trim();
+        btn.disabled = true;
+        btn.textContent = "Saving...";
+        try {
+          const ok = await saveToCloud();
+          if (!ok) return;
+          const pdfOk = await generatePDF(true);
+          if (pdfOk) {
+            rememberLastSavedInvoice(invNum);
+            showToast("Invoice saved. Start a new invoice when ready.");
+          }
+        } finally {
+          btn.disabled = false;
+          btn.textContent = "Save as PDF & Cloud";
+        }
+      }
+
+      function startNewInvoice() {
+        const today = new Date();
+        document.getElementById("docType").value = "Invoice";
+        document.getElementById("invoiceDate").value =
+          `${String(today.getDate()).padStart(2, "0")}-${String(today.getMonth() + 1).padStart(2, "0")}-${today.getFullYear()}`;
+        document.getElementById("invoiceNumber").value = "";
+        document.getElementById("clientName").value = "";
+        document.getElementById("clientAddress").value = "";
+        document.getElementById("showPaidStamp").checked = false;
+        document.getElementById("paidOnDate").value = "";
+        document.getElementById("itemName").value = "";
+        document.getElementById("itemDesc").value = "";
+        document.getElementById("itemHsn").value = "";
+        document.getElementById("itemQty").value = "1";
+        document.getElementById("itemRate").value = "0";
+        document.getElementById("itemGst").value = "18";
+        document.getElementById("searchInvoices").value = "";
+        editingIndex = null;
+        itemsData = [];
+        document.getElementById("addItemBtn").style.display = "block";
+        document.getElementById("updateItemBtn").style.display = "none";
+        updateInvoiceNumberPlaceholder();
+        rebuildItemsTable();
+        togglePaidVisibility();
+        updatePreview();
+        renderInvoiceHistory();
+        showToast("New invoice ready");
       }
 
       function renderInvoiceHistory() {
         const term = document
           .getElementById("searchInvoices")
           .value.toLowerCase();
-        if (!db) return;
+        const container = document.getElementById("invoiceHistory");
+        if (!db || !cloudEnabled) {
+          container.innerHTML =
+            "<div style='padding:20px;text-align:center;color:#dc2626;'>Cloud invoice search is unavailable</div>";
+          return;
+        }
         db.collection("invoices")
           .get()
           .then((snapshot) => {
             const invoices = [];
             snapshot.forEach((doc) => invoices.push(doc.data()));
-            const container = document.getElementById("invoiceHistory");
             if (!term) {
               container.innerHTML =
-                "<div style='padding:20px;text-align:center;color:#94a3b8;'>🔍 Type to search</div>";
+                "<div style='padding:20px;text-align:center;color:#94a3b8;'>Type to search cloud invoices</div>";
               return;
             }
             const filtered = invoices.filter(
               (i) =>
                 i.invoiceNumber?.toLowerCase().includes(term) ||
                 i.clientName?.toLowerCase().includes(term),
+            ).sort(
+              (a, b) =>
+                (Date.parse(b.updatedAt || b.createdAt || "") || 0) -
+                (Date.parse(a.updatedAt || a.createdAt || "") || 0),
             );
             if (filtered.length === 0) {
               container.innerHTML =
-                "<div style='padding:20px;text-align:center;'>📭 No matches</div>";
+                "<div style='padding:20px;text-align:center;'>No cloud matches</div>";
               return;
             }
             container.innerHTML = filtered
               .map(
                 (i) =>
-                  `<div class="invoice-history-item" data-id="${escapeHtml(i.invoiceNumber)}"><strong>🧾 ${escapeHtml(i.invoiceNumber)}</strong><br><small>${escapeHtml(i.clientName)} | ${i.date}</small></div>`,
+                  `<div class="invoice-history-item" data-id="${escapeHtml(i.invoiceNumber)}"><strong>${escapeHtml(i.invoiceNumber)}</strong><br><small>${escapeHtml(i.clientName)} | ${i.date}</small></div>`,
               )
               .join("");
             document.querySelectorAll(".invoice-history-item").forEach((el) => {
@@ -2136,21 +2478,21 @@
         Object.entries(banksData).forEach(([name, details]) => {
           html += `
         <div class="bank-card">
-          <div class="bank-name">🏦 ${escapeHtml(name)}</div>
+          <div class="bank-name">${escapeHtml(name)}</div>
           <div class="bank-details-text">${escapeHtml(details)}</div>
           <div class="card-actions">
-            <button class="edit-card" data-name="${escapeHtml(name)}" data-details="${escapeHtml(details)}">✏️ Edit</button>
-            <button class="delete-card" data-name="${escapeHtml(name)}">🗑️ Delete</button>
+            <button class="mini-action-btn edit-card" data-name="${escapeHtml(name)}" data-details="${escapeHtml(details)}">Edit</button>
+            <button class="mini-action-btn danger delete-card" data-name="${escapeHtml(name)}">Delete</button>
           </div>
         </div>
       `;
         });
         html += `</div>
       <div class="add-form">
-        <h4>➕ Add / Edit Bank</h4>
+        <h4>Add / Edit Bank</h4>
         <input type="text" id="bankNameInput" placeholder="Bank Name">
         <textarea id="bankDetailsInput" rows="3" placeholder="Account details..."></textarea>
-        <button id="saveBankBtn" class="btn btn-success">💾 Save Bank</button>
+        <button id="saveBankBtn" class="btn btn-success">Save Bank</button>
         <button id="cancelBankEdit" class="btn btn-outline" style="margin-top:8px;">Cancel</button>
       </div>`;
         container.innerHTML = html;
@@ -2201,19 +2543,19 @@
         paidAccountsList.forEach((acc) => {
           html += `
         <div class="account-card">
-          <div class="account-name">📋 ${escapeHtml(acc)}</div>
+          <div class="account-name">${escapeHtml(acc)}</div>
           <div class="card-actions">
-            <button class="edit-account" data-name="${escapeHtml(acc)}">✏️ Edit</button>
-            <button class="delete-account" data-name="${escapeHtml(acc)}">🗑️ Delete</button>
+            <button class="mini-action-btn edit-account" data-name="${escapeHtml(acc)}">Edit</button>
+            <button class="mini-action-btn danger delete-account" data-name="${escapeHtml(acc)}">Delete</button>
           </div>
         </div>
       `;
         });
         html += `</div>
       <div class="add-form">
-        <h4>➕ Add / Edit Account</h4>
+        <h4>Add / Edit Account</h4>
         <input type="text" id="accountNameInput" placeholder="Account name">
-        <button id="saveAccountBtn" class="btn btn-success">💾 Save Account</button>
+        <button id="saveAccountBtn" class="btn btn-success">Save Account</button>
         <button id="cancelAccountEdit" class="btn btn-outline" style="margin-top:8px;">Cancel</button>
       </div>`;
         container.innerHTML = html;
@@ -2267,7 +2609,7 @@
         const container = document.getElementById("clientsModalBody");
         if (allClients.length === 0) {
           container.innerHTML =
-            "<p style='text-align:center;padding:40px;'>📭 No clients saved yet.</p>";
+            "<div class='empty-state'>No clients saved yet.</div>";
           return;
         }
         container.innerHTML = "";
@@ -2276,7 +2618,7 @@
           div.className = "client-manage-item";
           div.innerHTML = `
         <div><strong>${escapeHtml(client.name)}</strong><br><small>${escapeHtml(client.address || "No address")}</small></div>
-        <div><button class="use-client" data-id="${client.id}" data-name="${escapeHtml(client.name)}" data-address="${escapeHtml(client.address || "")}">📋 Use</button></div>
+        <div><button class="use-client" data-id="${client.id}" data-name="${escapeHtml(client.name)}" data-address="${escapeHtml(client.address || "")}">Use</button></div>
       `;
           container.appendChild(div);
         });
@@ -2293,6 +2635,8 @@
       }
 
       function init() {
+        setupLogin();
+        updateInvoiceNumberPlaceholder();
         initCurrency();
         initItemAutocomplete();
         flatpickr("#invoiceDate", {
@@ -2383,6 +2727,12 @@
           document.getElementById("accountsModal").style.display = "flex";
         };
         document.getElementById("savePdfBtn").onclick = handleSavePdf;
+        document.getElementById("newInvoiceBtn").onclick = () => {
+          if (itemsData.length || document.getElementById("invoiceNumber").value.trim()) {
+            if (!confirm("Start a new invoice and clear the current form?")) return;
+          }
+          startNewInvoice();
+        };
         document
           .getElementById("searchInvoices")
           .addEventListener("input", renderInvoiceHistory);
