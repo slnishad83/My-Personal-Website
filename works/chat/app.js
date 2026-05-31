@@ -218,6 +218,19 @@ function escapeHtml(text) {
   return div.innerHTML;
 }
 
+function getInitials(name = '', fallback = '') {
+  const source = String(name || fallback || '').trim();
+  if (!source) return 'U';
+  const parts = source.split(/\s+/).filter(Boolean);
+  if (parts.length > 1) {
+    return parts.slice(0, 3).map(part => part[0]?.toUpperCase() || '').join('') || 'U';
+  }
+  if (source.includes('@')) {
+    return source.split('@')[0].slice(0, 3).toUpperCase() || 'U';
+  }
+  return source.slice(0, 3).toUpperCase();
+}
+
 function getFileNameFromUrl(url) {
   if (!url) return '';
   try {
@@ -277,9 +290,9 @@ function renderAttachment(attachment = {}) {
 }
 
 function getCallIcon(type = 'voice', status = 'ended') {
-  if (status === 'missed' || status === 'failed') return '↯';
-  if (status === 'rejected') return '✕';
-  return type === 'video' ? '🎥' : '📞';
+  if (status === 'missed' || status === 'failed') return '!';
+  if (status === 'rejected') return 'x';
+  return type === 'video' ? 'VID' : 'CALL';
 }
 
 function renderCallMessage(msg = {}) {
@@ -436,13 +449,13 @@ function renderChatListItems(items, container) {
     chatDiv.innerHTML = `
       <div class="list-avatar">${item.avatar}</div>
       <div class="list-info" style="flex:1; cursor:pointer;">
-        <div class="list-name">${item.isFavorite ? '★ ' : ''}${escapeHtml(item.name)} ${item.isMuted ? '🔇' : ''}</div>
+        <div class="list-name">${item.isFavorite ? '* ' : ''}${escapeHtml(item.name)} ${item.isMuted ? '[Muted]' : ''}</div>
         <div class="list-preview">${previewHtml}</div>
       </div>
       ${statusChip}
       ${unread}
-      <button class="list-item-menu mute-chat-btn" data-chat-id="${item.id}" data-chat-type="${item.type}">🔇</button>
-      <button class="list-item-menu archive-chat-btn" data-chat-id="${item.id}" data-chat-type="${item.type}" data-chat-name="${escapeHtml(item.name)}">📦</button>
+      <button class="list-item-menu mute-chat-btn" data-chat-id="${item.id}" data-chat-type="${item.type}">Mute</button>
+      <button class="list-item-menu archive-chat-btn" data-chat-id="${item.id}" data-chat-type="${item.type}" data-chat-name="${escapeHtml(item.name)}">Arch</button>
     `;
 
     if (item.type === 'user' || item.type === 'saved') {
@@ -451,7 +464,7 @@ function renderChatListItems(items, container) {
 
     chatDiv.querySelector('.archive-chat-btn')?.addEventListener('click', async (e) => {
       e.stopPropagation();
-      if (confirm(`Archive "${item.name}"?`)) await archiveChat(item.id, item.type, item.name);
+      if (confirm(`Archive "${item.name}"?`)) await archiveChat(item.id, item.type, item.name, item.aliasDirectIds || []);
     });
 
     chatDiv.querySelector('.mute-chat-btn')?.addEventListener('click', async (e) => {
@@ -3267,6 +3280,9 @@ async function acceptChatRequest(requestId, fromUserId) {
     }
     await db.collection('chatRequests').doc(requestId).update({ status: 'accepted', respondedAt: firebase.firestore.FieldValue.serverTimestamp() });
     showToast('Request accepted');
+    if (toggle) {
+      toggle.textContent = section?.classList.contains("expanded") ? "▲" : "▼";
+    }
     loadReceivedRequests();
     loadCurrentChatList();
 
@@ -4280,9 +4296,17 @@ function setupChatListListeners() {
 // ARCHIVE & CHAT ACTIONS
 // ========================================
 
-async function archiveChat(chatId, chatType, chatName) {
-  await db.collection('archivedChats').doc(`${currentUser.uid}_${chatId}`).set({
-    userId: currentUser.uid, chatId, chatType, chatName, archivedAt: firebase.firestore.FieldValue.serverTimestamp()
+async function archiveChat(chatId, chatType, chatName, aliasDirectIds = []) {
+  const aliases = chatType === 'direct'
+    ? [...new Set([chatId, ...(aliasDirectIds || [])].filter(Boolean))]
+    : [];
+  await db.collection('archivedChats').doc(`${currentUser.uid}_${chatType}_${chatId}`).set({
+    userId: currentUser.uid,
+    chatId,
+    chatType,
+    chatName,
+    aliasDirectIds: aliases,
+    archivedAt: firebase.firestore.FieldValue.serverTimestamp()
   });
   if (currentChat?.id === chatId) { resetChatPanel(); }
   loadChatsList(); loadGroupsList(); loadArchivedChats();
@@ -4301,7 +4325,13 @@ async function getArchivedChatIds() {
       .where('userId', '==', currentUser.uid)
       .get();
 
-    return new Set(snapshot.docs.map(doc => doc.data().chatId));
+    const ids = new Set();
+    snapshot.docs.forEach(doc => {
+      const data = doc.data() || {};
+      if (data.chatId) ids.add(data.chatId);
+      (data.aliasDirectIds || []).forEach(id => id && ids.add(id));
+    });
+    return ids;
   } catch (error) {
     console.error('getArchivedChatIds failed:', error);
     return new Set();
@@ -4367,20 +4397,130 @@ async function clearChatHistoryForMe(chatId, chatType, chatName = 'Chat') {
   loadCurrentChatList();
 }
 
+async function getArchivedDirectChatNames() {
+  try {
+    if (!currentUser) return new Set();
+    const snapshot = await db.collection('archivedChats')
+      .where('userId', '==', currentUser.uid)
+      .where('chatType', '==', 'direct')
+      .get();
+    const names = new Set();
+    snapshot.docs.forEach(doc => {
+      const name = String(doc.data()?.chatName || '').trim().toLowerCase();
+      if (name) names.add(name);
+    });
+    return names;
+  } catch (error) {
+    console.error('getArchivedDirectChatNames failed:', error);
+    return new Set();
+  }
+}
+
+function setupArchiveSection() {
+  const archiveHeader = document.getElementById('archiveHeader');
+  const archiveList = document.getElementById('archiveList');
+  const archiveToggle = document.getElementById('archiveToggle');
+  if (!archiveHeader || !archiveList || !archiveToggle) return;
+
+  archiveHeader.addEventListener('click', () => {
+    const isOpen = archiveList.classList.toggle('show');
+    archiveToggle.textContent = isOpen ? '▲' : '▼';
+    if (isOpen) loadArchivedChats();
+  });
+}
+
+let archivedRowLongPressTimer = null;
+
+function hideArchivedRowMenu() {
+  const menu = document.getElementById('archivedRowMenu');
+  if (menu) menu.style.display = 'none';
+}
+
+function showArchivedRowMenu(x, y, archive) {
+  const menu = document.getElementById('archivedRowMenu');
+  if (!menu) return;
+  menu.dataset.archiveId = archive.id;
+  menu.dataset.chatId = archive.chatId;
+  menu.dataset.chatType = archive.chatType;
+  menu.dataset.chatName = archive.chatName || 'Chat';
+  menu.style.display = 'block';
+  const margin = 8;
+  const maxX = Math.max(margin, window.innerWidth - menu.offsetWidth - margin);
+  const maxY = Math.max(margin, window.innerHeight - menu.offsetHeight - margin);
+  menu.style.left = `${Math.min(Math.max(margin, x), maxX)}px`;
+  menu.style.top = `${Math.min(Math.max(margin, y), maxY)}px`;
+}
+
 async function loadArchivedChats() {
   const archiveList = document.getElementById('archiveList');
   if (!archiveList) return;
   const snapshot = await db.collection('archivedChats').where('userId', '==', currentUser.uid).get();
   if (snapshot.empty) { archiveList.innerHTML = '<div class="empty-state" style="padding:20px;">No archived chats</div>'; return; }
   archiveList.innerHTML = '';
-  const archivedChats = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })).sort((a, b) => (b.archivedAt?.toMillis?.() || 0) - (a.archivedAt?.toMillis?.() || 0));
+  const deduped = new Map();
+  snapshot.docs.forEach(doc => {
+    const data = { id: doc.id, ...doc.data() };
+    const key = data.chatType === 'direct'
+      ? `direct:${String(data.chatName || data.chatId || '').toLowerCase()}`
+      : `group:${data.chatId || doc.id}`;
+    const existing = deduped.get(key);
+    const existingTs = existing?.archivedAt?.toMillis?.() || 0;
+    const currentTs = data.archivedAt?.toMillis?.() || 0;
+    if (!existing || currentTs >= existingTs) deduped.set(key, data);
+  });
+  const archivedChats = [...deduped.values()].sort((a, b) => (b.archivedAt?.toMillis?.() || 0) - (a.archivedAt?.toMillis?.() || 0));
   for (const archive of archivedChats) {
     const archiveDiv = document.createElement('div');
     archiveDiv.className = 'list-item';
     archiveDiv.style.opacity = '0.7';
-    archiveDiv.innerHTML = `<div class="list-avatar">${archive.chatType === 'group' ? '👥' : '👤'}</div><div class="list-info"><div class="list-name">${escapeHtml(archive.chatName)}</div><div class="list-preview">Archived</div></div><button class="list-item-menu unarchive-btn" data-id="${archive.id}">📤</button>`;
+    archiveDiv.dataset.chatId = archive.chatId;
+    archiveDiv.dataset.chatType = archive.chatType;
+    archiveDiv.dataset.archiveId = archive.id;
+    archiveDiv.dataset.chatName = archive.chatName || 'Chat';
+    archiveDiv.innerHTML = `<div class="list-avatar">${archive.chatType === 'group' ? 'G' : escapeHtml(getInitials(archive.chatName || ''))}</div><div class="list-info"><div class="list-name">${escapeHtml(archive.chatName)}</div><div class="list-preview">Archived</div></div><button class="list-item-menu unarchive-btn" data-id="${archive.id}">Unarchive</button>`;
     archiveList.appendChild(archiveDiv);
+    const openArchivedMenu = (x, y) => showArchivedRowMenu(x, y, archive);
+    archiveDiv.addEventListener('contextmenu', (event) => {
+      event.preventDefault();
+      openArchivedMenu(event.clientX, event.clientY);
+    });
+    archiveDiv.addEventListener('touchstart', (event) => {
+      const touch = event.touches && event.touches[0];
+      if (!touch) return;
+      archivedRowLongPressTimer = setTimeout(() => {
+        openArchivedMenu(touch.clientX, touch.clientY);
+      }, 450);
+    }, { passive: true });
+    const clearLongPress = () => {
+      if (archivedRowLongPressTimer) {
+        clearTimeout(archivedRowLongPressTimer);
+        archivedRowLongPressTimer = null;
+      }
+    };
+    archiveDiv.addEventListener('touchmove', clearLongPress, { passive: true });
+    archiveDiv.addEventListener('touchend', clearLongPress, { passive: true });
+    archiveDiv.addEventListener('touchcancel', clearLongPress, { passive: true });
   }
+  archiveList.querySelectorAll('.list-item .list-info').forEach(infoEl => {
+    infoEl.addEventListener('click', async () => {
+      const parent = infoEl.closest('.list-item');
+      const chatId = parent?.dataset.chatId;
+      const chatType = parent?.dataset.chatType;
+      if (!chatId || !chatType) return;
+      if (chatType === 'group') {
+        const groupDoc = await db.collection('groups').doc(chatId).get();
+        if (groupDoc.exists) loadGroupChat(chatId, groupDoc.data().name || 'Group');
+      } else {
+        const directDoc = await db.collection('directChats').doc(chatId).get();
+        const participants = directDoc.data()?.participants || chatId.split('_');
+        const otherUserId = participants.find(id => id !== currentUser.uid);
+        if (otherUserId) {
+          const userDoc = await db.collection('users').doc(otherUserId).get();
+          if (userDoc.exists) startDirectChat({ id: otherUserId, ...userDoc.data() });
+        }
+      }
+    });
+  });
   document.querySelectorAll('.unarchive-btn').forEach(btn => {
     btn.addEventListener('click', async (e) => { e.stopPropagation(); await unarchiveChat(btn.dataset.id); });
   });
@@ -4389,6 +4529,7 @@ async function loadArchivedChats() {
 async function buildDirectChatItems() {
   if (!currentUser) return [];
   const archivedChatIds = await getArchivedChatIds();
+  const archivedDirectNames = await getArchivedDirectChatNames();
   const deletedChatIds = await getDeletedChatIds();
   const directChats = await db.collection('directChats').where('participants', 'array-contains', currentUser.uid).get();
   const directChatDocs = new Map();
@@ -4399,7 +4540,8 @@ async function buildDirectChatItems() {
   for (const chat of directChatDocs.values()) {
     const chatData = chat.data;
     if (chatData.status && chatData.status !== 'active') continue;
-    if (archivedChatIds.has(chat.id) || deletedChatIds.has(chat.id)) continue;
+    const aliasIds = [...new Set([chat.id, ...(chatData.aliasDirectIds || [])])];
+    if (aliasIds.some(id => archivedChatIds.has(id)) || aliasIds.some(id => deletedChatIds.has(id))) continue;
     const participants = chatData.participants || chat.id.split('_');
     const otherUserId = participants.find(id => id !== currentUser.uid);
     if (!otherUserId || isBlocked(otherUserId)) continue;
@@ -4411,6 +4553,7 @@ async function buildDirectChatItems() {
     const userData = userDoc.exists ? userDoc.data() : (profileMatch || {});
     if ((userDoc.exists || profileMatch) && userData.isActive === false) continue;
     const displayName = userData.displayName || userData.email || fallbackName;
+    if (archivedDirectNames.has(String(displayName || '').trim().toLowerCase())) continue;
     const onlineStatus = userData.onlineStatus || 'offline';
     const presenceText = getPresenceText(userData);
     const preview = chatData.lastMessage || 'Tap to open chat';
@@ -4419,7 +4562,7 @@ async function buildDirectChatItems() {
       id: chat.id,
       type: 'direct',
       name: displayName,
-      avatar: userData.avatar ? `<img src="${userData.avatar}">` : escapeHtml((displayName || '?')[0].toUpperCase()),
+      avatar: userData.avatar ? `<img src="${userData.avatar}">` : escapeHtml(getInitials(displayName, userData.email || fallbackEmail)),
       preview,
       unreadCount: await getChatUnreadCount([chat.id, ...(chatData.aliasDirectIds || [])], 'direct'),
       isFavorite: favoriteChatIds.includes(chat.id),
@@ -4531,7 +4674,7 @@ async function loadGroupsList() {
     groupDiv.dataset.unreadCount = group.unreadCount;
     groupDiv.dataset.chatName = group.name || '';
     if (currentChat?.id === group.id && currentChatType === 'group') groupDiv.classList.add('active');
-    groupDiv.innerHTML = `<div class="list-avatar">${group.icon ? `<img src="${group.icon}">` : '👥'}</div><div class="list-info" style="flex:1; cursor:pointer;"><div class="list-name">${group.isFavorite ? '⭐ ' : ''}${escapeHtml(group.name)} ${isMuted ? '🔇' : ''}</div><div class="list-preview">${group.code}${group.unreadCount ? ` • ${group.unreadCount} unread` : ''}</div></div><button class="list-item-menu mute-chat-btn" data-chat-id="${group.id}" data-chat-type="group">🔇</button><button class="list-item-menu archive-chat-btn" data-chat-id="${group.id}" data-chat-type="group" data-chat-name="${escapeHtml(group.name)}">📦</button>`;
+    groupDiv.innerHTML = `<div class="list-avatar">${group.icon ? `<img src="${group.icon}">` : 'G'}</div><div class="list-info" style="flex:1; cursor:pointer;"><div class="list-name">${group.isFavorite ? '* ' : ''}${escapeHtml(group.name)} ${isMuted ? '[Muted]' : ''}</div><div class="list-preview">${group.code}${group.unreadCount ? ` • ${group.unreadCount} unread` : ''}</div></div><button class="list-item-menu mute-chat-btn" data-chat-id="${group.id}" data-chat-type="group">Mute</button><button class="list-item-menu archive-chat-btn" data-chat-id="${group.id}" data-chat-type="group" data-chat-name="${escapeHtml(group.name)}">Arch</button>`;
     if (group.unreadCount) {
       groupDiv.insertAdjacentHTML('beforeend', `<span class="unread-pill">${group.unreadCount}</span>`);
     }
@@ -5709,6 +5852,10 @@ async function forwardMessageTo(chatItem) {
 }
 
 function showContextMenu(x, y, messageId, messageData, isMyMessage) {
+  try {
+    const selection = window.getSelection?.();
+    if (selection?.rangeCount) selection.removeAllRanges();
+  } catch (_) { }
   const existing = document.querySelector('.message-context-menu');
   if (existing) existing.remove();
   const menu = document.createElement('div');
@@ -5728,9 +5875,12 @@ function showContextMenu(x, y, messageId, messageData, isMyMessage) {
   }
 
   items.forEach(item => {
-    const div = document.createElement('div'); div.className = 'context-menu-item';
-    div.textContent = item.text; div.onclick = () => { item.action(); menu.remove(); };
-    menu.appendChild(div);
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'context-menu-item';
+    btn.textContent = item.text;
+    btn.onclick = () => { item.action(); menu.remove(); };
+    menu.appendChild(btn);
   });
   document.body.appendChild(menu);
   positionContextMenu(menu, x, y);
@@ -5787,6 +5937,10 @@ async function showProfileModal() {
   document.getElementById('hideReadReceipts').checked = !!privacySettings.hideReadReceipts;
   document.getElementById('hideTypingIndicator').checked = !!privacySettings.hideTypingIndicator;
   document.getElementById('hideLastSeen').checked = !!privacySettings.hideLastSeen;
+  const avatarMarkup = d.avatar
+    ? `<img src="${d.avatar}" alt="Profile avatar">`
+    : escapeHtml(getInitials(d.displayName || currentUser.displayName || '', d.email || currentUser.email || ''));
+  document.getElementById('profileAvatar').innerHTML = avatarMarkup;
   document.getElementById('profileModal').style.display = 'flex';
 }
 
@@ -6005,6 +6159,13 @@ async function init() {
       lastSeen: new Date()
     }, { merge: true });
     const latestUserDoc = await userRef.get();
+    const latestUserData = latestUserDoc.data() || {};
+    const userAvatarEl = document.getElementById('userAvatar');
+    if (userAvatarEl) {
+      userAvatarEl.innerHTML = latestUserData.avatar
+        ? `<img src="${latestUserData.avatar}" alt="User avatar">`
+        : escapeHtml(getInitials(latestUserData.displayName || user.displayName || '', latestUserData.email || user.email || ''));
+    }
     privacySettings = { ...privacySettings, ...(latestUserDoc.data()?.privacySettings || {}) };
     await reconnectSameEmailProfile();
 
@@ -6016,6 +6177,7 @@ async function init() {
     loadWallpaperFromStorage();
     setupChatListListeners();
     setupRequestListeners();
+    setupArchiveSection();
     listenForIncomingCalls();
     setupCallPushNotifications().catch(() => { });
     startScheduledMessageWorker();
@@ -6142,6 +6304,14 @@ async function init() {
     await currentUser.updateProfile({ displayName: name.trim() }).catch(() => { });
     document.getElementById('profileName').textContent = name.trim();
     document.getElementById('userName').textContent = name.trim();
+    const userAvatarEl = document.getElementById('userAvatar');
+    if (userAvatarEl && !userAvatarEl.querySelector('img')) {
+      userAvatarEl.textContent = getInitials(name.trim(), currentUser.email || '');
+    }
+    const profileAvatarEl = document.getElementById('profileAvatar');
+    if (profileAvatarEl && !profileAvatarEl.querySelector('img')) {
+      profileAvatarEl.textContent = getInitials(name.trim(), currentUser.email || '');
+    }
   });
   document.getElementById('changeEmailBtn')?.addEventListener('click', changeEmail);
   document.getElementById('changePhoneBtn')?.addEventListener('click', async () => {
@@ -6278,7 +6448,13 @@ async function init() {
   });
   document.getElementById('archiveChatMenuItem')?.addEventListener('click', async () => {
     if (!contextMenuTarget) return;
-    await archiveChat(contextMenuTarget.dataset.chatId, contextMenuTarget.dataset.chatType, contextMenuTarget.dataset.chatName || 'Chat');
+    const aliases = (contextMenuTarget.dataset.aliasDirectIds || '').split(',').filter(Boolean);
+    await archiveChat(
+      contextMenuTarget.dataset.chatId,
+      contextMenuTarget.dataset.chatType,
+      contextMenuTarget.dataset.chatName || 'Chat',
+      aliases
+    );
     document.getElementById('chatContextMenu').style.display = 'none';
     loadCurrentChatList();
   });
@@ -6348,6 +6524,29 @@ window.addEventListener('click', (e) => {
   if (sidebarMenu && !e.target.closest('#chatContextMenu')) {
     sidebarMenu.style.display = 'none';
   }
+
+  const archivedMenu = document.getElementById('archivedRowMenu');
+  if (archivedMenu && !e.target.closest('#archivedRowMenu')) {
+    hideArchivedRowMenu();
+  }
+});
+
+document.getElementById('archivedUnarchiveMenuItem')?.addEventListener('click', async () => {
+  const menu = document.getElementById('archivedRowMenu');
+  if (!menu?.dataset.archiveId) return;
+  await unarchiveChat(menu.dataset.archiveId);
+  hideArchivedRowMenu();
+});
+
+document.getElementById('archivedDeleteMenuItem')?.addEventListener('click', async () => {
+  const menu = document.getElementById('archivedRowMenu');
+  if (!menu?.dataset.archiveId || !menu.dataset.chatId || !menu.dataset.chatType) return;
+  const chatName = menu.dataset.chatName || 'Chat';
+  const doDelete = confirm(`Delete "${chatName}" for your account?`);
+  if (!doDelete) return;
+  await deleteChatForMe(menu.dataset.chatId, menu.dataset.chatType, chatName);
+  await unarchiveChat(menu.dataset.archiveId);
+  hideArchivedRowMenu();
 });
 
 document.getElementById('chatsList')?.addEventListener('contextmenu', (e) => {

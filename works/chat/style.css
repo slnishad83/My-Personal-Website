@@ -185,11 +185,154 @@ button {
   font-size: 18px;
 }
 
+#voiceCallBtn,
+#videoCallBtn,
+#searchChatBtn,
+#groupInfoBtn,
+#wallpaperBtn {
+  font-size: 0;
+  position: relative;
+}
+
+#voiceCallBtn::before,
+#videoCallBtn::before,
+#searchChatBtn::before,
+#groupInfoBtn::before,
+#wallpaperBtn::before {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  content: "";
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 18px 18px;
+  opacity: 0.9;
+}
+
+#voiceCallBtn::before {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2354656f' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M22 16.92V20a2 2 0 0 1-2.18 2A19.86 19.86 0 0 1 3 5.18 2 2 0 0 1 5 3h3.09a2 2 0 0 1 2 1.72c.12.9.33 1.77.62 2.6a2 2 0 0 1-.45 2.11L9.1 10.6a16 16 0 0 0 4.3 4.3l1.17-1.16a2 2 0 0 1 2.11-.45c.83.29 1.7.5 2.6.62A2 2 0 0 1 22 16.92z'/%3E%3C/svg%3E");
+}
+#videoCallBtn::before {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2354656f' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='2' y='7' width='15' height='10' rx='2'/%3E%3Cpath d='m17 10 5-3v10l-5-3z'/%3E%3C/svg%3E");
+}
+#searchChatBtn::before {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2354656f' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='m21 21-4.3-4.3'/%3E%3C/svg%3E");
+}
+#groupInfoBtn::before {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2354656f' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='10'/%3E%3Cpath d='M12 16v-4'/%3E%3Cpath d='M12 8h.01'/%3E%3C/svg%3E");
+}
+#wallpaperBtn::before {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2354656f' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='3' width='18' height='18' rx='2'/%3E%3Ccircle cx='9' cy='9' r='1.5'/%3E%3Cpath d='m21 15-5-5L5 21'/%3E%3C/svg%3E");
+}
+
+.list-item-menu.mute-chat-btn,
+.list-item-menu.archive-chat-btn,
+.list-item-menu.unarchive-btn {
+  font-size: 0;
+  color: transparent;
+  position: relative;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: #eef2f5;
+}
+
+.list-item-menu.unarchive-btn {
+  width: auto;
+  min-width: 84px;
+  height: 34px;
+  padding: 0 12px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #54656f;
+  gap: 6px;
+}
+
+.list-item-menu.unarchive-btn::before {
+  width: 14px;
+  height: 14px;
+  background-size: 14px 14px;
+}
+
+.list-item-menu.mute-chat-btn::before {
+  content: "";
+  width: 16px;
+  height: 16px;
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 16px 16px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2354656f' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M11 5 6 9H3v6h3l5 4z'/%3E%3Cpath d='m22 9-6 6'/%3E%3Cpath d='m16 9 6 6'/%3E%3C/svg%3E");
+}
+
+.list-item-menu.archive-chat-btn::before {
+  content: "";
+  width: 16px;
+  height: 16px;
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 16px 16px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2354656f' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='3' width='18' height='6' rx='1'/%3E%3Cpath d='M5 9v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V9'/%3E%3Cpath d='M10 13h4'/%3E%3C/svg%3E");
+}
+
+.list-item-menu.unarchive-btn::before {
+  content: "";
+  width: 16px;
+  height: 16px;
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 16px 16px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2354656f' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M9 14 4 9l5-5'/%3E%3Cpath d='M20 20a8 8 0 0 0-8-8H4'/%3E%3C/svg%3E");
+}
+
 .icon-btn:hover,
 .logout-btn:hover,
 .mobile-menu-btn:hover,
 .list-item-menu:hover {
   background: #e6e9eb;
+}
+
+#darkModeBtn,
+#logoutBtn {
+  font-size: 0;
+  position: relative;
+}
+
+#darkModeBtn::before,
+#logoutBtn::before {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  content: "";
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 18px 18px;
+  opacity: 0.9;
+}
+
+#darkModeBtn::before {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2354656f' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 3a7 7 0 1 0 9 9 9 9 0 1 1-9-9'/%3E%3C/svg%3E");
+}
+
+#logoutBtn::before {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2354656f' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4'/%3E%3Cpath d='M16 17l5-5-5-5'/%3E%3Cpath d='M21 12H9'/%3E%3C/svg%3E");
+}
+
+#sendBtn {
+  font-size: 0;
+  width: 42px;
+  min-width: 42px;
+}
+
+#sendBtn::before {
+  content: "\27A4";
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1;
 }
 
 .install-app-btn {
@@ -1126,6 +1269,21 @@ button {
   font-weight: 800;
 }
 
+.message.call-message .message-bubble span:first-child {
+  min-width: 34px;
+  height: 22px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: rgba(0, 168, 132, 0.16);
+  color: var(--brand-dark);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 1;
+}
+
 body.dark .message.call-message .message-bubble {
   background: rgba(32, 44, 51, 0.92);
 }
@@ -1784,6 +1942,16 @@ body.dark .message.call-message .message-bubble {
   line-height: 1.25;
   white-space: nowrap;
   cursor: pointer;
+  appearance: none;
+  width: 100%;
+  border: 0;
+  background: transparent;
+  text-align: left;
+}
+
+.message-context-menu .context-menu-item::before,
+.message-context-menu .context-menu-item::after {
+  content: none !important;
 }
 
 .context-menu-item:last-child {
@@ -1901,6 +2069,31 @@ body.dark .message.call-message .message-bubble {
   border: 1px solid var(--border);
   background: var(--panel);
   color: var(--text);
+}
+
+#profileModal .btn-outline {
+  min-height: 30px;
+  padding: 0 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+#profileModal .modal-body > div[style*="Name:"] {
+  line-height: 1.35;
+}
+
+#profileModal .modal-content {
+  max-height: calc(100dvh - 12px);
+}
+
+#profileModal .modal-body {
+  padding-bottom: calc(80px + env(safe-area-inset-bottom, 0px));
+}
+
+#profileModal #deactivateAccountBtn {
+  min-height: 46px;
+  margin-bottom: calc(22px + env(safe-area-inset-bottom, 0px));
 }
 
 .btn-danger {
@@ -2692,6 +2885,30 @@ body {
 
 .message-context-menu {
   z-index: 10001;
+  isolation: isolate;
+  min-width: 240px;
+  width: min(340px, calc(100vw - 20px));
+  max-width: calc(100vw - 20px);
+  background: #ffffff !important;
+  border: 1px solid #e3e7ea !important;
+  box-shadow: 0 10px 28px rgba(11, 20, 26, 0.22) !important;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+.message-context-menu .context-menu-item {
+  background: #ffffff !important;
+  background-image: none !important;
+  color: #111b21 !important;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+.message-context-menu .context-menu-item:hover,
+.message-context-menu .context-menu-item:active {
+  background: #f2f5f7 !important;
 }
 
 /* Encoding-safe icon + menu interaction overrides */
@@ -2789,9 +3006,9 @@ body {
 
   .chat-actions {
     flex: 0 0 auto;
-    max-width: 42vw;
+    max-width: 36vw;
     overflow: hidden;
-    gap: 0;
+    gap: 2px;
   }
 
   .chat-actions .icon-btn {
@@ -2917,14 +3134,18 @@ body {
   }
 
   .chat-actions {
-    max-width: 38vw;
+    max-width: 34vw;
   }
 
   .chat-actions .icon-btn,
   .mobile-menu-btn {
     width: 30px;
     height: 30px;
-    font-size: 15px;
+    font-size: 12px;
+  }
+
+  #wallpaperBtn {
+    display: none !important;
   }
 
   .messages-area {
