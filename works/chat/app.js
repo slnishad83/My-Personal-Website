@@ -41,6 +41,10 @@ const authPersistenceReady = Promise.race([
   console.error('Persistence error:', error);
 });
 
+window.addEventListener('beforeunload', () => {
+  stopSessionHeartbeat();
+});
+
 registerFcmTokenForCurrentUser({ force: false });
 const db = firebase.firestore();
 const storage = firebase.storage();
@@ -93,6 +97,14 @@ let pinnedMessages = [];
 let currentSearchResults = [];
 let currentSearchIndex = 0;
 let favoriteChatIds = [];
+let currentForwardTargets = [];
+let currentForwardSelectionKeys = new Set();
+let activeStatusSet = [];
+let activeStatusIndex = 0;
+let statusAutoAdvanceTimer = null;
+let mentionSuggestionItems = [];
+let mentionSuggestionRange = null;
+let mentionSuggestionIndex = -1;
 let mediaRecorder = null;
 let audioChunks = [];
 let isRecording = false;
@@ -135,6 +147,13 @@ let lastSearchValue = '';
 let currentViewTab = 'all';
 let callMiniBar = null;
 let callNetworkFailTimer = null;
+let currentSessionId = '';
+let sessionHeartbeatTimer = null;
+let sessionWatchUnsubscribe = null;
+let appUnlockedForSession = false;
+const MESSAGE_PAGE_SIZE = 120;
+const messageRenderLimits = new Map();
+let failedQueueRetryTimer = null;
 
 const defaultRtcConfig = {
   iceServers: [
@@ -205,10 +224,42 @@ let chatWallpapers = {};
 function showToast(message, type = 'success') {
   const toast = document.getElementById('toast');
   if (!toast) return;
+  toast.setAttribute('role', 'status');
+  toast.setAttribute('aria-live', type === 'error' ? 'assertive' : 'polite');
+  toast.setAttribute('aria-atomic', 'true');
   toast.textContent = message;
   toast.className = `toast ${type}`;
   toast.style.opacity = '1';
   setTimeout(() => { toast.style.opacity = '0'; }, 3000);
+}
+
+function applyA11yEnhancements() {
+  document.querySelectorAll('button').forEach((button) => {
+    const hasVisibleLabel = (button.textContent || '').trim().length > 0;
+    const hasAriaLabel = (button.getAttribute('aria-label') || '').trim().length > 0;
+    if (!hasVisibleLabel && !hasAriaLabel) {
+      const fallback = (button.getAttribute('title') || '').trim();
+      if (fallback) button.setAttribute('aria-label', fallback);
+    }
+  });
+
+  document.querySelectorAll('.modal').forEach((modal) => {
+    if (!modal.getAttribute('role')) modal.setAttribute('role', 'dialog');
+    modal.setAttribute('aria-modal', 'true');
+  });
+}
+
+function closeTopVisibleModal() {
+  const visibleModals = Array.from(document.querySelectorAll('.modal')).filter((modal) => {
+    const styles = window.getComputedStyle(modal);
+    return styles.display !== 'none' && styles.visibility !== 'hidden';
+  });
+  if (!visibleModals.length) return false;
+
+  const topModal = visibleModals[visibleModals.length - 1];
+  if (topModal.id === 'unlockModal' && !appUnlockedForSession) return false;
+  topModal.style.display = 'none';
+  return true;
 }
 
 function escapeHtml(text) {
@@ -400,7 +451,16 @@ function renderChatListItems(items, container) {
   ensureDraftPreviewStyle();
   container.innerHTML = '';
   if (items.length === 0) {
-    container.innerHTML = '<div class="empty-state" style="padding:40px;">No chats yet. Search for people or create a group.</div>';
+    container.innerHTML = `
+      <div class="empty-state" style="padding:40px;">
+        <div>No chats yet. Search for people or create a group.</div>
+        <button type="button" id="refreshChatListBtn" class="btn btn-outline" style="margin-top:12px;">Refresh chats</button>
+      </div>
+    `;
+    container.querySelector('#refreshChatListBtn')?.addEventListener('click', () => {
+      loadCurrentChatList();
+      loadArchivedChats();
+    });
     return;
   }
 
@@ -454,7 +514,7 @@ function renderChatListItems(items, container) {
       </div>
       ${statusChip}
       ${unread}
-      <button class="list-item-menu mute-chat-btn" data-chat-id="${item.id}" data-chat-type="${item.type}">Mute</button>
+      <button class="list-item-menu mute-chat-btn" data-chat-id="${item.id}" data-chat-type="${item.type}">${item.isMuted ? 'Unmute' : 'Mute'}</button>
       <button class="list-item-menu archive-chat-btn" data-chat-id="${item.id}" data-chat-type="${item.type}" data-chat-name="${escapeHtml(item.name)}">Arch</button>
     `;
 
@@ -469,6 +529,12 @@ function renderChatListItems(items, container) {
 
     chatDiv.querySelector('.mute-chat-btn')?.addEventListener('click', async (e) => {
       e.stopPropagation();
+      const activeMute = getActiveMuteRecord(item.id, item.type);
+      if (activeMute) {
+        await unmuteChat(activeMute.id);
+        loadCurrentChatList();
+        return;
+      }
       const duration = prompt('Mute for: 8h, 1w, or always?', '8h');
       if (duration === '8h' || duration === '1w' || duration === 'always') {
         await muteChat(item.id, item.type, duration);
@@ -541,6 +607,9 @@ function hideMentionSuggestions() {
   if (!box) return;
   box.style.display = 'none';
   box.innerHTML = '';
+  mentionSuggestionItems = [];
+  mentionSuggestionRange = null;
+  mentionSuggestionIndex = -1;
 }
 
 function insertMention(member, range) {
@@ -555,6 +624,44 @@ function insertMention(member, range) {
   input.setSelectionRange(cursor, cursor);
   saveCurrentDraft();
   hideMentionSuggestions();
+}
+
+function highlightMentionSuggestion() {
+  const box = document.getElementById('mentionSuggestions');
+  if (!box) return;
+  box.querySelectorAll('.mention-suggestion').forEach((el, idx) => {
+    el.classList.toggle('active', idx === mentionSuggestionIndex);
+  });
+}
+
+function handleMentionKeydown(event) {
+  const box = document.getElementById('mentionSuggestions');
+  if (!box || box.style.display !== 'block' || !mentionSuggestionItems.length) return false;
+  if (event.key === 'ArrowDown') {
+    event.preventDefault();
+    mentionSuggestionIndex = (mentionSuggestionIndex + 1) % mentionSuggestionItems.length;
+    highlightMentionSuggestion();
+    return true;
+  }
+  if (event.key === 'ArrowUp') {
+    event.preventDefault();
+    mentionSuggestionIndex = mentionSuggestionIndex <= 0 ? mentionSuggestionItems.length - 1 : mentionSuggestionIndex - 1;
+    highlightMentionSuggestion();
+    return true;
+  }
+  if (event.key === 'Enter' && mentionSuggestionIndex >= 0) {
+    event.preventDefault();
+    const member = mentionSuggestionItems[mentionSuggestionIndex];
+    if (member && mentionSuggestionRange) insertMention(member, mentionSuggestionRange);
+    return true;
+  }
+  if (event.key === 'Tab' && mentionSuggestionIndex >= 0) {
+    event.preventDefault();
+    const member = mentionSuggestionItems[mentionSuggestionIndex];
+    if (member && mentionSuggestionRange) insertMention(member, mentionSuggestionRange);
+    return true;
+  }
+  return false;
 }
 
 function updateMentionSuggestions() {
@@ -577,6 +684,9 @@ function updateMentionSuggestions() {
     hideMentionSuggestions();
     return;
   }
+  mentionSuggestionItems = matches;
+  mentionSuggestionRange = range;
+  mentionSuggestionIndex = 0;
   box.innerHTML = '';
   matches.forEach(member => {
     const button = document.createElement('button');
@@ -590,6 +700,7 @@ function updateMentionSuggestions() {
     box.appendChild(button);
   });
   box.style.display = 'block';
+  highlightMentionSuggestion();
 }
 
 function renderPollMessage(messageId, msg = {}) {
@@ -3080,6 +3191,7 @@ async function loadAllChatsList(searchTerm = '') {
   let items = [...allItems];
   if (currentViewTab === 'favorites') items = items.filter(item => item.isFavorite);
   if (currentViewTab === 'unread') items = items.filter(item => item.unreadCount > 0);
+  if (currentViewTab === 'muted') items = items.filter(item => item.isMuted);
 
   const term = searchTerm.trim().toLowerCase();
 
@@ -3140,6 +3252,7 @@ async function loadAllChatsList(searchTerm = '') {
     items = [...allItems];
     if (currentViewTab === 'favorites') items = items.filter(item => item.isFavorite);
     if (currentViewTab === 'unread') items = items.filter(item => item.unreadCount > 0);
+    if (currentViewTab === 'muted') items = items.filter(item => item.isMuted);
   }
 
   // Sort chronologically and update layout view
@@ -3164,7 +3277,14 @@ async function searchMessagesInChats(chatItems = [], term = '') {
         .map(doc => doc.data())
         .filter(msg => !msg.deletedFor?.[currentUser.uid] && !msg.deletedForEveryone)
         .find(msg => {
-          const body = [msg.text, msg.attachment?.filename, msg.poll?.question].filter(Boolean).join(' ').toLowerCase();
+          const body = [
+            msg.text,
+            msg.senderName,
+            msg.attachment?.filename,
+            msg.attachment?.url,
+            msg.poll?.question,
+            msg.poll?.options?.join?.(' ')
+          ].filter(Boolean).join(' ').toLowerCase();
           return body.includes(term);
         });
       if (match) {
@@ -3593,6 +3713,39 @@ async function unblockUser(blockId) {
   showToast('User unblocked');
 }
 
+async function reportUser(targetUserId, targetName = 'User', source = 'chat') {
+  if (!currentUser || !targetUserId) return;
+  const reason = prompt('Report reason (optional):', '') || '';
+  await db.collection('userReports').add({
+    reporterUserId: currentUser.uid,
+    reporterName: currentUser.displayName || currentUser.email || 'User',
+    targetUserId,
+    targetName,
+    source,
+    reason: reason.trim(),
+    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+  });
+  showToast(`${targetName} reported`);
+}
+
+async function reportMessage(messageId, messageData = {}) {
+  if (!currentUser || !messageId) return;
+  const reason = prompt('Report reason (optional):', '') || '';
+  await db.collection('messageReports').add({
+    reporterUserId: currentUser.uid,
+    reporterName: currentUser.displayName || currentUser.email || 'User',
+    messageId,
+    chatId: currentChat?.id || '',
+    chatType: currentChatType || '',
+    senderId: messageData.senderId || '',
+    senderName: messageData.senderName || '',
+    text: messageData.text || '',
+    reason: reason.trim(),
+    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+  });
+  showToast('Message reported');
+}
+
 function isBlocked(userId) {
   return blockedUsers.some(b => b.blockedUserId === userId);
 }
@@ -3656,14 +3809,18 @@ async function unmuteChat(muteId) {
   showToast('Chat unmuted');
 }
 
-function isChatMuted(chatId) {
-  const mute = mutedChats.find(m => m.chatId === chatId);
-  if (!mute) return false;
+function getActiveMuteRecord(chatId, chatType = '') {
+  const mute = mutedChats.find(m => m.chatId === chatId && (!chatType || m.chatType === chatType));
+  if (!mute) return null;
   if (mute.muteUntil && mute.muteUntil.toDate() < new Date()) {
     unmuteChat(mute.id);
-    return false;
+    return null;
   }
-  return true;
+  return mute;
+}
+
+function isChatMuted(chatId) {
+  return !!getActiveMuteRecord(chatId);
 }
 
 // ========================================
@@ -3992,8 +4149,17 @@ async function deactivateAccount() {
   await db.collection('users').doc(currentUser.uid).update({
     isActive: false, deactivatedAt: firebase.firestore.FieldValue.serverTimestamp(), onlineStatus: 'offline'
   });
+  await markCurrentSessionInactive();
   await auth.signOut();
   window.location.replace('login.html');
+}
+
+async function markCurrentSessionInactive() {
+  if (!currentUser || !currentSessionId) return;
+  await db.collection('userSessions').doc(`${currentUser.uid}_${currentSessionId}`).set({
+    isActive: false,
+    lastSeenAt: firebase.firestore.FieldValue.serverTimestamp()
+  }, { merge: true }).catch(() => { });
 }
 
 async function changeEmail() {
@@ -4430,6 +4596,7 @@ function setupArchiveSection() {
 }
 
 let archivedRowLongPressTimer = null;
+let archivedRowLongPressTriggered = false;
 
 function hideArchivedRowMenu() {
   const menu = document.getElementById('archivedRowMenu');
@@ -4477,20 +4644,25 @@ async function loadArchivedChats() {
     archiveDiv.dataset.chatType = archive.chatType;
     archiveDiv.dataset.archiveId = archive.id;
     archiveDiv.dataset.chatName = archive.chatName || 'Chat';
-    archiveDiv.innerHTML = `<div class="list-avatar">${archive.chatType === 'group' ? 'G' : escapeHtml(getInitials(archive.chatName || ''))}</div><div class="list-info"><div class="list-name">${escapeHtml(archive.chatName)}</div><div class="list-preview">Archived</div></div><button class="list-item-menu unarchive-btn" data-id="${archive.id}">Unarchive</button>`;
+    archiveDiv.innerHTML = `<div class="list-avatar">${archive.chatType === 'group' ? 'G' : escapeHtml(getInitials(archive.chatName || ''))}</div><div class="list-info"><div class="list-name">${escapeHtml(archive.chatName)}</div><div class="list-preview">Archived</div></div><button class="list-item-menu unarchive-btn" data-id="${archive.id}" title="Unarchive" aria-label="Unarchive"></button>`;
     archiveList.appendChild(archiveDiv);
+    archiveDiv.addEventListener('selectstart', (event) => event.preventDefault());
+    archiveDiv.addEventListener('dragstart', (event) => event.preventDefault());
     const openArchivedMenu = (x, y) => showArchivedRowMenu(x, y, archive);
     archiveDiv.addEventListener('contextmenu', (event) => {
       event.preventDefault();
       openArchivedMenu(event.clientX, event.clientY);
     });
     archiveDiv.addEventListener('touchstart', (event) => {
+      archivedRowLongPressTriggered = false;
       const touch = event.touches && event.touches[0];
       if (!touch) return;
       archivedRowLongPressTimer = setTimeout(() => {
+        archivedRowLongPressTriggered = true;
+        event.preventDefault();
         openArchivedMenu(touch.clientX, touch.clientY);
       }, 450);
-    }, { passive: true });
+    }, { passive: false });
     const clearLongPress = () => {
       if (archivedRowLongPressTimer) {
         clearTimeout(archivedRowLongPressTimer);
@@ -4498,7 +4670,10 @@ async function loadArchivedChats() {
       }
     };
     archiveDiv.addEventListener('touchmove', clearLongPress, { passive: true });
-    archiveDiv.addEventListener('touchend', clearLongPress, { passive: true });
+    archiveDiv.addEventListener('touchend', (event) => {
+      if (archivedRowLongPressTriggered) event.preventDefault();
+      clearLongPress();
+    }, { passive: false });
     archiveDiv.addEventListener('touchcancel', clearLongPress, { passive: true });
   }
   archiveList.querySelectorAll('.list-item .list-info').forEach(infoEl => {
@@ -4528,92 +4703,163 @@ async function loadArchivedChats() {
 
 async function buildDirectChatItems() {
   if (!currentUser) return [];
-  const archivedChatIds = await getArchivedChatIds();
-  const archivedDirectNames = await getArchivedDirectChatNames();
-  const deletedChatIds = await getDeletedChatIds();
-  const directChats = await db.collection('directChats').where('participants', 'array-contains', currentUser.uid).get();
-  const directChatDocs = new Map();
-  directChats.docs.forEach(doc => directChatDocs.set(doc.id, { id: doc.id, data: doc.data() }));
-
   const items = [getSavedMessagesItem()];
+  let archivedChatIds = new Set();
+  let archivedDirectNames = new Set();
+  let deletedChatIds = new Set();
+  let directChats = null;
 
-  for (const chat of directChatDocs.values()) {
-    const chatData = chat.data;
-    if (chatData.status && chatData.status !== 'active') continue;
-    const aliasIds = [...new Set([chat.id, ...(chatData.aliasDirectIds || [])])];
-    if (aliasIds.some(id => archivedChatIds.has(id)) || aliasIds.some(id => deletedChatIds.has(id))) continue;
-    const participants = chatData.participants || chat.id.split('_');
-    const otherUserId = participants.find(id => id !== currentUser.uid);
-    if (!otherUserId || isBlocked(otherUserId)) continue;
-    const fallbackEmail = chatData.participantEmails?.[otherUserId] || '';
-    const fallbackName = chatData.participantNames?.[otherUserId] || fallbackEmail || 'Unknown contact';
-    const userDoc = await db.collection('users').doc(otherUserId).get();
-    const profileMatch = userDoc.exists ? null : (findProfileByEmail(fallbackEmail) || findProfileByFallbackName(fallbackName));
-    const resolvedUserId = userDoc.exists ? otherUserId : (profileMatch?.id || otherUserId);
-    const userData = userDoc.exists ? userDoc.data() : (profileMatch || {});
-    if ((userDoc.exists || profileMatch) && userData.isActive === false) continue;
-    const displayName = userData.displayName || userData.email || fallbackName;
-    if (archivedDirectNames.has(String(displayName || '').trim().toLowerCase())) continue;
-    const onlineStatus = userData.onlineStatus || 'offline';
-    const presenceText = getPresenceText(userData);
-    const preview = chatData.lastMessage || 'Tap to open chat';
-
-    items.push({
-      id: chat.id,
-      type: 'direct',
-      name: displayName,
-      avatar: userData.avatar ? `<img src="${userData.avatar}">` : escapeHtml(getInitials(displayName, userData.email || fallbackEmail)),
-      preview,
-      unreadCount: await getChatUnreadCount([chat.id, ...(chatData.aliasDirectIds || [])], 'direct'),
-      isFavorite: favoriteChatIds.includes(chat.id),
-      isMuted: isChatMuted(chat.id),
-      otherUserId: resolvedUserId,
-      user: { id: resolvedUserId, ...userData, displayName },
-      email: userData.email || fallbackEmail || '',
-      phone: userData.phone || userData.phoneNumber || '',
-      hasUserProfile: userDoc.exists || !!profileMatch,
-      aliasDirectIds: [...new Set([chat.id, ...(chatData.aliasDirectIds || [])])],
-      onlineStatus,
-      presenceText,
-      lastMessageTime: chatData.lastMessageTime?.toDate?.() || new Date(0)
-    });
+  try {
+    archivedChatIds = await getArchivedChatIds();
+    archivedDirectNames = await getArchivedDirectChatNames();
+    deletedChatIds = await getDeletedChatIds();
+    directChats = await db.collection('directChats').where('participants', 'array-contains', currentUser.uid).get();
+  } catch (error) {
+    console.error('Could not load direct chat metadata:', error);
+    return items;
   }
 
-  return [getSavedMessagesItem(), ...mergeDirectContactItems(items.filter(item => item.type !== 'saved'))];
+  const directChatDocs = new Map();
+  directChats.docs.forEach(doc => directChatDocs.set(doc.id, { id: doc.id, data: doc.data() }));
+  try {
+    const acceptedSent = await db.collection('chatRequests')
+      .where('fromUserId', '==', currentUser.uid)
+      .where('status', '==', 'accepted')
+      .get();
+    const acceptedReceived = await db.collection('chatRequests')
+      .where('toUserId', '==', currentUser.uid)
+      .where('status', '==', 'accepted')
+      .get();
+    [...acceptedSent.docs, ...acceptedReceived.docs].forEach(doc => {
+      const request = doc.data() || {};
+      const otherUserId = request.fromUserId === currentUser.uid ? request.toUserId : request.fromUserId;
+      if (!otherUserId) return;
+      const chatId = getDirectChatId(currentUser.uid, otherUserId);
+      if (directChatDocs.has(chatId)) return;
+      directChatDocs.set(chatId, {
+        id: chatId,
+        data: {
+          participants: [currentUser.uid, otherUserId],
+          participantEmails: {
+            [otherUserId]: request.fromUserId === currentUser.uid ? request.toUserEmail : request.fromUserEmail
+          },
+          participantNames: {
+            [otherUserId]: request.fromUserId === currentUser.uid ? request.toUserName : request.fromUserName
+          },
+          status: 'active',
+          lastMessage: 'Tap to open chat',
+          lastMessageTime: request.respondedAt || request.createdAt || null
+        }
+      });
+    });
+  } catch (error) {
+    console.warn('Accepted chat fallback skipped:', error);
+  }
+
+  for (const chat of directChatDocs.values()) {
+    try {
+      const chatData = chat.data || {};
+      if (chatData.status && chatData.status !== 'active') continue;
+      const aliasIds = [...new Set([chat.id, ...(chatData.aliasDirectIds || [])])];
+      if (aliasIds.some(id => archivedChatIds.has(id)) || aliasIds.some(id => deletedChatIds.has(id))) continue;
+      const participants = chatData.participants || chat.id.split('_');
+      const otherUserId = participants.find(id => id !== currentUser.uid);
+      if (!otherUserId || isBlocked(otherUserId)) continue;
+      const fallbackEmail = chatData.participantEmails?.[otherUserId] || '';
+      const fallbackName = chatData.participantNames?.[otherUserId] || fallbackEmail || 'Unknown contact';
+      const userDoc = await db.collection('users').doc(otherUserId).get();
+      const profileMatch = userDoc.exists ? null : (findProfileByEmail(fallbackEmail) || findProfileByFallbackName(fallbackName));
+      const resolvedUserId = userDoc.exists ? otherUserId : (profileMatch?.id || otherUserId);
+      const userData = userDoc.exists ? userDoc.data() : (profileMatch || {});
+      if ((userDoc.exists || profileMatch) && userData.isActive === false) continue;
+      const displayName = userData.displayName || userData.email || fallbackName;
+      if (archivedDirectNames.has(String(displayName || '').trim().toLowerCase())) continue;
+      const onlineStatus = userData.onlineStatus || 'offline';
+      const presenceText = getPresenceText(userData);
+      const preview = chatData.lastMessage || 'Tap to open chat';
+
+      items.push({
+        id: chat.id,
+        type: 'direct',
+        name: displayName,
+        avatar: userData.avatar ? `<img src="${userData.avatar}">` : escapeHtml(getInitials(displayName, userData.email || fallbackEmail)),
+        preview,
+        unreadCount: await getChatUnreadCount([chat.id, ...(chatData.aliasDirectIds || [])], 'direct'),
+        isFavorite: favoriteChatIds.includes(chat.id),
+        isMuted: isChatMuted(chat.id),
+        otherUserId: resolvedUserId,
+        user: { id: resolvedUserId, ...userData, displayName },
+        email: userData.email || fallbackEmail || '',
+        phone: userData.phone || userData.phoneNumber || '',
+        hasUserProfile: userDoc.exists || !!profileMatch,
+        aliasDirectIds: [...new Set([chat.id, ...(chatData.aliasDirectIds || [])])],
+        onlineStatus,
+        presenceText,
+        lastMessageTime: chatData.lastMessageTime?.toDate?.() || new Date(0)
+      });
+    } catch (error) {
+      console.error('Skipping broken direct chat row:', chat.id, error);
+    }
+  }
+
+  return [items[0], ...mergeDirectContactItems(items.filter(item => item.type !== 'saved'))];
 }
 
 async function buildGroupChatItems() {
   if (!currentUser) return [];
-  const archivedChatIds = await getArchivedChatIds();
-  const deletedChatIds = await getDeletedChatIds();
-  const memberSnapshot = await db.collection('groupMembers').where('userId', '==', currentUser.uid).get();
+  let archivedChatIds = new Set();
+  let deletedChatIds = new Set();
+  let memberSnapshot = null;
   const items = [];
 
+  try {
+    archivedChatIds = await getArchivedChatIds();
+    deletedChatIds = await getDeletedChatIds();
+    memberSnapshot = await db.collection('groupMembers').where('userId', '==', currentUser.uid).get();
+  } catch (error) {
+    console.error('Could not load group chat metadata:', error);
+    return items;
+  }
+
   for (const memberDoc of memberSnapshot.docs) {
-    const groupId = memberDoc.data().groupId;
-    if (archivedChatIds.has(groupId) || deletedChatIds.has(groupId)) continue;
-    const groupDoc = await db.collection('groups').doc(groupId).get();
-    if (!groupDoc.exists) continue;
-    const group = groupDoc.data();
-    items.push({
-      id: groupDoc.id,
-      type: 'group',
-      name: group.name,
-      avatar: group.icon ? `<img src="${group.icon}">` : '👥',
-      preview: group.memberCount ? `${group.memberCount} members` : `Invite code ${group.code || ''}`.trim(),
-      unreadCount: await getChatUnreadCount(groupDoc.id, 'group'),
-      isFavorite: favoriteChatIds.includes(groupDoc.id),
-      isMuted: isChatMuted(groupDoc.id),
-      code: group.code || '',
-      lastMessageTime: group.updatedAt?.toDate?.() || group.createdAt?.toDate?.() || new Date(0)
-    });
+    try {
+      const groupId = memberDoc.data()?.groupId;
+      if (!groupId || archivedChatIds.has(groupId) || deletedChatIds.has(groupId)) continue;
+      const groupDoc = await db.collection('groups').doc(groupId).get();
+      if (!groupDoc.exists) continue;
+      const group = groupDoc.data() || {};
+      items.push({
+        id: groupDoc.id,
+        type: 'group',
+        name: group.name || 'Group',
+        avatar: group.icon ? `<img src="${group.icon}">` : 'G',
+        preview: group.memberCount ? `${group.memberCount} members` : `Invite code ${group.code || ''}`.trim(),
+        unreadCount: await getChatUnreadCount(groupDoc.id, 'group'),
+        isFavorite: favoriteChatIds.includes(groupDoc.id),
+        isMuted: isChatMuted(groupDoc.id),
+        code: group.code || '',
+        lastMessageTime: group.updatedAt?.toDate?.() || group.createdAt?.toDate?.() || new Date(0)
+      });
+    } catch (error) {
+      console.error('Skipping broken group row:', memberDoc.id, error);
+    }
   }
   return items;
 }
-
 function loadCurrentChatList() {
   if (currentViewTab === 'groups') loadGroupsList();
   else loadAllChatsList(document.getElementById('searchInput')?.value || '');
+}
+
+function updateChatContextMenuLabels() {
+  if (!contextMenuTarget) return;
+  const chatId = contextMenuTarget.dataset.chatId;
+  const chatType = contextMenuTarget.dataset.chatType || '';
+  const muteItem = document.getElementById('muteChatMenuItem');
+  if (muteItem && chatId) {
+    const muteRecord = getActiveMuteRecord(chatId, chatType);
+    muteItem.textContent = muteRecord ? 'Unmute' : 'Mute';
+  }
 }
 
 async function loadChatsList() {
@@ -4652,6 +4898,7 @@ async function loadGroupsList() {
   const filteredGroups = enhancedGroups.filter(group => {
     if (currentViewTab === 'favorites' && !group.isFavorite) return false;
     if (currentViewTab === 'unread' && group.unreadCount === 0) return false;
+    if (currentViewTab === 'muted' && !group.isMuted) return false;
     return true;
   });
 
@@ -4674,12 +4921,25 @@ async function loadGroupsList() {
     groupDiv.dataset.unreadCount = group.unreadCount;
     groupDiv.dataset.chatName = group.name || '';
     if (currentChat?.id === group.id && currentChatType === 'group') groupDiv.classList.add('active');
-    groupDiv.innerHTML = `<div class="list-avatar">${group.icon ? `<img src="${group.icon}">` : 'G'}</div><div class="list-info" style="flex:1; cursor:pointer;"><div class="list-name">${group.isFavorite ? '* ' : ''}${escapeHtml(group.name)} ${isMuted ? '[Muted]' : ''}</div><div class="list-preview">${group.code}${group.unreadCount ? ` • ${group.unreadCount} unread` : ''}</div></div><button class="list-item-menu mute-chat-btn" data-chat-id="${group.id}" data-chat-type="group">Mute</button><button class="list-item-menu archive-chat-btn" data-chat-id="${group.id}" data-chat-type="group" data-chat-name="${escapeHtml(group.name)}">Arch</button>`;
+    groupDiv.innerHTML = `<div class="list-avatar">${group.icon ? `<img src="${group.icon}">` : 'G'}</div><div class="list-info" style="flex:1; cursor:pointer;"><div class="list-name">${group.isFavorite ? '* ' : ''}${escapeHtml(group.name)} ${isMuted ? '[Muted]' : ''}</div><div class="list-preview">${group.code}${group.unreadCount ? ` • ${group.unreadCount} unread` : ''}</div></div><button class="list-item-menu mute-chat-btn" data-chat-id="${group.id}" data-chat-type="group">${isMuted ? 'Unmute' : 'Mute'}</button><button class="list-item-menu archive-chat-btn" data-chat-id="${group.id}" data-chat-type="group" data-chat-name="${escapeHtml(group.name)}">Arch</button>`;
     if (group.unreadCount) {
       groupDiv.insertAdjacentHTML('beforeend', `<span class="unread-pill">${group.unreadCount}</span>`);
     }
     groupDiv.querySelector('.archive-chat-btn')?.addEventListener('click', async (e) => { e.stopPropagation(); if (confirm(`Archive group "${group.name}"?`)) await archiveChat(group.id, 'group', group.name); });
-    groupDiv.querySelector('.mute-chat-btn')?.addEventListener('click', async (e) => { e.stopPropagation(); const duration = prompt('Mute for: 8h, 1w, or always?', '8h'); if (duration === '8h' || duration === '1w' || duration === 'always') { await muteChat(group.id, 'group', duration); loadGroupsList(); } });
+    groupDiv.querySelector('.mute-chat-btn')?.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      const activeMute = getActiveMuteRecord(group.id, 'group');
+      if (activeMute) {
+        await unmuteChat(activeMute.id);
+        loadGroupsList();
+        return;
+      }
+      const duration = prompt('Mute for: 8h, 1w, or always?', '8h');
+      if (duration === '8h' || duration === '1w' || duration === 'always') {
+        await muteChat(group.id, 'group', duration);
+        loadGroupsList();
+      }
+    });
     groupDiv.querySelector('.list-info').onclick = () => loadGroupChat(group.id, group.name);
     groupsList.appendChild(groupDiv);
   }
@@ -4713,6 +4973,7 @@ async function startSavedMessages() {
   document.getElementById('videoCallBtn').style.display = 'none';
   document.getElementById('replyPreviewBar').style.display = 'none';
   currentReplyTo = null;
+  resetMessageRenderLimit();
   loadMessages();
   restoreCurrentDraft();
   loadPinnedMessages();
@@ -4749,6 +5010,7 @@ async function startDirectChat(user) {
   document.getElementById('videoCallBtn').style.display = 'inline-flex';
   document.getElementById('replyPreviewBar').style.display = 'none';
   currentReplyTo = null;
+  resetMessageRenderLimit();
   loadMessages();
   restoreCurrentDraft();
   listenForTypingIndicator();
@@ -4818,6 +5080,7 @@ async function loadGroupChat(groupId, groupName) {
   document.getElementById('groupInfoBtn').style.display = 'block';
   document.getElementById('voiceCallBtn').style.display = 'inline-flex';
   document.getElementById('videoCallBtn').style.display = 'inline-flex';
+  resetMessageRenderLimit();
   loadMessages();
   restoreCurrentDraft();
   listenForTypingIndicator();
@@ -5005,19 +5268,59 @@ async function publishStatus() {
   loadStatusList();
 }
 
-async function showStatusViewer(statuses, index = 0) {
-  const status = statuses[index];
+function clampStatusIndex(index) {
+  if (!activeStatusSet.length) return 0;
+  return Math.max(0, Math.min(index, activeStatusSet.length - 1));
+}
+
+async function renderStatusViewerFrame() {
+  const status = activeStatusSet[activeStatusIndex];
   if (!status) return;
+  clearTimeout(statusAutoAdvanceTimer);
   const modal = document.getElementById('statusViewerModal');
   document.getElementById('statusViewerName').textContent = status.userName;
   document.getElementById('statusViewerTime').textContent = formatTime(status.createdAt);
   document.getElementById('statusViewerAvatar').innerHTML = status.userAvatar ? `<img src="${status.userAvatar}">` : escapeHtml((status.userName || '?')[0]);
   document.getElementById('statusViewerBody').innerHTML = status.image ? `<img src="${status.image.url}">` : `<div class="status-viewer-text">${escapeHtml(status.text)}</div>`;
   document.getElementById('statusViewerSeen').textContent = status.userId === currentUser.uid ? `${Object.keys(status.viewedBy || {}).length} viewed` : '';
+  const prevBtn = document.getElementById('statusPrevBtn');
+  const nextBtn = document.getElementById('statusNextBtn');
+  if (prevBtn) prevBtn.disabled = activeStatusIndex <= 0;
+  if (nextBtn) nextBtn.disabled = activeStatusIndex >= activeStatusSet.length - 1;
   modal.style.display = 'flex';
+  const nextDelay = status.image ? 8000 : 5000;
+  if (activeStatusIndex < activeStatusSet.length - 1) {
+    statusAutoAdvanceTimer = setTimeout(() => {
+      moveStatusViewer(1).catch(() => { });
+    }, nextDelay);
+  } else {
+    statusAutoAdvanceTimer = null;
+  }
   if (status.userId !== currentUser.uid) {
     await db.collection('statuses').doc(status.id).update({ [`viewedBy.${currentUser.uid}`]: firebase.firestore.FieldValue.serverTimestamp() });
   }
+}
+
+async function showStatusViewer(statuses, index = 0) {
+  activeStatusSet = Array.isArray(statuses) ? statuses : [];
+  activeStatusIndex = clampStatusIndex(index);
+  await renderStatusViewerFrame();
+}
+
+async function moveStatusViewer(step = 1) {
+  if (!activeStatusSet.length) return;
+  const nextIndex = clampStatusIndex(activeStatusIndex + step);
+  if (nextIndex === activeStatusIndex) return;
+  activeStatusIndex = nextIndex;
+  await renderStatusViewerFrame();
+}
+
+function closeStatusViewer() {
+  clearTimeout(statusAutoAdvanceTimer);
+  statusAutoAdvanceTimer = null;
+  document.getElementById('statusViewerModal').style.display = 'none';
+  activeStatusSet = [];
+  activeStatusIndex = 0;
 }
 
 async function renderPendingGroupInvites(groupId, membersList, isAdmin) {
@@ -5027,9 +5330,24 @@ async function renderPendingGroupInvites(groupId, membersList, isAdmin) {
     const invite = inviteDoc.data();
     const div = document.createElement('div');
     div.className = 'member-item pending';
-    div.innerHTML = `<span>${escapeHtml(invite.toUserName)} (Pending)</span>`;
+    div.innerHTML = `<span>${escapeHtml(invite.toUserName)} (Pending)</span>${isAdmin ? `<button class="btn btn-outline cancel-pending-invite-btn" data-id="${inviteDoc.id}">Cancel</button>` : ''}`;
     membersList.appendChild(div);
   });
+  if (isAdmin) {
+    membersList.querySelectorAll('.cancel-pending-invite-btn').forEach(btn => {
+      btn.addEventListener('click', async (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        if (!confirm('Cancel this pending invite?')) return;
+        await db.collection('groupInvites').doc(btn.dataset.id).update({
+          status: 'cancelled',
+          cancelledAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        showToast('Pending invite cancelled');
+        showGroupInfo();
+      });
+    });
+  }
 }
 
 // ========================================
@@ -5044,6 +5362,10 @@ async function showChatInfo() {
   const user = userDoc.exists ? userDoc.data() : {};
   document.getElementById('chatInfoName').textContent = user.displayName || currentChat.otherUserName;
   document.getElementById('chatInfoPresence').textContent = getPresenceText(user);
+  const muteBtn = document.getElementById('chatInfoMuteBtn');
+  if (muteBtn) {
+    muteBtn.textContent = getActiveMuteRecord(currentChat.id, currentChatType) ? 'Unmute notifications' : 'Mute notifications';
+  }
   modal.style.display = 'flex';
   await renderSharedContent('media');
 }
@@ -5063,6 +5385,16 @@ async function renderSharedContent(type) {
     const voice = messages.filter(m => m.attachment?.type === 'voice');
     container.innerHTML = voice.length ? voice.map(m => renderAttachment(m.attachment)).join('') : 'No voice notes found';
     bindRenderedMessageActions();
+  } else if (type === 'files') {
+    const files = messages.filter(m => {
+      const attachment = m.attachment;
+      if (!attachment?.url) return false;
+      if (attachment.type === 'image' || attachment.type === 'voice') return false;
+      return true;
+    });
+    container.innerHTML = files.length
+      ? files.map(m => renderAttachment(m.attachment)).join('')
+      : 'No shared files found';
   } else {
     const docs = messages.filter(m => m.attachment?.type === 'document');
     container.innerHTML = docs.length ? docs.map(m => `<a class="shared-link" href="${escapeHtml(m.attachment.url)}" target="_blank" rel="noopener">${escapeHtml(m.attachment.filename || getFileNameFromUrl(m.attachment.url) || 'Document')}</a>`).join('') : 'No shared documents found';
@@ -5262,7 +5594,13 @@ function renderFailedLocalMessage(item = {}) {
 }
 
 function appendFailedMessage(text = '', attachment = null) {
-  const failed = addLocalFailedMessage(text, attachment);
+  const failed = addLocalFailedMessage(text, attachment, {
+    chatId: currentChat?.id || '',
+    chatType: currentChatType || '',
+    otherUserId: currentChat?.otherUserId || '',
+    aliasDirectIds: currentChat?.aliasDirectIds || [],
+    replyTo: currentReplyTo || null
+  });
   const messagesArea = document.getElementById('messagesArea');
   if (!messagesArea) return;
   messagesArea.insertAdjacentHTML('beforeend', renderFailedLocalMessage(failed));
@@ -5295,7 +5633,7 @@ async function retryFailedMessage(localId) {
     readBy: { [currentUser.uid]: firebase.firestore.FieldValue.serverTimestamp() },
     deliveredTo: {},
     participants: currentChatType === 'direct' ? directParticipants : [currentUser.uid],
-    mentions: getMessageMentions(text)
+    mentions: getMessageMentions(failed.text || '')
   };
 
   if (failed.attachment) messageData.attachment = failed.attachment;
@@ -5305,6 +5643,24 @@ async function retryFailedMessage(localId) {
 
   try {
     await db.collection('messages').add(messageData);
+    const previewText = failed.text || (failed.attachment ? getAttachmentLabel(failed.attachment) : 'Message');
+    if (failed.chatType === 'direct') {
+      await db.collection('directChats').doc(failed.chatId).set({
+        participants: directParticipants,
+        lastMessage: previewText,
+        lastMessageSenderId: currentUser.uid,
+        lastMessageTime: firebase.firestore.FieldValue.serverTimestamp(),
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+        status: 'active'
+      }, { merge: true });
+    } else if (failed.chatType === 'group') {
+      await db.collection('groups').doc(failed.chatId).set({
+        lastMessage: previewText,
+        lastMessageSenderId: currentUser.uid,
+        lastMessageSenderName: currentUser.displayName || currentUser.email,
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      }, { merge: true });
+    }
     removeLocalFailedMessage(localId);
     document.querySelector(`.local-failed-message[data-local-failed-id="${CSS.escape(localId)}"]`)?.remove();
     showToast('Message sent');
@@ -5329,6 +5685,18 @@ function bindFailedMessageRetryActions() {
   });
 }
 
+function jumpToReplyMessage(targetMessageId) {
+  if (!targetMessageId) return;
+  const target = document.querySelector(`.message[data-message-id="${CSS.escape(targetMessageId)}"]`);
+  if (!target) {
+    showToast('Original message is older. Tap "Load older messages" to view it.');
+    return;
+  }
+  target.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  target.classList.add('reply-target-highlight');
+  setTimeout(() => target.classList.remove('reply-target-highlight'), 1400);
+}
+
 function loadMessages() {
   if (!currentChat) return;
   const messagesArea = document.getElementById('messagesArea');
@@ -5350,12 +5718,28 @@ function loadMessages() {
       return aTime - bTime;
     });
 
-    docs.forEach(doc => {
+    const renderLimit = getMessageRenderLimit();
+    const docsToRender = docs.length > renderLimit ? docs.slice(docs.length - renderLimit) : docs;
+    if (docs.length > docsToRender.length) {
+      const olderButton = document.createElement('button');
+      olderButton.type = 'button';
+      olderButton.className = 'btn btn-outline';
+      olderButton.style.margin = '8px auto 12px';
+      olderButton.textContent = `Load older messages (${docs.length - docsToRender.length} hidden)`;
+      olderButton.addEventListener('click', () => {
+        increaseMessageRenderLimit();
+        loadMessages();
+      });
+      messagesArea.appendChild(olderButton);
+    }
+
+    docsToRender.forEach(doc => {
       const msg = doc.data();
       if (msg.deletedFor?.[currentUser.uid] || isBlocked(msg.senderId)) return;
       const isMyMessage = msg.senderId === currentUser.uid;
       const messageDiv = document.createElement('div');
       messageDiv.className = `message ${isMyMessage ? 'my-message' : ''}`;
+      messageDiv.dataset.messageId = doc.id;
 
       if (msg.type === 'call') {
         messageDiv.className = 'message call-message';
@@ -5363,7 +5747,9 @@ function loadMessages() {
         messagesArea.appendChild(messageDiv); return;
       }
 
-      let replyHtml = msg.replyTo ? `<div class="reply-preview"><strong>${escapeHtml(msg.replyTo.senderName)}</strong>: ${escapeHtml(msg.replyTo.text || 'Media')}</div>` : '';
+      let replyHtml = msg.replyTo
+        ? `<button type="button" class="reply-preview jump-reply-btn" data-reply-message-id="${escapeHtml(msg.replyTo.messageId || '')}" title="Jump to original message"><strong>${escapeHtml(msg.replyTo.senderName)}</strong>: ${escapeHtml(msg.replyTo.text || 'Media')}</button>`
+        : '';
       let attachmentHtml = msg.attachment ? renderAttachment(msg.attachment) : '';
       let pollHtml = msg.poll ? renderPollMessage(doc.id, msg) : '';
       let textContent = msg.deletedForEveryone ? 'This message was deleted' : (msg.text || '');
@@ -5394,6 +5780,15 @@ function loadMessages() {
     }
     messagesArea.scrollTop = messagesArea.scrollHeight;
     bindRenderedMessageActions();
+    messagesArea.querySelectorAll('.jump-reply-btn').forEach((btn) => {
+      if (btn.dataset.bound === 'true') return;
+      btn.dataset.bound = 'true';
+      btn.addEventListener('click', (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        jumpToReplyMessage(btn.dataset.replyMessageId || '');
+      });
+    });
     markMessagesAsRead();
   });
 }
@@ -5692,6 +6087,198 @@ function startScheduledMessageWorker() {
   scheduledMessagesTimer = setInterval(() => processScheduledMessages().catch(() => { }), 60000);
 }
 
+async function retryFailedMessageRecord(failed) {
+  if (!failed || !currentUser || !failed.chatId || !failed.chatType) return false;
+  const directParticipants = failed.chatType === 'direct'
+    ? [...new Set([
+      currentUser.uid,
+      ...(String(failed.chatId || '').split('_').filter(Boolean)),
+      failed.otherUserId
+    ].filter(Boolean))]
+    : [];
+
+  const messageData = {
+    senderId: currentUser.uid,
+    senderName: currentUser.displayName || currentUser.email,
+    text: failed.text || '',
+    timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+    status: 'sent',
+    read: false,
+    readBy: { [currentUser.uid]: firebase.firestore.FieldValue.serverTimestamp() },
+    deliveredTo: {},
+    participants: failed.chatType === 'direct' ? directParticipants : [currentUser.uid],
+    mentions: failed.chatType === 'group' ? [] : getMessageMentions(failed.text || '')
+  };
+  if (failed.attachment) messageData.attachment = failed.attachment;
+  if (failed.replyTo) messageData.replyTo = failed.replyTo;
+  if (failed.chatType === 'direct') messageData.directId = failed.chatId;
+  else messageData.groupId = failed.chatId;
+
+  await db.collection('messages').add(messageData);
+  const previewText = failed.text || (failed.attachment ? getAttachmentLabel(failed.attachment) : 'Message');
+  if (failed.chatType === 'direct') {
+    await db.collection('directChats').doc(failed.chatId).set({
+      participants: directParticipants,
+      lastMessage: previewText,
+      lastMessageSenderId: currentUser.uid,
+      lastMessageTime: firebase.firestore.FieldValue.serverTimestamp(),
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+      status: 'active'
+    }, { merge: true });
+  } else {
+    await db.collection('groups').doc(failed.chatId).set({
+      lastMessage: previewText,
+      lastMessageSenderId: currentUser.uid,
+      lastMessageSenderName: currentUser.displayName || currentUser.email,
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    }, { merge: true });
+  }
+  return true;
+}
+
+async function processFailedMessageQueue() {
+  if (!navigator.onLine || !currentUser) return;
+  const items = getLocalFailedMessages();
+  if (!items.length) return;
+  for (const item of items) {
+    try {
+      await retryFailedMessageRecord(item);
+      removeLocalFailedMessage(item.localId);
+      document.querySelector(`.local-failed-message[data-local-failed-id="${CSS.escape(item.localId)}"]`)?.remove();
+    } catch (_) { }
+  }
+  loadCurrentChatList();
+  if (currentChat) loadMessages();
+}
+
+function startFailedQueueRetryWorker() {
+  clearInterval(failedQueueRetryTimer);
+  failedQueueRetryTimer = setInterval(() => {
+    processFailedMessageQueue().catch(() => { });
+  }, 30000);
+}
+
+function formatWhen(dateValue) {
+  if (!dateValue) return '';
+  const date = dateValue?.toDate?.() || (dateValue instanceof Date ? dateValue : null);
+  if (!date) return '';
+  return date.toLocaleString();
+}
+
+async function resolveScheduledChatName(item) {
+  const data = item.data || {};
+  if (data.chatType === 'group') {
+    const groupDoc = await db.collection('groups').doc(data.chatId).get().catch(() => null);
+    return groupDoc?.exists ? (groupDoc.data()?.name || 'Group') : 'Group';
+  }
+  if (data.otherUserId) {
+    const userDoc = await db.collection('users').doc(data.otherUserId).get().catch(() => null);
+    if (userDoc?.exists) return userDoc.data()?.displayName || userDoc.data()?.email || 'Direct chat';
+  }
+  return 'Direct chat';
+}
+
+async function showScheduledMessagesModal() {
+  if (!currentUser) return;
+  const modal = document.getElementById('scheduledMessagesModal');
+  const list = document.getElementById('scheduledMessagesList');
+  if (!modal || !list) return;
+  list.innerHTML = '<div class="empty-state">Loading scheduled messages...</div>';
+  modal.style.display = 'flex';
+
+  const snapshot = await db.collection('scheduledMessages')
+    .where('userId', '==', currentUser.uid)
+    .orderBy('createdAt', 'desc')
+    .limit(200)
+    .get()
+    .catch(() => null);
+
+  if (!snapshot || snapshot.empty) {
+    list.innerHTML = '<div class="empty-state">No scheduled messages</div>';
+    return;
+  }
+
+  const entries = await Promise.all(snapshot.docs.map(async doc => {
+    const data = doc.data();
+    return {
+      id: doc.id,
+      data,
+      chatName: await resolveScheduledChatName({ data })
+    };
+  }));
+
+  list.innerHTML = '';
+  entries.forEach(entry => {
+    const data = entry.data || {};
+    const status = data.status || 'pending';
+    const row = document.createElement('div');
+    row.className = 'starred-message-card scheduled-message-card';
+    row.innerHTML = `
+      <div class="starred-message-head">
+        <strong>${escapeHtml(entry.chatName)}</strong>
+        <span>${escapeHtml(status.toUpperCase())}</span>
+      </div>
+      <div class="starred-message-text">${escapeHtml(data.text || '')}</div>
+      <div class="starred-message-meta">
+        Due: ${escapeHtml(formatWhen(data.dueAt) || '-')}
+      </div>
+      <div class="scheduled-message-actions"></div>
+    `;
+
+    const actions = row.querySelector('.scheduled-message-actions');
+    const addAction = (label, handler, className = '') => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = `btn btn-outline ${className}`.trim();
+      btn.textContent = label;
+      btn.addEventListener('click', handler);
+      actions.appendChild(btn);
+    };
+
+    if (status === 'pending') {
+      addAction('Send Now', async () => {
+        await sendScheduledMessage(entry);
+        showToast('Scheduled message sent');
+        showScheduledMessagesModal();
+        loadCurrentChatList();
+        if (currentChat?.id === data.chatId && currentChatType === data.chatType) loadMessages();
+      });
+      addAction('Cancel', async () => {
+        await db.collection('scheduledMessages').doc(entry.id).update({
+          status: 'cancelled',
+          cancelledAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        showToast('Scheduled message cancelled');
+        showScheduledMessagesModal();
+      }, 'danger');
+    } else if (status === 'failed') {
+      addAction('Retry', async () => {
+        const nextDue = new Date(Date.now() + 60 * 1000);
+        await db.collection('scheduledMessages').doc(entry.id).update({
+          status: 'pending',
+          dueAt: nextDue,
+          retriedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        showToast('Retry scheduled');
+        showScheduledMessagesModal();
+      });
+      addAction('Delete', async () => {
+        await db.collection('scheduledMessages').doc(entry.id).delete();
+        showToast('Scheduled message removed');
+        showScheduledMessagesModal();
+      }, 'danger');
+    } else {
+      addAction('Delete', async () => {
+        await db.collection('scheduledMessages').doc(entry.id).delete();
+        showToast('Scheduled message removed');
+        showScheduledMessagesModal();
+      }, 'danger');
+    }
+
+    list.appendChild(row);
+  });
+}
+
 function copyToClipboard(text) { navigator.clipboard.writeText(text); showToast('Copied text!'); }
 function setReplyTo(msg) { currentReplyTo = msg; document.getElementById('replyPreviewBar').style.display = 'block'; document.getElementById('replyPreviewSender').textContent = msg.senderName; document.getElementById('replyPreviewText').textContent = msg.text || 'Media'; }
 async function deleteMessageForMe(id) {
@@ -5702,8 +6289,37 @@ async function deleteMessageForMe(id) {
   });
   showToast('Message deleted for you');
 }
-async function deleteMessageForEveryone(id) {
-  if (!id || !confirm('Delete this message for everyone?')) return;
+function canDeleteForEveryone(messageData) {
+  if (!messageData || messageData.senderId !== currentUser?.uid) return false;
+  const sentAtMs = messageData.timestamp?.toMillis?.() || 0;
+  if (!sentAtMs) return false;
+  return (Date.now() - sentAtMs) <= (15 * 60 * 1000);
+}
+
+function viewEditHistory(messageData = {}) {
+  const history = Array.isArray(messageData.editHistory) ? messageData.editHistory : [];
+  if (!history.length) {
+    showToast('No edit history found');
+    return;
+  }
+  const lines = history.map((item, index) => {
+    const when = item.editedAt ? new Date(item.editedAt).toLocaleString() : 'Unknown time';
+    return `${index + 1}. ${when}: ${item.previousText || ''}`;
+  });
+  alert(`Edit history:\n\n${lines.join('\n')}`);
+}
+
+async function deleteMessageForEveryone(id, messageData = null) {
+  if (!id) return;
+  if (!messageData) {
+    const doc = await db.collection('messages').doc(id).get().catch(() => null);
+    messageData = doc?.exists ? doc.data() : null;
+  }
+  if (!canDeleteForEveryone(messageData)) {
+    showToast('Delete for everyone is only available for your recent messages (15 min)', 'error');
+    return;
+  }
+  if (!confirm('Delete this message for everyone?')) return;
   await db.collection('messages').doc(id).update({
     text: '',
     attachment: firebase.firestore.FieldValue.delete(),
@@ -5771,14 +6387,26 @@ async function editMessage(id, data) {
   if (!data || data.deletedForEveryone) return;
   const nextText = prompt('Edit message', data.text || '');
   if (nextText === null) return;
+  const trimmed = nextText.trim();
+  if (!trimmed) {
+    showToast('Message cannot be empty', 'error');
+    return;
+  }
+  if (trimmed === (data.text || '').trim()) return;
   await db.collection('messages').doc(id).update({
-    text: nextText.trim(),
-    editedAt: firebase.firestore.FieldValue.serverTimestamp()
+    text: trimmed,
+    editedAt: firebase.firestore.FieldValue.serverTimestamp(),
+    editHistory: firebase.firestore.FieldValue.arrayUnion({
+      previousText: data.text || '',
+      editedAt: new Date().toISOString()
+    })
   });
 }
 
 function openForwardModal(messageId, messageData) {
   currentForwardMessage = { id: messageId, ...messageData };
+  currentForwardSelectionKeys = new Set();
+  currentForwardTargets = [];
   document.getElementById('forwardModal').style.display = 'flex';
   renderForwardChats();
 }
@@ -5792,22 +6420,51 @@ async function renderForwardChats(searchTerm = '') {
     ...(await buildDirectChatItems()),
     ...(await buildGroupChatItems())
   ].filter(item => !term || normalizeSearchText(item.name).includes(term));
+  currentForwardTargets = items;
   if (!items.length) {
     list.innerHTML = '<div class="empty-state">No chats found</div>';
+    updateForwardSelectionButton();
     return;
   }
   list.innerHTML = '';
   items.forEach(item => {
+    const key = `${item.type}:${item.id}`;
+    const selected = currentForwardSelectionKeys.has(key);
     const row = document.createElement('button');
     row.type = 'button';
-    row.className = 'forward-chat-row';
-    row.innerHTML = `<span class="list-avatar">${item.avatar || '?'}</span><span>${escapeHtml(item.name || 'Chat')}</span>`;
-    row.addEventListener('click', () => forwardMessageTo(item));
+    row.className = `forward-chat-row${selected ? ' selected' : ''}`;
+    row.innerHTML = `<span class="list-avatar">${item.avatar || '?'}</span><span>${escapeHtml(item.name || 'Chat')}</span><span class="forward-check">${selected ? '✓' : ''}</span>`;
+    row.addEventListener('click', () => {
+      if (currentForwardSelectionKeys.has(key)) currentForwardSelectionKeys.delete(key);
+      else currentForwardSelectionKeys.add(key);
+      renderForwardChats(document.getElementById('forwardSearch')?.value || '');
+    });
     list.appendChild(row);
   });
+  updateForwardSelectionButton();
 }
 
-async function forwardMessageTo(chatItem) {
+function updateForwardSelectionButton() {
+  const btn = document.getElementById('forwardSelectedBtn');
+  if (!btn) return;
+  const count = currentForwardSelectionKeys.size;
+  btn.disabled = count === 0;
+  btn.textContent = count ? `Forward (${count})` : 'Forward';
+}
+
+async function forwardSelectedMessages() {
+  if (!currentForwardMessage || !currentForwardSelectionKeys.size) return;
+  const selectedItems = currentForwardTargets.filter(item => currentForwardSelectionKeys.has(`${item.type}:${item.id}`));
+  for (const item of selectedItems) {
+    await forwardMessageTo(item, false);
+  }
+  currentForwardSelectionKeys = new Set();
+  currentForwardMessage = null;
+  document.getElementById('forwardModal').style.display = 'none';
+  showToast(`Message forwarded to ${selectedItems.length} chat(s)`);
+}
+
+async function forwardMessageTo(chatItem, closeModal = true) {
   if (!currentForwardMessage || !chatItem || !currentUser) return;
   const messageData = {
     senderId: currentUser.uid,
@@ -5846,9 +6503,11 @@ async function forwardMessageTo(chatItem) {
       updatedAt: firebase.firestore.FieldValue.serverTimestamp()
     }, { merge: true });
   }
-  currentForwardMessage = null;
-  document.getElementById('forwardModal').style.display = 'none';
-  showToast('Message forwarded');
+  if (closeModal) {
+    currentForwardMessage = null;
+    document.getElementById('forwardModal').style.display = 'none';
+    showToast('Message forwarded');
+  }
 }
 
 function showContextMenu(x, y, messageId, messageData, isMyMessage) {
@@ -5856,22 +6515,44 @@ function showContextMenu(x, y, messageId, messageData, isMyMessage) {
     const selection = window.getSelection?.();
     if (selection?.rangeCount) selection.removeAllRanges();
   } catch (_) { }
-  const existing = document.querySelector('.message-context-menu');
-  if (existing) existing.remove();
+  removeMessageContextMenu();
   const menu = document.createElement('div');
   menu.className = 'context-menu message-context-menu';
+
+  const reactionStrip = document.createElement('div');
+  reactionStrip.className = 'message-context-reactions';
+  ['👍', '❤️', '😂', '😮', '🙏'].forEach((emoji) => {
+    const reactionBtn = document.createElement('button');
+    reactionBtn.type = 'button';
+    reactionBtn.className = 'message-context-reaction-btn';
+    reactionBtn.textContent = emoji;
+    reactionBtn.addEventListener('click', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      addReaction(messageId, emoji);
+      removeMessageContextMenu();
+    });
+    reactionStrip.appendChild(reactionBtn);
+  });
+  menu.appendChild(reactionStrip);
 
   const items = [
     { text: 'Forward', action: () => openForwardModal(messageId, messageData) },
     { text: 'Copy Text', action: () => copyToClipboard(messageData.text) },
     { text: 'Thread Reply', action: () => setReplyTo(messageData) },
     { text: 'Star Message', action: () => starMessage(messageId, messageData) },
-    { text: 'Pin Message', action: () => pinMessage(messageId, messageData) }
+    { text: 'Pin Message', action: () => pinMessage(messageId, messageData) },
+    { text: 'Report Message', action: () => reportMessage(messageId, messageData) }
   ];
   items.push({ text: 'Delete For Me', action: () => deleteMessageForMe(messageId) });
   if (isMyMessage) {
     items.push({ text: 'Edit Message', action: () => editMessage(messageId, messageData) });
-    items.push({ text: 'Delete Everyone', action: () => deleteMessageForEveryone(messageId) });
+    if (canDeleteForEveryone(messageData)) {
+      items.push({ text: 'Delete Everyone', action: () => deleteMessageForEveryone(messageId, messageData) });
+    }
+  }
+  if (Array.isArray(messageData.editHistory) && messageData.editHistory.length) {
+    items.push({ text: 'View Edit History', action: () => viewEditHistory(messageData) });
   }
 
   items.forEach(item => {
@@ -5879,11 +6560,18 @@ function showContextMenu(x, y, messageId, messageData, isMyMessage) {
     btn.type = 'button';
     btn.className = 'context-menu-item';
     btn.textContent = item.text;
-    btn.onclick = () => { item.action(); menu.remove(); };
+    btn.onclick = () => { item.action(); removeMessageContextMenu(); };
     menu.appendChild(btn);
   });
   document.body.appendChild(menu);
+  document.body.classList.add('message-menu-open');
   positionContextMenu(menu, x, y);
+}
+
+function removeMessageContextMenu() {
+  const existing = document.querySelector('.message-context-menu');
+  if (existing) existing.remove();
+  document.body.classList.remove('message-menu-open');
 }
 
 function positionContextMenu(menu, x, y) {
@@ -6004,20 +6692,193 @@ async function exportCurrentChat() {
   }
   const messages = await getCurrentChatMessages();
   const title = document.getElementById('currentChatName')?.textContent || 'Chat';
-  const lines = [`Export: ${title}`, `Created: ${new Date().toLocaleString()}`, ''];
-  messages.forEach(msg => {
-    const when = msg.timestamp?.toDate?.()?.toLocaleString?.() || '';
-    const body = msg.poll ? `Poll: ${msg.poll.question}` : (msg.text || getAttachmentLabel(msg.attachment) || 'Message');
-    lines.push(`[${when}] ${msg.senderName || 'User'}: ${body}`);
-  });
-  const blob = new Blob([lines.join('\n')], { type: 'text/plain;charset=utf-8' });
+  const formatInput = prompt('Export format: txt or json', 'txt');
+  if (!formatInput) return;
+  const format = formatInput.trim().toLowerCase();
+  const safeName = `${title.replace(/[^a-z0-9_-]+/gi, '_') || 'chat'}-export`;
+  let blob;
+  let fileName;
+
+  if (format === 'json') {
+    const payload = {
+      exportedAt: new Date().toISOString(),
+      chat: {
+        id: currentChat.id,
+        type: currentChatType,
+        name: title
+      },
+      messages: messages.map(msg => ({
+        id: msg.id || null,
+        timestamp: msg.timestamp?.toDate?.()?.toISOString?.() || null,
+        senderId: msg.senderId || null,
+        senderName: msg.senderName || 'User',
+        text: msg.text || '',
+        poll: msg.poll || null,
+        attachment: msg.attachment || null,
+        forwarded: !!msg.forwarded,
+        edited: !!msg.edited
+      }))
+    };
+    blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json;charset=utf-8' });
+    fileName = `${safeName}.json`;
+  } else {
+    const lines = [`Export: ${title}`, `Created: ${new Date().toLocaleString()}`, ''];
+    messages.forEach(msg => {
+      const when = msg.timestamp?.toDate?.()?.toLocaleString?.() || '';
+      const body = msg.poll ? `Poll: ${msg.poll.question}` : (msg.text || getAttachmentLabel(msg.attachment) || 'Message');
+      lines.push(`[${when}] ${msg.senderName || 'User'}: ${body}`);
+    });
+    blob = new Blob([lines.join('\n')], { type: 'text/plain;charset=utf-8' });
+    fileName = `${safeName}.txt`;
+  }
+
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url;
-  link.download = `${title.replace(/[^a-z0-9_-]+/gi, '_') || 'chat'}-export.txt`;
+  link.download = fileName;
   link.click();
   URL.revokeObjectURL(url);
   showToast('Chat exported');
+}
+
+function serializeForBackup(value) {
+  if (value === null || value === undefined) return value;
+  if (Array.isArray(value)) return value.map(serializeForBackup);
+  if (typeof value === 'object') {
+    if (typeof value.toMillis === 'function') return { __ts: value.toMillis() };
+    const out = {};
+    Object.keys(value).forEach(key => {
+      out[key] = serializeForBackup(value[key]);
+    });
+    return out;
+  }
+  return value;
+}
+
+function deserializeFromBackup(value) {
+  if (value === null || value === undefined) return value;
+  if (Array.isArray(value)) return value.map(deserializeFromBackup);
+  if (typeof value === 'object') {
+    if (Object.prototype.hasOwnProperty.call(value, '__ts')) {
+      return new Date(Number(value.__ts) || Date.now());
+    }
+    const out = {};
+    Object.keys(value).forEach(key => {
+      out[key] = deserializeFromBackup(value[key]);
+    });
+    return out;
+  }
+  return value;
+}
+
+function normalizeImportDocId(raw = '') {
+  return String(raw || '')
+    .replace(/[^a-zA-Z0-9_-]/g, '_')
+    .slice(0, 90);
+}
+
+async function exportFullBackup() {
+  if (!currentUser) return;
+  showToast('Preparing backup...');
+  const userDoc = await db.collection('users').doc(currentUser.uid).get();
+  const directChatsSnap = await db.collection('directChats').where('participants', 'array-contains', currentUser.uid).get();
+  const memberSnap = await db.collection('groupMembers').where('userId', '==', currentUser.uid).get();
+  const groupIds = [...new Set(memberSnap.docs.map(d => d.data().groupId).filter(Boolean))];
+
+  const groups = [];
+  for (const groupId of groupIds) {
+    const g = await db.collection('groups').doc(groupId).get();
+    if (g.exists) groups.push({ id: g.id, data: g.data() });
+  }
+
+  const directChats = directChatsSnap.docs.map(doc => ({ id: doc.id, data: doc.data() }));
+  const groupMembers = memberSnap.docs.map(doc => ({ id: doc.id, data: doc.data() }));
+
+  const messages = [];
+  for (const dc of directChats) {
+    const ms = await db.collection('messages').where('directId', '==', dc.id).get();
+    ms.docs.forEach(doc => messages.push({ id: doc.id, data: doc.data() }));
+  }
+  for (const gid of groupIds) {
+    const ms = await db.collection('messages').where('groupId', '==', gid).get();
+    ms.docs.forEach(doc => messages.push({ id: doc.id, data: doc.data() }));
+  }
+
+  const backup = {
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    userId: currentUser.uid,
+    userProfile: userDoc.exists ? serializeForBackup(userDoc.data()) : {},
+    directChats: serializeForBackup(directChats),
+    groups: serializeForBackup(groups),
+    groupMembers: serializeForBackup(groupMembers),
+    messages: serializeForBackup(messages)
+  };
+
+  const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `chat-backup-${new Date().toISOString().slice(0, 10)}.json`;
+  link.click();
+  URL.revokeObjectURL(url);
+  showToast('Full backup exported');
+}
+
+async function importFullBackupFile(file) {
+  if (!currentUser || !file) return;
+  const text = await file.text();
+  const raw = JSON.parse(text);
+  if (!raw || typeof raw !== 'object') throw new Error('Invalid backup file');
+  if (!confirm('Import backup data now? Existing chats stay intact; backup data is merged.')) return;
+
+  const userProfile = deserializeFromBackup(raw.userProfile || {});
+  if (userProfile && typeof userProfile === 'object') {
+    await db.collection('users').doc(currentUser.uid).set({
+      ...userProfile,
+      uid: currentUser.uid,
+      email: normalizeEmail(currentUser.email),
+      isActive: true
+    }, { merge: true });
+  }
+
+  const directChats = deserializeFromBackup(raw.directChats || []);
+  for (const item of directChats) {
+    if (!item?.id || !item?.data) continue;
+    await db.collection('directChats').doc(item.id).set(item.data, { merge: true });
+  }
+
+  const groups = deserializeFromBackup(raw.groups || []);
+  for (const item of groups) {
+    if (!item?.id || !item?.data) continue;
+    await db.collection('groups').doc(item.id).set(item.data, { merge: true });
+  }
+
+  const groupMembers = deserializeFromBackup(raw.groupMembers || []);
+  for (const item of groupMembers) {
+    if (!item?.id || !item?.data) continue;
+    const safeId = normalizeImportDocId(item.id) || `gm_${Math.random().toString(36).slice(2, 10)}`;
+    await db.collection('groupMembers').doc(safeId).set(item.data, { merge: true });
+  }
+
+  const messages = deserializeFromBackup(raw.messages || []);
+  for (let i = 0; i < messages.length; i++) {
+    const item = messages[i];
+    if (!item?.data) continue;
+    const backupId = normalizeImportDocId(item.id) || `msg_${i}`;
+    const docId = `imp_${currentUser.uid}_${backupId}`;
+    await db.collection('messages').doc(docId).set({
+      ...item.data,
+      importedFromBackup: true,
+      backupMessageId: item.id || '',
+      importedAt: firebase.firestore.FieldValue.serverTimestamp()
+    }, { merge: true });
+  }
+
+  await loadAllUsers();
+  loadCurrentChatList();
+  if (currentChat) loadMessages();
+  showToast('Backup imported');
 }
 
 async function clearMessagesForChat(chatId, chatType) {
@@ -6038,9 +6899,17 @@ async function clearMessagesForChat(chatId, chatType) {
 async function clearAllChats() {
   if (!currentUser || !confirm('Clear all message history from your account? This will not delete messages for other people.')) return;
   const directSnapshot = await db.collection('directChats').where('participants', 'array-contains', currentUser.uid).get();
-  for (const doc of directSnapshot.docs) await clearMessagesForChat(doc.id, 'direct');
+  const directIds = new Set();
+  directSnapshot.docs.forEach(doc => {
+    directIds.add(doc.id);
+    (doc.data()?.aliasDirectIds || []).forEach(id => id && directIds.add(id));
+  });
+  for (const directId of directIds) await clearMessagesForChat(directId, 'direct');
+
   const memberSnapshot = await db.collection('groupMembers').where('userId', '==', currentUser.uid).get();
-  for (const memberDoc of memberSnapshot.docs) await clearMessagesForChat(memberDoc.data().groupId, 'group');
+  const groupIds = new Set(memberSnapshot.docs.map(memberDoc => memberDoc.data().groupId).filter(Boolean));
+  for (const groupId of groupIds) await clearMessagesForChat(groupId, 'group');
+
   resetChatPanel();
   loadCurrentChatList();
   showToast('Chat history cleared for you');
@@ -6117,6 +6986,77 @@ function revealAuthenticatedApp() {
   document.body.classList.add('auth-ready');
 }
 
+async function runBootstrapStep(stepName, fn) {
+  try {
+    await fn();
+    return true;
+  } catch (error) {
+    console.error(`Bootstrap step failed: ${stepName}`, error);
+    return false;
+  }
+}
+
+function getStoredAppLockPin() {
+  try { return localStorage.getItem('teamChatAppLockPin') || ''; } catch (_) { return ''; }
+}
+
+function setStoredAppLockPin(pin) {
+  try { localStorage.setItem('teamChatAppLockPin', pin); } catch (_) { }
+}
+
+function clearStoredAppLockPin() {
+  try { localStorage.removeItem('teamChatAppLockPin'); } catch (_) { }
+}
+
+function lockAppNowIfEnabled() {
+  const pin = getStoredAppLockPin();
+  if (!pin) return;
+  appUnlockedForSession = false;
+  const modal = document.getElementById('unlockModal');
+  if (modal) modal.style.display = 'flex';
+}
+
+function unlockAppAttempt() {
+  const expected = getStoredAppLockPin();
+  if (!expected) return;
+  const input = document.getElementById('unlockPinInput');
+  const value = (input?.value || '').trim();
+  if (value !== expected) {
+    showToast('Wrong PIN', 'error');
+    return;
+  }
+  appUnlockedForSession = true;
+  if (input) input.value = '';
+  const modal = document.getElementById('unlockModal');
+  if (modal) modal.style.display = 'none';
+}
+
+function showAppLockModal() {
+  document.getElementById('appLockModal').style.display = 'flex';
+  const input = document.getElementById('appLockPinInput');
+  if (input) input.value = '';
+}
+
+function saveAppLockPin() {
+  const input = document.getElementById('appLockPinInput');
+  const pin = (input?.value || '').trim();
+  if (!/^\d{4}$/.test(pin)) {
+    showToast('Enter exactly 4 digits', 'error');
+    return;
+  }
+  setStoredAppLockPin(pin);
+  showToast('App lock enabled');
+  document.getElementById('appLockModal').style.display = 'none';
+  lockAppNowIfEnabled();
+}
+
+function disableAppLock() {
+  clearStoredAppLockPin();
+  appUnlockedForSession = true;
+  showToast('App lock disabled');
+  document.getElementById('appLockModal').style.display = 'none';
+}
+
 function redirectToLogin() {
   document.body.classList.remove('auth-ready');
   window.location.replace('login.html');
@@ -6124,6 +7064,7 @@ function redirectToLogin() {
 
 async function init() {
   await authPersistenceReady;
+  applyA11yEnhancements();
   setupMobileBackGuard();
   setupActiveCallBackProtection();
   setupCallNotificationRefreshHooks();
@@ -6138,60 +7079,110 @@ async function init() {
   auth.onAuthStateChanged(async (user) => {
     if (!user) { redirectToLogin(); return; }
     try {
-      await user.reload();
-      user = auth.currentUser || user;
+      try {
+        await user.reload();
+        user = auth.currentUser || user;
+      } catch (error) {
+        console.warn('Could not refresh auth user:', error);
+      }
+      currentUser = user;
+      currentSessionId = getOrCreateSessionId();
+      revealAuthenticatedApp();
+      requestNativeNotificationPermission();
+
+      document.getElementById('userName').textContent = user.displayName || user.email.split('@')[0];
+      const userRef = db.collection('users').doc(user.uid);
+      await userRef.set({
+        uid: user.uid,
+        email: normalizeEmail(user.email),
+        displayName: user.displayName || user.email.split('@')[0],
+        emailVerified: user.emailVerified === true,
+        pendingVerification: user.emailVerified !== true,
+        isActive: true,
+        onlineStatus: 'online',
+        lastSeen: new Date()
+      }, { merge: true });
+      const latestUserDoc = await userRef.get();
+      const latestUserData = latestUserDoc.data() || {};
+      const userAvatarEl = document.getElementById('userAvatar');
+      if (userAvatarEl) {
+        userAvatarEl.innerHTML = latestUserData.avatar
+          ? `<img src="${latestUserData.avatar}" alt="User avatar">`
+          : escapeHtml(getInitials(latestUserData.displayName || user.displayName || '', latestUserData.email || user.email || ''));
+      }
+      privacySettings = { ...privacySettings, ...(latestUserDoc.data()?.privacySettings || {}) };
+      await runBootstrapStep('reconnectSameEmailProfile', () => reconnectSameEmailProfile());
+
+      await runBootstrapStep('loadBlockedUsers', () => loadBlockedUsers());
+      await runBootstrapStep('upsertCurrentSession', () => upsertCurrentSession());
+      startSessionHeartbeat();
+      watchSessionRevocation();
+      await runBootstrapStep('loadMutedChats', () => loadMutedChats());
+      await runBootstrapStep('loadFavoriteChatIds', () => loadFavoriteChatIds());
+      await runBootstrapStep('loadQuickReplies', () => loadQuickReplies());
+      await runBootstrapStep('loadAllUsers', () => loadAllUsers());
+      await runBootstrapStep('loadWallpaperFromStorage', async () => { loadWallpaperFromStorage(); });
+      await runBootstrapStep('setupChatListListeners', async () => { setupChatListListeners(); });
+      await runBootstrapStep('setupRequestListeners', async () => { setupRequestListeners(); });
+      await runBootstrapStep('setupArchiveSection', async () => { setupArchiveSection(); });
+      await runBootstrapStep('listenForIncomingCalls', async () => { listenForIncomingCalls(); });
+      setupCallPushNotifications().catch(() => { });
+      startScheduledMessageWorker();
+      startFailedQueueRetryWorker();
+      processFailedMessageQueue().catch(() => { });
+      switchTab('all');
+      appUnlockedForSession = !getStoredAppLockPin();
+      if (!appUnlockedForSession) lockAppNowIfEnabled();
     } catch (error) {
-      console.warn('Could not refresh auth user:', error);
+      console.error('Auth bootstrap failed:', error);
+      revealAuthenticatedApp();
+      switchTab('all');
+      showToast('Session restored. Some data may load in a moment.', 'error');
     }
-    currentUser = user;
-    requestNativeNotificationPermission();
-
-    document.getElementById('userName').textContent = user.displayName || user.email.split('@')[0];
-    const userRef = db.collection('users').doc(user.uid);
-    await userRef.set({
-      uid: user.uid,
-      email: normalizeEmail(user.email),
-      displayName: user.displayName || user.email.split('@')[0],
-      emailVerified: user.emailVerified === true,
-      pendingVerification: user.emailVerified !== true,
-      isActive: true,
-      onlineStatus: 'online',
-      lastSeen: new Date()
-    }, { merge: true });
-    const latestUserDoc = await userRef.get();
-    const latestUserData = latestUserDoc.data() || {};
-    const userAvatarEl = document.getElementById('userAvatar');
-    if (userAvatarEl) {
-      userAvatarEl.innerHTML = latestUserData.avatar
-        ? `<img src="${latestUserData.avatar}" alt="User avatar">`
-        : escapeHtml(getInitials(latestUserData.displayName || user.displayName || '', latestUserData.email || user.email || ''));
-    }
-    privacySettings = { ...privacySettings, ...(latestUserDoc.data()?.privacySettings || {}) };
-    await reconnectSameEmailProfile();
-
-    await loadBlockedUsers();
-    await loadMutedChats();
-    await loadFavoriteChatIds();
-    await loadQuickReplies();
-    await loadAllUsers();
-    loadWallpaperFromStorage();
-    setupChatListListeners();
-    setupRequestListeners();
-    setupArchiveSection();
-    listenForIncomingCalls();
-    setupCallPushNotifications().catch(() => { });
-    startScheduledMessageWorker();
-    switchTab('all');
-    revealAuthenticatedApp();
   });
 
   // Attach Event Handlers
   document.getElementById('sendBtn')?.addEventListener('click', sendMessage);
   document.getElementById('messageInput')?.addEventListener('keydown', (e) => {
+    if (handleMentionKeydown(e)) return;
     if (e.key === 'Escape') hideMentionSuggestions();
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       sendMessage();
+    }
+  });
+  document.addEventListener('keydown', (e) => {
+    const target = e.target;
+    const inEditable = target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable);
+    const mod = e.ctrlKey || e.metaKey;
+
+    if (mod && e.key.toLowerCase() === 'k') {
+      e.preventDefault();
+      document.getElementById('searchInput')?.focus();
+      return;
+    }
+
+    if (mod && e.key.toLowerCase() === 'f' && currentChat) {
+      e.preventDefault();
+      const searchBar = document.getElementById('inChatSearchBar');
+      const inChatInput = document.getElementById('inChatSearchInput');
+      if (searchBar) searchBar.style.display = 'flex';
+      inChatInput?.focus();
+      return;
+    }
+
+    if (e.key === 'Escape') {
+      hideMentionSuggestions();
+      if (document.getElementById('inChatSearchBar')?.style.display === 'flex') {
+        document.getElementById('closeSearchBtn')?.click();
+      }
+      const archivedMenu = document.getElementById('archivedRowMenu');
+      if (archivedMenu?.style.display === 'block') hideArchivedRowMenu();
+      const chatMenu = document.getElementById('chatContextMenu');
+      if (chatMenu?.style.display === 'block') chatMenu.style.display = 'none';
+      removeMessageContextMenu();
+      closeTopVisibleModal();
+      if (inEditable) return;
     }
   });
   document.getElementById('messageInput')?.addEventListener('input', () => {
@@ -6203,6 +7194,15 @@ async function init() {
     if (!event.target.closest('#mentionSuggestions') && event.target.id !== 'messageInput') hideMentionSuggestions();
   });
   window.addEventListener('beforeunload', saveCurrentDraft);
+  window.addEventListener('online', () => {
+    showToast('Back online');
+    processFailedMessageQueue().catch(() => { });
+    loadCurrentChatList();
+    loadArchivedChats();
+  });
+  window.addEventListener('offline', () => {
+    showToast('You are offline. Messages will retry when connected.', 'error');
+  });
   document.getElementById('cancelReplyBtn')?.addEventListener('click', () => {
     currentReplyTo = null;
     document.getElementById('replyPreviewBar').style.display = 'none';
@@ -6251,7 +7251,11 @@ async function init() {
   });
   document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () => switchTab(t.dataset.tab)));
   document.getElementById('profileBtn')?.addEventListener('click', showProfileModal);
-  document.getElementById('logoutBtn')?.addEventListener('click', () => auth.signOut().then(() => window.location.replace('login.html')));
+  document.getElementById('logoutBtn')?.addEventListener('click', async () => {
+    await markCurrentSessionInactive();
+    await auth.signOut();
+    window.location.replace('login.html');
+  });
   document.getElementById('voiceCallBtn')?.addEventListener('click', () => startCall('voice'));
   document.getElementById('videoCallBtn')?.addEventListener('click', () => startCall('video'));
   document.getElementById('acceptCallBtn')?.addEventListener('click', acceptIncomingCall);
@@ -6285,7 +7289,25 @@ async function init() {
   document.getElementById('blockedUsersBtn')?.addEventListener('click', showBlockedUsersModal);
   document.getElementById('quickRepliesSettingsBtn')?.addEventListener('click', showQuickRepliesModal);
   document.getElementById('starredMessagesBtn')?.addEventListener('click', showStarredMessagesModal);
+  document.getElementById('scheduledMessagesBtn')?.addEventListener('click', showScheduledMessagesModal);
+  document.getElementById('activeSessionsBtn')?.addEventListener('click', showSessionsModal);
+  document.getElementById('appLockSettingsBtn')?.addEventListener('click', showAppLockModal);
+  document.getElementById('saveAppLockPinBtn')?.addEventListener('click', saveAppLockPin);
+  document.getElementById('disableAppLockBtn')?.addEventListener('click', disableAppLock);
+  document.getElementById('unlockAppBtn')?.addEventListener('click', unlockAppAttempt);
+  document.querySelectorAll('.closeAppLockModal').forEach(btn => btn.addEventListener('click', () => document.getElementById('appLockModal').style.display = 'none'));
+  document.getElementById('logoutOtherSessionsBtn')?.addEventListener('click', () => logoutOtherSessions().catch(() => showToast('Could not log out other sessions', 'error')));
   document.querySelectorAll('.closeStarredModal').forEach(btn => btn.addEventListener('click', () => document.getElementById('starredMessagesModal').style.display = 'none'));
+  document.querySelectorAll('.closeScheduledMessagesModal').forEach(btn => btn.addEventListener('click', () => document.getElementById('scheduledMessagesModal').style.display = 'none'));
+  document.querySelectorAll('.closeSessionsModal').forEach(btn => btn.addEventListener('click', () => document.getElementById('sessionsModal').style.display = 'none'));
+  document.getElementById('unlockPinInput')?.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') unlockAppAttempt();
+  });
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible' && getStoredAppLockPin()) {
+      lockAppNowIfEnabled();
+    }
+  });
   document.getElementById('addQuickReplyBtn')?.addEventListener('click', async () => {
     const input = document.getElementById('newQuickReplyText');
     const text = input?.value?.trim();
@@ -6296,6 +7318,20 @@ async function init() {
   document.querySelectorAll('.closeBlockedModal').forEach(btn => btn.addEventListener('click', () => document.getElementById('blockedModal').style.display = 'none'));
   document.querySelectorAll('.closeQuickRepliesModal').forEach(btn => btn.addEventListener('click', () => document.getElementById('quickRepliesModal').style.display = 'none'));
   document.getElementById('exportChatsBtn')?.addEventListener('click', exportCurrentChat);
+  document.getElementById('exportBackupBtn')?.addEventListener('click', () => exportFullBackup().catch(() => showToast('Backup export failed', 'error')));
+  document.getElementById('importBackupBtn')?.addEventListener('click', () => document.getElementById('backupImportInput')?.click());
+  document.getElementById('backupImportInput')?.addEventListener('change', async (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    try {
+      await importFullBackupFile(file);
+    } catch (error) {
+      console.error('Backup import failed:', error);
+      showToast('Backup import failed', 'error');
+    } finally {
+      event.target.value = '';
+    }
+  });
   document.getElementById('clearAllChatsBtn')?.addEventListener('click', clearAllChats);
   document.getElementById('changeNameBtn')?.addEventListener('click', async () => {
     const name = prompt('Enter display name', document.getElementById('profileName')?.textContent || '');
@@ -6339,7 +7375,14 @@ async function init() {
     document.getElementById('createStatusModal').style.display = 'flex';
   });
   document.querySelectorAll('.closeStatusModal').forEach(btn => btn.addEventListener('click', () => document.getElementById('createStatusModal').style.display = 'none'));
-  document.querySelectorAll('.closeStatusViewer').forEach(btn => btn.addEventListener('click', () => document.getElementById('statusViewerModal').style.display = 'none'));
+  document.querySelectorAll('.closeStatusViewer').forEach(btn => btn.addEventListener('click', closeStatusViewer));
+  document.getElementById('statusPrevBtn')?.addEventListener('click', () => moveStatusViewer(-1));
+  document.getElementById('statusNextBtn')?.addEventListener('click', () => moveStatusViewer(1));
+  document.getElementById('statusViewerBody')?.addEventListener('click', (event) => {
+    const rect = event.currentTarget.getBoundingClientRect();
+    const isLeft = (event.clientX - rect.left) < rect.width / 2;
+    moveStatusViewer(isLeft ? -1 : 1).catch(() => { });
+  });
   document.getElementById('publishStatusBtn')?.addEventListener('click', () => publishStatus().catch(() => showToast('Could not publish status', 'error')));
   document.getElementById('statusImageBtn')?.addEventListener('click', () => document.getElementById('statusImageInput').click());
   document.getElementById('statusImageInput')?.addEventListener('change', async (event) => {
@@ -6359,9 +7402,11 @@ async function init() {
   });
   document.querySelectorAll('.closeForwardModal').forEach(btn => btn.addEventListener('click', () => {
     currentForwardMessage = null;
+    currentForwardSelectionKeys = new Set();
     document.getElementById('forwardModal').style.display = 'none';
   }));
   document.getElementById('forwardSearch')?.addEventListener('input', event => renderForwardChats(event.target.value));
+  document.getElementById('forwardSelectedBtn')?.addEventListener('click', () => forwardSelectedMessages().catch(() => showToast('Forward failed', 'error')));
 
   // Setup Modals
   const createGroupModal = document.getElementById('createGroupModal');
@@ -6429,8 +7474,12 @@ async function init() {
   }));
   document.getElementById('chatInfoMuteBtn')?.addEventListener('click', async () => {
     if (!currentChat) return;
-    await muteChat(currentChat.id, currentChatType, 'always');
-    showToast('Chat muted');
+    const activeMute = getActiveMuteRecord(currentChat.id, currentChatType);
+    if (activeMute) {
+      await unmuteChat(activeMute.id);
+    } else {
+      await muteChat(currentChat.id, currentChatType, 'always');
+    }
   });
   document.getElementById('chatInfoWallpaperBtn')?.addEventListener('click', () => openWallpaperModal('current'));
   document.getElementById('wallpaperBtn')?.addEventListener('click', () => openWallpaperModal('current'));
@@ -6440,9 +7489,21 @@ async function init() {
     document.getElementById('chatInfoModal').style.display = 'none';
     resetChatPanel();
   });
+  document.getElementById('chatInfoReportBtn')?.addEventListener('click', async () => {
+    if (currentChatType !== 'direct' || !currentChat?.otherUserId) return;
+    await reportUser(currentChat.otherUserId, currentChat.otherUserName || 'User', 'chat_info');
+    document.getElementById('chatInfoModal').style.display = 'none';
+  });
   document.getElementById('muteChatMenuItem')?.addEventListener('click', async () => {
     if (!contextMenuTarget) return;
-    await muteChat(contextMenuTarget.dataset.chatId, contextMenuTarget.dataset.chatType, 'always');
+    const chatId = contextMenuTarget.dataset.chatId;
+    const chatType = contextMenuTarget.dataset.chatType;
+    const activeMute = getActiveMuteRecord(chatId, chatType);
+    if (activeMute) {
+      await unmuteChat(activeMute.id);
+    } else {
+      await muteChat(chatId, chatType, 'always');
+    }
     document.getElementById('chatContextMenu').style.display = 'none';
     loadCurrentChatList();
   });
@@ -6516,7 +7577,7 @@ window.addEventListener('click', (e) => {
   // Hide the message menu
   const msgMenu = document.querySelector('.message-context-menu');
   if (msgMenu && !e.target.closest('.message-context-menu')) {
-    msgMenu.remove();
+    removeMessageContextMenu();
   }
 
   // Hide the sidebar menu
@@ -6531,14 +7592,176 @@ window.addEventListener('click', (e) => {
   }
 });
 
-document.getElementById('archivedUnarchiveMenuItem')?.addEventListener('click', async () => {
+const runArchivedUnarchive = async (event) => {
+  if (event) event.preventDefault();
   const menu = document.getElementById('archivedRowMenu');
   if (!menu?.dataset.archiveId) return;
   await unarchiveChat(menu.dataset.archiveId);
   hideArchivedRowMenu();
-});
+};
 
-document.getElementById('archivedDeleteMenuItem')?.addEventListener('click', async () => {
+function getCurrentChatKey() {
+  if (!currentChat || !currentChatType) return '';
+  return `${currentChatType}:${currentChat.id}`;
+}
+
+function resetMessageRenderLimit() {
+  const key = getCurrentChatKey();
+  if (!key) return;
+  messageRenderLimits.set(key, MESSAGE_PAGE_SIZE);
+}
+
+function getMessageRenderLimit() {
+  const key = getCurrentChatKey();
+  if (!key) return MESSAGE_PAGE_SIZE;
+  if (!messageRenderLimits.has(key)) messageRenderLimits.set(key, MESSAGE_PAGE_SIZE);
+  return messageRenderLimits.get(key);
+}
+
+function increaseMessageRenderLimit() {
+  const key = getCurrentChatKey();
+  if (!key) return;
+  messageRenderLimits.set(key, getMessageRenderLimit() + MESSAGE_PAGE_SIZE);
+}
+
+function getOrCreateSessionId() {
+  try {
+    const key = 'teamChatSessionId';
+    let id = localStorage.getItem(key);
+    if (!id) {
+      id = `sess_${Math.random().toString(36).slice(2)}_${Date.now().toString(36)}`;
+      localStorage.setItem(key, id);
+    }
+    return id;
+  } catch (_) {
+    return `sess_${Math.random().toString(36).slice(2)}_${Date.now().toString(36)}`;
+  }
+}
+
+function getDeviceLabel() {
+  const ua = navigator.userAgent || '';
+  if (/Android/i.test(ua)) return 'Android device';
+  if (/iPhone|iPad|iPod/i.test(ua)) return 'iOS device';
+  if (/Windows/i.test(ua)) return 'Windows';
+  if (/Macintosh|Mac OS X/i.test(ua)) return 'Mac';
+  if (/Linux/i.test(ua)) return 'Linux';
+  return 'Unknown device';
+}
+
+async function upsertCurrentSession() {
+  if (!currentUser || !currentSessionId) return;
+  await db.collection('userSessions').doc(`${currentUser.uid}_${currentSessionId}`).set({
+    userId: currentUser.uid,
+    sessionId: currentSessionId,
+    deviceLabel: getDeviceLabel(),
+    userAgent: navigator.userAgent || '',
+    isActive: true,
+    revoked: false,
+    lastSeenAt: firebase.firestore.FieldValue.serverTimestamp(),
+    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+  }, { merge: true });
+}
+
+function startSessionHeartbeat() {
+  clearInterval(sessionHeartbeatTimer);
+  upsertCurrentSession().catch(() => { });
+  sessionHeartbeatTimer = setInterval(() => {
+    upsertCurrentSession().catch(() => { });
+  }, 45000);
+}
+
+function stopSessionHeartbeat() {
+  clearInterval(sessionHeartbeatTimer);
+  sessionHeartbeatTimer = null;
+}
+
+function watchSessionRevocation() {
+  if (!currentUser || !currentSessionId) return;
+  if (sessionWatchUnsubscribe) {
+    sessionWatchUnsubscribe();
+    sessionWatchUnsubscribe = null;
+  }
+  const ref = db.collection('userSessions').doc(`${currentUser.uid}_${currentSessionId}`);
+  sessionWatchUnsubscribe = ref.onSnapshot(snapshot => {
+    const data = snapshot.data();
+    if (data?.revoked === true) {
+      showToast('This session was logged out from another device');
+      auth.signOut().then(() => window.location.replace('login.html'));
+    }
+  });
+}
+
+async function showSessionsModal() {
+  if (!currentUser) return;
+  const modal = document.getElementById('sessionsModal');
+  const list = document.getElementById('sessionsList');
+  if (!modal || !list) return;
+  list.innerHTML = '<div class="empty-state">Loading sessions...</div>';
+  modal.style.display = 'flex';
+
+  const snapshot = await db.collection('userSessions')
+    .where('userId', '==', currentUser.uid)
+    .orderBy('lastSeenAt', 'desc')
+    .limit(50)
+    .get()
+    .catch(() => null);
+
+  if (!snapshot || snapshot.empty) {
+    list.innerHTML = '<div class="empty-state">No active sessions found</div>';
+    return;
+  }
+
+  list.innerHTML = '';
+  snapshot.docs.forEach(doc => {
+    const s = doc.data();
+    const isCurrent = s.sessionId === currentSessionId;
+    const row = document.createElement('div');
+    row.className = 'blocked-user-card';
+    row.innerHTML = `
+      <div class="list-info">
+        <div class="list-name">${escapeHtml(s.deviceLabel || 'Device')}${isCurrent ? ' (This Device)' : ''}</div>
+        <div class="list-preview">Last seen: ${escapeHtml(formatWhen(s.lastSeenAt) || 'Unknown')}</div>
+      </div>
+      ${isCurrent ? '' : `<button class="btn btn-outline revoke-session-btn" data-id="${escapeHtml(doc.id)}">Log Out</button>`}
+    `;
+    list.appendChild(row);
+  });
+
+  list.querySelectorAll('.revoke-session-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      if (!confirm('Log out this session?')) return;
+      await db.collection('userSessions').doc(btn.dataset.id).update({
+        revoked: true,
+        isActive: false,
+        revokedAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      showToast('Session logged out');
+      showSessionsModal();
+    });
+  });
+}
+
+async function logoutOtherSessions() {
+  if (!currentUser || !confirm('Log out all other sessions?')) return;
+  const snapshot = await db.collection('userSessions')
+    .where('userId', '==', currentUser.uid)
+    .get()
+    .catch(() => null);
+  if (!snapshot) return;
+  const targets = snapshot.docs.filter(doc => doc.data()?.sessionId !== currentSessionId);
+  for (const doc of targets) {
+    await doc.ref.update({
+      revoked: true,
+      isActive: false,
+      revokedAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+  }
+  showToast(`Logged out ${targets.length} other session(s)`);
+  showSessionsModal();
+}
+
+const runArchivedDelete = async (event) => {
+  if (event) event.preventDefault();
   const menu = document.getElementById('archivedRowMenu');
   if (!menu?.dataset.archiveId || !menu.dataset.chatId || !menu.dataset.chatType) return;
   const chatName = menu.dataset.chatName || 'Chat';
@@ -6547,6 +7770,27 @@ document.getElementById('archivedDeleteMenuItem')?.addEventListener('click', asy
   await deleteChatForMe(menu.dataset.chatId, menu.dataset.chatType, chatName);
   await unarchiveChat(menu.dataset.archiveId);
   hideArchivedRowMenu();
+};
+
+document.getElementById('archivedUnarchiveMenuItem')?.addEventListener('click', runArchivedUnarchive);
+document.getElementById('archivedDeleteMenuItem')?.addEventListener('click', runArchivedDelete);
+document.getElementById('archivedUnarchiveMenuItem')?.addEventListener('touchend', runArchivedUnarchive, { passive: false });
+document.getElementById('archivedDeleteMenuItem')?.addEventListener('touchend', runArchivedDelete, { passive: false });
+
+const archivedRowMenuEl = document.getElementById('archivedRowMenu');
+if (archivedRowMenuEl) {
+  archivedRowMenuEl.addEventListener('contextmenu', (event) => event.preventDefault(), { passive: false });
+  archivedRowMenuEl.addEventListener('touchstart', (event) => event.stopPropagation(), { passive: true });
+  archivedRowMenuEl.addEventListener('mousedown', (event) => event.stopPropagation());
+}
+
+document.addEventListener('selectionchange', () => {
+  const menu = document.getElementById('archivedRowMenu');
+  if (!menu || menu.style.display !== 'block') return;
+  const selection = window.getSelection && window.getSelection();
+  if (selection && selection.rangeCount) {
+    selection.removeAllRanges();
+  }
 });
 
 document.getElementById('chatsList')?.addEventListener('contextmenu', (e) => {
@@ -6557,6 +7801,7 @@ document.getElementById('chatsList')?.addEventListener('contextmenu', (e) => {
   contextMenuTarget = item;
   const menu = document.getElementById('chatContextMenu');
   if (menu) {
+    updateChatContextMenuLabels();
     contextMenuOpenedAt = Date.now();
     positionContextMenu(menu, e.clientX, e.clientY);
   }
@@ -6570,6 +7815,7 @@ document.getElementById('groupsList')?.addEventListener('contextmenu', (e) => {
   contextMenuTarget = item;
   const menu = document.getElementById('chatContextMenu');
   if (menu) {
+    updateChatContextMenuLabels();
     contextMenuOpenedAt = Date.now();
     positionContextMenu(menu, e.clientX, e.clientY);
   }
@@ -6619,6 +7865,18 @@ document.getElementById('blockUserMenuItem')?.addEventListener('click', async ()
     if (currentChatType === 'direct' && currentChat?.otherUserId === userId) resetChatPanel();
     loadCurrentChatList();
     showToast(`${userName} blocked`);
+  }
+  document.getElementById('chatContextMenu').style.display = 'none';
+});
+
+document.getElementById('reportUserMenuItem')?.addEventListener('click', async () => {
+  if (!contextMenuTarget) return;
+  const userId = contextMenuTarget.dataset.otherUserId;
+  const userName = contextMenuTarget.dataset.chatName || contextMenuTarget.querySelector('.list-name')?.textContent || 'User';
+  if (!userId) {
+    showToast('Only personal chats can be reported here', 'error');
+  } else {
+    await reportUser(userId, userName, 'sidebar_menu');
   }
   document.getElementById('chatContextMenu').style.display = 'none';
 });

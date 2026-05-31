@@ -163,6 +163,7 @@
               style="display: none"
             ></span>
           </button>
+          <button class="tab" data-tab="muted">Muted</button>
           <button class="tab" data-tab="favorites">Favorites</button>
           <button class="tab" data-tab="groups">Groups</button>
           <button class="tab" data-tab="status">Status</button>
@@ -689,6 +690,9 @@
             <button id="chatInfoBlockBtn" class="setting-item danger">
               Block contact
             </button>
+            <button id="chatInfoReportBtn" class="setting-item danger">
+              Report contact
+            </button>
           </div>
           <div class="shared-section">
             <div class="shared-tabs">
@@ -696,6 +700,7 @@
                 Media
               </button>
               <button class="shared-tab" data-shared-tab="docs">Docs</button>
+              <button class="shared-tab" data-shared-tab="files">Files</button>
               <button class="shared-tab" data-shared-tab="links">Links</button>
               <button class="shared-tab" data-shared-tab="voice">Voice</button>
             </div>
@@ -827,6 +832,15 @@
           <button id="starredMessagesBtn" class="setting-item">
             Starred Messages
           </button>
+          <button id="scheduledMessagesBtn" class="setting-item">
+            Scheduled Messages
+          </button>
+          <button id="activeSessionsBtn" class="setting-item">
+            Active Sessions
+          </button>
+          <button id="appLockSettingsBtn" class="setting-item">
+            App Lock (PIN)
+          </button>
           <button id="wallpaperSettingsBtn" class="setting-item">
             Change Wallpaper (All Chats)
           </button>
@@ -838,6 +852,12 @@
           </button>
           <button id="exportChatsBtn" class="setting-item">
             Export Current Chat
+          </button>
+          <button id="exportBackupBtn" class="setting-item">
+            Export Full Backup (JSON)
+          </button>
+          <button id="importBackupBtn" class="setting-item">
+            Import Backup (JSON)
           </button>
           <button id="clearAllChatsBtn" class="setting-item danger">
             Clear All Chats
@@ -900,6 +920,64 @@
         </div>
         <div class="modal-body">
           <div id="starredMessagesList"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Active Sessions Modal -->
+    <div id="sessionsModal" class="modal" style="display: none">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>Active Sessions</h3>
+          <span class="close-modal closeSessionsModal">&times;</span>
+        </div>
+        <div class="modal-body">
+          <div style="display:flex; justify-content:flex-end; margin-bottom:10px;">
+            <button id="logoutOtherSessionsBtn" class="btn btn-outline">Log Out Other Sessions</button>
+          </div>
+          <div id="sessionsList"></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="appLockModal" class="modal" style="display: none">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>App Lock</h3>
+          <span class="close-modal closeAppLockModal">&times;</span>
+        </div>
+        <div class="modal-body">
+          <p class="modal-helper">Set a 4-digit PIN to lock this app on this device.</p>
+          <input id="appLockPinInput" type="password" inputmode="numeric" maxlength="4" placeholder="Enter 4-digit PIN" />
+          <div style="display:flex; gap:8px; margin-top:12px;">
+            <button id="saveAppLockPinBtn" class="btn btn-primary">Save PIN</button>
+            <button id="disableAppLockBtn" class="btn btn-outline">Disable</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="unlockModal" class="modal" style="display: none">
+      <div class="modal-content">
+        <div class="modal-header"><h3>Unlock</h3></div>
+        <div class="modal-body">
+          <input id="unlockPinInput" type="password" inputmode="numeric" maxlength="4" placeholder="Enter PIN" />
+          <div style="display:flex; justify-content:flex-end; margin-top:12px;">
+            <button id="unlockAppBtn" class="btn btn-primary">Unlock</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Scheduled Messages Modal -->
+    <div id="scheduledMessagesModal" class="modal" style="display: none">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>Scheduled Messages</h3>
+          <span class="close-modal closeScheduledMessagesModal">&times;</span>
+        </div>
+        <div class="modal-body">
+          <div id="scheduledMessagesList"></div>
         </div>
       </div>
     </div>
@@ -990,11 +1068,20 @@
             id="forwardChatsList"
             style="max-height: 300px; overflow-y: auto"
           ></div>
+          <div style="display:flex; justify-content:flex-end; margin-top:12px;">
+            <button id="forwardSelectedBtn" class="btn btn-primary" disabled>Forward</button>
+          </div>
         </div>
       </div>
     </div>
 
-    <div id="toast" class="toast"></div>
+    <div
+      id="toast"
+      class="toast"
+      role="status"
+      aria-live="polite"
+      aria-atomic="true"
+    ></div>
 
     <div id="callModal" class="modal call-modal" style="display: none">
       <div class="call-shell">
@@ -1125,6 +1212,10 @@
             <div id="statusViewerTime" class="list-preview"></div>
           </div>
         </div>
+        <div class="status-viewer-nav">
+          <button id="statusPrevBtn" class="status-nav-btn" type="button">Prev</button>
+          <button id="statusNextBtn" class="status-nav-btn" type="button">Next</button>
+        </div>
         <div id="statusViewerBody" class="status-viewer-body"></div>
         <div id="statusViewerSeen" class="status-viewer-seen"></div>
       </div>
@@ -1134,6 +1225,12 @@
       type="file"
       id="statusImageInput"
       accept="image/*"
+      style="display: none"
+    />
+    <input
+      type="file"
+      id="backupImportInput"
+      accept="application/json,.json"
       style="display: none"
     />
 
@@ -1166,6 +1263,7 @@
       <div class="context-menu-item" id="favoriteChatMenuItem">Add to Favorite</div>
       <div class="context-menu-item" id="markReadMenuItem">Mark as Unread</div>
       <div class="context-menu-item" id="blockUserMenuItem">Block</div>
+      <div class="context-menu-item" id="reportUserMenuItem">Report</div>
       <div class="context-menu-item" id="clearChatMenuItem">Clear Chat</div>
       <div class="context-menu-item" id="deleteChatMenuItem">Delete</div>
     </div>
