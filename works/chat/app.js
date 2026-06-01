@@ -156,6 +156,7 @@ let activeGroupCallParticipants = [];
 const GROUP_CALL_MAX_PARTICIPANTS = 4;
 let sessionHeartbeatTimer = null;
 let sessionWatchUnsubscribe = null;
+let presenceHeartbeatTimer = null;
 let appUnlockedForSession = false;
 const MESSAGE_PAGE_SIZE = 120;
 const messageRenderLimits = new Map();
@@ -4649,7 +4650,10 @@ async function deactivateAccount() {
 }
 
 async function markCurrentSessionInactive() {
-  if (!currentUser || !currentSessionId) return;
+  if (!currentUser) return;
+  stopPresenceHeartbeat();
+  await setCurrentUserPresence(false);
+  if (!currentSessionId) return;
   await db.collection('userSessions').doc(`${currentUser.uid}_${currentSessionId}`).set({
     isActive: false,
     lastSeenAt: firebase.firestore.FieldValue.serverTimestamp()
@@ -4784,6 +4788,8 @@ async function loadAllUsers() {
     usersUnsubscribe = db.collection('users').onSnapshot(snapshot => {
       allUsers = normalizeUsersSnapshot(snapshot);
       populateGroupMemberSuggestions();
+      refreshOpenChatPresence();
+      scheduleChatListRefresh(500);
       resolve(allUsers);
     }, error => {
       console.warn('User directory listener failed:', error);
@@ -5378,13 +5384,52 @@ function formatLastSeen(timestamp) {
   return `last seen ${date.toLocaleDateString()} at ${time}`;
 }
 
+function isUserOnlineNow(userData = {}) {
+  if (userData.onlineStatus !== 'online') return false;
+  const lastSeen = userData.lastSeen?.toDate?.() || (userData.lastSeen ? new Date(userData.lastSeen) : null);
+  if (!lastSeen || Number.isNaN(lastSeen.getTime())) return false;
+  return Date.now() - lastSeen.getTime() < 90000;
+}
+
 function getPresenceText(userData) {
   if (!userData) return '';
   const canSeePresence = !privacySettings.hideLastSeen && !userData.privacySettings?.hideLastSeen;
   if (!canSeePresence) return 'last seen hidden';
-  if (userData.onlineStatus === 'online') return 'online';
+  if (isUserOnlineNow(userData)) return 'online';
   if (userData.lastSeen) return formatLastSeen(userData.lastSeen);
   return '';
+}
+
+async function setCurrentUserPresence(isOnline) {
+  if (!currentUser) return;
+  await db.collection('users').doc(currentUser.uid).set({
+    onlineStatus: isOnline ? 'online' : 'offline',
+    lastSeen: firebase.firestore.FieldValue.serverTimestamp(),
+    lastPresenceAt: firebase.firestore.FieldValue.serverTimestamp()
+  }, { merge: true }).catch(error => {
+    console.warn('Presence update failed:', error);
+  });
+}
+
+function startPresenceHeartbeat() {
+  clearInterval(presenceHeartbeatTimer);
+  setCurrentUserPresence(document.visibilityState !== 'hidden').catch(() => { });
+  presenceHeartbeatTimer = setInterval(() => {
+    if (!currentUser) return;
+    setCurrentUserPresence(document.visibilityState !== 'hidden').catch(() => { });
+  }, 30000);
+}
+
+function stopPresenceHeartbeat() {
+  clearInterval(presenceHeartbeatTimer);
+  presenceHeartbeatTimer = null;
+}
+
+function refreshOpenChatPresence() {
+  if (!currentChat || currentChatType !== 'direct' || !currentChat.otherUserId) return;
+  const user = allUsers.find(u => u.id === currentChat.otherUserId);
+  const chatStatus = document.getElementById('chatStatus');
+  if (user && chatStatus) chatStatus.textContent = getPresenceText(user);
 }
 
 async function loadGroupsList() {
@@ -7703,7 +7748,8 @@ async function init() {
         pendingVerification: user.emailVerified !== true,
         isActive: true,
         onlineStatus: 'online',
-        lastSeen: new Date()
+        lastSeen: firebase.firestore.FieldValue.serverTimestamp(),
+        lastPresenceAt: firebase.firestore.FieldValue.serverTimestamp()
       }, { merge: true });
       const latestUserDoc = await userRef.get();
       const latestUserData = latestUserDoc.data() || {};
@@ -7719,6 +7765,7 @@ async function init() {
       await runBootstrapStep('loadBlockedUsers', () => loadBlockedUsers());
       await runBootstrapStep('upsertCurrentSession', () => upsertCurrentSession());
       startSessionHeartbeat();
+      startPresenceHeartbeat();
       watchSessionRevocation();
       await runBootstrapStep('loadMutedChats', () => loadMutedChats());
       await runBootstrapStep('loadFavoriteChatIds', () => loadFavoriteChatIds());
@@ -7916,6 +7963,9 @@ async function init() {
     if (e.key === 'Enter') unlockAppAttempt();
   });
   document.addEventListener('visibilitychange', () => {
+    if (currentUser) {
+      setCurrentUserPresence(document.visibilityState !== 'hidden').catch(() => { });
+    }
     if (document.visibilityState === 'visible' && getStoredAppLockPin()) {
       lockAppNowIfEnabled();
     }
@@ -8576,6 +8626,9 @@ window.addEventListener('focus', () => {
   if (currentChat) markMessagesAsRead();
 });
 document.addEventListener('visibilitychange', () => {
+  if (currentUser) {
+    setCurrentUserPresence(document.visibilityState !== 'hidden').catch(() => { });
+  }
   if (document.hidden && activeCall && activeCallMode !== 'incoming') {
     minimizeActiveCallUi('background');
   }
@@ -8583,6 +8636,10 @@ document.addEventListener('visibilitychange', () => {
     updateCallMiniBar(callStartedAt ? 'Connected' : 'Call running');
   }
   if (!document.hidden && currentChat) markMessagesAsRead();
+});
+
+window.addEventListener('pagehide', () => {
+  if (currentUser) setCurrentUserPresence(false).catch(() => { });
 });
 
 window.enableTeamChatCallNotifications = function enableTeamChatCallNotifications() {
