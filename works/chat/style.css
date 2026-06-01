@@ -2725,7 +2725,7 @@ input:checked + .slider::before {
 .toast {
   position: fixed;
   left: 50%;
-  bottom: 20px;
+  bottom: calc(20px + var(--safe-bottom));
   z-index: 10000;
   transform: translateX(-50%);
   max-width: min(420px, calc(100vw - 28px));

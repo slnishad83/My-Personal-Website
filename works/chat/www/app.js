@@ -495,8 +495,9 @@ function renderChatListItems(items, container) {
 
     const unread = item.unreadCount ? `<span class="unread-pill">${item.unreadCount}</span>` : '';
     const draftPreview = getDraftPreviewForItem(item);
-    const normalPreview = item.preview || '';
-    const missedPreviewPattern = /missed\s+(voice|video|audio)?\s*(call|note)?/i;
+    const normalPreview = item.searchResultType === 'message'
+      ? (item.preview || '')
+      : getChatListPreviewText(item.preview);
     const activeIds = [
       currentChat?.id,
       currentChat?.otherUserId,
@@ -3157,6 +3158,16 @@ function decorateSearchItems(items = [], section = '', searchResultType = '') {
   return items.map(item => ({ ...item, section, searchResultType: searchResultType || item.searchResultType || '' }));
 }
 
+function getChatListPreviewText(preview = '') {
+  const text = String(preview || '').trim();
+  if (!text) return '';
+
+  if (/^missed\s+(voice|video)\s+call/i.test(text)) return text;
+  if (/^(voice|video)\s+call\s+(ended|cancelled|declined)/i.test(text)) return '';
+
+  return text;
+}
+
 function isSearchableUser(user = {}) {
   if (!user.id || user.id === currentUser?.uid || isBlocked(user.id) || user.isActive === false) return false;
   if (user.pendingVerification === true && user.emailVerified === false) return false;
@@ -5259,7 +5270,7 @@ async function buildDirectChatItems() {
       if (archivedDirectNames.has(String(displayName || '').trim().toLowerCase())) continue;
       const onlineStatus = userData.onlineStatus || 'offline';
       const presenceText = getPresenceText(userData);
-      const preview = chatData.lastMessage || 'Tap to open chat';
+      const preview = getChatListPreviewText(chatData.lastMessage);
 
       items.push({
         id: chat.id,
