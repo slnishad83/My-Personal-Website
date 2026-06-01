@@ -3139,6 +3139,20 @@ function matchesIdentitySearch(entity = {}, rawTerm = '') {
   });
 }
 
+function matchesNewContactLookup(entity = {}, rawTerm = '') {
+  const term = normalizeSearchText(rawTerm);
+  if (!term) return false;
+
+  const digits = term.replace(/\D/g, '');
+  const phone = String(entity.phone || entity.phoneNumber || '').replace(/\D/g, '');
+  if (digits.length >= 6 && phone) return phone.includes(digits);
+
+  const email = normalizeEmail(entity.email || '');
+  if ((term.includes('@') || term.includes('.')) && email) return email.includes(term);
+
+  return false;
+}
+
 function decorateSearchItems(items = [], section = '', searchResultType = '') {
   return items.map(item => ({ ...item, section, searchResultType: searchResultType || item.searchResultType || '' }));
 }
@@ -3633,7 +3647,7 @@ async function loadAllChatsList(searchTerm = '') {
       // PREVENT CONFLICTS: Skip if this user is already visible in chatMatches
       if (visibleUserIds.has(user.id)) continue;
 
-      const isMatch = matchesIdentitySearch(user, term);
+      const isMatch = matchesNewContactLookup(user, term);
 
       if (isMatch) {
         const requestState = await getContactRequestState(user.id); // Fixed reference pass
@@ -3658,7 +3672,8 @@ async function loadAllChatsList(searchTerm = '') {
     // FIXED CORRECTION LAYER: Read directly from item.id to completely avoid mapping crashes
     const cleanUserMatches = Array.from(new Map(userMatches.map(u => [u.id, u])).values());
     const chatMatchKeys = new Set(chatMatches.map(item => `${item.type}:${item.id}`));
-    const messageMatches = await searchMessagesInChats(allItems, term);
+    const messageSearchItems = await buildMessageSearchChatItems(allItems);
+    const messageMatches = await searchMessagesInChats(messageSearchItems, term);
     const contactMatches = cleanUserMatches.filter(item => !chatMatchKeys.has(`${item.type}:${item.id}`));
     items = [
       ...decorateSearchItems(chatMatches, 'Chats', 'chat'),
@@ -3696,7 +3711,11 @@ async function searchMessagesInChats(chatItems = [], term = '') {
   for (const item of uniqueChats) {
     try {
       const field = item.type === 'group' ? 'groupId' : 'directId';
-      const snapshot = await db.collection('messages').where(field, '==', item.id).limit(120).get();
+      const targetIds = item.type === 'direct'
+        ? [...new Set([item.id, ...(item.aliasDirectIds || [])].filter(Boolean))].slice(0, 10)
+        : [item.id];
+      let query = db.collection('messages').where(field, targetIds.length > 1 ? 'in' : '==', targetIds.length > 1 ? targetIds : targetIds[0]);
+      const snapshot = await query.limit(120).get();
       const matches = snapshot.docs
         .map(doc => doc.data())
         .filter(msg => !msg.deletedFor?.[currentUser.uid] && !msg.deletedForEveryone)
@@ -3726,6 +3745,43 @@ async function searchMessagesInChats(chatItems = [], term = '') {
     }
   }
   return results;
+}
+
+async function buildMessageSearchChatItems(visibleItems = []) {
+  const items = [...visibleItems];
+  const seen = new Set(visibleItems.map(item => `${item.type}:${item.id}`));
+
+  try {
+    const archivedSnapshot = await db.collection('archivedChats')
+      .where('userId', '==', currentUser.uid)
+      .get();
+
+    archivedSnapshot.docs.forEach(doc => {
+      const archive = doc.data() || {};
+      if (!archive.chatId || !archive.chatType) return;
+      const key = `${archive.chatType}:${archive.chatId}`;
+      if (seen.has(key)) return;
+      seen.add(key);
+      const name = archive.chatName || (archive.chatType === 'group' ? 'Group' : 'Archived chat');
+      items.push({
+        id: archive.chatId,
+        type: archive.chatType,
+        name,
+        avatar: archive.chatType === 'group' ? 'G' : escapeHtml(getInitials(name)),
+        preview: 'Archived',
+        unreadCount: 0,
+        isFavorite: false,
+        isMuted: false,
+        aliasDirectIds: archive.aliasDirectIds || [],
+        archived: true,
+        lastMessageTime: archive.archivedAt?.toDate?.() || new Date(0)
+      });
+    });
+  } catch (error) {
+    console.warn('Archived message search skipped:', error);
+  }
+
+  return items;
 }
 
 async function sendChatRequest(user) {
