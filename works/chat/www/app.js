@@ -4838,7 +4838,7 @@ async function buildGroupChatItems() {
         unreadCount: await getChatUnreadCount(groupDoc.id, 'group'),
         isFavorite: favoriteChatIds.includes(groupDoc.id),
         isMuted: isChatMuted(groupDoc.id),
-        role: membership.role || (group.createdBy === currentUser.uid ? 'owner' : 'member'),
+        role: membership.role || (group.createdBy === currentUser.uid ? 'admin' : 'member'),
         memberCount: group.memberCount || 0,
         icon: group.icon || '',
         code: group.code || '',
@@ -4896,6 +4896,7 @@ function getPresenceText(userData) {
 async function loadGroupsList() {
   if (!currentUser) return;
   const groupsList = document.getElementById('groupsList');
+  const groupActions = document.getElementById('groupActions');
   if (!groupsList) return;
   const enhancedGroups = await buildGroupChatItems();
 
@@ -4911,6 +4912,7 @@ async function loadGroupsList() {
   );
 
   if (filteredGroups.length === 0) {
+    if (groupActions) groupActions.style.display = 'none';
     groupsList.innerHTML = `
       <div class="empty-state groups-empty-state">
         <div class="empty-state-title">No groups yet</div>
@@ -4929,6 +4931,7 @@ async function loadGroupsList() {
     return;
   }
 
+  if (groupActions) groupActions.style.display = currentViewTab === 'groups' ? 'flex' : 'none';
   groupsList.innerHTML = '';
   for (const group of filteredGroups) {
     const isMuted = isChatMuted(group.id);
@@ -4939,7 +4942,7 @@ async function loadGroupsList() {
     groupDiv.dataset.unreadCount = group.unreadCount;
     groupDiv.dataset.chatName = group.name || '';
     if (currentChat?.id === group.id && currentChatType === 'group') groupDiv.classList.add('active');
-    const roleLabel = group.role === 'owner' ? 'Owner' : group.role === 'admin' ? 'Admin' : 'Member';
+    const roleLabel = ['owner', 'admin'].includes(group.role) ? 'Admin' : 'Member';
     const groupPreview = [roleLabel, group.memberCount ? `${group.memberCount} members` : '', group.code ? `Code ${group.code}` : '']
       .filter(Boolean)
       .join(' - ');
@@ -5074,7 +5077,7 @@ async function createGroup(groupName, memberEmails = '') {
     name: groupName.trim(), code: groupCode, createdBy: currentUser.uid, ownerId: currentUser.uid, createdAt: firebase.firestore.FieldValue.serverTimestamp(), memberCount: 1, onlyAdminsCanSend: adminsOnlySend, onlyAdminsCanEdit: true
   });
   await db.collection('groupMembers').add({
-    groupId: groupRef.id, userId: currentUser.uid, role: 'owner', joinedAt: firebase.firestore.FieldValue.serverTimestamp()
+    groupId: groupRef.id, userId: currentUser.uid, role: 'admin', joinedAt: firebase.firestore.FieldValue.serverTimestamp()
   });
   for (const user of invitedUsers) {
     await sendGroupInvite(groupRef.id, groupName.trim(), user);
@@ -5148,10 +5151,6 @@ function isCurrentUserGroupAdmin() {
   return currentGroupMembers.some(member => member.id === currentUser?.uid && ['owner', 'admin'].includes(member.role));
 }
 
-function isCurrentUserGroupOwner() {
-  return currentGroupMembers.some(member => member.id === currentUser?.uid && member.role === 'owner') || currentGroup?.ownerId === currentUser?.uid || currentGroup?.createdBy === currentUser?.uid;
-}
-
 async function getGroupMemberDocs(groupId, userId = '') {
   let query = db.collection('groupMembers').where('groupId', '==', groupId);
   if (userId) query = query.where('userId', '==', userId);
@@ -5168,6 +5167,7 @@ async function showGroupInfo() {
   if (!currentGroup) return;
   const groupDoc = await db.collection('groups').doc(currentGroup.id).get();
   const group = groupDoc.data();
+  await loadGroupMembers(currentGroup.id);
   document.getElementById('groupInfoTitle').textContent = group.name;
   document.getElementById('groupAvatarLarge').innerHTML = group.icon ? `<img src="${group.icon}">` : 'G';
   document.getElementById('editGroupNameInput').value = group.name;
@@ -5176,8 +5176,8 @@ async function showGroupInfo() {
   document.getElementById('groupAdminsOnlyEdit').checked = group.onlyAdminsCanEdit !== false;
 
   const currentUserRole = currentGroupMembers.find(m => m.id === currentUser.uid)?.role;
-  const isOwner = currentUserRole === 'owner' || group.ownerId === currentUser.uid || group.createdBy === currentUser.uid;
-  const isAdmin = isOwner || currentUserRole === 'admin';
+  const isAdmin = ['owner', 'admin'].includes(currentUserRole);
+  const adminCount = currentGroupMembers.filter(member => ['owner', 'admin'].includes(member.role)).length;
   const canEditInfo = isAdmin || group.onlyAdminsCanEdit === false;
   document.getElementById('editGroupNameInput').disabled = !canEditInfo;
   document.getElementById('groupAvatarLarge').style.pointerEvents = canEditInfo ? 'auto' : 'none';
@@ -5185,19 +5185,21 @@ async function showGroupInfo() {
   document.getElementById('groupEditPermissionRow').style.display = isAdmin ? 'flex' : 'none';
   document.getElementById('addMemberBtn').style.display = isAdmin ? 'block' : 'none';
   document.getElementById('addMemberEmail').style.display = isAdmin ? 'inline-block' : 'none';
-  document.getElementById('deleteGroupBtn').style.display = isOwner ? 'block' : 'none';
+  document.getElementById('deleteGroupBtn').style.display = isAdmin ? 'block' : 'none';
 
   const membersList = document.getElementById('groupMembersList');
   membersList.innerHTML = '';
   for (const member of currentGroupMembers) {
-    const isMemberOwner = member.role === 'owner';
-    const isMemberAdmin = isMemberOwner || member.role === 'admin';
+    const isMemberAdmin = ['owner', 'admin'].includes(member.role);
     const isCurrentUser = member.id === currentUser.uid;
-    const canModify = isAdmin && !isCurrentUser && !isMemberOwner;
+    const canModifyOther = isAdmin && !isCurrentUser;
+    const canDemoteSelf = isAdmin && isCurrentUser && isMemberAdmin && adminCount > 1;
+    const canModify = canModifyOther || canDemoteSelf;
     const memberDiv = document.createElement('div');
     memberDiv.className = 'member-item';
-    const roleBadge = isMemberOwner ? 'Owner' : isMemberAdmin ? 'Admin' : '';
-    memberDiv.innerHTML = `<div class="member-info"><div class="member-avatar">${member.avatar ? `<img src="${member.avatar}" style="width:36px;height:36px;border-radius:50%;">` : (member.name?.[0]?.toUpperCase() || 'U')}</div><div><span>${escapeHtml(member.name)}</span>${roleBadge ? `<span class="member-role-badge">${roleBadge}</span>` : ''}</div></div>${canModify ? `<div class="member-actions">${!isMemberAdmin ? `<button class="make-admin-btn" data-id="${member.id}" data-name="${escapeHtml(member.name)}" title="Make admin">Make admin</button>` : `<button class="remove-admin-btn" data-id="${member.id}" data-name="${escapeHtml(member.name)}" title="Remove admin">Remove admin</button>`}<button class="remove-member-btn" data-id="${member.id}" data-name="${escapeHtml(member.name)}" title="Remove member">Remove</button></div>` : ''}`;
+    const roleBadge = isMemberAdmin ? 'Admin' : '';
+    const actions = canModify ? `<div class="member-actions">${!isMemberAdmin ? `<button class="make-admin-btn" data-id="${member.id}" data-name="${escapeHtml(member.name)}" title="Make admin">Make admin</button>` : `<button class="remove-admin-btn" data-id="${member.id}" data-name="${escapeHtml(member.name)}" title="Remove admin">Remove admin</button>`}${canModifyOther ? `<button class="remove-member-btn" data-id="${member.id}" data-name="${escapeHtml(member.name)}" title="Remove member">Remove</button>` : ''}</div>` : '';
+    memberDiv.innerHTML = `<div class="member-info"><div class="member-avatar">${member.avatar ? `<img src="${member.avatar}" style="width:36px;height:36px;border-radius:50%;">` : (member.name?.[0]?.toUpperCase() || 'U')}</div><div><span>${escapeHtml(member.name)}</span>${roleBadge ? `<span class="member-role-badge">${roleBadge}</span>` : ''}</div></div>${actions}`;
     membersList.appendChild(memberDiv);
   }
   await renderPendingGroupInvites(currentGroup.id, membersList, isAdmin);
@@ -5208,10 +5210,9 @@ async function makeAdmin(groupId, memberId, memberName) {
   if (!isCurrentUserGroupAdmin()) return;
   if (!confirm(`Make ${memberName} an admin?`)) return;
   const memberDoc = await db.collection('groupMembers').where('groupId', '==', groupId).where('userId', '==', memberId).get();
-  memberDoc.forEach(doc => {
-    if (doc.data()?.role !== 'owner') doc.ref.update({ role: 'admin' });
-  });
+  await Promise.all(memberDoc.docs.map(doc => doc.ref.update({ role: 'admin' })));
   showToast(`${memberName} is now admin`);
+  await loadGroupMembers(groupId);
   showGroupInfo();
 }
 
@@ -5223,9 +5224,7 @@ async function removeAdmin(groupId, memberId, memberName) {
     return;
   }
   const memberDoc = await db.collection('groupMembers').where('groupId', '==', groupId).where('userId', '==', memberId).get();
-  memberDoc.forEach(doc => {
-    if (doc.data()?.role !== 'owner') doc.ref.update({ role: 'member' });
-  });
+  await Promise.all(memberDoc.docs.map(doc => doc.ref.update({ role: 'member' })));
   showToast(`${memberName} is now a member`);
   await loadGroupMembers(groupId);
   showGroupInfo();
@@ -5234,9 +5233,13 @@ async function removeAdmin(groupId, memberId, memberName) {
 async function removeMember(groupId, memberId, memberName) {
   if (!isCurrentUserGroupAdmin()) return;
   if (!confirm(`Remove ${memberName} from group?`)) return;
-  await db.collection('groupMembers').where('groupId', '==', groupId).where('userId', '==', memberId).get().then(s => s.forEach(d => {
-    if (d.data()?.role !== 'owner') d.ref.delete();
-  }));
+  const memberDocs = await db.collection('groupMembers').where('groupId', '==', groupId).where('userId', '==', memberId).get();
+  const memberRole = memberDocs.docs[0]?.data()?.role;
+  if (['owner', 'admin'].includes(memberRole) && await countGroupAdmins(groupId) <= 1) {
+    showToast('Make another member admin before removing this admin', 'error');
+    return;
+  }
+  memberDocs.forEach(d => d.ref.delete());
   await db.collection('groups').doc(groupId).update({ memberCount: firebase.firestore.FieldValue.increment(-1) });
   showToast('Member removed');
   await loadGroupMembers(groupId);
@@ -5270,10 +5273,6 @@ async function updateGroupIcon(file) {
 
 async function leaveGroup() {
   if (!confirm(`Leave group "${currentGroup.name}"?`)) return;
-  if (isCurrentUserGroupOwner()) {
-    showToast('Transfer ownership or delete the group before leaving', 'error');
-    return;
-  }
   if (isCurrentUserGroupAdmin() && await countGroupAdmins(currentGroup.id) <= 1) {
     showToast('Make another member admin before leaving', 'error');
     return;
@@ -5284,8 +5283,8 @@ async function leaveGroup() {
 }
 
 async function deleteGroup() {
-  if (!isCurrentUserGroupOwner()) {
-    showToast('Only the group owner can delete this group', 'error');
+  if (!isCurrentUserGroupAdmin()) {
+    showToast('Only a group admin can delete this group', 'error');
     return;
   }
   if (!confirm('Permanently delete group for everyone?')) return;
@@ -7041,7 +7040,7 @@ function switchTab(tab) {
   chatsList.style.display = tab === 'groups' || tab === 'status' ? 'none' : 'block';
   groupsList.style.display = tab === 'groups' ? 'block' : 'none';
   if (statusList) statusList.style.display = tab === 'status' ? 'block' : 'none';
-  if (groupActions) groupActions.style.display = tab === 'groups' ? 'flex' : 'none';
+  if (groupActions) groupActions.style.display = 'none';
   if (statusActions) statusActions.style.display = tab === 'status' ? 'flex' : 'none';
 
   if (tab === 'groups') loadGroupsList();
