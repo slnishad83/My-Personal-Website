@@ -529,11 +529,32 @@ button {
   display: block;
 }
 
-.request-section .list-item {
+.request-section .list-item,
+.request-card {
   min-height: 58px;
   margin-top: 8px;
   border-radius: 8px;
-  align-items: flex-start;
+  align-items: center;
+}
+
+.request-card {
+  gap: 10px;
+  padding: 10px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+}
+
+.request-card .list-avatar {
+  width: 40px;
+  height: 40px;
+  min-width: 40px;
+  font-size: 13px;
+}
+
+.request-card .list-preview {
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 .request-actions {
@@ -547,6 +568,22 @@ button {
   min-height: 30px;
   padding: 0 9px;
   font-size: 12px;
+}
+
+.request-actions .btn-success {
+  background: var(--brand);
+  color: #fff;
+}
+
+@media (max-width: 520px) {
+  .request-card {
+    align-items: flex-start;
+  }
+
+  .request-actions {
+    width: 100%;
+    justify-content: flex-start;
+  }
 }
 
 .request-section .list-item::after {

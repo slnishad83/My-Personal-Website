@@ -517,9 +517,8 @@ function renderChatListItems(items, container) {
       ? ''
       : (draftPreview || escapeHtml(normalPreview));
 
-    // VISUAL BUG FIX: Skip rendering action prompt chips for verified active logs
     let statusChip = '';
-    if (item.type !== 'direct' && item.type !== 'saved' && item.requestState) {
+    if (item.type === 'user' && item.requestState) {
       statusChip = `<span class="status-chip ${item.requestState.status}">${escapeHtml(item.requestState.label)}</span>`;
     }
 
@@ -3151,10 +3150,10 @@ function matchesNewContactLookup(entity = {}, rawTerm = '') {
 
   const digits = term.replace(/\D/g, '');
   const phone = String(entity.phone || entity.phoneNumber || '').replace(/\D/g, '');
-  if (digits.length >= 6 && phone) return phone.includes(digits);
+  if (digits.length >= 6 && phone) return phone === digits;
 
   const email = normalizeEmail(entity.email || '');
-  if ((term.includes('@') || term.includes('.')) && email) return email.includes(term);
+  if ((term.includes('@') || term.includes('.')) && email) return email === term;
 
   return false;
 }
@@ -3874,47 +3873,56 @@ async function isBlockedByUser(userId) {
     return false;
   }
 }
-
 async function acceptChatRequest(requestId, fromUserId) {
   if (!currentUser || !requestId || !fromUserId) return;
   try {
     const requestDoc = await db.collection('chatRequests').doc(requestId).get();
-    const requestData = requestDoc.exists ? requestDoc.data() : {};
+    if (!requestDoc.exists) {
+      showToast('Request no longer exists', 'error');
+      await loadReceivedRequests();
+      return;
+    }
+    const requestData = requestDoc.data() || {};
+    if (requestData.status !== 'pending' || requestData.toUserId !== currentUser.uid || requestData.fromUserId !== fromUserId) {
+      showToast('Request is no longer available', 'error');
+      await loadReceivedRequests();
+      return;
+    }
+
     const chatId = getDirectChatId(currentUser.uid, fromUserId);
-    const chatDoc = await db.collection('directChats').doc(chatId).get();
-    if (!chatDoc.exists) {
-      await db.collection('directChats').doc(chatId).set({
-        participants: [currentUser.uid, fromUserId],
-        participantEmails: {
-          [currentUser.uid]: normalizeEmail(currentUser.email),
-          [fromUserId]: normalizeEmail(requestData.fromUserEmail)
-        },
-        participantNames: {
-          [currentUser.uid]: currentUser.displayName || currentUser.email,
-          [fromUserId]: requestData.fromUserName || ''
-        },
-        status: 'active',
-        createdAt: firebase.firestore.FieldValue.serverTimestamp()
-      });
-    }
-    await db.collection('chatRequests').doc(requestId).update({ status: 'accepted', respondedAt: firebase.firestore.FieldValue.serverTimestamp() });
+    await db.collection('directChats').doc(chatId).set({
+      participants: [currentUser.uid, fromUserId],
+      participantEmails: {
+        [currentUser.uid]: normalizeEmail(currentUser.email),
+        [fromUserId]: normalizeEmail(requestData.fromUserEmail)
+      },
+      participantNames: {
+        [currentUser.uid]: currentUser.displayName || currentUser.email,
+        [fromUserId]: requestData.fromUserName || requestData.fromUserEmail || 'User'
+      },
+      status: 'active',
+      createdAt: requestData.createdAt || firebase.firestore.FieldValue.serverTimestamp(),
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    }, { merge: true });
+
+    await db.collection('chatRequests').doc(requestId).update({
+      status: 'accepted',
+      respondedAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+
     showToast('Request accepted');
-    if (toggle) {
-      toggle.textContent = section?.classList.contains("expanded") ? "▲" : "▼";
-    }
-    loadReceivedRequests();
-    loadCurrentChatList();
+    await loadReceivedRequests();
+    await loadCurrentChatList();
 
     const userDoc = await db.collection('users').doc(fromUserId).get();
-    if (userDoc.exists) {
-      startDirectChat({ id: fromUserId, ...userDoc.data() });
-    }
+    await startDirectChat(userDoc.exists
+      ? { id: fromUserId, ...userDoc.data() }
+      : { id: fromUserId, displayName: requestData.fromUserName || requestData.fromUserEmail || 'User', email: requestData.fromUserEmail || '' });
   } catch (error) {
     console.error('Could not accept chat request:', error);
     showToast(error?.message || 'Could not accept request. Please try again.', 'error');
   }
 }
-
 async function loadReceivedRequests() {
   if (!currentUser) return;
   const requestList = document.getElementById('requestList');
@@ -3963,16 +3971,16 @@ async function loadReceivedRequests() {
     for (const req of requests) {
       const isGroupInvite = req.requestType === 'group';
       const reqDiv = document.createElement('div');
-      reqDiv.className = 'list-item';
+      reqDiv.className = 'list-item request-card';
       reqDiv.innerHTML = `
-        <div class="list-avatar">${isGroupInvite ? 'G' : 'C'}</div>
+        <div class="list-avatar">${isGroupInvite ? 'G' : escapeHtml(getInitials(req.fromUserName || '', req.fromUserEmail || ''))}</div>
         <div class="list-info">
           <div class="list-name">${escapeHtml(isGroupInvite ? (req.groupName || 'Group invite') : (req.fromUserName || 'User'))}</div>
-          <div class="list-preview">${isGroupInvite ? `Group invite from ${escapeHtml(req.fromUserName || 'User')}` : 'Chat request'}</div>
+          <div class="list-preview">${isGroupInvite ? `Group invite from ${escapeHtml(req.fromUserName || 'User')}` : `Wants to chat${req.fromUserEmail ? ` - ${escapeHtml(req.fromUserEmail)}` : ''}`}</div>
         </div>
         <div class="request-actions">
           <button class="btn btn-success accept-request-btn" data-type="${req.requestType}" data-id="${req.id}" data-from="${escapeHtml(req.fromUserId || '')}">Accept</button>
-          <button class="btn btn-outline delete-request-btn" data-type="${req.requestType}" data-id="${req.id}">Delete</button>
+          <button class="btn btn-outline delete-request-btn" data-type="${req.requestType}" data-id="${req.id}">Decline</button>
           <button class="btn btn-outline block-request-btn" data-type="${req.requestType}" data-id="${req.id}" data-from="${escapeHtml(req.fromUserId || '')}" data-name="${escapeHtml(req.fromUserName || 'User')}">Block</button>
         </div>
       `;
