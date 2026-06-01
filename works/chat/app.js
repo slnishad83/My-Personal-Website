@@ -1871,11 +1871,7 @@ function setCallUi({ mode = 'outgoing', type = 'voice', title = 'Calling...', st
   modal.style.display = 'flex';
   setupCallControlButtons();
   resetLocalVideoPreviewPosition();
-  modal.dataset.callType = type;
-  modal.dataset.callMode = mode;
   shell?.classList.toggle('incoming', mode === 'incoming');
-  shell?.classList.toggle('video-call', type === 'video');
-  shell?.classList.toggle('voice-call', type === 'voice');
   document.getElementById('callTypeLabel').textContent = type === 'video' ? 'Video call' : 'Voice call';
   document.getElementById('callTitle').textContent = title;
   document.getElementById('callStatusText').textContent = status;
@@ -1893,14 +1889,8 @@ function setCallUi({ mode = 'outgoing', type = 'voice', title = 'Calling...', st
   if (switchCameraBtn) {
     switchCameraBtn.style.display = mode !== 'incoming' && type === 'video' ? 'inline-flex' : 'none';
   }
-  if (localVideo) {
-    localVideo.style.display = type === 'video' ? 'block' : 'none';
-    localVideo.classList.toggle('main-preview', type === 'video' && mode !== 'active');
-  }
-  if (remoteVideo) {
-    remoteVideo.style.display = type === 'video' && mode === 'active' ? 'block' : 'none';
-    remoteVideo.classList.remove('has-remote-video');
-  }
+  if (localVideo) localVideo.style.display = type === 'video' ? 'block' : 'none';
+  if (remoteVideo) remoteVideo.style.display = type === 'video' ? 'block' : 'none';
   if (groupGrid) {
     groupGrid.classList.remove('active');
     groupGrid.innerHTML = '';
@@ -2296,11 +2286,6 @@ async function preparePeerConnection(callId, role) {
   });
   peerConnection.ontrack = event => {
     event.streams[0].getTracks().forEach(track => remoteCallStream.addTrack(track));
-    if (remoteVideo && currentCallType === 'video') {
-      remoteVideo.style.display = 'block';
-      remoteVideo.classList.add('has-remote-video');
-      document.getElementById('localVideo')?.classList.remove('main-preview');
-    }
     remoteAudio?.play?.().catch(() => { });
     remoteVideo?.play?.().catch(() => { });
   };
@@ -8819,17 +8804,6 @@ function showCallControlHint(message) {
 function setupCallControlButtons() {
   const muteBtn = document.getElementById('muteMicBtn');
   const cameraBtn = document.getElementById('toggleCameraBtn');
-  const endBtn = document.getElementById('endCallBtn');
-  const acceptBtn = document.getElementById('acceptCallBtn');
-  const rejectBtn = document.getElementById('rejectCallBtn');
-  const closeBtn = document.getElementById('closeCallBtn');
-
-  if (muteBtn) muteBtn.dataset.label = 'Mute';
-  if (cameraBtn) cameraBtn.dataset.label = 'Video';
-  if (endBtn) endBtn.dataset.label = 'End';
-  if (acceptBtn) acceptBtn.dataset.label = 'Accept';
-  if (rejectBtn) rejectBtn.dataset.label = 'Decline';
-  if (closeBtn) closeBtn.dataset.label = 'Close';
 
   if (muteBtn && muteBtn.dataset.ready !== 'true') {
     muteBtn.dataset.ready = 'true';
@@ -8844,7 +8818,6 @@ function setupCallControlButtons() {
   }
 
   const switchCameraBtn = document.getElementById('switchCameraBtn');
-  if (switchCameraBtn) switchCameraBtn.dataset.label = 'Flip';
 
   if (switchCameraBtn && switchCameraBtn.dataset.ready !== 'true') {
     switchCameraBtn.dataset.ready = 'true';
@@ -8852,7 +8825,6 @@ function setupCallControlButtons() {
   }
 
   const addParticipantBtn = document.getElementById('addCallParticipantBtn');
-  if (addParticipantBtn) addParticipantBtn.dataset.label = 'Add';
 
   if (addParticipantBtn && addParticipantBtn.dataset.ready !== 'true') {
     addParticipantBtn.dataset.ready = 'true';
