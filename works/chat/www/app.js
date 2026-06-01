@@ -158,7 +158,6 @@ let sessionHeartbeatTimer = null;
 let sessionWatchUnsubscribe = null;
 let presenceHeartbeatTimer = null;
 let appUnlockedForSession = false;
-const confirmedPermissionActions = new Set();
 const MESSAGE_PAGE_SIZE = 120;
 const messageRenderLimits = new Map();
 let failedQueueRetryTimer = null;
@@ -213,13 +212,6 @@ async function getRtcConfig() {
 
 function updateTurnServerSettings() {
   window.location.replace('turn.html');
-}
-
-function requestActionPermission(actionKey, message) {
-  if (confirmedPermissionActions.has(actionKey)) return true;
-  const allowed = confirm(message);
-  if (allowed) confirmedPermissionActions.add(actionKey);
-  return allowed;
 }
 
 // Privacy Settings
@@ -2340,7 +2332,6 @@ async function preparePeerConnection(callId, role) {
 
 async function upgradeVoiceCallToVideo() {
   if (!activeCall?.id || !peerConnection || !localCallStream) return;
-  if (!requestActionPermission('camera-upgrade', 'Allow camera access to switch this call to video?')) return;
   try {
     setCallStatus('Starting camera...');
     const videoStream = await navigator.mediaDevices.getUserMedia({
@@ -2764,10 +2755,6 @@ async function startCall(type = 'voice') {
     showToast('Calls are not supported in this browser', 'error');
     return;
   }
-  const permissionMessage = type === 'video'
-    ? 'Allow camera and microphone access to start a video call?'
-    : 'Allow microphone access to start a voice call?';
-  if (!requestActionPermission(`call-${type}`, permissionMessage)) return;
   if (currentChatType === 'group') {
     await startGroupCall(type);
     return;
@@ -4484,7 +4471,6 @@ function getReactionOptions() {
 // ========================================
 
 async function startVoiceRecording() {
-  if (!requestActionPermission('microphone', 'Allow microphone access to record and send a voice message?')) return;
   try {
     const stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, sampleRate: 44100 } });
     if (!window.MediaRecorder) { showToast('Voice recording not supported', 'error'); return; }
@@ -6593,7 +6579,6 @@ async function sendMessage() {
 
 async function handleFileUpload(file) {
   if (!file) return;
-  if (!requestActionPermission('attachment', 'Allow this app to attach and upload the selected file?')) return;
   try {
     const url = file.type.startsWith('image/') ? await uploadToCloudinary(file) : await uploadDocument(file);
     currentAttachment = { type: file.type.startsWith('image/') ? 'image' : 'document', url, filename: file.name, size: file.size };
@@ -7369,6 +7354,93 @@ async function showProfileModal() {
   document.getElementById('profileModal').style.display = 'flex';
 }
 
+function normalizePermissionState(state) {
+  if (state === 'granted') return 'Allowed';
+  if (state === 'denied') return 'Blocked';
+  if (state === 'prompt') return 'Ask first time';
+  return state || 'Ask when needed';
+}
+
+async function queryPermissionState(name) {
+  if (name === 'notifications') {
+    return typeof Notification === 'undefined' ? 'Not supported' : normalizePermissionState(Notification.permission);
+  }
+  if (!navigator.permissions?.query) return 'Ask when needed';
+  try {
+    const result = await navigator.permissions.query({ name });
+    return normalizePermissionState(result.state);
+  } catch (_) {
+    return 'Ask when needed';
+  }
+}
+
+async function refreshPermissionsModal() {
+  const camera = document.getElementById('cameraPermissionStatus');
+  const microphone = document.getElementById('microphonePermissionStatus');
+  const notifications = document.getElementById('notificationsPermissionStatus');
+  const media = document.getElementById('mediaPermissionStatus');
+  const contacts = document.getElementById('contactsPermissionStatus');
+  if (camera) camera.textContent = await queryPermissionState('camera');
+  if (microphone) microphone.textContent = await queryPermissionState('microphone');
+  if (notifications) notifications.textContent = await queryPermissionState('notifications');
+  if (media) media.textContent = isAndroidNativeApp ? 'Android asks from app settings/file picker' : 'Asked by the browser file picker';
+  if (contacts) contacts.textContent = navigator.contacts?.select ? 'Ask first time' : 'Not supported on this device';
+}
+
+function stopPermissionProbe(stream) {
+  stream?.getTracks?.().forEach(track => track.stop());
+}
+
+function openMediaPermissionPicker() {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = 'image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.txt';
+  input.style.display = 'none';
+  input.addEventListener('change', () => input.remove(), { once: true });
+  document.body.appendChild(input);
+  input.click();
+}
+
+async function requestAppPermission(kind) {
+  try {
+    if (kind === 'camera') {
+      stopPermissionProbe(await navigator.mediaDevices.getUserMedia({ video: true }));
+    } else if (kind === 'microphone') {
+      stopPermissionProbe(await navigator.mediaDevices.getUserMedia({ audio: true }));
+    } else if (kind === 'notifications') {
+      await ensureCallNotificationPermission({ force: true });
+      await requestNativeNotificationPermission();
+    } else if (kind === 'media') {
+      openMediaPermissionPicker();
+    } else if (kind === 'contacts') {
+      if (!navigator.contacts?.select) {
+        showToast('Contact picker is not supported on this device', 'error');
+        return;
+      }
+      await navigator.contacts.select(['name', 'email', 'tel'], { multiple: false });
+    }
+    await refreshPermissionsModal();
+  } catch (error) {
+    const label = kind === 'microphone' ? 'microphone' : kind;
+    showToast(`${label[0].toUpperCase()}${label.slice(1)} permission was not allowed`, 'error');
+    await refreshPermissionsModal();
+  }
+}
+
+function showPermissionRevokeGuide() {
+  const appSettingsHint = isAndroidNativeApp
+    ? 'Android app: long-press the app icon, open App info, then Permissions. You can allow or deny Camera, Microphone, Notifications, Photos and Contacts there.'
+    : 'Browser: open the lock/site settings icon near the address bar, then change Camera, Microphone, Notifications, and File access permissions.';
+  alert(`${appSettingsHint}\n\nFor security, Android and browsers do not let this app silently revoke OS permissions. After changing settings, reopen the app and check this screen again.`);
+}
+
+async function showPermissionsModal() {
+  const modal = document.getElementById('permissionsModal');
+  if (!modal) return;
+  modal.style.display = 'flex';
+  await refreshPermissionsModal();
+}
+
 async function showBlockedUsersModal() {
   await loadBlockedUsers();
   const list = document.getElementById('blockedUsersList');
@@ -8036,16 +8108,18 @@ async function init() {
 
   document.querySelectorAll('.closeProfileModal').forEach(b => b.addEventListener('click', () => document.getElementById('profileModal').style.display = 'none'));
   document.getElementById('fileInput')?.addEventListener('change', (e) => handleFileUpload(e.target.files[0]));
-  document.getElementById('attachBtn')?.addEventListener('click', () => {
-    if (requestActionPermission('attachment', 'Allow this app to open your file picker for an attachment?')) {
-      document.getElementById('fileInput').click();
-    }
-  });
+  document.getElementById('attachBtn')?.addEventListener('click', () => document.getElementById('fileInput').click());
   document.getElementById('blockedUsersBtn')?.addEventListener('click', showBlockedUsersModal);
   document.getElementById('quickRepliesSettingsBtn')?.addEventListener('click', showQuickRepliesModal);
   document.getElementById('starredMessagesBtn')?.addEventListener('click', showStarredMessagesModal);
   document.getElementById('scheduledMessagesBtn')?.addEventListener('click', showScheduledMessagesModal);
   document.getElementById('activeSessionsBtn')?.addEventListener('click', showSessionsModal);
+  document.getElementById('appPermissionsBtn')?.addEventListener('click', () => showPermissionsModal().catch(() => showToast('Could not open permissions', 'error')));
+  document.querySelectorAll('.closePermissionsModal').forEach(btn => btn.addEventListener('click', () => document.getElementById('permissionsModal').style.display = 'none'));
+  document.querySelectorAll('[data-request-permission]').forEach(btn => {
+    btn.addEventListener('click', () => requestAppPermission(btn.dataset.requestPermission));
+  });
+  document.getElementById('revokePermissionsBtn')?.addEventListener('click', showPermissionRevokeGuide);
   document.getElementById('appLockSettingsBtn')?.addEventListener('click', showAppLockModal);
   document.getElementById('saveAppLockPinBtn')?.addEventListener('click', saveAppLockPin);
   document.getElementById('disableAppLockBtn')?.addEventListener('click', disableAppLock);

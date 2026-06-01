@@ -838,6 +838,9 @@
           <button id="activeSessionsBtn" class="setting-item">
             Active Sessions
           </button>
+          <button id="appPermissionsBtn" class="setting-item">
+            App Permissions
+          </button>
           <button id="appLockSettingsBtn" class="setting-item">
             App Lock (PIN)
           </button>
@@ -864,6 +867,55 @@
           </button>
           <button id="deactivateAccountBtn" class="setting-item danger">
             Deactivate Account
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div id="permissionsModal" class="modal" style="display: none">
+      <div class="modal-content permissions-modal-content">
+        <div class="modal-header">
+          <h3>App Permissions</h3>
+          <span class="close-modal closePermissionsModal">&times;</span>
+        </div>
+        <div class="modal-body">
+          <div class="permission-card" data-permission="camera">
+            <div>
+              <strong>Camera</strong>
+              <span id="cameraPermissionStatus">Checking...</span>
+            </div>
+            <button class="btn btn-outline" data-request-permission="camera">Allow</button>
+          </div>
+          <div class="permission-card" data-permission="microphone">
+            <div>
+              <strong>Microphone</strong>
+              <span id="microphonePermissionStatus">Checking...</span>
+            </div>
+            <button class="btn btn-outline" data-request-permission="microphone">Allow</button>
+          </div>
+          <div class="permission-card" data-permission="notifications">
+            <div>
+              <strong>Notifications</strong>
+              <span id="notificationsPermissionStatus">Checking...</span>
+            </div>
+            <button class="btn btn-outline" data-request-permission="notifications">Allow</button>
+          </div>
+          <div class="permission-card" data-permission="media">
+            <div>
+              <strong>Photos and Files</strong>
+              <span id="mediaPermissionStatus">Asked when you pick a file</span>
+            </div>
+            <button class="btn btn-outline" data-request-permission="media">Open Picker</button>
+          </div>
+          <div class="permission-card" data-permission="contacts">
+            <div>
+              <strong>Contacts</strong>
+              <span id="contactsPermissionStatus">Only requested if supported</span>
+            </div>
+            <button class="btn btn-outline" data-request-permission="contacts">Allow</button>
+          </div>
+          <button id="revokePermissionsBtn" class="setting-item danger">
+            Revoke or Change Permissions
           </button>
         </div>
       </div>
