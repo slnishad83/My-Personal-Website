@@ -158,6 +158,7 @@ let sessionHeartbeatTimer = null;
 let sessionWatchUnsubscribe = null;
 let presenceHeartbeatTimer = null;
 let appUnlockedForSession = false;
+const confirmedPermissionActions = new Set();
 const MESSAGE_PAGE_SIZE = 120;
 const messageRenderLimits = new Map();
 let failedQueueRetryTimer = null;
@@ -212,6 +213,13 @@ async function getRtcConfig() {
 
 function updateTurnServerSettings() {
   window.location.replace('turn.html');
+}
+
+function requestActionPermission(actionKey, message) {
+  if (confirmedPermissionActions.has(actionKey)) return true;
+  const allowed = confirm(message);
+  if (allowed) confirmedPermissionActions.add(actionKey);
+  return allowed;
 }
 
 // Privacy Settings
@@ -2332,6 +2340,7 @@ async function preparePeerConnection(callId, role) {
 
 async function upgradeVoiceCallToVideo() {
   if (!activeCall?.id || !peerConnection || !localCallStream) return;
+  if (!requestActionPermission('camera-upgrade', 'Allow camera access to switch this call to video?')) return;
   try {
     setCallStatus('Starting camera...');
     const videoStream = await navigator.mediaDevices.getUserMedia({
@@ -2747,16 +2756,24 @@ async function addPersonToActiveCall() {
 }
 
 async function startCall(type = 'voice') {
-  if (currentChatType === 'group') {
-    await startGroupCall(type);
-    return;
-  }
-  if (!currentUser || !currentChat || currentChatType !== 'direct') {
-    showToast('Calls are available for personal chats only', 'error');
+  if (!currentUser || !currentChat) {
+    showToast('Open a chat to start a call', 'error');
     return;
   }
   if (!window.RTCPeerConnection || !navigator.mediaDevices?.getUserMedia) {
     showToast('Calls are not supported in this browser', 'error');
+    return;
+  }
+  const permissionMessage = type === 'video'
+    ? 'Allow camera and microphone access to start a video call?'
+    : 'Allow microphone access to start a voice call?';
+  if (!requestActionPermission(`call-${type}`, permissionMessage)) return;
+  if (currentChatType === 'group') {
+    await startGroupCall(type);
+    return;
+  }
+  if (currentChatType !== 'direct') {
+    showToast('Calls are available for personal chats only', 'error');
     return;
   }
 
@@ -4458,11 +4475,16 @@ async function loadReactions(messageId, container) {
   container.appendChild(reactionDiv);
 }
 
+function getReactionOptions() {
+  return ['\u{1F44D}', '\u2764\uFE0F', '\u{1F602}', '\u{1F62E}', '\u{1F622}', '\u{1F64F}'];
+}
+
 // ========================================
 // VOICE RECORDING
 // ========================================
 
 async function startVoiceRecording() {
+  if (!requestActionPermission('microphone', 'Allow microphone access to record and send a voice message?')) return;
   try {
     const stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, sampleRate: 44100 } });
     if (!window.MediaRecorder) { showToast('Voice recording not supported', 'error'); return; }
@@ -6309,6 +6331,42 @@ async function retryFailedMessage(localId) {
   }
 }
 
+function bindSwipeToReply(messageDiv, messageData) {
+  if (!messageDiv || messageDiv.dataset.swipeReplyBound === 'true') return;
+  messageDiv.dataset.swipeReplyBound = 'true';
+  let startX = 0;
+  let startY = 0;
+  let moved = false;
+  messageDiv.addEventListener('pointerdown', event => {
+    if (event.pointerType === 'mouse' && event.button !== 0) return;
+    startX = event.clientX;
+    startY = event.clientY;
+    moved = false;
+  });
+  messageDiv.addEventListener('pointermove', event => {
+    if (!startX) return;
+    const dx = event.clientX - startX;
+    const dy = Math.abs(event.clientY - startY);
+    moved = dx > 24 && dy < 36;
+    messageDiv.classList.toggle('reply-swipe-active', moved);
+  });
+  messageDiv.addEventListener('pointerup', event => {
+    const dx = event.clientX - startX;
+    const dy = Math.abs(event.clientY - startY);
+    messageDiv.classList.remove('reply-swipe-active');
+    if (dx > 70 && dy < 45) setReplyTo(messageData);
+    startX = 0;
+    startY = 0;
+    moved = false;
+  });
+  messageDiv.addEventListener('pointercancel', () => {
+    messageDiv.classList.remove('reply-swipe-active');
+    startX = 0;
+    startY = 0;
+    moved = false;
+  });
+}
+
 function bindFailedMessageRetryActions() {
   document.querySelectorAll('.retry-message-btn').forEach(button => {
     if (button.dataset.bound === 'true') return;
@@ -6406,6 +6464,8 @@ function loadMessages() {
       `;
       messageDiv.addEventListener('contextmenu', (e) => { e.preventDefault(); showContextMenu(e.clientX, e.clientY, doc.id, msg, isMyMessage); });
       messagesArea.appendChild(messageDiv);
+      bindSwipeToReply(messageDiv, { ...msg, messageId: doc.id });
+      loadReactions(doc.id, messageDiv.querySelector('.message-bubble')).catch(() => { });
     });
     const failedItems = getLocalFailedMessages();
     if (failedItems.length) {
@@ -6533,6 +6593,7 @@ async function sendMessage() {
 
 async function handleFileUpload(file) {
   if (!file) return;
+  if (!requestActionPermission('attachment', 'Allow this app to attach and upload the selected file?')) return;
   try {
     const url = file.type.startsWith('image/') ? await uploadToCloudinary(file) : await uploadDocument(file);
     currentAttachment = { type: file.type.startsWith('image/') ? 'image' : 'document', url, filename: file.name, size: file.size };
@@ -6926,6 +6987,36 @@ async function showScheduledMessagesModal() {
 
 function copyToClipboard(text) { navigator.clipboard.writeText(text); showToast('Copied text!'); }
 function setReplyTo(msg) { currentReplyTo = msg; document.getElementById('replyPreviewBar').style.display = 'block'; document.getElementById('replyPreviewSender').textContent = msg.senderName; document.getElementById('replyPreviewText').textContent = msg.text || 'Media'; }
+async function showMessageInfo(messageId, messageData = {}) {
+  if (!messageId || messageData.senderId !== currentUser?.uid) return;
+  const deliveredTo = messageData.deliveredTo || {};
+  const readBy = messageData.readBy || {};
+  const allIds = [...new Set([
+    ...Object.keys(deliveredTo),
+    ...Object.keys(readBy)
+  ].filter(id => id && id !== currentUser.uid))];
+
+  const nameFor = async (userId) => {
+    if (currentGroupMembers.find(m => m.id === userId)) return currentGroupMembers.find(m => m.id === userId).name;
+    const user = allUsers.find(u => u.id === userId);
+    if (user) return user.displayName || user.email || 'User';
+    const doc = await db.collection('users').doc(userId).get().catch(() => null);
+    return doc?.data?.()?.displayName || doc?.data?.()?.email || 'User';
+  };
+
+  const lines = [`Message info`, `Sent: ${formatWhen(messageData.timestamp) || 'Pending'}`];
+  if (!allIds.length) {
+    lines.push('Delivered: Not yet', 'Read: Not yet');
+  } else {
+    for (const id of allIds) {
+      const name = await nameFor(id);
+      lines.push(`${name}`);
+      lines.push(`  Delivered: ${formatWhen(deliveredTo[id]) || 'Not yet'}`);
+      lines.push(`  Read: ${formatWhen(readBy[id]) || 'Not yet'}`);
+    }
+  }
+  alert(lines.join('\n'));
+}
 async function deleteMessageForMe(id) {
   if (!id || !currentUser) return;
   await db.collection('messages').doc(id).update({
@@ -7166,7 +7257,7 @@ function showContextMenu(x, y, messageId, messageData, isMyMessage) {
 
   const reactionStrip = document.createElement('div');
   reactionStrip.className = 'message-context-reactions';
-  ['👍', '❤️', '😂', '😮', '🙏'].forEach((emoji) => {
+  getReactionOptions().forEach((emoji) => {
     const reactionBtn = document.createElement('button');
     reactionBtn.type = 'button';
     reactionBtn.className = 'message-context-reaction-btn';
@@ -7184,13 +7275,14 @@ function showContextMenu(x, y, messageId, messageData, isMyMessage) {
   const items = [
     { text: 'Forward', action: () => openForwardModal(messageId, messageData) },
     { text: 'Copy Text', action: () => copyToClipboard(messageData.text) },
-    { text: 'Thread Reply', action: () => setReplyTo(messageData) },
+    { text: 'Reply', action: () => setReplyTo({ ...messageData, messageId }) },
     { text: 'Star Message', action: () => starMessage(messageId, messageData) },
     { text: 'Pin Message', action: () => pinMessage(messageId, messageData) },
     { text: 'Report Message', action: () => reportMessage(messageId, messageData) }
   ];
   items.push({ text: 'Delete For Me', action: () => deleteMessageForMe(messageId) });
   if (isMyMessage) {
+    items.push({ text: 'Message Info', action: () => showMessageInfo(messageId, messageData) });
     items.push({ text: 'Edit Message', action: () => editMessage(messageId, messageData) });
     if (canDeleteForEveryone(messageData)) {
       items.push({ text: 'Delete Everyone', action: () => deleteMessageForEveryone(messageId, messageData) });
@@ -7944,7 +8036,11 @@ async function init() {
 
   document.querySelectorAll('.closeProfileModal').forEach(b => b.addEventListener('click', () => document.getElementById('profileModal').style.display = 'none'));
   document.getElementById('fileInput')?.addEventListener('change', (e) => handleFileUpload(e.target.files[0]));
-  document.getElementById('attachBtn')?.addEventListener('click', () => document.getElementById('fileInput').click());
+  document.getElementById('attachBtn')?.addEventListener('click', () => {
+    if (requestActionPermission('attachment', 'Allow this app to open your file picker for an attachment?')) {
+      document.getElementById('fileInput').click();
+    }
+  });
   document.getElementById('blockedUsersBtn')?.addEventListener('click', showBlockedUsersModal);
   document.getElementById('quickRepliesSettingsBtn')?.addEventListener('click', showQuickRepliesModal);
   document.getElementById('starredMessagesBtn')?.addEventListener('click', showStarredMessagesModal);
