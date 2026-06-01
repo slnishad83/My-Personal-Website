@@ -4828,6 +4828,7 @@ async function buildGroupChatItems() {
       const groupDoc = await db.collection('groups').doc(groupId).get();
       if (!groupDoc.exists) continue;
       const group = groupDoc.data() || {};
+      const membership = memberDoc.data() || {};
       items.push({
         id: groupDoc.id,
         type: 'group',
@@ -4837,6 +4838,9 @@ async function buildGroupChatItems() {
         unreadCount: await getChatUnreadCount(groupDoc.id, 'group'),
         isFavorite: favoriteChatIds.includes(groupDoc.id),
         isMuted: isChatMuted(groupDoc.id),
+        role: membership.role || (group.createdBy === currentUser.uid ? 'owner' : 'member'),
+        memberCount: group.memberCount || 0,
+        icon: group.icon || '',
         code: group.code || '',
         lastMessageTime: group.updatedAt?.toDate?.() || group.createdAt?.toDate?.() || new Date(0)
       });
@@ -4907,7 +4911,21 @@ async function loadGroupsList() {
   );
 
   if (filteredGroups.length === 0) {
-    groupsList.innerHTML = `<div class="empty-state" style="padding:40px;">No groups found.</div>`;
+    groupsList.innerHTML = `
+      <div class="empty-state groups-empty-state">
+        <div class="empty-state-title">No groups yet</div>
+        <div class="empty-state-copy">Create a group, invite people, or join using an invite code.</div>
+        <div class="empty-state-actions">
+          <button class="join-btn empty-create-group" type="button">Create group</button>
+          <button class="join-btn empty-join-group" type="button">Join group</button>
+        </div>
+      </div>`;
+    groupsList.querySelector('.empty-create-group')?.addEventListener('click', () => {
+      document.getElementById('createGroupModal').style.display = 'flex';
+    });
+    groupsList.querySelector('.empty-join-group')?.addEventListener('click', () => {
+      document.getElementById('joinGroupModal').style.display = 'flex';
+    });
     return;
   }
 
@@ -4921,7 +4939,11 @@ async function loadGroupsList() {
     groupDiv.dataset.unreadCount = group.unreadCount;
     groupDiv.dataset.chatName = group.name || '';
     if (currentChat?.id === group.id && currentChatType === 'group') groupDiv.classList.add('active');
-    groupDiv.innerHTML = `<div class="list-avatar">${group.icon ? `<img src="${group.icon}">` : 'G'}</div><div class="list-info" style="flex:1; cursor:pointer;"><div class="list-name">${group.isFavorite ? '* ' : ''}${escapeHtml(group.name)} ${isMuted ? '[Muted]' : ''}</div><div class="list-preview">${group.code}${group.unreadCount ? ` • ${group.unreadCount} unread` : ''}</div></div><button class="list-item-menu mute-chat-btn" data-chat-id="${group.id}" data-chat-type="group">${isMuted ? 'Unmute' : 'Mute'}</button><button class="list-item-menu archive-chat-btn" data-chat-id="${group.id}" data-chat-type="group" data-chat-name="${escapeHtml(group.name)}">Arch</button>`;
+    const roleLabel = group.role === 'owner' ? 'Owner' : group.role === 'admin' ? 'Admin' : 'Member';
+    const groupPreview = [roleLabel, group.memberCount ? `${group.memberCount} members` : '', group.code ? `Code ${group.code}` : '']
+      .filter(Boolean)
+      .join(' - ');
+    groupDiv.innerHTML = `<div class="list-avatar">${group.icon ? `<img src="${group.icon}">` : 'G'}</div><div class="list-info" style="flex:1; cursor:pointer;"><div class="list-name">${group.isFavorite ? '* ' : ''}${escapeHtml(group.name)} ${isMuted ? '[Muted]' : ''}</div><div class="list-preview">${escapeHtml(groupPreview)}${group.unreadCount ? ` - ${group.unreadCount} unread` : ''}</div></div><button class="list-item-menu mute-chat-btn" data-chat-id="${group.id}" data-chat-type="group">${isMuted ? 'Unmute' : 'Mute'}</button><button class="list-item-menu archive-chat-btn" data-chat-id="${group.id}" data-chat-type="group" data-chat-name="${escapeHtml(group.name)}">Archive</button>`;
     if (group.unreadCount) {
       groupDiv.insertAdjacentHTML('beforeend', `<span class="unread-pill">${group.unreadCount}</span>`);
     }
@@ -5006,8 +5028,18 @@ async function startDirectChat(user) {
   setChatHeaderAvatar(user.avatar ? `<img src="${user.avatar}">` : escapeHtml((user.displayName || user.email || '?')[0].toUpperCase()));
   document.getElementById('inputArea').style.display = 'flex';
   document.getElementById('groupInfoBtn').style.display = 'none';
-  document.getElementById('voiceCallBtn').style.display = 'inline-flex';
-  document.getElementById('videoCallBtn').style.display = 'inline-flex';
+  const voiceCallBtn = document.getElementById('voiceCallBtn');
+  const videoCallBtn = document.getElementById('videoCallBtn');
+  if (voiceCallBtn) {
+    voiceCallBtn.style.display = 'inline-flex';
+    voiceCallBtn.disabled = false;
+    voiceCallBtn.title = 'Voice call';
+  }
+  if (videoCallBtn) {
+    videoCallBtn.style.display = 'inline-flex';
+    videoCallBtn.disabled = false;
+    videoCallBtn.title = 'Video call';
+  }
   document.getElementById('replyPreviewBar').style.display = 'none';
   currentReplyTo = null;
   resetMessageRenderLimit();
@@ -5039,10 +5071,10 @@ async function createGroup(groupName, memberEmails = '') {
     }
   }
   const groupRef = await db.collection('groups').add({
-    name: groupName.trim(), code: groupCode, createdBy: currentUser.uid, createdAt: firebase.firestore.FieldValue.serverTimestamp(), memberCount: 1, onlyAdminsCanSend: adminsOnlySend, onlyAdminsCanEdit: true
+    name: groupName.trim(), code: groupCode, createdBy: currentUser.uid, ownerId: currentUser.uid, createdAt: firebase.firestore.FieldValue.serverTimestamp(), memberCount: 1, onlyAdminsCanSend: adminsOnlySend, onlyAdminsCanEdit: true
   });
   await db.collection('groupMembers').add({
-    groupId: groupRef.id, userId: currentUser.uid, role: 'admin', joinedAt: firebase.firestore.FieldValue.serverTimestamp()
+    groupId: groupRef.id, userId: currentUser.uid, role: 'owner', joinedAt: firebase.firestore.FieldValue.serverTimestamp()
   });
   for (const user of invitedUsers) {
     await sendGroupInvite(groupRef.id, groupName.trim(), user);
@@ -5072,14 +5104,24 @@ async function loadGroupChat(groupId, groupName) {
   currentGroup = { id: groupId, name: groupName, icon: groupData.icon, ...groupData };
   document.getElementById('currentChatName').textContent = groupName;
   document.getElementById('chatStatus').textContent = 'Group Chat';
-  setChatHeaderAvatar(groupData.icon ? `<img src="${groupData.icon}">` : '👥');
+  setChatHeaderAvatar(groupData.icon ? `<img src="${groupData.icon}">` : 'G');
   await loadGroupMembers(groupId);
   const inputArea = document.getElementById('inputArea');
   const canSend = !currentGroup.onlyAdminsCanSend || isCurrentUserGroupAdmin();
   if (inputArea) inputArea.style.display = canSend ? 'flex' : 'none';
   document.getElementById('groupInfoBtn').style.display = 'block';
-  document.getElementById('voiceCallBtn').style.display = 'inline-flex';
-  document.getElementById('videoCallBtn').style.display = 'inline-flex';
+  const voiceCallBtn = document.getElementById('voiceCallBtn');
+  const videoCallBtn = document.getElementById('videoCallBtn');
+  if (voiceCallBtn) {
+    voiceCallBtn.style.display = 'inline-flex';
+    voiceCallBtn.disabled = true;
+    voiceCallBtn.title = 'Group calls need conference signaling support';
+  }
+  if (videoCallBtn) {
+    videoCallBtn.style.display = 'inline-flex';
+    videoCallBtn.disabled = true;
+    videoCallBtn.title = 'Group calls need conference signaling support';
+  }
   resetMessageRenderLimit();
   loadMessages();
   restoreCurrentDraft();
@@ -5103,7 +5145,23 @@ async function loadGroupMembers(groupId) {
 }
 
 function isCurrentUserGroupAdmin() {
-  return currentGroupMembers.some(member => member.id === currentUser?.uid && member.role === 'admin');
+  return currentGroupMembers.some(member => member.id === currentUser?.uid && ['owner', 'admin'].includes(member.role));
+}
+
+function isCurrentUserGroupOwner() {
+  return currentGroupMembers.some(member => member.id === currentUser?.uid && member.role === 'owner') || currentGroup?.ownerId === currentUser?.uid || currentGroup?.createdBy === currentUser?.uid;
+}
+
+async function getGroupMemberDocs(groupId, userId = '') {
+  let query = db.collection('groupMembers').where('groupId', '==', groupId);
+  if (userId) query = query.where('userId', '==', userId);
+  const snapshot = await query.get();
+  return snapshot.docs;
+}
+
+async function countGroupAdmins(groupId) {
+  const docs = await getGroupMemberDocs(groupId);
+  return docs.filter(doc => ['owner', 'admin'].includes(doc.data()?.role)).length;
 }
 
 async function showGroupInfo() {
@@ -5111,27 +5169,35 @@ async function showGroupInfo() {
   const groupDoc = await db.collection('groups').doc(currentGroup.id).get();
   const group = groupDoc.data();
   document.getElementById('groupInfoTitle').textContent = group.name;
-  document.getElementById('groupAvatarLarge').innerHTML = group.icon ? `<img src="${group.icon}">` : '👥';
+  document.getElementById('groupAvatarLarge').innerHTML = group.icon ? `<img src="${group.icon}">` : 'G';
   document.getElementById('editGroupNameInput').value = group.name;
   document.getElementById('groupCodeDisplay').textContent = group.code;
   document.getElementById('groupAdminsOnlySend').checked = !!group.onlyAdminsCanSend;
   document.getElementById('groupAdminsOnlyEdit').checked = group.onlyAdminsCanEdit !== false;
 
   const currentUserRole = currentGroupMembers.find(m => m.id === currentUser.uid)?.role;
-  const isAdmin = currentUserRole === 'admin';
+  const isOwner = currentUserRole === 'owner' || group.ownerId === currentUser.uid || group.createdBy === currentUser.uid;
+  const isAdmin = isOwner || currentUserRole === 'admin';
+  const canEditInfo = isAdmin || group.onlyAdminsCanEdit === false;
+  document.getElementById('editGroupNameInput').disabled = !canEditInfo;
+  document.getElementById('groupAvatarLarge').style.pointerEvents = canEditInfo ? 'auto' : 'none';
+  document.getElementById('groupSendPermissionRow').style.display = isAdmin ? 'flex' : 'none';
+  document.getElementById('groupEditPermissionRow').style.display = isAdmin ? 'flex' : 'none';
   document.getElementById('addMemberBtn').style.display = isAdmin ? 'block' : 'none';
   document.getElementById('addMemberEmail').style.display = isAdmin ? 'inline-block' : 'none';
-  document.getElementById('deleteGroupBtn').style.display = isAdmin ? 'block' : 'none';
+  document.getElementById('deleteGroupBtn').style.display = isOwner ? 'block' : 'none';
 
   const membersList = document.getElementById('groupMembersList');
   membersList.innerHTML = '';
   for (const member of currentGroupMembers) {
-    const isMemberAdmin = member.role === 'admin';
+    const isMemberOwner = member.role === 'owner';
+    const isMemberAdmin = isMemberOwner || member.role === 'admin';
     const isCurrentUser = member.id === currentUser.uid;
-    const canModify = isAdmin && !isCurrentUser;
+    const canModify = isAdmin && !isCurrentUser && !isMemberOwner;
     const memberDiv = document.createElement('div');
     memberDiv.className = 'member-item';
-    memberDiv.innerHTML = `<div class="member-info"><div class="member-avatar">${member.avatar ? `<img src="${member.avatar}" style="width:36px;height:36px;border-radius:50%;">` : (member.name?.[0]?.toUpperCase() || '👤')}</div><div><span>${escapeHtml(member.name)}</span>${isMemberAdmin ? '<span style="font-size:10px; color:#667eea; margin-left:8px;">Admin</span>' : ''}</div></div>${canModify ? `<div class="member-actions">${!isMemberAdmin ? `<button class="make-admin-btn" data-id="${member.id}" data-name="${escapeHtml(member.name)}" title="Make admin">👑</button>` : `<button class="remove-admin-btn" data-id="${member.id}" data-name="${escapeHtml(member.name)}" title="Remove admin">Admin -</button>`}<button class="remove-member-btn" data-id="${member.id}" data-name="${escapeHtml(member.name)}" title="Remove member">❌</button></div>` : ''}`;
+    const roleBadge = isMemberOwner ? 'Owner' : isMemberAdmin ? 'Admin' : '';
+    memberDiv.innerHTML = `<div class="member-info"><div class="member-avatar">${member.avatar ? `<img src="${member.avatar}" style="width:36px;height:36px;border-radius:50%;">` : (member.name?.[0]?.toUpperCase() || 'U')}</div><div><span>${escapeHtml(member.name)}</span>${roleBadge ? `<span class="member-role-badge">${roleBadge}</span>` : ''}</div></div>${canModify ? `<div class="member-actions">${!isMemberAdmin ? `<button class="make-admin-btn" data-id="${member.id}" data-name="${escapeHtml(member.name)}" title="Make admin">Make admin</button>` : `<button class="remove-admin-btn" data-id="${member.id}" data-name="${escapeHtml(member.name)}" title="Remove admin">Remove admin</button>`}<button class="remove-member-btn" data-id="${member.id}" data-name="${escapeHtml(member.name)}" title="Remove member">Remove</button></div>` : ''}`;
     membersList.appendChild(memberDiv);
   }
   await renderPendingGroupInvites(currentGroup.id, membersList, isAdmin);
@@ -5139,25 +5205,38 @@ async function showGroupInfo() {
 }
 
 async function makeAdmin(groupId, memberId, memberName) {
+  if (!isCurrentUserGroupAdmin()) return;
   if (!confirm(`Make ${memberName} an admin?`)) return;
   const memberDoc = await db.collection('groupMembers').where('groupId', '==', groupId).where('userId', '==', memberId).get();
-  memberDoc.forEach(doc => doc.ref.update({ role: 'admin' }));
+  memberDoc.forEach(doc => {
+    if (doc.data()?.role !== 'owner') doc.ref.update({ role: 'admin' });
+  });
   showToast(`${memberName} is now admin`);
   showGroupInfo();
 }
 
 async function removeAdmin(groupId, memberId, memberName) {
+  if (!isCurrentUserGroupAdmin()) return;
   if (!confirm(`Remove admin rights from ${memberName}?`)) return;
+  if (await countGroupAdmins(groupId) <= 1) {
+    showToast('A group must keep at least one admin', 'error');
+    return;
+  }
   const memberDoc = await db.collection('groupMembers').where('groupId', '==', groupId).where('userId', '==', memberId).get();
-  memberDoc.forEach(doc => doc.ref.update({ role: 'member' }));
+  memberDoc.forEach(doc => {
+    if (doc.data()?.role !== 'owner') doc.ref.update({ role: 'member' });
+  });
   showToast(`${memberName} is now a member`);
   await loadGroupMembers(groupId);
   showGroupInfo();
 }
 
 async function removeMember(groupId, memberId, memberName) {
+  if (!isCurrentUserGroupAdmin()) return;
   if (!confirm(`Remove ${memberName} from group?`)) return;
-  await db.collection('groupMembers').where('groupId', '==', groupId).where('userId', '==', memberId).get().then(s => s.forEach(d => d.ref.delete()));
+  await db.collection('groupMembers').where('groupId', '==', groupId).where('userId', '==', memberId).get().then(s => s.forEach(d => {
+    if (d.data()?.role !== 'owner') d.ref.delete();
+  }));
   await db.collection('groups').doc(groupId).update({ memberCount: firebase.firestore.FieldValue.increment(-1) });
   showToast('Member removed');
   await loadGroupMembers(groupId);
@@ -5166,6 +5245,7 @@ async function removeMember(groupId, memberId, memberName) {
 }
 
 async function addMemberToGroup(email) {
+  if (!isCurrentUserGroupAdmin()) return;
   if (!email.trim()) return;
   const matchedUser = findUserByMemberInput(email);
   if (!matchedUser) { showToast('User not found', 'error'); return; }
@@ -5174,14 +5254,14 @@ async function addMemberToGroup(email) {
 }
 
 async function updateGroupName(newName) {
-  if (!newName.trim() || !isCurrentUserGroupAdmin()) return;
+  if (!newName.trim() || (!isCurrentUserGroupAdmin() && currentGroup?.onlyAdminsCanEdit !== false)) return;
   await db.collection('groups').doc(currentGroup.id).update({ name: newName.trim() });
   if (currentChat?.id === currentGroup.id) document.getElementById('currentChatName').textContent = newName;
   loadGroupsList();
 }
 
 async function updateGroupIcon(file) {
-  if (!isCurrentUserGroupAdmin()) return;
+  if (!isCurrentUserGroupAdmin() && currentGroup?.onlyAdminsCanEdit !== false) return;
   const url = await uploadToCloudinary(file);
   await db.collection('groups').doc(currentGroup.id).update({ icon: url });
   if (currentChat?.id === currentGroup.id) currentGroup.icon = url;
@@ -5190,12 +5270,24 @@ async function updateGroupIcon(file) {
 
 async function leaveGroup() {
   if (!confirm(`Leave group "${currentGroup.name}"?`)) return;
+  if (isCurrentUserGroupOwner()) {
+    showToast('Transfer ownership or delete the group before leaving', 'error');
+    return;
+  }
+  if (isCurrentUserGroupAdmin() && await countGroupAdmins(currentGroup.id) <= 1) {
+    showToast('Make another member admin before leaving', 'error');
+    return;
+  }
   await db.collection('groupMembers').where('groupId', '==', currentGroup.id).where('userId', '==', currentUser.uid).get().then(s => s.forEach(d => d.ref.delete()));
   await db.collection('groups').doc(currentGroup.id).update({ memberCount: firebase.firestore.FieldValue.increment(-1) });
   resetChatPanel(); loadGroupsList();
 }
 
 async function deleteGroup() {
+  if (!isCurrentUserGroupOwner()) {
+    showToast('Only the group owner can delete this group', 'error');
+    return;
+  }
   if (!confirm('Permanently delete group for everyone?')) return;
   await db.collection('groups').doc(currentGroup.id).delete();
   resetChatPanel(); loadGroupsList();
@@ -5206,6 +5298,12 @@ async function joinGroup(groupCode) {
   const q = await db.collection('groups').where('code', '==', groupCode.trim().toUpperCase()).limit(1).get();
   if (q.empty) { showToast('Group not found', 'error'); return; }
   const group = q.docs[0];
+  const existing = await db.collection('groupMembers').where('groupId', '==', group.id).where('userId', '==', currentUser.uid).limit(1).get();
+  if (!existing.empty) {
+    showToast('You are already in this group');
+    loadGroupChat(group.id, group.data().name || 'Group');
+    return;
+  }
   await db.collection('groupMembers').add({ groupId: group.id, userId: currentUser.uid, role: 'member', joinedAt: firebase.firestore.FieldValue.serverTimestamp() });
   await db.collection('groups').doc(group.id).update({ memberCount: firebase.firestore.FieldValue.increment(1) });
   showToast(`Joined Group!`); loadGroupsList();
@@ -5801,6 +5899,13 @@ async function sendMessage() {
   const input = document.getElementById('messageInput');
   const text = input ? input.value.trim() : '';
   if ((!text && !currentAttachment) || !currentChat) return;
+  if (currentChatType === 'group') {
+    const canSend = !currentGroup?.onlyAdminsCanSend || isCurrentUserGroupAdmin();
+    if (!canSend) {
+      showToast('Only group admins can send messages here', 'error');
+      return;
+    }
+  }
 
   setSendingState(true);
 
@@ -5823,7 +5928,9 @@ async function sendMessage() {
       [currentUser.uid]: firebase.firestore.FieldValue.serverTimestamp()
     },
     deliveredTo: {},
-    participants: currentChatType === 'direct' ? directParticipants : [currentUser.uid]
+    participants: currentChatType === 'direct'
+      ? directParticipants
+      : [...new Set((currentGroupMembers || []).map(member => member.id).concat(currentUser.uid).filter(Boolean))]
   };
 
   if (currentReplyTo) {
@@ -6929,13 +7036,16 @@ function switchTab(tab) {
   const groupsList = document.getElementById('groupsList');
   const statusList = document.getElementById('statusList');
   const statusActions = document.getElementById('statusActions');
+  const groupActions = document.getElementById('groupActions');
 
   chatsList.style.display = tab === 'groups' || tab === 'status' ? 'none' : 'block';
   groupsList.style.display = tab === 'groups' ? 'block' : 'none';
   if (statusList) statusList.style.display = tab === 'status' ? 'block' : 'none';
+  if (groupActions) groupActions.style.display = tab === 'groups' ? 'flex' : 'none';
   if (statusActions) statusActions.style.display = tab === 'status' ? 'flex' : 'none';
 
-  if (tab === 'status') loadStatusList();
+  if (tab === 'groups') loadGroupsList();
+  else if (tab === 'status') loadStatusList();
   else loadCurrentChatList();
 }
 
@@ -7951,9 +8061,9 @@ function setupCallControlButtons() {
   if (addParticipantBtn && addParticipantBtn.dataset.ready !== 'true') {
     addParticipantBtn.dataset.ready = 'true';
     addParticipantBtn.disabled = true;
-    addParticipantBtn.title = 'Group calls are not available yet';
+    addParticipantBtn.title = 'Add people needs group-call signaling support';
     addParticipantBtn.addEventListener('click', () => {
-      flashCallControlLabel(addParticipantBtn, 'Group calls unavailable');
+      flashCallControlLabel(addParticipantBtn, 'Add people is not available for one-to-one calls yet');
     });
   }
 }
