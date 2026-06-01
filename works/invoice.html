@@ -157,15 +157,20 @@
         margin: 0 auto 24px;
       }
 
-      .top-actions .back-link {
-        margin-bottom: 0;
+      .top-actions .back-link,
+      .top-actions .logout-link {
+        width: auto;
+        min-width: 0;
+        margin: 0;
+        padding: 11px 18px;
+        border-radius: 999px;
+        white-space: nowrap;
+        line-height: 1;
+        box-shadow: 0 8px 20px rgba(15, 23, 42, 0.06);
       }
 
-      .logout-link {
-        width: auto;
-        margin: 0;
-        padding: 10px 18px;
-        border-radius: 999px;
+      .top-actions .logout-link {
+        flex: 0 0 auto;
       }
 
       /* Toast Notifications */
@@ -643,9 +648,36 @@
 
       /* Search Section */
       .search-section {
+        display: grid;
+        gap: 10px;
         margin-top: 24px;
         padding-top: 20px;
         border-top: 2px solid #e2e8f0;
+      }
+      .search-section label {
+        display: block;
+        margin: 0;
+        color: #475569;
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 0.6px;
+        text-transform: uppercase;
+      }
+      .search-section input {
+        width: 100%;
+        min-width: 0;
+        padding: 14px 16px;
+        border: 1.5px solid #e2e8f0;
+        border-radius: 16px;
+        font: inherit;
+        font-size: 14px;
+        color: #1e293b;
+        background: #fff;
+      }
+      .search-section input:focus {
+        outline: none;
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.08);
       }
       .invoice-history-list {
         max-height: 260px;
@@ -1132,12 +1164,71 @@
         border-radius: 18px;
       }
 
+
+      .mobile-view-switch {
+        display: none;
+      }
+
+      @media (max-width: 1000px) {
+        .mobile-view-switch {
+          position: sticky;
+          top: 0;
+          z-index: 50;
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 8px;
+          max-width: 1600px;
+          margin: 0 auto 14px;
+          padding: 8px;
+          border: 1px solid #dbe4ef;
+          border-radius: 999px;
+          background: rgba(255, 255, 255, 0.92);
+          box-shadow: 0 12px 28px rgba(15, 23, 42, 0.08);
+          backdrop-filter: blur(14px);
+        }
+        .mobile-view-switch button {
+          border: 0;
+          border-radius: 999px;
+          background: transparent;
+          color: #475569;
+          padding: 12px 14px;
+          font: inherit;
+          font-size: 13px;
+          font-weight: 800;
+          cursor: pointer;
+        }
+        .mobile-view-switch button.active {
+          background: #3b82f6;
+          color: #ffffff;
+          box-shadow: 0 8px 18px rgba(59, 130, 246, 0.24);
+        }
+        body.mobile-show-preview .left-panel {
+          display: none;
+        }
+        body.mobile-show-form .invoice-preview {
+          display: none;
+        }
+        .left-panel {
+          position: static;
+          max-height: none;
+          overflow: visible;
+        }
+        .invoice-preview {
+          overflow-x: auto;
+        }
+      }
       @media (max-width: 640px) {
         body {
           padding: 10px;
         }
         .top-actions {
-          margin-bottom: 12px;
+          gap: 8px;
+          margin-bottom: 10px;
+        }
+        .top-actions .back-link,
+        .top-actions .logout-link {
+          padding: 10px 12px;
+          font-size: 12px;
         }
         .left-panel,
         .invoice-preview {
@@ -1151,7 +1242,25 @@
         .button-group,
         .item-buttons,
         .row-fields {
+          display: grid;
           grid-template-columns: 1fr;
+        }
+        .search-section input {
+          margin-top: 0 !important;
+        }
+        .invoice-header,
+        .bill-section,
+        .table-wrapper,
+        .bottom-section,
+        .invoice-footer {
+          padding-left: 18px;
+          padding-right: 18px;
+        }
+        .invoice-title-section {
+          text-align: left;
+        }
+        .bill-box {
+          flex-basis: 100%;
         }
         .modal-content {
           width: calc(100vw - 20px);
@@ -1198,6 +1307,11 @@
       <button id="logoutBtn" class="btn btn-outline logout-link" type="button">
         Logout
       </button>
+    </div>
+
+    <div class="mobile-view-switch" id="mobileViewSwitch" aria-label="Invoice view switch">
+      <button type="button" class="active" data-view="form">Edit Invoice</button>
+      <button type="button" data-view="preview">Preview</button>
     </div>
 
     <div class="container">
@@ -2634,9 +2748,30 @@
         });
       }
 
+
+      function setupMobileViewSwitch() {
+        const switcher = document.getElementById("mobileViewSwitch");
+        if (!switcher) return;
+        const buttons = Array.from(switcher.querySelectorAll("button"));
+        const applyView = (view) => {
+          const isMobile = window.matchMedia("(max-width: 1000px)").matches;
+          document.body.classList.toggle("mobile-show-preview", isMobile && view === "preview");
+          document.body.classList.toggle("mobile-show-form", isMobile && view !== "preview");
+          buttons.forEach((btn) => btn.classList.toggle("active", btn.dataset.view === view));
+        };
+        buttons.forEach((button) => {
+          button.addEventListener("click", () => applyView(button.dataset.view));
+        });
+        window.addEventListener("resize", () => {
+          const active = buttons.find((btn) => btn.classList.contains("active"));
+          applyView(active?.dataset.view || "form");
+        });
+        applyView("form");
+      }
       function init() {
         setupLogin();
         updateInvoiceNumberPlaceholder();
+        setupMobileViewSwitch();
         initCurrency();
         initItemAutocomplete();
         flatpickr("#invoiceDate", {
