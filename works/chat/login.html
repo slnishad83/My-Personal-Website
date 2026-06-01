@@ -763,8 +763,8 @@
             hasError = true;
           }
 
-          // 3. Strict 10-Digit Indian Phone Validation
-          if (!validatePhone(phone)) {
+          // 3. Optional phone, strict when entered
+          if (phone && !validatePhone(phone)) {
             showValidationError(
               "phoneError",
               "❌ Enter a valid 10-digit phone number starting with 6, 7, 8, or 9.",

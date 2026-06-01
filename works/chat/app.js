@@ -1871,7 +1871,11 @@ function setCallUi({ mode = 'outgoing', type = 'voice', title = 'Calling...', st
   modal.style.display = 'flex';
   setupCallControlButtons();
   resetLocalVideoPreviewPosition();
+  modal.dataset.callType = type;
+  modal.dataset.callMode = mode;
   shell?.classList.toggle('incoming', mode === 'incoming');
+  shell?.classList.toggle('video-call', type === 'video');
+  shell?.classList.toggle('voice-call', type === 'voice');
   document.getElementById('callTypeLabel').textContent = type === 'video' ? 'Video call' : 'Voice call';
   document.getElementById('callTitle').textContent = title;
   document.getElementById('callStatusText').textContent = status;
@@ -1889,8 +1893,14 @@ function setCallUi({ mode = 'outgoing', type = 'voice', title = 'Calling...', st
   if (switchCameraBtn) {
     switchCameraBtn.style.display = mode !== 'incoming' && type === 'video' ? 'inline-flex' : 'none';
   }
-  if (localVideo) localVideo.style.display = type === 'video' ? 'block' : 'none';
-  if (remoteVideo) remoteVideo.style.display = type === 'video' ? 'block' : 'none';
+  if (localVideo) {
+    localVideo.style.display = type === 'video' ? 'block' : 'none';
+    localVideo.classList.toggle('main-preview', type === 'video' && mode !== 'active');
+  }
+  if (remoteVideo) {
+    remoteVideo.style.display = type === 'video' && mode === 'active' ? 'block' : 'none';
+    remoteVideo.classList.remove('has-remote-video');
+  }
   if (groupGrid) {
     groupGrid.classList.remove('active');
     groupGrid.innerHTML = '';
@@ -2286,6 +2296,11 @@ async function preparePeerConnection(callId, role) {
   });
   peerConnection.ontrack = event => {
     event.streams[0].getTracks().forEach(track => remoteCallStream.addTrack(track));
+    if (remoteVideo && currentCallType === 'video') {
+      remoteVideo.style.display = 'block';
+      remoteVideo.classList.add('has-remote-video');
+      document.getElementById('localVideo')?.classList.remove('main-preview');
+    }
     remoteAudio?.play?.().catch(() => { });
     remoteVideo?.play?.().catch(() => { });
   };
@@ -3530,11 +3545,11 @@ function updateFilterButtons() {
 }
 
 function isValidIndianPhone(phone) {
-  return /^[6-9]\d{9}$/.test(phone);
+  return /^[6-9]\d{9}$/.test(String(phone || '').trim());
 }
 
 function isCompleteEmail(email) {
-  return email.includes('@') && email.includes('.');
+  return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(String(email || '').trim().toLowerCase());
 }
 
 // ========================================
@@ -4677,15 +4692,63 @@ async function markCurrentSessionInactive() {
 }
 
 async function changeEmail() {
-  const newEmail = prompt('Enter your new email address:');
+  const newEmail = normalizeEmail(prompt('Enter your new email address:') || '');
   if (!newEmail) return;
+  if (!isCompleteEmail(newEmail)) {
+    showToast('Enter a valid email address', 'error');
+    return;
+  }
+  if (newEmail === normalizeEmail(currentUser.email)) {
+    showToast('This is already your current email');
+    return;
+  }
   try {
-    await currentUser.updateEmail(newEmail);
-    await currentUser.sendEmailVerification();
-    await db.collection('users').doc(currentUser.uid).update({ email: newEmail });
-    showToast('Email changed! Please verify your new email address.');
+    if (typeof currentUser.verifyBeforeUpdateEmail === 'function') {
+      await currentUser.verifyBeforeUpdateEmail(newEmail);
+      await db.collection('users').doc(currentUser.uid).set({
+        pendingEmailChange: newEmail,
+        pendingEmailRequestedAt: firebase.firestore.FieldValue.serverTimestamp()
+      }, { merge: true });
+      showToast('Verification sent to the new email. Email changes after verification.');
+    } else {
+      await currentUser.updateEmail(newEmail);
+      await currentUser.sendEmailVerification();
+      await db.collection('users').doc(currentUser.uid).set({
+        email: newEmail,
+        emailVerified: false,
+        pendingVerification: true
+      }, { merge: true });
+      showToast('Email changed. Please verify the new email address.');
+    }
   } catch (error) {
-    showToast(error.message, 'error');
+    showToast(error?.message || 'Could not change email. Please login again and retry.', 'error');
+  }
+}
+
+async function changePhoneNumber() {
+  const phone = (prompt('Enter 10-digit Indian phone number', document.getElementById('profilePhone')?.textContent || '') || '').trim();
+  if (!phone) return;
+  if (!isValidIndianPhone(phone)) {
+    showToast('Enter a valid 10-digit Indian phone number', 'error');
+    return;
+  }
+  try {
+    await currentUser.reload();
+    currentUser = auth.currentUser || currentUser;
+    if (!currentUser.emailVerified) {
+      await currentUser.sendEmailVerification();
+      showToast('Verify your email first. Verification email sent.', 'error');
+      return;
+    }
+    await db.collection('users').doc(currentUser.uid).set({
+      phone,
+      phoneNumber: phone,
+      phoneVerifiedByEmailAt: firebase.firestore.FieldValue.serverTimestamp()
+    }, { merge: true });
+    document.getElementById('profilePhone').textContent = phone;
+    showToast('Phone updated');
+  } catch (error) {
+    showToast(error?.message || 'Could not update phone', 'error');
   }
 }
 
@@ -8190,17 +8253,7 @@ async function init() {
     }
   });
   document.getElementById('changeEmailBtn')?.addEventListener('click', changeEmail);
-  document.getElementById('changePhoneBtn')?.addEventListener('click', async () => {
-    const phone = prompt('Enter 10-digit Indian phone number', document.getElementById('profilePhone')?.textContent || '');
-    if (!phone) return;
-    if (!isValidIndianPhone(phone)) {
-      showToast('Enter a valid 10-digit Indian phone number', 'error');
-      return;
-    }
-    await db.collection('users').doc(currentUser.uid).update({ phone, phoneNumber: phone });
-    document.getElementById('profilePhone').textContent = phone;
-    showToast('Phone updated');
-  });
+  document.getElementById('changePhoneBtn')?.addEventListener('click', changePhoneNumber);
   document.getElementById('deactivateAccountBtn')?.addEventListener('click', deactivateAccount);
   document.getElementById('callNetworkSettingsBtn')?.addEventListener('click', updateTurnServerSettings);
   document.getElementById('profileStatusText')?.addEventListener('change', (event) => updateStatusText(event.target.value.trim()));
@@ -8766,6 +8819,17 @@ function showCallControlHint(message) {
 function setupCallControlButtons() {
   const muteBtn = document.getElementById('muteMicBtn');
   const cameraBtn = document.getElementById('toggleCameraBtn');
+  const endBtn = document.getElementById('endCallBtn');
+  const acceptBtn = document.getElementById('acceptCallBtn');
+  const rejectBtn = document.getElementById('rejectCallBtn');
+  const closeBtn = document.getElementById('closeCallBtn');
+
+  if (muteBtn) muteBtn.dataset.label = 'Mute';
+  if (cameraBtn) cameraBtn.dataset.label = 'Video';
+  if (endBtn) endBtn.dataset.label = 'End';
+  if (acceptBtn) acceptBtn.dataset.label = 'Accept';
+  if (rejectBtn) rejectBtn.dataset.label = 'Decline';
+  if (closeBtn) closeBtn.dataset.label = 'Close';
 
   if (muteBtn && muteBtn.dataset.ready !== 'true') {
     muteBtn.dataset.ready = 'true';
@@ -8780,6 +8844,7 @@ function setupCallControlButtons() {
   }
 
   const switchCameraBtn = document.getElementById('switchCameraBtn');
+  if (switchCameraBtn) switchCameraBtn.dataset.label = 'Flip';
 
   if (switchCameraBtn && switchCameraBtn.dataset.ready !== 'true') {
     switchCameraBtn.dataset.ready = 'true';
@@ -8787,6 +8852,7 @@ function setupCallControlButtons() {
   }
 
   const addParticipantBtn = document.getElementById('addCallParticipantBtn');
+  if (addParticipantBtn) addParticipantBtn.dataset.label = 'Add';
 
   if (addParticipantBtn && addParticipantBtn.dataset.ready !== 'true') {
     addParticipantBtn.dataset.ready = 'true';
