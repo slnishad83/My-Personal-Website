@@ -464,9 +464,18 @@ function renderChatListItems(items, container) {
     return;
   }
 
+  let lastSection = '';
   items.forEach(item => {
+    if (item.section && item.section !== lastSection) {
+      const section = document.createElement('div');
+      section.className = 'search-section-label';
+      section.textContent = item.section;
+      container.appendChild(section);
+      lastSection = item.section;
+    }
     const chatDiv = document.createElement('div');
     chatDiv.className = 'list-item';
+    if (item.searchResultType) chatDiv.classList.add(`search-result-${item.searchResultType}`);
     chatDiv.dataset.chatId = item.id;
     chatDiv.dataset.chatType = item.type;
     chatDiv.dataset.unreadCount = item.unreadCount || 0;
@@ -506,10 +515,11 @@ function renderChatListItems(items, container) {
       statusChip = `<span class="status-chip ${item.requestState.status}">${escapeHtml(item.requestState.label)}</span>`;
     }
 
+    const searchMeta = item.searchResultType === 'message' ? '<span class="search-result-chip">Message</span>' : '';
     chatDiv.innerHTML = `
       <div class="list-avatar">${item.avatar}</div>
       <div class="list-info" style="flex:1; cursor:pointer;">
-        <div class="list-name">${item.isFavorite ? '* ' : ''}${escapeHtml(item.name)} ${item.isMuted ? '[Muted]' : ''}</div>
+        <div class="list-name">${item.isFavorite ? '* ' : ''}${escapeHtml(item.name)} ${item.isMuted ? '[Muted]' : ''}${searchMeta}</div>
         <div class="list-preview">${previewHtml}</div>
       </div>
       ${statusChip}
@@ -2725,10 +2735,14 @@ function matchesIdentitySearch(entity = {}, rawTerm = '') {
   const looksLikeEmailSearch = term.includes('@') || term.includes('.');
   if (looksLikeEmailSearch) return email.includes(term);
 
-  // Name search is strict: show only when a full name block is typed.
-  // Examples: "Nishad", "Halid", "Meera" match. "N", "Ni", "Nish" do not.
-  // If multiple users have the same full name block, all of them are shown.
-  return names.some(name => isExactNameBlockMatch(name, term));
+  return names.some(name => {
+    const cleanName = normalizeSearchText(name);
+    return cleanName.includes(term) || getNameTokens(name).some(part => part.startsWith(term));
+  });
+}
+
+function decorateSearchItems(items = [], section = '', searchResultType = '') {
+  return items.map(item => ({ ...item, section, searchResultType: searchResultType || item.searchResultType || '' }));
 }
 
 function isSearchableUser(user = {}) {
@@ -3245,8 +3259,14 @@ async function loadAllChatsList(searchTerm = '') {
 
     // FIXED CORRECTION LAYER: Read directly from item.id to completely avoid mapping crashes
     const cleanUserMatches = Array.from(new Map(userMatches.map(u => [u.id, u])).values());
+    const chatMatchKeys = new Set(chatMatches.map(item => `${item.type}:${item.id}`));
     const messageMatches = await searchMessagesInChats(allItems, term);
-    items = [...chatMatches, ...messageMatches, ...cleanUserMatches];
+    const contactMatches = cleanUserMatches.filter(item => !chatMatchKeys.has(`${item.type}:${item.id}`));
+    items = [
+      ...decorateSearchItems(chatMatches, 'Chats', 'chat'),
+      ...decorateSearchItems(contactMatches, 'Contacts', 'contact'),
+      ...decorateSearchItems(messageMatches, 'Messages', 'message')
+    ];
   } else {
     // Whitelist core operational fallback: when no search text is active, default back to showing WhatsApp style history list
     items = [...allItems];
@@ -3255,8 +3275,14 @@ async function loadAllChatsList(searchTerm = '') {
     if (currentViewTab === 'muted') items = items.filter(item => item.isMuted);
   }
 
-  // Sort chronologically and update layout view
-  items.sort((a, b) => b.lastMessageTime - a.lastMessageTime || a.name.localeCompare(b.name));
+  items.sort((a, b) => {
+    if (a.section || b.section) {
+      const order = { Chats: 1, Contacts: 2, Messages: 3 };
+      const sectionDiff = (order[a.section] || 99) - (order[b.section] || 99);
+      if (sectionDiff) return sectionDiff;
+    }
+    return b.lastMessageTime - a.lastMessageTime || a.name.localeCompare(b.name);
+  });
   renderChatListItems(items, chatsList);
 }
 
@@ -3267,16 +3293,16 @@ async function searchMessagesInChats(chatItems = [], term = '') {
     chatItems
       .filter(item => item.type === 'direct' || item.type === 'group' || item.type === 'saved')
       .map(item => [`${item.type}:${item.id}`, item])
-  ).values()).slice(0, 30);
+  ).values()).slice(0, 50);
 
   for (const item of uniqueChats) {
     try {
       const field = item.type === 'group' ? 'groupId' : 'directId';
-      const snapshot = await db.collection('messages').where(field, '==', item.id).limit(60).get();
-      const match = snapshot.docs
+      const snapshot = await db.collection('messages').where(field, '==', item.id).limit(120).get();
+      const matches = snapshot.docs
         .map(doc => doc.data())
         .filter(msg => !msg.deletedFor?.[currentUser.uid] && !msg.deletedForEveryone)
-        .find(msg => {
+        .filter(msg => {
           const body = [
             msg.text,
             msg.senderName,
@@ -3286,10 +3312,13 @@ async function searchMessagesInChats(chatItems = [], term = '') {
             msg.poll?.options?.join?.(' ')
           ].filter(Boolean).join(' ').toLowerCase();
           return body.includes(term);
-        });
-      if (match) {
+        })
+        .sort((a, b) => (b.timestamp?.toMillis?.() || 0) - (a.timestamp?.toMillis?.() || 0))
+        .slice(0, 3);
+      for (const match of matches) {
         results.push({
           ...item,
+          searchResultType: 'message',
           preview: `Message: ${(match.text || match.attachment?.filename || match.poll?.question || 'match').replace(/\s+/g, ' ').slice(0, 90)}`,
           lastMessageTime: match.timestamp?.toDate?.() || item.lastMessageTime || new Date(0)
         });
