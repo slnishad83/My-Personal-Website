@@ -2723,10 +2723,33 @@ async function addPersonToActiveCall() {
     showToast('Open a personal call first to add someone', 'error');
     return;
   }
-  const input = prompt('Add person by name, email, or phone');
-  if (!input?.trim()) return;
+  
+  const modal = document.getElementById('addCallParticipantModal');
+  const input = document.getElementById('addCallParticipantInput');
+  const datalist = document.getElementById('addCallParticipantSuggestions');
+  
+  if (!modal || !input || !datalist) return;
+  
+  datalist.innerHTML = '';
+  const others = allUsers.filter(u => u.id !== currentUser.uid && u.id !== currentChat?.otherUserId);
+  others.forEach(u => {
+    const opt = document.createElement('option');
+    opt.value = u.email || u.phone || u.displayName;
+    opt.textContent = u.displayName || u.email;
+    datalist.appendChild(opt);
+  });
+  
+  input.value = '';
+  modal.style.display = 'flex';
+}
+
+async function processAddParticipantToCall() {
+  const input = document.getElementById('addCallParticipantInput').value.trim();
+  if (!input) return;
+  document.getElementById('addCallParticipantModal').style.display = 'none';
+
   await refreshAllUsersOnce();
-  const user = findUserByMemberInput(input.trim());
+  const user = findUserByMemberInput(input);
   if (!user || user.id === currentUser.uid || user.id === currentChat?.otherUserId) {
     showToast('User not found or already in the call', 'error');
     return;
@@ -6259,6 +6282,165 @@ function getMessageReceiptHtml(msg, isMyMessage) {
     return '<span class="message-status failed" title="Message failed to send">⚠ Failed</span>';
   }
   if (msg.pending || msg.status === 'sending' || msg.status === 'pending' || !msg.timestamp) {
+
+if (isChatDebugEnabled()) {
+  window.chatDebug = chatDebug;
+}
+
+// ========================================
+// REAL-TIME MESSAGES SUBSCRIBERS LISTENER
+// ========================================
+
+
+function getCurrentChatFailedKey() {
+  if (!currentUser || !currentChat || !currentChatType) return '';
+  return `teamChatFailedMessages:${currentUser.uid}:${currentChatType}:${currentChat.id}`;
+}
+
+function getLocalFailedMessages() {
+  const key = getCurrentChatFailedKey();
+  if (!key) return [];
+  try {
+    const items = JSON.parse(localStorage.getItem(key) || '[]');
+    return Array.isArray(items) ? items : [];
+  } catch (error) {
+    return [];
+  }
+}
+
+function saveLocalFailedMessages(items = []) {
+  const key = getCurrentChatFailedKey();
+  if (!key) return;
+  localStorage.setItem(key, JSON.stringify(items.slice(-40)));
+}
+
+function addLocalFailedMessage(text = '', attachment = null, extra = {}) {
+  const failed = {
+    localId: `failed_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+    text: text || '',
+    attachment: attachment || null,
+    createdAt: new Date().toISOString(),
+    ...extra
+  };
+  const items = getLocalFailedMessages();
+  items.push(failed);
+  saveLocalFailedMessages(items);
+  return failed;
+}
+
+function removeLocalFailedMessage(localId) {
+  if (!localId) return;
+  const items = getLocalFailedMessages().filter(item => item.localId !== localId);
+  saveLocalFailedMessages(items);
+}
+
+function getReceiptTargetIds(msg = {}) {
+  if (!currentUser) return [];
+
+  const ids = new Set();
+  const addId = (uid) => {
+    if (uid && typeof uid === 'string' && uid !== currentUser.uid) ids.add(uid);
+  };
+  const addIdsFromDirectId = (directId = '') => {
+    String(directId || '')
+      .split('_')
+      .filter(Boolean)
+      .forEach(addId);
+  };
+
+  if (Array.isArray(msg.participants)) msg.participants.forEach(addId);
+  if (msg.receiverId) addId(msg.receiverId);
+  if (msg.toUserId) addId(msg.toUserId);
+
+  if (currentChatType === 'direct') {
+    addId(currentChat?.otherUserId);
+    addIdsFromDirectId(currentChat?.id);
+    (currentChat?.aliasDirectIds || []).forEach(addIdsFromDirectId);
+    addIdsFromDirectId(msg.directId);
+    return [...ids];
+  }
+
+  if (Array.isArray(currentGroupMembers) && currentGroupMembers.length) {
+    currentGroupMembers.forEach(member => addId(member.id));
+  }
+
+  return [...ids];
+}
+
+function receiptMapHasTarget(map = {}, targetIds = []) {
+  if (!map || typeof map !== 'object') return false;
+  if (targetIds.length) return targetIds.some(uid => Boolean(map?.[uid]));
+  return hasReceiptFromOtherUser(map);
+}
+
+async function markMessagesAsDelivered(markAsRead = false) {
+  if (!currentChat || !currentUser) return;
+
+  const deliveredFieldKey = `deliveredTo.${currentUser.uid}`;
+  const readFieldKey = `readBy.${currentUser.uid}`;
+  const directIds = getDirectChatIdsForCurrentChat();
+
+  let query;
+  if (currentChatType === 'direct' && directIds.length > 1) {
+    query = db.collection('messages').where('directId', 'in', directIds);
+  } else {
+    query = db.collection('messages').where(currentChatType === 'direct' ? 'directId' : 'groupId', '==', currentChat.id);
+  }
+
+  try {
+    const snapshot = await query.get();
+    const batch = db.batch();
+    let updatesMade = false;
+
+    snapshot.docs.forEach(doc => {
+      const data = doc.data() || {};
+      if (!data.senderId || data.senderId === currentUser.uid) return;
+      if (data.deletedFor?.[currentUser.uid]) return;
+      if (data.deletedForEveryone) return;
+
+      const updates = {};
+      if (!data.deliveredTo?.[currentUser.uid]) {
+        updates[deliveredFieldKey] = firebase.firestore.FieldValue.serverTimestamp();
+      }
+
+      if (markAsRead && !privacySettings.hideReadReceipts && !data.readBy?.[currentUser.uid]) {
+        updates[readFieldKey] = firebase.firestore.FieldValue.serverTimestamp();
+      }
+
+      if (markAsRead && !privacySettings.hideReadReceipts) {
+        updates.read = true;
+        updates.status = 'read';
+      } else if (!data.status || data.status === 'sent') {
+        updates.status = 'delivered';
+      }
+
+      if (Object.keys(updates).length) {
+        batch.update(doc.ref, updates);
+        updatesMade = true;
+      }
+    });
+
+    if (updatesMade) await batch.commit();
+  } catch (error) {
+    console.warn('Could not update message receipt state:', error);
+  }
+}
+
+async function markMessagesAsRead() {
+  return markMessagesAsDelivered(true);
+}
+
+function hasReceiptFromOtherUser(map = {}) {
+  if (!currentUser || !map || typeof map !== 'object') return false;
+  return Object.keys(map).some(uid => uid && uid !== currentUser.uid);
+}
+
+function getMessageReceiptHtml(msg, isMyMessage) {
+  if (!isMyMessage || currentChat?.isSaved) return '';
+  if (msg.failed || msg.status === 'failed') {
+    return '<span class="message-status failed" title="Message failed to send">⚠ Failed</span>';
+  }
+  if (msg.pending || msg.status === 'sending' || msg.status === 'pending' || !msg.timestamp) {
     return '<span class="message-status pending" title="Sending">◷</span>';
   }
 
@@ -6267,12 +6449,12 @@ function getMessageReceiptHtml(msg, isMyMessage) {
   const deliveredToTarget = receiptMapHasTarget(msg.deliveredTo, targets);
 
   if (readByTarget || (!privacySettings.hideReadReceipts && msg.status === 'read' && (targets.length === 0 || msg.read))) {
-    return '<span class="read-receipt read" title="Read">✓✓</span>';
+    return '<span class="read-receipt read" title="Read"><svg viewBox="0 0 16 15" width="16" height="15"><path fill="currentColor" d="M15.01 3.316l-.478-.372a.365.365 0 0 0-.51.063L8.666 9.88a.32.32 0 0 1-.484.032l-.358-.325a.32.32 0 0 0-.484.032l-.378.48a.418.418 0 0 0 .036.54l1.32 1.267a.32.32 0 0 0 .484-.034l6.272-8.048a.366.366 0 0 0-.064-.512zm-4.1 0l-.478-.372a.365.365 0 0 0-.51.063L4.566 9.88a.32.32 0 0 1-.484.032L1.892 7.72a.366.366 0 0 0-.516.005l-.423.433a.364.364 0 0 0 .006.514l3.255 3.185a.32.32 0 0 0 .484-.033l6.272-8.048a.365.365 0 0 0-.063-.51z"/></svg></span>';
   }
   if (deliveredToTarget || msg.status === 'delivered') {
-    return '<span class="read-receipt delivered" title="Delivered">✓✓</span>';
+    return '<span class="read-receipt delivered" title="Delivered"><svg viewBox="0 0 16 15" width="16" height="15"><path fill="currentColor" d="M15.01 3.316l-.478-.372a.365.365 0 0 0-.51.063L8.666 9.88a.32.32 0 0 1-.484.032l-.358-.325a.32.32 0 0 0-.484.032l-.378.48a.418.418 0 0 0 .036.54l1.32 1.267a.32.32 0 0 0 .484-.034l6.272-8.048a.366.366 0 0 0-.064-.512zm-4.1 0l-.478-.372a.365.365 0 0 0-.51.063L4.566 9.88a.32.32 0 0 1-.484.032L1.892 7.72a.366.366 0 0 0-.516.005l-.423.433a.364.364 0 0 0 .006.514l3.255 3.185a.32.32 0 0 0 .484-.033l6.272-8.048a.365.365 0 0 0-.063-.51z"/></svg></span>';
   }
-  return '<span class="read-receipt sent" title="Sent">✓</span>';
+  return '<span class="read-receipt sent" title="Sent"><svg viewBox="0 0 11 9" width="11" height="9"><path fill="currentColor" d="M3.714 8.786l-3.5-3.5a.428.428 0 0 1 0-.6l.7-.7a.428.428 0 0 1 .6 0l2.5 2.5 5.5-5.5a.428.428 0 0 1 .6 0l.7.7a.428.428 0 0 1 0 .6l-6.5 6.5a.428.428 0 0 1-.6 0z"/></svg></span>';
 }
 
 function renderFailedLocalMessage(item = {}) {
@@ -7484,10 +7666,8 @@ async function requestAppPermission(kind) {
 }
 
 function showPermissionRevokeGuide() {
-  const appSettingsHint = isAndroidNativeApp
-    ? 'Android app: long-press the app icon, open App info, then Permissions. You can allow or deny Camera, Microphone, Notifications, Photos and Contacts there.'
-    : 'Browser: open the lock/site settings icon near the address bar, then change Camera, Microphone, Notifications, and File access permissions.';
-  alert(`${appSettingsHint}\n\nFor security, Android and browsers do not let this app silently revoke OS permissions. After changing settings, reopen the app and check this screen again.`);
+  const modal = document.getElementById('revokePermissionsGuideModal');
+  if (modal) modal.style.display = 'flex';
 }
 
 async function showPermissionsModal() {
@@ -8176,6 +8356,11 @@ async function init() {
     btn.addEventListener('click', () => requestAppPermission(btn.dataset.requestPermission));
   });
   document.getElementById('revokePermissionsBtn')?.addEventListener('click', showPermissionRevokeGuide);
+  document.querySelectorAll('.closeRevokePermissionsModal').forEach(btn => btn.addEventListener('click', () => document.getElementById('revokePermissionsGuideModal').style.display = 'none'));
+  
+  document.getElementById('confirmAddParticipantBtn')?.addEventListener('click', () => processAddParticipantToCall().catch(e => console.error(e)));
+  document.querySelectorAll('.closeAddParticipantModal').forEach(btn => btn.addEventListener('click', () => document.getElementById('addCallParticipantModal').style.display = 'none'));
+
   document.getElementById('appLockSettingsBtn')?.addEventListener('click', showAppLockModal);
   document.getElementById('saveAppLockPinBtn')?.addEventListener('click', saveAppLockPin);
   document.getElementById('disableAppLockBtn')?.addEventListener('click', disableAppLock);

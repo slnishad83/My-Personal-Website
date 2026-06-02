@@ -76,10 +76,13 @@ button {
 .chat-header {
   min-height: 64px;
   padding: 10px 16px;
-  background: var(--panel-soft);
+  background: rgba(240, 242, 245, 0.85); /* Glassmorphism background */
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--border);
   display: flex;
   align-items: center;
+  z-index: 100; /* Ensure header stays above messages */
 }
 
 .sidebar-header {
@@ -1419,10 +1422,16 @@ button {
   background-size: 118px 118px;
 }
 
+@keyframes slideUpFadeIn {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
 .message {
   display: flex;
   align-self: flex-start;
   max-width: min(72%, 680px);
+  animation: slideUpFadeIn 0.25s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
 }
 
 .message.my-message {
@@ -2925,6 +2934,11 @@ body.dark .read-receipt {
   .mobile-menu-btn {
     display: inline-flex !important;
     flex: 0 0 auto;
+  }
+
+  .sidebar-header,
+  .chat-header {
+    background: rgba(32, 44, 51, 0.85);
   }
 
   .chat-header {

@@ -1127,6 +1127,63 @@
       </div>
     </div>
 
+    <!-- Add Call Participant Modal -->
+    <div id="addCallParticipantModal" class="modal" style="display: none">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>Add to Call</h3>
+          <span class="close-modal closeAddParticipantModal">&times;</span>
+        </div>
+        <div class="modal-body">
+          <input
+            type="text"
+            id="addCallParticipantInput"
+            list="addCallParticipantSuggestions"
+            placeholder="Name, email, or phone"
+            style="
+              width: 100%;
+              padding: 12px;
+              border: 1px solid #e2e8f0;
+              border-radius: 12px;
+              margin-bottom: 16px;
+            "
+          />
+          <datalist id="addCallParticipantSuggestions"></datalist>
+          <div style="display:flex; justify-content:flex-end; gap:8px;">
+            <button class="btn btn-outline closeAddParticipantModal">Cancel</button>
+            <button id="confirmAddParticipantBtn" class="btn btn-primary">Add Person</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Revoke Permissions Guide Modal -->
+    <div id="revokePermissionsGuideModal" class="modal" style="display: none">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>How to Revoke Permissions</h3>
+          <span class="close-modal closeRevokePermissionsModal">&times;</span>
+        </div>
+        <div class="modal-body">
+          <p style="margin-bottom: 12px; font-size: 14px; color: #475569;">
+            For your security, web browsers and operating systems do not allow apps to secretly revoke permissions once granted. You must do it manually in your settings:
+          </p>
+          <div style="background: #f1f5f9; padding: 12px; border-radius: 8px; margin-bottom: 12px; font-size: 13px;">
+            <strong>Android:</strong> Long-press the app icon > App info > Permissions. You can allow or deny Camera, Microphone, and Notifications there.
+          </div>
+          <div style="background: #f1f5f9; padding: 12px; border-radius: 8px; font-size: 13px; margin-bottom: 16px;">
+            <strong>Browser (Desktop):</strong> Click the lock/tune icon near the address bar. Change Camera, Microphone, and Notification permissions to Block.
+          </div>
+          <p style="font-size: 13px; font-weight: 600; color: #334155;">
+            After changing settings, reopen the app and check your permissions again.
+          </p>
+          <div style="display:flex; justify-content:flex-end; margin-top: 16px;">
+            <button class="btn btn-primary closeRevokePermissionsModal">Got it</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <div
       id="toast"
       class="toast"
