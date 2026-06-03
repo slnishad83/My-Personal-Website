@@ -351,6 +351,7 @@ function getAttachmentLabel(attachment = {}) {
 
 function renderAttachment(attachment = {}) {
   if (!attachment.url) return '';
+  if (!/^https?:\/\//i.test(attachment.url)) return '';
   const url = escapeHtml(attachment.url);
   const filename = escapeHtml(attachment.filename || getFileNameFromUrl(attachment.url) || 'Attachment');
   const viewOnceHtml = attachment.viewOnce ? '<span class="view-once-badge">View Once</span>' : '';
@@ -721,10 +722,25 @@ function renderChatListItems(items, container) {
       try {
         if (item.type === 'user') { await handleUserSelection(item.user || item.rawUser || item); return; }
         if (item.type === 'saved') { startSavedMessages(); return; }
-        if (item.type === 'group') { await loadGroupChat(item.id, item.name); return; }
-        if (item.user) { await startDirectChat({ ...item.user, aliasDirectIds: item.aliasDirectIds }); return; }
-        const doc = await db.collection('users').doc(item.otherUserId).get();
-        await startDirectChat(doc.exists ? { id: item.otherUserId, ...doc.data(), aliasDirectIds: item.aliasDirectIds } : { id: item.otherUserId, displayName: item.name, aliasDirectIds: item.aliasDirectIds });
+        if (item.type === 'group') { await loadGroupChat(item.id, item.name, item); return; }
+        if (item.user) {
+          await startDirectChat({
+            ...item.user,
+            directChatId: item.id,
+            aliasDirectIds: item.aliasDirectIds,
+            chatData: item.chatData || {},
+            disappearAfterSecs: item.disappearAfterSecs || 0
+          });
+          return;
+        }
+        let userData = { id: item.otherUserId, displayName: item.name, aliasDirectIds: item.aliasDirectIds, directChatId: item.id };
+        try {
+          const doc = await db.collection('users').doc(item.otherUserId).get();
+          if (doc.exists) userData = { id: item.otherUserId, ...doc.data(), aliasDirectIds: item.aliasDirectIds, directChatId: item.id };
+        } catch (error) {
+          console.warn('Opening chat with list fallback profile:', error);
+        }
+        await startDirectChat(userData);
       } catch (err) {
         console.error('Chat click error:', err);
         showToast('Could not open chat: ' + (err.message || 'unknown error'), 'error');
@@ -5929,6 +5945,9 @@ async function buildDirectChatItems() {
         phone: userData.phone || userData.phoneNumber || '',
         hasUserProfile: userDoc.exists || !!profileMatch,
         aliasDirectIds: [...new Set([chat.id, ...(chatData.aliasDirectIds || [])])],
+        directChatId: chat.id,
+        chatData,
+        disappearAfterSecs: chatData.disappearAfterSecs || 0,
         onlineStatus,
         presenceText,
         lastMessageTime: chatData.lastMessageTime?.toDate?.() || new Date(0)
@@ -6517,28 +6536,50 @@ async function startSavedMessages() {
 
 async function startDirectChat(user) {
   saveCurrentDraft();
-  if (isBlocked(user.id)) { showToast('You have blocked this user.', 'error'); return; }
-  const chatId = getDirectChatId(currentUser.uid, user.id);
+  const otherUserId = user.id || user.otherUserId;
+  if (!otherUserId) {
+    showToast('Could not open chat: missing user', 'error');
+    return;
+  }
+  if (isBlocked(otherUserId)) { showToast('You have blocked this user.', 'error'); return; }
+  const chatId = user.directChatId || user.chatId || getDirectChatId(currentUser.uid, otherUserId);
   const chatRef = db.collection('directChats').doc(chatId);
-  const chatDoc = await chatRef.get().catch(() => null);
-  currentChat = { id: chatId, otherUserId: user.id, otherUserName: user.displayName || user.email, type: 'direct', aliasDirectIds: [...new Set([chatId, ...(user.aliasDirectIds || [])])], disappearAfterSecs: chatDoc?.data()?.disappearAfterSecs || 0 };
-  await chatRef.set({
-    participants: [currentUser.uid, user.id],
+  let chatData = user.chatData || {};
+  if (!Object.keys(chatData).length) {
+    const chatDoc = await chatRef.get().catch((error) => {
+      console.warn('Direct chat metadata read skipped:', error);
+      return null;
+    });
+    chatData = chatDoc?.data?.() || {};
+  }
+  const aliasDirectIds = [...new Set([chatId, ...(user.aliasDirectIds || []), ...(chatData.aliasDirectIds || [])].filter(Boolean))];
+  currentChat = {
+    id: chatId,
+    otherUserId,
+    otherUserName: user.displayName || user.email || user.name || 'User',
+    type: 'direct',
+    aliasDirectIds,
+    disappearAfterSecs: user.disappearAfterSecs || chatData.disappearAfterSecs || 0
+  };
+  chatRef.set({
+    participants: [currentUser.uid, otherUserId],
     participantEmails: {
       [currentUser.uid]: normalizeEmail(currentUser.email),
-      [user.id]: normalizeEmail(user.email)
+      [otherUserId]: normalizeEmail(user.email)
     },
     participantNames: {
       [currentUser.uid]: currentUser.displayName || currentUser.email,
-      [user.id]: user.displayName || user.email || 'User'
+      [otherUserId]: user.displayName || user.email || user.name || 'User'
     },
     status: 'active'
-  }, { merge: true });
+  }, { merge: true }).catch((error) => {
+    console.warn('Direct chat metadata merge skipped:', error);
+  });
   currentChatType = 'direct';
   setActiveDraftKey();
-  document.getElementById('currentChatName').textContent = user.displayName || user.email;
+  document.getElementById('currentChatName').textContent = currentChat.otherUserName;
   document.getElementById('chatStatus').textContent = getPresenceText(user);
-  setChatHeaderAvatar(user.avatar ? `<img src="${user.avatar}">` : escapeHtml((user.displayName || user.email || '?')[0].toUpperCase()));
+  setChatHeaderAvatar(user.avatar ? `<img src="${user.avatar}">` : escapeHtml(getInitials(currentChat.otherUserName, user.email || '')));
   document.getElementById('inputArea').style.display = 'flex';
   document.getElementById('groupInfoBtn').style.display = 'none';
   updateEncryptionBadge(chatId, 'direct');
@@ -6609,18 +6650,25 @@ async function sendGroupInvite(groupId, groupName, user) {
   });
 }
 
-async function loadGroupChat(groupId, groupName) {
+async function loadGroupChat(groupId, groupName, listItem = {}) {
   saveCurrentDraft();
-  const groupDoc = await db.collection('groups').doc(groupId).get();
+  const groupDoc = await db.collection('groups').doc(groupId).get().catch((error) => {
+    console.warn('Group metadata read skipped:', error);
+    return null;
+  });
   currentChat = { id: groupId, name: groupName, type: 'group' };
   currentChatType = 'group';
   setActiveDraftKey();
-  const groupData = groupDoc.data() || {};
-  currentGroup = { id: groupId, name: groupName, icon: groupData.icon, ...groupData };
-  document.getElementById('currentChatName').textContent = groupName;
+  const groupData = groupDoc?.data?.() || listItem || {};
+  const resolvedGroupName = groupData.name || groupName || 'Group';
+  currentGroup = { id: groupId, name: resolvedGroupName, icon: groupData.icon, ...groupData };
+  document.getElementById('currentChatName').textContent = resolvedGroupName;
   document.getElementById('chatStatus').textContent = 'Group Chat';
   setChatHeaderAvatar(groupData.icon ? `<img src="${groupData.icon}">` : 'G');
-  await loadGroupMembers(groupId);
+  await loadGroupMembers(groupId).catch((error) => {
+    console.warn('Group members load skipped:', error);
+    currentGroupMembers = [{ id: currentUser.uid, name: currentUser.displayName || currentUser.email, role: listItem.role || 'member' }];
+  });
   const inputArea = document.getElementById('inputArea');
   const canSend = !currentGroup.onlyAdminsCanSend || isCurrentUserGroupAdmin();
   if (inputArea) inputArea.style.display = canSend ? 'flex' : 'none';
@@ -7607,7 +7655,11 @@ function loadMessages() {
     checkAndShowJumpToUnread();
   }, err => {
     console.error('Messages onSnapshot error:', err);
-    showToast('Error loading messages: ' + (err.message || 'unknown error'), 'error');
+    const message = err?.code === 'permission-denied'
+      ? 'You do not have permission to read messages in this chat.'
+      : 'Could not load messages for this chat.';
+    if (messagesArea) messagesArea.innerHTML = `<div class="empty-state">${escapeHtml(message)}</div>`;
+    showToast(message, 'error');
   });
 }
 
