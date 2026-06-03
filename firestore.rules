@@ -22,6 +22,16 @@ service cloud.firestore {
         && request.auth.uid in data.participants;
     }
 
+    function isDirectMessageParticipant(data) {
+      return signedIn() && (
+        (data.directId is string && isExistingDirectParticipant(data.directId))
+        || (data.participants is list && request.auth.uid in data.participants)
+        || data.senderId == request.auth.uid
+        || data.receiverId == request.auth.uid
+        || data.toUserId == request.auth.uid
+      );
+    }
+
     function isRequestParticipant(data) {
       return signedIn()
         && (data.fromUserId == request.auth.uid || data.toUserId == request.auth.uid);
@@ -54,18 +64,15 @@ service cloud.firestore {
 
     match /messages/{messageId} {
       allow read: if signedIn() && (
-        (resource.data.directId is string && resource.data.participants is list && request.auth.uid in resource.data.participants)
+        isDirectMessageParticipant(resource.data)
         || (resource.data.groupId is string)
-        || (resource.data.senderId == request.auth.uid)
-        || (resource.data.participants is list && request.auth.uid in resource.data.participants)
       );
       allow create: if signedIn() && request.resource.data.senderId == request.auth.uid && (
         (request.resource.data.directId is string && isExistingDirectParticipant(request.resource.data.directId))
         || (request.resource.data.groupId is string)
       );
       allow update, delete: if signedIn() && (
-        resource.data.senderId == request.auth.uid
-        || (resource.data.directId is string && resource.data.participants is list && request.auth.uid in resource.data.participants)
+        isDirectMessageParticipant(resource.data)
         || (resource.data.groupId is string)
       );
     }
