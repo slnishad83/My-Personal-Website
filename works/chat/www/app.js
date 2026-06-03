@@ -620,7 +620,7 @@ function renderChatListItems(items, container) {
     const draftPreview = getDraftPreviewForItem(item);
     const normalPreview = item.searchResultType === 'message'
       ? (item.preview || '')
-      : getChatListPreviewText(item.preview);
+      : getChatListPreviewText(item.preview, item.type);
     const activeIds = [
       currentChat?.id,
       currentChat?.otherUserId,
@@ -3568,13 +3568,14 @@ function decorateSearchItems(items = [], section = '', searchResultType = '') {
   return items.map(item => ({ ...item, section, searchResultType: searchResultType || item.searchResultType || '' }));
 }
 
-function getChatListPreviewText(preview = '') {
+function getChatListPreviewText(preview = '', chatType = '') {
   const text = String(preview || '').trim();
   if (!text) return '';
 
   if (/^missed\s+(voice|video)\s+call/i.test(text)) return text;
   if (/^(voice|video)\s+call\s+(ended|cancelled|declined)/i.test(text)) return '';
 
+  if (chatType === 'direct') return '';
   return text;
 }
 
@@ -5179,6 +5180,8 @@ function listenForTypingIndicator() {
       } else {
         chatStatus.textContent = 'typing...';
       }
+    }, err => {
+      console.error('Typing indicator onSnapshot error:', err);
     });
 }
 
@@ -5908,7 +5911,7 @@ async function buildDirectChatItems() {
       if (archivedDirectNames.has(String(displayName || '').trim().toLowerCase())) continue;
       const onlineStatus = userData.onlineStatus || 'offline';
       const presenceText = getPresenceText(userData);
-      const preview = getChatListPreviewText(chatData.lastMessage);
+      const preview = getChatListPreviewText(chatData.lastMessage, 'direct');
 
       items.push({
         id: chat.id,
@@ -7602,6 +7605,9 @@ function loadMessages() {
     });
     markMessagesAsRead();
     checkAndShowJumpToUnread();
+  }, err => {
+    console.error('Messages onSnapshot error:', err);
+    showToast('Error loading messages: ' + (err.message || 'unknown error'), 'error');
   });
 }
 
