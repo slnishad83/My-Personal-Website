@@ -16,6 +16,7 @@
     "@capacitor/app": "^8.1.0",
     "@capacitor/cli": "^8.3.4",
     "@capacitor/core": "^8.3.4",
-    "@capacitor/push-notifications": "^8.1.1"
+    "@capacitor/push-notifications": "^8.1.1",
+    "acorn": "^8.16.0"
   }
 }

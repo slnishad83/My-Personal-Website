@@ -475,7 +475,7 @@
       }
 
       async function sendVerificationEmail(user) {
-        await user.sendEmailVerification();
+        await user.sendEmailVerification(getEmailVerificationSettings());
       }
 
       function getFriendlyAuthError(error, fallback) {

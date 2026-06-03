@@ -71,7 +71,10 @@
             <div class="user-avatar" id="userAvatar">U</div>
             <div>
               <div class="user-name" id="userName">Loading...</div>
-              <div class="user-status-text" id="userStatusText">Online</div>
+              <div class="user-status-row">
+                <span class="status-dot" id="userStatusDot"></span>
+                <span class="user-status-text" id="userStatusText">Online</span>
+              </div>
             </div>
           </div>
           <div class="sidebar-actions">
@@ -96,6 +99,7 @@
               </span>
               <span class="install-app-label">Install App</span>
             </button>
+            <button class="icon-btn" id="globalSearchBtn" title="Global Search"></button>
             <button class="icon-btn" id="darkModeBtn" title="Dark Mode"></button>
             <button class="logout-btn" id="logoutBtn" title="Logout"></button>
           </div>
@@ -166,8 +170,12 @@
           <button class="tab" data-tab="muted">Muted</button>
           <button class="tab" data-tab="favorites">Favorites</button>
           <button class="tab" data-tab="groups">Groups</button>
+          <button class="tab" data-tab="broadcasts">Broadcasts</button>
           <button class="tab" data-tab="status">Status</button>
+          <button class="tab" data-tab="communities">Communities</button>
         </div>
+
+        <div class="folder-tabs" id="folderTabs"></div>
 
         <div id="chatsList" class="list">
           <div class="empty-state">No chats yet</div>
@@ -175,8 +183,14 @@
         <div id="groupsList" class="list" style="display: none">
           <div class="empty-state">No groups yet</div>
         </div>
+        <div id="broadcastsList" class="list" style="display: none">
+          <div class="empty-state">No broadcasts yet</div>
+        </div>
         <div id="statusList" class="list status-list" style="display: none">
           <div class="empty-state">No status updates</div>
+        </div>
+        <div id="communitiesList" class="list" style="display: none">
+          <div class="empty-state">No communities yet</div>
         </div>
 
         <div class="group-actions" id="groupActions" style="display: none">
@@ -190,10 +204,23 @@
           <button id="showJoinGroupBtn" class="join-btn" style="flex: 1">
             Join Group
           </button>
+          <button id="showJoinByLinkBtn" class="join-btn" style="flex: 1">
+            Join by Link
+          </button>
+        </div>
+        <div class="group-actions" id="broadcastActions" style="display: none">
+          <button id="createBroadcastBtn" class="join-btn" style="flex: 1; background: #8b5cf6">
+            + New Broadcast
+          </button>
         </div>
         <div class="group-actions" id="statusActions" style="display: none">
           <button id="createStatusBtn" class="join-btn" style="flex: 1">
             Add Status
+          </button>
+        </div>
+        <div class="group-actions" id="communityActions" style="display: none">
+          <button id="createCommunityBtn" class="join-btn" style="flex: 1; background: #e67e22">
+            + New Community
           </button>
         </div>
       </div>
@@ -214,6 +241,7 @@
             </div>
             <h2 id="currentChatName">Select a chat</h2>
             <div class="chat-status" id="chatStatus"></div>
+            <span id="encryptionBadge" class="encryption-badge" title="Encryption status"></span>
           </div>
           <div class="chat-actions">
             <button
@@ -296,6 +324,17 @@
               →
             </button>
             <span id="searchResultCount" style="font-size: 12px"></span>
+            <input
+              type="date"
+              id="dateSearchInput"
+              style="padding:6px 8px;border:1px solid #e2e8f0;border-radius:12px;font-size:12px;outline:none;max-width:140px;"
+              title="Search by date"
+            />
+            <button
+              id="clearDateSearch"
+              style="background:none;border:none;font-size:14px;cursor:pointer;padding:4px;"
+              title="Clear date filter"
+            >✕</button>
             <button
               id="closeSearchBtn"
               style="
@@ -311,6 +350,7 @@
         </div>
 
         <div class="messages-area" id="messagesArea">
+          <button id="jumpToUnreadBtn" class="jump-to-unread-btn" style="display:none" title="Jump to first unread">⬇ First unread</button>
           <div class="home-panel">
             <div class="home-panel-icon">💬</div>
             <h3 class="home-panel-title">Team Chat for Web</h3>
@@ -377,6 +417,13 @@
             class="attachment-preview"
             style="display: none"
           ></div>
+          <div id="viewOnceRow" class="view-once-row" style="display:flex;align-items:center;gap:8px;padding:4px 20px;font-size:12px;color:var(--muted-strong);">
+            <label class="switch" style="margin:0;">
+              <input type="checkbox" id="viewOnceToggle" />
+              <span class="slider" style="width:28px;height:16px;"></span>
+            </label>
+            <span id="viewOnceLabel">View Once: OFF</span>
+          </div>
           <div style="position: relative">
             <button class="emoji-btn" id="emojiBtn" title="Emoji">☺</button>
             <div id="emojiPicker" class="emoji-picker"></div>
@@ -385,35 +432,59 @@
             class="voice-msg-btn"
             id="voiceMsgBtn"
             title="Hold to record voice"
-          >
-            Mic
-          </button>
-          <button class="attach-btn" id="attachBtn" title="Attach file">
-            +
-          </button>
+            aria-label="Hold to record voice"
+          ></button>
+          <button class="attach-btn" id="attachBtn" title="Attach file" aria-label="Attach file"></button>
+          <button
+            class="attach-btn"
+            id="locationBtn"
+            title="Share location"
+            aria-label="Share location"
+          ></button>
           <button
             class="attach-btn"
             id="pollBtn"
             title="Create poll"
             aria-label="Create poll"
-          >
-            Poll
-          </button>
-          <button
-            class="attach-btn"
-            id="scheduleMsgBtn"
-            title="Schedule message"
-            aria-label="Schedule message"
-          >
-            T
-          </button>
-          <input
-            type="text"
+          ></button>
+           <button
+             class="attach-btn"
+             id="scheduleMsgBtn"
+             title="Schedule message"
+             aria-label="Schedule message"
+           ></button>
+           <button
+             class="attach-btn"
+             id="videoMsgBtn"
+             title="Record video message"
+             aria-label="Record video message"
+           ></button>
+           <button
+             class="attach-btn"
+             id="contactCardBtn"
+             title="Share contact"
+             aria-label="Share contact"
+           ></button>
+           <button
+             class="attach-btn"
+             id="eventBtn"
+             title="Schedule event"
+             aria-label="Schedule event"
+           ></button>
+           <button
+             class="attach-btn"
+             id="listBtn"
+             title="Create list"
+             aria-label="Create list"
+           ></button>
+          <div id="emojiPredictionBar" class="emoji-prediction-bar" style="display:none"></div>
+          <textarea
             id="messageInput"
             placeholder="Type a message..."
-          />
+            rows="1"
+          ></textarea>
           <div id="mentionSuggestions" class="mention-suggestions"></div>
-          <button class="send-btn" id="sendBtn">Send</button>
+          <button class="send-btn" id="sendBtn" title="Send message" aria-label="Send message"></button>
         </div>
       </div>
     </div>
@@ -500,6 +571,33 @@
       </div>
     </div>
 
+    <!-- Global Message Search Modal -->
+    <div id="globalSearchModal" class="modal" style="display: none">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>Search Messages Globally</h3>
+          <span class="close-modal closeGlobalSearchModal">&times;</span>
+        </div>
+        <div class="modal-body" style="padding-top: 10px;">
+          <input
+            type="text"
+            id="globalSearchInput"
+            placeholder="Type search keyword..."
+            style="
+              width: 100%;
+              padding: 12px;
+              border: 1px solid #e2e8f0;
+              border-radius: 12px;
+              margin-bottom: 16px;
+            "
+          />
+          <div id="globalSearchResults" style="max-height: 400px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px;">
+            <div class="empty-state">Enter a keyword to search across all chats</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Create Group Modal -->
     <div id="createGroupModal" class="modal" style="display: none">
       <div class="modal-content">
@@ -520,6 +618,20 @@
               border-radius: 12px;
             "
           />
+          <textarea
+            id="newGroupDescription"
+            placeholder="Group Description & Rules (Optional)"
+            style="
+              width: 100%;
+              padding: 12px;
+              margin-bottom: 16px;
+              border: 1px solid #e2e8f0;
+              border-radius: 12px;
+              resize: vertical;
+              min-height: 80px;
+              font-family: inherit;
+            "
+          ></textarea>
           <input
             type="text"
             id="newGroupMembers"
@@ -545,8 +657,30 @@
           </div>
         </div>
         <div class="modal-footer">
-          <button class="btn btn-outline cancelGroupBtn">Cancel</button
-          ><button class="btn btn-primary confirmGroupBtn">Create</button>
+          <button class="btn btn-outline cancelGroupBtn">Cancel</button>
+          <button class="btn btn-primary confirmGroupBtn">Create</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Create Broadcast Modal -->
+    <div id="createBroadcastModal" class="modal" style="display: none">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>New Broadcast</h3>
+          <span class="close-modal closeBroadcastModal">&times;</span>
+        </div>
+        <div class="modal-body">
+          <input type="text" id="newBroadcastName" placeholder="Broadcast name" style="width:100%;padding:12px;margin-bottom:12px;border:1px solid var(--border);border-radius:12px;background:var(--panel);color:var(--text)" />
+          <textarea id="newBroadcastDescription" placeholder="Description (optional)" style="width:100%;padding:12px;margin-bottom:12px;border:1px solid var(--border);border-radius:12px;background:var(--panel);color:var(--text);resize:vertical;min-height:60px;font-family:inherit"></textarea>
+          <label style="font-size:13px;font-weight:600;display:block;margin-bottom:6px">Select recipients:</label>
+          <input type="text" id="broadcastMemberSearch" placeholder="Search users..." style="width:100%;padding:10px;margin-bottom:8px;border:1px solid var(--border);border-radius:10px;background:var(--panel);color:var(--text)" />
+          <div id="broadcastMemberList" style="max-height:200px;overflow-y:auto;border:1px solid var(--border);border-radius:10px;padding:4px"></div>
+          <div id="broadcastSelectedMembers" style="display:flex;flex-wrap:wrap;gap:4px;margin-top:8px;min-height:28px"></div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-outline closeBroadcastModal">Cancel</button>
+          <button id="confirmBroadcastBtn" class="btn btn-primary">Create</button>
         </div>
       </div>
     </div>
@@ -591,6 +725,23 @@
             <input
               type="text"
               id="editGroupNameInput"
+            />
+            <textarea
+              id="editGroupDescriptionInput"
+              placeholder="Group description & rules..."
+              style="
+                width: 100%;
+                margin-bottom: 16px;
+                padding: 8px;
+                border: 1px solid #e2e8f0;
+                border-radius: 12px;
+                resize: vertical;
+                min-height: 60px;
+                font-family: inherit;
+                font-size: 13px;
+              "
+            ></textarea>
+            <input type="hidden" id="dummyInput"
               placeholder="Group name"
               style="
                 text-align: center;
@@ -610,6 +761,22 @@
                 Copy
               </button>
             </p>
+            <button id="shareInviteLinkBtn" class="btn btn-outline" style="margin-top:8px;width:100%">Share Invite Link</button>
+          </div>
+          <div class="privacy-row" id="groupDisappearingRow" style="display: flex; align-items: center; justify-content: space-between;">
+            <span>Disappearing Messages</span>
+            <select id="groupInfoDisappearingSelect" style="padding: 6px 12px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 13px; outline: none; background: white;">
+              <option value="0">Off</option>
+              <option value="86400">24 Hours</option>
+              <option value="604800">7 Days</option>
+            </select>
+          </div>
+          <div class="privacy-row" style="display:flex;align-items:center;justify-content:space-between;">
+            <span>End-to-End Encryption</span>
+            <label class="switch">
+              <input type="checkbox" id="groupEncryptionToggle" />
+              <span class="slider"></span>
+            </label>
           </div>
           <div class="privacy-row" id="groupSendPermissionRow">
             <span>Only admins can send messages</span>
@@ -626,6 +793,29 @@
                 class="slider"
               ></span
             ></label>
+          </div>
+          <div class="privacy-row" id="groupSlowModeRow" style="display:none">
+            <span>Slow Mode</span>
+            <select id="groupSlowModeSelect" style="padding:6px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;outline:none;background:white;">
+              <option value="0">Off</option>
+              <option value="5">5 seconds</option>
+              <option value="10">10 seconds</option>
+              <option value="30">30 seconds</option>
+              <option value="60">60 seconds</option>
+            </select>
+          </div>
+          <div class="privacy-row" id="groupWelcomeMessageRow" style="display:none;flex-direction:column;align-items:stretch;gap:8px;">
+            <span>Welcome Message</span>
+            <textarea id="welcomeMessageInput" rows="2" placeholder="Welcome message (use {user} for name)" style="width:100%;padding:8px;border:1px solid #e2e8f0;border-radius:8px;resize:vertical;font-family:inherit;font-size:13px;"></textarea>
+            <button id="saveWelcomeMessageBtn" class="btn btn-outline" style="align-self:flex-end;">Save</button>
+          </div>
+          <div class="privacy-row" id="groupJoinQuestionsRow" style="display:none">
+            <span>Join Questions</span>
+            <button id="manageJoinQuestionsBtn" class="btn btn-outline">Manage</button>
+          </div>
+          <div class="privacy-row" id="groupModerationRow" style="display:none">
+            <span>Moderation</span>
+            <button id="groupModerationBtn" class="btn btn-outline">Settings</button>
           </div>
           <div style="margin-top: 20px">
             <h4>Members</h4>
@@ -681,11 +871,29 @@
           </div>
           <div class="chat-info-details" id="chatInfoDetails"></div>
           <div class="chat-info-actions">
-            <button id="chatInfoMuteBtn" class="setting-item">
-              Mute notifications
+            <div class="setting-item" style="display: flex; align-items: center; justify-content: space-between; padding: 10px 16px;">
+              <span>Disappearing Messages</span>
+              <select id="chatInfoDisappearingSelect" style="padding: 6px 12px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 13px; outline: none; background: white;">
+                <option value="0">Off</option>
+                <option value="86400">24 Hours</option>
+                <option value="604800">7 Days</option>
+              </select>
+            </div>
+            <div class="setting-item" style="display:flex;align-items:center;justify-content:space-between;padding:10px 16px;">
+              <span>Screenshot Warning</span>
+              <label class="switch">
+                <input type="checkbox" id="screenshotWarningToggle" />
+                <span class="slider"></span>
+              </label>
+            </div>
+            <button id="chatInfoNotifBtn" class="setting-item">
+              Notification Settings
             </button>
             <button id="chatInfoWallpaperBtn" class="setting-item">
               Wallpaper
+            </button>
+            <button id="chatInfoTagBtn" class="setting-item">
+              Tag
             </button>
             <button id="chatInfoBlockBtn" class="setting-item danger">
               Block contact
@@ -710,6 +918,63 @@
       </div>
     </div>
 
+    <!-- Notification Settings Modal -->
+    <div id="notifSettingsModal" class="modal" style="display: none">
+      <div class="modal-content" style="max-width:400px">
+        <div class="modal-header">
+          <h3>Notification Settings</h3>
+          <span class="close-modal closeNotifSettingsModal">&times;</span>
+        </div>
+        <div class="modal-body">
+          <p id="notifSettingsChatName" style="font-weight:600;margin-bottom:12px"></p>
+
+          <div class="setting-item" style="display:flex;align-items:center;justify-content:space-between;padding:10px 0">
+            <span>Mute notifications</span>
+            <label class="switch">
+              <input type="checkbox" id="notifMuteToggle">
+              <span class="slider round"></span>
+            </label>
+          </div>
+          <div id="notifMuteDurationSection" style="display:none;padding:8px 0">
+            <label style="font-size:13px;color:var(--secondary-text)">Mute duration</label>
+            <select id="notifMuteDuration" style="width:100%;padding:8px;margin-top:4px;border:1px solid var(--border);border-radius:8px;font-size:13px;outline:none;background:var(--card-bg);color:var(--text)">
+              <option value="1h">1 hour</option>
+              <option value="8h" selected>8 hours</option>
+              <option value="24h">24 hours</option>
+              <option value="7d">7 days</option>
+              <option value="always">Always</option>
+            </select>
+          </div>
+
+          <hr style="border:none;border-top:1px solid var(--border);margin:12px 0">
+
+          <div class="setting-item" style="display:flex;align-items:center;justify-content:space-between;padding:10px 0">
+            <span>Custom notification sound</span>
+            <label class="switch">
+              <input type="checkbox" id="notifCustomSound" checked>
+              <span class="slider round"></span>
+            </label>
+          </div>
+          <div class="setting-item" style="display:flex;align-items:center;justify-content:space-between;padding:10px 0">
+            <span>Vibrate</span>
+            <label class="switch">
+              <input type="checkbox" id="notifVibrate" checked>
+              <span class="slider round"></span>
+            </label>
+          </div>
+          <div class="setting-item" style="display:flex;align-items:center;justify-content:space-between;padding:10px 0">
+            <span>Show message previews</span>
+            <label class="switch">
+              <input type="checkbox" id="notifShowPreview" checked>
+              <span class="slider round"></span>
+            </label>
+          </div>
+
+          <button id="notifSettingsSaveBtn" class="btn" style="width:100%;margin-top:16px">Save Settings</button>
+        </div>
+      </div>
+    </div>
+
     <!-- Profile Modal -->
     <div id="profileModal" class="modal" style="display: none">
       <div class="modal-content">
@@ -727,6 +992,11 @@
             >
               Change Avatar
             </button>
+            <input type="file" id="avatarUploadInput" accept="image/*" style="display:none">
+          </div>
+          <div style="margin:10px 0">
+            <strong>Username:</strong> <span id="profileUsername" style="color:var(--brand)">@not set</span>
+            <button id="setUsernameBtn" style="font-size:10px;background:none;border:1px solid var(--border);border-radius:20px;padding:2px 8px;color:var(--text)">Set</button>
           </div>
           <p>
             <strong>Name:</strong> <span id="profileName"></span>
@@ -774,19 +1044,28 @@
             </button>
           </p>
           <div style="margin: 16px 0">
-            <label><strong>About</strong></label
-            ><input
-              type="text"
-              id="profileStatusText"
-              placeholder="About"
-              style="
-                width: 100%;
-                margin-top: 5px;
-                padding: 10px;
-                border: 1px solid #e2e8f0;
-                border-radius: 12px;
-              "
-            />
+            <label><strong>Status</strong></label>
+            <div class="status-presets" id="statusPresets">
+              <button class="status-preset" data-preset="available" data-emoji="🟢">Available</button>
+              <button class="status-preset" data-preset="busy" data-emoji="🔴">Busy</button>
+              <button class="status-preset" data-preset="at-work" data-emoji="💼">At work</button>
+              <button class="status-preset" data-preset="in-meeting" data-emoji="📅">In meeting</button>
+              <button class="status-preset" data-preset="dnd" data-emoji="⛔">DND</button>
+              <button class="status-preset" data-preset="vacation" data-emoji="🌴">Vacation</button>
+              <button class="status-preset" data-preset="sleeping" data-emoji="😴">Sleeping</button>
+              <button class="status-preset" data-preset="custom" data-emoji="✏️">Custom</button>
+            </div>
+            <div class="status-custom-row">
+              <input type="text" id="profileStatusText" placeholder="Custom status text..." class="status-custom-input" />
+              <select id="statusTimer" class="status-timer-select">
+                <option value="">No timer</option>
+                <option value="3600000">1 hour</option>
+                <option value="7200000">2 hours</option>
+                <option value="14400000">4 hours</option>
+                <option value="86400000">Today</option>
+                <option value="604800000">This week</option>
+              </select>
+            </div>
           </div>
 
           <div
@@ -823,6 +1102,9 @@
             </div>
           </div>
 
+          <button id="manageFoldersBtn" class="setting-item">
+            Manage Chat Folders
+          </button>
           <button id="blockedUsersBtn" class="setting-item">
             Blocked Users
           </button>
@@ -843,6 +1125,12 @@
           </button>
           <button id="appLockSettingsBtn" class="setting-item">
             App Lock (PIN)
+          </button>
+          <button id="dataUsageBtn" class="setting-item">
+            Data Usage
+          </button>
+          <button id="storageManagerBtn" class="setting-item">
+            Storage Manager
           </button>
           <button id="wallpaperSettingsBtn" class="setting-item">
             Change Wallpaper (All Chats)
@@ -899,6 +1187,13 @@
               <span id="notificationsPermissionStatus">Checking...</span>
             </div>
             <button class="btn btn-outline" data-request-permission="notifications">Allow</button>
+          </div>
+          <div class="permission-card" data-permission="location">
+            <div>
+              <strong>Location</strong>
+              <span id="locationPermissionStatus">Asked when you share location</span>
+            </div>
+            <button class="btn btn-outline" data-request-permission="location">Allow</button>
           </div>
           <div class="permission-card" data-permission="media">
             <div>
@@ -1177,7 +1472,8 @@
           <p style="font-size: 13px; font-weight: 600; color: #334155;">
             After changing settings, reopen the app and check your permissions again.
           </p>
-          <div style="display:flex; justify-content:flex-end; margin-top: 16px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-top: 16px; gap: 8px;">
+            <button id="nativeSettingsBtn" class="btn btn-outline" style="display:none;">Open Settings</button>
             <button class="btn btn-primary closeRevokePermissionsModal">Got it</button>
           </div>
         </div>
@@ -1191,6 +1487,8 @@
       aria-live="polite"
       aria-atomic="true"
     ></div>
+
+    <div id="effectOverlay" style="position:fixed;inset:0;pointer-events:none;z-index:9999;overflow:hidden;"></div>
 
     <div id="callModal" class="modal call-modal" style="display: none">
       <div class="call-shell">
@@ -1253,6 +1551,24 @@
             style="display: none"
           >
             +
+          </button>
+          <button
+            id="screenShareBtn"
+            class="call-icon-btn"
+            title="Share screen"
+            aria-label="Share screen"
+            style="display: none"
+          >
+            Screen
+          </button>
+          <button
+            id="pipBtn"
+            class="call-icon-btn"
+            title="Picture-in-Picture"
+            aria-label="Picture-in-Picture"
+            style="display: none"
+          >
+            PiP
           </button>
           <button
             id="acceptCallBtn"
@@ -1344,6 +1660,34 @@
       style="display: none"
     />
 
+    <!-- Manage Folders Modal -->
+    <div id="manageFoldersModal" class="modal" style="display: none">
+      <div class="modal-content" style="width: min(460px, 96%)">
+        <div class="modal-header">
+          <h3>Chat Folders</h3>
+          <span class="close-modal closeManageFoldersModal">&times;</span>
+        </div>
+        <div class="modal-body">
+          <div id="foldersList"></div>
+          <button id="addFolderBtn" class="btn btn-outline" style="width:100%;margin-top:12px">+ New Folder</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Message Info Modal -->
+    <div id="messageInfoModal" class="modal" style="display: none">
+      <div class="modal-content" style="width: min(500px, 98%)">
+        <div class="modal-header">
+          <h3>Message Info</h3>
+          <span class="close-modal" id="closeMessageInfo">&times;</span>
+        </div>
+        <div class="modal-body">
+          <div class="message-info-preview" id="messageInfoPreview"></div>
+          <div id="messageInfoRecipients"></div>
+        </div>
+      </div>
+    </div>
+
     <div id="scheduleMessageModal" class="modal" style="display: none">
       <div class="modal-content schedule-modal-content">
         <div class="modal-header">
@@ -1382,13 +1726,260 @@
       <button type="button" class="context-menu-item danger" id="archivedDeleteMenuItem">Delete</button>
     </div>
 
+    <!-- Join Group By Link Modal -->
+    <div id="joinGroupByLinkModal" class="modal" style="display: none">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>Join Group by Invite Link</h3>
+          <span class="close-modal closeJoinByLinkModal">&times;</span>
+        </div>
+        <div class="modal-body">
+          <input type="text" id="joinByLinkInput" placeholder="Paste invite code" style="width:100%;padding:12px;border:1px solid #e2e8f0;border-radius:12px;">
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-outline closeJoinByLinkModal">Cancel</button>
+          <button id="confirmJoinByLinkBtn" class="btn btn-primary">Join</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Chat Tag Modal -->
+    <div id="chatTagModal" class="modal" style="display: none">
+      <div class="modal-content" style="width: min(380px, 96%)">
+        <div class="modal-header">
+          <h3>Chat Tag</h3>
+          <span class="close-modal closeChatTagModal">&times;</span>
+        </div>
+        <div class="modal-body">
+          <label class="form-label" for="chatTagLabel">Label</label>
+          <input type="text" id="chatTagLabel" placeholder="e.g. Work, Family" style="width:100%;padding:10px;border:1px solid #e2e8f0;border-radius:12px;margin-bottom:12px;">
+          <label class="form-label">Color</label>
+          <div id="chatTagColors" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">
+            <button class="tag-color-option" data-color="#ef4444" style="width:32px;height:32px;border-radius:50%;background:#ef4444;border:2px solid transparent;cursor:pointer;"></button>
+            <button class="tag-color-option" data-color="#f97316" style="width:32px;height:32px;border-radius:50%;background:#f97316;border:2px solid transparent;cursor:pointer;"></button>
+            <button class="tag-color-option" data-color="#eab308" style="width:32px;height:32px;border-radius:50%;background:#eab308;border:2px solid transparent;cursor:pointer;"></button>
+            <button class="tag-color-option" data-color="#22c55e" style="width:32px;height:32px;border-radius:50%;background:#22c55e;border:2px solid transparent;cursor:pointer;"></button>
+            <button class="tag-color-option" data-color="#3b82f6" style="width:32px;height:32px;border-radius:50%;background:#3b82f6;border:2px solid transparent;cursor:pointer;"></button>
+            <button class="tag-color-option" data-color="#8b5cf6" style="width:32px;height:32px;border-radius:50%;background:#8b5cf6;border:2px solid transparent;cursor:pointer;"></button>
+            <button class="tag-color-option" data-color="#ec4899" style="width:32px;height:32px;border-radius:50%;background:#ec4899;border:2px solid transparent;cursor:pointer;"></button>
+            <button class="tag-color-option" data-color="#64748b" style="width:32px;height:32px;border-radius:50%;background:#64748b;border:2px solid transparent;cursor:pointer;"></button>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button id="removeChatTagBtn" class="btn btn-outline" style="color:#ef4444;border-color:#ef4444;">Remove Tag</button>
+          <button id="saveChatTagBtn" class="btn btn-primary">Save</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Contact Picker Modal -->
+    <div id="contactPickerModal" class="modal" style="display: none">
+      <div class="modal-content" style="width: min(400px, 96%)">
+        <div class="modal-header">
+          <h3>Share Contact</h3>
+          <span class="close-modal closeContactPickerModal">&times;</span>
+        </div>
+        <div class="modal-body">
+          <input type="text" id="contactPickerSearch" placeholder="Search contacts..." style="width:100%;padding:10px;border:1px solid #e2e8f0;border-radius:12px;margin-bottom:12px;">
+          <div id="contactPickerList" style="max-height:300px;overflow-y:auto;"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Event Modal -->
+    <div id="eventModal" class="modal" style="display: none">
+      <div class="modal-content" style="width: min(420px, 96%)">
+        <div class="modal-header">
+          <h3>Schedule Event</h3>
+          <span class="close-modal closeEventModal">&times;</span>
+        </div>
+        <div class="modal-body">
+          <label class="form-label" for="eventTitle">Title</label>
+          <input type="text" id="eventTitle" placeholder="Event title" style="width:100%;padding:10px;border:1px solid #e2e8f0;border-radius:12px;margin-bottom:12px;">
+          <label class="form-label" for="eventDate">Date</label>
+          <input type="date" id="eventDate" style="width:100%;padding:10px;border:1px solid #e2e8f0;border-radius:12px;margin-bottom:12px;">
+          <label class="form-label" for="eventTime">Time</label>
+          <input type="time" id="eventTime" style="width:100%;padding:10px;border:1px solid #e2e8f0;border-radius:12px;margin-bottom:12px;">
+          <label class="form-label" for="eventLocation">Location</label>
+          <input type="text" id="eventLocation" placeholder="Location" style="width:100%;padding:10px;border:1px solid #e2e8f0;border-radius:12px;margin-bottom:12px;">
+          <label class="form-label" for="eventDescription">Description</label>
+          <textarea id="eventDescription" rows="3" placeholder="Description" style="width:100%;padding:10px;border:1px solid #e2e8f0;border-radius:12px;resize:vertical;"></textarea>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-outline closeEventModal">Cancel</button>
+          <button id="confirmEventBtn" class="btn btn-primary">Share Event</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Create List Modal -->
+    <div id="createListModal" class="modal" style="display: none">
+      <div class="modal-content" style="width: min(420px, 96%)">
+        <div class="modal-header">
+          <h3>Create List</h3>
+          <span class="close-modal closeCreateListModal">&times;</span>
+        </div>
+        <div class="modal-body">
+          <div id="listItemsContainer">
+            <div class="list-item-input-row" style="display:flex;gap:8px;margin-bottom:8px;">
+              <input type="text" class="list-item-text" placeholder="Item 1" style="flex:1;padding:10px;border:1px solid #e2e8f0;border-radius:12px;">
+            </div>
+            <div class="list-item-input-row" style="display:flex;gap:8px;margin-bottom:8px;">
+              <input type="text" class="list-item-text" placeholder="Item 2" style="flex:1;padding:10px;border:1px solid #e2e8f0;border-radius:12px;">
+            </div>
+            <div class="list-item-input-row" style="display:flex;gap:8px;margin-bottom:8px;">
+              <input type="text" class="list-item-text" placeholder="Item 3" style="flex:1;padding:10px;border:1px solid #e2e8f0;border-radius:12px;">
+            </div>
+          </div>
+          <button id="addListItemBtn" class="btn btn-outline" style="width:100%;">+ Add Item</button>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-outline closeCreateListModal">Cancel</button>
+          <button id="confirmListBtn" class="btn btn-primary">Share List</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Feature 3: Moderation Settings Modal -->
+    <div id="moderationSettingsModal" class="modal" style="display:none">
+      <div class="modal-content" style="width:min(460px,96%)">
+        <div class="modal-header">
+          <h3>Moderation Settings</h3>
+          <span class="close-modal" onclick="document.getElementById('moderationSettingsModal').style.display='none'">&times;</span>
+        </div>
+        <div class="modal-body">
+          <div id="moderationWordsList" style="margin-bottom:16px;"></div>
+          <div style="display:flex;gap:8px;">
+            <input type="text" id="moderationWordInput" placeholder="Add blocked word..." style="flex:1;padding:8px;border:1px solid var(--border);border-radius:8px;">
+            <button class="btn btn-primary" onclick="addBlockedWord(document.getElementById('moderationWordInput').value); document.getElementById('moderationWordInput').value='';">Add</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Feature 4: Slow Mode Selector (inside group info modal body) -->
+
+    <!-- Feature 5: Welcome Message Input (inside group info modal body) -->
+
+    <!-- Feature 6: Join Questions Editor Modal -->
+    <div id="joinQuestionsEditorModal" class="modal" style="display:none">
+      <div class="modal-content" style="width:min(480px,96%)">
+        <div class="modal-header">
+          <h3>Join Questions</h3>
+          <span class="close-modal" onclick="document.getElementById('joinQuestionsEditorModal').style.display='none'">&times;</span>
+        </div>
+        <div class="modal-body">
+          <div id="joinQuestionsEditorContainer" style="margin-bottom:16px;"></div>
+          <div style="display:flex;gap:8px;align-items:center;">
+            <input type="text" id="joinQuestionInput" placeholder="Enter a question..." style="flex:1;padding:8px;border:1px solid var(--border);border-radius:8px;">
+            <label style="font-size:13px;white-space:nowrap;"><input type="checkbox" id="joinQuestionRequired"> Required</label>
+            <button class="btn btn-primary" onclick="addJoinQuestion()">Add</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Create Community Modal -->
+    <div id="createCommunityModal" class="modal" style="display:none">
+      <div class="modal-content" style="width:min(440px,96%)">
+        <div class="modal-header">
+          <h3>Create Community</h3>
+          <span class="close-modal" onclick="document.getElementById('createCommunityModal').style.display='none'">&times;</span>
+        </div>
+        <div class="modal-body">
+          <input type="text" id="newCommunityName" placeholder="Community name" style="width:100%;padding:12px;margin-bottom:12px;border:1px solid var(--border);border-radius:12px;background:var(--panel);color:var(--text)" />
+          <textarea id="newCommunityDescription" placeholder="Description (optional)" style="width:100%;padding:12px;margin-bottom:12px;border:1px solid var(--border);border-radius:12px;background:var(--panel);color:var(--text);resize:vertical;min-height:60px;font-family:inherit"></textarea>
+          <input type="text" id="newCommunityIcon" placeholder="Icon emoji (e.g. 🏠)" style="width:100%;padding:12px;margin-bottom:12px;border:1px solid var(--border);border-radius:12px;background:var(--panel);color:var(--text)" />
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-outline" onclick="document.getElementById('createCommunityModal').style.display='none'">Cancel</button>
+          <button class="btn btn-primary" onclick="createCommunity()">Create</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Community Info Modal -->
+    <div id="communityInfoModal" class="modal" style="display:none">
+      <div class="modal-content" style="width:min(480px,96%);max-height:80vh;display:flex;flex-direction:column;">
+        <div class="modal-header">
+          <h3 id="communityInfoTitle">Community Info</h3>
+          <span class="close-modal" onclick="document.getElementById('communityInfoModal').style.display='none'">&times;</span>
+        </div>
+        <div class="modal-body" style="flex:1;overflow-y:auto;">
+          <div id="communityInfoContent"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Feature 6: Join Questions Answer Modal -->
+    <div id="joinQuestionsAnswerModal" class="modal" style="display:none">
+      <div class="modal-content" style="width:min(480px,96%)">
+        <div class="modal-header">
+          <h3>Answer Join Questions</h3>
+          <span class="close-modal" onclick="document.getElementById('joinQuestionsAnswerModal').style.display='none'">&times;</span>
+        </div>
+        <div class="modal-body">
+          <p style="font-size:13px;color:var(--muted-strong);margin-bottom:16px;">The group admin requires you to answer these questions before joining.</p>
+          <div id="joinQuestionsAnswerContainer"></div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-outline" onclick="document.getElementById('joinQuestionsAnswerModal').style.display='none'">Cancel</button>
+          <button class="btn btn-primary" onclick="submitJoinAnswers()">Submit & Join</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- File Preview Modal -->
+    <div id="filePreviewModal" class="modal" style="display:none">
+      <div class="modal-content" style="width:min(800px,98%);height:min(600px,90vh);display:flex;flex-direction:column;">
+        <div class="modal-header">
+          <h3 id="filePreviewHeader">File Preview</h3>
+          <span class="close-modal" id="closeFilePreview">&times;</span>
+        </div>
+        <div id="filePreviewContainer" style="flex:1;overflow:hidden;position:relative;"></div>
+      </div>
+    </div>
+
+    <!-- Data Usage Modal -->
+    <div id="dataUsageModal" class="modal" style="display:none">
+      <div class="modal-content" style="width:min(420px,96%);">
+        <div class="modal-header">
+          <h3>Data Usage</h3>
+          <span class="close-modal" id="closeDataUsage">&times;</span>
+        </div>
+        <div class="modal-body">
+          <div class="data-usage-stat"><span>Sent:</span><strong id="dataUsageSent">0 B</strong></div>
+          <div class="data-usage-stat"><span>Received:</span><strong id="dataUsageReceived">0 B</strong></div>
+          <div class="data-usage-stat"><span>Total:</span><strong id="dataUsageTotal">0 B</strong></div>
+          <div class="data-usage-stat" style="border:none;"><span>Last Reset:</span><strong id="dataUsageLastReset">-</strong></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Storage Manager Modal -->
+    <div id="storageManagerModal" class="modal" style="display:none">
+      <div class="modal-content" style="width:min(520px,96%);max-height:80vh;display:flex;flex-direction:column;">
+        <div class="modal-header">
+          <h3>Storage Manager</h3>
+          <span class="close-modal" id="closeStorageManager">&times;</span>
+        </div>
+        <div class="modal-body" style="flex:1;overflow-y:auto;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+            <span style="font-weight:600;">Total Used: <span id="storageManagerTotal">0 B</span></span>
+            <button id="refreshStorageBreakdown" class="btn btn-outline" style="font-size:12px;padding:4px 12px;">Refresh</button>
+          </div>
+          <div id="storageManagerContent"></div>
+        </div>
+      </div>
+    </div>
+
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-storage-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-messaging-compat.js"></script>
-    <script src="app.js?v=136"></script>
+    <script src="app.js?v=138"></script>
     <script src="pwa-install.js?v=124"></script>
   </body>
 </html>
