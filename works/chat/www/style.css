@@ -4491,6 +4491,76 @@ body.dark .location-card div {
   border-color: #3b4a54 !important;
 }
 
+/* Final mobile chat polish: keep light mode clean and the composer compact. */
+body:not(.dark) .sidebar-header,
+body:not(.dark) .chat-header {
+  background: #f8fafc !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+body:not(.dark) .input-area {
+  background: #f8fafc !important;
+}
+
+.view-once-row {
+  position: absolute;
+  left: 12px;
+  bottom: calc(100% + 6px);
+  z-index: 6;
+  align-items: center;
+  gap: 8px;
+  max-width: min(220px, calc(100vw - 24px));
+  min-height: 34px;
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--panel);
+  color: var(--muted-strong);
+  box-shadow: 0 8px 24px rgba(11, 20, 26, 0.12);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.view-once-row .switch {
+  flex: 0 0 auto;
+}
+
+.view-once-row .slider {
+  display: block;
+}
+
+.attachment-preview:has(+ .view-once-row) {
+  bottom: calc(100% + 46px);
+}
+
+@media (max-width: 520px) {
+  .input-area {
+    gap: 5px;
+    padding: 8px 8px calc(8px + var(--safe-bottom));
+  }
+
+  .emoji-btn,
+  .voice-msg-btn,
+  .attach-btn,
+  .send-btn {
+    width: 38px;
+    height: 38px;
+    flex: 0 0 38px;
+  }
+
+  #messageInput {
+    min-height: 38px;
+    padding: 8px 12px;
+  }
+}
+
+@media (max-width: 900px) {
+  .chat-container:not(.chat-open) .list-item.active {
+    background: transparent;
+  }
+}
+
 .location-card {
   display: flex;
   flex-direction: column;

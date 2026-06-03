@@ -1163,7 +1163,11 @@ function openMobileChatPanel() {
 
 function closeMobileChatPanel({ fromPopState = false } = {}) {
   const container = getChatContainer();
-  if (container) container.classList.remove('chat-open');
+  if (container) {
+    container.classList.remove('chat-open');
+    container.classList.add('chat-list-returned');
+    setTimeout(() => container.classList.remove('chat-list-returned'), 250);
+  }
 
   // The chat list is now visible. Do not trap the next back press here:
   // browser/PWA back from the chat list should behave normally and exit/minimize.
@@ -1510,12 +1514,30 @@ function scheduleChatListRefresh(delay = 600) {
   }, delay);
 }
 
+function updateViewOnceRow() {
+  const row = document.getElementById('viewOnceRow');
+  const toggle = document.getElementById('viewOnceToggle');
+  const label = document.getElementById('viewOnceLabel');
+  if (!row) return;
+
+  const canUseViewOnce = currentAttachment?.type === 'image';
+  row.style.display = canUseViewOnce ? 'flex' : 'none';
+
+  if (!canUseViewOnce && toggle) {
+    toggle.checked = false;
+    if (currentAttachment) currentAttachment.viewOnce = false;
+  }
+
+  if (label) label.textContent = toggle?.checked ? 'View Once: ON' : 'View Once: OFF';
+}
+
 function setAttachmentPreview() {
   const preview = document.getElementById('attachmentPreview');
   if (!preview) return;
   if (!currentAttachment) {
     preview.style.display = 'none';
     preview.innerHTML = '';
+    updateViewOnceRow();
     return;
   }
   const isImage = currentAttachment.type === 'image';
@@ -1541,6 +1563,7 @@ function setAttachmentPreview() {
     currentAttachment = null;
     setAttachmentPreview();
   });
+  updateViewOnceRow();
 }
 
 function setConnectionBanner() {
@@ -7731,6 +7754,10 @@ async function sendMessage() {
   }
 
   if (currentAttachment) {
+    const viewOnceToggle = document.getElementById('viewOnceToggle');
+    if (currentAttachment.type === 'image' && viewOnceToggle?.checked) {
+      currentAttachment.viewOnce = true;
+    }
     messageData.attachment = currentAttachment;
   }
 
@@ -7779,6 +7806,8 @@ async function sendMessage() {
     currentReplyTo = null;
 
     document.getElementById('replyPreviewBar').style.display = 'none';
+    const viewOnceToggle = document.getElementById('viewOnceToggle');
+    if (viewOnceToggle) viewOnceToggle.checked = false;
     setAttachmentPreview();
 
     // Auto confetti for celebratory messages
@@ -7797,14 +7826,6 @@ async function sendMessage() {
 
 async function handleFileUpload(file) {
   if (!file) return;
-  const viewOnceToggle = document.getElementById('viewOnceToggle');
-  const isViewOnce = viewOnceToggle ? viewOnceToggle.checked : false;
-  if (isViewOnce) {
-    await sendViewOnceMessage(file);
-    if (viewOnceToggle) viewOnceToggle.checked = false;
-    document.getElementById('viewOnceLabel').textContent = 'View Once: OFF';
-    return;
-  }
   try {
     const url = file.type.startsWith('image/') ? await uploadToCloudinary(file) : await uploadDocument(file);
     currentAttachment = { type: file.type.startsWith('image/') ? 'image' : 'document', url, filename: file.name, size: file.size };
