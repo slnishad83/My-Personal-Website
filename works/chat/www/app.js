@@ -717,14 +717,18 @@ function renderChatListItems(items, container) {
       }
     });
 
-    chatDiv.addEventListener('click', () => {
-      if (item.type === 'user') handleUserSelection(item.user || item.rawUser || item);
-      else if (item.type === 'saved') startSavedMessages();
-      else if (item.type === 'group') loadGroupChat(item.id, item.name);
-      else if (item.user) startDirectChat({ ...item.user, aliasDirectIds: item.aliasDirectIds });
-      else db.collection('users').doc(item.otherUserId).get().then(doc => {
-        startDirectChat(doc.exists ? { id: item.otherUserId, ...doc.data(), aliasDirectIds: item.aliasDirectIds } : { id: item.otherUserId, displayName: item.name, aliasDirectIds: item.aliasDirectIds });
-      });
+    chatDiv.addEventListener('click', async () => {
+      try {
+        if (item.type === 'user') { await handleUserSelection(item.user || item.rawUser || item); return; }
+        if (item.type === 'saved') { startSavedMessages(); return; }
+        if (item.type === 'group') { await loadGroupChat(item.id, item.name); return; }
+        if (item.user) { await startDirectChat({ ...item.user, aliasDirectIds: item.aliasDirectIds }); return; }
+        const doc = await db.collection('users').doc(item.otherUserId).get();
+        await startDirectChat(doc.exists ? { id: item.otherUserId, ...doc.data(), aliasDirectIds: item.aliasDirectIds } : { id: item.otherUserId, displayName: item.name, aliasDirectIds: item.aliasDirectIds });
+      } catch (err) {
+        console.error('Chat click error:', err);
+        showToast('Could not open chat: ' + (err.message || 'unknown error'), 'error');
+      }
     });
 
     container.appendChild(chatDiv);
@@ -8670,20 +8674,39 @@ async function refreshPermissionsModal() {
   const media = document.getElementById('mediaPermissionStatus');
   const contacts = document.getElementById('contactsPermissionStatus');
 
-  if (isNativeAndroidApp) {
-    if (camera) camera.textContent = await queryNativePermissionState('camera') || 'Ask when needed';
-    if (microphone) microphone.textContent = await queryNativePermissionState('microphone') || 'Ask when needed';
-    if (notifications) notifications.textContent = await queryNativePermissionState('notifications') || 'Ask when needed';
-    if (location) location.textContent = await queryNativePermissionState('location') || 'Ask when needed';
-    if (media) media.textContent = 'Android asks from app settings/file picker';
-    if (contacts) contacts.textContent = await queryNativePermissionState('contacts') || 'Ask when needed';
-  } else {
-    if (camera) camera.textContent = await queryPermissionState('camera');
-    if (microphone) microphone.textContent = await queryPermissionState('microphone');
-    if (notifications) notifications.textContent = await queryPermissionState('notifications');
-    if (location) location.textContent = await queryPermissionState('geolocation');
-    if (media) media.textContent = 'Asked by the browser file picker';
-    if (contacts) contacts.textContent = navigator.contacts?.select ? 'Ask first time' : 'Not supported on this device';
+  const permConfig = [
+    { kind: 'camera', el: camera, btnKind: 'camera', nativeAlias: 'camera', browserKey: 'camera' },
+    { kind: 'microphone', el: microphone, btnKind: 'microphone', nativeAlias: 'microphone', browserKey: 'microphone' },
+    { kind: 'notifications', el: notifications, btnKind: 'notifications', nativeAlias: 'notifications', browserKey: 'notifications' },
+    { kind: 'location', el: location, btnKind: 'location', nativeAlias: 'location', browserKey: 'geolocation' },
+    { kind: 'media', el: media, btnKind: 'media', nativeAlias: null, browserKey: null },
+    { kind: 'contacts', el: contacts, btnKind: 'contacts', nativeAlias: 'contacts', browserKey: null }
+  ];
+
+  for (const cfg of permConfig) {
+    let status;
+    if (isNativeAndroidApp) {
+      if (cfg.kind === 'media') status = 'Android asks from app settings/file picker';
+      else if (cfg.kind === 'contacts') status = await queryNativePermissionState('contacts') || 'Ask when needed';
+      else if (cfg.nativeAlias) status = await queryNativePermissionState(cfg.nativeAlias) || 'Ask when needed';
+    } else {
+      if (cfg.kind === 'media') status = 'Asked by the browser file picker';
+      else if (cfg.kind === 'contacts') status = navigator.contacts?.select ? 'Ask first time' : 'Not supported on this device';
+      else if (cfg.browserKey) status = await queryPermissionState(cfg.browserKey);
+    }
+    if (cfg.el) cfg.el.textContent = status;
+    const btn = document.querySelector(`[data-request-permission="${cfg.btnKind}"]`);
+    if (btn) {
+      if (status === 'Allowed' || status === 'granted' || status === 'Granted') {
+        btn.textContent = 'Granted';
+        btn.className = 'btn btn-primary';
+        btn.disabled = true;
+      } else {
+        btn.textContent = cfg.btnKind === 'media' ? 'Open Picker' : 'Allow';
+        btn.className = 'btn btn-outline';
+        btn.disabled = false;
+      }
+    }
   }
 }
 
