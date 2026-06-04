@@ -6830,6 +6830,131 @@ body:not(.dark):not(.native-android) .message-context-menu .reaction-option {
   }
 }
 
+/* Final audit layer for every non-message menu in the chat system. */
+.context-menu:not(.message-context-menu) {
+  --app-menu-bg: #ffffff;
+  --app-menu-text: #111b21;
+  --app-menu-muted: #667781;
+  --app-menu-hover: #f0f2f5;
+  --app-menu-danger: #ea0038;
+  position: fixed !important;
+  z-index: 10000 !important;
+  min-width: 244px !important;
+  width: max-content !important;
+  max-width: calc(100vw - 24px) !important;
+  max-height: min(76dvh, calc(100dvh - 24px)) !important;
+  padding: 8px 0 !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  overscroll-behavior: contain !important;
+  -webkit-overflow-scrolling: touch;
+  border: 0 !important;
+  border-radius: 10px !important;
+  background: var(--app-menu-bg) !important;
+  color: var(--app-menu-text) !important;
+  box-shadow: 0 10px 30px rgba(11, 20, 26, 0.22) !important;
+}
+
+body.dark .context-menu:not(.message-context-menu),
+body.native-android .context-menu:not(.message-context-menu) {
+  --app-menu-bg: #111b21;
+  --app-menu-text: #e9edef;
+  --app-menu-muted: #8696a0;
+  --app-menu-hover: #1f2c33;
+  --app-menu-danger: #ff7a86;
+}
+
+.context-menu:not(.message-context-menu) .context-menu-item {
+  display: flex !important;
+  align-items: center !important;
+  width: 100% !important;
+  min-height: 50px !important;
+  padding: 0 24px !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  background-image: none !important;
+  color: var(--app-menu-text) !important;
+  box-shadow: none !important;
+  font-size: 16px !important;
+  font-weight: 400 !important;
+  line-height: 1.25 !important;
+  text-align: left !important;
+  white-space: nowrap !important;
+  cursor: pointer !important;
+  appearance: none !important;
+  outline: 0 !important;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.context-menu:not(.message-context-menu) .context-menu-item:hover,
+.context-menu:not(.message-context-menu) .context-menu-item:active,
+.context-menu:not(.message-context-menu) .context-menu-item:focus-visible {
+  background: var(--app-menu-hover) !important;
+  color: var(--app-menu-text) !important;
+  outline: 0 !important;
+}
+
+.context-menu:not(.message-context-menu) .context-menu-item:disabled,
+.context-menu:not(.message-context-menu) .context-menu-item[aria-disabled="true"],
+.context-menu:not(.message-context-menu) .context-menu-item.disabled {
+  color: var(--app-menu-muted) !important;
+  opacity: 0.45 !important;
+  background: transparent !important;
+  cursor: default !important;
+}
+
+.context-menu:not(.message-context-menu) .context-menu-item.danger,
+.context-menu:not(.message-context-menu) #deleteChatMenuItem,
+.context-menu:not(.message-context-menu) #archivedDeleteMenuItem,
+.context-menu:not(.message-context-menu) #exitGroupMenuItem {
+  color: var(--app-menu-danger) !important;
+}
+
+.context-menu:not(.message-context-menu) .context-menu-item::before,
+.context-menu:not(.message-context-menu) .context-menu-item::after {
+  content: none !important;
+}
+
+.context-menu:not(.message-context-menu)::-webkit-scrollbar {
+  width: 4px;
+}
+
+.context-menu:not(.message-context-menu)::-webkit-scrollbar-thumb {
+  background: rgba(134, 150, 160, 0.45);
+  border-radius: 999px;
+}
+
+#chatContextMenu {
+  min-width: min(286px, calc(100vw - 24px)) !important;
+}
+
+#archivedRowMenu {
+  min-width: min(220px, calc(100vw - 24px)) !important;
+}
+
+.attachment-sheet,
+.emoji-picker,
+.modal-content,
+.context-menu,
+.message-context-menu {
+  scrollbar-width: thin;
+}
+
+@media (max-width: 900px), (pointer: coarse) {
+  .context-menu:not(.message-context-menu) {
+    width: min(88vw, 320px) !important;
+    min-width: min(72vw, 260px) !important;
+    max-height: calc(100dvh - 88px - var(--sab, 0px)) !important;
+    border-radius: 12px !important;
+  }
+
+  .context-menu:not(.message-context-menu) .context-menu-item {
+    min-height: 54px !important;
+    font-size: 17px !important;
+  }
+}
+
 @media (max-width: 420px) {
   .sidebar-header {
     padding-left: 12px !important;
