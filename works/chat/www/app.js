@@ -9927,41 +9927,64 @@ async function retryFailedMessage(localId) {
 function bindSwipeToReply(messageDiv, messageData) {
   if (!messageDiv || messageDiv.dataset.swipeReplyBound === "true") return;
   messageDiv.dataset.swipeReplyBound = "true";
-  let startX = 0;
-  let startY = 0;
+  let startX = null;
+  let startY = null;
+  let pointerId = null;
+  let gestureLocked = false;
   let moved = false;
+
+  const resetSwipe = () => {
+    messageDiv.classList.remove("reply-swipe-active");
+    messageDiv.style.removeProperty("--reply-swipe-x");
+    startX = null;
+    startY = null;
+    pointerId = null;
+    gestureLocked = false;
+    moved = false;
+  };
+
   messageDiv.addEventListener("pointerdown", (event) => {
     if (event.pointerType === "mouse" && event.button !== 0) return;
+    if (event.target.closest(".message-options-btn")) return;
     startX = event.clientX;
     startY = event.clientY;
+    pointerId = event.pointerId;
+    gestureLocked = false;
     moved = false;
+    messageDiv.setPointerCapture?.(event.pointerId);
   });
   messageDiv.addEventListener("pointermove", (event) => {
-    if (!startX) return;
+    if (startX === null || event.pointerId !== pointerId) return;
     const dx = event.clientX - startX;
+    const absDx = Math.abs(dx);
     const dy = Math.abs(event.clientY - startY);
-    moved = dx > 24 && dy < 36;
+    if (!gestureLocked && absDx > 10 && absDx > dy * 1.25) {
+      gestureLocked = true;
+    }
+    if (gestureLocked) {
+      event.preventDefault();
+      const pull = Math.min(Math.max(dx, 0), 86);
+      messageDiv.style.setProperty("--reply-swipe-x", `${pull}px`);
+    }
+    moved = dx > 18 && dy < 56;
     messageDiv.classList.toggle("reply-swipe-active", moved);
   });
   messageDiv.addEventListener("pointerup", (event) => {
+    if (startX === null || event.pointerId !== pointerId) {
+      resetSwipe();
+      return;
+    }
     const dx = event.clientX - startX;
     const dy = Math.abs(event.clientY - startY);
-    messageDiv.classList.remove("reply-swipe-active");
-    if (dx > 70 && dy < 45) {
+    if (dx > 52 && dy < 64) {
       messageDiv.classList.add("swiped");
       setTimeout(() => messageDiv.classList.remove("swiped"), 600);
       setReplyTo(messageData);
     }
-    startX = 0;
-    startY = 0;
-    moved = false;
+    resetSwipe();
   });
-  messageDiv.addEventListener("pointercancel", () => {
-    messageDiv.classList.remove("reply-swipe-active");
-    startX = 0;
-    startY = 0;
-    moved = false;
-  });
+  messageDiv.addEventListener("pointercancel", resetSwipe);
+  messageDiv.addEventListener("lostpointercapture", resetSwipe);
 }
 
 function bindLongPressMessageMenu(messageDiv, messageData, isMyMessage) {

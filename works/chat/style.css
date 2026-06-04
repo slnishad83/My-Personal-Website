@@ -7679,6 +7679,275 @@ body.native-android .context-menu {
   content: none !important;
 }
 
+/* Final mobile gesture and WhatsApp-style consistency pass. */
+.message {
+  touch-action: pan-y;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.message .message-bubble {
+  transform: translateX(var(--reply-swipe-x, 0));
+  transition: transform 160ms ease, box-shadow 160ms ease;
+  will-change: transform;
+}
+
+.message.reply-swipe-active .message-bubble {
+  transform: translateX(var(--reply-swipe-x, 42px)) !important;
+}
+
+.swipe-reply-indicator {
+  width: 34px !important;
+  height: 34px !important;
+  left: 12px !important;
+  top: 50% !important;
+  transform: translateY(-50%) scale(0.82) !important;
+  border-radius: 50% !important;
+  background: #00a884 !important;
+  box-shadow: 0 4px 14px rgba(0, 168, 132, 0.25) !important;
+}
+
+.swipe-reply-indicator::before {
+  content: "" !important;
+  display: block !important;
+  width: 19px !important;
+  height: 19px !important;
+  margin: 7px auto !important;
+  background: #fff !important;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='9 10 4 15 9 20'/%3E%3Cpath d='M20 4v7a4 4 0 0 1-4 4H4'/%3E%3C/svg%3E") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='9 10 4 15 9 20'/%3E%3Cpath d='M20 4v7a4 4 0 0 1-4 4H4'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+
+.message.reply-swipe-active .swipe-reply-indicator,
+.message.swiped .swipe-reply-indicator {
+  opacity: 1 !important;
+}
+
+.message-text {
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+.message-footer {
+  padding-right: 2px;
+}
+
+@media (max-width: 900px) {
+  .chat-header,
+  .sidebar-header {
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important;
+  }
+
+  .chat-header {
+    min-height: calc(64px + var(--sat, 0px)) !important;
+    padding-top: calc(8px + var(--sat, 0px)) !important;
+  }
+
+  .chat-title {
+    font-size: 19px !important;
+    font-weight: 600 !important;
+    line-height: 22px !important;
+    color: #111b21 !important;
+  }
+
+  .chat-status {
+    font-size: 13px !important;
+    line-height: 16px !important;
+    color: #667781 !important;
+  }
+
+  .chat-actions {
+    gap: 2px !important;
+  }
+
+  .chat-actions .icon-btn {
+    width: 40px !important;
+    height: 40px !important;
+    min-width: 40px !important;
+    color: #54656f !important;
+    background: transparent !important;
+  }
+
+  .messages-area {
+    padding-left: max(10px, calc(10px + var(--sal, 0px))) !important;
+    padding-right: max(10px, calc(10px + var(--sar, 0px))) !important;
+  }
+
+  .message-bubble {
+    max-width: min(82vw, 560px) !important;
+    border-radius: 8px !important;
+  }
+
+  .my-message .message-bubble {
+    border-top-right-radius: 8px !important;
+  }
+
+  .message:not(.my-message) .message-bubble {
+    border-top-left-radius: 8px !important;
+  }
+
+  .message-options-btn {
+    width: 30px !important;
+    height: 30px !important;
+    right: 4px !important;
+    top: 4px !important;
+    color: #8696a0 !important;
+  }
+
+  .sidebar {
+    background: #fff !important;
+  }
+
+  body.dark .sidebar {
+    background: #111b21 !important;
+  }
+
+  .sidebar-header {
+    min-height: calc(56px + var(--sat, 0px)) !important;
+    background: #fff !important;
+    padding-bottom: 6px !important;
+  }
+
+  .user-avatar {
+    width: 42px !important;
+    height: 42px !important;
+    min-width: 42px !important;
+  }
+
+  .user-name {
+    font-size: 19px !important;
+    line-height: 22px !important;
+  }
+
+  .sidebar-actions {
+    gap: 4px !important;
+  }
+
+  .sidebar-actions .icon-btn,
+  .sidebar-actions button {
+    width: 40px !important;
+    height: 40px !important;
+    min-width: 40px !important;
+    border-radius: 50% !important;
+    background: transparent !important;
+    color: #54656f !important;
+    box-shadow: none !important;
+  }
+
+  .search-container {
+    padding: 8px 12px 10px !important;
+    background: #fff !important;
+    border-bottom: 1px solid rgba(11, 20, 26, 0.05) !important;
+  }
+
+  #searchInput {
+    height: 46px !important;
+    border-radius: 10px !important;
+    background: #f0f2f5 !important;
+    border: 0 !important;
+    font-size: 16px !important;
+    color: #111b21 !important;
+    box-shadow: none !important;
+  }
+
+  .tabs {
+    gap: 14px !important;
+    padding: 10px 12px 10px !important;
+    background: #fff !important;
+    border-bottom: 1px solid rgba(11, 20, 26, 0.08) !important;
+  }
+
+  .tab {
+    min-height: 38px !important;
+    padding: 0 16px !important;
+    border-radius: 999px !important;
+    font-size: 15px !important;
+    font-weight: 600 !important;
+    color: #54656f !important;
+    background: transparent !important;
+  }
+
+  .tab.active {
+    background: #e7fce8 !important;
+    color: #008069 !important;
+  }
+
+  .chat-list .list-item,
+  .groups-list .list-item {
+    min-height: 72px !important;
+    padding: 9px 12px !important;
+    gap: 12px !important;
+    border-bottom: 1px solid rgba(11, 20, 26, 0.08) !important;
+  }
+
+  .list-avatar {
+    width: 52px !important;
+    height: 52px !important;
+    min-width: 52px !important;
+    font-size: 20px !important;
+    background: #dfe5e7 !important;
+    color: #54656f !important;
+  }
+
+  .list-name {
+    font-size: 17px !important;
+    font-weight: 600 !important;
+    color: #111b21 !important;
+    line-height: 22px !important;
+  }
+
+  .list-preview {
+    font-size: 14px !important;
+    color: #667781 !important;
+    line-height: 19px !important;
+  }
+
+  .list-item-menu {
+    width: 40px !important;
+    height: 40px !important;
+    min-width: 40px !important;
+    border-radius: 50% !important;
+    background: #f0f2f5 !important;
+    color: #54656f !important;
+    font-size: 0 !important;
+    box-shadow: none !important;
+  }
+
+  .wa-composer-shell {
+    min-height: 50px !important;
+    background: #fff !important;
+    box-shadow: 0 1px 2px rgba(11, 20, 26, 0.14) !important;
+  }
+
+  body.dark .wa-composer-shell {
+    background: #202c33 !important;
+  }
+
+  #messageInput {
+    font-size: 17px !important;
+    letter-spacing: 0 !important;
+  }
+
+  .attachment-sheet {
+    border-radius: 24px 24px 0 0 !important;
+    padding: 10px 14px calc(18px + var(--sab, 0px)) !important;
+  }
+
+  .attachment-sheet-grid {
+    gap: 18px 12px !important;
+  }
+
+  .attachment-sheet-icon {
+    width: 60px !important;
+    height: 60px !important;
+    box-shadow: none !important;
+  }
+
+  #attachmentSheet .attachment-sheet-item > span:last-child {
+    font-size: 14px !important;
+    color: #d1d7db !important;
+  }
+}
+
 /* WhatsApp-style mobile home/chat-list header */
 @media (max-width: 900px) {
   .sidebar-header {
