@@ -15041,6 +15041,29 @@ window.enableTeamChatCallNotifications =
   }
 })();
 
+(function normalizeHomeTopAction() {
+  const searchBtn = document.getElementById("globalSearchBtn");
+  if (!searchBtn) return;
+  searchBtn.innerHTML = "";
+  searchBtn.title = "Find people or messages";
+  searchBtn.setAttribute("aria-label", "Find people or messages");
+  searchBtn.addEventListener(
+    "click",
+    (event) => {
+      const compactHome = window.matchMedia?.(
+        "(max-width: 900px), (pointer: coarse)",
+      )?.matches;
+      if (!compactHome) return;
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      const peopleSearch = document.getElementById("searchInput");
+      peopleSearch?.focus();
+      peopleSearch?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    },
+    true,
+  );
+})();
+
 async function handleGlobalSearch(query, resultsDiv) {
   if (!currentUser || !query) return;
   const lowerQuery = query.toLowerCase();
