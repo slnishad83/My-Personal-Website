@@ -7948,6 +7948,427 @@ body.native-android .context-menu {
   }
 }
 
+/* Global WhatsApp-style cleanup across auth-adjacent panels, profiles, menus, and settings. */
+.modal {
+  background: rgba(11, 20, 26, 0.48) !important;
+}
+
+.modal-content,
+.permissions-modal-content,
+.chat-info-modal .modal-content,
+.schedule-modal-content,
+.forward-modal-content {
+  border-radius: 12px !important;
+  background: #fff !important;
+  color: #111b21 !important;
+  border: 0 !important;
+  box-shadow: 0 8px 28px rgba(11, 20, 26, 0.18) !important;
+}
+
+body.dark .modal-content,
+body.dark .permissions-modal-content,
+body.dark .chat-info-modal .modal-content,
+body.dark .schedule-modal-content,
+body.dark .forward-modal-content {
+  background: #111b21 !important;
+  color: #e9edef !important;
+}
+
+.modal-header {
+  min-height: 58px !important;
+  padding: 16px 20px !important;
+  border-bottom: 1px solid #e9edef !important;
+  background: #fff !important;
+}
+
+body.dark .modal-header {
+  background: #111b21 !important;
+  border-bottom-color: #26353d !important;
+}
+
+.modal-header h3 {
+  font-size: 20px !important;
+  font-weight: 700 !important;
+  color: #111b21 !important;
+  line-height: 1.2 !important;
+}
+
+body.dark .modal-header h3 {
+  color: #e9edef !important;
+}
+
+.close-modal,
+.close-btn {
+  width: 40px !important;
+  height: 40px !important;
+  min-width: 40px !important;
+  border-radius: 50% !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  color: #54656f !important;
+  background: transparent !important;
+  font-size: 30px !important;
+  font-weight: 300 !important;
+  line-height: 1 !important;
+}
+
+.close-modal:hover,
+.close-btn:hover {
+  background: #f0f2f5 !important;
+}
+
+.modal-body {
+  background: inherit !important;
+}
+
+.form-label,
+.modal-body label {
+  color: #54656f !important;
+  font-size: 13px !important;
+  font-weight: 700 !important;
+}
+
+.modal-body input,
+.modal-body textarea,
+.modal-body select,
+.status-custom-input,
+.status-timer-select {
+  border: 1px solid #d1d7db !important;
+  border-radius: 10px !important;
+  background: #fff !important;
+  color: #111b21 !important;
+  box-shadow: none !important;
+}
+
+.modal-body input:focus,
+.modal-body textarea:focus,
+.modal-body select:focus,
+.status-custom-input:focus,
+.status-timer-select:focus {
+  border-color: #00a884 !important;
+  box-shadow: 0 0 0 2px rgba(0, 168, 132, 0.14) !important;
+  outline: 0 !important;
+}
+
+.btn,
+.join-btn,
+.setting-item,
+.shared-tab,
+.context-menu-item {
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important;
+  letter-spacing: 0 !important;
+}
+
+.btn-primary,
+.join-btn {
+  background: #008069 !important;
+  color: #fff !important;
+  border: 0 !important;
+  border-radius: 10px !important;
+  box-shadow: none !important;
+}
+
+.btn-outline,
+.setting-item {
+  border: 1px solid #e9edef !important;
+  background: #fff !important;
+  color: #111b21 !important;
+  border-radius: 10px !important;
+}
+
+.setting-item {
+  min-height: 52px !important;
+  padding: 0 16px !important;
+  margin: 0 !important;
+  border-width: 0 0 1px !important;
+  border-radius: 0 !important;
+  font-size: 16px !important;
+  font-weight: 400 !important;
+}
+
+.setting-item:hover,
+.setting-item:active {
+  background: #f5f6f6 !important;
+}
+
+.setting-item.danger,
+.context-menu-item.danger {
+  color: #ea0038 !important;
+}
+
+.profile-avatar,
+.group-avatar-large,
+.chat-info-profile .profile-avatar,
+.chat-info-profile .group-avatar-large {
+  background: #dfe5e7 !important;
+  color: #54656f !important;
+  box-shadow: none !important;
+}
+
+#profileModal .modal-body,
+#chatInfoModal .modal-body,
+#groupInfoModal .modal-body {
+  padding-left: 20px !important;
+  padding-right: 20px !important;
+}
+
+#profileModal p {
+  color: #111b21 !important;
+  font-size: 16px !important;
+}
+
+#profileModal p strong {
+  color: #111b21 !important;
+}
+
+#profileModal .btn-outline,
+#profileModal #changeNameBtn,
+#profileModal #changeEmailBtn,
+#profileModal #changePhoneBtn {
+  border-radius: 999px !important;
+  color: #111b21 !important;
+  background: #fff !important;
+  border: 1px solid #e9edef !important;
+}
+
+.status-presets {
+  gap: 8px !important;
+}
+
+.status-preset,
+.folder-tab {
+  min-height: 36px !important;
+  border-radius: 999px !important;
+  border: 1px solid #e9edef !important;
+  background: #fff !important;
+  color: #111b21 !important;
+  font-weight: 600 !important;
+}
+
+.status-preset.active,
+.folder-tab.active {
+  background: #d9fdd3 !important;
+  color: #008069 !important;
+  border-color: transparent !important;
+}
+
+.permission-card,
+.member-item,
+.message-info-recipient,
+.shared-list-item,
+.shared-list-item-wrap,
+.shared-voice-row,
+.shared-file-row,
+.blocked-user-card {
+  border-color: #e9edef !important;
+}
+
+.permission-card .btn,
+.permission-card .permission-revoke-btn {
+  min-height: 42px !important;
+  border-radius: 999px !important;
+  font-weight: 700 !important;
+}
+
+.permission-card .btn-primary {
+  background: #008069 !important;
+}
+
+.chat-info-profile {
+  border-bottom-color: #e9edef !important;
+}
+
+.chat-info-profile h3 {
+  color: #111b21 !important;
+  font-weight: 700 !important;
+}
+
+.chat-info-profile p,
+.chat-info-details,
+.chat-info-detail-row span:first-child,
+.shared-empty,
+.modal-helper,
+.form-hint {
+  color: #667781 !important;
+}
+
+.shared-tabs {
+  display: flex !important;
+  gap: 0 !important;
+  padding: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  border-bottom: 1px solid #e9edef !important;
+}
+
+.shared-tab {
+  flex: 1 1 0 !important;
+  min-height: 46px !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  color: #667781 !important;
+  font-size: 15px !important;
+  font-weight: 700 !important;
+}
+
+.shared-tab.active {
+  color: #008069 !important;
+  background: transparent !important;
+  box-shadow: inset 0 -3px #008069 !important;
+}
+
+.shared-grid {
+  gap: 2px !important;
+}
+
+.shared-media-item {
+  border-radius: 0 !important;
+  background: #f0f2f5 !important;
+}
+
+.context-menu,
+.message-context-menu {
+  min-width: 250px !important;
+  padding: 8px 0 !important;
+  border-radius: 10px !important;
+  background: #fff !important;
+  color: #111b21 !important;
+  box-shadow: 0 8px 28px rgba(11, 20, 26, 0.24) !important;
+  border: 0 !important;
+}
+
+body.dark .context-menu,
+body.dark .message-context-menu,
+body.native-android .context-menu,
+body.native-android .message-context-menu {
+  background: #111b21 !important;
+  color: #e9edef !important;
+}
+
+.context-menu-item,
+.message-context-menu .context-menu-item {
+  min-height: 48px !important;
+  padding: 0 24px !important;
+  color: inherit !important;
+  font-size: 16px !important;
+  font-weight: 400 !important;
+  text-align: left !important;
+  border: 0 !important;
+  background: transparent !important;
+}
+
+.context-menu-item:hover,
+.context-menu-item:active,
+.message-context-menu .context-menu-item:hover,
+.message-context-menu .context-menu-item:active {
+  background: #f5f6f6 !important;
+}
+
+.message-context-menu .reaction-row {
+  padding: 6px 10px !important;
+  border-bottom: 1px solid #e9edef !important;
+}
+
+.reaction-option {
+  width: 40px !important;
+  height: 40px !important;
+  border-radius: 50% !important;
+}
+
+.message-info-preview {
+  border-radius: 8px !important;
+  background: #f0f2f5 !important;
+  border: 0 !important;
+}
+
+@media (max-width: 900px) {
+  .chat-container {
+    width: 100vw !important;
+    height: 100dvh !important;
+    margin: 0 !important;
+    box-shadow: none !important;
+  }
+
+  .request-section {
+    order: 5 !important;
+  }
+
+  .archive-section {
+    order: 4 !important;
+  }
+
+  .tabs {
+    order: 3 !important;
+  }
+
+  .archive-section,
+  .request-section {
+    border-bottom: 1px solid #e9edef !important;
+  }
+
+  .archive-header,
+  .request-header {
+    min-height: 52px !important;
+    padding: 0 18px !important;
+    background: #fff !important;
+    color: #54656f !important;
+    font-size: 16px !important;
+    font-weight: 700 !important;
+  }
+
+  .group-actions {
+    gap: 8px !important;
+    padding: 8px 12px calc(8px + var(--sab, 0px)) !important;
+    background: #fff !important;
+    border-top: 1px solid #e9edef !important;
+  }
+
+  .group-actions .join-btn,
+  .group-actions .btn {
+    min-height: 48px !important;
+    border-radius: 10px !important;
+    font-size: 15px !important;
+    font-weight: 700 !important;
+    padding: 0 12px !important;
+  }
+
+  .modal {
+    align-items: flex-end !important;
+  }
+
+  .modal-content,
+  .permissions-modal-content,
+  .chat-info-modal .modal-content,
+  .schedule-modal-content,
+  .forward-modal-content {
+    width: 100vw !important;
+    max-width: 100vw !important;
+    max-height: calc(100dvh - var(--sat, 0px)) !important;
+    border-radius: 18px 18px 0 0 !important;
+  }
+
+  #profileModal .modal-content,
+  #filePreviewModal .modal-content,
+  #callModal .modal-content {
+    border-radius: 18px 18px 0 0 !important;
+  }
+
+  .modal-header {
+    border-radius: 18px 18px 0 0 !important;
+  }
+
+  .modal-body {
+    font-size: 16px !important;
+  }
+
+  .context-menu,
+  .message-context-menu {
+    max-width: calc(100vw - 24px) !important;
+  }
+}
+
 /* WhatsApp-style mobile home/chat-list header */
 @media (max-width: 900px) {
   .sidebar-header {
