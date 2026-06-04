@@ -128,6 +128,7 @@ let favoriteChatIds = [];
 let pinnedChatIds = [];
 let currentForwardTargets = [];
 let currentForwardSelectionKeys = new Set();
+let currentForwardSelectionMap = new Map();
 let activeStatusSet = [];
 let activeStatusIndex = 0;
 let statusAutoAdvanceTimer = null;
@@ -10913,6 +10914,40 @@ function copyToClipboard(text) {
   navigator.clipboard.writeText(text || "");
   showToast("Copied text!");
 }
+
+function getMessageCopyPayload(messageData = {}) {
+  const text = String(messageData.text || "").trim();
+  if (text) {
+    return { label: "Copy Text", value: text, toast: "Copied text" };
+  }
+  const attachment = messageData.attachment || null;
+  if (attachment?.url) {
+    const label = attachment.filename || getAttachmentLabel(attachment);
+    return {
+      label: "Copy Media Link",
+      value: attachment.url,
+      toast: `${label || "Media"} link copied`,
+    };
+  }
+  if (messageData.location?.url) {
+    return {
+      label: "Copy Location",
+      value: messageData.location.url,
+      toast: "Location link copied",
+    };
+  }
+  return null;
+}
+
+function copyMessagePayload(messageData = {}) {
+  const payload = getMessageCopyPayload(messageData);
+  if (!payload?.value) {
+    showToast("Nothing to copy", "error");
+    return;
+  }
+  navigator.clipboard.writeText(payload.value);
+  showToast(payload.toast || "Copied");
+}
 function setReplyTo(msg) {
   const messageId = msg?.messageId || msg?.id || "";
   currentReplyTo = { ...msg, id: messageId, messageId };
@@ -11164,7 +11199,10 @@ async function editMessage(id, data) {
 function openForwardModal(messageId, messageData) {
   currentForwardMessage = { id: messageId, ...messageData };
   currentForwardSelectionKeys = new Set();
+  currentForwardSelectionMap = new Map();
   currentForwardTargets = [];
+  const searchInput = document.getElementById("forwardSearch");
+  if (searchInput) searchInput.value = "";
   document.getElementById("forwardModal").style.display = "flex";
   renderForwardPreviewBanner(currentForwardMessage);
   renderForwardChats();
@@ -11179,7 +11217,10 @@ function openForwardModalForMedia(attachment, extraMeta = {}) {
     ...extraMeta,
   };
   currentForwardSelectionKeys = new Set();
+  currentForwardSelectionMap = new Map();
   currentForwardTargets = [];
+  const searchInput = document.getElementById("forwardSearch");
+  if (searchInput) searchInput.value = "";
   document.getElementById("forwardModal").style.display = "flex";
   renderForwardPreviewBanner(currentForwardMessage);
   renderForwardChats();
@@ -11193,7 +11234,10 @@ function openForwardModalForLink(url) {
     attachment: null,
   };
   currentForwardSelectionKeys = new Set();
+  currentForwardSelectionMap = new Map();
   currentForwardTargets = [];
+  const searchInput = document.getElementById("forwardSearch");
+  if (searchInput) searchInput.value = "";
   document.getElementById("forwardModal").style.display = "flex";
   renderForwardPreviewBanner(currentForwardMessage);
   renderForwardChats();
@@ -11241,7 +11285,23 @@ async function renderForwardChats(searchTerm = "") {
   const items = [
     ...(await buildDirectChatItems()),
     ...(await buildGroupChatItems()),
-  ].filter((item) => !term || normalizeSearchText(item.name).includes(term));
+  ].filter((item) => {
+    if (!term) return true;
+    const searchable = [
+      item.name,
+      item.email,
+      item.phone,
+      item.preview,
+      item.code,
+      item.user?.email,
+      item.user?.phone,
+      item.user?.phoneNumber,
+      item.type === "group" ? "group" : "chat",
+    ]
+      .filter(Boolean)
+      .join(" ");
+    return normalizeSearchText(searchable).includes(term);
+  });
   currentForwardTargets = items;
   if (!items.length) {
     list.innerHTML = '<div class="forward-empty">No chats found</div>';
@@ -11283,9 +11343,13 @@ async function renderForwardChats(searchTerm = "") {
       </span>
       <span class="forward-check${selected ? " checked" : ""}">${selected ? "✓" : ""}</span>`;
     row.addEventListener("click", () => {
-      if (currentForwardSelectionKeys.has(key))
+      if (currentForwardSelectionKeys.has(key)) {
         currentForwardSelectionKeys.delete(key);
-      else currentForwardSelectionKeys.add(key);
+        currentForwardSelectionMap.delete(key);
+      } else {
+        currentForwardSelectionKeys.add(key);
+        currentForwardSelectionMap.set(key, item);
+      }
       renderForwardChats(document.getElementById("forwardSearch")?.value || "");
     });
     list.appendChild(row);
@@ -11303,13 +11367,18 @@ function updateForwardSelectionButton() {
 
 async function forwardSelectedMessages() {
   if (!currentForwardMessage || !currentForwardSelectionKeys.size) return;
-  const selectedItems = currentForwardTargets.filter((item) =>
-    currentForwardSelectionKeys.has(`${item.type}:${item.id}`),
-  );
+  const selectedItems = Array.from(currentForwardSelectionKeys)
+    .map((key) => currentForwardSelectionMap.get(key))
+    .filter(Boolean);
+  if (!selectedItems.length) {
+    showToast("Select a chat to forward", "error");
+    return;
+  }
   for (const item of selectedItems) {
     await forwardMessageTo(item, false);
   }
   currentForwardSelectionKeys = new Set();
+  currentForwardSelectionMap = new Map();
   currentForwardMessage = null;
   document.getElementById("forwardModal").style.display = "none";
   showToast(`Message forwarded to ${selectedItems.length} chat(s)`);
@@ -11411,9 +11480,17 @@ function showContextMenu(x, y, messageId, messageData, isMyMessage) {
   });
   menu.appendChild(reactionStrip);
 
+  const copyPayload = getMessageCopyPayload(messageData);
   const items = [
     { text: "Forward", action: () => openForwardModal(messageId, messageData) },
-    { text: "Copy Text", action: () => copyToClipboard(messageData.text) },
+    ...(copyPayload
+      ? [
+          {
+            text: copyPayload.label,
+            action: () => copyMessagePayload(messageData),
+          },
+        ]
+      : []),
     ...(extractLinks(messageData.text || "").length
       ? [
           {
@@ -13623,6 +13700,7 @@ async function init() {
     btn.addEventListener("click", () => {
       currentForwardMessage = null;
       currentForwardSelectionKeys = new Set();
+      currentForwardSelectionMap = new Map();
       document.getElementById("forwardModal").style.display = "none";
     }),
   );
@@ -16436,6 +16514,8 @@ function previewFile(url, filename) {
   const header = document.getElementById("filePreviewHeader");
   const safeUrl = escapeHtml(url || "");
   const safeFilename = escapeHtml(filename || "File Preview");
+  modal.classList.toggle("image-preview-mode", type === "image");
+  modal.classList.toggle("document-preview-mode", type !== "image");
   if (header) header.textContent = filename || "File Preview";
   if (container)
     container.className = `file-preview-container file-preview-${type}`;
