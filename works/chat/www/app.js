@@ -68,6 +68,18 @@ const recentCallNotificationKeys = new Map();
 const CLOUDINARY_CLOUD_NAME = 'du2dsimyz';
 const CLOUDINARY_UPLOAD_PRESET = 'chat_app_uploads';
 const TURN_CREDENTIALS_ENDPOINT = 'https://us-central1-my-team-chat-2255.cloudfunctions.net/getTurnCredentials';
+const AVATAR_MAX_BYTES = 5 * 1024 * 1024;
+const AVATAR_ALLOWED_EXTENSIONS = ['jpg', 'jpeg', 'png', 'webp', 'gif', 'bmp', 'heic', 'heif'];
+const AVATAR_ALLOWED_MIME_TYPES = [
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+  'image/gif',
+  'image/bmp',
+  'image/heic',
+  'image/heif'
+];
+const AVATAR_FORMAT_HELP_TEXT = 'Supported image formats: JPG, JPEG, PNG, WebP, GIF, BMP, HEIC, HEIF. Maximum size: 5 MB.';
 const AUTH_DIRECTORY_FALLBACKS = [
   { id: 'ArOfySQ0wBbemcCpwxQKaybBFmA2', email: 'rakeshjit18@gmail.com' },
   { id: 'N5KfNSSYXDYbbevELbuhpgS06Ez1', email: 'alwynwilson187@gmail.com' },
@@ -4927,6 +4939,38 @@ function formatBytes(bytes) {
   return `${size.toFixed(size >= 10 || unit === 0 ? 0 : 1)} ${units[unit]}`;
 }
 
+function getFileExtensionFromName(name = '') {
+  return String(name || '').split('.').pop()?.toLowerCase() || '';
+}
+
+function getAvatarFormatHelpText() {
+  return AVATAR_FORMAT_HELP_TEXT;
+}
+
+function validateAvatarImageFile(file, label = 'image') {
+  if (!file) return false;
+  const ext = getFileExtensionFromName(file.name);
+  const type = String(file.type || '').toLowerCase();
+  const allowedByType = type ? AVATAR_ALLOWED_MIME_TYPES.includes(type) : false;
+  const allowedByExtension = AVATAR_ALLOWED_EXTENSIONS.includes(ext);
+
+  if (!allowedByType && !allowedByExtension) {
+    showToast(`${label} format is not supported. ${getAvatarFormatHelpText()}`, 'error');
+    return false;
+  }
+
+  if (file.size > AVATAR_MAX_BYTES) {
+    showToast(`${label} is too large. Maximum size is ${formatBytes(AVATAR_MAX_BYTES)}.`, 'error');
+    return false;
+  }
+
+  return true;
+}
+
+function notifyAvatarUploadPolicy() {
+  showToast(getAvatarFormatHelpText());
+}
+
 // ========================================
 // MUTED CHATS
 // ========================================
@@ -7019,6 +7063,7 @@ async function updateGroupName(newName) {
 
 async function updateGroupIcon(file) {
   if (!isCurrentUserGroupAdmin() && currentGroup?.onlyAdminsCanEdit !== false) return;
+  if (!validateAvatarImageFile(file, 'Group photo')) return;
   const url = await uploadToCloudinary(file);
   await db.collection('groups').doc(currentGroup.id).update({ icon: url });
   if (currentChat?.id === currentGroup.id) currentGroup.icon = url;
@@ -7042,7 +7087,16 @@ async function deleteGroup() {
     return;
   }
   if (!confirm('Permanently delete group for everyone?')) return;
-  await db.collection('groups').doc(currentGroup.id).delete();
+  const groupId = currentGroup.id;
+  const [memberDocs, inviteDocs] = await Promise.all([
+    db.collection('groupMembers').where('groupId', '==', groupId).get(),
+    db.collection('groupInvites').where('groupId', '==', groupId).get()
+  ]);
+  const batch = db.batch();
+  memberDocs.forEach(doc => batch.delete(doc.ref));
+  inviteDocs.forEach(doc => batch.delete(doc.ref));
+  batch.delete(db.collection('groups').doc(groupId));
+  await batch.commit();
   resetChatPanel(); loadGroupsList();
 }
 
@@ -7596,6 +7650,43 @@ function bindSwipeToReply(messageDiv, messageData) {
   });
 }
 
+function bindLongPressMessageMenu(messageDiv, messageData, isMyMessage) {
+  if (!messageDiv || messageDiv.dataset.longPressMenuBound === 'true') return;
+  messageDiv.dataset.longPressMenuBound = 'true';
+  let timer = null;
+  let startX = 0;
+  let startY = 0;
+
+  const clearTimer = () => {
+    clearTimeout(timer);
+    timer = null;
+  };
+
+  messageDiv.addEventListener('pointerdown', event => {
+    if (event.pointerType === 'mouse') return;
+    startX = event.clientX;
+    startY = event.clientY;
+    clearTimer();
+    timer = setTimeout(() => {
+      if (messageDiv.classList.contains('reply-swipe-active')) return;
+      navigator.vibrate?.(20);
+      showContextMenu(startX, startY, messageDiv.dataset.messageId, messageData, isMyMessage);
+      timer = null;
+    }, 520);
+  });
+
+  messageDiv.addEventListener('pointermove', event => {
+    if (!timer) return;
+    const dx = Math.abs(event.clientX - startX);
+    const dy = Math.abs(event.clientY - startY);
+    if (dx > 12 || dy > 12) clearTimer();
+  });
+
+  messageDiv.addEventListener('pointerup', clearTimer);
+  messageDiv.addEventListener('pointercancel', clearTimer);
+  messageDiv.addEventListener('pointerleave', clearTimer);
+}
+
 function bindFailedMessageRetryActions() {
   document.querySelectorAll('.retry-message-btn').forEach(button => {
     if (button.dataset.bound === 'true') return;
@@ -7745,6 +7836,7 @@ function loadMessages() {
       messageDiv.addEventListener('contextmenu', (e) => { e.preventDefault(); showContextMenu(e.clientX, e.clientY, doc.id, msg, isMyMessage); });
       messagesArea.appendChild(messageDiv);
       bindSwipeToReply(messageDiv, { ...msg, messageId: doc.id });
+      bindLongPressMessageMenu(messageDiv, { ...msg, messageId: doc.id }, isMyMessage);
       loadReactions(doc.id, messageDiv.querySelector('.message-bubble')).catch(() => { });
     });
     const failedItems = getLocalFailedMessages();
@@ -8318,8 +8410,14 @@ async function showScheduledMessagesModal() {
   });
 }
 
-function copyToClipboard(text) { navigator.clipboard.writeText(text); showToast('Copied text!'); }
-function setReplyTo(msg) { currentReplyTo = msg; document.getElementById('replyPreviewBar').style.display = 'block'; document.getElementById('replyPreviewSender').textContent = msg.senderName; document.getElementById('replyPreviewText').textContent = msg.text || 'Media'; }
+function copyToClipboard(text) { navigator.clipboard.writeText(text || ''); showToast('Copied text!'); }
+function setReplyTo(msg) {
+  const messageId = msg?.messageId || msg?.id || '';
+  currentReplyTo = { ...msg, id: messageId, messageId };
+  document.getElementById('replyPreviewBar').style.display = 'block';
+  document.getElementById('replyPreviewSender').textContent = msg.senderName;
+  document.getElementById('replyPreviewText').textContent = msg.text || 'Media';
+}
 async function showMessageInfo(messageId, messageData = {}) {
   if (!messageId || messageData.senderId !== currentUser?.uid) return;
   const deliveredTo = messageData.deliveredTo || {};
@@ -8384,6 +8482,14 @@ function canDeleteForEveryone(messageData) {
   if (!messageData || messageData.senderId !== currentUser?.uid) return false;
   const sentAtMs = messageData.timestamp?.toMillis?.() || 0;
   if (!sentAtMs) return false;
+  return (Date.now() - sentAtMs) <= (60 * 60 * 60 * 1000);
+}
+
+function canEditMessage(messageData) {
+  if (!messageData || messageData.senderId !== currentUser?.uid || messageData.deletedForEveryone) return false;
+  if (!messageData.text || messageData.attachment || messageData.poll || messageData.type) return false;
+  const sentAtMs = messageData.timestamp?.toMillis?.() || 0;
+  if (!sentAtMs) return false;
   return (Date.now() - sentAtMs) <= (15 * 60 * 1000);
 }
 
@@ -8407,7 +8513,7 @@ async function deleteMessageForEveryone(id, messageData = null) {
     messageData = doc?.exists ? doc.data() : null;
   }
   if (!canDeleteForEveryone(messageData)) {
-    showToast('Delete for everyone is only available for your recent messages (15 min)', 'error');
+    showToast('Delete for everyone is only available for your recent messages', 'error');
     return;
   }
   if (!confirm('Delete this message for everyone?')) return;
@@ -8475,7 +8581,10 @@ async function showStarredMessagesModal() {
   });
 }
 async function editMessage(id, data) {
-  if (!data || data.deletedForEveryone) return;
+  if (!canEditMessage(data)) {
+    showToast('Only your recent text messages can be edited', 'error');
+    return;
+  }
   const nextText = prompt('Edit message', data.text || '');
   if (nextText === null) return;
   const trimmed = nextText.trim();
@@ -8492,6 +8601,7 @@ async function editMessage(id, data) {
       editedAt: new Date().toISOString()
     })
   });
+  showToast('Message edited');
 }
 
 function openForwardModal(messageId, messageData) {
@@ -8638,9 +8748,11 @@ function showContextMenu(x, y, messageId, messageData, isMyMessage) {
   items.push({ text: 'Delete For Me', action: () => deleteMessageForMe(messageId) });
   if (isMyMessage) {
     items.push({ text: 'Message Info', action: () => showMessageInfo(messageId, messageData) });
-    items.push({ text: 'Edit Message', action: () => editMessage(messageId, messageData) });
+    if (canEditMessage(messageData)) {
+      items.push({ text: 'Edit Message', action: () => editMessage(messageId, messageData) });
+    }
     if (canDeleteForEveryone(messageData)) {
-      items.push({ text: 'Delete Everyone', action: () => deleteMessageForEveryone(messageId, messageData) });
+      items.push({ text: 'Delete For Everyone', action: () => deleteMessageForEveryone(messageId, messageData) });
     }
   }
   if (Array.isArray(messageData.editHistory) && messageData.editHistory.length) {
@@ -8701,7 +8813,12 @@ function getHomePanelHtml() {
 // SYSTEM PROFILES CONFIGURATORS
 // ========================================
 
-async function updateProfileAvatar(file) { const url = await uploadToCloudinary(file); await db.collection('users').doc(currentUser.uid).update({ avatar: url }); showToast('Avatar saved!'); }
+async function updateProfileAvatar(file) {
+  if (!validateAvatarImageFile(file, 'Profile photo')) return;
+  const url = await uploadToCloudinary(file);
+  await db.collection('users').doc(currentUser.uid).update({ avatar: url });
+  showToast('Avatar saved!');
+}
 async function updateDisplayName(name) { await db.collection('users').doc(currentUser.uid).update({ displayName: name }); showToast('Profile Name synchronized'); }
 async function updateStatusText(txt) {
   if (txt) {
@@ -9955,11 +10072,16 @@ async function init() {
     }
   });
   document.getElementById('changeAvatarBtn')?.addEventListener('click', () => {
+    notifyAvatarUploadPolicy();
     document.getElementById('avatarUploadInput')?.click();
   });
   document.getElementById('avatarUploadInput')?.addEventListener('change', async (event) => {
     const file = event.target.files?.[0];
     if (!file) return;
+    if (!validateAvatarImageFile(file, 'Profile photo')) {
+      event.target.value = '';
+      return;
+    }
     try {
       const url = await uploadToCloudinary(file);
       await Promise.all([
@@ -10079,20 +10201,31 @@ async function init() {
   document.getElementById('leaveGroupBtn')?.addEventListener('click', leaveGroup);
   document.getElementById('deleteGroupBtn')?.addEventListener('click', deleteGroup);
   document.getElementById('editGroupNameInput')?.addEventListener('change', event => updateGroupName(event.target.value));
-  document.getElementById('groupAvatarLarge')?.addEventListener('click', () => document.getElementById('groupIconInput')?.click());
+  document.getElementById('groupAvatarLarge')?.addEventListener('click', () => {
+    notifyAvatarUploadPolicy();
+    document.getElementById('groupIconInput')?.click();
+  });
   document.getElementById('groupIconInput')?.addEventListener('change', event => {
     const file = event.target.files?.[0];
     if (file) updateGroupIcon(file).catch(() => showToast('Group icon upload failed', 'error'));
     event.target.value = '';
   });
   document.getElementById('groupAdminsOnlySend')?.addEventListener('change', async event => {
-    if (!currentGroup || !isCurrentUserGroupAdmin()) return;
+    if (!currentGroup || !isCurrentUserGroupAdmin()) {
+      event.target.checked = !!currentGroup?.onlyAdminsCanSend;
+      showToast('Only admins can change group permissions', 'error');
+      return;
+    }
     await db.collection('groups').doc(currentGroup.id).update({ onlyAdminsCanSend: event.target.checked });
     currentGroup.onlyAdminsCanSend = event.target.checked;
     showToast('Group permissions updated');
   });
   document.getElementById('groupAdminsOnlyEdit')?.addEventListener('change', async event => {
-    if (!currentGroup || !isCurrentUserGroupAdmin()) return;
+    if (!currentGroup || !isCurrentUserGroupAdmin()) {
+      event.target.checked = currentGroup?.onlyAdminsCanEdit !== false;
+      showToast('Only admins can change group permissions', 'error');
+      return;
+    }
     await db.collection('groups').doc(currentGroup.id).update({ onlyAdminsCanEdit: event.target.checked });
     currentGroup.onlyAdminsCanEdit = event.target.checked;
     showToast('Group permissions updated');
@@ -10106,7 +10239,11 @@ async function init() {
     loadMessages();
   });
   document.getElementById('groupEncryptionToggle')?.addEventListener('change', async (e) => {
-    if (!currentGroup) return;
+    if (!currentGroup || !isCurrentUserGroupAdmin()) {
+      e.target.checked = currentGroup?.encryptionEnabled === true;
+      showToast('Only admins can change group encryption', 'error');
+      return;
+    }
     try {
       await db.collection('groups').doc(currentGroup.id).update({ encryptionEnabled: e.target.checked });
       if (currentChat?.id === currentGroup.id) updateEncryptionBadge(currentGroup.id, 'group');
@@ -10129,7 +10266,11 @@ async function init() {
     }
   });
   document.getElementById('groupInfoDisappearingSelect')?.addEventListener('change', async event => {
-    if (!currentGroup || !isCurrentUserGroupAdmin()) return;
+    if (!currentGroup || !isCurrentUserGroupAdmin()) {
+      event.target.value = String(currentGroup?.disappearAfterSecs || 0);
+      showToast('Only admins can change disappearing messages', 'error');
+      return;
+    }
     const secs = parseInt(event.target.value, 10) || 0;
     await db.collection('groups').doc(currentGroup.id).set({ disappearAfterSecs: secs }, { merge: true });
     currentGroup.disappearAfterSecs = secs;

@@ -3049,6 +3049,14 @@ button.reply-preview {
   cursor: pointer;
 }
 
+.upload-format-hint {
+  max-width: 320px;
+  margin: 6px auto 12px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
 .member-list {
   max-height: 260px;
   overflow-y: auto;
