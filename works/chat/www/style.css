@@ -6823,3 +6823,63 @@ body:not(.native-android) {
   min-height: 0;
   padding: 12px !important;
 }
+
+/* Profile sheet scrolling: one scroll container, with Android nav-bar clearance. */
+#profileModal {
+  align-items: stretch !important;
+  justify-content: center !important;
+  padding: max(10px, var(--sat, 0px)) 10px max(10px, var(--sab, 0px)) !important;
+  overflow: hidden !important;
+}
+
+#profileModal .modal-content {
+  width: min(560px, 100%) !important;
+  height: calc(100dvh - max(20px, var(--sat, 0px)) - max(20px, var(--sab, 0px))) !important;
+  max-height: none !important;
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+}
+
+#profileModal .modal-header {
+  position: sticky;
+  top: 0;
+  flex: 0 0 auto !important;
+  padding-top: max(16px, calc(10px + var(--sat, 0px))) !important;
+  z-index: 3;
+}
+
+#profileModal .modal-body {
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  overflow-y: auto !important;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: calc(120px + var(--sab, 0px)) !important;
+  scroll-padding-bottom: calc(140px + var(--sab, 0px));
+}
+
+#profileModal #deactivateAccountBtn {
+  margin-bottom: calc(34px + var(--sab, 0px)) !important;
+}
+
+@media (max-width: 720px) {
+  #profileModal {
+    padding: 0 !important;
+  }
+
+  #profileModal .modal-content {
+    width: 100vw !important;
+    height: 100dvh !important;
+    border-radius: 0 !important;
+  }
+
+  #profileModal .modal-body {
+    padding-left: 18px !important;
+    padding-right: 18px !important;
+    padding-bottom: calc(136px + var(--mobile-footer-clearance, var(--sab, 0px))) !important;
+    scroll-padding-bottom: calc(152px + var(--mobile-footer-clearance, var(--sab, 0px)));
+  }
+}
