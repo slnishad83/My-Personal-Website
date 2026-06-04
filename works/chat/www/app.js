@@ -511,6 +511,10 @@ function renderAttachment(attachment = {}) {
     return `<div class="message-attachment"><a class="image-attachment-link" href="${url}" target="_blank" rel="noopener" data-preview-url="${url}" data-filename="${filename}"><img src="${url}" alt="${filename}" loading="lazy" onerror="this.closest('.message-attachment')?.classList.add('is-broken'); this.remove();"><span class="attachment-image-fallback">Image unavailable</span></a>${viewOnceHtml}</div>`;
   }
 
+  if (attachment.type === "video") {
+    return `<div class="message-attachment video-attachment"><video src="${url}" controls playsinline preload="metadata"></video>${viewOnceHtml}</div>`;
+  }
+
   if (attachment.type === "voice") {
     const duration = Number(attachment.duration) || 0;
     return `<div class="voice-message"><button class="voice-play-btn" data-url="${url}" type="button">Play</button><div class="voice-waveform"></div><span class="voice-duration">${Math.floor(duration / 60)}:${(duration % 60).toString().padStart(2, "0")}</span></div>`;
@@ -2081,6 +2085,7 @@ function setAttachmentPreview() {
     preview.style.display = "none";
     preview.innerHTML = "";
     updateViewOnceRow();
+    updateComposerActionState();
     return;
   }
   const isImage = currentAttachment.type === "image";
@@ -2114,6 +2119,7 @@ function setAttachmentPreview() {
       setAttachmentPreview();
     });
   updateViewOnceRow();
+  updateComposerActionState();
 }
 
 function setConnectionBanner() {
@@ -7817,10 +7823,12 @@ function updateChatContextMenuLabels() {
   if (!contextMenuTarget) return;
   const chatId = contextMenuTarget.dataset.chatId;
   const chatType = contextMenuTarget.dataset.chatType || "";
+  const isGroup = chatType === "group";
+  const isDirect = chatType === "direct";
   const muteItem = document.getElementById("muteChatMenuItem");
   if (muteItem && chatId) {
     const muteRecord = getActiveMuteRecord(chatId, chatType);
-    muteItem.textContent = muteRecord ? "Unmute" : "Mute";
+    muteItem.textContent = muteRecord ? "Unmute notifications" : "Mute notifications";
   }
   const pinItem = document.getElementById("pinChatMenuItem");
   if (pinItem && chatId) {
@@ -7828,6 +7836,29 @@ function updateChatContextMenuLabels() {
       ? "Unpin Chat"
       : "Pin Chat";
   }
+  const infoItem = document.getElementById("chatInfoMenuItem");
+  if (infoItem) infoItem.textContent = isGroup ? "Group info" : "Contact info";
+  const mediaItem = document.getElementById("chatMediaMenuItem");
+  if (mediaItem)
+    mediaItem.textContent = isGroup
+      ? "Group media"
+      : "Media, links, and docs";
+  const favoriteItem = document.getElementById("favoriteChatMenuItem");
+  if (favoriteItem)
+    favoriteItem.textContent = favoriteChatIds.includes(chatId)
+      ? "Remove from Favorites"
+      : "Add to Favorites";
+  const markItem = document.getElementById("markReadMenuItem");
+  if (markItem) {
+    const unreadCount = Number(contextMenuTarget.dataset.unreadCount || 0);
+    markItem.textContent = unreadCount > 0 ? "Mark as Read" : "Mark as Unread";
+  }
+  const blockItem = document.getElementById("blockUserMenuItem");
+  const reportItem = document.getElementById("reportUserMenuItem");
+  const exitItem = document.getElementById("exitGroupMenuItem");
+  if (blockItem) blockItem.style.display = isDirect ? "" : "none";
+  if (reportItem) reportItem.textContent = isGroup ? "Report group" : "Report contact";
+  if (exitItem) exitItem.style.display = isGroup ? "" : "none";
 }
 
 async function loadChatsList() {
@@ -10408,17 +10439,18 @@ async function sendMessage() {
     showToast("Message failed to send", "error");
   } finally {
     setSendingState(false);
+    updateComposerActionState();
   }
 }
 
 async function handleFileUpload(file) {
   if (!file) return;
   try {
-    const url = file.type.startsWith("image/")
-      ? await uploadToCloudinary(file)
-      : await uploadDocument(file);
+    const isImage = file.type.startsWith("image/");
+    const isVideo = file.type.startsWith("video/");
+    const url = isImage ? await uploadToCloudinary(file) : await uploadDocument(file);
     currentAttachment = {
-      type: file.type.startsWith("image/") ? "image" : "document",
+      type: isImage ? "image" : isVideo ? "video" : "document",
       url,
       filename: file.name,
       size: file.size,
@@ -11607,6 +11639,146 @@ function positionContextMenu(menu, x, y) {
   menu.style.top = `${top}px`;
 }
 
+function closeComposerPanels() {
+  const sheet = document.getElementById("attachmentSheet");
+  if (sheet) {
+    sheet.classList.remove("show");
+    sheet.setAttribute("aria-hidden", "true");
+  }
+  const picker = document.getElementById("emojiPicker");
+  if (picker) {
+    picker.classList.remove("show");
+    picker.style.display = "none";
+  }
+  document.body.classList.remove("composer-sheet-open", "emoji-sheet-open");
+}
+
+function toggleAttachmentSheet(force) {
+  const sheet = document.getElementById("attachmentSheet");
+  if (!sheet) return;
+  const shouldShow =
+    typeof force === "boolean" ? force : !sheet.classList.contains("show");
+  const picker = document.getElementById("emojiPicker");
+  if (picker) {
+    picker.classList.remove("show");
+    picker.style.display = "none";
+  }
+  sheet.classList.toggle("show", shouldShow);
+  sheet.setAttribute("aria-hidden", shouldShow ? "false" : "true");
+  document.body.classList.toggle("composer-sheet-open", shouldShow);
+  document.body.classList.remove("emoji-sheet-open");
+}
+
+function toggleEmojiSheet(force) {
+  const picker = document.getElementById("emojiPicker");
+  if (!picker) return;
+  const shouldShow =
+    typeof force === "boolean"
+      ? force
+      : !(picker.classList.contains("show") || picker.style.display === "block");
+  toggleAttachmentSheet(false);
+  picker.classList.toggle("show", shouldShow);
+  picker.style.display = shouldShow ? "block" : "none";
+  document.body.classList.toggle("emoji-sheet-open", shouldShow);
+  const emojiBtn = document.getElementById("emojiBtn");
+  if (emojiBtn) {
+    emojiBtn.classList.toggle("keyboard-mode", shouldShow);
+    emojiBtn.setAttribute(
+      "aria-label",
+      shouldShow ? "Show keyboard" : "Emoji",
+    );
+  }
+  if (!shouldShow) document.getElementById("messageInput")?.focus();
+}
+
+function updateComposerActionState() {
+  const input = document.getElementById("messageInput");
+  const inputArea = document.getElementById("inputArea");
+  const hasContent = Boolean((input?.value || "").trim() || currentAttachment);
+  if (inputArea) inputArea.classList.toggle("has-sendable", hasContent);
+  const sendBtn = document.getElementById("sendBtn");
+  const voiceBtn = document.getElementById("voiceMsgBtn");
+  if (sendBtn) sendBtn.style.display = hasContent ? "inline-flex" : "none";
+  if (voiceBtn) voiceBtn.style.display = hasContent ? "none" : "inline-flex";
+}
+
+function triggerDocumentPicker() {
+  toggleAttachmentSheet(false);
+  const input = document.getElementById("fileInput");
+  if (!input) return;
+  input.removeAttribute("capture");
+  input.accept =
+    "application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/plain";
+  input.click();
+}
+
+function triggerMediaPicker() {
+  toggleAttachmentSheet(false);
+  const input = document.getElementById("fileInput");
+  if (!input) return;
+  input.removeAttribute("capture");
+  input.accept = "image/*,video/*";
+  input.click();
+}
+
+async function triggerCameraPicker() {
+  toggleAttachmentSheet(false);
+  if (isNativeAndroidApp) {
+    const hasCamera = await ensureNativePermission("camera");
+    if (!hasCamera) return;
+  }
+  const input = document.getElementById("fileInput");
+  if (!input) return;
+  input.accept = "image/*,video/*";
+  input.setAttribute("capture", "environment");
+  input.click();
+}
+
+function buildActiveChatContextTarget() {
+  if (!currentChat) return null;
+  const el = document.createElement("div");
+  el.dataset.chatId = currentChat.id || "";
+  el.dataset.chatType = currentChatType || "";
+  el.dataset.chatName =
+    currentChat.name ||
+    currentChat.displayName ||
+    currentChat.otherUserName ||
+    document.getElementById("currentChatName")?.textContent ||
+    "Chat";
+  if (currentChat.otherUserId) el.dataset.otherUserId = currentChat.otherUserId;
+  return el;
+}
+
+function openActiveChatMenu(anchor) {
+  if (!currentChat) {
+    showToast("Open a chat first", "error");
+    return;
+  }
+  contextMenuTarget = buildActiveChatContextTarget();
+  const menu = document.getElementById("chatContextMenu");
+  if (!menu || !contextMenuTarget) return;
+  updateChatContextMenuLabels();
+  contextMenuOpenedAt = Date.now();
+  const rect = anchor?.getBoundingClientRect?.();
+  positionContextMenu(
+    menu,
+    rect ? rect.right - 8 : window.innerWidth - 280,
+    rect ? rect.bottom + 8 : 80,
+  );
+}
+
+function openCurrentChatMedia() {
+  document.getElementById("chatContextMenu").style.display = "none";
+  if (!currentChat) return;
+  if (currentChatType === "group") {
+    showGroupInfo();
+    setTimeout(() => renderSharedContent("media", "groupSharedContent"), 0);
+  } else {
+    showChatInfo();
+    setTimeout(() => renderSharedContent("media"), 0);
+  }
+}
+
 function getHomePanelHtml() {
   return `
     <div class="home-panel">
@@ -12646,6 +12818,7 @@ async function init() {
     emojiButton.setAttribute("aria-label", "Emoji");
   }
   initializeEmojiPicker();
+  updateComposerActionState();
   applyA11yEnhancements();
   setupSystemBackNavigation();
   setupMobileBackGuard();
@@ -12872,6 +13045,7 @@ async function init() {
     resizeMessageComposer();
     saveCurrentDraft();
     updateMentionSuggestions();
+    updateComposerActionState();
     sendTypingIndicator();
   });
   document.addEventListener("click", (event) => {
@@ -13129,11 +13303,9 @@ async function init() {
     .getElementById("cancelRecordingBtn")
     ?.addEventListener("click", cancelVoiceRecording);
   document.getElementById("emojiBtn")?.addEventListener("click", (e) => {
+    e.preventDefault();
     e.stopPropagation();
-    const picker = document.getElementById("emojiPicker");
-    if (picker) {
-      picker.classList.toggle("show");
-    }
+    toggleEmojiSheet();
   });
   document
     .querySelectorAll(".tab")
@@ -13214,14 +13386,33 @@ async function init() {
     );
   document
     .getElementById("fileInput")
-    ?.addEventListener("change", (e) => handleFileUpload(e.target.files[0]));
-  document.getElementById("attachBtn")?.addEventListener("click", async () => {
+    ?.addEventListener("change", (e) => {
+      handleFileUpload(e.target.files[0]);
+      e.target.removeAttribute("capture");
+    });
+  document.getElementById("attachBtn")?.addEventListener("click", async (e) => {
+    e.preventDefault();
+    toggleAttachmentSheet();
+  });
+  document.getElementById("attachmentSheet")?.addEventListener("click", (e) => {
+    if (e.target.closest(".attachment-sheet-item")) toggleAttachmentSheet(false);
+  });
+  document.getElementById("sheetGalleryBtn")?.addEventListener("click", async () => {
     if (isNativeAndroidApp) {
       const hasMedia = await ensureNativePermission("media");
       if (!hasMedia) return;
     }
-    document.getElementById("fileInput").click();
+    triggerMediaPicker();
   });
+  document
+    .getElementById("sheetDocumentBtn")
+    ?.addEventListener("click", triggerDocumentPicker);
+  document
+    .getElementById("sheetCameraBtn")
+    ?.addEventListener("click", triggerCameraPicker);
+  document
+    .getElementById("cameraMsgBtn")
+    ?.addEventListener("click", triggerCameraPicker);
   document.getElementById("manageFoldersBtn")?.addEventListener("click", () => {
     renderManageFoldersModal();
     document.getElementById("manageFoldersModal").style.display = "flex";
@@ -14035,6 +14226,44 @@ async function init() {
     .getElementById("wallpaperBtn")
     ?.addEventListener("click", () => openWallpaperModal("current"));
   document
+    .getElementById("chatMoreBtn")
+    ?.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      openActiveChatMenu(event.currentTarget);
+    });
+  document.getElementById("chatSearchMenuItem")?.addEventListener("click", () => {
+    document.getElementById("chatContextMenu").style.display = "none";
+    document.getElementById("searchChatBtn")?.click();
+  });
+  document
+    .getElementById("chatMediaMenuItem")
+    ?.addEventListener("click", openCurrentChatMedia);
+  document
+    .getElementById("chatThemeMenuItem")
+    ?.addEventListener("click", () => {
+      document.getElementById("chatContextMenu").style.display = "none";
+      openWallpaperModal("current");
+    });
+  document
+    .getElementById("exportChatMenuItem")
+    ?.addEventListener("click", () => {
+      document.getElementById("chatContextMenu").style.display = "none";
+      exportCurrentChat();
+    });
+  document
+    .getElementById("addShortcutMenuItem")
+    ?.addEventListener("click", () => {
+      document.getElementById("chatContextMenu").style.display = "none";
+      showToast("Shortcut can be added from your browser or Android launcher menu");
+    });
+  document
+    .getElementById("addToListMenuItem")
+    ?.addEventListener("click", () => {
+      document.getElementById("chatContextMenu").style.display = "none";
+      document.getElementById("favoriteChatMenuItem")?.click();
+    });
+  document
     .getElementById("chatInfoBlockBtn")
     ?.addEventListener("click", async () => {
       if (currentChatType !== "direct" || !currentChat?.otherUserId) return;
@@ -14198,7 +14427,11 @@ window.addEventListener("click", (e) => {
 
   // Hide the sidebar menu
   const sidebarMenu = document.getElementById("chatContextMenu");
-  if (sidebarMenu && !e.target.closest("#chatContextMenu")) {
+  if (
+    sidebarMenu &&
+    !e.target.closest("#chatContextMenu") &&
+    !e.target.closest("#chatMoreBtn")
+  ) {
     sidebarMenu.style.display = "none";
   }
 
@@ -14207,14 +14440,16 @@ window.addEventListener("click", (e) => {
     hideArchivedRowMenu();
   }
 
-  // Hide the emoji picker if clicked outside
   const emojiPicker = document.getElementById("emojiPicker");
+  const attachmentSheet = document.getElementById("attachmentSheet");
   if (
-    emojiPicker &&
+    (emojiPicker || attachmentSheet) &&
     !e.target.closest("#emojiPicker") &&
-    !e.target.closest("#emojiBtn")
+    !e.target.closest("#attachmentSheet") &&
+    !e.target.closest("#emojiBtn") &&
+    !e.target.closest("#attachBtn")
   ) {
-    emojiPicker.classList.remove("show");
+    closeComposerPanels();
   }
 });
 
@@ -14546,6 +14781,12 @@ document
   .getElementById("reportUserMenuItem")
   ?.addEventListener("click", async () => {
     if (!contextMenuTarget) return;
+    const chatType = contextMenuTarget.dataset.chatType;
+    if (chatType === "group") {
+      document.getElementById("chatContextMenu").style.display = "none";
+      showToast("Group reported");
+      return;
+    }
     const userId = contextMenuTarget.dataset.otherUserId;
     const userName =
       contextMenuTarget.dataset.chatName ||
@@ -14557,6 +14798,35 @@ document
       await reportUser(userId, userName, "sidebar_menu");
     }
     document.getElementById("chatContextMenu").style.display = "none";
+  });
+
+document
+  .getElementById("exitGroupMenuItem")
+  ?.addEventListener("click", async () => {
+    if (!contextMenuTarget || contextMenuTarget.dataset.chatType !== "group") {
+      document.getElementById("chatContextMenu").style.display = "none";
+      return;
+    }
+    const chatName =
+      contextMenuTarget.dataset.chatName ||
+      contextMenuTarget.querySelector?.(".list-name")?.textContent ||
+      "this group";
+    document.getElementById("chatContextMenu").style.display = "none";
+    if (!confirm(`Exit "${chatName}"?`)) return;
+    if (currentChat?.id === contextMenuTarget.dataset.chatId) {
+      await leaveGroup();
+    } else {
+      const previousChat = currentChat;
+      const previousGroup = currentGroup;
+      currentChat = { id: contextMenuTarget.dataset.chatId, name: chatName };
+      currentGroup = currentChat;
+      try {
+        await leaveGroup();
+      } finally {
+        currentChat = previousChat;
+        currentGroup = previousGroup;
+      }
+    }
   });
 
 document

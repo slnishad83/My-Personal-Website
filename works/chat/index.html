@@ -275,6 +275,12 @@
               title="Change Wallpaper"
               aria-label="Change Wallpaper"
             ></button>
+            <button
+              class="icon-btn"
+              id="chatMoreBtn"
+              title="More options"
+              aria-label="More options"
+            ></button>
           </div>
         </div>
 
@@ -424,67 +430,46 @@
             </label>
             <span id="viewOnceLabel">View Once: OFF</span>
           </div>
-          <div style="position: relative">
-            <button class="emoji-btn" id="emojiBtn" title="Emoji">☺</button>
-            <div id="emojiPicker" class="emoji-picker"></div>
+          <div class="wa-composer-shell">
+            <button class="emoji-btn" id="emojiBtn" title="Emoji" aria-label="Emoji"></button>
+            <textarea
+              id="messageInput"
+              placeholder="Message"
+              rows="1"
+            ></textarea>
+            <button class="attach-btn" id="attachBtn" title="Attach" aria-label="Attach"></button>
+            <button
+              class="attach-btn"
+              id="cameraMsgBtn"
+              title="Camera"
+              aria-label="Camera"
+            ></button>
           </div>
+          <button class="send-btn" id="sendBtn" title="Send message" aria-label="Send message"></button>
           <button
             class="voice-msg-btn"
             id="voiceMsgBtn"
             title="Hold to record voice"
             aria-label="Hold to record voice"
           ></button>
-          <button class="attach-btn" id="attachBtn" title="Attach file" aria-label="Attach file"></button>
-          <button
-            class="attach-btn"
-            id="locationBtn"
-            title="Share location"
-            aria-label="Share location"
-          ></button>
-          <button
-            class="attach-btn"
-            id="pollBtn"
-            title="Create poll"
-            aria-label="Create poll"
-          ></button>
-           <button
-             class="attach-btn"
-             id="scheduleMsgBtn"
-             title="Schedule message"
-             aria-label="Schedule message"
-           ></button>
-           <button
-             class="attach-btn"
-             id="videoMsgBtn"
-             title="Record video message"
-             aria-label="Record video message"
-           ></button>
-           <button
-             class="attach-btn"
-             id="contactCardBtn"
-             title="Share contact"
-             aria-label="Share contact"
-           ></button>
-           <button
-             class="attach-btn"
-             id="eventBtn"
-             title="Schedule event"
-             aria-label="Schedule event"
-           ></button>
-           <button
-             class="attach-btn"
-             id="listBtn"
-             title="Create list"
-             aria-label="Create list"
-           ></button>
-          <div id="emojiPredictionBar" class="emoji-prediction-bar" style="display:none"></div>
-          <textarea
-            id="messageInput"
-            placeholder="Type a message..."
-            rows="1"
-          ></textarea>
           <div id="mentionSuggestions" class="mention-suggestions"></div>
-          <button class="send-btn" id="sendBtn" title="Send message" aria-label="Send message"></button>
+          <div id="emojiPredictionBar" class="emoji-prediction-bar" style="display:none"></div>
+          <div id="emojiPicker" class="emoji-picker"></div>
+          <div id="attachmentSheet" class="attachment-sheet" aria-hidden="true">
+            <div class="attachment-sheet-handle"></div>
+            <div class="attachment-sheet-grid">
+              <button type="button" class="attachment-sheet-item" id="sheetGalleryBtn" data-color="blue"><span class="attachment-sheet-icon">IMG</span><span>Gallery</span></button>
+              <button type="button" class="attachment-sheet-item" id="sheetCameraBtn" data-color="pink"><span class="attachment-sheet-icon">CAM</span><span>Camera</span></button>
+              <button type="button" class="attachment-sheet-item" id="locationBtn" data-color="green"><span class="attachment-sheet-icon">PIN</span><span>Location</span></button>
+              <button type="button" class="attachment-sheet-item" id="contactCardBtn" data-color="cyan"><span class="attachment-sheet-icon">USER</span><span>Contact</span></button>
+              <button type="button" class="attachment-sheet-item" id="sheetDocumentBtn" data-color="purple"><span class="attachment-sheet-icon">DOC</span><span>Document</span></button>
+              <button type="button" class="attachment-sheet-item" id="pollBtn" data-color="amber"><span class="attachment-sheet-icon">POLL</span><span>Poll</span></button>
+              <button type="button" class="attachment-sheet-item" id="eventBtn" data-color="rose"><span class="attachment-sheet-icon">DATE</span><span>Event</span></button>
+              <button type="button" class="attachment-sheet-item" id="videoMsgBtn" data-color="teal"><span class="attachment-sheet-icon">VID</span><span>Video note</span></button>
+              <button type="button" class="attachment-sheet-item" id="scheduleMsgBtn" data-color="slate"><span class="attachment-sheet-icon">TIME</span><span>Schedule</span></button>
+              <button type="button" class="attachment-sheet-item" id="listBtn" data-color="orange"><span class="attachment-sheet-icon">LIST</span><span>List</span></button>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -1728,12 +1713,19 @@
     <div id="chatContextMenu" class="context-menu" style="display: none">
       <button type="button" class="context-menu-item" id="pinChatMenuItem">Pin Chat</button>
       <button type="button" class="context-menu-item" id="chatInfoMenuItem">Info</button>
+      <button type="button" class="context-menu-item" id="chatMediaMenuItem">Media, links, and docs</button>
+      <button type="button" class="context-menu-item" id="chatSearchMenuItem">Search</button>
+      <button type="button" class="context-menu-item" id="chatThemeMenuItem">Chat theme</button>
+      <button type="button" class="context-menu-item" id="exportChatMenuItem">Export Chat</button>
+      <button type="button" class="context-menu-item" id="addShortcutMenuItem">Add Shortcut</button>
+      <button type="button" class="context-menu-item" id="addToListMenuItem">Add to List</button>
       <button type="button" class="context-menu-item" id="muteChatMenuItem">Mute</button>
       <button type="button" class="context-menu-item" id="archiveChatMenuItem">Archive</button>
       <button type="button" class="context-menu-item" id="favoriteChatMenuItem">Add to Favorite</button>
       <button type="button" class="context-menu-item" id="markReadMenuItem">Mark as Unread</button>
       <button type="button" class="context-menu-item" id="blockUserMenuItem">Block</button>
       <button type="button" class="context-menu-item" id="reportUserMenuItem">Report</button>
+      <button type="button" class="context-menu-item danger" id="exitGroupMenuItem">Exit Group</button>
       <button type="button" class="context-menu-item" id="clearChatMenuItem">Clear Chat</button>
       <button type="button" class="context-menu-item" id="deleteChatMenuItem">Delete</button>
     </div>
