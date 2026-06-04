@@ -442,19 +442,24 @@ function escapeRegExp(text = "") {
 function getInitials(name = "", fallback = "") {
   const source = String(name || fallback || "").trim();
   if (!source) return "U";
-  const parts = source.split(/\s+/).filter(Boolean);
-  if (parts.length > 1) {
-    return (
-      parts
-        .slice(0, 3)
-        .map((part) => part[0]?.toUpperCase() || "")
-        .join("") || "U"
-    );
+  const normalizedEmail = String(fallback || source).trim().toLowerCase();
+  const normalizedName = String(name || "").trim().toLowerCase().replace(/\s+/g, " ");
+  if (
+    normalizedEmail === "sl.nishad@gmail.com" ||
+    normalizedEmail === "sl.nishad@gmail.co" ||
+    normalizedName === "nishad s l"
+  ) {
+    return "NSL";
   }
   if (source.includes("@")) {
-    return source.split("@")[0].slice(0, 3).toUpperCase() || "U";
+    const local = source.split("@")[0].replace(/[^a-z0-9]+/gi, " ").trim();
+    return local.slice(0, 2).toUpperCase() || "U";
   }
-  return source.slice(0, 3).toUpperCase();
+  const parts = source.split(/\s+/).filter(Boolean);
+  if (parts.length > 1 && parts[1].length > 1) {
+    return `${parts[0][0] || ""}${parts[1][0] || ""}`.toUpperCase() || "U";
+  }
+  return parts[0]?.slice(0, 2).toUpperCase() || "U";
 }
 
 function getFileNameFromUrl(url) {
@@ -1466,7 +1471,7 @@ function updateMentionSuggestions() {
     const button = document.createElement("button");
     button.type = "button";
     button.className = "mention-suggestion";
-    button.innerHTML = `<span class="list-avatar">${member.avatar ? `<img src="${member.avatar}">` : escapeHtml(member.name[0]?.toUpperCase() || "?")}</span><span>${escapeHtml(member.name)}</span>`;
+    button.innerHTML = `<span class="list-avatar">${member.avatar ? `<img src="${member.avatar}">` : escapeHtml(getInitials(member.name || ""))}</span><span>${escapeHtml(member.name)}</span>`;
     button.addEventListener("mousedown", (event) => {
       event.preventDefault();
       insertMention(member, range);
@@ -3541,15 +3546,7 @@ async function addRemoteIceCandidate(candidateData) {
 }
 
 function getGroupCallInitials(name = "") {
-  const parts = String(name || "")
-    .trim()
-    .split(/\s+/)
-    .filter(Boolean);
-  return (
-    parts.length > 1
-      ? `${parts[0][0]}${parts[parts.length - 1][0]}`
-      : (parts[0] || "?").slice(0, 2)
-  ).toUpperCase();
+  return getInitials(name || "", "");
 }
 
 function getGroupCallPairKey(a, b) {
@@ -5572,7 +5569,9 @@ async function buildMessageSearchChatItems(visibleItems = []) {
         type: archive.chatType,
         name,
         avatar:
-          archive.chatType === "group" ? "G" : escapeHtml(getInitials(name)),
+          archive.chatType === "group"
+            ? escapeHtml(getInitials(name || "Group"))
+            : escapeHtml(getInitials(name)),
         preview: "Archived",
         unreadCount: 0,
         isFavorite: false,
@@ -5816,7 +5815,7 @@ async function loadReceivedRequests() {
       const reqDiv = document.createElement("div");
       reqDiv.className = "list-item request-card";
       reqDiv.innerHTML = `
-        <div class="list-avatar">${isGroupInvite ? "G" : escapeHtml(getInitials(req.fromUserName || "", req.fromUserEmail || ""))}</div>
+        <div class="list-avatar">${isGroupInvite ? escapeHtml(getInitials(req.groupName || "Group invite")) : escapeHtml(getInitials(req.fromUserName || "", req.fromUserEmail || ""))}</div>
         <div class="list-info">
           <div class="list-name">${escapeHtml(isGroupInvite ? req.groupName || "Group invite" : req.fromUserName || "User")}</div>
           <div class="list-preview">${isGroupInvite ? `Group invite from ${escapeHtml(req.fromUserName || "User")}` : `Wants to chat${req.fromUserEmail ? ` - ${escapeHtml(req.fromUserEmail)}` : ""}`}</div>
@@ -7782,7 +7781,9 @@ async function buildGroupChatItems() {
         id: groupDoc.id,
         type: "group",
         name: group.name || "Group",
-        avatar: group.icon ? `<img src="${group.icon}">` : "G",
+        avatar: group.icon
+          ? `<img src="${group.icon}">`
+          : escapeHtml(getInitials(group.name || "Group")),
         preview: group.memberCount
           ? `${group.memberCount} members`
           : `Invite code ${group.code || ""}`.trim(),
@@ -7984,7 +7985,7 @@ async function loadGroupsList() {
     ]
       .filter(Boolean)
       .join(" - ");
-    groupDiv.innerHTML = `<div class="list-avatar">${group.icon ? `<img src="${group.icon}">` : "G"}</div><div class="list-info" style="flex:1; cursor:pointer;"><div class="list-name">${group.isPinned ? '<span class="pin-icon">&#x1F4CC;</span> ' : ""}${group.isFavorite ? "* " : ""}${escapeHtml(group.name)} ${isMuted ? "[Muted]" : ""}</div><div class="list-preview">${escapeHtml(groupPreview)}${group.unreadCount ? ` - ${group.unreadCount} unread` : ""}</div></div><button class="list-item-menu mute-chat-btn" data-chat-id="${group.id}" data-chat-type="group">${isMuted ? "Unmute" : "Mute"}</button><button class="list-item-menu archive-chat-btn" data-chat-id="${group.id}" data-chat-type="group" data-chat-name="${escapeHtml(group.name)}">Archive</button>`;
+    groupDiv.innerHTML = `<div class="list-avatar">${group.icon ? `<img src="${group.icon}">` : escapeHtml(getInitials(group.name || "Group"))}</div><div class="list-info" style="flex:1; cursor:pointer;"><div class="list-name">${group.isPinned ? '<span class="pin-icon">&#x1F4CC;</span> ' : ""}${group.isFavorite ? "* " : ""}${escapeHtml(group.name)} ${isMuted ? "[Muted]" : ""}</div><div class="list-preview">${escapeHtml(groupPreview)}${group.unreadCount ? ` - ${group.unreadCount} unread` : ""}</div></div><button class="list-item-menu mute-chat-btn" data-chat-id="${group.id}" data-chat-type="group">${isMuted ? "Unmute" : "Mute"}</button><button class="list-item-menu archive-chat-btn" data-chat-id="${group.id}" data-chat-type="group" data-chat-name="${escapeHtml(group.name)}">Archive</button>`;
     if (group.unreadCount) {
       groupDiv.insertAdjacentHTML(
         "beforeend",
@@ -8830,7 +8831,7 @@ async function showGroupInfo() {
   document.getElementById("groupInfoTitle").textContent = group.name;
   document.getElementById("groupAvatarLarge").innerHTML = group.icon
     ? `<img src="${group.icon}">`
-    : "G";
+    : escapeHtml(getInitials(group.name || "Group"));
   document.getElementById("editGroupNameInput").value = group.name;
   document.getElementById("groupCodeDisplay").textContent = group.code;
   document.getElementById("groupAdminsOnlySend").checked =
@@ -11335,14 +11336,14 @@ async function renderForwardChats(searchTerm = "") {
     let avatarHtml;
     const photoUrl = item.photoURL || item.icon || "";
     if (photoUrl) {
-      avatarHtml = `<img src="${escapeHtml(photoUrl)}" class="forward-avatar-img" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex'"><span class="forward-avatar-fallback" style="display:none;">${escapeHtml((item.name || "?")[0].toUpperCase())}</span>`;
+      avatarHtml = `<img src="${escapeHtml(photoUrl)}" class="forward-avatar-img" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex'"><span class="forward-avatar-fallback" style="display:none;">${escapeHtml(getInitials(item.name || "Chat", item.email || ""))}</span>`;
     } else {
       const rawAvatar = item.avatar || "";
       const isImg = rawAvatar.startsWith("<img");
       if (isImg) {
         avatarHtml = `<span class="forward-avatar-wrap">${rawAvatar}</span>`;
       } else {
-        avatarHtml = `<span class="forward-avatar-fallback">${escapeHtml((item.name || "?")[0].toUpperCase())}</span>`;
+        avatarHtml = `<span class="forward-avatar-fallback">${escapeHtml(getInitials(item.name || "Chat", item.email || ""))}</span>`;
       }
     }
 
