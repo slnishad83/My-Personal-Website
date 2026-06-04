@@ -7393,9 +7393,39 @@ body.native-android .context-menu {
 
 .attachment-sheet-item:hover,
 .attachment-sheet-item:focus,
+.attachment-sheet-item:focus-visible,
 .attachment-sheet-item:active {
   background: transparent !important;
   box-shadow: none !important;
+  outline: 0 !important;
+}
+
+#attachmentSheet .attachment-sheet-item,
+#attachmentSheet #locationBtn,
+#attachmentSheet #pollBtn,
+#attachmentSheet #scheduleMsgBtn {
+  background: transparent !important;
+  color: #cfd8dc !important;
+  font-size: 13px !important;
+}
+
+#attachmentSheet .attachment-sheet-item > span:last-child {
+  display: block !important;
+  min-height: 18px;
+  color: #cfd8dc !important;
+  font-size: 13px !important;
+  line-height: 1.2 !important;
+  text-align: center;
+}
+
+#attachmentSheet #locationBtn::before,
+#attachmentSheet #locationBtn::after,
+#attachmentSheet #pollBtn::before,
+#attachmentSheet #pollBtn::after,
+#attachmentSheet #scheduleMsgBtn::before,
+#attachmentSheet #scheduleMsgBtn::after {
+  content: none !important;
+  display: none !important;
 }
 
 .attachment-sheet-item#sheetGalleryBtn .attachment-sheet-icon::before {
