@@ -8672,6 +8672,15 @@ function normalizePermissionState(state) {
   return state || 'Ask when needed';
 }
 
+function isPermissionAllowedStatus(status = '') {
+  return ['allowed', 'granted'].includes(String(status || '').trim().toLowerCase());
+}
+
+function getPermissionButtonLabel(kind, status) {
+  if (kind === 'media' && !isPermissionAllowedStatus(status)) return 'Open Picker';
+  return isPermissionAllowedStatus(status) ? 'Revoke / Change' : 'Grant Permission';
+}
+
 async function queryNativePermissionState(alias) {
   if (!isNativeAndroidApp) return null;
   try {
@@ -8758,14 +8767,14 @@ async function refreshPermissionsModal() {
     { kind: 'microphone', el: microphone, btnKind: 'microphone', nativeAlias: 'microphone', browserKey: 'microphone' },
     { kind: 'notifications', el: notifications, btnKind: 'notifications', nativeAlias: 'notifications', browserKey: 'notifications' },
     { kind: 'location', el: location, btnKind: 'location', nativeAlias: 'location', browserKey: 'geolocation' },
-    { kind: 'media', el: media, btnKind: 'media', nativeAlias: null, browserKey: null },
+    { kind: 'media', el: media, btnKind: 'media', nativeAlias: 'media', browserKey: null },
     { kind: 'contacts', el: contacts, btnKind: 'contacts', nativeAlias: 'contacts', browserKey: null }
   ];
 
   for (const cfg of permConfig) {
     let status;
     if (isNativeAndroidApp) {
-      if (cfg.kind === 'media') status = 'Android asks from app settings/file picker';
+      if (cfg.kind === 'media') status = await queryNativePermissionState('media') || 'Ask from file picker';
       else if (cfg.kind === 'contacts') status = await queryNativePermissionState('contacts') || 'Ask when needed';
       else if (cfg.nativeAlias) status = await queryNativePermissionState(cfg.nativeAlias) || 'Ask when needed';
     } else {
@@ -8776,15 +8785,11 @@ async function refreshPermissionsModal() {
     if (cfg.el) cfg.el.textContent = status;
     const btn = document.querySelector(`[data-request-permission="${cfg.btnKind}"]`);
     if (btn) {
-      if (status === 'Allowed' || status === 'granted' || status === 'Granted') {
-        btn.textContent = 'Granted';
-        btn.className = 'btn btn-primary';
-        btn.disabled = true;
-      } else {
-        btn.textContent = cfg.btnKind === 'media' ? 'Open Picker' : 'Allow';
-        btn.className = 'btn btn-outline';
-        btn.disabled = false;
-      }
+      const allowed = isPermissionAllowedStatus(status);
+      btn.textContent = getPermissionButtonLabel(cfg.btnKind, status);
+      btn.className = allowed ? 'btn btn-outline permission-revoke-btn' : 'btn btn-outline';
+      btn.disabled = status === 'Not supported on this device';
+      btn.dataset.permissionStatus = allowed ? 'granted' : 'not-granted';
     }
   }
 }
@@ -8805,8 +8810,14 @@ function openMediaPermissionPicker() {
 
 async function requestAppPermission(kind) {
   try {
+    const btn = document.querySelector(`[data-request-permission="${kind}"]`);
+    if (btn?.dataset.permissionStatus === 'granted') {
+      showPermissionRevokeGuide(kind);
+      return;
+    }
+
     if (isNativeAndroidApp) {
-      if (kind === 'camera' || kind === 'microphone' || kind === 'notifications' || kind === 'contacts' || kind === 'location') {
+      if (kind === 'camera' || kind === 'microphone' || kind === 'notifications' || kind === 'contacts' || kind === 'location' || kind === 'media') {
         const status = await requestNativePermissionState(kind);
         if (status === 'granted') {
           showToast('Permission granted successfully', 'success');
@@ -8861,10 +8872,12 @@ async function requestAppPermission(kind) {
   }
 }
 
-function showPermissionRevokeGuide() {
+function showPermissionRevokeGuide(kind = '') {
   const modal = document.getElementById('revokePermissionsGuideModal');
   if (modal) {
     modal.style.display = 'flex';
+    const title = modal.querySelector('.modal-header h3');
+    if (title) title.textContent = kind ? `Change ${kind} permission` : 'How to Revoke Permissions';
     const btn = document.getElementById('nativeSettingsBtn');
     if (btn) {
       btn.style.display = isNativeAndroidApp ? 'block' : 'none';
@@ -9670,11 +9683,14 @@ async function init() {
     }
   });
 
-  window.Capacitor.Plugins.App.addListener('appStateChange', async () => {
+  window.Capacitor.Plugins.App.addListener('appStateChange', async (state) => {
     const pendingCallId = localStorage.getItem('pendingNativeCallId');
     if (pendingCallId) {
       localStorage.removeItem('pendingNativeCallId');
       await autoAcceptNativeCall(pendingCallId);
+    }
+    if (state?.isActive !== false && document.getElementById('permissionsModal')?.style.display === 'flex') {
+      await refreshPermissionsModal().catch(() => { });
     }
   });
 }
@@ -9692,7 +9708,13 @@ async function init() {
 
   document.querySelectorAll('.closeProfileModal').forEach(b => b.addEventListener('click', () => document.getElementById('profileModal').style.display = 'none'));
   document.getElementById('fileInput')?.addEventListener('change', (e) => handleFileUpload(e.target.files[0]));
-  document.getElementById('attachBtn')?.addEventListener('click', () => document.getElementById('fileInput').click());
+  document.getElementById('attachBtn')?.addEventListener('click', async () => {
+    if (isNativeAndroidApp) {
+      const hasMedia = await ensureNativePermission('media');
+      if (!hasMedia) return;
+    }
+    document.getElementById('fileInput').click();
+  });
   document.getElementById('manageFoldersBtn')?.addEventListener('click', () => {
     renderManageFoldersModal();
     document.getElementById('manageFoldersModal').style.display = 'flex';

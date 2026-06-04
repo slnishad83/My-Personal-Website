@@ -20,7 +20,13 @@ import com.getcapacitor.PermissionState;
         @Permission(strings = {Manifest.permission.RECORD_AUDIO}, alias = "microphone"),
         @Permission(strings = {Manifest.permission.READ_CONTACTS}, alias = "contacts"),
         @Permission(strings = {Manifest.permission.POST_NOTIFICATIONS}, alias = "notifications"),
-        @Permission(strings = {Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION}, alias = "location")
+        @Permission(strings = {Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION}, alias = "location"),
+        @Permission(strings = {
+            Manifest.permission.READ_EXTERNAL_STORAGE,
+            Manifest.permission.READ_MEDIA_IMAGES,
+            Manifest.permission.READ_MEDIA_VIDEO,
+            Manifest.permission.READ_MEDIA_AUDIO
+        }, alias = "media")
     }
 )
 public class AppPermissionsPlugin extends Plugin {
