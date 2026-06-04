@@ -6167,3 +6167,295 @@ iframe {
   color: var(--brand, #6366f1);
 }
 
+
+/* ================================================================
+   COMPREHENSIVE SAFE-AREA / EDGE-TO-EDGE FIX
+   Works for: Android gesture nav, Android 3-button nav, iPhone notch
+   All env() values fall back to 0px on devices that don't need them.
+   ================================================================ */
+
+/* ── 1. Root variables (overrides the earlier declarations) ────── */
+:root {
+  --sat: env(safe-area-inset-top,    0px);   /* status bar / notch */
+  --sar: env(safe-area-inset-right,  0px);   /* landscape right */
+  --sab: env(safe-area-inset-bottom, 0px);   /* nav bar / gesture bar */
+  --sal: env(safe-area-inset-left,   0px);   /* landscape left */
+
+  /* minimum tap target for comfortable mobile use */
+  --min-tap: 44px;
+}
+
+/* ── 2. The outermost container must fill the full screen ──────── */
+html, body {
+  /* Use dvh so the address-bar collapsing on mobile doesn't cause jumps */
+  height: 100dvh;
+  overflow: hidden;
+}
+
+.chat-container {
+  height: 100dvh;
+  /* Don't add padding here – children handle their own insets */
+}
+
+/* ── 3. TOP BARS ─────────────────────────────────────────────────
+   sidebar-header (chat list) + chat-header (inside a chat)
+   Both sit at the very top of the screen → pad for status bar.      */
+.sidebar-header,
+.chat-header {
+  /* Push content below status bar / notch */
+  padding-top: calc(12px + var(--sat)) !important;
+  min-height: calc(56px + var(--sat)) !important;
+  /* Left/right in landscape */
+  padding-left:  calc(16px + var(--sal)) !important;
+  padding-right: calc(16px + var(--sar)) !important;
+  /* Keep it always on top */
+  position: relative;
+  z-index: 100;
+}
+
+/* Modals that use a custom header */
+.modal-header {
+  padding-top: max(14px, calc(8px + var(--sat)));
+  flex-shrink: 0;
+}
+
+/* File-preview modal header */
+#filePreviewModal .modal-header {
+  padding-top: max(16px, calc(10px + var(--sat)));
+}
+
+/* ── 4. BOTTOM INPUT BAR ─────────────────────────────────────────
+   The message composer sits at the very bottom → pad for nav bar.   */
+.input-area {
+  padding-bottom: calc(10px + var(--sab)) !important;
+  padding-left:   calc(10px + var(--sal)) !important;
+  padding-right:  calc(10px + var(--sar)) !important;
+}
+
+/* ── 5. SCROLLABLE MESSAGE LIST ──────────────────────────────────
+   When the input-area is NOT fixed we rely on it to push content up.
+   But add a small bottom padding so last message isn't flush with bar. */
+.messages-area {
+  /* extra bottom breathing room – input-area height is separate */
+  padding-bottom: max(16px, calc(10px + var(--sab)));
+}
+
+/* ── 6. CHAT LIST (left panel) ───────────────────────────────────
+   The list itself scrolls; the bottom of the list shouldn't hide
+   behind the gesture strip when scrolled to the end.                */
+.list {
+  padding-bottom: calc(8px + var(--sab));
+}
+
+/* ── 7. TABS BAR (Chats / Groups / etc.) ────────────────────────
+   Sits in the sidebar below the header – no bottom inset needed
+   but ensure left/right are safe.                                   */
+.tabs {
+  padding-left:  calc(10px + var(--sal));
+  padding-right: calc(10px + var(--sar));
+}
+
+/* ── 8. GROUP ACTION BUTTONS ─────────────────────────────────────
+   "Join Group" / "Leave" etc. sticky at bottom of group info panel */
+.group-actions {
+  padding-bottom: calc(12px + var(--sab)) !important;
+  padding-left:   calc(10px + var(--sal)) !important;
+  padding-right:  calc(10px + var(--sar)) !important;
+}
+
+/* ── 9. MODALS ───────────────────────────────────────────────────
+   On mobile modals slide up from the bottom as a sheet.
+   The modal-footer / last action row must clear the nav bar.        */
+.modal-content {
+  padding-bottom: calc(12px + var(--sab)) !important;
+}
+
+.modal-footer {
+  padding-bottom: calc(12px + var(--sab)) !important;
+}
+
+/* Forward modal footer (our new one) */
+.forward-footer {
+  padding-bottom: calc(12px + var(--sab));
+}
+
+/* Full-screen modals (profile, file-preview, call) */
+#profileModal .modal-content,
+#filePreviewModal .modal-content,
+.call-shell {
+  padding-bottom: calc(16px + var(--sab)) !important;
+}
+
+/* Scroll containers inside modals */
+.modal-body {
+  padding-bottom: calc(16px + var(--sab));
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Forward modal chats list */
+.forward-chats-list {
+  /* Room for the footer + nav bar */
+  max-height: calc(100dvh - 280px - var(--sat) - var(--sab));
+}
+
+/* ── 10. EMOJI PICKER ────────────────────────────────────────────
+   The picker appears above the input bar.
+   Its bottom should be exactly at the top of the input-area.        */
+.emoji-picker {
+  bottom: calc(var(--input-bar-height, 62px) + var(--sab)) !important;
+}
+
+/* ── 11. REPLY / ATTACHMENT PREVIEW banners ──────────────────────
+   These float just above the input bar, so no extra safe-area
+   needed (they use calc(100% + 6px) relative to .input-area).      */
+
+/* ── 12. VOICE RECORDING INDICATOR ─────────────────────────────
+   Fixed badge above the input bar.                                  */
+.voice-recording-indicator {
+  bottom: calc(80px + var(--sab)) !important;
+}
+
+/* ── 13. TOAST NOTIFICATIONS ─────────────────────────────────────
+   Keep toast above the nav bar gesture strip.                       */
+.toast {
+  bottom: calc(24px + var(--sab)) !important;
+}
+
+/* ── 14. CALL SCREEN ─────────────────────────────────────────────
+   Call top bar → safe top; call controls row → safe bottom.         */
+.call-top {
+  padding-top: calc(12px + var(--sat)) !important;
+}
+
+.call-controls {
+  padding-bottom: calc(16px + var(--sab)) !important;
+}
+
+/* ── 15. CONTEXT MENU ────────────────────────────────────────────
+   positionContextMenu() handles XY in JS; just ensure it can't
+   go off the bottom edge.                                           */
+.context-menu {
+  max-height: calc(100dvh - 32px - var(--sat) - var(--sab)) !important;
+}
+
+/* ── 16. SEARCH BOX IN SIDEBAR ───────────────────────────────────
+   Horizontal safe area in landscape.                                */
+.search-box {
+  padding-left:  calc(12px + var(--sal));
+  padding-right: calc(12px + var(--sar));
+}
+
+/* ── 17. SHARED CONTENT PANELS (inside chat info) ────────────────
+   These open as full-height panels; bottom must clear nav bar.      */
+.shared-content,
+#sharedContent,
+#groupSharedContent {
+  padding-bottom: calc(16px + var(--sab));
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* ── 18. CHAT INFO / GROUP INFO SIDE PANELS ─────────────────────
+   Full-height panels that slide in from the right.                  */
+#chatInfoModal .modal-content,
+#groupInfoModal .modal-content {
+  padding-top:    calc(0px + var(--sat)) !important;
+  padding-bottom: calc(20px + var(--sab)) !important;
+}
+
+/* ── 19. LANDSCAPE SAFE AREAS ────────────────────────────────────
+   When phone is rotated, left/right insets (notch sides) apply.     */
+@media (orientation: landscape) {
+  .sidebar-header,
+  .chat-header {
+    padding-left:  calc(20px + var(--sal)) !important;
+    padding-right: calc(20px + var(--sar)) !important;
+  }
+
+  .input-area {
+    padding-left:  calc(16px + var(--sal)) !important;
+    padding-right: calc(16px + var(--sar)) !important;
+    /* Smaller bottom pad in landscape – nav bar is on the side */
+    padding-bottom: calc(8px + var(--sab)) !important;
+  }
+
+  .messages-area {
+    padding-left:  calc(12px + var(--sal));
+    padding-right: calc(12px + var(--sar));
+  }
+
+  .modal-content {
+    /* In landscape the sheet can be wider but still clear nav bar */
+    padding-bottom: calc(8px + var(--sab)) !important;
+  }
+}
+
+/* ── 20. VERY SMALL SCREENS (320 – 360 px wide) ─────────────────
+   Extra care to keep tap targets reachable.                         */
+@media (max-width: 360px) {
+  .sidebar-header,
+  .chat-header {
+    padding-left:  calc(8px + var(--sal)) !important;
+    padding-right: calc(8px + var(--sar)) !important;
+  }
+
+  .input-area {
+    padding-left:  calc(6px + var(--sal)) !important;
+    padding-right: calc(6px + var(--sar)) !important;
+  }
+}
+
+/* ── 21. Minimum tap target enforcement ─────────────────────────
+   All interactive buttons in toolbars should be at least 44 × 44.  */
+.sidebar-header .icon-btn,
+.sidebar-header .logout-btn,
+.sidebar-actions .icon-btn,
+.chat-header .icon-btn,
+.chat-actions .icon-btn,
+.mobile-menu-btn {
+  min-width:  var(--min-tap) !important;
+  min-height: var(--min-tap) !important;
+}
+
+.emoji-btn,
+.voice-msg-btn,
+.attach-btn,
+.send-btn {
+  min-width:  var(--min-tap);
+  min-height: var(--min-tap);
+}
+
+/* ── 22. Standalone (Capacitor / PWA) overrides ─────────────────
+   When running as an installed app (display-mode: standalone) the
+   safe-area env() values from the OS are already correct if
+   viewport-fit=cover is set (it is). These rules are belt-and-
+   suspenders for older Android WebViews that ignore the env().      */
+@media (display-mode: standalone) {
+  .sidebar-header,
+  .chat-header {
+    padding-top: calc(14px + var(--sat)) !important;
+    min-height:  calc(60px + var(--sat)) !important;
+  }
+
+  .input-area {
+    padding-bottom: calc(12px + var(--sab)) !important;
+  }
+
+  .modal-content {
+    padding-bottom: calc(16px + var(--sab)) !important;
+  }
+
+  .group-actions {
+    padding-bottom: calc(16px + var(--sab)) !important;
+  }
+
+  .toast {
+    bottom: calc(28px + var(--sab)) !important;
+  }
+
+  .voice-recording-indicator {
+    bottom: calc(86px + var(--sab)) !important;
+  }
+}
+
