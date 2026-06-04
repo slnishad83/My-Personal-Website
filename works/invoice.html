@@ -747,6 +747,113 @@
       .invoice-preview.pdf-mode td:last-child {
         display: none;
       }
+      .pdf-export-root {
+        position: fixed;
+        top: 0;
+        left: -10000px;
+        width: 794px;
+        background: #ffffff;
+        pointer-events: none;
+        z-index: -1;
+      }
+      .invoice-preview.pdf-mode {
+        width: 794px !important;
+        max-width: 794px !important;
+        min-width: 794px !important;
+        border-radius: 0 !important;
+        box-shadow: none !important;
+        overflow: visible !important;
+        background: #ffffff !important;
+        color: #1e293b !important;
+        font-size: 12px;
+      }
+      .invoice-preview.pdf-mode,
+      .invoice-preview.pdf-mode * {
+        box-sizing: border-box;
+      }
+      .invoice-preview.pdf-mode .invoice-header,
+      .invoice-preview.pdf-mode .bill-section,
+      .invoice-preview.pdf-mode .bottom-section,
+      .invoice-preview.pdf-mode .invoice-footer {
+        page-break-inside: avoid;
+        break-inside: avoid;
+      }
+      .invoice-preview.pdf-mode .invoice-header {
+        padding: 22px 28px !important;
+      }
+      .invoice-preview.pdf-mode .bill-section {
+        display: grid !important;
+        grid-template-columns: 1fr 1fr;
+        gap: 18px;
+        padding: 22px 28px !important;
+      }
+      .invoice-preview.pdf-mode .bill-box {
+        min-width: 0;
+        border-radius: 16px;
+        padding: 15px 18px;
+        overflow-wrap: anywhere;
+      }
+      .invoice-preview.pdf-mode .table-wrapper {
+        padding: 0 28px !important;
+        overflow: visible !important;
+      }
+      .invoice-preview.pdf-mode .invoice-table {
+        width: 100% !important;
+        table-layout: fixed !important;
+        border-collapse: collapse !important;
+        font-size: 10.5px !important;
+      }
+      .invoice-preview.pdf-mode .invoice-table thead {
+        display: table-header-group;
+      }
+      .invoice-preview.pdf-mode .invoice-table tr {
+        page-break-inside: avoid;
+        break-inside: avoid;
+      }
+      .invoice-preview.pdf-mode .invoice-table th,
+      .invoice-preview.pdf-mode .invoice-table td {
+        padding: 8px 6px !important;
+        line-height: 1.28;
+        overflow-wrap: anywhere;
+        word-break: break-word;
+        vertical-align: top;
+      }
+      .invoice-preview.pdf-mode .invoice-table th:first-child,
+      .invoice-preview.pdf-mode .invoice-table td:first-child {
+        width: 28%;
+        text-align: left;
+      }
+      .invoice-preview.pdf-mode .invoice-table th:not(:first-child),
+      .invoice-preview.pdf-mode .invoice-table td:not(:first-child) {
+        width: auto;
+      }
+      .invoice-preview.pdf-mode .item-name-cell,
+      .invoice-preview.pdf-mode .item-desc-cell,
+      .invoice-preview.pdf-mode #previewClientAddress,
+      .invoice-preview.pdf-mode #previewBankDetails {
+        overflow-wrap: anywhere;
+        word-break: break-word;
+      }
+      .invoice-preview.pdf-mode .bottom-section {
+        display: grid !important;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+        padding: 22px 28px !important;
+      }
+      .invoice-preview.pdf-mode .bank-details,
+      .invoice-preview.pdf-mode .total-section {
+        min-width: 0;
+      }
+      .invoice-preview.pdf-mode .amount-words {
+        align-items: flex-start;
+        border-radius: 14px;
+        gap: 10px;
+        padding: 12px 14px;
+      }
+      .invoice-preview.pdf-mode .amount-words span:first-child {
+        min-width: 0;
+        overflow-wrap: anywhere;
+      }
 
       .invoice-header {
         padding: 28px 32px;
@@ -1756,10 +1863,27 @@
 
       function escapeHtml(str) {
         if (!str) return "";
-        return str.replace(
+        return String(str).replace(
           /[&<>]/g,
           (m) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" })[m],
         );
+      }
+
+      function toSafeNumber(value, fallback = 0) {
+        if (typeof value === "number" && Number.isFinite(value)) return value;
+        const parsed = parseFloat(String(value ?? "").replace(/[^0-9.-]/g, ""));
+        return Number.isFinite(parsed) ? parsed : fallback;
+      }
+
+      function normalizeInvoiceItem(item = {}) {
+        return {
+          name: String(item.name || item.itemName || "").trim(),
+          desc: String(item.desc || item.description || "").trim(),
+          hsn: String(item.hsn || item.hsnSac || "").trim(),
+          qty: toSafeNumber(item.qty ?? item.quantity, 0),
+          rate: toSafeNumber(item.rate ?? item.price ?? item.amount, 0),
+          gst: toSafeNumber(item.gst ?? item.gstPercent, 0),
+        };
       }
 
       function unlockInvoiceApp() {
@@ -1818,9 +1942,10 @@
 
       function formatMoney(amount) {
         const s = currentCurrency.symbol;
+        const safeAmount = toSafeNumber(amount, 0);
         if (currentCurrency.code === "INR")
-          return `${s}${Number(amount).toLocaleString("en-IN", { minimumFractionDigits: 2 })}`;
-        return `${s}${Number(amount).toLocaleString("en-US", { minimumFractionDigits: 2 })}`;
+          return `${s}${safeAmount.toLocaleString("en-IN", { minimumFractionDigits: 2 })}`;
+        return `${s}${safeAmount.toLocaleString("en-US", { minimumFractionDigits: 2 })}`;
       }
 
       function numberToWords(num) {
@@ -1926,8 +2051,9 @@
         tbody.innerHTML = "";
         const useGst = isGstApplicable();
         for (let i = 0; i < itemsData.length; i++) {
-          const item = itemsData[i];
-          const taxable = item.qty * item.rate;
+          const item = normalizeInvoiceItem(itemsData[i]);
+          itemsData[i] = item;
+          const taxable = toSafeNumber(item.qty) * toSafeNumber(item.rate);
           const row = tbody.insertRow();
           if (useGst && item.gst > 0) {
             const gstAmount = (taxable * item.gst) / 100;
@@ -2017,10 +2143,14 @@
       function calculateTotals() {
         let grandTotal = 0;
         const useGst = isGstApplicable();
+        itemsData = itemsData.map((item) => normalizeInvoiceItem(item));
         for (const item of itemsData) {
-          const taxable = item.qty * item.rate;
-          if (useGst && item.gst > 0)
-            grandTotal += taxable + (taxable * item.gst) / 100;
+          const qty = toSafeNumber(item.qty);
+          const rate = toSafeNumber(item.rate);
+          const gst = toSafeNumber(item.gst);
+          const taxable = qty * rate;
+          if (useGst && gst > 0)
+            grandTotal += taxable + (taxable * gst) / 100;
           else grandTotal += taxable;
         }
         const gstSummaryDiv = document.getElementById("previewGstSummary");
@@ -2386,7 +2516,7 @@
           showPaidStamp: document.getElementById("showPaidStamp").checked,
           paidOnDate: document.getElementById("paidOnDate").value,
           paidToAccount: document.getElementById("paidAccountSelect").value,
-          items: itemsData,
+          items: itemsData.map((item) => normalizeInvoiceItem(item)),
           updatedAt: new Date().toISOString(),
         };
         if (db && cloudEnabled) {
@@ -2412,20 +2542,47 @@
       async function generatePDF(download = true) {
         const invNum =
           document.getElementById("invoiceNumber").value.trim() || "draft";
+        itemsData = itemsData.map((item) => normalizeInvoiceItem(item));
+        rebuildItemsTable();
+        updatePreview();
         const cloneContainer = document.createElement("div");
-        cloneContainer.style.cssText =
-          "position:fixed;top:-9999px;left:-9999px;opacity:0;pointer-events:none;background:white;width:800px;";
+        cloneContainer.className = "pdf-export-root";
         const clone = document.getElementById("invoicePreview").cloneNode(true);
         clone.classList.add("pdf-mode");
+        clone.style.width = "794px";
         cloneContainer.appendChild(clone);
         document.body.appendChild(cloneContainer);
-        await new Promise((r) => setTimeout(r, 150));
+        const images = Array.from(clone.querySelectorAll("img"));
+        await Promise.all(
+          images.map((img) =>
+            img.complete
+              ? Promise.resolve()
+              : new Promise((resolve) => {
+                  img.onload = resolve;
+                  img.onerror = resolve;
+                }),
+          ),
+        );
+        if (document.fonts?.ready) await document.fonts.ready;
+        await new Promise((r) => setTimeout(r, 100));
         const opt = {
-          margin: [0.5, 0.5, 0.5, 0.5],
+          margin: [0.35, 0.32, 0.35, 0.32],
           filename: `Invoice_${invNum}.pdf`,
           image: { type: "jpeg", quality: 0.98 },
-          html2canvas: { scale: 2, useCORS: true, backgroundColor: "#ffffff" },
+          html2canvas: {
+            scale: 2,
+            useCORS: true,
+            allowTaint: true,
+            backgroundColor: "#ffffff",
+            windowWidth: 794,
+            scrollX: 0,
+            scrollY: 0,
+          },
           jsPDF: { unit: "in", format: "a4", orientation: "portrait" },
+          pagebreak: {
+            mode: ["css", "legacy"],
+            avoid: [".invoice-header", ".bill-box", ".bottom-section", ".summary-row"],
+          },
         };
         try {
           const blob = await html2pdf().set(opt).from(clone).outputPdf("blob");
@@ -2571,7 +2728,9 @@
                   )
                     document.getElementById("paidAccountSelect").value =
                       inv.paidToAccount;
-                  itemsData = inv.items ? inv.items.map((i) => ({ ...i })) : [];
+                  itemsData = inv.items
+                    ? inv.items.map((i) => normalizeInvoiceItem(i))
+                    : [];
                   rebuildItemsTable();
                   updatePreview();
                   togglePaidVisibility();
@@ -2816,14 +2975,14 @@
             showToast("Enter item name", true);
             return;
           }
-          const newItem = {
+          const newItem = normalizeInvoiceItem({
             name: name,
             desc: document.getElementById("itemDesc").value,
             hsn: document.getElementById("itemHsn").value,
-            qty: parseFloat(document.getElementById("itemQty").value) || 0,
-            rate: parseFloat(document.getElementById("itemRate").value) || 0,
-            gst: parseFloat(document.getElementById("itemGst").value) || 0,
-          };
+            qty: document.getElementById("itemQty").value,
+            rate: document.getElementById("itemRate").value,
+            gst: document.getElementById("itemGst").value,
+          });
           if (editingIndex !== null) {
             itemsData[editingIndex] = newItem;
             editingIndex = null;
