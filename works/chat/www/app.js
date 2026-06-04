@@ -170,6 +170,7 @@ let sessionHeartbeatTimer = null;
 let sessionWatchUnsubscribe = null;
 let presenceHeartbeatTimer = null;
 let appUnlockedForSession = false;
+let systemBackHandlerReady = false;
 const MESSAGE_PAGE_SIZE = 120;
 const messageRenderLimits = new Map();
 let failedQueueRetryTimer = null;
@@ -290,8 +291,101 @@ function closeTopVisibleModal() {
 
   const topModal = visibleModals[visibleModals.length - 1];
   if (topModal.id === 'unlockModal' && !appUnlockedForSession) return false;
+  if (topModal.id === 'callModal' && hasLiveCallSession()) {
+    minimizeActiveCallUi('navigation');
+    return true;
+  }
+  if (topModal.id === 'statusViewerModal') {
+    closeStatusViewer();
+    return true;
+  }
   topModal.style.display = 'none';
   return true;
+}
+
+function closeTransientOverlay() {
+  const mentionBox = document.getElementById('mentionSuggestions');
+  if (mentionBox && window.getComputedStyle(mentionBox).display !== 'none') {
+    hideMentionSuggestions();
+    return true;
+  }
+
+  const emojiPicker = document.getElementById('emojiPicker');
+  if (emojiPicker?.classList.contains('show') || emojiPicker?.style.display === 'block') {
+    emojiPicker.classList.remove('show');
+    emojiPicker.style.display = 'none';
+    return true;
+  }
+
+  const inChatSearch = document.getElementById('inChatSearchBar');
+  if (inChatSearch?.style.display === 'flex') {
+    document.getElementById('closeSearchBtn')?.click();
+    return true;
+  }
+
+  const archivedMenu = document.getElementById('archivedRowMenu');
+  if (archivedMenu?.style.display === 'block') {
+    hideArchivedRowMenu();
+    return true;
+  }
+
+  const chatMenu = document.getElementById('chatContextMenu');
+  if (chatMenu?.style.display === 'block') {
+    chatMenu.style.display = 'none';
+    return true;
+  }
+
+  if (document.querySelector('.message-context-menu')) {
+    removeMessageContextMenu();
+    return true;
+  }
+
+  const replyBar = document.getElementById('replyPreviewBar');
+  if (replyBar?.style.display !== 'none' && currentReplyTo) {
+    currentReplyTo = null;
+    replyBar.style.display = 'none';
+    return true;
+  }
+
+  return false;
+}
+
+function handleSystemBackNavigation({ fromPopState = false } = {}) {
+  if (closeTopVisibleModal()) return true;
+  if (closeTransientOverlay()) return true;
+
+  if (hasLiveCallSession()) {
+    minimizeActiveCallUi('navigation');
+    return true;
+  }
+
+  if (activeCall && activeCallMode !== 'incoming') {
+    minimizeActiveCallUi('navigation');
+    return true;
+  }
+
+  if (isChatPanelOpen()) {
+    closeMobileChatPanel({ fromPopState });
+    return true;
+  }
+
+  return false;
+}
+
+function setupSystemBackNavigation() {
+  if (systemBackHandlerReady) return;
+  systemBackHandlerReady = true;
+
+  window.Capacitor?.Plugins?.App?.addListener?.('backButton', ({ canGoBack } = {}) => {
+    if (handleSystemBackNavigation()) return;
+
+    const AppPlugin = window.Capacitor?.Plugins?.App;
+    if (canGoBack) {
+      history.back();
+    } else if (AppPlugin?.exitApp) {
+      AppPlugin.exitApp();
+    }
+  });
 }
 
 function escapeHtml(text) {
@@ -1251,9 +1345,16 @@ function setupMobileBackGuard() {
   document.getElementById('mobileMenuBtn')?.addEventListener('click', handleMobileChatBack);
 
   // Android back button / browser back / mobile swipe-back:
-  // - If a conversation is open, return to chat list.
+  // - Close in-app layers first, then return from conversation to chat list.
   // - If already on chat list, do not block anything; browser/PWA exits naturally.
   window.addEventListener('popstate', () => {
+    if (handleSystemBackNavigation({ fromPopState: true })) {
+      if (shouldUseMobileBackGuard() && isChatPanelOpen() && !hasLiveCallSession()) {
+        pushMobileChatHistory();
+      }
+      return;
+    }
+
     if (hasLiveCallSession()) {
       minimizeActiveCallUi();
       try {
@@ -9350,6 +9451,7 @@ async function init() {
   }
   initializeEmojiPicker();
   applyA11yEnhancements();
+  setupSystemBackNavigation();
   setupMobileBackGuard();
   setupActiveCallBackProtection();
   setupCallNotificationRefreshHooks();
