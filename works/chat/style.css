@@ -28,6 +28,8 @@
 body.native-android {
   --safe-bottom: 28px;
   --safe-top: 32px;
+  --sab: 36px;
+  --sat: 28px;
 }
 
 html,
@@ -6459,3 +6461,222 @@ html, body {
   }
 }
 
+/* Mobile shell polish: keep top actions readable and bottom actions clear of Android navigation. */
+body.native-android {
+  --mobile-footer-clearance: max(42px, var(--sab));
+}
+
+body:not(.native-android) {
+  --mobile-footer-clearance: var(--sab);
+}
+
+@media (max-width: 900px) {
+  .chat-container {
+    width: 100vw !important;
+    height: 100dvh !important;
+    margin: 0 !important;
+    border-radius: 0 !important;
+  }
+
+  .sidebar,
+  .chat-main {
+    width: 100vw;
+    min-width: 0;
+  }
+
+  .sidebar-header,
+  .chat-header {
+    gap: 8px;
+    padding-top: calc(10px + var(--sat)) !important;
+    padding-bottom: 10px !important;
+  }
+
+  .sidebar-actions,
+  .chat-actions {
+    gap: 6px;
+  }
+
+  .sidebar-actions .icon-btn,
+  .sidebar-actions .logout-btn,
+  .chat-actions .icon-btn,
+  .mobile-menu-btn {
+    width: 42px !important;
+    min-width: 42px !important;
+    height: 42px !important;
+    min-height: 42px !important;
+    flex: 0 0 42px !important;
+  }
+
+  .tabs {
+    gap: 10px;
+    padding: 10px 14px;
+    scroll-padding-inline: 14px;
+  }
+
+  .tab {
+    min-width: max-content;
+    min-height: 42px;
+    padding: 0 16px;
+    border-radius: 22px;
+    font-size: 15px;
+  }
+
+  .group-actions {
+    gap: 10px;
+    padding: 12px 14px calc(14px + var(--mobile-footer-clearance)) !important;
+    background: rgba(255, 255, 255, 0.98);
+    box-shadow: 0 -1px 0 var(--border);
+  }
+
+  .group-actions .btn,
+  .group-actions .join-btn {
+    min-width: 0;
+    min-height: 54px;
+    border-radius: 8px;
+    font-size: clamp(13px, 3.7vw, 16px);
+    line-height: 1.15;
+    white-space: normal;
+  }
+
+  .input-area {
+    padding-top: 10px !important;
+    padding-bottom: calc(12px + var(--mobile-footer-clearance)) !important;
+    background: rgba(255, 255, 255, 0.98);
+  }
+
+  .messages-area {
+    padding-bottom: calc(20px + var(--mobile-footer-clearance));
+  }
+
+  .list {
+    padding-bottom: calc(18px + var(--mobile-footer-clearance));
+  }
+}
+
+@media (max-width: 420px) {
+  .sidebar-header {
+    padding-left: 12px !important;
+    padding-right: 12px !important;
+  }
+
+  .chat-header {
+    padding-left: 8px !important;
+    padding-right: 8px !important;
+  }
+
+  .user-avatar {
+    width: 44px;
+    height: 44px;
+    font-size: 18px;
+  }
+
+  .user-name {
+    max-width: 155px;
+    font-size: 17px;
+  }
+
+  .user-status-text {
+    max-width: 150px;
+    font-size: 13px;
+  }
+
+  .sidebar-actions {
+    gap: 4px;
+  }
+
+  .sidebar-actions .icon-btn,
+  .sidebar-actions .logout-btn {
+    width: 40px !important;
+    min-width: 40px !important;
+    height: 40px !important;
+    min-height: 40px !important;
+    flex-basis: 40px !important;
+  }
+
+  .chat-actions {
+    max-width: none;
+    gap: 2px;
+  }
+
+  .chat-actions .icon-btn,
+  .mobile-menu-btn {
+    width: 36px !important;
+    min-width: 36px !important;
+    height: 36px !important;
+    min-height: 36px !important;
+    flex-basis: 36px !important;
+  }
+
+  .chat-header-info {
+    grid-template-columns: 36px minmax(0, 1fr);
+    column-gap: 8px;
+  }
+
+  .chat-header-avatar,
+  .chat-header-info .list-avatar {
+    width: 36px;
+    height: 36px;
+  }
+
+  .chat-header h2 {
+    font-size: 17px;
+  }
+
+  .chat-status {
+    font-size: 12px;
+  }
+
+  .tabs {
+    padding: 10px 12px;
+  }
+
+  .tab {
+    min-height: 40px;
+    padding: 0 15px;
+    font-size: 14px;
+  }
+
+  .group-actions {
+    gap: 8px;
+    padding: 12px 10px calc(14px + var(--mobile-footer-clearance)) !important;
+  }
+
+  .group-actions .btn,
+  .group-actions .join-btn {
+    min-height: 52px;
+    padding: 7px 8px;
+    font-size: clamp(12px, 3.5vw, 14px);
+  }
+}
+
+@media (max-width: 360px) {
+  .user-name {
+    max-width: 122px;
+    font-size: 15px;
+  }
+
+  .user-status-text {
+    max-width: 120px;
+  }
+
+  .sidebar-actions .icon-btn,
+  .sidebar-actions .logout-btn {
+    width: 36px !important;
+    min-width: 36px !important;
+    height: 36px !important;
+    min-height: 36px !important;
+    flex-basis: 36px !important;
+  }
+
+  .group-actions {
+    gap: 6px;
+    padding-left: 8px !important;
+    padding-right: 8px !important;
+  }
+
+  .group-actions .btn,
+  .group-actions .join-btn {
+    min-height: 50px;
+    font-size: 12px;
+  }
+}
