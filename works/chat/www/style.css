@@ -5543,3 +5543,180 @@ body,
     height: 29px;
   }
 }
+
+/* Final cross-device hardening: small phones, touch navigation, and wide screens */
+button,
+[role="button"],
+.tab,
+.list-item,
+.icon-btn,
+.join-btn,
+.setting-item {
+  touch-action: manipulation;
+}
+
+img,
+video,
+canvas,
+iframe {
+  max-width: 100%;
+}
+
+.chat-container,
+.sidebar,
+.chat-main,
+.messages-area,
+.input-area,
+.modal-content {
+  min-width: 0;
+}
+
+.sidebar-header,
+.chat-header,
+.input-area,
+.group-actions {
+  flex-shrink: 0;
+}
+
+.list,
+.messages-area,
+.modal-body,
+.modal-content {
+  overscroll-behavior: contain;
+}
+
+@media (min-width: 1601px) {
+  .chat-container {
+    width: min(1840px, calc(100vw - 56px));
+    height: min(94dvh, 1080px);
+  }
+}
+
+@media (max-width: 900px) {
+  .chat-main {
+    height: 100%;
+  }
+
+  .list-item {
+    min-height: 68px;
+  }
+
+  .list-item-menu,
+  .icon-btn,
+  .logout-btn,
+  .mobile-menu-btn {
+    min-width: 36px;
+    min-height: 36px;
+  }
+
+  .chat-actions {
+    flex-wrap: nowrap;
+  }
+
+  .message-attachment img {
+    max-width: min(100%, 76vw) !important;
+    max-height: min(58dvh, 420px) !important;
+    object-fit: contain;
+  }
+}
+
+@media (max-width: 420px) {
+  .chat-header {
+    padding-right: 6px !important;
+    padding-left: 6px !important;
+  }
+
+  .mobile-menu-btn {
+    width: 36px !important;
+    min-width: 36px !important;
+    height: 36px !important;
+    flex-basis: 36px !important;
+  }
+
+  .chat-actions .icon-btn {
+    width: 32px;
+    min-width: 32px;
+    height: 32px;
+    min-height: 32px;
+  }
+
+  .chat-actions {
+    max-width: 38vw;
+  }
+
+  .sidebar-header .user-avatar,
+  .chat-header-avatar,
+  .chat-header-info .list-avatar {
+    width: 34px;
+    height: 34px;
+  }
+
+  .user-info {
+    gap: 8px;
+    margin-right: 4px;
+  }
+
+  .search-box {
+    padding-right: 10px;
+    padding-left: 10px;
+  }
+
+  .list-item {
+    padding-right: 8px;
+    padding-left: 8px;
+  }
+
+  .input-area {
+    gap: 6px;
+  }
+
+  .emoji-btn,
+  .voice-msg-btn,
+  .attach-btn,
+  .send-btn {
+    width: 36px;
+    height: 36px;
+    flex-basis: 36px;
+  }
+
+  #messageInput {
+    min-width: 112px;
+  }
+}
+
+@media (max-width: 340px) {
+  .chat-actions {
+    max-width: 35vw;
+  }
+
+  .chat-actions .icon-btn {
+    width: 30px;
+    min-width: 30px;
+    height: 30px;
+    min-height: 30px;
+  }
+
+  .chat-header-info {
+    grid-template-columns: 30px minmax(0, 1fr);
+  }
+
+  .chat-header-avatar,
+  .chat-header-info .list-avatar {
+    width: 30px;
+    height: 30px;
+  }
+
+  .group-actions {
+    gap: 5px;
+    padding-right: 6px;
+    padding-left: 6px;
+  }
+
+  .group-actions .btn,
+  .group-actions .join-btn {
+    min-height: 48px;
+    padding-right: 5px;
+    padding-left: 5px;
+    font-size: 12px;
+  }
+}
