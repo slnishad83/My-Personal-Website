@@ -10141,6 +10141,7 @@ function loadMessages() {
         messageDiv.innerHTML = `
         <div class="swipe-reply-indicator"></div>
         <div class="message-bubble">
+          <button type="button" class="message-options-btn" title="Message options" aria-label="Message options">⋮</button>
           ${!isMyMessage ? `<div class="message-sender">${escapeHtml(msg.senderName)}</div>` : ""}
           ${replyHtml}
           ${textContent ? `<div class="message-text">${renderMessageText(textContent, msg.mentions || [])}</div>` : ""}
@@ -10163,6 +10164,20 @@ function loadMessages() {
           e.preventDefault();
           showContextMenu(e.clientX, e.clientY, doc.id, msg, isMyMessage);
         });
+        messageDiv
+          .querySelector(".message-options-btn")
+          ?.addEventListener("click", (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            const rect = event.currentTarget.getBoundingClientRect();
+            showContextMenu(
+              rect.left,
+              rect.bottom + 6,
+              doc.id,
+              { ...msg, messageId: doc.id },
+              isMyMessage,
+            );
+          });
         messagesArea.appendChild(messageDiv);
         bindSwipeToReply(messageDiv, { ...msg, messageId: doc.id });
         bindLongPressMessageMenu(
