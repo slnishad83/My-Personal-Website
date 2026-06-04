@@ -824,6 +824,18 @@
             <h4>Members</h4>
             <div id="groupMembersList" class="member-list"></div>
           </div>
+          <div class="shared-section">
+            <div class="shared-tabs">
+              <button class="shared-tab group-shared-tab active" data-group-shared-tab="media">
+                Media
+              </button>
+              <button class="shared-tab group-shared-tab" data-group-shared-tab="docs">Docs</button>
+              <button class="shared-tab group-shared-tab" data-group-shared-tab="files">Files</button>
+              <button class="shared-tab group-shared-tab" data-group-shared-tab="links">Links</button>
+              <button class="shared-tab group-shared-tab" data-group-shared-tab="voice">Voice</button>
+            </div>
+            <div id="groupSharedContent" class="shared-content"></div>
+          </div>
           <div style="margin-top: 16px; display: flex; gap: 8px">
             <input
               type="text"
@@ -1937,7 +1949,7 @@
 
     <!-- File Preview Modal -->
     <div id="filePreviewModal" class="modal" style="display:none">
-      <div class="modal-content" style="width:min(800px,98%);height:min(600px,90vh);display:flex;flex-direction:column;">
+      <div class="modal-content file-preview-modal-content">
         <div class="modal-header">
           <h3 id="filePreviewHeader">File Preview</h3>
           <span class="close-modal" id="closeFilePreview">&times;</span>

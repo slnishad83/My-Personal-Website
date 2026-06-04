@@ -466,7 +466,7 @@ function renderAttachment(attachment = {}) {
     if (attachment.viewOnce) {
       return `<div class="message-attachment view-once-container"><button type="button" class="view-once-placeholder" data-view-once-url="${url}" data-filename="${filename}"><span class="view-once-icon">👁️</span><span>Tap to view</span></button></div>`;
     }
-    return `<div class="message-attachment"><a class="image-attachment-link" href="${url}" target="_blank" rel="noopener" data-preview-url="${url}" data-filename="${filename}"><img src="${url}" alt="${filename}"></a>${viewOnceHtml}</div>`;
+    return `<div class="message-attachment"><a class="image-attachment-link" href="${url}" target="_blank" rel="noopener" data-preview-url="${url}" data-filename="${filename}"><img src="${url}" alt="${filename}" loading="lazy" onerror="this.closest('.message-attachment')?.classList.add('is-broken'); this.remove();"><span class="attachment-image-fallback">Image unavailable</span></a>${viewOnceHtml}</div>`;
   }
 
   if (attachment.type === 'voice') {
@@ -4923,6 +4923,22 @@ async function getCurrentDirectMessages() {
   return messages.sort((a, b) => (b.timestamp?.toMillis?.() || 0) - (a.timestamp?.toMillis?.() || 0));
 }
 
+async function getCurrentSharedMessages() {
+  if (!currentChat || !currentChatType) return [];
+  if (currentChatType === 'direct') return getCurrentDirectMessages();
+  if (currentChatType !== 'group') return [];
+
+  const snapshot = await db.collection('messages')
+    .where('groupId', '==', currentChat.id)
+    .limit(160)
+    .get();
+
+  return snapshot.docs
+    .map(doc => ({ id: doc.id, ...doc.data() }))
+    .filter(msg => !msg.deletedForEveryone && !msg.deletedFor?.[currentUser?.uid])
+    .sort((a, b) => (b.timestamp?.toMillis?.() || 0) - (a.timestamp?.toMillis?.() || 0));
+}
+
 function extractLinks(text = '') {
   return text.match(/https?:\/\/[^\s]+/g) || [];
 }
@@ -7002,6 +7018,10 @@ async function showGroupInfo() {
   }
   await renderPendingGroupInvites(currentGroup.id, membersList, isAdmin);
   document.getElementById('groupInfoModal').style.display = 'flex';
+  document.querySelectorAll('.group-shared-tab').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.groupSharedTab === 'media');
+  });
+  await renderSharedContent('media', 'groupSharedContent');
 }
 
 async function makeAdmin(groupId, memberId, memberName) {
@@ -7291,20 +7311,23 @@ async function showChatInfo() {
   await renderSharedContent('media');
 }
 
-async function renderSharedContent(type) {
-  const container = document.getElementById('sharedContent');
+async function renderSharedContent(type, containerId = 'sharedContent') {
+  const container = document.getElementById(containerId);
   if (!container || !currentChat) return;
-  container.innerHTML = 'Loading items...';
-  let messages = await getCurrentDirectMessages();
+  container.innerHTML = '<div class="shared-empty">Loading items...</div>';
+  let messages = await getCurrentSharedMessages();
   if (type === 'media') {
-    const media = messages.filter(m => m.attachment?.type === 'image');
-    container.innerHTML = media.length ? `<div class="shared-grid">${media.map(m => `<img src="${m.attachment.url}">`).join('')}</div>` : 'No media';
+    const media = messages.filter(m => ['image', 'gif'].includes(m.attachment?.type) && m.attachment?.url);
+    container.innerHTML = media.length
+      ? `<div class="shared-grid">${media.map(m => renderSharedMediaItem(m)).join('')}</div>`
+      : '<div class="shared-empty">No media shared</div>';
+    bindSharedContentActions(container);
   } else if (type === 'links') {
     const links = messages.flatMap(m => extractLinks(m.text || ''));
-    container.innerHTML = links.length ? links.map(link => `<a class="shared-link" href="${escapeHtml(link)}" target="_blank" rel="noopener">${escapeHtml(link)}</a>`).join('') : 'No shared links found';
+    container.innerHTML = links.length ? links.map(link => `<a class="shared-link" href="${escapeHtml(link)}" target="_blank" rel="noopener">${escapeHtml(link)}</a>`).join('') : '<div class="shared-empty">No shared links found</div>';
   } else if (type === 'voice') {
     const voice = messages.filter(m => m.attachment?.type === 'voice');
-    container.innerHTML = voice.length ? voice.map(m => renderAttachment(m.attachment)).join('') : 'No voice notes found';
+    container.innerHTML = voice.length ? voice.map(m => renderAttachment(m.attachment)).join('') : '<div class="shared-empty">No voice notes found</div>';
     bindRenderedMessageActions();
   } else if (type === 'files') {
     const files = messages.filter(m => {
@@ -7315,11 +7338,58 @@ async function renderSharedContent(type) {
     });
     container.innerHTML = files.length
       ? files.map(m => renderAttachment(m.attachment)).join('')
-      : 'No shared files found';
+      : '<div class="shared-empty">No shared files found</div>';
+    bindRenderedMessageActions();
   } else {
     const docs = messages.filter(m => m.attachment?.type === 'document');
-    container.innerHTML = docs.length ? docs.map(m => `<a class="shared-link" href="${escapeHtml(m.attachment.url)}" target="_blank" rel="noopener">${escapeHtml(m.attachment.filename || getFileNameFromUrl(m.attachment.url) || 'Document')}</a>`).join('') : 'No shared documents found';
+    container.innerHTML = docs.length
+      ? docs.map(m => renderSharedDocumentItem(m)).join('')
+      : '<div class="shared-empty">No shared documents found</div>';
+    bindSharedContentActions(container);
   }
+}
+
+function renderSharedMediaItem(message = {}) {
+  const attachment = message.attachment || {};
+  const url = escapeHtml(attachment.url || '');
+  const filename = escapeHtml(attachment.filename || getFileNameFromUrl(attachment.url) || getAttachmentLabel(attachment));
+  const when = message.timestamp ? formatTime(message.timestamp) : '';
+  return `
+    <button type="button" class="shared-media-item" data-preview-url="${url}" data-filename="${filename}" title="${filename}">
+      <img src="${url}" alt="${filename}" loading="lazy" onerror="this.closest('.shared-media-item')?.classList.add('is-broken'); this.remove();">
+      <span class="shared-media-fallback">${escapeHtml(getAttachmentLabel(attachment))}</span>
+      <span class="shared-media-meta">${escapeHtml(when)}</span>
+    </button>
+  `;
+}
+
+function renderSharedDocumentItem(message = {}) {
+  const attachment = message.attachment || {};
+  const url = escapeHtml(attachment.url || '');
+  const filename = escapeHtml(attachment.filename || getFileNameFromUrl(attachment.url) || 'Document');
+  const detail = [getAttachmentLabel(attachment), formatBytes(attachment.size)].filter(Boolean).join(' · ');
+  return `
+    <button type="button" class="shared-list-item shared-open-item" data-preview-url="${url}" data-filename="${filename}">
+      <span>${filename}</span>
+      <small>${escapeHtml(detail || 'Document')}</small>
+    </button>
+  `;
+}
+
+function bindSharedContentActions(root = document) {
+  root.querySelectorAll('[data-preview-url]').forEach(el => {
+    if (el.dataset.sharedPreviewBound === 'true') return;
+    el.dataset.sharedPreviewBound = 'true';
+    el.addEventListener('click', event => {
+      event.preventDefault();
+      const url = el.dataset.previewUrl;
+      if (!url) {
+        showToast('Media is not available', 'error');
+        return;
+      }
+      previewFile(url, el.dataset.filename || 'Shared item');
+    });
+  });
 }
 
 if (isChatDebugEnabled()) {
@@ -10296,6 +10366,11 @@ async function init() {
     tabBtn.classList.add('active');
     renderSharedContent(tabBtn.dataset.sharedTab);
   }));
+  document.querySelectorAll('.group-shared-tab').forEach(tabBtn => tabBtn.addEventListener('click', () => {
+    document.querySelectorAll('.group-shared-tab').forEach(btn => btn.classList.remove('active'));
+    tabBtn.classList.add('active');
+    renderSharedContent(tabBtn.dataset.groupSharedTab, 'groupSharedContent');
+  }));
   document.getElementById('chatInfoNotifBtn')?.addEventListener('click', () => {
     if (!currentChat) return;
     openNotifSettings(currentChat.id, currentChatType, currentChat.name || currentChat.displayName || 'Chat');
@@ -12181,8 +12256,9 @@ async function sendSticker(sticker) {
 // ========================================
 // FEATURE: File Preview
 // ========================================
-function getFilePreviewType(url) {
-  const ext = (url || '').split('?')[0].split('.').pop().toLowerCase();
+function getFilePreviewType(url, filename = '') {
+  const source = filename || url || '';
+  const ext = source.split('?')[0].split('.').pop().toLowerCase();
   if (['pdf'].includes(ext)) return 'pdf';
   if (['png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp', 'svg', 'ico'].includes(ext)) return 'image';
   if (['txt', 'csv', 'log', 'md', 'json', 'xml', 'html', 'css', 'js', 'ts'].includes(ext)) return 'text';
@@ -12191,14 +12267,19 @@ function getFilePreviewType(url) {
 function previewFile(url, filename) {
   const modal = document.getElementById('filePreviewModal');
   if (!modal) return;
-  const type = getFilePreviewType(url);
+  const type = getFilePreviewType(url, filename);
   const container = document.getElementById('filePreviewContainer');
   const header = document.getElementById('filePreviewHeader');
+  const safeUrl = escapeHtml(url || '');
+  const safeFilename = escapeHtml(filename || 'File Preview');
   if (header) header.textContent = filename || 'File Preview';
+  if (container) container.className = `file-preview-container file-preview-${type}`;
   if (type === 'pdf') {
-    container.innerHTML = '<iframe src="' + url + '" style="width:100%;height:100%;border:none;" allowfullscreen></iframe>';
+    container.innerHTML = '<iframe src="' + safeUrl + '" title="' + safeFilename + '" allowfullscreen></iframe>';
   } else if (type === 'image') {
-    container.innerHTML = '<img src="' + url + '" alt="' + (filename || 'Preview') + '" style="max-width:100%;max-height:100%;object-fit:contain;">';
+    container.innerHTML = '<div class="file-preview-image-stage"><img src="' + safeUrl + '" alt="' + safeFilename + '"><div class="file-preview-fallback"><strong>Image unavailable</strong><span>This media could not be loaded.</span><a class="btn btn-primary" href="' + safeUrl + '" target="_blank" rel="noopener" download>Open or Download</a></div></div>';
+    const img = container.querySelector('img');
+    img?.addEventListener('error', () => container.querySelector('.file-preview-image-stage')?.classList.add('is-broken'), { once: true });
   } else if (type === 'text') {
     container.innerHTML = '<div style="padding:20px;font-family:monospace;white-space:pre-wrap;overflow:auto;height:100%;" id="filePreviewText">Loading...</div>';
     fetch(url).then(function(r) { return r.text(); }).then(function(t) {
