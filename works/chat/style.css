@@ -6679,6 +6679,157 @@ body:not(.native-android) {
   }
 }
 
+/* Final message action menu polish: long-press and per-message three-dot menu. */
+.message-context-menu {
+  --message-menu-bg: #111b21;
+  --message-menu-text: #e9edef;
+  --message-menu-muted: #8696a0;
+  --message-menu-hover: #1f2c33;
+  --message-menu-line: rgba(134, 150, 160, 0.24);
+  width: min(348px, calc(100vw - 28px)) !important;
+  min-width: min(348px, calc(100vw - 28px)) !important;
+  max-width: calc(100vw - 28px) !important;
+  max-height: min(74dvh, 620px) !important;
+  padding: 0 !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  border: 0 !important;
+  border-radius: 12px !important;
+  background: var(--message-menu-bg) !important;
+  color: var(--message-menu-text) !important;
+  box-shadow: 0 12px 34px rgba(11, 20, 26, 0.36) !important;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+.message-context-menu .message-context-reactions,
+.message-context-menu .reaction-row {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 8px !important;
+  padding: 14px 18px 12px !important;
+  border-bottom: 1px solid var(--message-menu-line) !important;
+  background: var(--message-menu-bg) !important;
+}
+
+.message-context-menu .message-context-reaction-btn,
+.message-context-menu .reaction-option {
+  width: 44px !important;
+  height: 44px !important;
+  min-width: 44px !important;
+  min-height: 44px !important;
+  border: 0 !important;
+  border-radius: 50% !important;
+  background: #f0f2f5 !important;
+  color: #111b21 !important;
+  font-size: 24px !important;
+  line-height: 1 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+.message-context-menu .message-context-reaction-btn:hover,
+.message-context-menu .message-context-reaction-btn:active,
+.message-context-menu .message-context-reaction-btn:focus-visible,
+.message-context-menu .reaction-option:hover,
+.message-context-menu .reaction-option:active,
+.message-context-menu .reaction-option:focus-visible {
+  background: #e9edef !important;
+  transform: translateY(-1px) !important;
+  outline: 0 !important;
+}
+
+.message-context-menu .context-menu-item {
+  width: 100% !important;
+  min-height: 54px !important;
+  padding: 0 24px !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: var(--message-menu-bg) !important;
+  background-image: none !important;
+  color: var(--message-menu-text) !important;
+  box-shadow: none !important;
+  font-size: 17px !important;
+  font-weight: 400 !important;
+  line-height: 1.25 !important;
+  text-align: left !important;
+  white-space: nowrap !important;
+  opacity: 1 !important;
+  outline: 0 !important;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.message-context-menu .context-menu-item:hover,
+.message-context-menu .context-menu-item:active,
+.message-context-menu .context-menu-item:focus,
+.message-context-menu .context-menu-item:focus-visible {
+  background: var(--message-menu-hover) !important;
+  color: var(--message-menu-text) !important;
+  outline: 0 !important;
+}
+
+.message-context-menu .context-menu-item:disabled,
+.message-context-menu .context-menu-item[aria-disabled="true"],
+.message-context-menu .context-menu-item.disabled {
+  background: var(--message-menu-bg) !important;
+  color: var(--message-menu-muted) !important;
+  opacity: 0.44 !important;
+  cursor: default !important;
+}
+
+.message-context-menu .context-menu-item.danger {
+  color: #ff7a86 !important;
+}
+
+.message-context-menu .context-menu-item + .context-menu-item {
+  border-top: 0 !important;
+}
+
+.message-context-menu::-webkit-scrollbar {
+  width: 4px;
+}
+
+.message-context-menu::-webkit-scrollbar-thumb {
+  background: rgba(134, 150, 160, 0.45);
+  border-radius: 999px;
+}
+
+body:not(.dark):not(.native-android) .message-context-menu {
+  --message-menu-bg: #ffffff;
+  --message-menu-text: #111b21;
+  --message-menu-muted: #8696a0;
+  --message-menu-hover: #f0f2f5;
+  --message-menu-line: #e9edef;
+  box-shadow: 0 10px 28px rgba(11, 20, 26, 0.2) !important;
+}
+
+body:not(.dark):not(.native-android) .message-context-menu .message-context-reaction-btn,
+body:not(.dark):not(.native-android) .message-context-menu .reaction-option {
+  background: #f0f2f5 !important;
+}
+
+@media (max-width: 900px), (pointer: coarse) {
+  .message-context-menu {
+    width: min(92vw, 360px) !important;
+    min-width: min(92vw, 360px) !important;
+    border-radius: 12px !important;
+  }
+
+  .message-context-menu .context-menu-item {
+    min-height: 56px !important;
+    font-size: 17px !important;
+  }
+
+  .message-context-menu .message-context-reactions,
+  .message-context-menu .reaction-row {
+    padding: 14px 20px 12px !important;
+  }
+}
+
 @media (max-width: 420px) {
   .sidebar-header {
     padding-left: 12px !important;
