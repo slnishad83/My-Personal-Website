@@ -1411,29 +1411,27 @@
 
     <!-- Forward Modal -->
     <div id="forwardModal" class="modal" style="display: none">
-      <div class="modal-content">
+      <div class="modal-content forward-modal-content">
         <div class="modal-header">
           <h3>Forward to...</h3>
           <span class="close-modal closeForwardModal">&times;</span>
         </div>
-        <div class="modal-body">
-          <input
-            type="text"
-            id="forwardSearch"
-            placeholder="Search chats..."
-            style="
-              width: 100%;
-              margin-bottom: 12px;
-              padding: 10px;
-              border: 1px solid #e2e8f0;
-              border-radius: 12px;
-            "
-          />
-          <div
-            id="forwardChatsList"
-            style="max-height: 300px; overflow-y: auto"
-          ></div>
-          <div style="display:flex; justify-content:flex-end; margin-top:12px;">
+        <div class="modal-body" style="padding:0;">
+          <!-- preview of what is being forwarded -->
+          <div id="forwardPreviewBanner" class="forward-preview-banner"></div>
+          <!-- search -->
+          <div style="padding:12px 16px 0;">
+            <input
+              type="text"
+              id="forwardSearch"
+              class="forward-search-input"
+              placeholder="Search chats or groups..."
+            />
+          </div>
+          <!-- list -->
+          <div id="forwardChatsList" class="forward-chats-list"></div>
+          <!-- footer -->
+          <div class="forward-footer">
             <button id="forwardSelectedBtn" class="btn btn-primary" disabled>Forward</button>
           </div>
         </div>
