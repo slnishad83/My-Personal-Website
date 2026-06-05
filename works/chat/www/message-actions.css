@@ -18,7 +18,10 @@
   top: 50% !important;
   display: inline-flex !important;
   width: max-content !important;
+  min-width: 0 !important;
+  flex: 0 0 auto !important;
   align-items: center !important;
+  justify-content: flex-start !important;
   gap: 4px !important;
   padding: 4px !important;
   border: 1px solid rgba(134, 150, 160, 0.2) !important;
@@ -47,6 +50,7 @@
   height: 30px !important;
   min-width: 30px !important;
   min-height: 30px !important;
+  flex: 0 0 30px !important;
   padding: 0 !important;
   border: 0 !important;
   border-radius: 50% !important;
@@ -54,6 +58,16 @@
   color: #667781 !important;
   box-shadow: none !important;
   transform: none !important;
+}
+
+.message-quick-actions .quick-translate-btn::after,
+.received-message-actions .quick-translate-btn::after,
+.sent-message-actions .quick-translate-btn::after {
+  content: none !important;
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+  border: 0 !important;
 }
 
 .message-quick-actions .quick-message-action:hover,

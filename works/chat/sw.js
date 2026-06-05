@@ -56,7 +56,7 @@ self.addEventListener('notificationclick', event => {
   );
 });
 
-const CACHE_NAME = 'team-chat-v143-measured-message-actions';
+const CACHE_NAME = 'team-chat-v144-clean-message-actions';
 const urlsToCache = [
   'index.html',
   'login.html',
