@@ -10504,7 +10504,11 @@ function loadMessages() {
       docsToRender.forEach((doc) => {
         const msg = doc.data();
         if (isExpiredByDisappearingSetting(msg)) return;
-        if (msg.deletedFor?.[currentUser.uid] || isBlocked(msg.senderId))
+        if (
+          msg.deletedFor?.[currentUser.uid] ||
+          msg.deletedForEveryone ||
+          isBlocked(msg.senderId)
+        )
           return;
         const isMyMessage = msg.senderId === currentUser.uid;
         const messageDiv = document.createElement("div");
@@ -10542,15 +10546,10 @@ function loadMessages() {
           msg.type === "contact" ? renderContactCard(msg.contact) : "";
         let eventHtml = msg.type === "event" ? renderEventCard(msg.event) : "";
         let listHtml = msg.type === "list" ? renderListCard(msg.list) : "";
-        let textContent = msg.deletedForEveryone
-          ? "This message was deleted"
-          : msg.type === "location"
-            ? ""
-            : msg.text || "";
+        let textContent = msg.type === "location" ? "" : msg.text || "";
 
         messageDiv.innerHTML = `
-        <div class="swipe-reply-indicator"></div>
-        ${!msg.deletedForEveryone ? `<div class="message-quick-actions ${isMyMessage ? "sent-message-actions" : "received-message-actions"}"><button type="button" class="quick-message-action quick-translate-btn" title="Translate message" aria-label="Translate message"></button><button type="button" class="quick-message-action quick-forward-btn" title="Forward message" aria-label="Forward message"></button><button type="button" class="quick-message-action quick-delete-btn" title="Delete message" aria-label="Delete message"></button></div>` : ""}
+        <div class="message-quick-actions ${isMyMessage ? "sent-message-actions" : "received-message-actions"}"><button type="button" class="quick-message-action quick-forward-btn" title="Forward message" aria-label="Forward message"></button><button type="button" class="quick-message-action quick-translate-btn" title="Translate message" aria-label="Translate message"></button><button type="button" class="quick-message-action quick-delete-btn" title="Delete message" aria-label="Delete message"></button></div>
         <div class="message-bubble">
           <button type="button" class="message-options-btn" title="Message options" aria-label="Message options">⋮</button>
           ${!isMyMessage ? `<div class="message-sender">${escapeHtml(msg.senderName)}</div>` : ""}
@@ -11555,7 +11554,6 @@ async function deleteMessageForEveryone(id, messageData = null) {
     );
     return;
   }
-  if (!confirm("Delete this message for everyone?")) return;
   await db.collection("messages").doc(id).update({
     text: "",
     attachment: firebase.firestore.FieldValue.delete(),
@@ -11577,20 +11575,13 @@ function openMessageDeleteSheet(messageId, messageData) {
   backdrop.className = "app-action-sheet-backdrop";
   backdrop.innerHTML = `
     <div class="app-action-sheet" role="dialog" aria-modal="true" aria-label="Delete message">
-      <div class="action-sheet-handle"></div>
-      <div class="action-sheet-heading">
-        <strong>Delete message?</strong>
-        <span>${canDeleteAll ? "Choose who this message is removed for." : "This removes the message from your view."}</span>
-      </div>
       <button type="button" class="action-sheet-option danger delete-for-me-option">Delete for me</button>
-      ${canDeleteAll ? '<button type="button" class="action-sheet-option danger delete-for-all-option">Delete for everyone</button>' : ""}
-      <button type="button" class="action-sheet-option cancel-option">Cancel</button>
+      ${canDeleteAll ? '<button type="button" class="action-sheet-option danger delete-for-all-option">Delete for all</button>' : ""}
     </div>`;
   document.body.appendChild(backdrop);
   requestAnimationFrame(() => backdrop.classList.add("show"));
   backdrop.addEventListener("click", (event) => {
-    if (event.target === backdrop || event.target.closest(".cancel-option"))
-      closeActionSheet();
+    if (event.target === backdrop) closeActionSheet();
   });
   backdrop.querySelector(".delete-for-me-option")?.addEventListener("click", async () => {
     closeActionSheet();
