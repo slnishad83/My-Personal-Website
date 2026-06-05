@@ -2,7 +2,7 @@
 .message:not(.call-message) {
   position: relative !important;
   display: flex !important;
-  max-width: min(calc(100% - 112px), 680px) !important;
+  max-width: min(calc(100% - 120px), 680px) !important;
 }
 
 .message:not(.call-message) > .message-bubble {
@@ -94,26 +94,47 @@ body.dark .message-quick-actions .quick-message-action {
   display: none !important;
 }
 
-/* Only small screens lacking side room move actions below the bubble. */
-@media (max-width: 390px) {
-  .message:not(.call-message) {
-    display: grid !important;
-    grid-template-columns: minmax(0, 1fr) !important;
-    max-width: 88% !important;
-    gap: 4px !important;
-  }
+/* Applied only after measuring that this individual message has no side room. */
+.message.actions-below:not(.call-message) {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) !important;
+  max-width: 88% !important;
+  gap: 4px !important;
+}
 
-  .message-quick-actions {
-    position: static !important;
-    grid-row: 2 !important;
-    transform: none !important;
-  }
+.message.actions-below .message-quick-actions {
+  position: static !important;
+  grid-row: 2 !important;
+  transform: none !important;
+}
 
-  .received-message-actions {
-    justify-self: start !important;
-  }
+.message.actions-below .received-message-actions {
+  justify-self: start !important;
+}
 
-  .sent-message-actions {
-    justify-self: end !important;
-  }
+.message.actions-below .sent-message-actions {
+  justify-self: end !important;
+}
+
+/* Disable every legacy swipe-reply visual and transform. */
+.message,
+.message .message-bubble,
+.message.reply-swipe-active .message-bubble,
+.message.swiped .message-bubble {
+  --reply-swipe-x: 0px !important;
+}
+
+.message.reply-swipe-active .message-bubble,
+.message.swiped .message-bubble {
+  transform: none !important;
+}
+
+.swipe-reply-indicator,
+.swipe-reply-indicator::before,
+.message.reply-swipe-active .swipe-reply-indicator,
+.message.swiped .swipe-reply-indicator {
+  content: none !important;
+  display: none !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
 }

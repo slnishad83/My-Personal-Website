@@ -10338,6 +10338,33 @@ function bindSwipeToReply(messageDiv, messageData) {
   messageDiv.addEventListener("lostpointercapture", resetSwipe);
 }
 
+function positionMessageQuickActions(messageDiv) {
+  const messagesArea = messageDiv?.closest?.(".messages-area");
+  const bubble = messageDiv?.querySelector?.(".message-bubble");
+  const actions = messageDiv?.querySelector?.(".message-quick-actions");
+  if (!messagesArea || !bubble || !actions) return;
+
+  messageDiv.classList.remove("actions-below");
+  requestAnimationFrame(() => {
+    const areaRect = messagesArea.getBoundingClientRect();
+    const bubbleRect = bubble.getBoundingClientRect();
+    const neededSpace = actions.offsetWidth + 12;
+    const sideSpace = messageDiv.classList.contains("my-message")
+      ? bubbleRect.left - areaRect.left
+      : areaRect.right - bubbleRect.right;
+    messageDiv.classList.toggle("actions-below", sideSpace < neededSpace);
+  });
+}
+
+function positionAllMessageQuickActions() {
+  document
+    .querySelectorAll("#messagesArea .message")
+    .forEach(positionMessageQuickActions);
+}
+
+window.addEventListener("resize", positionAllMessageQuickActions);
+window.addEventListener("orientationchange", positionAllMessageQuickActions);
+
 function bindLongPressMessageMenu(messageDiv, messageData, isMyMessage) {
   if (!messageDiv || messageDiv.dataset.longPressMenuBound === "true") return;
   messageDiv.dataset.longPressMenuBound = "true";
@@ -10615,7 +10642,15 @@ function loadMessages() {
           messageId: doc.id,
         });
         messagesArea.appendChild(messageDiv);
-        bindSwipeToReply(messageDiv, { ...msg, messageId: doc.id });
+        positionMessageQuickActions(messageDiv);
+        messageDiv.querySelectorAll("img, video").forEach((media) => {
+          media.addEventListener("load", () => positionMessageQuickActions(messageDiv), {
+            once: true,
+          });
+          media.addEventListener("loadedmetadata", () => positionMessageQuickActions(messageDiv), {
+            once: true,
+          });
+        });
         bindLongPressMessageMenu(
           messageDiv,
           { ...msg, messageId: doc.id },
