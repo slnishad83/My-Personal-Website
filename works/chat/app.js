@@ -212,6 +212,8 @@ let draggedChatItem = null;
 let blockedWordsCache = [];
 let currentJoinQuestions = [];
 let pendingJoinGroupId = null;
+let lockedChats = new Map();
+let lockPinVerifiedForSearch = false;
 
 const defaultRtcConfig = {
   iceServers: [
@@ -812,6 +814,7 @@ function renderChatListItems(items, container) {
       chatDiv.dataset.otherUserId = item.otherUserId || item.user.id;
     chatDiv.dataset.chatName = item.name || "";
     chatDiv.dataset.aliasDirectIds = (item.aliasDirectIds || []).join(",");
+    chatDiv.dataset.locked = item.isLocked ? "true" : "false";
 
     if (
       currentChat?.id === item.id &&
@@ -870,8 +873,7 @@ function renderChatListItems(items, container) {
       </div>
       ${statusChip}
       ${unread}
-      <button class="list-item-menu mute-chat-btn" data-chat-id="${item.id}" data-chat-type="${item.type}">${item.isMuted ? "Unmute" : "Mute"}</button>
-      <button class="list-item-menu archive-chat-btn" data-chat-id="${item.id}" data-chat-type="${item.type}" data-chat-name="${escapeHtml(item.name)}">Arch</button>
+      ${item.isLocked ? `<button class="list-item-menu unlock-chat-btn" title="Unlock chat" aria-label="Unlock chat">Unlock</button>` : `<button class="list-item-menu mute-chat-btn" data-chat-id="${item.id}" data-chat-type="${item.type}">${item.isMuted ? "Unmute" : "Mute"}</button><button class="list-item-menu archive-chat-btn" data-chat-id="${item.id}" data-chat-type="${item.type}" data-chat-name="${escapeHtml(item.name)}">Arch</button>`}
     `;
 
     if (item.type === "user" || item.type === "saved") {
@@ -918,6 +920,13 @@ function renderChatListItems(items, container) {
       saveChatOrder(orderedIds);
       loadCurrentChatList();
     });
+
+    chatDiv
+      .querySelector(".unlock-chat-btn")
+      ?.addEventListener("click", async (e) => {
+        e.stopPropagation();
+        await unlockChat(item.id, item.type);
+      });
 
     chatDiv
       .querySelector(".archive-chat-btn")
@@ -5361,7 +5370,10 @@ async function loadAllChatsList(searchTerm = "") {
     console.error("buildGroupChatItems failed:", error);
   }
   if (loadToken !== chatListLoadToken) return;
-  const allItems = [...directItems, ...groupItems];
+  await refreshLockedChats();
+  const allItems = [...directItems, ...groupItems].filter(
+    (item) => item.type === "saved" || !isChatLocked(item.id, item.type),
+  );
   updateUnreadBadges(allItems);
 
   let items = [...allItems];
@@ -5374,6 +5386,21 @@ async function loadAllChatsList(searchTerm = "") {
     items = items.filter((item) => activeFolderChatIds.has(item.id));
 
   const term = searchTerm.trim().toLowerCase();
+
+  if (/^\d{4}$/.test(term) && (await verifyChatLockPin(term))) {
+    const lockedItems = [...lockedChats.values()]
+      .map(lockedRecordToListItem)
+      .filter(Boolean)
+      .map((item) => ({ ...item, section: "Locked Chats", isLocked: true }));
+    const archivedItems = (await getArchivedChatListItems())
+      .filter((item) => !isChatLocked(item.id, item.type))
+      .map((item) => ({ ...item, section: "Archived Chats" }));
+    const normalItems = allItems.map((item) => ({ ...item, section: "All" }));
+    renderChatListItems([...lockedItems, ...archivedItems, ...normalItems], chatsList);
+    lockPinVerifiedForSearch = true;
+    return;
+  }
+  lockPinVerifiedForSearch = false;
 
   if (term) {
     // MATCH 1: Search existing active chat logs.
@@ -5403,6 +5430,7 @@ async function loadAllChatsList(searchTerm = "") {
 
     // MATCH 2: Look through the directory for users you haven't messaged yet
     for (const user of allUsers.filter(isSearchableUser)) {
+      if (isUserInLockedDirectChat(user.id)) continue;
       // PREVENT CONFLICTS: Skip if this user is already visible in chatMatches
       if (visibleUserIds.has(user.id)) continue;
 
@@ -7363,6 +7391,297 @@ async function getDeletedChatIds() {
     return new Set();
   }
 }
+
+function getLockedChatKey(chatId, chatType) {
+  return `${chatType}:${chatId}`;
+}
+
+function getLockedChatDocId(chatId, chatType) {
+  return `${currentUser.uid}_${chatType}_${chatId}`.replaceAll("/", "_");
+}
+
+function isChatLocked(chatId, chatType) {
+  return lockedChats.has(getLockedChatKey(chatId, chatType));
+}
+
+function isUserInLockedDirectChat(userId) {
+  return [...lockedChats.values()].some(
+    (record) => record.chatType === "direct" && record.otherUserId === userId,
+  );
+}
+
+async function refreshLockedChats() {
+  lockedChats = new Map();
+  if (!currentUser) return lockedChats;
+  const snapshot = await db
+    .collection("lockedChats")
+    .where("userId", "==", currentUser.uid)
+    .get();
+  snapshot.docs.forEach((doc) => {
+    const data = { recordId: doc.id, ...doc.data() };
+    if (data.chatId && data.chatType)
+      lockedChats.set(getLockedChatKey(data.chatId, data.chatType), data);
+  });
+  return lockedChats;
+}
+
+function bytesToBase64(bytes) {
+  let binary = "";
+  bytes.forEach((value) => (binary += String.fromCharCode(value)));
+  return btoa(binary);
+}
+
+function base64ToBytes(value) {
+  return Uint8Array.from(atob(value), (char) => char.charCodeAt(0));
+}
+
+async function deriveChatLockPin(pin, salt, iterations = 120000) {
+  const key = await crypto.subtle.importKey(
+    "raw",
+    new TextEncoder().encode(pin),
+    "PBKDF2",
+    false,
+    ["deriveBits"],
+  );
+  const bits = await crypto.subtle.deriveBits(
+    { name: "PBKDF2", hash: "SHA-256", salt, iterations },
+    key,
+    256,
+  );
+  return bytesToBase64(new Uint8Array(bits));
+}
+
+async function saveChatLockPin(pin) {
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  const iterations = 120000;
+  const pinHash = await deriveChatLockPin(pin, salt, iterations);
+  await db.collection("chatLockSettings").doc(currentUser.uid).set({
+    userId: currentUser.uid,
+    pinHash,
+    pinSalt: bytesToBase64(salt),
+    pinIterations: iterations,
+    updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+  });
+}
+
+async function getChatLockSettings() {
+  if (!currentUser) return null;
+  const doc = await db.collection("chatLockSettings").doc(currentUser.uid).get();
+  return doc.exists ? doc.data() : null;
+}
+
+async function verifyChatLockPin(pin) {
+  if (!/^\d{4}$/.test(pin) || !crypto?.subtle) return false;
+  const settings = await getChatLockSettings();
+  if (!settings?.pinHash || !settings?.pinSalt) return false;
+  const candidate = await deriveChatLockPin(
+    pin,
+    base64ToBytes(settings.pinSalt),
+    settings.pinIterations || 120000,
+  );
+  return candidate === settings.pinHash;
+}
+
+function closeChatLockModal(result = null) {
+  const modal = document.querySelector(".chat-lock-modal-backdrop");
+  if (!modal) return;
+  modal._resolve?.(result);
+  modal.remove();
+}
+
+function openChatLockPinModal({
+  title,
+  message,
+  setup = false,
+  confirmLabel = "Continue",
+  allowRecovery = true,
+}) {
+  document.querySelector(".chat-lock-modal-backdrop")?.remove();
+  return new Promise((resolve) => {
+    const modal = document.createElement("div");
+    modal.className = "chat-lock-modal-backdrop";
+    modal._resolve = resolve;
+    modal.innerHTML = `
+      <div class="chat-lock-modal" role="dialog" aria-modal="true" aria-label="${escapeHtml(title)}">
+        <div class="lock-shield">#</div>
+        <h3>${escapeHtml(title)}</h3>
+        <p>${escapeHtml(message)}</p>
+        <label>4-digit PIN<input class="chat-lock-pin" type="password" inputmode="numeric" maxlength="4" autocomplete="off" placeholder="••••"></label>
+        ${setup ? '<label>Confirm PIN<input class="chat-lock-pin-confirm" type="password" inputmode="numeric" maxlength="4" autocomplete="off" placeholder="••••"></label>' : ""}
+        <div class="chat-lock-error" aria-live="polite"></div>
+        ${allowRecovery ? '<button type="button" class="chat-lock-recovery">Forgot or change PIN?</button>' : ""}
+        <div class="chat-lock-actions"><button type="button" class="btn btn-outline lock-cancel">Cancel</button><button type="button" class="btn btn-primary lock-confirm">' + escapeHtml(confirmLabel) + "</button></div>
+      </div>`;
+    document.body.appendChild(modal);
+    requestAnimationFrame(() => modal.classList.add("show"));
+    const pin = modal.querySelector(".chat-lock-pin");
+    const error = modal.querySelector(".chat-lock-error");
+    pin.focus();
+    modal.querySelector(".lock-cancel").onclick = () => closeChatLockModal();
+    modal.addEventListener("click", (event) => {
+      if (event.target === modal) closeChatLockModal();
+    });
+    modal.querySelector(".lock-confirm").onclick = () => {
+      const value = pin.value.trim();
+      const confirmation = modal.querySelector(".chat-lock-pin-confirm")?.value.trim();
+      if (!/^\d{4}$/.test(value)) {
+        error.textContent = "Enter exactly 4 digits.";
+        return;
+      }
+      if (setup && value !== confirmation) {
+        error.textContent = "The PINs do not match.";
+        return;
+      }
+      closeChatLockModal(value);
+    };
+    modal.querySelector(".chat-lock-recovery")?.addEventListener("click", async () => {
+      closeChatLockModal();
+      await openChatLockResetModal();
+    });
+  });
+}
+
+async function openChatLockResetModal() {
+  const modal = document.createElement("div");
+  modal.className = "chat-lock-modal-backdrop";
+  modal.innerHTML = `
+    <div class="chat-lock-modal" role="dialog" aria-modal="true" aria-label="Reset locked-chat PIN">
+      <div class="lock-shield">#</div>
+      <h3>Reset locked-chat PIN</h3>
+      <p>Confirm your account password, then choose a new 4-digit PIN. Your existing locked chats stay locked.</p>
+      <label>Account password<input class="lock-account-password" type="password" autocomplete="current-password" placeholder="Account password"></label>
+      <label>New 4-digit PIN<input class="chat-lock-pin" type="password" inputmode="numeric" maxlength="4" autocomplete="off" placeholder="••••"></label>
+      <label>Confirm new PIN<input class="chat-lock-pin-confirm" type="password" inputmode="numeric" maxlength="4" autocomplete="off" placeholder="••••"></label>
+      <div class="chat-lock-error" aria-live="polite"></div>
+      <button type="button" class="chat-lock-recovery send-account-recovery">Email account password reset link</button>
+      <div class="chat-lock-actions"><button type="button" class="btn btn-outline lock-cancel">Cancel</button><button type="button" class="btn btn-primary lock-confirm">Reset PIN</button></div>
+    </div>`;
+  document.body.appendChild(modal);
+  requestAnimationFrame(() => modal.classList.add("show"));
+  const error = modal.querySelector(".chat-lock-error");
+  const close = () => modal.remove();
+  modal.querySelector(".lock-cancel").onclick = close;
+  modal.addEventListener("click", (event) => {
+    if (event.target === modal) close();
+  });
+  modal.querySelector(".send-account-recovery").onclick = async () => {
+    try {
+      await auth.sendPasswordResetEmail(currentUser.email);
+      error.textContent = `Account password reset link sent to ${currentUser.email}.`;
+    } catch (sendError) {
+      error.textContent = sendError.message || "Could not send recovery email.";
+    }
+  };
+  modal.querySelector(".lock-confirm").onclick = async () => {
+    const password = modal.querySelector(".lock-account-password").value;
+    const pin = modal.querySelector(".chat-lock-pin").value.trim();
+    const confirmation = modal.querySelector(".chat-lock-pin-confirm").value.trim();
+    if (!password || !/^\d{4}$/.test(pin) || pin !== confirmation) {
+      error.textContent = "Enter your account password and matching 4-digit PINs.";
+      return;
+    }
+    try {
+      const credential = firebase.auth.EmailAuthProvider.credential(currentUser.email, password);
+      await currentUser.reauthenticateWithCredential(credential);
+      await saveChatLockPin(pin);
+      close();
+      showToast("Locked-chat PIN changed");
+    } catch (resetError) {
+      error.textContent = resetError.message || "Account verification failed.";
+    }
+  };
+}
+
+async function ensureChatLockPin() {
+  const settings = await getChatLockSettings();
+  if (!settings) {
+    const pin = await openChatLockPinModal({
+      title: "Create locked-chat PIN",
+      message: "Use this PIN to reveal your locked personal and group chats.",
+      setup: true,
+      confirmLabel: "Create PIN",
+      allowRecovery: false,
+    });
+    if (!pin) return null;
+    await saveChatLockPin(pin);
+    return pin;
+  }
+  const pin = await openChatLockPinModal({
+    title: "Confirm locked-chat PIN",
+    message: "Enter your PIN to lock this chat.",
+  });
+  if (!pin || !(await verifyChatLockPin(pin))) {
+    if (pin) showToast("Incorrect locked-chat PIN", "error");
+    return null;
+  }
+  return pin;
+}
+
+async function lockChat(chatId, chatType, chatName = "Chat", otherUserId = "") {
+  if (!currentUser || !["direct", "group"].includes(chatType)) return;
+  if (!(await ensureChatLockPin())) return;
+  await db.collection("lockedChats").doc(getLockedChatDocId(chatId, chatType)).set({
+    userId: currentUser.uid,
+    chatId,
+    chatType,
+    chatName,
+    otherUserId: otherUserId || "",
+    lockedAt: firebase.firestore.FieldValue.serverTimestamp(),
+  });
+  await refreshLockedChats();
+  if (currentChat?.id === chatId && currentChatType === chatType) resetChatPanel();
+  showToast(`${chatName} locked`);
+  loadCurrentChatList();
+  loadArchivedChats();
+}
+
+async function unlockChat(chatId, chatType) {
+  const record = lockedChats.get(getLockedChatKey(chatId, chatType));
+  if (!record) return;
+  await db.collection("lockedChats").doc(record.recordId || getLockedChatDocId(chatId, chatType)).delete();
+  await refreshLockedChats();
+  showToast(`${record.chatName || "Chat"} unlocked`);
+  loadCurrentChatList();
+  loadArchivedChats();
+}
+
+function lockedRecordToListItem(record) {
+  if (!record?.chatId || !record?.chatType) return null;
+  return {
+    id: record.chatId,
+    type: record.chatType,
+    name: record.chatName || "Locked chat",
+    avatar: escapeHtml(getInitials(record.chatName || "Locked chat")),
+    preview: "Locked chat",
+    unreadCount: 0,
+    isMuted: false,
+    isPinned: false,
+    isFavorite: false,
+    otherUserId: record.otherUserId || "",
+    lastMessageTime: record.lockedAt?.toDate?.() || new Date(0),
+  };
+}
+
+async function getArchivedChatListItems() {
+  if (!currentUser) return [];
+  const snapshot = await db.collection("archivedChats").where("userId", "==", currentUser.uid).get();
+  return snapshot.docs.map((doc) => {
+    const record = doc.data() || {};
+    return {
+      id: record.chatId,
+      type: record.chatType,
+      name: record.chatName || "Archived chat",
+      avatar: escapeHtml(getInitials(record.chatName || "Archived chat")),
+      preview: "Archived",
+      unreadCount: 0,
+      isMuted: false,
+      isPinned: false,
+      isFavorite: false,
+      lastMessageTime: record.archivedAt?.toDate?.() || new Date(0),
+    };
+  }).filter((item) => item.id && item.type);
+}
+
 async function deleteChatForMe(chatId, chatType, chatName = "Chat") {
   if (!currentUser || !chatId || !chatType) return;
   await db.collection("deletedChats").doc(`${currentUser.uid}_${chatId}`).set({
@@ -7514,7 +7833,10 @@ async function loadArchivedChats() {
     const currentTs = data.archivedAt?.toMillis?.() || 0;
     if (!existing || currentTs >= existingTs) deduped.set(key, data);
   });
-  const archivedChats = [...deduped.values()].sort(
+  await refreshLockedChats();
+  const archivedChats = [...deduped.values()].filter(
+    (item) => !isChatLocked(item.chatId, item.chatType),
+  ).sort(
     (a, b) =>
       (b.archivedAt?.toMillis?.() || 0) - (a.archivedAt?.toMillis?.() || 0),
   );
@@ -7845,6 +8167,11 @@ function updateChatContextMenuLabels() {
       ? "Unpin Chat"
       : "Pin Chat";
   }
+  const lockItem = document.getElementById("lockChatMenuItem");
+  if (lockItem) {
+    lockItem.style.display = ["direct", "group"].includes(chatType) ? "" : "none";
+    lockItem.textContent = isChatLocked(chatId, chatType) ? "Unlock Chat" : "Lock Chat";
+  }
   const infoItem = document.getElementById("chatInfoMenuItem");
   if (infoItem) infoItem.textContent = isGroup ? "Group info" : "Contact info";
   const mediaItem = document.getElementById("chatMediaMenuItem");
@@ -7971,7 +8298,10 @@ async function loadGroupsList() {
   const groupsList = document.getElementById("groupsList");
   const groupActions = document.getElementById("groupActions");
   if (!groupsList) return;
-  const enhancedGroups = await buildGroupChatItems();
+  await refreshLockedChats();
+  const enhancedGroups = (await buildGroupChatItems()).filter(
+    (group) => !isChatLocked(group.id, "group"),
+  );
 
   const filteredGroups = enhancedGroups.filter((group) => {
     if (currentViewTab === "favorites" && !group.isFavorite) return false;
@@ -10220,7 +10550,7 @@ function loadMessages() {
 
         messageDiv.innerHTML = `
         <div class="swipe-reply-indicator"></div>
-        ${!isMyMessage && !msg.deletedForEveryone ? '<div class="received-message-actions"><button type="button" class="quick-message-action quick-translate-btn" title="Translate message" aria-label="Translate message"></button><button type="button" class="quick-message-action quick-forward-btn" title="Forward message" aria-label="Forward message"></button></div>' : ""}
+        ${!msg.deletedForEveryone ? `<div class="message-quick-actions ${isMyMessage ? "sent-message-actions" : "received-message-actions"}"><button type="button" class="quick-message-action quick-translate-btn" title="Translate message" aria-label="Translate message"></button><button type="button" class="quick-message-action quick-forward-btn" title="Forward message" aria-label="Forward message"></button><button type="button" class="quick-message-action quick-delete-btn" title="Delete message" aria-label="Delete message"></button></div>` : ""}
         <div class="message-bubble">
           <button type="button" class="message-options-btn" title="Message options" aria-label="Message options">⋮</button>
           ${!isMyMessage ? `<div class="message-sender">${escapeHtml(msg.senderName)}</div>` : ""}
@@ -10259,6 +10589,13 @@ function loadMessages() {
               { ...msg, messageId: doc.id },
               isMyMessage,
             );
+          });
+        messageDiv
+          .querySelector(".quick-delete-btn")
+          ?.addEventListener("click", (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            openMessageDeleteSheet(doc.id, { ...msg, messageId: doc.id });
           });
         messageDiv
           .querySelector(".quick-forward-btn")
@@ -11228,6 +11565,43 @@ async function deleteMessageForEveryone(id, messageData = null) {
   });
   showToast("Message deleted for everyone");
 }
+
+function closeActionSheet() {
+  document.querySelector(".app-action-sheet-backdrop")?.remove();
+}
+
+function openMessageDeleteSheet(messageId, messageData) {
+  closeActionSheet();
+  const canDeleteAll = canDeleteForEveryone(messageData);
+  const backdrop = document.createElement("div");
+  backdrop.className = "app-action-sheet-backdrop";
+  backdrop.innerHTML = `
+    <div class="app-action-sheet" role="dialog" aria-modal="true" aria-label="Delete message">
+      <div class="action-sheet-handle"></div>
+      <div class="action-sheet-heading">
+        <strong>Delete message?</strong>
+        <span>${canDeleteAll ? "Choose who this message is removed for." : "This removes the message from your view."}</span>
+      </div>
+      <button type="button" class="action-sheet-option danger delete-for-me-option">Delete for me</button>
+      ${canDeleteAll ? '<button type="button" class="action-sheet-option danger delete-for-all-option">Delete for everyone</button>' : ""}
+      <button type="button" class="action-sheet-option cancel-option">Cancel</button>
+    </div>`;
+  document.body.appendChild(backdrop);
+  requestAnimationFrame(() => backdrop.classList.add("show"));
+  backdrop.addEventListener("click", (event) => {
+    if (event.target === backdrop || event.target.closest(".cancel-option"))
+      closeActionSheet();
+  });
+  backdrop.querySelector(".delete-for-me-option")?.addEventListener("click", async () => {
+    closeActionSheet();
+    await deleteMessageForMe(messageId);
+  });
+  backdrop.querySelector(".delete-for-all-option")?.addEventListener("click", async () => {
+    closeActionSheet();
+    await deleteMessageForEveryone(messageId, messageData);
+  });
+}
+
 async function starMessage(id, data) {
   await db.collection("starredMessages").add({
     userId: currentUser.uid,
@@ -14808,6 +15182,23 @@ document
       await togglePinChat(chatId);
     }
     document.getElementById("chatContextMenu").style.display = "none";
+  });
+
+document
+  .getElementById("lockChatMenuItem")
+  ?.addEventListener("click", async () => {
+    if (!contextMenuTarget) return;
+    const chatId = contextMenuTarget.dataset.chatId;
+    const chatType = contextMenuTarget.dataset.chatType;
+    const chatName =
+      contextMenuTarget.dataset.chatName ||
+      contextMenuTarget.querySelector?.(".list-name")?.textContent ||
+      "Chat";
+    const otherUserId = contextMenuTarget.dataset.otherUserId || "";
+    document.getElementById("chatContextMenu").style.display = "none";
+    if (!chatId || !["direct", "group"].includes(chatType)) return;
+    if (isChatLocked(chatId, chatType)) await unlockChat(chatId, chatType);
+    else await lockChat(chatId, chatType, chatName, otherUserId);
   });
 
 document
