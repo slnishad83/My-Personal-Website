@@ -1,73 +1,73 @@
-/* Final side-first message actions. Loaded after style.css. */
+/* Final compact side-by-side message actions. Loaded after style.css. */
 .message:not(.call-message) {
   position: relative !important;
   display: flex !important;
-  max-width: min(calc(100% - 120px), 680px) !important;
+  align-items: center !important;
+  gap: 6px !important;
+  max-width: min(92%, 800px) !important;
 }
 
 .message:not(.call-message) > .message-bubble {
+  flex: 0 1 auto !important;
   min-width: 0 !important;
-  max-width: 100% !important;
+  max-width: calc(100% - 108px) !important;
+  order: 1 !important;
+}
+
+.message.my-message:not(.call-message) > .message-bubble {
+  order: 2 !important;
 }
 
 .message-quick-actions,
 .received-message-actions,
 .sent-message-actions {
-  position: absolute !important;
-  z-index: 4 !important;
-  top: 50% !important;
-  display: inline-flex !important;
-  width: max-content !important;
-  min-width: 0 !important;
+  position: static !important;
+  inset: auto !important;
+  order: 2 !important;
+  display: inline-grid !important;
+  grid-template-columns: repeat(3, 28px) !important;
+  place-items: center !important;
   flex: 0 0 auto !important;
-  align-items: center !important;
-  justify-content: flex-start !important;
-  gap: 4px !important;
-  padding: 4px !important;
+  width: auto !important;
+  min-width: 0 !important;
+  height: 36px !important;
+  margin: 0 !important;
+  padding: 3px 5px !important;
+  gap: 3px !important;
   border: 1px solid rgba(134, 150, 160, 0.2) !important;
   border-radius: 999px !important;
   background: rgba(255, 255, 255, 0.94) !important;
-  box-shadow: 0 2px 7px rgba(11, 20, 26, 0.16) !important;
-  transform: translateY(-50%) !important;
+  box-shadow: 0 2px 7px rgba(11, 20, 26, 0.15) !important;
+  transform: none !important;
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
 }
 
-.received-message-actions {
-  left: calc(100% + 8px) !important;
-  right: auto !important;
-}
-
 .sent-message-actions {
-  right: calc(100% + 8px) !important;
-  left: auto !important;
+  order: 1 !important;
 }
 
 .message-quick-actions .quick-message-action {
   position: relative !important;
   inset: auto !important;
-  width: 30px !important;
-  height: 30px !important;
-  min-width: 30px !important;
-  min-height: 30px !important;
-  flex: 0 0 30px !important;
+  display: grid !important;
+  place-items: center !important;
+  align-self: center !important;
+  justify-self: center !important;
+  width: 28px !important;
+  height: 28px !important;
+  min-width: 28px !important;
+  min-height: 28px !important;
+  flex: 0 0 28px !important;
+  margin: 0 !important;
   padding: 0 !important;
   border: 0 !important;
   border-radius: 50% !important;
   background: transparent !important;
   color: #667781 !important;
   box-shadow: none !important;
+  line-height: 1 !important;
   transform: none !important;
-}
-
-.message-quick-actions .quick-translate-btn::after,
-.received-message-actions .quick-translate-btn::after,
-.sent-message-actions .quick-translate-btn::after {
-  content: none !important;
-  display: none !important;
-  width: 0 !important;
-  height: 0 !important;
-  border: 0 !important;
 }
 
 .message-quick-actions .quick-message-action:hover,
@@ -77,12 +77,32 @@
   color: #008069 !important;
 }
 
+.message-quick-actions .quick-forward-btn::before {
+  width: 17px !important;
+  height: 17px !important;
+  margin: 0 !important;
+}
+
+.message-quick-actions .quick-translate-btn::before {
+  display: grid !important;
+  width: 28px !important;
+  height: 28px !important;
+  place-items: center !important;
+  font-size: 15px !important;
+  line-height: 1 !important;
+}
+
+.message-quick-actions .quick-translate-btn::after {
+  content: none !important;
+  display: none !important;
+}
+
 .quick-delete-btn::before {
   content: "" !important;
   display: block !important;
   width: 17px !important;
   height: 17px !important;
-  margin: auto !important;
+  margin: 0 !important;
   border: 0 !important;
   border-radius: 0 !important;
   background: currentColor !important;
@@ -104,22 +124,22 @@ body.dark .message-quick-actions .quick-message-action {
   color: #aebac1 !important;
 }
 
-.swipe-reply-indicator {
-  display: none !important;
-}
-
-/* Applied only after measuring that this individual message has no side room. */
+/* Applied only after JavaScript measures insufficient side room. */
 .message.actions-below:not(.call-message) {
   display: grid !important;
   grid-template-columns: minmax(0, 1fr) !important;
-  max-width: 88% !important;
+  align-items: start !important;
   gap: 4px !important;
+  max-width: 92% !important;
+}
+
+.message.actions-below:not(.call-message) > .message-bubble {
+  grid-row: 1 !important;
+  max-width: 100% !important;
 }
 
 .message.actions-below .message-quick-actions {
-  position: static !important;
   grid-row: 2 !important;
-  transform: none !important;
 }
 
 .message.actions-below .received-message-actions {
@@ -130,7 +150,17 @@ body.dark .message-quick-actions .quick-message-action {
   justify-self: end !important;
 }
 
-/* Disable every legacy swipe-reply visual and transform. */
+/* Disable all legacy swipe-reply visuals and transforms. */
+.swipe-reply-indicator,
+.swipe-reply-indicator::before,
+.message.reply-swipe-active .swipe-reply-indicator,
+.message.swiped .swipe-reply-indicator {
+  content: none !important;
+  display: none !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+}
+
 .message,
 .message .message-bubble,
 .message.reply-swipe-active .message-bubble,
@@ -141,14 +171,4 @@ body.dark .message-quick-actions .quick-message-action {
 .message.reply-swipe-active .message-bubble,
 .message.swiped .message-bubble {
   transform: none !important;
-}
-
-.swipe-reply-indicator,
-.swipe-reply-indicator::before,
-.message.reply-swipe-active .swipe-reply-indicator,
-.message.swiped .swipe-reply-indicator {
-  content: none !important;
-  display: none !important;
-  opacity: 0 !important;
-  visibility: hidden !important;
 }
