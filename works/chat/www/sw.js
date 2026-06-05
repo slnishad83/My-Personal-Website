@@ -56,7 +56,7 @@ self.addEventListener('notificationclick', event => {
   );
 });
 
-const CACHE_NAME = 'team-chat-v141-responsive-translation';
+const CACHE_NAME = 'team-chat-v142-compact-translation-actions';
 const urlsToCache = [
   'index.html',
   'login.html',
