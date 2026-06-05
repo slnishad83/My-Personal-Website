@@ -56,7 +56,7 @@ self.addEventListener('notificationclick', event => {
   );
 });
 
-const CACHE_NAME = 'team-chat-v136-final-best-web-pwa';
+const CACHE_NAME = 'team-chat-v141-responsive-translation';
 const urlsToCache = [
   'index.html',
   'login.html',
@@ -87,7 +87,11 @@ self.addEventListener('fetch', event => {
     fetch(event.request)
       .then(response => {
         const requestUrl = new URL(event.request.url);
-        if (requestUrl.origin === self.location.origin && response.ok) {
+        if (
+          requestUrl.origin === self.location.origin &&
+          response.ok &&
+          !requestUrl.pathname.toLowerCase().endsWith(".apk")
+        ) {
           const responseCopy = response.clone();
           caches.open(CACHE_NAME).then(cache => cache.put(event.request, responseCopy));
         }

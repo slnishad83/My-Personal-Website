@@ -17,7 +17,7 @@
       href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="style.css?v=124" />
+    <link rel="stylesheet" href="style.css?v=141" />
     <link rel="manifest" href="manifest.json?v=97" />
     <link rel="apple-touch-icon" href="app-icon-192.png" />
     <style>
@@ -97,9 +97,9 @@
                   />
                 </svg>
               </span>
-              <span class="install-app-label">Install App</span>
+              <span class="install-app-label">Download App</span>
             </button>
-            <button class="icon-btn" id="globalSearchBtn" title="Find people or messages" aria-label="Find people or messages"></button>
+            <button class="icon-btn" id="scannerBtn" title="Scan QR code or barcode" aria-label="Scan QR code or barcode"></button>
             <button class="icon-btn" id="darkModeBtn" title="Dark Mode"></button>
             <button class="logout-btn" id="logoutBtn" title="Log out" aria-label="Log out"></button>
           </div>
@@ -109,7 +109,7 @@
           <input
             type="text"
             id="searchInput"
-            placeholder="Search users by name, phone, or email..."
+            placeholder="Search for Users and Messages"
           />
         </div>
 
@@ -578,6 +578,57 @@
           />
           <div id="globalSearchResults" style="max-height: 400px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px;">
             <div class="empty-state">Enter a keyword to search across all chats</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- QR and Barcode Scanner Modal -->
+    <div id="scannerModal" class="modal scanner-modal" style="display: none">
+      <div class="modal-content scanner-modal-content">
+        <div class="modal-header">
+          <h3>Scan QR Code or Barcode</h3>
+          <span class="close-modal closeScannerModal">&times;</span>
+        </div>
+        <div class="modal-body scanner-body">
+          <div class="scanner-camera">
+            <video id="scannerVideo" playsinline muted></video>
+            <div class="scanner-frame" aria-hidden="true"></div>
+          </div>
+          <p id="scannerStatus" class="scanner-status">Point the camera at a QR code or barcode.</p>
+          <div id="scannerResult" class="scanner-result" style="display: none"></div>
+          <div class="scanner-actions">
+            <button id="copyScannerResultBtn" class="btn btn-outline" type="button" style="display: none">Copy Result</button>
+            <button id="openScannerResultBtn" class="btn btn-primary" type="button" style="display: none">Open Link</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Received Message Translation Modal -->
+    <div id="translateModal" class="modal translate-modal" style="display: none">
+      <div class="modal-content translate-modal-content">
+        <div class="modal-header">
+          <h3>Translate Message</h3>
+          <span class="close-modal closeTranslateModal">&times;</span>
+        </div>
+        <div class="modal-body translate-body">
+          <div id="translateSourcePreview" class="translate-source-preview"></div>
+          <div class="translate-language-grid">
+            <label>
+              <span>Translate from</span>
+              <select id="translateFromLanguage"></select>
+            </label>
+            <button id="swapTranslateLanguagesBtn" class="translate-swap-btn" type="button" title="Swap languages" aria-label="Swap languages"></button>
+            <label>
+              <span>Translate to</span>
+              <select id="translateToLanguage"></select>
+            </label>
+          </div>
+          <p id="translateCapabilityNote" class="translate-capability-note"></p>
+          <div class="translate-actions">
+            <button id="openExternalTranslateBtn" class="btn btn-outline" type="button">Open Free Translator</button>
+            <button id="runTranslateBtn" class="btn btn-primary" type="button">Translate</button>
           </div>
         </div>
       </div>
@@ -1987,7 +2038,7 @@
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-storage-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-messaging-compat.js"></script>
-    <script src="app.js?v=138"></script>
-    <script src="pwa-install.js?v=124"></script>
+    <script src="app.js?v=141"></script>
+    <script src="pwa-install.js?v=140"></script>
   </body>
 </html>

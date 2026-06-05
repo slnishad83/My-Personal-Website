@@ -11,6 +11,17 @@
     /^((?!chrome|android|crios|fxios|edg|opr).)*safari/i.test(userAgent);
   const isEdge = /edg/i.test(userAgent);
   const isFirefox = /firefox|fxios/i.test(userAgent);
+  const isAndroid = /android/i.test(userAgent);
+  const isNativeApp =
+    window.Capacitor?.isNativePlatform?.() === true ||
+    Boolean(window.Capacitor?.Plugins?.App);
+  const APK_URL = new URL("my-team-chat.apk", window.location.href).href;
+  const ANDROID_APP_INTENT =
+    "intent://open#Intent;" +
+    "scheme=myteamchat;" +
+    "package=com.nishad.myteamchat;" +
+    `S.browser_fallback_url=${encodeURIComponent(APK_URL)};` +
+    "end";
 
   function isStandaloneApp() {
     return (
@@ -36,6 +47,28 @@
     getInstallButtons().forEach((button) => {
       button.disabled = isBusy;
       button.setAttribute("aria-busy", isBusy ? "true" : "false");
+    });
+  }
+
+  function setButtonLabels(label) {
+    getInstallButtons().forEach((button) => {
+      const labelElement = button.querySelector(".install-app-label");
+      if (labelElement) {
+        labelElement.textContent = label;
+      } else {
+        const icon = button.querySelector(".login-install-icon");
+        button.childNodes.forEach((node) => {
+          if (node.nodeType === Node.TEXT_NODE && node.textContent.trim()) {
+            node.textContent = ` ${label}`;
+          }
+        });
+        if (!icon && !button.textContent.trim()) button.textContent = label;
+      }
+      button.title = "Open My Team Chat if installed, otherwise download the Android APK";
+      button.setAttribute(
+        "aria-label",
+        "Open My Team Chat if installed, otherwise download the Android APK",
+      );
     });
   }
 
@@ -110,9 +143,23 @@
   }
 
   function updateInstallUi() {
-    if (isStandaloneApp()) {
+    if (isStandaloneApp() || isNativeApp) {
       setButtonsVisible(false);
       setHelp("");
+      return;
+    }
+
+    if (isAndroid) {
+      setButtonLabels("Download App");
+      setButtonsVisible(true);
+      setHelp("Already installed? This button opens the app. Otherwise, it downloads the APK.");
+      return;
+    }
+
+    if (!isIos) {
+      setButtonLabels("Download Android APK");
+      setButtonsVisible(true);
+      setHelp("Download the Android APK, then transfer it to an Android device to install.");
       return;
     }
 
@@ -120,11 +167,39 @@
     setHelp(isIos ? getManualInstallMessage() : "");
   }
 
+  function openInstalledAppOrDownloadApk() {
+    setButtonsBusy(true);
+    setHelp("Opening the installed app, or downloading the APK if it is not installed...");
+    window.setTimeout(() => setButtonsBusy(false), 1800);
+    window.location.href = ANDROID_APP_INTENT;
+  }
+
+  function downloadAndroidApk() {
+    const link = document.createElement("a");
+    link.href = APK_URL;
+    link.download = "my-team-chat.apk";
+    link.rel = "noopener";
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    setHelp("APK download started.");
+  }
+
   async function installApp(event) {
     event.preventDefault();
 
-    if (isStandaloneApp()) {
+    if (isStandaloneApp() || isNativeApp) {
       notify("Team Chat is already installed on this device.");
+      return;
+    }
+
+    if (isAndroid) {
+      openInstalledAppOrDownloadApk();
+      return;
+    }
+
+    if (!isIos) {
+      downloadAndroidApk();
       return;
     }
 

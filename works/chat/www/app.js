@@ -333,6 +333,14 @@ function closeTopVisibleModal() {
     closeStatusViewer();
     return true;
   }
+  if (topModal.id === "scannerModal") {
+    closeScanner();
+    return true;
+  }
+  if (topModal.id === "translateModal") {
+    closeTranslateModal();
+    return true;
+  }
   topModal.style.display = "none";
   return true;
 }
@@ -5313,12 +5321,14 @@ async function searchUsersRealtime(searchTerm) {
 // ========================================================================
 // FIXED: COMBINED REAL-TIME HISTORY & DIRECTORY LOOKUP ENGINE
 // ========================================================================
+let chatListLoadToken = 0;
 async function loadAllChatsList(searchTerm = "") {
   const chatsList = document.getElementById("chatsList");
   if (!chatsList) return;
+  const loadToken = ++chatListLoadToken;
 
   // Show skeleton loading while fetching
-  if (!searchTerm) {
+  if (!searchTerm && !chatsList.children.length) {
     chatsList.innerHTML = Array(5)
       .fill("")
       .map(
@@ -5350,6 +5360,7 @@ async function loadAllChatsList(searchTerm = "") {
   } catch (error) {
     console.error("buildGroupChatItems failed:", error);
   }
+  if (loadToken !== chatListLoadToken) return;
   const allItems = [...directItems, ...groupItems];
   updateUnreadBadges(allItems);
 
@@ -7033,8 +7044,6 @@ function applyCurrentChatWallpaper() {
     messagesArea.style.backgroundPosition = "center";
   }
 
-  messagesArea.style.display = "none";
-  messagesArea.offsetHeight; // Force layouts
   messagesArea.style.display = "flex";
   messagesArea.style.flexDirection = "column";
 }
@@ -7881,7 +7890,19 @@ function formatLastSeen(timestamp) {
     return `last seen today at ${time}`;
   if (date.toDateString() === yesterday.toDateString())
     return `last seen yesterday at ${time}`;
-  return `last seen ${date.toLocaleDateString()} at ${time}`;
+  return `last seen ${date.toLocaleDateString([], {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  })} at ${time}`;
+}
+
+function setChatStatus(text = "") {
+  const chatStatus = document.getElementById("chatStatus");
+  if (!chatStatus) return;
+  chatStatus.textContent = text;
+  chatStatus.title = text;
+  chatStatus.setAttribute("aria-label", text || "No status available");
 }
 
 function isUserOnlineNow(userData = {}) {
@@ -7942,7 +7963,7 @@ function refreshOpenChatPresence() {
     return;
   const user = allUsers.find((u) => u.id === currentChat.otherUserId);
   const chatStatus = document.getElementById("chatStatus");
-  if (user && chatStatus) chatStatus.textContent = getPresenceText(user);
+  if (user && chatStatus) setChatStatus(getPresenceText(user));
 }
 
 async function loadGroupsList() {
@@ -8628,7 +8649,7 @@ async function startDirectChat(user) {
   setActiveDraftKey();
   document.getElementById("currentChatName").textContent =
     currentChat.otherUserName;
-  document.getElementById("chatStatus").textContent = getPresenceText(user);
+  setChatStatus(getPresenceText(user));
   setChatHeaderAvatar(
     user.avatar
       ? `<img src="${user.avatar}">`
@@ -10097,6 +10118,10 @@ function loadMessages() {
   messagesUnsubscribe = query.onSnapshot(
     (snapshot) => {
       if (!messagesArea) return;
+      const previousHeight = messagesArea.scrollHeight;
+      const previousScrollTop = messagesArea.scrollTop;
+      const shouldStickToBottom =
+        previousHeight - previousScrollTop - messagesArea.clientHeight < 100;
       messagesArea.innerHTML = "";
       if (snapshot.empty) {
         messagesArea.innerHTML =
@@ -10195,6 +10220,7 @@ function loadMessages() {
 
         messageDiv.innerHTML = `
         <div class="swipe-reply-indicator"></div>
+        ${!isMyMessage && !msg.deletedForEveryone ? '<div class="received-message-actions"><button type="button" class="quick-message-action quick-translate-btn" title="Translate message" aria-label="Translate message"></button><button type="button" class="quick-message-action quick-forward-btn" title="Forward message" aria-label="Forward message"></button></div>' : ""}
         <div class="message-bubble">
           <button type="button" class="message-options-btn" title="Message options" aria-label="Message options">⋮</button>
           ${!isMyMessage ? `<div class="message-sender">${escapeHtml(msg.senderName)}</div>` : ""}
@@ -10208,6 +10234,7 @@ function loadMessages() {
           ${contactHtml}
           ${eventHtml}
           ${listHtml}
+          ${getTranslationCardHtml(doc.id)}
           <div class="message-footer">
             <span class="message-time">${msg.timestamp ? formatTime(msg.timestamp) : ""}</span>
             ${msg.editedAt ? '<span class="message-edited">edited</span>' : ""}
@@ -10233,6 +10260,24 @@ function loadMessages() {
               isMyMessage,
             );
           });
+        messageDiv
+          .querySelector(".quick-forward-btn")
+          ?.addEventListener("click", (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            openForwardModal(doc.id, { ...msg, messageId: doc.id });
+          });
+        messageDiv
+          .querySelector(".quick-translate-btn")
+          ?.addEventListener("click", (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            openTranslateModal(doc.id, { ...msg, messageId: doc.id });
+          });
+        bindTranslationCardActions(messageDiv, doc.id, {
+          ...msg,
+          messageId: doc.id,
+        });
         messagesArea.appendChild(messageDiv);
         bindSwipeToReply(messageDiv, { ...msg, messageId: doc.id });
         bindLongPressMessageMenu(
@@ -10255,7 +10300,9 @@ function loadMessages() {
         });
         bindFailedMessageRetryActions();
       }
-      messagesArea.scrollTop = messagesArea.scrollHeight;
+      messagesArea.scrollTop = shouldStickToBottom
+        ? messagesArea.scrollHeight
+        : previousScrollTop + (messagesArea.scrollHeight - previousHeight);
       renderSuggestedReplies(messagesArea);
       bindRenderedMessageActions();
       messagesArea.querySelectorAll(".jump-reply-btn").forEach((btn) => {
@@ -11532,7 +11579,7 @@ function showContextMenu(x, y, messageId, messageData, isMyMessage) {
   } catch (_) {}
   removeMessageContextMenu();
   const menu = document.createElement("div");
-  menu.className = "context-menu message-context-menu";
+  menu.className = "context-menu message-context-menu context-menu-opening";
 
   const reactionStrip = document.createElement("div");
   reactionStrip.className = "message-context-reactions";
@@ -11624,6 +11671,7 @@ function showContextMenu(x, y, messageId, messageData, isMyMessage) {
   document.body.appendChild(menu);
   document.body.classList.add("message-menu-open");
   positionContextMenu(menu, x, y);
+  window.setTimeout(() => menu.classList.remove("context-menu-opening"), 220);
 }
 
 function removeMessageContextMenu() {
@@ -12698,8 +12746,10 @@ function switchTab(tab) {
 function bindSearchInput() {
   const input = document.getElementById("searchInput");
   if (!input) return;
+  let searchTimer = null;
   input.addEventListener("input", (e) => {
-    searchUsersRealtime(e.target.value);
+    clearTimeout(searchTimer);
+    searchTimer = window.setTimeout(() => searchUsersRealtime(e.target.value), 220);
   });
 }
 
@@ -13395,10 +13445,6 @@ async function init() {
   document
     .getElementById("darkModeBtn")
     ?.addEventListener("click", toggleDarkMode);
-  document
-    .getElementById("installAppBtn")
-    ?.addEventListener("click", handleInstallApp);
-
   document
     .querySelectorAll(".closeProfileModal")
     .forEach((b) =>
@@ -14993,6 +15039,369 @@ window.enableTeamChatCallNotifications =
   function enableTeamChatCallNotifications() {
     return registerFcmTokenForCurrentUser({ force: true });
   };
+
+// ========================================
+// FREE, CAPABILITY-BASED MESSAGE TRANSLATION
+// ========================================
+
+const TRANSLATION_LANGUAGES = [
+  ["auto", "Auto detect"],
+  ["en", "English"],
+  ["ar", "Arabic"],
+  ["bn", "Bengali"],
+  ["zh", "Chinese"],
+  ["fr", "French"],
+  ["de", "German"],
+  ["gu", "Gujarati"],
+  ["hi", "Hindi"],
+  ["id", "Indonesian"],
+  ["it", "Italian"],
+  ["ja", "Japanese"],
+  ["kn", "Kannada"],
+  ["ko", "Korean"],
+  ["ml", "Malayalam"],
+  ["mr", "Marathi"],
+  ["pt", "Portuguese"],
+  ["ru", "Russian"],
+  ["es", "Spanish"],
+  ["ta", "Tamil"],
+  ["te", "Telugu"],
+  ["tr", "Turkish"],
+  ["ur", "Urdu"],
+  ["vi", "Vietnamese"],
+];
+const translationCache = new Map();
+let activeTranslationMessage = null;
+
+function getTranslationSourceText(message = {}) {
+  const parts = [];
+  if (message.text) parts.push(message.text);
+  if (message.linkPreview?.title) parts.push(message.linkPreview.title);
+  if (message.linkPreview?.description) parts.push(message.linkPreview.description);
+  if (message.attachment?.caption) parts.push(message.attachment.caption);
+  if (message.transcript) parts.push(message.transcript);
+  if (message.attachment?.transcript) parts.push(message.attachment.transcript);
+  return [...new Set(parts.map((part) => String(part || "").trim()).filter(Boolean))].join("\n");
+}
+
+function getTranslationMediaNote(message = {}) {
+  const type = message.attachment?.type || message.type || "";
+  if (type === "voice" || type === "audio")
+    return "This voice message has no transcript. Free, reliable voice transcription is not available on every device.";
+  if (type === "video")
+    return "This video has no transcript or caption. Free, reliable video transcription is not available on every device.";
+  if (type === "image")
+    return "This image has no caption. Image text extraction is not available on every device.";
+  return "This message does not contain translatable text.";
+}
+
+function populateTranslationLanguages() {
+  const from = document.getElementById("translateFromLanguage");
+  const to = document.getElementById("translateToLanguage");
+  if (!from || !to || from.options.length) return;
+  TRANSLATION_LANGUAGES.forEach(([code, label]) => {
+    from.add(new Option(label, code));
+    if (code !== "auto") to.add(new Option(label, code));
+  });
+  from.value = localStorage.getItem("translateFromLanguage") || "auto";
+  to.value = localStorage.getItem("translateToLanguage") || navigator.language?.split("-")[0] || "en";
+  if (!to.value) to.value = "en";
+}
+
+function getExternalTranslationUrl(text, source, target) {
+  const params = new URLSearchParams({
+    sl: source || "auto",
+    tl: target || "en",
+    text: text || "",
+    op: "translate",
+  });
+  return `https://translate.google.com/?${params.toString()}`;
+}
+
+function closeTranslateModal() {
+  const modal = document.getElementById("translateModal");
+  if (modal) modal.style.display = "none";
+}
+
+function updateTranslationCapabilityNote() {
+  const note = document.getElementById("translateCapabilityNote");
+  const runButton = document.getElementById("runTranslateBtn");
+  if (!note || !runButton || !activeTranslationMessage) return;
+  const text = getTranslationSourceText(activeTranslationMessage.data);
+  if (!text) {
+    note.textContent = getTranslationMediaNote(activeTranslationMessage.data);
+    runButton.disabled = true;
+    return;
+  }
+  runButton.disabled = false;
+  note.textContent =
+    "Inline translation uses your browser's free on-device translator when available. Otherwise, use Open Free Translator.";
+}
+
+function openTranslateModal(messageId, messageData) {
+  populateTranslationLanguages();
+  activeTranslationMessage = { id: messageId, data: messageData };
+  const modal = document.getElementById("translateModal");
+  const preview = document.getElementById("translateSourcePreview");
+  const text = getTranslationSourceText(messageData);
+  if (preview)
+    preview.textContent =
+      text || getAttachmentLabel(messageData.attachment) || "Message";
+  updateTranslationCapabilityNote();
+  if (modal) modal.style.display = "flex";
+}
+
+async function detectTranslationLanguage(text) {
+  if (!("LanguageDetector" in self)) return null;
+  try {
+    const detector = await self.LanguageDetector.create();
+    const results = await detector.detect(text);
+    detector.destroy?.();
+    return results?.[0]?.detectedLanguage || null;
+  } catch (_) {
+    return null;
+  }
+}
+
+async function runFreeInlineTranslation() {
+  if (!activeTranslationMessage) return;
+  const text = getTranslationSourceText(activeTranslationMessage.data);
+  const from = document.getElementById("translateFromLanguage");
+  const to = document.getElementById("translateToLanguage");
+  const button = document.getElementById("runTranslateBtn");
+  if (!text || !from || !to || !button) return;
+  localStorage.setItem("translateFromLanguage", from.value);
+  localStorage.setItem("translateToLanguage", to.value);
+
+  if (!("Translator" in self)) {
+    showToast("Inline translation is unavailable here. Opening the free translator.");
+    window.open(getExternalTranslationUrl(text, from.value, to.value), "_blank", "noopener,noreferrer");
+    return;
+  }
+
+  button.disabled = true;
+  button.textContent = "Translating...";
+  try {
+    const sourceLanguage =
+      from.value === "auto" ? await detectTranslationLanguage(text) : from.value;
+    if (!sourceLanguage)
+      throw new Error("Automatic language detection is unavailable");
+    const translator = await self.Translator.create({
+      sourceLanguage,
+      targetLanguage: to.value,
+      monitor(monitor) {
+        monitor.addEventListener("downloadprogress", (event) => {
+          button.textContent = `Preparing ${Math.round((event.loaded || 0) * 100)}%`;
+        });
+      },
+    });
+    const translatedText = await translator.translate(text);
+    translator.destroy?.();
+    translationCache.set(activeTranslationMessage.id, {
+      text: translatedText,
+      sourceLanguage,
+      targetLanguage: to.value,
+    });
+    closeTranslateModal();
+    loadMessages();
+  } catch (error) {
+    showToast("Inline translation is unavailable for these languages. Opening the free translator.");
+    window.open(getExternalTranslationUrl(text, from.value, to.value), "_blank", "noopener,noreferrer");
+  } finally {
+    button.disabled = false;
+    button.textContent = "Translate";
+  }
+}
+
+function getTranslationCardHtml(messageId) {
+  const result = translationCache.get(messageId);
+  if (!result) return "";
+  const language = TRANSLATION_LANGUAGES.find(([code]) => code === result.targetLanguage)?.[1] || result.targetLanguage;
+  return `<div class="message-translation-card">
+    <div class="message-translation-label">Translated to ${escapeHtml(language)}</div>
+    <div class="message-translation-text">${renderMessageText(result.text)}</div>
+    <div class="message-translation-actions">
+      <button type="button" data-translation-action="change">Change</button>
+      <button type="button" data-translation-action="copy">Copy</button>
+      <button type="button" data-translation-action="hide">Hide</button>
+    </div>
+  </div>`;
+}
+
+function bindTranslationCardActions(messageDiv, messageId, messageData) {
+  messageDiv.querySelectorAll("[data-translation-action]").forEach((button) => {
+    button.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      const action = button.dataset.translationAction;
+      if (action === "copy") copyToClipboard(translationCache.get(messageId)?.text || "");
+      if (action === "change") openTranslateModal(messageId, messageData);
+      if (action === "hide") {
+        translationCache.delete(messageId);
+        messageDiv.querySelector(".message-translation-card")?.remove();
+      }
+    });
+  });
+}
+
+(function initTranslationUi() {
+  populateTranslationLanguages();
+  document.querySelectorAll(".closeTranslateModal").forEach((button) =>
+    button.addEventListener("click", closeTranslateModal),
+  );
+  document.getElementById("translateModal")?.addEventListener("click", (event) => {
+    if (event.target.id === "translateModal") closeTranslateModal();
+  });
+  document.getElementById("runTranslateBtn")?.addEventListener("click", runFreeInlineTranslation);
+  document.getElementById("openExternalTranslateBtn")?.addEventListener("click", () => {
+    if (!activeTranslationMessage) return;
+    const text = getTranslationSourceText(activeTranslationMessage.data);
+    if (!text) {
+      showToast(getTranslationMediaNote(activeTranslationMessage.data), "error");
+      return;
+    }
+    const from = document.getElementById("translateFromLanguage")?.value || "auto";
+    const to = document.getElementById("translateToLanguage")?.value || "en";
+    window.open(getExternalTranslationUrl(text, from, to), "_blank", "noopener,noreferrer");
+  });
+  document.getElementById("swapTranslateLanguagesBtn")?.addEventListener("click", () => {
+    const from = document.getElementById("translateFromLanguage");
+    const to = document.getElementById("translateToLanguage");
+    if (!from || !to || from.value === "auto") return;
+    [from.value, to.value] = [to.value, from.value];
+  });
+})();
+
+// ========================================
+// QR AND BARCODE SCANNER
+// ========================================
+
+let scannerStream = null;
+let scannerFrameId = 0;
+let scannerValue = "";
+
+function isSafeScannerLink(value) {
+  try {
+    const url = new URL(value);
+    return url.protocol === "https:" || url.protocol === "http:";
+  } catch (_) {
+    return false;
+  }
+}
+
+function stopScannerCamera() {
+  if (scannerFrameId) cancelAnimationFrame(scannerFrameId);
+  scannerFrameId = 0;
+  scannerStream?.getTracks?.().forEach((track) => track.stop());
+  scannerStream = null;
+  const video = document.getElementById("scannerVideo");
+  if (video) video.srcObject = null;
+}
+
+function closeScanner() {
+  stopScannerCamera();
+  const modal = document.getElementById("scannerModal");
+  if (modal) modal.style.display = "none";
+}
+
+function showScannerResult(value) {
+  scannerValue = String(value || "").trim();
+  if (!scannerValue) return;
+  const result = document.getElementById("scannerResult");
+  const status = document.getElementById("scannerStatus");
+  const copyBtn = document.getElementById("copyScannerResultBtn");
+  const openBtn = document.getElementById("openScannerResultBtn");
+  if (result) {
+    result.textContent = scannerValue;
+    result.style.display = "block";
+  }
+  if (status) status.textContent = "Scan complete";
+  if (copyBtn) copyBtn.style.display = "inline-flex";
+  if (openBtn) openBtn.style.display = isSafeScannerLink(scannerValue) ? "inline-flex" : "none";
+  stopScannerCamera();
+  navigator.vibrate?.(30);
+}
+
+async function openScanner() {
+  const modal = document.getElementById("scannerModal");
+  const video = document.getElementById("scannerVideo");
+  const status = document.getElementById("scannerStatus");
+  const result = document.getElementById("scannerResult");
+  const copyBtn = document.getElementById("copyScannerResultBtn");
+  const openBtn = document.getElementById("openScannerResultBtn");
+  if (!modal || !video) return;
+
+  closeTransientOverlay();
+  stopScannerCamera();
+  scannerValue = "";
+  modal.style.display = "flex";
+  if (result) {
+    result.textContent = "";
+    result.style.display = "none";
+  }
+  if (copyBtn) copyBtn.style.display = "none";
+  if (openBtn) openBtn.style.display = "none";
+  if (status) status.textContent = "Starting camera...";
+
+  if (!navigator.mediaDevices?.getUserMedia || !("BarcodeDetector" in window)) {
+    if (status)
+      status.textContent =
+        "Scanning is not supported by this browser. Update the app or browser and try again.";
+    return;
+  }
+
+  try {
+    scannerStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: { ideal: "environment" } },
+      audio: false,
+    });
+    video.srcObject = scannerStream;
+    await video.play();
+    const formats = await window.BarcodeDetector.getSupportedFormats?.();
+    const detector = new window.BarcodeDetector(
+      formats?.length ? { formats } : undefined,
+    );
+    if (status) status.textContent = "Point the camera at a QR code or barcode.";
+
+    const detectFrame = async () => {
+      if (!scannerStream || modal.style.display === "none") return;
+      try {
+        const codes = video.readyState >= 2 ? await detector.detect(video) : [];
+        const value = codes?.[0]?.rawValue;
+        if (value) {
+          showScannerResult(value);
+          return;
+        }
+      } catch (_) {}
+      scannerFrameId = requestAnimationFrame(detectFrame);
+    };
+    scannerFrameId = requestAnimationFrame(detectFrame);
+  } catch (error) {
+    stopScannerCamera();
+    if (status)
+      status.textContent =
+        error?.name === "NotAllowedError"
+          ? "Camera permission is required to scan codes."
+          : "Could not start the camera. Please try again.";
+  }
+}
+
+(function initScanner() {
+  document.getElementById("scannerBtn")?.addEventListener("click", openScanner);
+  document.querySelectorAll(".closeScannerModal").forEach((button) =>
+    button.addEventListener("click", closeScanner),
+  );
+  document.getElementById("scannerModal")?.addEventListener("click", (event) => {
+    if (event.target.id === "scannerModal") closeScanner();
+  });
+  document.getElementById("copyScannerResultBtn")?.addEventListener("click", () => {
+    if (scannerValue) copyToClipboard(scannerValue);
+  });
+  document.getElementById("openScannerResultBtn")?.addEventListener("click", () => {
+    if (isSafeScannerLink(scannerValue))
+      window.open(scannerValue, "_blank", "noopener,noreferrer");
+  });
+})();
 
 // ========================================
 // FEATURE 2: GLOBAL MESSAGE SEARCH
