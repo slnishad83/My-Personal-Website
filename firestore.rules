@@ -131,6 +131,11 @@ service cloud.firestore {
       allow create: if isPersonalOwner(request.resource.data);
     }
 
+    match /chatTranslationSettings/{docId} {
+      allow read, update, delete: if isPersonalOwner(resource.data);
+      allow create: if isPersonalOwner(request.resource.data);
+    }
+
     match /deletedChats/{docId} {
       allow read, update, delete: if isPersonalOwner(resource.data);
       allow create: if isPersonalOwner(request.resource.data);
