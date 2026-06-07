@@ -8169,7 +8169,7 @@ function updateChatContextMenuLabels() {
   }
   const lockItem = document.getElementById("lockChatMenuItem");
   if (lockItem) {
-    lockItem.style.display = ["direct", "group"].includes(chatType) ? "" : "none";
+    lockItem.hidden = !["direct", "group"].includes(chatType);
     lockItem.textContent = isChatLocked(chatId, chatType) ? "Unlock Chat" : "Lock Chat";
   }
   const infoItem = document.getElementById("chatInfoMenuItem");
@@ -8192,9 +8192,9 @@ function updateChatContextMenuLabels() {
   const blockItem = document.getElementById("blockUserMenuItem");
   const reportItem = document.getElementById("reportUserMenuItem");
   const exitItem = document.getElementById("exitGroupMenuItem");
-  if (blockItem) blockItem.style.display = isDirect ? "" : "none";
+  if (blockItem) blockItem.hidden = !isDirect;
   if (reportItem) reportItem.textContent = isGroup ? "Report group" : "Report contact";
-  if (exitItem) exitItem.style.display = isGroup ? "" : "none";
+  if (exitItem) exitItem.hidden = !isGroup;
 }
 
 async function loadChatsList() {
@@ -10296,7 +10296,12 @@ function bindSwipeToReply(messageDiv, messageData) {
 
   messageDiv.addEventListener("pointerdown", (event) => {
     if (event.pointerType === "mouse" && event.button !== 0) return;
-    if (event.target.closest(".message-options-btn")) return;
+    if (
+      event.target.closest(
+        ".message-options-btn, .message-quick-actions, button, a, input, textarea, select",
+      )
+    )
+      return;
     startX = event.clientX;
     startY = event.clientY;
     pointerId = event.pointerId;
@@ -10576,6 +10581,7 @@ function loadMessages() {
         let textContent = msg.type === "location" ? "" : msg.text || "";
 
         messageDiv.innerHTML = `
+        <div class="swipe-reply-indicator" aria-hidden="true"></div>
         <div class="message-quick-actions ${isMyMessage ? "sent-message-actions" : "received-message-actions"}"><button type="button" class="quick-message-action quick-forward-btn" title="Forward message" aria-label="Forward message"></button><button type="button" class="quick-message-action quick-translate-btn" title="Translate message" aria-label="Translate message"></button><button type="button" class="quick-message-action quick-delete-btn" title="Delete message" aria-label="Delete message"></button></div>
         <div class="message-bubble">
           <button type="button" class="message-options-btn" title="Message options" aria-label="Message options">⋮</button>
@@ -10643,6 +10649,7 @@ function loadMessages() {
         });
         messagesArea.appendChild(messageDiv);
         positionMessageQuickActions(messageDiv);
+        bindSwipeToReply(messageDiv, { ...msg, messageId: doc.id });
         messageDiv.querySelectorAll("img, video").forEach((media) => {
           media.addEventListener("load", () => positionMessageQuickActions(messageDiv), {
             once: true,

@@ -1,0 +1,265 @@
+/* Final shared UI audit layer for web, PWA, and Android. */
+[hidden],
+body .context-menu .context-menu-item[hidden],
+body .message-context-menu .context-menu-item[hidden] {
+  display: none !important;
+}
+
+body.dark {
+  --panel: #111b21;
+  --panel-soft: #202c33;
+  --panel-hover: #26353d;
+  --border: #2f3f48;
+  --text: #e9edef;
+  --muted: #8696a0;
+  --muted-strong: #aebac1;
+  color: #e9edef !important;
+  background: #0b141a !important;
+}
+
+body.dark .chat-container,
+body.dark .sidebar,
+body.dark .chat-main,
+body.dark .messages-area,
+body.dark .list,
+body.dark .chat-list,
+body.dark .groups-list,
+body.dark .archive-section,
+body.dark .request-section,
+body.dark .archive-list,
+body.dark .request-list,
+body.dark .search-container,
+body.dark .search-box,
+body.dark .tabs,
+body.dark .group-actions,
+body.dark .home-panel,
+body.dark .empty-state {
+  border-color: #2f3f48 !important;
+  background: #111b21 !important;
+  color: #e9edef !important;
+}
+
+body.dark .messages-area {
+  background-color: #0b141a !important;
+}
+
+body.dark .sidebar-header,
+body.dark .chat-header,
+body.dark .archive-header,
+body.dark .request-header {
+  border-color: #2f3f48 !important;
+  background: #202c33 !important;
+  color: #e9edef !important;
+}
+
+body.dark #searchInput,
+body.dark .search-box input,
+body.dark .search-container input,
+body.dark .wa-composer-shell,
+body.dark #messageInput,
+body.dark .composer-input,
+body.dark .input-area {
+  border-color: #33444d !important;
+  background: #202c33 !important;
+  color: #e9edef !important;
+}
+
+body.dark input::placeholder,
+body.dark textarea::placeholder {
+  color: #8696a0 !important;
+  opacity: 1 !important;
+}
+
+body.dark .tab,
+body.dark .archive-header,
+body.dark .request-header,
+body.dark .user-status-text,
+body.dark .list-preview,
+body.dark .empty-state-copy,
+body.dark .form-hint,
+body.dark .modal-helper {
+  color: #aebac1 !important;
+}
+
+body.dark .tab.active {
+  background: rgba(0, 168, 132, 0.18) !important;
+  color: #00a884 !important;
+}
+
+body.dark .list-item,
+body.dark .chat-list .list-item,
+body.dark .groups-list .list-item,
+body.dark .member-item,
+body.dark .blocked-user-card,
+body.dark .permission-card,
+body.dark .shared-list-item,
+body.dark .shared-file-row,
+body.dark .shared-voice-row {
+  border-color: #2f3f48 !important;
+  background: #111b21 !important;
+  color: #e9edef !important;
+}
+
+body.dark .list-item:hover,
+body.dark .list-item.active {
+  background: #202c33 !important;
+}
+
+body.dark .list-name,
+body.dark .user-name,
+body.dark .chat-info-profile h3,
+body.dark #profileModal p,
+body.dark #profileModal p strong {
+  color: #e9edef !important;
+}
+
+body.dark .list-avatar,
+body.dark .profile-avatar,
+body.dark .group-avatar-large {
+  background: #2a3942 !important;
+  color: #aebac1 !important;
+}
+
+body.dark .list-item-menu,
+body.dark .icon-btn,
+body.dark .mobile-menu-btn,
+body.dark .logout-btn {
+  border-color: #33444d !important;
+  background: #202c33 !important;
+  color: #aebac1 !important;
+}
+
+body.dark .modal-content,
+body.dark .modal-header,
+body.dark .modal-body,
+body.dark .modal-footer,
+body.dark .permissions-modal-content,
+body.dark .chat-info-modal .modal-content,
+body.dark .schedule-modal-content,
+body.dark .forward-modal-content,
+body.dark .attachment-sheet,
+body.dark .emoji-picker,
+body.dark .app-action-sheet,
+body.dark .chat-lock-modal {
+  border-color: #33444d !important;
+  background: #111b21 !important;
+  color: #e9edef !important;
+}
+
+body.dark .modal-header h3,
+body.dark .modal-body h1,
+body.dark .modal-body h2,
+body.dark .modal-body h3,
+body.dark .modal-body h4,
+body.dark .modal-body p,
+body.dark .modal-body span,
+body.dark .modal-body label {
+  color: inherit !important;
+}
+
+body.dark .modal-header,
+body.dark .modal-footer {
+  border-color: #2f3f48 !important;
+}
+
+body.dark .modal-body input,
+body.dark .modal-body textarea,
+body.dark .modal-body select,
+body.dark .status-custom-input,
+body.dark .status-timer-select,
+body.dark .chat-lock-modal input {
+  border-color: #40515a !important;
+  background: #202c33 !important;
+  color: #e9edef !important;
+}
+
+body.dark .btn-outline,
+body.dark .setting-item,
+body.dark .status-preset,
+body.dark .folder-tab,
+body.dark #profileModal .btn-outline,
+body.dark #profileModal #changeNameBtn,
+body.dark #profileModal #changeEmailBtn,
+body.dark #profileModal #changePhoneBtn {
+  border-color: #33444d !important;
+  background: #202c33 !important;
+  color: #e9edef !important;
+}
+
+body.dark .setting-item:hover,
+body.dark .setting-item:active,
+body.dark .btn-outline:hover {
+  background: #26353d !important;
+}
+
+body.dark .shared-tabs,
+body.dark .chat-info-profile,
+body.dark .message-context-menu .reaction-row {
+  border-color: #2f3f48 !important;
+}
+
+body.dark .shared-media-item,
+body.dark .message-info-preview,
+body.dark .translate-source-preview,
+body.dark .message-translation-card {
+  border-color: #33444d !important;
+  background: #202c33 !important;
+  color: #e9edef !important;
+}
+
+body.dark .context-menu,
+body.dark .message-context-menu,
+body.dark .context-menu:not(.message-context-menu) {
+  --app-menu-bg: #111b21;
+  --app-menu-text: #e9edef;
+  --app-menu-hover: #202c33;
+  background: #111b21 !important;
+  color: #e9edef !important;
+}
+
+body.dark .context-menu-item:hover,
+body.dark .context-menu-item:active,
+body.dark .message-context-menu .context-menu-item:hover,
+body.dark .message-context-menu .context-menu-item:active {
+  background: #202c33 !important;
+  color: #e9edef !important;
+}
+
+body.dark .message-context-menu .message-context-reaction-btn {
+  background: #202c33 !important;
+  color: #e9edef !important;
+}
+
+body.dark .auth-container,
+body.dark .auth-card,
+body.dark .login-container,
+body.dark .register-container,
+body.dark .settings-page,
+body.dark .settings-section {
+  border-color: #33444d !important;
+  background: #111b21 !important;
+  color: #e9edef !important;
+}
+
+body.dark .auth-container input,
+body.dark .auth-card input,
+body.dark .login-container input,
+body.dark .register-container input {
+  border-color: #40515a !important;
+  background: #202c33 !important;
+  color: #e9edef !important;
+}
+
+@media (max-width: 900px) {
+  body.dark .sidebar-header,
+  body.dark .search-container,
+  body.dark .search-box,
+  body.dark .tabs,
+  body.dark .archive-header,
+  body.dark .request-header,
+  body.dark .group-actions {
+    border-color: #2f3f48 !important;
+    background: #111b21 !important;
+    color: #e9edef !important;
+  }
+}

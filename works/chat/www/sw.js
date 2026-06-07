@@ -56,13 +56,15 @@ self.addEventListener('notificationclick', event => {
   );
 });
 
-const CACHE_NAME = 'team-chat-v145-aligned-message-actions';
+const CACHE_NAME = 'team-chat-v146-ui-audit';
 const urlsToCache = [
   'index.html',
   'login.html',
   'verify.html',
   'turn.html',
   'style.css',
+  'message-actions.css',
+  'ui-audit.css',
   'app.js',
   'pwa-install.js',
   'manifest.json',
