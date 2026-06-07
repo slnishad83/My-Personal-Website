@@ -20,6 +20,7 @@
     <link rel="stylesheet" href="style.css?v=142" />
     <link rel="stylesheet" href="message-actions.css?v=6" />
     <link rel="stylesheet" href="ui-audit.css?v=1" />
+    <link rel="stylesheet" href="translation-ui.css?v=1" />
     <link rel="manifest" href="manifest.json?v=97" />
     <link rel="apple-touch-icon" href="app-icon-192.png" />
     <style>
@@ -607,29 +608,48 @@
       </div>
     </div>
 
-    <!-- Received Message Translation Modal -->
+    <!-- Message Translation Modal -->
     <div id="translateModal" class="modal translate-modal" style="display: none">
       <div class="modal-content translate-modal-content">
-        <div class="modal-header">
-          <h3>Translate Message</h3>
-          <span class="close-modal closeTranslateModal">&times;</span>
+        <div class="modal-header translate-modal-header">
+          <div class="translate-title">
+            <span class="translate-title-icon" aria-hidden="true"></span>
+            <div>
+              <h3>Translate message</h3>
+              <p>Translate readable message text and captions</p>
+            </div>
+          </div>
+          <button class="close-modal closeTranslateModal" type="button" aria-label="Close translation">&times;</button>
         </div>
         <div class="modal-body translate-body">
-          <div id="translateSourcePreview" class="translate-source-preview"></div>
+          <section class="translate-panel translate-original-panel">
+            <div class="translate-panel-label">Original</div>
+            <div id="translateSourcePreview" class="translate-source-preview"></div>
+          </section>
           <div class="translate-language-grid">
             <label>
-              <span>Translate from</span>
+              <span>From</span>
               <select id="translateFromLanguage"></select>
             </label>
             <button id="swapTranslateLanguagesBtn" class="translate-swap-btn" type="button" title="Swap languages" aria-label="Swap languages"></button>
             <label>
-              <span>Translate to</span>
+              <span>To</span>
               <select id="translateToLanguage"></select>
             </label>
           </div>
           <p id="translateCapabilityNote" class="translate-capability-note"></p>
+          <section id="translateOutputPanel" class="translate-panel translate-output-panel" hidden>
+            <div class="translate-output-heading">
+              <div>
+                <div class="translate-panel-label">Translation</div>
+                <span id="translateOutputLanguage"></span>
+              </div>
+              <button id="copyModalTranslationBtn" type="button">Copy</button>
+            </div>
+            <div id="translateOutputText" class="translate-output-text"></div>
+          </section>
           <div class="translate-actions">
-            <button id="openExternalTranslateBtn" class="btn btn-outline" type="button">Open Free Translator</button>
+            <button id="openExternalTranslateBtn" class="btn btn-outline" type="button">Open translator</button>
             <button id="runTranslateBtn" class="btn btn-primary" type="button">Translate</button>
           </div>
         </div>
@@ -2041,7 +2061,7 @@
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-storage-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-messaging-compat.js"></script>
-    <script src="app.js?v=146"></script>
+    <script src="app.js?v=147"></script>
     <script src="pwa-install.js?v=140"></script>
   </body>
 </html>

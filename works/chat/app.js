@@ -15547,6 +15547,27 @@ function closeTranslateModal() {
   if (modal) modal.style.display = "none";
 }
 
+function resetTranslationOutput() {
+  const panel = document.getElementById("translateOutputPanel");
+  const text = document.getElementById("translateOutputText");
+  const language = document.getElementById("translateOutputLanguage");
+  if (panel) panel.hidden = true;
+  if (text) text.textContent = "";
+  if (language) language.textContent = "";
+}
+
+function showTranslationOutput(result) {
+  const panel = document.getElementById("translateOutputPanel");
+  const text = document.getElementById("translateOutputText");
+  const language = document.getElementById("translateOutputLanguage");
+  const label =
+    TRANSLATION_LANGUAGES.find(([code]) => code === result.targetLanguage)?.[1] ||
+    result.targetLanguage;
+  if (text) text.textContent = result.text;
+  if (language) language.textContent = `Translated to ${label}`;
+  if (panel) panel.hidden = false;
+}
+
 function updateTranslationCapabilityNote() {
   const note = document.getElementById("translateCapabilityNote");
   const runButton = document.getElementById("runTranslateBtn");
@@ -15559,7 +15580,7 @@ function updateTranslationCapabilityNote() {
   }
   runButton.disabled = false;
   note.textContent =
-    "Inline translation uses your browser's free on-device translator when available. Otherwise, use Open Free Translator.";
+    "Inline translation uses your browser's free on-device translator when available. Otherwise, use Open translator.";
 }
 
 function openTranslateModal(messageId, messageData) {
@@ -15568,6 +15589,7 @@ function openTranslateModal(messageId, messageData) {
   const modal = document.getElementById("translateModal");
   const preview = document.getElementById("translateSourcePreview");
   const text = getTranslationSourceText(messageData);
+  resetTranslationOutput();
   if (preview)
     preview.textContent =
       text || getAttachmentLabel(messageData.attachment) || "Message";
@@ -15598,8 +15620,7 @@ async function runFreeInlineTranslation() {
   localStorage.setItem("translateToLanguage", to.value);
 
   if (!("Translator" in self)) {
-    showToast("Inline translation is unavailable here. Opening the free translator.");
-    window.open(getExternalTranslationUrl(text, from.value, to.value), "_blank", "noopener,noreferrer");
+    showToast("Inline translation is unavailable here. Use Open translator.", "error");
     return;
   }
 
@@ -15621,16 +15642,16 @@ async function runFreeInlineTranslation() {
     });
     const translatedText = await translator.translate(text);
     translator.destroy?.();
-    translationCache.set(activeTranslationMessage.id, {
+    const result = {
       text: translatedText,
       sourceLanguage,
       targetLanguage: to.value,
-    });
-    closeTranslateModal();
+    };
+    translationCache.set(activeTranslationMessage.id, result);
+    showTranslationOutput(result);
     loadMessages();
   } catch (error) {
-    showToast("Inline translation is unavailable for these languages. Opening the free translator.");
-    window.open(getExternalTranslationUrl(text, from.value, to.value), "_blank", "noopener,noreferrer");
+    showToast("Inline translation is unavailable for these languages. Use Open translator.", "error");
   } finally {
     button.disabled = false;
     button.textContent = "Translate";
@@ -15677,6 +15698,10 @@ function bindTranslationCardActions(messageDiv, messageId, messageData) {
     if (event.target.id === "translateModal") closeTranslateModal();
   });
   document.getElementById("runTranslateBtn")?.addEventListener("click", runFreeInlineTranslation);
+  document.getElementById("copyModalTranslationBtn")?.addEventListener("click", () => {
+    if (!activeTranslationMessage) return;
+    copyToClipboard(translationCache.get(activeTranslationMessage.id)?.text || "");
+  });
   document.getElementById("openExternalTranslateBtn")?.addEventListener("click", () => {
     if (!activeTranslationMessage) return;
     const text = getTranslationSourceText(activeTranslationMessage.data);
