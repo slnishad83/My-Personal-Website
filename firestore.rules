@@ -43,7 +43,11 @@ service cloud.firestore {
 
     function isCallParticipant(data) {
       return signedIn()
-        && (data.fromUserId == request.auth.uid || data.toUserId == request.auth.uid);
+        && (
+          data.fromUserId == request.auth.uid
+          || data.toUserId == request.auth.uid
+          || (data.participantIds is list && request.auth.uid in data.participantIds)
+        );
     }
 
     function validMessageUpdate() {

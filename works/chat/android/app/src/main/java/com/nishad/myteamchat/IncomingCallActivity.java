@@ -4,6 +4,7 @@ import android.app.Activity;
 import android.app.NotificationManager;
 import android.content.Intent;
 import android.graphics.Color;
+import android.graphics.drawable.GradientDrawable;
 import android.media.AudioManager;
 import android.media.MediaPlayer;
 import android.os.Build;
@@ -35,6 +36,11 @@ public class IncomingCallActivity extends Activity {
         String type = getIntent().getStringExtra("type");
         String callId = getIntent().getStringExtra("callId");
         int notificationId = getIntent().getIntExtra("notificationId", 5001);
+        String nativeAction = getIntent().getStringExtra("nativeAction");
+        if ("accept".equals(nativeAction) || "reject".equals(nativeAction)) {
+            openCallInApp(callId, nativeAction, notificationId);
+            return;
+        }
 
         LinearLayout layout = new LinearLayout(this);
         layout.setOrientation(LinearLayout.VERTICAL);
@@ -53,7 +59,22 @@ public class IncomingCallActivity extends Activity {
         callerView.setTextColor(Color.parseColor("#B8C7D9"));
         callerView.setTextSize(22);
         callerView.setGravity(Gravity.CENTER);
-        callerView.setPadding(0, 30, 0, 70);
+        callerView.setPadding(0, 22, 0, 54);
+
+        TextView avatarView = new TextView(this);
+        String initial = caller != null && !caller.trim().isEmpty()
+            ? caller.trim().substring(0, 1).toUpperCase()
+            : "M";
+        avatarView.setText(initial);
+        avatarView.setTextColor(Color.parseColor("#52646F"));
+        avatarView.setTextSize(42);
+        avatarView.setGravity(Gravity.CENTER);
+        GradientDrawable avatarBackground = new GradientDrawable();
+        avatarBackground.setShape(GradientDrawable.OVAL);
+        avatarBackground.setColor(Color.parseColor("#E9EDEF"));
+        avatarView.setBackground(avatarBackground);
+        LinearLayout.LayoutParams avatarParams = new LinearLayout.LayoutParams(180, 180);
+        avatarParams.setMargins(0, 0, 0, 24);
 
         Button acceptBtn = new Button(this);
         acceptBtn.setText("ACCEPT");
@@ -67,14 +88,27 @@ public class IncomingCallActivity extends Activity {
         rejectBtn.setTextColor(Color.WHITE);
         rejectBtn.setBackgroundColor(Color.parseColor("#DC2626"));
 
+        LinearLayout buttonRow = new LinearLayout(this);
+        buttonRow.setOrientation(LinearLayout.HORIZONTAL);
+        buttonRow.setGravity(Gravity.CENTER);
+        LinearLayout.LayoutParams buttonParams = new LinearLayout.LayoutParams(0, 132, 1);
+        buttonParams.setMargins(14, 0, 14, 0);
+        rejectBtn.setLayoutParams(buttonParams);
+        acceptBtn.setLayoutParams(buttonParams);
+
         acceptBtn.setOnClickListener(v -> openCallInApp(callId, "accept", notificationId));
 
         rejectBtn.setOnClickListener(v -> openCallInApp(callId, "reject", notificationId));
 
         layout.addView(titleView);
+        layout.addView(avatarView, avatarParams);
         layout.addView(callerView);
-        layout.addView(acceptBtn);
-        layout.addView(rejectBtn);
+        buttonRow.addView(rejectBtn);
+        buttonRow.addView(acceptBtn);
+        layout.addView(buttonRow, new LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT,
+            LinearLayout.LayoutParams.WRAP_CONTENT
+        ));
         setContentView(layout);
 
         startRespectfulRingOrVibrate();

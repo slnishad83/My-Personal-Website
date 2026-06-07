@@ -184,6 +184,7 @@ let isVideoRecording = false;
 let videoRecordingStartTime = null;
 let callMiniBar = null;
 let callNetworkFailTimer = null;
+let callHistoryLoadToken = 0;
 let currentSessionId = "";
 let groupCallsUnsubscribe = null;
 let groupCallPeerConnections = new Map();
@@ -655,16 +656,121 @@ function getCallIcon(type = "voice", status = "ended") {
 }
 
 function renderCallMessage(msg = {}) {
-  const text = escapeHtml(
-    msg.text ||
-      getCallHistoryText(
-        msg.callStatus || "ended",
-        msg.callType || "voice",
-        msg.callDurationMs || 0,
-      ),
-  );
+  const direction = msg.callFromUserId === currentUser?.uid ? "Outgoing" : "Incoming";
+  const text = escapeHtml(getViewedCallHistoryText(
+    msg.callStatus || "ended",
+    msg.callType || "voice",
+    msg.callDurationMs || 0,
+    direction,
+  ));
   const icon = getCallIcon(msg.callType, msg.callStatus);
   return `<div class="message-bubble"><span>${icon}</span><span>${text}</span></div>`;
+}
+
+function getViewedCallHistoryText(status, type, durationMs = 0, direction = "") {
+  const label = type === "video" ? "video call" : "voice call";
+  const prefix = direction ? `${direction} ` : "";
+  if (status === "missed" || status === "failed")
+    return `${direction === "Outgoing" ? "Not answered" : "Missed"} ${label}`;
+  if (status === "cancelled") return `${prefix}${label} cancelled`;
+  if (status === "rejected") return `${prefix}${label} declined`;
+  if (durationMs > 0) return `${prefix}${label} · ${formatCallDuration(durationMs)}`;
+  return `${prefix}${label}`;
+}
+
+function getHiddenCallHistoryIds() {
+  try {
+    return new Set(JSON.parse(localStorage.getItem(`hiddenCallHistory_${currentUser?.uid || ""}`) || "[]"));
+  } catch (_) {
+    return new Set();
+  }
+}
+
+function hideCallHistoryForMe(callId) {
+  const hidden = getHiddenCallHistoryIds();
+  hidden.add(callId);
+  localStorage.setItem(`hiddenCallHistory_${currentUser.uid}`, JSON.stringify([...hidden].slice(-500)));
+  loadCallsList();
+}
+
+function getCallHistoryDate(call = {}) {
+  return call.endedAt?.toDate?.() || call.connectedAt?.toDate?.() ||
+    call.acceptedAt?.toDate?.() || call.createdAt?.toDate?.() || new Date(0);
+}
+
+async function redialCall(call) {
+  const otherUserId = call.fromUserId === currentUser.uid ? call.toUserId : call.fromUserId;
+  let user = allUsers.find((item) => item.id === otherUserId);
+  if (!user && otherUserId) {
+    const snapshot = await db.collection("users").doc(otherUserId).get().catch(() => null);
+    if (snapshot?.exists) user = { id: snapshot.id, ...snapshot.data() };
+  }
+  if (!user) return showToast("Contact is unavailable", "error");
+  await startDirectChat(user);
+  await startCall(call.type || "voice");
+}
+
+async function loadCallsList() {
+  const list = document.getElementById("callsList");
+  if (!list || !currentUser) return;
+  const token = ++callHistoryLoadToken;
+  list.innerHTML = '<div class="empty-state">Loading calls...</div>';
+  try {
+    const [outgoing, incoming, group] = await Promise.all([
+      db.collection("calls").where("fromUserId", "==", currentUser.uid).get(),
+      db.collection("calls").where("toUserId", "==", currentUser.uid).get(),
+      db.collection("calls").where("participantIds", "array-contains", currentUser.uid).get(),
+    ]);
+    if (token !== callHistoryLoadToken) return;
+    const hidden = getHiddenCallHistoryIds();
+    const unique = new Map();
+    [...outgoing.docs, ...incoming.docs, ...group.docs].forEach((doc) => {
+      if (!hidden.has(doc.id)) unique.set(doc.id, { id: doc.id, ...doc.data() });
+    });
+    const calls = [...unique.values()].filter((call) => call.status !== "ringing")
+      .sort((a, b) => getCallHistoryDate(b) - getCallHistoryDate(a)).slice(0, 200);
+    if (!calls.length) {
+      list.innerHTML = '<div class="empty-state">No calls yet</div>';
+      return;
+    }
+    list.innerHTML = "";
+    let lastDay = "";
+    calls.forEach((call) => {
+      const date = getCallHistoryDate(call);
+      const day = date.toLocaleDateString([], { weekday: "short", day: "2-digit", month: "short" });
+      if (day !== lastDay) {
+        const label = document.createElement("div");
+        label.className = "calls-day-label";
+        label.textContent = day;
+        list.appendChild(label);
+        lastDay = day;
+      }
+      const outgoingCall = call.fromUserId === currentUser.uid;
+      const otherUserId = outgoingCall ? call.toUserId : call.fromUserId;
+      const user = allUsers.find((item) => item.id === otherUserId);
+      const name = call.groupName || call.title || user?.displayName ||
+        (outgoingCall ? call.toUserName : call.fromUserName) || "Unknown caller";
+      const direction = outgoingCall ? "Outgoing" : "Incoming";
+      const row = document.createElement("div");
+      row.className = "call-history-row";
+      row.innerHTML = `
+        <div class="call-history-avatar">${user?.avatar ? `<img src="${escapeHtml(user.avatar)}" alt="">` : escapeHtml(getInitials(name))}</div>
+        <div class="call-history-main">
+          <div class="call-history-name">${escapeHtml(name)}</div>
+          <div class="call-history-meta ${escapeHtml(call.status || "")}">${outgoingCall ? "↗" : "↙"} ${escapeHtml(getViewedCallHistoryText(call.status, call.type, call.callDurationMs || 0, direction))} · ${escapeHtml(date.toLocaleString([], { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" }))}</div>
+        </div>
+        <div class="call-history-actions">
+          ${call.groupCall ? "" : `<button class="call-history-action ${call.type === "video" ? "video" : "voice"}" type="button" aria-label="Redial ${escapeHtml(name)}"></button>`}
+          <button class="call-history-action remove" type="button" aria-label="Remove call from my history"></button>
+        </div>`;
+      row.querySelector(".call-history-action.voice, .call-history-action.video")?.addEventListener("click", () => redialCall(call));
+      row.querySelector(".call-history-action.remove")?.addEventListener("click", () => hideCallHistoryForMe(call.id));
+      list.appendChild(row);
+    });
+  } catch (error) {
+    console.warn("Could not load call history:", error);
+    list.innerHTML = '<div class="empty-state">Could not load calls</div>';
+  }
 }
 
 let activeDraftKey = "";
@@ -2877,6 +2983,48 @@ async function writeCallHistory(status) {
     .catch(() => {});
 }
 
+async function writeCompleteCallHistory(status, callData = activeCall) {
+  if (!callData?.id || !currentUser) return;
+  const durationMs = callStartedAt ? Date.now() - callStartedAt : 0;
+  const type = callData.type || currentCallType || "voice";
+  const isGroup = Boolean(callData.groupCall || callData.groupId);
+  const directId = isGroup ? "" : getDirectChatId(callData.fromUserId, callData.toUserId);
+  const groupId = callData.groupId || "";
+  const direction = callData.fromUserId === currentUser.uid ? "Outgoing" : "Incoming";
+  const text = getViewedCallHistoryText(status, type, durationMs, direction);
+  await db.collection("messages").doc(`call_${callData.id}`).set({
+    type: "call",
+    callId: callData.id,
+    callType: type,
+    callStatus: status,
+    callDurationMs: durationMs,
+    callFromUserId: callData.fromUserId,
+    callToUserId: callData.toUserId || "",
+    ...(directId ? { directId, participants: [callData.fromUserId, callData.toUserId] } : {}),
+    ...(groupId ? { groupId } : {}),
+    senderId: currentUser.uid,
+    senderName: currentUser.displayName || currentUser.email,
+    text,
+    timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+    readBy: { [currentUser.uid]: firebase.firestore.FieldValue.serverTimestamp() },
+  }, { merge: true }).catch((error) => console.warn("Could not write complete call history:", error));
+
+  if (groupId) {
+    await db.collection("groups").doc(groupId).set({
+      lastMessage: text,
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+    }, { merge: true }).catch(() => {});
+  } else if (directId) {
+    await db.collection("directChats").doc(directId).set({
+      participants: [callData.fromUserId, callData.toUserId],
+      status: "active",
+      lastMessage: text,
+      lastMessageTime: firebase.firestore.FieldValue.serverTimestamp(),
+    }, { merge: true }).catch(() => {});
+  }
+  callLogWritten = true;
+}
+
 function scheduleCallTimeout(callRef, ownerRole) {
   clearCallTimeout();
   callTimeoutTimer = setTimeout(async () => {
@@ -2892,7 +3040,7 @@ function scheduleCallTimeout(callRef, ownerRole) {
       });
       shouldCleanup = true;
       if (ownerRole === "caller" && activeCall)
-        await writeCallHistory("missed");
+        await writeCompleteCallHistory("missed", { id: snapshot.id, ...data });
       if (ownerRole === "caller") showToast("Call not answered", "error");
     } catch (error) {
       console.warn("Could not mark missed call:", error);
@@ -3972,6 +4120,7 @@ async function acceptIncomingGroupCall() {
 
 async function endGroupCall(status = "ended") {
   const callId = activeCall?.id;
+  const callData = activeCall ? { ...activeCall } : null;
   try {
     if (callId) {
       if (status === "rejected" && activeCallMode === "incoming") {
@@ -3985,6 +4134,7 @@ async function endGroupCall(status = "ended") {
             },
             { merge: true },
           );
+        await writeCompleteCallHistory("rejected", callData);
         cleanupCallUi();
         return;
       }
@@ -3995,11 +4145,13 @@ async function endGroupCall(status = "ended") {
           {
             status,
             endedBy: currentUser?.uid || null,
+            callDurationMs: callStartedAt ? Date.now() - callStartedAt : 0,
             endedAt: firebase.firestore.FieldValue.serverTimestamp(),
             participantStates: { [currentUser.uid]: "left" },
           },
           { merge: true },
         );
+      await writeCompleteCallHistory(status, callData);
     }
   } catch (error) {
     console.warn("Could not end group call:", error);
@@ -4297,12 +4449,26 @@ async function autoRejectNativeCall(callId) {
       },
       { merge: true },
     );
+    await writeCompleteCallHistory("rejected", { id: snap.id, ...callData });
     if (activeCall?.id === callId) cleanupCallUi();
     showToast("Call rejected");
   } catch (error) {
     console.warn("autoRejectNativeCall failed:", error);
     showToast("Could not reject the call. Please try again.", "error");
   }
+}
+
+async function handlePendingWebCallAction() {
+  const params = new URLSearchParams(window.location.search);
+  const callId = params.get("callId");
+  const action = params.get("callAction");
+  if (!callId || !currentUser) return;
+  params.delete("callId");
+  params.delete("callAction");
+  const clean = `${window.location.pathname}${params.toString() ? `?${params}` : ""}${window.location.hash}`;
+  history.replaceState(history.state, "", clean);
+  if (action === "reject") await autoRejectNativeCall(callId);
+  else await autoAcceptNativeCall(callId);
 }
 
 async function endActiveCall(status = "ended") {
@@ -4334,11 +4500,8 @@ async function endActiveCall(status = "ended") {
         finalStatus = "cancelled";
       }
 
-      if (
-        ["ended", "missed", "failed"].includes(finalStatus) &&
-        currentStatus !== "ringing"
-      ) {
-        await writeCallHistory(finalStatus).catch((error) =>
+      if (["ended", "cancelled", "rejected", "missed", "failed"].includes(finalStatus)) {
+        await writeCompleteCallHistory(finalStatus, call).catch((error) =>
           console.warn("Call history failed:", error),
         );
       }
@@ -4346,6 +4509,7 @@ async function endActiveCall(status = "ended") {
       await callRef.set(
         {
           status: finalStatus,
+          callDurationMs: callStartedAt ? Date.now() - callStartedAt : 0,
           endedAt: firebase.firestore.FieldValue.serverTimestamp(),
           endedBy: currentUser?.uid || null,
         },
@@ -4360,6 +4524,7 @@ async function endActiveCall(status = "ended") {
       if (btn) btn.disabled = false;
     });
     cleanupCallUi();
+    showToast(status === "rejected" ? "Call declined" : "Call ended");
   }
 }
 
@@ -5341,6 +5506,10 @@ async function searchUsersRealtime(searchTerm) {
 
   if (currentViewTab === "groups") {
     searchGroupsRealtime(term);
+    return;
+  }
+  if (currentViewTab === "calls") {
+    loadCallsList();
     return;
   }
 
@@ -8171,6 +8340,7 @@ async function buildGroupChatItems() {
 }
 function loadCurrentChatList() {
   if (currentViewTab === "groups") loadGroupsList();
+  else if (currentViewTab === "calls") loadCallsList();
   else loadAllChatsList(document.getElementById("searchInput")?.value || "");
 }
 
@@ -13183,6 +13353,7 @@ function switchTab(tab) {
   const groupsList = document.getElementById("groupsList");
   const broadcastsList = document.getElementById("broadcastsList");
   const statusList = document.getElementById("statusList");
+  const callsList = document.getElementById("callsList");
   const communitiesList = document.getElementById("communitiesList");
   const statusActions = document.getElementById("statusActions");
   const groupActions = document.getElementById("groupActions");
@@ -13193,6 +13364,7 @@ function switchTab(tab) {
     tab === "groups" ||
     tab === "status" ||
     tab === "broadcasts" ||
+    tab === "calls" ||
     tab === "communities"
       ? "none"
       : "block";
@@ -13201,6 +13373,8 @@ function switchTab(tab) {
     broadcastsList.style.display = tab === "broadcasts" ? "block" : "none";
   if (statusList)
     statusList.style.display = tab === "status" ? "block" : "none";
+  if (callsList)
+    callsList.style.display = tab === "calls" ? "block" : "none";
   if (communitiesList)
     communitiesList.style.display = tab === "communities" ? "block" : "none";
   if (groupActions)
@@ -13215,6 +13389,7 @@ function switchTab(tab) {
   if (tab === "groups") loadGroupsList();
   else if (tab === "broadcasts") loadBroadcastsList();
   else if (tab === "status") loadStatusList();
+  else if (tab === "calls") loadCallsList();
   else if (tab === "communities") loadCommunitiesList();
   else loadCurrentChatList();
 }
@@ -13390,6 +13565,9 @@ async function init() {
         console.warn("Could not refresh auth user:", error);
       }
       currentUser = user;
+      handlePendingWebCallAction().catch((error) =>
+        console.warn("Could not process notification call action:", error),
+      );
       currentSessionId = getOrCreateSessionId();
       revealAuthenticatedApp();
       requestNativeNotificationPermission();

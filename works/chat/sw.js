@@ -35,14 +35,19 @@ messaging.onBackgroundMessage(payload => {
       kind: data.kind || ''
     },
     actions: isCall ? [
-      { action: 'open', title: 'Open' }
+      { action: 'reject', title: 'Decline' },
+      { action: 'accept', title: 'Accept' }
     ] : []
   });
 });
 
 self.addEventListener('notificationclick', event => {
   event.notification.close();
-  const url = event.notification.data?.url || './index.html';
+  const data = event.notification.data || {};
+  const action = event.action || (data.kind === 'call' ? 'accept' : 'open');
+  const url = data.kind === 'call' && data.callId
+    ? `./index.html?callId=${encodeURIComponent(data.callId)}&callAction=${encodeURIComponent(action)}`
+    : (data.url || './index.html');
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then(clientList => {
       for (const client of clientList) {
@@ -56,7 +61,7 @@ self.addEventListener('notificationclick', event => {
   );
 });
 
-const CACHE_NAME = 'team-chat-v152-full-audit';
+const CACHE_NAME = 'team-chat-v153-calls';
 const urlsToCache = [
   'index.html',
   'login.html',
@@ -69,6 +74,7 @@ const urlsToCache = [
   'ui-audit.css',
   'translation-ui.css',
   'safe-area-audit.css',
+  'calls-ui.css',
   'app.js',
   'pwa-install.js',
   'manifest.json',
