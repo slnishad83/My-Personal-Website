@@ -56,7 +56,7 @@ self.addEventListener('notificationclick', event => {
   );
 });
 
-const CACHE_NAME = 'team-chat-v147-translation-ui';
+const CACHE_NAME = 'team-chat-v148-auto-translation';
 const urlsToCache = [
   'index.html',
   'login.html',
@@ -66,6 +66,7 @@ const urlsToCache = [
   'message-actions.css',
   'ui-audit.css',
   'translation-ui.css',
+  'safe-area-audit.css',
   'app.js',
   'pwa-install.js',
   'manifest.json',

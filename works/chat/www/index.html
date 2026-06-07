@@ -20,7 +20,8 @@
     <link rel="stylesheet" href="style.css?v=142" />
     <link rel="stylesheet" href="message-actions.css?v=6" />
     <link rel="stylesheet" href="ui-audit.css?v=1" />
-    <link rel="stylesheet" href="translation-ui.css?v=1" />
+    <link rel="stylesheet" href="translation-ui.css?v=2" />
+    <link rel="stylesheet" href="safe-area-audit.css?v=1" />
     <link rel="manifest" href="manifest.json?v=97" />
     <link rel="apple-touch-icon" href="app-icon-192.png" />
     <style>
@@ -638,6 +639,13 @@
             </label>
           </div>
           <p id="translateCapabilityNote" class="translate-capability-note"></p>
+          <label class="auto-translate-toggle">
+            <input id="autoTranslateChatToggle" type="checkbox" />
+            <span>
+              <strong>Automatically translate this chat</strong>
+              <small>Incoming messages translate to your preferred language. Outgoing translations are shown before sending.</small>
+            </span>
+          </label>
           <section id="translateOutputPanel" class="translate-panel translate-output-panel" hidden>
             <div class="translate-output-heading">
               <div>
@@ -651,6 +659,40 @@
           <div class="translate-actions">
             <button id="openExternalTranslateBtn" class="btn btn-outline" type="button">Open translator</button>
             <button id="runTranslateBtn" class="btn btn-primary" type="button">Translate</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Outgoing Translation Confirmation -->
+    <div id="outgoingTranslationModal" class="modal outgoing-translation-modal" style="display: none">
+      <div class="modal-content outgoing-translation-content">
+        <div class="modal-header">
+          <div class="translate-title">
+            <span class="translate-title-icon" aria-hidden="true"></span>
+            <div>
+              <h3>Confirm translated message</h3>
+              <p>Review what the recipient will receive</p>
+            </div>
+          </div>
+          <button id="cancelOutgoingTranslationBtn" class="close-modal" type="button" aria-label="Cancel sending">&times;</button>
+        </div>
+        <div class="modal-body outgoing-translation-body">
+          <section class="translate-panel">
+            <div class="translate-panel-label">Your original</div>
+            <div id="outgoingOriginalText" class="translate-source-preview"></div>
+          </section>
+          <section class="translate-panel translate-output-panel">
+            <div class="translate-panel-label">Will be sent as</div>
+            <div id="outgoingTranslatedText" class="translate-output-text"></div>
+          </section>
+          <label class="outgoing-confirm-choice">
+            <input id="skipOutgoingTranslationOnce" type="checkbox" />
+            <span>Send the original message this time</span>
+          </label>
+          <div class="translate-actions">
+            <button id="stopAutoTranslateBtn" class="btn btn-outline" type="button">Turn off auto-translate</button>
+            <button id="confirmOutgoingTranslationBtn" class="btn btn-primary" type="button">Send message</button>
           </div>
         </div>
       </div>
@@ -2061,7 +2103,7 @@
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-storage-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-messaging-compat.js"></script>
-    <script src="app.js?v=147"></script>
+    <script src="app.js?v=148"></script>
     <script src="pwa-install.js?v=140"></script>
   </body>
 </html>

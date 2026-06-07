@@ -8893,6 +8893,7 @@ async function startSavedMessages() {
     aliasDirectIds: [chatId],
   };
   currentChatType = "direct";
+  await hydrateCurrentChatTranslationSetting();
   setActiveDraftKey();
   document.getElementById("currentChatName").textContent = "Saved Messages";
   document.getElementById("chatStatus").textContent =
@@ -8976,6 +8977,7 @@ async function startDirectChat(user) {
       console.warn("Direct chat metadata merge skipped:", error);
     });
   currentChatType = "direct";
+  await hydrateCurrentChatTranslationSetting();
   setActiveDraftKey();
   document.getElementById("currentChatName").textContent =
     currentChat.otherUserName;
@@ -9099,6 +9101,7 @@ async function loadGroupChat(groupId, groupName, listItem = {}) {
     });
   currentChat = { id: groupId, name: groupName, type: "group" };
   currentChatType = "group";
+  await hydrateCurrentChatTranslationSetting();
   setActiveDraftKey();
   const groupData = groupDoc?.data?.() || listItem || {};
   const resolvedGroupName = groupData.name || groupName || "Group";
@@ -10578,7 +10581,12 @@ function loadMessages() {
           msg.type === "contact" ? renderContactCard(msg.contact) : "";
         let eventHtml = msg.type === "event" ? renderEventCard(msg.event) : "";
         let listHtml = msg.type === "list" ? renderListCard(msg.list) : "";
-        let textContent = msg.type === "location" ? "" : msg.text || "";
+        let textContent =
+          msg.type === "location"
+            ? ""
+            : isMyMessage && msg.translatedForSend && msg.originalText
+              ? msg.originalText
+              : msg.text || "";
 
         messageDiv.innerHTML = `
         <div class="swipe-reply-indicator" aria-hidden="true"></div>
@@ -10588,6 +10596,7 @@ function loadMessages() {
           ${!isMyMessage ? `<div class="message-sender">${escapeHtml(msg.senderName)}</div>` : ""}
           ${replyHtml}
           ${textContent ? `<div class="message-text">${renderMessageText(textContent, msg.mentions || [])}</div>` : ""}
+          ${isMyMessage && msg.translatedForSend ? `<details class="sent-translation-details"><summary>Sent translated</summary><div>${renderMessageText(msg.text || "")}</div></details>` : ""}
           ${stickerHtml}
           ${linkPreviewHtml}
           ${attachmentHtml}
@@ -10703,6 +10712,7 @@ function loadMessages() {
       });
       markMessagesAsRead();
       checkAndShowJumpToUnread();
+      autoTranslateCurrentChatMessages(docsToRender);
     },
     (err) => {
       console.error("Messages onSnapshot error:", err);
@@ -10751,6 +10761,11 @@ async function sendMessage() {
     return;
   }
 
+  const outgoingTranslation = text
+    ? await prepareOutgoingAutoTranslation(text)
+    : { text, originalText: "" };
+  if (!outgoingTranslation) return;
+
   setSendingState(true);
 
   const directParticipants =
@@ -10771,7 +10786,7 @@ async function sendMessage() {
   const messageData = {
     senderId: currentUser.uid,
     senderName: currentUser.displayName || currentUser.email,
-    text,
+    text: outgoingTranslation.text,
     timestamp: firebase.firestore.FieldValue.serverTimestamp(),
     status: "sent",
     read: false,
@@ -10791,6 +10806,13 @@ async function sendMessage() {
             ),
           ],
   };
+
+  if (outgoingTranslation.originalText) {
+    messageData.originalText = outgoingTranslation.originalText;
+    messageData.translatedForSend = true;
+    messageData.translationSourceLanguage = outgoingTranslation.sourceLanguage;
+    messageData.translationTargetLanguage = outgoingTranslation.targetLanguage;
+  }
 
   if (currentReplyTo) {
     messageData.replyTo = {
@@ -10816,12 +10838,12 @@ async function sendMessage() {
 
   try {
     await db.collection("messages").add(messageData);
-    const textBytes = new Blob([text || ""]).size;
+    const textBytes = new Blob([outgoingTranslation.text || ""]).size;
     const attachBytes = currentAttachment?.size || 0;
     trackDataUsage(textBytes + attachBytes, "sent");
 
     const previewText =
-      text ||
+      outgoingTranslation.text ||
       (currentAttachment ? getAttachmentLabel(currentAttachment) : "Message");
 
     if (currentChatType === "direct") {
@@ -15496,6 +15518,76 @@ const TRANSLATION_LANGUAGES = [
 ];
 const translationCache = new Map();
 let activeTranslationMessage = null;
+let autoTranslationPassRunning = false;
+
+function getCurrentChatTranslationKey() {
+  if (!currentUser?.uid || !currentChat?.id || !currentChatType) return "";
+  return `chatAutoTranslation_${currentUser.uid}_${currentChatType}_${currentChat.id}`;
+}
+
+function getCurrentChatTranslationSetting() {
+  const key = getCurrentChatTranslationKey();
+  if (!key) return null;
+  try {
+    const setting = JSON.parse(localStorage.getItem(key) || "null");
+    return setting?.enabled ? setting : null;
+  } catch (_) {
+    return null;
+  }
+}
+
+function saveCurrentChatTranslationSetting(setting) {
+  const key = getCurrentChatTranslationKey();
+  if (!key) return;
+  const recordId = `${currentUser.uid}_${currentChatType}_${currentChat.id}`.replaceAll("/", "_");
+  if (!setting?.enabled) {
+    localStorage.removeItem(key);
+    db?.collection("chatTranslationSettings")
+      ?.doc(recordId)
+      ?.delete()
+      ?.catch(() => {});
+    return;
+  }
+  const record = {
+    ...setting,
+    enabled: true,
+    userId: currentUser.uid,
+    chatId: currentChat.id,
+    chatType: currentChatType,
+    updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+  };
+  localStorage.setItem(key, JSON.stringify({ ...setting, enabled: true }));
+  db?.collection("chatTranslationSettings")
+    ?.doc(recordId)
+    ?.set(record, { merge: true })
+    ?.catch(() => {});
+}
+
+async function hydrateCurrentChatTranslationSetting() {
+  if (!currentUser?.uid || !currentChat?.id || !currentChatType) return;
+  const recordId = `${currentUser.uid}_${currentChatType}_${currentChat.id}`.replaceAll("/", "_");
+  try {
+    const snapshot = await db.collection("chatTranslationSettings").doc(recordId).get();
+    const setting = snapshot.data();
+    if (setting?.enabled) {
+      localStorage.setItem(
+        getCurrentChatTranslationKey(),
+        JSON.stringify({
+          enabled: true,
+          sourceLanguage: setting.sourceLanguage,
+          preferredLanguage: setting.preferredLanguage,
+        }),
+      );
+    }
+  } catch (_) {}
+}
+
+function disableCurrentChatAutoTranslation() {
+  saveCurrentChatTranslationSetting(null);
+  const toggle = document.getElementById("autoTranslateChatToggle");
+  if (toggle) toggle.checked = false;
+  showToast("Automatic translation turned off");
+}
 
 function getTranslationSourceText(message = {}) {
   const parts = [];
@@ -15589,6 +15681,8 @@ function openTranslateModal(messageId, messageData) {
   const modal = document.getElementById("translateModal");
   const preview = document.getElementById("translateSourcePreview");
   const text = getTranslationSourceText(messageData);
+  const toggle = document.getElementById("autoTranslateChatToggle");
+  if (toggle) toggle.checked = Boolean(getCurrentChatTranslationSetting());
   resetTranslationOutput();
   if (preview)
     preview.textContent =
@@ -15606,6 +15700,34 @@ async function detectTranslationLanguage(text) {
     return results?.[0]?.detectedLanguage || null;
   } catch (_) {
     return null;
+  }
+}
+
+async function translateWithBrowser(text, sourceLanguage, targetLanguage, onProgress) {
+  if (!("Translator" in self)) throw new Error("Browser translator unavailable");
+  const resolvedSource =
+    sourceLanguage === "auto"
+      ? await detectTranslationLanguage(text)
+      : sourceLanguage;
+  if (!resolvedSource) throw new Error("Language detection unavailable");
+  const translator = await self.Translator.create({
+    sourceLanguage: resolvedSource,
+    targetLanguage,
+    monitor(monitor) {
+      if (!onProgress) return;
+      monitor.addEventListener("downloadprogress", (event) =>
+        onProgress(Math.round((event.loaded || 0) * 100)),
+      );
+    },
+  });
+  try {
+    return {
+      text: await translator.translate(text),
+      sourceLanguage: resolvedSource,
+      targetLanguage,
+    };
+  } finally {
+    translator.destroy?.();
   }
 }
 
@@ -15627,27 +15749,17 @@ async function runFreeInlineTranslation() {
   button.disabled = true;
   button.textContent = "Translating...";
   try {
-    const sourceLanguage =
-      from.value === "auto" ? await detectTranslationLanguage(text) : from.value;
-    if (!sourceLanguage)
-      throw new Error("Automatic language detection is unavailable");
-    const translator = await self.Translator.create({
-      sourceLanguage,
-      targetLanguage: to.value,
-      monitor(monitor) {
-        monitor.addEventListener("downloadprogress", (event) => {
-          button.textContent = `Preparing ${Math.round((event.loaded || 0) * 100)}%`;
-        });
-      },
+    const result = await translateWithBrowser(text, from.value, to.value, (progress) => {
+      button.textContent = `Preparing ${progress}%`;
     });
-    const translatedText = await translator.translate(text);
-    translator.destroy?.();
-    const result = {
-      text: translatedText,
-      sourceLanguage,
-      targetLanguage: to.value,
-    };
     translationCache.set(activeTranslationMessage.id, result);
+    if (document.getElementById("autoTranslateChatToggle")?.checked) {
+      saveCurrentChatTranslationSetting({
+        sourceLanguage: result.sourceLanguage,
+        preferredLanguage: result.targetLanguage,
+      });
+      result.auto = true;
+    }
     showTranslationOutput(result);
     loadMessages();
   } catch (error) {
@@ -15663,7 +15775,7 @@ function getTranslationCardHtml(messageId) {
   if (!result) return "";
   const language = TRANSLATION_LANGUAGES.find(([code]) => code === result.targetLanguage)?.[1] || result.targetLanguage;
   return `<div class="message-translation-card">
-    <div class="message-translation-label">Translated to ${escapeHtml(language)}</div>
+    <div class="message-translation-label">Translated to ${escapeHtml(language)}${result.auto ? '<span class="auto-translation-badge">Automatic</span>' : ""}</div>
     <div class="message-translation-text">${renderMessageText(result.text)}</div>
     <div class="message-translation-actions">
       <button type="button" data-translation-action="change">Change</button>
@@ -15671,6 +15783,107 @@ function getTranslationCardHtml(messageId) {
       <button type="button" data-translation-action="hide">Hide</button>
     </div>
   </div>`;
+}
+
+async function autoTranslateCurrentChatMessages(docs = []) {
+  const setting = getCurrentChatTranslationSetting();
+  if (
+    !setting ||
+    autoTranslationPassRunning ||
+    !("Translator" in self) ||
+    !currentChat
+  )
+    return;
+  const chatId = currentChat.id;
+  autoTranslationPassRunning = true;
+  let changed = false;
+  try {
+    for (const doc of docs) {
+      if (currentChat?.id !== chatId) break;
+      const message = doc.data();
+      if (
+        message.senderId === currentUser?.uid ||
+        translationCache.has(doc.id)
+      )
+        continue;
+      const text = getTranslationSourceText(message);
+      if (!text) continue;
+      try {
+        const result = await translateWithBrowser(
+          text,
+          setting.sourceLanguage || "auto",
+          setting.preferredLanguage || "en",
+        );
+        translationCache.set(doc.id, { ...result, auto: true });
+        changed = true;
+      } catch (_) {}
+    }
+  } finally {
+    autoTranslationPassRunning = false;
+  }
+  if (changed && currentChat?.id === chatId) loadMessages();
+}
+
+function confirmOutgoingTranslation(originalText, translatedText) {
+  return new Promise((resolve) => {
+    const modal = document.getElementById("outgoingTranslationModal");
+    const original = document.getElementById("outgoingOriginalText");
+    const translated = document.getElementById("outgoingTranslatedText");
+    const skip = document.getElementById("skipOutgoingTranslationOnce");
+    const confirmButton = document.getElementById("confirmOutgoingTranslationBtn");
+    const cancelButton = document.getElementById("cancelOutgoingTranslationBtn");
+    const stopButton = document.getElementById("stopAutoTranslateBtn");
+    if (!modal || !confirmButton || !cancelButton || !stopButton) {
+      resolve({ send: true, useOriginal: false });
+      return;
+    }
+    if (original) original.textContent = originalText;
+    if (translated) translated.textContent = translatedText;
+    if (skip) skip.checked = false;
+    modal.style.display = "flex";
+    const finish = (result) => {
+      modal.style.display = "none";
+      confirmButton.onclick = null;
+      cancelButton.onclick = null;
+      stopButton.onclick = null;
+      resolve(result);
+    };
+    confirmButton.onclick = () =>
+      finish({ send: true, useOriginal: Boolean(skip?.checked) });
+    cancelButton.onclick = () => finish({ send: false });
+    stopButton.onclick = () => {
+      disableCurrentChatAutoTranslation();
+      finish({ send: true, useOriginal: true });
+    };
+  });
+}
+
+async function prepareOutgoingAutoTranslation(text) {
+  const setting = getCurrentChatTranslationSetting();
+  if (!setting || !text) return { text, originalText: "" };
+  if (!("Translator" in self)) {
+    showToast("Automatic outgoing translation is unavailable in this browser.", "error");
+    return { text, originalText: "" };
+  }
+  try {
+    const result = await translateWithBrowser(
+      text,
+      setting.preferredLanguage || "auto",
+      setting.sourceLanguage,
+    );
+    const choice = await confirmOutgoingTranslation(text, result.text);
+    if (!choice?.send) return null;
+    if (choice.useOriginal) return { text, originalText: "" };
+    return {
+      text: result.text,
+      originalText: text,
+      sourceLanguage: result.sourceLanguage,
+      targetLanguage: result.targetLanguage,
+    };
+  } catch (_) {
+    showToast("Could not translate this message. It will remain unsent.", "error");
+    return null;
+  }
 }
 
 function bindTranslationCardActions(messageDiv, messageId, messageData) {
@@ -15718,6 +15931,11 @@ function bindTranslationCardActions(messageDiv, messageId, messageData) {
     const to = document.getElementById("translateToLanguage");
     if (!from || !to || from.value === "auto") return;
     [from.value, to.value] = [to.value, from.value];
+  });
+  document.getElementById("autoTranslateChatToggle")?.addEventListener("change", (event) => {
+    if (!event.target.checked && getCurrentChatTranslationSetting()) {
+      disableCurrentChatAutoTranslation();
+    }
   });
 })();
 

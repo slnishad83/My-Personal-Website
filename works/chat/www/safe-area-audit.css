@@ -1,0 +1,94 @@
+:root {
+  --app-safe-top: env(safe-area-inset-top, 0px);
+  --app-safe-right: env(safe-area-inset-right, 0px);
+  --app-safe-bottom: env(safe-area-inset-bottom, 0px);
+  --app-safe-left: env(safe-area-inset-left, 0px);
+}
+
+html,
+body,
+.chat-container {
+  width: 100%;
+  min-height: 100%;
+  height: 100dvh;
+  overflow: hidden;
+}
+
+.sidebar-header,
+.chat-header {
+  box-sizing: border-box;
+  padding-top: max(12px, calc(8px + var(--app-safe-top))) !important;
+  padding-right: max(12px, calc(10px + var(--app-safe-right))) !important;
+  padding-left: max(12px, calc(10px + var(--app-safe-left))) !important;
+}
+
+.input-area,
+.group-actions {
+  box-sizing: border-box;
+  padding-right: max(10px, calc(8px + var(--app-safe-right))) !important;
+  padding-bottom: max(10px, calc(8px + var(--app-safe-bottom))) !important;
+  padding-left: max(10px, calc(8px + var(--app-safe-left))) !important;
+}
+
+.messages-area,
+.list,
+.archive-list,
+.modal-body {
+  scroll-padding-bottom: calc(24px + var(--app-safe-bottom));
+}
+
+.modal {
+  box-sizing: border-box;
+  padding-top: var(--app-safe-top);
+  padding-right: var(--app-safe-right);
+  padding-bottom: var(--app-safe-bottom);
+  padding-left: var(--app-safe-left);
+}
+
+.modal-content,
+.context-menu,
+.message-context-menu,
+.app-action-sheet,
+.attachment-sheet,
+.emoji-picker {
+  max-width: calc(100vw - var(--app-safe-left) - var(--app-safe-right) - 12px) !important;
+  max-height: calc(100dvh - var(--app-safe-top) - var(--app-safe-bottom) - 12px) !important;
+}
+
+.modal-footer,
+.translate-body,
+.outgoing-translation-body {
+  padding-bottom: max(16px, calc(12px + var(--app-safe-bottom))) !important;
+}
+
+.toast {
+  bottom: max(20px, calc(16px + var(--app-safe-bottom))) !important;
+}
+
+button,
+.btn,
+.icon-btn,
+input,
+select,
+textarea {
+  max-width: 100%;
+}
+
+@media (max-width: 900px) {
+  .sidebar,
+  .chat-main {
+    height: 100dvh;
+  }
+
+  .chat-actions,
+  .sidebar-actions {
+    min-width: 0;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .chat-actions::-webkit-scrollbar,
+  .sidebar-actions::-webkit-scrollbar {
+    display: none;
+  }
+}
