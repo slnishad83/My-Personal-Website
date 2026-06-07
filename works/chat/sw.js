@@ -56,7 +56,7 @@ self.addEventListener('notificationclick', event => {
   );
 });
 
-const CACHE_NAME = 'team-chat-v149-navigation-clearance';
+const CACHE_NAME = 'team-chat-v150-delete-for-all';
 const urlsToCache = [
   'index.html',
   'login.html',

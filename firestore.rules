@@ -46,6 +46,18 @@ service cloud.firestore {
         && (data.fromUserId == request.auth.uid || data.toUserId == request.auth.uid);
     }
 
+    function validMessageUpdate() {
+      return !request.resource.data.diff(resource.data).affectedKeys().hasAny([
+        'deletedForEveryone',
+        'deletedForEveryoneBy',
+        'deletedForEveryoneAt'
+      ]) || (
+        resource.data.senderId == request.auth.uid
+        && request.resource.data.deletedForEveryone == true
+        && request.resource.data.deletedForEveryoneBy == request.auth.uid
+      );
+    }
+
     match /users/{userId} {
       allow read: if signedIn();
       allow create: if isOwner(userId)
@@ -71,10 +83,11 @@ service cloud.firestore {
         (request.resource.data.directId is string && isExistingDirectParticipant(request.resource.data.directId))
         || (request.resource.data.groupId is string)
       );
-      allow update, delete: if signedIn() && (
+      allow update: if signedIn() && validMessageUpdate() && (
         isDirectMessageParticipant(resource.data)
         || (resource.data.groupId is string)
       );
+      allow delete: if signedIn() && resource.data.senderId == request.auth.uid;
     }
 
     match /chatRequests/{requestId} {

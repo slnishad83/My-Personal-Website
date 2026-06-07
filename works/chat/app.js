@@ -11548,21 +11548,26 @@ async function showMessageInfo(messageId, messageData = {}) {
 }
 async function deleteMessageForMe(id) {
   if (!id || !currentUser) return;
-  await db
-    .collection("messages")
-    .doc(id)
-    .update({
+  try {
+    await db.collection("messages").doc(id).update({
       [`deletedFor.${currentUser.uid}`]: true,
       [`deletedForAt.${currentUser.uid}`]:
         firebase.firestore.FieldValue.serverTimestamp(),
     });
-  showToast("Message deleted for you");
+    translationCache.delete(id);
+    showToast("Message deleted for you");
+  } catch (error) {
+    console.error("Delete for me failed:", error);
+    showToast("Could not delete this message for you", "error");
+  }
 }
 function canDeleteForEveryone(messageData) {
-  if (!messageData || messageData.senderId !== currentUser?.uid) return false;
-  const sentAtMs = messageData.timestamp?.toMillis?.() || 0;
-  if (!sentAtMs) return false;
-  return Date.now() - sentAtMs <= 60 * 60 * 60 * 1000;
+  return Boolean(
+    messageData &&
+      currentUser?.uid &&
+      messageData.senderId === currentUser.uid &&
+      !messageData.deletedForEveryone,
+  );
 }
 
 function canEditMessage(messageData) {
@@ -11612,20 +11617,33 @@ async function deleteMessageForEveryone(id, messageData = null) {
     messageData = doc?.exists ? doc.data() : null;
   }
   if (!canDeleteForEveryone(messageData)) {
-    showToast(
-      "Delete for everyone is only available for your recent messages",
-      "error",
-    );
+    showToast("Only the sender can delete this message for everyone", "error");
     return;
   }
-  await db.collection("messages").doc(id).update({
-    text: "",
-    attachment: firebase.firestore.FieldValue.delete(),
-    poll: firebase.firestore.FieldValue.delete(),
-    deletedForEveryone: true,
-    deletedForEveryoneAt: firebase.firestore.FieldValue.serverTimestamp(),
-  });
-  showToast("Message deleted for everyone");
+  try {
+    await db.collection("messages").doc(id).update({
+      text: "",
+      originalText: firebase.firestore.FieldValue.delete(),
+      attachment: firebase.firestore.FieldValue.delete(),
+      poll: firebase.firestore.FieldValue.delete(),
+      sticker: firebase.firestore.FieldValue.delete(),
+      animatedSticker: firebase.firestore.FieldValue.delete(),
+      linkPreview: firebase.firestore.FieldValue.delete(),
+      transcript: firebase.firestore.FieldValue.delete(),
+      contact: firebase.firestore.FieldValue.delete(),
+      event: firebase.firestore.FieldValue.delete(),
+      list: firebase.firestore.FieldValue.delete(),
+      location: firebase.firestore.FieldValue.delete(),
+      deletedForEveryone: true,
+      deletedForEveryoneBy: currentUser.uid,
+      deletedForEveryoneAt: firebase.firestore.FieldValue.serverTimestamp(),
+    });
+    translationCache.delete(id);
+    showToast("Message deleted for everyone");
+  } catch (error) {
+    console.error("Delete for everyone failed:", error);
+    showToast("Could not delete this message for everyone", "error");
+  }
 }
 
 function closeActionSheet() {
