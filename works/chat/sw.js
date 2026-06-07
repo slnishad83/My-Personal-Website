@@ -56,12 +56,14 @@ self.addEventListener('notificationclick', event => {
   );
 });
 
-const CACHE_NAME = 'team-chat-v150-delete-for-all';
+const CACHE_NAME = 'team-chat-v152-full-audit';
 const urlsToCache = [
   'index.html',
   'login.html',
+  'reset.html',
   'verify.html',
   'turn.html',
+  'auth-theme.css',
   'style.css',
   'message-actions.css',
   'ui-audit.css',

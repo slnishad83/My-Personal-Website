@@ -1,5 +1,25 @@
 {
   "appId": "com.nishad.myteamchat",
   "appName": "My Team Chat",
-  "webDir": "www"
+  "webDir": "www",
+  "plugins": {
+    "StatusBar": {
+      "style": "DEFAULT",
+      "backgroundColor": "#00000000",
+      "overlaysWebView": true,
+      "androidOverlaysWebView": true
+    },
+    "Keyboard": {
+      "resize": "body",
+      "style": "DARK",
+      "resizeOnFullScreen": true
+    }
+  },
+  "android": {
+    "allowMixedContent": true,
+    "useLegacyBridge": false
+  },
+  "ios": {
+    "contentInset": "always"
+  }
 }

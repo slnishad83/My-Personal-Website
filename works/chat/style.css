@@ -7322,6 +7322,10 @@ body.native-android .context-menu:not(.message-context-menu) {
   color: var(--app-menu-danger) !important;
 }
 
+.context-menu .context-menu-item[hidden] {
+  display: none !important;
+}
+
 .context-menu:not(.message-context-menu) .context-menu-item::before,
 .context-menu:not(.message-context-menu) .context-menu-item::after {
   content: none !important;

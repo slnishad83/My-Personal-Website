@@ -28,16 +28,18 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
 
     private void showIncomingCall(String callId, String type, String fromUserName) {
         createChannel();
+        int notificationId = callId != null ? (callId.hashCode() & 0x7fffffff) : 5001;
 
         Intent fullScreenIntent = new Intent(this, IncomingCallActivity.class);
         fullScreenIntent.putExtra("callId", callId);
         fullScreenIntent.putExtra("type", type);
         fullScreenIntent.putExtra("fromUserName", fromUserName);
+        fullScreenIntent.putExtra("notificationId", notificationId);
         fullScreenIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
 
         PendingIntent fullScreenPendingIntent = PendingIntent.getActivity(
             this,
-            1001,
+            notificationId,
             fullScreenIntent,
             PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
         );
@@ -45,7 +47,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
         NotificationCompat.Builder builder = new NotificationCompat.Builder(this, CHANNEL_ID)
             .setSmallIcon(getApplicationInfo().icon)
             .setContentTitle("video".equals(type) ? "Incoming video call" : "Incoming voice call")
-            .setContentText((fromUserName != null ? fromUserName : "NSL Chat") + " is calling")
+            .setContentText((fromUserName != null ? fromUserName : "My Team Chat") + " is calling")
             .setPriority(NotificationCompat.PRIORITY_MAX)
             .setCategory(NotificationCompat.CATEGORY_CALL)
             .setOngoing(true)
@@ -54,7 +56,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
             .setContentIntent(fullScreenPendingIntent);
 
         NotificationManager manager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
-        manager.notify(5001, builder.build());
+        manager.notify(notificationId, builder.build());
     }
 
     private void createChannel() {
@@ -64,7 +66,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                 "Incoming Calls",
                 NotificationManager.IMPORTANCE_HIGH
             );
-            channel.setDescription("Incoming NSL voice and video calls");
+            channel.setDescription("Incoming My Team Chat voice and video calls");
             channel.setLockscreenVisibility(android.app.Notification.VISIBILITY_PUBLIC);
 
             NotificationManager manager = getSystemService(NotificationManager.class);

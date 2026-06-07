@@ -4281,6 +4281,30 @@ async function autoAcceptNativeCall(callId) {
   }
 }
 
+async function autoRejectNativeCall(callId) {
+  if (!callId || !currentUser) return;
+  try {
+    const callRef = db.collection("calls").doc(callId);
+    const snap = await callRef.get();
+    const callData = snap.data() || {};
+    if (!snap.exists || callData.toUserId !== currentUser.uid) return;
+    if (!["ringing", "accepted"].includes(callData.status)) return;
+    await callRef.set(
+      {
+        status: "rejected",
+        endedAt: firebase.firestore.FieldValue.serverTimestamp(),
+        endedBy: currentUser.uid,
+      },
+      { merge: true },
+    );
+    if (activeCall?.id === callId) cleanupCallUi();
+    showToast("Call rejected");
+  } catch (error) {
+    console.warn("autoRejectNativeCall failed:", error);
+    showToast("Could not reject the call. Please try again.", "error");
+  }
+}
+
 async function endActiveCall(status = "ended") {
   const call = activeCall ? { ...activeCall } : null;
   const callId = call?.id;
@@ -13860,9 +13884,13 @@ async function init() {
 
     window.Capacitor.Plugins.App.addListener("appUrlOpen", async (event) => {
       const url = event?.url || "";
-      const match = url.match(/[?&]callId=([^&]+)/);
-      if (match?.[1]) {
-        await autoAcceptNativeCall(decodeURIComponent(match[1]));
+      const callIdMatch = url.match(/[?&]callId=([^&]+)/);
+      const actionMatch = url.match(/[?&]action=([^&]+)/);
+      if (callIdMatch?.[1]) {
+        const callId = decodeURIComponent(callIdMatch[1]);
+        const action = decodeURIComponent(actionMatch?.[1] || "accept");
+        if (action === "reject") await autoRejectNativeCall(callId);
+        else await autoAcceptNativeCall(callId);
       }
     });
 

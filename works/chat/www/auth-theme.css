@@ -1,0 +1,207 @@
+:root {
+  color-scheme: light;
+  --page-bg: #efeae2;
+  --page-accent: #008069;
+  --surface: #ffffff;
+  --surface-raised: #f7f9fa;
+  --surface-muted: #f0f2f5;
+  --border: #d8dee2;
+  --text: #111b21;
+  --muted: #667781;
+  --primary: #008069;
+  --primary-hover: #006b58;
+  --success-bg: #d9fdd3;
+  --success-text: #075e54;
+  --error-bg: #fee2e2;
+  --error-text: #b42318;
+  --focus: rgba(0, 168, 132, 0.28);
+  --shadow: 0 16px 48px rgba(11, 20, 26, 0.16);
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --page-bg: #0b141a;
+  --page-accent: #111b21;
+  --surface: #111b21;
+  --surface-raised: #17232b;
+  --surface-muted: #202c33;
+  --border: #2a3942;
+  --text: #e9edef;
+  --muted: #aebac1;
+  --primary: #00a884;
+  --primary-hover: #06cf9c;
+  --success-bg: #103b32;
+  --success-text: #7ae3c3;
+  --error-bg: #421f24;
+  --error-text: #ff9da4;
+  --focus: rgba(0, 168, 132, 0.36);
+  --shadow: 0 18px 48px rgba(0, 0, 0, 0.36);
+}
+
+body {
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-right: env(safe-area-inset-right, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  padding-left: env(safe-area-inset-left, 0px);
+  background: linear-gradient(var(--page-accent) 0 128px, var(--page-bg) 128px 100%);
+  color: var(--text);
+}
+
+main,
+.auth-card,
+.modal-content {
+  background: var(--surface);
+  color: var(--text);
+  border-color: var(--border);
+  box-shadow: var(--shadow);
+}
+
+h1,
+h2,
+h3,
+strong,
+.auth-header h1,
+.form-group label {
+  color: var(--text);
+}
+
+p,
+.auth-header p,
+.auth-note,
+.install-note {
+  color: var(--muted);
+}
+
+.guide {
+  border-color: var(--border);
+  background: var(--surface-raised);
+}
+
+.guide ol {
+  color: var(--text);
+}
+
+code {
+  color: var(--primary);
+}
+
+.auth-tabs {
+  border-color: var(--border);
+}
+
+.auth-tab {
+  color: var(--muted);
+}
+
+.auth-tab.active,
+.btn-link {
+  color: var(--primary);
+  border-color: var(--primary);
+}
+
+.form-group input,
+textarea {
+  border-color: var(--border);
+  background: var(--surface-muted);
+  color: var(--text);
+}
+
+.form-group input::placeholder,
+textarea::placeholder {
+  color: var(--muted);
+  opacity: 0.9;
+}
+
+.form-group input:focus,
+textarea:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--focus);
+}
+
+.password-toggle,
+.secondary,
+.btn-outline {
+  border-color: var(--border);
+  background: var(--surface-muted);
+  color: var(--text);
+}
+
+.password-toggle:hover,
+.password-toggle:focus-visible {
+  background: var(--surface-raised);
+  color: var(--primary);
+}
+
+.btn-primary,
+button:not(.auth-tab):not(.password-toggle):not(.btn-link):not(.secondary):not(.btn-outline),
+a:not(.secondary) {
+  background: var(--primary);
+  color: #ffffff;
+}
+
+.btn-primary:hover,
+button:not(.auth-tab):not(.password-toggle):not(.btn-link):not(.secondary):not(.btn-outline):hover,
+a:not(.secondary):hover {
+  background: var(--primary-hover);
+}
+
+.btn-secondary {
+  background: var(--success-bg);
+  color: var(--success-text);
+}
+
+.auth-error {
+  background: var(--error-bg);
+  color: var(--error-text);
+}
+
+.auth-success {
+  background: var(--success-bg);
+  color: var(--success-text);
+}
+
+.modal {
+  padding: max(16px, env(safe-area-inset-top, 0px))
+    max(16px, env(safe-area-inset-right, 0px))
+    max(16px, env(safe-area-inset-bottom, 0px))
+    max(16px, env(safe-area-inset-left, 0px));
+  background: rgba(11, 20, 26, 0.68);
+}
+
+button,
+a,
+input,
+textarea {
+  touch-action: manipulation;
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+.close-modal:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 3px;
+}
+
+@media (max-width: 520px) {
+  body {
+    background: var(--surface);
+  }
+
+  .auth-card {
+    background: var(--surface);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}

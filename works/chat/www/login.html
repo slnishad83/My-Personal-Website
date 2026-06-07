@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta
       name="viewport"
-      content="width=device-width, initial-scale=1.0, user-scalable=yes"
+      content="width=device-width, initial-scale=1.0, user-scalable=yes, viewport-fit=cover"
     />
     <meta name="theme-color" content="#008069" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -13,6 +13,14 @@
       content="black-translucent"
     />
     <title>Team Chat - Login</title>
+    <script>
+      (() => {
+        const savedTheme = localStorage.getItem("darkMode");
+        const dark = savedTheme === "true" ||
+          (savedTheme === null && matchMedia("(prefers-color-scheme: dark)").matches);
+        document.documentElement.dataset.theme = dark ? "dark" : "light";
+      })();
+    </script>
     <link rel="manifest" href="manifest.json?v=96" />
     <link rel="apple-touch-icon" href="app-icon-192.png" />
     <link
@@ -280,6 +288,7 @@
         }
       }
     </style>
+    <link rel="stylesheet" href="auth-theme.css?v=1" />
   </head>
   <body>
     <div class="auth-container">

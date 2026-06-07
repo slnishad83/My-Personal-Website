@@ -2,8 +2,16 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>Email Verification - Team Chat</title>
+  <script>
+    (() => {
+      const savedTheme = localStorage.getItem("darkMode");
+      const dark = savedTheme === "true" ||
+        (savedTheme === null && matchMedia("(prefers-color-scheme: dark)").matches);
+      document.documentElement.dataset.theme = dark ? "dark" : "light";
+    })();
+  </script>
   <style>
     * {
       box-sizing: border-box;
@@ -71,6 +79,7 @@
       text-decoration: none;
     }
   </style>
+  <link rel="stylesheet" href="auth-theme.css?v=1">
 </head>
 <body>
   <main>

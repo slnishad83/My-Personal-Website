@@ -1,6 +1,7 @@
 package com.nishad.myteamchat;
 
 import android.app.Activity;
+import android.app.NotificationManager;
 import android.content.Intent;
 import android.graphics.Color;
 import android.media.AudioManager;
@@ -11,10 +12,10 @@ import android.os.VibrationEffect;
 import android.os.Vibrator;
 import android.provider.Settings;
 import android.view.Gravity;
-import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.TextView;
+import android.net.Uri;
 
 public class IncomingCallActivity extends Activity {
     private MediaPlayer ringtonePlayer;
@@ -24,16 +25,16 @@ public class IncomingCallActivity extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        getWindow().addFlags(
-            WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED |
-            WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON |
-            WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON |
-            WindowManager.LayoutParams.FLAG_FULLSCREEN
-        );
+        getWindow().addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
+            setShowWhenLocked(true);
+            setTurnScreenOn(true);
+        }
 
         String caller = getIntent().getStringExtra("fromUserName");
         String type = getIntent().getStringExtra("type");
         String callId = getIntent().getStringExtra("callId");
+        int notificationId = getIntent().getIntExtra("notificationId", 5001);
 
         LinearLayout layout = new LinearLayout(this);
         layout.setOrientation(LinearLayout.VERTICAL);
@@ -48,7 +49,7 @@ public class IncomingCallActivity extends Activity {
         titleView.setGravity(Gravity.CENTER);
 
         TextView callerView = new TextView(this);
-        callerView.setText(caller != null ? caller : "NSL Chat");
+        callerView.setText(caller != null ? caller : "My Team Chat");
         callerView.setTextColor(Color.parseColor("#B8C7D9"));
         callerView.setTextSize(22);
         callerView.setGravity(Gravity.CENTER);
@@ -66,34 +67,9 @@ public class IncomingCallActivity extends Activity {
         rejectBtn.setTextColor(Color.WHITE);
         rejectBtn.setBackgroundColor(Color.parseColor("#DC2626"));
 
-        acceptBtn.setOnClickListener(v -> {
-    stopEffects();
+        acceptBtn.setOnClickListener(v -> openCallInApp(callId, "accept", notificationId));
 
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
-        setShowWhenLocked(false);
-        setTurnScreenOn(true);
-    }
-
-    Intent intent = new Intent(this, MainActivity.class);
-
-    intent.setFlags(
-        Intent.FLAG_ACTIVITY_NEW_TASK |
-        Intent.FLAG_ACTIVITY_CLEAR_TOP |
-        Intent.FLAG_ACTIVITY_SINGLE_TOP
-    );
-
-    intent.setData(android.net.Uri.parse("nslchat://call?callId=" + callId));
-intent.putExtra("openCall", "true");
-intent.putExtra("callId", callId);
-
-    startActivity(intent);
-    finish();
-});
-
-        rejectBtn.setOnClickListener(v -> {
-            stopEffects();
-            finish();
-        });
+        rejectBtn.setOnClickListener(v -> openCallInApp(callId, "reject", notificationId));
 
         layout.addView(titleView);
         layout.addView(callerView);
@@ -102,6 +78,31 @@ intent.putExtra("callId", callId);
         setContentView(layout);
 
         startRespectfulRingOrVibrate();
+    }
+
+    private void openCallInApp(String callId, String action, int notificationId) {
+        stopEffects();
+        NotificationManager manager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
+        if (manager != null) manager.cancel(notificationId);
+
+        Intent intent = getPackageManager().getLaunchIntentForPackage(getPackageName());
+        if (intent == null) {
+            finish();
+            return;
+        }
+        intent.setFlags(
+            Intent.FLAG_ACTIVITY_NEW_TASK |
+            Intent.FLAG_ACTIVITY_CLEAR_TOP |
+            Intent.FLAG_ACTIVITY_SINGLE_TOP
+        );
+        intent.setData(new Uri.Builder()
+            .scheme("myteamchat")
+            .authority("open")
+            .appendQueryParameter("callId", callId != null ? callId : "")
+            .appendQueryParameter("action", action)
+            .build());
+        startActivity(intent);
+        finish();
     }
 
     private void startRespectfulRingOrVibrate() {
