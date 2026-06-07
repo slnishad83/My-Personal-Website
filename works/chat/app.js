@@ -664,7 +664,12 @@ function renderCallMessage(msg = {}) {
     direction,
   ));
   const icon = getCallIcon(msg.callType, msg.callStatus);
-  return `<div class="message-bubble"><span>${icon}</span><span>${text}</span></div>`;
+  const canCallAgain = Boolean(msg.groupId || msg.callFromUserId || msg.callToUserId);
+  return `<div class="message-bubble call-history-message-bubble">
+    <span class="call-history-message-icon" aria-hidden="true">${icon}</span>
+    <span class="call-history-message-text">${text}</span>
+    ${canCallAgain ? `<button type="button" class="call-again-btn" title="Call again" aria-label="Call again">${msg.callType === "video" ? "Video" : "Call"}</button>` : ""}
+  </div>`;
 }
 
 function getViewedCallHistoryText(status, type, durationMs = 0, direction = "") {
@@ -699,6 +704,12 @@ function getCallHistoryDate(call = {}) {
 }
 
 async function redialCall(call) {
+  if (call.groupCall || call.groupId) {
+    if (!call.groupId) return showToast("This group call cannot be reopened", "error");
+    await loadGroupChat(call.groupId, call.groupName || call.title || "Group");
+    await startCall(call.type || call.callType || "voice");
+    return;
+  }
   const otherUserId = call.fromUserId === currentUser.uid ? call.toUserId : call.fromUserId;
   let user = allUsers.find((item) => item.id === otherUserId);
   if (!user && otherUserId) {
@@ -707,7 +718,23 @@ async function redialCall(call) {
   }
   if (!user) return showToast("Contact is unavailable", "error");
   await startDirectChat(user);
-  await startCall(call.type || "voice");
+  await startCall(call.type || call.callType || "voice");
+}
+
+async function openCallHistoryChat(call) {
+  if (call.groupCall || call.groupId) {
+    if (!call.groupId) return showToast("This group is unavailable", "error");
+    await loadGroupChat(call.groupId, call.groupName || call.title || "Group");
+    return;
+  }
+  const otherUserId = call.fromUserId === currentUser.uid ? call.toUserId : call.fromUserId;
+  let user = allUsers.find((item) => item.id === otherUserId);
+  if (!user && otherUserId) {
+    const snapshot = await db.collection("users").doc(otherUserId).get().catch(() => null);
+    if (snapshot?.exists) user = { id: snapshot.id, ...snapshot.data() };
+  }
+  if (!user) return showToast("Contact is unavailable", "error");
+  await startDirectChat(user);
 }
 
 async function loadCallsList() {
@@ -753,6 +780,9 @@ async function loadCallsList() {
       const direction = outgoingCall ? "Outgoing" : "Incoming";
       const row = document.createElement("div");
       row.className = "call-history-row";
+      row.tabIndex = 0;
+      row.setAttribute("role", "button");
+      row.setAttribute("aria-label", `Open chat with ${name}`);
       row.innerHTML = `
         <div class="call-history-avatar">${user?.avatar ? `<img src="${escapeHtml(user.avatar)}" alt="">` : escapeHtml(getInitials(name))}</div>
         <div class="call-history-main">
@@ -760,11 +790,24 @@ async function loadCallsList() {
           <div class="call-history-meta ${escapeHtml(call.status || "")}">${outgoingCall ? "↗" : "↙"} ${escapeHtml(getViewedCallHistoryText(call.status, call.type, call.callDurationMs || 0, direction))} · ${escapeHtml(date.toLocaleString([], { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" }))}</div>
         </div>
         <div class="call-history-actions">
-          ${call.groupCall ? "" : `<button class="call-history-action ${call.type === "video" ? "video" : "voice"}" type="button" aria-label="Redial ${escapeHtml(name)}"></button>`}
+          <button class="call-history-action ${call.type === "video" ? "video" : "voice"}" type="button" aria-label="Call ${escapeHtml(name)} again"></button>
           <button class="call-history-action remove" type="button" aria-label="Remove call from my history"></button>
         </div>`;
-      row.querySelector(".call-history-action.voice, .call-history-action.video")?.addEventListener("click", () => redialCall(call));
-      row.querySelector(".call-history-action.remove")?.addEventListener("click", () => hideCallHistoryForMe(call.id));
+      row.addEventListener("click", () => openCallHistoryChat(call));
+      row.addEventListener("keydown", (event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          openCallHistoryChat(call);
+        }
+      });
+      row.querySelector(".call-history-action.voice, .call-history-action.video")?.addEventListener("click", (event) => {
+        event.stopPropagation();
+        redialCall(call);
+      });
+      row.querySelector(".call-history-action.remove")?.addEventListener("click", (event) => {
+        event.stopPropagation();
+        hideCallHistoryForMe(call.id);
+      });
       list.appendChild(row);
     });
   } catch (error) {
@@ -3225,9 +3268,10 @@ function ensureCallMiniBar() {
   ensureCallMiniBarStyles();
   if (callMiniBar) return callMiniBar;
 
-  callMiniBar = document.createElement("button");
-  callMiniBar.type = "button";
+  callMiniBar = document.createElement("div");
   callMiniBar.className = "call-mini-bar";
+  callMiniBar.tabIndex = 0;
+  callMiniBar.setAttribute("role", "button");
   callMiniBar.setAttribute("aria-label", "Return to active call");
   callMiniBar.innerHTML = `
     <span class="call-mini-icon" aria-hidden="true">📞</span>
@@ -3239,6 +3283,12 @@ function ensureCallMiniBar() {
   `;
 
   callMiniBar.addEventListener("click", () => restoreActiveCallUi());
+  callMiniBar.addEventListener("keydown", (event) => {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      restoreActiveCallUi();
+    }
+  });
   callMiniBar
     .querySelector(".call-mini-end")
     ?.addEventListener("click", (event) => {
@@ -3984,14 +4034,10 @@ async function joinGroupCallRoom(callId, callData = {}, mode = "active") {
     await db
       .collection("calls")
       .doc(callId)
-      .set(
-        {
-          status: "ringing",
-          participantStates: { [currentUser.uid]: "joined" },
-          updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
-        },
-        { merge: true },
-      );
+      .update({
+        [`participantStates.${currentUser.uid}`]: "joined",
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+      });
     activeGroupCallParticipants = await getGroupCallParticipantsFromIds(
       callData.participantIds || [],
     );
@@ -4014,13 +4060,10 @@ async function joinGroupCallRoom(callId, callData = {}, mode = "active") {
     await db
       .collection("calls")
       .doc(callId)
-      .set(
-        {
-          participantStates: { [currentUser.uid]: "failed" },
-          updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
-        },
-        { merge: true },
-      )
+      .update({
+        [`participantStates.${currentUser.uid}`]: "failed",
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+      })
       .catch(() => {});
     cleanupCallUi();
   }
@@ -4127,30 +4170,34 @@ async function endGroupCall(status = "ended") {
         await db
           .collection("calls")
           .doc(callId)
-          .set(
-            {
-              participantStates: { [currentUser.uid]: "rejected" },
-              updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
-            },
-            { merge: true },
-          );
-        await writeCompleteCallHistory("rejected", callData);
+          .update({
+            [`participantStates.${currentUser.uid}`]: "rejected",
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+          });
+        cleanupCallUi();
+        return;
+      }
+      if (callData?.fromUserId !== currentUser.uid) {
+        await db
+          .collection("calls")
+          .doc(callId)
+          .update({
+            [`participantStates.${currentUser.uid}`]: "left",
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+          });
         cleanupCallUi();
         return;
       }
       await db
         .collection("calls")
         .doc(callId)
-        .set(
-          {
-            status,
-            endedBy: currentUser?.uid || null,
-            callDurationMs: callStartedAt ? Date.now() - callStartedAt : 0,
-            endedAt: firebase.firestore.FieldValue.serverTimestamp(),
-            participantStates: { [currentUser.uid]: "left" },
-          },
-          { merge: true },
-        );
+        .update({
+          status,
+          endedBy: currentUser?.uid || null,
+          callDurationMs: callStartedAt ? Date.now() - callStartedAt : 0,
+          endedAt: firebase.firestore.FieldValue.serverTimestamp(),
+          [`participantStates.${currentUser.uid}`]: "left",
+        });
       await writeCompleteCallHistory(status, callData);
     }
   } catch (error) {
@@ -4420,13 +4467,18 @@ async function autoAcceptNativeCall(callId) {
 
     const callData = snap.data() || {};
 
-    if (callData.toUserId !== currentUser.uid) return;
+    const isGroupParticipant =
+      callData.groupCall === true &&
+      Array.isArray(callData.participantIds) &&
+      callData.participantIds.includes(currentUser.uid);
+    if (callData.toUserId !== currentUser.uid && !isGroupParticipant) return;
     if (!["ringing", "accepted"].includes(callData.status)) return;
 
     activeCall = { id: snap.id, ...callData };
     currentCallType = activeCall.type || "voice";
 
-    await acceptIncomingCall();
+    if (isGroupParticipant) await acceptIncomingGroupCall();
+    else await acceptIncomingCall();
   } catch (error) {
     console.warn("autoAcceptNativeCall failed:", error);
     showToast("Could not open accepted call. Please try again.", "error");
@@ -4439,8 +4491,21 @@ async function autoRejectNativeCall(callId) {
     const callRef = db.collection("calls").doc(callId);
     const snap = await callRef.get();
     const callData = snap.data() || {};
-    if (!snap.exists || callData.toUserId !== currentUser.uid) return;
+    const isGroupParticipant =
+      callData.groupCall === true &&
+      Array.isArray(callData.participantIds) &&
+      callData.participantIds.includes(currentUser.uid);
+    if (!snap.exists || (callData.toUserId !== currentUser.uid && !isGroupParticipant)) return;
     if (!["ringing", "accepted"].includes(callData.status)) return;
+    if (isGroupParticipant) {
+      await callRef.update({
+        [`participantStates.${currentUser.uid}`]: "rejected",
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+      });
+      if (activeCall?.id === callId) cleanupCallUi();
+      showToast("Group call declined");
+      return;
+    }
     await callRef.set(
       {
         status: "rejected",
@@ -10747,6 +10812,18 @@ function loadMessages() {
         if (msg.type === "call") {
           messageDiv.className = "message call-message";
           messageDiv.innerHTML = renderCallMessage(msg);
+          messageDiv
+            .querySelector(".call-again-btn")
+            ?.addEventListener("click", (event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              redialCall({
+                ...msg,
+                id: msg.callId,
+                type: msg.callType || "voice",
+                groupCall: Boolean(msg.groupId),
+              });
+            });
           messagesArea.appendChild(messageDiv);
           return;
         }

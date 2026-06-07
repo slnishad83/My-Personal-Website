@@ -258,6 +258,82 @@ exports.sendIncomingCallNotification = onDocumentCreated(
     return null;
   }
 );
+
+// Group calls do not have a single toUserId, so notify every invited
+// participant except the caller through the same call action flow.
+exports.sendIncomingGroupCallNotification = onDocumentCreated(
+  {
+    document: 'calls/{callId}',
+    region: 'us-central1'
+  },
+  async (event) => {
+    const call = event.data?.data() || {};
+    const callId = event.params.callId;
+    if (
+      call.groupCall !== true ||
+      call.status !== 'ringing' ||
+      !Array.isArray(call.participantIds)
+    ) return null;
+
+    const receiverIds = call.participantIds.filter(
+      (uid) => uid && uid !== call.fromUserId
+    );
+    const title = call.type === 'video'
+      ? 'Incoming group video call'
+      : 'Incoming group voice call';
+    const body = `${call.fromUserName || 'Team Chat'} started a call in ${call.groupName || 'your group'}.`;
+
+    await Promise.all(receiverIds.map(async (receiverId) => {
+      const userSnap = await admin.firestore().collection('users').doc(receiverId).get();
+      const user = userSnap.data() || {};
+      const tokens = Object.values(user.fcmTokens || {})
+        .map((entry) => entry && entry.token)
+        .filter(Boolean);
+      if (!tokens.length) return;
+
+      await admin.messaging().sendEachForMulticast({
+        tokens,
+        data: {
+          kind: 'call',
+          callId,
+          type: call.type || 'voice',
+          fromUserId: call.fromUserId || '',
+          fromUserName: call.fromUserName || '',
+          toUserId: receiverId,
+          groupCall: 'true',
+          groupId: call.groupId || ''
+        },
+        android: { priority: 'high' },
+        webpush: {
+          headers: { Urgency: 'high', TTL: '120' },
+          notification: {
+            title,
+            body,
+            icon: '/works/chat/app-icon-192.png',
+            badge: '/works/chat/app-icon-192.png',
+            tag: `call-${callId}`,
+            requireInteraction: true,
+            renotify: true,
+            silent: false,
+            vibrate: [700, 250, 700, 250, 700, 250, 700],
+            data: {
+              url: 'https://nishadsl.com/works/chat/',
+              callId,
+              kind: 'call'
+            },
+            actions: [
+              { action: 'reject', title: 'Decline' },
+              { action: 'accept', title: 'Accept' }
+            ]
+          },
+          fcmOptions: { link: 'https://nishadsl.com/works/chat/' }
+        }
+      });
+    }));
+
+    return null;
+  }
+);
 // ========================================
 // New chat message push notification via FCM
 // ========================================
