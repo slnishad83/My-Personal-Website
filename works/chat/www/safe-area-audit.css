@@ -3,6 +3,11 @@
   --app-safe-right: env(safe-area-inset-right, 0px);
   --app-safe-bottom: env(safe-area-inset-bottom, 0px);
   --app-safe-left: env(safe-area-inset-left, 0px);
+  --app-bottom-clearance: max(var(--app-safe-bottom), var(--mobile-footer-clearance, 0px));
+}
+
+body.native-android {
+  --app-bottom-clearance: max(48px, var(--app-safe-bottom));
 }
 
 html,
@@ -26,7 +31,7 @@ body,
 .group-actions {
   box-sizing: border-box;
   padding-right: max(10px, calc(8px + var(--app-safe-right))) !important;
-  padding-bottom: max(10px, calc(8px + var(--app-safe-bottom))) !important;
+  padding-bottom: max(10px, calc(8px + var(--app-bottom-clearance))) !important;
   padding-left: max(10px, calc(8px + var(--app-safe-left))) !important;
 }
 
@@ -35,13 +40,14 @@ body,
 .archive-list,
 .modal-body {
   scroll-padding-bottom: calc(24px + var(--app-safe-bottom));
+  scroll-padding-bottom: calc(24px + var(--app-bottom-clearance));
 }
 
 .modal {
   box-sizing: border-box;
   padding-top: var(--app-safe-top);
   padding-right: var(--app-safe-right);
-  padding-bottom: var(--app-safe-bottom);
+  padding-bottom: var(--app-bottom-clearance) !important;
   padding-left: var(--app-safe-left);
 }
 
@@ -52,17 +58,118 @@ body,
 .attachment-sheet,
 .emoji-picker {
   max-width: calc(100vw - var(--app-safe-left) - var(--app-safe-right) - 12px) !important;
-  max-height: calc(100dvh - var(--app-safe-top) - var(--app-safe-bottom) - 12px) !important;
+  max-height: calc(100dvh - var(--app-safe-top) - var(--app-bottom-clearance) - 12px) !important;
 }
 
 .modal-footer,
+.forward-footer,
 .translate-body,
 .outgoing-translation-body {
-  padding-bottom: max(16px, calc(12px + var(--app-safe-bottom))) !important;
+  padding-bottom: max(16px, calc(12px + var(--app-bottom-clearance))) !important;
 }
 
 .toast {
-  bottom: max(20px, calc(16px + var(--app-safe-bottom))) !important;
+  bottom: max(20px, calc(16px + var(--app-bottom-clearance))) !important;
+}
+
+.app-action-sheet-backdrop {
+  box-sizing: border-box;
+  padding-right: max(12px, calc(8px + var(--app-safe-right))) !important;
+  padding-bottom: max(16px, calc(12px + var(--app-bottom-clearance))) !important;
+  padding-left: max(12px, calc(8px + var(--app-safe-left))) !important;
+}
+
+.app-action-sheet {
+  box-sizing: border-box;
+  max-height: calc(100dvh - var(--app-safe-top) - var(--app-bottom-clearance) - 24px) !important;
+  overflow-y: auto !important;
+  overscroll-behavior: contain;
+}
+
+.action-sheet-option {
+  min-height: 54px;
+}
+
+.forward-modal-content {
+  box-sizing: border-box;
+  display: flex !important;
+  max-height: calc(100dvh - var(--app-safe-top) - var(--app-bottom-clearance) - 24px) !important;
+  overflow: hidden !important;
+}
+
+.forward-modal-content > .modal-body {
+  display: flex !important;
+  flex: 1 1 auto;
+  min-height: 0;
+  flex-direction: column;
+  padding-bottom: 0 !important;
+  overflow: hidden !important;
+}
+
+.forward-chats-list {
+  flex: 1 1 auto;
+  min-height: 120px;
+  max-height: none !important;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scroll-padding-bottom: 16px;
+}
+
+.forward-footer {
+  position: relative;
+  z-index: 2;
+  flex: 0 0 auto;
+  background: #fff !important;
+}
+
+.forward-footer .btn {
+  min-width: 132px;
+  min-height: 48px;
+}
+
+body.dark .forward-footer {
+  border-color: #33444d !important;
+  background: #111b21 !important;
+}
+
+body.dark .forward-modal-content,
+body.dark .forward-modal-content > .modal-body,
+body.dark .forward-chats-list {
+  background: #111b21 !important;
+  color: #e9edef !important;
+}
+
+body.dark .forward-preview-banner {
+  border-color: #33444d !important;
+  background: #202c33 !important;
+  color: #aebac1 !important;
+}
+
+body.dark .forward-search-input {
+  border-color: #40515a !important;
+  background: #202c33 !important;
+  color: #e9edef !important;
+}
+
+body.dark .forward-name {
+  color: #e9edef !important;
+}
+
+body.dark .forward-type-tag {
+  color: #00a884 !important;
+}
+
+body.dark .forward-chat-row:hover,
+body.dark .forward-chat-row:active,
+body.dark .forward-chat-row.selected {
+  background: #202c33 !important;
+}
+
+.attachment-sheet,
+.emoji-picker,
+.voice-recording-indicator,
+.jump-to-unread-btn {
+  margin-bottom: var(--app-bottom-clearance);
 }
 
 button,
@@ -78,6 +185,20 @@ textarea {
   .sidebar,
   .chat-main {
     height: 100dvh;
+  }
+
+  .modal-content,
+  .forward-modal-content {
+    width: calc(100vw - var(--app-safe-left) - var(--app-safe-right) - 16px) !important;
+    max-width: calc(100vw - var(--app-safe-left) - var(--app-safe-right) - 16px) !important;
+  }
+
+  .forward-footer {
+    justify-content: stretch;
+  }
+
+  .forward-footer .btn {
+    width: 100%;
   }
 
   .chat-actions,

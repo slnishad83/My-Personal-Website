@@ -11639,6 +11639,11 @@ function openMessageDeleteSheet(messageId, messageData) {
   backdrop.className = "app-action-sheet-backdrop";
   backdrop.innerHTML = `
     <div class="app-action-sheet" role="dialog" aria-modal="true" aria-label="Delete message">
+      <div class="action-sheet-handle" aria-hidden="true"></div>
+      <div class="action-sheet-heading">
+        <strong>Delete message</strong>
+        <span>Choose where this message should be removed.</span>
+      </div>
       <button type="button" class="action-sheet-option danger delete-for-me-option">Delete for me</button>
       ${canDeleteAll ? '<button type="button" class="action-sheet-option danger delete-for-all-option">Delete for all</button>' : ""}
     </div>`;

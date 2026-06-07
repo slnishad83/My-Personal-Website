@@ -56,7 +56,7 @@ self.addEventListener('notificationclick', event => {
   );
 });
 
-const CACHE_NAME = 'team-chat-v148-auto-translation';
+const CACHE_NAME = 'team-chat-v149-navigation-clearance';
 const urlsToCache = [
   'index.html',
   'login.html',
