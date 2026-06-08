@@ -111,6 +111,8 @@ let directChatsUnsubscribe = null;
 let groupChatsUnsubscribe = null;
 let usersUnsubscribe = null;
 let allUsersReadyPromise = null;
+let explicitPeopleLookupTerm = "";
+let explicitPeopleLookupToken = 0;
 let chatRequestsUnsubscribe = null;
 let groupInvitesUnsubscribe = null;
 let currentGroup = null;
@@ -4882,14 +4884,6 @@ function matchesIdentitySearch(entity = {}, rawTerm = "") {
   });
 }
 
-function isCompleteContactLookupTerm(rawTerm = "") {
-  const term = normalizeSearchText(rawTerm);
-  if (!term) return false;
-  const digits = term.replace(/\D/g, "");
-  if (digits.length >= 8 && digits === term.replace(/\D/g, "")) return true;
-  return isCompleteEmail(term);
-}
-
 function matchesNewContactLookup(entity = {}, rawTerm = "") {
   const term = normalizeSearchText(rawTerm);
   if (!term) return false;
@@ -4945,18 +4939,25 @@ function isSearchableUser(user = {}) {
     user.isActive === false
   )
     return false;
-
-  // New-user discovery must expose only email-verified registered users.
-  // Normal chat/message search can still show existing chats from your own chat list.
-  const verified =
-    user.emailVerified === true ||
-    user.verified === true ||
-    user.isVerified === true;
-  if (!verified || user.pendingVerification === true) return false;
-
   return Boolean(
     user.email || user.displayName || user.phone || user.phoneNumber,
   );
+}
+
+function isVerifiedDirectoryUser(user = {}) {
+  // New-user discovery must expose only users whose email is verified.
+  // Existing chats are still shown from chat history, but fresh lookup is protected.
+  return isSearchableUser(user) && user.emailVerified === true;
+}
+
+function isCompletePhoneLookup(value = "") {
+  const digits = String(value || "").replace(/\D/g, "");
+  return digits.length >= 7;
+}
+
+function isExplicitPeopleLookupTerm(value = "") {
+  const term = normalizeSearchText(value);
+  return isCompleteEmail(term) || isCompletePhoneLookup(term);
 }
 
 function normalizeUserDoc(doc) {
@@ -5585,7 +5586,6 @@ async function searchUsersRealtime(searchTerm, options = {}) {
   }
 
   const term = searchTerm.trim().toLowerCase();
-  const allowDirectoryLookup = options.allowDirectoryLookup === true;
 
   if (currentViewTab === "groups") {
     searchGroupsRealtime(term);
@@ -5596,9 +5596,8 @@ async function searchUsersRealtime(searchTerm, options = {}) {
     return;
   }
 
-  // While typing: search only existing chats/messages.
-  // Enter/Search key: allow exact verified user lookup by full email/phone.
-  await loadAllChatsList(term, { allowDirectoryLookup: options.allowDirectoryLookup === true });
+  if (options.peopleLookup) await refreshAllUsersOnce();
+  loadAllChatsList(term, { peopleLookup: Boolean(options.peopleLookup) });
 }
 
 // ========================================================================
@@ -5663,7 +5662,10 @@ async function loadAllChatsList(searchTerm = "", options = {}) {
     items = items.filter((item) => activeFolderChatIds.has(item.id));
 
   const term = searchTerm.trim().toLowerCase();
-  const allowDirectoryLookup = options.allowDirectoryLookup === true;
+  const allowUserLookup =
+    Boolean(options.peopleLookup) &&
+    explicitPeopleLookupTerm === term &&
+    isExplicitPeopleLookupTerm(term);
 
   if (/^\d{4}$/.test(term) && (await verifyChatLockPin(term))) {
     const lockedItems = [...lockedChats.values()]
@@ -5704,14 +5706,14 @@ async function loadAllChatsList(searchTerm = "", options = {}) {
 
     const userMatches = [];
 
-    // MATCH 2: New-user lookup is explicit only.
-    // It runs only after Enter/Search, and only for a complete email or complete phone number.
-    if (allowDirectoryLookup && isCompleteContactLookupTerm(term)) {
+    if (allowUserLookup) {
       await refreshAllUsersOnce();
+      const directoryCandidates = await getVerifiedUserLookupCandidates(term);
 
-      for (const user of allUsers.filter(isSearchableUser)) {
+      // MATCH 2: Look through the verified directory only after Enter/Search.
+      for (const user of directoryCandidates) {
         if (isUserInLockedDirectChat(user.id)) continue;
-        // If this person already exists in chat results, do not show Send Request again.
+        // PREVENT CONFLICTS: Skip if this user is already visible in chatMatches
         if (visibleUserIds.has(user.id)) continue;
 
         const isMatch = matchesNewContactLookup(user, term);
@@ -5722,11 +5724,11 @@ async function loadAllChatsList(searchTerm = "", options = {}) {
           userMatches.push({
             id: `user_${user.id}`,
             type: "user",
-            name: user.displayName || user.name || user.fullName || user.email || "User",
+            name: user.displayName || user.email || "User",
             avatar: user.avatar
               ? `<img src="${user.avatar}">`
-              : escapeHtml((user.displayName || user.name || user.email || "?")[0].toUpperCase()),
-            preview: user.email || user.phone || "Tap to connect",
+              : escapeHtml((user.displayName || "?")[0].toUpperCase()),
+            preview: requestState?.label || user.email || user.phone || "Tap to connect",
             requestState,
             unreadCount: 0,
             isFavorite: false,
@@ -7422,6 +7424,46 @@ async function refreshAllUsersOnce() {
   return allUsers;
 }
 
+async function getVerifiedUserLookupCandidates(term = "") {
+  const cleanTerm = normalizeSearchText(term);
+  const digits = cleanTerm.replace(/\D/g, "");
+  const byKey = new Map();
+  const addCandidate = (user) => {
+    if (!user || !isVerifiedDirectoryUser(user)) return;
+    if (!matchesNewContactLookup(user, cleanTerm)) return;
+    byKey.set(user.id, user);
+  };
+
+  allUsers.forEach(addCandidate);
+
+  const querySnapshots = [];
+  try {
+    if (isCompleteEmail(cleanTerm)) {
+      querySnapshots.push(
+        await db.collection("users").where("email", "==", normalizeEmail(cleanTerm)).limit(10).get(),
+      );
+    }
+    if (isCompletePhoneLookup(cleanTerm)) {
+      querySnapshots.push(
+        await db.collection("users").where("phone", "==", digits).limit(10).get(),
+      );
+      querySnapshots.push(
+        await db.collection("users").where("phoneNumber", "==", digits).limit(10).get(),
+      );
+    }
+  } catch (error) {
+    console.warn("Exact verified-user lookup failed:", error);
+  }
+
+  querySnapshots.forEach((snapshot) => {
+    snapshot.docs.forEach((doc) => addCandidate(normalizeUserDoc(doc)));
+  });
+
+  return [...byKey.values()].sort((a, b) =>
+    (a.displayName || a.email || "").localeCompare(b.displayName || b.email || ""),
+  );
+}
+
 function populateGroupMemberSuggestions() {
   updateGroupMemberSuggestions();
 }
@@ -8429,7 +8471,7 @@ async function buildGroupChatItems() {
 function loadCurrentChatList() {
   if (currentViewTab === "groups") loadGroupsList();
   else if (currentViewTab === "calls") loadCallsList();
-  else loadAllChatsList(document.getElementById("searchInput")?.value || "", { allowDirectoryLookup: false });
+  else loadAllChatsList(document.getElementById("searchInput")?.value || "");
 }
 
 function updateChatContextMenuLabels() {
@@ -8481,7 +8523,7 @@ function updateChatContextMenuLabels() {
 
 async function loadChatsList() {
   if (!currentUser) return;
-  loadAllChatsList(document.getElementById("searchInput")?.value || "", { allowDirectoryLookup: false });
+  loadAllChatsList(document.getElementById("searchInput")?.value || "");
 }
 
 function formatLastSeen(timestamp) {
@@ -13622,25 +13664,49 @@ function switchTab(tab) {
 function bindSearchInput() {
   const input = document.getElementById("searchInput");
   if (!input) return;
-  let searchTimer = null;
-  input.addEventListener("input", (e) => {
-    clearTimeout(searchTimer);
-    searchTimer = window.setTimeout(
-      () => searchUsersRealtime(e.target.value, { allowDirectoryLookup: false }),
+  const runTypingSearch = () => {
+    explicitPeopleLookupTerm = "";
+    clearTimeout(input._teamChatSearchTimer);
+    input._teamChatSearchTimer = window.setTimeout(
+      () => searchUsersRealtime(input.value, { peopleLookup: false }),
       220,
     );
+  };
+  const runPeopleLookup = () => performExplicitPeopleLookup(input.value);
+  input.addEventListener("input", runTypingSearch);
+  input.addEventListener("keydown", (event) => {
+    if (event.key !== "Enter") return;
+    event.preventDefault();
+    runPeopleLookup();
   });
-  input.addEventListener("keydown", (e) => {
-    if (e.key === "Enter") {
-      e.preventDefault();
-      clearTimeout(searchTimer);
-      searchUsersRealtime(input.value, { allowDirectoryLookup: true });
-    }
+  document.getElementById("peopleSearchBtn")?.addEventListener("click", (event) => {
+    event.preventDefault();
+    runPeopleLookup();
   });
-  input.addEventListener("search", () => {
-    clearTimeout(searchTimer);
-    searchUsersRealtime(input.value, { allowDirectoryLookup: true });
+  document.getElementById("clearSearchBtn")?.addEventListener("click", (event) => {
+    event.preventDefault();
+    input.value = "";
+    explicitPeopleLookupTerm = "";
+    loadCurrentChatList();
+    input.focus();
   });
+}
+
+async function performExplicitPeopleLookup(rawTerm = "") {
+  const input = document.getElementById("searchInput");
+  const term = normalizeSearchText(rawTerm);
+  if (!term) {
+    explicitPeopleLookupTerm = "";
+    loadCurrentChatList();
+    return;
+  }
+  explicitPeopleLookupTerm = isExplicitPeopleLookupTerm(term) ? term : "";
+  explicitPeopleLookupToken += 1;
+  if (!explicitPeopleLookupTerm) {
+    showToast("Enter a complete email address or phone number to find a user", "error");
+  }
+  if (input) input.value = rawTerm;
+  await searchUsersRealtime(rawTerm, { peopleLookup: Boolean(explicitPeopleLookupTerm) });
 }
 
 function updateInChatSearch() {

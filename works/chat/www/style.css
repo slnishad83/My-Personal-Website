@@ -9992,99 +9992,120 @@ body.dark .message-translation-card {
 }
 
 
-/* FINAL emergency UI stability fix: keep chat composer visible on web + Android WebView */
-html, body {
-  width: 100%;
-  min-width: 0;
-  overflow: hidden;
+/* === FINAL SEARCH + COMPOSER STABILITY PATCH === */
+.search-box {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 12px;
+  box-sizing: border-box;
 }
-.chat-container {
-  height: 100vh;
+.search-box input#searchInput {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding-right: 76px !important;
+  height: 42px;
+  line-height: 42px;
+  box-sizing: border-box;
+}
+.search-box .people-search-btn,
+.search-box .clear-search-btn {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  border: 0;
+  background: transparent;
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: #475569;
+  font-size: 16px;
+  z-index: 2;
+}
+.search-box .people-search-btn { right: 46px; }
+.search-box .clear-search-btn { right: 12px; font-size: 22px; }
+.search-box .people-search-btn:hover,
+.search-box .clear-search-btn:hover { background: rgba(15, 23, 42, 0.08); }
+
+.chat-container,
+.chat-main {
   height: 100dvh;
-  min-height: 0;
+  max-height: 100dvh;
   overflow: hidden;
 }
 .chat-main {
-  min-height: 0;
-  overflow: hidden;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
 }
 .messages-area {
+  flex: 1 1 auto !important;
   min-height: 0 !important;
   overflow-y: auto !important;
-  padding-bottom: 18px !important;
-  scroll-padding-bottom: 120px !important;
+  padding-bottom: 14px !important;
+  box-sizing: border-box;
 }
 .input-area {
   flex: 0 0 auto !important;
-  position: sticky !important;
-  bottom: 0 !important;
-  display: flex !important;
-  align-items: flex-end !important;
-  width: 100% !important;
-  min-width: 0 !important;
-  box-sizing: border-box !important;
-  padding: 8px 10px calc(8px + env(safe-area-inset-bottom, 0px)) 10px !important;
-  background: #f0f2f5 !important;
-  z-index: 80 !important;
+  position: sticky;
+  bottom: 0;
+  z-index: 20;
+  width: 100%;
+  min-height: 58px;
+  padding: 7px max(10px, env(safe-area-inset-right)) calc(7px + env(safe-area-inset-bottom)) max(10px, env(safe-area-inset-left)) !important;
+  box-sizing: border-box;
+  background: #f8fafc;
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  overflow: visible !important;
 }
-body.dark .input-area { background: #111b21 !important; }
 .wa-composer-shell {
-  min-width: 0 !important;
-  max-width: 100% !important;
-  overflow: hidden !important;
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+  border-radius: 22px;
+  padding: 6px 8px;
+  box-sizing: border-box;
 }
 #messageInput {
-  width: 100% !important;
-  min-width: 0 !important;
-  resize: none !important;
-  overflow-y: auto !important;
+  flex: 1 1 auto;
+  min-width: 0;
+  max-height: 128px;
+  overflow-y: auto;
+  resize: none;
+  box-sizing: border-box;
 }
 .input-area .emoji-btn,
 .input-area .attach-btn,
-.input-area .voice-msg-btn,
-.input-area .send-btn {
-  flex-shrink: 0 !important;
+.input-area .send-btn,
+.input-area .voice-msg-btn {
+  flex: 0 0 42px;
+  width: 42px;
+  height: 42px;
+  min-width: 42px;
+  min-height: 42px;
 }
 @media (max-width: 700px) {
-  .chat-container.chat-open .chat-main {
-    width: 100% !important;
-    min-width: 0 !important;
-  }
-  .messages-area {
-    padding-left: 8px !important;
-    padding-right: 8px !important;
-  }
-  .input-area {
-    gap: 6px !important;
-    padding-left: 6px !important;
-    padding-right: 6px !important;
-  }
-  .wa-composer-shell {
-    gap: 0 !important;
-    padding-left: 4px !important;
-    padding-right: 4px !important;
-  }
+  .chat-container,
+  .chat-main { height: 100dvh; max-height: 100dvh; }
+  .input-area { gap: 6px; padding-left: 8px !important; padding-right: 8px !important; }
   .input-area .emoji-btn,
   .input-area .attach-btn,
-  .input-area .voice-msg-btn,
-  .input-area .send-btn {
-    width: 42px !important;
-    min-width: 42px !important;
-    height: 42px !important;
-    min-height: 42px !important;
-    flex-basis: 42px !important;
+  .input-area .send-btn,
+  .input-area .voice-msg-btn {
+    flex-basis: 38px;
+    width: 38px;
+    height: 38px;
+    min-width: 38px;
+    min-height: 38px;
   }
-}
-@media (max-width: 380px) {
-  #cameraMsgBtn { display: none !important; }
-  .input-area .emoji-btn,
-  .input-area .attach-btn,
-  .input-area .voice-msg-btn,
-  .input-area .send-btn {
-    width: 40px !important;
-    min-width: 40px !important;
-    height: 40px !important;
-    min-height: 40px !important;
-    flex-basis: 40px !important;
-  }
+  .wa-composer-shell { gap: 4px; padding: 5px 6px; }
 }

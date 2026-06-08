@@ -114,11 +114,14 @@
           <input
             type="search"
             id="searchInput"
-            inputmode="search"
+            placeholder="Search chats/messages. Enter full email/phone to find user"
             enterkeyhint="search"
             autocomplete="off"
-            placeholder="Search chats/messages; Enter full email/phone"
+            autocapitalize="none"
+            spellcheck="false"
           />
+          <button type="button" id="peopleSearchBtn" class="people-search-btn" title="Search user" aria-label="Search user">🔍</button>
+          <button type="button" id="clearSearchBtn" class="clear-search-btn" title="Clear search" aria-label="Clear search">×</button>
         </div>
 
         <div class="request-section">
