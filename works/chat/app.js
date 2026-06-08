@@ -4882,31 +4882,29 @@ function matchesIdentitySearch(entity = {}, rawTerm = "") {
   });
 }
 
+function isCompleteEmailLookup(term = "") {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(normalizeEmail(term));
+}
+
+function getNormalizedPhoneDigits(value = "") {
+  return String(value || "").replace(/\D/g, "");
+}
+
+function isCompletePhoneLookup(term = "") {
+  const digits = getNormalizedPhoneDigits(term);
+  return digits.length >= 7;
+}
+
 function matchesNewContactLookup(entity = {}, rawTerm = "") {
   const term = normalizeSearchText(rawTerm);
   if (!term) return false;
 
-  const digits = term.replace(/\D/g, "");
-  const phone = String(entity.phone || entity.phoneNumber || "").replace(
-    /\D/g,
-    "",
-  );
-  if (digits.length >= 6 && phone) return phone === digits;
-
   const email = normalizeEmail(entity.email || "");
-  if ((term.includes("@") || term.includes(".")) && email) {
-    if (term.startsWith("@")) {
-      const username = (entity.username || "").toLowerCase();
-      return username.includes(term.replace("@", ""));
-    }
-    // Allow both full email and partial email searches, case-insensitively.
-    // Example: typing "sl.nishad", "gmail.com", or "sl.nishad@gmail.com" can find the same user.
-    return email.includes(term);
-  }
+  if (isCompleteEmailLookup(term) && email) return email === normalizeEmail(term);
 
-  const username = (entity.username || "").toLowerCase();
-  if (username && term.startsWith("@"))
-    return username === term.replace("@", "");
+  const digits = getNormalizedPhoneDigits(term);
+  const phone = getNormalizedPhoneDigits(entity.phone || entity.phoneNumber || "");
+  if (isCompletePhoneLookup(term) && phone) return phone === digits;
 
   return false;
 }
@@ -4939,8 +4937,11 @@ function isSearchableUser(user = {}) {
     user.isActive === false
   )
     return false;
-  if (user.pendingVerification === true && user.emailVerified === false)
-    return false;
+  // New-user discovery must expose only email-verified registered users.
+  // Existing chats/messages can still be searched from the user's own chat history,
+  // but the public directory search must not show unverified accounts.
+  if (user.emailVerified !== true) return false;
+  if (user.pendingVerification === true) return false;
   return Boolean(
     user.email || user.displayName || user.phone || user.phoneNumber,
   );
@@ -5582,8 +5583,7 @@ async function searchUsersRealtime(searchTerm) {
     return;
   }
 
-  await refreshAllUsersOnce();
-  loadAllChatsList(term);
+  loadAllChatsList(term, { includeDirectoryLookup: false });
 }
 
 // ========================================================================
@@ -5593,10 +5593,11 @@ async function searchUsersRealtime(searchTerm) {
 // FIXED: COMBINED REAL-TIME HISTORY & DIRECTORY LOOKUP ENGINE
 // ========================================================================
 let chatListLoadToken = 0;
-async function loadAllChatsList(searchTerm = "") {
+async function loadAllChatsList(searchTerm = "", options = {}) {
   const chatsList = document.getElementById("chatsList");
   if (!chatsList) return;
   const loadToken = ++chatListLoadToken;
+  const includeDirectoryLookup = options.includeDirectoryLookup === true;
 
   // Show skeleton loading while fetching
   if (!searchTerm && !chatsList.children.length) {
@@ -5688,10 +5689,11 @@ async function loadAllChatsList(searchTerm = "") {
 
     const userMatches = [];
 
-    await refreshAllUsersOnce();
+    if (includeDirectoryLookup) {
+      await refreshAllUsersOnce();
 
-    // MATCH 2: Look through the directory for users you haven't messaged yet
-    for (const user of allUsers.filter(isSearchableUser)) {
+      // MATCH 2: Look through the verified user directory only after Search/Enter.
+      for (const user of allUsers.filter(isSearchableUser)) {
       if (isUserInLockedDirectChat(user.id)) continue;
       // PREVENT CONFLICTS: Skip if this user is already visible in chatMatches
       if (visibleUserIds.has(user.id)) continue;
@@ -5719,6 +5721,7 @@ async function loadAllChatsList(searchTerm = "") {
           lastMessageTime: new Date(0),
         });
       }
+    }
     }
 
     // FIXED CORRECTION LAYER: Read directly from item.id to completely avoid mapping crashes
@@ -5896,6 +5899,20 @@ async function buildMessageSearchChatItems(visibleItems = []) {
   return items;
 }
 
+async function createUserNotification(userId, payload = {}) {
+  if (!userId) return;
+  try {
+    await db.collection("userNotifications").add({
+      userId,
+      read: false,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+      ...payload,
+    });
+  } catch (error) {
+    console.warn("Could not create user notification:", error);
+  }
+}
+
 async function sendChatRequest(user) {
   if (!currentUser || !user) return;
   if (await isBlockedByUser(user.id)) {
@@ -5929,7 +5946,7 @@ async function sendChatRequest(user) {
     return;
   }
 
-  await db.collection("chatRequests").add({
+  const requestRef = await db.collection("chatRequests").add({
     fromUserId: currentUser.uid,
     fromUserName: currentUser.displayName || currentUser.email.split("@")[0],
     fromUserEmail: normalizeEmail(currentUser.email),
@@ -5938,6 +5955,15 @@ async function sendChatRequest(user) {
     toUserEmail: normalizeEmail(user.email),
     status: "pending",
     createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+  });
+  await createUserNotification(user.id, {
+    type: "chat_request_received",
+    requestId: requestRef.id,
+    fromUserId: currentUser.uid,
+    fromUserName: currentUser.displayName || currentUser.email.split("@")[0],
+    fromUserEmail: normalizeEmail(currentUser.email),
+    title: "New chat request",
+    body: `${currentUser.displayName || currentUser.email} wants to chat with you`,
   });
   showToast("Request sent");
   loadCurrentChatList();
@@ -5955,8 +5981,8 @@ async function ensureDirectoryUserProfile(user) {
           email: normalizeEmail(user.email),
           displayName:
             user.displayName || normalizeEmail(user.email).split("@")[0],
-          emailVerified: user.emailVerified !== false,
-          pendingVerification: false,
+          emailVerified: user.emailVerified === true,
+          pendingVerification: user.emailVerified !== true,
           isActive: true,
           onlineStatus: user.onlineStatus || "offline",
           repairedAt: firebase.firestore.FieldValue.serverTimestamp(),
@@ -6030,6 +6056,16 @@ async function acceptChatRequest(requestId, fromUserId) {
     await db.collection("chatRequests").doc(requestId).update({
       status: "accepted",
       respondedAt: firebase.firestore.FieldValue.serverTimestamp(),
+    });
+
+    await createUserNotification(fromUserId, {
+      type: "chat_request_accepted",
+      requestId,
+      chatId,
+      fromUserId: currentUser.uid,
+      fromUserName: currentUser.displayName || currentUser.email,
+      title: "Chat request accepted",
+      body: `${currentUser.displayName || currentUser.email} accepted your chat request`,
     });
 
     showToast("Request accepted");
@@ -6218,6 +6254,29 @@ function setupRequestListeners() {
         showToast(`New chat request from ${request.fromUserName || "User"}`);
       });
       chatRequestListenerReady = true;
+    });
+  if (setupRequestListeners._acceptedUnsubscribe) setupRequestListeners._acceptedUnsubscribe();
+  setupRequestListeners._seenAcceptedRequestIds = new Set();
+  setupRequestListeners._acceptedReady = false;
+  setupRequestListeners._acceptedUnsubscribe = db
+    .collection("chatRequests")
+    .where("fromUserId", "==", currentUser.uid)
+    .where("status", "==", "accepted")
+    .onSnapshot((snapshot) => {
+      const currentIds = new Set(snapshot.docs.map((doc) => doc.id));
+      const newlyAccepted = snapshot.docs
+        .filter(
+          (doc) =>
+            setupRequestListeners._acceptedReady &&
+            !setupRequestListeners._seenAcceptedRequestIds.has(doc.id),
+        )
+        .map((doc) => ({ id: doc.id, ...doc.data() }));
+      setupRequestListeners._seenAcceptedRequestIds = currentIds;
+      newlyAccepted.forEach((request) => {
+        showToast(`${request.toUserName || "User"} accepted your chat request`);
+      });
+      if (newlyAccepted.length) loadCurrentChatList();
+      setupRequestListeners._acceptedReady = true;
     });
   groupInvitesUnsubscribe = db
     .collection("groupInvites")
@@ -13602,27 +13661,48 @@ function switchTab(tab) {
 
 function bindSearchInput() {
   const input = document.getElementById("searchInput");
-  if (!input) return;
+  if (!input || input.dataset.searchBound === "true") return;
+  input.dataset.searchBound = "true";
+  input.setAttribute("type", "search");
+  input.setAttribute("enterkeyhint", "search");
+  input.setAttribute("autocomplete", "off");
   let searchTimer = null;
 
-  // Important mobile/APK safeguard:
-  // Tapping the search field must never also trigger a chat-row click behind/near it.
-  // This fixes the issue where tapping Search sometimes opened an existing person's chat.
-  ["click", "touchstart", "pointerdown"].forEach((eventName) => {
-    input.addEventListener(eventName, (event) => {
-      event.stopPropagation();
-    });
-  });
-
-  input.addEventListener("focus", () => {
-    const value = input.value || "";
-    if (value.trim()) searchUsersRealtime(value);
-  });
-
+  // Typing is intentionally limited to existing chats and messages.
+  // It must not reveal directory users while the person is still typing.
   input.addEventListener("input", (e) => {
     clearTimeout(searchTimer);
-    searchTimer = window.setTimeout(() => searchUsersRealtime(e.target.value), 220);
+    searchTimer = window.setTimeout(
+      () => searchUsersRealtime(e.target.value),
+      220,
+    );
   });
+
+  // Full email/phone + Enter/Search performs verified user discovery.
+  input.addEventListener("keydown", (event) => {
+    if (event.key !== "Enter") return;
+    event.preventDefault();
+    runExplicitUserLookup(input.value);
+  });
+
+  input.closest("form")?.addEventListener("submit", (event) => {
+    event.preventDefault();
+    runExplicitUserLookup(input.value);
+  });
+}
+
+async function runExplicitUserLookup(rawValue = "") {
+  const term = normalizeSearchText(rawValue);
+  if (!term) {
+    loadCurrentChatList();
+    return;
+  }
+  if (!isCompleteEmailLookup(term) && !isCompletePhoneLookup(term)) {
+    showToast("Enter the full email address or full phone number to find a user");
+    await loadAllChatsList(term, { includeDirectoryLookup: false });
+    return;
+  }
+  await loadAllChatsList(term, { includeDirectoryLookup: true });
 }
 
 function updateInChatSearch() {
@@ -16598,8 +16678,13 @@ async function openScanner() {
       event.preventDefault();
       event.stopImmediatePropagation();
       const peopleSearch = document.getElementById("searchInput");
-      peopleSearch?.focus();
-      peopleSearch?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+      const currentValue = peopleSearch?.value || "";
+      if (isCompleteEmailLookup(currentValue) || isCompletePhoneLookup(currentValue)) {
+        runExplicitUserLookup(currentValue);
+      } else {
+        peopleSearch?.focus();
+        peopleSearch?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+      }
     },
     true,
   );
