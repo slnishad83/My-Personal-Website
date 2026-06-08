@@ -61,7 +61,7 @@ self.addEventListener('notificationclick', event => {
   );
 });
 
-const CACHE_NAME = 'team-chat-v154-call-actions';
+const CACHE_NAME = 'team-chat-v155-bulk-actions';
 const urlsToCache = [
   'index.html',
   'login.html',

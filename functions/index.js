@@ -10,6 +10,7 @@ if (!admin.apps.length) {
 const meteredApiKey = defineSecret('METERED_API_KEY');
 const METERED_APP_URL = 'teamchatnishad.metered.live';
 const TURN_CREDENTIAL_LABEL = 'team-chat-secure-turn';
+const BACKEND_RUNTIME_GENERATION = 'nodejs22';
 
 function setCorsHeaders(response) {
   response.set('Access-Control-Allow-Origin', '*');

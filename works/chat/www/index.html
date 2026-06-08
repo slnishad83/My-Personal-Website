@@ -22,7 +22,7 @@
     <link rel="stylesheet" href="ui-audit.css?v=1" />
     <link rel="stylesheet" href="translation-ui.css?v=2" />
     <link rel="stylesheet" href="safe-area-audit.css?v=3" />
-    <link rel="stylesheet" href="calls-ui.css?v=2" />
+    <link rel="stylesheet" href="calls-ui.css?v=3" />
     <link rel="manifest" href="manifest.json?v=97" />
     <link rel="apple-touch-icon" href="app-icon-192.png" />
     <style>
@@ -941,6 +941,9 @@
             </div>
             <div id="groupSharedContent" class="shared-content"></div>
           </div>
+          <button id="groupInfoMarkUnreadBtn" class="setting-item">
+            Mark chat as unread
+          </button>
           <div style="margin-top: 16px; display: flex; gap: 8px">
             <input
               type="text"
@@ -1014,6 +1017,9 @@
             </button>
             <button id="chatInfoTagBtn" class="setting-item">
               Tag
+            </button>
+            <button id="chatInfoMarkUnreadBtn" class="setting-item">
+              Mark chat as unread
             </button>
             <button id="chatInfoBlockBtn" class="setting-item danger">
               Block contact
@@ -2108,7 +2114,7 @@
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-storage-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-messaging-compat.js"></script>
-    <script src="app.js?v=154"></script>
+    <script src="app.js?v=155"></script>
     <script src="pwa-install.js?v=140"></script>
   </body>
 </html>

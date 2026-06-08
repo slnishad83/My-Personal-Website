@@ -818,6 +818,8 @@ async function loadCallsList() {
 
 let activeDraftKey = "";
 let currentForwardMessage = null;
+let currentForwardMessages = [];
+let selectedChatMessages = new Map();
 
 function getSavedMessagesChatId() {
   return currentUser ? `saved_${currentUser.uid}` : "";
@@ -10020,7 +10022,7 @@ async function renderSharedContent(type, containerId = "sharedContent") {
   let messages = await getCurrentSharedMessages();
   if (type === "media") {
     const media = messages.filter(
-      (m) => ["image", "gif"].includes(m.attachment?.type) && m.attachment?.url,
+      (m) => ["image", "gif", "video"].includes(m.attachment?.type) && m.attachment?.url,
     );
     container.innerHTML = media.length
       ? `<div class="shared-grid">${media.map((m) => renderSharedMediaItem(m)).join("")}</div>`
@@ -10080,6 +10082,7 @@ async function renderSharedContent(type, containerId = "sharedContent") {
       : '<div class="shared-empty">No shared documents found</div>';
     bindSharedContentActions(container);
   }
+  bindSharedSelection(container, messages);
 }
 
 function renderSharedMediaItem(message = {}) {
@@ -10093,9 +10096,10 @@ function renderSharedMediaItem(message = {}) {
   const when = message.timestamp ? formatTime(message.timestamp) : "";
   const attJson = escapeHtml(JSON.stringify(attachment));
   return `
-    <div class="shared-media-item-wrap">
+    <div class="shared-media-item-wrap shared-selectable-item" data-message-id="${escapeHtml(message.id)}">
+      <button type="button" class="shared-select-toggle" aria-label="Select item"></button>
       <button type="button" class="shared-media-item" data-preview-url="${url}" data-filename="${filename}" title="${filename}">
-        <img src="${url}" alt="${filename}" loading="lazy" onerror="this.closest('.shared-media-item')?.classList.add('is-broken'); this.remove();">
+        ${attachment.type === "video" ? `<video src="${url}" preload="metadata" muted playsinline></video>` : `<img src="${url}" alt="${filename}" loading="lazy" onerror="this.closest('.shared-media-item')?.classList.add('is-broken'); this.remove();">`}
         <span class="shared-media-fallback">${escapeHtml(getAttachmentLabel(attachment))}</span>
         <span class="shared-media-meta">${escapeHtml(when)}</span>
       </button>
@@ -10115,7 +10119,8 @@ function renderSharedDocumentItem(message = {}) {
     .join(" · ");
   const attJson = escapeHtml(JSON.stringify(attachment));
   return `
-    <div class="shared-list-item-wrap">
+    <div class="shared-list-item-wrap shared-selectable-item" data-message-id="${escapeHtml(message.id)}">
+      <button type="button" class="shared-select-toggle" aria-label="Select item"></button>
       <button type="button" class="shared-list-item shared-open-item" data-preview-url="${url}" data-filename="${filename}">
         <span>${filename}</span>
         <small>${escapeHtml(detail || "Document")}</small>
@@ -10623,6 +10628,20 @@ function positionMessageQuickActions(messageDiv) {
   });
 }
 
+function bindSharedSelection(container, messages = []) {
+  const byId = new Map(messages.map((message) => [message.id, message]));
+  container.querySelectorAll(".shared-selectable-item").forEach((item) => {
+    item.querySelector(".shared-select-toggle")?.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      const message = byId.get(item.dataset.messageId);
+      if (!message) return;
+      toggleSelectedMessage(message.id, message);
+      item.classList.toggle("bulk-selected", selectedChatMessages.has(message.id));
+    });
+  });
+}
+
 function positionAllMessageQuickActions() {
   document
     .querySelectorAll("#messagesArea .message")
@@ -10808,6 +10827,7 @@ function loadMessages() {
         const messageDiv = document.createElement("div");
         messageDiv.className = `message ${isMyMessage ? "my-message" : ""}`;
         messageDiv.dataset.messageId = doc.id;
+        messageDiv._messageData = { ...msg, messageId: doc.id };
 
         if (msg.type === "call") {
           messageDiv.className = "message call-message";
@@ -10887,6 +10907,12 @@ function loadMessages() {
         messageDiv.addEventListener("contextmenu", (e) => {
           e.preventDefault();
           showContextMenu(e.clientX, e.clientY, doc.id, msg, isMyMessage);
+        });
+        messageDiv.addEventListener("click", (event) => {
+          if (!selectedChatMessages.size) return;
+          if (event.target.closest("button, a, input, textarea, select, audio, video")) return;
+          event.preventDefault();
+          toggleSelectedMessage(doc.id, msg);
         });
         messageDiv
           .querySelector(".message-options-btn")
@@ -11917,6 +11943,97 @@ async function deleteMessageForEveryone(id, messageData = null) {
   }
 }
 
+function ensureMessageSelectionToolbar() {
+  let toolbar = document.getElementById("messageSelectionToolbar");
+  if (toolbar) return toolbar;
+  toolbar = document.createElement("div");
+  toolbar.id = "messageSelectionToolbar";
+  toolbar.className = "message-selection-toolbar";
+  toolbar.innerHTML = `
+    <button type="button" data-selection-action="cancel" aria-label="Cancel selection">Cancel</button>
+    <strong id="messageSelectionCount">0 selected</strong>
+    <button type="button" data-selection-action="all">Select all</button>
+    <button type="button" data-selection-action="forward">Forward</button>
+    <button type="button" data-selection-action="delete">Delete</button>`;
+  toolbar.addEventListener("click", async (event) => {
+    const action = event.target.closest("[data-selection-action]")?.dataset.selectionAction;
+    if (action === "cancel") clearMessageSelection();
+    if (action === "all") selectAllVisibleMessages();
+    if (action === "forward") openForwardModalForSelectedMessages();
+    if (action === "delete") openBulkDeleteSheet();
+  });
+  document.body.appendChild(toolbar);
+  return toolbar;
+}
+
+function updateMessageSelectionUi() {
+  const toolbar = ensureMessageSelectionToolbar();
+  const count = selectedChatMessages.size;
+  toolbar.classList.toggle("show", count > 0);
+  document.getElementById("messageSelectionCount").textContent = `${count} selected`;
+  document.querySelectorAll("[data-message-id]").forEach((element) => {
+    element.classList.toggle("bulk-selected", selectedChatMessages.has(element.dataset.messageId));
+  });
+}
+
+function toggleSelectedMessage(messageId, messageData) {
+  if (!messageId || !messageData) return;
+  if (selectedChatMessages.has(messageId)) selectedChatMessages.delete(messageId);
+  else selectedChatMessages.set(messageId, { ...messageData, messageId });
+  updateMessageSelectionUi();
+}
+
+function clearMessageSelection() {
+  selectedChatMessages.clear();
+  updateMessageSelectionUi();
+}
+
+function selectAllVisibleMessages() {
+  document.querySelectorAll("#messagesArea .message[data-message-id]").forEach((element) => {
+    if (element._messageData) {
+      selectedChatMessages.set(element.dataset.messageId, element._messageData);
+    }
+  });
+  updateMessageSelectionUi();
+}
+
+function openForwardModalForSelectedMessages() {
+  if (!selectedChatMessages.size) return;
+  currentForwardMessages = [...selectedChatMessages.values()];
+  openForwardModal(currentForwardMessages[0].messageId, currentForwardMessages[0]);
+}
+
+function openBulkDeleteSheet() {
+  if (!selectedChatMessages.size) return;
+  closeActionSheet();
+  const messages = [...selectedChatMessages.values()];
+  const canDeleteAll = messages.every(canDeleteForEveryone);
+  const backdrop = document.createElement("div");
+  backdrop.className = "app-action-sheet-backdrop";
+  backdrop.innerHTML = `
+    <div class="app-action-sheet" role="dialog" aria-modal="true" aria-label="Delete selected messages">
+      <div class="action-sheet-handle" aria-hidden="true"></div>
+      <div class="action-sheet-heading"><strong>Delete ${messages.length} messages</strong></div>
+      <button type="button" class="action-sheet-option danger delete-for-me-option">Delete for me</button>
+      ${canDeleteAll ? '<button type="button" class="action-sheet-option danger delete-for-all-option">Delete for all</button>' : ""}
+    </div>`;
+  document.body.appendChild(backdrop);
+  requestAnimationFrame(() => backdrop.classList.add("show"));
+  backdrop.addEventListener("click", (event) => {
+    if (event.target === backdrop) closeActionSheet();
+  });
+  backdrop.querySelector(".delete-for-me-option")?.addEventListener("click", async () => {
+    closeActionSheet();
+    for (const message of messages) await deleteMessageForMe(message.messageId);
+    clearMessageSelection();
+  });
+  backdrop.querySelector(".delete-for-all-option")?.addEventListener("click", async () => {
+    closeActionSheet();
+    for (const message of messages) await deleteMessageForEveryone(message.messageId, message);
+    clearMessageSelection();
+  });
+}
+
 function closeActionSheet() {
   document.querySelector(".app-action-sheet-backdrop")?.remove();
 }
@@ -12038,6 +12155,7 @@ async function editMessage(id, data) {
 }
 
 function openForwardModal(messageId, messageData) {
+  if (!selectedChatMessages.size) currentForwardMessages = [];
   currentForwardMessage = { id: messageId, ...messageData };
   currentForwardSelectionKeys = new Set();
   currentForwardSelectionMap = new Map();
@@ -12215,14 +12333,22 @@ async function forwardSelectedMessages() {
     showToast("Select a chat to forward", "error");
     return;
   }
-  for (const item of selectedItems) {
-    await forwardMessageTo(item, false);
+  const messagesToForward = currentForwardMessages.length
+    ? [...currentForwardMessages]
+    : [currentForwardMessage];
+  for (const message of messagesToForward) {
+    currentForwardMessage = message;
+    for (const item of selectedItems) {
+      await forwardMessageTo(item, false);
+    }
   }
   currentForwardSelectionKeys = new Set();
   currentForwardSelectionMap = new Map();
   currentForwardMessage = null;
+  currentForwardMessages = [];
+  clearMessageSelection();
   document.getElementById("forwardModal").style.display = "none";
-  showToast(`Message forwarded to ${selectedItems.length} chat(s)`);
+  showToast(`${messagesToForward.length} message(s) forwarded to ${selectedItems.length} chat(s)`);
 }
 
 async function forwardMessageTo(chatItem, closeModal = true) {
@@ -12323,6 +12449,7 @@ function showContextMenu(x, y, messageId, messageData, isMyMessage) {
 
   const copyPayload = getMessageCopyPayload(messageData);
   const items = [
+    { text: "Select", action: () => toggleSelectedMessage(messageId, messageData) },
     { text: "Forward", action: () => openForwardModal(messageId, messageData) },
     ...(copyPayload
       ? [
@@ -14710,6 +14837,7 @@ async function init() {
   document.querySelectorAll(".closeForwardModal").forEach((btn) =>
     btn.addEventListener("click", () => {
       currentForwardMessage = null;
+      currentForwardMessages = [];
       currentForwardSelectionKeys = new Set();
       currentForwardSelectionMap = new Map();
       document.getElementById("forwardModal").style.display = "none";
@@ -15039,6 +15167,20 @@ async function init() {
   document.getElementById("chatSearchMenuItem")?.addEventListener("click", () => {
     document.getElementById("chatContextMenu").style.display = "none";
     document.getElementById("searchChatBtn")?.click();
+  });
+  document.getElementById("chatInfoMarkUnreadBtn")?.addEventListener("click", async () => {
+    if (!currentChat) return;
+    await markChatReadState(
+      currentChatType === "direct" ? (currentChat.aliasDirectIds || currentChat.id) : currentChat.id,
+      currentChatType,
+      false,
+    );
+    document.getElementById("chatInfoModal").style.display = "none";
+  });
+  document.getElementById("groupInfoMarkUnreadBtn")?.addEventListener("click", async () => {
+    if (!currentGroup?.id) return;
+    await markChatReadState(currentGroup.id, "group", false);
+    document.getElementById("groupInfoModal").style.display = "none";
   });
   document
     .getElementById("chatMediaMenuItem")

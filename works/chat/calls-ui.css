@@ -233,3 +233,106 @@ body.dark .call-history-message-icon {
     padding: 0 10px;
   }
 }
+
+.message-selection-toolbar {
+  position: fixed;
+  z-index: 100001;
+  top: max(10px, calc(env(safe-area-inset-top, 0px) + 8px));
+  left: 50%;
+  width: min(680px, calc(100vw - 20px));
+  min-height: 54px;
+  padding: 7px 10px;
+  display: none;
+  grid-template-columns: auto minmax(0, 1fr) auto auto auto;
+  align-items: center;
+  gap: 7px;
+  transform: translateX(-50%);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--panel);
+  color: var(--text);
+  box-shadow: 0 12px 34px rgba(11, 20, 26, 0.24);
+}
+
+.message-selection-toolbar.show {
+  display: grid;
+}
+
+.message-selection-toolbar strong {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.message-selection-toolbar button {
+  min-height: 38px;
+  padding: 0 11px;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(0, 128, 105, 0.11);
+  color: #008069;
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.message.bulk-selected > .message-bubble,
+.shared-selectable-item.bulk-selected {
+  outline: 3px solid #00a884;
+  outline-offset: 2px;
+}
+
+.shared-selectable-item {
+  position: relative;
+}
+
+.shared-select-toggle {
+  position: absolute;
+  z-index: 4;
+  top: 6px;
+  left: 6px;
+  width: 28px;
+  height: 28px;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  background: rgba(17, 27, 33, 0.65);
+  cursor: pointer;
+  box-shadow: 0 1px 5px rgba(0, 0, 0, 0.24);
+}
+
+.shared-selectable-item.bulk-selected .shared-select-toggle {
+  background: #00a884;
+}
+
+.shared-selectable-item.bulk-selected .shared-select-toggle::before {
+  content: "✓";
+  color: #fff;
+  font-weight: 900;
+}
+
+.shared-media-item video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+body.dark .message-selection-toolbar {
+  border-color: #3b4a54;
+  background: #202c33;
+}
+
+@media (max-width: 560px) {
+  .message-selection-toolbar {
+    grid-template-columns: auto minmax(0, 1fr) repeat(3, auto);
+    gap: 4px;
+    padding: 6px;
+  }
+
+  .message-selection-toolbar button {
+    min-height: 36px;
+    padding: 0 8px;
+    font-size: 11px;
+  }
+}
