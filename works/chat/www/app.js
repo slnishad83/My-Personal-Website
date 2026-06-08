@@ -4947,7 +4947,13 @@ function isSearchableUser(user = {}) {
 function isVerifiedDirectoryUser(user = {}) {
   // New-user discovery must expose only users whose email is verified.
   // Existing chats are still shown from chat history, but fresh lookup is protected.
-  return isSearchableUser(user) && user.emailVerified === true;
+  return (
+    isSearchableUser(user) &&
+    (user.emailVerified === true ||
+      user.isEmailVerified === true ||
+      user.verifiedEmail === true ||
+      String(user.emailVerificationStatus || "").toLowerCase() === "verified")
+  );
 }
 
 function isCompletePhoneLookup(value = "") {
@@ -19400,3 +19406,261 @@ document.addEventListener("DOMContentLoaded", function () {
     });
   }
 });
+
+
+// ========================================================================
+// NSL FINAL RELIABLE SEARCH PATCH
+// Purpose:
+// 1) Typing in the left search box still searches chats/messages only.
+// 2) Full email/phone + Enter or search button performs verified user lookup.
+// 3) Already connected users show the existing chat row instead of request again.
+// 4) The result list always shows clear Loading / Not found / Error states.
+// ========================================================================
+(function setupReliablePeopleSearchPatch() {
+  if (window.__nslReliablePeopleSearchPatchInstalled) return;
+  window.__nslReliablePeopleSearchPatchInstalled = true;
+
+  function nslSetActiveAllTabForSearch() {
+    try {
+      currentViewTab = "all";
+      document.querySelectorAll(".tab").forEach((tab) => {
+        tab.classList.toggle("active", tab.dataset.tab === "all");
+      });
+      ["groupsList", "broadcastsList", "statusList", "callsList", "communitiesList"].forEach((id) => {
+        const el = document.getElementById(id);
+        if (el) el.style.display = "none";
+      });
+      const chatsList = document.getElementById("chatsList");
+      if (chatsList) chatsList.style.display = "block";
+      ["groupActions", "broadcastActions", "statusActions", "communityActions"].forEach((id) => {
+        const el = document.getElementById(id);
+        if (el) el.style.display = "none";
+      });
+    } catch (error) {
+      console.warn("Could not switch to All tab for search:", error);
+    }
+  }
+
+  function nslSetSearchListState(html) {
+    const chatsList = document.getElementById("chatsList");
+    if (!chatsList) return;
+    chatsList.style.display = "block";
+    chatsList.innerHTML = html;
+  }
+
+  function nslLookupEmptyState(term) {
+    const safeTerm = escapeHtml(term || "");
+    return `
+      <div class="empty-state explicit-people-empty">
+        <strong>No verified user found</strong>
+        <span>No email-verified account matched <b>${safeTerm}</b>.</span>
+        <small>Check the full email/phone, and make sure the other user has verified their email.</small>
+      </div>
+    `;
+  }
+
+  function nslIsExistingChatItemMatch(item = {}, term = "") {
+    const cleanTerm = normalizeSearchText(term);
+    if (!cleanTerm) return false;
+    const email = normalizeEmail(item.email || item.user?.email || "");
+    const itemPhone = String(item.phone || item.user?.phone || item.user?.phoneNumber || "").replace(/\D/g, "");
+    const digits = cleanTerm.replace(/\D/g, "");
+    if (isCompleteEmail(cleanTerm) && email && email === normalizeEmail(cleanTerm)) return true;
+    if (isCompletePhoneLookup(cleanTerm) && itemPhone && itemPhone === digits) return true;
+    return false;
+  }
+
+  async function nslGetExistingChatMatches(term) {
+    const directItems = await buildDirectChatItems().catch((error) => {
+      console.warn("Could not build existing chat matches:", error);
+      return [];
+    });
+    return directItems.filter((item) => item.type === "direct" && nslIsExistingChatItemMatch(item, term));
+  }
+
+  async function nslGetExactVerifiedUsers(term) {
+    const cleanTerm = normalizeSearchText(term);
+    const digits = cleanTerm.replace(/\D/g, "");
+    const found = new Map();
+    const addUser = (user) => {
+      if (!user || !user.id) return;
+      if (!isVerifiedDirectoryUser(user)) return;
+      if (!matchesNewContactLookup(user, cleanTerm)) return;
+      found.set(user.id, user);
+    };
+
+    try {
+      await refreshAllUsersOnce();
+      allUsers.forEach(addUser);
+    } catch (error) {
+      console.warn("Directory cache refresh failed during explicit lookup:", error);
+    }
+
+    const snapshots = [];
+    try {
+      if (isCompleteEmail(cleanTerm)) {
+        snapshots.push(await db.collection("users").where("email", "==", normalizeEmail(cleanTerm)).limit(20).get());
+      }
+      if (isCompletePhoneLookup(cleanTerm)) {
+        snapshots.push(await db.collection("users").where("phone", "==", digits).limit(20).get());
+        snapshots.push(await db.collection("users").where("phoneNumber", "==", digits).limit(20).get());
+      }
+    } catch (error) {
+      console.error("Direct Firestore explicit lookup failed:", error);
+      throw error;
+    }
+
+    snapshots.forEach((snapshot) => {
+      snapshot.docs.forEach((doc) => addUser(normalizeUserDoc(doc)));
+    });
+
+    return [...found.values()].filter((user) => user.id !== currentUser?.uid);
+  }
+
+  async function nslRenderExplicitPeopleLookup(rawTerm = "") {
+    const input = document.getElementById("searchInput");
+    const term = normalizeSearchText(rawTerm || input?.value || "");
+    explicitPeopleLookupTerm = isExplicitPeopleLookupTerm(term) ? term : "";
+    explicitPeopleLookupToken += 1;
+
+    nslSetActiveAllTabForSearch();
+
+    if (!term) {
+      loadCurrentChatList();
+      return;
+    }
+
+    if (!isExplicitPeopleLookupTerm(term)) {
+      showToast("Enter a complete email address or phone number to find a user", "error");
+      searchUsersRealtime(term, { peopleLookup: false });
+      return;
+    }
+
+    nslSetSearchListState('<div class="empty-state explicit-people-loading">Searching verified users...</div>');
+
+    try {
+      const existingMatches = await nslGetExistingChatMatches(term);
+      if (existingMatches.length) {
+        renderChatListItems(
+          decorateSearchItems(existingMatches, "Existing chat", "chat"),
+          document.getElementById("chatsList"),
+        );
+        return;
+      }
+
+      const verifiedUsers = await nslGetExactVerifiedUsers(term);
+      if (!verifiedUsers.length) {
+        nslSetSearchListState(nslLookupEmptyState(term));
+        return;
+      }
+
+      const userRows = [];
+      for (const user of verifiedUsers) {
+        const requestState = await getContactRequestState(user.id);
+        userRows.push({
+          id: `user_${user.id}`,
+          type: "user",
+          name: user.displayName || user.name || user.fullName || user.email || "User",
+          avatar: user.avatar
+            ? `<img src="${escapeHtml(user.avatar)}" alt="">`
+            : escapeHtml(getInitials(user.displayName || user.name || "", user.email || "")),
+          preview: requestState?.label || "Send chat request",
+          requestState,
+          unreadCount: 0,
+          isFavorite: false,
+          isPinned: false,
+          isMuted: false,
+          onlineStatus: user.onlineStatus || "offline",
+          rawUser: user,
+          user,
+          email: user.email || "",
+          phone: user.phone || user.phoneNumber || "",
+          lastMessageTime: new Date(0),
+        });
+      }
+
+      renderChatListItems(
+        decorateSearchItems(userRows, "Verified user", "contact"),
+        document.getElementById("chatsList"),
+      );
+    } catch (error) {
+      console.error("Verified user lookup failed:", error);
+      nslSetSearchListState(`
+        <div class="empty-state explicit-people-empty">
+          <strong>Search failed</strong>
+          <span>${escapeHtml(error?.message || "Could not search users right now.")}</span>
+        </div>
+      `);
+      showToast("Could not search users. Check Firebase rules/indexes and try again.", "error");
+    }
+  }
+
+  window.performExplicitPeopleLookup = nslRenderExplicitPeopleLookup;
+  window.nslRenderExplicitPeopleLookup = nslRenderExplicitPeopleLookup;
+
+  function nslBindReliableSearchEvents() {
+    const input = document.getElementById("searchInput");
+    const peopleButton = document.getElementById("peopleSearchBtn");
+    const clearButton = document.getElementById("clearSearchBtn");
+    if (!input) return;
+
+    input.setAttribute("enterkeyhint", "search");
+    input.setAttribute("autocomplete", "off");
+    input.setAttribute("autocapitalize", "none");
+    input.setAttribute("spellcheck", "false");
+
+    if (input.dataset.nslReliableSearchBound !== "true") {
+      input.dataset.nslReliableSearchBound = "true";
+      input.addEventListener("keydown", (event) => {
+        if (event.key === "Enter") {
+          event.preventDefault();
+          event.stopPropagation();
+          nslRenderExplicitPeopleLookup(input.value);
+        }
+      }, true);
+      input.addEventListener("search", (event) => {
+        if (input.value.trim()) {
+          event.preventDefault();
+          nslRenderExplicitPeopleLookup(input.value);
+        }
+      }, true);
+    }
+
+    if (peopleButton && peopleButton.dataset.nslReliableSearchBound !== "true") {
+      peopleButton.dataset.nslReliableSearchBound = "true";
+      peopleButton.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        nslRenderExplicitPeopleLookup(input.value);
+      }, true);
+    }
+
+    if (clearButton && clearButton.dataset.nslReliableSearchBound !== "true") {
+      clearButton.dataset.nslReliableSearchBound = "true";
+      clearButton.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        input.value = "";
+        explicitPeopleLookupTerm = "";
+        loadCurrentChatList();
+        input.focus();
+      }, true);
+    }
+  }
+
+  document.addEventListener("click", (event) => {
+    const btn = event.target.closest?.("#peopleSearchBtn");
+    if (!btn) return;
+    const input = document.getElementById("searchInput");
+    event.preventDefault();
+    event.stopPropagation();
+    nslRenderExplicitPeopleLookup(input?.value || "");
+  }, true);
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", nslBindReliableSearchEvents);
+  } else {
+    nslBindReliableSearchEvents();
+  }
+  window.addEventListener("load", nslBindReliableSearchEvents);
+})();
