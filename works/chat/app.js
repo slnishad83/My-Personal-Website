@@ -4897,9 +4897,11 @@ function matchesNewContactLookup(entity = {}, rawTerm = "") {
   if ((term.includes("@") || term.includes(".")) && email) {
     if (term.startsWith("@")) {
       const username = (entity.username || "").toLowerCase();
-      return username === term.replace("@", "");
+      return username.includes(term.replace("@", ""));
     }
-    return email === term;
+    // Allow both full email and partial email searches, case-insensitively.
+    // Example: typing "sl.nishad", "gmail.com", or "sl.nishad@gmail.com" can find the same user.
+    return email.includes(term);
   }
 
   const username = (entity.username || "").toLowerCase();
@@ -13602,6 +13604,21 @@ function bindSearchInput() {
   const input = document.getElementById("searchInput");
   if (!input) return;
   let searchTimer = null;
+
+  // Important mobile/APK safeguard:
+  // Tapping the search field must never also trigger a chat-row click behind/near it.
+  // This fixes the issue where tapping Search sometimes opened an existing person's chat.
+  ["click", "touchstart", "pointerdown"].forEach((eventName) => {
+    input.addEventListener(eventName, (event) => {
+      event.stopPropagation();
+    });
+  });
+
+  input.addEventListener("focus", () => {
+    const value = input.value || "";
+    if (value.trim()) searchUsersRealtime(value);
+  });
+
   input.addEventListener("input", (e) => {
     clearTimeout(searchTimer);
     searchTimer = window.setTimeout(() => searchUsersRealtime(e.target.value), 220);
