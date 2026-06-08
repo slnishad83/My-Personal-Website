@@ -61,7 +61,7 @@ self.addEventListener('notificationclick', event => {
   );
 });
 
-const CACHE_NAME = 'team-chat-v156-responsive-audit';
+const CACHE_NAME = 'team-chat-v157-device-install';
 const urlsToCache = [
   'index.html',
   'login.html',

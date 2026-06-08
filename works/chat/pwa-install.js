@@ -12,6 +12,9 @@
   const isEdge = /edg/i.test(userAgent);
   const isFirefox = /firefox|fxios/i.test(userAgent);
   const isAndroid = /android/i.test(userAgent);
+  const supportsAndroidIntent = /chrome|crios|edg|opr|samsungbrowser/i.test(
+    userAgent,
+  );
   const isNativeApp =
     window.Capacitor?.isNativePlatform?.() === true ||
     Boolean(window.Capacitor?.Plugins?.App);
@@ -22,6 +25,7 @@
     "package=com.nishad.myteamchat;" +
     `S.browser_fallback_url=${encodeURIComponent(APK_URL)};` +
     "end";
+  const WEB_APP_LABEL = isIos ? "Add App to Home Screen" : "Install Web App";
 
   function isStandaloneApp() {
     return (
@@ -64,11 +68,11 @@
         });
         if (!icon && !button.textContent.trim()) button.textContent = label;
       }
-      button.title = "Open My Team Chat if installed, otherwise download the Android APK";
-      button.setAttribute(
-        "aria-label",
-        "Open My Team Chat if installed, otherwise download the Android APK",
-      );
+      const description = isAndroid
+        ? "Open My Team Chat if installed, otherwise download the Android APK"
+        : "Install My Team Chat on this device";
+      button.title = description;
+      button.setAttribute("aria-label", description);
     });
   }
 
@@ -87,7 +91,7 @@
 
     if (!serviceWorkerReadyPromise) {
       serviceWorkerReadyPromise = navigator.serviceWorker
-        .register("sw.js?v=118", { scope: "./" })
+        .register("sw.js?v=156", { scope: "./" })
         .then((registration) => {
           registration.update?.().catch(() => {});
           return navigator.serviceWorker.ready;
@@ -150,39 +154,44 @@
     }
 
     if (isAndroid) {
-      setButtonLabels("Download App");
+      setButtonLabels("Open or Download App");
       setButtonsVisible(true);
-      setHelp("Already installed? This button opens the app. Otherwise, it downloads the APK.");
+      setHelp(
+        "Already installed? This opens the Android app. Otherwise, it downloads the APK for installation.",
+      );
       return;
     }
 
-    if (!isIos) {
-      setButtonLabels("Download Android APK");
-      setButtonsVisible(true);
-      setHelp("Download the Android APK, then transfer it to an Android device to install.");
-      return;
-    }
-
+    setButtonLabels(deferredInstallPrompt ? "Install App" : WEB_APP_LABEL);
     setButtonsVisible(true);
-    setHelp(isIos ? getManualInstallMessage() : "");
+    setHelp(deferredInstallPrompt ? "Install Team Chat on this device." : getManualInstallMessage());
   }
 
   function openInstalledAppOrDownloadApk() {
     setButtonsBusy(true);
     setHelp("Opening the installed app, or downloading the APK if it is not installed...");
-    window.setTimeout(() => setButtonsBusy(false), 1800);
-    window.location.href = ANDROID_APP_INTENT;
-  }
+    if (supportsAndroidIntent) {
+      window.setTimeout(() => setButtonsBusy(false), 1800);
+      window.location.href = ANDROID_APP_INTENT;
+      return;
+    }
 
-  function downloadAndroidApk() {
-    const link = document.createElement("a");
-    link.href = APK_URL;
-    link.download = "my-team-chat.apk";
-    link.rel = "noopener";
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    setHelp("APK download started.");
+    let appOpened = false;
+    const markAppOpened = () => {
+      if (document.visibilityState === "hidden") appOpened = true;
+    };
+    document.addEventListener("visibilitychange", markAppOpened, { once: true });
+
+    const launcher = document.createElement("iframe");
+    launcher.hidden = true;
+    launcher.src = "myteamchat://open";
+    document.body.appendChild(launcher);
+
+    window.setTimeout(() => {
+      launcher.remove();
+      setButtonsBusy(false);
+      if (!appOpened) window.location.href = APK_URL;
+    }, 1600);
   }
 
   async function installApp(event) {
@@ -195,11 +204,6 @@
 
     if (isAndroid) {
       openInstalledAppOrDownloadApk();
-      return;
-    }
-
-    if (!isIos) {
-      downloadAndroidApk();
       return;
     }
 
