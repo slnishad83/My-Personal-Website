@@ -19482,6 +19482,7 @@ document.addEventListener("DOMContentLoaded", function () {
     const cleanTerm = normalizeSearchText(term);
     const digits = cleanTerm.replace(/\D/g, "");
     const found = new Map();
+    const queryErrors = [];
     const addUser = (user) => {
       if (!user || !user.id) return;
       if (!isVerifiedDirectoryUser(user)) return;
@@ -19489,32 +19490,51 @@ document.addEventListener("DOMContentLoaded", function () {
       found.set(user.id, user);
     };
 
+    // 1) First use the already-loaded directory cache. This avoids breaking search
+    // when one Firestore query is blocked by rules/indexes.
     try {
-      await refreshAllUsersOnce();
-      allUsers.forEach(addUser);
+      if (!Array.isArray(allUsers) || allUsers.length === 0) {
+        await refreshAllUsersOnce();
+      }
+      (allUsers || []).forEach(addUser);
     } catch (error) {
+      queryErrors.push(error);
       console.warn("Directory cache refresh failed during explicit lookup:", error);
     }
 
-    const snapshots = [];
-    try {
-      if (isCompleteEmail(cleanTerm)) {
-        snapshots.push(await db.collection("users").where("email", "==", normalizeEmail(cleanTerm)).limit(20).get());
-      }
-      if (isCompletePhoneLookup(cleanTerm)) {
-        snapshots.push(await db.collection("users").where("phone", "==", digits).limit(20).get());
-        snapshots.push(await db.collection("users").where("phoneNumber", "==", digits).limit(20).get());
-      }
-    } catch (error) {
-      console.error("Direct Firestore explicit lookup failed:", error);
-      throw error;
+    // 2) Then try exact Firestore queries one-by-one. Do NOT throw from here,
+    // because one blocked query should not hide valid cached/existing results.
+    const queryJobs = [];
+    if (isCompleteEmail(cleanTerm)) {
+      const email = normalizeEmail(cleanTerm);
+      queryJobs.push(["email", db.collection("users").where("email", "==", email).limit(20)]);
+      queryJobs.push(["emailLower", db.collection("users").where("emailLower", "==", email).limit(20)]);
+      queryJobs.push(["emailNormalized", db.collection("users").where("emailNormalized", "==", email).limit(20)]);
+    }
+    if (isCompletePhoneLookup(cleanTerm)) {
+      queryJobs.push(["phone", db.collection("users").where("phone", "==", digits).limit(20)]);
+      queryJobs.push(["phoneNumber", db.collection("users").where("phoneNumber", "==", digits).limit(20)]);
+      queryJobs.push(["phoneDigits", db.collection("users").where("phoneDigits", "==", digits).limit(20)]);
     }
 
-    snapshots.forEach((snapshot) => {
-      snapshot.docs.forEach((doc) => addUser(normalizeUserDoc(doc)));
-    });
+    for (const [label, query] of queryJobs) {
+      try {
+        const snapshot = await query.get();
+        snapshot.docs.forEach((doc) => addUser(normalizeUserDoc(doc)));
+      } catch (error) {
+        queryErrors.push(error);
+        console.warn(`Explicit user lookup query failed (${label}):`, error);
+      }
+    }
 
-    return [...found.values()].filter((user) => user.id !== currentUser?.uid);
+    const results = [...found.values()].filter((user) => user.id !== currentUser?.uid);
+    if (!results.length && queryErrors.length) {
+      console.warn(
+        "No user result. Firestore may be blocking the users collection. Deploy the included firestore.rules file.",
+        queryErrors[0],
+      );
+    }
+    return results;
   }
 
   async function nslRenderExplicitPeopleLookup(rawTerm = "") {
@@ -19591,7 +19611,7 @@ document.addEventListener("DOMContentLoaded", function () {
           <span>${escapeHtml(error?.message || "Could not search users right now.")}</span>
         </div>
       `);
-      showToast("Could not search users. Check Firebase rules/indexes and try again.", "error");
+      showToast("User search is blocked by Firebase rules. Deploy firestore.rules, then try again.", "error");
     }
   }
 
