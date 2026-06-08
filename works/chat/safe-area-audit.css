@@ -213,3 +213,146 @@ textarea {
     display: none;
   }
 }
+
+/* Final responsive guardrails shared by browser, PWA, and native shells. */
+.modal-content,
+.forward-modal-content,
+.translate-modal-content,
+.outgoing-translation-modal-content,
+.context-menu,
+.message-context-menu,
+.app-action-sheet,
+.attachment-sheet,
+.emoji-picker {
+  box-sizing: border-box;
+  max-width: calc(100vw - var(--app-safe-left) - var(--app-safe-right) - 16px) !important;
+  max-height: calc(100dvh - var(--app-safe-top) - var(--app-bottom-clearance) - 16px) !important;
+  overscroll-behavior: contain;
+}
+
+.context-menu,
+.message-context-menu,
+.app-action-sheet,
+.attachment-sheet,
+.emoji-picker {
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+.modal-header,
+.modal-footer,
+.app-action-sheet,
+.attachment-sheet,
+.emoji-picker,
+.call-top,
+.call-controls {
+  min-width: 0;
+}
+
+.modal-header > *,
+.modal-footer > *,
+.call-top > *,
+.chat-header > *,
+.sidebar-header > * {
+  min-width: 0;
+}
+
+.modal-footer,
+.forward-footer {
+  box-sizing: border-box;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.modal-footer .btn,
+.forward-footer .btn,
+.action-sheet-option,
+.context-menu-item,
+.message-context-menu button {
+  min-height: 44px;
+}
+
+.call-modal {
+  box-sizing: border-box;
+  padding-top: max(8px, var(--app-safe-top)) !important;
+  padding-right: max(8px, var(--app-safe-right)) !important;
+  padding-bottom: max(8px, var(--app-bottom-clearance)) !important;
+  padding-left: max(8px, var(--app-safe-left)) !important;
+}
+
+.call-shell {
+  max-width: calc(100vw - var(--app-safe-left) - var(--app-safe-right) - 16px);
+  max-height: calc(100dvh - var(--app-safe-top) - var(--app-bottom-clearance) - 16px);
+}
+
+.call-controls {
+  box-sizing: border-box;
+  max-height: min(42dvh, 280px);
+  padding-right: max(12px, calc(8px + var(--app-safe-right))) !important;
+  padding-bottom: max(14px, calc(10px + var(--app-bottom-clearance))) !important;
+  padding-left: max(12px, calc(8px + var(--app-safe-left))) !important;
+  overflow-y: auto;
+}
+
+.call-icon-btn,
+.chat-actions button,
+.sidebar-actions button,
+.input-area button {
+  flex: 0 0 auto;
+  min-width: 44px;
+  min-height: 44px;
+}
+
+.toast,
+.voice-recording-indicator,
+.jump-to-unread-btn {
+  max-width: calc(100vw - var(--app-safe-left) - var(--app-safe-right) - 20px) !important;
+}
+
+@media (max-width: 560px) {
+  .modal:not(.call-modal) {
+    align-items: flex-end;
+    padding-top: max(8px, var(--app-safe-top));
+    padding-right: max(8px, var(--app-safe-right));
+    padding-left: max(8px, var(--app-safe-left));
+  }
+
+  .modal-content,
+  .forward-modal-content,
+  .translate-modal-content,
+  .outgoing-translation-modal-content {
+    width: 100% !important;
+    max-width: 100% !important;
+    border-radius: 18px 18px 0 0;
+  }
+
+  .modal-footer .btn,
+  .forward-footer .btn {
+    flex: 1 1 140px;
+  }
+
+  .chat-actions,
+  .sidebar-actions {
+    max-width: min(46vw, 230px);
+  }
+}
+
+@media (max-height: 520px) and (orientation: landscape) {
+  .modal-content,
+  .forward-modal-content,
+  .translate-modal-content,
+  .outgoing-translation-modal-content,
+  .app-action-sheet {
+    max-height: calc(100dvh - var(--app-safe-top) - var(--app-bottom-clearance) - 8px) !important;
+  }
+
+  .call-shell {
+    width: min(860px, calc(100vw - var(--app-safe-left) - var(--app-safe-right) - 16px));
+    height: calc(100dvh - var(--app-safe-top) - var(--app-bottom-clearance) - 16px);
+  }
+
+  .call-controls {
+    max-height: 46dvh;
+    row-gap: 20px;
+  }
+}

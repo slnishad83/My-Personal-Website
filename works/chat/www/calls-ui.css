@@ -325,14 +325,55 @@ body.dark .message-selection-toolbar {
 
 @media (max-width: 560px) {
   .message-selection-toolbar {
-    grid-template-columns: auto minmax(0, 1fr) repeat(3, auto);
-    gap: 4px;
-    padding: 6px;
+    top: auto;
+    right: max(8px, var(--app-safe-right, env(safe-area-inset-right, 0px)));
+    bottom: max(8px, calc(var(--app-bottom-clearance, env(safe-area-inset-bottom, 0px)) + 8px));
+    left: max(8px, var(--app-safe-left, env(safe-area-inset-left, 0px)));
+    width: auto;
+    max-height: calc(100dvh - var(--app-safe-top, env(safe-area-inset-top, 0px)) - var(--app-bottom-clearance, env(safe-area-inset-bottom, 0px)) - 16px);
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    gap: 7px;
+    padding: 8px;
+    transform: none;
+    overflow-y: auto;
   }
 
   .message-selection-toolbar button {
-    min-height: 36px;
-    padding: 0 8px;
-    font-size: 11px;
+    min-height: 42px;
+    padding: 0 12px;
+    font-size: 12px;
+  }
+
+  .message-selection-toolbar button:nth-of-type(n + 2) {
+    grid-row: 2;
+  }
+
+  .message-selection-toolbar button:nth-of-type(2) {
+    grid-column: 1;
+  }
+
+  .message-selection-toolbar button:nth-of-type(3) {
+    grid-column: 2;
+  }
+
+  .message-selection-toolbar button:nth-of-type(4) {
+    grid-column: 3;
+  }
+}
+
+@media (max-width: 360px) {
+  .message-selection-toolbar {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .message-selection-toolbar strong {
+    grid-column: 1 / -1;
+  }
+
+  .message-selection-toolbar button,
+  .message-selection-toolbar button:nth-of-type(n) {
+    grid-column: auto;
+    grid-row: auto;
+    width: 100%;
   }
 }
