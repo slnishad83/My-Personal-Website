@@ -5560,7 +5560,7 @@ async function uploadDocument(file) {
 // ========================================================================
 // FIXED: STRICT PREFIX & EXACT MULTI-CRITERIA SEARCH ENGINE
 // ========================================================================
-async function searchUsersRealtime(searchTerm) {
+async function searchUsersRealtime(searchTerm, options = {}) {
   const chatsList = document.getElementById("chatsList");
   if (!chatsList) return;
 
@@ -5570,6 +5570,9 @@ async function searchUsersRealtime(searchTerm) {
   }
 
   const term = searchTerm.trim().toLowerCase();
+  // emailHold: true means we type an email but haven't pressed Enter/Search yet.
+  // We still search existing chat names/groups but skip the slow full user Firestore scan.
+  const emailHold = options.emailHold === true;
 
   if (currentViewTab === "groups") {
     searchGroupsRealtime(term);
@@ -5588,7 +5591,8 @@ async function searchUsersRealtime(searchTerm) {
   chatsList.innerHTML = `<div class="empty-state" style="padding:32px;color:#667781;">Searching...</div>`;
 
   const looksLikeEmail = term.includes("@") && term.includes(".");
-  if (looksLikeEmail) {
+  if (looksLikeEmail && !emailHold) {
+    // Full email user scan — only on explicit Enter/Search button
     try {
       const snapshot = await db.collection("users").get();
       allUsers = normalizeUsersSnapshot(snapshot);
@@ -5596,9 +5600,10 @@ async function searchUsersRealtime(searchTerm) {
       console.warn("Live user refresh for email search failed:", e);
       await refreshAllUsersOnce();
     }
-  } else {
+  } else if (!looksLikeEmail) {
     await refreshAllUsersOnce();
   }
+  // If emailHold is true: skip the full scan, use cached allUsers for name matching
 
   // If another search started while we were fetching, abort this one
   if (searchToken !== chatListLoadToken) return;
@@ -7164,6 +7169,8 @@ async function sendTypingIndicator() {
   }, 2000);
 }
 
+const TYPING_DOTS_HTML = `<span class="typing-dots-anim"><span></span><span></span><span></span></span>`;
+
 function listenForTypingIndicator() {
   if (!currentChat || !currentUser) return;
 
@@ -7173,7 +7180,10 @@ function listenForTypingIndicator() {
   }
 
   const chatStatus = document.getElementById("chatStatus");
-  const baseStatus = chatStatus?.textContent || "";
+  const baseStatus = chatStatus?.dataset?.baseStatus || chatStatus?.textContent || "";
+  if (chatStatus && !chatStatus.dataset.baseStatus) {
+    chatStatus.dataset.baseStatus = chatStatus.textContent || "";
+  }
 
   typingUnsubscribe = db
     .collection("typingIndicators")
@@ -7187,7 +7197,8 @@ function listenForTypingIndicator() {
         if (!chatStatus) return;
 
         if (!typingUsers.length) {
-          chatStatus.textContent = baseStatus;
+          chatStatus.innerHTML = "";
+          chatStatus.textContent = chatStatus.dataset.baseStatus || baseStatus;
           return;
         }
 
@@ -7197,14 +7208,14 @@ function listenForTypingIndicator() {
             .filter(Boolean);
 
           if (names.length === 1) {
-            chatStatus.textContent = `${names[0]} is typing...`;
+            chatStatus.innerHTML = `${TYPING_DOTS_HTML} <span class="typing-label">${escapeHtml(names[0])} is typing</span>`;
           } else if (names.length === 2) {
-            chatStatus.textContent = `${names[0]} and ${names[1]} are typing...`;
+            chatStatus.innerHTML = `${TYPING_DOTS_HTML} <span class="typing-label">${escapeHtml(names[0])} &amp; ${escapeHtml(names[1])} are typing</span>`;
           } else {
-            chatStatus.textContent = `${names.length} people are typing...`;
+            chatStatus.innerHTML = `${TYPING_DOTS_HTML} <span class="typing-label">${names.length} people are typing</span>`;
           }
         } else {
-          chatStatus.textContent = "typing...";
+          chatStatus.innerHTML = `${TYPING_DOTS_HTML} <span class="typing-label">typing</span>`;
         }
       },
       (err) => {
@@ -8646,7 +8657,14 @@ function formatLastSeen(timestamp) {
 function setChatStatus(text = "") {
   const chatStatus = document.getElementById("chatStatus");
   if (!chatStatus) return;
-  chatStatus.textContent = text;
+  chatStatus.dataset.baseStatus = text;
+  if (text.startsWith("last seen")) {
+    chatStatus.innerHTML = `<span class="last-seen-status"><span class="last-seen-icon">🕓</span><span class="last-seen-text">${escapeHtml(text)}</span></span>`;
+  } else if (text === "online") {
+    chatStatus.innerHTML = `<span class="online-status"><span class="online-dot"></span><span>online</span></span>`;
+  } else {
+    chatStatus.textContent = text;
+  }
   chatStatus.title = text;
   chatStatus.setAttribute("aria-label", text || "No status available");
 }
@@ -13762,24 +13780,78 @@ function switchTab(tab) {
   else loadCurrentChatList();
 }
 
+function isEmailLike(str) {
+  return str.includes("@");
+}
+
+function updateSearchControls(val) {
+  const clearBtn = document.getElementById("searchClearBtn");
+  const triggerBtn = document.getElementById("searchTriggerBtn");
+  const hint = document.getElementById("searchHint");
+  if (clearBtn) clearBtn.style.display = val.trim() ? "flex" : "none";
+  if (isEmailLike(val)) {
+    if (triggerBtn) triggerBtn.style.display = "flex";
+    if (hint) hint.style.display = "block";
+  } else {
+    if (triggerBtn) triggerBtn.style.display = "none";
+    if (hint) hint.style.display = "none";
+  }
+}
+
 function bindSearchInput() {
   const input = document.getElementById("searchInput");
   if (!input) return;
   let searchTimer = null;
 
   input.addEventListener("input", (e) => {
+    const val = e.target.value;
+    updateSearchControls(val);
     clearTimeout(searchTimer);
-    searchTimer = window.setTimeout(() => searchUsersRealtime(e.target.value), 220);
+    if (!val.trim()) {
+      searchUsersRealtime("");
+      return;
+    }
+    if (isEmailLike(val)) {
+      // For email-like terms: only search on Enter/button click, not as-you-type
+      // Show existing chat name matches immediately but hold user search
+      searchUsersRealtime(val, { emailHold: true });
+    } else {
+      // Real-time name/group search as you type
+      searchTimer = window.setTimeout(() => searchUsersRealtime(val), 200);
+    }
   });
 
-  // FIX 1: Enter key forces an immediate full search (important for email lookup)
   input.addEventListener("keydown", (e) => {
     if (e.key === "Enter") {
       e.preventDefault();
       clearTimeout(searchTimer);
-      searchUsersRealtime(input.value);
+      searchUsersRealtime(input.value, { emailHold: false });
+    }
+    if (e.key === "Escape") {
+      input.value = "";
+      updateSearchControls("");
+      searchUsersRealtime("");
+      input.blur();
     }
   });
+
+  const clearBtn = document.getElementById("searchClearBtn");
+  if (clearBtn) {
+    clearBtn.addEventListener("click", () => {
+      input.value = "";
+      updateSearchControls("");
+      searchUsersRealtime("");
+      input.focus();
+    });
+  }
+
+  const triggerBtn = document.getElementById("searchTriggerBtn");
+  if (triggerBtn) {
+    triggerBtn.addEventListener("click", () => {
+      clearTimeout(searchTimer);
+      searchUsersRealtime(input.value, { emailHold: false });
+    });
+  }
 }
 
 function updateInChatSearch() {
@@ -16297,7 +16369,7 @@ function updateTranslationCapabilityNote() {
   }
   runButton.disabled = false;
   note.textContent =
-    "Inline translation uses your browser's free on-device translator when available. Otherwise, use Open translator.";
+    "Inline translation works on all devices — using your browser's on-device translator or the free MyMemory API as fallback. No account required.";
 }
 
 function openTranslateModal(messageId, messageData) {
@@ -16356,6 +16428,23 @@ async function translateWithBrowser(text, sourceLanguage, targetLanguage, onProg
   }
 }
 
+async function translateWithMyMemory(text, sourceLanguage, targetLanguage) {
+  const langpair = `${sourceLanguage === "auto" ? "autodetect" : sourceLanguage}|${targetLanguage}`;
+  const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text.slice(0, 500))}&langpair=${encodeURIComponent(langpair)}`;
+  const res = await fetch(url, { signal: AbortSignal.timeout(12000) });
+  if (!res.ok) throw new Error("MyMemory API failed");
+  const data = await res.json();
+  if (data.responseStatus !== 200 && data.responseStatus !== "200")
+    throw new Error(data.responseMessage || "Translation failed");
+  return {
+    text: data.responseData.translatedText,
+    sourceLanguage: sourceLanguage === "auto"
+      ? (data.responseData.detectedLanguage || "auto")
+      : sourceLanguage,
+    targetLanguage,
+  };
+}
+
 async function runFreeInlineTranslation() {
   if (!activeTranslationMessage) return;
   const text = getTranslationSourceText(activeTranslationMessage.data);
@@ -16366,17 +16455,21 @@ async function runFreeInlineTranslation() {
   localStorage.setItem("translateFromLanguage", from.value);
   localStorage.setItem("translateToLanguage", to.value);
 
-  if (!("Translator" in self)) {
-    showToast("Inline translation is unavailable here. Use Open translator.", "error");
-    return;
-  }
-
   button.disabled = true;
-  button.textContent = "Translating...";
+  button.textContent = "Translating…";
   try {
-    const result = await translateWithBrowser(text, from.value, to.value, (progress) => {
-      button.textContent = `Preparing ${progress}%`;
-    });
+    let result;
+    if ("Translator" in self) {
+      try {
+        result = await translateWithBrowser(text, from.value, to.value, (progress) => {
+          button.textContent = `Preparing ${progress}%`;
+        });
+      } catch (_) {
+        result = await translateWithMyMemory(text, from.value, to.value);
+      }
+    } else {
+      result = await translateWithMyMemory(text, from.value, to.value);
+    }
     translationCache.set(activeTranslationMessage.id, result);
     if (document.getElementById("autoTranslateChatToggle")?.checked) {
       saveCurrentChatTranslationSetting({
@@ -16388,7 +16481,7 @@ async function runFreeInlineTranslation() {
     showTranslationOutput(result);
     loadMessages();
   } catch (error) {
-    showToast("Inline translation is unavailable for these languages. Use Open translator.", "error");
+    showToast("Translation failed. Please check your connection and try again.", "error");
   } finally {
     button.disabled = false;
     button.textContent = "Translate";

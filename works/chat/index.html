@@ -235,12 +235,23 @@
           </div>
         </div>
 
-        <div class="search-box">
+        <div class="search-box" id="searchBoxWrapper">
           <input
             type="text"
             id="searchInput"
-            placeholder="Search for Users and Messages"
+            placeholder="Search chats, groups or email…"
+            autocomplete="off"
+            autocorrect="off"
+            autocapitalize="off"
+            spellcheck="false"
           />
+          <button class="search-trigger-btn" id="searchTriggerBtn" title="Search" aria-label="Search" style="display:none">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          </button>
+          <button class="search-clear-btn" id="searchClearBtn" title="Clear search" aria-label="Clear search" style="display:none">✕</button>
+        </div>
+        <div class="search-hint" id="searchHint" style="display:none">
+          <span>Enter full email &amp; press <kbd>Enter</kbd> or <button class="search-hint-btn" onclick="document.getElementById('searchTriggerBtn').click()">Search ↵</button> to find new users</span>
         </div>
 
         <div class="request-section">
