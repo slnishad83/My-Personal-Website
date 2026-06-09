@@ -11004,6 +11004,7 @@ function loadMessages() {
         messagesArea.appendChild(olderButton);
       }
 
+      let unreadDividerInserted = false;
       docsToRender.forEach((doc) => {
         const msg = doc.data();
         if (isExpiredByDisappearingSetting(msg)) return;
@@ -11014,6 +11015,20 @@ function loadMessages() {
         )
           return;
         const isMyMessage = msg.senderId === currentUser.uid;
+
+        if (
+          !unreadDividerInserted &&
+          !isMyMessage &&
+          msg.senderId &&
+          currentUser?.uid &&
+          !msg.readBy?.[currentUser.uid]
+        ) {
+          unreadDividerInserted = true;
+          const divider = document.createElement("div");
+          divider.className = "unread-messages-divider";
+          divider.innerHTML = "<span>Unread messages</span>";
+          messagesArea.appendChild(divider);
+        }
         const messageDiv = document.createElement("div");
         messageDiv.className = `message ${isMyMessage ? "my-message" : ""}`;
         messageDiv.dataset.messageId = doc.id;
@@ -11069,8 +11084,13 @@ function loadMessages() {
               ? msg.originalText
               : msg.text || "";
 
+        const emojiStripHtml = getReactionOptions()
+          .map(e => `<button type="button" class="msg-emoji-hover-btn" data-emoji="${e}" title="React with ${e}" aria-label="React with ${e}">${e}</button>`)
+          .join("");
+
         messageDiv.innerHTML = `
         <div class="swipe-reply-indicator" aria-hidden="true"></div>
+        <div class="message-emoji-hover-strip" aria-label="Quick reactions">${emojiStripHtml}</div>
         <div class="message-quick-actions ${isMyMessage ? "sent-message-actions" : "received-message-actions"}"><button type="button" class="quick-message-action quick-copy-btn" title="Copy message" aria-label="Copy message"></button><button type="button" class="quick-message-action quick-forward-btn" title="Forward message" aria-label="Forward message"></button><button type="button" class="quick-message-action quick-translate-btn" title="Translate message" aria-label="Translate message"></button><button type="button" class="quick-message-action quick-delete-btn" title="Delete message" aria-label="Delete message"></button></div>
         <div class="message-bubble">
           <button type="button" class="message-options-btn" title="Message options" aria-label="Message options">⋮</button>
@@ -11133,6 +11153,13 @@ function loadMessages() {
             event.stopPropagation();
             openForwardModal(doc.id, { ...msg, messageId: doc.id });
           });
+        messageDiv.querySelectorAll(".msg-emoji-hover-btn").forEach((btn) => {
+          btn.addEventListener("click", (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            addReaction(doc.id, btn.dataset.emoji || "");
+          });
+        });
         messageDiv
           .querySelector(".quick-copy-btn")
           ?.addEventListener("click", (event) => {
@@ -19595,6 +19622,19 @@ document.addEventListener("DOMContentLoaded", function () {
     messagesArea.addEventListener("scroll", function () {
       const jumpBtn = document.getElementById("jumpToUnreadBtn");
       if (jumpBtn) jumpBtn.style.display = "none";
+      const scrollBtn = document.getElementById("scrollToBottomBtn");
+      if (scrollBtn) {
+        const distFromBottom =
+          messagesArea.scrollHeight - messagesArea.scrollTop - messagesArea.clientHeight;
+        scrollBtn.style.display = distFromBottom > 220 ? "flex" : "none";
+      }
     });
+    const scrollBtn = document.getElementById("scrollToBottomBtn");
+    if (scrollBtn) {
+      scrollBtn.addEventListener("click", () => {
+        messagesArea.scrollTo({ top: messagesArea.scrollHeight, behavior: "smooth" });
+        scrollBtn.style.display = "none";
+      });
+    }
   }
 });

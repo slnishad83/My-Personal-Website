@@ -788,3 +788,37 @@ body.dark .work-tags span {
 /* ============================================================
    END WORKS SHOWCASE
    ============================================================ */
+
+/* ============================================================
+   READING PROGRESS BAR
+   ============================================================ */
+.reading-progress-bar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 0%;
+  height: 3px;
+  background: linear-gradient(90deg, #00a884 0%, #25d366 55%, #00c58e 100%);
+  z-index: 9999;
+  transition: width 0.08s linear;
+  pointer-events: none;
+  border-radius: 0 2px 2px 0;
+}
+body.dark .reading-progress-bar {
+  background: linear-gradient(90deg, #00a884 0%, #1adb7a 55%, #00c58e 100%);
+}
+
+/* ============================================================
+   TYPEWRITER CURSOR ON HERO BADGE
+   ============================================================ */
+.hero-badge::after {
+  content: '|';
+  margin-left: 1px;
+  animation: badgeCursor 1s step-end infinite;
+  font-weight: 300;
+  opacity: 1;
+}
+@keyframes badgeCursor {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0; }
+}

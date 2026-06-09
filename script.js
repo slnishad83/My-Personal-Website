@@ -165,10 +165,64 @@ function setupScrollFade() {
   });
 }
 
+// Reading progress bar
+function updateReadingProgress() {
+  const bar = document.getElementById('readingProgress');
+  if (!bar) return;
+  const scrollTop = window.scrollY || document.documentElement.scrollTop;
+  const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+  bar.style.width = docHeight > 0 ? ((scrollTop / docHeight) * 100) + '%' : '0%';
+}
+window.addEventListener('scroll', updateReadingProgress, { passive: true });
+
+// Typewriter cycling badge
+function setupTypewriterBadge() {
+  const badge = document.querySelector('.hero-badge');
+  if (!badge) return;
+  const roles = [
+    '\u2736 Senior Digital Marketing Specialist',
+    '\u2736 SEO & Performance Marketing Expert',
+    '\u2736 Social Media Strategist',
+    '\u2736 Growth Marketing Leader',
+  ];
+  let roleIndex = 0;
+  let charIndex = 0;
+  let isDeleting = false;
+  badge.textContent = '';
+
+  function tick() {
+    const current = roles[roleIndex];
+    if (isDeleting) {
+      charIndex--;
+      badge.textContent = current.substring(0, charIndex);
+      if (charIndex <= 0) {
+        isDeleting = false;
+        roleIndex = (roleIndex + 1) % roles.length;
+        charIndex = 0;
+        setTimeout(tick, 380);
+        return;
+      }
+      setTimeout(tick, 32);
+    } else {
+      charIndex++;
+      badge.textContent = current.substring(0, charIndex);
+      if (charIndex >= current.length) {
+        isDeleting = true;
+        setTimeout(tick, 2200);
+        return;
+      }
+      setTimeout(tick, 62);
+    }
+  }
+  setTimeout(tick, 600);
+}
+
 // Init on DOM ready
 document.addEventListener('DOMContentLoaded', () => {
   loadTheme();
   animateStats();
   setupScrollFade();
   handleBackToTopVisibility();
+  setupTypewriterBadge();
+  updateReadingProgress();
 });
