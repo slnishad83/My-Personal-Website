@@ -33,11 +33,35 @@ function toggleMenu() {
   if (nav) nav.classList.toggle('active');
 }
 
-// Close mobile menu on link click
+// Mobile dropdown toggle (Works sub-menu)
+document.addEventListener('DOMContentLoaded', () => {
+  document.querySelectorAll('.nav-item-dropdown > a').forEach(trigger => {
+    trigger.addEventListener('click', (e) => {
+      if (window.innerWidth <= 768) {
+        e.preventDefault();
+        e.stopPropagation();
+        const li = trigger.closest('.nav-item-dropdown');
+        const isOpen = li.classList.toggle('open');
+        // Close other dropdowns
+        document.querySelectorAll('.nav-item-dropdown').forEach(other => {
+          if (other !== li) other.classList.remove('open');
+        });
+      }
+    });
+  });
+});
+
+// Close mobile menu on link click (but not on dropdown trigger)
 document.querySelectorAll('.nav-menu a').forEach(link => {
-  link.addEventListener('click', () => {
+  link.addEventListener('click', (e) => {
+    const isDropdownTrigger = link.closest('.nav-item-dropdown') &&
+      link.parentElement.classList.contains('nav-item-dropdown');
+    if (window.innerWidth <= 768 && isDropdownTrigger) return;
     const nav = document.getElementById('navMenu');
-    if (nav) nav.classList.remove('active');
+    if (nav) {
+      nav.classList.remove('active');
+      document.querySelectorAll('.nav-item-dropdown').forEach(d => d.classList.remove('open'));
+    }
   });
 });
 
