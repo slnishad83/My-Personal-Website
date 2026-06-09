@@ -2,79 +2,16 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link
-      rel="icon"
-      type="image/x-icon"
-      href="https://raw.githubusercontent.com/nishadsl/Fav-Icon/main/favicon.ico"
-    />
+    <link rel="icon" type="image/x-icon" href="https://raw.githubusercontent.com/nishadsl/Fav-Icon/main/favicon.ico" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta
-      name="description"
-      content="Contact Nishad S L - Senior Digital Marketing Specialist based in Thrissur, Kerala"
-    />
+    <meta name="description" content="Contact Nishad S L - Senior Digital Marketing Specialist based in Thrissur, Kerala" />
     <meta name="robots" content="index, follow" />
     <meta property="og:image" content="https://nishadsl.com/og-image.jpg" />
     <title>Contact Nishad S L | Senior Digital Marketing Specialist</title>
     <link rel="canonical" href="https://nishadsl.com/contact.html" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700;14..32,800&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="style.css" />
-    <style>
-      .nav-item-dropdown {
-        position: relative;
-      }
-      .dropdown-menu {
-        position: absolute;
-        top: 100%;
-        left: 0;
-        background: var(--bg-primary);
-        border: 1px solid var(--border);
-        border-radius: 12px;
-        min-width: 200px;
-        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
-        opacity: 0;
-        visibility: hidden;
-        transform: translateY(-10px);
-        transition: all 0.2s ease;
-        z-index: 1000;
-        list-style: none;
-        padding: 0.5rem 0;
-        margin: 0;
-      }
-      .nav-item-dropdown:hover .dropdown-menu {
-        opacity: 1;
-        visibility: visible;
-        transform: translateY(0);
-      }
-      .dropdown-menu li {
-        padding: 0;
-      }
-      .dropdown-menu a {
-        display: block;
-        padding: 0.6rem 1.2rem;
-        color: var(--text-secondary);
-        text-decoration: none;
-        font-size: 0.9rem;
-        transition: all 0.2s;
-      }
-      .dropdown-menu a:hover {
-        background: var(--accent-light);
-        color: var(--accent);
-      }
-      @media (max-width: 768px) {
-        .nav-menu.active .nav-item-dropdown .dropdown-menu {
-          position: static;
-          opacity: 1;
-          visibility: visible;
-          transform: none;
-          box-shadow: none;
-          border: none;
-          padding-left: 1.5rem;
-          background: transparent;
-        }
-        .nav-menu.active .dropdown-menu a {
-          padding: 0.5rem 0;
-        }
-      }
-    </style>
+    <script>(function(){const s=localStorage.getItem('theme');if(s==='dark')document.body.classList.add('dark');})();</script>
   </head>
   <body>
     <div class="wrapper">
@@ -85,32 +22,17 @@
             <li><a href="index.html">Home</a></li>
             <li><a href="resume.html">Resume</a></li>
             <li class="nav-item-dropdown">
-              <a href="#" style="display: flex; align-items: center; gap: 4px"
-                >Works <span style="font-size: 12px">▼</span></a
-              >
+              <a href="#" style="display:flex;align-items:center;gap:4px">Works <span style="font-size:11px;opacity:.7">▼</span></a>
               <ul class="dropdown-menu">
-                <li>
-                  <a href="works/invoice.html" target="_blank"
-                    >📄 Invoice Generator</a
-                  >
-                </li>
-                <li>
-                  <a href="works/chat/login.html" target="_blank"
-                    >💬 Team Chat</a
-                  >
-                </li>
+                <li><a href="works/invoice.html" target="_blank">📄 Invoice Generator</a></li>
+                <li><a href="works/chat/login.html" target="_blank">💬 Team Chat</a></li>
               </ul>
             </li>
             <li><a href="contact.html" class="active">Contact</a></li>
           </ul>
           <div class="right-buttons">
-            <button
-              class="theme-toggle"
-              onclick="toggleTheme()"
-              aria-label="Toggle dark mode"
-            >
-              🌙</button
-            ><button class="mobile-menu-btn" onclick="toggleMenu()">☰</button>
+            <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle dark mode">🌙</button>
+            <button class="mobile-menu-btn" onclick="toggleMenu()" aria-label="Open menu">☰</button>
           </div>
         </div>
       </nav>
@@ -118,103 +40,81 @@
       <section class="contact-page">
         <div class="contact-container">
           <div class="contact-header">
-            <h1>Let's Connect</h1>
-            <p>
-              Available for collaborations, freelance projects, or full-time
-              opportunities
-            </p>
+            <h1 class="section-title">Let's Connect</h1>
+            <p>Available for collaborations, freelance projects, or full-time opportunities</p>
           </div>
           <div class="contact-grid">
             <div class="contact-info-card">
               <h2>Get in Touch</h2>
               <div class="contact-details">
                 <div class="contact-detail">
-                  <span class="detail-icon">📞</span
-                  ><a href="tel:+919846310043">+91 9846310043</a>
+                  <span class="detail-icon">📞</span>
+                  <div class="detail-text">
+                    <div class="detail-label">Phone</div>
+                    <a class="detail-value" href="tel:+919846310043">+91 9846310043</a>
+                  </div>
                 </div>
                 <div class="contact-detail">
-                  <span class="detail-icon">✉️</span
-                  ><a href="mailto:sl.nishad@gmail.com">sl.nishad@gmail.com</a>
+                  <span class="detail-icon">✉️</span>
+                  <div class="detail-text">
+                    <div class="detail-label">Email</div>
+                    <a class="detail-value" href="mailto:sl.nishad@gmail.com">sl.nishad@gmail.com</a>
+                  </div>
                 </div>
                 <div class="contact-detail">
-                  <span class="detail-icon">📍</span
-                  ><span>Thrissur, Kerala, India</span>
+                  <span class="detail-icon">📍</span>
+                  <div class="detail-text">
+                    <div class="detail-label">Location</div>
+                    <span class="detail-value">Thrissur, Kerala, India</span>
+                  </div>
                 </div>
                 <div class="contact-detail">
-                  <span class="detail-icon">🔗</span
-                  ><a
-                    href="https://www.linkedin.com/in/nishadsl/"
-                    target="_blank"
-                    >linkedin.com/in/nishadsl</a
-                  >
+                  <span class="detail-icon">🔗</span>
+                  <div class="detail-text">
+                    <div class="detail-label">LinkedIn</div>
+                    <a class="detail-value" href="https://www.linkedin.com/in/nishadsl/" target="_blank" rel="noopener">linkedin.com/in/nishadsl</a>
+                  </div>
                 </div>
               </div>
               <div class="availability">
-                <span class="status-badge available">● Available for work</span>
-                <p>
-                  Open to full-time opportunities, freelance projects, and
-                  consulting
+                <span class="status-badge available">
+                  <span class="status-dot-indicator"></span>
+                  Available for work
+                </span>
+                <p style="margin-top:.75rem;font-size:.875rem;color:var(--text-muted)">
+                  Open to full-time opportunities, freelance projects, and consulting
                 </p>
               </div>
             </div>
+
             <div class="contact-form-card">
               <h2>Send a Message</h2>
-              <div
-                id="successMessage"
-                class="success-message"
-                style="display: none"
-              >
+              <div id="successMessage" class="success-message" style="display:none;">
                 <div class="success-icon">✓</div>
                 <h3>Thank You!</h3>
                 <p>Your message has been sent successfully.</p>
-                <p class="success-note">
-                  I'll get back to you within 24 hours.
-                </p>
+                <p class="success-note" style="color:var(--text-muted);font-size:.875rem;margin-top:.5rem">I'll get back to you within 24 hours.</p>
               </div>
               <form id="contactForm">
-                <input
-                  type="hidden"
-                  name="_gotcha"
-                  style="display: none !important"
-                />
+                <input type="hidden" name="_gotcha" style="display:none!important" />
                 <div class="form-group">
-                  <input
-                    type="text"
-                    name="name"
-                    id="name"
-                    placeholder="Your Name"
-                    required
-                  />
+                  <label for="name">Your Name</label>
+                  <input type="text" name="name" id="name" placeholder="John Doe" required />
                 </div>
                 <div class="form-group">
-                  <input
-                    type="email"
-                    name="email"
-                    id="email"
-                    placeholder="Your Email"
-                    required
-                  />
+                  <label for="email">Email Address</label>
+                  <input type="email" name="email" id="email" placeholder="you@example.com" required />
                 </div>
                 <div class="form-group">
-                  <input
-                    type="text"
-                    name="subject"
-                    id="subject"
-                    placeholder="Subject"
-                  />
+                  <label for="subject">Subject</label>
+                  <input type="text" name="subject" id="subject" placeholder="What's this about?" />
                 </div>
                 <div class="form-group">
-                  <textarea
-                    name="message"
-                    id="message"
-                    rows="5"
-                    placeholder="Your Message"
-                    required
-                  ></textarea>
+                  <label for="message">Message</label>
+                  <textarea name="message" id="message" rows="5" placeholder="Tell me about your project or opportunity…" required></textarea>
                 </div>
-                <button type="submit" class="btn btn-primary" id="submitBtn">
-                  Send Message →
-                </button>
+                <button type="submit" class="btn btn-primary" id="submitBtn">Send Message →</button>
+                <p class="form-note">Your message goes directly to my inbox</p>
               </form>
             </div>
           </div>
@@ -225,124 +125,66 @@
         <div class="footer-content">
           <div class="footer-info">
             <h3>Nishad S L</h3>
-            <p>Senior Digital Marketing Specialist</p>
+            <p style="color:var(--text-muted);font-size:.875rem;margin:.25rem 0 .75rem">Senior Digital Marketing Specialist</p>
             <div class="social-links">
-              <a href="https://www.linkedin.com/in/nishadsl/" target="_blank"
-                >LinkedIn</a
-              >
+              <a href="https://www.linkedin.com/in/nishadsl/" target="_blank" rel="noopener" title="LinkedIn">in</a>
             </div>
           </div>
           <div class="footer-links">
-            <a href="index.html">Home</a><a href="resume.html">Resume</a
-            ><a href="contact.html">Contact</a>
+            <a href="index.html">Home</a>
+            <a href="resume.html">Resume</a>
+            <a href="contact.html">Contact</a>
           </div>
           <div class="footer-copyright">
-            <p>© <span id="currentYear"></span> Nishad S L</p>
+            <p style="color:var(--text-muted);font-size:.875rem">© <span id="currentYear"></span> Nishad S L. All rights reserved.</p>
           </div>
         </div>
       </footer>
     </div>
-    <button
-      class="back-to-top-modern"
-      id="modernBackToTop"
-      aria-label="Back to top"
-    >
+
+    <button class="back-to-top-modern" id="modernBackToTop" onclick="scrollToTop()" aria-label="Back to top">
       <span>↑</span>
     </button>
+
+    <script src="script.js"></script>
     <script>
-      function toggleTheme() {
-        const b = document.body,
-          t = document.querySelector(".theme-toggle");
-        if (b.classList.contains("dark")) {
-          b.classList.remove("dark");
-          localStorage.setItem("theme", "light");
-          if (t) t.textContent = "🌙";
-        } else {
-          b.classList.add("dark");
-          localStorage.setItem("theme", "dark");
-          if (t) t.textContent = "☀️";
-        }
-      }
-      function loadTheme() {
-        const s = localStorage.getItem("theme"),
-          t = document.querySelector(".theme-toggle");
-        if (s === "dark") {
-          document.body.classList.add("dark");
-          if (t) t.textContent = "☀️";
-        } else {
-          if (t) t.textContent = "🌙";
-        }
-      }
-      function toggleMenu() {
-        document.getElementById("navMenu")?.classList.toggle("active");
-      }
-      document.querySelectorAll(".nav-menu a").forEach((l) =>
-        l.addEventListener("click", () => {
-          const m = document.getElementById("navMenu");
-          if (m && window.innerWidth <= 768) m.classList.remove("active");
-        }),
-      );
-      const backBtn = document.getElementById("modernBackToTop");
-      if (backBtn) {
-        window.addEventListener("scroll", () => {
-          window.scrollY > 300
-            ? backBtn.classList.add("show")
-            : backBtn.classList.remove("show");
-        });
-        backBtn.addEventListener("click", () =>
-          window.scrollTo({ top: 0, behavior: "smooth" }),
-        );
-      }
-      document.getElementById("currentYear") &&
-        (document.getElementById("currentYear").textContent =
-          new Date().getFullYear());
-      document.addEventListener("DOMContentLoaded", loadTheme);
-      const form = document.getElementById("contactForm"),
-        successMsg = document.getElementById("successMessage");
+      document.getElementById("currentYear").textContent = new Date().getFullYear();
+
+      const form = document.getElementById("contactForm");
+      const successMsg = document.getElementById("successMessage");
+
       if (form) {
-        form.addEventListener("submit", async function (e) {
+        form.addEventListener("submit", async function(e) {
           e.preventDefault();
-          const btn = document.getElementById("submitBtn"),
-            orig = btn.innerHTML;
-          btn.innerHTML = "⏳ Sending...";
+          const btn = document.getElementById("submitBtn");
+          const orig = btn.textContent;
+          btn.textContent = "⏳ Sending…";
           btn.disabled = true;
-          const name = document.getElementById("name").value,
-            email = document.getElementById("email").value,
-            subj = document.getElementById("subject").value,
-            msg = document.getElementById("message").value;
+
           const fd = new FormData();
-          fd.append("name", name);
-          fd.append("email", email);
-          fd.append("_replyto", email);
-          fd.append(
-            "_subject",
-            `Message from ${name}: ${subj || "No Subject"}`,
-          );
-          fd.append("subject", subj);
-          fd.append("message", msg);
+          fd.append("name", document.getElementById("name").value);
+          fd.append("email", document.getElementById("email").value);
+          fd.append("_replyto", document.getElementById("email").value);
+          fd.append("_subject", `Message from ${document.getElementById("name").value}: ${document.getElementById("subject").value || "No Subject"}`);
+          fd.append("subject", document.getElementById("subject").value);
+          fd.append("message", document.getElementById("message").value);
+
           try {
             const res = await fetch("https://formspree.io/f/xeenzngd", {
-              method: "POST",
-              body: fd,
-              headers: { Accept: "application/json" },
+              method: "POST", body: fd, headers: { Accept: "application/json" }
             });
             if (res.ok) {
               form.style.display = "none";
               successMsg.style.display = "block";
-              successMsg.scrollIntoView({
-                behavior: "smooth",
-                block: "center",
-              });
+              successMsg.scrollIntoView({ behavior: "smooth", block: "center" });
             } else {
-              alert(
-                "Something went wrong. Please try again or email me directly at sl.nishad@gmail.com",
-              );
-              btn.innerHTML = orig;
+              alert("Something went wrong. Please try again or email me directly at sl.nishad@gmail.com");
+              btn.textContent = orig;
               btn.disabled = false;
             }
-          } catch (err) {
+          } catch {
             alert("Network error. Please check your connection and try again.");
-            btn.innerHTML = orig;
+            btn.textContent = orig;
             btn.disabled = false;
           }
         });
