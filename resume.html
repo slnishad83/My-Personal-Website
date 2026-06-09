@@ -2,16 +2,9 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link
-      rel="icon"
-      type="image/x-icon"
-      href="https://raw.githubusercontent.com/nishadsl/Fav-Icon/main/favicon.ico"
-    />
+    <link rel="icon" type="image/x-icon" href="https://raw.githubusercontent.com/nishadsl/Fav-Icon/main/favicon.ico" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta
-      name="description"
-      content="Nishad S L - Senior Digital Marketing Specialist Resume. 15+ years experience in SEO, Performance Marketing & Social Media"
-    />
+    <meta name="description" content="Nishad S L - Senior Digital Marketing Specialist Resume. 15+ years experience in SEO, Performance Marketing & Social Media" />
     <meta name="robots" content="index, follow" />
     <meta property="og:title" content="Nishad S L - Resume" />
     <meta property="og:type" content="profile" />
@@ -19,86 +12,27 @@
     <meta property="og:image" content="https://nishadsl.com/og-image.jpg" />
     <title>Nishad S L | Resume | Senior Digital Marketing Specialist</title>
     <link rel="canonical" href="https://nishadsl.com/resume.html" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700;14..32,800&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="style.css" />
-    <style>
-      .nav-item-dropdown {
-        position: relative;
-      }
-      .dropdown-menu {
-        position: absolute;
-        top: 100%;
-        left: 0;
-        background: var(--bg-primary);
-        border: 1px solid var(--border);
-        border-radius: 12px;
-        min-width: 200px;
-        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
-        opacity: 0;
-        visibility: hidden;
-        transform: translateY(-10px);
-        transition: all 0.2s ease;
-        z-index: 1000;
-        list-style: none;
-        padding: 0.5rem 0;
-        margin: 0;
-      }
-      .nav-item-dropdown:hover .dropdown-menu {
-        opacity: 1;
-        visibility: visible;
-        transform: translateY(0);
-      }
-      .dropdown-menu li {
-        padding: 0;
-      }
-      .dropdown-menu a {
-        display: block;
-        padding: 0.6rem 1.2rem;
-        color: var(--text-secondary);
-        text-decoration: none;
-        font-size: 0.9rem;
-        transition: all 0.2s;
-      }
-      .dropdown-menu a:hover {
-        background: var(--accent-light);
-        color: var(--accent);
-      }
-      @media (max-width: 768px) {
-        .nav-menu.active .nav-item-dropdown .dropdown-menu {
-          position: static;
-          opacity: 1;
-          visibility: visible;
-          transform: none;
-          box-shadow: none;
-          border: none;
-          padding-left: 1.5rem;
-          background: transparent;
-        }
-        .nav-menu.active .dropdown-menu a {
-          padding: 0.5rem 0;
-        }
-      }
-    </style>
+    <script>(function(){const s=localStorage.getItem('theme');if(s==='dark')document.body.classList.add('dark');})();</script>
     <script type="application/ld+json">
-      {
-        "@context": "https://schema.org",
-        "@type": "Person",
-        "name": "Nishad S L",
-        "email": "sl.nishad@gmail.com",
-        "telephone": "+919846310043",
-        "address": {
-          "@type": "PostalAddress",
-          "addressLocality": "Thrissur",
-          "addressRegion": "Kerala",
-          "addressCountry": "India"
-        },
-        "jobTitle": "Senior Digital Marketing Specialist",
-        "worksFor": {
-          "@type": "Organization",
-          "name": "Wazeefa1 Technologies Pvt. Ltd."
-        },
-        "url": "https://nishadsl.com",
-        "sameAs": ["https://www.linkedin.com/in/nishadsl/"]
-      }
+    {
+      "@context": "https://schema.org",
+      "@type": "Person",
+      "name": "Nishad S L",
+      "email": "sl.nishad@gmail.com",
+      "telephone": "+919846310043",
+      "address": {
+        "@type": "PostalAddress",
+        "addressLocality": "Thrissur",
+        "addressRegion": "Kerala",
+        "addressCountry": "India"
+      },
+      "jobTitle": "Senior Digital Marketing Specialist",
+      "worksFor": { "@type": "Organization", "name": "Wazeefa1 Technologies Pvt. Ltd." },
+      "url": "https://nishadsl.com",
+      "sameAs": ["https://www.linkedin.com/in/nishadsl/"]
+    }
     </script>
   </head>
   <body>
@@ -110,172 +44,119 @@
             <li><a href="index.html">Home</a></li>
             <li><a href="resume.html" class="active">Resume</a></li>
             <li class="nav-item-dropdown">
-              <a href="#" style="display: flex; align-items: center; gap: 4px"
-                >Works <span style="font-size: 12px">▼</span></a
-              >
+              <a href="#" style="display:flex;align-items:center;gap:4px">Works <span style="font-size:11px;opacity:.7">▼</span></a>
               <ul class="dropdown-menu">
-                <li>
-                  <a href="works/invoice.html" target="_blank"
-                    >📄 Invoice Generator</a
-                  >
-                </li>
-                <li>
-                  <a href="works/chat/login.html" target="_blank"
-                    >💬 Team Chat</a
-                  >
-                </li>
+                <li><a href="works/invoice.html" target="_blank">📄 Invoice Generator</a></li>
+                <li><a href="works/chat/login.html" target="_blank">💬 Team Chat</a></li>
               </ul>
             </li>
             <li><a href="contact.html">Contact</a></li>
           </ul>
           <div class="right-buttons">
-            <button
-              class="theme-toggle"
-              onclick="toggleTheme()"
-              aria-label="Toggle dark mode"
-            >
-              🌙</button
-            ><button class="mobile-menu-btn" onclick="toggleMenu()">☰</button>
+            <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle dark mode">🌙</button>
+            <button class="mobile-menu-btn" onclick="toggleMenu()" aria-label="Open menu">☰</button>
           </div>
         </div>
       </nav>
 
       <div class="resume-container">
         <div class="resume-actions">
-          <button class="btn btn-outline" onclick="window.print()">
-            📄 Save as PDF</button
-          ><button class="btn btn-outline" onclick="copyContact()">
-            📋 Copy Contact
-          </button>
+          <button class="btn btn-outline" onclick="window.print()">📄 Save as PDF</button>
+          <button class="btn btn-outline" onclick="copyContact()">📋 Copy Contact</button>
         </div>
         <div class="resume-header">
           <h1>Nishad S L</h1>
           <div class="resume-title">Senior Digital Marketing Specialist</div>
           <div class="resume-contact">
-            <a href="tel:+919846310043">📞 +91 9846310043</a
-            ><a href="mailto:sl.nishad@gmail.com">✉️ sl.nishad@gmail.com</a
-            ><span>📍 Thrissur, Kerala</span
-            ><a href="https://www.linkedin.com/in/nishadsl/" target="_blank"
-              >🔗 linkedin.com/in/nishadsl</a
-            >
+            <a href="tel:+919846310043">📞 +91 9846310043</a>
+            <a href="mailto:sl.nishad@gmail.com">✉️ sl.nishad@gmail.com</a>
+            <span>📍 Thrissur, Kerala</span>
+            <a href="https://www.linkedin.com/in/nishadsl/" target="_blank" rel="noopener">🔗 linkedin.com/in/nishadsl</a>
           </div>
         </div>
+
         <div class="resume-content">
           <section class="resume-section">
             <h2>Professional Summary</h2>
             <div class="summary-text">
-              Determined Senior Digital Marketing Specialist with 15+ years of
-              experience introducing innovative techniques to strengthen brand
-              loyalty, boost revenue and connect with audiences across digital
-              platforms.
+              Determined Senior Digital Marketing Specialist with 15+ years of experience introducing innovative techniques to strengthen brand loyalty, boost revenue and connect with audiences across digital platforms.
             </div>
           </section>
+
           <section class="resume-section">
             <h2>Work Experience</h2>
             <div class="job">
               <div class="job-header">
-                <span class="job-title">Digital Marketing Specialist</span
-                ><span class="job-date">2016 – Present</span>
+                <span class="job-title">Digital Marketing Specialist</span>
+                <span class="job-date">2016 – Present</span>
               </div>
-              <div class="job-company">
-                Wazeefa1 Technologies Pvt. Ltd. | Infopark, Thrissur
-              </div>
+              <div class="job-company">Wazeefa1 Technologies Pvt. Ltd. | Infopark, Thrissur</div>
               <ul>
-                <li>
-                  Create client websites and develop strategic social media
-                  advertising campaigns
-                </li>
-                <li>
-                  Manage day-to-day SEO activities to maintain higher search
-                  engine rankings
-                </li>
-                <li>
-                  Develop and manage online marketing campaigns across various
-                  industry verticals, driving brand awareness, engagement and
-                  traffic
-                </li>
-                <li>
-                  Create comprehensive performance reports for stakeholders and
-                  clients
-                </li>
+                <li>Create client websites and develop strategic social media advertising campaigns</li>
+                <li>Manage day-to-day SEO activities to maintain higher search engine rankings</li>
+                <li>Develop and manage online marketing campaigns across various industry verticals, driving brand awareness, engagement and traffic</li>
+                <li>Create comprehensive performance reports for stakeholders and clients</li>
               </ul>
             </div>
             <div class="job">
               <div class="job-header">
-                <span class="job-title">Senior Digital Marketing Executive</span
-                ><span class="job-date">2014 – 2016</span>
+                <span class="job-title">Senior Digital Marketing Executive</span>
+                <span class="job-date">2014 – 2016</span>
               </div>
               <div class="job-company">Muble Solutions | Kochi, Kerala</div>
               <ul>
-                <li>
-                  Managed SEO activities for client websites and created
-                  detailed performance reports
-                </li>
-                <li>
-                  Served as SEO Trainer, successfully training 3 batches of
-                  professionals in SEO alongside SMO and SEM activities
-                </li>
+                <li>Managed SEO activities for client websites and created detailed performance reports</li>
+                <li>Served as SEO Trainer, successfully training 3 batches of professionals in SEO alongside SMO and SEM activities</li>
               </ul>
             </div>
             <div class="job">
               <div class="job-header">
-                <span class="job-title">Digital Marketing Executive</span
-                ><span class="job-date">2011 – 2014</span>
+                <span class="job-title">Digital Marketing Executive</span>
+                <span class="job-date">2011 – 2014</span>
               </div>
-              <div class="job-company">
-                Anvita Tours2Health | Infopark, Thrissur
-              </div>
+              <div class="job-company">Anvita Tours2Health | Infopark, Thrissur</div>
               <ul>
-                <li>
-                  Developed on-page and off-page search strategy for local
-                  clients across multiple locations, increasing organic traffic
-                </li>
-                <li>
-                  Maintained strong social media and online presence across
-                  various platforms
-                </li>
-                <li>
-                  Developed engaging marketing content for digital campaigns
-                </li>
+                <li>Developed on-page and off-page search strategy for local clients across multiple locations, increasing organic traffic</li>
+                <li>Maintained strong social media and online presence across various platforms</li>
+                <li>Developed engaging marketing content for digital campaigns</li>
               </ul>
             </div>
           </section>
+
           <section class="resume-section">
             <h2>Core Skills</h2>
             <div class="skills-list">
-              <span>Research and Analysis</span
-              ><span>Facebook / Instagram Ads</span><span>Google Ads</span
-              ><span>Search Engine Optimization (SEO)</span
-              ><span>Basic Poster Designing</span
-              ><span>HTML / CSS (Basic)</span>
+              <span class="skill-tag">Research and Analysis</span>
+              <span class="skill-tag">Facebook / Instagram Ads</span>
+              <span class="skill-tag">Google Ads</span>
+              <span class="skill-tag">Search Engine Optimization (SEO)</span>
+              <span class="skill-tag">Basic Poster Designing</span>
+              <span class="skill-tag">HTML / CSS</span>
             </div>
           </section>
+
           <section class="resume-section">
             <h2>Education</h2>
             <div class="education">
               <div class="edu-item">
-                <span class="edu-degree"
-                  >Master of Computer Applications (MCA)</span
-                ><span class="edu-year">2008</span
-                ><span class="edu-school"
-                  >Kristu Jayanti College of Management and Technology,
-                  Bangalore</span
-                >
+                <span class="edu-degree">Master of Computer Applications (MCA)</span>
+                <span class="edu-year">2008</span>
+                <span class="edu-school">Kristu Jayanti College of Management and Technology, Bangalore</span>
               </div>
               <div class="edu-item">
-                <span class="edu-degree">B.Sc. Computer Science</span
-                ><span class="edu-year">2004</span
-                ><span class="edu-school"
-                  >NSS College, Ottapalam, Palakkad</span
-                >
+                <span class="edu-degree">B.Sc. Computer Science</span>
+                <span class="edu-year">2004</span>
+                <span class="edu-school">NSS College, Ottapalam, Palakkad</span>
               </div>
             </div>
           </section>
+
           <section class="resume-section">
             <h2>Professional Strengths</h2>
             <div class="strengths-list">
-              <span>✓ Self-motivating</span><span>✓ Collaborative</span
-              ><span>✓ Team Leadership</span>
+              <span class="skill-tag">✓ Self-motivating</span>
+              <span class="skill-tag">✓ Collaborative</span>
+              <span class="skill-tag">✓ Team Leadership</span>
             </div>
           </section>
         </div>
@@ -285,86 +166,28 @@
         <div class="footer-content">
           <div class="footer-info">
             <h3>Nishad S L</h3>
-            <p>Senior Digital Marketing Specialist</p>
+            <p style="color:var(--text-muted);font-size:.875rem;margin:.25rem 0 .75rem">Senior Digital Marketing Specialist</p>
             <div class="social-links">
-              <a href="https://www.linkedin.com/in/nishadsl/" target="_blank"
-                >LinkedIn</a
-              >
+              <a href="https://www.linkedin.com/in/nishadsl/" target="_blank" rel="noopener" title="LinkedIn">in</a>
             </div>
           </div>
           <div class="footer-links">
-            <a href="index.html">Home</a><a href="resume.html">Resume</a
-            ><a href="contact.html">Contact</a>
+            <a href="index.html">Home</a>
+            <a href="resume.html">Resume</a>
+            <a href="contact.html">Contact</a>
           </div>
           <div class="footer-copyright">
-            <p>© <span id="currentYear"></span> Nishad S L</p>
+            <p style="color:var(--text-muted);font-size:.875rem">© <span id="currentYear"></span> Nishad S L. All rights reserved.</p>
           </div>
         </div>
       </footer>
     </div>
-    <button
-      class="back-to-top-modern"
-      id="modernBackToTop"
-      aria-label="Back to top"
-    >
+
+    <button class="back-to-top-modern" id="modernBackToTop" onclick="scrollToTop()" aria-label="Back to top">
       <span>↑</span>
     </button>
-    <script>
-      function toggleTheme() {
-        const b = document.body,
-          t = document.querySelector(".theme-toggle");
-        if (b.classList.contains("dark")) {
-          b.classList.remove("dark");
-          localStorage.setItem("theme", "light");
-          if (t) t.textContent = "🌙";
-        } else {
-          b.classList.add("dark");
-          localStorage.setItem("theme", "dark");
-          if (t) t.textContent = "☀️";
-        }
-      }
-      function loadTheme() {
-        const s = localStorage.getItem("theme"),
-          t = document.querySelector(".theme-toggle");
-        if (s === "dark") {
-          document.body.classList.add("dark");
-          if (t) t.textContent = "☀️";
-        } else {
-          if (t) t.textContent = "🌙";
-        }
-      }
-      function toggleMenu() {
-        document.getElementById("navMenu")?.classList.toggle("active");
-      }
-      function copyContact() {
-        navigator.clipboard
-          .writeText(
-            "Nishad S L\nSenior Digital Marketing Specialist\nPhone: +91 9846310043\nEmail: sl.nishad@gmail.com\nLocation: Thrissur, Kerala, India\nLinkedIn: https://www.linkedin.com/in/nishadsl/",
-          )
-          .then(() => alert("✓ Copied!"))
-          .catch(() => alert("Manual copy needed"));
-      }
-      document.querySelectorAll(".nav-menu a").forEach((l) =>
-        l.addEventListener("click", () => {
-          const m = document.getElementById("navMenu");
-          if (m && window.innerWidth <= 768) m.classList.remove("active");
-        }),
-      );
-      const btn = document.getElementById("modernBackToTop");
-      if (btn) {
-        window.addEventListener("scroll", () => {
-          window.scrollY > 300
-            ? btn.classList.add("show")
-            : btn.classList.remove("show");
-        });
-        btn.addEventListener("click", () =>
-          window.scrollTo({ top: 0, behavior: "smooth" }),
-        );
-      }
-      document.getElementById("currentYear") &&
-        (document.getElementById("currentYear").textContent =
-          new Date().getFullYear());
-      document.addEventListener("DOMContentLoaded", loadTheme);
-    </script>
+
+    <script src="script.js"></script>
+    <script>document.getElementById("currentYear").textContent = new Date().getFullYear();</script>
   </body>
 </html>
