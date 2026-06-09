@@ -9990,3 +9990,572 @@ body.dark .message-translation-card {
     flex-basis: 36px !important;
   }
 }
+
+/* ============================================================
+   2026 PREMIUM THEME OVERRIDES — nishadsl.com Team Chat
+   Appended enhancement layer — does not break existing code
+   ============================================================ */
+
+/* --- Root variable upgrades: richer, more premium palette --- */
+:root {
+  --brand:        #00a884;
+  --brand-dark:   #008069;
+  --brand-light:  #e7f8f4;
+  --accent:       #6366f1;
+  --accent-soft:  #eef2ff;
+  --panel-radius: 18px;
+  --msg-radius:   16px;
+  --transition:   0.18s cubic-bezier(0.4, 0, 0.2, 1);
+  --glow:         0 0 0 3px rgba(0,168,132,0.18);
+  --shadow-deep:  0 24px 64px rgba(11,20,26,0.22), 0 2px 8px rgba(0,0,0,0.06);
+}
+
+/* --- Chat container: rounded, elevated, max-width growth --- */
+.chat-container {
+  border-radius: var(--panel-radius) !important;
+  box-shadow: var(--shadow-deep) !important;
+  overflow: hidden !important;
+  transition: box-shadow var(--transition) !important;
+}
+
+/* --- Sidebar header: richer gradient bar --- */
+.sidebar-header {
+  background: linear-gradient(135deg, rgba(0,128,105,0.06), rgba(99,102,241,0.04)) !important;
+  border-bottom: 1px solid var(--border) !important;
+}
+
+/* --- Chat header: glass effect + subtle brand accent --- */
+.chat-header {
+  background: rgba(255,255,255,0.88) !important;
+  backdrop-filter: blur(18px) saturate(1.4) !important;
+  -webkit-backdrop-filter: blur(18px) saturate(1.4) !important;
+  border-bottom: 1px solid rgba(0,168,132,0.12) !important;
+  box-shadow: 0 1px 0 rgba(0,0,0,0.05) !important;
+}
+
+/* --- Search input: premium pill style --- */
+.search-box input {
+  background: var(--panel-soft) !important;
+  border: 1.5px solid transparent !important;
+  border-radius: 40px !important;
+  padding: 10px 18px 10px 40px !important;
+  transition: border-color var(--transition), box-shadow var(--transition) !important;
+  font-size: 14px !important;
+}
+.search-box input:focus {
+  border-color: var(--brand) !important;
+  box-shadow: var(--glow) !important;
+  background: #fff !important;
+}
+
+/* --- Tabs: animated underline indicator --- */
+.tabs {
+  background: var(--panel) !important;
+  border-bottom: 1px solid var(--border) !important;
+  padding: 0 4px !important;
+  overflow-x: auto !important;
+  scrollbar-width: none !important;
+}
+.tabs::-webkit-scrollbar { display: none !important; }
+
+.tabs .tab {
+  position: relative !important;
+  font-weight: 500 !important;
+  font-size: 13px !important;
+  padding: 12px 14px !important;
+  border: none !important;
+  background: transparent !important;
+  color: var(--muted) !important;
+  cursor: pointer !important;
+  transition: color var(--transition) !important;
+  white-space: nowrap !important;
+}
+.tabs .tab:hover {
+  color: var(--brand-dark) !important;
+  background: var(--brand-light) !important;
+  border-radius: 8px !important;
+}
+.tabs .tab.active {
+  color: var(--brand-dark) !important;
+  font-weight: 700 !important;
+}
+.tabs .tab.active::after {
+  content: "" !important;
+  position: absolute !important;
+  bottom: 0 !important; left: 14% !important;
+  width: 72% !important; height: 3px !important;
+  background: var(--brand) !important;
+  border-radius: 3px 3px 0 0 !important;
+  animation: tabSlideIn 0.22s cubic-bezier(0.4,0,0.2,1) !important;
+}
+@keyframes tabSlideIn {
+  from { transform: scaleX(0); opacity: 0; }
+  to   { transform: scaleX(1); opacity: 1; }
+}
+
+/* --- Chat list items: smoother hover, richer avatar --- */
+.list-item {
+  padding: 12px 16px !important;
+  border-radius: 8px !important;
+  margin: 1px 6px !important;
+  transition: background var(--transition), transform var(--transition) !important;
+  cursor: pointer !important;
+}
+.list-item:hover {
+  background: var(--panel-soft) !important;
+  transform: translateX(2px) !important;
+}
+.list-item.active-chat {
+  background: var(--brand-light) !important;
+  border-left: 3px solid var(--brand) !important;
+}
+
+/* --- Avatars: ring, shadow, better initials colors --- */
+.list-avatar,
+.chat-header-avatar {
+  border-radius: 50% !important;
+  font-weight: 700 !important;
+  letter-spacing: -0.5px !important;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.12) !important;
+  transition: transform var(--transition), box-shadow var(--transition) !important;
+  flex-shrink: 0 !important;
+}
+.list-item:hover .list-avatar {
+  transform: scale(1.06) !important;
+  box-shadow: 0 4px 14px rgba(0,168,132,0.2) !important;
+}
+
+/* --- Message bubbles: rounder, subtle gradient, better shadows --- */
+.message-bubble {
+  border-radius: var(--msg-radius) !important;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.09), 0 0 1px rgba(0,0,0,0.04) !important;
+  transition: transform 0.12s ease !important;
+  line-height: 1.55 !important;
+}
+.message.sent .message-bubble {
+  background: linear-gradient(135deg, #d9fdd3 0%, #c5f7bd 100%) !important;
+  border-bottom-right-radius: 4px !important;
+}
+.message.received .message-bubble {
+  background: #ffffff !important;
+  border-bottom-left-radius: 4px !important;
+}
+.message-bubble:hover {
+  transform: translateY(-1px) !important;
+}
+
+/* --- Input / composer: floating glass style --- */
+.input-area {
+  padding: 10px 16px 16px !important;
+  background: var(--panel) !important;
+  border-top: 1px solid var(--border) !important;
+}
+.wa-composer-shell {
+  background: var(--panel-soft) !important;
+  border: 1.5px solid transparent !important;
+  border-radius: 28px !important;
+  transition: border-color var(--transition), box-shadow var(--transition) !important;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.06) !important;
+}
+.wa-composer-shell:focus-within {
+  border-color: rgba(0,168,132,0.35) !important;
+  box-shadow: 0 0 0 3px rgba(0,168,132,0.10) !important;
+  background: #fff !important;
+}
+.wa-composer-shell textarea {
+  background: transparent !important;
+  border: none !important;
+  padding: 12px 8px !important;
+  font-size: 15px !important;
+  line-height: 1.5 !important;
+}
+
+/* --- Send button: gradient glow --- */
+.send-btn {
+  background: linear-gradient(135deg, var(--brand), var(--brand-dark)) !important;
+  border-radius: 50% !important;
+  box-shadow: 0 4px 14px rgba(0,168,132,0.35) !important;
+  transition: transform var(--transition), box-shadow var(--transition) !important;
+}
+.send-btn:hover {
+  transform: scale(1.08) !important;
+  box-shadow: 0 6px 20px rgba(0,168,132,0.45) !important;
+}
+.send-btn:active {
+  transform: scale(0.96) !important;
+}
+
+/* --- Voice button premium --- */
+.voice-msg-btn {
+  background: linear-gradient(135deg, var(--brand), var(--brand-dark)) !important;
+  border-radius: 50% !important;
+  box-shadow: 0 4px 14px rgba(0,168,132,0.35) !important;
+  transition: transform var(--transition), box-shadow var(--transition) !important;
+}
+.voice-msg-btn:hover {
+  transform: scale(1.08) !important;
+  box-shadow: 0 6px 20px rgba(0,168,132,0.50) !important;
+}
+
+/* --- Icon buttons: smooth hover with brand fill --- */
+.icon-btn {
+  border-radius: 50% !important;
+  width: 40px !important; height: 40px !important;
+  display: inline-flex !important;
+  align-items: center !important; justify-content: center !important;
+  transition: background var(--transition), transform var(--transition) !important;
+}
+.icon-btn:hover {
+  background: var(--brand-light) !important;
+  transform: scale(1.1) !important;
+}
+
+/* --- Home panel: richer illustration card --- */
+.home-panel {
+  background: linear-gradient(160deg, rgba(0,168,132,0.05) 0%, rgba(99,102,241,0.04) 100%) !important;
+  border: 1px solid rgba(0,168,132,0.12) !important;
+  border-radius: 24px !important;
+  padding: 48px 40px !important;
+  text-align: center !important;
+  max-width: 460px !important;
+  margin: auto !important;
+  box-shadow: 0 12px 40px rgba(0,168,132,0.06) !important;
+}
+.home-panel-icon {
+  font-size: 56px !important;
+  line-height: 1 !important;
+  margin-bottom: 20px !important;
+  filter: drop-shadow(0 6px 14px rgba(0,168,132,0.2)) !important;
+  animation: homeIconFloat 3.5s ease-in-out infinite !important;
+}
+@keyframes homeIconFloat {
+  0%,100% { transform: translateY(0); }
+  50%      { transform: translateY(-7px); }
+}
+.home-panel-title {
+  font-size: 1.4rem !important;
+  font-weight: 700 !important;
+  color: var(--text) !important;
+  margin-bottom: 10px !important;
+  letter-spacing: -0.3px !important;
+}
+.home-panel-text {
+  color: var(--muted) !important;
+  font-size: 14px !important;
+  line-height: 1.6 !important;
+}
+.home-panel-note {
+  color: var(--muted) !important;
+  font-size: 12px !important;
+  margin-top: 8px !important;
+  opacity: 0.8 !important;
+}
+
+/* --- Modals: glass card --- */
+.modal-content {
+  border-radius: 24px !important;
+  box-shadow: 0 32px 80px rgba(0,0,0,0.2), 0 2px 10px rgba(0,0,0,0.08) !important;
+  border: 1px solid rgba(226,232,240,0.7) !important;
+  backdrop-filter: blur(12px) !important;
+  animation: modalPop 0.25s cubic-bezier(0.34,1.56,0.64,1) !important;
+}
+@keyframes modalPop {
+  from { transform: scale(0.92) translateY(10px); opacity: 0; }
+  to   { transform: scale(1) translateY(0);    opacity: 1; }
+}
+.modal-header {
+  padding: 22px 24px 16px !important;
+  border-bottom: 1px solid var(--border) !important;
+  border-radius: 24px 24px 0 0 !important;
+}
+.modal-header h3 {
+  font-weight: 700 !important;
+  font-size: 1.1rem !important;
+  letter-spacing: -0.2px !important;
+}
+
+/* --- Buttons: pill style upgrade --- */
+.btn-primary, .join-btn {
+  background: linear-gradient(135deg, var(--brand), var(--brand-dark)) !important;
+  border-radius: 40px !important;
+  font-weight: 600 !important;
+  font-size: 14px !important;
+  transition: transform var(--transition), box-shadow var(--transition) !important;
+  box-shadow: 0 4px 14px rgba(0,168,132,0.3) !important;
+}
+.btn-primary:hover, .join-btn:hover {
+  transform: translateY(-2px) !important;
+  box-shadow: 0 8px 24px rgba(0,168,132,0.4) !important;
+}
+.btn-outline {
+  border-radius: 40px !important;
+  font-weight: 600 !important;
+  font-size: 14px !important;
+  transition: background var(--transition), color var(--transition) !important;
+}
+
+/* --- Unread badge: premium pill --- */
+.unread-badge {
+  background: linear-gradient(135deg, var(--brand), var(--brand-dark)) !important;
+  border-radius: 20px !important;
+  font-weight: 700 !important;
+  font-size: 11px !important;
+  min-width: 20px !important;
+  height: 20px !important;
+  padding: 0 6px !important;
+  display: inline-flex !important;
+  align-items: center !important; justify-content: center !important;
+  box-shadow: 0 2px 6px rgba(0,168,132,0.3) !important;
+}
+
+/* --- Connection banner: richer --- */
+.connection-banner {
+  background: linear-gradient(90deg, #f59e0b, #f97316) !important;
+  color: #fff !important;
+  font-weight: 600 !important;
+  font-size: 13px !important;
+  padding: 8px 16px !important;
+  border-radius: 8px !important;
+  margin: 8px 12px !important;
+  box-shadow: 0 2px 8px rgba(249,115,22,0.25) !important;
+}
+
+/* --- Attachment sheet: glass bottom sheet --- */
+.attachment-sheet {
+  background: rgba(255,255,255,0.97) !important;
+  backdrop-filter: blur(20px) saturate(1.3) !important;
+  border-radius: 24px 24px 0 0 !important;
+  box-shadow: 0 -8px 40px rgba(0,0,0,0.12) !important;
+}
+.attachment-sheet-item {
+  border-radius: 16px !important;
+  transition: transform var(--transition), background var(--transition) !important;
+}
+.attachment-sheet-item:hover {
+  transform: translateY(-4px) scale(1.04) !important;
+}
+
+/* --- Emoji picker polish --- */
+.emoji-picker {
+  border-radius: 20px !important;
+  box-shadow: 0 16px 48px rgba(0,0,0,0.16) !important;
+  border: 1px solid rgba(226,232,240,0.8) !important;
+  backdrop-filter: blur(12px) !important;
+  animation: modalPop 0.22s cubic-bezier(0.34,1.56,0.64,1) !important;
+}
+
+/* --- Message actions popup: glass --- */
+.message-actions-popup, .context-menu {
+  border-radius: 16px !important;
+  box-shadow: 0 12px 40px rgba(0,0,0,0.16) !important;
+  border: 1px solid rgba(226,232,240,0.7) !important;
+  backdrop-filter: blur(16px) !important;
+  animation: modalPop 0.2s cubic-bezier(0.34,1.56,0.64,1) !important;
+}
+
+/* --- Reply preview bar: brand left border + glass --- */
+#replyPreviewBar {
+  background: linear-gradient(to right, rgba(0,168,132,0.06), rgba(99,102,241,0.03)) !important;
+  border-left: 4px solid var(--brand) !important;
+  border-radius: 14px !important;
+  margin: 0 12px !important;
+  padding: 10px 16px !important;
+  backdrop-filter: blur(8px) !important;
+}
+
+/* --- Scroll smooth for messages --- */
+.messages-area {
+  scroll-behavior: smooth !important;
+}
+
+/* --- Fade in animation for new messages --- */
+.message {
+  animation: msgFadeUp 0.22s cubic-bezier(0.2, 0.8, 0.4, 1) !important;
+}
+@keyframes msgFadeUp {
+  from { opacity: 0; transform: translateY(8px) scale(0.98); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* --- Status indicators: pulse animation --- */
+.online-dot {
+  animation: onlinePulse 2.5s ease-in-out infinite !important;
+}
+@keyframes onlinePulse {
+  0%,100% { box-shadow: 0 0 0 0 rgba(0,168,132,0.5); }
+  50%      { box-shadow: 0 0 0 4px rgba(0,168,132,0); }
+}
+
+/* --- Request / archive section headers --- */
+.request-header, .archive-header, .pinned-header {
+  font-size: 12px !important;
+  font-weight: 700 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.6px !important;
+  padding: 10px 16px !important;
+  color: var(--muted-strong) !important;
+  cursor: pointer !important;
+  transition: color var(--transition), background var(--transition) !important;
+  border-radius: 6px !important;
+}
+.request-header:hover, .archive-header:hover {
+  color: var(--brand-dark) !important;
+  background: var(--brand-light) !important;
+}
+
+/* --- Voice recording indicator: pill glow --- */
+.voice-recording-indicator {
+  background: linear-gradient(135deg, #1e293b, #0f172a) !important;
+  border-radius: 40px !important;
+  padding: 14px 28px !important;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.35) !important;
+  animation: recordPulse 1.2s ease-in-out infinite !important;
+}
+@keyframes recordPulse {
+  0%,100% { box-shadow: 0 8px 32px rgba(239,68,68,0.2); }
+  50%      { box-shadow: 0 8px 40px rgba(239,68,68,0.5); }
+}
+
+/* ============================================================
+   DARK MODE UPGRADES — richer 2026 dark palette
+   ============================================================ */
+body.dark {
+  --app-bg:          #0b141a !important;
+  --panel:           #111b21 !important;
+  --panel-soft:      #1c2b33 !important;
+  --panel-hover:     #182229 !important;
+  --panel-highlight: #1e2a30 !important;
+  --border:          #2a3942 !important;
+  --text:            #e9edef !important;
+  --muted:           #8696a0 !important;
+  --muted-strong:    #aebac1 !important;
+  --sent:            #005c4b !important;
+  --received:        #1e2e35 !important;
+  --brand-light:     rgba(0,168,132,0.1) !important;
+  background: #0b141a !important;
+}
+
+body.dark .chat-container {
+  box-shadow: 0 32px 80px rgba(0,0,0,0.6), 0 2px 12px rgba(0,0,0,0.3) !important;
+}
+
+body.dark .chat-header {
+  background: rgba(17,27,33,0.92) !important;
+  border-bottom-color: rgba(0,168,132,0.10) !important;
+}
+
+body.dark .sidebar-header {
+  background: rgba(17,27,33,0.92) !important;
+}
+
+body.dark .wa-composer-shell {
+  background: var(--panel-soft) !important;
+}
+body.dark .wa-composer-shell:focus-within {
+  background: #1e2e35 !important;
+  border-color: rgba(0,168,132,0.4) !important;
+}
+
+body.dark .message.sent .message-bubble {
+  background: linear-gradient(135deg, #005c4b, #004a3b) !important;
+  color: #e9edef !important;
+}
+body.dark .message.received .message-bubble {
+  background: #1e2e35 !important;
+  color: #e9edef !important;
+}
+
+body.dark .home-panel {
+  background: linear-gradient(160deg, rgba(0,168,132,0.06) 0%, rgba(99,102,241,0.05) 100%) !important;
+  border-color: rgba(0,168,132,0.15) !important;
+}
+
+body.dark .attachment-sheet {
+  background: rgba(17,27,33,0.97) !important;
+}
+
+body.dark .modal-content {
+  background: #1a2730 !important;
+  border-color: #2a3942 !important;
+}
+
+body.dark .modal-header {
+  border-bottom-color: #2a3942 !important;
+}
+
+body.dark .emoji-picker {
+  background: #1a2730 !important;
+  border-color: #2a3942 !important;
+}
+
+body.dark .message-actions-popup,
+body.dark .context-menu {
+  background: #1a2730 !important;
+  border-color: #2a3942 !important;
+}
+
+body.dark #replyPreviewBar {
+  background: linear-gradient(to right, rgba(0,168,132,0.08), rgba(99,102,241,0.05)) !important;
+  border-left-color: var(--brand) !important;
+}
+
+body.dark .search-box input {
+  background: var(--panel-soft) !important;
+  color: var(--text) !important;
+  border-color: transparent !important;
+}
+body.dark .search-box input:focus {
+  background: #1c2b33 !important;
+  border-color: var(--brand) !important;
+}
+
+body.dark .tabs {
+  background: var(--panel) !important;
+  border-bottom-color: var(--border) !important;
+}
+
+body.dark .tabs .tab {
+  color: var(--muted) !important;
+}
+body.dark .tabs .tab:hover {
+  color: var(--brand) !important;
+  background: rgba(0,168,132,0.08) !important;
+}
+body.dark .tabs .tab.active {
+  color: var(--brand) !important;
+}
+
+body.dark .list-item:hover {
+  background: var(--panel-soft) !important;
+}
+body.dark .list-item.active-chat {
+  background: rgba(0,168,132,0.08) !important;
+}
+
+/* --- Dark mode scroll bar --- */
+body.dark ::-webkit-scrollbar-track { background: #0d1b22 !important; }
+body.dark ::-webkit-scrollbar-thumb { background: #2a3942 !important; }
+body.dark ::-webkit-scrollbar-thumb:hover { background: #3d535e !important; }
+
+/* --- Custom scrollbar (global) --- */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #c8d4da; border-radius: 10px; }
+::-webkit-scrollbar-thumb:hover { background: #aebac1; }
+
+/* --- Responsive improvements --- */
+@media (max-width: 768px) {
+  .chat-container {
+    border-radius: 0 !important;
+    margin: 0 !important;
+    width: 100vw !important;
+    height: 100dvh !important;
+  }
+  .modal-content {
+    border-radius: 20px 20px 0 0 !important;
+  }
+}
+
+/* ============================================================
+   END PREMIUM THEME OVERRIDES
+   ============================================================ */
