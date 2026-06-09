@@ -1015,9 +1015,16 @@ function renderChatListItems(items, container) {
     const tagHtml = tag
       ? `<span class="chat-tag-dot" style="background:${escapeHtml(tag.color)}" title="${escapeHtml(tag.label)}"></span>`
       : "";
+    const listItemOtherUserId = item.otherUserId || item.user?.id;
+    const listItemOnline = item.type === "direct" && listItemOtherUserId &&
+      isUserOnlineNow(allUsers.find(u => u.id === listItemOtherUserId) || {});
+    const presenceDot = listItemOnline
+      ? '<span class="list-presence-dot" title="Online" aria-label="Online"></span>'
+      : "";
+
     chatDiv.innerHTML = `
       <span class="drag-handle" draggable="false">⠿</span>
-      <div class="list-avatar">${item.avatar}</div>
+      <div class="list-avatar-wrap">${presenceDot}<div class="list-avatar">${item.avatar}</div></div>
       <div class="list-info" style="flex:1; cursor:pointer;">
         <div class="list-name">${tagHtml}${item.isPinned ? '<span class="pin-icon">&#x1F4CC;</span> ' : ""}${item.isFavorite ? "* " : ""}${escapeHtml(item.name)} ${item.isMuted ? "[Muted]" : ""}${searchMeta}</div>
         <div class="list-preview">${previewHtml}</div>
@@ -10550,6 +10557,13 @@ function hasReceiptFromOtherUser(map = {}) {
   return Object.keys(map).some((uid) => uid && uid !== currentUser.uid);
 }
 
+function getSeenByCountHtml(msg, isMyMessage) {
+  if (!isMyMessage || currentChatType !== "group" || !msg.readBy) return "";
+  const count = Object.keys(msg.readBy).filter(id => id !== currentUser?.uid).length;
+  if (count === 0) return "";
+  return `<button type="button" class="seen-by-count-btn" title="Seen by ${count} member${count !== 1 ? "s" : ""}" aria-label="Seen by ${count}">👁 ${count}</button>`;
+}
+
 function getMessageReceiptHtml(msg, isMyMessage) {
   if (!isMyMessage || currentChat?.isSaved) return "";
   if (msg.failed || msg.status === "failed") {
@@ -11057,7 +11071,7 @@ function loadMessages() {
 
         messageDiv.innerHTML = `
         <div class="swipe-reply-indicator" aria-hidden="true"></div>
-        <div class="message-quick-actions ${isMyMessage ? "sent-message-actions" : "received-message-actions"}"><button type="button" class="quick-message-action quick-forward-btn" title="Forward message" aria-label="Forward message"></button><button type="button" class="quick-message-action quick-translate-btn" title="Translate message" aria-label="Translate message"></button><button type="button" class="quick-message-action quick-delete-btn" title="Delete message" aria-label="Delete message"></button></div>
+        <div class="message-quick-actions ${isMyMessage ? "sent-message-actions" : "received-message-actions"}"><button type="button" class="quick-message-action quick-copy-btn" title="Copy message" aria-label="Copy message"></button><button type="button" class="quick-message-action quick-forward-btn" title="Forward message" aria-label="Forward message"></button><button type="button" class="quick-message-action quick-translate-btn" title="Translate message" aria-label="Translate message"></button><button type="button" class="quick-message-action quick-delete-btn" title="Delete message" aria-label="Delete message"></button></div>
         <div class="message-bubble">
           <button type="button" class="message-options-btn" title="Message options" aria-label="Message options">⋮</button>
           ${!isMyMessage ? `<div class="message-sender">${escapeHtml(msg.senderName)}</div>` : ""}
@@ -11077,6 +11091,7 @@ function loadMessages() {
             <span class="message-time">${msg.timestamp ? formatTime(msg.timestamp) : ""}</span>
             ${msg.editedAt ? '<span class="message-edited">edited</span>' : ""}
             ${getMessageReceiptHtml(msg, isMyMessage)}
+            ${getSeenByCountHtml(msg, isMyMessage)}
           </div>
         </div>
       `;
@@ -11119,11 +11134,25 @@ function loadMessages() {
             openForwardModal(doc.id, { ...msg, messageId: doc.id });
           });
         messageDiv
+          .querySelector(".quick-copy-btn")
+          ?.addEventListener("click", (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            copyMessagePayload({ ...msg, messageId: doc.id });
+          });
+        messageDiv
           .querySelector(".quick-translate-btn")
           ?.addEventListener("click", (event) => {
             event.preventDefault();
             event.stopPropagation();
             openTranslateModal(doc.id, { ...msg, messageId: doc.id });
+          });
+        messageDiv
+          .querySelector(".seen-by-count-btn")
+          ?.addEventListener("click", (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            showMessageInfo(doc.id, { ...msg, messageId: doc.id });
           });
         bindTranslationCardActions(messageDiv, doc.id, {
           ...msg,

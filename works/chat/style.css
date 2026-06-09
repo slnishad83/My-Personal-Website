@@ -10732,3 +10732,90 @@ body.dark .search-hint kbd {
 .translate-capability-note {
   background: #e9f7f3 !important;
 }
+
+/* ============================================================
+   FEATURE: ONLINE PRESENCE DOTS ON CHAT LIST
+   ============================================================ */
+.list-avatar-wrap {
+  position: relative;
+  flex: 0 0 auto;
+  width: 48px;
+  height: 48px;
+}
+.list-avatar-wrap .list-avatar {
+  width: 100%;
+  height: 100%;
+}
+.list-presence-dot {
+  position: absolute;
+  bottom: 1px;
+  right: 1px;
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: #25d366;
+  border: 2px solid var(--panel);
+  z-index: 2;
+  pointer-events: none;
+  animation: presencePulse 2.5s ease-in-out infinite;
+}
+body.dark .list-presence-dot {
+  border-color: #111b21;
+}
+@keyframes presencePulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(37,211,102,0.5); }
+  50% { box-shadow: 0 0 0 4px rgba(37,211,102,0); }
+}
+
+/* ============================================================
+   FEATURE: COPY QUICK ACTION BUTTON
+   ============================================================ */
+.quick-copy-btn::before {
+  content: "" !important;
+  display: block !important;
+  width: 15px !important;
+  height: 15px !important;
+  margin: auto !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: currentColor !important;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='9' y='9' width='13' height='13' rx='2' ry='2'/%3E%3Cpath d='M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1'/%3E%3C/svg%3E") center / contain no-repeat !important;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='9' y='9' width='13' height='13' rx='2' ry='2'/%3E%3Cpath d='M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1'/%3E%3C/svg%3E") center / contain no-repeat !important;
+}
+.quick-copy-btn::after {
+  content: none !important;
+}
+
+/* ============================================================
+   FEATURE: SEEN-BY COUNT BADGE ON GROUP MESSAGES
+   ============================================================ */
+.seen-by-count-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  margin-left: 5px;
+  padding: 0 5px;
+  height: 18px;
+  border: none;
+  border-radius: 9px;
+  background: rgba(0,0,0,0.06);
+  color: var(--muted-strong);
+  font-size: 10.5px;
+  font-weight: 600;
+  cursor: pointer;
+  vertical-align: middle;
+  transition: background 0.15s, color 0.15s;
+  line-height: 1;
+}
+.seen-by-count-btn:hover {
+  background: rgba(0,168,132,0.15);
+  color: var(--brand-dark);
+}
+body.dark .seen-by-count-btn {
+  background: rgba(255,255,255,0.08);
+  color: #8696a0;
+}
+body.dark .seen-by-count-btn:hover {
+  background: rgba(0,168,132,0.2);
+  color: #00a884;
+}
