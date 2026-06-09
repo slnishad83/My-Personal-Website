@@ -10873,7 +10873,7 @@ function bindLongPressMessageMenu(messageDiv, messageData, isMyMessage) {
         isMyMessage,
       );
       timer = null;
-    }, 520);
+    }, 400);
   });
 
   messageDiv.addEventListener("pointermove", (event) => {
@@ -13838,6 +13838,14 @@ function switchTab(tab) {
   else if (tab === "communities") loadCommunitiesList();
   else if (tab === "notifications") markAllNotificationsRead();
   else loadCurrentChatList();
+
+  // Sync bottom nav bar active state
+  const bottomKey = (tab === "all" || tab === "unread" || tab === "muted" ||
+    tab === "favorites" || tab === "groups" || tab === "broadcasts" ||
+    tab === "communities" || tab === "notifications") ? "chats" : tab;
+  document.querySelectorAll(".bottom-nav-btn").forEach((b) => {
+    b.classList.toggle("active", b.dataset.bottomTab === bottomKey);
+  });
 }
 
 function isEmailLike(str) {
@@ -14310,25 +14318,78 @@ async function init() {
     let deferredPrompt = null;
     const btn = document.getElementById("installAppBtn");
     if (!btn) return;
+    const labelEl = btn.querySelector(".install-app-label");
+    const isAndroid = /android/i.test(navigator.userAgent);
+
+    // Detect if already installed via getInstalledRelatedApps
+    async function checkAlreadyInstalled() {
+      if ("getInstalledRelatedApps" in navigator) {
+        try {
+          const apps = await navigator.getInstalledRelatedApps();
+          if (apps.length > 0) {
+            btn.style.display = "";
+            if (labelEl) labelEl.textContent = "App Installed ✓";
+            btn.onclick = () => showToast("Team Chat is already installed on your device!");
+            return true;
+          }
+        } catch (_) {}
+      }
+      return false;
+    }
+
+    // On Android always show the button — PWA install prompt or direct APK download
+    if (isAndroid) {
+      btn.style.display = "";
+      if (labelEl) labelEl.textContent = "Download App";
+    }
+
     window.addEventListener("beforeinstallprompt", (e) => {
       e.preventDefault();
       deferredPrompt = e;
       btn.style.display = "";
+      if (labelEl) labelEl.textContent = "Install App";
     });
+
     window.addEventListener("appinstalled", () => {
-      btn.style.display = "none";
       deferredPrompt = null;
+      btn.style.display = "";
+      if (labelEl) labelEl.textContent = "App Installed ✓";
+      btn.onclick = () => showToast("Team Chat is already installed on your device!");
+      showToast("Team Chat installed successfully!");
     });
+
+    checkAlreadyInstalled();
+
     window.handleInstallApp = async function handleInstallApp() {
-      if (!deferredPrompt) {
-        showToast("App already installed or not available", "error");
-        return;
+      // Check already-installed first
+      if ("getInstalledRelatedApps" in navigator) {
+        try {
+          const apps = await navigator.getInstalledRelatedApps();
+          if (apps.length > 0) {
+            showToast("Team Chat is already installed on your device!");
+            return;
+          }
+        } catch (_) {}
       }
-      deferredPrompt.prompt();
-      const result = await deferredPrompt.userChoice;
-      if (result.outcome === "accepted") showToast("App installed!");
-      deferredPrompt = null;
-      btn.style.display = "none";
+      if (deferredPrompt) {
+        // PWA install prompt is available
+        deferredPrompt.prompt();
+        const result = await deferredPrompt.userChoice;
+        if (result.outcome === "accepted") showToast("App installed successfully!");
+        deferredPrompt = null;
+        btn.style.display = "none";
+      } else if (isAndroid) {
+        // Direct APK download for Android when PWA prompt is unavailable
+        const a = document.createElement("a");
+        a.href = "my-team-chat.apk";
+        a.download = "my-team-chat.apk";
+        document.body.appendChild(a);
+        a.click();
+        setTimeout(() => document.body.removeChild(a), 600);
+        showToast("Downloading APK…");
+      } else {
+        showToast("Open in Chrome on Android to install, or use your browser's 'Add to Home Screen'.", "error");
+      }
     };
   })();
   document.getElementById("cancelReplyBtn")?.addEventListener("click", () => {
