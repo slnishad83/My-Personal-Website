@@ -5580,8 +5580,13 @@ async function searchUsersRealtime(searchTerm) {
     return;
   }
 
-  // FIX 2: When the query looks like a full email, always do a live Firestore
-  // fetch so newly registered users are never missed due to a stale local cache.
+  // Lock the token NOW before any async work, so loadAllChatsList
+  // will not be cancelled by other list refreshes that run while we fetch.
+  const searchToken = ++chatListLoadToken;
+
+  // Show a loading indicator in the list while we fetch
+  chatsList.innerHTML = `<div class="empty-state" style="padding:32px;color:#667781;">Searching...</div>`;
+
   const looksLikeEmail = term.includes("@") && term.includes(".");
   if (looksLikeEmail) {
     try {
@@ -5595,7 +5600,10 @@ async function searchUsersRealtime(searchTerm) {
     await refreshAllUsersOnce();
   }
 
-  loadAllChatsList(term);
+  // If another search started while we were fetching, abort this one
+  if (searchToken !== chatListLoadToken) return;
+
+  loadAllChatsList(term, searchToken);
 }
 
 // ========================================================================
@@ -5605,10 +5613,12 @@ async function searchUsersRealtime(searchTerm) {
 // FIXED: COMBINED REAL-TIME HISTORY & DIRECTORY LOOKUP ENGINE
 // ========================================================================
 let chatListLoadToken = 0;
-async function loadAllChatsList(searchTerm = "") {
+async function loadAllChatsList(searchTerm = "", forceToken = null) {
   const chatsList = document.getElementById("chatsList");
   if (!chatsList) return;
-  const loadToken = ++chatListLoadToken;
+  // If a forceToken is passed, use it (search locked it before async work).
+  // Otherwise increment as normal for non-search refreshes.
+  const loadToken = forceToken !== null ? forceToken : ++chatListLoadToken;
 
   // Show skeleton loading while fetching
   if (!searchTerm && !chatsList.children.length) {
@@ -5643,6 +5653,8 @@ async function loadAllChatsList(searchTerm = "") {
   } catch (error) {
     console.error("buildGroupChatItems failed:", error);
   }
+  // Abort if a newer non-search list load started after us.
+  // Search calls pass forceToken so this check always passes for them.
   if (loadToken !== chatListLoadToken) return;
   await refreshLockedChats();
   const allItems = [...directItems, ...groupItems].filter(
@@ -5700,7 +5712,10 @@ async function loadAllChatsList(searchTerm = "") {
 
     const userMatches = [];
 
-    await refreshAllUsersOnce();
+    // NOTE: We intentionally skip refreshAllUsersOnce() here.
+    // For email searches, searchUsersRealtime() already did a fresh Firestore
+    // fetch before calling us. Calling it again would overwrite allUsers with
+    // a potentially stale cached result.
 
     // MATCH 2: Look through the directory for users you haven't messaged yet
     // FIX: For email searches, use a looser filter so users with stale
