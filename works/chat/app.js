@@ -7545,7 +7545,11 @@ function normalizeUsersSnapshot(snapshot) {
     user.createdAt?.getTime?.() ||
     0;
   const addUser = (user) => {
-    if (!isSearchableUser(user)) return;
+    // Use a looser filter here so ALL registered users (including those with
+    // pendingVerification=true or emailVerified=false) are stored in allUsers.
+    // isSearchableUser() is still used at search-display time, not at storage time.
+    if (!user.id || user.id === currentUser?.uid || user.isActive === false) return;
+    if (!user.email && !user.displayName && !user.phone && !user.phoneNumber) return;
     const key = getUserDedupeKey(user);
     const existing = userMap.get(key);
     if (
@@ -13868,9 +13872,10 @@ function bindSearchInput() {
       return;
     }
     if (isEmailLike(val)) {
-      // For email-like terms: only search on Enter/button click, not as-you-type
-      // Show existing chat name matches immediately but hold user search
+      // Show existing chat name matches immediately
       searchUsersRealtime(val, { emailHold: true });
+      // Auto-trigger full user search after 800ms so user doesn't HAVE to press Enter
+      searchTimer = window.setTimeout(() => searchUsersRealtime(val, { emailHold: false }), 800);
     } else {
       // Real-time name/group search as you type
       searchTimer = window.setTimeout(() => searchUsersRealtime(val), 200);
