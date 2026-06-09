@@ -2,462 +2,313 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta
-      name="viewport"
-      content="width=device-width, initial-scale=1.0, user-scalable=yes, viewport-fit=cover"
-    />
-    <meta name="theme-color" content="#008069" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, viewport-fit=cover" />
+    <meta name="theme-color" content="#6366f1" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta
-      name="apple-mobile-web-app-status-bar-style"
-      content="black-translucent"
-    />
-    <title>Team Chat - Login</title>
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <title>Team Chat — Sign In</title>
     <script>
       (() => {
-        const savedTheme = localStorage.getItem("darkMode");
-        const dark = savedTheme === "true" ||
-          (savedTheme === null && matchMedia("(prefers-color-scheme: dark)").matches);
+        const saved = localStorage.getItem("darkMode");
+        const dark = saved === "true" || (saved === null && matchMedia("(prefers-color-scheme: dark)").matches);
         document.documentElement.dataset.theme = dark ? "dark" : "light";
       })();
     </script>
     <link rel="manifest" href="manifest.json?v=96" />
     <link rel="apple-touch-icon" href="app-icon-192.png" />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700&display=swap"
-      rel="stylesheet"
-    />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700;14..32,800&display=swap" rel="stylesheet" />
     <style>
-      * {
-        margin: 0;
-        padding: 0;
-        box-sizing: border-box;
+      :root {
+        --bg: #f0f4ff;
+        --surface: #ffffff;
+        --surface2: #f5f7ff;
+        --border: #dde3ff;
+        --text: #111827;
+        --muted: #6b7280;
+        --brand: #6366f1;
+        --brand-dark: #4f46e5;
+        --brand-light: #eef2ff;
+        --error: #ef4444;
+        --success: #10b981;
+        --shadow: 0 24px 64px rgba(99,102,241,0.14);
+        --radius: 14px;
+        --t: 0.2s cubic-bezier(0.4,0,0.2,1);
       }
+      [data-theme="dark"] {
+        --bg: #0d0d1f;
+        --surface: #18183a;
+        --surface2: #111130;
+        --border: #2a2a5a;
+        --text: #f1f5f9;
+        --muted: #94a3b8;
+        --brand: #818cf8;
+        --brand-dark: #6366f1;
+        --brand-light: #1e1b4b;
+        --shadow: 0 24px 64px rgba(0,0,0,0.5);
+      }
+      *,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
       body {
-        font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-        min-height: 100vh;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        background: linear-gradient(#008069 0 128px, #d1d7db 128px 100%);
-        color: #111b21;
+        font-family:"Inter",-apple-system,BlinkMacSystemFont,system-ui,sans-serif;
+        background:var(--bg); min-height:100vh;
+        display:flex; align-items:center; justify-content:center;
+        padding:max(20px,env(safe-area-inset-top,20px)) 20px max(20px,env(safe-area-inset-bottom,20px));
+        color:var(--text); position:relative; overflow:hidden;
       }
-      .auth-container {
-        width: 100%;
-        max-width: 420px;
-        padding: max(18px, env(safe-area-inset-top, 0px)) 18px max(18px, env(safe-area-inset-bottom, 0px));
+      body::before {
+        content:''; position:fixed; inset:0;
+        background:
+          radial-gradient(ellipse 80% 70% at 15% 5%,rgba(99,102,241,.18) 0%,transparent 55%),
+          radial-gradient(ellipse 60% 55% at 85% 95%,rgba(139,92,246,.12) 0%,transparent 55%);
+        pointer-events:none; z-index:0;
       }
+      .auth-wrap{position:relative;z-index:1;width:100%;max-width:420px;}
+
+      .brand-header{text-align:center;margin-bottom:1.5rem;}
+      .brand-logo {
+        display:inline-flex;align-items:center;justify-content:center;
+        width:60px;height:60px;border-radius:20px;margin-bottom:.875rem;
+        background:linear-gradient(135deg,#6366f1,#8b5cf6);
+        box-shadow:0 8px 28px rgba(99,102,241,.4);
+      }
+      .brand-logo svg{width:30px;height:30px;fill:white;}
+      .brand-name{font-size:1.6rem;font-weight:800;letter-spacing:-.03em;}
+      .brand-tagline{font-size:.84rem;color:var(--muted);margin-top:.25rem;}
+
       .auth-card {
-        background: #ffffff;
-        border-radius: 12px;
-        padding: 28px;
-        box-shadow: 0 8px 24px rgba(11, 20, 26, 0.16);
-      }
-      .auth-header {
-        text-align: center;
-        margin-bottom: 32px;
-      }
-      .auth-header h1 {
-        font-size: 28px;
-        font-weight: 700;
-        color: #111b21;
-        margin-bottom: 8px;
-      }
-      .auth-header p {
-        font-size: 14px;
-        color: #667781;
+        background:var(--surface);border-radius:24px;
+        padding:2rem;box-shadow:var(--shadow);border:1px solid var(--border);
       }
       .auth-tabs {
-        display: flex;
-        gap: 8px;
-        margin-bottom: 24px;
-        border-bottom: 1px solid #e9edef;
+        display:flex;background:var(--surface2);border-radius:12px;
+        padding:4px;margin-bottom:1.75rem;border:1px solid var(--border);
       }
       .auth-tab {
-        flex: 1;
-        padding: 12px;
-        background: none;
-        border: none;
-        font-size: 16px;
-        font-weight: 600;
-        color: #667781;
-        cursor: pointer;
+        flex:1;padding:.6rem;background:none;border:none;
+        font-size:.9rem;font-weight:600;color:var(--muted);cursor:pointer;
+        border-radius:9px;transition:all var(--t);font-family:inherit;
       }
       .auth-tab.active {
-        color: #008069;
-        border-bottom: 3px solid #008069;
-        margin-bottom: -1px;
+        background:var(--surface);color:var(--brand);
+        box-shadow:0 2px 10px rgba(0,0,0,.1);
       }
-      .auth-form {
-        display: none;
-      }
-      .auth-form.active {
-        display: block;
-      }
-      .form-group {
-        margin-bottom: 20px;
-      }
+      .auth-form{display:none;}
+      .auth-form.active{display:block;}
+
+      .form-group{margin-bottom:1rem;}
       .form-group label {
-        display: block;
-        font-size: 13px;
-        font-weight: 600;
-        color: #333;
-        margin-bottom: 8px;
+        display:block;font-size:.78rem;font-weight:700;color:var(--muted);
+        margin-bottom:.4rem;text-transform:uppercase;letter-spacing:.06em;
       }
-      .form-group input {
-        width: 100%;
-        padding: 14px 16px;
-        border: 1px solid #d1d7db;
-        border-radius: 10px;
-        font-size: 15px;
-        font-family: inherit;
-        background: #ffffff;
-        color: #111b21;
+      .input-wrap{position:relative;}
+      .input-icon {
+        position:absolute;left:13px;top:50%;transform:translateY(-50%);
+        font-size:1rem;pointer-events:none;opacity:.55;
       }
-      .form-group input:focus {
-        outline: none;
-        border-color: #00a884;
-        box-shadow: 0 0 0 2px rgba(0, 168, 132, 0.14);
+      .input-wrap input {
+        width:100%;padding:.875rem 1rem .875rem 2.75rem;
+        background:var(--surface2);border:1.5px solid var(--border);
+        border-radius:var(--radius);font-size:.95rem;font-family:inherit;
+        color:var(--text);transition:border-color var(--t),box-shadow var(--t);
       }
-      .password-field {
-        position: relative;
+      .input-wrap input:focus {
+        outline:none;border-color:var(--brand);
+        box-shadow:0 0 0 3px rgba(99,102,241,.16);
       }
-      .password-field input {
-        padding-right: 48px;
-      }
+      .input-wrap input::placeholder{color:var(--muted);opacity:.6;}
+
+      .password-wrap input{padding-right:3rem;}
       .password-toggle {
-        position: absolute;
-        right: 10px;
-        top: 50%;
-        transform: translateY(-50%);
-        width: 34px;
-        height: 34px;
-        border: 0;
-        border-radius: 50%;
-        background: transparent;
-        color: #54656f;
-        cursor: pointer;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 17px;
-        line-height: 1;
+        position:absolute;right:10px;top:50%;transform:translateY(-50%);
+        width:34px;height:34px;border:0;background:transparent;
+        color:var(--muted);cursor:pointer;border-radius:8px;font-size:15px;
+        display:flex;align-items:center;justify-content:center;transition:all var(--t);
       }
-      .password-toggle:hover,
-      .password-toggle:focus-visible {
-        background: #f0f2f5;
-        color: #008069;
-        outline: none;
+      .password-toggle:hover{background:var(--brand-light);color:var(--brand);}
+
+      .field-error {
+        color:var(--error);font-size:.78rem;margin-top:.35rem;
+        display:none;align-items:center;gap:.3rem;
       }
+      .field-error.show{display:flex;}
 
       .btn {
-        width: 100%;
-        padding: 14px;
-        border: none;
-        border-radius: 10px;
-        font-size: 15px;
-        font-weight: 600;
-        cursor: pointer;
+        width:100%;padding:.9rem;border:none;border-radius:var(--radius);
+        font-size:.95rem;font-weight:700;cursor:pointer;
+        transition:all var(--t);font-family:inherit;
       }
       .btn-primary {
-        background: #008069;
-        color: white;
+        background:linear-gradient(135deg,var(--brand) 0%,#8b5cf6 100%);
+        color:white;box-shadow:0 4px 16px rgba(99,102,241,.38);
       }
-      .btn-primary:hover {
-        background: #00a884;
+      .btn-primary:hover:not(:disabled){
+        transform:translateY(-1px);box-shadow:0 6px 22px rgba(99,102,241,.48);
       }
-      .btn-link {
-        background: none;
-        margin-top: 12px;
-        color: #008069;
+      .btn-primary:active{transform:translateY(0);}
+      .btn-primary:disabled{opacity:.6;cursor:not-allowed;transform:none;}
+      .btn-ghost{
+        background:none;color:var(--brand);font-weight:600;
+        font-size:.88rem;padding:.6rem;margin-top:.5rem;
       }
-      .btn-secondary {
-        background: #e7fce3;
-        color: #008069;
-        margin-top: 12px;
+      .btn-ghost:hover{background:var(--brand-light);}
+      .btn-secondary{
+        background:var(--brand-light);color:var(--brand);
+        margin-top:.5rem;font-size:.88rem;
       }
-      .btn-outline {
-        border: 1px solid #d7dce5;
-        background: #ffffff;
-        color: #1f2937;
+      .btn-outline-install{
+        background:var(--surface2);border:1.5px solid var(--border);
+        color:var(--text);margin-top:1rem;font-weight:600;
+        display:none;align-items:center;justify-content:center;gap:8px;
       }
-      .login-install-btn {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        gap: 8px;
+      .btn-outline-install:hover{border-color:var(--brand);color:var(--brand);}
+
+      .alert {
+        border-radius:var(--radius);font-size:.88rem;
+        padding:.875rem 1rem;margin-top:1rem;
+        display:none;align-items:flex-start;gap:.5rem;line-height:1.5;
       }
-      .login-install-icon {
-        width: 18px;
-        height: 18px;
-        border: 2px solid currentColor;
-        border-radius: 5px;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 9px;
-        line-height: 1;
-      }
-      .install-note {
-        display: none;
-        margin-top: 10px;
-        color: #667085;
-        font-size: 12px;
-        line-height: 1.4;
-        text-align: center;
-      }
-      .auth-error {
-        margin-top: 16px;
-        padding: 12px;
-        background: #fee2e2;
-        color: #dc2626;
-        border-radius: 10px;
-        font-size: 13px;
-        text-align: center;
-      }
-      .auth-success {
-        margin-top: 16px;
-        padding: 12px;
-        background: #d1fae5;
-        color: #065f46;
-        border-radius: 10px;
-        font-size: 13px;
-        text-align: center;
-      }
-      .auth-note {
-        font-size: 11px;
-        color: #888;
-        text-align: center;
-        margin-top: 12px;
-      }
+      .alert.show{display:flex;}
+      .alert-error{background:#fef2f2;color:#991b1b;border:1px solid #fecaca;}
+      .alert-success{background:#f0fdf4;color:#166534;border:1px solid #bbf7d0;}
+      [data-theme="dark"] .alert-error{background:#450a0a;color:#fca5a5;border-color:#7f1d1d;}
+      [data-theme="dark"] .alert-success{background:#052e16;color:#86efac;border-color:#14532d;}
+
+      .auth-note{font-size:.78rem;color:var(--muted);text-align:center;margin-top:.75rem;line-height:1.5;}
+      .install-note{display:none;font-size:.75rem;color:var(--muted);text-align:center;margin-top:.5rem;}
+
       .modal {
-        display: none;
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: rgba(11, 20, 26, 0.48);
-        align-items: center;
-        justify-content: center;
-        z-index: 1000;
+        display:none;position:fixed;inset:0;
+        background:rgba(0,0,0,.55);backdrop-filter:blur(6px);
+        align-items:center;justify-content:center;z-index:1000;padding:20px;
       }
-      .modal-content {
-        background: white;
-        border-radius: 12px;
-        width: 350px;
-        max-width: 90%;
-        padding: 24px;
+      .modal.open{display:flex;}
+      .modal-card {
+        background:var(--surface);border-radius:22px;
+        width:min(380px,100%);padding:1.75rem;
+        border:1px solid var(--border);box-shadow:var(--shadow);
       }
-      .modal-header {
-        margin-bottom: 16px;
+      .modal-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem;}
+      .modal-head h3{font-size:1.1rem;font-weight:700;}
+      .modal-close{background:none;border:none;font-size:1.6rem;cursor:pointer;color:var(--muted);line-height:1;}
+      .modal-close:hover{color:var(--text);}
+
+      .theme-btn {
+        position:fixed;top:20px;right:20px;
+        width:40px;height:40px;border-radius:50%;
+        background:var(--surface);border:1.5px solid var(--border);
+        cursor:pointer;font-size:1.1rem;
+        display:flex;align-items:center;justify-content:center;
+        box-shadow:0 2px 12px rgba(0,0,0,.12);
+        transition:all var(--t);z-index:100;
       }
-      .modal-header h3 {
-        font-size: 18px;
-      }
-      .close-modal {
-        float: right;
-        font-size: 24px;
-        cursor: pointer;
-      }
-      @media (max-width: 520px) {
-        body {
-          align-items: stretch;
-          background: #ffffff;
-        }
-        .auth-container {
-          max-width: none;
-          padding: max(22px, env(safe-area-inset-top, 0px)) 18px max(22px, env(safe-area-inset-bottom, 0px));
-        }
-        .auth-card {
-          min-height: calc(100dvh - 44px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
-          padding: 22px 2px;
-          border-radius: 0;
-          box-shadow: none;
-        }
-        .auth-header {
-          margin-bottom: 26px;
-          padding: 0 16px;
-        }
-        .auth-form,
-        .auth-tabs,
-        .auth-note,
-        .install-note {
-          margin-left: 16px;
-          margin-right: 16px;
-        }
+      .theme-btn:hover{transform:rotate(20deg) scale(1.1);border-color:var(--brand);}
+
+      @media(max-width:480px){
+        body{align-items:stretch;background:var(--surface);}
+        body::before{display:none;}
+        .auth-wrap{max-width:none;}
+        .auth-card{border-radius:0;box-shadow:none;border:none;min-height:100dvh;padding:1.5rem 1.25rem;}
+        .brand-header{padding-top:1rem;}
+        .theme-btn{top:12px;right:12px;}
       }
     </style>
-    <link rel="stylesheet" href="auth-theme.css?v=1" />
   </head>
   <body>
-    <div class="auth-container">
+    <button class="theme-btn" onclick="toggleTheme()" aria-label="Toggle theme" id="themeBtn">🌙</button>
+
+    <div class="auth-wrap">
+      <div class="brand-header">
+        <div class="brand-logo">
+          <svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-2 12H6v-2h12v2zm0-3H6V9h12v2zm0-3H6V6h12v2z"/></svg>
+        </div>
+        <div class="brand-name">Team Chat</div>
+        <div class="brand-tagline">Collaborate seamlessly with your team</div>
+      </div>
+
       <div class="auth-card">
-        <div class="auth-header">
-          <h1>💬 Team Chat</h1>
-          <p>Internal communication for your team</p>
-        </div>
-
         <div class="auth-tabs">
-          <button class="auth-tab active" data-tab="login">Login</button>
-          <button class="auth-tab" data-tab="register">Register</button>
+          <button class="auth-tab active" data-tab="login">Sign In</button>
+          <button class="auth-tab" data-tab="register">Create Account</button>
         </div>
 
-        <form id="loginForm" class="auth-form active">
+        <form id="loginForm" class="auth-form active" novalidate>
           <div class="form-group">
-            <label>Email</label>
-            <input
-              type="email"
-              id="loginEmail"
-              placeholder="your@email.com"
-              required
-            />
+            <label>Email Address</label>
+            <div class="input-wrap">
+              <span class="input-icon">✉️</span>
+              <input type="email" id="loginEmail" placeholder="you@example.com" autocomplete="email" required />
+            </div>
           </div>
           <div class="form-group">
             <label>Password</label>
-            <div class="password-field">
-              <input
-                type="password"
-                id="loginPassword"
-                placeholder="••••••••"
-                required
-              />
-              <button
-                type="button"
-                class="password-toggle"
-                data-password-toggle="loginPassword"
-                aria-label="Show password"
-                title="Show password"
-              >
-                👁️
-              </button>
+            <div class="input-wrap password-wrap">
+              <span class="input-icon">🔒</span>
+              <input type="password" id="loginPassword" placeholder="••••••••" autocomplete="current-password" required />
+              <button type="button" class="password-toggle" data-password-toggle="loginPassword" aria-label="Show password">👁️</button>
             </div>
           </div>
-          <button type="submit" class="btn btn-primary">Login →</button>
-          <button type="button" id="forgotPasswordBtn" class="btn btn-link">
-            Forgot Password?
-          </button>
-          <button
-            type="button"
-            id="resendVerificationBtn"
-            class="btn btn-secondary"
-            style="display: none"
-          >
-            Resend verification email
-          </button>
+          <button type="submit" class="btn btn-primary" id="loginBtn">Sign In →</button>
+          <button type="button" id="forgotPasswordBtn" class="btn btn-ghost">Forgot password?</button>
+          <button type="button" id="resendVerificationBtn" class="btn btn-secondary" style="display:none;">Resend verification email</button>
         </form>
 
-        <form id="registerForm" class="auth-form">
+        <form id="registerForm" class="auth-form" novalidate>
           <div class="form-group">
             <label>Full Name</label>
-            <input
-              type="text"
-              id="registerName"
-              placeholder="Your name"
-              required
-            />
+            <div class="input-wrap">
+              <span class="input-icon">👤</span>
+              <input type="text" id="registerName" placeholder="Your display name" autocomplete="name" required />
+            </div>
           </div>
           <div class="form-group">
-            <label>Email</label>
-            <input
-              type="email"
-              id="registerEmail"
-              placeholder="your@email.com"
-              required
-            />
-            <div
-              id="emailError"
-              style="
-                color: #dc2626;
-                font-size: 12px;
-                margin-top: 4px;
-                display: none;
-              "
-            ></div>
+            <label>Email Address</label>
+            <div class="input-wrap">
+              <span class="input-icon">✉️</span>
+              <input type="email" id="registerEmail" placeholder="you@example.com" autocomplete="email" required />
+            </div>
+            <div id="emailError" class="field-error"></div>
           </div>
           <div class="form-group">
-            <label>Phone Number</label>
-            <input
-              type="tel"
-              id="registerPhone"
-              placeholder="Enter 10-digit phone number (Indian, optional)"
-            />
-            <div
-              id="phoneError"
-              style="
-                color: #dc2626;
-                font-size: 12px;
-                margin-top: 4px;
-                display: none;
-              "
-            ></div>
+            <label>Phone (optional)</label>
+            <div class="input-wrap">
+              <span class="input-icon">📱</span>
+              <input type="tel" id="registerPhone" placeholder="10-digit Indian number" autocomplete="tel" />
+            </div>
+            <div id="phoneError" class="field-error"></div>
           </div>
           <div class="form-group">
             <label>Password</label>
-            <div class="password-field">
-              <input
-                type="password"
-                id="registerPassword"
-                placeholder="•••••••• (min 6 characters)"
-                required
-              />
-              <button
-                type="button"
-                class="password-toggle"
-                data-password-toggle="registerPassword"
-                aria-label="Show password"
-                title="Show password"
-              >
-                👁️
-              </button>
+            <div class="input-wrap password-wrap">
+              <span class="input-icon">🔒</span>
+              <input type="password" id="registerPassword" placeholder="Min. 6 characters" autocomplete="new-password" required />
+              <button type="button" class="password-toggle" data-password-toggle="registerPassword" aria-label="Show password">👁️</button>
             </div>
-            <div
-              id="passwordError"
-              style="
-                color: #dc2626;
-                font-size: 12px;
-                margin-top: 4px;
-                display: none;
-              "
-            ></div>
+            <div id="passwordError" class="field-error"></div>
           </div>
-          <button type="submit" class="btn btn-primary" id="registerBtn">
-            Create Account →
-          </button>
-          <p class="auth-note">
-            📧 Verification email will be sent. Please verify before logging in.
-          </p>
+          <button type="submit" class="btn btn-primary" id="registerBtn">Create Account →</button>
+          <p class="auth-note">📧 A verification email will be sent. Please verify before signing in.</p>
         </form>
 
-        <div id="authError" class="auth-error" style="display: none"></div>
-        <div id="authSuccess" class="auth-success" style="display: none"></div>
-        <button
-          id="installAppBtn"
-          class="btn btn-outline login-install-btn"
-          type="button"
-          data-install-app
-          style="display: none; margin-top: 16px"
-        >
-          <span class="login-install-icon" aria-hidden="true">▣</span>
-          Download App
-        </button>
+        <div id="authError" class="alert alert-error"></div>
+        <div id="authSuccess" class="alert alert-success"></div>
+        <button id="installAppBtn" class="btn btn-outline-install" type="button" data-install-app style="display:none;">⬇️ Install App</button>
         <p id="installHelpText" class="install-note" data-install-help></p>
       </div>
     </div>
 
     <div id="resetModal" class="modal">
-      <div class="modal-content">
-        <div class="modal-header">
-          <span class="close-modal resetClose">&times;</span>
+      <div class="modal-card">
+        <div class="modal-head">
           <h3>Reset Password</h3>
+          <button class="modal-close resetClose" aria-label="Close">×</button>
         </div>
         <div class="form-group">
-          <label>Email</label>
-          <input type="email" id="resetEmail" placeholder="your@email.com" />
+          <label>Email Address</label>
+          <div class="input-wrap">
+            <span class="input-icon">✉️</span>
+            <input type="email" id="resetEmail" placeholder="you@example.com" />
+          </div>
         </div>
-        <button id="sendResetBtn" class="btn btn-primary">
-          Send Reset Link
-        </button>
+        <button id="sendResetBtn" class="btn btn-primary">Send Reset Link</button>
       </div>
     </div>
 
@@ -476,452 +327,171 @@
       firebase.initializeApp(firebaseConfig);
       const auth = firebase.auth();
       const db = firebase.firestore();
-      let lastUnverifiedEmail = "";
-      let lastUnverifiedPassword = "";
+      let lastUnverifiedEmail = "", lastUnverifiedPassword = "";
 
       function isLikelyPrivateSession() {
-        try {
-          const testKey = "teamChatStorageProbe";
-          localStorage.setItem(testKey, testKey);
-          localStorage.removeItem(testKey);
-          return false;
-        } catch (error) {
-          return true;
-        }
+        try { const k="tcProbe"; localStorage.setItem(k,k); localStorage.removeItem(k); return false; }
+        catch { return true; }
+      }
+      const authPersistenceReady = auth.setPersistence(
+        isLikelyPrivateSession() ? firebase.auth.Auth.Persistence.SESSION : firebase.auth.Auth.Persistence.LOCAL
+      );
+
+      const cleanEmail = e => e.trim().toLowerCase();
+      const validateEmail = e => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
+      const validatePhone = p => /^[6-9]\d{9}$/.test(p);
+      const validatePassword = p => p.length >= 6;
+
+      function getFriendlyError(err) {
+        const c = err?.code;
+        if (["auth/invalid-credential","auth/wrong-password","auth/user-not-found"].includes(c))
+          return "Incorrect email or password.";
+        if (c === "auth/too-many-requests") return "Too many attempts. Please wait a few minutes.";
+        if (c === "auth/network-request-failed") return "Network problem. Check your connection.";
+        if (c === "auth/invalid-email") return "Please enter a valid email address.";
+        if (c === "auth/email-already-in-use") return "Email already registered. Try signing in.";
+        if (c === "auth/weak-password") return "Password too weak. Use at least 6 characters.";
+        return err?.message || "Something went wrong. Please try again.";
       }
 
-      function getAuthPersistence() {
-        return isLikelyPrivateSession()
-          ? firebase.auth.Auth.Persistence.SESSION
-          : firebase.auth.Auth.Persistence.LOCAL;
-      }
+      const $id = id => document.getElementById(id);
+      const showError = msg => { $id("authError").textContent = "⚠️ "+msg; $id("authError").classList.add("show"); $id("authSuccess").classList.remove("show"); };
+      const showSuccess = msg => { $id("authSuccess").textContent = "✅ "+msg; $id("authSuccess").classList.add("show"); $id("authError").classList.remove("show"); };
+      const clearAlerts = () => { $id("authError").classList.remove("show"); $id("authSuccess").classList.remove("show"); };
+      function showFieldError(id, msg) { const el=$id(id); if(el){el.textContent=msg;el.classList.add("show");} }
+      function clearFieldErrors() { ["emailError","phoneError","passwordError"].forEach(id=>{const el=$id(id);if(el)el.classList.remove("show");}); }
+      function setLoading(btn,loading,label,loadLabel) { btn.disabled=loading; btn.textContent=loading?loadLabel:label; }
+      function getVerifSettings() { return {url:new URL("verify.html",window.location.href).href,handleCodeInApp:false}; }
 
-      const authPersistenceReady = auth.setPersistence(getAuthPersistence());
-
-      function cleanEmail(email) {
-        return email.trim().toLowerCase();
-      }
-
-      function setButtonLoading(btn, isLoading, label, loadingLabel) {
-        btn.disabled = isLoading;
-        btn.textContent = isLoading ? loadingLabel : label;
-      }
-
-      function getEmailVerificationSettings() {
-        return {
-          url: new URL("verify.html", window.location.href).href,
-          handleCodeInApp: false,
-        };
-      }
-
-      async function sendVerificationEmail(user) {
-        await user.sendEmailVerification(getEmailVerificationSettings());
-      }
-
-      function getFriendlyAuthError(error, fallback) {
-        const code = error && error.code;
-        if (
-          code === "auth/invalid-credential" ||
-          code === "auth/wrong-password" ||
-          code === "auth/user-not-found"
-        ) {
-          return "Incorrect email or password. Please check and try again.";
-        }
-        if (code === "auth/too-many-requests") {
-          return "Too many attempts. Please wait a few minutes, then try again.";
-        }
-        if (code === "auth/network-request-failed") {
-          return "Network problem. Check your internet connection and try again.";
-        }
-        if (code === "auth/invalid-email") {
-          return "Please enter a valid email address.";
-        }
-        if (code === "auth/email-already-in-use") {
-          return "This email is already registered. Login or use a different email.";
-        }
-        if (code === "auth/weak-password") {
-          return "Password is too weak. Use at least 6 characters.";
-        }
-        if (
-          code === "auth/unauthorized-continue-uri" ||
-          code === "auth/invalid-continue-uri"
-        ) {
-          return "Verification link setup needs Firebase authorized domain access. A standard verification email can still be sent.";
-        }
-        return fallback || "Something went wrong. Please try again.";
-      }
-
-      // ========================================================================
-      // STRICT APP VALIDATION, TAB SYSTEMS & SUBMISSION CONTROLLERS
-      // ========================================================================
-
-      // Real-time Regular Expression Validators
-      function validateEmail(email) {
-        // Enforces strict syntax standard format
-        const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
-        return emailRegex.test(email);
-      }
-
-      function validatePhone(phone) {
-        // Strict Indian format validation rule: exactly 10 digits starting with 6, 7, 8, or 9
-        return /^[6-9]\d{9}$/.test(phone.trim());
-      }
-
-      function validatePassword(password) {
-        return password.length >= 6;
-      }
-
-      auth.onAuthStateChanged(async (user) => {
-        await authPersistenceReady.catch(() => {});
-        if (!user) return;
-        await user.reload();
-        if (user.emailVerified) {
-          window.location.href = "index.html";
-        }
-      });
-
-      // Clear validation errors
-      function clearValidationErrors() {
-        document.getElementById("emailError").style.display = "none";
-        document.getElementById("phoneError").style.display = "none";
-        document.getElementById("passwordError").style.display = "none";
-      }
-
-      // Show validation error
-      function showValidationError(fieldId, message) {
-        const errorDiv = document.getElementById(fieldId);
-        if (errorDiv) {
-          errorDiv.textContent = message;
-          errorDiv.style.display = "block";
-        }
-      }
-
-      // Tab switching controller interaction setup
-      document.querySelectorAll(".auth-tab").forEach((tab) => {
+      // Tabs
+      document.querySelectorAll(".auth-tab").forEach(tab => {
         tab.addEventListener("click", () => {
-          document
-            .querySelectorAll(".auth-tab")
-            .forEach((t) => t.classList.remove("active"));
+          document.querySelectorAll(".auth-tab,.auth-form").forEach(el=>el.classList.remove("active"));
           tab.classList.add("active");
-          document
-            .querySelectorAll(".auth-form")
-            .forEach((form) => form.classList.remove("active"));
-          document.getElementById("authError").style.display = "none";
-          document.getElementById("authSuccess").style.display = "none";
-          document
-            .getElementById(`${tab.dataset.tab}Form`)
-            .classList.add("active");
+          $id(tab.dataset.tab+"Form").classList.add("active");
+          clearAlerts(); clearFieldErrors();
         });
       });
 
-      // Password show/hide toggle
-      document
-        .querySelectorAll("[data-password-toggle]")
-        .forEach((toggleBtn) => {
-          toggleBtn.addEventListener("click", () => {
-            const input = document.getElementById(
-              toggleBtn.dataset.passwordToggle,
-            );
-            if (!input) return;
+      // Password toggles
+      document.querySelectorAll("[data-password-toggle]").forEach(btn => {
+        btn.addEventListener("click", () => {
+          const inp = $id(btn.dataset.passwordToggle);
+          inp.type = inp.type === "password" ? "text" : "password";
+          btn.textContent = inp.type === "password" ? "👁️" : "🙈";
+        });
+      });
 
-            const isHidden = input.type === "password";
-            input.type = isHidden ? "text" : "password";
-            toggleBtn.textContent = isHidden ? "🙈" : "👁️";
-            toggleBtn.setAttribute(
-              "aria-label",
-              isHidden ? "Hide password" : "Show password",
-            );
-            toggleBtn.title = isHidden ? "Hide password" : "Show password";
+      // Theme toggle
+      function toggleTheme() {
+        const isDark = document.documentElement.dataset.theme === "dark";
+        document.documentElement.dataset.theme = isDark ? "light" : "dark";
+        localStorage.setItem("darkMode", String(!isDark));
+        $id("themeBtn").textContent = isDark ? "🌙" : "☀️";
+      }
+      $id("themeBtn").textContent = document.documentElement.dataset.theme === "dark" ? "☀️" : "🌙";
+
+      // Login
+      $id("loginForm").addEventListener("submit", async e => {
+        e.preventDefault(); clearAlerts();
+        const email = cleanEmail($id("loginEmail").value);
+        const password = $id("loginPassword").value;
+        const btn = $id("loginBtn");
+        setLoading(btn, true, "Sign In →", "Signing in…");
+        try {
+          await authPersistenceReady;
+          const cred = await auth.signInWithEmailAndPassword(email, password);
+          if (!cred.user.emailVerified) {
+            lastUnverifiedEmail = email; lastUnverifiedPassword = password;
+            await auth.signOut();
+            showError("Please verify your email before signing in.");
+            $id("resendVerificationBtn").style.display = "block";
+            return;
+          }
+          window.location.href = "index.html";
+        } catch(err) {
+          showError(getFriendlyError(err));
+        } finally {
+          setLoading(btn, false, "Sign In →", "Signing in…");
+        }
+      });
+
+      // Resend verification
+      $id("resendVerificationBtn").addEventListener("click", async () => {
+        const btn = $id("resendVerificationBtn");
+        if (!lastUnverifiedEmail) { showError("Sign in first, then resend."); return; }
+        setLoading(btn, true, "Resend verification email", "Sending…");
+        try {
+          await authPersistenceReady;
+          const cred = await auth.signInWithEmailAndPassword(lastUnverifiedEmail, lastUnverifiedPassword);
+          await cred.user.sendEmailVerification(getVerifSettings());
+          await auth.signOut();
+          showSuccess("Verification email sent. Check your inbox.");
+        } catch(err) {
+          showError(getFriendlyError(err));
+        } finally {
+          setLoading(btn, false, "Resend verification email", "Sending…");
+        }
+      });
+
+      // Register
+      $id("registerForm").addEventListener("submit", async e => {
+        e.preventDefault(); clearAlerts(); clearFieldErrors();
+        const name = $id("registerName").value.trim();
+        const email = cleanEmail($id("registerEmail").value);
+        const phone = $id("registerPhone").value.trim();
+        const password = $id("registerPassword").value;
+        const btn = $id("registerBtn");
+        let hasError = false;
+        if (!name || name.length < 2) { showError("Please enter your full display name."); hasError = true; }
+        if (!validateEmail(email)) { showFieldError("emailError","❌ Enter a valid email (e.g. name@domain.com)."); hasError = true; }
+        if (phone && !validatePhone(phone)) { showFieldError("phoneError","❌ Valid 10-digit Indian number (starts with 6–9)."); hasError = true; }
+        if (!validatePassword(password)) { showFieldError("passwordError","❌ Password must be at least 6 characters."); hasError = true; }
+        if (hasError) return;
+        setLoading(btn, true, "Create Account →", "Creating account…");
+        let createdUser = null;
+        try {
+          await authPersistenceReady;
+          const cred = await auth.createUserWithEmailAndPassword(email, password);
+          createdUser = cred.user;
+          await cred.user.updateProfile({ displayName: name });
+          await cred.user.sendEmailVerification(getVerifSettings());
+          await db.collection("users").doc(cred.user.uid).set({
+            uid: cred.user.uid, email, displayName: name, phone,
+            createdAt: new Date(), isActive: true, isFirstTime: true,
+            emailVerified: false, pendingVerification: true, onlineStatus: "offline",
+            privacySettings: { hideReadReceipts:false, hideTypingIndicator:false, hideLastSeen:false },
           });
-        });
-
-      // Login Form submission router execution
-      document
-        .getElementById("loginForm")
-        .addEventListener("submit", async (e) => {
-          e.preventDefault();
-          const email = cleanEmail(document.getElementById("loginEmail").value);
-          const password = document.getElementById("loginPassword").value;
-          const errorDiv = document.getElementById("authError");
-          const successDiv = document.getElementById("authSuccess");
-          const resendBtn = document.getElementById("resendVerificationBtn");
-          const btn = e.target.querySelector("button[type='submit']");
-
-          errorDiv.style.display = "none";
-          successDiv.style.display = "none";
-          resendBtn.style.display = "none";
-          setButtonLoading(btn, true, "Login ->", "Logging in...");
-
-          try {
-            await authPersistenceReady;
-            const userCred = await auth.signInWithEmailAndPassword(
-              email,
-              password,
-            );
-            await userCred.user.reload();
-
-            if (!userCred.user.emailVerified) {
-              lastUnverifiedEmail = email;
-              lastUnverifiedPassword = password;
-              await auth.signOut();
-              errorDiv.textContent =
-                "Please verify your email first. Check your inbox, then login again.";
-              errorDiv.style.display = "block";
-              resendBtn.style.display = "block";
-              setButtonLoading(btn, false, "Login ->", "Logging in...");
-              return;
-            }
-
-            try {
-              const userRef = db.collection("users").doc(userCred.user.uid);
-
-              const userDoc = await userRef.get();
-
-              if (userDoc.exists && userDoc.data().isActive === false) {
-                await userRef.update({
-                  isActive: true,
-                  deactivatedAt: null,
-                });
-              }
-
-              await userRef.set(
-                {
-                  onlineStatus: "online",
-                  lastSeen: new Date(),
-                  emailVerified: true,
-                  pendingVerification: false,
-                },
-                { merge: true },
-              );
-            } catch (firestoreError) {
-              console.warn("Profile update skipped:", firestoreError);
-            }
-
-            window.location.href = "index.html";
-          } catch (error) {
-            errorDiv.textContent = getFriendlyAuthError(
-              error,
-              "Login failed. Please try again.",
-            );
-            errorDiv.style.display = "block";
-            setButtonLoading(btn, false, "Login ->", "Logging in...");
-          }
-        });
-
-      document
-        .getElementById("resendVerificationBtn")
-        .addEventListener("click", async () => {
-          const errorDiv = document.getElementById("authError");
-          const successDiv = document.getElementById("authSuccess");
-          const btn = document.getElementById("resendVerificationBtn");
-          const email =
-            lastUnverifiedEmail ||
-            cleanEmail(document.getElementById("loginEmail").value);
-          const password =
-            lastUnverifiedPassword ||
-            document.getElementById("loginPassword").value;
-
-          errorDiv.style.display = "none";
-          successDiv.style.display = "none";
-
-          if (!email || !password) {
-            errorDiv.textContent =
-              "Enter your email and password first, then resend verification.";
-            errorDiv.style.display = "block";
-            return;
-          }
-
-          setButtonLoading(
-            btn,
-            true,
-            "Resend verification email",
-            "Sending...",
-          );
-          try {
-            await authPersistenceReady;
-            const userCred = await auth.signInWithEmailAndPassword(
-              email,
-              password,
-            );
-            await sendVerificationEmail(userCred.user);
-            await auth.signOut();
-            successDiv.textContent =
-              "Verification email sent. Please check your inbox.";
-            successDiv.style.display = "block";
-          } catch (error) {
-            errorDiv.textContent = getFriendlyAuthError(
-              error,
-              "Could not send verification email. Please try again.",
-            );
-            errorDiv.style.display = "block";
-          } finally {
-            setButtonLoading(
-              btn,
-              false,
-              "Resend verification email",
-              "Sending...",
-            );
-          }
-        });
-
-      // Register Form submission interceptor
-      document
-        .getElementById("registerForm")
-        .addEventListener("submit", async (e) => {
-          e.preventDefault();
-          clearValidationErrors();
-
-          const name = document.getElementById("registerName").value.trim();
-          const email = cleanEmail(
-            document.getElementById("registerEmail").value,
-          );
-          const phone = document.getElementById("registerPhone").value.trim();
-          const password = document.getElementById("registerPassword").value;
-          const errorDiv = document.getElementById("authError");
-          const successDiv = document.getElementById("authSuccess");
-          const btn = e.target.querySelector("button[type='submit']");
-
-          errorDiv.style.display = "none";
-          successDiv.style.display = "none";
-
-          let hasError = false;
-
-          // 1. Strict Name Length Check
-          if (!name || name.length < 2) {
-            errorDiv.textContent = "❌ Please enter your full display name.";
-            errorDiv.style.display = "block";
-            hasError = true;
-          }
-
-          // 2. Strict Syntax Email Validation
-          if (!validateEmail(email)) {
-            showValidationError(
-              "emailError",
-              "❌ Please provide a valid email format address (e.g. name@domain.com).",
-            );
-            hasError = true;
-          }
-
-          // 3. Optional phone, strict when entered
-          if (phone && !validatePhone(phone)) {
-            showValidationError(
-              "phoneError",
-              "❌ Enter a valid 10-digit phone number starting with 6, 7, 8, or 9.",
-            );
-            hasError = true;
-          }
-
-          // 4. Strict Security Password Length Check
-          if (!validatePassword(password)) {
-            showValidationError(
-              "passwordError",
-              "❌ Password requirement unmet. Must contain at least 6 characters.",
-            );
-            hasError = true;
-          }
-
-          if (hasError) return;
-
-          btn.disabled = true;
-          btn.textContent = "Creating account...";
-
-          let createdUser = null;
-          try {
-            await authPersistenceReady;
-            const userCred = await auth.createUserWithEmailAndPassword(
-              email,
-              password,
-            );
-            createdUser = userCred.user;
-            await userCred.user.updateProfile({ displayName: name });
-            await sendVerificationEmail(userCred.user);
-
-            await db
-              .collection("users")
-              .doc(userCred.user.uid)
-              .set({
-                uid: userCred.user.uid,
-                email: email,
-                displayName: name,
-                phone,
-                createdAt: new Date(),
-                isActive: true,
-                isFirstTime: true,
-                emailVerified: false,
-                pendingVerification: true,
-                onlineStatus: "offline",
-                privacySettings: {
-                  hideReadReceipts: false,
-                  hideTypingIndicator: false,
-                  hideLastSeen: false,
-                },
-              });
-
-            await auth.signOut();
-            successDiv.textContent =
-              "Account created! Check Inbox, Spam, and Promotions for the verification email. Please verify your email before logging in.";
-            successDiv.style.display = "block";
-            document.getElementById("registerForm").reset();
-            btn.disabled = false;
-            btn.textContent = "Create Account →";
-          } catch (error) {
-            if (createdUser) {
-              await createdUser.delete().catch(() => {});
-              await auth.signOut().catch(() => {});
-            }
-            errorDiv.textContent = getFriendlyAuthError(
-              error,
-              "Registration failed. Please try again.",
-            );
-            errorDiv.style.display = "block";
-            setButtonLoading(
-              btn,
-              false,
-              "Create Account ->",
-              "Creating account...",
-            );
-          }
-        });
-
-      // Password Reset
-      const resetModal = document.getElementById("resetModal");
-      document
-        .getElementById("forgotPasswordBtn")
-        .addEventListener("click", () => {
-          resetModal.style.display = "flex";
-        });
-      document.querySelectorAll(".resetClose").forEach((btn) => {
-        btn.addEventListener(
-          "click",
-          () => (resetModal.style.display = "none"),
-        );
+          await auth.signOut();
+          showSuccess("Account created! Check your inbox (and Spam) for the verification email.");
+          e.target.reset();
+        } catch(err) {
+          if (createdUser) { await createdUser.delete().catch(()=>{}); await auth.signOut().catch(()=>{}); }
+          showError(getFriendlyError(err));
+        } finally {
+          setLoading(btn, false, "Create Account →", "Creating account…");
+        }
       });
-      document
-        .getElementById("sendResetBtn")
-        .addEventListener("click", async () => {
-          const email = document.getElementById("resetEmail").value.trim();
-          const btn = document.getElementById("sendResetBtn");
 
-          if (!email) {
-            alert("Please enter your email");
-            return;
-          }
-
-          btn.disabled = true;
-          btn.textContent = "Sending...";
-
-          try {
-            await auth.sendPasswordResetEmail(email);
-            alert("✅ Password reset email sent! Check your inbox.");
-            resetModal.style.display = "none";
-            btn.disabled = false;
-            btn.textContent = "Send Reset Link";
-          } catch (error) {
-            alert("❌ " + (error.message || "Failed to send reset email"));
-            btn.disabled = false;
-            btn.textContent = "Send Reset Link";
-          }
-        });
+      // Reset password
+      $id("forgotPasswordBtn").addEventListener("click", () => $id("resetModal").classList.add("open"));
+      document.querySelectorAll(".resetClose").forEach(btn => btn.addEventListener("click", () => $id("resetModal").classList.remove("open")));
+      $id("resetModal").addEventListener("click", e => { if(e.target===$id("resetModal")) $id("resetModal").classList.remove("open"); });
+      $id("sendResetBtn").addEventListener("click", async () => {
+        const email = $id("resetEmail").value.trim();
+        const btn = $id("sendResetBtn");
+        if (!email) { alert("Please enter your email."); return; }
+        setLoading(btn, true, "Send Reset Link", "Sending…");
+        try {
+          await auth.sendPasswordResetEmail(email);
+          $id("resetModal").classList.remove("open");
+          showSuccess("Password reset email sent! Check your inbox.");
+        } catch(err) {
+          alert("❌ " + (err.message || "Failed to send reset email."));
+        } finally {
+          setLoading(btn, false, "Send Reset Link", "Sending…");
+        }
+      });
     </script>
     <script src="pwa-install.js?v=141"></script>
   </body>
