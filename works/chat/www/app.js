@@ -111,8 +111,6 @@ let directChatsUnsubscribe = null;
 let groupChatsUnsubscribe = null;
 let usersUnsubscribe = null;
 let allUsersReadyPromise = null;
-let explicitPeopleLookupTerm = "";
-let explicitPeopleLookupToken = 0;
 let chatRequestsUnsubscribe = null;
 let groupInvitesUnsubscribe = null;
 let currentGroup = null;
@@ -4939,31 +4937,11 @@ function isSearchableUser(user = {}) {
     user.isActive === false
   )
     return false;
+  if (user.pendingVerification === true && user.emailVerified === false)
+    return false;
   return Boolean(
     user.email || user.displayName || user.phone || user.phoneNumber,
   );
-}
-
-function isVerifiedDirectoryUser(user = {}) {
-  // New-user discovery must expose only users whose email is verified.
-  // Existing chats are still shown from chat history, but fresh lookup is protected.
-  return (
-    isSearchableUser(user) &&
-    (user.emailVerified === true ||
-      user.isEmailVerified === true ||
-      user.verifiedEmail === true ||
-      String(user.emailVerificationStatus || "").toLowerCase() === "verified")
-  );
-}
-
-function isCompletePhoneLookup(value = "") {
-  const digits = String(value || "").replace(/\D/g, "");
-  return digits.length >= 7;
-}
-
-function isExplicitPeopleLookupTerm(value = "") {
-  const term = normalizeSearchText(value);
-  return isCompleteEmail(term) || isCompletePhoneLookup(term);
 }
 
 function normalizeUserDoc(doc) {
@@ -5582,7 +5560,7 @@ async function uploadDocument(file) {
 // ========================================================================
 // FIXED: STRICT PREFIX & EXACT MULTI-CRITERIA SEARCH ENGINE
 // ========================================================================
-async function searchUsersRealtime(searchTerm, options = {}) {
+async function searchUsersRealtime(searchTerm) {
   const chatsList = document.getElementById("chatsList");
   if (!chatsList) return;
 
@@ -5602,8 +5580,8 @@ async function searchUsersRealtime(searchTerm, options = {}) {
     return;
   }
 
-  if (options.peopleLookup) await refreshAllUsersOnce();
-  loadAllChatsList(term, { peopleLookup: Boolean(options.peopleLookup) });
+  await refreshAllUsersOnce();
+  loadAllChatsList(term);
 }
 
 // ========================================================================
@@ -5613,7 +5591,7 @@ async function searchUsersRealtime(searchTerm, options = {}) {
 // FIXED: COMBINED REAL-TIME HISTORY & DIRECTORY LOOKUP ENGINE
 // ========================================================================
 let chatListLoadToken = 0;
-async function loadAllChatsList(searchTerm = "", options = {}) {
+async function loadAllChatsList(searchTerm = "") {
   const chatsList = document.getElementById("chatsList");
   if (!chatsList) return;
   const loadToken = ++chatListLoadToken;
@@ -5668,10 +5646,6 @@ async function loadAllChatsList(searchTerm = "", options = {}) {
     items = items.filter((item) => activeFolderChatIds.has(item.id));
 
   const term = searchTerm.trim().toLowerCase();
-  const allowUserLookup =
-    Boolean(options.peopleLookup) &&
-    explicitPeopleLookupTerm === term &&
-    isExplicitPeopleLookupTerm(term);
 
   if (/^\d{4}$/.test(term) && (await verifyChatLockPin(term))) {
     const lockedItems = [...lockedChats.values()]
@@ -5712,39 +5686,36 @@ async function loadAllChatsList(searchTerm = "", options = {}) {
 
     const userMatches = [];
 
-    if (allowUserLookup) {
-      await refreshAllUsersOnce();
-      const directoryCandidates = await getVerifiedUserLookupCandidates(term);
+    await refreshAllUsersOnce();
 
-      // MATCH 2: Look through the verified directory only after Enter/Search.
-      for (const user of directoryCandidates) {
-        if (isUserInLockedDirectChat(user.id)) continue;
-        // PREVENT CONFLICTS: Skip if this user is already visible in chatMatches
-        if (visibleUserIds.has(user.id)) continue;
+    // MATCH 2: Look through the directory for users you haven't messaged yet
+    for (const user of allUsers.filter(isSearchableUser)) {
+      if (isUserInLockedDirectChat(user.id)) continue;
+      // PREVENT CONFLICTS: Skip if this user is already visible in chatMatches
+      if (visibleUserIds.has(user.id)) continue;
 
-        const isMatch = matchesNewContactLookup(user, term);
+      const isMatch = matchesNewContactLookup(user, term);
 
-        if (isMatch) {
-          const requestState = await getContactRequestState(user.id);
+      if (isMatch) {
+        const requestState = await getContactRequestState(user.id); // Fixed reference pass
 
-          userMatches.push({
-            id: `user_${user.id}`,
-            type: "user",
-            name: user.displayName || user.email || "User",
-            avatar: user.avatar
-              ? `<img src="${user.avatar}">`
-              : escapeHtml((user.displayName || "?")[0].toUpperCase()),
-            preview: requestState?.label || user.email || user.phone || "Tap to connect",
-            requestState,
-            unreadCount: 0,
-            isFavorite: false,
-            isPinned: false,
-            isMuted: false,
-            onlineStatus: user.onlineStatus || "offline",
-            rawUser: user,
-            lastMessageTime: new Date(0),
-          });
-        }
+        userMatches.push({
+          id: `user_${user.id}`,
+          type: "user",
+          name: user.displayName || user.email || "User",
+          avatar: user.avatar
+            ? `<img src="${user.avatar}">`
+            : escapeHtml((user.displayName || "?")[0].toUpperCase()),
+          preview: user.email || user.phone || "Tap to connect",
+          requestState,
+          unreadCount: 0,
+          isFavorite: false,
+          isPinned: false,
+          isMuted: false,
+          onlineStatus: user.onlineStatus || "offline",
+          rawUser: user, // renamed tracker internally to completely avoid property conflicts
+          lastMessageTime: new Date(0),
+        });
       }
     }
 
@@ -7428,46 +7399,6 @@ async function refreshAllUsersOnce() {
     else await allUsersReadyPromise;
   }
   return allUsers;
-}
-
-async function getVerifiedUserLookupCandidates(term = "") {
-  const cleanTerm = normalizeSearchText(term);
-  const digits = cleanTerm.replace(/\D/g, "");
-  const byKey = new Map();
-  const addCandidate = (user) => {
-    if (!user || !isVerifiedDirectoryUser(user)) return;
-    if (!matchesNewContactLookup(user, cleanTerm)) return;
-    byKey.set(user.id, user);
-  };
-
-  allUsers.forEach(addCandidate);
-
-  const querySnapshots = [];
-  try {
-    if (isCompleteEmail(cleanTerm)) {
-      querySnapshots.push(
-        await db.collection("users").where("email", "==", normalizeEmail(cleanTerm)).limit(10).get(),
-      );
-    }
-    if (isCompletePhoneLookup(cleanTerm)) {
-      querySnapshots.push(
-        await db.collection("users").where("phone", "==", digits).limit(10).get(),
-      );
-      querySnapshots.push(
-        await db.collection("users").where("phoneNumber", "==", digits).limit(10).get(),
-      );
-    }
-  } catch (error) {
-    console.warn("Exact verified-user lookup failed:", error);
-  }
-
-  querySnapshots.forEach((snapshot) => {
-    snapshot.docs.forEach((doc) => addCandidate(normalizeUserDoc(doc)));
-  });
-
-  return [...byKey.values()].sort((a, b) =>
-    (a.displayName || a.email || "").localeCompare(b.displayName || b.email || ""),
-  );
 }
 
 function populateGroupMemberSuggestions() {
@@ -13670,49 +13601,11 @@ function switchTab(tab) {
 function bindSearchInput() {
   const input = document.getElementById("searchInput");
   if (!input) return;
-  const runTypingSearch = () => {
-    explicitPeopleLookupTerm = "";
-    clearTimeout(input._teamChatSearchTimer);
-    input._teamChatSearchTimer = window.setTimeout(
-      () => searchUsersRealtime(input.value, { peopleLookup: false }),
-      220,
-    );
-  };
-  const runPeopleLookup = () => performExplicitPeopleLookup(input.value);
-  input.addEventListener("input", runTypingSearch);
-  input.addEventListener("keydown", (event) => {
-    if (event.key !== "Enter") return;
-    event.preventDefault();
-    runPeopleLookup();
+  let searchTimer = null;
+  input.addEventListener("input", (e) => {
+    clearTimeout(searchTimer);
+    searchTimer = window.setTimeout(() => searchUsersRealtime(e.target.value), 220);
   });
-  document.getElementById("peopleSearchBtn")?.addEventListener("click", (event) => {
-    event.preventDefault();
-    runPeopleLookup();
-  });
-  document.getElementById("clearSearchBtn")?.addEventListener("click", (event) => {
-    event.preventDefault();
-    input.value = "";
-    explicitPeopleLookupTerm = "";
-    loadCurrentChatList();
-    input.focus();
-  });
-}
-
-async function performExplicitPeopleLookup(rawTerm = "") {
-  const input = document.getElementById("searchInput");
-  const term = normalizeSearchText(rawTerm);
-  if (!term) {
-    explicitPeopleLookupTerm = "";
-    loadCurrentChatList();
-    return;
-  }
-  explicitPeopleLookupTerm = isExplicitPeopleLookupTerm(term) ? term : "";
-  explicitPeopleLookupToken += 1;
-  if (!explicitPeopleLookupTerm) {
-    showToast("Enter a complete email address or phone number to find a user", "error");
-  }
-  if (input) input.value = rawTerm;
-  await searchUsersRealtime(rawTerm, { peopleLookup: Boolean(explicitPeopleLookupTerm) });
 }
 
 function updateInChatSearch() {
@@ -19406,263 +19299,3 @@ document.addEventListener("DOMContentLoaded", function () {
     });
   }
 });
-
-
-// ========================================================================
-// NSL FINAL RELIABLE SEARCH PATCH
-// Purpose:
-// 1) Typing in the left search box still searches chats/messages only.
-// 2) Full email/phone + Enter or search button performs verified user lookup.
-// 3) Already connected users show the existing chat row instead of request again.
-// 4) The result list always shows clear Loading / Not found / Error states.
-// ========================================================================
-(function setupReliablePeopleSearchPatch() {
-  if (window.__nslReliablePeopleSearchPatchInstalled) return;
-  window.__nslReliablePeopleSearchPatchInstalled = true;
-
-  function nslSetActiveAllTabForSearch() {
-    try {
-      currentViewTab = "all";
-      document.querySelectorAll(".tab").forEach((tab) => {
-        tab.classList.toggle("active", tab.dataset.tab === "all");
-      });
-      ["groupsList", "broadcastsList", "statusList", "callsList", "communitiesList"].forEach((id) => {
-        const el = document.getElementById(id);
-        if (el) el.style.display = "none";
-      });
-      const chatsList = document.getElementById("chatsList");
-      if (chatsList) chatsList.style.display = "block";
-      ["groupActions", "broadcastActions", "statusActions", "communityActions"].forEach((id) => {
-        const el = document.getElementById(id);
-        if (el) el.style.display = "none";
-      });
-    } catch (error) {
-      console.warn("Could not switch to All tab for search:", error);
-    }
-  }
-
-  function nslSetSearchListState(html) {
-    const chatsList = document.getElementById("chatsList");
-    if (!chatsList) return;
-    chatsList.style.display = "block";
-    chatsList.innerHTML = html;
-  }
-
-  function nslLookupEmptyState(term) {
-    const safeTerm = escapeHtml(term || "");
-    return `
-      <div class="empty-state explicit-people-empty">
-        <strong>No verified user found</strong>
-        <span>No email-verified account matched <b>${safeTerm}</b>.</span>
-        <small>Check the full email/phone, and make sure the other user has verified their email.</small>
-      </div>
-    `;
-  }
-
-  function nslIsExistingChatItemMatch(item = {}, term = "") {
-    const cleanTerm = normalizeSearchText(term);
-    if (!cleanTerm) return false;
-    const email = normalizeEmail(item.email || item.user?.email || "");
-    const itemPhone = String(item.phone || item.user?.phone || item.user?.phoneNumber || "").replace(/\D/g, "");
-    const digits = cleanTerm.replace(/\D/g, "");
-    if (isCompleteEmail(cleanTerm) && email && email === normalizeEmail(cleanTerm)) return true;
-    if (isCompletePhoneLookup(cleanTerm) && itemPhone && itemPhone === digits) return true;
-    return false;
-  }
-
-  async function nslGetExistingChatMatches(term) {
-    const directItems = await buildDirectChatItems().catch((error) => {
-      console.warn("Could not build existing chat matches:", error);
-      return [];
-    });
-    return directItems.filter((item) => item.type === "direct" && nslIsExistingChatItemMatch(item, term));
-  }
-
-  async function nslGetExactVerifiedUsers(term) {
-    const cleanTerm = normalizeSearchText(term);
-    const digits = cleanTerm.replace(/\D/g, "");
-    const found = new Map();
-    const addUser = (user) => {
-      if (!user || !user.id) return;
-      if (!isVerifiedDirectoryUser(user)) return;
-      if (!matchesNewContactLookup(user, cleanTerm)) return;
-      found.set(user.id, user);
-    };
-
-    try {
-      await refreshAllUsersOnce();
-      allUsers.forEach(addUser);
-    } catch (error) {
-      console.warn("Directory cache refresh failed during explicit lookup:", error);
-    }
-
-    const snapshots = [];
-    try {
-      if (isCompleteEmail(cleanTerm)) {
-        snapshots.push(await db.collection("users").where("email", "==", normalizeEmail(cleanTerm)).limit(20).get());
-      }
-      if (isCompletePhoneLookup(cleanTerm)) {
-        snapshots.push(await db.collection("users").where("phone", "==", digits).limit(20).get());
-        snapshots.push(await db.collection("users").where("phoneNumber", "==", digits).limit(20).get());
-      }
-    } catch (error) {
-      console.warn("Direct Firestore explicit lookup failed; using cached user directory only:", error);
-      // Do not fail the whole search here. If Firebase rules/indexes are not updated yet,
-      // the app should still show matches that were already loaded into allUsers.
-      // The UI will show "No verified user found" instead of a permission crash.
-    }
-
-    snapshots.forEach((snapshot) => {
-      snapshot.docs.forEach((doc) => addUser(normalizeUserDoc(doc)));
-    });
-
-    return [...found.values()].filter((user) => user.id !== currentUser?.uid);
-  }
-
-  async function nslRenderExplicitPeopleLookup(rawTerm = "") {
-    const input = document.getElementById("searchInput");
-    const term = normalizeSearchText(rawTerm || input?.value || "");
-    explicitPeopleLookupTerm = isExplicitPeopleLookupTerm(term) ? term : "";
-    explicitPeopleLookupToken += 1;
-
-    nslSetActiveAllTabForSearch();
-
-    if (!term) {
-      loadCurrentChatList();
-      return;
-    }
-
-    if (!isExplicitPeopleLookupTerm(term)) {
-      showToast("Enter a complete email address or phone number to find a user", "error");
-      searchUsersRealtime(term, { peopleLookup: false });
-      return;
-    }
-
-    nslSetSearchListState('<div class="empty-state explicit-people-loading">Searching verified users...</div>');
-
-    try {
-      const existingMatches = await nslGetExistingChatMatches(term);
-      if (existingMatches.length) {
-        renderChatListItems(
-          decorateSearchItems(existingMatches, "Existing chat", "chat"),
-          document.getElementById("chatsList"),
-        );
-        return;
-      }
-
-      const verifiedUsers = await nslGetExactVerifiedUsers(term);
-      if (!verifiedUsers.length) {
-        nslSetSearchListState(nslLookupEmptyState(term));
-        return;
-      }
-
-      const userRows = [];
-      for (const user of verifiedUsers) {
-        const requestState = await getContactRequestState(user.id);
-        userRows.push({
-          id: `user_${user.id}`,
-          type: "user",
-          name: user.displayName || user.name || user.fullName || user.email || "User",
-          avatar: user.avatar
-            ? `<img src="${escapeHtml(user.avatar)}" alt="">`
-            : escapeHtml(getInitials(user.displayName || user.name || "", user.email || "")),
-          preview: requestState?.label || "Send chat request",
-          requestState,
-          unreadCount: 0,
-          isFavorite: false,
-          isPinned: false,
-          isMuted: false,
-          onlineStatus: user.onlineStatus || "offline",
-          rawUser: user,
-          user,
-          email: user.email || "",
-          phone: user.phone || user.phoneNumber || "",
-          lastMessageTime: new Date(0),
-        });
-      }
-
-      renderChatListItems(
-        decorateSearchItems(userRows, "Verified user", "contact"),
-        document.getElementById("chatsList"),
-      );
-    } catch (error) {
-      console.error("Verified user lookup failed:", error);
-      nslSetSearchListState(`
-        <div class="empty-state explicit-people-empty">
-          <strong>Search failed</strong>
-          <span>${escapeHtml(error?.message || "Could not search users right now.")}</span>
-        </div>
-      `);
-      showToast("Could not search users. Check Firebase rules/indexes and try again.", "error");
-    }
-  }
-
-  window.performExplicitPeopleLookup = nslRenderExplicitPeopleLookup;
-  window.nslRenderExplicitPeopleLookup = nslRenderExplicitPeopleLookup;
-
-  function nslBindReliableSearchEvents() {
-    const input = document.getElementById("searchInput");
-    const peopleButton = document.getElementById("peopleSearchBtn");
-    const clearButton = document.getElementById("clearSearchBtn");
-    if (!input) return;
-
-    input.setAttribute("enterkeyhint", "search");
-    input.setAttribute("autocomplete", "off");
-    input.setAttribute("autocapitalize", "none");
-    input.setAttribute("spellcheck", "false");
-
-    if (input.dataset.nslReliableSearchBound !== "true") {
-      input.dataset.nslReliableSearchBound = "true";
-      input.addEventListener("keydown", (event) => {
-        if (event.key === "Enter") {
-          event.preventDefault();
-          event.stopPropagation();
-          nslRenderExplicitPeopleLookup(input.value);
-        }
-      }, true);
-      input.addEventListener("search", (event) => {
-        if (input.value.trim()) {
-          event.preventDefault();
-          nslRenderExplicitPeopleLookup(input.value);
-        }
-      }, true);
-    }
-
-    if (peopleButton && peopleButton.dataset.nslReliableSearchBound !== "true") {
-      peopleButton.dataset.nslReliableSearchBound = "true";
-      peopleButton.addEventListener("click", (event) => {
-        event.preventDefault();
-        event.stopPropagation();
-        nslRenderExplicitPeopleLookup(input.value);
-      }, true);
-    }
-
-    if (clearButton && clearButton.dataset.nslReliableSearchBound !== "true") {
-      clearButton.dataset.nslReliableSearchBound = "true";
-      clearButton.addEventListener("click", (event) => {
-        event.preventDefault();
-        event.stopPropagation();
-        input.value = "";
-        explicitPeopleLookupTerm = "";
-        loadCurrentChatList();
-        input.focus();
-      }, true);
-    }
-  }
-
-  document.addEventListener("click", (event) => {
-    const btn = event.target.closest?.("#peopleSearchBtn");
-    if (!btn) return;
-    const input = document.getElementById("searchInput");
-    event.preventDefault();
-    event.stopPropagation();
-    nslRenderExplicitPeopleLookup(input?.value || "");
-  }, true);
-
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", nslBindReliableSearchEvents);
-  } else {
-    nslBindReliableSearchEvents();
-  }
-  window.addEventListener("load", nslBindReliableSearchEvents);
-})();
