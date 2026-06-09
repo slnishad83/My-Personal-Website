@@ -37,6 +37,25 @@
         box-sizing: border-box;
       }
 
+      :root {
+        --inv-bg: linear-gradient(135deg, #f0f4f9 0%, #e6ecf3 100%);
+        --inv-surface: #ffffff;
+        --inv-text: #0f172a;
+        --inv-muted: #64748b;
+        --inv-border: rgba(226,232,240,0.8);
+        --inv-panel-shadow: 0 20px 40px -12px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.02);
+        --inv-transition: 0.2s cubic-bezier(0.4,0,0.2,1);
+      }
+
+      body.inv-dark {
+        --inv-bg: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+        --inv-surface: #1e293b;
+        --inv-text: #e2e8f0;
+        --inv-muted: #94a3b8;
+        --inv-border: rgba(51,65,85,0.8);
+        --inv-panel-shadow: 0 20px 40px -12px rgba(0,0,0,0.4), 0 1px 2px rgba(0,0,0,0.2);
+      }
+
       body {
         font-family:
           "Inter",
@@ -45,9 +64,10 @@
           "Segoe UI",
           system-ui,
           sans-serif;
-        background: linear-gradient(135deg, #f0f4f9 0%, #e6ecf3 100%);
+        background: var(--inv-bg);
         padding: 28px;
         min-height: 100vh;
+        transition: background var(--inv-transition);
       }
 
       body.login-locked {
@@ -1391,6 +1411,105 @@
           padding: 16px;
         }
       }
+
+      /* ============================================================
+         DARK MODE — Invoice Generator
+      ============================================================ */
+      body.inv-dark {
+        color: var(--inv-text);
+      }
+      body.inv-dark .left-panel {
+        background: #1e293b;
+        border-color: rgba(51,65,85,0.8);
+        box-shadow: 0 20px 40px -12px rgba(0,0,0,0.4);
+      }
+      body.inv-dark .left-panel::-webkit-scrollbar-track { background: #1a2535; }
+      body.inv-dark .left-panel::-webkit-scrollbar-thumb { background: #334155; }
+      body.inv-dark .panel-header { border-bottom-color: rgba(51,65,85,0.6); }
+      body.inv-dark .panel-header h3 {
+        background: linear-gradient(135deg, #e2e8f0, #60a5fa);
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+      }
+      body.inv-dark .panel-header p,
+      body.inv-dark .form-group label { color: #94a3b8; }
+      body.inv-dark .form-group input,
+      body.inv-dark .form-group textarea,
+      body.inv-dark .form-group select {
+        background: #0f172a;
+        border-color: rgba(51,65,85,0.8);
+        color: #e2e8f0;
+      }
+      body.inv-dark .form-group input:focus,
+      body.inv-dark .form-group textarea:focus,
+      body.inv-dark .form-group select:focus {
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 4px rgba(59,130,246,0.12);
+      }
+      body.inv-dark .form-group input::placeholder { color: #475569; }
+      body.inv-dark .btn-outline {
+        border-color: rgba(51,65,85,0.8);
+        color: #94a3b8;
+        background: #1e293b;
+      }
+      body.inv-dark .btn-outline:hover {
+        background: #334155;
+        color: #e2e8f0;
+      }
+      body.inv-dark .mobile-view-switch {
+        background: #1e293b;
+        border-color: rgba(51,65,85,0.6);
+      }
+      body.inv-dark .mobile-view-switch button { color: #94a3b8; }
+      body.inv-dark .mobile-view-switch button.active {
+        background: #334155;
+        color: #e2e8f0;
+      }
+      body.inv-dark table th {
+        background: #1e293b;
+        color: #94a3b8;
+        border-color: rgba(51,65,85,0.6);
+      }
+      body.inv-dark table td {
+        border-color: rgba(51,65,85,0.4);
+        color: #e2e8f0;
+      }
+      body.inv-dark table tr:hover td { background: rgba(51,65,85,0.3); }
+      body.inv-dark .modal-content,
+      body.inv-dark .invoice-history-item {
+        background: #1e293b;
+        border-color: rgba(51,65,85,0.6);
+        color: #e2e8f0;
+      }
+      body.inv-dark .modal-header {
+        background: #172032;
+        border-bottom-color: rgba(51,65,85,0.6);
+      }
+      body.inv-dark .section-divider {
+        border-color: rgba(51,65,85,0.5);
+        color: #64748b;
+      }
+      body.inv-dark .invoice-preview {
+        background: #1e293b;
+        color: #e2e8f0;
+        border-color: rgba(51,65,85,0.6);
+      }
+      body.inv-dark #invDarkToggle {
+        background: #334155;
+        border-color: #475569;
+        color: #e2e8f0;
+      }
+      body.inv-dark .back-link {
+        background: #1e293b;
+        color: #94a3b8;
+        border-color: rgba(51,65,85,0.6);
+      }
+      body.inv-dark .back-link:hover { background: #334155; color: #e2e8f0; }
+      /* Scrollbar dark */
+      body.inv-dark ::-webkit-scrollbar-track { background: #0f172a; }
+      body.inv-dark ::-webkit-scrollbar-thumb { background: #334155; }
+      body.inv-dark ::-webkit-scrollbar-thumb:hover { background: #475569; }
     </style>
   </head>
   <body class="login-locked">
@@ -1410,10 +1529,14 @@
 
     <div class="app-shell">
     <div class="top-actions">
-      <a href="../index.html" class="back-link">Back to Portfolio</a>
-      <button id="logoutBtn" class="btn btn-outline logout-link" type="button">
-        Logout
-      </button>
+      <a href="../index.html" class="back-link">← Back to Portfolio</a>
+      <div style="display:flex;align-items:center;gap:10px">
+        <button id="invDarkToggle" class="btn btn-outline" type="button" title="Toggle dark mode" style="padding:9px 16px;border-radius:999px;font-size:13px;display:flex;align-items:center;gap:6px">
+          <span id="invDarkIcon">🌙</span>
+          <span id="invDarkLabel">Dark</span>
+        </button>
+        <button id="logoutBtn" class="btn btn-outline logout-link" type="button">Logout</button>
+      </div>
     </div>
 
     <div class="mobile-view-switch" id="mobileViewSwitch" aria-label="Invoice view switch">
@@ -3046,6 +3169,21 @@
         updateTableHeaders();
         togglePaidVisibility();
         initFirebase();
+
+        // Dark mode toggle
+        const invDarkToggle = document.getElementById("invDarkToggle");
+        const invDarkIcon   = document.getElementById("invDarkIcon");
+        const invDarkLabel  = document.getElementById("invDarkLabel");
+        const applyInvDark  = (dark) => {
+          document.body.classList.toggle("inv-dark", dark);
+          invDarkIcon.textContent  = dark ? "☀️" : "🌙";
+          invDarkLabel.textContent = dark ? "Light" : "Dark";
+          localStorage.setItem("invDark", dark ? "1" : "0");
+        };
+        applyInvDark(localStorage.getItem("invDark") === "1");
+        invDarkToggle.addEventListener("click", () => {
+          applyInvDark(!document.body.classList.contains("inv-dark"));
+        });
       }
 
       window.onload = init;
