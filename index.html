@@ -2,81 +2,47 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link
-      rel="icon"
-      type="image/x-icon"
-      href="https://raw.githubusercontent.com/nishadsl/Fav-Icon/main/favicon.ico"
-    />
+    <link rel="icon" type="image/x-icon" href="https://raw.githubusercontent.com/nishadsl/Fav-Icon/main/favicon.ico" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta
-      name="description"
-      content="Nishad S L - Senior Digital Marketing Specialist based in Thrissur, Kerala"
-    />
+    <meta name="description" content="Nishad S L - Senior Digital Marketing Specialist based in Thrissur, Kerala" />
     <meta name="robots" content="index, follow" />
     <meta property="og:image" content="https://nishadsl.com/og-image.jpg" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
+    <meta property="og:title" content="Nishad S L | Senior Digital Marketing Specialist" />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://nishadsl.com" />
     <title>Nishad S L | Senior Digital Marketing Specialist</title>
     <link rel="canonical" href="https://nishadsl.com" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Nishad S L | Senior Digital Marketing Specialist" />
+    <meta name="twitter:description" content="15+ years in SEO, Performance Marketing & Social Media. Thrissur, Kerala." />
+    <meta name="geo.region" content="IN-KL" />
+    <meta name="geo.placename" content="Thrissur, Kerala" />
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Person",
+      "name": "Nishad S L",
+      "jobTitle": "Senior Digital Marketing Specialist",
+      "url": "https://nishadsl.com",
+      "sameAs": ["https://www.linkedin.com/in/nishadsl/"],
+      "address": {
+        "@type": "PostalAddress",
+        "addressLocality": "Thrissur",
+        "addressRegion": "Kerala",
+        "addressCountry": "IN"
+      },
+      "description": "15+ years of experience in SEO, Performance Marketing and Social Media Marketing.",
+      "knowsAbout": ["SEO", "Performance Marketing", "Social Media Marketing", "Google Ads", "Meta Ads", "Content Strategy"]
+    }
+    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700;14..32,800&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="style.css" />
-    <style>
-      .nav-item-dropdown {
-        position: relative;
-      }
-      .dropdown-menu {
-        position: absolute;
-        top: 100%;
-        left: 0;
-        background: var(--bg-primary);
-        border: 1px solid var(--border);
-        border-radius: 12px;
-        min-width: 200px;
-        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
-        opacity: 0;
-        visibility: hidden;
-        transform: translateY(-10px);
-        transition: all 0.2s ease;
-        z-index: 1000;
-        list-style: none;
-        padding: 0.5rem 0;
-        margin: 0;
-      }
-      .nav-item-dropdown:hover .dropdown-menu {
-        opacity: 1;
-        visibility: visible;
-        transform: translateY(0);
-      }
-      .dropdown-menu li {
-        padding: 0;
-      }
-      .dropdown-menu a {
-        display: block;
-        padding: 0.6rem 1.2rem;
-        color: var(--text-secondary);
-        text-decoration: none;
-        font-size: 0.9rem;
-        transition: all 0.2s;
-      }
-      .dropdown-menu a:hover {
-        background: var(--accent-light);
-        color: var(--accent);
-      }
-      @media (max-width: 768px) {
-        .nav-menu.active .nav-item-dropdown .dropdown-menu {
-          position: static;
-          opacity: 1;
-          visibility: visible;
-          transform: none;
-          box-shadow: none;
-          border: none;
-          padding-left: 1.5rem;
-          background: transparent;
-        }
-        .nav-menu.active .dropdown-menu a {
-          padding: 0.5rem 0;
-        }
-      }
-    </style>
+    <script>
+      // Prevent FOUC
+      (function(){const s=localStorage.getItem('theme');if(s==='dark')document.body.classList.add('dark');})();
+    </script>
   </head>
   <body>
     <div class="wrapper">
@@ -87,50 +53,33 @@
             <li><a href="index.html" class="active">Home</a></li>
             <li><a href="resume.html">Resume</a></li>
             <li class="nav-item-dropdown">
-              <a href="#" style="display: flex; align-items: center; gap: 4px"
-                >Works <span style="font-size: 12px">▼</span></a
-              >
+              <a href="#" style="display:flex;align-items:center;gap:4px">Works <span style="font-size:11px;opacity:.7">▼</span></a>
               <ul class="dropdown-menu">
-                <li>
-                  <a href="works/invoice.html" target="_blank"
-                    >📄 Invoice Generator</a
-                  >
-                </li>
-                <li>
-                  <a href="works/chat/login.html" target="_blank"
-                    >💬 Team Chat</a
-                  >
-                </li>
+                <li><a href="works/invoice.html" target="_blank">📄 Invoice Generator</a></li>
+                <li><a href="works/chat/login.html" target="_blank">💬 Team Chat</a></li>
               </ul>
             </li>
             <li><a href="contact.html">Contact</a></li>
           </ul>
           <div class="right-buttons">
-            <button
-              class="theme-toggle"
-              onclick="toggleTheme()"
-              aria-label="Toggle dark mode"
-            >
-              🌙
-            </button>
-            <button class="mobile-menu-btn" onclick="toggleMenu()">☰</button>
+            <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle dark mode">🌙</button>
+            <button class="mobile-menu-btn" onclick="toggleMenu()" aria-label="Open menu">☰</button>
           </div>
         </div>
       </nav>
 
       <section class="hero">
         <div class="hero-content">
-          <div class="hero-badge">Senior Digital Marketing Specialist</div>
+          <div class="hero-badge">✦ Senior Digital Marketing Specialist</div>
           <h1 class="hero-title">Nishad S L</h1>
           <p class="hero-subtitle">
             15+ Years of Experience in <span class="highlight">SEO</span>,
-            <span class="highlight">Performance Marketing</span> &
+            <span class="highlight">Performance Marketing</span> &amp;
             <span class="highlight">Social Media</span>
           </p>
           <p class="hero-description">
-            Determined digital marketing professional dedicated to strengthening
-            brand loyalty, boosting revenue, and connecting with audiences
-            through innovative techniques.
+            Determined digital marketing professional dedicated to strengthening brand loyalty,
+            boosting revenue, and connecting with audiences through innovative techniques.
           </p>
           <div class="hero-buttons">
             <a href="resume.html" class="btn btn-primary">View Resume →</a>
@@ -163,28 +112,19 @@
           <h2 class="section-title">How I Help Brands Grow</h2>
           <div class="services-grid">
             <div class="service-card">
-              <div class="service-icon">📈</div>
+              <span class="service-icon">📈</span>
               <h3>Increase Organic Visibility</h3>
-              <p>
-                SEO strategies that improve search rankings and drive qualified
-                traffic to your website.
-              </p>
+              <p>SEO strategies that improve search rankings and drive qualified traffic to your website.</p>
             </div>
             <div class="service-card">
-              <div class="service-icon">🎯</div>
+              <span class="service-icon">🎯</span>
               <h3>Drive Targeted Traffic</h3>
-              <p>
-                Performance marketing campaigns across Google & Meta platforms
-                that convert.
-              </p>
+              <p>Performance marketing campaigns across Google &amp; Meta platforms that convert.</p>
             </div>
             <div class="service-card">
-              <div class="service-icon">💬</div>
+              <span class="service-icon">💬</span>
               <h3>Build Engaged Communities</h3>
-              <p>
-                Social media management and advertising strategies that turn
-                followers into customers.
-              </p>
+              <p>Social media management and advertising strategies that turn followers into customers.</p>
             </div>
           </div>
         </div>
@@ -213,12 +153,41 @@
         </div>
       </section>
 
+      <section class="works-showcase">
+        <div class="container">
+          <h2 class="section-title">Tools I've Built</h2>
+          <p class="section-subtitle">Real products used in real workflows — combining marketing expertise with hands-on development.</p>
+          <div class="works-grid">
+            <a href="works/invoice.html" target="_blank" class="work-card">
+              <div class="work-card-icon">📄</div>
+              <div class="work-card-body">
+                <h3>Invoice Generator Pro</h3>
+                <p>GST-compliant Indian invoice system with PDF export, client management, cloud sync, and invoice history. Used for real business billing.</p>
+                <div class="work-tags">
+                  <span>GST Ready</span><span>PDF Export</span><span>Cloud Sync</span><span>Multi-device</span>
+                </div>
+              </div>
+              <span class="work-card-arrow">→</span>
+            </a>
+            <a href="works/chat/login.html" target="_blank" class="work-card">
+              <div class="work-card-icon">💬</div>
+              <div class="work-card-body">
+                <h3>Team Chat</h3>
+                <p>Full-featured real-time messaging app with groups, broadcasts, voice notes, file sharing, status updates, and end-to-end encryption.</p>
+                <div class="work-tags">
+                  <span>Real-time</span><span>Groups</span><span>Voice Notes</span><span>File Share</span>
+                </div>
+              </div>
+              <span class="work-card-arrow">→</span>
+            </a>
+          </div>
+        </div>
+      </section>
+
       <section class="cta">
         <div class="cta-content">
           <h2>Ready to discuss your project?</h2>
-          <p>
-            Let's connect and explore how I can help grow your digital presence.
-          </p>
+          <p>Let's connect and explore how I can help grow your digital presence.</p>
           <a href="contact.html" class="btn btn-primary">Contact Me →</a>
         </div>
       </section>
@@ -227,80 +196,30 @@
         <div class="footer-content">
           <div class="footer-info">
             <h3>Nishad S L</h3>
-            <p>Senior Digital Marketing Specialist</p>
+            <p style="color:var(--text-muted);font-size:.875rem;margin:.25rem 0 .75rem">Senior Digital Marketing Specialist</p>
             <div class="social-links">
-              <a href="https://www.linkedin.com/in/nishadsl/" target="_blank"
-                >LinkedIn</a
-              >
+              <a href="https://www.linkedin.com/in/nishadsl/" target="_blank" rel="noopener" title="LinkedIn">in</a>
             </div>
           </div>
           <div class="footer-links">
-            <a href="index.html">Home</a><a href="resume.html">Resume</a
-            ><a href="contact.html">Contact</a>
+            <a href="index.html">Home</a>
+            <a href="resume.html">Resume</a>
+            <a href="contact.html">Contact</a>
           </div>
           <div class="footer-copyright">
-            <p>© <span id="currentYear"></span> Nishad S L</p>
+            <p style="color:var(--text-muted);font-size:.875rem">© <span id="currentYear"></span> Nishad S L. All rights reserved.</p>
           </div>
         </div>
       </footer>
     </div>
 
-    <button
-      class="back-to-top-modern"
-      id="modernBackToTop"
-      aria-label="Back to top"
-    >
+    <button class="back-to-top-modern" id="modernBackToTop" onclick="scrollToTop()" aria-label="Back to top">
       <span>↑</span>
     </button>
 
+    <script src="script.js"></script>
     <script>
-      function toggleTheme() {
-        const body = document.body;
-        const toggle = document.querySelector(".theme-toggle");
-        if (body.classList.contains("dark")) {
-          body.classList.remove("dark");
-          localStorage.setItem("theme", "light");
-          if (toggle) toggle.textContent = "🌙";
-        } else {
-          body.classList.add("dark");
-          localStorage.setItem("theme", "dark");
-          if (toggle) toggle.textContent = "☀️";
-        }
-      }
-      function loadTheme() {
-        const saved = localStorage.getItem("theme");
-        const toggle = document.querySelector(".theme-toggle");
-        if (saved === "dark") {
-          document.body.classList.add("dark");
-          if (toggle) toggle.textContent = "☀️";
-        } else {
-          if (toggle) toggle.textContent = "🌙";
-        }
-      }
-      function toggleMenu() {
-        const navMenu = document.getElementById("navMenu");
-        if (navMenu) navMenu.classList.toggle("active");
-      }
-      document.querySelectorAll(".nav-menu a").forEach((link) => {
-        link.addEventListener("click", () => {
-          const navMenu = document.getElementById("navMenu");
-          if (navMenu && window.innerWidth <= 768)
-            navMenu.classList.remove("active");
-        });
-      });
-      const backToTopBtn = document.getElementById("modernBackToTop");
-      if (backToTopBtn) {
-        window.addEventListener("scroll", () => {
-          if (window.scrollY > 300) backToTopBtn.classList.add("show");
-          else backToTopBtn.classList.remove("show");
-        });
-        backToTopBtn.addEventListener("click", () =>
-          window.scrollTo({ top: 0, behavior: "smooth" }),
-        );
-      }
-      const yearSpan = document.getElementById("currentYear");
-      if (yearSpan) yearSpan.textContent = new Date().getFullYear();
-      document.addEventListener("DOMContentLoaded", loadTheme);
+      document.getElementById("currentYear").textContent = new Date().getFullYear();
     </script>
   </body>
 </html>
