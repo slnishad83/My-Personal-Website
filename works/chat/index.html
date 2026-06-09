@@ -179,9 +179,16 @@
           <button class="tab" data-tab="status">Status</button>
           <button class="tab" data-tab="calls">Calls</button>
           <button class="tab" data-tab="communities">Communities</button>
+          <button class="tab" data-tab="notifications" id="notificationsTab">
+            Alerts
+            <span id="notifAlertBadge" class="tab-badge" style="display:none"></span>
+          </button>
         </div>
 
         <div class="folder-tabs" id="folderTabs"></div>
+
+        <!-- FIX 4a: Notifications panel -->
+        <div id="notificationsPanel" style="display:none;overflow-y:auto;flex:1;padding:8px 0;"></div>
 
         <div id="chatsList" class="list">
           <div class="empty-state">No chats yet</div>

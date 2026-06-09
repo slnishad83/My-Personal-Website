@@ -5580,7 +5580,21 @@ async function searchUsersRealtime(searchTerm) {
     return;
   }
 
-  await refreshAllUsersOnce();
+  // FIX 2: When the query looks like a full email, always do a live Firestore
+  // fetch so newly registered users are never missed due to a stale local cache.
+  const looksLikeEmail = term.includes("@") && term.includes(".");
+  if (looksLikeEmail) {
+    try {
+      const snapshot = await db.collection("users").get();
+      allUsers = normalizeUsersSnapshot(snapshot);
+    } catch (e) {
+      console.warn("Live user refresh for email search failed:", e);
+      await refreshAllUsersOnce();
+    }
+  } else {
+    await refreshAllUsersOnce();
+  }
+
   loadAllChatsList(term);
 }
 
@@ -5689,7 +5703,13 @@ async function loadAllChatsList(searchTerm = "") {
     await refreshAllUsersOnce();
 
     // MATCH 2: Look through the directory for users you haven't messaged yet
-    for (const user of allUsers.filter(isSearchableUser)) {
+    // FIX: For email searches, use a looser filter so users with stale
+    // pendingVerification flags are still findable by exact email.
+    const looksLikeEmailSearch = term.includes("@") && term.includes(".");
+    const userPool = looksLikeEmailSearch
+      ? allUsers.filter((u) => u.id && u.id !== currentUser?.uid && !isBlocked(u.id) && u.isActive !== false && (u.email || u.displayName))
+      : allUsers.filter(isSearchableUser);
+    for (const user of userPool) {
       if (isUserInLockedDirectChat(user.id)) continue;
       // PREVENT CONFLICTS: Skip if this user is already visible in chatMatches
       if (visibleUserIds.has(user.id)) continue;
@@ -5716,6 +5736,39 @@ async function loadAllChatsList(searchTerm = "") {
           rawUser: user, // renamed tracker internally to completely avoid property conflicts
           lastMessageTime: new Date(0),
         });
+      }
+    }
+
+    // DIRECT FIRESTORE FALLBACK: if email search found nothing in cache, query Firestore directly
+    if (looksLikeEmailSearch && userMatches.length === 0) {
+      try {
+        const directSnap = await db.collection("users")
+          .where("email", "==", term.trim().toLowerCase())
+          .limit(3)
+          .get();
+        for (const doc of directSnap.docs) {
+          const u = { id: doc.id, ...doc.data() };
+          if (!u.id || u.id === currentUser?.uid || isBlocked(u.id)) continue;
+          if (visibleUserIds.has(u.id)) continue;
+          const requestState = await getContactRequestState(u.id);
+          userMatches.push({
+            id: `user_${u.id}`,
+            type: "user",
+            name: u.displayName || u.email || "User",
+            avatar: u.avatar ? `<img src="${u.avatar}">` : escapeHtml((u.displayName || "?")[0].toUpperCase()),
+            preview: u.email || "Tap to connect",
+            requestState,
+            unreadCount: 0,
+            isFavorite: false,
+            isPinned: false,
+            isMuted: false,
+            onlineStatus: u.onlineStatus || "offline",
+            rawUser: u,
+            lastMessageTime: new Date(0),
+          });
+        }
+      } catch (fbErr) {
+        console.warn("Direct email Firestore lookup failed:", fbErr);
       }
     }
 
@@ -6030,6 +6083,21 @@ async function acceptChatRequest(requestId, fromUserId) {
       respondedAt: firebase.firestore.FieldValue.serverTimestamp(),
     });
 
+    // FIX 3: Write an in-app notification to the original sender
+    try {
+      await db.collection("inAppNotifications").add({
+        toUserId: fromUserId,
+        type: "chat_request_accepted",
+        fromUserId: currentUser.uid,
+        fromUserName: currentUser.displayName || currentUser.email,
+        message: `${currentUser.displayName || currentUser.email} accepted your chat request`,
+        read: false,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+      });
+    } catch (notifErr) {
+      console.warn("Could not write acceptance notification:", notifErr);
+    }
+
     showToast("Request accepted");
     await loadReceivedRequests();
     await loadCurrentChatList();
@@ -6239,6 +6307,81 @@ function setupRequestListeners() {
       groupInviteListenerReady = true;
     });
 }
+
+// =============================================
+// FIX 4: IN-APP NOTIFICATIONS (acceptance alerts)
+// =============================================
+let inAppNotifUnsubscribe = null;
+
+function setupInAppNotificationsListener() {
+  if (!currentUser) return;
+  if (inAppNotifUnsubscribe) inAppNotifUnsubscribe();
+
+  inAppNotifUnsubscribe = db
+    .collection("inAppNotifications")
+    .where("toUserId", "==", currentUser.uid)
+    .orderBy("createdAt", "desc")
+    .limit(50)
+    .onSnapshot((snapshot) => {
+      renderInAppNotifications(snapshot.docs.map((d) => ({ id: d.id, ...d.data() })));
+    }, (err) => {
+      console.warn("In-app notifications listener error:", err);
+    });
+}
+
+function renderInAppNotifications(notifications) {
+  const panel = document.getElementById("notificationsPanel");
+  const badge = document.getElementById("notifAlertBadge");
+  if (!panel) return;
+
+  const unreadCount = notifications.filter((n) => !n.read).length;
+  if (badge) {
+    if (unreadCount > 0) {
+      badge.textContent = unreadCount > 99 ? "99+" : String(unreadCount);
+      badge.style.display = "inline-flex";
+    } else {
+      badge.textContent = "";
+      badge.style.display = "none";
+    }
+  }
+
+  if (!notifications.length) {
+    panel.innerHTML = '<div class="empty-state">No notifications</div>';
+    return;
+  }
+
+  panel.innerHTML = notifications.map((n) => {
+    const ts = n.createdAt && n.createdAt.toDate ? n.createdAt.toDate() : null;
+    const time = ts ? formatRelativeTime(ts) : "";
+    return `
+      <div class="list-item notif-item ${n.read ? "" : "notif-unread"}" data-notif-id="${n.id}" style="cursor:default;">
+        <div class="list-avatar" style="background:var(--accent,#008069);color:#fff;font-size:18px;display:flex;align-items:center;justify-content:center;">&#10003;</div>
+        <div class="list-info">
+          <div class="list-name" style="font-weight:${n.read ? "400" : "600"};">${escapeHtml(n.fromUserName || "Someone")}</div>
+          <div class="list-preview">${escapeHtml(n.message || "Accepted your chat request")}</div>
+        </div>
+        <div class="list-meta">
+          <div class="list-time">${time}</div>
+        </div>
+      </div>`;
+  }).join("");
+}
+
+async function markAllNotificationsRead() {
+  if (!currentUser) return;
+  try {
+    const snap = await db.collection("inAppNotifications")
+      .where("toUserId", "==", currentUser.uid)
+      .where("read", "==", false)
+      .get();
+    const batch = db.batch();
+    snap.forEach((doc) => batch.update(doc.ref, { read: true }));
+    await batch.commit();
+  } catch (e) {
+    console.warn("Could not mark notifications read:", e);
+  }
+}
+
 async function acceptGroupInvite(inviteId) {
   if (!currentUser || !inviteId) return;
   const inviteRef = db.collection("groupInvites").doc(inviteId);
@@ -13564,12 +13707,17 @@ function switchTab(tab) {
   const broadcastActions = document.getElementById("broadcastActions");
   const communityActions = document.getElementById("communityActions");
 
+  // FIX 4c: hide/show notifications panel
+  const notifPanel = document.getElementById("notificationsPanel");
+  if (notifPanel) notifPanel.style.display = tab === "notifications" ? "block" : "none";
+
   chatsList.style.display =
     tab === "groups" ||
     tab === "status" ||
     tab === "broadcasts" ||
     tab === "calls" ||
-    tab === "communities"
+    tab === "communities" ||
+    tab === "notifications"
       ? "none"
       : "block";
   groupsList.style.display = tab === "groups" ? "block" : "none";
@@ -13595,6 +13743,7 @@ function switchTab(tab) {
   else if (tab === "status") loadStatusList();
   else if (tab === "calls") loadCallsList();
   else if (tab === "communities") loadCommunitiesList();
+  else if (tab === "notifications") markAllNotificationsRead();
   else loadCurrentChatList();
 }
 
@@ -13602,9 +13751,19 @@ function bindSearchInput() {
   const input = document.getElementById("searchInput");
   if (!input) return;
   let searchTimer = null;
+
   input.addEventListener("input", (e) => {
     clearTimeout(searchTimer);
     searchTimer = window.setTimeout(() => searchUsersRealtime(e.target.value), 220);
+  });
+
+  // FIX 1: Enter key forces an immediate full search (important for email lookup)
+  input.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      clearTimeout(searchTimer);
+      searchUsersRealtime(input.value);
+    }
   });
 }
 
@@ -13853,6 +14012,9 @@ async function init() {
       });
       await runBootstrapStep("setupRequestListeners", async () => {
         setupRequestListeners();
+      });
+      await runBootstrapStep("setupInAppNotificationsListener", async () => {
+        setupInAppNotificationsListener(); // FIX 4d
       });
       await runBootstrapStep("setupArchiveSection", async () => {
         setupArchiveSection();
