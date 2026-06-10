@@ -20904,3 +20904,766 @@ document.addEventListener("click", e => {
 })();
 
 /* ── End of Feature Pack 3 ──────────────────────────────────────────── */
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   FEATURE PACK 4 — Long Collapse · Stats · Templates · Image Compress ·
+                    Forward Caption · Flag Messages · Format Toolbar ·
+                    Typing Sound · Capacitor Native
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ══════════════════════════════════════════════════════════════════════════
+   1. LONG MESSAGE COLLAPSE  ("Read more / Read less")
+      Messages longer than 500 chars are clamped. A button toggles the rest.
+   ══════════════════════════════════════════════════════════════════════════ */
+(function initLongMessageCollapse() {
+  const LIMIT = 500;
+
+  function collapseIfNeeded(el) {
+    const msgEl = el.querySelector('.message-text');
+    if (!msgEl) return;
+    const text = msgEl.textContent || '';
+    if (text.length <= LIMIT) return;
+    if (msgEl.dataset.collapseInit) return;
+    msgEl.dataset.collapseInit = '1';
+    msgEl.classList.add('collapsed');
+    const btn = document.createElement('button');
+    btn.className = 'read-more-btn';
+    btn.textContent = 'Read more ▾';
+    btn.addEventListener('click', e => {
+      e.stopPropagation();
+      const collapsed = msgEl.classList.toggle('collapsed');
+      btn.textContent = collapsed ? 'Read more ▾' : 'Read less ▴';
+    });
+    msgEl.after(btn);
+  }
+
+  const observer = new MutationObserver(muts => {
+    for (const m of muts) {
+      m.addedNodes.forEach(n => {
+        if (n.nodeType !== 1) return;
+        if (n.classList?.contains('message-row') || n.classList?.contains('message-item')) {
+          collapseIfNeeded(n);
+        }
+        n.querySelectorAll?.('.message-row, .message-item').forEach(collapseIfNeeded);
+      });
+    }
+  });
+
+  document.addEventListener('DOMContentLoaded', () => {
+    const area = document.getElementById('messagesArea');
+    if (area) observer.observe(area, { childList: true, subtree: true });
+  });
+})();
+
+/* ══════════════════════════════════════════════════════════════════════════
+   2. CHAT STATISTICS
+   ══════════════════════════════════════════════════════════════════════════ */
+async function openChatStats() {
+  if (!currentChat?.id || !currentUser) return;
+  const modal = document.getElementById('chatStatsModal');
+  const body  = document.getElementById('chatStatsBody');
+  if (!modal || !body) return;
+  modal.style.display = 'flex';
+  body.innerHTML = '<div class="stats-loading">Calculating…</div>';
+
+  try {
+    const snap = await db.collection('messages')
+      .where(currentChatType === 'group' ? 'groupId' : 'directId', '==', currentChat.id)
+      .orderBy('timestamp', 'asc')
+      .get();
+
+    const docs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    const total = docs.length;
+    const mine  = docs.filter(d => d.senderId === currentUser.uid).length;
+    const images= docs.filter(d => d.attachment?.type === 'image').length;
+    const videos= docs.filter(d => d.attachment?.type === 'video').length;
+    const files = docs.filter(d => d.attachment?.type === 'file' || d.attachment?.type === 'document').length;
+    const links = docs.filter(d => /https?:\/\//.test(d.text || '')).length;
+    const voice = docs.filter(d => d.attachment?.type === 'audio').length;
+    const reacted = docs.filter(d => d.reactions && Object.keys(d.reactions).length).length;
+
+    // Most active day
+    const dayCounts = {};
+    docs.forEach(d => {
+      if (!d.timestamp) return;
+      const date = (d.timestamp.toDate ? d.timestamp.toDate() : new Date(d.timestamp))
+        .toLocaleDateString([], { weekday: 'long' });
+      dayCounts[date] = (dayCounts[date] || 0) + 1;
+    });
+    const busiest = Object.entries(dayCounts).sort((a,b)=>b[1]-a[1])[0];
+
+    // Words
+    const words = docs.reduce((n, d) => n + (d.text?.trim().split(/\s+/).length || 0), 0);
+
+    const oldest = docs[0];
+    const oldestDate = oldest?.timestamp
+      ? (oldest.timestamp.toDate ? oldest.timestamp.toDate() : new Date(oldest.timestamp))
+          .toLocaleDateString([], { day:'2-digit', month:'short', year:'numeric' })
+      : '—';
+
+    body.innerHTML = `
+      <div class="stats-grid">
+        <div class="stat-card"><div class="stat-val">${total}</div><div class="stat-label">Total messages</div></div>
+        <div class="stat-card"><div class="stat-val">${mine}</div><div class="stat-label">Sent by you</div></div>
+        <div class="stat-card"><div class="stat-val">${images}</div><div class="stat-label">Images</div></div>
+        <div class="stat-card"><div class="stat-val">${videos}</div><div class="stat-label">Videos</div></div>
+      </div>
+      <div class="stat-divider"></div>
+      <div class="stat-row"><strong>📁 Files</strong><span>${files}</span></div>
+      <div class="stat-row"><strong>🔗 Links</strong><span>${links}</span></div>
+      <div class="stat-row"><strong>🎙️ Voice messages</strong><span>${voice}</span></div>
+      <div class="stat-row"><strong>😂 Reacted messages</strong><span>${reacted}</span></div>
+      <div class="stat-row"><strong>📝 Total words</strong><span>${words.toLocaleString()}</span></div>
+      <div class="stat-row"><strong>📅 Chat started</strong><span>${oldestDate}</span></div>
+      ${busiest ? `<div class="stat-row"><strong>🔥 Busiest day</strong><span>${busiest[0]} (${busiest[1]} msgs)</span></div>` : ''}
+    `;
+  } catch (e) {
+    body.innerHTML = '<div style="color:#ef4444;padding:16px;">Could not load stats.</div>';
+  }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('closeChatStats')?.addEventListener('click', () => {
+    document.getElementById('chatStatsModal').style.display = 'none';
+  });
+  document.getElementById('chatStatsModal')?.addEventListener('click', e => {
+    if (e.target === document.getElementById('chatStatsModal'))
+      document.getElementById('chatStatsModal').style.display = 'none';
+  });
+});
+
+/* ══════════════════════════════════════════════════════════════════════════
+   3. MESSAGE TEMPLATES / SAVED REPLIES
+   ══════════════════════════════════════════════════════════════════════════ */
+(function initMessageTemplates() {
+  const KEY = 'teamChatTemplates';
+  let templates = [];
+  let editingId = null;
+
+  function loadTemplates() {
+    try { templates = JSON.parse(localStorage.getItem(KEY)) || []; }
+    catch (_) { templates = []; }
+    if (!templates.length) {
+      templates = [
+        { id: 't1', title: 'On my way', text: "I'm on my way, be there soon! 🚀" },
+        { id: 't2', title: 'Running late', text: "Running a bit late, sorry! Will be there in 10 minutes." },
+        { id: 't3', title: 'In a meeting', text: "I'm in a meeting right now. I'll get back to you shortly." },
+        { id: 't4', title: 'Noted', text: "Noted, thanks! ✅" },
+        { id: 't5', title: 'Call me', text: "Please give me a call when you have a moment. 📞" },
+      ];
+      saveTemplates();
+    }
+  }
+  function saveTemplates() {
+    localStorage.setItem(KEY, JSON.stringify(templates));
+  }
+  function renderTemplates(filter = '') {
+    const list = document.getElementById('templatesList');
+    if (!list) return;
+    const filtered = filter
+      ? templates.filter(t => t.title.toLowerCase().includes(filter) || t.text.toLowerCase().includes(filter))
+      : templates;
+    if (!filtered.length) {
+      list.innerHTML = '<div style="padding:20px;text-align:center;color:#94a3b8;font-size:13px;">No templates found</div>';
+      return;
+    }
+    list.innerHTML = filtered.map(t => `
+      <div class="template-item" data-tid="${escapeHtml(t.id)}">
+        <div class="template-item-body">
+          <div class="template-item-title">${escapeHtml(t.title)}</div>
+          <div class="template-item-text">${escapeHtml(t.text)}</div>
+        </div>
+        <div class="template-item-actions">
+          <button class="template-item-btn tpl-use" data-tid="${escapeHtml(t.id)}" title="Use">↵</button>
+          <button class="template-item-btn tpl-edit" data-tid="${escapeHtml(t.id)}" title="Edit">✏️</button>
+          <button class="template-item-btn tpl-del" data-tid="${escapeHtml(t.id)}" title="Delete">🗑️</button>
+        </div>
+      </div>`).join('');
+
+    list.querySelectorAll('.tpl-use').forEach(btn => {
+      btn.addEventListener('click', e => {
+        e.stopPropagation();
+        const t = templates.find(x => x.id === btn.dataset.tid);
+        if (t) insertTemplate(t.text);
+      });
+    });
+    list.querySelectorAll('.tpl-edit').forEach(btn => {
+      btn.addEventListener('click', e => {
+        e.stopPropagation();
+        const t = templates.find(x => x.id === btn.dataset.tid);
+        if (t) startEditTemplate(t);
+      });
+    });
+    list.querySelectorAll('.tpl-del').forEach(btn => {
+      btn.addEventListener('click', e => {
+        e.stopPropagation();
+        templates = templates.filter(x => x.id !== btn.dataset.tid);
+        saveTemplates();
+        renderTemplates(document.getElementById('templateSearch')?.value || '');
+      });
+    });
+    list.querySelectorAll('.template-item').forEach(item => {
+      item.addEventListener('click', () => {
+        const t = templates.find(x => x.id === item.dataset.tid);
+        if (t) insertTemplate(t.text);
+      });
+    });
+  }
+  function insertTemplate(text) {
+    const input = document.getElementById('messageInput');
+    if (input) {
+      const start = input.selectionStart || 0;
+      const val = input.value;
+      input.value = val.slice(0, start) + text + val.slice(input.selectionEnd || start);
+      input.focus();
+      input.setSelectionRange(start + text.length, start + text.length);
+      input.dispatchEvent(new Event('input'));
+    }
+    closeTemplatesModal();
+  }
+  function startEditTemplate(t) {
+    editingId = t.id;
+    document.getElementById('templateTitleInput').value = t.title;
+    document.getElementById('templateBodyInput').value  = t.text;
+    document.getElementById('templateEditor').style.display = 'block';
+  }
+  function closeTemplatesModal() {
+    document.getElementById('templatesModal').style.display = 'none';
+    document.getElementById('templateEditor').style.display = 'none';
+    editingId = null;
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    loadTemplates();
+    document.getElementById('closeTemplatesModal')?.addEventListener('click', closeTemplatesModal);
+    document.getElementById('templatesModal')?.addEventListener('click', e => {
+      if (e.target === document.getElementById('templatesModal')) closeTemplatesModal();
+    });
+    document.getElementById('templateSearch')?.addEventListener('input', e => {
+      renderTemplates(e.target.value.toLowerCase());
+    });
+    document.getElementById('addTemplateBtn')?.addEventListener('click', () => {
+      editingId = null;
+      document.getElementById('templateTitleInput').value = '';
+      document.getElementById('templateBodyInput').value  = '';
+      document.getElementById('templateEditor').style.display = 'block';
+    });
+    document.getElementById('cancelTemplateEdit')?.addEventListener('click', () => {
+      document.getElementById('templateEditor').style.display = 'none';
+      editingId = null;
+    });
+    document.getElementById('saveTemplateBtn')?.addEventListener('click', () => {
+      const title = document.getElementById('templateTitleInput').value.trim();
+      const text  = document.getElementById('templateBodyInput').value.trim();
+      if (!title || !text) return;
+      if (editingId) {
+        const t = templates.find(x => x.id === editingId);
+        if (t) { t.title = title; t.text = text; }
+      } else {
+        templates.unshift({ id: 't' + Date.now(), title, text });
+      }
+      saveTemplates();
+      renderTemplates();
+      document.getElementById('templateEditor').style.display = 'none';
+      editingId = null;
+    });
+    document.getElementById('templatesPickerBtn')?.addEventListener('click', () => {
+      loadTemplates();
+      renderTemplates();
+      document.getElementById('templatesModal').style.display = 'flex';
+    });
+  });
+
+  window.openTemplatesModal = () => {
+    loadTemplates();
+    renderTemplates();
+    document.getElementById('templatesModal').style.display = 'flex';
+  };
+})();
+
+/* ══════════════════════════════════════════════════════════════════════════
+   4. IMAGE COMPRESSION BEFORE UPLOAD
+      Hooks into file input — resizes any image > 1.5 MB or > 1920px to
+      max 1280px wide, JPEG quality 0.82, before it hits Firebase Storage.
+   ══════════════════════════════════════════════════════════════════════════ */
+(function initImageCompression() {
+  const MAX_DIM  = 1280;
+  const QUALITY  = 0.82;
+  const MAX_BYTES = 1.5 * 1024 * 1024; // 1.5 MB
+
+  async function compressImageFile(file) {
+    if (!file.type.startsWith('image/') || file.type === 'image/gif') return file;
+    if (file.size < MAX_BYTES) return file; // already small enough
+
+    return new Promise((resolve) => {
+      const url = URL.createObjectURL(file);
+      const img = new Image();
+      img.onload = () => {
+        URL.revokeObjectURL(url);
+        let { width, height } = img;
+        if (width > MAX_DIM || height > MAX_DIM) {
+          const ratio = Math.min(MAX_DIM / width, MAX_DIM / height);
+          width  = Math.round(width  * ratio);
+          height = Math.round(height * ratio);
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width  = width;
+        canvas.height = height;
+        canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+        canvas.toBlob(blob => {
+          if (!blob || blob.size >= file.size) { resolve(file); return; }
+          const compressed = new File([blob], file.name.replace(/\.[^.]+$/, '.jpg'), {
+            type: 'image/jpeg', lastModified: Date.now(),
+          });
+          resolve(compressed);
+        }, 'image/jpeg', QUALITY);
+      };
+      img.onerror = () => { URL.revokeObjectURL(url); resolve(file); };
+      img.src = url;
+    });
+  }
+
+  // Expose globally so existing upload functions can use it
+  window.compressImageFile = compressImageFile;
+
+  // Patch the main file attachment handler if it reads from a file input
+  const origHandleFile = window.handleFileAttachment || window.attachFile;
+  if (typeof origHandleFile === 'function') {
+    const patchedName = window.handleFileAttachment ? 'handleFileAttachment' : 'attachFile';
+    window[patchedName] = async function(file, ...args) {
+      const compressed = await compressImageFile(file);
+      return origHandleFile.call(this, compressed, ...args);
+    };
+  }
+
+  // Patch file input change — intercept at capture phase before other handlers
+  document.addEventListener('change', async e => {
+    const input = e.target;
+    if (input.type !== 'file' || !input.id?.toLowerCase().includes('attach')) return;
+    if (!input.files?.length) return;
+    const file = input.files[0];
+    if (!file.type.startsWith('image/') || file.size < MAX_BYTES) return;
+
+    const compressed = await compressImageFile(file);
+    if (compressed === file) return; // no change
+
+    // Replace the FileList (read-only) by storing compressed file in a global temp slot
+    window.__lastCompressedFile = compressed;
+
+    const indicator = document.createElement('span');
+    indicator.className = 'compress-indicator';
+    indicator.textContent = '🗜️ Compressed';
+    input.after(indicator);
+    setTimeout(() => indicator.remove(), 3000);
+  }, true);
+})();
+
+/* ══════════════════════════════════════════════════════════════════════════
+   5. FORWARD WITH CAPTION
+   ══════════════════════════════════════════════════════════════════════════ */
+(function initForwardCaption() {
+  const origSendForward = window.sendForwardedMessages || window.performForward;
+  if (!origSendForward) return; // hook will be set up when function is available
+
+  function patchForward() {
+    const fnName = window.sendForwardedMessages ? 'sendForwardedMessages' : 'performForward';
+    const orig = window[fnName];
+    if (typeof orig !== 'function' || orig.__captionPatched) return;
+    window[fnName] = async function(...args) {
+      const caption = document.getElementById('forwardCaptionInput')?.value.trim();
+      const result = await orig.apply(this, args);
+      // If a caption was entered, send it as a follow-up message to each forwarded target
+      if (caption && Array.isArray(window.currentForwardTargets)) {
+        for (const target of window.currentForwardTargets) {
+          try {
+            await db.collection('messages').add({
+              text: caption,
+              senderId: currentUser.uid,
+              senderName: currentUser.displayName || currentUser.email || 'User',
+              timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+              directId: target.type === 'direct' ? target.id : null,
+              groupId: target.type === 'group' ? target.id : null,
+              forwardedCaption: true,
+            });
+          } catch (_) {}
+        }
+      }
+      if (document.getElementById('forwardCaptionInput'))
+        document.getElementById('forwardCaptionInput').value = '';
+      return result;
+    };
+    window[fnName].__captionPatched = true;
+  }
+
+  // Try immediately and also after a delay (function may not be defined yet)
+  patchForward();
+  setTimeout(patchForward, 2000);
+})();
+
+/* ══════════════════════════════════════════════════════════════════════════
+   6. FLAG / PRIORITY MESSAGES
+   ══════════════════════════════════════════════════════════════════════════ */
+(function initFlagMessages() {
+  const FLAGS_KEY = 'teamChatFlaggedMsgs';
+
+  function loadFlags() {
+    try { return new Map(JSON.parse(localStorage.getItem(FLAGS_KEY)) || []); }
+    catch (_) { return new Map(); }
+  }
+  function saveFlags(map) {
+    localStorage.setItem(FLAGS_KEY, JSON.stringify([...map.entries()]));
+  }
+
+  window.toggleFlagMessage = function(messageId, msgData) {
+    const flags = loadFlags();
+    if (flags.has(messageId)) {
+      flags.delete(messageId);
+      showToast('Flag removed');
+    } else {
+      flags.set(messageId, {
+        text: (msgData.text || '').slice(0, 200),
+        senderName: msgData.senderName || '',
+        timestamp: Date.now(),
+        chatId: currentChat?.id,
+      });
+      showToast('🚩 Message flagged');
+    }
+    saveFlags(flags);
+    // Update bubble styling
+    const bubble = document.querySelector(`[data-message-id="${messageId}"] .message-bubble`);
+    bubble?.classList.toggle('flagged-msg', flags.has(messageId));
+    const flagBtn = document.querySelector(`[data-message-id="${messageId}"] .message-flag-btn`);
+    if (flagBtn) {
+      flagBtn.classList.toggle('flagged', flags.has(messageId));
+      flagBtn.textContent = flags.has(messageId) ? '🚩' : '🏳️';
+    }
+  };
+
+  window.openFlaggedPanel = function() {
+    const panel = document.getElementById('flaggedMsgsPanel');
+    const list  = document.getElementById('flaggedMsgsList');
+    if (!panel || !list) return;
+    const flags = loadFlags();
+    const container = document.querySelector('.chat-container');
+    panel.style.display = 'flex';
+    container?.classList.add('thread-open');
+    if (!flags.size) {
+      list.innerHTML = '<div style="padding:24px;text-align:center;color:#94a3b8;font-size:13px;">No flagged messages</div>';
+      return;
+    }
+    list.innerHTML = [...flags.entries()].sort((a,b)=>b[1].timestamp-a[1].timestamp).map(([id, f]) => `
+      <div class="flagged-item">
+        <div class="flagged-item-meta">${escapeHtml(f.senderName)} · ${new Date(f.timestamp).toLocaleString([], {day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'})}</div>
+        <div class="flagged-item-text">${escapeHtml(f.text || '(attachment)')}</div>
+        <button class="flagged-item-unflag" data-msgid="${escapeHtml(id)}">✕ Remove flag</button>
+      </div>`).join('');
+
+    list.querySelectorAll('.flagged-item-unflag').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const flags2 = loadFlags();
+        flags2.delete(btn.dataset.msgid);
+        saveFlags(flags2);
+        window.openFlaggedPanel();
+      });
+    });
+  };
+
+  document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('closeFlaggedPanel')?.addEventListener('click', () => {
+      const panel = document.getElementById('flaggedMsgsPanel');
+      const container = document.querySelector('.chat-container');
+      if (panel) panel.style.display = 'none';
+      container?.classList.remove('thread-open');
+    });
+
+    // Apply flag styling to already-rendered messages
+    const flags = loadFlags();
+    flags.forEach((_, id) => {
+      const bubble = document.querySelector(`[data-message-id="${id}"] .message-bubble`);
+      bubble?.classList.add('flagged-msg');
+    });
+  });
+
+  // Add "Flag" to message context menu
+  const checkContextMenu = setInterval(() => {
+    if (typeof buildMessageContextMenuItems !== 'function' &&
+        typeof showMessageContextMenu !== 'function') return;
+
+    if (typeof window.buildMessageContextMenuItems === 'function' && !window._flagMenuPatched) {
+      window._flagMenuPatched = true;
+      const orig = window.buildMessageContextMenuItems;
+      window.buildMessageContextMenuItems = function(messageId, messageData, ...rest) {
+        const items = orig.call(this, messageId, messageData, ...rest);
+        const flags = loadFlags();
+        items.push({
+          text: flags.has(messageId) ? '🏳️ Remove Flag' : '🚩 Flag Message',
+          action: () => window.toggleFlagMessage(messageId, messageData),
+        });
+        return items;
+      };
+    }
+    clearInterval(checkContextMenu);
+  }, 800);
+})();
+
+/* ══════════════════════════════════════════════════════════════════════════
+   7. FORMATTING TOOLBAR  (B / I / S / </> buttons above input)
+   ══════════════════════════════════════════════════════════════════════════ */
+(function initFormatToolbar() {
+  const FORMATS = {
+    bold:      { open: '*',   close: '*' },
+    italic:    { open: '_',   close: '_' },
+    strike:    { open: '~',   close: '~' },
+    code:      { open: '`',   close: '`' },
+    codeblock: { open: '```\n', close: '\n```' },
+  };
+
+  function wrapSelection(fmt) {
+    const input = document.getElementById('messageInput');
+    if (!input) return;
+    const { open, close } = FORMATS[fmt] || {};
+    if (!open) return;
+    const start = input.selectionStart;
+    const end   = input.selectionEnd;
+    const val   = input.value;
+    const selected = val.slice(start, end);
+    const wrapped  = open + (selected || fmt) + close;
+    input.value = val.slice(0, start) + wrapped + val.slice(end);
+    const cursor = start + open.length + (selected || fmt).length + close.length;
+    input.focus();
+    input.setSelectionRange(
+      selected ? start : start + open.length,
+      selected ? cursor : start + open.length + fmt.length
+    );
+    input.dispatchEvent(new Event('input'));
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    const toolbar   = document.getElementById('formatToolbar');
+    const toggleBtn = document.getElementById('fmtToggleBtn');
+    const closeBtn  = document.getElementById('fmtToolbarClose');
+
+    toggleBtn?.addEventListener('click', () => {
+      if (!toolbar) return;
+      const visible = toolbar.style.display !== 'none';
+      toolbar.style.display = visible ? 'none' : 'flex';
+      toggleBtn.classList.toggle('active', !visible);
+    });
+    closeBtn?.addEventListener('click', () => {
+      if (toolbar) toolbar.style.display = 'none';
+      toggleBtn?.classList.remove('active');
+    });
+
+    document.querySelectorAll('.fmt-btn[data-fmt]').forEach(btn => {
+      btn.addEventListener('click', () => wrapSelection(btn.dataset.fmt));
+    });
+  });
+})();
+
+/* ══════════════════════════════════════════════════════════════════════════
+   8. OPTIONAL TYPING SOUND  (subtle click per keystroke — opt-in)
+   ══════════════════════════════════════════════════════════════════════════ */
+(function initTypingSound() {
+  const KEY = 'teamChatTypingSound';
+  let enabled = localStorage.getItem(KEY) === '1';
+  let ctx = null;
+
+  function playClick() {
+    if (!enabled) return;
+    try {
+      ctx = ctx || new (window.AudioContext || window.webkitAudioContext)();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.value = 800;
+      gain.gain.setValueAtTime(0.04, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.06);
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.start(); osc.stop(ctx.currentTime + 0.06);
+    } catch (_) {}
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    const input = document.getElementById('messageInput');
+    if (input) {
+      input.addEventListener('keydown', e => {
+        if (e.key.length === 1 || e.key === 'Backspace') playClick();
+      });
+    }
+  });
+
+  window.toggleTypingSound = function() {
+    enabled = !enabled;
+    localStorage.setItem(KEY, enabled ? '1' : '0');
+    showToast(enabled ? '🔊 Typing sound enabled' : '🔇 Typing sound disabled');
+  };
+  window.isTypingSoundEnabled = () => enabled;
+})();
+
+/* ══════════════════════════════════════════════════════════════════════════
+   9. CHAT STATISTICS — wire up "Stats" to context menu / chat info
+   ══════════════════════════════════════════════════════════════════════════ */
+document.addEventListener('DOMContentLoaded', () => {
+  // Add "Stats" button to any chat info dropdown that exists
+  document.querySelector('.chat-info-btn, #chatInfoBtn, [data-action="chat-info"]')
+    ?.parentElement?.insertAdjacentHTML('beforeend',
+      '<button type="button" class="icon-btn" id="chatStatsBtn" title="Chat statistics" aria-label="Chat statistics">📊</button>'
+    );
+  document.getElementById('chatStatsBtn')?.addEventListener('click', openChatStats);
+});
+
+/* ══════════════════════════════════════════════════════════════════════════
+   10. CAPACITOR NATIVE APP — deep links, back button, status bar, notifications
+   ══════════════════════════════════════════════════════════════════════════ */
+(function initCapacitorNative() {
+  const isNative = window.Capacitor?.isNativePlatform?.() === true;
+  if (!isNative) return;
+
+  document.body.classList.add('is-capacitor');
+
+  const { App, PushNotifications, StatusBar, Haptics, Network } = window.Capacitor?.Plugins || {};
+
+  /* ── Status bar ─────────────────────────────────────────────────── */
+  if (StatusBar) {
+    StatusBar.setStyle?.({ style: 'DARK' }).catch(() => {});
+    StatusBar.setBackgroundColor?.({ color: '#008069' }).catch(() => {});
+  }
+
+  /* ── Hardware back button (Android) ─────────────────────────────── */
+  App?.addListener('backButton', ({ canGoBack }) => {
+    // Close any open modal/panel first
+    const openModal = document.querySelector('.modal[style*="flex"], .modal[style*="block"]');
+    if (openModal) { openModal.style.display = 'none'; return; }
+    const threadPanel = document.getElementById('threadPanel');
+    if (threadPanel?.style.display !== 'none') { window.closeThread?.(); return; }
+    const flagPanel = document.getElementById('flaggedMsgsPanel');
+    if (flagPanel?.style.display !== 'none') { flagPanel.style.display = 'none'; return; }
+    // If a chat is open, close it (go back to chat list)
+    if (currentChat?.id && typeof closeChatView === 'function') { closeChatView(); return; }
+    if (!canGoBack) App.exitApp?.();
+  });
+
+  /* ── Deep link handling ─────────────────────────────────────────── */
+  App?.addListener('appUrlOpen', ({ url }) => {
+    try {
+      const u = new URL(url);
+      const callId = u.searchParams.get('callId');
+      const callAction = u.searchParams.get('callAction');
+      const openChat = u.searchParams.get('openChat');
+      const chatType = u.searchParams.get('chatType');
+      if (callId) {
+        const waitAuth = setInterval(async () => {
+          if (!currentUser?.uid) return;
+          clearInterval(waitAuth);
+          const doc = await db.collection('calls').doc(callId).get();
+          if (doc.exists && ['ringing','accepted'].includes(doc.data().status)) {
+            if (callAction === 'reject') {
+              await db.collection('calls').doc(callId).update({ status: 'rejected' });
+            } else {
+              window.openIncomingCallUI?.(callId, doc.data());
+            }
+          }
+        }, 600);
+      }
+      if (openChat) {
+        const waitAuth2 = setInterval(() => {
+          if (!currentUser?.uid) return;
+          clearInterval(waitAuth2);
+          setTimeout(() => window.openChatById?.(openChat, chatType || 'direct'), 800);
+        }, 600);
+      }
+    } catch (_) {}
+  });
+
+  /* ── Push Notifications (Capacitor FCM) ─────────────────────────── */
+  if (PushNotifications) {
+    PushNotifications.requestPermissions?.().then(result => {
+      if (result.receive === 'granted') PushNotifications.register?.();
+    }).catch(() => {});
+
+    PushNotifications.addListener?.('registration', token => {
+      if (!token?.value || !currentUser?.uid) return;
+      const tokenKey = token.value.replace(/[^a-zA-Z0-9]/g, '').slice(-120);
+      db.collection('users').doc(currentUser.uid).set({
+        fcmTokens: {
+          [tokenKey]: {
+            token: token.value,
+            platform: 'capacitor-android',
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+          }
+        },
+        notificationsEnabled: true,
+      }, { merge: true }).catch(() => {});
+    });
+
+    PushNotifications.addListener?.('pushNotificationActionPerformed', action => {
+      const data = action.notification?.data || {};
+      if (data.kind === 'call' && data.callId) {
+        window.notifySwCallAnswered?.(data.callId);
+        const waitAuth = setInterval(async () => {
+          if (!currentUser?.uid) return;
+          clearInterval(waitAuth);
+          if (action.actionId === 'reject') {
+            await db.collection('calls').doc(data.callId).update({ status: 'rejected' }).catch(() => {});
+          } else {
+            const doc = await db.collection('calls').doc(data.callId).get();
+            if (doc.exists) window.openIncomingCallUI?.(data.callId, doc.data());
+          }
+        }, 600);
+      } else if (data.kind === 'message' && data.chatId) {
+        setTimeout(() => window.openChatById?.(data.chatId, data.chatType || 'direct'), 1000);
+      }
+    });
+
+    PushNotifications.addListener?.('pushNotificationReceived', notification => {
+      const data = notification.data || {};
+      if (data.kind === 'call' && data.callId) {
+        window.notifyIncomingCall?.({
+          id: data.callId, type: data.type || 'voice', fromUserName: data.fromUserName,
+        });
+      }
+    });
+  }
+
+  /* ── Haptic feedback on send ─────────────────────────────────────── */
+  if (Haptics) {
+    const sendBtn = document.getElementById('sendBtn');
+    sendBtn?.addEventListener('click', () => {
+      Haptics.impact?.({ style: 'LIGHT' }).catch(() => {});
+    });
+  }
+
+  /* ── Network status ─────────────────────────────────────────────── */
+  Network?.addListener?.('networkStatusChange', status => {
+    const banner = document.getElementById('connectionBanner');
+    if (banner) banner.style.display = status.connected ? 'none' : 'block';
+  });
+})();
+
+/* ═══════════════════════════════════════════════════
+   Wire up Chat Stats to the "Chat Info" header area
+   ═══════════════════════════════════════════════════ */
+(function wireStatsToMenu() {
+  // Hook into the existing chat options/header menu if present
+  const tryWire = () => {
+    const chatHeader = document.getElementById('chatHeader');
+    if (!chatHeader) return;
+    if (chatHeader.querySelector('#chatStatsMenuBtn')) return;
+    const btn = document.createElement('button');
+    btn.id = 'chatStatsMenuBtn';
+    btn.type = 'button';
+    btn.className = 'icon-btn';
+    btn.title = 'Chat statistics';
+    btn.setAttribute('aria-label', 'Chat statistics');
+    btn.textContent = '📊';
+    btn.addEventListener('click', openChatStats);
+    // Try to insert near other header icon buttons
+    const headerActions = chatHeader.querySelector('.chat-header-actions, .header-actions');
+    if (headerActions) headerActions.prepend(btn);
+    else chatHeader.appendChild(btn);
+  };
+  document.addEventListener('DOMContentLoaded', tryWire);
+  setTimeout(tryWire, 2000);
+})();
+
+/* ── End of Feature Pack 4 ──────────────────────────────────────────── */

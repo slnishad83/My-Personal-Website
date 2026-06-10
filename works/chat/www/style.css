@@ -11335,3 +11335,98 @@ body.dark .bottom-nav-fab {
   width: 44px; height: 44px; font-size: 20px; cursor: pointer;
   display: flex; align-items: center; justify-content: center;
 }
+
+/* ═══════════════════════════════════════════════════════════════════════
+   FEATURE PACK 4 — Templates · Stats · Flags · Collapse · Compress · More
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* ── Formatting Toolbar ─────────────────────────────────────────────── */
+.format-toolbar {
+  display: flex; align-items: center; gap: 4px;
+  padding: 4px 12px 2px; flex-wrap: wrap;
+  border-top: 1px solid var(--border, #e2e8f0);
+}
+.fmt-btn {
+  background: none; border: 1px solid var(--border, #e2e8f0);
+  border-radius: 6px; padding: 3px 8px; cursor: pointer; font-size: 13px;
+  color: var(--text, #1e293b); transition: all 0.15s;
+  min-width: 28px; line-height: 1.4;
+}
+.fmt-btn:hover { background: var(--brand-light, #e6f4f1); border-color: var(--brand, #008069); }
+.fmt-btn.active { background: var(--brand, #008069); color: #fff; border-color: var(--brand, #008069); }
+.fmt-toggle-btn { font-size: 11px; font-weight: 700; padding: 3px 7px; }
+.fmt-close { margin-left: auto; opacity: 0.5; }
+.fmt-divider { width: 1px; height: 18px; background: var(--border, #e2e8f0); margin: 0 2px; }
+
+/* ── Long Message Collapse ──────────────────────────────────────────── */
+.message-text.collapsed { 
+  display: -webkit-box; -webkit-line-clamp: 8; -webkit-box-orient: vertical; overflow: hidden;
+}
+.read-more-btn {
+  background: none; border: none; color: var(--brand, #008069); font-size: 13px;
+  cursor: pointer; padding: 2px 0; font-weight: 600; display: block; margin-top: 2px;
+}
+.read-more-btn:hover { text-decoration: underline; }
+
+/* ── Flag / Priority Messages ─────────────────────────────────────────── */
+.message-flag-btn {
+  background: none; border: none; font-size: 14px; cursor: pointer;
+  opacity: 0.4; padding: 2px; line-height: 1; transition: opacity 0.15s, transform 0.15s;
+}
+.message-flag-btn:hover { opacity: 1; transform: scale(1.2); }
+.message-flag-btn.flagged { opacity: 1; }
+.message-bubble.flagged-msg { border-left: 3px solid #f59e0b !important; }
+.flagged-item {
+  background: var(--panel, #f8fafc); border-radius: 10px; padding: 10px 12px;
+  border-left: 3px solid #f59e0b; font-size: 13px;
+}
+.flagged-item-meta { font-size: 11px; color: var(--muted, #94a3b8); margin-bottom: 4px; }
+.flagged-item-text { color: var(--text, #1e293b); word-break: break-word; }
+.flagged-item-unflag {
+  background: none; border: none; color: var(--brand, #008069); font-size: 11px;
+  cursor: pointer; padding: 4px 0 0; font-weight: 600;
+}
+
+/* ── Chat Statistics ───────────────────────────────────────────────── */
+.stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.stat-card {
+  background: var(--panel, #f8fafc); border-radius: 12px; padding: 14px 16px;
+  border: 1px solid var(--border, #e2e8f0); text-align: center;
+}
+.stat-card .stat-val { font-size: 28px; font-weight: 800; color: var(--brand, #008069); }
+.stat-card .stat-label { font-size: 12px; color: var(--muted, #94a3b8); margin-top: 2px; }
+.stat-divider { height: 1px; background: var(--border, #e2e8f0); margin: 16px 0; }
+.stat-row { display: flex; justify-content: space-between; font-size: 13px; margin: 8px 0; }
+.stat-row strong { color: var(--text, #1e293b); }
+.stat-row span { color: var(--muted-strong, #64748b); }
+
+/* ── Message Templates ─────────────────────────────────────────────── */
+.template-item {
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 16px; cursor: pointer; transition: background 0.12s;
+  border-bottom: 1px solid var(--border-light, #f1f5f9);
+}
+.template-item:hover { background: var(--panel, #f8fafc); }
+.template-item-body { flex: 1; min-width: 0; }
+.template-item-title { font-size: 13px; font-weight: 700; color: var(--text, #1e293b); }
+.template-item-text { font-size: 12px; color: var(--muted, #94a3b8); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.template-item-actions { display: flex; gap: 4px; }
+.template-item-btn {
+  background: none; border: none; font-size: 14px; cursor: pointer;
+  padding: 4px; opacity: 0.5; transition: opacity 0.15s;
+}
+.template-item-btn:hover { opacity: 1; }
+
+/* ── Image compression progress ─────────────────────────────────────── */
+.compress-indicator {
+  font-size: 11px; color: var(--brand, #008069); padding: 2px 8px;
+  background: var(--brand-light, #e6f4f1); border-radius: 10px; margin-left: 4px;
+}
+
+/* ── Typing sound indicator ─────────────────────────────────────────── */
+.typing-sound-btn.on::after { content: ' 🔊'; font-size: 10px; }
+.typing-sound-btn.off::after { content: ' 🔇'; font-size: 10px; }
+
+/* ── Capacitor native ───────────────────────────────────────────────── */
+body.is-capacitor { padding-top: env(safe-area-inset-top); }
+body.is-capacitor .sidebar { padding-top: max(env(safe-area-inset-top), 0px); }
