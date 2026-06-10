@@ -229,6 +229,7 @@
               </span>
               <span class="install-app-label">Download App</span>
             </button>
+            <button class="icon-btn e2ee-lock-btn" id="e2eeLockBtn" title="End-to-end encryption" aria-label="Toggle E2EE" style="display:none;"></button>
             <button class="icon-btn" id="scannerBtn" title="Scan QR code or barcode" aria-label="Scan QR code or barcode"></button>
             <button class="icon-btn" id="darkModeBtn" title="Dark Mode"></button>
             <button class="logout-btn" id="logoutBtn" title="Log out" aria-label="Log out"></button>
@@ -2224,6 +2225,23 @@
     <script src="app.js?v=156"></script>
     <script src="pwa-install.js?v=142"></script>
   
+
+    <!-- Message Thread Panel -->
+    <div id="threadPanel" class="thread-panel" style="display:none;">
+      <div class="thread-panel-header">
+        <span class="thread-panel-title">Thread</span>
+        <button id="closeThreadPanel" class="icon-btn" title="Close thread" aria-label="Close thread">×</button>
+      </div>
+      <div id="threadParentMsg" class="thread-parent-msg"></div>
+      <div class="thread-messages-wrapper">
+        <div id="threadMessages" class="thread-messages"></div>
+      </div>
+      <div id="threadRepliesCount" class="thread-replies-count"></div>
+      <div class="thread-composer">
+        <textarea id="threadInput" placeholder="Reply in thread…" rows="1"></textarea>
+        <button id="threadSendBtn" class="send-btn" title="Send" aria-label="Send thread reply"></button>
+      </div>
+    </div>
     <!-- GIF Search Modal -->
     <div id="gifSearchModal" class="modal" style="display:none;">
       <div class="modal-content gif-modal-content">

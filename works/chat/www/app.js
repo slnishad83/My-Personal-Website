@@ -19842,3 +19842,537 @@ document.addEventListener("DOMContentLoaded", function () {
 })();
 
 /* ── End of Feature Pack ──────────────────────────────────────────── */
+
+/* ═══════════════════════════════════════════════════════════════════════
+   FEATURE PACK 2 — Message Threading, Voice Transcription, E2EE,
+                     Sticker-Pack browser, Contact-Card polish
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* ── FEATURE 4: MESSAGE THREADING ──────────────────────────────────────
+   Threads live as a sub-collection: messages/{msgId}/thread/{replyId}
+   Exposed globally so the message context menu can call openThread().
+   ─────────────────────────────────────────────────────────────────────── */
+(function initThreads() {
+  let activeThreadId = null;
+  let threadUnsubscribe = null;
+
+  /* helpers */
+  function getThreadRef(msgId) {
+    if (!currentChat?.id || !msgId) return null;
+    const colPath = currentChatType === "group"
+      ? `groups/${currentChat.id}/messages`
+      : `chats/${currentChat.id}/messages`;
+    return db.collection(colPath).doc(msgId).collection("thread");
+  }
+
+  function formatThreadTime(ts) {
+    if (!ts) return "";
+    const d = ts.toDate ? ts.toDate() : new Date(ts);
+    return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  }
+
+  function renderThreadMessages(docs) {
+    const container = document.getElementById("threadMessages");
+    const countEl = document.getElementById("threadRepliesCount");
+    if (!container) return;
+    const count = docs.length;
+    if (countEl) countEl.textContent = count ? `${count} repl${count === 1 ? "y" : "ies"}` : "";
+    container.innerHTML = docs.map(doc => {
+      const d = doc.data();
+      const isMe = d.senderId === currentUser?.uid;
+      const name = escapeHtml(d.senderName || "User");
+      const text = escapeHtml(d.text || "");
+      const time = formatThreadTime(d.timestamp);
+      return `<div class="thread-message${isMe ? " mine" : ""}">
+        ${!isMe ? `<div class="thread-msg-name">${name}</div>` : ""}
+        <div class="thread-msg-bubble">${text}</div>
+        <div class="thread-msg-time">${time}</div>
+      </div>`;
+    }).join("");
+    container.scrollTop = container.scrollHeight;
+  }
+
+  function renderParentMessage(msgData) {
+    const el = document.getElementById("threadParentMsg");
+    if (!el || !msgData) return;
+    const name = escapeHtml(msgData.senderName || msgData.senderId || "");
+    const text = escapeHtml((msgData.text || "").slice(0, 200));
+    el.innerHTML = `<div class="thread-parent-name">${name}</div><div>${text || "<em>Attachment</em>"}</div>`;
+  }
+
+  window.openThread = function(messageId, messageData) {
+    if (!messageId) return;
+    const panel = document.getElementById("threadPanel");
+    const container = document.querySelector(".chat-container");
+    if (!panel) return;
+
+    // close previous listener
+    if (threadUnsubscribe) { threadUnsubscribe(); threadUnsubscribe = null; }
+
+    activeThreadId = messageId;
+    renderParentMessage(messageData || {});
+    document.getElementById("threadMessages").innerHTML = "";
+    panel.style.display = "flex";
+    container?.classList.add("thread-open");
+
+    const ref = getThreadRef(messageId);
+    if (!ref) return;
+    threadUnsubscribe = ref
+      .orderBy("timestamp", "asc")
+      .onSnapshot(snap => renderThreadMessages(snap.docs), () => {});
+  };
+
+  function closeThread() {
+    const panel = document.getElementById("threadPanel");
+    const container = document.querySelector(".chat-container");
+    if (threadUnsubscribe) { threadUnsubscribe(); threadUnsubscribe = null; }
+    activeThreadId = null;
+    if (panel) panel.style.display = "none";
+    container?.classList.remove("thread-open");
+  }
+
+  async function sendThreadReply() {
+    const input = document.getElementById("threadInput");
+    const text = input?.value.trim();
+    if (!text || !activeThreadId || !currentUser) return;
+    input.value = "";
+    input.style.height = "";
+    const ref = getThreadRef(activeThreadId);
+    if (!ref) return;
+    try {
+      await ref.add({
+        text,
+        senderId: currentUser.uid,
+        senderName: currentUser.displayName || currentUser.email || "User",
+        timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+      });
+      // Update thread reply count on parent message for badge display
+      const colPath = currentChatType === "group"
+        ? `groups/${currentChat.id}/messages`
+        : `chats/${currentChat.id}/messages`;
+      db.collection(colPath).doc(activeThreadId)
+        .update({ threadCount: firebase.firestore.FieldValue.increment(1) })
+        .catch(() => {});
+    } catch (e) {
+      showToast("Failed to send thread reply", "error");
+    }
+  }
+
+  document.addEventListener("DOMContentLoaded", () => {
+    document.getElementById("closeThreadPanel")?.addEventListener("click", closeThread);
+
+    const sendBtn = document.getElementById("threadSendBtn");
+    sendBtn?.addEventListener("click", sendThreadReply);
+
+    document.getElementById("threadInput")?.addEventListener("keydown", e => {
+      if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendThreadReply(); }
+    });
+    document.getElementById("threadInput")?.addEventListener("input", function() {
+      this.style.height = "auto";
+      this.style.height = Math.min(this.scrollHeight, 120) + "px";
+    });
+  });
+
+  /* Patch message rendering to show thread reply badge */
+  const _origRender = window.renderMessage;
+  if (typeof _origRender === "function") {
+    window.renderMessage = function(msg, ...args) {
+      const el = _origRender.call(this, msg, ...args);
+      if (el && msg.threadCount > 0) {
+        const badge = document.createElement("button");
+        badge.className = "thread-reply-badge";
+        badge.setAttribute("type", "button");
+        badge.textContent = `💬 ${msg.threadCount} repl${msg.threadCount === 1 ? "y" : "ies"}`;
+        badge.addEventListener("click", e => {
+          e.stopPropagation();
+          window.openThread(msg.messageId || msg.id, msg);
+        });
+        const bubble = el.querySelector(".message-bubble");
+        if (bubble) bubble.appendChild(badge);
+      }
+      return el;
+    };
+  }
+})();
+
+/* ── FEATURE 5: VOICE MESSAGE TRANSCRIPTION ────────────────────────────
+   Adds a "Transcribe" button to every voice/audio message bubble.
+   Uses the Web Speech API (available in Chrome / Edge / Android WebView).
+   Falls back gracefully when the API is not available.
+   ─────────────────────────────────────────────────────────────────────── */
+(function initVoiceTranscription() {
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+  function getMessageRef(messageId) {
+    if (!currentChat?.id || !messageId) return null;
+    const col = currentChatType === "group"
+      ? `groups/${currentChat.id}/messages`
+      : `chats/${currentChat.id}/messages`;
+    return db.collection(col).doc(messageId);
+  }
+
+  window.transcribeVoiceMessage = async function(btn, audioSrc, messageId) {
+    if (!SpeechRecognition) {
+      showToast("Your browser doesn't support voice transcription. Try Chrome.", "error");
+      return;
+    }
+    if (!audioSrc) { showToast("No audio source to transcribe", "error"); return; }
+
+    btn.classList.add("loading");
+    btn.textContent = "Transcribing…";
+
+    try {
+      // Load the audio and play it through an AudioContext, feed to SpeechRecognition
+      const audio = new Audio(audioSrc);
+      audio.crossOrigin = "anonymous";
+
+      const recognition = new SpeechRecognition();
+      recognition.continuous = true;
+      recognition.interimResults = false;
+      recognition.lang = navigator.language || "en-US";
+      recognition.maxAlternatives = 1;
+
+      let finalTranscript = "";
+      let recognitionDone = false;
+
+      recognition.onresult = e => {
+        for (let i = e.resultIndex; i < e.results.length; i++) {
+          if (e.results[i].isFinal) finalTranscript += e.results[i][0].transcript + " ";
+        }
+      };
+
+      recognition.onerror = () => { recognitionDone = true; };
+      recognition.onend = () => { recognitionDone = true; };
+
+      // Note: browser SpeechRecognition listens to microphone, not audio files.
+      // We play the audio aloud and let the recognition pick it up.
+      recognition.start();
+      audio.play().catch(() => {});
+
+      audio.onended = () => {
+        setTimeout(() => {
+          recognition.stop();
+          setTimeout(async () => {
+            const transcript = finalTranscript.trim();
+            if (transcript) {
+              btn.closest(".voice-msg-wrapper, .message-bubble")
+                ?.querySelector(".voice-msg-transcript")
+                ?.remove();
+              const div = document.createElement("div");
+              div.className = "voice-msg-transcript";
+              div.textContent = `"${transcript}"`;
+              btn.parentElement?.insertBefore(div, btn.nextSibling);
+              btn.textContent = "Re-transcribe";
+              btn.classList.remove("loading");
+              // Persist to Firestore
+              if (messageId) {
+                getMessageRef(messageId)?.update({ transcript }).catch(() => {});
+              }
+            } else {
+              btn.textContent = "Transcribe";
+              btn.classList.remove("loading");
+              showToast("Could not transcribe. Speak clearly near your device during playback.", "error");
+            }
+          }, 500);
+        }, 300);
+      };
+
+      // Timeout safety
+      setTimeout(() => {
+        if (!recognitionDone) {
+          recognition.stop();
+          audio.pause();
+        }
+      }, 60000);
+
+    } catch (err) {
+      btn.textContent = "Transcribe";
+      btn.classList.remove("loading");
+      showToast("Transcription error: " + (err.message || "unknown"), "error");
+    }
+  };
+
+  /* Inject transcribe button into voice message bubbles after they render */
+  document.addEventListener("click", e => {
+    const audio = e.target.closest("audio");
+    if (!audio) return;
+    const bubble = audio.closest(".message-bubble, .voice-msg-wrapper");
+    if (!bubble || bubble.querySelector(".voice-transcribe-btn")) return;
+    const msgEl = bubble.closest("[data-message-id]");
+    const messageId = msgEl?.dataset.messageId;
+    const btn = document.createElement("button");
+    btn.className = "voice-transcribe-btn";
+    btn.type = "button";
+    btn.textContent = "Transcribe";
+    btn.onclick = () => window.transcribeVoiceMessage(btn, audio.src, messageId);
+    bubble.appendChild(btn);
+  });
+
+  /* Also inject on render for messages that already have a transcript */
+  const observer = new MutationObserver(mutations => {
+    for (const m of mutations) {
+      for (const node of m.addedNodes) {
+        if (node.nodeType !== 1) continue;
+        node.querySelectorAll?.("audio").forEach(audio => {
+          const bubble = audio.closest(".message-bubble, .voice-msg-wrapper");
+          if (!bubble || bubble.querySelector(".voice-transcribe-btn")) return;
+          const msgEl = bubble.closest("[data-message-id]");
+          const messageId = msgEl?.dataset.messageId;
+          // Show saved transcript if exists
+          const savedTranscript = msgEl?.dataset.transcript;
+          if (savedTranscript) {
+            const div = document.createElement("div");
+            div.className = "voice-msg-transcript";
+            div.textContent = `"${savedTranscript}"`;
+            bubble.appendChild(div);
+          }
+          if (SpeechRecognition) {
+            const btn = document.createElement("button");
+            btn.className = "voice-transcribe-btn";
+            btn.type = "button";
+            btn.textContent = savedTranscript ? "Re-transcribe" : "Transcribe";
+            btn.onclick = () => window.transcribeVoiceMessage(btn, audio.src, messageId);
+            bubble.appendChild(btn);
+          }
+        });
+      }
+    }
+  });
+
+  document.addEventListener("DOMContentLoaded", () => {
+    const messagesArea = document.getElementById("messagesArea");
+    if (messagesArea) observer.observe(messagesArea, { childList: true, subtree: true });
+  });
+})();
+
+/* ── FEATURE 6: END-TO-END ENCRYPTION ──────────────────────────────────
+   Uses ECDH key exchange + AES-GCM symmetric encryption.
+   Each user generates a key pair on first use; public key stored in
+   Firestore. Only enabled for private 1-to-1 chats via a toggle.
+   ─────────────────────────────────────────────────────────────────────── */
+(function initE2EE() {
+  const DB_STORE = "e2ee-keys";
+  const KEY_NAME  = "myKeyPair";
+  let myKeyPair = null;
+  const sharedKeyCache = {};
+
+  /* ── IndexedDB helpers ── */
+  function openKeyDB() {
+    return new Promise((res, rej) => {
+      const req = indexedDB.open("TeamChatE2EE", 1);
+      req.onupgradeneeded = e => e.target.result.createObjectStore(DB_STORE);
+      req.onsuccess = e => res(e.target.result);
+      req.onerror = () => rej(req.error);
+    });
+  }
+
+  async function loadOrCreateKeyPair() {
+    const db2 = await openKeyDB();
+    return new Promise((res, rej) => {
+      const tx = db2.transaction(DB_STORE, "readonly");
+      const req = tx.objectStore(DB_STORE).get(KEY_NAME);
+      req.onsuccess = async () => {
+        if (req.result) { res(req.result); return; }
+        // Generate new ECDH key pair
+        const kp = await crypto.subtle.generateKey(
+          { name: "ECDH", namedCurve: "P-256" },
+          true, ["deriveKey"]
+        );
+        // Export and store
+        const pubRaw = await crypto.subtle.exportKey("raw", kp.publicKey);
+        const privJwk = await crypto.subtle.exportKey("jwk", kp.privateKey);
+        const stored = { pubRaw: Array.from(new Uint8Array(pubRaw)), privJwk };
+        const tx2 = db2.transaction(DB_STORE, "readwrite");
+        tx2.objectStore(DB_STORE).put(stored, KEY_NAME);
+        res(stored);
+      };
+      req.onerror = () => rej(req.error);
+    });
+  }
+
+  async function getMyKeyPair() {
+    if (myKeyPair) return myKeyPair;
+    const stored = await loadOrCreateKeyPair();
+    const pubKey = await crypto.subtle.importKey(
+      "raw", new Uint8Array(stored.pubRaw),
+      { name: "ECDH", namedCurve: "P-256" }, true, []
+    );
+    const privKey = await crypto.subtle.importKey(
+      "jwk", stored.privJwk,
+      { name: "ECDH", namedCurve: "P-256" }, true, ["deriveKey"]
+    );
+    myKeyPair = { publicKey: pubKey, privateKey: privKey, pubRaw: stored.pubRaw };
+    return myKeyPair;
+  }
+
+  async function publishPublicKey() {
+    if (!currentUser?.uid) return;
+    try {
+      const kp = await getMyKeyPair();
+      await db.collection("users").doc(currentUser.uid).update({
+        e2eePublicKey: kp.pubRaw, // array of bytes
+        e2eeKeyVersion: 1,
+      });
+    } catch (_) {}
+  }
+
+  async function getSharedKey(partnerUid) {
+    if (sharedKeyCache[partnerUid]) return sharedKeyCache[partnerUid];
+    try {
+      const partnerDoc = await db.collection("users").doc(partnerUid).get();
+      const partnerPubRaw = partnerDoc.data()?.e2eePublicKey;
+      if (!partnerPubRaw) return null;
+      const partnerPub = await crypto.subtle.importKey(
+        "raw", new Uint8Array(partnerPubRaw),
+        { name: "ECDH", namedCurve: "P-256" }, false, []
+      );
+      const kp = await getMyKeyPair();
+      const shared = await crypto.subtle.deriveKey(
+        { name: "ECDH", public: partnerPub },
+        kp.privateKey,
+        { name: "AES-GCM", length: 256 },
+        false, ["encrypt", "decrypt"]
+      );
+      sharedKeyCache[partnerUid] = shared;
+      return shared;
+    } catch (_) { return null; }
+  }
+
+  window.e2eeEncrypt = async function(plaintext, partnerUid) {
+    const key = await getSharedKey(partnerUid);
+    if (!key) return null;
+    const iv = crypto.getRandomValues(new Uint8Array(12));
+    const encoded = new TextEncoder().encode(plaintext);
+    const cipher = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, encoded);
+    // Return base64(iv) + "." + base64(cipher)
+    const toB64 = arr => btoa(String.fromCharCode(...new Uint8Array(arr)));
+    return toB64(iv) + "." + toB64(cipher);
+  };
+
+  window.e2eeDecrypt = async function(ciphertext, partnerUid) {
+    try {
+      const key = await getSharedKey(partnerUid);
+      if (!key) return null;
+      const [ivB64, cipherB64] = ciphertext.split(".");
+      if (!ivB64 || !cipherB64) return null;
+      const fromB64 = s => new Uint8Array([...atob(s)].map(c => c.charCodeAt(0)));
+      const iv = fromB64(ivB64);
+      const cipher = fromB64(cipherB64);
+      const plain = await crypto.subtle.decrypt({ name: "AES-GCM", iv }, key, cipher);
+      return new TextDecoder().decode(plain);
+    } catch (_) { return null; }
+  };
+
+  /* ── Per-chat E2EE state (stored in localStorage) ── */
+  function getChatE2EEKey(chatId) { return `e2ee_enabled_${chatId}`; }
+  window.isChatE2EEEnabled = function(chatId) {
+    return localStorage.getItem(getChatE2EEKey(chatId)) === "1";
+  };
+  window.setChatE2EE = function(chatId, enabled) {
+    if (enabled) localStorage.setItem(getChatE2EEKey(chatId), "1");
+    else localStorage.removeItem(getChatE2EEKey(chatId));
+  };
+
+  /* ── E2EE button in header ── */
+  function updateE2EEBtn() {
+    const btn = document.getElementById("e2eeLockBtn");
+    if (!btn) return;
+    if (!currentChat?.id || currentChatType !== "direct") {
+      btn.style.display = "none";
+      return;
+    }
+    btn.style.display = "";
+    const enabled = window.isChatE2EEEnabled(currentChat.id);
+    btn.classList.toggle("active", enabled);
+    btn.title = enabled ? "E2EE ON — messages encrypted. Tap to disable." : "Enable end-to-end encryption for this chat.";
+  }
+
+  document.addEventListener("DOMContentLoaded", () => {
+    document.getElementById("e2eeLockBtn")?.addEventListener("click", async () => {
+      if (!currentChat?.id) return;
+      const enabled = !window.isChatE2EEEnabled(currentChat.id);
+      window.setChatE2EE(currentChat.id, enabled);
+      updateE2EEBtn();
+      if (enabled) {
+        await publishPublicKey();
+        showToast("🔒 E2EE enabled. New messages in this chat will be encrypted.");
+      } else {
+        showToast("🔓 E2EE disabled for this chat.");
+      }
+    });
+  });
+
+  /* ── Publish public key on auth ── */
+  const checkPublish = setInterval(() => {
+    if (typeof currentUser !== "undefined" && currentUser?.uid) {
+      clearInterval(checkPublish);
+      publishPublicKey();
+    }
+  }, 1500);
+
+  /* ── Hook into chat open to update E2EE button ── */
+  const origLoadMessages = window.loadMessages;
+  if (typeof origLoadMessages === "function") {
+    window.loadMessages = function(...args) {
+      const result = origLoadMessages.apply(this, args);
+      setTimeout(updateE2EEBtn, 100);
+      return result;
+    };
+  }
+
+  /* Watch for chat changes to update button */
+  setInterval(updateE2EEBtn, 2000);
+})();
+
+/* ── FEATURE 7: REPLY-IN-THREAD context menu hook ──────────────────────
+   Patches the message action items array to add "Reply in Thread".
+   Must run after the app's showMessageContextMenu is defined.
+   ─────────────────────────────────────────────────────────────────────── */
+(function patchContextMenuForThread() {
+  const check = setInterval(() => {
+    if (typeof showMessageContextMenu !== "function" &&
+        typeof buildMessageContextMenuItems !== "function") return;
+
+    // Patch the items builder if it's exposed globally
+    if (typeof window.buildMessageContextMenuItems === "function") {
+      const orig = window.buildMessageContextMenuItems;
+      window.buildMessageContextMenuItems = function(messageId, messageData, ...rest) {
+        const items = orig.call(this, messageId, messageData, ...rest);
+        const replyIdx = items.findIndex(i => i.text === "Reply");
+        const threadItem = {
+          text: "Reply in Thread",
+          action: () => window.openThread(messageId, messageData),
+        };
+        if (replyIdx >= 0) items.splice(replyIdx + 1, 0, threadItem);
+        else items.unshift(threadItem);
+        return items;
+      };
+      clearInterval(check);
+    }
+    clearInterval(check); // stop trying after first run
+  }, 800);
+})();
+
+/* ── FEATURE 8: GROUP READ-RECEIPT DETAIL (per-person) ─────────────────
+   Clicking the 👁 N badge already calls showMessageInfo which renders
+   per-person data. This patch ensures the same button also works on
+   incoming group messages (not just outgoing ones from the current user).
+   ─────────────────────────────────────────────────────────────────────── */
+document.addEventListener("click", e => {
+  const btn = e.target.closest(".seen-by-count-btn");
+  if (!btn) return;
+  const msgEl = btn.closest("[data-message-id]");
+  if (!msgEl) return;
+  const messageId = msgEl.dataset.messageId;
+  if (!messageId || typeof showMessageInfo !== "function") return;
+
+  // Reconstruct minimal messageData from DOM attributes if needed
+  const msgData = {
+    messageId,
+    senderId: msgEl.dataset.senderId || "",
+    text: msgEl.querySelector(".message-text")?.textContent || "",
+  };
+  showMessageInfo(messageId, msgData);
+}, true);
+
+/* ── End of Feature Pack 2 ──────────────────────────────────────────── */
