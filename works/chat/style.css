@@ -11052,3 +11052,36 @@ body.dark .bottom-nav-fab {
     padding-bottom: 0 !important;
   }
 }
+
+/* ── GIF Button ─────────────────────────────────── */
+.gif-btn::before {
+  content: 'GIF';
+  font-size: 10px;
+  font-weight: 800;
+  color: var(--brand, #008069);
+  letter-spacing: -0.5px;
+}
+.gif-btn { width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border-radius: 50%; border: none; background: transparent; cursor: pointer; }
+.gif-btn:hover::before { color: var(--brand-dark, #005c4b); }
+
+/* ── GIF Modal ───────────────────────────────────── */
+.gif-modal-content { width: min(520px, 96%); max-height: 80vh; display: flex; flex-direction: column; }
+.gif-modal-body { flex: 1; overflow: hidden; display: flex; flex-direction: column; padding: 12px; }
+.gif-search-bar { margin-bottom: 10px; }
+.gif-search-bar input { width: 100%; padding: 10px 14px; border: 1px solid var(--border, #e2e8f0); border-radius: 24px; font-size: 14px; outline: none; background: var(--panel, #f8fafc); color: var(--text, #1e293b); }
+.gif-search-bar input:focus { border-color: var(--brand, #008069); }
+.gif-grid { flex: 1; overflow-y: auto; display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; min-height: 200px; }
+.gif-grid img { width: 100%; border-radius: 8px; cursor: pointer; object-fit: cover; height: 100px; transition: opacity 0.15s; }
+.gif-grid img:hover { opacity: 0.85; }
+.gif-attribution { text-align: right; font-size: 11px; color: var(--muted, #94a3b8); margin-top: 6px; }
+.gif-loading { text-align: center; color: var(--muted, #94a3b8); font-size: 13px; padding: 20px; grid-column: 1/-1; }
+
+/* ── Smart Reply Bar ─────────────────────────────── */
+.smart-reply-bar { padding: 6px 12px 0; overflow-x: auto; scrollbar-width: none; }
+.smart-reply-bar::-webkit-scrollbar { display: none; }
+.smart-reply-chips { display: flex; gap: 8px; }
+.smart-reply-chip { border: 1.5px solid var(--brand, #008069); color: var(--brand, #008069); background: transparent; border-radius: 16px; padding: 4px 14px; font-size: 13px; white-space: nowrap; cursor: pointer; transition: background 0.15s, color 0.15s; }
+.smart-reply-chip:hover { background: var(--brand, #008069); color: #fff; }
+
+/* ── Auto-Away Status ────────────────────────────── */
+.presence-away { opacity: 0.65; }

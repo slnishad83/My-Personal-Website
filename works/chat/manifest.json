@@ -32,5 +32,19 @@
       "type": "image/png",
       "purpose": "any maskable"
     }
-  ]
+  ],
+  "related_applications": [
+    {
+      "platform": "play",
+      "url": "https://play.google.com/store/apps/details?id=com.nishad.myteamchat",
+      "id": "com.nishad.myteamchat"
+    },
+    {
+      "platform": "webapp",
+      "url": "./manifest.json"
+    }
+  ],
+  "prefer_related_applications": false,
+  "categories": ["social", "productivity", "communication"],
+  "screenshots": []
 }

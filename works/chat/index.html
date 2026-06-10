@@ -536,6 +536,10 @@
             </label>
             <span id="viewOnceLabel">View Once: OFF</span>
           </div>
+          
+          <div id="smartReplyBar" class="smart-reply-bar" style="display:none;">
+            <div id="smartReplyChips" class="smart-reply-chips"></div>
+          </div>
           <div class="wa-composer-shell">
             <button class="emoji-btn" id="emojiBtn" title="Emoji" aria-label="Emoji"></button>
             <textarea
@@ -549,6 +553,12 @@
               id="cameraMsgBtn"
               title="Camera"
               aria-label="Camera"
+            ></button>
+            <button
+              class="attach-btn gif-btn"
+              id="gifBtn"
+              title="Send GIF"
+              aria-label="Send GIF"
             ></button>
           </div>
           <button class="send-btn" id="sendBtn" title="Send message" aria-label="Send message"></button>
@@ -2211,7 +2221,24 @@
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-storage-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-messaging-compat.js"></script>
-    <script src="app.js?v=155"></script>
-    <script src="pwa-install.js?v=141"></script>
+    <script src="app.js?v=156"></script>
+    <script src="pwa-install.js?v=142"></script>
+  
+    <!-- GIF Search Modal -->
+    <div id="gifSearchModal" class="modal" style="display:none;">
+      <div class="modal-content gif-modal-content">
+        <div class="modal-header">
+          <h3>Search GIFs</h3>
+          <span class="close-modal" id="closeGifModal">&times;</span>
+        </div>
+        <div class="modal-body gif-modal-body">
+          <div class="gif-search-bar">
+            <input type="text" id="gifSearchInput" placeholder="Search Tenor GIFs..." autocomplete="off" />
+          </div>
+          <div id="gifGrid" class="gif-grid"></div>
+          <p class="gif-attribution">Powered by Tenor</p>
+        </div>
+      </div>
+    </div>
   </body>
 </html>

@@ -10929,3 +10929,159 @@ body.dark .message-emoji-hover-strip {
 body.dark .unread-messages-divider {
   color: #00a884;
 }
+
+/* ============================================================
+   FEATURE: WHATSAPP-STYLE BOTTOM NAVIGATION BAR
+   ============================================================ */
+.bottom-nav {
+  display: none; /* hidden on desktop, shown on mobile */
+  position: sticky;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 200;
+  background: #fff;
+  border-top: 1px solid rgba(134,150,160,0.2);
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-around;
+  padding: 0 0 env(safe-area-inset-bottom, 0);
+  height: calc(56px + env(safe-area-inset-bottom, 0));
+  box-shadow: 0 -1px 0 rgba(0,0,0,0.07);
+  flex-shrink: 0;
+}
+body.dark .bottom-nav {
+  background: #111b21;
+  border-top-color: rgba(134,150,160,0.15);
+}
+
+.bottom-nav-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  flex: 1;
+  height: 56px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 6px 4px 4px;
+  color: #667781;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.1px;
+  position: relative;
+  transition: color 0.18s;
+  -webkit-tap-highlight-color: transparent;
+}
+.bottom-nav-btn svg {
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+  transition: transform 0.18s;
+}
+.bottom-nav-btn.active {
+  color: #00a884;
+}
+.bottom-nav-btn.active svg {
+  transform: scale(1.08);
+}
+body.dark .bottom-nav-btn {
+  color: #8696a0;
+}
+body.dark .bottom-nav-btn.active {
+  color: #00a884;
+}
+.bottom-nav-btn:active svg {
+  transform: scale(0.9);
+}
+
+/* Centre FAB-style New Chat button */
+.bottom-nav-fab {
+  background: #00a884;
+  border-radius: 50%;
+  width: 44px;
+  height: 44px;
+  max-width: 44px;
+  flex: 0 0 44px;
+  padding: 0;
+  color: #fff !important;
+  box-shadow: 0 4px 14px rgba(0,168,132,0.42);
+  margin: 0 8px;
+  position: relative;
+  overflow: hidden;
+}
+.bottom-nav-fab svg:first-child { display: none; }
+.bottom-nav-fab svg:last-child {
+  position: static;
+  transform: none;
+  width: 24px;
+  height: 24px;
+}
+body.dark .bottom-nav-fab {
+  background: #00a884;
+}
+
+/* Unread badge on Chats icon */
+.bottom-nav-badge {
+  position: absolute;
+  top: 6px;
+  right: calc(50% - 18px);
+  background: #00a884;
+  color: #fff;
+  font-size: 9px;
+  font-weight: 700;
+  min-width: 16px;
+  height: 16px;
+  border-radius: 8px;
+  padding: 0 3px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+/* Show bottom nav on mobile/small screens only */
+@media (max-width: 900px) {
+  .bottom-nav {
+    display: flex;
+  }
+  /* Give sidebar a little extra padding at the bottom so content isn't hidden behind the nav */
+  .sidebar {
+    padding-bottom: 0 !important;
+  }
+}
+
+/* ── GIF Button ─────────────────────────────────── */
+.gif-btn::before {
+  content: 'GIF';
+  font-size: 10px;
+  font-weight: 800;
+  color: var(--brand, #008069);
+  letter-spacing: -0.5px;
+}
+.gif-btn { width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border-radius: 50%; border: none; background: transparent; cursor: pointer; }
+.gif-btn:hover::before { color: var(--brand-dark, #005c4b); }
+
+/* ── GIF Modal ───────────────────────────────────── */
+.gif-modal-content { width: min(520px, 96%); max-height: 80vh; display: flex; flex-direction: column; }
+.gif-modal-body { flex: 1; overflow: hidden; display: flex; flex-direction: column; padding: 12px; }
+.gif-search-bar { margin-bottom: 10px; }
+.gif-search-bar input { width: 100%; padding: 10px 14px; border: 1px solid var(--border, #e2e8f0); border-radius: 24px; font-size: 14px; outline: none; background: var(--panel, #f8fafc); color: var(--text, #1e293b); }
+.gif-search-bar input:focus { border-color: var(--brand, #008069); }
+.gif-grid { flex: 1; overflow-y: auto; display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; min-height: 200px; }
+.gif-grid img { width: 100%; border-radius: 8px; cursor: pointer; object-fit: cover; height: 100px; transition: opacity 0.15s; }
+.gif-grid img:hover { opacity: 0.85; }
+.gif-attribution { text-align: right; font-size: 11px; color: var(--muted, #94a3b8); margin-top: 6px; }
+.gif-loading { text-align: center; color: var(--muted, #94a3b8); font-size: 13px; padding: 20px; grid-column: 1/-1; }
+
+/* ── Smart Reply Bar ─────────────────────────────── */
+.smart-reply-bar { padding: 6px 12px 0; overflow-x: auto; scrollbar-width: none; }
+.smart-reply-bar::-webkit-scrollbar { display: none; }
+.smart-reply-chips { display: flex; gap: 8px; }
+.smart-reply-chip { border: 1.5px solid var(--brand, #008069); color: var(--brand, #008069); background: transparent; border-radius: 16px; padding: 4px 14px; font-size: 13px; white-space: nowrap; cursor: pointer; transition: background 0.15s, color 0.15s; }
+.smart-reply-chip:hover { background: var(--brand, #008069); color: #fff; }
+
+/* ── Auto-Away Status ────────────────────────────── */
+.presence-away { opacity: 0.65; }

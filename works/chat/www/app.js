@@ -220,6 +220,11 @@ const defaultRtcConfig = {
   iceServers: [
     { urls: "stun:stun.l.google.com:19302" },
     { urls: "stun:stun1.l.google.com:19302" },
+    { urls: "stun:stun2.l.google.com:19302" },
+    { urls: "stun:stun3.l.google.com:19302" },
+    { urls: "stun:stun4.l.google.com:19302" },
+    { urls: "stun:stun.cloudflare.com:3478" },
+    { urls: "stun:stun.relay.metered.ca:80" },
   ],
 };
 
@@ -2223,8 +2228,10 @@ function updateUnreadBadges(items = []) {
   );
   setBadgeText("allUnreadBadge", totalUnread);
   setBadgeText("unreadTabBadge", totalUnread);
+  // Keep bottom nav Chats badge in sync
+  setBadgeText("bottomNavChatsBadge", totalUnread);
   document.title =
-    totalUnread > 0 ? `(${totalUnread}) Team Chat` : "Team Chat - Complete";
+    totalUnread > 0 ? `(${totalUnread}) Team Chat` : "Team Chat";
 }
 
 function scheduleChatListRefresh(delay = 600) {
@@ -5615,7 +5622,13 @@ async function searchUsersRealtime(searchTerm, options = {}) {
   // If another search started while we were fetching, abort this one
   if (searchToken !== chatListLoadToken) return;
 
-  loadAllChatsList(term, searchToken);
+  loadAllChatsList(term, searchToken).catch((err) => {
+    console.warn("Search render failed:", err);
+    const cl = document.getElementById("chatsList");
+    if (cl && cl.innerHTML.includes("Searching")) {
+      cl.innerHTML = `<div class="empty-state" style="padding:32px;color:#667781;">No users found. Try a different email.</div>`;
+    }
+  });
 }
 
 // ========================================================================
@@ -5666,8 +5679,10 @@ async function loadAllChatsList(searchTerm = "", forceToken = null) {
     console.error("buildGroupChatItems failed:", error);
   }
   // Abort if a newer non-search list load started after us.
-  // Search calls pass forceToken so this check always passes for them.
-  if (loadToken !== chatListLoadToken) return;
+  // Search calls pass forceToken so we skip this check for them — their
+  // token was locked before the async work and must not be cancelled by
+  // a background real-time refresh incrementing chatListLoadToken.
+  if (forceToken === null && loadToken !== chatListLoadToken) return;
   await refreshLockedChats();
   const allItems = [...directItems, ...groupItems].filter(
     (item) => item.type === "saved" || !isChatLocked(item.id, item.type),
@@ -5887,8 +5902,9 @@ async function searchMessagesInChats(chatItems = [], term = "") {
           field,
           targetIds.length > 1 ? "in" : "==",
           targetIds.length > 1 ? targetIds : targetIds[0],
-        );
-      const snapshot = await query.limit(120).get();
+        )
+        .orderBy("timestamp", "desc");
+      const snapshot = await query.limit(200).get();
       const matches = snapshot.docs
         .map((doc) => doc.data())
         .filter(
@@ -7545,7 +7561,11 @@ function normalizeUsersSnapshot(snapshot) {
     user.createdAt?.getTime?.() ||
     0;
   const addUser = (user) => {
-    if (!isSearchableUser(user)) return;
+    // Use a looser filter here so ALL registered users (including those with
+    // pendingVerification=true or emailVerified=false) are stored in allUsers.
+    // isSearchableUser() is still used at search-display time, not at storage time.
+    if (!user.id || user.id === currentUser?.uid || user.isActive === false) return;
+    if (!user.email && !user.displayName && !user.phone && !user.phoneNumber) return;
     const key = getUserDedupeKey(user);
     const existing = userMap.get(key);
     if (
@@ -7675,28 +7695,33 @@ async function handleUserSelection(user) {
 
 async function getContactRequestState(userId) {
   if (!currentUser || !userId) return { status: "none", label: "" };
-  const sentPending = await db
-    .collection("chatRequests")
-    .where("fromUserId", "==", currentUser.uid)
-    .where("toUserId", "==", userId)
-    .where("status", "==", "pending")
-    .limit(1)
-    .get();
-  if (!sentPending.empty) return { status: "sent", label: "Request sent" };
+  try {
+    const sentPending = await db
+      .collection("chatRequests")
+      .where("fromUserId", "==", currentUser.uid)
+      .where("toUserId", "==", userId)
+      .where("status", "==", "pending")
+      .limit(1)
+      .get();
+    if (!sentPending.empty) return { status: "sent", label: "Request sent" };
 
-  const receivedPending = await db
-    .collection("chatRequests")
-    .where("fromUserId", "==", userId)
-    .where("toUserId", "==", currentUser.uid)
-    .where("status", "==", "pending")
-    .limit(1)
-    .get();
-  if (!receivedPending.empty)
-    return { status: "received", label: "Accept request" };
+    const receivedPending = await db
+      .collection("chatRequests")
+      .where("fromUserId", "==", userId)
+      .where("toUserId", "==", currentUser.uid)
+      .where("status", "==", "pending")
+      .limit(1)
+      .get();
+    if (!receivedPending.empty)
+      return { status: "received", label: "Accept request" };
 
-  if (await hasAcceptedChatRelationship(userId))
-    return { status: "accepted", label: "Connected" };
-  return { status: "none", label: "Send chat request" };
+    if (await hasAcceptedChatRelationship(userId))
+      return { status: "accepted", label: "Connected" };
+    return { status: "none", label: "Send chat request" };
+  } catch (e) {
+    console.warn("getContactRequestState failed (missing index?):", e);
+    return { status: "none", label: "Send chat request" };
+  }
 }
 
 function updateGroupMemberSuggestions(searchTerm = "") {
@@ -10869,7 +10894,7 @@ function bindLongPressMessageMenu(messageDiv, messageData, isMyMessage) {
         isMyMessage,
       );
       timer = null;
-    }, 520);
+    }, 400);
   });
 
   messageDiv.addEventListener("pointermove", (event) => {
@@ -13834,6 +13859,14 @@ function switchTab(tab) {
   else if (tab === "communities") loadCommunitiesList();
   else if (tab === "notifications") markAllNotificationsRead();
   else loadCurrentChatList();
+
+  // Sync bottom nav bar active state
+  const bottomKey = (tab === "all" || tab === "unread" || tab === "muted" ||
+    tab === "favorites" || tab === "groups" || tab === "broadcasts" ||
+    tab === "communities" || tab === "notifications") ? "chats" : tab;
+  document.querySelectorAll(".bottom-nav-btn").forEach((b) => {
+    b.classList.toggle("active", b.dataset.bottomTab === bottomKey);
+  });
 }
 
 function isEmailLike(str) {
@@ -13868,11 +13901,13 @@ function bindSearchInput() {
       return;
     }
     if (isEmailLike(val)) {
-      // For email-like terms: only search on Enter/button click, not as-you-type
-      // Show existing chat name matches immediately but hold user search
-      searchUsersRealtime(val, { emailHold: true });
+      // While typing an email: show existing chats + message matches immediately.
+      // Do NOT auto-trigger the new-user Firestore lookup — the user must press
+      // Enter or click Search for that. This avoids unnecessary scans and matches
+      // the requirement that new users only appear on explicit search.
+      searchTimer = window.setTimeout(() => searchUsersRealtime(val, { emailHold: true }), 200);
     } else {
-      // Real-time name/group search as you type
+      // Real-time name / message search as you type
       searchTimer = window.setTimeout(() => searchUsersRealtime(val), 200);
     }
   });
@@ -14301,31 +14336,6 @@ async function init() {
   window.addEventListener("offline", () => {
     showToast("You are offline. Messages will retry when connected.", "error");
   });
-  (function initInstallApp() {
-    let deferredPrompt = null;
-    const btn = document.getElementById("installAppBtn");
-    if (!btn) return;
-    window.addEventListener("beforeinstallprompt", (e) => {
-      e.preventDefault();
-      deferredPrompt = e;
-      btn.style.display = "";
-    });
-    window.addEventListener("appinstalled", () => {
-      btn.style.display = "none";
-      deferredPrompt = null;
-    });
-    window.handleInstallApp = async function handleInstallApp() {
-      if (!deferredPrompt) {
-        showToast("App already installed or not available", "error");
-        return;
-      }
-      deferredPrompt.prompt();
-      const result = await deferredPrompt.userChoice;
-      if (result.outcome === "accepted") showToast("App installed!");
-      deferredPrompt = null;
-      btn.style.display = "none";
-    };
-  })();
   document.getElementById("cancelReplyBtn")?.addEventListener("click", () => {
     currentReplyTo = null;
     document.getElementById("replyPreviewBar").style.display = "none";
@@ -19638,3 +19648,197 @@ document.addEventListener("DOMContentLoaded", function () {
     }
   }
 });
+
+/* ═══════════════════════════════════════════════════════════════════
+   TOP-10 FEATURE PACK  (appended – does not modify existing code)
+   1. GIF Search (Tenor)
+   2. Smart Reply Suggestions
+   3. Auto-Away Status
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* ── 1. GIF SEARCH via Tenor ──────────────────────────────────────── */
+(function initGifSearch() {
+  const TENOR_KEY = "AIzaSyAyimkuYQYF_y7VMEbkSTRQF4v5XwzAMzY"; // Tenor v2 key (free)
+  const TENOR_BASE = "https://tenor.googleapis.com/v2";
+  let gifDebounce = null;
+
+  function openGifModal() {
+    const modal = document.getElementById("gifSearchModal");
+    if (!modal) return;
+    modal.style.display = "flex";
+    document.getElementById("gifSearchInput")?.focus();
+    loadTrendingGifs();
+  }
+
+  function closeGifModal() {
+    const modal = document.getElementById("gifSearchModal");
+    if (modal) modal.style.display = "none";
+  }
+
+  async function fetchGifs(query) {
+    const endpoint = query
+      ? `${TENOR_BASE}/search?q=${encodeURIComponent(query)}&key=${TENOR_KEY}&limit=24&media_filter=gif`
+      : `${TENOR_BASE}/featured?key=${TENOR_KEY}&limit=24&media_filter=gif`;
+    try {
+      const res = await fetch(endpoint);
+      const data = await res.json();
+      return data.results || [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  function renderGifs(results) {
+    const grid = document.getElementById("gifGrid");
+    if (!grid) return;
+    if (!results.length) {
+      grid.innerHTML = '<p class="gif-loading">No GIFs found.</p>';
+      return;
+    }
+    grid.innerHTML = results.map(r => {
+      const url = r.media_formats?.tinygif?.url || r.media_formats?.gif?.url || "";
+      const preview = r.media_formats?.tinygif?.url || url;
+      const title = r.title || "GIF";
+      return url ? `<img src="${preview}" alt="${title}" data-full="${url}" loading="lazy" title="${title}">` : "";
+    }).join("");
+    grid.querySelectorAll("img").forEach(img => {
+      img.addEventListener("click", () => sendGif(img.dataset.full, img.alt));
+    });
+  }
+
+  async function loadTrendingGifs() {
+    const grid = document.getElementById("gifGrid");
+    if (grid) grid.innerHTML = '<p class="gif-loading">Loading trending GIFs…</p>';
+    renderGifs(await fetchGifs(""));
+  }
+
+  async function sendGif(url, title) {
+    if (!url) return;
+    closeGifModal();
+    if (typeof sendMessage === "function") {
+      // Send GIF as an image attachment message
+      const gifData = {
+        type: "image",
+        attachments: [{ type: "image", url, name: title || "GIF", isGif: true }],
+        text: "",
+      };
+      try {
+        await sendMessage(gifData);
+      } catch (_) {
+        // Fallback: send as text link
+        const input = document.getElementById("messageInput");
+        if (input) { input.value = url; input.dispatchEvent(new Event("input")); }
+      }
+    } else {
+      // Fallback: put URL in input
+      const input = document.getElementById("messageInput");
+      if (input) { input.value = url; input.dispatchEvent(new Event("input")); }
+    }
+  }
+
+  document.addEventListener("DOMContentLoaded", () => {
+    document.getElementById("gifBtn")?.addEventListener("click", openGifModal);
+    document.getElementById("closeGifModal")?.addEventListener("click", closeGifModal);
+    document.getElementById("gifSearchModal")?.addEventListener("click", (e) => {
+      if (e.target === document.getElementById("gifSearchModal")) closeGifModal();
+    });
+
+    document.getElementById("gifSearchInput")?.addEventListener("input", (e) => {
+      clearTimeout(gifDebounce);
+      const q = e.target.value.trim();
+      const grid = document.getElementById("gifGrid");
+      if (grid) grid.innerHTML = '<p class="gif-loading">Searching…</p>';
+      gifDebounce = setTimeout(async () => {
+        renderGifs(await fetchGifs(q));
+      }, 420);
+    });
+  });
+})();
+
+/* ── 2. SMART REPLY SUGGESTIONS ──────────────────────────────────── */
+(function initSmartReplies() {
+  const PATTERNS = [
+    { test: /\b(hi|hey|hello|howdy|sup|greetings)\b/i,  chips: ["Hi! 👋", "Hey there!", "Hello! How are you?"] },
+    { test: /\b(how are you|how r u|how's it going|how are things|you okay)\b/i, chips: ["I'm good, thanks!", "Doing well 😊", "All good! You?"] },
+    { test: /\b(ok|okay|alright|sure|sounds good|got it|noted)\b/i, chips: ["Great!", "👍", "Perfect!"] },
+    { test: /\b(thanks|thank you|thx|ty)\b/i, chips: ["You're welcome! 😊", "Anytime!", "No problem!"] },
+    { test: /\b(yes|no)\b.*\?/i, chips: ["Yes", "No", "Maybe"] },
+    { test: /\?$/, chips: ["Yes", "No", "Let me check"] },
+    { test: /\b(busy|later|later today|tomorrow)\b/i, chips: ["Okay, no worries!", "Talk later!", "Sure, take your time"] },
+    { test: /\b(good morning|good night|good evening|gn|gm)\b/i, chips: ["Good morning! ☀️", "Good night! 🌙", "Sleep well!"] },
+    { test: /\b(meet|meeting|call|hop on|join)\b/i, chips: ["I'll join!", "Can't make it", "What time?"] },
+    { test: /\b(lol|haha|😂|🤣|funny|hilarious)\b/i, chips: ["😂", "Haha yes!", "So funny!"] },
+  ];
+
+  window._showSmartReplies = function(text) {
+    const bar = document.getElementById("smartReplyBar");
+    const chips = document.getElementById("smartReplyChips");
+    if (!bar || !chips || !text) { if (bar) bar.style.display = "none"; return; }
+
+    for (const p of PATTERNS) {
+      if (p.test.test(text)) {
+        chips.innerHTML = p.chips.map(c => `<button class="smart-reply-chip" type="button">${c}</button>`).join("");
+        bar.style.display = "block";
+        chips.querySelectorAll(".smart-reply-chip").forEach(btn => {
+          btn.addEventListener("click", () => {
+            const input = document.getElementById("messageInput");
+            if (input) {
+              input.value = btn.textContent;
+              input.focus();
+              input.dispatchEvent(new Event("input"));
+            }
+            bar.style.display = "none";
+          });
+        });
+        return;
+      }
+    }
+    bar.style.display = "none";
+  };
+
+  // Hide smart reply bar when user starts typing manually
+  document.addEventListener("DOMContentLoaded", () => {
+    document.getElementById("messageInput")?.addEventListener("input", () => {
+      const bar = document.getElementById("smartReplyBar");
+      if (bar && document.getElementById("messageInput").value) bar.style.display = "none";
+    });
+  });
+})();
+
+/* ── 3. AUTO-AWAY STATUS ─────────────────────────────────────────── */
+(function initAutoAway() {
+  const AWAY_AFTER_MS = 5 * 60 * 1000; // 5 minutes of no interaction
+  let awayTimer = null;
+  let isAway = false;
+
+  function setAway(away) {
+    if (isAway === away) return;
+    isAway = away;
+    if (typeof db !== "undefined" && typeof currentUser !== "undefined" && currentUser?.uid) {
+      try {
+        db.collection("users").doc(currentUser.uid).update({
+          status: away ? "away" : "online",
+          lastSeen: firebase.firestore.FieldValue.serverTimestamp(),
+        }).catch(() => {});
+      } catch (_) {}
+    }
+  }
+
+  function resetAwayTimer() {
+    if (isAway) setAway(false);
+    clearTimeout(awayTimer);
+    awayTimer = setTimeout(() => setAway(true), AWAY_AFTER_MS);
+  }
+
+  document.addEventListener("DOMContentLoaded", () => {
+    const events = ["mousemove", "keydown", "pointerdown", "touchstart", "scroll", "visibilitychange"];
+    events.forEach(ev => document.addEventListener(ev, resetAwayTimer, { passive: true }));
+    document.addEventListener("visibilitychange", () => {
+      if (document.hidden) setAway(true);
+      else resetAwayTimer();
+    });
+    resetAwayTimer();
+  });
+})();
+
+/* ── End of Feature Pack ──────────────────────────────────────────── */

@@ -14336,84 +14336,6 @@ async function init() {
   window.addEventListener("offline", () => {
     showToast("You are offline. Messages will retry when connected.", "error");
   });
-  (function initInstallApp() {
-    let deferredPrompt = null;
-    const btn = document.getElementById("installAppBtn");
-    if (!btn) return;
-    const labelEl = btn.querySelector(".install-app-label");
-    const isAndroid = /android/i.test(navigator.userAgent);
-
-    // Detect if already installed via getInstalledRelatedApps
-    async function checkAlreadyInstalled() {
-      if ("getInstalledRelatedApps" in navigator) {
-        try {
-          const apps = await navigator.getInstalledRelatedApps();
-          if (apps.length > 0) {
-            btn.style.display = "";
-            if (labelEl) labelEl.textContent = "App Installed ✓";
-            btn.onclick = () => showToast("Team Chat is already installed on your device!");
-            return true;
-          }
-        } catch (_) {}
-      }
-      return false;
-    }
-
-    // On Android always show the button — PWA install prompt or direct APK download
-    if (isAndroid) {
-      btn.style.display = "";
-      if (labelEl) labelEl.textContent = "Download App";
-    }
-
-    window.addEventListener("beforeinstallprompt", (e) => {
-      e.preventDefault();
-      deferredPrompt = e;
-      btn.style.display = "";
-      if (labelEl) labelEl.textContent = "Install App";
-    });
-
-    window.addEventListener("appinstalled", () => {
-      deferredPrompt = null;
-      btn.style.display = "";
-      if (labelEl) labelEl.textContent = "App Installed ✓";
-      btn.onclick = () => showToast("Team Chat is already installed on your device!");
-      showToast("Team Chat installed successfully!");
-    });
-
-    checkAlreadyInstalled();
-
-    window.handleInstallApp = async function handleInstallApp() {
-      // Check already-installed first
-      if ("getInstalledRelatedApps" in navigator) {
-        try {
-          const apps = await navigator.getInstalledRelatedApps();
-          if (apps.length > 0) {
-            showToast("Team Chat is already installed on your device!");
-            return;
-          }
-        } catch (_) {}
-      }
-      if (deferredPrompt) {
-        // PWA install prompt is available
-        deferredPrompt.prompt();
-        const result = await deferredPrompt.userChoice;
-        if (result.outcome === "accepted") showToast("App installed successfully!");
-        deferredPrompt = null;
-        btn.style.display = "none";
-      } else if (isAndroid) {
-        // Direct APK download for Android when PWA prompt is unavailable
-        const a = document.createElement("a");
-        a.href = "my-team-chat.apk";
-        a.download = "my-team-chat.apk";
-        document.body.appendChild(a);
-        a.click();
-        setTimeout(() => document.body.removeChild(a), 600);
-        showToast("Downloading APK…");
-      } else {
-        showToast("Open in Chrome on Android to install, or use your browser's 'Add to Home Screen'.", "error");
-      }
-    };
-  })();
   document.getElementById("cancelReplyBtn")?.addEventListener("click", () => {
     currentReplyTo = null;
     document.getElementById("replyPreviewBar").style.display = "none";
@@ -19726,3 +19648,197 @@ document.addEventListener("DOMContentLoaded", function () {
     }
   }
 });
+
+/* ═══════════════════════════════════════════════════════════════════
+   TOP-10 FEATURE PACK  (appended – does not modify existing code)
+   1. GIF Search (Tenor)
+   2. Smart Reply Suggestions
+   3. Auto-Away Status
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* ── 1. GIF SEARCH via Tenor ──────────────────────────────────────── */
+(function initGifSearch() {
+  const TENOR_KEY = "AIzaSyAyimkuYQYF_y7VMEbkSTRQF4v5XwzAMzY"; // Tenor v2 key (free)
+  const TENOR_BASE = "https://tenor.googleapis.com/v2";
+  let gifDebounce = null;
+
+  function openGifModal() {
+    const modal = document.getElementById("gifSearchModal");
+    if (!modal) return;
+    modal.style.display = "flex";
+    document.getElementById("gifSearchInput")?.focus();
+    loadTrendingGifs();
+  }
+
+  function closeGifModal() {
+    const modal = document.getElementById("gifSearchModal");
+    if (modal) modal.style.display = "none";
+  }
+
+  async function fetchGifs(query) {
+    const endpoint = query
+      ? `${TENOR_BASE}/search?q=${encodeURIComponent(query)}&key=${TENOR_KEY}&limit=24&media_filter=gif`
+      : `${TENOR_BASE}/featured?key=${TENOR_KEY}&limit=24&media_filter=gif`;
+    try {
+      const res = await fetch(endpoint);
+      const data = await res.json();
+      return data.results || [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  function renderGifs(results) {
+    const grid = document.getElementById("gifGrid");
+    if (!grid) return;
+    if (!results.length) {
+      grid.innerHTML = '<p class="gif-loading">No GIFs found.</p>';
+      return;
+    }
+    grid.innerHTML = results.map(r => {
+      const url = r.media_formats?.tinygif?.url || r.media_formats?.gif?.url || "";
+      const preview = r.media_formats?.tinygif?.url || url;
+      const title = r.title || "GIF";
+      return url ? `<img src="${preview}" alt="${title}" data-full="${url}" loading="lazy" title="${title}">` : "";
+    }).join("");
+    grid.querySelectorAll("img").forEach(img => {
+      img.addEventListener("click", () => sendGif(img.dataset.full, img.alt));
+    });
+  }
+
+  async function loadTrendingGifs() {
+    const grid = document.getElementById("gifGrid");
+    if (grid) grid.innerHTML = '<p class="gif-loading">Loading trending GIFs…</p>';
+    renderGifs(await fetchGifs(""));
+  }
+
+  async function sendGif(url, title) {
+    if (!url) return;
+    closeGifModal();
+    if (typeof sendMessage === "function") {
+      // Send GIF as an image attachment message
+      const gifData = {
+        type: "image",
+        attachments: [{ type: "image", url, name: title || "GIF", isGif: true }],
+        text: "",
+      };
+      try {
+        await sendMessage(gifData);
+      } catch (_) {
+        // Fallback: send as text link
+        const input = document.getElementById("messageInput");
+        if (input) { input.value = url; input.dispatchEvent(new Event("input")); }
+      }
+    } else {
+      // Fallback: put URL in input
+      const input = document.getElementById("messageInput");
+      if (input) { input.value = url; input.dispatchEvent(new Event("input")); }
+    }
+  }
+
+  document.addEventListener("DOMContentLoaded", () => {
+    document.getElementById("gifBtn")?.addEventListener("click", openGifModal);
+    document.getElementById("closeGifModal")?.addEventListener("click", closeGifModal);
+    document.getElementById("gifSearchModal")?.addEventListener("click", (e) => {
+      if (e.target === document.getElementById("gifSearchModal")) closeGifModal();
+    });
+
+    document.getElementById("gifSearchInput")?.addEventListener("input", (e) => {
+      clearTimeout(gifDebounce);
+      const q = e.target.value.trim();
+      const grid = document.getElementById("gifGrid");
+      if (grid) grid.innerHTML = '<p class="gif-loading">Searching…</p>';
+      gifDebounce = setTimeout(async () => {
+        renderGifs(await fetchGifs(q));
+      }, 420);
+    });
+  });
+})();
+
+/* ── 2. SMART REPLY SUGGESTIONS ──────────────────────────────────── */
+(function initSmartReplies() {
+  const PATTERNS = [
+    { test: /\b(hi|hey|hello|howdy|sup|greetings)\b/i,  chips: ["Hi! 👋", "Hey there!", "Hello! How are you?"] },
+    { test: /\b(how are you|how r u|how's it going|how are things|you okay)\b/i, chips: ["I'm good, thanks!", "Doing well 😊", "All good! You?"] },
+    { test: /\b(ok|okay|alright|sure|sounds good|got it|noted)\b/i, chips: ["Great!", "👍", "Perfect!"] },
+    { test: /\b(thanks|thank you|thx|ty)\b/i, chips: ["You're welcome! 😊", "Anytime!", "No problem!"] },
+    { test: /\b(yes|no)\b.*\?/i, chips: ["Yes", "No", "Maybe"] },
+    { test: /\?$/, chips: ["Yes", "No", "Let me check"] },
+    { test: /\b(busy|later|later today|tomorrow)\b/i, chips: ["Okay, no worries!", "Talk later!", "Sure, take your time"] },
+    { test: /\b(good morning|good night|good evening|gn|gm)\b/i, chips: ["Good morning! ☀️", "Good night! 🌙", "Sleep well!"] },
+    { test: /\b(meet|meeting|call|hop on|join)\b/i, chips: ["I'll join!", "Can't make it", "What time?"] },
+    { test: /\b(lol|haha|😂|🤣|funny|hilarious)\b/i, chips: ["😂", "Haha yes!", "So funny!"] },
+  ];
+
+  window._showSmartReplies = function(text) {
+    const bar = document.getElementById("smartReplyBar");
+    const chips = document.getElementById("smartReplyChips");
+    if (!bar || !chips || !text) { if (bar) bar.style.display = "none"; return; }
+
+    for (const p of PATTERNS) {
+      if (p.test.test(text)) {
+        chips.innerHTML = p.chips.map(c => `<button class="smart-reply-chip" type="button">${c}</button>`).join("");
+        bar.style.display = "block";
+        chips.querySelectorAll(".smart-reply-chip").forEach(btn => {
+          btn.addEventListener("click", () => {
+            const input = document.getElementById("messageInput");
+            if (input) {
+              input.value = btn.textContent;
+              input.focus();
+              input.dispatchEvent(new Event("input"));
+            }
+            bar.style.display = "none";
+          });
+        });
+        return;
+      }
+    }
+    bar.style.display = "none";
+  };
+
+  // Hide smart reply bar when user starts typing manually
+  document.addEventListener("DOMContentLoaded", () => {
+    document.getElementById("messageInput")?.addEventListener("input", () => {
+      const bar = document.getElementById("smartReplyBar");
+      if (bar && document.getElementById("messageInput").value) bar.style.display = "none";
+    });
+  });
+})();
+
+/* ── 3. AUTO-AWAY STATUS ─────────────────────────────────────────── */
+(function initAutoAway() {
+  const AWAY_AFTER_MS = 5 * 60 * 1000; // 5 minutes of no interaction
+  let awayTimer = null;
+  let isAway = false;
+
+  function setAway(away) {
+    if (isAway === away) return;
+    isAway = away;
+    if (typeof db !== "undefined" && typeof currentUser !== "undefined" && currentUser?.uid) {
+      try {
+        db.collection("users").doc(currentUser.uid).update({
+          status: away ? "away" : "online",
+          lastSeen: firebase.firestore.FieldValue.serverTimestamp(),
+        }).catch(() => {});
+      } catch (_) {}
+    }
+  }
+
+  function resetAwayTimer() {
+    if (isAway) setAway(false);
+    clearTimeout(awayTimer);
+    awayTimer = setTimeout(() => setAway(true), AWAY_AFTER_MS);
+  }
+
+  document.addEventListener("DOMContentLoaded", () => {
+    const events = ["mousemove", "keydown", "pointerdown", "touchstart", "scroll", "visibilitychange"];
+    events.forEach(ev => document.addEventListener(ev, resetAwayTimer, { passive: true }));
+    document.addEventListener("visibilitychange", () => {
+      if (document.hidden) setAway(true);
+      else resetAwayTimer();
+    });
+    resetAwayTimer();
+  });
+})();
+
+/* ── End of Feature Pack ──────────────────────────────────────────── */
