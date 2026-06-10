@@ -199,8 +199,30 @@ exports.sendIncomingCallNotification = onDocumentCreated(
         toUserId: call.toUserId || ''
       },
       android: {
-  priority: 'high'
+  priority: 'high',
+  notification: {
+    channelId: 'incoming_calls',
+    sound: 'default',
+    defaultVibrateTimings: true,
+    notificationPriority: 'PRIORITY_MAX',
+    visibility: 'PUBLIC',
+  }
 },
+      apns: {
+        headers: {
+          'apns-priority': '10',
+          'apns-push-type': 'alert',
+        },
+        payload: {
+          aps: {
+            alert: { title, body },
+            sound: 'default',
+            badge: 1,
+            'interruption-level': 'time-sensitive',
+            'content-available': 1,
+          },
+        },
+      },
       webpush: {
         headers: {
           Urgency: 'high',
@@ -222,7 +244,10 @@ exports.sendIncomingCallNotification = onDocumentCreated(
             callId,
             kind: 'call'
           },
-          actions: [{ action: 'open', title: 'Open' }]
+          actions: [
+              { action: 'accept', title: '✅ Accept' },
+              { action: 'reject', title: '❌ Decline' }
+            ]
         },
         fcmOptions: {
           link: 'https://nishadsl.com/works/chat/'
@@ -397,12 +422,24 @@ exports.sendMessageNotification = onDocumentCreated(
         android: {
   priority: 'high',
   notification: {
-    channelId: 'default',
-    defaultSound: true,
+    channelId: 'messages',
+    sound: 'default',
     defaultVibrateTimings: true,
+    notificationPriority: 'PRIORITY_HIGH',
     tag: `message-${messageId}`
   }
 },
+        apns: {
+          headers: { 'apns-priority': '10', 'apns-push-type': 'alert' },
+          payload: {
+            aps: {
+              alert: { title, body },
+              sound: 'default',
+              badge: 1,
+              'content-available': 1,
+            },
+          },
+        },
         webpush: {
           headers: {
             Urgency: 'high',
@@ -472,6 +509,82 @@ if (hasSuccessfulDelivery) {
     });
 
     await Promise.all(sendTasks);
+    return null;
+  }
+);
+
+// ========================================
+// Group message push notification via FCM
+// Firestore path: messages/{messageId} where groupId is set
+// ========================================
+exports.sendGroupMessageNotification = onDocumentCreated(
+  {
+    document: 'messages/{messageId}',
+    region: 'us-central1'
+  },
+  async (event) => {
+    const message = event.data?.data() || {};
+    const messageId = event.params.messageId;
+
+    // Only handle group messages with explicit groupId + participants
+    if (!message.groupId || !Array.isArray(message.participants)) return null;
+    if (!message.senderId) return null;
+
+    const receiverIds = message.participants.filter((uid) => uid && uid !== message.senderId);
+    if (!receiverIds.length) return null;
+
+    const groupName = message.groupName || 'Group';
+    const title = `${message.senderName || 'New message'} • ${groupName}`;
+    const body  = message.text || 'Sent an attachment';
+
+    await Promise.all(receiverIds.map(async (receiverId) => {
+      const userSnap = await admin.firestore().collection('users').doc(receiverId).get();
+      const user = userSnap.data() || {};
+      const tokens = Object.values(user.fcmTokens || {})
+        .map((e) => e && e.token).filter(Boolean);
+      if (!tokens.length) return;
+
+      await admin.messaging().sendEachForMulticast({
+        tokens,
+        notification: { title, body },
+        data: {
+          kind: 'message',
+          messageId,
+          chatId: message.groupId,
+          chatType: 'group',
+          senderId: message.senderId || '',
+          groupName,
+        },
+        android: {
+          priority: 'high',
+          notification: {
+            channelId: 'messages',
+            tag: `msg-${messageId}`,
+            notificationPriority: 'PRIORITY_HIGH',
+          }
+        },
+        apns: {
+          headers: { 'apns-priority': '10', 'apns-push-type': 'alert' },
+          payload: { aps: { alert: { title, body }, sound: 'default', badge: 1 } },
+        },
+        webpush: {
+          headers: { Urgency: 'high', TTL: '120' },
+          notification: {
+            title, body,
+            icon: '/works/chat/app-icon-192.png',
+            badge: '/works/chat/app-icon-192.png',
+            tag: `msg-${messageId}`,
+            renotify: true,
+            data: {
+              url: 'https://nishadsl.com/works/chat/',
+              messageId, chatId: message.groupId, chatType: 'group', kind: 'message',
+            },
+            actions: [{ action: 'open', title: 'Open' }],
+          },
+          fcmOptions: { link: 'https://nishadsl.com/works/chat/' }
+        }
+      });
+    }));
     return null;
   }
 );

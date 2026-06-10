@@ -20376,3 +20376,531 @@ document.addEventListener("click", e => {
 }, true);
 
 /* ── End of Feature Pack 2 ──────────────────────────────────────────── */
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   FEATURE PACK 3 — Stories/Status Rings · Smart Notifications · Call Banners
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ══════════════════════════════════════════════════════════════════════════
+   1. STORY RINGS ON CHAT LIST AVATARS
+      Reads active statuses from Firestore and applies .story-ring /
+      .story-ring-seen to .list-avatar-wrap elements in the chat list.
+   ══════════════════════════════════════════════════════════════════════════ */
+(function initStoryRings() {
+  // Map of userId → { hasUnseen, hasAny }
+  let statusMap = {};
+  let ringRefreshTimer = null;
+
+  async function refreshStatusMap() {
+    if (!currentUser?.uid) return;
+    try {
+      const now = new Date();
+      const snap = await db.collection("statuses")
+        .where("expiresAt", ">", now)
+        .get();
+      const fresh = {};
+      snap.docs.forEach(doc => {
+        const s = doc.data();
+        if (!s.userId) return;
+        if (!fresh[s.userId]) fresh[s.userId] = { hasAny: false, hasUnseen: false };
+        fresh[s.userId].hasAny = true;
+        if (!s.viewedBy?.[currentUser.uid] && s.userId !== currentUser.uid) {
+          fresh[s.userId].hasUnseen = true;
+        }
+      });
+      statusMap = fresh;
+      applyRingsToDOM();
+    } catch (_) {}
+  }
+
+  function applyRingsToDOM() {
+    // Chat list items have data-other-user-id for direct chats
+    document.querySelectorAll(".list-item[data-other-user-id]").forEach(item => {
+      const uid = item.dataset.otherUserId;
+      if (!uid) return;
+      const wrap = item.querySelector(".list-avatar-wrap");
+      if (!wrap) return;
+      wrap.classList.remove("story-ring", "story-ring-seen");
+      if (statusMap[uid]?.hasUnseen) wrap.classList.add("story-ring");
+      else if (statusMap[uid]?.hasAny) wrap.classList.add("story-ring-seen");
+    });
+
+    // Status tab list
+    document.querySelectorAll("#statusList .list-item").forEach(item => {
+      const wrap = item.querySelector(".list-avatar-wrap");
+      if (!wrap) return;
+      // Status list already has the unseen logic via loadStatusList → reuse it
+      // Just ensure wrap exists (it may use .list-avatar without wrap)
+      const avatar = item.querySelector(".list-avatar");
+      if (avatar && !wrap.classList.contains("list-avatar-wrap")) {
+        // Wrap the avatar if not already wrapped
+        const newWrap = document.createElement("div");
+        newWrap.className = "list-avatar-wrap";
+        avatar.parentNode.insertBefore(newWrap, avatar);
+        newWrap.appendChild(avatar);
+      }
+    });
+  }
+
+  // Observe chat list mutations to apply rings to newly rendered items
+  const observer = new MutationObserver(() => applyRingsToDOM());
+
+  function startObserver() {
+    const chatsList = document.getElementById("chatsList");
+    if (chatsList) observer.observe(chatsList, { childList: true, subtree: false });
+    const statusList = document.getElementById("statusList");
+    if (statusList) observer.observe(statusList, { childList: true, subtree: false });
+  }
+
+  document.addEventListener("DOMContentLoaded", () => {
+    startObserver();
+    // Refresh every 5 minutes
+    refreshStatusMap();
+    ringRefreshTimer = setInterval(refreshStatusMap, 5 * 60 * 1000);
+  });
+
+  // Also refresh after status tab loads
+  const origLoadStatusList = window.loadStatusList;
+  if (typeof origLoadStatusList === "function") {
+    window.loadStatusList = async function(...args) {
+      const r = await origLoadStatusList.apply(this, args);
+      await refreshStatusMap();
+      return r;
+    };
+  }
+
+  // Expose for external use
+  window.refreshStoryRings = refreshStatusMap;
+})();
+
+/* ══════════════════════════════════════════════════════════════════════════
+   2. ENHANCED STATUS CREATION  — color backgrounds + emoji quick-picks
+   ══════════════════════════════════════════════════════════════════════════ */
+(function initEnhancedStatusCreation() {
+  let selectedBg = "#1e293b";
+
+  document.addEventListener("DOMContentLoaded", () => {
+    const picker = document.getElementById("statusBgPicker");
+    const preview = document.getElementById("statusComposerPreview");
+    const textInput = document.getElementById("statusTextInput");
+
+    if (!picker || !preview) return;
+
+    // Color swatch clicks
+    picker.addEventListener("click", e => {
+      const swatch = e.target.closest(".status-bg-swatch");
+      if (!swatch) return;
+      picker.querySelectorAll(".status-bg-swatch").forEach(s => s.classList.remove("active"));
+      swatch.classList.add("active");
+      selectedBg = swatch.dataset.bg || "#1e293b";
+      preview.style.background = selectedBg;
+    });
+
+    // Emoji chip clicks — insert at cursor
+    document.querySelectorAll(".status-emoji-chip").forEach(chip => {
+      chip.addEventListener("click", () => {
+        if (!textInput) return;
+        const em = chip.dataset.emoji || "";
+        const start = textInput.selectionStart;
+        const end = textInput.selectionEnd;
+        const val = textInput.value;
+        textInput.value = val.slice(0, start) + em + val.slice(end);
+        textInput.setSelectionRange(start + em.length, start + em.length);
+        textInput.focus();
+      });
+    });
+
+    // Keep preview text synced
+    textInput?.addEventListener("input", () => {});
+
+    // Patch publishStatus to include the background color
+    const origPublishStatus = window.publishStatus;
+    if (typeof origPublishStatus === "function") {
+      window.publishStatus = async function(...args) {
+        const textEl = document.getElementById("statusTextInput");
+        if (!textEl) return origPublishStatus.apply(this, args);
+        const text = textEl.value.trim();
+        // Build extra fields then call original (it reads statusTextInput itself)
+        const bg = selectedBg;
+        const result = await origPublishStatus.apply(this, args);
+        // Patch: the original add() already ran; update the last status with bg
+        try {
+          const snap = await db.collection("statuses")
+            .where("userId", "==", currentUser.uid)
+            .orderBy("createdAt", "desc")
+            .limit(1)
+            .get();
+          if (!snap.empty) {
+            await snap.docs[0].ref.update({ background: bg });
+          }
+        } catch (_) {}
+        // Refresh rings
+        window.refreshStoryRings?.();
+        return result;
+      };
+    }
+  });
+})();
+
+/* ══════════════════════════════════════════════════════════════════════════
+   3. STATUS VIEWER — progress bar + background colors
+   ══════════════════════════════════════════════════════════════════════════ */
+(function enhanceStatusViewer() {
+  const origRenderFrame = window.renderStatusViewerFrame;
+  if (typeof origRenderFrame !== "function") return;
+
+  window.renderStatusViewerFrame = async function() {
+    await origRenderFrame.apply(this, arguments);
+
+    const status = (typeof activeStatusSet !== "undefined" && activeStatusSet)
+      ? activeStatusSet[typeof activeStatusIndex !== "undefined" ? activeStatusIndex : 0]
+      : null;
+    if (!status) return;
+
+    // Apply background
+    const viewer = document.querySelector(".status-viewer");
+    if (viewer && status.background) {
+      viewer.style.background = status.background;
+    }
+
+    // Build/update progress bar
+    const statusViewerModal = document.getElementById("statusViewerModal");
+    if (!statusViewerModal) return;
+    let progressBar = statusViewerModal.querySelector(".status-viewer-progress");
+    if (!progressBar) {
+      progressBar = document.createElement("div");
+      progressBar.className = "status-viewer-progress";
+      statusViewerModal.querySelector(".status-viewer")?.prepend(progressBar);
+    }
+    const total = (typeof activeStatusSet !== "undefined") ? activeStatusSet.length : 1;
+    const current = (typeof activeStatusIndex !== "undefined") ? activeStatusIndex : 0;
+    progressBar.innerHTML = Array.from({ length: total }, (_, i) => {
+      const cls = i < current ? "done" : i === current ? "active" : "";
+      const dur = status.image ? "8s" : "5s";
+      return `<div class="status-progress-seg ${cls}" style="--duration:${dur}"><div class="fill"></div></div>`;
+    }).join("");
+  };
+})();
+
+/* ══════════════════════════════════════════════════════════════════════════
+   4. SMART NOTIFICATIONS — device-aware, auto-request, all states
+   ══════════════════════════════════════════════════════════════════════════ */
+(function initSmartNotifications() {
+
+  /* ── Detect device profile ────────────────────────────────────────────── */
+  function getDeviceProfile() {
+    const ua = navigator.userAgent || "";
+    const isIOS = /iPad|iPhone|iPod/.test(ua) && !window.MSStream;
+    const isAndroid = /Android/.test(ua);
+    const isMobile = isIOS || isAndroid || /Mobi|Mobile/.test(ua);
+    const isTablet = /iPad|Tablet/.test(ua) || (isAndroid && !/Mobile/.test(ua));
+    const isMacOS = /Macintosh/.test(ua) && !isIOS;
+    const isWindows = /Windows/.test(ua);
+    const isCapacitor = !!window.Capacitor?.isNativePlatform?.();
+    const isPWA = window.matchMedia("(display-mode: standalone)").matches ||
+                  window.matchMedia("(display-mode: fullscreen)").matches ||
+                  navigator.standalone === true;
+    return { isIOS, isAndroid, isMobile, isTablet, isMacOS, isWindows, isCapacitor, isPWA };
+  }
+
+  /* ── Notification permission nudge bar ──────────────────────────────── */
+  function showNotificationNudge() {
+    if (document.getElementById("notifNudge")) return;
+    if (Notification.permission === "granted" || Notification.permission === "denied") return;
+    const profile = getDeviceProfile();
+    if (profile.isIOS && !profile.isPWA) return; // iOS Safari can't do web push
+
+    const nudge = document.createElement("div");
+    nudge.id = "notifNudge";
+    nudge.className = "notification-nudge";
+    nudge.innerHTML = `
+      <span class="notification-nudge-icon">🔔</span>
+      <div>
+        <strong>Enable notifications</strong><br>
+        <small>Get notified of new messages and calls even when the app is closed</small>
+      </div>
+      <button class="notification-nudge-close" title="Dismiss" id="nudgeClose">✕</button>
+    `;
+    nudge.addEventListener("click", async e => {
+      if (e.target.id === "nudgeClose") {
+        nudge.remove();
+        localStorage.setItem("notifNudgeDismissed", "1");
+        return;
+      }
+      nudge.remove();
+      await requestNotificationPermissionFull();
+    });
+
+    const sidebar = document.querySelector(".sidebar, .left-panel, #sidePanel") ||
+                    document.getElementById("chatsList")?.parentElement;
+    if (sidebar) sidebar.prepend(nudge);
+  }
+
+  async function requestNotificationPermissionFull() {
+    if (!("Notification" in window)) return;
+    if (Notification.permission === "denied") {
+      showToast("Notifications are blocked. Please enable them in your browser settings.", "error");
+      return;
+    }
+    if (Notification.permission !== "granted") {
+      const perm = await Notification.requestPermission();
+      if (perm !== "granted") return;
+    }
+    // Register/refresh FCM token
+    await setupCallPushNotifications({ forcePrompt: true });
+    await registerFcmTokenForCurrentUser({ force: true });
+    showToast("✅ Notifications enabled! You'll receive alerts for messages and calls.");
+  }
+
+  /* ── Post-login trigger ────────────────────────────────────────────── */
+  function tryShowNudge() {
+    if (localStorage.getItem("notifNudgeDismissed")) return;
+    if (Notification.permission === "granted") {
+      setupCallPushNotifications({ forcePrompt: false });
+      registerFcmTokenForCurrentUser({ force: false });
+      return;
+    }
+    setTimeout(showNotificationNudge, 3000);
+  }
+
+  // Watch for currentUser to be available
+  const check = setInterval(() => {
+    if (typeof currentUser !== "undefined" && currentUser?.uid) {
+      clearInterval(check);
+      tryShowNudge();
+    }
+  }, 1500);
+
+  /* ── Listen to SW messages for notification clicks ─────────────────── */
+  if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.addEventListener("message", async event => {
+      const msg = event.data || {};
+      if (msg.type === "NOTIFICATION_CLICK") {
+        const { action, data } = msg;
+        if (data?.kind === "call" && data?.callId) {
+          if (action === "reject") {
+            // Reject the call in Firestore
+            try {
+              await db.collection("calls").doc(data.callId).update({
+                status: "rejected",
+                rejectedAt: firebase.firestore.FieldValue.serverTimestamp(),
+              });
+              stopRingtone?.();
+            } catch (_) {}
+          } else if (action === "accept") {
+            // Open the call UI
+            const callDoc = await db.collection("calls").doc(data.callId).get();
+            if (callDoc.exists) {
+              const callData = callDoc.data();
+              if (["ringing", "accepted"].includes(callData.status)) {
+                window.openIncomingCallUI?.(data.callId, callData);
+              }
+            }
+          }
+        } else if (data?.kind === "message" && data?.chatId) {
+          // Open the relevant chat
+          const chat = { id: data.chatId, type: data.chatType || "direct" };
+          window.openChat?.(chat);
+        }
+      }
+    });
+  }
+
+  /* ── Tell SW when a call is answered or rejected (stop ring) ───────── */
+  window.notifySwCallAnswered = function(callId) {
+    navigator.serviceWorker?.ready.then(reg => {
+      reg.active?.postMessage({ type: "CALL_ANSWERED", callId });
+    });
+  };
+  window.notifySwCallRejected = function(callId) {
+    navigator.serviceWorker?.ready.then(reg => {
+      reg.active?.postMessage({ type: "CALL_REJECTED", callId });
+    });
+  };
+
+  /* ── Handle URL params from notification click (page opened fresh) ─── */
+  (function handleNotificationOpenUrl() {
+    const params = new URLSearchParams(window.location.search);
+    const callId = params.get("callId");
+    const callAction = params.get("callAction");
+    const openChat = params.get("openChat");
+    const chatType = params.get("chatType");
+
+    if (callId) {
+      const waitForApp = setInterval(async () => {
+        if (typeof currentUser === "undefined" || !currentUser?.uid) return;
+        clearInterval(waitForApp);
+        try {
+          const callDoc = await db.collection("calls").doc(callId).get();
+          if (!callDoc.exists) return;
+          const callData = callDoc.data();
+          if (callAction === "reject") {
+            await db.collection("calls").doc(callId).update({ status: "rejected" });
+          } else if (["ringing", "accepted"].includes(callData.status)) {
+            window.openIncomingCallUI?.(callId, callData) ||
+              showToast("Incoming call — check the call panel");
+          }
+        } catch (_) {}
+        // Clean URL
+        const clean = window.location.pathname + window.location.hash;
+        history.replaceState(null, "", clean);
+      }, 800);
+    }
+
+    if (openChat && !callId) {
+      const waitForChat = setInterval(() => {
+        if (typeof currentUser === "undefined" || !currentUser?.uid) return;
+        clearInterval(waitForChat);
+        setTimeout(() => {
+          window.openChatById?.(openChat, chatType || "direct");
+          history.replaceState(null, "", window.location.pathname);
+        }, 1000);
+      }, 800);
+    }
+  })();
+
+  window.requestNotificationPermissionFull = requestNotificationPermissionFull;
+})();
+
+/* ══════════════════════════════════════════════════════════════════════════
+   5. IN-APP CALL BANNER
+      Shows a slide-down banner when an incoming call arrives while the
+      user is already in the app — so they see it even if the call modal
+      isn't front-and-center.  Accept/Reject right from the banner.
+   ══════════════════════════════════════════════════════════════════════════ */
+(function initInAppCallBanner() {
+  let bannerDismissTimer = null;
+
+  function showInAppCallBanner(call) {
+    removeBanner();
+    const name = call.fromUserName || "Unknown";
+    const type = call.type || call.callType || "voice";
+    const typeLabel = type === "video" ? "📹 Video call" : "📞 Voice call";
+    const initials = (name.split(" ").map(p => p[0]).join("").slice(0, 2) || "?").toUpperCase();
+
+    const banner = document.createElement("div");
+    banner.id = "inAppCallBanner";
+    banner.innerHTML = `
+      <div class="banner-avatar">${initials}</div>
+      <div class="banner-info">
+        <div class="banner-name">${escapeHtml(name)}</div>
+        <div class="banner-sub">${typeLabel} • Incoming call</div>
+      </div>
+      <div class="banner-actions">
+        <button class="banner-accept" title="Accept" aria-label="Accept call">✅</button>
+        <button class="banner-reject" title="Decline" aria-label="Decline call">❌</button>
+      </div>
+    `;
+
+    banner.querySelector(".banner-accept").addEventListener("click", () => {
+      removeBanner();
+      window.notifySwCallAnswered?.(call.id || call.callId);
+      // Trigger the normal incoming call accept flow
+      document.getElementById("acceptCallBtn")?.click() ||
+        window.acceptCall?.() ||
+        window.openIncomingCallUI?.(call.id || call.callId, call);
+    });
+
+    banner.querySelector(".banner-reject").addEventListener("click", async () => {
+      removeBanner();
+      window.notifySwCallRejected?.(call.id || call.callId);
+      try {
+        await db.collection("calls").doc(call.id || call.callId).update({
+          status: "rejected",
+          rejectedAt: firebase.firestore.FieldValue.serverTimestamp(),
+        });
+      } catch (_) {}
+      stopRingtone?.();
+    });
+
+    document.body.appendChild(banner);
+    // Auto-dismiss after 35 s (call would time out anyway)
+    bannerDismissTimer = setTimeout(removeBanner, 35000);
+  }
+
+  function removeBanner() {
+    clearTimeout(bannerDismissTimer);
+    document.getElementById("inAppCallBanner")?.remove();
+  }
+
+  // Hook into the incoming call listener — when app IS visible, also show banner
+  const origNotifyIncomingCall = window.notifyIncomingCall;
+  window.notifyIncomingCall = function(call) {
+    origNotifyIncomingCall?.apply(this, arguments);
+    // Show banner if call modal is not already visible
+    const callModal = document.getElementById("callModal");
+    const modalVisible = callModal && callModal.style.display !== "none" &&
+                         !callModal.classList.contains("hidden");
+    if (!modalVisible) showInAppCallBanner(call);
+  };
+
+  // Clean up banner when call ends / is accepted
+  document.addEventListener("click", e => {
+    if (e.target.id === "acceptCallBtn" || e.target.id === "declineCallBtn" ||
+        e.target.closest("#acceptCallBtn") || e.target.closest("#declineCallBtn")) {
+      removeBanner();
+    }
+  });
+
+  window.removeInAppCallBanner = removeBanner;
+})();
+
+/* ══════════════════════════════════════════════════════════════════════════
+   6. PERSISTENT RINGTONE IN BACKGROUND TABS
+      When the tab becomes hidden during an active incoming call, the
+      ringtone AudioContext may be throttled by the browser.
+      We reschedule beats on visibilitychange to keep the ring audible.
+   ══════════════════════════════════════════════════════════════════════════ */
+(function initBackgroundRingtone() {
+  // Patch: resume AudioContext when visibility returns (browser may suspend it)
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden) return;
+    try {
+      if (typeof ringtoneAudioContext !== "undefined" &&
+          ringtoneAudioContext?.state === "suspended") {
+        ringtoneAudioContext.resume();
+      }
+    } catch (_) {}
+  });
+
+  // Page Visibility → re-request wake lock when page becomes visible during a call
+  document.addEventListener("visibilitychange", async () => {
+    if (document.hidden) return;
+    const callModal = document.getElementById("callModal");
+    if (callModal && callModal.style.display !== "none") {
+      try { await requestCallWakeLock?.(); } catch (_) {}
+    }
+  });
+})();
+
+/* ══════════════════════════════════════════════════════════════════════════
+   7. NOTIFY SW WHEN CALL IS ANSWERED / REJECTED  (closes lock-screen ring)
+   ══════════════════════════════════════════════════════════════════════════ */
+(function patchCallAnswerReject() {
+  // Patch acceptCall / declineCall / endCall to notify SW
+  const patchFn = (fnName, swMsgType) => {
+    const orig = window[fnName];
+    if (typeof orig !== "function") return;
+    window[fnName] = async function(...args) {
+      const result = await orig.apply(this, args);
+      const callId = (typeof currentCallSession !== "undefined" && currentCallSession?.id) ||
+                     (typeof currentCallId !== "undefined" && currentCallId);
+      if (callId) {
+        navigator.serviceWorker?.ready.then(reg => {
+          reg.active?.postMessage({ type: swMsgType, callId });
+        });
+      }
+      window.removeInAppCallBanner?.();
+      return result;
+    };
+  };
+
+  setTimeout(() => {
+    patchFn("acceptCall", "CALL_ANSWERED");
+    patchFn("declineCall", "CALL_REJECTED");
+    patchFn("endCall", "CALL_ANSWERED");
+    patchFn("rejectIncomingCall", "CALL_REJECTED");
+  }, 2000);
+})();
+
+/* ── End of Feature Pack 3 ──────────────────────────────────────────── */

@@ -1840,17 +1840,39 @@
           <span class="close-modal closeStatusModal">&times;</span>
         </div>
         <div class="modal-body">
-          <textarea
-            id="statusTextInput"
-            placeholder="Type a status..."
-            rows="4"
-          ></textarea>
+          <div class="status-bg-picker" id="statusBgPicker">
+            <button type="button" class="status-bg-swatch active" data-bg="#1e293b" style="background:#1e293b;" title="Dark"></button>
+            <button type="button" class="status-bg-swatch" data-bg="linear-gradient(135deg,#6366f1,#a855f7)" style="background:linear-gradient(135deg,#6366f1,#a855f7);" title="Purple"></button>
+            <button type="button" class="status-bg-swatch" data-bg="linear-gradient(135deg,#0ea5e9,#22d3ee)" style="background:linear-gradient(135deg,#0ea5e9,#22d3ee);" title="Blue"></button>
+            <button type="button" class="status-bg-swatch" data-bg="linear-gradient(135deg,#10b981,#34d399)" style="background:linear-gradient(135deg,#10b981,#34d399);" title="Green"></button>
+            <button type="button" class="status-bg-swatch" data-bg="linear-gradient(135deg,#f59e0b,#fbbf24)" style="background:linear-gradient(135deg,#f59e0b,#fbbf24);" title="Gold"></button>
+            <button type="button" class="status-bg-swatch" data-bg="linear-gradient(135deg,#ef4444,#f97316)" style="background:linear-gradient(135deg,#ef4444,#f97316);" title="Red-Orange"></button>
+            <button type="button" class="status-bg-swatch" data-bg="linear-gradient(135deg,#ec4899,#f43f5e)" style="background:linear-gradient(135deg,#ec4899,#f43f5e);" title="Pink"></button>
+            <button type="button" class="status-bg-swatch" data-bg="linear-gradient(135deg,#008069,#00b09b)" style="background:linear-gradient(135deg,#008069,#00b09b);" title="Teal"></button>
+          </div>
+          <div id="statusComposerPreview" class="status-composer-preview" style="background:#1e293b;">
+            <textarea
+              id="statusTextInput"
+              placeholder="Type a status…"
+              rows="3"
+            ></textarea>
+          </div>
+          <div class="status-emoji-row">
+            <span class="status-emoji-chip" data-emoji="❤️">❤️</span>
+            <span class="status-emoji-chip" data-emoji="😂">😂</span>
+            <span class="status-emoji-chip" data-emoji="🔥">🔥</span>
+            <span class="status-emoji-chip" data-emoji="✅">✅</span>
+            <span class="status-emoji-chip" data-emoji="🎉">🎉</span>
+            <span class="status-emoji-chip" data-emoji="😴">😴</span>
+            <span class="status-emoji-chip" data-emoji="🚀">🚀</span>
+            <span class="status-emoji-chip" data-emoji="💪">💪</span>
+          </div>
           <div
             id="statusImagePreview"
             class="attachment-preview-inline"
             style="display: none"
           ></div>
-          <button id="statusImageBtn" class="setting-item">Add image</button>
+          <button id="statusImageBtn" class="setting-item">📷 Add image</button>
         </div>
         <div class="modal-footer">
           <button class="btn btn-outline closeStatusModal">Cancel</button>
