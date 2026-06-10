@@ -5622,7 +5622,13 @@ async function searchUsersRealtime(searchTerm, options = {}) {
   // If another search started while we were fetching, abort this one
   if (searchToken !== chatListLoadToken) return;
 
-  loadAllChatsList(term, searchToken);
+  loadAllChatsList(term, searchToken).catch((err) => {
+    console.warn("Search render failed:", err);
+    const cl = document.getElementById("chatsList");
+    if (cl && cl.innerHTML.includes("Searching")) {
+      cl.innerHTML = `<div class="empty-state" style="padding:32px;color:#667781;">No users found. Try a different email.</div>`;
+    }
+  });
 }
 
 // ========================================================================
@@ -5673,8 +5679,10 @@ async function loadAllChatsList(searchTerm = "", forceToken = null) {
     console.error("buildGroupChatItems failed:", error);
   }
   // Abort if a newer non-search list load started after us.
-  // Search calls pass forceToken so this check always passes for them.
-  if (loadToken !== chatListLoadToken) return;
+  // Search calls pass forceToken so we skip this check for them — their
+  // token was locked before the async work and must not be cancelled by
+  // a background real-time refresh incrementing chatListLoadToken.
+  if (forceToken === null && loadToken !== chatListLoadToken) return;
   await refreshLockedChats();
   const allItems = [...directItems, ...groupItems].filter(
     (item) => item.type === "saved" || !isChatLocked(item.id, item.type),
@@ -5894,8 +5902,9 @@ async function searchMessagesInChats(chatItems = [], term = "") {
           field,
           targetIds.length > 1 ? "in" : "==",
           targetIds.length > 1 ? targetIds : targetIds[0],
-        );
-      const snapshot = await query.limit(120).get();
+        )
+        .orderBy("timestamp", "desc");
+      const snapshot = await query.limit(200).get();
       const matches = snapshot.docs
         .map((doc) => doc.data())
         .filter(
@@ -7686,28 +7695,33 @@ async function handleUserSelection(user) {
 
 async function getContactRequestState(userId) {
   if (!currentUser || !userId) return { status: "none", label: "" };
-  const sentPending = await db
-    .collection("chatRequests")
-    .where("fromUserId", "==", currentUser.uid)
-    .where("toUserId", "==", userId)
-    .where("status", "==", "pending")
-    .limit(1)
-    .get();
-  if (!sentPending.empty) return { status: "sent", label: "Request sent" };
+  try {
+    const sentPending = await db
+      .collection("chatRequests")
+      .where("fromUserId", "==", currentUser.uid)
+      .where("toUserId", "==", userId)
+      .where("status", "==", "pending")
+      .limit(1)
+      .get();
+    if (!sentPending.empty) return { status: "sent", label: "Request sent" };
 
-  const receivedPending = await db
-    .collection("chatRequests")
-    .where("fromUserId", "==", userId)
-    .where("toUserId", "==", currentUser.uid)
-    .where("status", "==", "pending")
-    .limit(1)
-    .get();
-  if (!receivedPending.empty)
-    return { status: "received", label: "Accept request" };
+    const receivedPending = await db
+      .collection("chatRequests")
+      .where("fromUserId", "==", userId)
+      .where("toUserId", "==", currentUser.uid)
+      .where("status", "==", "pending")
+      .limit(1)
+      .get();
+    if (!receivedPending.empty)
+      return { status: "received", label: "Accept request" };
 
-  if (await hasAcceptedChatRelationship(userId))
-    return { status: "accepted", label: "Connected" };
-  return { status: "none", label: "Send chat request" };
+    if (await hasAcceptedChatRelationship(userId))
+      return { status: "accepted", label: "Connected" };
+    return { status: "none", label: "Send chat request" };
+  } catch (e) {
+    console.warn("getContactRequestState failed (missing index?):", e);
+    return { status: "none", label: "Send chat request" };
+  }
 }
 
 function updateGroupMemberSuggestions(searchTerm = "") {
@@ -13887,12 +13901,13 @@ function bindSearchInput() {
       return;
     }
     if (isEmailLike(val)) {
-      // Show existing chat name matches immediately
-      searchUsersRealtime(val, { emailHold: true });
-      // Auto-trigger full user search after 800ms so user doesn't HAVE to press Enter
-      searchTimer = window.setTimeout(() => searchUsersRealtime(val, { emailHold: false }), 800);
+      // While typing an email: show existing chats + message matches immediately.
+      // Do NOT auto-trigger the new-user Firestore lookup — the user must press
+      // Enter or click Search for that. This avoids unnecessary scans and matches
+      // the requirement that new users only appear on explicit search.
+      searchTimer = window.setTimeout(() => searchUsersRealtime(val, { emailHold: true }), 200);
     } else {
-      // Real-time name/group search as you type
+      // Real-time name / message search as you type
       searchTimer = window.setTimeout(() => searchUsersRealtime(val), 200);
     }
   });
