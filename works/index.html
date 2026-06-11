@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="Web applications and tools created by Nishad S L."
+    />
+    <link rel="canonical" href="https://nishadsl.com/works" />
+    <title>Works | Nishad S L</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        font-family: Inter, system-ui, sans-serif;
+        background: #f5f7fa;
+        color: #17212b;
+      }
+      * { box-sizing: border-box; }
+      body { margin: 0; min-height: 100vh; background: radial-gradient(circle at top, #e6f7f2, #f5f7fa 48%); }
+      main { width: min(980px, calc(100% - 32px)); margin: 0 auto; padding: 64px 0; }
+      .back { color: #007c68; text-decoration: none; font-weight: 700; }
+      h1 { margin: 28px 0 8px; font-size: clamp(36px, 7vw, 64px); }
+      .intro { max-width: 640px; margin: 0 0 36px; color: #54636c; font-size: 18px; line-height: 1.6; }
+      .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 20px; }
+      .card { display: block; min-height: 220px; padding: 28px; border: 1px solid #dbe3e8; border-radius: 22px; background: rgba(255,255,255,.88); color: inherit; text-decoration: none; box-shadow: 0 16px 40px rgba(23,33,43,.08); transition: transform .2s, box-shadow .2s; }
+      .card:hover, .card:focus-visible { transform: translateY(-4px); box-shadow: 0 20px 48px rgba(23,33,43,.14); outline: 3px solid rgba(0,168,132,.25); }
+      .icon { display: grid; width: 52px; height: 52px; place-items: center; border-radius: 16px; background: #d9fdd3; color: #007c68; font-size: 24px; font-weight: 900; }
+      h2 { margin: 24px 0 8px; }
+      .card p { margin: 0; color: #667781; line-height: 1.55; }
+      @media (prefers-color-scheme: dark) {
+        :root { background: #0b141a; color: #e9edef; }
+        body { background: radial-gradient(circle at top, #15372f, #0b141a 48%); }
+        .intro, .card p { color: #aebac1; }
+        .card { border-color: #2a3942; background: rgba(32,44,51,.92); }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <a class="back" href="/">Back to portfolio</a>
+      <h1>Works</h1>
+      <p class="intro">
+        A collection of practical web applications designed for communication
+        and everyday business work.
+      </p>
+      <div class="grid">
+        <a class="card" href="/works/chat">
+          <span class="icon" aria-hidden="true">C</span>
+          <h2>Team Chat</h2>
+          <p>Real-time personal and group messaging, calls, requests, and collaboration tools.</p>
+        </a>
+        <a class="card" href="/works/invoice">
+          <span class="icon" aria-hidden="true">I</span>
+          <h2>Invoice Generator</h2>
+          <p>Create, manage, and export professional invoices from any modern browser.</p>
+        </a>
+      </div>
+    </main>
+  </body>
+</html>

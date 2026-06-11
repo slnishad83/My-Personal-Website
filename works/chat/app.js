@@ -70,6 +70,8 @@ const CLOUDINARY_CLOUD_NAME = "du2dsimyz";
 const CLOUDINARY_UPLOAD_PRESET = "chat_app_uploads";
 const TURN_CREDENTIALS_ENDPOINT =
   "https://us-central1-my-team-chat-2255.cloudfunctions.net/getTurnCredentials";
+const VERIFIED_USER_LOOKUP_ENDPOINT =
+  "https://us-central1-my-team-chat-2255.cloudfunctions.net/lookupVerifiedUserByEmail";
 const AVATAR_MAX_BYTES = 5 * 1024 * 1024;
 const AVATAR_ALLOWED_EXTENSIONS = [
   "jpg",
@@ -92,14 +94,6 @@ const AVATAR_ALLOWED_MIME_TYPES = [
 ];
 const AVATAR_FORMAT_HELP_TEXT =
   "Supported image formats: JPG, JPEG, PNG, WebP, GIF, BMP, HEIC, HEIF. Maximum size: 5 MB.";
-const AUTH_DIRECTORY_FALLBACKS = [
-  { id: "ArOfySQ0wBbemcCpwxQKaybBFmA2", email: "rakeshjit18@gmail.com" },
-  { id: "N5KfNSSYXDYbbevELbuhpgS06Ez1", email: "alwynwilson187@gmail.com" },
-  { id: "w8yFWAJS3aRgBlcRPV9ta7ig52M2", email: "ashwatitharavath@gmail.com" },
-  { id: "gXTqQwmqmjhicXVwUqLauTqXw8O2", email: "halid480@gmail.com" },
-  { id: "eAgAyBTqvwdnuiNremGtig4gbE1", email: "sl.nishad@gmail.com" },
-];
-
 // Global Variables
 let currentUser = null;
 let currentChat = null;
@@ -112,6 +106,7 @@ let groupChatsUnsubscribe = null;
 let usersUnsubscribe = null;
 let allUsersReadyPromise = null;
 let chatRequestsUnsubscribe = null;
+let sentChatRequestsUnsubscribe = null;
 let groupInvitesUnsubscribe = null;
 let currentGroup = null;
 let currentGroupMembers = [];
@@ -168,8 +163,10 @@ let cameraSender = null;
 let callLogWritten = false;
 let lastHandledRenegotiationSdp = "";
 let seenPendingChatRequestIds = new Set();
+let seenSentChatRequestIds = new Set();
 let seenPendingGroupInviteIds = new Set();
 let chatRequestListenerReady = false;
+let sentChatRequestListenerReady = false;
 let groupInviteListenerReady = false;
 let mobileBackGuardReady = false;
 let mobileChatHistoryOpen = false;
@@ -2745,6 +2742,11 @@ async function registerFcmTokenForCurrentUser({ force = false } = {}) {
             type: data.type,
             fromUserName: data.fromUserName,
           });
+        } else if (data.kind === "chat_request") {
+          showToast(
+            payload.notification?.body ||
+              `${data.fromUserName || "Someone"} updated a chat request.`,
+          );
         }
       });
     }
@@ -4823,6 +4825,26 @@ function normalizeEmail(email = "") {
     .toLowerCase();
 }
 
+function isValidEmailAddress(value = "") {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/i.test(String(value || "").trim());
+}
+
+async function lookupVerifiedUserByEmail(email = "") {
+  if (!currentUser || !isValidEmailAddress(email)) return null;
+  try {
+    const token = await currentUser.getIdToken();
+    const response = await fetch(
+      `${VERIFIED_USER_LOOKUP_ENDPOINT}?email=${encodeURIComponent(normalizeEmail(email))}`,
+      { headers: { Authorization: `Bearer ${token}` } },
+    );
+    if (!response.ok) return null;
+    return await response.json();
+  } catch (error) {
+    console.warn("Verified email lookup failed:", error);
+    return null;
+  }
+}
+
 function normalizeSearchText(value = "") {
   return String(value || "")
     .trim()
@@ -4861,8 +4883,8 @@ function matchesIdentitySearch(entity = {}, rawTerm = "") {
   // Phone search remains partial, but only when the user types numbers.
   if (digits.length > 0 && phone) return phone.includes(digits);
 
-  // Email search remains partial, but only when the query clearly looks like an email search.
-  const looksLikeEmailSearch = term.includes("@") || term.includes(".");
+  // Only a complete valid email address can reveal a directory profile.
+  const looksLikeEmailSearch = isValidEmailAddress(term);
   if (looksLikeEmailSearch) {
     // Check @username match
     if (username && term.startsWith("@"))
@@ -4894,7 +4916,7 @@ function matchesNewContactLookup(entity = {}, rawTerm = "") {
   if (digits.length >= 6 && phone) return phone === digits;
 
   const email = normalizeEmail(entity.email || "");
-  if ((term.includes("@") || term.includes(".")) && email) {
+  if (isValidEmailAddress(term) && email) {
     if (term.startsWith("@")) {
       const username = (entity.username || "").toLowerCase();
       return username === term.replace("@", "");
@@ -4937,8 +4959,8 @@ function isSearchableUser(user = {}) {
     user.isActive === false
   )
     return false;
-  if (user.pendingVerification === true && user.emailVerified === false)
-    return false;
+  if (user.email && user.emailVerified !== true) return false;
+  if (user.pendingVerification === true) return false;
   return Boolean(
     user.email || user.displayName || user.phone || user.phoneNumber,
   );
@@ -4961,25 +4983,6 @@ function normalizeUserDoc(doc) {
     displayName,
     phone,
   };
-}
-
-function getFallbackDirectoryUsers() {
-  return AUTH_DIRECTORY_FALLBACKS.filter(
-    (user) => user.id !== currentUser?.uid,
-  ).map((user) => {
-    const email = normalizeEmail(user.email);
-    return {
-      ...user,
-      email,
-      uid: user.id,
-      displayName: user.displayName || email.split("@")[0] || "User",
-      emailVerified: true,
-      pendingVerification: false,
-      isActive: true,
-      onlineStatus: "offline",
-      source: "authFallback",
-    };
-  });
 }
 
 function getUserDedupeKey(user = {}) {
@@ -5587,14 +5590,15 @@ async function searchUsersRealtime(searchTerm) {
   // Show a loading indicator in the list while we fetch
   chatsList.innerHTML = `<div class="empty-state" style="padding:32px;color:#667781;">Searching...</div>`;
 
-  const looksLikeEmail = term.includes("@") && term.includes(".");
+  const looksLikeEmail = isValidEmailAddress(term);
   if (looksLikeEmail) {
-    try {
-      const snapshot = await db.collection("users").get();
-      allUsers = normalizeUsersSnapshot(snapshot);
-    } catch (e) {
-      console.warn("Live user refresh for email search failed:", e);
-      await refreshAllUsersOnce();
+    await refreshAllUsersOnce();
+    const verifiedUser = await lookupVerifiedUserByEmail(term);
+    if (
+      verifiedUser &&
+      !allUsers.some((user) => user.id === verifiedUser.id)
+    ) {
+      allUsers = [...allUsers, verifiedUser];
     }
   } else {
     await refreshAllUsersOnce();
@@ -5718,12 +5722,8 @@ async function loadAllChatsList(searchTerm = "", forceToken = null) {
     // a potentially stale cached result.
 
     // MATCH 2: Look through the directory for users you haven't messaged yet
-    // FIX: For email searches, use a looser filter so users with stale
-    // pendingVerification flags are still findable by exact email.
-    const looksLikeEmailSearch = term.includes("@") && term.includes(".");
-    const userPool = looksLikeEmailSearch
-      ? allUsers.filter((u) => u.id && u.id !== currentUser?.uid && !isBlocked(u.id) && u.isActive !== false && (u.email || u.displayName))
-      : allUsers.filter(isSearchableUser);
+    const looksLikeEmailSearch = isValidEmailAddress(term);
+    const userPool = allUsers.filter(isSearchableUser);
     for (const user of userPool) {
       if (isUserInLockedDirectChat(user.id)) continue;
       // PREVENT CONFLICTS: Skip if this user is already visible in chatMatches
@@ -5754,36 +5754,28 @@ async function loadAllChatsList(searchTerm = "", forceToken = null) {
       }
     }
 
-    // DIRECT FIRESTORE FALLBACK: if email search found nothing in cache, query Firestore directly
+    // Auth-backed fallback: reveal only a verified registered user for a full email.
     if (looksLikeEmailSearch && userMatches.length === 0) {
-      try {
-        const directSnap = await db.collection("users")
-          .where("email", "==", term.trim().toLowerCase())
-          .limit(3)
-          .get();
-        for (const doc of directSnap.docs) {
-          const u = { id: doc.id, ...doc.data() };
-          if (!u.id || u.id === currentUser?.uid || isBlocked(u.id)) continue;
-          if (visibleUserIds.has(u.id)) continue;
-          const requestState = await getContactRequestState(u.id);
-          userMatches.push({
-            id: `user_${u.id}`,
-            type: "user",
-            name: u.displayName || u.email || "User",
-            avatar: u.avatar ? `<img src="${u.avatar}">` : escapeHtml((u.displayName || "?")[0].toUpperCase()),
-            preview: u.email || "Tap to connect",
-            requestState,
-            unreadCount: 0,
-            isFavorite: false,
-            isPinned: false,
-            isMuted: false,
-            onlineStatus: u.onlineStatus || "offline",
-            rawUser: u,
-            lastMessageTime: new Date(0),
-          });
-        }
-      } catch (fbErr) {
-        console.warn("Direct email Firestore lookup failed:", fbErr);
+      const u = await lookupVerifiedUserByEmail(term);
+      if (u && isSearchableUser(u) && !visibleUserIds.has(u.id)) {
+        const requestState = await getContactRequestState(u.id);
+        userMatches.push({
+          id: `user_${u.id}`,
+          type: "user",
+          name: u.displayName || u.email || "User",
+          avatar: u.avatar
+            ? `<img src="${u.avatar}">`
+            : escapeHtml((u.displayName || "?")[0].toUpperCase()),
+          preview: u.email || "Tap to connect",
+          requestState,
+          unreadCount: 0,
+          isFavorite: false,
+          isPinned: false,
+          isMuted: false,
+          onlineStatus: u.onlineStatus || "offline",
+          rawUser: u,
+          lastMessageTime: new Date(0),
+        });
       }
     }
 
@@ -5804,7 +5796,7 @@ async function loadAllChatsList(searchTerm = "", forceToken = null) {
     );
     items = [
       ...decorateSearchItems(chatMatches, "Chats", "chat"),
-      ...decorateSearchItems(contactMatches, "Contacts", "contact"),
+      ...decorateSearchItems(contactMatches, "User Discovery", "contact"),
       ...decorateSearchItems(messageMatches, "Messages", "message"),
     ];
   } else {
@@ -5829,7 +5821,7 @@ async function loadAllChatsList(searchTerm = "", forceToken = null) {
   }
   items.sort((a, b) => {
     if (a.section || b.section) {
-      const order = { Chats: 1, Contacts: 2, Messages: 3 };
+      const order = { Chats: 1, "User Discovery": 2, Messages: 3 };
       const sectionDiff = (order[a.section] || 99) - (order[b.section] || 99);
       if (sectionDiff) return sectionDiff;
     }
@@ -5964,11 +5956,18 @@ async function buildMessageSearchChatItems(visibleItems = []) {
 
 async function sendChatRequest(user) {
   if (!currentUser || !user) return;
-  if (await isBlockedByUser(user.id)) {
+  if (!user.id || user.id === currentUser.uid) {
+    showToast("You cannot send a chat request to yourself", "error");
+    return;
+  }
+  if (isBlocked(user.id) || (await isBlockedByUser(user.id))) {
     showToast("Request cannot be sent to this user", "error");
     return;
   }
-  await ensureDirectoryUserProfile(user);
+  if (await hasAcceptedChatRelationship(user.id)) {
+    showToast("A chat with this user already exists");
+    return;
+  }
   const existingRequest = await db
     .collection("chatRequests")
     .where("fromUserId", "==", currentUser.uid)
@@ -5995,43 +5994,36 @@ async function sendChatRequest(user) {
     return;
   }
 
-  await db.collection("chatRequests").add({
-    fromUserId: currentUser.uid,
-    fromUserName: currentUser.displayName || currentUser.email.split("@")[0],
-    fromUserEmail: normalizeEmail(currentUser.email),
-    toUserId: user.id,
-    toUserName: user.displayName || user.email,
-    toUserEmail: normalizeEmail(user.email),
-    status: "pending",
-    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-  });
-  showToast("Request sent");
-  loadCurrentChatList();
-}
-
-async function ensureDirectoryUserProfile(user) {
-  if (!user?.id || !user?.email) return;
+  const requestRef = db
+    .collection("chatRequests")
+    .doc(getDirectChatId(currentUser.uid, user.id));
   try {
-    await db
-      .collection("users")
-      .doc(user.id)
-      .set(
-        {
-          uid: user.id,
-          email: normalizeEmail(user.email),
-          displayName:
-            user.displayName || normalizeEmail(user.email).split("@")[0],
-          emailVerified: user.emailVerified !== false,
-          pendingVerification: false,
-          isActive: true,
-          onlineStatus: user.onlineStatus || "offline",
-          repairedAt: firebase.firestore.FieldValue.serverTimestamp(),
-        },
-        { merge: true },
-      );
+    await db.runTransaction(async (transaction) => {
+      const existing = await transaction.get(requestRef);
+      if (existing.exists && existing.data()?.status === "pending") {
+        throw new Error("A pending request already exists");
+      }
+      if (existing.exists && existing.data()?.status === "accepted") {
+        throw new Error("A chat with this user already exists");
+      }
+      transaction.set(requestRef, {
+        fromUserId: currentUser.uid,
+        fromUserName: currentUser.displayName || currentUser.email.split("@")[0],
+        fromUserEmail: normalizeEmail(currentUser.email),
+        toUserId: user.id,
+        toUserName: user.displayName || user.email,
+        toUserEmail: normalizeEmail(user.email),
+        status: "pending",
+        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+      });
+    });
   } catch (error) {
-    console.warn("Could not repair directory profile:", error);
+    showToast(error?.message || "Could not send chat request", "error");
+    return;
   }
+  showToast("Request sent");
+  await loadReceivedRequests();
+  loadCurrentChatList();
 }
 
 async function isBlockedByUser(userId) {
@@ -6069,49 +6061,33 @@ async function acceptChatRequest(requestId, fromUserId) {
     }
 
     const chatId = getDirectChatId(currentUser.uid, fromUserId);
-    await db
-      .collection("directChats")
-      .doc(chatId)
-      .set(
-        {
-          participants: [currentUser.uid, fromUserId],
-          participantEmails: {
-            [currentUser.uid]: normalizeEmail(currentUser.email),
-            [fromUserId]: normalizeEmail(requestData.fromUserEmail),
-          },
-          participantNames: {
-            [currentUser.uid]: currentUser.displayName || currentUser.email,
-            [fromUserId]:
-              requestData.fromUserName || requestData.fromUserEmail || "User",
-          },
-          status: "active",
-          createdAt:
-            requestData.createdAt ||
-            firebase.firestore.FieldValue.serverTimestamp(),
-          updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+    const batch = db.batch();
+    batch.set(
+      db.collection("directChats").doc(chatId),
+      {
+        participants: [currentUser.uid, fromUserId],
+        participantEmails: {
+          [currentUser.uid]: normalizeEmail(currentUser.email),
+          [fromUserId]: normalizeEmail(requestData.fromUserEmail),
         },
-        { merge: true },
-      );
-
-    await db.collection("chatRequests").doc(requestId).update({
+        participantNames: {
+          [currentUser.uid]: currentUser.displayName || currentUser.email,
+          [fromUserId]:
+            requestData.fromUserName || requestData.fromUserEmail || "User",
+        },
+        status: "active",
+        createdAt:
+          requestData.createdAt ||
+          firebase.firestore.FieldValue.serverTimestamp(),
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+      },
+      { merge: true },
+    );
+    batch.update(db.collection("chatRequests").doc(requestId), {
       status: "accepted",
       respondedAt: firebase.firestore.FieldValue.serverTimestamp(),
     });
-
-    // FIX 3: Write an in-app notification to the original sender
-    try {
-      await db.collection("inAppNotifications").add({
-        toUserId: fromUserId,
-        type: "chat_request_accepted",
-        fromUserId: currentUser.uid,
-        fromUserName: currentUser.displayName || currentUser.email,
-        message: `${currentUser.displayName || currentUser.email} accepted your chat request`,
-        read: false,
-        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-      });
-    } catch (notifErr) {
-      console.warn("Could not write acceptance notification:", notifErr);
-    }
+    await batch.commit();
 
     showToast("Request accepted");
     await loadReceivedRequests();
@@ -6145,10 +6121,15 @@ async function loadReceivedRequests() {
   const badge = document.getElementById("requestBadge");
 
   try {
-    const [chatSnapshot, groupSnapshot] = await Promise.all([
+    const [chatSnapshot, sentChatSnapshot, groupSnapshot] = await Promise.all([
       db
         .collection("chatRequests")
         .where("toUserId", "==", currentUser.uid)
+        .where("status", "==", "pending")
+        .get(),
+      db
+        .collection("chatRequests")
+        .where("fromUserId", "==", currentUser.uid)
         .where("status", "==", "pending")
         .get(),
       db
@@ -6162,11 +6143,19 @@ async function loadReceivedRequests() {
       ...chatSnapshot.docs.map((doc) => ({
         id: doc.id,
         requestType: "chat",
+        direction: "incoming",
+        ...doc.data(),
+      })),
+      ...sentChatSnapshot.docs.map((doc) => ({
+        id: doc.id,
+        requestType: "chat",
+        direction: "outgoing",
         ...doc.data(),
       })),
       ...groupSnapshot.docs.map((doc) => ({
         id: doc.id,
         requestType: "group",
+        direction: "incoming",
         ...doc.data(),
       })),
     ].sort(
@@ -6175,9 +6164,10 @@ async function loadReceivedRequests() {
     );
 
     if (badge) {
-      if (requests.length > 0) {
+      const incomingCount = chatSnapshot.size + groupSnapshot.size;
+      if (incomingCount > 0) {
         badge.textContent =
-          requests.length > 99 ? "99+" : String(requests.length);
+          incomingCount > 99 ? "99+" : String(incomingCount);
         badge.classList.add("show");
         badge.style.display = "inline-flex";
       } else {
@@ -6200,18 +6190,26 @@ async function loadReceivedRequests() {
 
     for (const req of requests) {
       const isGroupInvite = req.requestType === "group";
+      const isOutgoing = req.direction === "outgoing";
+      const displayName = isOutgoing
+        ? req.toUserName || req.toUserEmail || "User"
+        : isGroupInvite
+          ? req.groupName || "Group invite"
+          : req.fromUserName || "User";
       const reqDiv = document.createElement("div");
       reqDiv.className = "list-item request-card";
       reqDiv.innerHTML = `
-        <div class="list-avatar">${isGroupInvite ? escapeHtml(getInitials(req.groupName || "Group invite")) : escapeHtml(getInitials(req.fromUserName || "", req.fromUserEmail || ""))}</div>
+        <div class="list-avatar">${escapeHtml(getInitials(displayName, isOutgoing ? req.toUserEmail || "" : req.fromUserEmail || ""))}</div>
         <div class="list-info">
-          <div class="list-name">${escapeHtml(isGroupInvite ? req.groupName || "Group invite" : req.fromUserName || "User")}</div>
-          <div class="list-preview">${isGroupInvite ? `Group invite from ${escapeHtml(req.fromUserName || "User")}` : `Wants to chat${req.fromUserEmail ? ` - ${escapeHtml(req.fromUserEmail)}` : ""}`}</div>
+          <div class="list-name">${escapeHtml(displayName)}</div>
+          <div class="list-preview">${isOutgoing ? "Pending chat request" : isGroupInvite ? `Group invite from ${escapeHtml(req.fromUserName || "User")}` : `Wants to chat${req.fromUserEmail ? ` - ${escapeHtml(req.fromUserEmail)}` : ""}`}</div>
         </div>
         <div class="request-actions">
-          <button class="btn btn-success accept-request-btn" data-type="${req.requestType}" data-id="${req.id}" data-from="${escapeHtml(req.fromUserId || "")}">Accept</button>
-          <button class="btn btn-outline delete-request-btn" data-type="${req.requestType}" data-id="${req.id}">Decline</button>
-          <button class="btn btn-outline block-request-btn" data-type="${req.requestType}" data-id="${req.id}" data-from="${escapeHtml(req.fromUserId || "")}" data-name="${escapeHtml(req.fromUserName || "User")}">Block</button>
+          ${isOutgoing
+            ? `<button class="btn btn-outline cancel-request-btn" data-id="${req.id}">Cancel</button>`
+            : `<button class="btn btn-success accept-request-btn" data-type="${req.requestType}" data-id="${req.id}" data-from="${escapeHtml(req.fromUserId || "")}">Accept</button>
+          <button class="btn btn-outline decline-request-btn" data-type="${req.requestType}" data-id="${req.id}">Decline</button>
+          <button class="btn btn-outline block-request-btn" data-type="${req.requestType}" data-id="${req.id}" data-from="${escapeHtml(req.fromUserId || "")}" data-name="${escapeHtml(req.fromUserName || "User")}">Block</button>`}
         </div>
       `;
       requestList.appendChild(reqDiv);
@@ -6230,12 +6228,18 @@ async function loadReceivedRequests() {
         }
       });
     });
-    requestList.querySelectorAll(".delete-request-btn").forEach((btn) => {
+    requestList.querySelectorAll(".decline-request-btn").forEach((btn) => {
       btn.addEventListener("click", async (e) => {
         e.stopPropagation();
         if (btn.dataset.type === "group")
-          await deleteGroupInvite(btn.dataset.id);
-        else await deleteChatRequest(btn.dataset.id);
+          await declineGroupInvite(btn.dataset.id);
+        else await declineChatRequest(btn.dataset.id);
+      });
+    });
+    requestList.querySelectorAll(".cancel-request-btn").forEach((btn) => {
+      btn.addEventListener("click", async (e) => {
+        e.stopPropagation();
+        await cancelChatRequest(btn.dataset.id);
       });
     });
     requestList.querySelectorAll(".block-request-btn").forEach((btn) => {
@@ -6274,10 +6278,13 @@ function setupRequestListeners() {
   });
   if (!currentUser) return;
   if (chatRequestsUnsubscribe) chatRequestsUnsubscribe();
+  if (sentChatRequestsUnsubscribe) sentChatRequestsUnsubscribe();
   if (groupInvitesUnsubscribe) groupInvitesUnsubscribe();
   seenPendingChatRequestIds = new Set();
+  seenSentChatRequestIds = new Set();
   seenPendingGroupInviteIds = new Set();
   chatRequestListenerReady = false;
+  sentChatRequestListenerReady = false;
   groupInviteListenerReady = false;
   chatRequestsUnsubscribe = db
     .collection("chatRequests")
@@ -6299,6 +6306,22 @@ function setupRequestListeners() {
         showToast(`New chat request from ${request.fromUserName || "User"}`);
       });
       chatRequestListenerReady = true;
+    });
+  sentChatRequestsUnsubscribe = db
+    .collection("chatRequests")
+    .where("fromUserId", "==", currentUser.uid)
+    .where("status", "==", "pending")
+    .onSnapshot((snapshot) => {
+      const currentIds = new Set(snapshot.docs.map((doc) => doc.id));
+      if (
+        sentChatRequestListenerReady &&
+        (currentIds.size !== seenSentChatRequestIds.size ||
+          [...currentIds].some((id) => !seenSentChatRequestIds.has(id)))
+      ) {
+        loadReceivedRequests();
+      }
+      seenSentChatRequestIds = currentIds;
+      sentChatRequestListenerReady = true;
     });
   groupInvitesUnsubscribe = db
     .collection("groupInvites")
@@ -6444,14 +6467,25 @@ async function declineGroupInvite(inviteId) {
   loadReceivedRequests();
 }
 
-async function deleteChatRequest(requestId) {
+async function declineChatRequest(requestId) {
   if (!requestId) return;
   await db.collection("chatRequests").doc(requestId).update({
-    status: "deleted",
+    status: "declined",
     respondedAt: firebase.firestore.FieldValue.serverTimestamp(),
   });
-  showToast("Request deleted");
+  showToast("Request declined");
   loadReceivedRequests();
+}
+
+async function cancelChatRequest(requestId) {
+  if (!requestId) return;
+  await db.collection("chatRequests").doc(requestId).update({
+    status: "cancelled",
+    respondedAt: firebase.firestore.FieldValue.serverTimestamp(),
+  });
+  showToast("Request cancelled");
+  loadReceivedRequests();
+  loadCurrentChatList();
 }
 
 async function deleteGroupInvite(inviteId) {
@@ -6471,7 +6505,7 @@ async function blockRequestSender(type, requestId, fromUserId, fromUserName) {
   await blockUser(fromUserId, fromUserName || "User");
   await loadBlockedUsers();
   if (type === "group") await deleteGroupInvite(requestId);
-  else await deleteChatRequest(requestId);
+  else await declineChatRequest(requestId);
   showToast(`${fromUserName || "User"} blocked`);
 }
 
@@ -7539,7 +7573,6 @@ function normalizeUsersSnapshot(snapshot) {
     }
   };
   snapshot.forEach((doc) => addUser(normalizeUserDoc(doc)));
-  getFallbackDirectoryUsers().forEach(addUser);
   return [...userMap.values()].sort((a, b) =>
     (a.displayName || "").localeCompare(b.displayName || ""),
   );
@@ -9351,11 +9384,15 @@ async function startDirectChat(user) {
     getDirectChatId(currentUser.uid, otherUserId);
   const chatRef = db.collection("directChats").doc(chatId);
   let chatData = user.chatData || {};
+  const chatDoc = await chatRef.get().catch((error) => {
+    console.warn("Direct chat metadata read skipped:", error);
+    return null;
+  });
+  if (!chatDoc?.exists && !(await hasAcceptedChatRelationship(otherUserId))) {
+    showToast("Accept the chat request before opening this chat.", "error");
+    return;
+  }
   if (!Object.keys(chatData).length) {
-    const chatDoc = await chatRef.get().catch((error) => {
-      console.warn("Direct chat metadata read skipped:", error);
-      return null;
-    });
     chatData = chatDoc?.data?.() || {};
   }
   const aliasDirectIds = [

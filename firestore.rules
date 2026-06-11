@@ -95,10 +95,71 @@ service cloud.firestore {
     }
 
     match /chatRequests/{requestId} {
-      allow read, update, delete: if isRequestParticipant(resource.data);
+      allow read: if isRequestParticipant(resource.data);
       allow create: if isRequestParticipant(request.resource.data)
         && request.resource.data.fromUserId == request.auth.uid
+        && request.resource.data.toUserId != request.auth.uid
         && request.resource.data.status == 'pending';
+      allow update: if isRequestParticipant(resource.data)
+        && (
+          (
+            resource.data.status == 'pending'
+            && resource.data.toUserId == request.auth.uid
+            && request.resource.data.status in ['accepted', 'declined']
+            && request.resource.data.fromUserId == resource.data.fromUserId
+            && request.resource.data.toUserId == resource.data.toUserId
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+              'status',
+              'respondedAt'
+            ])
+          )
+          || (
+            resource.data.status == 'pending'
+            && resource.data.fromUserId == request.auth.uid
+            && request.resource.data.status == 'cancelled'
+            && request.resource.data.fromUserId == resource.data.fromUserId
+            && request.resource.data.toUserId == resource.data.toUserId
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+              'status',
+              'respondedAt'
+            ])
+          )
+          || (
+            resource.data.status in ['declined', 'cancelled']
+            && request.resource.data.status == 'pending'
+            && request.resource.data.fromUserId == request.auth.uid
+            && request.resource.data.toUserId != request.auth.uid
+            && request.resource.data.fromUserId in [
+              resource.data.fromUserId,
+              resource.data.toUserId
+            ]
+            && request.resource.data.toUserId in [
+              resource.data.fromUserId,
+              resource.data.toUserId
+            ]
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+              'fromUserId',
+              'fromUserName',
+              'fromUserEmail',
+              'toUserId',
+              'toUserName',
+              'toUserEmail',
+              'status',
+              'createdAt',
+              'respondedAt'
+            ])
+          )
+        );
+      allow delete: if false;
+    }
+
+    match /inAppNotifications/{notificationId} {
+      allow read: if signedIn() && resource.data.toUserId == request.auth.uid;
+      allow update: if signedIn()
+        && resource.data.toUserId == request.auth.uid
+        && request.resource.data.toUserId == resource.data.toUserId
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read']);
+      allow create, delete: if false;
     }
 
     match /groups/{groupId} {

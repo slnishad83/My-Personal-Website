@@ -1,6 +1,6 @@
 const admin = require('firebase-admin');
 const { onRequest } = require('firebase-functions/v2/https');
-const { onDocumentCreated } = require('firebase-functions/v2/firestore');
+const { onDocumentCreated, onDocumentUpdated } = require('firebase-functions/v2/firestore');
 const { defineSecret } = require('firebase-functions/params');
 
 if (!admin.apps.length) {
@@ -11,6 +11,221 @@ const meteredApiKey = defineSecret('METERED_API_KEY');
 const METERED_APP_URL = 'teamchatnishad.metered.live';
 const TURN_CREDENTIAL_LABEL = 'team-chat-secure-turn';
 const BACKEND_RUNTIME_GENERATION = 'nodejs22';
+const CHAT_APP_URL = 'https://nishadsl.com/works/chat/';
+
+async function getUserPushTokens(userId) {
+  if (!userId) return { userSnap: null, user: {}, tokens: [] };
+  const userSnap = await admin.firestore().collection('users').doc(userId).get();
+  const user = userSnap.data() || {};
+  const tokens = Object.values(user.fcmTokens || {})
+    .map((entry) => entry && entry.token)
+    .filter(Boolean);
+  return { userSnap, user, tokens };
+}
+
+async function removeStalePushTokens(userSnap, user, tokens, response) {
+  if (!userSnap || !response?.responses?.length) return;
+  const staleTokens = [];
+  response.responses.forEach((result, index) => {
+    const code = result.error && result.error.code;
+    if (
+      !result.success &&
+      (code === 'messaging/registration-token-not-registered' ||
+        code === 'messaging/invalid-registration-token')
+    ) {
+      staleTokens.push(tokens[index]);
+    }
+  });
+  if (!staleTokens.length) return;
+  const updates = {};
+  Object.entries(user.fcmTokens || {}).forEach(([key, entry]) => {
+    if (entry && staleTokens.includes(entry.token)) {
+      updates[`fcmTokens.${key}`] = admin.firestore.FieldValue.delete();
+    }
+  });
+  if (Object.keys(updates).length) await userSnap.ref.update(updates);
+}
+
+async function sendChatRequestEventNotification({
+  requestId,
+  toUserId,
+  fromUserId,
+  fromUserName,
+  type,
+  title,
+  body
+}) {
+  if (!toUserId) return;
+  await admin.firestore().collection('inAppNotifications').add({
+    toUserId,
+    fromUserId: fromUserId || '',
+    fromUserName: fromUserName || 'Team Chat',
+    requestId: requestId || '',
+    type,
+    message: body,
+    read: false,
+    createdAt: admin.firestore.FieldValue.serverTimestamp()
+  });
+
+  const { userSnap, user, tokens } = await getUserPushTokens(toUserId);
+  if (!tokens.length) return;
+  const response = await admin.messaging().sendEachForMulticast({
+    tokens,
+    notification: { title, body },
+    data: {
+      kind: 'chat_request',
+      requestId: requestId || '',
+      requestStatus: type,
+      fromUserId: fromUserId || '',
+      fromUserName: fromUserName || ''
+    },
+    android: {
+      priority: 'high',
+      notification: {
+        channelId: 'default',
+        defaultSound: true,
+        defaultVibrateTimings: true,
+        tag: `chat-request-${requestId || type}`
+      }
+    },
+    webpush: {
+      headers: { Urgency: 'high', TTL: '3600' },
+      notification: {
+        title,
+        body,
+        icon: '/works/chat/app-icon-192.png',
+        badge: '/works/chat/app-icon-192.png',
+        tag: `chat-request-${requestId || type}`,
+        renotify: true,
+        data: { url: CHAT_APP_URL, kind: 'chat_request', requestId: requestId || '' }
+      },
+      fcmOptions: { link: CHAT_APP_URL }
+    }
+  });
+  await removeStalePushTokens(userSnap, user, tokens, response);
+}
+
+exports.sendNewChatRequestNotification = onDocumentCreated(
+  {
+    document: 'chatRequests/{requestId}',
+    region: 'asia-south1'
+  },
+  async (event) => {
+    const request = event.data?.data() || {};
+    if (request.status !== 'pending' || !request.toUserId) return null;
+    await sendChatRequestEventNotification({
+      requestId: event.params.requestId,
+      toUserId: request.toUserId,
+      fromUserId: request.fromUserId,
+      fromUserName: request.fromUserName,
+      type: 'chat_request_pending',
+      title: 'New chat request',
+      body: `${request.fromUserName || 'Someone'} wants to chat with you.`
+    });
+    return null;
+  }
+);
+
+exports.sendChatRequestStatusNotification = onDocumentUpdated(
+  {
+    document: 'chatRequests/{requestId}',
+    region: 'asia-south1'
+  },
+  async (event) => {
+    const before = event.data?.before.data() || {};
+    const after = event.data?.after.data() || {};
+    if (!after.status || before.status === after.status) return null;
+
+    if (after.status === 'pending') {
+      await sendChatRequestEventNotification({
+        requestId: event.params.requestId,
+        toUserId: after.toUserId,
+        fromUserId: after.fromUserId,
+        fromUserName: after.fromUserName,
+        type: 'chat_request_pending',
+        title: 'New chat request',
+        body: `${after.fromUserName || 'Someone'} wants to chat with you.`
+      });
+    } else if (after.status === 'accepted' || after.status === 'declined') {
+      const accepted = after.status === 'accepted';
+      await sendChatRequestEventNotification({
+        requestId: event.params.requestId,
+        toUserId: after.fromUserId,
+        fromUserId: after.toUserId,
+        fromUserName: after.toUserName,
+        type: accepted ? 'chat_request_accepted' : 'chat_request_declined',
+        title: accepted ? 'Chat request accepted' : 'Chat request declined',
+        body: `${after.toUserName || 'The user'} ${accepted ? 'accepted' : 'declined'} your chat request.`
+      });
+    } else if (after.status === 'cancelled') {
+      await sendChatRequestEventNotification({
+        requestId: event.params.requestId,
+        toUserId: after.toUserId,
+        fromUserId: after.fromUserId,
+        fromUserName: after.fromUserName,
+        type: 'chat_request_cancelled',
+        title: 'Chat request cancelled',
+        body: `${after.fromUserName || 'The user'} cancelled their chat request.`
+      });
+    }
+    return null;
+  }
+);
+
+exports.lookupVerifiedUserByEmail = onRequest(
+  {
+    region: 'us-central1',
+    invoker: 'public'
+  },
+  async (request, response) => {
+    setCorsHeaders(response);
+    response.set('Cache-Control', 'private, no-store');
+    if (request.method === 'OPTIONS') {
+      response.status(204).send('');
+      return;
+    }
+    if (request.method !== 'GET') {
+      response.status(405).json({ error: 'Method not allowed' });
+      return;
+    }
+    try {
+      const caller = await verifyFirebaseUser(request);
+      const email = String(request.query.email || '').trim().toLowerCase();
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/i.test(email)) {
+        response.status(400).json({ error: 'A valid email address is required' });
+        return;
+      }
+      const authUser = await admin.auth().getUserByEmail(email);
+      if (
+        authUser.disabled ||
+        authUser.emailVerified !== true ||
+        authUser.uid === caller.uid
+      ) {
+        response.status(404).json({ error: 'Verified user not found' });
+        return;
+      }
+      const profileSnap = await admin.firestore().collection('users').doc(authUser.uid).get();
+      const profile = profileSnap.data() || {};
+      if (profile.isActive === false) {
+        response.status(404).json({ error: 'Verified user not found' });
+        return;
+      }
+      response.status(200).json({
+        id: authUser.uid,
+        uid: authUser.uid,
+        email: authUser.email,
+        emailVerified: true,
+        pendingVerification: false,
+        isActive: true,
+        displayName: profile.displayName || authUser.displayName || email.split('@')[0],
+        avatar: profile.avatar || authUser.photoURL || '',
+        onlineStatus: profile.onlineStatus || 'offline'
+      });
+    } catch (error) {
+      response.status(404).json({ error: 'Verified user not found' });
+    }
+  }
+);
 
 function setCorsHeaders(response) {
   response.set('Access-Control-Allow-Origin', '*');
