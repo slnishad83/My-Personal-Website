@@ -2,6 +2,48 @@
   padding: 8px 0 calc(16px + var(--app-bottom-clearance, 0px));
 }
 
+.call-history-toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 4;
+  min-height: 52px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border);
+  background: var(--panel);
+}
+
+.call-history-toolbar strong {
+  flex: 1;
+  color: var(--text);
+  font-size: 14px;
+}
+
+.call-history-toolbar button {
+  min-height: 36px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--panel);
+  color: var(--text);
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.call-history-toolbar button[data-call-action^="delete"],
+.call-history-toolbar button[data-call-action="clear-all"] {
+  color: #dc2626;
+}
+
+.call-history-toolbar button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
 .calls-day-label {
   padding: 12px 16px 6px;
   color: var(--muted-strong);
@@ -21,6 +63,31 @@
   background: var(--panel);
   cursor: pointer;
   transition: background 0.16s ease;
+}
+
+.call-history-row.selection-mode {
+  grid-template-columns: 28px 48px minmax(0, 1fr);
+}
+
+.call-history-row.selected {
+  background: rgba(0, 128, 105, 0.1);
+}
+
+.call-history-check {
+  width: 22px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+  border: 2px solid var(--muted-strong);
+  border-radius: 50%;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.call-history-row.selected .call-history-check {
+  border-color: #008069;
+  background: #008069;
 }
 
 .call-history-row:hover,
@@ -175,6 +242,17 @@ body.dark .call-history-row {
   background: #111b21;
 }
 
+body.dark .call-history-toolbar,
+body.dark .call-history-toolbar button {
+  border-color: #2f3f48;
+  background: #111b21;
+  color: #e9edef;
+}
+
+body.dark .call-history-row.selected {
+  background: rgba(0, 168, 132, 0.16);
+}
+
 body.dark .call-history-row:hover,
 body.dark .call-history-row:focus-visible {
   background: #202c33;
@@ -265,6 +343,30 @@ body.dark .call-history-status.declined {
   font-weight: 800;
 }
 
+.call-history-message-actions {
+  display: grid;
+  gap: 6px;
+}
+
+.call-history-message-delete {
+  min-width: 48px;
+  min-height: 32px;
+  padding: 0 10px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: transparent;
+  color: #dc2626;
+  cursor: pointer;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 750;
+}
+
+body.dark .call-history-message-delete {
+  border-color: #3b4a54;
+  color: #ff8a92;
+}
+
 .call-again-btn:hover,
 .call-again-btn:focus-visible {
   background: #006f5b;
@@ -282,6 +384,14 @@ body.dark .call-history-message-icon {
     grid-template-columns: 44px minmax(0, 1fr) auto;
     gap: 9px;
     padding-left: 12px;
+  }
+
+  .call-history-row.selection-mode {
+    grid-template-columns: 24px 44px minmax(0, 1fr);
+  }
+
+  .call-history-toolbar {
+    flex-wrap: wrap;
   }
 
   .call-history-avatar {

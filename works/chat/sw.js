@@ -71,7 +71,7 @@ self.addEventListener('notificationclick', event => {
   );
 });
 
-const CACHE_NAME = 'team-chat-v162-phase4-notifications';
+const CACHE_NAME = 'team-chat-v163-phase5-audit';
 const urlsToCache = [
   'index.html',
   'login.html',

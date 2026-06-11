@@ -186,6 +186,8 @@ let videoRecordingStartTime = null;
 let callMiniBar = null;
 let callNetworkFailTimer = null;
 let callHistoryLoadToken = 0;
+let callHistorySelectionMode = false;
+let selectedCallHistoryIds = new Set();
 let currentSessionId = "";
 let groupCallsUnsubscribe = null;
 let groupCallPeerConnections = new Map();
@@ -681,7 +683,10 @@ function renderCallMessage(msg = {}) {
   return `<div class="message-bubble call-history-message-bubble">
     <span class="call-history-message-icon" aria-hidden="true">${icon}</span>
     <span class="call-history-message-text"><strong>${text}</strong><small>${escapeHtml(participantText)}</small><small>${escapeHtml(formatCallHistoryTimestamp(msg.timestamp))}</small></span>
-    ${canCallAgain ? `<button type="button" class="call-again-btn" title="Call again" aria-label="Call again">${msg.callType === "video" ? "Video" : "Call"}</button>` : ""}
+    <span class="call-history-message-actions">
+      ${canCallAgain ? `<button type="button" class="call-again-btn" title="Call again" aria-label="Call again">${msg.callType === "video" ? "Video" : "Call"}</button>` : ""}
+      <button type="button" class="call-history-message-delete" title="Delete call entry" aria-label="Delete call entry">Delete</button>
+    </span>
   </div>`;
 }
 
@@ -760,10 +765,63 @@ function getHiddenCallHistoryIds() {
 }
 
 function hideCallHistoryForMe(callId) {
+  hideCallHistoryIdsForMe([callId]);
+}
+
+function hideCallHistoryIdsForMe(callIds = []) {
   const hidden = getHiddenCallHistoryIds();
-  hidden.add(callId);
-  localStorage.setItem(`hiddenCallHistory_${currentUser.uid}`, JSON.stringify([...hidden].slice(-500)));
+  callIds.filter(Boolean).forEach((callId) => hidden.add(callId));
+  localStorage.setItem(
+    `hiddenCallHistory_${currentUser.uid}`,
+    JSON.stringify([...hidden]),
+  );
+  selectedCallHistoryIds.clear();
+  callHistorySelectionMode = false;
   loadCallsList();
+}
+
+function toggleCallHistorySelection(callId) {
+  if (selectedCallHistoryIds.has(callId)) selectedCallHistoryIds.delete(callId);
+  else selectedCallHistoryIds.add(callId);
+  loadCallsList();
+}
+
+function renderCallHistoryToolbar(list, calls = [], allCalls = calls) {
+  const toolbar = document.createElement("div");
+  toolbar.className = "call-history-toolbar";
+  toolbar.innerHTML = callHistorySelectionMode
+    ? `<button type="button" data-call-action="cancel">Cancel</button>
+      <strong>${selectedCallHistoryIds.size} selected</strong>
+      <button type="button" data-call-action="select-all">Select all</button>
+      <button type="button" data-call-action="delete-selected" ${selectedCallHistoryIds.size ? "" : "disabled"}>Delete</button>`
+    : `<strong>Call history</strong>
+      <button type="button" data-call-action="select">Select</button>
+      <button type="button" data-call-action="clear-all" ${calls.length ? "" : "disabled"}>Clear all</button>`;
+  toolbar.addEventListener("click", (event) => {
+    const action = event.target.closest("[data-call-action]")?.dataset.callAction;
+    if (!action) return;
+    if (action === "select") {
+      callHistorySelectionMode = true;
+      selectedCallHistoryIds.clear();
+      loadCallsList();
+    } else if (action === "cancel") {
+      callHistorySelectionMode = false;
+      selectedCallHistoryIds.clear();
+      loadCallsList();
+    } else if (action === "select-all") {
+      selectedCallHistoryIds = new Set(calls.map((call) => call.id));
+      loadCallsList();
+    } else if (action === "delete-selected" && selectedCallHistoryIds.size) {
+      if (confirm(`Delete ${selectedCallHistoryIds.size} selected call entries from your history?`)) {
+        hideCallHistoryIdsForMe([...selectedCallHistoryIds]);
+      }
+    } else if (action === "clear-all" && allCalls.length) {
+      if (confirm("Delete all call history entries for you?")) {
+        hideCallHistoryIdsForMe(allCalls.map((call) => call.id));
+      }
+    }
+  });
+  list.appendChild(toolbar);
 }
 
 function getCallHistoryDate(call = {}) {
@@ -822,17 +880,24 @@ async function loadCallsList() {
     [...outgoing.docs, ...incoming.docs, ...group.docs].forEach((doc) => {
       if (!hidden.has(doc.id)) unique.set(doc.id, { id: doc.id, ...doc.data() });
     });
-    const calls = [...unique.values()].filter((call) => {
+    const allCalls = [...unique.values()].filter((call) => {
       if (call.status !== "ringing") return true;
       const participantState = call.participantStates?.[currentUser.uid];
       return call.groupCall === true && ["rejected", "failed"].includes(participantState);
     })
-      .sort((a, b) => getCallHistoryDate(b) - getCallHistoryDate(a)).slice(0, 200);
+      .sort((a, b) => getCallHistoryDate(b) - getCallHistoryDate(a));
+    const calls = allCalls.slice(0, 200);
     if (!calls.length) {
-      list.innerHTML = '<div class="empty-state">No calls yet</div>';
+      list.innerHTML = "";
+      renderCallHistoryToolbar(list, []);
+      list.insertAdjacentHTML(
+        "beforeend",
+        '<div class="empty-state">No calls yet</div>',
+      );
       return;
     }
     list.innerHTML = "";
+    renderCallHistoryToolbar(list, calls, allCalls);
     let lastDay = "";
     calls.forEach((call) => {
       const date = getCallHistoryDate(call);
@@ -855,25 +920,32 @@ async function loadCallsList() {
       const timeText = date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
       const row = document.createElement("div");
       row.className = "call-history-row";
+      row.classList.toggle("selection-mode", callHistorySelectionMode);
+      row.classList.toggle("selected", selectedCallHistoryIds.has(call.id));
       row.tabIndex = 0;
       row.setAttribute("role", "button");
       row.setAttribute("aria-label", `Open chat with ${name}`);
       row.innerHTML = `
+        ${callHistorySelectionMode ? `<span class="call-history-check" aria-hidden="true">${selectedCallHistoryIds.has(call.id) ? "✓" : ""}</span>` : ""}
         <div class="call-history-avatar">${user?.avatar ? `<img src="${escapeHtml(user.avatar)}" alt="">` : escapeHtml(getInitials(name))}</div>
         <div class="call-history-main">
           <div class="call-history-heading"><div class="call-history-name">${escapeHtml(name)}</div><span class="call-history-status ${escapeHtml(view.status)}">${escapeHtml(view.outcome)}</span></div>
           <div class="call-history-participants">${escapeHtml(getCallParticipantDetails(call, view))}</div>
           <div class="call-history-meta ${escapeHtml(view.status)}"><span>${escapeHtml(call.type === "video" ? "Video" : "Voice")}</span><span>${escapeHtml(dateText)}</span><span>${escapeHtml(timeText)}</span><span>${escapeHtml(durationMs ? formatCallDuration(durationMs) : "0:00")}</span></div>
         </div>
-        <div class="call-history-actions">
+        <div class="call-history-actions" ${callHistorySelectionMode ? 'style="display:none"' : ""}>
           <button class="call-history-action ${call.type === "video" ? "video" : "voice"}" type="button" aria-label="Call ${escapeHtml(name)} again"></button>
           <button class="call-history-action remove" type="button" aria-label="Remove call from my history"></button>
         </div>`;
-      row.addEventListener("click", () => openCallHistoryChat(call));
+      row.addEventListener("click", () => {
+        if (callHistorySelectionMode) toggleCallHistorySelection(call.id);
+        else openCallHistoryChat(call);
+      });
       row.addEventListener("keydown", (event) => {
         if (event.key === "Enter" || event.key === " ") {
           event.preventDefault();
-          openCallHistoryChat(call);
+          if (callHistorySelectionMode) toggleCallHistorySelection(call.id);
+          else openCallHistoryChat(call);
         }
       });
       row.querySelector(".call-history-action.voice, .call-history-action.video")?.addEventListener("click", (event) => {
@@ -11334,6 +11406,13 @@ function loadMessages() {
                 groupCall: Boolean(msg.groupId),
               });
             });
+          messageDiv
+            .querySelector(".call-history-message-delete")
+            ?.addEventListener("click", (event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              openMessageDeleteSheet(doc.id, { ...msg, messageId: doc.id });
+            });
           messagesArea.appendChild(messageDiv);
           return;
         }
@@ -12266,11 +12345,22 @@ async function showMessageInfo(messageId, messageData = {}) {
   const readBy = messageData.readBy || {};
   const hasGroupMembers =
     Array.isArray(currentGroupMembers) && currentGroupMembers.length > 0;
+  const participantIds = [];
+  if (currentChatType === "group" && hasGroupMembers) {
+    currentGroupMembers.forEach((member) => participantIds.push(member.id));
+  } else if (currentChatType === "direct" && currentChat?.otherUserId) {
+    participantIds.push(currentChat.otherUserId);
+  }
+  if (Array.isArray(messageData.participants)) {
+    participantIds.push(...messageData.participants);
+  }
   const allIds = [
     ...new Set(
-      [...Object.keys(deliveredTo), ...Object.keys(readBy)].filter(
-        (id) => id && id !== currentUser.uid,
-      ),
+      [
+        ...participantIds,
+        ...Object.keys(deliveredTo),
+        ...Object.keys(readBy),
+      ].filter((id) => id && id !== currentUser.uid),
     ),
   ];
 
@@ -12280,7 +12370,10 @@ async function showMessageInfo(messageId, messageData = {}) {
   const recipientsEl = document.getElementById("messageInfoRecipients");
   previewEl.textContent = previewText || "(no text)";
 
-  let html = "";
+  const sentTime = messageData.timestamp
+    ? formatWhen(messageData.timestamp)
+    : "Pending";
+  let html = `<div class="message-info-summary"><strong>Sent</strong><span>${escapeHtml(sentTime)}</span></div>`;
   if (!allIds.length) {
     const sentTime = messageData.timestamp
       ? formatWhen(messageData.timestamp)

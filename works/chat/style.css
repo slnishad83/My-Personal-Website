@@ -2705,6 +2705,19 @@ button.reply-preview {
   font-size: 14px;
 }
 
+.message-info-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--panel);
+  color: var(--text);
+}
+
 .info-row {
   display: flex;
   justify-content: space-between;

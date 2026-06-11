@@ -18,7 +18,8 @@
   const isNativeApp =
     window.Capacitor?.isNativePlatform?.() === true ||
     Boolean(window.Capacitor?.Plugins?.App);
-  const APK_URL = new URL("my-team-chat.apk", window.location.href).href;
+  const APK_URL =
+    "https://my-team-chat-2255.web.app/works/chat/my-team-chat.apk";
   const ANDROID_APP_INTENT =
     "intent://open#Intent;" +
     "scheme=myteamchat;" +
@@ -91,7 +92,7 @@
 
     if (!serviceWorkerReadyPromise) {
       serviceWorkerReadyPromise = navigator.serviceWorker
-        .register("sw.js?v=162", { scope: "./" })
+        .register("sw.js?v=163", { scope: "./" })
         .then((registration) => {
           registration.update?.().catch(() => {});
           return navigator.serviceWorker.ready;
