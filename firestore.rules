@@ -22,6 +22,22 @@ service cloud.firestore {
         && request.auth.uid in data.participants;
     }
 
+    function isAcceptedDirectChatRequest(chatId) {
+      return existsAfter(/databases/$(database)/documents/chatRequests/$(chatId))
+        && getAfter(/databases/$(database)/documents/chatRequests/$(chatId)).data.status == 'accepted'
+        && getAfter(/databases/$(database)/documents/chatRequests/$(chatId)).data.fromUserId
+          in request.resource.data.participants
+        && getAfter(/databases/$(database)/documents/chatRequests/$(chatId)).data.toUserId
+          in request.resource.data.participants;
+    }
+
+    function isOwnSavedMessagesChat(data) {
+      return data.saved == true
+        && data.participants is list
+        && data.participants.size() == 1
+        && data.participants[0] == request.auth.uid;
+    }
+
     function isDirectMessageParticipant(data) {
       return signedIn() && (
         (data.directId is string && isExistingDirectParticipant(data.directId))
@@ -75,7 +91,11 @@ service cloud.firestore {
     match /directChats/{chatId} {
       allow read: if signedIn() && request.auth.uid in resource.data.participants;
       allow update, delete: if isExistingDirectParticipant(chatId);
-      allow create: if isDirectParticipantData(request.resource.data);
+      allow create: if isDirectParticipantData(request.resource.data)
+        && (
+          isOwnSavedMessagesChat(request.resource.data)
+          || isAcceptedDirectChatRequest(chatId)
+        );
     }
 
     match /messages/{messageId} {
@@ -99,6 +119,7 @@ service cloud.firestore {
       allow create: if isRequestParticipant(request.resource.data)
         && request.resource.data.fromUserId == request.auth.uid
         && request.resource.data.toUserId != request.auth.uid
+        && !exists(/databases/$(database)/documents/directChats/$(requestId))
         && request.resource.data.status == 'pending';
       allow update: if isRequestParticipant(resource.data)
         && (
@@ -129,6 +150,7 @@ service cloud.firestore {
             && request.resource.data.status == 'pending'
             && request.resource.data.fromUserId == request.auth.uid
             && request.resource.data.toUserId != request.auth.uid
+            && !exists(/databases/$(database)/documents/directChats/$(requestId))
             && request.resource.data.fromUserId in [
               resource.data.fromUserId,
               resource.data.toUserId

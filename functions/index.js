@@ -214,19 +214,16 @@ exports.sendChatRequestStatusNotification = onDocumentUpdated(
         title: 'New chat request',
         body: `${after.fromUserName || 'Someone'} wants to chat with you.`
       });
-    } else if (after.status === 'accepted' || after.status === 'declined') {
-      const accepted = after.status === 'accepted';
+    } else if (after.status === 'accepted') {
       await sendChatRequestEventNotification({
         requestId: event.params.requestId,
         toUserId: after.fromUserId,
         fromUserId: after.toUserId,
         fromUserName: after.toUserName,
-        chatUserId: accepted ? after.toUserId : '',
-        type: accepted ? 'chat_request_accepted' : 'chat_request_declined',
-        title: accepted ? 'Chat request accepted' : 'Chat request declined',
-        body: accepted
-          ? 'Your chat request has been accepted. Tap to start chatting.'
-          : `${after.toUserName || 'The user'} declined your chat request.`
+        chatUserId: after.toUserId,
+        type: 'chat_request_accepted',
+        title: 'Chat request accepted',
+        body: 'Your chat request has been accepted. Tap to start chatting.'
       });
     } else if (after.status === 'cancelled') {
       await sendChatRequestEventNotification({
