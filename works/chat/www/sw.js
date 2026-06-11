@@ -18,6 +18,7 @@ messaging.onBackgroundMessage(payload => {
   const isCall = data.kind === 'call';
   const title = payload.notification?.title || (data.type === 'video' ? '📹 Incoming video call' : '📞 Incoming voice call');
   const body = payload.notification?.body || `${data.fromUserName || 'Team Chat'} is calling. Tap to open Team Chat.`;
+  const notificationUrl = data.url || payload.notification?.data?.url || './index.html';
 
   self.registration.showNotification(title, {
     body,
@@ -30,9 +31,10 @@ messaging.onBackgroundMessage(payload => {
     timestamp: Date.now(),
     vibrate: isCall ? [700, 250, 700, 250, 700, 250, 700, 250, 700] : [180, 80, 180],
     data: {
-      url: './index.html',
+      url: notificationUrl,
       callId: data.callId || '',
-      kind: data.kind || ''
+      kind: data.kind || '',
+      chatUserId: data.chatUserId || ''
     },
     actions: isCall ? [
       { action: 'reject', title: 'Decline' },
@@ -52,8 +54,13 @@ self.addEventListener('notificationclick', event => {
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then(clientList => {
       for (const client of clientList) {
         if ('focus' in client) {
-          client.focus();
-          return;
+          if ('navigate' in client) {
+            return client
+              .navigate(url)
+              .then(() => client.focus())
+              .catch(() => client.focus());
+          }
+          return client.focus();
         }
       }
       if (clients.openWindow) return clients.openWindow(url);
@@ -61,7 +68,7 @@ self.addEventListener('notificationclick', event => {
   );
 });
 
-const CACHE_NAME = 'team-chat-v158-request-workflow';
+const CACHE_NAME = 'team-chat-v159-accepted-request-deeplink';
 const urlsToCache = [
   'index.html',
   'login.html',

@@ -5,6 +5,7 @@ import android.app.Notification;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.content.Intent;
+import android.net.Uri;
 import android.media.AudioAttributes;
 import android.provider.Settings;
 import android.os.Build;
@@ -110,6 +111,12 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
             : message.getData().get("body");
         Intent launchIntent = getPackageManager().getLaunchIntentForPackage(getPackageName());
         if (launchIntent == null) return;
+        String chatUserId = message.getData().get("chatUserId");
+        if (chatUserId != null && !chatUserId.isEmpty()) {
+            launchIntent.setData(
+                Uri.parse("myteamchat://open?chatUserId=" + Uri.encode(chatUserId))
+            );
+        }
         launchIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
         PendingIntent pendingIntent = PendingIntent.getActivity(
             this, (int) System.currentTimeMillis(), launchIntent,

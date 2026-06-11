@@ -4825,6 +4825,36 @@ function normalizeEmail(email = "") {
     .toLowerCase();
 }
 
+async function openDirectChatFromNotification(chatUserId) {
+  if (!chatUserId) return;
+  if (!currentUser) {
+    localStorage.setItem("pendingNotificationChatUserId", chatUserId);
+    return;
+  }
+  localStorage.removeItem("pendingNotificationChatUserId");
+  await refreshAllUsersOnce();
+  const userDoc = await db.collection("users").doc(chatUserId).get();
+  const user = userDoc.exists
+    ? { id: chatUserId, ...userDoc.data() }
+    : allUsers.find((item) => item.id === chatUserId);
+  if (!user) {
+    showToast("The accepted chat is not available yet. Please try again.", "error");
+    return;
+  }
+  await startDirectChat(user);
+}
+
+async function handlePendingDirectChatOpen() {
+  const params = new URLSearchParams(window.location.search);
+  const chatUserId = params.get("chatUserId");
+  if (!chatUserId || !currentUser) return;
+
+  params.delete("chatUserId");
+  const clean = `${window.location.pathname}${params.toString() ? `?${params}` : ""}${window.location.hash}`;
+  history.replaceState(history.state, "", clean);
+  await openDirectChatFromNotification(chatUserId);
+}
+
 function isValidEmailAddress(value = "") {
   return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/i.test(String(value || "").trim());
 }
@@ -14055,6 +14085,17 @@ async function init() {
       await runBootstrapStep("loadChatFolders", () => loadChatFolders());
       await runBootstrapStep("loadQuickReplies", () => loadQuickReplies());
       await runBootstrapStep("loadAllUsers", () => loadAllUsers());
+      const pendingNotificationChatUserId = localStorage.getItem(
+        "pendingNotificationChatUserId",
+      );
+      if (pendingNotificationChatUserId) {
+        await runBootstrapStep("openPendingNotificationChat", () =>
+          openDirectChatFromNotification(pendingNotificationChatUserId),
+        );
+      }
+      await runBootstrapStep("handlePendingDirectChatOpen", () =>
+        handlePendingDirectChatOpen(),
+      );
       await runBootstrapStep("getChatTags", () => getChatTags());
       await runBootstrapStep("loadWallpaperFromStorage", async () => {
         loadWallpaperFromStorage();
@@ -14482,11 +14523,25 @@ async function init() {
       const url = event?.url || "";
       const callIdMatch = url.match(/[?&]callId=([^&]+)/);
       const actionMatch = url.match(/[?&]action=([^&]+)/);
+      const chatUserIdMatch = url.match(/[?&]chatUserId=([^&]+)/);
       if (callIdMatch?.[1]) {
         const callId = decodeURIComponent(callIdMatch[1]);
         const action = decodeURIComponent(actionMatch?.[1] || "accept");
         if (action === "reject") await autoRejectNativeCall(callId);
         else await autoAcceptNativeCall(callId);
+      } else if (chatUserIdMatch?.[1]) {
+        const chatUserId = decodeURIComponent(chatUserIdMatch[1]);
+        await openDirectChatFromNotification(chatUserId);
+      }
+    });
+
+    window.Capacitor.Plugins.App.getLaunchUrl?.().then(async (result) => {
+      const url = result?.url || "";
+      const chatUserIdMatch = url.match(/[?&]chatUserId=([^&]+)/);
+      if (chatUserIdMatch?.[1]) {
+        await openDirectChatFromNotification(
+          decodeURIComponent(chatUserIdMatch[1]),
+        );
       }
     });
 

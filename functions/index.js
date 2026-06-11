@@ -51,15 +51,20 @@ async function sendChatRequestEventNotification({
   toUserId,
   fromUserId,
   fromUserName,
+  chatUserId,
   type,
   title,
   body
 }) {
   if (!toUserId) return;
+  const notificationUrl = chatUserId
+    ? `${CHAT_APP_URL}?chatUserId=${encodeURIComponent(chatUserId)}`
+    : CHAT_APP_URL;
   await admin.firestore().collection('inAppNotifications').add({
     toUserId,
     fromUserId: fromUserId || '',
     fromUserName: fromUserName || 'Team Chat',
+    chatUserId: chatUserId || '',
     requestId: requestId || '',
     type,
     message: body,
@@ -77,7 +82,11 @@ async function sendChatRequestEventNotification({
       requestId: requestId || '',
       requestStatus: type,
       fromUserId: fromUserId || '',
-      fromUserName: fromUserName || ''
+      fromUserName: fromUserName || '',
+      chatUserId: chatUserId || '',
+      url: notificationUrl,
+      title,
+      body
     },
     android: {
       priority: 'high',
@@ -85,6 +94,7 @@ async function sendChatRequestEventNotification({
         channelId: 'default',
         defaultSound: true,
         defaultVibrateTimings: true,
+        ...(chatUserId ? { clickAction: 'OPEN_CHAT' } : {}),
         tag: `chat-request-${requestId || type}`
       }
     },
@@ -97,9 +107,14 @@ async function sendChatRequestEventNotification({
         badge: '/works/chat/app-icon-192.png',
         tag: `chat-request-${requestId || type}`,
         renotify: true,
-        data: { url: CHAT_APP_URL, kind: 'chat_request', requestId: requestId || '' }
+        data: {
+          url: notificationUrl,
+          kind: 'chat_request',
+          requestId: requestId || '',
+          chatUserId: chatUserId || ''
+        }
       },
-      fcmOptions: { link: CHAT_APP_URL }
+      fcmOptions: { link: notificationUrl }
     }
   });
   await removeStalePushTokens(userSnap, user, tokens, response);
@@ -153,9 +168,12 @@ exports.sendChatRequestStatusNotification = onDocumentUpdated(
         toUserId: after.fromUserId,
         fromUserId: after.toUserId,
         fromUserName: after.toUserName,
+        chatUserId: accepted ? after.toUserId : '',
         type: accepted ? 'chat_request_accepted' : 'chat_request_declined',
         title: accepted ? 'Chat request accepted' : 'Chat request declined',
-        body: `${after.toUserName || 'The user'} ${accepted ? 'accepted' : 'declined'} your chat request.`
+        body: accepted
+          ? 'Your chat request has been accepted. Tap to start chatting.'
+          : `${after.toUserName || 'The user'} declined your chat request.`
       });
     } else if (after.status === 'cancelled') {
       await sendChatRequestEventNotification({
