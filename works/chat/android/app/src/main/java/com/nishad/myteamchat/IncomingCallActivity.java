@@ -4,6 +4,8 @@ import android.app.Activity;
 import android.app.NotificationManager;
 import android.content.Intent;
 import android.graphics.Color;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.drawable.GradientDrawable;
 import android.media.AudioManager;
 import android.media.MediaPlayer;
@@ -16,7 +18,9 @@ import android.view.Gravity;
 import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.TextView;
+import android.widget.ImageView;
 import android.net.Uri;
+import java.net.URL;
 
 public class IncomingCallActivity extends Activity {
     private MediaPlayer ringtonePlayer;
@@ -33,6 +37,7 @@ public class IncomingCallActivity extends Activity {
         }
 
         String caller = getIntent().getStringExtra("fromUserName");
+        String callerAvatar = getIntent().getStringExtra("fromUserAvatar");
         String type = getIntent().getStringExtra("type");
         String callId = getIntent().getStringExtra("callId");
         int notificationId = getIntent().getIntExtra("notificationId", 5001);
@@ -75,6 +80,9 @@ public class IncomingCallActivity extends Activity {
         avatarView.setBackground(avatarBackground);
         LinearLayout.LayoutParams avatarParams = new LinearLayout.LayoutParams(180, 180);
         avatarParams.setMargins(0, 0, 0, 24);
+        ImageView avatarImage = new ImageView(this);
+        avatarImage.setScaleType(ImageView.ScaleType.CENTER_CROP);
+        avatarImage.setBackground(avatarBackground);
 
         Button acceptBtn = new Button(this);
         acceptBtn.setText("ACCEPT");
@@ -101,7 +109,22 @@ public class IncomingCallActivity extends Activity {
         rejectBtn.setOnClickListener(v -> openCallInApp(callId, "reject", notificationId));
 
         layout.addView(titleView);
-        layout.addView(avatarView, avatarParams);
+        if (callerAvatar != null && !callerAvatar.trim().isEmpty()) {
+            layout.addView(avatarImage, avatarParams);
+            new Thread(() -> {
+                try {
+                    Bitmap bitmap = BitmapFactory.decodeStream(new URL(callerAvatar).openStream());
+                    runOnUiThread(() -> avatarImage.setImageBitmap(bitmap));
+                } catch (Exception ignored) {
+                    runOnUiThread(() -> {
+                        layout.removeView(avatarImage);
+                        layout.addView(avatarView, 1, avatarParams);
+                    });
+                }
+            }).start();
+        } else {
+            layout.addView(avatarView, avatarParams);
+        }
         layout.addView(callerView);
         buttonRow.addView(rejectBtn);
         buttonRow.addView(acceptBtn);

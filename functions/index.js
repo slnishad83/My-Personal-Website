@@ -46,6 +46,67 @@ async function removeStalePushTokens(userSnap, user, tokens, response) {
   if (Object.keys(updates).length) await userSnap.ref.update(updates);
 }
 
+function getMessagePreview(message = {}) {
+  if (message.text) return String(message.text).slice(0, 180);
+  if (message.attachment?.type === 'voice') return 'Voice message';
+  if (message.attachment?.type === 'video') return 'Video';
+  if (message.attachment?.type === 'image') return 'Photo';
+  if (message.attachment) return 'Attachment';
+  if (message.type === 'call') return message.text || 'Call update';
+  return 'New message';
+}
+
+async function getChatNotificationPreferences(userId, chatId) {
+  if (!userId || !chatId) return { muted: false, showPreview: true, soundEnabled: true, vibrate: true };
+  const [settingsSnap, muteSnap] = await Promise.all([
+    admin.firestore().collection('chatNotifSettings').doc(`${userId}_${chatId}`).get(),
+    admin.firestore().collection('mutedChats').where('userId', '==', userId).get()
+  ]);
+  const settings = settingsSnap.data() || {};
+  const now = Date.now();
+  const muted = muteSnap.docs.some((doc) => {
+    const mute = doc.data() || {};
+    if (mute.chatId !== chatId) return false;
+    const until = mute.muteUntil?.toMillis?.();
+    return !until || until > now;
+  });
+  return {
+    muted,
+    showPreview: settings.showPreview !== false,
+    soundEnabled: settings.customSound !== false,
+    vibrate: settings.vibrate !== false
+  };
+}
+
+async function addNotificationCenterItem({
+  toUserId,
+  fromUserId = '',
+  fromUserName = 'Team Chat',
+  type,
+  message,
+  chatId = '',
+  chatType = '',
+  chatUserId = '',
+  callId = '',
+  statusId = ''
+}) {
+  if (!toUserId) return;
+  await admin.firestore().collection('inAppNotifications').add({
+    toUserId,
+    fromUserId,
+    fromUserName,
+    type,
+    message,
+    chatId,
+    chatType,
+    chatUserId,
+    callId,
+    statusId,
+    read: false,
+    createdAt: admin.firestore.FieldValue.serverTimestamp()
+  });
+}
+
 async function sendChatRequestEventNotification({
   requestId,
   toUserId,
@@ -76,7 +137,6 @@ async function sendChatRequestEventNotification({
   if (!tokens.length) return;
   const response = await admin.messaging().sendEachForMulticast({
     tokens,
-    notification: { title, body },
     data: {
       kind: 'chat_request',
       requestId: requestId || '',
@@ -89,14 +149,7 @@ async function sendChatRequestEventNotification({
       body
     },
     android: {
-      priority: 'high',
-      notification: {
-        channelId: 'default',
-        defaultSound: true,
-        defaultVibrateTimings: true,
-        ...(chatUserId ? { clickAction: 'OPEN_CHAT' } : {}),
-        tag: `chat-request-${requestId || type}`
-      }
+      priority: 'high'
     },
     webpush: {
       headers: { Urgency: 'high', TTL: '3600' },
@@ -408,6 +461,16 @@ exports.sendIncomingCallNotification = onDocumentCreated(
 
     if (!call.toUserId || call.status !== 'ringing') return null;
 
+    await addNotificationCenterItem({
+      toUserId: call.toUserId,
+      fromUserId: call.fromUserId || '',
+      fromUserName: call.fromUserName || 'Team Chat',
+      type: call.type === 'video' ? 'incoming_video_call' : 'incoming_voice_call',
+      message: `${call.fromUserName || 'Someone'} is calling`,
+      chatUserId: call.fromUserId || '',
+      callId
+    });
+
     const userSnap = await admin.firestore().collection('users').doc(call.toUserId).get();
     const user = userSnap.data() || {};
     const tokenEntries = Object.values(user.fcmTokens || {});
@@ -429,6 +492,7 @@ exports.sendIncomingCallNotification = onDocumentCreated(
         type: call.type || 'voice',
         fromUserId: call.fromUserId || '',
         fromUserName: call.fromUserName || '',
+        fromUserAvatar: call.fromUserAvatar || '',
         toUserId: call.toUserId || ''
       },
       android: {
@@ -518,6 +582,16 @@ exports.sendIncomingGroupCallNotification = onDocumentCreated(
     const body = `${call.fromUserName || 'Team Chat'} started a call in ${call.groupName || 'your group'}.`;
 
     await Promise.all(receiverIds.map(async (receiverId) => {
+      await addNotificationCenterItem({
+        toUserId: receiverId,
+        fromUserId: call.fromUserId || '',
+        fromUserName: call.fromUserName || 'Team Chat',
+        type: call.type === 'video' ? 'incoming_group_video_call' : 'incoming_group_voice_call',
+        message: body,
+        chatId: call.groupId || '',
+        chatType: 'group',
+        callId
+      });
       const userSnap = await admin.firestore().collection('users').doc(receiverId).get();
       const user = userSnap.data() || {};
       const tokens = Object.values(user.fcmTokens || {})
@@ -533,6 +607,7 @@ exports.sendIncomingGroupCallNotification = onDocumentCreated(
           type: call.type || 'voice',
           fromUserId: call.fromUserId || '',
           fromUserName: call.fromUserName || '',
+          fromUserAvatar: call.fromUserAvatar || '',
           toUserId: receiverId,
           groupCall: 'true',
           groupId: call.groupId || ''
@@ -568,6 +643,134 @@ exports.sendIncomingGroupCallNotification = onDocumentCreated(
     return null;
   }
 );
+
+exports.sendMissedCallNotification = onDocumentUpdated(
+  {
+    document: 'calls/{callId}',
+    region: 'us-central1'
+  },
+  async (event) => {
+    const before = event.data?.before.data() || {};
+    const call = event.data?.after.data() || {};
+    if (before.status === call.status) return null;
+    const isDirectMissed = call.groupCall !== true && call.status === 'missed';
+    const isGroupCompleted = call.groupCall === true && ['ended', 'cancelled', 'missed'].includes(call.status);
+    if (!isDirectMissed && !isGroupCompleted) return null;
+    const callId = event.params.callId;
+    const receiverIds = call.groupCall === true
+      ? (call.participantIds || []).filter((uid) =>
+          uid && uid !== call.fromUserId && !['joined', 'rejected', 'failed'].includes(call.participantStates?.[uid])
+        )
+      : [call.toUserId].filter(Boolean);
+    await Promise.all(receiverIds.map(async (receiverId) => {
+      const title = call.groupCall ? 'Missed group call' : 'Missed call';
+      const body = `${call.fromUserName || 'Someone'} called you`;
+      await addNotificationCenterItem({
+        toUserId: receiverId,
+        fromUserId: call.fromUserId || '',
+        fromUserName: call.fromUserName || 'Team Chat',
+        type: call.groupCall ? 'missed_group_call' : 'missed_call',
+        message: body,
+        chatId: call.groupId || '',
+        chatType: call.groupId ? 'group' : 'direct',
+        chatUserId: call.groupId ? '' : call.fromUserId || '',
+        callId
+      });
+      const { userSnap, user, tokens } = await getUserPushTokens(receiverId);
+      if (!tokens.length) return;
+      const url = call.groupId
+        ? `${CHAT_APP_URL}?groupId=${encodeURIComponent(call.groupId)}`
+        : `${CHAT_APP_URL}?chatUserId=${encodeURIComponent(call.fromUserId || '')}`;
+      const response = await admin.messaging().sendEachForMulticast({
+        tokens,
+        data: {
+          kind: 'missed_call',
+          title,
+          body,
+          callId,
+          chatUserId: call.groupId ? '' : call.fromUserId || '',
+          groupId: call.groupId || '',
+          url
+        },
+        android: { priority: 'high' },
+        webpush: {
+          headers: { Urgency: 'high', TTL: '3600' },
+          notification: {
+            title, body,
+            icon: '/works/chat/app-icon-192.png',
+            badge: '/works/chat/app-icon-192.png',
+            tag: `missed-call-${callId}`,
+            data: { url, kind: 'missed_call', chatUserId: call.fromUserId || '', groupId: call.groupId || '' },
+            actions: [{ action: 'open', title: 'Open chat' }]
+          },
+          fcmOptions: { link: url }
+        }
+      });
+      await removeStalePushTokens(userSnap, user, tokens, response);
+    }));
+    return null;
+  }
+);
+
+exports.sendStatusUpdateNotification = onDocumentCreated(
+  {
+    document: 'statuses/{statusId}',
+    region: 'us-central1'
+  },
+  async (event) => {
+    const status = event.data?.data() || {};
+    if (!status.userId) return null;
+    const chats = await admin.firestore().collection('directChats')
+      .where('participants', 'array-contains', status.userId)
+      .get();
+    const receiverIds = [...new Set(chats.docs
+      .filter((doc) => doc.data()?.status !== 'deleted')
+      .flatMap((doc) =>
+        (doc.data()?.participants || []).filter((uid) => uid && uid !== status.userId)
+      ))];
+    const title = `${status.userName || 'A contact'} shared a status`;
+    const body = status.text ? String(status.text).slice(0, 120) : 'Tap to view the new status';
+    const url = `${CHAT_APP_URL}?tab=status`;
+    await Promise.all(receiverIds.map(async (receiverId) => {
+      await addNotificationCenterItem({
+        toUserId: receiverId,
+        fromUserId: status.userId,
+        fromUserName: status.userName || 'Team Chat',
+        type: 'status_update',
+        message: body,
+        statusId: event.params.statusId
+      });
+      const { userSnap, user, tokens } = await getUserPushTokens(receiverId);
+      if (!tokens.length) return;
+      const response = await admin.messaging().sendEachForMulticast({
+        tokens,
+        data: {
+          kind: 'status_update',
+          title,
+          body,
+          statusId: event.params.statusId,
+          url
+        },
+        android: { priority: 'normal' },
+        webpush: {
+          headers: { Urgency: 'normal', TTL: '3600' },
+          notification: {
+            title, body,
+            icon: '/works/chat/app-icon-192.png',
+            badge: '/works/chat/app-icon-192.png',
+            tag: `status-${event.params.statusId}`,
+            data: { url, kind: 'status_update' },
+            actions: [{ action: 'open', title: 'View status' }]
+          },
+          fcmOptions: { link: url }
+        }
+      });
+      await removeStalePushTokens(userSnap, user, tokens, response);
+    }));
+    return null;
+  }
+);
+
 // ========================================
 // New chat message push notification via FCM
 // ========================================
@@ -603,10 +806,31 @@ exports.sendMessageNotification = onDocumentCreated(
       return null;
     }
 
-    const title = message.senderName || 'New message';
-    const body = message.text || 'Sent an attachment';
+    const title = message.groupId
+      ? `${message.senderName || 'Someone'} · ${message.groupName || 'Group'}`
+      : message.senderName || 'New message';
+    const preview = getMessagePreview(message);
 
     const sendTasks = receiverIds.map(async (receiverId) => {
+      const chatId = message.directId || message.groupId || '';
+      const chatType = message.groupId ? 'group' : 'direct';
+      const preferences = await getChatNotificationPreferences(receiverId, chatId);
+      if (preferences.muted) return null;
+      const body = preferences.showPreview ? preview : 'New message';
+      const chatUserId = chatType === 'direct' ? message.senderId || '' : '';
+      const notificationUrl = chatType === 'group'
+        ? `${CHAT_APP_URL}?groupId=${encodeURIComponent(chatId)}`
+        : `${CHAT_APP_URL}?chatUserId=${encodeURIComponent(chatUserId)}`;
+      await addNotificationCenterItem({
+        toUserId: receiverId,
+        fromUserId: message.senderId || '',
+        fromUserName: message.senderName || 'Team Chat',
+        type: chatType === 'group' ? 'group_message' : 'message',
+        message: body,
+        chatId,
+        chatType,
+        chatUserId
+      });
       const userSnap = await admin.firestore().collection('users').doc(receiverId).get();
       const user = userSnap.data() || {};
       const tokenEntries = Object.values(user.fcmTokens || {});
@@ -619,23 +843,23 @@ exports.sendMessageNotification = onDocumentCreated(
 
       const fcmMessage = {
         tokens,
-        notification: { title, body },
         data: {
           kind: 'message',
+          title,
+          body,
           messageId,
-          chatId: message.directId || message.groupId || '',
-          chatType: message.groupId ? 'group' : 'direct',
-          senderId: message.senderId || ''
+          chatId,
+          chatType,
+          senderId: message.senderId || '',
+          chatUserId,
+          groupId: message.groupId || '',
+          url: notificationUrl,
+          vibrate: preferences.vibrate ? 'true' : 'false',
+          soundEnabled: preferences.soundEnabled ? 'true' : 'false'
         },
         android: {
-  priority: 'high',
-  notification: {
-    channelId: 'default',
-    defaultSound: true,
-    defaultVibrateTimings: true,
-    tag: `message-${messageId}`
-  }
-},
+          priority: 'high'
+        },
         webpush: {
           headers: {
             Urgency: 'high',
@@ -648,17 +872,20 @@ exports.sendMessageNotification = onDocumentCreated(
             badge: '/works/chat/app-icon-192.png',
             tag: `message-${messageId}`,
             renotify: true,
-            silent: false,
+            silent: !preferences.soundEnabled,
             timestamp: Date.now(),
+            vibrate: preferences.vibrate ? [180, 80, 180] : [],
             data: {
-              url: 'https://nishadsl.com/works/chat/',
+              url: notificationUrl,
               messageId,
-              kind: 'message'
+              kind: 'message',
+              chatUserId,
+              groupId: message.groupId || ''
             },
-            actions: [{ action: 'open', title: 'Open' }]
+            actions: [{ action: 'open', title: 'Open chat' }]
           },
           fcmOptions: {
-            link: 'https://nishadsl.com/works/chat/'
+            link: notificationUrl
           }
         }
       };

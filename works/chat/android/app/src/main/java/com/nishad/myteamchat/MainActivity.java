@@ -35,8 +35,14 @@ public class MainActivity extends BridgeActivity {
     private void normalizeNotificationIntent(Intent intent) {
         if (intent == null || intent.getData() != null) return;
         String chatUserId = intent.getStringExtra("chatUserId");
+        String groupId = intent.getStringExtra("groupId");
+        String tab = intent.getStringExtra("tab");
         if (chatUserId != null && !chatUserId.isEmpty()) {
             intent.setData(Uri.parse("myteamchat://open?chatUserId=" + Uri.encode(chatUserId)));
+        } else if (groupId != null && !groupId.isEmpty()) {
+            intent.setData(Uri.parse("myteamchat://open?groupId=" + Uri.encode(groupId)));
+        } else if (tab != null && !tab.isEmpty()) {
+            intent.setData(Uri.parse("myteamchat://open?tab=" + Uri.encode(tab)));
         }
     }
 }

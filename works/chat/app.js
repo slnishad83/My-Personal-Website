@@ -2292,6 +2292,10 @@ function updateUnreadBadges(items = []) {
   );
   setBadgeText("allUnreadBadge", totalUnread);
   setBadgeText("unreadTabBadge", totalUnread);
+  if ("setAppBadge" in navigator) {
+    if (totalUnread > 0) navigator.setAppBadge(totalUnread).catch(() => {});
+    else navigator.clearAppBadge?.().catch(() => {});
+  }
   document.title =
     totalUnread > 0 ? `(${totalUnread}) Team Chat` : "Team Chat - Complete";
 }
@@ -2826,6 +2830,28 @@ async function registerFcmTokenForCurrentUser({ force = false } = {}) {
             payload.notification?.body ||
               `${data.fromUserName || "Someone"} updated a chat request.`,
           );
+        } else if (["message", "missed_call", "status_update"].includes(data.kind)) {
+          const title = payload.notification?.title || data.title || "Team Chat";
+          const body = payload.notification?.body || data.body || "New notification";
+          if (document.hidden && Notification.permission === "granted") {
+            navigator.serviceWorker.ready.then((reg) =>
+              reg.showNotification(title, {
+                body,
+                icon: "app-icon-192.png",
+                badge: "app-icon-192.png",
+                tag: `${data.kind}-${data.messageId || data.callId || Date.now()}`,
+                data: {
+                  url: data.url || "./index.html",
+                  kind: data.kind,
+                  chatUserId: data.chatUserId || "",
+                  groupId: data.groupId || "",
+                },
+                actions: [{ action: "open", title: "Open chat" }],
+              }),
+            ).catch(() => {});
+          } else {
+            showToast(`${title}: ${body}`);
+          }
         }
       });
     }
@@ -4201,6 +4227,8 @@ async function startMeshGroupCall(
     type,
     fromUserId: currentUser.uid,
     fromUserName: currentUser.displayName || currentUser.email,
+    fromUserAvatar:
+      document.querySelector("#userAvatar img")?.src || currentUser.photoURL || "",
     participantIds,
     participantNames: Object.fromEntries(
       selected.map((participant) => [
@@ -4416,6 +4444,8 @@ async function startCall(type = "voice") {
     type,
     fromUserId: currentUser.uid,
     fromUserName: currentUser.displayName || currentUser.email,
+    fromUserAvatar:
+      document.querySelector("#userAvatar img")?.src || currentUser.photoURL || "",
     toUserId: currentChat.otherUserId,
     toUserName: currentChat.otherUserName || currentChat.name || "Contact",
   };
@@ -4974,15 +5004,43 @@ async function openDirectChatFromNotification(chatUserId) {
   await startDirectChat(user);
 }
 
+async function openGroupChatFromNotification(groupId) {
+  if (!groupId) return;
+  if (!currentUser) {
+    localStorage.setItem("pendingNotificationGroupId", groupId);
+    return;
+  }
+  localStorage.removeItem("pendingNotificationGroupId");
+  const groupDoc = await db.collection("groups").doc(groupId).get().catch(() => null);
+  if (!groupDoc?.exists) {
+    showToast("This group is not available", "error");
+    return;
+  }
+  await loadGroupChat(groupId, groupDoc.data()?.name || "Group");
+}
+
 async function handlePendingDirectChatOpen() {
   const params = new URLSearchParams(window.location.search);
   const chatUserId = params.get("chatUserId");
-  if (!chatUserId || !currentUser) return;
+  const groupId = params.get("groupId");
+  if ((!chatUserId && !groupId) || !currentUser) return;
 
   params.delete("chatUserId");
+  params.delete("groupId");
   const clean = `${window.location.pathname}${params.toString() ? `?${params}` : ""}${window.location.hash}`;
   history.replaceState(history.state, "", clean);
-  await openDirectChatFromNotification(chatUserId);
+  if (groupId) await openGroupChatFromNotification(groupId);
+  else await openDirectChatFromNotification(chatUserId);
+}
+
+function handlePendingNavigationTab() {
+  const params = new URLSearchParams(window.location.search);
+  const tab = params.get("tab");
+  if (!["all", "unread", "groups", "calls", "status", "notifications"].includes(tab)) return;
+  params.delete("tab");
+  const clean = `${window.location.pathname}${params.toString() ? `?${params}` : ""}${window.location.hash}`;
+  history.replaceState(history.state, "", clean);
+  switchTab(tab);
 }
 
 function isValidEmailAddress(value = "") {
@@ -5597,7 +5655,7 @@ async function getChatUnreadCount(chatId, chatType) {
       if (!data.senderId || data.senderId === currentUser.uid) return false;
       if (data.deletedFor?.[currentUser.uid]) return false;
       if (data.deletedForEveryone) return false;
-      if (data.readBy?.[currentUser.uid]) return false;
+      if (data.openedBy?.[currentUser.uid] || data.readBy?.[currentUser.uid]) return false;
 
       return true;
     }).length;
@@ -5636,10 +5694,16 @@ async function markChatReadState(chatId, chatType, readState) {
       };
 
       if (readState) {
-        updates[`readBy.${currentUser.uid}`] =
+        updates[`openedBy.${currentUser.uid}`] =
           firebase.firestore.FieldValue.serverTimestamp();
-        updates.status = "read";
+        if (!privacySettings.hideReadReceipts) {
+          updates[`readBy.${currentUser.uid}`] =
+            firebase.firestore.FieldValue.serverTimestamp();
+          updates.status = "read";
+        }
       } else {
+        updates[`openedBy.${currentUser.uid}`] =
+          firebase.firestore.FieldValue.delete();
         updates[`readBy.${currentUser.uid}`] =
           firebase.firestore.FieldValue.delete();
         updates.status = data.deliveredTo?.[currentUser.uid]
@@ -6552,7 +6616,7 @@ function renderInAppNotifications(notifications) {
     const ts = n.createdAt && n.createdAt.toDate ? n.createdAt.toDate() : null;
     const time = ts ? formatRelativeTime(ts) : "";
     return `
-      <div class="list-item notif-item ${n.read ? "" : "notif-unread"}" data-notif-id="${n.id}" style="cursor:default;">
+      <div class="list-item notif-item ${n.read ? "" : "notif-unread"}" data-notif-id="${n.id}" data-notif-type="${escapeHtml(n.type || "")}" data-chat-user-id="${escapeHtml(n.chatUserId || "")}" data-group-id="${escapeHtml(n.chatType === "group" ? n.chatId || "" : "")}" style="cursor:pointer;">
         <div class="list-avatar" style="background:var(--accent,#008069);color:#fff;font-size:18px;display:flex;align-items:center;justify-content:center;">&#10003;</div>
         <div class="list-info">
           <div class="list-name" style="font-weight:${n.read ? "400" : "600"};">${escapeHtml(n.fromUserName || "Someone")}</div>
@@ -6563,6 +6627,14 @@ function renderInAppNotifications(notifications) {
         </div>
       </div>`;
   }).join("");
+  panel.querySelectorAll(".notif-item").forEach((item) => {
+    item.addEventListener("click", async () => {
+      await db.collection("inAppNotifications").doc(item.dataset.notifId).update({ read: true }).catch(() => {});
+      if (item.dataset.notifType === "status_update") switchTab("status");
+      else if (item.dataset.groupId) await openGroupChatFromNotification(item.dataset.groupId);
+      else if (item.dataset.chatUserId) await openDirectChatFromNotification(item.dataset.chatUserId);
+    });
+  });
 }
 
 async function markAllNotificationsRead() {
@@ -10725,6 +10797,14 @@ async function markMessagesAsDelivered(markAsRead = false) {
 
       if (
         markAsRead &&
+        !data.openedBy?.[currentUser.uid]
+      ) {
+        updates[`openedBy.${currentUser.uid}`] =
+          firebase.firestore.FieldValue.serverTimestamp();
+      }
+
+      if (
+        markAsRead &&
         !privacySettings.hideReadReceipts &&
         !data.readBy?.[currentUser.uid]
       ) {
@@ -14285,6 +14365,14 @@ async function init() {
           openDirectChatFromNotification(pendingNotificationChatUserId),
         );
       }
+      const pendingNotificationGroupId = localStorage.getItem(
+        "pendingNotificationGroupId",
+      );
+      if (pendingNotificationGroupId) {
+        await runBootstrapStep("openPendingNotificationGroup", () =>
+          openGroupChatFromNotification(pendingNotificationGroupId),
+        );
+      }
       await runBootstrapStep("handlePendingDirectChatOpen", () =>
         handlePendingDirectChatOpen(),
       );
@@ -14315,6 +14403,7 @@ async function init() {
       startFailedQueueRetryWorker();
       processFailedMessageQueue().catch(() => {});
       switchTab("all");
+      handlePendingNavigationTab();
       appUnlockedForSession = !getStoredAppLockPin();
       if (!appUnlockedForSession) lockAppNowIfEnabled();
     } catch (error) {
@@ -14738,6 +14827,8 @@ async function init() {
       const callIdMatch = url.match(/[?&]callId=([^&]+)/);
       const actionMatch = url.match(/[?&]action=([^&]+)/);
       const chatUserIdMatch = url.match(/[?&]chatUserId=([^&]+)/);
+      const groupIdMatch = url.match(/[?&]groupId=([^&]+)/);
+      const tabMatch = url.match(/[?&]tab=([^&]+)/);
       if (callIdMatch?.[1]) {
         const callId = decodeURIComponent(callIdMatch[1]);
         const action = decodeURIComponent(actionMatch?.[1] || "accept");
@@ -14746,16 +14837,26 @@ async function init() {
       } else if (chatUserIdMatch?.[1]) {
         const chatUserId = decodeURIComponent(chatUserIdMatch[1]);
         await openDirectChatFromNotification(chatUserId);
+      } else if (groupIdMatch?.[1]) {
+        await openGroupChatFromNotification(decodeURIComponent(groupIdMatch[1]));
+      } else if (tabMatch?.[1]) {
+        switchTab(decodeURIComponent(tabMatch[1]));
       }
     });
 
     window.Capacitor.Plugins.App.getLaunchUrl?.().then(async (result) => {
       const url = result?.url || "";
       const chatUserIdMatch = url.match(/[?&]chatUserId=([^&]+)/);
+      const groupIdMatch = url.match(/[?&]groupId=([^&]+)/);
+      const tabMatch = url.match(/[?&]tab=([^&]+)/);
       if (chatUserIdMatch?.[1]) {
         await openDirectChatFromNotification(
           decodeURIComponent(chatUserIdMatch[1]),
         );
+      } else if (groupIdMatch?.[1]) {
+        await openGroupChatFromNotification(decodeURIComponent(groupIdMatch[1]));
+      } else if (tabMatch?.[1]) {
+        switchTab(decodeURIComponent(tabMatch[1]));
       }
     });
 

@@ -17,7 +17,7 @@ import com.google.firebase.messaging.RemoteMessage;
 
 public class MyFirebaseMessagingService extends FirebaseMessagingService {
     private static final String CHANNEL_ID = "incoming_calls_v2";
-    private static final String MESSAGE_CHANNEL_ID = "chat_messages_v1";
+    private static final String MESSAGE_CHANNEL_ID = "chat_messages_v2";
 
     @Override
     public void onMessageReceived(RemoteMessage message) {
@@ -30,11 +30,12 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
         String callId = message.getData().get("callId");
         String type = message.getData().get("type");
         String fromUserName = message.getData().get("fromUserName");
+        String fromUserAvatar = message.getData().get("fromUserAvatar");
 
-        showIncomingCall(callId, type, fromUserName);
+        showIncomingCall(callId, type, fromUserName, fromUserAvatar);
     }
 
-    private void showIncomingCall(String callId, String type, String fromUserName) {
+    private void showIncomingCall(String callId, String type, String fromUserName, String fromUserAvatar) {
         createChannel();
         int notificationId = callId != null ? (callId.hashCode() & 0x7fffffff) : 5001;
 
@@ -42,6 +43,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
         fullScreenIntent.putExtra("callId", callId);
         fullScreenIntent.putExtra("type", type);
         fullScreenIntent.putExtra("fromUserName", fromUserName);
+        fullScreenIntent.putExtra("fromUserAvatar", fromUserAvatar);
         fullScreenIntent.putExtra("notificationId", notificationId);
         fullScreenIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
 
@@ -53,10 +55,10 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
         );
 
         PendingIntent acceptIntent = createCallActionIntent(
-            callId, type, fromUserName, notificationId, "accept", notificationId + 1
+            callId, type, fromUserName, fromUserAvatar, notificationId, "accept", notificationId + 1
         );
         PendingIntent rejectIntent = createCallActionIntent(
-            callId, type, fromUserName, notificationId, "reject", notificationId + 2
+            callId, type, fromUserName, fromUserAvatar, notificationId, "reject", notificationId + 2
         );
 
         NotificationCompat.Builder builder = new NotificationCompat.Builder(this, CHANNEL_ID)
@@ -82,6 +84,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
         String callId,
         String type,
         String fromUserName,
+        String fromUserAvatar,
         int notificationId,
         String action,
         int requestCode
@@ -90,6 +93,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
         intent.putExtra("callId", callId);
         intent.putExtra("type", type);
         intent.putExtra("fromUserName", fromUserName);
+        intent.putExtra("fromUserAvatar", fromUserAvatar);
         intent.putExtra("notificationId", notificationId);
         intent.putExtra("nativeAction", action);
         intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
@@ -105,23 +109,33 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
         createMessageChannel();
         String title = message.getNotification() != null
             ? message.getNotification().getTitle()
-            : message.getData().get("fromUserName");
+            : message.getData().get("title");
         String body = message.getNotification() != null
             ? message.getNotification().getBody()
             : message.getData().get("body");
         Intent launchIntent = getPackageManager().getLaunchIntentForPackage(getPackageName());
         if (launchIntent == null) return;
         String chatUserId = message.getData().get("chatUserId");
+        String groupId = message.getData().get("groupId");
+        String kind = message.getData().get("kind");
         if (chatUserId != null && !chatUserId.isEmpty()) {
             launchIntent.setData(
                 Uri.parse("myteamchat://open?chatUserId=" + Uri.encode(chatUserId))
             );
+        } else if (groupId != null && !groupId.isEmpty()) {
+            launchIntent.setData(
+                Uri.parse("myteamchat://open?groupId=" + Uri.encode(groupId))
+            );
+        } else if ("status_update".equals(kind)) {
+            launchIntent.setData(Uri.parse("myteamchat://open?tab=status"));
         }
         launchIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
         PendingIntent pendingIntent = PendingIntent.getActivity(
             this, (int) System.currentTimeMillis(), launchIntent,
             PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
         );
+        boolean vibrate = !"false".equals(message.getData().get("vibrate"));
+        boolean soundEnabled = !"false".equals(message.getData().get("soundEnabled"));
         NotificationCompat.Builder builder = new NotificationCompat.Builder(this, MESSAGE_CHANNEL_ID)
             .setSmallIcon(getApplicationInfo().icon)
             .setContentTitle(title != null ? title : "My Team Chat")
@@ -129,8 +143,12 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setCategory(NotificationCompat.CATEGORY_MESSAGE)
             .setAutoCancel(true)
-            .setDefaults(Notification.DEFAULT_ALL)
+            .setVisibility(NotificationCompat.VISIBILITY_PRIVATE)
+            .setGroup("team_chat_messages")
+            .setNumber(1)
             .setContentIntent(pendingIntent);
+        if (soundEnabled) builder.setSound(Settings.System.DEFAULT_NOTIFICATION_URI);
+        if (vibrate) builder.setVibrate(new long[]{0, 180, 80, 180});
         NotificationManager manager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
         manager.notify((int) (System.currentTimeMillis() & 0x7fffffff), builder.build());
     }

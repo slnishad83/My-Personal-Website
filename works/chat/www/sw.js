@@ -16,30 +16,33 @@ const messaging = firebase.messaging();
 messaging.onBackgroundMessage(payload => {
   const data = payload.data || {};
   const isCall = data.kind === 'call';
-  const title = payload.notification?.title || (data.type === 'video' ? '📹 Incoming video call' : '📞 Incoming voice call');
-  const body = payload.notification?.body || `${data.fromUserName || 'Team Chat'} is calling. Tap to open Team Chat.`;
+  const title = payload.notification?.title || data.title ||
+    (isCall ? (data.type === 'video' ? 'Incoming video call' : 'Incoming voice call') : 'Team Chat');
+  const body = payload.notification?.body || data.body ||
+    (isCall ? `${data.fromUserName || 'Team Chat'} is calling. Tap to open Team Chat.` : 'New notification');
   const notificationUrl = data.url || payload.notification?.data?.url || './index.html';
 
   self.registration.showNotification(title, {
     body,
-    tag: isCall && data.callId ? `call-${data.callId}` : 'team-chat',
+    tag: isCall && data.callId ? `call-${data.callId}` : `${data.kind || 'team-chat'}-${data.messageId || data.callId || Date.now()}`,
     renotify: true,
     requireInteraction: Boolean(isCall),
-    silent: false,
+    silent: data.soundEnabled === 'false',
     icon: 'app-icon-192.png',
     badge: 'app-icon-192.png',
     timestamp: Date.now(),
-    vibrate: isCall ? [700, 250, 700, 250, 700, 250, 700, 250, 700] : [180, 80, 180],
+    vibrate: data.vibrate === 'false' ? [] : (isCall ? [700, 250, 700, 250, 700, 250, 700, 250, 700] : [180, 80, 180]),
     data: {
       url: notificationUrl,
       callId: data.callId || '',
       kind: data.kind || '',
-      chatUserId: data.chatUserId || ''
+      chatUserId: data.chatUserId || '',
+      groupId: data.groupId || ''
     },
     actions: isCall ? [
       { action: 'reject', title: 'Decline' },
       { action: 'accept', title: 'Accept' }
-    ] : []
+    ] : [{ action: 'open', title: 'Open chat' }]
   });
 });
 
@@ -68,7 +71,7 @@ self.addEventListener('notificationclick', event => {
   );
 });
 
-const CACHE_NAME = 'team-chat-v161-phase3-call-history';
+const CACHE_NAME = 'team-chat-v162-phase4-notifications';
 const urlsToCache = [
   'index.html',
   'login.html',
