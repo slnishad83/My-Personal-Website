@@ -18,9 +18,9 @@
       href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="style.css?v=144" />
+    <link rel="stylesheet" href="style.css?v=145" />
     <link rel="stylesheet" href="message-actions.css?v=7" />
-    <link rel="stylesheet" href="ui-audit.css?v=1" />
+    <link rel="stylesheet" href="ui-audit.css?v=2" />
     <link rel="stylesheet" href="translation-ui.css?v=2" />
     <link rel="stylesheet" href="safe-area-audit.css?v=4" />
     <link rel="stylesheet" href="calls-ui.css?v=4" />
@@ -156,35 +156,42 @@
           <div id="pinnedMessagesList" class="pinned-messages-list"></div>
         </div>
 
-        <div class="tabs">
-          <button class="tab active" data-tab="all">
-            All
+        <nav class="tabs primary-tabs" aria-label="Main navigation">
+          <button class="tab primary-tab active" data-tab="all" type="button">
+            <span class="primary-tab-icon" data-icon="chats" aria-hidden="true"></span>
+            <span>Chats</span>
             <span
               id="allUnreadBadge"
               class="tab-badge"
               style="display: none"
             ></span>
           </button>
-          <button class="tab" data-tab="unread">
-            Unread
+          <button class="tab primary-tab" data-tab="unread" type="button">
+            <span class="primary-tab-icon" data-icon="unread" aria-hidden="true"></span>
+            <span>Unread</span>
             <span
               id="unreadTabBadge"
               class="tab-badge"
               style="display: none"
             ></span>
           </button>
-          <button class="tab" data-tab="muted">Muted</button>
-          <button class="tab" data-tab="favorites">Favorites</button>
-          <button class="tab" data-tab="groups">Groups</button>
-          <button class="tab" data-tab="broadcasts">Broadcasts</button>
-          <button class="tab" data-tab="status">Status</button>
-          <button class="tab" data-tab="calls">Calls</button>
-          <button class="tab" data-tab="communities">Communities</button>
-          <button class="tab" data-tab="notifications" id="notificationsTab">
-            Alerts
-            <span id="notifAlertBadge" class="tab-badge" style="display:none"></span>
+          <button class="tab primary-tab" data-tab="groups" type="button">
+            <span class="primary-tab-icon" data-icon="groups" aria-hidden="true"></span>
+            <span>Groups</span>
           </button>
-        </div>
+          <button class="tab primary-tab" data-tab="calls" type="button">
+            <span class="primary-tab-icon" data-icon="calls" aria-hidden="true"></span>
+            <span>Calls</span>
+          </button>
+          <button class="tab primary-tab" data-tab="status" type="button">
+            <span class="primary-tab-icon" data-icon="status" aria-hidden="true"></span>
+            <span>Status</span>
+          </button>
+          <button class="tab primary-tab nav-add-tab" id="moreTabsBtn" type="button" aria-label="Open more features" title="More features">
+            <span class="primary-tab-icon" data-icon="add" aria-hidden="true"></span>
+            <span>More</span>
+          </button>
+        </nav>
 
         <div class="folder-tabs" id="folderTabs"></div>
 
@@ -1864,6 +1871,25 @@
       <button type="button" class="context-menu-item" id="clearChatMenuItem">Clear Chat</button>
       <button type="button" class="context-menu-item" id="deleteChatMenuItem">Delete</button>
     </div>
+
+    <div id="moreTabsModal" class="modal" style="display: none">
+      <div class="modal-content more-tabs-content">
+        <div class="modal-header">
+          <div>
+            <h3>More features</h3>
+            <p class="modal-helper">Choose an additional workspace without changing the five main tabs.</p>
+          </div>
+          <span class="close-modal closeMoreTabsModal">&times;</span>
+        </div>
+        <div class="more-tabs-grid">
+          <button class="more-tab-option" type="button" data-more-tab="favorites"><strong>Favorites</strong><span>Chats you marked as important</span></button>
+          <button class="more-tab-option" type="button" data-more-tab="muted"><strong>Muted</strong><span>Conversations with muted alerts</span></button>
+          <button class="more-tab-option" type="button" data-more-tab="broadcasts"><strong>Broadcasts</strong><span>Send updates to multiple contacts</span></button>
+          <button class="more-tab-option" type="button" data-more-tab="communities"><strong>Communities</strong><span>Organize related groups</span></button>
+          <button class="more-tab-option" type="button" data-more-tab="notifications" id="notificationsTab"><strong>Alerts <span id="notifAlertBadge" class="tab-badge" style="display:none"></span></strong><span>Requests and system notifications</span></button>
+        </div>
+      </div>
+    </div>
     <div id="archivedRowMenu" class="context-menu" style="display: none">
       <button type="button" class="context-menu-item" id="archivedUnarchiveMenuItem">Unarchive</button>
       <button type="button" class="context-menu-item danger" id="archivedDeleteMenuItem">Delete</button>
@@ -2122,7 +2148,7 @@
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-storage-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-messaging-compat.js"></script>
-    <script src="app.js?v=157"></script>
+    <script src="app.js?v=158"></script>
     <script src="pwa-install.js?v=141"></script>
   </body>
 </html>

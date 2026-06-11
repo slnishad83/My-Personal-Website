@@ -68,7 +68,7 @@ self.addEventListener('notificationclick', event => {
   );
 });
 
-const CACHE_NAME = 'team-chat-v159-accepted-request-deeplink';
+const CACHE_NAME = 'team-chat-v160-phase2-navigation';
 const urlsToCache = [
   'index.html',
   'login.html',

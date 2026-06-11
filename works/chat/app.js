@@ -108,6 +108,10 @@ let allUsersReadyPromise = null;
 let chatRequestsUnsubscribe = null;
 let sentChatRequestsUnsubscribe = null;
 let groupInvitesUnsubscribe = null;
+let statusesUnsubscribe = null;
+let outgoingCallsListUnsubscribe = null;
+let incomingCallsListUnsubscribe = null;
+let groupCallsListUnsubscribe = null;
 let currentGroup = null;
 let currentGroupMembers = [];
 let currentReplyTo = null;
@@ -10032,14 +10036,27 @@ async function joinGroupFinalize(groupId) {
 async function loadStatusList() {
   const statusList = document.getElementById("statusList");
   if (!statusList || !currentUser) return;
-  const cutoff = Date.now() - 24 * 60 * 60 * 1000;
   let statuses = [];
   try {
-    const snapshot = await db
-      .collection("statuses")
-      .where("expiresAt", ">", new Date())
-      .get();
-    statuses = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+    const [snapshot, directChats] = await Promise.all([
+      db.collection("statuses").where("expiresAt", ">", new Date()).get(),
+      db
+        .collection("directChats")
+        .where("participants", "array-contains", currentUser.uid)
+        .get(),
+    ]);
+    const connectedUserIds = new Set([currentUser.uid]);
+    directChats.docs.forEach((doc) => {
+      if (doc.data()?.status === "deleted") return;
+      (doc.data()?.participants || []).forEach((id) => connectedUserIds.add(id));
+    });
+    statuses = snapshot.docs
+      .map((doc) => ({ id: doc.id, ...doc.data() }))
+      .filter((status) => connectedUserIds.has(status.userId))
+      .sort(
+        (a, b) =>
+          (b.createdAt?.toMillis?.() || 0) - (a.createdAt?.toMillis?.() || 0),
+      );
   } catch (e) {
     statuses = [];
   }
@@ -10054,7 +10071,12 @@ async function loadStatusList() {
     byUser.get(s.userId).push(s);
   });
   statusList.innerHTML = "";
-  for (const userStatuses of byUser.values()) {
+  const orderedStatusSets = [...byUser.values()].sort((a, b) => {
+    if (a[0]?.userId === currentUser.uid) return -1;
+    if (b[0]?.userId === currentUser.uid) return 1;
+    return (b[0]?.createdAt?.toMillis?.() || 0) - (a[0]?.createdAt?.toMillis?.() || 0);
+  });
+  for (const userStatuses of orderedStatusSets) {
     const latest = userStatuses[0];
     const item = document.createElement("div");
     item.className = "list-item";
@@ -10071,6 +10093,43 @@ async function loadStatusList() {
     item.addEventListener("click", () => showStatusViewer(userStatuses, 0));
     statusList.appendChild(item);
   }
+}
+
+function setupMainNavigationLiveListeners() {
+  if (!currentUser) return;
+  [
+    statusesUnsubscribe,
+    outgoingCallsListUnsubscribe,
+    incomingCallsListUnsubscribe,
+    groupCallsListUnsubscribe,
+  ].forEach((unsubscribe) => {
+    if (typeof unsubscribe === "function") unsubscribe();
+  });
+
+  const handleNavigationListenerError = (error) => {
+    console.warn("Main navigation live update paused:", error?.message || error);
+  };
+  statusesUnsubscribe = db.collection("statuses").onSnapshot(() => {
+    if (currentViewTab === "status") loadStatusList();
+  }, handleNavigationListenerError);
+  outgoingCallsListUnsubscribe = db
+    .collection("calls")
+    .where("fromUserId", "==", currentUser.uid)
+    .onSnapshot(() => {
+      if (currentViewTab === "calls") loadCallsList();
+    }, handleNavigationListenerError);
+  incomingCallsListUnsubscribe = db
+    .collection("calls")
+    .where("toUserId", "==", currentUser.uid)
+    .onSnapshot(() => {
+      if (currentViewTab === "calls") loadCallsList();
+    }, handleNavigationListenerError);
+  groupCallsListUnsubscribe = db
+    .collection("calls")
+    .where("participantIds", "array-contains", currentUser.uid)
+    .onSnapshot(() => {
+      if (currentViewTab === "calls") loadCallsList();
+    }, handleNavigationListenerError);
 }
 
 async function publishStatus() {
@@ -13765,6 +13824,13 @@ function switchTab(tab) {
     .querySelectorAll(".tab")
     .forEach((t) => t.classList.remove("active"));
   document.querySelector(`.tab[data-tab="${tab}"]`)?.classList.add("active");
+  const moreTabsBtn = document.getElementById("moreTabsBtn");
+  if (moreTabsBtn) {
+    moreTabsBtn.classList.toggle(
+      "active",
+      ["favorites", "muted", "broadcasts", "communities", "notifications"].includes(tab),
+    );
+  }
 
   // Add switching animation to active list
   document
@@ -14105,6 +14171,9 @@ async function init() {
       });
       await runBootstrapStep("setupRequestListeners", async () => {
         setupRequestListeners();
+      });
+      await runBootstrapStep("setupMainNavigationLiveListeners", async () => {
+        setupMainNavigationLiveListeners();
       });
       await runBootstrapStep("setupInAppNotificationsListener", async () => {
         setupInAppNotificationsListener(); // FIX 4d
@@ -14494,10 +14563,29 @@ async function init() {
     toggleEmojiSheet();
   });
   document
-    .querySelectorAll(".tab")
+    .querySelectorAll(".tab[data-tab]")
     .forEach((t) =>
       t.addEventListener("click", () => switchTab(t.dataset.tab)),
     );
+  document.getElementById("moreTabsBtn")?.addEventListener("click", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    document.getElementById("moreTabsModal").style.display = "flex";
+  });
+  document.querySelectorAll(".closeMoreTabsModal").forEach((button) =>
+    button.addEventListener("click", () => {
+      document.getElementById("moreTabsModal").style.display = "none";
+    }),
+  );
+  document.querySelectorAll(".more-tab-option").forEach((button) =>
+    button.addEventListener("click", () => {
+      document.getElementById("moreTabsModal").style.display = "none";
+      switchTab(button.dataset.moreTab);
+    }),
+  );
+  document.getElementById("moreTabsModal")?.addEventListener("click", (event) => {
+    if (event.target === event.currentTarget) event.currentTarget.style.display = "none";
+  });
   document
     .getElementById("profileBtn")
     ?.addEventListener("click", showProfileModal);

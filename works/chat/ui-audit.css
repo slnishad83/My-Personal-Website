@@ -86,6 +86,19 @@ body.dark .tab.active {
   color: #00a884 !important;
 }
 
+body.dark .more-tabs-content,
+body.dark .more-tab-option {
+  border-color: #2f3f48 !important;
+  background: #111b21 !important;
+  color: #e9edef !important;
+}
+
+body.dark .more-tab-option:hover,
+body.dark .more-tab-option:focus-visible {
+  border-color: #00a884 !important;
+  background: #202c33 !important;
+}
+
 body.dark .list-item,
 body.dark .chat-list .list-item,
 body.dark .groups-list .list-item,
