@@ -651,13 +651,25 @@ function renderLocationMessage(msg = {}) {
 }
 
 function getCallIcon(type = "voice", status = "ended") {
-  if (status === "missed" || status === "failed") return "!";
-  if (status === "rejected") return "x";
+  if (status === "missed") return "!";
+  if (status === "rejected" || status === "declined" || status === "failed") return "x";
   return type === "video" ? "VID" : "CALL";
 }
 
 function renderCallMessage(msg = {}) {
   const direction = msg.callFromUserId === currentUser?.uid ? "Outgoing" : "Incoming";
+  const callView = getCallHistoryView({
+    ...msg,
+    type: msg.callType,
+    status: msg.callStatus,
+    participantNames: msg.callParticipantNames,
+  });
+  const participantText = getCallParticipantDetails({
+    ...msg,
+    type: msg.callType,
+    status: msg.callStatus,
+    participantNames: msg.callParticipantNames,
+  }, callView);
   const text = escapeHtml(getViewedCallHistoryText(
     msg.callStatus || "ended",
     msg.callType || "voice",
@@ -668,7 +680,7 @@ function renderCallMessage(msg = {}) {
   const canCallAgain = Boolean(msg.groupId || msg.callFromUserId || msg.callToUserId);
   return `<div class="message-bubble call-history-message-bubble">
     <span class="call-history-message-icon" aria-hidden="true">${icon}</span>
-    <span class="call-history-message-text">${text}</span>
+    <span class="call-history-message-text"><strong>${text}</strong><small>${escapeHtml(participantText)}</small><small>${escapeHtml(formatCallHistoryTimestamp(msg.timestamp))}</small></span>
     ${canCallAgain ? `<button type="button" class="call-again-btn" title="Call again" aria-label="Call again">${msg.callType === "video" ? "Video" : "Call"}</button>` : ""}
   </div>`;
 }
@@ -676,12 +688,67 @@ function renderCallMessage(msg = {}) {
 function getViewedCallHistoryText(status, type, durationMs = 0, direction = "") {
   const label = type === "video" ? "video call" : "voice call";
   const prefix = direction ? `${direction} ` : "";
-  if (status === "missed" || status === "failed")
+  if (status === "missed")
     return `${direction === "Outgoing" ? "Not answered" : "Missed"} ${label}`;
+  if (status === "failed") return `${prefix}${label} rejected`;
   if (status === "cancelled") return `${prefix}${label} cancelled`;
-  if (status === "rejected") return `${prefix}${label} declined`;
+  if (status === "rejected") return `${prefix}${label} rejected`;
+  if (status === "declined") return `${prefix}${label} declined`;
   if (durationMs > 0) return `${prefix}${label} · ${formatCallDuration(durationMs)}`;
   return `${prefix}${label}`;
+}
+
+function formatCallHistoryTimestamp(timestamp) {
+  const date = timestamp?.toDate?.() || (timestamp instanceof Date ? timestamp : null);
+  if (!date) return "";
+  return date.toLocaleString([], {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+function getCallHistoryView(call = {}) {
+  const isGroup = Boolean(call.groupCall || call.groupId);
+  const outgoing = call.fromUserId === currentUser?.uid;
+  const participantState = isGroup ? call.participantStates?.[currentUser?.uid] : "";
+  let status = call.status || "ended";
+  if (isGroup && !outgoing) {
+    if (participantState === "rejected") status = "declined";
+    else if (participantState === "failed") status = "rejected";
+    else if (!["joined", "left"].includes(participantState) && status !== "ringing")
+      status = "missed";
+  }
+  const direction = outgoing ? "Outgoing" : "Incoming";
+  const outcome =
+    status === "ended" || status === "connected" || status === "accepted"
+      ? direction
+      : status === "missed"
+        ? "Missed"
+        : status === "declined"
+          ? "Declined"
+          : status === "rejected" || status === "failed"
+            ? "Rejected"
+            : status === "cancelled"
+              ? "Cancelled"
+              : direction;
+  return { isGroup, outgoing, direction, status, outcome };
+}
+
+function getCallParticipantDetails(call = {}, view = getCallHistoryView(call)) {
+  if (!view.isGroup) {
+    const name = view.outgoing ? call.toUserName : call.fromUserName;
+    return name ? `${view.direction} personal call with ${name}` : `${view.direction} personal call`;
+  }
+  const names = Object.entries(call.participantNames || {})
+    .filter(([id]) => id !== currentUser?.uid)
+    .map(([, name]) => name)
+    .filter(Boolean);
+  if (!names.length) return `${view.direction} group call`;
+  const visible = names.slice(0, 3).join(", ");
+  return `${view.direction} group call · ${visible}${names.length > 3 ? ` +${names.length - 3}` : ""}`;
 }
 
 function getHiddenCallHistoryIds() {
@@ -755,7 +822,11 @@ async function loadCallsList() {
     [...outgoing.docs, ...incoming.docs, ...group.docs].forEach((doc) => {
       if (!hidden.has(doc.id)) unique.set(doc.id, { id: doc.id, ...doc.data() });
     });
-    const calls = [...unique.values()].filter((call) => call.status !== "ringing")
+    const calls = [...unique.values()].filter((call) => {
+      if (call.status !== "ringing") return true;
+      const participantState = call.participantStates?.[currentUser.uid];
+      return call.groupCall === true && ["rejected", "failed"].includes(participantState);
+    })
       .sort((a, b) => getCallHistoryDate(b) - getCallHistoryDate(a)).slice(0, 200);
     if (!calls.length) {
       list.innerHTML = '<div class="empty-state">No calls yet</div>';
@@ -773,12 +844,15 @@ async function loadCallsList() {
         list.appendChild(label);
         lastDay = day;
       }
-      const outgoingCall = call.fromUserId === currentUser.uid;
+      const view = getCallHistoryView(call);
+      const outgoingCall = view.outgoing;
       const otherUserId = outgoingCall ? call.toUserId : call.fromUserId;
       const user = allUsers.find((item) => item.id === otherUserId);
       const name = call.groupName || call.title || user?.displayName ||
         (outgoingCall ? call.toUserName : call.fromUserName) || "Unknown caller";
-      const direction = outgoingCall ? "Outgoing" : "Incoming";
+      const durationMs = Number(call.callDurationMs) || 0;
+      const dateText = date.toLocaleDateString([], { day: "2-digit", month: "short", year: "numeric" });
+      const timeText = date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
       const row = document.createElement("div");
       row.className = "call-history-row";
       row.tabIndex = 0;
@@ -787,8 +861,9 @@ async function loadCallsList() {
       row.innerHTML = `
         <div class="call-history-avatar">${user?.avatar ? `<img src="${escapeHtml(user.avatar)}" alt="">` : escapeHtml(getInitials(name))}</div>
         <div class="call-history-main">
-          <div class="call-history-name">${escapeHtml(name)}</div>
-          <div class="call-history-meta ${escapeHtml(call.status || "")}">${outgoingCall ? "↗" : "↙"} ${escapeHtml(getViewedCallHistoryText(call.status, call.type, call.callDurationMs || 0, direction))} · ${escapeHtml(date.toLocaleString([], { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" }))}</div>
+          <div class="call-history-heading"><div class="call-history-name">${escapeHtml(name)}</div><span class="call-history-status ${escapeHtml(view.status)}">${escapeHtml(view.outcome)}</span></div>
+          <div class="call-history-participants">${escapeHtml(getCallParticipantDetails(call, view))}</div>
+          <div class="call-history-meta ${escapeHtml(view.status)}"><span>${escapeHtml(call.type === "video" ? "Video" : "Voice")}</span><span>${escapeHtml(dateText)}</span><span>${escapeHtml(timeText)}</span><span>${escapeHtml(durationMs ? formatCallDuration(durationMs) : "0:00")}</span></div>
         </div>
         <div class="call-history-actions">
           <button class="call-history-action ${call.type === "video" ? "video" : "voice"}" type="button" aria-label="Call ${escapeHtml(name)} again"></button>
@@ -2979,10 +3054,12 @@ function clearCallTimeout() {
 
 function getCallHistoryText(status, type, durationMs = 0) {
   const label = type === "video" ? "Video call" : "Voice call";
-  if (status === "missed" || status === "failed")
+  if (status === "missed")
     return `Missed ${label.toLowerCase()}`;
+  if (status === "failed") return `${label} rejected`;
   if (status === "cancelled") return `${label} cancelled`;
-  if (status === "rejected") return `${label} declined`;
+  if (status === "rejected") return `${label} rejected`;
+  if (status === "declined") return `${label} declined`;
   if (status === "ended" && durationMs > 0)
     return `${label} ended · ${formatCallDuration(durationMs)}`;
   return `${label} ended`;
@@ -3036,14 +3113,16 @@ async function writeCallHistory(status) {
 
 async function writeCompleteCallHistory(status, callData = activeCall) {
   if (!callData?.id || !currentUser) return;
-  const durationMs = callStartedAt ? Date.now() - callStartedAt : 0;
+  const durationMs = callStartedAt
+    ? Date.now() - callStartedAt
+    : Number(callData.callDurationMs) || 0;
   const type = callData.type || currentCallType || "voice";
   const isGroup = Boolean(callData.groupCall || callData.groupId);
   const directId = isGroup ? "" : getDirectChatId(callData.fromUserId, callData.toUserId);
   const groupId = callData.groupId || "";
   const direction = callData.fromUserId === currentUser.uid ? "Outgoing" : "Incoming";
   const text = getViewedCallHistoryText(status, type, durationMs, direction);
-  await db.collection("messages").doc(`call_${callData.id}`).set({
+  await db.collection("messages").doc(`call_${callData.historyDocumentId || callData.id}`).set({
     type: "call",
     callId: callData.id,
     callType: type,
@@ -3051,6 +3130,7 @@ async function writeCompleteCallHistory(status, callData = activeCall) {
     callDurationMs: durationMs,
     callFromUserId: callData.fromUserId,
     callToUserId: callData.toUserId || "",
+    callParticipantNames: callData.participantNames || {},
     ...(directId ? { directId, participants: [callData.fromUserId, callData.toUserId] } : {}),
     ...(groupId ? { groupId } : {}),
     senderId: currentUser.uid,
@@ -3074,6 +3154,14 @@ async function writeCompleteCallHistory(status, callData = activeCall) {
     }, { merge: true }).catch(() => {});
   }
   callLogWritten = true;
+}
+
+async function writeGroupParticipantCallHistory(status, callData = activeCall) {
+  if (!callData?.id || !currentUser) return;
+  await writeCompleteCallHistory(status, {
+    ...callData,
+    historyDocumentId: `${callData.id}_${currentUser.uid}`,
+  });
 }
 
 function scheduleCallTimeout(callRef, ownerRole) {
@@ -4060,7 +4148,7 @@ async function joinGroupCallRoom(callId, callData = {}, mode = "active") {
       .doc(callId)
       .onSnapshot((snapshot) => {
         const data = snapshot.data() || {};
-        if (["ended", "cancelled", "failed", "rejected"].includes(data.status))
+        if (["ended", "cancelled", "failed", "rejected", "declined"].includes(data.status))
           cleanupCallUi();
       });
   } catch (error) {
@@ -4073,6 +4161,7 @@ async function joinGroupCallRoom(callId, callData = {}, mode = "active") {
         updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
       })
       .catch(() => {});
+    await writeGroupParticipantCallHistory("failed", activeCall);
     cleanupCallUi();
   }
 }
@@ -4152,12 +4241,22 @@ async function acceptIncomingGroupCall() {
   if (isNativeAndroidApp) {
     const hasMic = await ensureNativePermission("microphone");
     if (!hasMic) {
+      await db.collection("calls").doc(activeCall.id).update({
+        [`participantStates.${currentUser.uid}`]: "failed",
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+      }).catch(() => {});
+      await writeGroupParticipantCallHistory("failed", activeCall);
       cleanupCallUi();
       return;
     }
     if (activeCall.type === "video") {
       const hasCam = await ensureNativePermission("camera");
       if (!hasCam) {
+        await db.collection("calls").doc(activeCall.id).update({
+          [`participantStates.${currentUser.uid}`]: "failed",
+          updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+        }).catch(() => {});
+        await writeGroupParticipantCallHistory("failed", activeCall);
         cleanupCallUi();
         return;
       }
@@ -4174,7 +4273,7 @@ async function endGroupCall(status = "ended") {
   const callData = activeCall ? { ...activeCall } : null;
   try {
     if (callId) {
-      if (status === "rejected" && activeCallMode === "incoming") {
+      if (status === "declined" && activeCallMode === "incoming") {
         await db
           .collection("calls")
           .doc(callId)
@@ -4182,6 +4281,7 @@ async function endGroupCall(status = "ended") {
             [`participantStates.${currentUser.uid}`]: "rejected",
             updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
           });
+        await writeGroupParticipantCallHistory("declined", callData);
         cleanupCallUi();
         return;
       }
@@ -4360,11 +4460,14 @@ async function startCall(type = "voice") {
       if (data.status === "rejected") {
         showToast("Call rejected", "error");
       }
+      if (data.status === "declined") {
+        showToast("Call declined", "error");
+      }
       if (data.status === "missed") {
         showToast("Call missed", "error");
       }
       if (
-        ["ended", "cancelled", "rejected", "missed", "failed"].includes(
+        ["ended", "cancelled", "rejected", "declined", "missed", "failed"].includes(
           data.status,
         )
       )
@@ -4384,7 +4487,9 @@ async function startCall(type = "voice") {
       status: "failed",
       error: error.message,
       createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+      endedAt: firebase.firestore.FieldValue.serverTimestamp(),
     });
+    await writeCompleteCallHistory("failed", activeCall);
     cleanupCallUi();
   }
 }
@@ -4398,7 +4503,12 @@ async function acceptIncomingCall() {
       await db
         .collection("calls")
         .doc(activeCall.id)
-        .update({ status: "rejected" });
+        .update({
+          status: "rejected",
+          endedAt: firebase.firestore.FieldValue.serverTimestamp(),
+          endedBy: currentUser.uid,
+        });
+      await writeCompleteCallHistory("rejected", activeCall);
       cleanupCallUi();
       return;
     }
@@ -4408,7 +4518,12 @@ async function acceptIncomingCall() {
         await db
           .collection("calls")
           .doc(activeCall.id)
-          .update({ status: "rejected" });
+          .update({
+            status: "rejected",
+            endedAt: firebase.firestore.FieldValue.serverTimestamp(),
+            endedBy: currentUser.uid,
+          });
+        await writeCompleteCallHistory("rejected", activeCall);
         cleanupCallUi();
         return;
       }
@@ -4451,7 +4566,7 @@ async function acceptIncomingCall() {
         if (!callStartedAt) startCallDuration();
       }
       if (
-        ["ended", "cancelled", "rejected", "missed", "failed"].includes(
+        ["ended", "cancelled", "rejected", "declined", "missed", "failed"].includes(
           snapshot.data()?.status,
         )
       )
@@ -4459,7 +4574,13 @@ async function acceptIncomingCall() {
     });
   } catch (error) {
     showToast(getCallPermissionMessage(error, currentCallType), "error");
-    await callRef.update({ status: "failed", error: error.message });
+    await callRef.update({
+      status: "failed",
+      error: error.message,
+      endedAt: firebase.firestore.FieldValue.serverTimestamp(),
+      endedBy: currentUser.uid,
+    });
+    await writeCompleteCallHistory("failed", activeCall);
     cleanupCallUi();
   }
 }
@@ -4510,21 +4631,26 @@ async function autoRejectNativeCall(callId) {
         [`participantStates.${currentUser.uid}`]: "rejected",
         updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
       });
+      await writeCompleteCallHistory("declined", {
+        id: snap.id,
+        ...callData,
+        historyDocumentId: `${snap.id}_${currentUser.uid}`,
+      });
       if (activeCall?.id === callId) cleanupCallUi();
       showToast("Group call declined");
       return;
     }
     await callRef.set(
       {
-        status: "rejected",
+        status: "declined",
         endedAt: firebase.firestore.FieldValue.serverTimestamp(),
         endedBy: currentUser.uid,
       },
       { merge: true },
     );
-    await writeCompleteCallHistory("rejected", { id: snap.id, ...callData });
+    await writeCompleteCallHistory("declined", { id: snap.id, ...callData });
     if (activeCall?.id === callId) cleanupCallUi();
-    showToast("Call rejected");
+    showToast("Call declined");
   } catch (error) {
     console.warn("autoRejectNativeCall failed:", error);
     showToast("Could not reject the call. Please try again.", "error");
@@ -4555,7 +4681,7 @@ async function endActiveCall(status = "ended") {
   [endBtn, closeBtn, rejectBtn].forEach((btn) => {
     if (btn) btn.disabled = true;
   });
-  setCallStatus(status === "rejected" ? "Rejecting..." : "Ending call...");
+  setCallStatus(status === "declined" ? "Declining..." : status === "rejected" ? "Rejecting..." : "Ending call...");
 
   try {
     if (callId) {
@@ -4573,7 +4699,7 @@ async function endActiveCall(status = "ended") {
         finalStatus = "cancelled";
       }
 
-      if (["ended", "cancelled", "rejected", "missed", "failed"].includes(finalStatus)) {
+      if (["ended", "cancelled", "rejected", "declined", "missed", "failed"].includes(finalStatus)) {
         await writeCompleteCallHistory(finalStatus, call).catch((error) =>
           console.warn("Call history failed:", error),
         );
@@ -4597,7 +4723,7 @@ async function endActiveCall(status = "ended") {
       if (btn) btn.disabled = false;
     });
     cleanupCallUi();
-    showToast(status === "rejected" ? "Call declined" : "Call ended");
+    showToast(status === "declined" ? "Call declined" : status === "rejected" ? "Call rejected" : "Call ended");
   }
 }
 
@@ -4652,7 +4778,7 @@ function listenForIncomingCalls() {
             .onSnapshot((callSnapshot) => {
               const status = callSnapshot.data()?.status;
               if (
-                ["ended", "cancelled", "rejected", "missed", "failed"].includes(
+                ["ended", "cancelled", "rejected", "declined", "missed", "failed"].includes(
                   status,
                 )
               ) {
@@ -4727,11 +4853,11 @@ function listenForIncomingCalls() {
 
 function handleCallCloseAction() {
   if (activeCall?.groupCall) {
-    endGroupCall(activeCallMode === "incoming" ? "rejected" : "ended");
+    endGroupCall(activeCallMode === "incoming" ? "declined" : "ended");
     return;
   }
   if (activeCallMode === "incoming") {
-    endActiveCall("rejected");
+    endActiveCall("declined");
     return;
   }
   endActiveCall("ended");
@@ -4978,7 +5104,7 @@ function getChatListPreviewText(preview = "", chatType = "") {
   if (!text) return "";
 
   if (/^missed\s+(voice|video)\s+call/i.test(text)) return text;
-  if (/^(voice|video)\s+call\s+(ended|cancelled|declined)/i.test(text))
+  if (/^(voice|video)\s+call\s+(ended|cancelled|declined|rejected)/i.test(text))
     return "";
 
   if (chatType === "direct") return "";
@@ -14651,8 +14777,8 @@ async function init() {
     );
   }
   document.getElementById("rejectCallBtn")?.addEventListener("click", () => {
-    if (activeCall?.groupCall) endGroupCall("rejected");
-    else endActiveCall("rejected");
+    if (activeCall?.groupCall) endGroupCall("declined");
+    else endActiveCall("declined");
   });
   document.getElementById("endCallBtn")?.addEventListener("click", () => {
     if (activeCall?.groupCall) endGroupCall("ended");

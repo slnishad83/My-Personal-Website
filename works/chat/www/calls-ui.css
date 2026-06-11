@@ -65,15 +65,62 @@
   font-weight: 700;
 }
 
+.call-history-heading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.call-history-heading .call-history-name {
+  min-width: 0;
+  flex: 1;
+}
+
+.call-history-status {
+  flex: 0 0 auto;
+  padding: 3px 7px;
+  border-radius: 999px;
+  background: rgba(0, 128, 105, 0.1);
+  color: #008069;
+  font-size: 10px;
+  font-weight: 850;
+  text-transform: uppercase;
+}
+
+.call-history-status.missed,
+.call-history-status.failed,
+.call-history-status.rejected,
+.call-history-status.declined {
+  background: rgba(220, 38, 38, 0.1);
+  color: #dc2626;
+}
+
+.call-history-participants {
+  margin-top: 3px;
+  overflow: hidden;
+  color: var(--muted-strong);
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .call-history-meta {
   margin-top: 4px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px 7px;
   color: var(--muted-strong);
   font-size: 12px;
 }
 
+.call-history-meta span:not(:last-child)::after {
+  content: " ·";
+}
+
 .call-history-meta.missed,
 .call-history-meta.failed,
-.call-history-meta.rejected {
+.call-history-meta.rejected,
+.call-history-meta.declined {
   color: #dc2626;
 }
 
@@ -148,7 +195,32 @@ body.dark .call-history-meta {
 
 body.dark .call-history-meta.missed,
 body.dark .call-history-meta.failed,
-body.dark .call-history-meta.rejected {
+body.dark .call-history-meta.rejected,
+body.dark .call-history-meta.declined {
+  color: #ff8a92;
+}
+
+.call-history-message-text {
+  display: grid;
+  gap: 3px;
+}
+
+.call-history-message-text small {
+  color: var(--muted-strong);
+  font-size: 10px;
+  font-weight: 500;
+}
+
+body.dark .call-history-status {
+  background: rgba(0, 168, 132, 0.18);
+  color: #00a884;
+}
+
+body.dark .call-history-status.missed,
+body.dark .call-history-status.failed,
+body.dark .call-history-status.rejected,
+body.dark .call-history-status.declined {
+  background: rgba(255, 138, 146, 0.14);
   color: #ff8a92;
 }
 
@@ -220,6 +292,17 @@ body.dark .call-history-message-icon {
   .call-history-action {
     width: 36px;
     height: 36px;
+  }
+
+  .call-history-heading {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 3px;
+  }
+
+  .call-history-status {
+    padding: 2px 6px;
+    font-size: 9px;
   }
 
   .call-history-message-bubble {

@@ -68,7 +68,7 @@ self.addEventListener('notificationclick', event => {
   );
 });
 
-const CACHE_NAME = 'team-chat-v160-phase2-navigation';
+const CACHE_NAME = 'team-chat-v161-phase3-call-history';
 const urlsToCache = [
   'index.html',
   'login.html',
