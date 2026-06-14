@@ -1118,13 +1118,13 @@ function ensureDraftPreviewStyle() {
 // ========================================
 // CORE LIST RENDERING (Unified Fix)
 // ========================================
-function renderChatListItems(items, container) {
+function renderChatListItems(items, container, emptyMessage = "") {
   ensureDraftPreviewStyle();
   container.innerHTML = "";
   if (items.length === 0) {
     container.innerHTML = `
       <div class="empty-state" style="padding:40px;">
-        <div>No chats yet. Search for people or create a group.</div>
+        <div>${escapeHtml(emptyMessage || "No chats yet. Search for people or create a group.")}</div>
         <button type="button" id="refreshChatListBtn" class="btn btn-outline" style="margin-top:12px;">Refresh chats</button>
       </div>
     `;
@@ -5346,19 +5346,26 @@ function isValidEmailAddress(value = "") {
   return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/i.test(String(value || "").trim());
 }
 
-async function lookupVerifiedUserByEmail(email = "") {
+async function lookupVerifiedUserByEmail(email = "", timeoutMs = 8000) {
   if (!currentUser || !isValidEmailAddress(email)) return null;
+  const controller = new AbortController();
+  const timeoutId = window.setTimeout(() => controller.abort(), timeoutMs);
   try {
     const token = await currentUser.getIdToken();
     const response = await fetch(
       `${VERIFIED_USER_LOOKUP_ENDPOINT}?email=${encodeURIComponent(normalizeEmail(email))}`,
-      { headers: { Authorization: `Bearer ${token}` } },
+      {
+        headers: { Authorization: `Bearer ${token}` },
+        signal: controller.signal,
+      },
     );
     if (!response.ok) return null;
     return await response.json();
   } catch (error) {
     console.warn("Verified email lookup failed:", error);
     return null;
+  } finally {
+    window.clearTimeout(timeoutId);
   }
 }
 
@@ -6199,6 +6206,7 @@ async function searchUsersRealtime(searchTerm) {
   if (!chatsList) return;
 
   if (!searchTerm || searchTerm.trim() === "") {
+    ++chatSearchToken;
     if (currentViewTab === "groups") loadGroupsList();
     else if (currentViewTab === "calls") loadCallsList();
     else if (currentViewTab === "status") loadStatusList();
@@ -6237,31 +6245,55 @@ async function searchUsersRealtime(searchTerm) {
     return;
   }
 
-  // Lock the token NOW before any async work, so loadAllChatsList
-  // will not be cancelled by other list refreshes that run while we fetch.
-  const searchToken = ++chatListLoadToken;
+  // Search requests have their own token so background real-time list
+  // refreshes cannot leave the visible search stuck in a loading state.
+  const searchToken = ++chatSearchToken;
 
   // Show a loading indicator in the list while we fetch
   chatsList.innerHTML = `<div class="empty-state" style="padding:32px;color:#667781;">Searching...</div>`;
 
-  const looksLikeEmail = isValidEmailAddress(term);
-  if (looksLikeEmail) {
-    await refreshAllUsersOnce();
-    const verifiedUser = await lookupVerifiedUserByEmail(term);
-    if (
-      verifiedUser &&
-      !allUsers.some((user) => user.id === verifiedUser.id)
-    ) {
-      allUsers = [...allUsers, verifiedUser];
+  try {
+    const looksLikeEmail = isValidEmailAddress(term);
+    if (looksLikeEmail) {
+      await refreshSearchDirectoryWithinTimeout();
+      const verifiedUser = await lookupVerifiedUserByEmail(term);
+      if (
+        verifiedUser &&
+        !allUsers.some((user) => user.id === verifiedUser.id)
+      ) {
+        allUsers = [...allUsers, verifiedUser];
+      }
+    } else {
+      await refreshSearchDirectoryWithinTimeout();
     }
-  } else {
-    await refreshAllUsersOnce();
+
+    if (searchToken !== chatSearchToken) return;
+
+    await loadAllChatsList(term, searchToken);
+  } catch (error) {
+    console.warn("Search failed:", error);
+    if (searchToken === chatSearchToken) {
+      renderChatListItems(
+        [],
+        chatsList,
+        "Search could not be completed. Check your connection and try again.",
+      );
+    }
   }
+}
 
-  // If another search started while we were fetching, abort this one
-  if (searchToken !== chatListLoadToken) return;
-
-  loadAllChatsList(term, searchToken);
+async function refreshSearchDirectoryWithinTimeout(timeoutMs = 8000) {
+  let timeoutId;
+  try {
+    await Promise.race([
+      refreshAllUsersOnce(),
+      new Promise((resolve) => {
+        timeoutId = window.setTimeout(resolve, timeoutMs);
+      }),
+    ]);
+  } finally {
+    window.clearTimeout(timeoutId);
+  }
 }
 
 // ========================================================================
@@ -6271,12 +6303,11 @@ async function searchUsersRealtime(searchTerm) {
 // FIXED: COMBINED REAL-TIME HISTORY & DIRECTORY LOOKUP ENGINE
 // ========================================================================
 let chatListLoadToken = 0;
-async function loadAllChatsList(searchTerm = "", forceToken = null) {
+let chatSearchToken = 0;
+async function loadAllChatsList(searchTerm = "", searchToken = null) {
   const chatsList = document.getElementById("chatsList");
   if (!chatsList) return;
-  // If a forceToken is passed, use it (search locked it before async work).
-  // Otherwise increment as normal for non-search refreshes.
-  const loadToken = forceToken !== null ? forceToken : ++chatListLoadToken;
+  const loadToken = ++chatListLoadToken;
 
   // Show skeleton loading while fetching
   if (!searchTerm && !chatsList.children.length) {
@@ -6311,9 +6342,13 @@ async function loadAllChatsList(searchTerm = "", forceToken = null) {
   } catch (error) {
     console.error("buildGroupChatItems failed:", error);
   }
-  // Abort if a newer non-search list load started after us.
-  // Search calls pass forceToken so this check always passes for them.
-  if (loadToken !== chatListLoadToken) return;
+  // Background list updates may supersede one another, but they must not
+  // cancel an active search. Only a newer search may cancel a search render.
+  if (searchToken !== null) {
+    if (searchToken !== chatSearchToken) return;
+  } else if (loadToken !== chatListLoadToken) {
+    return;
+  }
   await refreshLockedChats();
   const allItems = [...directItems, ...groupItems].filter(
     (item) => item.type === "saved" || !isChatLocked(item.id, item.type),
@@ -6485,7 +6520,12 @@ async function loadAllChatsList(searchTerm = "", forceToken = null) {
       b.lastMessageTime - a.lastMessageTime || a.name.localeCompare(b.name)
     );
   });
-  renderChatListItems(items, chatsList);
+  if (searchToken !== null && searchToken !== chatSearchToken) return;
+  renderChatListItems(
+    items,
+    chatsList,
+    term ? "No matching chats, messages, or verified users found." : "",
+  );
 }
 
 async function searchMessagesInChats(chatItems = [], term = "") {
