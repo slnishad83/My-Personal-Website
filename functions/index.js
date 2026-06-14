@@ -310,6 +310,102 @@ exports.lookupVerifiedUserByEmail = onRequest(
   }
 );
 
+async function findVerifiedUserByEmail(email, callerUid) {
+  const candidates = new Map();
+  try {
+    const authUser = await admin.auth().getUserByEmail(email);
+    candidates.set(authUser.uid, authUser);
+  } catch (error) {
+    if (error?.code !== 'auth/user-not-found') throw error;
+  }
+
+  // Newly registered profiles can become visible in Firestore before an
+  // email lookup is immediately consistent in Firebase Authentication.
+  const profileMatches = await admin.firestore()
+    .collection('users')
+    .where('email', '==', email)
+    .limit(5)
+    .get();
+  for (const profileDoc of profileMatches.docs) {
+    if (candidates.has(profileDoc.id)) continue;
+    try {
+      const authUser = await admin.auth().getUser(profileDoc.id);
+      if (String(authUser.email || '').trim().toLowerCase() === email) {
+        candidates.set(authUser.uid, authUser);
+      }
+    } catch (error) {
+      if (error?.code !== 'auth/user-not-found') throw error;
+    }
+  }
+
+  for (const authUser of candidates.values()) {
+    if (
+      authUser.disabled ||
+      authUser.emailVerified !== true ||
+      authUser.uid === callerUid
+    ) {
+      continue;
+    }
+    const profileSnap = await admin.firestore().collection('users').doc(authUser.uid).get();
+    const profile = profileSnap.data() || {};
+    if (profile.isActive === false) continue;
+    return {
+      id: authUser.uid,
+      uid: authUser.uid,
+      email: authUser.email,
+      emailVerified: true,
+      pendingVerification: false,
+      isActive: true,
+      displayName: profile.displayName || authUser.displayName || email.split('@')[0],
+      avatar: profile.avatar || authUser.photoURL || '',
+      onlineStatus: profile.onlineStatus || 'offline'
+    };
+  }
+  return null;
+}
+
+exports.lookupVerifiedUserByEmailV2 = onRequest(
+  {
+    region: 'asia-south1',
+    invoker: 'public',
+    timeoutSeconds: 30
+  },
+  async (request, response) => {
+    setCorsHeaders(response);
+    response.set('Cache-Control', 'private, no-store');
+    if (request.method === 'OPTIONS') {
+      response.status(204).send('');
+      return;
+    }
+    if (request.method !== 'GET') {
+      response.status(405).json({ error: 'Method not allowed' });
+      return;
+    }
+    try {
+      const caller = await verifyFirebaseUser(request);
+      const email = String(request.query.email || '').trim().toLowerCase();
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/i.test(email)) {
+        response.status(400).json({ error: 'A valid email address is required' });
+        return;
+      }
+      const verifiedUser = await findVerifiedUserByEmail(email, caller.uid);
+      if (!verifiedUser) {
+        console.info('Verified user lookup completed without a discoverable match');
+        response.status(404).json({ error: 'Verified user not found' });
+        return;
+      }
+      console.info('Verified user lookup returned a discoverable match');
+      response.status(200).json(verifiedUser);
+    } catch (error) {
+      console.error('Verified user lookup failed', {
+        code: error?.code || 'unknown',
+        message: error?.message || 'Unknown error'
+      });
+      response.status(500).json({ error: 'User lookup is temporarily unavailable' });
+    }
+  }
+);
+
 function setCorsHeaders(response) {
   response.set('Access-Control-Allow-Origin', '*');
   response.set('Access-Control-Allow-Methods', 'GET, OPTIONS');

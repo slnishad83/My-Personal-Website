@@ -80,7 +80,7 @@ self.addEventListener('notificationclick', event => {
   );
 });
 
-const CACHE_NAME = 'team-chat-v170-search-reliability';
+const CACHE_NAME = 'team-chat-v171-discovery-header';
 const urlsToCache = [
   'index.html',
   'login.html',

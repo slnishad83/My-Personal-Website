@@ -9764,6 +9764,72 @@ body.dark .quick-forward-btn {
   color: #aebac1;
 }
 
+/* Compact desktop identity and install action. */
+@media (min-width: 901px) {
+  .sidebar-header {
+    gap: 8px;
+    padding-inline: 12px;
+  }
+
+  .user-info {
+    gap: 10px;
+    margin-right: 0;
+  }
+
+  .user-name {
+    max-width: none;
+  }
+
+  .sidebar-actions {
+    gap: 2px;
+  }
+
+  .install-app-btn {
+    min-width: 78px;
+    height: 36px;
+    padding: 0 11px;
+    gap: 6px;
+    border: 1px solid rgba(0, 128, 105, 0.22);
+    border-radius: 12px;
+    background: rgba(0, 128, 105, 0.08);
+    color: #00745f;
+    box-shadow: none;
+    font-size: 12px;
+    font-weight: 750;
+    transition:
+      background 150ms ease,
+      border-color 150ms ease,
+      transform 150ms ease;
+  }
+
+  .install-app-btn:hover,
+  .install-app-btn:focus-visible {
+    border-color: rgba(0, 128, 105, 0.38);
+    background: rgba(0, 128, 105, 0.14);
+    color: #006653;
+    transform: translateY(-1px);
+  }
+
+  .install-app-icon,
+  .install-app-icon svg {
+    width: 16px;
+    height: 16px;
+  }
+
+  body.dark .install-app-btn {
+    border-color: rgba(0, 168, 132, 0.3);
+    background: rgba(0, 168, 132, 0.12);
+    color: #59d9be;
+  }
+
+  body.dark .install-app-btn:hover,
+  body.dark .install-app-btn:focus-visible {
+    border-color: rgba(0, 168, 132, 0.48);
+    background: rgba(0, 168, 132, 0.2);
+    color: #78e4cd;
+  }
+}
+
 @media (max-width: 900px) {
   .chat-header {
     min-height: calc(70px + var(--sat, 0px)) !important;

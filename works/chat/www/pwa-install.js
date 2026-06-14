@@ -26,7 +26,7 @@
     "package=com.nishad.myteamchat;" +
     `S.browser_fallback_url=${encodeURIComponent(APK_URL)};` +
     "end";
-  const WEB_APP_LABEL = isIos ? "Add App to Home Screen" : "Install Web App";
+  const WEB_APP_LABEL = isIos ? "Add to Home" : "Get app";
 
   function isStandaloneApp() {
     return (
@@ -92,7 +92,7 @@
 
     if (!serviceWorkerReadyPromise) {
       serviceWorkerReadyPromise = navigator.serviceWorker
-        .register("sw.js?v=169", { scope: "./" })
+        .register("sw.js?v=171", { scope: "./" })
         .then((registration) => {
           registration.update?.().catch(() => {});
           return navigator.serviceWorker.ready;

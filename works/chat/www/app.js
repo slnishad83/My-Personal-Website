@@ -71,7 +71,7 @@ const CLOUDINARY_UPLOAD_PRESET = "chat_app_uploads";
 const TURN_CREDENTIALS_ENDPOINT =
   "https://us-central1-my-team-chat-2255.cloudfunctions.net/getTurnCredentials";
 const VERIFIED_USER_LOOKUP_ENDPOINT =
-  "https://us-central1-my-team-chat-2255.cloudfunctions.net/lookupVerifiedUserByEmail";
+  "https://asia-south1-my-team-chat-2255.cloudfunctions.net/lookupVerifiedUserByEmailV2";
 const GROUP_ACCESS_REPAIR_ENDPOINT =
   "https://us-central1-my-team-chat-2255.cloudfunctions.net/repairGroupAccessMetadata";
 const AVATAR_MAX_BYTES = 5 * 1024 * 1024;
@@ -5346,7 +5346,7 @@ function isValidEmailAddress(value = "") {
   return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/i.test(String(value || "").trim());
 }
 
-async function lookupVerifiedUserByEmail(email = "", timeoutMs = 8000) {
+async function lookupVerifiedUserByEmail(email = "", timeoutMs = 20000) {
   if (!currentUser || !isValidEmailAddress(email)) return null;
   const controller = new AbortController();
   const timeoutId = window.setTimeout(() => controller.abort(), timeoutMs);
@@ -6254,21 +6254,22 @@ async function searchUsersRealtime(searchTerm) {
 
   try {
     const looksLikeEmail = isValidEmailAddress(term);
-    if (looksLikeEmail) {
-      await refreshSearchDirectoryWithinTimeout();
-      const verifiedUser = await lookupVerifiedUserByEmail(term);
-      if (
-        verifiedUser &&
-        !allUsers.some((user) => user.id === verifiedUser.id)
-      ) {
-        allUsers = [...allUsers, verifiedUser];
-      }
-    } else {
-      await refreshSearchDirectoryWithinTimeout();
-    }
+    const verifiedLookupPromise = looksLikeEmail
+      ? lookupVerifiedUserByEmail(term)
+      : Promise.resolve(null);
+    await refreshSearchDirectoryWithinTimeout();
 
     if (searchToken !== chatSearchToken) return;
 
+    await loadAllChatsList(term, searchToken);
+
+    // Existing chats/messages appear first. Exact-email discovery is added
+    // when the verified account lookup finishes, without blocking search.
+    const verifiedUser = await verifiedLookupPromise;
+    if (searchToken !== chatSearchToken || !verifiedUser) return;
+    if (!allUsers.some((user) => user.id === verifiedUser.id)) {
+      allUsers = [...allUsers, verifiedUser];
+    }
     await loadAllChatsList(term, searchToken);
   } catch (error) {
     console.warn("Search failed:", error);
@@ -6438,31 +6439,6 @@ async function loadAllChatsList(searchTerm = "", searchToken = null) {
           isMuted: false,
           onlineStatus: user.onlineStatus || "offline",
           rawUser: user, // renamed tracker internally to completely avoid property conflicts
-          lastMessageTime: new Date(0),
-        });
-      }
-    }
-
-    // Auth-backed fallback: reveal only a verified registered user for a full email.
-    if (looksLikeEmailSearch && userMatches.length === 0) {
-      const u = await lookupVerifiedUserByEmail(term);
-      if (u && isSearchableUser(u) && !visibleUserIds.has(u.id)) {
-        const requestState = await getContactRequestState(u.id);
-        userMatches.push({
-          id: `user_${u.id}`,
-          type: "user",
-          name: u.displayName || u.email || "User",
-          avatar: u.avatar
-            ? `<img src="${u.avatar}">`
-            : escapeHtml((u.displayName || "?")[0].toUpperCase()),
-          preview: u.email || "Tap to connect",
-          requestState,
-          unreadCount: 0,
-          isFavorite: false,
-          isPinned: false,
-          isMuted: false,
-          onlineStatus: u.onlineStatus || "offline",
-          rawUser: u,
           lastMessageTime: new Date(0),
         });
       }
