@@ -153,6 +153,7 @@ let callCandidatesUnsubscribe = null;
 let currentCallType = "voice";
 let micMuted = false;
 let cameraOff = false;
+let speakerOn = false;
 let preferredCameraFacingMode = "user";
 let pendingRemoteIceCandidates = [];
 let activeCallMode = null;
@@ -183,6 +184,9 @@ let videoRecorder = null;
 let videoChunks = [];
 let isVideoRecording = false;
 let videoRecordingStartTime = null;
+let videoRecordingTimer = null;
+let pendingRecordedMedia = null;
+let activeVoicePlayback = null;
 let callMiniBar = null;
 let callNetworkFailTimer = null;
 let callHistoryLoadToken = 0;
@@ -498,6 +502,8 @@ function getAttachmentLabel(attachment = {}) {
   if (attachment.type === "image") return "Image";
   if (attachment.type === "gif") return "GIF";
   if (attachment.type === "voice") return "Voice message";
+  if (attachment.type === "audio") return "Audio file";
+  if (attachment.type === "video") return "Video";
   const ext = getFileExtension(attachment.filename, attachment.url);
   if (ext === "PDF") return "PDF document";
   if (["DOC", "DOCX"].includes(ext)) return "Word document";
@@ -532,6 +538,10 @@ function renderAttachment(attachment = {}) {
   if (attachment.type === "voice") {
     const duration = Number(attachment.duration) || 0;
     return `<div class="voice-message"><button class="voice-play-btn" data-url="${url}" type="button">Play</button><div class="voice-waveform"></div><span class="voice-duration">${Math.floor(duration / 60)}:${(duration % 60).toString().padStart(2, "0")}</span></div>`;
+  }
+
+  if (attachment.type === "audio") {
+    return `<div class="message-attachment audio-attachment"><audio src="${url}" controls preload="metadata"></audio></div>`;
   }
 
   const ext = getFileExtension(attachment.filename, attachment.url);
@@ -1876,9 +1886,36 @@ async function votePoll(messageId, optionIndex) {
 
 function bindRenderedMessageActions() {
   document.querySelectorAll(".voice-play-btn").forEach((btn) => {
+    if (btn.dataset.voiceBound) return;
+    btn.dataset.voiceBound = "true";
     btn.addEventListener("click", () => {
+      if (activeVoicePlayback?.button === btn) {
+        if (activeVoicePlayback.audio.paused) {
+          activeVoicePlayback.audio.play().catch(() => {
+            showToast("Could not play audio message", "error");
+          });
+        } else {
+          activeVoicePlayback.audio.pause();
+        }
+        return;
+      }
+      if (activeVoicePlayback) {
+        activeVoicePlayback.audio.pause();
+        activeVoicePlayback.button.textContent = "Play";
+      }
       const audio = new Audio(btn.dataset.url);
-      audio.play();
+      activeVoicePlayback = { audio, button: btn };
+      audio.addEventListener("play", () => (btn.textContent = "Pause"));
+      audio.addEventListener("pause", () => (btn.textContent = "Play"));
+      audio.addEventListener("ended", () => {
+        btn.textContent = "Play";
+        if (activeVoicePlayback?.audio === audio) activeVoicePlayback = null;
+      });
+      audio.play().catch(() => {
+        btn.textContent = "Play";
+        activeVoicePlayback = null;
+        showToast("Could not play audio message", "error");
+      });
     });
   });
   document.querySelectorAll(".poll-option").forEach((btn) => {
@@ -2443,23 +2480,31 @@ function setAttachmentPreview() {
     return;
   }
   const isImage = currentAttachment.type === "image";
+  const isVideo = currentAttachment.type === "video";
+  const isAudio = ["audio", "voice"].includes(currentAttachment.type);
   const attachmentType = isImage
     ? "Image attachment"
     : getAttachmentLabel(currentAttachment);
   preview.style.display = "flex";
   preview.innerHTML = `
-    ${isImage ? `<img src="${currentAttachment.url}" alt="Attachment preview">` : '<span style="font-size:24px">📎</span>'}
+    ${
+      isImage
+        ? `<img src="${currentAttachment.url}" alt="Attachment preview">`
+        : isVideo
+          ? `<video src="${currentAttachment.url}" controls playsinline preload="metadata"></video>`
+          : isAudio
+            ? `<audio src="${currentAttachment.url}" controls preload="metadata"></audio>`
+            : '<span class="attachment-file-icon"></span>'
+    }
     <div style="min-width:0">
       <strong>${escapeHtml(currentAttachment.filename || (isImage ? "Image ready" : "Document ready"))}</strong>
       <div class="list-preview">${escapeHtml(attachmentType)}${currentAttachment.size ? ` · ${formatBytes(currentAttachment.size)}` : ""}</div>
     </div>
     <button type="button" id="clearAttachmentBtn">Remove</button>
   `;
-  if (!isImage) {
-    const icon = preview.querySelector("span[style]");
+  if (!isImage && !isVideo && !isAudio) {
+    const icon = preview.querySelector(".attachment-file-icon");
     if (icon) {
-      icon.removeAttribute("style");
-      icon.className = "attachment-file-icon";
       icon.textContent = getFileExtension(
         currentAttachment.filename,
         currentAttachment.url,
@@ -2525,6 +2570,8 @@ function setCallStatus(status) {
 
 function updateCallControlState() {
   const muteBtn = document.getElementById("muteMicBtn");
+  const speakerBtn = document.getElementById("speakerCallBtn");
+  const upgradeVideoBtn = document.getElementById("upgradeVideoCallBtn");
   const cameraBtn = document.getElementById("toggleCameraBtn");
   const switchCameraBtn = document.getElementById("switchCameraBtn");
   const addParticipantBtn = document.getElementById("addCallParticipantBtn");
@@ -2535,6 +2582,20 @@ function updateCallControlState() {
     muteBtn.title = micMuted ? "Turn microphone on" : "Mute microphone";
     muteBtn.setAttribute("aria-label", muteBtn.title);
     muteBtn.dataset.controlLabel = micMuted ? "Muted" : "Unmuted";
+  }
+
+  if (speakerBtn) {
+    speakerBtn.classList.toggle("active", speakerOn);
+    speakerBtn.title = speakerOn ? "Use earpiece or default output" : "Use speaker";
+    speakerBtn.setAttribute("aria-label", speakerBtn.title);
+    speakerBtn.dataset.controlLabel = speakerOn ? "SPEAKER" : "OUTPUT";
+  }
+
+  if (upgradeVideoBtn) {
+    upgradeVideoBtn.style.display =
+      activeCallMode === "active" && currentCallType === "voice"
+        ? "inline-flex"
+        : "none";
   }
 
   if (cameraBtn) {
@@ -3354,6 +3415,8 @@ function setCallUi({
     mode === "incoming" ? "none" : "inline-flex";
   document.getElementById("muteMicBtn").style.display =
     mode === "incoming" ? "none" : "inline-flex";
+  document.getElementById("speakerCallBtn").style.display =
+    mode === "incoming" ? "none" : "inline-flex";
   const addParticipantBtn = document.getElementById("addCallParticipantBtn");
   if (addParticipantBtn) {
     addParticipantBtn.style.display =
@@ -3361,6 +3424,11 @@ function setCallUi({
   }
   document.getElementById("toggleCameraBtn").style.display =
     mode !== "incoming" && type === "video" ? "inline-flex" : "none";
+  const upgradeVideoBtn = document.getElementById("upgradeVideoCallBtn");
+  if (upgradeVideoBtn) {
+    upgradeVideoBtn.style.display =
+      mode === "active" && type === "voice" ? "inline-flex" : "none";
+  }
   const switchCameraBtn = document.getElementById("switchCameraBtn");
   if (switchCameraBtn) {
     switchCameraBtn.style.display =
@@ -3780,6 +3848,7 @@ function cleanupCallUi() {
   lastHandledRenegotiationSdp = "";
   micMuted = false;
   cameraOff = false;
+  speakerOn = false;
   pendingRemoteIceCandidates = [];
   updateCallControlState();
 }
@@ -5140,6 +5209,7 @@ async function openDirectChatFromNotification(chatUserId) {
     localStorage.setItem("pendingNotificationChatUserId", chatUserId);
     return;
   }
+
   localStorage.removeItem("pendingNotificationChatUserId");
   await refreshAllUsersOnce();
   const userDoc = await db.collection("users").doc(chatUserId).get();
@@ -5151,6 +5221,45 @@ async function openDirectChatFromNotification(chatUserId) {
     return;
   }
   await startDirectChat(user);
+}
+
+async function setCallSpeakerEnabled(enabled) {
+  const next = Boolean(enabled);
+  try {
+    const nativePlugin = window.Capacitor?.Plugins?.AppPermissions;
+    if (isNativeAndroidApp && nativePlugin?.setSpeakerphone) {
+      await nativePlugin.setSpeakerphone({ enabled: next });
+      speakerOn = next;
+    } else {
+      const outputs = await navigator.mediaDevices?.enumerateDevices?.();
+      const audioOutputs = (outputs || []).filter((device) => device.kind === "audiooutput");
+      const speaker =
+        audioOutputs.find((device) => /speaker/i.test(device.label || "")) ||
+        audioOutputs.find((device) => device.deviceId === "default");
+      const earpiece =
+        audioOutputs.find((device) => /earpiece|communications/i.test(device.label || "")) ||
+        audioOutputs.find((device) => device.deviceId === "default");
+      const target = next ? speaker : earpiece;
+      const sinkTargets = [
+        document.getElementById("remoteAudio"),
+        document.getElementById("remoteVideo"),
+      ].filter((element) => typeof element?.setSinkId === "function");
+      if (!target || !sinkTargets.length) {
+        showCallControlHint("Audio routing is controlled by this device");
+        return;
+      }
+      await Promise.all(sinkTargets.map((element) => element.setSinkId(target.deviceId)));
+      speakerOn = next;
+    }
+    updateCallControlState();
+    flashCallControlLabel(
+      document.getElementById("speakerCallBtn"),
+      speakerOn ? "SPEAKER" : "DEFAULT",
+    );
+  } catch (error) {
+    console.warn("Could not change call audio route:", error);
+    showCallControlHint("Audio routing is controlled by this device");
+  }
 }
 
 async function openGroupChatFromNotification(groupId) {
@@ -5949,7 +6058,9 @@ async function uploadDocument(file) {
 
 function getMediaDuration(file) {
   return new Promise((resolve, reject) => {
-    const media = document.createElement("video");
+    const media = document.createElement(
+      file?.type?.startsWith("audio/") ? "audio" : "video",
+    );
     const url = URL.createObjectURL(file);
     media.preload = "metadata";
     media.onloadedmetadata = () => {
@@ -5959,10 +6070,86 @@ function getMediaDuration(file) {
     };
     media.onerror = () => {
       URL.revokeObjectURL(url);
-      reject(new Error("Could not read video duration"));
+      reject(new Error("Could not read media duration"));
     };
     media.src = url;
   });
+}
+
+function closeRecordedMediaPreview() {
+  if (pendingRecordedMedia?.previewUrl) {
+    URL.revokeObjectURL(pendingRecordedMedia.previewUrl);
+  }
+  pendingRecordedMedia = null;
+  const modal = document.getElementById("recordedMediaPreviewModal");
+  if (modal) modal.style.display = "none";
+  const body = document.getElementById("recordedMediaPreviewBody");
+  if (body) body.innerHTML = "";
+  const caption = document.getElementById("recordedMediaCaption");
+  if (caption) caption.value = "";
+  const status = document.getElementById("recordedMediaUploadStatus");
+  if (status) status.textContent = "";
+}
+
+function showRecordedMediaPreview(blob, type, duration) {
+  closeRecordedMediaPreview();
+  const previewUrl = URL.createObjectURL(blob);
+  pendingRecordedMedia = { blob, type, duration, previewUrl };
+  document.getElementById("recordedMediaPreviewTitle").textContent =
+    type === "voice" ? "Preview audio message" : "Preview video message";
+  document.getElementById("recordedMediaPreviewBody").innerHTML =
+    type === "voice"
+      ? `<audio src="${previewUrl}" controls preload="metadata"></audio>`
+      : `<video src="${previewUrl}" controls playsinline preload="metadata"></video>`;
+  const caption = document.getElementById("recordedMediaCaption");
+  if (caption) caption.style.display = type === "video" ? "block" : "none";
+  document.getElementById("recordedMediaPreviewModal").style.display = "flex";
+}
+
+async function uploadRecordedMedia(blob) {
+  const formData = new FormData();
+  formData.append("file", blob);
+  formData.append("upload_preset", CLOUDINARY_UPLOAD_PRESET);
+  formData.append("resource_type", "video");
+  const response = await fetch(
+    `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/video/upload`,
+    { method: "POST", body: formData },
+  );
+  const data = await response.json();
+  if (!data.secure_url) throw new Error("Recorded media upload failed");
+  return data.secure_url;
+}
+
+async function sendPendingRecordedMedia() {
+  if (!pendingRecordedMedia || !currentChat) return;
+  const sendBtn = document.getElementById("sendRecordedMediaBtn");
+  const cancelBtn = document.getElementById("cancelRecordedMediaBtn");
+  const status = document.getElementById("recordedMediaUploadStatus");
+  sendBtn.disabled = true;
+  cancelBtn.disabled = true;
+  if (status) status.textContent = "Uploading recording...";
+  try {
+    const media = pendingRecordedMedia;
+    const url = await uploadRecordedMedia(media.blob);
+    currentAttachment = {
+      type: media.type,
+      url,
+      duration: media.duration,
+      filename: media.type === "voice" ? "Voice message" : "Video message",
+      size: media.blob.size,
+    };
+    const caption = document.getElementById("recordedMediaCaption")?.value.trim() || "";
+    if (caption) document.getElementById("messageInput").value = caption;
+    closeRecordedMediaPreview();
+    await sendMessage();
+  } catch (error) {
+    console.warn("Could not send recorded media:", error);
+    if (status) status.textContent = "Upload failed. Tap Send to retry.";
+    showToast("Recorded message upload failed", "error");
+  } finally {
+    sendBtn.disabled = false;
+    cancelBtn.disabled = false;
+  }
 }
 
 // ========================================================================
@@ -7563,24 +7750,9 @@ async function startVoiceRecording() {
       const audioBlob = new Blob(audioChunks, {
         type: mimeType === "audio/mp4" ? "audio/mp4" : "audio/webm",
       });
-      const formData = new FormData();
-      formData.append("file", audioBlob);
-      formData.append("upload_preset", CLOUDINARY_UPLOAD_PRESET);
-      formData.append("resource_type", "video");
-      try {
-        const response = await fetch(
-          `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/video/upload`,
-          { method: "POST", body: formData },
-        );
-        const data = await response.json();
-        if (data.secure_url) {
-          const duration = Math.floor((Date.now() - recordingStartTime) / 1000);
-          await sendVoiceMessage(data.secure_url, duration);
-        }
-      } catch (error) {
-        showToast("Failed to send voice message", "error");
-      }
+      const duration = Math.floor((Date.now() - recordingStartTime) / 1000);
       stream.getTracks().forEach((track) => track.stop());
+      if (audioBlob.size) showRecordedMediaPreview(audioBlob, "voice", duration);
     };
 
     mediaRecorder.start(100);
@@ -7617,6 +7789,7 @@ function cancelVoiceRecording() {
   if (mediaRecorder && isRecording) {
     mediaRecorder.onstop = () => {};
     mediaRecorder.stop();
+    mediaRecorder.stream?.getTracks().forEach((track) => track.stop());
     isRecording = false;
     clearInterval(recordingTimer);
     document
@@ -12001,12 +12174,16 @@ async function handleFileUpload(file) {
   try {
     const isImage = file.type.startsWith("image/");
     const isVideo = file.type.startsWith("video/");
+    const isAudio = file.type.startsWith("audio/");
     const url = isImage ? await uploadToCloudinary(file) : await uploadDocument(file);
+    const duration =
+      isVideo || isAudio ? await getMediaDuration(file).catch(() => 0) : 0;
     currentAttachment = {
-      type: isImage ? "image" : isVideo ? "video" : "document",
+      type: isImage ? "image" : isVideo ? "video" : isAudio ? "audio" : "document",
       url,
       filename: file.name,
       size: file.size,
+      duration,
     };
     setAttachmentPreview();
   } catch (e) {
@@ -13429,7 +13606,7 @@ function triggerDocumentPicker() {
   if (!input) return;
   input.removeAttribute("capture");
   input.accept =
-    "application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/plain";
+    "audio/*,video/*,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/plain,.csv,.zip,.rar";
   input.click();
 }
 
@@ -15103,6 +15280,15 @@ async function init() {
   document
     .getElementById("cancelRecordingBtn")
     ?.addEventListener("click", cancelVoiceRecording);
+  document
+    .getElementById("sendRecordedMediaBtn")
+    ?.addEventListener("click", sendPendingRecordedMedia);
+  document
+    .getElementById("cancelRecordedMediaBtn")
+    ?.addEventListener("click", closeRecordedMediaPreview);
+  document
+    .querySelectorAll(".closeRecordedMediaPreview")
+    .forEach((btn) => btn.addEventListener("click", closeRecordedMediaPreview));
   document.getElementById("emojiBtn")?.addEventListener("click", (e) => {
     e.preventDefault();
     e.stopPropagation();
@@ -16788,6 +16974,8 @@ function showCallControlHint(message) {
 function setupCallControlButtons() {
   const muteBtn = document.getElementById("muteMicBtn");
   const cameraBtn = document.getElementById("toggleCameraBtn");
+  const speakerBtn = document.getElementById("speakerCallBtn");
+  const upgradeVideoBtn = document.getElementById("upgradeVideoCallBtn");
 
   if (muteBtn && muteBtn.dataset.ready !== "true") {
     muteBtn.dataset.ready = "true";
@@ -16830,6 +17018,20 @@ function setupCallControlButtons() {
   const pipBtn = document.getElementById("pipBtn");
   if (pipBtn) {
     pipBtn.style.display = currentCallType === "video" ? "inline-flex" : "none";
+  }
+
+  if (speakerBtn && speakerBtn.dataset.ready !== "true") {
+    speakerBtn.dataset.ready = "true";
+    speakerBtn.addEventListener("click", () => setCallSpeakerEnabled(!speakerOn));
+  }
+
+  if (upgradeVideoBtn && upgradeVideoBtn.dataset.ready !== "true") {
+    upgradeVideoBtn.dataset.ready = "true";
+    upgradeVideoBtn.addEventListener("click", () => {
+      upgradeVoiceCallToVideo().catch(() =>
+        showCallControlHint("Could not switch to video"),
+      );
+    });
   }
 }
 
@@ -18782,6 +18984,11 @@ async function stopScreenShare() {
 
 async function startVideoRecording() {
   if (isVideoRecording) return;
+  if (isNativeAndroidApp) {
+    const hasCamera = await ensureNativePermission("camera");
+    const hasMic = await ensureNativePermission("microphone");
+    if (!hasCamera || !hasMic) return;
+  }
   if (!navigator.mediaDevices || !window.MediaRecorder) {
     showToast("Video recording not supported", "error");
     return;
@@ -18801,30 +19008,16 @@ async function startVideoRecording() {
     };
     videoRecorder.onstop = async () => {
       const videoBlob = new Blob(videoChunks, { type: mimeType });
-      const formData = new FormData();
-      formData.append("file", videoBlob);
-      formData.append("upload_preset", CLOUDINARY_UPLOAD_PRESET);
-      formData.append("resource_type", "video");
-      try {
-        const response = await fetch(
-          `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/video/upload`,
-          { method: "POST", body: formData },
-        );
-        const data = await response.json();
-        if (data.secure_url) {
-          const duration = Math.floor(
-            (Date.now() - videoRecordingStartTime) / 1000,
-          );
-          await sendVideoMessage(data.secure_url, duration);
-        }
-      } catch (error) {
-        showToast("Failed to send video message", "error");
-      }
+      const duration = Math.floor(
+        (Date.now() - videoRecordingStartTime) / 1000,
+      );
       stream.getTracks().forEach((track) => track.stop());
+      if (videoBlob.size) showRecordedMediaPreview(videoBlob, "video", duration);
     };
     videoRecorder.start(100);
     isVideoRecording = true;
     videoRecordingStartTime = Date.now();
+    videoRecordingTimer = setTimeout(stopVideoRecording, 60_000);
     showToast("Recording video...");
   } catch (error) {
     showToast("Camera access denied", "error");
@@ -18837,6 +19030,8 @@ function stopVideoRecording() {
     isVideoRecording &&
     videoRecorder.state === "recording"
   ) {
+    clearTimeout(videoRecordingTimer);
+    videoRecordingTimer = null;
     videoRecorder.stop();
     isVideoRecording = false;
     showToast("Video recording stopped");
@@ -19834,6 +20029,7 @@ async function loadCommunitiesList(searchTerm = "") {
       loadCommunitiesList(document.getElementById("searchInput")?.value || ""),
     );
   }
+
 }
 
 async function addGroupToCommunity(communityId, groupId) {

@@ -71,7 +71,7 @@ self.addEventListener('notificationclick', event => {
   );
 });
 
-const CACHE_NAME = 'team-chat-v165-tabs-audit';
+const CACHE_NAME = 'team-chat-v166-call-media-upgrade';
 const urlsToCache = [
   'index.html',
   'login.html',

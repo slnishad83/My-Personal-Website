@@ -1,7 +1,9 @@
 package com.nishad.myteamchat;
 
 import android.Manifest;
+import android.content.Context;
 import android.content.Intent;
+import android.media.AudioManager;
 import android.net.Uri;
 import android.provider.Settings;
 import com.getcapacitor.JSObject;
@@ -82,5 +84,22 @@ public class AppPermissionsPlugin extends Plugin {
         } catch (Exception e) {
             call.reject("Could not open settings: " + e.getMessage());
         }
+    }
+
+    @PluginMethod
+    public void setSpeakerphone(PluginCall call) {
+        Boolean enabledValue = call.getBoolean("enabled");
+        boolean enabled = enabledValue != null && enabledValue;
+        AudioManager audioManager =
+            (AudioManager) getContext().getSystemService(Context.AUDIO_SERVICE);
+        if (audioManager == null) {
+            call.reject("Audio routing is unavailable");
+            return;
+        }
+        audioManager.setMode(AudioManager.MODE_IN_COMMUNICATION);
+        audioManager.setSpeakerphoneOn(enabled);
+        JSObject response = new JSObject();
+        response.put("enabled", enabled);
+        call.resolve(response);
     }
 }
