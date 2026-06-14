@@ -636,13 +636,20 @@ function renderLocationMessage(msg = {}) {
   const mapsUrl = `https://maps.google.com/?q=${lat},${lng}`;
   const osmUrl = `https://www.openstreetmap.org/?mlat=${lat}&mlon=${lng}#map=16/${lat}/${lng}`;
   const embedUrl = `https://www.openstreetmap.org/export/embed.html?bbox=${longitude - 0.01}%2C${latitude - 0.01}%2C${longitude + 0.01}%2C${latitude + 0.01}&layer=mapnik&marker=${latitude}%2C${longitude}`;
+  const accuracy = Number(location.accuracy || 0);
+  const liveExpiry =
+    location.expiresAt?.toMillis?.() ||
+    (location.expiresAt ? new Date(location.expiresAt).getTime() : 0);
+  const isLive = location.isLive && (!liveExpiry || liveExpiry > Date.now());
+  const liveLabel = isLive ? "Live location" : "Shared location";
 
   return `
     <div class="location-card">
       <iframe src="${escapeHtml(embedUrl)}" loading="lazy" title="Shared location"></iframe>
       <div class="location-card-body">
-        <strong>Shared location</strong>
+        <strong>${liveLabel}</strong>
         <span>${escapeHtml(lat)}, ${escapeHtml(lng)}</span>
+        ${accuracy ? `<span>Accuracy: about ${Math.round(accuracy)} m</span>` : ""}
         <div class="location-card-actions">
           <a href="${escapeHtml(mapsUrl)}" target="_blank" rel="noopener">Google Maps</a>
           <a href="${escapeHtml(osmUrl)}" target="_blank" rel="noopener">OpenStreetMap</a>
@@ -4246,6 +4253,18 @@ async function joinGroupCallRoom(callId, callData = {}, mode = "active") {
       .doc(callId)
       .onSnapshot((snapshot) => {
         const data = snapshot.data() || {};
+        if (activeCall?.fromUserId === currentUser.uid) {
+          const busyNames = Object.entries(data.participantStates || {})
+            .filter(([id, state]) => id !== currentUser.uid && state === "busy")
+            .map(([id]) => data.participantNames?.[id] || "A participant");
+          const notified = new Set(activeCall.busyNotified || []);
+          busyNames.forEach((name) => {
+            if (notified.has(name)) return;
+            notified.add(name);
+            showToast(`${name} is currently in another call`, "error");
+          });
+          activeCall.busyNotified = [...notified];
+        }
         if (["ended", "cancelled", "failed", "rejected", "declined"].includes(data.status))
           cleanupCallUi();
       });
@@ -4568,8 +4587,11 @@ async function startCall(type = "voice") {
       if (data.status === "missed") {
         showToast("Call missed", "error");
       }
+      if (data.status === "busy") {
+        showToast("This person is currently in another call", "error");
+      }
       if (
-        ["ended", "cancelled", "rejected", "declined", "missed", "failed"].includes(
+        ["ended", "cancelled", "rejected", "declined", "missed", "failed", "busy"].includes(
           data.status,
         )
       )
@@ -4668,7 +4690,7 @@ async function acceptIncomingCall() {
         if (!callStartedAt) startCallDuration();
       }
       if (
-        ["ended", "cancelled", "rejected", "declined", "missed", "failed"].includes(
+        ["ended", "cancelled", "rejected", "declined", "missed", "failed", "busy"].includes(
           snapshot.data()?.status,
         )
       )
@@ -4851,8 +4873,21 @@ function listenForIncomingCalls() {
           activeCall &&
           activeCall.id !== call.id &&
           activeCallMode !== "incoming"
-        )
+        ) {
+          db.collection("calls")
+            .doc(call.id)
+            .set(
+              {
+                status: "busy",
+                busyBy: currentUser.uid,
+                endedAt: firebase.firestore.FieldValue.serverTimestamp(),
+              },
+              { merge: true },
+            )
+            .catch((error) => console.warn("Could not mark call busy:", error));
+          showToast(`${call.data().fromUserName || "Someone"} is trying to call. You are already in another call.`);
           return;
+        }
 
         if (!activeCall || activeCall.id !== call.id) {
           activeCall = { id: call.id, ...call.data() };
@@ -4880,7 +4915,7 @@ function listenForIncomingCalls() {
             .onSnapshot((callSnapshot) => {
               const status = callSnapshot.data()?.status;
               if (
-                ["ended", "cancelled", "rejected", "declined", "missed", "failed"].includes(
+                ["ended", "cancelled", "rejected", "declined", "missed", "failed", "busy"].includes(
                   status,
                 )
               ) {
@@ -4905,7 +4940,7 @@ function listenForIncomingCalls() {
             data.groupCall === true &&
             data.status === "ringing" &&
             data.fromUserId !== currentUser.uid &&
-            !["joined", "rejected", "left"].includes(
+            !["joined", "rejected", "left", "busy"].includes(
               data.participantStates?.[currentUser.uid],
             )
           );
@@ -4921,8 +4956,23 @@ function listenForIncomingCalls() {
           activeCall &&
           activeCall.id !== call.id &&
           activeCallMode !== "incoming"
-        )
+        ) {
+          db.collection("calls")
+            .doc(call.id)
+            .set(
+              {
+                [`participantStates.${currentUser.uid}`]: "busy",
+                [`busyAt.${currentUser.uid}`]:
+                  firebase.firestore.FieldValue.serverTimestamp(),
+              },
+              { merge: true },
+            )
+            .catch((error) =>
+              console.warn("Could not mark group call participant busy:", error),
+            );
+          showToast(`${call.data().fromUserName || "Someone"} is trying to call. You are already in another call.`);
           return;
+        }
         if (!activeCall || activeCall.id !== call.id) {
           activeCall = { id: call.id, ...call.data(), groupCall: true };
           currentCallType = activeCall.type || "voice";
@@ -5853,6 +5903,24 @@ async function uploadDocument(file) {
         else reject("Upload failed");
       })
       .catch(reject);
+  });
+}
+
+function getMediaDuration(file) {
+  return new Promise((resolve, reject) => {
+    const media = document.createElement("video");
+    const url = URL.createObjectURL(file);
+    media.preload = "metadata";
+    media.onloadedmetadata = () => {
+      const duration = Number(media.duration || 0);
+      URL.revokeObjectURL(url);
+      resolve(duration);
+    };
+    media.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error("Could not read video duration"));
+    };
+    media.src = url;
   });
 }
 
@@ -10440,9 +10508,17 @@ async function renderStatusViewerFrame() {
   document.getElementById("statusViewerAvatar").innerHTML = status.userAvatar
     ? `<img src="${status.userAvatar}">`
     : escapeHtml((status.userName || "?")[0]);
-  document.getElementById("statusViewerBody").innerHTML = status.image
-    ? `<img src="${status.image.url}">`
-    : `<div class="status-viewer-text">${escapeHtml(status.text)}</div>`;
+  const statusMedia = status.image
+    ? status.image.type === "video"
+      ? `<video src="${escapeHtml(status.image.url)}" autoplay muted playsinline controls></video>`
+      : `<img src="${escapeHtml(status.image.url)}" alt="">`
+    : "";
+  const statusCaption = status.text
+    ? `<div class="status-viewer-text status-viewer-caption">${escapeHtml(status.text)}</div>`
+    : "";
+  document.getElementById("statusViewerBody").innerHTML = statusMedia
+    ? `${statusMedia}${statusCaption}`
+    : statusCaption || '<div class="status-viewer-text">Status unavailable</div>';
   document.getElementById("statusViewerSeen").textContent =
     status.userId === currentUser.uid
       ? `${Object.keys(status.viewedBy || {}).length} viewed`
@@ -10453,7 +10529,7 @@ async function renderStatusViewerFrame() {
   if (nextBtn)
     nextBtn.disabled = activeStatusIndex >= activeStatusSet.length - 1;
   modal.style.display = "flex";
-  const nextDelay = status.image ? 8000 : 5000;
+  const nextDelay = status.image?.type === "video" ? 15000 : status.image ? 8000 : 5000;
   if (activeStatusIndex < activeStatusSet.length - 1) {
     statusAutoAdvanceTimer = setTimeout(() => {
       moveStatusViewer(1).catch(() => {});
@@ -11115,6 +11191,7 @@ function bindSwipeToReply(messageDiv, messageData) {
 
   const resetSwipe = () => {
     messageDiv.classList.remove("reply-swipe-active");
+    messageDiv.classList.remove("delete-swipe-active");
     messageDiv.style.removeProperty("--reply-swipe-x");
     startX = null;
     startY = null;
@@ -11148,11 +11225,12 @@ function bindSwipeToReply(messageDiv, messageData) {
     }
     if (gestureLocked) {
       event.preventDefault();
-      const pull = Math.min(Math.max(dx, 0), 86);
+      const pull = Math.max(-86, Math.min(dx, 86));
       messageDiv.style.setProperty("--reply-swipe-x", `${pull}px`);
     }
-    moved = dx > 18 && dy < 56;
-    messageDiv.classList.toggle("reply-swipe-active", moved);
+    moved = absDx > 18 && dy < 56;
+    messageDiv.classList.toggle("reply-swipe-active", moved && dx > 0);
+    messageDiv.classList.toggle("delete-swipe-active", moved && dx < 0);
   });
   messageDiv.addEventListener("pointerup", (event) => {
     if (startX === null || event.pointerId !== pointerId) {
@@ -11165,6 +11243,8 @@ function bindSwipeToReply(messageDiv, messageData) {
       messageDiv.classList.add("swiped");
       setTimeout(() => messageDiv.classList.remove("swiped"), 600);
       setReplyTo(messageData);
+    } else if (dx < -52 && dy < 64) {
+      openMessageDeleteSheet(messageData.messageId, messageData);
     }
     resetSwipe();
   });
@@ -11231,7 +11311,11 @@ function bindLongPressMessageMenu(messageDiv, messageData, isMyMessage) {
     startY = event.clientY;
     clearTimer();
     timer = setTimeout(() => {
-      if (messageDiv.classList.contains("reply-swipe-active")) return;
+      if (
+        messageDiv.classList.contains("reply-swipe-active") ||
+        messageDiv.classList.contains("delete-swipe-active")
+      )
+        return;
       navigator.vibrate?.(20);
       showContextMenu(
         startX,
@@ -11450,6 +11534,7 @@ function loadMessages() {
 
         messageDiv.innerHTML = `
         <div class="swipe-reply-indicator" aria-hidden="true"></div>
+        <div class="swipe-delete-indicator" aria-hidden="true"></div>
         <div class="message-quick-actions ${isMyMessage ? "sent-message-actions" : "received-message-actions"}"><button type="button" class="quick-message-action quick-forward-btn" title="Forward message" aria-label="Forward message"></button><button type="button" class="quick-message-action quick-translate-btn" title="Translate message" aria-label="Translate message"></button><button type="button" class="quick-message-action quick-delete-btn" title="Delete message" aria-label="Delete message"></button></div>
         <div class="message-bubble">
           <button type="button" class="message-options-btn" title="Message options" aria-label="Message options">⋮</button>
@@ -11525,6 +11610,13 @@ function loadMessages() {
         messagesArea.appendChild(messageDiv);
         positionMessageQuickActions(messageDiv);
         bindSwipeToReply(messageDiv, { ...msg, messageId: doc.id });
+        messageDiv
+          .querySelector(".event-start-call-btn")
+          ?.addEventListener("click", (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            startCall(event.currentTarget.dataset.callType || "voice");
+          });
         messageDiv.querySelectorAll("img, video").forEach((media) => {
           media.addEventListener("load", () => positionMessageQuickActions(messageDiv), {
             once: true,
@@ -14714,6 +14806,7 @@ async function init() {
     const date = document.getElementById("eventDate").value;
     const time = document.getElementById("eventTime").value;
     const location = document.getElementById("eventLocation").value.trim();
+    const callType = document.getElementById("eventCallType")?.value || "";
     const description = document
       .getElementById("eventDescription")
       .value.trim();
@@ -14725,7 +14818,7 @@ async function init() {
       showToast("Event date required", "error");
       return;
     }
-    sendEventMessage({ title, date, time, description, location });
+    sendEventMessage({ title, date, time, description, location, callType });
   });
   document
     .querySelectorAll(".closeEventModal")
@@ -15473,6 +15566,7 @@ async function init() {
   document
     .getElementById("statusViewerBody")
     ?.addEventListener("click", (event) => {
+      if (event.target.closest("video, button, a")) return;
       const rect = event.currentTarget.getBoundingClientRect();
       const isLeft = event.clientX - rect.left < rect.width / 2;
       moveStatusViewer(isLeft ? -1 : 1).catch(() => {});
@@ -15495,18 +15589,33 @@ async function init() {
       const file = event.target.files?.[0];
       if (!file) return;
       try {
-        const url = await uploadToCloudinary(file);
+        if (!file.type.startsWith("image/") && !file.type.startsWith("video/")) {
+          showToast("Choose an image or video", "error");
+          return;
+        }
+        if (file.type.startsWith("video/")) {
+          const duration = await getMediaDuration(file);
+          if (duration > 60) {
+            showToast("Status videos must be 60 seconds or shorter", "error");
+            return;
+          }
+        }
+        const url = file.type.startsWith("video/")
+          ? await uploadDocument(file)
+          : await uploadToCloudinary(file);
         statusImageAttachment = {
-          type: "image",
+          type: file.type.startsWith("video/") ? "video" : "image",
           url,
           filename: file.name,
           size: file.size,
         };
         const preview = document.getElementById("statusImagePreview");
-        preview.innerHTML = `<img src="${url}" alt="">`;
+        preview.innerHTML = statusImageAttachment.type === "video"
+          ? `<video src="${url}" controls playsinline></video>`
+          : `<img src="${url}" alt="">`;
         preview.style.display = "block";
       } catch (error) {
-        showToast("Status image upload failed", "error");
+        showToast("Status media upload failed", "error");
       } finally {
         event.target.value = "";
       }
@@ -17389,10 +17498,27 @@ async function handleGlobalSearch(query, resultsDiv) {
 (function initLocationBtn() {
   const btn = document.getElementById("locationBtn");
   if (!btn) return;
-  btn.addEventListener("click", shareLocation);
+  btn.addEventListener("click", () => {
+    document.getElementById("attachmentSheet")?.classList.remove("open");
+    document.getElementById("locationShareModal").style.display = "flex";
+  });
+  document
+    .querySelectorAll(".closeLocationShareModal")
+    .forEach((close) =>
+      close.addEventListener(
+        "click",
+        () => (document.getElementById("locationShareModal").style.display = "none"),
+      ),
+    );
+  document
+    .getElementById("shareCurrentLocationBtn")
+    ?.addEventListener("click", () => shareLocation("current"));
+  document
+    .getElementById("shareLiveLocationBtn")
+    ?.addEventListener("click", () => shareLocation("live"));
 })();
 
-async function shareLocation() {
+async function shareLocation(mode = "current") {
   if (!currentChat || !currentUser) {
     showToast("Please open a chat first", "error");
     return;
@@ -17410,7 +17536,7 @@ async function shareLocation() {
 
   navigator.geolocation.getCurrentPosition(
     async (pos) => {
-      const { latitude, longitude } = pos.coords;
+      const { latitude, longitude, accuracy } = pos.coords;
       const mapsUrl = `https://www.openstreetmap.org/?mlat=${latitude}&mlon=${longitude}#map=16/${latitude}/${longitude}`;
       const googleMapsUrl = `https://maps.google.com/?q=${latitude},${longitude}`;
       const text = `📍 My Location\nLatitude: ${latitude.toFixed(6)}, Longitude: ${longitude.toFixed(6)}\n🗺️ OpenStreetMap: ${mapsUrl}\n🗺️ Google Maps: ${googleMapsUrl}`;
@@ -17435,7 +17561,15 @@ async function shareLocation() {
         senderName: currentUser.displayName || currentUser.email,
         text,
         type: "location",
-        location: { latitude, longitude },
+        location: {
+          latitude,
+          longitude,
+          accuracy: Number(accuracy || 0),
+          isLive: mode === "live",
+          startedAt: mode === "live" ? new Date() : null,
+          expiresAt:
+            mode === "live" ? new Date(Date.now() + 15 * 60 * 1000) : null,
+        },
         timestamp: firebase.firestore.FieldValue.serverTimestamp(),
         status: "sent",
         read: false,
@@ -17460,8 +17594,41 @@ async function shareLocation() {
       else messageData.groupId = currentChat.id;
 
       try {
-        await db.collection("messages").add(messageData);
-        showToast("Location shared!");
+        const messageRef = await db.collection("messages").add(messageData);
+        document.getElementById("locationShareModal").style.display = "none";
+        if (mode === "live") {
+          const expiresAt = Date.now() + 15 * 60 * 1000;
+          const watcherId = navigator.geolocation.watchPosition(
+            (nextPosition) => {
+              if (Date.now() >= expiresAt) {
+                navigator.geolocation.clearWatch(watcherId);
+                messageRef.set(
+                  { location: { isLive: false, endedAt: new Date() } },
+                  { merge: true },
+                ).catch(() => {});
+                return;
+              }
+              messageRef.set(
+                {
+                  location: {
+                    latitude: nextPosition.coords.latitude,
+                    longitude: nextPosition.coords.longitude,
+                    accuracy: Number(nextPosition.coords.accuracy || 0),
+                    isLive: true,
+                    updatedAt: new Date(),
+                  },
+                },
+                { merge: true },
+              ).catch(() => {});
+            },
+            () => {},
+            { enableHighAccuracy: true, maximumAge: 5000, timeout: 15000 },
+          );
+          setTimeout(() => navigator.geolocation.clearWatch(watcherId), 15 * 60 * 1000);
+          showToast("Live location shared for 15 minutes");
+        } else {
+          showToast("Location shared!");
+        }
       } catch (e) {
         showToast("Failed to share location", "error");
       }
@@ -18805,6 +18972,9 @@ async function sendEventMessage(eventData) {
       time: eventData.time || "",
       description: eventData.description || "",
       location: eventData.location || "",
+      callType: ["voice", "video"].includes(eventData.callType)
+        ? eventData.callType
+        : "",
     },
     timestamp: firebase.firestore.FieldValue.serverTimestamp(),
     status: "sent",
@@ -18854,6 +19024,7 @@ function renderEventCard(event) {
         ${event.time ? `<span>⏰ ${escapeHtml(event.time)}</span>` : ""}
         ${event.location ? `<span>📍 ${escapeHtml(event.location)}</span>` : ""}
         ${event.description ? `<p>${escapeHtml(event.description)}</p>` : ""}
+        ${event.callType ? `<button type="button" class="btn btn-primary event-start-call-btn" data-call-type="${escapeHtml(event.callType)}">Start ${event.callType === "video" ? "video" : "audio"} meeting</button>` : ""}
       </div>
     </div>
   `;

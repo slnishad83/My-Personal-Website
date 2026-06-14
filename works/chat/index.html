@@ -18,8 +18,8 @@
       href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="style.css?v=145" />
-    <link rel="stylesheet" href="message-actions.css?v=7" />
+    <link rel="stylesheet" href="style.css?v=146" />
+    <link rel="stylesheet" href="message-actions.css?v=8" />
     <link rel="stylesheet" href="ui-audit.css?v=2" />
     <link rel="stylesheet" href="translation-ui.css?v=2" />
     <link rel="stylesheet" href="safe-area-audit.css?v=4" />
@@ -1757,7 +1757,7 @@
             class="attachment-preview-inline"
             style="display: none"
           ></div>
-          <button id="statusImageBtn" class="setting-item">Add image</button>
+          <button id="statusImageBtn" class="setting-item">Add image or short video</button>
         </div>
         <div class="modal-footer">
           <button class="btn btn-outline closeStatusModal">Cancel</button>
@@ -1792,9 +1792,27 @@
     <input
       type="file"
       id="statusImageInput"
-      accept="image/*"
+      accept="image/*,video/*"
       style="display: none"
     />
+    <div id="locationShareModal" class="modal" style="display: none">
+      <div class="modal-content" style="width: min(420px, 96%)">
+        <div class="modal-header">
+          <h3>Share Location</h3>
+          <span class="close-modal closeLocationShareModal">&times;</span>
+        </div>
+        <div class="modal-body location-share-options">
+          <button id="shareCurrentLocationBtn" class="setting-item" type="button">
+            <strong>Current location</strong>
+            <span>Share your accurate location once</span>
+          </button>
+          <button id="shareLiveLocationBtn" class="setting-item" type="button">
+            <strong>Live location for 15 minutes</strong>
+            <span>Keep this location updated while you move</span>
+          </button>
+        </div>
+      </div>
+    </div>
     <input
       type="file"
       id="backupImportInput"
@@ -1971,6 +1989,12 @@
           <input type="time" id="eventTime" style="width:100%;padding:10px;border:1px solid #e2e8f0;border-radius:12px;margin-bottom:12px;">
           <label class="form-label" for="eventLocation">Location</label>
           <input type="text" id="eventLocation" placeholder="Location" style="width:100%;padding:10px;border:1px solid #e2e8f0;border-radius:12px;margin-bottom:12px;">
+          <label class="form-label" for="eventCallType">Meeting call</label>
+          <select id="eventCallType" style="width:100%;padding:10px;border:1px solid #e2e8f0;border-radius:12px;margin-bottom:12px;">
+            <option value="">No call</option>
+            <option value="voice">Audio meeting</option>
+            <option value="video">Video meeting</option>
+          </select>
           <label class="form-label" for="eventDescription">Description</label>
           <textarea id="eventDescription" rows="3" placeholder="Description" style="width:100%;padding:10px;border:1px solid #e2e8f0;border-radius:12px;resize:vertical;"></textarea>
         </div>
@@ -2148,7 +2172,7 @@
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-storage-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-messaging-compat.js"></script>
-    <script src="app.js?v=161"></script>
+    <script src="app.js?v=162"></script>
     <script src="pwa-install.js?v=144"></script>
   </body>
 </html>

@@ -182,6 +182,21 @@
         background: #ffffff;
         color: #1f2937;
       }
+      .auth-divider {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin: 20px 0 12px;
+        color: #667781;
+        font-size: 12px;
+      }
+      .auth-divider::before,
+      .auth-divider::after {
+        content: "";
+        flex: 1;
+        height: 1px;
+        background: #e9edef;
+      }
       .login-install-btn {
         display: inline-flex;
         align-items: center;
@@ -430,6 +445,10 @@
           </p>
         </form>
 
+        <div class="auth-divider">or</div>
+        <button id="googleAuthBtn" class="btn btn-outline" type="button">
+          Continue with Google
+        </button>
         <div id="authError" class="auth-error" style="display: none"></div>
         <div id="authSuccess" class="auth-success" style="display: none"></div>
         <button
@@ -577,6 +596,20 @@
         if (!user) return;
         await user.reload();
         if (user.emailVerified) {
+          await db.collection("users").doc(user.uid).set(
+            {
+              uid: user.uid,
+              email: user.email || "",
+              displayName: user.displayName || user.email || "User",
+              avatar: user.photoURL || "",
+              emailVerified: true,
+              pendingVerification: false,
+              isActive: true,
+              onlineStatus: "online",
+              lastSeen: new Date(),
+            },
+            { merge: true },
+          );
           window.location.href = "index.html";
         }
       });
@@ -637,6 +670,33 @@
         });
 
       // Login Form submission router execution
+      document
+        .getElementById("googleAuthBtn")
+        .addEventListener("click", async (event) => {
+          const btn = event.currentTarget;
+          const errorDiv = document.getElementById("authError");
+          errorDiv.style.display = "none";
+          setButtonLoading(btn, true, "Continue with Google", "Opening Google...");
+          try {
+            await authPersistenceReady;
+            const provider = new firebase.auth.GoogleAuthProvider();
+            provider.setCustomParameters({ prompt: "select_account" });
+            await auth.signInWithPopup(provider);
+          } catch (error) {
+            errorDiv.textContent = getFriendlyAuthError(
+              error,
+              "Google sign-in failed. Please try again.",
+            );
+            errorDiv.style.display = "block";
+            setButtonLoading(
+              btn,
+              false,
+              "Continue with Google",
+              "Opening Google...",
+            );
+          }
+        });
+
       document
         .getElementById("loginForm")
         .addEventListener("submit", async (e) => {
@@ -924,6 +984,6 @@
           }
         });
     </script>
-    <script src="pwa-install.js?v=141"></script>
+    <script src="pwa-install.js?v=144"></script>
   </body>
 </html>
