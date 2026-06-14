@@ -2811,6 +2811,51 @@ function notifyIncomingCall(call) {
   }
 }
 
+async function clearChatNotifications(chatId, chatType) {
+  if (!chatId || !chatType) return;
+  const tag = `chat-${chatType}-${chatId}`;
+  try {
+    if ("serviceWorker" in navigator) {
+      const registration = await navigator.serviceWorker.ready;
+      const notifications = await registration.getNotifications({ tag });
+      notifications.forEach((notification) => notification.close());
+    }
+  } catch (error) {
+    console.warn("Could not clear browser chat notification:", error);
+  }
+  try {
+    const nativePlugin = window.Capacitor?.Plugins?.AppPermissions;
+    if (isNativeAndroidApp && nativePlugin?.clearChatNotification) {
+      await nativePlugin.clearChatNotification({ chatId, chatType });
+    }
+  } catch (error) {
+    console.warn("Could not clear native chat notification:", error);
+  }
+}
+
+async function clearCallNotifications(callId) {
+  if (!callId) return;
+  try {
+    if ("serviceWorker" in navigator) {
+      const registration = await navigator.serviceWorker.ready;
+      const notifications = await registration.getNotifications({
+        tag: `call-${callId}`,
+      });
+      notifications.forEach((notification) => notification.close());
+    }
+  } catch (error) {
+    console.warn("Could not clear browser call notification:", error);
+  }
+  try {
+    const nativePlugin = window.Capacitor?.Plugins?.AppPermissions;
+    if (isNativeAndroidApp && nativePlugin?.clearCallNotification) {
+      await nativePlugin.clearCallNotification({ callId });
+    }
+  } catch (error) {
+    console.warn("Could not clear native call notification:", error);
+  }
+}
+
 function hasValidFcmVapidKey() {
   return Boolean(
     typeof FCM_VAPID_KEY === "string" &&
@@ -2971,12 +3016,17 @@ async function registerFcmTokenForCurrentUser({ force = false } = {}) {
             navigator.serviceWorker.ready.then((reg) =>
               reg.showNotification(title, {
                 body,
-                icon: "app-icon-192.png",
+                icon: data.senderAvatar || "app-icon-192.png",
                 badge: "app-icon-192.png",
-                tag: `${data.kind}-${data.messageId || data.callId || Date.now()}`,
+                tag:
+                  data.kind === "message" && data.chatId && data.chatType
+                    ? `chat-${data.chatType}-${data.chatId}`
+                    : `${data.kind}-${data.messageId || data.callId || Date.now()}`,
                 data: {
                   url: data.url || "./index.html",
                   kind: data.kind,
+                  chatId: data.chatId || "",
+                  chatType: data.chatType || "",
                   chatUserId: data.chatUserId || "",
                   groupId: data.groupId || "",
                 },
@@ -3792,6 +3842,8 @@ function cleanupGroupCallResources() {
 }
 
 function cleanupCallUi() {
+  const closingCallId = activeCall?.id || "";
+  clearCallNotifications(closingCallId);
   hideMiniCallBar();
   clearCallTimeout();
   clearCallConnectionFailureTimer();
@@ -10055,6 +10107,7 @@ async function startDirectChat(user) {
       console.warn("Direct chat metadata merge skipped:", error);
     });
   currentChatType = "direct";
+  clearChatNotifications(chatId, "direct");
   await hydrateCurrentChatTranslationSetting();
   setActiveDraftKey();
   document.getElementById("currentChatName").textContent =
@@ -10179,6 +10232,7 @@ async function loadGroupChat(groupId, groupName, listItem = {}) {
     });
   currentChat = { id: groupId, name: groupName, type: "group" };
   currentChatType = "group";
+  clearChatNotifications(groupId, "group");
   await hydrateCurrentChatTranslationSetting();
   setActiveDraftKey();
   const groupData = groupDoc?.data?.() || listItem || {};
@@ -11253,6 +11307,7 @@ async function markMessagesAsRead() {
   if (currentChat && currentChatType) {
     const key = `${currentChatType}_${currentChat.id}`;
     lastReadTimestamps.set(key, Date.now());
+    clearChatNotifications(currentChat.id, currentChatType);
   }
   return markMessagesAsDelivered(true);
 }

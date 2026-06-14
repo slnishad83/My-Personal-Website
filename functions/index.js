@@ -78,6 +78,21 @@ async function getChatNotificationPreferences(userId, chatId) {
   };
 }
 
+async function getUnreadMessageCount(userId, chatId, chatType) {
+  if (!userId || !chatId) return 1;
+  const field = chatType === 'group' ? 'groupId' : 'directId';
+  const snapshot = await admin.firestore().collection('messages').where(field, '==', chatId).get();
+  return Math.max(1, snapshot.docs.filter((doc) => {
+    const data = doc.data() || {};
+    return data.senderId &&
+      data.senderId !== userId &&
+      !data.deletedForEveryone &&
+      !data.deletedFor?.[userId] &&
+      !data.openedBy?.[userId] &&
+      !data.readBy?.[userId];
+  }).length);
+}
+
 async function addNotificationCenterItem({
   toUserId,
   fromUserId = '',
@@ -709,6 +724,39 @@ exports.sendMissedCallNotification = onDocumentUpdated(
   }
 );
 
+exports.clearEndedCallNotification = onDocumentUpdated(
+  {
+    document: 'calls/{callId}',
+    region: 'us-central1'
+  },
+  async (event) => {
+    const before = event.data?.before.data() || {};
+    const call = event.data?.after.data() || {};
+    if (before.status === call.status || !['ended', 'cancelled', 'rejected', 'declined', 'missed', 'failed', 'busy'].includes(call.status)) {
+      return null;
+    }
+    const receiverIds = call.groupCall === true
+      ? (call.participantIds || []).filter((uid) => uid && uid !== call.fromUserId)
+      : [call.toUserId].filter(Boolean);
+    await Promise.all(receiverIds.map(async (receiverId) => {
+      const { userSnap, user, tokens } = await getUserPushTokens(receiverId);
+      if (!tokens.length) return;
+      const response = await admin.messaging().sendEachForMulticast({
+        tokens,
+        data: {
+          kind: 'call_ended',
+          callId: event.params.callId,
+          status: call.status || 'ended'
+        },
+        android: { priority: 'high' },
+        webpush: { headers: { Urgency: 'normal', TTL: '120' } }
+      });
+      await removeStalePushTokens(userSnap, user, tokens, response);
+    }));
+    return null;
+  }
+);
+
 exports.sendStatusUpdateNotification = onDocumentCreated(
   {
     document: 'statuses/{statusId}',
@@ -806,6 +854,22 @@ exports.sendMessageNotification = onDocumentCreated(
     const title = message.groupId
       ? `${message.senderName || 'Someone'} · ${message.groupName || 'Group'}`
       : message.senderName || 'New message';
+    const [senderSnap, groupSnap] = await Promise.all([
+      admin.firestore().collection('users').doc(message.senderId).get().catch(() => null),
+      message.groupId
+        ? admin.firestore().collection('groups').doc(message.groupId).get().catch(() => null)
+        : Promise.resolve(null)
+    ]);
+    const senderProfile = senderSnap?.data?.() || {};
+    const groupProfile = groupSnap?.data?.() || {};
+    const resolvedSenderName =
+      message.senderName || senderProfile.displayName || senderProfile.email || 'Someone';
+    const resolvedSenderAvatar =
+      message.senderAvatar || message.senderPhoto || senderProfile.avatar || senderProfile.photoURL || '';
+    const resolvedGroupName = message.groupName || groupProfile.name || 'Group';
+    const notificationTitle = message.groupId
+      ? `${resolvedSenderName} - ${resolvedGroupName}`
+      : resolvedSenderName;
     const preview = getMessagePreview(message);
 
     const sendTasks = receiverIds.map(async (receiverId) => {
@@ -813,6 +877,7 @@ exports.sendMessageNotification = onDocumentCreated(
       const chatType = message.groupId ? 'group' : 'direct';
       const preferences = await getChatNotificationPreferences(receiverId, chatId);
       if (preferences.muted) return null;
+      const unreadCount = await getUnreadMessageCount(receiverId, chatId, chatType);
       const body = preferences.showPreview ? preview : 'New message';
       const chatUserId = chatType === 'direct' ? message.senderId || '' : '';
       const notificationUrl = chatType === 'group'
@@ -842,7 +907,7 @@ exports.sendMessageNotification = onDocumentCreated(
         tokens,
         data: {
           kind: 'message',
-          title,
+          title: notificationTitle,
           body,
           messageId,
           chatId,
@@ -850,6 +915,10 @@ exports.sendMessageNotification = onDocumentCreated(
           senderId: message.senderId || '',
           chatUserId,
           groupId: message.groupId || '',
+          groupName: resolvedGroupName,
+          senderName: resolvedSenderName,
+          senderAvatar: resolvedSenderAvatar,
+          unreadCount: String(unreadCount),
           url: notificationUrl,
           vibrate: preferences.vibrate ? 'true' : 'false',
           soundEnabled: preferences.soundEnabled ? 'true' : 'false'
@@ -863,11 +932,11 @@ exports.sendMessageNotification = onDocumentCreated(
             TTL: '120'
           },
           notification: {
-            title,
+            title: notificationTitle,
             body,
-            icon: '/works/chat/app-icon-192.png',
+            icon: resolvedSenderAvatar || '/works/chat/app-icon-192.png',
             badge: '/works/chat/app-icon-192.png',
-            tag: `message-${messageId}`,
+            tag: `chat-${chatType}-${chatId}`,
             renotify: true,
             silent: !preferences.soundEnabled,
             timestamp: Date.now(),
@@ -876,6 +945,8 @@ exports.sendMessageNotification = onDocumentCreated(
               url: notificationUrl,
               messageId,
               kind: 'message',
+              chatId,
+              chatType,
               chatUserId,
               groupId: message.groupId || ''
             },

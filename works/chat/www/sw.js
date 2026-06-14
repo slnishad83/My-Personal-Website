@@ -15,20 +15,26 @@ const messaging = firebase.messaging();
 
 messaging.onBackgroundMessage(payload => {
   const data = payload.data || {};
+  if (data.kind === 'call_ended' && data.callId) {
+    return self.registration.getNotifications({ tag: `call-${data.callId}` })
+      .then(notifications => notifications.forEach(notification => notification.close()));
+  }
   const isCall = data.kind === 'call';
   const title = payload.notification?.title || data.title ||
     (isCall ? (data.type === 'video' ? 'Incoming video call' : 'Incoming voice call') : 'Team Chat');
   const body = payload.notification?.body || data.body ||
     (isCall ? `${data.fromUserName || 'Team Chat'} is calling. Tap to open Team Chat.` : 'New notification');
   const notificationUrl = data.url || payload.notification?.data?.url || './index.html';
+  const chatKey = data.chatId && data.chatType ? `${data.chatType}-${data.chatId}` : '';
+  const unreadCount = Number(data.unreadCount || 0);
 
   self.registration.showNotification(title, {
     body,
-    tag: isCall && data.callId ? `call-${data.callId}` : `${data.kind || 'team-chat'}-${data.messageId || data.callId || Date.now()}`,
+    tag: isCall && data.callId ? `call-${data.callId}` : (chatKey ? `chat-${chatKey}` : `${data.kind || 'team-chat'}-${data.messageId || data.callId || Date.now()}`),
     renotify: true,
     requireInteraction: Boolean(isCall),
     silent: data.soundEnabled === 'false',
-    icon: 'app-icon-192.png',
+    icon: data.senderAvatar || 'app-icon-192.png',
     badge: 'app-icon-192.png',
     timestamp: Date.now(),
     vibrate: data.vibrate === 'false' ? [] : (isCall ? [700, 250, 700, 250, 700, 250, 700, 250, 700] : [180, 80, 180]),
@@ -36,6 +42,9 @@ messaging.onBackgroundMessage(payload => {
       url: notificationUrl,
       callId: data.callId || '',
       kind: data.kind || '',
+      chatId: data.chatId || '',
+      chatType: data.chatType || '',
+      unreadCount,
       chatUserId: data.chatUserId || '',
       groupId: data.groupId || ''
     },
@@ -71,7 +80,7 @@ self.addEventListener('notificationclick', event => {
   );
 });
 
-const CACHE_NAME = 'team-chat-v167-device-profile-notifications';
+const CACHE_NAME = 'team-chat-v168-message-call-ux';
 const urlsToCache = [
   'index.html',
   'login.html',

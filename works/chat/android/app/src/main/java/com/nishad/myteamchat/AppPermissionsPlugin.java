@@ -4,6 +4,7 @@ import android.Manifest;
 import android.content.Context;
 import android.content.Intent;
 import android.media.AudioManager;
+import android.app.NotificationManager;
 import android.net.Uri;
 import android.provider.Settings;
 import com.getcapacitor.JSObject;
@@ -101,5 +102,35 @@ public class AppPermissionsPlugin extends Plugin {
         JSObject response = new JSObject();
         response.put("enabled", enabled);
         call.resolve(response);
+    }
+
+    @PluginMethod
+    public void clearChatNotification(PluginCall call) {
+        String chatId = call.getString("chatId");
+        String chatType = call.getString("chatType");
+        if (chatId == null || chatType == null) {
+            call.reject("Chat ID and type are required");
+            return;
+        }
+        String chatKey = chatType + "-" + chatId;
+        NotificationManager manager =
+            (NotificationManager) getContext().getSystemService(Context.NOTIFICATION_SERVICE);
+        if (manager != null) {
+            manager.cancel("chat:" + chatKey, chatKey.hashCode() & 0x7fffffff);
+        }
+        call.resolve();
+    }
+
+    @PluginMethod
+    public void clearCallNotification(PluginCall call) {
+        String callId = call.getString("callId");
+        if (callId == null) {
+            call.reject("Call ID is required");
+            return;
+        }
+        NotificationManager manager =
+            (NotificationManager) getContext().getSystemService(Context.NOTIFICATION_SERVICE);
+        if (manager != null) manager.cancel(callId.hashCode() & 0x7fffffff);
+        call.resolve();
     }
 }

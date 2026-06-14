@@ -9,6 +9,9 @@ import android.net.Uri;
 import android.media.AudioAttributes;
 import android.provider.Settings;
 import android.os.Build;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import java.net.URL;
 
 import androidx.core.app.NotificationCompat;
 
@@ -22,6 +25,13 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
     @Override
     public void onMessageReceived(RemoteMessage message) {
         String kind = message.getData().get("kind");
+        if ("call_ended".equals(kind)) {
+            cancelCallNotification(message.getData().get("callId"));
+            return;
+        }
+        if ("missed_call".equals(kind)) {
+            cancelCallNotification(message.getData().get("callId"));
+        }
         if (!"call".equals(kind)) {
             showMessageNotification(message);
             return;
@@ -33,6 +43,12 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
         String fromUserAvatar = message.getData().get("fromUserAvatar");
 
         showIncomingCall(callId, type, fromUserName, fromUserAvatar);
+    }
+
+    private void cancelCallNotification(String callId) {
+        if (callId == null || callId.isEmpty()) return;
+        NotificationManager manager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
+        if (manager != null) manager.cancel(callId.hashCode() & 0x7fffffff);
     }
 
     private void showIncomingCall(String callId, String type, String fromUserName, String fromUserAvatar) {
@@ -117,6 +133,9 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
         if (launchIntent == null) return;
         String chatUserId = message.getData().get("chatUserId");
         String groupId = message.getData().get("groupId");
+        String chatId = message.getData().get("chatId");
+        String chatType = message.getData().get("chatType");
+        String senderAvatar = message.getData().get("senderAvatar");
         String kind = message.getData().get("kind");
         if (chatUserId != null && !chatUserId.isEmpty()) {
             launchIntent.setData(
@@ -136,6 +155,12 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
         );
         boolean vibrate = !"false".equals(message.getData().get("vibrate"));
         boolean soundEnabled = !"false".equals(message.getData().get("soundEnabled"));
+        int unreadCount = parsePositiveInt(message.getData().get("unreadCount"), 1);
+        String resolvedChatId = chatId != null && !chatId.isEmpty()
+            ? chatId
+            : (groupId != null && !groupId.isEmpty() ? groupId : chatUserId);
+        String chatKey = (chatType != null && !chatType.isEmpty() ? chatType : "chat") +
+            "-" + (resolvedChatId != null ? resolvedChatId : "general");
         NotificationCompat.Builder builder = new NotificationCompat.Builder(this, MESSAGE_CHANNEL_ID)
             .setSmallIcon(getApplicationInfo().icon)
             .setContentTitle(title != null ? title : "My Team Chat")
@@ -144,15 +169,35 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
             .setCategory(NotificationCompat.CATEGORY_MESSAGE)
             .setAutoCancel(true)
             .setVisibility(NotificationCompat.VISIBILITY_PRIVATE)
-            .setGroup("team_chat_messages")
-            .setNumber(1)
+            .setGroup("team_chat_" + chatKey)
+            .setNumber(unreadCount)
             .setContentIntent(pendingIntent);
+        Bitmap avatar = loadRemoteBitmap(senderAvatar);
+        if (avatar != null) builder.setLargeIcon(avatar);
         if (soundEnabled) builder.setSound(Settings.System.DEFAULT_NOTIFICATION_URI);
         else builder.setSound(null);
         if (vibrate) builder.setVibrate(new long[]{0, 180, 80, 180});
         else builder.setVibrate(new long[]{0});
         NotificationManager manager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
-        manager.notify((int) (System.currentTimeMillis() & 0x7fffffff), builder.build());
+        int notificationId = chatKey.hashCode() & 0x7fffffff;
+        manager.notify("chat:" + chatKey, notificationId, builder.build());
+    }
+
+    private int parsePositiveInt(String value, int fallback) {
+        try {
+            return Math.max(1, Integer.parseInt(value));
+        } catch (Exception ignored) {
+            return fallback;
+        }
+    }
+
+    private Bitmap loadRemoteBitmap(String url) {
+        if (url == null || url.trim().isEmpty()) return null;
+        try {
+            return BitmapFactory.decodeStream(new URL(url).openStream());
+        } catch (Exception ignored) {
+            return null;
+        }
     }
 
     private void createChannel() {
