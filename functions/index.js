@@ -1,6 +1,6 @@
 const admin = require('firebase-admin');
 const { onRequest } = require('firebase-functions/v2/https');
-const { onDocumentCreated, onDocumentUpdated } = require('firebase-functions/v2/firestore');
+const { onDocumentCreated, onDocumentUpdated, onDocumentDeleted } = require('firebase-functions/v2/firestore');
 const { defineSecret } = require('firebase-functions/params');
 
 if (!admin.apps.length) {
@@ -327,6 +327,89 @@ async function verifyFirebaseUser(request) {
 
   return admin.auth().verifyIdToken(match[1]);
 }
+
+async function syncGroupAccessMetadata(groupId) {
+  if (!groupId) return;
+  const memberSnap = await admin.firestore()
+    .collection('groupMembers')
+    .where('groupId', '==', groupId)
+    .get();
+  const memberIds = [];
+  const adminIds = [];
+  memberSnap.docs.forEach((doc) => {
+    const member = doc.data() || {};
+    if (!member.userId || memberIds.includes(member.userId)) return;
+    memberIds.push(member.userId);
+    if (member.role === 'admin' || member.role === 'owner') {
+      adminIds.push(member.userId);
+    }
+  });
+  await admin.firestore().collection('groups').doc(groupId).set({
+    memberIds,
+    adminIds,
+    memberCount: memberIds.length,
+    accessMetadataUpdatedAt: admin.firestore.FieldValue.serverTimestamp()
+  }, { merge: true });
+}
+
+exports.syncGroupMemberCreated = onDocumentCreated(
+  { document: 'groupMembers/{memberId}', region: 'asia-south1' },
+  async (event) => syncGroupAccessMetadata(event.data?.data()?.groupId)
+);
+
+exports.syncGroupMemberUpdated = onDocumentUpdated(
+  { document: 'groupMembers/{memberId}', region: 'asia-south1' },
+  async (event) => {
+    const beforeGroupId = event.data?.before.data()?.groupId;
+    const afterGroupId = event.data?.after.data()?.groupId;
+    await syncGroupAccessMetadata(afterGroupId);
+    if (beforeGroupId && beforeGroupId !== afterGroupId) {
+      await syncGroupAccessMetadata(beforeGroupId);
+    }
+  }
+);
+
+exports.syncGroupMemberDeleted = onDocumentDeleted(
+  { document: 'groupMembers/{memberId}', region: 'asia-south1' },
+  async (event) => syncGroupAccessMetadata(event.data?.data()?.groupId)
+);
+
+exports.repairGroupAccessMetadata = onRequest(
+  { region: 'us-central1', invoker: 'public' },
+  async (request, response) => {
+    setCorsHeaders(response);
+    response.set('Cache-Control', 'private, no-store');
+    if (request.method === 'OPTIONS') {
+      response.status(204).send('');
+      return;
+    }
+    if (request.method !== 'POST') {
+      response.status(405).json({ error: 'Method not allowed' });
+      return;
+    }
+    try {
+      await verifyFirebaseUser(request);
+      const migrationRef = admin.firestore().collection('systemMigrations').doc('groupAccessMetadataV1');
+      const migration = await migrationRef.get();
+      if (migration.exists && migration.data()?.completed === true) {
+        response.status(200).json({ repaired: 0, alreadyComplete: true });
+        return;
+      }
+      const groupSnap = await admin.firestore().collection('groups').get();
+      for (const groupDoc of groupSnap.docs) {
+        await syncGroupAccessMetadata(groupDoc.id);
+      }
+      await migrationRef.set({
+        completed: true,
+        repairedGroups: groupSnap.size,
+        completedAt: admin.firestore.FieldValue.serverTimestamp()
+      });
+      response.status(200).json({ repaired: groupSnap.size, alreadyComplete: false });
+    } catch (error) {
+      response.status(401).json({ error: 'Unauthorized' });
+    }
+  }
+);
 
 function normalizeIceServers(payload) {
   if (Array.isArray(payload)) return payload;

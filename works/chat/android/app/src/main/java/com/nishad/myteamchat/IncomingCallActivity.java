@@ -42,7 +42,7 @@ public class IncomingCallActivity extends Activity {
         LinearLayout layout = new LinearLayout(this);
         layout.setOrientation(LinearLayout.VERTICAL);
         layout.setGravity(Gravity.CENTER);
-        layout.setPadding(60, 140, 60, 120);
+        layout.setPadding(dp(24), dp(56), dp(24), dp(48));
         layout.setBackgroundColor(Color.parseColor("#081120"));
 
         TextView titleView = new TextView(this);
@@ -50,13 +50,15 @@ public class IncomingCallActivity extends Activity {
         titleView.setTextColor(Color.WHITE);
         titleView.setTextSize(28);
         titleView.setGravity(Gravity.CENTER);
+        titleView.setContentDescription("Incoming call type");
 
         TextView callerView = new TextView(this);
         callerView.setText(caller != null ? caller : "My Team Chat");
         callerView.setTextColor(Color.parseColor("#B8C7D9"));
         callerView.setTextSize(22);
         callerView.setGravity(Gravity.CENTER);
-        callerView.setPadding(0, 22, 0, 54);
+        callerView.setPadding(0, dp(12), 0, dp(28));
+        callerView.setContentDescription("Caller name");
 
         TextView avatarView = new TextView(this);
         String initial = caller != null && !caller.trim().isEmpty()
@@ -70,29 +72,32 @@ public class IncomingCallActivity extends Activity {
         avatarBackground.setShape(GradientDrawable.OVAL);
         avatarBackground.setColor(Color.parseColor("#E9EDEF"));
         avatarView.setBackground(avatarBackground);
-        LinearLayout.LayoutParams avatarParams = new LinearLayout.LayoutParams(180, 180);
-        avatarParams.setMargins(0, 0, 0, 24);
+        LinearLayout.LayoutParams avatarParams = new LinearLayout.LayoutParams(dp(112), dp(112));
+        avatarParams.setMargins(0, 0, 0, dp(16));
         ImageView avatarImage = new ImageView(this);
         avatarImage.setScaleType(ImageView.ScaleType.CENTER_CROP);
         avatarImage.setBackground(avatarBackground);
+        avatarImage.setContentDescription("Caller profile image");
 
         Button acceptBtn = new Button(this);
         acceptBtn.setText("ACCEPT");
         acceptBtn.setTextSize(18);
         acceptBtn.setTextColor(Color.WHITE);
         acceptBtn.setBackgroundColor(Color.parseColor("#16A34A"));
+        acceptBtn.setContentDescription("Accept call");
 
         Button rejectBtn = new Button(this);
         rejectBtn.setText("REJECT");
         rejectBtn.setTextSize(18);
         rejectBtn.setTextColor(Color.WHITE);
         rejectBtn.setBackgroundColor(Color.parseColor("#DC2626"));
+        rejectBtn.setContentDescription("Decline call");
 
         LinearLayout buttonRow = new LinearLayout(this);
         buttonRow.setOrientation(LinearLayout.HORIZONTAL);
         buttonRow.setGravity(Gravity.CENTER);
-        LinearLayout.LayoutParams buttonParams = new LinearLayout.LayoutParams(0, 132, 1);
-        buttonParams.setMargins(14, 0, 14, 0);
+        LinearLayout.LayoutParams buttonParams = new LinearLayout.LayoutParams(0, dp(64), 1);
+        buttonParams.setMargins(dp(7), 0, dp(7), 0);
         rejectBtn.setLayoutParams(buttonParams);
         acceptBtn.setLayoutParams(buttonParams);
 
@@ -126,6 +131,10 @@ public class IncomingCallActivity extends Activity {
         ));
         setContentView(layout);
 
+    }
+
+    private int dp(int value) {
+        return Math.round(value * getResources().getDisplayMetrics().density);
     }
 
     private void openCallInApp(String callId, String action, int notificationId) {

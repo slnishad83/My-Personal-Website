@@ -72,6 +72,8 @@ const TURN_CREDENTIALS_ENDPOINT =
   "https://us-central1-my-team-chat-2255.cloudfunctions.net/getTurnCredentials";
 const VERIFIED_USER_LOOKUP_ENDPOINT =
   "https://us-central1-my-team-chat-2255.cloudfunctions.net/lookupVerifiedUserByEmail";
+const GROUP_ACCESS_REPAIR_ENDPOINT =
+  "https://us-central1-my-team-chat-2255.cloudfunctions.net/repairGroupAccessMetadata";
 const AVATAR_MAX_BYTES = 5 * 1024 * 1024;
 const AVATAR_ALLOWED_EXTENSIONS = [
   "jpg",
@@ -5360,6 +5362,18 @@ async function lookupVerifiedUserByEmail(email = "") {
   }
 }
 
+async function ensureGroupAccessMetadata() {
+  if (!currentUser) return;
+  const token = await currentUser.getIdToken();
+  const response = await fetch(GROUP_ACCESS_REPAIR_ENDPOINT, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!response.ok) {
+    throw new Error(`Group access repair returned ${response.status}`);
+  }
+}
+
 function normalizeSearchText(value = "") {
   return String(value || "")
     .trim()
@@ -7115,12 +7129,6 @@ async function acceptGroupInvite(inviteId) {
       role: "member",
       joinedAt: firebase.firestore.FieldValue.serverTimestamp(),
     });
-    await db
-      .collection("groups")
-      .doc(invite.groupId)
-      .update({
-        memberCount: firebase.firestore.FieldValue.increment(1),
-      });
     await sendWelcomeMessage(invite.groupId, currentUser.uid);
   }
 
@@ -10181,6 +10189,8 @@ async function createGroup(groupName, memberEmails = "") {
     ownerId: currentUser.uid,
     createdAt: firebase.firestore.FieldValue.serverTimestamp(),
     memberCount: 1,
+    memberIds: [currentUser.uid],
+    adminIds: [currentUser.uid],
     onlyAdminsCanSend: adminsOnlySend,
     onlyAdminsCanEdit: true,
   });
@@ -10594,10 +10604,6 @@ async function leaveGroup() {
     .where("userId", "==", currentUser.uid)
     .get()
     .then((s) => s.forEach((d) => d.ref.delete()));
-  await db
-    .collection("groups")
-    .doc(currentGroup.id)
-    .update({ memberCount: firebase.firestore.FieldValue.increment(-1) });
   resetChatPanel();
   loadGroupsList();
 }
@@ -10662,10 +10668,6 @@ async function joinGroupFinalize(groupId) {
       role: "member",
       joinedAt: firebase.firestore.FieldValue.serverTimestamp(),
     });
-  await db
-    .collection("groups")
-    .doc(groupId)
-    .update({ memberCount: firebase.firestore.FieldValue.increment(1) });
   await sendWelcomeMessage(groupId, currentUser.uid);
   showToast(`Joined Group!`);
   loadGroupsList();
@@ -14712,23 +14714,36 @@ async function runBootstrapStep(stepName, fn) {
   }
 }
 
+const APP_LOCK_STORAGE_KEY = "teamChatAppLockPin";
+const APP_LOCK_ITERATIONS = 120000;
+
 function getStoredAppLockPin() {
   try {
-    return localStorage.getItem("teamChatAppLockPin") || "";
+    return localStorage.getItem(APP_LOCK_STORAGE_KEY) || "";
   } catch (_) {
     return "";
   }
 }
 
-function setStoredAppLockPin(pin) {
+async function setStoredAppLockPin(pin) {
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  const pinHash = await deriveChatLockPin(pin, salt, APP_LOCK_ITERATIONS);
   try {
-    localStorage.setItem("teamChatAppLockPin", pin);
+    localStorage.setItem(
+      APP_LOCK_STORAGE_KEY,
+      JSON.stringify({
+        version: 2,
+        pinHash,
+        pinSalt: bytesToBase64(salt),
+        pinIterations: APP_LOCK_ITERATIONS,
+      }),
+    );
   } catch (_) {}
 }
 
 function clearStoredAppLockPin() {
   try {
-    localStorage.removeItem("teamChatAppLockPin");
+    localStorage.removeItem(APP_LOCK_STORAGE_KEY);
   } catch (_) {}
 }
 
@@ -14740,12 +14755,33 @@ function lockAppNowIfEnabled() {
   if (modal) modal.style.display = "flex";
 }
 
-function unlockAppAttempt() {
-  const expected = getStoredAppLockPin();
-  if (!expected) return;
+async function verifyStoredAppLockPin(pin) {
+  const stored = getStoredAppLockPin();
+  if (!stored || !/^\d{4}$/.test(pin)) return false;
+  if (/^\d{4}$/.test(stored)) {
+    if (pin !== stored) return false;
+    await setStoredAppLockPin(pin);
+    return true;
+  }
+  try {
+    const settings = JSON.parse(stored);
+    if (!settings?.pinHash || !settings?.pinSalt) return false;
+    const candidate = await deriveChatLockPin(
+      pin,
+      base64ToBytes(settings.pinSalt),
+      settings.pinIterations || APP_LOCK_ITERATIONS,
+    );
+    return candidate === settings.pinHash;
+  } catch (_) {
+    return false;
+  }
+}
+
+async function unlockAppAttempt() {
+  if (!getStoredAppLockPin()) return;
   const input = document.getElementById("unlockPinInput");
   const value = (input?.value || "").trim();
-  if (value !== expected) {
+  if (!(await verifyStoredAppLockPin(value))) {
     showToast("Wrong PIN", "error");
     return;
   }
@@ -14761,14 +14797,18 @@ function showAppLockModal() {
   if (input) input.value = "";
 }
 
-function saveAppLockPin() {
+async function saveAppLockPin() {
   const input = document.getElementById("appLockPinInput");
   const pin = (input?.value || "").trim();
   if (!/^\d{4}$/.test(pin)) {
     showToast("Enter exactly 4 digits", "error");
     return;
   }
-  setStoredAppLockPin(pin);
+  if (!globalThis.crypto?.subtle) {
+    showToast("Secure app lock is unavailable on this device", "error");
+    return;
+  }
+  await setStoredAppLockPin(pin);
   showToast("App lock enabled");
   document.getElementById("appLockModal").style.display = "none";
   lockAppNowIfEnabled();
@@ -14874,6 +14914,9 @@ async function init() {
       updateSidebarStatus();
       await runBootstrapStep("reconnectSameEmailProfile", () =>
         reconnectSameEmailProfile(),
+      );
+      await runBootstrapStep("ensureGroupAccessMetadata", () =>
+        ensureGroupAccessMetadata(),
       );
 
       await runBootstrapStep("loadBlockedUsers", () => loadBlockedUsers());

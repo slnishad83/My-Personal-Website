@@ -10,7 +10,7 @@
 .message:not(.call-message) > .message-bubble {
   flex: 0 1 auto !important;
   min-width: 0 !important;
-  max-width: calc(100% - 108px) !important;
+  max-width: calc(100% - 144px) !important;
   order: 1 !important;
 }
 
@@ -25,15 +25,15 @@
   inset: auto !important;
   order: 2 !important;
   display: inline-grid !important;
-  grid-template-columns: repeat(3, 28px) !important;
+  grid-template-columns: repeat(3, 36px) !important;
   place-items: center !important;
   flex: 0 0 auto !important;
   width: auto !important;
   min-width: 0 !important;
-  height: 36px !important;
+  height: 44px !important;
   margin: 0 !important;
-  padding: 3px 5px !important;
-  gap: 3px !important;
+  padding: 3px 6px !important;
+  gap: 4px !important;
   border: 1px solid rgba(134, 150, 160, 0.2) !important;
   border-radius: 999px !important;
   background: rgba(255, 255, 255, 0.94) !important;
@@ -54,11 +54,11 @@
   place-items: center !important;
   align-self: center !important;
   justify-self: center !important;
-  width: 28px !important;
-  height: 28px !important;
-  min-width: 28px !important;
-  min-height: 28px !important;
-  flex: 0 0 28px !important;
+  width: 36px !important;
+  height: 36px !important;
+  min-width: 36px !important;
+  min-height: 36px !important;
+  flex: 0 0 36px !important;
   margin: 0 !important;
   padding: 0 !important;
   border: 0 !important;
@@ -78,17 +78,17 @@
 }
 
 .message-quick-actions .quick-forward-btn::before {
-  width: 17px !important;
-  height: 17px !important;
+  width: 19px !important;
+  height: 19px !important;
   margin: 0 !important;
 }
 
 .message-quick-actions .quick-translate-btn::before {
   display: grid !important;
-  width: 28px !important;
-  height: 28px !important;
+  width: 36px !important;
+  height: 36px !important;
   place-items: center !important;
-  font-size: 15px !important;
+  font-size: 17px !important;
   line-height: 1 !important;
 }
 
@@ -100,8 +100,8 @@
 .quick-delete-btn::before {
   content: "" !important;
   display: block !important;
-  width: 17px !important;
-  height: 17px !important;
+  width: 19px !important;
+  height: 19px !important;
   margin: 0 !important;
   border: 0 !important;
   border-radius: 0 !important;

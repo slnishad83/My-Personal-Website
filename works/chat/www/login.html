@@ -583,8 +583,8 @@
       }
 
       function validatePhone(phone) {
-        // Strict Indian format validation rule: exactly 10 digits starting with 6, 7, 8, or 9
-        return /^[6-9]\d{9}$/.test(phone.trim());
+        const normalized = phone.trim().replace(/[\s().-]/g, "");
+        return /^\+?[1-9]\d{6,14}$/.test(normalized);
       }
 
       function validatePassword(password) {
@@ -867,7 +867,7 @@
           if (phone && !validatePhone(phone)) {
             showValidationError(
               "phoneError",
-              "❌ Enter a valid 10-digit phone number starting with 6, 7, 8, or 9.",
+              "❌ Enter a valid phone number, including country code when needed.",
             );
             hasError = true;
           }
