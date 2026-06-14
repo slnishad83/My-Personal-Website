@@ -157,7 +157,8 @@
 .call-history-status.missed,
 .call-history-status.failed,
 .call-history-status.rejected,
-.call-history-status.declined {
+.call-history-status.declined,
+.call-history-status.busy {
   background: rgba(220, 38, 38, 0.1);
   color: #dc2626;
 }
@@ -187,7 +188,8 @@
 .call-history-meta.missed,
 .call-history-meta.failed,
 .call-history-meta.rejected,
-.call-history-meta.declined {
+.call-history-meta.declined,
+.call-history-meta.busy {
   color: #dc2626;
 }
 
@@ -274,7 +276,8 @@ body.dark .call-history-meta {
 body.dark .call-history-meta.missed,
 body.dark .call-history-meta.failed,
 body.dark .call-history-meta.rejected,
-body.dark .call-history-meta.declined {
+body.dark .call-history-meta.declined,
+body.dark .call-history-meta.busy {
   color: #ff8a92;
 }
 
@@ -297,7 +300,8 @@ body.dark .call-history-status {
 body.dark .call-history-status.missed,
 body.dark .call-history-status.failed,
 body.dark .call-history-status.rejected,
-body.dark .call-history-status.declined {
+body.dark .call-history-status.declined,
+body.dark .call-history-status.busy {
   background: rgba(255, 138, 146, 0.14);
   color: #ff8a92;
 }

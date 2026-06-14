@@ -870,7 +870,7 @@ async function openCallHistoryChat(call) {
   await startDirectChat(user);
 }
 
-async function loadCallsList() {
+async function loadCallsList(searchTerm = "") {
   const list = document.getElementById("callsList");
   if (!list || !currentUser) return;
   const token = ++callHistoryLoadToken;
@@ -893,13 +893,34 @@ async function loadCallsList() {
       return call.groupCall === true && ["rejected", "failed"].includes(participantState);
     })
       .sort((a, b) => getCallHistoryDate(b) - getCallHistoryDate(a));
-    const calls = allCalls.slice(0, 200);
+    const term = String(searchTerm || "").trim().toLowerCase();
+    const filteredCalls = term
+      ? allCalls.filter((call) => {
+          const view = getCallHistoryView(call);
+          return [
+            call.groupName,
+            call.title,
+            call.fromUserName,
+            call.toUserName,
+            call.type === "video" ? "video" : "audio voice",
+            view.direction,
+            view.outcome,
+            view.status,
+            getCallParticipantDetails(call, view),
+          ]
+            .filter(Boolean)
+            .join(" ")
+            .toLowerCase()
+            .includes(term);
+        })
+      : allCalls;
+    const calls = filteredCalls.slice(0, 200);
     if (!calls.length) {
       list.innerHTML = "";
       renderCallHistoryToolbar(list, []);
       list.insertAdjacentHTML(
         "beforeend",
-        '<div class="empty-state">No calls yet</div>',
+        `<div class="empty-state">${term ? "No matching calls" : "No calls yet"}</div>`,
       );
       return;
     }
@@ -941,7 +962,8 @@ async function loadCallsList() {
           <div class="call-history-meta ${escapeHtml(view.status)}"><span>${escapeHtml(call.type === "video" ? "Video" : "Voice")}</span><span>${escapeHtml(dateText)}</span><span>${escapeHtml(timeText)}</span><span>${escapeHtml(durationMs ? formatCallDuration(durationMs) : "0:00")}</span></div>
         </div>
         <div class="call-history-actions" ${callHistorySelectionMode ? 'style="display:none"' : ""}>
-          <button class="call-history-action ${call.type === "video" ? "video" : "voice"}" type="button" aria-label="Call ${escapeHtml(name)} again"></button>
+          <button class="call-history-action voice" data-call-type="voice" type="button" aria-label="Start audio call with ${escapeHtml(name)}"></button>
+          <button class="call-history-action video" data-call-type="video" type="button" aria-label="Start video call with ${escapeHtml(name)}"></button>
           <button class="call-history-action remove" type="button" aria-label="Remove call from my history"></button>
         </div>`;
       row.addEventListener("click", () => {
@@ -955,10 +977,12 @@ async function loadCallsList() {
           else openCallHistoryChat(call);
         }
       });
-      row.querySelector(".call-history-action.voice, .call-history-action.video")?.addEventListener("click", (event) => {
-        event.stopPropagation();
-        redialCall(call);
-      });
+      row.querySelectorAll(".call-history-action[data-call-type]").forEach((button) =>
+        button.addEventListener("click", (event) => {
+          event.stopPropagation();
+          redialCall({ ...call, type: button.dataset.callType });
+        }),
+      );
       row.querySelector(".call-history-action.remove")?.addEventListener("click", (event) => {
         event.stopPropagation();
         hideCallHistoryForMe(call.id);
@@ -967,7 +991,10 @@ async function loadCallsList() {
     });
   } catch (error) {
     console.warn("Could not load call history:", error);
-    list.innerHTML = '<div class="empty-state">Could not load calls</div>';
+    list.innerHTML = '<div class="empty-state tab-error-state">Could not load calls<button type="button" class="btn btn-outline tab-retry-btn">Retry</button></div>';
+    list.querySelector(".tab-retry-btn")?.addEventListener("click", () =>
+      loadCallsList(document.getElementById("searchInput")?.value || ""),
+    );
   }
 }
 
@@ -5158,7 +5185,21 @@ async function handlePendingDirectChatOpen() {
 function handlePendingNavigationTab() {
   const params = new URLSearchParams(window.location.search);
   const tab = params.get("tab");
-  if (!["all", "unread", "groups", "calls", "status", "notifications"].includes(tab)) return;
+  if (
+    ![
+      "all",
+      "unread",
+      "groups",
+      "calls",
+      "status",
+      "favorites",
+      "muted",
+      "broadcasts",
+      "communities",
+      "notifications",
+    ].includes(tab)
+  )
+    return;
   params.delete("tab");
   const clean = `${window.location.pathname}${params.toString() ? `?${params}` : ""}${window.location.hash}`;
   history.replaceState(history.state, "", clean);
@@ -5932,7 +5973,14 @@ async function searchUsersRealtime(searchTerm) {
   if (!chatsList) return;
 
   if (!searchTerm || searchTerm.trim() === "") {
-    loadCurrentChatList();
+    if (currentViewTab === "groups") loadGroupsList();
+    else if (currentViewTab === "calls") loadCallsList();
+    else if (currentViewTab === "status") loadStatusList();
+    else if (currentViewTab === "broadcasts") loadBroadcastsList();
+    else if (currentViewTab === "communities") loadCommunitiesList();
+    else if (currentViewTab === "notifications")
+      renderInAppNotifications(currentInAppNotifications);
+    else loadCurrentChatList();
     return;
   }
 
@@ -5943,7 +5991,23 @@ async function searchUsersRealtime(searchTerm) {
     return;
   }
   if (currentViewTab === "calls") {
-    loadCallsList();
+    loadCallsList(term);
+    return;
+  }
+  if (currentViewTab === "status") {
+    loadStatusList(term);
+    return;
+  }
+  if (currentViewTab === "broadcasts") {
+    loadBroadcastsList(term);
+    return;
+  }
+  if (currentViewTab === "communities") {
+    loadCommunitiesList(term);
+    return;
+  }
+  if (currentViewTab === "notifications") {
+    renderInAppNotifications(currentInAppNotifications, term);
     return;
   }
 
@@ -6714,6 +6778,7 @@ function setupRequestListeners() {
 // FIX 4: IN-APP NOTIFICATIONS (acceptance alerts)
 // =============================================
 let inAppNotifUnsubscribe = null;
+let currentInAppNotifications = [];
 
 function setupInAppNotificationsListener() {
   if (!currentUser) return;
@@ -6725,13 +6790,26 @@ function setupInAppNotificationsListener() {
     .orderBy("createdAt", "desc")
     .limit(50)
     .onSnapshot((snapshot) => {
-      renderInAppNotifications(snapshot.docs.map((d) => ({ id: d.id, ...d.data() })));
+      currentInAppNotifications = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
+      renderInAppNotifications(
+        currentInAppNotifications,
+        currentViewTab === "notifications"
+          ? document.getElementById("searchInput")?.value || ""
+          : "",
+      );
     }, (err) => {
       console.warn("In-app notifications listener error:", err);
+      if (currentViewTab === "notifications") {
+        const panel = document.getElementById("notificationsPanel");
+        if (panel)
+          panel.innerHTML =
+            '<div class="empty-state tab-error-state">Could not load alerts<button type="button" class="btn btn-outline tab-retry-btn">Retry</button></div>';
+        panel?.querySelector(".tab-retry-btn")?.addEventListener("click", setupInAppNotificationsListener);
+      }
     });
 }
 
-function renderInAppNotifications(notifications) {
+function renderInAppNotifications(notifications, searchTerm = "") {
   const panel = document.getElementById("notificationsPanel");
   const badge = document.getElementById("notifAlertBadge");
   if (!panel) return;
@@ -6747,12 +6825,26 @@ function renderInAppNotifications(notifications) {
     }
   }
 
-  if (!notifications.length) {
-    panel.innerHTML = '<div class="empty-state">No notifications</div>';
+  const term = String(searchTerm || "").trim().toLowerCase();
+  const visibleNotifications = term
+    ? notifications.filter((notification) =>
+        [
+          notification.fromUserName,
+          notification.message,
+          notification.type,
+        ]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase()
+          .includes(term),
+      )
+    : notifications;
+  if (!visibleNotifications.length) {
+    panel.innerHTML = `<div class="empty-state">${term ? "No matching alerts" : "No alerts yet"}</div>`;
     return;
   }
 
-  panel.innerHTML = notifications.map((n) => {
+  panel.innerHTML = visibleNotifications.map((n) => {
     const ts = n.createdAt && n.createdAt.toDate ? n.createdAt.toDate() : null;
     const time = ts ? formatRelativeTime(ts) : "";
     return `
@@ -9425,11 +9517,12 @@ function renderBroadcastSelectedTags() {
   }
 }
 
-async function loadBroadcastsList() {
+async function loadBroadcastsList(searchTerm = "") {
   if (!currentUser) return;
   const container = document.getElementById("broadcastsList");
   const actions = document.getElementById("broadcastActions");
   if (!container) return;
+  container.innerHTML = '<div class="empty-state">Loading broadcasts...</div>';
   try {
     const snapshot = await db
       .collection("broadcasts")
@@ -9441,22 +9534,33 @@ async function loadBroadcastsList() {
       currentBroadcasts.push({ id: doc.id, ...doc.data() });
     });
   } catch (e) {
-    if (e.code === "failed-precondition") {
-      currentBroadcasts = [];
-    } else {
-      console.warn("loadBroadcastsList error:", e);
-      currentBroadcasts = [];
-    }
+    console.warn("loadBroadcastsList error:", e);
+    container.innerHTML =
+      '<div class="empty-state tab-error-state">Could not load broadcasts<button type="button" class="btn btn-outline tab-retry-btn">Retry</button></div>';
+    container.querySelector(".tab-retry-btn")?.addEventListener("click", () =>
+      loadBroadcastsList(document.getElementById("searchInput")?.value || ""),
+    );
+    return;
   }
   if (currentViewTab !== "broadcasts") return;
   if (actions) actions.style.display = "flex";
-  if (!currentBroadcasts.length) {
+  const term = String(searchTerm || "").trim().toLowerCase();
+  const visibleBroadcasts = term
+    ? currentBroadcasts.filter((broadcast) =>
+        [broadcast.name, broadcast.description, broadcast.ownerName]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase()
+          .includes(term),
+      )
+    : currentBroadcasts;
+  if (!visibleBroadcasts.length) {
     container.innerHTML =
-      '<div class="empty-state">📡 No broadcasts yet.<br><span style="font-size:12px;color:var(--muted)">Create one to send messages to multiple people at once.</span></div>';
+      `<div class="empty-state">${term ? "No matching broadcasts" : "No broadcasts yet. Create one to send messages to multiple people."}</div>`;
     return;
   }
   container.innerHTML = "";
-  for (const b of currentBroadcasts) {
+  for (const b of visibleBroadcasts) {
     const div = document.createElement("div");
     div.className = "broadcast-item";
     div.dataset.broadcastId = b.id;
@@ -10371,9 +10475,10 @@ async function joinGroupFinalize(groupId) {
 // STATUS STORIES FLOWS
 // ========================================
 
-async function loadStatusList() {
+async function loadStatusList(searchTerm = "") {
   const statusList = document.getElementById("statusList");
   if (!statusList || !currentUser) return;
+  statusList.innerHTML = '<div class="empty-state">Loading status updates...</div>';
   let statuses = [];
   try {
     const [snapshot, directChats] = await Promise.all([
@@ -10396,11 +10501,27 @@ async function loadStatusList() {
           (b.createdAt?.toMillis?.() || 0) - (a.createdAt?.toMillis?.() || 0),
       );
   } catch (e) {
-    statuses = [];
+    console.warn("Could not load status updates:", e);
+    statusList.innerHTML =
+      '<div class="empty-state tab-error-state">Could not load status updates<button type="button" class="btn btn-outline tab-retry-btn">Retry</button></div>';
+    statusList.querySelector(".tab-retry-btn")?.addEventListener("click", () =>
+      loadStatusList(document.getElementById("searchInput")?.value || ""),
+    );
+    return;
   }
 
+  const term = String(searchTerm || "").trim().toLowerCase();
+  if (term) {
+    statuses = statuses.filter((status) =>
+      [status.userName, status.text]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase()
+        .includes(term),
+    );
+  }
   if (!statuses.length) {
-    statusList.innerHTML = '<div class="empty-state">No stories shared</div>';
+    statusList.innerHTML = `<div class="empty-state">${term ? "No matching status updates" : "No status updates yet"}</div>`;
     return;
   }
   const byUser = new Map();
@@ -10448,25 +10569,29 @@ function setupMainNavigationLiveListeners() {
     console.warn("Main navigation live update paused:", error?.message || error);
   };
   statusesUnsubscribe = db.collection("statuses").onSnapshot(() => {
-    if (currentViewTab === "status") loadStatusList();
+    if (currentViewTab === "status")
+      loadStatusList(document.getElementById("searchInput")?.value || "");
   }, handleNavigationListenerError);
   outgoingCallsListUnsubscribe = db
     .collection("calls")
     .where("fromUserId", "==", currentUser.uid)
     .onSnapshot(() => {
-      if (currentViewTab === "calls") loadCallsList();
+      if (currentViewTab === "calls")
+        loadCallsList(document.getElementById("searchInput")?.value || "");
     }, handleNavigationListenerError);
   incomingCallsListUnsubscribe = db
     .collection("calls")
     .where("toUserId", "==", currentUser.uid)
     .onSnapshot(() => {
-      if (currentViewTab === "calls") loadCallsList();
+      if (currentViewTab === "calls")
+        loadCallsList(document.getElementById("searchInput")?.value || "");
     }, handleNavigationListenerError);
   groupCallsListUnsubscribe = db
     .collection("calls")
     .where("participantIds", "array-contains", currentUser.uid)
     .onSnapshot(() => {
-      if (currentViewTab === "calls") loadCallsList();
+      if (currentViewTab === "calls")
+        loadCallsList(document.getElementById("searchInput")?.value || "");
     }, handleNavigationListenerError);
 }
 
@@ -14211,6 +14336,23 @@ async function clearAllChats() {
 function switchTab(tab) {
   if (tab === "chats") tab = "all";
   currentViewTab = tab;
+  const searchInput = document.getElementById("searchInput");
+  if (searchInput) {
+    const labels = {
+      all: "Search for Users and Messages",
+      unread: "Search unread chats and messages",
+      groups: "Search groups",
+      calls: "Search call history",
+      status: "Search status updates",
+      favorites: "Search favorite chats",
+      muted: "Search muted chats",
+      broadcasts: "Search broadcasts",
+      communities: "Search communities",
+      notifications: "Search alerts",
+    };
+    searchInput.placeholder = labels[tab] || "Search";
+    searchInput.value = "";
+  }
   document
     .querySelectorAll(".tab")
     .forEach((t) => t.classList.remove("active"));
@@ -14282,7 +14424,10 @@ function switchTab(tab) {
   else if (tab === "status") loadStatusList();
   else if (tab === "calls") loadCallsList();
   else if (tab === "communities") loadCommunitiesList();
-  else if (tab === "notifications") markAllNotificationsRead();
+  else if (tab === "notifications") {
+    renderInAppNotifications(currentInAppNotifications);
+    markAllNotificationsRead();
+  }
   else loadCurrentChatList();
 }
 
@@ -19642,20 +19787,31 @@ async function createCommunity() {
   }
 }
 
-async function loadCommunitiesList() {
+async function loadCommunitiesList(searchTerm = "") {
   const container = document.getElementById("communitiesList");
   if (!container) return;
-  container.innerHTML = "";
+  container.innerHTML = '<div class="empty-state">Loading communities...</div>';
   try {
     const snap = await db
       .collection("communities")
       .orderBy("createdAt", "desc")
       .get();
-    if (snap.empty) {
-      container.innerHTML = '<div class="empty-state">No communities yet</div>';
+    const term = String(searchTerm || "").trim().toLowerCase();
+    const docs = snap.docs.filter((doc) => {
+      if (!term) return true;
+      const data = doc.data() || {};
+      return [data.name, data.description]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase()
+        .includes(term);
+    });
+    if (!docs.length) {
+      container.innerHTML = `<div class="empty-state">${term ? "No matching communities" : "No communities yet"}</div>`;
       return;
     }
-    for (const doc of snap.docs) {
+    container.innerHTML = "";
+    for (const doc of docs) {
       const data = doc.data();
       const div = document.createElement("div");
       div.className = "community-item";
@@ -19673,7 +19829,10 @@ async function loadCommunitiesList() {
     }
   } catch (e) {
     container.innerHTML =
-      '<div class="empty-state">Failed to load communities</div>';
+      '<div class="empty-state tab-error-state">Could not load communities<button type="button" class="btn btn-outline tab-retry-btn">Retry</button></div>';
+    container.querySelector(".tab-retry-btn")?.addEventListener("click", () =>
+      loadCommunitiesList(document.getElementById("searchInput")?.value || ""),
+    );
   }
 }
 

@@ -66,6 +66,16 @@ service cloud.firestore {
         );
     }
 
+    function isBroadcastMember(data) {
+      return signedIn()
+        && data.members is list
+        && request.auth.uid in data.members;
+    }
+
+    function isCommunityCreator(data) {
+      return signedIn() && data.createdBy == request.auth.uid;
+    }
+
     function validMessageUpdate() {
       return !request.resource.data.diff(resource.data).affectedKeys().hasAny([
         'deletedForEveryone',
@@ -182,6 +192,43 @@ service cloud.firestore {
         && request.resource.data.toUserId == resource.data.toUserId
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read']);
       allow create, delete: if false;
+    }
+
+    match /broadcasts/{broadcastId} {
+      allow read: if isBroadcastMember(resource.data);
+      allow create: if isBroadcastMember(request.resource.data)
+        && request.resource.data.ownerId == request.auth.uid;
+      allow update, delete: if isBroadcastMember(resource.data)
+        && resource.data.ownerId == request.auth.uid;
+
+      match /messages/{messageId} {
+        allow read: if signedIn()
+          && isBroadcastMember(get(/databases/$(database)/documents/broadcasts/$(broadcastId)).data);
+        allow create: if signedIn()
+          && isBroadcastMember(get(/databases/$(database)/documents/broadcasts/$(broadcastId)).data)
+          && get(/databases/$(database)/documents/broadcasts/$(broadcastId)).data.ownerId == request.auth.uid
+          && request.resource.data.senderId == request.auth.uid;
+        allow update, delete: if false;
+      }
+    }
+
+    match /communities/{communityId} {
+      allow read: if signedIn();
+      allow create: if isCommunityCreator(request.resource.data);
+      allow update, delete: if isCommunityCreator(resource.data);
+    }
+
+    match /communityMembers/{memberId} {
+      allow read: if signedIn();
+      allow create: if signedIn() && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if signedIn() && resource.data.userId == request.auth.uid;
+    }
+
+    match /communityGroups/{communityId}/groups/{groupId} {
+      allow read: if signedIn();
+      allow create, update, delete: if signedIn()
+        && exists(/databases/$(database)/documents/communities/$(communityId))
+        && get(/databases/$(database)/documents/communities/$(communityId)).data.createdBy == request.auth.uid;
     }
 
     match /groups/{groupId} {

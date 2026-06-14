@@ -890,6 +890,47 @@ button {
   padding: 0;
 }
 
+.tab-error-state {
+  display: grid;
+  justify-items: center;
+  gap: 12px;
+  padding: 32px 16px !important;
+  color: var(--muted-strong);
+  text-align: center;
+}
+
+.tab-retry-btn {
+  min-width: 96px;
+  min-height: 42px;
+}
+
+#notificationsPanel {
+  min-height: 0;
+  padding-bottom: calc(16px + var(--app-bottom-clearance, 0px)) !important;
+}
+
+.notif-item,
+.broadcast-item,
+.community-item {
+  min-height: 68px;
+}
+
+body.dark .community-icon {
+  background: #202c33;
+  color: #e9edef;
+}
+
+@media (max-width: 420px) {
+  .call-history-actions {
+    gap: 1px;
+  }
+
+  .call-history-action {
+    width: 34px;
+    height: 40px;
+  }
+}
+
 .search-section-label {
   padding: 12px 14px 6px;
   color: var(--muted-strong);
