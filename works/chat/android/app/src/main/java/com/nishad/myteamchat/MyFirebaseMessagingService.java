@@ -148,7 +148,9 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
             .setNumber(1)
             .setContentIntent(pendingIntent);
         if (soundEnabled) builder.setSound(Settings.System.DEFAULT_NOTIFICATION_URI);
+        else builder.setSound(null);
         if (vibrate) builder.setVibrate(new long[]{0, 180, 80, 180});
+        else builder.setVibrate(new long[]{0});
         NotificationManager manager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
         manager.notify((int) (System.currentTimeMillis() & 0x7fffffff), builder.build());
     }

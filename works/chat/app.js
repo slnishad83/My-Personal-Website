@@ -2800,42 +2800,9 @@ function stopCallDuration() {
 
 function startIncomingRingtone() {
   stopIncomingRingtone();
-  if (navigator.vibrate) {
-    navigator.vibrate([700, 250, 700, 250, 700]);
-    vibrationTimer = setInterval(
-      () => navigator.vibrate?.([700, 250, 700, 250, 700]),
-      1600,
-    );
-  }
-  try {
-    const AudioContextCtor = window.AudioContext || window.webkitAudioContext;
-    if (!AudioContextCtor) return;
-    ringtoneAudioContext = new AudioContextCtor();
-    const playTone = () => {
-      if (!ringtoneAudioContext) return;
-      const oscillator = ringtoneAudioContext.createOscillator();
-      const gain = ringtoneAudioContext.createGain();
-      oscillator.type = "sine";
-      oscillator.frequency.value = 920;
-      gain.gain.setValueAtTime(0.0001, ringtoneAudioContext.currentTime);
-      gain.gain.exponentialRampToValueAtTime(
-        0.18,
-        ringtoneAudioContext.currentTime + 0.03,
-      );
-      gain.gain.exponentialRampToValueAtTime(
-        0.0001,
-        ringtoneAudioContext.currentTime + 0.42,
-      );
-      oscillator.connect(gain);
-      gain.connect(ringtoneAudioContext.destination);
-      oscillator.start();
-      oscillator.stop(ringtoneAudioContext.currentTime + 0.75);
-    };
-    playTone();
-    ringtoneTimer = setInterval(playTone, 1100);
-  } catch (error) {
-    console.warn("Incoming call tone could not start:", error);
-  }
+  // Native apps and browsers must let their notification system decide whether
+  // a call rings or vibrates. Direct audio/vibration here would bypass silent
+  // mode, DND, per-app channel settings, or browser notification restrictions.
 }
 
 function notifyIncomingCall(call) {
@@ -3013,6 +2980,13 @@ async function registerFcmTokenForCurrentUser({ force = false } = {}) {
                   chatUserId: data.chatUserId || "",
                   groupId: data.groupId || "",
                 },
+                silent: data.soundEnabled === "false",
+                vibrate:
+                  data.vibrate === "false"
+                    ? []
+                    : data.kind === "missed_call"
+                      ? [180, 80, 180]
+                      : [180, 80, 180],
                 actions: [{ action: "open", title: "Open chat" }],
               }),
             ).catch(() => {});
@@ -3233,7 +3207,6 @@ function stopIncomingRingtone() {
   clearInterval(vibrationTimer);
   ringtoneTimer = null;
   vibrationTimer = null;
-  navigator.vibrate?.(0);
   if (ringtoneAudioContext) {
     ringtoneAudioContext.close().catch(() => {});
     ringtoneAudioContext = null;

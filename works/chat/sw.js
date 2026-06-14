@@ -71,7 +71,7 @@ self.addEventListener('notificationclick', event => {
   );
 });
 
-const CACHE_NAME = 'team-chat-v166-call-media-upgrade';
+const CACHE_NAME = 'team-chat-v167-device-profile-notifications';
 const urlsToCache = [
   'index.html',
   'login.html',

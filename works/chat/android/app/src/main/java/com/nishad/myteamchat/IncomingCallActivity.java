@@ -7,13 +7,8 @@ import android.graphics.Color;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.drawable.GradientDrawable;
-import android.media.AudioManager;
-import android.media.MediaPlayer;
 import android.os.Build;
 import android.os.Bundle;
-import android.os.VibrationEffect;
-import android.os.Vibrator;
-import android.provider.Settings;
 import android.view.Gravity;
 import android.widget.Button;
 import android.widget.LinearLayout;
@@ -23,9 +18,6 @@ import android.net.Uri;
 import java.net.URL;
 
 public class IncomingCallActivity extends Activity {
-    private MediaPlayer ringtonePlayer;
-    private Vibrator vibrator;
-
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -134,7 +126,6 @@ public class IncomingCallActivity extends Activity {
         ));
         setContentView(layout);
 
-        startRespectfulRingOrVibrate();
     }
 
     private void openCallInApp(String callId, String action, int notificationId) {
@@ -162,49 +153,9 @@ public class IncomingCallActivity extends Activity {
         finish();
     }
 
-    private void startRespectfulRingOrVibrate() {
-        AudioManager audioManager = (AudioManager) getSystemService(AUDIO_SERVICE);
-        int mode = audioManager != null ? audioManager.getRingerMode() : AudioManager.RINGER_MODE_NORMAL;
-
-        if (mode == AudioManager.RINGER_MODE_SILENT) return;
-
-        if (mode == AudioManager.RINGER_MODE_NORMAL) {
-            try {
-                ringtonePlayer = MediaPlayer.create(this, Settings.System.DEFAULT_RINGTONE_URI);
-                if (ringtonePlayer != null) {
-                    ringtonePlayer.setLooping(true);
-                    ringtonePlayer.start();
-                }
-            } catch (Exception ignored) {}
-        }
-
-        if (mode == AudioManager.RINGER_MODE_VIBRATE || mode == AudioManager.RINGER_MODE_NORMAL) {
-            try {
-                vibrator = (Vibrator) getSystemService(VIBRATOR_SERVICE);
-                if (vibrator != null) {
-                    long[] pattern = new long[]{0, 900, 600, 900, 600};
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                        vibrator.vibrate(VibrationEffect.createWaveform(pattern, 0));
-                    } else {
-                        vibrator.vibrate(pattern, 0);
-                    }
-                }
-            } catch (Exception ignored) {}
-        }
-    }
-
     private void stopEffects() {
-        try {
-            if (ringtonePlayer != null) {
-                ringtonePlayer.stop();
-                ringtonePlayer.release();
-                ringtonePlayer = null;
-            }
-        } catch (Exception ignored) {}
-
-        try {
-            if (vibrator != null) vibrator.cancel();
-        } catch (Exception ignored) {}
+        // The Android notification channel owns ringtone and vibration so the
+        // user's silent mode, DND, volume, and custom channel settings win.
     }
 
     @Override
