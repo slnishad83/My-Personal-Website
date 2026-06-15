@@ -54,6 +54,19 @@
             </intent-filter>
 
             <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data
+                    android:scheme="https"
+                    android:host="nishadsl.com"
+                    android:pathPrefix="/works/chat" />
+                <data
+                    android:scheme="https"
+                    android:host="chat.nishadsl.com" />
+            </intent-filter>
+
+            <intent-filter>
                 <action android:name="OPEN_CHAT" />
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
