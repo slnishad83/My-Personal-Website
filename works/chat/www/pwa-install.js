@@ -58,6 +58,7 @@
   function setButtonLabels(label) {
     getInstallButtons().forEach((button) => {
       const labelElement = button.querySelector(".install-app-label");
+      const actionElement = button.querySelector(".mobile-install-card-action");
       if (labelElement) {
         labelElement.textContent = label;
       } else {
@@ -68,6 +69,15 @@
           }
         });
         if (!icon && !button.textContent.trim()) button.textContent = label;
+      }
+      if (actionElement) {
+        actionElement.textContent = isAndroid
+          ? "Open"
+          : deferredInstallPrompt
+            ? "Install"
+            : isIos
+              ? "Add"
+              : "How";
       }
       const description = isAndroid
         ? "Open My Team Chat if installed, otherwise download the Android APK"
@@ -92,7 +102,7 @@
 
     if (!serviceWorkerReadyPromise) {
       serviceWorkerReadyPromise = navigator.serviceWorker
-        .register("sw.js?v=175", { scope: "./" })
+        .register("sw.js?v=176", { scope: "./" })
         .then((registration) => {
           registration.update?.().catch(() => {});
           return navigator.serviceWorker.ready;

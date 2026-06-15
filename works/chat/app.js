@@ -195,6 +195,7 @@ let callHistoryLoadToken = 0;
 let callHistoryRefreshTimer = null;
 let statusRefreshTimer = null;
 let callHistorySelectionMode = false;
+let callHistoryFilter = "all";
 let selectedCallHistoryIds = new Set();
 let currentSessionId = "";
 let groupCallsUnsubscribe = null;
@@ -811,14 +812,32 @@ function renderCallHistoryToolbar(list, calls = [], allCalls = calls) {
   const toolbar = document.createElement("div");
   toolbar.className = "call-history-toolbar";
   toolbar.innerHTML = callHistorySelectionMode
-    ? `<button type="button" data-call-action="cancel">Cancel</button>
-      <strong>${selectedCallHistoryIds.size} selected</strong>
-      <button type="button" data-call-action="select-all">Select all</button>
-      <button type="button" data-call-action="delete-selected" ${selectedCallHistoryIds.size ? "" : "disabled"}>Delete</button>`
-    : `<strong>Call history</strong>
-      <button type="button" data-call-action="select">Select</button>
-      <button type="button" data-call-action="clear-all" ${calls.length ? "" : "disabled"}>Clear all</button>`;
+    ? `<div class="call-history-toolbar-main">
+        <button type="button" data-call-action="cancel">Cancel</button>
+        <strong>${selectedCallHistoryIds.size} selected</strong>
+        <button type="button" data-call-action="select-all">Select all</button>
+        <button type="button" data-call-action="delete-selected" ${selectedCallHistoryIds.size ? "" : "disabled"}>Delete</button>
+      </div>`
+    : `<div class="call-history-toolbar-main">
+        <strong>Calls</strong>
+        <button type="button" data-call-action="select">Select</button>
+        <button type="button" data-call-action="clear-all" ${allCalls.length ? "" : "disabled"}>Clear all</button>
+      </div>
+      <div class="call-history-filters" role="tablist" aria-label="Filter call history">
+        ${[
+          ["all", "All"],
+          ["missed", "Missed"],
+          ["incoming", "Incoming"],
+          ["outgoing", "Outgoing"],
+        ].map(([value, label]) => `<button type="button" role="tab" data-call-filter="${value}" aria-selected="${callHistoryFilter === value}" class="${callHistoryFilter === value ? "active" : ""}">${label}</button>`).join("")}
+      </div>`;
   toolbar.addEventListener("click", (event) => {
+    const filter = event.target.closest("[data-call-filter]")?.dataset.callFilter;
+    if (filter) {
+      callHistoryFilter = filter;
+      loadCallsList(document.getElementById("searchInput")?.value || "");
+      return;
+    }
     const action = event.target.closest("[data-call-action]")?.dataset.callAction;
     if (!action) return;
     if (action === "select") {
@@ -916,7 +935,7 @@ async function loadCallsList(searchTerm = "") {
     })
       .sort((a, b) => getCallHistoryDate(b) - getCallHistoryDate(a));
     const term = String(searchTerm || "").trim().toLowerCase();
-    const filteredCalls = term
+    let filteredCalls = term
       ? allCalls.filter((call) => {
           const view = getCallHistoryView(call);
           return [
@@ -936,6 +955,14 @@ async function loadCallsList(searchTerm = "") {
             .includes(term);
         })
       : allCalls;
+    if (callHistoryFilter !== "all") {
+      filteredCalls = filteredCalls.filter((call) => {
+        const view = getCallHistoryView(call);
+        if (callHistoryFilter === "missed")
+          return ["missed", "declined", "rejected", "failed", "busy"].includes(view.status);
+        return view.direction.toLowerCase() === callHistoryFilter;
+      });
+    }
     const calls = filteredCalls.slice(0, 200);
     list.dataset.loaded = "true";
     if (!calls.length) {
@@ -943,7 +970,7 @@ async function loadCallsList(searchTerm = "") {
       renderCallHistoryToolbar(list, []);
       list.insertAdjacentHTML(
         "beforeend",
-        `<div class="empty-state">${term ? "No matching calls" : "No calls yet"}</div>`,
+        `<div class="empty-state call-history-empty">${term ? "No matching calls" : callHistoryFilter === "all" ? "No calls yet" : `No ${escapeHtml(callHistoryFilter)} calls`}</div>`,
       );
       return;
     }
@@ -971,6 +998,7 @@ async function loadCallsList(searchTerm = "") {
       const timeText = date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
       const row = document.createElement("div");
       row.className = "call-history-row";
+      row.classList.add(`call-${view.status}`);
       row.classList.toggle("selection-mode", callHistorySelectionMode);
       row.classList.toggle("selected", selectedCallHistoryIds.has(call.id));
       row.tabIndex = 0;
@@ -982,11 +1010,11 @@ async function loadCallsList(searchTerm = "") {
         <div class="call-history-main">
           <div class="call-history-heading"><div class="call-history-name">${escapeHtml(name)}</div><span class="call-history-status ${escapeHtml(view.status)}">${escapeHtml(view.outcome)}</span></div>
           <div class="call-history-participants">${escapeHtml(getCallParticipantDetails(call, view))}</div>
-          <div class="call-history-meta ${escapeHtml(view.status)}"><span>${escapeHtml(call.type === "video" ? "Video" : "Voice")}</span><span>${escapeHtml(dateText)}</span><span>${escapeHtml(timeText)}</span><span>${escapeHtml(durationMs ? formatCallDuration(durationMs) : "0:00")}</span></div>
+          <div class="call-history-meta ${escapeHtml(view.status)}"><span class="call-history-direction">${view.outgoing ? "↗" : "↙"} ${escapeHtml(call.type === "video" ? "Video" : "Voice")}</span><span>${escapeHtml(dateText)}</span><span>${escapeHtml(timeText)}</span>${durationMs ? `<span>${escapeHtml(formatCallDuration(durationMs))}</span>` : ""}</div>
         </div>
         <div class="call-history-actions" ${callHistorySelectionMode ? 'style="display:none"' : ""}>
-          <button class="call-history-action voice" data-call-type="voice" type="button" aria-label="Start audio call with ${escapeHtml(name)}"></button>
-          <button class="call-history-action video" data-call-type="video" type="button" aria-label="Start video call with ${escapeHtml(name)}"></button>
+          <button class="call-history-action voice ${call.type !== "video" ? "preferred" : ""}" data-call-type="voice" type="button" title="Voice call" aria-label="Start audio call with ${escapeHtml(name)}"></button>
+          <button class="call-history-action video ${call.type === "video" ? "preferred" : ""}" data-call-type="video" type="button" title="Video call" aria-label="Start video call with ${escapeHtml(name)}"></button>
           <button class="call-history-action remove" type="button" aria-label="Remove call from my history"></button>
         </div>`;
       row.addEventListener("click", () => {
@@ -1015,6 +1043,10 @@ async function loadCallsList(searchTerm = "") {
   } catch (error) {
     console.warn("Could not load call history:", error);
     if (token !== callHistoryLoadToken) return;
+    if (list.dataset.loaded && list.querySelector(".call-history-row")) {
+      showToast("Call history refresh paused. Showing your existing calls.", "error");
+      return;
+    }
     list.innerHTML = '<div class="empty-state tab-error-state">Could not load calls<button type="button" class="btn btn-outline tab-retry-btn">Retry</button></div>';
     list.querySelector(".tab-retry-btn")?.addEventListener("click", () =>
       loadCallsList(document.getElementById("searchInput")?.value || ""),

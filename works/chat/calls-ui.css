@@ -431,6 +431,126 @@ body.dark .call-history-message-icon {
   }
 }
 
+/* Responsive call-history controls and clear platform-neutral icons. */
+.call-history-toolbar {
+  display: grid;
+  align-items: stretch;
+  gap: 7px;
+}
+
+.call-history-toolbar-main,
+.call-history-filters {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.call-history-toolbar-main strong {
+  flex: 1;
+  font-size: 18px;
+}
+
+.call-history-filters {
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.call-history-filters::-webkit-scrollbar {
+  display: none;
+}
+
+.call-history-filters button {
+  flex: 0 0 auto;
+}
+
+.call-history-filters button.active {
+  border-color: rgba(0, 128, 105, 0.25);
+  background: rgba(0, 128, 105, 0.11);
+  color: #008069;
+}
+
+.call-history-row.call-missed .call-history-avatar,
+.call-history-row.call-declined .call-history-avatar,
+.call-history-row.call-rejected .call-history-avatar,
+.call-history-row.call-failed .call-history-avatar {
+  box-shadow: 0 0 0 2px rgba(220, 38, 38, 0.18);
+}
+
+.call-history-action {
+  position: relative;
+}
+
+.call-history-action::before {
+  content: "" !important;
+  width: 20px;
+  height: 20px;
+  display: block;
+  background: currentColor;
+  font-size: 0 !important;
+}
+
+.call-history-action.voice::before {
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.79 19.79 0 0 1 2.12 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.69 2.8a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.9.33 1.84.56 2.8.69A2 2 0 0 1 22 16.92Z'/%3E%3C/svg%3E") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.79 19.79 0 0 1 2.12 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.69 2.8a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.9.33 1.84.56 2.8.69A2 2 0 0 1 22 16.92Z'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+
+.call-history-action.video::before {
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m16 13 5 3V8l-5 3'/%3E%3Crect x='3' y='5' width='13' height='14' rx='2'/%3E%3C/svg%3E") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m16 13 5 3V8l-5 3'/%3E%3Crect x='3' y='5' width='13' height='14' rx='2'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+
+.call-history-action.remove::before {
+  color: #8696a0;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6M10 11v5M14 11v5'/%3E%3C/svg%3E") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6M10 11v5M14 11v5'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+
+.call-history-action.preferred {
+  background: rgba(0, 128, 105, 0.11);
+}
+
+.call-history-empty {
+  padding: 48px 18px !important;
+}
+
+body.dark .call-history-filters button.active,
+body.dark .call-history-action.preferred {
+  border-color: rgba(0, 168, 132, 0.3);
+  background: rgba(0, 168, 132, 0.18);
+  color: #00a884;
+}
+
+@media (max-width: 420px) {
+  .call-history-toolbar {
+    gap: 8px;
+  }
+
+  .call-history-action {
+    width: 40px;
+    height: 40px;
+  }
+}
+
+@media (max-width: 360px) {
+  .call-history-row {
+    grid-template-columns: 42px minmax(0, 1fr) auto;
+    gap: 7px;
+    padding-inline: 10px 6px;
+  }
+
+  .call-history-actions {
+    gap: 0;
+  }
+
+  .call-history-action {
+    width: 36px;
+  }
+
+  .call-history-action.remove {
+    display: none;
+  }
+}
+
 .message-selection-toolbar {
   position: fixed;
   z-index: 100001;
