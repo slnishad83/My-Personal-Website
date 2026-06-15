@@ -277,8 +277,13 @@
             <div id="currentChatAvatar" class="list-avatar chat-header-avatar">
               ?
             </div>
-            <h2 id="currentChatName">Select a chat</h2>
-            <div class="chat-status" id="chatStatus"></div>
+            <div class="chat-header-text">
+              <h2 id="currentChatName">Select a chat</h2>
+              <div class="chat-status" id="chatStatus"></div>
+              <div class="chat-header-sub" id="chatHeaderSub" style="display:none;font-size:11px;color:var(--muted);line-height:1.2;">
+                <span id="groupMemberCount"></span> · <span id="groupHeaderEncryptionIcon" class="encryption-badge-inline">Encrypted</span>
+              </div>
+            </div>
             <span id="encryptionBadge" class="encryption-badge" title="Encryption status"></span>
           </div>
           <div class="chat-actions">
@@ -395,6 +400,16 @@
 
         <div class="messages-area" id="messagesArea">
           <button id="jumpToUnreadBtn" class="jump-to-unread-btn" style="display:none" title="Jump to first unread">⬇ First unread</button>
+          <!-- WhatsApp-style group description banner -->
+          <div id="groupDescriptionBanner" class="group-description-banner" style="display:none">
+            <div class="group-desc-banner-avatar" id="groupDescBannerAvatar">G</div>
+            <div class="group-desc-banner-info">
+              <div class="group-desc-banner-name" id="groupDescBannerName">Group Name</div>
+              <div class="group-desc-banner-desc" id="groupDescBannerDesc">Group description & rules...</div>
+              <div class="group-desc-banner-meta" id="groupDescBannerMeta">Group · 3 members</div>
+            </div>
+            <button class="group-desc-banner-close" id="groupDescBannerClose" title="Dismiss">&times;</button>
+          </div>
           <div class="home-panel">
             <div class="home-panel-icon">💬</div>
             <h3 class="home-panel-title">Team Chat for Web</h3>
@@ -752,67 +767,72 @@
       </div>
     </div>
 
-    <!-- Create Group Modal -->
+    <!-- Create Group Modal (WhatsApp-style step wizard) -->
     <div id="createGroupModal" class="modal" style="display: none">
-      <div class="modal-content">
+      <div class="modal-content create-group-modal-content">
         <div class="modal-header">
-          <h3>Create New Group</h3>
+          <button class="btn btn-outline" id="createGroupBackBtn" style="display:none;padding:4px 10px;font-size:13px;">← Back</button>
+          <h3 id="createGroupStepTitle">New Group</h3>
           <span class="close-modal closeCreateModal">&times;</span>
         </div>
         <div class="modal-body">
-          <input
-            type="text"
-            id="newGroupName"
-            placeholder="Group name"
-            style="
-              width: 100%;
-              padding: 12px;
-              margin-bottom: 16px;
-              border: 1px solid #e2e8f0;
-              border-radius: 12px;
-            "
-          />
-          <textarea
-            id="newGroupDescription"
-            placeholder="Group Description & Rules (Optional)"
-            style="
-              width: 100%;
-              padding: 12px;
-              margin-bottom: 16px;
-              border: 1px solid #e2e8f0;
-              border-radius: 12px;
-              resize: vertical;
-              min-height: 80px;
-              font-family: inherit;
-            "
-          ></textarea>
-          <input
-            type="text"
-            id="newGroupMembers"
-            list="groupMemberSuggestions"
-            placeholder="Add members by name, email, or phone"
-            style="
-              width: 100%;
-              padding: 12px;
-              border: 1px solid #e2e8f0;
-              border-radius: 12px;
-            "
-          />
-          <p class="form-hint">
-            Members receive an invite and join only after accepting.
-          </p>
-          <div class="privacy-row">
-            <span>Only admins can send messages</span>
-            <label class="switch"
-              ><input type="checkbox" id="newGroupAdminsOnlySend" /><span
-                class="slider"
-              ></span
-            ></label>
+          <!-- Step 1: Add Members -->
+          <div id="createGroupStep1" class="create-group-step">
+            <div class="step-indicator">Step 1 of 2</div>
+            <h4 style="margin-bottom:12px;font-size:15px;font-weight:600;">Add members</h4>
+            <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;min-height:32px;" id="selectedMemberChips"></div>
+            <div style="position:relative;">
+              <input
+                type="text"
+                id="newGroupMembersSearch"
+                placeholder="Search contacts..."
+                autocomplete="off"
+                style="width:100%;padding:12px;border:1px solid var(--border);border-radius:12px;margin-bottom:8px;"
+              />
+              <div id="memberSearchResults" class="member-search-results" style="max-height:240px;overflow-y:auto;border:1px solid var(--border);border-radius:12px;display:none;"></div>
+            </div>
+            <div id="allContactsList" class="member-search-results" style="max-height:260px;overflow-y:auto;border:1px solid var(--border);border-radius:12px;margin-top:8px;"></div>
+          </div>
+          <!-- Step 2: Group Info -->
+          <div id="createGroupStep2" class="create-group-step" style="display:none;">
+            <div class="step-indicator">Step 2 of 2</div>
+            <div style="text-align:center;margin-bottom:16px;">
+              <div class="group-avatar-large group-create-avatar" id="createGroupAvatar" style="cursor:pointer;position:relative;">
+                <span id="createGroupAvatarText">G</span>
+                <input type="file" id="createGroupIconInput" accept="image/*" style="display:none;">
+                <div class="avatar-edit-overlay" style="position:absolute;inset:0;border-radius:50%;background:rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:center;color:white;font-size:20px;opacity:0;transition:opacity 0.2s;">📷</div>
+              </div>
+              <div style="font-size:11px;color:var(--muted);margin-top:4px;">Tap to set group icon</div>
+            </div>
+            <input
+              type="text"
+              id="newGroupName"
+              placeholder="Group subject (required)"
+              style="width:100%;padding:12px;margin-bottom:12px;border:1px solid var(--border);border-radius:12px;"
+            />
+            <textarea
+              id="newGroupDescription"
+              placeholder="Group description (optional)"
+              style="width:100%;padding:12px;margin-bottom:12px;border:1px solid var(--border);border-radius:12px;resize:vertical;min-height:60px;font-family:inherit;"
+            ></textarea>
+            <div class="privacy-row" style="margin-bottom:8px;">
+              <span>Only admins can send messages</span>
+              <label class="switch"
+                ><input type="checkbox" id="newGroupAdminsOnlySend" /><span class="slider"></span
+              ></label>
+            </div>
+            <div class="privacy-row">
+              <span>Approve new members</span>
+              <label class="switch"
+                ><input type="checkbox" id="newGroupApprovalRequired" /><span class="slider"></span
+              ></label>
+            </div>
           </div>
         </div>
         <div class="modal-footer">
           <button class="btn btn-outline cancelGroupBtn">Cancel</button>
-          <button class="btn btn-primary confirmGroupBtn">Create</button>
+          <button class="btn btn-primary" id="createGroupNextBtn">Next</button>
+          <button class="btn btn-primary" id="createGroupConfirmBtn" style="display:none;">Create</button>
         </div>
       </div>
     </div>
@@ -866,164 +886,263 @@
       </div>
     </div>
 
-    <!-- Group Info Modal -->
+    <!-- Group Info Modal (WhatsApp-style redesign) -->
     <div id="groupInfoModal" class="modal" style="display: none">
-      <div class="modal-content">
+      <div class="modal-content group-info-modal-content">
         <div class="modal-header">
           <h3 id="groupInfoTitle">Group Info</h3>
           <span class="close-modal closeGroupInfoModal">&times;</span>
         </div>
         <div class="modal-body">
-          <div style="text-align: center">
-            <div class="group-avatar-large" id="groupAvatarLarge">G</div>
-            <div class="upload-format-hint">
-              JPG, PNG, WebP, GIF, BMP, HEIC, HEIF. Max 5 MB.
+          <!-- SECTION: Group Photo & Name (editable) -->
+          <div class="gi-section gi-profile-section" style="text-align:center;padding:16px 0 12px;">
+            <div class="group-avatar-large" id="groupAvatarLarge" style="position:relative;">
+              <span id="groupAvatarLargeText">G</span>
+              <input type="file" id="groupIconInput" accept="image/*" style="display:none;">
+              <div class="avatar-edit-overlay" style="position:absolute;inset:0;border-radius:50%;background:rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:center;color:white;font-size:24px;opacity:0;transition:opacity 0.2s;cursor:pointer;">📷</div>
             </div>
-            <input
-              type="text"
-              id="editGroupNameInput"
-            />
-            <textarea
-              id="editGroupDescriptionInput"
-              placeholder="Group description & rules..."
-              style="
-                width: 100%;
-                margin-bottom: 16px;
-                padding: 8px;
-                border: 1px solid #e2e8f0;
-                border-radius: 12px;
-                resize: vertical;
-                min-height: 60px;
-                font-family: inherit;
-                font-size: 13px;
-              "
-            ></textarea>
-            <input type="hidden" id="dummyInput"
-              placeholder="Group name"
-              style="
-                text-align: center;
-                width: 100%;
-                margin-bottom: 8px;
-                padding: 8px;
-                border: 1px solid #e2e8f0;
-                border-radius: 12px;
-              "
-            />
-            <p style="font-size: 12px; color: #888">
-              Invite Code: <strong id="groupCodeDisplay"></strong>
-              <button
-                id="copyGroupCodeBtn"
-                style="background: none; border: none; cursor: pointer"
-              >
-                Copy
-              </button>
-            </p>
-            <button id="shareInviteLinkBtn" class="btn btn-outline" style="margin-top:8px;width:100%">Share Invite Link</button>
-          </div>
-          <div class="privacy-row" id="groupDisappearingRow" style="display: flex; align-items: center; justify-content: space-between;">
-            <span>Disappearing Messages</span>
-            <select id="groupInfoDisappearingSelect" style="padding: 6px 12px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 13px; outline: none; background: white;">
-              <option value="0">Off</option>
-              <option value="86400">24 Hours</option>
-              <option value="604800">7 Days</option>
-            </select>
-          </div>
-          <div class="privacy-row" style="display:flex;align-items:center;justify-content:space-between;">
-            <span>End-to-End Encryption</span>
-            <label class="switch">
-              <input type="checkbox" id="groupEncryptionToggle" />
-              <span class="slider"></span>
-            </label>
-          </div>
-          <div class="privacy-row" id="groupSendPermissionRow">
-            <span>Only admins can send messages</span>
-            <label class="switch"
-              ><input type="checkbox" id="groupAdminsOnlySend" /><span
-                class="slider"
-              ></span
-            ></label>
-          </div>
-          <div class="privacy-row" id="groupEditPermissionRow">
-            <span>Only admins can edit group info</span>
-            <label class="switch"
-              ><input type="checkbox" id="groupAdminsOnlyEdit" /><span
-                class="slider"
-              ></span
-            ></label>
-          </div>
-          <div class="privacy-row" id="groupSlowModeRow" style="display:none">
-            <span>Slow Mode</span>
-            <select id="groupSlowModeSelect" style="padding:6px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;outline:none;background:white;">
-              <option value="0">Off</option>
-              <option value="5">5 seconds</option>
-              <option value="10">10 seconds</option>
-              <option value="30">30 seconds</option>
-              <option value="60">60 seconds</option>
-            </select>
-          </div>
-          <div class="privacy-row" id="groupWelcomeMessageRow" style="display:none;flex-direction:column;align-items:stretch;gap:8px;">
-            <span>Welcome Message</span>
-            <textarea id="welcomeMessageInput" rows="2" placeholder="Welcome message (use {user} for name)" style="width:100%;padding:8px;border:1px solid #e2e8f0;border-radius:8px;resize:vertical;font-family:inherit;font-size:13px;"></textarea>
-            <button id="saveWelcomeMessageBtn" class="btn btn-outline" style="align-self:flex-end;">Save</button>
-          </div>
-          <div class="privacy-row" id="groupJoinQuestionsRow" style="display:none">
-            <span>Join Questions</span>
-            <button id="manageJoinQuestionsBtn" class="btn btn-outline">Manage</button>
-          </div>
-          <div class="privacy-row" id="groupModerationRow" style="display:none">
-            <span>Moderation</span>
-            <button id="groupModerationBtn" class="btn btn-outline">Settings</button>
-          </div>
-          <div style="margin-top: 20px">
-            <h4>Members</h4>
-            <div id="groupMembersList" class="member-list"></div>
-          </div>
-          <div class="shared-section">
-            <div class="shared-tabs">
-              <button class="shared-tab group-shared-tab active" data-group-shared-tab="media">
-                Media
-              </button>
-              <button class="shared-tab group-shared-tab" data-group-shared-tab="docs">Docs</button>
-              <button class="shared-tab group-shared-tab" data-group-shared-tab="files">Files</button>
-              <button class="shared-tab group-shared-tab" data-group-shared-tab="links">Links</button>
-              <button class="shared-tab group-shared-tab" data-group-shared-tab="voice">Voice</button>
+            <div class="gi-name-row">
+              <input type="text" id="editGroupNameInput" class="gi-name-input" placeholder="Group name" />
+              <button id="editGroupNameSaveBtn" class="gi-save-btn" style="display:none;">Save</button>
             </div>
-            <div id="groupSharedContent" class="shared-content"></div>
+            <div class="gi-description-row">
+              <textarea id="editGroupDescriptionInput" class="gi-desc-input" placeholder="Add group description..." rows="2"></textarea>
+              <button id="editGroupDescSaveBtn" class="gi-save-btn" style="display:none;">Save</button>
+            </div>
           </div>
-          <button id="groupInfoMarkUnreadBtn" class="setting-item">
-            Mark chat as unread
-          </button>
-          <div style="margin-top: 16px; display: flex; gap: 8px">
-            <input
-              type="text"
-              id="addMemberEmail"
-              list="groupMemberSuggestions"
-              placeholder="Name, email, or phone"
-              style="
-                flex: 1;
-                padding: 10px;
-                border: 1px solid #e2e8f0;
-                border-radius: 12px;
-              "
-            /><button id="addMemberBtn" class="btn btn-outline">Add</button>
+
+          <!-- SECTION: Invite via Link -->
+          <div class="gi-section gi-invite-section">
+            <div class="gi-section-header">
+              <span class="gi-section-icon">🔗</span>
+              <span class="gi-section-title">Invite via Link</span>
+            </div>
+            <div class="gi-invite-card">
+              <div class="gi-invite-row">
+                <input type="text" id="groupCodeDisplay" class="gi-invite-code" readonly />
+                <div class="gi-invite-actions">
+                  <button id="shareInviteLinkBtn" class="gi-invite-btn" title="Share invite link">Share</button>
+                  <button id="copyGroupCodeBtn" class="gi-invite-btn" title="Copy link">Copy</button>
+                  <button id="resetInviteLinkBtn" class="gi-invite-btn gi-invite-btn-danger" title="Reset link">Reset</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- SECTION: Members -->
+          <div class="gi-section gi-members-section">
+            <div class="gi-section-header">
+              <span class="gi-section-icon">👥</span>
+              <span class="gi-section-title" id="giMembersTitle">Members</span>
+              <button id="addMemberBtn" class="gi-add-btn">Add</button>
+            </div>
+            <div id="giMembersSearchRow" style="display:flex;gap:6px;margin-bottom:8px;">
+              <input type="text" id="giMembersSearch" placeholder="Search members..." style="flex:1;padding:8px 12px;border:1px solid var(--border);border-radius:20px;font-size:13px;" />
+            </div>
+            <div id="groupMembersList" class="gi-member-list"></div>
+            <div class="gi-add-member-row" id="giAddMemberRow" style="display:none;margin-top:8px;">
+              <input type="text" id="addMemberEmail" list="groupMemberSuggestions" placeholder="Name, email, or phone" style="flex:1;padding:8px 12px;border:1px solid var(--border);border-radius:20px;font-size:13px;" />
+              <button id="addMemberConfirmBtn" class="gi-add-btn">Add</button>
+            </div>
+          </div>
+
+          <!-- SECTION: Past Participants (admin only) -->
+          <div class="gi-section gi-past-participants-section" id="giPastParticipantsSection" style="display:none;">
+            <div class="gi-section-header" style="cursor:pointer;" onclick="togglePastParticipants()">
+              <span class="gi-section-icon">🚫</span>
+              <span class="gi-section-title">Past Participants</span>
+              <span class="gi-chevron" id="giPastParticipantsChevron">▶</span>
+            </div>
+            <div id="giPastParticipantsList" class="gi-member-list" style="display:none;"></div>
+          </div>
+
+          <!-- SECTION: Group Settings -->
+          <div class="gi-section gi-settings-section">
+            <div class="gi-section-header">
+              <span class="gi-section-icon">⚙️</span>
+              <span class="gi-section-title">Group Settings</span>
+            </div>
+            <div class="gi-settings-list">
+              <div class="gi-setting-row" id="groupSendPermissionRow">
+                <div class="gi-setting-info">
+                  <div class="gi-setting-label">Send Messages</div>
+                  <div class="gi-setting-hint">Who can send messages to this group</div>
+                </div>
+                <select id="groupAdminsOnlySendSelect" class="gi-setting-select">
+                  <option value="false">All Members</option>
+                  <option value="true">Only Admins</option>
+                </select>
+              </div>
+              <div class="gi-setting-row" id="groupEditPermissionRow">
+                <div class="gi-setting-info">
+                  <div class="gi-setting-label">Edit Group Info</div>
+                  <div class="gi-setting-hint">Who can edit group name, description, and icon</div>
+                </div>
+                <select id="groupAdminsOnlyEditSelect" class="gi-setting-select">
+                  <option value="false">All Members</option>
+                  <option value="true">Only Admins</option>
+                </select>
+              </div>
+              <div class="gi-setting-row" id="groupAddMembersPermissionRow">
+                <div class="gi-setting-info">
+                  <div class="gi-setting-label">Add Other Members</div>
+                  <div class="gi-setting-hint">Who can add new members to this group</div>
+                </div>
+                <select id="groupAdminsOnlyAddMembersSelect" class="gi-setting-select">
+                  <option value="false">All Members</option>
+                  <option value="true">Only Admins</option>
+                </select>
+              </div>
+              <div class="gi-setting-row">
+                <div class="gi-setting-info">
+                  <div class="gi-setting-label">Approve New Members</div>
+                  <div class="gi-setting-hint">Admins must approve new members before they can join</div>
+                </div>
+                <label class="switch">
+                  <input type="checkbox" id="groupApprovalRequiredToggle" />
+                  <span class="slider"></span>
+                </label>
+              </div>
+              <div class="gi-setting-row" id="groupDisappearingRow">
+                <div class="gi-setting-info">
+                  <div class="gi-setting-label">Disappearing Messages</div>
+                  <div class="gi-setting-hint">Automatically delete messages after a set time</div>
+                </div>
+                <select id="groupInfoDisappearingSelect" class="gi-setting-select">
+                  <option value="0">Off</option>
+                  <option value="86400">24 Hours</option>
+                  <option value="604800">7 Days</option>
+                  <option value="7776000">90 Days</option>
+                </select>
+              </div>
+              <div class="gi-setting-row" id="groupSlowModeRow" style="display:none">
+                <div class="gi-setting-info">
+                  <div class="gi-setting-label">Slow Mode</div>
+                  <div class="gi-setting-hint">Limit how often each member can send messages</div>
+                </div>
+                <select id="groupSlowModeSelect" class="gi-setting-select">
+                  <option value="0">Off</option>
+                  <option value="5">5 seconds</option>
+                  <option value="10">10 seconds</option>
+                  <option value="30">30 seconds</option>
+                  <option value="60">60 seconds</option>
+                </select>
+              </div>
+              <div class="gi-setting-row gi-setting-with-toggle">
+                <div class="gi-setting-info">
+                  <div class="gi-setting-label">Encryption</div>
+                  <div class="gi-setting-hint">Messages are end-to-end encrypted</div>
+                </div>
+                <label class="switch">
+                  <input type="checkbox" id="groupEncryptionToggle" />
+                  <span class="slider"></span>
+                </label>
+              </div>
+              <div class="gi-setting-row gi-detail-link" id="groupWelcomeMessageRow" style="display:none">
+                <div class="gi-setting-info">
+                  <div class="gi-setting-label">Welcome Message</div>
+                  <div class="gi-setting-hint">Auto-sent to new members</div>
+                </div>
+                <button id="editWelcomeMessageBtn" class="gi-setting-edit-btn">Edit</button>
+              </div>
+              <div class="gi-setting-row gi-detail-link" id="groupJoinQuestionsRow" style="display:none">
+                <div class="gi-setting-info">
+                  <div class="gi-setting-label">Join Questions</div>
+                  <div class="gi-setting-hint">Ask new members to answer questions</div>
+                </div>
+                <button id="manageJoinQuestionsBtn" class="gi-setting-edit-btn">Manage</button>
+              </div>
+              <div class="gi-setting-row gi-detail-link" id="groupModerationRow" style="display:none">
+                <div class="gi-setting-info">
+                  <div class="gi-setting-label">Moderation</div>
+                  <div class="gi-setting-hint">Blocked words and content filtering</div>
+                </div>
+                <button id="groupModerationBtn" class="gi-setting-edit-btn">Settings</button>
+              </div>
+
+              <!-- Poll visibility -->
+              <div class="gi-setting-row" id="groupPollVisibilityRow" style="display:none">
+                <div class="gi-setting-info">
+                  <div class="gi-setting-label">Poll Results Visibility</div>
+                  <div class="gi-setting-hint">Who can see poll results</div>
+                </div>
+                <select id="groupPollVisibilitySelect" class="gi-setting-select">
+                  <option value="everyone">Everyone</option>
+                  <option value="admins">Admins only</option>
+                </select>
+              </div>
+
+              <!-- Announcement mode -->
+              <div class="gi-setting-row gi-setting-with-toggle" id="groupAnnouncementRow" style="display:none">
+                <div class="gi-setting-info">
+                  <div class="gi-setting-label">Announcement Mode</div>
+                  <div class="gi-setting-hint">Only admins can send messages (like Telegram)</div>
+                </div>
+                <label class="switch"><input type="checkbox" id="groupAnnouncementToggle" /><span class="slider"></span></label>
+              </div>
+
+              <!-- Temporary group -->
+              <div class="gi-setting-row gi-detail-link" id="groupTemporaryRow" style="display:none">
+                <div class="gi-setting-info">
+                  <div class="gi-setting-label">Temporary Group</div>
+                  <div class="gi-setting-hint">Auto-delete group after a set duration</div>
+                </div>
+                <button id="manageTemporaryGroupBtn" class="gi-setting-edit-btn">Manage</button>
+              </div>
+
+              <!-- Group tags -->
+              <div class="gi-setting-row gi-detail-link" id="groupTagsRow" style="display:none">
+                <div class="gi-setting-info">
+                  <div class="gi-setting-label">Group Tags</div>
+                  <div class="gi-setting-hint">Color-coded labels for this group</div>
+                </div>
+                <button id="manageGroupTagsBtn" class="gi-setting-edit-btn">Manage</button>
+              </div>
+
+              <!-- Invite expiry -->
+              <div class="gi-setting-row" id="groupInviteExpiryRow" style="display:none">
+                <div class="gi-setting-info">
+                  <div class="gi-setting-label">Invite Link Expiry</div>
+                  <div class="gi-setting-hint">Auto-expire the invite link after a set time</div>
+                </div>
+                <select id="groupInviteExpirySelect" class="gi-setting-select">
+                  <option value="0">Never</option>
+                  <option value="3600">1 hour</option>
+                  <option value="86400">24 hours</option>
+                  <option value="604800">7 days</option>
+                  <option value="2592000">30 days</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <!-- SECTION: Shared Media -->
+          <div class="gi-section gi-media-section" id="giMediaSection">
+            <div class="gi-section-header">
+              <span class="gi-section-icon">📷</span>
+              <span class="gi-section-title">Shared Media</span>
+            </div>
+            <div class="gi-media-tabs">
+              <button class="gi-media-tab active" data-gi-media-tab="media">Media</button>
+              <button class="gi-media-tab" data-gi-media-tab="docs">Docs</button>
+              <button class="gi-media-tab" data-gi-media-tab="links">Links</button>
+            </div>
+            <div id="groupSharedContent" class="gi-media-content"></div>
+          </div>
+
+          <!-- SECTION: Actions -->
+          <div class="gi-section gi-actions-section">
+            <button id="groupInfoMarkUnreadBtn" class="gi-action-item">Mark as Unread</button>
+            <button id="giMuteGroupBtn" class="gi-action-item">Mute Notifications</button>
+            <button id="giWallpaperBtn" class="gi-action-item">Change Wallpaper</button>
+            <button id="giExportChatBtn" class="gi-action-item">Export Chat</button>
+            <button id="giClearChatBtn" class="gi-action-item">Clear Messages</button>
+            <button id="giUsageDashboardBtn" class="gi-action-item">📊 Group Dashboard</button>
+            <button id="giReportGroupBtn" class="gi-action-item">Report Group</button>
+            <button id="giLeaveGroupBtn" class="gi-action-item gi-action-danger">Leave Group</button>
+            <button id="deleteGroupBtn" class="gi-action-item gi-action-danger" style="display:none;">Delete Group</button>
           </div>
           <datalist id="groupMemberSuggestions"></datalist>
-          <div style="margin-top: 20px">
-            <button
-              id="leaveGroupBtn"
-              class="btn btn-outline"
-              style="background: #fee2e2; color: #dc2626; width: 100%"
-            >
-              Leave Group
-            </button>
-            <button
-              id="deleteGroupBtn"
-              class="btn btn-danger"
-              style="margin-top: 8px; width: 100%; display: none"
-            >
-              Delete Group
-            </button>
-          </div>
         </div>
       </div>
     </div>
@@ -1303,6 +1422,12 @@
           </button>
           <button id="appLockSettingsBtn" class="setting-item">
             App Lock (PIN)
+          </button>
+          <button id="twoStepVerificationBtn" class="setting-item">
+            Two-Step Verification (PIN)
+          </button>
+          <button id="autoDownloadBtn" class="setting-item">
+            Auto-Download Media
           </button>
           <button id="dataUsageBtn" class="setting-item">
             Data Usage
@@ -2184,6 +2309,71 @@
       </div>
     </div>
 
+    <!-- Approve New Members Modal -->
+    <div id="approveMembersModal" class="modal" style="display:none">
+      <div class="modal-content" style="width:min(460px,96%);">
+        <div class="modal-header">
+          <h3>Pending Join Requests</h3>
+          <span class="close-modal" onclick="document.getElementById('approveMembersModal').style.display='none'">&times;</span>
+        </div>
+        <div class="modal-body">
+          <div id="pendingJoinRequestsList" style="max-height:400px;overflow-y:auto;">
+            <div class="empty-state" style="padding:20px;text-align:center;color:var(--muted);font-size:13px;">No pending requests</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Reset Invite Link Confirmation Modal -->
+    <div id="resetInviteLinkModal" class="modal" style="display:none">
+      <div class="modal-content" style="width:min(380px,96%);">
+        <div class="modal-header">
+          <h3>Reset Invite Link</h3>
+          <span class="close-modal" onclick="document.getElementById('resetInviteLinkModal').style.display='none'">&times;</span>
+        </div>
+        <div class="modal-body">
+          <p style="font-size:14px;color:var(--text);margin-bottom:12px;">Are you sure you want to reset the invite link for this group?</p>
+          <p style="font-size:13px;color:var(--muted);">The previous invite link will stop working. A new one will be generated.</p>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-outline" onclick="document.getElementById('resetInviteLinkModal').style.display='none'">Cancel</button>
+          <button id="confirmResetInviteLinkBtn" class="btn btn-primary" style="background:#ef4444;">Reset Link</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Welcome Message Editor Modal -->
+    <div id="welcomeMessageModal" class="modal" style="display:none">
+      <div class="modal-content" style="width:min(440px,96%);">
+        <div class="modal-header">
+          <h3>Welcome Message</h3>
+          <span class="close-modal" onclick="document.getElementById('welcomeMessageModal').style.display='none'">&times;</span>
+        </div>
+        <div class="modal-body">
+          <p style="font-size:13px;color:var(--muted-strong);margin-bottom:12px;">This message will be automatically sent to new members when they join the group.</p>
+          <textarea id="welcomeMessageInput" rows="4" placeholder="Enter welcome message... Use {user} to insert the member's name." style="width:100%;padding:12px;border:1px solid var(--border);border-radius:12px;resize:vertical;font-family:inherit;font-size:13px;"></textarea>
+          <div style="font-size:11px;color:var(--muted);margin-top:6px;">Tip: Use <code>{user}</code> to insert the new member's name</div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-outline" onclick="document.getElementById('welcomeMessageModal').style.display='none'">Cancel</button>
+          <button id="saveWelcomeMessageBtn" class="btn btn-primary">Save</button>
+          <button id="clearWelcomeMessageBtn" class="btn btn-outline" style="color:#ef4444;border-color:#ef4444;">Clear</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- View Fullscreen Photo Modal -->
+    <div id="groupPhotoViewerModal" class="modal" style="display:none">
+      <div class="modal-content" style="width:min(500px,96%);background:transparent;box-shadow:none;">
+        <div class="modal-header" style="background:transparent;border:none;justify-content:flex-end;">
+          <span class="close-modal" onclick="document.getElementById('groupPhotoViewerModal').style.display='none'" style="color:white;font-size:32px;text-shadow:0 2px 8px rgba(0,0,0,0.5);">&times;</span>
+        </div>
+        <div class="modal-body" style="text-align:center;padding:0;">
+          <img id="groupPhotoViewerImg" src="" alt="Group photo" style="max-width:100%;max-height:70vh;border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,0.3);">
+        </div>
+      </div>
+    </div>
+
     <!-- Data Usage Modal -->
     <div id="dataUsageModal" class="modal" style="display:none">
       <div class="modal-content" style="width:min(420px,96%);">
@@ -2196,6 +2386,72 @@
           <div class="data-usage-stat"><span>Received:</span><strong id="dataUsageReceived">0 B</strong></div>
           <div class="data-usage-stat"><span>Total:</span><strong id="dataUsageTotal">0 B</strong></div>
           <div class="data-usage-stat" style="border:none;"><span>Last Reset:</span><strong id="dataUsageLastReset">-</strong></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Two-Step Verification Modal -->
+    <div id="twoStepVerificationModal" class="modal" style="display:none">
+      <div class="modal-content" style="width:min(400px,96%);">
+        <div class="modal-header">
+          <h3 id="tsvModalTitle">Two-Step Verification</h3>
+          <span class="close-modal" id="closeTwoStepVerification">&times;</span>
+        </div>
+        <div class="modal-body" id="tsvModalBody">
+          <p style="font-size:13px;color:var(--muted);margin-bottom:16px;">Set a PIN that will be required to verify your identity. You'll be prompted for it periodically.</p>
+          <div style="margin-bottom:12px;">
+            <label style="font-size:13px;font-weight:600;display:block;margin-bottom:4px;">Enter PIN</label>
+            <input type="password" id="tsvPinInput" maxlength="6" inputmode="numeric" pattern="[0-9]*" placeholder="6-digit PIN" style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-size:16px;text-align:center;letter-spacing:8px;" />
+          </div>
+          <div style="margin-bottom:16px;">
+            <label style="font-size:13px;font-weight:600;display:block;margin-bottom:4px;">Re-enter PIN</label>
+            <input type="password" id="tsvPinConfirmInput" maxlength="6" inputmode="numeric" pattern="[0-9]*" placeholder="6-digit PIN" style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-size:16px;text-align:center;letter-spacing:8px;" />
+          </div>
+          <div style="margin-bottom:16px;">
+            <label style="font-size:13px;font-weight:600;display:block;margin-bottom:4px;">Recovery Email (optional)</label>
+            <input type="email" id="tsvEmailInput" placeholder="email@example.com" style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;" />
+            <p style="font-size:11px;color:var(--muted);margin-top:4px;">Add an email to reset your PIN if you forget it.</p>
+          </div>
+          <button id="tsvSaveBtn" class="btn btn-primary" style="width:100%;">Enable Two-Step Verification</button>
+          <button id="tsvDisableBtn" class="btn btn-outline danger" style="width:100%;margin-top:8px;display:none;">Disable Two-Step Verification</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Auto-Download Media Modal -->
+    <div id="autoDownloadModal" class="modal" style="display:none">
+      <div class="modal-content" style="width:min(420px,96%);">
+        <div class="modal-header">
+          <h3>Auto-Download Media</h3>
+          <span class="close-modal" id="closeAutoDownload">&times;</span>
+        </div>
+        <div class="modal-body">
+          <p style="font-size:13px;color:var(--muted);margin-bottom:16px;">Choose when to automatically download media files in chats.</p>
+          <div style="margin-bottom:16px;">
+            <label style="font-size:13px;font-weight:600;display:block;margin-bottom:6px;">When using mobile data</label>
+            <select id="autoDownloadMobile" class="gi-setting-select" style="width:100%;">
+              <option value="never">Never</option>
+              <option value="wifi">Wi-Fi Only</option>
+              <option value="all">All Media</option>
+            </select>
+          </div>
+          <div style="margin-bottom:16px;">
+            <label style="font-size:13px;font-weight:600;display:block;margin-bottom:6px;">When using Wi-Fi</label>
+            <select id="autoDownloadWifi" class="gi-setting-select" style="width:100%;">
+              <option value="never">Never</option>
+              <option value="all">All Media</option>
+            </select>
+          </div>
+          <div style="margin-bottom:16px;">
+            <label style="font-size:13px;font-weight:600;display:block;margin-bottom:6px;">Media types to auto-download</label>
+            <div style="display:flex;flex-direction:column;gap:6px;margin-top:8px;">
+              <label style="font-size:13px;display:flex;align-items:center;gap:8px;"><input type="checkbox" id="autoDownloadPhotos" checked /> Photos</label>
+              <label style="font-size:13px;display:flex;align-items:center;gap:8px;"><input type="checkbox" id="autoDownloadAudio" checked /> Audio</label>
+              <label style="font-size:13px;display:flex;align-items:center;gap:8px;"><input type="checkbox" id="autoDownloadVideo" /> Video</label>
+              <label style="font-size:13px;display:flex;align-items:center;gap:8px;"><input type="checkbox" id="autoDownloadDocs" /> Documents</label>
+            </div>
+          </div>
+          <button id="saveAutoDownloadBtn" class="btn btn-primary" style="width:100%;">Save</button>
         </div>
       </div>
     </div>
@@ -2214,6 +2470,751 @@
           </div>
           <div id="storageManagerContent"></div>
         </div>
+      </div>
+    </div>
+
+    <!-- ===== NEW FEATURE MODALS ===== -->
+
+    <!-- Bookmarked Messages Modal -->
+    <div id="bookmarkedMessagesModal" class="modal" style="display:none">
+      <div class="modal-content" style="width:min(520px,96%);max-height:80vh;display:flex;flex-direction:column;">
+        <div class="modal-header">
+          <h3>Bookmarked Messages</h3>
+          <span class="close-modal" id="closeBookmarkedMessages">&times;</span>
+        </div>
+        <div class="modal-body" id="bookmarkedMessagesList" style="flex:1;overflow-y:auto;"></div>
+      </div>
+    </div>
+
+    <!-- Chat Statistics Modal -->
+    <div id="chatStatsModal" class="modal" style="display:none">
+      <div class="modal-content" style="width:min(480px,96%);">
+        <div class="modal-header">
+          <h3>Chat Statistics</h3>
+          <span class="close-modal" id="closeChatStats">&times;</span>
+        </div>
+        <div class="modal-body" id="chatStatsBody"></div>
+      </div>
+    </div>
+
+    <!-- Message Effects Panel -->
+    <div id="messageEffectsPanel" class="modal" style="display:none">
+      <div class="modal-content" style="width:min(360px,96%);">
+        <div class="modal-header">
+          <h3>Send with Effect</h3>
+          <span class="close-modal" id="closeMsgEffects">&times;</span>
+        </div>
+        <div class="modal-body" style="display:flex;flex-wrap:wrap;gap:12px;justify-content:center;padding:20px;">
+          <button class="msg-effect-btn" data-effect="none" style="flex-direction:column;gap:4px;padding:16px;border:2px solid var(--border);border-radius:12px;background:var(--bg);cursor:pointer;width:100px;text-align:center;">
+            <span style="font-size:28px;">❌</span><span style="font-size:12px;">None</span>
+          </button>
+          <button class="msg-effect-btn" data-effect="confetti" style="flex-direction:column;gap:4px;padding:16px;border:2px solid var(--border);border-radius:12px;background:var(--bg);cursor:pointer;width:100px;text-align:center;">
+            <span style="font-size:28px;">🎊</span><span style="font-size:12px;">Confetti</span>
+          </button>
+          <button class="msg-effect-btn" data-effect="fireworks" style="flex-direction:column;gap:4px;padding:16px;border:2px solid var(--border);border-radius:12px;background:var(--bg);cursor:pointer;width:100px;text-align:center;">
+            <span style="font-size:28px;">🎆</span><span style="font-size:12px;">Fireworks</span>
+          </button>
+          <button class="msg-effect-btn" data-effect="hearts" style="flex-direction:column;gap:4px;padding:16px;border:2px solid var(--border);border-radius:12px;background:var(--bg);cursor:pointer;width:100px;text-align:center;">
+            <span style="font-size:28px;">💕</span><span style="font-size:12px;">Hearts</span>
+          </button>
+          <button class="msg-effect-btn" data-effect="laser" style="flex-direction:column;gap:4px;padding:16px;border:2px solid var(--border);border-radius:12px;background:var(--bg);cursor:pointer;width:100px;text-align:center;">
+            <span style="font-size:28px;">🔫</span><span style="font-size:12px;">Laser</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- AI Smart Replies: settings modal -->
+    <div id="smartRepliesSettingsModal" class="modal" style="display:none">
+      <div class="modal-content" style="width:min(420px,96%);">
+        <div class="modal-header">
+          <h3>AI Smart Replies</h3>
+          <span class="close-modal" id="closeSmartReplies">&times;</span>
+        </div>
+        <div class="modal-body">
+          <p style="font-size:13px;color:var(--muted);margin-bottom:12px;">Get AI-powered reply suggestions for incoming messages.</p>
+          <div class="privacy-row" style="margin-bottom:12px;">
+            <span>Enable Smart Replies</span>
+            <label class="switch"><input type="checkbox" id="smartRepliesEnabled" /><span class="slider"></span></label>
+          </div>
+          <div style="margin-bottom:12px;">
+            <label style="font-size:13px;font-weight:600;display:block;margin-bottom:4px;">API Key (Gemini)</label>
+            <input type="password" id="smartRepliesApiKey" placeholder="Enter your Gemini API key" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:13px;" />
+            <p style="font-size:11px;color:var(--muted);margin-top:4px;">Get a free key at <a href="https://aistudio.google.com/apikey" target="_blank">aistudio.google.com/apikey</a></p>
+          </div>
+          <button id="saveSmartRepliesBtn" class="btn btn-primary" style="width:100%;">Save</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Smart Reply Suggestions Bar (hidden by default) -->
+    <div id="smartReplyBar" style="display:none;padding:8px 16px;gap:8px;overflow-x:auto;white-space:nowrap;border-top:1px solid var(--border);background:var(--bg);">
+      <span style="font-size:12px;color:var(--muted);flex-shrink:0;">Reply:</span>
+    </div>
+
+    <!-- Chat Summary Modal -->
+    <div id="chatSummaryModal" class="modal" style="display:none">
+      <div class="modal-content" style="width:min(480px,96%);">
+        <div class="modal-header">
+          <h3>Chat Summary</h3>
+          <span class="close-modal" id="closeChatSummary">&times;</span>
+        </div>
+        <div class="modal-body" id="chatSummaryBody" style="font-size:14px;line-height:1.6;white-space:pre-wrap;"></div>
+      </div>
+    </div>
+
+    <!-- Notes Modal -->
+    <div id="notesModal" class="modal" style="display:none">
+      <div class="modal-content" style="width:min(520px,96%);max-height:80vh;display:flex;flex-direction:column;">
+        <div class="modal-header">
+          <h3>Notes</h3>
+          <span class="close-modal" id="closeNotesModal">&times;</span>
+        </div>
+        <div class="modal-body" style="flex:1;overflow-y:auto;" id="notesList"></div>
+      </div>
+    </div>
+
+    <!-- Create Event Modal -->
+    <div id="createEventModal" class="modal" style="display:none">
+      <div class="modal-content" style="width:min(400px,96%);">
+        <div class="modal-header">
+          <h3>Create Calendar Event</h3>
+          <span class="close-modal" id="closeCreateEvent">&times;</span>
+        </div>
+        <div class="modal-body">
+          <div style="margin-bottom:12px;">
+            <label style="font-size:13px;font-weight:600;display:block;margin-bottom:4px;">Title</label>
+            <input type="text" id="eventTitleInput" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:13px;" />
+          </div>
+          <div style="margin-bottom:12px;">
+            <label style="font-size:13px;font-weight:600;display:block;margin-bottom:4px;">Date</label>
+            <input type="date" id="eventDateInput" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:13px;" />
+          </div>
+          <div style="margin-bottom:12px;">
+            <label style="font-size:13px;font-weight:600;display:block;margin-bottom:4px;">Time</label>
+            <input type="time" id="eventTimeInput" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:13px;" />
+          </div>
+          <div style="margin-bottom:16px;">
+            <label style="font-size:13px;font-weight:600;display:block;margin-bottom:4px;">Description</label>
+            <textarea id="eventDescInput" rows="3" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:13px;resize:vertical;"></textarea>
+          </div>
+          <button id="downloadEventBtn" class="btn btn-primary" style="width:100%;">Download .ics File</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Voice Transcription Indicator -->
+    <div id="transcriptionIndicator" style="display:none;position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:var(--bg);border:1px solid var(--border);border-radius:12px;padding:12px 20px;z-index:999;max-width:80%;text-align:center;box-shadow:0 4px 20px rgba(0,0,0,0.15);">
+      <div style="font-size:12px;color:var(--muted);margin-bottom:4px;">Transcribing...</div>
+      <div id="transcriptionText" style="font-size:14px;"></div>
+    </div>
+
+    <!-- ===== PHASE 2: MESSAGING & RICH CONTENT MODALS ===== -->
+
+    <!-- Schedule Message Modal -->
+    <div id="scheduleMessageModal" class="modal" style="display:none">
+      <div class="modal-content" style="width:min(400px,96%);">
+        <div class="modal-header">
+          <h3>Schedule Message</h3>
+          <span class="close-modal" id="closeScheduleMsg">&times;</span>
+        </div>
+        <div class="modal-body">
+          <p style="font-size:13px;color:var(--muted);margin-bottom:16px;">Set a date and time for this message to be sent automatically.</p>
+          <div style="margin-bottom:12px;">
+            <label style="font-size:13px;font-weight:600;display:block;margin-bottom:4px;">Message preview</label>
+            <div id="scheduledMsgPreview" style="padding:10px;background:var(--panel-soft);border-radius:8px;font-size:13px;min-height:40px;word-break:break-word;"></div>
+          </div>
+          <div style="margin-bottom:12px;">
+            <label style="font-size:13px;font-weight:600;display:block;margin-bottom:4px;">Date</label>
+            <input type="date" id="scheduledDateInput" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:13px;" />
+          </div>
+          <div style="margin-bottom:16px;">
+            <label style="font-size:13px;font-weight:600;display:block;margin-bottom:4px;">Time</label>
+            <input type="time" id="scheduledTimeInput" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:13px;" />
+          </div>
+          <button id="confirmScheduleBtn" class="btn btn-primary" style="width:100%;">Schedule Message</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Markdown Preview Panel (hidden by default, shown in compose area) -->
+    <div id="markdownPreviewPanel" style="display:none;padding:12px 16px;border-top:1px solid var(--border);background:var(--panel-soft);max-height:200px;overflow-y:auto;font-size:14px;line-height:1.6;"></div>
+
+    <!-- Read-by List Modal -->
+    <div id="readByListModal" class="modal" style="display:none">
+      <div class="modal-content" style="width:min(380px,96%);max-height:70vh;display:flex;flex-direction:column;">
+        <div class="modal-header">
+          <h3>Read By</h3>
+          <span class="close-modal" id="closeReadByList">&times;</span>
+        </div>
+        <div class="modal-body" id="readByListBody" style="flex:1;overflow-y:auto;"></div>
+      </div>
+    </div>
+
+    <!-- Large File Upload Progress Overlay -->
+    <div id="fileUploadProgress" style="display:none;position:fixed;bottom:100px;left:50%;transform:translateX(-50%);background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:16px 20px;z-index:9999;min-width:280px;max-width:90%;box-shadow:0 4px 24px rgba(0,0,0,0.18);">
+      <div style="font-size:13px;font-weight:600;margin-bottom:8px;" id="fileUploadProgressLabel">Uploading...</div>
+      <div style="width:100%;height:6px;background:var(--border);border-radius:3px;overflow:hidden;">
+        <div id="fileUploadProgressBar" style="width:0%;height:100%;background:var(--brand);border-radius:3px;transition:width 0.3s;"></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;margin-top:6px;font-size:11px;color:var(--muted);">
+        <span id="fileUploadProgressPercent">0%</span>
+        <button id="fileUploadCancelBtn" style="background:none;border:none;color:var(--danger);cursor:pointer;font-size:11px;padding:0;">Cancel</button>
+      </div>
+    </div>
+
+    <!-- ===== PHASE 3: GROUP ADMIN MODALS ===== -->
+
+    <!-- Temporary Group Settings Modal -->
+    <div id="temporaryGroupModal" class="modal" style="display:none">
+      <div class="modal-content" style="width:min(400px,96%);">
+        <div class="modal-header">
+          <h3>Temporary Group</h3>
+          <span class="close-modal" id="closeTemporaryGroup">&times;</span>
+        </div>
+        <div class="modal-body">
+          <p style="font-size:13px;color:var(--muted);margin-bottom:16px;">Set a lifespan for this group. After the duration expires, the group will be automatically deleted.</p>
+          <div style="margin-bottom:12px;">
+            <label style="font-size:13px;font-weight:600;display:block;margin-bottom:4px;">Auto-delete after</label>
+            <select id="temporaryGroupDuration" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:13px;">
+              <option value="0">Never (permanent)</option>
+              <option value="3600">1 hour</option>
+              <option value="86400">24 hours</option>
+              <option value="604800">7 days</option>
+              <option value="2592000">30 days</option>
+              <option value="7776000">90 days</option>
+            </select>
+          </div>
+          <button id="saveTemporaryGroupBtn" class="btn btn-primary" style="width:100%;">Save</button>
+          <button id="clearTemporaryGroupBtn" class="btn btn-outline" style="width:100%;margin-top:8px;color:var(--danger);border-color:var(--danger);">Disable Temporary Mode</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Group Tags Modal -->
+    <div id="groupTagsModal" class="modal" style="display:none">
+      <div class="modal-content" style="width:min(360px,96%);">
+        <div class="modal-header">
+          <h3>Group Tags</h3>
+          <span class="close-modal" id="closeGroupTags">&times;</span>
+        </div>
+        <div class="modal-body" style="padding:16px;">
+          <p style="font-size:13px;color:var(--muted);margin-bottom:12px;">Assign color-coded tags to organize your groups.</p>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;" id="groupTagSelector">
+            <button class="group-tag-option" data-tag="" style="padding:8px 16px;border:2px solid var(--border);border-radius:20px;background:transparent;cursor:pointer;font-size:13px;">None</button>
+            <button class="group-tag-option" data-tag="work" style="padding:8px 16px;border:2px solid #3b82f6;border-radius:20px;background:#3b82f6;color:#fff;cursor:pointer;font-size:13px;">Work</button>
+            <button class="group-tag-option" data-tag="family" style="padding:8px 16px;border:2px solid #10b981;border-radius:20px;background:#10b981;color:#fff;cursor:pointer;font-size:13px;">Family</button>
+            <button class="group-tag-option" data-tag="friends" style="padding:8px 16px;border:2px solid #f59e0b;border-radius:20px;background:#f59e0b;color:#fff;cursor:pointer;font-size:13px;">Friends</button>
+            <button class="group-tag-option" data-tag="project" style="padding:8px 16px;border:2px solid #8b5cf6;border-radius:20px;background:#8b5cf6;color:#fff;cursor:pointer;font-size:13px;">Project</button>
+            <button class="group-tag-option" data-tag="archive" style="padding:8px 16px;border:2px solid #6b7280;border-radius:20px;background:#6b7280;color:#fff;cursor:pointer;font-size:13px;">Archive</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Group Usage Dashboard Modal -->
+    <div id="groupUsageModal" class="modal" style="display:none">
+      <div class="modal-content" style="width:min(480px,96%);max-height:80vh;display:flex;flex-direction:column;">
+        <div class="modal-header">
+          <h3>Group Dashboard</h3>
+          <span class="close-modal" id="closeGroupUsage">&times;</span>
+        </div>
+        <div class="modal-body" id="groupUsageBody" style="flex:1;overflow-y:auto;padding:16px;"></div>
+      </div>
+    </div>
+
+    <!-- Batch Member Management Bar -->
+    <div id="batchMemberBar" style="display:none;position:sticky;bottom:0;background:var(--panel);border-top:2px solid var(--brand);padding:10px 16px;gap:8px;align-items:center;justify-content:space-between;z-index:10;">
+      <span style="font-size:13px;font-weight:600;" id="batchMemberCount">0 selected</span>
+      <div style="display:flex;gap:8px;">
+        <button id="batchPromoteBtn" class="btn btn-outline" style="font-size:12px;padding:6px 14px;">Promote</button>
+        <button id="batchDemoteBtn" class="btn btn-outline" style="font-size:12px;padding:6px 14px;">Demote</button>
+        <button id="batchRemoveBtn" class="btn btn-outline danger" style="font-size:12px;padding:6px 14px;color:var(--danger);border-color:var(--danger);">Remove</button>
+      </div>
+      <button id="batchClearBtn" class="btn btn-outline" style="font-size:12px;padding:6px 10px;">Clear</button>
+    </div>
+
+    <!-- Mute Member Confirmation Modal -->
+    <div id="muteMemberModal" class="modal" style="display:none">
+      <div class="modal-content" style="width:min(360px,96%);">
+        <div class="modal-header">
+          <h3>Mute Member</h3>
+          <span class="close-modal" id="closeMuteMember">&times;</span>
+        </div>
+        <div class="modal-body">
+          <p style="font-size:13px;color:var(--muted);margin-bottom:16px;">Mute messages from this member in this group. They won't know they've been muted.</p>
+          <div style="margin-bottom:12px;">
+            <label style="font-size:13px;font-weight:600;display:block;margin-bottom:4px;">Duration</label>
+            <select id="muteMemberDuration" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:13px;">
+              <option value="3600">1 hour</option>
+              <option value="86400">24 hours</option>
+              <option value="604800">7 days</option>
+              <option value="0">Always (until unmuted)</option>
+            </select>
+          </div>
+          <button id="confirmMuteMemberBtn" class="btn btn-primary" style="width:100%;">Mute</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== PHASE 5-8: CALLS, SEARCH, PRIVACY, NOTIFICATIONS MODALS ===== -->
+
+    <!-- Call Link Sharing Modal -->
+    <div id="callLinkModal" class="modal" style="display:none">
+      <div class="modal-content" style="width:min(380px,96%);">
+        <div class="modal-header">
+          <h3>Share Call Link</h3>
+          <span class="close-modal" id="closeCallLink">&times;</span>
+        </div>
+        <div class="modal-body">
+          <p style="font-size:13px;color:var(--muted);margin-bottom:12px;">Share this link to let others join the call.</p>
+          <div style="display:flex;gap:8px;">
+            <input type="text" id="callLinkInput" readonly style="flex:1;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:13px;" />
+            <button id="copyCallLinkBtn" class="btn btn-outline" style="padding:10px 16px;">Copy</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Call Reactions Overlay -->
+    <div id="callReactionsOverlay" style="display:none;position:absolute;bottom:80px;right:20px;z-index:100;">
+      <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;max-width:200px;">
+        <button class="call-reaction-btn" data-reaction="❤️" style="font-size:28px;background:var(--panel);border:none;border-radius:50%;width:48px;height:48px;cursor:pointer;box-shadow:0 2px 12px rgba(0,0,0,0.15);">❤️</button>
+        <button class="call-reaction-btn" data-reaction="👍" style="font-size:28px;background:var(--panel);border:none;border-radius:50%;width:48px;height:48px;cursor:pointer;box-shadow:0 2px 12px rgba(0,0,0,0.15);">👍</button>
+        <button class="call-reaction-btn" data-reaction="🎉" style="font-size:28px;background:var(--panel);border:none;border-radius:50%;width:48px;height:48px;cursor:pointer;box-shadow:0 2px 12px rgba(0,0,0,0.15);">🎉</button>
+        <button class="call-reaction-btn" data-reaction="😂" style="font-size:28px;background:var(--panel);border:none;border-radius:50%;width:48px;height:48px;cursor:pointer;box-shadow:0 2px 12px rgba(0,0,0,0.15);">😂</button>
+        <button class="call-reaction-btn" data-reaction="😮" style="font-size:28px;background:var(--panel);border:none;border-radius:50%;width:48px;height:48px;cursor:pointer;box-shadow:0 2px 12px rgba(0,0,0,0.15);">😮</button>
+      </div>
+    </div>
+
+    <!-- Call Raise Hand Overlay -->
+    <div id="raiseHandIndicator" style="display:none;position:absolute;top:10px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.7);color:#fff;padding:8px 16px;border-radius:20px;font-size:13px;z-index:100;white-space:nowrap;">✋ Hand raised</div>
+
+    <!-- Search Filters Modal -->
+    <div id="searchFiltersModal" class="modal" style="display:none">
+      <div class="modal-content" style="width:min(380px,96%);">
+        <div class="modal-header">
+          <h3>Search Filters</h3>
+          <span class="close-modal" id="closeSearchFilters">&times;</span>
+        </div>
+        <div class="modal-body">
+          <div style="margin-bottom:12px;">
+            <label style="font-size:13px;font-weight:600;display:block;margin-bottom:4px;">Sender</label>
+            <input type="text" id="searchFilterSender" placeholder="Filter by sender name" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:13px;" />
+          </div>
+          <div style="margin-bottom:12px;">
+            <label style="font-size:13px;font-weight:600;display:block;margin-bottom:4px;">Date from</label>
+            <input type="date" id="searchFilterDateFrom" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:13px;" />
+          </div>
+          <div style="margin-bottom:12px;">
+            <label style="font-size:13px;font-weight:600;display:block;margin-bottom:4px;">Date to</label>
+            <input type="date" id="searchFilterDateTo" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:13px;" />
+          </div>
+          <div style="margin-bottom:12px;">
+            <label style="font-size:13px;font-weight:600;display:block;margin-bottom:4px;">Type</label>
+            <select id="searchFilterType" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:13px;">
+              <option value="">All</option>
+              <option value="text">Text</option>
+              <option value="image">Images</option>
+              <option value="video">Videos</option>
+              <option value="audio">Audio</option>
+              <option value="file">Files</option>
+              <option value="link">Links</option>
+            </select>
+          </div>
+          <button id="applySearchFiltersBtn" class="btn btn-primary" style="width:100%;">Apply Filters</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Keyword Alerts Modal -->
+    <div id="keywordAlertsModal" class="modal" style="display:none">
+      <div class="modal-content" style="width:min(400px,96%);">
+        <div class="modal-header">
+          <h3>Keyword Alerts</h3>
+          <span class="close-modal" id="closeKeywordAlerts">&times;</span>
+        </div>
+        <div class="modal-body">
+          <p style="font-size:13px;color:var(--muted);margin-bottom:12px;">Get notified when specific keywords are mentioned in any chat.</p>
+          <div style="display:flex;gap:8px;margin-bottom:12px;">
+            <input type="text" id="keywordAlertInput" placeholder="Enter keyword (e.g., urgent)" style="flex:1;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:13px;" />
+            <button id="addKeywordBtn" class="btn btn-primary" style="padding:10px 16px;">Add</button>
+          </div>
+          <div id="keywordAlertsList"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Scheduled DND Modal -->
+    <div id="scheduledDndModal" class="modal" style="display:none">
+      <div class="modal-content" style="width:min(380px,96%);">
+        <div class="modal-header">
+          <h3>Quiet Hours</h3>
+          <span class="close-modal" id="closeScheduledDnd">&times;</span>
+        </div>
+        <div class="modal-body">
+          <p style="font-size:13px;color:var(--muted);margin-bottom:12px;">Set hours when notifications are muted.</p>
+          <div style="margin-bottom:12px;">
+            <label style="font-size:13px;font-weight:600;display:block;margin-bottom:4px;">From</label>
+            <input type="time" id="dndFromTime" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:13px;" />
+          </div>
+          <div style="margin-bottom:12px;">
+            <label style="font-size:13px;font-weight:600;display:block;margin-bottom:4px;">To</label>
+            <input type="time" id="dndToTime" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:13px;" />
+          </div>
+          <button id="saveDndBtn" class="btn btn-primary" style="width:100%;">Save Quiet Hours</button>
+          <button id="clearDndBtn" class="btn btn-outline" style="width:100%;margin-top:8px;">Disable Quiet Hours</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Encryption Verification Modal -->
+    <div id="encryptionVerifyModal" class="modal" style="display:none">
+      <div class="modal-content" style="width:min(400px,96%);">
+        <div class="modal-header">
+          <h3>Encryption Verification</h3>
+          <span class="close-modal" id="closeEncryptionVerify">&times;</span>
+        </div>
+        <div class="modal-body" style="text-align:center;">
+          <div style="font-size:48px;margin-bottom:16px;">🔐</div>
+          <p style="font-size:14px;margin-bottom:12px;">Your messages are end-to-end encrypted. Verify with the other device:</p>
+          <div id="encryptionFingerprint" style="font-family:monospace;font-size:14px;background:var(--panel-soft);padding:16px;border-radius:8px;word-break:break-all;margin-bottom:12px;letter-spacing:2px;"></div>
+          <p style="font-size:12px;color:var(--muted);">Compare this 60-digit number with the other device. If they match, your encryption is secure.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Screenshot Detection Notification -->
+    <div id="screenshotDetectedToast" style="display:none;position:fixed;top:20px;left:50%;transform:translateX(-50%);background:#ef4444;color:#fff;padding:10px 20px;border-radius:12px;font-size:13px;z-index:99999;box-shadow:0 4px 24px rgba(0,0,0,0.2);">📸 Screenshot detected from a participant</div>
+
+    <!-- Self-Destruct Account Modal -->
+    <div id="selfDestructModal" class="modal" style="display:none">
+      <div class="modal-content" style="width:min(380px,96%);">
+        <div class="modal-header">
+          <h3>Self-Destructing Account</h3>
+          <span class="close-modal" id="closeSelfDestruct">&times;</span>
+        </div>
+        <div class="modal-body">
+          <p style="font-size:13px;color:var(--muted);margin-bottom:16px;">Auto-delete your account after a period of inactivity.</p>
+          <div style="margin-bottom:12px;">
+            <label style="font-size:13px;font-weight:600;display:block;margin-bottom:4px;">Auto-delete after</label>
+            <select id="selfDestructDuration" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:13px;">
+              <option value="0">Never</option>
+              <option value="2592000">30 days</option>
+              <option value="5184000">60 days</option>
+              <option value="7776000">90 days</option>
+            </select>
+          </div>
+          <button id="saveSelfDestructBtn" class="btn btn-primary" style="width:100%;">Save</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Session Management Modal -->
+    <div id="sessionsModal" class="modal" style="display:none">
+      <div class="modal-content" style="width:min(420px,96%);">
+        <div class="modal-header">
+          <h3>Active Sessions</h3>
+          <span class="close-modal" id="closeSessionsModal">&times;</span>
+        </div>
+        <div class="modal-body" id="sessionsListBody">
+          <p style="font-size:13px;color:var(--muted);">Sessions are managed per-device. This browser session is currently active.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Privacy Settings Modal -->
+    <div id="privacySettingsModal" class="modal" style="display:none">
+      <div class="modal-content" style="width:min(400px,96%);">
+        <div class="modal-header">
+          <h3>Privacy Settings</h3>
+          <span class="close-modal" id="closePrivacySettings">&times;</span>
+        </div>
+        <div class="modal-body">
+          <div class="privacy-row"><span>Profile Photo</span>
+            <select id="privacyProfilePhoto" style="padding:6px;border:1px solid var(--border);border-radius:6px;font-size:12px;">
+              <option value="everyone">Everyone</option>
+              <option value="contacts">My Contacts</option>
+              <option value="nobody">Nobody</option>
+            </select>
+          </div>
+          <div class="privacy-row"><span>Last Seen & Online</span>
+            <select id="privacyLastSeen" style="padding:6px;border:1px solid var(--border);border-radius:6px;font-size:12px;">
+              <option value="everyone">Everyone</option>
+              <option value="contacts">My Contacts</option>
+              <option value="nobody">Nobody</option>
+            </select>
+          </div>
+          <div class="privacy-row"><span>Groups</span>
+            <select id="privacyGroups" style="padding:6px;border:1px solid var(--border);border-radius:6px;font-size:12px;">
+              <option value="everyone">Everyone</option>
+              <option value="contacts">My Contacts</option>
+              <option value="nobody">Nobody</option>
+            </select>
+          </div>
+          <div class="privacy-row"><span>Read Receipts</span>
+            <label class="switch"><input type="checkbox" id="privacyReadReceipts" checked /><span class="slider"></span></label>
+          </div>
+          <button id="savePrivacySettingsBtn" class="btn btn-primary" style="width:100%;margin-top:16px;">Save Privacy Settings</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Notification Sound Picker -->
+    <div id="notificationSoundModal" class="modal" style="display:none">
+      <div class="modal-content" style="width:min(360px,96%);">
+        <div class="modal-header">
+          <h3>Notification Sound</h3>
+          <span class="close-modal" id="closeNotifSound">&times;</span>
+        </div>
+        <div class="modal-body">
+          <div style="margin-bottom:12px;" id="chatSoundSelector">
+            <label style="font-size:13px;font-weight:600;display:block;margin-bottom:8px;">Choose a sound for this chat</label>
+            <select id="chatSoundSelect" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:13px;">
+              <option value="">Default</option>
+              <option value="notification_1">Notification 1</option>
+              <option value="notification_2">Notification 2</option>
+              <option value="notification_3">Notification 3</option>
+              <option value="chime">Chime</option>
+              <option value="bell">Bell</option>
+            </select>
+          </div>
+          <button id="saveChatSoundBtn" class="btn btn-primary" style="width:100%;">Save</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== PHASE 9-13: DATA, A11Y, INTEGRATIONS, FUN, DEVELOPER ===== -->
+
+    <!-- Media Quality Selector Modal -->
+    <div id="mediaQualityModal" class="modal" style="display:none">
+      <div class="modal-content" style="width:min(380px,96%);">
+        <div class="modal-header">
+          <h3>Media Quality</h3>
+          <span class="close-modal" id="closeMediaQuality">&times;</span>
+        </div>
+        <div class="modal-body">
+          <div style="margin-bottom:16px;">
+            <label style="font-size:13px;font-weight:600;display:block;margin-bottom:8px;">Photo quality</label>
+            <select id="photoQualitySelect" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:13px;">
+              <option value="auto">Auto (recommended)</option>
+              <option value="best">Best quality</option>
+              <option value="data_saver">Data saver</option>
+            </select>
+          </div>
+          <div style="margin-bottom:16px;">
+            <label style="font-size:13px;font-weight:600;display:block;margin-bottom:8px;">Video quality</label>
+            <select id="videoQualitySelect" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:13px;">
+              <option value="auto">Auto (recommended)</option>
+              <option value="high">High (1080p)</option>
+              <option value="medium">Medium (720p)</option>
+              <option value="low">Low (480p)</option>
+            </select>
+          </div>
+          <button id="saveMediaQualityBtn" class="btn btn-primary" style="width:100%;">Save</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Cache Manager Modal -->
+    <div id="cacheManagerModal" class="modal" style="display:none">
+      <div class="modal-content" style="width:min(400px,96%);">
+        <div class="modal-header">
+          <h3>Cache Manager</h3>
+          <span class="close-modal" id="closeCacheManager">&times;</span>
+        </div>
+        <div class="modal-body">
+          <div style="margin-bottom:12px;" id="cacheStats">
+            <div class="usage-stat-card"><span class="usage-stat-label">LocalStorage</span><span class="usage-stat-value" id="cacheLocalStorageSize">0 KB</span></div>
+            <div class="usage-stat-card"><span class="usage-stat-label">Cached Files</span><span class="usage-stat-value" id="cacheFileCount">0 files</span></div>
+          </div>
+          <button id="clearCacheBtn" class="btn btn-outline danger" style="width:100%;color:var(--danger);border-color:var(--danger);">Clear All Cache</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Font Size Slider -->
+    <div id="fontSizeModal" class="modal" style="display:none">
+      <div class="modal-content" style="width:min(380px,96%);">
+        <div class="modal-header">
+          <h3>Font Size</h3>
+          <span class="close-modal" id="closeFontSize">&times;</span>
+        </div>
+        <div class="modal-body">
+          <p style="font-size:13px;color:var(--muted);margin-bottom:12px;">Adjust the font size for chat messages.</p>
+          <div style="display:flex;align-items:center;gap:12px;">
+            <span style="font-size:12px;">A</span>
+            <input type="range" id="fontSizeSlider" min="12" max="22" value="15" style="flex:1;" />
+            <span style="font-size:20px;">A</span>
+          </div>
+          <div id="fontSizePreview" style="margin-top:16px;padding:12px;background:var(--panel-soft);border-radius:8px;">Preview text with your selected font size</div>
+          <button id="saveFontSizeBtn" class="btn btn-primary" style="width:100%;margin-top:16px;">Apply</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Language Selector Modal -->
+    <div id="languageModal" class="modal" style="display:none">
+      <div class="modal-content" style="width:min(360px,96%);">
+        <div class="modal-header">
+          <h3>Language</h3>
+          <span class="close-modal" id="closeLanguageModal">&times;</span>
+        </div>
+        <div class="modal-body">
+          <select id="languageSelect" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:13px;">
+            <option value="en">English</option>
+            <option value="hi">हिन्दी (Hindi)</option>
+            <option value="es">Español (Spanish)</option>
+            <option value="fr">Français (French)</option>
+            <option value="de">Deutsch (German)</option>
+            <option value="ja">日本語 (Japanese)</option>
+            <option value="zh">中文 (Chinese)</option>
+            <option value="ar">العربية (Arabic)</option>
+          </select>
+          <div style="margin-top:12px;">
+            <label style="font-size:13px;display:flex;align-items:center;gap:8px;">
+              <input type="checkbox" id="rtlToggle" /> Enable RTL layout (for Arabic, Urdu, etc.)
+            </label>
+          </div>
+          <button id="saveLanguageBtn" class="btn btn-primary" style="width:100%;margin-top:16px;">Apply</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Keyboard Shortcuts Help Modal -->
+    <div id="keyboardShortcutsModal" class="modal" style="display:none">
+      <div class="modal-content" style="width:min(400px,96%);">
+        <div class="modal-header">
+          <h3>Keyboard Shortcuts</h3>
+          <span class="close-modal" id="closeKeyboardShortcuts">&times;</span>
+        </div>
+        <div class="modal-body">
+          <div class="usage-stat-card"><span class="usage-stat-label">Ctrl/Cmd + K</span><span class="usage-stat-value" style="color:var(--muted);font-weight:400;">Search</span></div>
+          <div class="usage-stat-card"><span class="usage-stat-label">Ctrl/Cmd + N</span><span class="usage-stat-value" style="color:var(--muted);font-weight:400;">New chat</span></div>
+          <div class="usage-stat-card"><span class="usage-stat-label">Ctrl/Cmd + Shift + M</span><span class="usage-stat-value" style="color:var(--muted);font-weight:400;">Mute/unmute</span></div>
+          <div class="usage-stat-card"><span class="usage-stat-label">Ctrl/Cmd + Enter</span><span class="usage-stat-value" style="color:var(--muted);font-weight:400;">Send message</span></div>
+          <div class="usage-stat-card"><span class="usage-stat-label">Escape</span><span class="usage-stat-value" style="color:var(--muted);font-weight:400;">Close modal / cancel</span></div>
+          <div class="usage-stat-card"><span class="usage-stat-label">Arrow Up (in chat)</span><span class="usage-stat-value" style="color:var(--muted);font-weight:400;">Edit last message</span></div>
+          <div class="usage-stat-card" style="border:none;"><span class="usage-stat-label">?</span><span class="usage-stat-value" style="color:var(--muted);font-weight:400;">Show this help</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Chat Theme Selector Modal -->
+    <div id="chatThemeModal" class="modal" style="display:none">
+      <div class="modal-content" style="width:min(400px,96%);">
+        <div class="modal-header">
+          <h3>Chat Theme</h3>
+          <span class="close-modal" id="closeChatTheme">&times;</span>
+        </div>
+        <div class="modal-body">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;" id="themeSelector">
+            <button class="chat-theme-option" data-theme="default" style="padding:16px;border:2px solid var(--border);border-radius:12px;cursor:pointer;background:#fff;text-align:center;">Default</button>
+            <button class="chat-theme-option" data-theme="dark" style="padding:16px;border:2px solid var(--border);border-radius:12px;cursor:pointer;background:#1a1a2e;color:#fff;text-align:center;">Dark</button>
+            <button class="chat-theme-option" data-theme="ocean" style="padding:16px;border:2px solid var(--border);border-radius:12px;cursor:pointer;background:#0f4c75;color:#fff;text-align:center;">Ocean</button>
+            <button class="chat-theme-option" data-theme="forest" style="padding:16px;border:2px solid var(--border);border-radius:12px;cursor:pointer;background:#2d6a4f;color:#fff;text-align:center;">Forest</button>
+            <button class="chat-theme-option" data-theme="sunset" style="padding:16px;border:2px solid var(--border);border-radius:12px;cursor:pointer;background:#d62828;color:#fff;text-align:center;">Sunset</button>
+            <button class="chat-theme-option" data-theme="lavender" style="padding:16px;border:2px solid var(--border);border-radius:12px;cursor:pointer;background:#7b2d8e;color:#fff;text-align:center;">Lavender</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Daily Streak Modal -->
+    <div id="streakModal" class="modal" style="display:none">
+      <div class="modal-content" style="width:min(360px,96%);text-align:center;">
+        <div class="modal-header">
+          <h3>🔥 Streaks</h3>
+          <span class="close-modal" id="closeStreakModal">&times;</span>
+        </div>
+        <div class="modal-body" id="streakBody">
+          <div style="font-size:48px;margin-bottom:12px;">🔥</div>
+          <div id="streakCount" style="font-size:36px;font-weight:700;color:var(--brand);">0</div>
+          <div style="font-size:14px;color:var(--muted);margin-bottom:16px;">day streak</div>
+          <div id="streakMessage" style="font-size:13px;color:var(--muted);"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Chat Anniversary Card -->
+    <div id="anniversaryModal" class="modal" style="display:none">
+      <div class="modal-content" style="width:min(400px,96%);text-align:center;background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;">
+        <div class="modal-header" style="background:transparent;border:none;">
+          <h3 style="color:#fff;">🎉 Chat Anniversary</h3>
+          <span class="close-modal" id="closeAnniversaryModal" style="color:#fff;">&times;</span>
+        </div>
+        <div class="modal-body">
+          <div style="font-size:64px;margin-bottom:16px;">🎂</div>
+          <div style="font-size:24px;font-weight:700;margin-bottom:8px;" id="anniversaryChatName">Chat</div>
+          <div style="font-size:16px;margin-bottom:4px;" id="anniversaryYears">1 year</div>
+          <div style="font-size:14px;opacity:0.8;" id="anniversaryDate">Started today</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- In-Chat Game Modal (Tic-Tac-Toe) -->
+    <div id="gameModal" class="modal" style="display:none">
+      <div class="modal-content" style="width:min(340px,96%);text-align:center;">
+        <div class="modal-header">
+          <h3>Tic-Tac-Toe</h3>
+          <span class="close-modal" id="closeGameModal">&times;</span>
+        </div>
+        <div class="modal-body">
+          <div style="font-size:13px;color:var(--muted);margin-bottom:12px;" id="gameStatus">Your turn (X)</div>
+          <div id="gameBoard" style="display:grid;grid-template-columns:repeat(3,1fr);gap:4px;max-width:240px;margin:0 auto;">
+            ${[0,1,2,3,4,5,6,7,8].map(i =>
+              `<button class="game-cell" data-index="${i}" style="aspect-ratio:1;font-size:32px;font-weight:700;border:2px solid var(--border);border-radius:8px;background:var(--panel-soft);cursor:pointer;"></button>`
+            ).join('')}
+          </div>
+          <button id="resetGameBtn" class="btn btn-outline" style="margin-top:12px;">New Game</button>
+          <div style="margin-top:8px;font-size:11px;color:var(--muted);">Both players need to be on this screen</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Webhook/Bot Settings Modal -->
+    <div id="webhookModal" class="modal" style="display:none">
+      <div class="modal-content" style="width:min(420px,96%);">
+        <div class="modal-header">
+          <h3>Bot API / Webhooks</h3>
+          <span class="close-modal" id="closeWebhookModal">&times;</span>
+        </div>
+        <div class="modal-body">
+          <p style="font-size:13px;color:var(--muted);margin-bottom:12px;">Configure webhooks to allow external services to send messages.</p>
+          <div style="margin-bottom:12px;">
+            <label style="font-size:13px;font-weight:600;display:block;margin-bottom:4px;">Webhook URL (incoming)</label>
+            <div style="display:flex;gap:8px;">
+              <input type="text" id="webhookUrlDisplay" readonly style="flex:1;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:12px;" />
+              <button id="copyWebhookUrlBtn" class="btn btn-outline" style="padding:10px 12px;font-size:12px;">Copy</button>
+            </div>
+            <p style="font-size:11px;color:var(--muted);margin-top:4px;">Send POST requests to this URL to post messages to this chat.</p>
+          </div>
+          <button id="generateWebhookBtn" class="btn btn-primary" style="width:100%;">Generate New Webhook</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Error Reporting UI Modal -->
+    <div id="errorReportModal" class="modal" style="display:none">
+      <div class="modal-content" style="width:min(480px,96%);max-height:70vh;display:flex;flex-direction:column;">
+        <div class="modal-header">
+          <h3>Error Log</h3>
+          <span class="close-modal" id="closeErrorReport">&times;</span>
+        </div>
+        <div class="modal-body" id="errorReportBody" style="flex:1;overflow-y:auto;font-size:12px;font-family:monospace;white-space:pre-wrap;"></div>
+      </div>
+    </div>
+
+    <!-- In-Chat Music Player -->
+    <div id="musicPlayer" style="display:none;position:fixed;bottom:0;left:0;right:0;background:var(--panel);border-top:1px solid var(--border);padding:10px 16px;z-index:9999;box-shadow:0 -2px 12px rgba(0,0,0,0.1);">
+      <div style="display:flex;align-items:center;gap:12px;">
+        <div id="musicPlayerThumb" style="width:40px;height:40px;border-radius:8px;background:var(--panel-soft);display:flex;align-items:center;justify-content:center;font-size:20px;">🎵</div>
+        <div style="flex:1;min-width:0;">
+          <div id="musicPlayerTitle" style="font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">No track</div>
+          <div id="musicPlayerMeta" style="font-size:11px;color:var(--muted);">Tap play to start</div>
+        </div>
+        <button id="musicPlayerPlayBtn" style="width:36px;height:36px;border-radius:50%;background:var(--brand);color:#fff;border:none;font-size:16px;cursor:pointer;">▶️</button>
+        <button id="musicPlayerCloseBtn" style="width:28px;height:28px;border-radius:50%;background:transparent;border:none;font-size:16px;cursor:pointer;color:var(--muted);">✕</button>
       </div>
     </div>
 

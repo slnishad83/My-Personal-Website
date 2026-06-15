@@ -255,6 +255,62 @@ exports.sendChatRequestStatusNotification = onDocumentUpdated(
   }
 );
 
+exports.sendGroupJoinRequestNotification = onDocumentCreated(
+  {
+    document: 'groupJoinRequests/{requestId}',
+    region: 'asia-south1'
+  },
+  async (event) => {
+    const req = event.data?.data() || {};
+    if (req.status !== 'pending' || !req.groupId) return null;
+    // Notify all group admins
+    const memberSnap = await admin.firestore().collection('groupMembers')
+      .where('groupId', '==', req.groupId)
+      .get();
+    const adminIds = [];
+    memberSnap.docs.forEach((doc) => {
+      if (['owner', 'admin'].includes(doc.data().role)) {
+        adminIds.push(doc.data().userId);
+      }
+    });
+    const groupSnap = await admin.firestore().collection('groups').doc(req.groupId).get();
+    const groupName = groupSnap.data()?.name || 'Group';
+    const title = 'New join request';
+    const body = `${req.userName || 'Someone'} wants to join "${groupName}"`;
+    await Promise.all(adminIds.map(async (adminId) => {
+      await addNotificationCenterItem({
+        toUserId: adminId,
+        fromUserId: req.userId || '',
+        fromUserName: req.userName || 'Someone',
+        type: 'group_join_request',
+        message: body,
+        chatId: req.groupId,
+        chatType: 'group'
+      });
+      const { user, tokens } = await getUserPushTokens(adminId);
+      if (!tokens.length) return;
+      await admin.messaging().sendEachForMulticast({
+        tokens,
+        data: {
+          kind: 'group_join_request',
+          groupId: req.groupId,
+          requestId: event.params.requestId,
+          title,
+          body,
+          url: `${CHAT_APP_URL}?groupId=${encodeURIComponent(req.groupId)}`
+        },
+        android: { priority: 'high' },
+        webpush: {
+          headers: { Urgency: 'high', TTL: '3600' },
+          notification: { title, body, icon: '/works/chat/app-icon-192.png', tag: `group-req-${req.groupId}` },
+          fcmOptions: { link: `${CHAT_APP_URL}?groupId=${encodeURIComponent(req.groupId)}` }
+        }
+      });
+    }));
+    return null;
+  }
+);
+
 exports.lookupVerifiedUserByEmail = onRequest(
   {
     region: 'us-central1',
