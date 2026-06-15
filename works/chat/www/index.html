@@ -65,6 +65,34 @@
       body:not(.auth-ready) .chat-container {
         visibility: hidden;
       }
+
+      .auth-gate-recovery {
+        width: min(360px, calc(100vw - 32px));
+        padding: 22px;
+        display: grid;
+        gap: 14px;
+        justify-items: center;
+        border-radius: 18px;
+        background: #fff;
+        box-shadow: 0 12px 40px rgba(11, 20, 26, 0.18);
+        text-align: center;
+      }
+
+      .auth-gate-recovery p {
+        margin: 0;
+        line-height: 1.45;
+      }
+
+      .auth-gate-recovery button {
+        min-width: 112px;
+        min-height: 44px;
+        border: 0;
+        border-radius: 999px;
+        background: #008069;
+        color: #fff;
+        cursor: pointer;
+        font-weight: 700;
+      }
     </style>
   </head>
   <body>
@@ -3224,7 +3252,7 @@
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-storage-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-messaging-compat.js"></script>
-    <script src="app.js?v=170"></script>
+    <script src="app.js?v=171"></script>
     <script src="pwa-install.js?v=146"></script>
   </body>
 </html>

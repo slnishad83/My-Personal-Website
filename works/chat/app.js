@@ -15539,6 +15539,22 @@ function redirectToLogin() {
   window.location.replace("login.html");
 }
 
+function showStartupRecovery(message = "Team Chat could not finish starting.") {
+  const gate = document.getElementById("authGate");
+  if (!gate) return;
+  gate.innerHTML = "";
+  const panel = document.createElement("div");
+  panel.className = "auth-gate-recovery";
+  const text = document.createElement("p");
+  text.textContent = message;
+  const retry = document.createElement("button");
+  retry.type = "button";
+  retry.textContent = "Retry";
+  retry.addEventListener("click", () => window.location.reload());
+  panel.append(text, retry);
+  gate.appendChild(panel);
+}
+
 async function init() {
   await authPersistenceReady;
   const emojiButton = document.getElementById("emojiBtn");
@@ -15557,7 +15573,15 @@ async function init() {
 
   bindSearchInput();
   loadBlockedWords();
+  const authStateTimeout = window.setTimeout(() => {
+    if (!document.body.classList.contains("auth-ready")) {
+      showStartupRecovery(
+        "Session checking is taking longer than expected. Check your connection and retry.",
+      );
+    }
+  }, 15000);
   auth.onAuthStateChanged(async (user) => {
+    window.clearTimeout(authStateTimeout);
     if (!user) {
       redirectToLogin();
       return;
@@ -17304,7 +17328,10 @@ async function requestNativeNotificationPermission() {
   }
 }
 // Run framework initializes
-init();
+init().catch((error) => {
+  console.error("Application startup failed:", error);
+  showStartupRecovery("Team Chat could not start. Please retry.");
+});
 // ========================================
 // SIDEBAR CONTEXT MENU HANDLERS
 // ========================================
@@ -22978,7 +23005,8 @@ function getSenderColor(uid) {
         const doc = await db.collection("userProfiles").doc(currentUser.uid).get();
         if (doc.exists && doc.data().groupColor) {
           const c = doc.data().groupColor;
-          section.querySelector(`[data-color="${c}"]`)?.style?.borderColor &&= "#000";
+          const selectedSwatch = section.querySelector(`[data-color="${c}"]`);
+          if (selectedSwatch) selectedSwatch.style.borderColor = "#000";
         }
       } catch (e) { /* ignore */ }
     })();

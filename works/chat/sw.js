@@ -80,7 +80,7 @@ self.addEventListener('notificationclick', event => {
   );
 });
 
-const CACHE_NAME = 'team-chat-v177-footer-sync';
+const CACHE_NAME = 'team-chat-v179-startup-recovery';
 const urlsToCache = [
   'index.html',
   'login.html',
