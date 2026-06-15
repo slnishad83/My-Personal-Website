@@ -6257,11 +6257,24 @@ async function searchUsersRealtime(searchTerm) {
     const verifiedLookupPromise = looksLikeEmail
       ? lookupVerifiedUserByEmail(term)
       : Promise.resolve(null);
-    await refreshSearchDirectoryWithinTimeout();
+    await refreshSearchDirectoryWithinTimeout().catch((error) => {
+      console.warn("Directory refresh skipped during search:", error);
+    });
 
     if (searchToken !== chatSearchToken) return;
 
-    await loadAllChatsList(term, searchToken);
+    try {
+      await loadAllChatsList(term, searchToken);
+    } catch (error) {
+      console.warn("Existing chat/message search partially failed:", error);
+      if (searchToken === chatSearchToken) {
+        renderChatListItems(
+          [],
+          chatsList,
+          "No matching chats or messages found. Verified-user discovery is still running.",
+        );
+      }
+    }
 
     // Existing chats/messages appear first. Exact-email discovery is added
     // when the verified account lookup finishes, without blocking search.
@@ -6270,7 +6283,11 @@ async function searchUsersRealtime(searchTerm) {
     if (!allUsers.some((user) => user.id === verifiedUser.id)) {
       allUsers = [...allUsers, verifiedUser];
     }
-    await loadAllChatsList(term, searchToken);
+    try {
+      await loadAllChatsList(term, searchToken);
+    } catch (error) {
+      console.warn("Verified-user result could not be rendered:", error);
+    }
   } catch (error) {
     console.warn("Search failed:", error);
     if (searchToken === chatSearchToken) {
@@ -6638,35 +6655,33 @@ async function sendChatRequest(user) {
     showToast("A chat with this user already exists");
     return;
   }
-  const existingRequest = await db
-    .collection("chatRequests")
-    .where("fromUserId", "==", currentUser.uid)
-    .where("toUserId", "==", user.id)
-    .where("status", "==", "pending")
-    .get();
-
-  if (!existingRequest.empty) {
-    showToast("Request already sent to this user");
-    return;
-  }
-
-  const inverseRequest = await db
-    .collection("chatRequests")
-    .where("fromUserId", "==", user.id)
-    .where("toUserId", "==", currentUser.uid)
-    .where("status", "==", "pending")
-    .get();
-
-  if (!inverseRequest.empty) {
-    showToast(
-      `${user.displayName || user.email} already sent you a request. Accept it from Requests.`,
-    );
-    return;
-  }
-
   const requestRef = db
     .collection("chatRequests")
     .doc(getDirectChatId(currentUser.uid, user.id));
+  let existingRequest = null;
+  try {
+    existingRequest = await requestRef.get();
+  } catch (error) {
+    // A missing request document is intentionally unreadable by the rules.
+    console.info("No readable existing chat request");
+  }
+  if (existingRequest?.exists) {
+    const request = existingRequest.data() || {};
+    if (request.status === "pending" && request.fromUserId === currentUser.uid) {
+      showToast("Request already sent to this user");
+      return;
+    }
+    if (request.status === "pending" && request.toUserId === currentUser.uid) {
+      showToast(
+        `${user.displayName || user.email} already sent you a request. Accept it from Requests.`,
+      );
+      return;
+    }
+    if (request.status === "accepted") {
+      showToast("A chat with this user already exists");
+      return;
+    }
+  }
   try {
     await db.runTransaction(async (transaction) => {
       const existing = await transaction.get(requestRef);
@@ -8324,26 +8339,12 @@ function searchUsersByIdentity(input) {
 async function hasAcceptedChatRelationship(userId) {
   if (!currentUser || !userId) return false;
   const directId = getDirectChatId(currentUser.uid, userId);
-  const directDoc = await db.collection("directChats").doc(directId).get();
-  if (directDoc.exists && directDoc.data().status !== "deleted") return true;
-
-  const sentAccepted = await db
-    .collection("chatRequests")
-    .where("fromUserId", "==", currentUser.uid)
-    .where("toUserId", "==", userId)
-    .where("status", "==", "accepted")
-    .limit(1)
-    .get();
-  if (!sentAccepted.empty) return true;
-
-  const receivedAccepted = await db
-    .collection("chatRequests")
-    .where("fromUserId", "==", userId)
-    .where("toUserId", "==", currentUser.uid)
-    .where("status", "==", "accepted")
-    .limit(1)
-    .get();
-  return !receivedAccepted.empty;
+  const [directDoc, requestDoc] = await Promise.all([
+    db.collection("directChats").doc(directId).get().catch(() => null),
+    db.collection("chatRequests").doc(directId).get().catch(() => null),
+  ]);
+  if (directDoc?.exists && directDoc.data()?.status !== "deleted") return true;
+  return requestDoc?.exists && requestDoc.data()?.status === "accepted";
 }
 
 async function handleUserSelection(user) {
@@ -8376,27 +8377,32 @@ async function handleUserSelection(user) {
 
 async function getContactRequestState(userId) {
   if (!currentUser || !userId) return { status: "none", label: "" };
-  const sentPending = await db
-    .collection("chatRequests")
-    .where("fromUserId", "==", currentUser.uid)
-    .where("toUserId", "==", userId)
-    .where("status", "==", "pending")
-    .limit(1)
-    .get();
-  if (!sentPending.empty) return { status: "sent", label: "Request sent" };
-
-  const receivedPending = await db
-    .collection("chatRequests")
-    .where("fromUserId", "==", userId)
-    .where("toUserId", "==", currentUser.uid)
-    .where("status", "==", "pending")
-    .limit(1)
-    .get();
-  if (!receivedPending.empty)
-    return { status: "received", label: "Accept request" };
-
-  if (await hasAcceptedChatRelationship(userId))
-    return { status: "accepted", label: "Connected" };
+  try {
+    const requestId = getDirectChatId(currentUser.uid, userId);
+    const [requestDoc, directDoc] = await Promise.all([
+      db.collection("chatRequests").doc(requestId).get().catch(() => null),
+      db.collection("directChats").doc(requestId).get().catch(() => null),
+    ]);
+    if (directDoc?.exists && directDoc.data()?.status !== "deleted") {
+      return { status: "accepted", label: "Connected" };
+    }
+    if (requestDoc?.exists) {
+      const request = requestDoc.data() || {};
+      if (request.status === "accepted") {
+        return { status: "accepted", label: "Connected" };
+      }
+      if (request.status === "pending") {
+        if (request.fromUserId === currentUser.uid) {
+          return { status: "sent", label: "Request sent" };
+        }
+        if (request.toUserId === currentUser.uid) {
+          return { status: "received", label: "Accept request" };
+        }
+      }
+    }
+  } catch (error) {
+    console.warn("Could not read chat request state:", error);
+  }
   return { status: "none", label: "Send chat request" };
 }
 
@@ -9505,7 +9511,7 @@ async function loadGroupsList() {
     ]
       .filter(Boolean)
       .join(" - ");
-    groupDiv.innerHTML = `<div class="list-avatar">${group.icon ? `<img src="${group.icon}">` : escapeHtml(getInitials(group.name || "Group"))}</div><div class="list-info" style="flex:1; cursor:pointer;"><div class="list-name">${group.isPinned ? '<span class="pin-icon">&#x1F4CC;</span> ' : ""}${group.isFavorite ? "* " : ""}${escapeHtml(group.name)} ${isMuted ? "[Muted]" : ""}</div><div class="list-preview">${escapeHtml(groupPreview)}${group.unreadCount ? ` - ${group.unreadCount} unread` : ""}</div></div><button class="list-item-menu mute-chat-btn" data-chat-id="${group.id}" data-chat-type="group">${isMuted ? "Unmute" : "Mute"}</button><button class="list-item-menu archive-chat-btn" data-chat-id="${group.id}" data-chat-type="group" data-chat-name="${escapeHtml(group.name)}">Archive</button>`;
+    groupDiv.innerHTML = `<div class="list-avatar">${group.icon ? `<img src="${group.icon}">` : escapeHtml(getInitials(group.name || "Group"))}</div><div class="list-info" style="flex:1; cursor:pointer;"><div class="list-name">${group.isPinned ? '<span class="pin-icon">&#x1F4CC;</span> ' : ""}${group.isFavorite ? "* " : ""}${escapeHtml(group.name)} ${isMuted ? "[Muted]" : ""}</div><div class="list-preview">${escapeHtml(groupPreview)}${group.unreadCount ? ` - ${group.unreadCount} unread` : ""}</div></div><div class="group-row-actions"><button class="list-item-menu mute-chat-btn" title="${isMuted ? "Unmute group" : "Mute group"}" aria-label="${isMuted ? "Unmute group" : "Mute group"}" data-chat-id="${group.id}" data-chat-type="group">${isMuted ? "Unmute" : "Mute"}</button><button class="list-item-menu archive-chat-btn" title="Archive group" aria-label="Archive group" data-chat-id="${group.id}" data-chat-type="group" data-chat-name="${escapeHtml(group.name)}">Archive</button></div>`;
     if (group.unreadCount) {
       groupDiv.insertAdjacentHTML(
         "beforeend",
@@ -10739,7 +10745,12 @@ async function loadStatusList(searchTerm = "") {
     );
   }
   if (!statuses.length) {
-    statusList.innerHTML = `<div class="empty-state">${term ? "No matching status updates" : "No status updates yet"}</div>`;
+    statusList.innerHTML = term
+      ? '<div class="empty-state tab-empty-state"><div class="tab-empty-icon status-empty-icon" aria-hidden="true"></div><div class="empty-state-title">No matching updates</div><div class="empty-state-copy">Try a different status search.</div></div>'
+      : '<div class="empty-state tab-empty-state"><div class="tab-empty-icon status-empty-icon" aria-hidden="true"></div><div class="empty-state-title">No status updates yet</div><div class="empty-state-copy">Share a photo, video, or note with your connected contacts.</div><button type="button" class="join-btn empty-add-status">Add status</button></div>';
+    statusList.querySelector(".empty-add-status")?.addEventListener("click", () => {
+      document.getElementById("createStatusModal").style.display = "flex";
+    });
     return;
   }
   const byUser = new Map();
