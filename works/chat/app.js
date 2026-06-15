@@ -18509,6 +18509,82 @@ function bindTranslationCardActions(messageDiv, messageId, messageData) {
   organizeActions();
 })();
 
+// Keep optional composer features available without letting independently
+// inserted buttons escape the message capsule.
+(function initCompactComposerTools() {
+  const toolSelectors = [
+    "#markdownToggleBtn",
+    "#transcribeBtn",
+    "#effectBtn",
+    "#scheduleMsgQuickBtn",
+    "#voiceChangerBtn",
+  ];
+
+  const organizeComposerTools = () => {
+    const inputArea = document.getElementById("inputArea");
+    const shell = inputArea?.querySelector(".wa-composer-shell");
+    if (!inputArea || !shell) return;
+
+    let trigger = shell.querySelector(".composer-tools-trigger");
+    let tray = inputArea.querySelector(".composer-tools-tray");
+    const tools = toolSelectors
+      .map((selector) => document.querySelector(selector))
+      .filter(Boolean);
+
+    if (!tools.length) {
+      trigger?.remove();
+      tray?.remove();
+      return;
+    }
+
+    if (!trigger) {
+      trigger = document.createElement("button");
+      trigger.type = "button";
+      trigger.className = "composer-tools-trigger";
+      trigger.title = "Message tools";
+      trigger.setAttribute("aria-label", "Message tools");
+      trigger.setAttribute("aria-expanded", "false");
+      trigger.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        const isOpen = tray?.classList.toggle("open");
+        trigger.setAttribute("aria-expanded", String(Boolean(isOpen)));
+      });
+      shell.appendChild(trigger);
+    }
+
+    if (!tray) {
+      tray = document.createElement("div");
+      tray.className = "composer-tools-tray";
+      tray.setAttribute("role", "menu");
+      tray.addEventListener("click", (event) => {
+        if (!event.target.closest("button")) return;
+        tray.classList.remove("open");
+        trigger?.setAttribute("aria-expanded", "false");
+      });
+      inputArea.appendChild(tray);
+    }
+
+    tools.forEach((button) => {
+      button.dataset.composerTool = "true";
+      button.setAttribute("role", "menuitem");
+      if (button.parentElement !== tray) tray.appendChild(button);
+    });
+  };
+
+  const observer = new MutationObserver(organizeComposerTools);
+  observer.observe(document.body, { childList: true, subtree: true });
+  document.addEventListener("click", (event) => {
+    const tray = document.querySelector(".composer-tools-tray");
+    const trigger = document.querySelector(".composer-tools-trigger");
+    if (!tray?.classList.contains("open")) return;
+    if (tray.contains(event.target) || trigger?.contains(event.target)) return;
+    tray.classList.remove("open");
+    trigger?.setAttribute("aria-expanded", "false");
+  });
+  organizeComposerTools();
+})();
+
 // ========================================
 // QR AND BARCODE SCANNER
 // ========================================

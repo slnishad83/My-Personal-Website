@@ -270,6 +270,13 @@
 }
 
 .wa-composer-shell {
+  position: relative !important;
+  display: flex !important;
+  width: auto !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+  align-items: center !important;
+  flex: 1 1 auto !important;
   overflow: hidden !important;
   border: 1px solid var(--border) !important;
   background: var(--panel) !important;
@@ -279,8 +286,105 @@
 .input-area .emoji-btn,
 .input-area .attach-btn,
 .input-area .voice-msg-btn,
-.input-area .send-btn {
+.input-area .send-btn,
+.composer-tools-trigger {
   flex: 0 0 44px !important;
+}
+
+#messageInput {
+  width: auto !important;
+  flex: 1 1 auto !important;
+  min-width: 60px !important;
+}
+
+.composer-tools-trigger {
+  display: grid !important;
+  width: 44px !important;
+  height: 44px !important;
+  min-width: 44px !important;
+  min-height: 44px !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  place-items: center !important;
+  border: 0 !important;
+  border-radius: 50% !important;
+  background: transparent !important;
+  color: #667781 !important;
+  font-size: 0 !important;
+  cursor: pointer;
+}
+
+.composer-tools-trigger:hover,
+.composer-tools-trigger:focus-visible {
+  background: rgba(134, 150, 160, 0.14) !important;
+}
+
+.composer-tools-trigger::before {
+  content: "" !important;
+  display: block !important;
+  width: 23px !important;
+  height: 23px !important;
+  background: currentColor !important;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 3v18M3 12h18'/%3E%3C/svg%3E") center / contain no-repeat !important;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 3v18M3 12h18'/%3E%3C/svg%3E") center / contain no-repeat !important;
+}
+
+.composer-tools-tray {
+  position: absolute !important;
+  z-index: 800 !important;
+  right: max(12px, calc(10px + var(--app-safe-right, 0px))) !important;
+  bottom: calc(100% + 8px) !important;
+  display: none !important;
+  width: min(360px, calc(100vw - 24px)) !important;
+  max-height: min(48dvh, 320px) !important;
+  padding: 8px !important;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  gap: 7px !important;
+  overflow-y: auto !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 16px !important;
+  background: var(--panel) !important;
+  box-shadow: 0 12px 34px rgba(11, 20, 26, 0.2) !important;
+}
+
+.composer-tools-tray.open {
+  display: grid !important;
+}
+
+.composer-tools-tray > button {
+  position: relative !important;
+  inset: auto !important;
+  display: grid !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  height: auto !important;
+  min-height: 66px !important;
+  margin: 0 !important;
+  padding: 8px 5px !important;
+  place-items: center !important;
+  border: 0 !important;
+  border-radius: 12px !important;
+  background: var(--panel-soft) !important;
+  color: var(--muted-strong) !important;
+  box-shadow: none !important;
+  font-size: 18px !important;
+  opacity: 1 !important;
+}
+
+.composer-tools-tray > button::after {
+  content: attr(title);
+  display: block;
+  max-width: 100%;
+  color: var(--muted-strong);
+  font-size: 10px;
+  line-height: 1.15;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.composer-tools-tray #markdownToggleBtn {
+  display: grid !important;
 }
 
 .emoji-prediction-bar:empty,
@@ -297,12 +401,14 @@
 }
 
 body.dark .chat-extra-actions,
-body.dark .wa-composer-shell {
+body.dark .wa-composer-shell,
+body.dark .composer-tools-tray {
   border-color: #33444d !important;
   background: #202c33 !important;
 }
 
-body.dark .chat-extra-actions > button {
+body.dark .chat-extra-actions > button,
+body.dark .composer-tools-tray > button {
   background: #111b21 !important;
 }
 
@@ -358,6 +464,12 @@ body.dark .message-quick-actions {
   .input-area {
     gap: 6px !important;
   }
+
+  .composer-tools-tray {
+    right: max(8px, calc(6px + var(--app-safe-right, 0px))) !important;
+    left: max(8px, calc(6px + var(--app-safe-left, 0px))) !important;
+    width: auto !important;
+  }
 }
 
 @media (max-width: 560px) {
@@ -367,10 +479,21 @@ body.dark .message-quick-actions {
   }
 
   .input-area .emoji-btn,
-  .input-area .attach-btn {
+  .input-area .attach-btn,
+  .composer-tools-trigger {
     width: 40px !important;
     min-width: 40px !important;
     flex-basis: 40px !important;
+  }
+
+  .composer-tools-tray {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+}
+
+@media (max-width: 430px) {
+  #cameraMsgBtn {
+    display: none !important;
   }
 }
 

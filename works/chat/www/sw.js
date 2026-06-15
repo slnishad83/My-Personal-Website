@@ -80,7 +80,7 @@ self.addEventListener('notificationclick', event => {
   );
 });
 
-const CACHE_NAME = 'team-chat-v180-ui-polish';
+const CACHE_NAME = 'team-chat-v181-composer-polish';
 const urlsToCache = [
   'index.html',
   'login.html',
