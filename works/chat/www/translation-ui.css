@@ -193,6 +193,21 @@
   text-transform: none;
 }
 
+.translation-method-badge,
+.message-translation-label .auto-translation-badge {
+  display: inline-flex;
+  min-height: 20px;
+  align-items: center;
+  padding: 0 7px;
+  border-radius: 999px;
+  background: rgb(0 128 105 / 10%);
+  color: #008069;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
 .sent-translation-details {
   margin-top: 8px;
   padding-top: 7px;
@@ -381,6 +396,12 @@ body.dark .sent-translation-details div {
   color: #d1d7db;
 }
 
+body.dark .translation-method-badge,
+body.dark .message-translation-label .auto-translation-badge {
+  background: rgb(0 168 132 / 18%);
+  color: #59d9be;
+}
+
 @media (max-width: 600px) {
   .translate-modal {
     padding: 0;
@@ -420,7 +441,7 @@ body.dark .sent-translation-details div {
 
   .translate-actions {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: minmax(0, .75fr) minmax(0, 1.25fr);
   }
 
   .outgoing-translation-modal {

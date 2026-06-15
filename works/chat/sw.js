@@ -80,7 +80,7 @@ self.addEventListener('notificationclick', event => {
   );
 });
 
-const CACHE_NAME = 'team-chat-v174-responsive-tabs-menus';
+const CACHE_NAME = 'team-chat-v175-inline-translation';
 const urlsToCache = [
   'index.html',
   'login.html',

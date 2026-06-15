@@ -2967,7 +2967,7 @@ async function registerFcmTokenForCurrentUser({ force = false } = {}) {
     messaging = messaging || firebase.messaging();
 
     const registration = await navigator.serviceWorker.register(
-      "sw.js?v=174-responsive-tabs-menus",
+      "sw.js?v=175-inline-translation",
       { scope: "./" },
     );
     await registration.update?.().catch(() => {});
@@ -3166,7 +3166,7 @@ async function setupCallPushNotifications({ forcePrompt = false } = {}) {
     if (permission !== "granted") return;
 
     const registration = await navigator.serviceWorker.register(
-      "sw.js?v=174-responsive-tabs-menus",
+      "sw.js?v=175-inline-translation",
     );
     messaging = firebase.messaging();
 
@@ -17330,16 +17330,6 @@ function populateTranslationLanguages() {
   if (!to.value) to.value = "en";
 }
 
-function getExternalTranslationUrl(text, source, target) {
-  const params = new URLSearchParams({
-    sl: source || "auto",
-    tl: target || "en",
-    text: text || "",
-    op: "translate",
-  });
-  return `https://translate.google.com/?${params.toString()}`;
-}
-
 function closeTranslateModal() {
   const modal = document.getElementById("translateModal");
   if (modal) modal.style.display = "none";
@@ -17378,7 +17368,7 @@ function updateTranslationCapabilityNote() {
   }
   runButton.disabled = false;
   note.textContent =
-    "Inline translation uses your browser's free on-device translator when available. Otherwise, use Open translator.";
+    "Translation stays inside this conversation. On-device translation is used when available; otherwise a free online translation service is used.";
 }
 
 function openTranslateModal(messageId, messageData) {
@@ -17437,6 +17427,85 @@ async function translateWithBrowser(text, sourceLanguage, targetLanguage, onProg
   }
 }
 
+function splitTranslationText(text, maxLength = 450) {
+  const chunks = [];
+  let remaining = String(text || "").trim();
+  while (remaining) {
+    if (remaining.length <= maxLength) {
+      chunks.push(remaining);
+      break;
+    }
+    const windowText = remaining.slice(0, maxLength);
+    const splitAt = Math.max(
+      windowText.lastIndexOf("\n"),
+      windowText.lastIndexOf(". "),
+      windowText.lastIndexOf(" "),
+    );
+    const end = splitAt > maxLength * 0.45 ? splitAt + 1 : maxLength;
+    chunks.push(remaining.slice(0, end).trim());
+    remaining = remaining.slice(end).trim();
+  }
+  return chunks;
+}
+
+function decodeTranslationText(value) {
+  const textarea = document.createElement("textarea");
+  textarea.innerHTML = String(value || "");
+  return textarea.value;
+}
+
+async function translateWithFreeService(text, sourceLanguage, targetLanguage) {
+  const source = sourceLanguage === "auto" ? "autodetect" : sourceLanguage;
+  const chunks = splitTranslationText(text);
+  const translated = [];
+  let detectedSource = sourceLanguage;
+  for (const chunk of chunks) {
+    const params = new URLSearchParams({
+      q: chunk,
+      langpair: `${source}|${targetLanguage}`,
+    });
+    const response = await fetch(
+      `https://api.mymemory.translated.net/get?${params.toString()}`,
+      { headers: { Accept: "application/json" } },
+    );
+    if (!response.ok) throw new Error(`Translation service returned ${response.status}`);
+    const payload = await response.json();
+    const result = payload?.responseData?.translatedText;
+    if (!result || payload?.responseStatus >= 400)
+      throw new Error(payload?.responseDetails || "Translation unavailable");
+    translated.push(decodeTranslationText(result));
+    detectedSource =
+      payload?.responseData?.detectedLanguage ||
+      payload?.matches?.[0]?.source ||
+      detectedSource;
+  }
+  return {
+    text: translated.join("\n"),
+    sourceLanguage: detectedSource === "autodetect" ? "auto" : detectedSource,
+    targetLanguage,
+    provider: "online",
+  };
+}
+
+async function translateInline(text, sourceLanguage, targetLanguage, onProgress) {
+  if ("Translator" in self) {
+    try {
+      return {
+        ...(await translateWithBrowser(
+          text,
+          sourceLanguage,
+          targetLanguage,
+          onProgress,
+        )),
+        provider: "device",
+      };
+    } catch (error) {
+      console.warn("On-device translation unavailable, using online fallback:", error);
+    }
+  }
+  return translateWithFreeService(text, sourceLanguage, targetLanguage);
+}
+
 async function runFreeInlineTranslation() {
   if (!activeTranslationMessage) return;
   const text = getTranslationSourceText(activeTranslationMessage.data);
@@ -17447,15 +17516,10 @@ async function runFreeInlineTranslation() {
   localStorage.setItem("translateFromLanguage", from.value);
   localStorage.setItem("translateToLanguage", to.value);
 
-  if (!("Translator" in self)) {
-    showToast("Inline translation is unavailable here. Use Open translator.", "error");
-    return;
-  }
-
   button.disabled = true;
   button.textContent = "Translating...";
   try {
-    const result = await translateWithBrowser(text, from.value, to.value, (progress) => {
+    const result = await translateInline(text, from.value, to.value, (progress) => {
       button.textContent = `Preparing ${progress}%`;
     });
     translationCache.set(activeTranslationMessage.id, result);
@@ -17469,7 +17533,8 @@ async function runFreeInlineTranslation() {
     showTranslationOutput(result);
     loadMessages();
   } catch (error) {
-    showToast("Inline translation is unavailable for these languages. Use Open translator.", "error");
+    console.warn("Inline translation failed:", error);
+    showToast("Could not translate this message. Check your connection and try again.", "error");
   } finally {
     button.disabled = false;
     button.textContent = "Translate";
@@ -17480,11 +17545,13 @@ function getTranslationCardHtml(messageId) {
   const result = translationCache.get(messageId);
   if (!result) return "";
   const language = TRANSLATION_LANGUAGES.find(([code]) => code === result.targetLanguage)?.[1] || result.targetLanguage;
+  const method = result.provider === "device" ? "On-device" : "Online";
   return `<div class="message-translation-card">
-    <div class="message-translation-label">Translated to ${escapeHtml(language)}${result.auto ? '<span class="auto-translation-badge">Automatic</span>' : ""}</div>
+    <div class="message-translation-label"><span>Translated to ${escapeHtml(language)}</span><span class="translation-method-badge">${method}</span>${result.auto ? '<span class="auto-translation-badge">Auto</span>' : ""}</div>
     <div class="message-translation-text">${renderMessageText(result.text)}</div>
     <div class="message-translation-actions">
-      <button type="button" data-translation-action="change">Change</button>
+      <button type="button" data-translation-action="original">Original</button>
+      <button type="button" data-translation-action="change">Language</button>
       <button type="button" data-translation-action="copy">Copy</button>
       <button type="button" data-translation-action="hide">Hide</button>
     </div>
@@ -17496,7 +17563,6 @@ async function autoTranslateCurrentChatMessages(docs = []) {
   if (
     !setting ||
     autoTranslationPassRunning ||
-    !("Translator" in self) ||
     !currentChat
   )
     return;
@@ -17515,7 +17581,7 @@ async function autoTranslateCurrentChatMessages(docs = []) {
       const text = getTranslationSourceText(message);
       if (!text) continue;
       try {
-        const result = await translateWithBrowser(
+        const result = await translateInline(
           text,
           setting.sourceLanguage || "auto",
           setting.preferredLanguage || "en",
@@ -17567,12 +17633,8 @@ function confirmOutgoingTranslation(originalText, translatedText) {
 async function prepareOutgoingAutoTranslation(text) {
   const setting = getCurrentChatTranslationSetting();
   if (!setting || !text) return { text, originalText: "" };
-  if (!("Translator" in self)) {
-    showToast("Automatic outgoing translation is unavailable in this browser.", "error");
-    return { text, originalText: "" };
-  }
   try {
-    const result = await translateWithBrowser(
+    const result = await translateInline(
       text,
       setting.preferredLanguage || "auto",
       setting.sourceLanguage,
@@ -17600,6 +17662,16 @@ function bindTranslationCardActions(messageDiv, messageId, messageData) {
       const action = button.dataset.translationAction;
       if (action === "copy") copyToClipboard(translationCache.get(messageId)?.text || "");
       if (action === "change") openTranslateModal(messageId, messageData);
+      if (action === "original") {
+        const card = messageDiv.querySelector(".message-translation-card");
+        const translated = card?.querySelector(".message-translation-text");
+        if (!card || !translated) return;
+        const showingOriginal = card.classList.toggle("showing-original");
+        translated.innerHTML = showingOriginal
+          ? renderMessageText(getTranslationSourceText(messageData))
+          : renderMessageText(translationCache.get(messageId)?.text || "");
+        button.textContent = showingOriginal ? "Translated" : "Original";
+      }
       if (action === "hide") {
         translationCache.delete(messageId);
         messageDiv.querySelector(".message-translation-card")?.remove();
@@ -17620,17 +17692,6 @@ function bindTranslationCardActions(messageDiv, messageId, messageData) {
   document.getElementById("copyModalTranslationBtn")?.addEventListener("click", () => {
     if (!activeTranslationMessage) return;
     copyToClipboard(translationCache.get(activeTranslationMessage.id)?.text || "");
-  });
-  document.getElementById("openExternalTranslateBtn")?.addEventListener("click", () => {
-    if (!activeTranslationMessage) return;
-    const text = getTranslationSourceText(activeTranslationMessage.data);
-    if (!text) {
-      showToast(getTranslationMediaNote(activeTranslationMessage.data), "error");
-      return;
-    }
-    const from = document.getElementById("translateFromLanguage")?.value || "auto";
-    const to = document.getElementById("translateToLanguage")?.value || "en";
-    window.open(getExternalTranslationUrl(text, from, to), "_blank", "noopener,noreferrer");
   });
   document.getElementById("swapTranslateLanguagesBtn")?.addEventListener("click", () => {
     const from = document.getElementById("translateFromLanguage");

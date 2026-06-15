@@ -10637,3 +10637,131 @@ body.dark .message-translation-card {
     flex-basis: 36px !important;
   }
 }
+
+/* Final inline-translation precedence. Keep results inside the message bubble. */
+.message .message-translation-card {
+  margin: 10px -3px -2px !important;
+  padding: 10px 11px 8px !important;
+  border: 0 !important;
+  border-left: 3px solid #00a884 !important;
+  border-radius: 8px !important;
+  background: rgb(0 128 105 / 7%) !important;
+  box-shadow: none !important;
+}
+
+.message .message-translation-label,
+.message .message-translation-actions {
+  display: flex !important;
+  align-items: center !important;
+  flex-wrap: wrap !important;
+  gap: 5px !important;
+}
+
+.message .message-translation-label {
+  margin-bottom: 6px !important;
+}
+
+.message .message-translation-actions {
+  gap: 3px !important;
+  margin-top: 7px !important;
+}
+
+.message .message-translation-actions button {
+  min-height: 28px !important;
+  padding: 0 8px !important;
+  border: 0 !important;
+  border-radius: 8px !important;
+  background: transparent !important;
+  color: #008069 !important;
+}
+
+.message .message-translation-text {
+  max-height: 180px !important;
+  overflow-y: auto !important;
+  color: #111b21 !important;
+  font-size: 14px !important;
+  line-height: 1.48 !important;
+  white-space: pre-wrap !important;
+}
+
+.message .message-translation-card.showing-original .message-translation-text {
+  color: #54656f !important;
+  font-style: italic;
+}
+
+.message .message-translation-actions button:hover,
+.message .message-translation-actions button:focus-visible {
+  background: rgb(0 128 105 / 10%) !important;
+}
+
+.group-actions {
+  min-height: 54px !important;
+  padding: 6px 9px max(6px, calc(6px + var(--app-bottom-clearance, 0px))) !important;
+  border-top: 1px solid var(--border) !important;
+}
+
+.group-actions .join-btn,
+.group-actions .btn {
+  min-height: 40px !important;
+  border-radius: 10px !important;
+}
+
+#statusList .tab-empty-state,
+#groupsList .groups-empty-state {
+  width: 100% !important;
+  max-width: none !important;
+  margin: 0 !important;
+  padding: 30px 22px !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+body.dark .message .message-translation-card {
+  border-left-color: #00a884 !important;
+  background: rgb(0 168 132 / 11%) !important;
+}
+
+body.dark .message .message-translation-text {
+  color: #e9edef !important;
+}
+
+body.dark .message .message-translation-card.showing-original .message-translation-text {
+  color: #aebac1 !important;
+}
+
+@media (max-width: 600px) {
+  .translate-modal-content {
+    width: 100vw !important;
+    max-width: 100vw !important;
+    margin: 0 !important;
+    border-radius: 22px 22px 0 0 !important;
+  }
+
+  .translate-body {
+    gap: 11px !important;
+    padding: 14px 14px max(16px, calc(12px + var(--app-bottom-clearance, 0px))) !important;
+  }
+
+  .translate-panel {
+    padding: 11px 12px !important;
+    border-radius: 13px !important;
+  }
+
+  .translate-language-grid {
+    grid-template-columns: minmax(0, 1fr) 38px minmax(0, 1fr) !important;
+    gap: 6px !important;
+  }
+
+  .translate-language-grid select {
+    height: 42px !important;
+    padding-left: 9px !important;
+    font-size: 13px !important;
+  }
+
+  #statusList .tab-empty-state,
+  #groupsList .groups-empty-state {
+    padding-bottom: calc(28px + var(--app-bottom-clearance, 0px)) !important;
+  }
+}
