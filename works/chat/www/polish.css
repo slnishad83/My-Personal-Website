@@ -1,6 +1,19 @@
 /* Authoritative presentation layer. Keeps all features while preventing
    accumulated enhancement styles from breaking the core chat layout. */
 
+@media (min-width: 901px) {
+  .chat-container {
+    height: calc(100dvh - 40px) !important;
+    max-height: calc(100dvh - 40px) !important;
+  }
+}
+
+.chat-main {
+  height: 100% !important;
+  max-height: 100% !important;
+  overflow: hidden !important;
+}
+
 .search-box {
   display: grid !important;
   grid-template-columns: minmax(0, 1fr) 40px !important;
@@ -259,13 +272,21 @@
 
 .input-area {
   box-sizing: border-box !important;
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) 52px !important;
+  grid-template-rows: auto !important;
   width: 100% !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+  min-height: 72px !important;
+  flex: 0 0 auto !important;
   padding-top: 9px !important;
   padding-right: max(12px, calc(10px + var(--app-safe-right, 0px))) !important;
   padding-bottom: max(10px, calc(8px + var(--app-bottom-clearance, 0px))) !important;
   padding-left: max(12px, calc(10px + var(--app-safe-left, 0px))) !important;
   align-items: flex-end !important;
   gap: 8px !important;
+  overflow: visible !important;
   background: var(--panel-soft) !important;
 }
 
@@ -277,10 +298,25 @@
   max-width: 100% !important;
   align-items: center !important;
   flex: 1 1 auto !important;
+  grid-column: 1 !important;
+  grid-row: 1 !important;
   overflow: hidden !important;
   border: 1px solid var(--border) !important;
   background: var(--panel) !important;
   box-shadow: 0 1px 3px rgba(11, 20, 26, 0.1) !important;
+}
+
+.input-area > #sendBtn,
+.input-area > #voiceMsgBtn {
+  grid-column: 2 !important;
+  grid-row: 1 !important;
+  align-self: center !important;
+  justify-self: center !important;
+  margin: 0 !important;
+}
+
+.input-area > button:not(#sendBtn):not(#voiceMsgBtn) {
+  display: none !important;
 }
 
 .input-area .emoji-btn,
@@ -418,6 +454,11 @@ body.dark .message-quick-actions {
 }
 
 @media (max-width: 900px) {
+  .chat-container {
+    height: 100dvh !important;
+    max-height: 100dvh !important;
+  }
+
   .chat-header-info {
     min-width: 0 !important;
   }
@@ -463,6 +504,8 @@ body.dark .message-quick-actions {
 
   .input-area {
     gap: 6px !important;
+    grid-template-columns: minmax(0, 1fr) 54px !important;
+    min-height: calc(74px + var(--app-bottom-clearance, 0px)) !important;
   }
 
   .composer-tools-tray {

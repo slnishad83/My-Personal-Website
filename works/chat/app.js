@@ -18530,6 +18530,10 @@ function bindTranslationCardActions(messageDiv, messageId, messageData) {
     const tools = toolSelectors
       .map((selector) => document.querySelector(selector))
       .filter(Boolean);
+    inputArea.querySelectorAll(":scope > button").forEach((button) => {
+      if (button.id === "sendBtn" || button.id === "voiceMsgBtn") return;
+      if (!tools.includes(button)) tools.push(button);
+    });
 
     if (!tools.length) {
       trigger?.remove();
