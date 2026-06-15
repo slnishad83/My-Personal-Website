@@ -80,7 +80,7 @@ self.addEventListener('notificationclick', event => {
   );
 });
 
-const CACHE_NAME = 'team-chat-v182-composer-viewport-fix';
+const CACHE_NAME = 'team-chat-v183-full-viewport-fix';
 const urlsToCache = [
   'index.html',
   'login.html',

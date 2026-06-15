@@ -1,11 +1,23 @@
 /* Authoritative presentation layer. Keeps all features while preventing
    accumulated enhancement styles from breaking the core chat layout. */
 
-@media (min-width: 901px) {
-  .chat-container {
-    height: calc(100dvh - 40px) !important;
-    max-height: calc(100dvh - 40px) !important;
-  }
+html,
+body {
+  width: 100vw !important;
+  height: 100dvh !important;
+  min-height: 100dvh !important;
+  overflow: hidden !important;
+}
+
+.chat-container {
+  position: fixed !important;
+  inset: 0 !important;
+  width: 100vw !important;
+  height: 100dvh !important;
+  min-height: 100dvh !important;
+  max-height: 100dvh !important;
+  margin: 0 !important;
+  border-radius: 0 !important;
 }
 
 .chat-main {
@@ -278,11 +290,11 @@
   width: 100% !important;
   min-width: 0 !important;
   max-width: 100% !important;
-  min-height: 72px !important;
+  min-height: 76px !important;
   flex: 0 0 auto !important;
   padding-top: 9px !important;
   padding-right: max(12px, calc(10px + var(--app-safe-right, 0px))) !important;
-  padding-bottom: max(10px, calc(8px + var(--app-bottom-clearance, 0px))) !important;
+  padding-bottom: max(14px, calc(10px + var(--app-bottom-clearance, 0px))) !important;
   padding-left: max(12px, calc(10px + var(--app-safe-left, 0px))) !important;
   align-items: flex-end !important;
   gap: 8px !important;
@@ -505,7 +517,7 @@ body.dark .message-quick-actions {
   .input-area {
     gap: 6px !important;
     grid-template-columns: minmax(0, 1fr) 54px !important;
-    min-height: calc(74px + var(--app-bottom-clearance, 0px)) !important;
+    min-height: calc(78px + var(--app-bottom-clearance, 0px)) !important;
   }
 
   .composer-tools-tray {
