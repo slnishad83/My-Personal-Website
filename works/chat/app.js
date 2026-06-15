@@ -192,6 +192,8 @@ let activeVoicePlayback = null;
 let callMiniBar = null;
 let callNetworkFailTimer = null;
 let callHistoryLoadToken = 0;
+let callHistoryRefreshTimer = null;
+let statusRefreshTimer = null;
 let callHistorySelectionMode = false;
 let selectedCallHistoryIds = new Set();
 let currentSessionId = "";
@@ -886,17 +888,25 @@ async function loadCallsList(searchTerm = "") {
   const list = document.getElementById("callsList");
   if (!list || !currentUser) return;
   const token = ++callHistoryLoadToken;
-  list.innerHTML = '<div class="empty-state">Loading calls...</div>';
+  if (!list.dataset.loaded)
+    list.innerHTML = '<div class="empty-state tab-loading-state">Loading calls...</div>';
   try {
-    const [outgoing, incoming, group] = await Promise.all([
+    const results = await Promise.allSettled([
       db.collection("calls").where("fromUserId", "==", currentUser.uid).get(),
       db.collection("calls").where("toUserId", "==", currentUser.uid).get(),
       db.collection("calls").where("participantIds", "array-contains", currentUser.uid).get(),
     ]);
     if (token !== callHistoryLoadToken) return;
+    const successful = results.filter((result) => result.status === "fulfilled");
+    results
+      .filter((result) => result.status === "rejected")
+      .forEach((result) =>
+        console.warn("A call history source is unavailable:", result.reason),
+      );
+    if (!successful.length) throw results[0]?.reason || new Error("Call history unavailable");
     const hidden = getHiddenCallHistoryIds();
     const unique = new Map();
-    [...outgoing.docs, ...incoming.docs, ...group.docs].forEach((doc) => {
+    successful.flatMap((result) => result.value.docs).forEach((doc) => {
       if (!hidden.has(doc.id)) unique.set(doc.id, { id: doc.id, ...doc.data() });
     });
     const allCalls = [...unique.values()].filter((call) => {
@@ -927,6 +937,7 @@ async function loadCallsList(searchTerm = "") {
         })
       : allCalls;
     const calls = filteredCalls.slice(0, 200);
+    list.dataset.loaded = "true";
     if (!calls.length) {
       list.innerHTML = "";
       renderCallHistoryToolbar(list, []);
@@ -1003,6 +1014,7 @@ async function loadCallsList(searchTerm = "") {
     });
   } catch (error) {
     console.warn("Could not load call history:", error);
+    if (token !== callHistoryLoadToken) return;
     list.innerHTML = '<div class="empty-state tab-error-state">Could not load calls<button type="button" class="btn btn-outline tab-retry-btn">Retry</button></div>';
     list.querySelector(".tab-retry-btn")?.addEventListener("click", () =>
       loadCallsList(document.getElementById("searchInput")?.value || ""),
@@ -2955,7 +2967,7 @@ async function registerFcmTokenForCurrentUser({ force = false } = {}) {
     messaging = messaging || firebase.messaging();
 
     const registration = await navigator.serviceWorker.register(
-      "sw.js?v=134-call-bg",
+      "sw.js?v=174-responsive-tabs-menus",
       { scope: "./" },
     );
     await registration.update?.().catch(() => {});
@@ -3153,7 +3165,9 @@ async function setupCallPushNotifications({ forcePrompt = false } = {}) {
 
     if (permission !== "granted") return;
 
-    const registration = await navigator.serviceWorker.register("sw.js");
+    const registration = await navigator.serviceWorker.register(
+      "sw.js?v=174-responsive-tabs-menus",
+    );
     messaging = firebase.messaging();
 
     const token = await messaging.getToken({
@@ -6517,7 +6531,15 @@ async function loadAllChatsList(searchTerm = "", searchToken = null) {
   renderChatListItems(
     items,
     chatsList,
-    term ? "No matching chats, messages, or verified users found." : "",
+    term
+      ? "No matching chats, messages, or verified users found."
+      : currentViewTab === "unread"
+        ? "No unread chats or messages."
+        : currentViewTab === "favorites"
+          ? "No favorite chats yet."
+          : currentViewTab === "muted"
+            ? "No muted chats."
+            : "",
   );
 }
 
@@ -10701,8 +10723,10 @@ async function joinGroupFinalize(groupId) {
 
 async function loadStatusList(searchTerm = "") {
   const statusList = document.getElementById("statusList");
+  const statusActions = document.getElementById("statusActions");
   if (!statusList || !currentUser) return;
-  statusList.innerHTML = '<div class="empty-state">Loading status updates...</div>';
+  if (!statusList.dataset.loaded)
+    statusList.innerHTML = '<div class="empty-state tab-loading-state">Loading status updates...</div>';
   let statuses = [];
   try {
     const [snapshot, directChats] = await Promise.all([
@@ -10726,6 +10750,7 @@ async function loadStatusList(searchTerm = "") {
       );
   } catch (e) {
     console.warn("Could not load status updates:", e);
+    if (statusActions) statusActions.style.display = "none";
     statusList.innerHTML =
       '<div class="empty-state tab-error-state">Could not load status updates<button type="button" class="btn btn-outline tab-retry-btn">Retry</button></div>';
     statusList.querySelector(".tab-retry-btn")?.addEventListener("click", () =>
@@ -10742,9 +10767,11 @@ async function loadStatusList(searchTerm = "") {
         .join(" ")
         .toLowerCase()
         .includes(term),
-    );
+      );
   }
+  statusList.dataset.loaded = "true";
   if (!statuses.length) {
+    if (statusActions) statusActions.style.display = "none";
     statusList.innerHTML = term
       ? '<div class="empty-state tab-empty-state"><div class="tab-empty-icon status-empty-icon" aria-hidden="true"></div><div class="empty-state-title">No matching updates</div><div class="empty-state-copy">Try a different status search.</div></div>'
       : '<div class="empty-state tab-empty-state"><div class="tab-empty-icon status-empty-icon" aria-hidden="true"></div><div class="empty-state-title">No status updates yet</div><div class="empty-state-copy">Share a photo, video, or note with your connected contacts.</div><button type="button" class="join-btn empty-add-status">Add status</button></div>';
@@ -10753,6 +10780,8 @@ async function loadStatusList(searchTerm = "") {
     });
     return;
   }
+  if (statusActions)
+    statusActions.style.display = currentViewTab === "status" ? "flex" : "none";
   const byUser = new Map();
   statuses.forEach((s) => {
     if (!byUser.has(s.userId)) byUser.set(s.userId, []);
@@ -10797,31 +10826,35 @@ function setupMainNavigationLiveListeners() {
   const handleNavigationListenerError = (error) => {
     console.warn("Main navigation live update paused:", error?.message || error);
   };
+  const scheduleStatusRefresh = () => {
+    clearTimeout(statusRefreshTimer);
+    statusRefreshTimer = setTimeout(() => {
+      if (currentViewTab === "status")
+        loadStatusList(document.getElementById("searchInput")?.value || "");
+    }, 120);
+  };
+  const scheduleCallsRefresh = () => {
+    clearTimeout(callHistoryRefreshTimer);
+    callHistoryRefreshTimer = setTimeout(() => {
+      if (currentViewTab === "calls")
+        loadCallsList(document.getElementById("searchInput")?.value || "");
+    }, 160);
+  };
   statusesUnsubscribe = db.collection("statuses").onSnapshot(() => {
-    if (currentViewTab === "status")
-      loadStatusList(document.getElementById("searchInput")?.value || "");
+    scheduleStatusRefresh();
   }, handleNavigationListenerError);
   outgoingCallsListUnsubscribe = db
     .collection("calls")
     .where("fromUserId", "==", currentUser.uid)
-    .onSnapshot(() => {
-      if (currentViewTab === "calls")
-        loadCallsList(document.getElementById("searchInput")?.value || "");
-    }, handleNavigationListenerError);
+    .onSnapshot(scheduleCallsRefresh, handleNavigationListenerError);
   incomingCallsListUnsubscribe = db
     .collection("calls")
     .where("toUserId", "==", currentUser.uid)
-    .onSnapshot(() => {
-      if (currentViewTab === "calls")
-        loadCallsList(document.getElementById("searchInput")?.value || "");
-    }, handleNavigationListenerError);
+    .onSnapshot(scheduleCallsRefresh, handleNavigationListenerError);
   groupCallsListUnsubscribe = db
     .collection("calls")
     .where("participantIds", "array-contains", currentUser.uid)
-    .onSnapshot(() => {
-      if (currentViewTab === "calls")
-        loadCallsList(document.getElementById("searchInput")?.value || "");
-    }, handleNavigationListenerError);
+    .onSnapshot(scheduleCallsRefresh, handleNavigationListenerError);
 }
 
 async function publishStatus() {
@@ -13468,6 +13501,7 @@ function showContextMenu(x, y, messageId, messageData, isMyMessage) {
     reactionBtn.type = "button";
     reactionBtn.className = "message-context-reaction-btn";
     reactionBtn.textContent = emoji;
+    reactionBtn.setAttribute("aria-label", `React with ${emoji}`);
     reactionBtn.addEventListener("click", (event) => {
       event.preventDefault();
       event.stopPropagation();
@@ -13563,21 +13597,24 @@ function removeMessageContextMenu() {
 
 function positionContextMenu(menu, x, y) {
   if (!menu) return;
-  const margin = 8;
+  const margin = 12;
   const touchBottomInset = window.matchMedia?.("(pointer: coarse)").matches
-    ? 56
+    ? 72
     : 0;
   const viewportWidth = window.visualViewport?.width || window.innerWidth;
   const viewportHeight = window.visualViewport?.height || window.innerHeight;
+  const viewportOffsetLeft = window.visualViewport?.offsetLeft || 0;
   const viewportOffsetTop = window.visualViewport?.offsetTop || 0;
   menu.style.display = "block";
   menu.style.left = "0px";
   menu.style.top = "0px";
   menu.style.maxHeight = `${Math.max(180, viewportHeight - margin * 2 - touchBottomInset)}px`;
   const rect = menu.getBoundingClientRect();
+  const leftMin = viewportOffsetLeft + margin;
+  const leftMax = viewportOffsetLeft + viewportWidth - rect.width - margin;
   const left = Math.min(
-    Math.max(margin, x),
-    Math.max(margin, viewportWidth - rect.width - margin),
+    Math.max(leftMin, x),
+    Math.max(leftMin, leftMax),
   );
   const topMin = viewportOffsetTop + margin;
   const topMax =
@@ -14596,18 +14633,6 @@ function switchTab(tab) {
     );
   }
 
-  // Add switching animation to active list
-  document
-    .querySelectorAll(".list")
-    .forEach((l) => l.classList.add("tab-switching"));
-  setTimeout(
-    () =>
-      document
-        .querySelectorAll(".list")
-        .forEach((l) => l.classList.remove("tab-switching")),
-    250,
-  );
-
   const chatsList = document.getElementById("chatsList");
   const groupsList = document.getElementById("groupsList");
   const broadcastsList = document.getElementById("broadcastsList");
@@ -14646,7 +14671,12 @@ function switchTab(tab) {
   if (broadcastActions)
     broadcastActions.style.display = tab === "broadcasts" ? "flex" : "none";
   if (statusActions)
-    statusActions.style.display = tab === "status" ? "flex" : "none";
+    statusActions.style.display =
+      tab === "status" &&
+      statusList?.dataset.loaded === "true" &&
+      !statusList.querySelector(".empty-add-status")
+        ? "flex"
+        : "none";
   if (communityActions)
     communityActions.style.display = tab === "communities" ? "flex" : "none";
 

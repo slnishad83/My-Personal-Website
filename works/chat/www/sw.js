@@ -80,7 +80,7 @@ self.addEventListener('notificationclick', event => {
   );
 });
 
-const CACHE_NAME = 'team-chat-v173-delete-after-read';
+const CACHE_NAME = 'team-chat-v174-responsive-tabs-menus';
 const urlsToCache = [
   'index.html',
   'login.html',

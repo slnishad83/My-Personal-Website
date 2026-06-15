@@ -10051,6 +10051,87 @@ body.native-android:not(.dark) .message-context-menu .reaction-option {
   background: #f0f2f5 !important;
 }
 
+/* Final tab and context-menu guardrails. */
+.list.tab-switching {
+  animation: none !important;
+  opacity: 1 !important;
+  transform: none !important;
+}
+
+.tab-loading-state {
+  min-height: 110px;
+  display: grid;
+  place-items: center;
+  color: var(--text-muted);
+}
+
+.message-context-menu {
+  width: min(360px, calc(100vw - 24px)) !important;
+  min-width: min(300px, calc(100vw - 24px)) !important;
+  max-width: calc(100vw - 24px) !important;
+  max-height: calc(100dvh - var(--app-safe-top, 0px) - var(--app-bottom-clearance, 0px) - 24px) !important;
+  padding: 0 !important;
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+  overscroll-behavior: contain;
+}
+
+.message-context-menu .message-context-reactions {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: grid !important;
+  grid-template-columns: repeat(6, minmax(38px, 1fr));
+  gap: 6px !important;
+  padding: 10px 12px !important;
+  background: var(--message-menu-bg, #fff) !important;
+}
+
+.message-context-menu .message-context-reaction-btn {
+  width: 42px !important;
+  min-width: 42px !important;
+  height: 42px !important;
+  min-height: 42px !important;
+  margin: auto;
+  font-size: 23px !important;
+}
+
+.message-context-menu .context-menu-item {
+  min-height: 50px !important;
+  white-space: normal !important;
+  overflow-wrap: anywhere;
+}
+
+.calls-list,
+.status-list,
+#groupsList,
+#chatsList {
+  min-height: 0;
+  overflow-x: hidden;
+}
+
+@media (max-width: 420px) {
+  .message-context-menu {
+    width: calc(100vw - 20px) !important;
+    min-width: 0 !important;
+    max-width: calc(100vw - 20px) !important;
+  }
+
+  .message-context-menu .message-context-reactions {
+    grid-template-columns: repeat(6, minmax(34px, 1fr));
+    gap: 3px !important;
+    padding: 9px 8px !important;
+  }
+
+  .message-context-menu .message-context-reaction-btn {
+    width: 38px !important;
+    min-width: 38px !important;
+    height: 38px !important;
+    min-height: 38px !important;
+    font-size: 21px !important;
+  }
+}
+
 body.native-android:not(.dark) .context-menu .context-menu-item:hover,
 body.native-android:not(.dark) .context-menu .context-menu-item:active {
   background: #f0f2f5 !important;
