@@ -12893,6 +12893,8 @@ async function deleteMessageForMe(id) {
   }
 }
 function canDeleteForEveryone(messageData) {
+  // Read, delivered, and opened receipts intentionally do not affect this.
+  // The original sender can remove their message for everyone at any time.
   return Boolean(
     messageData &&
       currentUser?.uid &&
@@ -12939,20 +12941,15 @@ function viewEditHistory(messageData = {}) {
 
 async function deleteMessageForEveryone(id, messageData = null) {
   if (!id) return;
-  if (!messageData) {
-    const doc = await db
-      .collection("messages")
-      .doc(id)
-      .get()
-      .catch(() => null);
-    messageData = doc?.exists ? doc.data() : null;
-  }
-  if (!canDeleteForEveryone(messageData)) {
+  const messageRef = db.collection("messages").doc(id);
+  const latestDoc = await messageRef.get().catch(() => null);
+  const latestMessage = latestDoc?.exists ? latestDoc.data() : messageData;
+  if (!canDeleteForEveryone(latestMessage)) {
     showToast("Only the sender can delete this message for everyone", "error");
     return;
   }
   try {
-    await db.collection("messages").doc(id).update({
+    await messageRef.update({
       text: "",
       originalText: firebase.firestore.FieldValue.delete(),
       attachment: firebase.firestore.FieldValue.delete(),
@@ -13082,7 +13079,7 @@ function openMessageDeleteSheet(messageId, messageData) {
       <div class="action-sheet-handle" aria-hidden="true"></div>
       <div class="action-sheet-heading">
         <strong>Delete message</strong>
-        <span>Choose where this message should be removed.</span>
+        <span>${canDeleteAll ? "As the sender, you can delete this for everyone even after it has been read." : "Choose where this message should be removed."}</span>
       </div>
       <button type="button" class="action-sheet-option danger delete-for-me-option">Delete for me</button>
       ${canDeleteAll ? '<button type="button" class="action-sheet-option danger delete-for-all-option">Delete for all</button>' : ""}

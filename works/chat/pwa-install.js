@@ -92,7 +92,7 @@
 
     if (!serviceWorkerReadyPromise) {
       serviceWorkerReadyPromise = navigator.serviceWorker
-        .register("sw.js?v=172", { scope: "./" })
+        .register("sw.js?v=173", { scope: "./" })
         .then((registration) => {
           registration.update?.().catch(() => {});
           return navigator.serviceWorker.ready;
