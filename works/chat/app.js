@@ -18440,6 +18440,75 @@ function bindTranslationCardActions(messageDiv, messageId, messageData) {
   });
 })();
 
+// Keep optional chat tools available without overcrowding the main header.
+(function initCompactChatExtraActions() {
+  const optionalActionSelectors = [
+    "[data-block-chat-btn]",
+    "[data-encryption-verify-btn]",
+    "[data-chat-sound-btn]",
+    "[data-critical-alert-btn]",
+    "[data-perchat-download-btn]",
+  ];
+
+  const organizeActions = () => {
+    const actions = document.querySelector(".chat-header .chat-actions");
+    if (!actions) return;
+
+    let tray = actions.querySelector(".chat-extra-actions");
+    let trigger = actions.querySelector(".chat-extra-actions-trigger");
+    const optionalActions = optionalActionSelectors
+      .map((selector) => document.querySelector(`.chat-header ${selector}`))
+      .filter(Boolean);
+
+    if (!optionalActions.length) {
+      trigger?.remove();
+      tray?.remove();
+      return;
+    }
+
+    if (!trigger) {
+      trigger = document.createElement("button");
+      trigger.type = "button";
+      trigger.className = "chat-extra-actions-trigger";
+      trigger.title = "More chat tools";
+      trigger.setAttribute("aria-label", "More chat tools");
+      trigger.setAttribute("aria-expanded", "false");
+      trigger.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        const isOpen = tray?.classList.toggle("open");
+        trigger.setAttribute("aria-expanded", String(Boolean(isOpen)));
+      });
+      actions.insertBefore(trigger, actions.querySelector("#chatMoreBtn"));
+    }
+
+    if (!tray) {
+      tray = document.createElement("div");
+      tray.className = "chat-extra-actions";
+      tray.setAttribute("role", "menu");
+      actions.appendChild(tray);
+    }
+
+    optionalActions.forEach((button) => {
+      button.dataset.chatExtraAction = "true";
+      button.setAttribute("role", "menuitem");
+      if (button.parentElement !== tray) tray.appendChild(button);
+    });
+  };
+
+  const observer = new MutationObserver(organizeActions);
+  observer.observe(document.body, { childList: true, subtree: true });
+  document.addEventListener("click", (event) => {
+    const tray = document.querySelector(".chat-extra-actions");
+    const trigger = document.querySelector(".chat-extra-actions-trigger");
+    if (!tray?.classList.contains("open")) return;
+    if (tray.contains(event.target) || trigger?.contains(event.target)) return;
+    tray.classList.remove("open");
+    trigger?.setAttribute("aria-expanded", "false");
+  });
+  organizeActions();
+})();
+
 // ========================================
 // QR AND BARCODE SCANNER
 // ========================================

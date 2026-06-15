@@ -1,0 +1,392 @@
+/* Authoritative presentation layer. Keeps all features while preventing
+   accumulated enhancement styles from breaking the core chat layout. */
+
+.search-box {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) 40px !important;
+  align-items: center !important;
+  gap: 6px !important;
+}
+
+.search-box::before {
+  z-index: 2 !important;
+}
+
+.search-box > input {
+  grid-column: 1 / -1 !important;
+  grid-row: 1 !important;
+  padding-right: 48px !important;
+}
+
+#searchFilterBtn {
+  grid-column: 2 !important;
+  grid-row: 1 !important;
+  position: relative !important;
+  z-index: 3 !important;
+  width: 36px !important;
+  height: 36px !important;
+  min-width: 36px !important;
+  min-height: 36px !important;
+  margin: 0 !important;
+  border: 0 !important;
+  border-radius: 50% !important;
+  background: transparent !important;
+  color: var(--muted-strong) !important;
+  font-size: 0 !important;
+}
+
+#searchFilterBtn::before {
+  content: "" !important;
+  display: block !important;
+  width: 18px !important;
+  height: 18px !important;
+  margin: auto !important;
+  background: currentColor !important;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='M4 5h16M7 12h10M10 19h4'/%3E%3C/svg%3E") center / contain no-repeat !important;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='M4 5h16M7 12h10M10 19h4'/%3E%3C/svg%3E") center / contain no-repeat !important;
+}
+
+.search-filter-badge {
+  grid-column: 1 / -1;
+  width: max-content;
+  max-width: 100%;
+  margin-top: 4px;
+}
+
+.chat-header {
+  gap: 10px !important;
+}
+
+.chat-header-info {
+  flex: 1 1 auto !important;
+  min-width: 150px !important;
+}
+
+.chat-actions {
+  position: relative !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-end !important;
+  gap: 4px !important;
+  min-width: 0 !important;
+}
+
+.chat-actions > .icon-btn,
+.chat-extra-actions-trigger {
+  width: 40px !important;
+  height: 40px !important;
+  min-width: 40px !important;
+  min-height: 40px !important;
+  margin: 0 !important;
+  border: 0 !important;
+  border-radius: 50% !important;
+  background: transparent !important;
+  color: var(--muted-strong) !important;
+  box-shadow: none !important;
+}
+
+.chat-actions > .icon-btn:hover,
+.chat-actions > .icon-btn:focus-visible,
+.chat-extra-actions-trigger:hover,
+.chat-extra-actions-trigger:focus-visible {
+  background: rgba(134, 150, 160, 0.14) !important;
+}
+
+.chat-extra-actions-trigger {
+  position: relative;
+  display: grid;
+  place-items: center;
+  font-size: 0;
+  cursor: pointer;
+}
+
+.chat-extra-actions-trigger::before {
+  content: "" !important;
+  display: block;
+  width: 21px;
+  height: 21px;
+  background: currentColor;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='M12 3v18M3 12h18'/%3E%3C/svg%3E") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='M12 3v18M3 12h18'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+
+.chat-extra-actions {
+  position: absolute !important;
+  z-index: 700 !important;
+  top: calc(100% + 8px) !important;
+  right: 0 !important;
+  display: none !important;
+  width: min(280px, calc(100vw - 24px)) !important;
+  max-height: min(60dvh, 420px) !important;
+  padding: 8px !important;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  gap: 6px !important;
+  overflow-y: auto !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 16px !important;
+  background: var(--panel) !important;
+  box-shadow: 0 12px 34px rgba(11, 20, 26, 0.2) !important;
+}
+
+.chat-extra-actions.open {
+  display: grid !important;
+}
+
+.chat-extra-actions > button {
+  position: relative !important;
+  inset: auto !important;
+  display: grid !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  height: auto !important;
+  min-height: 64px !important;
+  margin: 0 !important;
+  padding: 8px 4px !important;
+  place-items: center !important;
+  border: 0 !important;
+  border-radius: 12px !important;
+  background: var(--panel-soft) !important;
+  color: var(--muted-strong) !important;
+  box-shadow: none !important;
+  font-size: 17px !important;
+}
+
+.chat-extra-actions > button::after {
+  content: attr(title);
+  display: block;
+  max-width: 100%;
+  color: var(--muted-strong);
+  font-size: 10px;
+  line-height: 1.15;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.messages-area {
+  padding-right: clamp(18px, 4vw, 60px) !important;
+  padding-bottom: 24px !important;
+  padding-left: clamp(18px, 4vw, 60px) !important;
+  gap: 6px !important;
+}
+
+.message:not(.call-message) {
+  position: relative !important;
+  display: flex !important;
+  width: fit-content !important;
+  max-width: min(88%, 820px) !important;
+  align-items: center !important;
+  gap: 8px !important;
+}
+
+.message.my-message:not(.call-message) {
+  flex-direction: row !important;
+}
+
+.message:not(.call-message) > .message-bubble {
+  order: 1 !important;
+  flex: 0 1 auto !important;
+  width: fit-content !important;
+  min-width: min(120px, 100%) !important;
+  max-width: min(620px, calc(100vw - 240px)) !important;
+}
+
+.message.my-message:not(.call-message) > .message-bubble {
+  order: 2 !important;
+}
+
+.message-quick-actions,
+.received-message-actions,
+.sent-message-actions {
+  position: static !important;
+  inset: auto !important;
+  order: 2 !important;
+  display: inline-grid !important;
+  grid-template-columns: repeat(3, 38px) !important;
+  flex: 0 0 auto !important;
+  width: auto !important;
+  height: 44px !important;
+  margin: 0 !important;
+  padding: 3px 6px !important;
+  gap: 3px !important;
+  border: 1px solid rgba(134, 150, 160, 0.22) !important;
+  border-radius: 999px !important;
+  background: rgba(255, 255, 255, 0.96) !important;
+  box-shadow: 0 3px 10px rgba(11, 20, 26, 0.13) !important;
+  transform: none !important;
+}
+
+.sent-message-actions {
+  order: 1 !important;
+}
+
+.message-quick-actions .quick-message-action {
+  display: grid !important;
+  width: 38px !important;
+  height: 38px !important;
+  min-width: 38px !important;
+  min-height: 38px !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  place-items: center !important;
+  border: 0 !important;
+  border-radius: 50% !important;
+  background: transparent !important;
+  color: #667781 !important;
+}
+
+.message.actions-below:not(.call-message) {
+  display: grid !important;
+  gap: 5px !important;
+}
+
+.message.actions-below:not(.call-message) > .message-bubble {
+  grid-row: 1 !important;
+  max-width: min(620px, 100%) !important;
+}
+
+.message.actions-below .message-quick-actions {
+  grid-row: 2 !important;
+}
+
+.message.actions-below .received-message-actions {
+  justify-self: start !important;
+}
+
+.message.actions-below .sent-message-actions {
+  justify-self: end !important;
+}
+
+.input-area {
+  box-sizing: border-box !important;
+  width: 100% !important;
+  padding-top: 9px !important;
+  padding-right: max(12px, calc(10px + var(--app-safe-right, 0px))) !important;
+  padding-bottom: max(10px, calc(8px + var(--app-bottom-clearance, 0px))) !important;
+  padding-left: max(12px, calc(10px + var(--app-safe-left, 0px))) !important;
+  align-items: flex-end !important;
+  gap: 8px !important;
+  background: var(--panel-soft) !important;
+}
+
+.wa-composer-shell {
+  overflow: hidden !important;
+  border: 1px solid var(--border) !important;
+  background: var(--panel) !important;
+  box-shadow: 0 1px 3px rgba(11, 20, 26, 0.1) !important;
+}
+
+.input-area .emoji-btn,
+.input-area .attach-btn,
+.input-area .voice-msg-btn,
+.input-area .send-btn {
+  flex: 0 0 44px !important;
+}
+
+.emoji-prediction-bar:empty,
+.mention-suggestions:empty {
+  display: none !important;
+}
+
+.list,
+.chat-list,
+.groups-list,
+#statusList,
+#callsList {
+  padding-bottom: calc(18px + var(--app-bottom-clearance, 0px)) !important;
+}
+
+body.dark .chat-extra-actions,
+body.dark .wa-composer-shell {
+  border-color: #33444d !important;
+  background: #202c33 !important;
+}
+
+body.dark .chat-extra-actions > button {
+  background: #111b21 !important;
+}
+
+body.dark .message-quick-actions {
+  border-color: rgba(134, 150, 160, 0.28) !important;
+  background: rgba(32, 44, 51, 0.97) !important;
+}
+
+@media (max-width: 900px) {
+  .chat-header-info {
+    min-width: 0 !important;
+  }
+
+  .chat-actions {
+    max-width: min(46vw, 170px) !important;
+    overflow: visible !important;
+  }
+
+  .chat-actions > #searchChatBtn,
+  .chat-actions > #groupInfoBtn,
+  .chat-actions > #wallpaperBtn {
+    display: none !important;
+  }
+
+  .messages-area {
+    padding-right: 10px !important;
+    padding-left: 10px !important;
+  }
+
+  .message:not(.call-message) {
+    max-width: 96% !important;
+    gap: 5px !important;
+  }
+
+  .message:not(.call-message) > .message-bubble {
+    min-width: min(96px, 100%) !important;
+    max-width: min(76vw, 560px) !important;
+  }
+
+  .message-quick-actions {
+    grid-template-columns: repeat(3, 36px) !important;
+    height: 42px !important;
+    padding: 2px 5px !important;
+  }
+
+  .message-quick-actions .quick-message-action {
+    width: 36px !important;
+    height: 36px !important;
+    min-width: 36px !important;
+    min-height: 36px !important;
+  }
+
+  .input-area {
+    gap: 6px !important;
+  }
+}
+
+@media (max-width: 560px) {
+  .wa-composer-shell {
+    gap: 0 !important;
+    padding-inline: 3px !important;
+  }
+
+  .input-area .emoji-btn,
+  .input-area .attach-btn {
+    width: 40px !important;
+    min-width: 40px !important;
+    flex-basis: 40px !important;
+  }
+}
+
+@media (max-width: 390px) {
+  .message:not(.call-message) {
+    max-width: 96% !important;
+  }
+
+  .message-quick-actions {
+    grid-template-columns: repeat(3, 34px) !important;
+  }
+
+  .message-quick-actions .quick-message-action {
+    width: 34px !important;
+    height: 34px !important;
+    min-width: 34px !important;
+    min-height: 34px !important;
+  }
+}
