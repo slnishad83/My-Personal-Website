@@ -300,17 +300,31 @@ let chatWallpapers = {};
 // ========================================
 
 function showToast(message, type = "success") {
-  const toast = document.getElementById("toast");
-  if (!toast) return;
+  const container = document.getElementById("toastContainer");
+  if (!container) return;
+  const toast = document.createElement("div");
+  toast.className = `toast ${type}`;
   toast.setAttribute("role", "status");
   toast.setAttribute("aria-live", type === "error" ? "assertive" : "polite");
   toast.setAttribute("aria-atomic", "true");
   toast.textContent = message;
-  toast.className = `toast ${type}`;
+  container.appendChild(toast);
   requestAnimationFrame(() => toast.classList.add("show"));
-  setTimeout(() => {
+  const remove = () => {
     toast.classList.remove("show");
-  }, 3000);
+    toast.addEventListener("transitionend", () => toast.remove(), { once: true });
+    setTimeout(() => { if (toast.parentNode) toast.remove(); }, 400);
+  };
+  setTimeout(remove, 3000);
+  toast.addEventListener("click", remove);
+  // Keep max 3 toasts
+  while (container.children.length > 3) {
+    container.firstChild.classList.remove("show");
+    container.firstChild.addEventListener("transitionend", () => {
+      if (container.firstChild && !container.firstChild.classList.contains("show")) container.firstChild.remove();
+    }, { once: true });
+    setTimeout(() => { if (container.firstChild && container.firstChild.parentNode) container.firstChild.remove(); }, 400);
+  }
 }
 
 function applyA11yEnhancements() {
@@ -1184,6 +1198,13 @@ function renderChatListItems(items, container, emptyMessage = "") {
 
   let lastSection = "";
   items.forEach((item) => {
+    if (item.divider) {
+      const div = document.createElement("div");
+      div.className = "caught-up-divider";
+      div.textContent = item.name || "";
+      container.appendChild(div);
+      return;
+    }
     if (item.section && item.section !== lastSection) {
       const section = document.createElement("div");
       section.className = "search-section-label";
@@ -6680,6 +6701,18 @@ async function loadAllChatsList(searchTerm = "", searchToken = null) {
     );
   });
   if (searchToken !== null && searchToken !== chatSearchToken) return;
+
+  // Add "You're all caught up" divider when all chats are read on All tab
+  if (
+    !term &&
+    currentViewTab === "all" &&
+    !activeFolderChatIds &&
+    items.length > 0 &&
+    items.every((i) => !Number(i.unreadCount || 0))
+  ) {
+    items.unshift({ id: "_caught_up", type: "divider", name: "You\u2019re all caught up", divider: true, lastMessageTime: new Date(0) });
+  }
+
   renderChatListItems(
     items,
     chatsList,
@@ -8152,9 +8185,27 @@ function listenForTypingIndicator() {
 // NOTIFICATIONS & PROFILE UTILS
 // ========================================
 
+function playNotificationBeep() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(800, ctx.currentTime);
+    osc.frequency.setValueAtTime(1000, ctx.currentTime + 0.08);
+    gain.gain.setValueAtTime(0.15, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.2);
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + 0.2);
+  } catch (_) {}
+}
+
 async function sendNotification(chatName, message) {
   if (Notification.permission === "granted" && document.hidden) {
     new Notification(chatName, { body: message });
+    playNotificationBeep();
   }
 }
 
@@ -12787,6 +12838,20 @@ function loadMessages() {
         bindTranslationCardActions(messageDiv, doc.id, {
           ...msg,
           messageId: doc.id,
+        });
+        messageDiv.addEventListener("dblclick", (e) => {
+          if (e.target.closest("button, a, input, textarea, select")) return;
+          addReaction(doc.id, "❤️");
+          // Brief heart animation
+          const heart = document.createElement("span");
+          heart.textContent = "❤️";
+          heart.style.cssText = "position:absolute;font-size:32px;pointer-events:none;z-index:10;animation:heartPop 0.6s ease forwards;";
+          const bubble = messageDiv.querySelector(".message-bubble");
+          if (bubble) {
+            bubble.style.position = "relative";
+            bubble.appendChild(heart);
+            setTimeout(() => heart.remove(), 700);
+          }
         });
         messagesArea.appendChild(messageDiv);
         positionMessageQuickActions(messageDiv);
@@ -22922,6 +22987,7 @@ function initChatListSwipe() {
     startY = e.touches[0].clientY;
     currentItem = item;
     swipeState = { dx: 0, dy: 0, started: false };
+    item.classList.remove("swipe-left-reveal", "swipe-right-reveal");
   }, { passive: true });
 
   list.addEventListener("touchmove", (e) => {
@@ -22932,55 +22998,48 @@ function initChatListSwipe() {
     swipeState.dy = dy;
     if (!swipeState.started && Math.abs(dx) > 10) {
       swipeState.started = true;
-      currentItem.style.transition = "transform 0.1s";
+      currentItem.style.transition = "transform 0.05s linear";
     }
     if (swipeState.started && Math.abs(dx) > Math.abs(dy)) {
       e.preventDefault();
-      const translateX = Math.max(-120, Math.min(0, dx));
+      const translateX = Math.max(-120, Math.min(120, dx));
       currentItem.style.transform = `translateX(${translateX}px)`;
+      currentItem.classList.toggle("swipe-left-active", dx < -20);
+      currentItem.classList.toggle("swipe-right-active", dx > 20);
     }
   }, { passive: false });
 
-  list.addEventListener("touchend", (e) => {
-    if (!currentItem || !swipeState) return;
-    if (swipeState.started && swipeState.dx < -60) {
-      // Swipe left - show actions
-      const id = currentItem.dataset.chatId;
-      const type = currentItem.dataset.chatType;
-      currentItem.style.transform = "translateX(-120px)";
-      currentItem.style.transition = "transform 0.2s";
-      // Add action buttons overlay
-      const actions = document.createElement("div");
-      actions.className = "swipe-actions";
-      actions.style.cssText =
-        "position:absolute;right:0;top:0;bottom:0;display:flex;z-index:5;" +
-        "transform:translateX(120px);transition:transform 0.2s;";
-      actions.innerHTML = `
-        <button class="swipe-action archive" style="background:#00a884;color:#fff;border:none;padding:0 16px;font-size:12px;cursor:pointer;">Archive</button>
-        <button class="swipe-action delete" style="background:#ea0038;color:#fff;border:none;padding:0 16px;font-size:12px;cursor:pointer;">Delete</button>
-      `;
-      actions.querySelector(".swipe-action.archive").onclick = (ev) => {
-        ev.stopPropagation();
+  list.addEventListener("touchend", () => {
+    if (!currentItem || !swipeState) { currentItem = null; swipeState = null; return; }
+    const { dx, started } = swipeState;
+    if (started) {
+      if (dx < -60) {
+        // Swipe left → archive
+        currentItem.style.transition = "transform 0.2s";
         currentItem.style.transform = "";
-        currentItem.style.transition = "";
-        actions.remove();
-        const chatType = type || currentItem.dataset.chatType;
-        archiveChat(id, chatType);
-      };
-      actions.querySelector(".swipe-action.delete").onclick = (ev) => {
-        ev.stopPropagation();
+        const id = currentItem.dataset.chatId;
+        const type = currentItem.dataset.chatType;
+        if (id && type) {
+          const name = currentItem.querySelector(".list-name")?.textContent?.trim() || "Chat";
+          archiveChat(id, type, name);
+          showToast(`"${name}" archived`);
+        }
+      } else if (dx > 60) {
+        // Swipe right → delete
+        const id = currentItem.dataset.chatId;
+        const type = currentItem.dataset.chatType;
+        const name = currentItem.querySelector(".list-name")?.textContent?.trim() || "Chat";
+        currentItem.style.transition = "transform 0.2s";
         currentItem.style.transform = "";
-        currentItem.style.transition = "";
-        actions.remove();
-        deleteChatForMe(id, type || "");
-      };
-      if (currentItem.style.position !== "relative") currentItem.style.position = "relative";
-      currentItem.appendChild(actions);
-      requestAnimationFrame(() => { actions.style.transform = "translateX(0)"; });
-    } else {
-      currentItem.style.transform = "";
-      currentItem.style.transition = "";
+        if (id && confirm(`Delete "${name}"?`)) {
+          if (typeof deleteChatForMe === "function") deleteChatForMe(id, type || "");
+        }
+      } else {
+        currentItem.style.transition = "transform 0.2s";
+        currentItem.style.transform = "";
+      }
     }
+    currentItem.classList.remove("swipe-left-active", "swipe-right-active");
     currentItem = null;
     swipeState = null;
   }, { passive: true });
