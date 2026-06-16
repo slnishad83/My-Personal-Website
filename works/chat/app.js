@@ -8867,40 +8867,50 @@ async function ensureChatLockPin() {
 
 async function lockChat(chatId, chatType, chatName = "Chat", otherUserId = "") {
   if (!currentUser || !["direct", "group"].includes(chatType)) return;
-  if (!(await ensureChatLockPin())) return;
-  await db.collection("lockedChats").doc(getLockedChatDocId(chatId, chatType)).set({
-    userId: currentUser.uid,
-    chatId,
-    chatType,
-    chatName,
-    otherUserId: otherUserId || "",
-    lockedAt: firebase.firestore.FieldValue.serverTimestamp(),
-  });
-  await refreshLockedChats();
-  if (currentChat?.id === chatId && currentChatType === chatType) resetChatPanel();
-  showToast(`${chatName} locked`);
-  loadCurrentChatList();
-  loadArchivedChats();
+  try {
+    if (!(await ensureChatLockPin())) return;
+    await db.collection("lockedChats").doc(getLockedChatDocId(chatId, chatType)).set({
+      userId: currentUser.uid,
+      chatId,
+      chatType,
+      chatName,
+      otherUserId: otherUserId || "",
+      lockedAt: firebase.firestore.FieldValue.serverTimestamp(),
+    });
+    await refreshLockedChats();
+    if (currentChat?.id === chatId && currentChatType === chatType) resetChatPanel();
+    showToast(`${chatName} locked`);
+    loadCurrentChatList();
+    loadArchivedChats();
+  } catch (error) {
+    console.error("Lock chat failed:", error);
+    showToast("Could not lock this chat. Check connection and try again.", "error");
+  }
 }
 
 async function unlockChat(chatId, chatType) {
   const record = lockedChats.get(getLockedChatKey(chatId, chatType));
   if (!record) return;
-  const pin = await openChatLockPinModal({
-    title: "Unlock chat",
-    message: `Enter your locked-chat PIN to return ${record.chatName || "this chat"} to the main chat list.`,
-    confirmLabel: "Unlock chat",
-  });
-  if (!pin) return;
-  if (!(await verifyChatLockPin(pin))) {
-    showToast("Incorrect locked-chat PIN", "error");
-    return;
+  try {
+    const pin = await openChatLockPinModal({
+      title: "Unlock chat",
+      message: `Enter your locked-chat PIN to return ${record.chatName || "this chat"} to the main chat list.`,
+      confirmLabel: "Unlock chat",
+    });
+    if (!pin) return;
+    if (!(await verifyChatLockPin(pin))) {
+      showToast("Incorrect locked-chat PIN", "error");
+      return;
+    }
+    await db.collection("lockedChats").doc(record.recordId || getLockedChatDocId(chatId, chatType)).delete();
+    await refreshLockedChats();
+    showToast(`${record.chatName || "Chat"} unlocked`);
+    loadCurrentChatList();
+    loadArchivedChats();
+  } catch (error) {
+    console.error("Unlock chat failed:", error);
+    showToast("Could not unlock this chat. Check connection and try again.", "error");
   }
-  await db.collection("lockedChats").doc(record.recordId || getLockedChatDocId(chatId, chatType)).delete();
-  await refreshLockedChats();
-  showToast(`${record.chatName || "Chat"} unlocked`);
-  loadCurrentChatList();
-  loadArchivedChats();
 }
 
 function lockedRecordToListItem(record) {
@@ -15486,23 +15496,66 @@ function getStoredAppLockPin() {
 async function setStoredAppLockPin(pin) {
   const salt = crypto.getRandomValues(new Uint8Array(16));
   const pinHash = await deriveChatLockPin(pin, salt, APP_LOCK_ITERATIONS);
+  const settings = {
+    version: 2,
+    pinHash,
+    pinSalt: bytesToBase64(salt),
+    pinIterations: APP_LOCK_ITERATIONS,
+  };
   try {
-    localStorage.setItem(
-      APP_LOCK_STORAGE_KEY,
-      JSON.stringify({
-        version: 2,
-        pinHash,
-        pinSalt: bytesToBase64(salt),
-        pinIterations: APP_LOCK_ITERATIONS,
-      }),
-    );
+    localStorage.setItem(APP_LOCK_STORAGE_KEY, JSON.stringify(settings));
   } catch (_) {}
+  return settings;
 }
 
 function clearStoredAppLockPin() {
   try {
     localStorage.removeItem(APP_LOCK_STORAGE_KEY);
   } catch (_) {}
+}
+
+async function saveRemoteAppLockSettings(settings) {
+  if (!currentUser || !settings?.pinHash || !settings?.pinSalt) return;
+  await db.collection("appLockSettings").doc(currentUser.uid).set({
+    userId: currentUser.uid,
+    version: settings.version || 2,
+    pinHash: settings.pinHash,
+    pinSalt: settings.pinSalt,
+    pinIterations: settings.pinIterations || APP_LOCK_ITERATIONS,
+    updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+  }, { merge: true });
+}
+
+async function loadRemoteAppLockSettings() {
+  if (!currentUser) return null;
+  try {
+    const doc = await db.collection("appLockSettings").doc(currentUser.uid).get();
+    if (!doc.exists) return null;
+    const data = doc.data() || {};
+    if (data.userId !== currentUser.uid || !data.pinHash || !data.pinSalt) return null;
+    const settings = {
+      version: data.version || 2,
+      pinHash: data.pinHash,
+      pinSalt: data.pinSalt,
+      pinIterations: data.pinIterations || APP_LOCK_ITERATIONS,
+    };
+    try {
+      localStorage.setItem(APP_LOCK_STORAGE_KEY, JSON.stringify(settings));
+    } catch (_) {}
+    return settings;
+  } catch (error) {
+    console.warn("Remote app lock load failed:", error);
+    return null;
+  }
+}
+
+async function deleteRemoteAppLockSettings() {
+  if (!currentUser) return;
+  try {
+    await db.collection("appLockSettings").doc(currentUser.uid).delete();
+  } catch (error) {
+    console.warn("Remote app lock delete failed:", error);
+  }
 }
 
 function lockAppNowIfEnabled() {
@@ -15526,7 +15579,8 @@ async function verifyStoredAppLockPin(pin) {
   if (!stored || !/^\d{4}$/.test(pin)) return false;
   if (/^\d{4}$/.test(stored)) {
     if (pin !== stored) return false;
-    await setStoredAppLockPin(pin);
+    const settings = await setStoredAppLockPin(pin);
+    await saveRemoteAppLockSettings(settings);
     return true;
   }
   try {
@@ -15616,7 +15670,14 @@ async function saveAppLockPin() {
     if (error) error.textContent = "Secure app lock is unavailable on this device.";
     return;
   }
-  await setStoredAppLockPin(pin);
+  const settings = await setStoredAppLockPin(pin);
+  try {
+    await saveRemoteAppLockSettings(settings);
+  } catch (saveError) {
+    console.error("Remote app lock save failed:", saveError);
+    if (error) error.textContent = "Could not save app lock. Check connection and try again.";
+    return;
+  }
   showToast("App lock enabled");
   document.getElementById("appLockModal").style.display = "none";
   lockAppNowIfEnabled();
@@ -15632,6 +15693,7 @@ async function disableAppLock() {
     return;
   }
   clearStoredAppLockPin();
+  await deleteRemoteAppLockSettings();
   appUnlockedForSession = true;
   showToast("App lock disabled");
   document.getElementById("appLockModal").style.display = "none";
@@ -15827,6 +15889,9 @@ async function init() {
       processFailedMessageQueue().catch(() => {});
       switchTab("all");
       handlePendingNavigationTab();
+      await runBootstrapStep("loadRemoteAppLockSettings", () =>
+        loadRemoteAppLockSettings(),
+      );
       appUnlockedForSession = !getStoredAppLockPin();
       if (!appUnlockedForSession) lockAppNowIfEnabled();
     } catch (error) {
@@ -17778,14 +17843,15 @@ document
 document
   .getElementById("lockChatMenuItem")
   ?.addEventListener("click", async () => {
-    if (!contextMenuTarget) return;
-    const chatId = contextMenuTarget.dataset.chatId;
-    const chatType = contextMenuTarget.dataset.chatType;
+    const target = contextMenuTarget || buildActiveChatContextTarget?.();
+    if (!target) return;
+    const chatId = target.dataset.chatId;
+    const chatType = target.dataset.chatType;
     const chatName =
-      contextMenuTarget.dataset.chatName ||
-      contextMenuTarget.querySelector?.(".list-name")?.textContent ||
+      target.dataset.chatName ||
+      target.querySelector?.(".list-name")?.textContent ||
       "Chat";
-    const otherUserId = contextMenuTarget.dataset.otherUserId || "";
+    const otherUserId = target.dataset.otherUserId || "";
     document.getElementById("chatContextMenu").style.display = "none";
     if (!chatId || !["direct", "group"].includes(chatType)) return;
     if (isChatLocked(chatId, chatType)) await unlockChat(chatId, chatType);

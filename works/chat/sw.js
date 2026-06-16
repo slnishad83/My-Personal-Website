@@ -80,7 +80,7 @@ self.addEventListener('notificationclick', event => {
   );
 });
 
-const CACHE_NAME = 'team-chat-v185-search-privacy-locks';
+const CACHE_NAME = 'team-chat-v186-locks-account-sync';
 const urlsToCache = [
   'index.html',
   'login.html',
