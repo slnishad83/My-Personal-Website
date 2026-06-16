@@ -1195,6 +1195,7 @@ function renderChatListItems(items, container, emptyMessage = "") {
     chatDiv.className = "list-item";
     chatDiv.draggable = true;
     if (item.isPinned) chatDiv.classList.add("pinned");
+    if (item.isLocked) chatDiv.classList.add("locked");
     if (item.searchResultType)
       chatDiv.classList.add(`search-result-${item.searchResultType}`);
     chatDiv.dataset.chatId = item.id;
@@ -1254,16 +1255,19 @@ function renderChatListItems(items, container, emptyMessage = "") {
     const tagHtml = tag
       ? `<span class="chat-tag-dot" style="background:${escapeHtml(tag.color)}" title="${escapeHtml(tag.label)}"></span>`
       : "";
+    const lockOverlay = item.isLocked ? `<span class="lock-badge-overlay" title="Locked chat">&#x1F512;</span>` : "";
+    const lockedPreview = item.isLocked ? `<span class="locked-preview">&#x1F512; Locked${item.unreadCount ? ` &middot; ${item.unreadCount} new` : ""}</span>` : "";
+    const previewContent = item.isLocked ? lockedPreview : (previewHtml || "");
     chatDiv.innerHTML = `
       <span class="drag-handle" draggable="false">⠿</span>
-      <div class="list-avatar">${item.avatar}</div>
+      <div class="list-avatar">${item.avatar}${lockOverlay}</div>
       <div class="list-info" style="flex:1; cursor:pointer;">
-        <div class="list-name">${tagHtml}${item.isPinned ? '<span class="pin-icon">&#x1F4CC;</span> ' : ""}${item.isFavorite ? "* " : ""}${escapeHtml(item.name)} ${item.isMuted ? "[Muted]" : ""}${searchMeta}</div>
-        <div class="list-preview">${previewHtml}</div>
+        <div class="list-name">${tagHtml}${item.isPinned ? '<span class="pin-icon">&#x1F4CC;</span> ' : ""}${item.isFavorite ? "* " : ""}${item.isLocked ? '&#x1F512; ' : ""}${escapeHtml(item.name)} ${item.isMuted ? "[Muted]" : ""}${searchMeta}</div>
+        <div class="list-preview">${previewContent}</div>
       </div>
       ${statusChip}
-      ${unread}
-      ${item.isLocked ? `<button class="list-item-menu unlock-chat-btn" title="Unlock chat" aria-label="Unlock chat">Unlock</button>` : `<button class="list-item-menu mute-chat-btn" data-chat-id="${item.id}" data-chat-type="${item.type}">${item.isMuted ? "Unmute" : "Mute"}</button><button class="list-item-menu archive-chat-btn" data-chat-id="${item.id}" data-chat-type="${item.type}" data-chat-name="${escapeHtml(item.name)}">Arch</button>`}
+      ${!item.isLocked ? unread : ""}
+      <button class="list-item-menu ${item.isLocked ? "unlock-chat-btn" : "mute-chat-btn"}" ${!item.isLocked ? `data-chat-id="${item.id}" data-chat-type="${item.type}"` : ""}>${item.isLocked ? "Unlock" : item.isMuted ? "Unmute" : "Mute"}</button>${item.isLocked ? "" : `<button class="list-item-menu archive-chat-btn" data-chat-id="${item.id}" data-chat-type="${item.type}" data-chat-name="${escapeHtml(item.name)}">Arch</button>`}
     `;
 
     if (item.type === "user" || item.type === "saved") {
@@ -1348,8 +1352,20 @@ function renderChatListItems(items, container, emptyMessage = "") {
         }
       });
 
-    chatDiv.addEventListener("click", async () => {
+    chatDiv.addEventListener("click", async (e) => {
+      if (e.target.closest("button")) return;
       try {
+        if (item.isLocked) {
+          if (!(await showUnlockChatPrompt(item.id, item.type))) return;
+          const record = lockedChats.get(getLockedChatKey(item.id, item.type));
+          if (record) {
+            try {
+              await db.collection("lockedChats").doc(record.recordId || getLockedChatDocId(item.id, item.type)).delete();
+            } catch (_) {}
+            await refreshLockedChats();
+          }
+          // Fall through to open the chat after unlocking
+        }
         if (item.type === "user") {
           await handleUserSelection(item.user || item.rawUser || item);
           return;
@@ -6467,8 +6483,20 @@ async function loadAllChatsList(searchTerm = "", searchToken = null) {
   }
   await refreshLockedChats();
   const allItems = [...directItems, ...groupItems].filter(
-    (item) => item.type === "saved" || !isChatLocked(item.id, item.type),
+    (item) => item.type === "saved",
   );
+  allItems.forEach((item) => {
+    if (item.type !== "saved" && isChatLocked(item.id, item.type)) {
+      item.isLocked = true;
+      item.preview = "Locked";
+    }
+  });
+  // Pre-load real unread counts for locked chats
+  await Promise.all(allItems.map(async (item) => {
+    if (item.isLocked) {
+      try { item.unreadCount = await getChatUnreadCount(item.id, item.type); } catch (_) {}
+    }
+  }));
   updateUnreadBadges(allItems);
 
   let items = [...allItems];
@@ -6483,10 +6511,8 @@ async function loadAllChatsList(searchTerm = "", searchToken = null) {
   const term = searchTerm.trim().toLowerCase();
 
   if (/^\d{4}$/.test(term) && (await verifyChatLockPin(term))) {
-    const lockedItems = [...lockedChats.values()]
-      .map(lockedRecordToListItem)
-      .filter(Boolean)
-      .map((item) => ({ ...item, section: "Locked Chats", isLocked: true }));
+    const lockedItems = (await getLockedChatListItems())
+      .map((item) => ({ ...item, section: "Locked Chats" }));
     const archivedItems = (await getArchivedChatListItems())
       .filter((item) => !isChatLocked(item.id, item.type))
       .map((item) => ({ ...item, section: "Archived Chats" }));
@@ -8757,125 +8783,139 @@ async function verifyChatLockPin(pin) {
   return candidate === settings.pinHash;
 }
 
-function closeChatLockModal(result = null) {
-  const modal = document.querySelector(".chat-lock-modal-backdrop");
+function showChatLockModal() {
+  const modal = document.getElementById("chatLockModal");
   if (!modal) return;
-  modal._resolve?.(result);
-  modal.remove();
+  modal.style.display = "flex";
+  const input = document.getElementById("chatLockPinInput");
+  const error = document.getElementById("chatLockError");
+  if (input) { input.value = ""; input.focus(); }
+  if (error) error.textContent = "";
 }
 
-function openChatLockPinModal({
-  title,
-  message,
-  setup = false,
-  confirmLabel = "Continue",
-  allowRecovery = true,
-}) {
-  document.querySelector(".chat-lock-modal-backdrop")?.remove();
+function hideChatLockModal() {
+  document.getElementById("chatLockModal").style.display = "none";
+}
+
+function showChatLockSetupModal() {
+  const modal = document.getElementById("chatLockSetupModal");
+  if (!modal) return;
+  modal.style.display = "flex";
+  const input = document.getElementById("chatLockSetupPinInput");
+  const confirmInput = document.getElementById("chatLockSetupConfirmInput");
+  const error = document.getElementById("chatLockSetupError");
+  if (input) input.value = "";
+  if (confirmInput) confirmInput.value = "";
+  if (error) error.textContent = "";
+  setTimeout(() => input?.focus(), 0);
+}
+
+function hideChatLockSetupModal() {
+  document.getElementById("chatLockSetupModal").style.display = "none";
+}
+
+function showChatLockResetModal() {
+  const modal = document.getElementById("chatLockResetModal");
+  if (!modal) return;
+  modal.style.display = "flex";
+  const inputs = ["chatLockResetPassword", "chatLockResetPinInput", "chatLockResetConfirmInput"];
+  inputs.forEach((id) => { const el = document.getElementById(id); if (el) el.value = ""; });
+  const error = document.getElementById("chatLockResetError");
+  if (error) error.textContent = "";
+  setTimeout(() => document.getElementById("chatLockResetPassword")?.focus(), 0);
+}
+
+function hideChatLockResetModal() {
+  document.getElementById("chatLockResetModal").style.display = "none";
+}
+
+function openChatLockPinModal({ title, message, confirmLabel = "Continue", allowRecovery = true }) {
   return new Promise((resolve) => {
-    const modal = document.createElement("div");
-    modal.className = "chat-lock-modal-backdrop";
-    modal._resolve = resolve;
-    modal.innerHTML = `
-      <div class="chat-lock-modal" role="dialog" aria-modal="true" aria-label="${escapeHtml(title)}">
-        <div class="lock-shield">#</div>
-        <h3>${escapeHtml(title)}</h3>
-        <p>${escapeHtml(message)}</p>
-        <label>4-digit PIN<input class="chat-lock-pin" type="password" inputmode="numeric" maxlength="4" autocomplete="off" placeholder="••••"></label>
-        ${setup ? '<label>Confirm PIN<input class="chat-lock-pin-confirm" type="password" inputmode="numeric" maxlength="4" autocomplete="off" placeholder="••••"></label>' : ""}
-        <div class="chat-lock-error" aria-live="polite"></div>
-        ${allowRecovery ? '<button type="button" class="chat-lock-recovery">Forgot or change PIN?</button>' : ""}
-        <div class="chat-lock-actions"><button type="button" class="btn btn-outline lock-cancel">Cancel</button><button type="button" class="btn btn-primary lock-confirm">' + escapeHtml(confirmLabel) + "</button></div>
-      </div>`;
-    document.body.appendChild(modal);
-    requestAnimationFrame(() => modal.classList.add("show"));
-    const pin = modal.querySelector(".chat-lock-pin");
-    const error = modal.querySelector(".chat-lock-error");
-    pin.focus();
-    modal.querySelector(".lock-cancel").onclick = () => closeChatLockModal();
-    modal.addEventListener("click", (event) => {
-      if (event.target === modal) closeChatLockModal();
-    });
-    modal.querySelector(".lock-confirm").onclick = () => {
-      const value = pin.value.trim();
-      const confirmation = modal.querySelector(".chat-lock-pin-confirm")?.value.trim();
-      if (!/^\d{4}$/.test(value)) {
-        error.textContent = "Enter exactly 4 digits.";
-        return;
-      }
-      if (setup && value !== confirmation) {
-        error.textContent = "The PINs do not match.";
-        return;
-      }
-      closeChatLockModal(value);
+    const modal = document.getElementById("chatLockModal");
+    const titleEl = document.getElementById("chatLockModalTitle");
+    const msgEl = document.getElementById("chatLockModalMessage");
+    const input = document.getElementById("chatLockPinInput");
+    const error = document.getElementById("chatLockError");
+    const confirmBtn = document.getElementById("chatLockConfirmBtn");
+    const cancelBtn = document.getElementById("chatLockCancelBtn");
+    const forgotBtn = document.getElementById("chatLockForgotBtn");
+    if (!modal) return resolve(null);
+    if (titleEl) titleEl.textContent = title || "Enter locked-chat PIN";
+    if (msgEl) msgEl.textContent = message || "Enter your PIN.";
+    if (input) input.value = "";
+    if (error) error.textContent = "";
+    if (forgotBtn) forgotBtn.style.display = allowRecovery ? "" : "none";
+    if (confirmBtn) confirmBtn.textContent = confirmLabel || "Continue";
+    const close = (result) => {
+      modal.style.display = "none";
+      resolve(result);
     };
-    modal.querySelector(".chat-lock-recovery")?.addEventListener("click", async () => {
-      closeChatLockModal();
-      await openChatLockResetModal();
+    const cleanup = () => {
+      cancelBtn?.removeEventListener("click", onCancel);
+      modal.querySelector(".closeChatLockModal")?.removeEventListener("click", onCancel);
+      confirmBtn?.removeEventListener("click", onConfirm);
+      forgotBtn?.removeEventListener("click", onForgot);
+      modal.removeEventListener("click", onBackdrop);
+    };
+    const onCancel = () => { cleanup(); close(null); };
+    const onConfirm = () => {
+      const value = (input?.value || "").trim();
+      if (!/^\d{4}$/.test(value)) {
+        if (error) error.textContent = "Enter exactly 4 digits.";
+        return;
+      }
+      cleanup();
+      close(value);
+    };
+    const onForgot = () => {
+      cleanup();
+      close(null);
+      setTimeout(() => showChatLockResetModal(), 100);
+    };
+    const onBackdrop = (e) => { if (e.target === modal) { cleanup(); close(null); } };
+    cancelBtn?.addEventListener("click", onCancel);
+    modal.querySelector(".closeChatLockModal")?.addEventListener("click", onCancel);
+    confirmBtn?.addEventListener("click", onConfirm);
+    forgotBtn?.addEventListener("click", onForgot);
+    modal.addEventListener("click", onBackdrop);
+    input?.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") onConfirm();
+      if (e.key === "Escape") onCancel();
     });
+    modal.style.display = "flex";
+    setTimeout(() => input?.focus(), 0);
   });
-}
-
-async function openChatLockResetModal() {
-  const modal = document.createElement("div");
-  modal.className = "chat-lock-modal-backdrop";
-  modal.innerHTML = `
-    <div class="chat-lock-modal" role="dialog" aria-modal="true" aria-label="Reset locked-chat PIN">
-      <div class="lock-shield">#</div>
-      <h3>Reset locked-chat PIN</h3>
-      <p>Confirm your account password, then choose a new 4-digit PIN. Your existing locked chats stay locked.</p>
-      <label>Account password<input class="lock-account-password" type="password" autocomplete="current-password" placeholder="Account password"></label>
-      <label>New 4-digit PIN<input class="chat-lock-pin" type="password" inputmode="numeric" maxlength="4" autocomplete="off" placeholder="••••"></label>
-      <label>Confirm new PIN<input class="chat-lock-pin-confirm" type="password" inputmode="numeric" maxlength="4" autocomplete="off" placeholder="••••"></label>
-      <div class="chat-lock-error" aria-live="polite"></div>
-      <button type="button" class="chat-lock-recovery send-account-recovery">Email account password reset link</button>
-      <div class="chat-lock-actions"><button type="button" class="btn btn-outline lock-cancel">Cancel</button><button type="button" class="btn btn-primary lock-confirm">Reset PIN</button></div>
-    </div>`;
-  document.body.appendChild(modal);
-  requestAnimationFrame(() => modal.classList.add("show"));
-  const error = modal.querySelector(".chat-lock-error");
-  const close = () => modal.remove();
-  modal.querySelector(".lock-cancel").onclick = close;
-  modal.addEventListener("click", (event) => {
-    if (event.target === modal) close();
-  });
-  modal.querySelector(".send-account-recovery").onclick = async () => {
-    try {
-      await auth.sendPasswordResetEmail(currentUser.email);
-      error.textContent = `Account password reset link sent to ${currentUser.email}.`;
-    } catch (sendError) {
-      error.textContent = sendError.message || "Could not send recovery email.";
-    }
-  };
-  modal.querySelector(".lock-confirm").onclick = async () => {
-    const password = modal.querySelector(".lock-account-password").value;
-    const pin = modal.querySelector(".chat-lock-pin").value.trim();
-    const confirmation = modal.querySelector(".chat-lock-pin-confirm").value.trim();
-    if (!password || !/^\d{4}$/.test(pin) || pin !== confirmation) {
-      error.textContent = "Enter your account password and matching 4-digit PINs.";
-      return;
-    }
-    try {
-      const credential = firebase.auth.EmailAuthProvider.credential(currentUser.email, password);
-      await currentUser.reauthenticateWithCredential(credential);
-      await saveChatLockPin(pin);
-      close();
-      showToast("Locked-chat PIN changed");
-    } catch (resetError) {
-      error.textContent = resetError.message || "Account verification failed.";
-    }
-  };
 }
 
 async function ensureChatLockPin() {
   const settings = await getChatLockSettings();
   if (!settings) {
-    const pin = await openChatLockPinModal({
-      title: "Create locked-chat PIN",
-      message: "Use this PIN to reveal your locked personal and group chats.",
-      setup: true,
-      confirmLabel: "Create PIN",
-      allowRecovery: false,
+    const pin = await new Promise((resolve) => {
+      const modal = document.getElementById("chatLockSetupModal");
+      const pinInput = document.getElementById("chatLockSetupPinInput");
+      const confirmInput = document.getElementById("chatLockSetupConfirmInput");
+      const error = document.getElementById("chatLockSetupError");
+      const saveBtn = document.getElementById("chatLockSetupSaveBtn");
+      if (!modal) return resolve(null);
+      pinInput.value = "";
+      confirmInput.value = "";
+      error.textContent = "";
+      const close = (result) => { modal.style.display = "none"; resolve(result); };
+      const onCancel = () => { close(null); };
+      const onSave = () => {
+        const pin = (pinInput?.value || "").trim();
+        const conf = (confirmInput?.value || "").trim();
+        if (!/^\d{4}$/.test(pin)) { error.textContent = "Enter exactly 4 digits."; return; }
+        if (pin !== conf) { error.textContent = "The PINs do not match."; return; }
+        close(pin);
+      };
+      document.querySelectorAll(".closeChatLockSetupModal").forEach((el) => el.addEventListener("click", onCancel));
+      modal.querySelector(".close-modal")?.addEventListener("click", onCancel);
+      saveBtn?.addEventListener("click", onSave);
+      pinInput?.addEventListener("keydown", (e) => { if (e.key === "Enter") onSave(); });
+      confirmInput?.addEventListener("keydown", (e) => { if (e.key === "Enter") onSave(); });
+      modal.style.display = "flex";
+      setTimeout(() => pinInput?.focus(), 0);
     });
     if (!pin) return null;
     await saveChatLockPin(pin);
@@ -8924,20 +8964,27 @@ async function lockChat(chatId, chatType, chatName = "Chat", otherUserId = "") {
   }
 }
 
+async function showUnlockChatPrompt(chatId, chatType) {
+  const record = lockedChats.get(getLockedChatKey(chatId, chatType));
+  if (!record) return false;
+  const pin = await openChatLockPinModal({
+    title: "Unlock chat",
+    message: `Enter your locked-chat PIN to open ${record.chatName || "this chat"}.`,
+    confirmLabel: "Unlock",
+  });
+  if (!pin) return false;
+  if (!(await verifyChatLockPin(pin))) {
+    showToast("Incorrect locked-chat PIN", "error");
+    return false;
+  }
+  return true;
+}
+
 async function unlockChat(chatId, chatType) {
   const record = lockedChats.get(getLockedChatKey(chatId, chatType));
   if (!record) return;
+  if (!(await showUnlockChatPrompt(chatId, chatType))) return;
   try {
-    const pin = await openChatLockPinModal({
-      title: "Unlock chat",
-      message: `Enter your locked-chat PIN to return ${record.chatName || "this chat"} to the main chat list.`,
-      confirmLabel: "Unlock chat",
-    });
-    if (!pin) return;
-    if (!(await verifyChatLockPin(pin))) {
-      showToast("Incorrect locked-chat PIN", "error");
-      return;
-    }
     await db.collection("lockedChats").doc(record.recordId || getLockedChatDocId(chatId, chatType)).delete();
     await refreshLockedChats();
     showToast(`${record.chatName || "Chat"} unlocked`);
@@ -8951,19 +8998,56 @@ async function unlockChat(chatId, chatType) {
 
 function lockedRecordToListItem(record) {
   if (!record?.chatId || !record?.chatType) return null;
+  const prepId = record.chatType === "direct" ? record.chatId.split("_").find((id) => id !== currentUser?.uid) : "";
   return {
     id: record.chatId,
     type: record.chatType,
     name: record.chatName || "Locked chat",
     avatar: escapeHtml(getInitials(record.chatName || "Locked chat")),
-    preview: "Locked chat",
+    preview: "Locked",
     unreadCount: 0,
     isMuted: false,
     isPinned: false,
     isFavorite: false,
-    otherUserId: record.otherUserId || "",
+    isLocked: true,
+    otherUserId: record.otherUserId || prepId || "",
     lastMessageTime: record.lockedAt?.toDate?.() || new Date(0),
   };
+}
+
+async function getLockedChatListItems() {
+  const items = [];
+  for (const record of lockedChats.values()) {
+    if (!record?.chatId || !record?.chatType) continue;
+    const item = lockedRecordToListItem(record);
+    if (!item) continue;
+    try {
+      const unread = await getChatUnreadCount(record.chatId, record.chatType);
+      item.unreadCount = unread;
+    } catch (_) {}
+    items.push(item);
+  }
+  return items;
+}
+
+async function handleChatLockReset() {
+  const password = document.getElementById("chatLockResetPassword")?.value || "";
+  const pin = (document.getElementById("chatLockResetPinInput")?.value || "").trim();
+  const confirmation = (document.getElementById("chatLockResetConfirmInput")?.value || "").trim();
+  const error = document.getElementById("chatLockResetError");
+  if (!password || !/^\d{4}$/.test(pin) || pin !== confirmation) {
+    if (error) error.textContent = "Enter your account password and matching 4-digit PINs.";
+    return;
+  }
+  try {
+    const credential = firebase.auth.EmailAuthProvider.credential(currentUser.email, password);
+    await currentUser.reauthenticateWithCredential(credential);
+    await saveChatLockPin(pin);
+    document.getElementById("chatLockResetModal").style.display = "none";
+    showToast("Locked-chat PIN changed");
+  } catch (resetError) {
+    if (error) error.textContent = resetError.message || "Account verification failed.";
+  }
 }
 
 async function getArchivedChatListItems() {
@@ -16576,6 +16660,45 @@ async function init() {
         () => (document.getElementById("appLockModal").style.display = "none"),
       ),
     );
+  document
+    .querySelectorAll(".closeChatLockModal")
+    .forEach((btn) =>
+      btn.addEventListener(
+        "click",
+        () => (document.getElementById("chatLockModal").style.display = "none"),
+      ),
+    );
+  document
+    .querySelectorAll(".closeChatLockSetupModal")
+    .forEach((btn) =>
+      btn.addEventListener(
+        "click",
+        () => (document.getElementById("chatLockSetupModal").style.display = "none"),
+      ),
+    );
+  document
+    .querySelectorAll(".closeChatLockResetModal")
+    .forEach((btn) =>
+      btn.addEventListener(
+        "click",
+        () => (document.getElementById("chatLockResetModal").style.display = "none"),
+      ),
+    );
+  document
+    .getElementById("chatLockResetConfirmBtn")
+    ?.addEventListener("click", handleChatLockReset);
+  document
+    .getElementById("chatLockResetEmailBtn")
+    ?.addEventListener("click", async () => {
+      try {
+        await auth.sendPasswordResetEmail(currentUser.email);
+        const error = document.getElementById("chatLockResetError");
+        if (error) error.textContent = `Password reset link sent to ${currentUser.email}.`;
+      } catch (sendError) {
+        const error = document.getElementById("chatLockResetError");
+        if (error) error.textContent = sendError.message || "Could not send recovery email.";
+      }
+    });
   document
     .getElementById("logoutOtherSessionsBtn")
     ?.addEventListener("click", () =>

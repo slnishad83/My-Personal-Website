@@ -1631,6 +1631,79 @@
       </div>
     </div>
 
+    <div id="chatLockModal" class="modal" style="display: none">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3 id="chatLockModalTitle">Enter locked-chat PIN</h3>
+          <span class="close-modal closeChatLockModal">&times;</span>
+        </div>
+        <div class="modal-body">
+          <p id="chatLockModalMessage" class="modal-helper">Enter your PIN to unlock this chat.</p>
+          <label class="secure-pin-field">4-digit PIN
+            <input id="chatLockPinInput" type="password" inputmode="numeric" maxlength="4" autocomplete="off" placeholder="Enter 4-digit PIN" />
+          </label>
+          <div id="chatLockError" class="secure-lock-error" aria-live="polite"></div>
+          <div class="secure-lock-actions">
+            <button id="chatLockForgotBtn" class="btn btn-link" style="display:none">Forgot or change PIN?</button>
+            <button id="chatLockCancelBtn" class="btn btn-outline">Cancel</button>
+            <button id="chatLockConfirmBtn" class="btn btn-primary">Continue</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="chatLockSetupModal" class="modal" style="display: none">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>Create locked-chat PIN</h3>
+          <span class="close-modal closeChatLockSetupModal">&times;</span>
+        </div>
+        <div class="modal-body">
+          <p class="modal-helper">Use this PIN to reveal your locked personal and group chats.</p>
+          <label class="secure-pin-field">4-digit PIN
+            <input id="chatLockSetupPinInput" type="password" inputmode="numeric" maxlength="4" autocomplete="new-password" placeholder="Enter 4-digit PIN" />
+          </label>
+          <label class="secure-pin-field">Confirm PIN
+            <input id="chatLockSetupConfirmInput" type="password" inputmode="numeric" maxlength="4" autocomplete="new-password" placeholder="Confirm 4-digit PIN" />
+          </label>
+          <div id="chatLockSetupError" class="secure-lock-error" aria-live="polite"></div>
+          <div class="secure-lock-actions">
+            <button class="btn btn-outline closeChatLockSetupModal">Cancel</button>
+            <button id="chatLockSetupSaveBtn" class="btn btn-primary">Create PIN</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="chatLockResetModal" class="modal" style="display: none">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>Reset locked-chat PIN</h3>
+          <span class="close-modal closeChatLockResetModal">&times;</span>
+        </div>
+        <div class="modal-body">
+          <p class="modal-helper">Confirm your account password, then choose a new 4-digit PIN. Your existing locked chats stay locked.</p>
+          <label class="secure-pin-field">Account password
+            <input id="chatLockResetPassword" type="password" autocomplete="current-password" placeholder="Account password" />
+          </label>
+          <label class="secure-pin-field">New 4-digit PIN
+            <input id="chatLockResetPinInput" type="password" inputmode="numeric" maxlength="4" autocomplete="new-password" placeholder="Enter 4-digit PIN" />
+          </label>
+          <label class="secure-pin-field">Confirm new PIN
+            <input id="chatLockResetConfirmInput" type="password" inputmode="numeric" maxlength="4" autocomplete="new-password" placeholder="Confirm 4-digit PIN" />
+          </label>
+          <div id="chatLockResetError" class="secure-lock-error" aria-live="polite"></div>
+          <div class="secure-lock-actions" style="justify-content:space-between">
+            <button id="chatLockResetEmailBtn" class="btn btn-link">Email password reset link</button>
+            <div>
+              <button class="btn btn-outline closeChatLockResetModal">Cancel</button>
+              <button id="chatLockResetConfirmBtn" class="btn btn-primary">Reset PIN</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Scheduled Messages Modal -->
     <div id="scheduledMessagesModal" class="modal" style="display: none">
       <div class="modal-content">
