@@ -6756,59 +6756,86 @@ async function sendChatRequest(user) {
     showToast("Request cannot be sent to this user", "error");
     return;
   }
-  if (await hasAcceptedChatRelationship(user.id)) {
-    showToast("A chat with this user already exists");
-    return;
-  }
-  const requestRef = db
-    .collection("chatRequests")
-    .doc(getDirectChatId(currentUser.uid, user.id));
+  const directChatId = getDirectChatId(currentUser.uid, user.id);
+  const requestRef = db.collection("chatRequests").doc(directChatId);
+
+  // Check for existing directChats (including deleted ones)
+  let directChatDoc = null;
+  let directChatDeleted = false;
+  try {
+    directChatDoc = await db.collection("directChats").doc(directChatId).get();
+    if (directChatDoc.exists) {
+      const dcStatus = directChatDoc.data()?.status;
+      if (dcStatus === "active") {
+        showToast("A chat with this user already exists");
+        return;
+      }
+      if (dcStatus === "deleted") directChatDeleted = true;
+    }
+  } catch (_) {}
+
+  // Check for existing chat request
   let existingRequest = null;
   try {
     existingRequest = await requestRef.get();
-  } catch (error) {
-    // A missing request document is intentionally unreadable by the rules.
-    console.info("No readable existing chat request");
-  }
+  } catch (_) {}
   if (existingRequest?.exists) {
     const request = existingRequest.data() || {};
-    if (request.status === "pending" && request.fromUserId === currentUser.uid) {
-      showToast("Request already sent to this user");
-      return;
-    }
-    if (request.status === "pending" && request.toUserId === currentUser.uid) {
+    if (request.status === "pending") {
+      if (request.fromUserId === currentUser.uid) {
+        showToast("Request already sent to this user");
+        return;
+      }
       showToast(
         `${user.displayName || user.email} already sent you a request. Accept it from Requests.`,
       );
       return;
     }
     if (request.status === "accepted") {
-      showToast("A chat with this user already exists");
+      if (directChatDeleted) {
+        try {
+          await db.collection("directChats").doc(directChatId).update({
+            status: "active",
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+          });
+          showToast("Chat restored");
+        } catch (_) {
+          showToast("Could not restore chat", "error");
+        }
+      } else {
+        showToast("A chat with this user already exists");
+      }
       return;
     }
   }
+
   try {
-    await db.runTransaction(async (transaction) => {
-      const existing = await transaction.get(requestRef);
-      if (existing.exists && existing.data()?.status === "pending") {
-        throw new Error("A pending request already exists");
-      }
-      if (existing.exists && existing.data()?.status === "accepted") {
-        throw new Error("A chat with this user already exists");
-      }
-      transaction.set(requestRef, {
-        fromUserId: currentUser.uid,
-        fromUserName: currentUser.displayName || currentUser.email.split("@")[0],
-        fromUserEmail: normalizeEmail(currentUser.email),
-        toUserId: user.id,
-        toUserName: user.displayName || user.email,
-        toUserEmail: normalizeEmail(user.email),
-        status: "pending",
-        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+    // Restore deleted directChat if needed
+    if (directChatDeleted) {
+      await db.collection("directChats").doc(directChatId).update({
+        status: "active",
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
       });
+    }
+
+    // Write the chat request (create if new, update if re-sending after decline/cancel)
+    await requestRef.set({
+      fromUserId: currentUser.uid,
+      fromUserName: currentUser.displayName || currentUser.email.split("@")[0],
+      fromUserEmail: normalizeEmail(currentUser.email),
+      toUserId: user.id,
+      toUserName: user.displayName || user.email,
+      toUserEmail: normalizeEmail(user.email),
+      status: "pending",
+      createdAt: firebase.firestore.FieldValue.serverTimestamp(),
     });
   } catch (error) {
-    showToast(error?.message || "Could not send chat request", "error");
+    const msg = error?.message || "";
+    if (msg.includes("permission-denied") || msg.includes("Missing or insufficient")) {
+      showToast("Could not send request. Please make sure the user is verified and try again.", "error");
+    } else {
+      showToast(error?.message || "Could not send chat request", "error");
+    }
     return;
   }
   showToast("Request sent");

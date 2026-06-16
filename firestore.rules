@@ -151,11 +151,17 @@ service cloud.firestore {
     }
 
     match /chatRequests/{requestId} {
-      allow read: if isRequestParticipant(resource.data);
+      allow read: if resource == null || isRequestParticipant(resource.data);
       allow create: if isRequestParticipant(request.resource.data)
         && request.resource.data.fromUserId == request.auth.uid
         && request.resource.data.toUserId != request.auth.uid
-        && !exists(/databases/$(database)/documents/directChats/$(requestId))
+        && (
+          !exists(/databases/$(database)/documents/directChats/$(requestId))
+          || (
+            exists(/databases/$(database)/documents/directChats/$(requestId))
+            && get(/databases/$(database)/documents/directChats/$(requestId)).data.status == 'deleted'
+          )
+        )
         && request.resource.data.status == 'pending';
       allow update: if isRequestParticipant(resource.data)
         && (
@@ -186,7 +192,13 @@ service cloud.firestore {
             && request.resource.data.status == 'pending'
             && request.resource.data.fromUserId == request.auth.uid
             && request.resource.data.toUserId != request.auth.uid
-            && !exists(/databases/$(database)/documents/directChats/$(requestId))
+            && (
+              !exists(/databases/$(database)/documents/directChats/$(requestId))
+              || (
+                exists(/databases/$(database)/documents/directChats/$(requestId))
+                && get(/databases/$(database)/documents/directChats/$(requestId)).data.status == 'deleted'
+              )
+            )
             && request.resource.data.fromUserId in [
               resource.data.fromUserId,
               resource.data.toUserId
