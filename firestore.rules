@@ -518,6 +518,12 @@ service cloud.firestore {
       }
     }
 
+    match /scheduledCalls/{docId} {
+      allow create: if signedIn();
+      allow read: if signedIn();
+      allow update, delete: if signedIn() && resource.data.creatorId == request.auth.uid;
+    }
+
     match /{document=**} {
       allow read, write: if false;
     }

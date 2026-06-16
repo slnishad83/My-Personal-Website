@@ -31,11 +31,12 @@ messaging.onBackgroundMessage(payload => {
   self.registration.showNotification(title, {
     body,
     tag: isCall && data.callId ? `call-${data.callId}` : (chatKey ? `chat-${chatKey}` : `${data.kind || 'team-chat'}-${data.messageId || data.callId || Date.now()}`),
-    renotify: true,
+    renotify: Boolean(isCall),
     requireInteraction: Boolean(isCall),
     silent: data.soundEnabled === 'false',
     icon: data.senderAvatar || 'app-icon-192.png',
     badge: 'app-icon-192.png',
+    image: data.senderAvatar || 'app-icon-512.png',
     timestamp: Date.now(),
     vibrate: data.vibrate === 'false' ? [] : (isCall ? [700, 250, 700, 250, 700, 250, 700, 250, 700] : [180, 80, 180]),
     data: {
@@ -46,7 +47,8 @@ messaging.onBackgroundMessage(payload => {
       chatType: data.chatType || '',
       unreadCount,
       chatUserId: data.chatUserId || '',
-      groupId: data.groupId || ''
+      groupId: data.groupId || '',
+      fromUserName: data.fromUserName || ''
     },
     actions: isCall ? [
       { action: 'reject', title: 'Decline' },
@@ -80,7 +82,7 @@ self.addEventListener('notificationclick', event => {
   );
 });
 
-const CACHE_NAME = 'team-chat-v187-lock-rules-fix';
+const CACHE_NAME = 'team-chat-v188-notif-recovery';
 const urlsToCache = [
   'index.html',
   'login.html',

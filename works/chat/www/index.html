@@ -1956,6 +1956,24 @@
             +
           </button>
           <button
+            id="peopleCallBtn"
+            class="call-icon-btn"
+            title="People in call"
+            aria-label="People in call"
+            style="display: none"
+          >
+            People
+          </button>
+          <button
+            id="toggleViewBtn"
+            class="call-icon-btn"
+            title="Toggle view"
+            aria-label="Toggle speaker/grid view"
+            style="display: none"
+          >
+            View
+          </button>
+          <button
             id="screenShareBtn"
             class="call-icon-btn"
             title="Share screen"
@@ -1972,6 +1990,24 @@
             style="display: none"
           >
             PiP
+          </button>
+          <button
+            id="msgCallBtn"
+            class="call-icon-btn"
+            title="Send message"
+            aria-label="Send message during call"
+            style="display: none"
+          >
+            Msg
+          </button>
+          <button
+            id="proximityLockBtn"
+            class="call-icon-btn"
+            title="Proximity lock"
+            aria-label="Toggle proximity lock"
+            style="display: none"
+          >
+            Ear
           </button>
           <button
             id="acceptCallBtn"
@@ -1997,6 +2033,42 @@
           >
             Stop
           </button>
+        </div>
+        <div id="callMsgPanel" class="call-msg-panel">
+          <div class="call-msg-header">
+            <span>Send a message</span>
+            <button id="callMsgCloseBtn" class="call-icon-btn" aria-label="Close message panel">&times;</button>
+          </div>
+          <div class="call-msg-body">
+            <input id="callMsgInput" type="text" placeholder="Type a message..." maxlength="1000" />
+            <button id="callMsgSendBtn" class="btn btn-primary">Send</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="participantPanelModal" class="modal" style="display: none">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>People in call</h3>
+          <span class="close-modal closeParticipantPanel">&times;</span>
+        </div>
+        <div class="modal-body" id="participantPanelBody"></div>
+      </div>
+    </div>
+
+    <div id="callWaitingModal" class="modal" style="display: none">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>Call waiting</h3>
+          <span class="close-modal">&times;</span>
+        </div>
+        <div class="modal-body" id="callWaitingBody">
+          <p id="callWaitingText">Incoming call...</p>
+        </div>
+        <div class="modal-footer">
+          <button id="callWaitingDeclineBtn" class="btn btn-outline">Decline</button>
+          <button id="callWaitingAcceptBtn" class="btn btn-primary">Accept & End Current</button>
         </div>
       </div>
     </div>
