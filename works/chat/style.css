@@ -787,8 +787,18 @@ button {
 }
 
 .primary-tab-icon[data-icon="calls"] {
-  border-radius: 58% 18% 58% 18%;
-  transform: rotate(-28deg);
+  position: relative;
+  border-radius: 0;
+  background: transparent;
+  transform: none;
+}
+
+.primary-tab-icon[data-icon="calls"]::before {
+  content: "";
+  position: absolute;
+  inset: 1px;
+  background: currentColor;
+  clip-path: polygon(24% 2%, 42% 4%, 51% 27%, 43% 37%, 54% 52%, 69% 62%, 79% 54%, 98% 64%, 98% 82%, 86% 96%, 72% 94%, 52% 84%, 32% 67%, 17% 48%, 7% 27%, 5% 14%);
 }
 
 .primary-tab-icon[data-icon="status"] {

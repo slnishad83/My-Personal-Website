@@ -6671,7 +6671,6 @@ async function searchMessagesInChats(chatItems = [], term = "") {
         .filter((msg) => {
           const body = [
             msg.text,
-            msg.senderName,
             msg.attachment?.filename,
             msg.attachment?.url,
             msg.poll?.question,
@@ -14434,7 +14433,18 @@ async function updateStatusText(txt) {
   }
 }
 async function updatePrivacySettings() {
-  await db.collection("users").doc(currentUser.uid).update({ privacySettings });
+  if (!currentUser) return;
+  await db.collection("users").doc(currentUser.uid).set({ privacySettings }, { merge: true });
+  await db.collection("userProfiles").doc(currentUser.uid).set(
+    {
+      privacy: {
+        lastSeen: privacySettings.hideLastSeen ? "nobody" : "everyone",
+        readReceipts: !privacySettings.hideReadReceipts,
+        typingIndicator: !privacySettings.hideTypingIndicator,
+      },
+    },
+    { merge: true },
+  );
 }
 
 async function showProfileModal() {
@@ -15249,6 +15259,7 @@ function switchTab(tab) {
     };
     searchInput.placeholder = labels[tab] || "Search";
     searchInput.value = "";
+    updateMainSearchClearButton();
   }
   document
     .querySelectorAll(".tab")
@@ -15327,6 +15338,7 @@ function bindSearchInput() {
   let searchTimer = null;
 
   input.addEventListener("input", (e) => {
+    updateMainSearchClearButton();
     clearTimeout(searchTimer);
     searchTimer = window.setTimeout(() => searchUsersRealtime(e.target.value), 220);
   });
@@ -15336,9 +15348,25 @@ function bindSearchInput() {
     if (e.key === "Enter") {
       e.preventDefault();
       clearTimeout(searchTimer);
+      updateMainSearchClearButton();
       searchUsersRealtime(input.value);
     }
   });
+  document.getElementById("clearSearchInputBtn")?.addEventListener("click", () => {
+    input.value = "";
+    updateMainSearchClearButton();
+    ++chatSearchToken;
+    searchUsersRealtime("");
+    input.focus();
+  });
+  updateMainSearchClearButton();
+}
+
+function updateMainSearchClearButton() {
+  const input = document.getElementById("searchInput");
+  const clearButton = document.getElementById("clearSearchInputBtn");
+  if (!input || !clearButton) return;
+  clearButton.classList.toggle("show", Boolean(input.value.trim()));
 }
 
 function updateInChatSearch() {
@@ -25276,6 +25304,9 @@ document.getElementById("closeEncryptionVerify")?.addEventListener("click", () =
       readReceipts: document.getElementById("privacyReadReceipts")?.checked !== false,
     };
     try {
+      privacySettings.hideLastSeen = settings.lastSeen === "nobody";
+      privacySettings.hideReadReceipts = settings.readReceipts === false;
+      await updatePrivacySettings();
       await db.collection("userProfiles").doc(currentUser.uid).set({ privacy: settings }, { merge: true });
       localStorage.setItem("tc_privacy", JSON.stringify(settings));
       showToast("Privacy settings saved");
