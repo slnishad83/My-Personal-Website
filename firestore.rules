@@ -340,13 +340,15 @@ service cloud.firestore {
     }
 
     match /chatLockSettings/{docId} {
-      allow read, update, delete: if isPersonalOwner(resource.data);
-      allow create: if isPersonalOwner(request.resource.data);
+      allow read: if isOwner(docId) || isPersonalOwner(resource.data);
+      allow update, delete: if isOwner(docId) && isPersonalOwner(resource.data);
+      allow create: if isOwner(docId) && isPersonalOwner(request.resource.data);
     }
 
     match /appLockSettings/{docId} {
-      allow read, update, delete: if isPersonalOwner(resource.data);
-      allow create: if isPersonalOwner(request.resource.data);
+      allow read: if isOwner(docId) || isPersonalOwner(resource.data);
+      allow update, delete: if isOwner(docId) && isPersonalOwner(resource.data);
+      allow create: if isOwner(docId) && isPersonalOwner(request.resource.data);
     }
 
     match /chatTranslationSettings/{docId} {

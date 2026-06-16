@@ -8869,22 +8869,31 @@ async function lockChat(chatId, chatType, chatName = "Chat", otherUserId = "") {
   if (!currentUser || !["direct", "group"].includes(chatType)) return;
   try {
     if (!(await ensureChatLockPin())) return;
-    await db.collection("lockedChats").doc(getLockedChatDocId(chatId, chatType)).set({
+    const safeChatId = String(chatId || "").trim();
+    const safeChatType = String(chatType || "").trim();
+    const safeChatName = String(chatName || "Chat").trim() || "Chat";
+    const safeOtherUserId = String(otherUserId || "").trim();
+    if (!safeChatId || !["direct", "group"].includes(safeChatType)) {
+      showToast("Could not lock this chat: invalid chat details.", "error");
+      return;
+    }
+    await db.collection("lockedChats").doc(getLockedChatDocId(safeChatId, safeChatType)).set({
       userId: currentUser.uid,
-      chatId,
-      chatType,
-      chatName,
-      otherUserId: otherUserId || "",
+      chatId: safeChatId,
+      chatType: safeChatType,
+      chatName: safeChatName,
+      otherUserId: safeOtherUserId,
       lockedAt: firebase.firestore.FieldValue.serverTimestamp(),
     });
     await refreshLockedChats();
-    if (currentChat?.id === chatId && currentChatType === chatType) resetChatPanel();
-    showToast(`${chatName} locked`);
+    if (currentChat?.id === safeChatId && currentChatType === safeChatType) resetChatPanel();
+    showToast(`${safeChatName} locked`);
     loadCurrentChatList();
     loadArchivedChats();
   } catch (error) {
     console.error("Lock chat failed:", error);
-    showToast("Could not lock this chat. Check connection and try again.", "error");
+    const detail = error?.code ? ` (${error.code})` : "";
+    showToast(`Could not lock this chat${detail}. Please try again.`, "error");
   }
 }
 
@@ -10247,11 +10256,11 @@ async function startDirectChat(user) {
       {
         participants: [currentUser.uid, otherUserId],
         participantEmails: {
-          [currentUser.uid]: normalizeEmail(currentUser.email),
-          [otherUserId]: normalizeEmail(user.email),
+          [currentUser.uid]: normalizeEmail(currentUser.email || ""),
+          [otherUserId]: normalizeEmail(user.email || ""),
         },
         participantNames: {
-          [currentUser.uid]: currentUser.displayName || currentUser.email,
+          [currentUser.uid]: currentUser.displayName || currentUser.email || "Me",
           [otherUserId]: user.displayName || user.email || user.name || "User",
         },
         status: "active",
