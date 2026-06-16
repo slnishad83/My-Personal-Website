@@ -537,6 +537,37 @@ button {
   background: var(--panel-soft);
 }
 
+.mark-all-read-bar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 16px;
+  order: 3;
+}
+
+.mark-all-read-bar button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 16px;
+  border-radius: 999px;
+  background: var(--brand);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.mark-all-read-bar button:hover {
+  opacity: 0.85;
+}
+
+.mark-all-read-icon {
+  font-size: 14px;
+}
+
 .archive-section {
   order: 4;
 }

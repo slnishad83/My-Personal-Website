@@ -1267,7 +1267,7 @@ function renderChatListItems(items, container, emptyMessage = "") {
       </div>
       ${statusChip}
       ${!item.isLocked ? unread : ""}
-      <button class="list-item-menu ${item.isLocked ? "unlock-chat-btn" : "mute-chat-btn"}" ${!item.isLocked ? `data-chat-id="${item.id}" data-chat-type="${item.type}"` : ""}>${item.isLocked ? "Unlock" : item.isMuted ? "Unmute" : "Mute"}</button>${item.isLocked ? "" : `<button class="list-item-menu archive-chat-btn" data-chat-id="${item.id}" data-chat-type="${item.type}" data-chat-name="${escapeHtml(item.name)}">Arch</button>`}
+      <button class="list-item-menu ${item.isLocked ? "unlock-chat-btn" : "mute-chat-btn"}" ${!item.isLocked ? `data-chat-id="${item.id}" data-chat-type="${item.type}"` : ""}>${item.isLocked ? "Unlock" : item.isMuted ? "Unmute" : "Mute"}</button><button class="list-item-menu archive-chat-btn" data-chat-id="${item.id}" data-chat-type="${item.type}" data-chat-name="${escapeHtml(item.name)}" title="Archive">&#x1F4E5;</button>
     `;
 
     if (item.type === "user" || item.type === "saved") {
@@ -1326,13 +1326,13 @@ function renderChatListItems(items, container, emptyMessage = "") {
       .querySelector(".archive-chat-btn")
       ?.addEventListener("click", async (e) => {
         e.stopPropagation();
-        if (confirm(`Archive "${item.name}"?`))
-          await archiveChat(
-            item.id,
-            item.type,
-            item.name,
-            item.aliasDirectIds || [],
-          );
+        await archiveChat(
+          item.id,
+          item.type,
+          item.name,
+          item.aliasDirectIds || [],
+        );
+        showToast(`"${item.name}" archived`);
       });
 
     chatDiv
@@ -2555,6 +2555,11 @@ function updateUnreadBadges(items = []) {
   }
   document.title =
     totalUnread > 0 ? `(${totalUnread}) Team Chat` : "Team Chat - Complete";
+  // Hide mark-all-read bar when no unreads
+  const bar = document.getElementById("markAllReadBar");
+  if (bar && currentViewTab === "unread") {
+    bar.style.display = totalUnread > 0 ? "flex" : "none";
+  }
 }
 
 function scheduleChatListRefresh(delay = 600) {
@@ -6096,6 +6101,45 @@ async function getChatUnreadCount(chatId, chatType) {
     return 0;
   }
 }
+async function markAllChatsAsRead() {
+  if (!currentUser) return;
+  const bar = document.getElementById("markAllReadBar");
+  const btn = document.getElementById("markAllReadBtn");
+  if (btn) btn.disabled = true;
+  try {
+    const [directItems, groupItems] = await Promise.all([
+      buildDirectChatItems(),
+      buildGroupChatItems(),
+    ]);
+    const allItems = [...directItems, ...groupItems];
+    const unreadItems = allItems.filter((item) => Number(item.unreadCount || 0) > 0);
+
+    if (unreadItems.length === 0) {
+      showToast("No unread messages");
+      if (bar) bar.style.display = "none";
+      return;
+    }
+
+    await Promise.all(
+      unreadItems.map((item) => {
+        const chatId =
+          item.type === "direct"
+            ? (item.aliasDirectIds || item.id)
+            : item.id;
+        return markChatReadState(chatId, item.type, true);
+      }),
+    );
+
+    showToast(`Marked ${unreadItems.length} chat${unreadItems.length > 1 ? "s" : ""} as read`);
+    loadCurrentChatList();
+  } catch (error) {
+    console.error("markAllChatsAsRead failed:", error);
+    showToast("Could not mark all as read", "error");
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+}
+
 async function markChatReadState(chatId, chatType, readState) {
   if (!currentUser || !chatId || !chatType) return;
 
@@ -6482,9 +6526,7 @@ async function loadAllChatsList(searchTerm = "", searchToken = null) {
     return;
   }
   await refreshLockedChats();
-  const allItems = [...directItems, ...groupItems].filter(
-    (item) => item.type === "saved",
-  );
+  const allItems = [...directItems, ...groupItems];
   allItems.forEach((item) => {
     if (item.type !== "saved" && isChatLocked(item.id, item.type)) {
       item.isLocked = true;
@@ -9767,8 +9809,8 @@ async function loadGroupsList() {
       .querySelector(".archive-chat-btn")
       ?.addEventListener("click", async (e) => {
         e.stopPropagation();
-        if (confirm(`Archive group "${group.name}"?`))
-          await archiveChat(group.id, "group", group.name);
+        await archiveChat(group.id, "group", group.name);
+        showToast(`"${group.name}" archived`);
       });
     groupDiv
       .querySelector(".mute-chat-btn")
@@ -15450,6 +15492,9 @@ function switchTab(tab) {
   if (communityActions)
     communityActions.style.display = tab === "communities" ? "flex" : "none";
 
+  const markAllReadBar = document.getElementById("markAllReadBar");
+  if (markAllReadBar) markAllReadBar.style.display = tab === "unread" ? "flex" : "none";
+
   if (tab === "groups") loadGroupsList();
   else if (tab === "broadcasts") loadBroadcastsList();
   else if (tab === "status") loadStatusList();
@@ -18030,6 +18075,10 @@ document
     }
     document.getElementById("chatContextMenu").style.display = "none";
   });
+
+document
+  .getElementById("markAllReadBtn")
+  ?.addEventListener("click", markAllChatsAsRead);
 
 document
   .getElementById("blockUserMenuItem")
