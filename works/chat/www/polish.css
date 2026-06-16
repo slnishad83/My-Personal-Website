@@ -465,6 +465,186 @@ body.dark .message-quick-actions {
   background: rgba(32, 44, 51, 0.97) !important;
 }
 
+/* Responsive in-conversation search shared by personal and group chats. */
+#inChatSearchBar.in-chat-search-bar {
+  min-width: 0 !important;
+  padding: 10px 14px !important;
+  align-items: center !important;
+  gap: 10px !important;
+  background: var(--panel) !important;
+  border-bottom: 1px solid var(--border) !important;
+}
+
+.in-chat-search-shell {
+  display: grid !important;
+  grid-template-columns: 20px minmax(120px, 1fr) auto !important;
+  width: min(620px, 100%) !important;
+  min-width: 0 !important;
+  min-height: 44px !important;
+  align-items: center !important;
+  gap: 8px !important;
+  padding: 0 12px !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 22px !important;
+  background: var(--panel-soft) !important;
+}
+
+.in-chat-search-icon::before {
+  content: "\2315";
+  color: var(--muted);
+  font-size: 22px;
+}
+
+#inChatSearchInput {
+  min-width: 0 !important;
+  height: 40px !important;
+  padding: 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+  color: var(--text) !important;
+  font-size: 15px !important;
+}
+
+.in-chat-search-count {
+  min-width: 34px;
+  color: var(--muted);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.in-chat-search-controls {
+  display: flex !important;
+  min-width: 0 !important;
+  align-items: center !important;
+  gap: 6px !important;
+  margin-left: auto !important;
+}
+
+.in-chat-search-action {
+  position: relative;
+  display: inline-grid;
+  width: 40px;
+  height: 40px;
+  min-width: 40px;
+  min-height: 40px;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.in-chat-search-action:hover {
+  background: var(--panel-soft);
+  color: var(--primary);
+}
+
+.in-chat-search-action:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+#prevSearchBtn::before,
+#nextSearchBtn::before {
+  content: "";
+  width: 9px;
+  height: 9px;
+  border-top: 2px solid currentColor;
+  border-left: 2px solid currentColor;
+}
+
+#prevSearchBtn::before { transform: rotate(-45deg); }
+#nextSearchBtn::before { transform: rotate(135deg); }
+
+.in-chat-date-filter {
+  display: flex;
+  min-width: 0;
+  height: 40px;
+  align-items: center;
+  gap: 6px;
+  padding: 0 9px;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  color: var(--muted);
+  background: var(--panel-soft);
+}
+
+.in-chat-date-filter > span::before {
+  content: "\25A3";
+  font-size: 16px;
+}
+
+#dateSearchInput {
+  width: 112px;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 12px;
+}
+
+.clear-date-search { display: none; }
+.clear-date-search.show { display: inline-grid; }
+.clear-date-search::before,
+.close-in-chat-search::before,
+.clear-date-search::after,
+.close-in-chat-search::after {
+  content: "";
+  position: absolute;
+  width: 16px;
+  height: 2px;
+  border-radius: 2px;
+  background: currentColor;
+  transform: rotate(45deg);
+}
+.clear-date-search::after,
+.close-in-chat-search::after { transform: rotate(-45deg); }
+
+.secure-pin-field {
+  display: grid;
+  gap: 7px;
+  margin-top: 12px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.secure-pin-field input,
+#unlockPinInput {
+  width: 100%;
+  min-height: 46px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--panel-soft);
+  color: var(--text);
+  font-size: 18px;
+  letter-spacing: 0.22em;
+}
+
+.secure-lock-error {
+  min-height: 18px;
+  margin-top: 8px;
+  color: #d93025;
+  font-size: 12px;
+}
+
+.secure-lock-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.app-unlock-card {
+  width: min(390px, calc(100vw - 24px)) !important;
+}
+
 @media (max-width: 900px) {
   .chat-container {
     height: 100dvh !important;
@@ -484,6 +664,24 @@ body.dark .message-quick-actions {
   .chat-actions > #groupInfoBtn,
   .chat-actions > #wallpaperBtn {
     display: none !important;
+  }
+
+  #inChatSearchBar.in-chat-search-bar {
+    flex-wrap: wrap !important;
+    padding: 8px 10px !important;
+  }
+
+  .in-chat-search-shell {
+    width: 100% !important;
+  }
+
+  .in-chat-search-controls {
+    width: 100% !important;
+    justify-content: flex-end !important;
+  }
+
+  .in-chat-date-filter {
+    margin-right: auto;
   }
 
   .messages-area {
@@ -524,6 +722,31 @@ body.dark .message-quick-actions {
     right: max(8px, calc(6px + var(--app-safe-right, 0px))) !important;
     left: max(8px, calc(6px + var(--app-safe-left, 0px))) !important;
     width: auto !important;
+  }
+}
+
+@media (max-width: 430px) {
+  .in-chat-search-action {
+    width: 38px;
+    height: 38px;
+    min-width: 38px;
+    min-height: 38px;
+  }
+
+  .in-chat-date-filter {
+    flex: 1 1 132px;
+  }
+
+  #dateSearchInput {
+    width: 100%;
+  }
+
+  .secure-lock-actions {
+    flex-direction: column-reverse;
+  }
+
+  .secure-lock-actions .btn {
+    width: 100%;
   }
 }
 

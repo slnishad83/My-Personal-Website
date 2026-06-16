@@ -80,7 +80,7 @@ self.addEventListener('notificationclick', event => {
   );
 });
 
-const CACHE_NAME = 'team-chat-v183-full-viewport-fix';
+const CACHE_NAME = 'team-chat-v184-search-locks';
 const urlsToCache = [
   'index.html',
   'login.html',

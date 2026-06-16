@@ -8887,6 +8887,16 @@ async function lockChat(chatId, chatType, chatName = "Chat", otherUserId = "") {
 async function unlockChat(chatId, chatType) {
   const record = lockedChats.get(getLockedChatKey(chatId, chatType));
   if (!record) return;
+  const pin = await openChatLockPinModal({
+    title: "Unlock chat",
+    message: `Enter your locked-chat PIN to return ${record.chatName || "this chat"} to the main chat list.`,
+    confirmLabel: "Unlock chat",
+  });
+  if (!pin) return;
+  if (!(await verifyChatLockPin(pin))) {
+    showToast("Incorrect locked-chat PIN", "error");
+    return;
+  }
   await db.collection("lockedChats").doc(record.recordId || getLockedChatDocId(chatId, chatType)).delete();
   await refreshLockedChats();
   showToast(`${record.chatName || "Chat"} unlocked`);
@@ -15357,6 +15367,8 @@ function updateInChatSearch() {
   currentInChatSearchTerm = term;
   if (!term) {
     document.getElementById("searchResultCount").textContent = "";
+    document.getElementById("prevSearchBtn").disabled = true;
+    document.getElementById("nextSearchBtn").disabled = true;
     return;
   }
   currentSearchResults = [
@@ -15396,6 +15408,11 @@ function updateInChatSearch() {
 function focusCurrentSearchResult() {
   const count = currentSearchResults.length;
   const countEl = document.getElementById("searchResultCount");
+  const previousButton = document.getElementById("prevSearchBtn");
+  const nextButton = document.getElementById("nextSearchBtn");
+  const disabled = count < 2;
+  if (previousButton) previousButton.disabled = disabled;
+  if (nextButton) nextButton.disabled = disabled;
   if (!count) {
     if (countEl) countEl.textContent = "0/0";
     return;
@@ -15465,7 +15482,15 @@ function lockAppNowIfEnabled() {
   if (!pin) return;
   appUnlockedForSession = false;
   const modal = document.getElementById("unlockModal");
-  if (modal) modal.style.display = "flex";
+  if (modal) {
+    modal.style.display = "flex";
+    modal.setAttribute("aria-hidden", "false");
+  }
+  const input = document.getElementById("unlockPinInput");
+  const error = document.getElementById("unlockAppError");
+  if (input) input.value = "";
+  if (error) error.textContent = "";
+  window.setTimeout(() => input?.focus(), 0);
 }
 
 async function verifyStoredAppLockPin(pin) {
@@ -15495,30 +15520,72 @@ async function unlockAppAttempt() {
   const input = document.getElementById("unlockPinInput");
   const value = (input?.value || "").trim();
   if (!(await verifyStoredAppLockPin(value))) {
-    showToast("Wrong PIN", "error");
+    const error = document.getElementById("unlockAppError");
+    if (error) error.textContent = "Incorrect PIN. Try again.";
+    if (input) {
+      input.value = "";
+      input.focus();
+    }
     return;
   }
   appUnlockedForSession = true;
   if (input) input.value = "";
   const modal = document.getElementById("unlockModal");
-  if (modal) modal.style.display = "none";
+  if (modal) {
+    modal.style.display = "none";
+    modal.setAttribute("aria-hidden", "true");
+  }
 }
 
 function showAppLockModal() {
+  const enabled = Boolean(getStoredAppLockPin());
   document.getElementById("appLockModal").style.display = "flex";
   const input = document.getElementById("appLockPinInput");
+  const currentInput = document.getElementById("appLockCurrentPinInput");
+  const currentField = document.getElementById("appLockCurrentField");
+  const confirmInput = document.getElementById("appLockConfirmPinInput");
+  const confirmField = document.getElementById("appLockConfirmField");
+  const helper = document.getElementById("appLockHelper");
+  const saveButton = document.getElementById("saveAppLockPinBtn");
+  const disableButton = document.getElementById("disableAppLockBtn");
+  const error = document.getElementById("appLockError");
   if (input) input.value = "";
+  if (currentInput) currentInput.value = "";
+  if (currentField) currentField.style.display = enabled ? "grid" : "none";
+  if (confirmInput) confirmInput.value = "";
+  if (confirmField) confirmField.style.display = "grid";
+  if (helper) helper.textContent = enabled
+    ? "App lock is enabled. Confirm the current PIN before changing or disabling it."
+    : "Set a 4-digit PIN. The app locks whenever you leave it and must be unlocked when you return.";
+  if (saveButton) saveButton.textContent = enabled ? "Change PIN" : "Enable lock";
+  if (disableButton) disableButton.style.display = enabled ? "inline-flex" : "none";
+  if (error) error.textContent = "";
+  window.setTimeout(() => (enabled ? currentInput : input)?.focus(), 0);
 }
 
 async function saveAppLockPin() {
   const input = document.getElementById("appLockPinInput");
+  const currentInput = document.getElementById("appLockCurrentPinInput");
+  const confirmInput = document.getElementById("appLockConfirmPinInput");
+  const error = document.getElementById("appLockError");
   const pin = (input?.value || "").trim();
+  const currentPin = (currentInput?.value || "").trim();
+  const confirmation = (confirmInput?.value || "").trim();
   if (!/^\d{4}$/.test(pin)) {
-    showToast("Enter exactly 4 digits", "error");
+    if (error) error.textContent = "Enter exactly 4 digits.";
+    return;
+  }
+  if (pin !== confirmation) {
+    if (error) error.textContent = "The PINs do not match.";
+    return;
+  }
+  if (getStoredAppLockPin() && !(await verifyStoredAppLockPin(currentPin))) {
+    if (error) error.textContent = "The current PIN is incorrect.";
+    currentInput?.focus();
     return;
   }
   if (!globalThis.crypto?.subtle) {
-    showToast("Secure app lock is unavailable on this device", "error");
+    if (error) error.textContent = "Secure app lock is unavailable on this device.";
     return;
   }
   await setStoredAppLockPin(pin);
@@ -15527,7 +15594,15 @@ async function saveAppLockPin() {
   lockAppNowIfEnabled();
 }
 
-function disableAppLock() {
+async function disableAppLock() {
+  const input = document.getElementById("appLockCurrentPinInput");
+  const error = document.getElementById("appLockError");
+  const pin = (input?.value || "").trim();
+  if (!(await verifyStoredAppLockPin(pin))) {
+    if (error) error.textContent = "Enter the current PIN to disable app lock.";
+    input?.focus();
+    return;
+  }
   clearStoredAppLockPin();
   appUnlockedForSession = true;
   showToast("App lock disabled");
@@ -15886,6 +15961,8 @@ async function init() {
   });
   document.getElementById("searchChatBtn")?.addEventListener("click", () => {
     document.getElementById("inChatSearchBar").style.display = "flex";
+    document.getElementById("prevSearchBtn").disabled = true;
+    document.getElementById("nextSearchBtn").disabled = true;
     document.getElementById("inChatSearchInput")?.focus();
   });
   document
@@ -15902,6 +15979,9 @@ async function init() {
   document.getElementById("closeSearchBtn")?.addEventListener("click", () => {
     document.getElementById("inChatSearchBar").style.display = "none";
     document.getElementById("inChatSearchInput").value = "";
+    document.getElementById("dateSearchInput").value = "";
+    document.getElementById("clearDateSearch")?.classList.remove("show");
+    searchMessagesByDate("");
     updateInChatSearch();
   });
   document
@@ -16526,10 +16606,14 @@ async function init() {
   document
     .getElementById("dateSearchInput")
     ?.addEventListener("change", (e) => {
+      document
+        .getElementById("clearDateSearch")
+        ?.classList.toggle("show", Boolean(e.target.value));
       searchMessagesByDate(e.target.value);
     });
   document.getElementById("clearDateSearch")?.addEventListener("click", () => {
     document.getElementById("dateSearchInput").value = "";
+    document.getElementById("clearDateSearch")?.classList.remove("show");
     searchMessagesByDate("");
   });
   document
@@ -21686,23 +21770,15 @@ function searchMessagesByDate(dateStr) {
   var messages = document.querySelectorAll("#messagesArea .message");
   var count = 0;
   messages.forEach(function (msg) {
-    var timeEl = msg.querySelector(".message-time");
-    if (!timeEl) return;
     var show = true;
     if (dateStr) {
-      var msgDate = timeEl.textContent.trim();
-      var parts = dateStr.split("-");
-      var d = new Date(
-        parseInt(parts[0]),
-        parseInt(parts[1]) - 1,
-        parseInt(parts[2]),
-      );
-      var formatted = d.toLocaleDateString(undefined, {
-        month: "short",
-        day: "numeric",
-        year: "numeric",
-      });
-      show = msgDate.indexOf(formatted) > -1;
+      var timestamp = msg._messageData?.timestamp;
+      var messageDate = timestamp?.toDate ? timestamp.toDate() : new Date(timestamp || 0);
+      var selectedDate = new Date(dateStr + "T00:00:00");
+      show =
+        messageDate.getFullYear() === selectedDate.getFullYear() &&
+        messageDate.getMonth() === selectedDate.getMonth() &&
+        messageDate.getDate() === selectedDate.getDate();
     }
     msg.style.display = show ? "" : "none";
     if (show) count++;

@@ -24,7 +24,7 @@
     <link rel="stylesheet" href="translation-ui.css?v=3" />
     <link rel="stylesheet" href="safe-area-audit.css?v=5" />
     <link rel="stylesheet" href="calls-ui.css?v=8" />
-    <link rel="stylesheet" href="polish.css?v=4" />
+    <link rel="stylesheet" href="polish.css?v=5" />
     <link rel="manifest" href="manifest.json?v=98" />
     <link rel="apple-touch-icon" href="app-icon-192.png" />
     <style>
@@ -356,74 +356,44 @@
           </div>
         </div>
 
-        <div
-          id="inChatSearchBar"
-          style="
-            display: none;
-            padding: 12px 20px;
-            background: white;
-            border-bottom: 1px solid #e2e8f0;
-          "
-        >
-          <div style="display: flex; gap: 8px; align-items: center">
+        <div id="inChatSearchBar" class="in-chat-search-bar" style="display: none">
+          <div class="in-chat-search-shell">
+            <span class="in-chat-search-icon" aria-hidden="true"></span>
             <input
               type="text"
               id="inChatSearchInput"
-              placeholder="Search in this chat..."
-              style="
-                flex: 1;
-                padding: 8px 12px;
-                border: 1px solid #e2e8f0;
-                border-radius: 20px;
-              "
+              placeholder="Search messages"
+              aria-label="Search messages in this chat"
             />
+            <span id="searchResultCount" class="in-chat-search-count" aria-live="polite"></span>
+          </div>
+          <div class="in-chat-search-controls">
             <button
               id="prevSearchBtn"
-              style="
-                padding: 6px 12px;
-                background: #667eea;
-                color: white;
-                border: none;
-                border-radius: 20px;
-              "
-            >
-              ←
-            </button>
+              class="in-chat-search-action"
+              type="button"
+              title="Previous result"
+              aria-label="Previous search result"
+            ></button>
             <button
               id="nextSearchBtn"
-              style="
-                padding: 6px 12px;
-                background: #667eea;
-                color: white;
-                border: none;
-                border-radius: 20px;
-              "
-            >
-              →
-            </button>
-            <span id="searchResultCount" style="font-size: 12px"></span>
-            <input
-              type="date"
-              id="dateSearchInput"
-              style="padding:6px 8px;border:1px solid #e2e8f0;border-radius:12px;font-size:12px;outline:none;max-width:140px;"
-              title="Search by date"
-            />
-            <button
-              id="clearDateSearch"
-              style="background:none;border:none;font-size:14px;cursor:pointer;padding:4px;"
-              title="Clear date filter"
-            >✕</button>
+              class="in-chat-search-action"
+              type="button"
+              title="Next result"
+              aria-label="Next search result"
+            ></button>
+            <label class="in-chat-date-filter" title="Filter messages by date">
+              <span aria-hidden="true"></span>
+              <input type="date" id="dateSearchInput" aria-label="Filter messages by date" />
+            </label>
+            <button id="clearDateSearch" class="in-chat-search-action clear-date-search" type="button" title="Clear date filter" aria-label="Clear date filter"></button>
             <button
               id="closeSearchBtn"
-              style="
-                background: none;
-                border: none;
-                font-size: 20px;
-                cursor: pointer;
-              "
-            >
-            ✕
-            </button>
+              class="in-chat-search-action close-in-chat-search"
+              type="button"
+              title="Close search"
+              aria-label="Close search"
+            ></button>
           </div>
         </div>
 
@@ -1626,22 +1596,33 @@
           <span class="close-modal closeAppLockModal">&times;</span>
         </div>
         <div class="modal-body">
-          <p class="modal-helper">Set a 4-digit PIN to lock this app on this device.</p>
-          <input id="appLockPinInput" type="password" inputmode="numeric" maxlength="4" placeholder="Enter 4-digit PIN" />
-          <div style="display:flex; gap:8px; margin-top:12px;">
-            <button id="saveAppLockPinBtn" class="btn btn-primary">Save PIN</button>
-            <button id="disableAppLockBtn" class="btn btn-outline">Disable</button>
+          <p id="appLockHelper" class="modal-helper">Set a 4-digit PIN to lock this app on this device.</p>
+          <label id="appLockCurrentField" class="secure-pin-field">Current PIN
+            <input id="appLockCurrentPinInput" type="password" inputmode="numeric" maxlength="4" autocomplete="current-password" placeholder="Enter current PIN" />
+          </label>
+          <label class="secure-pin-field">4-digit PIN
+            <input id="appLockPinInput" type="password" inputmode="numeric" maxlength="4" autocomplete="new-password" placeholder="Enter 4-digit PIN" />
+          </label>
+          <label id="appLockConfirmField" class="secure-pin-field">Confirm PIN
+            <input id="appLockConfirmPinInput" type="password" inputmode="numeric" maxlength="4" autocomplete="new-password" placeholder="Confirm 4-digit PIN" />
+          </label>
+          <div id="appLockError" class="secure-lock-error" aria-live="polite"></div>
+          <div class="secure-lock-actions">
+            <button id="disableAppLockBtn" class="btn btn-outline">Disable lock</button>
+            <button id="saveAppLockPinBtn" class="btn btn-primary">Enable lock</button>
           </div>
         </div>
       </div>
     </div>
 
     <div id="unlockModal" class="modal" style="display: none">
-      <div class="modal-content">
+      <div class="modal-content app-unlock-card">
         <div class="modal-header"><h3>Unlock</h3></div>
         <div class="modal-body">
-          <input id="unlockPinInput" type="password" inputmode="numeric" maxlength="4" placeholder="Enter PIN" />
-          <div style="display:flex; justify-content:flex-end; margin-top:12px;">
+          <p class="modal-helper">Enter your 4-digit app-lock PIN to continue.</p>
+          <input id="unlockPinInput" type="password" inputmode="numeric" maxlength="4" autocomplete="current-password" placeholder="Enter PIN" />
+          <div id="unlockAppError" class="secure-lock-error" aria-live="assertive"></div>
+          <div class="secure-lock-actions">
             <button id="unlockAppBtn" class="btn btn-primary">Unlock</button>
           </div>
         </div>
@@ -3253,7 +3234,7 @@
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-storage-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-messaging-compat.js"></script>
-    <script src="app.js?v=174"></script>
+    <script src="app.js?v=175"></script>
     <script src="pwa-install.js?v=146"></script>
   </body>
 </html>
