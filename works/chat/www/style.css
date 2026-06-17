@@ -9014,31 +9014,6 @@ body.selection-active .message-wrapper .msg-select-checkbox {
   opacity: 0.6;
 }
 
-/* Pull to refresh */
-.pull-to-refresh-indicator {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 0;
-  overflow: hidden;
-  transition: height 0.2s ease;
-  font-size: 13px;
-  color: var(--muted);
-  gap: 8px;
-}
-.pull-to-refresh-indicator.active {
-  height: 48px;
-}
-.pull-to-refresh-indicator .ptr-spinner {
-  width: 18px;
-  height: 18px;
-  border: 2px solid var(--border);
-  border-top-color: var(--brand);
-  border-radius: 50%;
-  animation: ptr-spin 0.6s linear infinite;
-}
-@keyframes ptr-spin { to { transform: rotate(360deg); } }
-
 /* Formatting toolbar above composer */
 .format-toolbar {
   display: flex;

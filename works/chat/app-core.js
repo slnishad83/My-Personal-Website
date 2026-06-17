@@ -16681,8 +16681,6 @@ async function init() {
   });
   // Formatting toolbar
   initFormatToolbar();
-  // Pull to refresh
-  initPullToRefresh();
   // Chat folders
   initFolders();
   // Scheduled messages
@@ -18914,45 +18912,7 @@ function initFolders() {
   });
 }
 
-// ===== Pull to Refresh =====
-function initPullToRefresh() {
-  const sidebar = document.getElementById("sidebar");
-  const indicator = document.getElementById("pullToRefreshIndicator");
-  if (!sidebar) return;
-  let startY = 0, pulling = false, moved = false;
-  sidebar.addEventListener("touchstart", (e) => {
-    if (sidebar.scrollTop !== 0) return;
-    startY = e.touches[0].clientY;
-    pulling = true;
-    moved = false;
-  }, { passive: true });
-  sidebar.addEventListener("touchmove", (e) => {
-    if (!pulling) return;
-    const dy = e.touches[0].clientY - startY;
-    if (dy > 0) {
-      moved = true;
-      if (indicator) {
-        const h = Math.min(dy * 0.4, 60);
-        indicator.style.height = h + "px";
-        indicator.style.opacity = Math.min(h / 48, 1);
-      }
-    }
-  }, { passive: true });
-  sidebar.addEventListener("touchend", () => {
-    if (!pulling) return;
-    pulling = false;
-    if (indicator) {
-      indicator.style.height = "0";
-      indicator.style.opacity = "0";
-    }
-    if (moved) {
-      if (indicator) indicator.classList.add("active");
-      refreshCurrentChatList();
-      setTimeout(() => { if (indicator) indicator.classList.remove("active"); }, 1000);
-    }
-    moved = false;
-  }, { passive: true });
-}
+
 
 async function refreshCurrentChatList() {
   const activeTab = document.querySelector(".primary-tabs .tab.active");
