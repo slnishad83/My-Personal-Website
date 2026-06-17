@@ -7565,6 +7565,7 @@ document.getElementById("confirmMuteMemberBtn")?.addEventListener("click", async
       menu.style.top = Math.min(y, window.innerHeight - 200) + "px";
       const chatId = item.dataset.chatId;
       const chatType = item.dataset.chatType;
+      const otherUserId = item.dataset.otherUserId;
       const items = [
         { label: "Mark as unread", action: async () => {
           if (chatId) {
@@ -7576,7 +7577,8 @@ document.getElementById("confirmMuteMemberBtn")?.addEventListener("click", async
         }},
         { label: chatType === "group" ? "Group info" : "Contact info", action: () => {
           if (chatType === "group") showGroupInfo();
-          else openDirectChat({ id: chatId, type: "user" });
+          else if (otherUserId) startDirectChat({ id: otherUserId });
+          else showToast("Cannot open contact info", "error");
         }},
         { label: "Pin/Unpin", action: async () => {
           if (!chatId) return;
@@ -10064,12 +10066,11 @@ document.getElementById("closeSessionsModal")?.addEventListener("click", () => {
   }
 
   // Check anniversary when opening a chat
-  const origOpen = openDirectChat || openChat;
-  if (typeof openDirectChat === "function") {
-    const _origOpen = openDirectChat;
-    openDirectChat = async function(chat) {
-      const result = await _origOpen.apply(this, arguments);
-      if (chat?.createdAt) checkAnniversary(chat.id, chat.name || chat.displayName, chat.createdAt);
+  if (typeof startDirectChat === "function") {
+    const _origStart = startDirectChat;
+    startDirectChat = async function(user) {
+      const result = await _origStart.apply(this, arguments);
+      if (user?.createdAt) checkAnniversary(user.id, user.displayName || user.name, user.createdAt);
       return result;
     };
   }
