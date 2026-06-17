@@ -8641,6 +8641,7 @@ body.dark #logoutBtn {
   align-items: flex-end !important;
   background: transparent !important;
   border-top: 0 !important;
+  position: relative;
   z-index: 50;
 }
 

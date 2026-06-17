@@ -3699,13 +3699,29 @@ function initMediaViewer() {
   document.getElementById("mediaViewerPrev")?.addEventListener("click", () => navigateMediaViewer(-1));
   document.getElementById("mediaViewerNext")?.addEventListener("click", () => navigateMediaViewer(1));
 
-  // Click handler for videos in messages area
+  // Click handler for videos and images in messages area
   document.getElementById("messagesArea")?.addEventListener("click", (e) => {
     const video = e.target.closest(".video-attachment video");
     if (video && !e.target.closest("button, a")) {
       e.preventDefault();
       const url = video.currentSrc || video.src || video.querySelector("source")?.src || "";
       if (url) openMediaViewer(url, "Video", "video");
+      return;
+    }
+    const imgLink = e.target.closest(".image-attachment-link");
+    if (imgLink) {
+      e.preventDefault();
+      const url = imgLink.dataset.previewUrl || imgLink.href;
+      const filename = imgLink.dataset.filename || "Image";
+      if (url) openMediaViewer(url, filename);
+      return;
+    }
+    const fileCard = e.target.closest(".file-attachment-card");
+    if (fileCard) {
+      e.preventDefault();
+      const url = fileCard.dataset.previewUrl || fileCard.href;
+      const filename = fileCard.dataset.filename || "File";
+      if (url) previewFile(url, filename);
     }
   });
 
