@@ -7302,7 +7302,21 @@ body.dark .message-quick-actions .quick-message-action {
   transition: opacity 160ms ease;
 }
 
-.chat-lock-modal-backdrop.show {
+.app-lock-backdrop {
+  composes: chat-lock-modal-backdrop;
+  position: fixed;
+  inset: 0;
+  z-index: 10051;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: rgba(11, 20, 26, 0.48);
+  opacity: 0;
+  transition: opacity 160ms ease;
+}
+
+.chat-lock-modal-backdrop.show,
+.app-lock-backdrop.show {
   display: flex !important;
   opacity: 1;
 }

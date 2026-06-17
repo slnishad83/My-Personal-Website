@@ -234,6 +234,8 @@ let currentJoinQuestions = [];
 let pendingJoinGroupId = null;
 let lockedChats = new Map();
 let lockPinVerifiedForSearch = false;
+let temporarilyUnlockedChatId = null;
+let lockedChatFolderVisible = false;
 
 const defaultRtcConfig = {
   iceServers: [
@@ -351,7 +353,7 @@ function applyA11yEnhancements() {
 }
 
 function closeTopVisibleModal() {
-  const visibleModals = Array.from(document.querySelectorAll(".modal, .chat-lock-modal-backdrop")).filter(
+  const visibleModals = Array.from(document.querySelectorAll(".modal, .chat-lock-modal-backdrop, .app-lock-backdrop")).filter(
     (modal) => {
       const styles = window.getComputedStyle(modal);
       return styles.display !== "none" && styles.visibility !== "hidden";
@@ -1223,6 +1225,7 @@ function renderChatListItems(items, container, emptyMessage = "") {
     chatDiv.draggable = true;
     if (item.isPinned) chatDiv.classList.add("pinned");
     if (item.isLocked) chatDiv.classList.add("locked");
+    if (item.isLockedFolder) { chatDiv.draggable = false; chatDiv.style.cursor = "pointer"; }
     if (item.searchResultType)
       chatDiv.classList.add(`search-result-${item.searchResultType}`);
     chatDiv.dataset.chatId = item.id;
@@ -1284,17 +1287,18 @@ function renderChatListItems(items, container, emptyMessage = "") {
       : "";
     const lockOverlay = item.isLocked ? `<span class="lock-badge-overlay" title="Locked chat">&#x1F512;</span>` : "";
     const lockedPreview = item.isLocked ? `<span class="locked-preview">&#x1F512; Locked${item.unreadCount ? ` &middot; ${item.unreadCount} new` : ""}</span>` : "";
-    const previewContent = item.isLocked ? lockedPreview : (previewHtml || "");
+    const folderPreview = item.isLockedFolder ? `<span style="color:var(--text-muted);font-size:12px">${item.lockedCount || 0} locked</span>` : "";
+    const previewContent = item.isLockedFolder ? folderPreview : (item.isLocked ? lockedPreview : (previewHtml || ""));
     chatDiv.innerHTML = `
       <span class="drag-handle" draggable="false">⠿</span>
-      <div class="list-avatar">${item.avatar}${lockOverlay}</div>
+      <div class="list-avatar">${item.isLockedFolder ? '&#x1F512;' : item.avatar}${lockOverlay}</div>
       <div class="list-info" style="flex:1; cursor:pointer;">
         <div class="list-name">${tagHtml}${item.isPinned ? '<span class="pin-icon">&#x1F4CC;</span> ' : ""}${item.isFavorite ? "* " : ""}${item.isLocked ? '&#x1F512; ' : ""}${escapeHtml(item.name)} ${item.isMuted ? "[Muted]" : ""}${searchMeta}</div>
         <div class="list-preview">${previewContent}</div>
       </div>
       ${statusChip}
-      ${!item.isLocked ? unread : ""}
-      <button class="list-item-menu ${item.isLocked ? "unlock-chat-btn" : "mute-chat-btn"}" ${!item.isLocked ? `data-chat-id="${item.id}" data-chat-type="${item.type}"` : ""}>${item.isLocked ? "Unlock" : item.isMuted ? "Unmute" : "Mute"}</button><button class="list-item-menu archive-chat-btn" data-chat-id="${item.id}" data-chat-type="${item.type}" data-chat-name="${escapeHtml(item.name)}" title="Archive">&#x1F4E5;</button>
+      ${!item.isLocked && !item.isLockedFolder ? unread : ""}
+      ${!item.isLockedFolder ? `<button class="list-item-menu ${item.isLocked ? "unlock-chat-btn" : "mute-chat-btn"}" ${!item.isLocked ? `data-chat-id="${item.id}" data-chat-type="${item.type}"` : ""}>${item.isLocked ? "Unlock" : item.isMuted ? "Unmute" : "Mute"}</button><button class="list-item-menu archive-chat-btn" data-chat-id="${item.id}" data-chat-type="${item.type}" data-chat-name="${escapeHtml(item.name)}" title="Archive">&#x1F4E5;</button>` : ""}
     `;
 
     if (item.type === "user" || item.type === "saved") {
@@ -1382,16 +1386,14 @@ function renderChatListItems(items, container, emptyMessage = "") {
     chatDiv.addEventListener("click", async (e) => {
       if (e.target.closest("button")) return;
       try {
+        if (item.isLockedFolder) {
+          showLockedChatsView();
+          return;
+        }
         if (item.isLocked) {
           if (!(await showUnlockChatPrompt(item.id, item.type))) return;
-          const record = lockedChats.get(getLockedChatKey(item.id, item.type));
-          if (record) {
-            try {
-              await db.collection("lockedChats").doc(record.recordId || getLockedChatDocId(item.id, item.type)).delete();
-            } catch (_) {}
-            await refreshLockedChats();
-          }
-          // Fall through to open the chat after unlocking
+          temporarilyUnlockedChatId = item.id;
+          // Fall through to open the chat after temporary unlock
         }
         if (item.type === "user") {
           await handleUserSelection(item.user || item.rawUser || item);
@@ -2529,6 +2531,8 @@ function setupActiveCallBackProtection() {
 }
 
 function resetChatPanel() {
+  // Re-lock temporarily unlocked chat on navigation away
+  if (temporarilyUnlockedChatId) relockTemporarilyUnlockedChat();
   currentChat = null;
   currentChatType = null;
   currentGroup = null;
@@ -6968,22 +6972,14 @@ async function loadAllChatsList(searchTerm = "", searchToken = null) {
     return;
   }
   await refreshLockedChats();
-  const allItems = [...directItems, ...groupItems];
-  allItems.forEach((item) => {
-    if (item.type !== "saved" && isChatLocked(item.id, item.type)) {
-      item.isLocked = true;
-      item.preview = "Locked";
-    }
-  });
-  // Pre-load real unread counts for locked chats
-  await Promise.all(allItems.map(async (item) => {
-    if (item.isLocked) {
-      try { item.unreadCount = await getChatUnreadCount(item.id, item.type); } catch (_) {}
-    }
-  }));
-  updateUnreadBadges(allItems);
+  const lockedChatCount = lockedChats.size;
 
-  let items = [...allItems];
+  // Filter locked chats out of the visible list — they live in the folder only
+  let items = [...directItems, ...groupItems].filter(
+    (item) => item.type === "saved" || !isChatLocked(item.id, item.type)
+  );
+  updateUnreadBadges([...directItems, ...groupItems]);
+
   if (currentViewTab === "favorites")
     items = items.filter((item) => item.isFavorite);
   if (currentViewTab === "unread")
@@ -6994,16 +6990,36 @@ async function loadAllChatsList(searchTerm = "", searchToken = null) {
 
   const term = searchTerm.trim().toLowerCase();
 
+  // If PIN was verified via search bar, show locked-chat folder + normal list
   if (/^\d{4}$/.test(term) && (await verifyChatLockPin(term))) {
-    const lockedItems = (await getLockedChatListItems())
-      .map((item) => ({ ...item, section: "Locked Chats" }));
+    lockPinVerifiedForSearch = true;
+    lockedChatFolderVisible = true;
+    const folderEntry = {
+      id: "__lockedChatFolder",
+      type: "folder",
+      name: `🔒 Locked Chats`,
+      isLockedFolder: true,
+      lockedCount: lockedChatCount,
+      section: "",
+    };
     const archivedItems = (await getArchivedChatListItems())
       .filter((item) => !isChatLocked(item.id, item.type))
       .map((item) => ({ ...item, section: "Archived Chats" }));
-    const normalItems = allItems.map((item) => ({ ...item, section: "All" }));
-    renderChatListItems([...lockedItems, ...archivedItems, ...normalItems], chatsList);
-    lockPinVerifiedForSearch = true;
+    const normalItems = items.map((item) => ({ ...item, section: "Chats" }));
+    renderChatListItems([folderEntry, ...archivedItems, ...normalItems], chatsList);
     return;
+  }
+  // Also show folder if previously verified (e.g. after navigating back)
+  if (lockedChatFolderVisible && lockedChatCount > 0) {
+    const folderEntry = {
+      id: "__lockedChatFolder",
+      type: "folder",
+      name: `🔒 Locked Chats`,
+      isLockedFolder: true,
+      lockedCount: lockedChatCount,
+      section: "",
+    };
+    items = [folderEntry, ...items];
   }
   lockPinVerifiedForSearch = false;
 
@@ -9343,12 +9359,9 @@ function hideChatLockSetupModal() {
 function showChatLockResetModal() {
   const modal = document.getElementById("chatLockResetModal");
   if (!modal) return;
-  showModal("chatLockResetModal");
-  const inputs = ["chatLockResetPassword", "chatLockResetPinInput", "chatLockResetConfirmInput"];
-  inputs.forEach((id) => { const el = document.getElementById(id); if (el) el.value = ""; });
   const error = document.getElementById("chatLockResetError");
   if (error) error.textContent = "";
-  setTimeout(() => document.getElementById("chatLockResetPassword")?.focus(), 0);
+  showModal("chatLockResetModal");
 }
 
 function hideChatLockResetModal() {
@@ -9426,7 +9439,7 @@ async function ensureChatLockPin() {
       pinInput.value = "";
       confirmInput.value = "";
       error.textContent = "";
-      const close = (result) => { modal.style.display = "none"; resolve(result); };
+      const close = (result) => { hideModal("chatLockSetupModal"); resolve(result); };
       const onCancel = () => { close(null); };
       const onSave = () => {
         const pin = (pinInput?.value || "").trim();
@@ -9436,12 +9449,11 @@ async function ensureChatLockPin() {
         close(pin);
       };
       document.querySelectorAll(".closeChatLockSetupModal").forEach((el) => el.addEventListener("click", onCancel));
-      modal.querySelector(".close-modal")?.addEventListener("click", onCancel);
       saveBtn?.addEventListener("click", onSave);
       pinInput?.addEventListener("keydown", (e) => { if (e.key === "Enter") onSave(); });
       confirmInput?.addEventListener("keydown", (e) => { if (e.key === "Enter") onSave(); });
-      modal.style.display = "flex";
-      setTimeout(() => pinInput?.focus(), 0);
+      showModal("chatLockSetupModal");
+      setTimeout(() => pinInput?.focus(), 100);
     });
     if (!pin) return null;
     await saveChatLockPin(pin);
@@ -9507,19 +9519,7 @@ async function showUnlockChatPrompt(chatId, chatType) {
 }
 
 async function unlockChat(chatId, chatType) {
-  const record = lockedChats.get(getLockedChatKey(chatId, chatType));
-  if (!record) return;
-  if (!(await showUnlockChatPrompt(chatId, chatType))) return;
-  try {
-    await db.collection("lockedChats").doc(record.recordId || getLockedChatDocId(chatId, chatType)).delete();
-    await refreshLockedChats();
-    showToast(`${record.chatName || "Chat"} unlocked`);
-    if (typeof loadCurrentChatList === "function") loadCurrentChatList();
-    if (typeof loadArchivedChats === "function") loadArchivedChats();
-  } catch (error) {
-    console.error("Unlock chat failed:", error);
-    showToast("Could not unlock this chat. Check connection and try again.", "error");
-  }
+  return permanentlyUnlockChat(chatId, chatType);
 }
 
 function lockedRecordToListItem(record) {
@@ -9557,23 +9557,136 @@ async function getLockedChatListItems() {
 }
 
 async function handleChatLockReset() {
-  const password = document.getElementById("chatLockResetPassword")?.value || "";
-  const pin = (document.getElementById("chatLockResetPinInput")?.value || "").trim();
-  const confirmation = (document.getElementById("chatLockResetConfirmInput")?.value || "").trim();
+  if (!confirm("Locked chats will be cleared and all chats will be permanently unlocked. Continue?")) return;
   const error = document.getElementById("chatLockResetError");
-  if (!password || !/^\d{4}$/.test(pin) || pin !== confirmation) {
-    if (error) error.textContent = "Enter your account password and matching 4-digit PINs.";
+  try {
+    // Delete all locked chat records
+    const batch = db.batch();
+    lockedChats.forEach((record) => {
+      const ref = db.collection("lockedChats").doc(record.recordId || getLockedChatDocId(record.chatId, record.chatType));
+      batch.delete(ref);
+    });
+    await batch.commit();
+    // Delete PIN settings
+    await db.collection("chatLockSettings").doc(currentUser.uid).delete().catch(() => {});
+    await refreshLockedChats();
+    hideModal("chatLockResetModal");
+    lockedChatFolderVisible = false;
+    lockPinVerifiedForSearch = false;
+    showToast("All locked chats cleared and unlocked");
+    if (typeof loadCurrentChatList === "function") loadCurrentChatList();
+  } catch (resetError) {
+    console.error("Chat lock reset failed:", resetError);
+    if (error) error.textContent = "Failed to reset. Check connection and try again.";
+  }
+}
+
+// Show locked-chats-only list view (called when user taps the "🔒 Locked Chats" folder)
+async function showLockedChatsView() {
+  const container = document.getElementById("chatsList");
+  if (!container) return;
+  container.innerHTML = "";
+  // Back button
+  const back = document.createElement("div");
+  back.className = "list-item";
+  back.style.cssText = "font-weight:600;cursor:pointer";
+  back.innerHTML = '<span style="margin-right:8px">&#x2190;</span> Back';
+  back.addEventListener("click", () => { lockedChatFolderVisible = false; loadCurrentChatList(); });
+  container.appendChild(back);
+
+  const items = await getLockedChatListItems();
+  if (!items.length) {
+    container.innerHTML += '<div class="empty-state" style="padding:40px;text-align:center;color:var(--text-muted)">No locked chats</div>';
     return;
   }
+
+  // "Unlock All" option at top of locked list
+  const unlockAll = document.createElement("div");
+  unlockAll.className = "list-item";
+  unlockAll.style.cssText = "cursor:pointer;opacity:0.8";
+  unlockAll.innerHTML = '<span style="margin-right:8px">&#x1F513;</span> Unlock All';
+  unlockAll.addEventListener("click", async () => {
+    if (!confirm("All locked chats will be permanently unlocked. Continue?")) return;
+    try {
+      const batch = db.batch();
+      lockedChats.forEach((record) => {
+        const ref = db.collection("lockedChats").doc(record.recordId || getLockedChatDocId(record.chatId, record.chatType));
+        batch.delete(ref);
+      });
+      await batch.commit();
+      await refreshLockedChats();
+      lockedChatFolderVisible = false;
+      showToast("All chats unlocked");
+      loadCurrentChatList();
+    } catch (e) {
+      showToast("Could not unlock all chats", "error");
+    }
+  });
+  container.appendChild(unlockAll);
+
+  items.forEach((item) => {
+    const div = document.createElement("div");
+    div.className = "list-item";
+    div.dataset.chatId = item.id;
+    div.dataset.chatType = item.type;
+    div.innerHTML = `
+      <div class="list-avatar"><span class="lock-badge-overlay">&#x1F512;</span>${item.avatar}</div>
+      <div class="list-info" style="flex:1">
+        <div class="list-name">&#x1F512; ${escapeHtml(item.name)}</div>
+        <div class="list-preview">${item.unreadCount ? `${item.unreadCount} new` : "Locked"}</div>
+      </div>
+      <button class="list-item-menu unlock-chat-btn" title="Permanently unlock this chat">Unlock</button>
+    `;
+    // Tap chat → temporarily unlock + open
+    div.addEventListener("click", async (e) => {
+      if (e.target.closest("button")) return;
+      if (!(await showUnlockChatPrompt(item.id, item.type))) return;
+      temporarilyUnlockedChatId = item.id;
+      if (item.type === "group") await loadGroupChat(item.id, item.name, item);
+      else {
+        const record = lockedChats.get(getLockedChatKey(item.id, item.type));
+        const otherId = record?.otherUserId || "";
+        if (otherId) await startDirectChat({ id: otherId, displayName: item.name });
+      }
+    });
+    // "Unlock" button → permanently unlock (deletes lock record)
+    div.querySelector(".unlock-chat-btn")?.addEventListener("click", async (e) => {
+      e.stopPropagation();
+      await permanentlyUnlockChat(item.id, item.type);
+      showLockedChatsView(); // refresh the locked-chats list
+    });
+    container.appendChild(div);
+  });
+}
+
+// Temporary unlock — just verify PIN, set flag, don't delete record
+async function temporarilyUnlockChat(chatId, chatType) {
+  if (!(await showUnlockChatPrompt(chatId, chatType))) return false;
+  temporarilyUnlockedChatId = chatId;
+  return true;
+}
+
+// Permanent unlock — deletes the lock record from Firestore
+async function permanentlyUnlockChat(chatId, chatType) {
+  const record = lockedChats.get(getLockedChatKey(chatId, chatType));
+  if (!record) return;
+  if (!(await showUnlockChatPrompt(chatId, chatType))) return;
   try {
-    const credential = firebase.auth.EmailAuthProvider.credential(currentUser.email, password);
-    await currentUser.reauthenticateWithCredential(credential);
-    await saveChatLockPin(pin);
-    hideModal("chatLockResetModal");
-    showToast("Locked-chat PIN changed");
-  } catch (resetError) {
-    if (error) error.textContent = resetError.message || "Account verification failed.";
+    await db.collection("lockedChats").doc(record.recordId || getLockedChatDocId(chatId, chatType)).delete();
+    await refreshLockedChats();
+    showToast(`${record.chatName || "Chat"} permanently unlocked`);
+    if (typeof loadCurrentChatList === "function") loadCurrentChatList();
+  } catch (error) {
+    console.error("Permanent unlock failed:", error);
+    showToast("Could not unlock this chat. Check connection and try again.", "error");
   }
+}
+
+// Re-lock the temporarily unlocked chat when user navigates away
+async function relockTemporarilyUnlockedChat() {
+  if (!temporarilyUnlockedChatId) return;
+  temporarilyUnlockedChatId = null;
+  if (typeof loadCurrentChatList === "function") loadCurrentChatList();
 }
 
 async function getArchivedChatListItems() {
@@ -17217,18 +17330,6 @@ async function init() {
     .getElementById("chatLockResetConfirmBtn")
     ?.addEventListener("click", handleChatLockReset);
   document
-    .getElementById("chatLockResetEmailBtn")
-    ?.addEventListener("click", async () => {
-      try {
-        await auth.sendPasswordResetEmail(currentUser.email);
-        const error = document.getElementById("chatLockResetError");
-        if (error) error.textContent = `Password reset link sent to ${currentUser.email}.`;
-      } catch (sendError) {
-        const error = document.getElementById("chatLockResetError");
-        if (error) error.textContent = sendError.message || "Could not send recovery email.";
-      }
-    });
-  document
     .getElementById("logoutOtherSessionsBtn")
     ?.addEventListener("click", () =>
       logoutOtherSessions().catch(() =>
@@ -17274,8 +17375,11 @@ async function init() {
         () => {},
       );
     }
-    if (document.visibilityState === "visible" && getStoredAppLockPin()) {
-      lockAppNowIfEnabled();
+    if (document.visibilityState === "visible") {
+      if (getStoredAppLockPin()) lockAppNowIfEnabled();
+    } else {
+      // Re-lock temporarily unlocked chat when app goes to background
+      if (temporarilyUnlockedChatId) relockTemporarilyUnlockedChat();
     }
     if (
       document.visibilityState === "hidden" &&
@@ -18542,7 +18646,7 @@ document
     const otherUserId = target.dataset.otherUserId || "";
     document.getElementById("chatContextMenu").style.display = "none";
     if (!chatId || !["direct", "group"].includes(chatType)) return;
-    if (isChatLocked(chatId, chatType)) await unlockChat(chatId, chatType);
+    if (isChatLocked(chatId, chatType)) await permanentlyUnlockChat(chatId, chatType);
     else await lockChat(chatId, chatType, chatName, otherUserId);
   });
 
@@ -19168,6 +19272,7 @@ document.addEventListener("visibilitychange", () => {
 window.addEventListener("pagehide", () => {
   if (currentUser) setCurrentUserPresence(false).catch(() => {});
   saveCallState();
+  if (temporarilyUnlockedChatId) relockTemporarilyUnlockedChat();
 });
 
 window.enableTeamChatCallNotifications =
@@ -27412,8 +27517,9 @@ document.getElementById("closeSessionsModal")?.addEventListener("click", () => {
     }
     // Escape to close modals
     if (e.key === "Escape") {
-      document.querySelectorAll(".modal[style*='display: flex']").forEach(m => {
-        if (m.id !== "callModal") m.style.display = "none";
+      const selector = ".modal[style*='display: flex'], .chat-lock-modal-backdrop.show, .app-lock-backdrop.show";
+      document.querySelectorAll(selector).forEach(m => {
+        if (m.id !== "callModal") hideModal(m.id);
       });
     }
   });

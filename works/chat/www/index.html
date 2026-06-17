@@ -1597,7 +1597,7 @@
       </div>
     </div>
 
-    <div id="appLockModal" class="chat-lock-modal-backdrop" style="display: none">
+    <div id="appLockModal" class="app-lock-backdrop" style="display: none">
       <div class="chat-lock-modal" style="padding:28px 24px 20px">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
           <h3 style="margin:0">App Lock</h3>
@@ -1623,7 +1623,7 @@
       </div>
     </div>
 
-    <div id="unlockModal" class="chat-lock-modal-backdrop" style="display: none">
+    <div id="unlockModal" class="app-lock-backdrop" style="display: none">
       <div class="chat-lock-modal app-unlock-card" style="text-align:center;padding:32px 28px">
         <div class="lock-shield" style="margin:0 auto 12px">&#x1F512;</div>
         <h3 style="margin:0 0 4px">App Locked</h3>
@@ -1686,24 +1686,12 @@
           <div class="lock-shield" style="margin-bottom:14px">&#x1F510;</div>
           <span class="close-modal closeChatLockResetModal" style="font-size:22px;cursor:pointer;color:var(--text-muted);line-height:1">&times;</span>
         </div>
-        <h3 style="margin:0 0 4px">Reset PIN</h3>
-        <p style="margin:0 0 18px;color:var(--text-muted);font-size:13px">Confirm your account password, then choose a new 4-digit PIN. Your existing locked chats stay locked.</p>
-        <label class="secure-pin-field" style="display:grid;gap:6px;color:var(--text-muted);font-size:12px;font-weight:600">Account password
-          <input id="chatLockResetPassword" type="password" autocomplete="current-password" placeholder="Account password" />
-        </label>
-        <label class="secure-pin-field" style="display:grid;gap:6px;color:var(--text-muted);font-size:12px;font-weight:600;margin-top:14px">New PIN
-          <input id="chatLockResetPinInput" type="password" inputmode="numeric" maxlength="4" autocomplete="new-password" placeholder="Enter 4-digit PIN" />
-        </label>
-        <label class="secure-pin-field" style="display:grid;gap:6px;color:var(--text-muted);font-size:12px;font-weight:600;margin-top:14px">Confirm PIN
-          <input id="chatLockResetConfirmInput" type="password" inputmode="numeric" maxlength="4" autocomplete="new-password" placeholder="Confirm 4-digit PIN" />
-        </label>
+        <h3 style="margin:0 0 4px">Reset locked-chat PIN?</h3>
+        <p style="margin:0 0 18px;color:var(--text-muted);font-size:13px">All locked chats will be cleared and permanently unlocked. You can lock chats again with a new PIN.</p>
         <div id="chatLockResetError" class="secure-lock-error" aria-live="polite"></div>
-        <div class="secure-lock-actions" style="margin-top:16px;justify-content:space-between;flex-wrap:wrap;gap:8px">
-          <button id="chatLockResetEmailBtn" class="btn btn-link" style="font-size:12px">Email password reset link</button>
-          <div style="display:flex;gap:8px">
-            <button class="btn btn-outline closeChatLockResetModal">Cancel</button>
-            <button id="chatLockResetConfirmBtn" class="btn btn-primary">Reset PIN</button>
-          </div>
+        <div class="secure-lock-actions" style="margin-top:16px;justify-content:flex-end;gap:8px">
+          <button class="btn btn-outline closeChatLockResetModal">Cancel</button>
+          <button id="chatLockResetConfirmBtn" class="btn btn-primary" style="background:#d93025">Clear & Reset</button>
         </div>
       </div>
     </div>
