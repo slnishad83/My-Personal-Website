@@ -6971,7 +6971,7 @@ async function loadAllChatsList(searchTerm = "", searchToken = null) {
   } else if (loadToken !== chatListLoadToken) {
     return;
   }
-  await refreshLockedChats();
+  try { await refreshLockedChats(); } catch (e) { lockedChats = new Map(); console.warn("refreshLockedChats failed:", e); }
   const lockedChatCount = lockedChats.size;
   const allItems = [...directItems, ...groupItems];
 
@@ -6992,7 +6992,9 @@ async function loadAllChatsList(searchTerm = "", searchToken = null) {
   const term = searchTerm.trim().toLowerCase();
 
   // If PIN was verified via search bar, show locked-chat folder + normal list
-  if (/^\d{4}$/.test(term) && (await verifyChatLockPin(term))) {
+  let pinVerified = false;
+  try { pinVerified = /^\d{4}$/.test(term) && (await verifyChatLockPin(term)); } catch (e) { console.warn("PIN verification failed:", e); }
+  if (pinVerified) {
     lockPinVerifiedForSearch = true;
     lockedChatFolderVisible = true;
     const folderEntry = {
@@ -9307,7 +9309,8 @@ async function getChatLockSettings() {
 
 async function verifyChatLockPin(pin) {
   if (!/^\d{4}$/.test(pin) || !crypto?.subtle) return false;
-  const settings = await getChatLockSettings();
+  let settings;
+  try { settings = await getChatLockSettings(); } catch (e) { console.warn("getChatLockSettings failed:", e); return false; }
   if (!settings?.pinHash || !settings?.pinSalt) return false;
   const candidate = await deriveChatLockPin(
     pin,
