@@ -82,13 +82,8 @@ self.addEventListener('notificationclick', event => {
   );
 });
 
-const CACHE_NAME = 'team-chat-v188-notif-recovery';
-const urlsToCache = [
-  'index.html',
-  'login.html',
-  'reset.html',
-  'verify.html',
-  'turn.html',
+const CACHE_NAME = 'team-chat-v200-modular';
+const STATIC_ASSETS = [
   'auth-theme.css',
   'style.css',
   'message-actions.css',
@@ -96,41 +91,35 @@ const urlsToCache = [
   'translation-ui.css',
   'safe-area-audit.css',
   'calls-ui.css',
-  'app.js',
+  'polish.css',
+  'config.js',
+  'permissions-manager.js',
+  'app-core.js',
+  'app-extras.js',
+  'app-init.js',
   'pwa-install.js',
   'manifest.json',
   'app-icon.svg',
   'app-icon-192.png',
   'app-icon-512.png'
 ];
+const HTML_PAGES = [
+  'index.html',
+  'login.html',
+  'reset.html',
+  'verify.html',
+  'turn.html'
+];
 
 self.addEventListener('install', event => {
   self.skipWaiting();
   event.waitUntil(
     caches.open(CACHE_NAME).then(cache => (
-      Promise.all(urlsToCache.map(url => cache.add(url).catch(() => null)))
+      Promise.all([
+        ...STATIC_ASSETS.map(url => cache.add(url).catch(() => null)),
+        ...HTML_PAGES.map(url => cache.add(url).catch(() => null))
+      ])
     ))
-  );
-});
-
-self.addEventListener('fetch', event => {
-  if (event.request.method !== 'GET') return;
-
-  event.respondWith(
-    fetch(event.request)
-      .then(response => {
-        const requestUrl = new URL(event.request.url);
-        if (
-          requestUrl.origin === self.location.origin &&
-          response.ok &&
-          !requestUrl.pathname.toLowerCase().endsWith(".apk")
-        ) {
-          const responseCopy = response.clone();
-          caches.open(CACHE_NAME).then(cache => cache.put(event.request, responseCopy));
-        }
-        return response;
-      })
-      .catch(() => caches.match(event.request))
   );
 });
 
@@ -141,5 +130,68 @@ self.addEventListener('activate', event => {
         if (key !== CACHE_NAME) return caches.delete(key);
       })))
       .then(() => self.clients.claim())
+  );
+});
+
+self.addEventListener('fetch', event => {
+  if (event.request.method !== 'GET') return;
+
+  const requestUrl = new URL(event.request.url);
+  const isApk = requestUrl.pathname.toLowerCase().endsWith('.apk');
+  const isHtml = requestUrl.pathname.endsWith('.html') || requestUrl.pathname === '/' || requestUrl.pathname === '';
+  const isStatic = STATIC_ASSETS.some(asset => requestUrl.pathname.endsWith(asset));
+  const isFirestore = requestUrl.hostname.indexOf('firestore') !== -1 || requestUrl.hostname.indexOf('firebaseio') !== -1;
+  const isFunction = requestUrl.pathname.indexOf('cloudfunctions') !== -1;
+
+  if (isApk || isFirestore || isFunction) {
+    event.respondWith(fetch(event.request));
+    return;
+  }
+
+  if (isStatic) {
+    event.respondWith(
+      caches.match(event.request).then(cached => {
+        if (cached) return cached;
+        return fetch(event.request).then(response => {
+          if (response.ok) {
+            const copy = response.clone();
+            caches.open(CACHE_NAME).then(cache => cache.put(event.request, copy));
+          }
+          return response;
+        }).catch(() => caches.match(event.request).then(fallback => fallback || new Response('Offline', { status: 503 })));
+      })
+    );
+    return;
+  }
+
+  if (isHtml) {
+    event.respondWith(
+      fetch(event.request)
+        .then(response => {
+          if (response.ok) {
+            const copy = response.clone();
+            caches.open(CACHE_NAME).then(cache => cache.put(event.request, copy));
+          }
+          return response;
+        })
+        .catch(() => caches.match(event.request).then(cached => {
+          if (cached) return cached;
+          return caches.match('index.html');
+        }))
+    );
+    return;
+  }
+
+  event.respondWith(
+    fetch(event.request)
+      .then(response => {
+        const origin = self.location.origin;
+        if (response.ok && requestUrl.origin === origin && !isApk) {
+          const copy = response.clone();
+          caches.open(CACHE_NAME).then(cache => cache.put(event.request, copy));
+        }
+        return response;
+      })
+      .catch(() => caches.match(event.request))
   );
 });

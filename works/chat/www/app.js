@@ -302,6 +302,8 @@ let privacySettings = {
 
 // Wallpaper Settings (per chat)
 let chatWallpapers = {};
+let callWaitingUnsub = null;
+let waitingParticipantCheckInterval = null;
 
 // ========================================
 // HELPER FUNCTIONS
@@ -355,6 +357,7 @@ function applyA11yEnhancements() {
 function closeTopVisibleModal() {
   const visibleModals = Array.from(document.querySelectorAll(".modal, .chat-lock-modal-backdrop, .app-lock-backdrop")).filter(
     (modal) => {
+      if (modal.classList.contains("show")) return true;
       const styles = window.getComputedStyle(modal);
       return styles.display !== "none" && styles.visibility !== "hidden";
     },
@@ -379,7 +382,7 @@ function closeTopVisibleModal() {
     closeTranslateModal();
     return true;
   }
-  topModal.style.display = "none";
+  hideModal(topModal.id);
   return true;
 }
 
@@ -556,7 +559,7 @@ function renderAttachment(attachment = {}) {
     if (attachment.viewOnce) {
       return `<div class="message-attachment view-once-container"><button type="button" class="view-once-placeholder" data-view-once-url="${url}" data-filename="${filename}"><span class="view-once-icon">👁️</span><span>Tap to view</span></button></div>`;
     }
-    return `<div class="message-attachment"><a class="image-attachment-link" href="${url}" target="_blank" rel="noopener" data-preview-url="${url}" data-filename="${filename}"><img src="${url}" alt="${filename}" loading="lazy" onerror="this.closest('.message-attachment')?.classList.add('is-broken'); this.remove();"><span class="attachment-image-fallback">Image unavailable</span></a>${viewOnceHtml}</div>`;
+    return `<div class="message-attachment"><a class="image-attachment-link" href="${url}" target="_blank" rel="noopener" data-preview-url="${url}" data-filename="${filename}"><img src="${url}" alt="${filename}" loading="lazy" class="attachment-img"><span class="attachment-image-fallback">Image unavailable</span></a>${viewOnceHtml}</div>`;
   }
 
   if (attachment.type === "video") {
@@ -597,15 +600,20 @@ function findUrls(text) {
 function renderLinkPreview(preview = {}) {
   if (!preview || !preview.url) return "";
   const image = preview.image
-    ? `<img src="${escapeHtml(preview.image)}" alt="" class="link-preview-image" onerror="this.style.display='none'">`
+    ? `<img src="${escapeHtml(preview.image)}" alt="" class="link-preview-image">`
     : "";
   return `<div class="link-preview"><a href="${escapeHtml(preview.url)}" target="_blank" rel="noopener noreferrer" class="link-preview-link">${image}<div class="link-preview-text"><strong class="link-preview-title">${escapeHtml(preview.title || preview.url)}</strong>${preview.description ? `<span class="link-preview-desc">${escapeHtml(preview.description.substring(0, 100))}</span>` : ""}<span class="link-preview-domain">${escapeHtml(new URL(preview.url).hostname)}</span></div></a></div>`;
 }
 
 const linkPreviewCache = new Map();
+const LINK_PREVIEW_CACHE_MAX = 100;
 
 async function fetchLinkPreview(url) {
   if (linkPreviewCache.has(url)) return linkPreviewCache.get(url);
+  if (linkPreviewCache.size >= LINK_PREVIEW_CACHE_MAX) {
+    const firstKey = linkPreviewCache.keys().next().value;
+    if (firstKey !== undefined) linkPreviewCache.delete(firstKey);
+  }
   try {
     const res = await fetch(
       `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
@@ -2671,12 +2679,6 @@ function setAttachmentPreview() {
   updateComposerActionState();
 }
 
-function setConnectionBanner() {
-  const banner = document.getElementById("connectionBanner");
-  if (!banner) return;
-  banner.style.display = navigator.onLine ? "none" : "block";
-}
-
 function setSendingState(isSending) {
   const sendBtn = document.getElementById("sendBtn");
   const input = document.getElementById("messageInput");
@@ -3153,7 +3155,7 @@ async function registerFcmTokenForCurrentUser({ force = false } = {}) {
     messaging = messaging || firebase.messaging();
 
     const registration = await navigator.serviceWorker.register(
-      "sw.js?v=188-notif-recovery",
+      "sw.js?v=189",
       { scope: "./" },
     );
     await registration.update?.().catch(() => {});
@@ -3198,6 +3200,10 @@ async function registerFcmTokenForCurrentUser({ force = false } = {}) {
       window.__teamChatForegroundFcmBound = true;
       messaging.onMessage(async (payload) => {
         const data = payload.data || {};
+        if (typeof checkDndStatus === 'function' && checkDndStatus()) {
+          console.log('[DND] Suppressed foreground notification during quiet hours');
+          return;
+        }
         if (data.kind === "call" && document.hidden) {
           showStrongIncomingCallNotification({
             id: data.callId,
@@ -3285,6 +3291,10 @@ async function registerFcmTokenForCurrentUser({ force = false } = {}) {
 }
 
 async function showStrongIncomingCallNotification(call = {}) {
+  if (typeof checkDndStatus === 'function' && checkDndStatus()) {
+    console.log('[DND] Suppressed call notification during quiet hours');
+    return;
+  }
   if (!("serviceWorker" in navigator) || Notification.permission !== "granted")
     return;
   if (!shouldShowCallNotification(call)) return;
@@ -3352,114 +3362,6 @@ function getFcmTokenMapKey(token = "") {
     .slice(0, 160);
 }
 
-async function setupCallPushNotifications({ forcePrompt = false } = {}) {
-  if (!currentUser || pushSetupStarted || pushSetupDone) return;
-  if (!("Notification" in window) || !("serviceWorker" in navigator)) return;
-  if (!firebase.messaging || !hasValidFcmVapidKey()) {
-    console.warn(
-      "FCM is not ready. Add firebase-messaging-compat.js and set FCM_VAPID_KEY.",
-    );
-    return;
-  }
-
-  if (Notification.permission === "denied") {
-    console.warn("Notification permission is denied by the user/browser.");
-    return;
-  }
-
-  // Avoid surprising permission popups unless the user has already granted permission
-  // or the caller intentionally asks from a user action.
-  if (Notification.permission === "default" && !forcePrompt) return;
-
-  pushSetupStarted = true;
-  try {
-    const permission =
-      Notification.permission === "granted"
-        ? "granted"
-        : await Notification.requestPermission();
-
-    if (permission !== "granted") return;
-
-    const registration = await navigator.serviceWorker.register(
-      "sw.js?v=188-notif-recovery",
-    );
-    messaging = firebase.messaging();
-
-    const token = await messaging.getToken({
-      vapidKey: FCM_VAPID_KEY,
-      serviceWorkerRegistration: registration,
-    });
-
-    if (!token) return;
-
-    await db
-      .collection("users")
-      .doc(currentUser.uid)
-      .set(
-        {
-          fcmTokens: {
-            [getFcmTokenMapKey(token)]: {
-              token,
-              userAgent: navigator.userAgent,
-              platform: navigator.platform || "",
-              updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
-            },
-          },
-          notificationPermission: "granted",
-          notificationUpdatedAt:
-            firebase.firestore.FieldValue.serverTimestamp(),
-        },
-        { merge: true },
-      );
-
-    pushSetupDone = true;
-
-    messaging.onMessage((payload) => {
-      const data = payload?.data || {};
-      if (
-        data.kind === "call" &&
-        data.callId &&
-        data.toUserId === currentUser.uid
-      ) {
-        // Foreground FCM backup. Firestore listener normally opens the call UI;
-        // this keeps a visible notification if the tab is backgrounded but still alive.
-        if (document.hidden && Notification.permission === "granted") {
-          navigator.serviceWorker.ready
-            .then((reg) => {
-              reg.showNotification(
-                data.type === "video"
-                  ? "📹 Incoming video call"
-                  : "📞 Incoming voice call",
-                {
-                  body: `${data.fromUserName || "Team Chat"} is calling. Tap to open Team Chat.`,
-                  tag: `call-${data.callId}`,
-                  renotify: true,
-                  requireInteraction: true,
-                  silent: false,
-                  icon: "app-icon-192.png",
-                  badge: "app-icon-192.png",
-                  timestamp: Date.now(),
-                  vibrate: [700, 250, 700, 250, 700, 250, 700],
-                  data: {
-                    url: "./index.html",
-                    callId: data.callId,
-                    kind: "call",
-                  },
-                  actions: [{ action: "open", title: "Open" }],
-                },
-              );
-            })
-            .catch(() => {});
-        }
-      }
-    });
-  } catch (error) {
-    console.warn("Could not setup call push notifications:", error);
-  } finally {
-    pushSetupStarted = false;
-  }
-}
-
 async function requestCallWakeLock() {
   if (!("wakeLock" in navigator)) return;
   try {
@@ -3497,65 +3399,6 @@ function stopIncomingRingtone() {
 function clearCallTimeout() {
   clearTimeout(callTimeoutTimer);
   callTimeoutTimer = null;
-}
-
-function getCallHistoryText(status, type, durationMs = 0) {
-  const label = type === "video" ? "Video call" : "Voice call";
-  if (status === "missed")
-    return `Missed ${label.toLowerCase()}`;
-  if (status === "failed") return `${label} rejected`;
-  if (status === "cancelled") return `${label} cancelled`;
-  if (status === "rejected") return `${label} rejected`;
-  if (status === "declined") return `${label} declined`;
-  if (status === "ended" && durationMs > 0)
-    return `${label} ended · ${formatCallDuration(durationMs)}`;
-  return `${label} ended`;
-}
-
-async function writeCallHistory(status) {
-  if (!activeCall?.id || callLogWritten || !currentUser) return;
-  callLogWritten = true;
-  const durationMs = callStartedAt ? Date.now() - callStartedAt : 0;
-  const type = activeCall.type || currentCallType || "voice";
-  const directId = getDirectChatId(activeCall.fromUserId, activeCall.toUserId);
-  const text = getCallHistoryText(status, type, durationMs);
-  await db
-    .collection("messages")
-    .doc(`call_${activeCall.id}`)
-    .set(
-      {
-        type: "call",
-        callId: activeCall.id,
-        callType: type,
-        callStatus: status,
-        callDurationMs: durationMs,
-        directId,
-        senderId: currentUser.uid,
-        senderName: currentUser.displayName || currentUser.email,
-        text,
-        timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-        readBy: {
-          [currentUser.uid]: firebase.firestore.FieldValue.serverTimestamp(),
-        },
-      },
-      { merge: true },
-    )
-    .catch((error) => {
-      console.warn("Could not write call history:", error);
-    });
-  await db
-    .collection("directChats")
-    .doc(directId)
-    .set(
-      {
-        participants: [activeCall.fromUserId, activeCall.toUserId],
-        status: "active",
-        lastMessage: text,
-        lastMessageTime: firebase.firestore.FieldValue.serverTimestamp(),
-      },
-      { merge: true },
-    )
-    .catch(() => {});
 }
 
 async function writeCompleteCallHistory(status, callData = activeCall) {
@@ -4327,6 +4170,11 @@ function cleanupCallUi() {
   }
   if (callDocUnsubscribe) callDocUnsubscribe();
   if (callCandidatesUnsubscribe) callCandidatesUnsubscribe();
+  if (callWaitingUnsub) { callWaitingUnsub(); callWaitingUnsub = null; }
+  if (waitingParticipantCheckInterval) {
+    clearInterval(waitingParticipantCheckInterval);
+    waitingParticipantCheckInterval = null;
+  }
   callDocUnsubscribe = null;
   callCandidatesUnsubscribe = null;
   activeCall = null;
@@ -4917,10 +4765,10 @@ async function joinGroupCallRoom(callId, callData = {}, mode = "active") {
       });
       setCallStatus("Waiting for host to let you in...");
       showToast("Waiting for host to admit you");
-      const waitUnsub = db.collection("calls").doc(callId).onSnapshot((snap) => {
+      callWaitingUnsub = db.collection("calls").doc(callId).onSnapshot((snap) => {
         const state = snap.data()?.participantStates?.[currentUser.uid];
         if (state === "joined") {
-          waitUnsub();
+          if (callWaitingUnsub) { callWaitingUnsub(); callWaitingUnsub = null; }
           activeGroupCallParticipants = getGroupCallParticipantsFromIds(
             snap.data()?.participantIds || [],
           ).then((participants) => {
@@ -4933,7 +4781,7 @@ async function joinGroupCallRoom(callId, callData = {}, mode = "active") {
           });
           setCallStatus("Connecting...");
         } else if (state === "rejected") {
-          waitUnsub();
+          if (callWaitingUnsub) { callWaitingUnsub(); callWaitingUnsub = null; }
           showToast("Host declined your join request", "error");
           cleanupCallUi();
         }
@@ -5715,74 +5563,10 @@ function saveOfflineQueue(queue) {
   localStorage.setItem("offlineMessageQueue", JSON.stringify(queue));
 }
 
-function queueOfflineMessage(messageData, chatSnapshot) {
-  const queue = getOfflineQueue();
-  queue.push({
-    id: `${Date.now()}_${Math.random().toString(36).slice(2)}`,
-    messageData: {
-      ...messageData,
-      timestamp: new Date().toISOString(),
-      readBy: { [currentUser.uid]: new Date().toISOString() },
-    },
-    chatSnapshot,
-    queuedAt: new Date().toISOString(),
-  });
-  saveOfflineQueue(queue);
-}
-
-async function flushOfflineQueue() {
-  if (!navigator.onLine || !currentUser) return;
-  const queue = getOfflineQueue();
-  if (!queue.length) return;
-  const remaining = [];
-  for (const item of queue) {
-    try {
-      const messageData = {
-        ...item.messageData,
-        timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-        readBy: {
-          [currentUser.uid]: new Date(
-            item.messageData.readBy?.[currentUser.uid] || Date.now(),
-          ),
-        },
-      };
-      await db.collection("messages").add(messageData);
-      if (item.chatSnapshot?.type === "direct") {
-        await db
-          .collection("directChats")
-          .doc(item.chatSnapshot.id)
-          .update({
-            lastMessage:
-              messageData.text || (messageData.attachment ? "Attachment" : ""),
-            lastMessageTime: firebase.firestore.FieldValue.serverTimestamp(),
-          });
-      } else if (item.chatSnapshot?.type === "group") {
-        await db.collection("groups").doc(item.chatSnapshot.id).update({
-          updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
-        });
-      }
-    } catch (error) {
-      remaining.push(item);
-    }
-  }
-  saveOfflineQueue(remaining);
-  if (queue.length !== remaining.length) {
-    showToast("Queued messages sent");
-    loadMessages();
-    loadMessages();
-    loadCurrentChatList();
-  }
-}
-
 function formatTime(timestamp) {
   if (!timestamp) return "";
   const date = timestamp.toDate();
   return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-}
-
-function formatDate(date) {
-  if (!date) return "";
-  return date.toLocaleDateString();
 }
 
 function getDirectChatId(userId1, userId2) {
@@ -5958,12 +5742,6 @@ function getNameTokens(value = "") {
     .split(" ")
     .map((part) => part.trim())
     .filter(Boolean);
-}
-
-function isExactNameBlockMatch(name = "", term = "") {
-  const cleanTerm = normalizeSearchText(term);
-  if (!cleanTerm) return false;
-  return getNameTokens(name).some((part) => part === cleanTerm);
 }
 
 function matchesIdentitySearch(entity = {}, rawTerm = "") {
@@ -6272,26 +6050,6 @@ async function chatDebug() {
 
   console.log("CHAT_DEBUG_REPORT", report);
   return report;
-}
-
-async function renderChatDebugPanel() {
-  if (
-    !isChatDebugEnabled() ||
-    !new URLSearchParams(window.location.search).has("debugChats")
-  )
-    return;
-  const panel = document.createElement("pre");
-  panel.id = "chatDebugPanel";
-  panel.style.cssText =
-    "position:fixed;inset:12px;z-index:99999;overflow:auto;background:#111b21;color:#e9edef;padding:16px;border-radius:8px;font:12px/1.4 monospace;white-space:pre-wrap;";
-  panel.textContent = "Loading chat debug report...";
-  document.body.appendChild(panel);
-  try {
-    const report = await chatDebug();
-    panel.textContent = JSON.stringify(report, null, 2);
-  } catch (error) {
-    panel.textContent = `Debug failed: ${error.message || error}`;
-  }
 }
 
 async function reconnectSameEmailProfile() {
@@ -8542,21 +8300,6 @@ function cancelVoiceRecording() {
   }
 }
 
-async function sendVoiceMessage(audioUrl, duration) {
-  if (!currentChat) return;
-  const messageData = {
-    senderId: currentUser.uid,
-    senderName: currentUser.displayName || currentUser.email.split("@")[0],
-    timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-    read: false,
-    readBy: { [currentUser.uid]: new Date() },
-    attachment: { type: "voice", url: audioUrl, duration },
-  };
-  if (currentChatType === "direct") messageData.directId = currentChat.id;
-  else messageData.groupId = currentChat.id;
-  await db.collection("messages").add(messageData);
-}
-
 // ========================================
 // TYPING INDICATOR
 // ========================================
@@ -8647,21 +8390,6 @@ function playNotificationBeep() {
     osc.start(ctx.currentTime);
     osc.stop(ctx.currentTime + 0.2);
   } catch (_) {}
-}
-
-async function sendNotification(chatName, message) {
-  if (Notification.permission === "granted" && document.hidden) {
-    new Notification(chatName, { body: message });
-    playNotificationBeep();
-  }
-}
-
-async function checkFirstTimeUser() {
-  const userDoc = await db.collection("users").doc(currentUser.uid).get();
-  const userData = userDoc.data();
-  if (!userData.phoneNumber && userData.isFirstTime === true) {
-    showFirstTimePhoneModal();
-  }
 }
 
 function showFirstTimePhoneModal() {
@@ -9336,31 +9064,8 @@ function hideModal(id) {
   setTimeout(() => { el.style.display = "none"; }, 160);
 }
 
-function showChatLockModal() {
-  const modal = document.getElementById("chatLockModal");
-  if (!modal) return;
-  showModal("chatLockModal");
-  const input = document.getElementById("chatLockPinInput");
-  const error = document.getElementById("chatLockError");
-  if (input) { input.value = ""; input.focus(); }
-  if (error) error.textContent = "";
-}
-
 function hideChatLockModal() {
   hideModal("chatLockModal");
-}
-
-function showChatLockSetupModal() {
-  const modal = document.getElementById("chatLockSetupModal");
-  if (!modal) return;
-  showModal("chatLockSetupModal");
-  const input = document.getElementById("chatLockSetupPinInput");
-  const confirmInput = document.getElementById("chatLockSetupConfirmInput");
-  const error = document.getElementById("chatLockSetupError");
-  if (input) input.value = "";
-  if (confirmInput) confirmInput.value = "";
-  if (error) error.textContent = "";
-  setTimeout(() => input?.focus(), 0);
 }
 
 function hideChatLockSetupModal() {
@@ -9670,13 +9375,6 @@ async function showLockedChatsView() {
   });
 }
 
-// Temporary unlock — just verify PIN, set flag, don't delete record
-async function temporarilyUnlockChat(chatId, chatType) {
-  if (!(await showUnlockChatPrompt(chatId, chatType))) return false;
-  temporarilyUnlockedChatId = chatId;
-  return true;
-}
-
 // Permanent unlock — deletes the lock record from Firestore
 async function permanentlyUnlockChat(chatId, chatType) {
   const record = lockedChats.get(getLockedChatKey(chatId, chatType));
@@ -9850,6 +9548,9 @@ async function loadArchivedChats() {
   const archiveList = document.getElementById("archiveList");
   if (!archiveList) return;
   const archiveSection = document.querySelector(".archive-section");
+  const archiveBadge = document.getElementById("archiveBadge");
+  // Preserve expanded state across refreshes
+  const wasExpanded = archiveList.classList.contains("show");
   const snapshot = await db
     .collection("archivedChats")
     .where("userId", "==", currentUser.uid)
@@ -9858,6 +9559,8 @@ async function loadArchivedChats() {
     archiveList.innerHTML =
       '<div class="empty-state" style="padding:20px;">No archived chats</div>';
     if (archiveSection) archiveSection.style.display = "none";
+    archiveList.classList.remove("show");
+    if (archiveBadge) { archiveBadge.textContent = ""; archiveBadge.style.display = "none"; }
     return;
   }
   archiveList.innerHTML = "";
@@ -9884,9 +9587,18 @@ async function loadArchivedChats() {
     archiveList.innerHTML =
       '<div class="empty-state" style="padding:20px;">No archived chats</div>';
     if (archiveSection) archiveSection.style.display = "none";
+    archiveList.classList.remove("show");
+    if (archiveBadge) { archiveBadge.textContent = ""; archiveBadge.style.display = "none"; }
     return;
   }
   if (archiveSection) archiveSection.style.display = "";
+  // Restore expanded state
+  if (wasExpanded) archiveList.classList.add("show");
+  // Update badge count
+  if (archiveBadge) {
+    archiveBadge.textContent = archivedChats.length > 99 ? "99+" : String(archivedChats.length);
+    archiveBadge.style.display = "inline-flex";
+  }
   for (const archive of archivedChats) {
     const archiveDiv = document.createElement("div");
     archiveDiv.className = "list-item";
@@ -10525,11 +10237,6 @@ function selectFolder(index) {
   }
   loadCurrentChatList();
   if (currentViewTab === "groups") loadGroupsList();
-}
-
-function getFilteredChatsByFolder(items) {
-  if (!activeFolderChatIds) return items;
-  return items.filter((item) => activeFolderChatIds.has(item.id));
 }
 
 function renderManageFoldersModal() {
@@ -12366,39 +12073,6 @@ function closeStatusViewer() {
   activeStatusIndex = 0;
 }
 
-async function renderPendingGroupInvites(groupId, membersList, isAdmin) {
-  const pendingSnapshot = await db
-    .collection("groupInvites")
-    .where("groupId", "==", groupId)
-    .where("status", "==", "pending")
-    .get();
-  if (pendingSnapshot.empty) return;
-  pendingSnapshot.docs.forEach((inviteDoc) => {
-    const invite = inviteDoc.data();
-    const div = document.createElement("div");
-    div.className = "member-item pending";
-    div.innerHTML = `<span>${escapeHtml(invite.toUserName)} (Pending)</span>${isAdmin ? `<button class="btn btn-outline cancel-pending-invite-btn" data-id="${inviteDoc.id}">Cancel</button>` : ""}`;
-    membersList.appendChild(div);
-  });
-  if (isAdmin) {
-    membersList
-      .querySelectorAll(".cancel-pending-invite-btn")
-      .forEach((btn) => {
-        btn.addEventListener("click", async (event) => {
-          event.preventDefault();
-          event.stopPropagation();
-          if (!confirm("Cancel this pending invite?")) return;
-          await db.collection("groupInvites").doc(btn.dataset.id).update({
-            status: "cancelled",
-            cancelledAt: firebase.firestore.FieldValue.serverTimestamp(),
-          });
-          showToast("Pending invite cancelled");
-          showGroupInfo();
-        });
-      });
-  }
-}
-
 // ========================================
 // REACTION & CHAT INFO VIEW
 // ========================================
@@ -12525,7 +12199,7 @@ function renderSharedMediaItem(message = {}) {
     <div class="shared-media-item-wrap shared-selectable-item" data-message-id="${escapeHtml(message.id)}">
       <button type="button" class="shared-select-toggle" aria-label="Select item"></button>
       <button type="button" class="shared-media-item" data-preview-url="${url}" data-filename="${filename}" title="${filename}">
-        ${attachment.type === "video" ? `<video src="${url}" preload="metadata" muted playsinline></video>` : `<img src="${url}" alt="${filename}" loading="lazy" onerror="this.closest('.shared-media-item')?.classList.add('is-broken'); this.remove();">`}
+        ${attachment.type === "video" ? `<video src="${url}" preload="metadata" muted playsinline></video>` : `<img src="${url}" alt="${filename}" loading="lazy" class="shared-media-img">`}
         <span class="shared-media-fallback">${escapeHtml(getAttachmentLabel(attachment))}</span>
         <span class="shared-media-meta">${escapeHtml(when)}</span>
       </button>
@@ -14709,7 +14383,7 @@ function renderForwardPreviewBanner(msg) {
   let html = "";
   if (att) {
     if (att.type === "image" || att.type === "gif") {
-      html = `<div class="fp-media"><img src="${escapeHtml(att.url || "")}" class="fp-thumb" onerror="this.style.display='none'"><span class="fp-label">${escapeHtml(att.filename || getAttachmentLabel(att))}</span></div>`;
+      html = `<div class="fp-media"><img src="${escapeHtml(att.url || "")}" class="fp-thumb"><span class="fp-label">${escapeHtml(att.filename || getAttachmentLabel(att))}</span></div>`;
     } else if (att.type === "voice") {
       html = `<div class="fp-media"><span class="fp-icon">🎤</span><span class="fp-label">Voice note</span></div>`;
     } else if (att.type === "video") {
@@ -14774,7 +14448,7 @@ async function renderForwardChats(searchTerm = "") {
     let avatarHtml;
     const photoUrl = item.photoURL || item.icon || "";
     if (photoUrl) {
-      avatarHtml = `<img src="${escapeHtml(photoUrl)}" class="forward-avatar-img" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex'"><span class="forward-avatar-fallback" style="display:none;">${escapeHtml(getInitials(item.name || "Chat", item.email || ""))}</span>`;
+      avatarHtml = `<img src="${escapeHtml(photoUrl)}" class="forward-avatar-img"><span class="forward-avatar-fallback" style="display:none;">${escapeHtml(getInitials(item.name || "Chat", item.email || ""))}</span>`;
     } else {
       const rawAvatar = item.avatar || "";
       const isImg = rawAvatar.startsWith("<img");
@@ -15214,12 +14888,6 @@ function getHomePanelHtml() {
 // SYSTEM PROFILES CONFIGURATORS
 // ========================================
 
-async function updateProfileAvatar(file) {
-  if (!validateAvatarImageFile(file, "Profile photo")) return;
-  const url = await uploadToCloudinary(file);
-  await db.collection("users").doc(currentUser.uid).update({ avatar: url });
-  showToast("Avatar saved!");
-}
 async function updateDisplayName(name) {
   await db
     .collection("users")
@@ -16775,6 +16443,7 @@ async function init() {
     }
 
     if (e.key === "Escape") {
+      if (inEditable) return;
       hideMentionSuggestions();
       if (
         document.getElementById("inChatSearchBar")?.style.display === "flex"
@@ -16787,8 +16456,16 @@ async function init() {
       if (chatMenu?.style.display === "block") chatMenu.style.display = "none";
       removeMessageContextMenu();
       closeTopVisibleModal();
-      if (inEditable) return;
     }
+  });
+  document.addEventListener("click", (e) => {
+    const closeBtn = e.target.closest(".close-modal, [data-dismiss='modal']");
+    if (!closeBtn) return;
+    const modal = closeBtn.closest(".modal, .chat-lock-modal-backdrop, .app-lock-backdrop");
+    if (!modal || modal.id === "unlockModal" && !appUnlockedForSession) return;
+    if (modal.id === "callModal" && hasLiveCallSession()) return;
+    e.preventDefault();
+    hideModal(modal.id);
   });
   document.getElementById("messageInput")?.addEventListener("input", () => {
     resizeMessageComposer();
@@ -16827,17 +16504,6 @@ async function init() {
       btn.style.display = "none";
       deferredPrompt = null;
     });
-    window.handleInstallApp = async function handleInstallApp() {
-      if (!deferredPrompt) {
-        showToast("App already installed or not available", "error");
-        return;
-      }
-      deferredPrompt.prompt();
-      const result = await deferredPrompt.userChoice;
-      if (result.outcome === "accepted") showToast("App installed!");
-      deferredPrompt = null;
-      btn.style.display = "none";
-    };
   })();
   document.getElementById("cancelReplyBtn")?.addEventListener("click", () => {
     currentReplyTo = null;
@@ -17193,6 +16859,9 @@ async function init() {
         () => (document.getElementById("profileModal").style.display = "none"),
       ),
     );
+  document.getElementById("profileModal")?.addEventListener("click", (e) => {
+    if (e.target === e.currentTarget) e.currentTarget.style.display = "none";
+  });
   document
     .getElementById("fileInput")
     ?.addEventListener("change", (e) => {
@@ -17874,6 +17543,9 @@ async function init() {
           (document.getElementById("groupInfoModal").style.display = "none"),
       ),
     );
+  document.getElementById("groupInfoModal")?.addEventListener("click", (e) => {
+    if (e.target === e.currentTarget) e.currentTarget.style.display = "none";
+  });
   document
     .getElementById("copyGroupCodeBtn")
     ?.addEventListener("click", () =>
@@ -18066,6 +17738,9 @@ async function init() {
         () => (document.getElementById("chatInfoModal").style.display = "none"),
       ),
     );
+  document.getElementById("chatInfoModal")?.addEventListener("click", (e) => {
+    if (e.target === e.currentTarget) e.currentTarget.style.display = "none";
+  });
   document.querySelectorAll(".shared-tab").forEach((tabBtn) =>
     tabBtn.addEventListener("click", () => {
       document
@@ -19293,6 +18968,10 @@ window.addEventListener("pagehide", () => {
   if (currentUser) setCurrentUserPresence(false).catch(() => {});
   saveCallState();
   if (temporarilyUnlockedChatId) relockTemporarilyUnlockedChat();
+  appUnlockedForSession = false;
+});
+window.addEventListener("pageshow", () => {
+  if (getStoredAppLockPin()) lockAppNowIfEnabled();
 });
 
 window.enableTeamChatCallNotifications =
@@ -20965,15 +20644,6 @@ function containsBlockedWords(text) {
   return blockedWordsCache.some((word) => lower.includes(word.toLowerCase()));
 }
 
-function censorText(text) {
-  let result = text;
-  for (const word of blockedWordsCache) {
-    const regex = new RegExp(word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "gi");
-    result = result.replace(regex, "*".repeat(word.length));
-  }
-  return result;
-}
-
 async function checkMessageBeforeSend(text) {
   if (!text || !containsBlockedWords(text)) return true;
   showToast("Message may contain inappropriate words. Send anyway?", "error");
@@ -21079,19 +20749,6 @@ async function setSlowMode(groupId, seconds) {
     .update({ slowModeInterval: seconds });
   showToast(seconds ? `Slow mode set to ${seconds}s` : "Slow mode disabled");
   if (currentGroup?.id === groupId) currentGroup.slowModeInterval = seconds;
-}
-
-function getSlowModeRemainingSeconds(groupId, userId) {
-  const key = `${groupId}_${userId}`;
-  const lastTime = lastMessageTimestamps.get(key) || 0;
-  if (!lastTime) return 0;
-  return Math.max(
-    0,
-    Math.ceil(
-      (lastTime + (currentGroup?.slowModeInterval || 0) * 1000 - Date.now()) /
-        1000,
-    ),
-  );
 }
 
 // ========================================
@@ -21508,22 +21165,6 @@ function stopVideoRecording() {
     isVideoRecording = false;
     showToast("Video recording stopped");
   }
-}
-
-async function sendVideoMessage(videoUrl, duration) {
-  if (!currentChat) return;
-  const messageData = {
-    senderId: currentUser.uid,
-    senderName: currentUser.displayName || currentUser.email.split("@")[0],
-    timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-    read: false,
-    readBy: { [currentUser.uid]: new Date() },
-    type: "video",
-    attachment: { type: "video", url: videoUrl, duration },
-  };
-  if (currentChatType === "direct") messageData.directId = currentChat.id;
-  else messageData.groupId = currentChat.id;
-  await db.collection("messages").add(messageData);
 }
 
 // ========================================
@@ -22127,70 +21768,6 @@ async function updateEncryptionBadge(chatId, chatType) {
 // ========================================
 // FEATURE: View Once Messages
 // ========================================
-async function sendViewOnceMessage(file) {
-  if (!currentChat || !currentUser) return;
-  try {
-    var url = file.type.startsWith("image/")
-      ? await uploadToCloudinary(file)
-      : await uploadDocument(file);
-    var directParticipants =
-      currentChatType === "direct"
-        ? [
-            ...new Set(
-              [
-                currentUser.uid,
-                ...String((currentChat && currentChat.id) || "")
-                  .split("_")
-                  .filter(Boolean),
-                currentChat && currentChat.otherUserId,
-              ].filter(Boolean),
-            ),
-          ]
-        : [];
-    var messageData = {
-      senderId: currentUser.uid,
-      senderName: currentUser.displayName || currentUser.email,
-      text: "",
-      attachment: {
-        type: file.type.startsWith("image/") ? "image" : "document",
-        url: url,
-        filename: file.name,
-        size: file.size,
-      },
-      viewOnce: true,
-      viewedBy: [],
-      timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-      status: "sent",
-      read: false,
-      readBy: {},
-      deliveredTo: {},
-      participants:
-        currentChatType === "direct"
-          ? directParticipants
-          : [
-              ...new Set(
-                (currentGroupMembers || [])
-                  .map(function (m) {
-                    return m.id;
-                  })
-                  .concat(currentUser.uid)
-                  .filter(Boolean),
-              ),
-            ],
-    };
-    messageData.readBy[currentUser.uid] =
-      firebase.firestore.FieldValue.serverTimestamp();
-    if (currentChatType === "direct") messageData.directId = currentChat.id;
-    else messageData.groupId = currentChat.id;
-    await db.collection("messages").add(messageData);
-    var textBytes = new Blob([file.name || ""]).size;
-    trackDataUsage((file.size || 0) + textBytes, "sent");
-    showToast("View once message sent");
-  } catch (e) {
-    showToast("Failed to send view once message", "error");
-  }
-}
-
 // ========================================
 // FEATURE: Screenshot Warning
 // ========================================
@@ -22666,6 +22243,8 @@ async function loadCommunitiesList(searchTerm = "") {
 async function addGroupToCommunity(communityId, groupId) {
   if (!currentUser) return;
   try {
+    const groupDoc = await db.collection("groups").doc(groupId).get();
+    const groupName = groupDoc.exists ? (groupDoc.data().name || groupId) : groupId;
     await db
       .collection("communityGroups")
       .doc(communityId)
@@ -22673,6 +22252,7 @@ async function addGroupToCommunity(communityId, groupId) {
       .doc(groupId)
       .set({
         groupId,
+        groupName,
         addedAt: firebase.firestore.FieldValue.serverTimestamp(),
         addedBy: currentUser.uid,
       });
@@ -22686,10 +22266,12 @@ async function showCommunityInfo(communityId) {
   const modal = document.getElementById("communityInfoModal");
   const content = document.getElementById("communityInfoContent");
   const title = document.getElementById("communityInfoTitle");
+  const footer = document.getElementById("communityInfoFooter");
   if (!modal || !content) return;
   modal.style.display = "flex";
   content.innerHTML =
     '<div style="text-align:center;padding:20px;color:var(--muted);font-size:13px;">Loading...</div>';
+  if (footer) footer.style.display = "none";
   try {
     const doc = await db.collection("communities").doc(communityId).get();
     if (!doc.exists) {
@@ -22699,6 +22281,15 @@ async function showCommunityInfo(communityId) {
     }
     const data = doc.data();
     title.textContent = data.name || "Community Info";
+
+    // Determine current user's role
+    const myMemberSnap = await db
+      .collection("communityMembers")
+      .where("communityId", "==", communityId)
+      .where("userId", "==", currentUser?.uid)
+      .limit(1)
+      .get();
+    const isAdmin = !myMemberSnap.empty && myMemberSnap.docs[0].data().role === "admin";
 
     let html = `<div style="text-align:center;margin-bottom:16px;"><span style="font-size:48px;">${data.icon || "🏠"}</span><h3>${escapeHtml(data.name)}</h3>`;
     if (data.description)
@@ -22733,36 +22324,152 @@ async function showCommunityInfo(communityId) {
         '<div style="font-size:13px;color:var(--muted);padding:8px 0;">No groups added yet</div>';
     } else {
       groupsSnap.forEach((g) => {
-        html += `<div class="community-group-row"><span>${escapeHtml(g.id)}</span></div>`;
+        const gData = g.data();
+        const groupId = g.id;
+        const displayName = gData.groupName || groupId;
+        html += `<div class="community-group-row"><span>${escapeHtml(displayName)}</span>${isAdmin ? `<button class="btn btn-outline" style="padding:2px 8px;font-size:11px;color:#ef4444;border-color:#ef4444;margin-left:auto;" onclick="removeGroupFromCommunity('${communityId}','${groupId}')">Remove</button>` : ""}</div>`;
       });
     }
 
     content.innerHTML = html;
+
+    // Wire footer buttons
+    if (footer && currentUser) {
+      const addBtn = document.getElementById("addGroupToCommunityBtn");
+      const deleteBtn = document.getElementById("deleteCommunityBtn");
+      const leaveBtn = document.getElementById("leaveCommunityBtn");
+      // Reset button visibility before applying role-based state
+      if (addBtn) addBtn.style.display = "";
+      if (deleteBtn) deleteBtn.style.display = "";
+      if (isAdmin) {
+        footer.style.display = "flex";
+        if (addBtn) addBtn.onclick = () => showAddGroupToCommunityUI(communityId);
+        if (deleteBtn) {
+          deleteBtn.onclick = () => {
+            if (confirm("Delete this entire community? This action cannot be undone.")) {
+              deleteCommunity(communityId);
+            }
+          };
+        }
+        if (leaveBtn) {
+          leaveBtn.textContent = "Leave Community";
+          leaveBtn.style.color = "";
+          leaveBtn.style.borderColor = "";
+          leaveBtn.onclick = () => leaveCommunity(communityId);
+        }
+      } else if (!myMemberSnap.empty) {
+        footer.style.display = "flex";
+        if (addBtn) addBtn.style.display = "none";
+        if (deleteBtn) deleteBtn.style.display = "none";
+        if (leaveBtn) {
+          leaveBtn.textContent = "Leave Community";
+          leaveBtn.onclick = () => leaveCommunity(communityId);
+        }
+      }
+    }
   } catch (e) {
     content.innerHTML =
       '<div style="text-align:center;padding:20px;color:var(--muted);">Error loading community info</div>';
   }
 }
 
+async function showAddGroupToCommunityUI(communityId) {
+  const groupName = prompt("Enter the name or ID of the group to add:");
+  if (!groupName || !groupName.trim()) return;
+  try {
+    const snap = await db
+      .collection("groups")
+      .where("name", "==", groupName.trim())
+      .limit(1)
+      .get();
+    if (snap.empty) {
+      showToast("No group found with that name", "error");
+      return;
+    }
+    const groupId = snap.docs[0].id;
+    await addGroupToCommunity(communityId, groupId);
+    showCommunityInfo(communityId);
+  } catch (e) {
+    showToast("Failed to add group", "error");
+  }
+}
+
+async function removeGroupFromCommunity(communityId, groupId) {
+  if (!currentUser) return;
+  try {
+    await db
+      .collection("communityGroups")
+      .doc(communityId)
+      .collection("groups")
+      .doc(groupId)
+      .delete();
+    showToast("Group removed from community");
+    showCommunityInfo(communityId);
+  } catch (e) {
+    showToast("Failed to remove group", "error");
+  }
+}
+
+async function deleteCommunity(communityId) {
+  if (!currentUser) return;
+  try {
+    const batch = db.batch();
+    // Delete community groups
+    const groupsSnap = await db
+      .collection("communityGroups")
+      .doc(communityId)
+      .collection("groups")
+      .get();
+    groupsSnap.forEach((g) => batch.delete(g.ref));
+    // Delete communityGroups parent doc
+    batch.delete(db.collection("communityGroups").doc(communityId));
+    // Delete community members
+    const membersSnap = await db
+      .collection("communityMembers")
+      .where("communityId", "==", communityId)
+      .get();
+    membersSnap.forEach((m) => batch.delete(m.ref));
+    // Delete community document
+    batch.delete(db.collection("communities").doc(communityId));
+    await batch.commit();
+    hideModal("communityInfoModal");
+    showToast("Community deleted");
+    loadCommunitiesList();
+  } catch (e) {
+    showToast("Failed to delete community", "error");
+  }
+}
+
+async function leaveCommunity(communityId) {
+  if (!currentUser) return;
+  try {
+    const myMemberSnap = await db
+      .collection("communityMembers")
+      .where("communityId", "==", communityId)
+      .where("userId", "==", currentUser.uid)
+      .limit(1)
+      .get();
+    if (!myMemberSnap.empty) {
+      await myMemberSnap.docs[0].ref.delete();
+      // Decrement member count
+      await db
+        .collection("communities")
+        .doc(communityId)
+        .update({
+          memberCount: firebase.firestore.FieldValue.increment(-1),
+        });
+    }
+    hideModal("communityInfoModal");
+    showToast("Left community");
+    loadCommunitiesList();
+  } catch (e) {
+    showToast("Failed to leave community", "error");
+  }
+}
+
 // ========================================
 // FEATURE: Animated Stickers
 // ========================================
-
-async function addAnimatedStickerPack(name, frames, frameDuration) {
-  if (!currentUser) return null;
-  try {
-    const ref = await db.collection("animatedStickerPacks").add({
-      name,
-      frames,
-      frameDuration: frameDuration || 150,
-      createdBy: currentUser.uid,
-      createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-    });
-    return ref.id;
-  } catch (e) {
-    return null;
-  }
-}
 
 async function loadAnimatedStickers() {
   const grid = document.getElementById("animatedStickerGrid");
@@ -22944,23 +22651,6 @@ const EFFECT_COLORS = [
   "#c44dff",
 ];
 
-function createParticle(x, y, color) {
-  const el = document.createElement("div");
-  el.className = "effect-particle";
-  const size = 6 + Math.random() * 8;
-  el.style.cssText = `
-    left:${x}px; top:${y}px;
-    width:${size}px; height:${size}px;
-    background:${color};
-    border-radius:${Math.random() > 0.5 ? "50%" : "2px"};
-    animation-duration:${1.5 + Math.random() * 1}s;
-    animation-delay:${Math.random() * 0.3}s;
-  `;
-  document.getElementById("effectOverlay").appendChild(el);
-  setTimeout(() => el.remove(), 3000);
-  return el;
-}
-
 function createConfetti(count) {
   const overlay = document.getElementById("effectOverlay");
   if (!overlay) return;
@@ -23100,6 +22790,28 @@ function searchMessagesByDate(dateStr) {
 // ========================================
 // FEATURE EVENT LISTENERS
 // ========================================
+
+// Delegated image error handler (replaces inline onerror, prevents XSS)
+document.addEventListener("error", (e) => {
+  const img = e.target;
+  if (img.tagName !== "IMG") return;
+  if (img.closest(".message-attachment")) {
+    img.closest(".message-attachment").classList.add("is-broken");
+    img.remove();
+  } else if (img.classList.contains("link-preview-image")) {
+    img.style.display = "none";
+  } else if (img.closest(".shared-media-item")) {
+    img.closest(".shared-media-item").classList.add("is-broken");
+    img.remove();
+  } else if (img.classList.contains("fp-thumb")) {
+    img.style.display = "none";
+  } else if (img.classList.contains("forward-avatar-img")) {
+    img.style.display = "none";
+    const fb = img.nextElementSibling;
+    if (fb) fb.style.display = "flex";
+  }
+}, true);
+
 document.addEventListener("DOMContentLoaded", function () {
   const jumpBtn = document.getElementById("jumpToUnreadBtn");
   if (jumpBtn) {
@@ -23233,18 +22945,6 @@ function getURLFromText(text) {
   return m ? m[1] : null;
 }
 
-function renderUrlPreview(preview) {
-  if (!preview) return "";
-  return `<div class="url-preview-card">
-    ${preview.image ? `<img class="url-preview-img" src="${preview.image}" onerror="this.style.display='none'" />` : ""}
-    <div class="url-preview-info">
-      ${preview.title ? `<div class="url-preview-title">${escapeHtml(preview.title)}</div>` : ""}
-      ${preview.description ? `<div class="url-preview-desc">${escapeHtml(preview.description)}</div>` : ""}
-      <div class="url-preview-domain">${escapeHtml(preview.domain)}</div>
-    </div>
-  </div>`;
-}
-
 // Patch sendMessage to attach URL preview
 const _origSendMessage = sendMessage;
 sendMessage = async function() {
@@ -23272,38 +22972,6 @@ if (typeof _origBuildMessageData === "function") {
 
 // ---------- 3. Message Effects ----------
 let currentMsgEffect = "none";
-
-function showMessageEffect(effect) {
-  if (effect === "none") return;
-  const container = document.createElement("div");
-  container.className = "msg-effect-container";
-  document.body.appendChild(container);
-
-  const colors = { confetti: ["#f44336","#e91e63","#9c27b0","#3f51b5","#03a9f4","#009688","#8bc34a","#ffeb3b","#ff9800"], fireworks: ["#ff0","#f0f","#0ff","#f00","#0f0","#00f"], hearts: [], laser: [] };
-  const pal = colors[effect] || ["#ff0"];
-  const count = effect === "laser" ? 1 : 30;
-
-  for (let i = 0; i < count; i++) {
-    const p = document.createElement("div");
-    p.className = `msg-effect-particle ${effect}`;
-    if (effect === "hearts") {
-      p.textContent = ["❤️","💕","💗","💖","💝"][i % 5];
-      p.style.left = Math.random() * 90 + "%";
-      p.style.top = (60 + Math.random() * 30) + "%";
-    } else if (effect === "laser") {
-      p.style.background = `linear-gradient(90deg, transparent, ${pal[i % pal.length]}, transparent)`;
-    } else {
-      p.style.background = pal[i % pal.length];
-      p.style.left = Math.random() * 95 + "%";
-      p.style.top = (40 + Math.random() * 40) + "%";
-      p.style.width = (6 + Math.random() * 10) + "px";
-      p.style.height = (6 + Math.random() * 10) + "px";
-      p.style.animationDelay = Math.random() * 0.5 + "s";
-    }
-    container.appendChild(p);
-  }
-  setTimeout(() => container.remove(), 3000);
-}
 
 // Wire effect selection panel
 document.addEventListener("click", (e) => {
@@ -24129,7 +23797,7 @@ function showScheduleModal() {
   now.setHours(now.getHours() + 1);
   document.getElementById("scheduledDateInput").value = now.toISOString().split("T")[0];
   document.getElementById("scheduledTimeInput").value = now.toTimeString().slice(0, 5);
-  document.getElementById("scheduleMessageModal").style.display = "flex";
+  document.getElementById("scheduleMessageModalV2").style.display = "flex";
 }
 
 document.getElementById("confirmScheduleBtn")?.addEventListener("click", async () => {
@@ -24151,7 +23819,7 @@ document.getElementById("confirmScheduleBtn")?.addEventListener("click", async (
       status: "pending",
     });
     showToast("Message scheduled");
-    document.getElementById("scheduleMessageModal").style.display = "none";
+    document.getElementById("scheduleMessageModalV2").style.display = "none";
     const input = document.getElementById("messageInput");
     if (input) input.value = "";
     if (document.getElementById("sendBtn")) document.getElementById("sendBtn").style.display = "inline-flex";
@@ -24161,7 +23829,7 @@ document.getElementById("confirmScheduleBtn")?.addEventListener("click", async (
 });
 
 document.getElementById("closeScheduleMsg")?.addEventListener("click", () => {
-  document.getElementById("scheduleMessageModal").style.display = "none";
+  document.getElementById("scheduleMessageModalV2").style.display = "none";
 });
 
 // Schedule message button in composer (long-press send or separate button)
@@ -24239,15 +23907,6 @@ function syncDraftToFirestore(chatId, chatType, text) {
       }
     } catch (e) { /* ignore sync errors */ }
   }, 1000);
-}
-
-async function loadRemoteDraft(chatId) {
-  if (!currentUser || !chatId) return "";
-  try {
-    const doc = await db.collection("drafts").doc(`${currentUser.uid}_${chatId}`).get();
-    if (doc.exists) return doc.data().text || "";
-  } catch (e) { /* ignore */ }
-  return "";
 }
 
 // Patch saveCurrentDraft to also sync to Firestore
@@ -24581,18 +24240,6 @@ async function uploadLargeFile(file, onProgress) {
 })();
 
 // Show progress overlay during upload
-function showUploadProgress() {
-  document.getElementById("fileUploadProgress").style.display = "block";
-  document.getElementById("fileUploadProgressBar").style.width = "0%";
-  document.getElementById("fileUploadProgressPercent").textContent = "0%";
-  largeFileUploadCancelled = false;
-}
-
-function updateUploadProgress(pct) {
-  document.getElementById("fileUploadProgressBar").style.width = pct + "%";
-  document.getElementById("fileUploadProgressPercent").textContent = pct + "%";
-}
-
 function hideUploadProgress() {
   document.getElementById("fileUploadProgress").style.display = "none";
 }
@@ -24957,13 +24604,16 @@ function updateBatchBar() {
   const doBatchAction = async (action) => {
     if (!selectedBatchMembers.size || !currentGroup) return;
     const ids = [...selectedBatchMembers];
+    const nameMap = {};
+    currentGroupMembers.forEach(m => { nameMap[m.id] = m.name; });
     const isConfirm = confirm(`${action} ${ids.length} member(s)?`);
     if (!isConfirm) return;
     for (const id of ids) {
       try {
-        if (action === "promote") await makeAdmin(currentGroup.id, id, "User");
-        else if (action === "demote") await removeAdmin(currentGroup.id, id, "User");
-        else if (action === "remove") await removeGroupMember(currentGroup.id, id);
+        const name = nameMap[id] || "Unknown";
+        if (action === "promote") await makeAdmin(currentGroup.id, id, name);
+        else if (action === "demote") await removeAdmin(currentGroup.id, id, name);
+        else if (action === "remove") await removeMember(currentGroup.id, id, name);
       } catch (e) { /* continue */ }
     }
     selectedBatchMembers.clear();
@@ -26066,7 +25716,7 @@ function toggleWaitingRoom() {
 // Listen for waiting participants in group calls (host only)
 (function initWaitingParticipantListener() {
   let waitingUnsub = null;
-  const check = setInterval(() => {
+  waitingParticipantCheckInterval = setInterval(() => {
     if (activeCall?.id && activeCall?.groupCall && activeCall?.fromUserId === currentUser?.uid) {
       if (!waitingUnsub) {
         waitingUnsub = db.collection("calls").doc(activeCall.id)
@@ -27003,7 +26653,7 @@ document.getElementById("closeSessionsModal")?.addEventListener("click", () => {
     document.getElementById("scheduledDndModal").style.display = "none";
   });
 
-  function checkDndStatus() {
+  window.checkDndStatus = function() {
     const dndData = localStorage.getItem("tc_dnd");
     if (!dndData) return false;
     try {
@@ -27021,20 +26671,31 @@ document.getElementById("closeSessionsModal")?.addEventListener("click", () => {
         return currentMinutes >= fromMinutes || currentMinutes <= toMinutes;
       }
     } catch(e) { return false; }
-  }
+  };
 
   document.getElementById("saveDndBtn")?.addEventListener("click", () => {
     const from = document.getElementById("dndFromTime")?.value;
     const to = document.getElementById("dndToTime")?.value;
     if (!from || !to) { showToast("Please select both times", "error"); return; }
-    localStorage.setItem("tc_dnd", JSON.stringify({ enabled: true, from, to }));
+    const tzOffset = new Date().getTimezoneOffset();
+    localStorage.setItem("tc_dnd", JSON.stringify({ enabled: true, from, to, tzOffset }));
+    if (currentUser) {
+      db.collection("users").doc(currentUser.uid).set({
+        dndSettings: { enabled: true, from, to, tzOffset }
+      }, { merge: true }).catch(() => {});
+    }
     showToast("Quiet hours saved: " + from + " - " + to);
     document.getElementById("scheduledDndModal").style.display = "none";
     showDndIndicator();
   });
 
   document.getElementById("clearDndBtn")?.addEventListener("click", () => {
-    localStorage.setItem("tc_dnd", JSON.stringify({ enabled: false, from: "", to: "" }));
+    localStorage.setItem("tc_dnd", JSON.stringify({ enabled: false, from: "", to: "", tzOffset: 0 }));
+    if (currentUser) {
+      db.collection("users").doc(currentUser.uid).set({
+        dndSettings: { enabled: false, from: "", to: "", tzOffset: 0 }
+      }, { merge: true }).catch(() => {});
+    }
     showToast("Quiet hours disabled");
     document.getElementById("scheduledDndModal").style.display = "none";
     const ind = document.querySelector(".dnd-active-indicator");
@@ -27044,7 +26705,7 @@ document.getElementById("closeSessionsModal")?.addEventListener("click", () => {
   function showDndIndicator() {
     const existing = document.querySelector(".dnd-active-indicator");
     if (existing) existing.remove();
-    if (!checkDndStatus()) return;
+    if (!window.checkDndStatus()) return;
     const ind = document.createElement("div");
     ind.className = "dnd-active-indicator";
     ind.textContent = "🔇 Quiet hours active";
@@ -27077,9 +26738,6 @@ document.getElementById("closeSessionsModal")?.addEventListener("click", () => {
   // Check DND status periodically
   setInterval(() => {
     showDndIndicator();
-    if (checkDndStatus()) {
-      // DND is active - suppress notifications logic would go here
-    }
   }, 60000);
   setTimeout(showDndIndicator, 2000);
 })();
@@ -27521,11 +27179,6 @@ document.getElementById("closeSessionsModal")?.addEventListener("click", () => {
   });
 
   document.addEventListener("keydown", (e) => {
-    // Ctrl+K or Cmd+K for search
-    if ((e.ctrlKey || e.metaKey) && e.key === "k") {
-      e.preventDefault();
-      document.getElementById("searchInput")?.focus();
-    }
     // Ctrl+N or Cmd+N for new chat
     if ((e.ctrlKey || e.metaKey) && e.key === "n") {
       e.preventDefault();
@@ -27534,13 +27187,6 @@ document.getElementById("closeSessionsModal")?.addEventListener("click", () => {
     // ? for shortcuts help
     if (e.key === "?" && !e.ctrlKey && !e.metaKey && !e.target.closest("input,textarea")) {
       document.getElementById("keyboardShortcutsModal").style.display = "flex";
-    }
-    // Escape to close modals
-    if (e.key === "Escape") {
-      const selector = ".modal[style*='display: flex'], .chat-lock-modal-backdrop.show, .app-lock-backdrop.show";
-      document.querySelectorAll(selector).forEach(m => {
-        if (m.id !== "callModal") hideModal(m.id);
-      });
     }
   });
 
@@ -28603,10 +28249,6 @@ document.getElementById("closeSessionsModal")?.addEventListener("click", () => {
   // Count reads/writes
   const observer = new MutationObserver(() => {});
   // Simple counter only, no actual Firestore patching to avoid breaking
-
-  function getFirestoreStats() {
-    return { reads: readCount, writes: writeCount };
-  }
 
   // Add to developer info
   const check = setInterval(() => {

@@ -824,7 +824,7 @@ body.dark .message-quick-actions {
   }
 }
 
-@media (max-width: 430px) {
+@media (max-width: 480px) {
   #cameraMsgBtn {
     display: none !important;
   }

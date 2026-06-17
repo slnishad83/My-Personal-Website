@@ -58,20 +58,38 @@ function getMessagePreview(message = {}) {
 
 async function getChatNotificationPreferences(userId, chatId) {
   if (!userId || !chatId) return { muted: false, showPreview: true, soundEnabled: true, vibrate: true };
-  const [settingsSnap, muteSnap] = await Promise.all([
+  const [settingsSnap, muteSnap, userSnap] = await Promise.all([
     admin.firestore().collection('chatNotifSettings').doc(`${userId}_${chatId}`).get(),
-    admin.firestore().collection('mutedChats').where('userId', '==', userId).get()
+    admin.firestore().collection('mutedChats').where('userId', '==', userId).get(),
+    admin.firestore().collection('users').doc(userId).get()
   ]);
   const settings = settingsSnap.data() || {};
   const now = Date.now();
-  const muted = muteSnap.docs.some((doc) => {
+  const mutedByUser = muteSnap.docs.some((doc) => {
     const mute = doc.data() || {};
     if (mute.chatId !== chatId) return false;
     const until = mute.muteUntil?.toMillis?.();
     return !until || until > now;
   });
+  const userData = userSnap.data() || {};
+  const dnd = userData.dndSettings || {};
+  let dndMuted = false;
+  if (dnd.enabled && dnd.from && dnd.to) {
+    const tzOffset = typeof dnd.tzOffset === 'number' ? dnd.tzOffset : 0;
+    const serverUtcMinutes = new Date().getUTCHours() * 60 + new Date().getUTCMinutes();
+    const userLocalMinutes = (serverUtcMinutes - tzOffset + 1440) % 1440;
+    const fromParts = dnd.from.split(':').map(Number);
+    const toParts = dnd.to.split(':').map(Number);
+    const fromMinutes = fromParts[0] * 60 + fromParts[1];
+    const toMinutes = toParts[0] * 60 + toParts[1];
+    if (fromMinutes <= toMinutes) {
+      dndMuted = userLocalMinutes >= fromMinutes && userLocalMinutes <= toMinutes;
+    } else {
+      dndMuted = userLocalMinutes >= fromMinutes || userLocalMinutes <= toMinutes;
+    }
+  }
   return {
-    muted,
+    muted: mutedByUser || dndMuted,
     showPreview: settings.showPreview !== false,
     soundEnabled: settings.customSound !== false,
     vibrate: settings.vibrate !== false

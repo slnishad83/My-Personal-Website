@@ -553,7 +553,7 @@ body.dark .call-history-action.preferred {
 
 .message-selection-toolbar {
   position: fixed;
-  z-index: 100001;
+  z-index: var(--z-call-bar);
   top: max(10px, calc(env(safe-area-inset-top, 0px) + 8px));
   left: 50%;
   width: min(680px, calc(100vw - 20px));

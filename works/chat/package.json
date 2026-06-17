@@ -5,6 +5,8 @@
   "main": "app.js",
   "scripts": {
     "test": "node --check app.js && node --check www/app.js",
+    "lint": "eslint app.js www/app.js",
+    "lint:fix": "eslint --fix app.js www/app.js",
     "sync:android": "cap sync android"
   },
   "keywords": [],
@@ -18,5 +20,9 @@
     "@capacitor/core": "^8.3.4",
     "@capacitor/push-notifications": "^8.1.1",
     "acorn": "^8.16.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.5.0"
   }
 }
