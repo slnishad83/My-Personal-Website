@@ -7546,8 +7546,12 @@ async function loadReceivedRequests() {
     requestList.innerHTML = "";
     if (!requests.length) {
       requestList.innerHTML = '<div class="empty-state">No requests</div>';
+      requestSection?.classList.remove("expanded");
+      if (requestToggle) requestToggle.textContent = "▼";
+      if (requestSection) requestSection.style.display = "none";
       return;
     }
+    if (requestSection) requestSection.style.display = "";
 
     for (const req of requests) {
       const isGroupInvite = req.requestType === "group";
@@ -7600,7 +7604,8 @@ async function loadReceivedRequests() {
     requestList.querySelectorAll(".cancel-request-btn").forEach((btn) => {
       btn.addEventListener("click", async (e) => {
         e.stopPropagation();
-        await cancelChatRequest(btn.dataset.id);
+        btn.disabled = true;
+        try { await cancelChatRequest(btn.dataset.id); } finally { btn.disabled = false; }
       });
     });
     requestList.querySelectorAll(".block-request-btn").forEach((btn) => {
@@ -7875,8 +7880,7 @@ async function cancelChatRequest(requestId) {
     respondedAt: firebase.firestore.FieldValue.serverTimestamp(),
   });
   showToast("Request cancelled");
-  loadReceivedRequests();
-  loadCurrentChatList();
+  await loadReceivedRequests();
 }
 
 async function deleteGroupInvite(inviteId) {
@@ -9845,6 +9849,7 @@ function showArchivedRowMenu(x, y, archive) {
 async function loadArchivedChats() {
   const archiveList = document.getElementById("archiveList");
   if (!archiveList) return;
+  const archiveSection = document.querySelector(".archive-section");
   const snapshot = await db
     .collection("archivedChats")
     .where("userId", "==", currentUser.uid)
@@ -9852,6 +9857,7 @@ async function loadArchivedChats() {
   if (snapshot.empty) {
     archiveList.innerHTML =
       '<div class="empty-state" style="padding:20px;">No archived chats</div>';
+    if (archiveSection) archiveSection.style.display = "none";
     return;
   }
   archiveList.innerHTML = "";
@@ -9874,6 +9880,13 @@ async function loadArchivedChats() {
     (a, b) =>
       (b.archivedAt?.toMillis?.() || 0) - (a.archivedAt?.toMillis?.() || 0),
   );
+  if (!archivedChats.length) {
+    archiveList.innerHTML =
+      '<div class="empty-state" style="padding:20px;">No archived chats</div>';
+    if (archiveSection) archiveSection.style.display = "none";
+    return;
+  }
+  if (archiveSection) archiveSection.style.display = "";
   for (const archive of archivedChats) {
     const archiveDiv = document.createElement("div");
     archiveDiv.className = "list-item";
