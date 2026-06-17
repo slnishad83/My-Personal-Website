@@ -6973,12 +6973,13 @@ async function loadAllChatsList(searchTerm = "", searchToken = null) {
   }
   await refreshLockedChats();
   const lockedChatCount = lockedChats.size;
+  const allItems = [...directItems, ...groupItems];
 
   // Filter locked chats out of the visible list — they live in the folder only
-  let items = [...directItems, ...groupItems].filter(
+  let items = allItems.filter(
     (item) => item.type === "saved" || !isChatLocked(item.id, item.type)
   );
-  updateUnreadBadges([...directItems, ...groupItems]);
+  updateUnreadBadges(allItems);
 
   if (currentViewTab === "favorites")
     items = items.filter((item) => item.isFavorite);
@@ -7008,18 +7009,6 @@ async function loadAllChatsList(searchTerm = "", searchToken = null) {
     const normalItems = items.map((item) => ({ ...item, section: "Chats" }));
     renderChatListItems([folderEntry, ...archivedItems, ...normalItems], chatsList);
     return;
-  }
-  // Also show folder if previously verified (e.g. after navigating back)
-  if (lockedChatFolderVisible && lockedChatCount > 0) {
-    const folderEntry = {
-      id: "__lockedChatFolder",
-      type: "folder",
-      name: `🔒 Locked Chats`,
-      isLockedFolder: true,
-      lockedCount: lockedChatCount,
-      section: "",
-    };
-    items = [folderEntry, ...items];
   }
   lockPinVerifiedForSearch = false;
 
@@ -7107,7 +7096,9 @@ async function loadAllChatsList(searchTerm = "", searchToken = null) {
     ];
   } else {
     // Whitelist core operational fallback: when no search text is active, default back to showing WhatsApp style history list
-    items = [...allItems];
+    items = allItems.filter(
+      (item) => item.type === "saved" || !isChatLocked(item.id, item.type)
+    );
     if (currentViewTab === "favorites")
       items = items.filter((item) => item.isFavorite);
     if (currentViewTab === "unread")
@@ -7116,6 +7107,19 @@ async function loadAllChatsList(searchTerm = "", searchToken = null) {
       items = items.filter((item) => item.isMuted);
     if (activeFolderChatIds)
       items = items.filter((item) => activeFolderChatIds.has(item.id));
+  }
+
+  // Also show folder if previously verified (e.g. after navigating back)
+  if (lockedChatFolderVisible && lockedChatCount > 0) {
+    const folderEntry = {
+      id: "__lockedChatFolder",
+      type: "folder",
+      name: `🔒 Locked Chats`,
+      isLockedFolder: true,
+      lockedCount: lockedChatCount,
+      section: "",
+    };
+    items = [folderEntry, ...items];
   }
 
   if (
@@ -9591,7 +9595,7 @@ async function showLockedChatsView() {
   back.className = "list-item";
   back.style.cssText = "font-weight:600;cursor:pointer";
   back.innerHTML = '<span style="margin-right:8px">&#x2190;</span> Back';
-  back.addEventListener("click", () => { lockedChatFolderVisible = false; loadCurrentChatList(); });
+  back.addEventListener("click", () => { loadCurrentChatList(); });
   container.appendChild(back);
 
   const items = await getLockedChatListItems();
