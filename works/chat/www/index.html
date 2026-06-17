@@ -1597,60 +1597,60 @@
       </div>
     </div>
 
-    <div id="appLockModal" class="modal" style="display: none">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h3>App Lock</h3>
-          <span class="close-modal closeAppLockModal">&times;</span>
+    <div id="appLockModal" class="chat-lock-modal-backdrop" style="display: none">
+      <div class="chat-lock-modal" style="padding:28px 24px 20px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+          <h3 style="margin:0">App Lock</h3>
+          <span class="close-modal closeAppLockModal" style="font-size:22px;cursor:pointer;color:var(--text-muted)">&times;</span>
         </div>
-        <div class="modal-body">
-          <p id="appLockHelper" class="modal-helper">Set a 4-digit PIN to lock this app on this device.</p>
-          <label id="appLockCurrentField" class="secure-pin-field">Current PIN
-            <input id="appLockCurrentPinInput" type="password" inputmode="numeric" maxlength="4" autocomplete="current-password" placeholder="Enter current PIN" />
-          </label>
-          <label class="secure-pin-field">4-digit PIN
-            <input id="appLockPinInput" type="password" inputmode="numeric" maxlength="4" autocomplete="new-password" placeholder="Enter 4-digit PIN" />
-          </label>
-          <label id="appLockConfirmField" class="secure-pin-field">Confirm PIN
-            <input id="appLockConfirmPinInput" type="password" inputmode="numeric" maxlength="4" autocomplete="new-password" placeholder="Confirm 4-digit PIN" />
-          </label>
-          <div id="appLockError" class="secure-lock-error" aria-live="polite"></div>
-          <div class="secure-lock-actions">
-            <button id="disableAppLockBtn" class="btn btn-outline">Disable lock</button>
+        <p id="appLockHelper" style="margin:0 0 16px;color:var(--text-muted);font-size:13px;line-height:1.45">Set a 4-digit PIN to lock this app on this device.</p>
+        <label id="appLockCurrentField" class="secure-pin-field" style="display:none;grid;gap:6px;color:var(--text-muted);font-size:12px;font-weight:600">Current PIN
+          <input id="appLockCurrentPinInput" type="password" inputmode="numeric" maxlength="4" autocomplete="current-password" placeholder="Enter current PIN" />
+        </label>
+        <label class="secure-pin-field" style="display:grid;gap:6px;color:var(--text-muted);font-size:12px;font-weight:600;margin-top:12px">4-digit PIN
+          <input id="appLockPinInput" type="password" inputmode="numeric" maxlength="4" autocomplete="new-password" placeholder="Enter 4-digit PIN" />
+        </label>
+        <label id="appLockConfirmField" class="secure-pin-field" style="display:grid;gap:6px;color:var(--text-muted);font-size:12px;font-weight:600;margin-top:12px">Confirm PIN
+          <input id="appLockConfirmPinInput" type="password" inputmode="numeric" maxlength="4" autocomplete="new-password" placeholder="Confirm 4-digit PIN" />
+        </label>
+        <div id="appLockError" class="secure-lock-error" aria-live="polite"></div>
+        <div class="secure-lock-actions" style="margin-top:16px">
+          <button id="disableAppLockBtn" class="btn btn-outline" style="display:none">Disable lock</button>
+          <div style="margin-left:auto;display:flex;gap:8px">
             <button id="saveAppLockPinBtn" class="btn btn-primary">Enable lock</button>
           </div>
         </div>
       </div>
     </div>
 
-    <div id="unlockModal" class="modal" style="display: none">
-      <div class="modal-content app-unlock-card">
-        <div class="modal-header"><h3>Unlock</h3></div>
-        <div class="modal-body">
-          <p class="modal-helper">Enter your 4-digit app-lock PIN to continue.</p>
-          <input id="unlockPinInput" type="password" inputmode="numeric" maxlength="4" autocomplete="current-password" placeholder="Enter PIN" />
-          <div id="unlockAppError" class="secure-lock-error" aria-live="assertive"></div>
-          <div class="secure-lock-actions">
-            <button id="unlockAppBtn" class="btn btn-primary">Unlock</button>
-          </div>
+    <div id="unlockModal" class="chat-lock-modal-backdrop" style="display: none">
+      <div class="chat-lock-modal app-unlock-card" style="text-align:center;padding:32px 28px">
+        <div class="lock-shield" style="margin:0 auto 12px">&#x1F512;</div>
+        <h3 style="margin:0 0 4px">App Locked</h3>
+        <p style="margin:0 0 20px;color:var(--text-muted)">Enter your PIN to continue.</p>
+        <input id="unlockPinInput" type="password" inputmode="numeric" maxlength="4" autocomplete="current-password" placeholder="Enter 4-digit PIN" style="width:100%;min-height:48px;border:1px solid var(--border);border-radius:12px;background:var(--panel-soft);color:var(--text);font-size:20px;letter-spacing:0.24em;text-align:center;padding:12px;outline:none" />
+        <div id="unlockAppError" class="secure-lock-error" style="margin-top:10px"></div>
+        <div class="secure-lock-actions" style="justify-content:center">
+          <button id="unlockAppBtn" class="btn btn-primary" style="min-width:120px">Unlock</button>
         </div>
       </div>
     </div>
 
-    <div id="chatLockModal" class="modal" style="display: none">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h3 id="chatLockModalTitle">Enter locked-chat PIN</h3>
-          <span class="close-modal closeChatLockModal">&times;</span>
+    <div id="chatLockModal" class="chat-lock-modal-backdrop" style="display: none">
+      <div class="chat-lock-modal" style="padding:28px 24px 20px">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start">
+          <div class="lock-shield" style="margin-bottom:14px">&#x1F512;</div>
+          <span class="close-modal closeChatLockModal" style="font-size:22px;cursor:pointer;color:var(--text-muted);line-height:1">&times;</span>
         </div>
-        <div class="modal-body">
-          <p id="chatLockModalMessage" class="modal-helper">Enter your PIN to unlock this chat.</p>
-          <label class="secure-pin-field">4-digit PIN
-            <input id="chatLockPinInput" type="password" inputmode="numeric" maxlength="4" autocomplete="off" placeholder="Enter 4-digit PIN" />
-          </label>
-          <div id="chatLockError" class="secure-lock-error" aria-live="polite"></div>
-          <div class="secure-lock-actions">
-            <button id="chatLockForgotBtn" class="btn btn-link" style="display:none">Forgot or change PIN?</button>
+        <h3 id="chatLockModalTitle" style="margin:0 0 4px">Enter PIN</h3>
+        <p id="chatLockModalMessage" style="margin:0 0 18px;color:var(--text-muted);font-size:13px">Enter your PIN to unlock this chat.</p>
+        <label class="secure-pin-field" style="display:grid;gap:6px;color:var(--text-muted);font-size:12px;font-weight:600">4-digit PIN
+          <input id="chatLockPinInput" type="password" inputmode="numeric" maxlength="4" autocomplete="off" placeholder="Enter 4-digit PIN" />
+        </label>
+        <div id="chatLockError" class="secure-lock-error" aria-live="polite"></div>
+        <div class="secure-lock-actions" style="margin-top:16px">
+          <button id="chatLockForgotBtn" class="btn btn-link" style="display:none;font-size:12px">Forgot PIN?</button>
+          <div style="margin-left:auto;display:flex;gap:8px">
             <button id="chatLockCancelBtn" class="btn btn-outline">Cancel</button>
             <button id="chatLockConfirmBtn" class="btn btn-primary">Continue</button>
           </div>
@@ -1658,53 +1658,51 @@
       </div>
     </div>
 
-    <div id="chatLockSetupModal" class="modal" style="display: none">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h3>Create locked-chat PIN</h3>
-          <span class="close-modal closeChatLockSetupModal">&times;</span>
+    <div id="chatLockSetupModal" class="chat-lock-modal-backdrop" style="display: none">
+      <div class="chat-lock-modal" style="padding:28px 24px 20px">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start">
+          <div class="lock-shield" style="margin-bottom:14px">&#x1F511;</div>
+          <span class="close-modal closeChatLockSetupModal" style="font-size:22px;cursor:pointer;color:var(--text-muted);line-height:1">&times;</span>
         </div>
-        <div class="modal-body">
-          <p class="modal-helper">Use this PIN to reveal your locked personal and group chats.</p>
-          <label class="secure-pin-field">4-digit PIN
-            <input id="chatLockSetupPinInput" type="password" inputmode="numeric" maxlength="4" autocomplete="new-password" placeholder="Enter 4-digit PIN" />
-          </label>
-          <label class="secure-pin-field">Confirm PIN
-            <input id="chatLockSetupConfirmInput" type="password" inputmode="numeric" maxlength="4" autocomplete="new-password" placeholder="Confirm 4-digit PIN" />
-          </label>
-          <div id="chatLockSetupError" class="secure-lock-error" aria-live="polite"></div>
-          <div class="secure-lock-actions">
-            <button class="btn btn-outline closeChatLockSetupModal">Cancel</button>
-            <button id="chatLockSetupSaveBtn" class="btn btn-primary">Create PIN</button>
-          </div>
+        <h3 style="margin:0 0 4px">Create PIN</h3>
+        <p style="margin:0 0 18px;color:var(--text-muted);font-size:13px">Use this PIN to reveal your locked chats.</p>
+        <label class="secure-pin-field" style="display:grid;gap:6px;color:var(--text-muted);font-size:12px;font-weight:600">4-digit PIN
+          <input id="chatLockSetupPinInput" type="password" inputmode="numeric" maxlength="4" autocomplete="new-password" placeholder="Enter 4-digit PIN" />
+        </label>
+        <label class="secure-pin-field" style="display:grid;gap:6px;color:var(--text-muted);font-size:12px;font-weight:600;margin-top:14px">Confirm PIN
+          <input id="chatLockSetupConfirmInput" type="password" inputmode="numeric" maxlength="4" autocomplete="new-password" placeholder="Confirm 4-digit PIN" />
+        </label>
+        <div id="chatLockSetupError" class="secure-lock-error" aria-live="polite"></div>
+        <div class="secure-lock-actions" style="margin-top:16px">
+          <button class="btn btn-outline closeChatLockSetupModal">Cancel</button>
+          <button id="chatLockSetupSaveBtn" class="btn btn-primary">Create PIN</button>
         </div>
       </div>
     </div>
 
-    <div id="chatLockResetModal" class="modal" style="display: none">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h3>Reset locked-chat PIN</h3>
-          <span class="close-modal closeChatLockResetModal">&times;</span>
+    <div id="chatLockResetModal" class="chat-lock-modal-backdrop" style="display: none">
+      <div class="chat-lock-modal" style="padding:28px 24px 20px">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start">
+          <div class="lock-shield" style="margin-bottom:14px">&#x1F510;</div>
+          <span class="close-modal closeChatLockResetModal" style="font-size:22px;cursor:pointer;color:var(--text-muted);line-height:1">&times;</span>
         </div>
-        <div class="modal-body">
-          <p class="modal-helper">Confirm your account password, then choose a new 4-digit PIN. Your existing locked chats stay locked.</p>
-          <label class="secure-pin-field">Account password
-            <input id="chatLockResetPassword" type="password" autocomplete="current-password" placeholder="Account password" />
-          </label>
-          <label class="secure-pin-field">New 4-digit PIN
-            <input id="chatLockResetPinInput" type="password" inputmode="numeric" maxlength="4" autocomplete="new-password" placeholder="Enter 4-digit PIN" />
-          </label>
-          <label class="secure-pin-field">Confirm new PIN
-            <input id="chatLockResetConfirmInput" type="password" inputmode="numeric" maxlength="4" autocomplete="new-password" placeholder="Confirm 4-digit PIN" />
-          </label>
-          <div id="chatLockResetError" class="secure-lock-error" aria-live="polite"></div>
-          <div class="secure-lock-actions" style="justify-content:space-between">
-            <button id="chatLockResetEmailBtn" class="btn btn-link">Email password reset link</button>
-            <div>
-              <button class="btn btn-outline closeChatLockResetModal">Cancel</button>
-              <button id="chatLockResetConfirmBtn" class="btn btn-primary">Reset PIN</button>
-            </div>
+        <h3 style="margin:0 0 4px">Reset PIN</h3>
+        <p style="margin:0 0 18px;color:var(--text-muted);font-size:13px">Confirm your account password, then choose a new 4-digit PIN. Your existing locked chats stay locked.</p>
+        <label class="secure-pin-field" style="display:grid;gap:6px;color:var(--text-muted);font-size:12px;font-weight:600">Account password
+          <input id="chatLockResetPassword" type="password" autocomplete="current-password" placeholder="Account password" />
+        </label>
+        <label class="secure-pin-field" style="display:grid;gap:6px;color:var(--text-muted);font-size:12px;font-weight:600;margin-top:14px">New PIN
+          <input id="chatLockResetPinInput" type="password" inputmode="numeric" maxlength="4" autocomplete="new-password" placeholder="Enter 4-digit PIN" />
+        </label>
+        <label class="secure-pin-field" style="display:grid;gap:6px;color:var(--text-muted);font-size:12px;font-weight:600;margin-top:14px">Confirm PIN
+          <input id="chatLockResetConfirmInput" type="password" inputmode="numeric" maxlength="4" autocomplete="new-password" placeholder="Confirm 4-digit PIN" />
+        </label>
+        <div id="chatLockResetError" class="secure-lock-error" aria-live="polite"></div>
+        <div class="secure-lock-actions" style="margin-top:16px;justify-content:space-between;flex-wrap:wrap;gap:8px">
+          <button id="chatLockResetEmailBtn" class="btn btn-link" style="font-size:12px">Email password reset link</button>
+          <div style="display:flex;gap:8px">
+            <button class="btn btn-outline closeChatLockResetModal">Cancel</button>
+            <button id="chatLockResetConfirmBtn" class="btn btn-primary">Reset PIN</button>
           </div>
         </div>
       </div>

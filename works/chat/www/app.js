@@ -351,7 +351,7 @@ function applyA11yEnhancements() {
 }
 
 function closeTopVisibleModal() {
-  const visibleModals = Array.from(document.querySelectorAll(".modal")).filter(
+  const visibleModals = Array.from(document.querySelectorAll(".modal, .chat-lock-modal-backdrop")).filter(
     (modal) => {
       const styles = window.getComputedStyle(modal);
       return styles.display !== "none" && styles.visibility !== "hidden";
@@ -9297,10 +9297,22 @@ async function verifyChatLockPin(pin) {
   return candidate === settings.pinHash;
 }
 
+function showModal(id) {
+  const el = document.getElementById(id);
+  if (el) { el.style.display = "flex"; requestAnimationFrame(() => el.classList.add("show")); }
+}
+
+function hideModal(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.classList.remove("show");
+  setTimeout(() => { el.style.display = "none"; }, 160);
+}
+
 function showChatLockModal() {
   const modal = document.getElementById("chatLockModal");
   if (!modal) return;
-  modal.style.display = "flex";
+  showModal("chatLockModal");
   const input = document.getElementById("chatLockPinInput");
   const error = document.getElementById("chatLockError");
   if (input) { input.value = ""; input.focus(); }
@@ -9308,13 +9320,13 @@ function showChatLockModal() {
 }
 
 function hideChatLockModal() {
-  document.getElementById("chatLockModal").style.display = "none";
+  hideModal("chatLockModal");
 }
 
 function showChatLockSetupModal() {
   const modal = document.getElementById("chatLockSetupModal");
   if (!modal) return;
-  modal.style.display = "flex";
+  showModal("chatLockSetupModal");
   const input = document.getElementById("chatLockSetupPinInput");
   const confirmInput = document.getElementById("chatLockSetupConfirmInput");
   const error = document.getElementById("chatLockSetupError");
@@ -9325,13 +9337,13 @@ function showChatLockSetupModal() {
 }
 
 function hideChatLockSetupModal() {
-  document.getElementById("chatLockSetupModal").style.display = "none";
+  hideModal("chatLockSetupModal");
 }
 
 function showChatLockResetModal() {
   const modal = document.getElementById("chatLockResetModal");
   if (!modal) return;
-  modal.style.display = "flex";
+  showModal("chatLockResetModal");
   const inputs = ["chatLockResetPassword", "chatLockResetPinInput", "chatLockResetConfirmInput"];
   inputs.forEach((id) => { const el = document.getElementById(id); if (el) el.value = ""; });
   const error = document.getElementById("chatLockResetError");
@@ -9340,7 +9352,7 @@ function showChatLockResetModal() {
 }
 
 function hideChatLockResetModal() {
-  document.getElementById("chatLockResetModal").style.display = "none";
+  hideModal("chatLockResetModal");
 }
 
 function openChatLockPinModal({ title, message, confirmLabel = "Continue", allowRecovery = true }) {
@@ -9361,7 +9373,7 @@ function openChatLockPinModal({ title, message, confirmLabel = "Continue", allow
     if (forgotBtn) forgotBtn.style.display = allowRecovery ? "" : "none";
     if (confirmBtn) confirmBtn.textContent = confirmLabel || "Continue";
     const close = (result) => {
-      modal.style.display = "none";
+      hideModal("chatLockModal");
       resolve(result);
     };
     const cleanup = () => {
@@ -9396,8 +9408,8 @@ function openChatLockPinModal({ title, message, confirmLabel = "Continue", allow
       if (e.key === "Enter") onConfirm();
       if (e.key === "Escape") onCancel();
     });
-    modal.style.display = "flex";
-    setTimeout(() => input?.focus(), 0);
+    showModal("chatLockModal");
+    setTimeout(() => input?.focus(), 100);
   });
 }
 
@@ -9502,8 +9514,8 @@ async function unlockChat(chatId, chatType) {
     await db.collection("lockedChats").doc(record.recordId || getLockedChatDocId(chatId, chatType)).delete();
     await refreshLockedChats();
     showToast(`${record.chatName || "Chat"} unlocked`);
-    loadCurrentChatList();
-    loadArchivedChats();
+    if (typeof loadCurrentChatList === "function") loadCurrentChatList();
+    if (typeof loadArchivedChats === "function") loadArchivedChats();
   } catch (error) {
     console.error("Unlock chat failed:", error);
     showToast("Could not unlock this chat. Check connection and try again.", "error");
@@ -9557,7 +9569,7 @@ async function handleChatLockReset() {
     const credential = firebase.auth.EmailAuthProvider.credential(currentUser.email, password);
     await currentUser.reauthenticateWithCredential(credential);
     await saveChatLockPin(pin);
-    document.getElementById("chatLockResetModal").style.display = "none";
+    hideModal("chatLockResetModal");
     showToast("Locked-chat PIN changed");
   } catch (resetError) {
     if (error) error.textContent = resetError.message || "Account verification failed.";
@@ -16213,16 +16225,12 @@ function lockAppNowIfEnabled() {
   const pin = getStoredAppLockPin();
   if (!pin) return;
   appUnlockedForSession = false;
-  const modal = document.getElementById("unlockModal");
-  if (modal) {
-    modal.style.display = "flex";
-    modal.setAttribute("aria-hidden", "false");
-  }
   const input = document.getElementById("unlockPinInput");
   const error = document.getElementById("unlockAppError");
   if (input) input.value = "";
   if (error) error.textContent = "";
-  window.setTimeout(() => input?.focus(), 0);
+  showModal("unlockModal");
+  window.setTimeout(() => input?.focus(), 100);
 }
 
 async function verifyStoredAppLockPin(pin) {
@@ -16263,16 +16271,12 @@ async function unlockAppAttempt() {
   }
   appUnlockedForSession = true;
   if (input) input.value = "";
-  const modal = document.getElementById("unlockModal");
-  if (modal) {
-    modal.style.display = "none";
-    modal.setAttribute("aria-hidden", "true");
-  }
+  hideModal("unlockModal");
 }
 
 function showAppLockModal() {
   const enabled = Boolean(getStoredAppLockPin());
-  document.getElementById("appLockModal").style.display = "flex";
+  showModal("appLockModal");
   const input = document.getElementById("appLockPinInput");
   const currentInput = document.getElementById("appLockCurrentPinInput");
   const currentField = document.getElementById("appLockCurrentField");
@@ -16330,7 +16334,7 @@ async function saveAppLockPin() {
     return;
   }
   showToast("App lock enabled");
-  document.getElementById("appLockModal").style.display = "none";
+  hideModal("appLockModal");
   lockAppNowIfEnabled();
 }
 
@@ -16347,7 +16351,7 @@ async function disableAppLock() {
   await deleteRemoteAppLockSettings();
   appUnlockedForSession = true;
   showToast("App lock disabled");
-  document.getElementById("appLockModal").style.display = "none";
+  hideModal("appLockModal");
 }
 
 function redirectToLogin() {
@@ -17191,32 +17195,23 @@ async function init() {
     .forEach((btn) =>
       btn.addEventListener(
         "click",
-        () => (document.getElementById("appLockModal").style.display = "none"),
+        () => hideModal("appLockModal"),
       ),
     );
   document
     .querySelectorAll(".closeChatLockModal")
     .forEach((btn) =>
-      btn.addEventListener(
-        "click",
-        () => (document.getElementById("chatLockModal").style.display = "none"),
-      ),
+      btn.addEventListener("click", () => hideChatLockModal()),
     );
   document
     .querySelectorAll(".closeChatLockSetupModal")
     .forEach((btn) =>
-      btn.addEventListener(
-        "click",
-        () => (document.getElementById("chatLockSetupModal").style.display = "none"),
-      ),
+      btn.addEventListener("click", () => hideChatLockSetupModal()),
     );
   document
     .querySelectorAll(".closeChatLockResetModal")
     .forEach((btn) =>
-      btn.addEventListener(
-        "click",
-        () => (document.getElementById("chatLockResetModal").style.display = "none"),
-      ),
+      btn.addEventListener("click", () => hideChatLockResetModal()),
     );
   document
     .getElementById("chatLockResetConfirmBtn")

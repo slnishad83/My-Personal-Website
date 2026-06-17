@@ -7272,12 +7272,11 @@ body.dark .message-quick-actions .quick-message-action {
   color: #aebac1;
 }
 
-.app-action-sheet-backdrop,
-.chat-lock-modal-backdrop {
+.app-action-sheet-backdrop {
   position: fixed;
   inset: 0;
   z-index: 10050;
-  display: flex;
+  display: none;
   align-items: flex-end;
   justify-content: center;
   padding: 18px;
@@ -7286,8 +7285,25 @@ body.dark .message-quick-actions .quick-message-action {
   transition: opacity 160ms ease;
 }
 
-.app-action-sheet-backdrop.show,
+.app-action-sheet-backdrop.show {
+  display: flex !important;
+  opacity: 1;
+}
+
+.chat-lock-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 10050;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: rgba(11, 20, 26, 0.38);
+  opacity: 0;
+  transition: opacity 160ms ease;
+}
+
 .chat-lock-modal-backdrop.show {
+  display: flex !important;
   opacity: 1;
 }
 
@@ -7354,6 +7370,7 @@ body.dark .message-quick-actions .quick-message-action {
 
 .chat-lock-modal-backdrop {
   align-items: center;
+  padding: 18px;
 }
 
 .chat-lock-modal {
@@ -7505,10 +7522,30 @@ body.dark .chat-lock-modal input {
 .locked-preview {
   color: #667781;
   font-size: 12px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }
 
 body.dark .locked-preview {
   color: #aebac1;
+}
+
+.list-item.locked {
+  background: rgba(0, 128, 105, 0.03);
+  position: relative;
+}
+
+.list-item.locked::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 4px;
+  bottom: 4px;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+  background: var(--accent, #008069);
+  opacity: 0.5;
 }
 
 .list-item.locked .list-name {
@@ -7525,8 +7562,46 @@ body.dark .locked-preview {
   opacity: 0.85;
 }
 
+body.dark .list-item.locked {
+  background: rgba(0, 168, 132, 0.04);
+}
+
 body.dark .list-item[data-locked="true"] .list-name {
   opacity: 0.7;
+}
+
+.unlock-chat-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border: 1px solid var(--border, #d8dee2);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--accent, #008069);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+  white-space: nowrap;
+}
+
+.unlock-chat-btn::before {
+  content: "\1F513";
+  font-size: 13px;
+}
+
+.unlock-chat-btn:hover {
+  background: var(--hover-bg, rgba(0,0,0,0.04));
+}
+
+body.dark .unlock-chat-btn {
+  border-color: #33444d;
+  color: #00a884;
+}
+
+body.dark .unlock-chat-btn:hover {
+  background: rgba(255,255,255,0.06);
 }
 
 /* ── 21. Minimum tap target enforcement ─────────────────────────
