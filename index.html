@@ -41,7 +41,8 @@
         padding: 0.5rem 0;
         margin: 0;
       }
-      .nav-item-dropdown:hover .dropdown-menu {
+      .nav-item-dropdown:hover .dropdown-menu,
+      .nav-item-dropdown.open .dropdown-menu {
         opacity: 1;
         visibility: visible;
         transform: translateY(0);
@@ -61,16 +62,46 @@
         background: var(--accent-light);
         color: var(--accent);
       }
+      .nav-works-btn {
+        background: none;
+        border: none;
+        padding: 0;
+        cursor: pointer;
+        font: inherit;
+        color: var(--text-secondary);
+        font-weight: 500;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        transition: color 0.2s;
+      }
+      .nav-works-btn:hover,
+      .nav-works-btn:focus-visible {
+        color: var(--accent);
+      }
+      .nav-works-arrow {
+        font-size: 10px;
+        transition: transform 0.25s ease;
+      }
+      .nav-item-dropdown.open .nav-works-arrow {
+        transform: rotate(180deg);
+      }
       @media (max-width: 768px) {
         .nav-menu.active .nav-item-dropdown .dropdown-menu {
           position: static;
-          opacity: 1;
-          visibility: visible;
-          transform: none;
+          opacity: 0;
+          visibility: hidden;
+          transform: translateY(-10px);
+          transition: all 0.2s ease;
           box-shadow: none;
           border: none;
           padding-left: 1.5rem;
           background: transparent;
+        }
+        .nav-menu.active .nav-item-dropdown.open .dropdown-menu {
+          opacity: 1;
+          visibility: visible;
+          transform: none;
         }
         .nav-menu.active .dropdown-menu a {
           padding: 0.5rem 0;
@@ -87,17 +118,17 @@
             <li><a href="index.html" class="active">Home</a></li>
             <li><a href="resume.html">Resume</a></li>
             <li class="nav-item-dropdown">
-              <a href="/works" style="display: flex; align-items: center; gap: 4px"
-                >Works <span style="font-size: 12px">▼</span></a
-              >
-              <ul class="dropdown-menu">
-                <li>
-                  <a href="/works/invoice" target="_blank"
+              <button class="nav-works-btn" aria-haspopup="true" aria-expanded="false">
+                Works <span class="nav-works-arrow">▼</span>
+              </button>
+              <ul class="dropdown-menu" role="menu">
+                <li role="none">
+                  <a href="/works/invoice" target="_blank" role="menuitem"
                     >📄 Invoice Generator</a
                   >
                 </li>
-                <li>
-                  <a href="/works/chat" target="_blank"
+                <li role="none">
+                  <a href="/works/chat" target="_blank" role="menuitem"
                     >💬 Team Chat</a
                   >
                 </li>
@@ -281,11 +312,40 @@
         const navMenu = document.getElementById("navMenu");
         if (navMenu) navMenu.classList.toggle("active");
       }
+      // Works dropdown toggle
+      const worksBtn = document.querySelector(".nav-works-btn");
+      const worksDropdown = document.querySelector(".nav-item-dropdown");
+      if (worksBtn && worksDropdown) {
+        worksBtn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          const isOpen = worksDropdown.classList.toggle("open");
+          worksBtn.setAttribute("aria-expanded", isOpen);
+        });
+        // Close on outside click
+        document.addEventListener("click", (e) => {
+          if (!worksDropdown.contains(e.target)) {
+            worksDropdown.classList.remove("open");
+            worksBtn.setAttribute("aria-expanded", "false");
+          }
+        });
+        // Close on Escape
+        worksDropdown.addEventListener("keydown", (e) => {
+          if (e.key === "Escape") {
+            worksDropdown.classList.remove("open");
+            worksBtn.setAttribute("aria-expanded", "false");
+            worksBtn.focus();
+          }
+        });
+      }
+      // Close mobile menu & dropdown when a nav link is tapped
       document.querySelectorAll(".nav-menu a").forEach((link) => {
         link.addEventListener("click", () => {
           const navMenu = document.getElementById("navMenu");
-          if (navMenu && window.innerWidth <= 768)
+          if (navMenu && window.innerWidth <= 768) {
             navMenu.classList.remove("active");
+            worksDropdown?.classList.remove("open");
+            worksBtn?.setAttribute("aria-expanded", "false");
+          }
         });
       });
       const backToTopBtn = document.getElementById("modernBackToTop");
