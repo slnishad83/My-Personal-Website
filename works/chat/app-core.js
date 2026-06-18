@@ -9086,7 +9086,11 @@ function openChatLockPinModal({ title, message, confirmLabel = "Continue", allow
     if (input) input.value = "";
     if (error) error.textContent = "";
     if (forgotBtn) forgotBtn.style.display = allowRecovery ? "" : "none";
-    if (confirmBtn) confirmBtn.textContent = confirmLabel || "Continue";
+    if (confirmBtn) {
+      confirmBtn.textContent = "";
+      confirmBtn.appendChild(document.createTextNode(String(confirmLabel || "Continue")));
+      confirmBtn.setAttribute("aria-label", String(confirmLabel || "Continue"));
+    }
     const close = (result) => {
       hideModal("chatLockModal");
       resolve(result);
@@ -12234,8 +12238,18 @@ function renderSharedMediaItem(message = {}) {
   );
   const when = message.timestamp ? formatTime(message.timestamp) : "";
   const attJson = escapeHtml(JSON.stringify(attachment));
+  const messageMeta = escapeHtml(JSON.stringify({
+    messageId: message.id || "",
+    chatId: message.chatId || currentChat?.id || "",
+    chatType: message.chatType || currentChatType || "",
+    senderId: message.senderId || "",
+    senderName: message.senderName || "",
+    text: message.text || "",
+    timestamp: message.timestamp || "",
+    attachment: message.attachment || {},
+  }));
   return `
-    <div class="shared-media-item-wrap shared-selectable-item" data-message-id="${escapeHtml(message.id)}">
+    <div class="shared-media-item-wrap shared-selectable-item" data-message-id="${escapeHtml(message.id)}" data-message-meta="${messageMeta}">
       <button type="button" class="shared-select-toggle" aria-label="Select item"></button>
       <button type="button" class="shared-media-item" data-preview-url="${url}" data-filename="${filename}" title="${filename}">
         ${attachment.type === "video" ? `<video src="${url}" preload="metadata" muted playsinline></video>` : `<img src="${url}" alt="${filename}" loading="lazy" class="shared-media-img">`}
@@ -12321,7 +12335,7 @@ function bindSharedContentActions(root = document) {
         if (el.querySelector("video") && typeof openMediaViewer === "function") {
           openMediaViewer(url, filename, "video");
         } else if (el.querySelector("img") && typeof openMediaViewer === "function") {
-          openMediaViewer(url, filename);
+          openMediaViewer(url, filename, "image");
         } else if (typeof previewFile === "function") {
           previewFile(url, filename);
         } else {

@@ -3599,13 +3599,36 @@ let _mediaViewerIsDragging = false;
 let _mediaViewerIsSwiping = false;
 let _mediaViewerHideUITimer = null;
 
+function getCurrentMediaViewerItem() {
+  return _mediaViewerItems[_mediaViewerIndex] || null;
+}
+
+function parseMediaMessageMeta(value) {
+  if (!value) return null;
+  try {
+    return typeof value === "string" ? JSON.parse(value) : value;
+  } catch (_) {
+    return null;
+  }
+}
+
 function collectMediaItems() {
   const items = [];
   const seen = new Set();
-  const addItem = (url, filename, caption, type) => {
+  const addItem = (url, filename, caption, type, sourceMessageData = null) => {
     if (!url || seen.has(url)) return;
     seen.add(url);
-    items.push({ url, filename: filename || "Media", caption: caption || "", type: type || "image" });
+    items.push({
+      url,
+      filename: filename || "Media",
+      caption: caption || "",
+      type: type || "image",
+      sourceMessageId: sourceMessageData?.messageId || sourceMessageData?.id || "",
+      sourceChatId: sourceMessageData?.chatId || "",
+      sourceChatType: sourceMessageData?.chatType || "",
+      sourceSenderId: sourceMessageData?.senderId || "",
+      sourceMessageData: sourceMessageData || null,
+    });
   };
   // Collect from chat messages
   document.querySelectorAll("#messagesArea .attachment-img").forEach((img) => {
@@ -3614,21 +3637,35 @@ function collectMediaItems() {
     const url = link.dataset.previewUrl;
     if (!url) return;
     const filename = link.dataset.filename || "Image";
-    const caption = img.closest(".message-bubble")?.querySelector(".message-text")?.textContent?.slice(0, 120) || "";
-    addItem(url, filename, caption, "image");
+    const messageEl = img.closest("[data-message-id], .message");
+    const messageData = messageEl?._messageData || null;
+    const caption =
+      messageEl?.querySelector(".message-text")?.textContent?.slice(0, 120) ||
+      messageData?.text?.slice?.(0, 120) ||
+      "";
+    addItem(url, filename, caption, "image", messageData);
   });
   document.querySelectorAll("#messagesArea .video-attachment video").forEach((video) => {
     const url = video.querySelector("source")?.src || video.src || "";
     if (!url) return;
-    const caption = video.closest(".message-bubble")?.querySelector(".message-text")?.textContent?.slice(0, 120) || "";
-    addItem(url, "Video", caption, "video");
+    const messageEl = video.closest("[data-message-id], .message");
+    const messageData = messageEl?._messageData || null;
+    const caption =
+      messageEl?.querySelector(".message-text")?.textContent?.slice(0, 120) ||
+      messageData?.text?.slice?.(0, 120) ||
+      "";
+    addItem(url, messageData?.attachment?.filename || "Video", caption, "video", messageData);
   });
   // Collect from shared content (Media, Links, and Docs tabs)
   document.querySelectorAll("#sharedContent .shared-media-item, #groupSharedContent .shared-media-item").forEach((btn) => {
     const url = btn.dataset.previewUrl;
     if (!url) return;
     const filename = btn.dataset.filename || "Media";
-    addItem(url, filename, "", "image");
+    const wrapper = btn.closest(".shared-media-item-wrap");
+    const messageData = parseMediaMessageMeta(wrapper?.dataset?.messageMeta) || null;
+    const type = btn.querySelector("video") ? "video" : (messageData?.attachment?.type === "video" ? "video" : "image");
+    const caption = messageData?.text?.slice?.(0, 120) || messageData?.caption || "";
+    addItem(url, filename, caption, type, messageData);
   });
   return items;
 }
@@ -3660,6 +3697,7 @@ function openMediaViewer(url, filename, mediaType) {
       console.log("[MEDIA] viewer display set to flex");
     }
     document.body.style.overflow = "hidden";
+    updateMediaViewerActions();
     console.log("[MEDIA] openMediaViewer complete");
   } catch (err) {
     console.error("[MEDIA] openMediaViewer error:", err);
@@ -3681,7 +3719,7 @@ function showMediaViewerSlide() {
   if (img) { img.style.display = isVideo ? "none" : ""; img.style.transform = "scale(1)"; img.src = isVideo ? "" : item.url; img.alt = item.filename || "Media"; }
   if (video) { video.style.display = isVideo ? "" : "none"; video.src = isVideo ? item.url : ""; video.load(); }
   if (counter) counter.textContent = `${_mediaViewerIndex + 1} / ${_mediaViewerItems.length}`;
-  if (caption) caption.textContent = item.caption || "";
+  if (caption) caption.textContent = item.caption || item.filename || "";
   if (prev) prev.style.display = _mediaViewerItems.length > 1 ? "flex" : "none";
   if (next) next.style.display = _mediaViewerItems.length > 1 ? "flex" : "none";
   if (prev) prev.disabled = _mediaViewerIndex === 0;
@@ -3694,6 +3732,7 @@ function showMediaViewerSlide() {
       dots.appendChild(dot);
     });
   }
+  updateMediaViewerActions();
 }
 
 function navigateMediaViewer(delta) {
@@ -3714,7 +3753,7 @@ function closeMediaViewer() {
 }
 
 function downloadCurrentMedia() {
-  const item = _mediaViewerItems[_mediaViewerIndex];
+  const item = getCurrentMediaViewerItem();
   if (!item) return;
   const a = document.createElement("a");
   a.href = item.url;
@@ -3725,18 +3764,110 @@ function downloadCurrentMedia() {
 }
 
 function shareCurrentMedia() {
-  const item = _mediaViewerItems[_mediaViewerIndex];
+  const item = getCurrentMediaViewerItem();
   if (!item) return;
   try {
     const attachment = { url: item.url, filename: item.filename, type: item.type === "video" ? "video" : "image" };
     if (typeof openForwardModalForMedia === "function") {
-      openForwardModalForMedia(attachment);
+      openForwardModalForMedia(attachment, {
+        sourceMessageId: item.sourceMessageId || "",
+        sourceChatId: item.sourceChatId || "",
+        sourceChatType: item.sourceChatType || "",
+      });
     } else {
       showToast("Forwarding is not available", "info");
     }
   } catch (_) {
     showToast("Could not forward this media", "error");
   }
+}
+
+async function toggleCurrentMediaBookmark() {
+  const item = getCurrentMediaViewerItem();
+  if (!item?.sourceMessageId || typeof toggleBookmarkMessage !== "function") {
+    showToast("Bookmarking is not available for this item", "info");
+    return;
+  }
+  const text =
+    item.sourceMessageData?.text ||
+    item.caption ||
+    item.filename ||
+    "Media";
+  await toggleBookmarkMessage(
+    item.sourceMessageId,
+    item.sourceChatId || currentChat?.id || "",
+    item.sourceChatType || currentChatType || "",
+    text,
+  );
+}
+
+async function openCurrentMediaInfo() {
+  const item = getCurrentMediaViewerItem();
+  if (!item?.sourceMessageId) {
+    showToast("Message info is not available for this media item", "info");
+    return;
+  }
+  const source = item.sourceMessageData || {};
+  if (source.senderId !== currentUser?.uid) {
+    showToast("Message info is available for sent media only", "info");
+    return;
+  }
+  if (typeof showMessageInfo === "function") {
+    showMessageInfo(item.sourceMessageId, { ...source, messageId: item.sourceMessageId });
+    return;
+  }
+  showToast("Message info is not available right now", "info");
+}
+
+async function deleteCurrentMediaMessage() {
+  const item = getCurrentMediaViewerItem();
+  if (!item?.sourceMessageId) {
+    showToast("Delete is not available for this media item", "info");
+    return;
+  }
+  const source = item.sourceMessageData || {};
+  if (source.senderId !== currentUser?.uid) {
+    showToast("You can only delete media you sent", "info");
+    return;
+  }
+  if (typeof openMessageDeleteSheet === "function") {
+    openMessageDeleteSheet(item.sourceMessageId, { ...source, messageId: item.sourceMessageId });
+    return;
+  }
+  showToast("Delete is not available right now", "error");
+}
+
+async function copyCurrentMediaLink() {
+  const item = getCurrentMediaViewerItem();
+  if (!item?.url) return;
+  try {
+    if (typeof copyToClipboard === "function") {
+      await copyToClipboard(item.url);
+    } else if (navigator?.clipboard?.writeText) {
+      await navigator.clipboard.writeText(item.url);
+    }
+    showToast("Media link copied");
+  } catch (_) {
+    showToast("Could not copy media link", "error");
+  }
+}
+
+function updateMediaViewerActions() {
+  const item = getCurrentMediaViewerItem();
+  const forwardBtn = document.getElementById("mediaViewerShareBtn");
+  const downloadBtn = document.getElementById("mediaViewerDownloadBtn");
+  const starBtn = document.getElementById("mediaViewerStarBtn");
+  const infoBtn = document.getElementById("mediaViewerInfoBtn");
+  const copyBtn = document.getElementById("mediaViewerCopyBtn");
+  const deleteBtn = document.getElementById("mediaViewerDeleteBtn");
+  if (!item) return;
+  const ownMessage = item.sourceMessageData?.senderId === currentUser?.uid;
+  if (forwardBtn) forwardBtn.title = "Forward";
+  if (downloadBtn) downloadBtn.title = "Download";
+  if (starBtn) starBtn.style.display = item.sourceMessageId ? "" : "none";
+  if (infoBtn) infoBtn.style.display = ownMessage ? "" : "none";
+  if (deleteBtn) deleteBtn.style.display = ownMessage ? "" : "none";
+  if (copyBtn) copyBtn.style.display = item.url ? "" : "none";
 }
 
 function zoomMediaViewer(factor, reset) {
@@ -3760,6 +3891,10 @@ function initMediaViewer() {
   document.getElementById("mediaViewerPrev")?.addEventListener("click", () => navigateMediaViewer(-1));
   document.getElementById("mediaViewerNext")?.addEventListener("click", () => navigateMediaViewer(1));
   document.getElementById("mediaViewerShareBtn")?.addEventListener("click", shareCurrentMedia);
+  document.getElementById("mediaViewerStarBtn")?.addEventListener("click", toggleCurrentMediaBookmark);
+  document.getElementById("mediaViewerInfoBtn")?.addEventListener("click", openCurrentMediaInfo);
+  document.getElementById("mediaViewerCopyBtn")?.addEventListener("click", copyCurrentMediaLink);
+  document.getElementById("mediaViewerDeleteBtn")?.addEventListener("click", deleteCurrentMediaMessage);
   document.getElementById("mediaViewerZoomIn")?.addEventListener("click", () => zoomMediaViewer(1.5));
   document.getElementById("mediaViewerZoomOut")?.addEventListener("click", () => zoomMediaViewer(0.67));
   document.getElementById("mediaViewerZoomReset")?.addEventListener("click", () => zoomMediaViewer(0, true));
@@ -3796,7 +3931,8 @@ function initMediaViewer() {
         e.preventDefault();
         const url = sharedItem.dataset.previewUrl;
         const filename = sharedItem.dataset.filename || "Media";
-        if (url) { openMediaViewer(url, filename); return; }
+        const isVideo = sharedItem.querySelector("video") != null;
+        if (url) { openMediaViewer(url, filename, isVideo ? "video" : "image"); return; }
       }
       // Shared doc item (<button class="shared-list-item shared-open-item">)
       const sharedDoc = e.target.closest(".shared-open-item");
@@ -3995,13 +4131,32 @@ if (document.readyState === "loading") {
   initMediaViewer();
 }
 
+// Capture-phase click handler — fires before any bubbling handler, cannot be stopped
+document.addEventListener("click", (e) => {
+  const mediaEl = e.target.closest(".image-attachment-link, .shared-media-item, .shared-open-item, .file-attachment-card");
+  if (!mediaEl) return;
+  if (!mediaEl.dataset.previewUrl) return;
+  e.preventDefault();
+  const url = mediaEl.dataset.previewUrl;
+  const filename = mediaEl.dataset.filename || "Media";
+  const isVideo = mediaEl.querySelector("video") != null;
+  if (isVideo && typeof openMediaViewer === "function") {
+    openMediaViewer(url, filename, "video");
+  } else if (typeof openMediaViewer === "function") {
+    openMediaViewer(url, filename);
+  } else if (typeof previewFile === "function") {
+    previewFile(url, filename);
+  }
+}, true);
+
 // Add CSS for UI hidden state
 const _mvStyle = document.createElement("style");
 _mvStyle.textContent = `
 .media-viewer.ui-hidden .media-viewer-topbar,
 .media-viewer.ui-hidden .media-viewer-nav,
 .media-viewer.ui-hidden .media-viewer-caption,
-.media-viewer.ui-hidden .media-viewer-dots {
+.media-viewer.ui-hidden .media-viewer-dots,
+.media-viewer.ui-hidden .media-viewer-actions {
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.3s;
@@ -4009,7 +4164,8 @@ _mvStyle.textContent = `
 .media-viewer .media-viewer-topbar,
 .media-viewer .media-viewer-nav,
 .media-viewer .media-viewer-caption,
-.media-viewer .media-viewer-dots {
+.media-viewer .media-viewer-dots,
+.media-viewer .media-viewer-actions {
   transition: opacity 0.3s;
 }
 `;

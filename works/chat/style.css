@@ -13878,6 +13878,52 @@ body.large-tap-targets .setting-item {
   z-index: 100003;
   pointer-events: none;
 }
+.media-viewer-actions {
+  position: fixed;
+  bottom: 122px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  max-width: min(92vw, 760px);
+  padding: 8px 10px;
+  border-radius: 20px;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(10px);
+  z-index: 100003;
+}
+.media-viewer-action-btn {
+  min-width: 84px;
+  min-height: 36px;
+  border: 0;
+  border-radius: 999px;
+  padding: 0 14px;
+  background: rgba(255, 255, 255, 0.14);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s, transform 0.15s, opacity 0.15s;
+}
+.media-viewer-action-btn:hover {
+  background: rgba(255, 255, 255, 0.22);
+  transform: translateY(-1px);
+}
+.media-viewer-action-btn:active {
+  transform: translateY(0);
+}
+.media-viewer-action-danger {
+  background: rgba(255, 88, 88, 0.24);
+}
+.media-viewer-action-danger:hover {
+  background: rgba(255, 88, 88, 0.34);
+}
 .media-viewer-dots {
   position: fixed;
   bottom: 16px;
@@ -13935,6 +13981,17 @@ body.large-tap-targets .setting-item {
   .media-viewer-next { right: 8px; width: 40px; height: 40px; font-size: 26px; }
   .media-viewer-topbar { height: 48px; }
   .media-viewer-caption { bottom: 44px; font-size: 12px; }
+  .media-viewer-actions {
+    bottom: 104px;
+    gap: 6px;
+    padding: 6px;
+  }
+  .media-viewer-action-btn {
+    min-width: 72px;
+    min-height: 32px;
+    font-size: 11px;
+    padding: 0 10px;
+  }
 }
 
 /* ===== Stories / Status ===== */
