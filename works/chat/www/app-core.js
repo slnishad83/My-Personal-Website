@@ -2010,6 +2010,32 @@ function bindRenderedMessageActions() {
       }
     });
   });
+  // Direct click handlers for media preview (restored - more reliable than delegation alone)
+  document.querySelectorAll("[data-preview-url]").forEach((el) => {
+    if (el.dataset.previewBound) return;
+    el.dataset.previewBound = "true";
+    el.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const url = el.dataset.previewUrl;
+      if (!url) return;
+      if (el.querySelector("video")) {
+        openMediaViewer(url, el.dataset.filename || "Media", "video");
+      } else {
+        previewFile(url, el.dataset.filename);
+      }
+    });
+  });
+  document.querySelectorAll(".video-attachment video").forEach((video) => {
+    if (video.dataset.videoBound) return;
+    video.dataset.videoBound = "true";
+    video.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const url = video.currentSrc || video.src || video.querySelector("source")?.src || "";
+      if (url) openMediaViewer(url, "Video", "video");
+    });
+  });
 }
 
 function getChatContainer() {
@@ -12241,6 +12267,26 @@ function bindSharedContentActions(root = document) {
       event.preventDefault();
       event.stopPropagation();
       copyToClipboard(btn.dataset.copyLink);
+    });
+  });
+  // Direct click handlers for shared media preview
+  root.querySelectorAll("[data-preview-url]").forEach((el) => {
+    if (el.dataset.sharedPreviewBound === "true") return;
+    el.dataset.sharedPreviewBound = "true";
+    el.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      const url = el.dataset.previewUrl;
+      if (!url) {
+        showToast("Media is not available", "error");
+        return;
+      }
+      const filename = el.dataset.filename || "Shared item";
+      if (el.querySelector("video")) {
+        openMediaViewer(url, filename, "video");
+      } else {
+        previewFile(url, filename);
+      }
     });
   });
 }
