@@ -2016,12 +2016,13 @@ function bindRenderedMessageActions() {
     el.dataset.previewBound = "true";
     el.addEventListener("click", (e) => {
       e.preventDefault();
-      e.stopPropagation();
       console.log("[MEDIA] click [data-preview-url]", el.dataset.previewUrl);
       var url = el.dataset.previewUrl; if (!url) return;
       try {
         if (el.querySelector("video") && typeof openMediaViewer === "function") {
           openMediaViewer(url, el.dataset.filename || "Media", "video");
+        } else if (el.querySelector("img") && typeof openMediaViewer === "function") {
+          openMediaViewer(url, el.dataset.filename || "Image");
         } else if (typeof previewFile === "function") {
           previewFile(url, el.dataset.filename);
         } else {
@@ -12312,7 +12313,6 @@ function bindSharedContentActions(root = document) {
     el.dataset.sharedPreviewBound = "true";
     el.addEventListener("click", (event) => {
       event.preventDefault();
-      event.stopPropagation();
       console.log("[MEDIA] click shared [data-preview-url]", el.dataset.previewUrl);
       var url = el.dataset.previewUrl;
       if (!url) { showToast("Media is not available", "error"); return; }
@@ -12320,6 +12320,8 @@ function bindSharedContentActions(root = document) {
       try {
         if (el.querySelector("video") && typeof openMediaViewer === "function") {
           openMediaViewer(url, filename, "video");
+        } else if (el.querySelector("img") && typeof openMediaViewer === "function") {
+          openMediaViewer(url, filename);
         } else if (typeof previewFile === "function") {
           previewFile(url, filename);
         } else {

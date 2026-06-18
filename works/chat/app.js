@@ -2086,7 +2086,12 @@ function bindRenderedMessageActions() {
     el.dataset.previewBound = "true";
     el.addEventListener("click", (e) => {
       e.preventDefault();
-      previewFile(el.dataset.previewUrl, el.dataset.filename);
+      var url = el.dataset.previewUrl; if (!url) return;
+      if (el.querySelector("img") && typeof openMediaViewer === "function") {
+        openMediaViewer(url, el.dataset.filename || "Image");
+      } else {
+        previewFile(url, el.dataset.filename);
+      }
     });
   });
   document.querySelectorAll(".view-once-placeholder").forEach((el) => {
@@ -12237,12 +12242,16 @@ function bindSharedContentActions(root = document) {
     el.dataset.sharedPreviewBound = "true";
     el.addEventListener("click", (event) => {
       event.preventDefault();
-      const url = el.dataset.previewUrl;
+      var url = el.dataset.previewUrl;
       if (!url) {
         showToast("Media is not available", "error");
         return;
       }
-      previewFile(url, el.dataset.filename || "Shared item");
+      if (el.querySelector("img") && typeof openMediaViewer === "function") {
+        openMediaViewer(url, el.dataset.filename || "Image");
+      } else {
+        previewFile(url, el.dataset.filename || "Shared item");
+      }
     });
   });
 
