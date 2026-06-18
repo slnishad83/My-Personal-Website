@@ -115,9 +115,7 @@
     })();
 
     function getReturnUrl() {
-      const pathname = location.pathname.replace(/reset\.html$/i, "");
-      const base = pathname.endsWith("/") ? pathname : `${pathname}/`;
-      return `${base}index.html?fresh=${Date.now()}`;
+      return `${location.origin}/?fresh=${Date.now()}`;
     }
 
     async function clearIndexedDb() {
