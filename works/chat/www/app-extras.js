@@ -3852,10 +3852,43 @@ async function copyCurrentMediaLink() {
   }
 }
 
+async function replyCurrentMediaMessage() {
+  const item = getCurrentMediaViewerItem();
+  const source = item?.sourceMessageData || null;
+  if (!item?.sourceMessageId || !source) {
+    showToast("Reply is not available for this media item", "info");
+    return;
+  }
+  if (typeof setReplyTo === "function") {
+    setReplyTo({ ...source, id: item.sourceMessageId, messageId: item.sourceMessageId });
+    closeMediaViewer();
+    showToast("Reply ready");
+    return;
+  }
+  showToast("Reply is not available right now", "error");
+}
+
+function openCurrentMediaInChat() {
+  const item = getCurrentMediaViewerItem();
+  if (!item?.sourceMessageId) {
+    showToast("This media item cannot be opened in chat", "info");
+    return;
+  }
+  closeMediaViewer();
+  if (typeof scrollToMessage === "function") {
+    scrollToMessage(item.sourceMessageId);
+    showToast("Opened in chat");
+    return;
+  }
+  showToast("Could not jump to the original message", "error");
+}
+
 function updateMediaViewerActions() {
   const item = getCurrentMediaViewerItem();
   const forwardBtn = document.getElementById("mediaViewerShareBtn");
   const downloadBtn = document.getElementById("mediaViewerDownloadBtn");
+  const replyBtn = document.getElementById("mediaViewerReplyBtn");
+  const openBtn = document.getElementById("mediaViewerOpenBtn");
   const starBtn = document.getElementById("mediaViewerStarBtn");
   const infoBtn = document.getElementById("mediaViewerInfoBtn");
   const copyBtn = document.getElementById("mediaViewerCopyBtn");
@@ -3864,6 +3897,8 @@ function updateMediaViewerActions() {
   const ownMessage = item.sourceMessageData?.senderId === currentUser?.uid;
   if (forwardBtn) forwardBtn.title = "Forward";
   if (downloadBtn) downloadBtn.title = "Download";
+  if (replyBtn) replyBtn.style.display = item.sourceMessageId ? "" : "none";
+  if (openBtn) openBtn.style.display = item.sourceMessageId ? "" : "none";
   if (starBtn) starBtn.style.display = item.sourceMessageId ? "" : "none";
   if (infoBtn) infoBtn.style.display = ownMessage ? "" : "none";
   if (deleteBtn) deleteBtn.style.display = ownMessage ? "" : "none";
@@ -3891,6 +3926,8 @@ function initMediaViewer() {
   document.getElementById("mediaViewerPrev")?.addEventListener("click", () => navigateMediaViewer(-1));
   document.getElementById("mediaViewerNext")?.addEventListener("click", () => navigateMediaViewer(1));
   document.getElementById("mediaViewerShareBtn")?.addEventListener("click", shareCurrentMedia);
+  document.getElementById("mediaViewerReplyBtn")?.addEventListener("click", replyCurrentMediaMessage);
+  document.getElementById("mediaViewerOpenBtn")?.addEventListener("click", openCurrentMediaInChat);
   document.getElementById("mediaViewerStarBtn")?.addEventListener("click", toggleCurrentMediaBookmark);
   document.getElementById("mediaViewerInfoBtn")?.addEventListener("click", openCurrentMediaInfo);
   document.getElementById("mediaViewerCopyBtn")?.addEventListener("click", copyCurrentMediaLink);
