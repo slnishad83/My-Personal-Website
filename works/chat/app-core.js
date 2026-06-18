@@ -320,7 +320,7 @@ function renderAttachment(attachment = {}) {
   }
 
   if (attachment.type === "video") {
-    return `<div class="message-attachment video-attachment"><video src="${url}" controls playsinline preload="metadata"></video>${viewOnceHtml}</div>`;
+    return `<div class="message-attachment video-attachment" data-preview-url="${url}" data-filename="${filename}"><div class="video-thumb-wrap"><video src="${url}" preload="metadata" muted playsinline></video><button type="button" class="video-play-overlay" aria-label="Play video">&#9654;</button></div>${viewOnceHtml}</div>`;
   }
 
   if (attachment.type === "voice") {
@@ -12651,6 +12651,7 @@ function appendFailedMessage(text = "", attachment = null) {
     renderFailedLocalMessage(failed),
   );
   bindFailedMessageRetryActions();
+  bindRenderedMessageActions();
   messagesArea.scrollTop = messagesArea.scrollHeight;
 }
 
@@ -13523,7 +13524,7 @@ async function handleFileUpload(file) {
     return;
   }
   try {
-    const url = await uploadDocument(file);
+    const url = isVideo ? await uploadRecordedMedia(file) : await uploadDocument(file);
     const duration =
       isVideo || isAudio ? await getMediaDuration(file).catch(() => 0) : 0;
     currentAttachment = {
@@ -17609,8 +17610,8 @@ async function init() {
             return;
           }
         }
-        const url = file.type.startsWith("video/")
-          ? await uploadDocument(file)
+         const url = file.type.startsWith("video/")
+          ? await uploadRecordedMedia(file)
           : await uploadToCloudinary(file);
         statusImageAttachment = {
           type: file.type.startsWith("video/") ? "video" : "image",

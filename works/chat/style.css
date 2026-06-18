@@ -14226,3 +14226,42 @@ body.large-tap-targets .setting-item {
   .story-add-badge { width: 16px; height: 16px; font-size: 12px; bottom: 12px; }
   .story-viewer-content .story-text-content { font-size: 20px; padding: 24px; }
 }
+/* ── Video thumbnail overlay in chat ─────────────────────── */
+.video-thumb-wrap {
+  position: relative;
+  display: inline-block;
+  max-width: 100%;
+  cursor: pointer;
+  border-radius: 10px;
+  overflow: hidden;
+  background: #000;
+}
+.video-thumb-wrap video {
+  display: block;
+  max-width: 280px;
+  max-height: 200px;
+  width: 100%;
+  object-fit: cover;
+  pointer-events: none;
+  border-radius: 10px;
+}
+.video-play-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.35);
+  border: none;
+  cursor: pointer;
+  border-radius: 10px;
+  transition: background 0.18s;
+}
+.video-play-overlay:hover { background: rgba(0, 0, 0, 0.52); }
+.video-play-overlay {
+  color: #fff;
+  font-size: 40px;
+  line-height: 1;
+  text-shadow: 0 2px 8px rgba(0,0,0,0.5);
+}
+.video-attachment[data-preview-url] { display: inline-block; }

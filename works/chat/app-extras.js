@@ -3645,16 +3645,16 @@ function collectMediaItems() {
       "";
     addItem(url, filename, caption, "image", messageData);
   });
-  document.querySelectorAll("#messagesArea .video-attachment video").forEach((video) => {
-    const url = video.querySelector("source")?.src || video.src || "";
+    document.querySelectorAll("#messagesArea .video-attachment").forEach((wrap) => {
+    const url = wrap.dataset.previewUrl || wrap.querySelector("video")?.src || "";
     if (!url) return;
-    const messageEl = video.closest("[data-message-id], .message");
+    const messageEl = wrap.closest("[data-message-id], .message");
     const messageData = messageEl?._messageData || null;
     const caption =
       messageEl?.querySelector(".message-text")?.textContent?.slice(0, 120) ||
       messageData?.text?.slice?.(0, 120) ||
       "";
-    addItem(url, messageData?.attachment?.filename || "Video", caption, "video", messageData);
+    addItem(url, wrap.dataset.filename || messageData?.attachment?.filename || "Video", caption, "video", messageData);
   });
   // Collect from shared content (Media, Links, and Docs tabs)
   document.querySelectorAll("#sharedContent .shared-media-item, #groupSharedContent .shared-media-item").forEach((btn) => {
