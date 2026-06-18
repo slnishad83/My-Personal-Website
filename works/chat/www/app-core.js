@@ -2010,19 +2010,27 @@ function bindRenderedMessageActions() {
       }
     });
   });
-  // Direct click handlers for media preview (restored - more reliable than delegation alone)
+  // Direct click handlers for media preview
   document.querySelectorAll("[data-preview-url]").forEach((el) => {
     if (el.dataset.previewBound) return;
     el.dataset.previewBound = "true";
     el.addEventListener("click", (e) => {
       e.preventDefault();
       e.stopPropagation();
-      const url = el.dataset.previewUrl;
-      if (!url) return;
-      if (el.querySelector("video")) {
-        openMediaViewer(url, el.dataset.filename || "Media", "video");
-      } else {
-        previewFile(url, el.dataset.filename);
+      console.log("[MEDIA] click [data-preview-url]", el.dataset.previewUrl);
+      var url = el.dataset.previewUrl; if (!url) return;
+      try {
+        if (el.querySelector("video") && typeof openMediaViewer === "function") {
+          openMediaViewer(url, el.dataset.filename || "Media", "video");
+        } else if (typeof previewFile === "function") {
+          previewFile(url, el.dataset.filename);
+        } else {
+          console.log("[MEDIA] fallback - openMediaViewer/previewFile not defined");
+          forceShowViewer(url);
+        }
+      } catch(ex) {
+        console.error("[MEDIA] error in handler, using fallback", ex);
+        forceShowViewer(url);
       }
     });
   });
@@ -2032,10 +2040,39 @@ function bindRenderedMessageActions() {
     video.addEventListener("click", (e) => {
       e.preventDefault();
       e.stopPropagation();
-      const url = video.currentSrc || video.src || video.querySelector("source")?.src || "";
-      if (url) openMediaViewer(url, "Video", "video");
+      var url = video.currentSrc || video.src || (video.querySelector("source")?.src) || "";
+      console.log("[MEDIA] click video-attachment", url);
+      if (!url) return;
+      try {
+        if (typeof openMediaViewer === "function") {
+          openMediaViewer(url, "Video", "video");
+        } else {
+          console.log("[MEDIA] fallback - openMediaViewer not defined");
+          forceShowViewer(url);
+        }
+      } catch(ex) {
+        console.error("[MEDIA] error in video handler", ex);
+        forceShowViewer(url);
+      }
     });
   });
+}
+
+function forceShowViewer(url) {
+  console.log("[MEDIA] forceShowViewer", url);
+  var viewer = document.getElementById("mediaViewer");
+  var img = document.getElementById("mediaViewerImg");
+  var video = document.getElementById("mediaViewerVideo");
+  if (!viewer || !img) { console.log("[MEDIA] viewer DOM missing"); return; }
+  try { video.pause(); video.src = ""; } catch(_) {}
+  video.style.display = "none";
+  img.style.display = "";
+  img.src = url;
+  viewer.style.display = "flex";
+  viewer.style.transform = "";
+  viewer.style.opacity = "";
+  document.body.style.overflow = "hidden";
+  console.log("[MEDIA] viewer displayed");
 }
 
 function getChatContainer() {
@@ -12276,16 +12313,22 @@ function bindSharedContentActions(root = document) {
     el.addEventListener("click", (event) => {
       event.preventDefault();
       event.stopPropagation();
-      const url = el.dataset.previewUrl;
-      if (!url) {
-        showToast("Media is not available", "error");
-        return;
-      }
-      const filename = el.dataset.filename || "Shared item";
-      if (el.querySelector("video")) {
-        openMediaViewer(url, filename, "video");
-      } else {
-        previewFile(url, filename);
+      console.log("[MEDIA] click shared [data-preview-url]", el.dataset.previewUrl);
+      var url = el.dataset.previewUrl;
+      if (!url) { showToast("Media is not available", "error"); return; }
+      var filename = el.dataset.filename || "Shared item";
+      try {
+        if (el.querySelector("video") && typeof openMediaViewer === "function") {
+          openMediaViewer(url, filename, "video");
+        } else if (typeof previewFile === "function") {
+          previewFile(url, filename);
+        } else {
+          console.log("[MEDIA] fallback shared - functions not defined");
+          forceShowViewer(url);
+        }
+      } catch(ex) {
+        console.error("[MEDIA] error in shared handler", ex);
+        forceShowViewer(url);
       }
     });
   });

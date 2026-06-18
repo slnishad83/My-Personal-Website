@@ -3634,6 +3634,7 @@ function collectMediaItems() {
 }
 
 function openMediaViewer(url, filename, mediaType) {
+  console.log("[MEDIA] openMediaViewer called", url, filename, mediaType);
   try {
     const allItems = collectMediaItems();
     let idx = allItems.findIndex((i) => i.url === url);
@@ -3742,6 +3743,7 @@ function zoomMediaViewer(factor, reset) {
 }
 
 function initMediaViewer() {
+  console.log("[MEDIA] initMediaViewer called");
   const viewer = document.getElementById("mediaViewer");
   if (!viewer) return;
 
