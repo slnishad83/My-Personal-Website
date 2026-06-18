@@ -3513,9 +3513,15 @@ function getFilePreviewType(url, filename = "") {
   return "download";
 }
 function previewFile(url, filename) {
-  const type = getFilePreviewType(url, filename);
-  if (type === "image") {
-    openMediaViewer(url, filename);
+  try {
+    const type = getFilePreviewType(url, filename);
+    if (type === "image") {
+      openMediaViewer(url, filename);
+      return;
+    }
+    // fall through to file preview modal below
+  } catch (err) {
+    console.error("previewFile error:", err);
     return;
   }
   const modal = document.getElementById("filePreviewModal");
@@ -3595,41 +3601,60 @@ let _mediaViewerHideUITimer = null;
 
 function collectMediaItems() {
   const items = [];
-  // Collect images
+  const seen = new Set();
+  const addItem = (url, filename, caption, type) => {
+    if (!url || seen.has(url)) return;
+    seen.add(url);
+    items.push({ url, filename: filename || "Media", caption: caption || "", type: type || "image" });
+  };
+  // Collect from chat messages
   document.querySelectorAll("#messagesArea .attachment-img").forEach((img) => {
     const link = img.closest("[data-preview-url]");
     if (!link) return;
     const url = link.dataset.previewUrl;
-    if (!url || items.some((i) => i.url === url)) return;
+    if (!url) return;
     const filename = link.dataset.filename || "Image";
     const caption = img.closest(".message-bubble")?.querySelector(".message-text")?.textContent?.slice(0, 120) || "";
-    items.push({ url, filename, caption, type: "image" });
+    addItem(url, filename, caption, "image");
   });
-  // Collect videos
   document.querySelectorAll("#messagesArea .video-attachment video").forEach((video) => {
     const url = video.querySelector("source")?.src || video.src || "";
-    if (!url || items.some((i) => i.url === url || i.url === video.currentSrc)) return;
-    const filename = "Video";
+    if (!url) return;
     const caption = video.closest(".message-bubble")?.querySelector(".message-text")?.textContent?.slice(0, 120) || "";
-    items.push({ url: url, filename, caption, type: "video" });
+    addItem(url, "Video", caption, "video");
+  });
+  // Collect from shared content (Media, Links, and Docs tabs)
+  document.querySelectorAll("#sharedContent .shared-media-item, #groupSharedContent .shared-media-item").forEach((btn) => {
+    const url = btn.dataset.previewUrl;
+    if (!url) return;
+    const filename = btn.dataset.filename || "Media";
+    addItem(url, filename, "", "image");
   });
   return items;
 }
 
 function openMediaViewer(url, filename, mediaType) {
-  const allItems = collectMediaItems();
-  let idx = allItems.findIndex((i) => i.url === url);
-  if (idx === -1) {
-    allItems.unshift({ url, filename, caption: "", type: mediaType || "image" });
-    idx = 0;
+  try {
+    const allItems = collectMediaItems();
+    let idx = allItems.findIndex((i) => i.url === url);
+    if (idx === -1) {
+      allItems.unshift({ url, filename: filename || "Media", caption: "", type: mediaType || "image" });
+      idx = 0;
+    }
+    _mediaViewerItems = allItems;
+    _mediaViewerIndex = idx;
+    _mediaViewerZoom = 1;
+    showMediaViewerSlide();
+    const viewer = document.getElementById("mediaViewer");
+    if (viewer) {
+      viewer.style.display = "flex";
+      viewer.style.transform = "";
+      viewer.style.opacity = "";
+    }
+    document.body.style.overflow = "hidden";
+  } catch (err) {
+    console.error("openMediaViewer error:", err);
   }
-  _mediaViewerItems = allItems;
-  _mediaViewerIndex = idx;
-  _mediaViewerZoom = 1;
-  showMediaViewerSlide();
-  const viewer = document.getElementById("mediaViewer");
-  if (viewer) viewer.style.display = "flex";
-  document.body.style.overflow = "hidden";
 }
 
 function showMediaViewerSlide() {
@@ -3690,6 +3715,32 @@ function downloadCurrentMedia() {
   a.click();
 }
 
+function shareCurrentMedia() {
+  const item = _mediaViewerItems[_mediaViewerIndex];
+  if (!item) return;
+  try {
+    const attachment = { url: item.url, filename: item.filename, type: item.type === "video" ? "video" : "image" };
+    if (typeof openForwardModalForMedia === "function") {
+      openForwardModalForMedia(attachment);
+    } else {
+      showToast("Forwarding is not available", "info");
+    }
+  } catch (_) {
+    showToast("Could not forward this media", "error");
+  }
+}
+
+function zoomMediaViewer(factor, reset) {
+  const img = document.getElementById("mediaViewerImg");
+  if (!img || img.style.display === "none") return;
+  if (reset) {
+    _mediaViewerZoom = 1;
+  } else {
+    _mediaViewerZoom = Math.max(1, Math.min(5, _mediaViewerZoom * factor));
+  }
+  img.style.transform = `scale(${_mediaViewerZoom})`;
+}
+
 function initMediaViewer() {
   const viewer = document.getElementById("mediaViewer");
   if (!viewer) return;
@@ -3698,32 +3749,63 @@ function initMediaViewer() {
   document.getElementById("mediaViewerDownloadBtn")?.addEventListener("click", downloadCurrentMedia);
   document.getElementById("mediaViewerPrev")?.addEventListener("click", () => navigateMediaViewer(-1));
   document.getElementById("mediaViewerNext")?.addEventListener("click", () => navigateMediaViewer(1));
+  document.getElementById("mediaViewerShareBtn")?.addEventListener("click", shareCurrentMedia);
+  document.getElementById("mediaViewerZoomIn")?.addEventListener("click", () => zoomMediaViewer(1.5));
+  document.getElementById("mediaViewerZoomOut")?.addEventListener("click", () => zoomMediaViewer(0.67));
+  document.getElementById("mediaViewerZoomReset")?.addEventListener("click", () => zoomMediaViewer(0, true));
 
-  // Click handler for videos and images in messages area
-  document.getElementById("messagesArea")?.addEventListener("click", (e) => {
-    const video = e.target.closest(".video-attachment video");
-    if (video && !e.target.closest("button, a")) {
-      e.preventDefault();
-      const url = video.currentSrc || video.src || video.querySelector("source")?.src || "";
-      if (url) openMediaViewer(url, "Video", "video");
-      return;
+  // Open media viewer / preview for any media element in the page
+  const openMediaOnClick = (e) => {
+    try {
+      // Video in chat messages
+      const video = e.target.closest(".video-attachment video");
+      if (video) {
+        e.preventDefault();
+        const url = video.currentSrc || video.src || video.querySelector("source")?.src || "";
+        if (url) { openMediaViewer(url, "Video", "video"); return; }
+      }
+      // Image in chat messages (<a> with data-preview-url)
+      const imgLink = e.target.closest(".image-attachment-link");
+      if (imgLink) {
+        e.preventDefault();
+        const url = imgLink.dataset.previewUrl || imgLink.href;
+        const filename = imgLink.dataset.filename || "Image";
+        if (url) { openMediaViewer(url, filename); return; }
+      }
+      // File attachment card
+      const fileCard = e.target.closest(".file-attachment-card");
+      if (fileCard) {
+        e.preventDefault();
+        const url = fileCard.dataset.previewUrl || fileCard.href;
+        const filename = fileCard.dataset.filename || "File";
+        if (url) { previewFile(url, filename); return; }
+      }
+      // Shared media thumbnail (<button class="shared-media-item">)
+      const sharedItem = e.target.closest(".shared-media-item");
+      if (sharedItem) {
+        e.preventDefault();
+        const url = sharedItem.dataset.previewUrl;
+        const filename = sharedItem.dataset.filename || "Media";
+        if (url) { openMediaViewer(url, filename); return; }
+      }
+      // Shared doc item (<button class="shared-list-item shared-open-item">)
+      const sharedDoc = e.target.closest(".shared-open-item");
+      if (sharedDoc) {
+        e.preventDefault();
+        const url = sharedDoc.dataset.previewUrl;
+        const filename = sharedDoc.dataset.filename || "File";
+        if (url) { previewFile(url, filename); return; }
+      }
+    } catch (err) {
+      console.error("Media click handler error:", err);
     }
-    const imgLink = e.target.closest(".image-attachment-link");
-    if (imgLink) {
-      e.preventDefault();
-      const url = imgLink.dataset.previewUrl || imgLink.href;
-      const filename = imgLink.dataset.filename || "Image";
-      if (url) openMediaViewer(url, filename);
-      return;
-    }
-    const fileCard = e.target.closest(".file-attachment-card");
-    if (fileCard) {
-      e.preventDefault();
-      const url = fileCard.dataset.previewUrl || fileCard.href;
-      const filename = fileCard.dataset.filename || "File";
-      if (url) previewFile(url, filename);
-    }
-  });
+  };
+
+  // Attach to messages area (chat messages)
+  document.getElementById("messagesArea")?.addEventListener("click", openMediaOnClick);
+  // Attach to shared content containers (Media, Links, and Docs tabs)
+  document.getElementById("sharedContent")?.addEventListener("click", openMediaOnClick);
+  document.getElementById("groupSharedContent")?.addEventListener("click", openMediaOnClick);
 
   // Keyboard
   document.addEventListener("keydown", (e) => {
@@ -3848,17 +3930,44 @@ function initMediaViewer() {
     const now = Date.now();
     if (now - lastTap < 300 && !_mediaViewerIsSwiping) {
       const img = document.getElementById("mediaViewerImg");
-      if (img) {
+      if (img && img.style.display !== "none") {
         if (_mediaViewerZoom > 1) {
           _mediaViewerZoom = 1;
           img.style.transform = "scale(1)";
         } else {
           _mediaViewerZoom = 3;
           img.style.transform = "scale(3)";
+          img.style.transformOrigin = "center center";
         }
       }
     }
     lastTap = now;
+  }, { passive: true });
+
+  // Swipe down to close
+  let swipeDownStartY = 0;
+  let swipeDownStarted = false;
+  stage.addEventListener("touchstart", (e) => {
+    if (_mediaViewerZoom > 1 || e.touches.length > 1) return;
+    swipeDownStartY = e.touches[0].clientY;
+    swipeDownStarted = false;
+  }, { passive: true });
+  stage.addEventListener("touchmove", (e) => {
+    if (_mediaViewerZoom > 1 || e.touches.length > 1) return;
+    const dy = e.touches[0].clientY - swipeDownStartY;
+    if (dy > 15) {
+      swipeDownStarted = true;
+      viewer.style.transform = `translateY(${dy * 0.5}px)`;
+      viewer.style.opacity = Math.max(0, 1 - dy / 300);
+    }
+  }, { passive: true });
+  stage.addEventListener("touchend", () => {
+    if (swipeDownStarted) {
+      viewer.style.transform = "";
+      viewer.style.opacity = "";
+      closeMediaViewer();
+      swipeDownStarted = false;
+    }
   }, { passive: true });
 
   // Click outside image to close

@@ -1976,14 +1976,6 @@ function bindRenderedMessageActions() {
       }
     });
   });
-  document.querySelectorAll("[data-preview-url]").forEach((el) => {
-    if (el.dataset.previewBound) return;
-    el.dataset.previewBound = "true";
-    el.addEventListener("click", (e) => {
-      e.preventDefault();
-      previewFile(el.dataset.previewUrl, el.dataset.filename);
-    });
-  });
   document.querySelectorAll(".view-once-placeholder").forEach((el) => {
     if (el.dataset.viewOnceBound) return;
     el.dataset.viewOnceBound = "true";
@@ -12214,21 +12206,6 @@ function renderSharedDocumentItem(message = {}) {
 }
 
 function bindSharedContentActions(root = document) {
-  // Preview on tap
-  root.querySelectorAll("[data-preview-url]").forEach((el) => {
-    if (el.dataset.sharedPreviewBound === "true") return;
-    el.dataset.sharedPreviewBound = "true";
-    el.addEventListener("click", (event) => {
-      event.preventDefault();
-      const url = el.dataset.previewUrl;
-      if (!url) {
-        showToast("Media is not available", "error");
-        return;
-      }
-      previewFile(url, el.dataset.filename || "Shared item");
-    });
-  });
-
   // Share button on media/doc items
   root.querySelectorAll("[data-share-attachment]").forEach((btn) => {
     if (btn.dataset.shareBound === "true") return;
