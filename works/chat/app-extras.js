@@ -3636,8 +3636,11 @@ function collectMediaItems() {
 function openMediaViewer(url, filename, mediaType) {
   console.log("[MEDIA] openMediaViewer called", url, filename, mediaType);
   try {
+    console.log("[MEDIA] collecting media items...");
     const allItems = collectMediaItems();
+    console.log("[MEDIA] collected", allItems.length, "items");
     let idx = allItems.findIndex((i) => i.url === url);
+    console.log("[MEDIA] found index:", idx);
     if (idx === -1) {
       allItems.unshift({ url, filename: filename || "Media", caption: "", type: mediaType || "image" });
       idx = 0;
@@ -3645,16 +3648,21 @@ function openMediaViewer(url, filename, mediaType) {
     _mediaViewerItems = allItems;
     _mediaViewerIndex = idx;
     _mediaViewerZoom = 1;
+    console.log("[MEDIA] calling showMediaViewerSlide...");
     showMediaViewerSlide();
+    console.log("[MEDIA] showMediaViewerSlide done, showing viewer...");
     const viewer = document.getElementById("mediaViewer");
+    console.log("[MEDIA] viewer element:", viewer);
     if (viewer) {
       viewer.style.display = "flex";
       viewer.style.transform = "";
       viewer.style.opacity = "";
+      console.log("[MEDIA] viewer display set to flex");
     }
     document.body.style.overflow = "hidden";
+    console.log("[MEDIA] openMediaViewer complete");
   } catch (err) {
-    console.error("openMediaViewer error:", err);
+    console.error("[MEDIA] openMediaViewer error:", err);
   }
 }
 
@@ -10675,7 +10683,7 @@ document.getElementById("closeSessionsModal")?.addEventListener("click", () => {
     status: "ok",
     timestamp: Date.now(),
     version: "2.0.0",
-    uptime: process?.uptime?.() || 0,
+    uptime: (typeof process !== "undefined" ? process?.uptime?.() : null) || 0,
     userCount: allUsers?.length || 0,
     memoryUsage: performance?.memory?.usedJSHeapSize || "unknown",
   };
