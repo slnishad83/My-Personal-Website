@@ -1656,3 +1656,40 @@ exports.adminListUsers = onCall(
     return { users: snap.docs.map(d => ({ id: d.id, ...d.data() })) };
   }
 );
+
+// ── Delete a user permanently ─────────────────────────────────────────────
+exports.adminDeleteUser = onCall(
+  { region: 'us-central1' },
+  async (request) => {
+    await assertAdmin(request.auth);
+    const { targetUid } = request.data || {};
+    if (!targetUid) throw new HttpsError('invalid-argument', 'Missing targetUid.');
+    if (targetUid === request.auth.uid) throw new HttpsError('invalid-argument', 'Cannot delete your own admin account.');
+
+    // Delete from Firebase Auth
+    try { await admin.auth().deleteUser(targetUid); } catch (_) {}
+
+    // Delete Firestore user document
+    try { await admin.firestore().collection('users').doc(targetUid).delete(); } catch (_) {}
+
+    // Remove all sessions
+    try {
+      const sessions = await admin.firestore()
+        .collection('userSessions').where('userId', '==', targetUid).get();
+      const batch = admin.firestore().batch();
+      sessions.docs.forEach(doc => batch.delete(doc.ref));
+      await batch.commit();
+    } catch (_) {}
+
+    // Remove username reservation
+    try {
+      const usernames = await admin.firestore()
+        .collection('usernames').where('uid', '==', targetUid).get();
+      const batch2 = admin.firestore().batch();
+      usernames.docs.forEach(doc => batch2.delete(doc.ref));
+      await batch2.commit();
+    } catch (_) {}
+
+    return { ok: true };
+  }
+);
