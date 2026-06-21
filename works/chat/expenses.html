@@ -204,7 +204,7 @@ function openModal(){
   // Split checkboxes
   document.getElementById('splitMembers').innerHTML=members.map(m=>`<div class="split-row"><span class="split-name">${esc(m.displayName||m.email)}</span><input type="checkbox" value="${m.id}" checked/></div>`).join('');
   // Emoji picker
-  document.getElementById('catEmojis').innerHTML='🍽️🛒🎬🚗⛽🏠🎁💊🛫🎉🏥☕'.split('').map(e=>`<span class="cat-emoji" onclick="selectIcon('${e}',this)">${e}</span>`).join('');
+  const expIcons=['🍽','🛒','🎬','🚗','⛽','🏠','🎁','💊','🛫','🎉','🏥','☕','🍕','🎮','💪','🐕','📚','✈','🎵','🎤','💻','🧾'];document.getElementById('catEmojis').innerHTML=expIcons.map(e=>`<span class="cat-emoji" onclick="selectIcon('${e}',this)">${e}</span>`).join('');
   document.getElementById('addModal').classList.add('show');
 }
 function closeModal(){document.getElementById('addModal').classList.remove('show');}
