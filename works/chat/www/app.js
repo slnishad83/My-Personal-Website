@@ -29020,3 +29020,575 @@ document.getElementById("closeSessionsModal")?.addEventListener("click", () => {
     return items;
   };
 })();
+
+/* ═══════════════════════════════════════════════════════════════════
+   WHATSAPP-PARITY CALL FEATURE PACK — 2026
+   Adds to existing call system:
+   1. Live network quality indicator (RTCPeerConnection.getStats)
+   2. Per-tile speaking indicators (AudioContext RMS level)
+   3. Group tile tap-to-pin (enlarges to main view, strip for rest)
+   4. Long-press tile → participant context menu (mute/pin/remove)
+   5. Incoming video call dual accept: Audio-only + Video buttons
+   6. Raised hand (group calls) synced via Firestore
+   7. Per-tile network quality badges
+   8. Responsive for all screen sizes (web, PWA, Capacitor Android)
+   All implemented as non-breaking patches over existing functions.
+═══════════════════════════════════════════════════════════════════ */
+(function CallFeaturePack() {
+  "use strict";
+
+  /* ── tiny helpers ──────────────────────────── */
+  const $  = id  => document.getElementById(id);
+  const qs = (s, r) => (r || document).querySelector(s);
+  const qsa = (s, r) => [...(r || document).querySelectorAll(s)];
+
+  /* ══════════════════════════════════════════════════════════════
+     1.  NETWORK QUALITY MONITOR
+         Polls every 2.5 s via RTCPeerConnection.getStats().
+         Shows 4-bar indicator (good/fair/poor) + RTT label.
+  ══════════════════════════════════════════════════════════════ */
+  let _nqTimer    = null;
+  let _nqRafQueue = [];
+  const RTT_GOOD  = 120;   // ms
+  const RTT_FAIR  = 300;
+  const LOSS_GOOD = 1.5;   // %
+  const LOSS_FAIR = 7;
+  const JIT_GOOD  = 30;    // ms
+  const JIT_FAIR  = 80;
+
+  function _getActivePCs() {
+    const list = [];
+    if (typeof peerConnection !== "undefined" && peerConnection?.connectionState)
+      list.push(peerConnection);
+    if (typeof groupCallPeerConnections !== "undefined")
+      groupCallPeerConnections.forEach(pc => pc?.connectionState && list.push(pc));
+    return list;
+  }
+
+  async function _sampleQuality() {
+    const pcs = _getActivePCs();
+    if (!pcs.length) return null;
+    let rttSum = 0, lossSum = 0, jitSum = 0, n = 0;
+    for (const pc of pcs) {
+      try {
+        const stats = await pc.getStats();
+        stats.forEach(r => {
+          if (r.type === "candidate-pair" && r.state === "succeeded" && r.nominated) {
+            if (r.currentRoundTripTime != null) { rttSum += r.currentRoundTripTime * 1000; n++; }
+          }
+          if (r.type === "inbound-rtp" && r.kind === "audio") {
+            const tot = (r.packetsReceived || 0) + (r.packetsLost || 0);
+            if (tot > 0) lossSum += (r.packetsLost / tot) * 100;
+            if (r.jitter != null) jitSum += r.jitter * 1000;
+          }
+        });
+      } catch {}
+    }
+    return n ? { rtt: rttSum / n, loss: lossSum, jitter: jitSum } : null;
+  }
+
+  function _qualityOf(s) {
+    if (!s) return "unknown";
+    if (s.rtt < RTT_GOOD && s.loss < LOSS_GOOD && s.jitter < JIT_GOOD) return "good";
+    if (s.rtt < RTT_FAIR && s.loss < LOSS_FAIR && s.jitter < JIT_FAIR) return "fair";
+    return "poor";
+  }
+
+  function _ensureNQEl() {
+    if ($("_nqInd")) return $("_nqInd");
+    const shell = qs(".call-shell");
+    if (!shell) return null;
+    const el = document.createElement("div");
+    el.id   = "_nqInd";
+    el.className = "call-network-indicator";
+    el.setAttribute("aria-label", "Network quality");
+    el.innerHTML =
+      `<div class="call-network-indicator-bars">` +
+      `<div class="call-network-bar"></div>`.repeat(4) +
+      `</div><span class="_nq-lbl"></span>`;
+    shell.appendChild(el);
+    return el;
+  }
+
+  function _updateNQUI(quality, sample) {
+    const el = _ensureNQEl();
+    if (!el) return;
+    el.className = "call-network-indicator " + (quality === "unknown" ? "" : quality);
+    const bars = qsa(".call-network-bar", el);
+    const fill = { good: 4, fair: 2, poor: 1, unknown: 0 }[quality] ?? 0;
+    bars.forEach((b, i) => b.classList.toggle("active", i < fill));
+    const lbl = qs("._nq-lbl", el);
+    if (lbl) lbl.textContent = sample ? Math.round(sample.rtt) + " ms" : "";
+  }
+
+  async function _nqPoll() {
+    const s = await _sampleQuality();
+    _updateNQUI(_qualityOf(s), s);
+    // Per-tile quality badges for group calls
+    _updateGroupTileQuality();
+  }
+
+  function startNetworkQualityMonitor() {
+    stopNetworkQualityMonitor();
+    _ensureNQEl();
+    _nqTimer = setInterval(_nqPoll, 2500);
+    _nqPoll();
+  }
+
+  function stopNetworkQualityMonitor() {
+    clearInterval(_nqTimer);
+    _nqTimer = null;
+    $("_nqInd")?.remove();
+  }
+
+  /* ══════════════════════════════════════════════════════════════
+     2.  SPEAKING INDICATORS
+         AudioContext RMS analysis per participant stream.
+         Adds pulsing green border when speaking.
+  ══════════════════════════════════════════════════════════════ */
+  const _speakMap = new Map();   // key → { ctx, raf, stopped }
+  const SPEAK_THRESH = 11;       // 0–255 RMS
+
+  function _attachSpeaking(tile, stream, key) {
+    if (!stream || !key || !tile) return;
+    _detachSpeaking(key);
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return;
+    try {
+      const ctx    = new AC({ sampleRate: 8000 });
+      const src    = ctx.createMediaStreamSource(stream);
+      const an     = ctx.createAnalyser();
+      an.fftSize   = 256;
+      src.connect(an);
+      const buf  = new Uint8Array(an.frequencyBinCount);
+      let rafId;
+      const entry = { ctx, rafId: null, stopped: false };
+      const loop = () => {
+        if (entry.stopped) return;
+        an.getByteTimeDomainData(buf);
+        let sq = 0;
+        for (let i = 0; i < buf.length; i++) { const v = buf[i] - 128; sq += v * v; }
+        const rms = Math.sqrt(sq / buf.length);
+        tile.classList.toggle("speaking", rms > SPEAK_THRESH);
+        entry.rafId = requestAnimationFrame(loop);
+      };
+      entry.rafId = requestAnimationFrame(loop);
+      _speakMap.set(key, entry);
+    } catch {}
+  }
+
+  function _detachSpeaking(key) {
+    const e = _speakMap.get(key);
+    if (!e) return;
+    e.stopped = true;
+    cancelAnimationFrame(e.rafId);
+    try { e.ctx.close(); } catch {}
+    _speakMap.delete(key);
+  }
+
+  function stopAllSpeaking() {
+    _speakMap.forEach((_, k) => _detachSpeaking(k));
+  }
+
+  /* ══════════════════════════════════════════════════════════════
+     3.  GROUP TILE PINNING
+         Single tap → pin tile to main stage, others to strip.
+         Double-tap or tap X → unpin.
+  ══════════════════════════════════════════════════════════════ */
+  let _pinnedUid = null;
+
+  function pinGroupCallTile(userId) {
+    const grid = $("groupCallGrid");
+    if (!grid) return;
+    if (_pinnedUid === userId) { unpinGroupCallTile(); return; }
+    _pinnedUid = userId;
+
+    // Ensure speaker view is active
+    const stage = qs(".call-video-stage");
+    if (stage && !stage.classList.contains("speaker-view")) {
+      stage.classList.add("speaker-view");
+      try { isSpeakerView = true; } catch {}
+      const vb = $("toggleViewBtn");
+      if (vb) { vb.textContent = "Grid"; vb.title = "Switch to grid view"; }
+    }
+
+    // Reclassify tiles
+    qsa(".group-call-tile", grid).forEach(t => {
+      const mine = t.dataset.userId === userId;
+      t.classList.toggle("pinned-main", mine);
+      t.classList.toggle("pinned-strip", !mine);
+      if (mine) grid.prepend(t);
+    });
+
+    // Unpin button
+    if (!$("_unpinBtn")) {
+      const btn = document.createElement("button");
+      btn.id = "_unpinBtn";
+      btn.className = "_unpin-btn";
+      btn.innerHTML = "&#10005; Unpin";
+      btn.onclick = unpinGroupCallTile;
+      stage?.appendChild(btn);
+    }
+
+    // Expand pinned tile video to fill
+    const pinned = qs(".group-call-tile.pinned-main", grid);
+    const vid = pinned?.querySelector("video");
+    if (vid) { vid.style.objectFit = "cover"; }
+  }
+
+  function unpinGroupCallTile() {
+    const grid = $("groupCallGrid");
+    _pinnedUid = null;
+    $("_unpinBtn")?.remove();
+    if (!grid) return;
+    qsa(".group-call-tile", grid).forEach(t => {
+      t.classList.remove("pinned-main", "pinned-strip");
+    });
+  }
+
+  /* ══════════════════════════════════════════════════════════════
+     4.  PARTICIPANT CONTEXT MENU
+         Long-press (≥ 500 ms) on any group tile opens a menu:
+         • Mute for me / Unmute for me
+         • Pin / Unpin
+         • Remove from call  (host only, not self)
+  ══════════════════════════════════════════════════════════════ */
+  function _showTileMenu(tile, event) {
+    $("_tileMenu")?.remove();
+    const userId = tile.dataset.userId;
+    const name   = qs(".group-call-name", tile)?.textContent?.replace(" 🔇","") || "Participant";
+    const isMe   = userId === currentUser?.uid;
+    const isHost = activeCall?.fromUserId === currentUser?.uid;
+    const isPinned = _pinnedUid === userId;
+    const audio  = tile.querySelector("audio");
+
+    const items = [];
+    if (!isMe) items.push({
+      label: audio?.muted ? "Unmute for me" : "Mute for me",
+      action: () => _toggleMuteForMe(tile)
+    });
+    items.push({
+      label: isPinned ? "Unpin" : "Pin to main view",
+      action: () => pinGroupCallTile(userId)
+    });
+    if (!isMe && isHost) items.push({
+      label: "Remove from call", danger: true,
+      action: () => _removeParticipant(userId, name)
+    });
+    if (!items.length) return;
+
+    const menu = document.createElement("div");
+    menu.id = "_tileMenu";
+    menu.className = "_tile-ctx-menu";
+    menu.innerHTML = `<div class="_tcm-header">${escapeHtml(name)}</div>` +
+      items.map((it, i) =>
+        `<button class="_tcm-item${it.danger?" _tcm-danger":""}" data-i="${i}">${escapeHtml(it.label)}</button>`
+      ).join("");
+    menu.querySelectorAll("._tcm-item").forEach(b =>
+      b.addEventListener("click", () => { items[+b.dataset.i].action(); menu.remove(); })
+    );
+
+    const shell = qs(".call-shell");
+    shell?.appendChild(menu);
+
+    // Position
+    const sr = shell.getBoundingClientRect();
+    const tr = tile.getBoundingClientRect();
+    const mx = Math.min(Math.max(tr.left - sr.left + 8, 8), sr.width - 220);
+    const my = Math.min(Math.max(tr.top  - sr.top  + 8, 8), sr.height - 160);
+    menu.style.left = mx + "px";
+    menu.style.top  = my + "px";
+
+    const close = ev => { if (!menu.contains(ev.target)) { menu.remove(); document.removeEventListener("pointerdown", close); } };
+    setTimeout(() => document.addEventListener("pointerdown", close), 80);
+  }
+
+  function _toggleMuteForMe(tile) {
+    const audio = tile.querySelector("audio");
+    if (!audio) return;
+    audio.muted = !audio.muted;
+    tile.classList.toggle("muted-for-me", audio.muted);
+    const label = qs(".group-call-name", tile);
+    if (label) {
+      const base = label.dataset.base || label.textContent.replace(" 🔇","");
+      label.dataset.base = base;
+      label.textContent  = audio.muted ? base + " 🔇" : base;
+    }
+    showToast(audio.muted ? "Muted for you" : "Unmuted", "info");
+  }
+
+  function _removeParticipant(userId, name) {
+    if (!confirm(`Remove ${name} from the call?`)) return;
+    if (!activeCall?.id) return;
+    db.collection("calls").doc(activeCall.id).update({
+      [`participantStates.${userId}`]: "removed"
+    }).then(() => showToast(`${name} removed`))
+      .catch(() => showToast("Could not remove participant", "error"));
+  }
+
+  /* ══════════════════════════════════════════════════════════════
+     5.  TILE GESTURE WIRING
+         Short tap → pin, long-press (≥ 500 ms) → context menu.
+  ══════════════════════════════════════════════════════════════ */
+  function _wireTileGestures(tile) {
+    if (tile.dataset.cfpWired) return;
+    tile.dataset.cfpWired = "1";
+
+    let pressId = null;
+    let didLong = false;
+
+    tile.addEventListener("pointerdown", e => {
+      didLong = false;
+      pressId = setTimeout(() => { didLong = true; _showTileMenu(tile, e); }, 500);
+    }, { passive: true });
+
+    tile.addEventListener("pointerup", () => {
+      clearTimeout(pressId);
+      pressId = null;
+      if (!didLong) pinGroupCallTile(tile.dataset.userId);
+    });
+
+    ["pointercancel","contextmenu"].forEach(ev =>
+      tile.addEventListener(ev, () => { clearTimeout(pressId); pressId = null; })
+    );
+  }
+
+  /* ══════════════════════════════════════════════════════════════
+     6.  INCOMING VIDEO CALL: DUAL ACCEPT BUTTONS
+         Audio-only  📞   Video  📹
+  ══════════════════════════════════════════════════════════════ */
+  function _enhanceIncomingUI(type) {
+    const acceptBtn = $("acceptCallBtn");
+    if (!acceptBtn) return;
+    // Remove any previously injected audio-accept
+    $("_acceptAudio")?.remove();
+    if (type !== "video") return;
+
+    // Style existing button as "Answer with Video"
+    acceptBtn.title = "Answer with video";
+    acceptBtn.setAttribute("aria-label", "Answer with video");
+    acceptBtn.dataset.controlLabel = "VIDEO";
+    acceptBtn.innerHTML = "📹";
+    acceptBtn.style.background = "#16a34a";
+    acceptBtn.style.width  = "68px";
+    acceptBtn.style.height = "68px";
+
+    // Inject audio-only accept
+    const aBtn = document.createElement("button");
+    aBtn.id = "_acceptAudio";
+    aBtn.className = "call-icon-btn";
+    aBtn.innerHTML = "📞";
+    aBtn.title = "Answer audio only";
+    aBtn.setAttribute("aria-label", "Answer audio only");
+    aBtn.dataset.controlLabel = "AUDIO";
+    aBtn.style.cssText = "background:#1e7e5c;width:68px;height:68px;font-size:22px;";
+    aBtn.addEventListener("click", () => {
+      // Force voice-only accept
+      window._cfpAudioOnlyAccept = true;
+      activeCall && (activeCall.type = "voice");
+      ($("acceptCallBtn"))?.click();
+    });
+    acceptBtn.parentNode?.insertBefore(aBtn, acceptBtn);
+
+    // Label each button
+    const wrap = acceptBtn.parentNode;
+    if (wrap) {
+      let lbl = wrap.querySelector("._dual-accept-label");
+      if (!lbl) {
+        lbl = document.createElement("div");
+        lbl.className = "_dual-accept-label";
+        lbl.innerHTML = `<span>Audio</span><span>Video</span>`;
+        wrap.appendChild(lbl);
+      }
+    }
+  }
+
+  /* ══════════════════════════════════════════════════════════════
+     7.  RAISED HAND
+  ══════════════════════════════════════════════════════════════ */
+  let _handRaised = false;
+
+  function toggleRaisedHand() {
+    _handRaised = !_handRaised;
+    const btn = $("_raiseHandBtn");
+    if (btn) { btn.classList.toggle("active", _handRaised); btn.title = _handRaised ? "Lower hand" : "Raise hand"; }
+    // Sync to Firestore
+    if (activeCall?.id && currentUser?.uid) {
+      const update = _handRaised
+        ? { [`raisedHands.${currentUser.uid}`]: true }
+        : { [`raisedHands.${currentUser.uid}`]: firebase.firestore.FieldValue.delete() };
+      db.collection("calls").doc(activeCall.id).update(update).catch(() => {});
+    }
+    // Show on my own tile
+    _setHandBadge(currentUser?.uid, _handRaised);
+    showToast(_handRaised ? "Hand raised ✋" : "Hand lowered", "info");
+  }
+
+  function _setHandBadge(uid, raised) {
+    const tile = qs(`.group-call-tile[data-user-id="${uid}"]`, $("groupCallGrid"));
+    if (!tile) return;
+    let badge = tile.querySelector("._hand-badge");
+    if (raised && !badge) { badge = document.createElement("span"); badge.className = "_hand-badge"; badge.textContent = "✋"; tile.appendChild(badge); }
+    else if (!raised && badge) badge.remove();
+  }
+
+  // Listen for other participants raising hands
+  let _handsUnsub = null;
+  function _watchRaisedHands() {
+    if (_handsUnsub || !activeCall?.id || !activeCall?.groupCall) return;
+    _handsUnsub = db.collection("calls").doc(activeCall.id).onSnapshot(snap => {
+      const hands = snap.data()?.raisedHands || {};
+      // Reset all badges
+      qsa(".group-call-tile").forEach(t => {
+        const uid = t.dataset.userId;
+        if (uid !== currentUser?.uid) _setHandBadge(uid, !!hands[uid]);
+      });
+    }, () => {});
+  }
+
+  /* ══════════════════════════════════════════════════════════════
+     8.  PER-TILE NETWORK QUALITY BADGE
+  ══════════════════════════════════════════════════════════════ */
+  async function _updateGroupTileQuality() {
+    if (!activeCall?.groupCall) return;
+    for (const [uid, pc] of groupCallPeerConnections) {
+      let rtt = null;
+      try {
+        const stats = await pc.getStats();
+        stats.forEach(r => {
+          if (r.type === "candidate-pair" && r.state === "succeeded" && r.nominated && r.currentRoundTripTime != null)
+            rtt = r.currentRoundTripTime * 1000;
+        });
+      } catch {}
+      const quality = rtt == null ? "unknown" : rtt < RTT_GOOD ? "good" : rtt < RTT_FAIR ? "fair" : "poor";
+      const tile = qs(`.group-call-tile[data-user-id="${uid}"]`, $("groupCallGrid"));
+      if (!tile) continue;
+      let badge = tile.querySelector("._tile-nq");
+      if (!badge) { badge = document.createElement("span"); badge.className = "_tile-nq"; tile.appendChild(badge); }
+      badge.className = `_tile-nq _tnq-${quality}`;
+      badge.textContent = quality === "good" ? "▐▐▐▐" : quality === "fair" ? "▐▐" : quality === "poor" ? "▐" : "";
+    }
+  }
+
+  /* ══════════════════════════════════════════════════════════════
+     9.  EXTRA CONTROL BUTTONS INJECTION
+  ══════════════════════════════════════════════════════════════ */
+  function _injectExtraButtons() {
+    const controls = qs(".call-controls");
+    if (!controls) return;
+
+    // Raise hand (group only)
+    if (!$("_raiseHandBtn")) {
+      const btn = document.createElement("button");
+      btn.id = "_raiseHandBtn";
+      btn.className = "call-icon-btn";
+      btn.innerHTML = "✋";
+      btn.title = "Raise hand";
+      btn.setAttribute("aria-label", "Raise hand");
+      btn.dataset.controlLabel = "HAND";
+      btn.style.display = activeCall?.groupCall ? "inline-flex" : "none";
+      btn.addEventListener("click", toggleRaisedHand);
+      const endBtn = $("endCallBtn");
+      if (endBtn) controls.insertBefore(btn, endBtn);
+      else controls.appendChild(btn);
+    }
+  }
+
+  /* ══════════════════════════════════════════════════════════════
+     HOOK INJECTION — non-breaking patches over existing functions
+  ══════════════════════════════════════════════════════════════ */
+
+  // Patch renderGroupCallTile → attach speaking indicator + wire gestures
+  if (typeof window.renderGroupCallTile === "function") {
+    const _orig = window.renderGroupCallTile;
+    window.renderGroupCallTile = function(userId, name, stream, isLocal) {
+      _orig.call(this, userId, name, stream, isLocal);
+      const grid = $("groupCallGrid");
+      if (!grid) return;
+      const tile = qs(`.group-call-tile[data-user-id="${userId}"]`, grid);
+      if (!tile) return;
+      _wireTileGestures(tile);
+      if (stream) _attachSpeaking(tile, stream, isLocal ? userId + "_local" : userId);
+    };
+  }
+
+  // Patch setCallUi → start NQ monitor + inject extra buttons + dual accept
+  if (typeof window.setCallUi === "function") {
+    const _orig = window.setCallUi;
+    window.setCallUi = function(opts = {}) {
+      _orig.call(this, opts);
+      const { mode, type } = opts;
+      if (mode === "active") {
+        setTimeout(() => {
+          startNetworkQualityMonitor();
+          _injectExtraButtons();
+          const rhBtn = $("_raiseHandBtn");
+          if (rhBtn) rhBtn.style.display = activeCall?.groupCall ? "inline-flex" : "none";
+          _watchRaisedHands();
+        }, 400);
+      }
+      if (mode === "incoming") {
+        setTimeout(() => _enhanceIncomingUI(type), 150);
+      }
+      if (!["active","incoming","outgoing"].includes(mode)) {
+        stopNetworkQualityMonitor();
+      }
+    };
+  }
+
+  // Patch cleanupGroupCallResources
+  if (typeof window.cleanupGroupCallResources === "function") {
+    const _orig = window.cleanupGroupCallResources;
+    window.cleanupGroupCallResources = function() {
+      stopAllSpeaking();
+      stopNetworkQualityMonitor();
+      unpinGroupCallTile();
+      if (_handsUnsub) { _handsUnsub(); _handsUnsub = null; }
+      _handRaised = false;
+      _orig.call(this);
+    };
+  }
+
+  // Patch stopLocalCallStream
+  if (typeof window.stopLocalCallStream === "function") {
+    const _orig = window.stopLocalCallStream;
+    window.stopLocalCallStream = function() {
+      stopAllSpeaking();
+      stopNetworkQualityMonitor();
+      unpinGroupCallTile();
+      _orig.call(this);
+    };
+  }
+
+  // Patch endActiveCall
+  if (typeof window.endActiveCall === "function") {
+    const _orig = window.endActiveCall;
+    window.endActiveCall = function(...a) {
+      stopAllSpeaking();
+      stopNetworkQualityMonitor();
+      unpinGroupCallTile();
+      if (_handsUnsub) { _handsUnsub(); _handsUnsub = null; }
+      _handRaised = false;
+      return _orig.apply(this, a);
+    };
+  }
+
+  // Patch endGroupCall
+  if (typeof window.endGroupCall === "function") {
+    const _orig = window.endGroupCall;
+    window.endGroupCall = function(...a) {
+      stopAllSpeaking();
+      stopNetworkQualityMonitor();
+      unpinGroupCallTile();
+      if (_handsUnsub) { _handsUnsub(); _handsUnsub = null; }
+      _handRaised = false;
+      return _orig.apply(this, a);
+    };
+  }
+
+  // Expose for debugging
+  window._cfp = { pinGroupCallTile, unpinGroupCallTile, toggleRaisedHand,
+                   startNetworkQualityMonitor, stopNetworkQualityMonitor };
+
+  console.log("[CFP] WhatsApp-parity call feature pack loaded");
+})();
