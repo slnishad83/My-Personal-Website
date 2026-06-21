@@ -1482,6 +1482,88 @@ exports.aiChatBot = onCall(
   }
 );
 
+// ── Summarize Thread ──────────────────────────────────────────────────────
+exports.summarizeThread = onCall(
+  { region: 'us-central1', secrets: [geminiApiKey] },
+  async (request) => {
+    if (!request.auth) throw new HttpsError('unauthenticated', 'Must be signed in.');
+    const { messageId } = request.data || {};
+    if (!messageId) throw new HttpsError('invalid-argument', 'Missing messageId.');
+
+    const apiKey = geminiApiKey.value();
+    if (!apiKey) throw new HttpsError('failed-precondition', 'GEMINI_API_KEY not configured.');
+
+    const snap = await admin.firestore()
+      .collection('messages').doc(messageId)
+      .collection('threadReplies')
+      .orderBy('timestamp', 'asc')
+      .limit(100)
+      .get();
+
+    if (snap.empty) throw new HttpsError('not-found', 'No replies to summarize yet.');
+
+    const replies = snap.docs.map(d => {
+      const data = d.data();
+      return `${data.senderName || 'User'}: ${data.text || '[media]'}`;
+    }).join('\n');
+
+    const prompt = `Summarize the following team chat thread into 3-5 concise bullet points. Each bullet should capture a key point, decision, or action item. Do not use markdown formatting — plain text only, one bullet per line starting with a dash.\n\nThread:\n${replies}`;
+
+    const geminiRes = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ role: 'user', parts: [{ text: prompt }] }],
+          generationConfig: { maxOutputTokens: 400, temperature: 0.4 }
+        })
+      }
+    );
+    if (!geminiRes.ok) {
+      const errText = await geminiRes.text();
+      throw new HttpsError('internal', `Gemini error: ${errText.substring(0, 200)}`);
+    }
+    const geminiData = await geminiRes.json();
+    const summary = geminiData?.candidates?.[0]?.content?.parts?.[0]?.text || 'Could not generate summary.';
+    return { summary };
+  }
+);
+
+// ── Explain Message ───────────────────────────────────────────────────────
+exports.explainMessage = onCall(
+  { region: 'us-central1', secrets: [geminiApiKey] },
+  async (request) => {
+    if (!request.auth) throw new HttpsError('unauthenticated', 'Must be signed in.');
+    const { text } = request.data || {};
+    if (!text) throw new HttpsError('invalid-argument', 'Missing message text.');
+
+    const apiKey = geminiApiKey.value();
+    if (!apiKey) throw new HttpsError('failed-precondition', 'GEMINI_API_KEY not configured.');
+
+    const prompt = `A user received this chat message and wants it explained clearly and briefly (2-4 sentences). Explain what it means, any implied context, tone, or intent. Be concise and friendly.\n\nMessage: "${text}"`;
+
+    const geminiRes = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ role: 'user', parts: [{ text: prompt }] }],
+          generationConfig: { maxOutputTokens: 300, temperature: 0.5 }
+        })
+      }
+    );
+    if (!geminiRes.ok) {
+      const errText = await geminiRes.text();
+      throw new HttpsError('internal', `Gemini error: ${errText.substring(0, 200)}`);
+    }
+    const geminiData = await geminiRes.json();
+    const explanation = geminiData?.candidates?.[0]?.content?.parts?.[0]?.text || 'Could not explain this message.';
+    return { explanation };
+  }
+);
+
 /** Extract a Firebase Storage file path from a download URL. */
 function _storagePathFromUrl(url) {
   try {
