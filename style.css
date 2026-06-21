@@ -826,3 +826,116 @@ body.dark .back-to-top-modern:hover {
         display: none;
     }
 }
+
+/* ========================================
+   DROPDOWN NAVIGATION
+   ======================================== */
+.nav-item-dropdown {
+    position: relative;
+}
+.dropdown-menu {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    background: var(--bg-primary);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    min-width: 200px;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-10px);
+    transition: all 0.2s ease;
+    z-index: 1000;
+    list-style: none;
+    padding: 0.5rem 0;
+    margin: 0;
+}
+.nav-item-dropdown:hover .dropdown-menu,
+.nav-item-dropdown.open .dropdown-menu {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+}
+.dropdown-menu li { padding: 0; }
+.dropdown-menu a {
+    display: block;
+    padding: 0.6rem 1.2rem;
+    color: var(--text-secondary);
+    text-decoration: none;
+    font-size: 0.9rem;
+    transition: all 0.2s;
+}
+.dropdown-menu a:hover {
+    background: var(--accent-light);
+    color: var(--accent);
+}
+.nav-works-btn {
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    font: inherit;
+    color: var(--text-secondary);
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    transition: color 0.2s;
+}
+.nav-works-btn:hover,
+.nav-works-btn:focus-visible { color: var(--accent); }
+.nav-works-arrow {
+    font-size: 10px;
+    transition: transform 0.25s ease;
+}
+.nav-item-dropdown.open .nav-works-arrow { transform: rotate(180deg); }
+@media (max-width: 768px) {
+    .nav-menu.active .nav-item-dropdown .dropdown-menu {
+        position: static;
+        opacity: 0;
+        visibility: hidden;
+        transform: translateY(-10px);
+        transition: all 0.2s ease;
+        box-shadow: none;
+        border: none;
+        padding-left: 1.5rem;
+        background: transparent;
+    }
+    .nav-menu.active .nav-item-dropdown.open .dropdown-menu {
+        opacity: 1;
+        visibility: visible;
+        transform: none;
+    }
+    .nav-menu.active .dropdown-menu a { padding: 0.5rem 0; }
+}
+
+/* Skills & Strengths badges */
+.skills-list span,
+.strengths-list span {
+    display: inline-block;
+    background: var(--accent-light);
+    color: var(--accent);
+    padding: 0.3rem 0.85rem;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 500;
+}
+body.dark .skills-list span,
+body.dark .strengths-list span {
+    background: var(--bg-tertiary);
+    color: var(--text-secondary);
+}
+
+/* Availability badge */
+.availability { margin-top: 1.5rem; }
+.status-badge {
+    display: inline-block;
+    padding: 0.3rem 0.85rem;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    margin-bottom: 0.5rem;
+}
+.status-badge.available { background: #dcfce7; color: #15803d; }
+body.dark .status-badge.available { background: #14532d; color: #86efac; }
