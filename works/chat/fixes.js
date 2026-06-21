@@ -1,5 +1,5 @@
 // ============================================================
-// fixes.js  v4 — My-Personal-Website chat app
+// fixes.js  v5 — My-Personal-Website chat app
 //
 // WhatsApp-style fullscreen media viewer:
 //   • Top bar  : filename + close button (solid, always visible)
@@ -807,5 +807,68 @@
   window.uploadDocument      = _uploadToStorage;
   window.uploadRecordedMedia = _uploadToStorage;
 
-  console.log("[fixes.js v4] Loaded — WhatsApp-style viewer ready.");
+  // ============================================================
+  // 14. BUG FIX — Profile name truncated in sidebar header
+  //     Root cause: hard pixel max-widths (190px / 160px) on
+  //     .user-name and .user-status-text clip text when the
+  //     "Get app" button is present on first load.
+  //     Fix: override with max-width:100% so they adapt to
+  //     whatever space the flex layout actually gives them.
+  // ============================================================
+  (function _fixProfileHeader() {
+    const id = "_fix_profile_style";
+    if (document.getElementById(id)) return;
+    const s = document.createElement("style");
+    s.id = id;
+    s.textContent = `
+/* Fix: profile name & status always fill available width without hard caps */
+.user-info > div:not(.user-avatar) {
+  overflow: hidden !important;
+  min-width: 0 !important;
+  flex: 1 1 0 !important;
+}
+.user-name {
+  max-width: 100% !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+.user-status-text {
+  max-width: 100% !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+  display: block !important;
+}
+`;
+    document.head.appendChild(s);
+  })();
+
+  // ============================================================
+  // 15. BUG FIX — Stray tick mark ✓ shown under direct-chat
+  //     contact names in the chat list.
+  //     Root cause: getChatListPreviewText() only suppresses
+  //     the preview for chatType==="direct", but Halid's entry
+  //     is typed "user" (directory lookup overlay), so the raw
+  //     lastMessage value ("✓") passes through unchanged.
+  //     Fix: patch the function to also return "" for "user"
+  //     type entries, and strip bare tick strings globally.
+  // ============================================================
+  (function _fixTickMarkInChatList() {
+    // Wait for app to define the function (it's in app-core.js
+    // which loads before fixes.js, so it's already on window).
+    const orig = window.getChatListPreviewText;
+    if (typeof orig !== "function") return; // safety guard
+
+    window.getChatListPreviewText = function (preview, chatType) {
+      // "user" items are directory contacts, never show a preview
+      if (chatType === "user") return "";
+      const result = orig.call(this, preview, chatType);
+      // Strip bare delivery-status ticks that leaked into lastMessage
+      if (/^[✓✔☑\u2713\u2714\u2611]+$/.test(result.trim())) return "";
+      return result;
+    };
+  })();
+
+  console.log("[fixes.js v5] Loaded — viewer + profile fix + tick fix.");
 })();
