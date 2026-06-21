@@ -125,6 +125,8 @@ function loadEvents(){
   db.collection('calendarEvents').orderBy('date','asc').onSnapshot(snap=>{
     allEvents=snap.docs.map(d=>({id:d.id,...d.data()}));
     renderCalendar();renderUpcoming();
+  }, err=>{
+    document.getElementById('upcomingList').innerHTML='<div class="empty-evt">Could not load events: '+err.message+'</div>';
   });
 }
 
