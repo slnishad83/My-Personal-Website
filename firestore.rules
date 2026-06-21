@@ -543,6 +543,10 @@ service cloud.firestore {
       allow create: if signedIn() && request.resource.data.userId == request.auth.uid;
       allow update, delete: if signedIn() && resource.data.userId == request.auth.uid;
     }
+    match /typingStatus/{chatKey} {
+      allow read: if signedIn();
+      allow write: if signedIn();
+    }
     match /{document=**} {
       allow read, write: if false;
     }
