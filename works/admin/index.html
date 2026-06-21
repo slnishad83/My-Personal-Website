@@ -1,0 +1,838 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="noindex,nofollow" />
+  <title>Team Chat — Admin Panel</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet" />
+
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-functions-compat.js"></script>
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --green: #008069;
+      --green-dark: #006d58;
+      --red: #ef4444;
+      --orange: #f97316;
+      --bg: #f0f2f5;
+      --card: #ffffff;
+      --border: #e2e8f0;
+      --text: #111b21;
+      --muted: #667781;
+      --sidebar-w: 220px;
+    }
+
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    /* ── LOGIN ── */
+    #loginScreen {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, #00574d 0%, #008069 50%, #00a884 100%);
+    }
+    .login-card {
+      background: #fff;
+      border-radius: 16px;
+      padding: 40px 36px;
+      width: min(420px, calc(100vw - 32px));
+      box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+    }
+    .login-card .logo { font-size: 32px; text-align: center; margin-bottom: 6px; }
+    .login-card h1 { text-align: center; font-size: 22px; font-weight: 700; color: var(--green); margin-bottom: 4px; }
+    .login-card p { text-align: center; color: var(--muted); font-size: 13px; margin-bottom: 28px; }
+    .login-card label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; color: var(--text); }
+    .login-card input {
+      width: 100%; padding: 11px 14px; border: 1.5px solid var(--border);
+      border-radius: 10px; font-size: 14px; font-family: inherit;
+      outline: none; margin-bottom: 16px; transition: border-color 0.2s;
+    }
+    .login-card input:focus { border-color: var(--green); }
+    .btn-primary {
+      width: 100%; padding: 12px; background: var(--green); color: #fff;
+      border: none; border-radius: 10px; font-size: 15px; font-weight: 600;
+      cursor: pointer; font-family: inherit; transition: background 0.2s;
+    }
+    .btn-primary:hover { background: var(--green-dark); }
+    .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
+    #loginError { color: var(--red); font-size: 13px; margin-top: 10px; text-align: center; min-height: 18px; }
+
+    /* ── APP SHELL ── */
+    #appShell { display: none; }
+    #appShell.visible { display: flex; min-height: 100vh; }
+
+    /* ── SIDEBAR ── */
+    .sidebar {
+      width: var(--sidebar-w);
+      background: #1a2a32;
+      color: #e9edef;
+      display: flex;
+      flex-direction: column;
+      flex-shrink: 0;
+      position: fixed;
+      top: 0; left: 0; bottom: 0;
+    }
+    .sidebar-header {
+      padding: 20px 16px 14px;
+      border-bottom: 1px solid rgba(255,255,255,0.07);
+    }
+    .sidebar-header .app-name { font-size: 15px; font-weight: 700; color: var(--green); }
+    .sidebar-header .admin-badge {
+      font-size: 10px; background: var(--green); color: #fff;
+      padding: 2px 7px; border-radius: 20px; font-weight: 600; letter-spacing: 0.5px;
+      display: inline-block; margin-top: 3px;
+    }
+    .sidebar-nav { flex: 1; padding: 10px 0; overflow-y: auto; }
+    .nav-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 16px; cursor: pointer; font-size: 13.5px;
+      border-radius: 0; transition: background 0.15s; color: #aebac1;
+      border: none; background: none; width: 100%; text-align: left; font-family: inherit;
+    }
+    .nav-item:hover { background: rgba(255,255,255,0.06); color: #e9edef; }
+    .nav-item.active { background: rgba(0,128,105,0.25); color: #e9edef; border-right: 3px solid var(--green); }
+    .nav-item .icon { font-size: 16px; width: 22px; flex-shrink: 0; }
+    .sidebar-footer {
+      padding: 14px 16px;
+      border-top: 1px solid rgba(255,255,255,0.07);
+    }
+    .sidebar-footer .admin-email { font-size: 11px; color: #667781; margin-bottom: 8px; word-break: break-all; }
+    .btn-signout {
+      width: 100%; padding: 8px; background: rgba(239,68,68,0.15); color: #ef4444;
+      border: 1px solid rgba(239,68,68,0.3); border-radius: 8px; font-size: 12px;
+      font-weight: 600; cursor: pointer; font-family: inherit; transition: background 0.2s;
+    }
+    .btn-signout:hover { background: rgba(239,68,68,0.25); }
+
+    /* ── MAIN ── */
+    .main-area {
+      margin-left: var(--sidebar-w);
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+    .top-bar {
+      background: #fff;
+      padding: 16px 28px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+    .top-bar h2 { font-size: 17px; font-weight: 700; }
+    .top-bar .stats-row { display: flex; gap: 20px; }
+    .stat-pill {
+      font-size: 12px; padding: 4px 12px;
+      background: var(--bg); border-radius: 20px; color: var(--muted);
+      font-weight: 500;
+    }
+    .stat-pill span { font-weight: 700; color: var(--text); }
+
+    .content-area { padding: 24px 28px; flex: 1; }
+
+    /* ── SECTION ── */
+    .section { display: none; }
+    .section.active { display: block; }
+
+    /* ── CARDS / STATS ── */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 16px;
+      margin-bottom: 28px;
+    }
+    .stat-card {
+      background: var(--card);
+      border-radius: 14px;
+      padding: 20px;
+      border: 1px solid var(--border);
+    }
+    .stat-card .stat-label { font-size: 12px; color: var(--muted); font-weight: 500; margin-bottom: 6px; }
+    .stat-card .stat-val { font-size: 28px; font-weight: 700; color: var(--text); }
+    .stat-card .stat-sub { font-size: 11px; color: var(--muted); margin-top: 2px; }
+    .stat-card.green .stat-val { color: var(--green); }
+    .stat-card.red .stat-val { color: var(--red); }
+    .stat-card.orange .stat-val { color: var(--orange); }
+
+    /* ── TABLE ── */
+    .table-card {
+      background: var(--card);
+      border-radius: 14px;
+      border: 1px solid var(--border);
+      overflow: hidden;
+    }
+    .table-toolbar {
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .table-toolbar h3 { font-size: 14px; font-weight: 700; flex: 1; }
+    .search-input {
+      padding: 7px 12px; border: 1.5px solid var(--border);
+      border-radius: 8px; font-size: 13px; font-family: inherit;
+      outline: none; min-width: 200px;
+    }
+    .search-input:focus { border-color: var(--green); }
+    .filter-select {
+      padding: 7px 12px; border: 1.5px solid var(--border);
+      border-radius: 8px; font-size: 13px; font-family: inherit;
+      outline: none; background: #fff; cursor: pointer;
+    }
+    table { width: 100%; border-collapse: collapse; }
+    th {
+      text-align: left; padding: 10px 14px; font-size: 11px;
+      font-weight: 700; color: var(--muted); text-transform: uppercase;
+      letter-spacing: 0.5px; background: var(--bg);
+      border-bottom: 1px solid var(--border);
+    }
+    td { padding: 11px 14px; font-size: 13px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: #f8fafc; }
+    .avatar-cell {
+      width: 34px; height: 34px; border-radius: 50%;
+      background: var(--green); color: #fff;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 13px; font-weight: 700; flex-shrink: 0;
+    }
+    .user-cell { display: flex; align-items: center; gap: 10px; }
+    .user-name { font-weight: 600; font-size: 13px; }
+    .user-email { font-size: 11px; color: var(--muted); }
+
+    .badge {
+      display: inline-block; padding: 2px 9px; border-radius: 20px;
+      font-size: 11px; font-weight: 600;
+    }
+    .badge.active { background: #dcfce7; color: #15803d; }
+    .badge.banned { background: #fee2e2; color: #b91c1c; }
+    .badge.pending { background: #fef3c7; color: #92400e; }
+    .badge.open { background: #fef3c7; color: #92400e; }
+    .badge.resolved { background: #dcfce7; color: #15803d; }
+    .badge.dismissed { background: #f1f5f9; color: #64748b; }
+
+    .actions-cell { display: flex; gap: 6px; flex-wrap: wrap; }
+    .btn-action {
+      padding: 5px 11px; border-radius: 7px; font-size: 12px; font-weight: 600;
+      cursor: pointer; border: 1.5px solid; font-family: inherit; transition: all 0.15s;
+      white-space: nowrap;
+    }
+    .btn-ban { color: var(--red); border-color: var(--red); background: transparent; }
+    .btn-ban:hover { background: #fee2e2; }
+    .btn-unban { color: var(--green); border-color: var(--green); background: transparent; }
+    .btn-unban:hover { background: #dcfce7; }
+    .btn-view { color: #3b82f6; border-color: #3b82f6; background: transparent; }
+    .btn-view:hover { background: #eff6ff; }
+    .btn-resolve { color: var(--green); border-color: var(--green); background: transparent; }
+    .btn-resolve:hover { background: #dcfce7; }
+    .btn-dismiss { color: var(--muted); border-color: var(--border); background: transparent; }
+    .btn-dismiss:hover { background: var(--bg); }
+    .btn-delete { color: var(--red); border-color: var(--red); background: transparent; }
+    .btn-delete:hover { background: #fee2e2; }
+
+    /* ── MODAL ── */
+    .modal-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.5);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 1000; opacity: 0; visibility: hidden;
+      transition: opacity 0.2s, visibility 0.2s;
+    }
+    .modal-overlay.show { opacity: 1; visibility: visible; }
+    .modal-box {
+      background: #fff; border-radius: 16px; padding: 28px;
+      width: min(480px, calc(100vw - 32px)); max-height: 80vh;
+      overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+    }
+    .modal-box h3 { font-size: 17px; font-weight: 700; margin-bottom: 16px; }
+    .modal-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
+    .modal-row:last-child { border-bottom: none; }
+    .modal-row .label { color: var(--muted); font-weight: 500; }
+    .modal-row .value { font-weight: 600; word-break: break-all; text-align: right; max-width: 60%; }
+    .modal-footer { margin-top: 18px; display: flex; gap: 10px; justify-content: flex-end; }
+    .btn-cancel {
+      padding: 9px 18px; border-radius: 9px; font-size: 13px; font-weight: 600;
+      cursor: pointer; border: 1.5px solid var(--border); background: #fff;
+      font-family: inherit; color: var(--text);
+    }
+    .btn-danger {
+      padding: 9px 18px; border-radius: 9px; font-size: 13px; font-weight: 600;
+      cursor: pointer; border: none; background: var(--red); color: #fff;
+      font-family: inherit;
+    }
+
+    /* ── TOAST ── */
+    #toastContainer { position: fixed; bottom: 20px; right: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 8px; }
+    .toast-msg {
+      padding: 12px 18px; border-radius: 10px; font-size: 13px; font-weight: 600;
+      color: #fff; max-width: 320px; box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+      animation: slideIn 0.3s ease;
+    }
+    .toast-msg.success { background: var(--green); }
+    .toast-msg.error { background: var(--red); }
+    @keyframes slideIn { from { transform: translateX(40px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+    .empty-state { padding: 48px; text-align: center; color: var(--muted); font-size: 14px; }
+    .empty-state .icon { font-size: 36px; margin-bottom: 10px; }
+
+    .loading-row td { text-align: center; padding: 32px; color: var(--muted); }
+
+    .report-reason { font-size: 12px; color: var(--muted); max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .report-excerpt { font-size: 12px; color: var(--text); max-width: 180px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+    @media (max-width: 700px) {
+      .sidebar { width: 60px; }
+      .sidebar .nav-item span, .sidebar-header .app-name,
+      .sidebar-header .admin-badge, .sidebar-footer .admin-email,
+      .sidebar-footer .btn-signout span { display: none; }
+      .main-area { margin-left: 60px; }
+      .content-area { padding: 16px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- LOGIN SCREEN -->
+<div id="loginScreen">
+  <div class="login-card">
+    <div class="logo">🛡️</div>
+    <h1>Admin Panel</h1>
+    <p>Team Chat — Restricted Access</p>
+    <label for="emailInput">Email</label>
+    <input type="email" id="emailInput" placeholder="admin email" autocomplete="username" />
+    <label for="pwdInput">Password</label>
+    <input type="password" id="pwdInput" placeholder="password" autocomplete="current-password" />
+    <button class="btn-primary" id="loginBtn" onclick="doLogin()">Sign In</button>
+    <div id="loginError"></div>
+  </div>
+</div>
+
+<!-- APP SHELL -->
+<div id="appShell">
+  <nav class="sidebar">
+    <div class="sidebar-header">
+      <div class="app-name">Team Chat</div>
+      <div class="admin-badge">ADMIN</div>
+    </div>
+    <div class="sidebar-nav">
+      <button class="nav-item active" onclick="showSection('dashboard')" data-sec="dashboard">
+        <span class="icon">📊</span><span>Dashboard</span>
+      </button>
+      <button class="nav-item" onclick="showSection('users')" data-sec="users">
+        <span class="icon">👥</span><span>Users</span>
+      </button>
+      <button class="nav-item" onclick="showSection('reports')" data-sec="reports">
+        <span class="icon">🚩</span><span>Reports</span>
+      </button>
+      <button class="nav-item" onclick="showSection('banned')" data-sec="banned">
+        <span class="icon">🚫</span><span>Banned</span>
+      </button>
+    </div>
+    <div class="sidebar-footer">
+      <div class="admin-email" id="adminEmailDisplay"></div>
+      <button class="btn-signout" onclick="doSignOut()"><span>Sign Out</span></button>
+    </div>
+  </nav>
+
+  <div class="main-area">
+    <div class="top-bar">
+      <h2 id="pageTitle">Dashboard</h2>
+      <div class="stats-row">
+        <div class="stat-pill">Users: <span id="topTotalUsers">—</span></div>
+        <div class="stat-pill">Banned: <span id="topBanned">—</span></div>
+        <div class="stat-pill">Open Reports: <span id="topReports">—</span></div>
+      </div>
+    </div>
+
+    <div class="content-area">
+
+      <!-- DASHBOARD -->
+      <div class="section active" id="sec-dashboard">
+        <div class="stats-grid">
+          <div class="stat-card green">
+            <div class="stat-label">Total Users</div>
+            <div class="stat-val" id="statTotal">—</div>
+            <div class="stat-sub">registered accounts</div>
+          </div>
+          <div class="stat-card red">
+            <div class="stat-label">Banned Users</div>
+            <div class="stat-val" id="statBanned">—</div>
+            <div class="stat-sub">access blocked</div>
+          </div>
+          <div class="stat-card orange">
+            <div class="stat-label">Open Reports</div>
+            <div class="stat-val" id="statReports">—</div>
+            <div class="stat-sub">awaiting review</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">User Reports</div>
+            <div class="stat-val" id="statUserReports">—</div>
+            <div class="stat-sub">total submitted</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Message Reports</div>
+            <div class="stat-val" id="statMsgReports">—</div>
+            <div class="stat-sub">total submitted</div>
+          </div>
+        </div>
+
+        <div class="table-card">
+          <div class="table-toolbar"><h3>🕐 Recently Joined Users</h3></div>
+          <table>
+            <thead><tr><th>User</th><th>Joined</th><th>Status</th><th>Actions</th></tr></thead>
+            <tbody id="recentUsersBody"><tr class="loading-row"><td colspan="4">Loading…</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- USERS -->
+      <div class="section" id="sec-users">
+        <div class="table-card">
+          <div class="table-toolbar">
+            <h3>All Users</h3>
+            <input class="search-input" type="text" placeholder="Search name or email…" id="userSearch" oninput="filterUsers()" />
+            <select class="filter-select" id="userFilter" onchange="filterUsers()">
+              <option value="all">All</option>
+              <option value="active">Active</option>
+              <option value="banned">Banned</option>
+            </select>
+          </div>
+          <table>
+            <thead><tr><th>User</th><th>Username</th><th>Joined</th><th>Status</th><th>Actions</th></tr></thead>
+            <tbody id="usersBody"><tr class="loading-row"><td colspan="5">Loading…</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- REPORTS -->
+      <div class="section" id="sec-reports">
+        <div class="table-card">
+          <div class="table-toolbar">
+            <h3>User & Message Reports</h3>
+            <select class="filter-select" id="reportFilter" onchange="filterReports()">
+              <option value="all">All</option>
+              <option value="open">Open</option>
+              <option value="resolved">Resolved</option>
+              <option value="dismissed">Dismissed</option>
+            </select>
+          </div>
+          <table>
+            <thead><tr><th>Type</th><th>Reported By</th><th>Target</th><th>Reason</th><th>Date</th><th>Status</th><th>Actions</th></tr></thead>
+          <tbody id="reportsBody"><tr class="loading-row"><td colspan="7">Loading…</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- BANNED -->
+      <div class="section" id="sec-banned">
+        <div class="table-card">
+          <div class="table-toolbar"><h3>🚫 Banned Users</h3></div>
+          <table>
+            <thead><tr><th>User</th><th>Banned On</th><th>Reason</th><th>Actions</th></tr></thead>
+            <tbody id="bannedBody"><tr class="loading-row"><td colspan="4">Loading…</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="modalOverlay" onclick="closeModal(event)">
+  <div class="modal-box" id="modalBox">
+    <h3 id="modalTitle">User Details</h3>
+    <div id="modalContent"></div>
+    <div class="modal-footer" id="modalFooter"></div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div id="toastContainer"></div>
+
+<script>
+  const ADMIN_EMAIL = 'sl.nishad@gmail.com';
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyCdbut_FdscAjl-OVSlAUhb7TOTiRNkh34",
+    authDomain: "my-team-chat-2255.firebaseapp.com",
+    projectId: "my-team-chat-2255",
+    storageBucket: "my-team-chat-2255.firebasestorage.app",
+    messagingSenderId: "805016891521",
+    appId: "1:805016891521:web:ac9bc7a252bcf33686dd80",
+  };
+  firebase.initializeApp(firebaseConfig);
+  const auth = firebase.auth();
+  const db = firebase.firestore();
+  const functions = firebase.functions();
+
+  let allUsers = [];
+  let allReports = [];
+  let currentSection = 'dashboard';
+
+  // ── AUTH ──────────────────────────────────────────────────────────────────
+  auth.onAuthStateChanged(user => {
+    if (user && user.email === ADMIN_EMAIL) {
+      document.getElementById('loginScreen').style.display = 'none';
+      document.getElementById('appShell').classList.add('visible');
+      document.getElementById('adminEmailDisplay').textContent = user.email;
+      loadAll();
+    } else if (user) {
+      auth.signOut();
+      showLoginError('Access denied. Admin only.');
+    }
+  });
+
+  async function doLogin() {
+    const email = document.getElementById('emailInput').value.trim();
+    const pwd = document.getElementById('pwdInput').value;
+    const btn = document.getElementById('loginBtn');
+    if (!email || !pwd) { showLoginError('Enter email and password.'); return; }
+    if (email !== ADMIN_EMAIL) { showLoginError('Access denied. Admin only.'); return; }
+    btn.disabled = true; btn.textContent = 'Signing in…';
+    showLoginError('');
+    try {
+      await auth.signInWithEmailAndPassword(email, pwd);
+    } catch (e) {
+      showLoginError(e.code === 'auth/wrong-password' || e.code === 'auth/invalid-credential'
+        ? 'Wrong password.' : e.message);
+      btn.disabled = false; btn.textContent = 'Sign In';
+    }
+  }
+
+  document.getElementById('pwdInput').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+
+  function showLoginError(msg) { document.getElementById('loginError').textContent = msg; }
+
+  function doSignOut() { auth.signOut().then(() => location.reload()); }
+
+  // ── NAVIGATION ────────────────────────────────────────────────────────────
+  function showSection(sec) {
+    currentSection = sec;
+    document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    document.getElementById('sec-' + sec).classList.add('active');
+    document.querySelector(`[data-sec="${sec}"]`).classList.add('active');
+    const titles = { dashboard: 'Dashboard', users: 'Users', reports: 'Reports', banned: 'Banned Users' };
+    document.getElementById('pageTitle').textContent = titles[sec] || sec;
+  }
+
+  // ── LOAD ALL DATA ─────────────────────────────────────────────────────────
+  async function loadAll() {
+    await Promise.all([loadUsers(), loadReports()]);
+    updateTopBar();
+  }
+
+  async function loadUsers() {
+    try {
+      const snap = await db.collection('users').orderBy('createdAt', 'desc').limit(500).get();
+      allUsers = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      renderUsers();
+      renderRecentUsers();
+      renderBanned();
+      updateStats();
+    } catch (e) {
+      console.error('loadUsers', e);
+      showToast('Failed to load users: ' + e.message, 'error');
+    }
+  }
+
+  async function loadReports() {
+    try {
+      const [userRep, msgRep] = await Promise.all([
+        db.collection('userReports').orderBy('createdAt', 'desc').limit(200).get().catch(() => ({ docs: [] })),
+        db.collection('messageReports').orderBy('createdAt', 'desc').limit(200).get().catch(() => ({ docs: [] }))
+      ]);
+      allReports = [
+        ...userRep.docs.map(d => ({ id: d.id, kind: 'user', ...d.data() })),
+        ...msgRep.docs.map(d => ({ id: d.id, kind: 'message', ...d.data() }))
+      ].sort((a, b) => {
+        const ta = a.createdAt?.toMillis?.() || 0;
+        const tb = b.createdAt?.toMillis?.() || 0;
+        return tb - ta;
+      });
+      renderReports();
+      updateStats();
+    } catch (e) {
+      console.error('loadReports', e);
+    }
+  }
+
+  // ── STATS ─────────────────────────────────────────────────────────────────
+  function updateStats() {
+    const total = allUsers.length;
+    const banned = allUsers.filter(u => u.banned).length;
+    const openReports = allReports.filter(r => !r.status || r.status === 'open').length;
+    const userRep = allReports.filter(r => r.kind === 'user').length;
+    const msgRep = allReports.filter(r => r.kind === 'message').length;
+
+    setEl('statTotal', total);
+    setEl('statBanned', banned);
+    setEl('statReports', openReports);
+    setEl('statUserReports', userRep);
+    setEl('statMsgReports', msgRep);
+  }
+
+  function updateTopBar() {
+    const total = allUsers.length;
+    const banned = allUsers.filter(u => u.banned).length;
+    const openReports = allReports.filter(r => !r.status || r.status === 'open').length;
+    setEl('topTotalUsers', total);
+    setEl('topBanned', banned);
+    setEl('topReports', openReports);
+  }
+
+  // ── USERS TABLE ───────────────────────────────────────────────────────────
+  function filterUsers() { renderUsers(); }
+
+  function renderUsers() {
+    const q = (document.getElementById('userSearch').value || '').toLowerCase();
+    const f = document.getElementById('userFilter').value;
+    let list = allUsers.filter(u => {
+      const matchQ = !q || (u.displayName || '').toLowerCase().includes(q) || (u.email || '').toLowerCase().includes(q) || (u.username || '').toLowerCase().includes(q);
+      const matchF = f === 'all' || (f === 'banned' ? u.banned : !u.banned);
+      return matchQ && matchF;
+    });
+    const tbody = document.getElementById('usersBody');
+    if (!list.length) { tbody.innerHTML = '<tr><td colspan="5"><div class="empty-state"><div class="icon">👤</div>No users found.</div></td></tr>'; return; }
+    tbody.innerHTML = list.map(u => `
+      <tr>
+        <td><div class="user-cell">
+          <div class="avatar-cell" style="${u.photoURL ? `background:url('${u.photoURL}') center/cover;color:transparent` : `background:${strColor(u.displayName)}`}">${u.photoURL ? '' : initials(u.displayName || u.email)}</div>
+          <div><div class="user-name">${esc(u.displayName || '—')}</div><div class="user-email">${esc(u.email || '—')}</div></div>
+        </div></td>
+        <td>${esc(u.username || '—')}</td>
+        <td>${fmtDate(u.createdAt)}</td>
+        <td><span class="badge ${u.banned ? 'banned' : 'active'}">${u.banned ? 'Banned' : 'Active'}</span></td>
+        <td><div class="actions-cell">
+          <button class="btn-action btn-view" onclick="viewUser('${u.id}')">View</button>
+          ${u.banned
+            ? `<button class="btn-action btn-unban" onclick="unbanUser('${u.id}','${esc(u.displayName||u.email)}')">Unban</button>`
+            : `<button class="btn-action btn-ban" onclick="confirmBan('${u.id}','${esc(u.displayName||u.email)}')">Ban</button>`}
+        </div></td>
+      </tr>`).join('');
+  }
+
+  function renderRecentUsers() {
+    const list = allUsers.slice(0, 10);
+    const tbody = document.getElementById('recentUsersBody');
+    if (!list.length) { tbody.innerHTML = '<tr><td colspan="4"><div class="empty-state">No users yet.</div></td></tr>'; return; }
+    tbody.innerHTML = list.map(u => `
+      <tr>
+        <td><div class="user-cell">
+          <div class="avatar-cell" style="${u.photoURL ? `background:url('${u.photoURL}') center/cover;color:transparent` : `background:${strColor(u.displayName)}`}">${u.photoURL ? '' : initials(u.displayName || u.email)}</div>
+          <div><div class="user-name">${esc(u.displayName || '—')}</div><div class="user-email">${esc(u.email || '—')}</div></div>
+        </div></td>
+        <td>${fmtDate(u.createdAt)}</td>
+        <td><span class="badge ${u.banned ? 'banned' : 'active'}">${u.banned ? 'Banned' : 'Active'}</span></td>
+        <td><div class="actions-cell">
+          <button class="btn-action btn-view" onclick="viewUser('${u.id}')">View</button>
+          ${u.banned
+            ? `<button class="btn-action btn-unban" onclick="unbanUser('${u.id}','${esc(u.displayName||u.email)}')">Unban</button>`
+            : `<button class="btn-action btn-ban" onclick="confirmBan('${u.id}','${esc(u.displayName||u.email)}')">Ban</button>`}
+        </div></td>
+      </tr>`).join('');
+  }
+
+  function renderBanned() {
+    const list = allUsers.filter(u => u.banned);
+    const tbody = document.getElementById('bannedBody');
+    if (!list.length) { tbody.innerHTML = '<tr><td colspan="4"><div class="empty-state"><div class="icon">✅</div>No banned users.</div></td></tr>'; return; }
+    tbody.innerHTML = list.map(u => `
+      <tr>
+        <td><div class="user-cell">
+          <div class="avatar-cell" style="background:${strColor(u.displayName)}">${initials(u.displayName || u.email)}</div>
+          <div><div class="user-name">${esc(u.displayName || '—')}</div><div class="user-email">${esc(u.email || '—')}</div></div>
+        </div></td>
+        <td>${fmtDate(u.bannedAt)}</td>
+        <td class="report-reason">${esc(u.banReason || '—')}</td>
+        <td><button class="btn-action btn-unban" onclick="unbanUser('${u.id}','${esc(u.displayName||u.email)}')">Unban</button></td>
+      </tr>`).join('');
+  }
+
+  // ── REPORTS TABLE ─────────────────────────────────────────────────────────
+  function filterReports() { renderReports(); }
+
+  function renderReports() {
+    const f = document.getElementById('reportFilter').value;
+    let list = allReports.filter(r => {
+      if (f === 'all') return true;
+      if (f === 'open') return !r.status || r.status === 'open';
+      return r.status === f;
+    });
+    const tbody = document.getElementById('reportsBody');
+    if (!list.length) { tbody.innerHTML = '<tr><td colspan="7"><div class="empty-state"><div class="icon">✅</div>No reports found.</div></td></tr>'; return; }
+    tbody.innerHTML = list.map(r => {
+      const status = r.status || 'open';
+      return `<tr>
+        <td><span class="badge ${r.kind === 'user' ? 'orange' : 'pending'}">${r.kind === 'user' ? '👤 User' : '💬 Message'}</span></td>
+        <td><div class="user-email">${esc(r.reporterEmail || r.reporterUserId || '—')}</div></td>
+        <td><div class="report-excerpt">${esc(r.reportedUserEmail || r.reportedUserId || r.messageText || '—')}</div></td>
+        <td><div class="report-reason">${esc(r.reason || '—')}</div></td>
+        <td>${fmtDate(r.createdAt)}</td>
+        <td><span class="badge ${status}">${status}</span></td>
+        <td><div class="actions-cell">
+          <button class="btn-action btn-view" onclick="viewReport('${r.id}','${r.kind}')">View</button>
+          ${status === 'open' ? `
+            <button class="btn-action btn-resolve" onclick="updateReportStatus('${r.id}','${r.kind}','resolved')">Resolve</button>
+            <button class="btn-action btn-dismiss" onclick="updateReportStatus('${r.id}','${r.kind}','dismissed')">Dismiss</button>
+          ` : ''}
+          ${r.kind === 'user' && r.reportedUserId ? `<button class="btn-action btn-ban" onclick="confirmBan('${r.reportedUserId}','${esc(r.reportedUserEmail||r.reportedUserId)}')">Ban User</button>` : ''}
+        </div></td>
+      </tr>`;
+    }).join('');
+  }
+
+  // ── ACTIONS ───────────────────────────────────────────────────────────────
+  function viewUser(uid) {
+    const u = allUsers.find(x => x.id === uid);
+    if (!u) return;
+    openModal('User Details', `
+      <div class="modal-row"><span class="label">Name</span><span class="value">${esc(u.displayName || '—')}</span></div>
+      <div class="modal-row"><span class="label">Email</span><span class="value">${esc(u.email || '—')}</span></div>
+      <div class="modal-row"><span class="label">Username</span><span class="value">${esc(u.username || '—')}</span></div>
+      <div class="modal-row"><span class="label">UID</span><span class="value" style="font-size:11px">${esc(u.id)}</span></div>
+      <div class="modal-row"><span class="label">Joined</span><span class="value">${fmtDate(u.createdAt)}</span></div>
+      <div class="modal-row"><span class="label">Status</span><span class="value"><span class="badge ${u.banned ? 'banned' : 'active'}">${u.banned ? 'Banned' : 'Active'}</span></span></div>
+      ${u.banned ? `<div class="modal-row"><span class="label">Ban Reason</span><span class="value">${esc(u.banReason || '—')}</span></div>` : ''}
+    `, [
+      { label: 'Close', cls: 'btn-cancel', action: 'closeModal()' },
+      u.banned
+        ? { label: 'Unban', cls: 'btn-action btn-unban', action: `unbanUser('${u.id}','${esc(u.displayName||u.email)}');closeModalDirect()` }
+        : { label: 'Ban User', cls: 'btn-danger', action: `confirmBan('${u.id}','${esc(u.displayName||u.email)}');closeModalDirect()` }
+    ]);
+  }
+
+  function viewReport(id, kind) {
+    const r = allReports.find(x => x.id === id && x.kind === kind);
+    if (!r) return;
+    openModal('Report Details', `
+      <div class="modal-row"><span class="label">Type</span><span class="value">${r.kind === 'user' ? 'User Report' : 'Message Report'}</span></div>
+      <div class="modal-row"><span class="label">Reporter</span><span class="value">${esc(r.reporterEmail || r.reporterUserId || '—')}</span></div>
+      <div class="modal-row"><span class="label">Reported</span><span class="value">${esc(r.reportedUserEmail || r.reportedUserId || '—')}</span></div>
+      <div class="modal-row"><span class="label">Reason</span><span class="value">${esc(r.reason || '—')}</span></div>
+      ${r.messageText ? `<div class="modal-row"><span class="label">Message</span><span class="value">${esc(r.messageText)}</span></div>` : ''}
+      <div class="modal-row"><span class="label">Status</span><span class="value"><span class="badge ${r.status || 'open'}">${r.status || 'open'}</span></span></div>
+      <div class="modal-row"><span class="label">Date</span><span class="value">${fmtDate(r.createdAt)}</span></div>
+    `, [{ label: 'Close', cls: 'btn-cancel', action: 'closeModal()' }]);
+  }
+
+  function confirmBan(uid, name) {
+    openModal('Ban User', `
+      <p style="font-size:14px;margin-bottom:16px;">Are you sure you want to ban <strong>${esc(name)}</strong>? They will be logged out and unable to access the app.</p>
+      <label style="font-size:13px;font-weight:600;display:block;margin-bottom:6px;">Reason (optional)</label>
+      <input type="text" id="banReasonInput" class="search-input" style="width:100%" placeholder="e.g. Violation of community rules" />
+    `, [
+      { label: 'Cancel', cls: 'btn-cancel', action: 'closeModal()' },
+      { label: 'Confirm Ban', cls: 'btn-danger', action: `execBan('${uid}','${esc(name)}')` }
+    ]);
+  }
+
+  async function execBan(uid, name) {
+    closeModalDirect();
+    const reason = document.getElementById('banReasonInput')?.value || '';
+    try {
+      const adminAction = functions.httpsCallable('adminBanUser');
+      await adminAction({ targetUid: uid, reason });
+      showToast(`${name} has been banned.`);
+      await loadUsers();
+      updateTopBar();
+    } catch (e) {
+      showToast('Ban failed: ' + e.message, 'error');
+    }
+  }
+
+  async function unbanUser(uid, name) {
+    closeModalDirect();
+    try {
+      const adminAction = functions.httpsCallable('adminUnbanUser');
+      await adminAction({ targetUid: uid });
+      showToast(`${name} has been unbanned.`);
+      await loadUsers();
+      updateTopBar();
+    } catch (e) {
+      showToast('Unban failed: ' + e.message, 'error');
+    }
+  }
+
+  async function updateReportStatus(id, kind, status) {
+    try {
+      const col = kind === 'user' ? 'userReports' : 'messageReports';
+      await db.collection(col).doc(id).update({ status, resolvedAt: firebase.firestore.FieldValue.serverTimestamp(), resolvedBy: auth.currentUser?.uid });
+      showToast(`Report marked as ${status}.`);
+      const r = allReports.find(x => x.id === id && x.kind === kind);
+      if (r) r.status = status;
+      renderReports();
+      updateStats();
+      updateTopBar();
+    } catch (e) {
+      showToast('Update failed: ' + e.message, 'error');
+    }
+  }
+
+  // ── MODAL ─────────────────────────────────────────────────────────────────
+  function openModal(title, content, buttons = []) {
+    document.getElementById('modalTitle').textContent = title;
+    document.getElementById('modalContent').innerHTML = content;
+    document.getElementById('modalFooter').innerHTML = buttons.map(b =>
+      `<button class="${b.cls}" onclick="${b.action}">${b.label}</button>`
+    ).join('');
+    document.getElementById('modalOverlay').classList.add('show');
+  }
+
+  function closeModal(e) {
+    if (e && e.target !== document.getElementById('modalOverlay')) return;
+    closeModalDirect();
+  }
+
+  function closeModalDirect() {
+    document.getElementById('modalOverlay').classList.remove('show');
+  }
+
+  // ── TOAST ─────────────────────────────────────────────────────────────────
+  function showToast(msg, type = 'success') {
+    const t = document.createElement('div');
+    t.className = `toast-msg ${type}`;
+    t.textContent = msg;
+    document.getElementById('toastContainer').appendChild(t);
+    setTimeout(() => t.remove(), 3500);
+  }
+
+  // ── HELPERS ───────────────────────────────────────────────────────────────
+  function esc(s) {
+    return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+  }
+  function initials(name = '') {
+    return name.trim().split(/\s+/).map(w => w[0]).join('').toUpperCase().slice(0,2) || '?';
+  }
+  function strColor(name = '') {
+    const colors = ['#008069','#0284c7','#7c3aed','#db2777','#d97706','#059669','#dc2626'];
+    let h = 0; for (let i = 0; i < name.length; i++) h = name.charCodeAt(i) + ((h << 5) - h);
+    return colors[Math.abs(h) % colors.length];
+  }
+  function fmtDate(ts) {
+    if (!ts) return '—';
+    const d = ts.toDate ? ts.toDate() : new Date(ts);
+    return d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+  }
+  function setEl(id, val) { const el = document.getElementById(id); if (el) el.textContent = val; }
+</script>
+</body>
+</html>
