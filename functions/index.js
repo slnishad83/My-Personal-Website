@@ -1,6 +1,7 @@
 const admin = require('firebase-admin');
 const { onRequest } = require('firebase-functions/v2/https');
 const { onDocumentCreated, onDocumentUpdated, onDocumentDeleted } = require('firebase-functions/v2/firestore');
+const { onSchedule } = require('firebase-functions/v2/scheduler');
 const { defineSecret } = require('firebase-functions/params');
 
 if (!admin.apps.length) {
@@ -1256,3 +1257,146 @@ if (hasSuccessfulDelivery) {
     return null;
   }
 );
+
+// ============================================================
+// STORAGE CLEANUP — safe, never touches active chat media
+// ============================================================
+
+/**
+ * Triggered when a message document is deleted.
+ * If the deleted message had a Firebase Storage attachment,
+ * delete the file from Storage too — but ONLY if no other
+ * message still references that same URL.
+ *
+ * This covers: "delete for everyone", manual deletes, etc.
+ * It does NOT touch Cloudinary URLs (legacy) or any file
+ * whose URL still appears in another message.
+ */
+exports.cleanupMessageAttachment = onDocumentDeleted(
+  'messages/{messageId}',
+  async (event) => {
+    const data = event.data && event.data.data();
+    if (!data) return null;
+
+    const attachment = data.attachment;
+    if (!attachment || !attachment.url) return null;
+
+    const url = attachment.url;
+
+    // Only handle Firebase Storage URLs for this project
+    const storageBucket = admin.storage().bucket().name;
+    if (!url.includes(storageBucket) && !url.includes('firebasestorage.googleapis.com')) {
+      return null; // Cloudinary or other CDN — skip
+    }
+
+    // Safety check: does any other message still reference this URL?
+    const db = admin.firestore();
+    const stillInUse = await db.collection('messages')
+      .where('attachment.url', '==', url)
+      .limit(1)
+      .get();
+
+    if (!stillInUse.empty) {
+      console.log('[cleanup] URL still referenced in another message, skipping:', url);
+      return null;
+    }
+
+    // Extract storage path from the download URL
+    try {
+      const filePath = _storagePathFromUrl(url);
+      if (!filePath) return null;
+      await admin.storage().bucket().file(filePath).delete();
+      console.log('[cleanup] Deleted attachment file:', filePath);
+    } catch (err) {
+      // File may already be gone — not an error worth surfacing
+      console.warn('[cleanup] Could not delete attachment:', err.message);
+    }
+
+    return null;
+  }
+);
+
+/**
+ * Weekly scheduled job — removes orphaned uploads.
+ * An orphaned upload is a file in chat_uploads/ that:
+ *   1. Was uploaded more than 7 days ago
+ *   2. Is NOT referenced in any Firestore message
+ *
+ * This catches files where the upload succeeded but the
+ * message send failed (e.g. network drop after upload).
+ *
+ * Run schedule: every Sunday at 02:00 UTC.
+ * Safe: it checks Firestore before deleting anything.
+ */
+exports.weeklyOrphanedUploadCleanup = onSchedule(
+  { schedule: '0 2 * * 0', timeZone: 'UTC', region: 'us-central1' },
+  async () => {
+    const bucket = admin.storage().bucket();
+    const db = admin.firestore();
+    const cutoffMs = Date.now() - 7 * 24 * 60 * 60 * 1000; // 7 days ago
+
+    const [files] = await bucket.getFiles({ prefix: 'chat_uploads/' });
+
+    let deleted = 0;
+    let skipped = 0;
+
+    for (const file of files) {
+      const meta = file.metadata;
+      const updatedMs = meta.updated ? new Date(meta.updated).getTime() : 0;
+
+      // Only consider files older than 7 days
+      if (updatedMs > cutoffMs) { skipped++; continue; }
+
+      // Build the public download URL to check against Firestore
+      const encodedPath = encodeURIComponent(file.name).replace(/%2F/g, '%2F');
+      const bucketName = bucket.name;
+      const urlPattern = `https://firebasestorage.googleapis.com/v0/b/${bucketName}/o/${encodedPath}`;
+
+      // Check if any message still references this file
+      const refs = await db.collection('messages')
+        .where('attachment.url', '>=', urlPattern)
+        .where('attachment.url', '<', urlPattern + '\uf8ff')
+        .limit(1)
+        .get();
+
+      if (!refs.empty) { skipped++; continue; }
+
+      // Also check getDownloadURL style URLs (alt=media suffix)
+      const refsAlt = await db.collection('messages')
+        .where('attachment.url', '>=', 'https://firebasestorage.googleapis.com')
+        .limit(1)
+        .get();
+
+      // For safety, do a simple string search across results
+      const stillUsed = refsAlt.docs.some((doc) => {
+        const u = doc.data()?.attachment?.url || '';
+        return u.includes(encodeURIComponent(file.name));
+      });
+
+      if (stillUsed) { skipped++; continue; }
+
+      try {
+        await file.delete();
+        deleted++;
+        console.log('[weeklyCleanup] Deleted orphan:', file.name);
+      } catch (err) {
+        console.warn('[weeklyCleanup] Failed to delete:', file.name, err.message);
+      }
+    }
+
+    console.log(`[weeklyCleanup] Done. Deleted: ${deleted}, Skipped/active: ${skipped}`);
+    return null;
+  }
+);
+
+/** Extract a Firebase Storage file path from a download URL. */
+function _storagePathFromUrl(url) {
+  try {
+    // Format: .../o/chat_uploads%2Fuid%2Ffilename?alt=media&...
+    const match = url.match(/\/o\/([^?#]+)/);
+    if (!match) return null;
+    return decodeURIComponent(match[1]);
+  } catch (_) {
+    return null;
+  }
+}
