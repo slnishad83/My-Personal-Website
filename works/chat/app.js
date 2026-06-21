@@ -13053,8 +13053,20 @@ function loadMessages() {
             ${msg.editedAt ? '<span class="message-edited">edited</span>' : ""}
             ${getMessageReceiptHtml(msg, isMyMessage)}
           </div>
+          ${(msg.threadCount > 0) ? `<button type="button" class="thread-count-badge" aria-label="Open thread with ${msg.threadCount} ${msg.threadCount === 1 ? 'reply' : 'replies'}"><span class="thread-count-icon">💬</span> ${msg.threadCount} ${msg.threadCount === 1 ? "reply" : "replies"}${msg.lastThreadSenderName ? ` · ${escapeHtml(msg.lastThreadSenderName)}` : ""}</button>` : ""}
         </div>
       `;
+        // Bind thread badge click
+        const threadBadge = messageDiv.querySelector(".thread-count-badge");
+        if (threadBadge) {
+          threadBadge.addEventListener("click", (e) => {
+            e.stopPropagation();
+            if (typeof openThreadPanel === "function") {
+              openThreadPanel(doc.id, { ...msg, messageId: doc.id });
+            }
+          });
+        }
+
         messageDiv.addEventListener("contextmenu", (e) => {
           e.preventDefault();
           showContextMenu(e.clientX, e.clientY, doc.id, msg, isMyMessage);
@@ -13377,6 +13389,11 @@ async function sendMessage() {
         text.toLowerCase().includes("happy"))
     ) {
       setTimeout(() => triggerMessageEffect("confetti"), 300);
+    }
+
+    // AI bot trigger — fires if message contains @AI or @AIBot
+    if (text && typeof triggerAiBotIfMentioned === "function") {
+      triggerAiBotIfMentioned(text, currentChat.id, currentChatType);
     }
 
     loadCurrentChatList();
@@ -14663,6 +14680,7 @@ function showContextMenu(x, y, messageId, messageData, isMyMessage) {
         ]
       : []),
     { text: "Reply", action: () => setReplyTo({ ...messageData, messageId }) },
+    { text: "Open Thread", action: () => (typeof openThreadPanel === "function") && openThreadPanel(messageId, { ...messageData, messageId }) },
     { text: "Star Message", action: () => starMessage(messageId, messageData) },
     { text: "Pin Message", action: () => pinMessage(messageId, messageData) },
     {
