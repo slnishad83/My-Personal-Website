@@ -55,34 +55,18 @@ function removeAiBotThinkingBubble(id) {
 }
 
 // Call the Firebase Cloud Function which calls Gemini and posts the reply
+// Uses httpsCallable — auth is handled automatically by the Firebase SDK
 async function callAiBotFunction(prompt, chatId, chatType) {
-  const projectId = (typeof firebaseConfig !== "undefined" && firebaseConfig.projectId)
-    || firebase.app().options.projectId
-    || "";
-
-  if (!projectId) {
-    throw new Error("Firebase project ID not found");
-  }
-
-  const region = "us-central1";
-  const functionUrl = `https://${region}-${projectId}.cloudfunctions.net/aiChatBot`;
-
-  const idToken = await currentUser.getIdToken(false);
-
-  const resp = await fetch(functionUrl, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${idToken}`,
-    },
-    body: JSON.stringify({ prompt, chatId, chatType, senderName: currentUser.displayName || currentUser.email }),
-    signal: AbortSignal.timeout(35000),
+  const functions = firebase.functions();
+  // If you deployed to a non-default region, set it here:
+  // firebase.app().functions("us-central1")
+  const aiChatBot = functions.httpsCallable("aiChatBot", { timeout: 35000 });
+  await aiChatBot({
+    prompt,
+    chatId,
+    chatType,
+    senderName: currentUser.displayName || currentUser.email || "User",
   });
-
-  if (!resp.ok) {
-    const body = await resp.text().catch(() => "");
-    throw new Error(`AI function returned ${resp.status}: ${body}`);
-  }
 }
 
 // Main entry — called from sendMessage after the user's message is saved
