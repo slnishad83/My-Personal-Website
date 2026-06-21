@@ -1389,6 +1389,113 @@ exports.weeklyOrphanedUploadCleanup = onSchedule(
   }
 );
 
+// ========================================
+// AI CHAT BOT — powered by Google Gemini
+// ========================================
+// Setup: firebase functions:secrets:set GEMINI_API_KEY
+// Then deploy: firebase deploy --only functions:aiChatBot
+
+const geminiApiKey = defineSecret('GEMINI_API_KEY');
+
+exports.aiChatBot = onRequest(
+  { secrets: [geminiApiKey], cors: true, region: BACKEND_RUNTIME_GENERATION === 'nodejs22' ? 'us-central1' : 'us-central1' },
+  async (req, res) => {
+    if (req.method === 'OPTIONS') {
+      res.set('Access-Control-Allow-Origin', '*');
+      res.set('Access-Control-Allow-Headers', 'Content-Type,Authorization');
+      res.set('Access-Control-Allow-Methods', 'POST,OPTIONS');
+      return res.sendStatus(204);
+    }
+    res.set('Access-Control-Allow-Origin', '*');
+
+    if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+
+    // Verify Firebase ID token
+    const authHeader = req.headers.authorization || '';
+    const idToken = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
+    if (!idToken) return res.status(401).json({ error: 'Unauthorized' });
+
+    let decodedToken;
+    try {
+      decodedToken = await admin.auth().verifyIdToken(idToken);
+    } catch (err) {
+      return res.status(401).json({ error: 'Invalid token' });
+    }
+
+    const { prompt, chatId, chatType, senderName } = req.body || {};
+    if (!prompt || !chatId || !chatType) {
+      return res.status(400).json({ error: 'Missing prompt, chatId, or chatType' });
+    }
+
+    const apiKey = geminiApiKey.value();
+    if (!apiKey) {
+      return res.status(503).json({ error: 'GEMINI_API_KEY secret not configured' });
+    }
+
+    // Fetch recent chat messages for context (last 10)
+    let contextMessages = '';
+    try {
+      const snap = await admin.firestore()
+        .collection('messages')
+        .where(chatType === 'direct' ? 'directId' : 'groupId', '==', chatId)
+        .orderBy('timestamp', 'desc')
+        .limit(10)
+        .get();
+      const recent = snap.docs.reverse().map(d => {
+        const data = d.data();
+        return `${data.senderName || 'User'}: ${data.text || '[media]'}`;
+      }).join('\n');
+      if (recent) contextMessages = `\nRecent conversation:\n${recent}\n`;
+    } catch (_) {}
+
+    const systemPrompt = `You are a helpful AI assistant inside a team chat app called Team Chat. Be concise, friendly, and helpful.${contextMessages}`;
+
+    try {
+      const geminiRes = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [
+              { role: 'user', parts: [{ text: `${systemPrompt}\n\nUser asks: ${prompt}` }] }
+            ],
+            generationConfig: { maxOutputTokens: 800, temperature: 0.7 }
+          })
+        }
+      );
+
+      if (!geminiRes.ok) {
+        const errBody = await geminiRes.text();
+        console.error('[aiChatBot] Gemini error:', errBody);
+        return res.status(502).json({ error: 'Gemini API error', detail: errBody });
+      }
+
+      const geminiData = await geminiRes.json();
+      const botText = geminiData?.candidates?.[0]?.content?.parts?.[0]?.text || 'Sorry, I could not generate a response.';
+
+      // Post the AI response as a message in the chat
+      const messageData = {
+        text: botText,
+        senderId: 'ai-bot',
+        senderName: 'AI Assistant',
+        isAiBot: true,
+        timestamp: admin.firestore.FieldValue.serverTimestamp(),
+        readBy: { [decodedToken.uid]: admin.firestore.FieldValue.serverTimestamp() },
+      };
+      if (chatType === 'direct') messageData.directId = chatId;
+      else if (chatType === 'group') messageData.groupId = chatId;
+
+      await admin.firestore().collection('messages').add(messageData);
+
+      return res.status(200).json({ ok: true });
+    } catch (err) {
+      console.error('[aiChatBot] Error:', err);
+      return res.status(500).json({ error: err.message });
+    }
+  }
+);
+
 /** Extract a Firebase Storage file path from a download URL. */
 function _storagePathFromUrl(url) {
   try {
