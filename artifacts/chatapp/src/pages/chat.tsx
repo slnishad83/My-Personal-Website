@@ -1,32 +1,52 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useConversations } from "@/hooks/useConversations";
 import { useUsers } from "@/hooks/useUsers";
+import { useIncomingCall } from "@/hooks/useIncomingCall";
 import { ConversationList } from "@/components/ConversationList";
 import { ChatWindow } from "@/components/ChatWindow";
 import { NewChatModal } from "@/components/NewChatModal";
+import { IncomingCallModal } from "@/components/IncomingCallModal";
+import { CallScreen } from "@/components/CallScreen";
 import { Conversation, User } from "@/types/chat";
-import { createPersonalConversation, createGroupConversation } from "@/services/chatService";
+import { Call, CallType } from "@/types/call";
+import {
+  createPersonalConversation,
+  createGroupConversation,
+} from "@/services/chatService";
+import {
+  initiateCall,
+  rejectCall,
+  markMissed,
+  addCallMessageToChat,
+} from "@/services/callService";
 import { MessageSquare, Search, LogOut, Edit } from "lucide-react";
 
 export default function ChatPage() {
   const { currentUser, logout } = useAuth();
   const { conversations, loading } = useConversations(currentUser?.uid);
   const users = useUsers(currentUser?.uid);
+  const { incomingCall, setIncomingCall } = useIncomingCall(currentUser?.uid);
+
   const [selectedConvId, setSelectedConvId] = useState<string | null>(null);
   const [showNewChat, setShowNewChat] = useState(false);
   const [mobileView, setMobileView] = useState<"list" | "chat">("list");
   const [search, setSearch] = useState("");
+  const [activeCall, setActiveCall] = useState<{ call: Call; role: "caller" | "callee" } | null>(null);
 
   const selectedConv = conversations.find((c) => c.id === selectedConvId) ?? null;
 
   const filteredConvs = conversations.filter((c) => {
     if (!search) return true;
-    const name = c.type === "group"
-      ? c.name ?? ""
-      : c.participantDetails[c.participants.find((p) => p !== currentUser?.uid) ?? ""]?.displayName ?? "";
-    return name.toLowerCase().includes(search.toLowerCase()) ||
-      (c.lastMessage ?? "").toLowerCase().includes(search.toLowerCase());
+    const otherUid = c.participants.find((p) => p !== currentUser?.uid);
+    const name =
+      c.type === "group"
+        ? c.name ?? ""
+        : c.participantDetails[otherUid ?? ""]?.displayName ?? "";
+    return (
+      name.toLowerCase().includes(search.toLowerCase()) ||
+      (c.lastMessage ?? "").toLowerCase().includes(search.toLowerCase())
+    );
   });
 
   async function handleStartPersonal(user: User) {
@@ -57,11 +77,78 @@ export default function ChatPage() {
     setMobileView("chat");
   }
 
+  // Caller initiates a call from the chat header
+  const handleStartCall = useCallback(
+    async (type: CallType) => {
+      if (!currentUser || !selectedConv) return;
+      const otherUid = selectedConv.participants.find((p) => p !== currentUser.uid);
+      if (!otherUid) return;
+      const otherDetails = selectedConv.participantDetails[otherUid];
+
+      const callId = await initiateCall({
+        callerId: currentUser.uid,
+        callerName: currentUser.displayName ?? "Me",
+        callerPhotoURL: currentUser.photoURL,
+        calleeId: otherUid,
+        calleeName: otherDetails?.displayName ?? "Unknown",
+        conversationId: selectedConv.id,
+        type,
+      });
+
+      const call: Call = {
+        id: callId,
+        callerId: currentUser.uid,
+        callerName: currentUser.displayName ?? "Me",
+        callerPhotoURL: currentUser.photoURL,
+        calleeId: otherUid,
+        calleeName: otherDetails?.displayName ?? "Unknown",
+        conversationId: selectedConv.id,
+        type,
+        status: "calling",
+        createdAt: new Date(),
+      };
+
+      setActiveCall({ call, role: "caller" });
+    },
+    [currentUser, selectedConv]
+  );
+
+  // Callee accepts
+  async function handleAcceptCall() {
+    if (!incomingCall) return;
+    setActiveCall({ call: incomingCall, role: "callee" });
+    setIncomingCall(null);
+  }
+
+  // Callee rejects
+  async function handleRejectCall() {
+    if (!incomingCall) return;
+    await rejectCall(incomingCall.id);
+    await addCallMessageToChat(
+      incomingCall.conversationId,
+      incomingCall.callerId,
+      incomingCall.callerName,
+      incomingCall.type,
+      "rejected",
+      null
+    );
+    setIncomingCall(null);
+  }
+
+  // Call ended (by either side)
+  function handleCallEnd() {
+    setActiveCall(null);
+  }
+
   return (
     <div className="h-screen flex bg-white overflow-hidden">
       {/* Sidebar */}
-      <div className={`w-full md:w-[380px] md:flex flex-col border-r border-gray-200 bg-white flex-shrink-0 ${mobileView === "list" ? "flex" : "hidden md:flex"}`}>
-        {/* Sidebar header */}
+      <div
+        className={`w-full md:w-[380px] md:flex flex-col border-r border-gray-200 bg-white flex-shrink-0 ${
+          mobileView === "list" ? "flex" : "hidden md:flex"
+        }`}
+      >
+        {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 bg-[#f0f2f5] flex-shrink-0">
           <div className="flex items-center gap-2">
             <div className="w-10 h-10 rounded-full bg-[#00a884] flex items-center justify-center text-white font-semibold">
@@ -117,14 +204,6 @@ export default function ChatPage() {
             />
           )}
         </div>
-
-        {/* FAB new chat */}
-        <button
-          className="absolute bottom-6 left-[340px] md:hidden w-14 h-14 bg-[#00a884] rounded-full flex items-center justify-center text-white shadow-lg hover:bg-[#008069] transition-colors"
-          onClick={() => setShowNewChat(true)}
-        >
-          <MessageSquare size={24} />
-        </button>
       </div>
 
       {/* Chat area */}
@@ -133,6 +212,7 @@ export default function ChatPage() {
           <ChatWindow
             conversation={selectedConv}
             onBack={() => setMobileView("list")}
+            onStartCall={selectedConv.type === "personal" ? handleStartCall : undefined}
           />
         ) : (
           <div className="flex flex-col items-center justify-center h-full bg-[#f0f2f5]">
@@ -141,7 +221,7 @@ export default function ChatPage() {
             </div>
             <h2 className="text-2xl font-light text-gray-600 mb-2">WhatsApp Web</h2>
             <p className="text-sm text-gray-400 text-center max-w-xs">
-              Send and receive messages with full delivery and read receipts — just like WhatsApp.
+              Send messages, make voice and video calls — just like WhatsApp.
             </p>
             <button
               className="mt-6 flex items-center gap-2 bg-[#00a884] text-white px-5 py-2.5 rounded-full text-sm font-medium hover:bg-[#008069] transition-colors"
@@ -154,12 +234,31 @@ export default function ChatPage() {
         )}
       </div>
 
+      {/* Modals */}
       {showNewChat && (
         <NewChatModal
           users={users}
           onStartPersonal={handleStartPersonal}
           onStartGroup={handleStartGroup}
           onClose={() => setShowNewChat(false)}
+        />
+      )}
+
+      {/* Incoming call (only if not already in a call) */}
+      {incomingCall && !activeCall && (
+        <IncomingCallModal
+          call={incomingCall}
+          onAccept={handleAcceptCall}
+          onReject={handleRejectCall}
+        />
+      )}
+
+      {/* Active call screen */}
+      {activeCall && (
+        <CallScreen
+          call={activeCall.call}
+          role={activeCall.role}
+          onEnd={handleCallEnd}
         />
       )}
     </div>

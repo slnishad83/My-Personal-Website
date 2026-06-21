@@ -8,6 +8,12 @@ service cloud.firestore {
       return isSignedIn() &&
         request.auth.uid in get(/databases/$(database)/documents/conversations/$(conversationId)).data.participants;
     }
+    function isCallParticipant(callId) {
+      return isSignedIn() && (
+        request.auth.uid == get(/databases/$(database)/documents/calls/$(callId)).data.callerId ||
+        request.auth.uid == get(/databases/$(database)/documents/calls/$(callId)).data.calleeId
+      );
+    }
 
     match /users/{userId} {
       allow read: if isSignedIn();
@@ -24,6 +30,26 @@ service cloud.firestore {
         allow read: if isParticipant(conversationId);
         allow create: if isParticipant(conversationId) && request.auth.uid == request.resource.data.senderId;
         allow update: if isParticipant(conversationId);
+      }
+    }
+
+    match /calls/{callId} {
+      allow read: if isSignedIn() && (
+        request.auth.uid == resource.data.callerId ||
+        request.auth.uid == resource.data.calleeId
+      );
+      allow create: if isSignedIn() && request.auth.uid == request.resource.data.callerId;
+      allow update: if isSignedIn() && (
+        request.auth.uid == resource.data.callerId ||
+        request.auth.uid == resource.data.calleeId
+      );
+
+      match /callerCandidates/{candidateId} {
+        allow read, write: if isCallParticipant(callId);
+      }
+
+      match /calleeCandidates/{candidateId} {
+        allow read, write: if isCallParticipant(callId);
       }
     }
   }

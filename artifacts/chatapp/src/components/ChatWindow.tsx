@@ -4,16 +4,18 @@ import { ChatBubble } from "./ChatBubble";
 import { MessageInfo } from "./MessageInfo";
 import { useMessages } from "@/hooks/useMessages";
 import { sendMessage } from "@/services/chatService";
-import { Send, ArrowLeft, Info } from "lucide-react";
+import { Send, ArrowLeft, Phone, Video } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { formatMessageTime } from "@/lib/utils";
+import { CallType } from "@/types/call";
 
 interface ChatWindowProps {
   conversation: Conversation;
   onBack?: () => void;
+  onStartCall?: (type: CallType) => void;
 }
 
-export function ChatWindow({ conversation, onBack }: ChatWindowProps) {
+export function ChatWindow({ conversation, onBack, onStartCall }: ChatWindowProps) {
   const { currentUser } = useAuth();
   const { messages, loading } = useMessages(conversation.id, currentUser?.uid);
   const [text, setText] = useState("");
@@ -38,10 +40,9 @@ export function ChatWindow({ conversation, onBack }: ChatWindowProps) {
 
   function getSubtitle(): string {
     if (conversation.type === "group") {
-      const names = conversation.participants
+      return conversation.participants
         .map((uid) => conversation.participantDetails[uid]?.displayName ?? uid)
         .join(", ");
-      return names;
     }
     return otherParticipant?.isOnline ? "online" : "offline";
   }
@@ -73,10 +74,11 @@ export function ChatWindow({ conversation, onBack }: ChatWindowProps) {
     }
   }
 
-  // Group messages by date
   const grouped: { date: string; messages: Message[] }[] = [];
   for (const msg of messages) {
-    const dateKey = msg.createdAt.toLocaleDateString([], { weekday: "long", month: "long", day: "numeric" });
+    const dateKey = msg.createdAt.toLocaleDateString([], {
+      weekday: "long", month: "long", day: "numeric",
+    });
     const last = grouped[grouped.length - 1];
     if (last && last.date === dateKey) {
       last.messages.push(msg);
@@ -85,8 +87,15 @@ export function ChatWindow({ conversation, onBack }: ChatWindowProps) {
     }
   }
 
+  const isPersonal = conversation.type === "personal";
+
   return (
-    <div className="flex flex-col h-full bg-[#efeae2]" style={{ backgroundImage: "url(\"data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23c9c0b3' fill-opacity='0.15'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E\")" }}>
+    <div
+      className="flex flex-col h-full bg-[#efeae2]"
+      style={{
+        backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23c9c0b3' fill-opacity='0.15'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
+      }}
+    >
       {/* Header */}
       <div className="flex items-center gap-3 px-4 py-3 bg-[#008069] text-white shadow-sm flex-shrink-0">
         {onBack && (
@@ -99,14 +108,33 @@ export function ChatWindow({ conversation, onBack }: ChatWindowProps) {
         </div>
         <div className="flex-1 min-w-0">
           <p className="font-semibold text-sm leading-tight">{getTitle()}</p>
-          <p className={`text-xs leading-tight ${otherParticipant?.isOnline ? "text-[#a8d5ca]" : "text-[#c5ddd8]"} truncate`}>
+          <p className={`text-xs leading-tight truncate ${otherParticipant?.isOnline ? "text-[#a8d5ca]" : "text-[#c5ddd8]"}`}>
             {getSubtitle()}
           </p>
         </div>
+        {/* Call buttons — only for 1-on-1 chats */}
+        {isPersonal && onStartCall && (
+          <div className="flex items-center gap-1">
+            <button
+              className="w-9 h-9 rounded-full hover:bg-white/20 flex items-center justify-center transition-colors"
+              onClick={() => onStartCall("voice")}
+              title="Voice call"
+            >
+              <Phone size={18} />
+            </button>
+            <button
+              className="w-9 h-9 rounded-full hover:bg-white/20 flex items-center justify-center transition-colors"
+              onClick={() => onStartCall("video")}
+              title="Video call"
+            >
+              <Video size={18} />
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto px-4 py-3 space-y-0.5">
+      <div className="flex-1 overflow-y-auto px-4 py-3">
         {loading && (
           <div className="flex items-center justify-center h-full">
             <div className="w-8 h-8 border-2 border-[#00a884] border-t-transparent rounded-full animate-spin" />
