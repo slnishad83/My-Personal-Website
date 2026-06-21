@@ -544,6 +544,33 @@ function getAttachmentLabel(attachment = {}) {
   return `${ext} file`;
 }
 
+function _resolveAttachmentType(attachment) {
+  const stored = attachment.type || "";
+  if (stored && stored !== "document") return stored;
+  // Auto-detect from filename/URL extension when type is missing or generic
+  const ext = (getFileExtension(attachment.filename, attachment.url) || "").toLowerCase();
+  const IMAGE_EXTS  = ["jpg","jpeg","png","gif","webp","svg","bmp","ico","tiff","avif","heic","heif"];
+  const VIDEO_EXTS  = ["mp4","mov","webm","avi","mkv","ogv","3gp","m4v","wmv","flv"];
+  const AUDIO_EXTS  = ["mp3","wav","ogg","m4a","aac","flac","opus","weba","wma"];
+  if (IMAGE_EXTS.includes(ext)) return "image";
+  if (VIDEO_EXTS.includes(ext)) return "video";
+  if (AUDIO_EXTS.includes(ext)) return "audio";
+  if (ext === "pdf")             return "pdf";
+  return "document";
+}
+
+function _getDocIcon(ext) {
+  const icons = {
+    pdf: "📄", doc: "📝", docx: "📝", xls: "📊", xlsx: "📊", csv: "📊",
+    ppt: "📊", pptx: "📊", txt: "📃", rtf: "📃", zip: "🗜️", rar: "🗜️",
+    "7z": "🗜️", tar: "🗜️", gz: "🗜️", mp3: "🎵", wav: "🎵", ogg: "🎵",
+    psd: "🎨", ai: "🎨", sketch: "🎨", fig: "🎨", apk: "📱", exe: "⚙️",
+    dmg: "💿", iso: "💿", json: "🗂️", xml: "🗂️", html: "🌐", css: "🎨",
+    js: "⚡", ts: "⚡", py: "🐍", sh: "⚙️",
+  };
+  return icons[ext] || "📎";
+}
+
 function renderAttachment(attachment = {}) {
   if (!attachment.url) return "";
   if (!/^https?:\/\//i.test(attachment.url)) return "";
@@ -555,38 +582,60 @@ function renderAttachment(attachment = {}) {
     ? '<span class="view-once-badge">View Once</span>'
     : "";
 
-  if (attachment.type === "image" || attachment.type === "gif") {
+  const resolvedType = _resolveAttachmentType(attachment);
+
+  // ── Image / GIF ──────────────────────────────────────────────────────────
+  if (resolvedType === "image" || resolvedType === "gif") {
     if (attachment.viewOnce) {
       return `<div class="message-attachment view-once-container"><button type="button" class="view-once-placeholder" data-view-once-url="${url}" data-filename="${filename}"><span class="view-once-icon">👁️</span><span>Tap to view</span></button></div>`;
     }
-    return `<div class="message-attachment"><a class="image-attachment-link" href="${url}" target="_blank" rel="noopener" data-preview-url="${url}" data-filename="${filename}"><img src="${url}" alt="${filename}" loading="lazy" class="attachment-img"><span class="attachment-image-fallback">Image unavailable</span></a>${viewOnceHtml}</div>`;
+    return `<div class="message-attachment"><a class="image-attachment-link" href="${url}" target="_blank" rel="noopener" data-preview-url="${url}" data-filename="${filename}"><img src="${url}" alt="${filename}" loading="lazy" class="attachment-img" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"><span class="attachment-image-fallback">Image unavailable</span></a>${viewOnceHtml}</div>`;
   }
 
-  if (attachment.type === "video") {
-    return `<div class="message-attachment video-attachment"><video src="${url}" controls playsinline preload="metadata"></video>${viewOnceHtml}</div>`;
+  // ── Video ─────────────────────────────────────────────────────────────────
+  if (resolvedType === "video") {
+    return `<div class="message-attachment video-attachment"><video src="${url}" controls playsinline preload="metadata" style="max-width:100%;border-radius:8px;display:block;"></video>${viewOnceHtml}</div>`;
   }
 
-  if (attachment.type === "voice") {
+  // ── Voice message ─────────────────────────────────────────────────────────
+  if (resolvedType === "voice") {
     const duration = Number(attachment.duration) || 0;
     return `<div class="voice-message"><button class="voice-play-btn" data-url="${url}" type="button">Play</button><div class="voice-waveform"></div><span class="voice-duration">${Math.floor(duration / 60)}:${(duration % 60).toString().padStart(2, "0")}</span></div>`;
   }
 
-  if (attachment.type === "audio") {
-    return `<div class="message-attachment audio-attachment"><audio src="${url}" controls preload="metadata"></audio></div>`;
+  // ── Audio ─────────────────────────────────────────────────────────────────
+  if (resolvedType === "audio") {
+    return `<div class="message-attachment audio-attachment"><div class="audio-attachment-label">🎵 ${filename}</div><audio src="${url}" controls preload="metadata" style="width:100%;margin-top:4px;"></audio></div>`;
   }
 
-  const ext = getFileExtension(attachment.filename, attachment.url);
-  const detail = [getAttachmentLabel(attachment), formatBytes(attachment.size)]
-    .filter(Boolean)
-    .join(" · ");
+  // ── PDF ───────────────────────────────────────────────────────────────────
+  if (resolvedType === "pdf") {
+    const viewerUrl = `https://docs.google.com/viewer?url=${encodeURIComponent(attachment.url)}&embedded=true`;
+    return `
+      <div class="message-attachment pdf-attachment">
+        <div class="pdf-attachment-header">
+          <span class="pdf-attachment-icon">📄</span>
+          <span class="pdf-attachment-name">${filename}</span>
+          <a class="pdf-attachment-download" href="${url}" target="_blank" rel="noopener" download title="Download">↓</a>
+        </div>
+        <iframe src="${viewerUrl}" class="pdf-attachment-iframe" title="${filename}" loading="lazy" sandbox="allow-scripts allow-same-origin allow-popups allow-forms"></iframe>
+      </div>`;
+  }
+
+  // ── Generic document ──────────────────────────────────────────────────────
+  const ext = (getFileExtension(attachment.filename, attachment.url) || "FILE").toLowerCase();
+  const extLabel = ext.toUpperCase();
+  const icon = _getDocIcon(ext);
+  const sizeLabel = formatBytes(attachment.size);
+  const detail = [extLabel + " file", sizeLabel].filter(Boolean).join(" · ");
   return `
     <a class="file-attachment-card" href="${url}" target="_blank" rel="noopener" data-preview-url="${url}" data-filename="${filename}">
-      <span class="file-attachment-icon">${escapeHtml(ext)}</span>
+      <span class="file-attachment-icon">${icon}</span>
       <span class="file-attachment-info">
         <span class="file-attachment-name">${filename}</span>
-        <span class="file-attachment-meta">${escapeHtml(detail || "File")}</span>
+        <span class="file-attachment-meta">${escapeHtml(detail)}</span>
       </span>
-      <span class="file-attachment-action">Download</span>
+      <span class="file-attachment-action">↓ Download</span>
     </a>
   `;
 }
