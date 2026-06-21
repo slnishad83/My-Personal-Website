@@ -163,7 +163,22 @@
           "order": "DESCENDING"
         }
       ]
+    },
+    {
+      "collectionGroup": "threadReplies",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "parentMessageId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "timestamp",
+          "order": "ASCENDING"
+        }
+      ]
     }
   ],
   "fieldOverrides": []
 }
+
