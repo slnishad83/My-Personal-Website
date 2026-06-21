@@ -1297,46 +1297,57 @@ body.dark .community-icon {
 }
 
 .call-modal {
-  background: rgba(11, 20, 26, 0.82);
+  background: rgba(7, 13, 17, 0.92);
   align-items: center;
   justify-content: center;
-  padding: 18px;
+  padding: 0;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
 }
 
+/* ── 2026 Modern Call Shell ────────────────────────────────── */
 .call-shell {
   position: relative;
-  width: min(420px, 100vw);
-  height: min(720px, 100dvh);
+  width: 100%;
+  max-width: 480px;
+  height: 100dvh;
   margin: auto;
   display: flex;
   flex-direction: column;
-  background: #0b141a;
+  background: linear-gradient(165deg, #0d1f2d 0%, #0b141a 60%, #091218 100%);
   color: #fff;
-  border-radius: 14px;
+  border-radius: 0;
   overflow: hidden;
 }
 
+@media (min-width: 600px) {
+  .call-shell {
+    height: min(820px, 96dvh);
+    border-radius: 20px;
+    box-shadow: 0 32px 80px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.06);
+  }
+}
+
 .call-shell.incoming {
-  animation: incomingPulse 1.4s ease-in-out infinite;
+  animation: incomingPulse 1.8s ease-in-out infinite;
 }
 
 @keyframes incomingPulse {
-  0%,
-  100% {
-    box-shadow: 0 0 0 rgba(0, 168, 132, 0);
-  }
-  50% {
-    box-shadow: 0 0 0 8px rgba(0, 168, 132, 0.18);
-  }
+  0%, 100% { box-shadow: 0 0 0 0 rgba(0, 168, 132, 0); }
+  50%       { box-shadow: 0 0 0 12px rgba(0, 168, 132, 0.14); }
 }
 
+/* ── Call Top Bar ──────────────────────────────────────────── */
 .call-top {
-  min-height: 72px;
-  padding: 14px 16px;
+  min-height: 80px;
+  padding: max(18px, env(safe-area-inset-top, 18px)) 18px 14px;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
+  background: transparent;
+  position: relative;
+  z-index: 3;
 }
 
 .call-top > div {
@@ -1352,33 +1363,40 @@ body.dark .community-icon {
 .call-top h3 {
   overflow: hidden;
   color: #fff;
-  font-size: 18px;
-  line-height: 1.25;
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1.2;
   text-overflow: ellipsis;
   white-space: nowrap;
+  letter-spacing: -0.3px;
+  text-shadow: 0 1px 8px rgba(0,0,0,0.4);
 }
 
 .call-top p {
-  color: rgba(255, 255, 255, 0.72);
+  color: rgba(255, 255, 255, 0.6);
   font-size: 13px;
+  font-weight: 500;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  margin-top: 3px;
 }
 
 .call-type-label {
   display: inline-flex;
   align-items: center;
-  min-height: 22px;
-  margin-bottom: 6px;
+  gap: 5px;
+  min-height: 24px;
+  margin-bottom: 8px;
   padding: 0 10px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.12);
-  color: rgba(255, 255, 255, 0.78);
-  font-size: 11px;
+  background: rgba(0, 168, 132, 0.18);
+  border: 1px solid rgba(0, 168, 132, 0.28);
+  color: #00d4a8;
+  font-size: 10px;
   font-weight: 800;
   text-transform: uppercase;
-  letter-spacing: 0.4px;
+  letter-spacing: 0.7px;
 }
 
 .call-video-stage {
@@ -1639,122 +1657,174 @@ body.dark .community-icon {
   object-fit: cover;
 }
 
+/* ── Modern 2026 Audio Avatar ──────────────────────────────── */
 .call-audio-avatar {
   position: absolute;
-  width: 108px;
-  height: 108px;
+  width: 130px;
+  height: 130px;
   border-radius: 50%;
   display: none;
   align-items: center;
   justify-content: center;
-  background: var(--brand);
+  background: linear-gradient(135deg, #008069 0%, #006f5b 100%);
   color: #fff;
-  font-size: 42px;
+  font-size: 50px;
   font-weight: 800;
+  box-shadow: 0 0 0 0 rgba(0, 168, 132, 0.4);
+  text-shadow: 0 2px 8px rgba(0,0,0,0.3);
 }
 
 .call-audio-avatar.ringing {
-  animation: avatarRing 1.15s ease-in-out infinite;
+  animation: avatarRing 1.4s ease-in-out infinite;
 }
 
 @keyframes avatarRing {
-  0%,
-  100% {
-    transform: scale(1);
-  }
-  50% {
-    transform: scale(1.07);
-  }
+  0%   { transform: scale(1);    box-shadow: 0 0 0 0 rgba(0,168,132,0.5); }
+  60%  { transform: scale(1.06); box-shadow: 0 0 0 22px rgba(0,168,132,0); }
+  100% { transform: scale(1);    box-shadow: 0 0 0 0 rgba(0,168,132,0); }
 }
 
+/* ── Call Duration Pill ────────────────────────────────────── */
 .call-duration {
   position: absolute;
-  bottom: 18px;
+  bottom: 22px;
   left: 50%;
   transform: translateX(-50%);
-  padding: 6px 12px;
+  padding: 6px 16px;
   border-radius: 999px;
-  background: rgba(0, 0, 0, 0.38);
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255,255,255,0.1);
   color: #fff;
-  font-size: 12px;
-  font-weight: 800;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
 }
 
+/* ── Modern 2026 Call Controls ─────────────────────────────── */
 .call-controls {
-  min-height: 76px;
-  padding: 20px 14px calc(14px + var(--safe-bottom));
+  min-height: 100px;
+  padding: 18px 20px calc(max(20px, env(safe-area-inset-bottom, 20px)) + 4px);
   display: flex;
   align-items: center;
   justify-content: center;
   flex-wrap: wrap;
-  column-gap: 10px;
-  row-gap: 14px;
-  background: #111b21;
+  column-gap: 14px;
+  row-gap: 20px;
+  background: rgba(11, 20, 26, 0.85);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-top: 1px solid rgba(255,255,255,0.07);
 }
 
+/* ── Modern Call Buttons ───────────────────────────────────── */
 .call-icon-btn {
   position: relative;
-  width: 46px;
-  height: 46px;
-  border: 0;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.14);
-  color: #fff;
-  cursor: pointer;
-  font-size: 20px;
   display: inline-flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
+  gap: 6px;
+  width: 60px;
+  height: 60px;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+  cursor: pointer;
+  font-size: 22px;
   flex: 0 0 auto;
-  transition:
-    background 0.18s ease,
-    transform 0.18s ease,
-    opacity 0.18s ease;
+  transition: background 0.18s ease, transform 0.14s ease, box-shadow 0.18s ease;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.2);
 }
 
 .call-icon-btn:hover,
 .call-icon-btn:focus-visible {
-  background: rgba(255, 255, 255, 0.22);
+  background: rgba(255, 255, 255, 0.2);
   outline: none;
-  transform: translateY(-1px);
+  transform: scale(1.07);
+  box-shadow: 0 4px 18px rgba(0,0,0,0.3);
+}
+
+.call-icon-btn:active {
+  transform: scale(0.94);
 }
 
 .call-icon-btn:disabled {
   cursor: not-allowed;
-  opacity: 0.45;
+  opacity: 0.38;
+  transform: none;
 }
 
+/* Active = toggled off (muted/cam-off/etc.) */
 .call-icon-btn.active {
-  opacity: 0.55;
+  background: rgba(255, 255, 255, 0.18);
+  box-shadow: inset 0 0 0 2px rgba(255,255,255,0.25);
 }
 
 .call-icon-btn[data-control-label]::after {
   content: attr(data-control-label);
   position: absolute;
   left: 50%;
-  bottom: calc(100% + 8px);
+  bottom: calc(100% + 10px);
   transform: translateX(-50%);
-  min-width: 68px;
+  min-width: 56px;
   padding: 3px 8px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.14);
-  color: #fff;
-  font-size: 11px;
-  font-weight: 800;
-  line-height: 1.2;
+  background: rgba(0,0,0,0.55);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  color: rgba(255,255,255,0.85);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  line-height: 1.3;
   text-align: center;
   white-space: nowrap;
   pointer-events: none;
   opacity: 0;
   visibility: hidden;
-  transition:
-    opacity 0.16s ease,
-    visibility 0.16s ease;
+  transition: opacity 0.16s ease, visibility 0.16s ease;
 }
 
 .call-icon-btn.show-control-label::after {
   opacity: 1;
   visibility: visible;
+}
+
+/* End-call button — always red and larger */
+#endCallBtn,
+button[title="End call"],
+button[aria-label="End call"],
+button[data-control-label="END"] {
+  background: #ef4444 !important;
+  width: 68px !important;
+  height: 68px !important;
+  font-size: 24px !important;
+  box-shadow: 0 4px 20px rgba(239,68,68,0.5) !important;
+}
+#endCallBtn:hover,
+button[title="End call"]:hover {
+  background: #dc2626 !important;
+  transform: scale(1.08) !important;
+  box-shadow: 0 6px 24px rgba(239,68,68,0.6) !important;
+}
+
+/* Answer button — green */
+#answerCallBtn,
+button[title="Answer"],
+button[aria-label="Answer call"] {
+  background: #16a34a !important;
+  width: 68px !important;
+  height: 68px !important;
+  font-size: 24px !important;
+  box-shadow: 0 4px 20px rgba(22,163,74,0.5) !important;
+}
+#answerCallBtn:hover {
+  background: #15803d !important;
+  transform: scale(1.08) !important;
 }
 
 .call-icon-btn.active::before {
@@ -2258,6 +2328,17 @@ button.reply-preview {
   box-shadow: 0 1px 2px rgba(11, 20, 26, 0.1);
   font-size: 11px;
   cursor: pointer;
+}
+body.dark .reaction-badge {
+  background: rgba(255, 255, 255, 0.12);
+  color: #e9edef;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+}
+body.dark .reaction-badge:hover {
+  background: rgba(255, 255, 255, 0.18);
+}
+body.dark .reactions-container .reaction-badge {
+  border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .mention-highlight {
@@ -14338,3 +14419,92 @@ body.large-tap-targets .setting-item {
   text-shadow: 0 2px 8px rgba(0,0,0,0.5);
 }
 .video-attachment[data-preview-url] { display: inline-block; }
+
+/* ── 2026 Call: Network Quality Indicator ──────────────────── */
+.call-network-indicator {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(0,0,0,0.45);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  z-index: 4;
+  font-size: 11px;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: 0.3px;
+  transition: opacity 0.3s;
+}
+.call-network-indicator.good  { color: #4ade80; }
+.call-network-indicator.fair  { color: #facc15; }
+.call-network-indicator.poor  { color: #f87171; }
+.call-network-indicator-bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 14px;
+}
+.call-network-bar {
+  width: 3px;
+  border-radius: 2px;
+  background: currentColor;
+  opacity: 0.3;
+  transition: opacity 0.3s, height 0.3s;
+}
+.call-network-bar.active { opacity: 1; }
+.call-network-bar:nth-child(1) { height: 4px; }
+.call-network-bar:nth-child(2) { height: 7px; }
+.call-network-bar:nth-child(3) { height: 10px; }
+.call-network-bar:nth-child(4) { height: 14px; }
+
+/* ── Connection Status Banner ──────────────────────────────── */
+.call-reconnecting-banner {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 5;
+  padding: 8px 14px;
+  background: rgba(239,68,68,0.85);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  text-align: center;
+  letter-spacing: 0.3px;
+  transform: translateY(-100%);
+  transition: transform 0.25s ease;
+}
+.call-reconnecting-banner.show {
+  transform: translateY(0);
+}
+
+/* ── Hold State Overlay ────────────────────────────────────── */
+.call-hold-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 10px;
+  background: rgba(0,0,0,0.65);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  color: #fff;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+}
+.call-hold-overlay.active { display: flex; }
+.call-hold-icon {
+  font-size: 48px;
+  opacity: 0.75;
+}
