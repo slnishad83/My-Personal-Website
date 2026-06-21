@@ -14778,3 +14778,212 @@ body.large-tap-targets .setting-item {
   transition: none;
 }
 
+
+
+/* ═══════════════════════════════════════════════════════════════════
+   BACKGROUND EFFECTS PANEL CSS — 2026
+═══════════════════════════════════════════════════════════════════ */
+
+/* ── Effects Button active glow ────────────────────────────────── */
+#_bgEffectsBtn.active {
+  background: rgba(0, 168, 132, 0.22) !important;
+  box-shadow: 0 0 0 2px #00d4a8, 0 4px 16px rgba(0,212,168,0.3) !important;
+}
+
+/* ── Effects Panel ─────────────────────────────────────────────── */
+._bgfx-panel {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 300;
+  background: rgba(14, 22, 28, 0.97);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-radius: 20px 20px 0 0;
+  border-top: 1px solid rgba(255,255,255,0.09);
+  box-shadow: 0 -12px 40px rgba(0,0,0,0.5);
+  color: #e9edef;
+  animation: _bgfx-slide-in 0.25s cubic-bezier(.22,1,.36,1);
+  overflow: hidden;
+}
+
+@media (min-width: 600px) {
+  ._bgfx-panel {
+    border-radius: 20px;
+    bottom: 88px;
+    left: 50%;
+    right: auto;
+    transform: translateX(-50%);
+    width: 360px;
+  }
+}
+
+@keyframes _bgfx-slide-in {
+  from { transform: translateY(100%); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+@media (min-width: 600px) {
+  @keyframes _bgfx-slide-in {
+    from { transform: translateX(-50%) translateY(12px); opacity: 0; }
+    to   { transform: translateX(-50%) translateY(0);    opacity: 1; }
+  }
+}
+
+._bgfx-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 18px 12px;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+  border-bottom: 1px solid rgba(255,255,255,0.07);
+}
+
+._bgfx-close {
+  background: none;
+  border: none;
+  color: rgba(255,255,255,0.5);
+  font-size: 18px;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 50%;
+  transition: background 0.15s, color 0.15s;
+}
+._bgfx-close:hover { background: rgba(255,255,255,0.1); color: #fff; }
+
+._bgfx-scroll {
+  padding: 16px;
+  overflow-y: auto;
+  max-height: 60dvh;
+}
+
+/* ── Thumbnail Grid ────────────────────────────────────────────── */
+._bgfx-options {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+._bgfx-opt {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 6px;
+  border: 1.5px solid rgba(255,255,255,0.08);
+  border-radius: 14px;
+  background: rgba(255,255,255,0.04);
+  color: rgba(255,255,255,0.7);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, transform 0.12s;
+  letter-spacing: 0.2px;
+}
+._bgfx-opt:hover {
+  background: rgba(255,255,255,0.1);
+  border-color: rgba(255,255,255,0.2);
+  transform: translateY(-2px);
+}
+._bgfx-opt._bgfx-active {
+  border-color: #00d4a8;
+  background: rgba(0,212,168,0.12);
+  color: #00d4a8;
+  box-shadow: 0 0 0 1px rgba(0,212,168,0.2) inset;
+}
+._bgfx-opt._bgfx-active::after {
+  content: "✓";
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  font-size: 10px;
+  color: #00d4a8;
+  font-weight: 800;
+}
+._bgfx-opt { position: relative; }
+
+/* ── Thumbnails ────────────────────────────────────────────────── */
+._bgfx-thumb {
+  width: 48px;
+  height: 36px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  overflow: hidden;
+  background: rgba(255,255,255,0.06);
+  background-size: cover;
+  background-position: center;
+  flex-shrink: 0;
+}
+._bgfx-thumb-off   { background: rgba(255,255,255,0.06); }
+._bgfx-thumb-slight {
+  background: linear-gradient(135deg, rgba(180,200,220,0.3) 0%, rgba(100,130,160,0.5) 100%);
+  backdrop-filter: blur(2px);
+}
+._bgfx-thumb-blur {
+  background: linear-gradient(135deg, rgba(180,200,220,0.5) 0%, rgba(80,110,140,0.7) 100%);
+  backdrop-filter: blur(6px);
+}
+._bgfx-thumb-color { border-radius: 8px; transition: background 0.2s; }
+._bgfx-thumb-img   { background: rgba(255,255,255,0.08); }
+
+/* ── Colour Swatches ───────────────────────────────────────────── */
+._bgfx-color-swatches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 10px 0 4px;
+  animation: _bgfx-fade-in 0.18s ease;
+}
+@keyframes _bgfx-fade-in { from { opacity: 0; } to { opacity: 1; } }
+
+._bgfx-swatch {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 2px solid rgba(255,255,255,0.15);
+  cursor: pointer;
+  transition: transform 0.12s, border-color 0.12s, box-shadow 0.12s;
+  flex-shrink: 0;
+}
+._bgfx-swatch:hover { transform: scale(1.15); border-color: rgba(255,255,255,0.5); }
+._bgfx-swatch._bgfx-swatch-active {
+  border-color: #00d4a8;
+  box-shadow: 0 0 0 3px rgba(0,212,168,0.3);
+  transform: scale(1.12);
+}
+
+/* ── Loading spinner inside panel (while MediaPipe loads) ──────── */
+._bgfx-loading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 0 4px;
+  font-size: 12px;
+  color: rgba(255,255,255,0.45);
+}
+._bgfx-spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(255,255,255,0.2);
+  border-top-color: #00d4a8;
+  border-radius: 50%;
+  animation: _bgfx-spin 0.8s linear infinite;
+  flex-shrink: 0;
+}
+@keyframes _bgfx-spin { to { transform: rotate(360deg); } }
+
+/* ── Responsive tweaks ─────────────────────────────────────────── */
+@media (max-width: 360px) {
+  ._bgfx-options { grid-template-columns: repeat(3, 1fr); }
+  ._bgfx-thumb   { width: 40px; height: 30px; font-size: 18px; }
+}
+@media (orientation: landscape) and (max-height: 500px) {
+  ._bgfx-scroll { max-height: 45dvh; }
+  ._bgfx-panel  { border-radius: 16px; }
+}
