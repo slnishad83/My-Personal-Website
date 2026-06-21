@@ -1398,15 +1398,14 @@ exports.weeklyOrphanedUploadCleanup = onSchedule(
 const geminiApiKey = defineSecret('GEMINI_API_KEY');
 
 exports.aiChatBot = onRequest(
-  { secrets: [geminiApiKey], cors: true, region: BACKEND_RUNTIME_GENERATION === 'nodejs22' ? 'us-central1' : 'us-central1' },
+  { region: 'us-central1', invoker: 'public', secrets: [geminiApiKey] },
   async (req, res) => {
+    setCorsHeaders(res);
+    res.set('Cache-Control', 'private, no-store');
     if (req.method === 'OPTIONS') {
-      res.set('Access-Control-Allow-Origin', '*');
-      res.set('Access-Control-Allow-Headers', 'Content-Type,Authorization');
-      res.set('Access-Control-Allow-Methods', 'POST,OPTIONS');
-      return res.sendStatus(204);
+      res.status(204).send('');
+      return;
     }
-    res.set('Access-Control-Allow-Origin', '*');
 
     if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
