@@ -2,250 +2,75 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link
-      rel="icon"
-      type="image/x-icon"
-      href="https://raw.githubusercontent.com/nishadsl/Fav-Icon/main/favicon.ico"
-    />
+    <link rel="icon" type="image/x-icon" href="https://raw.githubusercontent.com/nishadsl/Fav-Icon/main/favicon.ico" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta
-      name="description"
-      content="Contact Nishad S L - Senior Digital Marketing Specialist based in Thrissur, Kerala"
-    />
+    <meta name="description" content="Contact Nishad S L - Senior Digital Marketing Specialist based in Thrissur, Kerala" />
     <meta name="robots" content="index, follow" />
     <meta property="og:image" content="https://nishadsl.com/og-image.jpg" />
     <title>Contact Nishad S L | Senior Digital Marketing Specialist</title>
     <link rel="canonical" href="https://nishadsl.com/contact.html" />
     <link rel="stylesheet" href="style.css" />
-    <style>
-      .nav-item-dropdown {
-        position: relative;
-      }
-      .dropdown-menu {
-        position: absolute;
-        top: 100%;
-        left: 0;
-        background: var(--bg-primary);
-        border: 1px solid var(--border);
-        border-radius: 12px;
-        min-width: 200px;
-        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
-        opacity: 0;
-        visibility: hidden;
-        transform: translateY(-10px);
-        transition: all 0.2s ease;
-        z-index: 1000;
-        list-style: none;
-        padding: 0.5rem 0;
-        margin: 0;
-      }
-      .nav-item-dropdown:hover .dropdown-menu,
-      .nav-item-dropdown.open .dropdown-menu {
-        opacity: 1;
-        visibility: visible;
-        transform: translateY(0);
-      }
-      .dropdown-menu li {
-        padding: 0;
-      }
-      .dropdown-menu a {
-        display: block;
-        padding: 0.6rem 1.2rem;
-        color: var(--text-secondary);
-        text-decoration: none;
-        font-size: 0.9rem;
-        transition: all 0.2s;
-      }
-      .dropdown-menu a:hover {
-        background: var(--accent-light);
-        color: var(--accent);
-      }
-      .nav-works-btn {
-        background: none;
-        border: none;
-        padding: 0;
-        cursor: pointer;
-        font: inherit;
-        color: var(--text-secondary);
-        font-weight: 500;
-        display: flex;
-        align-items: center;
-        gap: 4px;
-        transition: color 0.2s;
-      }
-      .nav-works-btn:hover,
-      .nav-works-btn:focus-visible {
-        color: var(--accent);
-      }
-      .nav-works-arrow {
-        font-size: 10px;
-        transition: transform 0.25s ease;
-      }
-      .nav-item-dropdown.open .nav-works-arrow {
-        transform: rotate(180deg);
-      }
-      @media (max-width: 768px) {
-        .nav-menu.active .nav-item-dropdown .dropdown-menu {
-          position: static;
-          opacity: 0;
-          visibility: hidden;
-          transform: translateY(-10px);
-          transition: all 0.2s ease;
-          box-shadow: none;
-          border: none;
-          padding-left: 1.5rem;
-          background: transparent;
-        }
-        .nav-menu.active .nav-item-dropdown.open .dropdown-menu {
-          opacity: 1;
-          visibility: visible;
-          transform: none;
-        }
-        .nav-menu.active .dropdown-menu a {
-          padding: 0.5rem 0;
-        }
-      }
-    </style>
+    <script src="nav.js" defer></script>
+    <script src="contact.js" defer></script>
   </head>
   <body>
     <div class="wrapper">
-      <nav class="navbar">
-        <div class="nav-container">
-          <a href="index.html" class="logo">Nishad<span>SL</span></a>
-          <ul class="nav-menu" id="navMenu">
-            <li><a href="index.html">Home</a></li>
-            <li><a href="resume.html">Resume</a></li>
-            <li class="nav-item-dropdown">
-              <button class="nav-works-btn" aria-haspopup="true" aria-expanded="false">
-                Works <span class="nav-works-arrow">▼</span>
-              </button>
-              <ul class="dropdown-menu" role="menu">
-                <li role="none">
-                  <a href="works/invoice.html" target="_blank" role="menuitem"
-                    >📄 Invoice Generator</a
-                  >
-                </li>
-                <li role="none">
-                  <a href="works/chat/login.html" target="_blank" role="menuitem"
-                    >💬 Team Chat</a
-                  >
-                </li>
-              </ul>
-            </li>
-            <li><a href="contact.html" class="active">Contact</a></li>
-          </ul>
-          <div class="right-buttons">
-            <button
-              class="theme-toggle"
-              onclick="toggleTheme()"
-              aria-label="Toggle dark mode"
-            >
-              🌙</button
-            ><button class="mobile-menu-btn" onclick="toggleMenu()">☰</button>
-          </div>
-        </div>
-      </nav>
 
       <section class="contact-page">
         <div class="contact-container">
           <div class="contact-header">
-            <h1>Let's Connect</h1>
-            <p>
-              Available for collaborations, freelance projects, or full-time
-              opportunities
-            </p>
+            <h1>Let&rsquo;s Connect</h1>
+            <p>Available for collaborations, freelance projects, or full-time opportunities</p>
           </div>
           <div class="contact-grid">
             <div class="contact-info-card">
               <h2>Get in Touch</h2>
               <div class="contact-details">
                 <div class="contact-detail">
-                  <span class="detail-icon">📞</span
-                  ><a href="tel:+919846310043">+91 9846310043</a>
+                  <span class="detail-icon">&#128222;</span>
+                  <a href="tel:+919846310043">+91 9846310043</a>
                 </div>
                 <div class="contact-detail">
-                  <span class="detail-icon">✉️</span
-                  ><a href="mailto:sl.nishad@gmail.com">sl.nishad@gmail.com</a>
+                  <span class="detail-icon">&#9993;&#65039;</span>
+                  <a href="mailto:sl.nishad@gmail.com">sl.nishad@gmail.com</a>
                 </div>
                 <div class="contact-detail">
-                  <span class="detail-icon">📍</span
-                  ><span>Thrissur, Kerala, India</span>
+                  <span class="detail-icon">&#128205;</span>
+                  <span>Thrissur, Kerala, India</span>
                 </div>
                 <div class="contact-detail">
-                  <span class="detail-icon">🔗</span
-                  ><a
-                    href="https://www.linkedin.com/in/nishadsl/"
-                    target="_blank"
-                    >linkedin.com/in/nishadsl</a
-                  >
+                  <span class="detail-icon">&#128279;</span>
+                  <a href="https://www.linkedin.com/in/nishadsl/" target="_blank">linkedin.com/in/nishadsl</a>
                 </div>
               </div>
               <div class="availability">
-                <span class="status-badge available">● Available for work</span>
-                <p>
-                  Open to full-time opportunities, freelance projects, and
-                  consulting
-                </p>
+                <span class="status-badge available">&#9679; Available for work</span>
+                <p>Open to full-time opportunities, freelance projects, and consulting</p>
               </div>
             </div>
             <div class="contact-form-card">
               <h2>Send a Message</h2>
-              <div
-                id="successMessage"
-                class="success-message"
-                style="display: none"
-              >
-                <div class="success-icon">✓</div>
+              <div id="successMessage" class="success-message" style="display:none">
+                <div class="success-icon">&#10003;</div>
                 <h3>Thank You!</h3>
                 <p>Your message has been sent successfully.</p>
-                <p class="success-note">
-                  I'll get back to you within 24 hours.
-                </p>
+                <p class="success-note">I&rsquo;ll get back to you within 24 hours.</p>
               </div>
               <form id="contactForm">
-                <input
-                  type="hidden"
-                  name="_gotcha"
-                  style="display: none !important"
-                />
+                <input type="hidden" name="_gotcha" style="display:none !important" />
                 <div class="form-group">
-                  <input
-                    type="text"
-                    name="name"
-                    id="name"
-                    placeholder="Your Name"
-                    required
-                  />
+                  <input type="text" name="name" id="name" placeholder="Your Name" required />
                 </div>
                 <div class="form-group">
-                  <input
-                    type="email"
-                    name="email"
-                    id="email"
-                    placeholder="Your Email"
-                    required
-                  />
+                  <input type="email" name="email" id="email" placeholder="Your Email" required />
                 </div>
                 <div class="form-group">
-                  <input
-                    type="text"
-                    name="subject"
-                    id="subject"
-                    placeholder="Subject"
-                  />
+                  <input type="text" name="subject" id="subject" placeholder="Subject" />
                 </div>
                 <div class="form-group">
-                  <textarea
-                    name="message"
-                    id="message"
-                    rows="5"
-                    placeholder="Your Message"
-                    required
-                  ></textarea>
+                  <textarea name="message" id="message" rows="5" placeholder="Your Message" required></textarea>
                 </div>
-                <button type="submit" class="btn btn-primary" id="submitBtn">
-                  Send Message →
-                </button>
+                <button type="submit" class="btn btn-primary" id="submitBtn">Send Message &rarr;</button>
               </form>
             </div>
           </div>
@@ -258,153 +83,23 @@
             <h3>Nishad S L</h3>
             <p>Senior Digital Marketing Specialist</p>
             <div class="social-links">
-              <a href="https://www.linkedin.com/in/nishadsl/" target="_blank"
-                >LinkedIn</a
-              >
+              <a href="https://www.linkedin.com/in/nishadsl/" target="_blank">LinkedIn</a>
             </div>
           </div>
           <div class="footer-links">
-            <a href="index.html">Home</a><a href="resume.html">Resume</a
-            ><a href="contact.html">Contact</a>
+            <a href="index.html">Home</a>
+            <a href="resume.html">Resume</a>
+            <a href="contact.html">Contact</a>
           </div>
           <div class="footer-copyright">
-            <p>© <span id="currentYear"></span> Nishad S L</p>
+            <p>&copy; <span id="currentYear"></span> Nishad S L</p>
           </div>
         </div>
       </footer>
     </div>
-    <button
-      class="back-to-top-modern"
-      id="modernBackToTop"
-      aria-label="Back to top"
-    >
-      <span>↑</span>
+
+    <button class="back-to-top-modern" id="modernBackToTop" aria-label="Back to top">
+      <span>&#8593;</span>
     </button>
-    <script>
-      function toggleTheme() {
-        const b = document.body,
-          t = document.querySelector(".theme-toggle");
-        if (b.classList.contains("dark")) {
-          b.classList.remove("dark");
-          localStorage.setItem("theme", "light");
-          if (t) t.textContent = "🌙";
-        } else {
-          b.classList.add("dark");
-          localStorage.setItem("theme", "dark");
-          if (t) t.textContent = "☀️";
-        }
-      }
-      function loadTheme() {
-        const s = localStorage.getItem("theme"),
-          t = document.querySelector(".theme-toggle");
-        if (s === "dark") {
-          document.body.classList.add("dark");
-          if (t) t.textContent = "☀️";
-        } else {
-          if (t) t.textContent = "🌙";
-        }
-      }
-      function toggleMenu() {
-        document.getElementById("navMenu")?.classList.toggle("active");
-      }
-      document.querySelectorAll(".nav-menu a").forEach((l) =>
-        l.addEventListener("click", () => {
-          const m = document.getElementById("navMenu");
-          if (m && window.innerWidth <= 768) {
-            m.classList.remove("active");
-            worksDropdown?.classList.remove("open");
-            worksBtn?.setAttribute("aria-expanded", "false");
-          }
-        }),
-      );
-      // Works dropdown toggle
-      const worksBtn = document.querySelector(".nav-works-btn");
-      const worksDropdown = document.querySelector(".nav-item-dropdown");
-      if (worksBtn && worksDropdown) {
-        worksBtn.addEventListener("click", (e) => {
-          e.stopPropagation();
-          const isOpen = worksDropdown.classList.toggle("open");
-          worksBtn.setAttribute("aria-expanded", isOpen);
-        });
-        document.addEventListener("click", (e) => {
-          if (!worksDropdown.contains(e.target)) {
-            worksDropdown.classList.remove("open");
-            worksBtn.setAttribute("aria-expanded", "false");
-          }
-        });
-        worksDropdown.addEventListener("keydown", (e) => {
-          if (e.key === "Escape") {
-            worksDropdown.classList.remove("open");
-            worksBtn.setAttribute("aria-expanded", "false");
-            worksBtn.focus();
-          }
-        });
-      }
-      const backBtn = document.getElementById("modernBackToTop");
-      if (backBtn) {
-        window.addEventListener("scroll", () => {
-          window.scrollY > 300
-            ? backBtn.classList.add("show")
-            : backBtn.classList.remove("show");
-        });
-        backBtn.addEventListener("click", () =>
-          window.scrollTo({ top: 0, behavior: "smooth" }),
-        );
-      }
-      document.getElementById("currentYear") &&
-        (document.getElementById("currentYear").textContent =
-          new Date().getFullYear());
-      document.addEventListener("DOMContentLoaded", loadTheme);
-      const form = document.getElementById("contactForm"),
-        successMsg = document.getElementById("successMessage");
-      if (form) {
-        form.addEventListener("submit", async function (e) {
-          e.preventDefault();
-          const btn = document.getElementById("submitBtn"),
-            orig = btn.innerHTML;
-          btn.innerHTML = "⏳ Sending...";
-          btn.disabled = true;
-          const name = document.getElementById("name").value,
-            email = document.getElementById("email").value,
-            subj = document.getElementById("subject").value,
-            msg = document.getElementById("message").value;
-          const fd = new FormData();
-          fd.append("name", name);
-          fd.append("email", email);
-          fd.append("_replyto", email);
-          fd.append(
-            "_subject",
-            `Message from ${name}: ${subj || "No Subject"}`,
-          );
-          fd.append("subject", subj);
-          fd.append("message", msg);
-          try {
-            const res = await fetch("https://formspree.io/f/xeenzngd", {
-              method: "POST",
-              body: fd,
-              headers: { Accept: "application/json" },
-            });
-            if (res.ok) {
-              form.style.display = "none";
-              successMsg.style.display = "block";
-              successMsg.scrollIntoView({
-                behavior: "smooth",
-                block: "center",
-              });
-            } else {
-              alert(
-                "Something went wrong. Please try again or email me directly at sl.nishad@gmail.com",
-              );
-              btn.innerHTML = orig;
-              btn.disabled = false;
-            }
-          } catch (err) {
-            alert("Network error. Please check your connection and try again.");
-            btn.innerHTML = orig;
-            btn.disabled = false;
-          }
-        });
-      }
-    </script>
   </body>
 </html>
