@@ -47,11 +47,16 @@ export function useMessages(conversationId: string | null, currentUid: string | 
           senderId: data.senderId,
           senderName: data.senderName ?? "",
           senderPhotoURL: data.senderPhotoURL ?? null,
-          text: data.text,
+          text: data.text ?? "",
           createdAt: toDate(data.createdAt) ?? new Date(),
           status: data.status ?? "sent",
           deliveredTo: data.deliveredTo ?? {},
           readBy: data.readBy ?? {},
+          mediaURL: data.mediaURL ?? null,
+          mediaType: data.mediaType ?? null,
+          fileName: data.fileName ?? null,
+          fileSize: data.fileSize ?? null,
+          isCallLog: data.isCallLog ?? false,
         } as Message;
       });
       setMessages(msgs);

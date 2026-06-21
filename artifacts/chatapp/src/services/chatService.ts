@@ -62,6 +62,65 @@ export async function sendMessage(
   return msgRef.id;
 }
 
+export async function sendMediaMessage(
+  conversationId: string,
+  senderId: string,
+  senderName: string,
+  senderPhotoURL: string | null,
+  participants: string[],
+  media: {
+    url: string;
+    mediaType: "image" | "file";
+    fileName: string;
+    fileSize: number;
+  },
+  caption?: string
+) {
+  const now = Date.now();
+  const deliveredTo: Record<string, number> = { [senderId]: now };
+  const readBy: Record<string, number> = { [senderId]: now };
+
+  const lastMessageText =
+    media.mediaType === "image"
+      ? caption ? `📷 ${caption}` : "📷 Photo"
+      : `📎 ${media.fileName}`;
+
+  await addDoc(
+    collection(db, "conversations", conversationId, "messages"),
+    {
+      senderId,
+      senderName,
+      senderPhotoURL,
+      text: caption ?? "",
+      mediaURL: media.url,
+      mediaType: media.mediaType,
+      fileName: media.fileName,
+      fileSize: media.fileSize,
+      createdAt: serverTimestamp(),
+      status: "sent",
+      deliveredTo,
+      readBy,
+    }
+  );
+
+  const unreadUpdate: Record<string, unknown> = {};
+  for (const uid of participants) {
+    if (uid !== senderId) {
+      unreadUpdate[`unreadCount.${uid}`] = (await getDocs(
+        query(collection(db, "conversations"), where("__name__", "==", conversationId))
+      ).then((s) => (s.docs[0]?.data()?.unreadCount?.[uid] ?? 0) + 1));
+    }
+  }
+
+  await updateDoc(doc(db, "conversations", conversationId), {
+    lastMessage: lastMessageText,
+    lastMessageTime: serverTimestamp(),
+    lastMessageSenderId: senderId,
+    lastMessageStatus: "sent",
+    ...unreadUpdate,
+  });
+}
+
 export async function createPersonalConversation(
   currentUser: { uid: string; displayName: string; photoURL: string | null },
   otherUser: User

@@ -1,4 +1,5 @@
 export type MessageStatus = "sending" | "sent" | "delivered" | "read";
+export type MediaType = "image" | "file";
 
 export interface MessageReceipt {
   userId: string;
@@ -16,8 +17,14 @@ export interface Message {
   text: string;
   createdAt: Date;
   status: MessageStatus;
-  deliveredTo: Record<string, number>; // userId -> timestamp ms
-  readBy: Record<string, number>;      // userId -> timestamp ms
+  deliveredTo: Record<string, number>;
+  readBy: Record<string, number>;
+  // Media
+  mediaURL: string | null;
+  mediaType: MediaType | null;
+  fileName: string | null;
+  fileSize: number | null;
+  isCallLog?: boolean;
 }
 
 export interface Participant {
@@ -33,7 +40,7 @@ export interface Conversation {
   type: "personal" | "group";
   name: string | null;
   photoURL: string | null;
-  participants: string[]; // uids
+  participants: string[];
   participantDetails: Record<string, Participant>;
   lastMessage: string | null;
   lastMessageTime: Date | null;
@@ -41,7 +48,7 @@ export interface Conversation {
   lastMessageStatus: MessageStatus | null;
   createdAt: Date;
   createdBy: string;
-  unreadCount: Record<string, number>; // userId -> count
+  unreadCount: Record<string, number>;
 }
 
 export interface User {
