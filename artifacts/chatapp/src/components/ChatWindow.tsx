@@ -3,10 +3,12 @@ import { Conversation, Message } from "@/types/chat";
 import { ChatBubble } from "./ChatBubble";
 import { MessageInfo } from "./MessageInfo";
 import { useMessages } from "@/hooks/useMessages";
+import { useUserPresence } from "@/hooks/useUserPresence";
+import { useTyping } from "@/hooks/useTyping";
 import { sendMessage } from "@/services/chatService";
 import { Send, ArrowLeft, Phone, Video } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
-import { formatMessageTime } from "@/lib/utils";
+import { formatLastSeen } from "@/lib/utils";
 import { CallType } from "@/types/call";
 
 interface ChatWindowProps {
@@ -21,36 +23,73 @@ export function ChatWindow({ conversation, onBack, onStartCall }: ChatWindowProp
   const [text, setText] = useState("");
   const [sending, setSending] = useState(false);
   const [selectedMessage, setSelectedMessage] = useState<Message | null>(null);
+  const [typingNames, setTypingNames] = useState<string[]>([]);
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+
+  const isPersonal = conversation.type === "personal";
+  const otherUid = isPersonal
+    ? conversation.participants.find((p) => p !== currentUser?.uid) ?? null
+    : null;
+
+  // Real-time presence for the other user (personal chat only)
+  const otherPresence = useUserPresence(otherUid);
+
+  // Typing hook — writes our state, reads others'
+  const { onTypingStart, onTypingStop, subscribe } = useTyping(
+    conversation.id,
+    currentUser?.uid,
+    conversation.participantDetails
+  );
+
+  // Subscribe to typing names reactively
+  useEffect(() => {
+    const unsub = subscribe((names) => setTypingNames(names));
+    return unsub;
+  }, [subscribe]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  const otherUid = conversation.type === "personal"
-    ? conversation.participants.find((p) => p !== currentUser?.uid)
-    : null;
-  const otherParticipant = otherUid ? conversation.participantDetails[otherUid] : null;
-
   function getTitle(): string {
-    if (conversation.type === "group") return conversation.name ?? "Group";
-    return otherParticipant?.displayName ?? "Chat";
+    if (!isPersonal) return conversation.name ?? "Group";
+    return conversation.participantDetails[otherUid ?? ""]?.displayName ?? "Chat";
   }
 
-  function getSubtitle(): string {
-    if (conversation.type === "group") {
-      return conversation.participants
+  function getSubtitle(): { text: string; isTyping: boolean; isOnline: boolean } {
+    if (typingNames.length > 0) {
+      const label = isPersonal
+        ? "typing..."
+        : typingNames.length === 1
+          ? `${typingNames[0]} is typing...`
+          : `${typingNames[0]} and ${typingNames.length - 1} more typing...`;
+      return { text: label, isTyping: true, isOnline: false };
+    }
+
+    if (!isPersonal) {
+      const names = conversation.participants
         .map((uid) => conversation.participantDetails[uid]?.displayName ?? uid)
         .join(", ");
+      return { text: names, isTyping: false, isOnline: false };
     }
-    return otherParticipant?.isOnline ? "online" : "offline";
+
+    if (otherPresence.isOnline) {
+      return { text: "online", isTyping: false, isOnline: true };
+    }
+
+    return {
+      text: formatLastSeen(otherPresence.lastSeen),
+      isTyping: false,
+      isOnline: false,
+    };
   }
 
   async function handleSend() {
     if (!text.trim() || !currentUser) return;
     const t = text.trim();
     setText("");
+    onTypingStop();
     setSending(true);
     try {
       await sendMessage(
@@ -74,6 +113,17 @@ export function ChatWindow({ conversation, onBack, onStartCall }: ChatWindowProp
     }
   }
 
+  function handleTextChange(e: React.ChangeEvent<HTMLTextAreaElement>) {
+    setText(e.target.value);
+    e.target.style.height = "auto";
+    e.target.style.height = Math.min(e.target.scrollHeight, 128) + "px";
+    if (e.target.value.trim()) {
+      onTypingStart();
+    } else {
+      onTypingStop();
+    }
+  }
+
   const grouped: { date: string; messages: Message[] }[] = [];
   for (const msg of messages) {
     const dateKey = msg.createdAt.toLocaleDateString([], {
@@ -87,7 +137,7 @@ export function ChatWindow({ conversation, onBack, onStartCall }: ChatWindowProp
     }
   }
 
-  const isPersonal = conversation.type === "personal";
+  const subtitle = getSubtitle();
 
   return (
     <div
@@ -108,8 +158,16 @@ export function ChatWindow({ conversation, onBack, onStartCall }: ChatWindowProp
         </div>
         <div className="flex-1 min-w-0">
           <p className="font-semibold text-sm leading-tight">{getTitle()}</p>
-          <p className={`text-xs leading-tight truncate ${otherParticipant?.isOnline ? "text-[#a8d5ca]" : "text-[#c5ddd8]"}`}>
-            {getSubtitle()}
+          <p
+            className={`text-xs leading-tight truncate transition-colors duration-200 ${
+              subtitle.isTyping
+                ? "text-[#a8ffd0] italic"
+                : subtitle.isOnline
+                  ? "text-[#a8d5ca]"
+                  : "text-[#c5ddd8]"
+            }`}
+          >
+            {subtitle.text}
           </p>
         </div>
         {/* Call buttons — only for 1-on-1 chats */}
@@ -161,7 +219,7 @@ export function ChatWindow({ conversation, onBack, onStartCall }: ChatWindowProp
               return (
                 <div
                   key={msg.id}
-                  onDoubleClick={() => isOwn ? setSelectedMessage(msg) : undefined}
+                  onDoubleClick={() => (isOwn ? setSelectedMessage(msg) : undefined)}
                 >
                   <ChatBubble
                     message={msg}
@@ -186,11 +244,7 @@ export function ChatWindow({ conversation, onBack, onStartCall }: ChatWindowProp
             placeholder="Type a message"
             rows={1}
             value={text}
-            onChange={(e) => {
-              setText(e.target.value);
-              e.target.style.height = "auto";
-              e.target.style.height = Math.min(e.target.scrollHeight, 128) + "px";
-            }}
+            onChange={handleTextChange}
             onKeyDown={handleKeyDown}
           />
         </div>

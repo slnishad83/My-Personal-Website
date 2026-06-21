@@ -26,3 +26,21 @@ export function formatMessageTime(date: Date | null | undefined): string {
   return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 }
 
+export function formatLastSeen(date: Date | null | undefined): string {
+  if (!date) return "last seen recently";
+  const now = new Date();
+  const time = date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+
+  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const yesterdayStart = new Date(todayStart.getTime() - 86400000);
+
+  if (date >= todayStart) {
+    return `last seen today at ${time}`;
+  } else if (date >= yesterdayStart) {
+    return `last seen yesterday at ${time}`;
+  } else {
+    const dateStr = date.toLocaleDateString([], { day: "2-digit", month: "2-digit", year: "numeric" });
+    return `last seen ${dateStr} at ${time}`;
+  }
+}
+
