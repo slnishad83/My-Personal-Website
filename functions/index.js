@@ -1693,3 +1693,158 @@ exports.adminDeleteUser = onCall(
     return { ok: true };
   }
 );
+
+// ════════════════════════════════════════════════════════════════════════════
+// INNOVATIVE FEATURES — Cloud Functions
+// ════════════════════════════════════════════════════════════════════════════
+
+// ── Feature 1: Voice Message Transcription (uses Gemini 1.5 Flash) ────────
+exports.transcribeVoiceMessage = onCall(
+  { region: 'us-central1', secrets: [geminiApiKey] },
+  async (request) => {
+    if (!request.auth) throw new HttpsError('unauthenticated', 'Must be signed in.');
+    const { messageId, audioUrl } = request.data || {};
+    if (!audioUrl) throw new HttpsError('invalid-argument', 'Missing audioUrl.');
+    const apiKey = geminiApiKey.value();
+    if (!apiKey) throw new HttpsError('failed-precondition', 'GEMINI_API_KEY not set.');
+    try {
+      // Download the audio file and convert to base64
+      const audioRes = await fetch(audioUrl);
+      if (!audioRes.ok) throw new Error('Could not fetch audio file.');
+      const buffer = await audioRes.arrayBuffer();
+      const base64 = Buffer.from(buffer).toString('base64');
+      const mimeType = audioRes.headers.get('content-type') || 'audio/webm';
+      // Send to Gemini for transcription
+      const gemRes = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{
+              role: 'user',
+              parts: [
+                { inlineData: { mimeType, data: base64 } },
+                { text: 'Please transcribe this voice message accurately. Return only the transcribed text, nothing else. If you cannot transcribe, say "Could not transcribe."' }
+              ]
+            }],
+            generationConfig: { maxOutputTokens: 500, temperature: 0 }
+          })
+        }
+      );
+      if (!gemRes.ok) throw new Error('Gemini error: ' + await gemRes.text());
+      const gemData = await gemRes.json();
+      const text = gemData?.candidates?.[0]?.content?.parts?.[0]?.text || 'Could not transcribe.';
+      // Save transcription to the message
+      if (messageId) {
+        await admin.firestore().collection('messages').doc(messageId).update({ transcription: text.trim() }).catch(() => {});
+      }
+      return { text: text.trim() };
+    } catch (err) {
+      throw new HttpsError('internal', err.message);
+    }
+  }
+);
+
+// ── Feature 4: Catch Me Up AI Summary ─────────────────────────────────────
+exports.catchMeUp = onCall(
+  { region: 'us-central1', secrets: [geminiApiKey] },
+  async (request) => {
+    if (!request.auth) throw new HttpsError('unauthenticated', 'Must be signed in.');
+    const { chatId, chatType } = request.data || {};
+    if (!chatId || !chatType) throw new HttpsError('invalid-argument', 'Missing chatId or chatType.');
+    const apiKey = geminiApiKey.value();
+    if (!apiKey) throw new HttpsError('failed-precondition', 'GEMINI_API_KEY not set.');
+    try {
+      const field = chatType === 'group' ? 'groupId' : 'directId';
+      const snap = await admin.firestore().collection('messages')
+        .where(field, '==', chatId)
+        .orderBy('timestamp', 'desc')
+        .limit(50)
+        .get();
+      if (snap.empty) return { summary: 'No messages yet in this chat.' };
+      const messages = snap.docs.reverse().map(d => {
+        const data = d.data();
+        return `${data.senderName || 'Someone'}: ${data.text || (data.attachment ? '[media]' : '')}`;
+      }).filter(Boolean).join('\n');
+      const prompt = `These are the last messages in a team chat. Give a short, friendly summary (3-5 bullet points) of what was discussed, any decisions made, and anything that needs attention. Use plain text with dash bullets. Be brief and conversational.\n\nMessages:\n${messages}`;
+      const gemRes = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ role: 'user', parts: [{ text: prompt }] }],
+            generationConfig: { maxOutputTokens: 400, temperature: 0.5 }
+          })
+        }
+      );
+      const gemData = await gemRes.json();
+      const summary = gemData?.candidates?.[0]?.content?.parts?.[0]?.text || 'Could not generate summary.';
+      return { summary };
+    } catch (err) {
+      throw new HttpsError('internal', err.message);
+    }
+  }
+);
+
+// ── Feature 10: Busy Status Auto-Reply ────────────────────────────────────
+exports.busyAutoReply = onDocumentCreated(
+  { document: 'messages/{messageId}', region: 'asia-south1' },
+  async (event) => {
+    const msg = event.data.data();
+    if (!msg || msg.senderId === 'busy-autoreply' || msg.isAutoReply) return;
+    // Only for direct messages
+    if (!msg.directId || !msg.receiverId) return;
+    try {
+      const recipientSnap = await admin.firestore().collection('users').doc(msg.receiverId).get();
+      const recipient = recipientSnap.data();
+      if (!recipient?.busyStatus) return;
+      // Send auto-reply
+      await admin.firestore().collection('messages').add({
+        directId: msg.directId,
+        senderId: msg.receiverId,
+        senderName: (recipient.displayName || 'User') + ' (Auto-reply)',
+        receiverId: msg.senderId,
+        text: `🔴 ${recipient.displayName || 'I'} is currently busy: "${recipient.busyStatus}". They will get back to you soon.`,
+        timestamp: admin.firestore.FieldValue.serverTimestamp(),
+        isAutoReply: true,
+        readBy: {}
+      });
+    } catch (_) {}
+  }
+);
+
+// ── Feature 7: Detect Calendar Events from Chat Messages ──────────────────
+exports.detectCalendarEvent = onCall(
+  { region: 'us-central1', secrets: [geminiApiKey] },
+  async (request) => {
+    if (!request.auth) throw new HttpsError('unauthenticated', 'Must be signed in.');
+    const { text } = request.data || {};
+    if (!text) throw new HttpsError('invalid-argument', 'Missing text.');
+    const apiKey = geminiApiKey.value();
+    if (!apiKey) throw new HttpsError('failed-precondition', 'GEMINI_API_KEY not set.');
+    const today = new Date().toISOString().split('T')[0];
+    const prompt = `Today is ${today}. Analyze this message and extract any event or appointment details.\nMessage: "${text}"\n\nReturn ONLY valid JSON like: {"hasEvent":true,"title":"Dinner","date":"2026-06-25","time":"19:00","note":"at Taj Hotel"}\nIf no event, return: {"hasEvent":false}`;
+    try {
+      const gemRes = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ role: 'user', parts: [{ text: prompt }] }],
+            generationConfig: { maxOutputTokens: 100, temperature: 0 }
+          })
+        }
+      );
+      const gemData = await gemRes.json();
+      const raw = gemData?.candidates?.[0]?.content?.parts?.[0]?.text || '{"hasEvent":false}';
+      const jsonMatch = raw.match(/\{[\s\S]*\}/);
+      const result = jsonMatch ? JSON.parse(jsonMatch[0]) : { hasEvent: false };
+      return result;
+    } catch (_) {
+      return { hasEvent: false };
+    }
+  }
+);
