@@ -101,11 +101,15 @@ auth.onAuthStateChanged(u=>{
 async function loadAlbum(){
   document.getElementById('albumGrid').innerHTML='<div class="loading">Loading photos…</div>';
   try{
-    const snap=await db.collection('messages')
-      .where('attachment.type','in',['image','video'])
-      .orderBy('timestamp','desc').limit(500).get();
-    allPhotos=snap.docs.map(d=>({id:d.id,...d.data()}))
-      .filter(m=>m.attachment&&m.attachment.url);
+    const [imgSnap,vidSnap]=await Promise.all([
+      db.collection('messages').where('participants','array-contains',currentUser.uid).where('attachment.type','==','image').orderBy('timestamp','desc').limit(300).get(),
+      db.collection('messages').where('participants','array-contains',currentUser.uid).where('attachment.type','==','video').orderBy('timestamp','desc').limit(200).get()
+    ]);
+    const seen=new Set();
+    allPhotos=[...imgSnap.docs,...vidSnap.docs]
+      .map(d=>({id:d.id,...d.data()}))
+      .filter(m=>{if(!m.attachment||!m.attachment.url||seen.has(m.id))return false;seen.add(m.id);return true;})
+      .sort((a,b)=>{const ta=a.timestamp?.toMillis?a.timestamp.toMillis():0;const tb=b.timestamp?.toMillis?b.timestamp.toMillis():0;return tb-ta;});
     renderAlbum();
   }catch(e){
     document.getElementById('albumGrid').innerHTML='<div class="empty"><div class="icon">📷</div><p>Could not load album.<br>'+e.message+'</p></div>';
