@@ -20,6 +20,7 @@
       rel="stylesheet"
     />
     <link rel="stylesheet" href="style.css?v=156" />
+    <link rel="stylesheet" href="threads.css?v=1" />
     <link rel="stylesheet" href="message-actions.css?v=8" />
     <link rel="stylesheet" href="ui-audit.css?v=2" />
     <link rel="stylesheet" href="translation-ui.css?v=3" />
@@ -3606,6 +3607,29 @@
       </div>
     </div>
 
+    <!-- ====== THREAD PANEL ====== -->
+    <div id="threadPanel" role="dialog" aria-label="Thread" aria-modal="true">
+      <div class="thread-panel-header">
+        <span class="thread-panel-title">Thread</span>
+        <span class="thread-header-count" id="threadHeaderCount"></span>
+        <button id="threadPanelCloseBtn" aria-label="Close thread">&times;</button>
+      </div>
+      <div class="thread-parent-section">
+        <div class="thread-parent-label">Original message</div>
+        <div id="threadParentMessage"></div>
+      </div>
+      <div id="threadRepliesList" role="log" aria-live="polite" aria-label="Thread replies"></div>
+      <div class="thread-composer-row">
+        <textarea
+          id="threadComposer"
+          placeholder="Reply to thread…"
+          rows="1"
+          aria-label="Thread reply"
+        ></textarea>
+        <button id="threadSendBtn" aria-label="Send reply">&#9658;</button>
+      </div>
+    </div>
+
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
@@ -3618,5 +3642,7 @@
     <script src="app-init.js?v=1"></script>
     <script src="pwa-install.js?v=146"></script>
     <script src="fixes.js?v=5"></script>
+    <script src="threads.js?v=1"></script>
+    <script src="ai-bot.js?v=1"></script>
   </body>
 </html>
