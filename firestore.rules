@@ -524,6 +524,25 @@ service cloud.firestore {
       allow update, delete: if signedIn() && resource.data.creatorId == request.auth.uid;
     }
 
+    match /tasks/{taskId} {
+      allow read, create: if signedIn() && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if signedIn() && resource.data.userId == request.auth.uid;
+    }
+    match /calendarEvents/{eventId} {
+      allow read: if signedIn();
+      allow create: if signedIn();
+      allow update, delete: if signedIn() && resource.data.addedBy == request.auth.uid;
+    }
+    match /groupExpenses/{expId} {
+      allow read: if signedIn();
+      allow create: if signedIn();
+      allow update, delete: if signedIn() && resource.data.addedBy == request.auth.uid;
+    }
+    match /scheduledMessages/{msgId} {
+      allow read: if signedIn() && resource.data.userId == request.auth.uid;
+      allow create: if signedIn() && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if signedIn() && resource.data.userId == request.auth.uid;
+    }
     match /{document=**} {
       allow read, write: if false;
     }
