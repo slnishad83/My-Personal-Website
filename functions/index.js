@@ -1575,3 +1575,84 @@ function _storagePathFromUrl(url) {
     return null;
   }
 }
+
+// ════════════════════════════════════════════════════════════════════════════
+// ADMIN FUNCTIONS — Only callable by sl.nishad@gmail.com
+// ════════════════════════════════════════════════════════════════════════════
+
+const ADMIN_EMAIL = 'sl.nishad@gmail.com';
+
+async function assertAdmin(auth) {
+  if (!auth) throw new HttpsError('unauthenticated', 'Must be signed in.');
+  const userRecord = await admin.auth().getUser(auth.uid);
+  if (userRecord.email !== ADMIN_EMAIL) {
+    throw new HttpsError('permission-denied', 'Admin access only.');
+  }
+}
+
+// ── Ban a user ────────────────────────────────────────────────────────────
+exports.adminBanUser = onCall(
+  { region: 'us-central1' },
+  async (request) => {
+    await assertAdmin(request.auth);
+    const { targetUid, reason } = request.data || {};
+    if (!targetUid) throw new HttpsError('invalid-argument', 'Missing targetUid.');
+
+    // Mark banned in Firestore
+    await admin.firestore().collection('users').doc(targetUid).set({
+      banned: true,
+      banReason: reason || '',
+      bannedAt: admin.firestore.FieldValue.serverTimestamp(),
+      bannedBy: request.auth.uid,
+    }, { merge: true });
+
+    // Disable in Firebase Auth
+    try { await admin.auth().updateUser(targetUid, { disabled: true }); } catch (_) {}
+
+    // Revoke all active sessions
+    try {
+      const sessions = await admin.firestore()
+        .collection('userSessions')
+        .where('userId', '==', targetUid)
+        .where('isActive', '==', true)
+        .get();
+      const batch = admin.firestore().batch();
+      sessions.docs.forEach(doc => batch.update(doc.ref, { revoked: true, isActive: false }));
+      await batch.commit();
+    } catch (_) {}
+
+    return { ok: true };
+  }
+);
+
+// ── Unban a user ─────────────────────────────────────────────────────────
+exports.adminUnbanUser = onCall(
+  { region: 'us-central1' },
+  async (request) => {
+    await assertAdmin(request.auth);
+    const { targetUid } = request.data || {};
+    if (!targetUid) throw new HttpsError('invalid-argument', 'Missing targetUid.');
+
+    await admin.firestore().collection('users').doc(targetUid).set({
+      banned: false,
+      banReason: '',
+      unbannedAt: admin.firestore.FieldValue.serverTimestamp(),
+      unbannedBy: request.auth.uid,
+    }, { merge: true });
+
+    try { await admin.auth().updateUser(targetUid, { disabled: false }); } catch (_) {}
+
+    return { ok: true };
+  }
+);
+
+// ── Get all users (admin only) ────────────────────────────────────────────
+exports.adminListUsers = onCall(
+  { region: 'us-central1' },
+  async (request) => {
+    await assertAdmin(request.auth);
+    const snap = await admin.firestore().collection('users')
+      .orderBy('createdAt', 'desc').limit(500).get();
+    return { users: snap.docs.map(d => ({ id: d.id, ...d.data() })) };
+  }
+);
