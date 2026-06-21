@@ -179,12 +179,57 @@ async function sendThreadReply() {
   }
 }
 
+// ── Thread Summary ────────────────────────────────────────────────────────
+async function summarizeCurrentThread() {
+  if (!currentThreadMessageId) return;
+
+  const btn = document.getElementById("threadSummarizeBtn");
+  if (btn) { btn.disabled = true; btn.textContent = "Summarizing…"; }
+
+  // Remove any previous summary card
+  document.getElementById("threadSummaryCard")?.remove();
+
+  try {
+    const summarizeFn = firebase.functions().httpsCallable("summarizeThread", { timeout: 30000 });
+    const result = await summarizeFn({ messageId: currentThreadMessageId });
+    const summaryText = result.data?.summary || "No summary generated.";
+
+    // Parse lines into bullet list
+    const lines = summaryText.split("\n").map(l => l.trim().replace(/^[-•*]\s*/, "")).filter(Boolean);
+    const listHtml = lines.map(l => `<li>${escapeHtml(l)}</li>`).join("");
+
+    const card = document.createElement("div");
+    card.id = "threadSummaryCard";
+    card.className = "thread-summary-card";
+    card.innerHTML = `
+      <div class="thread-summary-header">
+        <span class="thread-summary-icon">✨</span>
+        <span class="thread-summary-title">AI Summary</span>
+        <button class="thread-summary-close" type="button" aria-label="Close summary">&#x2715;</button>
+      </div>
+      <ul class="thread-summary-list">${listHtml}</ul>
+    `;
+    card.querySelector(".thread-summary-close").addEventListener("click", () => card.remove());
+
+    const repliesList = document.getElementById("threadRepliesList");
+    if (repliesList) repliesList.parentNode.insertBefore(card, repliesList);
+  } catch (err) {
+    console.error("[summarizeThread]", err);
+    if (typeof showToast === "function") showToast("Could not summarize thread. Deploy the Cloud Function first.", "error");
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = "✨ Summarize"; }
+  }
+}
+
 function setupThreadPanel() {
   const closeBtn = document.getElementById("threadPanelCloseBtn");
   if (closeBtn) closeBtn.addEventListener("click", closeThreadPanel);
 
   const sendBtn = document.getElementById("threadSendBtn");
   if (sendBtn) sendBtn.addEventListener("click", sendThreadReply);
+
+  const summarizeBtn = document.getElementById("threadSummarizeBtn");
+  if (summarizeBtn) summarizeBtn.addEventListener("click", summarizeCurrentThread);
 
   const composer = document.getElementById("threadComposer");
   if (composer) {
