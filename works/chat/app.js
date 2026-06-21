@@ -24335,7 +24335,7 @@ let largeFileUploadXHR = null;
 async function uploadLargeFile(file, onProgress) {
   if (file.size <= 25 * 1024 * 1024) {
     // Small file: use existing Cloudinary upload
-    return uploadToCloudinary(file, onProgress);
+    return (window._origUploadToCloudinary || uploadToCloudinary)(file, onProgress);
   }
   // Large file: use Firebase Storage with resumable upload
   const path = `large_uploads/${currentUser.uid}/${Date.now()}_${file.name}`;
