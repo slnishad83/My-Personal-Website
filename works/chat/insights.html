@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover"/>
+  <meta name="theme-color" content="#008069"/>
+  <title>Chat Insights — Team Chat</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet"/>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    :root{--green:#008069;--bg:#f0f2f5;--card:#fff;--text:#111b21;--muted:#667781;--border:#e2e8f0}
+    body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+    .header{background:var(--green);color:#fff;padding:14px 18px;display:flex;align-items:center;gap:14px;position:sticky;top:0;z-index:10}
+    .back-btn{background:none;border:none;color:#fff;font-size:22px;cursor:pointer;padding:4px}
+    .header h1{font-size:17px;font-weight:700}
+    .content{padding:16px;max-width:700px;margin:0 auto;display:flex;flex-direction:column;gap:16px}
+    .card{background:var(--card);border-radius:14px;border:1px solid var(--border);overflow:hidden}
+    .card-header{padding:14px 18px;border-bottom:1px solid var(--border);font-weight:700;font-size:14px;display:flex;align-items:center;gap:8px}
+    .card-body{padding:16px 18px}
+    .stats-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px;padding:16px}
+    .stat-box{text-align:center;padding:16px 10px;background:var(--bg);border-radius:10px}
+    .stat-num{font-size:28px;font-weight:800;color:var(--green)}
+    .stat-lbl{font-size:11px;color:var(--muted);margin-top:4px;font-weight:500}
+    .bar-row{display:flex;align-items:center;gap:10px;padding:6px 0}
+    .bar-label{font-size:12px;color:var(--text);width:100px;flex-shrink:0;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .bar-track{flex:1;height:8px;background:var(--bg);border-radius:4px;overflow:hidden}
+    .bar-fill{height:100%;background:var(--green);border-radius:4px;transition:width 0.8s ease}
+    .bar-count{font-size:12px;color:var(--muted);width:36px;text-align:right;flex-shrink:0}
+    .emoji-grid{display:flex;flex-wrap:wrap;gap:10px}
+    .emoji-item{display:flex;align-items:center;gap:6px;background:var(--bg);border-radius:8px;padding:7px 12px;font-size:13px}
+    .emoji-icon{font-size:20px}
+    .emoji-count{font-weight:700;color:var(--text)}
+    .hour-bars{display:flex;align-items:flex-end;gap:3px;height:80px;padding-top:8px}
+    .hour-bar{flex:1;background:var(--green);border-radius:3px 3px 0 0;min-height:2px;position:relative;opacity:0.7;transition:opacity 0.2s}
+    .hour-bar:hover{opacity:1}
+    .hour-bar[title]:hover::after{content:attr(title);position:absolute;bottom:calc(100% + 4px);left:50%;transform:translateX(-50%);background:#111;color:#fff;font-size:10px;padding:3px 6px;border-radius:4px;white-space:nowrap;z-index:10}
+    .hour-labels{display:flex;justify-content:space-between;font-size:9px;color:var(--muted);padding:4px 0 0}
+    .loading-txt{text-align:center;color:var(--muted);padding:32px;font-size:14px}
+    .badge-row{display:flex;flex-wrap:wrap;gap:8px}
+    .badge{display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border-radius:20px;font-size:12px;font-weight:600;background:var(--bg);color:var(--text)}
+    .badge .icon{font-size:14px}
+  </style>
+</head>
+<body>
+<div class="header">
+  <button class="back-btn" onclick="history.back()">←</button>
+  <h1>📊 Your Chat Insights</h1>
+</div>
+<div class="content">
+  <div id="loading" class="loading-txt">Analysing your chat history…</div>
+  <div id="stats" style="display:none;display:flex;flex-direction:column;gap:16px"></div>
+</div>
+
+<script>
+const firebaseConfig={apiKey:"AIzaSyCdbut_FdscAjl-OVSlAUhb7TOTiRNkh34",authDomain:"my-team-chat-2255.firebaseapp.com",projectId:"my-team-chat-2255",storageBucket:"my-team-chat-2255.firebasestorage.app",messagingSenderId:"805016891521",appId:"1:805016891521:web:ac9bc7a252bcf33686dd80"};
+firebase.initializeApp(firebaseConfig);
+const auth=firebase.auth(),db=firebase.firestore();
+let currentUser=null;
+
+auth.onAuthStateChanged(u=>{if(!u){window.location.href='login.html';return;}currentUser=u;loadInsights();});
+
+async function loadInsights(){
+  try{
+    // Fetch messages sent by this user (last 1000)
+    const sentSnap=await db.collection('messages').where('senderId','==',currentUser.uid).orderBy('timestamp','desc').limit(1000).get();
+    const sent=sentSnap.docs.map(d=>d.data());
+
+    // Fetch user profile to get displayName
+    const userDoc=await db.collection('users').doc(currentUser.uid).get();
+    const userData=userDoc.data()||{};
+
+    // Basic stats
+    const totalSent=sent.length;
+    const voiceNotes=sent.filter(m=>m.attachment&&m.attachment.type==='voice').length;
+    const images=sent.filter(m=>m.attachment&&m.attachment.type==='image').length;
+    const videos=sent.filter(m=>m.attachment&&m.attachment.type==='video').length;
+    const textMsgs=sent.filter(m=>m.text&&!m.attachment).length;
+
+    // Hour distribution
+    const hourMap=Array(24).fill(0);
+    sent.forEach(m=>{const d=m.timestamp?.toDate?m.timestamp.toDate():null;if(d)hourMap[d.getHours()]++;});
+    const peakHour=hourMap.indexOf(Math.max(...hourMap));
+    const peakLabel=peakHour===0?'Midnight':peakHour<12?peakHour+'am':peakHour===12?'Noon':(peakHour-12)+'pm';
+
+    // Emoji analysis
+    const emojiRe=/\p{Emoji_Presentation}/gu;
+    const emojiCount={};
+    sent.forEach(m=>{const matches=(m.text||'').match(emojiRe)||[];matches.forEach(e=>{emojiCount[e]=(emojiCount[e]||0)+1;});});
+    const topEmojis=Object.entries(emojiCount).sort((a,b)=>b[1]-a[1]).slice(0,8);
+
+    // Most chatted with (from directId)
+    const chatCount={};
+    sent.forEach(m=>{if(m.directId){chatCount[m.directId]=(chatCount[m.directId]||0)+1;}});
+
+    // Longest text sent
+    let longestMsg='';
+    sent.forEach(m=>{if((m.text||'').length>(longestMsg||'').length)longestMsg=m.text||'';});
+
+    // Build badges
+    const badges=[];
+    if(voiceNotes>50)badges.push({icon:'🎙️',label:'Voice Champion'});
+    if(images>30)badges.push({icon:'📸',label:'Photo Sharer'});
+    if(totalSent>500)badges.push({icon:'💬',label:'Chatterbox'});
+    if(topEmojis.length>0&&topEmojis[0][1]>20)badges.push({icon:'😄',label:'Emoji Lover'});
+    if(peakHour>=22||peakHour<5)badges.push({icon:'🌙',label:'Night Owl'});
+    if(peakHour>=5&&peakHour<9)badges.push({icon:'🌅',label:'Early Bird'});
+
+    document.getElementById('loading').style.display='none';
+    const el=document.getElementById('stats');
+    el.style.display='flex';
+    el.innerHTML=`
+      <div class="card">
+        <div class="stats-row">
+          <div class="stat-box"><div class="stat-num">${totalSent}</div><div class="stat-lbl">Messages Sent</div></div>
+          <div class="stat-box"><div class="stat-num">${voiceNotes}</div><div class="stat-lbl">Voice Notes</div></div>
+          <div class="stat-box"><div class="stat-num">${images}</div><div class="stat-lbl">Photos Shared</div></div>
+          <div class="stat-box"><div class="stat-num">${videos}</div><div class="stat-lbl">Videos Shared</div></div>
+          <div class="stat-box"><div class="stat-num">${textMsgs}</div><div class="stat-lbl">Text Messages</div></div>
+          <div class="stat-box"><div class="stat-num">${longestMsg.length}</div><div class="stat-lbl">Longest Message (chars)</div></div>
+        </div>
+      </div>
+      ${badges.length?`<div class="card">
+        <div class="card-header">🏆 Your Badges</div>
+        <div class="card-body"><div class="badge-row">${badges.map(b=>`<div class="badge"><span class="icon">${b.icon}</span>${b.label}</div>`).join('')}</div></div>
+      </div>`:''}
+      <div class="card">
+        <div class="card-header">⏰ Activity by Hour — Peak: ${peakLabel}</div>
+        <div class="card-body">
+          <div class="hour-bars">${hourMap.map((v,i)=>{const max=Math.max(...hourMap,1);const h=Math.round((v/max)*76);return`<div class="hour-bar" style="height:${h}px" title="${i}:00 — ${v} msgs"></div>`;}).join('')}</div>
+          <div class="hour-labels"><span>12am</span><span>6am</span><span>12pm</span><span>6pm</span><span>11pm</span></div>
+        </div>
+      </div>
+      ${topEmojis.length?`<div class="card">
+        <div class="card-header">😄 Your Most Used Emojis</div>
+        <div class="card-body"><div class="emoji-grid">${topEmojis.map(([e,c])=>`<div class="emoji-item"><span class="emoji-icon">${e}</span><span class="emoji-count">${c}</span></div>`).join('')}</div></div>
+      </div>`:''}
+    `;
+  }catch(e){
+    document.getElementById('loading').textContent='Could not load insights: '+e.message;
+  }
+}
+</script>
+</body>
+</html>
