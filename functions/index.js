@@ -1,5 +1,5 @@
 const admin = require('firebase-admin');
-const { onRequest } = require('firebase-functions/v2/https');
+const { onRequest, onCall, HttpsError } = require('firebase-functions/v2/https');
 const { onDocumentCreated, onDocumentUpdated, onDocumentDeleted } = require('firebase-functions/v2/firestore');
 const { onSchedule } = require('firebase-functions/v2/scheduler');
 const { defineSecret } = require('firebase-functions/params');
@@ -1397,38 +1397,22 @@ exports.weeklyOrphanedUploadCleanup = onSchedule(
 
 const geminiApiKey = defineSecret('GEMINI_API_KEY');
 
-exports.aiChatBot = onRequest(
-  { region: 'us-central1', invoker: 'public', secrets: [geminiApiKey] },
-  async (req, res) => {
-    setCorsHeaders(res);
-    res.set('Cache-Control', 'private, no-store');
-    if (req.method === 'OPTIONS') {
-      res.status(204).send('');
-      return;
+exports.aiChatBot = onCall(
+  { region: 'us-central1', secrets: [geminiApiKey] },
+  async (request) => {
+    // onCall automatically verifies the Firebase auth token
+    if (!request.auth) {
+      throw new HttpsError('unauthenticated', 'Must be signed in to use the AI assistant.');
     }
 
-    if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
-
-    // Verify Firebase ID token
-    const authHeader = req.headers.authorization || '';
-    const idToken = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
-    if (!idToken) return res.status(401).json({ error: 'Unauthorized' });
-
-    let decodedToken;
-    try {
-      decodedToken = await admin.auth().verifyIdToken(idToken);
-    } catch (err) {
-      return res.status(401).json({ error: 'Invalid token' });
-    }
-
-    const { prompt, chatId, chatType, senderName } = req.body || {};
+    const { prompt, chatId, chatType, senderName } = request.data || {};
     if (!prompt || !chatId || !chatType) {
-      return res.status(400).json({ error: 'Missing prompt, chatId, or chatType' });
+      throw new HttpsError('invalid-argument', 'Missing prompt, chatId, or chatType.');
     }
 
     const apiKey = geminiApiKey.value();
     if (!apiKey) {
-      return res.status(503).json({ error: 'GEMINI_API_KEY secret not configured' });
+      throw new HttpsError('failed-precondition', 'GEMINI_API_KEY secret is not configured.');
     }
 
     // Fetch recent chat messages for context (last 10)
@@ -1449,6 +1433,7 @@ exports.aiChatBot = onRequest(
 
     const systemPrompt = `You are a helpful AI assistant inside a team chat app called Team Chat. Be concise, friendly, and helpful.${contextMessages}`;
 
+    let botText;
     try {
       const geminiRes = await fetch(
         `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
@@ -1467,31 +1452,33 @@ exports.aiChatBot = onRequest(
       if (!geminiRes.ok) {
         const errBody = await geminiRes.text();
         console.error('[aiChatBot] Gemini error:', errBody);
-        return res.status(502).json({ error: 'Gemini API error', detail: errBody });
+        throw new HttpsError('internal', `Gemini API error: ${errBody.substring(0, 200)}`);
       }
 
       const geminiData = await geminiRes.json();
-      const botText = geminiData?.candidates?.[0]?.content?.parts?.[0]?.text || 'Sorry, I could not generate a response.';
-
-      // Post the AI response as a message in the chat
-      const messageData = {
-        text: botText,
-        senderId: 'ai-bot',
-        senderName: 'AI Assistant',
-        isAiBot: true,
-        timestamp: admin.firestore.FieldValue.serverTimestamp(),
-        readBy: { [decodedToken.uid]: admin.firestore.FieldValue.serverTimestamp() },
-      };
-      if (chatType === 'direct') messageData.directId = chatId;
-      else if (chatType === 'group') messageData.groupId = chatId;
-
-      await admin.firestore().collection('messages').add(messageData);
-
-      return res.status(200).json({ ok: true });
+      botText = geminiData?.candidates?.[0]?.content?.parts?.[0]?.text
+        || 'Sorry, I could not generate a response.';
     } catch (err) {
-      console.error('[aiChatBot] Error:', err);
-      return res.status(500).json({ error: err.message });
+      if (err instanceof HttpsError) throw err;
+      console.error('[aiChatBot] Gemini fetch error:', err);
+      throw new HttpsError('internal', err.message);
     }
+
+    // Post the AI reply as a chat message
+    const messageData = {
+      text: botText,
+      senderId: 'ai-bot',
+      senderName: 'AI Assistant',
+      isAiBot: true,
+      timestamp: admin.firestore.FieldValue.serverTimestamp(),
+      readBy: { [request.auth.uid]: admin.firestore.FieldValue.serverTimestamp() },
+    };
+    if (chatType === 'direct') messageData.directId = chatId;
+    else if (chatType === 'group') messageData.groupId = chatId;
+
+    await admin.firestore().collection('messages').add(messageData);
+
+    return { ok: true };
   }
 );
 
