@@ -245,8 +245,8 @@
     .btn-resolve:hover { background: #dcfce7; }
     .btn-dismiss { color: var(--muted); border-color: var(--border); background: transparent; }
     .btn-dismiss:hover { background: var(--bg); }
-    .btn-delete { color: var(--red); border-color: var(--red); background: transparent; }
-    .btn-delete:hover { background: #fee2e2; }
+    .btn-delete { color: #fff; border-color: #b91c1c; background: #dc2626; }
+    .btn-delete:hover { background: #b91c1c; }
 
     /* ── MODAL ── */
     .modal-overlay {
@@ -626,6 +626,7 @@
           ${u.banned
             ? `<button class="btn-action btn-unban" onclick="unbanUser('${u.id}','${esc(u.displayName||u.email)}')">Unban</button>`
             : `<button class="btn-action btn-ban" onclick="confirmBan('${u.id}','${esc(u.displayName||u.email)}')">Ban</button>`}
+          <button class="btn-action btn-delete" onclick="confirmDelete('${u.id}','${esc(u.displayName||u.email)}')">Delete</button>
         </div></td>
       </tr>`).join('');
   }
@@ -647,6 +648,7 @@
           ${u.banned
             ? `<button class="btn-action btn-unban" onclick="unbanUser('${u.id}','${esc(u.displayName||u.email)}')">Unban</button>`
             : `<button class="btn-action btn-ban" onclick="confirmBan('${u.id}','${esc(u.displayName||u.email)}')">Ban</button>`}
+          <button class="btn-action btn-delete" onclick="confirmDelete('${u.id}','${esc(u.displayName||u.email)}')">Delete</button>
         </div></td>
       </tr>`).join('');
   }
@@ -716,7 +718,8 @@
       { label: 'Close', cls: 'btn-cancel', action: 'closeModal()' },
       u.banned
         ? { label: 'Unban', cls: 'btn-action btn-unban', action: `unbanUser('${u.id}','${esc(u.displayName||u.email)}');closeModalDirect()` }
-        : { label: 'Ban User', cls: 'btn-danger', action: `confirmBan('${u.id}','${esc(u.displayName||u.email)}');closeModalDirect()` }
+        : { label: 'Ban User', cls: 'btn-danger', action: `confirmBan('${u.id}','${esc(u.displayName||u.email)}');closeModalDirect()` },
+      { label: '🗑 Delete Account', cls: 'btn-action btn-delete', action: `confirmDelete('${u.id}','${esc(u.displayName||u.email)}');closeModalDirect()` }
     ]);
   }
 
@@ -734,6 +737,42 @@
     `, [{ label: 'Close', cls: 'btn-cancel', action: 'closeModal()' }]);
   }
 
+
+  function confirmDelete(uid, name) {
+    openModal('⚠️ Delete Account', `
+      <div style='background:#fef2f2;border:1px solid #fecaca;border-radius:10px;padding:14px;margin-bottom:16px;'>
+        <strong style='color:#b91c1c;font-size:14px;'>This is permanent and cannot be undone.</strong>
+        <p style='color:#7f1d1d;font-size:13px;margin-top:6px;'>Deleting <strong>${esc(name)}</strong> will remove their account from Firebase Auth and Firestore. Their messages will remain but the account is gone forever.</p>
+      </div>
+      <p style='font-size:13px;color:#374151;'>Type <strong>DELETE</strong> below to confirm:</p>
+      <input type='text' id='deleteConfirmInput' class='search-input' style='width:100%;margin-top:8px' placeholder='Type DELETE to confirm' />
+    `, [
+      { label: 'Cancel', cls: 'btn-cancel', action: 'closeModal()' },
+      { label: '🗑 Permanently Delete', cls: 'btn-delete', action: `execDelete('${uid}','${esc(name)}')` }
+    ]);
+  }
+
+  async function execDelete(uid, name) {
+    const confirmText = document.getElementById('deleteConfirmInput')?.value || '';
+    if (confirmText.trim().toUpperCase() !== 'DELETE') {
+      showToast('Type DELETE (in capitals) to confirm.', 'error');
+      return;
+    }
+    closeModalDirect();
+    try {
+      const adminAction = functions.httpsCallable('adminDeleteUser');
+      await adminAction({ targetUid: uid });
+      allUsers = allUsers.filter(u => u.id !== uid);
+      renderUsers();
+      renderRecentUsers();
+      renderBanned();
+      updateStats();
+      updateTopBar();
+      showToast(name + ' account permanently deleted.');
+    } catch (e) {
+      showToast('Delete failed: ' + e.message, 'error');
+    }
+  }
   function confirmBan(uid, name) {
     openModal('Ban User', `
       <p style="font-size:14px;margin-bottom:16px;">Are you sure you want to ban <strong>${esc(name)}</strong>? They will be logged out and unable to access the app.</p>
