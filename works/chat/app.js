@@ -29726,3 +29726,517 @@ document.getElementById("closeSessionsModal")?.addEventListener("click", () => {
 
   console.log("[CFP] WhatsApp-parity call feature pack loaded");
 })();
+
+/* ═══════════════════════════════════════════════════════════════════
+   BACKGROUND EFFECTS SYSTEM — 2026
+   Canvas pipeline: camera video → effect canvas → replaceTrack()
+   Effects: Blur / Slight-blur / Virtual colour / Virtual image upload
+   Segmentation: MediaPipe SelfieSegmentation (lazy CDN) with instant
+   center-oval fallback so the button works immediately on first click.
+   Works on web, PWA, and Capacitor Android (canvas captureStream).
+═══════════════════════════════════════════════════════════════════ */
+(function BgEffectsPack() {
+  "use strict";
+
+  /* ── state ─────────────────────────────────────────────────── */
+  let _mode           = "off";    // 'off'|'blur'|'slight'|'color'|'image'
+  let _canvas         = null;     // processing canvas (same res as camera)
+  let _ctx            = null;
+  let _blurCanvas     = null;     // offscreen blur layer
+  let _blurCtx        = null;
+  let _maskCanvas     = null;     // temp canvas for ML mask compositing
+  let _maskCtx        = null;
+  let _stream         = null;     // canvas.captureStream(30)
+  let _raf            = null;     // animation-frame loop ID
+  let _origTrack      = null;     // saved raw camera track
+  let _segmenter      = null;     // MediaPipe SelfieSegmentation
+  let _segReady       = false;
+  let _bgColor        = "#1a2a3a";
+  let _bgImg          = null;     // HTMLImageElement for virtual bg
+  let _lastSegMask    = null;     // latest segmentation mask canvas
+  let _segPending     = false;
+
+  const FPS           = 30;
+  const BLUR_HEAVY    = 20;       // px for 'blur' mode
+  const BLUR_LIGHT    = 8;        // px for 'slight' mode
+
+  /* ── canvas helpers ────────────────────────────────────────── */
+  function _ensureCanvases(w, h) {
+    if (!_canvas) {
+      _canvas = document.createElement("canvas");
+      _ctx    = _canvas.getContext("2d");
+    }
+    if (!_blurCanvas) {
+      _blurCanvas = document.createElement("canvas");
+      _blurCtx    = _blurCanvas.getContext("2d");
+    }
+    if (!_maskCanvas) {
+      _maskCanvas = document.createElement("canvas");
+      _maskCtx    = _maskCanvas.getContext("2d");
+    }
+    if (_canvas.width !== w || _canvas.height !== h) {
+      _canvas.width  = _blurCanvas.width  = _maskCanvas.width  = w || 640;
+      _canvas.height = _blurCanvas.height = _maskCanvas.height = h || 480;
+    }
+  }
+
+  /* ── MediaPipe lazy-load ───────────────────────────────────── */
+  function _loadSegmenter() {
+    if (_segmenter || _segPending) return;
+    _segPending = true;
+
+    const BASE = "https://cdn.jsdelivr.net/npm/@mediapipe/selfie_segmentation@0.1.1675465747/";
+    const s = Object.assign(document.createElement("script"), {
+      src: BASE + "selfie_segmentation.js",
+      crossOrigin: "anonymous",
+    });
+    s.onload = async () => {
+      try {
+        _segmenter = new SelfieSegmentation({
+          locateFile: f => BASE + f,
+        });
+        _segmenter.setOptions({ modelSelection: 1 }); // landscape model
+        _segmenter.onResults(r => {
+          _lastSegMask = r.segmentationMask;
+        });
+        await _segmenter.initialize();
+        _segReady = true;
+        console.log("[BgFX] MediaPipe segmentation ready");
+      } catch (e) {
+        console.warn("[BgFX] MediaPipe failed, using fallback:", e);
+      }
+    };
+    s.onerror = () => console.warn("[BgFX] MediaPipe CDN load failed, using ellipse fallback");
+    document.head.appendChild(s);
+  }
+
+  /* ── blur-only helper (no segmentation) ───────────────────── */
+  function _drawBlurFallback(ctx, blurCtx, videoEl, w, h, blurPx) {
+    // Step 1 — blurred background layer on blurCanvas
+    blurCtx.filter = `blur(${blurPx}px)`;
+    blurCtx.drawImage(videoEl, 0, 0, w, h);
+    blurCtx.filter = "none";
+
+    // Step 2 — draw blurred layer onto main canvas
+    ctx.drawImage(_blurCanvas, 0, 0, w, h);
+
+    // Step 3 — overlay clear frame clipped to a soft center ellipse
+    //   (approx person region; no ML needed)
+    ctx.save();
+    const rX = w * 0.30;
+    const rY = h * 0.48;
+    const cX = w * 0.50;
+    const cY = h * 0.48;
+
+    // Build soft feather mask on maskCanvas
+    const mc = _maskCtx;
+    mc.clearRect(0, 0, w, h);
+    const grad = mc.createRadialGradient(cX, cY, rX * 0.40, cX, cY, rX * 1.10);
+    grad.addColorStop(0,    "rgba(0,0,0,1)");
+    grad.addColorStop(0.72, "rgba(0,0,0,1)");
+    grad.addColorStop(1,    "rgba(0,0,0,0)");
+    mc.ellipse(cX, cY, rX * 1.10, rY * 1.10, 0, 0, Math.PI * 2);
+    mc.fillStyle = grad;
+    mc.fill();
+
+    // Draw clear video onto mask canvas
+    mc.globalCompositeOperation = "source-in";
+    mc.drawImage(videoEl, 0, 0, w, h);
+    mc.globalCompositeOperation = "source-over";
+
+    // Composite masked clear frame onto the blurred background
+    ctx.drawImage(_maskCanvas, 0, 0, w, h);
+    ctx.restore();
+  }
+
+  /* ── ML-segmented blur ─────────────────────────────────────── */
+  function _drawBlurML(ctx, blurCtx, videoEl, w, h, blurPx, mask) {
+    // Step 1 — blurred background
+    blurCtx.filter = `blur(${blurPx}px)`;
+    blurCtx.drawImage(videoEl, 0, 0, w, h);
+    blurCtx.filter = "none";
+    ctx.drawImage(_blurCanvas, 0, 0, w, h);
+
+    // Step 2 — clear person on top using ML mask
+    const mc = _maskCtx;
+    mc.clearRect(0, 0, w, h);
+    mc.drawImage(videoEl, 0, 0, w, h);
+    mc.globalCompositeOperation = "destination-in";
+    mc.drawImage(mask, 0, 0, w, h);
+    mc.globalCompositeOperation = "source-over";
+
+    ctx.drawImage(_maskCanvas, 0, 0, w, h);
+  }
+
+  /* ── virtual background helper ─────────────────────────────── */
+  function _drawVirtualBg(ctx, videoEl, w, h, mask) {
+    // Background: color or image
+    if (_mode === "image" && _bgImg) {
+      const scaleX = w / _bgImg.naturalWidth;
+      const scaleY = h / _bgImg.naturalHeight;
+      const scale  = Math.max(scaleX, scaleY);
+      const bw     = _bgImg.naturalWidth  * scale;
+      const bh     = _bgImg.naturalHeight * scale;
+      ctx.drawImage(_bgImg, (w - bw) / 2, (h - bh) / 2, bw, bh);
+    } else {
+      ctx.fillStyle = _bgColor;
+      ctx.fillRect(0, 0, w, h);
+    }
+
+    // Overlay person
+    const mc = _maskCtx;
+    mc.clearRect(0, 0, w, h);
+    mc.drawImage(videoEl, 0, 0, w, h);
+    if (mask) {
+      mc.globalCompositeOperation = "destination-in";
+      mc.drawImage(mask, 0, 0, w, h);
+      mc.globalCompositeOperation = "source-over";
+    } else {
+      // Fallback ellipse mask
+      const tmp = mc.getImageData(0, 0, w, h);
+      mc.clearRect(0, 0, w, h);
+      const g = mc.createRadialGradient(w*.5,h*.48,w*.15, w*.5,h*.48,w*.32);
+      g.addColorStop(0, "rgba(0,0,0,1)"); g.addColorStop(.8,"rgba(0,0,0,1)"); g.addColorStop(1,"rgba(0,0,0,0)");
+      mc.ellipse(w*.5,h*.48,w*.32,h*.48,0,0,Math.PI*2);
+      mc.fillStyle = g; mc.fill();
+      mc.globalCompositeOperation = "source-in";
+      mc.drawImage(videoEl, 0, 0, w, h);
+      mc.globalCompositeOperation = "source-over";
+    }
+    ctx.drawImage(_maskCanvas, 0, 0, w, h);
+  }
+
+  /* ── main render loop ──────────────────────────────────────── */
+  async function _loop() {
+    if (_mode === "off") return;
+
+    const localVideo = document.getElementById("localVideo");
+    if (!localVideo || !localVideo.srcObject) {
+      _raf = requestAnimationFrame(_loop);
+      return;
+    }
+
+    const w = localVideo.videoWidth  || 640;
+    const h = localVideo.videoHeight || 480;
+    _ensureCanvases(w, h);
+
+    const ctx     = _ctx;
+    const blurCtx = _blurCtx;
+
+    // Try to send to MediaPipe segmenter
+    if (_segReady && _segmenter && !_segPending) {
+      try {
+        _segPending = true;
+        await _segmenter.send({ image: localVideo });
+        _segPending = false;
+      } catch { _segPending = false; }
+    }
+
+    const mask = _lastSegMask;
+
+    if (_mode === "blur") {
+      if (mask) _drawBlurML(ctx, blurCtx, localVideo, w, h, BLUR_HEAVY, mask);
+      else       _drawBlurFallback(ctx, blurCtx, localVideo, w, h, BLUR_HEAVY);
+    } else if (_mode === "slight") {
+      if (mask) _drawBlurML(ctx, blurCtx, localVideo, w, h, BLUR_LIGHT, mask);
+      else       _drawBlurFallback(ctx, blurCtx, localVideo, w, h, BLUR_LIGHT);
+    } else if (_mode === "color" || _mode === "image") {
+      _drawVirtualBg(ctx, localVideo, w, h, mask);
+    }
+
+    _raf = requestAnimationFrame(_loop);
+  }
+
+  /* ── start / stop ──────────────────────────────────────────── */
+  async function startBgEffect(mode) {
+    if (mode === "off") { stopBgEffect(); return; }
+
+    // Get local video element (camera feed, unprocessed)
+    const localVideo = document.getElementById("localVideo");
+    if (!localVideo) { showToast("No camera active", "error"); return; }
+
+    // Save original camera track before first activation
+    if (!_origTrack) {
+      const tracks = (typeof localCallStream !== "undefined" ? localCallStream : null)?.getVideoTracks?.() || [];
+      _origTrack = tracks[0] || null;
+    }
+
+    // If already running a different mode, just change mode
+    if (_mode !== "off" && _raf) {
+      _mode = mode;
+      if (mode === "blur" || mode === "slight") _loadSegmenter();
+      return;
+    }
+
+    _mode = mode;
+    if (mode === "blur" || mode === "slight") _loadSegmenter();
+
+    // Start canvas pipeline
+    const w = localVideo.videoWidth  || 640;
+    const h = localVideo.videoHeight || 480;
+    _ensureCanvases(w, h);
+
+    _stream = _canvas.captureStream(FPS);
+
+    // Replace camera track in peer connection
+    const newTrack = _stream.getVideoTracks()[0];
+    if (newTrack) {
+      try {
+        if (typeof cameraSender !== "undefined" && cameraSender?.replaceTrack) {
+          await cameraSender.replaceTrack(newTrack);
+        }
+        // Also for group call peer connections
+        if (typeof groupCallPeerConnections !== "undefined") {
+          groupCallPeerConnections.forEach(async pc => {
+            const sender = pc.getSenders().find(s => s.track?.kind === "video");
+            if (sender) await sender.replaceTrack(newTrack).catch(() => {});
+          });
+        }
+      } catch (e) { console.warn("[BgFX] replaceTrack failed:", e); }
+    }
+
+    // Point localVideo to our canvas stream so the preview matches what others see
+    localVideo.srcObject = _stream;
+    localVideo.play?.().catch(() => {});
+
+    // Start render loop
+    _raf = requestAnimationFrame(_loop);
+    console.log("[BgFX] started:", mode);
+  }
+
+  async function stopBgEffect() {
+    if (_raf) { cancelAnimationFrame(_raf); _raf = null; }
+    _mode = "off";
+    _lastSegMask = null;
+
+    // Restore original camera track
+    if (_origTrack && typeof cameraSender !== "undefined") {
+      try {
+        if (cameraSender?.replaceTrack) await cameraSender.replaceTrack(_origTrack);
+        if (typeof groupCallPeerConnections !== "undefined") {
+          groupCallPeerConnections.forEach(async pc => {
+            const sender = pc.getSenders().find(s => s.track?.kind === "video");
+            if (sender && _origTrack) await sender.replaceTrack(_origTrack).catch(() => {});
+          });
+        }
+      } catch {}
+    }
+
+    // Restore localVideo to original stream
+    const localVideo = document.getElementById("localVideo");
+    if (localVideo && typeof localCallStream !== "undefined" && localCallStream) {
+      localVideo.srcObject = localCallStream;
+      localVideo.play?.().catch(() => {});
+    }
+
+    _origTrack = null;
+    if (_stream) { _stream.getTracks().forEach(t => t.stop()); _stream = null; }
+    console.log("[BgFX] stopped");
+  }
+
+  /* ── UI: Effects Panel ─────────────────────────────────────── */
+  function _showEffectsPanel() {
+    document.getElementById("_bgFxPanel")?.remove();
+
+    const panel = document.createElement("div");
+    panel.id    = "_bgFxPanel";
+    panel.className = "_bgfx-panel";
+    panel.setAttribute("role", "dialog");
+    panel.setAttribute("aria-label", "Background effects");
+    panel.innerHTML = `
+      <div class="_bgfx-header">
+        <span>Background Effects</span>
+        <button class="_bgfx-close" aria-label="Close">✕</button>
+      </div>
+      <div class="_bgfx-scroll">
+        <div class="_bgfx-options">
+          <button class="_bgfx-opt${_mode==="off"?" _bgfx-active":""}" data-mode="off">
+            <span class="_bgfx-thumb _bgfx-thumb-off">🚫</span>
+            <span>None</span>
+          </button>
+          <button class="_bgfx-opt${_mode==="slight"?" _bgfx-active":""}" data-mode="slight">
+            <span class="_bgfx-thumb _bgfx-thumb-slight">🌫</span>
+            <span>Slight blur</span>
+          </button>
+          <button class="_bgfx-opt${_mode==="blur"?" _bgfx-active":""}" data-mode="blur">
+            <span class="_bgfx-thumb _bgfx-thumb-blur">🌁</span>
+            <span>Blur</span>
+          </button>
+          <button class="_bgfx-opt _bgfx-colors-trigger" data-mode="_colors">
+            <span class="_bgfx-thumb _bgfx-thumb-color" style="background:${_bgColor}"></span>
+            <span>Colour</span>
+          </button>
+          <button class="_bgfx-opt${_mode==="image"?" _bgfx-active":""}" id="_bgfx-upload-btn" data-mode="image">
+            <span class="_bgfx-thumb _bgfx-thumb-img">🖼</span>
+            <span>My photo</span>
+          </button>
+        </div>
+        <div class="_bgfx-color-swatches" id="_bgfxSwatches" style="display:none">
+          ${["#1a1a2e","#16213e","#0f3460","#533483","#05445e","#189ab4","#1a3a1a","#2d4a1e",
+             "#3d1a00","#4a0000","#1a0a2e","#2a2a2a","#0a0a0a","#ffffff"].map(c =>
+            `<button class="_bgfx-swatch${_bgColor===c?" _bgfx-swatch-active":""}" data-color="${c}" style="background:${c}"></button>`
+          ).join("")}
+        </div>
+      </div>`;
+
+    const shell = document.querySelector(".call-shell") || document.body;
+    shell.appendChild(panel);
+
+    // Event: close
+    panel.querySelector("._bgfx-close").onclick = () => panel.remove();
+
+    // Event: mode buttons
+    panel.querySelectorAll("._bgfx-opt[data-mode]").forEach(btn => {
+      btn.addEventListener("click", async () => {
+        const m = btn.dataset.mode;
+        if (m === "_colors") {
+          const sw = panel.querySelector("#_bgfxSwatches");
+          sw.style.display = sw.style.display === "none" ? "flex" : "none";
+          return;
+        }
+        if (m === "image") {
+          _triggerImageUpload(panel);
+          return;
+        }
+        panel.querySelectorAll("._bgfx-opt").forEach(b => b.classList.remove("_bgfx-active"));
+        btn.classList.add("_bgfx-active");
+        await startBgEffect(m);
+        _updateEffectsBtnState();
+      });
+    });
+
+    // Event: colour swatches
+    panel.querySelectorAll("._bgfx-swatch").forEach(sw => {
+      sw.addEventListener("click", async () => {
+        _bgColor = sw.dataset.color;
+        panel.querySelectorAll("._bgfx-swatch").forEach(s => s.classList.remove("_bgfx-swatch-active"));
+        sw.classList.add("_bgfx-swatch-active");
+        const colorOpt = panel.querySelector("[data-mode='_colors'] ._bgfx-thumb");
+        if (colorOpt) colorOpt.style.background = _bgColor;
+        panel.querySelectorAll("._bgfx-opt").forEach(b => b.classList.remove("_bgfx-active"));
+        panel.querySelector("[data-mode='_colors']").classList.add("_bgfx-active");
+        await startBgEffect("color");
+        _updateEffectsBtnState();
+      });
+    });
+
+    // Click outside → close
+    setTimeout(() => {
+      const close = e => {
+        if (!panel.contains(e.target) && e.target.id !== "_bgEffectsBtn") {
+          panel.remove();
+          document.removeEventListener("pointerdown", close);
+        }
+      };
+      document.addEventListener("pointerdown", close);
+    }, 80);
+  }
+
+  function _triggerImageUpload(panel) {
+    const input = Object.assign(document.createElement("input"), {
+      type: "file", accept: "image/*"
+    });
+    input.onchange = e => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      const url = URL.createObjectURL(file);
+      const img = new Image();
+      img.onload = async () => {
+        _bgImg = img;
+        panel.querySelectorAll("._bgfx-opt").forEach(b => b.classList.remove("_bgfx-active"));
+        panel.querySelector("[data-mode='image']").classList.add("_bgfx-active");
+        // Update thumbnail
+        const th = panel.querySelector("._bgfx-thumb-img");
+        if (th) { th.style.backgroundImage = `url(${url})`; th.style.backgroundSize = "cover"; th.textContent = ""; }
+        await startBgEffect("image");
+        _updateEffectsBtnState();
+      };
+      img.src = url;
+    };
+    input.click();
+  }
+
+  function _updateEffectsBtnState() {
+    const btn = document.getElementById("_bgEffectsBtn");
+    if (!btn) return;
+    btn.classList.toggle("active", _mode !== "off");
+    btn.title = _mode === "off" ? "Background effects" : `Effects: ${_mode} (tap to change)`;
+  }
+
+  /* ── inject Effects button into call controls ──────────────── */
+  function _injectEffectsButton() {
+    const controls = document.querySelector(".call-controls");
+    if (!controls || document.getElementById("_bgEffectsBtn")) return;
+    const btn = document.createElement("button");
+    btn.id        = "_bgEffectsBtn";
+    btn.className = "call-icon-btn";
+    btn.innerHTML = "✨";
+    btn.title     = "Background effects";
+    btn.setAttribute("aria-label", "Background effects");
+    btn.dataset.controlLabel = "EFFECTS";
+    // Only show in video calls
+    btn.style.display = (typeof currentCallType !== "undefined" && currentCallType === "video") ? "inline-flex" : "none";
+    btn.addEventListener("click", _showEffectsPanel);
+    // Insert before end-call button
+    const endBtn = document.getElementById("endCallBtn");
+    if (endBtn) controls.insertBefore(btn, endBtn);
+    else controls.appendChild(btn);
+  }
+
+  /* ── hook into existing call system ───────────────────────── */
+  // Show/hide effects button when call type changes
+  const _origUpdateCtrl = window.updateCallControlState;
+  if (typeof _origUpdateCtrl === "function") {
+    window.updateCallControlState = function() {
+      _origUpdateCtrl.call(this);
+      const btn = document.getElementById("_bgEffectsBtn");
+      if (btn) {
+        btn.style.display = (typeof currentCallType !== "undefined" && currentCallType === "video") ? "inline-flex" : "none";
+      }
+    };
+  }
+
+  // Hook setCallUi to inject the button when call becomes active
+  const _origSetCallUi = window.setCallUi;
+  if (typeof _origSetCallUi === "function") {
+    window.setCallUi = function(opts = {}) {
+      _origSetCallUi.call(this, opts);
+      if (opts.mode === "active") {
+        setTimeout(_injectEffectsButton, 500);
+      }
+      // When call ends, stop effect and restore
+      if (!["active","incoming","outgoing"].includes(opts.mode)) {
+        stopBgEffect();
+        document.getElementById("_bgFxPanel")?.remove();
+      }
+    };
+  }
+
+  // Clean up when call ends
+  const _origEnd  = window.endActiveCall;
+  const _origEndG = window.endGroupCall;
+  const _origStop = window.stopLocalCallStream;
+
+  if (typeof _origEnd === "function") {
+    window.endActiveCall = function(...a) {
+      stopBgEffect(); document.getElementById("_bgFxPanel")?.remove();
+      return _origEnd.apply(this, a);
+    };
+  }
+  if (typeof _origEndG === "function") {
+    window.endGroupCall = function(...a) {
+      stopBgEffect(); document.getElementById("_bgFxPanel")?.remove();
+      return _origEndG.apply(this, a);
+    };
+  }
+  if (typeof _origStop === "function") {
+    window.stopLocalCallStream = function() {
+      stopBgEffect();
+      return _origStop.call(this);
+    };
+  }
+
+  // Expose for debugging
+  window._bgFx = { startBgEffect, stopBgEffect, mode: () => _mode };
+  console.log("[BgFX] Background effects system loaded");
+})();
