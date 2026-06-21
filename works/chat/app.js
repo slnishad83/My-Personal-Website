@@ -14146,9 +14146,9 @@ function canEditMessage(messageData) {
     messageData.type
   )
     return false;
-  const sentAtMs = messageData.timestamp?.toMillis?.() || 0;
-  if (!sentAtMs) return false;
-  return Date.now() - sentAtMs <= 15 * 60 * 1000;
+  // No time restriction — sender can edit their own text messages at any time,
+  // even after the recipient has read the message.
+  return true;
 }
 
 function viewEditHistory(messageData = {}) {
@@ -14389,29 +14389,116 @@ async function showStarredMessagesModal() {
 }
 async function editMessage(id, data) {
   if (!canEditMessage(data)) {
-    showToast("Only your recent text messages can be edited", "error");
+    showToast("Only your own text messages can be edited", "error");
     return;
   }
-  const nextText = prompt("Edit message", data.text || "");
-  if (nextText === null) return;
-  const trimmed = nextText.trim();
-  if (!trimmed) {
-    showToast("Message cannot be empty", "error");
-    return;
-  }
-  if (trimmed === (data.text || "").trim()) return;
-  await db
-    .collection("messages")
-    .doc(id)
-    .update({
-      text: trimmed,
-      editedAt: firebase.firestore.FieldValue.serverTimestamp(),
-      editHistory: firebase.firestore.FieldValue.arrayUnion({
-        previousText: data.text || "",
-        editedAt: new Date().toISOString(),
-      }),
-    });
-  showToast("Message edited");
+  showInlineEditModal(id, data);
+}
+
+function showInlineEditModal(id, data) {
+  document.getElementById("_inlineEditModal")?.remove();
+  const overlay = document.createElement("div");
+  overlay.id = "_inlineEditModal";
+  overlay.setAttribute("role", "dialog");
+  overlay.setAttribute("aria-modal", "true");
+  overlay.setAttribute("aria-label", "Edit message");
+  overlay.style.cssText = [
+    "position:fixed;inset:0;z-index:9999;",
+    "display:flex;align-items:flex-end;justify-content:center;",
+    "background:rgba(11,20,26,0.55);",
+    "animation:_iem_fadein 0.18s ease;"
+  ].join("");
+  overlay.innerHTML = `<style>
+    @keyframes _iem_fadein{from{opacity:0}to{opacity:1}}
+    @keyframes _iem_slidein{from{transform:translateY(40px);opacity:0}to{transform:translateY(0);opacity:1}}
+    #_inlineEditBox{
+      width:100%;max-width:600px;
+      background:var(--panel,#fff);
+      border-radius:20px 20px 0 0;
+      padding:20px 16px calc(16px + env(safe-area-inset-bottom,0px));
+      box-shadow:0 -8px 32px rgba(11,20,26,0.18);
+      animation:_iem_slidein 0.22s cubic-bezier(.22,1,.36,1);
+    }
+    #_inlineEditBox label{
+      display:block;font-size:11px;font-weight:700;
+      color:var(--muted-strong,#8696a0);letter-spacing:.5px;
+      text-transform:uppercase;margin-bottom:8px;
+    }
+    #_inlineEditTextarea{
+      width:100%;min-height:80px;max-height:200px;
+      padding:12px;border:1.5px solid var(--border,#e9edef);
+      border-radius:12px;font:inherit;font-size:15px;
+      line-height:1.45;resize:vertical;
+      background:var(--app-bg,#f0f2f5);color:var(--text,#111b21);
+      outline:none;transition:border-color .15s;
+    }
+    #_inlineEditTextarea:focus{border-color:#008069;}
+    body.dark #_inlineEditTextarea{background:#182229;color:#e9edef;border-color:#3b4a54;}
+    body.dark #_inlineEditBox{background:#202c33;}
+    ._iem_hint{font-size:11px;color:var(--muted-strong,#8696a0);margin-top:5px;}
+    ._iem_btns{display:flex;gap:10px;margin-top:14px;}
+    ._iem_cancel{
+      flex:1;padding:12px;border:1.5px solid var(--border,#e9edef);
+      border-radius:12px;background:transparent;
+      color:var(--text,#111b21);font:inherit;font-size:14px;
+      font-weight:600;cursor:pointer;
+    }
+    ._iem_save{
+      flex:2;padding:12px;border:none;border-radius:12px;
+      background:#008069;color:#fff;font:inherit;
+      font-size:14px;font-weight:700;cursor:pointer;transition:background .15s;
+    }
+    ._iem_save:hover{background:#006f5b;}
+    ._iem_save:disabled{background:#b2dfdb;cursor:not-allowed;}
+  </style>
+  <div id="_inlineEditBox">
+    <label>Edit message</label>
+    <textarea id="_inlineEditTextarea" rows="3" maxlength="65536"></textarea>
+    <p class="_iem_hint">Ctrl + Enter to save &bull; Esc to cancel</p>
+    <div class="_iem_btns">
+      <button class="_iem_cancel" type="button">Cancel</button>
+      <button class="_iem_save" type="button">Save changes</button>
+    </div>
+  </div>`;
+  document.body.appendChild(overlay);
+  const ta = overlay.querySelector("#_inlineEditTextarea");
+  const saveBtn = overlay.querySelector("._iem_save");
+  const cancelBtn = overlay.querySelector("._iem_cancel");
+  // Set value safely (avoids HTML injection via innerHTML)
+  ta.value = data.text || "";
+  setTimeout(() => { ta.focus(); ta.selectionStart = ta.selectionEnd = ta.value.length; }, 50);
+
+  const close = () => overlay.remove();
+  const save = async () => {
+    const trimmed = ta.value.trim();
+    if (!trimmed) { showToast("Message cannot be empty", "error"); return; }
+    if (trimmed === (data.text || "").trim()) { close(); return; }
+    saveBtn.disabled = true;
+    saveBtn.textContent = "Saving…";
+    try {
+      await db.collection("messages").doc(id).update({
+        text: trimmed,
+        editedAt: firebase.firestore.FieldValue.serverTimestamp(),
+        editHistory: firebase.firestore.FieldValue.arrayUnion({
+          previousText: data.text || "",
+          editedAt: new Date().toISOString(),
+        }),
+      });
+      showToast("Message edited");
+      close();
+    } catch (err) {
+      showToast("Could not edit message", "error");
+      saveBtn.disabled = false;
+      saveBtn.textContent = "Save changes";
+    }
+  };
+  saveBtn.addEventListener("click", save);
+  cancelBtn.addEventListener("click", close);
+  overlay.addEventListener("click", (e) => { if (e.target === overlay) close(); });
+  ta.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) save();
+    if (e.key === "Escape") close();
+  });
 }
 
 function openForwardModal(messageId, messageData) {
@@ -14953,15 +15040,319 @@ function triggerMediaPicker() {
 
 async function triggerCameraPicker() {
   toggleAttachmentSheet(false);
+
+  // On native Android, use the Capacitor camera plugin path
   if (isNativeAndroidApp) {
     const hasCamera = await ensureNativePermission("camera");
     if (!hasCamera) return;
+    const input = document.getElementById("fileInput");
+    if (!input) return;
+    input.accept = "image/*,video/*";
+    input.setAttribute("capture", "environment");
+    input.click();
+    return;
   }
-  const input = document.getElementById("fileInput");
-  if (!input) return;
-  input.accept = "image/*,video/*";
-  input.setAttribute("capture", "environment");
-  input.click();
+
+  // On web — open a real camera preview using getUserMedia
+  await openWebCameraModal();
+}
+
+async function openWebCameraModal() {
+  document.getElementById("_webCamModal")?.remove();
+
+  let stream = null;
+  let facingMode = "environment";
+  let isRecordingVideo = false;
+  let videoRecorderLocal = null;
+  let videoChunksLocal = [];
+  let recordTimerLocal = null;
+
+  const overlay = document.createElement("div");
+  overlay.id = "_webCamModal";
+  overlay.setAttribute("role", "dialog");
+  overlay.setAttribute("aria-modal", "true");
+  overlay.setAttribute("aria-label", "Camera");
+  overlay.innerHTML = `<style>
+    #_webCamModal{
+      position:fixed;inset:0;z-index:9998;
+      background:#000;display:flex;flex-direction:column;
+      animation:_cam_in 0.2s ease;
+    }
+    @keyframes _cam_in{from{opacity:0}to{opacity:1}}
+    #_wcm_bar{
+      display:flex;align-items:center;justify-content:space-between;
+      padding:max(14px,env(safe-area-inset-top,14px)) 16px 10px;
+      background:rgba(0,0,0,0.7);position:relative;z-index:2;
+    }
+    #_wcm_bar button{
+      background:rgba(255,255,255,0.15);border:none;color:#fff;
+      border-radius:50%;width:40px;height:40px;
+      display:grid;place-items:center;cursor:pointer;font-size:18px;
+      transition:background .15s;
+    }
+    #_wcm_bar button:hover{background:rgba(255,255,255,0.28);}
+    #_wcm_title{color:#fff;font-size:15px;font-weight:700;letter-spacing:.3px;}
+    #_wcm_status{
+      color:#fff;font-size:12px;font-weight:600;text-align:center;
+      padding:6px;background:rgba(0,0,0,0.5);
+      position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+      border-radius:8px;display:none;
+    }
+    #_wcm_video{
+      flex:1;width:100%;object-fit:cover;
+      background:#111;min-height:0;
+    }
+    #_wcm_preview_img,#_wcm_preview_vid{
+      display:none;flex:1;width:100%;object-fit:contain;background:#111;
+    }
+    #_wcm_controls{
+      display:flex;align-items:center;justify-content:space-around;
+      padding:16px 24px calc(20px + env(safe-area-inset-bottom,0px));
+      background:rgba(0,0,0,0.85);gap:16px;
+    }
+    ._wcm_ctrl{
+      background:rgba(255,255,255,0.15);border:none;color:#fff;
+      border-radius:50%;width:52px;height:52px;
+      display:grid;place-items:center;cursor:pointer;font-size:22px;
+      transition:background .15s, transform .1s;flex-shrink:0;
+    }
+    ._wcm_ctrl:hover{background:rgba(255,255,255,0.28);}
+    ._wcm_ctrl:active{transform:scale(0.92);}
+    #_wcm_capture{
+      width:72px;height:72px;border-radius:50%;
+      border:4px solid #fff;background:rgba(255,255,255,0.22);
+      cursor:pointer;transition:background .15s, transform .1s;
+      flex-shrink:0;display:grid;place-items:center;
+    }
+    #_wcm_capture:hover{background:rgba(255,255,255,0.38);}
+    #_wcm_capture:active{transform:scale(0.9);}
+    #_wcm_capture_inner{
+      width:52px;height:52px;border-radius:50%;background:#fff;
+    }
+    #_wcm_capture.recording #_wcm_capture_inner{
+      border-radius:8px;background:#ef4444;width:30px;height:30px;
+    }
+    #_wcm_rec_badge{
+      display:none;position:absolute;top:60px;left:50%;transform:translateX(-50%);
+      background:#ef4444;color:#fff;font-size:12px;font-weight:700;
+      padding:4px 12px;border-radius:999px;letter-spacing:.5px;
+    }
+    #_wcm_rec_badge.show{display:block;}
+    ._wcm_mode_btn{
+      padding:8px 16px;border-radius:999px;border:1.5px solid rgba(255,255,255,0.4);
+      background:transparent;color:#fff;font:inherit;font-size:13px;
+      font-weight:700;cursor:pointer;transition:background .15s;
+    }
+    ._wcm_mode_btn.active{background:rgba(255,255,255,0.2);border-color:#fff;}
+    #_wcm_confirm_bar{
+      display:none;flex-direction:column;gap:10px;padding:16px;
+      background:rgba(0,0,0,0.85);
+    }
+    #_wcm_confirm_bar.show{display:flex;}
+    #_wcm_send_btn{
+      padding:13px;border:none;border-radius:12px;
+      background:#008069;color:#fff;font:inherit;
+      font-size:15px;font-weight:700;cursor:pointer;
+    }
+    #_wcm_retake_btn{
+      padding:13px;border:1.5px solid rgba(255,255,255,0.3);border-radius:12px;
+      background:transparent;color:#fff;font:inherit;
+      font-size:14px;font-weight:600;cursor:pointer;
+    }
+    #_wcm_mode_bar{
+      display:flex;justify-content:center;gap:10px;
+      padding:10px 16px;background:rgba(0,0,0,0.6);
+    }
+  </style>
+  <div id="_wcm_bar">
+    <button id="_wcm_close" title="Close" aria-label="Close camera">×</button>
+    <span id="_wcm_title">Camera</span>
+    <button id="_wcm_flip" title="Flip camera" aria-label="Flip camera">&#x21BB;</button>
+  </div>
+  <div style="position:relative;flex:1;min-height:0;display:flex;flex-direction:column;">
+    <div id="_wcm_rec_badge">● REC</div>
+    <div id="_wcm_status">Starting camera…</div>
+    <video id="_wcm_video" autoplay playsinline muted></video>
+    <img id="_wcm_preview_img" alt="Captured photo" />
+    <video id="_wcm_preview_vid" controls></video>
+  </div>
+  <div id="_wcm_mode_bar">
+    <button class="_wcm_mode_btn active" id="_wcm_photo_mode">Photo</button>
+    <button class="_wcm_mode_btn" id="_wcm_video_mode">Video</button>
+  </div>
+  <div id="_wcm_controls">
+    <button class="_wcm_ctrl" id="_wcm_cancel_preview" title="Retake" style="display:none">↩</button>
+    <button id="_wcm_capture" title="Capture" aria-label="Take photo">
+      <div id="_wcm_capture_inner"></div>
+    </button>
+    <button class="_wcm_ctrl" style="opacity:0;pointer-events:none">&#8942;</button>
+  </div>
+  <div id="_wcm_confirm_bar">
+    <button id="_wcm_send_btn">Use Photo</button>
+    <button id="_wcm_retake_btn">Retake</button>
+  </div>`;
+
+  document.body.appendChild(overlay);
+
+  const video = overlay.querySelector("#_wcm_video");
+  const previewImg = overlay.querySelector("#_wcm_preview_img");
+  const previewVid = overlay.querySelector("#_wcm_preview_vid");
+  const captureBtn = overlay.querySelector("#_wcm_capture");
+  const flipBtn = overlay.querySelector("#_wcm_flip");
+  const closeBtn = overlay.querySelector("#_wcm_close");
+  const sendBtn = overlay.querySelector("#_wcm_send_btn");
+  const retakeBtn = overlay.querySelector("#_wcm_retake_btn");
+  const cancelPreviewBtn = overlay.querySelector("#_wcm_cancel_preview");
+  const confirmBar = overlay.querySelector("#_wcm_confirm_bar");
+  const recBadge = overlay.querySelector("#_wcm_rec_badge");
+  const statusEl = overlay.querySelector("#_wcm_status");
+  const photoModeBtn = overlay.querySelector("#_wcm_photo_mode");
+  const videoModeBtn = overlay.querySelector("#_wcm_video_mode");
+  let captureMode = "photo"; // "photo" | "video"
+  let capturedBlob = null;
+  let capturedType = null;
+
+  const startStream = async () => {
+    try {
+      if (stream) stream.getTracks().forEach(t => t.stop());
+      statusEl.style.display = "block";
+      stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode, width: { ideal: 1920 }, height: { ideal: 1080 } },
+        audio: true,
+      });
+      video.srcObject = stream;
+      video.style.display = "block";
+      statusEl.style.display = "none";
+    } catch (err) {
+      statusEl.style.display = "block";
+      statusEl.textContent = "Camera access denied. Please allow camera permission and try again.";
+      console.error("[Camera] getUserMedia failed:", err);
+    }
+  };
+
+  const showPreview = (blob, type) => {
+    capturedBlob = blob;
+    capturedType = type;
+    video.style.display = "none";
+    overlay.querySelector("#_wcm_controls").style.display = "none";
+    overlay.querySelector("#_wcm_mode_bar").style.display = "none";
+    confirmBar.classList.add("show");
+    if (type.startsWith("image/")) {
+      const url = URL.createObjectURL(blob);
+      previewImg.src = url;
+      previewImg.style.display = "block";
+      sendBtn.textContent = "Use Photo";
+    } else {
+      const url = URL.createObjectURL(blob);
+      previewVid.src = url;
+      previewVid.style.display = "block";
+      sendBtn.textContent = "Use Video";
+    }
+  };
+
+  const retake = () => {
+    capturedBlob = null;
+    capturedType = null;
+    previewImg.style.display = "none";
+    previewVid.style.display = "none";
+    video.style.display = "block";
+    overlay.querySelector("#_wcm_controls").style.display = "flex";
+    overlay.querySelector("#_wcm_mode_bar").style.display = "flex";
+    confirmBar.classList.remove("show");
+    captureBtn.classList.remove("recording");
+  };
+
+  const stopRecording = () => {
+    if (videoRecorderLocal && isRecordingVideo) {
+      videoRecorderLocal.stop();
+    }
+  };
+
+  captureBtn.addEventListener("click", () => {
+    if (captureMode === "photo") {
+      // Take photo via canvas
+      const canvas = document.createElement("canvas");
+      canvas.width = video.videoWidth || 1280;
+      canvas.height = video.videoHeight || 720;
+      canvas.getContext("2d").drawImage(video, 0, 0);
+      canvas.toBlob(blob => showPreview(blob, "image/jpeg"), "image/jpeg", 0.92);
+    } else {
+      // Video record
+      if (!isRecordingVideo) {
+        isRecordingVideo = true;
+        videoChunksLocal = [];
+        captureBtn.classList.add("recording");
+        recBadge.classList.add("show");
+        const mimeType = MediaRecorder.isTypeSupported("video/webm;codecs=vp9")
+          ? "video/webm;codecs=vp9"
+          : MediaRecorder.isTypeSupported("video/webm") ? "video/webm" : "video/mp4";
+        videoRecorderLocal = new MediaRecorder(stream, { mimeType });
+        videoRecorderLocal.ondataavailable = e => { if (e.data.size) videoChunksLocal.push(e.data); };
+        videoRecorderLocal.onstop = () => {
+          isRecordingVideo = false;
+          recBadge.classList.remove("show");
+          captureBtn.classList.remove("recording");
+          clearInterval(recordTimerLocal);
+          const blob = new Blob(videoChunksLocal, { type: mimeType });
+          showPreview(blob, mimeType);
+        };
+        videoRecorderLocal.start(100);
+      } else {
+        stopRecording();
+      }
+    }
+  });
+
+  flipBtn.addEventListener("click", async () => {
+    facingMode = facingMode === "environment" ? "user" : "environment";
+    await startStream();
+  });
+
+  photoModeBtn.addEventListener("click", () => {
+    captureMode = "photo";
+    photoModeBtn.classList.add("active");
+    videoModeBtn.classList.remove("active");
+  });
+
+  videoModeBtn.addEventListener("click", () => {
+    captureMode = "video";
+    videoModeBtn.classList.add("active");
+    photoModeBtn.classList.remove("active");
+  });
+
+  retakeBtn.addEventListener("click", retake);
+  cancelPreviewBtn.addEventListener("click", retake);
+
+  sendBtn.addEventListener("click", () => {
+    if (!capturedBlob) return;
+    const ext = capturedType.startsWith("image/") ? "jpg" : "webm";
+    const fileName = `camera_capture_${Date.now()}.${ext}`;
+    const file = new File([capturedBlob], fileName, { type: capturedType });
+    // Trigger the existing file handler
+    const dataTransfer = new DataTransfer();
+    dataTransfer.items.add(file);
+    const fileInput = document.getElementById("fileInput");
+    if (fileInput) {
+      fileInput.files = dataTransfer.files;
+      fileInput.dispatchEvent(new Event("change", { bubbles: true }));
+    }
+    cleanup();
+  });
+
+  const cleanup = () => {
+    if (stream) stream.getTracks().forEach(t => t.stop());
+    if (videoRecorderLocal && isRecordingVideo) {
+      try { videoRecorderLocal.stop(); } catch(_) {}
+    }
+    overlay.remove();
+  };
+
+  closeBtn.addEventListener("click", cleanup);
+  document.addEventListener("keydown", function escHandler(e) {
+    if (e.key === "Escape") { cleanup(); document.removeEventListener("keydown", escHandler); }
+  }, { once: true });
+
+  await startStream();
 }
 
 function buildActiveChatContextTarget() {
