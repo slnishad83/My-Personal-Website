@@ -1348,7 +1348,7 @@ function renderChatListItems(items, container, emptyMessage = "") {
     const previewContent = item.isLockedFolder ? folderPreview : (item.isLocked ? lockedPreview : (previewHtml || ""));
     chatDiv.innerHTML = `
       <span class="drag-handle" draggable="false">⠿</span>
-      <div class="list-avatar">${item.isLockedFolder ? '&#x1F512;' : item.avatar}${lockOverlay}</div>
+      <div class="list-avatar" style="position:relative;">${item.isLockedFolder ? '&#x1F512;' : item.avatar}${lockOverlay}${(item.type === "direct" && item.onlineStatus) ? `<span class="presence-dot presence-dot--${item.onlineStatus === 'online' ? 'online' : 'offline'}" aria-label="${item.onlineStatus === 'online' ? 'Online' : 'Offline'}"></span>` : ""}</div>
       <div class="list-info" style="flex:1; cursor:pointer;">
         <div class="list-name">${tagHtml}${item.isPinned ? '<span class="pin-icon">&#x1F4CC;</span> ' : ""}${item.isFavorite ? "* " : ""}${item.isLocked ? '&#x1F512; ' : ""}${escapeHtml(item.name)} ${item.isMuted ? "[Muted]" : ""}${searchMeta}</div>
         <div class="list-preview">${previewContent}</div>
@@ -14730,6 +14730,7 @@ function showContextMenu(x, y, messageId, messageData, isMyMessage) {
       : []),
     { text: "Reply", action: () => setReplyTo({ ...messageData, messageId }) },
     { text: "Open Thread", action: () => (typeof openThreadPanel === "function") && openThreadPanel(messageId, { ...messageData, messageId }) },
+    ...(messageData.text ? [{ text: "✨ Explain", action: () => showAiExplainModal(messageData) }] : []),
     { text: "Star Message", action: () => starMessage(messageId, messageData) },
     { text: "Pin Message", action: () => pinMessage(messageId, messageData) },
     {
@@ -14790,6 +14791,49 @@ function removeMessageContextMenu() {
   const existing = document.querySelector(".message-context-menu");
   if (existing) existing.remove();
   document.body.classList.remove("message-menu-open");
+}
+
+// ── AI Explain Modal ──────────────────────────────────────────────────────
+async function showAiExplainModal(messageData) {
+  document.getElementById("aiExplainModal")?.remove();
+
+  const modal = document.createElement("div");
+  modal.id = "aiExplainModal";
+  modal.className = "ai-explain-overlay";
+  modal.setAttribute("role", "dialog");
+  modal.setAttribute("aria-modal", "true");
+  modal.setAttribute("aria-label", "AI Explanation");
+  modal.innerHTML = `
+    <div class="ai-explain-panel">
+      <div class="ai-explain-header">
+        <span class="ai-explain-icon">✨</span>
+        <span class="ai-explain-title">AI Explanation</span>
+        <button class="ai-explain-close" type="button" aria-label="Close">&#x2715;</button>
+      </div>
+      <div class="ai-explain-quote">&ldquo;${escapeHtml((messageData.text || "").substring(0, 220))}${(messageData.text || "").length > 220 ? "…" : ""}&rdquo;</div>
+      <div class="ai-explain-body">
+        <div class="ai-explain-thinking">
+          <span class="ai-thinking-dot"></span><span class="ai-thinking-dot"></span><span class="ai-thinking-dot"></span>
+        </div>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+
+  const closeBtn = modal.querySelector(".ai-explain-close");
+  closeBtn.addEventListener("click", () => modal.remove());
+  modal.addEventListener("click", (e) => { if (e.target === modal) modal.remove(); });
+
+  const body = modal.querySelector(".ai-explain-body");
+  try {
+    const explainFn = firebase.functions().httpsCallable("explainMessage", { timeout: 25000 });
+    const result = await explainFn({ text: messageData.text || "" });
+    const explanation = result.data?.explanation || "No explanation available.";
+    body.innerHTML = `<p class="ai-explain-text">${escapeHtml(explanation)}</p>`;
+  } catch (err) {
+    console.error("[aiExplain]", err);
+    body.innerHTML = `<p class="ai-explain-error">Could not explain this message right now.<br>Make sure the Cloud Function is deployed.</p>`;
+  }
 }
 
 function positionContextMenu(menu, x, y) {
