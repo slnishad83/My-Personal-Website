@@ -5772,6 +5772,7 @@ function decorateSearchItems(items = [], section = "", searchResultType = "") {
 function getChatListPreviewText(preview = "", chatType = "") {
   const text = String(preview || "").trim();
   if (!text) return "";
+  if (/^[✓✔✅]+$/.test(text)) return "";
 
   if (/^missed\s+(voice|video)\s+call/i.test(text)) return text;
   if (/^(voice|video)\s+call\s+(ended|cancelled|declined|rejected)/i.test(text))
