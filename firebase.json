@@ -20,55 +20,34 @@
     "headers": [
       {
         "source": "/works/chat",
-        "headers": [
-          {
-            "key": "Cache-Control",
-            "value": "no-cache, no-store, must-revalidate"
-          }
-        ]
+        "headers": [{"key": "Cache-Control","value": "no-cache, no-store, must-revalidate"}]
       },
       {
         "source": "/works/chat/**",
-        "headers": [
-          {
-            "key": "Cache-Control",
-            "value": "no-cache, no-store, must-revalidate"
-          }
-        ]
+        "headers": [{"key": "Cache-Control","value": "no-cache, no-store, must-revalidate"}]
+      },
+      {
+        "source": "/works/admin",
+        "headers": [{"key": "Cache-Control","value": "no-cache, no-store, must-revalidate"}]
+      },
+      {
+        "source": "/works/admin/**",
+        "headers": [{"key": "Cache-Control","value": "no-cache, no-store, must-revalidate"}]
       },
       {
         "source": "**/*.html",
-        "headers": [
-          {
-            "key": "Cache-Control",
-            "value": "no-cache, no-store, must-revalidate"
-          }
-        ]
+        "headers": [{"key": "Cache-Control","value": "no-cache, no-store, must-revalidate"}]
       },
       {
         "source": "**/sw.js",
-        "headers": [
-          {
-            "key": "Cache-Control",
-            "value": "no-cache, no-store, must-revalidate"
-          }
-        ]
+        "headers": [{"key": "Cache-Control","value": "no-cache, no-store, must-revalidate"}]
       },
       {
         "source": "**/*.apk",
         "headers": [
-          {
-            "key": "Content-Type",
-            "value": "application/vnd.android.package-archive"
-          },
-          {
-            "key": "Content-Disposition",
-            "value": "attachment; filename=\"my-team-chat.apk\""
-          },
-          {
-            "key": "Cache-Control",
-            "value": "public, max-age=0, must-revalidate"
-          }
+          {"key": "Content-Type","value": "application/vnd.android.package-archive"},
+          {"key": "Content-Disposition","value": "attachment; filename=\"my-team-chat.apk\""},
+          {"key": "Cache-Control","value": "public, max-age=0, must-revalidate"}
         ]
       }
     ],
