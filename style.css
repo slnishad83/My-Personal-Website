@@ -893,19 +893,23 @@ body.dark .back-to-top-modern:hover {
 @media (max-width: 768px) {
     .nav-menu.active .nav-item-dropdown .dropdown-menu {
         position: static;
+        max-height: 0;
+        overflow: hidden;
         opacity: 0;
         visibility: hidden;
-        transform: translateY(-10px);
-        transition: all 0.2s ease;
+        transform: none;
+        transition: max-height 0.25s ease, opacity 0.2s ease, visibility 0.2s ease;
         box-shadow: none;
         border: none;
-        padding-left: 1.5rem;
+        padding: 0 0 0 1.5rem;
         background: transparent;
+        pointer-events: none;
     }
     .nav-menu.active .nav-item-dropdown.open .dropdown-menu {
+        max-height: 500px;
         opacity: 1;
         visibility: visible;
-        transform: none;
+        pointer-events: auto;
     }
     .nav-menu.active .dropdown-menu a { padding: 0.5rem 0; }
 }
