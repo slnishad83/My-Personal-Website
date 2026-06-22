@@ -30240,41 +30240,31 @@ document.getElementById("closeSessionsModal")?.addEventListener("click", () => {
   window._bgFx = { startBgEffect, stopBgEffect, mode: () => _mode };
   console.log("[BgFX] Background effects system loaded");
 })();
-
 /* ═══════════════════════════════════════════════════════════════════
-   RESPONSIVE UI/UX FIX — JS PATCH — June 2026
-   Fixes:
-   - initInstallApp: also handles [data-install-app] attribute group,
-     hides mobile-install-card, positions #installAppBtn in header
-   - Context menus: clamp position to viewport so they never clip
-   - Dropdown menus: keyboard-nav & touch-close improvements
+   RESPONSIVE UI/UX FIX — JS PATCH v2 — June 2026
+   Safe version: removed touchend preventDefault (was blocking clicks).
 ═══════════════════════════════════════════════════════════════════ */
 (function ResponsiveUxPatch() {
   "use strict";
 
-  /* ── 1. Install App / Download App button ──────────────────── */
+  /* ── 1. Install App button — show only in header, hide inline card ─ */
   (function patchInstallApp() {
     let deferredPrompt = null;
 
-    // All elements with [data-install-app] attribute
     function getInstallEls() {
       return Array.from(document.querySelectorAll("[data-install-app]"));
     }
-
-    // Show only #installAppBtn (in header); hide all mobile-install-card clones
     function showInstallBtn() {
       getInstallEls().forEach(el => {
         if (el.id === "installAppBtn") {
-          el.style.display = "";   // let CSS decide
+          el.style.display = "";
           el.removeAttribute("hidden");
         } else {
-          // mobile-install-card and any other floating copies — keep hidden
           el.style.display = "none";
           el.setAttribute("hidden", "");
         }
       });
     }
-
     function hideInstallBtn() {
       getInstallEls().forEach(el => {
         el.style.display = "none";
@@ -30287,13 +30277,10 @@ document.getElementById("closeSessionsModal")?.addEventListener("click", () => {
       deferredPrompt = e;
       showInstallBtn();
     });
-
     window.addEventListener("appinstalled", () => {
       deferredPrompt = null;
       hideInstallBtn();
     });
-
-    // Wire click handlers for all [data-install-app] buttons
     document.addEventListener("click", async e => {
       const btn = e.target.closest("[data-install-app]");
       if (!btn || !deferredPrompt) return;
@@ -30315,81 +30302,44 @@ document.getElementById("closeSessionsModal")?.addEventListener("click", () => {
     const vw = window.innerWidth;
     const vh = window.innerHeight;
     const r  = el.getBoundingClientRect();
-    let { left, top } = el.style;
-    left = parseFloat(left) || r.left;
-    top  = parseFloat(top)  || r.top;
-
-    // Clamp right edge
-    if (r.right > vw - 8) left = Math.max(8, vw - r.width - 8);
-    // Clamp bottom edge
-    if (r.bottom > vh - 8) top = Math.max(8, vh - r.height - 8);
-    // Clamp left edge
+    let left = parseFloat(el.style.left) || r.left;
+    let top  = parseFloat(el.style.top)  || r.top;
+    if (r.right  > vw - 8) left = Math.max(8, vw - r.width - 8);
+    if (r.bottom > vh - 8) top  = Math.max(8, vh - r.height - 8);
     if (left < 8) left = 8;
-    // Clamp top edge
-    if (top < 8) top = 8;
-
-    el.style.left = left + "px";
-    el.style.top  = top + "px";
-    el.style.right = "auto";
+    if (top  < 8) top  = 8;
+    el.style.left   = left + "px";
+    el.style.top    = top  + "px";
+    el.style.right  = "auto";
     el.style.bottom = "auto";
   }
 
-  // Observe context menu visibility changes and auto-clamp
-  const _observer = new MutationObserver(mutations => {
+  const _menuSel = ".chat-context-menu,.message-context-menu,#chatContextMenu,#messageContextMenu";
+  new MutationObserver(mutations => {
     mutations.forEach(m => {
-      if (m.type === "attributes" && m.attributeName === "style") {
+      if (m.type === "attributes") {
         const el = m.target;
-        if (
-          el.matches(
-            ".chat-context-menu, .message-context-menu, #chatContextMenu, " +
-            "#messageContextMenu, .dropdown, .context-menu"
-          ) &&
-          getComputedStyle(el).display !== "none"
-        ) {
+        if (el.matches && el.matches(_menuSel) &&
+            getComputedStyle(el).display !== "none") {
           requestAnimationFrame(() => clampMenuToViewport(el));
         }
       }
     });
-  });
-  _observer.observe(document.body, { subtree: true, attributes: true, attributeFilter: ["style", "class"] });
+  }).observe(document.body, { subtree: true, attributes: true, attributeFilter: ["style", "class"] });
 
-  /* ── 3. Message context menu on mobile: show on long-press ─── */
-  // Ensure long-press works on touch devices (backup, in case existing
-  // handler doesn't catch all cases)
+  /* ── 3. Long-press context menu on mobile (backup handler) ─── */
   let _pressTimer = null;
   document.addEventListener("touchstart", e => {
     const msg = e.target.closest(".message");
     if (!msg) return;
     _pressTimer = setTimeout(() => {
       const optBtn = msg.querySelector(".message-options-btn");
-      if (optBtn) optBtn.click();
-    }, 480);
+      if (optBtn) { optBtn.click(); }
+    }, 500);
   }, { passive: true });
-  document.addEventListener("touchend",   () => clearTimeout(_pressTimer), { passive: true });
-  document.addEventListener("touchmove",  () => clearTimeout(_pressTimer), { passive: true });
-  document.addEventListener("touchcancel",() => clearTimeout(_pressTimer), { passive: true });
+  ["touchend","touchmove","touchcancel"].forEach(ev =>
+    document.addEventListener(ev, () => clearTimeout(_pressTimer), { passive: true })
+  );
 
-  /* ── 4. Prevent double-tap zoom on buttons ─────────────────── */
-  document.addEventListener("touchend", e => {
-    if (e.target.closest("button, [role='button'], a")) {
-      e.preventDefault();
-    }
-  }, { passive: false });
-
-  /* ── 5. iOS safe-area CSS variable shim ─────────────────────── */
-  function setSafeAreaVars() {
-    const el = document.documentElement;
-    // These are already handled by env() in CSS; this is a fallback
-    // for browsers that don't support CSS env()
-    const safe = {
-      "--sal": "0px", "--sar": "0px",
-      "--sat": "0px", "--sab": "0px"
-    };
-    Object.entries(safe).forEach(([k, v]) => {
-      if (!el.style.getPropertyValue(k)) el.style.setProperty(k, v);
-    });
-  }
-  setSafeAreaVars();
-
-  console.log("[ResponsiveUxPatch] loaded");
+  console.log("[ResponsiveUxPatch v2] loaded");
 })();
