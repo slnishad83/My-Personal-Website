@@ -15201,11 +15201,33 @@ body {
 }
 
 /* ── 5. Sidebar layout ────────────────────────────────────────── */
+/* NOTE: do NOT add display:flex !important here — it would override
+   .chat-container.chat-open .sidebar { display: none } on mobile. */
 .sidebar {
-  display: flex !important;
   flex-direction: column !important;
   min-height: 0 !important;
   overflow: hidden !important;
+}
+
+/* ── 5b. Mobile chat split-view: sidebar hides when chat is open ── */
+@media (max-width: 900px) {
+  /* Default state: sidebar visible, chat hidden */
+  .chat-container .sidebar {
+    display: flex !important;
+  }
+  .chat-container:not(.chat-open) .chat-main {
+    display: none !important;
+  }
+  /* Chat open: sidebar hides, chat takes full screen */
+  .chat-container.chat-open .sidebar {
+    display: none !important;
+  }
+  .chat-container.chat-open .chat-main {
+    display: flex !important;
+    width: 100% !important;
+    flex: 1 1 100% !important;
+    min-width: 0 !important;
+  }
 }
 
 .chat-list,
@@ -15223,6 +15245,18 @@ body {
   padding-right: max(8px, env(safe-area-inset-right, 0px)) !important;
 }
 
+
+/* ── Archive list: suppress stray tick/status icons in preview ───────── */
+#archiveList .list-item .list-preview {
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  display: block !important;
+}
+#archiveList .list-item .chat-list-status,
+#archiveList .list-item .message-status {
+  display: none !important;
+}
 /* ── 7. Context menus — clamp to viewport ────────────────────── */
 .chat-context-menu,
 .message-context-menu,
