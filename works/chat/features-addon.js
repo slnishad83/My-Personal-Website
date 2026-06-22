@@ -63,24 +63,46 @@
 
       /* Feature modals */
       .feat-modal-overlay {
-        position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 9000;
-        display: flex; align-items: flex-end; justify-content: center;
+        position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 9000;
+        display: flex; align-items: center; justify-content: center;
+        padding: 16px; box-sizing: border-box;
         opacity: 0; visibility: hidden; transition: opacity 0.2s, visibility 0.2s;
-        padding-top: 56px;
       }
       .feat-modal-overlay.show { opacity: 1; visibility: visible; }
       .feat-modal-box {
-        background: #fff; border-radius: 20px 20px 0 0;
-        padding: 24px 24px calc(24px + env(safe-area-inset-bottom, 0px));
-        width: 100%; max-width: 500px;
-        max-height: min(88dvh, 88vh);
-        overflow-y: auto;
+        background: #fff; border-radius: 16px;
+        padding: 24px;
+        width: 100%; max-width: 480px;
+        max-height: min(90dvh, calc(100vh - 32px));
+        overflow-y: auto; overflow-x: hidden;
         -webkit-overflow-scrolling: touch;
+        box-sizing: border-box;
       }
-      @media (max-height: 600px) {
-        .feat-modal-box { max-height: min(95dvh, 95vh); padding: 16px 16px calc(16px + env(safe-area-inset-bottom, 0px)); }
-        .feat-modal-box h3 { font-size: 15px; margin-bottom: 10px; }
-        .feat-form-group { margin-bottom: 9px; }
+      /* Mobile: bottom-sheet style */
+      @media (max-width: 540px) {
+        .feat-modal-overlay {
+          align-items: flex-end;
+          padding: 0;
+        }
+        .feat-modal-box {
+          border-radius: 18px 18px 0 0;
+          padding: 20px 16px calc(20px + env(safe-area-inset-bottom, 0px));
+          max-width: 100%;
+          max-height: min(88dvh, 88vh);
+        }
+      }
+      /* Very small screens / landscape with keyboard */
+      @media (max-height: 500px) {
+        .feat-modal-box {
+          max-height: min(96dvh, 96vh);
+          padding: 12px 14px calc(12px + env(safe-area-inset-bottom, 0px));
+        }
+        .feat-modal-box h3 { font-size: 14px; margin-bottom: 6px; }
+        .feat-modal-box > p { display: none; }
+        .feat-form-group { margin-bottom: 6px; }
+        .feat-form-group input,
+        .feat-form-group select,
+        .feat-form-group textarea { padding: 7px 10px; font-size: 13px; }
       }
       .feat-modal-box h3 { font-size: 17px; font-weight: 700; margin-bottom: 16px; }
       .feat-form-group { margin-bottom: 13px; }
@@ -276,7 +298,7 @@
         </p>
         <div class="feat-form-group">
           <label>Your message</label>
-          <textarea id="capsuleMsg" rows="4" placeholder="Write your message here…" style="resize:vertical"></textarea>
+          <textarea id="capsuleMsg" rows="4" placeholder="Write your message here…" style="resize:none"></textarea>
         </div>
         <div class="feat-form-group">
           <label>Deliver on this date</label>
