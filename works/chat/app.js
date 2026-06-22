@@ -113,6 +113,7 @@ let sentChatRequestsUnsubscribe = null;
 let groupInvitesUnsubscribe = null;
 let readRequestsUnsubscribe = null;
 let cachedReadRequestIds = new Set();
+let currentIncomingRequestIds = new Set();
 let statusesUnsubscribe = null;
 let outgoingCallsListUnsubscribe = null;
 let incomingCallsListUnsubscribe = null;
@@ -7349,9 +7350,12 @@ async function loadReceivedRequests() {
         .update({ ids: firebase.firestore.FieldValue.arrayRemove(...staleIds) })
         .catch((err) => console.warn("Could not prune stale read IDs:", err));
     }
+    currentIncomingRequestIds = allIncomingIds;
 
     if (badge) {
       const unreadIncomingCount = [...allIncomingIds].filter((id) => !validReadIds.has(id)).length;
+      const markAllBtn = document.getElementById("markAllRequestsReadBtn");
+      if (markAllBtn) markAllBtn.style.display = unreadIncomingCount > 0 ? "inline-flex" : "none";
       if (unreadIncomingCount > 0) {
         badge.textContent =
           unreadIncomingCount > 99 ? "99+" : String(unreadIncomingCount);
@@ -7494,6 +7498,28 @@ function setupRequestListeners() {
 
     loadReceivedRequests();
   });
+  const markAllBtn = document.getElementById("markAllRequestsReadBtn");
+  if (markAllBtn && !markAllBtn.dataset.listenerAttached) {
+    markAllBtn.dataset.listenerAttached = "1";
+    markAllBtn.addEventListener("click", async (e) => {
+      e.stopPropagation();
+      const btn = e.currentTarget;
+      btn.disabled = true;
+      const unreadIds = [...currentIncomingRequestIds].filter(
+        (id) => !cachedReadRequestIds.has(id),
+      );
+      if (unreadIds.length === 0) { btn.disabled = false; return; }
+      try {
+        await db.collection("chatRequestsRead").doc(currentUser.uid).set(
+          { ids: firebase.firestore.FieldValue.arrayUnion(...unreadIds) },
+          { merge: true },
+        );
+      } catch (err) {
+        console.warn("Could not mark all requests as read:", err);
+        btn.disabled = false;
+      }
+    });
+  }
   if (!currentUser) return;
   if (chatRequestsUnsubscribe) chatRequestsUnsubscribe();
   if (sentChatRequestsUnsubscribe) sentChatRequestsUnsubscribe();
