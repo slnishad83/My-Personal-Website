@@ -121,13 +121,16 @@ kbd {
    REQUEST PRIORITY LABELS
    ═══════════════════════════════════════════════════════════ */
 
-/* ── Filter bar ── */
+/* ── Filter bar — hidden until Chat Requests is expanded ── */
 .rp-filter-bar {
-  display: flex;
+  display: none;
   flex-wrap: wrap;
   gap: 4px;
   padding: 6px 0 4px;
   align-items: center;
+}
+.request-section.expanded .rp-filter-bar {
+  display: flex;
 }
 
 .rp-filter-btn {
