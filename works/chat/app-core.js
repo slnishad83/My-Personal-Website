@@ -8115,14 +8115,21 @@ async function loadReactions(messageId, container) {
     .get();
   const reactions = {};
   snapshot.forEach((doc) => {
-    reactions[doc.data().reaction] = (reactions[doc.data().reaction] || 0) + 1;
+    const d = doc.data();
+    if (!reactions[d.reaction]) reactions[d.reaction] = { count: 0, names: [] };
+    reactions[d.reaction].count++;
+    const name = d.userName || "Someone";
+    reactions[d.reaction].names.push(name);
   });
 
   if (Object.keys(reactions).length === 0) return;
 
   const reactionDiv = document.createElement("div");
   reactionDiv.className = "reactions-container";
-  for (const [reaction, count] of Object.entries(reactions)) {
+  for (const [reaction, { count, names }] of Object.entries(reactions)) {
+    const wrapper = document.createElement("span");
+    wrapper.className = "reaction-badge-wrapper";
+
     const badge = document.createElement("span");
     badge.className = "reaction-badge";
     badge.textContent = `${reaction} ${count}`;
@@ -8134,7 +8141,19 @@ async function loadReactions(messageId, container) {
       e.stopPropagation();
       triggerMessageEffect("confetti");
     };
-    reactionDiv.appendChild(badge);
+
+    const tooltip = document.createElement("span");
+    tooltip.className = "reaction-tooltip";
+    const header = `<span class="reaction-tooltip-emoji">${reaction}</span>`;
+    const list = names.length <= 5
+      ? names.map(n => `<span>${escapeHtml(n)}</span>`).join("")
+      : names.slice(0, 4).map(n => `<span>${escapeHtml(n)}</span>`).join("") +
+        `<span>+${names.length - 4} more</span>`;
+    tooltip.innerHTML = header + list;
+
+    wrapper.appendChild(badge);
+    wrapper.appendChild(tooltip);
+    reactionDiv.appendChild(wrapper);
   }
   container.appendChild(reactionDiv);
 }
@@ -13271,6 +13290,23 @@ function loadMessages() {
       if (wasEmpty && !shouldStickToBottom && previousScrollTop === 0) scrollToFirstUnread(messagesArea);
       renderSuggestedReplies(messagesArea);
       bindRenderedMessageActions();
+      // Mobile tap-to-toggle reaction tooltips
+      messagesArea.querySelectorAll(".reaction-badge-wrapper").forEach((w) => {
+        if (w.dataset.tooltipBound) return;
+        w.dataset.tooltipBound = "true";
+        w.addEventListener("click", (e) => {
+          if (window.matchMedia("(hover: none)").matches) {
+            const isActive = w.classList.contains("tooltip-active");
+            document.querySelectorAll(".reaction-badge-wrapper.tooltip-active")
+              .forEach((el) => el.classList.remove("tooltip-active"));
+            if (!isActive) { e.stopPropagation(); w.classList.add("tooltip-active"); }
+          }
+        });
+      });
+      document.addEventListener("click", () => {
+        document.querySelectorAll(".reaction-badge-wrapper.tooltip-active")
+          .forEach((el) => el.classList.remove("tooltip-active"));
+      }, { once: false, capture: false });
       messagesArea.querySelectorAll(".jump-reply-btn").forEach((btn) => {
         if (btn.dataset.bound === "true") return;
         btn.dataset.bound = "true";

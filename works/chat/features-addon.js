@@ -66,11 +66,21 @@
         position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 9000;
         display: flex; align-items: flex-end; justify-content: center;
         opacity: 0; visibility: hidden; transition: opacity 0.2s, visibility 0.2s;
+        padding-top: 56px;
       }
       .feat-modal-overlay.show { opacity: 1; visibility: visible; }
       .feat-modal-box {
-        background: #fff; border-radius: 20px 20px 0 0; padding: 24px;
-        width: 100%; max-width: 500px; max-height: 80vh; overflow-y: auto;
+        background: #fff; border-radius: 20px 20px 0 0;
+        padding: 24px 24px calc(24px + env(safe-area-inset-bottom, 0px));
+        width: 100%; max-width: 500px;
+        max-height: min(88dvh, 88vh);
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+      }
+      @media (max-height: 600px) {
+        .feat-modal-box { max-height: min(95dvh, 95vh); padding: 16px 16px calc(16px + env(safe-area-inset-bottom, 0px)); }
+        .feat-modal-box h3 { font-size: 15px; margin-bottom: 10px; }
+        .feat-form-group { margin-bottom: 9px; }
       }
       .feat-modal-box h3 { font-size: 17px; font-weight: 700; margin-bottom: 16px; }
       .feat-form-group { margin-bottom: 13px; }

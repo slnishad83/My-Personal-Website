@@ -11069,7 +11069,8 @@ document.getElementById("closeSessionsModal")?.addEventListener("click", () => {
     for (const item of items) {
       const chatData = item.chatData || {};
       item.lastMessageSentByMe = chatData.lastMessageSenderId === currentUser?.uid;
-      item.lastMessageStatus = chatData.lastMessageStatus || "sent";
+      // Only show tick when Firestore has an explicit status — no "sent" default fallback
+      item.lastMessageStatus = chatData.lastMessageStatus || "";
     }
     return items;
   };

@@ -2451,6 +2451,11 @@ button.reply-preview {
   margin-top: 6px;
 }
 
+.reaction-badge-wrapper {
+  position: relative;
+  display: inline-flex;
+}
+
 .reaction-badge {
   display: inline-flex;
   align-items: center;
@@ -2472,6 +2477,80 @@ body.dark .reaction-badge:hover {
 }
 body.dark .reactions-container .reaction-badge {
   border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* Reaction tooltip — who reacted */
+.reaction-tooltip {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: #1f2c33;
+  color: #e9edef;
+  border-radius: 8px;
+  padding: 7px 10px;
+  font-size: 12px;
+  line-height: 1.5;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.15s, visibility 0.15s;
+  z-index: 9999;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  min-width: 80px;
+  max-width: 180px;
+}
+
+.reaction-tooltip::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 5px solid transparent;
+  border-top-color: #1f2c33;
+}
+
+.reaction-tooltip-emoji {
+  font-size: 18px;
+  line-height: 1;
+  margin-bottom: 2px;
+}
+
+.reaction-tooltip span {
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: center;
+}
+
+.reaction-badge-wrapper:hover .reaction-tooltip {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* Mobile: tap to toggle tooltip */
+@media (hover: none) {
+  .reaction-badge-wrapper .reaction-tooltip {
+    transition: opacity 0.2s, visibility 0.2s;
+  }
+  .reaction-badge-wrapper.tooltip-active .reaction-tooltip {
+    opacity: 1;
+    visibility: visible;
+  }
+}
+
+body.dark .reaction-tooltip {
+  background: #2a3942;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.5);
+}
+body.dark .reaction-tooltip::after {
+  border-top-color: #2a3942;
 }
 
 .mention-highlight {
