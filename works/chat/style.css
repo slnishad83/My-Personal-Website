@@ -10792,9 +10792,7 @@ body.native-android .message-context-menu {
     gap: 2px !important;
   }
 
-  #installAppBtn {
-    display: none !important;
-  }
+  /* #installAppBtn display is controlled by pwa-install.js — do NOT force hide here */
 
   .sidebar-actions .icon-btn,
   .sidebar-actions .logout-btn {
@@ -15161,13 +15159,7 @@ body.large-tap-targets .setting-item {
   display: none !important;
 }
 
-#installAppBtn {
-  flex-shrink: 0 !important;
-  max-width: 110px !important;
-  white-space: nowrap !important;
-  overflow: hidden !important;
-  text-overflow: ellipsis !important;
-}
+/* #installAppBtn sizing — handled by .install-app-btn below */
 
 /* ── 3. Prevent horizontal overflow ───────────────────────────── */
 html {
@@ -15381,4 +15373,131 @@ body {
 button:focus:not(:focus-visible),
 [role="button"]:focus:not(:focus-visible) {
   outline: none !important;
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   DOWNLOAD APP BUTTON — Compact pill in sidebar header, browser-only
+   pwa-install.js controls show/hide via inline style — no !important here
+   ════════════════════════════════════════════════════════════════════ */
+
+/* Reset any previous sizing rules on the button */
+#installAppBtn.install-app-btn,
+.install-app-btn#installAppBtn {
+  /* layout */
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  flex-shrink: 0;
+  min-width: 0;
+  max-width: 140px;
+  overflow: hidden;
+  /* spacing */
+  padding: 6px 13px 6px 9px;
+  /* shape */
+  border: none;
+  border-radius: 20px;
+  /* colour — WhatsApp brand green gradient */
+  background: linear-gradient(135deg, #00a884 0%, #017a60 100%);
+  color: #fff;
+  /* type */
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  cursor: pointer;
+  /* shadow & motion */
+  box-shadow: 0 2px 10px rgba(0,168,132,0.32);
+  transition: background 0.18s ease, box-shadow 0.18s ease, transform 0.14s ease;
+  /* accessibility */
+  -webkit-tap-highlight-color: transparent;
+  position: relative;
+}
+
+/* Icon inside the button */
+#installAppBtn.install-app-btn .install-app-icon,
+.install-app-btn#installAppBtn .install-app-icon {
+  width: 17px;
+  height: 17px;
+  flex: 0 0 17px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+#installAppBtn.install-app-btn .install-app-icon svg,
+.install-app-btn#installAppBtn .install-app-icon svg {
+  width: 17px;
+  height: 17px;
+  fill: rgba(255,255,255,0.95);
+  display: block;
+}
+
+/* Label */
+#installAppBtn.install-app-btn .install-app-label,
+.install-app-btn#installAppBtn .install-app-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Hover / focus */
+#installAppBtn.install-app-btn:hover,
+.install-app-btn#installAppBtn:hover,
+#installAppBtn.install-app-btn:focus-visible,
+.install-app-btn#installAppBtn:focus-visible {
+  background: linear-gradient(135deg, #00c49a 0%, #00a884 100%);
+  box-shadow: 0 4px 16px rgba(0,168,132,0.42);
+  transform: translateY(-1px);
+  outline: none;
+}
+
+/* Active press */
+#installAppBtn.install-app-btn:active,
+.install-app-btn#installAppBtn:active {
+  transform: translateY(0);
+  box-shadow: 0 1px 6px rgba(0,168,132,0.25);
+}
+
+/* Disabled / loading state */
+#installAppBtn.install-app-btn:disabled,
+.install-app-btn#installAppBtn:disabled {
+  opacity: 0.6;
+  cursor: wait;
+  transform: none;
+}
+
+/* Dark mode */
+body.dark #installAppBtn.install-app-btn,
+body.dark .install-app-btn#installAppBtn {
+  background: linear-gradient(135deg, #00a884 0%, #016b53 100%);
+  box-shadow: 0 2px 10px rgba(0,168,132,0.2);
+}
+body.dark #installAppBtn.install-app-btn:hover,
+body.dark .install-app-btn#installAppBtn:hover {
+  background: linear-gradient(135deg, #00b894 0%, #00a884 100%);
+  box-shadow: 0 4px 16px rgba(0,168,132,0.32);
+}
+
+/* ── Responsive: very small phones — icon-only to save space ─── */
+@media (max-width: 360px) {
+  #installAppBtn.install-app-btn,
+  .install-app-btn#installAppBtn {
+    padding: 7px 9px;
+    max-width: 38px;
+    min-width: 34px;
+    gap: 0;
+  }
+  #installAppBtn.install-app-btn .install-app-label,
+  .install-app-btn#installAppBtn .install-app-label {
+    display: none;
+  }
+}
+
+/* ── Standalone / installed PWA — hide completely ────────────── */
+@media (display-mode: standalone) {
+  #installAppBtn,
+  .mobile-install-card {
+    display: none !important;
+  }
 }
