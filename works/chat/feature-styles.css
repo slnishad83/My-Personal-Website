@@ -1,0 +1,438 @@
+/* ============================================================
+   FEATURE STYLES
+   Combined CSS for: Message Search, Request Priority,
+   Notification Digest.
+   Add ONE link to works/chat/index.html:
+     <link rel="stylesheet" href="feature-styles.css" />
+   ============================================================ */
+
+
+/* ═══════════════════════════════════════════════════════════
+   MESSAGE SEARCH
+   ═══════════════════════════════════════════════════════════ */
+
+.ms-hint, .ms-empty, .ms-loading {
+  padding: 20px 16px;
+  font-size: 13px;
+  color: var(--muted, #888);
+  text-align: center;
+  line-height: 1.6;
+}
+
+.ms-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+@keyframes ms-spin { to { transform: rotate(360deg); } }
+.ms-spinner {
+  width: 16px; height: 16px;
+  border: 2px solid var(--border, rgba(255,255,255,0.1));
+  border-top-color: var(--brand, #6366f1);
+  border-radius: 50%;
+  display: inline-block;
+  animation: ms-spin 0.7s linear infinite;
+}
+
+.ms-count {
+  padding: 8px 16px 4px;
+  font-size: 11px;
+  color: var(--muted, #888);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.ms-group {
+  margin: 8px 0;
+}
+
+.ms-group-header {
+  padding: 4px 16px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--brand, #6366f1);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  background: var(--brand-subtle, rgba(99,102,241,0.08));
+  border-left: 3px solid var(--brand, #6366f1);
+}
+
+.ms-result {
+  padding: 10px 16px;
+  cursor: pointer;
+  border-bottom: 1px solid var(--border, rgba(255,255,255,0.05));
+  transition: background 0.12s;
+}
+
+.ms-result:hover {
+  background: var(--hover, rgba(255,255,255,0.05));
+}
+
+.ms-result-text {
+  font-size: 13px;
+  color: var(--text, #e0e0e0);
+  line-height: 1.5;
+  word-break: break-word;
+}
+
+.ms-result-meta {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: var(--muted, #888);
+  margin-top: 4px;
+}
+
+.ms-hl {
+  background: rgba(99,102,241,0.25);
+  color: var(--text, #e0e0e0);
+  border-radius: 2px;
+  padding: 0 1px;
+}
+
+.ms-kbd-hint {
+  font-size: 11px;
+  color: var(--muted, #888);
+  text-align: right;
+  padding: 4px 2px 0;
+  display: flex;
+  justify-content: flex-end;
+  gap: 4px;
+  align-items: center;
+}
+
+kbd {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-secondary, #1e1e2e);
+  border: 1px solid var(--border, rgba(255,255,255,0.15));
+  border-radius: 4px;
+  padding: 1px 5px;
+  font-size: 10px;
+  font-family: inherit;
+  color: var(--text, #e0e0e0);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   REQUEST PRIORITY LABELS
+   ═══════════════════════════════════════════════════════════ */
+
+/* ── Filter bar ── */
+.rp-filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 6px 0 4px;
+  align-items: center;
+}
+
+.rp-filter-btn {
+  background: transparent;
+  border: 1px solid var(--border, rgba(255,255,255,0.1));
+  border-radius: 14px;
+  padding: 3px 10px;
+  font-size: 11px;
+  color: var(--muted, #888);
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s, border-color 0.12s;
+  white-space: nowrap;
+}
+
+.rp-filter-btn:hover {
+  background: var(--hover, rgba(255,255,255,0.07));
+  color: var(--text, #e0e0e0);
+}
+
+.rp-filter-btn.active {
+  background: var(--brand, #6366f1);
+  border-color: var(--brand, #6366f1);
+  color: #fff;
+}
+
+.rp-ad-btn {
+  margin-left: auto;
+  font-size: 10px;
+}
+
+.rp-ad-btn.active {
+  background: rgba(245,158,11,0.15);
+  border-color: #f59e0b;
+  color: #f59e0b;
+}
+
+@media (max-width: 420px) {
+  .rp-filter-bar { gap: 3px; }
+  .rp-filter-btn { padding: 2px 7px; font-size: 10px; }
+}
+
+/* ── Priority badge on card ── */
+.rp-wrapper {
+  display: inline-flex;
+  align-items: center;
+  position: relative;
+  flex-shrink: 0;
+  margin-right: 6px;
+}
+
+.rp-badge {
+  background: transparent;
+  border: none;
+  font-size: 14px;
+  cursor: pointer;
+  padding: 2px;
+  border-radius: 4px;
+  line-height: 1;
+  opacity: 0.45;
+  transition: opacity 0.15s, transform 0.15s;
+}
+
+.rp-badge:hover, .rp-badge--set { opacity: 1; }
+.rp-badge--set { transform: scale(1.1); }
+
+/* ── Priority picker popover ── */
+.rp-picker {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  background: var(--bg-secondary, #1e1e2e);
+  border: 1px solid var(--border, rgba(255,255,255,0.12));
+  border-radius: 9px;
+  padding: 6px;
+  min-width: 130px;
+  z-index: 300;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.4);
+}
+
+.rp-picker-title {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--muted, #888);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 2px 6px 6px;
+  border-bottom: 1px solid var(--border, rgba(255,255,255,0.08));
+  margin-bottom: 4px;
+}
+
+.rp-picker-opt {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: none;
+  border-radius: 5px;
+  padding: 6px 8px;
+  font-size: 12px;
+  color: var(--text, #e0e0e0);
+  cursor: pointer;
+  transition: background 0.12s;
+}
+
+.rp-picker-opt:hover { background: var(--hover, rgba(255,255,255,0.07)); }
+
+.rp-none {
+  color: var(--muted, #888);
+  border-top: 1px solid var(--border, rgba(255,255,255,0.08));
+  margin-top: 4px;
+  padding-top: 8px;
+  font-size: 11px;
+}
+
+/* ── Auto-decline settings panel ── */
+.rp-ad-panel {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  background: var(--bg-secondary, #1e1e2e);
+  border: 1px solid var(--border, rgba(255,255,255,0.12));
+  border-radius: 9px;
+  padding: 12px;
+  min-width: 210px;
+  z-index: 300;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.4);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.rp-ad-title {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--muted, #888);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.rp-ad-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text, #e0e0e0);
+  cursor: pointer;
+}
+
+.rp-ad-days {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--muted, #888);
+  transition: opacity 0.15s;
+}
+
+.rp-ad-days select {
+  flex: 1;
+  background: var(--input-bg, rgba(255,255,255,0.06));
+  border: 1px solid var(--border, rgba(255,255,255,0.12));
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-size: 12px;
+  color: var(--text, #e0e0e0);
+  outline: none;
+}
+
+.rp-ad-run {
+  background: var(--brand, #6366f1);
+  color: #fff;
+  border: none;
+  border-radius: 7px;
+  padding: 7px 14px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: opacity 0.15s;
+  width: 100%;
+}
+
+.rp-ad-run:hover { opacity: 0.88; }
+
+/* Ensure request-section is relatively-positioned for absolute panel */
+.request-section { position: relative; }
+
+
+/* ═══════════════════════════════════════════════════════════
+   NOTIFICATION DIGEST
+   ═══════════════════════════════════════════════════════════ */
+
+.nd-empty {
+  padding: 20px 16px;
+  font-size: 13px;
+  color: var(--muted, #888);
+  text-align: center;
+}
+
+.nd-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border, rgba(255,255,255,0.05));
+  cursor: pointer;
+  transition: background 0.12s;
+}
+
+.nd-item:hover { background: var(--hover, rgba(255,255,255,0.04)); }
+
+.nd-icon {
+  font-size: 18px;
+  flex-shrink: 0;
+  width: 28px;
+  text-align: center;
+  margin-top: 1px;
+}
+
+.nd-body { flex: 1; min-width: 0; }
+
+.nd-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text, #e0e0e0);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.nd-count {
+  font-size: 10px;
+  font-weight: 700;
+  background: var(--brand, #6366f1);
+  color: #fff;
+  border-radius: 9px;
+  padding: 1px 6px;
+  flex-shrink: 0;
+}
+
+.nd-msg {
+  font-size: 12px;
+  color: var(--muted, #888);
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.nd-time {
+  font-size: 10px;
+  color: var(--muted-strong, #666);
+  margin-top: 3px;
+}
+
+.nd-group .nd-name { color: var(--text, #e0e0e0); }
+.nd-group { background: var(--brand-subtle, rgba(99,102,241,0.04)); }
+
+
+/* ═══════════════════════════════════════════════════════════
+   RESPONSIVE FIXES — applies globally to the chat app
+   ═══════════════════════════════════════════════════════════ */
+
+/* Ensure request-header wraps on very small screens */
+.request-header {
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+/* Prevent snooze-wrapper panels from overflowing on mobile */
+@media (max-width: 380px) {
+  .snooze-menu,
+  .snz-pref-panel,
+  .snooze-custom-picker,
+  .sh-panel,
+  .rp-picker,
+  .rp-ad-panel {
+    max-width: min(96vw, 260px);
+    right: 0;
+    left: auto;
+  }
+}
+
+/* Ensure request cards stack properly on small screens */
+@media (max-width: 420px) {
+  .request-card {
+    flex-wrap: wrap;
+  }
+  .rp-filter-bar {
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    padding-bottom: 4px;
+    scrollbar-width: none;
+  }
+  .rp-filter-bar::-webkit-scrollbar { display: none; }
+}
+
+/* Global search modal responsive */
+@media (max-width: 600px) {
+  #globalSearchModal .modal-content {
+    width: 96vw !important;
+    max-width: 96vw !important;
+    margin: 10px auto;
+    border-radius: 12px;
+  }
+}

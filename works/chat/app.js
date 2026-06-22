@@ -7445,6 +7445,8 @@ async function loadReceivedRequests() {
         "list-item request-card" +
         (isRead ? " request-card--read" : "") +
         (isSnoozed ? " request-card--snoozed" : "");
+      reqDiv.dataset.reqCreated = req.createdAt?.toMillis?.() || 0;
+      reqDiv.dataset.reqId = req.id;
       reqDiv.innerHTML = `
         <div class="list-avatar">${escapeHtml(getInitials(displayName, isOutgoing ? req.toUserEmail || "" : req.fromUserEmail || ""))}</div>
         <div class="list-info">
