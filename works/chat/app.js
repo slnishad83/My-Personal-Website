@@ -7336,11 +7336,23 @@ async function loadReceivedRequests() {
         (b.createdAt?.toMillis?.() || 0) - (a.createdAt?.toMillis?.() || 0),
     );
 
+    const readRequestKey = `chatRequestsRead_${currentUser.uid}`;
+    let readIds;
+    try { readIds = new Set(JSON.parse(localStorage.getItem(readRequestKey) || "[]")); } catch { readIds = new Set(); }
+    const allIncomingIds = new Set([
+      ...chatSnapshot.docs.map((d) => d.id),
+      ...groupSnapshot.docs.map((d) => d.id),
+    ]);
+    const validReadIds = new Set([...readIds].filter((id) => allIncomingIds.has(id)));
+    if (validReadIds.size !== readIds.size) {
+      localStorage.setItem(readRequestKey, JSON.stringify([...validReadIds]));
+    }
+
     if (badge) {
-      const incomingCount = chatSnapshot.size + groupSnapshot.size;
-      if (incomingCount > 0) {
+      const unreadIncomingCount = [...allIncomingIds].filter((id) => !validReadIds.has(id)).length;
+      if (unreadIncomingCount > 0) {
         badge.textContent =
-          incomingCount > 99 ? "99+" : String(incomingCount);
+          unreadIncomingCount > 99 ? "99+" : String(unreadIncomingCount);
         badge.classList.add("show");
         badge.style.display = "inline-flex";
       } else {
@@ -7368,13 +7380,14 @@ async function loadReceivedRequests() {
     for (const req of requests) {
       const isGroupInvite = req.requestType === "group";
       const isOutgoing = req.direction === "outgoing";
+      const isRead = !isOutgoing && validReadIds.has(req.id);
       const displayName = isOutgoing
         ? req.toUserName || req.toUserEmail || "User"
         : isGroupInvite
           ? req.groupName || "Group invite"
           : req.fromUserName || "User";
       const reqDiv = document.createElement("div");
-      reqDiv.className = "list-item request-card";
+      reqDiv.className = "list-item request-card" + (isRead ? " request-card--read" : "");
       reqDiv.innerHTML = `
         <div class="list-avatar">${escapeHtml(getInitials(displayName, isOutgoing ? req.toUserEmail || "" : req.fromUserEmail || ""))}</div>
         <div class="list-info">
@@ -7386,7 +7399,8 @@ async function loadReceivedRequests() {
             ? `<button class="btn btn-outline cancel-request-btn" data-id="${req.id}">Cancel</button>`
             : `<button class="btn btn-success accept-request-btn" data-type="${req.requestType}" data-id="${req.id}" data-from="${escapeHtml(req.fromUserId || "")}">Accept</button>
           <button class="btn btn-outline decline-request-btn" data-type="${req.requestType}" data-id="${req.id}">Decline</button>
-          <button class="btn btn-outline block-request-btn" data-type="${req.requestType}" data-id="${req.id}" data-from="${escapeHtml(req.fromUserId || "")}" data-name="${escapeHtml(req.fromUserName || "User")}">Block</button>`}
+          <button class="btn btn-outline block-request-btn" data-type="${req.requestType}" data-id="${req.id}" data-from="${escapeHtml(req.fromUserId || "")}" data-name="${escapeHtml(req.fromUserName || "User")}">Block</button>
+          <button class="btn btn-ghost mark-read-request-btn" data-id="${req.id}" title="${isRead ? "Mark as unread" : "Dismiss notification without accepting or declining"}">${isRead ? "✓ Read" : "Mark as Read"}</button>`}
         </div>
       `;
       requestList.appendChild(reqDiv);
@@ -7429,6 +7443,21 @@ async function loadReceivedRequests() {
           btn.dataset.from,
           btn.dataset.name,
         );
+      });
+    });
+    requestList.querySelectorAll(".mark-read-request-btn").forEach((btn) => {
+      btn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const reqId = btn.dataset.id;
+        let ids;
+        try { ids = JSON.parse(localStorage.getItem(readRequestKey) || "[]"); } catch { ids = []; }
+        if (ids.includes(reqId)) {
+          localStorage.setItem(readRequestKey, JSON.stringify(ids.filter((id) => id !== reqId)));
+        } else {
+          ids.push(reqId);
+          localStorage.setItem(readRequestKey, JSON.stringify(ids));
+        }
+        loadReceivedRequests();
       });
     });
   } catch (error) {
