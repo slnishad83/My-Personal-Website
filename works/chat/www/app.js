@@ -111,6 +111,8 @@ let allUsersReadyPromise = null;
 let chatRequestsUnsubscribe = null;
 let sentChatRequestsUnsubscribe = null;
 let groupInvitesUnsubscribe = null;
+let readRequestsUnsubscribe = null;
+let cachedReadRequestIds = new Set();
 let statusesUnsubscribe = null;
 let outgoingCallsListUnsubscribe = null;
 let incomingCallsListUnsubscribe = null;
@@ -7336,17 +7338,11 @@ async function loadReceivedRequests() {
         (b.createdAt?.toMillis?.() || 0) - (a.createdAt?.toMillis?.() || 0),
     );
 
-    const readRequestKey = `chatRequestsRead_${currentUser.uid}`;
-    let readIds;
-    try { readIds = new Set(JSON.parse(localStorage.getItem(readRequestKey) || "[]")); } catch { readIds = new Set(); }
     const allIncomingIds = new Set([
       ...chatSnapshot.docs.map((d) => d.id),
       ...groupSnapshot.docs.map((d) => d.id),
     ]);
-    const validReadIds = new Set([...readIds].filter((id) => allIncomingIds.has(id)));
-    if (validReadIds.size !== readIds.size) {
-      localStorage.setItem(readRequestKey, JSON.stringify([...validReadIds]));
-    }
+    const validReadIds = new Set([...cachedReadRequestIds].filter((id) => allIncomingIds.has(id)));
 
     if (badge) {
       const unreadIncomingCount = [...allIncomingIds].filter((id) => !validReadIds.has(id)).length;
@@ -7446,18 +7442,27 @@ async function loadReceivedRequests() {
       });
     });
     requestList.querySelectorAll(".mark-read-request-btn").forEach((btn) => {
-      btn.addEventListener("click", (e) => {
+      btn.addEventListener("click", async (e) => {
         e.stopPropagation();
+        btn.disabled = true;
         const reqId = btn.dataset.id;
-        let ids;
-        try { ids = JSON.parse(localStorage.getItem(readRequestKey) || "[]"); } catch { ids = []; }
-        if (ids.includes(reqId)) {
-          localStorage.setItem(readRequestKey, JSON.stringify(ids.filter((id) => id !== reqId)));
-        } else {
-          ids.push(reqId);
-          localStorage.setItem(readRequestKey, JSON.stringify(ids));
+        const readDocRef = db.collection("chatRequestsRead").doc(currentUser.uid);
+        try {
+          if (cachedReadRequestIds.has(reqId)) {
+            await readDocRef.set(
+              { ids: firebase.firestore.FieldValue.arrayRemove(reqId) },
+              { merge: true },
+            );
+          } else {
+            await readDocRef.set(
+              { ids: firebase.firestore.FieldValue.arrayUnion(reqId) },
+              { merge: true },
+            );
+          }
+        } catch (err) {
+          console.warn("Could not update read state:", err);
+          btn.disabled = false;
         }
-        loadReceivedRequests();
       });
     });
   } catch (error) {
@@ -7487,6 +7492,18 @@ function setupRequestListeners() {
   if (chatRequestsUnsubscribe) chatRequestsUnsubscribe();
   if (sentChatRequestsUnsubscribe) sentChatRequestsUnsubscribe();
   if (groupInvitesUnsubscribe) groupInvitesUnsubscribe();
+  if (readRequestsUnsubscribe) readRequestsUnsubscribe();
+  cachedReadRequestIds = new Set();
+  readRequestsUnsubscribe = db
+    .collection("chatRequestsRead")
+    .doc(currentUser.uid)
+    .onSnapshot(
+      (snap) => {
+        cachedReadRequestIds = new Set(snap.exists ? (snap.data()?.ids || []) : []);
+        loadReceivedRequests();
+      },
+      (error) => console.warn("Could not sync read requests:", error),
+    );
   seenPendingChatRequestIds = new Set();
   seenSentChatRequestIds = new Set();
   seenPendingGroupInviteIds = new Set();
