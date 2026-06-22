@@ -2545,9 +2545,9 @@ function updateUnreadBadges(items = []) {
   }
   document.title =
     totalUnread > 0 ? `(${totalUnread}) Team Chat` : "Team Chat - Complete";
-  // Hide mark-all-read bar when no unreads
+  // Show/hide mark-all-read bar based on unreads (all + unread tabs)
   const bar = document.getElementById("markAllReadBar");
-  if (bar && currentViewTab === "unread") {
+  if (bar && (currentViewTab === "all" || currentViewTab === "unread")) {
     bar.style.display = totalUnread > 0 ? "flex" : "none";
   }
 }
@@ -16004,7 +16004,10 @@ function switchTab(tab) {
     communityActions.style.display = tab === "communities" ? "flex" : "none";
 
   const markAllReadBar = document.getElementById("markAllReadBar");
-  if (markAllReadBar) markAllReadBar.style.display = tab === "unread" ? "flex" : "none";
+  // Hide bar on tabs where it doesn't belong; updateUnreadBadges manages the rest
+  if (markAllReadBar && tab !== "all" && tab !== "unread") {
+    markAllReadBar.style.display = "none";
+  }
 
   if (tab === "groups") loadGroupsList();
   else if (tab === "broadcasts") loadBroadcastsList();
