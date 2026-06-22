@@ -387,6 +387,10 @@ service cloud.firestore {
       allow read, create, update, delete: if isOwner(userId);
     }
 
+    match /chatRequestsRead/{userId} {
+      allow read, create, update, delete: if isOwner(userId);
+    }
+
     match /usernames/{username} {
       allow read: if signedIn();
       allow create: if signedIn() && request.resource.data.uid == request.auth.uid;
