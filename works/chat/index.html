@@ -19,7 +19,7 @@
       href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="style.css?v=157" />
+    <link rel="stylesheet" href="style.css?v=158" />
     <link rel="stylesheet" href="notification-prefs.css" />
     <link rel="stylesheet" href="snooze-enhancements.css" />
     <link rel="stylesheet" href="snooze-history.css" />
@@ -263,7 +263,7 @@
         <div id="notificationsPanel" style="display:none;overflow-y:auto;flex:1;padding:8px 0;"></div>
 
         <div id="markAllReadBar" class="mark-all-read-bar" style="display:none">
-          <button type="button" id="markAllReadBtn">
+          <button type="button" id="markAllReadBtn" onclick="markAllChatsAsRead()">
             <span class="mark-all-read-icon">&#x2714;</span>
             <span>Mark all as read</span>
           </button>
@@ -3659,7 +3659,7 @@
     <script src="request-priority.js" defer></script>
     <script src="notification-digest.js" defer></script>
     <script src="permissions-manager.js?v=1"></script>
-    <script src="app-core.js?v=9"></script>
+    <script src="app-core.js?v=10"></script>
     <script src="app-extras.js?v=9"></script>
     <script src="app-init.js?v=1"></script>
     <script src="pwa-install.js?v=146"></script>
