@@ -320,7 +320,7 @@ function renderAttachment(attachment = {}) {
   }
 
   if (attachment.type === "video") {
-    return `<div class="message-attachment video-attachment"><video src="${url}" controls playsinline preload="metadata"></video>${viewOnceHtml}</div>`;
+    return `<div class="message-attachment video-attachment" data-preview-url="${url}" data-filename="${filename}"><div class="video-thumb-wrap"><video src="${url}" preload="metadata" muted playsinline></video><button type="button" class="video-play-overlay" aria-label="Play video">&#9654;</button></div>${viewOnceHtml}</div>`;
   }
 
   if (attachment.type === "voice") {
@@ -2545,9 +2545,9 @@ function updateUnreadBadges(items = []) {
   }
   document.title =
     totalUnread > 0 ? `(${totalUnread}) Team Chat` : "Team Chat - Complete";
-  // Hide mark-all-read bar when no unreads
+  // Show/hide mark-all-read bar based on unreads (all + unread tabs)
   const bar = document.getElementById("markAllReadBar");
-  if (bar && currentViewTab === "unread") {
+  if (bar && (currentViewTab === "all" || currentViewTab === "unread")) {
     bar.style.display = totalUnread > 0 ? "flex" : "none";
   }
 }
@@ -5772,6 +5772,7 @@ function decorateSearchItems(items = [], section = "", searchResultType = "") {
 function getChatListPreviewText(preview = "", chatType = "") {
   const text = String(preview || "").trim();
   if (!text) return "";
+  if (/^[✓✔✅]+$/.test(text)) return "";
 
   if (/^missed\s+(voice|video)\s+call/i.test(text)) return text;
   if (/^(voice|video)\s+call\s+(ended|cancelled|declined|rejected)/i.test(text))
@@ -6846,6 +6847,8 @@ async function loadAllChatsList(searchTerm = "", searchToken = null) {
       const sectionDiff = (order[a.section] || 99) - (order[b.section] || 99);
       if (sectionDiff) return sectionDiff;
     }
+    if (a.type === "saved") return -1;
+    if (b.type === "saved") return 1;
     if (a.isPinned && !b.isPinned) return -1;
     if (!a.isPinned && b.isPinned) return 1;
     return (
@@ -8114,14 +8117,21 @@ async function loadReactions(messageId, container) {
     .get();
   const reactions = {};
   snapshot.forEach((doc) => {
-    reactions[doc.data().reaction] = (reactions[doc.data().reaction] || 0) + 1;
+    const d = doc.data();
+    if (!reactions[d.reaction]) reactions[d.reaction] = { count: 0, names: [] };
+    reactions[d.reaction].count++;
+    const name = d.userName || "Someone";
+    reactions[d.reaction].names.push(name);
   });
 
   if (Object.keys(reactions).length === 0) return;
 
   const reactionDiv = document.createElement("div");
   reactionDiv.className = "reactions-container";
-  for (const [reaction, count] of Object.entries(reactions)) {
+  for (const [reaction, { count, names }] of Object.entries(reactions)) {
+    const wrapper = document.createElement("span");
+    wrapper.className = "reaction-badge-wrapper";
+
     const badge = document.createElement("span");
     badge.className = "reaction-badge";
     badge.textContent = `${reaction} ${count}`;
@@ -8133,7 +8143,19 @@ async function loadReactions(messageId, container) {
       e.stopPropagation();
       triggerMessageEffect("confetti");
     };
-    reactionDiv.appendChild(badge);
+
+    const tooltip = document.createElement("span");
+    tooltip.className = "reaction-tooltip";
+    const header = `<span class="reaction-tooltip-emoji">${reaction}</span>`;
+    const list = names.length <= 5
+      ? names.map(n => `<span>${escapeHtml(n)}</span>`).join("")
+      : names.slice(0, 4).map(n => `<span>${escapeHtml(n)}</span>`).join("") +
+        `<span>+${names.length - 4} more</span>`;
+    tooltip.innerHTML = header + list;
+
+    wrapper.appendChild(badge);
+    wrapper.appendChild(tooltip);
+    reactionDiv.appendChild(wrapper);
   }
   container.appendChild(reactionDiv);
 }
@@ -12651,6 +12673,7 @@ function appendFailedMessage(text = "", attachment = null) {
     renderFailedLocalMessage(failed),
   );
   bindFailedMessageRetryActions();
+  bindRenderedMessageActions();
   messagesArea.scrollTop = messagesArea.scrollHeight;
 }
 
@@ -13281,6 +13304,23 @@ function loadMessages() {
       if (wasEmpty && !shouldStickToBottom && previousScrollTop === 0) scrollToFirstUnread(messagesArea);
       renderSuggestedReplies(messagesArea);
       bindRenderedMessageActions();
+      // Mobile tap-to-toggle reaction tooltips
+      messagesArea.querySelectorAll(".reaction-badge-wrapper").forEach((w) => {
+        if (w.dataset.tooltipBound) return;
+        w.dataset.tooltipBound = "true";
+        w.addEventListener("click", (e) => {
+          if (window.matchMedia("(hover: none)").matches) {
+            const isActive = w.classList.contains("tooltip-active");
+            document.querySelectorAll(".reaction-badge-wrapper.tooltip-active")
+              .forEach((el) => el.classList.remove("tooltip-active"));
+            if (!isActive) { e.stopPropagation(); w.classList.add("tooltip-active"); }
+          }
+        });
+      });
+      document.addEventListener("click", () => {
+        document.querySelectorAll(".reaction-badge-wrapper.tooltip-active")
+          .forEach((el) => el.classList.remove("tooltip-active"));
+      }, { once: false, capture: false });
       messagesArea.querySelectorAll(".jump-reply-btn").forEach((btn) => {
         if (btn.dataset.bound === "true") return;
         btn.dataset.bound = "true";
@@ -13535,7 +13575,7 @@ async function handleFileUpload(file) {
     return;
   }
   try {
-    const url = await uploadDocument(file);
+    const url = isVideo ? await uploadRecordedMedia(file) : await uploadDocument(file);
     const duration =
       isVideo || isAudio ? await getMediaDuration(file).catch(() => 0) : 0;
     currentAttachment = {
@@ -15978,7 +16018,10 @@ function switchTab(tab) {
     communityActions.style.display = tab === "communities" ? "flex" : "none";
 
   const markAllReadBar = document.getElementById("markAllReadBar");
-  if (markAllReadBar) markAllReadBar.style.display = tab === "unread" ? "flex" : "none";
+  // Hide bar on tabs where it doesn't belong; updateUnreadBadges manages the rest
+  if (markAllReadBar && tab !== "all" && tab !== "unread") {
+    markAllReadBar.style.display = "none";
+  }
 
   if (tab === "groups") loadGroupsList();
   else if (tab === "broadcasts") loadBroadcastsList();
@@ -17621,8 +17664,8 @@ async function init() {
             return;
           }
         }
-        const url = file.type.startsWith("video/")
-          ? await uploadDocument(file)
+         const url = file.type.startsWith("video/")
+          ? await uploadRecordedMedia(file)
           : await uploadToCloudinary(file);
         statusImageAttachment = {
           type: file.type.startsWith("video/") ? "video" : "image",

@@ -6847,6 +6847,8 @@ async function loadAllChatsList(searchTerm = "", searchToken = null) {
       const sectionDiff = (order[a.section] || 99) - (order[b.section] || 99);
       if (sectionDiff) return sectionDiff;
     }
+    if (a.type === "saved") return -1;
+    if (b.type === "saved") return 1;
     if (a.isPinned && !b.isPinned) return -1;
     if (!a.isPinned && b.isPinned) return 1;
     return (

@@ -34,7 +34,6 @@
         name: 'Myself',
         avatar: '&#128100;',
         preview: 'Your personal notes, files & reminders',
-        isPinned: true,
       });
     };
   });
