@@ -15501,3 +15501,237 @@ body.dark .install-app-btn#installAppBtn:hover {
     display: none !important;
   }
 }
+
+
+/* ========================================
+   NOTIFICATION BELL — sidebar styles
+   Add these rules to works/chat/style.css
+   (anywhere near the .sidebar-actions section)
+   ======================================== */
+
+/* ── Wrapper (positions the dropdown relative to the button) ── */
+.notif-bell-wrapper {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+/* ── Bell button states ─────────────────────────────────────── */
+.notif-bell-btn {
+  position: relative;
+  color: var(--muted, #8696a0);
+  transition: color 0.2s, transform 0.15s;
+}
+
+/* ON — green ring animation */
+.notif-bell-btn[data-notif-state="on"] {
+  color: var(--success, #25d366);
+}
+.notif-bell-btn[data-notif-state="on"]::after {
+  content: '';
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--success, #25d366);
+  border: 2px solid var(--bg, #fff);
+  animation: notif-pulse 2.5s infinite;
+}
+
+/* OFF — muted appearance, no dot */
+.notif-bell-btn[data-notif-state="off"] {
+  color: var(--muted, #8696a0);
+  opacity: 0.75;
+}
+
+/* BLOCKED — red warning dot */
+.notif-bell-btn[data-notif-state="blocked"] {
+  color: #f44336;
+}
+.notif-bell-btn[data-notif-state="blocked"]::after {
+  content: '!';
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #f44336;
+  border: 1.5px solid var(--bg, #fff);
+  font-size: 7px;
+  font-weight: 900;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+/* UNSUPPORTED */
+.notif-bell-btn[data-notif-state="unsupported"] {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* Hover scale */
+.notif-bell-btn:not([data-notif-state="unsupported"]):hover {
+  transform: scale(1.12);
+}
+
+/* ── Green pulse animation ───────────────────────────────────── */
+@keyframes notif-pulse {
+  0%   { box-shadow: 0 0 0 0 rgba(37, 211, 102, 0.55); }
+  60%  { box-shadow: 0 0 0 5px rgba(37, 211, 102, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(37, 211, 102, 0); }
+}
+
+/* ── Dropdown panel ─────────────────────────────────────────── */
+.notif-bell-dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 260px;
+  background: var(--surface, #fff);
+  border: 1px solid var(--border, #e0e0e0);
+  border-radius: 14px;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.14);
+  z-index: 9999;
+  opacity: 0;
+  transform: translateY(-6px) scale(0.97);
+  pointer-events: none;
+  transition: opacity 0.18s ease, transform 0.18s ease;
+  overflow: hidden;
+}
+
+.notif-bell-dropdown.open {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  pointer-events: auto;
+}
+
+.notif-bell-dropdown-inner {
+  padding: 14px 16px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* ── Status row ─────────────────────────────────────────────── */
+.notif-bell-status {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  background: var(--bg-subtle, #f0f2f5);
+}
+.notif-bell-status.on    { background: #e6f9ee; color: #1a7a3f; }
+.notif-bell-status.off   { background: var(--bg-subtle, #f0f2f5); color: var(--muted-strong, #54656f); }
+.notif-bell-status.blocked { background: #fdecea; color: #c62828; }
+
+.notif-bell-status-icon {
+  font-size: 20px;
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+/* ── Description text ───────────────────────────────────────── */
+.notif-bell-desc {
+  font-size: 12.5px;
+  color: var(--muted, #8696a0);
+  line-height: 1.5;
+  margin: 0;
+}
+
+/* ── Steps list (for blocked state) ─────────────────────────── */
+.notif-bell-steps {
+  font-size: 12.5px;
+  color: var(--muted-strong, #54656f);
+  line-height: 1.7;
+  padding-left: 18px;
+  margin: 0;
+}
+.notif-bell-steps li { margin-bottom: 2px; }
+
+/* ── Action buttons ─────────────────────────────────────────── */
+.notif-bell-action-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border: none;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.1s;
+  width: 100%;
+  text-align: left;
+}
+.notif-bell-action-btn:active { transform: scale(0.98); }
+
+.notif-bell-enable {
+  background: var(--primary, #00a884);
+  color: #fff;
+}
+.notif-bell-enable:hover { background: #008a6e; }
+
+.notif-bell-test {
+  background: var(--bg-subtle, #f0f2f5);
+  color: var(--text, #111b21);
+}
+.notif-bell-test:hover { background: #e2e8ef; }
+
+.notif-bell-disable {
+  background: #fdecea;
+  color: #c62828;
+}
+.notif-bell-disable:hover { background: #f9d6d3; }
+
+.notif-bell-refresh {
+  background: var(--bg-subtle, #f0f2f5);
+  color: var(--text, #111b21);
+}
+.notif-bell-refresh:hover { background: #e2e8ef; }
+
+/* ── Dark mode overrides ─────────────────────────────────────── */
+body.dark .notif-bell-dropdown {
+  background: var(--surface, #1f2c34);
+  border-color: var(--border, #2a3942);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.4);
+}
+body.dark .notif-bell-status.off {
+  background: #2a3942;
+  color: #aebac1;
+}
+body.dark .notif-bell-test,
+body.dark .notif-bell-refresh {
+  background: #2a3942;
+  color: #e9edef;
+}
+body.dark .notif-bell-test:hover,
+body.dark .notif-bell-refresh:hover {
+  background: #3a4a52;
+}
+body.dark .notif-bell-btn[data-notif-state="on"]::after,
+body.dark .notif-bell-btn[data-notif-state="blocked"]::after {
+  border-color: #1f2c34;
+}
+
+/* ── Mobile (small screens) ─────────────────────────────────── */
+@media (max-width: 480px) {
+  .notif-bell-dropdown {
+    width: 230px;
+    right: -8px;
+  }
+}
+@media (max-width: 360px) {
+  .notif-bell-dropdown {
+    width: 200px;
+    right: -16px;
+  }
+}
