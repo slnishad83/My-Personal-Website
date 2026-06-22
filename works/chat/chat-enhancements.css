@@ -1,0 +1,319 @@
+/* ==========================================================
+   CHAT ENHANCEMENTS - nishadsl.com/works/chat
+   Fixes: PNG thumbnails · Dark mode · Scroll-to-latest btn
+   ========================================================== */
+
+/* ── 1. Image/PNG thumbnail inside file cards ────────────── */
+.file-attachment-icon.has-thumbnail {
+  width: 64px !important;
+  height: 64px !important;
+  min-width: 64px;
+  border-radius: 8px;
+  overflow: hidden;
+  padding: 0 !important;
+  background: transparent !important;
+  font-size: 0 !important;
+  flex-shrink: 0;
+}
+
+.file-attachment-thumbnail {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 8px;
+  display: block;
+}
+
+a.file-attachment-card.has-image-preview {
+  align-items: center;
+  gap: 12px;
+}
+
+/* ── 2. Scroll-to-latest floating button ─────────────────── */
+.jump-to-bottom-btn {
+  /* Override the tiny circle */
+  width: auto !important;
+  height: 38px !important;
+  border-radius: 20px !important;
+  padding: 0 14px 0 10px !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 5px !important;
+  white-space: nowrap;
+  position: fixed !important;
+  bottom: 80px !important;
+  right: 14px !important;
+  z-index: 999 !important;
+  background: var(--panel, #fff) !important;
+  color: var(--text, #111b21) !important;
+  border: 1px solid var(--border, #e9edef) !important;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.18) !important;
+  transition: opacity 0.2s, transform 0.2s, box-shadow 0.2s !important;
+}
+
+.jump-to-bottom-btn .jtb-arrow {
+  font-size: 15px;
+  line-height: 1;
+  color: var(--brand, #00a884);
+}
+
+.jump-to-bottom-btn .jtb-label {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.jump-to-bottom-btn:hover {
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.24) !important;
+  transform: translateY(-2px) !important;
+}
+
+/* Responsive: smaller on very narrow screens */
+@media (max-width: 400px) {
+  .jump-to-bottom-btn {
+    bottom: 72px !important;
+    right: 8px !important;
+    padding: 0 10px 0 8px !important;
+    font-size: 12px !important;
+  }
+}
+
+/* Dark mode scroll button */
+body.dark .jump-to-bottom-btn {
+  background: #182229 !important;
+  border-color: #2a3942 !important;
+  color: #e9edef !important;
+  box-shadow: 0 4px 22px rgba(0, 0, 0, 0.40) !important;
+}
+
+
+/* ── 3. Dark mode comprehensive fixes ────────────────────── */
+
+/* Message option dots button (the ⋮ on hover) - was white in dark */
+body.dark .message-options-btn {
+  background: rgba(32, 44, 51, 0.92) !important;
+  color: #aebac1 !important;
+}
+
+body.dark .message-options-btn:hover,
+body.dark .message-options-btn:active {
+  background: rgba(42, 57, 66, 0.98) !important;
+}
+
+body.dark .my-message .message-options-btn {
+  background: rgba(0, 78, 63, 0.85) !important;
+}
+
+/* File attachment card */
+body.dark .file-attachment-card {
+  background: #1e2a30 !important;
+  border-color: #2a3942 !important;
+  color: #e9edef !important;
+}
+
+body.dark .file-attachment-name {
+  color: #e9edef !important;
+}
+
+body.dark .file-attachment-meta {
+  color: #8696a0 !important;
+}
+
+body.dark .file-attachment-action {
+  color: #00a884 !important;
+}
+
+body.dark .file-attachment-icon:not(.has-thumbnail) {
+  background: #2a3942 !important;
+  color: #aebac1 !important;
+}
+
+/* Link preview */
+body.dark .link-preview {
+  background: #1e2a30 !important;
+  border-left-color: #00a884 !important;
+}
+
+body.dark .link-preview-title {
+  color: #e9edef !important;
+}
+
+body.dark .link-preview-desc,
+body.dark .link-preview-domain {
+  color: #8696a0 !important;
+}
+
+/* Modals */
+body.dark .modal-content {
+  background: #111b21 !important;
+  color: #e9edef !important;
+  border-color: #2a3942 !important;
+}
+
+body.dark .modal-header {
+  background: #182229 !important;
+  border-bottom-color: #2a3942 !important;
+  color: #e9edef !important;
+}
+
+body.dark .modal-body {
+  color: #e9edef !important;
+}
+
+/* All input / textarea / select in dark mode */
+body.dark input:not([type="range"]):not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+body.dark textarea,
+body.dark select {
+  background: #1e2a30 !important;
+  color: #e9edef !important;
+  border-color: #2a3942 !important;
+}
+
+body.dark input::placeholder,
+body.dark textarea::placeholder {
+  color: #8696a0 !important;
+}
+
+/* Context / right-click menus */
+body.dark [class*="context-menu"],
+body.dark [class*="dropdown-menu"],
+body.dark .message-context-menu,
+body.dark .chat-context-menu {
+  background: #1e2a30 !important;
+  border-color: #2a3942 !important;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.5) !important;
+}
+
+body.dark [class*="context-menu"] *,
+body.dark [class*="menu-item"],
+body.dark [class*="context-item"] {
+  color: #e9edef !important;
+}
+
+body.dark [class*="menu-item"]:hover,
+body.dark [class*="context-item"]:hover {
+  background: #2a3942 !important;
+}
+
+/* Emoji picker */
+body.dark [class*="emoji-picker"] {
+  background: #111b21 !important;
+  border-color: #2a3942 !important;
+}
+
+/* Smart replies */
+body.dark [class*="smart-reply"] {
+  background: #1e2a30 !important;
+  border-color: #2a3942 !important;
+  color: #e9edef !important;
+}
+
+/* Usage stat cards inside modals */
+body.dark .usage-stat-card {
+  background: #1e2a30 !important;
+  border-color: #2a3942 !important;
+  color: #e9edef !important;
+}
+
+/* Jump-to-unread pill */
+body.dark .jump-to-unread-btn {
+  background: #1e2a30 !important;
+  color: #e9edef !important;
+  border-color: #2a3942 !important;
+}
+
+/* Connection/offline banner */
+body.dark .connection-banner {
+  background: #1e2a30 !important;
+  color: #8696a0 !important;
+}
+
+/* Reaction badge */
+body.dark .reaction-badge {
+  background: #1e2a30 !important;
+  border-color: #2a3942 !important;
+}
+
+/* Sent message area: ensure correct dark teal in dark mode */
+body.dark .my-message .message-bubble {
+  background: #005c4b !important;
+  color: #e9edef !important;
+}
+
+/* Received message bubble dark */
+body.dark .message-bubble {
+  background: #202c33 !important;
+  color: #e9edef !important;
+}
+
+/* Sidebar search box */
+body.dark .search-box input {
+  background: #202c33 !important;
+  color: #e9edef !important;
+}
+
+/* Composer / message input area */
+body.dark #messageInput,
+body.dark .message-input {
+  background: #1e2a30 !important;
+  color: #e9edef !important;
+}
+
+/* Reply preview band */
+body.dark .reply-preview,
+body.dark .reply-context {
+  background: #1e2a30 !important;
+  border-left-color: #00a884 !important;
+}
+
+/* PWA install card */
+body.dark .mobile-install-card {
+  background: #1e2a30 !important;
+  border-color: #2a3942 !important;
+  color: #e9edef !important;
+}
+
+/* Thread panel */
+body.dark #threadPanel {
+  background: #111b21 !important;
+  border-color: #2a3942 !important;
+}
+
+body.dark .thread-panel-header {
+  background: #182229 !important;
+  border-color: #2a3942 !important;
+  color: #e9edef !important;
+}
+
+body.dark .thread-parent-section {
+  background: #1e2a30 !important;
+  border-color: #2a3942 !important;
+}
+
+body.dark #threadComposer {
+  background: #202c33 !important;
+  color: #e9edef !important;
+  border-color: #2a3942 !important;
+}
+
+/* Attachment sheet */
+body.dark .attachment-sheet {
+  background: #111b21 !important;
+  border-color: #2a3942 !important;
+}
+
+/* Status / stories strip */
+body.dark .stories-strip,
+body.dark #storiesStrip {
+  background: #111b21 !important;
+  border-color: #2a3942 !important;
+}
+
+/* Pinned section */
+body.dark .pinned-section,
+body.dark #pinnedSection {
+  background: #1a2328 !important;
+  border-color: #2a3942 !important;
+  color: #e9edef !important;
+}
