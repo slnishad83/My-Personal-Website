@@ -7414,6 +7414,7 @@ async function loadReceivedRequests() {
       const isOutgoing = req.direction === "outgoing";
       const isRead = !isOutgoing && validReadIds.has(req.id);
       const isSnoozed = !isOutgoing && activeSnoozedIds.has(req.id);
+      if (isSnoozed && window._notifPrefs?.getSnoozedDisplayPref() === 'hide') continue;
       const snoozeExpiryMs = isSnoozed ? cachedSnoozes[req.id] : null;
       const snoozeUntilLabel = snoozeExpiryMs
         ? (() => {
