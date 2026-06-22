@@ -1,16 +1,708 @@
 /* ============================================================
-   CHAT ENHANCEMENTS v2 — nishadsl.com/works/chat
-   Image · Video · Audio · Document previews
-   Scroll-to-latest button (all devices / browsers / PWA)
-   Comprehensive dark mode
+   CHAT ENHANCEMENTS v3 — nishadsl.com/works/chat
+   Truly universal dark mode  ·  All media previews
+   Scroll-to-latest (all devices / browsers / PWA)
    ============================================================ */
 
-/* ── 1. Cards with a media preview ──────────────────────────
-   The file card is a CSS grid: "icon info / icon action".
-   We inject a .ce-preview div as the first child and assign
-   it the full-width "preview" grid area so it spans both
-   columns above the icon + info row.
-   ──────────────────────────────────────────────────────── */
+/* ══════════════════════════════════════════════════════════
+   DARK MODE — UNIVERSAL
+   ══════════════════════════════════════════════════════════
+
+   THE KEY PROPERTY:
+   color-scheme: dark  tells every browser to render ALL
+   native UI controls — scrollbars, form inputs, <select>
+   dropdowns, checkboxes, radio buttons, date pickers,
+   colour pickers — in dark mode automatically.
+   Works on Chrome, Safari, Firefox, Edge, Samsung Internet,
+   and in standalone PWA / installed-app mode.
+   ══════════════════════════════════════════════════════════ */
+
+body.dark {
+  color-scheme: dark;                    /* ← native controls auto-dark */
+}
+
+/* ── Scrollbars (webkit: Chrome, Safari, Edge, Samsung) ── */
+body.dark ::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+  background: #0b141a;
+}
+body.dark ::-webkit-scrollbar-track {
+  background: #0b141a;
+}
+body.dark ::-webkit-scrollbar-thumb {
+  background: #2a3942;
+  border-radius: 4px;
+}
+body.dark ::-webkit-scrollbar-thumb:hover {
+  background: #3d5463;
+}
+body.dark ::-webkit-scrollbar-corner {
+  background: #0b141a;
+}
+
+/* Scrollbars (Firefox) */
+body.dark * {
+  scrollbar-color: #2a3942 #0b141a;
+  scrollbar-width: thin;
+}
+
+/* ── Text selection ───────────────────────────────────── */
+body.dark ::selection {
+  background: #005c4b;
+  color: #e9edef;
+}
+
+/* ── Browser autofill override (Chrome / Edge / Safari) ── */
+body.dark input:-webkit-autofill,
+body.dark input:-webkit-autofill:hover,
+body.dark input:-webkit-autofill:focus,
+body.dark input:-webkit-autofill:active,
+body.dark textarea:-webkit-autofill,
+body.dark select:-webkit-autofill {
+  -webkit-box-shadow: 0 0 0 1000px #1e2a30 inset !important;
+  -webkit-text-fill-color: #e9edef !important;
+  caret-color: #e9edef !important;
+}
+
+/* ── Focus ring ───────────────────────────────────────── */
+body.dark :focus-visible {
+  outline-color: rgba(0, 168, 132, 0.75) !important;
+}
+
+
+/* ══════════════════════════════════════════════════════════
+   STRUCTURAL BACKGROUNDS  (hardcoded colours in source CSS)
+   ══════════════════════════════════════════════════════════ */
+
+/* Main chat area — source has background: #efeae2 */
+body.dark .chat-main {
+  background: #0b141a !important;
+}
+
+/* Messages area (wallpaper area) */
+body.dark .messages-area,
+body.dark #messagesArea {
+  background-color: #0b141a !important;
+  background-image:
+    radial-gradient(circle at 20px 20px, rgba(233,237,239,0.035) 1.5px, transparent 2px),
+    radial-gradient(circle at 80px 72px, rgba(233,237,239,0.03) 1.5px, transparent 2px) !important;
+}
+
+/* Sidebar */
+body.dark .sidebar {
+  background: #111b21 !important;
+}
+
+/* App-wide body background */
+body.dark,
+body.dark html {
+  background-color: #0b141a !important;
+}
+
+/* ── Sidebar / chat-list header ────────────────────────── */
+body.dark .sidebar-header,
+body.dark .chat-header {
+  background: rgba(17, 27, 33, 0.95) !important;
+  border-bottom-color: #2a3942 !important;
+}
+
+/* ── Message input / composer area ─────────────────────── */
+body.dark .input-area,
+body.dark .wa-composer-shell,
+body.dark #inputArea {
+  background: #202c33 !important;
+  border-top-color: #2a3942 !important;
+}
+
+body.dark #messageInput,
+body.dark .message-input,
+body.dark [contenteditable="true"] {
+  background: #2a3942 !important;
+  color: #e9edef !important;
+  caret-color: #00a884;
+}
+
+body.dark #messageInput::placeholder,
+body.dark .message-input::placeholder {
+  color: #8696a0 !important;
+}
+
+
+/* ══════════════════════════════════════════════════════════
+   MESSAGE BUBBLES
+   ══════════════════════════════════════════════════════════ */
+
+/* Incoming (received) bubbles */
+body.dark .message-bubble {
+  background: #202c33 !important;
+  color: #e9edef !important;
+}
+
+/* Outgoing (sent) bubbles */
+body.dark .my-message .message-bubble {
+  background: #005c4b !important;
+  color: #e9edef !important;
+}
+
+/* Call-record bubble — source: rgba(255,255,255,0.86) */
+body.dark .message.call-message .message-bubble {
+  background: rgba(32, 44, 51, 0.96) !important;
+  color: #aebac1 !important;
+  border: 1px solid #2a3942 !important;
+}
+
+/* Message ⋮ options button — source: rgba(255,255,255,0.72) */
+body.dark .message-options-btn {
+  background: rgba(30, 42, 48, 0.93) !important;
+  color: #aebac1 !important;
+}
+body.dark .message-options-btn:hover {
+  background: rgba(42, 57, 66, 0.98) !important;
+}
+body.dark .my-message .message-options-btn {
+  background: rgba(0, 78, 63, 0.88) !important;
+}
+
+/* Deleted / italic message */
+body.dark .message.deleted .message-text {
+  color: #8696a0 !important;
+}
+
+/* Highlighted search hit — source: #fef08a */
+body.dark .message.search-hit .message-bubble {
+  background: #1a3a30 !important;
+  outline-color: #00a884 !important;
+}
+body.dark .message.search-current .message-bubble {
+  background: #005c4b !important;
+}
+
+/* Reply preview inside a bubble */
+body.dark .reply-preview,
+body.dark .reply-context,
+body.dark .quoted-message {
+  background: rgba(0, 0, 0, 0.25) !important;
+  border-left-color: #00a884 !important;
+  color: #aebac1 !important;
+}
+
+/* ── Reactions ─────────────────────────────────────────── */
+/* source: rgba(255,255,255,0.74) */
+body.dark .reaction-badge {
+  background: rgba(255, 255, 255, 0.12) !important;
+  color: #e9edef !important;
+  border-color: rgba(255,255,255,0.08) !important;
+}
+body.dark .reaction-badge:hover {
+  background: rgba(255, 255, 255, 0.20) !important;
+}
+
+
+/* ══════════════════════════════════════════════════════════
+   FILE & MEDIA ATTACHMENTS
+   ══════════════════════════════════════════════════════════ */
+
+/* File card — source: rgba(255,255,255,0.5) */
+body.dark .file-attachment-card {
+  background: #1e2a30 !important;
+  border-color: #2a3942 !important;
+  color: #e9edef !important;
+}
+body.dark .my-message .file-attachment-card {
+  background: rgba(0, 70, 56, 0.6) !important;
+  border-color: rgba(0,130,103,0.3) !important;
+}
+body.dark .file-attachment-name  { color: #e9edef !important; }
+body.dark .file-attachment-meta  { color: #8696a0 !important; }
+body.dark .file-attachment-action { color: #00a884 !important; }
+body.dark .file-attachment-icon:not([data-ce-coloured]) {
+  background: #2a3942 !important;
+  color: #aebac1 !important;
+}
+
+/* Audio player accent */
+body.dark .ce-audio-player audio {
+  color-scheme: dark;
+  accent-color: #00a884;
+}
+
+/* Link preview */
+body.dark .link-preview {
+  background: #1e2a30 !important;
+  border-left-color: #00a884 !important;
+}
+body.dark .link-preview-title  { color: #e9edef !important; }
+body.dark .link-preview-desc,
+body.dark .link-preview-domain { color: #8696a0 !important; }
+
+
+/* ══════════════════════════════════════════════════════════
+   STATUS CHIPS & BADGES
+   ══════════════════════════════════════════════════════════ */
+
+/* source: #fff7d6, #e7fce3, #e6f7f1 */
+body.dark .status-chip.sent,
+body.dark .status-chip.pending {
+  background: #2a2500 !important;
+  color: #ffd54f !important;
+  border-color: #5c4d00 !important;
+}
+body.dark .status-chip.received {
+  background: #002b15 !important;
+  color: #69f0ae !important;
+  border-color: #006633 !important;
+}
+body.dark .status-chip.accepted,
+body.dark .status-chip.member {
+  background: #002a22 !important;
+  color: #00a884 !important;
+  border-color: rgba(0,168,132,0.3) !important;
+}
+
+
+/* ══════════════════════════════════════════════════════════
+   FORMS, INPUTS & NATIVE CONTROLS
+   ══════════════════════════════════════════════════════════ */
+
+body.dark input:not([type="range"]):not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="submit"]):not([type="button"]),
+body.dark textarea,
+body.dark select {
+  background: #1e2a30 !important;
+  color: #e9edef !important;
+  border-color: #2a3942 !important;
+}
+body.dark input::placeholder,
+body.dark textarea::placeholder { color: #8696a0 !important; }
+
+/* Toggle / switch slider thumb — source: background: white */
+body.dark .slider::before {
+  background: #aebac1 !important;
+}
+
+/* Range slider */
+body.dark input[type="range"] {
+  accent-color: #00a884;
+}
+
+/* Search box */
+body.dark .search-box input,
+body.dark [class*="search"] input {
+  background: #202c33 !important;
+  color: #e9edef !important;
+}
+
+
+/* ══════════════════════════════════════════════════════════
+   MODALS & OVERLAYS
+   ══════════════════════════════════════════════════════════ */
+
+body.dark .modal-content,
+body.dark [class*="-modal"],
+body.dark [class*="modal-content"] {
+  background: #111b21 !important;
+  color: #e9edef !important;
+  border-color: #2a3942 !important;
+}
+body.dark .modal-header,
+body.dark [class*="modal-header"] {
+  background: #182229 !important;
+  border-bottom-color: #2a3942 !important;
+  color: #e9edef !important;
+}
+body.dark [class*="modal-body"],
+body.dark [class*="modal-footer"] {
+  background: #111b21 !important;
+  color: #e9edef !important;
+}
+
+/* Backdrop / overlay */
+body.dark [class*="backdrop"],
+body.dark [class*="overlay"]:not(.ce-play-overlay) {
+  background: rgba(0, 0, 0, 0.72) !important;
+}
+
+/* Sheets / drawers / panels */
+body.dark [class*="sheet"],
+body.dark [class*="drawer"],
+body.dark [class*="bottom-sheet"] {
+  background: #111b21 !important;
+  color: #e9edef !important;
+}
+
+/* Wallpaper gallery modal */
+body.dark .wallpaper-option {
+  border-color: #2a3942 !important;
+}
+
+
+/* ══════════════════════════════════════════════════════════
+   MENUS, DROPDOWNS & CONTEXT MENUS
+   ══════════════════════════════════════════════════════════ */
+
+body.dark [class*="context-menu"],
+body.dark [class*="dropdown-menu"],
+body.dark [class*="action-menu"],
+body.dark .message-context-menu,
+body.dark .chat-context-menu {
+  background: #1e2a30 !important;
+  border-color: #2a3942 !important;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.55) !important;
+}
+body.dark [class*="menu-item"],
+body.dark [class*="context-item"],
+body.dark [class*="dropdown-item"] {
+  color: #e9edef !important;
+}
+body.dark [class*="menu-item"]:hover,
+body.dark [class*="context-item"]:hover,
+body.dark [class*="dropdown-item"]:hover {
+  background: #2a3942 !important;
+}
+body.dark [class*="menu-divider"],
+body.dark [class*="dropdown-divider"] {
+  border-color: #2a3942 !important;
+}
+
+
+/* ══════════════════════════════════════════════════════════
+   EMOJI PICKER
+   ══════════════════════════════════════════════════════════ */
+
+body.dark [class*="emoji-picker"],
+body.dark em-emoji-picker {
+  background: #111b21 !important;
+  border-color: #2a3942 !important;
+  --background-rgb: 17, 27, 33;
+  --border-color: #2a3942;
+  --category-icon-color: #8696a0;
+  --color-a: #e9edef;
+  color-scheme: dark;
+}
+body.dark [class*="emoji-search"] input {
+  background: #202c33 !important;
+  color: #e9edef !important;
+}
+
+
+/* ══════════════════════════════════════════════════════════
+   PANELS, CARDS & INFO SECTIONS
+   ══════════════════════════════════════════════════════════ */
+
+/* Thread / reply panel */
+body.dark #threadPanel                { background: #111b21 !important; border-color: #2a3942 !important; }
+body.dark .thread-panel-header        { background: #182229 !important; color: #e9edef !important; border-color: #2a3942 !important; }
+body.dark .thread-parent-section      { background: #1e2a30 !important; border-color: #2a3942 !important; }
+body.dark #threadComposer             { background: #202c33 !important; color: #e9edef !important; border-color: #2a3942 !important; }
+
+/* Connection / offline banner — source: #fff3cd */
+body.dark .connection-banner {
+  background: #1e2a30 !important;
+  color: #8696a0 !important;
+  border-color: #2a3942 !important;
+}
+
+/* Smart-reply chips */
+body.dark [class*="smart-reply"],
+body.dark [class*="quick-reply"] {
+  background: #1e2a30 !important;
+  border-color: #2a3942 !important;
+  color: #e9edef !important;
+}
+
+/* Pinned-message section */
+body.dark .pinned-section,
+body.dark #pinnedSection {
+  background: #182229 !important;
+  border-color: #2a3942 !important;
+  color: #e9edef !important;
+}
+
+/* Group-info / user-profile info cards */
+body.dark .group-info-card,
+body.dark .profile-info-card,
+body.dark .gi-member-row,
+body.dark .user-info-card {
+  background: #1e2a30 !important;
+  border-color: #2a3942 !important;
+  color: #e9edef !important;
+}
+
+/* PWA install card */
+body.dark .mobile-install-card {
+  background: #1e2a30 !important;
+  border-color: #2a3942 !important;
+  color: #e9edef !important;
+}
+
+/* Toast notifications */
+body.dark .toast,
+body.dark [class*="toast"] {
+  background: #1e2a30 !important;
+  color: #e9edef !important;
+  border-color: #2a3942 !important;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.45) !important;
+}
+
+/* Usage / permission stat cards */
+body.dark .usage-stat-card,
+body.dark .permission-card,
+body.dark .perm-feature-tag {
+  background: #1e2a30 !important;
+  border-color: #2a3942 !important;
+  color: #e9edef !important;
+}
+
+/* Stories / status strip */
+body.dark .stories-strip,
+body.dark #storiesStrip {
+  background: #111b21 !important;
+  border-color: #2a3942 !important;
+}
+body.dark .story-avatar-ring {
+  border-color: #00a884 !important;
+}
+
+/* Jump-to-unread pill */
+body.dark .jump-to-unread-btn {
+  background: #1e2a30 !important;
+  color: #e9edef !important;
+  border-color: #2a3942 !important;
+}
+
+/* Archive header */
+body.dark .archive-header,
+body.dark [class*="archive-label"] {
+  background: #111b21 !important;
+  color: #8696a0 !important;
+  border-color: #2a3942 !important;
+}
+
+/* Search result cards — source: #ffffff !important, #f2f5f7 !important */
+body.dark .search-result-card {
+  background: #1e2a30 !important;
+  border-color: #2a3942 !important;
+  color: #e9edef !important;
+}
+body.dark .search-result-card strong { color: #e9edef !important; }
+body.dark .search-result-card:hover  { background: #2a3942 !important; }
+
+/* Location card */
+body.dark .location-card,
+body.dark .location-card > * {
+  background: #111b21 !important;
+  border-color: #2a3942 !important;
+  color: #e9edef !important;
+}
+
+/* Attachment / media preview sheet */
+body.dark .attachment-sheet,
+body.dark [class*="photo-editor"],
+body.dark #photoEditorModal {
+  background: #111b21 !important;
+  color: #e9edef !important;
+}
+
+/* Caption / media-send preview */
+body.dark [class*="media-caption"],
+body.dark [class*="send-preview"] {
+  background: #0b141a !important;
+  color: #e9edef !important;
+}
+
+/* Sidebar search area */
+body.dark [class*="global-search"],
+body.dark [class*="search-panel"] {
+  background: #111b21 !important;
+  color: #e9edef !important;
+}
+
+/* Notification / broadcast cards */
+body.dark [class*="notification-card"],
+body.dark [class*="broadcast"] {
+  background: #1e2a30 !important;
+  border-color: #2a3942 !important;
+  color: #e9edef !important;
+}
+
+/* AI bot / snooze panels */
+body.dark [class*="ai-"], body.dark [class*="snooze-"],
+body.dark [class*="bot-"] {
+  background: #1e2a30 !important;
+  border-color: #2a3942 !important;
+  color: #e9edef !important;
+}
+
+
+/* ══════════════════════════════════════════════════════════
+   SEPARATORS & DIVIDERS
+   ══════════════════════════════════════════════════════════ */
+
+body.dark hr,
+body.dark [class*="divider"],
+body.dark [class*="separator"] {
+  border-color: #2a3942 !important;
+  background: #2a3942 !important;
+}
+
+/* Date separator labels in chat */
+body.dark .date-separator,
+body.dark [class*="date-label"],
+body.dark [class*="msg-date"] {
+  background: #182229 !important;
+  color: #8696a0 !important;
+  border-color: transparent !important;
+}
+
+
+/* ══════════════════════════════════════════════════════════
+   SIDEBAR LIST ITEMS
+   ══════════════════════════════════════════════════════════ */
+
+body.dark .list-item,
+body.dark .chat-list-item,
+body.dark [class*="contact-row"],
+body.dark [class*="group-row"] {
+  color: #e9edef !important;
+}
+body.dark .list-item:hover,
+body.dark .chat-list-item:hover,
+body.dark [class*="contact-row"]:hover {
+  background: #182229 !important;
+}
+body.dark .list-item.active,
+body.dark .chat-list-item.active {
+  background: #1e2a30 !important;
+}
+body.dark .list-preview,
+body.dark [class*="preview-text"] { color: #8696a0 !important; }
+body.dark .list-time { color: #8696a0 !important; }
+body.dark .unread-badge {
+  background: #00a884 !important;
+  color: #fff !important;
+}
+
+
+/* ══════════════════════════════════════════════════════════
+   CALLS UI
+   ══════════════════════════════════════════════════════════ */
+
+body.dark .call-shell,
+body.dark [class*="call-screen"] {
+  background: #0b141a !important;
+  color: #e9edef !important;
+}
+body.dark [class*="call-avatar"] {
+  background: #1e2a30 !important;
+}
+body.dark [class*="call-history"] {
+  background: #1e2a30 !important;
+  border-color: #2a3942 !important;
+  color: #e9edef !important;
+}
+
+/* ── Mobile browser specific dark tweaks ───────────────── */
+
+/* Safe-area padding in dark colour */
+body.dark {
+  background-color: #0b141a !important;
+}
+
+/* Prevent any white flash during page load on dark devices */
+@media (prefers-color-scheme: dark) {
+  body:not(.dark) {
+    /* Don't force dark if user explicitly chose light */
+  }
+}
+
+
+/* ══════════════════════════════════════════════════════════
+   SCROLL-TO-LATEST BUTTON — ALL DEVICES / BROWSERS / PWA
+   ══════════════════════════════════════════════════════════
+
+   The original uses position:absolute inside the messages
+   scroll container. We override to position:fixed so the
+   button floats above the composer in EVERY context:
+   mobile browser, desktop, PWA standalone, any screen size.
+   env(safe-area-inset-bottom) handles the iPhone home bar.
+   ══════════════════════════════════════════════════════════ */
+
+#jumpToBottomBtn,
+.jump-to-bottom-btn {
+  position: fixed !important;
+  bottom: calc(68px + env(safe-area-inset-bottom, 0px)) !important;
+  right: 14px !important;
+  z-index: 10000 !important;
+
+  /* Pill shape */
+  width: auto !important;
+  height: 36px !important;
+  min-width: 36px;
+  border-radius: 999px !important;
+  padding: 0 14px 0 10px !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  white-space: nowrap !important;
+  letter-spacing: 0.01em;
+  border: none !important;
+
+  display: flex !important;
+  align-items: center !important;
+  gap: 5px !important;
+
+  background: #ffffff !important;
+  color: #111b21 !important;
+  box-shadow: 0 2px 14px rgba(0,0,0,0.20), 0 0 0 1px rgba(0,0,0,0.07) !important;
+  transition: opacity 0.2s ease, transform 0.2s ease !important;
+}
+
+.jump-to-bottom-btn .jtb-arrow {
+  font-size: 15px;
+  color: #00a884;
+  line-height: 1;
+  flex-shrink: 0;
+}
+.jump-to-bottom-btn .jtb-label {
+  font-size: 12px;
+  font-weight: 600;
+}
+.jump-to-bottom-btn.visible:hover {
+  box-shadow: 0 5px 22px rgba(0,0,0,0.26) !important;
+  transform: translateY(-2px) !important;
+}
+
+/* Narrow phones */
+@media (max-width: 420px) {
+  #jumpToBottomBtn, .jump-to-bottom-btn {
+    right: 10px !important;
+    bottom: calc(60px + env(safe-area-inset-bottom, 0px)) !important;
+    height: 34px !important;
+    padding: 0 11px 0 8px !important;
+  }
+}
+
+/* PWA installed-app standalone mode */
+@media (display-mode: standalone) {
+  #jumpToBottomBtn, .jump-to-bottom-btn {
+    bottom: calc(78px + env(safe-area-inset-bottom, 0px)) !important;
+  }
+}
+
+/* Dark — scroll button */
+body.dark #jumpToBottomBtn,
+body.dark .jump-to-bottom-btn {
+  background: #1e2a30 !important;
+  color: #e9edef !important;
+  box-shadow: 0 2px 16px rgba(0,0,0,0.48) !important;
+}
+body.dark .jump-to-bottom-btn .jtb-arrow { color: #00a884; }
+
+
+/* ══════════════════════════════════════════════════════════
+   MEDIA PREVIEW CARDS (all file types)
+   ══════════════════════════════════════════════════════════ */
+
+/* Image / video: preview spans both grid columns */
 a.file-attachment-card.has-image-preview,
 a.file-attachment-card.has-video-preview {
   grid-template-columns: 42px minmax(0, 1fr);
@@ -25,36 +717,30 @@ a.file-attachment-card.has-video-preview {
   max-width: min(340px, 80vw);
 }
 
-/* Restore inner padding after removing card padding */
 a.file-attachment-card.has-image-preview .file-attachment-icon,
 a.file-attachment-card.has-video-preview .file-attachment-icon {
   margin: 10px 0 8px 10px;
 }
-
 a.file-attachment-card.has-image-preview .file-attachment-info,
 a.file-attachment-card.has-video-preview .file-attachment-info {
   padding-top: 10px;
   padding-right: 10px;
 }
-
 a.file-attachment-card.has-image-preview .file-attachment-action,
 a.file-attachment-card.has-video-preview .file-attachment-action {
   padding-bottom: 10px;
   padding-right: 10px;
 }
 
-/* ── Preview container ───────────────────────────────────── */
 .ce-preview {
   grid-area: preview;
   position: relative;
   overflow: hidden;
-  background: #0a0a0a;
+  background: #111;
   line-height: 0;
   border-radius: 8px 8px 0 0;
-  /* Max height clamps the preview on very large images */
   max-height: 220px;
 }
-
 .ce-preview-img,
 .ce-preview-video {
   display: block;
@@ -63,310 +749,60 @@ a.file-attachment-card.has-video-preview .file-attachment-action {
   object-fit: cover;
   border-radius: 8px 8px 0 0;
 }
-
-/* Responsive: shorter on narrow screens */
 @media (max-width: 400px) {
-  .ce-preview-img,
-  .ce-preview-video {
-    height: 140px;
-  }
+  .ce-preview-img, .ce-preview-video { height: 140px; }
 }
 
-/* ── 2. Video play overlay ───────────────────────────────── */
+/* Video play button overlay */
 .ce-play-overlay {
   position: absolute;
   inset: 0;
   display: flex;
   align-items: center;
   justify-content: center;
+  font-size: 18px;
+  color: #fff;
   pointer-events: none;
+  z-index: 1;
 }
-
 .ce-play-overlay::before {
   content: '';
-  display: block;
+  position: absolute;
   width: 44px;
   height: 44px;
   border-radius: 50%;
-  background: rgba(0, 0, 0, 0.58);
-  position: absolute;
+  background: rgba(0,0,0,0.55);
+  backdrop-filter: blur(2px);
 }
 
-.ce-play-overlay {
-  font-size: 18px;
-  color: #fff;
-  text-shadow: none;
-  z-index: 1;
-}
-
-/* ── 3. Audio player ──────────────────────────────────────── */
+/* Audio player */
 .ce-audio-player {
   padding: 4px 10px 10px;
   width: 100%;
   box-sizing: border-box;
 }
-
 a.file-attachment-card.has-audio-card {
   display: grid;
   grid-template-columns: 42px minmax(0, 1fr);
   grid-template-areas:
-    "icon    info"
-    "icon    action"
-    "audio   audio";
+    "icon  info"
+    "icon  action"
+    "audio audio";
   min-width: min(240px, 70vw);
 }
-
-a.file-attachment-card.has-audio-card .ce-audio-player {
-  grid-area: audio;
-}
-
+a.file-attachment-card.has-audio-card .ce-audio-player { grid-area: audio; }
 a.file-attachment-card.has-audio-card .ce-audio-player audio {
   width: 100%;
   height: 32px;
-  outline: none;
   border-radius: 999px;
+  outline: none;
   accent-color: #00a884;
 }
 
-/* ── 4. Document icon colour coding ──────────────────────── */
-/* (JS sets inline styles; these are fallbacks and baseline sizes) */
-.file-attachment-icon {
-  transition: background 0.2s, color 0.2s;
-}
-
-/* Ensure icon text is always visible */
+/* Document icon colour coding */
+.file-attachment-icon { transition: background 0.2s, color 0.2s; }
 .file-attachment-icon[data-ce-coloured] {
   font-weight: 800;
   font-size: 10px;
   letter-spacing: 0.5px;
-}
-
-/* ── 5. Scroll-to-latest button — UNIVERSAL ──────────────────
-   The original button is position:absolute inside the scroll
-   container. We change it to position:fixed so it floats
-   correctly in every context: browser, mobile PWA, standalone
-   app, any screen size.
-   ──────────────────────────────────────────────────────── */
-#jumpToBottomBtn,
-.jump-to-bottom-btn {
-  /* Core override: absolute → fixed */
-  position: fixed !important;
-
-  /* Distance from bottom — above the composer (~60px) + iOS home bar */
-  bottom: calc(68px + env(safe-area-inset-bottom, 0px)) !important;
-  right: 14px !important;
-
-  /* High z-index — stays above every overlay */
-  z-index: 10000 !important;
-
-  /* Pill shape */
-  width: auto !important;
-  height: 36px !important;
-  border-radius: 999px !important;
-  padding: 0 14px 0 10px !important;
-  font-size: 13px !important;
-  font-weight: 600 !important;
-  white-space: nowrap !important;
-  letter-spacing: 0.01em;
-
-  /* Flex layout for icon + label */
-  display: flex !important;
-  align-items: center !important;
-  gap: 5px !important;
-
-  /* Light-mode colours */
-  background: #ffffff !important;
-  color: #111b21 !important;
-  border: 1px solid #e2e8ea !important;
-  box-shadow: 0 2px 14px rgba(0, 0, 0, 0.18), 0 0 0 1px rgba(0,0,0,0.06) !important;
-
-  /* Transitions — kept from original; JS adds .visible */
-  transition: opacity 0.2s ease, transform 0.2s ease, box-shadow 0.15s ease !important;
-}
-
-/* Arrow icon — teal brand colour */
-.jump-to-bottom-btn .jtb-arrow {
-  font-size: 15px;
-  color: #00a884;
-  line-height: 1;
-  flex-shrink: 0;
-}
-
-/* Text label */
-.jump-to-bottom-btn .jtb-label {
-  font-size: 12px;
-  font-weight: 600;
-}
-
-/* Hover lift */
-.jump-to-bottom-btn.visible:hover {
-  box-shadow: 0 5px 22px rgba(0, 0, 0, 0.24) !important;
-  transform: translateY(-2px) !important;
-}
-
-/* Narrow phones */
-@media (max-width: 420px) {
-  #jumpToBottomBtn, .jump-to-bottom-btn {
-    right: 10px !important;
-    bottom: calc(62px + env(safe-area-inset-bottom, 0px)) !important;
-    height: 34px !important;
-    padding: 0 12px 0 9px !important;
-    font-size: 12px !important;
-  }
-}
-
-/* PWA / standalone mode — extra bottom clearance for home indicator */
-@media (display-mode: standalone) {
-  #jumpToBottomBtn, .jump-to-bottom-btn {
-    bottom: calc(76px + env(safe-area-inset-bottom, 0px)) !important;
-  }
-}
-
-/* Dark mode — scroll button */
-body.dark #jumpToBottomBtn,
-body.dark .jump-to-bottom-btn {
-  background: #1e2a30 !important;
-  color: #e9edef !important;
-  border-color: #2a3942 !important;
-  box-shadow: 0 2px 16px rgba(0, 0, 0, 0.45) !important;
-}
-
-body.dark .jump-to-bottom-btn .jtb-arrow {
-  color: #00a884;
-}
-
-
-/* ── 6. Dark mode — comprehensive fixes ──────────────────── */
-
-/* Message options ⋮ button — was bright white in dark mode */
-body.dark .message-options-btn {
-  background: rgba(30, 42, 48, 0.92) !important;
-  color: #aebac1 !important;
-}
-body.dark .message-options-btn:hover {
-  background: rgba(42, 57, 66, 0.98) !important;
-}
-body.dark .my-message .message-options-btn {
-  background: rgba(0, 78, 63, 0.85) !important;
-}
-
-/* Outgoing message bubble */
-body.dark .my-message .message-bubble {
-  background: #005c4b !important;
-  color: #e9edef !important;
-}
-
-/* Incoming message bubble */
-body.dark .message-bubble {
-  background: #202c33 !important;
-  color: #e9edef !important;
-}
-
-/* File attachment card */
-body.dark .file-attachment-card {
-  background: #1e2a30 !important;
-  border-color: #2a3942 !important;
-  color: #e9edef !important;
-}
-body.dark .file-attachment-name  { color: #e9edef !important; }
-body.dark .file-attachment-meta  { color: #8696a0 !important; }
-body.dark .file-attachment-action { color: #00a884 !important; }
-body.dark .file-attachment-icon:not([data-ce-coloured]) {
-  background: #2a3942 !important;
-  color: #aebac1 !important;
-}
-
-/* Link previews */
-body.dark .link-preview {
-  background: #1e2a30 !important;
-  border-left-color: #00a884 !important;
-}
-body.dark .link-preview-title { color: #e9edef !important; }
-body.dark .link-preview-desc,
-body.dark .link-preview-domain { color: #8696a0 !important; }
-
-/* Modals */
-body.dark .modal-content   { background: #111b21 !important; color: #e9edef !important; }
-body.dark .modal-header    { background: #182229 !important; border-bottom-color: #2a3942 !important; color: #e9edef !important; }
-body.dark .modal-body      { color: #e9edef !important; }
-
-/* All text inputs in dark mode */
-body.dark input:not([type="range"]):not([type="checkbox"]):not([type="radio"]):not([type="file"]),
-body.dark textarea,
-body.dark select {
-  background: #1e2a30 !important;
-  color: #e9edef !important;
-  border-color: #2a3942 !important;
-}
-body.dark input::placeholder,
-body.dark textarea::placeholder { color: #8696a0 !important; }
-
-/* Search box */
-body.dark .search-box input { background: #202c33 !important; color: #e9edef !important; }
-
-/* Message input */
-body.dark #messageInput,
-body.dark .message-input { background: #1e2a30 !important; color: #e9edef !important; }
-
-/* Context / dropdown menus */
-body.dark [class*="context-menu"],
-body.dark [class*="dropdown-menu"],
-body.dark .message-context-menu,
-body.dark .chat-context-menu {
-  background: #1e2a30 !important;
-  border-color: #2a3942 !important;
-  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.52) !important;
-}
-body.dark [class*="menu-item"],
-body.dark [class*="context-item"] { color: #e9edef !important; }
-body.dark [class*="menu-item"]:hover,
-body.dark [class*="context-item"]:hover { background: #2a3942 !important; }
-
-/* Emoji picker */
-body.dark [class*="emoji-picker"] {
-  background: #111b21 !important;
-  border-color: #2a3942 !important;
-}
-
-/* Reply preview */
-body.dark .reply-preview,
-body.dark .reply-context {
-  background: #1e2a30 !important;
-  border-left-color: #00a884 !important;
-}
-
-/* Thread panel */
-body.dark #threadPanel                { background: #111b21 !important; border-color: #2a3942 !important; }
-body.dark .thread-panel-header        { background: #182229 !important; color: #e9edef !important; border-color: #2a3942 !important; }
-body.dark .thread-parent-section      { background: #1e2a30 !important; border-color: #2a3942 !important; }
-body.dark #threadComposer             { background: #202c33 !important; color: #e9edef !important; border-color: #2a3942 !important; }
-
-/* Smart replies */
-body.dark [class*="smart-reply"]      { background: #1e2a30 !important; border-color: #2a3942 !important; color: #e9edef !important; }
-
-/* Jump-to-unread pill */
-body.dark .jump-to-unread-btn         { background: #1e2a30 !important; color: #e9edef !important; border-color: #2a3942 !important; }
-
-/* Connection banner */
-body.dark .connection-banner          { background: #1e2a30 !important; color: #8696a0 !important; }
-
-/* Pinned section */
-body.dark .pinned-section,
-body.dark #pinnedSection              { background: #1a2328 !important; border-color: #2a3942 !important; color: #e9edef !important; }
-
-/* PWA install card */
-body.dark .mobile-install-card        { background: #1e2a30 !important; border-color: #2a3942 !important; color: #e9edef !important; }
-
-/* Reaction badges */
-body.dark .reaction-badge             { background: #1e2a30 !important; border-color: #2a3942 !important; }
-
-/* Audio player (ce-audio-player) dark */
-body.dark .ce-audio-player audio {
-  color-scheme: dark;
-  accent-color: #00a884;
-}
-
-/* Video preview dark border */
-body.dark .ce-preview {
-  background: #0a0a0a;
 }
