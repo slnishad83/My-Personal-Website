@@ -7427,7 +7427,7 @@ async function loadReceivedRequests() {
           })()
         : "";
       const snoozePreviewLabel = isSnoozed
-        ? ` <span class="snooze-label">· ⏰ Until ${escapeHtml(snoozeUntilLabel)}</span>`
+        ? ` <span class="snooze-label">· ⏰ Until ${escapeHtml(snoozeUntilLabel)} <span class="snooze-countdown" data-expiry="${snoozeExpiryMs}"></span></span>`
         : "";
       const snoozeBtnTitle = isSnoozed
         ? "Snoozed until " + escapeHtml(snoozeUntilLabel)
@@ -7464,6 +7464,7 @@ async function loadReceivedRequests() {
               <button class="snooze-option" data-id="${req.id}" data-hours="1">1 hour</button>
               <button class="snooze-option" data-id="${req.id}" data-hours="8">8 hours</button>
               <button class="snooze-option" data-id="${req.id}" data-hours="24">1 day</button>
+              <button class="snooze-option snooze-custom-btn" data-id="${req.id}" data-hours="-1">🗓 Custom time…</button>
               ${snoozeClearBtn}
             </div>
           </div>`}
@@ -7553,6 +7554,7 @@ async function loadReceivedRequests() {
         const hours = parseInt(btn.dataset.hours, 10);
         const menu = document.getElementById(`snooze-menu-${reqId}`);
         if (menu) menu.style.display = "none";
+        if (hours === -1) { if (typeof window.snoozeEnhancements?.openCustomPicker === 'function') window.snoozeEnhancements.openCustomPicker(reqId); return; }
         const snoozeDocRef = db.collection("chatRequestsSnooze").doc(currentUser.uid);
         try {
           if (hours === 0) {
