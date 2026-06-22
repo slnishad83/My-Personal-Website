@@ -7377,6 +7377,11 @@ async function loadReceivedRequests() {
       ).length;
       const markAllBtn = document.getElementById("markAllRequestsReadBtn");
       if (markAllBtn) markAllBtn.style.display = unreadIncomingCount > 0 ? "inline-flex" : "none";
+      const snoozeAllWrapper = document.getElementById("snoozeAllWrapper");
+      if (snoozeAllWrapper) {
+        const unsnoozedCount = [...allIncomingIds].filter((id) => !activeSnoozedIds.has(id)).length;
+        snoozeAllWrapper.style.display = unsnoozedCount > 0 ? "inline-flex" : "none";
+      }
       if (unreadIncomingCount > 0) {
         badge.textContent =
           unreadIncomingCount > 99 ? "99+" : String(unreadIncomingCount);
@@ -7613,6 +7618,41 @@ function setupRequestListeners() {
         console.warn("Could not mark all requests as read:", err);
         btn.disabled = false;
       }
+    });
+  }
+  const snoozeAllBtn = document.getElementById("snoozeAllBtn");
+  if (snoozeAllBtn && !snoozeAllBtn.dataset.listenerAttached) {
+    snoozeAllBtn.dataset.listenerAttached = "1";
+    snoozeAllBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const menu = document.getElementById("snoozeAllMenu");
+      if (menu) menu.style.display = menu.style.display === "none" ? "block" : "none";
+    });
+    document.getElementById("snoozeAllMenu")?.querySelectorAll(".snooze-all-option").forEach((opt) => {
+      opt.addEventListener("click", async (e) => {
+        e.stopPropagation();
+        const menu = document.getElementById("snoozeAllMenu");
+        if (menu) menu.style.display = "none";
+        const hours = parseInt(opt.dataset.hours, 10);
+        const expiryMs = Date.now() + hours * 60 * 60 * 1000;
+        const activeSnoozedNow = new Set(
+          Object.keys(cachedSnoozes).filter((id) => cachedSnoozes[id] > Date.now()),
+        );
+        const idsToSnooze = [...currentIncomingRequestIds].filter(
+          (id) => !activeSnoozedNow.has(id),
+        );
+        if (idsToSnooze.length === 0) return;
+        const snoozes = {};
+        idsToSnooze.forEach((id) => { snoozes[id] = expiryMs; });
+        try {
+          await db.collection("chatRequestsSnooze").doc(currentUser.uid).set(
+            { snoozes },
+            { merge: true },
+          );
+        } catch (err) {
+          console.warn("Could not snooze all requests:", err);
+        }
+      });
     });
   }
   if (!currentUser) return;
