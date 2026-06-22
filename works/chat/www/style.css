@@ -687,6 +687,41 @@ button {
   display: none;
 }
 
+.request-card--read {
+  opacity: 0.7;
+}
+
+.request-card--read .list-name,
+.request-card--read .list-preview {
+  color: var(--muted);
+}
+
+.request-actions .mark-read-request-btn {
+  font-size: 11px;
+  padding: 0 8px;
+  min-height: 28px;
+  color: var(--muted);
+  border: 1px solid transparent;
+  border-radius: 6px;
+  white-space: nowrap;
+}
+
+.request-actions .mark-read-request-btn:hover {
+  border-color: var(--border);
+  color: var(--text);
+}
+
+@media (max-width: 520px) {
+  .request-actions {
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+  .request-actions .mark-read-request-btn {
+    width: 100%;
+    justify-content: flex-start;
+  }
+}
+
 .status-chip {
   flex: 0 0 auto;
   display: inline-flex;
