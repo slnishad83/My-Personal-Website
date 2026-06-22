@@ -2205,6 +2205,22 @@ button[aria-label="Answer call"] {
   font-weight: 700;
 }
 
+/* Message grouping — consecutive messages from same sender */
+.message.msg-continuation {
+  margin-top: 2px;
+}
+.message.msg-continuation .message-bubble {
+  border-top-left-radius: 4px;
+}
+.my-message.msg-continuation .message-bubble {
+  border-top-left-radius: 8px;
+  border-top-right-radius: 4px;
+}
+/* First message in a group gets a slightly larger bottom radius to visually cap the group */
+.message:not(.msg-continuation) + .message.msg-continuation ~ .message:not(.msg-continuation) .message-bubble {
+  border-bottom-left-radius: 4px;
+}
+
 .message-text {
   color: inherit;
   font-size: 14px;
@@ -4792,9 +4808,9 @@ body.dark .read-receipt {
   }
 
   .chat-actions {
-    gap: 0;
-    max-width: 44vw;
-    overflow: hidden;
+    gap: 2px;
+    flex: 0 0 auto;
+    overflow: visible;
   }
 
   .call-modal {
@@ -5339,8 +5355,7 @@ body.message-menu-open .message-bubble {
 
   .chat-actions {
     flex: 0 0 auto;
-    max-width: 36vw;
-    overflow: hidden;
+    overflow: visible;
     gap: 2px;
   }
 
@@ -5468,7 +5483,7 @@ body.message-menu-open .message-bubble {
   }
 
   .chat-actions {
-    max-width: 34vw;
+    overflow: visible;
   }
 
   .chat-actions .icon-btn,

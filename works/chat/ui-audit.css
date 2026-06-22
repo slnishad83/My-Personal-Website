@@ -276,3 +276,83 @@ body.dark .register-container input {
     color: #e9edef !important;
   }
 }
+
+/* ============================================================
+   UNIVERSAL CHAT HEADER FIX — applies to ALL devices, browsers,
+   screen sizes (mobile/tablet/desktop/PWA/Android/iOS).
+   Root cause: max-width + overflow:hidden was clipping buttons.
+   Fix: let header flex shrink info, never clip action buttons.
+   ============================================================ */
+
+/* Stable flex layout for all viewports */
+.chat-header {
+  display: flex !important;
+  align-items: center !important;
+  flex-wrap: nowrap !important;
+  overflow: visible !important;
+  gap: 4px !important;
+}
+
+/* Info always shrinks — never steals space from actions */
+.chat-header-info {
+  flex: 1 1 0 !important;
+  min-width: 0 !important;
+  overflow: hidden !important;
+}
+
+/* Action buttons: never clip, always visible */
+.chat-actions {
+  flex: 0 0 auto !important;
+  display: flex !important;
+  align-items: center !important;
+  overflow: visible !important;
+  max-width: none !important;     /* remove all vw limits */
+  flex-shrink: 0 !important;
+}
+
+/* Mobile (≤ 900px): reduce gaps */
+@media (max-width: 900px) {
+  .chat-header { gap: 2px !important; }
+  .chat-actions { gap: 1px !important; }
+}
+
+/* Small mobile (≤ 600px): smaller buttons */
+@media (max-width: 600px) {
+  .chat-actions .icon-btn,
+  .chat-actions button.icon-btn {
+    width: 34px !important;
+    height: 34px !important;
+    font-size: 16px !important;
+  }
+}
+
+/* Very small mobile (≤ 480px): even smaller + hide low-priority */
+@media (max-width: 480px) {
+  .chat-header { gap: 1px !important; padding-left: 4px !important; padding-right: 4px !important; }
+  .chat-actions { gap: 0 !important; }
+  .chat-actions .icon-btn,
+  .chat-actions button.icon-btn {
+    width: 30px !important;
+    height: 30px !important;
+    font-size: 15px !important;
+  }
+  /* Wallpaper & select-mode live in the ⋮ menu — hide on tiny screens */
+  #wallpaperBtn,
+  #selectModeBtn {
+    display: none !important;
+  }
+}
+
+/* Ultra-small (≤ 360px): tightest layout */
+@media (max-width: 360px) {
+  .mobile-menu-btn {
+    width: 28px !important;
+    height: 28px !important;
+  }
+  .chat-actions .icon-btn,
+  .chat-actions button.icon-btn {
+    width: 26px !important;
+    height: 26px !important;
+    font-size: 14px !important;
+  }
+}

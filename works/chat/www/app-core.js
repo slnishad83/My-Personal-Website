@@ -13048,6 +13048,7 @@ function loadMessages() {
         }
       }
 
+      let _prevRenderedMsg = null;
       docsToRender.forEach((doc) => {
         const msg = doc.data();
         if (decryptedTexts[doc.id]) {
@@ -13064,8 +13065,18 @@ function loadMessages() {
         )
           return;
         const isMyMessage = msg.senderId === currentUser.uid;
+        const _prevTs = _prevRenderedMsg?.timestamp?.toMillis?.() || 0;
+        const _curTs = msg.timestamp?.toMillis?.() || 0;
+        const isContinuation = !!(
+          _prevRenderedMsg &&
+          _prevRenderedMsg.senderId === msg.senderId &&
+          msg.type !== "call" &&
+          _prevRenderedMsg.type !== "call" &&
+          !msg.replyTo &&
+          (_curTs - _prevTs) < 5 * 60 * 1000
+        );
         const messageDiv = document.createElement("div");
-        messageDiv.className = `message ${isMyMessage ? "my-message" : ""}`;
+        messageDiv.className = `message ${isMyMessage ? "my-message" : ""}${isContinuation ? " msg-continuation" : ""}`;
         messageDiv.dataset.messageId = doc.id;
         messageDiv._messageData = { ...msg, messageId: doc.id };
 
@@ -13134,7 +13145,7 @@ function loadMessages() {
         <div class="message-quick-actions ${isMyMessage ? "sent-message-actions" : "received-message-actions"}"><button type="button" class="quick-message-action quick-forward-btn" title="Forward message" aria-label="Forward message"></button><button type="button" class="quick-message-action quick-translate-btn" title="Translate message" aria-label="Translate message"></button><button type="button" class="quick-message-action quick-delete-btn" title="Delete message" aria-label="Delete message"></button></div>
         <div class="message-bubble">
           <button type="button" class="message-options-btn" title="Message options" aria-label="Message options">⋮</button>
-          ${!isMyMessage ? `<div class="message-sender">${escapeHtml(msg.senderName)}${currentChatType === "group" && isGroupMemberAdmin(msg.senderId) ? ' <span class="admin-badge" title="Group admin">👑</span>' : ""}</div>` : ""}
+          ${!isMyMessage && !isContinuation ? `<div class="message-sender">${escapeHtml(msg.senderName)}${currentChatType === "group" && isGroupMemberAdmin(msg.senderId) ? ' <span class="admin-badge" title="Group admin">👑</span>' : ""}</div>` : ""}
           ${replyHtml}
           ${textContent ? `<div class="message-text${isEmojiOnly(textContent) ? ' emoji-large' : ''}">${renderMessageText(textContent, msg.mentionEveryone ? [...(msg.mentions || []), { id: 'everyone', name: 'everyone', label: 'everyone', isEveryone: true }] : (msg.mentions || []))}</div>` : ""}
           ${isMyMessage && msg.translatedForSend ? `<details class="sent-translation-details"><summary>Sent translated</summary><div>${renderMessageText(msg.text || "")}</div></details>` : ""}
@@ -13219,6 +13230,7 @@ function loadMessages() {
             setTimeout(() => heart.remove(), 700);
           }
         });
+        _prevRenderedMsg = msg;
         messagesArea.appendChild(messageDiv);
         positionMessageQuickActions(messageDiv);
         bindSwipeToReply(messageDiv, { ...msg, messageId: doc.id });
