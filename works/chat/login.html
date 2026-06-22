@@ -304,6 +304,138 @@
           margin-right: 16px;
         }
       }
+/* ================================================================
+   LOGIN PAGE DARK MODE  (login.html)
+   ================================================================
+   login.html has its own <style> block with hardcoded light
+   colours.  This CSS should be pasted INSIDE that <style> block,
+   right before the closing </style> tag, OR linked as an extra
+   stylesheet in login.html.
+
+   It uses both:
+     body.dark { … }          ← for when JS applies the class
+     @media (prefers-color-scheme: dark) { … }  ← for OS dark mode
+
+   If your login page already reads the stored theme from
+   localStorage and applies body.dark before render, only the
+   body.dark rules are needed.  Keep both to be safe.
+   ================================================================ */
+
+
+/* ── Shared dark overrides ────────────────────────────────────── */
+body.dark,
+@media (prefers-color-scheme: dark) {
+  /* no-op wrapper — rules below use the correct selector form */
+}
+
+/* ── Body & gradient background ─────────────────────────────────
+   WhatsApp dark mode login: keep the teal header band,
+   swap the bottom half from #d1d7db → #0b141a (app bg).
+   ─────────────────────────────────────────────────────────────── */
+body.dark {
+  background: linear-gradient(#008069 0 128px, #0b141a 128px 100%) !important;
+  color: #e9edef !important;
+}
+
+@media (prefers-color-scheme: dark) {
+  body {
+    background: linear-gradient(#008069 0 128px, #0b141a 128px 100%) !important;
+    color: #e9edef !important;
+  }
+}
+
+/* ── Auth card ───────────────────────────────────────────────────
+   The white card becomes the panel colour.
+   ─────────────────────────────────────────────────────────────── */
+body.dark .auth-card {
+  background:  #111b21 !important;
+  box-shadow:  0 12px 40px rgba(0,0,0,0.55) !important;
+}
+
+@media (prefers-color-scheme: dark) {
+  .auth-card {
+    background:  #111b21 !important;
+    box-shadow:  0 12px 40px rgba(0,0,0,0.55) !important;
+  }
+}
+
+/* ── Header text ─────────────────────────────────────────────────*/
+body.dark .auth-header h1 { color: #e9edef !important; }
+body.dark .auth-header p  { color: #8696a0 !important; }
+
+@media (prefers-color-scheme: dark) {
+  .auth-header h1 { color: #e9edef !important; }
+  .auth-header p  { color: #8696a0 !important; }
+}
+
+/* ── Tabs ────────────────────────────────────────────────────────*/
+body.dark .auth-tabs {
+  border-bottom-color: #2a3942 !important;
+}
+body.dark .auth-tab {
+  color: #8696a0 !important;
+}
+body.dark .auth-tab.active {
+  color: #00a884 !important;
+  border-bottom-color: #00a884 !important;
+}
+
+@media (prefers-color-scheme: dark) {
+  .auth-tabs          { border-bottom-color: #2a3942  !important; }
+  .auth-tab           { color: #8696a0                !important; }
+  .auth-tab.active    { color: #00a884; border-bottom-color: #00a884 !important; }
+}
+
+/* ── Form labels & inputs ────────────────────────────────────────*/
+body.dark .form-group label {
+  color: #aebac1 !important;
+}
+body.dark .form-group input {
+  background:   #2a3942 !important;
+  border-color: #3d5463 !important;
+  color:        #e9edef !important;
+}
+body.dark .form-group input::placeholder {
+  color: #8696a0 !important;
+}
+body.dark .form-group input:focus {
+  border-color: #00a884 !important;
+  box-shadow:   0 0 0 2px rgba(0,168,132,0.22) !important;
+}
+
+@media (prefers-color-scheme: dark) {
+  .form-group label           { color: #aebac1  !important; }
+  .form-group input           { background:#2a3942; border-color:#3d5463; color:#e9edef !important; }
+  .form-group input::placeholder { color:#8696a0 !important; }
+  .form-group input:focus     { border-color:#00a884; box-shadow:0 0 0 2px rgba(0,168,132,0.22) !important; }
+}
+
+/* ── Password toggle ─────────────────────────────────────────────*/
+body.dark .password-toggle       { color: #8696a0 !important; }
+body.dark .password-toggle:hover { background: #2a3942 !important; }
+
+@media (prefers-color-scheme: dark) {
+  .password-toggle       { color: #8696a0            !important; }
+  .password-toggle:hover { background: #2a3942        !important; }
+}
+
+/* ── Any remaining hardcoded grays in login.html ─────────────────
+   auth-gate-recovery is a full-screen white card shown before
+   the page loads; keep it dark too.
+   ─────────────────────────────────────────────────────────────── */
+body.dark .auth-gate-recovery {
+  background: #111b21    !important;
+  color:      #e9edef    !important;
+  box-shadow: 0 12px 40px rgba(0,0,0,0.5) !important;
+}
+
+@media (prefers-color-scheme: dark) {
+  .auth-gate-recovery {
+    background: #111b21  !important;
+    color:      #e9edef  !important;
+  }
+}
+
     </style>
     <link rel="stylesheet" href="auth-theme.css?v=1" />
   </head>
