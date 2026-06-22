@@ -114,6 +114,8 @@ let groupInvitesUnsubscribe = null;
 let readRequestsUnsubscribe = null;
 let cachedReadRequestIds = new Set();
 let currentIncomingRequestIds = new Set();
+let snoozeRequestsUnsubscribe = null;
+let cachedSnoozes = {};
 let statusesUnsubscribe = null;
 let outgoingCallsListUnsubscribe = null;
 let incomingCallsListUnsubscribe = null;
@@ -7352,8 +7354,27 @@ async function loadReceivedRequests() {
     }
     currentIncomingRequestIds = allIncomingIds;
 
+    const now = Date.now();
+    const expiredOrStaleSnoozeKeys = Object.keys(cachedSnoozes).filter(
+      (id) => cachedSnoozes[id] <= now || !allIncomingIds.has(id),
+    );
+    if (expiredOrStaleSnoozeKeys.length > 0) {
+      const updates = {};
+      expiredOrStaleSnoozeKeys.forEach(
+        (id) => { updates[`snoozes.${id}`] = firebase.firestore.FieldValue.delete(); },
+      );
+      db.collection("chatRequestsSnooze").doc(currentUser.uid)
+        .update(updates)
+        .catch((err) => console.warn("Could not clean up snoozes:", err));
+    }
+    const activeSnoozedIds = new Set(
+      Object.keys(cachedSnoozes).filter((id) => cachedSnoozes[id] > now),
+    );
+
     if (badge) {
-      const unreadIncomingCount = [...allIncomingIds].filter((id) => !validReadIds.has(id)).length;
+      const unreadIncomingCount = [...allIncomingIds].filter(
+        (id) => !validReadIds.has(id) && !activeSnoozedIds.has(id),
+      ).length;
       const markAllBtn = document.getElementById("markAllRequestsReadBtn");
       if (markAllBtn) markAllBtn.style.display = unreadIncomingCount > 0 ? "inline-flex" : "none";
       if (unreadIncomingCount > 0) {
@@ -7387,18 +7408,42 @@ async function loadReceivedRequests() {
       const isGroupInvite = req.requestType === "group";
       const isOutgoing = req.direction === "outgoing";
       const isRead = !isOutgoing && validReadIds.has(req.id);
+      const isSnoozed = !isOutgoing && activeSnoozedIds.has(req.id);
+      const snoozeExpiryMs = isSnoozed ? cachedSnoozes[req.id] : null;
+      const snoozeUntilLabel = snoozeExpiryMs
+        ? (() => {
+            const d = new Date(snoozeExpiryMs);
+            const time = d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+            const isToday = d.toDateString() === new Date().toDateString();
+            return isToday
+              ? time
+              : `${d.toLocaleDateString([], { month: "short", day: "numeric" })} ${time}`;
+          })()
+        : "";
+      const snoozePreviewLabel = isSnoozed
+        ? ` <span class="snooze-label">· ⏰ Until ${escapeHtml(snoozeUntilLabel)}</span>`
+        : "";
+      const snoozeBtnTitle = isSnoozed
+        ? "Snoozed until " + escapeHtml(snoozeUntilLabel)
+        : "Snooze this notification";
+      const snoozeClearBtn = isSnoozed
+        ? `<button class="snooze-option snooze-clear" data-id="${req.id}" data-hours="0">Clear snooze</button>`
+        : "";
       const displayName = isOutgoing
         ? req.toUserName || req.toUserEmail || "User"
         : isGroupInvite
           ? req.groupName || "Group invite"
           : req.fromUserName || "User";
       const reqDiv = document.createElement("div");
-      reqDiv.className = "list-item request-card" + (isRead ? " request-card--read" : "");
+      reqDiv.className =
+        "list-item request-card" +
+        (isRead ? " request-card--read" : "") +
+        (isSnoozed ? " request-card--snoozed" : "");
       reqDiv.innerHTML = `
         <div class="list-avatar">${escapeHtml(getInitials(displayName, isOutgoing ? req.toUserEmail || "" : req.fromUserEmail || ""))}</div>
         <div class="list-info">
           <div class="list-name">${escapeHtml(displayName)}</div>
-          <div class="list-preview">${isOutgoing ? "Pending chat request" : isGroupInvite ? `Group invite from ${escapeHtml(req.fromUserName || "User")}` : `Wants to chat${req.fromUserEmail ? ` - ${escapeHtml(req.fromUserEmail)}` : ""}`}</div>
+          <div class="list-preview">${isOutgoing ? "Pending chat request" : isGroupInvite ? `Group invite from ${escapeHtml(req.fromUserName || "User")}` : `Wants to chat${req.fromUserEmail ? ` - ${escapeHtml(req.fromUserEmail)}` : ""}`}${snoozePreviewLabel}</div>
         </div>
         <div class="request-actions">
           ${isOutgoing
@@ -7406,7 +7451,16 @@ async function loadReceivedRequests() {
             : `<button class="btn btn-success accept-request-btn" data-type="${req.requestType}" data-id="${req.id}" data-from="${escapeHtml(req.fromUserId || "")}">Accept</button>
           <button class="btn btn-outline decline-request-btn" data-type="${req.requestType}" data-id="${req.id}">Decline</button>
           <button class="btn btn-outline block-request-btn" data-type="${req.requestType}" data-id="${req.id}" data-from="${escapeHtml(req.fromUserId || "")}" data-name="${escapeHtml(req.fromUserName || "User")}">Block</button>
-          <button class="btn btn-ghost mark-read-request-btn" data-id="${req.id}" title="${isRead ? "Mark as unread" : "Dismiss notification without accepting or declining"}">${isRead ? "✓ Read" : "Mark as Read"}</button>`}
+          <button class="btn btn-ghost mark-read-request-btn" data-id="${req.id}" title="${isRead ? "Mark as unread" : "Dismiss notification without accepting or declining"}">${isRead ? "✓ Read" : "Mark as Read"}</button>
+          <div class="snooze-wrapper">
+            <button class="btn btn-ghost snooze-request-btn${isSnoozed ? " snoozed" : ""}" data-id="${req.id}" title="${snoozeBtnTitle}">${isSnoozed ? "⏰ Snoozed" : "⏰ Snooze"}</button>
+            <div class="snooze-menu" id="snooze-menu-${req.id}" style="display:none">
+              <button class="snooze-option" data-id="${req.id}" data-hours="1">1 hour</button>
+              <button class="snooze-option" data-id="${req.id}" data-hours="8">8 hours</button>
+              <button class="snooze-option" data-id="${req.id}" data-hours="24">1 day</button>
+              ${snoozeClearBtn}
+            </div>
+          </div>`}
         </div>
       `;
       requestList.appendChild(reqDiv);
@@ -7475,6 +7529,47 @@ async function loadReceivedRequests() {
         }
       });
     });
+    requestList.querySelectorAll(".snooze-request-btn").forEach((btn) => {
+      btn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const reqId = btn.dataset.id;
+        const menu = document.getElementById(`snooze-menu-${reqId}`);
+        document.querySelectorAll(".snooze-menu").forEach((m) => {
+          if (m !== menu) m.style.display = "none";
+        });
+        if (menu) menu.style.display = menu.style.display === "none" ? "block" : "none";
+      });
+    });
+    requestList.querySelectorAll(".snooze-option").forEach((btn) => {
+      btn.addEventListener("click", async (e) => {
+        e.stopPropagation();
+        const reqId = btn.dataset.id;
+        const hours = parseInt(btn.dataset.hours, 10);
+        const menu = document.getElementById(`snooze-menu-${reqId}`);
+        if (menu) menu.style.display = "none";
+        const snoozeDocRef = db.collection("chatRequestsSnooze").doc(currentUser.uid);
+        try {
+          if (hours === 0) {
+            await snoozeDocRef.update({
+              [`snoozes.${reqId}`]: firebase.firestore.FieldValue.delete(),
+            });
+          } else {
+            await snoozeDocRef.set(
+              { snoozes: { [reqId]: Date.now() + hours * 60 * 60 * 1000 } },
+              { merge: true },
+            );
+          }
+        } catch (err) {
+          console.warn("Could not update snooze:", err);
+        }
+      });
+    });
+    if (!document.body.dataset.snoozeOutsideListenerAttached) {
+      document.body.dataset.snoozeOutsideListenerAttached = "1";
+      document.addEventListener("click", () => {
+        document.querySelectorAll(".snooze-menu").forEach((m) => (m.style.display = "none"));
+      });
+    }
   } catch (error) {
     console.error("Could not load requests:", error);
     if (badge) {
@@ -7535,6 +7630,18 @@ function setupRequestListeners() {
         loadReceivedRequests();
       },
       (error) => console.warn("Could not sync read requests:", error),
+    );
+  if (snoozeRequestsUnsubscribe) snoozeRequestsUnsubscribe();
+  cachedSnoozes = {};
+  snoozeRequestsUnsubscribe = db
+    .collection("chatRequestsSnooze")
+    .doc(currentUser.uid)
+    .onSnapshot(
+      (snap) => {
+        cachedSnoozes = snap.exists ? (snap.data()?.snoozes || {}) : {};
+        loadReceivedRequests();
+      },
+      (error) => console.warn("Could not sync snoozed requests:", error),
     );
   seenPendingChatRequestIds = new Set();
   seenSentChatRequestIds = new Set();
