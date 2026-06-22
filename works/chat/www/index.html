@@ -171,6 +171,14 @@
           <div class="request-header" id="requestHeader">
             Chat Requests
             <span style="display: inline-flex; align-items: center; gap: 8px">
+              <div class="snooze-wrapper" id="snoozeAllWrapper" style="display:none">
+                <button id="snoozeAllBtn" class="mark-all-requests-read-btn" title="Snooze all incoming requests">⏰ Snooze all</button>
+                <div class="snooze-menu" id="snoozeAllMenu" style="display:none">
+                  <button class="snooze-all-option" data-hours="1">1 hour</button>
+                  <button class="snooze-all-option" data-hours="8">8 hours</button>
+                  <button class="snooze-all-option" data-hours="24">1 day</button>
+                </div>
+              </div>
               <button id="markAllRequestsReadBtn" class="mark-all-requests-read-btn" style="display:none" title="Mark all as read">Mark all read</button>
               <span
                 id="requestBadge"
