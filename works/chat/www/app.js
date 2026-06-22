@@ -1555,13 +1555,13 @@ function renderMessageText(text = "", mentions = []) {
     /`([^`\n]+?)`/g,
     '<code class="message-inline-code">$1</code>',
   );
-  html = html.replace(/\*([^\*\n]+?)\*/g, "<strong>$1</strong>");
+  html = html.replace(/\*([^*\n]+?)\*/g, "<strong>$1</strong>");
   html = html.replace(/_([^_\n]+?)_/g, "<em>$1</em>");
   html = html.replace(/~([^~\n]+?)~/g, "<del>$1</del>");
 
   // 4. Hyperlink parsing
   const urlRegex =
-    /(\b(https?|ftp|file):\/\/[-A-Z0-9+&@#\/%?=~_|!:,.;]*[-A-Z0-9+&@#\/%=~_|])/gi;
+    /(\b(https?|ftp|file):\/\/[-A-Z0-9+&@#/%?=~_|!:,.;]*[-A-Z0-9+&@#/%=~_|])/gi;
   html = html.replace(
     urlRegex,
     '<a href="$1" target="_blank" rel="noopener noreferrer" class="message-link">$1</a>',
@@ -2538,32 +2538,7 @@ function updateMiniCallBarText() {
   text.textContent = `${type}${name ? ` with ${name}` : ""}`;
 }
 
-function minimizeActiveCallUi() {
-  if (!hasLiveCallSession()) return false;
-  const modal = document.getElementById("callModal");
-  const bar = ensureMiniCallBar();
 
-  updateMiniCallBarText();
-  document.body.classList.add("call-minimized");
-  if (modal) modal.style.display = "none";
-  bar.classList.add("show");
-
-  // Important: do not cleanup streams or peer connection here.
-  // Only hide/minimize the call interface.
-  return true;
-}
-
-function restoreActiveCallUi() {
-  if (!hasLiveCallSession()) return false;
-  const modal = document.getElementById("callModal");
-  const bar = ensureMiniCallBar();
-
-  document.body.classList.remove("call-minimized");
-  bar.classList.remove("show");
-  if (modal) modal.style.display = "flex";
-
-  return true;
-}
 
 function hideMiniCallBar() {
   document.body.classList.remove("call-minimized");
@@ -3417,7 +3392,7 @@ function setupCallNotificationRefreshHooks() {
 
 function getFcmTokenMapKey(token = "") {
   return String(token)
-    .replace(/[.#$/\[\]]/g, "_")
+    .replace(/[.#$/[\]]/g, "_")
     .slice(0, 160);
 }
 
@@ -7121,7 +7096,7 @@ async function sendChatRequest(user) {
   const requestRef = db.collection("chatRequests").doc(directChatId);
 
   // Check for existing directChats (including deleted ones)
-  let directChatDoc = null;
+  let directChatDoc;
   let directChatDeleted = false;
   try {
     directChatDoc = await db.collection("directChats").doc(directChatId).get();
@@ -7414,6 +7389,7 @@ async function loadReceivedRequests() {
       const isOutgoing = req.direction === "outgoing";
       const isRead = !isOutgoing && validReadIds.has(req.id);
       const isSnoozed = !isOutgoing && activeSnoozedIds.has(req.id);
+      if (isSnoozed && window._notifPrefs?.getSnoozedDisplayPref() === 'hide') continue;
       const snoozeExpiryMs = isSnoozed ? cachedSnoozes[req.id] : null;
       const snoozeUntilLabel = snoozeExpiryMs
         ? (() => {
@@ -7426,7 +7402,7 @@ async function loadReceivedRequests() {
           })()
         : "";
       const snoozePreviewLabel = isSnoozed
-        ? ` <span class="snooze-label">· ⏰ Until ${escapeHtml(snoozeUntilLabel)}</span>`
+        ? ` <span class="snooze-label">· ⏰ Until ${escapeHtml(snoozeUntilLabel)} <span class="snooze-countdown" data-expiry="${snoozeExpiryMs}"></span></span>`
         : "";
       const snoozeBtnTitle = isSnoozed
         ? "Snoozed until " + escapeHtml(snoozeUntilLabel)
@@ -7444,6 +7420,8 @@ async function loadReceivedRequests() {
         "list-item request-card" +
         (isRead ? " request-card--read" : "") +
         (isSnoozed ? " request-card--snoozed" : "");
+      reqDiv.dataset.reqCreated = req.createdAt?.toMillis?.() || 0;
+      reqDiv.dataset.reqId = req.id;
       reqDiv.innerHTML = `
         <div class="list-avatar">${escapeHtml(getInitials(displayName, isOutgoing ? req.toUserEmail || "" : req.fromUserEmail || ""))}</div>
         <div class="list-info">
@@ -7463,6 +7441,7 @@ async function loadReceivedRequests() {
               <button class="snooze-option" data-id="${req.id}" data-hours="1">1 hour</button>
               <button class="snooze-option" data-id="${req.id}" data-hours="8">8 hours</button>
               <button class="snooze-option" data-id="${req.id}" data-hours="24">1 day</button>
+              <button class="snooze-option snooze-custom-btn" data-id="${req.id}" data-hours="-1">🗓 Custom time…</button>
               ${snoozeClearBtn}
             </div>
           </div>`}
@@ -7552,6 +7531,7 @@ async function loadReceivedRequests() {
         const hours = parseInt(btn.dataset.hours, 10);
         const menu = document.getElementById(`snooze-menu-${reqId}`);
         if (menu) menu.style.display = "none";
+        if (hours === -1) { if (typeof window.snoozeEnhancements?.openCustomPicker === 'function') window.snoozeEnhancements.openCustomPicker(reqId); return; }
         const snoozeDocRef = db.collection("chatRequestsSnooze").doc(currentUser.uid);
         try {
           if (hours === 0) {
@@ -9969,8 +9949,10 @@ async function buildDirectChatItems() {
   if (!currentUser) return [];
   const items = [getSavedMessagesItem()];
   let archivedChatIds = new Set();
+  // eslint-disable-next-line no-useless-assignment
   let archivedDirectNames = new Set();
   let deletedChatIds = new Set();
+  // eslint-disable-next-line no-useless-assignment
   let directChats = null;
 
   try {
@@ -10126,8 +10108,11 @@ async function buildDirectChatItems() {
 
 async function buildGroupChatItems() {
   if (!currentUser) return [];
+  // eslint-disable-next-line no-useless-assignment
   let archivedChatIds = new Set();
+  // eslint-disable-next-line no-useless-assignment
   let deletedChatIds = new Set();
+  // eslint-disable-next-line no-useless-assignment
   let memberSnapshot = null;
   const items = [];
 
@@ -12126,6 +12111,7 @@ async function loadStatusList(searchTerm = "") {
   if (!statusList || !currentUser) return;
   if (!statusList.dataset.loaded)
     statusList.innerHTML = '<div class="empty-state tab-loading-state">Loading status updates...</div>';
+  // eslint-disable-next-line no-useless-assignment
   let statuses = [];
   try {
     const [snapshot, directChats] = await Promise.all([
@@ -14689,8 +14675,10 @@ function showInlineEditModal(id, data) {
   const ta = overlay.querySelector("#_inlineEditTextarea");
   const saveBtn = overlay.querySelector("._iem_save");
   const cancelBtn = overlay.querySelector("._iem_cancel");
+  // Set value safely (avoids HTML injection via innerHTML)
   ta.value = data.text || "";
   setTimeout(() => { ta.focus(); ta.selectionStart = ta.selectionEnd = ta.value.length; }, 50);
+
   const close = () => overlay.remove();
   const save = async () => {
     const trimmed = ta.value.trim();
@@ -15263,6 +15251,8 @@ function triggerMediaPicker() {
 
 async function triggerCameraPicker() {
   toggleAttachmentSheet(false);
+
+  // On native Android, use the Capacitor camera plugin path
   if (isNativeAndroidApp) {
     const hasCamera = await ensureNativePermission("camera");
     if (!hasCamera) return;
@@ -15273,50 +15263,117 @@ async function triggerCameraPicker() {
     input.click();
     return;
   }
+
+  // On web — open a real camera preview using getUserMedia
   await openWebCameraModal();
 }
 
 async function openWebCameraModal() {
   document.getElementById("_webCamModal")?.remove();
+
   let stream = null;
   let facingMode = "environment";
   let isRecordingVideo = false;
   let videoRecorderLocal = null;
   let videoChunksLocal = [];
   let recordTimerLocal = null;
+
   const overlay = document.createElement("div");
   overlay.id = "_webCamModal";
   overlay.setAttribute("role", "dialog");
   overlay.setAttribute("aria-modal", "true");
   overlay.setAttribute("aria-label", "Camera");
   overlay.innerHTML = `<style>
-    #_webCamModal{position:fixed;inset:0;z-index:9998;background:#000;display:flex;flex-direction:column;animation:_cam_in 0.2s ease;}
+    #_webCamModal{
+      position:fixed;inset:0;z-index:9998;
+      background:#000;display:flex;flex-direction:column;
+      animation:_cam_in 0.2s ease;
+    }
     @keyframes _cam_in{from{opacity:0}to{opacity:1}}
-    #_wcm_bar{display:flex;align-items:center;justify-content:space-between;padding:max(14px,env(safe-area-inset-top,14px)) 16px 10px;background:rgba(0,0,0,0.7);position:relative;z-index:2;}
-    #_wcm_bar button{background:rgba(255,255,255,0.15);border:none;color:#fff;border-radius:50%;width:40px;height:40px;display:grid;place-items:center;cursor:pointer;font-size:18px;transition:background .15s;}
+    #_wcm_bar{
+      display:flex;align-items:center;justify-content:space-between;
+      padding:max(14px,env(safe-area-inset-top,14px)) 16px 10px;
+      background:rgba(0,0,0,0.7);position:relative;z-index:2;
+    }
+    #_wcm_bar button{
+      background:rgba(255,255,255,0.15);border:none;color:#fff;
+      border-radius:50%;width:40px;height:40px;
+      display:grid;place-items:center;cursor:pointer;font-size:18px;
+      transition:background .15s;
+    }
     #_wcm_bar button:hover{background:rgba(255,255,255,0.28);}
     #_wcm_title{color:#fff;font-size:15px;font-weight:700;letter-spacing:.3px;}
-    #_wcm_status{color:#fff;font-size:12px;font-weight:600;text-align:center;padding:6px;background:rgba(0,0,0,0.5);position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);border-radius:8px;display:none;}
-    #_wcm_video{flex:1;width:100%;object-fit:cover;background:#111;min-height:0;}
-    #_wcm_preview_img,#_wcm_preview_vid{display:none;flex:1;width:100%;object-fit:contain;background:#111;}
-    #_wcm_controls{display:flex;align-items:center;justify-content:space-around;padding:16px 24px calc(20px + env(safe-area-inset-bottom,0px));background:rgba(0,0,0,0.85);gap:16px;}
-    ._wcm_ctrl{background:rgba(255,255,255,0.15);border:none;color:#fff;border-radius:50%;width:52px;height:52px;display:grid;place-items:center;cursor:pointer;font-size:22px;transition:background .15s,transform .1s;flex-shrink:0;}
+    #_wcm_status{
+      color:#fff;font-size:12px;font-weight:600;text-align:center;
+      padding:6px;background:rgba(0,0,0,0.5);
+      position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+      border-radius:8px;display:none;
+    }
+    #_wcm_video{
+      flex:1;width:100%;object-fit:cover;
+      background:#111;min-height:0;
+    }
+    #_wcm_preview_img,#_wcm_preview_vid{
+      display:none;flex:1;width:100%;object-fit:contain;background:#111;
+    }
+    #_wcm_controls{
+      display:flex;align-items:center;justify-content:space-around;
+      padding:16px 24px calc(20px + env(safe-area-inset-bottom,0px));
+      background:rgba(0,0,0,0.85);gap:16px;
+    }
+    ._wcm_ctrl{
+      background:rgba(255,255,255,0.15);border:none;color:#fff;
+      border-radius:50%;width:52px;height:52px;
+      display:grid;place-items:center;cursor:pointer;font-size:22px;
+      transition:background .15s, transform .1s;flex-shrink:0;
+    }
     ._wcm_ctrl:hover{background:rgba(255,255,255,0.28);}
     ._wcm_ctrl:active{transform:scale(0.92);}
-    #_wcm_capture{width:72px;height:72px;border-radius:50%;border:4px solid #fff;background:rgba(255,255,255,0.22);cursor:pointer;transition:background .15s,transform .1s;flex-shrink:0;display:grid;place-items:center;}
+    #_wcm_capture{
+      width:72px;height:72px;border-radius:50%;
+      border:4px solid #fff;background:rgba(255,255,255,0.22);
+      cursor:pointer;transition:background .15s, transform .1s;
+      flex-shrink:0;display:grid;place-items:center;
+    }
     #_wcm_capture:hover{background:rgba(255,255,255,0.38);}
     #_wcm_capture:active{transform:scale(0.9);}
-    #_wcm_capture_inner{width:52px;height:52px;border-radius:50%;background:#fff;}
-    #_wcm_capture.recording #_wcm_capture_inner{border-radius:8px;background:#ef4444;width:30px;height:30px;}
-    #_wcm_rec_badge{display:none;position:absolute;top:60px;left:50%;transform:translateX(-50%);background:#ef4444;color:#fff;font-size:12px;font-weight:700;padding:4px 12px;border-radius:999px;letter-spacing:.5px;}
+    #_wcm_capture_inner{
+      width:52px;height:52px;border-radius:50%;background:#fff;
+    }
+    #_wcm_capture.recording #_wcm_capture_inner{
+      border-radius:8px;background:#ef4444;width:30px;height:30px;
+    }
+    #_wcm_rec_badge{
+      display:none;position:absolute;top:60px;left:50%;transform:translateX(-50%);
+      background:#ef4444;color:#fff;font-size:12px;font-weight:700;
+      padding:4px 12px;border-radius:999px;letter-spacing:.5px;
+    }
     #_wcm_rec_badge.show{display:block;}
-    ._wcm_mode_btn{padding:8px 16px;border-radius:999px;border:1.5px solid rgba(255,255,255,0.4);background:transparent;color:#fff;font:inherit;font-size:13px;font-weight:700;cursor:pointer;transition:background .15s;}
+    ._wcm_mode_btn{
+      padding:8px 16px;border-radius:999px;border:1.5px solid rgba(255,255,255,0.4);
+      background:transparent;color:#fff;font:inherit;font-size:13px;
+      font-weight:700;cursor:pointer;transition:background .15s;
+    }
     ._wcm_mode_btn.active{background:rgba(255,255,255,0.2);border-color:#fff;}
-    #_wcm_confirm_bar{display:none;flex-direction:column;gap:10px;padding:16px;background:rgba(0,0,0,0.85);}
+    #_wcm_confirm_bar{
+      display:none;flex-direction:column;gap:10px;padding:16px;
+      background:rgba(0,0,0,0.85);
+    }
     #_wcm_confirm_bar.show{display:flex;}
-    #_wcm_send_btn{padding:13px;border:none;border-radius:12px;background:#008069;color:#fff;font:inherit;font-size:15px;font-weight:700;cursor:pointer;}
-    #_wcm_retake_btn{padding:13px;border:1.5px solid rgba(255,255,255,0.3);border-radius:12px;background:transparent;color:#fff;font:inherit;font-size:14px;font-weight:600;cursor:pointer;}
-    #_wcm_mode_bar{display:flex;justify-content:center;gap:10px;padding:10px 16px;background:rgba(0,0,0,0.6);}
+    #_wcm_send_btn{
+      padding:13px;border:none;border-radius:12px;
+      background:#008069;color:#fff;font:inherit;
+      font-size:15px;font-weight:700;cursor:pointer;
+    }
+    #_wcm_retake_btn{
+      padding:13px;border:1.5px solid rgba(255,255,255,0.3);border-radius:12px;
+      background:transparent;color:#fff;font:inherit;
+      font-size:14px;font-weight:600;cursor:pointer;
+    }
+    #_wcm_mode_bar{
+      display:flex;justify-content:center;gap:10px;
+      padding:10px 16px;background:rgba(0,0,0,0.6);
+    }
   </style>
   <div id="_wcm_bar">
     <button id="_wcm_close" title="Close" aria-label="Close camera">×</button>
@@ -15336,14 +15393,18 @@ async function openWebCameraModal() {
   </div>
   <div id="_wcm_controls">
     <button class="_wcm_ctrl" id="_wcm_cancel_preview" title="Retake" style="display:none">↩</button>
-    <button id="_wcm_capture" title="Capture" aria-label="Take photo"><div id="_wcm_capture_inner"></div></button>
+    <button id="_wcm_capture" title="Capture" aria-label="Take photo">
+      <div id="_wcm_capture_inner"></div>
+    </button>
     <button class="_wcm_ctrl" style="opacity:0;pointer-events:none">&#8942;</button>
   </div>
   <div id="_wcm_confirm_bar">
     <button id="_wcm_send_btn">Use Photo</button>
     <button id="_wcm_retake_btn">Retake</button>
   </div>`;
+
   document.body.appendChild(overlay);
+
   const video = overlay.querySelector("#_wcm_video");
   const previewImg = overlay.querySelector("#_wcm_preview_img");
   const previewVid = overlay.querySelector("#_wcm_preview_vid");
@@ -15352,97 +15413,156 @@ async function openWebCameraModal() {
   const closeBtn = overlay.querySelector("#_wcm_close");
   const sendBtn = overlay.querySelector("#_wcm_send_btn");
   const retakeBtn = overlay.querySelector("#_wcm_retake_btn");
+  const cancelPreviewBtn = overlay.querySelector("#_wcm_cancel_preview");
   const confirmBar = overlay.querySelector("#_wcm_confirm_bar");
   const recBadge = overlay.querySelector("#_wcm_rec_badge");
   const statusEl = overlay.querySelector("#_wcm_status");
   const photoModeBtn = overlay.querySelector("#_wcm_photo_mode");
   const videoModeBtn = overlay.querySelector("#_wcm_video_mode");
-  let captureMode = "photo";
+  let captureMode = "photo"; // "photo" | "video"
   let capturedBlob = null;
   let capturedType = null;
+
   const startStream = async () => {
     try {
       if (stream) stream.getTracks().forEach(t => t.stop());
       statusEl.style.display = "block";
-      stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode, width: { ideal: 1920 }, height: { ideal: 1080 } }, audio: true });
+      stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode, width: { ideal: 1920 }, height: { ideal: 1080 } },
+        audio: true,
+      });
       video.srcObject = stream;
       video.style.display = "block";
       statusEl.style.display = "none";
     } catch (err) {
       statusEl.style.display = "block";
       statusEl.textContent = "Camera access denied. Please allow camera permission and try again.";
+      console.error("[Camera] getUserMedia failed:", err);
     }
   };
+
   const showPreview = (blob, type) => {
-    capturedBlob = blob; capturedType = type;
+    capturedBlob = blob;
+    capturedType = type;
     video.style.display = "none";
     overlay.querySelector("#_wcm_controls").style.display = "none";
     overlay.querySelector("#_wcm_mode_bar").style.display = "none";
     confirmBar.classList.add("show");
     if (type.startsWith("image/")) {
-      previewImg.src = URL.createObjectURL(blob); previewImg.style.display = "block";
+      const url = URL.createObjectURL(blob);
+      previewImg.src = url;
+      previewImg.style.display = "block";
       sendBtn.textContent = "Use Photo";
     } else {
-      previewVid.src = URL.createObjectURL(blob); previewVid.style.display = "block";
+      const url = URL.createObjectURL(blob);
+      previewVid.src = url;
+      previewVid.style.display = "block";
       sendBtn.textContent = "Use Video";
     }
   };
+
   const retake = () => {
-    capturedBlob = null; capturedType = null;
-    previewImg.style.display = "none"; previewVid.style.display = "none";
+    capturedBlob = null;
+    capturedType = null;
+    previewImg.style.display = "none";
+    previewVid.style.display = "none";
     video.style.display = "block";
     overlay.querySelector("#_wcm_controls").style.display = "flex";
     overlay.querySelector("#_wcm_mode_bar").style.display = "flex";
     confirmBar.classList.remove("show");
     captureBtn.classList.remove("recording");
   };
+
+  const stopRecording = () => {
+    if (videoRecorderLocal && isRecordingVideo) {
+      videoRecorderLocal.stop();
+    }
+  };
+
   captureBtn.addEventListener("click", () => {
     if (captureMode === "photo") {
+      // Take photo via canvas
       const canvas = document.createElement("canvas");
-      canvas.width = video.videoWidth || 1280; canvas.height = video.videoHeight || 720;
+      canvas.width = video.videoWidth || 1280;
+      canvas.height = video.videoHeight || 720;
       canvas.getContext("2d").drawImage(video, 0, 0);
       canvas.toBlob(blob => showPreview(blob, "image/jpeg"), "image/jpeg", 0.92);
     } else {
+      // Video record
       if (!isRecordingVideo) {
-        isRecordingVideo = true; videoChunksLocal = [];
-        captureBtn.classList.add("recording"); recBadge.classList.add("show");
-        const mimeType = MediaRecorder.isTypeSupported("video/webm;codecs=vp9") ? "video/webm;codecs=vp9" : MediaRecorder.isTypeSupported("video/webm") ? "video/webm" : "video/mp4";
+        isRecordingVideo = true;
+        videoChunksLocal = [];
+        captureBtn.classList.add("recording");
+        recBadge.classList.add("show");
+        const mimeType = MediaRecorder.isTypeSupported("video/webm;codecs=vp9")
+          ? "video/webm;codecs=vp9"
+          : MediaRecorder.isTypeSupported("video/webm") ? "video/webm" : "video/mp4";
         videoRecorderLocal = new MediaRecorder(stream, { mimeType });
         videoRecorderLocal.ondataavailable = e => { if (e.data.size) videoChunksLocal.push(e.data); };
         videoRecorderLocal.onstop = () => {
-          isRecordingVideo = false; recBadge.classList.remove("show"); captureBtn.classList.remove("recording");
+          isRecordingVideo = false;
+          recBadge.classList.remove("show");
+          captureBtn.classList.remove("recording");
           clearInterval(recordTimerLocal);
-          showPreview(new Blob(videoChunksLocal, { type: mimeType }), mimeType);
+          const blob = new Blob(videoChunksLocal, { type: mimeType });
+          showPreview(blob, mimeType);
         };
         videoRecorderLocal.start(100);
       } else {
-        if (videoRecorderLocal && isRecordingVideo) videoRecorderLocal.stop();
+        stopRecording();
       }
     }
   });
-  flipBtn.addEventListener("click", async () => { facingMode = facingMode === "environment" ? "user" : "environment"; await startStream(); });
-  photoModeBtn.addEventListener("click", () => { captureMode = "photo"; photoModeBtn.classList.add("active"); videoModeBtn.classList.remove("active"); });
-  videoModeBtn.addEventListener("click", () => { captureMode = "video"; videoModeBtn.classList.add("active"); photoModeBtn.classList.remove("active"); });
+
+  flipBtn.addEventListener("click", async () => {
+    facingMode = facingMode === "environment" ? "user" : "environment";
+    await startStream();
+  });
+
+  photoModeBtn.addEventListener("click", () => {
+    captureMode = "photo";
+    photoModeBtn.classList.add("active");
+    videoModeBtn.classList.remove("active");
+  });
+
+  videoModeBtn.addEventListener("click", () => {
+    captureMode = "video";
+    videoModeBtn.classList.add("active");
+    photoModeBtn.classList.remove("active");
+  });
+
   retakeBtn.addEventListener("click", retake);
+  cancelPreviewBtn.addEventListener("click", retake);
+
   sendBtn.addEventListener("click", () => {
     if (!capturedBlob) return;
     const ext = capturedType.startsWith("image/") ? "jpg" : "webm";
-    const file = new File([capturedBlob], `camera_capture_${Date.now()}.${ext}`, { type: capturedType });
+    const fileName = `camera_capture_${Date.now()}.${ext}`;
+    const file = new File([capturedBlob], fileName, { type: capturedType });
+    // Trigger the existing file handler
     const dataTransfer = new DataTransfer();
     dataTransfer.items.add(file);
     const fileInput = document.getElementById("fileInput");
-    if (fileInput) { fileInput.files = dataTransfer.files; fileInput.dispatchEvent(new Event("change", { bubbles: true })); }
+    if (fileInput) {
+      fileInput.files = dataTransfer.files;
+      fileInput.dispatchEvent(new Event("change", { bubbles: true }));
+    }
     cleanup();
   });
+
   const cleanup = () => {
     if (stream) stream.getTracks().forEach(t => t.stop());
-    if (videoRecorderLocal && isRecordingVideo) { try { videoRecorderLocal.stop(); } catch(_) {} }
+    if (videoRecorderLocal && isRecordingVideo) {
+      try { videoRecorderLocal.stop(); } catch(_) {}
+    }
     overlay.remove();
   };
+
   closeBtn.addEventListener("click", cleanup);
   document.addEventListener("keydown", function escHandler(e) {
     if (e.key === "Escape") { cleanup(); document.removeEventListener("keydown", escHandler); }
   }, { once: true });
+
   await startStream();
 }
 
@@ -19113,6 +19233,7 @@ function toggleParticipantPanel() {
   }
   const body = document.getElementById("participantPanelBody");
   if (!body) return;
+  // eslint-disable-next-line no-useless-assignment
   let participants = [];
   if (activeGroupCallParticipants?.length) {
     participants = activeGroupCallParticipants;
@@ -19537,24 +19658,7 @@ function setupCallControlButtons() {
   }
 }
 
-function flashCallControlLabel(element, message) {
-  if (!element) return;
-  const original = element.textContent;
-  element.textContent = message;
-  element.style.opacity = "0.7";
-  setTimeout(() => {
-    element.textContent = original;
-    element.style.opacity = "1";
-  }, 1200);
-}
 
-function getCallPermissionMessage(error, callType) {
-  if (error?.name === "NotAllowedError" || error?.message?.includes("denied")) {
-    return `${callType === "video" ? "Camera" : "Microphone"} permission denied. Please allow access in settings.`;
-  }
-  if (error?.name === "NotFoundError") return "No camera found on this device";
-  return error?.message || `Could not start ${callType} call`;
-}
 
 // Keep read receipts reliable when mobile browsers/PWA pause and resume the page.
 window.addEventListener("focus", () => {
@@ -22364,8 +22468,8 @@ async function updateEncryptionBadge(chatId, chatType) {
       var doc = await db.collection("directChats").doc(chatId).get();
       encrypted = doc.data() && doc.data().encryptionEnabled === true;
     } else if (chatType === "group") {
-      var doc = await db.collection("groups").doc(chatId).get();
-      encrypted = doc.data() && doc.data().encryptionEnabled === true;
+      var groupDoc = await db.collection("groups").doc(chatId).get();
+      encrypted = groupDoc.data() && groupDoc.data().encryptionEnabled === true;
     }
     if (encrypted) {
       badge.innerHTML = "🔒";
@@ -22649,7 +22753,7 @@ async function getStorageBreakdown() {
         : msg.groupName || "Group";
   });
   for (var chatId in chatSizes) {
-    if (chatSizes.hasOwnProperty(chatId)) {
+    if (Object.prototype.hasOwnProperty.call(chatSizes, chatId)) {
       breakdown.push({
         chatId: chatId,
         bytes: chatSizes[chatId].bytes,
@@ -24468,40 +24572,6 @@ document.getElementById("closeScheduleMsg")?.addEventListener("click", () => {
 })();
 
 // Process scheduled messages (called on page load and periodically)
-async function processScheduledMessages() {
-  if (!currentUser) return;
-  try {
-    const now = firebase.firestore.Timestamp.now();
-    const snap = await db.collection("scheduledMessages")
-      .where("userId", "==", currentUser.uid)
-      .where("status", "==", "pending")
-      .where("scheduledAt", "<=", now)
-      .get();
-    for (const doc of snap.docs) {
-      const data = doc.data();
-      try {
-        // Send the message
-        const msgData = {
-          senderId: currentUser.uid,
-          senderName: currentUser.displayName || currentUser.email,
-          text: data.text || "",
-          timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-          status: "sent",
-          read: false,
-          readBy: { [currentUser.uid]: firebase.firestore.FieldValue.serverTimestamp() },
-          deliveredTo: {},
-        };
-        if (data.attachment) msgData.attachment = data.attachment;
-        if (data.chatType === "direct") msgData.directId = data.chatId;
-        else msgData.groupId = data.chatId;
-        await db.collection("messages").add(msgData);
-        await doc.ref.update({ status: "sent", sentAt: firebase.firestore.FieldValue.serverTimestamp() });
-      } catch (e) {
-        await doc.ref.update({ status: "failed", error: e.message });
-      }
-    }
-  } catch (e) { /* ignore */ }
-}
 setInterval(processScheduledMessages, 30000);
 setTimeout(processScheduledMessages, 5000);
 
@@ -24563,7 +24633,7 @@ function renderMarkdown(text) {
   // Links
   html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank">$1</a>');
   // Unordered list
-  html = html.replace(/^[\*\-] (.+)$/gm, "<li>$1</li>");
+  html = html.replace(/^[*-] (.+)$/gm, "<li>$1</li>");
   html = html.replace(/(<li>.*<\/li>\n?)+/g, "<ul>$&</ul>");
   // Ordered list
   html = html.replace(/^\d+\. (.+)$/gm, "<li>$1</li>");
@@ -24675,6 +24745,7 @@ async function translateMessageText(text, targetLang = "en") {
 function addTranslateButtonToMessage(msgDiv, text) {
   if (!text || text.length < 3 || msgDiv.querySelector(".msg-translate-btn")) return;
   // Check if it's already in English (rough heuristic)
+  // eslint-disable-next-line no-control-regex
   const hasNonLatin = /[^\x00-\x7F]/.test(text);
   if (!hasNonLatin) return;
   const btn = document.createElement("button");
@@ -24713,6 +24784,7 @@ loadMessages = function() {
       const msgDiv = el.closest(".message");
       if (msgDiv && !msgDiv.querySelector(".msg-translate-btn")) {
         const text = el.textContent?.trim();
+        // eslint-disable-next-line no-control-regex
         if (text && /[^\x00-\x7F]/.test(text)) {
           addTranslateButtonToMessage(msgDiv, text);
         }
@@ -24817,7 +24889,7 @@ let largeFileUploadXHR = null;
 async function uploadLargeFile(file, onProgress) {
   if (file.size <= 25 * 1024 * 1024) {
     // Small file: use existing Cloudinary upload
-    return uploadToCloudinary(file, onProgress);
+    return (window._origUploadToCloudinary || uploadToCloudinary)(file, onProgress);
   }
   // Large file: use Firebase Storage with resumable upload
   const path = `large_uploads/${currentUser.uid}/${Date.now()}_${file.name}`;
@@ -26109,6 +26181,7 @@ document.getElementById("confirmMuteMemberBtn")?.addEventListener("click", async
       if (el.dataset.illustrated) return;
       el.dataset.illustrated = "1";
       const text = el.textContent?.trim() || "";
+      // eslint-disable-next-line no-useless-assignment
       let emoji = "";
       if (text.includes("No chats") || text.includes("no chats")) emoji = "💬";
       else if (text.includes("No messages") || text.includes("no messages")) emoji = "✉️";

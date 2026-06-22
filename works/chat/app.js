@@ -1555,13 +1555,13 @@ function renderMessageText(text = "", mentions = []) {
     /`([^`\n]+?)`/g,
     '<code class="message-inline-code">$1</code>',
   );
-  html = html.replace(/\*([^\*\n]+?)\*/g, "<strong>$1</strong>");
+  html = html.replace(/\*([^*\n]+?)\*/g, "<strong>$1</strong>");
   html = html.replace(/_([^_\n]+?)_/g, "<em>$1</em>");
   html = html.replace(/~([^~\n]+?)~/g, "<del>$1</del>");
 
   // 4. Hyperlink parsing
   const urlRegex =
-    /(\b(https?|ftp|file):\/\/[-A-Z0-9+&@#\/%?=~_|!:,.;]*[-A-Z0-9+&@#\/%=~_|])/gi;
+    /(\b(https?|ftp|file):\/\/[-A-Z0-9+&@#/%?=~_|!:,.;]*[-A-Z0-9+&@#/%=~_|])/gi;
   html = html.replace(
     urlRegex,
     '<a href="$1" target="_blank" rel="noopener noreferrer" class="message-link">$1</a>',
@@ -2538,32 +2538,7 @@ function updateMiniCallBarText() {
   text.textContent = `${type}${name ? ` with ${name}` : ""}`;
 }
 
-function minimizeActiveCallUi() {
-  if (!hasLiveCallSession()) return false;
-  const modal = document.getElementById("callModal");
-  const bar = ensureMiniCallBar();
 
-  updateMiniCallBarText();
-  document.body.classList.add("call-minimized");
-  if (modal) modal.style.display = "none";
-  bar.classList.add("show");
-
-  // Important: do not cleanup streams or peer connection here.
-  // Only hide/minimize the call interface.
-  return true;
-}
-
-function restoreActiveCallUi() {
-  if (!hasLiveCallSession()) return false;
-  const modal = document.getElementById("callModal");
-  const bar = ensureMiniCallBar();
-
-  document.body.classList.remove("call-minimized");
-  bar.classList.remove("show");
-  if (modal) modal.style.display = "flex";
-
-  return true;
-}
 
 function hideMiniCallBar() {
   document.body.classList.remove("call-minimized");
@@ -3417,7 +3392,7 @@ function setupCallNotificationRefreshHooks() {
 
 function getFcmTokenMapKey(token = "") {
   return String(token)
-    .replace(/[.#$/\[\]]/g, "_")
+    .replace(/[.#$/[\]]/g, "_")
     .slice(0, 160);
 }
 
@@ -7121,7 +7096,7 @@ async function sendChatRequest(user) {
   const requestRef = db.collection("chatRequests").doc(directChatId);
 
   // Check for existing directChats (including deleted ones)
-  let directChatDoc = null;
+  let directChatDoc;
   let directChatDeleted = false;
   try {
     directChatDoc = await db.collection("directChats").doc(directChatId).get();
@@ -9974,8 +9949,10 @@ async function buildDirectChatItems() {
   if (!currentUser) return [];
   const items = [getSavedMessagesItem()];
   let archivedChatIds = new Set();
+  // eslint-disable-next-line no-useless-assignment
   let archivedDirectNames = new Set();
   let deletedChatIds = new Set();
+  // eslint-disable-next-line no-useless-assignment
   let directChats = null;
 
   try {
@@ -10131,8 +10108,11 @@ async function buildDirectChatItems() {
 
 async function buildGroupChatItems() {
   if (!currentUser) return [];
+  // eslint-disable-next-line no-useless-assignment
   let archivedChatIds = new Set();
+  // eslint-disable-next-line no-useless-assignment
   let deletedChatIds = new Set();
+  // eslint-disable-next-line no-useless-assignment
   let memberSnapshot = null;
   const items = [];
 
@@ -12131,6 +12111,7 @@ async function loadStatusList(searchTerm = "") {
   if (!statusList || !currentUser) return;
   if (!statusList.dataset.loaded)
     statusList.innerHTML = '<div class="empty-state tab-loading-state">Loading status updates...</div>';
+  // eslint-disable-next-line no-useless-assignment
   let statuses = [];
   try {
     const [snapshot, directChats] = await Promise.all([
@@ -19252,6 +19233,7 @@ function toggleParticipantPanel() {
   }
   const body = document.getElementById("participantPanelBody");
   if (!body) return;
+  // eslint-disable-next-line no-useless-assignment
   let participants = [];
   if (activeGroupCallParticipants?.length) {
     participants = activeGroupCallParticipants;
@@ -19676,24 +19658,7 @@ function setupCallControlButtons() {
   }
 }
 
-function flashCallControlLabel(element, message) {
-  if (!element) return;
-  const original = element.textContent;
-  element.textContent = message;
-  element.style.opacity = "0.7";
-  setTimeout(() => {
-    element.textContent = original;
-    element.style.opacity = "1";
-  }, 1200);
-}
 
-function getCallPermissionMessage(error, callType) {
-  if (error?.name === "NotAllowedError" || error?.message?.includes("denied")) {
-    return `${callType === "video" ? "Camera" : "Microphone"} permission denied. Please allow access in settings.`;
-  }
-  if (error?.name === "NotFoundError") return "No camera found on this device";
-  return error?.message || `Could not start ${callType} call`;
-}
 
 // Keep read receipts reliable when mobile browsers/PWA pause and resume the page.
 window.addEventListener("focus", () => {
@@ -22503,8 +22468,8 @@ async function updateEncryptionBadge(chatId, chatType) {
       var doc = await db.collection("directChats").doc(chatId).get();
       encrypted = doc.data() && doc.data().encryptionEnabled === true;
     } else if (chatType === "group") {
-      var doc = await db.collection("groups").doc(chatId).get();
-      encrypted = doc.data() && doc.data().encryptionEnabled === true;
+      var groupDoc = await db.collection("groups").doc(chatId).get();
+      encrypted = groupDoc.data() && groupDoc.data().encryptionEnabled === true;
     }
     if (encrypted) {
       badge.innerHTML = "🔒";
@@ -22788,7 +22753,7 @@ async function getStorageBreakdown() {
         : msg.groupName || "Group";
   });
   for (var chatId in chatSizes) {
-    if (chatSizes.hasOwnProperty(chatId)) {
+    if (Object.prototype.hasOwnProperty.call(chatSizes, chatId)) {
       breakdown.push({
         chatId: chatId,
         bytes: chatSizes[chatId].bytes,
@@ -24607,40 +24572,6 @@ document.getElementById("closeScheduleMsg")?.addEventListener("click", () => {
 })();
 
 // Process scheduled messages (called on page load and periodically)
-async function processScheduledMessages() {
-  if (!currentUser) return;
-  try {
-    const now = firebase.firestore.Timestamp.now();
-    const snap = await db.collection("scheduledMessages")
-      .where("userId", "==", currentUser.uid)
-      .where("status", "==", "pending")
-      .where("scheduledAt", "<=", now)
-      .get();
-    for (const doc of snap.docs) {
-      const data = doc.data();
-      try {
-        // Send the message
-        const msgData = {
-          senderId: currentUser.uid,
-          senderName: currentUser.displayName || currentUser.email,
-          text: data.text || "",
-          timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-          status: "sent",
-          read: false,
-          readBy: { [currentUser.uid]: firebase.firestore.FieldValue.serverTimestamp() },
-          deliveredTo: {},
-        };
-        if (data.attachment) msgData.attachment = data.attachment;
-        if (data.chatType === "direct") msgData.directId = data.chatId;
-        else msgData.groupId = data.chatId;
-        await db.collection("messages").add(msgData);
-        await doc.ref.update({ status: "sent", sentAt: firebase.firestore.FieldValue.serverTimestamp() });
-      } catch (e) {
-        await doc.ref.update({ status: "failed", error: e.message });
-      }
-    }
-  } catch (e) { /* ignore */ }
-}
 setInterval(processScheduledMessages, 30000);
 setTimeout(processScheduledMessages, 5000);
 
@@ -24702,7 +24633,7 @@ function renderMarkdown(text) {
   // Links
   html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank">$1</a>');
   // Unordered list
-  html = html.replace(/^[\*\-] (.+)$/gm, "<li>$1</li>");
+  html = html.replace(/^[*-] (.+)$/gm, "<li>$1</li>");
   html = html.replace(/(<li>.*<\/li>\n?)+/g, "<ul>$&</ul>");
   // Ordered list
   html = html.replace(/^\d+\. (.+)$/gm, "<li>$1</li>");
@@ -24814,6 +24745,7 @@ async function translateMessageText(text, targetLang = "en") {
 function addTranslateButtonToMessage(msgDiv, text) {
   if (!text || text.length < 3 || msgDiv.querySelector(".msg-translate-btn")) return;
   // Check if it's already in English (rough heuristic)
+  // eslint-disable-next-line no-control-regex
   const hasNonLatin = /[^\x00-\x7F]/.test(text);
   if (!hasNonLatin) return;
   const btn = document.createElement("button");
@@ -24852,6 +24784,7 @@ loadMessages = function() {
       const msgDiv = el.closest(".message");
       if (msgDiv && !msgDiv.querySelector(".msg-translate-btn")) {
         const text = el.textContent?.trim();
+        // eslint-disable-next-line no-control-regex
         if (text && /[^\x00-\x7F]/.test(text)) {
           addTranslateButtonToMessage(msgDiv, text);
         }
@@ -26248,6 +26181,7 @@ document.getElementById("confirmMuteMemberBtn")?.addEventListener("click", async
       if (el.dataset.illustrated) return;
       el.dataset.illustrated = "1";
       const text = el.textContent?.trim() || "";
+      // eslint-disable-next-line no-useless-assignment
       let emoji = "";
       if (text.includes("No chats") || text.includes("no chats")) emoji = "💬";
       else if (text.includes("No messages") || text.includes("no messages")) emoji = "✉️";

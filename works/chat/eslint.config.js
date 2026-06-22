@@ -43,7 +43,6 @@ module.exports = [
         Atomics: "readonly",
         SharedArrayBuffer: "readonly",
         firebase: "readonly",
-        messaging: "writable",
       },
       ecmaVersion: "latest",
       sourceType: "script",
