@@ -12954,14 +12954,9 @@ body.dark .message .message-translation-card.showing-original .message-translati
 
 /* ========== NEW FEATURE STYLES ========== */
 
-/* Chat list date section headers */
+/* Chat list date section headers — hidden per user preference */
 .chat-date-section {
-  padding: 8px 16px 4px;
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--muted-strong, #667781);
-  letter-spacing: 0.3px;
-  text-transform: uppercase;
+  display: none;
 }
 
 .caught-up-divider {
