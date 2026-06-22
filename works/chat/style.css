@@ -16131,6 +16131,61 @@ body.dark .notif-bell-btn[data-notif-state="blocked"]::after {
 }
 
 /* ═══════════════════════════════════════════════════════════════
+   SWIPE-RIGHT TO GO BACK — all mobile / touch / standalone
+   Works with swipe-nav.js on iOS, Android, PWA, touch laptops.
+   ═══════════════════════════════════════════════════════════════ */
+
+/* Sidebar revealed behind the sliding panel during drag */
+.chat-container.swipe-peeking .sidebar {
+  display: flex !important;
+  position: fixed !important;
+  inset: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  z-index: 1 !important;
+  pointer-events: none !important;
+}
+
+/* Chat panel slides right on top of the revealed sidebar */
+.chat-main.swipe-dragging {
+  transform: translateX(var(--swipe-dx, 0px)) !important;
+  transition: none !important;
+  will-change: transform;
+  position: relative !important;
+  z-index: 2 !important;
+  box-shadow: -8px 0 28px rgba(0, 0, 0, 0.25) !important;
+}
+
+/* Smooth snap-back when swipe doesn't reach the threshold */
+.chat-main:not(.swipe-dragging) {
+  transition: transform 0.28s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+/* Subtle left-edge pull indicator (visible on mobile/standalone) */
+@media (max-width: 900px), (display-mode: standalone) {
+  .chat-container.chat-open .chat-main::before {
+    content: '';
+    position: fixed;
+    top: 50%;
+    left: 0;
+    transform: translateY(-50%);
+    width: 4px;
+    height: 48px;
+    border-radius: 0 4px 4px 0;
+    background: rgba(255, 255, 255, 0.20);
+    pointer-events: none;
+    z-index: 300;
+    transition: opacity 0.3s ease, width 0.2s ease;
+    opacity: 0.6;
+  }
+  /* Widen indicator while actively dragging */
+  .chat-container.swipe-peeking .chat-main::before {
+    width: 6px;
+    opacity: 1;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════
    CHAT HEADER — Responsive layout fix (all devices / browsers)
    Must stay LAST in this file so it wins cascade order.
    ═══════════════════════════════════════════════════════════════ */
