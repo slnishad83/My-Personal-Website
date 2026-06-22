@@ -15649,3 +15649,291 @@ body.dark .install-app-btn#installAppBtn:hover {
     display: none !important;
   }
 }
+
+/* ============================================================
+   FONT & TEXT SETTINGS MODAL — synced from main style.css
+   Missing from www build — needed for Font & Text modal UI
+   ============================================================ */
+
+.font-settings-modal {
+  width: min(420px, 96%);
+  max-height: min(90dvh, calc(100vh - 32px));
+  overflow-y: auto;
+}
+
+.fs-section-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: #667781;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.fs-value-badge {
+  font-size: 11px;
+  font-weight: 600;
+  background: var(--brand, #008069);
+  color: #fff;
+  padding: 1px 7px;
+  border-radius: 10px;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.fs-font-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+}
+
+.fs-font-btn {
+  padding: 10px 6px;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 10px;
+  background: #fff;
+  font-size: 13px;
+  cursor: pointer;
+  text-align: center;
+  transition: border-color 0.12s, background 0.12s, color 0.12s;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.fs-font-btn.active {
+  border-color: var(--brand, #008069);
+  background: color-mix(in srgb, var(--brand, #008069) 10%, #fff);
+  color: var(--brand, #008069);
+  font-weight: 600;
+}
+
+body.dark .fs-font-btn {
+  background: #1e2d35;
+  border-color: #2a3942;
+  color: #e9edef;
+}
+
+body.dark .fs-font-btn.active {
+  background: color-mix(in srgb, var(--brand, #008069) 20%, #1e2d35);
+  border-color: var(--brand, #008069);
+  color: #25d366;
+}
+
+.fs-slider-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.fs-a-small { font-size: 12px; color: #667781; font-weight: 600; }
+.fs-a-large { font-size: 22px; color: #667781; font-weight: 600; line-height: 1; }
+
+.fs-slider {
+  flex: 1;
+  accent-color: var(--brand, #008069);
+  height: 4px;
+  cursor: pointer;
+}
+
+.fs-pill-row {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.fs-pill {
+  padding: 6px 14px;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 20px;
+  background: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  color: #667781;
+  cursor: pointer;
+  transition: border-color 0.12s, background 0.12s, color 0.12s;
+}
+
+.fs-pill.active {
+  border-color: var(--brand, #008069);
+  background: color-mix(in srgb, var(--brand, #008069) 10%, #fff);
+  color: var(--brand, #008069);
+}
+
+body.dark .fs-pill {
+  background: #1e2d35;
+  border-color: #2a3942;
+  color: #8696a0;
+}
+
+body.dark .fs-pill.active {
+  background: color-mix(in srgb, var(--brand, #008069) 20%, #1e2d35);
+  border-color: var(--brand, #008069);
+  color: #25d366;
+}
+
+.fs-preview {
+  background: var(--panel-soft, #f0f2f5);
+  border-radius: 10px;
+  padding: 12px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: var(--fs-prev-size, 15px);
+  font-family: var(--fs-prev-family, inherit);
+  font-weight: var(--fs-prev-weight, 400);
+  line-height: var(--fs-prev-spacing, 1.4);
+}
+
+.fs-preview-bubble {
+  max-width: 75%;
+  padding: 6px 10px;
+  border-radius: 8px;
+  font-size: inherit;
+  font-family: inherit;
+  font-weight: inherit;
+  line-height: inherit;
+}
+
+.fs-preview-in {
+  background: #fff;
+  align-self: flex-start;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+}
+
+.fs-preview-out {
+  background: var(--brand, #008069);
+  color: #fff;
+  align-self: flex-end;
+}
+
+body.dark .fs-preview { background: #0d1418; }
+body.dark .fs-preview-in { background: #1e2d35; color: #e9edef; }
+
+.message-bubble,
+.message-bubble p,
+.message-text,
+#messagesArea {
+  font-family: var(--msg-font-family, inherit);
+  font-size: var(--msg-font-size, 15px);
+  font-weight: var(--msg-font-weight, 400);
+  line-height: var(--msg-line-height, 1.4);
+}
+
+/* ============================================================
+   NOTIFICATION BELL — synced from main style.css
+   ============================================================ */
+
+.notif-bell-wrapper {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.notif-bell-btn {
+  position: relative;
+  color: var(--muted, #8696a0);
+  transition: color 0.2s, transform 0.15s;
+}
+
+.notif-bell-btn[data-notif-state="on"] { color: var(--success, #25d366); }
+.notif-bell-btn[data-notif-state="on"]::after {
+  content: '';
+  position: absolute;
+  top: 4px; right: 4px;
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--success, #25d366);
+  border: 2px solid var(--bg, #fff);
+  animation: notif-pulse 2.5s infinite;
+}
+
+.notif-bell-btn[data-notif-state="off"] { color: var(--muted, #8696a0); opacity: 0.75; }
+
+.notif-bell-btn[data-notif-state="blocked"] { color: #f44336; }
+.notif-bell-btn[data-notif-state="blocked"]::after {
+  content: '!';
+  position: absolute;
+  top: 3px; right: 3px;
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  background: #f44336;
+  border: 1.5px solid var(--bg, #fff);
+  font-size: 7px; font-weight: 900; color: #fff;
+  display: flex; align-items: center; justify-content: center; line-height: 1;
+}
+
+.notif-bell-btn[data-notif-state="unsupported"] { opacity: 0.4; cursor: not-allowed; }
+.notif-bell-btn:not([data-notif-state="unsupported"]):hover { transform: scale(1.12); }
+
+@keyframes notif-pulse {
+  0%   { box-shadow: 0 0 0 0 rgba(37,211,102,0.55); }
+  60%  { box-shadow: 0 0 0 5px rgba(37,211,102,0); }
+  100% { box-shadow: 0 0 0 0 rgba(37,211,102,0); }
+}
+
+.notif-bell-dropdown {
+  position: absolute;
+  top: calc(100% + 8px); right: 0;
+  width: 260px;
+  background: var(--surface, #fff);
+  border: 1px solid var(--border, #e0e0e0);
+  border-radius: 14px;
+  box-shadow: 0 8px 28px rgba(0,0,0,0.14);
+  z-index: 9999;
+  opacity: 0;
+  transform: translateY(-6px) scale(0.97);
+  pointer-events: none;
+  transition: opacity 0.18s ease, transform 0.18s ease;
+  overflow: hidden;
+}
+
+.notif-bell-dropdown.open { opacity: 1; transform: translateY(0) scale(1); pointer-events: auto; }
+
+.notif-bell-dropdown-inner { padding: 14px 16px 16px; display: flex; flex-direction: column; gap: 10px; }
+
+.notif-bell-status {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 12px; border-radius: 10px;
+  font-size: 13px; font-weight: 600;
+  background: var(--bg-subtle, #f0f2f5);
+}
+.notif-bell-status.on    { background: #e6f9ee; color: #1a7a3f; }
+.notif-bell-status.off   { background: var(--bg-subtle, #f0f2f5); color: var(--muted-strong, #54656f); }
+.notif-bell-status.blocked { background: #fdecea; color: #c62828; }
+.notif-bell-status-icon { font-size: 20px; flex-shrink: 0; line-height: 1; }
+
+.notif-bell-desc { font-size: 12.5px; color: var(--muted, #8696a0); line-height: 1.5; margin: 0; }
+
+.notif-bell-steps { font-size: 12.5px; color: var(--muted-strong, #54656f); line-height: 1.7; padding-left: 18px; margin: 0; }
+.notif-bell-steps li { margin-bottom: 2px; }
+
+.notif-bell-action-btn {
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 14px; border: none; border-radius: 10px;
+  font-size: 13px; font-weight: 600; cursor: pointer;
+  transition: background 0.15s, transform 0.1s;
+  width: 100%; text-align: left;
+}
+.notif-bell-action-btn:active { transform: scale(0.98); }
+.notif-bell-enable { background: var(--primary, #00a884); color: #fff; }
+.notif-bell-enable:hover { background: #008a6e; }
+.notif-bell-test { background: var(--bg-subtle, #f0f2f5); color: var(--text, #111b21); }
+.notif-bell-test:hover { background: #e2e8ef; }
+.notif-bell-disable { background: #fdecea; color: #c62828; }
+.notif-bell-disable:hover { background: #f9d6d3; }
+.notif-bell-refresh { background: var(--bg-subtle, #f0f2f5); color: var(--text, #111b21); }
+.notif-bell-refresh:hover { background: #e2e8ef; }
+
+body.dark .notif-bell-dropdown { background: var(--surface, #1f2c34); border-color: var(--border, #2a3942); box-shadow: 0 8px 28px rgba(0,0,0,0.4); }
+body.dark .notif-bell-status.off { background: #2a3942; color: #aebac1; }
+body.dark .notif-bell-test, body.dark .notif-bell-refresh { background: #2a3942; color: #e9edef; }
+body.dark .notif-bell-test:hover, body.dark .notif-bell-refresh:hover { background: #3a4a52; }
+body.dark .notif-bell-btn[data-notif-state="on"]::after,
+body.dark .notif-bell-btn[data-notif-state="blocked"]::after { border-color: #1f2c34; }
+
+@media (max-width: 480px) { .notif-bell-dropdown { width: 230px; right: -8px; } }
+@media (max-width: 360px) { .notif-bell-dropdown { width: 200px; right: -16px; } }

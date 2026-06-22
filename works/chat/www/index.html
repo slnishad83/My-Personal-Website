@@ -19,10 +19,14 @@
       href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="style.css?v=156" />
+    <link rel="stylesheet" href="style.css?v=160" />
+    <link rel="stylesheet" href="notification-prefs.css" />
+    <link rel="stylesheet" href="snooze-enhancements.css" />
+    <link rel="stylesheet" href="snooze-history.css" />
+    <link rel="stylesheet" href="feature-styles.css" />
     <link rel="stylesheet" href="threads.css?v=1" />
     <link rel="stylesheet" href="message-actions.css?v=8" />
-    <link rel="stylesheet" href="ui-audit.css?v=2" />
+    <link rel="stylesheet" href="ui-audit.css?v=3" />
     <link rel="stylesheet" href="translation-ui.css?v=3" />
     <link rel="stylesheet" href="safe-area-audit.css?v=5" />
     <link rel="stylesheet" href="calls-ui.css?v=8" />
@@ -259,7 +263,7 @@
         <div id="notificationsPanel" style="display:none;overflow-y:auto;flex:1;padding:8px 0;"></div>
 
         <div id="markAllReadBar" class="mark-all-read-bar" style="display:none">
-          <button type="button" id="markAllReadBtn">
+          <button type="button" id="markAllReadBtn" onclick="markAllChatsAsRead()">
             <span class="mark-all-read-icon">&#x2714;</span>
             <span>Mark all as read</span>
           </button>
@@ -3317,22 +3321,61 @@
       </div>
     </div>
 
-    <!-- Font Size Slider -->
+    <!-- Font & Text Settings -->
     <div id="fontSizeModal" class="modal" style="display:none">
-      <div class="modal-content" style="width:min(380px,96%);">
+      <div class="modal-content font-settings-modal">
         <div class="modal-header">
-          <h3>Font Size</h3>
+          <h3>🔤 Font &amp; Text</h3>
           <span class="close-modal" id="closeFontSize">&times;</span>
         </div>
         <div class="modal-body">
-          <p style="font-size:13px;color:var(--muted);margin-bottom:12px;">Adjust the font size for chat messages.</p>
-          <div style="display:flex;align-items:center;gap:12px;">
-            <span style="font-size:12px;">A</span>
-            <input type="range" id="fontSizeSlider" min="12" max="22" value="15" style="flex:1;" />
-            <span style="font-size:20px;">A</span>
+
+          <!-- Font Family -->
+          <div class="fs-section-label">Font Family</div>
+          <div class="fs-font-grid" id="fsFontGrid">
+            <button class="fs-font-btn active" data-font="Inter, system-ui, sans-serif" style="font-family:'Inter',system-ui,sans-serif">Inter</button>
+            <button class="fs-font-btn" data-font="-apple-system, BlinkMacSystemFont, sans-serif" style="font-family:-apple-system,BlinkMacSystemFont,sans-serif">System</button>
+            <button class="fs-font-btn" data-font="Georgia, 'Times New Roman', serif" style="font-family:Georgia,serif">Georgia</button>
+            <button class="fs-font-btn" data-font="'Trebuchet MS', Helvetica, sans-serif" style="font-family:'Trebuchet MS',Helvetica,sans-serif">Trebuchet</button>
+            <button class="fs-font-btn" data-font="Verdana, Geneva, sans-serif" style="font-family:Verdana,Geneva,sans-serif">Verdana</button>
+            <button class="fs-font-btn" data-font="'Courier New', Courier, monospace" style="font-family:'Courier New',Courier,monospace">Monospace</button>
           </div>
-          <div id="fontSizePreview" style="margin-top:16px;padding:12px;background:var(--panel-soft);border-radius:8px;">Preview text with your selected font size</div>
-          <button id="saveFontSizeBtn" class="btn btn-primary" style="width:100%;margin-top:16px;">Apply</button>
+
+          <!-- Font Size -->
+          <div class="fs-section-label" style="margin-top:16px">Font Size <span id="fsSizeLabel" class="fs-value-badge">15px</span></div>
+          <div class="fs-slider-row">
+            <span class="fs-a-small">A</span>
+            <input type="range" id="fontSizeSlider" min="12" max="22" step="1" value="15" class="fs-slider" />
+            <span class="fs-a-large">A</span>
+          </div>
+
+          <!-- Font Weight -->
+          <div class="fs-section-label" style="margin-top:16px">Weight</div>
+          <div class="fs-pill-row" id="fsWeightRow">
+            <button class="fs-pill active" data-weight="400">Regular</button>
+            <button class="fs-pill" data-weight="500">Medium</button>
+            <button class="fs-pill" data-weight="600">Semi-bold</button>
+            <button class="fs-pill" data-weight="700">Bold</button>
+          </div>
+
+          <!-- Line Spacing -->
+          <div class="fs-section-label" style="margin-top:16px">Line Spacing</div>
+          <div class="fs-pill-row" id="fsSpacingRow">
+            <button class="fs-pill active" data-spacing="1.4">Compact</button>
+            <button class="fs-pill" data-spacing="1.6">Normal</button>
+            <button class="fs-pill" data-spacing="1.9">Relaxed</button>
+          </div>
+
+          <!-- Live Preview -->
+          <div class="fs-section-label" style="margin-top:16px">Preview</div>
+          <div id="fontSizePreview" class="fs-preview">
+            <div class="fs-preview-bubble fs-preview-in">Hey! How are you doing? 😊</div>
+            <div class="fs-preview-bubble fs-preview-out">I'm great, thanks for asking!</div>
+            <div class="fs-preview-bubble fs-preview-in">Let's catch up later this week.</div>
+          </div>
+
+          <button id="saveFontSizeBtn" class="btn btn-primary" style="width:100%;margin-top:18px;">Apply</button>
+          <button id="resetFontBtn" class="btn btn-outline" style="width:100%;margin-top:8px;">Reset to Default</button>
         </div>
       </div>
     </div>
@@ -3647,14 +3690,24 @@
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-storage-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-messaging-compat.js"></script>
     <script src="config.js?v=1"></script>
+    <script src="notification-bell.js?v=1" defer></script>
+    <script src="notification-prefs.js" defer></script>
+    <script src="snooze-enhancements.js" defer></script>
+    <script src="snooze-history.js" defer></script>
+    <script src="message-search.js" defer></script>
+    <script src="request-priority.js" defer></script>
+    <script src="notification-digest.js" defer></script>
     <script src="permissions-manager.js?v=1"></script>
-    <script src="app-core.js?v=8"></script>
-    <script src="app-extras.js?v=8"></script>
+    <script src="app-core.js?v=10"></script>
+    <script src="app-extras.js?v=10"></script>
     <script src="app-init.js?v=1"></script>
     <script src="pwa-install.js?v=146"></script>
     <script src="fixes.js?v=5"></script>
     <script src="threads.js?v=1"></script>
     <script src="ai-bot.js?v=1"></script>
+    <script src="features-addon.js?v=3"></script>
+    <script src="whatsapp-enhancements.js?v=1"></script>
+    <script src="whatsapp-share.js?v=1" defer></script>
     <script src="chat-fixes.js?v=3" defer></script>
   </body>
 </html>

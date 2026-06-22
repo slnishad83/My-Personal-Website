@@ -356,3 +356,51 @@ body.dark .register-container input {
     font-size: 14px !important;
   }
 }
+
+/* ============================================================
+   100vh → dynamic viewport height fix (iOS Safari URL bar)
+   Prevents content being hidden behind browser chrome on mobile.
+   The dvh unit is supported in all modern browsers (2023+).
+   100vh fallback for older browsers is left as-is in style.css;
+   this override upgrades any key full-height containers.
+   ============================================================ */
+
+@supports (height: 100dvh) {
+  .chat-container,
+  .app-container,
+  .main-container,
+  #app {
+    height: 100dvh !important;
+    max-height: 100dvh !important;
+  }
+
+  .auth-container,
+  .login-wrapper,
+  .onboarding-container {
+    min-height: 100dvh !important;
+  }
+
+  /* Prevent modals from overflowing dynamic viewport */
+  .modal-content {
+    max-height: min(90dvh, calc(100dvh - 32px)) !important;
+  }
+}
+
+/* ============================================================
+   iOS input zoom prevention
+   iOS Safari zooms in when tapping any input with font-size < 16px.
+   Force 16px on inputs; visual size is handled by the container.
+   ============================================================ */
+
+@media (hover: none) and (pointer: coarse) {
+  input[type="text"],
+  input[type="search"],
+  input[type="email"],
+  input[type="password"],
+  input[type="tel"],
+  input[type="url"],
+  textarea,
+  [contenteditable="true"] {
+    font-size: max(16px, 1em) !important;
+  }
+}
