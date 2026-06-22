@@ -6902,7 +6902,6 @@ body,
   }
 
   .chat-actions {
-    max-width: 42vw;
     overflow: visible;
   }
 
@@ -6986,7 +6985,6 @@ body,
   }
 
   .chat-actions {
-    max-width: 40vw;
     gap: 1px;
   }
 
@@ -16129,5 +16127,143 @@ body.dark .notif-bell-btn[data-notif-state="blocked"]::after {
   .notif-bell-dropdown {
     width: 200px;
     right: -16px;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   CHAT HEADER — Responsive layout fix (all devices / browsers)
+   Must stay LAST in this file so it wins cascade order.
+   ═══════════════════════════════════════════════════════════════ */
+
+/* 1 ─ Core flex: info section takes leftover space, never overflows */
+.chat-header {
+  display: flex !important;
+  align-items: center !important;
+  flex-wrap: nowrap !important;
+  overflow: hidden !important;
+  box-sizing: border-box !important;
+}
+
+.chat-header-info {
+  flex: 1 1 0% !important;   /* 0% basis = can shrink to zero */
+  min-width: 0 !important;
+  overflow: hidden !important;
+}
+
+/* 2 ─ Grid inside chat-header-info: column 2 is bounded by flex parent */
+.chat-header-info {
+  display: grid !important;
+  grid-template-columns: 40px minmax(0, 1fr) !important;
+  grid-template-rows: auto auto !important;
+  align-items: center !important;
+  column-gap: 10px !important;
+}
+
+/* 3 ─ Name & status must always truncate, never push siblings sideways */
+.chat-header h2,
+.chat-status,
+.chat-header-sub {
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+  max-width: 100% !important;
+}
+
+/* 4 ─ Actions row: never stretches, never overflows */
+.chat-actions {
+  flex: 0 0 auto !important;
+  max-width: none !important;   /* remove old vw-based cap */
+  flex-wrap: nowrap !important;
+  display: flex !important;
+  align-items: center !important;
+}
+
+/* 5 ─ Small screens (≤ 640px): compact everything */
+@media (max-width: 640px) {
+  .chat-header {
+    gap: 4px !important;
+    padding-left: 8px !important;
+    padding-right: 8px !important;
+  }
+
+  /* Override the ≤900px block that forces 42px even on phones */
+  .mobile-menu-btn {
+    width: 36px !important;
+    min-width: 36px !important;
+    height: 36px !important;
+    flex: 0 0 36px !important;
+  }
+
+  .chat-header-info {
+    grid-template-columns: 38px minmax(0, 1fr) !important;
+    column-gap: 8px !important;
+    padding: 2px 4px !important;
+  }
+
+  .chat-header-avatar,
+  .chat-header-info .list-avatar {
+    width: 38px !important;
+    height: 38px !important;
+  }
+
+  .chat-actions {
+    gap: 2px !important;
+  }
+
+  .chat-actions .icon-btn {
+    width: 32px !important;
+    height: 32px !important;
+  }
+
+  /* Hide low-priority buttons to reclaim header space */
+  #selectModeBtn,
+  #wallpaperBtn {
+    display: none !important;
+  }
+
+  .chat-header h2 {
+    font-size: 14px !important;
+  }
+
+  .chat-status,
+  .chat-header-sub {
+    font-size: 10px !important;
+  }
+}
+
+/* 6 ─ Very small screens (≤ 400px): even more compact */
+@media (max-width: 400px) {
+  .chat-header {
+    gap: 2px !important;
+    padding-left: 4px !important;
+    padding-right: 4px !important;
+  }
+
+  .mobile-menu-btn {
+    width: 32px !important;
+    min-width: 32px !important;
+    height: 32px !important;
+    flex: 0 0 32px !important;
+  }
+
+  .chat-header-info {
+    grid-template-columns: 34px minmax(0, 1fr) !important;
+    column-gap: 6px !important;
+  }
+
+  .chat-header-avatar,
+  .chat-header-info .list-avatar {
+    width: 34px !important;
+    height: 34px !important;
+  }
+
+  .chat-actions {
+    gap: 1px !important;
+  }
+
+  .chat-actions .icon-btn {
+    width: 28px !important;
+    height: 28px !important;
+    font-size: 12px !important;
   }
 }

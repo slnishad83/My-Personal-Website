@@ -3645,16 +3645,16 @@ function collectMediaItems() {
       "";
     addItem(url, filename, caption, "image", messageData);
   });
-  document.querySelectorAll("#messagesArea .video-attachment video").forEach((video) => {
-    const url = video.querySelector("source")?.src || video.src || "";
+    document.querySelectorAll("#messagesArea .video-attachment").forEach((wrap) => {
+    const url = wrap.dataset.previewUrl || wrap.querySelector("video")?.src || "";
     if (!url) return;
-    const messageEl = video.closest("[data-message-id], .message");
+    const messageEl = wrap.closest("[data-message-id], .message");
     const messageData = messageEl?._messageData || null;
     const caption =
       messageEl?.querySelector(".message-text")?.textContent?.slice(0, 120) ||
       messageData?.text?.slice?.(0, 120) ||
       "";
-    addItem(url, messageData?.attachment?.filename || "Video", caption, "video", messageData);
+    addItem(url, wrap.dataset.filename || messageData?.attachment?.filename || "Video", caption, "video", messageData);
   });
   // Collect from shared content (Media, Links, and Docs tabs)
   document.querySelectorAll("#sharedContent .shared-media-item, #groupSharedContent .shared-media-item").forEach((btn) => {
@@ -9541,50 +9541,153 @@ document.getElementById("closeSessionsModal")?.addEventListener("click", () => {
 
 // ===== PHASE 10: ACCESSIBILITY & I18N =====
 
-// ---------- 79. Font Size Slider ----------
+// ---------- 79. Font & Text Settings ----------
 (function initFontSize() {
-  document.getElementById("closeFontSize")?.addEventListener("click", () => {
-    document.getElementById("fontSizeModal").style.display = "none";
-  });
-  const slider = document.getElementById("fontSizeSlider");
-  const preview = document.getElementById("fontSizePreview");
-  if (slider && preview) {
-    slider.addEventListener("input", () => {
-      preview.style.fontSize = slider.value + "px";
+  // ── State ──────────────────────────────────────────────────────────────────
+  const DEFAULTS = { family: "Inter, system-ui, sans-serif", size: "15", weight: "400", spacing: "1.4" };
+  let _prefs = { ...DEFAULTS };
+
+  function _load() {
+    try {
+      const saved = JSON.parse(localStorage.getItem("tc_font_prefs") || "{}");
+      _prefs = { ...DEFAULTS, ...saved };
+      // migrate legacy tc_font_size key
+      const legacySize = localStorage.getItem("tc_font_size");
+      if (legacySize && !saved.size) _prefs.size = legacySize;
+    } catch (_) {}
+  }
+
+  function _apply(prefs) {
+    const root = document.documentElement;
+    root.style.setProperty("--msg-font-family", prefs.family);
+    root.style.setProperty("--msg-font-size", prefs.size + "px");
+    root.style.setProperty("--msg-font-weight", prefs.weight);
+    root.style.setProperty("--msg-line-height", prefs.spacing);
+  }
+
+  function _save(prefs) {
+    localStorage.setItem("tc_font_prefs", JSON.stringify(prefs));
+    localStorage.setItem("tc_font_size", prefs.size); // keep legacy key
+  }
+
+  // ── Apply on boot ──────────────────────────────────────────────────────────
+  _load();
+  _apply(_prefs);
+
+  // ── Modal helpers ──────────────────────────────────────────────────────────
+  function _updatePreview() {
+    const preview = document.getElementById("fontSizePreview");
+    if (!preview) return;
+    const sz  = document.getElementById("fontSizeSlider")?.value || _prefs.size;
+    const fam = document.querySelector("#fsFontGrid .fs-font-btn.active")?.dataset.font || _prefs.family;
+    const wt  = document.querySelector("#fsWeightRow .fs-pill.active")?.dataset.weight || _prefs.weight;
+    const sp  = document.querySelector("#fsSpacingRow .fs-pill.active")?.dataset.spacing || _prefs.spacing;
+    preview.style.setProperty("--fs-prev-size",    sz + "px");
+    preview.style.setProperty("--fs-prev-family",  fam);
+    preview.style.setProperty("--fs-prev-weight",  wt);
+    preview.style.setProperty("--fs-prev-spacing", sp);
+    const label = document.getElementById("fsSizeLabel");
+    if (label) label.textContent = sz + "px";
+  }
+
+  function _syncUI(prefs) {
+    // family
+    document.querySelectorAll("#fsFontGrid .fs-font-btn").forEach(btn => {
+      btn.classList.toggle("active", btn.dataset.font === prefs.family);
+    });
+    // size
+    const slider = document.getElementById("fontSizeSlider");
+    if (slider) slider.value = prefs.size;
+    // weight
+    document.querySelectorAll("#fsWeightRow .fs-pill").forEach(btn => {
+      btn.classList.toggle("active", btn.dataset.weight === prefs.weight);
+    });
+    // spacing
+    document.querySelectorAll("#fsSpacingRow .fs-pill").forEach(btn => {
+      btn.classList.toggle("active", btn.dataset.spacing === prefs.spacing);
+    });
+    _updatePreview();
+  }
+
+  // ── Wire up controls once modal is in the DOM ──────────────────────────────
+  function _wireModal() {
+    document.getElementById("closeFontSize")?.addEventListener("click", () => {
+      document.getElementById("fontSizeModal").style.display = "none";
+    });
+
+    // Font family buttons
+    document.getElementById("fsFontGrid")?.addEventListener("click", e => {
+      const btn = e.target.closest(".fs-font-btn");
+      if (!btn) return;
+      document.querySelectorAll("#fsFontGrid .fs-font-btn").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      _updatePreview();
+    });
+
+    // Size slider
+    document.getElementById("fontSizeSlider")?.addEventListener("input", _updatePreview);
+
+    // Weight pills
+    document.getElementById("fsWeightRow")?.addEventListener("click", e => {
+      const btn = e.target.closest(".fs-pill");
+      if (!btn) return;
+      document.querySelectorAll("#fsWeightRow .fs-pill").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      _updatePreview();
+    });
+
+    // Spacing pills
+    document.getElementById("fsSpacingRow")?.addEventListener("click", e => {
+      const btn = e.target.closest(".fs-pill");
+      if (!btn) return;
+      document.querySelectorAll("#fsSpacingRow .fs-pill").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      _updatePreview();
+    });
+
+    // Apply button
+    document.getElementById("saveFontSizeBtn")?.addEventListener("click", () => {
+      const newPrefs = {
+        family:  document.querySelector("#fsFontGrid .fs-font-btn.active")?.dataset.font  || DEFAULTS.family,
+        size:    document.getElementById("fontSizeSlider")?.value                          || DEFAULTS.size,
+        weight:  document.querySelector("#fsWeightRow .fs-pill.active")?.dataset.weight   || DEFAULTS.weight,
+        spacing: document.querySelector("#fsSpacingRow .fs-pill.active")?.dataset.spacing || DEFAULTS.spacing,
+      };
+      _prefs = newPrefs;
+      _apply(newPrefs);
+      _save(newPrefs);
+      showToast("Font settings applied");
+      document.getElementById("fontSizeModal").style.display = "none";
+    });
+
+    // Reset button
+    document.getElementById("resetFontBtn")?.addEventListener("click", () => {
+      _prefs = { ...DEFAULTS };
+      _syncUI(_prefs);
+      _apply(_prefs);
+      _save(_prefs);
+      showToast("Font reset to default");
     });
   }
-  document.getElementById("saveFontSizeBtn")?.addEventListener("click", () => {
-    const size = document.getElementById("fontSizeSlider")?.value || "15";
-    localStorage.setItem("tc_font_size", size);
-    document.documentElement.style.setProperty("--msg-font-size", size + "px");
-    document.getElementById("messagesArea")?.style.setProperty("font-size", size + "px");
-    showToast("Font size applied");
-    document.getElementById("fontSizeModal").style.display = "none";
-  });
+  _wireModal();
 
-  // Load saved font size
-  const savedSize = localStorage.getItem("tc_font_size");
-  if (savedSize) {
-    document.documentElement.style.setProperty("--msg-font-size", savedSize + "px");
-  }
-
-  // Add to settings
+  // ── Add entry to Settings panel ────────────────────────────────────────────
   const check = setInterval(() => {
     if (document.getElementById("wallpaperSettingsBtn") && !document.getElementById("fontSizeSettingsBtn")) {
+      clearInterval(check);
       const btn = document.createElement("button");
       btn.id = "fontSizeSettingsBtn";
       btn.className = "setting-item";
-      btn.textContent = "Font Size";
+      btn.innerHTML = '<span class="si-icon">🔤</span> Font &amp; Text';
       btn.onclick = () => {
-        const sz = localStorage.getItem("tc_font_size") || "15";
-        document.getElementById("fontSizeSlider").value = sz;
-        document.getElementById("fontSizePreview").style.fontSize = sz + "px";
+        _load();
+        _syncUI(_prefs);
         document.getElementById("fontSizeModal").style.display = "flex";
       };
       const wallBtn = document.getElementById("wallpaperSettingsBtn");
       if (wallBtn) wallBtn.parentElement?.insertBefore(btn, wallBtn);
     }
-  }, 1000);
+  }, 800);
 })();
 
 // ---------- 80. High Contrast Mode ----------
@@ -11069,7 +11172,8 @@ document.getElementById("closeSessionsModal")?.addEventListener("click", () => {
     for (const item of items) {
       const chatData = item.chatData || {};
       item.lastMessageSentByMe = chatData.lastMessageSenderId === currentUser?.uid;
-      item.lastMessageStatus = chatData.lastMessageStatus || "sent";
+      // Only show tick when Firestore has an explicit status — no "sent" default fallback
+      item.lastMessageStatus = chatData.lastMessageStatus || "";
     }
     return items;
   };

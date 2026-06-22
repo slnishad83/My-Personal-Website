@@ -82,7 +82,7 @@ self.addEventListener('notificationclick', event => {
   );
 });
 
-const CACHE_NAME = 'team-chat-v200-modular';
+const CACHE_NAME = 'team-chat-v210-wa';
 const STATIC_ASSETS = [
   'auth-theme.css',
   'style.css',
@@ -97,6 +97,11 @@ const STATIC_ASSETS = [
   'app-core.js',
   'app-extras.js',
   'app-init.js',
+  'fixes.js',
+  'threads.js',
+  'ai-bot.js',
+  'features-addon.js',
+  'whatsapp-enhancements.js',
   'pwa-install.js',
   'manifest.json',
   'app-icon.svg',
@@ -108,7 +113,11 @@ const HTML_PAGES = [
   'login.html',
   'reset.html',
   'verify.html',
-  'turn.html'
+  'turn.html',
+  'album.html',
+  'insights.html',
+  'calendar.html',
+  'expenses.html'
 ];
 
 self.addEventListener('install', event => {
