@@ -7343,6 +7343,12 @@ async function loadReceivedRequests() {
       ...groupSnapshot.docs.map((d) => d.id),
     ]);
     const validReadIds = new Set([...cachedReadRequestIds].filter((id) => allIncomingIds.has(id)));
+    const staleIds = [...cachedReadRequestIds].filter((id) => !allIncomingIds.has(id));
+    if (staleIds.length > 0) {
+      db.collection("chatRequestsRead").doc(currentUser.uid)
+        .update({ ids: firebase.firestore.FieldValue.arrayRemove(...staleIds) })
+        .catch((err) => console.warn("Could not prune stale read IDs:", err));
+    }
 
     if (badge) {
       const unreadIncomingCount = [...allIncomingIds].filter((id) => !validReadIds.has(id)).length;
