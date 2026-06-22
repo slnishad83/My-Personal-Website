@@ -1304,6 +1304,8 @@ body.dark .community-icon {
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
 }
+
+/* ── 2026 Modern Call Shell ────────────────────────────────── */
 .call-shell {
   position: relative;
   width: 100%;
@@ -1317,6 +1319,7 @@ body.dark .community-icon {
   border-radius: 0;
   overflow: hidden;
 }
+
 @media (min-width: 600px) {
   .call-shell {
     height: min(820px, 96dvh);
@@ -1324,13 +1327,17 @@ body.dark .community-icon {
     box-shadow: 0 32px 80px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.06);
   }
 }
+
 .call-shell.incoming {
   animation: incomingPulse 1.8s ease-in-out infinite;
 }
+
 @keyframes incomingPulse {
   0%, 100% { box-shadow: 0 0 0 0 rgba(0, 168, 132, 0); }
   50%       { box-shadow: 0 0 0 12px rgba(0, 168, 132, 0.14); }
 }
+
+/* ── Call Top Bar ──────────────────────────────────────────── */
 .call-top {
   min-height: 80px;
   padding: max(18px, env(safe-area-inset-top, 18px)) 18px 14px;
@@ -1342,14 +1349,17 @@ body.dark .community-icon {
   position: relative;
   z-index: 3;
 }
+
 .call-top > div {
   min-width: 0;
   flex: 1;
 }
+
 .call-top h3,
 .call-top p {
   margin: 0;
 }
+
 .call-top h3 {
   overflow: hidden;
   color: #fff;
@@ -1361,6 +1371,7 @@ body.dark .community-icon {
   letter-spacing: -0.3px;
   text-shadow: 0 1px 8px rgba(0,0,0,0.4);
 }
+
 .call-top p {
   color: rgba(255, 255, 255, 0.6);
   font-size: 13px;
@@ -1370,6 +1381,7 @@ body.dark .community-icon {
   white-space: nowrap;
   margin-top: 3px;
 }
+
 .call-type-label {
   display: inline-flex;
   align-items: center;
@@ -1645,6 +1657,7 @@ body.dark .community-icon {
   object-fit: cover;
 }
 
+/* ── Modern 2026 Audio Avatar ──────────────────────────────── */
 .call-audio-avatar {
   position: absolute;
   width: 130px;
@@ -1660,14 +1673,18 @@ body.dark .community-icon {
   box-shadow: 0 0 0 0 rgba(0, 168, 132, 0.4);
   text-shadow: 0 2px 8px rgba(0,0,0,0.3);
 }
+
 .call-audio-avatar.ringing {
   animation: avatarRing 1.4s ease-in-out infinite;
 }
+
 @keyframes avatarRing {
   0%   { transform: scale(1);    box-shadow: 0 0 0 0 rgba(0,168,132,0.5); }
   60%  { transform: scale(1.06); box-shadow: 0 0 0 22px rgba(0,168,132,0); }
   100% { transform: scale(1);    box-shadow: 0 0 0 0 rgba(0,168,132,0); }
 }
+
+/* ── Call Duration Pill ────────────────────────────────────── */
 .call-duration {
   position: absolute;
   bottom: 22px;
@@ -1685,6 +1702,8 @@ body.dark .community-icon {
   letter-spacing: 0.5px;
   white-space: nowrap;
 }
+
+/* ── Modern 2026 Call Controls ─────────────────────────────── */
 .call-controls {
   min-height: 100px;
   padding: 18px 20px calc(max(20px, env(safe-area-inset-bottom, 20px)) + 4px);
@@ -1699,6 +1718,8 @@ body.dark .community-icon {
   -webkit-backdrop-filter: blur(16px);
   border-top: 1px solid rgba(255,255,255,0.07);
 }
+
+/* ── Modern Call Buttons ───────────────────────────────────── */
 .call-icon-btn {
   position: relative;
   display: inline-flex;
@@ -1718,6 +1739,7 @@ body.dark .community-icon {
   transition: background 0.18s ease, transform 0.14s ease, box-shadow 0.18s ease;
   box-shadow: 0 2px 12px rgba(0,0,0,0.2);
 }
+
 .call-icon-btn:hover,
 .call-icon-btn:focus-visible {
   background: rgba(255, 255, 255, 0.2);
@@ -1725,14 +1747,18 @@ body.dark .community-icon {
   transform: scale(1.07);
   box-shadow: 0 4px 18px rgba(0,0,0,0.3);
 }
+
 .call-icon-btn:active {
   transform: scale(0.94);
 }
+
 .call-icon-btn:disabled {
   cursor: not-allowed;
   opacity: 0.38;
   transform: none;
 }
+
+/* Active = toggled off (muted/cam-off/etc.) */
 .call-icon-btn.active {
   background: rgba(255, 255, 255, 0.18);
   box-shadow: inset 0 0 0 2px rgba(255,255,255,0.25);
@@ -1742,29 +1768,63 @@ body.dark .community-icon {
   content: attr(data-control-label);
   position: absolute;
   left: 50%;
-  bottom: calc(100% + 8px);
+  bottom: calc(100% + 10px);
   transform: translateX(-50%);
-  min-width: 68px;
+  min-width: 56px;
   padding: 3px 8px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.14);
-  color: #fff;
-  font-size: 11px;
-  font-weight: 800;
-  line-height: 1.2;
+  background: rgba(0,0,0,0.55);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  color: rgba(255,255,255,0.85);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  line-height: 1.3;
   text-align: center;
   white-space: nowrap;
   pointer-events: none;
   opacity: 0;
   visibility: hidden;
-  transition:
-    opacity 0.16s ease,
-    visibility 0.16s ease;
+  transition: opacity 0.16s ease, visibility 0.16s ease;
 }
 
 .call-icon-btn.show-control-label::after {
   opacity: 1;
   visibility: visible;
+}
+
+/* End-call button — always red and larger */
+#endCallBtn,
+button[title="End call"],
+button[aria-label="End call"],
+button[data-control-label="END"] {
+  background: #ef4444 !important;
+  width: 68px !important;
+  height: 68px !important;
+  font-size: 24px !important;
+  box-shadow: 0 4px 20px rgba(239,68,68,0.5) !important;
+}
+#endCallBtn:hover,
+button[title="End call"]:hover {
+  background: #dc2626 !important;
+  transform: scale(1.08) !important;
+  box-shadow: 0 6px 24px rgba(239,68,68,0.6) !important;
+}
+
+/* Answer button — green */
+#answerCallBtn,
+button[title="Answer"],
+button[aria-label="Answer call"] {
+  background: #16a34a !important;
+  width: 68px !important;
+  height: 68px !important;
+  font-size: 24px !important;
+  box-shadow: 0 4px 20px rgba(22,163,74,0.5) !important;
+}
+#answerCallBtn:hover {
+  background: #15803d !important;
+  transform: scale(1.08) !important;
 }
 
 .call-icon-btn.active::before {
@@ -14359,23 +14419,95 @@ body.large-tap-targets .setting-item {
   text-shadow: 0 2px 8px rgba(0,0,0,0.5);
 }
 .video-attachment[data-preview-url] { display: inline-block; }
-/* 2026 Call: Network Quality Indicator */
-.call-network-indicator{display:flex;align-items:center;gap:4px;padding:4px 10px;border-radius:999px;background:rgba(0,0,0,0.45);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);position:absolute;top:14px;right:14px;z-index:4;font-size:11px;font-weight:700;color:#fff;letter-spacing:.3px;transition:opacity .3s;}
-.call-network-indicator.good{color:#4ade80;}
-.call-network-indicator.fair{color:#facc15;}
-.call-network-indicator.poor{color:#f87171;}
-.call-network-indicator-bars{display:flex;align-items:flex-end;gap:2px;height:14px;}
-.call-network-bar{width:3px;border-radius:2px;background:currentColor;opacity:.3;transition:opacity .3s,height .3s;}
-.call-network-bar.active{opacity:1;}
-.call-network-bar:nth-child(1){height:4px;}
-.call-network-bar:nth-child(2){height:7px;}
-.call-network-bar:nth-child(3){height:10px;}
-.call-network-bar:nth-child(4){height:14px;}
-.call-reconnecting-banner{position:absolute;top:0;left:0;right:0;z-index:5;padding:8px 14px;background:rgba(239,68,68,0.85);backdrop-filter:blur(8px);color:#fff;font-size:12px;font-weight:700;text-align:center;transform:translateY(-100%);transition:transform .25s ease;}
-.call-reconnecting-banner.show{transform:translateY(0);}
-.call-hold-overlay{position:absolute;inset:0;z-index:5;display:none;align-items:center;justify-content:center;flex-direction:column;gap:10px;background:rgba(0,0,0,0.65);backdrop-filter:blur(6px);color:#fff;font-size:15px;font-weight:700;}
-.call-hold-overlay.active{display:flex;}
-.call-hold-icon{font-size:48px;opacity:.75;}
+
+/* ── 2026 Call: Network Quality Indicator ──────────────────── */
+.call-network-indicator {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(0,0,0,0.45);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  z-index: 4;
+  font-size: 11px;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: 0.3px;
+  transition: opacity 0.3s;
+}
+.call-network-indicator.good  { color: #4ade80; }
+.call-network-indicator.fair  { color: #facc15; }
+.call-network-indicator.poor  { color: #f87171; }
+.call-network-indicator-bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 14px;
+}
+.call-network-bar {
+  width: 3px;
+  border-radius: 2px;
+  background: currentColor;
+  opacity: 0.3;
+  transition: opacity 0.3s, height 0.3s;
+}
+.call-network-bar.active { opacity: 1; }
+.call-network-bar:nth-child(1) { height: 4px; }
+.call-network-bar:nth-child(2) { height: 7px; }
+.call-network-bar:nth-child(3) { height: 10px; }
+.call-network-bar:nth-child(4) { height: 14px; }
+
+/* ── Connection Status Banner ──────────────────────────────── */
+.call-reconnecting-banner {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 5;
+  padding: 8px 14px;
+  background: rgba(239,68,68,0.85);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  text-align: center;
+  letter-spacing: 0.3px;
+  transform: translateY(-100%);
+  transition: transform 0.25s ease;
+}
+.call-reconnecting-banner.show {
+  transform: translateY(0);
+}
+
+/* ── Hold State Overlay ────────────────────────────────────── */
+.call-hold-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 10px;
+  background: rgba(0,0,0,0.65);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  color: #fff;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+}
+.call-hold-overlay.active { display: flex; }
+.call-hold-icon {
+  font-size: 48px;
+  opacity: 0.75;
+}
 
 
 /* ═══════════════════════════════════════════════════════════════════
@@ -15069,11 +15201,33 @@ body {
 }
 
 /* ── 5. Sidebar layout ────────────────────────────────────────── */
+/* NOTE: do NOT add display:flex !important here — it would override
+   .chat-container.chat-open .sidebar { display: none } on mobile. */
 .sidebar {
-  display: flex !important;
   flex-direction: column !important;
   min-height: 0 !important;
   overflow: hidden !important;
+}
+
+/* ── 5b. Mobile chat split-view: sidebar hides when chat is open ── */
+@media (max-width: 900px) {
+  /* Default state: sidebar visible, chat hidden */
+  .chat-container .sidebar {
+    display: flex !important;
+  }
+  .chat-container:not(.chat-open) .chat-main {
+    display: none !important;
+  }
+  /* Chat open: sidebar hides, chat takes full screen */
+  .chat-container.chat-open .sidebar {
+    display: none !important;
+  }
+  .chat-container.chat-open .chat-main {
+    display: flex !important;
+    width: 100% !important;
+    flex: 1 1 100% !important;
+    min-width: 0 !important;
+  }
 }
 
 .chat-list,
@@ -15091,6 +15245,18 @@ body {
   padding-right: max(8px, env(safe-area-inset-right, 0px)) !important;
 }
 
+
+/* ── Archive list: suppress stray tick/status icons in preview ───────── */
+#archiveList .list-item .list-preview {
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  display: block !important;
+}
+#archiveList .list-item .chat-list-status,
+#archiveList .list-item .message-status {
+  display: none !important;
+}
 /* ── 7. Context menus — clamp to viewport ────────────────────── */
 .chat-context-menu,
 .message-context-menu,
