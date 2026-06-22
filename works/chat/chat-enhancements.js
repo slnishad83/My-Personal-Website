@@ -1,12 +1,96 @@
 /* ============================================================
-   CHAT ENHANCEMENTS v2 — nishadsl.com/works/chat
-   All file types: image · video · audio · document previews
-   Scroll-to-latest button: all devices, browsers, PWA
+   CHAT ENHANCEMENTS v3 — nishadsl.com/works/chat
+   · Truly universal dark mode (theme-color, OS sync)
+   · All file types: image / video / audio / document preview
+   · Scroll-to-latest: all devices, browsers, PWA
    ============================================================ */
 (function () {
   'use strict';
 
-  /* ── File-type patterns ───────────────────────────────────── */
+  /* ══════════════════════════════════════════════════════════
+     DARK MODE — UNIVERSAL EXTRAS
+     The CSS handles color-scheme and visual overrides.
+     JS handles:
+       1. <meta name="theme-color"> — controls the browser
+          address bar and PWA title bar colour on every
+          mobile browser and installed app.
+       2. OS dark-mode sync — if the user hasn't manually
+          toggled dark mode, mirror the OS preference.
+     ══════════════════════════════════════════════════════════ */
+
+  var DARK_THEME  = '#0b141a';   /* dark mode browser chrome */
+  var LIGHT_THEME = '#008069';   /* light mode browser chrome */
+
+  /** Update <meta name="theme-color"> for mobile & PWA chrome */
+  function syncThemeColor(isDark) {
+    var existing = document.querySelector('meta[name="theme-color"]');
+    var meta = existing || document.createElement('meta');
+    if (!existing) {
+      meta.name = 'theme-color';
+      document.head.appendChild(meta);
+    }
+    meta.content = isDark ? DARK_THEME : LIGHT_THEME;
+
+    /* Also update apple-mobile-web-app-status-bar-style */
+    var appleBar = document.querySelector('meta[name="apple-mobile-web-app-status-bar-style"]');
+    if (!appleBar) {
+      appleBar = document.createElement('meta');
+      appleBar.name = 'apple-mobile-web-app-status-bar-style';
+      document.head.appendChild(appleBar);
+    }
+    appleBar.content = isDark ? 'black-translucent' : 'default';
+  }
+
+  /** Returns true when body has .dark class */
+  function isDark() {
+    return document.body.classList.contains('dark');
+  }
+
+  /* Watch body class changes to sync theme-color automatically */
+  var darkWatcher = new MutationObserver(function (mutations) {
+    mutations.forEach(function (m) {
+      if (m.type === 'attributes' && m.attributeName === 'class') {
+        var dark = isDark();
+        syncThemeColor(dark);
+        refreshDocIconColors(dark);
+      }
+    });
+  });
+
+  /**
+   * OS-level dark-mode sync.
+   * If the user has never manually toggled dark mode (no localStorage key),
+   * automatically match the OS/system preference.
+   * Once the user toggles it manually, we respect their choice forever.
+   */
+  function setupOsSync() {
+    var mq = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)');
+    if (!mq) return;
+
+    /* Only auto-apply if no manual preference is saved */
+    if (localStorage.getItem('darkMode') === null) {
+      if (mq.matches && !isDark()) {
+        document.body.classList.add('dark');
+      } else if (!mq.matches && isDark()) {
+        document.body.classList.remove('dark');
+      }
+    }
+
+    /* When the OS theme changes, follow it — but only if the user
+       hasn't manually set a preference (localStorage not yet set) */
+    mq.addEventListener('change', function (e) {
+      if (localStorage.getItem('darkMode') === null) {
+        document.body.classList.toggle('dark', e.matches);
+        syncThemeColor(e.matches);
+      }
+    });
+  }
+
+
+  /* ══════════════════════════════════════════════════════════
+     FILE-TYPE DETECTION & MEDIA PREVIEWS
+     ══════════════════════════════════════════════════════════ */
+
   var TYPES = {
     image:   /\.(png|jpe?g|gif|webp|avif|bmp|heic|heif|svg|tiff?)(\?.*)?$/i,
     video:   /\.(mp4|mov|webm|avi|mkv|ogv|3gp|m4v|wmv|flv)(\?.*)?$/i,
@@ -16,11 +100,11 @@
     excel:   /\.(xlsx?|ods|csv)(\?.*)?$/i,
     ppt:     /\.(pptx?|odp|key)(\?.*)?$/i,
     archive: /\.(zip|rar|7z|tar\.gz|tar|gz|bz2|xz)(\?.*)?$/i,
-    code:    /\.(json|xml|html?|css|js|ts|py|java|cpp|c|md|yaml|yml|txt)(\?.*)?$/i,
+    code:    /\.(json|xml|html?|css|js|ts|py|java|cpp|c|md|ya?ml|txt)(\?.*)?$/i,
   };
 
-  /* Icon colours per doc type */
-  var DOC_STYLE = {
+  /* Light-mode icon colours */
+  var DOC_COLOR = {
     pdf:     { bg: '#ffebee', fg: '#c62828' },
     word:    { bg: '#e3f2fd', fg: '#1565c0' },
     excel:   { bg: '#e8f5e9', fg: '#2e7d32' },
@@ -29,8 +113,8 @@
     code:    { bg: '#f3e5f5', fg: '#6a1b9a' },
   };
 
-  /* Dark-mode equivalents */
-  var DOC_STYLE_DARK = {
+  /* Dark-mode icon colours */
+  var DOC_COLOR_DARK = {
     pdf:     { bg: '#4a0000', fg: '#ef9a9a' },
     word:    { bg: '#0d2137', fg: '#90caf9' },
     excel:   { bg: '#0a2010', fg: '#a5d6a7' },
@@ -45,16 +129,6 @@
     return null;
   }
 
-  function extOf(name, href) {
-    var m = (name || href || '').match(/\.([a-z0-9]{1,8})(\?.*)?$/i);
-    return m ? m[1].toUpperCase() : 'FILE';
-  }
-
-  function isDark() {
-    return document.body.classList.contains('dark');
-  }
-
-  /* ── Main enhancer ────────────────────────────────────────── */
   function enhanceCard(card) {
     if (card.dataset.ceDone) return;
     card.dataset.ceDone = '1';
@@ -67,145 +141,104 @@
     card.setAttribute('data-ce-type', type || 'file');
 
     switch (type) {
-      case 'image':
-        addImagePreview(card, href, filename);
-        break;
-      case 'video':
-        addVideoPreview(card, href, filename);
-        break;
-      case 'audio':
-        addAudioPlayer(card, href);
-        break;
-      default:
-        colorDocIcon(card, type);
+      case 'image': addImagePreview(card, href, filename); break;
+      case 'video': addVideoPreview(card, href, filename); break;
+      case 'audio': addAudioPlayer(card, href);            break;
+      default:      colorDocIcon(card, type);
     }
   }
 
-  /* ── Image: inject full-width thumbnail ───────────────────── */
   function addImagePreview(card, href, filename) {
     var wrap = document.createElement('div');
     wrap.className = 'ce-preview';
-
     var img = document.createElement('img');
-    img.className  = 'ce-preview-img';
-    img.src        = href;
-    img.alt        = filename;
-    img.loading    = 'lazy';
-    img.decoding   = 'async';
-    img.onerror    = function () {
+    img.className = 'ce-preview-img';
+    img.src = href;  img.alt = filename;
+    img.loading = 'lazy';  img.decoding = 'async';
+    img.onerror = function () {
       wrap.style.display = 'none';
       card.classList.remove('has-image-preview');
     };
-
     wrap.appendChild(img);
     card.insertBefore(wrap, card.firstChild);
     card.classList.add('has-image-preview');
   }
 
-  /* ── Video: inject thumbnail + play overlay ───────────────── */
   function addVideoPreview(card, href, filename) {
     var wrap = document.createElement('div');
     wrap.className = 'ce-preview';
-
     var vid = document.createElement('video');
-    vid.className  = 'ce-preview-video';
-    vid.src        = href;
-    vid.preload    = 'metadata';
-    vid.muted      = true;
-    vid.playsInline = true;
+    vid.className = 'ce-preview-video';
+    vid.src = href;  vid.preload = 'metadata';
+    vid.muted = true;  vid.playsInline = true;
     vid.setAttribute('playsinline', '');
-    vid.addEventListener('loadedmetadata', function () {
-      vid.currentTime = 0.5;          /* seek to capture a frame */
-    });
-
+    vid.addEventListener('loadedmetadata', function () { vid.currentTime = 0.5; });
     var overlay = document.createElement('div');
-    overlay.className   = 'ce-play-overlay';
-    overlay.innerHTML   = '&#9654;';
+    overlay.className = 'ce-play-overlay';
+    overlay.innerHTML = '&#9654;';
     overlay.setAttribute('aria-hidden', 'true');
-
-    wrap.appendChild(vid);
-    wrap.appendChild(overlay);
+    wrap.appendChild(vid);  wrap.appendChild(overlay);
     card.insertBefore(wrap, card.firstChild);
     card.classList.add('has-video-preview');
   }
 
-  /* ── Audio: append a native audio player ──────────────────── */
   function addAudioPlayer(card, href) {
-    /* Avoid adding if there's already an <audio> inside */
     if (card.querySelector('audio')) return;
-
-    var playerWrap = document.createElement('div');
-    playerWrap.className = 'ce-audio-player';
-
+    var wrap = document.createElement('div');
+    wrap.className = 'ce-audio-player';
     var audio = document.createElement('audio');
-    audio.src     = href;
-    audio.controls = true;
-    audio.preload  = 'metadata';
-
-    playerWrap.appendChild(audio);
-    card.appendChild(playerWrap);
+    audio.src = href;  audio.controls = true;  audio.preload = 'metadata';
+    wrap.appendChild(audio);
+    card.appendChild(wrap);
     card.classList.add('has-audio-card');
   }
 
-  /* ── Document/archive: colour the type badge ──────────────── */
   function colorDocIcon(card, type) {
-    if (!type || !(type in DOC_STYLE)) return;
+    if (!type || !(type in DOC_COLOR)) return;
     var iconEl = card.querySelector('.file-attachment-icon');
     if (!iconEl || iconEl.dataset.ceColoured) return;
     iconEl.dataset.ceColoured = '1';
+    applyIconColor(iconEl, type, isDark());
+  }
 
-    var palette = isDark() ? DOC_STYLE_DARK[type] : DOC_STYLE[type];
+  function applyIconColor(iconEl, type, dark) {
+    var palette = (dark ? DOC_COLOR_DARK : DOC_COLOR)[type];
+    if (!palette) return;
     iconEl.style.setProperty('background', palette.bg, 'important');
     iconEl.style.setProperty('color', palette.fg, 'important');
   }
 
-  /* Re-apply colours when dark mode toggles */
-  function refreshDocColours() {
+  function refreshDocIconColors(dark) {
     document.querySelectorAll('.file-attachment-icon[data-ce-coloured]')
       .forEach(function (iconEl) {
         var card = iconEl.closest('[data-ce-type]');
         if (!card) return;
-        var type = card.getAttribute('data-ce-type');
-        if (!type || !(type in DOC_STYLE)) return;
-        var palette = isDark() ? DOC_STYLE_DARK[type] : DOC_STYLE[type];
-        iconEl.style.setProperty('background', palette.bg, 'important');
-        iconEl.style.setProperty('color', palette.fg, 'important');
+        applyIconColor(iconEl, card.getAttribute('data-ce-type'), dark);
       });
   }
 
-  /* ── Batch-process all unenhanced file cards ──────────────── */
   function scanCards(root) {
     root = root || document;
     var cards = root.querySelectorAll
-      ? root.querySelectorAll('a.file-attachment-card:not([data-ce-done])')
-      : [];
+      ? root.querySelectorAll('a.file-attachment-card:not([data-ce-done])') : [];
     Array.prototype.forEach.call(cards, enhanceCard);
   }
 
-  /* ── MutationObserver watches for new messages ─────────────── */
   var cardObserver = new MutationObserver(function (mutations) {
     mutations.forEach(function (m) {
       m.addedNodes.forEach(function (node) {
         if (node.nodeType !== 1) return;
-        if (node.matches && node.matches('a.file-attachment-card')) {
-          enhanceCard(node);
-        } else {
-          scanCards(node);
-        }
+        if (node.matches && node.matches('a.file-attachment-card')) enhanceCard(node);
+        else scanCards(node);
       });
     });
   });
 
-  /* Watch for dark-mode toggle to recolour document icons */
-  var darkObserver = new MutationObserver(function (mutations) {
-    mutations.forEach(function (m) {
-      if (m.type === 'attributes' && m.attributeName === 'class') {
-        refreshDocColours();
-      }
-    });
-  });
 
-  /* ── Scroll-to-latest button: device-universal upgrade ─────── */
+  /* ══════════════════════════════════════════════════════════
+     SCROLL-TO-LATEST BUTTON — LABELED PILL
+     ══════════════════════════════════════════════════════════ */
+
   function enhanceScrollBtn() {
     var btn = document.getElementById('jumpToBottomBtn');
     if (!btn || btn.dataset.ceEnhanced) return;
@@ -217,19 +250,25 @@
     btn.setAttribute('aria-label', 'Jump to latest messages');
   }
 
-  /* Re-enhance button if the chat panel is recreated on navigation */
-  var btnObserver = new MutationObserver(function () {
-    enhanceScrollBtn();
-  });
+  var btnObserver = new MutationObserver(function () { enhanceScrollBtn(); });
 
-  /* ── Boot ──────────────────────────────────────────────────── */
+
+  /* ══════════════════════════════════════════════════════════
+     BOOT
+     ══════════════════════════════════════════════════════════ */
+
   function init() {
+    /* Dark mode extras */
+    syncThemeColor(isDark());
+    setupOsSync();
+    darkWatcher.observe(document.body, { attributes: true, attributeFilter: ['class'] });
+
+    /* File-card media previews */
     scanCards();
     cardObserver.observe(document.body, { childList: true, subtree: true });
-    darkObserver.observe(document.body, { attributes: true, attributeFilter: ['class'] });
 
+    /* Scroll button */
     enhanceScrollBtn();
-
     var anchor = document.getElementById('chatMain')
                || document.querySelector('.chat-main')
                || document.body;
@@ -241,4 +280,5 @@
   } else {
     init();
   }
+
 })();
