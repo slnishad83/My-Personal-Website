@@ -12968,6 +12968,180 @@ body.dark .message .message-translation-card.showing-original .message-translati
   letter-spacing: 0.2px;
 }
 
+/* ── Font & Text settings modal ── */
+.font-settings-modal {
+  width: min(420px, 96%);
+  max-height: min(90dvh, calc(100vh - 32px));
+  overflow-y: auto;
+}
+
+.fs-section-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: #667781;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.fs-value-badge {
+  font-size: 11px;
+  font-weight: 600;
+  background: var(--brand, #008069);
+  color: #fff;
+  padding: 1px 7px;
+  border-radius: 10px;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+/* Font family grid */
+.fs-font-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+}
+
+.fs-font-btn {
+  padding: 10px 6px;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 10px;
+  background: #fff;
+  font-size: 13px;
+  cursor: pointer;
+  text-align: center;
+  transition: border-color 0.12s, background 0.12s, color 0.12s;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.fs-font-btn.active {
+  border-color: var(--brand, #008069);
+  background: color-mix(in srgb, var(--brand, #008069) 10%, #fff);
+  color: var(--brand, #008069);
+  font-weight: 600;
+}
+
+body.dark .fs-font-btn {
+  background: #1e2d35;
+  border-color: #2a3942;
+  color: #e9edef;
+}
+
+body.dark .fs-font-btn.active {
+  background: color-mix(in srgb, var(--brand, #008069) 20%, #1e2d35);
+  border-color: var(--brand, #008069);
+  color: #25d366;
+}
+
+/* Slider row */
+.fs-slider-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.fs-a-small { font-size: 12px; color: #667781; font-weight: 600; }
+.fs-a-large { font-size: 22px; color: #667781; font-weight: 600; line-height: 1; }
+
+.fs-slider {
+  flex: 1;
+  accent-color: var(--brand, #008069);
+  height: 4px;
+  cursor: pointer;
+}
+
+/* Pill row (weight / spacing) */
+.fs-pill-row {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.fs-pill {
+  padding: 6px 14px;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 20px;
+  background: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  color: #667781;
+  cursor: pointer;
+  transition: border-color 0.12s, background 0.12s, color 0.12s;
+}
+
+.fs-pill.active {
+  border-color: var(--brand, #008069);
+  background: color-mix(in srgb, var(--brand, #008069) 10%, #fff);
+  color: var(--brand, #008069);
+}
+
+body.dark .fs-pill {
+  background: #1e2d35;
+  border-color: #2a3942;
+  color: #8696a0;
+}
+
+body.dark .fs-pill.active {
+  background: color-mix(in srgb, var(--brand, #008069) 20%, #1e2d35);
+  border-color: var(--brand, #008069);
+  color: #25d366;
+}
+
+/* Preview bubbles */
+.fs-preview {
+  background: var(--panel-soft, #f0f2f5);
+  border-radius: 10px;
+  padding: 12px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: var(--fs-prev-size, 15px);
+  font-family: var(--fs-prev-family, inherit);
+  font-weight: var(--fs-prev-weight, 400);
+  line-height: var(--fs-prev-spacing, 1.4);
+}
+
+.fs-preview-bubble {
+  max-width: 75%;
+  padding: 6px 10px;
+  border-radius: 8px;
+  font-size: inherit;
+  font-family: inherit;
+  font-weight: inherit;
+  line-height: inherit;
+}
+
+.fs-preview-in {
+  background: #fff;
+  align-self: flex-start;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+}
+
+.fs-preview-out {
+  background: var(--brand, #008069);
+  color: #fff;
+  align-self: flex-end;
+}
+
+body.dark .fs-preview { background: #0d1418; }
+body.dark .fs-preview-in { background: #1e2d35; color: #e9edef; }
+
+/* Apply the CSS vars to message bubbles */
+.message-bubble,
+.message-bubble p,
+.message-text,
+#messagesArea {
+  font-family: var(--msg-font-family, inherit);
+  font-size: var(--msg-font-size, 15px);
+  font-weight: var(--msg-font-weight, 400);
+  line-height: var(--msg-line-height, 1.4);
+}
+
 /* Chat list message status indicator */
 .chat-list-status {
   font-size: 11px;
