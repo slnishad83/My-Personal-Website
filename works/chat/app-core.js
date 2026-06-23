@@ -16577,7 +16577,7 @@ async function init() {
         "Session checking is taking longer than expected. Check your connection and retry.",
       );
     }
-  }, 8000);
+  }, 6000);
   auth.onAuthStateChanged(async (user) => {
     if (!user) {
       window.clearTimeout(authStateTimeout);
@@ -16590,7 +16590,7 @@ async function init() {
         await Promise.race([
           user.reload(),
           new Promise((_, reject) =>
-            setTimeout(() => reject(new Error("user.reload() timed out")), 5000),
+            setTimeout(() => reject(new Error("user.reload() timed out")), 2500),
           ),
         ]);
         user = auth.currentUser || user;
