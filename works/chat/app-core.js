@@ -18430,7 +18430,7 @@ function showCurrentStory() {
 
   if (avatar) {
     if (user.userAvatar) { avatar.innerHTML = `<img src="${escapeHtml(user.userAvatar)}" alt="" />`; }
-    else { avatar.textContent = user.userName[0] || "U"; avatar.style.background = "#dfe5e7"; }
+    else { avatar.textContent = user.userName[0] || "U"; avatar.style.background = document.body.classList.contains('dark') ? '#202c33' : '#dfe5e7'; }
   }
   if (name) name.textContent = user.userName;
   if (time) time.textContent = story.timestamp?.toDate?.()?.toLocaleTimeString() || "";

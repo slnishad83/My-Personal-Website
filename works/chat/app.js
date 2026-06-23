@@ -6646,7 +6646,7 @@ async function searchUsersRealtime(searchTerm) {
   const searchToken = ++chatSearchToken;
 
   // Show a loading indicator in the list while we fetch
-  chatsList.innerHTML = `<div class="empty-state" style="padding:32px;color:#667781;">Searching...</div>`;
+  chatsList.innerHTML = `<div class="empty-state" style="padding:32px;color:var(--muted);">Searching...</div>`;
 
   try {
     const looksLikeEmail = isValidEmailAddress(term);
@@ -8401,7 +8401,7 @@ async function loadPinnedMessages() {
     pinnedMessages.forEach((pin) => {
       const div = document.createElement("div");
       div.className = "pinned-message-item";
-      div.innerHTML = `<span>📌</span><div style="flex:1;"><div style="font-weight:600; font-size:12px;">${escapeHtml(pin.senderName)}</div><div style="font-size:11px; color:#888;">${escapeHtml(pin.text ? pin.text.substring(0, 50) : "Media")}</div></div><button class="unpin-btn" data-id="${pin.id}" style="background:none; border:none; cursor:pointer;">✖</button>`;
+      div.innerHTML = `<span>📌</span><div style="flex:1;"><div style="font-weight:600; font-size:12px;">${escapeHtml(pin.senderName)}</div><div style="font-size:11px; color:var(--muted);">${escapeHtml(pin.text ? pin.text.substring(0, 50) : "Media")}</div></div><button class="unpin-btn" data-id="${pin.id}" style="background:none; border:none; cursor:pointer;">✖</button>`;
       div.querySelector(".unpin-btn")?.addEventListener("click", async (e) => {
         e.stopPropagation();
         await unpinMessage(pin.id);
@@ -17352,7 +17352,7 @@ async function init() {
     row.innerHTML =
       '<input type="text" class="list-item-text" placeholder="Item ' +
       (container.children.length + 1) +
-      '" style="flex:1;padding:10px;border:1px solid #e2e8f0;border-radius:12px;">';
+      '" style="flex:1;padding:10px;border:1px solid var(--border);border-radius:12px;background:var(--panel-soft);color:var(--text);">';
     container.appendChild(row);
   });
   document
@@ -20647,17 +20647,17 @@ async function handleGlobalSearch(query, resultsDiv) {
     const text = escapeHtml(msg.text || "");
     const highlighted = text.replace(
       new RegExp(escapeRegExp(escapeHtml(query)), "gi"),
-      (m) => `<mark style="background:#fef08a;border-radius:2px;">${m}</mark>`,
+      (m) => { const dk = document.body.classList.contains('dark'); return `<mark style="background:${dk?'rgba(0,168,132,0.35)':'#fef08a'};color:${dk?'#e9edef':'inherit'};border-radius:2px;">${m}</mark>`; },
     );
     const div = document.createElement("div");
     div.style.cssText =
-      "padding:10px 14px;border-bottom:1px solid #f1f5f9;cursor:pointer;border-radius:8px;margin-bottom:4px;";
+      "padding:10px 14px;border-bottom:1px solid var(--border);cursor:pointer;border-radius:8px;margin-bottom:4px;";
     div.innerHTML = `
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
-        <strong style="font-size:13px;color:#1e293b;">${escapeHtml(msg.senderName || "Unknown")}</strong>
-        <span style="font-size:11px;color:#94a3b8;">${time}</span>
+        <strong style="font-size:13px;color:var(--text);">${escapeHtml(msg.senderName || "Unknown")}</strong>
+        <span style="font-size:11px;color:var(--muted);">${time}</span>
       </div>
-      <div style="font-size:13px;color:#475569;line-height:1.4;">${highlighted}</div>
+      <div style="font-size:13px;color:var(--muted-strong);line-height:1.4;">${highlighted}</div>
     `;
     div.addEventListener("click", () => {
       document.getElementById("globalSearchModal").style.display = "none";
@@ -20897,9 +20897,9 @@ const TENOR_API_KEY = "AIzaSyAyimkuYQYF_FXVALexPzkcggwijAPpc"; // Tenor public d
     gifSection.id = "gifPickerSection";
     gifSection.style.cssText = "display:none;padding:8px;";
     gifSection.innerHTML = `
-      <input id="gifSearchInput" type="text" placeholder="Search GIFs..." style="width:100%;padding:8px 12px;border:1px solid #e2e8f0;border-radius:12px;margin-bottom:8px;font-size:13px;outline:none;" />
+      <input id="gifSearchInput" type="text" placeholder="Search GIFs..." style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:12px;margin-bottom:8px;font-size:13px;outline:none;background:var(--panel-soft);color:var(--text);" />
       <div id="gifResults" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;max-height:200px;overflow-y:auto;"></div>
-      <div id="gifLoading" style="text-align:center;padding:16px;color:#94a3b8;font-size:13px;display:none;">Loading GIFs...</div>
+      <div id="gifLoading" style="text-align:center;padding:16px;color:var(--muted);font-size:13px;display:none;">Loading GIFs...</div>
     `;
     picker.appendChild(gifSection);
 
@@ -20998,7 +20998,7 @@ async function loadTrendingGifs() {
   } catch (e) {
     if (resultsDiv)
       resultsDiv.innerHTML =
-        '<div style="color:#94a3b8;font-size:12px;padding:8px;">Could not load GIFs</div>';
+        '<div style="color:var(--muted);font-size:12px;padding:8px;">Could not load GIFs</div>';
   } finally {
     if (loading) loading.style.display = "none";
   }
@@ -21019,7 +21019,7 @@ async function searchGifs(query) {
   } catch (e) {
     if (resultsDiv)
       resultsDiv.innerHTML =
-        '<div style="color:#94a3b8;font-size:12px;padding:8px;">GIF search failed</div>';
+        '<div style="color:var(--muted);font-size:12px;padding:8px;">GIF search failed</div>';
   } finally {
     if (loading) loading.style.display = "none";
   }
@@ -21031,7 +21031,7 @@ function renderGifResults(gifs) {
   resultsDiv.innerHTML = "";
   if (!gifs.length) {
     resultsDiv.innerHTML =
-      '<div style="color:#94a3b8;font-size:12px;padding:8px;grid-column:1/-1;">No GIFs found</div>';
+      '<div style="color:var(--muted);font-size:12px;padding:8px;grid-column:1/-1;">No GIFs found</div>';
     return;
   }
   gifs.forEach((gif) => {
@@ -22304,7 +22304,7 @@ function renderListCard(list) {
             (item, index) => `
           <label class="list-item-row">
             <input type="checkbox" class="list-item-checkbox" ${item.checked ? "checked" : ""} data-item-index="${index}">
-            <span style="${item.checked ? "text-decoration:line-through;color:#94a3b8;" : ""}">${escapeHtml(item.text)}</span>
+            <span style="${item.checked ? "text-decoration:line-through;color:var(--muted);" : ""}">${escapeHtml(item.text)}</span>
           </label>
         `,
           )

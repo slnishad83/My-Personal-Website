@@ -64,6 +64,20 @@
     .cat-emojis{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}
     .cat-emoji{font-size:22px;cursor:pointer;padding:4px;border-radius:6px;border:2px solid transparent}
     .cat-emoji.selected{border-color:var(--green)}
+  
+    /* ── DARK MODE ─────────────────────────────────────────────────── */
+    @media (prefers-color-scheme: dark) {
+      :root { --bg:#0b141a;--card:#111b21;--text:#e9edef;--muted:#8696a0;--border:#2a3942 }
+    }
+    body.dark { --bg:#0b141a;--card:#111b21;--text:#e9edef;--muted:#8696a0;--border:#2a3942 }
+    body.dark .group-selector select,
+    body.dark .modal-box,
+    body.dark .btn-cancel,
+    body.dark .form-group input,
+    body.dark .form-group select,
+    body.dark .form-group textarea { background:var(--card);color:var(--text);border-color:var(--border) }
+    body.dark .form-group input:focus,
+    body.dark .form-group select:focus { border-color:#00a884 }
   </style>
 </head>
 <body>

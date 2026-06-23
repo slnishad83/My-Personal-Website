@@ -376,7 +376,7 @@
       const btn = document.createElement('button');
       btn.className = 'catchup-btn';
       btn.title = 'Catch Me Up — AI summary of recent messages';
-      btn.style.cssText = 'background:none;border:1px solid #e2e8f0;border-radius:8px;padding:5px 10px;font-size:12px;cursor:pointer;color:#008069;font-weight:600;font-family:inherit;margin-right:4px';
+      btn.style.cssText = 'background:none;border:1px solid var(--border,#e2e8f0);border-radius:8px;padding:5px 10px;font-size:12px;cursor:pointer;color:var(--brand-dark,#008069);font-weight:600;font-family:inherit;margin-right:4px';
       btn.innerHTML = '🧠 Catch Me Up';
       btn.onclick = catchMeUp;
       const actionsArea = chatHeader.querySelector('[class*="actions"], [class*="right"], [class*="icons"]');
@@ -530,11 +530,11 @@
       if (!settingsPanel || settingsPanel.querySelector('.auto-translate-toggle')) return;
       const toggle = document.createElement('div');
       toggle.className = 'auto-translate-toggle';
-      toggle.style.cssText = 'padding:12px 18px;display:flex;align-items:center;justify-content:space-between;border-top:1px solid #e2e8f0';
+      toggle.style.cssText = 'padding:12px 18px;display:flex;align-items:center;justify-content:space-between;border-top:1px solid var(--border,#e2e8f0)';
       toggle.innerHTML = `
         <div>
           <div style="font-weight:600;font-size:14px">🌍 Auto-Translate Messages</div>
-          <div style="font-size:12px;color:#667781">Translate incoming messages to your language</div>
+          <div style="font-size:12px;color:var(--muted,#667781)">Translate incoming messages to your language</div>
         </div>
         <label style="position:relative;display:inline-block;width:44px;height:24px">
           <input type="checkbox" id="autoTranslateToggle" style="opacity:0;width:0;height:0" onchange="setAutoTranslate(this.checked)"/>

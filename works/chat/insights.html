@@ -42,6 +42,13 @@
     .badge-row{display:flex;flex-wrap:wrap;gap:8px}
     .badge{display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border-radius:20px;font-size:12px;font-weight:600;background:var(--bg);color:var(--text)}
     .badge .icon{font-size:14px}
+  
+    /* ── DARK MODE ─────────────────────────────────────────────────── */
+    @media (prefers-color-scheme: dark) {
+      :root { --bg:#0b141a;--card:#111b21;--text:#e9edef;--muted:#8696a0;--border:#2a3942 }
+    }
+    body.dark { --bg:#0b141a;--card:#111b21;--text:#e9edef;--muted:#8696a0;--border:#2a3942 }
+    body.dark .hour-bar[title]:hover::after { background:#202c33;color:#e9edef;border:1px solid #2a3942 }
   </style>
 </head>
 <body>

@@ -61,6 +61,25 @@
     .color-dot{width:28px;height:28px;border-radius:50%;cursor:pointer;border:3px solid transparent;transition:border-color 0.15s}
     .color-dot.selected{border-color:#111}
     @media(max-width:500px){.day-cell{min-height:50px}.event-dot{display:none}}
+  
+    /* ── DARK MODE ─────────────────────────────────────────────────── */
+    @media (prefers-color-scheme: dark) {
+      :root { --bg:#0b141a;--card:#111b21;--text:#e9edef;--muted:#8696a0;--border:#2a3942 }
+    }
+    body.dark { --bg:#0b141a;--card:#111b21;--text:#e9edef;--muted:#8696a0;--border:#2a3942 }
+    body.dark .modal-box,
+    body.dark .btn-cancel { background:var(--card);color:var(--text);border-color:var(--border) }
+    body.dark .form-group input,
+    body.dark .form-group select,
+    body.dark .form-group textarea { background:var(--card);color:var(--text);border-color:var(--border) }
+    body.dark .form-group input:focus,
+    body.dark .form-group select:focus { border-color:#00a884 }
+    body.dark .month-nav button { background:var(--card);border-color:var(--border);color:var(--text) }
+    body.dark .day-cell { background:var(--card) }
+    body.dark .day-cell:hover { background:#1a2730 }
+    body.dark .day-cell.other-month { background:#0d161b }
+    body.dark .day-header { background:var(--bg) }
+    body.dark .color-dot.selected { border-color:#e9edef }
   </style>
 </head>
 <body>
