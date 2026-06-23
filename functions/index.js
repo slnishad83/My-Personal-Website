@@ -1910,3 +1910,85 @@ exports.sendNotificationReply = onRequest(
     }
   }
 );
+
+// ── generateUrlPreview — item #24 ─────────────────────────────────────────
+exports.generateUrlPreview = functions.https.onRequest(async (req, res) => {
+  res.set('Access-Control-Allow-Origin', '*');
+  res.set('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
+  res.set('Access-Control-Allow-Headers', 'Content-Type');
+  if (req.method === 'OPTIONS') { res.status(204).send(''); return; }
+
+  const url = (req.body && req.body.url) || req.query.url;
+  if (!url || !/^https?:\/\//.test(url)) {
+    res.status(400).json({ error: 'Missing or invalid url parameter' }); return;
+  }
+
+  const https = require('https');
+  const http  = require('http');
+  const { URL } = require('url');
+
+  function getHtml(rawUrl, redirects) {
+    redirects = redirects || 0;
+    if (redirects > 5) return Promise.reject(new Error('Too many redirects'));
+    return new Promise((resolve, reject) => {
+      const parsed = new URL(rawUrl);
+      const mod = parsed.protocol === 'https:' ? https : http;
+      const options = {
+        hostname: parsed.hostname, port: parsed.port || (parsed.protocol === 'https:' ? 443 : 80),
+        path: parsed.pathname + parsed.search, method: 'GET',
+        headers: { 'User-Agent': 'Mozilla/5.0 (compatible; ChatBot/1.0)', Accept: 'text/html', 'Accept-Language': 'en-US,en;q=0.9' },
+        timeout: 7000
+      };
+      const request = mod.request(options, response => {
+        if ([301,302,303,307,308].includes(response.statusCode)) {
+          const loc = response.headers.location;
+          if (!loc) { reject(new Error('Redirect without location')); return; }
+          const next = loc.startsWith('http') ? loc : parsed.origin + loc;
+          resolve(getHtml(next, redirects + 1));
+          return;
+        }
+        const ct = response.headers['content-type'] || '';
+        if (!ct.includes('text/html') && !ct.includes('text/plain')) {
+          reject(new Error('Not HTML')); return;
+        }
+        let data = ''; let received = 0;
+        response.on('data', chunk => { received += chunk.length; if (received < 500000) data += chunk; });
+        response.on('end', () => resolve(data));
+      });
+      request.on('error', reject);
+      request.on('timeout', () => { request.destroy(); reject(new Error('Timeout')); });
+      request.end();
+    });
+  }
+
+  function extractMeta(html) {
+    const m = (prop, name) => {
+      const re1 = new RegExp('<meta[^>]+property=["\'\']' + prop + '["\'\'][^>]+content=["\'\']([^\'\'"]+)["\'\']', 'i');
+      const re2 = new RegExp('<meta[^>]+content=["\'\']([^\'\'"]+)["\'\'][^>]+property=["\'\']' + prop + '["\'\']', 'i');
+      const rn1 = new RegExp('<meta[^>]+name=["\'\']' + name + '["\'\'][^>]+content=["\'\']([^\'\'"]+)["\'\']', 'i');
+      const rn2 = new RegExp('<meta[^>]+content=["\'\']([^\'\'"]+)["\'\'][^>]+name=["\'\']' + name + '["\'\']', 'i');
+      for (const r of [re1, re2, rn1, rn2]) { const x = html.match(r); if (x) return x[1].trim(); }
+      return '';
+    };
+    const titleM  = html.match(/<title[^>]*>([^<]+)<\/title>/i);
+    const parsed2 = new URL(url);
+    return {
+      title      : m('og:title','og:title')       || (titleM ? titleM[1].trim() : ''),
+      description: m('og:description','description') || '',
+      image      : m('og:image','og:image')         || '',
+      domain     : parsed2.hostname.replace(/^www\./,'')
+    };
+  }
+
+  try {
+    const html = await getHtml(url);
+    const data = extractMeta(html);
+    if (!data.title && !data.description && !data.image) {
+      res.status(422).json({ error: 'No preview data found' }); return;
+    }
+    res.json(data);
+  } catch (e) {
+    console.error('[generateUrlPreview] error:', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
