@@ -57,6 +57,16 @@ function getCurrentChatKey() {
 function resetMessageRenderLimit() {
   const key = getCurrentChatKey();
   if (!key) return;
+  // Trim old entries to prevent memory leaks
+  if (messageRenderLimits.size > 100) {
+    const keysToDelete = [];
+    for (const k of messageRenderLimits.keys()) {
+      if (k !== key) keysToDelete.push(k);
+    }
+    // Keep only the current and up to 20 most recent
+    const toRemove = Math.min(keysToDelete.length, keysToDelete.length - 20);
+    keysToDelete.slice(0, Math.max(0, toRemove)).forEach(k => messageRenderLimits.delete(k));
+  }
   messageRenderLimits.set(key, MESSAGE_PAGE_SIZE);
 }
 
@@ -68,10 +78,10 @@ function getMessageRenderLimit() {
   return messageRenderLimits.get(key);
 }
 
-function increaseMessageRenderLimit() {
+function increaseMessageRenderLimit(count) {
   const key = getCurrentChatKey();
   if (!key) return;
-  messageRenderLimits.set(key, getMessageRenderLimit() + MESSAGE_PAGE_SIZE);
+  messageRenderLimits.set(key, getMessageRenderLimit() + (count || MESSAGE_PAGE_SIZE));
 }
 
 function getOrCreateSessionId() {

@@ -109,8 +109,6 @@ function cleanupAllFirestoreListeners() {
   seenPendingChatRequestIds.clear();
   seenSentChatRequestIds.clear();
   seenPendingGroupInviteIds.clear();
-  _reactionListeners.forEach((fn) => { try { fn(); } catch (_) {} });
-  _reactionListeners.clear();
 }
 
 function closeTopVisibleModal() {
@@ -502,15 +500,6 @@ function renderCallMessage(msg = {}) {
   ));
   const icon = getCallIcon(msg.callType, msg.callStatus);
   const canCallAgain = Boolean(msg.groupId || msg.callFromUserId || msg.callToUserId);
-  const recordingHtml = msg.recordingUrl
-    ? `<div class="call-history-recording">
-        <div class="call-history-recording-label">
-          <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="#e53935" aria-hidden="true"><circle cx="12" cy="12" r="6"/></svg>
-          Recording
-        </div>
-        <audio controls preload="none" src="${escapeHtml(msg.recordingUrl)}" aria-label="Call recording playback"></audio>
-      </div>`
-    : "";
   return `<div class="message-bubble call-history-message-bubble">
     <span class="call-history-message-icon" aria-hidden="true">${icon}</span>
     <span class="call-history-message-text"><strong>${text}</strong><small>${escapeHtml(participantText)}</small><small>${escapeHtml(formatCallHistoryTimestamp(msg.timestamp))}</small></span>
@@ -518,7 +507,6 @@ function renderCallMessage(msg = {}) {
       ${canCallAgain ? `<button type="button" class="call-again-btn" title="Call again" aria-label="Call again">${msg.callType === "video" ? "Video" : "Call"}</button>` : ""}
       <button type="button" class="call-history-message-delete" title="Delete call entry" aria-label="Delete call entry">Delete</button>
     </span>
-    ${recordingHtml}
   </div>`;
 }
 
@@ -618,22 +606,9 @@ function toggleCallHistorySelection(callId) {
   loadCallsList();
 }
 
-// --- Call history advanced filter state ---
-if (typeof callHistoryDateFilter === "undefined") var callHistoryDateFilter = "any";
-if (typeof callHistoryDurationFilter === "undefined") var callHistoryDurationFilter = "any";
-
-function _chfActiveCount() {
-  return (callHistoryDateFilter !== "any" ? 1 : 0) + (callHistoryDurationFilter !== "any" ? 1 : 0);
-}
-
-function _chfRefresh() {
-  loadCallsList(document.getElementById("searchInput")?.value || "");
-}
-
 function renderCallHistoryToolbar(list, calls = [], allCalls = calls) {
   const toolbar = document.createElement("div");
   toolbar.className = "call-history-toolbar";
-  const activeCount = _chfActiveCount();
   toolbar.innerHTML = callHistorySelectionMode
     ? `<div class="call-history-toolbar-main">
         <button type="button" data-call-action="cancel">Cancel</button>
@@ -643,14 +618,8 @@ function renderCallHistoryToolbar(list, calls = [], allCalls = calls) {
       </div>`
     : `<div class="call-history-toolbar-main">
         <strong>Calls</strong>
-        <span style="display:flex;align-items:center;gap:6px;margin-left:auto">
-          <button type="button" class="call-history-filter-toggle${activeCount ? " has-active-filters" : ""}" data-call-action="toggle-advanced" aria-label="Advanced filters" title="Filter by date or duration">
-            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
-            Filters${activeCount ? `<span class="call-history-filter-badge">${activeCount}</span>` : ""}
-          </button>
-          <button type="button" data-call-action="select">Select</button>
-          <button type="button" data-call-action="clear-all" ${allCalls.length ? "" : "disabled"}>Clear all</button>
-        </span>
+        <button type="button" data-call-action="select">Select</button>
+        <button type="button" data-call-action="clear-all" ${allCalls.length ? "" : "disabled"}>Clear all</button>
       </div>
       <div class="call-history-filters" role="tablist" aria-label="Filter call history">
         ${[
@@ -660,37 +629,16 @@ function renderCallHistoryToolbar(list, calls = [], allCalls = calls) {
           ["outgoing", "Outgoing"],
         ].map(([value, label]) => `<button type="button" role="tab" data-call-filter="${value}" aria-selected="${callHistoryFilter === value}" class="${callHistoryFilter === value ? "active" : ""}">${label}</button>`).join("")}
       </div>`;
-
-  // Advanced filter panel (date + duration)
-  const advPanel = document.createElement("div");
-  advPanel.className = "call-history-advanced-filters";
-  advPanel.style.display = "none";
-  advPanel.innerHTML = `
-    <div class="call-history-filter-row">
-      <span class="call-history-filter-label">Date</span>
-      ${[["any","Any time"],["today","Today"],["week","This week"],["month","This month"]]
-        .map(([v,l]) => `<button type="button" class="call-history-filter-chip${callHistoryDateFilter===v?" active":""}" data-date-filter="${v}">${l}</button>`).join("")}
-    </div>
-    <div class="call-history-filter-row">
-      <span class="call-history-filter-label">Duration</span>
-      ${[["any","Any"],["short","< 2 min"],["medium","2–10 min"],["long","> 10 min"],["missed","No answer"]]
-        .map(([v,l]) => `<button type="button" class="call-history-filter-chip${callHistoryDurationFilter===v?" active":""}" data-dur-filter="${v}">${l}</button>`).join("")}
-    </div>`;
-
-  // Event: direction filter tabs
   toolbar.addEventListener("click", (event) => {
     const filter = event.target.closest("[data-call-filter]")?.dataset.callFilter;
     if (filter) {
       callHistoryFilter = filter;
-      _chfRefresh();
+      loadCallsList(document.getElementById("searchInput")?.value || "");
       return;
     }
     const action = event.target.closest("[data-call-action]")?.dataset.callAction;
     if (!action) return;
-    if (action === "toggle-advanced") {
-      advPanel.style.display = advPanel.style.display === "none" ? "flex" : "none";
-      advPanel.style.flexDirection = "column";
-    } else if (action === "select") {
+    if (action === "select") {
       callHistorySelectionMode = true;
       selectedCallHistoryIds.clear();
       loadCallsList();
@@ -711,33 +659,7 @@ function renderCallHistoryToolbar(list, calls = [], allCalls = calls) {
       }
     }
   });
-
-  // Event: advanced filter chips
-  advPanel.addEventListener("click", (event) => {
-    const df = event.target.closest("[data-date-filter]")?.dataset.dateFilter;
-    if (df !== undefined) {
-      callHistoryDateFilter = df;
-      advPanel.querySelectorAll("[data-date-filter]").forEach((b) =>
-        b.classList.toggle("active", b.dataset.dateFilter === df));
-      _chfRefresh();
-      return;
-    }
-    const dur = event.target.closest("[data-dur-filter]")?.dataset.durFilter;
-    if (dur !== undefined) {
-      callHistoryDurationFilter = dur;
-      advPanel.querySelectorAll("[data-dur-filter]").forEach((b) =>
-        b.classList.toggle("active", b.dataset.durFilter === dur));
-      _chfRefresh();
-    }
-  });
-
   list.appendChild(toolbar);
-  list.appendChild(advPanel);
-  // Keep panel open if filters were active before re-render
-  if (activeCount > 0) {
-    advPanel.style.display = "flex";
-    advPanel.style.flexDirection = "column";
-  }
 }
 
 function getCallHistoryDate(call = {}) {
@@ -837,34 +759,6 @@ async function loadCallsList(searchTerm = "") {
         if (callHistoryFilter === "missed")
           return ["missed", "declined", "rejected", "failed", "busy"].includes(view.status);
         return view.direction.toLowerCase() === callHistoryFilter;
-      });
-    }
-    // Date range filter
-    if (callHistoryDateFilter !== "any") {
-      const now = new Date();
-      filteredCalls = filteredCalls.filter((call) => {
-        const d = getCallHistoryDate(call);
-        if (callHistoryDateFilter === "today")
-          return d.toDateString() === now.toDateString();
-        if (callHistoryDateFilter === "week") {
-          const weekAgo = new Date(now);
-          weekAgo.setDate(now.getDate() - 7);
-          return d >= weekAgo;
-        }
-        if (callHistoryDateFilter === "month")
-          return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
-        return true;
-      });
-    }
-    // Duration filter
-    if (callHistoryDurationFilter !== "any") {
-      filteredCalls = filteredCalls.filter((call) => {
-        const ms = Number(call.callDurationMs) || 0;
-        if (callHistoryDurationFilter === "short") return ms > 0 && ms < 120000;
-        if (callHistoryDurationFilter === "medium") return ms >= 120000 && ms < 600000;
-        if (callHistoryDurationFilter === "long") return ms >= 600000;
-        if (callHistoryDurationFilter === "missed") return ms === 0;
-        return true;
       });
     }
     const calls = filteredCalls.slice(0, 200);
@@ -1379,11 +1273,6 @@ function renderMessageText(text = "", mentions = []) {
     '<a href="$1" target="_blank" rel="noopener noreferrer" class="message-link">$1</a>',
   );
 
-  // 5. Hashtag highlighting
-  html = html.replace(/(^|[\s>,.!?;:"])(#[a-zA-Z0-9_]{2,40})(?=[\s<,.!?;:"]|$)/g,
-    '$1<span class="message-hashtag" onclick="window._onHashtagClick&&window._onHashtagClick(\'$2\')" tabindex="0" role="button" aria-label="Search hashtag $2">$2</span>'
-  );
-
   // Search term highlighting
   if (currentInChatSearchTerm) {
     const sterm = escapeHtml(currentInChatSearchTerm).replace(/[-[\]{}()*+.,\\^$|#\s]/g, '\\$&');
@@ -1394,26 +1283,6 @@ function renderMessageText(text = "", mentions = []) {
 
   return html;
 }
-
-// Hashtag click handler — searches for hashtag in global search
-window._onHashtagClick = function(tag) {
-  const modal = document.getElementById('globalSearchModal');
-  const input = document.getElementById('globalSearchInput');
-  if (modal && input) {
-    modal.style.display = 'flex';
-    input.value = tag;
-    input.dispatchEvent(new Event('input', { bubbles: true }));
-    setTimeout(() => input.focus(), 80);
-  } else if (typeof window.messageSearch === 'object') {
-    window.messageSearch.open();
-    setTimeout(() => {
-      const inp = document.getElementById('globalSearchInput');
-      if (inp) { inp.value = tag; inp.dispatchEvent(new Event('input', { bubbles: true })); }
-    }, 200);
-  } else if (typeof window.showToast === 'function') {
-    window.showToast('Search: ' + tag);
-  }
-};
 
 function initializeEmojiPicker() {
   const picker = document.getElementById("emojiPicker");
@@ -2077,7 +1946,7 @@ function bindRenderedMessageActions() {
     btn.dataset.speedBound = "true";
     btn.addEventListener("click", (e) => {
       e.stopPropagation();
-      const speeds = [0.5, 1, 1.5, 2];
+      const speeds = [1, 1.5, 2];
       const cur = parseFloat(btn.textContent) || 1;
       const idx = speeds.indexOf(cur);
       const next = speeds[(idx + 1) % speeds.length];
@@ -2636,8 +2505,6 @@ function resetChatPanel() {
     typingUnsubscribe();
     typingUnsubscribe = null;
   }
-  _reactionListeners.forEach((fn) => { try { fn(); } catch (_) {} });
-  _reactionListeners.clear();
   document.getElementById("currentChatName").textContent = "Select a chat";
   document.getElementById("chatStatus").textContent = "";
   document.getElementById("currentChatAvatar").innerHTML = "?";
@@ -5911,7 +5778,6 @@ function getChatListPreviewText(preview = "", chatType = "") {
   if (/^(voice|video)\s+call\s+(ended|cancelled|declined|rejected)/i.test(text))
     return "";
 
-  if (chatType === "direct") return "";
   return text;
 }
 
@@ -6506,7 +6372,19 @@ function isCompleteEmail(email) {
 // UPLOAD FUNCTIONS
 // ========================================
 
+const UPLOAD_SIZE_LIMIT = 10 * 1024 * 1024;
+
+function getUploadErrorMessage(status, body) {
+  if (status === 401 || status === 403) return "Upload authentication failed. Check Cloudinary config.";
+  if (status === 404) return "Upload endpoint not found.";
+  if (status === 413 || body?.error?.message?.includes("too large")) return "File is too large. Maximum 10MB.";
+  if (status === 420 || body?.error?.message?.includes("usage")) return "Upload limit reached. Try again later.";
+  if (body?.error?.message) return `Upload failed: ${body.error.message}`;
+  return "Upload failed. Please try again.";
+}
+
 async function uploadToCloudinary(file) {
+  if (file.size > UPLOAD_SIZE_LIMIT) throw new Error(`File too large (${(file.size / 1024 / 1024).toFixed(1)}MB). Maximum 10MB.`);
   return new Promise((resolve, reject) => {
     const formData = new FormData();
     formData.append("file", file);
@@ -6518,16 +6396,18 @@ async function uploadToCloudinary(file) {
         body: formData,
       },
     )
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.secure_url) resolve(data.secure_url);
-        else reject("Upload failed");
+      .then(async (res) => {
+        const data = await res.json();
+        if (!res.ok) reject(new Error(getUploadErrorMessage(res.status, data)));
+        else if (data.secure_url) resolve(data.secure_url);
+        else reject(new Error("Upload returned no URL"));
       })
       .catch(reject);
   });
 }
 
 async function uploadDocument(file) {
+  if (file.size > UPLOAD_SIZE_LIMIT) throw new Error(`File too large (${(file.size / 1024 / 1024).toFixed(1)}MB). Maximum 10MB.`);
   return new Promise((resolve, reject) => {
     const formData = new FormData();
     formData.append("file", file);
@@ -6540,10 +6420,11 @@ async function uploadDocument(file) {
         body: formData,
       },
     )
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.secure_url) resolve(data.secure_url);
-        else reject("Upload failed");
+      .then(async (res) => {
+        const data = await res.json();
+        if (!res.ok) reject(new Error(getUploadErrorMessage(res.status, data)));
+        else if (data.secure_url) resolve(data.secure_url);
+        else reject(new Error("Upload returned no URL"));
       })
       .catch(reject);
   });
@@ -6600,6 +6481,7 @@ function showRecordedMediaPreview(blob, type, duration) {
 }
 
 async function uploadRecordedMedia(blob) {
+  if (blob.size > UPLOAD_SIZE_LIMIT) throw new Error(`Recording too large (${(blob.size / 1024 / 1024).toFixed(1)}MB). Maximum 10MB.`);
   const formData = new FormData();
   formData.append("file", blob);
   formData.append("upload_preset", CLOUDINARY_UPLOAD_PRESET);
@@ -6609,7 +6491,8 @@ async function uploadRecordedMedia(blob) {
     { method: "POST", body: formData },
   );
   const data = await response.json();
-  if (!data.secure_url) throw new Error("Recorded media upload failed");
+  if (!response.ok) throw new Error(getUploadErrorMessage(response.status, data));
+  if (!data.secure_url) throw new Error("Recorded media upload returned no URL");
   return data.secure_url;
 }
 
@@ -6980,8 +6863,6 @@ async function loadAllChatsList(searchTerm = "", searchToken = null) {
       const sectionDiff = (order[a.section] || 99) - (order[b.section] || 99);
       if (sectionDiff) return sectionDiff;
     }
-    if (a.type === "saved") return -1;
-    if (b.type === "saved") return 1;
     if (a.isPinned && !b.isPinned) return -1;
     if (!a.isPinned && b.isPinned) return 1;
     return (
@@ -8243,71 +8124,56 @@ async function loadPinnedMessages() {
 // MESSAGE REACTIONS
 // ========================================
 
-function loadReactions(messageId, container) {
-  // Unsubscribe any existing listener for this message to avoid duplicates
-  if (_reactionListeners.has(messageId)) {
-    try { _reactionListeners.get(messageId)(); } catch (_) {}
-    _reactionListeners.delete(messageId);
-  }
-
-  function renderReactions(snapshot) {
-    const reactions = {};
-    snapshot.forEach((doc) => {
-      const d = doc.data();
-      if (!reactions[d.reaction]) reactions[d.reaction] = { count: 0, names: [] };
-      reactions[d.reaction].count++;
-      reactions[d.reaction].names.push(d.userName || "Someone");
-    });
-
-    // Replace previous reaction container for this message
-    const existing = container.querySelector(".reactions-container");
-    if (existing) existing.remove();
-
-    if (Object.keys(reactions).length === 0) return;
-
-    const reactionDiv = document.createElement("div");
-    reactionDiv.className = "reactions-container";
-    for (const [reaction, { count, names }] of Object.entries(reactions)) {
-      const wrapper = document.createElement("span");
-      wrapper.className = "reaction-badge-wrapper";
-
-      const badge = document.createElement("span");
-      badge.className = "reaction-badge";
-      badge.textContent = `${reaction} ${count}`;
-      badge.onclick = (e) => {
-        e.stopPropagation();
-        addReaction(messageId, reaction);
-      };
-      badge.ondblclick = (e) => {
-        e.stopPropagation();
-        triggerMessageEffect("confetti");
-      };
-
-      const tooltip = document.createElement("span");
-      tooltip.className = "reaction-tooltip";
-      const header = `<span class="reaction-tooltip-emoji">${reaction}</span>`;
-      const list = names.length <= 5
-        ? names.map(n => `<span>${escapeHtml(n)}</span>`).join("")
-        : names.slice(0, 4).map(n => `<span>${escapeHtml(n)}</span>`).join("") +
-          `<span>+${names.length - 4} more</span>`;
-      tooltip.innerHTML = header + list;
-
-      wrapper.appendChild(badge);
-      wrapper.appendChild(tooltip);
-      reactionDiv.appendChild(wrapper);
-    }
-    container.appendChild(reactionDiv);
-  }
-
-  const unsub = db
+async function loadReactions(messageId, container) {
+  const snapshot = await db
     .collection("messageReactions")
     .where("messageId", "==", messageId)
-    .onSnapshot(renderReactions, () => {});
+    .get();
+  const reactions = {};
+  snapshot.forEach((doc) => {
+    const d = doc.data();
+    if (!reactions[d.reaction]) reactions[d.reaction] = { count: 0, names: [] };
+    reactions[d.reaction].count++;
+    const name = d.userName || "Someone";
+    reactions[d.reaction].names.push(name);
+  });
 
-  _reactionListeners.set(messageId, unsub);
+  if (Object.keys(reactions).length === 0) return;
+
+  const reactionDiv = document.createElement("div");
+  reactionDiv.className = "reactions-container";
+  for (const [reaction, { count, names }] of Object.entries(reactions)) {
+    const wrapper = document.createElement("span");
+    wrapper.className = "reaction-badge-wrapper";
+
+    const badge = document.createElement("span");
+    badge.className = "reaction-badge";
+    badge.textContent = `${reaction} ${count}`;
+    badge.onclick = (e) => {
+      e.stopPropagation();
+      addReaction(messageId, reaction);
+    };
+    badge.ondblclick = (e) => {
+      e.stopPropagation();
+      triggerMessageEffect("confetti");
+    };
+
+    const tooltip = document.createElement("span");
+    tooltip.className = "reaction-tooltip";
+    const header = `<span class="reaction-tooltip-emoji">${reaction}</span>`;
+    const list = names.length <= 5
+      ? names.map(n => `<span>${escapeHtml(n)}</span>`).join("")
+      : names.slice(0, 4).map(n => `<span>${escapeHtml(n)}</span>`).join("") +
+        `<span>+${names.length - 4} more</span>`;
+    tooltip.innerHTML = header + list;
+
+    wrapper.appendChild(badge);
+    wrapper.appendChild(tooltip);
+    reactionDiv.appendChild(wrapper);
+  }
+  container.appendChild(reactionDiv);
 }
 
-const _reactionListeners = new Map(); // messageId -> unsubscribe fn
 const _allReactions = ["👍","❤️","😂","😮","😢","🙏","🔥","🎉","💯","✅","👏","🤣","🥰","😍","🤔","🤩","😭","😤","🤗","🥳"];
 
 function getReactionOptions() {
@@ -10040,9 +9906,13 @@ async function buildGroupChatItems() {
         avatar: group.icon
           ? `<img src="${group.icon}">`
           : escapeHtml(getInitials(group.name || "Group")),
-        preview: group.memberCount
-          ? `${group.memberCount} members`
-          : `Invite code ${group.code || ""}`.trim(),
+        preview: getChatListPreviewText(
+          group.lastMessage ||
+            (group.memberCount
+              ? `${group.memberCount} members`
+              : `Invite code ${group.code || ""}`.trim()),
+          "group",
+        ),
         unreadCount: await getChatUnreadCount(groupDoc.id, "group"),
         isFavorite: favoriteChatIds.includes(groupDoc.id),
         isPinned: pinnedChatIds.includes(groupDoc.id),
@@ -10054,6 +9924,7 @@ async function buildGroupChatItems() {
         icon: group.icon || "",
         code: group.code || "",
         lastMessageTime:
+          group.lastMessageTime?.toDate?.() ||
           group.updatedAt?.toDate?.() ||
           group.createdAt?.toDate?.() ||
           new Date(0),
@@ -13131,13 +13002,16 @@ function isExpiredByDisappearingSetting(msg = {}) {
   return Date.now() - sentAt > seconds * 1000;
 }
 
+let _loadedOldestTimestamp = null;
+
 function loadMessages() {
   if (!currentChat) return;
   const messagesArea = document.getElementById("messagesArea");
   if (messagesUnsubscribe) messagesUnsubscribe();
+  _loadedOldestTimestamp = null;
 
   const directIds = getDirectChatIdsForCurrentChat();
-  let query =
+  let baseQuery =
     currentChatType === "direct" && directIds.length > 1
       ? db.collection("messages").where("directId", "in", directIds)
       : db
@@ -13148,194 +13022,166 @@ function loadMessages() {
             currentChat.id,
           );
 
-  messagesUnsubscribe = query.onSnapshot(
-    async (snapshot) => {
-      if (!messagesArea) return;
-      const previousHeight = messagesArea.scrollHeight;
-      const previousScrollTop = messagesArea.scrollTop;
-      const shouldStickToBottom =
-        previousHeight - previousScrollTop - messagesArea.clientHeight < 100;
-      messagesArea.innerHTML = "";
-      if (snapshot.empty) {
-        messagesArea.innerHTML =
-          '<div class="empty-state">No messages here yet.</div>';
-        return;
-      }
+  const orderedQuery = baseQuery.orderBy("timestamp", "asc");
+  messagesUnsubscribe = subscribeToMessages(orderedQuery);
 
-      const docs = [...snapshot.docs].sort((a, b) => {
-        const aTime = a.data().timestamp?.toMillis?.() || 0;
-        const bTime = b.data().timestamp?.toMillis?.() || 0;
-        return aTime - bTime;
-      });
-
-      docs.forEach((doc) => {
-        const msg = doc.data();
-        if (msg.senderId && msg.senderId !== currentUser?.uid) {
-          const textBytes = new Blob([msg.text || ""]).size;
-          const attachBytes = msg.attachment?.size || 0;
-          if (textBytes + attachBytes > 0)
-            trackDataUsage(textBytes + attachBytes, "received");
-        }
-      });
-
-      // Trigger link preview fetching for new messages with URLs
-      docs.forEach((doc) => {
-        const msg = doc.data();
-        if (!msg.linkPreview && findUrls(msg.text || "").length) {
-          tryAttachLinkPreview(doc.id, msg);
-        }
-      });
-
-      const renderLimit = getMessageRenderLimit();
-      const docsToRender =
-        docs.length > renderLimit
-          ? docs.slice(docs.length - renderLimit)
-          : docs;
-      if (docs.length > docsToRender.length) {
-        const olderButton = document.createElement("button");
-        olderButton.type = "button";
-        olderButton.className = "btn btn-outline";
-        olderButton.style.margin = "8px auto 12px";
-        olderButton.textContent = `Load older messages (${docs.length - docsToRender.length} hidden)`;
-        olderButton.addEventListener("click", () => {
-          increaseMessageRenderLimit();
-          loadMessages();
-        });
-        messagesArea.appendChild(olderButton);
-      }
-
-      // Decrypt E2E messages before rendering
-      const decryptedTexts = {};
-      if (currentChatType === "direct") {
-        const peerUid = _getPeerUid();
-        if (peerUid) {
-          await Promise.all(docsToRender.map(async (doc) => {
-            const msg = doc.data();
-            if (msg.encrypted && msg.iv) {
-              const plaintext = await decryptMessageText(msg.text, msg.iv, peerUid);
-              if (plaintext !== null) decryptedTexts[doc.id] = plaintext;
-            }
-          }));
-        }
-      }
-
-      let _prevRenderedMsg = null;
-      docsToRender.forEach((doc) => {
-        const msg = doc.data();
-        if (decryptedTexts[doc.id]) {
-          msg.text = decryptedTexts[doc.id];
-        } else if (msg.encrypted) {
-          msg.text = "🔒 Encrypted message";
-          msg._decryptFailed = true;
-        }
-        if (isExpiredByDisappearingSetting(msg)) return;
-        if (
-          msg.deletedFor?.[currentUser.uid] ||
-          msg.deletedForEveryone ||
-          isBlocked(msg.senderId)
-        )
+  function subscribeToMessages(queryToUse) {
+    return queryToUse.onSnapshot(
+      async (snapshot) => {
+        if (!messagesArea) return;
+        const previousHeight = messagesArea.scrollHeight;
+        const previousScrollTop = messagesArea.scrollTop;
+        const shouldStickToBottom =
+          previousHeight - previousScrollTop - messagesArea.clientHeight < 100;
+        messagesArea.innerHTML = "";
+        if (snapshot.empty) {
+          messagesArea.innerHTML =
+            '<div class="empty-state">No messages here yet.</div>';
           return;
-        const isMyMessage = msg.senderId === currentUser.uid;
-        const _prevTs = _prevRenderedMsg?.timestamp?.toMillis?.() || 0;
-        const _curTs = msg.timestamp?.toMillis?.() || 0;
-        const isContinuation = !!(
-          _prevRenderedMsg &&
-          _prevRenderedMsg.senderId === msg.senderId &&
-          msg.type !== "call" &&
-          _prevRenderedMsg.type !== "call" &&
-          !msg.replyTo &&
-          (_curTs - _prevTs) < 5 * 60 * 1000
-        );
-        const messageDiv = document.createElement("div");
-        messageDiv.className = `message ${isMyMessage ? "my-message" : ""}${isContinuation ? " msg-continuation" : ""}`;
-        messageDiv.dataset.messageId = doc.id;
-        messageDiv._messageData = { ...msg, messageId: doc.id };
+        }
 
-        if (msg.type === "call") {
-          messageDiv.className = "message call-message";
-          messageDiv.innerHTML = renderCallMessage(msg);
-          messageDiv
-            .querySelector(".call-again-btn")
-            ?.addEventListener("click", (event) => {
+        const docs = snapshot.docs;
+
+        docs.forEach((doc) => {
+          const msg = doc.data();
+          if (msg.senderId && msg.senderId !== currentUser?.uid) {
+            const textBytes = new Blob([msg.text || ""]).size;
+            const attachBytes = msg.attachment?.size || 0;
+            if (textBytes + attachBytes > 0)
+              trackDataUsage(textBytes + attachBytes, "received");
+          }
+        });
+
+        // Trigger link preview fetching for new messages with URLs
+        docs.forEach((doc) => {
+          const msg = doc.data();
+          if (!msg.linkPreview && findUrls(msg.text || "").length) {
+            tryAttachLinkPreview(doc.id, msg);
+          }
+        });
+
+        const renderLimit = getMessageRenderLimit();
+        const docsToRender =
+          docs.length > renderLimit
+            ? docs.slice(docs.length - renderLimit)
+            : docs;
+        if (docs.length > docsToRender.length) {
+          const remaining = docs.length - docsToRender.length;
+          const olderButton = document.createElement("button");
+          olderButton.type = "button";
+          olderButton.className = "btn btn-outline";
+          olderButton.style.margin = "8px auto 12px";
+          olderButton.textContent = `Load older messages (${remaining} hidden)`;
+          olderButton.addEventListener("click", () => {
+            increaseMessageRenderLimit(Math.min(remaining, MESSAGE_PAGE_SIZE));
+            loadMessages();
+          });
+          messagesArea.appendChild(olderButton);
+        }
+
+        // Decrypt E2E messages before rendering
+        const decryptedTexts = {};
+        if (currentChatType === "direct") {
+          const peerUid = _getPeerUid();
+          if (peerUid) {
+            await Promise.all(docsToRender.map(async (doc) => {
+              const msg = doc.data();
+              if (msg.encrypted && msg.iv) {
+                const plaintext = await decryptMessageText(msg.text, msg.iv, peerUid);
+                if (plaintext !== null) decryptedTexts[doc.id] = plaintext;
+              }
+            }));
+          }
+        }
+
+        docsToRender.forEach((doc) => {
+          const msg = doc.data();
+          if (decryptedTexts[doc.id]) {
+            msg.text = decryptedTexts[doc.id];
+          } else if (msg.encrypted) {
+            msg.text = "🔒 Encrypted message";
+            msg._decryptFailed = true;
+          }
+          if (isExpiredByDisappearingSetting(msg)) return;
+          if (msg.deletedFor?.[currentUser.uid] || msg.deletedForEveryone || isBlocked(msg.senderId)) return;
+          const isMyMessage = msg.senderId === currentUser.uid;
+          const messageDiv = document.createElement("div");
+          messageDiv.className = `message ${isMyMessage ? "my-message" : ""}`;
+          messageDiv.dataset.messageId = doc.id;
+          messageDiv._messageData = { ...msg, messageId: doc.id };
+
+          if (msg.type === "call") {
+            messageDiv.className = "message call-message";
+            messageDiv.innerHTML = renderCallMessage(msg);
+            messageDiv.querySelector(".call-again-btn")?.addEventListener("click", (event) => {
               event.preventDefault();
               event.stopPropagation();
               redialCall({
-                ...msg,
-                id: msg.callId,
-                type: msg.callType || "voice",
-                groupCall: Boolean(msg.groupId),
+                ...msg, id: msg.callId, type: msg.callType || "voice", groupCall: Boolean(msg.groupId)
               });
             });
-          messageDiv
-            .querySelector(".call-history-message-delete")
-            ?.addEventListener("click", (event) => {
+            messageDiv.querySelector(".call-history-message-delete")?.addEventListener("click", (event) => {
               event.preventDefault();
               event.stopPropagation();
               openMessageDeleteSheet(doc.id, { ...msg, messageId: doc.id });
             });
-          messagesArea.appendChild(messageDiv);
-          return;
-        }
+            messagesArea.appendChild(messageDiv);
+            return;
+          }
 
-        let replyHtml = msg.replyTo
-          ? `<button type="button" class="reply-preview jump-reply-btn" data-reply-message-id="${escapeHtml(msg.replyTo.messageId || "")}" title="Jump to original message"><strong>${escapeHtml(msg.replyTo.senderName)}</strong>: ${escapeHtml(msg.replyTo.text || "Media")}</button>`
-          : "";
-        let linkPreviewHtml = msg.linkPreview
-          ? renderLinkPreview(msg.linkPreview)
-          : "";
-        let stickerHtml =
-          msg.type === "animated_sticker" && msg.animatedSticker
-            ? `<div class="animated-sticker-message" data-animated-sticker='${escapeHtml(JSON.stringify(msg.animatedSticker))}'></div>`
-            : msg.sticker
-              ? msg.sticker.url
-                ? `<div class="sticker-message"><img src="${escapeHtml(msg.sticker.url)}" alt="Sticker"></div>`
-                : `<div class="sticker-message emoji-sticker">${msg.sticker.emoji || ""}</div>`
-              : "";
-        let attachmentHtml = msg.attachment
-          ? renderAttachment(msg.attachment)
-          : "";
-        let locationHtml =
-          msg.type === "location" ? renderLocationMessage(msg) : "";
-        let pollHtml = msg.poll ? renderPollMessage(doc.id, msg) : "";
-        let contactHtml =
-          msg.type === "contact" ? renderContactCard(msg.contact) : "";
-        let eventHtml = msg.type === "event" ? renderEventCard(msg.event) : "";
-        let listHtml = msg.type === "list" ? renderListCard(msg.list) : "";
-        let textContent =
-          msg.type === "location"
-            ? ""
-            : isMyMessage && msg.translatedForSend && msg.originalText
-              ? msg.originalText
-              : msg.text || "";
+          let replyHtml = msg.replyTo
+            ? `<button type="button" class="reply-preview jump-reply-btn" data-reply-message-id="${escapeHtml(msg.replyTo.messageId || "")}" title="Jump to original message"><strong>${escapeHtml(msg.replyTo.senderName)}</strong>: ${escapeHtml(msg.replyTo.text || "Media")}</button>`
+            : "";
+          let linkPreviewHtml = msg.linkPreview ? renderLinkPreview(msg.linkPreview) : "";
+          let stickerHtml =
+            msg.type === "animated_sticker" && msg.animatedSticker
+              ? `<div class="animated-sticker-message" data-animated-sticker='${escapeHtml(JSON.stringify(msg.animatedSticker))}'></div>`
+              : msg.sticker
+                ? msg.sticker.url
+                  ? `<div class="sticker-message"><img src="${escapeHtml(msg.sticker.url)}" alt="Sticker"></div>`
+                  : `<div class="sticker-message emoji-sticker">${msg.sticker.emoji || ""}</div>`
+                : "";
+          let attachmentHtml = msg.attachment ? renderAttachment(msg.attachment) : "";
+          let locationHtml = msg.type === "location" ? renderLocationMessage(msg) : "";
+          let pollHtml = msg.poll ? renderPollMessage(doc.id, msg) : "";
+          let contactHtml = msg.type === "contact" ? renderContactCard(msg.contact) : "";
+          let eventHtml = msg.type === "event" ? renderEventCard(msg.event) : "";
+          let listHtml = msg.type === "list" ? renderListCard(msg.list) : "";
+          let textContent =
+            msg.type === "location"
+              ? ""
+              : isMyMessage && msg.translatedForSend && msg.originalText
+                ? msg.originalText
+                : msg.text || "";
 
-        if (!isMyMessage && msg.read === false) _msgReadState[doc.id] = true;
+          if (!isMyMessage && msg.read === false) _msgReadState[doc.id] = true;
 
-        messageDiv.innerHTML = `
-        <div class="swipe-reply-indicator" aria-hidden="true"></div>
-        <div class="swipe-delete-indicator" aria-hidden="true"></div>
-        <div class="message-quick-actions ${isMyMessage ? "sent-message-actions" : "received-message-actions"}"><button type="button" class="quick-message-action quick-forward-btn" title="Forward message" aria-label="Forward message"></button><button type="button" class="quick-message-action quick-translate-btn" title="Translate message" aria-label="Translate message"></button><button type="button" class="quick-message-action quick-delete-btn" title="Delete message" aria-label="Delete message"></button></div>
-        <div class="message-bubble">
-          <button type="button" class="message-options-btn" title="Message options" aria-label="Message options">⋮</button>
-          ${!isMyMessage && !isContinuation ? `<div class="message-sender">${escapeHtml(msg.senderName)}${currentChatType === "group" && isGroupMemberAdmin(msg.senderId) ? ' <span class="admin-badge" title="Group admin">👑</span>' : ""}</div>` : ""}
-          ${replyHtml}
-          ${textContent ? `<div class="message-text${isEmojiOnly(textContent) ? ' emoji-large' : ''}">${renderMessageText(textContent, msg.mentionEveryone ? [...(msg.mentions || []), { id: 'everyone', name: 'everyone', label: 'everyone', isEveryone: true }] : (msg.mentions || []))}</div>` : ""}
-          ${isMyMessage && msg.translatedForSend ? `<details class="sent-translation-details"><summary>Sent translated</summary><div>${renderMessageText(msg.text || "")}</div></details>` : ""}
-          ${stickerHtml}
-          ${linkPreviewHtml}
-          ${attachmentHtml}
-          ${locationHtml}
-          ${pollHtml}
-          ${contactHtml}
-          ${eventHtml}
-          ${listHtml}
-          ${getTranslationCardHtml(doc.id)}
-          <div class="message-footer">
-            <span class="message-time">${msg.timestamp ? formatTime(msg.timestamp) : ""}</span>
-            ${msg.editedAt ? '<span class="message-edited">edited</span>' : ""}
-            ${getMessageReceiptHtml(msg, isMyMessage)}
+          messageDiv.innerHTML = `
+          <div class="swipe-reply-indicator" aria-hidden="true"></div>
+          <div class="swipe-delete-indicator" aria-hidden="true"></div>
+          <div class="message-quick-actions ${isMyMessage ? "sent-message-actions" : "received-message-actions"}"><button type="button" class="quick-message-action quick-forward-btn" title="Forward message" aria-label="Forward message"></button><button type="button" class="quick-message-action quick-translate-btn" title="Translate message" aria-label="Translate message"></button><button type="button" class="quick-message-action quick-delete-btn" title="Delete message" aria-label="Delete message"></button></div>
+          <div class="message-bubble">
+            <button type="button" class="message-options-btn" title="Message options" aria-label="Message options">⋮</button>
+            ${!isMyMessage ? `<div class="message-sender">${escapeHtml(msg.senderName)}${currentChatType === "group" && isGroupMemberAdmin(msg.senderId) ? ' <span class="admin-badge" title="Group admin">👑</span>' : ""}</div>` : ""}
+            ${replyHtml}
+            ${textContent ? `<div class="message-text${isEmojiOnly(textContent) ? ' emoji-large' : ''}">${renderMessageText(textContent, msg.mentionEveryone ? [...(msg.mentions || []), { id: 'everyone', name: 'everyone', label: 'everyone', isEveryone: true }] : (msg.mentions || []))}</div>` : ""}
+            ${isMyMessage && msg.translatedForSend ? `<details class="sent-translation-details"><summary>Sent translated</summary><div>${renderMessageText(msg.text || "")}</div></details>` : ""}
+            ${stickerHtml}
+            ${linkPreviewHtml}
+            ${attachmentHtml}
+            ${locationHtml}
+            ${pollHtml}
+            ${contactHtml}
+            ${eventHtml}
+            ${listHtml}
+            ${getTranslationCardHtml(doc.id)}
+            <div class="message-footer">
+              <span class="message-time">${msg.timestamp ? formatTime(msg.timestamp) : ""}</span>
+              ${msg.editedAt ? '<span class="message-edited">edited</span>' : ""}
+              ${getMessageReceiptHtml(msg, isMyMessage)}
+            </div>
           </div>
-        </div>
-      `;
+        `;
         messageDiv.addEventListener("contextmenu", (e) => {
           e.preventDefault();
           showContextMenu(e.clientX, e.clientY, doc.id, msg, isMyMessage);
@@ -13401,7 +13247,6 @@ function loadMessages() {
             setTimeout(() => heart.remove(), 700);
           }
         });
-        _prevRenderedMsg = msg;
         messagesArea.appendChild(messageDiv);
         positionMessageQuickActions(messageDiv);
         bindSwipeToReply(messageDiv, { ...msg, messageId: doc.id });
@@ -13430,69 +13275,221 @@ function loadMessages() {
           messageDiv.querySelector(".message-bubble"),
         ).catch(() => {});
       });
-      const failedItems = getLocalFailedMessages();
-      if (failedItems.length) {
-        failedItems.forEach((item) => {
-          messagesArea.insertAdjacentHTML(
-            "beforeend",
-            renderFailedLocalMessage(item),
-          );
+        const failedItems = getLocalFailedMessages();
+        if (failedItems.length) {
+          failedItems.forEach((item) => {
+            messagesArea.insertAdjacentHTML("beforeend", renderFailedLocalMessage(item));
+          });
+          bindFailedMessageRetryActions();
+        }
+        const wasEmpty = messagesArea.children.length === 0;
+        messagesArea.scrollTop = shouldStickToBottom
+          ? messagesArea.scrollHeight
+          : previousScrollTop + (messagesArea.scrollHeight - previousHeight);
+        updateJumpToBottomBtn(messagesArea);
+        messagesArea._jumpListenerActive = messagesArea._jumpListenerActive || (() => {
+          messagesArea.addEventListener("scroll", () => updateJumpToBottomBtn(messagesArea), { passive: true });
+          return true;
+        })();
+        if (wasEmpty && !shouldStickToBottom && previousScrollTop === 0) scrollToFirstUnread(messagesArea);
+        renderSuggestedReplies(messagesArea);
+        bindRenderedMessageActions();
+        messagesArea.querySelectorAll(".reaction-badge-wrapper").forEach((w) => {
+          if (w.dataset.tooltipBound) return;
+          w.dataset.tooltipBound = "true";
+          w.addEventListener("click", (e) => {
+            if (window.matchMedia("(hover: none)").matches) {
+              const isActive = w.classList.contains("tooltip-active");
+              document.querySelectorAll(".reaction-badge-wrapper.tooltip-active").forEach((el) => el.classList.remove("tooltip-active"));
+              if (!isActive) { e.stopPropagation(); w.classList.add("tooltip-active"); }
+            }
+          });
         });
-        bindFailedMessageRetryActions();
-      }
-      const wasEmpty = messagesArea.children.length === 0;
-      messagesArea.scrollTop = shouldStickToBottom
-        ? messagesArea.scrollHeight
-        : previousScrollTop + (messagesArea.scrollHeight - previousHeight);
-      updateJumpToBottomBtn(messagesArea);
-      messagesArea._jumpListenerActive = messagesArea._jumpListenerActive || (() => {
-        messagesArea.addEventListener("scroll", () => updateJumpToBottomBtn(messagesArea), { passive: true });
-        return true;
-      })();
-      if (wasEmpty && !shouldStickToBottom && previousScrollTop === 0) scrollToFirstUnread(messagesArea);
-      renderSuggestedReplies(messagesArea);
-      bindRenderedMessageActions();
-      // Mobile tap-to-toggle reaction tooltips
-      messagesArea.querySelectorAll(".reaction-badge-wrapper").forEach((w) => {
-        if (w.dataset.tooltipBound) return;
-        w.dataset.tooltipBound = "true";
-        w.addEventListener("click", (e) => {
-          if (window.matchMedia("(hover: none)").matches) {
-            const isActive = w.classList.contains("tooltip-active");
-            document.querySelectorAll(".reaction-badge-wrapper.tooltip-active")
-              .forEach((el) => el.classList.remove("tooltip-active"));
-            if (!isActive) { e.stopPropagation(); w.classList.add("tooltip-active"); }
-          }
+        document.addEventListener("click", () => {
+          document.querySelectorAll(".reaction-badge-wrapper.tooltip-active").forEach((el) => el.classList.remove("tooltip-active"));
+        }, { once: false, capture: false });
+        messagesArea.querySelectorAll(".jump-reply-btn").forEach((btn) => {
+          if (btn.dataset.bound === "true") return;
+          btn.dataset.bound = "true";
+          btn.addEventListener("click", (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            jumpToReplyMessage(btn.dataset.replyMessageId || "");
+          });
         });
-      });
-      document.addEventListener("click", () => {
-        document.querySelectorAll(".reaction-badge-wrapper.tooltip-active")
-          .forEach((el) => el.classList.remove("tooltip-active"));
-      }, { once: false, capture: false });
-      messagesArea.querySelectorAll(".jump-reply-btn").forEach((btn) => {
-        if (btn.dataset.bound === "true") return;
-        btn.dataset.bound = "true";
-        btn.addEventListener("click", (event) => {
-          event.preventDefault();
-          event.stopPropagation();
-          jumpToReplyMessage(btn.dataset.replyMessageId || "");
+        messagesArea.querySelectorAll("[data-animated-sticker]").forEach((el) => {
+          if (el.dataset.animating === "true") return;
+          el.dataset.animating = "true";
+          try { const sticker = JSON.parse(el.dataset.animatedSticker); renderAnimatedSticker(sticker, el); } catch (e) {}
         });
-      });
-      // Animate animated stickers in messages
-      messagesArea.querySelectorAll("[data-animated-sticker]").forEach((el) => {
-        if (el.dataset.animating === "true") return;
-        el.dataset.animating = "true";
-        try {
-          const sticker = JSON.parse(el.dataset.animatedSticker);
-          renderAnimatedSticker(sticker, el);
-        } catch (e) {}
-      });
-      markMessagesAsRead();
-      checkAndShowJumpToUnread();
-      autoTranslateCurrentChatMessages(docsToRender);
-    },
+        markMessagesAsRead();
+        checkAndShowJumpToUnread();
+        autoTranslateCurrentChatMessages(docsToRender);
+      },
     (err) => {
       console.error("Messages onSnapshot error:", err);
+      if (err?.code === "failed-precondition" && String(err.message).includes("index")) {
+        console.warn("Missing composite index — falling back to unordered query");
+        if (messagesUnsubscribe) messagesUnsubscribe();
+        messagesUnsubscribe = baseQuery.onSnapshot(
+          async (fallbackSnap) => {
+            if (!messagesArea) return;
+            const prevH = messagesArea.scrollHeight;
+            const prevST = messagesArea.scrollTop;
+            const stickBottom = prevH - prevST - messagesArea.clientHeight < 100;
+            messagesArea.innerHTML = "";
+            if (fallbackSnap.empty) {
+              messagesArea.innerHTML = '<div class="empty-state">No messages here yet.</div>';
+              return;
+            }
+            const fbDocs = [...fallbackSnap.docs].sort((a, b) => {
+              const aT = a.data().timestamp?.toMillis?.() || 0;
+              const bT = b.data().timestamp?.toMillis?.() || 0;
+              return aT - bT;
+            });
+            fallbackSnap.docs.forEach((doc) => {
+              const msg = doc.data();
+              if (msg.senderId && msg.senderId !== currentUser?.uid) {
+                const bytes = new Blob([msg.text || ""]).size + (msg.attachment?.size || 0);
+                if (bytes > 0) trackDataUsage(bytes, "received");
+              }
+            });
+            fbDocs.forEach((doc) => {
+              const msg = doc.data();
+              if (!msg.linkPreview && findUrls(msg.text || "").length) tryAttachLinkPreview(doc.id, msg);
+            });
+            const rLimit = getMessageRenderLimit();
+            const toRender = fbDocs.length > rLimit ? fbDocs.slice(fbDocs.length - rLimit) : fbDocs;
+            if (fbDocs.length > toRender.length) {
+              const ob = document.createElement("button");
+              ob.type = "button"; ob.className = "btn btn-outline";
+              ob.style.margin = "8px auto 12px";
+              ob.textContent = `Load older messages (${fbDocs.length - toRender.length} hidden)`;
+              ob.addEventListener("click", () => { increaseMessageRenderLimit(Math.min(fbDocs.length - toRender.length, MESSAGE_PAGE_SIZE)); loadMessages(); });
+              messagesArea.appendChild(ob);
+            }
+            const decrypted = {};
+            if (currentChatType === "direct") {
+              const peerUid = _getPeerUid();
+              if (peerUid) {
+                await Promise.all(toRender.map(async (d) => {
+                  const m = d.data();
+                  if (m.encrypted && m.iv) { const pt = await decryptMessageText(m.text, m.iv, peerUid); if (pt !== null) decrypted[d.id] = pt; }
+                }));
+              }
+            }
+            toRender.forEach((doc) => {
+              const msg = doc.data();
+              if (decrypted[doc.id]) msg.text = decrypted[doc.id];
+              else if (msg.encrypted) { msg.text = "🔒 Encrypted message"; msg._decryptFailed = true; }
+              if (isExpiredByDisappearingSetting(msg)) return;
+              if (msg.deletedFor?.[currentUser.uid] || msg.deletedForEveryone || isBlocked(msg.senderId)) return;
+              const isMy = msg.senderId === currentUser.uid;
+              const div = document.createElement("div");
+              div.className = `message ${isMy ? "my-message" : ""}`;
+              div.dataset.messageId = doc.id;
+              div._messageData = { ...msg, messageId: doc.id };
+              if (msg.type === "call") {
+                div.className = "message call-message";
+                div.innerHTML = renderCallMessage(msg);
+                div.querySelector(".call-again-btn")?.addEventListener("click", (e) => { e.preventDefault(); e.stopPropagation(); redialCall({ ...msg, id: msg.callId, type: msg.callType || "voice", groupCall: Boolean(msg.groupId) }); });
+                div.querySelector(".call-history-message-delete")?.addEventListener("click", (e) => { e.preventDefault(); e.stopPropagation(); openMessageDeleteSheet(doc.id, { ...msg, messageId: doc.id }); });
+                messagesArea.appendChild(div);
+                return;
+              }
+              const replyHtml = msg.replyTo ? `<button type="button" class="reply-preview jump-reply-btn" data-reply-message-id="${escapeHtml(msg.replyTo.messageId || "")}" title="Jump to original message"><strong>${escapeHtml(msg.replyTo.senderName)}</strong>: ${escapeHtml(msg.replyTo.text || "Media")}</button>` : "";
+              const linkPreviewHtml = msg.linkPreview ? renderLinkPreview(msg.linkPreview) : "";
+              let stickerHtml = "";
+              if (msg.type === "animated_sticker" && msg.animatedSticker) stickerHtml = `<div class="animated-sticker-message" data-animated-sticker='${escapeHtml(JSON.stringify(msg.animatedSticker))}'></div>`;
+              else if (msg.sticker && msg.sticker.url) stickerHtml = `<div class="sticker-message"><img src="${escapeHtml(msg.sticker.url)}" alt="Sticker"></div>`;
+              else if (msg.sticker) stickerHtml = `<div class="sticker-message emoji-sticker">${msg.sticker.emoji || ""}</div>`;
+              const attachmentHtml = msg.attachment ? renderAttachment(msg.attachment) : "";
+              const locationHtml = msg.type === "location" ? renderLocationMessage(msg) : "";
+              const pollHtml = msg.poll ? renderPollMessage(doc.id, msg) : "";
+              const contactHtml = msg.type === "contact" ? renderContactCard(msg.contact) : "";
+              const eventHtml = msg.type === "event" ? renderEventCard(msg.event) : "";
+              const listHtml = msg.type === "list" ? renderListCard(msg.list) : "";
+              const textContent = msg.type === "location" ? "" : (isMy && msg.translatedForSend && msg.originalText ? msg.originalText : msg.text || "");
+              if (!isMy && msg.read === false) _msgReadState[doc.id] = true;
+              div.innerHTML = `<div class="swipe-reply-indicator" aria-hidden="true"></div><div class="swipe-delete-indicator" aria-hidden="true"></div><div class="message-quick-actions ${isMy ? "sent-message-actions" : "received-message-actions"}"><button type="button" class="quick-message-action quick-forward-btn" title="Forward message" aria-label="Forward message"></button><button type="button" class="quick-message-action quick-translate-btn" title="Translate message" aria-label="Translate message"></button><button type="button" class="quick-message-action quick-delete-btn" title="Delete message" aria-label="Delete message"></button></div><div class="message-bubble"><button type="button" class="message-options-btn" title="Message options" aria-label="Message options">⋮</button>${!isMy ? `<div class="message-sender">${escapeHtml(msg.senderName)}${currentChatType === "group" && isGroupMemberAdmin(msg.senderId) ? ' <span class="admin-badge" title="Group admin">👑</span>' : ""}</div>` : ""}${replyHtml}${textContent ? `<div class="message-text${isEmojiOnly(textContent) ? ' emoji-large' : ''}">${renderMessageText(textContent, msg.mentionEveryone ? [...(msg.mentions || []), { id: 'everyone', name: 'everyone', label: 'everyone', isEveryone: true }] : (msg.mentions || []))}</div>` : ""}${isMy && msg.translatedForSend ? `<details class="sent-translation-details"><summary>Sent translated</summary><div>${renderMessageText(msg.text || "")}</div></details>` : ""}${stickerHtml}${linkPreviewHtml}${attachmentHtml}${locationHtml}${pollHtml}${contactHtml}${eventHtml}${listHtml}${getTranslationCardHtml(doc.id)}<div class="message-footer"><span class="message-time">${msg.timestamp ? formatTime(msg.timestamp) : ""}</span>${msg.editedAt ? '<span class="message-edited">edited</span>' : ""}${getMessageReceiptHtml(msg, isMy)}</div></div>`;
+              div.addEventListener("contextmenu", (e) => { e.preventDefault(); showContextMenu(e.clientX, e.clientY, doc.id, msg, isMy); });
+              div.addEventListener("click", (event) => {
+                const selMode = document.body.classList.contains("selection-mode");
+                if (!selectedChatMessages.size && !selMode) return;
+                if (event.target.closest("button, a, input, textarea, select, audio, video, .msg-select-checkbox")) return;
+                event.preventDefault();
+                toggleSelectedMessage(doc.id, msg);
+              });
+              div.querySelector(".message-options-btn")?.addEventListener("click", (event) => { event.preventDefault(); event.stopPropagation(); const rect = event.currentTarget.getBoundingClientRect(); showContextMenu(rect.left, rect.bottom + 6, doc.id, { ...msg, messageId: doc.id }, isMy); });
+              div.querySelector(".quick-delete-btn")?.addEventListener("click", (event) => { event.preventDefault(); event.stopPropagation(); openMessageDeleteSheet(doc.id, { ...msg, messageId: doc.id }); });
+              div.querySelector(".quick-forward-btn")?.addEventListener("click", (event) => { event.preventDefault(); event.stopPropagation(); openForwardModal(doc.id, { ...msg, messageId: doc.id }); });
+              div.querySelector(".quick-translate-btn")?.addEventListener("click", (event) => { event.preventDefault(); event.stopPropagation(); openTranslateModal(doc.id, { ...msg, messageId: doc.id }); });
+              bindTranslationCardActions(div, doc.id, { ...msg, messageId: doc.id });
+              div.addEventListener("dblclick", (e) => {
+                if (e.target.closest("button, a, input, textarea, select")) return;
+                const recentR = getRecentReactions();
+                const quickEmoji = recentR.length > 0 ? recentR[0] : "❤️";
+                addReaction(doc.id, quickEmoji);
+                const heart = document.createElement("span");
+                heart.textContent = quickEmoji;
+                heart.style.cssText = "position:absolute;font-size:32px;pointer-events:none;z-index:10;animation:heartPop 0.6s ease forwards;";
+                const bubble = div.querySelector(".message-bubble");
+                if (bubble) { bubble.style.position = "relative"; bubble.appendChild(heart); setTimeout(() => heart.remove(), 700); }
+              });
+              messagesArea.appendChild(div);
+              positionMessageQuickActions(div);
+              bindSwipeToReply(div, { ...msg, messageId: doc.id });
+              div.querySelector(".event-start-call-btn")?.addEventListener("click", (event) => { event.preventDefault(); event.stopPropagation(); startCall(event.currentTarget.dataset.callType || "voice"); });
+              div.querySelectorAll("img, video").forEach((media) => {
+                media.addEventListener("load", () => positionMessageQuickActions(div), { once: true });
+                media.addEventListener("loadedmetadata", () => positionMessageQuickActions(div), { once: true });
+              });
+              bindLongPressMessageMenu(div, { ...msg, messageId: doc.id }, isMy);
+              loadReactions(doc.id, div.querySelector(".message-bubble")).catch(() => {});
+            });
+            const failedItems = getLocalFailedMessages();
+            if (failedItems.length) { failedItems.forEach((item) => { messagesArea.insertAdjacentHTML("beforeend", renderFailedLocalMessage(item)); }); bindFailedMessageRetryActions(); }
+            const wasEmpty = messagesArea.children.length === 0;
+            messagesArea.scrollTop = stickBottom ? messagesArea.scrollHeight : prevST + (messagesArea.scrollHeight - prevH);
+            updateJumpToBottomBtn(messagesArea);
+            if (wasEmpty && !stickBottom && prevST === 0) scrollToFirstUnread(messagesArea);
+            renderSuggestedReplies(messagesArea);
+            bindRenderedMessageActions();
+            messagesArea.querySelectorAll(".reaction-badge-wrapper").forEach((w) => {
+              if (w.dataset.tooltipBound) return;
+              w.dataset.tooltipBound = "true";
+              w.addEventListener("click", (e) => {
+                if (window.matchMedia("(hover: none)").matches) {
+                  const isActive = w.classList.contains("tooltip-active");
+                  document.querySelectorAll(".reaction-badge-wrapper.tooltip-active").forEach((el) => el.classList.remove("tooltip-active"));
+                  if (!isActive) { e.stopPropagation(); w.classList.add("tooltip-active"); }
+                }
+              });
+            });
+            document.addEventListener("click", () => { document.querySelectorAll(".reaction-badge-wrapper.tooltip-active").forEach((el) => el.classList.remove("tooltip-active")); }, { once: false, capture: false });
+            messagesArea.querySelectorAll(".jump-reply-btn").forEach((btn) => {
+              if (btn.dataset.bound === "true") return;
+              btn.dataset.bound = "true";
+              btn.addEventListener("click", (event) => { event.preventDefault(); event.stopPropagation(); jumpToReplyMessage(btn.dataset.replyMessageId || ""); });
+            });
+            messagesArea.querySelectorAll("[data-animated-sticker]").forEach((el) => {
+              if (el.dataset.animating === "true") return;
+              el.dataset.animating = "true";
+              try { const s = JSON.parse(el.dataset.animatedSticker); renderAnimatedSticker(s, el); } catch (e) {}
+            });
+            markMessagesAsRead();
+            checkAndShowJumpToUnread();
+            autoTranslateCurrentChatMessages(toRender);
+          },
+          (fallbackErr) => {
+            console.error("Fallback messages query failed:", fallbackErr);
+            const fbMsg = fallbackErr?.code === "permission-denied" ? "You do not have permission to read messages in this chat." : "Could not load messages for this chat.";
+            if (messagesArea) messagesArea.innerHTML = `<div class="empty-state">${escapeHtml(fbMsg)}</div>`;
+            showToast(fbMsg, "error");
+          }
+        );
+        return;
+      }
       const message =
         err?.code === "permission-denied"
           ? "You do not have permission to read messages in this chat."
@@ -13680,6 +13677,18 @@ async function sendMessage() {
       );
     }
 
+    try {
+      const notifyFn = firebase.functions("asia-south1").httpsCallable("sendMessageNotification");
+      notifyFn({
+        ...messageData,
+        messageId: sentMsgId,
+        directId: currentChatType === "direct" ? currentChat.id : null,
+        groupId: currentChatType === "group" ? currentChat.id : null,
+        groupName: currentChatType === "group" ? currentGroup?.name : null,
+        senderAvatar: currentUser.photoURL || currentUser.avatar || "",
+      }).catch(() => {});
+    } catch (e) {}
+
     if (input) input.value = "";
     resizeMessageComposer();
     clearCurrentDraft();
@@ -13713,8 +13722,50 @@ async function sendMessage() {
   }
 }
 
+async function resetDisappearingMessagesForExistingChats() {
+  if (!currentUser) return;
+  try {
+    const [directSnap, groupMemberSnap] = await Promise.all([
+      db.collection("directChats")
+        .where("participants", "array-contains", currentUser.uid)
+        .where("disappearAfterSecs", ">", 0)
+        .get(),
+      db.collection("groupMembers")
+        .where("userId", "==", currentUser.uid)
+        .get(),
+    ]);
+    const batch = db.batch();
+    let count = 0;
+    directSnap.docs.forEach((doc) => {
+      batch.update(doc.ref, { disappearAfterSecs: 0 });
+      count++;
+    });
+    const groupIds = groupMemberSnap.docs.map((d) => d.data().groupId).filter(Boolean);
+    if (groupIds.length) {
+      const groupSnap = await db.collection("groups")
+        .where(firebase.firestore.FieldPath.documentId(), "in", groupIds.slice(0, 30))
+        .where("disappearAfterSecs", ">", 0)
+        .get();
+      groupSnap.docs.forEach((doc) => {
+        batch.update(doc.ref, { disappearAfterSecs: 0 });
+        count++;
+      });
+    }
+    if (count > 0) {
+      await batch.commit();
+      console.log(`Reset disappearing messages on ${count} chats`);
+    }
+  } catch (error) {
+    console.warn("resetDisappearingMessagesForExistingChats error:", error);
+  }
+}
+
 async function handleFileUpload(file) {
   if (!file) return;
+  if (file.size > UPLOAD_SIZE_LIMIT) {
+    showToast(`File too large (${(file.size / 1024 / 1024).toFixed(1)}MB). Maximum 10MB.`, "error");
+    return;
+  }
   const isImage = file.type.startsWith("image/");
   const isVideo = file.type.startsWith("video/");
   const isAudio = file.type.startsWith("audio/");
@@ -13735,7 +13786,7 @@ async function handleFileUpload(file) {
     };
     setAttachmentPreview();
   } catch (e) {
-    showToast("File uploading failed", "error");
+    showToast(e.message || "File uploading failed", "error");
   }
 }
 
@@ -16304,18 +16355,9 @@ function focusCurrentSearchResult() {
   if (countEl) countEl.textContent = `${currentSearchIndex + 1}/${count}`;
 }
 
-function _syncDarkModeBtn() {
-  const btn = document.getElementById("darkModeBtn");
-  if (!btn) return;
-  const isDark = document.body.classList.contains("dark");
-  btn.textContent = isDark ? "☀️" : "🌙";
-  btn.title = isDark ? "Switch to light mode" : "Switch to dark mode";
-}
-
 function toggleDarkMode() {
   document.body.classList.toggle("dark");
   localStorage.setItem("darkMode", document.body.classList.contains("dark"));
-  _syncDarkModeBtn();
 }
 
 function revealAuthenticatedApp() {
@@ -16582,39 +16624,25 @@ async function init() {
   loadBlockedWords();
   const authStateTimeout = window.setTimeout(() => {
     if (!document.body.classList.contains("auth-ready")) {
-      if (!sessionStorage.getItem("_auth_auto_retried")) {
-        sessionStorage.setItem("_auth_auto_retried", "1");
-        const label = document.querySelector(".auth-gate-label");
-        if (label) label.textContent = "Reconnecting\u2026";
-        setTimeout(() => window.location.reload(), 600);
-      } else {
-        sessionStorage.removeItem("_auth_auto_retried");
-        showStartupRecovery(
-          "Session checking is taking longer than expected. Check your connection and retry.",
-        );
-      }
+      showStartupRecovery(
+        "Session checking is taking longer than expected. Check your connection and retry.",
+      );
     }
-  }, 6000);
+  }, 15000);
   auth.onAuthStateChanged(async (user) => {
+    window.clearTimeout(authStateTimeout);
     if (!user) {
-      window.clearTimeout(authStateTimeout);
       cleanupAllFirestoreListeners();
       redirectToLogin();
       return;
     }
     try {
       try {
-        await Promise.race([
-          user.reload(),
-          new Promise((_, reject) =>
-            setTimeout(() => reject(new Error("user.reload() timed out")), 2500),
-          ),
-        ]);
+        await user.reload();
         user = auth.currentUser || user;
       } catch (error) {
         console.warn("Could not refresh auth user:", error);
       }
-      window.clearTimeout(authStateTimeout);
       currentUser = user;
       handlePendingWebCallAction().catch((error) =>
         console.warn("Could not process notification call action:", error),
@@ -16721,6 +16749,9 @@ async function init() {
       }
       await runBootstrapStep("handlePendingDirectChatOpen", () =>
         handlePendingDirectChatOpen(),
+      );
+      await runBootstrapStep("resetDisappearingMessages", () =>
+        resetDisappearingMessagesForExistingChats(),
       );
       await runBootstrapStep("getChatTags", () => getChatTags());
       await runBootstrapStep("loadWallpaperFromStorage", async () => {
@@ -18417,7 +18448,6 @@ async function init() {
 
   if (localStorage.getItem("darkMode") === "true")
     document.body.classList.add("dark");
-  _syncDarkModeBtn();
 }
 
 // ===== Export Chat as PDF =====
@@ -18602,7 +18632,7 @@ function showCurrentStory() {
 
   if (avatar) {
     if (user.userAvatar) { avatar.innerHTML = `<img src="${escapeHtml(user.userAvatar)}" alt="" />`; }
-    else { avatar.textContent = user.userName[0] || "U"; avatar.style.background = document.body.classList.contains('dark') ? '#202c33' : '#dfe5e7'; }
+    else { avatar.textContent = user.userName[0] || "U"; avatar.style.background = "#dfe5e7"; }
   }
   if (name) name.textContent = user.userName;
   if (time) time.textContent = story.timestamp?.toDate?.()?.toLocaleTimeString() || "";
