@@ -30,7 +30,19 @@
     <link rel="stylesheet" href="translation-ui.css?v=3" />
     <link rel="stylesheet" href="safe-area-audit.css?v=5" />
     <link rel="stylesheet" href="calls-ui.css?v=8" />
+    <link rel="stylesheet" href="calls-modern.css?v=1" />
+    <link rel="stylesheet" href="call-recording.css?v=1" />
     <link rel="stylesheet" href="polish.css?v=7" />
+    <link rel="stylesheet" href="chat-enhancements.css?v=4" />
+    <link rel="stylesheet" href="feature-updates.css?v=1" />
+    <link rel="stylesheet" href="audit-responsive.css?v=1" />
+    <link rel="stylesheet" href="audit-interactions.css?v=1" />
+    <link rel="stylesheet" href="url-preview.css?v=1" />
+    <link rel="stylesheet" href="group-message-info.css?v=1" />
+    <link rel="stylesheet" href="attachment-reliability.css?v=1" />
+    <link rel="stylesheet" href="message-search.css?v=1" />
+    <link rel="stylesheet" href="ui-compliance.css?v=1" />
+    <link rel="stylesheet" href="sync-audit.css?v=1" />
     <link rel="manifest" href="manifest.json?v=98" />
     <link rel="apple-touch-icon" href="app-icon-192.png" />
     <style>
@@ -575,16 +587,16 @@
           <div id="attachmentSheet" class="attachment-sheet" aria-hidden="true">
             <div class="attachment-sheet-handle"></div>
             <div class="attachment-sheet-grid">
-              <button type="button" class="attachment-sheet-item" id="sheetGalleryBtn" data-color="blue"><span class="attachment-sheet-icon">IMG</span><span>Gallery</span></button>
-              <button type="button" class="attachment-sheet-item" id="sheetCameraBtn" data-color="pink"><span class="attachment-sheet-icon">CAM</span><span>Camera</span></button>
-              <button type="button" class="attachment-sheet-item" id="locationBtn" data-color="green"><span class="attachment-sheet-icon">PIN</span><span>Location</span></button>
-              <button type="button" class="attachment-sheet-item" id="contactCardBtn" data-color="cyan"><span class="attachment-sheet-icon">USER</span><span>Contact</span></button>
-              <button type="button" class="attachment-sheet-item" id="sheetDocumentBtn" data-color="purple"><span class="attachment-sheet-icon">DOC</span><span>Document</span></button>
-              <button type="button" class="attachment-sheet-item" id="pollBtn" data-color="amber"><span class="attachment-sheet-icon">POLL</span><span>Poll</span></button>
-              <button type="button" class="attachment-sheet-item" id="eventBtn" data-color="rose"><span class="attachment-sheet-icon">DATE</span><span>Event</span></button>
-              <button type="button" class="attachment-sheet-item" id="videoMsgBtn" data-color="teal"><span class="attachment-sheet-icon">VID</span><span>Video note</span></button>
-              <button type="button" class="attachment-sheet-item" id="scheduleMsgBtn" data-color="slate"><span class="attachment-sheet-icon">TIME</span><span>Schedule</span></button>
-              <button type="button" class="attachment-sheet-item" id="listBtn" data-color="orange"><span class="attachment-sheet-icon">LIST</span><span>List</span></button>
+              <button type="button" class="attachment-sheet-item" id="sheetGalleryBtn" data-color="blue"><span class="attachment-sheet-icon"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></span><span>Gallery</span></button>
+              <button type="button" class="attachment-sheet-item" id="sheetCameraBtn" data-color="pink"><span class="attachment-sheet-icon"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></span><span>Camera</span></button>
+              <button type="button" class="attachment-sheet-item" id="locationBtn" data-color="green"><span class="attachment-sheet-icon"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg></span><span>Location</span></button>
+              <button type="button" class="attachment-sheet-item" id="contactCardBtn" data-color="cyan"><span class="attachment-sheet-icon"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span><span>Contact</span></button>
+              <button type="button" class="attachment-sheet-item" id="sheetDocumentBtn" data-color="purple"><span class="attachment-sheet-icon"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg></span><span>Document</span></button>
+              <button type="button" class="attachment-sheet-item" id="pollBtn" data-color="amber"><span class="attachment-sheet-icon"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></span><span>Poll</span></button>
+              <button type="button" class="attachment-sheet-item" id="eventBtn" data-color="rose"><span class="attachment-sheet-icon"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span><span>Event</span></button>
+              <button type="button" class="attachment-sheet-item" id="videoMsgBtn" data-color="teal"><span class="attachment-sheet-icon"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg></span><span>Video note</span></button>
+              <button type="button" class="attachment-sheet-item" id="scheduleMsgBtn" data-color="slate"><span class="attachment-sheet-icon"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></span><span>Schedule</span></button>
+              <button type="button" class="attachment-sheet-item" id="listBtn" data-color="orange"><span class="attachment-sheet-icon"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg></span><span>List</span></button>
             </div>
           </div>
           <!-- Markdown Preview Panel (hidden by default, shown in compose area) -->
@@ -2031,129 +2043,129 @@
             class="call-icon-btn"
             title="Mute microphone"
             aria-label="Mute microphone"
-          >
-            Mic
+            data-control-label="Mic"
+          ><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="11" rx="3"/><path d="M5 10a7 7 0 0 0 14 0"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="8" y1="22" x2="16" y2="22"/></svg>
           </button>
           <button
             id="speakerCallBtn"
             class="call-icon-btn"
             title="Use speaker"
             aria-label="Use speaker"
-          >
-            Spk
+            data-control-label="Speaker"
+          ><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
           </button>
           <button
             id="upgradeVideoCallBtn"
             class="call-icon-btn"
             title="Switch to video call"
             aria-label="Switch to video call"
+            data-control-label="Video"
             style="display: none"
-          >
-            Video
+          ><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
           </button>
           <button
             id="toggleCameraBtn"
             class="call-icon-btn"
             title="Turn camera on/off"
             aria-label="Turn camera on or off"
-          >
-            Cam
+            data-control-label="Camera"
+          ><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
           </button>
           <button
             id="switchCameraBtn"
             class="call-icon-btn"
             title="Switch camera"
             aria-label="Switch camera"
+            data-control-label="Flip"
             style="display: none"
-          >
-            Flip
+          ><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.1"/></svg>
           </button>
           <button
             id="addCallParticipantBtn"
             class="call-icon-btn"
             title="Add people"
             aria-label="Add people to call"
+            data-control-label="Add"
             style="display: none"
-          >
-            +
+          ><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>
           </button>
           <button
             id="peopleCallBtn"
             class="call-icon-btn"
             title="People in call"
             aria-label="People in call"
+            data-control-label="People"
             style="display: none"
-          >
-            People
+          ><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
           </button>
           <button
             id="toggleViewBtn"
             class="call-icon-btn"
             title="Toggle view"
             aria-label="Toggle speaker/grid view"
+            data-control-label="View"
             style="display: none"
-          >
-            View
+          ><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
           </button>
           <button
             id="screenShareBtn"
             class="call-icon-btn"
             title="Share screen"
             aria-label="Share screen"
+            data-control-label="Screen"
             style="display: none"
-          >
-            Screen
+          ><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><polyline points="8 21 12 17 16 21"/></svg>
           </button>
           <button
             id="pipBtn"
             class="call-icon-btn"
             title="Picture-in-Picture"
             aria-label="Picture-in-Picture"
+            data-control-label="PiP"
             style="display: none"
-          >
-            PiP
+          ><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><rect x="14" y="11" width="8" height="6" rx="1"/></svg>
           </button>
           <button
             id="msgCallBtn"
             class="call-icon-btn"
             title="Send message"
             aria-label="Send message during call"
+            data-control-label="Message"
             style="display: none"
-          >
-            Msg
+          ><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
           </button>
           <button
             id="proximityLockBtn"
             class="call-icon-btn"
             title="Proximity lock"
             aria-label="Toggle proximity lock"
+            data-control-label="Ear mode"
             style="display: none"
-          >
-            Ear
+          ><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 18v-6a9 9 0 0 1 18 0v6"/><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/></svg>
           </button>
           <button
             id="acceptCallBtn"
             class="call-icon-btn accept-call"
             title="Accept"
             aria-label="Accept call"
-          >
-            Accept
+            data-control-label="Accept"
+          ><svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 24 24" fill="currentColor"><path d="M6.62 10.79a15.53 15.53 0 006.59 6.59l2.2-2.2a1 1 0 011.01-.24 11.36 11.36 0 003.56.57 1 1 0 011 1V21a1 1 0 01-1 1A18 18 0 013 5a1 1 0 011-1h3.5a1 1 0 011 1 11.36 11.36 0 00.57 3.56 1 1 0 01-.24 1.01z"/></svg>
           </button>
           <button
             id="rejectCallBtn"
             class="call-icon-btn end-call"
             title="Reject"
             aria-label="Reject call"
-          >
-            End
+            data-control-label="Decline"
+          ><svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 24 24" fill="currentColor"><path d="M23.71 16.67C20.66 13.78 16.54 12 12 12 7.46 12 3.34 13.78.29 16.67c-.18.18-.29.43-.29.71 0 .28.11.53.29.71l2.48 2.48c.18.18.43.29.71.29.27 0 .52-.11.7-.28.79-.74 1.69-1.36 2.66-1.85.33-.16.56-.5.56-.9v-3.1c1.45-.48 3-.73 4.6-.73 1.6 0 3.15.25 4.6.72v3.1c0 .39.23.74.56.9.98.49 1.87 1.12 2.66 1.85.18.18.43.28.7.28.28 0 .53-.11.71-.29l2.48-2.48c.18-.18.29-.43.29-.71 0-.28-.11-.53-.29-.71z"/></svg>
           </button>
           <button
             id="endCallBtn"
             class="call-icon-btn end-call"
             title="End call"
             aria-label="End call"
-          >
-            Stop
+            data-control-label="End"
+          ><svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 24 24" fill="currentColor"><path d="M23.71 16.67C20.66 13.78 16.54 12 12 12 7.46 12 3.34 13.78.29 16.67c-.18.18-.29.43-.29.71 0 .28.11.53.29.71l2.48 2.48c.18.18.43.29.71.29.27 0 .52-.11.7-.28.79-.74 1.69-1.36 2.66-1.85.33-.16.56-.5.56-.9v-3.1c1.45-.48 3-.73 4.6-.73 1.6 0 3.15.25 4.6.72v3.1c0 .39.23.74.56.9.98.49 1.87 1.12 2.66 1.85.18.18.43.28.7.28.28 0 .53-.11.71-.29l2.48-2.48c.18-.18.29-.43.29-.71 0-.28-.11-.53-.29-.71z"/></svg>
           </button>
         </div>
         <div id="callMsgPanel" class="call-msg-panel">
@@ -3711,5 +3723,15 @@
     <script src="chat-fixes.js?v=3" defer></script>
     <script src="swipe-nav.js?v=1" defer></script>
     <script src="app.js"></script>
+    <script src="chat-enhancements.js?v=1" defer></script>
+    <script src="feature-updates.js?v=1"></script>
+    <script src="sync-audit.js?v=1"></script>
+    <script src="push-notifications.js?v=1" defer></script>
+    <script src="notification-reply.js?v=1" defer></script>
+    <script src="audit-interactions.js?v=1" defer></script>
+    <script src="url-preview.js?v=1" defer></script>
+    <script src="group-message-info.js?v=1" defer></script>
+    <script src="attachment-reliability.js?v=1" defer></script>
+    <script src="ui-compliance.js?v=1" defer></script>
 </body>
 </html>

@@ -1,0 +1,195 @@
+/* =============================================
+   MESSAGE SEARCH v1.0
+   Styles for the enhanced global search modal,
+   result cards, highlights, infinite scroll loader
+   ============================================= */
+
+/* ── Modal upgrades ──────────────────────────────────────────── */
+#globalSearchModal .modal-content {
+  max-width: 560px; width: 100%;
+  max-height: 85vh; display: flex; flex-direction: column;
+  border-radius: 16px; overflow: hidden;
+}
+#globalSearchModal .modal-body {
+  display: flex; flex-direction: column; flex: 1; overflow: hidden;
+  padding: 12px 16px 16px;
+}
+#globalSearchModal .modal-header {
+  flex-shrink: 0; padding: 14px 20px;
+  border-bottom: 1px solid rgba(0,0,0,0.07);
+}
+.dark-mode #globalSearchModal .modal-header,
+body.dark #globalSearchModal .modal-header {
+  border-color: rgba(255,255,255,0.07);
+}
+
+/* ── Input area ──────────────────────────────────────────────── */
+#globalSearchInput {
+  width: 100%; padding: 11px 40px 11px 14px !important;
+  border: 1.5px solid #e2e8f0 !important; border-radius: 12px !important;
+  font-size: 14px; outline: none; transition: border-color 0.18s;
+  background: #f0f2f5; color: inherit;
+  flex-shrink: 0; margin-bottom: 0 !important;
+}
+#globalSearchInput:focus {
+  border-color: #00a884 !important;
+  background: #fff;
+  box-shadow: 0 0 0 3px rgba(0,168,132,0.12);
+}
+.dark-mode #globalSearchInput, body.dark #globalSearchInput {
+  background: #202c33; border-color: #2a3942 !important; color: #e9edef;
+}
+.dark-mode #globalSearchInput:focus, body.dark #globalSearchInput:focus {
+  background: #111b21; border-color: #00a884 !important;
+}
+
+/* ── Clear button ────────────────────────────────────────────── */
+.ms-input-clear {
+  position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
+  background: none; border: none; color: #aebac1; font-size: 14px;
+  cursor: pointer; padding: 4px; border-radius: 50%; line-height: 1;
+  min-width: 24px; min-height: 24px;
+  display: flex; align-items: center; justify-content: center;
+  transition: background 0.12s, color 0.12s;
+}
+.ms-input-clear:hover { background: rgba(0,0,0,0.07); color: #111b21; }
+.dark-mode .ms-input-clear:hover, body.dark .ms-input-clear:hover {
+  background: rgba(255,255,255,0.1); color: #e9edef;
+}
+
+/* ── Scope toggle ────────────────────────────────────────────── */
+.ms-scope-bar {
+  display: flex; gap: 6px; margin: 10px 0 8px; flex-shrink: 0;
+}
+.ms-scope-btn {
+  flex: 1; padding: 7px 10px; border-radius: 20px; border: 1.5px solid #e2e8f0;
+  background: transparent; font-size: 13px; font-weight: 500; color: #667781;
+  cursor: pointer; transition: all 0.15s; min-height: 36px;
+}
+.ms-scope-btn:hover { background: rgba(0,0,0,0.04); }
+.ms-scope-btn.ms-active { border-color: #00a884; color: #00a884; background: rgba(0,168,132,0.08); font-weight: 600; }
+.dark-mode .ms-scope-btn, body.dark .ms-scope-btn { border-color: #2a3942; color: #aebac1; }
+.dark-mode .ms-scope-btn.ms-active, body.dark .ms-scope-btn.ms-active { background: rgba(0,168,132,0.12); color: #00a884; border-color: #00a884; }
+
+/* ── Results container ───────────────────────────────────────── */
+.ms-results-container {
+  flex: 1; overflow-y: auto; display: flex; flex-direction: column;
+  gap: 0; -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin; scrollbar-color: rgba(0,0,0,0.12) transparent;
+  margin-top: 8px;
+}
+.ms-results-container::-webkit-scrollbar { width: 4px; }
+.ms-results-container::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.12); border-radius: 4px; }
+
+/* ── Result card ─────────────────────────────────────────────── */
+.ms-card {
+  display: flex; flex-direction: column; gap: 3px;
+  padding: 12px 14px; border-radius: 10px;
+  cursor: pointer; transition: background 0.12s;
+  border-bottom: 1px solid rgba(0,0,0,0.05);
+  outline: none;
+}
+.ms-card:last-of-type { border-bottom: none; }
+.ms-card:hover, .ms-card:focus { background: rgba(0,168,132,0.07); }
+.dark-mode .ms-card:hover, body.dark .ms-card:hover,
+.dark-mode .ms-card:focus,  body.dark .ms-card:focus {
+  background: rgba(0,168,132,0.1);
+}
+.dark-mode .ms-card, body.dark .ms-card { border-color: rgba(255,255,255,0.05); }
+
+.ms-card-meta {
+  display: flex; justify-content: space-between; align-items: center; gap: 8px;
+}
+.ms-card-chat {
+  font-size: 11px; font-weight: 700; color: #00a884;
+  text-transform: uppercase; letter-spacing: 0.04em;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.ms-card-time { font-size: 11px; color: #aebac1; white-space: nowrap; }
+.ms-card-sender { font-size: 13px; font-weight: 600; color: #111b21; }
+.dark-mode .ms-card-sender, body.dark .ms-card-sender { color: #e9edef; }
+.ms-card-snippet { font-size: 13px; color: #667781; line-height: 1.4; }
+.dark-mode .ms-card-snippet, body.dark .ms-card-snippet { color: #aebac1; }
+
+/* ── Match highlight ─────────────────────────────────────────── */
+mark.ms-highlight {
+  background: #fff176; color: #111b21; border-radius: 2px;
+  padding: 0 1px; font-weight: 700;
+}
+.dark-mode mark.ms-highlight, body.dark mark.ms-highlight {
+  background: #f59f0b; color: #111b21;
+}
+
+/* ── Jump-to-message flash ───────────────────────────────────── */
+@keyframes msJumpFlash {
+  0%   { background: rgba(0,168,132,0.35); }
+  100% { background: transparent; }
+}
+.ms-jump-flash {
+  animation: msJumpFlash 1.8s ease-out forwards;
+  border-radius: 8px;
+}
+
+/* ── Empty / error states ────────────────────────────────────── */
+.ms-empty, .ms-empty-state {
+  text-align: center; padding: 28px 16px;
+  color: #aebac1; font-size: 14px; line-height: 1.5;
+}
+.ms-empty strong { color: #667781; }
+
+/* ── Spinner ─────────────────────────────────────────────────── */
+.ms-spinner {
+  width: 28px; height: 28px; border-radius: 50%;
+  border: 3px solid rgba(0,168,132,0.2);
+  border-top-color: #00a884;
+  animation: msSpin 0.75s linear infinite;
+  margin: 28px auto;
+}
+@keyframes msSpin { to { transform: rotate(360deg); } }
+
+/* ── Infinite scroll sentinel ────────────────────────────────── */
+.ms-sentinel { height: 40px; display: flex; align-items: center; justify-content: center; }
+.ms-loader {
+  width: 20px; height: 20px; border-radius: 50%;
+  border: 2.5px solid rgba(0,168,132,0.2);
+  border-top-color: #00a884;
+  animation: msSpin 0.75s linear infinite;
+  opacity: 0; transition: opacity 0.2s;
+}
+.ms-sentinel.ms-loading .ms-loader { opacity: 1; }
+.ms-end { text-align: center; padding: 10px 0; font-size: 12px; color: #aebac1; }
+
+/* ── Global search header button ─────────────────────────────── */
+.ms-global-btn {
+  background: none; border: none;
+  width: 36px; height: 36px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  color: #667781; cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  flex-shrink: 0;
+}
+.ms-global-btn:hover { background: rgba(0,0,0,0.07); color: #00a884; }
+.dark-mode .ms-global-btn:hover, body.dark .ms-global-btn:hover {
+  background: rgba(255,255,255,0.1); color: #00a884;
+}
+
+/* ── Responsive ──────────────────────────────────────────────── */
+@media (max-width: 480px) {
+  #globalSearchModal .modal-content {
+    max-width: 100%; border-radius: 16px 16px 0 0;
+    max-height: 90vh; position: fixed; bottom: 0; left: 0; right: 0;
+  }
+  #globalSearchModal {
+    align-items: flex-end !important;
+    padding: 0 !important;
+  }
+  .ms-scope-btn { font-size: 12px; padding: 6px 8px; }
+}
+
+/* ── Dark mode for empty state ───────────────────────────────── */
+@media (prefers-color-scheme: dark) {
+  #globalSearchInput { background: #202c33; border-color: #2a3942 !important; color: #e9edef; }
+  mark.ms-highlight  { background: #f59f0b; color: #111b21; }
+  .ms-card:hover     { background: rgba(0,168,132,0.1); }
+  .ms-card-sender    { color: #e9edef; }
+}

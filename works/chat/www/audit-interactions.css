@@ -1,0 +1,10 @@
+/* =============================================
+   AUDIT INTERACTIONS CSS — #19 Keyboard nav
+   ============================================= */
+.chat-list-item.keyboard-focus,
+[class*="chat-row"].keyboard-focus {
+  background: rgba(0,168,132,0.1) !important;
+  outline: 2px solid #00a884;
+  outline-offset: -2px;
+}
+.tc-offscreen { content-visibility: auto; }

@@ -1,0 +1,529 @@
+/* =============================================
+   UI COMPLIANCE v1.0
+   Items #7-14: Critical responsive compliance,
+   scrolling, buttons, icons, modals, touch targets,
+   landscape, foldable, accessibility, dark mode.
+   ============================================= */
+
+/* ═══════════════════════════════════════════════
+   ITEM #8 — Download / Install App placement fix
+   Card moved to bottom of sidebar via HTML patch.
+   Ensure it never appears inside the chat list.
+   ══════════════════════════════════════════════ */
+.mobile-install-card {
+  position: sticky !important;
+  bottom: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  width: 100% !important;
+  z-index: 10 !important;
+  border-radius: 0 !important;
+  margin: 0 !important;
+  border-top: 1px solid rgba(0,0,0,0.07) !important;
+  background: var(--sidebar-bg, #f0f2f5) !important;
+  flex-shrink: 0 !important;
+}
+.dark-mode .mobile-install-card,
+body.dark .mobile-install-card {
+  background: var(--sidebar-bg, #111b21) !important;
+  border-top-color: rgba(255,255,255,0.07) !important;
+}
+
+/* ═══════════════════════════════════════════════
+   ITEM #7 & #9 — Layout structure: no overflow,
+   no overlapping, correct flex/grid hierarchy
+   ══════════════════════════════════════════════ */
+html, body {
+  width: 100% !important;
+  max-width: 100vw !important;
+  overflow-x: hidden !important;
+  overscroll-behavior: none !important;
+}
+.chat-container, #chatContainer, .app-wrapper, #appWrapper {
+  display: flex !important;
+  width: 100% !important;
+  height: 100dvh !important;
+  max-width: 100vw !important;
+  overflow: hidden !important;
+  position: relative !important;
+}
+.chat-main, #chatMain, .main-area {
+  flex: 1 1 0 !important;
+  min-width: 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
+  height: 100dvh !important;
+}
+.sidebar, #sidebar {
+  flex-shrink: 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
+  height: 100dvh !important;
+  max-height: 100dvh !important;
+}
+
+/* ═══════════════════════════════════════════════
+   ITEM #10 — Universal scrolling
+   Every scrollable region must actually scroll
+   ══════════════════════════════════════════════ */
+#chatList, .chat-list, #chatMessages, .messages-area,
+#requestList, .request-list, #archiveList, .archive-list,
+#pinnedMessagesList, .pinned-messages-list,
+.sidebar-content, #sidebarContent,
+.modal-body, .modal-content,
+.settings-body, #settingsBody,
+.members-list, #membersList,
+.emoji-picker, [class*="emoji-picker"],
+.context-menu, #chatContextMenu,
+.dropdown-menu, [class*="dropdown-menu"],
+.attachment-panel, #attachmentSheet {
+  overflow-y: auto !important;
+  -webkit-overflow-scrolling: touch !important;
+  overscroll-behavior-y: contain !important;
+  scroll-behavior: smooth !important;
+}
+/* Prevent content from shrinking inside scroll containers */
+#chatList, .chat-list {
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+}
+.messages-area, #messagesArea {
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  -webkit-overflow-scrolling: touch !important;
+  overscroll-behavior-y: contain !important;
+}
+/* Thin scrollbars everywhere */
+* { scrollbar-width: thin; scrollbar-color: rgba(0,0,0,0.15) transparent; }
+*::-webkit-scrollbar { width: 3px; height: 3px; }
+*::-webkit-scrollbar-track { background: transparent; }
+*::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.15); border-radius: 3px; }
+body.dark *::-webkit-scrollbar-thumb,
+.dark-mode *::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); }
+/* Hide scrollbar on mobile but keep functionality */
+@media (max-width: 600px) {
+  * { scrollbar-width: none !important; }
+  *::-webkit-scrollbar { display: none !important; }
+}
+
+/* ═══════════════════════════════════════════════
+   ITEM #11 — Button, icon & control validation
+   All controls must be sized, aligned, accessible
+   ══════════════════════════════════════════════ */
+/* Baseline touch target */
+button, [role="button"], a, [role="tab"],
+input[type="checkbox"], input[type="radio"],
+select, summary {
+  min-height: 44px !important;
+  min-width: 44px !important;
+  cursor: pointer !important;
+  -webkit-tap-highlight-color: transparent !important;
+}
+/* Compact icon-only buttons — 40px is acceptable per WCAG with padding */
+.icon-btn, .toolbar-icon, .emoji-btn, .attachment-btn,
+.in-chat-search-action, .clear-search-input,
+.sidebar-actions button, .chat-actions button,
+.install-app-btn, #logoutBtn, #darkModeBtn, #scannerBtn,
+.selection-bar-actions button, .sel-action {
+  min-height: 40px !important;
+  min-width: 40px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  flex-shrink: 0 !important;
+  border-radius: 50% !important;
+  position: relative !important;
+}
+/* Consistent icon sizes */
+.icon-btn svg, .icon-btn img, .toolbar-icon svg,
+.chat-actions button svg, .sidebar-actions button svg {
+  width: 20px !important;
+  height: 20px !important;
+  flex-shrink: 0 !important;
+  pointer-events: none !important;
+}
+/* Hover states */
+.icon-btn:hover, [role="button"]:hover:not(:disabled),
+.emoji-btn:hover, .attachment-btn:hover,
+.sidebar-actions button:hover, .chat-actions button:hover {
+  background: rgba(0,0,0,0.07) !important;
+  transition: background 0.15s ease !important;
+}
+body.dark .icon-btn:hover,
+.dark-mode .icon-btn:hover { background: rgba(255,255,255,0.1) !important; }
+/* Focus states */
+button:focus-visible, a:focus-visible,
+[role="button"]:focus-visible, [tabindex]:focus-visible {
+  outline: 2px solid #00a884 !important;
+  outline-offset: 2px !important;
+  box-shadow: 0 0 0 4px rgba(0,168,132,0.18) !important;
+}
+button:focus:not(:focus-visible), a:focus:not(:focus-visible) {
+  outline: none !important;
+  box-shadow: none !important;
+}
+/* Active states */
+button:active, [role="button"]:active {
+  transform: scale(0.96) !important;
+  transition: transform 0.08s ease !important;
+}
+/* Disabled states */
+button:disabled, [disabled], [aria-disabled="true"] {
+  opacity: 0.45 !important;
+  cursor: not-allowed !important;
+  pointer-events: none !important;
+}
+/* Labels must never overflow */
+.install-app-label, button span, .btn span {
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  max-width: 100% !important;
+}
+/* Sidebar actions row must never overflow */
+.sidebar-actions {
+  display: flex !important;
+  align-items: center !important;
+  gap: 2px !important;
+  flex-shrink: 0 !important;
+  flex-wrap: nowrap !important;
+  overflow: visible !important;
+}
+/* Chat actions row */
+.chat-actions {
+  display: flex !important;
+  align-items: center !important;
+  gap: 2px !important;
+  flex-shrink: 0 !important;
+}
+@media (max-width: 390px) {
+  .chat-actions .icon-btn:nth-child(n+5) { display: none !important; }
+  #chatMoreBtn { display: inline-flex !important; }
+}
+
+/* ═══════════════════════════════════════════════
+   ITEM #9 — Prevent overflow / clipping
+   ══════════════════════════════════════════════ */
+/* Messages must never overflow horizontally */
+.message-bubble, .msg-bubble, .message-row, .message-item,
+.chat-message { max-width: 100% !important; box-sizing: border-box !important; }
+/* Input area must always be at the bottom */
+.input-area, #inputArea {
+  flex-shrink: 0 !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  overflow: visible !important;
+  position: relative !important;
+  z-index: 20 !important;
+}
+/* Chat header must be full width and never clip */
+.chat-header {
+  flex-shrink: 0 !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  overflow: visible !important;
+  position: relative !important;
+  z-index: 30 !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+}
+.chat-header-info {
+  flex: 1 1 0 !important;
+  min-width: 0 !important;
+  overflow: hidden !important;
+}
+.chat-header-text h2, #currentChatName {
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  max-width: 100% !important;
+}
+/* Search box in sidebar */
+.search-box { flex-shrink: 0 !important; width: 100% !important; }
+.search-box input { width: 100% !important; box-sizing: border-box !important; }
+/* Modals must never bleed out of viewport */
+.modal { overflow-y: auto !important; overscroll-behavior: contain !important; }
+.modal-content {
+  max-width: min(96vw, 600px) !important;
+  max-height: 90dvh !important;
+  overflow-y: auto !important;
+  box-sizing: border-box !important;
+  margin: auto !important;
+}
+.modal-body { overflow-y: auto !important; -webkit-overflow-scrolling: touch !important; }
+
+/* ═══════════════════════════════════════════════
+   ITEM #13 — Landscape orientation
+   ══════════════════════════════════════════════ */
+@media (orientation: landscape) and (max-height: 500px) {
+  .chat-container, #chatContainer { height: 100dvh !important; }
+  .chat-header { min-height: 44px !important; padding: 6px 12px !important; }
+  .input-area, #inputArea { min-height: 48px !important; }
+  .messages-area, #messagesArea { flex: 1 !important; }
+  .modal-content { max-height: 95dvh !important; }
+  /* On tiny-height landscape, collapse sidebar header */
+  .sidebar-header { min-height: 48px !important; padding: 6px 12px !important; }
+  .user-avatar, #userAvatar { width: 32px !important; height: 32px !important; }
+  .mobile-install-card { padding: 6px 12px !important; }
+}
+@media (orientation: landscape) and (max-width: 920px) {
+  /* Tablet landscape: show both panels */
+  .sidebar, #sidebar { width: 260px !important; }
+  .chat-main, #chatMain { flex: 1 !important; }
+}
+
+/* ═══════════════════════════════════════════════
+   ITEM #13 — Foldable device support
+   ══════════════════════════════════════════════ */
+@media (min-width: 280px) and (max-width: 360px) {
+  .chat-header h2, #currentChatName { font-size: 13px !important; }
+  .chat-actions .icon-btn { min-width: 36px !important; min-height: 36px !important; }
+  .message-bubble, .msg-bubble { font-size: 13px !important; }
+}
+/* Samsung Galaxy Fold / Z Flip outer screen */
+@media (max-width: 280px) {
+  .sidebar, #sidebar { width: 100% !important; }
+  .chat-main, #chatMain { width: 100% !important; }
+  .chat-header { padding: 6px 8px !important; }
+  .chat-actions .icon-btn:nth-child(n+4) { display: none !important; }
+}
+
+/* ═══════════════════════════════════════════════
+   ITEM #9 — Fix specific layout bugs
+   ══════════════════════════════════════════════ */
+/* Prevent sidebar from collapsing on small screens in split layout */
+@media (max-width: 480px) {
+  .sidebar, #sidebar {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+  .chat-main, #chatMain { display: none !important; }
+  .chat-open .sidebar, .chat-open #sidebar { display: none !important; }
+  .chat-open .chat-main, .chat-open #chatMain { display: flex !important; width: 100% !important; }
+}
+/* Fix reply preview bar from overflowing */
+#replyPreviewBar {
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+  margin: 0 !important;
+  overflow: hidden !important;
+}
+/* Selection bar */
+.selection-bar { overflow: hidden !important; flex-shrink: 0 !important; }
+/* In-chat search bar */
+.in-chat-search-bar {
+  flex-shrink: 0 !important;
+  overflow: hidden !important;
+  width: 100% !important;
+}
+.in-chat-search-shell { flex: 1 !important; min-width: 0 !important; }
+#inChatSearchInput { min-width: 0 !important; }
+/* Attachment preview must not overflow */
+.attachment-preview, #attachmentPreview {
+  max-width: 100% !important;
+  overflow-x: auto !important;
+  box-sizing: border-box !important;
+}
+/* Context menu must stay within viewport */
+.context-menu, #chatContextMenu, [class*="context-menu"] {
+  max-width: min(280px, 90vw) !important;
+  max-height: 80dvh !important;
+  overflow-y: auto !important;
+  z-index: 9999 !important;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.18) !important;
+}
+/* Emoji picker */
+.emoji-picker, [class*="emoji-picker"] {
+  max-width: min(352px, 96vw) !important;
+  max-height: 70dvh !important;
+  overflow: hidden !important;
+  z-index: 9000 !important;
+}
+@media (max-width: 400px) {
+  .emoji-picker, [class*="emoji-picker"] {
+    width: calc(100vw - 16px) !important;
+    left: 8px !important;
+    right: 8px !important;
+  }
+}
+
+/* ═══════════════════════════════════════════════
+   ITEM #11 — Form inputs
+   ══════════════════════════════════════════════ */
+input, textarea, select {
+  font-size: max(16px, 1em) !important; /* Prevent iOS zoom */
+  box-sizing: border-box !important;
+  max-width: 100% !important;
+}
+/* messageInput must be auto-height but bounded */
+#messageInput, [id*="messageInput"] {
+  resize: none !important;
+  overflow-y: auto !important;
+  max-height: 160px !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+/* ═══════════════════════════════════════════════
+   ITEM #9 — Modal overlays
+   ══════════════════════════════════════════════ */
+.modal {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 10000 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: env(safe-area-inset-top,12px) env(safe-area-inset-right,12px)
+           env(safe-area-inset-bottom,12px) env(safe-area-inset-left,12px) !important;
+  box-sizing: border-box !important;
+  background: rgba(0,0,0,0.55) !important;
+}
+.modal[style*="display: none"], .modal[style*="display:none"] { display: none !important; }
+@media (max-width: 480px) {
+  .modal-content {
+    max-width: 100% !important;
+    width: 100% !important;
+    max-height: 92dvh !important;
+    border-radius: 16px 16px 0 0 !important;
+    margin: auto 0 0 !important;
+  }
+  .modal { align-items: flex-end !important; padding: 0 !important; }
+}
+
+/* ═══════════════════════════════════════════════
+   ITEM #11 — Call screen
+   ══════════════════════════════════════════════ */
+.call-panel, #callPanel, [class*="call-ui"], [class*="call-overlay"] {
+  max-height: 100dvh !important;
+  overflow: hidden !important;
+  z-index: 10001 !important;
+}
+@media (max-width: 480px) {
+  .call-controls, [class*="call-actions"] {
+    flex-wrap: wrap !important;
+    justify-content: center !important;
+    gap: 20px !important;
+    padding: 16px !important;
+    padding-bottom: calc(16px + env(safe-area-inset-bottom,0px)) !important;
+  }
+  .call-control-btn, [class*="call-btn"] {
+    min-width: 56px !important; min-height: 56px !important;
+    border-radius: 50% !important;
+  }
+}
+
+/* ═══════════════════════════════════════════════
+   ITEM #9 — Profile / Group Info panel
+   ══════════════════════════════════════════════ */
+.profile-panel, #profilePanel, .group-info-panel, #groupInfoPanel,
+[class*="info-panel"] {
+  overflow-y: auto !important;
+  -webkit-overflow-scrolling: touch !important;
+  max-height: 100dvh !important;
+}
+@media (max-width: 480px) {
+  .profile-panel, #profilePanel, .group-info-panel, #groupInfoPanel {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+}
+
+/* ═══════════════════════════════════════════════
+   ITEM #14 — Accessibility baseline
+   ══════════════════════════════════════════════ */
+[aria-hidden="true"] { pointer-events: none !important; }
+.sr-only {
+  position: absolute !important; width: 1px !important; height: 1px !important;
+  padding: 0 !important; margin: -1px !important; overflow: hidden !important;
+  clip: rect(0,0,0,0) !important; white-space: nowrap !important; border: 0 !important;
+}
+/* Respect reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ═══════════════════════════════════════════════
+   ITEM #9 — Text & content integrity
+   ══════════════════════════════════════════════ */
+* {
+  word-break: break-word !important;
+  overflow-wrap: anywhere !important;
+}
+img, video, svg, canvas {
+  max-width: 100% !important;
+  height: auto !important;
+  display: block !important;
+}
+/* Inline images (avatars etc.) keep their dimensions */
+.user-avatar, .list-avatar, .chat-header-avatar,
+.avatar, [class*="avatar"] {
+  display: flex !important;
+  flex-shrink: 0 !important;
+  height: auto !important;
+}
+
+/* ═══════════════════════════════════════════════
+   ITEM #13 — Print styles (basic sanity)
+   ══════════════════════════════════════════════ */
+@media print {
+  .sidebar, #sidebar, .chat-header, .input-area,
+  .modal, [class*="modal"], .emoji-picker { display: none !important; }
+  .messages-area, #messagesArea { overflow: visible !important; }
+}
+
+/* ═══════════════════════════════════════════════
+   ITEM #9 — High-contrast mode
+   ══════════════════════════════════════════════ */
+@media (forced-colors: active) {
+  .message-bubble, .msg-bubble { border: 1px solid ButtonText !important; }
+  button { border: 1px solid ButtonText !important; }
+  .modal-content { border: 1px solid ButtonText !important; }
+}
+
+/* ═══════════════════════════════════════════════
+   ITEM #11 — Dropdown menus
+   ══════════════════════════════════════════════ */
+.dropdown-menu, [class*="dropdown-menu"], .more-menu, #moreMenu,
+.chat-more-menu, #chatMoreMenu {
+  position: absolute !important;
+  z-index: 8000 !important;
+  max-height: min(360px, 70dvh) !important;
+  overflow-y: auto !important;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.16) !important;
+  border-radius: 10px !important;
+  min-width: 180px !important;
+  max-width: min(280px, 90vw) !important;
+}
+/* Ensure dropdowns don't go off-screen right edge */
+.dropdown-menu[style*="right"], [class*="dropdown-menu"][style*="right"] {
+  right: 0 !important;
+  left: auto !important;
+}
+
+/* ═══════════════════════════════════════════════
+   ITEM #9 — Safe area padding for composer
+   ══════════════════════════════════════════════ */
+.input-area, #inputArea {
+  padding-bottom: calc(8px + env(safe-area-inset-bottom,0px)) !important;
+  padding-left: env(safe-area-inset-left,0px) !important;
+  padding-right: env(safe-area-inset-right,0px) !important;
+}
+/* Sidebar safe area */
+.sidebar, #sidebar {
+  padding-left: env(safe-area-inset-left,0px) !important;
+}
+/* Header safe area */
+.chat-header, .sidebar-header {
+  padding-top: env(safe-area-inset-top,0px) !important;
+}

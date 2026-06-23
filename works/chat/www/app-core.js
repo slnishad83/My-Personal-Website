@@ -500,6 +500,15 @@ function renderCallMessage(msg = {}) {
   ));
   const icon = getCallIcon(msg.callType, msg.callStatus);
   const canCallAgain = Boolean(msg.groupId || msg.callFromUserId || msg.callToUserId);
+  const recordingHtml = msg.recordingUrl
+    ? `<div class="call-history-recording">
+        <div class="call-history-recording-label">
+          <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="#e53935" aria-hidden="true"><circle cx="12" cy="12" r="6"/></svg>
+          Recording
+        </div>
+        <audio controls preload="none" src="${escapeHtml(msg.recordingUrl)}" aria-label="Call recording playback"></audio>
+      </div>`
+    : "";
   return `<div class="message-bubble call-history-message-bubble">
     <span class="call-history-message-icon" aria-hidden="true">${icon}</span>
     <span class="call-history-message-text"><strong>${text}</strong><small>${escapeHtml(participantText)}</small><small>${escapeHtml(formatCallHistoryTimestamp(msg.timestamp))}</small></span>
@@ -507,6 +516,7 @@ function renderCallMessage(msg = {}) {
       ${canCallAgain ? `<button type="button" class="call-again-btn" title="Call again" aria-label="Call again">${msg.callType === "video" ? "Video" : "Call"}</button>` : ""}
       <button type="button" class="call-history-message-delete" title="Delete call entry" aria-label="Delete call entry">Delete</button>
     </span>
+    ${recordingHtml}
   </div>`;
 }
 

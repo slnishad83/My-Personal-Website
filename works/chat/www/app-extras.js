@@ -8008,39 +8008,152 @@ function showShimmerSkeleton(container, count = 5) {
 let isCallRecording = false;
 let mediaRecorderCall = null;
 let recordedCallChunks = [];
+let _recTimerInterval = null;
+let _recStartTime = 0;
+let _recCapturedCallId = null;
+let _recAudioCtx = null;
+
+const _recIconSVG = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="6" fill="#e53935" stroke="none"/></svg>`;
+const _recStopSVG = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="6" y="6" width="12" height="12" rx="2" fill="#e53935" stroke="none"/></svg>`;
+
+function _ensureRecTimerEl() {
+  let el = document.getElementById("callRecordingTimer");
+  if (el) return el;
+  el = document.createElement("div");
+  el.id = "callRecordingTimer";
+  el.innerHTML = `<span class="rec-indicator"></span><span id="callRecTimerText">0:00</span>&nbsp;REC`;
+  const stage = document.querySelector(".call-video-stage");
+  if (stage) stage.appendChild(el);
+  return el;
+}
+
+function _startRecTimer() {
+  _recStartTime = Date.now();
+  const timerEl = _ensureRecTimerEl();
+  timerEl.classList.add("visible");
+  _recTimerInterval = setInterval(() => {
+    const elapsed = Math.floor((Date.now() - _recStartTime) / 1000);
+    const m = Math.floor(elapsed / 60);
+    const s = String(elapsed % 60).padStart(2, "0");
+    const txt = document.getElementById("callRecTimerText");
+    if (txt) txt.textContent = `${m}:${s}`;
+  }, 1000);
+}
+
+function _stopRecTimer() {
+  clearInterval(_recTimerInterval);
+  _recTimerInterval = null;
+  const timerEl = document.getElementById("callRecordingTimer");
+  if (timerEl) timerEl.classList.remove("visible");
+}
+
+function _buildMixedCallStream() {
+  const tracks = [];
+  try {
+    _recAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const dest = _recAudioCtx.createMediaStreamDestination();
+    if (localCallStream) {
+      localCallStream.getAudioTracks().forEach(t => {
+        const src = _recAudioCtx.createMediaStreamSource(new MediaStream([t]));
+        src.connect(dest);
+      });
+    }
+    const remoteAudioEl = document.getElementById("remoteAudio");
+    if (remoteAudioEl?.srcObject) {
+      remoteAudioEl.srcObject.getAudioTracks().forEach(t => {
+        const src = _recAudioCtx.createMediaStreamSource(new MediaStream([t]));
+        src.connect(dest);
+      });
+    }
+    dest.stream.getAudioTracks().forEach(t => tracks.push(t));
+  } catch (_) {
+    localCallStream?.getAudioTracks().forEach(t => tracks.push(t));
+  }
+  if (currentCallType === "video" && localCallStream) {
+    localCallStream.getVideoTracks().forEach(t => tracks.push(t));
+  }
+  return new MediaStream(tracks);
+}
+
+async function _uploadRecordingAndLink(blob, callId) {
+  if (!currentUser) return;
+  const ext = blob.type.includes("video") ? "webm" : "webm";
+  const path = `call_recordings/${currentUser.uid}/${callId || Date.now()}/${Date.now()}.${ext}`;
+  const storageRef = firebase.storage().ref(path);
+  const uploadTask = storageRef.put(blob);
+
+  const toastId = "recUpload_" + Date.now();
+  showToast("Uploading recording…", "info", 30000);
+
+  await new Promise((resolve, reject) => {
+    uploadTask.on(
+      firebase.storage.TaskEvent.STATE_CHANGED,
+      null,
+      (err) => { showToast("Failed to save recording", "error"); reject(err); },
+      resolve
+    );
+  });
+
+  const url = await storageRef.getDownloadURL();
+  showToast("Recording saved ✓", "success");
+
+  if (callId) {
+    const msgDocId = `call_${callId}`;
+    try {
+      await db.collection("messages").doc(msgDocId).set(
+        { recordingUrl: url, recordingPath: path },
+        { merge: true }
+      );
+    } catch (_) {}
+  }
+  if (_recAudioCtx) { _recAudioCtx.close().catch(() => {}); _recAudioCtx = null; }
+}
 
 function toggleCallRecording() {
   if (!localCallStream) return;
   if (isCallRecording) {
     mediaRecorderCall?.stop();
     isCallRecording = false;
+    _stopRecTimer();
     const btn = document.getElementById("recordCallBtn");
-    if (btn) btn.textContent = "Rec";
+    if (btn) {
+      btn.innerHTML = _recIconSVG;
+      btn.setAttribute("data-control-label", "Record");
+      btn.classList.remove("recording");
+    }
     showToast("Call recording stopped");
     return;
   }
   try {
+    _recCapturedCallId = activeCall?.id || null;
     recordedCallChunks = [];
-    mediaRecorderCall = new MediaRecorder(localCallStream, { mimeType: 'audio/webm;codecs=opus' });
+    const mixedStream = _buildMixedCallStream();
+    const isVideo = currentCallType === "video" && mixedStream.getVideoTracks().length > 0;
+    const mimeType = isVideo
+      ? (MediaRecorder.isTypeSupported("video/webm;codecs=vp9,opus") ? "video/webm;codecs=vp9,opus" : "video/webm")
+      : (MediaRecorder.isTypeSupported("audio/webm;codecs=opus") ? "audio/webm;codecs=opus" : "audio/webm");
+    mediaRecorderCall = new MediaRecorder(mixedStream, { mimeType });
     mediaRecorderCall.ondataavailable = (e) => {
       if (e.data.size > 0) recordedCallChunks.push(e.data);
     };
-    mediaRecorderCall.onstop = async () => {
-      const blob = new Blob(recordedCallChunks, { type: 'audio/webm' });
-      // Save to storage
-      const path = `call_recordings/${currentUser.uid}/${Date.now()}.webm`;
-      try {
-        await storage.ref(path).put(blob);
-        const url = await storage.ref(path).getDownloadURL();
-        showToast("Recording saved to storage");
-      } catch (e) { showToast("Failed to save recording", "error"); }
+    mediaRecorderCall.onstop = () => {
+      const blob = new Blob(recordedCallChunks, { type: mimeType.split(";")[0] });
+      recordedCallChunks = [];
+      _uploadRecordingAndLink(blob, _recCapturedCallId).catch(() => {});
     };
-    mediaRecorderCall.start();
+    mediaRecorderCall.start(1000);
     isCallRecording = true;
+    _startRecTimer();
     const btn = document.getElementById("recordCallBtn");
-    if (btn) btn.textContent = "⏺";
-    showToast("Call recording started");
-  } catch (e) { showToast("Recording not supported on this device", "error"); }
+    if (btn) {
+      btn.innerHTML = _recStopSVG;
+      btn.setAttribute("data-control-label", "Stop Rec");
+      btn.classList.add("recording");
+    }
+    showToast("Recording started — both sides captured");
+  } catch (e) {
+    showToast("Recording not supported on this device", "error");
+  }
 }
 
 // Add recording button to call controls
@@ -8053,10 +8166,12 @@ function toggleCallRecording() {
     btn.id = "recordCallBtn";
     btn.className = "call-icon-btn";
     btn.title = "Record call";
-    btn.textContent = "Rec";
+    btn.setAttribute("data-control-label", "Record");
+    btn.innerHTML = _recIconSVG;
     btn.onclick = toggleCallRecording;
-    const muteBtn = document.getElementById("muteMicBtn");
-    if (muteBtn) muteBtn.parentElement?.insertBefore(btn, muteBtn);
+    const endBtn = document.getElementById("endCallBtn");
+    if (endBtn) endBtn.parentElement?.insertBefore(btn, endBtn);
+    else controls.appendChild(btn);
   }, 1000);
 })();
 
@@ -8520,15 +8635,20 @@ document.getElementById("closeCallLink")?.addEventListener("click", () => {
 
 // ---------- 44. Call Waiting / Call Hold ----------
 let callOnHold = false;
+const _holdIconSVG = '<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>';
+const _resumeIconSVG = '<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>';
 function toggleCallHold() {
   if (!peerConnection) return;
   callOnHold = !callOnHold;
-  // Mute/unmute audio track to simulate hold
   const audioTrack = localCallStream?.getAudioTracks()[0];
   if (audioTrack) audioTrack.enabled = !callOnHold;
   showToast(callOnHold ? "Call on hold" : "Call resumed");
   const btn = document.getElementById("holdCallBtn");
-  if (btn) btn.textContent = callOnHold ? "▶️" : "⏸️";
+  if (btn) {
+    btn.innerHTML = callOnHold ? _resumeIconSVG : _holdIconSVG;
+    btn.setAttribute("data-control-label", callOnHold ? "Resume" : "Hold");
+    btn.title = callOnHold ? "Resume call" : "Hold call";
+  }
 }
 (function addHoldCallBtn() {
   const check = setInterval(() => {
@@ -8538,8 +8658,9 @@ function toggleCallHold() {
     const btn = document.createElement("button");
     btn.id = "holdCallBtn";
     btn.className = "call-icon-btn";
-    btn.title = "Hold/unhold call";
-    btn.textContent = "⏸️";
+    btn.title = "Hold call";
+    btn.setAttribute("data-control-label", "Hold");
+    btn.innerHTML = _holdIconSVG;
     btn.onclick = toggleCallHold;
     endBtn.parentElement?.insertBefore(btn, endBtn);
   }, 1000);
