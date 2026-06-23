@@ -616,9 +616,22 @@ function toggleCallHistorySelection(callId) {
   loadCallsList();
 }
 
+// --- Call history advanced filter state ---
+if (typeof callHistoryDateFilter === "undefined") var callHistoryDateFilter = "any";
+if (typeof callHistoryDurationFilter === "undefined") var callHistoryDurationFilter = "any";
+
+function _chfActiveCount() {
+  return (callHistoryDateFilter !== "any" ? 1 : 0) + (callHistoryDurationFilter !== "any" ? 1 : 0);
+}
+
+function _chfRefresh() {
+  loadCallsList(document.getElementById("searchInput")?.value || "");
+}
+
 function renderCallHistoryToolbar(list, calls = [], allCalls = calls) {
   const toolbar = document.createElement("div");
   toolbar.className = "call-history-toolbar";
+  const activeCount = _chfActiveCount();
   toolbar.innerHTML = callHistorySelectionMode
     ? `<div class="call-history-toolbar-main">
         <button type="button" data-call-action="cancel">Cancel</button>
@@ -628,8 +641,14 @@ function renderCallHistoryToolbar(list, calls = [], allCalls = calls) {
       </div>`
     : `<div class="call-history-toolbar-main">
         <strong>Calls</strong>
-        <button type="button" data-call-action="select">Select</button>
-        <button type="button" data-call-action="clear-all" ${allCalls.length ? "" : "disabled"}>Clear all</button>
+        <span style="display:flex;align-items:center;gap:6px;margin-left:auto">
+          <button type="button" class="call-history-filter-toggle${activeCount ? " has-active-filters" : ""}" data-call-action="toggle-advanced" aria-label="Advanced filters" title="Filter by date or duration">
+            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+            Filters${activeCount ? `<span class="call-history-filter-badge">${activeCount}</span>` : ""}
+          </button>
+          <button type="button" data-call-action="select">Select</button>
+          <button type="button" data-call-action="clear-all" ${allCalls.length ? "" : "disabled"}>Clear all</button>
+        </span>
       </div>
       <div class="call-history-filters" role="tablist" aria-label="Filter call history">
         ${[
@@ -639,16 +658,37 @@ function renderCallHistoryToolbar(list, calls = [], allCalls = calls) {
           ["outgoing", "Outgoing"],
         ].map(([value, label]) => `<button type="button" role="tab" data-call-filter="${value}" aria-selected="${callHistoryFilter === value}" class="${callHistoryFilter === value ? "active" : ""}">${label}</button>`).join("")}
       </div>`;
+
+  // Advanced filter panel (date + duration)
+  const advPanel = document.createElement("div");
+  advPanel.className = "call-history-advanced-filters";
+  advPanel.style.display = "none";
+  advPanel.innerHTML = `
+    <div class="call-history-filter-row">
+      <span class="call-history-filter-label">Date</span>
+      ${[["any","Any time"],["today","Today"],["week","This week"],["month","This month"]]
+        .map(([v,l]) => `<button type="button" class="call-history-filter-chip${callHistoryDateFilter===v?" active":""}" data-date-filter="${v}">${l}</button>`).join("")}
+    </div>
+    <div class="call-history-filter-row">
+      <span class="call-history-filter-label">Duration</span>
+      ${[["any","Any"],["short","< 2 min"],["medium","2–10 min"],["long","> 10 min"],["missed","No answer"]]
+        .map(([v,l]) => `<button type="button" class="call-history-filter-chip${callHistoryDurationFilter===v?" active":""}" data-dur-filter="${v}">${l}</button>`).join("")}
+    </div>`;
+
+  // Event: direction filter tabs
   toolbar.addEventListener("click", (event) => {
     const filter = event.target.closest("[data-call-filter]")?.dataset.callFilter;
     if (filter) {
       callHistoryFilter = filter;
-      loadCallsList(document.getElementById("searchInput")?.value || "");
+      _chfRefresh();
       return;
     }
     const action = event.target.closest("[data-call-action]")?.dataset.callAction;
     if (!action) return;
-    if (action === "select") {
+    if (action === "toggle-advanced") {
+      advPanel.style.display = advPanel.style.display === "none" ? "flex" : "none";
+      advPanel.style.flexDirection = "column";
+    } else if (action === "select") {
       callHistorySelectionMode = true;
       selectedCallHistoryIds.clear();
       loadCallsList();
@@ -669,7 +709,33 @@ function renderCallHistoryToolbar(list, calls = [], allCalls = calls) {
       }
     }
   });
+
+  // Event: advanced filter chips
+  advPanel.addEventListener("click", (event) => {
+    const df = event.target.closest("[data-date-filter]")?.dataset.dateFilter;
+    if (df !== undefined) {
+      callHistoryDateFilter = df;
+      advPanel.querySelectorAll("[data-date-filter]").forEach((b) =>
+        b.classList.toggle("active", b.dataset.dateFilter === df));
+      _chfRefresh();
+      return;
+    }
+    const dur = event.target.closest("[data-dur-filter]")?.dataset.durFilter;
+    if (dur !== undefined) {
+      callHistoryDurationFilter = dur;
+      advPanel.querySelectorAll("[data-dur-filter]").forEach((b) =>
+        b.classList.toggle("active", b.dataset.durFilter === dur));
+      _chfRefresh();
+    }
+  });
+
   list.appendChild(toolbar);
+  list.appendChild(advPanel);
+  // Keep panel open if filters were active before re-render
+  if (activeCount > 0) {
+    advPanel.style.display = "flex";
+    advPanel.style.flexDirection = "column";
+  }
 }
 
 function getCallHistoryDate(call = {}) {
@@ -769,6 +835,34 @@ async function loadCallsList(searchTerm = "") {
         if (callHistoryFilter === "missed")
           return ["missed", "declined", "rejected", "failed", "busy"].includes(view.status);
         return view.direction.toLowerCase() === callHistoryFilter;
+      });
+    }
+    // Date range filter
+    if (callHistoryDateFilter !== "any") {
+      const now = new Date();
+      filteredCalls = filteredCalls.filter((call) => {
+        const d = getCallHistoryDate(call);
+        if (callHistoryDateFilter === "today")
+          return d.toDateString() === now.toDateString();
+        if (callHistoryDateFilter === "week") {
+          const weekAgo = new Date(now);
+          weekAgo.setDate(now.getDate() - 7);
+          return d >= weekAgo;
+        }
+        if (callHistoryDateFilter === "month")
+          return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+        return true;
+      });
+    }
+    // Duration filter
+    if (callHistoryDurationFilter !== "any") {
+      filteredCalls = filteredCalls.filter((call) => {
+        const ms = Number(call.callDurationMs) || 0;
+        if (callHistoryDurationFilter === "short") return ms > 0 && ms < 120000;
+        if (callHistoryDurationFilter === "medium") return ms >= 120000 && ms < 600000;
+        if (callHistoryDurationFilter === "long") return ms >= 600000;
+        if (callHistoryDurationFilter === "missed") return ms === 0;
+        return true;
       });
     }
     const calls = filteredCalls.slice(0, 200);
