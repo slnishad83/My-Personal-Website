@@ -22,8 +22,15 @@ messaging.onBackgroundMessage(payload => {
   const isCall = data.kind === 'call';
   const title = payload.notification?.title || data.title ||
     (isCall ? (data.type === 'video' ? 'Incoming video call' : 'Incoming voice call') : 'Team Chat');
-  const body = payload.notification?.body || data.body ||
+  const rawBody = payload.notification?.body || data.body ||
     (isCall ? `${data.fromUserName || 'Team Chat'} is calling. Tap to open Team Chat.` : 'New notification');
+  // Smart grouping: show message count when > 1 unread
+  const unreadCount = Number(data.unreadCount || 0);
+  const body = (!isCall && unreadCount > 1)
+    ? (data.groupId
+        ? `${unreadCount} new messages in ${data.groupName || 'Group'}`
+        : `${unreadCount} new messages from ${data.senderName || data.fromUserName || 'Someone'}`)
+    : rawBody;
   const notificationUrl = data.url || payload.notification?.data?.url || './index.html';
   const chatKey = data.chatId && data.chatType ? `${data.chatType}-${data.chatId}` : '';
   const unreadCount = Number(data.unreadCount || 0);
@@ -31,7 +38,7 @@ messaging.onBackgroundMessage(payload => {
   self.registration.showNotification(title, {
     body,
     tag: isCall && data.callId ? `call-${data.callId}` : (chatKey ? `chat-${chatKey}` : `${data.kind || 'team-chat'}-${data.messageId || data.callId || Date.now()}`),
-    renotify: Boolean(isCall),
+    renotify: Boolean(isCall) || unreadCount <= 1,
     requireInteraction: Boolean(isCall),
     silent: data.soundEnabled === 'false',
     icon: data.senderAvatar || 'app-icon-192.png',
@@ -82,7 +89,7 @@ self.addEventListener('notificationclick', event => {
   );
 });
 
-const CACHE_NAME = 'team-chat-v211-wa';
+const CACHE_NAME = 'team-chat-v212-wa';
 const STATIC_ASSETS = [
   'auth-theme.css',
   'feature-updates.css',
