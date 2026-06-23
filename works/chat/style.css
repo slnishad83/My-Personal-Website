@@ -513,14 +513,32 @@ button {
 }
 
 .search-box::before {
-  content: "\1F50D";
+  content: "";
   position: absolute;
-  left: 26px;
+  left: 24px;
   top: 50%;
   transform: translateY(-50%);
-  color: var(--muted);
-  font-size: 14px;
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--muted);
+  border-radius: 50%;
   pointer-events: none;
+  z-index: 1;
+}
+
+.search-box::after {
+  content: "";
+  position: absolute;
+  left: 35px;
+  top: calc(50% + 4px);
+  width: 5px;
+  height: 2px;
+  background: var(--muted);
+  border-radius: 1px;
+  transform: rotate(45deg);
+  transform-origin: left center;
+  pointer-events: none;
+  z-index: 1;
 }
 
 .search-box input,
