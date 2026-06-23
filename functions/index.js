@@ -1132,7 +1132,15 @@ exports.sendMessageNotification = onDocumentCreated(
       const preferences = await getChatNotificationPreferences(receiverId, chatId);
       if (preferences.muted) return null;
       const unreadCount = await getUnreadMessageCount(receiverId, chatId, chatType);
-      const body = preferences.showPreview ? preview : 'New message';
+      // Smart grouping: count-based body + alert only on first unread message
+      const isFirstUnread = unreadCount <= 1;
+      const body = unreadCount > 1
+        ? (message.groupId
+            ? `${unreadCount} new messages in ${resolvedGroupName}`
+            : `${unreadCount} new messages from ${resolvedSenderName}`)
+        : (preferences.showPreview ? preview : 'New message');
+      const shouldAlert  = isFirstUnread && preferences.soundEnabled;
+      const shouldVibrate = isFirstUnread && preferences.vibrate;
       const chatUserId = chatType === 'direct' ? message.senderId || '' : '';
       const notificationUrl = chatType === 'group'
         ? `${CHAT_APP_URL}?groupId=${encodeURIComponent(chatId)}`
@@ -1191,10 +1199,10 @@ exports.sendMessageNotification = onDocumentCreated(
             icon: resolvedSenderAvatar || '/works/chat/app-icon-192.png',
             badge: '/works/chat/app-icon-192.png',
             tag: `chat-${chatType}-${chatId}`,
-            renotify: true,
-            silent: !preferences.soundEnabled,
+            renotify: isFirstUnread,
+            silent: !shouldAlert,
             timestamp: Date.now(),
-            vibrate: preferences.vibrate ? [180, 80, 180] : [],
+            vibrate: shouldVibrate ? [180, 80, 180] : [],
             data: {
               url: notificationUrl,
               messageId,
