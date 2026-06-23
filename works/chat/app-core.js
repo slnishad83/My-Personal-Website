@@ -1381,7 +1381,7 @@ function renderMessageText(text = "", mentions = []) {
 
   // 5. Hashtag highlighting
   html = html.replace(/(^|[\s>,.!?;:"])(#[a-zA-Z0-9_]{2,40})(?=[\s<,.!?;:"]|$)/g,
-    '$1<span class="message-hashtag" onclick="window._onHashtagClick&&window._onHashtagClick('$2')" tabindex="0" role="button" aria-label="Search hashtag $2">$2</span>'
+    '$1<span class="message-hashtag" onclick="window._onHashtagClick&&window._onHashtagClick(\'$2\')" tabindex="0" role="button" aria-label="Search hashtag $2">$2</span>'
   );
 
   // Search term highlighting
@@ -16573,9 +16573,17 @@ async function init() {
   loadBlockedWords();
   const authStateTimeout = window.setTimeout(() => {
     if (!document.body.classList.contains("auth-ready")) {
-      showStartupRecovery(
-        "Session checking is taking longer than expected. Check your connection and retry.",
-      );
+      if (!sessionStorage.getItem("_auth_auto_retried")) {
+        sessionStorage.setItem("_auth_auto_retried", "1");
+        const label = document.querySelector(".auth-gate-label");
+        if (label) label.textContent = "Reconnecting\u2026";
+        setTimeout(() => window.location.reload(), 600);
+      } else {
+        sessionStorage.removeItem("_auth_auto_retried");
+        showStartupRecovery(
+          "Session checking is taking longer than expected. Check your connection and retry.",
+        );
+      }
     }
   }, 6000);
   auth.onAuthStateChanged(async (user) => {
