@@ -1379,6 +1379,11 @@ function renderMessageText(text = "", mentions = []) {
     '<a href="$1" target="_blank" rel="noopener noreferrer" class="message-link">$1</a>',
   );
 
+  // 5. Hashtag highlighting
+  html = html.replace(/(^|[\s>,.!?;:"])(#[a-zA-Z0-9_]{2,40})(?=[\s<,.!?;:"]|$)/g,
+    '$1<span class="message-hashtag" onclick="window._onHashtagClick&&window._onHashtagClick('$2')" tabindex="0" role="button" aria-label="Search hashtag $2">$2</span>'
+  );
+
   // Search term highlighting
   if (currentInChatSearchTerm) {
     const sterm = escapeHtml(currentInChatSearchTerm).replace(/[-[\]{}()*+.,\\^$|#\s]/g, '\\$&');
@@ -1389,6 +1394,26 @@ function renderMessageText(text = "", mentions = []) {
 
   return html;
 }
+
+// Hashtag click handler — searches for hashtag in global search
+window._onHashtagClick = function(tag) {
+  const modal = document.getElementById('globalSearchModal');
+  const input = document.getElementById('globalSearchInput');
+  if (modal && input) {
+    modal.style.display = 'flex';
+    input.value = tag;
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    setTimeout(() => input.focus(), 80);
+  } else if (typeof window.messageSearch === 'object') {
+    window.messageSearch.open();
+    setTimeout(() => {
+      const inp = document.getElementById('globalSearchInput');
+      if (inp) { inp.value = tag; inp.dispatchEvent(new Event('input', { bubbles: true })); }
+    }, 200);
+  } else if (typeof window.showToast === 'function') {
+    window.showToast('Search: ' + tag);
+  }
+};
 
 function initializeEmojiPicker() {
   const picker = document.getElementById("emojiPicker");
