@@ -726,7 +726,10 @@ body.dark .auth-gate-recovery {
       auth.onAuthStateChanged(async (user) => {
         await authPersistenceReady.catch(() => {});
         if (!user) return;
-        await user.reload();
+        await Promise.race([
+          user.reload(),
+          new Promise((resolve) => setTimeout(resolve, 2500)),
+        ]).catch(() => {});
         if (user.emailVerified) {
           await db.collection("users").doc(user.uid).set(
             {
