@@ -6834,7 +6834,7 @@ document.getElementById("closeReadByList")?.addEventListener("click", () => {
         w.appendChild(audio);
         return w;
       })();
-      const speeds = ["1x", "1.5x", "2x"];
+      const speeds = ["0.5x", "1x", "1.5x", "2x"];
       const speedContainer = document.createElement("div");
       speedContainer.style.cssText = "display:flex;gap:3px;margin-left:4px;";
       speeds.forEach(s => {
