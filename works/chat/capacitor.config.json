@@ -2,6 +2,10 @@
   "appId": "com.nishad.myteamchat",
   "appName": "My Team Chat",
   "webDir": "www",
+  "server": {
+    "url": "https://my-team-chat-2255.web.app/works/chat",
+    "cleartext": false
+  },
   "plugins": {
     "StatusBar": {
       "style": "DEFAULT",
@@ -13,12 +17,6 @@
       "resize": "body",
       "style": "DARK",
       "resizeOnFullScreen": true
-    },
-    "CapacitorUpdater": {
-      "autoUpdate": true,
-      "statsUrl": "",
-      "channelUrl": "https://api.capgo.app/channel_self",
-      "updateUrl": "https://api.capgo.app/updates"
     }
   },
   "android": {
