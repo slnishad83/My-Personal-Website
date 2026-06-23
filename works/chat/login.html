@@ -304,13 +304,6 @@
           margin-right: 16px;
         }
       }
-/* ================================================================
-   LOGIN PAGE DARK MODE  (login.html)
-   ================================================================
-   login.html has its own <style> block with hardcoded light
-   colours.  This CSS should be pasted INSIDE that <style> block,
-   right before the closing 
-      /* ── Dark mode toggle button ──────────────────────────────── */
       .dm-toggle {
         position: fixed; top: 16px; right: 16px; z-index: 9999;
         width: 40px; height: 40px; border-radius: 50%;
@@ -324,17 +317,6 @@
       .dm-toggle:hover { background: rgba(255,255,255,0.4); transform: scale(1.08); }
       body.dark .dm-toggle { background: rgba(32,44,51,0.85); }
       body.dark .dm-toggle:hover { background: rgba(42,57,66,0.95); }
-    </style> tag, OR linked as an extra
-   stylesheet in login.html.
-
-   It uses both:
-     body.dark { … }          ← for when JS applies the class
-     @media (prefers-color-scheme: dark) { … }  ← for OS dark mode
-
-   If your login page already reads the stored theme from
-   localStorage and applies body.dark before render, only the
-   body.dark rules are needed.  Keep both to be safe.
-   ================================================================ */
 
 
 /* ── Shared dark overrides ────────────────────────────────────── */
