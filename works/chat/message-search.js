@@ -14,6 +14,8 @@
   /* ─── state ─────────────────────────────────────────────────────── */
   let _query       = '';
   let _scope       = 'all';           // 'all' | 'current'
+  let _filterType  = 'all';           // 'all'|'text'|'image'|'video'|'audio'|'voice'|'doc'|'link'
+  let _filterDate  = 'any';           // 'any'|'today'|'week'|'month'
   let _lastDocs    = {};              // { chatId: firestoreDocSnapshot }
   let _exhausted   = {};             // { chatId: true }
   let _loading     = false;
@@ -115,7 +117,7 @@
       .map(d => ({ id: d.id, chatId, ...d.data() }))
       .filter(m => {
         const txt = (m.text || m.message || m.body || m.content || '').toLowerCase();
-        return txt.includes(qLower);
+        return txt.includes(qLower) && matchesFilters(m);
       });
   }
 
@@ -153,6 +155,9 @@
 <button class="ms-scope-btn${_scope==='all'?' ms-active':''}" data-scope="all">All Chats</button>
 <button class="ms-scope-btn${_scope==='current'?' ms-active':''}" data-scope="current">Current Chat</button>`;
         container.before(toggleBar);
+        // Inject advanced filter pills
+        renderFilterRow(container.parentElement || container);
+
 
         toggleBar.querySelectorAll('.ms-scope-btn').forEach(btn => {
           btn.addEventListener('click', () => {
@@ -340,6 +345,8 @@
       clear.addEventListener('click', () => {
         input.value = '';
         _query = '';
+        _filterType = 'all';
+        _filterDate = 'any';
         clear.style.display = 'none';
         const c = document.getElementById('globalSearchResults');
         if (c) c.innerHTML = '<div class="ms-empty-state">Enter a keyword to search across all chats</div>';
@@ -377,6 +384,81 @@
     });
     const modal = document.getElementById('globalSearchModal');
     if (modal) observer.observe(modal, { attributes: true, attributeFilter: ['style'] });
+  }
+
+  /* ─── filter helpers ────────────────────────────────────────────── */
+  function matchesFilters(msg) {
+    // Type filter
+    if (_filterType !== 'all') {
+      const att = msg.attachment || {};
+      const text = msg.text || '';
+      if (_filterType === 'text'  && (!text || att.type)) return false;
+      if (_filterType === 'image' && att.type !== 'image') return false;
+      if (_filterType === 'video' && att.type !== 'video') return false;
+      if (_filterType === 'audio' && att.type !== 'audio') return false;
+      if (_filterType === 'voice' && att.type !== 'voice') return false;
+      if (_filterType === 'doc'   && att.type !== 'document') return false;
+      if (_filterType === 'link'  && !/https?:\/\//.test(text)) return false;
+    }
+    // Date filter
+    if (_filterDate !== 'any' && msg.timestamp) {
+      let ts;
+      try { ts = typeof msg.timestamp.toDate === 'function' ? msg.timestamp.toDate() : new Date(msg.timestamp); } catch (_) { return true; }
+      const now = new Date();
+      const diff = now - ts;
+      if (_filterDate === 'today'  && diff > 86400000) return false;
+      if (_filterDate === 'week'   && diff > 604800000) return false;
+      if (_filterDate === 'month'  && diff > 2592000000) return false;
+    }
+    return true;
+  }
+
+  function renderFilterRow(container) {
+    if (container.querySelector('.ms-filter-row')) return;
+    const row = document.createElement('div');
+    row.className = 'ms-filter-row';
+
+    // Type pills
+    const typeLabel = document.createElement('span');
+    typeLabel.className = 'ms-filter-group-label';
+    typeLabel.textContent = 'Type:';
+    row.appendChild(typeLabel);
+
+    [['all','All'],['text','Text'],['image','Images'],['video','Videos'],
+     ['voice','Voice'],['audio','Audio'],['doc','Docs'],['link','Links']].forEach(([val, label]) => {
+      const btn = document.createElement('button');
+      btn.className = 'ms-filter-pill' + (_filterType === val ? ' active' : '');
+      btn.dataset.filterType = val;
+      btn.textContent = label;
+      btn.addEventListener('click', () => {
+        _filterType = val;
+        row.querySelectorAll('[data-filter-type]').forEach(b => b.classList.toggle('active', b.dataset.filterType === val));
+        resetSearch(); runSearch();
+      });
+      row.appendChild(btn);
+    });
+
+    // Date pills
+    const dateLabel = document.createElement('span');
+    dateLabel.className = 'ms-filter-group-label';
+    dateLabel.style.marginLeft = '8px';
+    dateLabel.textContent = 'Date:';
+    row.appendChild(dateLabel);
+
+    [['any','Any time'],['today','Today'],['week','This week'],['month','This month']].forEach(([val, label]) => {
+      const btn = document.createElement('button');
+      btn.className = 'ms-filter-pill' + (_filterDate === val ? ' active' : '');
+      btn.dataset.filterDate = val;
+      btn.textContent = label;
+      btn.addEventListener('click', () => {
+        _filterDate = val;
+        row.querySelectorAll('[data-filter-date]').forEach(b => b.classList.toggle('active', b.dataset.filterDate === val));
+        resetSearch(); runSearch();
+      });
+      row.appendChild(btn);
+    });
+
+    container.appendChild(row);
   }
 
   /* ─── keyboard shortcut Ctrl+F / Cmd+F ──────────────────────────── */
