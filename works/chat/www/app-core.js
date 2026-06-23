@@ -1087,7 +1087,7 @@ function renderChatListItems(items, container, emptyMessage = "") {
     const folderPreview = item.isLockedFolder ? `<span style="color:var(--text-muted);font-size:12px">${item.lockedCount || 0} locked</span>` : "";
     const previewContent = item.isLockedFolder ? folderPreview : (item.isLocked ? lockedPreview : (previewHtml || ""));
     chatDiv.innerHTML = `
-      <div class="list-avatar">${item.isLockedFolder ? '&#x1F512;' : item.avatar}${lockOverlay}</div>
+      <div class="list-avatar" style="position:relative;">${item.isLockedFolder ? '&#x1F512;' : item.avatar}${lockOverlay}${(item.type === "direct" && !item.isLocked && !item.isLockedFolder && item.onlineStatus) ? `<span class="presence-dot presence-dot--${item.onlineStatus === 'online' ? 'online' : 'offline'}" aria-label="${item.onlineStatus === 'online' ? 'Online' : 'Offline'}"></span>` : ""}</div>
       <div class="list-info" style="flex:1; cursor:pointer;">
         <div class="list-name">${tagHtml}${item.isPinned ? '<span class="pin-icon">&#x1F4CC;</span> ' : ""}${item.isFavorite ? "* " : ""}${item.isLocked ? '&#x1F512; ' : ""}${escapeHtml(item.name)}${searchMeta}</div>
         <div class="list-preview">${previewContent}</div>
@@ -13009,6 +13009,14 @@ function loadMessages() {
   const messagesArea = document.getElementById("messagesArea");
   if (messagesUnsubscribe) messagesUnsubscribe();
   _loadedOldestTimestamp = null;
+
+  // Show skeleton while loading
+  messagesArea.innerHTML =
+    '<div class="skeleton-messages">' +
+    '<div class="skeleton-message"><div class="skeleton skeleton-avatar"></div><div class="skeleton-message-lines"><div class="skeleton skeleton-line"></div><div class="skeleton skeleton-line" style="width:50%"></div></div></div>'.repeat(5) +
+    '<div class="skeleton-message my-message-skeleton"><div class="skeleton-message-lines"><div class="skeleton skeleton-line" style="width:60%"></div><div class="skeleton skeleton-line" style="width:35%"></div></div></div>' +
+    '<div class="skeleton-message"><div class="skeleton skeleton-avatar"></div><div class="skeleton-message-lines"><div class="skeleton skeleton-line" style="width:55%"></div><div class="skeleton skeleton-line" style="width:40%"></div></div></div>' +
+    '</div>';
 
   const directIds = getDirectChatIdsForCurrentChat();
   let baseQuery =
