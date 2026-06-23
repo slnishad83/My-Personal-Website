@@ -39,6 +39,7 @@
   <link rel="stylesheet" href="group-message-info.css?v=1" />
   <link rel="stylesheet" href="attachment-reliability.css?v=1" />
   <link rel="stylesheet" href="message-search.css?v=1" />
+  <link rel="stylesheet" href="ui-compliance.css?v=1" />
     <link rel="stylesheet" href="sync-audit.css?v=1" />
     <link rel="manifest" href="manifest.json?v=98" />
     <link rel="apple-touch-icon" href="app-icon-192.png" />
@@ -164,22 +165,6 @@
           />
           <button id="clearSearchInputBtn" class="clear-search-input" type="button" title="Clear search" aria-label="Clear search"></button>
         </div>
-        <button
-          class="mobile-install-card"
-          type="button"
-          data-install-app
-          aria-label="Install Team Chat app"
-          title="Install Team Chat app"
-          style="display: none"
-        >
-          <span class="mobile-install-card-icon" aria-hidden="true"></span>
-          <span class="mobile-install-card-copy">
-            <strong class="install-app-label">Install app</strong>
-            <small>Faster access and notifications</small>
-          </span>
-          <span class="mobile-install-card-action" aria-hidden="true">Install</span>
-        </button>
-
         <div class="request-section">
           <div class="request-header" id="requestHeader">
             Chat Requests
@@ -336,6 +321,22 @@
           </button>
         </div>
       </div>
+        <button
+          class="mobile-install-card"
+          type="button"
+          data-install-app
+          aria-label="Install Team Chat app"
+          title="Install Team Chat app"
+          style="display: none"
+        >
+          <span class="mobile-install-card-icon" aria-hidden="true"></span>
+          <span class="mobile-install-card-copy">
+            <strong class="install-app-label">Install app</strong>
+            <small>Faster access and notifications</small>
+          </span>
+          <span class="mobile-install-card-action" aria-hidden="true">Install</span>
+        </button>
+
       <!-- This closes the sidebar -->
 
       <!-- Main Chat Area -->
@@ -3729,5 +3730,6 @@
   <script src="group-message-info.js?v=1" defer></script>
   <script src="attachment-reliability.js?v=1" defer></script>
 </script>
+  <script src="ui-compliance.js?v=1" defer></script>
 </body>
 </html>
