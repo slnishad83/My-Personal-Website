@@ -1,0 +1,298 @@
+name: Build iOS IPA
+
+# Trigger manually from the Actions tab.
+# macOS runners cost 10x more than Linux, so this workflow is on-demand only.
+# Web-only changes (HTML/CSS/JS) update all installed iPhones automatically via
+# the normal App Store update flow — a new IPA is only needed for native changes
+# (new plugins, permissions, entitlements, or a major new release).
+on:
+  workflow_dispatch:
+    inputs:
+      submit_to_testflight:
+        description: 'Upload to TestFlight after build?'
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  build-ios:
+    runs-on: macos-latest
+    timeout-minutes: 90
+
+    steps:
+      # ── 1. Checkout ────────────────────────────────────────────────────────
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # ── 2. Node.js ──────────────────────────────────────────────────────────
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: works/chat/package-lock.json
+
+      - name: Install web dependencies
+        working-directory: works/chat
+        run: npm ci
+
+      # ── 3. Sync web source to www/ ─────────────────────────────────────────
+      - name: Sync www/ from web source
+        run: node works/chat/sync-www.js
+
+      # ── 4. Capacitor CLI ───────────────────────────────────────────────────
+      - name: Install Capacitor CLI
+        run: npm install -g @capacitor/cli@latest
+
+      # ── 5. Strip server.url before iOS build ───────────────────────────────
+      # Apple App Store guidelines (§2.5.2) prohibit downloading and running
+      # code that changes the app's primary purpose after review.
+      # The iOS IPA uses the local www/ bundle; updates go through the App Store.
+      # Android keeps server.url → Firebase OTA (Play Store allows this).
+      - name: Remove server.url for iOS compliance
+        run: |
+          node -e "
+          const fs = require('fs');
+          const cfg = JSON.parse(fs.readFileSync('works/chat/capacitor.config.json', 'utf8'));
+          delete cfg.server;
+          fs.writeFileSync('works/chat/capacitor.config.json', JSON.stringify(cfg, null, 2));
+          console.log('server.url removed — iOS IPA will use local www/ assets');
+          "
+
+      # ── 6. Generate iOS platform (fresh every run) ─────────────────────────
+      - name: Add and sync iOS platform
+        working-directory: works/chat
+        run: |
+          npx cap add ios
+          npx cap sync ios
+
+      # ── 7. Set iOS version from Android build.gradle (keeps them in sync) ──
+      # CFBundleVersion    = versionCode  (integer build counter)
+      # CFBundleShortVersionString = versionName (human-readable: "4.0")
+      - name: Sync iOS version from Android versionCode
+        id: version
+        run: |
+          GRADLE=works/chat/android/app/build.gradle
+          CODE=$(grep -oP 'versionCode \K[0-9]+' "$GRADLE")
+          NAME=$(grep -oP 'versionName "\K[^"]+' "$GRADLE")
+          echo "code=$CODE" >> $GITHUB_OUTPUT
+          echo "name=$NAME"  >> $GITHUB_OUTPUT
+          PLIST=works/chat/ios/App/App/Info.plist
+          /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $CODE" "$PLIST"
+          /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $NAME" "$PLIST"
+          echo "iOS version set to $NAME (build $CODE)"
+
+      # ── 8. Install CocoaPods dependencies ──────────────────────────────────
+      - name: Install CocoaPods
+        working-directory: works/chat/ios/App
+        run: pod install --repo-update
+
+      # ── 9. Import Distribution Certificate ────────────────────────────────
+      # Required secrets:
+      #   IOS_DISTRIBUTION_CERT_BASE64  — .p12 file: base64 -i cert.p12 | tr -d '\n'
+      #   IOS_CERT_P12_PASSWORD         — password used when exporting the .p12
+      #   IOS_KEYCHAIN_PASSWORD         — any random string (temp keychain password)
+      - name: Import Distribution Certificate
+        env:
+          BUILD_CERTIFICATE_BASE64: ${{ secrets.IOS_DISTRIBUTION_CERT_BASE64 }}
+          P12_PASSWORD: ${{ secrets.IOS_CERT_P12_PASSWORD }}
+          KEYCHAIN_PASSWORD: ${{ secrets.IOS_KEYCHAIN_PASSWORD }}
+        run: |
+          CERT_PATH=$RUNNER_TEMP/dist_cert.p12
+          KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
+
+          echo "$BUILD_CERTIFICATE_BASE64" | base64 --decode -o "$CERT_PATH"
+
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security import "$CERT_PATH" -P "$P12_PASSWORD" -A \
+            -t cert -f pkcs12 -k "$KEYCHAIN_PATH"
+          security list-keychain -d user -s "$KEYCHAIN_PATH"
+          echo "Distribution certificate imported"
+
+      # ── 10. Install Provisioning Profile ──────────────────────────────────
+      # Required secret:
+      #   IOS_PROVISION_PROFILE_BASE64 — App Store Distribution profile:
+      #     base64 -i MyTeamChat_AppStore.mobileprovision | tr -d '\n'
+      - name: Install Provisioning Profile
+        env:
+          PROVISION_PROFILE_BASE64: ${{ secrets.IOS_PROVISION_PROFILE_BASE64 }}
+        run: |
+          PP_PATH=$RUNNER_TEMP/build_profile.mobileprovision
+          echo "$PROVISION_PROFILE_BASE64" | base64 --decode -o "$PP_PATH"
+
+          mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
+
+          # Extract the UUID so Xcode can find the profile by filename
+          UUID=$(python3 - <<'PYEOF'
+import plistlib, sys
+raw = open("$RUNNER_TEMP/build_profile.mobileprovision", "rb").read()
+start = raw.index(b"<?xml")
+end   = raw.index(b"</plist>") + len(b"</plist>")
+p = plistlib.loads(raw[start:end])
+print(p["UUID"])
+PYEOF
+)
+          cp "$PP_PATH" ~/Library/MobileDevice/Provisioning\ Profiles/"$UUID".mobileprovision
+          echo "PROFILE_UUID=$UUID" >> $GITHUB_ENV
+          echo "Provisioning profile installed: $UUID"
+
+      # ── 11. Generate ExportOptions.plist ──────────────────────────────────
+      # Required secret:
+      #   APPLE_TEAM_ID — 10-character string from developer.apple.com
+      #                   Account → Membership Details → Team ID
+      - name: Generate ExportOptions.plist
+        env:
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          cat > "$RUNNER_TEMP/ExportOptions.plist" <<PEOF
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+              <key>method</key>
+              <string>app-store</string>
+              <key>teamID</key>
+              <string>${APPLE_TEAM_ID}</string>
+              <key>signingCertificate</key>
+              <string>Apple Distribution</string>
+              <key>signingStyle</key>
+              <string>manual</string>
+              <key>provisioningProfiles</key>
+              <dict>
+                  <key>com.nishad.myteamchat</key>
+                  <string>${PROFILE_UUID}</string>
+              </dict>
+              <key>stripSwiftSymbols</key>
+              <true/>
+              <key>uploadSymbols</key>
+              <true/>
+              <key>compileBitcode</key>
+              <false/>
+          </dict>
+          </plist>
+          PEOF
+          echo "ExportOptions.plist written"
+
+      # ── 12. Archive with xcodebuild ───────────────────────────────────────
+      - name: Archive app
+        working-directory: works/chat/ios/App
+        env:
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          xcodebuild archive \
+            -workspace App.xcworkspace \
+            -scheme App \
+            -configuration Release \
+            -archivePath "$RUNNER_TEMP/MyTeamChat.xcarchive" \
+            -destination "generic/platform=iOS" \
+            DEVELOPMENT_TEAM="$APPLE_TEAM_ID" \
+            CODE_SIGN_STYLE=Manual \
+            CODE_SIGN_IDENTITY="Apple Distribution" \
+            PROVISIONING_PROFILE="$PROFILE_UUID" \
+            -allowProvisioningUpdates \
+            2>&1 | tee /tmp/xcodebuild-archive.log
+          echo "Archive complete"
+
+      # ── 13. Export IPA ────────────────────────────────────────────────────
+      - name: Export IPA
+        run: |
+          xcodebuild -exportArchive \
+            -archivePath "$RUNNER_TEMP/MyTeamChat.xcarchive" \
+            -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist" \
+            -exportPath "$RUNNER_TEMP/ipa" \
+            2>&1 | tee /tmp/xcodebuild-export.log
+          echo "Exported IPA files:"
+          ls -lh "$RUNNER_TEMP/ipa/"
+
+      # ── 14. Upload to TestFlight (optional — tick the checkbox at trigger) ─
+      # Additional secrets needed for TestFlight upload:
+      #   APPLE_CONNECT_API_KEY_ID     — Key ID from App Store Connect → Users & Access → Keys
+      #   APPLE_CONNECT_ISSUER_ID      — Issuer ID from same page
+      #   APPLE_CONNECT_API_KEY_BASE64 — .p8 file: base64 -i AuthKey_XXXX.p8 | tr -d '\n'
+      - name: Upload to TestFlight
+        if: ${{ github.event.inputs.submit_to_testflight == 'true' && secrets.APPLE_CONNECT_API_KEY_ID != '' }}
+        env:
+          API_KEY_ID: ${{ secrets.APPLE_CONNECT_API_KEY_ID }}
+          ISSUER_ID: ${{ secrets.APPLE_CONNECT_ISSUER_ID }}
+          API_KEY_BASE64: ${{ secrets.APPLE_CONNECT_API_KEY_BASE64 }}
+        run: |
+          KEY_PATH=$RUNNER_TEMP/AuthKey_${API_KEY_ID}.p8
+          echo "$API_KEY_BASE64" | base64 --decode -o "$KEY_PATH"
+          chmod 600 "$KEY_PATH"
+
+          IPA_PATH=$(ls "$RUNNER_TEMP/ipa/"*.ipa | head -1)
+          echo "Uploading: $IPA_PATH"
+
+          xcrun altool --upload-app \
+            --type ios \
+            --file "$IPA_PATH" \
+            --apiKey "$API_KEY_ID" \
+            --apiIssuer "$ISSUER_ID" \
+            --verbose
+
+      # ── 15. Upload IPA as GitHub artifact (30-day retention) ──────────────
+      - name: Upload IPA artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: my-team-chat-v${{ steps.version.outputs.name }}-build${{ steps.version.outputs.code }}-ios
+          path: ${{ runner.temp }}/ipa/*.ipa
+          retention-days: 30
+
+      # ── 16. Upload build logs (always, for debugging) ──────────────────────
+      - name: Upload build logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: xcodebuild-logs
+          path: /tmp/xcodebuild-*.log
+          retention-days: 7
+
+      # ── 17. Summary ────────────────────────────────────────────────────────
+      - name: Summary
+        run: |
+          echo "## iOS Build Complete — v${{ steps.version.outputs.name }} (build ${{ steps.version.outputs.code }})" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Field | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|---|---|" >> $GITHUB_STEP_SUMMARY
+          echo "| App version | ${{ steps.version.outputs.name }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Build number | ${{ steps.version.outputs.code }} (matches Android versionCode) |" >> $GITHUB_STEP_SUMMARY
+          echo "| Bundle ID | com.nishad.myteamchat |" >> $GITHUB_STEP_SUMMARY
+          echo "| TestFlight upload | ${{ github.event.inputs.submit_to_testflight }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### One-time setup checklist" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Complete these steps once, in order:" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Step 1 — Apple Developer account (\$99/yr)**" >> $GITHUB_STEP_SUMMARY
+          echo "- Sign up at [developer.apple.com](https://developer.apple.com)" >> $GITHUB_STEP_SUMMARY
+          echo "- Note your **Team ID** (10 chars) from Account → Membership Details" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Step 2 — Register your App ID**" >> $GITHUB_STEP_SUMMARY
+          echo "- developer.apple.com → Identifiers → + → App IDs" >> $GITHUB_STEP_SUMMARY
+          echo "- Bundle ID: \`com.nishad.myteamchat\`" >> $GITHUB_STEP_SUMMARY
+          echo "- Enable: Push Notifications" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Step 3 — Distribution Certificate**" >> $GITHUB_STEP_SUMMARY
+          echo "- Xcode → Settings → Accounts → your Apple ID → Manage Certificates → + → Apple Distribution" >> $GITHUB_STEP_SUMMARY
+          echo "- Open Keychain Access → find \`Apple Distribution: ...\` → right-click → Export → save as .p12 with a password" >> $GITHUB_STEP_SUMMARY
+          echo "- \`base64 -i cert.p12 | tr -d '\\n'\` → add as GitHub Secret **IOS_DISTRIBUTION_CERT_BASE64**" >> $GITHUB_STEP_SUMMARY
+          echo "- Add the .p12 password as GitHub Secret **IOS_CERT_P12_PASSWORD**" >> $GITHUB_STEP_SUMMARY
+          echo "- Add any random string as GitHub Secret **IOS_KEYCHAIN_PASSWORD**" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Step 4 — App Store Provisioning Profile**" >> $GITHUB_STEP_SUMMARY
+          echo "- developer.apple.com → Profiles → + → App Store Connect → select your App ID" >> $GITHUB_STEP_SUMMARY
+          echo "- Download the .mobileprovision file" >> $GITHUB_STEP_SUMMARY
+          echo "- \`base64 -i profile.mobileprovision | tr -d '\\n'\` → add as GitHub Secret **IOS_PROVISION_PROFILE_BASE64**" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Step 5 — Add Team ID secret**" >> $GITHUB_STEP_SUMMARY
+          echo "- GitHub repo → Settings → Secrets → Actions → **APPLE_TEAM_ID** = your 10-char Team ID" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Step 6 — TestFlight (optional)**" >> $GITHUB_STEP_SUMMARY
+          echo "- App Store Connect → Users & Access → Keys → + → Developer → download .p8" >> $GITHUB_STEP_SUMMARY
+          echo "- Add secrets: **APPLE_CONNECT_API_KEY_ID**, **APPLE_CONNECT_ISSUER_ID**, **APPLE_CONNECT_API_KEY_BASE64**" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Once secrets are set, re-run this workflow with **Upload to TestFlight = true**." >> $GITHUB_STEP_SUMMARY
