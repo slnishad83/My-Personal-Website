@@ -1,0 +1,92 @@
+name: Build Android APK
+
+on:
+  workflow_dispatch:          # Run manually from GitHub Actions tab
+  push:
+    branches: [main]
+    paths:                    # Only trigger when web source actually changes
+      - 'works/chat/**'
+      - '!works/chat/sync-www.js'
+      - '!works/chat/*.md'
+
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      # ── 1. Checkout ──────────────────────────────────────────────────────
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # ── 2. Node.js (for sync-www + Capacitor CLI) ────────────────────────
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: works/chat/package-lock.json
+
+      - name: Install web dependencies
+        working-directory: works/chat
+        run: npm ci
+
+      # ── 3. Sync web source → www/ ────────────────────────────────────────
+      - name: Sync www/ from web source
+        run: node works/chat/sync-www.js
+
+      # ── 4. Install Capacitor CLI ─────────────────────────────────────────
+      - name: Install Capacitor CLI
+        working-directory: works/chat
+        run: npm install -g @capacitor/cli@latest
+
+      # ── 5. Java 17 (required by Android Gradle) ──────────────────────────
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      # ── 6. Android SDK ───────────────────────────────────────────────────
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android build tools
+        run: |
+          sdkmanager --install "build-tools;34.0.0" "platforms;android-34"
+
+      # ── 7. Add or sync Android platform ──────────────────────────────────
+      - name: Sync Capacitor Android project
+        working-directory: works/chat
+        run: |
+          # Add android platform if not present in repo
+          if [ ! -d "../../android" ]; then
+            npx cap add android
+          fi
+          npx cap sync android
+
+      # ── 8. Build debug APK ───────────────────────────────────────────────
+      - name: Build debug APK
+        working-directory: android
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon
+
+      # ── 9. Upload APK as build artifact ──────────────────────────────────
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: my-team-chat-debug-${{ github.run_number }}
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+          retention-days: 30
+
+      # ── 10. Comment APK download link on push ────────────────────────────
+      - name: Summary
+        run: |
+          echo "## ✅ APK Build Complete" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Debug APK is attached to this workflow run." >> $GITHUB_STEP_SUMMARY
+          echo "Download it from the **Artifacts** section above." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Build:** \`#${{ github.run_number }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "**Commit:** \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY

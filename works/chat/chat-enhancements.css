@@ -1815,3 +1815,99 @@ body.dark .call-history-filters button:hover {
   border-color: rgba(0, 168, 132, 0.20) !important;
   color: #00a884 !important;
 }
+
+
+/* ══════════════════════════════════════════════════════════════════════════
+   LARGE SCREEN / DESKTOP OPTIMISATION
+   Breakpoints: 1200px (large laptop), 1920px (1080p), 2560px (1440p/4K)
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* ── 1200px — large laptop / external monitor ────────────────────────── */
+@media (min-width: 1200px) {
+  .chat-container {
+    width: min(1760px, calc(100vw - 60px));
+    height: min(96vh, 1020px);
+  }
+  .message-text { font-size: 14.5px; }
+  /* Make sent/received bubbles a touch wider at this size */
+  .message-bubble { max-width: min(68%, 800px); }
+}
+
+/* ── 1920px — full HD / large desktop ───────────────────────────────── */
+@media (min-width: 1920px) {
+  :root {
+    --sidebar-width: clamp(380px, 26vw, 520px);
+  }
+  .chat-container {
+    width: min(2100px, calc(100vw - 80px));
+    height: min(94vh, 1100px);
+  }
+  .sidebar-header,
+  .chat-header { min-height: 70px; padding: 12px 20px; }
+  .avatar { width: 44px !important; height: 44px !important; }
+  .contact-name { font-size: 15.5px; }
+  .contact-msg  { font-size: 13.5px; }
+  .message-text { font-size: 15px; line-height: 1.55; }
+  .message-time { font-size: 12px; }
+  .message-bubble { max-width: min(64%, 860px); }
+  /* Input bar slightly taller */
+  .message-input-area { min-height: 64px; }
+  .message-input { font-size: 15px; }
+  /* Emoji/attach/send buttons */
+  .emoji-btn, .attach-btn, .send-btn { width: 42px; height: 42px; font-size: 20px; }
+  /* Modals — wider on big screens */
+  .modal-box { max-width: min(580px, 90vw); }
+}
+
+/* ── 2560px — QHD / 27-inch displays ────────────────────────────────── */
+@media (min-width: 2560px) {
+  :root {
+    --sidebar-width: clamp(420px, 24vw, 580px);
+  }
+  .chat-container {
+    width: min(2700px, calc(100vw - 120px));
+    height: min(94vh, 1300px);
+  }
+  body { font-size: 17px; }
+  .sidebar-header,
+  .chat-header { min-height: 78px; padding: 14px 24px; }
+  .avatar { width: 50px !important; height: 50px !important; }
+  .contact-name  { font-size: 17px; }
+  .contact-msg   { font-size: 14.5px; }
+  .message-text  { font-size: 16px; line-height: 1.6; }
+  .message-time  { font-size: 13px; }
+  .message-bubble{ max-width: min(60%, 1000px); }
+  .message-input { font-size: 16px; }
+  .emoji-btn, .attach-btn, .send-btn { width: 48px; height: 48px; font-size: 22px; }
+  .modal-box { max-width: min(680px, 85vw); }
+  /* Header title sizes */
+  .chat-contact-name { font-size: 17px; }
+  .chat-contact-status { font-size: 13px; }
+}
+
+/* ── 3840px — true 4K / 50-inch TV ──────────────────────────────────── */
+@media (min-width: 3840px) {
+  :root {
+    --sidebar-width: clamp(500px, 22vw, 700px);
+  }
+  .chat-container {
+    width: min(3600px, calc(100vw - 160px));
+    height: min(92vh, 1600px);
+  }
+  body { font-size: 20px; }
+  .sidebar-header,
+  .chat-header { min-height: 96px; padding: 18px 32px; }
+  .avatar { width: 60px !important; height: 60px !important; }
+  .contact-name  { font-size: 20px; }
+  .contact-msg   { font-size: 17px; }
+  .message-text  { font-size: 19px; line-height: 1.65; }
+  .message-time  { font-size: 15px; }
+  .message-bubble{ max-width: min(58%, 1200px); }
+  .message-input { font-size: 19px; }
+  .emoji-btn, .attach-btn, .send-btn { width: 58px; height: 58px; font-size: 26px; }
+  .modal-box { max-width: min(860px, 80vw); }
+  .chat-contact-name { font-size: 21px; }
+  .chat-contact-status { font-size: 16px; }
+  /* Larger touch targets for couch/TV remote use */
+  .auth-tab, .btn, button { min-height: 52px; }
+}

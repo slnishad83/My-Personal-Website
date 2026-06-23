@@ -309,7 +309,22 @@
    ================================================================
    login.html has its own <style> block with hardcoded light
    colours.  This CSS should be pasted INSIDE that <style> block,
-   right before the closing </style> tag, OR linked as an extra
+   right before the closing 
+      /* ── Dark mode toggle button ──────────────────────────────── */
+      .dm-toggle {
+        position: fixed; top: 16px; right: 16px; z-index: 9999;
+        width: 40px; height: 40px; border-radius: 50%;
+        border: none; cursor: pointer;
+        background: rgba(255,255,255,0.25);
+        backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+        font-size: 18px; display: flex; align-items: center; justify-content: center;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.18);
+        transition: background 0.2s, transform 0.15s;
+      }
+      .dm-toggle:hover { background: rgba(255,255,255,0.4); transform: scale(1.08); }
+      body.dark .dm-toggle { background: rgba(32,44,51,0.85); }
+      body.dark .dm-toggle:hover { background: rgba(42,57,66,0.95); }
+    </style> tag, OR linked as an extra
    stylesheet in login.html.
 
    It uses both:
@@ -440,7 +455,9 @@ body.dark .auth-gate-recovery {
     <link rel="stylesheet" href="auth-theme.css?v=1" />
   </head>
   <body>
-    <div class="auth-container">
+    
+  <button class="dm-toggle" id="dmToggle" aria-label="Toggle dark mode" title="Toggle dark mode">☀️</button>
+  <div class="auth-container">
       <div class="auth-card">
         <div class="auth-header">
           <h1>💬 Team Chat</h1>
@@ -1118,5 +1135,23 @@ body.dark .auth-gate-recovery {
         });
     </script>
     <script src="pwa-install.js?v=144"></script>
-  </body>
+  
+<script>
+(function () {
+  var btn = document.getElementById('dmToggle');
+  function applyDark(on) {
+    document.body.classList.toggle('dark', on);
+    btn.textContent = on ? '🌙' : '☀️';
+  }
+  // Apply saved preference on load
+  applyDark(localStorage.getItem('darkMode') === 'true');
+  // Toggle on click
+  btn.addEventListener('click', function () {
+    var on = document.body.classList.toggle('dark');
+    localStorage.setItem('darkMode', on);
+    btn.textContent = on ? '🌙' : '☀️';
+  });
+})();
+</script>
+</body>
 </html>
