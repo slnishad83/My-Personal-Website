@@ -1,0 +1,14 @@
+/* =============================================
+   ATTACHMENT RELIABILITY v1.0 — #26
+   ============================================= */
+.tc-attach-status { display: block; font-size: 11px; margin-top: 3px; }
+.tc-attach-status--info  { color: #667781; }
+.tc-attach-status--warn  { color: #f59e0b; }
+.tc-attach-status--error { color: #ef4444; }
+.tc-attach-status--done  { color: #00a884; }
+
+.tc-dl-progress { margin-top: 6px; border-radius: 4px; overflow: hidden; background: rgba(0,0,0,0.06); }
+.tc-dl-bar { height: 3px; width: 0; background: #00a884; transition: width 0.2s ease; border-radius: 3px; }
+.tc-dl-text { font-size: 11px; color: #667781; display: block; padding: 2px 0; }
+.dark-mode .tc-dl-progress, body.dark .tc-dl-progress { background: rgba(255,255,255,0.08); }
+.dark-mode .tc-dl-text, body.dark .tc-dl-text { color: #aebac1; }
