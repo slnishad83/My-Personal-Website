@@ -109,6 +109,8 @@ function cleanupAllFirestoreListeners() {
   seenPendingChatRequestIds.clear();
   seenSentChatRequestIds.clear();
   seenPendingGroupInviteIds.clear();
+  _reactionListeners.forEach((fn) => { try { fn(); } catch (_) {} });
+  _reactionListeners.clear();
 }
 
 function closeTopVisibleModal() {
@@ -2050,7 +2052,7 @@ function bindRenderedMessageActions() {
     btn.dataset.speedBound = "true";
     btn.addEventListener("click", (e) => {
       e.stopPropagation();
-      const speeds = [1, 1.5, 2];
+      const speeds = [0.5, 1, 1.5, 2];
       const cur = parseFloat(btn.textContent) || 1;
       const idx = speeds.indexOf(cur);
       const next = speeds[(idx + 1) % speeds.length];
@@ -2609,6 +2611,8 @@ function resetChatPanel() {
     typingUnsubscribe();
     typingUnsubscribe = null;
   }
+  _reactionListeners.forEach((fn) => { try { fn(); } catch (_) {} });
+  _reactionListeners.clear();
   document.getElementById("currentChatName").textContent = "Select a chat";
   document.getElementById("chatStatus").textContent = "";
   document.getElementById("currentChatAvatar").innerHTML = "?";
@@ -8214,56 +8218,71 @@ async function loadPinnedMessages() {
 // MESSAGE REACTIONS
 // ========================================
 
-async function loadReactions(messageId, container) {
-  const snapshot = await db
+function loadReactions(messageId, container) {
+  // Unsubscribe any existing listener for this message to avoid duplicates
+  if (_reactionListeners.has(messageId)) {
+    try { _reactionListeners.get(messageId)(); } catch (_) {}
+    _reactionListeners.delete(messageId);
+  }
+
+  function renderReactions(snapshot) {
+    const reactions = {};
+    snapshot.forEach((doc) => {
+      const d = doc.data();
+      if (!reactions[d.reaction]) reactions[d.reaction] = { count: 0, names: [] };
+      reactions[d.reaction].count++;
+      reactions[d.reaction].names.push(d.userName || "Someone");
+    });
+
+    // Replace previous reaction container for this message
+    const existing = container.querySelector(".reactions-container");
+    if (existing) existing.remove();
+
+    if (Object.keys(reactions).length === 0) return;
+
+    const reactionDiv = document.createElement("div");
+    reactionDiv.className = "reactions-container";
+    for (const [reaction, { count, names }] of Object.entries(reactions)) {
+      const wrapper = document.createElement("span");
+      wrapper.className = "reaction-badge-wrapper";
+
+      const badge = document.createElement("span");
+      badge.className = "reaction-badge";
+      badge.textContent = `${reaction} ${count}`;
+      badge.onclick = (e) => {
+        e.stopPropagation();
+        addReaction(messageId, reaction);
+      };
+      badge.ondblclick = (e) => {
+        e.stopPropagation();
+        triggerMessageEffect("confetti");
+      };
+
+      const tooltip = document.createElement("span");
+      tooltip.className = "reaction-tooltip";
+      const header = `<span class="reaction-tooltip-emoji">${reaction}</span>`;
+      const list = names.length <= 5
+        ? names.map(n => `<span>${escapeHtml(n)}</span>`).join("")
+        : names.slice(0, 4).map(n => `<span>${escapeHtml(n)}</span>`).join("") +
+          `<span>+${names.length - 4} more</span>`;
+      tooltip.innerHTML = header + list;
+
+      wrapper.appendChild(badge);
+      wrapper.appendChild(tooltip);
+      reactionDiv.appendChild(wrapper);
+    }
+    container.appendChild(reactionDiv);
+  }
+
+  const unsub = db
     .collection("messageReactions")
     .where("messageId", "==", messageId)
-    .get();
-  const reactions = {};
-  snapshot.forEach((doc) => {
-    const d = doc.data();
-    if (!reactions[d.reaction]) reactions[d.reaction] = { count: 0, names: [] };
-    reactions[d.reaction].count++;
-    const name = d.userName || "Someone";
-    reactions[d.reaction].names.push(name);
-  });
+    .onSnapshot(renderReactions, () => {});
 
-  if (Object.keys(reactions).length === 0) return;
-
-  const reactionDiv = document.createElement("div");
-  reactionDiv.className = "reactions-container";
-  for (const [reaction, { count, names }] of Object.entries(reactions)) {
-    const wrapper = document.createElement("span");
-    wrapper.className = "reaction-badge-wrapper";
-
-    const badge = document.createElement("span");
-    badge.className = "reaction-badge";
-    badge.textContent = `${reaction} ${count}`;
-    badge.onclick = (e) => {
-      e.stopPropagation();
-      addReaction(messageId, reaction);
-    };
-    badge.ondblclick = (e) => {
-      e.stopPropagation();
-      triggerMessageEffect("confetti");
-    };
-
-    const tooltip = document.createElement("span");
-    tooltip.className = "reaction-tooltip";
-    const header = `<span class="reaction-tooltip-emoji">${reaction}</span>`;
-    const list = names.length <= 5
-      ? names.map(n => `<span>${escapeHtml(n)}</span>`).join("")
-      : names.slice(0, 4).map(n => `<span>${escapeHtml(n)}</span>`).join("") +
-        `<span>+${names.length - 4} more</span>`;
-    tooltip.innerHTML = header + list;
-
-    wrapper.appendChild(badge);
-    wrapper.appendChild(tooltip);
-    reactionDiv.appendChild(wrapper);
-  }
-  container.appendChild(reactionDiv);
+  _reactionListeners.set(messageId, unsub);
 }
 
+const _reactionListeners = new Map(); // messageId -> unsubscribe fn
 const _allReactions = ["👍","❤️","😂","😮","😢","🙏","🔥","🎉","💯","✅","👏","🤣","🥰","😍","🤔","🤩","😭","😤","🤗","🥳"];
 
 function getReactionOptions() {
