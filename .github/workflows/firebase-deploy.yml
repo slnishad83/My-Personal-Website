@@ -29,6 +29,7 @@ jobs:
           FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
 
       - name: Deploy sendMessageNotification function
+        continue-on-error: true
         run: firebase deploy --only functions:sendMessageNotification --token "$FIREBASE_TOKEN" --project my-team-chat-2255
         env:
           FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
