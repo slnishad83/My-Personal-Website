@@ -1912,7 +1912,7 @@ exports.sendNotificationReply = onRequest(
 );
 
 // ── generateUrlPreview — item #24 ─────────────────────────────────────────
-exports.generateUrlPreview = functions.https.onRequest(async (req, res) => {
+exports.generateUrlPreview = onRequest(async (req, res) => {
   res.set('Access-Control-Allow-Origin', '*');
   res.set('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
   res.set('Access-Control-Allow-Headers', 'Content-Type');
