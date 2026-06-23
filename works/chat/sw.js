@@ -157,11 +157,20 @@ self.addEventListener('notificationclick', event => {
   );
 });
 
-const CACHE_NAME = 'team-chat-v213-wa';
+const CACHE_NAME = 'team-chat-v214-wa';
 const STATIC_ASSETS = [
   'auth-theme.css',
   'feature-updates.css',
   'feature-updates.js',
+    'attachment-reliability.css',
+    'attachment-reliability.js',
+    'group-message-info.css',
+    'group-message-info.js',
+    'audit-interactions.css',
+    'audit-interactions.js',
+    'audit-responsive.css',
+    'url-preview.css',
+    'url-preview.js',
   'sync-audit.css',
   'sync-audit.js',
   'push-notifications.js',
