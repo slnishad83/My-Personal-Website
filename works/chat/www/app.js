@@ -1,34 +1,13 @@
 /**
- * Capgo OTA live-update initialisation.
+ * app.js — runs inside the Capacitor WebView on every launch.
  *
- * Called on every app start inside the native WebView.
- * notifyAppReady() tells Capgo "this bundle loaded fine — do not roll back."
- * Without this call Capgo will revert to the previous bundle after 3 failed
- * launches, which is how bad updates are automatically recovered from.
+ * OTA update strategy:
+ *   capacitor.config.json → server.url points to Firebase Hosting.
+ *   Every push to GitHub triggers firebase-deploy.yml which redeploys the
+ *   chat files.  The installed APK loads the live Firebase URL on each
+ *   launch, so web-only changes (HTML / CSS / JS) are visible immediately
+ *   without reinstalling the APK or going through the Play Store.
  *
- * autoUpdate is enabled in capacitor.config.json, so new bundles are
- * downloaded in the background and applied on the next cold start.
+ *   Native code changes (plugins, permissions, AndroidManifest) still
+ *   require a new APK build and install.
  */
-(function () {
-  if (typeof window === "undefined") return; // safety guard for Node checks
-  if (window.__capgoReady) return;           // prevent double-init
-  window.__capgoReady = true;
-
-  function initCapgo() {
-    if (
-      typeof Capacitor !== "undefined" &&
-      Capacitor.isNativePlatform() &&
-      Capacitor.Plugins &&
-      Capacitor.Plugins.CapacitorUpdater
-    ) {
-      Capacitor.Plugins.CapacitorUpdater.notifyAppReady();
-    }
-  }
-
-  // Capacitor is synchronously available once the WebView has loaded.
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", initCapgo);
-  } else {
-    initCapgo();
-  }
-})();
