@@ -34,9 +34,10 @@
   margin: 0 !important;
   padding: 3px 6px !important;
   gap: 4px !important;
-  border: 1px solid rgba(134, 150, 160, 0.2) !important;
+  /* var(--actions-border/bg) let ui-audit.css theme this without !important fights */
+  border: 1px solid var(--actions-border, rgba(134, 150, 160, 0.2)) !important;
   border-radius: 999px !important;
-  background: rgba(255, 255, 255, 0.94) !important;
+  background: var(--actions-bg, rgba(255, 255, 255, 0.94)) !important;
   box-shadow: 0 2px 7px rgba(11, 20, 26, 0.15) !important;
   transform: none !important;
   backdrop-filter: blur(8px);
@@ -64,7 +65,8 @@
   border: 0 !important;
   border-radius: 50% !important;
   background: transparent !important;
-  color: #667781 !important;
+  /* --muted is defined in style.css :root as #667781 */
+  color: var(--muted, #667781) !important;
   box-shadow: none !important;
   line-height: 1 !important;
   transform: none !important;
@@ -73,8 +75,9 @@
 .message-quick-actions .quick-message-action:hover,
 .message-quick-actions .quick-message-action:focus-visible,
 .message-quick-actions .quick-message-action:active {
-  background: rgba(0, 128, 105, 0.11) !important;
-  color: #008069 !important;
+  background: var(--brand-hover-subtle, rgba(0, 128, 105, 0.11)) !important;
+  /* --brand-dark is defined in style.css :root as #008069 */
+  color: var(--brand-dark, #008069) !important;
 }
 
 .message-quick-actions .quick-forward-btn::before {
@@ -161,7 +164,7 @@ body.dark .message-quick-actions .quick-message-action {
   height: 32px !important;
   place-items: center !important;
   border-radius: 50% !important;
-  background: #008069 !important;
+  background: var(--brand-dark, #008069) !important;
   box-shadow: 0 3px 12px rgba(0, 128, 105, 0.25) !important;
   opacity: 0 !important;
   visibility: hidden !important;
@@ -196,7 +199,8 @@ body.dark .message-quick-actions .quick-message-action {
   height: 32px !important;
   place-items: center !important;
   border-radius: 50% !important;
-  background: #e5484d !important;
+  /* --danger not yet in style.css :root; add it there to centralise the red */
+  background: var(--danger, #e5484d) !important;
   box-shadow: 0 3px 12px rgba(229, 72, 77, 0.25) !important;
   opacity: 0 !important;
   visibility: hidden !important;
