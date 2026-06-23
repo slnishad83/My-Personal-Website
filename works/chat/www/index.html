@@ -19,6 +19,7 @@
       href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700&display=swap"
       rel="stylesheet"
     />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
     <link rel="stylesheet" href="style.css?v=160" />
     <link rel="stylesheet" href="notification-prefs.css" />
     <link rel="stylesheet" href="snooze-enhancements.css" />
@@ -72,13 +73,14 @@
         position: fixed;
         inset: 0;
         z-index: 99999;
-        display: grid;
-        place-items: center;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 20px;
         background: linear-gradient(#008069 0 128px, #d1d7db 128px 100%);
         color: #111b21;
-        font:
-          600 15px "Inter",
-          sans-serif;
+        font: 600 15px "Inter", sans-serif;
       }
 
       body.auth-ready .auth-gate {
@@ -87,6 +89,50 @@
 
       body:not(.auth-ready) .chat-container {
         visibility: hidden;
+      }
+
+      .auth-gate-inner {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 18px;
+        padding: 36px 28px;
+        background: #fff;
+        border-radius: 18px;
+        box-shadow: 0 12px 40px rgba(11, 20, 26, 0.16);
+        width: min(320px, calc(100vw - 40px));
+      }
+
+      .auth-gate-logo {
+        font-size: 36px;
+        line-height: 1;
+      }
+
+      .auth-gate-title {
+        font-size: 17px;
+        font-weight: 700;
+        color: #111b21;
+        margin: 0;
+      }
+
+      .auth-gate-spinner {
+        width: 36px;
+        height: 36px;
+        border: 3px solid #e9edef;
+        border-top-color: #008069;
+        border-radius: 50%;
+        animation: auth-spin 0.75s linear infinite;
+      }
+
+      @keyframes auth-spin {
+        to { transform: rotate(360deg); }
+      }
+
+      .auth-gate-label {
+        font-size: 13px;
+        font-weight: 500;
+        color: #667781;
+        margin: 0;
       }
 
       .auth-gate-recovery {
@@ -119,7 +165,14 @@
     </style>
   </head>
   <body>
-    <div class="auth-gate" id="authGate">Checking session...</div>
+    <div class="auth-gate" id="authGate">
+      <div class="auth-gate-inner">
+        <div class="auth-gate-logo">💬</div>
+        <p class="auth-gate-title">Team Chat</p>
+        <div class="auth-gate-spinner"></div>
+        <p class="auth-gate-label">Checking session…</p>
+      </div>
+    </div>
     <div class="chat-container">
       <!-- Sidebar -->
       <div class="sidebar" id="sidebar">
@@ -3567,7 +3620,6 @@
       </div>
     </div>
 
-    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-compat.js"></script>
     <!-- Global Search Modal -->
     <div id="globalSearchModal" class="modal" style="display:none">
       <div class="modal-content" style="max-width:600px;max-height:85vh">

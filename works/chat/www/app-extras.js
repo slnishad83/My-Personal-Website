@@ -11321,3 +11321,39 @@ document.getElementById("closeSessionsModal")?.addEventListener("click", () => {
     return items;
   };
 })();
+
+/* --- Ripple Effect on Icon Buttons --- */
+(function addRippleEffect() {
+  document.addEventListener("click", (e) => {
+    const btn = e.target.closest(".icon-btn, #sendBtn, .list-item, .primary-tab");
+    if (!btn) return;
+    const rect = btn.getBoundingClientRect();
+    const x = ((e.clientX - rect.left) / rect.width) * 100;
+    const y = ((e.clientY - rect.top) / rect.height) * 100;
+    btn.style.setProperty("--x", x + "%");
+    btn.style.setProperty("--y", y + "%");
+    btn.classList.add("ripple");
+    setTimeout(() => btn.classList.remove("ripple"), 300);
+  });
+})();
+
+/* --- Typing Dots Animation --- */
+(function addTypingDots() {
+  const origUpdate = window.updateTypingIndicator;
+  if (typeof updateTypingIndicator === "function") {
+    window._origUpdateTyping = updateTypingIndicator;
+    updateTypingIndicator = function(typingUsers) {
+      const result = window._origUpdateTyping ? window._origUpdateTyping(typingUsers) : null;
+      const indicator = document.getElementById("typingIndicator");
+      if (!indicator) return result;
+      // Add animated dots if they don't exist
+      if (!indicator.querySelector(".typing-dots")) {
+        const dots = document.createElement("span");
+        dots.className = "typing-dots";
+        dots.innerHTML = '<span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span>';
+        indicator.insertBefore(dots, indicator.firstChild);
+      }
+      return result;
+    };
+  }
+})();
