@@ -4,6 +4,9 @@ on:
   push:
     branches: [main, master]
 
+env:
+  FIREBASE_SUPPRESS_REGION_WARNING: "true"
+
 jobs:
   deploy:
     name: Deploy Hosting + Functions
@@ -30,12 +33,29 @@ jobs:
       - name: Install Firebase CLI
         run: npm install -g firebase-tools
 
-      - name: Deploy to Firebase (Hosting + Functions)
+      # Step 1: Deploy Hosting (always reliable)
+      - name: Deploy Firebase Hosting
         env:
           FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
         run: |
           firebase deploy \
-            --only hosting,functions \
+            --only hosting \
             --project my-team-chat-2255 \
             --token "$FIREBASE_TOKEN" \
             --non-interactive
+
+      # Step 2: Deploy Functions (best-effort — pre-existing busyAutoReply
+      # trigger-type conflict must be resolved in Firebase Console first.
+      # This step will not block Hosting deployment.)
+      - name: Deploy Firebase Functions (best-effort)
+        env:
+          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
+        continue-on-error: true
+        run: |
+          firebase deploy \
+            --only functions \
+            --project my-team-chat-2255 \
+            --token "$FIREBASE_TOKEN" \
+            --non-interactive \
+            --force \
+          || echo "::warning::Functions deploy had errors (likely busyAutoReply trigger-type conflict). Resolve in Firebase Console by deleting the old busyAutoReply function, then re-run this workflow."
