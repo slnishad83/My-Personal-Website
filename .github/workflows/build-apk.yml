@@ -5,11 +5,13 @@ on:
   push:
     branches: [main]
     paths:
-      - 'works/chat/**'
-      - '!works/chat/sync-www.js'
-      - '!works/chat/*.md'
+      - 'works/chat/android/**'
+      - 'works/chat/capacitor.config.json'
+      - 'works/chat/package.json'
+      - 'works/chat/package-lock.json'
       - '!works/chat/android/app/build.gradle'
 
+# Write access so the version-bump commit can be pushed back to main
 permissions:
   contents: write
 
@@ -38,6 +40,9 @@ jobs:
         run: npm ci
 
       # ── 3. Sync web source to www/ ─────────────────────────────────────────
+      # www/ is embedded as the fallback bundle in the APK.
+      # Runtime web updates come from Firebase (server.url in capacitor.config.json)
+      # so the www/ copy only needs to match the Firebase content at build time.
       - name: Sync www/ from web source
         run: node works/chat/sync-www.js
 
@@ -62,7 +67,7 @@ jobs:
 
       # ── 7. Auto-bump versionCode ───────────────────────────────────────────
       # Reads current versionCode, adds 1, writes back before Gradle runs.
-      # Both the APK and Capgo bundle will carry the same new number.
+      # The APK and AAB both carry the new code.
       - name: Bump versionCode
         id: version
         run: |
@@ -89,9 +94,9 @@ jobs:
           if [ ! -d "android" ]; then npx cap add android; fi
           npx cap sync android
 
-      # ── 10. Build signed APK and AAB in one Gradle run ────────────────────
+      # ── 10. Build signed APK and AAB ──────────────────────────────────────
       # APK  = direct install / sideload / testing
-      # AAB  = Google Play Store (required for all new apps since Aug 2021)
+      # AAB  = Google Play Store (required for new app submissions since Aug 2021)
       - name: Build signed release APK and AAB
         working-directory: works/chat/android
         env:
@@ -114,7 +119,7 @@ jobs:
           fi
 
       # ── 12. Commit bumped versionCode back to repo ─────────────────────────
-      # [skip ci] in the message + build.gradle excluded from paths filter
+      # [skip ci] in the message AND build.gradle excluded from paths filter
       # means this commit never re-triggers the workflow.
       - name: Commit bumped versionCode
         run: |
@@ -124,29 +129,7 @@ jobs:
           git commit -m "chore: bump versionCode to ${{ steps.version.outputs.new }} [skip ci]"
           git push
 
-      # ── 13. Push OTA bundle to Capgo ──────────────────────────────────────
-      # Silently skipped when CAPGO_TOKEN is not set.
-      # Installed APKs pull this bundle on next cold start — no store needed
-      # for web-only changes (CSS, JS, HTML inside www/).
-      #
-      # One-time setup (free, up to 200 devices):
-      #   1. https://capgo.app → sign up
-      #   2. Run:  npx @capgo/cli init   (in works/chat/ locally)
-      #   3. GitHub repo Settings → Secrets → Actions → New secret
-      #      Name: CAPGO_TOKEN   Value: API key from Capgo dashboard
-      - name: Push OTA bundle to Capgo
-        if: ${{ secrets.CAPGO_TOKEN != '' }}
-        env:
-          CAPGO_TOKEN: ${{ secrets.CAPGO_TOKEN }}
-        working-directory: works/chat
-        run: |
-          npm install -g @capgo/cli@latest
-          npx capgo bundle upload \
-            --apikey "$CAPGO_TOKEN" \
-            --channel production \
-            --bundle ${{ steps.version.outputs.new }}
-
-      # ── 14. Upload signed APK artifact ────────────────────────────────────
+      # ── 13. Upload signed APK artifact ────────────────────────────────────
       - name: Upload signed release APK
         uses: actions/upload-artifact@v4
         with:
@@ -154,7 +137,7 @@ jobs:
           path: works/chat/android/app/build/outputs/apk/release/app-release.apk
           retention-days: 30
 
-      # ── 15. Upload signed AAB artifact (Play Store ready) ─────────────────
+      # ── 14. Upload signed AAB artifact (Play Store ready) ─────────────────
       - name: Upload signed release AAB
         uses: actions/upload-artifact@v4
         with:
@@ -162,9 +145,8 @@ jobs:
           path: works/chat/android/app/build/outputs/bundle/release/app-release.aab
           retention-days: 90
 
-      # ── 16. Upload to Google Play internal track ───────────────────────────
+      # ── 15. Upload to Google Play internal track ───────────────────────────
       # Silently skipped when GOOGLE_PLAY_SERVICE_ACCOUNT_JSON is not set.
-      # Uses AAB, which Play Store requires for all new app submissions.
       - name: Upload to Google Play internal track
         if: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON != '' }}
         uses: r0adkll/upload-google-play@v1
@@ -176,22 +158,20 @@ jobs:
           status: completed
           whatsNewDirectory: .github/whatsnew
 
-      # ── 17. Summary ────────────────────────────────────────────────────────
+      # ── 16. Summary ────────────────────────────────────────────────────────
       - name: Summary
         run: |
-          echo "## Build complete" >> $GITHUB_STEP_SUMMARY
+          echo "## Build complete — versionCode ${{ steps.version.outputs.old }} to ${{ steps.version.outputs.new }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "versionCode bumped from ${{ steps.version.outputs.old }} to ${{ steps.version.outputs.new }}" >> $GITHUB_STEP_SUMMARY
+          echo "### OTA updates" >> $GITHUB_STEP_SUMMARY
+          echo "Web-only changes (HTML/CSS/JS) update automatically on next app launch." >> $GITHUB_STEP_SUMMARY
+          echo "The APK loads from Firebase Hosting (server.url in capacitor.config.json)." >> $GITHUB_STEP_SUMMARY
+          echo "A new APK build is only needed for native changes (plugins, permissions, etc)." >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "| Output | Status |" >> $GITHUB_STEP_SUMMARY
           echo "|---|---|" >> $GITHUB_STEP_SUMMARY
           echo "| Signed APK (sideload / test) | uploaded |" >> $GITHUB_STEP_SUMMARY
           echo "| Signed AAB (Play Store ready) | uploaded |" >> $GITHUB_STEP_SUMMARY
-          if [ -n "${{ secrets.CAPGO_TOKEN }}" ]; then
-            echo "| Capgo OTA bundle | pushed to production channel |" >> $GITHUB_STEP_SUMMARY
-          else
-            echo "| Capgo OTA bundle | skipped — set CAPGO_TOKEN secret to enable |" >> $GITHUB_STEP_SUMMARY
-          fi
           if [ -n "${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON }}" ]; then
             echo "| Google Play internal track | submitted |" >> $GITHUB_STEP_SUMMARY
           else
