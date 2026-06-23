@@ -49,11 +49,23 @@
     }
     body.dark { --bg:#0b141a;--card:#111b21;--text:#e9edef;--muted:#8696a0;--border:#2a3942 }
     body.dark .hour-bar[title]:hover::after { background:#202c33;color:#e9edef;border:1px solid #2a3942 }
+  
+    .dark-toggle-btn {
+      width: 34px; height: 34px; border-radius: 50%;
+      border: none; background: rgba(255,255,255,0.18);
+      color: #fff; font-size: 17px; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0; transition: background 0.2s;
+    }
+    .dark-toggle-btn:hover { background: rgba(255,255,255,0.32); }
+    .dark-toggle-btn::before { content: "☀️"; }
+    body.dark .dark-toggle-btn::before { content: "🌙"; }
   </style>
 </head>
 <body>
 <div class="header">
   <button class="back-btn" onclick="history.back()">←</button>
+  <button class="dark-toggle-btn" id="darkToggleBtn" onclick="toggleDark()" title="Toggle dark mode" aria-label="Toggle dark mode"></button>
   <h1>📊 Your Chat Insights</h1>
 </div>
 <div class="content">
@@ -149,6 +161,17 @@ async function loadInsights(){
     document.getElementById('loading').textContent='Could not load insights: '+e.message;
   }
 }
+</script>
+
+<script>
+(function(){
+  // Sync with main chat app dark-mode preference
+  if(localStorage.getItem('darkMode')==='true') document.body.classList.add('dark');
+  window.toggleDark=function(){
+    const on=document.body.classList.toggle('dark');
+    localStorage.setItem('darkMode',on);
+  };
+})();
 </script>
 </body>
 </html>

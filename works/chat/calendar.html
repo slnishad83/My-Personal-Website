@@ -80,11 +80,23 @@
     body.dark .day-cell.other-month { background:#0d161b }
     body.dark .day-header { background:var(--bg) }
     body.dark .color-dot.selected { border-color:#e9edef }
+  
+    .dark-toggle-btn {
+      width: 34px; height: 34px; border-radius: 50%;
+      border: none; background: rgba(255,255,255,0.18);
+      color: #fff; font-size: 17px; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0; transition: background 0.2s;
+    }
+    .dark-toggle-btn:hover { background: rgba(255,255,255,0.32); }
+    .dark-toggle-btn::before { content: "☀️"; }
+    body.dark .dark-toggle-btn::before { content: "🌙"; }
   </style>
 </head>
 <body>
 <div class="header">
   <button class="back-btn" onclick="history.back()">←</button>
+  <button class="dark-toggle-btn" id="darkToggleBtn" onclick="toggleDark()" title="Toggle dark mode" aria-label="Toggle dark mode"></button>
   <h1>📅 Family Calendar</h1>
   <button class="add-btn" onclick="openModal()">+ Event</button>
 </div>
@@ -221,6 +233,17 @@ async function deleteEvent(id){if(!confirm('Delete this event?'))return;await db
 function isToday(y,m,d){return y===today.getFullYear()&&m===today.getMonth()&&d===today.getDate();}
 function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2500);}
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+</script>
+
+<script>
+(function(){
+  // Sync with main chat app dark-mode preference
+  if(localStorage.getItem('darkMode')==='true') document.body.classList.add('dark');
+  window.toggleDark=function(){
+    const on=document.body.classList.toggle('dark');
+    localStorage.setItem('darkMode',on);
+  };
+})();
 </script>
 </body>
 </html>
