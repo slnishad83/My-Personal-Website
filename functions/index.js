@@ -1856,3 +1856,57 @@ exports.detectCalendarEvent = onCall(
     }
   }
 );
+
+// ========================================
+// Notification Reply — called by service worker when user replies
+// inline from a push notification (no open tab scenario)
+// ========================================
+exports.sendNotificationReply = onRequest(
+  { region: 'us-central1', cors: ['https://nishadsl.com', 'https://my-team-chat-2255.web.app'] },
+  async (req, res) => {
+    if (req.method !== 'POST') { res.status(405).json({ error: 'Method not allowed' }); return; }
+
+    const authHeader = req.headers.authorization || '';
+    const idToken = authHeader.startsWith('Bearer ') ? authHeader.slice(7).trim() : '';
+    if (!idToken) { res.status(401).json({ error: 'Missing auth token' }); return; }
+
+    try {
+      const decoded = await admin.auth().verifyIdToken(idToken);
+      const uid = decoded.uid;
+
+      const { chatId, chatType, chatUserId, groupId, text } = req.body || {};
+      const trimmedText = (text || '').trim();
+      if (!trimmedText)  { res.status(400).json({ error: 'Empty reply text' }); return; }
+      if (!chatId)       { res.status(400).json({ error: 'Missing chatId' });   return; }
+
+      const userSnap = await admin.firestore().collection('users').doc(uid).get();
+      const user = userSnap.data() || {};
+
+      const msgData = {
+        text: trimmedText,
+        senderId: uid,
+        senderName: user.displayName || user.name || 'Team Chat',
+        senderAvatar: user.avatar || user.photoURL || '',
+        timestamp: admin.firestore.FieldValue.serverTimestamp(),
+        status: 'sent',
+        readBy: { [uid]: admin.firestore.FieldValue.serverTimestamp() },
+        deliveredTo: {},
+        sentViaNotification: true
+      };
+
+      if (chatType === 'group' && groupId) {
+        msgData.groupId = groupId;
+      } else {
+        msgData.directId     = chatId;
+        msgData.receiverId   = chatUserId || '';
+        msgData.participants = [uid, chatUserId].filter(Boolean);
+      }
+
+      const ref = await admin.firestore().collection('messages').add(msgData);
+      res.status(200).json({ ok: true, messageId: ref.id });
+    } catch (err) {
+      console.error('sendNotificationReply error:', err);
+      res.status(401).json({ error: err.message || 'Unauthorized' });
+    }
+  }
+);
