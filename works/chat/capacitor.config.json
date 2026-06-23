@@ -13,6 +13,12 @@
       "resize": "body",
       "style": "DARK",
       "resizeOnFullScreen": true
+    },
+    "CapacitorUpdater": {
+      "autoUpdate": true,
+      "statsUrl": "",
+      "channelUrl": "https://api.capgo.app/channel_self",
+      "updateUrl": "https://api.capgo.app/updates"
     }
   },
   "android": {
