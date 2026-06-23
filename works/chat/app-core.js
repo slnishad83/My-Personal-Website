@@ -16577,21 +16577,27 @@ async function init() {
         "Session checking is taking longer than expected. Check your connection and retry.",
       );
     }
-  }, 15000);
+  }, 8000);
   auth.onAuthStateChanged(async (user) => {
-    window.clearTimeout(authStateTimeout);
     if (!user) {
+      window.clearTimeout(authStateTimeout);
       cleanupAllFirestoreListeners();
       redirectToLogin();
       return;
     }
     try {
       try {
-        await user.reload();
+        await Promise.race([
+          user.reload(),
+          new Promise((_, reject) =>
+            setTimeout(() => reject(new Error("user.reload() timed out")), 5000),
+          ),
+        ]);
         user = auth.currentUser || user;
       } catch (error) {
         console.warn("Could not refresh auth user:", error);
       }
+      window.clearTimeout(authStateTimeout);
       currentUser = user;
       handlePendingWebCallAction().catch((error) =>
         console.warn("Could not process notification call action:", error),
