@@ -16304,9 +16304,18 @@ function focusCurrentSearchResult() {
   if (countEl) countEl.textContent = `${currentSearchIndex + 1}/${count}`;
 }
 
+function _syncDarkModeBtn() {
+  const btn = document.getElementById("darkModeBtn");
+  if (!btn) return;
+  const isDark = document.body.classList.contains("dark");
+  btn.textContent = isDark ? "☀️" : "🌙";
+  btn.title = isDark ? "Switch to light mode" : "Switch to dark mode";
+}
+
 function toggleDarkMode() {
   document.body.classList.toggle("dark");
   localStorage.setItem("darkMode", document.body.classList.contains("dark"));
+  _syncDarkModeBtn();
 }
 
 function revealAuthenticatedApp() {
@@ -18408,6 +18417,7 @@ async function init() {
 
   if (localStorage.getItem("darkMode") === "true")
     document.body.classList.add("dark");
+  _syncDarkModeBtn();
 }
 
 // ===== Export Chat as PDF =====
