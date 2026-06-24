@@ -16,7 +16,7 @@
     <title>Team Chat - Login</title>
     <link rel="canonical" href="https://nishadsl.com/works/chat" />
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet" />
-    <link rel="stylesheet" href="redesign-base.css" />
+    <link rel="stylesheet" href="redesign-base.css?v=1" />
     <script>
       (() => {
         const savedTheme = localStorage.getItem("darkMode");
@@ -449,7 +449,7 @@ body.dark .auth-gate-recovery {
 }
 
     </style>
-    <link rel="stylesheet" href="auth-theme.css?v=1" />
+    <link rel="stylesheet" href="auth-theme.css?v=2" />
   </head>
   <body>
     
@@ -869,8 +869,14 @@ body.dark .auth-gate-recovery {
               email,
               password,
             );
-            await userCred.user.reload();
-
+            await Promise.race([
+              userCred.user.reload(),
+              new Promise((_, reject) =>
+                setTimeout(() => reject(new Error("reload timed out")), 5000),
+              ),
+            ]).catch(function (err) {
+              console.warn("user.reload failed during login:", err);
+            });
             if (!userCred.user.emailVerified) {
               lastUnverifiedEmail = email;
               lastUnverifiedPassword = password;

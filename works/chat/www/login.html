@@ -319,7 +319,7 @@
         }
       }
     </style>
-    <link rel="stylesheet" href="auth-theme.css?v=1" />
+    <link rel="stylesheet" href="auth-theme.css?v=2" />
   </head>
   <body>
     <div class="auth-container">
@@ -734,7 +734,14 @@
               email,
               password,
             );
-            await userCred.user.reload();
+            await Promise.race([
+              userCred.user.reload(),
+              new Promise((_, reject) =>
+                setTimeout(() => reject(new Error("reload timed out")), 5000),
+              ),
+            ]).catch(function (err) {
+              console.warn("user.reload failed during login:", err);
+            });
 
             if (!userCred.user.emailVerified) {
               lastUnverifiedEmail = email;
