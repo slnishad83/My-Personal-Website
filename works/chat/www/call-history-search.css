@@ -79,6 +79,10 @@
 .call-history-filter-toggle:hover {
   background: rgba(0,0,0,0.06);
 }
+[data-theme="dark"] .call-history-filter-toggle:hover,
+.dark-mode .call-history-filter-toggle:hover {
+  background: rgba(255,255,255,0.08);
+}
 
 .call-history-filter-toggle.has-active-filters {
   background: rgba(33, 150, 243, 0.12);

@@ -520,6 +520,22 @@ body.dark .message-quick-actions {
   background: rgba(32, 44, 51, 0.97) !important;
 }
 
+body.dark .quick-message-action,
+body.dark .composer-tools-trigger {
+  color: #aebac1 !important;
+}
+
+body.dark .chat-extra-actions-trigger:hover,
+body.dark .chat-extra-actions-trigger:focus-visible,
+body.dark .composer-tools-trigger:hover,
+body.dark .composer-tools-trigger:focus-visible {
+  background: rgba(174, 186, 193, 0.16) !important;
+}
+
+body.dark .clear-search-input:hover {
+  background: rgba(174, 186, 193, 0.12) !important;
+}
+
 /* Responsive in-conversation search shared by personal and group chats. */
 #inChatSearchBar.in-chat-search-bar {
   min-width: 0 !important;

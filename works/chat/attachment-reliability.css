@@ -3,6 +3,7 @@
    ============================================= */
 .tc-attach-status { display: block; font-size: 11px; margin-top: 3px; }
 .tc-attach-status--info  { color: #667781; }
+body.dark .tc-attach-status--info { color: #8696a0; }
 .tc-attach-status--warn  { color: #f59e0b; }
 .tc-attach-status--error { color: #ef4444; }
 .tc-attach-status--done  { color: #00a884; }
