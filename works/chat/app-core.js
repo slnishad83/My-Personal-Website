@@ -6383,50 +6383,54 @@ function getUploadErrorMessage(status, body) {
   return "Upload failed. Please try again.";
 }
 
-async function uploadToCloudinary(file) {
+async function uploadToCloudinary(file, onProgress) {
   if (file.size > UPLOAD_SIZE_LIMIT) throw new Error(`File too large (${(file.size / 1024 / 1024).toFixed(1)}MB). Maximum 10MB.`);
   return new Promise((resolve, reject) => {
     const formData = new FormData();
     formData.append("file", file);
     formData.append("upload_preset", CLOUDINARY_UPLOAD_PRESET);
-    fetch(
-      `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`,
-      {
-        method: "POST",
-        body: formData,
-      },
-    )
-      .then(async (res) => {
-        const data = await res.json();
-        if (!res.ok) reject(new Error(getUploadErrorMessage(res.status, data)));
-        else if (data.secure_url) resolve(data.secure_url);
-        else reject(new Error("Upload returned no URL"));
-      })
-      .catch(reject);
+    const xhr = new XMLHttpRequest();
+    xhr.open("POST", `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`);
+    if (onProgress) {
+      xhr.upload.onprogress = (e) => {
+        if (e.lengthComputable) onProgress(Math.round((e.loaded / e.total) * 100));
+      };
+    }
+    xhr.onload = () => {
+      try {
+        const data = JSON.parse(xhr.responseText);
+        if (xhr.status >= 200 && xhr.status < 300 && data.secure_url) resolve(data.secure_url);
+        else reject(new Error(getUploadErrorMessage(xhr.status, data)));
+      } catch (e) { reject(new Error("Upload parse error")); }
+    };
+    xhr.onerror = () => reject(new Error("Network upload failed"));
+    xhr.send(formData);
   });
 }
 
-async function uploadDocument(file) {
+async function uploadDocument(file, onProgress) {
   if (file.size > UPLOAD_SIZE_LIMIT) throw new Error(`File too large (${(file.size / 1024 / 1024).toFixed(1)}MB). Maximum 10MB.`);
   return new Promise((resolve, reject) => {
     const formData = new FormData();
     formData.append("file", file);
     formData.append("upload_preset", CLOUDINARY_UPLOAD_PRESET);
     formData.append("resource_type", "auto");
-    fetch(
-      `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/auto/upload`,
-      {
-        method: "POST",
-        body: formData,
-      },
-    )
-      .then(async (res) => {
-        const data = await res.json();
-        if (!res.ok) reject(new Error(getUploadErrorMessage(res.status, data)));
-        else if (data.secure_url) resolve(data.secure_url);
-        else reject(new Error("Upload returned no URL"));
-      })
-      .catch(reject);
+    const xhr = new XMLHttpRequest();
+    xhr.open("POST", `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/auto/upload`);
+    if (onProgress) {
+      xhr.upload.onprogress = (e) => {
+        if (e.lengthComputable) onProgress(Math.round((e.loaded / e.total) * 100));
+      };
+    }
+    xhr.onload = () => {
+      try {
+        const data = JSON.parse(xhr.responseText);
+        if (xhr.status >= 200 && xhr.status < 300 && data.secure_url) resolve(data.secure_url);
+        else reject(new Error(getUploadErrorMessage(xhr.status, data)));
+      } catch (e) { reject(new Error("Upload parse error")); }
+    };
+    xhr.onerror = () => reject(new Error("Network upload failed"));
+    xhr.send(formData);
   });
 }
 
@@ -6480,20 +6484,30 @@ function showRecordedMediaPreview(blob, type, duration) {
   document.getElementById("recordedMediaPreviewModal").style.display = "flex";
 }
 
-async function uploadRecordedMedia(blob) {
+async function uploadRecordedMedia(blob, onProgress) {
   if (blob.size > UPLOAD_SIZE_LIMIT) throw new Error(`Recording too large (${(blob.size / 1024 / 1024).toFixed(1)}MB). Maximum 10MB.`);
-  const formData = new FormData();
-  formData.append("file", blob);
-  formData.append("upload_preset", CLOUDINARY_UPLOAD_PRESET);
-  formData.append("resource_type", "video");
-  const response = await fetch(
-    `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/video/upload`,
-    { method: "POST", body: formData },
-  );
-  const data = await response.json();
-  if (!response.ok) throw new Error(getUploadErrorMessage(response.status, data));
-  if (!data.secure_url) throw new Error("Recorded media upload returned no URL");
-  return data.secure_url;
+  return new Promise((resolve, reject) => {
+    const formData = new FormData();
+    formData.append("file", blob);
+    formData.append("upload_preset", CLOUDINARY_UPLOAD_PRESET);
+    formData.append("resource_type", "video");
+    const xhr = new XMLHttpRequest();
+    xhr.open("POST", `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/video/upload`);
+    if (onProgress) {
+      xhr.upload.onprogress = (e) => {
+        if (e.lengthComputable) onProgress(Math.round((e.loaded / e.total) * 100));
+      };
+    }
+    xhr.onload = () => {
+      try {
+        const data = JSON.parse(xhr.responseText);
+        if (xhr.status >= 200 && xhr.status < 300 && data.secure_url) resolve(data.secure_url);
+        else reject(new Error(getUploadErrorMessage(xhr.status, data)));
+      } catch (e) { reject(new Error("Upload parse error")); }
+    };
+    xhr.onerror = () => reject(new Error("Network upload failed"));
+    xhr.send(formData);
+  });
 }
 
 async function sendPendingRecordedMedia() {
@@ -13781,8 +13795,17 @@ async function handleFileUpload(file) {
     showPhotoEditor(file);
     return;
   }
+  const uploadBar = document.createElement("div");
+  uploadBar.className = "upload-progress-bar";
+  uploadBar.innerHTML = '<div class="progress-fill" style="width:0%"></div>';
+  const attachPreview = document.getElementById("attachmentPreview");
+  if (attachPreview) attachPreview.prepend(uploadBar);
   try {
-    const url = isVideo ? await uploadRecordedMedia(file) : await uploadDocument(file);
+    const url = isVideo ? await uploadRecordedMedia(file, (pct) => {
+      uploadBar.querySelector(".progress-fill").style.width = pct + "%";
+    }) : await uploadDocument(file, (pct) => {
+      uploadBar.querySelector(".progress-fill").style.width = pct + "%";
+    });
     const duration =
       isVideo || isAudio ? await getMediaDuration(file).catch(() => 0) : 0;
     currentAttachment = {
@@ -13795,6 +13818,8 @@ async function handleFileUpload(file) {
     setAttachmentPreview();
   } catch (e) {
     showToast(e.message || "File uploading failed", "error");
+  } finally {
+    uploadBar.remove();
   }
 }
 

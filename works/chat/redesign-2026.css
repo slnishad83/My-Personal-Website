@@ -593,7 +593,7 @@ body.dark .message.my-message .message-bubble {
 /* --- Upload Progress --- */
 .upload-progress-bar {
   height: 4px;
-  background: var(--surface-soft);
+  background: var(--border);
   border-radius: 2px;
   overflow: hidden;
   margin: 8px 0;

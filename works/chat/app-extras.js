@@ -11324,16 +11324,20 @@ document.getElementById("closeSessionsModal")?.addEventListener("click", () => {
 
 /* --- Ripple Effect on Icon Buttons --- */
 (function addRippleEffect() {
+  const btnSelector = ".icon-btn, #sendBtn, .list-item, .primary-tab, .btn, .header-action, .back-btn, .nav-item";
   document.addEventListener("click", (e) => {
-    const btn = e.target.closest(".icon-btn, #sendBtn, .list-item, .primary-tab");
-    if (!btn) return;
+    const btn = e.target.closest(btnSelector);
+    if (!btn || btn.dataset.noRipple) return;
     const rect = btn.getBoundingClientRect();
-    const x = ((e.clientX - rect.left) / rect.width) * 100;
-    const y = ((e.clientY - rect.top) / rect.height) * 100;
-    btn.style.setProperty("--x", x + "%");
-    btn.style.setProperty("--y", y + "%");
-    btn.classList.add("ripple");
-    setTimeout(() => btn.classList.remove("ripple"), 300);
+    const size = Math.max(rect.width, rect.height) * 1.2;
+    const x = e.clientX - rect.left - size / 2;
+    const y = e.clientY - rect.top - size / 2;
+    const ripple = document.createElement("span");
+    ripple.style.cssText = `position:absolute;width:${size}px;height:${size}px;left:${x}px;top:${y}px;border-radius:50%;background:currentColor;opacity:0.2;transform:scale(0);animation:rippleAnim 0.6s ease-out;pointer-events:none;`;
+    btn.style.position = "relative";
+    btn.style.overflow = "hidden";
+    btn.appendChild(ripple);
+    ripple.addEventListener("animationend", () => ripple.remove());
   });
 })();
 

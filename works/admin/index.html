@@ -6,12 +6,15 @@
   <meta name="robots" content="noindex,nofollow" />
   <title>Team Chat — Admin Panel</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
+  <link rel="stylesheet" href="../redesign-base.css" />
 
   <!-- Firebase SDKs -->
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-functions-compat.js"></script>
+  <script src="../redesign-base.js" defer></script>
 
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -21,11 +24,6 @@
       --green-dark: #006d58;
       --red: #ef4444;
       --orange: #f97316;
-      --bg: #f0f2f5;
-      --card: #ffffff;
-      --border: #e2e8f0;
-      --text: #111b21;
-      --muted: #667781;
       --sidebar-w: 220px;
     }
 
@@ -53,7 +51,7 @@
     }
     .login-card .logo { font-size: 32px; text-align: center; margin-bottom: 6px; }
     .login-card h1 { text-align: center; font-size: 22px; font-weight: 700; color: var(--green); margin-bottom: 4px; }
-    .login-card p { text-align: center; color: var(--muted); font-size: 13px; margin-bottom: 28px; }
+    .login-card p { text-align: center; color: var(--text-secondary); font-size: 13px; margin-bottom: 28px; }
     .login-card label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; color: var(--text); }
     .login-card input {
       width: 100%; padding: 11px 14px; border: 1.5px solid var(--border);
@@ -140,7 +138,7 @@
     .top-bar .stats-row { display: flex; gap: 20px; }
     .stat-pill {
       font-size: 12px; padding: 4px 12px;
-      background: var(--bg); border-radius: 20px; color: var(--muted);
+      background: var(--bg); border-radius: 20px; color: var(--text-secondary);
       font-weight: 500;
     }
     .stat-pill span { font-weight: 700; color: var(--text); }
@@ -164,9 +162,9 @@
       padding: 20px;
       border: 1px solid var(--border);
     }
-    .stat-card .stat-label { font-size: 12px; color: var(--muted); font-weight: 500; margin-bottom: 6px; }
+    .stat-card .stat-label { font-size: 12px; color: var(--text-secondary); font-weight: 500; margin-bottom: 6px; }
     .stat-card .stat-val { font-size: 28px; font-weight: 700; color: var(--text); }
-    .stat-card .stat-sub { font-size: 11px; color: var(--muted); margin-top: 2px; }
+    .stat-card .stat-sub { font-size: 11px; color: var(--text-secondary); margin-top: 2px; }
     .stat-card.green .stat-val { color: var(--green); }
     .stat-card.red .stat-val { color: var(--red); }
     .stat-card.orange .stat-val { color: var(--orange); }
@@ -201,7 +199,7 @@
     table { width: 100%; border-collapse: collapse; }
     th {
       text-align: left; padding: 10px 14px; font-size: 11px;
-      font-weight: 700; color: var(--muted); text-transform: uppercase;
+      font-weight: 700; color: var(--text-secondary); text-transform: uppercase;
       letter-spacing: 0.5px; background: var(--bg);
       border-bottom: 1px solid var(--border);
     }
@@ -216,7 +214,7 @@
     }
     .user-cell { display: flex; align-items: center; gap: 10px; }
     .user-name { font-weight: 600; font-size: 13px; }
-    .user-email { font-size: 11px; color: var(--muted); }
+    .user-email { font-size: 11px; color: var(--text-secondary); }
 
     .badge {
       display: inline-block; padding: 2px 9px; border-radius: 20px;
@@ -243,7 +241,7 @@
     .btn-view:hover { background: #eff6ff; }
     .btn-resolve { color: var(--green); border-color: var(--green); background: transparent; }
     .btn-resolve:hover { background: #dcfce7; }
-    .btn-dismiss { color: var(--muted); border-color: var(--border); background: transparent; }
+    .btn-dismiss { color: var(--text-secondary); border-color: var(--border); background: transparent; }
     .btn-dismiss:hover { background: var(--bg); }
     .btn-delete { color: #fff; border-color: #b91c1c; background: #dc2626; }
     .btn-delete:hover { background: #b91c1c; }
@@ -264,7 +262,7 @@
     .modal-box h3 { font-size: 17px; font-weight: 700; margin-bottom: 16px; }
     .modal-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
     .modal-row:last-child { border-bottom: none; }
-    .modal-row .label { color: var(--muted); font-weight: 500; }
+    .modal-row .label { color: var(--text-secondary); font-weight: 500; }
     .modal-row .value { font-weight: 600; word-break: break-all; text-align: right; max-width: 60%; }
     .modal-footer { margin-top: 18px; display: flex; gap: 10px; justify-content: flex-end; }
     .btn-cancel {
@@ -289,12 +287,12 @@
     .toast-msg.error { background: var(--red); }
     @keyframes slideIn { from { transform: translateX(40px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
 
-    .empty-state { padding: 48px; text-align: center; color: var(--muted); font-size: 14px; }
+    .empty-state { padding: 48px; text-align: center; color: var(--text-secondary); font-size: 14px; }
     .empty-state .icon { font-size: 36px; margin-bottom: 10px; }
 
-    .loading-row td { text-align: center; padding: 32px; color: var(--muted); }
+    .loading-row td { text-align: center; padding: 32px; color: var(--text-secondary); }
 
-    .report-reason { font-size: 12px; color: var(--muted); max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .report-reason { font-size: 12px; color: var(--text-secondary); max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .report-excerpt { font-size: 12px; color: var(--text); max-width: 180px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
     @media (max-width: 700px) {
@@ -333,16 +331,16 @@
     </div>
     <div class="sidebar-nav">
       <button class="nav-item active" onclick="showSection('dashboard')" data-sec="dashboard">
-        <span class="icon">📊</span><span>Dashboard</span>
+        <span class="icon"><span class="mat-icon mat-icon--sm">dashboard</span></span><span>Dashboard</span>
       </button>
       <button class="nav-item" onclick="showSection('users')" data-sec="users">
-        <span class="icon">👥</span><span>Users</span>
+        <span class="icon"><span class="mat-icon mat-icon--sm">group</span></span><span>Users</span>
       </button>
       <button class="nav-item" onclick="showSection('reports')" data-sec="reports">
-        <span class="icon">🚩</span><span>Reports</span>
+        <span class="icon"><span class="mat-icon mat-icon--sm">flag</span></span><span>Reports</span>
       </button>
       <button class="nav-item" onclick="showSection('banned')" data-sec="banned">
-        <span class="icon">🚫</span><span>Banned</span>
+        <span class="icon"><span class="mat-icon mat-icon--sm">block</span></span><span>Banned</span>
       </button>
     </div>
     <div class="sidebar-footer">
