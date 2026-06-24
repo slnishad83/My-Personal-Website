@@ -6682,8 +6682,13 @@ let largeFileUploadXHR = null;
 
 async function uploadLargeFile(file, onProgress) {
   if (file.size <= 25 * 1024 * 1024) {
-    // Small file: use existing Cloudinary upload
-    return uploadToCloudinary(file, onProgress);
+    // Small file: use the original Cloudinary upload helper so the patch
+    // does not recurse back into itself.
+    const baseUpload = window._origUploadToCloudinary || null;
+    if (typeof baseUpload === "function") {
+      return baseUpload(file, onProgress);
+    }
+    throw new Error("Upload helper unavailable");
   }
   // Large file: use Firebase Storage with resumable upload
   const path = `large_uploads/${currentUser.uid}/${Date.now()}_${file.name}`;
@@ -6706,7 +6711,7 @@ async function uploadLargeFile(file, onProgress) {
       (error) => reject(error),
       async () => {
         const url = await task.snapshot.ref.getDownloadURL();
-        resolve({ url, path, size: file.size, name: file.name, type: file.type });
+        resolve(url);
       }
     );
   });

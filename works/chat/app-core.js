@@ -16660,22 +16660,25 @@ async function init() {
   }, 10000);
 
   await authPersistenceReady;
-  const emojiButton = document.getElementById("emojiBtn");
-  if (emojiButton) {
-    emojiButton.textContent = "";
-    emojiButton.setAttribute("aria-label", "Emoji");
+  try {
+    const emojiButton = document.getElementById("emojiBtn");
+    if (emojiButton) {
+      emojiButton.textContent = "";
+      emojiButton.setAttribute("aria-label", "Emoji");
+    }
+    initializeEmojiPicker();
+    updateComposerActionState();
+    applyA11yEnhancements();
+    setupSystemBackNavigation();
+    setupMobileBackGuard();
+    setupActiveCallBackProtection();
+    setupCallNotificationRefreshHooks();
+    registerFcmTokenForCurrentUser({ force: false });
+    bindSearchInput();
+    loadBlockedWords();
+  } catch (bootstrapSetupError) {
+    console.warn("Non-fatal startup setup failed:", bootstrapSetupError);
   }
-  initializeEmojiPicker();
-  updateComposerActionState();
-  applyA11yEnhancements();
-  setupSystemBackNavigation();
-  setupMobileBackGuard();
-  setupActiveCallBackProtection();
-  setupCallNotificationRefreshHooks();
-  registerFcmTokenForCurrentUser({ force: false });
-
-  bindSearchInput();
-  loadBlockedWords();
   const authStateTimeout = window.setTimeout(() => {
     if (!document.body.classList.contains("auth-ready")) {
       showStartupRecovery(
