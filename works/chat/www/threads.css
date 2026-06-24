@@ -516,3 +516,8 @@
 @media (prefers-color-scheme: dark) {
   .presence-dot { border-color: #1e2a32; }
 }
+
+body.dark .ai-explain-title,
+body.dark .ai-explain-text {
+  color: #e9edef;
+}

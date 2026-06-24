@@ -5607,6 +5607,42 @@ body.message-menu-open .message-bubble {
   }
 }
 
+/* ── Ungated dark-mode text overrides ────────────────────── */
+body.dark .message-context-menu .message-context-reaction-btn,
+body.dark .message-context-menu .reaction-option {
+  color: #e9edef !important;
+}
+@media (max-width: 900px) {
+  body.dark .chat-title { color: #e9edef !important; }
+  body.dark .list-name   { color: #e9edef !important; }
+}
+body.dark .modal-body input,
+body.dark .modal-body textarea,
+body.dark .modal-body select,
+body.dark .status-custom-input,
+body.dark .status-timer-select {
+  color: #e9edef !important;
+}
+body.dark .btn-outline,
+body.dark .setting-item {
+  color: #e9edef !important;
+}
+body.dark #profileModal p { color: #e9edef !important; }
+body.dark #profileModal p strong { color: #e9edef !important; }
+body.dark #profileModal .btn-outline,
+body.dark #profileModal #changeNameBtn,
+body.dark #profileModal #changeEmailBtn,
+body.dark #profileModal #changePhoneBtn {
+  color: #e9edef !important;
+}
+body.dark .status-preset,
+body.dark .folder-tab {
+  color: #e9edef !important;
+}
+body.dark .chat-info-profile h3 {
+  color: #e9edef !important;
+}
+
 
 /* Final WhatsApp-style message status and mobile/PWA safety updates */
 .message-status.pending {

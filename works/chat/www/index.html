@@ -20,7 +20,7 @@
       rel="stylesheet"
     />
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
-    <link rel="stylesheet" href="style.css?v=160" />
+    <link rel="stylesheet" href="style.css?v=161" />
     <link rel="stylesheet" href="notification-prefs.css" />
     <link rel="stylesheet" href="snooze-enhancements.css" />
     <link rel="stylesheet" href="snooze-history.css" />
@@ -163,6 +163,18 @@
         font-weight: 700;
       }
     </style>
+  <script>
+    (function () {
+      var mode = localStorage.getItem("themeMode") || (localStorage.getItem("darkMode") === "true" ? "dark" : "system");
+      if (!localStorage.getItem("themeMode")) localStorage.setItem("themeMode", mode);
+      var theme = mode;
+      if (theme === "system") {
+        var mq = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)");
+        theme = mq && mq.matches ? "dark" : "light";
+      }
+      document.documentElement.dataset.theme = theme;
+    })();
+  </script>
   </head>
   <body>
     <div class="auth-gate" id="authGate">
@@ -1650,6 +1662,57 @@
           <button id="callNetworkSettingsBtn" class="setting-item">
             <span class="si-icon">📞</span> Call Network Settings
           </button>
+
+          <div class="setting-section-divider">Appearance</div>
+          <div class="theme-selector" style="display:flex;gap:6px;padding:8px 16px" id="themeSelector">
+            <label class="theme-option" data-theme="system" style="flex:1;text-align:center;padding:8px;border-radius:8px;border:2px solid var(--border);cursor:pointer;transition:all 0.15s">
+              <input type="radio" name="themeMode" value="system" hidden>
+              <span style="display:block;font-size:18px;margin-bottom:4px">☀️🌙</span>
+              <span style="font-size:12px;font-weight:500">System</span>
+            </label>
+            <label class="theme-option" data-theme="dark" style="flex:1;text-align:center;padding:8px;border-radius:8px;border:2px solid var(--border);cursor:pointer;transition:all 0.15s">
+              <input type="radio" name="themeMode" value="dark" hidden>
+              <span style="display:block;font-size:18px;margin-bottom:4px">🌙</span>
+              <span style="font-size:12px;font-weight:500">Dark</span>
+            </label>
+            <label class="theme-option" data-theme="light" style="flex:1;text-align:center;padding:8px;border-radius:8px;border:2px solid var(--border);cursor:pointer;transition:all 0.15s">
+              <input type="radio" name="themeMode" value="light" hidden>
+              <span style="display:block;font-size:18px;margin-bottom:4px">☀️</span>
+              <span style="font-size:12px;font-weight:500">Light</span>
+            </label>
+          </div>
+          <script>
+          (function(){
+            var sel = document.getElementById('themeSelector');
+            if (!sel) return;
+            function updateTheme() {
+              var mode = localStorage.getItem('themeMode') || 'system';
+              sel.querySelectorAll('.theme-option').forEach(function(lbl) {
+                var rb = lbl.querySelector('input[type="radio"]');
+                if (rb) rb.checked = (rb.value === mode);
+                var border = (rb && rb.checked) ? 'var(--primary)' : 'var(--border)';
+                lbl.style.borderColor = border;
+              });
+            }
+            updateTheme();
+            sel.addEventListener('change', function(e) {
+              var val = e.target && e.target.value;
+              if (!val) return;
+              localStorage.setItem('themeMode', val);
+              if (window.setThemeMode) {
+                window.setThemeMode(val);
+              } else {
+                var theme = val;
+                if (val === 'system') {
+                  var mq = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)');
+                  theme = mq && mq.matches ? 'dark' : 'light';
+                }
+                document.documentElement.dataset.theme = theme;
+                document.body.classList.toggle('dark', theme === 'dark');
+              }
+            });
+          })();
+          </script>
 
           <div class="setting-section-divider">Danger Zone</div>
           <button id="clearAllChatsBtn" class="setting-item danger">
@@ -3765,8 +3828,9 @@
     <script src="message-search.js" defer></script>
     <script src="request-priority.js" defer></script>
     <script src="notification-digest.js" defer></script>
+    <script src="redesign-base.js?v=1" defer></script>
     <script src="permissions-manager.js?v=1"></script>
-    <script src="app-core.js?v=10"></script>
+    <script src="app-core.js?v=11"></script>
     <script src="app-extras.js?v=10"></script>
     <script src="chat-missing-features.js?v=1" defer></script>
     <script src="app-init.js?v=1"></script>

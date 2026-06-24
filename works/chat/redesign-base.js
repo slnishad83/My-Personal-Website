@@ -1,6 +1,51 @@
-/* 2026 Universal Design - Global Enhancements */
+/* 2026 Universal Design - Global Enhancements & Theme Controller */
 (function() {
-  /* Ripple effect on all clickable elements with ripple class or btn classes */
+  /* ── Unified Theme Controller ── */
+  var mq = window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)') : null;
+
+  function getSystemTheme() {
+    return mq && mq.matches ? "dark" : "light";
+  }
+
+  function getStoredMode() {
+    return localStorage.getItem("themeMode") || "system";
+  }
+
+  function resolveTheme(mode) {
+    if (mode === "dark") return "dark";
+    if (mode === "light") return "light";
+    return getSystemTheme();
+  }
+
+  function applyTheme(theme) {
+    document.documentElement.dataset.theme = theme;
+    document.body.classList.toggle("dark", theme === "dark");
+  }
+
+  window.setThemeMode = function(mode) {
+    localStorage.setItem("themeMode", mode);
+    var theme = resolveTheme(mode);
+    applyTheme(theme);
+    window.dispatchEvent(new CustomEvent("themechange", { detail: { mode: mode, theme: theme } }));
+  };
+
+  window.getThemeMode = function() { return getStoredMode(); };
+  window.getCurrentTheme = function() { return document.documentElement.dataset.theme || "light"; };
+
+  /* Apply initial theme */
+  applyTheme(resolveTheme(getStoredMode()));
+
+  /* Listen for OS theme changes in real-time */
+  if (mq) {
+    mq.addEventListener("change", function() {
+      if (getStoredMode() === "system") {
+        applyTheme(getSystemTheme());
+        window.dispatchEvent(new CustomEvent("themechange", { detail: { mode: "system", theme: getSystemTheme() } }));
+      }
+    });
+  }
+
+  /* Ripple effect on all clickable elements */
   document.addEventListener("click", function(e) {
     var btn = e.target.closest(".btn, .header-action, .back-btn, .nav-item, .filter-btn, .icon-btn, .card, .btn-action, .btn-cancel, .btn-save, .btn-danger, .btn-primary");
     if (!btn || btn.dataset.noRipple) return;
@@ -25,17 +70,5 @@
       if (href === currentPath) item.classList.add("active");
       else item.classList.remove("active");
     });
-  }
-
-  /* Dark mode: persist toggle with localStorage */
-  var darkToggle = document.getElementById("darkToggleBtn");
-  if (darkToggle) {
-    darkToggle.addEventListener("click", function() {
-      var isDark = document.body.classList.toggle("dark");
-      localStorage.setItem("darkMode", isDark);
-    });
-    if (localStorage.getItem("darkMode") === "true") {
-      document.body.classList.add("dark");
-    }
   }
 })();

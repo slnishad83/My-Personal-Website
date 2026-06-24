@@ -20,6 +20,10 @@
 
 :root[data-theme="dark"] {
   color-scheme: dark;
+}
+
+:root[data-theme="dark"],
+body.dark {
   --page-bg: #0b141a;
   --page-accent: #111b21;
   --surface: #111b21;

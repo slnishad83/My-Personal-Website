@@ -41,8 +41,14 @@
   font-size: 13px;
   color: #667781;
 }
-@media (prefers-color-scheme: dark),
-body.dark-mode #dropZoneOverlay .drop-zone-inner {
+@media (prefers-color-scheme: dark) {
+#dropZoneOverlay .drop-zone-inner {
+  background: #202c33;
+  border-color: #00a884;
+  color: #00a884;
+}
+}
+body.dark #dropZoneOverlay .drop-zone-inner {
   background: #202c33;
   border-color: #00a884;
   color: #00a884;
@@ -60,7 +66,7 @@ body.dark-mode #dropZoneOverlay .drop-zone-inner {
   background: rgba(0,128,105,0.10);
   text-decoration: underline;
 }
-body.dark-mode .message-hashtag {
+body.dark .message-hashtag {
   color: #00d9a6;
 }
 

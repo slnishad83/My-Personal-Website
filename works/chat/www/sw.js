@@ -82,7 +82,7 @@ self.addEventListener('notificationclick', event => {
   );
 });
 
-const CACHE_NAME = 'team-chat-v210-wa';
+const CACHE_NAME = 'team-chat-v212-wa';
 const STATIC_ASSETS = [
   'auth-theme.css',
   'style.css',

@@ -16,12 +16,16 @@
     <title>Team Chat - Login</title>
     <link rel="canonical" href="https://nishadsl.com/works/chat" />
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet" />
-    <link rel="stylesheet" href="redesign-base.css?v=1" />
+    <link rel="stylesheet" href="redesign-base.css?v=2" />
     <script>
-      (() => {
-        const savedTheme = localStorage.getItem("darkMode");
-        const dark = savedTheme === "true";
-        document.documentElement.dataset.theme = dark ? "dark" : "light";
+      (function() {
+        var mode = localStorage.getItem("themeMode") || "system";
+        if (mode === "system") {
+          var dark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+          document.documentElement.dataset.theme = dark ? "dark" : "light";
+        } else {
+          document.documentElement.dataset.theme = mode;
+        }
       })();
     </script>
     <link rel="manifest" href="manifest.json?v=96" />
@@ -1144,19 +1148,37 @@ body.dark .auth-gate-recovery {
   
 <script>
 (function () {
+  var themes = ["system", "dark", "light"];
+  var icons  = ["auto",   "dark_mode", "light_mode"];
   var btn = document.getElementById('dmToggle');
-  function applyDark(on) {
-    document.body.classList.toggle('dark', on);
-    btn.textContent = on ? '🌙' : '☀️';
+  if (!btn) return;
+  function updateBtn() {
+    var mode = localStorage.getItem("themeMode") || "system";
+    var theme = document.documentElement.dataset.theme;
+    btn.textContent = theme === "dark" ? "🌙" : "☀️";
+    btn.title = "Theme: " + mode;
   }
-  applyDark(localStorage.getItem('darkMode') === 'true');
-  btn.addEventListener('click', function () {
-    var on = document.body.classList.toggle('dark');
-    localStorage.setItem('darkMode', on);
-    btn.textContent = on ? '🌙' : '☀️';
+  updateBtn();
+  btn.addEventListener("click", function () {
+    var cur = localStorage.getItem("themeMode") || "system";
+    var next = themes[(themes.indexOf(cur) + 1) % themes.length];
+    if (window.setThemeMode) {
+      window.setThemeMode(next);
+    } else {
+      localStorage.setItem("themeMode", next);
+      if (next === "system") {
+        var m = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)");
+        document.documentElement.dataset.theme = m && m.matches ? "dark" : "light";
+      } else {
+        document.documentElement.dataset.theme = next;
+      }
+      document.body.classList.toggle("dark", document.documentElement.dataset.theme === "dark");
+    }
+    updateBtn();
   });
+  window.addEventListener("themechange", updateBtn);
 })();
 </script>
-<script src="../redesign-base.js" defer></script>
+<script src="redesign-base.js?v=1" defer></script>
 </body>
 </html>

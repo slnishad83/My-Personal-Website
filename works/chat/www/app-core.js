@@ -16389,8 +16389,21 @@ function focusCurrentSearchResult() {
 }
 
 function toggleDarkMode() {
-  document.body.classList.toggle("dark");
-  localStorage.setItem("darkMode", document.body.classList.contains("dark"));
+  var themes = ["system", "dark", "light"];
+  var cur = localStorage.getItem("themeMode") || "system";
+  var next = themes[(themes.indexOf(cur) + 1) % themes.length];
+  localStorage.setItem("themeMode", next);
+  if (window.setThemeMode) {
+    window.setThemeMode(next);
+  } else {
+    var theme = next;
+    if (theme === "system") {
+      var mq = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)");
+      theme = mq && mq.matches ? "dark" : "light";
+    }
+    document.documentElement.dataset.theme = theme;
+    document.body.classList.toggle("dark", theme === "dark");
+  }
 }
 
 function revealAuthenticatedApp() {
@@ -18510,8 +18523,14 @@ async function init() {
       }
     });
 
-  if (localStorage.getItem("darkMode") === "true")
-    document.body.classList.add("dark");
+  (function () {
+    var mode = localStorage.getItem("themeMode") || (localStorage.getItem("darkMode") === "true" ? "dark" : "system");
+    var theme = mode === "system"
+      ? (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light")
+      : mode;
+    document.documentElement.dataset.theme = theme;
+    document.body.classList.toggle("dark", theme === "dark");
+  })();
 }
 
 // ===== Export Chat as PDF =====
