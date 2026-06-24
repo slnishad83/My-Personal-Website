@@ -8,6 +8,9 @@
 (function() {
   'use strict';
 
+  const featureNavMedia = window.matchMedia('(max-width: 768px)');
+  let featureNavSyncBound = false;
+
   // ── Wait for app to be ready ────────────────────────────────────
   function waitFor(check, cb, ms = 200, max = 50) {
     let tries = 0;
@@ -36,7 +39,7 @@
     style.textContent = `
       /* Feature Nav Bar */
       .feature-nav-bar {
-        display: flex; gap: 0; overflow-x: auto; background: #f0f2f5;
+        display: none; gap: 0; overflow-x: auto; background: #f0f2f5;
         border-top: 1px solid #e2e8f0; padding: 0;
         scrollbar-width: none; position: relative; z-index: 5;
       }
@@ -50,6 +53,14 @@
       }
       .feat-nav-btn:hover { background: rgba(0,128,105,0.06); color: #008069; }
       .feat-nav-btn .fn-icon { font-size: 18px; }
+
+      @media (max-width: 768px) {
+        .feature-nav-bar { display: flex; }
+      }
+
+      @media (min-width: 769px) {
+        .feature-nav-bar { display: none !important; }
+      }
 
       /* Busy Status Banner */
       .busy-banner {
@@ -176,6 +187,23 @@
   function injectFeatureNav() {
     const sidebar = document.querySelector('.chat-sidebar, .sidebar, #chatSidebar, [class*="sidebar"]');
     if (!sidebar) return;
+    if (!featureNavSyncBound) {
+      const syncFeatureNav = () => {
+        const nav = document.getElementById('featureNavBar');
+        if (!nav) return;
+        const shouldShow = featureNavMedia.matches;
+        nav.hidden = !shouldShow;
+        nav.style.display = shouldShow ? 'flex' : 'none';
+        nav.setAttribute('aria-hidden', shouldShow ? 'false' : 'true');
+      };
+      if (typeof featureNavMedia.addEventListener === 'function') {
+        featureNavMedia.addEventListener('change', syncFeatureNav);
+      } else if (typeof featureNavMedia.addListener === 'function') {
+        featureNavMedia.addListener(syncFeatureNav);
+      }
+      window.addEventListener('resize', syncFeatureNav, { passive: true });
+      featureNavSyncBound = true;
+    }
     const nav = document.createElement('div');
     nav.className = 'feature-nav-bar';
     nav.id = 'featureNavBar';
@@ -209,6 +237,9 @@
     } else {
       sidebar.appendChild(nav);
     }
+    nav.hidden = !featureNavMedia.matches;
+    nav.style.display = featureNavMedia.matches ? 'flex' : 'none';
+    nav.setAttribute('aria-hidden', featureNavMedia.matches ? 'false' : 'true');
   }
 
   // ── 3. BUSY STATUS (Feature 10) ──────────────────────────────────

@@ -8,6 +8,9 @@
 (function() {
   'use strict';
 
+  const featureNavMedia = window.matchMedia('(max-width: 768px)');
+  let featureNavSyncBound = false;
+
   // ── Wait for app to be ready ────────────────────────────────────
   function waitFor(check, cb, ms = 200, max = 50) {
     let tries = 0;
@@ -36,7 +39,7 @@
     style.textContent = `
       /* Feature Nav Bar */
       .feature-nav-bar {
-        display: flex; gap: 0; overflow-x: auto; background: #f0f2f5;
+        display: none; gap: 0; overflow-x: auto; background: #f0f2f5;
         border-top: 1px solid #e2e8f0; padding: 0;
         scrollbar-width: none; position: relative; z-index: 5;
       }
@@ -50,6 +53,14 @@
       }
       .feat-nav-btn:hover { background: rgba(0,128,105,0.06); color: #008069; }
       .feat-nav-btn .fn-icon { font-size: 18px; }
+
+      @media (max-width: 768px) {
+        .feature-nav-bar { display: flex; }
+      }
+
+      @media (min-width: 769px) {
+        .feature-nav-bar { display: none !important; }
+      }
 
       /* Busy Status Banner */
       .busy-banner {
@@ -176,6 +187,23 @@
   function injectFeatureNav() {
     const sidebar = document.querySelector('.chat-sidebar, .sidebar, #chatSidebar, [class*="sidebar"]');
     if (!sidebar) return;
+    if (!featureNavSyncBound) {
+      const syncFeatureNav = () => {
+        const nav = document.getElementById('featureNavBar');
+        if (!nav) return;
+        const shouldShow = featureNavMedia.matches;
+        nav.hidden = !shouldShow;
+        nav.style.display = shouldShow ? 'flex' : 'none';
+        nav.setAttribute('aria-hidden', shouldShow ? 'false' : 'true');
+      };
+      if (typeof featureNavMedia.addEventListener === 'function') {
+        featureNavMedia.addEventListener('change', syncFeatureNav);
+      } else if (typeof featureNavMedia.addListener === 'function') {
+        featureNavMedia.addListener(syncFeatureNav);
+      }
+      window.addEventListener('resize', syncFeatureNav, { passive: true });
+      featureNavSyncBound = true;
+    }
     const nav = document.createElement('div');
     nav.className = 'feature-nav-bar';
     nav.id = 'featureNavBar';
@@ -209,6 +237,9 @@
     } else {
       sidebar.appendChild(nav);
     }
+    nav.hidden = !featureNavMedia.matches;
+    nav.style.display = featureNavMedia.matches ? 'flex' : 'none';
+    nav.setAttribute('aria-hidden', featureNavMedia.matches ? 'false' : 'true');
   }
 
   // ── 3. BUSY STATUS (Feature 10) ──────────────────────────────────
@@ -376,7 +407,7 @@
       const btn = document.createElement('button');
       btn.className = 'catchup-btn';
       btn.title = 'Catch Me Up — AI summary of recent messages';
-      btn.style.cssText = 'background:none;border:1px solid #e2e8f0;border-radius:8px;padding:5px 10px;font-size:12px;cursor:pointer;color:#008069;font-weight:600;font-family:inherit;margin-right:4px';
+      btn.style.cssText = 'background:none;border:1px solid var(--border,#e2e8f0);border-radius:8px;padding:5px 10px;font-size:12px;cursor:pointer;color:var(--brand-dark,#008069);font-weight:600;font-family:inherit;margin-right:4px';
       btn.innerHTML = '🧠 Catch Me Up';
       btn.onclick = catchMeUp;
       const actionsArea = chatHeader.querySelector('[class*="actions"], [class*="right"], [class*="icons"]');
@@ -530,11 +561,11 @@
       if (!settingsPanel || settingsPanel.querySelector('.auto-translate-toggle')) return;
       const toggle = document.createElement('div');
       toggle.className = 'auto-translate-toggle';
-      toggle.style.cssText = 'padding:12px 18px;display:flex;align-items:center;justify-content:space-between;border-top:1px solid #e2e8f0';
+      toggle.style.cssText = 'padding:12px 18px;display:flex;align-items:center;justify-content:space-between;border-top:1px solid var(--border,#e2e8f0)';
       toggle.innerHTML = `
         <div>
           <div style="font-weight:600;font-size:14px">🌍 Auto-Translate Messages</div>
-          <div style="font-size:12px;color:#667781">Translate incoming messages to your language</div>
+          <div style="font-size:12px;color:var(--muted,#667781)">Translate incoming messages to your language</div>
         </div>
         <label style="position:relative;display:inline-block;width:44px;height:24px">
           <input type="checkbox" id="autoTranslateToggle" style="opacity:0;width:0;height:0" onchange="setAutoTranslate(this.checked)"/>

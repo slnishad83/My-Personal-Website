@@ -20,7 +20,7 @@
   --received: #ffffff;
   --danger: #ef4444;
   --shadow: 0 6px 18px rgba(11, 20, 26, 0.14);
-  --sidebar-width: clamp(330px, 34vw, 430px);
+  --sidebar-width: clamp(350px, 36vw, 460px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
   --safe-top: env(safe-area-inset-top, 0px);
   --z-grid: 1;
@@ -104,7 +104,7 @@ button {
 .sidebar-header,
 .chat-header {
   min-height: 64px;
-  padding: 10px 16px;
+  padding: 12px 14px;
   background: rgba(240, 242, 245, 0.85); /* Glassmorphism background */
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
@@ -112,6 +112,7 @@ button {
   display: flex;
   align-items: center;
   z-index: 100; /* Ensure header stays above messages */
+  gap: 10px;
 }
 
 .sidebar-header {
@@ -121,7 +122,7 @@ button {
 .sidebar-actions {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   flex: 0 0 auto;
 }
 
@@ -178,7 +179,7 @@ button {
 
 .user-name {
   font-size: 15px;
-  max-width: 190px;
+  max-width: 240px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -197,7 +198,7 @@ button {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 160px;
+  max-width: 220px;
 }
 
 .user-status-row {
@@ -507,7 +508,7 @@ button {
 .search-box {
   position: relative;
   order: 2;
-  padding: 8px 12px;
+  padding: 10px 12px 8px;
   background: var(--panel);
   border-bottom: 1px solid var(--border);
 }
@@ -555,9 +556,9 @@ button {
 }
 
 .search-box input {
-  height: 40px;
-  border-radius: 8px;
-  padding: 0 14px 0 38px;
+  height: 42px;
+  border-radius: 10px;
+  padding: 0 14px 0 40px;
   font-size: 14px;
 }
 
@@ -950,7 +951,7 @@ button {
   grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: 4px;
   overflow: visible;
-  padding: 8px 10px;
+  padding: 10px 12px;
 }
 
 .primary-tab {
