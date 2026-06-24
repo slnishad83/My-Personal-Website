@@ -16662,7 +16662,9 @@ async function init() {
       );
     }
   }, 15000);
+  let authListenerFired = false;
   auth.onAuthStateChanged(async (user) => {
+    authListenerFired = true;
     window.clearTimeout(authStateTimeout);
     if (!user) {
       cleanupAllFirestoreListeners();
@@ -16826,6 +16828,22 @@ async function init() {
       showToast("Session restored. Some data may load in a moment.", "error");
     }
   });
+
+  setTimeout(() => {
+    if (!authListenerFired) {
+      const user = auth.currentUser;
+      if (user) {
+        console.warn("onAuthStateChanged did not fire but auth.currentUser exists — recovering.");
+        authListenerFired = true;
+        window.clearTimeout(authStateTimeout);
+        currentUser = user;
+        revealAuthenticatedApp();
+        switchTab("all");
+      } else {
+        redirectToLogin();
+      }
+    }
+  }, 3000);
 
   // Attach Event Handlers
   // Broadcast event listeners
