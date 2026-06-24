@@ -16638,6 +16638,14 @@ function showStartupRecovery(message = "Team Chat could not finish starting.") {
 }
 
 async function init() {
+  // Safety timeout: force-show UI after 10s no matter what
+  const forceShowTimer = window.setTimeout(() => {
+    if (!document.body.classList.contains("auth-ready")) {
+      document.body.classList.add("auth-ready");
+      console.warn("Force-show UI after safety timeout");
+    }
+  }, 10000);
+
   await authPersistenceReady;
   const emojiButton = document.getElementById("emojiBtn");
   if (emojiButton) {
