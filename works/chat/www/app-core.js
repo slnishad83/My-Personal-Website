@@ -16651,13 +16651,14 @@ function showStartupRecovery(message = "Team Chat could not finish starting.") {
 }
 
 async function init() {
-  // Safety timeout: force-show UI after 10s no matter what
+  // Safety timeout: force-show UI quickly so a slow auth check never traps the
+  // user on the loading gate.
   const forceShowTimer = window.setTimeout(() => {
     if (!document.body.classList.contains("auth-ready")) {
       document.body.classList.add("auth-ready");
       console.warn("Force-show UI after safety timeout");
     }
-  }, 10000);
+  }, 4000);
 
   await authPersistenceReady;
   try {
@@ -16685,7 +16686,7 @@ async function init() {
         "Session checking is taking longer than expected. Check your connection and retry.",
       );
     }
-  }, 15000);
+  }, 8000);
   let authListenerFired = false;
   auth.onAuthStateChanged(async (user) => {
     authListenerFired = true;
