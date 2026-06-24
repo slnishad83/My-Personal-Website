@@ -19,7 +19,19 @@
     "trailingSlash": false,
     "rewrites": [
       {
-        "source": "**/reset{/}?",
+        "source": "/reset{/}?",
+        "destination": "/reset.html"
+      },
+      {
+        "source": "/*/reset{/}?",
+        "destination": "/reset.html"
+      },
+      {
+        "source": "/*/*/reset{/}?",
+        "destination": "/reset.html"
+      },
+      {
+        "source": "/*/*/*/reset{/}?",
         "destination": "/reset.html"
       }
     ],
