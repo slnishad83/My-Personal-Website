@@ -531,7 +531,12 @@
           : firebase.auth.Auth.Persistence.LOCAL;
       }
 
-      const authPersistenceReady = auth.setPersistence(getAuthPersistence());
+      const authPersistenceReady = Promise.race([
+        auth.setPersistence(getAuthPersistence()),
+        new Promise((resolve) => setTimeout(resolve, 1000)),
+      ]).catch(function (error) {
+        console.error("Persistence error:", error);
+      });
 
       function cleanEmail(email) {
         return email.trim().toLowerCase();
