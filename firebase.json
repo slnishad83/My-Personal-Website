@@ -19,7 +19,7 @@
     "trailingSlash": false,
     "rewrites": [
       {
-        "source": "**/reset{/}?",
+        "source": "**/reset",
         "destination": "/reset.html"
       }
     ],
