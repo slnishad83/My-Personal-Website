@@ -119,7 +119,7 @@
         var eq = cookies[i].indexOf("=");
         var name = eq > -1 ? cookies[i].substring(0, eq) : cookies[i];
         var domains = [location.hostname, "." + location.hostname, ""];
-        var paths = ["/", "/works/chat", "/works/invoice", "/works/admin"];
+        var paths = ["/", "/resume", "/works/chat", "/works/invoice", "/works/admin", "/contact"];
         for (var d = 0; d < domains.length; d++) {
           for (var p = 0; p < paths.length; p++) {
             document.cookie = name + "=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=" + paths[p] + "; domain=" + domains[d] + "; SameSite=Lax";
