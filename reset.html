@@ -104,12 +104,28 @@
       } catch (_) {}
     })();
 
+    function normalizeReturnUrl(value) {
+      if (!value) return "";
+      try {
+        var url = new URL(value, location.origin);
+        if (url.origin !== location.origin) return "";
+        var path = url.pathname.replace(/\/reset(?:\.html)?\/?$/, "");
+        if (!path) path = "/";
+        url.pathname = path;
+        url.search = "";
+        url.hash = "";
+        return url.toString();
+      } catch (_) {
+        return "";
+      }
+    }
+
     function getReturnUrl() {
       var params = new URLSearchParams(location.search);
-      var ret = params.get("return") || params.get("redirect");
-      if (ret && ret.startsWith(location.origin)) return ret + (ret.includes("?") ? "&" : "?") + "fresh=" + Date.now();
-      var referrer = document.referrer;
-      if (referrer && referrer.startsWith(location.origin)) return referrer + (referrer.includes("?") ? "&" : "?") + "fresh=" + Date.now();
+      var ret = normalizeReturnUrl(params.get("return") || params.get("redirect"));
+      if (ret) return ret + (ret.includes("?") ? "&" : "?") + "fresh=" + Date.now();
+      var referrer = normalizeReturnUrl(document.referrer);
+      if (referrer) return referrer + (referrer.includes("?") ? "&" : "?") + "fresh=" + Date.now();
       return location.origin + "/?fresh=" + Date.now();
     }
 

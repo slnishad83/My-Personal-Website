@@ -6,8 +6,8 @@
   <meta name="robots" content="noindex,nofollow" />
   <title>Redirecting to Reset</title>
   <script>
-    var loc = encodeURIComponent(location.href.replace(location.origin, ""));
-    location.replace("/reset.html?return=" + loc);
+    var loc = location.href.replace(location.origin, "");
+    location.replace(location.origin + "/reset.html?return=" + encodeURIComponent(location.origin + loc.replace(/\/reset(?:\.html)?\/?$/, "")));
   </script>
 </head>
 <body>

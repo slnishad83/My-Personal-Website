@@ -8,7 +8,7 @@
   <script>
     (function () {
       var parentPath = location.pathname.replace(/\/reset(?:\.html)?\/?$/, "") || "/";
-      var target = "/reset.html?return=" + encodeURIComponent(parentPath);
+      var target = location.origin + "/reset.html?return=" + encodeURIComponent(location.origin + parentPath);
       location.replace(target);
     })();
   </script>

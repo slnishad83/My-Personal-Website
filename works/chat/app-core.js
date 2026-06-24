@@ -13522,6 +13522,7 @@ function loadMessages() {
     },
   );
 }
+}
 
 // ========================================
 // MESSAGE TRANSMISSIONS OPERATIONS
