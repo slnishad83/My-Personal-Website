@@ -16673,7 +16673,12 @@ async function init() {
     }
     try {
       try {
-        await user.reload();
+        await Promise.race([
+          user.reload(),
+          new Promise((_, reject) =>
+            setTimeout(() => reject(new Error("reload timed out")), 5000),
+          ),
+        ]);
         user = auth.currentUser || user;
       } catch (error) {
         console.warn("Could not refresh auth user:", error);

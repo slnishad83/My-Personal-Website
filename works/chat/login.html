@@ -1143,14 +1143,13 @@ body.dark .auth-gate-recovery {
     document.body.classList.toggle('dark', on);
     btn.textContent = on ? '🌙' : '☀️';
   }
-  // Apply saved preference on load
   applyDark(localStorage.getItem('darkMode') === 'true');
-  // Toggle on click
   btn.addEventListener('click', function () {
     var on = document.body.classList.toggle('dark');
     localStorage.setItem('darkMode', on);
     btn.textContent = on ? '🌙' : '☀️';
   });
+})();
 </script>
 <script src="../redesign-base.js" defer></script>
 </body>
