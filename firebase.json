@@ -33,6 +33,30 @@
         "headers": [{"key": "Cache-Control","value": "no-cache, no-store, must-revalidate"}]
       },
       {
+        "source": "/reset",
+        "headers": [{"key": "Cache-Control","value": "no-cache, no-store, must-revalidate"}]
+      },
+      {
+        "source": "/resume/reset",
+        "headers": [{"key": "Cache-Control","value": "no-cache, no-store, must-revalidate"}]
+      },
+      {
+        "source": "/contact/reset",
+        "headers": [{"key": "Cache-Control","value": "no-cache, no-store, must-revalidate"}]
+      },
+      {
+        "source": "/works/reset",
+        "headers": [{"key": "Cache-Control","value": "no-cache, no-store, must-revalidate"}]
+      },
+      {
+        "source": "/works/chat/reset",
+        "headers": [{"key": "Cache-Control","value": "no-cache, no-store, must-revalidate"}]
+      },
+      {
+        "source": "/works/invoice/reset",
+        "headers": [{"key": "Cache-Control","value": "no-cache, no-store, must-revalidate"}]
+      },
+      {
         "source": "/works/admin",
         "headers": [{"key": "Cache-Control","value": "no-cache, no-store, must-revalidate"}]
       },

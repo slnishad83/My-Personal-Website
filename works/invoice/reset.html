@@ -1,1 +1,19 @@
-﻿<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="robots" content="noindex,nofollow"><title>Redirecting...</title><script>location.href = "/reset" + location.search + location.hash;</script><meta http-equiv="refresh" content="0;url=/reset"><link rel="canonical" href="/reset"></head><body><p>Redirecting to <a href="/reset">reset page</a>...</p></body></html>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="robots" content="noindex,nofollow" />
+  <meta http-equiv="refresh" content="0;url=/reset.html" />
+  <title>Reset Redirect</title>
+  <script>
+    (function () {
+      var parentPath = location.pathname.replace(/\/reset(?:\.html)?\/?$/, "") || "/";
+      var target = "/reset.html?return=" + encodeURIComponent(parentPath);
+      location.replace(target);
+    })();
+  </script>
+</head>
+<body>
+  <p><a href="/reset.html">Continue to reset</a></p>
+</body>
+</html>
