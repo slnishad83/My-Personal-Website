@@ -176,22 +176,6 @@
       document.documentElement.dataset.theme = theme;
     })();
   </script>
-  <script>
-    (function() {
-      var tid = setTimeout(function() {
-        var body = document.body;
-        if (!body || body.classList.contains("auth-ready")) return;
-        var gate = document.getElementById("authGate");
-        if (!gate) return;
-        gate.innerHTML =
-          '<div class="auth-gate-inner" style="display:grid;gap:14px;justify-items:center;text-align:center">' +
-          '<p style="margin:0;line-height:1.5;color:#667781;font-size:14px">Could not connect. Check your network.</p>' +
-          '<button onclick="location.reload()" style="min-width:112px;min-height:44px;border:0;border-radius:999px;background:#008069;color:#fff;cursor:pointer;font-weight:700;font-size:14px">Retry</button>' +
-          '</div>';
-      }, 8000);
-      document.addEventListener("auth-ready", function() { clearTimeout(tid); }, { once: true });
-    })();
-  </script>
   </head>
   <body>
     <div class="auth-gate" id="authGate">
@@ -3879,5 +3863,18 @@
   <script src="attachment-reliability.js?v=1" defer></script>
   <script src="ui-compliance.js?v=1" defer></script>
   <script src="scheduled-calendar.js?v=1" defer></script>
+  <script>
+    setTimeout(function() {
+      if (!document.body.classList.contains("auth-ready")) {
+        var gate = document.getElementById("authGate");
+        if (!gate) return;
+        gate.innerHTML =
+          '<div class="auth-gate-inner" style="display:grid;gap:16px;justify-items:center;text-align:center">' +
+          '<p style="margin:0;line-height:1.5;color:#667781;font-size:14px">Could not connect. Check your network and try again.</p>' +
+          '<button onclick="location.reload()" style="min-width:112px;min-height:44px;border:0;border-radius:999px;background:#008069;color:#fff;cursor:pointer;font-weight:700;font-size:14px">Retry</button>' +
+          '</div>';
+      }
+    }, 20000);
+  </script>
 </body>
 </html>
