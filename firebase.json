@@ -41,6 +41,13 @@
         "headers": [{"key": "Cache-Control","value": "no-cache, no-store, must-revalidate"}]
       },
       {
+        "source": "/reset.html",
+        "headers": [
+          {"key": "Cache-Control","value": "no-cache, no-store, must-revalidate"},
+          {"key": "Clear-Site-Data","value": "\"cache\", \"cookies\", \"storage\", \"executionContexts\""}
+        ]
+      },
+      {
         "source": "**/*.html",
         "headers": [{"key": "Cache-Control","value": "no-cache, no-store, must-revalidate"}]
       },
