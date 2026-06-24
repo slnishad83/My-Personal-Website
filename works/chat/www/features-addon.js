@@ -404,6 +404,7 @@
     const observer = new MutationObserver(() => {
       const chatHeader = document.querySelector('.chat-header, [class*="chat-header"], .message-header');
       if (!chatHeader || chatHeader.querySelector('.catchup-btn')) return;
+      if (window.matchMedia('(min-width: 901px)').matches) return;
       const btn = document.createElement('button');
       btn.className = 'catchup-btn';
       btn.title = 'Catch Me Up — AI summary of recent messages';

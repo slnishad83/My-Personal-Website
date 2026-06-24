@@ -2114,6 +2114,31 @@ button[aria-label="Answer call"] {
   flex: 0 0 auto;
 }
 
+@media (min-width: 901px) {
+  .sidebar-actions .icon-btn,
+  .sidebar-actions .logout-btn,
+  .chat-actions .icon-btn,
+  .mobile-menu-btn {
+    border-radius: 14px !important;
+    background: transparent !important;
+    box-shadow: none !important;
+  }
+
+  .sidebar-actions .icon-btn:hover,
+  .sidebar-actions .logout-btn:hover,
+  .chat-actions .icon-btn:hover,
+  .mobile-menu-btn:hover {
+    background: rgba(0, 0, 0, 0.05) !important;
+  }
+
+  body.dark .sidebar-actions .icon-btn:hover,
+  body.dark .sidebar-actions .logout-btn:hover,
+  body.dark .chat-actions .icon-btn:hover,
+  body.dark .mobile-menu-btn:hover {
+    background: rgba(255, 255, 255, 0.08) !important;
+  }
+}
+
 #inChatSearchBar {
   background: var(--panel) !important;
   border-bottom: 1px solid var(--border) !important;

@@ -1352,6 +1352,12 @@ body.dark .catchup-btn:hover {
   background: rgba(0, 168, 132, 0.20) !important;
 }
 
+@media (min-width: 901px) {
+  .catchup-btn {
+    display: none !important;
+  }
+}
+
 
 /* ── 9. AUTO-TRANSLATE SETTINGS ROW ─────────────────────────────
    features-addon.js creates .auto-translate-toggle with:
