@@ -17,6 +17,12 @@
     "public": ".",
     "cleanUrls": true,
     "trailingSlash": false,
+    "rewrites": [
+      {
+        "source": "**/reset{/}?",
+        "destination": "/reset.html"
+      }
+    ],
     "headers": [
       {
         "source": "/works/chat",
