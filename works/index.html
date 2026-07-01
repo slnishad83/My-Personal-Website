@@ -1,55 +1,885 @@
-<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta
-      name="description"
-      content="Web applications and tools created by Nishad S L."
-    />
-    <link rel="canonical" href="https://nishadsl.com/works" />
-    <title>Works | Nishad S L</title>
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
-    <link rel="stylesheet" href="redesign-base.css" />
-    <style>
-      :root { color-scheme: light dark; }
-      body { margin: 0; min-height: 100vh; background: radial-gradient(circle at top, #e6f7f2, var(--bg) 48%); }
-      body.dark { background: radial-gradient(circle at top, #15372f, var(--bg) 48%); }
-      main { width: min(980px, calc(100% - 32px)); margin: 0 auto; padding: 64px 0; }
-      .back { color: var(--brand); text-decoration: none; font-weight: 700; display: inline-flex; align-items: center; gap: 6px; }
-      .back:hover { text-decoration: underline; }
-      h1 { margin: 28px 0 8px; font-size: clamp(36px, 7vw, 64px); font-weight: 800; }
-      .intro { max-width: 640px; margin: 0 0 36px; color: var(--text-secondary); font-size: 18px; line-height: 1.6; }
-      .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 20px; }
-      .card { display: block; min-height: 220px; padding: 28px; border-radius: 22px; background: var(--card); color: inherit; text-decoration: none; box-shadow: var(--shadow-md); transition: var(--transition); border: 1px solid var(--border); }
-      .card:hover, .card:focus-visible { transform: translateY(-4px); box-shadow: var(--shadow-lg); outline: 3px solid var(--brand-soft); }
-      .card-icon { display: grid; width: 52px; height: 52px; place-items: center; border-radius: 16px; background: var(--brand-soft); color: var(--brand); }
-      .card-icon .mat-icon { font-size: 28px; }
-      h2 { margin: 24px 0 8px; }
-      .card p { margin: 0; color: var(--text-secondary); line-height: 1.55; }
-    </style>
-  </head>
-  <body>
-    <main>
-      <a class="back" href="/"><span class="mat-icon mat-icon--sm" style="font-size:18px">arrow_back</span> Back to portfolio</a>
-      <h1>Works</h1>
-      <p class="intro">
-        A collection of practical web applications designed for communication
-        and everyday business work.
-      </p>
-      <div class="grid">
-        <a class="card" href="/works/chat">
-          <span class="card-icon" aria-hidden="true"><span class="mat-icon">forum</span></span>
-          <h2>Team Chat</h2>
-          <p>Real-time personal and group messaging, calls, requests, and collaboration tools.</p>
-        </a>
-        <a class="card" href="/works/invoice">
-          <span class="card-icon" aria-hidden="true"><span class="mat-icon">receipt</span></span>
-          <h2>Invoice Generator</h2>
-          <p>Create, manage, and export professional invoices from any modern browser.</p>
-        </a>
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="theme-color" content="#6366F1" id="theme-color-meta">
+  <meta name="description" content="Team Chat — Premium messaging for your team">
+  <link rel="canonical" href="https://nishadsl.com/works/chat">
+  <title>Team Chat</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="icon" href="../../favicon.ico">
+
+  <!-- Material Symbols for icons -->
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap">
+</head>
+<body>
+
+<!-- ═══════════════════════════════════
+     LOADING SCREEN
+═══════════════════════════════════ -->
+<div id="loading-screen" class="loading-screen" style="position:fixed;inset:0;z-index:9999;background:var(--bg);">
+  <div class="loading-logo">💬</div>
+  <div class="spinner spinner-lg"></div>
+  <p class="loading-text" id="loading-status">Checking session…</p>
+</div>
+
+<!-- ═══════════════════════════════════
+     TOAST CONTAINER
+═══════════════════════════════════ -->
+<div class="toast-container" id="toast-container" aria-live="polite"></div>
+
+<!-- ═══════════════════════════════════
+     MAIN APP SHELL
+═══════════════════════════════════ -->
+<div id="app" class="hidden">
+
+  <!-- ╔══════════════════════════╗
+       ║   LEFT SIDEBAR           ║
+       ╚══════════════════════════╝ -->
+  <aside id="sidebar" role="navigation" aria-label="Chat navigation">
+
+    <!-- Sidebar Header -->
+    <div class="sidebar-header">
+      <div class="brand-logo">
+        <div class="logo-icon" aria-hidden="true">💬</div>
+        <span class="logo-name">Team<span class="logo-dot">Chat</span></span>
       </div>
-    </main>
-    <script src="redesign-base.js" defer></script>
-  </body>
+      <div class="sidebar-header-actions">
+        <button class="icon-btn" onclick="openSearch()" title="Search (Ctrl+K)" aria-label="Search">
+          <span class="material-symbols-rounded" style="font-size:20px">search</span>
+        </button>
+        <button class="icon-btn" onclick="openNewChat()" title="New chat (Ctrl+N)" aria-label="New chat">
+          <span class="material-symbols-rounded" style="font-size:20px">edit_square</span>
+        </button>
+        <button class="icon-btn" onclick="openProfile()" title="Profile" aria-label="Profile & settings" id="my-avatar-btn">
+          <div class="avatar-img sz-40 gradient-1" style="font-size:14px;border-radius:50%" id="sidebar-avatar">U</div>
+        </button>
+      </div>
+    </div>
+
+    <!-- Status bar (stories) -->
+    <div class="status-list" id="status-list" role="list" aria-label="Status updates">
+      <!-- My status -->
+      <div class="status-item" onclick="openAddStatus()" role="listitem">
+        <div class="status-ring" style="background:var(--border-2)">
+          <div class="status-ring-inner">
+            <div class="avatar-img sz-40 gradient-1" style="font-size:16px;border-radius:50%;width:100%;height:100%">U</div>
+          </div>
+          <div class="status-add-btn">+</div>
+        </div>
+        <span class="status-label">My Status</span>
+      </div>
+    </div>
+
+    <!-- Tab Bar -->
+    <div class="tab-bar" role="tablist" aria-label="Chat sections">
+      <button class="tab-item active" data-tab="chats" onclick="switchTab('chats')" role="tab" aria-selected="true">
+        <span class="tab-icon material-symbols-rounded">chat</span>
+        Chats
+      </button>
+      <button class="tab-item" data-tab="groups" onclick="switchTab('groups')" role="tab" aria-selected="false">
+        <span class="tab-icon material-symbols-rounded">group</span>
+        Groups
+      </button>
+      <button class="tab-item" data-tab="calls" onclick="switchTab('calls')" role="tab" aria-selected="false">
+        <span class="tab-icon material-symbols-rounded">call</span>
+        Calls
+      </button>
+      <button class="tab-item" data-tab="more" onclick="switchTab('more')" role="tab" aria-selected="false">
+        <span class="tab-icon material-symbols-rounded">more_horiz</span>
+        More
+      </button>
+    </div>
+
+    <!-- Search within sidebar -->
+    <div class="search-wrap">
+      <div class="search-box">
+        <span class="material-symbols-rounded search-icon" style="font-size:18px">search</span>
+        <input type="search" class="search-input" id="sidebar-search" placeholder="Search chats…" aria-label="Search chats" oninput="filterChats(this.value)">
+      </div>
+    </div>
+
+    <!-- Chat List -->
+    <div class="chat-list" id="chat-list" role="list" aria-label="Conversations">
+      <!-- Skeleton loaders -->
+      <div class="chat-item-skeleton" aria-hidden="true">
+        <div class="skeleton skeleton-avatar" style="width:44px;height:44px"></div>
+        <div style="flex:1;display:flex;flex-direction:column;gap:8px">
+          <div class="skeleton skeleton-line lg" style="width:60%"></div>
+          <div class="skeleton skeleton-line sm" style="width:80%"></div>
+        </div>
+      </div>
+      <div class="chat-item-skeleton" aria-hidden="true">
+        <div class="skeleton skeleton-avatar" style="width:44px;height:44px"></div>
+        <div style="flex:1;display:flex;flex-direction:column;gap:8px">
+          <div class="skeleton skeleton-line lg" style="width:50%"></div>
+          <div class="skeleton skeleton-line sm" style="width:70%"></div>
+        </div>
+      </div>
+      <div class="chat-item-skeleton" aria-hidden="true">
+        <div class="skeleton skeleton-avatar" style="width:44px;height:44px"></div>
+        <div style="flex:1;display:flex;flex-direction:column;gap:8px">
+          <div class="skeleton skeleton-line lg" style="width:70%"></div>
+          <div class="skeleton skeleton-line sm" style="width:55%"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Empty state for chats tab -->
+    <div class="empty-state hidden" id="chats-empty">
+      <div class="empty-icon">💬</div>
+      <div class="empty-title">No chats yet</div>
+      <p class="empty-sub">Start a conversation with a teammate or create a group.</p>
+      <button class="empty-action" onclick="openNewChat()">
+        <span class="material-symbols-rounded">add</span>
+        New Chat
+      </button>
+    </div>
+  </aside>
+
+  <!-- ╔══════════════════════════════════╗
+       ║   MAIN CHAT AREA                 ║
+       ╚══════════════════════════════════╝ -->
+  <main id="chat-area" role="main">
+
+    <!-- Chat Header -->
+    <header class="chat-header" id="chat-header">
+      <button class="icon-btn chat-header-back" onclick="backToList()" aria-label="Back to chats">
+        <span class="material-symbols-rounded">arrow_back</span>
+      </button>
+
+      <div class="chat-header-info" id="chat-header-info" onclick="openChatInfo()" tabindex="0" role="button" aria-label="Open chat info">
+        <div class="avatar">
+          <div class="avatar-img sz-40 gradient-3" id="header-avatar">?</div>
+          <div class="avatar-status online" id="header-status-dot"></div>
+        </div>
+        <div class="chat-header-text">
+          <div class="chat-header-name" id="header-name">Select a chat</div>
+          <div class="chat-header-status" id="header-status">—</div>
+        </div>
+      </div>
+
+      <div class="chat-header-actions">
+        <button class="icon-btn" onclick="startVoiceCall()" title="Voice call" aria-label="Voice call" id="btn-voice-call">
+          <span class="material-symbols-rounded" style="font-size:20px">call</span>
+        </button>
+        <button class="icon-btn" onclick="startVideoCall()" title="Video call" aria-label="Video call" id="btn-video-call">
+          <span class="material-symbols-rounded" style="font-size:20px">videocam</span>
+        </button>
+        <button class="icon-btn" onclick="openChatSearch()" title="Search" aria-label="Search in chat">
+          <span class="material-symbols-rounded" style="font-size:20px">search</span>
+        </button>
+        <button class="icon-btn" onclick="openChatMenu(this)" title="More options" aria-label="More options" aria-haspopup="true">
+          <span class="material-symbols-rounded" style="font-size:20px">more_vert</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Offline banner -->
+    <div class="offline-banner hidden" id="offline-banner" role="alert">
+      <span class="material-symbols-rounded" style="font-size:16px">wifi_off</span>
+      Offline — messages will send when reconnected
+    </div>
+
+    <!-- Welcome screen (no chat selected) -->
+    <div class="welcome-screen" id="welcome-screen">
+      <div class="welcome-graphic" aria-hidden="true">💬</div>
+      <div class="welcome-title">Team Chat</div>
+      <p class="welcome-sub">Select a conversation from the sidebar, or start a new one to get messaging.</p>
+      <div class="welcome-badges">
+        <div class="welcome-badge">
+          <span class="material-symbols-rounded" style="font-size:14px;color:var(--accent)">lock</span>
+          End-to-end encrypted
+        </div>
+        <div class="welcome-badge">
+          <span class="material-symbols-rounded" style="font-size:14px;color:var(--accent)">bolt</span>
+          Real-time sync
+        </div>
+        <div class="welcome-badge">
+          <span class="material-symbols-rounded" style="font-size:14px;color:var(--accent)">devices</span>
+          Cross-platform
+        </div>
+      </div>
+    </div>
+
+    <!-- Message area -->
+    <div class="messages-wrap" id="messages-wrap" role="log" aria-label="Messages" aria-live="polite">
+      <!-- Messages rendered here by JS -->
+    </div>
+
+    <!-- Scroll to bottom -->
+    <button class="scroll-to-bottom hidden" id="scroll-to-bottom" onclick="scrollToBottom()" aria-label="Scroll to bottom">
+      <span class="material-symbols-rounded" style="font-size:18px">expand_more</span>
+      <div class="scroll-to-bottom-badge hidden" id="scroll-badge">0</div>
+    </button>
+
+    <!-- Typing indicator -->
+    <div class="typing-row hidden" id="typing-indicator" aria-live="polite" aria-label="Someone is typing">
+      <div class="avatar-img sz-40 gradient-3" id="typing-avatar" style="font-size:14px;border-radius:50%">?</div>
+      <div class="typing-bubble">
+        <div class="typing-dot"></div>
+        <div class="typing-dot"></div>
+        <div class="typing-dot"></div>
+      </div>
+    </div>
+
+    <!-- Reply preview -->
+    <div class="reply-preview hidden" id="reply-preview">
+      <span class="material-symbols-rounded" style="color:var(--accent)">reply</span>
+      <div class="reply-preview-content">
+        <div class="reply-preview-name" id="reply-name">Name</div>
+        <div class="reply-preview-text" id="reply-text">Message text</div>
+      </div>
+      <button class="reply-close" onclick="cancelReply()" aria-label="Cancel reply">
+        <span class="material-symbols-rounded" style="font-size:18px">close</span>
+      </button>
+    </div>
+
+    <!-- Format bar -->
+    <div class="format-bar hidden" id="format-bar">
+      <button class="fmt-btn bold" onclick="formatText('bold')" title="Bold" aria-label="Bold"><b>B</b></button>
+      <button class="fmt-btn italic" onclick="formatText('italic')" title="Italic" aria-label="Italic"><i>I</i></button>
+      <button class="fmt-btn strike" onclick="formatText('strike')" title="Strikethrough" aria-label="Strikethrough"><s>S</s></button>
+      <button class="fmt-btn code" onclick="formatText('code')" title="Code" aria-label="Inline code">`c`</button>
+      <div style="flex:1"></div>
+      <button class="fmt-btn" onclick="hideFormatBar()" aria-label="Hide formatting toolbar">
+        <span class="material-symbols-rounded" style="font-size:16px">close</span>
+      </button>
+    </div>
+
+    <!-- Recording bar -->
+    <div class="recording-bar hidden" id="recording-bar">
+      <div class="recording-indicator">
+        <div class="recording-dot"></div>
+        <span id="rec-timer">0:00</span>
+      </div>
+      <div class="recording-waveform" id="recording-waveform" aria-hidden="true">
+        <div class="recording-wave-bar" style="height:40%"></div>
+        <div class="recording-wave-bar" style="height:70%"></div>
+        <div class="recording-wave-bar" style="height:50%"></div>
+        <div class="recording-wave-bar" style="height:90%"></div>
+        <div class="recording-wave-bar" style="height:60%"></div>
+        <div class="recording-wave-bar" style="height:80%"></div>
+        <div class="recording-wave-bar" style="height:40%"></div>
+        <div class="recording-wave-bar" style="height:70%"></div>
+        <div class="recording-wave-bar" style="height:55%"></div>
+        <div class="recording-wave-bar" style="height:85%"></div>
+        <div class="recording-wave-bar" style="height:45%"></div>
+        <div class="recording-wave-bar" style="height:75%"></div>
+      </div>
+      <button class="btn btn-ghost btn-sm" onclick="cancelRecording()" aria-label="Cancel recording">Cancel</button>
+      <button class="btn btn-primary btn-sm" onclick="sendVoiceMessage()" aria-label="Send voice message">
+        <span class="material-symbols-rounded" style="font-size:14px">send</span>
+        Send
+      </button>
+    </div>
+
+    <!-- Input Bar -->
+    <div class="input-bar" id="input-bar">
+      <div class="input-row">
+        <button class="input-attach-btn" id="attach-btn" onclick="toggleAttachMenu()" title="Attach" aria-label="Attach file" aria-haspopup="true" aria-expanded="false">
+          <span class="material-symbols-rounded" style="font-size:22px">add_circle</span>
+        </button>
+
+        <div class="input-field-wrap">
+          <textarea
+            class="msg-input"
+            id="msg-input"
+            placeholder="Message…"
+            rows="1"
+            aria-label="Type a message"
+            aria-multiline="true"
+            oninput="onInputChange()"
+            onkeydown="onInputKeyDown(event)"
+          ></textarea>
+          <button class="emoji-btn" onclick="toggleEmojiPicker()" title="Emoji" aria-label="Emoji picker" aria-haspopup="true">😊</button>
+          <button class="icon-btn" onclick="toggleFormatBar()" title="Format text" aria-label="Text formatting" style="height:auto;padding:var(--sp-1) 0">
+            <span class="material-symbols-rounded" style="font-size:18px">format_size</span>
+          </button>
+        </div>
+
+        <button class="mic-btn" id="mic-btn" onclick="toggleRecording()" title="Voice message" aria-label="Record voice message">
+          <span class="material-symbols-rounded" style="font-size:20px">mic</span>
+        </button>
+        <button class="send-btn hidden" id="send-btn" onclick="sendMessage()" title="Send (Ctrl+Enter)" aria-label="Send message">
+          <span class="material-symbols-rounded" style="font-size:20px">send</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Attach menu (popup) -->
+    <div class="attach-menu hidden" id="attach-menu" role="menu" aria-label="Attachment options">
+      <div class="attach-item" onclick="attachPhoto()" role="menuitem">
+        <div class="attach-item-icon" style="background:#EDE9FE">🖼️</div>
+        <span class="attach-item-label">Gallery</span>
+      </div>
+      <div class="attach-item" onclick="attachCamera()" role="menuitem">
+        <div class="attach-item-icon" style="background:#FEF3C7">📷</div>
+        <span class="attach-item-label">Camera</span>
+      </div>
+      <div class="attach-item" onclick="attachDocument()" role="menuitem">
+        <div class="attach-item-icon" style="background:#DBEAFE">📄</div>
+        <span class="attach-item-label">Document</span>
+      </div>
+      <div class="attach-item" onclick="attachContact()" role="menuitem">
+        <div class="attach-item-icon" style="background:#D1FAE5">👤</div>
+        <span class="attach-item-label">Contact</span>
+      </div>
+      <div class="attach-item" onclick="openPollCreator()" role="menuitem">
+        <div class="attach-item-icon" style="background:#FEE2E2">📊</div>
+        <span class="attach-item-label">Poll</span>
+      </div>
+      <div class="attach-item" onclick="shareLocation()" role="menuitem">
+        <div class="attach-item-icon" style="background:#ECFDF5">📍</div>
+        <span class="attach-item-label">Location</span>
+      </div>
+      <div class="attach-item" onclick="openEventCreator()" role="menuitem">
+        <div class="attach-item-icon" style="background:#F0FDF4">📅</div>
+        <span class="attach-item-label">Event</span>
+      </div>
+      <div class="attach-item" onclick="createList()" role="menuitem">
+        <div class="attach-item-icon" style="background:#FFF7ED">📝</div>
+        <span class="attach-item-label">List</span>
+      </div>
+    </div>
+
+    <!-- Emoji picker -->
+    <div class="emoji-picker hidden" id="emoji-picker" role="dialog" aria-label="Emoji picker">
+      <div class="emoji-picker-header">
+        <button class="emoji-cat-btn active" onclick="setEmojiCat(this,'recent')" aria-label="Recent">🕐</button>
+        <button class="emoji-cat-btn" onclick="setEmojiCat(this,'smileys')" aria-label="Smileys">😊</button>
+        <button class="emoji-cat-btn" onclick="setEmojiCat(this,'people')" aria-label="People">👋</button>
+        <button class="emoji-cat-btn" onclick="setEmojiCat(this,'nature')" aria-label="Nature">🌿</button>
+        <button class="emoji-cat-btn" onclick="setEmojiCat(this,'food')" aria-label="Food">🍕</button>
+        <button class="emoji-cat-btn" onclick="setEmojiCat(this,'travel')" aria-label="Travel">✈️</button>
+        <button class="emoji-cat-btn" onclick="setEmojiCat(this,'objects')" aria-label="Objects">💡</button>
+        <button class="emoji-cat-btn" onclick="setEmojiCat(this,'symbols')" aria-label="Symbols">❤️</button>
+      </div>
+      <div class="emoji-grid" id="emoji-grid" role="grid" aria-label="Emojis"></div>
+    </div>
+  </main>
+
+  <!-- ╔══════════════════════════════════╗
+       ║   RIGHT DETAIL PANEL             ║
+       ╚══════════════════════════════════╝ -->
+  <aside id="detail-panel" role="complementary" aria-label="Chat details">
+    <!-- Dynamically populated -->
+  </aside>
+
+  <!-- ╔══════════════════════════════════╗
+       ║   BOTTOM NAVIGATION (mobile)     ║
+       ╚══════════════════════════════════╝ -->
+  <nav class="bottom-nav" id="bottom-nav" role="navigation" aria-label="Main navigation">
+    <button class="bottom-nav-item active" data-tab="chats" onclick="switchTab('chats')" aria-label="Chats" aria-current="page">
+      <div class="bottom-nav-item-icon">
+        <span class="material-symbols-rounded">chat</span>
+        <div class="bottom-nav-item-badge hidden" id="chats-badge">0</div>
+      </div>
+      <span>Chats</span>
+    </button>
+    <button class="bottom-nav-item" data-tab="groups" onclick="switchTab('groups')" aria-label="Groups">
+      <div class="bottom-nav-item-icon">
+        <span class="material-symbols-rounded">group</span>
+        <div class="bottom-nav-item-badge hidden" id="groups-badge">0</div>
+      </div>
+      <span>Groups</span>
+    </button>
+    <button class="bottom-nav-item" data-tab="calls" onclick="switchTab('calls')" aria-label="Calls">
+      <div class="bottom-nav-item-icon">
+        <span class="material-symbols-rounded">call</span>
+        <div class="bottom-nav-item-badge hidden" id="calls-badge">0</div>
+      </div>
+      <span>Calls</span>
+    </button>
+    <button class="bottom-nav-item" data-tab="status" onclick="switchTab('status')" aria-label="Status">
+      <div class="bottom-nav-item-icon">
+        <span class="material-symbols-rounded">circle</span>
+      </div>
+      <span>Status</span>
+    </button>
+    <button class="bottom-nav-item" onclick="openProfile()" aria-label="Profile">
+      <div class="bottom-nav-item-icon">
+        <span class="material-symbols-rounded">person</span>
+      </div>
+      <span>Profile</span>
+    </button>
+  </nav>
+
+  <!-- FAB (mobile new chat) -->
+  <button class="fab" onclick="openNewChat()" aria-label="New chat">
+    <span class="material-symbols-rounded">edit_square</span>
+  </button>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════
+     OVERLAYS & MODALS
+     (rendered by JS, examples pre-defined here)
+═══════════════════════════════════════════════════════ -->
+
+<!-- Profile / Settings Modal -->
+<div class="overlay hidden" id="profile-overlay" onclick="closeOnBackdrop(event,'profile-overlay')">
+  <div class="modal" style="max-width:520px" role="dialog" aria-modal="true" aria-labelledby="profile-modal-title">
+    <div class="modal-header">
+      <span class="material-symbols-rounded" style="color:var(--accent)">manage_accounts</span>
+      <h2 class="modal-title" id="profile-modal-title">Profile & Settings</h2>
+      <button class="modal-close" onclick="closeModal('profile-overlay')" aria-label="Close">
+        <span class="material-symbols-rounded">close</span>
+      </button>
+    </div>
+    <div class="modal-body" style="padding:0;overflow-y:auto">
+
+      <!-- Profile header -->
+      <div class="profile-header">
+        <div class="avatar" style="position:relative">
+          <div class="avatar-img sz-96 gradient-1" id="profile-avatar" style="font-size:36px;border-radius:50%;cursor:pointer" onclick="changeAvatar()" title="Change avatar">U</div>
+          <div style="position:absolute;bottom:4px;right:4px;background:var(--accent);width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;border:2px solid var(--surface);cursor:pointer" onclick="changeAvatar()">
+            <span class="material-symbols-rounded" style="font-size:14px;color:white">photo_camera</span>
+          </div>
+        </div>
+        <div class="profile-name" id="profile-name">User</div>
+        <div class="profile-sub" id="profile-email">Loading…</div>
+        <div class="profile-status-badge" id="profile-status-badge">
+          <span style="width:8px;height:8px;background:var(--online);border-radius:50%"></span>
+          Available
+        </div>
+      </div>
+
+      <!-- Quick actions -->
+      <div class="profile-actions">
+        <div class="profile-action" onclick="openQRScanner()">
+          <div class="profile-action-icon"><span class="material-symbols-rounded">qr_code_scanner</span></div>
+          <span class="profile-action-label">Scan QR</span>
+        </div>
+        <div class="profile-action" onclick="openStarred()">
+          <div class="profile-action-icon"><span class="material-symbols-rounded">star</span></div>
+          <span class="profile-action-label">Starred</span>
+        </div>
+        <div class="profile-action" onclick="openStorageManager()">
+          <div class="profile-action-icon"><span class="material-symbols-rounded">storage</span></div>
+          <span class="profile-action-label">Storage</span>
+        </div>
+        <div class="profile-action" onclick="openSettings()">
+          <div class="profile-action-icon"><span class="material-symbols-rounded">settings</span></div>
+          <span class="profile-action-label">Settings</span>
+        </div>
+      </div>
+
+      <!-- Settings sections -->
+      <div class="settings-section">
+        <div class="settings-section-header">Account</div>
+        <div class="settings-card">
+          <div class="settings-row" onclick="editName()">
+            <div class="settings-row-icon" style="background:#EDE9FE;color:var(--accent)"><span class="material-symbols-rounded">badge</span></div>
+            <div class="settings-row-text">
+              <div class="settings-row-label">Name</div>
+              <div class="settings-row-sub" id="settings-name">—</div>
+            </div>
+            <div class="settings-row-right"><span class="material-symbols-rounded">chevron_right</span></div>
+          </div>
+          <div class="settings-row" onclick="editUsername()">
+            <div class="settings-row-icon" style="background:#DBEAFE;color:#3B82F6"><span class="material-symbols-rounded">alternate_email</span></div>
+            <div class="settings-row-text">
+              <div class="settings-row-label">Username</div>
+              <div class="settings-row-sub" id="settings-username">@not set</div>
+            </div>
+            <div class="settings-row-right"><span class="material-symbols-rounded">chevron_right</span></div>
+          </div>
+          <div class="settings-row" onclick="editPhone()">
+            <div class="settings-row-icon" style="background:#D1FAE5;color:#10B981"><span class="material-symbols-rounded">phone</span></div>
+            <div class="settings-row-text">
+              <div class="settings-row-label">Phone</div>
+              <div class="settings-row-sub" id="settings-phone">Not set</div>
+            </div>
+            <div class="settings-row-right"><span class="material-symbols-rounded">chevron_right</span></div>
+          </div>
+          <div class="settings-row" onclick="editStatus()">
+            <div class="settings-row-icon" style="background:#FEF3C7;color:#F59E0B"><span class="material-symbols-rounded">mood</span></div>
+            <div class="settings-row-text">
+              <div class="settings-row-label">Status</div>
+              <div class="settings-row-sub" id="settings-status">Available</div>
+            </div>
+            <div class="settings-row-right"><span class="material-symbols-rounded">chevron_right</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="settings-section">
+        <div class="settings-section-header">Privacy & Security</div>
+        <div class="settings-card">
+          <div class="settings-row" onclick="openPrivacySettings()">
+            <div class="settings-row-icon" style="background:#FEE2E2;color:#EF4444"><span class="material-symbols-rounded">lock</span></div>
+            <div class="settings-row-text"><div class="settings-row-label">Privacy</div></div>
+            <div class="settings-row-right"><span class="material-symbols-rounded">chevron_right</span></div>
+          </div>
+          <div class="settings-row" onclick="openAppLock()">
+            <div class="settings-row-icon" style="background:#F3E8FF;color:#9333EA"><span class="material-symbols-rounded">fingerprint</span></div>
+            <div class="settings-row-text"><div class="settings-row-label">App Lock (PIN)</div></div>
+            <div class="settings-row-right"><span class="material-symbols-rounded">chevron_right</span></div>
+          </div>
+          <div class="settings-row" onclick="openTwoStep()">
+            <div class="settings-row-icon" style="background:#E0F2FE;color:#0284C7"><span class="material-symbols-rounded">verified_user</span></div>
+            <div class="settings-row-text"><div class="settings-row-label">Two-Step Verification</div></div>
+            <div class="settings-row-right"><span class="material-symbols-rounded">chevron_right</span></div>
+          </div>
+          <div class="settings-row" onclick="openActiveSessions()">
+            <div class="settings-row-icon" style="background:#ECFDF5;color:#059669"><span class="material-symbols-rounded">devices</span></div>
+            <div class="settings-row-text"><div class="settings-row-label">Active Sessions</div></div>
+            <div class="settings-row-right"><span class="material-symbols-rounded">chevron_right</span></div>
+          </div>
+          <div class="settings-row" onclick="openBlockedUsers()">
+            <div class="settings-row-icon" style="background:#FFF7ED;color:#EA580C"><span class="material-symbols-rounded">block</span></div>
+            <div class="settings-row-text"><div class="settings-row-label">Blocked Users</div></div>
+            <div class="settings-row-right"><span class="material-symbols-rounded">chevron_right</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="settings-section">
+        <div class="settings-section-header">Preferences</div>
+        <div class="settings-card">
+          <div class="settings-row" onclick="openNotificationSettings()">
+            <div class="settings-row-icon" style="background:#FEF3C7;color:#D97706"><span class="material-symbols-rounded">notifications</span></div>
+            <div class="settings-row-text"><div class="settings-row-label">Notifications</div></div>
+            <div class="settings-row-right"><span class="material-symbols-rounded">chevron_right</span></div>
+          </div>
+          <div class="settings-row" onclick="cycleTheme()">
+            <div class="settings-row-icon" style="background:#E0E7FF;color:#6366F1"><span class="material-symbols-rounded" id="theme-icon">light_mode</span></div>
+            <div class="settings-row-text">
+              <div class="settings-row-label">Theme</div>
+              <div class="settings-row-sub" id="theme-label">Light</div>
+            </div>
+            <div class="settings-row-right"><span class="material-symbols-rounded">chevron_right</span></div>
+          </div>
+          <div class="settings-row" onclick="openFontSettings()">
+            <div class="settings-row-icon" style="background:#F0FDF4;color:#16A34A"><span class="material-symbols-rounded">text_fields</span></div>
+            <div class="settings-row-text"><div class="settings-row-label">Font & Text</div></div>
+            <div class="settings-row-right"><span class="material-symbols-rounded">chevron_right</span></div>
+          </div>
+          <div class="settings-row" onclick="openLanguageSettings()">
+            <div class="settings-row-icon" style="background:#FDF2F8;color:#BE185D"><span class="material-symbols-rounded">language</span></div>
+            <div class="settings-row-text"><div class="settings-row-label">Language</div></div>
+            <div class="settings-row-right"><span class="material-symbols-rounded">chevron_right</span></div>
+          </div>
+          <div class="settings-row" onclick="openChatFolders()">
+            <div class="settings-row-icon" style="background:#FFFBEB;color:#B45309"><span class="material-symbols-rounded">folder</span></div>
+            <div class="settings-row-text"><div class="settings-row-label">Chat Folders</div></div>
+            <div class="settings-row-right"><span class="material-symbols-rounded">chevron_right</span></div>
+          </div>
+          <div class="settings-row" onclick="openAISmartReplies()">
+            <div class="settings-row-icon" style="background:#EDE9FE;color:#7C3AED"><span class="material-symbols-rounded">auto_awesome</span></div>
+            <div class="settings-row-text">
+              <div class="settings-row-label">AI Smart Replies</div>
+              <div class="settings-row-sub">Gemini-powered suggestions</div>
+            </div>
+            <div class="settings-row-right"><span class="material-symbols-rounded">chevron_right</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="settings-section">
+        <div class="settings-section-header">Media & Backup</div>
+        <div class="settings-card">
+          <div class="settings-row" onclick="openAutoDownload()">
+            <div class="settings-row-icon" style="background:#CFFAFE;color:#0891B2"><span class="material-symbols-rounded">download</span></div>
+            <div class="settings-row-text"><div class="settings-row-label">Auto-Download Media</div></div>
+            <div class="settings-row-right"><span class="material-symbols-rounded">chevron_right</span></div>
+          </div>
+          <div class="settings-row" onclick="openDataUsage()">
+            <div class="settings-row-icon" style="background:#DCFCE7;color:#15803D"><span class="material-symbols-rounded">data_usage</span></div>
+            <div class="settings-row-text"><div class="settings-row-label">Data Usage</div></div>
+            <div class="settings-row-right"><span class="material-symbols-rounded">chevron_right</span></div>
+          </div>
+          <div class="settings-row" onclick="exportBackup()">
+            <div class="settings-row-icon" style="background:#FEF9C3;color:#CA8A04"><span class="material-symbols-rounded">backup</span></div>
+            <div class="settings-row-text"><div class="settings-row-label">Export Backup (JSON)</div></div>
+            <div class="settings-row-right"><span class="material-symbols-rounded">chevron_right</span></div>
+          </div>
+          <div class="settings-row" onclick="importBackup()">
+            <div class="settings-row-icon" style="background:#F0FEFF;color:#0E7490"><span class="material-symbols-rounded">restore</span></div>
+            <div class="settings-row-text"><div class="settings-row-label">Import Backup (JSON)</div></div>
+            <div class="settings-row-right"><span class="material-symbols-rounded">chevron_right</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="settings-section">
+        <div class="settings-section-header">Danger Zone</div>
+        <div class="settings-card">
+          <div class="settings-row danger" onclick="confirmClearAllChats()">
+            <div class="settings-row-icon"><span class="material-symbols-rounded">delete_sweep</span></div>
+            <div class="settings-row-text"><div class="settings-row-label">Clear All Chats</div></div>
+          </div>
+          <div class="settings-row danger" onclick="confirmDeactivate()">
+            <div class="settings-row-icon"><span class="material-symbols-rounded">no_accounts</span></div>
+            <div class="settings-row-text"><div class="settings-row-label">Deactivate Account</div></div>
+          </div>
+          <div class="settings-row danger" onclick="signOut()">
+            <div class="settings-row-icon"><span class="material-symbols-rounded">logout</span></div>
+            <div class="settings-row-text"><div class="settings-row-label">Sign Out</div></div>
+          </div>
+        </div>
+      </div>
+
+      <div style="height:var(--sp-8)"></div>
+    </div>
+  </div>
+</div>
+
+<!-- New Chat Modal -->
+<div class="overlay hidden" id="new-chat-overlay" onclick="closeOnBackdrop(event,'new-chat-overlay')">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="new-chat-title">
+    <div class="modal-header">
+      <span class="material-symbols-rounded" style="color:var(--accent)">edit_square</span>
+      <h2 class="modal-title" id="new-chat-title">New Conversation</h2>
+      <button class="modal-close" onclick="closeModal('new-chat-overlay')" aria-label="Close"><span class="material-symbols-rounded">close</span></button>
+    </div>
+    <div style="padding:var(--sp-3) var(--sp-4);border-bottom:1px solid var(--border)">
+      <div class="search-box">
+        <span class="material-symbols-rounded search-icon" style="font-size:18px">search</span>
+        <input type="search" class="search-input" id="contact-search" placeholder="Search contacts or enter username…" aria-label="Search contacts">
+      </div>
+    </div>
+    <!-- Quick actions -->
+    <div style="display:flex;gap:var(--sp-3);padding:var(--sp-3) var(--sp-4);border-bottom:1px solid var(--border)">
+      <div class="contact-item" style="flex:1;border-radius:var(--r-md);background:var(--surface-3);padding:var(--sp-3)" onclick="openNewGroup()">
+        <div class="avatar-img sz-40" style="background:var(--accent-grad);border-radius:50%;font-size:18px">👥</div>
+        <div class="contact-info">
+          <div class="contact-name">New Group</div>
+          <div class="contact-sub">Create a group chat</div>
+        </div>
+      </div>
+      <div class="contact-item" style="flex:1;border-radius:var(--r-md);background:var(--surface-3);padding:var(--sp-3)" onclick="joinGroup()">
+        <div class="avatar-img sz-40" style="background:linear-gradient(135deg,#06B6D4,#3B82F6);border-radius:50%;font-size:18px">🔗</div>
+        <div class="contact-info">
+          <div class="contact-name">Join Group</div>
+          <div class="contact-sub">Via invite link</div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-body" style="padding:0;max-height:360px;overflow-y:auto" id="contact-list">
+      <!-- Contacts rendered by JS -->
+      <div class="empty-state" style="padding:var(--sp-8)">
+        <div class="empty-icon" style="width:60px;height:60px;font-size:28px">👥</div>
+        <div class="empty-sub">Your contacts will appear here once connected</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Call Screen (overlay) -->
+<div class="call-screen hidden" id="call-screen" role="dialog" aria-modal="true" aria-label="Active call">
+  <div class="call-bg"></div>
+
+  <div class="call-top">
+    <div class="call-quality">
+      <span class="material-symbols-rounded" style="font-size:16px">signal_cellular_alt</span>
+      <span id="call-quality-label">HD</span>
+    </div>
+    <div class="call-record hidden" id="call-record-indicator">
+      <div class="call-record-dot"></div>
+      Recording
+    </div>
+    <button class="icon-btn" onclick="minimizeCall()" aria-label="Minimize call" style="color:rgba(255,255,255,.7)">
+      <span class="material-symbols-rounded">expand_more</span>
+    </button>
+  </div>
+
+  <div class="call-center">
+    <div class="call-avatar">
+      <div class="call-avatar-ring"></div>
+      <div class="call-avatar-ring" style="animation-delay:.4s"></div>
+      <div class="avatar-img sz-112 gradient-3" id="call-avatar" style="border-radius:50%;font-size:44px">?</div>
+    </div>
+    <div>
+      <div class="call-name" id="call-name">Calling…</div>
+      <div class="call-status" id="call-status">Connecting</div>
+      <div class="call-timer hidden" id="call-timer">0:00</div>
+    </div>
+  </div>
+
+  <div class="call-controls">
+    <button class="call-btn unmuted" id="btn-mute" onclick="toggleMute()" aria-label="Toggle mute" aria-pressed="false">
+      <span class="material-symbols-rounded" id="mute-icon">mic</span>
+    </button>
+    <button class="call-btn video" id="btn-cam" onclick="toggleCamera()" aria-label="Toggle camera" aria-pressed="false">
+      <span class="material-symbols-rounded" id="cam-icon">videocam</span>
+    </button>
+    <button class="call-btn end" onclick="endCall()" aria-label="End call">
+      <span class="material-symbols-rounded">call_end</span>
+    </button>
+    <button class="call-btn unmuted" onclick="toggleSpeaker()" aria-label="Toggle speaker">
+      <span class="material-symbols-rounded">volume_up</span>
+    </button>
+    <button class="call-btn unmuted" onclick="showCallParticipants()" aria-label="Show participants">
+      <span class="material-symbols-rounded">people</span>
+    </button>
+  </div>
+</div>
+
+<!-- Incoming Call UI -->
+<div class="overlay hidden" id="incoming-call-overlay">
+  <div class="modal" style="max-width:340px;text-align:center" role="dialog" aria-modal="true" aria-label="Incoming call">
+    <div class="modal-body" style="padding:var(--sp-8) var(--sp-6)">
+      <div class="avatar-img sz-80 gradient-3" id="incoming-call-avatar" style="border-radius:50%;margin:0 auto var(--sp-4);font-size:32px">?</div>
+      <div style="font-size:var(--ts-xl);font-weight:700;margin-bottom:var(--sp-1)" id="incoming-call-name">Unknown</div>
+      <div style="color:var(--text-tertiary);margin-bottom:var(--sp-8)" id="incoming-call-type">Incoming call…</div>
+      <div style="display:flex;justify-content:center;gap:var(--sp-8)">
+        <div style="display:flex;flex-direction:column;align-items:center;gap:var(--sp-2)">
+          <button onclick="declineCall()" style="width:64px;height:64px;border-radius:50%;background:var(--error);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;color:white;font-size:28px;box-shadow:0 4px 24px rgba(239,68,68,.4)" aria-label="Decline call">
+            <span class="material-symbols-rounded">call_end</span>
+          </button>
+          <span style="font-size:var(--ts-xs);color:var(--text-tertiary)">Decline</span>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:var(--sp-2)">
+          <button onclick="acceptCall()" style="width:64px;height:64px;border-radius:50%;background:var(--success);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;color:white;font-size:28px;box-shadow:0 4px 24px rgba(34,197,94,.4)" aria-label="Accept call">
+            <span class="material-symbols-rounded">call</span>
+          </button>
+          <span style="font-size:var(--ts-xs);color:var(--text-tertiary)">Accept</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Search Overlay -->
+<div class="search-overlay hidden" id="search-overlay" role="search">
+  <div class="search-overlay-header">
+    <button class="icon-btn" onclick="closeSearchOverlay()" aria-label="Close search">
+      <span class="material-symbols-rounded">arrow_back</span>
+    </button>
+    <div class="search-box" style="flex:1">
+      <span class="material-symbols-rounded search-icon" style="font-size:18px">search</span>
+      <input type="search" class="search-input" id="global-search-input" placeholder="Search messages, chats, files…" autofocus aria-label="Global search" oninput="performSearch(this.value)">
+    </div>
+  </div>
+  <div class="search-filter-bar">
+    <button class="search-filter-chip active" onclick="setSearchFilter(this,'all')">All</button>
+    <button class="search-filter-chip" onclick="setSearchFilter(this,'chats')">
+      <span class="material-symbols-rounded" style="font-size:14px">chat</span>Chats
+    </button>
+    <button class="search-filter-chip" onclick="setSearchFilter(this,'messages')">
+      <span class="material-symbols-rounded" style="font-size:14px">message</span>Messages
+    </button>
+    <button class="search-filter-chip" onclick="setSearchFilter(this,'media')">
+      <span class="material-symbols-rounded" style="font-size:14px">photo</span>Media
+    </button>
+    <button class="search-filter-chip" onclick="setSearchFilter(this,'files')">
+      <span class="material-symbols-rounded" style="font-size:14px">description</span>Files
+    </button>
+    <button class="search-filter-chip" onclick="setSearchFilter(this,'links')">
+      <span class="material-symbols-rounded" style="font-size:14px">link</span>Links
+    </button>
+  </div>
+  <div class="search-overlay-body" id="search-results">
+    <div class="empty-state">
+      <div class="empty-icon" style="font-size:28px;width:64px;height:64px">🔍</div>
+      <div class="empty-sub">Type to search across all your chats</div>
+    </div>
+  </div>
+</div>
+
+<!-- Generic Confirm Dialog -->
+<div class="overlay hidden" id="confirm-overlay" onclick="closeOnBackdrop(event,'confirm-overlay')">
+  <div class="modal" style="max-width:360px" role="alertdialog" aria-modal="true" aria-labelledby="confirm-title" aria-describedby="confirm-msg">
+    <div class="modal-header">
+      <h2 class="modal-title" id="confirm-title">Confirm</h2>
+      <button class="modal-close" onclick="closeModal('confirm-overlay')" aria-label="Close"><span class="material-symbols-rounded">close</span></button>
+    </div>
+    <div class="modal-body">
+      <p id="confirm-msg" style="color:var(--text-secondary);line-height:1.5"></p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('confirm-overlay')">Cancel</button>
+      <button class="btn btn-danger" id="confirm-action-btn">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<!-- Group Info / Management -->
+<div class="overlay hidden" id="group-info-overlay" onclick="closeOnBackdrop(event,'group-info-overlay')">
+  <div class="modal" style="max-width:520px;max-height:85dvh" role="dialog" aria-modal="true" aria-labelledby="group-info-title">
+    <div class="modal-header">
+      <h2 class="modal-title" id="group-info-title">Group Info</h2>
+      <button class="modal-close" onclick="closeModal('group-info-overlay')" aria-label="Close"><span class="material-symbols-rounded">close</span></button>
+    </div>
+    <div class="modal-body" style="padding:0;overflow-y:auto" id="group-info-body">
+      <!-- Populated by JS -->
+    </div>
+  </div>
+</div>
+
+<!-- Message Info -->
+<div class="overlay hidden" id="msg-info-overlay" onclick="closeOnBackdrop(event,'msg-info-overlay')">
+  <div class="modal" style="max-width:420px" role="dialog" aria-modal="true" aria-labelledby="msg-info-title">
+    <div class="modal-header">
+      <h2 class="modal-title" id="msg-info-title">Message Info</h2>
+      <button class="modal-close" onclick="closeModal('msg-info-overlay')" aria-label="Close"><span class="material-symbols-rounded">close</span></button>
+    </div>
+    <div class="modal-body" id="msg-info-body"><!-- JS --></div>
+  </div>
+</div>
+
+<!-- Media Viewer -->
+<div class="media-viewer hidden" id="media-viewer" role="dialog" aria-modal="true" aria-label="Media viewer">
+  <div class="media-viewer-top">
+    <button onclick="closeMediaViewer()" style="color:white;background:none;border:none;cursor:pointer;padding:var(--sp-2)" aria-label="Close">
+      <span class="material-symbols-rounded">close</span>
+    </button>
+    <div style="flex:1;color:rgba(255,255,255,.8);font-size:var(--ts-sm)" id="media-viewer-caption"></div>
+    <button class="icon-btn" style="color:rgba(255,255,255,.8)" onclick="downloadMedia()" aria-label="Download">
+      <span class="material-symbols-rounded">download</span>
+    </button>
+    <button class="icon-btn" style="color:rgba(255,255,255,.8)" onclick="shareMedia()" aria-label="Share">
+      <span class="material-symbols-rounded">share</span>
+    </button>
+  </div>
+  <div class="media-viewer-center">
+    <button class="media-viewer-nav prev" onclick="prevMedia()" aria-label="Previous">
+      <span class="material-symbols-rounded">chevron_left</span>
+    </button>
+    <div id="media-viewer-content"></div>
+    <button class="media-viewer-nav next" onclick="nextMedia()" aria-label="Next">
+      <span class="material-symbols-rounded">chevron_right</span>
+    </button>
+  </div>
+  <div class="media-viewer-bottom">
+    <div class="media-viewer-action" onclick="replyToMedia()">
+      <span class="material-symbols-rounded">reply</span>
+      <span>Reply</span>
+    </div>
+    <div class="media-viewer-action" onclick="forwardMedia()">
+      <span class="material-symbols-rounded">forward</span>
+      <span>Forward</span>
+    </div>
+    <div class="media-viewer-action" onclick="starMedia()">
+      <span class="material-symbols-rounded">star</span>
+      <span>Star</span>
+    </div>
+    <div class="media-viewer-action" onclick="deleteMedia()">
+      <span class="material-symbols-rounded" style="color:var(--error)">delete</span>
+      <span style="color:var(--error)">Delete</span>
+    </div>
+  </div>
+</div>
+
+<!-- App Nav links (sub-pages) -->
+<div style="display:none">
+  <a href="album.html">Album</a>
+  <a href="calendar.html">Calendar</a>
+  <a href="expenses.html">Expenses</a>
+  <a href="insights.html">Insights</a>
+</div>
+
+<!-- File inputs (hidden) -->
+<input type="file" id="file-input-photo" accept="image/*,video/*" multiple style="display:none" onchange="handleFileInput(this,'media')">
+<input type="file" id="file-input-doc" accept="*/*" multiple style="display:none" onchange="handleFileInput(this,'doc')">
+<input type="file" id="file-input-avatar" accept="image/*" style="display:none" onchange="handleAvatarInput(this)">
+
+<!-- Main JS -->
+<script src="app.js"></script>
+</body>
 </html>
