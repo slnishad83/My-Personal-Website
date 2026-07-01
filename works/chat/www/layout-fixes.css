@@ -1,0 +1,326 @@
+/* ============================================================
+   Layout Fixes — Comprehensive UI polish
+   Covers: login, home sidebar, personal chats, group chats,
+   input area, panels, mobile responsiveness, dark mode
+   ============================================================ */
+
+/* ═══════════════════════════════════════════════
+   1. SIDEBAR HEADER — breathing room
+   ═══════════════════════════════════════════════ */
+.sidebar-header {
+  gap: 8px;
+  align-items: center;
+}
+
+.sidebar-actions {
+  gap: 6px;
+  flex-shrink: 0;
+  align-items: center;
+}
+
+/* Install-app button: collapse to icon-only on narrow sidebars */
+@media (max-width: 560px) {
+  .install-app-btn .install-app-label {
+    display: none;
+  }
+  .install-app-btn {
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    justify-content: center;
+    border-radius: 50%;
+  }
+}
+
+/* ═══════════════════════════════════════════════
+   2. SELECT-MODE BUTTON — was invisible (no icon)
+   ═══════════════════════════════════════════════ */
+#selectModeBtn {
+  font-size: 0;
+  position: relative;
+}
+#selectModeBtn::before {
+  content: "";
+  display: block;
+  width: 18px;
+  height: 18px;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2354656f' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='9 11 12 14 22 4'/%3E%3Cpath d='M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11'/%3E%3C/svg%3E") center / 18px no-repeat;
+}
+#selectModeBtn.active::before,
+#selectModeBtn.selected::before {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2300a884' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='9 11 12 14 22 4'/%3E%3Cpath d='M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11'/%3E%3C/svg%3E");
+}
+
+/* ═══════════════════════════════════════════════
+   3. CHAT-MORE BUTTON — was invisible (no icon)
+   ═══════════════════════════════════════════════ */
+#chatMoreBtn {
+  font-size: 0;
+  position: relative;
+}
+#chatMoreBtn::before {
+  content: "";
+  display: block;
+  width: 18px;
+  height: 18px;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2354656f'%3E%3Ccircle cx='12' cy='5' r='1.5'/%3E%3Ccircle cx='12' cy='12' r='1.5'/%3E%3Ccircle cx='12' cy='19' r='1.5'/%3E%3C/svg%3E") center / 18px no-repeat;
+}
+
+/* ═══════════════════════════════════════════════
+   4. MORE-TABS BUTTON
+   ═══════════════════════════════════════════════ */
+#moreTabsBtn .primary-tab-icon[data-icon="add"]::before {
+  content: "⋯";
+  font-size: 18px;
+  line-height: 1;
+}
+
+/* ═══════════════════════════════════════════════
+   5. CAMERA MESSAGE BUTTON — override paperclip with camera
+   ═══════════════════════════════════════════════ */
+#cameraMsgBtn::before {
+  content: "📷" !important;
+  transform: none !important;
+}
+
+/* ═══════════════════════════════════════════════
+   6. CHAT HEADER ACTIONS — spacing and overflow control
+   ═══════════════════════════════════════════════ */
+.chat-actions {
+  gap: 2px;
+  flex-shrink: 0;
+  overflow: visible;
+}
+
+/* On tablets and below: hide wallpaper and select-mode — accessible via More menu */
+@media (max-width: 860px) {
+  #wallpaperBtn,
+  #selectModeBtn {
+    display: none !important;
+  }
+  .chat-actions {
+    gap: 2px;
+  }
+}
+
+/* On phones: additionally hide video call to prevent header overflow */
+@media (max-width: 520px) {
+  #videoCallBtn {
+    display: none !important;
+  }
+  .chat-header .icon-btn {
+    width: 34px;
+    height: 34px;
+  }
+  .sidebar-actions .icon-btn,
+  .sidebar-actions .logout-btn {
+    width: 34px;
+    height: 34px;
+  }
+}
+
+/* ═══════════════════════════════════════════════
+   7. PRIMARY TABS — scroll instead of overflow
+   ═══════════════════════════════════════════════ */
+.primary-tabs {
+  overflow-x: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.primary-tabs::-webkit-scrollbar {
+  display: none;
+}
+.primary-tab {
+  min-width: 48px;
+  padding: 10px 4px;
+}
+
+/* ═══════════════════════════════════════════════
+   8. COMPOSER / INPUT AREA — no overflow on small screens
+   ═══════════════════════════════════════════════ */
+.wa-composer-shell {
+  min-width: 0;
+  flex: 1;
+}
+
+.input-area {
+  position: relative;
+  flex-shrink: 0;
+}
+
+/* Ensure send and voice buttons never overlap the textarea */
+@media (max-width: 400px) {
+  .emoji-btn,
+  .attach-btn {
+    width: 32px;
+    height: 32px;
+  }
+  .send-btn,
+  .voice-msg-btn {
+    width: 40px;
+    height: 40px;
+  }
+}
+
+/* ═══════════════════════════════════════════════
+   9. ATTACHMENT SHEET GRID — proper wrapping on mobile
+   ═══════════════════════════════════════════════ */
+.attachment-sheet-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
+  gap: 12px;
+  padding: 8px 0;
+}
+
+/* ═══════════════════════════════════════════════
+   10. GROUP INFO / PROFILE PANEL — scrollable, no cut-off
+   ═══════════════════════════════════════════════ */
+.group-info-panel,
+.profile-panel,
+.contact-info-panel {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+/* Ensure action-item buttons in group info don't overflow */
+.gi-action-item {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ═══════════════════════════════════════════════
+   11. IN-CHAT SEARCH BAR — prevent button overlap
+   ═══════════════════════════════════════════════ */
+.in-chat-search {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: nowrap;
+  overflow: hidden;
+}
+
+.in-chat-search-action {
+  flex-shrink: 0;
+}
+
+/* ═══════════════════════════════════════════════
+   12. LOGIN PAGE — button spacing and layout
+   ═══════════════════════════════════════════════ */
+.btn-link {
+  width: 100%;
+  text-align: center;
+  margin-top: 6px;
+}
+
+.btn-secondary {
+  width: 100%;
+  text-align: center;
+  margin-top: 6px;
+}
+
+.auth-divider {
+  margin: 18px 0 14px;
+}
+
+#googleAuthBtn {
+  width: 100%;
+  padding: 13px 20px;
+  border-radius: 9999px;
+  font-size: 15px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  cursor: pointer;
+  transition: box-shadow 0.15s, background 0.15s;
+}
+
+#installAppBtn.login-install-btn {
+  margin-top: 12px !important;
+  width: 100%;
+}
+
+/* Password-toggle eye icon — was invisible without font-size */
+.password-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 17px !important;
+}
+
+.auth-card {
+  overflow: visible;
+}
+
+.auth-note {
+  margin-top: 14px;
+}
+
+/* Tighten spacing on very narrow phones */
+@media (max-width: 380px) {
+  .form-group {
+    margin-bottom: 14px;
+  }
+  .auth-card {
+    padding: 22px 14px 18px;
+  }
+  .btn {
+    padding: 12px 16px;
+    font-size: 14px;
+  }
+}
+
+/* ═══════════════════════════════════════════════
+   13. SELECTION BAR — proper layout
+   ═══════════════════════════════════════════════ */
+.selection-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.selection-bar-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+}
+.selection-bar-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+/* ═══════════════════════════════════════════════
+   14. MODAL LAYOUT — always centered, no overflow
+   ═══════════════════════════════════════════════ */
+.modal-content {
+  max-height: 90dvh;
+  overflow-y: auto;
+}
+
+/* ═══════════════════════════════════════════════
+   15. DARK MODE ICON FIXES
+   ═══════════════════════════════════════════════ */
+body.dark #selectModeBtn::before,
+[data-theme="dark"] #selectModeBtn::before {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238696a0' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='9 11 12 14 22 4'/%3E%3Cpath d='M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11'/%3E%3C/svg%3E");
+}
+
+body.dark #chatMoreBtn::before,
+[data-theme="dark"] #chatMoreBtn::before {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%238696a0'%3E%3Ccircle cx='12' cy='5' r='1.5'/%3E%3Ccircle cx='12' cy='12' r='1.5'/%3E%3Ccircle cx='12' cy='19' r='1.5'/%3E%3C/svg%3E");
+}
+
+body.dark #logoutBtn::before,
+[data-theme="dark"] #logoutBtn::before {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238696a0' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4'/%3E%3Cpolyline points='16 17 21 12 16 7'/%3E%3Cline x1='21' y1='12' x2='9' y2='12'/%3E%3C/svg%3E");
+}
+
+body.dark #scannerBtn::before,
+[data-theme="dark"] #scannerBtn::before {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238696a0' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='3' width='5' height='5'/%3E%3Crect x='16' y='3' width='5' height='5'/%3E%3Crect x='3' y='16' width='5' height='5'/%3E%3Cpath d='M21 16h-3a2 2 0 0 0-2 2v3'/%3E%3Cpath d='M21 21v.01'/%3E%3Cpath d='M12 7v3a2 2 0 0 1-2 2H7'/%3E%3Cpath d='M3 12h.01'/%3E%3Cpath d='M12 3h.01'/%3E%3Cpath d='M12 16v.01'/%3E%3Cpath d='M16 12h1'/%3E%3Cpath d='M21 12v.01'/%3E%3Cpath d='M12 21v-1'/%3E%3C/svg%3E");
+}
