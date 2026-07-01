@@ -21,6 +21,9 @@
         const dark = savedTheme === "true" ||
           (savedTheme === null && matchMedia("(prefers-color-scheme: dark)").matches);
         document.documentElement.dataset.theme = dark ? "dark" : "light";
+        document.addEventListener("DOMContentLoaded", () => {
+          document.body.classList.toggle("dark", document.documentElement.dataset.theme === "dark");
+        });
       })();
     </script>
     <link rel="manifest" href="manifest.json?v=96" />
@@ -132,20 +135,30 @@
       }
       .form-group input:-webkit-autofill,
       .form-group input:-webkit-autofill:hover,
-      .form-group input:-webkit-autofill:focus {
+      .form-group input:-webkit-autofill:focus,
+      html[data-theme="dark"] .form-group input:-webkit-autofill,
+      html[data-theme="dark"] .form-group input:-webkit-autofill:hover,
+      html[data-theme="dark"] .form-group input:-webkit-autofill:focus {
         -webkit-text-fill-color: var(--text);
         -webkit-box-shadow: 0 0 0 30px var(--card) inset;
         caret-color: var(--text);
       }
+      html[data-theme="dark"] .form-group input,
       body.dark .form-group input {
         background: #111c23;
         border-color: #2b3a44;
         color: #edf3f6;
+        -webkit-text-fill-color: #edf3f6;
+        caret-color: #edf3f6;
       }
+      html[data-theme="dark"] .form-group input::placeholder,
       body.dark .form-group input::placeholder {
         color: #8fa0ab;
         opacity: 1;
       }
+      html[data-theme="dark"] .form-group input:-webkit-autofill,
+      html[data-theme="dark"] .form-group input:-webkit-autofill:hover,
+      html[data-theme="dark"] .form-group input:-webkit-autofill:focus,
       body.dark .form-group input:-webkit-autofill,
       body.dark .form-group input:-webkit-autofill:hover,
       body.dark .form-group input:-webkit-autofill:focus {

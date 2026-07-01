@@ -36,11 +36,12 @@
         if (mode === "system") {
           var dark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
           document.documentElement.dataset.theme = dark ? "dark" : "light";
-          if (dark) document.body.classList.add("dark");
         } else {
           document.documentElement.dataset.theme = mode;
-          if (mode === "dark") document.body.classList.add("dark");
         }
+        document.addEventListener("DOMContentLoaded", function () {
+          document.body.classList.toggle("dark", document.documentElement.dataset.theme === "dark");
+        });
       })();
     </script>
     <style>
@@ -139,6 +140,7 @@
         border-radius: var(--radius-md);
       }
 
+      html[data-theme="dark"] .auth-tabs,
       body.dark .auth-tabs {
         background: var(--panel-soft);
       }
@@ -168,6 +170,7 @@
         box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
       }
 
+      html[data-theme="dark"] .auth-tab.active,
       body.dark .auth-tab.active {
         background: var(--panel);
         box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
@@ -222,12 +225,16 @@
         opacity: 0.6;
       }
 
+      html[data-theme="dark"] .form-group input,
       body.dark .form-group input {
         background: #111c23;
         border-color: #2b3a44;
         color: #edf3f6;
+        -webkit-text-fill-color: #edf3f6;
+        caret-color: #edf3f6;
       }
 
+      html[data-theme="dark"] .form-group input::placeholder,
       body.dark .form-group input::placeholder {
         color: #8fa0ab;
         opacity: 1;
@@ -235,12 +242,18 @@
 
       .form-group input:-webkit-autofill,
       .form-group input:-webkit-autofill:hover,
-      .form-group input:-webkit-autofill:focus {
+      .form-group input:-webkit-autofill:focus,
+      html[data-theme="dark"] .form-group input:-webkit-autofill,
+      html[data-theme="dark"] .form-group input:-webkit-autofill:hover,
+      html[data-theme="dark"] .form-group input:-webkit-autofill:focus {
         -webkit-text-fill-color: var(--text);
         -webkit-box-shadow: 0 0 0 30px var(--panel) inset;
         caret-color: var(--text);
       }
 
+      html[data-theme="dark"] .form-group input:-webkit-autofill,
+      html[data-theme="dark"] .form-group input:-webkit-autofill:hover,
+      html[data-theme="dark"] .form-group input:-webkit-autofill:focus,
       body.dark .form-group input:-webkit-autofill,
       body.dark .form-group input:-webkit-autofill:hover,
       body.dark .form-group input:-webkit-autofill:focus {
