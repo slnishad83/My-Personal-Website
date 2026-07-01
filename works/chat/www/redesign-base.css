@@ -529,7 +529,7 @@ body {
   to { transform: translateY(0); }
 }
 
-/* ── Dark Mode ── */
+/* ── Dark Mode Variables ── */
 @media (prefers-color-scheme: dark) {
   :root {
     --bg: #0b141a;
@@ -540,13 +540,16 @@ body {
     --brand-soft: rgba(0,168,132,0.12);
     --brand-soft-hover: rgba(0,168,132,0.2);
   }
+}
 
-  .card, .input, .form-group input, .form-group select, .form-group textarea,
-  .modal-box, .bottom-nav { background: var(--card); color: var(--text); }
-
-  .bottom-nav { border-top-color: var(--border); }
-
-  .app-header { background: linear-gradient(135deg, #00574d, #008069); }
+:root[data-theme="dark"] {
+  --bg: #0b141a;
+  --card: #111b21;
+  --text: #e9edef;
+  --text-secondary: #8696a0;
+  --border: #2a3942;
+  --brand-soft: rgba(0,168,132,0.12);
+  --brand-soft-hover: rgba(0,168,132,0.2);
 }
 
 body.dark {
@@ -558,3 +561,11 @@ body.dark {
   --brand-soft: rgba(0,168,132,0.12);
   --brand-soft-hover: rgba(0,168,132,0.2);
 }
+
+/* ── Dark Mode Overrides ── */
+.app-header { background: linear-gradient(135deg, #008069, #00a884); }
+:root[data-theme="dark"] .app-header,
+body.dark .app-header { background: linear-gradient(135deg, #00574d, #008069); }
+
+:root[data-theme="dark"] .bottom-nav,
+body.dark .bottom-nav { border-top-color: var(--border); }

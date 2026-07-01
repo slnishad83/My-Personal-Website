@@ -36,7 +36,7 @@ function getAuthPersistence() {
 
 const authPersistenceReady = Promise.race([
   auth.setPersistence(getAuthPersistence()),
-  new Promise((resolve) => setTimeout(resolve, 3000)),
+  new Promise((resolve) => setTimeout(resolve, 1000)),
 ]).catch((error) => {
   console.error("Persistence error:", error);
 });

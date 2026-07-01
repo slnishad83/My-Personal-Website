@@ -118,6 +118,8 @@
         font-family: inherit;
         background: var(--card);
         color: var(--text);
+        caret-color: var(--brand);
+        text-shadow: none;
         transition: border-color 0.2s, box-shadow 0.2s;
       }
       .form-group input:focus {
@@ -125,12 +127,31 @@
         border-color: var(--brand);
         box-shadow: 0 0 0 3px var(--brand-soft);
       }
+      .form-group input::selection {
+        background: rgba(0, 128, 105, 0.24);
+      }
       .form-group input:-webkit-autofill,
       .form-group input:-webkit-autofill:hover,
       .form-group input:-webkit-autofill:focus {
         -webkit-text-fill-color: var(--text);
         -webkit-box-shadow: 0 0 0 30px var(--card) inset;
         caret-color: var(--text);
+      }
+      body.dark .form-group input {
+        background: #111c23;
+        border-color: #2b3a44;
+        color: #edf3f6;
+      }
+      body.dark .form-group input::placeholder {
+        color: #8fa0ab;
+        opacity: 1;
+      }
+      body.dark .form-group input:-webkit-autofill,
+      body.dark .form-group input:-webkit-autofill:hover,
+      body.dark .form-group input:-webkit-autofill:focus {
+        -webkit-text-fill-color: #edf3f6;
+        -webkit-box-shadow: 0 0 0 30px #111c23 inset;
+        caret-color: #edf3f6;
       }
       .password-field {
         position: relative;
@@ -320,8 +341,9 @@
       }
     </style>
     <link rel="stylesheet" href="auth-theme.css?v=2" />
-      <link rel="stylesheet" href="premium-final.css?v=1" />
+    <link rel="stylesheet" href="premium-final.css?v=1" />
     <link rel="stylesheet" href="layout-fixes.css?v=1" />
+    <link rel="stylesheet" href="product-redesign-2026.css?v=1" />
   </head>
   <body>
     <div class="auth-container">

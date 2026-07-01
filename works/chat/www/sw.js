@@ -53,28 +53,103 @@ messaging.onBackgroundMessage(payload => {
     actions: isCall ? [
       { action: 'reject', title: 'Decline' },
       { action: 'accept', title: 'Accept' }
-    ] : [{ action: 'open', title: 'Open chat' }]
+    ] : [
+      { action: 'reply', title: '↩ Reply', type: 'text', placeholder: 'Type a reply…' },
+      { action: 'open',  title: 'Open' }
+    ]
   });
 });
 
+/* ── IDB helper: read Firebase ID token stored by notification-reply.js ── */
+function getStoredAuthToken() {
+  return new Promise(resolve => {
+    try {
+      const req = indexedDB.open('tcAuthStore', 1);
+      req.onsuccess = e => {
+        const idb = e.target.result;
+        if (!idb.objectStoreNames.contains('tokens')) { resolve(null); return; }
+        const get = idb.transaction('tokens', 'readonly').objectStore('tokens').get('idToken');
+        get.onsuccess = () => resolve(get.result?.token || null);
+        get.onerror   = () => resolve(null);
+      };
+      req.onerror = () => resolve(null);
+    } catch (_) { resolve(null); }
+  });
+}
+
+/* ── Send a notification reply (tab open → postMessage, else Cloud Function) ── */
+async function handleNotificationReply(data, replyText) {
+  const chatId     = data.chatId     || '';
+  const chatType   = data.chatType   || 'direct';
+  const chatUserId = data.chatUserId || '';
+  const groupId    = data.groupId    || '';
+
+  /* Try relaying to an open app tab first */
+  const clientList = await clients.matchAll({ type: 'window', includeUncontrolled: true });
+  if (clientList.length > 0) {
+    clientList[0].postMessage({ type: 'TC_NOTIF_REPLY', chatId, chatType, chatUserId, groupId, replyText });
+    await self.registration.showNotification('Reply sent ✓', {
+      body: replyText.length > 80 ? replyText.slice(0, 80) + '…' : replyText,
+      icon: 'app-icon-192.png', badge: 'app-icon-192.png',
+      tag: 'tc-reply-sent-' + chatId, silent: true
+    });
+    return;
+  }
+
+  /* No open tab — send via Cloud Function using the stored ID token */
+  try {
+    const token = await getStoredAuthToken();
+    if (!token) throw new Error('no-token');
+
+    const resp = await fetch(
+      'https://us-central1-my-team-chat-2255.cloudfunctions.net/sendNotificationReply',
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+        body: JSON.stringify({ chatId, chatType, chatUserId, groupId, text: replyText })
+      }
+    );
+    if (!resp.ok) throw new Error('cf-' + resp.status);
+
+    await self.registration.showNotification('Reply sent ✓', {
+      body: replyText.length > 80 ? replyText.slice(0, 80) + '…' : replyText,
+      icon: 'app-icon-192.png', badge: 'app-icon-192.png',
+      tag: 'tc-reply-sent-' + chatId, silent: true
+    });
+  } catch (err) {
+    /* Fallback — open the chat so user can send manually */
+    await self.registration.showNotification('Tap to open chat', {
+      body: 'Could not send reply automatically — tap to open chat',
+      icon: 'app-icon-192.png', badge: 'app-icon-192.png',
+      tag: 'tc-reply-failed', data: { url: data.url || './index.html' }
+    });
+    if (clients.openWindow) clients.openWindow(data.url || './index.html');
+  }
+}
+
 self.addEventListener('notificationclick', event => {
   event.notification.close();
-  const data = event.notification.data || {};
+  const data   = event.notification.data || {};
   const action = event.action || (data.kind === 'call' ? 'accept' : 'open');
+
+  /* Inline reply — only fired on browsers that support type:'text' actions (Chrome Android) */
+  if (action === 'reply' && event.reply != null) {
+    const replyText = (event.reply || '').trim();
+    if (replyText) event.waitUntil(handleNotificationReply(data, replyText));
+    return;
+  }
+
   const url = data.kind === 'call' && data.callId
     ? `./index.html?callId=${encodeURIComponent(data.callId)}&callAction=${encodeURIComponent(action)}`
     : (data.url || './index.html');
+
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then(clientList => {
       for (const client of clientList) {
         if ('focus' in client) {
-          if ('navigate' in client) {
-            return client
-              .navigate(url)
-              .then(() => client.focus())
-              .catch(() => client.focus());
-          }
-          return client.focus();
+          return ('navigate' in client)
+            ? client.navigate(url).then(() => client.focus()).catch(() => client.focus())
+            : client.focus();
         }
       }
       if (clients.openWindow) return clients.openWindow(url);
@@ -82,9 +157,28 @@ self.addEventListener('notificationclick', event => {
   );
 });
 
-const CACHE_NAME = 'team-chat-v213-wa';
+const CACHE_NAME = 'team-chat-v220-wa';
 const STATIC_ASSETS = [
   'auth-theme.css',
+  'feature-updates.css',
+  'feature-updates.js',
+    'attachment-reliability.css',
+    'ui-compliance.js',
+    'ui-compliance.css',
+    'message-search.css',
+    'message-search.js',
+    'attachment-reliability.js',
+    'group-message-info.css',
+    'group-message-info.js',
+    'audit-interactions.css',
+    'audit-interactions.js',
+    'audit-responsive.css',
+    'url-preview.css',
+    'url-preview.js',
+  'sync-audit.css',
+  'sync-audit.js',
+  'push-notifications.js',
+  'notification-reply.js',
   'style.css',
   'message-actions.css',
   'ui-audit.css',

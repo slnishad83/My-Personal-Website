@@ -1003,7 +1003,6 @@ function renderChatListItems(items, container, emptyMessage = "") {
     return;
   }
 
-  let lastSection = "";
   items.forEach((item) => {
     if (item.divider) {
       const div = document.createElement("div");
@@ -1011,13 +1010,6 @@ function renderChatListItems(items, container, emptyMessage = "") {
       div.textContent = item.name || "";
       container.appendChild(div);
       return;
-    }
-    if (item.section && item.section !== lastSection) {
-      const section = document.createElement("div");
-      section.className = "search-section-label";
-      section.textContent = item.section;
-      container.appendChild(section);
-      lastSection = item.section;
     }
     const chatDiv = document.createElement("div");
     chatDiv.className = "list-item";
