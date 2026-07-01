@@ -121,6 +121,7 @@ body.dark .chat-container {
   display: flex !important;
   align-items: center !important;
   gap: 12px !important;
+  padding-inline: 14px !important;
 }
 
 .user-info {
@@ -264,7 +265,7 @@ body.dark .chat-container {
 }
 
 .search-box {
-  padding: 12px 18px 10px !important;
+  padding: 10px 14px 8px !important;
   position: relative !important;
 }
 
@@ -282,8 +283,9 @@ body.dark .chat-container {
 
 .search-box > input {
   width: 100% !important;
-  padding: 0 44px !important;
-  font-size: 14px !important;
+  min-height: 42px !important;
+  padding: 0 42px !important;
+  font-size: 13px !important;
 }
 
 .search-box > input:focus {
@@ -295,30 +297,30 @@ body.dark .chat-container {
 .request-section,
 .archive-section,
 .pinned-messages-section {
-  margin: 0 12px 8px !important;
-  border: 1px solid var(--tc-line) !important;
-  border-radius: 16px !important;
-  background: var(--tc-surface-2) !important;
+  margin: 0 10px 8px !important;
+  border: 1px solid color-mix(in srgb, var(--tc-line) 72%, transparent) !important;
+  border-radius: 14px !important;
+  background: color-mix(in srgb, var(--tc-surface-2) 88%, transparent) !important;
   overflow: hidden !important;
 }
 
 .request-header,
 .archive-header,
 .pinned-header {
-  min-height: 46px !important;
-  padding: 0 14px !important;
+  min-height: 42px !important;
+  padding: 0 12px !important;
   display: flex !important;
   align-items: center !important;
   justify-content: space-between !important;
   color: var(--tc-text-2) !important;
-  font-size: 13px !important;
+  font-size: 12px !important;
   font-weight: 750 !important;
 }
 
 .primary-tabs {
   display: flex !important;
-  gap: 8px !important;
-  padding: 8px 14px 12px !important;
+  gap: 6px !important;
+  padding: 8px 12px 10px !important;
   overflow-x: auto !important;
   border-bottom: 1px solid var(--tc-line) !important;
   scrollbar-width: none !important;
@@ -329,11 +331,11 @@ body.dark .chat-container {
 }
 
 .primary-tab {
-  min-width: 58px !important;
-  min-height: 56px !important;
-  padding: 7px 8px !important;
+  min-width: 56px !important;
+  min-height: 52px !important;
+  padding: 6px 8px !important;
   border: 1px solid transparent !important;
-  border-radius: 16px !important;
+  border-radius: 14px !important;
   display: inline-flex !important;
   flex-direction: column !important;
   align-items: center !important;
@@ -399,15 +401,15 @@ body.dark .chat-container {
 }
 
 .list-item {
-  min-height: 72px !important;
+  min-height: 68px !important;
   display: grid !important;
   grid-template-columns: 50px minmax(0, 1fr) auto auto auto !important;
   align-items: center !important;
-  gap: 12px !important;
-  margin: 2px 4px !important;
-  padding: 10px 10px !important;
+  gap: 10px !important;
+  margin: 2px 3px !important;
+  padding: 9px 10px !important;
   border: 1px solid transparent !important;
-  border-radius: 18px !important;
+  border-radius: 16px !important;
   background: transparent !important;
   transform: none !important;
   animation: none !important;
@@ -420,13 +422,13 @@ body.dark .chat-container {
 }
 
 .list-item.active {
-  margin: 2px 4px !important;
-  padding: 10px 10px !important;
-  border: 1px solid color-mix(in srgb, var(--tc-brand) 34%, transparent) !important;
+  margin: 2px 3px !important;
+  padding: 9px 10px !important;
+  border: 1px solid color-mix(in srgb, var(--tc-brand) 26%, transparent) !important;
   border-left: 4px solid var(--tc-brand) !important;
-  border-radius: 18px !important;
-  background: color-mix(in srgb, var(--tc-brand) 10%, var(--tc-surface)) !important;
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.16) !important;
+  border-radius: 16px !important;
+  background: linear-gradient(90deg, color-mix(in srgb, var(--tc-brand) 10%, var(--tc-surface)) 0%, color-mix(in srgb, var(--tc-surface) 96%, transparent) 100%) !important;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08) !important;
 }
 
 .list-info,
@@ -492,13 +494,14 @@ body.dark .chat-container {
 }
 
 .caught-up-divider {
-  margin: 10px 4px 0 !important;
-  min-height: 46px !important;
+  margin: 12px 6px 0 !important;
+  min-height: 28px !important;
+  padding: 10px 12px !important;
   display: grid !important;
   place-items: center !important;
-  border-radius: 0 !important;
-  background: transparent !important;
-  border-top: 1px solid var(--tc-line) !important;
+  border-radius: 999px !important;
+  background: color-mix(in srgb, var(--tc-surface-2) 82%, transparent) !important;
+  border: 1px solid color-mix(in srgb, var(--tc-line) 70%, transparent) !important;
 }
 
 .group-actions {
