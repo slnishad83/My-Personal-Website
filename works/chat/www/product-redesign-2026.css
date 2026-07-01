@@ -653,7 +653,8 @@ body.dark .messages-area {
 }
 
 .message {
-  width: fit-content !important;
+  width: auto !important;
+  min-width: 0 !important;
   max-width: min(78%, 760px) !important;
   display: flex !important;
   align-items: flex-end !important;
@@ -670,6 +671,8 @@ body.dark .messages-area {
 }
 
 .message-bubble {
+  width: auto !important;
+  min-width: 0 !important;
   max-width: min(100%, 760px) !important;
   padding: 10px 12px 8px !important;
   border-radius: 18px !important;
@@ -678,6 +681,7 @@ body.dark .messages-area {
   color: var(--tc-text) !important;
   box-shadow: 0 2px 7px rgba(19, 32, 43, 0.07) !important;
   overflow: visible !important;
+  display: block !important;
 }
 
 .message.my-message .message-bubble {
@@ -698,11 +702,45 @@ body.dark .message.my-message .message-bubble {
 }
 
 .message-text {
+  display: block !important;
+  width: 100% !important;
+  min-width: 0 !important;
   color: inherit !important;
   font-size: 15px !important;
   line-height: 1.48 !important;
   overflow-wrap: anywhere !important;
+  word-break: normal !important;
   white-space: pre-wrap !important;
+  writing-mode: horizontal-tb !important;
+  text-orientation: mixed !important;
+}
+
+.message-sender {
+  display: block !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+.message-bubble > *,
+.message-text *,
+.sent-translation-details *,
+.reply-preview *,
+.message-footer *,
+.message-meta *,
+.message-sender *,
+.attachment-preview *,
+.connection-banner *,
+.format-toolbar *,
+.mention-suggestions *,
+.emoji-prediction-bar *,
+.emoji-picker *,
+.attachment-sheet *,
+#markdownPreviewPanel * {
+  writing-mode: horizontal-tb !important;
+  text-orientation: mixed !important;
 }
 
 .message-footer,
@@ -795,6 +833,8 @@ body.dark .message.my-message .message-bubble {
   min-height: 52px !important;
   display: flex !important;
   align-items: end !important;
+  width: 100% !important;
+  flex: 1 1 auto !important;
   gap: 4px !important;
   padding: 5px 6px !important;
   border: 1px solid var(--tc-line) !important;
@@ -810,7 +850,9 @@ body.dark .message.my-message .message-bubble {
 }
 
 #messageInput {
+  flex: 1 1 auto !important;
   min-width: 0 !important;
+  width: 100% !important;
   min-height: 40px !important;
   max-height: 140px !important;
   padding: 10px 6px !important;
@@ -820,6 +862,9 @@ body.dark .message.my-message .message-bubble {
   background: transparent !important;
   color: var(--tc-text) !important;
   font: 500 15px/1.35 var(--tc-font) !important;
+  white-space: pre-wrap !important;
+  overflow-wrap: anywhere !important;
+  word-break: normal !important;
 }
 
 #messageInput::placeholder {
