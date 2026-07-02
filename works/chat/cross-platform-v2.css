@@ -1214,5 +1214,40 @@ body {
 }
 
 /* ────────────────────────────────────────────────────────────
+   20. AUTH GATE DARK MODE
+       The inline <style> in index.html uses hardcoded #fff /
+       #111b21 with no [data-theme] scoping.  These overrides
+       correct it when dark mode is active.
+   ──────────────────────────────────────────────────────────── */
+
+[data-theme="dark"] .auth-gate {
+  background: linear-gradient(#0b141a 0 128px, #111b21 128px 100%);
+  color: #e9edef;
+}
+
+[data-theme="dark"] .auth-gate-inner,
+[data-theme="dark"] .auth-gate-recovery {
+  background: #1f2c34 !important;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45) !important;
+}
+
+[data-theme="dark"] .auth-gate-title {
+  color: #e9edef !important;
+}
+
+[data-theme="dark"] .auth-gate-label {
+  color: #8696a0 !important;
+}
+
+[data-theme="dark"] .auth-gate-spinner {
+  border-color: #2f3f48 !important;
+  border-top-color: #00a884 !important;
+}
+
+[data-theme="dark"] .auth-gate-recovery p {
+  color: #aebac1 !important;
+}
+
+/* ────────────────────────────────────────────────────────────
    END OF cross-platform-v2.css
    ──────────────────────────────────────────────────────────── */
