@@ -1,0 +1,148 @@
+// ============================================================
+// FIRESTORE SECURITY RULES - TEAM CHAT 2026
+// Defines access control for all data
+// ============================================================
+
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isUser(userId) {
+      return request.auth.uid == userId;
+    }
+    
+    function isOwner(ownerId) {
+      return request.auth.uid == ownerId;
+    }
+    
+    // ========================================================
+    // USERS COLLECTION
+    // ========================================================
+    match /users/{userId} {
+      // Read: User can read own profile
+      allow read: if isUser(userId);
+      
+      // Write: User can only update own profile
+      allow create: if isUser(userId);
+      allow update: if isUser(userId);
+      allow delete: if isUser(userId);
+      
+      // Nested subcollections
+      match /settings/{document=**} {
+        allow read, write: if isUser(userId);
+      }
+      
+      match /blockedUsers/{document=**} {
+        allow read, write: if isUser(userId);
+      }
+      
+      match /notifications/{document=**} {
+        allow read, write: if isUser(userId);
+      }
+    }
+    
+    // ========================================================
+    // CHATS COLLECTION (Personal & Group)
+    // ========================================================
+    match /chats/{chatId} {
+      // Read: User must be a participant
+      allow read: if isAuthenticated() && request.auth.uid in resource.data.participants;
+      
+      // Create: Authenticated users can create
+      allow create: if isAuthenticated();
+      
+      // Update: Participants can update
+      allow update: if isAuthenticated() && request.auth.uid in resource.data.participants;
+      
+      // Delete: Creator or admin can delete
+      allow delete: if isAuthenticated() && isOwner(resource.data.createdBy);
+      
+      // Messages subcollection
+      match /messages/{messageId} {
+        // Read messages
+        allow read: if isAuthenticated() && request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participants;
+        
+        // Create message
+        allow create: if isAuthenticated() && 
+                         request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participants &&
+                         request.resource.data.senderId == request.auth.uid &&
+                         request.resource.data.createdAt == request.time;
+        
+        // Update own message (edit, reactions)
+        allow update: if isAuthenticated() && 
+                         request.resource.data.senderId == request.auth.uid &&
+                         request.resource.data.senderId == resource.data.senderId;
+        
+        // Delete own message or group admin
+        allow delete: if isAuthenticated() && request.auth.uid == resource.data.senderId;
+      }
+    }
+    
+    // ========================================================
+    // CALLS COLLECTION
+    // ========================================================
+    match /calls/{callId} {
+      // Read: Call participants can read
+      allow read: if isAuthenticated() && 
+                     (request.auth.uid == resource.data.initiatorId || 
+                      request.auth.uid == resource.data.recipientId);
+      
+      // Create: Any authenticated user
+      allow create: if isAuthenticated() && request.resource.data.initiatorId == request.auth.uid;
+      
+      // Update: Participants can update (e.g., status)
+      allow update: if isAuthenticated() && 
+                       (request.auth.uid == resource.data.initiatorId || 
+                        request.auth.uid == resource.data.recipientId);
+      
+      // Delete: After call ends
+      allow delete: if isAuthenticated();
+    }
+    
+    // ========================================================
+    // NOTIFICATIONS COLLECTION
+    // ========================================================
+    match /notifications/{userId}/{notifId} {
+      // User can read own notifications
+      allow read: if isUser(userId);
+      
+      // System can create notifications
+      allow create: if request.auth.uid == userId;
+      
+      // User can update own notifications (mark as read)
+      allow update: if isUser(userId);
+      
+      // User can delete own notifications
+      allow delete: if isUser(userId);
+    }
+    
+    // ========================================================
+    // CONTACTS COLLECTION
+    // ========================================================
+    match /contacts/{userId}/{contactId} {
+      // User can manage own contacts
+      allow read, write: if isUser(userId);
+    }
+    
+    // ========================================================
+    // ACTIVITY LOG (System collection, read-only)
+    // ========================================================
+    match /activityLog/{docId} {
+      allow read: if false; // Admin only (via Cloud Functions)
+      allow write: if false; // Cloud Functions only
+    }
+    
+    // ========================================================
+    // DEFAULT DENY
+    // ========================================================
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

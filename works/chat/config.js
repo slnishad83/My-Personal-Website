@@ -47,6 +47,15 @@ window.addEventListener("beforeunload", () => {
 });
 
 const db = firebase.firestore();
+    // Firestore offline persistence — shows cached messages when offline.
+    // Must be called before any other Firestore operations.
+    db.enablePersistence({ synchronizeTabs: true }).catch(function(err) {
+    if (err.code === 'failed-precondition') {
+      console.warn('[Firestore] Offline persistence unavailable (multiple tabs open).');
+    } else if (err.code === 'unimplemented') {
+      console.warn('[Firestore] Offline persistence not supported in this browser.');
+    }
+    });
 const storage = firebase.storage();
 const isNativeAndroidApp =
   window.Capacitor?.isNativePlatform?.() === true &&

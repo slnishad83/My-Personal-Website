@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>You're Offline - Team Chat</title>
+  <link rel="stylesheet" href="../styles/design-system.css">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: var(--font-family-base);
+      background: var(--color-bg-primary);
+      color: var(--color-text-primary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: var(--space-4);
+    }
+    
+    .offline-container {
+      text-align: center;
+      max-width: 400px;
+    }
+    
+    .offline-icon {
+      width: 120px;
+      height: 120px;
+      margin: 0 auto var(--space-6);
+      opacity: 0.6;
+    }
+    
+    h1 {
+      font-size: var(--font-size-2xl);
+      margin-bottom: var(--space-3);
+      color: var(--color-text-primary);
+    }
+    
+    p {
+      font-size: var(--font-size-base);
+      color: var(--color-text-secondary);
+      line-height: var(--line-height-relaxed);
+      margin-bottom: var(--space-4);
+    }
+    
+    .status-indicator {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-2);
+      padding: var(--space-2) var(--space-4);
+      background: var(--color-bg-secondary);
+      border-radius: var(--radius-md);
+      margin-top: var(--space-4);
+    }
+    
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--color-offline);
+      animation: pulse 2s infinite;
+    }
+    
+    .status-text {
+      font-size: var(--font-size-sm);
+      color: var(--color-text-secondary);
+    }
+    
+    .features {
+      margin-top: var(--space-8);
+      text-align: left;
+    }
+    
+    .features h3 {
+      font-size: var(--font-size-md);
+      margin-bottom: var(--space-4);
+      text-align: center;
+    }
+    
+    .feature-list {
+      list-style: none;
+    }
+    
+    .feature-list li {
+      padding: var(--space-3) 0;
+      border-bottom: 1px solid var(--color-border);
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+      font-size: var(--font-size-sm);
+    }
+    
+    .feature-list li:last-child {
+      border-bottom: none;
+    }
+    
+    .feature-icon {
+      font-size: var(--font-size-lg);
+      min-width: 20px;
+    }
+    
+    .retry-button {
+      margin-top: var(--space-6);
+      padding: var(--space-3) var(--space-6);
+      background: var(--color-primary);
+      color: var(--color-text-inverted);
+      border: none;
+      border-radius: var(--radius-md);
+      font-size: var(--font-size-base);
+      font-weight: var(--font-weight-semibold);
+      cursor: pointer;
+      transition: background var(--transition-base) var(--easing-ease-out);
+    }
+    
+    .retry-button:hover {
+      background: var(--color-primary-dark);
+    }
+    
+    @keyframes pulse {
+      0%, 100% {
+        opacity: 1;
+      }
+      50% {
+        opacity: 0.5;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="offline-container">
+    <svg class="offline-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <path d="M1 9l2 2c4.97-4.97 13.03-4.97 18 0l2-2M3 11l2 2c3.9-3.9 10.2-3.9 14.2 0l2-2M9 5l2 2c0 0 2-2 4-2s4 2 4 2l2-2"/>
+    </svg>
+    
+    <h1>You're Offline</h1>
+    <p>It looks like you've lost your internet connection. But don't worry! Team Chat works offline too.</p>
+    
+    <div class="status-indicator">
+      <div class="status-dot"></div>
+      <span class="status-text">Waiting for connection...</span>
+    </div>
+    
+    <div class="features">
+      <h3>You can still:</h3>
+      <ul class="feature-list">
+        <li>
+          <span class="feature-icon">💬</span>
+          <span>View your recent chats and messages</span>
+        </li>
+        <li>
+          <span class="feature-icon">✍️</span>
+          <span>Compose messages (they'll send when you're back online)</span>
+        </li>
+        <li>
+          <span class="feature-icon">🔍</span>
+          <span>Search through your message history</span>
+        </li>
+        <li>
+          <span class="feature-icon">👤</span>
+          <span>View your profile and contacts</span>
+        </li>
+      </ul>
+    </div>
+    
+    <button class="retry-button" onclick="location.reload()">Try to Reconnect</button>
+  </div>
+  
+  <script>
+    // Check for connection periodically
+    setInterval(() => {
+      fetch('/My-Personal-Website/works/chat/index.html', { method: 'HEAD' })
+        .then(() => {
+          // Connection restored
+          location.reload();
+        })
+        .catch(() => {
+          // Still offline
+        });
+    }, 5000);
+  </script>
+</body>
+</html>
