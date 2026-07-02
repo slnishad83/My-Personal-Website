@@ -19,11 +19,32 @@
 
   function applyTheme(theme) {
     document.documentElement.dataset.theme = theme;
-    document.body.classList.toggle("dark", theme === "dark");
+    var isDark = theme === "dark";
+    document.body.classList.toggle("dark", isDark);
+
+    // Sync theme-color meta tag for PWA and mobile address bar
+    var tm = document.querySelector('meta[name="theme-color"]');
+    if (!tm) {
+      tm = document.createElement('meta');
+      tm.name = 'theme-color';
+      document.head.appendChild(tm);
+    }
+    tm.content = isDark ? '#0b141a' : '#008069';
+
+    // Sync apple status bar style
+    var apple = document.querySelector('meta[name="apple-mobile-web-app-status-bar-style"]');
+    if (!apple) {
+      apple = document.createElement('meta');
+      apple.name = 'apple-mobile-web-app-status-bar-style';
+      document.head.appendChild(apple);
+    }
+    apple.content = isDark ? 'black-translucent' : 'default';
   }
 
   window.setThemeMode = function(mode) {
     localStorage.setItem("themeMode", mode);
+    // Keep legacy darkMode item in sync for compatibility with any un-refactored scripts
+    localStorage.setItem("darkMode", String(resolveTheme(mode) === "dark"));
     var theme = resolveTheme(mode);
     applyTheme(theme);
     window.dispatchEvent(new CustomEvent("themechange", { detail: { mode: mode, theme: theme } }));
@@ -31,6 +52,13 @@
 
   window.getThemeMode = function() { return getStoredMode(); };
   window.getCurrentTheme = function() { return document.documentElement.dataset.theme || "light"; };
+  
+  window.toggleDark = function() {
+    var currentMode = window.getThemeMode();
+    var currentTheme = currentMode === "system" ? getSystemTheme() : currentMode;
+    var nextMode = currentTheme === "dark" ? "light" : "dark";
+    window.setThemeMode(nextMode);
+  };
 
   /* Apply initial theme */
   applyTheme(resolveTheme(getStoredMode()));
@@ -64,10 +92,22 @@
   /* Auto-highlight active nav item in bottom nav */
   var bottomNav = document.getElementById("bottomNav");
   if (bottomNav) {
-    var currentPath = location.pathname.split("/").pop() || "index.html";
+    var path = location.pathname;
     bottomNav.querySelectorAll(".nav-item").forEach(function(item) {
       var href = item.getAttribute("href");
-      if (href === currentPath) item.classList.add("active");
+      // Normalize comparison to match paths accurately
+      var cleanHref = href.replace(/^\/?/, '').replace(/\/+$/, '');
+      var cleanPath = path.replace(/^\/?/, '').replace(/\/+$/, '');
+
+      // Special case: works/chat maps to works/chat/index.html or root
+      var isActive = false;
+      if (cleanHref === "works/chat" || cleanHref === "works/chat/index.html" || cleanHref === "index.html") {
+        isActive = (cleanPath === "works/chat" || cleanPath.endsWith("index.html") || cleanPath === "");
+      } else {
+        isActive = cleanPath.endsWith(cleanHref);
+      }
+
+      if (isActive) item.classList.add("active");
       else item.classList.remove("active");
     });
   }

@@ -987,6 +987,30 @@ body.dark .message.my-message .message-bubble {
     grid-column: 2 !important;
   }
 
+  /*
+   * Legacy responsive rules changed these grid panels back to flex.
+   * Keep the mobile sidebar/chat state in this authoritative final layer.
+   */
+  .chat-container:not(.chat-open) #sidebar {
+    display: grid !important;
+    width: 100vw !important;
+    min-width: 0 !important;
+  }
+
+  .chat-container:not(.chat-open) .chat-main {
+    display: none !important;
+  }
+
+  .chat-container.chat-open #sidebar {
+    display: none !important;
+  }
+
+  .chat-container.chat-open .chat-main {
+    display: grid !important;
+    width: 100vw !important;
+    min-width: 0 !important;
+  }
+
   .sidebar-header,
   .chat-header {
     min-height: calc(62px + env(safe-area-inset-top, 0px)) !important;
