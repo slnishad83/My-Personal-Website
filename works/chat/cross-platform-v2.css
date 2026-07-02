@@ -10,7 +10,7 @@
    WHAT THIS FILE FIXES
    ─────────────────────────────────────────────────────────────
    1. Dark mode completeness  — every element in both light and
-      dark themes (body.dark) with correct contrast.
+      dark themes ([data-theme="dark"]) with correct contrast.
    2. Safe-area insets        — notch/Dynamic Island on iOS,
       status bar on Android, home-indicator padding.
    3. Responsive layout       — 320 px up through 1600 px;
@@ -49,7 +49,7 @@
   --panel-left-pad:   max(0px,  var(--safe-left));
   --panel-right-pad:  max(0px,  var(--safe-right));
 
-  /* Dark-mode colour tokens (used by body.dark overrides below) */
+  /* Dark-mode colour tokens (used by [data-theme="dark"] overrides below) */
   --dark-bg:           #0b141a;
   --dark-panel:        #111b21;
   --dark-panel-soft:   #202c33;
@@ -523,8 +523,8 @@ html {
     opacity: 1 !important;
   }
 
-  body.dark .sidebar-header,
-  body.dark .chat-header {
+  [data-theme="dark"] .sidebar-header,
+  [data-theme="dark"] .chat-header {
     background: var(--dark-panel) !important;
   }
 
@@ -564,13 +564,13 @@ html {
 }
 
 /* ────────────────────────────────────────────────────────────
-   11. DARK MODE — COMPREHENSIVE (body.dark)
+   11. DARK MODE — COMPREHENSIVE ([data-theme="dark"])
        Supplements ui-audit.css with every element category
        that is still missing proper dark styles.
    ──────────────────────────────────────────────────────────── */
 
 /* --- 11a. Root background & body ----------------------------- */
-body.dark {
+[data-theme="dark"] {
   background: linear-gradient(var(--dark-bg) 0 128px, var(--dark-bg) 128px 100%) !important;
   color: var(--dark-text) !important;
   --app-bg:    var(--dark-bg);
@@ -585,26 +585,26 @@ body.dark {
   --received:  var(--dark-received);
 }
 
-body.dark .chat-container {
+[data-theme="dark"] .chat-container {
   background: var(--dark-panel) !important;
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.6) !important;
 }
 
 /* --- 11b. Headers ------------------------------------------- */
-body.dark .sidebar-header,
-body.dark .chat-header {
+[data-theme="dark"] .sidebar-header,
+[data-theme="dark"] .chat-header {
   background: rgba(17, 27, 33, 0.92) !important;
   border-color: var(--dark-border) !important;
   color: var(--dark-text) !important;
 }
 
-body.dark .sidebar-header button,
-body.dark .chat-header button {
+[data-theme="dark"] .sidebar-header button,
+[data-theme="dark"] .chat-header button {
   color: var(--dark-muted-strong) !important;
 }
 
-body.dark .sidebar-header button:hover,
-body.dark .chat-header button:hover {
+[data-theme="dark"] .sidebar-header button:hover,
+[data-theme="dark"] .chat-header button:hover {
   background: var(--dark-panel-hover) !important;
   color: var(--dark-text) !important;
 }
@@ -612,398 +612,398 @@ body.dark .chat-header button:hover {
 /* --- 11c. SVG-icon buttons in header (::before bg-image) ----- */
 /* These use data-URI SVGs with hardcoded stroke colours.
    We invert them slightly in dark mode via CSS filter. */
-body.dark #voiceCallBtn::before,
-body.dark #videoCallBtn::before,
-body.dark #searchChatBtn::before,
-body.dark #groupInfoBtn::before,
-body.dark #wallpaperBtn::before,
-body.dark #logoutBtn::before,
-body.dark #selectModeBtn::before,
-body.dark #chatMoreBtn::before,
-body.dark .list-item-menu.mute-chat-btn::before,
-body.dark .list-item-menu.archive-chat-btn::before,
-body.dark .list-item-menu.unarchive-btn::before {
+[data-theme="dark"] #voiceCallBtn::before,
+[data-theme="dark"] #videoCallBtn::before,
+[data-theme="dark"] #searchChatBtn::before,
+[data-theme="dark"] #groupInfoBtn::before,
+[data-theme="dark"] #wallpaperBtn::before,
+[data-theme="dark"] #logoutBtn::before,
+[data-theme="dark"] #selectModeBtn::before,
+[data-theme="dark"] #chatMoreBtn::before,
+[data-theme="dark"] .list-item-menu.mute-chat-btn::before,
+[data-theme="dark"] .list-item-menu.archive-chat-btn::before,
+[data-theme="dark"] .list-item-menu.unarchive-btn::before {
   filter: brightness(1.9) saturate(0);
 }
 
 /* --- 11d. Search box ---------------------------------------- */
-body.dark .search-box {
+[data-theme="dark"] .search-box {
   background: var(--dark-panel) !important;
   border-color: var(--dark-border) !important;
 }
 
-body.dark .search-box input {
+[data-theme="dark"] .search-box input {
   background: var(--dark-input-bg) !important;
   color: var(--dark-text) !important;
   border-color: var(--dark-border-soft) !important;
 }
 
-body.dark .search-box::before,
-body.dark .search-box::after {
+[data-theme="dark"] .search-box::before,
+[data-theme="dark"] .search-box::after {
   border-color: var(--dark-muted) !important;
   background:   var(--dark-muted) !important;
 }
 
-body.dark .search-box input::placeholder {
+[data-theme="dark"] .search-box input::placeholder {
   color: var(--dark-muted) !important;
 }
 
 /* --- 11e. Message bubbles ----------------------------------- */
-body.dark .message-sent .bubble {
+[data-theme="dark"] .message-sent .bubble {
   background: var(--dark-sent) !important;
   color: var(--dark-text) !important;
 }
 
-body.dark .message-received .bubble {
+[data-theme="dark"] .message-received .bubble {
   background: var(--dark-received) !important;
   color: var(--dark-text) !important;
 }
 
-body.dark .message-time,
-body.dark .bubble-time {
+[data-theme="dark"] .message-time,
+[data-theme="dark"] .bubble-time {
   color: var(--dark-muted) !important;
 }
 
 /* Tick icons in sent messages */
-body.dark .tick-icon {
+[data-theme="dark"] .tick-icon {
   filter: brightness(1.6) !important;
 }
 
 /* --- 11f. Input area ---------------------------------------- */
-body.dark .message-input-row,
-body.dark .compose-area,
-body.dark .chat-footer {
+[data-theme="dark"] .message-input-row,
+[data-theme="dark"] .compose-area,
+[data-theme="dark"] .chat-footer {
   background: var(--dark-panel) !important;
   border-color: var(--dark-border) !important;
 }
 
-body.dark #messageInput,
-body.dark [contenteditable="true"].message-input {
+[data-theme="dark"] #messageInput,
+[data-theme="dark"] [contenteditable="true"].message-input {
   background:   var(--dark-input-bg) !important;
   color:        var(--dark-text) !important;
   border-color: var(--dark-border-soft) !important;
 }
 
-body.dark #messageInput::placeholder {
+[data-theme="dark"] #messageInput::placeholder {
   color: var(--dark-muted) !important;
 }
 
-body.dark .emoji-btn,
-body.dark .attach-btn,
-body.dark .voice-msg-btn {
+[data-theme="dark"] .emoji-btn,
+[data-theme="dark"] .attach-btn,
+[data-theme="dark"] .voice-msg-btn {
   color: var(--dark-muted-strong) !important;
 }
 
-body.dark .send-btn {
+[data-theme="dark"] .send-btn {
   background: var(--brand) !important;
   color: #fff !important;
 }
 
 /* --- 11g. Tabs (bottom navigation) -------------------------- */
-body.dark .tabs {
+[data-theme="dark"] .tabs {
   background: var(--dark-panel) !important;
   border-color: var(--dark-border) !important;
 }
 
-body.dark .tab-btn {
+[data-theme="dark"] .tab-btn {
   color: var(--dark-muted) !important;
 }
 
-body.dark .tab-btn.active,
-body.dark .tab-btn[aria-selected="true"] {
+[data-theme="dark"] .tab-btn.active,
+[data-theme="dark"] .tab-btn[aria-selected="true"] {
   color: var(--brand) !important;
 }
 
-body.dark .tab-btn.active .tab-icon,
-body.dark .tab-btn[aria-selected="true"] .tab-icon {
+[data-theme="dark"] .tab-btn.active .tab-icon,
+[data-theme="dark"] .tab-btn[aria-selected="true"] .tab-icon {
   filter: none !important;
 }
 
 /* --- 11h. Timestamps / date dividers ------------------------ */
-body.dark .message-date-divider,
-body.dark .date-label {
+[data-theme="dark"] .message-date-divider,
+[data-theme="dark"] .date-label {
   background: var(--dark-panel-soft) !important;
   color: var(--dark-muted-strong) !important;
 }
 
 /* --- 11i. Reply preview bar --------------------------------- */
-body.dark .reply-bar,
-body.dark .reply-preview {
+[data-theme="dark"] .reply-bar,
+[data-theme="dark"] .reply-preview {
   background: var(--dark-panel-soft) !important;
   border-color: var(--brand) !important;
   color: var(--dark-text) !important;
 }
 
-body.dark .reply-bar .reply-cancel,
-body.dark .reply-preview .close-reply {
+[data-theme="dark"] .reply-bar .reply-cancel,
+[data-theme="dark"] .reply-preview .close-reply {
   color: var(--dark-muted-strong) !important;
 }
 
 /* --- 11j. Unread badge / counter ---------------------------- */
-body.dark .unread-badge,
-body.dark .badge {
+[data-theme="dark"] .unread-badge,
+[data-theme="dark"] .badge {
   background: var(--brand) !important;
   color: #fff !important;
 }
 
-body.dark .muted-badge {
+[data-theme="dark"] .muted-badge {
   background: var(--dark-muted) !important;
   color: var(--dark-panel) !important;
 }
 
 /* --- 11k. Toasts & banners ---------------------------------- */
-body.dark .toast,
-body.dark .offline-banner {
+[data-theme="dark"] .toast,
+[data-theme="dark"] .offline-banner {
   background: var(--dark-panel-soft) !important;
   color: var(--dark-text) !important;
   border-color: var(--dark-border) !important;
   box-shadow: 0 4px 16px rgba(0,0,0,0.5) !important;
 }
 
-body.dark .offline-banner {
+[data-theme="dark"] .offline-banner {
   background: #7f1d1d !important;
   color: #fecaca !important;
 }
 
 /* --- 11l. Loading / splash screen --------------------------- */
-body.dark .loading-screen {
+[data-theme="dark"] .loading-screen {
   background: var(--dark-bg) !important;
   color: var(--dark-text) !important;
 }
 
-body.dark .loading-screen .loading-header {
+[data-theme="dark"] .loading-screen .loading-header {
   background: var(--brand-dark) !important;
 }
 
 /* --- 11m. Context / right-click menu ----------------------- */
-body.dark .context-menu,
-body.dark .message-context-menu {
+[data-theme="dark"] .context-menu,
+[data-theme="dark"] .message-context-menu {
   background: var(--dark-panel) !important;
   border-color: var(--dark-border-soft) !important;
   box-shadow: 0 8px 24px rgba(0,0,0,0.55) !important;
 }
 
-body.dark .context-menu-separator {
+[data-theme="dark"] .context-menu-separator {
   background: var(--dark-border) !important;
 }
 
 /* --- 11n. Emoji picker -------------------------------------- */
-body.dark .emoji-picker {
+[data-theme="dark"] .emoji-picker {
   background: var(--dark-panel) !important;
   border-color: var(--dark-border) !important;
 }
 
-body.dark .emoji-category-tab {
+[data-theme="dark"] .emoji-category-tab {
   color: var(--dark-muted) !important;
 }
 
-body.dark .emoji-category-tab.active {
+[data-theme="dark"] .emoji-category-tab.active {
   color: var(--brand) !important;
   border-color: var(--brand) !important;
 }
 
-body.dark .emoji-search {
+[data-theme="dark"] .emoji-search {
   background:   var(--dark-input-bg) !important;
   color:        var(--dark-text) !important;
   border-color: var(--dark-border-soft) !important;
 }
 
 /* --- 11o. Attachment menu ----------------------------------- */
-body.dark .attachment-sheet {
+[data-theme="dark"] .attachment-sheet {
   background: var(--dark-panel) !important;
   border-color: var(--dark-border) !important;
 }
 
-body.dark .attach-option-label {
+[data-theme="dark"] .attach-option-label {
   color: var(--dark-muted-strong) !important;
 }
 
 /* --- 11p. Format bar (bold/italic etc) --------------------- */
-body.dark .format-bar {
+[data-theme="dark"] .format-bar {
   background: var(--dark-panel-soft) !important;
   border-color: var(--dark-border) !important;
 }
 
-body.dark .format-btn {
+[data-theme="dark"] .format-btn {
   color: var(--dark-muted-strong) !important;
 }
 
-body.dark .format-btn.active {
+[data-theme="dark"] .format-btn.active {
   color: var(--brand) !important;
   background: rgba(0, 168, 132, 0.15) !important;
 }
 
 /* --- 11q. Install / PWA banner ----------------------------- */
-body.dark .install-banner,
-body.dark .pwa-install-bar {
+[data-theme="dark"] .install-banner,
+[data-theme="dark"] .pwa-install-bar {
   background: var(--dark-panel-soft) !important;
   border-color: var(--dark-border) !important;
   color: var(--dark-text) !important;
 }
 
 /* --- 11r. Recording UI ------------------------------------- */
-body.dark .recording-bar {
+[data-theme="dark"] .recording-bar {
   background: var(--dark-panel) !important;
   color: var(--dark-text) !important;
   border-color: var(--dark-border) !important;
 }
 
-body.dark .recording-timer {
+[data-theme="dark"] .recording-timer {
   color: #ef4444 !important;
 }
 
 /* --- 11s. View-once toggle ---------------------------------- */
-body.dark .view-once-toggle {
+[data-theme="dark"] .view-once-toggle {
   color: var(--dark-muted-strong) !important;
 }
 
-body.dark .view-once-toggle.active {
+[data-theme="dark"] .view-once-toggle.active {
   color: var(--brand) !important;
 }
 
 /* --- 11t. Scroll-to-bottom button -------------------------- */
-body.dark .scroll-to-bottom-btn,
-body.dark #scrollToBottomBtn {
+[data-theme="dark"] .scroll-to-bottom-btn,
+[data-theme="dark"] #scrollToBottomBtn {
   background: var(--dark-panel-soft) !important;
   border-color: var(--dark-border) !important;
   color: var(--dark-muted-strong) !important;
 }
 
 /* --- 11u. Empty / placeholder state ------------------------ */
-body.dark .home-panel,
-body.dark .empty-state {
+[data-theme="dark"] .home-panel,
+[data-theme="dark"] .empty-state {
   background: var(--dark-panel) !important;
   color: var(--dark-muted) !important;
 }
 
-body.dark .home-panel h3,
-body.dark .empty-state h3 {
+[data-theme="dark"] .home-panel h3,
+[data-theme="dark"] .empty-state h3 {
   color: var(--dark-text) !important;
 }
 
 /* --- 11v. App lock screen ---------------------------------- */
-body.dark .lock-screen,
-body.dark .lock-modal,
-body.dark .app-lock-overlay {
+[data-theme="dark"] .lock-screen,
+[data-theme="dark"] .lock-modal,
+[data-theme="dark"] .app-lock-overlay {
   background: var(--dark-bg) !important;
   color: var(--dark-text) !important;
 }
 
-body.dark .pin-input {
+[data-theme="dark"] .pin-input {
   background: var(--dark-input-bg) !important;
   border-color: var(--dark-border-soft) !important;
   color: var(--dark-text) !important;
 }
 
 /* --- 11w. Inline media (voice notes, images) --------------- */
-body.dark .voice-note-player {
+[data-theme="dark"] .voice-note-player {
   background: var(--dark-panel-soft) !important;
   border-color: var(--dark-border) !important;
 }
 
-body.dark .voice-waveform-bar {
+[data-theme="dark"] .voice-waveform-bar {
   background: var(--dark-border-soft) !important;
 }
 
-body.dark .voice-waveform-bar.played {
+[data-theme="dark"] .voice-waveform-bar.played {
   background: var(--brand) !important;
 }
 
 /* --- 11x. Theme toggle (system / light / dark) ------------- */
-body.dark .theme-option {
+[data-theme="dark"] .theme-option {
   background: var(--dark-panel-soft) !important;
   border-color: var(--dark-border) !important;
   color: var(--dark-text) !important;
 }
 
-body.dark .theme-option.active {
+[data-theme="dark"] .theme-option.active {
   border-color: var(--brand) !important;
   background: rgba(0,168,132,0.15) !important;
 }
 
 /* --- 11y. Notification preference cards -------------------- */
-body.dark .notif-pref-card {
+[data-theme="dark"] .notif-pref-card {
   background: var(--dark-panel-soft) !important;
   border-color: var(--dark-border) !important;
   color: var(--dark-text) !important;
 }
 
 /* --- 11z. Shared media tabs -------------------------------- */
-body.dark .shared-tabs {
+[data-theme="dark"] .shared-tabs {
   background: var(--dark-panel) !important;
   border-color: var(--dark-border) !important;
 }
 
-body.dark .shared-tab-btn {
+[data-theme="dark"] .shared-tab-btn {
   color: var(--dark-muted) !important;
 }
 
-body.dark .shared-tab-btn.active {
+[data-theme="dark"] .shared-tab-btn.active {
   color: var(--brand) !important;
   border-color: var(--brand) !important;
 }
 
 /* ────────────────────────────────────────────────────────────
    12. AUTO DARK MODE VIA OS PREFERENCE
-       If the app does not yet apply body.dark based on
+       If the app does not yet apply [data-theme="dark"] based on
        prefers-color-scheme, this block acts as a safety net.
-       It is overridden whenever body.dark (or body.light) is
+       It is overridden whenever [data-theme="dark"] (or [data-theme="light"]) is
        explicitly set by JS.
    ──────────────────────────────────────────────────────────── */
 @media (prefers-color-scheme: dark) {
-  body:not(.light) {
+  html:not([data-theme="light"]) {
     background: linear-gradient(#0b141a 0 128px, #0b141a 128px 100%) !important;
     color: #e9edef !important;
   }
 
-  body:not(.light) .chat-container {
+  html:not([data-theme="light"]) .chat-container {
     background: #111b21 !important;
   }
 
-  body:not(.light) .sidebar,
-  body:not(.light) .chat-main {
+  html:not([data-theme="light"]) .sidebar,
+  html:not([data-theme="light"]) .chat-main {
     background: #111b21 !important;
     color: #e9edef !important;
   }
 
-  body:not(.light) .sidebar-header,
-  body:not(.light) .chat-header {
+  html:not([data-theme="light"]) .sidebar-header,
+  html:not([data-theme="light"]) .chat-header {
     background: rgba(17, 27, 33, 0.92) !important;
     border-color: #2f3f48 !important;
   }
 
-  body:not(.light) .tabs {
+  html:not([data-theme="light"]) .tabs {
     background: #111b21 !important;
     border-color: #2f3f48 !important;
   }
 
-  body:not(.light) .list-item {
+  html:not([data-theme="light"]) .list-item {
     background: #111b21 !important;
     color: #e9edef !important;
     border-color: #2f3f48 !important;
   }
 
-  body:not(.light) .list-item:hover,
-  body:not(.light) .list-item.active {
+  html:not([data-theme="light"]) .list-item:hover,
+  html:not([data-theme="light"]) .list-item.active {
     background: #202c33 !important;
   }
 
-  body:not(.light) .message-sent .bubble {
+  html:not([data-theme="light"]) .message-sent .bubble {
     background: #005c4b !important;
   }
 
-  body:not(.light) .message-received .bubble {
+  html:not([data-theme="light"]) .message-received .bubble {
     background: #202c33 !important;
     color: #e9edef !important;
   }
 
-  body:not(.light) #messageInput,
-  body:not(.light) [contenteditable="true"] {
+  html:not([data-theme="light"]) #messageInput,
+  html:not([data-theme="light"]) [contenteditable="true"] {
     background: #2a3942 !important;
     color: #e9edef !important;
   }
 
-  body:not(.light) .modal-content {
+  html:not([data-theme="light"]) .modal-content {
     background: #111b21 !important;
     color: #e9edef !important;
   }
@@ -1011,13 +1011,13 @@ body.dark .shared-tab-btn.active {
 
 /* ────────────────────────────────────────────────────────────
    13. LIGHT MODE — EXPLICIT OVERRIDES
-       Applied only when body.light is set by JS. This avoids
+       Applied only when [data-theme="light"] is set by JS. This avoids
        overriding the prefers-color-scheme dark fallback in §12,
-       which applies to body:not(.light). Never use body:not(.dark)
+       which applies to html:not([data-theme="light"]). Never use html:not([data-theme="dark"])
        here — that selector wins over the OS dark fallback because
        it appears later in the cascade.
    ──────────────────────────────────────────────────────────── */
-body.light {
+[data-theme="light"] {
   background: linear-gradient(#008069 0 128px, #d1d7db 128px 100%) !important;
   color: #111b21 !important;
   --panel: #ffffff;
@@ -1027,8 +1027,8 @@ body.light {
   --muted: #667781;
 }
 
-body.light .sidebar,
-body.light .chat-main {
+[data-theme="light"] .sidebar,
+[data-theme="light"] .chat-main {
   background: #ffffff !important;
   color: #111b21 !important;
 }
@@ -1095,10 +1095,10 @@ textarea:focus-visible,
 
   /* Theme colour bar — match header background */
   /* (set via <meta name="theme-color"> but also via CSS for PWA chrome) */
-  body:not(.dark) {
+  html:not([data-theme="dark"]) {
     --pwa-header-bg: #008069;
   }
-  body.dark {
+  [data-theme="dark"] {
     --pwa-header-bg: #111b21;
   }
 
