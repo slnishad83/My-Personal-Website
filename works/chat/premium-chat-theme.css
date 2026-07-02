@@ -1,0 +1,336 @@
+/* ================================================================
+   MY TEAM CHAT — 2026 PREMIUM VISUAL THEME OVERLAY
+   premium-chat-theme.css
+   ================================================================ */
+
+:root {
+  /* Premium Light Theme Custom HSL Palette */
+  --p-brand-h: 168;
+  --p-brand-s: 100%;
+  --p-brand-l: 33%; /* #008069 */
+  
+  --p-accent-h: 168;
+  --p-accent-s: 100%;
+  --p-accent-l: 43%; /* #00a884 */
+  
+  --p-brand: HSL(var(--p-brand-h), var(--p-brand-s), var(--p-brand-l));
+  --p-brand-glow: 0 8px 24px rgba(0, 168, 132, 0.18);
+  --p-brand-gradient: linear-gradient(135deg, HSL(var(--p-brand-h), var(--p-brand-s), var(--p-brand-l)) 0%, HSL(var(--p-accent-h), var(--p-accent-s), var(--p-accent-l)) 100%);
+  
+  /* Layout Spacing Details */
+  --p-r-bubble: 16px;
+  --p-r-panel: 20px;
+  
+  /* Custom scrollbar colors */
+  --p-scrollbar-thumb: rgba(0, 168, 132, 0.2);
+  --p-scrollbar-thumb-hover: rgba(0, 168, 132, 0.45);
+}
+
+/* Dark mode variables */
+:root[data-theme="dark"],
+body.dark {
+  --p-brand-l: 43%; /* Brighter teal for dark mode contrast */
+  --p-scrollbar-thumb: rgba(255, 255, 255, 0.12);
+  --p-scrollbar-thumb-hover: rgba(255, 255, 255, 0.28);
+}
+
+/* ── 1. Minimalist Custom Scrollbar ── */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--p-scrollbar-thumb);
+  border-radius: 20px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--p-scrollbar-thumb-hover);
+}
+
+/* ── 2. Glassmorphism Headers ── */
+.header,
+.app-header,
+.chat-header,
+#chatHeader {
+  background: rgba(255, 255, 255, 0.72) !important;
+  -webkit-backdrop-filter: blur(20px) !important;
+  backdrop-filter: blur(20px) !important;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05) !important;
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.02) !important;
+  color: var(--text) !important;
+}
+
+body.dark .header,
+body.dark .app-header,
+body.dark .chat-header,
+body.dark #chatHeader {
+  background: rgba(17, 28, 35, 0.76) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06) !important;
+}
+
+/* Make header titles look more premium */
+.header h1,
+.app-header h1,
+.chat-title {
+  font-family: 'Inter', sans-serif;
+  font-weight: 700 !important;
+  letter-spacing: -0.4px;
+}
+
+/* Ensure back and search header buttons match */
+.header-action,
+.back-btn,
+.icon-btn {
+  color: var(--text-secondary) !important;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.header-action:hover,
+.back-btn:hover {
+  color: var(--p-brand) !important;
+  background: rgba(0, 168, 132, 0.08) !important;
+}
+
+/* ── 3. Premium Floating Search Bar ── */
+.search-box {
+  background: transparent !important;
+  padding: 10px 16px !important;
+}
+.search-box input,
+#searchInput {
+  background: var(--panel-soft) !important;
+  border: 1.5px solid transparent !important;
+  border-radius: 24px !important;
+  padding: 10px 16px 10px 42px !important;
+  font-family: 'Inter', sans-serif;
+  font-size: 13.5px !important;
+  transition: all 0.25s ease !important;
+  color: var(--text) !important;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.02);
+}
+.search-box input:focus,
+#searchInput:focus {
+  background: var(--panel) !important;
+  border-color: var(--p-brand) !important;
+  box-shadow: 0 0 0 4px rgba(0, 168, 132, 0.12) !important;
+}
+
+/* ── 4. Elegant Sidebar Tabs ── */
+.tabs.primary-tabs {
+  background: var(--panel) !important;
+  border-bottom: 1px solid var(--border-soft) !important;
+  padding: 2px 8px !important;
+  gap: 4px;
+}
+.tabs.primary-tabs .tab {
+  border-radius: 12px !important;
+  padding: 8px 12px !important;
+  font-size: 12.5px !important;
+  font-weight: 600 !important;
+  transition: all 0.2s ease !important;
+  color: var(--text-secondary) !important;
+  border: none !important;
+  background: transparent !important;
+}
+.tabs.primary-tabs .tab:hover {
+  background: var(--panel-hover) !important;
+  color: var(--p-brand) !important;
+}
+.tabs.primary-tabs .tab.active {
+  background: rgba(0, 168, 132, 0.08) !important;
+  color: var(--p-brand) !important;
+}
+
+/* ── 5. Polished Chat List Items ── */
+.chat-item {
+  border-radius: 14px !important;
+  margin: 4px 10px !important;
+  padding: 12px 14px !important;
+  transition: all 0.22s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  border: none !important;
+  background: transparent;
+}
+.chat-item:hover {
+  background: var(--panel-hover) !important;
+  transform: translateY(-1px);
+}
+.chat-item.active {
+  background: var(--panel-active) !important;
+  box-shadow: 0 4px 12px rgba(0, 168, 132, 0.06);
+  position: relative;
+}
+.chat-item.active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 14px;
+  bottom: 14px;
+  width: 4px;
+  background: var(--p-brand);
+  border-radius: 0 4px 4px 0;
+}
+
+/* Modern Chat Item Avatars */
+.chat-item .avatar,
+.avatar {
+  border-radius: 16px !important; /* Squircle design */
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  transition: transform 0.2s ease;
+}
+.chat-item:hover .avatar {
+  transform: scale(1.05);
+}
+
+.chat-item .chat-name {
+  font-weight: 600 !important;
+  font-size: 14px !important;
+  color: var(--text) !important;
+}
+.chat-item .chat-last-msg {
+  font-size: 12.5px !important;
+  color: var(--text-secondary) !important;
+}
+
+/* ── 6. Ultra-Premium Dot-Grid Chat Wallpaper ── */
+.messages-area,
+#messagesArea {
+  background-color: var(--bg-chat) !important;
+  background-image: radial-gradient(rgba(0, 168, 132, 0.08) 1px, transparent 1px), radial-gradient(rgba(0, 168, 132, 0.08) 1px, transparent 1px) !important;
+  background-size: 24px 24px !important;
+  background-position: 0 0, 12px 12px !important;
+  padding: 24px 20px !important;
+}
+
+body.dark .messages-area,
+body.dark #messagesArea {
+  background-color: #0b141a !important;
+  background-image: radial-gradient(rgba(0, 168, 132, 0.12) 1.2px, transparent 1.2px) !important;
+  background-size: 20px 20px !important;
+  background-position: center;
+}
+
+/* ── 7. Asymmetric Message Bubbles ── */
+.message {
+  margin-bottom: 12px !important;
+}
+
+.message-bubble {
+  border-radius: var(--p-r-bubble) var(--p-r-bubble) var(--p-r-bubble) 4px !important;
+  padding: 10px 14px !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04) !important;
+  font-size: 13.5px !important;
+  line-height: 1.5 !important;
+  border: 1px solid rgba(0, 0, 0, 0.02) !important;
+  transition: all 0.2s ease;
+}
+
+/* Sent message override */
+.my-message .message-bubble,
+.message.my-message .message-bubble {
+  background: var(--p-brand-gradient) !important;
+  color: #ffffff !important;
+  border-radius: var(--p-r-bubble) var(--p-r-bubble) 4px var(--p-r-bubble) !important;
+  box-shadow: var(--p-brand-glow) !important;
+  border: none !important;
+}
+
+.my-message .message-bubble .message-text,
+.message.my-message .message-bubble .message-text {
+  color: #ffffff !important;
+}
+
+.my-message .message-bubble .message-time,
+.message.my-message .message-bubble .message-time {
+  color: rgba(255, 255, 255, 0.72) !important;
+}
+
+/* Received message override */
+.message:not(.my-message) .message-bubble {
+  background: var(--panel) !important;
+  color: var(--text) !important;
+  border: 1px solid rgba(0,0,0,0.04) !important;
+}
+
+body.dark .message:not(.my-message) .message-bubble {
+  background: #1f2c34 !important;
+  border: 1px solid rgba(255, 255, 255, 0.02) !important;
+}
+
+/* ── 8. Glassmorphic Input Composer ── */
+.input-area,
+.chat-input-container {
+  background: rgba(255, 255, 255, 0.8) !important;
+  -webkit-backdrop-filter: blur(20px) !important;
+  backdrop-filter: blur(20px) !important;
+  padding: 12px 18px !important;
+  border-top: 1px solid rgba(0, 0, 0, 0.04) !important;
+}
+
+body.dark .input-area,
+body.dark .chat-input-container {
+  background: rgba(17, 28, 35, 0.85) !important;
+  border-top: 1px solid rgba(255, 255, 255, 0.05) !important;
+}
+
+.wa-composer-shell {
+  background: var(--panel) !important;
+  border: 1.5px solid var(--border-soft) !important;
+  border-radius: 26px !important;
+  padding: 6px 14px !important;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.03) !important;
+  transition: all 0.25s ease;
+}
+
+.wa-composer-shell:focus-within {
+  border-color: var(--p-brand) !important;
+  box-shadow: 0 4px 20px rgba(0, 168, 132, 0.08) !important;
+}
+
+body.dark .wa-composer-shell {
+  background: #2a3942 !important;
+  border: 1.5px solid transparent !important;
+}
+
+#messageInput {
+  font-family: 'Inter', sans-serif;
+  font-size: 13.5px !important;
+  color: var(--text) !important;
+}
+
+/* Send button styling */
+.send-btn,
+.voice-msg-btn {
+  background: var(--p-brand) !important;
+  color: #fff !important;
+  width: 44px !important;
+  height: 44px !important;
+  border-radius: 50% !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  box-shadow: var(--p-brand-glow) !important;
+  transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
+  border: none !important;
+}
+.send-btn:hover,
+.voice-msg-btn:hover {
+  transform: scale(1.08);
+  box-shadow: 0 8px 28px rgba(0, 168, 132, 0.3) !important;
+}
+.send-btn:active,
+.voice-msg-btn:active {
+  transform: scale(0.95);
+}
+
+/* Attachment indicators */
+.emoji-btn,
+.attach-btn {
+  color: var(--text-secondary) !important;
+  transition: color 0.2s ease;
+}
+.emoji-btn:hover,
+.attach-btn:hover {
+  color: var(--p-brand) !important;
+}
