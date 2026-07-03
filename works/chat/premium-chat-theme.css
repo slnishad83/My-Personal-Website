@@ -1,266 +1,276 @@
 /* ================================================================
-   MY TEAM CHAT — 2026 PREMIUM VISUAL THEME OVERLAY
+   MY TEAM CHAT — 2026 PREMIUM "NEXUS" CYBER-TECH VISUAL THEME
    premium-chat-theme.css
    ================================================================ */
 
 :root {
-  /* Premium Light Theme Custom HSL Palette */
-  --p-brand-h: 168;
-  --p-brand-s: 100%;
-  --p-brand-l: 33%; /* #008069 */
+  /* Nexus Light Theme Palette (Screenshots 1, 2, 3 in Light Mode) */
+  --n-bg:              #f4f6f9;
+  --n-bg-chat:         #f8fafc;
+  --n-panel:           #ffffff;
+  --n-panel-soft:      #f1f5f9;
+  --n-panel-hover:     #f8fafc;
+  --n-panel-active:    #e6fbf7;
+  --n-border:          rgba(0, 184, 148, 0.12);
+  --n-border-soft:     rgba(0, 0, 0, 0.04);
+  --n-text:            #0f172a;
+  --n-text-muted:      #64748b;
   
-  --p-accent-h: 168;
-  --p-accent-s: 100%;
-  --p-accent-l: 43%; /* #00a884 */
+  /* Light Mode Bubble Customization */
+  --n-bubble-sent:     #006d58; /* Deep emerald green */
+  --n-bubble-sent-text: #ffffff;
+  --n-bubble-sent-border: none;
+  --n-bubble-sent-left-border: none;
   
-  --p-brand: HSL(var(--p-brand-h), var(--p-brand-s), var(--p-brand-l));
-  --p-brand-glow: 0 8px 24px rgba(0, 168, 132, 0.18);
-  --p-brand-gradient: linear-gradient(135deg, HSL(var(--p-brand-h), var(--p-brand-s), var(--p-brand-l)) 0%, HSL(var(--p-accent-h), var(--p-accent-s), var(--p-accent-l)) 100%);
+  --n-bubble-recv:     #f1f3f5; /* Light grey */
+  --n-bubble-recv-text: #0f172a;
+  --n-bubble-recv-border: 1px solid rgba(0,0,0,0.03);
   
-  /* Layout Spacing Details */
-  --p-r-bubble: 16px;
-  --p-r-panel: 20px;
+  --n-accent:          #00b894;
+  --n-accent-glow:     0 4px 12px rgba(0, 184, 148, 0.15);
+  --n-accent-light:    #e6fbf7;
   
-  /* Custom scrollbar colors */
-  --p-scrollbar-thumb: rgba(0, 168, 132, 0.2);
-  --p-scrollbar-thumb-hover: rgba(0, 168, 132, 0.45);
+  /* Font Stacks */
+  --n-font:            'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --n-mono:            "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier, monospace;
 }
 
-/* Dark mode variables */
-:root[data-theme="dark"],
+/* Dark Mode Overrides (Screenshots 1, 2, 3, 4 in Dark Mode) */
+[data-theme="dark"],
 body.dark {
-  --p-brand-l: 43%; /* Brighter teal for dark mode contrast */
-  --p-scrollbar-thumb: rgba(255, 255, 255, 0.12);
-  --p-scrollbar-thumb-hover: rgba(255, 255, 255, 0.28);
+  --n-bg:              #080c10; /* Tech Pitch Black */
+  --n-bg-chat:         #0a0e14;
+  --n-panel:           #0f141c; /* Sidebar panel */
+  --n-panel-soft:      #161d28;
+  --n-panel-hover:     #1d2634;
+  --n-panel-active:    #122224;
+  --n-border:          rgba(0, 245, 192, 0.08);
+  --n-border-soft:     rgba(255, 255, 255, 0.06);
+  --n-text:            #f0f4f8;
+  --n-text-muted:      #7a8b9e;
+  
+  /* Dark Mode Bubble Customization */
+  --n-bubble-sent:     #0d171e; /* Dark navy card */
+  --n-bubble-sent-text: #f0f4f8;
+  --n-bubble-sent-border: 1px solid rgba(0, 245, 192, 0.08);
+  --n-bubble-sent-left-border: 3px solid #00f5c0; /* Neon cyan-teal left border strip */
+  
+  --n-bubble-recv:     #16202b; /* Dark charcoal card */
+  --n-bubble-recv-text: #f0f4f8;
+  --n-bubble-recv-border: 1px solid rgba(255, 255, 255, 0.04);
+  
+  --n-accent:          #00f5c0; /* Glowing neon cyan-teal */
+  --n-accent-glow:     0 0 16px rgba(0, 245, 192, 0.35);
+  --n-accent-light:    #122224;
 }
 
-/* ── 1. Minimalist Custom Scrollbar ── */
+/* ── 1. Global Page Base & Typography ── */
+body {
+  background: var(--n-bg) !important;
+  color: var(--n-text) !important;
+  font-family: var(--n-font) !important;
+}
+
+/* Custom Minimal Scrollbars */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
 }
 ::-webkit-scrollbar-track {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: var(--p-scrollbar-thumb);
-  border-radius: 20px;
+  background: rgba(0, 245, 192, 0.15);
+  border-radius: 10px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--p-scrollbar-thumb-hover);
+  background: var(--n-accent);
 }
 
-/* ── 2. Glassmorphism Headers ── */
-.header,
-.app-header,
-.chat-header,
-#chatHeader {
-  background: rgba(255, 255, 255, 0.72) !important;
-  -webkit-backdrop-filter: blur(20px) !important;
-  backdrop-filter: blur(20px) !important;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.05) !important;
-  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.02) !important;
-  color: var(--text) !important;
-}
-
-body.dark .header,
-body.dark .app-header,
-body.dark .chat-header,
-body.dark #chatHeader {
-  background: rgba(17, 28, 35, 0.76) !important;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06) !important;
-}
-
-/* Make header titles look more premium */
-.header h1,
-.app-header h1,
-.chat-title {
-  font-family: 'Inter', sans-serif;
-  font-weight: 700 !important;
-  letter-spacing: -0.4px;
-}
-
-/* Ensure back and search header buttons match */
-.header-action,
-.back-btn,
-.icon-btn {
-  color: var(--text-secondary) !important;
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-}
-.header-action:hover,
-.back-btn:hover {
-  color: var(--p-brand) !important;
-  background: rgba(0, 168, 132, 0.08) !important;
-}
-
-/* ── 3. Premium Floating Search Bar ── */
-.search-box {
-  background: transparent !important;
-  padding: 10px 16px !important;
-}
-.search-box input,
-#searchInput {
-  background: var(--panel-soft) !important;
-  border: 1.5px solid transparent !important;
-  border-radius: 24px !important;
-  padding: 10px 16px 10px 42px !important;
-  font-family: 'Inter', sans-serif;
-  font-size: 13.5px !important;
-  transition: all 0.25s ease !important;
-  color: var(--text) !important;
-  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.02);
-}
-.search-box input:focus,
-#searchInput:focus {
-  background: var(--panel) !important;
-  border-color: var(--p-brand) !important;
-  box-shadow: 0 0 0 4px rgba(0, 168, 132, 0.12) !important;
-}
-
-/* ── 4. Elegant Sidebar Tabs ── */
+/* ── 2. Floating Pill Sidebar Tabs ── */
 .tabs.primary-tabs {
-  background: var(--panel) !important;
-  border-bottom: 1px solid var(--border-soft) !important;
-  padding: 2px 8px !important;
-  gap: 4px;
+  background: var(--n-panel) !important;
+  border-bottom: 1px solid var(--n-border-soft) !important;
+  padding: 10px 14px !important;
+  display: flex !important;
+  gap: 6px !important;
 }
 .tabs.primary-tabs .tab {
-  border-radius: 12px !important;
+  border-radius: 8px !important;
   padding: 8px 12px !important;
-  font-size: 12.5px !important;
-  font-weight: 600 !important;
-  transition: all 0.2s ease !important;
-  color: var(--text-secondary) !important;
-  border: none !important;
-  background: transparent !important;
+  font-size: 11px !important;
+  font-family: var(--n-mono) !important;
+  text-transform: uppercase !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.8px !important;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  background: var(--n-panel-soft) !important;
+  color: var(--n-text-muted) !important;
+  border: 1px solid var(--n-border-soft) !important;
 }
 .tabs.primary-tabs .tab:hover {
-  background: var(--panel-hover) !important;
-  color: var(--p-brand) !important;
+  color: var(--n-accent) !important;
+  border-color: var(--n-accent) !important;
 }
 .tabs.primary-tabs .tab.active {
-  background: rgba(0, 168, 132, 0.08) !important;
-  color: var(--p-brand) !important;
+  background: var(--n-accent) !important;
+  color: #080c10 !important;
+  border-color: var(--n-accent) !important;
+  box-shadow: var(--n-accent-glow) !important;
 }
 
-/* ── 5. Polished Chat List Items ── */
+/* ── 3. High-Tech Sidebar Cards ── */
 .chat-item {
-  border-radius: 14px !important;
-  margin: 4px 10px !important;
-  padding: 12px 14px !important;
+  background: var(--n-panel) !important;
+  border: 1px solid var(--n-border-soft) !important;
+  border-radius: 12px !important;
+  margin: 8px 14px !important;
+  padding: 14px 16px !important;
   transition: all 0.22s cubic-bezier(0.4, 0, 0.2, 1) !important;
-  border: none !important;
-  background: transparent;
 }
 .chat-item:hover {
-  background: var(--panel-hover) !important;
+  border-color: var(--n-accent) !important;
   transform: translateY(-1px);
+  box-shadow: 0 4px 16px rgba(0, 245, 192, 0.04);
 }
 .chat-item.active {
-  background: var(--panel-active) !important;
-  box-shadow: 0 4px 12px rgba(0, 168, 132, 0.06);
+  background: var(--n-panel-active) !important;
+  border-color: var(--n-accent) !important;
   position: relative;
 }
 .chat-item.active::before {
   content: '';
   position: absolute;
   left: 0;
-  top: 14px;
-  bottom: 14px;
-  width: 4px;
-  background: var(--p-brand);
+  top: 12px;
+  bottom: 12px;
+  width: 3px;
+  background: var(--n-accent);
   border-radius: 0 4px 4px 0;
-}
-
-/* Modern Chat Item Avatars */
-.chat-item .avatar,
-.avatar {
-  border-radius: 16px !important; /* Squircle design */
-  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
-  transition: transform 0.2s ease;
-}
-.chat-item:hover .avatar {
-  transform: scale(1.05);
+  box-shadow: var(--n-accent-glow);
 }
 
 .chat-item .chat-name {
+  font-family: var(--n-font) !important;
   font-weight: 600 !important;
   font-size: 14px !important;
-  color: var(--text) !important;
 }
 .chat-item .chat-last-msg {
+  font-family: var(--n-font) !important;
   font-size: 12.5px !important;
-  color: var(--text-secondary) !important;
+  color: var(--n-text-muted) !important;
 }
 
-/* ── 6. Ultra-Premium Dot-Grid Chat Wallpaper ── */
+/* Avatars */
+.chat-item .avatar,
+.avatar {
+  border-radius: 12px !important; /* Premium rounded squircles */
+  border: 1px solid var(--n-border-soft) !important;
+}
+
+/* Floating Action Button (FAB) / New Chat Button */
+.nav-add-tab,
+#moreTabsBtn {
+  background: var(--n-accent) !important;
+  color: #080c10 !important;
+  border-radius: 8px !important;
+  box-shadow: var(--n-accent-glow) !important;
+  font-family: var(--n-mono) !important;
+  font-weight: 700 !important;
+  text-transform: uppercase !important;
+}
+
+/* ── 4. Cyber-Tech Header & Banners ── */
+.header,
+.app-header,
+.chat-header,
+#chatHeader {
+  background: var(--n-panel) !important;
+  border-bottom: 1px solid var(--n-border-soft) !important;
+  color: var(--n-text) !important;
+  box-shadow: none !important;
+}
+
+.chat-header .chat-title {
+  font-family: var(--n-mono) !important;
+  font-weight: 700 !important;
+  text-transform: uppercase !important;
+  letter-spacing: -0.2px;
+}
+.chat-header .chat-status {
+  font-family: var(--n-mono) !important;
+  font-size: 11px !important;
+  color: var(--n-accent) !important;
+  text-transform: uppercase;
+}
+
+/* Monopoly Metadata / System Alerts in Message Flow */
+.system-message,
+.group-description-banner {
+  background: rgba(0, 245, 192, 0.03) !important;
+  border: 1px dashed var(--n-accent) !important;
+  border-radius: 8px !important;
+  font-family: var(--n-mono) !important;
+  font-size: 11px !important;
+  color: var(--n-accent) !important;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 8px 14px !important;
+  text-align: center !important;
+  margin: 16px auto !important;
+  max-width: 90%;
+}
+
+/* ── 5. Message Area Wallpaper Dot-Matrix ── */
 .messages-area,
 #messagesArea {
-  background-color: var(--bg-chat) !important;
-  background-image: radial-gradient(rgba(0, 168, 132, 0.08) 1px, transparent 1px), radial-gradient(rgba(0, 168, 132, 0.08) 1px, transparent 1px) !important;
-  background-size: 24px 24px !important;
-  background-position: 0 0, 12px 12px !important;
-  padding: 24px 20px !important;
-}
-
-body.dark .messages-area,
-body.dark #messagesArea {
-  background-color: #0b141a !important;
-  background-image: radial-gradient(rgba(0, 168, 132, 0.12) 1.2px, transparent 1.2px) !important;
+  background-color: var(--n-bg-chat) !important;
+  background-image: radial-gradient(rgba(0, 245, 192, 0.05) 1.2px, transparent 1.2px) !important;
   background-size: 20px 20px !important;
   background-position: center;
 }
 
-/* ── 7. Asymmetric Message Bubbles & Sizing Fixes ── */
+body:not(.dark) .messages-area,
+body:not(.dark) #messagesArea {
+  background-image: radial-gradient(rgba(0, 184, 148, 0.06) 1px, transparent 1px) !important;
+}
+
+/* ── 6. Asymmetric Border Accent Message Bubbles ── */
 .message {
   display: flex !important;
   width: 100% !important;
   max-width: 100% !important;
-  flex-direction: row !important;
-  align-items: flex-end !important;
   box-sizing: border-box !important;
-  margin-bottom: 12px !important;
-  position: relative !important;
-}
-
-.message.my-message {
-  justify-content: flex-end !important;
-  align-self: flex-end !important;
-}
-
-.message:not(.my-message) {
-  justify-content: flex-start !important;
-  align-self: flex-start !important;
+  margin-bottom: 14px !important;
 }
 
 .message-bubble {
   flex-grow: 0 !important;
-  flex-shrink: 0 !important; /* CRITICAL: Prevent bubble squishing */
+  flex-shrink: 0 !important;
   min-width: 160px !important;
   max-width: 72% !important;
   box-sizing: border-box !important;
-  border-radius: var(--p-r-bubble) var(--p-r-bubble) var(--p-r-bubble) 4px !important;
-  padding: 10px 14px !important;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04) !important;
+  border-radius: 12px !important;
+  padding: 12px 16px !important;
   font-size: 13.5px !important;
   line-height: 1.5 !important;
-  border: 1px solid rgba(0, 0, 0, 0.02) !important;
-  transition: all 0.2s ease;
+  position: relative !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04) !important;
 }
 
-/* Sent message override */
+/* Sent message bubble (Deep Emerald or Dark Navy + Neon accent border) */
 .my-message .message-bubble,
 .message.my-message .message-bubble {
-  background: var(--p-brand-gradient) !important;
-  color: #ffffff !important;
-  border-radius: var(--p-r-bubble) var(--p-r-bubble) 4px var(--p-r-bubble) !important;
-  box-shadow: var(--p-brand-glow) !important;
-  border: none !important;
+  background: var(--n-bubble-sent) !important;
+  color: var(--n-bubble-sent-text) !important;
+  border: var(--n-bubble-sent-border) !important;
+  border-left: var(--n-bubble-sent-left-border) !important;
+  box-shadow: var(--n-accent-glow) !important;
 }
 
 .my-message .message-bubble .message-text,
 .message.my-message .message-bubble .message-text {
-  color: #ffffff !important;
+  color: var(--n-bubble-sent-text) !important;
 }
 
 .my-message .message-bubble .message-time,
@@ -268,52 +278,57 @@ body.dark #messagesArea {
   color: rgba(255, 255, 255, 0.72) !important;
 }
 
-/* Received message override */
+/* Received message bubble */
 .message:not(.my-message) .message-bubble {
-  background: var(--panel) !important;
-  color: var(--text) !important;
-  border: 1px solid rgba(0,0,0,0.04) !important;
+  background: var(--n-bubble-recv) !important;
+  color: var(--n-bubble-recv-text) !important;
+  border: var(--n-bubble-recv-border) !important;
 }
 
-body.dark .message:not(.my-message) .message-bubble {
-  background: #1f2c34 !important;
-  border: 1px solid rgba(255, 255, 255, 0.02) !important;
+/* Bubble Metadata (Time, Status ticks) */
+.message-time {
+  font-family: var(--n-mono) !important;
+  font-size: 10px !important;
+  text-transform: uppercase !important;
+  color: var(--n-text-muted) !important;
 }
 
-/* ── 7a. Robust Horizontal File Attachment Cards ── */
+/* ── 6a. Cybernetic File Attachment Cards ── */
 .file-attachment-card {
   display: flex !important;
   flex-direction: row !important;
   align-items: center !important;
-  gap: 12px !important;
-  min-width: 240px !important;
-  width: 280px !important;
+  gap: 14px !important;
+  min-width: 260px !important;
+  width: 320px !important;
   max-width: 100% !important;
-  background: rgba(0, 0, 0, 0.03) !important;
-  border-radius: 12px !important;
-  padding: 10px 12px !important;
-  border: 1px solid rgba(0, 0, 0, 0.05) !important;
+  background: rgba(0, 0, 0, 0.2) !important;
+  border-radius: 8px !important;
+  padding: 12px 14px !important;
+  border: 1px solid var(--n-border) !important;
   text-decoration: none !important;
   color: inherit !important;
   box-sizing: border-box !important;
-  margin-top: 6px !important;
+  margin-top: 8px !important;
 }
 
-body.dark .file-attachment-card {
-  background: rgba(255, 255, 255, 0.04) !important;
-  border: 1px solid rgba(255, 255, 255, 0.06) !important;
+body:not(.dark) .file-attachment-card {
+  background: rgba(0, 0, 0, 0.03) !important;
+  border-color: rgba(0, 184, 148, 0.15) !important;
 }
 
 .file-attachment-icon {
-  width: 42px !important;
-  height: 42px !important;
-  min-width: 42px !important;
-  border-radius: 8px !important;
-  background: var(--p-brand) !important;
-  color: #ffffff !important;
+  width: 44px !important;
+  height: 44px !important;
+  min-width: 44px !important;
+  border-radius: 6px !important;
+  background: rgba(0, 245, 192, 0.1) !important;
+  color: var(--n-accent) !important;
+  border: 1px solid var(--n-accent) !important;
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
+  font-family: var(--n-mono) !important;
   font-weight: 700 !important;
   font-size: 11px !important;
   text-transform: uppercase !important;
@@ -327,167 +342,126 @@ body.dark .file-attachment-card {
 }
 
 .file-attachment-name {
+  font-family: var(--n-mono) !important;
   font-weight: 600 !important;
-  font-size: 13px !important;
+  font-size: 12.5px !important;
   white-space: nowrap !important;
   overflow: hidden !important;
   text-overflow: ellipsis !important;
   color: inherit !important;
   text-align: left !important;
+  text-transform: uppercase;
 }
 
 .file-attachment-meta {
-  font-size: 11px !important;
-  opacity: 0.7 !important;
+  font-family: var(--n-mono) !important;
+  font-size: 10.5px !important;
+  opacity: 0.65 !important;
   color: inherit !important;
   text-align: left !important;
 }
 
 .file-attachment-action {
-  font-size: 11px !important;
-  font-weight: 600 !important;
+  font-family: var(--n-mono) !important;
+  font-size: 10px !important;
+  font-weight: 700 !important;
   text-transform: uppercase !important;
-  color: var(--p-brand) !important;
-  background: rgba(0, 168, 132, 0.1) !important;
+  color: var(--n-accent) !important;
+  border: 1px solid var(--n-accent) !important;
   padding: 4px 8px !important;
-  border-radius: 6px !important;
+  border-radius: 4px !important;
+  background: transparent !important;
 }
 
-.my-message .file-attachment-action {
-  color: #ffffff !important;
-  background: rgba(255, 255, 255, 0.25) !important;
-}
-
-/* ── 8. Glassmorphic Input Composer & Absolute Panel Positions ── */
+/* ── 7. Floating Capsule Composer & Controls ── */
 .input-area,
 .chat-input-container {
-  background: rgba(255, 255, 255, 0.8) !important;
-  -webkit-backdrop-filter: blur(20px) !important;
-  backdrop-filter: blur(20px) !important;
-  padding: 12px 18px !important;
-  border-top: 1px solid rgba(0, 0, 0, 0.04) !important;
-  display: flex !important;
-  flex-direction: row !important;
-  align-items: center !important;
-  gap: 8px !important;
+  background: var(--n-bg) !important;
+  border-top: 1px solid var(--n-border-soft) !important;
+  padding: 16px 20px !important;
   position: relative !important;
 }
 
-body.dark .input-area,
-body.dark .chat-input-container {
-  background: rgba(17, 28, 35, 0.85) !important;
-  border-top: 1px solid rgba(255, 255, 255, 0.05) !important;
-}
-
-/* Absolute Panels so they float correctly */
+/* Absolute Floating sheets */
 .attachment-sheet {
   display: none !important;
   position: absolute !important;
   bottom: 100% !important;
-  left: 12px !important;
-  right: 12px !important;
-  background: rgba(255, 255, 255, 0.88) !important;
-  backdrop-filter: blur(28px) !important;
-  -webkit-backdrop-filter: blur(28px) !important;
-  border: 1px solid rgba(0, 0, 0, 0.08) !important;
-  border-radius: 20px !important;
+  left: 16px !important;
+  right: 16px !important;
+  background: var(--n-panel) !important;
+  border: 1px solid var(--n-border) !important;
+  border-radius: 16px !important;
   box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.08) !important;
   z-index: 1000 !important;
   padding: 16px !important;
-  margin-bottom: 8px !important;
+  margin-bottom: 10px !important;
   width: auto !important;
 }
 .attachment-sheet.show {
   display: block !important;
 }
-body.dark .attachment-sheet {
-  background: rgba(17, 28, 35, 0.92) !important;
-  border-color: rgba(255, 255, 255, 0.08) !important;
-  box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.3) !important;
-}
-
-.emoji-picker {
-  position: absolute !important;
-  bottom: 100% !important;
-  left: 12px !important;
-  background: var(--panel) !important;
-  border: 1px solid var(--border) !important;
-  border-radius: 16px !important;
-  box-shadow: var(--shadow-lg) !important;
-  z-index: 1000 !important;
-  margin-bottom: 8px !important;
-}
 
 .wa-composer-shell {
-  background: var(--panel) !important;
-  border: 1.5px solid var(--border-soft) !important;
-  border-radius: 26px !important;
-  padding: 6px 14px !important;
-  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.03) !important;
+  background: var(--n-panel-soft) !important;
+  border: 1px solid var(--n-border-soft) !important;
+  border-radius: 12px !important;
+  padding: 8px 16px !important;
+  box-shadow: none !important;
   transition: all 0.25s ease;
-  flex: 1 !important;
+  display: flex !important;
+  align-items: center !important;
 }
 
 .wa-composer-shell:focus-within {
-  border-color: var(--p-brand) !important;
-  box-shadow: 0 4px 20px rgba(0, 168, 132, 0.08) !important;
-}
-
-body.dark .wa-composer-shell {
-  background: #2a3942 !important;
-  border: 1.5px solid transparent !important;
+  border-color: var(--n-accent) !important;
+  box-shadow: 0 0 12px rgba(0, 245, 192, 0.15) !important;
 }
 
 #messageInput {
-  font-family: 'Inter', sans-serif;
+  font-family: var(--n-font) !important;
   font-size: 13.5px !important;
-  color: var(--text) !important;
+  color: var(--n-text) !important;
 }
 
-/* Send button styling */
+/* Send & Mic Icon Buttons */
 .send-btn,
 .voice-msg-btn {
-  background: var(--p-brand) !important;
-  color: #fff !important;
-  width: 44px !important;
-  height: 44px !important;
-  border-radius: 50% !important;
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  box-shadow: var(--p-brand-glow) !important;
-  transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
+  background: var(--n-accent) !important;
+  color: #080c10 !important;
+  width: 42px !important;
+  height: 42px !important;
+  border-radius: 8px !important;
+  box-shadow: var(--n-accent-glow) !important;
+  transition: all 0.2s ease-out !important;
   border: none !important;
 }
 .send-btn:hover,
 .voice-msg-btn:hover {
-  transform: scale(1.08);
-  box-shadow: 0 8px 28px rgba(0, 168, 132, 0.3) !important;
-}
-.send-btn:active,
-.voice-msg-btn:active {
-  transform: scale(0.95);
+  transform: scale(1.05);
 }
 
-/* Attachment indicators */
-.emoji-btn,
-.attach-btn {
-  color: var(--text-secondary) !important;
-  transition: color 0.2s ease;
-}
-.emoji-btn:hover,
-.attach-btn:hover {
-  color: var(--p-brand) !important;
+/* Mono-Status Indicator above input field (Cyber Vibe) */
+.input-area::before {
+  content: "SYS_OVERRIDE: READY // KEY_EXCHANGE: RSA-4096 // SECURE NODE" !important;
+  display: block !important;
+  font-family: var(--n-mono) !important;
+  font-size: 8.5px !important;
+  color: var(--n-accent) !important;
+  opacity: 0.7;
+  letter-spacing: 1px;
+  margin-bottom: 8px !important;
+  text-transform: uppercase;
 }
 
-/* ── 9. Beautiful Placeholder Home Card ── */
+/* ── 8. Glassmorphic Empty Panel Placeholder ── */
 .home-panel {
-  background: rgba(255, 255, 255, 0.45) !important;
-  backdrop-filter: blur(16px) !important;
-  -webkit-backdrop-filter: blur(16px) !important;
-  border: 1px solid rgba(255, 255, 255, 0.5) !important;
-  border-radius: 24px !important;
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.03) !important;
+  background: rgba(15, 20, 28, 0.72) !important;
+  backdrop-filter: blur(24px) !important;
+  -webkit-backdrop-filter: blur(24px) !important;
+  border: 1px solid var(--n-border) !important;
+  border-radius: 16px !important;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25) !important;
   padding: 40px 32px !important;
   max-width: 440px !important;
   margin: auto !important;
@@ -495,34 +469,132 @@ body.dark .wa-composer-shell {
   flex-direction: column !important;
   align-items: center !important;
   text-align: center !important;
-  transition: all 0.3s ease !important;
 }
-body.dark .home-panel {
-  background: rgba(17, 28, 35, 0.45) !important;
-  border: 1px solid rgba(255, 255, 255, 0.05) !important;
-  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.2) !important;
+
+body:not(.dark) .home-panel {
+  background: rgba(255, 255, 255, 0.75) !important;
+  border-color: rgba(0, 184, 148, 0.15) !important;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.04) !important;
 }
+
 .home-panel-icon {
-  font-size: 48px !important;
-  margin-bottom: 20px !important;
-  filter: drop-shadow(0 4px 10px rgba(0, 168, 132, 0.2)) !important;
+  font-size: 38px !important;
+  margin-bottom: 16px !important;
+  color: var(--n-accent) !important;
+  filter: drop-shadow(0 4px 8px rgba(0, 245, 192, 0.2)) !important;
 }
+
 .home-panel-title {
-  font-family: 'Inter', sans-serif !important;
+  font-family: var(--n-mono) !important;
   font-weight: 700 !important;
-  font-size: 20px !important;
-  color: var(--text) !important;
+  text-transform: uppercase !important;
+  font-size: 18px !important;
+  color: var(--n-text) !important;
   margin-bottom: 12px !important;
-  letter-spacing: -0.4px !important;
+  letter-spacing: 0.5px !important;
 }
 .home-panel-text {
-  font-size: 14px !important;
-  color: var(--text-secondary) !important;
-  margin-bottom: 8px !important;
-  line-height: 1.5 !important;
+  font-family: var(--n-font) !important;
+  font-size: 13.5px !important;
+  color: var(--n-text-muted) !important;
+  margin-bottom: 12px !important;
 }
 .home-panel-note {
-  font-size: 12px !important;
-  opacity: 0.65 !important;
-  color: var(--text-secondary) !important;
+  font-family: var(--n-mono) !important;
+  font-size: 10px !important;
+  color: var(--n-accent) !important;
+  opacity: 0.8 !important;
+  text-transform: uppercase;
+}
+
+/* ── 9. Responsive Layout Rules for All Device Screens ── */
+
+/* Laptop & Desktop Screens (min-width: 1024px) */
+@media (min-width: 1024px) {
+  .chat-container {
+    max-width: 1600px !important;
+    width: 100% !important;
+    height: 100vh !important;
+    height: 100dvh !important;
+    margin: 0 auto !important;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.15) !important;
+    border-radius: 0 !important;
+  }
+  .sidebar {
+    width: 360px !important;
+    min-width: 360px !important;
+    border-right: 1px solid var(--n-border-soft) !important;
+  }
+  .chat-main {
+    flex: 1 !important;
+  }
+  .message-bubble {
+    max-width: 60% !important; /* Elegant compact bubble on wide screen layouts */
+  }
+}
+
+/* Tablet Screens (min-width: 760px) and (max-width: 1023px) */
+@media (min-width: 760px) and (max-width: 1023px) {
+  .sidebar {
+    width: 300px !important;
+    min-width: 300px !important;
+    border-right: 1px solid var(--n-border-soft) !important;
+  }
+  .message-bubble {
+    max-width: 68% !important;
+  }
+}
+
+/* Mobile Screens (max-width: 759px) */
+@media (max-width: 759px) {
+  /* Clear margins and stretch full view */
+  .chat-container {
+    width: 100% !important;
+    height: 100dvh !important;
+    max-height: 100dvh !important;
+    border-radius: 0 !important;
+  }
+  
+  /* Make sure bottom PWA nav bar renders perfectly at the bottom */
+  .bottom-nav,
+  #bottomNav {
+    position: fixed !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    height: calc(56px + var(--sab, 0px)) !important;
+    padding-bottom: var(--sab, 0px) !important;
+    background: var(--n-panel) !important;
+    border-top: 1px solid var(--n-border-soft) !important;
+    display: flex !important;
+    justify-content: space-around !important;
+    align-items: center !important;
+    z-index: 1000 !important;
+    box-sizing: border-box !important;
+  }
+
+  /* Reposition FAB for editing / new chat */
+  .nav-add-tab,
+  #moreTabsBtn {
+    position: fixed !important;
+    bottom: calc(72px + var(--sab, 0px)) !important;
+    right: 20px !important;
+    width: 52px !important;
+    height: 52px !important;
+    border-radius: 14px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    z-index: 999 !important;
+  }
+  
+  .message-bubble {
+    max-width: 82% !important; /* Bubble fills mobile screens better */
+    font-size: 13px !important;
+  }
+
+  .file-attachment-card {
+    width: 100% !important;
+    min-width: 0 !important; /* Full width card on mobile layout sizes */
+  }
 }
