@@ -13,13 +13,13 @@
       name="apple-mobile-web-app-status-bar-style"
       content="black-translucent"
     />
-    <title>Nexus 2026 | Secure Access</title>
+    <title>NSL Chat | Secure Access</title>
     <link rel="canonical" href="https://nishadsl.com/works/chat" />
     <link rel="manifest" href="manifest.json?v=98" />
     <link rel="apple-touch-icon" href="app-icon-192.png" />
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
-    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;700&amp;family=Geist:wght@400;600;700&amp;family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;700&amp;family=Geist:wght@400;600;700&amp;family=Inter:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
     <script>
       (function() {
         var mode = localStorage.getItem("themeMode") || "system";
@@ -244,7 +244,7 @@
         }
 
         body {
-          min-height: max(884px, 100dvh);
+          min-height: max(780px, 100dvh);
         }
         .dark body {
           background: #10131a;
@@ -288,20 +288,22 @@
     </button>
 
     <!-- Main Content Canvas -->
-    <main class="relative z-10 flex-grow flex items-center justify-center px-margin-mobile py-xl">
+    <main class="relative z-10 flex-grow flex flex-col items-center justify-center px-margin-mobile py-lg">
       <!-- Login Container -->
       <div class="w-full max-w-md animate-float">
         
-        <!-- Logo/Identity Anchor -->
+        <!-- Logo/Identity Anchor: NSL Chat Style -->
         <div class="flex flex-col items-center mb-lg space-y-sm">
-          <div class="w-12 h-12 flex items-center justify-center bg-[#006c51]/10 dark:bg-[#00ffc3]/10 border border-[#006c51]/30 dark:border-[#00ffc3]/30 rounded-xl mb-sm shadow-md">
-            <span class="material-symbols-outlined text-[#006c51] dark:text-[#00ffc3] text-[32px]">shield_person</span>
+          <div class="w-14 h-14 flex items-center justify-center bg-primary/10 dark:bg-[#00ffc3]/10 border border-[#006c51]/20 dark:border-[#00ffc3]/30 rounded-2xl mb-xs shadow-inner">
+            <span class="material-symbols-outlined text-[#006c51] dark:text-[#34ffc5] text-[36px]" style="font-variation-settings: 'FILL' 1;">forum</span>
           </div>
-          <h1 class="font-display-lg text-[28px] font-extrabold tracking-tighter text-on-surface dark:text-white text-center">NEXUS TERMINAL</h1>
+          <h1 class="font-display-lg text-[32px] font-extrabold tracking-tighter text-on-surface dark:text-[#34ffc5] dark:terminal-glow text-center leading-none">
+            NSL <span class="text-[#006c51] dark:text-[#34ffc5] font-light">Chat</span>
+          </h1>
           <div class="flex items-center space-y-1">
-            <span class="font-data-mono text-[10px] text-[#006c51] dark:text-[#00ffc3] tracking-widest uppercase flex items-center gap-2">
-              <span class="w-1.5 h-1.5 bg-[#006c51] dark:bg-[#00ffc3] rounded-full pulse-dot"></span>
-              System Online // Secure Access v2.4.0
+            <span class="font-data-mono text-[10px] text-slate-500 dark:text-[#b9cbc1] tracking-widest uppercase flex items-center gap-1.5">
+              <span class="w-1.5 h-1.5 bg-[#006c51] dark:bg-[#34ffc5] rounded-full pulse-dot"></span>
+              v2.4.0 // Secure Link
             </span>
           </div>
         </div>
@@ -326,7 +328,7 @@
               <!-- Email Input -->
               <div class="form-group space-y-xs">
                 <label class="font-label-mono text-label-mono text-secondary dark:text-[#b9cbc1] uppercase px-1" for="loginEmail">Nexus ID / Email</label>
-                <div class="relative group border-b border-white/10 dark:cyber-border-focus transition-all duration-300">
+                <div class="relative group border-b border-slate-200 dark:border-white/10 dark:cyber-border-focus transition-all duration-300">
                   <div class="absolute left-1 top-1/2 -translate-y-1/2">
                     <span class="material-symbols-outlined text-outline dark:text-slate-500">fingerprint</span>
                   </div>
@@ -337,7 +339,7 @@
               <!-- Password Input -->
               <div class="form-group space-y-xs">
                 <label class="font-label-mono text-label-mono text-secondary dark:text-[#b9cbc1] uppercase px-1" for="loginPassword">Security Key</label>
-                <div class="relative group password-field border-b border-white/10 dark:cyber-border-focus transition-all duration-300">
+                <div class="relative group password-field border-b border-slate-200 dark:border-white/10 dark:cyber-border-focus transition-all duration-300">
                   <div class="absolute left-1 top-1/2 -translate-y-1/2">
                     <span class="material-symbols-outlined text-outline dark:text-slate-500">key</span>
                   </div>
@@ -376,7 +378,7 @@
               <!-- Full Name Input -->
               <div class="form-group space-y-xs">
                 <label class="font-label-mono text-label-mono text-secondary dark:text-[#b9cbc1] uppercase px-1" for="registerName">Full Display Name</label>
-                <div class="relative group border-b border-white/10 dark:cyber-border-focus transition-all duration-300">
+                <div class="relative group border-b border-slate-200 dark:border-white/10 dark:cyber-border-focus transition-all duration-300">
                   <div class="absolute left-1 top-1/2 -translate-y-1/2">
                     <span class="material-symbols-outlined text-outline dark:text-slate-500">badge</span>
                   </div>
@@ -387,7 +389,7 @@
               <!-- Email Input -->
               <div class="form-group space-y-xs">
                 <label class="font-label-mono text-label-mono text-secondary dark:text-[#b9cbc1] uppercase px-1" for="registerEmail">Secure Email</label>
-                <div class="relative group border-b border-white/10 dark:cyber-border-focus transition-all duration-300">
+                <div class="relative group border-b border-slate-200 dark:border-white/10 dark:cyber-border-focus transition-all duration-300">
                   <div class="absolute left-1 top-1/2 -translate-y-1/2">
                     <span class="material-symbols-outlined text-outline dark:text-slate-500">alternate_email</span>
                   </div>
@@ -399,7 +401,7 @@
               <!-- Phone Input (Optional) -->
               <div class="form-group space-y-xs">
                 <label class="font-label-mono text-label-mono text-secondary dark:text-[#b9cbc1] uppercase px-1" for="registerPhone">Phone Number (Optional)</label>
-                <div class="relative group border-b border-white/10 dark:cyber-border-focus transition-all duration-300">
+                <div class="relative group border-b border-slate-200 dark:border-white/10 dark:cyber-border-focus transition-all duration-300">
                   <div class="absolute left-1 top-1/2 -translate-y-1/2">
                     <span class="material-symbols-outlined text-outline dark:text-slate-500">call</span>
                   </div>
@@ -411,7 +413,7 @@
               <!-- Password Input -->
               <div class="form-group space-y-xs">
                 <label class="font-label-mono text-label-mono text-secondary dark:text-[#b9cbc1] uppercase px-1" for="registerPassword">Security Key / Password</label>
-                <div class="relative group password-field border-b border-white/10 dark:cyber-border-focus transition-all duration-300">
+                <div class="relative group password-field border-b border-slate-200 dark:border-white/10 dark:cyber-border-focus transition-all duration-300">
                   <div class="absolute left-1 top-1/2 -translate-y-1/2">
                     <span class="material-symbols-outlined text-outline dark:text-slate-500">key</span>
                   </div>
@@ -485,32 +487,6 @@
           </div>
         </div>
       </div>
-      
-      <!-- Desktop Visual Accents: Float Cards (Visible only on xl screen size) -->
-      <div class="hidden xl:block fixed left-12 bottom-12 w-64 glass-panel p-md rounded-lg animate-pulse" style="animation-duration: 4s; background: rgba(255,255,255,0.05);">
-        <div class="flex items-center gap-xs mb-xs">
-          <span class="material-symbols-outlined text-primary dark:text-[#34ffc5] text-sm">security</span>
-          <span class="text-label-mono font-label-mono text-on-surface dark:text-white text-[10px] uppercase">Encryption Active</span>
-        </div>
-        <div class="h-1 w-full bg-outline-variant/20 rounded-full overflow-hidden">
-          <div class="h-full bg-[#006c51] dark:bg-[#00ffc3] w-2/3"></div>
-        </div>
-      </div>
-      
-      <div class="hidden xl:block fixed right-12 top-1/2 -translate-y-1/2 w-80 glass-panel p-md rounded-xl space-y-md" style="background: rgba(255,255,255,0.05);">
-        <h5 class="text-label-mono font-label-mono text-[#006c51] dark:text-[#34ffc5] font-bold">IDENTITY OVERVIEW</h5>
-        <div class="aspect-square w-full rounded-lg overflow-hidden bg-slate-200 dark:bg-[#272a31] relative">
-          <img class="w-full h-full object-cover grayscale opacity-80 mix-blend-multiply" alt="Identification Scan" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAp3yWBp0SYxcZtOtEBD-OhDo3kv2ZsjXBPx6scF_bBIQmXeuz_2AHHgbwSuKB3qVyEUb6cOQmc6GhQ7jZS3xfjJCSNX0F8Nk5PMRGj0KQjiHnEqJf6JDku6cyWUfoZuleGxtEzHhqwoNkYaTMZWgTa-VmHlz4NMBTajq1LooZzTaW2BySKtxKrhAdLYRTIByzYdEFW8ucU9eFNND8OJtW9DoST7EAa1mXSVgj7CJwXh_EIv5qykgJ7kg"/>
-          <div class="absolute inset-0 bg-gradient-to-t from-slate-100 dark:from-[#10131a] via-transparent to-transparent"></div>
-          <div class="absolute bottom-3 left-3 right-3 flex flex-col">
-            <span class="text-label-mono font-label-mono text-[10px] text-on-surface dark:text-white opacity-60">IDENTIFICATION SCAN</span>
-            <span class="text-body-sm font-body-sm font-bold text-on-surface dark:text-white">Awaiting Personal Data...</span>
-          </div>
-        </div>
-        <p class="text-label-mono font-label-mono text-[10px] leading-relaxed text-on-surface-variant dark:text-[#b9cbc1]">
-          Identity verification is the first step in the Nexus onboarding. Stage 01 captures biometric and credentials markers for local link generation.
-        </p>
-      </div>
     </main>
 
     <!-- Password Reset Modal -->
@@ -530,27 +506,11 @@
       </div>
     </div>
 
-    <!-- Bottom System Status Indicators Footer -->
-    <footer class="fixed bottom-0 left-0 w-full p-md pointer-events-none z-20">
-      <div class="max-w-[1440px] mx-auto flex flex-col md:flex-row justify-between items-center gap-xs">
-        <div class="flex items-center space-x-md pointer-events-auto">
-          <div class="glass-panel px-sm py-xs rounded-full flex items-center space-x-xs bg-white/40 dark:bg-white/5 border border-slate-200 dark:border-white/5">
-            <div class="w-2 h-2 rounded-full bg-[#00FFC3] shadow-[0_0_8px_#00FFC3] animate-pulse"></div>
-            <span class="font-label-mono text-label-mono text-on-surface-variant dark:text-[#b9cbc1]">Core Node: Active</span>
-          </div>
-          <div class="glass-panel px-sm py-xs rounded-full flex items-center space-x-xs bg-white/40 dark:bg-white/5 border border-slate-200 dark:border-white/5">
-            <span class="material-symbols-outlined text-[14px]" style="font-variation-settings: 'FILL' 1;">speed</span>
-            <span id="latency-val" class="font-label-mono text-label-mono text-on-surface-variant dark:text-[#b9cbc1]">Latency: 12ms</span>
-          </div>
-        </div>
-        <div class="hidden md:flex items-center space-x-md pointer-events-auto">
-          <div class="glass-panel px-sm py-xs rounded-full flex items-center space-x-xs bg-white/40 dark:bg-white/5 border border-slate-200 dark:border-white/5">
-            <span class="material-symbols-outlined text-[14px]">public</span>
-            <span class="font-label-mono text-label-mono text-on-surface-variant dark:text-[#b9cbc1]">Global Mesh: Standard</span>
-          </div>
-          <span class="font-label-mono text-label-mono text-outline-variant">© 2026 Nexus Systems Corp.</span>
-        </div>
-      </div>
+    <!-- Clean Center-flow Footer -->
+    <footer class="relative z-10 py-md w-full mt-auto text-center">
+      <span class="font-label-mono text-label-mono text-outline-variant/60">
+        © 2026 NSL Chat Systems Corp. All rights reserved.
+      </span>
     </footer>
 
     <!-- Firebase Script integrations -->
@@ -974,16 +934,8 @@
           btn.textContent = "Send Reset Link";
         }
       });
-      
-      // Jitter simulation for latency
-      setInterval(() => {
-          const base = 12;
-          const jitter = Math.floor(Math.random() * 8);
-          const val = document.getElementById('latency-val');
-          if (val) val.textContent = `Latency: ${base + jitter}ms`;
-      }, 2500);
 
-      // Parallax mouse movements for ambient light spots on desktop
+      // Parallax mouse movements for ambient light spots
       document.addEventListener('mousemove', (e) => {
           const x = e.clientX / window.innerWidth;
           const y = e.clientY / window.innerHeight;
