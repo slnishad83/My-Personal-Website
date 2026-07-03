@@ -858,3 +858,209 @@ body:not(.dark) .home-panel {
     min-width: 0 !important; /* Full width card on mobile layout sizes */
   }
 }
+
+/* ================================================================
+   NEXUS HUB REDESIGN UPDATES
+   Bento Cards, 3-Pane Desktop Layout & Light/Dark styling matching templates
+   ================================================================ */
+
+/* Glass card / Bento Card overrides */
+.chat-item,
+.list-item {
+  background: rgba(255, 255, 255, 0.7) !important;
+  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
+  border: 1px solid rgba(15, 23, 42, 0.05) !important;
+  box-shadow: 0 8px 30px rgba(15, 23, 42, 0.04) !important;
+  border-radius: 12px !important;
+  margin: 10px 16px !important;
+  padding: 14px 16px !important;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+[data-theme="dark"] .chat-item,
+[data-theme="dark"] .list-item {
+  background: rgba(29, 32, 38, 0.4) !important;
+  border: 1px solid rgba(255, 255, 255, 0.05) !important;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2) !important;
+}
+
+.chat-item:hover,
+.list-item:hover {
+  background: rgba(255, 255, 255, 0.9) !important;
+  border-color: var(--n-accent) !important;
+  transform: scale(0.99) !important;
+}
+
+[data-theme="dark"] .chat-item:hover,
+[data-theme="dark"] .list-item:hover {
+  background: rgba(29, 32, 38, 0.7) !important;
+  border-color: var(--n-accent) !important;
+}
+
+.chat-item.active,
+.list-item.active {
+  background: rgba(255, 255, 255, 0.95) !important;
+  border-color: var(--n-accent) !important;
+  box-shadow: 0 0 15px rgba(0, 225, 172, 0.15) !important;
+}
+
+[data-theme="dark"] .chat-item.active,
+[data-theme="dark"] .list-item.active {
+  background: rgba(29, 32, 38, 0.8) !important;
+  border-color: var(--n-accent) !important;
+  box-shadow: 0 0 15px rgba(0, 225, 172, 0.25) !important;
+}
+
+/* User status active dot glow */
+.status-dot.online {
+  background: #00e1ac !important;
+  box-shadow: 0 0 8px rgba(0, 225, 172, 0.6) !important;
+}
+
+/* Three-pane layout for desktop (min-width: 1024px) */
+@media (min-width: 1024px) {
+  .chat-container {
+    display: grid !important;
+    grid-template-columns: 460px 1fr !important; /* 80px Left Sidebar + 380px list */
+    height: 100vh !important;
+    height: 100dvh !important;
+    overflow: hidden !important;
+  }
+
+  .sidebar {
+    display: grid !important;
+    grid-template-columns: 80px 1fr !important;
+    grid-template-rows: auto 1fr !important;
+    height: 100% !important;
+    border-right: 1px solid var(--n-border-soft) !important;
+    background: var(--n-panel) !important;
+  }
+
+  /* Left Column: sidebar-header + primary-tabs */
+  .sidebar-header {
+    grid-column: 1 / 2 !important;
+    grid-row: 1 / 2 !important;
+    width: 80px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    padding: 24px 8px 12px !important;
+    height: auto !important;
+    border-right: 1px solid var(--n-border-soft) !important;
+    background: var(--n-panel) !important;
+    box-sizing: border-box !important;
+  }
+
+  /* Hide textual header stuff on desktop */
+  .sidebar-header .user-info {
+    flex-direction: column !important;
+    align-items: center !important;
+  }
+  .sidebar-header .user-name,
+  .sidebar-header .user-status-row,
+  .sidebar-header .logo-header span {
+    display: none !important;
+  }
+
+  .sidebar-header .logo-header {
+    margin-bottom: 20px !important;
+  }
+
+  .sidebar-header .sidebar-actions {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    gap: 16px !important;
+    width: 100% !important;
+  }
+
+  .sidebar-header .sidebar-actions button {
+    margin: 0 !important;
+  }
+
+  /* Compact tabs as vertically stacked round icon buttons */
+  .tabs.primary-tabs {
+    grid-column: 1 / 2 !important;
+    grid-row: 2 / 3 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    width: 80px !important;
+    border-right: 1px solid var(--n-border-soft) !important;
+    border-bottom: none !important;
+    padding: 24px 8px !important;
+    gap: 20px !important;
+    background: var(--n-panel) !important;
+    box-sizing: border-box !important;
+    overflow-y: auto !important;
+  }
+
+  .tabs.primary-tabs .tab {
+    width: 48px !important;
+    height: 48px !important;
+    min-height: 48px !important;
+    border-radius: 50% !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 0 !important;
+    background: transparent !important;
+    border: none !important;
+    color: var(--n-text-muted) !important;
+    transition: all 0.2s ease !important;
+  }
+
+  .tabs.primary-tabs .tab span:not(.primary-tab-icon) {
+    display: none !important; /* Hide labels */
+  }
+
+  .tabs.primary-tabs .tab .primary-tab-icon {
+    font-size: 24px !important;
+  }
+
+  .tabs.primary-tabs .tab.active {
+    background: var(--n-accent) !important;
+    color: #080c10 !important;
+    box-shadow: var(--n-accent-glow) !important;
+  }
+
+  /* Right Column: search-box + lists */
+  .search-box {
+    grid-column: 2 / 3 !important;
+    grid-row: 1 / 2 !important;
+    padding: 24px 16px !important;
+    border-bottom: 1px solid var(--n-border-soft) !important;
+    background: var(--n-bg) !important;
+    box-sizing: border-box !important;
+    height: auto !important;
+  }
+
+  .search-box input {
+    height: 44px !important;
+    border-radius: 12px !important;
+    border: 1px solid var(--n-border-soft) !important;
+    padding-left: 40px !important;
+    background: var(--n-panel) !important;
+    box-shadow: inset 0 1px 2px rgba(0,0,0,0.02) !important;
+  }
+
+  .list,
+  #chatsList,
+  #groupsList,
+  #callsList,
+  #statusList,
+  #communitiesList,
+  .request-section,
+  .archive-section {
+    grid-column: 2 / 3 !important;
+    grid-row: 2 / 3 !important;
+    background: var(--n-bg) !important;
+    margin: 0 !important;
+    padding: 8px 0 !important;
+    height: 100% !important;
+    overflow-y: auto !important;
+  }
+}

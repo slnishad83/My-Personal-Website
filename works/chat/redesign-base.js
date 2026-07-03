@@ -20,6 +20,7 @@
   function applyTheme(theme) {
     document.documentElement.dataset.theme = theme;
     var isDark = theme === "dark";
+    document.documentElement.className = isDark ? "dark" : "light";
     document.body.classList.toggle("dark", isDark);
 
     // Sync theme-color meta tag for PWA and mobile address bar
