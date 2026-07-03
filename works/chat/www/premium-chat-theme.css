@@ -87,22 +87,30 @@ body {
   background: var(--n-accent);
 }
 
-/* ── 2. Sidebar Tabs Base ── */
+/* ── 2. Floating Pill Sidebar Tabs with Scroll Safeguard ── */
 .tabs.primary-tabs {
   background: var(--n-panel) !important;
   border-bottom: 1px solid var(--n-border-soft) !important;
-  padding: 10px 14px !important;
+  padding: 8px 12px !important;
   display: flex !important;
   gap: 6px !important;
+  overflow-x: auto !important; /* Prevent squishing on laptop layouts */
+  scrollbar-width: none !important; /* Firefox */
+  -ms-overflow-style: none !important; /* IE 10+ */
 }
+.tabs.primary-tabs::-webkit-scrollbar {
+  display: none !important; /* Safari and Chrome */
+}
+
 .tabs.primary-tabs .tab {
+  flex: 1 0 auto !important; /* Maintain layout proportion but scrollable */
   border-radius: 8px !important;
-  padding: 8px 12px !important;
-  font-size: 11px !important;
+  padding: 6px 10px !important;
+  font-size: 10.5px !important;
   font-family: var(--n-mono) !important;
   text-transform: uppercase !important;
   font-weight: 700 !important;
-  letter-spacing: 0.8px !important;
+  letter-spacing: 0.5px !important;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
   background: var(--n-panel-soft) !important;
   color: var(--n-text-muted) !important;
@@ -614,166 +622,62 @@ body:not(.dark) .home-panel {
     border-radius: 0 !important;
   }
   
-  /* THREE-COLUMN GRID LAYOUT FOR DESKTOP/LAPTOP PANELS */
-  body .chat-container .sidebar {
-    width: 600px !important;
-    min-width: 600px !important;
-    max-width: 600px !important;
-    display: grid !important;
-    grid-template-columns: 240px 360px !important;
-    grid-template-rows: auto 1fr !important;
-    grid-template-areas: 
-      "header  search"
-      "nav     list" !important;
-    height: 100vh !important;
-    height: 100dvh !important;
+  /* Sidebar sizing rules */
+  .sidebar {
+    width: 380px !important;
+    min-width: 380px !important;
     border-right: 1px solid var(--n-border-soft) !important;
     background: var(--n-panel) !important;
-    box-sizing: border-box !important;
-  }
-  
-  /* Left Panel Column - Header */
-  body .chat-container .sidebar .sidebar-header {
-    grid-area: header !important;
     display: flex !important;
     flex-direction: column !important;
-    align-items: stretch !important;
-    gap: 12px !important;
-    padding: 18px 16px !important;
-    background: var(--n-panel) !important;
-    border-bottom: 1px solid var(--n-border-soft) !important;
-    border-right: 1px solid var(--n-border-soft) !important;
+  }
+
+  /* Safe flex sizing for user profile and buttons header */
+  .sidebar-header {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 8px !important;
+    padding: 16px 14px !important;
     box-sizing: border-box !important;
   }
   
   .sidebar-header .user-info {
-    display: flex !important;
-    align-items: center !important;
-    gap: 10px !important;
+    flex: 1 1 auto !important;
+    min-width: 120px !important;
   }
   
   .sidebar-header .sidebar-actions {
     display: flex !important;
     align-items: center !important;
-    justify-content: flex-start !important;
-    flex-wrap: wrap !important;
     gap: 6px !important;
-    width: 100% !important;
+    flex-shrink: 0 !important;
   }
   
-  .sidebar-header .sidebar-actions button {
-    height: 32px !important;
-    padding: 0 10px !important;
-    font-size: 11.5px !important;
-  }
-  
+  /* Make sure Get app button doesn't force line wraps */
   .sidebar-header .sidebar-actions .install-app-btn {
+    padding: 4px 10px !important;
+    font-size: 11px !important;
     border-radius: 20px !important;
     background: var(--n-panel-soft) !important;
     border: 1px solid var(--n-border-soft) !important;
     color: var(--n-text) !important;
   }
-  
-  /* Left Panel Column - Vertical Menu rail */
-  body .chat-container .sidebar nav.tabs.primary-tabs {
-    grid-area: nav !important;
-    display: flex !important;
-    flex-direction: column !important;
-    gap: 6px !important;
-    padding: 16px 12px !important;
-    border: none !important;
-    border-right: 1px solid var(--n-border-soft) !important;
-    background: var(--n-panel) !important;
-    box-sizing: border-box !important;
-    height: 100% !important;
-  }
-  
-  body .chat-container .sidebar nav.tabs.primary-tabs .tab {
-    display: flex !important;
-    flex-direction: row !important;
-    align-items: center !important;
-    justify-content: flex-start !important;
-    gap: 12px !important;
-    width: 100% !important;
-    padding: 12px 14px !important;
-    border-radius: 10px !important;
-    background: var(--n-panel-soft) !important;
-    border: 1px solid var(--n-border-soft) !important;
-    color: var(--n-text-muted) !important;
-    font-family: var(--n-mono) !important;
-    font-size: 12px !important;
-    text-transform: uppercase !important;
-    letter-spacing: 0.5px !important;
-    box-shadow: none !important;
-    box-sizing: border-box !important;
-  }
-  
-  body .chat-container .sidebar nav.tabs.primary-tabs .tab:hover {
-    background: var(--n-panel-hover) !important;
-    color: var(--n-accent) !important;
-    border-color: var(--n-accent) !important;
-  }
-  
-  body .chat-container .sidebar nav.tabs.primary-tabs .tab.active {
-    background: var(--n-panel-active) !important;
-    color: var(--n-accent) !important;
-    border-color: var(--n-accent) !important;
-    border-left: 3px solid var(--n-accent) !important;
-    box-shadow: none !important;
-  }
-  
-  /* Badge positioning on the far right of the vertical tab menu item */
-  body .chat-container .sidebar nav.tabs.primary-tabs .tab .tab-badge,
-  body .chat-container .sidebar nav.tabs.primary-tabs .tab .badge {
-    margin-left: auto !important;
-    position: static !important;
-    transform: none !important;
-    background: var(--n-accent) !important;
-    color: #080c10 !important;
-    border-radius: 4px !important;
-    padding: 2px 6px !important;
-    font-family: var(--n-mono) !important;
-    font-size: 10px !important;
-    box-shadow: none !important;
-  }
-
-  /* Right Panel Column - Search Bar */
-  body .chat-container .sidebar .search-box {
-    grid-area: search !important;
-    border-bottom: 1px solid var(--n-border-soft) !important;
-    padding: 14px 16px !important;
-    box-sizing: border-box !important;
-    background: var(--n-panel) !important;
-  }
-  
-  /* Right Panel Column - Conversation List Scroll areas */
-  body .chat-container .sidebar .list,
-  body .chat-container .sidebar #chatsList,
-  body .chat-container .sidebar #groupsList,
-  body .chat-container .sidebar #callsList,
-  body .chat-container .sidebar #statusList,
-  body .chat-container .sidebar #communitiesList,
-  body .chat-container .sidebar .request-section,
-  body .chat-container .sidebar .archive-section {
-    grid-area: list !important;
-    height: 100% !important;
-    overflow-y: auto !important;
-    background: var(--n-bg-chat) !important;
-  }
 
   .chat-main {
     flex: 1 !important;
   }
-  
   .message-bubble {
     max-width: 60% !important; /* Elegant compact bubble on wide screen layouts */
   }
 }
 
-/* Tablet Screens (min-width: 760px) and (max-width: 1023px) {
+/* Tablet Screens (min-width: 760px) and (max-width: 1023px) */
+@media (min-width: 760px) and (max-width: 1023px) {
   .sidebar {
-    width: 300px !important;
-    min-width: 300px !important;
+    width: 320px !important;
+    min-width: 320px !important;
     border-right: 1px solid var(--n-border-soft) !important;
   }
   .message-bubble {
