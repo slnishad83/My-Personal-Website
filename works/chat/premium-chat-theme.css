@@ -651,23 +651,109 @@ body:not(.dark) .home-panel {
   .sidebar-header .sidebar-actions {
     display: flex !important;
     align-items: center !important;
+    justify-content: flex-end !important;
     gap: 6px !important;
     flex-shrink: 0 !important;
   }
   
-  /* Make sure Get app button doesn't force line wraps */
-  .sidebar-header .sidebar-actions .install-app-btn {
-    padding: 4px 10px !important;
+  /* Prevent install app button squishing */
+  .sidebar-actions .install-app-btn {
+    height: 32px !important;
+    padding: 0 10px !important;
     font-size: 11px !important;
     border-radius: 20px !important;
     background: var(--n-panel-soft) !important;
     border: 1px solid var(--n-border-soft) !important;
     color: var(--n-text) !important;
   }
+  
+  /* Restores single-row horizontal tab layout */
+  body .chat-container .sidebar nav.tabs.primary-tabs {
+    grid-area: auto !important;
+    display: flex !important;
+    flex-direction: row !important;
+    gap: 6px !important;
+    padding: 10px 12px !important;
+    border: none !important;
+    border-bottom: 1px solid var(--n-border-soft) !important;
+    background: var(--n-panel) !important;
+    box-sizing: border-box !important;
+    height: auto !important;
+    overflow-x: auto !important;
+    scrollbar-width: none !important;
+    -ms-overflow-style: none !important;
+  }
+  body .chat-container .sidebar nav.tabs.primary-tabs::-webkit-scrollbar {
+    display: none !important;
+  }
+  
+  body .chat-container .sidebar nav.tabs.primary-tabs .tab {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 8px !important;
+    width: auto !important;
+    flex: 1 0 auto !important;
+    padding: 8px 12px !important;
+    border-radius: 8px !important;
+    background: var(--n-panel-soft) !important;
+    border: 1px solid var(--n-border-soft) !important;
+    color: var(--n-text-muted) !important;
+    font-family: var(--n-mono) !important;
+    font-size: 11px !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.5px !important;
+    box-shadow: none !important;
+  }
+  
+  body .chat-container .sidebar nav.tabs.primary-tabs .tab:hover {
+    background: var(--n-panel-hover) !important;
+    color: var(--n-accent) !important;
+    border-color: var(--n-accent) !important;
+  }
+  
+  body .chat-container .sidebar nav.tabs.primary-tabs .tab.active {
+    background: var(--n-accent) !important;
+    color: #080c10 !important;
+    border-color: var(--n-accent) !important;
+    border-left: 1px solid var(--n-accent) !important;
+    box-shadow: var(--n-accent-glow) !important;
+  }
+  
+  /* Badge positioning on desktop tabs */
+  body .chat-container .sidebar nav.tabs.primary-tabs .tab .tab-badge,
+  body .chat-container .sidebar nav.tabs.primary-tabs .tab .badge {
+    margin-left: 4px !important;
+    position: static !important;
+    transform: none !important;
+  }
+
+  /* Restore normal list scroll block area */
+  body .chat-container .sidebar .search-box {
+    grid-area: auto !important;
+    background: var(--n-panel) !important;
+  }
+  
+  body .chat-container .sidebar .list,
+  body .chat-container .sidebar #chatsList,
+  body .chat-container .sidebar #groupsList,
+  body .chat-container .sidebar #callsList,
+  body .chat-container .sidebar #statusList,
+  body .chat-container .sidebar #communitiesList,
+  body .chat-container .sidebar .request-section,
+  body .chat-container .sidebar .archive-section {
+    grid-area: auto !important;
+    height: auto !important;
+    flex: 1 !important;
+    overflow-y: auto !important;
+    background: transparent !important;
+  }
 
   .chat-main {
     flex: 1 !important;
   }
+  
   .message-bubble {
     max-width: 60% !important; /* Elegant compact bubble on wide screen layouts */
   }
@@ -675,10 +761,32 @@ body:not(.dark) .home-panel {
 
 /* Tablet Screens (min-width: 760px) and (max-width: 1023px) */
 @media (min-width: 760px) and (max-width: 1023px) {
-  .sidebar {
+  body .chat-container .sidebar {
     width: 320px !important;
     min-width: 320px !important;
+    max-width: 320px !important;
+    display: flex !important;
+    flex-direction: column !important;
     border-right: 1px solid var(--n-border-soft) !important;
+  }
+  
+  body .chat-container .sidebar nav.tabs.primary-tabs {
+    grid-area: auto !important;
+    display: flex !important;
+    flex-direction: row !important;
+    gap: 4px !important;
+    padding: 8px 10px !important;
+    overflow-x: auto !important;
+    scrollbar-width: none !important;
+    -ms-overflow-style: none !important;
+  }
+  body .chat-container .sidebar nav.tabs.primary-tabs::-webkit-scrollbar {
+    display: none !important;
+  }
+  body .chat-container .sidebar nav.tabs.primary-tabs .tab {
+    flex: 1 0 auto !important;
+    padding: 6px 10px !important;
+    font-size: 10px !important;
   }
   .message-bubble {
     max-width: 68% !important;
