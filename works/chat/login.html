@@ -244,7 +244,7 @@
         }
 
         body {
-          min-height: max(780px, 100dvh);
+          min-height: 100dvh;
         }
         .dark body {
           background: #10131a;
@@ -273,7 +273,7 @@
         }
     </style>
   </head>
-  <body class="shimmer-bg font-body-md text-on-surface min-h-screen flex flex-col relative overflow-hidden transition-colors duration-300">
+  <body class="shimmer-bg font-body-md text-on-surface min-h-screen flex flex-col relative overflow-y-auto transition-colors duration-300">
     
     <!-- Decorative Ambient Lights -->
     <div class="absolute inset-0 pointer-events-none overflow-hidden z-0">
@@ -290,7 +290,7 @@
     <!-- Main Content Canvas -->
     <main class="relative z-10 flex-grow flex flex-col items-center justify-center px-margin-mobile py-lg">
       <!-- Login Container -->
-      <div class="w-full max-w-md animate-float">
+      <div class="w-full max-w-md animate-float py-md">
         
         <!-- Logo/Identity Anchor: NSL Chat Style -->
         <div class="flex flex-col items-center mb-lg space-y-sm">
