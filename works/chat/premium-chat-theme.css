@@ -4,7 +4,7 @@
    ================================================================ */
 
 :root {
-  /* Nexus Light Theme Palette (Screenshots 1, 2, 3 in Light Mode) */
+  /* Nexus Light Theme Palette (Screenshots 1, 2, 3, 5 in Light Mode) */
   --n-bg:              #f4f6f9;
   --n-bg-chat:         #f8fafc;
   --n-panel:           #ffffff;
@@ -16,9 +16,9 @@
   --n-text:            #0f172a;
   --n-text-muted:      #64748b;
   
-  /* Light Mode Bubble Customization */
-  --n-bubble-sent:     #006d58; /* Deep emerald green */
-  --n-bubble-sent-text: #ffffff;
+  /* Light Mode Bubble Customization - Neon Mint & Dark Text */
+  --n-bubble-sent:     #00f5c0; /* Bright Neon Mint */
+  --n-bubble-sent-text: #080c10; /* Dark contrast text */
   --n-bubble-sent-border: none;
   --n-bubble-sent-left-border: none;
   
@@ -35,7 +35,7 @@
   --n-mono:            "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier, monospace;
 }
 
-/* Dark Mode Overrides (Screenshots 1, 2, 3, 4 in Dark Mode) */
+/* Dark Mode Overrides (Screenshots 1, 2, 3, 4, 6 in Dark Mode) */
 [data-theme="dark"],
 body.dark {
   --n-bg:              #080c10; /* Tech Pitch Black */
@@ -49,7 +49,7 @@ body.dark {
   --n-text:            #f0f4f8;
   --n-text-muted:      #7a8b9e;
   
-  /* Dark Mode Bubble Customization */
+  /* Dark Mode Bubble Customization - Navy & Glowing Left Border */
   --n-bubble-sent:     #0d171e; /* Dark navy card */
   --n-bubble-sent-text: #f0f4f8;
   --n-bubble-sent-border: 1px solid rgba(0, 245, 192, 0.08);
@@ -258,7 +258,7 @@ body:not(.dark) #messagesArea {
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04) !important;
 }
 
-/* Sent message bubble (Deep Emerald or Dark Navy + Neon accent border) */
+/* Sent message bubble (Neon Mint in light / Dark navy with neon strip in dark) */
 .my-message .message-bubble,
 .message.my-message .message-bubble {
   background: var(--n-bubble-sent) !important;
@@ -275,7 +275,19 @@ body:not(.dark) #messagesArea {
 
 .my-message .message-bubble .message-time,
 .message.my-message .message-bubble .message-time {
-  color: rgba(255, 255, 255, 0.72) !important;
+  color: rgba(0, 0, 0, 0.6) !important;
+  font-family: var(--n-mono) !important;
+  font-size: 9.5px !important;
+}
+
+body.dark .my-message .message-bubble .message-time,
+body.dark .message.my-message .message-bubble .message-time {
+  color: var(--n-accent) !important; /* Glowing monospace receipt details */
+}
+
+/* Ticks / Monospace metadata below bubble */
+.my-message .message-bubble .message-time::after {
+  content: " • ENCRYPTED • READ" !important;
 }
 
 /* Received message bubble */
@@ -454,6 +466,19 @@ body:not(.dark) .file-attachment-card {
   text-transform: uppercase;
 }
 
+/* Monospace Security Signatures below Composer Area */
+.input-area::after {
+  content: "🔒 AES-256  //  🛡️ QUANTUM RESISTANT" !important;
+  display: block !important;
+  font-family: var(--n-mono) !important;
+  font-size: 9px !important;
+  color: var(--n-text-muted) !important;
+  text-align: center !important;
+  margin-top: 10px !important;
+  letter-spacing: 1px;
+  opacity: 0.7;
+}
+
 /* ── 8. Glassmorphic Empty Panel Placeholder ── */
 .home-panel {
   background: rgba(15, 20, 28, 0.72) !important;
@@ -505,6 +530,68 @@ body:not(.dark) .home-panel {
   color: var(--n-accent) !important;
   opacity: 0.8 !important;
   text-transform: uppercase;
+}
+
+/* ── 8a. Dashboard Profile, Session Audit Logs & Request Tags ── */
+.badge,
+.tab-badge {
+  font-family: var(--n-mono) !important;
+  font-weight: 700 !important;
+  font-size: 9px !important;
+  text-transform: uppercase !important;
+  background: var(--n-accent) !important;
+  color: #080c10 !important;
+  border-radius: 4px !important;
+  padding: 2px 6px !important;
+}
+
+/* Decline/Accept request buttons layout styling */
+.decline-btn {
+  background: transparent !important;
+  border: 1px solid var(--n-text-muted) !important;
+  color: var(--n-text) !important;
+  border-radius: 8px !important;
+  font-family: var(--n-mono) !important;
+  font-weight: 700 !important;
+  font-size: 11px !important;
+  text-transform: uppercase !important;
+  padding: 8px 16px !important;
+}
+.accept-btn {
+  background: var(--n-accent) !important;
+  border: none !important;
+  color: #080c10 !important;
+  border-radius: 8px !important;
+  font-family: var(--n-mono) !important;
+  font-weight: 700 !important;
+  font-size: 11px !important;
+  text-transform: uppercase !important;
+  padding: 8px 16px !important;
+  box-shadow: var(--n-accent-glow) !important;
+}
+
+/* Audit Log terminal styling */
+.audit-log-terminal,
+.session-audit-log {
+  background: #05080c !important;
+  border: 1px solid var(--n-border) !important;
+  border-radius: 12px !important;
+  padding: 16px !important;
+  font-family: var(--n-mono) !important;
+  font-size: 12px !important;
+  color: #8fa0b5 !important;
+  line-height: 1.6 !important;
+  overflow-x: auto;
+}
+.audit-log-line {
+  margin-bottom: 6px;
+}
+.audit-log-tag {
+  color: var(--n-accent) !important;
+  font-weight: bold;
+}
+.audit-log-warn {
+  color: #f39c12 !important;
 }
 
 /* ── 9. Responsive Layout Rules for All Device Screens ── */
