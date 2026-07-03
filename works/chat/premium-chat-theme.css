@@ -87,7 +87,7 @@ body {
   background: var(--n-accent);
 }
 
-/* ── 2. Floating Pill Sidebar Tabs ── */
+/* ── 2. Sidebar Tabs Base ── */
 .tabs.primary-tabs {
   background: var(--n-panel) !important;
   border-bottom: 1px solid var(--n-border-soft) !important;
@@ -375,7 +375,6 @@ body:not(.dark) .file-attachment-card {
 
 .file-attachment-action {
   font-family: var(--n-mono) !important;
-  font-size: 10px !important;
   font-weight: 700 !important;
   text-transform: uppercase !important;
   color: var(--n-accent) !important;
@@ -607,11 +606,114 @@ body:not(.dark) .home-panel {
     box-shadow: 0 20px 60px rgba(0,0,0,0.15) !important;
     border-radius: 0 !important;
   }
+  
+  /* Sidebar stack layout */
   .sidebar {
     width: 360px !important;
     min-width: 360px !important;
+    display: flex !important;
+    flex-direction: column !important;
     border-right: 1px solid var(--n-border-soft) !important;
+    background: var(--n-panel) !important;
   }
+  
+  /* Header button list stack instead of squishing horizontally */
+  .sidebar-header {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 12px !important;
+    padding: 18px 16px !important;
+    background: var(--n-panel) !important;
+  }
+  
+  .sidebar-header .user-info {
+    display: flex !important;
+    align-items: center !important;
+    gap: 12px !important;
+  }
+  
+  .sidebar-header .sidebar-actions {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    flex-wrap: wrap !important;
+    gap: 10px !important;
+    width: 100% !important;
+  }
+  
+  .sidebar-header .sidebar-actions button {
+    height: 36px !important;
+    padding: 0 12px !important;
+    font-size: 12px !important;
+  }
+  
+  .sidebar-header .sidebar-actions .install-app-btn {
+    border-radius: 20px !important;
+    background: var(--n-panel-soft) !important;
+    border: 1.5px solid var(--n-border-soft) !important;
+    color: var(--n-text) !important;
+  }
+  
+  /* Convert horizontal tab list to vertical left navigation to match final mockups */
+  .tabs.primary-tabs {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 6px !important;
+    padding: 12px 14px !important;
+    border: none !important;
+    background: transparent !important;
+  }
+  
+  .tabs.primary-tabs .tab {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    gap: 12px !important;
+    width: 100% !important;
+    padding: 12px 16px !important;
+    border-radius: 10px !important;
+    background: var(--n-panel-soft) !important;
+    border: 1px solid var(--n-border-soft) !important;
+    color: var(--n-text-muted) !important;
+    font-family: var(--n-mono) !important;
+    font-size: 12px !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.5px !important;
+    box-shadow: none !important;
+    box-sizing: border-box !important;
+  }
+  
+  .tabs.primary-tabs .tab:hover {
+    background: var(--n-panel-hover) !important;
+    color: var(--n-accent) !important;
+    border-color: var(--n-accent) !important;
+  }
+  
+  .tabs.primary-tabs .tab.active {
+    background: var(--n-panel-active) !important;
+    color: var(--n-accent) !important;
+    border-color: var(--n-accent) !important;
+    border-left: 3px solid var(--n-accent) !important;
+    box-shadow: none !important;
+  }
+  
+  /* Badge spacing inside the vertical menu item */
+  .tabs.primary-tabs .tab .tab-badge,
+  .tabs.primary-tabs .tab .badge {
+    margin-left: auto !important;
+    position: static !important;
+    transform: none !important;
+    background: var(--n-accent) !important;
+    color: #080c10 !important;
+    border-radius: 4px !important;
+    padding: 2px 6px !important;
+    font-family: var(--n-mono) !important;
+    font-size: 10px !important;
+    box-shadow: none !important;
+  }
+
   .chat-main {
     flex: 1 !important;
   }
