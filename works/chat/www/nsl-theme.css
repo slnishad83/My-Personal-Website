@@ -124,6 +124,29 @@ body {
   min-width: 0;
 }
 
+.sidebar-header .logo-header span,
+.sidebar-header .logo-header .nsl-logo-text {
+  display: inline !important;
+}
+
+.sidebar-header {
+  flex-direction: row !important;
+  flex-wrap: nowrap !important;
+}
+
+.sidebar-header .sidebar-actions,
+.sidebar-actions {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  width: auto !important;
+}
+
+.tabs.primary-tabs {
+  width: auto !important;
+  position: static !important;
+}
+
 .logo-header .nsl-logo-img {
   height: 28px;
   width: auto;
