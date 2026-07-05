@@ -544,7 +544,6 @@ body {
 /* ── Dark Mode Variables ── */
 @media (prefers-color-scheme: dark) {
   :root {
-    --brand: #00a884;
     --bg: #0b141a;
     --card: #111b21;
     --text: #e9edef;
@@ -579,7 +578,6 @@ body.dark {
 
 /* ── Dark Mode Overrides ── */
 .app-header { background: linear-gradient(135deg, #008069, #00a884); }
-
 :root[data-theme="dark"] .app-header,
 body.dark .app-header { background: linear-gradient(135deg, #00574d, #008069); }
 

@@ -6,77 +6,14 @@
       name="viewport"
       content="width=device-width, initial-scale=1.0, user-scalable=yes, viewport-fit=cover"
     />
-    <meta name="theme-color" content="#008069" />
+    <meta name="theme-color" content="#00b894" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta
       name="apple-mobile-web-app-status-bar-style"
       content="black-translucent"
     />
-    <!-- Tailwind CSS with Preflight Disabled -->
-    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
-    <script>
-      tailwind.config = {
-        corePlugins: {
-          preflight: false
-        },
-        darkMode: "class",
-        theme: {
-          extend: {
-            "colors": {
-                    "surface-container-highest": "#e0e3e5",
-                    "primary-fixed-dim": "#00e1ac",
-                    "background": "#f7f9fb",
-                    "on-primary-container": "#007255",
-                    "surface-container": "#eceef0",
-                    "on-primary-fixed": "#002116",
-                    "primary": "#006c51",
-                    "error-container": "#ffdad6",
-                    "secondary-fixed-dim": "#bec6e0",
-                    "surface": "#f7f9fb",
-                    "on-tertiary-container": "#006b92",
-                    "secondary": "#565e74",
-                    "on-secondary-fixed": "#131b2e",
-                    "on-secondary-container": "#5c647a",
-                    "on-surface": "#191c1e",
-                    "error": "#ba1a1a",
-                    "tertiary": "#00668a",
-                    "inverse-on-surface": "#eff1f3",
-                    "surface-tint": "#006c51",
-                    "primary-container": "#00ffc3",
-                    "tertiary-container": "#c2e7ff",
-                    "on-background": "#191c1e",
-                    "on-error-container": "#93000a",
-                    "tertiary-fixed": "#c4e7ff",
-                    "surface-container-lowest": "#ffffff",
-                    "primary-fixed": "#34ffc5",
-                    "outline": "#6a7b72",
-                    "surface-container-low": "#f2f4f6",
-                    "secondary-container": "#dae2fd",
-                    "on-tertiary-fixed": "#001e2c",
-                    "on-primary": "#ffffff",
-                    "tertiary-fixed-dim": "#7bd0ff",
-                    "on-tertiary-fixed-variant": "#004c69",
-                    "surface-variant": "#e0e3e5",
-                    "on-secondary-fixed-variant": "#3f465c",
-                    "on-secondary": "#ffffff",
-                    "on-tertiary": "#ffffff",
-                    "on-error": "#ffffff",
-                    "surface-dim": "#d8dadc",
-                    "on-surface-variant": "#3a4a43",
-                    "surface-container-high": "#e6e8ea",
-                    "on-primary-fixed-variant": "#00513c",
-                    "inverse-primary": "#00e1ac",
-                    "secondary-fixed": "#dae2fd",
-                    "outline-variant": "#b9cbc1",
-                    "surface-bright": "#f7f9fb",
-                    "inverse-surface": "#2d3133"
-            }
-          }
-        }
-      };
-    </script>
-    <title>Team Chat - Complete</title>
+    <title>NSL Chat</title>
     <link rel="canonical" href="https://nishadsl.com/works/chat" />
     <link
       href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700&display=swap"
@@ -118,6 +55,7 @@
     <link rel="stylesheet" href="chat-2026.css?v=1" />
     <link rel="stylesheet" href="cross-platform-v2.css?v=1" />
     <link rel="stylesheet" href="premium-chat-theme.css?v=11" />
+    <link rel="stylesheet" href="nsl-theme.css?v=1" />
     <link rel="manifest" href="manifest.json?v=98" />
     <link rel="apple-touch-icon" href="app-icon-192.png" />
     <style>
@@ -259,11 +197,9 @@
       <!-- Sidebar -->
       <div class="sidebar" id="sidebar">
         <div class="sidebar-header">
-          <div class="logo-header flex items-center gap-2 mr-auto">
-            <div class="w-8 h-8 rounded-lg bg-gradient-to-tr from-emerald-500 to-teal-400 flex items-center justify-center shadow-sm">
-              <span class="material-symbols-outlined text-white text-lg font-light" style="font-variation-settings: 'FILL' 1;">chat_bubble</span>
-            </div>
-            <span class="text-lg font-bold tracking-tight text-on-surface">NSL Chat</span>
+          <div class="logo-header">
+            <img class="nsl-logo-img" src="nsl-logo.png" alt="NSL" />
+            <span class="nsl-logo-text">NSL Chat</span>
           </div>
           <div class="user-info" id="profileBtn">
             <div class="user-avatar" id="userAvatar">U</div>

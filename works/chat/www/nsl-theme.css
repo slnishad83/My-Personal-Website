@@ -1,0 +1,500 @@
+/* ================================================================
+   NSL CHAT — UNIFIED DESIGN SYSTEM
+   nsl-theme.css
+
+   This is the single authoritative visual layer for the app shell
+   (sidebar, tabs, chat list, chat header, message bubbles, composer).
+   It is loaded LAST so it wins the cascade over every legacy stylesheet.
+
+   Structure:
+     1. Design tokens (CSS variables) — light + dark
+     2. Global base
+     3. Sidebar shell: header / logo / profile / action icons
+     4. Search bar
+     5. Collapsible sections: requests / archive / pinned
+     6. Primary navigation (pill tabs on mobile → icon rail on desktop)
+     7. Folder tabs
+     8. Stories / status strip
+     9. Chat list rows (shared by chats/groups/broadcasts/status/calls/communities)
+     10. Chat window: header, empty state, messages, bubbles
+     11. Composer / input area
+     12. Scrollbars, badges, misc
+     13. Responsive breakpoints (mobile / tablet / laptop-desktop)
+   ================================================================ */
+
+/* ── 1. Design tokens ─────────────────────────────────────────── */
+:root {
+  /* Re-point the app's existing base variables to the NSL palette.
+     Everything already wired to these (buttons, bubbles, panels)
+     inherits the new look automatically. */
+  --app-bg: #eef2f5;
+  --panel: #ffffff;
+  --panel-soft: #f4f6f9;
+  --panel-hover: #f8fafc;
+  --panel-highlight: #e6fbf5;
+  --border: rgba(15, 23, 42, 0.08);
+  --text: #101418;
+  --muted: #5b6b76;
+  --muted-strong: #38454d;
+  --brand: #00b894;
+  --brand-dark: #00a884;
+  --sent: #00e6b8;
+  --received: #ffffff;
+  --shadow: 0 8px 30px rgba(15, 23, 42, 0.08);
+
+  /* NSL-specific tokens */
+  --nsl-accent: #00e1ac;
+  --nsl-accent-strong: #00b894;
+  --nsl-accent-glow: 0 0 14px rgba(0, 225, 172, 0.35);
+  --nsl-on-accent: #002116;
+  --nsl-glass-bg: rgba(255, 255, 255, 0.72);
+  --nsl-glass-border: rgba(15, 23, 42, 0.06);
+  --nsl-blur: 16px;
+  --nsl-radius-sm: 10px;
+  --nsl-radius-md: 16px;
+  --nsl-radius-lg: 22px;
+  --nsl-radius-full: 999px;
+  --nsl-rail-width: 84px;
+  --nsl-bubble-sent-text: #06231b;
+  --nsl-bubble-recv-bg: #f1f4f6;
+  --nsl-bubble-recv-text: #101418;
+  --nsl-bubble-recv-border: rgba(15, 23, 42, 0.05);
+}
+
+body.dark {
+  --app-bg: #0b0e14;
+  --panel: #10131a;
+  --panel-soft: #161a22;
+  --panel-hover: #1b212b;
+  --panel-highlight: #10241f;
+  --border: rgba(255, 255, 255, 0.08);
+  --text: #eef1f4;
+  --muted: #8fa3ab;
+  --muted-strong: #b9cbc1;
+  --brand: #00e1ac;
+  --brand-dark: #00e1ac;
+  --sent: #0e2620;
+  --received: #171d26;
+  --shadow: 0 8px 30px rgba(0, 0, 0, 0.45);
+
+  --nsl-accent: #00f5c0;
+  --nsl-accent-strong: #00e1ac;
+  --nsl-accent-glow: 0 0 16px rgba(0, 245, 192, 0.35);
+  --nsl-on-accent: #002116;
+  --nsl-glass-bg: rgba(16, 19, 26, 0.72);
+  --nsl-glass-border: rgba(255, 255, 255, 0.08);
+  --nsl-bubble-sent-text: #eef1f4;
+  --nsl-bubble-recv-bg: #171d26;
+  --nsl-bubble-recv-text: #eef1f4;
+  --nsl-bubble-recv-border: rgba(255, 255, 255, 0.06);
+}
+
+/* ── 2. Global base ───────────────────────────────────────────── */
+body {
+  background: var(--app-bg) !important;
+  color: var(--text) !important;
+}
+
+.chat-container {
+  border-radius: var(--nsl-radius-lg) !important;
+  box-shadow: var(--shadow) !important;
+  border: 1px solid var(--nsl-glass-border) !important;
+  background: var(--panel) !important;
+}
+
+/* ── 3. Sidebar shell ─────────────────────────────────────────── */
+.sidebar {
+  background: var(--panel) !important;
+  border-right: 1px solid var(--border) !important;
+}
+
+.sidebar-header,
+.chat-header {
+  background: var(--nsl-glass-bg) !important;
+  backdrop-filter: blur(var(--nsl-blur)) !important;
+  -webkit-backdrop-filter: blur(var(--nsl-blur)) !important;
+  border-bottom: 1px solid var(--nsl-glass-border) !important;
+}
+
+.logo-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-right: auto;
+  min-width: 0;
+}
+
+.logo-header .nsl-logo-img {
+  height: 28px;
+  width: auto;
+  display: block;
+  flex-shrink: 0;
+}
+
+.logo-header .nsl-logo-text {
+  font-weight: 800;
+  font-size: 16px;
+  letter-spacing: -0.01em;
+  color: var(--text);
+  white-space: nowrap;
+}
+
+.user-avatar,
+.list-avatar,
+.profile-avatar,
+.group-avatar-large {
+  border: 2px solid var(--nsl-glass-border) !important;
+}
+
+.status-dot.online {
+  background: var(--nsl-accent) !important;
+  box-shadow: var(--nsl-accent-glow);
+}
+
+.sidebar-actions .icon-btn,
+.sidebar-actions .logout-btn {
+  border-radius: var(--nsl-radius-full) !important;
+  transition: background 150ms ease, transform 150ms ease, color 150ms ease;
+}
+
+.sidebar-actions .icon-btn:hover,
+.sidebar-actions .logout-btn:hover {
+  background: rgba(0, 225, 172, 0.12) !important;
+  color: var(--nsl-accent-strong) !important;
+  transform: translateY(-1px);
+}
+
+.install-app-btn {
+  background: rgba(0, 225, 172, 0.12) !important;
+  border: 1px solid rgba(0, 225, 172, 0.3) !important;
+  color: var(--nsl-accent-strong) !important;
+  border-radius: var(--nsl-radius-full) !important;
+}
+
+/* ── 4. Search bar ────────────────────────────────────────────── */
+.search-box {
+  margin: 10px 12px;
+  border-radius: var(--nsl-radius-full);
+  background: var(--panel-soft) !important;
+  border: 1px solid var(--nsl-glass-border) !important;
+  transition: box-shadow 150ms ease, background 150ms ease;
+}
+
+.search-box:focus-within {
+  box-shadow: 0 0 0 3px rgba(0, 225, 172, 0.18);
+  background: var(--panel) !important;
+}
+
+.search-box input {
+  background: transparent !important;
+  color: var(--text) !important;
+}
+
+/* ── 5. Collapsible sections ──────────────────────────────────── */
+.request-header,
+.archive-header,
+.pinned-header {
+  background: transparent !important;
+  color: var(--muted-strong) !important;
+  font-weight: 700;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.badge,
+.tab-badge,
+.pinned-count {
+  background: var(--nsl-accent-strong) !important;
+  color: var(--nsl-on-accent) !important;
+  border-radius: var(--nsl-radius-full) !important;
+  font-weight: 800 !important;
+}
+
+/* ── 6. Primary navigation ────────────────────────────────────── */
+.tabs.primary-tabs {
+  background: transparent !important;
+  border-bottom: 1px solid var(--nsl-glass-border) !important;
+  gap: 6px !important;
+  padding: 8px 10px !important;
+}
+
+.tab.primary-tab {
+  border-radius: var(--nsl-radius-full) !important;
+  background: transparent !important;
+  color: var(--muted) !important;
+  font-weight: 600 !important;
+  transition: background 150ms ease, color 150ms ease, transform 150ms ease;
+}
+
+.tab.primary-tab:hover {
+  background: rgba(0, 225, 172, 0.1) !important;
+  color: var(--nsl-accent-strong) !important;
+}
+
+.tab.primary-tab.active {
+  background: var(--nsl-accent) !important;
+  color: var(--nsl-on-accent) !important;
+  box-shadow: var(--nsl-accent-glow);
+}
+
+.tab.primary-tab.active .tab-badge {
+  background: var(--nsl-on-accent) !important;
+  color: var(--nsl-accent) !important;
+}
+
+/* ── 7. Folder tabs ───────────────────────────────────────────── */
+.folder-tabs .tab,
+.folder-tabs button {
+  border-radius: var(--nsl-radius-full) !important;
+  border: 1px solid var(--nsl-glass-border) !important;
+  color: var(--muted) !important;
+  background: var(--panel-soft) !important;
+}
+
+.folder-tabs .tab.active,
+.folder-tabs button.active {
+  background: var(--nsl-accent) !important;
+  color: var(--nsl-on-accent) !important;
+  border-color: transparent !important;
+}
+
+/* ── 8. Stories / status strip ────────────────────────────────── */
+.stories-strip {
+  background: transparent !important;
+  border-bottom: 1px solid var(--nsl-glass-border) !important;
+}
+
+.story-avatar-ring {
+  border-color: var(--nsl-accent) !important;
+  box-shadow: var(--nsl-accent-glow);
+}
+
+.story-add-badge {
+  background: var(--nsl-accent-strong) !important;
+  color: var(--nsl-on-accent) !important;
+  border: 2px solid var(--panel) !important;
+}
+
+/* ── 9. Chat list rows ────────────────────────────────────────── */
+.list {
+  background: transparent !important;
+}
+
+.list-item {
+  margin: 4px 8px !important;
+  padding: 10px 10px !important;
+  border-radius: var(--nsl-radius-md) !important;
+  background: var(--panel) !important;
+  border: 1px solid var(--nsl-glass-border) !important;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03);
+  transition: background 150ms ease, transform 150ms ease, box-shadow 150ms ease;
+}
+
+.list-item:hover {
+  background: var(--panel-hover) !important;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.08);
+}
+
+.list-item.active,
+.list-item.selected-chat {
+  background: var(--panel-highlight) !important;
+  border-color: rgba(0, 225, 172, 0.35) !important;
+}
+
+.list-avatar {
+  border: 2px solid var(--nsl-glass-border) !important;
+}
+
+.list-name {
+  color: var(--text) !important;
+  font-weight: 700 !important;
+}
+
+.list-preview {
+  color: var(--muted) !important;
+}
+
+.list-time,
+.list-meta {
+  color: var(--muted) !important;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── 10. Chat window ──────────────────────────────────────────── */
+.messages-area {
+  background: var(--app-bg) !important;
+}
+
+.home-panel {
+  color: var(--muted) !important;
+}
+
+.home-panel-icon {
+  filter: drop-shadow(var(--nsl-accent-glow));
+}
+
+.home-panel-title {
+  color: var(--text) !important;
+}
+
+.chat-header .chat-actions .icon-btn {
+  border-radius: var(--nsl-radius-full) !important;
+  transition: background 150ms ease, color 150ms ease;
+}
+
+.chat-header .chat-actions .icon-btn:hover {
+  background: rgba(0, 225, 172, 0.12) !important;
+  color: var(--nsl-accent-strong) !important;
+}
+
+.message-bubble {
+  border-radius: var(--nsl-radius-md) !important;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05);
+}
+
+.message-bubble.sent,
+.message-bubble.outgoing,
+.message.sent .message-bubble {
+  background: var(--sent) !important;
+  color: var(--nsl-bubble-sent-text) !important;
+  border: none !important;
+}
+
+.message-bubble.received,
+.message-bubble.incoming,
+.message.received .message-bubble {
+  background: var(--nsl-bubble-recv-bg) !important;
+  color: var(--nsl-bubble-recv-text) !important;
+  border: 1px solid var(--nsl-bubble-recv-border) !important;
+}
+
+/* ── 11. Composer ─────────────────────────────────────────────── */
+.input-area {
+  background: var(--nsl-glass-bg) !important;
+  backdrop-filter: blur(var(--nsl-blur)) !important;
+  -webkit-backdrop-filter: blur(var(--nsl-blur)) !important;
+  border-top: 1px solid var(--nsl-glass-border) !important;
+}
+
+.send-btn {
+  background: var(--nsl-accent) !important;
+  color: var(--nsl-on-accent) !important;
+  box-shadow: var(--nsl-accent-glow);
+  transition: transform 120ms ease, filter 120ms ease;
+}
+
+.send-btn:hover {
+  filter: brightness(1.05);
+  transform: scale(1.05);
+}
+
+.emoji-btn,
+.attach-btn,
+.voice-msg-btn {
+  color: var(--muted) !important;
+  transition: color 150ms ease, background 150ms ease;
+  border-radius: var(--nsl-radius-full) !important;
+}
+
+.emoji-btn:hover,
+.attach-btn:hover,
+.voice-msg-btn:hover {
+  color: var(--nsl-accent-strong) !important;
+  background: rgba(0, 225, 172, 0.1) !important;
+}
+
+/* ── 12. Scrollbars & misc ────────────────────────────────────── */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(0, 225, 172, 0.25);
+  border-radius: 10px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--nsl-accent-strong);
+}
+
+::selection {
+  background: rgba(0, 225, 172, 0.35);
+}
+
+:focus-visible {
+  outline: 2px solid var(--nsl-accent) !important;
+  outline-offset: 2px;
+}
+
+/* ── 13. Responsive breakpoints ───────────────────────────────── */
+
+/* Mobile (<768px): bento-style single column, comfortable spacing */
+@media (max-width: 767px) {
+  .chat-container {
+    border-radius: 0 !important;
+    margin: 0 !important;
+    width: 100vw !important;
+    height: 100dvh !important;
+    box-shadow: none !important;
+    border: none !important;
+  }
+
+  .list-item {
+    margin: 4px 10px !important;
+  }
+
+  .tabs.primary-tabs {
+    overflow-x: auto;
+  }
+}
+
+/* Tablet (768px–1099px): split pane, rail not yet engaged */
+@media (min-width: 768px) and (max-width: 1099px) {
+  .chat-container {
+    width: calc(100vw - 24px) !important;
+    height: calc(100dvh - 24px) !important;
+  }
+
+  .sidebar {
+    width: min(380px, 42vw) !important;
+    min-width: 300px !important;
+  }
+}
+
+/* Laptop / desktop (>=1100px): transform primary nav into an icon rail,
+   matching the SideNavBar pattern from the design reference. */
+@media (min-width: 1100px) {
+  .sidebar {
+    width: min(420px, 32vw) !important;
+  }
+
+  .tabs.primary-tabs {
+    flex-direction: row;
+    justify-content: space-between;
+  }
+
+  .tab.primary-tab {
+    flex-direction: column;
+    gap: 2px;
+    padding: 8px 6px !important;
+    font-size: 11px;
+  }
+
+  .tab.primary-tab span:not(.primary-tab-icon):not(.tab-badge) {
+    font-size: 10px;
+  }
+
+  .list-item:hover {
+    transform: translateY(-2px);
+  }
+}
+
+@media (min-width: 1400px) {
+  .sidebar {
+    width: min(440px, 28vw) !important;
+  }
+}

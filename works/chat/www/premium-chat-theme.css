@@ -622,40 +622,28 @@ body:not(.dark) .home-panel {
     border-radius: 0 !important;
   }
   
-  /* Reset grid sidebar back to clean single column */
-  body .chat-container .sidebar {
+  /* Sidebar sizing rules */
+  .sidebar {
     width: 380px !important;
     min-width: 380px !important;
-    max-width: 380px !important;
-    display: flex !important;
-    flex-direction: column !important;
-    height: 100vh !important;
-    height: 100dvh !important;
     border-right: 1px solid var(--n-border-soft) !important;
     background: var(--n-panel) !important;
-    box-sizing: border-box !important;
-  }
-  
-  /* Safe flex sizing for user profile and buttons header */
-  body .chat-container .sidebar .sidebar-header {
-    grid-area: auto !important;
     display: flex !important;
-    flex-direction: row !important;
+    flex-direction: column !important;
+  }
+
+  /* Safe flex sizing for user profile and buttons header */
+  .sidebar-header {
+    display: flex !important;
     flex-wrap: wrap !important;
     align-items: center !important;
     justify-content: space-between !important;
     gap: 8px !important;
     padding: 16px 14px !important;
-    background: var(--n-panel) !important;
-    border-bottom: 1px solid var(--n-border-soft) !important;
-    border-right: none !important;
     box-sizing: border-box !important;
   }
   
   .sidebar-header .user-info {
-    display: flex !important;
-    align-items: center !important;
-    gap: 10px !important;
     flex: 1 1 auto !important;
     min-width: 120px !important;
   }
