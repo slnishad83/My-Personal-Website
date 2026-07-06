@@ -597,6 +597,10 @@ body.dark .cyber-status-bar {
     overflow: hidden !important;
   }
 
+  .mobile-install-card {
+    display: none !important;
+  }
+
   .chat-main {
     grid-column: 3 / 4 !important;
     grid-row: 1 / 2 !important;
