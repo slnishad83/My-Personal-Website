@@ -541,5 +541,63 @@
 ';
   document.head.appendChild(style);
 
+  /* ── 9. Cyber Navigation & Status Bar Interceptors ── */
+  waitForFn('switchTab', function () {
+    var originalSwitchTab = window.switchTab;
+    window.switchTab = function (tab) {
+      originalSwitchTab(tab);
+      document.querySelectorAll('.nav-dock-item').forEach(function (btn) {
+        btn.classList.remove('active');
+        if (btn.dataset.tab === tab) {
+          btn.classList.add('active');
+        }
+      });
+    };
+  });
+
+  function initCyberDock() {
+    var leftNavDock = document.getElementById('leftNavDock');
+    if (leftNavDock) {
+      leftNavDock.addEventListener('click', function (e) {
+        var btn = e.target.closest('.nav-dock-item');
+        if (!btn) return;
+        
+        var tab = btn.dataset.tab;
+        if (tab) {
+          if (typeof window.switchTab === 'function') {
+            window.switchTab(tab);
+          }
+        } else if (btn.id === 'dockSavedBtn') {
+          if (typeof window.startSavedMessages === 'function') {
+            window.startSavedMessages();
+          }
+        } else if (btn.id === 'dockArchiveBtn') {
+          var header = document.getElementById('archiveHeader');
+          if (header) header.click();
+        } else if (btn.id === 'dockSettingsBtn' || btn.id === 'dockProfileBtn') {
+          if (typeof window.showProfileModal === 'function') {
+            window.showProfileModal();
+          }
+        } else if (btn.id === 'dockSupportBtn') {
+          alert('System status: Nominal. Protocol V2.0.26 secure.');
+        }
+      });
+    }
+    
+    var latencyVal = document.getElementById('statusLatency');
+    if (latencyVal) {
+      setInterval(function () {
+        var ms = Math.floor(Math.random() * 6) + 6;
+        latencyVal.textContent = ms + 'ms';
+      }, 6000);
+    }
+  }
+  
+  if (document.readyState !== 'loading') {
+    initCyberDock();
+  } else {
+    document.addEventListener('DOMContentLoaded', initCyberDock);
+  }
+
   console.log('[chat-fixes] v3 applied ✓');
 })();

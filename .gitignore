@@ -69,3 +69,7 @@ node_modules/
 .dataconnect
 
 works/chat/My-Personal-Website/
+works.zip
+fix_git.bat
+resolve_merge.bat
+deploy.bat

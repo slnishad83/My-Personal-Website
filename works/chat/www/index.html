@@ -193,6 +193,44 @@
       </div>
     </div>
     <div class="chat-container">
+      <!-- Left Navigation Dock -->
+      <div class="left-nav-dock" id="leftNavDock">
+        <div class="logo-header">
+          <div class="logo-pulse"></div>
+          <span class="logo-text">NEXUS</span>
+        </div>
+        <div class="nav-dock-items">
+          <button class="nav-dock-item active" data-tab="all" title="Chats">
+            <span class="material-symbols-outlined">chat</span>
+            <span class="dock-label">Chats</span>
+          </button>
+          <button class="nav-dock-item" data-tab="groups" title="Groups">
+            <span class="material-symbols-outlined">group</span>
+            <span class="dock-label">Groups</span>
+          </button>
+          <button class="nav-dock-item" id="dockSavedBtn" title="Saved Messages">
+            <span class="material-symbols-outlined">bookmark</span>
+            <span class="dock-label">Saved</span>
+          </button>
+          <button class="nav-dock-item" id="dockArchiveBtn" title="Archived Chats">
+            <span class="material-symbols-outlined">archive</span>
+            <span class="dock-label">Archive</span>
+          </button>
+        </div>
+        <div class="nav-dock-footer">
+          <button class="nav-dock-item" id="dockSettingsBtn" title="Settings">
+            <span class="material-symbols-outlined">settings</span>
+          </button>
+          <button class="nav-dock-item" id="dockSupportBtn" title="Support">
+            <span class="material-symbols-outlined">help</span>
+          </button>
+          <div class="user-avatar-dock" id="dockProfileBtn">
+            <div class="list-avatar chat-header-avatar" id="dockAvatarImg">U</div>
+            <span class="status-dot online"></span>
+          </div>
+        </div>
+      </div>
+
       <!-- Sidebar -->
       <div class="sidebar" id="sidebar">
         <div class="sidebar-header">
@@ -681,6 +719,18 @@
           </div>
           <!-- Markdown Preview Panel (hidden by default, shown in compose area) -->
           <div id="markdownPreviewPanel" style="display:none;padding:12px 16px;border-top:1px solid var(--border);background:var(--panel-soft);max-height:200px;overflow-y:auto;font-size:14px;line-height:1.6;"></div>
+          
+          <!-- Cyber Status Bar Footer -->
+          <div class="cyber-status-bar" id="cyberStatusBar">
+            <span class="status-indicator-dot online"></span>
+            <span class="status-item">LATENCY: <span id="statusLatency">8ms</span></span>
+            <span class="status-separator">•</span>
+            <span class="status-item">NODE: <span id="statusNode">GLOBAL-MESH</span></span>
+            <span class="status-separator">•</span>
+            <span class="status-item">PROTOCOL: V2.0.26</span>
+            <span class="status-separator">•</span>
+            <span class="status-item status-security">SYSTEM SECURE</span>
+          </div>
         </div>
       </div>
     </div>
