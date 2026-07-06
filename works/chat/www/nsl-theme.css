@@ -591,12 +591,15 @@ body.dark .cyber-status-bar {
   .chat-container {
     display: grid !important;
     grid-template-columns: 80px 380px 1fr !important;
+    grid-template-rows: 1fr !important;
     height: 100vh !important;
     height: 100dvh !important;
     overflow: hidden !important;
   }
 
   .chat-main {
+    grid-column: 3 / 4 !important;
+    grid-row: 1 / 2 !important;
     display: flex !important;
     flex-direction: column !important;
     height: 100% !important;
@@ -606,6 +609,8 @@ body.dark .cyber-status-bar {
 
   /* Left Navigation Dock styling on Desktop */
   .left-nav-dock {
+    grid-column: 1 / 2 !important;
+    grid-row: 1 / 2 !important;
     display: flex !important;
     flex-direction: column !important;
     align-items: center !important;
@@ -755,7 +760,7 @@ body.dark .cyber-status-bar {
     display: flex !important;
     flex-direction: column !important;
     grid-column: 2 / 3 !important;
-    grid-row: 1 / 3 !important;
+    grid-row: 1 / 2 !important;
     width: 100% !important;
     border-right: 1px solid var(--border) !important;
     background: var(--panel) !important;
