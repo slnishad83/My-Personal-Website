@@ -305,29 +305,32 @@ body {
 }
 
 .list-item {
-  margin: 4px 8px !important;
-  padding: 10px 10px !important;
-  border-radius: var(--nsl-radius-md) !important;
+  margin: 0 !important;
+  padding: 12px 16px !important;
+  border-radius: 0 !important;
   background: var(--panel) !important;
-  border: 1px solid var(--nsl-glass-border) !important;
-  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03);
-  transition: background 150ms ease, transform 150ms ease, box-shadow 150ms ease;
+  border: none !important;
+  border-bottom: 1px solid var(--border) !important;
+  box-shadow: none !important;
+  transition: background 150ms ease;
 }
 
 .list-item:hover {
   background: var(--panel-hover) !important;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.08);
+  transform: none !important;
+  box-shadow: none !important;
 }
 
 .list-item.active,
 .list-item.selected-chat {
-  background: var(--panel-highlight) !important;
-  border-color: rgba(0, 225, 172, 0.35) !important;
+  background: var(--panel-hover) !important;
+  border: none !important;
+  border-bottom: 1px solid var(--border) !important;
 }
 
 .list-avatar {
-  border: 2px solid var(--nsl-glass-border) !important;
+  border: none !important;
+  box-shadow: none !important;
 }
 
 .list-name {
@@ -835,4 +838,167 @@ body.dark .cyber-status-bar {
     margin: 0 !important;
     padding: 0 !important;
   }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   FINAL LAYOUT, CHAT LIST, AND MESSAGE BUBBLE CORRECTIONS
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ── 1. Flat WhatsApp Style Chat List (All viewports) ── */
+.list-item {
+  margin: 0 !important;
+  padding: 12px 16px !important;
+  border-radius: 0 !important;
+  background: var(--panel) !important;
+  border: none !important;
+  border-bottom: 1px solid var(--border) !important;
+  box-shadow: none !important;
+  transition: background 150ms ease;
+}
+
+.list-item:hover {
+  background: var(--panel-hover) !important;
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+.list-item.active,
+.list-item.selected-chat {
+  background: var(--panel-hover) !important;
+  border: none !important;
+  border-bottom: 1px solid var(--border) !important;
+}
+
+.list-avatar {
+  border: none !important;
+  box-shadow: none !important;
+}
+
+/* ── 2. Message Bubbles & WhatsApp Colors ── */
+.message-bubble {
+  border-radius: 8px !important;
+  box-shadow: 0 1px 0.5px rgba(11, 20, 26, 0.13) !important;
+  border: none !important;
+  border-left: none !important;
+  position: relative !important;
+  padding: 8px 12px !important;
+  font-size: 14.2px !important;
+  line-height: 1.45 !important;
+  min-width: 120px !important;
+  max-width: 65% !important;
+}
+
+/* Light Mode Sent (WhatsApp light green) */
+.message.my-message .message-bubble {
+  background: #d9fdd3 !important;
+  color: #111b21 !important;
+  border-top-right-radius: 0 !important;
+}
+
+/* Light Mode Received (WhatsApp white) */
+.message:not(.my-message) .message-bubble {
+  background: #ffffff !important;
+  color: #111b21 !important;
+  border-top-left-radius: 0 !important;
+}
+
+/* Dark Mode Sent (WhatsApp dark green) */
+body.dark .message.my-message .message-bubble {
+  background: #005c4b !important;
+  color: #e9edef !important;
+  box-shadow: 0 1px 0.5px rgba(0, 0, 0, 0.13) !important;
+}
+
+/* Dark Mode Received (WhatsApp dark blue-grey) */
+body.dark .message:not(.my-message) .message-bubble {
+  background: #202c33 !important;
+  color: #e9edef !important;
+  box-shadow: 0 1px 0.5px rgba(0, 0, 0, 0.13) !important;
+}
+
+/* Prevent timestamp overflow */
+.message-time {
+  float: right;
+  margin-top: 4px;
+  margin-left: 8px;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+/* ── 3. Sent & Received Media Bubbles Cleanup ── */
+.message-bubble:has(.message-attachment) {
+  padding: 4px !important;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+.message-bubble .message-attachment img {
+  border-radius: 6px !important;
+  display: block;
+  max-width: 100% !important;
+  height: auto !important;
+  border: 1px solid var(--border) !important;
+}
+
+/* ── 4. Floating Message Quick Actions (Desktop/Tablet) ── */
+@media (min-width: 768px) {
+  .message-quick-actions,
+  .received-message-actions,
+  .sent-message-actions {
+    position: absolute !important;
+    top: 50% !important;
+    transform: translateY(-50%) !important;
+    z-index: 5 !important;
+    display: none !important;
+    background: var(--panel) !important;
+    border: 1px solid var(--border) !important;
+    border-radius: 20px !important;
+    padding: 3px 6px !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15) !important;
+  }
+
+  .message:hover .message-quick-actions,
+  .message:hover .received-message-actions,
+  .message:hover .sent-message-actions {
+    display: inline-flex !important;
+  }
+
+  .my-message .message-quick-actions,
+  .sent-message-actions {
+    left: auto !important;
+    right: 100% !important;
+    margin-right: 12px !important;
+  }
+
+  .message:not(.my-message) .message-quick-actions,
+  .received-message-actions {
+    right: auto !important;
+    left: 100% !important;
+    margin-left: 12px !important;
+  }
+}
+
+/* ── 5. Search Bar, Composer & Header Overrides ── */
+.search-box input {
+  padding-right: 42px !important;
+}
+
+.wa-composer-shell {
+  flex: 1 !important;
+  width: auto !important;
+}
+
+.attachment-sheet {
+  display: none;
+}
+.attachment-sheet.active {
+  display: flex !important;
+}
+
+#selectModeBtn {
+  border-radius: 50% !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
 }
