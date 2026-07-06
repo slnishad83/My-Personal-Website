@@ -506,18 +506,22 @@ function checkSession() {
           setTimeout(bootApp, 400);
         });
       } else {
-        App.currentUser = { uid:'demo', displayName:'You', email:'you@teamchat.app', photoURL:null };
-        setLoadingStatus('Loading demo…');
-        setTimeout(() => { loadDemoData(); bootApp(); }, 800);
+        // Not signed in — redirect to login
+        window.location.href = '/works/chat/login.html';
       }
     });
   } else {
-    App.currentUser = { uid:'demo', displayName:'You', email:'you@teamchat.app', photoURL:null };
-    setTimeout(() => { loadDemoData(); bootApp(); }, 900);
+    // Firebase not available — redirect to login
+    window.location.href = '/works/chat/login.html';
   }
 }
 
 function bootApp() {
+  // Restore saved theme
+  const savedTheme = localStorage.getItem('nsl-theme') || 'light';
+  document.documentElement.setAttribute('data-theme', savedTheme);
+  _syncThemeIcons(savedTheme);
+
   document.getElementById('loading-screen').classList.add('hidden');
   document.getElementById('app').classList.remove('hidden');
   updateProfileUI();
@@ -606,21 +610,40 @@ function updateProfileUI() {
 function applyTheme(mode) {
   App.theme = mode;
   const html = document.documentElement;
+  let resolvedTheme = mode;
   if (mode === 'dark') {
     html.setAttribute('data-theme','dark');
   } else if (mode === 'light') {
     html.setAttribute('data-theme','light');
   } else {
     const dark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    html.setAttribute('data-theme', dark ? 'dark' : 'light');
+    resolvedTheme = dark ? 'dark' : 'light';
+    html.setAttribute('data-theme', resolvedTheme);
   }
   localStorage.setItem('tc_theme', mode);
+  localStorage.setItem('nsl-theme', resolvedTheme); // shared with hub
   updateThemeUI();
+  _syncThemeIcons(resolvedTheme);
+}
+
+function _syncThemeIcons(resolvedTheme) {
+  const icons  = { light: 'light_mode', dark: 'dark_mode', system: 'brightness_auto' };
+  const labels = { light: 'Light', dark: 'Dark', system: 'System' };
+  const icon = resolvedTheme === 'dark' ? 'dark_mode' : 'light_mode';
+  ['theme-icon', 'theme-icon-sidebar', 'theme-icon-2'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = icon;
+  });
+  ['theme-label', 'theme-label-2'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = resolvedTheme === 'dark' ? 'Dark' : 'Light';
+  });
 }
 
 function cycleTheme() {
-  const modes = ['system','light','dark'];
-  const next = modes[(modes.indexOf(App.theme)+1) % modes.length];
+  const modes = ['light','dark'];
+  const current = document.documentElement.getAttribute('data-theme') || 'light';
+  const next = current === 'dark' ? 'light' : 'dark';
   applyTheme(next);
 }
 
