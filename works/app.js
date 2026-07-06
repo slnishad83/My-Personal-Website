@@ -620,6 +620,7 @@ function applyTheme(mode) {
     resolvedTheme = dark ? 'dark' : 'light';
     html.setAttribute('data-theme', resolvedTheme);
   }
+  html.classList.toggle('dark', resolvedTheme === 'dark');
   localStorage.setItem('tc_theme', mode);
   localStorage.setItem('nsl-theme', resolvedTheme); // shared with hub
   updateThemeUI();
@@ -641,7 +642,6 @@ function _syncThemeIcons(resolvedTheme) {
 }
 
 function cycleTheme() {
-  const modes = ['light','dark'];
   const current = document.documentElement.getAttribute('data-theme') || 'light';
   const next = current === 'dark' ? 'light' : 'dark';
   applyTheme(next);
@@ -655,30 +655,100 @@ function updateThemeUI() {
   if (icon) icon.textContent = icons[App.theme] || 'brightness_auto';
 }
 
-/* ══════════════════════════════════════════════════
-   7. TAB SYSTEM
-══════════════════════════════════════════════════ */
 function switchTab(tab) {
   App.activeTab = tab;
 
-  // Sidebar tabs
+  // Sidebar tabs (Tailwind class styling)
   qsa('.tab-item').forEach(el => {
-    el.classList.toggle('active', el.dataset.tab === tab);
-    el.setAttribute('aria-selected', el.dataset.tab === tab);
+    const active = el.dataset.tab === tab;
+    el.classList.toggle('bg-primary-fixed/10', active);
+    el.classList.toggle('text-primary-fixed', active);
+    el.classList.toggle('border-l-4', active);
+    el.classList.toggle('border-primary-fixed', active);
+    el.classList.toggle('text-on-surface-variant', !active);
+    el.setAttribute('aria-selected', active ? 'true' : 'false');
   });
 
-  // Bottom nav
+  // Bottom nav tabs
   qsa('.bottom-nav-item').forEach(el => {
-    el.classList.toggle('active', el.dataset.tab === tab);
-    el.setAttribute('aria-current', el.dataset.tab === tab ? 'page' : 'false');
+    const active = el.dataset.tab === tab;
+    el.classList.toggle('text-primary-fixed', active);
+    el.classList.toggle('text-on-surface-variant', !active);
+    el.setAttribute('aria-current', active ? 'page' : 'false');
   });
 
   renderChatList();
 }
 
-/* ══════════════════════════════════════════════════
-   8. CHAT LIST RENDERING
-══════════════════════════════════════════════════ */
+function chatItemHTML(chat) {
+  const isActive  = App.currentChat && App.currentChat.id === chat.id;
+  const timeStr   = formatChatTime(chat.lastTime);
+  
+  // Resolve display properties dynamically
+  let name = chat.name;
+  let initials = chat.initials || '?';
+  let photoURL = chat.photoURL;
+  let status = chat.status || 'offline';
+
+  if (chat.type === 'personal' && chat.id !== `saved_${App.currentUser?.uid}`) {
+    const contact = App.contacts.find(c => c.uid === chat.uid);
+    if (contact) {
+      name = contact.name;
+      initials = contact.initials || '?';
+      photoURL = contact.photoURL;
+      status = contact.status || 'offline';
+    }
+  }
+
+  // Active item highlighting matches the design: border-l-4 border-primary bg-primary/10 or hover:bg-surface-container
+  const activeClass = isActive 
+    ? 'bg-primary/10 border-l-4 border-primary text-primary' 
+    : 'hover:bg-surface-container/50 text-on-surface';
+
+  const statusColor = status === 'online' ? 'bg-primary-fixed' : 'bg-outline';
+  const statusDot = chat.type === 'personal'
+    ? `<div class="absolute bottom-0 right-0 w-3.5 h-3.5 ${statusColor} border-2 border-surface-container-lowest rounded-full"></div>`
+    : '';
+
+  const avatarHtml = photoURL
+    ? `<img src="${photoURL}" alt="${escHtml(name)}" class="w-12 h-12 rounded-xl object-cover">`
+    : `<div class="w-12 h-12 rounded-xl flex items-center justify-center font-bold text-lg bg-surface-container-highest text-on-surface-variant">${initials}</div>`;
+
+  const unreadBadge = chat.unread > 0
+    ? `<div class="bg-secondary text-white text-[10px] px-1.5 py-0.5 rounded-full font-bold ml-2">${chat.unread}</div>`
+    : '';
+
+  const pinIcon = chat.pinned 
+    ? `<span class="material-symbols-outlined text-[14px] text-primary" style="font-variation-settings: 'FILL' 1;">push_pin</span>` 
+    : '';
+
+  return `
+  <div class="flex items-center gap-4 p-4 rounded-xl cursor-pointer transition-all duration-200 group ${activeClass}"
+       onclick="openChat('${chat.id}')"
+       oncontextmenu="chatContextMenu(event,'${chat.id}')"
+       role="listitem"
+       tabindex="0"
+       onkeydown="if(event.key==='Enter')openChat('${chat.id}')">
+    <div class="relative flex-shrink-0">
+      ${avatarHtml}
+      ${statusDot}
+    </div>
+    <div class="flex-1 min-w-0">
+      <div class="flex justify-between items-baseline mb-0.5">
+        <span class="font-bold text-[16px] truncate ${isActive ? 'text-primary' : 'text-on-surface'}">${escHtml(name)}</span>
+        <span class="text-[10px] text-on-surface-variant font-medium">${timeStr}</span>
+      </div>
+      <div class="flex justify-between items-center">
+        <p class="text-sm text-on-surface-variant truncate pr-2">${escHtml(chat.lastMsg || '')}</p>
+        <div class="flex items-center gap-1.5 flex-shrink-0">
+          ${pinIcon}
+          ${unreadBadge}
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+
 function renderChatList(filter = '') {
   const list = document.getElementById('chat-list');
   if (!list) return;
@@ -854,9 +924,6 @@ function moreRow(icon, label, action) {
   </div>`;
 }
 
-/* ══════════════════════════════════════════════════
-   9. OPEN CHAT
-══════════════════════════════════════════════════ */
 function openChat(chatId) {
   const chat = App.chats.find(c => c.id === chatId);
   if (!chat) return;
@@ -869,23 +936,23 @@ function openChat(chatId) {
   const el = document.querySelector(`.chat-item[onclick="openChat('${chatId}')"]`);
   if (el) el.classList.add('active');
 
-  // Update header
+  // Update header text and icons
   setEl('header-name', chat.name);
   const statusDot = document.getElementById('header-status-dot');
-  if (chat.type==='group') {
+  if (chat.type === 'group') {
     setEl('header-status', `${chat.memberCount||3} members`);
     if (statusDot) statusDot.style.display = 'none';
   } else {
     const contact = App.contacts.find(c=>c.uid===chat.uid);
-    const statusText = contact?.status === 'online' ? 'Online' : contact?.about || 'Tap to view profile';
+    const statusText = contact?.status === 'online' ? 'Active Now' : contact?.about || 'Offline';
     const el2 = document.getElementById('header-status');
     if (el2) {
       el2.textContent = statusText;
-      el2.className = 'chat-header-status' + (contact?.status==='online' ? ' online' : '');
+      el2.className = 'text-xs text-primary-fixed-dim';
     }
     if (statusDot) {
       statusDot.style.display = '';
-      statusDot.className = `avatar-status ${contact?.status||'offline'}`;
+      statusDot.className = `absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-background ${contact?.status === 'online' ? 'bg-primary-fixed' : 'bg-outline'}`;
     }
   }
 
@@ -893,18 +960,16 @@ function openChat(chatId) {
   const ha = document.getElementById('header-avatar');
   if (ha) {
     if (chat.photoURL) {
-      ha.innerHTML = `<img src="${chat.photoURL}" alt="${escHtml(chat.name)}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`;
+      ha.innerHTML = `<img src="${chat.photoURL}" alt="${escHtml(chat.name)}" class="w-10 h-10 rounded-full object-cover">`;
     } else {
       ha.innerHTML = chat.initials;
-      ha.className = `avatar-img sz-40 ${chat.avatar || 'gradient-1'}`;
-      ha.style.borderRadius='50%';
-      ha.style.fontSize='14px';
+      ha.className = `w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm bg-surface-container-highest text-on-surface-variant`;
     }
   }
 
   // On mobile: show chat area, hide sidebar
   if (window.innerWidth < 768) {
-    document.getElementById('chat-area').classList.add('active');
+    document.getElementById('chat-area').classList.remove('hidden');
     document.getElementById('sidebar').classList.add('hidden');
   }
 
@@ -925,31 +990,63 @@ function openChat(chatId) {
   renderChatList();
 }
 
-/* ══════════════════════════════════════════════════
-   10. MESSAGE RENDERING
-══════════════════════════════════════════════════ */
 function renderMessages(chatId) {
   const msgs = App.messages[chatId] || [];
   const wrap = document.getElementById('messages-wrap');
 
+  const isMyselfChat = App.currentChat && App.currentChat.id === `saved_${App.currentUser?.uid}`;
+
   if (!msgs.length) {
-    wrap.innerHTML = `
-      <div class="empty-state" style="flex:1;justify-content:flex-end;padding-bottom:var(--sp-8)">
-        <div class="empty-icon" style="font-size:28px;width:64px;height:64px">👋</div>
-        <div class="empty-title" style="font-size:var(--ts-base)">Start the conversation</div>
-        <p class="empty-sub">Say hello!</p>
-      </div>`;
+    if (isMyselfChat) {
+      wrap.innerHTML = `
+        <div class="flex flex-col items-center py-12 text-center w-full">
+          <div class="w-20 h-20 rounded-3xl bg-surface-container-high flex items-center justify-center mb-4 border border-outline-variant/20 shadow-2xl">
+            <span class="material-symbols-outlined text-primary text-4xl" style="font-variation-settings: 'FILL' 1;">lock</span>
+          </div>
+          <h4 class="font-headline-md text-headline-md font-bold mb-2">This is your personal workspace.</h4>
+          <p class="text-on-surface-variant text-sm max-w-sm">Messages sent here are private and encrypted. Perfect for drafting ideas, saving links, or keeping files handy.</p>
+          <div class="mt-4 flex gap-2">
+            <span class="px-3 py-1 bg-surface-variant rounded-full text-xs font-semibold text-on-surface-variant">Private</span>
+            <span class="px-3 py-1 bg-surface-variant rounded-full text-xs font-semibold text-on-surface-variant">Cloud Sync</span>
+          </div>
+        </div>`;
+    } else {
+      wrap.innerHTML = `
+        <div class="flex flex-col items-center py-12 text-center w-full">
+          <div class="w-16 h-16 rounded-2xl bg-surface-container-high flex items-center justify-center mb-4 border border-outline-variant/20">
+            <span class="material-symbols-outlined text-primary text-3xl">chat</span>
+          </div>
+          <h4 class="font-bold mb-1">Start the conversation</h4>
+          <p class="text-on-surface-variant text-sm">Say hello to get things started!</p>
+        </div>`;
+    }
     return;
   }
 
   let html = '';
+  if (isMyselfChat) {
+    html += `
+      <div class="flex flex-col items-center py-8 text-center w-full">
+        <div class="w-20 h-20 rounded-3xl bg-surface-container-high flex items-center justify-center mb-4 border border-outline-variant/20 shadow-2xl">
+          <span class="material-symbols-outlined text-primary text-4xl" style="font-variation-settings: 'FILL' 1;">lock</span>
+        </div>
+        <h4 class="font-headline-md text-headline-md font-bold mb-2">Personal Workspace</h4>
+        <p class="text-on-surface-variant text-xs max-w-xs">End-to-end encrypted notepad</p>
+      </div>`;
+  }
+
   let lastDate = null;
 
   msgs.forEach((msg, i) => {
     const msgDate = new Date(msg.time);
     const dateKey = msgDate.toDateString();
     if (dateKey !== lastDate) {
-      html += `<div class="date-sep"><span>${formatDateSep(msgDate)}</span></div>`;
+      html += `
+        <div class="flex justify-center my-6">
+          <span class="bg-surface-container-highest/50 px-4 py-1 rounded-full text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">
+            ${formatDateSep(msgDate)}
+          </span>
+        </div>`;
       lastDate = dateKey;
     }
 
@@ -961,26 +1058,26 @@ function renderMessages(chatId) {
 
     const avatarHTML = showAvatar
       ? (contact?.photoURL
-        ? `<div class="avatar-img sz-40 msg-avatar" style="border-radius:50%;overflow:hidden;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:var(--surface-3)"><img src="${contact.photoURL}" alt="${escHtml(senderName)}" style="width:100%;height:100%;object-fit:cover"></div>`
-        : `<div class="avatar-img sz-40 ${contact?.avatar||'gradient-1'} msg-avatar" style="border-radius:50%;font-size:13px;flex-shrink:0">${contact?.initials||'?'}</div>`)
-      : `<div style="width:40px;flex-shrink:0"></div>`;
+        ? `<img src="${contact.photoURL}" alt="${escHtml(senderName)}" class="w-10 h-10 rounded-full object-cover border border-outline-variant/10">`
+        : `<div class="w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm bg-surface-container-highest text-on-surface-variant">${contact?.initials||'?'}</div>`)
+      : `<div class="w-10"></div>`;
 
     const reactions = (msg.reactions||[]).map(r =>
-      `<div class="reaction-pill${r.mine?' mine':''}" onclick="toggleReaction('${msg.id}','${r.emoji}')">
-        <span>${r.emoji}</span><span class="reaction-count">${r.count}</span>
+      `<div class="flex items-center gap-1 bg-surface-container border border-outline-variant/30 px-2 py-0.5 rounded-lg text-xs cursor-pointer hover:bg-surface-variant transition-all ${r.mine?'border-primary/50 text-primary':''}" onclick="toggleReaction('${msg.id}','${r.emoji}')">
+        <span>${r.emoji}</span><span class="font-bold text-[10px]">${r.count}</span>
       </div>`
     ).join('');
 
     const tickIcon = isMe
-      ? msg.status==='read'      ? '<span class="bubble-tick read material-symbols-rounded" style="font-size:14px;display:inline-block">done_all</span>'
-      : msg.status==='delivered' ? '<span class="bubble-tick material-symbols-rounded" style="font-size:14px;display:inline-block">done_all</span>'
-      :                            '<span class="bubble-tick material-symbols-rounded" style="font-size:14px;display:inline-block">done</span>'
+      ? msg.status==='read'      ? '<span class="material-symbols-outlined text-[14px] text-primary" style="font-variation-settings: \'FILL\' 1;">done_all</span>'
+      : msg.status==='delivered' ? '<span class="material-symbols-outlined text-[14px] text-on-surface-variant" style="font-variation-settings: \'FILL\' 1;">done_all</span>'
+      :                            '<span class="material-symbols-outlined text-[14px] text-on-surface-variant">done</span>'
       : '';
 
     const replyHTML = msg.replyTo ? `
-      <div class="bubble-reply">
-        <div class="bubble-reply-name">${escHtml(msg.replyTo.name)}</div>
-        <div class="bubble-reply-text">${escHtml(msg.replyTo.text)}</div>
+      <div class="border-l-2 border-primary/50 pl-3 mb-2 opacity-80 text-xs">
+        <div class="font-bold text-primary">${escHtml(msg.replyTo.name)}</div>
+        <div class="truncate text-on-surface-variant">${escHtml(msg.replyTo.text)}</div>
       </div>` : '';
 
     let contentHTML = '';
@@ -1927,18 +2024,31 @@ function renderContactList() {
   const list = document.getElementById('contact-list');
   if (!list) return;
   if (!App.contacts.length) return;
-  list.innerHTML = `<div class="contact-section-header">Contacts</div>` +
-    App.contacts.map(c=>`
-      <div class="contact-item" onclick="startChatWith('${c.uid}')">
-        <div class="avatar">
-          <div class="avatar-img sz-44 ${c.avatar}" style="border-radius:50%;font-size:15px">${c.initials}</div>
-          <div class="avatar-status ${c.status}"></div>
-        </div>
-        <div>
-          <div class="contact-name">${escHtml(c.name)}</div>
-          <div class="contact-sub">${escHtml(c.about||c.status)}</div>
-        </div>
-      </div>`).join('');
+  
+  list.innerHTML = `
+    <div class="px-4 py-2 text-xs font-bold text-on-surface-variant uppercase tracking-wider">Workspace Directory</div>
+    <div class="space-y-1">
+      ${App.contacts.map(c => {
+        const initials = c.initials || '?';
+        const statusColor = c.status === 'online' ? 'bg-primary-fixed' : 'bg-outline';
+        
+        const avatarHtml = c.photoURL
+          ? `<img src="${c.photoURL}" alt="${escHtml(c.name)}" class="w-10 h-10 rounded-xl object-cover border border-outline-variant/10">`
+          : `<div class="w-10 h-10 rounded-xl flex items-center justify-center font-bold text-sm bg-surface-container-highest text-on-surface-variant">${initials}</div>`;
+
+        return `
+        <div class="flex items-center gap-3 p-3 rounded-xl hover:bg-surface-container transition-all cursor-pointer group" onclick="startChatWith('${c.uid}')">
+          <div class="relative flex-shrink-0">
+            ${avatarHtml}
+            <div class="absolute bottom-0 right-0 w-2.5 h-2.5 ${statusColor} rounded-full border border-surface-container-lowest"></div>
+          </div>
+          <div class="flex-1 min-w-0">
+            <div class="font-bold text-sm text-on-surface truncate group-hover:text-primary transition-colors">${escHtml(c.name)}</div>
+            <div class="text-xs text-on-surface-variant truncate">${escHtml(c.about || c.status)}</div>
+          </div>
+        </div>`;
+      }).join('')}
+    </div>`;
 }
 function startChatWith(uid) {
   const contact = App.contacts.find(c=>c.uid===uid) || (uid === App.currentUser?.uid ? { name: 'Myself', avatar: 'gradient-1', initials: getInitials(App.currentUser.displayName || App.currentUser.email || 'Me'), photoURL: App.currentUser.photoURL || null } : null);
