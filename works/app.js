@@ -78,6 +78,419 @@ document.addEventListener('DOMContentLoaded', () => {
   document.addEventListener('keydown', e => { if (e.key==='Escape') closeTopModal(); });
 });
 
+App.usersUnsubscribe = null;
+App.chatsUnsubscribe = null;
+App.groupsUnsubscribe = null;
+App.messagesUnsubscribe = null;
+App.directChats = [];
+App.groupChats = [];
+
+const _e2eSalt = new Uint8Array([87, 65, 45, 69, 50, 69, 45, 83, 65, 76, 84]);
+const _e2eSharedKeys = {};
+
+function _base64ToBuf(b64) {
+  const binary = atob(b64);
+  const u8 = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) u8[i] = binary.charCodeAt(i);
+  return u8;
+}
+
+function _bufToBase64(buf) {
+  let binary = "";
+  const len = buf.byteLength;
+  for (let i = 0; i < len; i++) binary += String.fromCharCode(buf[i]);
+  return btoa(binary);
+}
+
+async function _loadE2EPrivateKey() {
+  if (!App.auth?.currentUser) return null;
+  try {
+    const keyStr = localStorage.getItem("wa_e2e_" + App.auth.currentUser.uid);
+    if (!keyStr) return null;
+    return await crypto.subtle.importKey(
+      "jwk", JSON.parse(keyStr),
+      { name: "ECDH", namedCurve: "P-256" }, false, ["deriveBits"]
+    );
+  } catch (e) { return null; }
+}
+
+async function _fetchPeerPublicKey(peerUid) {
+  if (!App.db) return null;
+  try {
+    const doc = await App.db.collection("userPublicKeys").doc(peerUid).get();
+    if (!doc.exists) return null;
+    const jwk = doc.data().publicKey;
+    if (!jwk) return null;
+    return await crypto.subtle.importKey("jwk", jwk, { name: "ECDH", namedCurve: "P-256" }, true, []);
+  } catch (e) { return null; }
+}
+
+async function deriveSharedAESKey(peerUid) {
+  if (_e2eSharedKeys[peerUid]) return _e2eSharedKeys[peerUid];
+  const privKey = await _loadE2EPrivateKey();
+  if (!privKey) return null;
+  const pubKey = await _fetchPeerPublicKey(peerUid);
+  if (!pubKey) return null;
+  try {
+    const sharedBits = await crypto.subtle.deriveBits(
+      { name: "ECDH", namedCurve: "P-256", public: pubKey },
+      privKey, 256
+    );
+    const hkdfKey = await crypto.subtle.importKey("raw", sharedBits, { name: "HKDF" }, false, ["deriveKey"]);
+    const aesKey = await crypto.subtle.deriveKey(
+      {
+        name: "HKDF",
+        hash: "SHA-256",
+        salt: _e2eSalt,
+        info: new TextEncoder().encode("wa-e2e-v1"),
+      },
+      hkdfKey,
+      { name: "AES-GCM", length: 256 },
+      false,
+      ["encrypt", "decrypt"]
+    );
+    _e2eSharedKeys[peerUid] = aesKey;
+    return aesKey;
+  } catch (e) { console.warn("E2E derive failed:", e); return null; }
+}
+
+async function decryptMessageText(ciphertext, iv, peerUid) {
+  if (!ciphertext || !iv || !peerUid) return null;
+  try {
+    const key = await deriveSharedAESKey(peerUid);
+    if (!key) return null;
+    const decrypted = await crypto.subtle.decrypt(
+      { name: "AES-GCM", iv: _base64ToBuf(iv) },
+      key,
+      _base64ToBuf(ciphertext)
+    );
+    return new TextDecoder().decode(decrypted);
+  } catch (e) { return null; }
+}
+
+async function encryptMessageText(text, peerUid) {
+  if (!text || !peerUid) return null;
+  try {
+    const key = await deriveSharedAESKey(peerUid);
+    if (!key) return null;
+    const iv = crypto.getRandomValues(new Uint8Array(12));
+    const encrypted = await crypto.subtle.encrypt(
+      { name: "AES-GCM", iv }, key, new TextEncoder().encode(text)
+    );
+    return { ciphertext: _bufToBase64(new Uint8Array(encrypted)), iv: _bufToBase64(iv) };
+  } catch (e) { return null; }
+}
+
+function getInitials(name) {
+  if (!name) return '?';
+  return name.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
+}
+
+function getDirectChatId(userId1, userId2) {
+  return [userId1, userId2].sort().join("_");
+}
+
+function subscribeToUsers() {
+  if (!App.db || !App.auth?.currentUser) return;
+  if (App.usersUnsubscribe) App.usersUnsubscribe();
+  
+  App.usersUnsubscribe = App.db.collection('users').onSnapshot((snapshot) => {
+    const contacts = [];
+    snapshot.forEach(doc => {
+      const data = doc.data();
+      contacts.push({
+        uid: doc.id,
+        name: data.displayName || data.email || 'User',
+        avatar: data.avatar || 'gradient-2',
+        initials: getInitials(data.displayName || data.email || 'User'),
+        photoURL: data.photoURL || data.avatar || null,
+        status: data.onlineStatus || 'offline',
+        about: data.about || data.statusText || 'Available'
+      });
+    });
+    App.contacts = contacts;
+    renderChatList();
+    renderContactList();
+  }, (error) => {
+    console.warn("Users subscription failed:", error);
+  });
+}
+
+function subscribeToChats() {
+  if (!App.db || !App.auth?.currentUser) return;
+  const uid = App.auth.currentUser.uid;
+  if (App.chatsUnsubscribe) App.chatsUnsubscribe();
+  
+  App.chatsUnsubscribe = App.db.collection('directChats')
+    .where('participants', 'array-contains', uid)
+    .onSnapshot((snapshot) => {
+      const chatsList = [];
+      const myselfChatId = `saved_${uid}`;
+      const myselfChat = {
+        id: myselfChatId,
+        type: 'personal',
+        uid: uid,
+        name: 'Myself',
+        avatar: 'gradient-1',
+        initials: getInitials(App.currentUser.displayName || App.currentUser.email || 'Me'),
+        photoURL: App.currentUser.photoURL || null,
+        lastMsg: 'Your personal notes, files & reminders',
+        lastTime: Date.now() + 100000000000,
+        unread: 0,
+        pinned: true,
+        muted: false,
+        status: 'online'
+      };
+      chatsList.push(myselfChat);
+      
+      const decryptPromises = [];
+      
+      snapshot.forEach(doc => {
+        const data = doc.data();
+        const chatId = doc.id;
+        
+        if (chatId === myselfChatId) {
+          if (data.lastMessage) {
+            myselfChat.lastMsg = data.lastMessage;
+            myselfChat.lastTime = data.lastMessageTime?.toMillis ? data.lastMessageTime.toMillis() : (data.lastMessageTime || myselfChat.lastTime);
+          }
+          return;
+        }
+        
+        const otherUserId = data.participants.find(p => p !== uid);
+        if (!otherUserId) return;
+        
+        const otherUser = App.contacts.find(c => c.uid === otherUserId) || {
+          uid: otherUserId,
+          name: data.participantNames?.[otherUserId] || data.participantEmails?.[otherUserId]?.split('@')[0] || 'User',
+          avatar: 'gradient-2',
+          initials: getInitials(data.participantNames?.[otherUserId] || 'User'),
+          photoURL: null,
+          status: 'offline',
+          about: data.participantEmails?.[otherUserId] || ''
+        };
+        
+        const chatObj = {
+          id: chatId,
+          type: 'personal',
+          uid: otherUserId,
+          name: otherUser.name,
+          avatar: otherUser.avatar,
+          initials: otherUser.initials,
+          photoURL: otherUser.photoURL,
+          lastMsg: data.lastMessage || 'No messages yet',
+          lastTime: data.lastMessageTime?.toMillis ? data.lastMessageTime.toMillis() : (data.lastMessageTime || 0),
+          unread: data.unreadCount?.[uid] || 0,
+          pinned: data.pinned?.[uid] || false,
+          muted: data.muted?.[uid] || false,
+          status: otherUser.status
+        };
+        
+        if (data.lastMessage && data.lastMessageEncrypted && data.lastMessageIv) {
+          decryptPromises.push(
+            decryptMessageText(data.lastMessage, data.lastMessageIv, otherUserId).then(decryptedText => {
+              if (decryptedText !== null) {
+                chatObj.lastMsg = decryptedText;
+              } else {
+                chatObj.lastMsg = "🔒 Encrypted message";
+              }
+            })
+          );
+        }
+        
+        chatsList.push(chatObj);
+      });
+      
+      if (decryptPromises.length > 0) {
+        Promise.all(decryptPromises).then(() => {
+          App.directChats = chatsList;
+          mergeAndRenderChats();
+        });
+      } else {
+        App.directChats = chatsList;
+        mergeAndRenderChats();
+      }
+    }, (error) => {
+      console.warn("Chats subscription failed:", error);
+    });
+}
+
+function subscribeToGroups() {
+  if (!App.db || !App.auth?.currentUser) return;
+  const uid = App.auth.currentUser.uid;
+  if (App.groupsUnsubscribe) App.groupsUnsubscribe();
+  
+  App.groupsUnsubscribe = App.db.collection('groups')
+    .where('members', 'array-contains', uid)
+    .onSnapshot((snapshot) => {
+      const groupsList = [];
+      snapshot.forEach(doc => {
+        const data = doc.data();
+        groupsList.push({
+          id: doc.id,
+          type: 'group',
+          name: data.name || 'Unnamed Group',
+          avatar: data.avatar || 'gradient-3',
+          initials: getInitials(data.name || 'Group'),
+          photoURL: data.icon || null,
+          lastMsg: data.lastMessage || 'No messages yet',
+          lastTime: data.lastMessageTime?.toMillis ? data.lastMessageTime.toMillis() : (data.lastMessageTime || 0),
+          unread: data.unreadCount?.[uid] || 0,
+          pinned: data.pinned?.[uid] || false,
+          muted: data.muted?.[uid] || false,
+          memberCount: data.members?.length || 0
+        });
+      });
+      App.groupChats = groupsList;
+      mergeAndRenderChats();
+    }, (error) => {
+      console.warn("Groups subscription failed:", error);
+    });
+}
+
+function mergeAndRenderChats() {
+  const direct = App.directChats || [];
+  const groups = App.groupChats || [];
+  App.chats = [...direct, ...groups];
+  renderChatList();
+  
+  if (App.currentChat) {
+    const updatedChat = App.chats.find(c => c.id === App.currentChat.id);
+    if (updatedChat) {
+      App.currentChat = updatedChat;
+      setEl('header-name', updatedChat.name);
+      
+      const statusDot = document.getElementById('header-status-dot');
+      if (updatedChat.type === 'group') {
+        setEl('header-status', `${updatedChat.memberCount || 3} members`);
+        if (statusDot) statusDot.style.display = 'none';
+        
+        const ha = document.getElementById('header-avatar');
+        if (ha) {
+          if (updatedChat.photoURL) {
+            ha.innerHTML = `<img src="${updatedChat.photoURL}" alt="${escHtml(updatedChat.name)}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`;
+          } else {
+            ha.className = `avatar-img sz-40 ${updatedChat.avatar || 'gradient-3'}`;
+            ha.textContent = updatedChat.initials;
+            ha.style.borderRadius = '50%';
+            ha.style.fontSize = '14px';
+          }
+        }
+      } else {
+        const contact = App.contacts.find(c=>c.uid===updatedChat.uid);
+        const statusText = contact?.status === 'online' ? 'Online' : contact?.about || 'Tap to view profile';
+        const el2 = document.getElementById('header-status');
+        if (el2) {
+          el2.textContent = statusText;
+          el2.className = 'chat-header-status' + (contact?.status==='online' ? ' online' : '');
+        }
+        if (statusDot) {
+          statusDot.style.display = '';
+          statusDot.className = `avatar-status ${contact?.status||'offline'}`;
+        }
+        
+        const ha = document.getElementById('header-avatar');
+        if (ha) {
+          if (updatedChat.photoURL) {
+            ha.innerHTML = `<img src="${updatedChat.photoURL}" alt="${escHtml(updatedChat.name)}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`;
+          } else {
+            ha.className = `avatar-img sz-40 ${updatedChat.avatar}`;
+            ha.textContent = updatedChat.initials;
+            ha.style.borderRadius = '50%';
+            ha.style.fontSize = '14px';
+          }
+        }
+      }
+    }
+  }
+}
+
+function subscribeToMessages(chatId) {
+  if (!App.db || !App.auth?.currentUser) return;
+  if (App.messagesUnsubscribe) {
+    App.messagesUnsubscribe();
+    App.messagesUnsubscribe = null;
+  }
+  const chat = App.chats.find(c => c.id === chatId);
+  if (!chat) return;
+  const queryField = chat.type === 'group' ? 'groupId' : 'directId';
+  App.messagesUnsubscribe = App.db.collection('messages')
+    .where(queryField, '==', chatId)
+    .onSnapshot(async (snapshot) => {
+      const msgs = [];
+      const decryptPromises = [];
+      
+      snapshot.forEach(doc => {
+        const data = doc.data();
+        
+        let type = 'text';
+        let url = '';
+        let duration = '';
+        let fileName = '';
+        let fileSize = '';
+        
+        if (data.attachment) {
+          const att = data.attachment;
+          if (att.type === 'image' || att.type === 'video') {
+            type = 'image';
+            url = att.url || '';
+          } else if (att.type === 'voice' || att.type === 'audio') {
+            type = 'voice';
+            url = att.url || '';
+            duration = att.duration || '0:00';
+          } else {
+            type = 'doc';
+            fileName = att.name || 'Document';
+            fileSize = att.size || '';
+          }
+        }
+        
+        const msgObj = {
+          id: doc.id,
+          from: data.senderId === App.auth.currentUser.uid ? 'me' : data.senderId,
+          text: data.text || '',
+          time: data.timestamp?.toMillis ? data.timestamp.toMillis() : (data.time || Date.now()),
+          status: data.status || 'read',
+          replyTo: data.replyTo ? { name: data.replyTo.senderName, text: data.replyTo.text } : null,
+          reactions: data.reactions || [],
+          type: type,
+          url: url,
+          duration: duration,
+          fileName: fileName,
+          fileSize: fileSize
+        };
+        
+        if (data.encrypted && data.iv) {
+          const peerUid = chat.type === 'personal' ? chat.uid : null;
+          if (peerUid) {
+            decryptPromises.push(
+              decryptMessageText(data.text, data.iv, peerUid).then(decryptedText => {
+                if (decryptedText !== null) {
+                  msgObj.text = decryptedText;
+                } else {
+                  msgObj.text = "🔒 Encrypted message";
+                }
+              })
+            );
+          }
+        }
+        
+        msgs.push(msgObj);
+      });
+      
+      if (decryptPromises.length > 0) {
+        await Promise.all(decryptPromises);
+      }
+      
+      msgs.sort((a, b) => a.time - b.time);
+      App.messages[chatId] = msgs;
+      renderMessages(chatId);
+      scrollToBottom(true);
+    }, (error) => {
+      console.warn("Messages subscription error:", error);
+    });
+}
+
 function checkSession() {
   setLoadingStatus('Checking session…');
   if (App.auth) {
@@ -86,11 +499,13 @@ function checkSession() {
         App.currentUser = user;
         setLoadingStatus('Loading chats…');
         loadUserProfile(user).then(() => {
+          subscribeToUsers();
+          subscribeToChats();
+          subscribeToGroups();
           setLoadingStatus('Ready');
           setTimeout(bootApp, 400);
         });
       } else {
-        // No user — show guest/demo mode
         App.currentUser = { uid:'demo', displayName:'You', email:'you@teamchat.app', photoURL:null };
         setLoadingStatus('Loading demo…');
         setTimeout(() => { loadDemoData(); bootApp(); }, 800);
@@ -306,8 +721,30 @@ function chatItemHTML(chat) {
   const muteIcon  = chat.muted  ? `<span class="chat-mute-icon material-symbols-rounded" style="font-size:13px">notifications_off</span>` : '';
   const pinIcon   = chat.pinned ? `<span class="chat-pin-icon material-symbols-rounded" style="font-size:13px">push_pin</span>` : '';
 
-  const statusDot = chat.type==='personal' && chat.status
-    ? `<div class="avatar-status ${chat.status||'offline'}"></div>` : '';
+  // Resolve display properties dynamically from App.contacts
+  let name = chat.name;
+  let avatar = chat.avatar;
+  let initials = chat.initials;
+  let photoURL = chat.photoURL;
+  let status = chat.status;
+
+  if (chat.type === 'personal' && chat.id !== `saved_${App.currentUser?.uid}`) {
+    const contact = App.contacts.find(c => c.uid === chat.uid);
+    if (contact) {
+      name = contact.name;
+      avatar = contact.avatar;
+      initials = contact.initials;
+      photoURL = contact.photoURL;
+      status = contact.status;
+    }
+  }
+
+  const statusDot = chat.type === 'personal' && status
+    ? `<div class="avatar-status ${status || 'offline'}"></div>` : '';
+
+  const avatarHtml = photoURL
+    ? `<div class="avatar-img sz-44" style="border-radius:50%;overflow:hidden;display:flex;align-items:center;justify-content:center;background:var(--surface-3)"><img src="${photoURL}" alt="${escHtml(name)}" style="width:100%;height:100%;object-fit:cover"></div>`
+    : `<div class="avatar-img sz-44 ${avatar || 'gradient-1'}" style="border-radius:50%;font-size:16px">${initials}</div>`;
 
   return `
   <div class="chat-item${isActive?' active':''}${chat.unread?' unread':''}"
@@ -315,15 +752,15 @@ function chatItemHTML(chat) {
        oncontextmenu="chatContextMenu(event,'${chat.id}')"
        role="listitem"
        tabindex="0"
-       aria-label="${chat.name}, ${chat.unread?chat.unread+' unread messages,':''} last message: ${chat.lastMsg||''}"
+       aria-label="${name}, ${chat.unread?chat.unread+' unread messages,':''} last message: ${chat.lastMsg||''}"
        onkeydown="if(event.key==='Enter')openChat('${chat.id}')">
     <div class="avatar">
-      <div class="avatar-img sz-44 ${chat.avatar}" style="border-radius:50%;font-size:16px">${chat.initials}</div>
+      ${avatarHtml}
       ${statusDot}
     </div>
     <div class="chat-body">
       <div class="chat-name-row">
-        <span class="chat-name">${escHtml(chat.name)}</span>
+        <span class="chat-name">${escHtml(name)}</span>
         <span class="chat-time">${timeStr}</span>
       </div>
       <div class="chat-preview-row">
@@ -431,7 +868,16 @@ function openChat(chatId) {
 
   // Header avatar
   const ha = document.getElementById('header-avatar');
-  if (ha) { ha.className = `avatar-img sz-40 ${chat.avatar}`; ha.textContent = chat.initials; ha.style.borderRadius='50%'; ha.style.fontSize='14px'; }
+  if (ha) {
+    if (chat.photoURL) {
+      ha.innerHTML = `<img src="${chat.photoURL}" alt="${escHtml(chat.name)}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`;
+    } else {
+      ha.innerHTML = chat.initials;
+      ha.className = `avatar-img sz-40 ${chat.avatar || 'gradient-1'}`;
+      ha.style.borderRadius='50%';
+      ha.style.fontSize='14px';
+    }
+  }
 
   // On mobile: show chat area, hide sidebar
   if (window.innerWidth < 768) {
@@ -445,8 +891,12 @@ function openChat(chatId) {
   wrap.style.display = '';
 
   // Render messages
-  renderMessages(chatId);
-  scrollToBottom(true);
+  if (App.db && App.auth?.currentUser) {
+    subscribeToMessages(chatId);
+  } else {
+    renderMessages(chatId);
+    scrollToBottom(true);
+  }
 
   // Update chat list
   renderChatList();
@@ -487,7 +937,9 @@ function renderMessages(chatId) {
     const senderName = contact?.name || 'Unknown';
 
     const avatarHTML = showAvatar
-      ? `<div class="avatar-img sz-40 ${contact?.avatar||'gradient-1'} msg-avatar" style="border-radius:50%;font-size:13px;flex-shrink:0">${contact?.initials||'?'}</div>`
+      ? (contact?.photoURL
+        ? `<div class="avatar-img sz-40 msg-avatar" style="border-radius:50%;overflow:hidden;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:var(--surface-3)"><img src="${contact.photoURL}" alt="${escHtml(senderName)}" style="width:100%;height:100%;object-fit:cover"></div>`
+        : `<div class="avatar-img sz-40 ${contact?.avatar||'gradient-1'} msg-avatar" style="border-radius:50%;font-size:13px;flex-shrink:0">${contact?.initials||'?'}</div>`)
       : `<div style="width:40px;flex-shrink:0"></div>`;
 
     const reactions = (msg.reactions||[]).map(r =>
@@ -521,7 +973,7 @@ function renderMessages(chatId) {
         <span class="voice-duration">${msg.duration||'0:00'}</span>
       </div>`;
     } else if (msg.type === 'doc') {
-      contentHTML = `<div class="bubble-doc">
+      contentHTML = `<div class="bubble-doc" onclick="if('${msg.url}') window.open('${msg.url}', '_blank')" style="cursor:pointer">
         <div class="doc-icon">📄</div>
         <div class="doc-info"><div class="doc-name">${escHtml(msg.fileName||'Document')}</div><div class="doc-meta">${msg.fileSize||''}</div></div>
         <span class="material-symbols-rounded" style="font-size:20px;opacity:.7">download</span>
@@ -608,21 +1060,89 @@ function sendMessage() {
   scrollToBottom(true);
   renderChatList();
 
-  // Simulate delivered status
-  setTimeout(() => { msg.status = 'delivered'; renderMessages(App.currentChat.id); }, 800);
-  // Simulate read
-  setTimeout(() => {
-    msg.status = 'read';
-    renderMessages(App.currentChat.id);
-    simulateReply(msg.text);
-  }, 2000);
-
-  // Save to Firebase if available
-  if (App.db && App.auth?.currentUser) {
-    App.db.collection('chats').doc(App.currentChat.id).collection('messages').add({
-      from: App.auth.currentUser.uid,
-      text, time: firebase.firestore.FieldValue.serverTimestamp(),
-    }).catch(console.error);
+  if (!App.db || !App.auth?.currentUser) {
+    // Simulate delivered status
+    setTimeout(() => { msg.status = 'delivered'; renderMessages(App.currentChat.id); }, 800);
+    // Simulate read
+    setTimeout(() => {
+      msg.status = 'read';
+      renderMessages(App.currentChat.id);
+      simulateReply(msg.text);
+    }, 2000);
+  } else {
+    // Save to Firebase (Real Database Schema)
+    const uid = App.auth.currentUser.uid;
+    const chatId = App.currentChat.id;
+    const otherUserId = App.currentChat.uid;
+    const isGroup = App.currentChat.type === 'group';
+    
+    (async () => {
+      const messageData = {
+        senderId: uid,
+        senderName: App.currentUser.displayName || App.currentUser.email || 'Me',
+        text: text,
+        timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+        status: 'sent',
+        read: false
+      };
+      
+      let isEncrypted = false;
+      let ivStr = '';
+      let encryptedText = text;
+      
+      if (!isGroup && otherUserId && otherUserId !== uid) {
+        const encrypted = await encryptMessageText(text, otherUserId);
+        if (encrypted) {
+          encryptedText = encrypted.ciphertext;
+          ivStr = encrypted.iv;
+          isEncrypted = true;
+        }
+      }
+      
+      if (isEncrypted) {
+        messageData.text = encryptedText;
+        messageData.encrypted = true;
+        messageData.iv = ivStr;
+      }
+      
+      if (isGroup) {
+        messageData.groupId = chatId;
+      } else {
+        messageData.directId = chatId;
+        messageData.participants = [uid, otherUserId];
+      }
+      
+      App.db.collection('messages').add(messageData).catch(console.error);
+      
+      // Update direct chat or group metadata
+      if (isGroup) {
+        App.db.collection('groups').doc(chatId).update({
+          lastMessage: text,
+          lastMessageTime: firebase.firestore.FieldValue.serverTimestamp(),
+          lastMessageSenderId: uid,
+          lastMessageSenderName: App.currentUser.displayName || App.currentUser.email || 'Me'
+        }).catch(console.error);
+      } else {
+        App.db.collection('directChats').doc(chatId).set({
+          participants: [uid, otherUserId],
+          participantNames: {
+            [uid]: App.currentUser.displayName || App.currentUser.email || 'Me',
+            [otherUserId]: App.currentChat.name || 'User'
+          },
+          participantEmails: {
+            [uid]: App.currentUser.email || '',
+            [otherUserId]: App.currentChat.about || ''
+          },
+          lastMessage: encryptedText,
+          lastMessageTime: firebase.firestore.FieldValue.serverTimestamp(),
+          lastMessageSenderId: uid,
+          lastMessageStatus: 'sent',
+          lastMessageEncrypted: isEncrypted,
+          lastMessageIv: ivStr,
+          status: 'active'
+        }, { merge: true }).catch(console.error);
+      }
+    })();
   }
 }
 
@@ -1398,18 +1918,41 @@ function renderContactList() {
       </div>`).join('');
 }
 function startChatWith(uid) {
-  const contact = App.contacts.find(c=>c.uid===uid);
+  const contact = App.contacts.find(c=>c.uid===uid) || (uid === App.currentUser?.uid ? { name: 'Myself', avatar: 'gradient-1', initials: getInitials(App.currentUser.displayName || App.currentUser.email || 'Me'), photoURL: App.currentUser.photoURL || null } : null);
   if (!contact) return;
   closeModal('new-chat-overlay');
-  let chat = App.chats.find(c=>c.uid===uid&&c.type==='personal');
+  
+  const isOnline = App.db && App.auth?.currentUser;
+  const chatId = isOnline 
+    ? (uid === App.auth.currentUser.uid ? `saved_${uid}` : getDirectChatId(App.auth.currentUser.uid, uid)) 
+    : `ch_${uid}`;
+    
+  let chat = App.chats.find(c=>c.id===chatId);
   if (!chat) {
     chat = {
-      id:`ch_${uid}`, type:'personal', uid,
+      id: chatId, type:'personal', uid,
       name:contact.name, avatar:contact.avatar, initials:contact.initials,
+      photoURL:contact.photoURL || null,
       lastMsg:'', lastTime:Date.now(), unread:0, pinned:false, muted:false,
     };
     App.chats.unshift(chat);
     App.messages[chat.id] = [];
+    
+    if (isOnline) {
+      const myUid = App.auth.currentUser.uid;
+      App.db.collection('directChats').doc(chatId).set({
+        participants: uid === myUid ? [myUid] : [myUid, uid],
+        participantNames: {
+          [myUid]: App.currentUser.displayName || App.currentUser.email || 'Me',
+          [uid]: contact.name || 'User'
+        },
+        participantEmails: {
+          [myUid]: App.currentUser.email || '',
+          [uid]: contact.about || ''
+        },
+        status: 'active'
+      }, { merge: true }).catch(console.error);
+    }
   }
   openChat(chat.id);
 }
@@ -1503,10 +2046,54 @@ function editStatus()          { showToast('Set your status','info'); }
 function openSettings()        { /* already in profile modal */ }
 function confirmClearAllChats(){ showConfirm('Clear ALL chats? This cannot be undone.', ()=>{ App.messages={}; renderChatList(); showToast('All chats cleared','info'); }); }
 function confirmDeactivate()   { showConfirm('Deactivate your account? You can reactivate by logging in again.', ()=>signOut()); }
-function signOut()             { if(App.auth) App.auth.signOut().then(()=>location.reload()); else location.reload(); }
+function signOut()             { if (App.usersUnsubscribe) App.usersUnsubscribe(); if (App.chatsUnsubscribe) App.chatsUnsubscribe(); if (App.groupsUnsubscribe) App.groupsUnsubscribe(); if (App.messagesUnsubscribe) App.messagesUnsubscribe(); if(App.auth) App.auth.signOut().then(()=>location.reload()); else location.reload(); }
 function editContact()         { showToast('Edit contact','info'); }
-function playVoice(id)         { showToast('Playing voice message…','info'); }
-function openMediaViewer(id)   { showToast('Opening media…','info'); }
+function playVoice(id) {
+  const msgs = App.messages[App.currentChat?.id] || [];
+  const msg = msgs.find(m => m.id === id);
+  if (msg && msg.url) {
+    if (App.activeAudio && App.activeAudioId === id) {
+      if (App.activeAudio.paused) {
+        App.activeAudio.play();
+        showToast('Playing voice message…', 'info');
+      } else {
+        App.activeAudio.pause();
+        showToast('Paused voice message', 'info');
+      }
+      return;
+    }
+    
+    if (App.activeAudio) {
+      App.activeAudio.pause();
+    }
+    
+    const audio = new Audio(msg.url);
+    App.activeAudio = audio;
+    App.activeAudioId = id;
+    audio.play();
+    showToast('Playing voice message…', 'info');
+    
+    audio.onended = () => {
+      App.activeAudio = null;
+      App.activeAudioId = null;
+    };
+  } else {
+    showToast('Playing voice message…', 'info');
+  }
+}
+function openMediaViewer(id) {
+  const msgs = App.messages[App.currentChat?.id] || [];
+  const msg = msgs.find(m => m.id === id);
+  if (msg && msg.url) {
+    const content = document.getElementById('media-viewer-content');
+    if (content) {
+      content.innerHTML = `<img src="${msg.url}" style="max-width:100%;max-height:80dvh;object-fit:contain">`;
+      show('media-viewer');
+    }
+  } else {
+    showToast('Opening media…', 'info');
+  }
+}
 function closeMediaViewer()    { hide('media-viewer'); }
 function nextMedia()           {}
 function prevMedia()           {}
