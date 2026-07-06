@@ -776,9 +776,7 @@ body.dark .cyber-status-bar {
   }
 
   .sidebar-header .sidebar-actions {
-    flex-direction: row !important;
-    width: auto !important;
-    gap: 8px !important;
+    display: none !important;
   }
 
   /* Hide horizontal tabs, since vertical Left Nav Dock is active */

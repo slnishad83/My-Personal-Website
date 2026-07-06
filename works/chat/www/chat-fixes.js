@@ -542,6 +542,13 @@
   document.head.appendChild(style);
 
   /* ── 9. Cyber Navigation & Status Bar Interceptors ── */
+  function updateDockThemeIcon() {
+    var icon = document.querySelector('#dockThemeBtn span');
+    if (!icon) return;
+    var isDark = document.documentElement.dataset.theme === 'dark' || document.body.classList.contains('dark') || document.documentElement.classList.contains('dark');
+    icon.textContent = isDark ? 'light_mode' : 'dark_mode';
+  }
+
   waitForFn('switchTab', function () {
     var originalSwitchTab = window.switchTab;
     window.switchTab = function (tab) {
@@ -555,7 +562,16 @@
     };
   });
 
+  waitForFn('toggleDarkMode', function () {
+    var originalToggle = window.toggleDarkMode;
+    window.toggleDarkMode = function () {
+      originalToggle();
+      updateDockThemeIcon();
+    };
+  });
+
   function initCyberDock() {
+    updateDockThemeIcon();
     var leftNavDock = document.getElementById('leftNavDock');
     if (leftNavDock) {
       leftNavDock.addEventListener('click', function (e) {
@@ -577,6 +593,10 @@
         } else if (btn.id === 'dockSettingsBtn' || btn.id === 'dockProfileBtn') {
           if (typeof window.showProfileModal === 'function') {
             window.showProfileModal();
+          }
+        } else if (btn.id === 'dockThemeBtn') {
+          if (typeof window.toggleDarkMode === 'function') {
+            window.toggleDarkMode();
           }
         } else if (btn.id === 'dockSupportBtn') {
           alert('System status: Nominal. Protocol V2.0.26 secure.');
