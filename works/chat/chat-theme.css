@@ -1,0 +1,150 @@
+/* ════════════════════════════════════════════════════════════
+   CHAT THEME — Consolidated responsive + dark/light mode
+   Load AFTER tailwind, BEFORE app.js
+   ════════════════════════════════════════════════════════════ */
+
+/* ── Responsive Layout ────────────────────────────────── */
+@media (max-width: 767px) {
+  #sidebar { display: none !important; }
+  #chat-list-sidebar {
+    width: 100% !important;
+    max-width: 100% !important;
+    flex: 1 1 100% !important;
+  }
+  #chat-area {
+    position: fixed !important;
+    inset: 0 !important;
+    z-index: 50 !important;
+    background: var(--background) !important;
+  }
+  #chat-area.hidden-mobile { display: none !important; }
+  #chat-area.visible-mobile { display: flex !important; }
+  #bottom-nav { display: flex !important; }
+  #app { padding-bottom: 64px; }
+  .glass-panel { border-radius: 24px !important; }
+  #detail-panel { width: 100% !important; max-width: 100% !important; }
+  #attach-menu { left: 12px !important; bottom: 80px !important; }
+  #emoji-picker { right: 12px !important; width: calc(100% - 24px) !important; }
+  body { user-select: none; -webkit-tap-highlight-color: transparent; }
+  .overlay > div { margin: 8px !important; max-height: 90vh !important; }
+}
+
+@media (min-width: 768px) and (max-width: 1023px) {
+  #sidebar { width: 72px !important; }
+  #sidebar .xl\\:block { display: none !important; }
+  #chat-list-sidebar { width: 280px !important; }
+  #bottom-nav { display: none !important; }
+}
+
+@media (min-width: 1024px) and (max-width: 1279px) {
+  #sidebar { width: 72px !important; }
+  #sidebar .xl\\:block { display: none !important; }
+}
+
+@media (min-width: 1280px) {
+  #sidebar { width: 256px !important; }
+}
+
+/* ── Dark Mode Enhancements ──────────────────────────── */
+html.dark { color-scheme: dark; }
+html.dark ::-webkit-scrollbar { width: 5px; height: 5px; background: var(--surface-dim); }
+html.dark ::-webkit-scrollbar-track { background: var(--surface-dim); }
+html.dark ::-webkit-scrollbar-thumb { background: var(--surface-container-highest); border-radius: 4px; }
+html.dark ::-webkit-scrollbar-thumb:hover { background: var(--outline-variant); }
+html.dark ::-webkit-scrollbar-corner { background: var(--surface-dim); }
+html.dark * { scrollbar-color: var(--surface-container-highest) var(--surface-dim); scrollbar-width: thin; }
+
+/* Light mode scrollbars */
+html ::-webkit-scrollbar { width: 5px; height: 5px; background: var(--surface-bright); }
+html ::-webkit-scrollbar-track { background: var(--surface-bright); }
+html ::-webkit-scrollbar-thumb { background: var(--outline-variant); border-radius: 4px; }
+html ::-webkit-scrollbar-thumb:hover { background: var(--outline); }
+html * { scrollbar-color: var(--outline-variant) var(--surface-bright); scrollbar-width: thin; }
+
+/* ── Input / Textarea dark mode fixes ────────────────── */
+html.dark input,
+html.dark textarea,
+html.dark select { color-scheme: dark; }
+input::placeholder, textarea::placeholder { color: var(--on-surface-variant); opacity: 0.5; }
+
+/* ── Overlay animations ──────────────────────────────── */
+.overlay { transition: opacity 0.2s ease; }
+.animate-in { animation: fadeInZoom 0.2s ease-out; }
+@keyframes fadeInZoom {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+/* ── Glass panel dark mode override ──────────────────── */
+html.dark .glass-panel {
+  background: rgba(17, 19, 28, 0.6) !important;
+  border-color: rgba(196, 192, 255, 0.08) !important;
+}
+html:not(.dark) .glass-panel {
+  background: rgba(255, 255, 255, 0.7) !important;
+  border-color: rgba(83, 72, 212, 0.1) !important;
+}
+
+/* ── Message bubble styles ───────────────────────────── */
+.msg-bubble {
+  max-width: 75%;
+  padding: 10px 14px;
+  border-radius: 18px;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  line-height: 1.45;
+  font-size: 14px;
+}
+.msg-sent {
+  align-self: flex-end;
+  background: var(--primary);
+  color: var(--on-primary);
+  border-bottom-right-radius: 4px;
+}
+.msg-received {
+  align-self: flex-start;
+  background: var(--surface-container-high);
+  color: var(--on-surface);
+  border-bottom-left-radius: 4px;
+}
+html.dark .msg-sent { background: var(--primary-fixed-dim); color: var(--on-primary-fixed); }
+html.dark .msg-received { background: var(--surface-container-highest); }
+
+/* ── Bottom nav active state ─────────────────────────── */
+.bottom-nav-item.active { color: var(--primary) !important; }
+.bottom-nav-item.active .material-symbols-outlined { font-variation-settings: 'FILL' 1 !important; }
+nav#bottom-nav { z-index: 40; }
+
+/* ── Sidebar tab active state ────────────────────────── */
+.tab-item.active {
+  background: var(--primary-fixed) !important;
+  color: var(--on-primary-fixed) !important;
+  border-color: var(--primary) !important;
+}
+html.dark .tab-item.active {
+  background: rgba(196, 192, 255, 0.15) !important;
+  color: var(--primary) !important;
+}
+
+/* ── Chat list item hover/active ─────────────────────── */
+.chat-list-item { cursor: pointer; border-radius: 12px; transition: background 0.15s; }
+.chat-list-item:hover { background: var(--surface-container-high); }
+.chat-list-item.active { background: var(--surface-container-highest); }
+html.dark .chat-list-item.active { background: rgba(196, 192, 255, 0.08); }
+
+/* ── Safe area for modern phones ─────────────────────── */
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+  #bottom-nav { padding-bottom: env(safe-area-inset-bottom); }
+  .overlay > div { margin-bottom: calc(8px + env(safe-area-inset-bottom)); }
+}
+
+/* ── Touch feedback ──────────────────────────────────── */
+@media (hover: none) {
+  .chat-list-item:active { background: var(--surface-container-highest); transform: scale(0.98); }
+  button:active { transform: scale(0.95); }
+}
+
+/* ── System dark mode preference fallback ────────────── */
+@media (prefers-color-scheme: dark) {
+  html:not([data-theme]) { color-scheme: dark; }
+}

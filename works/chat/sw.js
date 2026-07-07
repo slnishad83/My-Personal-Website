@@ -157,48 +157,17 @@ self.addEventListener('notificationclick', event => {
   );
 });
 
-const CACHE_NAME = 'team-chat-v221-ui-shell';
+const CACHE_NAME = 'team-chat-v222-ui-shell';
 const STATIC_ASSETS = [
-  'auth-theme.css',
-  'feature-updates.css',
-  'feature-updates.js',
-    'attachment-reliability.css',
-    'ui-compliance.js',
-    'message-search.css',
-    'message-search.js',
-    'attachment-reliability.js',
-    'group-message-info.css',
-    'group-message-info.js',
-    'audit-interactions.css',
-    'audit-interactions.js',
-    'url-preview.css',
-    'url-preview.js',
-  'sync-audit.css',
-  'sync-audit.js',
-  'push-notifications.js',
-  'notification-reply.js',
-  'style.css',
-  'message-actions.css',
-  'ui-audit.css',
-  'translation-ui.css',
-  'safe-area-audit.css',
-  'calls-ui.css',
-  'polish.css',
   'config.js',
-  'permissions-manager.js',
-  'app-core.js',
-  'app-extras.js',
-  'app-init.js',
-  'fixes.js',
-  'threads.js',
-  'ai-bot.js',
-  'features-addon.js',
-  'whatsapp-enhancements.js',
-  'pwa-install.js',
+  'chat-theme.css',
+  'notification-reply.js',
   'manifest.json',
   'app-icon.svg',
   'app-icon-192.png',
-  'app-icon-512.png'
+  'app-icon-512.png',
+  '../app-extras.js',
+  '../app.js'
 ];
 const HTML_PAGES = [
   'index.html',

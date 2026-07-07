@@ -194,15 +194,6 @@ async function encryptMessageText(text, peerUid) {
   } catch (e) { return null; }
 }
 
-function getInitials(name) {
-  if (!name) return '?';
-  return name.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
-}
-
-function getDirectChatId(userId1, userId2) {
-  return [userId1, userId2].sort().join("_");
-}
-
 function subscribeToUsers() {
   if (!App.db || !App.auth?.currentUser) {
     loadDemoData();
@@ -1479,49 +1470,8 @@ function cancelReply() {
 function toggleRecording() {
   if (App.isRecording) stopRecording(); else startRecording();
 }
-function startRecording() {
-  App.isRecording = true;
-  App.recordingSeconds = 0;
-  show('recording-bar');
-  hide('input-bar');
-  App.recordingTimer = setInterval(() => {
-    App.recordingSeconds++;
-    setEl('rec-timer', formatDuration(App.recordingSeconds));
-  }, 1000);
-}
-function stopRecording() {
-  App.isRecording = false;
-  clearInterval(App.recordingTimer);
-}
-function cancelRecording() {
-  stopRecording();
-  hide('recording-bar');
-  show('input-bar');
-}
-function sendVoiceMessage() {
-  stopRecording();
-  hide('recording-bar');
-  show('input-bar');
-  
-  const msg = {
-    id:     'msg_' + Date.now(),
-    from:   'me',
-    type:   'voice',
-    duration: formatDuration(App.recordingSeconds),
-    time:   Date.now(),
-    status: 'sent'
-  };
-
-  if (!App.messages[App.currentChat.id]) App.messages[App.currentChat.id] = [];
-  App.messages[App.currentChat.id].push(msg);
-  App.currentChat.lastMsg = '🎙️ Voice Message (' + msg.duration + ')';
-  App.currentChat.lastTime = msg.time;
-
-  renderMessages(App.currentChat.id);
-  scrollToBottom(true);
-  renderChatList();
-  showToast('Voice message sent', 'success');
-}
+// startRecording, stopRecording, cancelRecording, sendVoiceMessage
+// are defined in app-extras.js with full MediaRecorder support
 
 /* ══════════════════════════════════════════════════
    15. CALL SCREENS
@@ -1587,17 +1537,7 @@ function declineCall() { closeModal('incoming-call-overlay'); showToast('Call re
    ══════════════════════════════════════════════════ */
 // openChatSearch is fully implemented in app-extras.js
 // This stub is kept as a no-op fallback
-function openChatSearch() {
-  if (typeof _openChatSearchImpl === 'function') {
-    _openChatSearchImpl();
-  } else {
-    // app-extras.js defines the full version — trigger it
-    const bar = document.getElementById('_chat-search-bar');
-    if (bar) { show('_chat-search-bar'); setTimeout(() => document.getElementById('_chat-search-input')?.focus(), 100); }
-    else if (typeof performChatSearch !== 'undefined') { /* will be available */ }
-    else showToast('Chat search — loading…', 'info');
-  }
-}
+// openChatSearch is defined in app-extras.js with full in-chat search UI
 function filterChats(q) { renderChatList(q); }
 
 /* ══════════════════════════════════════════════════
@@ -1889,10 +1829,7 @@ function startChatWith(uid) {
   openChat(chat.id);
 }
 
-function openNewGroup() {
-  closeModal('new-chat-overlay');
-  showToast('Channel Room Creator — coming soon','info');
-}
+// openNewGroup is defined in app-extras.js with full group creation UI
 
 /* ══════════════════════════════════════════════════
    21. CHAT LIST CONTEXT MENUS & PIN/MUTE
