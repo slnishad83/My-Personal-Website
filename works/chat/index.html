@@ -418,21 +418,13 @@
       <div class="flex-1 overflow-y-auto scrollbar-hide p-2 space-y-1" id="chat-list" role="list" aria-label="Conversations">
         <!-- Rendered dynamically -->
       </div>
-
-      <!-- Empty state for chats -->
-      <div class="empty-state hidden p-8 text-center" id="chats-empty">
-        <div class="text-4xl mb-2">💬</div>
-        <div class="font-bold text-sm">No conversations yet</div>
-        <p class="text-xs text-on-surface-variant mb-4">Start a private chat or create a group room.</p>
-        <button class="bg-primary text-on-primary font-bold text-xs px-4 py-2 rounded-xl transition-all" onclick="openNewChat()">New Chat</button>
-      </div>
     </aside>
 
     <!-- 💡 COLUMN 3: MAIN CHAT DISPLAY CANVAS -->
     <main id="chat-area" class="flex-1 flex flex-col relative bg-background min-w-0 h-full">
 
       <!-- Top Chat Navigation Header Bar -->
-      <header class="flex justify-between items-center px-6 h-16 w-full sticky top-0 bg-background/80 backdrop-blur-xl border-b border-outline-variant/30 z-30">
+      <header id="chat-header" class="flex justify-between items-center px-6 h-16 w-full sticky top-0 bg-background/80 backdrop-blur-xl border-b border-outline-variant/30 z-30" style="display:none">
         <div class="flex items-center gap-4 min-w-0">
           <!-- Back button on mobile -->
           <button class="md:hidden text-on-surface-variant hover:text-on-surface mr-1 transition-all" onclick="backToList()" aria-label="Back">
@@ -474,10 +466,10 @@
       </div>
 
       <!-- 🏠 Welcome Lobby / Empty view (No chat selected) -->
-      <div class="flex-1 flex flex-col p-6 overflow-y-auto scrollbar-hide" id="welcome-screen">
+      <div class="@container flex-1 flex flex-col p-6 overflow-y-auto scrollbar-hide" id="welcome-screen">
         <div class="max-w-4xl w-full mx-auto space-y-6 my-auto py-8">
           <!-- Hero Banner Header -->
-          <div class="flex flex-col md:flex-row items-center gap-6 bg-surface-container-high rounded-3xl p-8 border border-outline-variant/20 shadow-xl neon-glow">
+          <div class="flex flex-col @md:flex-row items-center gap-6 bg-surface-container-high rounded-3xl p-8 border border-outline-variant/20 shadow-xl neon-glow">
             <div class="w-20 h-20 rounded-3xl bg-primary flex items-center justify-center text-4xl shadow-lg flex-shrink-0 animate-bounce">💬</div>
             <div class="text-center md:text-left flex-1 space-y-1">
               <h3 class="font-headline-lg text-headline-lg font-bold text-on-surface">Welcome to NeonChat Workspace</h3>
@@ -487,7 +479,7 @@
           </div>
 
           <!-- Lobby Grid (Bento Style widgets) -->
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div class="grid grid-cols-1 @md:grid-cols-3 gap-6">
             <!-- Widget 1: My Notepad Shortcut -->
             <div class="bg-surface-container rounded-2xl p-6 border border-outline-variant/15 flex flex-col justify-between hover:scale-[1.01] transition-transform shadow-md">
               <div class="space-y-2">
@@ -549,7 +541,7 @@
             
             <p class="text-xs text-on-surface-variant">Click any design combination below. The application will instantly override its viewport layout, chat workspace theme, elements, and styles to render that exact mockup design variant live!</p>
             
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-3 pt-2">
+            <div class="grid grid-cols-2 @md:grid-cols-4 gap-3 pt-2">
               <div class="space-y-1.5">
                 <div class="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider pl-1">Myself Workspace</div>
                 <div class="flex flex-col gap-1.5">
@@ -726,7 +718,7 @@
     </main>
 
     <!-- 💡 COLUMN 4: RIGHT-SIDE DETAIL INFO PANEL -->
-    <aside id="detail-panel" class="hidden lg:flex flex-col h-full w-80 bg-surface-container border-l border-outline-variant/30 flex-shrink-0 z-20 overflow-y-auto scrollbar-hide">
+    <aside id="detail-panel" class="hidden flex-col h-full w-80 bg-surface-container border-l border-outline-variant/30 flex-shrink-0 z-20 overflow-y-auto scrollbar-hide">
       <!-- Populated dynamically -->
     </aside>
   </div>

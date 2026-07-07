@@ -641,17 +641,17 @@ function switchTab(tab) {
   qsa('.tab-item').forEach(el => {
     const active = el.dataset.tab === tab;
     if (active) {
-      el.className = "tab-item w-full flex items-center gap-4 bg-primary-fixed/10 text-primary-fixed border-l-4 border-primary px-4 py-3 cursor-pointer active:scale-95 transition-all duration-200";
+      el.className = "tab-item w-full flex items-center gap-4 bg-primary/10 text-primary border-l-4 border-primary px-4 py-3 cursor-pointer active:scale-95 transition-all duration-200";
     } else {
-      el.className = "tab-item w-full flex items-center gap-4 text-on-surface-variant hover:text-on-surface hover:bg-surface-container-highest transition-colors duration-200 px-4 py-3 cursor-pointer active:scale-95";
+      el.className = "tab-item w-full flex items-center gap-4 text-on-surface/60 hover:text-on-surface hover:bg-surface-container-highest transition-colors duration-200 px-4 py-3 cursor-pointer active:scale-95";
     }
   });
 
   // Bottom nav tab items active classes revamp
   qsa('.bottom-nav-item').forEach(el => {
     const active = el.dataset.tab === tab;
-    el.classList.toggle('text-primary-fixed', active);
-    el.classList.toggle('text-on-surface-variant', !active);
+    el.classList.toggle('text-primary', active);
+    el.classList.toggle('text-on-surface/60', !active);
   });
 
   // Adapt lists
@@ -770,19 +770,19 @@ function renderChatList(filter = '') {
       if (sidebarSubtitleEl) sidebarSubtitleEl.textContent = "Private Notepad";
       
       sidebarNav.innerHTML = `
-        <button class="tab-item w-full flex items-center gap-4 bg-primary-fixed/10 text-primary-fixed border-l-4 border-primary px-4 py-3 cursor-pointer active:scale-95" onclick="switchTab('chats')">
+        <button class="tab-item w-full flex items-center gap-4 bg-primary/10 text-primary border-l-4 border-primary px-4 py-3 cursor-pointer active:scale-95" onclick="switchTab('chats')">
           <span class="material-symbols-outlined">description</span>
           <span class="hidden xl:block font-body-md text-body-md font-semibold">Notes</span>
         </button>
-        <button class="tab-item w-full flex items-center gap-4 text-on-surface-variant hover:text-on-surface hover:bg-surface-container-highest px-4 py-3 cursor-pointer active:scale-95" onclick="showToast('Cloud Files Storage','info')">
+        <button class="tab-item w-full flex items-center gap-4 text-on-surface/60 hover:text-on-surface hover:bg-surface-container-highest px-4 py-3 cursor-pointer active:scale-95" onclick="showToast('Cloud Files Storage','info')">
           <span class="material-symbols-outlined">folder</span>
           <span class="hidden xl:block font-body-md text-body-md">Files</span>
         </button>
-        <button class="tab-item w-full flex items-center gap-4 text-on-surface-variant hover:text-on-surface hover:bg-surface-container-highest px-4 py-3 cursor-pointer active:scale-95" onclick="showToast('Reminders & Alerts','info')">
+        <button class="tab-item w-full flex items-center gap-4 text-on-surface/60 hover:text-on-surface hover:bg-surface-container-highest px-4 py-3 cursor-pointer active:scale-95" onclick="showToast('Reminders & Alerts','info')">
           <span class="material-symbols-outlined">notifications</span>
           <span class="hidden xl:block font-body-md text-body-md">Reminders</span>
         </button>
-        <button class="tab-item w-full flex items-center gap-4 text-on-surface-variant hover:text-on-surface hover:bg-surface-container-highest px-4 py-3 cursor-pointer active:scale-95" onclick="openProfile()">
+        <button class="tab-item w-full flex items-center gap-4 text-on-surface/60 hover:text-on-surface hover:bg-surface-container-highest px-4 py-3 cursor-pointer active:scale-95" onclick="openProfile()">
           <span class="material-symbols-outlined">settings</span>
           <span class="hidden xl:block font-body-md text-body-md">Settings</span>
         </button>
@@ -792,19 +792,19 @@ function renderChatList(filter = '') {
       if (sidebarSubtitleEl) sidebarSubtitleEl.textContent = "Vibrant Midnight";
       
       sidebarNav.innerHTML = `
-        <button class="tab-item w-full flex items-center gap-4 bg-primary-fixed/10 text-primary-fixed border-l-4 border-primary px-4 py-3 cursor-pointer active:scale-95" onclick="switchTab('chats')">
+        <button class="tab-item w-full flex items-center gap-4 bg-primary/10 text-primary border-l-4 border-primary px-4 py-3 cursor-pointer active:scale-95" onclick="switchTab('chats')">
           <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">chat</span>
           <span class="hidden xl:block font-body-md text-body-md font-semibold">Chats</span>
         </button>
-        <button class="tab-item w-full flex items-center gap-4 text-on-surface-variant hover:text-on-surface hover:bg-surface-container-highest px-4 py-3 cursor-pointer active:scale-95" onclick="switchTab('groups')">
+        <button class="tab-item w-full flex items-center gap-4 text-on-surface/60 hover:text-on-surface hover:bg-surface-container-highest px-4 py-3 cursor-pointer active:scale-95" onclick="switchTab('groups')">
           <span class="material-symbols-outlined">group</span>
           <span class="hidden xl:block font-body-md text-body-md">Groups</span>
         </button>
-        <button class="tab-item w-full flex items-center gap-4 text-on-surface-variant hover:text-on-surface hover:bg-surface-container-highest px-4 py-3 cursor-pointer active:scale-95" onclick="switchTab('calls')">
+        <button class="tab-item w-full flex items-center gap-4 text-on-surface/60 hover:text-on-surface hover:bg-surface-container-highest px-4 py-3 cursor-pointer active:scale-95" onclick="switchTab('calls')">
           <span class="material-symbols-outlined">call</span>
           <span class="hidden xl:block font-body-md text-body-md">Calls</span>
         </button>
-        <button class="tab-item w-full flex items-center gap-4 text-on-surface-variant hover:text-on-surface hover:bg-surface-container-highest px-4 py-3 cursor-pointer active:scale-95" onclick="switchTab('more')">
+        <button class="tab-item w-full flex items-center gap-4 text-on-surface/60 hover:text-on-surface hover:bg-surface-container-highest px-4 py-3 cursor-pointer active:scale-95" onclick="switchTab('more')">
           <span class="material-symbols-outlined">bookmark</span>
           <span class="hidden xl:block font-body-md text-body-md">Saved Items</span>
         </button>
@@ -1059,6 +1059,7 @@ function openChat(chatId) {
 
   // Display canvas
   hide('welcome-screen');
+  show('chat-header');
   const wrap = document.getElementById('messages-wrap');
   if (wrap) wrap.style.display = '';
   const inputBar = document.getElementById('input-bar');
@@ -1075,8 +1076,18 @@ function openChat(chatId) {
   // Redraw chat lists for updates
   renderChatList();
 
-  // Populate Right Info Panel if open
-  openChatInfo();
+  // Populate Right Info Panel if viewport permits (>=1024px)
+  const panel = document.getElementById('detail-panel');
+  if (panel) {
+    if (window.innerWidth >= 1024 && App.showroomViewport !== 'mobile' && App.showroomViewport !== 'tablet') {
+      panel.classList.remove('hidden');
+      panel.classList.add('flex');
+      openChatInfo();
+    } else {
+      panel.classList.add('hidden');
+      panel.classList.remove('flex');
+    }
+  }
 }
 
 /* ══════════════════════════════════════════════════
@@ -1592,6 +1603,8 @@ function backToList() {
 }
 function showWelcome() {
   show('welcome-screen');
+  hide('chat-header');
+  closeDetailPanel();
   const wrap = document.getElementById('messages-wrap');
   if (wrap) wrap.style.display = 'none';
   const inputBar = document.getElementById('input-bar');
@@ -1662,6 +1675,7 @@ function openContactInfoPanel(uid) {
     </div>
   `;
   panel.classList.remove('hidden');
+  panel.classList.add('flex');
 }
 
 function openGroupInfoPanel() {
@@ -1718,6 +1732,7 @@ function openGroupInfoPanel() {
     </div>
   `;
   panel.classList.remove('hidden');
+  panel.classList.add('flex');
 }
 
 function openMyselfInfo() {
@@ -1756,11 +1771,15 @@ function openMyselfInfo() {
     </div>
   `;
   panel.classList.remove('hidden');
+  panel.classList.add('flex');
 }
 
 function closeDetailPanel() {
   const panel = document.getElementById('detail-panel');
-  if (panel) panel.classList.add('hidden');
+  if (panel) {
+    panel.classList.add('hidden');
+    panel.classList.remove('flex');
+  }
 }
 
 /* ══════════════════════════════════════════════════
