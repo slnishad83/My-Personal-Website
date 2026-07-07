@@ -38,6 +38,9 @@ const App = {
   chatRequests: { incoming: [], outgoing: [] },
   chatRequestsUnsubscribe: null,
   pendingRequestsCount: 0,
+  chatFolders: [],
+  activeFolderIndex: -1,
+  notifSoundEnabled: {},
   
   // Showroom overrides
   showroomOverride: null, // { type: 'myself'|'personal'|'group', viewport: 'desktop'|'laptop'|'tablet'|'mobile' }
@@ -569,6 +572,7 @@ function checkSession() {
           }
           updatePresence('online');
           setupPushNotifications();
+          loadChatFolders();
           setLoadingStatus('Ready');
           setTimeout(bootApp, 400);
         });
@@ -845,17 +849,23 @@ function renderChatList(filter = '') {
     items = items.filter(c => c.name.toLowerCase().includes(q) || (c.lastMsg||'').toLowerCase().includes(q) || (c.about||'').toLowerCase().includes(q) || (c.email||'').toLowerCase().includes(q));
   }
 
+  // Filter by active folder
+  if (App.activeFolderIndex >= 0 && App.chatFolders[App.activeFolderIndex]) {
+    const folderChatIds = App.chatFolders[App.activeFolderIndex].chatIds || [];
+    items = items.filter(c => folderChatIds.includes(c.id));
+  }
+
   // Determine if Myself Workspace styling should override sidebar headers
   const isMyselfOverride = App.showroomOverride?.type === 'myself' || (App.currentChat && App.currentChat.id === 'saved_me');
   
   const sidebarTitle = document.getElementById('chats-sidebar-title');
   if (sidebarTitle) {
-    sidebarTitle.textContent = isMyselfOverride ? 'Notebooks' : 'Messages';
+    sidebarTitle.textContent = isMyselfOverride ? __('savedItems') : __('messages');
   }
   
   const sidebarSearchInput = document.getElementById('sidebar-search');
   if (sidebarSearchInput) {
-    sidebarSearchInput.placeholder = isMyselfOverride ? 'Search notes...' : 'Search conversations...';
+    sidebarSearchInput.placeholder = isMyselfOverride ? 'Search notes...' : __('search');
   }
 
   // Revamp navigation items in sidebar depending on Myself mode
@@ -1045,7 +1055,7 @@ function renderMoreTab() {
       ${moreRow('bookmark','Bookmarks','showToast("Bookmarks","info")')}
       ${moreRow('schedule','Scheduled Messages','showToast("Scheduled Messages","info")')}
       ${moreRow('quick_reply','Quick Replies','showToast("Quick Replies","info")')}
-      ${moreRow('folder','Folders','showToast("Folders","info")')}
+      ${moreRow('folder','Folders','openFolderManager()')}
       ${moreRow('insights','Chat Insights','showToast("Insights","info")')}
       ${moreRow('photo_library','Media Album','showToast("Media Album","info")')}
     </div>`;
@@ -2155,6 +2165,8 @@ function showConfirm(msg, onConfirm) {
 
 function openProfile() { show('profile-overlay'); }
 function closeModal(id) { hide(id); }
+function showOverlay(id) { show(id); }
+function closeOverlay(id) { hide(id); }
 function closeTopModal() {
   ['profile-overlay','new-chat-overlay','confirm-overlay','group-info-overlay','msg-info-overlay','media-viewer'].forEach(hide);
 }
@@ -2415,6 +2427,274 @@ async function declineChatRequest(requestId) {
     await App.db.collection('chatRequests').doc(requestId).update({ status: 'declined' });
     showToast('Chat request declined', 'info');
   } catch(e) { console.warn(e); }
+}
+
+/* ══════════════════════════════════════════════════
+     FEATURE: CHAT FOLDERS
+    ══════════════════════════════════════════════════ */
+async function loadChatFolders() {
+  if (!App.db || !App.auth?.currentUser) return;
+  try {
+    const doc = await App.db.collection('users').doc(App.auth.currentUser.uid).get();
+    App.chatFolders = doc.data()?.chatFolders || [];
+  } catch (e) { App.chatFolders = []; }
+  renderFolderTabs();
+}
+async function saveChatFolders() {
+  if (!App.db || !App.auth?.currentUser) return;
+  await App.db.collection('users').doc(App.auth.currentUser.uid).update({ chatFolders: App.chatFolders })
+    .catch(() => App.db.collection('users').doc(App.auth.currentUser.uid).set({ chatFolders: App.chatFolders }, { merge: true }));
+  renderFolderTabs();
+}
+function createFolder(name) {
+  if (!name || !name.trim()) return;
+  App.chatFolders.push({ name: name.trim(), icon: '📁', chatIds: [] });
+  saveChatFolders();
+}
+function deleteFolder(index) {
+  App.chatFolders.splice(index, 1);
+  if (App.activeFolderIndex >= App.chatFolders.length) App.activeFolderIndex = -1;
+  saveChatFolders();
+  renderChatList();
+}
+function addChatToFolder(folderIdx, chatId) {
+  const f = App.chatFolders[folderIdx];
+  if (!f) return;
+  if (!f.chatIds.includes(chatId)) f.chatIds.push(chatId);
+  saveChatFolders();
+}
+function removeChatFromFolder(folderIdx, chatId) {
+  const f = App.chatFolders[folderIdx];
+  if (!f) return;
+  f.chatIds = f.chatIds.filter(id => id !== chatId);
+  saveChatFolders();
+}
+function selectFolder(index) {
+  App.activeFolderIndex = index;
+  renderFolderTabs();
+  renderChatList();
+}
+function renderFolderTabs() {
+  const container = document.getElementById('folder-tabs');
+  if (!container) return;
+  if (!App.chatFolders.length) { container.innerHTML = ''; container.classList.add('hidden'); return; }
+  container.classList.remove('hidden');
+  let html = '';
+  App.chatFolders.forEach((f, i) => {
+    const active = i === App.activeFolderIndex ? 'bg-primary/15 text-primary' : 'bg-surface-container-hover text-on-surface-variant hover:bg-surface-container-high';
+    html += `<button class="folder-tab px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-all ${active}" data-folder-idx="${i}" onclick="selectFolder(${i})">${escHtml(f.icon || '📁')} ${escHtml(f.name)}</button>`;
+  });
+  if (App.activeFolderIndex >= 0) {
+    html += `<button class="folder-tab px-3 py-1.5 rounded-lg text-xs font-bold text-on-surface-variant hover:bg-surface-container-high whitespace-nowrap transition-all" onclick="selectFolder(-1)">✕ All</button>`;
+  }
+  container.innerHTML = html;
+}
+function openFolderManager() {
+  const overlay = document.getElementById('folder-manager-overlay');
+  if (!overlay) return;
+  const list = document.getElementById('folder-manager-list');
+  if (!list) return;
+  if (!App.chatFolders.length) {
+    list.innerHTML = '<div class="text-center py-8 text-on-surface-variant text-sm">No folders yet. Create one to organize your chats.</div>';
+  } else {
+    list.innerHTML = App.chatFolders.map((f, i) =>
+      `<div class="flex items-center gap-3 p-3 border-b border-outline-variant/10">
+        <span style="font-size:20px">${f.icon || '📁'}</span>
+        <div class="flex-1 min-w-0"><div class="font-bold text-sm text-on-surface">${escHtml(f.name)}</div><div class="text-xs text-on-surface-variant">${(f.chatIds || []).length} chat(s)</div></div>
+        <button class="px-2 py-1 text-xs font-bold text-error hover:bg-error/10 rounded-lg transition-all" onclick="if(confirm('Delete folder \\'${escHtml(f.name)}\\'?')){deleteFolder(${i})}">Delete</button>
+      </div>`
+    ).join('');
+  }
+  document.getElementById('folder-new-name').value = '';
+  showOverlay('folder-manager-overlay');
+}
+function saveFolderFromInput() {
+  const input = document.getElementById('folder-new-name');
+  if (!input) return;
+  createFolder(input.value);
+  input.value = '';
+  openFolderManager();
+}
+
+/* ══════════════════════════════════════════════════
+     FEATURE: CUSTOM NOTIFICATION SOUNDS PER CHAT
+    ══════════════════════════════════════════════════ */
+function getChatSound(chatId) {
+  try { return localStorage.getItem('tc_chat_sound_' + chatId) || ''; } catch (e) { return ''; }
+}
+function setChatSound(chatId, sound) {
+  try { localStorage.setItem('tc_chat_sound_' + chatId, sound || ''); } catch (e) {}
+  if (App.db && App.auth?.currentUser) {
+    App.db.collection('chatNotifSettings').doc(chatId).set({
+      userId: App.auth.currentUser.uid,
+      sound: sound || '',
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    }, { merge: true }).catch(() => {});
+  }
+}
+function openChatSoundPicker() {
+  const overlay = document.getElementById('sound-picker-overlay');
+  if (!overlay) return;
+  const chatId = App.currentChat?.id;
+  if (!chatId) return;
+  const select = document.getElementById('chat-sound-select');
+  if (select) select.value = getChatSound(chatId);
+  showOverlay('sound-picker-overlay');
+}
+function saveChatSound() {
+  const select = document.getElementById('chat-sound-select');
+  const chatId = App.currentChat?.id;
+  if (!select || !chatId) return;
+  setChatSound(chatId, select.value);
+  closeOverlay('sound-picker-overlay');
+  showToast(select.value ? 'Notification sound set' : 'Default sound restored', 'success');
+}
+
+/* ══════════════════════════════════════════════════
+     FEATURE: QR / BARCODE SCANNER
+    ══════════════════════════════════════════════════ */
+let scannerStream = null;
+let scannerFrameId = 0;
+let scannerValue = '';
+
+function closeScanner() {
+  if (scannerFrameId) cancelAnimationFrame(scannerFrameId);
+  scannerFrameId = 0;
+  if (scannerStream) { scannerStream.getTracks().forEach(t => t.stop()); scannerStream = null; }
+  closeOverlay('scanner-overlay');
+}
+
+async function openScanner() {
+  const overlay = document.getElementById('scanner-overlay');
+  const video = document.getElementById('scanner-video');
+  const status = document.getElementById('scanner-status');
+  const result = document.getElementById('scanner-result');
+  if (!overlay || !video) return;
+  scannerValue = '';
+  if (result) result.classList.add('hidden');
+  if (status) status.textContent = 'Initializing camera…';
+  showOverlay('scanner-overlay');
+
+  if (!navigator.mediaDevices?.getUserMedia || !('BarcodeDetector' in window)) {
+    if (status) status.textContent = 'QR scanning is not supported by this browser.';
+    return;
+  }
+  try {
+    scannerStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: { ideal: 'environment' } }, audio: false
+    });
+    video.srcObject = scannerStream;
+    await video.play();
+    if (status) status.textContent = 'Point camera at a QR code or barcode.';
+    const formats = await window.BarcodeDetector.getSupportedFormats().catch(() => ['qr_code']);
+    const detector = new window.BarcodeDetector({ formats });
+    const detectFrame = async () => {
+      if (!scannerStream || overlay.classList.contains('hidden')) return;
+      try {
+        const codes = video.readyState >= 2 ? await detector.detect(video) : [];
+        if (codes.length > 0 && codes[0].rawValue) {
+          scannerValue = codes[0].rawValue;
+          if (status) status.textContent = 'Scanned!';
+          if (result) { result.textContent = scannerValue; result.classList.remove('hidden'); }
+          closeScanner();
+          try {
+            const url = new URL(scannerValue);
+            if (url.protocol === 'http:' || url.protocol === 'https:') {
+              window.open(scannerValue, '_blank', 'noopener,noreferrer');
+            }
+          } catch (_) { showToast('Scanned: ' + scannerValue, 'info'); }
+          return;
+        }
+      } catch (e) { /* detection frame error */ }
+      scannerFrameId = requestAnimationFrame(detectFrame);
+    };
+    scannerFrameId = requestAnimationFrame(detectFrame);
+  } catch (e) {
+    if (status) status.textContent = 'Camera access denied or not available.';
+    console.warn('[Scanner]', e);
+  }
+}
+
+/* ══════════════════════════════════════════════════
+     FEATURE: MULTI-LANGUAGE / i18n
+    ══════════════════════════════════════════════════ */
+const TRANSLATIONS = {
+  en: {
+    chats: 'Chats', groups: 'Groups', calls: 'Calls', requests: 'Requests',
+    settings: 'Settings', profile: 'Profile', savedItems: 'Saved Items',
+    search: 'Search conversations...', messages: 'Messages',
+    noChats: 'No conversations yet', typeMessage: 'Type your message...',
+    online: 'Online', offline: 'Offline', typing: 'typing...',
+    accept: 'Accept', decline: 'Decline', pending: 'Pending',
+    notifications: 'Notifications', theme: 'Theme', folders: 'Folders',
+    language: 'Language', signOut: 'Sign Out', cancel: 'Cancel', save: 'Save',
+    create: 'Create', delete: 'Delete', edit: 'Edit', close: 'Close',
+    enableNotif: 'Enable notifications', notNow: 'Not now',
+  },
+  hi: {
+    chats: 'चैट', groups: 'समूह', calls: 'कॉल', requests: 'अनुरोध',
+    settings: 'सेटिंग्स', profile: 'प्रोफ़ाइल', savedItems: 'सहेजी गई चीज़ें',
+    search: 'बातचीत खोजें...', messages: 'संदेश',
+    noChats: 'अभी तक कोई बातचीत नहीं', typeMessage: 'अपना संदेश लिखें...',
+    online: 'ऑनलाइन', offline: 'ऑफ़लाइन', typing: 'टाइप कर रहे हैं...',
+    accept: 'स्वीकार करें', decline: 'अस्वीकार करें', pending: 'लंबित',
+    notifications: 'सूचनाएं', theme: 'थीम', folders: 'फ़ोल्डर',
+    language: 'भाषा', signOut: 'साइन आउट', cancel: 'रद्द करें', save: 'सहेजें',
+    create: 'बनाएं', delete: 'हटाएं', edit: 'संपादित करें', close: 'बंद करें',
+    enableNotif: 'सूचनाएं चालू करें', notNow: 'अभी नहीं',
+  },
+  gu: {
+    chats: 'ચેટ', groups: 'જૂથો', calls: 'કૉલ', requests: 'વિનંતીઓ',
+    settings: 'સેટિંગ્સ', profile: 'પ્રોફાઇલ', savedItems: 'સાચવેલ વસ્તુઓ',
+    search: 'વાતચીત શોધો...', messages: 'સંદેશાઓ',
+    noChats: 'હજી સુધી કોઈ વાતચીત નથી', typeMessage: 'તમારો સંદેશ લખો...',
+    online: 'ઑનલાઇન', offline: 'ઑફલાઇન', typing: 'ટાઇપ કરી રહ્યા છે...',
+    accept: 'સ્વીકારો', decline: 'નકારો', pending: 'બાકી',
+    notifications: 'સૂચનાઓ', theme: 'થીમ', folders: 'ફોલ્ડર',
+    language: 'ભાષા', signOut: 'સાઇન આઉટ', cancel: 'રદ કરો', save: 'સાચવો',
+    create: 'બનાવો', delete: 'કાઢો', edit: 'સંપાદિત કરો', close: 'બંધ કરો',
+    enableNotif: 'સૂચનાઓ સક્ષમ કરો', notNow: 'હમણાં નહીં',
+  },
+};
+
+function __(key) {
+  const lang = localStorage.getItem('tc_language') || 'en';
+  return TRANSLATIONS[lang]?.[key] || TRANSLATIONS.en[key] || key;
+}
+
+function setLanguage(lang) {
+  localStorage.setItem('tc_language', lang || 'en');
+  document.documentElement.lang = lang || 'en';
+  // Update static sidebar labels
+  const sidebarNav = document.getElementById('sidebar-nav-container');
+  if (sidebarNav && !App.showroomOverride?.type) {
+    const btns = sidebarNav.querySelectorAll('.tab-item');
+    const labels = btns ? [
+      { el: btns[0]?.querySelector('span:last-child'), key: 'chats' },
+      { el: btns[1]?.querySelector('span:last-child'), key: 'groups' },
+      { el: btns[2]?.querySelector('span:last-child'), key: 'calls' },
+    ] : [];
+    labels.forEach(({ el, key }) => { if (el) el.textContent = __(key); });
+  }
+  // Re-render current view
+  if (App.activeTab) switchTab(App.activeTab);
+  renderFolderTabs();
+}
+
+function openLanguagePicker() {
+  const overlay = document.getElementById('language-overlay');
+  if (!overlay) return;
+  const select = document.getElementById('language-select');
+  if (select) select.value = localStorage.getItem('tc_language') || 'en';
+  showOverlay('language-overlay');
+}
+
+function saveLanguage() {
+  const select = document.getElementById('language-select');
+  if (!select) return;
+  setLanguage(select.value);
+  closeOverlay('language-overlay');
+  showToast('Language updated', 'success');
 }
 
 function signOut() {
