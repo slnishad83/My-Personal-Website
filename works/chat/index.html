@@ -31,7 +31,7 @@
 
   <style>
     /* ══════════════════════════════════════════════════
-       DESIGN TOKENS - LIGHT / DARK MODES (Vibrant Midnight)
+       DESIGN TOKENS - LIGHT / DARK MODES (NSL Chat)
        ══════════════════════════════════════════════════ */
     :root {
       /* Light Mode theme constants */
@@ -91,7 +91,7 @@
     }
 
     .dark {
-      /* Dark Mode (Vibrant Midnight) theme constants */
+      /* Dark Mode NSL Chat theme constants */
       --primary: #c4c0ff;
       --on-primary: #2200a3;
       --primary-container: #8881ff;
@@ -355,8 +355,8 @@
           <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">bolt</span>
         </div>
         <div class="hidden xl:block">
-          <h1 class="font-headline-md text-headline-md font-bold text-on-background tracking-tight" id="sidebar-app-title">NeonChat</h1>
-          <p class="text-xs text-on-surface-variant font-medium mt-0.5" id="sidebar-app-subtitle">Vibrant Midnight</p>
+          <h1 class="font-headline-md text-headline-md font-bold text-on-background tracking-tight" id="sidebar-app-title">NSL Chat</h1>
+          <p class="text-xs text-on-surface-variant font-medium mt-0.5" id="sidebar-app-subtitle">NSL Chat</p>
         </div>
       </div>
 
@@ -483,7 +483,7 @@
           <div class="flex flex-col @md:flex-row items-center gap-6 bg-surface-container-high rounded-3xl p-8 border border-outline-variant/20 shadow-xl neon-glow">
             <div class="w-20 h-20 rounded-3xl bg-primary flex items-center justify-center text-4xl shadow-lg flex-shrink-0 animate-bounce">💬</div>
             <div class="text-center md:text-left flex-1 space-y-1">
-              <h3 class="font-headline-lg text-headline-lg font-bold text-on-surface">Welcome to NeonChat Workspace</h3>
+              <h3 class="font-headline-lg text-headline-lg font-bold text-on-surface">Welcome to NSL Chat Workspace</h3>
               <p class="text-on-surface-variant text-sm max-w-xl">A modern collaboration suite blending the premium Midnight theme with high-performance direct chat, channels, and developer-friendly notebook spaces.</p>
             </div>
             <button class="bg-primary text-on-primary px-6 py-3 rounded-2xl text-sm font-bold shadow-lg hover:scale-105 active:scale-95 transition-transform" onclick="openNewChat()">Start Message</button>
@@ -531,7 +531,7 @@
                   <span class="material-symbols-outlined text-2xl">light_mode</span>
                   <span class="text-[10px] font-label-caps uppercase tracking-wider bg-tertiary/10 px-2.5 py-0.5 rounded-full">Style</span>
                 </div>
-                <h4 class="font-bold text-lg text-on-surface">Vibrant Midnight Mode</h4>
+                <h4 class="font-bold text-lg text-on-surface">NSL Chat Theme</h4>
                 <p class="text-xs text-on-surface-variant leading-relaxed">Toggle between Midnight Dark Mode and high-legibility light theme layouts instantly.</p>
               </div>
               <div class="flex gap-2 mt-4">
@@ -540,65 +540,7 @@
             </div>
           </div>
 
-          <!-- 💎 DESIGN SYSTEM & VARIANTS SHOWROOM (Bento Card Expanded) -->
-          <div class="bg-surface-container rounded-2xl p-6 border border-primary/20 shadow-xl neon-glow space-y-4">
-            <div class="flex justify-between items-center">
-              <div class="flex items-center gap-2">
-                <span class="text-2xl">🎨</span>
-                <h4 class="font-bold text-lg text-on-surface">Design System & 24 Variants Showroom</h4>
-              </div>
-              <span class="text-[10px] font-label-caps uppercase tracking-wider bg-primary/25 text-primary px-3 py-1 rounded-full font-bold">Interactive Preview</span>
-            </div>
-            
-            <p class="text-xs text-on-surface-variant">Click any design combination below. The application will instantly override its viewport layout, chat workspace theme, elements, and styles to render that exact mockup design variant live!</p>
-            
-            <div class="grid grid-cols-2 @md:grid-cols-4 gap-3 pt-2">
-              <div class="space-y-1.5">
-                <div class="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider pl-1">Myself Workspace</div>
-                <div class="flex flex-col gap-1.5">
-                  <button class="bg-surface-container-high hover:bg-primary hover:text-white border border-outline-variant/30 text-left text-xs font-semibold px-3 py-2 rounded-xl transition-all truncate" onclick="triggerShowroomVariant('myself','desktop')">Desktop View</button>
-                  <button class="bg-surface-container-high hover:bg-primary hover:text-white border border-outline-variant/30 text-left text-xs font-semibold px-3 py-2 rounded-xl transition-all truncate" onclick="triggerShowroomVariant('myself','laptop')">Laptop View</button>
-                  <button class="bg-surface-container-high hover:bg-primary hover:text-white border border-outline-variant/30 text-left text-xs font-semibold px-3 py-2 rounded-xl transition-all truncate" onclick="triggerShowroomVariant('myself','tablet')">Tablet View</button>
-                  <button class="bg-surface-container-high hover:bg-primary hover:text-white border border-outline-variant/30 text-left text-xs font-semibold px-3 py-2 rounded-xl transition-all truncate" onclick="triggerShowroomVariant('myself','mobile')">Mobile View</button>
-                </div>
-              </div>
-              
-              <div class="space-y-1.5">
-                <div class="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider pl-1">Personal Chats</div>
-                <div class="flex flex-col gap-1.5">
-                  <button class="bg-surface-container-high hover:bg-primary hover:text-white border border-outline-variant/30 text-left text-xs font-semibold px-3 py-2 rounded-xl transition-all truncate" onclick="triggerShowroomVariant('personal','desktop')">Desktop View</button>
-                  <button class="bg-surface-container-high hover:bg-primary hover:text-white border border-outline-variant/30 text-left text-xs font-semibold px-3 py-2 rounded-xl transition-all truncate" onclick="triggerShowroomVariant('personal','laptop')">Laptop View</button>
-                  <button class="bg-surface-container-high hover:bg-primary hover:text-white border border-outline-variant/30 text-left text-xs font-semibold px-3 py-2 rounded-xl transition-all truncate" onclick="triggerShowroomVariant('personal','tablet')">Tablet View</button>
-                  <button class="bg-surface-container-high hover:bg-primary hover:text-white border border-outline-variant/30 text-left text-xs font-semibold px-3 py-2 rounded-xl transition-all truncate" onclick="triggerShowroomVariant('personal','mobile')">Mobile View</button>
-                </div>
-              </div>
 
-              <div class="space-y-1.5">
-                <div class="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider pl-1">Group Channels</div>
-                <div class="flex flex-col gap-1.5">
-                  <button class="bg-surface-container-high hover:bg-primary hover:text-white border border-outline-variant/30 text-left text-xs font-semibold px-3 py-2 rounded-xl transition-all truncate" onclick="triggerShowroomVariant('group','desktop')">Desktop View</button>
-                  <button class="bg-surface-container-high hover:bg-primary hover:text-white border border-outline-variant/30 text-left text-xs font-semibold px-3 py-2 rounded-xl transition-all truncate" onclick="triggerShowroomVariant('group','laptop')">Laptop View</button>
-                  <button class="bg-surface-container-high hover:bg-primary hover:text-white border border-outline-variant/30 text-left text-xs font-semibold px-3 py-2 rounded-xl transition-all truncate" onclick="triggerShowroomVariant('group','tablet')">Tablet View</button>
-                  <button class="bg-surface-container-high hover:bg-primary hover:text-white border border-outline-variant/30 text-left text-xs font-semibold px-3 py-2 rounded-xl transition-all truncate" onclick="triggerShowroomVariant('group','mobile')">Mobile View</button>
-                </div>
-              </div>
-
-              <div class="space-y-1.5">
-                <div class="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider pl-1">Quick Custom Controls</div>
-                <div class="flex flex-col gap-2 bg-surface-container-high/50 p-3 rounded-xl border border-outline-variant/15">
-                  <div class="flex justify-between items-center text-xs font-bold text-on-surface">
-                    <span>Theme:</span>
-                    <button class="text-primary hover:underline text-[11px]" onclick="cycleTheme()" id="showroom-theme-btn">Dark</button>
-                  </div>
-                  <div class="flex justify-between items-center text-xs font-bold text-on-surface">
-                    <span>Frame:</span>
-                    <button class="text-primary hover:underline text-[11px]" onclick="resetShowroomViewport()" id="showroom-viewport-btn">Auto</button>
-                  </div>
-                  <button class="w-full text-center bg-secondary text-white text-[11px] font-bold py-1.5 rounded-lg active:scale-95 transition-transform" onclick="resetShowroomVariant()">Reset Override</button>
-                </div>
-              </div>
-            </div>
-          </div>
         </div>
       </div>
 

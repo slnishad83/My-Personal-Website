@@ -15,7 +15,7 @@ const App = {
   messages: {},
   contacts: [],
   activeTab: 'chats',
-  theme: localStorage.getItem('tc_theme') || 'dark', // Vibrant Midnight default
+  theme: localStorage.getItem('tc_theme') || 'dark', // NSL Chat default
   isRecording: false,
   recordingTimer: null,
   recordingSeconds: 0,
@@ -615,7 +615,7 @@ function loadDemoData() {
   App.currentUser = { uid: 'me', displayName: 'Nishad SL', email: 'nishad@example.com', initials: 'NS' };
   
   App.contacts = [
-    { uid:'c1', name:'Halid',          avatar:'bg-primary-container text-primary', initials:'H', status:'online',  about:'Dev Lead @ NeonChat 🚀' },
+    { uid:'c1', name:'Halid',          avatar:'bg-primary-container text-primary', initials:'H', status:'online',  about:'Dev Lead 🚀' },
     { uid:'c2', name:'Aisha Rahman',   avatar:'gradient-2', initials:'AR', status:'away',    about:'Always coding ☕' },
     { uid:'c3', name:'Priya Nair',     avatar:'gradient-4', initials:'PN', status:'online',  about:'Product Designer ✨' },
     { uid:'c4', name:'Rohan Mehta',    avatar:'gradient-5', initials:'RM', status:'offline', about:'Available' },
@@ -897,8 +897,8 @@ function renderChatList(filter = '') {
         </button>
       `;
     } else {
-      if (sidebarTitleEl) sidebarTitleEl.textContent = "NeonChat";
-      if (sidebarSubtitleEl) sidebarSubtitleEl.textContent = "Vibrant Midnight";
+      if (sidebarTitleEl) sidebarTitleEl.textContent = "NSL Chat";
+      if (sidebarSubtitleEl) sidebarSubtitleEl.textContent = "NSL Chat";
       
       sidebarNav.innerHTML = `
         <button class="tab-item w-full flex items-center gap-4 bg-primary/10 text-primary border-l-4 border-primary px-4 py-3 cursor-pointer active:scale-95" onclick="switchTab('chats')">
@@ -1138,7 +1138,7 @@ function openChat(chatId) {
   const headerStatus = document.getElementById('header-status');
   const statusDot = document.getElementById('header-status-dot');
 
-  // Adapt Header actions based on chat type (Vibrant Midnight spec)
+  // Adapt Header actions based on chat type
   const actionContainer = document.getElementById('header-actions-container');
   
   if (chat.id === 'saved_me') {
@@ -1772,7 +1772,7 @@ function showWelcome() {
 }
 
 /* ══════════════════════════════════════════════════
-   19. INFO DETAIL PANELS (Vibrant Midnight styling)
+   19. INFO DETAIL PANELS
    ══════════════════════════════════════════════════ */
 function openChatInfo() {
   if (!App.currentChat) return;
