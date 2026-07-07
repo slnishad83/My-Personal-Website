@@ -1187,16 +1187,26 @@ function renderMessages(chatId) {
     let contentHTML = '';
     if (msg.type === 'image') {
       contentHTML = `<div class="bubble-media cursor-pointer relative rounded-xl overflow-hidden" onclick="openMediaViewer('${msg.id}')">
-        <img src="${msg.url}" alt="Image" loading="lazy" class="max-w-xs max-h-48 object-cover rounded-xl border border-outline-variant/20">
+        <img src="${escHtml(msg.url)}" alt="Image" loading="lazy" class="max-w-xs max-h-48 object-cover rounded-xl border border-outline-variant/20">
+        <div class="absolute inset-0 bg-black/0 hover:bg-black/10 transition-all rounded-xl flex items-center justify-center opacity-0 hover:opacity-100">
+          <span class="material-symbols-outlined text-white text-2xl drop-shadow">fullscreen</span>
+        </div>
+      </div>`;
+    } else if (msg.type === 'video') {
+      contentHTML = `<div class="bubble-media cursor-pointer relative rounded-xl overflow-hidden" onclick="openMediaViewer('${msg.id}')">
+        <video src="${escHtml(msg.url)}" class="max-w-xs max-h-48 rounded-xl border border-outline-variant/20" preload="metadata" muted></video>
+        <div class="absolute inset-0 flex items-center justify-center">
+          <div class="w-12 h-12 bg-black/60 rounded-full flex items-center justify-center text-white text-xl">▶</div>
+        </div>
       </div>`;
     } else if (msg.type === 'voice') {
       contentHTML = `<div class="flex items-center gap-3 bg-surface-container-high/40 p-2.5 rounded-xl border border-outline-variant/20">
-        <button class="voice-play w-8 h-8 rounded-full bg-primary text-on-primary flex items-center justify-center" onclick="playVoice('${msg.id}')" aria-label="Play voice message">▶</button>
+        <button class="voice-play w-8 h-8 rounded-full bg-primary text-on-primary flex items-center justify-center" data-msg-id="${msg.id}" onclick="playVoice('${msg.id}')" aria-label="Play voice message">▶</button>
         <div class="flex-1 flex items-end gap-0.5 h-6 overflow-hidden">${generateWaveform()}</div>
         <span class="text-[10px] font-timestamp text-on-surface-variant">${msg.duration||'0:00'}</span>
       </div>`;
     } else if (msg.type === 'doc') {
-      contentHTML = `<div class="flex items-center gap-4 bg-surface-container-high p-4 rounded-xl border border-outline-variant/20 cursor-pointer" onclick="if('${msg.url}') window.open('${msg.url}', '_blank')">
+      contentHTML = `<div class="flex items-center gap-4 bg-surface-container-high p-4 rounded-xl border border-outline-variant/20 cursor-pointer" onclick="window.open('${escHtml(msg.url||'')}', '_blank')">
         <div class="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center text-primary"><span class="material-symbols-outlined">description</span></div>
         <div class="flex-1"><p class="text-xs font-bold truncate">${escHtml(msg.fileName||'Document')}</p><p class="text-[10px] text-on-surface-variant">${msg.fileSize||''}</p></div>
         <span class="material-symbols-rounded" style="font-size:20px;opacity:.7">download</span>
@@ -1204,6 +1214,11 @@ function renderMessages(chatId) {
     } else {
       contentHTML = `<div class="text-sm font-normal leading-relaxed text-on-surface">${formatMsgText(msg.text||'')}</div>`;
     }
+
+    // Status badges: forwarded, starred, edited
+    const fwdBadge  = msg.forwarded ? `<span class="text-[9px] text-on-surface-variant italic opacity-70 mb-1">↪ Forwarded</span>` : '';
+    const starBadge = msg.starred   ? `<span class="text-[10px]">⭐</span>` : '';
+    const editBadge = msg.edited    ? `<span class="text-[9px] text-on-surface-variant italic opacity-60">(edited)</span>` : '';
 
     // Alignment and bubbled classes mapping mockups
     const bubbleClass = isMe
@@ -1215,15 +1230,20 @@ function renderMessages(chatId) {
       ${!isMe ? avatarHTML : ''}
       <div class="flex flex-col ${isMe?'items-end':'items-start'} max-w-full">
         ${showSender&&!isMe ? `<div class="text-[10px] text-on-surface-variant font-bold mb-1 ml-2">${escHtml(senderName)}</div>` : ''}
-        <div class="p-bubble_padding_xy ${bubbleClass} relative group">
+        ${fwdBadge ? `<div class="${isMe?'text-right':'text-left'}">${fwdBadge}</div>` : ''}
+        <div class="p-bubble_padding_xy ${bubbleClass} relative group"
+             oncontextmenu="showMsgContextMenu(event,'${msg.id}')"
+             ondblclick="showQuickReactions(event,'${msg.id}')">
           ${replyHTML}
           ${contentHTML}
           <div class="flex items-center justify-end gap-1 mt-1.5 select-none opacity-80">
+            ${editBadge}
             <span class="text-[9px] font-timestamp ${isMe?'text-white/80':'text-on-surface-variant'}">${formatMsgTime(msg.time)}</span>
+            ${starBadge}
             ${tickIcon}
           </div>
         </div>
-        ${reactions ? `<div class="flex gap-1 mt-1">${reactions}</div>` : ''}
+        ${reactions ? `<div class="flex flex-wrap gap-1 mt-1">${reactions}</div>` : ''}
       </div>
     </div>`;
   });
@@ -1546,6 +1566,7 @@ function endCall() {
 }
 
 function toggleMute() {
+  // This is the CALL mute — toggleChatMute() handles per-chat muting
   App.callMuted = !App.callMuted;
   const btn  = document.getElementById('btn-mute');
   const icon = document.getElementById('mute-icon');
@@ -1564,7 +1585,19 @@ function declineCall() { closeModal('incoming-call-overlay'); showToast('Call re
 /* ══════════════════════════════════════════════════
    16. SEARCH SYSTEM
    ══════════════════════════════════════════════════ */
-function openChatSearch() { showToast('Searching message logs — coming soon','info'); }
+// openChatSearch is fully implemented in app-extras.js
+// This stub is kept as a no-op fallback
+function openChatSearch() {
+  if (typeof _openChatSearchImpl === 'function') {
+    _openChatSearchImpl();
+  } else {
+    // app-extras.js defines the full version — trigger it
+    const bar = document.getElementById('_chat-search-bar');
+    if (bar) { show('_chat-search-bar'); setTimeout(() => document.getElementById('_chat-search-input')?.focus(), 100); }
+    else if (typeof performChatSearch !== 'undefined') { /* will be available */ }
+    else showToast('Chat search — loading…', 'info');
+  }
+}
 function filterChats(q) { renderChatList(q); }
 
 /* ══════════════════════════════════════════════════
@@ -2006,28 +2039,46 @@ function updateBadge(id, count) {
 /* ══════════════════════════════════════════════════
    23. ATTACHMENT MOCKS
    ══════════════════════════════════════════════════ */
-function attachPhoto() {
-  const msg = { id:'msg_'+Date.now(), from:'me', type:'image', url:'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=600&auto=format&fit=crop', time:Date.now(), status:'sent' };
-  App.messages[App.currentChat.id].push(msg);
-  App.currentChat.lastMsg = '🖼️ Photo attached';
-  App.currentChat.lastTime = msg.time;
-  renderMessages(App.currentChat.id);
-  scrollToBottom(true);
-  renderChatList();
+// attachPhoto, attachDocument, attachCamera are overridden in app-extras.js
+// These are fallback stubs in case app-extras.js is not loaded
+if (typeof attachPhoto === 'undefined') {
+  var attachPhoto = function() {
+    const msg = { id:'msg_'+Date.now(), from:'me', type:'image', url:'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=600&auto=format&fit=crop', time:Date.now(), status:'sent' };
+    App.messages[App.currentChat.id].push(msg);
+    App.currentChat.lastMsg = '🖼️ Photo attached'; App.currentChat.lastTime = msg.time;
+    renderMessages(App.currentChat.id); scrollToBottom(true); renderChatList(); toggleAttachMenu();
+  };
+}
+if (typeof attachDocument === 'undefined') {
+  var attachDocument = function() {
+    const msg = { id:'msg_'+Date.now(), from:'me', type:'doc', fileName:'design_tokens_brief.pdf', fileSize:'1.4 MB', time:Date.now(), status:'sent' };
+    App.messages[App.currentChat.id].push(msg);
+    App.currentChat.lastMsg = '📄 design_tokens_brief.pdf'; App.currentChat.lastTime = msg.time;
+    renderMessages(App.currentChat.id); scrollToBottom(true); renderChatList(); toggleAttachMenu();
+  };
+}
+if (typeof attachCamera === 'undefined') {
+  var attachCamera = function() { showToast('Accessing device camera...','info'); toggleAttachMenu(); };
+}
+function shareLocation() {
+  if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(
+      pos => {
+        const url = `https://maps.google.com/?q=${pos.coords.latitude},${pos.coords.longitude}`;
+        if (!App.messages[App.currentChat.id]) App.messages[App.currentChat.id] = [];
+        const msg = { id:'msg_'+Date.now(), from:'me', type:'text', text:'📍 My Location: ' + url, time:Date.now(), status:'sent' };
+        App.messages[App.currentChat.id].push(msg);
+        App.currentChat.lastMsg = '📍 Location shared'; App.currentChat.lastTime = msg.time;
+        renderMessages(App.currentChat.id); scrollToBottom(true); renderChatList();
+        showToast('Location shared', 'success');
+      },
+      () => showToast('Location access denied', 'error')
+    );
+  } else {
+    showToast('Location not available', 'error');
+  }
   toggleAttachMenu();
 }
-function attachDocument() {
-  const msg = { id:'msg_'+Date.now(), from:'me', type:'doc', fileName:'design_tokens_brief.pdf', fileSize:'1.4 MB', time:Date.now(), status:'sent' };
-  App.messages[App.currentChat.id].push(msg);
-  App.currentChat.lastMsg = '📄 design_tokens_brief.pdf';
-  App.currentChat.lastTime = msg.time;
-  renderMessages(App.currentChat.id);
-  scrollToBottom(true);
-  renderChatList();
-  toggleAttachMenu();
-}
-function attachCamera() { showToast('Accessing device camera...','info'); toggleAttachMenu(); }
-function shareLocation() { showToast('Locating coordinates...','info'); toggleAttachMenu(); }
 
 /* ══════════════════════════════════════════════════
    24. EMOJI LOADINGS
@@ -2051,13 +2102,44 @@ function insertEmoji(em) {
 /* ══════════════════════════════════════════════════
    25. KEYBOARD & WEB EVENTS
    ══════════════════════════════════════════════════ */
-function setupKeyboardShortcuts() {}
-function setupOnlineStatus() {}
+function setupKeyboardShortcuts() {
+  document.addEventListener('keydown', e => {
+    // Ctrl+K = focus search
+    if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+      e.preventDefault();
+      if (App.currentChat) openChatSearch();
+      else document.getElementById('sidebar-search')?.focus();
+    }
+    // Ctrl+/ = format bar
+    if ((e.ctrlKey || e.metaKey) && e.key === '/') {
+      e.preventDefault();
+      toggleFormatBar();
+    }
+  });
+}
+
+function setupOnlineStatus() {
+  window.addEventListener('online',  () => hide('offline-banner'));
+  window.addEventListener('offline', () => show('offline-banner'));
+  if (!navigator.onLine) show('offline-banner');
+}
+
+function getInitials(name) {
+  if (!name) return '?';
+  const parts = name.trim().split(/\s+/);
+  if (parts.length >= 2) return (parts[0][0] + parts[parts.length-1][0]).toUpperCase();
+  return name.slice(0,2).toUpperCase();
+}
+
+function getDirectChatId(uid1, uid2) {
+  return [uid1, uid2].sort().join('_');
+}
+
 function signOut() {
-  if (App.usersUnsubscribe) App.usersUnsubscribe();
-  if (App.chatsUnsubscribe) App.chatsUnsubscribe();
-  if (App.groupsUnsubscribe) App.groupsUnsubscribe();
+  if (App.usersUnsubscribe)    App.usersUnsubscribe();
+  if (App.chatsUnsubscribe)    App.chatsUnsubscribe();
+  if (App.groupsUnsubscribe)   App.groupsUnsubscribe();
   if (App.messagesUnsubscribe) App.messagesUnsubscribe();
-  if (App.auth) App.auth.signOut().then(()=>location.reload());
+  if (App.auth) App.auth.signOut().then(() => location.reload());
   else location.reload();
 }
