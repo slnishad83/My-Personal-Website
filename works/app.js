@@ -35,6 +35,9 @@ const App = {
   mediaViewerIndex: 0,
   mediaViewerItems: [],
   searchFilter: 'all',
+  chatRequests: { incoming: [], outgoing: [] },
+  chatRequestsUnsubscribe: null,
+  pendingRequestsCount: 0,
   
   // Showroom overrides
   showroomOverride: null, // { type: 'myself'|'personal'|'group', viewport: 'desktop'|'laptop'|'tablet'|'mobile' }
@@ -95,6 +98,7 @@ App.usersUnsubscribe = null;
 App.chatsUnsubscribe = null;
 App.groupsUnsubscribe = null;
 App.messagesUnsubscribe = null;
+App.chatRequestsUnsubscribe = null;
 App.directChats = [];
 App.groupChats = [];
 
@@ -365,6 +369,102 @@ function mergeAndRenderChats() {
   renderChatList();
 }
 
+async function loadMessageHistory(email, uid) {
+  if (!App.db || !email) return;
+  try {
+    const snap = await App.db.collection('messages')
+      .where('participantEmails', 'array-contains', email)
+      .orderBy('timestamp', 'asc')
+      .limit(200)
+      .get();
+    const chatMap = {};
+    snap.forEach(doc => {
+      const data = doc.data();
+      if (!data.directId) return;
+      if (!chatMap[data.directId]) chatMap[data.directId] = { msgs: 0, lastTime: 0, participants: data.participants || [], participantEmails: data.participantEmails || [] };
+      chatMap[data.directId].msgs++;
+      if (data.timestamp?.toMillis) chatMap[data.directId].lastTime = Math.max(chatMap[data.directId].lastTime, data.timestamp.toMillis());
+    });
+    const existingIds = new Set(App.directChats.map(c => c.id));
+    for (const [chatId, info] of Object.entries(chatMap)) {
+      if (existingIds.has(chatId) || chatId === `saved_${uid}`) continue;
+      const otherEmail = info.participantEmails.find(e => e !== email) || '';
+      const otherUid = info.participants.find(p => p !== uid) || '';
+      const contact = App.contacts.find(c => c.email === otherEmail || c.uid === otherUid) || { name: otherEmail.split('@')[0] || 'User', avatar: 'gradient-2', initials: '?', photoURL: null, status: 'offline', about: otherEmail };
+      const chatObj = {
+        id: chatId, type: 'personal', uid: otherUid,
+        name: contact.name, avatar: contact.avatar, initials: contact.initials || '?',
+        photoURL: contact.photoURL || null,
+        lastMsg: `${info.msgs} message${info.msgs > 1 ? 's' : ''}`, lastTime: info.lastTime || Date.now(),
+        unread: 0, pinned: false, muted: false, status: 'offline', email: otherEmail
+      };
+      App.directChats.push(chatObj);
+      if (App.db) {
+        App.db.collection('directChats').doc(chatId).set({
+          participants: [uid, otherUid],
+          participantNames: { [uid]: App.currentUser.displayName || App.currentUser.email || 'Me', [otherUid]: contact.name },
+          participantEmails: { [uid]: email, [otherUid]: otherEmail },
+          status: 'active'
+        }, { merge: true }).catch(() => {});
+      }
+    }
+    if (Object.keys(chatMap).length) mergeAndRenderChats();
+  } catch(e) { console.warn('loadMessageHistory:', e); }
+}
+
+function subscribeToChatRequests(email, uid) {
+  if (!App.db || !email) return;
+  if (App.chatRequestsUnsubscribe) App.chatRequestsUnsubscribe();
+  let incomingFirstLoad = true;
+  App.chatRequestsUnsubscribe = App.db.collection('chatRequests')
+    .where('toEmail', '==', email)
+    .onSnapshot(snapshot => {
+      const incoming = [];
+      snapshot.docChanges().forEach(change => {
+        const data = change.doc.data();
+        if (data.status === 'pending') {
+          incoming.push({ id: change.doc.id, fromUid: data.from, fromEmail: data.fromEmail, fromName: data.fromName, timestamp: data.timestamp?.toMillis ? data.timestamp.toMillis() : 0 });
+          if (!incomingFirstLoad && change.type === 'added') {
+            showToast(`New chat request from ${data.fromName || data.fromEmail}`, 'info');
+          }
+        }
+      });
+      App.chatRequests.incoming = incoming;
+      App.pendingRequestsCount = incoming.length;
+      updateRequestBadge();
+      incomingFirstLoad = false;
+      if (App.activeTab === 'requests') renderRequestsTab();
+    }, e => console.warn('chatRequests incoming err:', e));
+  let prevAcceptedIds = new Set();
+  App.db.collection('chatRequests')
+    .where('fromEmail', '==', email)
+    .onSnapshot(snapshot => {
+      const outgoing = [];
+      snapshot.docChanges().forEach(change => {
+        const data = change.doc.data();
+        if (data.status === 'pending') {
+          outgoing.push({ id: change.doc.id, toUid: data.to, toEmail: data.toEmail, toName: data.toName, timestamp: data.timestamp?.toMillis ? data.timestamp.toMillis() : 0 });
+        } else if (data.status === 'accepted' && change.type === 'modified' && !prevAcceptedIds.has(change.doc.id)) {
+          showToast('Your chat request was accepted!', 'success');
+          prevAcceptedIds.add(change.doc.id);
+        }
+      });
+      App.chatRequests.outgoing = outgoing;
+      if (App.activeTab === 'requests') renderRequestsTab();
+    }, e => console.warn('chatRequests outgoing err:', e));
+}
+
+function updateRequestBadge() {
+  const badge = document.getElementById('requests-badge');
+  if (!badge) return;
+  if (App.pendingRequestsCount > 0) {
+    badge.textContent = App.pendingRequestsCount;
+    badge.classList.remove('hidden');
+  } else {
+    badge.classList.add('hidden');
+  }
+}
+
 function subscribeToMessages(chatId) {
   if (!App.db || !App.auth?.currentUser) return;
   if (App.messagesUnsubscribe) {
@@ -462,6 +562,13 @@ function checkSession() {
           subscribeToUsers();
           subscribeToChats();
           subscribeToGroups();
+          const user = App.currentUser;
+          if (user.email) {
+            loadMessageHistory(user.email, user.uid);
+            subscribeToChatRequests(user.email, user.uid);
+          }
+          updatePresence('online');
+          setupPushNotifications();
           setLoadingStatus('Ready');
           setTimeout(bootApp, 400);
         });
@@ -729,12 +836,13 @@ function renderChatList(filter = '') {
     return true;
   });
 
-  if (tab === 'calls')  { renderCallsTab(); return; }
-  if (tab === 'more')   { renderMoreTab();  return; }
+  if (tab === 'calls')    { renderCallsTab(); return; }
+  if (tab === 'more')     { renderMoreTab(); return; }
+  if (tab === 'requests') { renderRequestsTab(); return; }
 
   if (filter) {
     const q = filter.toLowerCase();
-    items = items.filter(c => c.name.toLowerCase().includes(q) || (c.lastMsg||'').toLowerCase().includes(q));
+    items = items.filter(c => c.name.toLowerCase().includes(q) || (c.lastMsg||'').toLowerCase().includes(q) || (c.about||'').toLowerCase().includes(q) || (c.email||'').toLowerCase().includes(q));
   }
 
   // Determine if Myself Workspace styling should override sidebar headers
@@ -794,6 +902,13 @@ function renderChatList(filter = '') {
         <button class="tab-item w-full flex items-center gap-4 text-on-surface/60 hover:text-on-surface hover:bg-surface-container-highest px-4 py-3 cursor-pointer active:scale-95" onclick="switchTab('calls')">
           <span class="material-symbols-outlined">call</span>
           <span class="hidden xl:block font-body-md text-body-md">Calls</span>
+        </button>
+        <button class="tab-item w-full flex items-center gap-4 text-on-surface/60 hover:text-on-surface hover:bg-surface-container-highest px-4 py-3 cursor-pointer active:scale-95" onclick="switchTab('requests')">
+          <div class="relative">
+            <span class="material-symbols-outlined">handshake</span>
+            <div class="absolute -top-1.5 -right-2 bg-secondary text-white text-[9px] w-4 h-4 rounded-full flex items-center justify-center font-bold hidden" id="requests-badge">0</div>
+          </div>
+          <span class="hidden xl:block font-body-md text-body-md">Requests</span>
         </button>
         <button class="tab-item w-full flex items-center gap-4 text-on-surface/60 hover:text-on-surface hover:bg-surface-container-highest px-4 py-3 cursor-pointer active:scale-95" onclick="switchTab('more')">
           <span class="material-symbols-outlined">bookmark</span>
@@ -870,9 +985,8 @@ function chatItemHTML(chat) {
     ? 'bg-surface-variant/40 border-l-4 border-primary text-primary' 
     : 'hover:bg-surface-variant/30 text-on-surface';
 
-  const statusColor = status === 'online' ? 'bg-secondary' : 'bg-outline'; // pink for online
-  const statusDot = (chat.type === 'personal' && chat.id !== `saved_me`)
-    ? `<div class="absolute bottom-0 right-0 w-3 h-3 ${statusColor} rounded-full border-2 border-surface-container-low"></div>` : '';
+  const statusDot = (chat.type === 'personal' && chat.id !== `saved_me` && status === 'online')
+    ? `<div class="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-surface-container-low"></div>` : '';
 
   let avatarIconHtml = '';
   if (chat.id === 'saved_me') {
@@ -946,6 +1060,57 @@ function moreRow(icon, label, action) {
   </div>`;
 }
 
+function renderRequestsTab() {
+  const list = document.getElementById('chat-list');
+  if (!list) return;
+  const incoming = App.chatRequests.incoming || [];
+  const outgoing = App.chatRequests.outgoing || [];
+  if (!incoming.length && !outgoing.length) {
+    list.innerHTML = `
+      <div class="flex flex-col items-center py-12 text-center w-full">
+        <div class="w-16 h-16 rounded-2xl bg-surface-container-high flex items-center justify-center mb-4 border border-outline-variant/20 shadow-md">
+          <span class="material-symbols-outlined text-secondary text-3xl">handshake</span>
+        </div>
+        <h4 class="font-bold mb-1">No pending requests</h4>
+        <p class="text-on-surface-variant text-xs max-w-xs">Search by full email to find and connect with other registered users.</p>
+      </div>`;
+    return;
+  }
+  let html = '';
+  if (incoming.length) {
+    html += `<div class="px-4 py-2 text-[10px] font-bold text-secondary uppercase tracking-widest bg-surface-container-low/20 flex items-center gap-2">
+      <span class="material-symbols-outlined text-[12px]">arrow_back</span> Incoming Requests
+    </div>`;
+    html += incoming.map(r => `
+      <div class="flex items-center gap-3 p-3 rounded-xl hover:bg-surface-container transition-all mx-2">
+        <div class="w-10 h-10 rounded-xl flex items-center justify-center font-bold text-sm bg-primary-container/20 text-primary">${escHtml((r.fromName||'?')[0].toUpperCase())}</div>
+        <div class="flex-1 min-w-0">
+          <div class="font-bold text-sm text-on-surface truncate">${escHtml(r.fromName)}</div>
+          <div class="text-xs text-on-surface-variant truncate">${escHtml(r.fromEmail)}</div>
+        </div>
+        <button class="accept-req-btn px-3 py-1.5 bg-primary text-on-primary text-xs font-bold rounded-lg hover:brightness-110 active:scale-95 transition-all" data-req-id="${r.id}" onclick="acceptChatRequest(this.dataset.reqId)">Accept</button>
+        <button class="px-3 py-1.5 bg-surface-container-high text-on-surface text-xs font-bold rounded-lg hover:brightness-110 active:scale-95 transition-all" onclick="declineChatRequest('${r.id}')">Decline</button>
+      </div>
+    `).join('');
+  }
+  if (outgoing.length) {
+    html += `<div class="px-4 py-2 text-[10px] font-bold text-on-surface-variant uppercase tracking-widest bg-surface-container-low/20 mt-2 flex items-center gap-2">
+      <span class="material-symbols-outlined text-[12px]">arrow_forward</span> Sent Requests
+    </div>`;
+    html += outgoing.map(r => `
+      <div class="flex items-center gap-3 p-3 rounded-xl opacity-60 mx-2">
+        <div class="w-10 h-10 rounded-xl flex items-center justify-center font-bold text-sm bg-surface-container-highest text-on-surface-variant">${escHtml((r.toName||'?')[0].toUpperCase())}</div>
+        <div class="flex-1 min-w-0">
+          <div class="font-bold text-sm text-on-surface truncate">${escHtml(r.toName)}</div>
+          <div class="text-xs text-on-surface-variant truncate">${escHtml(r.toEmail)} — Awaiting response</div>
+        </div>
+        <span class="text-xs text-on-surface-variant italic">Pending</span>
+      </div>
+    `).join('');
+  }
+  list.innerHTML = html;
+}
+
 /* ══════════════════════════════════════════════════
    9. OPEN CHAT & STATE SYNC
    ══════════════════════════════════════════════════ */
@@ -1014,8 +1179,12 @@ function openChat(chatId) {
       headerStatus.className = "text-[10px] text-primary-fixed-dim uppercase tracking-widest font-label-caps" + (contact?.status === 'online' ? ' text-secondary' : '');
     }
     if (statusDot) {
-      statusDot.style.display = '';
-      statusDot.className = `absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-background ${contact?.status === 'online' ? 'bg-secondary' : 'bg-outline'}`;
+      if (contact?.status === 'online') {
+        statusDot.style.display = '';
+        statusDot.className = 'absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-background';
+      } else {
+        statusDot.style.display = 'none';
+      }
     }
     if (actionContainer) {
       actionContainer.innerHTML = `
@@ -1308,6 +1477,7 @@ function sendMessage() {
       const messageData = {
         senderId: uid,
         senderName: App.currentUser.displayName || App.currentUser.email || 'Me',
+        senderEmail: App.currentUser.email || '',
         text: text,
         timestamp: firebase.firestore.FieldValue.serverTimestamp(),
         status: 'sent',
@@ -1338,6 +1508,10 @@ function sendMessage() {
       } else {
         messageData.directId = chatId;
         messageData.participants = [uid, otherUserId];
+        messageData.participantEmails = [
+          App.currentUser.email || '',
+          App.currentChat.about || App.currentChat.email || ''
+        ];
       }
       
       App.db.collection('messages').add(messageData).catch(console.error);
@@ -1768,17 +1942,26 @@ function renderContactList() {
   if (!list) return;
   
   list.innerHTML = `
+    <div class="px-4 py-2 text-xs font-bold text-secondary uppercase tracking-wider flex items-center gap-2">
+      <span class="material-symbols-outlined text-[12px]">person_search</span> Find by Email
+    </div>
+    <div class="px-4 pb-3">
+      <div class="relative">
+        <input class="w-full bg-surface-container border-none rounded-xl py-2.5 pl-10 pr-3 text-on-surface text-sm focus:ring-1 focus:ring-primary" placeholder="Type complete email to search…" id="email-search-input" type="email" onkeydown="if(event.key==='Enter')searchUserByEmailInput()"/>
+        <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-lg">search</span>
+      </div>
+      <div id="email-search-result" class="mt-2"></div>
+    </div>
     <div class="px-4 py-2 text-xs font-bold text-on-surface-variant uppercase tracking-wider">Workspace Directory</div>
     <div class="space-y-1">
       ${App.contacts.map(c => {
         const initials = c.initials || '?';
-        const statusColor = c.status === 'online' ? 'bg-secondary' : 'bg-outline'; // pink online dot
         
         return `
         <div class="flex items-center gap-3 p-3 rounded-xl hover:bg-surface-container transition-all cursor-pointer group" onclick="startChatWith('${c.uid}')">
           <div class="relative flex-shrink-0">
             <div class="w-10 h-10 rounded-xl flex items-center justify-center font-bold text-sm bg-surface-container-highest text-on-surface-variant">${initials}</div>
-            <div class="absolute bottom-0 right-0 w-2.5 h-2.5 ${statusColor} rounded-full border border-surface-container-lowest"></div>
+            ${c.status === 'online' ? '<div class="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 rounded-full border border-surface-container-lowest"></div>' : ''}
           </div>
           <div class="flex-1 min-w-0">
             <div class="font-bold text-sm text-on-surface truncate group-hover:text-primary transition-colors">${escHtml(c.name)}</div>
@@ -1787,6 +1970,37 @@ function renderContactList() {
         </div>`;
       }).join('')}
     </div>`;
+}
+
+function searchUserByEmailInput() {
+  const input = document.getElementById('email-search-input');
+  const resultDiv = document.getElementById('email-search-result');
+  if (!input || !resultDiv) return;
+  const email = input.value.trim().toLowerCase();
+  if (!email || !email.includes('@') || !email.includes('.')) {
+    resultDiv.innerHTML = `<p class="text-xs text-on-surface-variant mt-1">Enter a complete email address</p>`;
+    return;
+  }
+  resultDiv.innerHTML = `<p class="text-xs text-on-surface-variant mt-1">Searching...</p>`;
+  searchUserByEmail(email).then(user => {
+    if (!user) {
+      resultDiv.innerHTML = `<p class="text-xs text-error mt-1">No registered user found with this email</p>`;
+      return;
+    }
+    const existingChat = App.chats.find(c => c.uid === user.uid);
+    resultDiv.innerHTML = `
+      <div class="flex items-center gap-3 p-3 rounded-xl bg-surface-container-high mt-1">
+        <div class="w-10 h-10 rounded-xl flex items-center justify-center font-bold text-sm ${user.avatar}">${escHtml(user.initials)}</div>
+        <div class="flex-1 min-w-0">
+          <div class="font-bold text-sm text-on-surface truncate">${escHtml(user.name)}</div>
+          <div class="text-xs text-on-surface-variant truncate">${escHtml(user.email)}</div>
+        </div>
+        ${existingChat
+          ? `<span class="text-xs text-on-surface-variant">In chats</span>`
+          : `<button class="send-req-btn px-3 py-1.5 bg-primary text-on-primary text-xs font-bold rounded-lg hover:brightness-110 active:scale-95 transition-all" data-req-uid="${user.uid}" data-req-email="${escHtml(user.email)}" data-req-name="${escHtml(user.name)}" onclick="sendChatRequestBtn(this)">Send Request</button>`
+        }
+      </div>`;
+  });
 }
 
 function startChatWith(uid) {
@@ -2055,10 +2269,62 @@ function setupKeyboardShortcuts() {
   });
 }
 
+function updatePresence(status) {
+  if (!App.db || !App.auth?.currentUser) return;
+  App.db.collection('users').doc(App.auth.currentUser.uid).set({ onlineStatus: status }, { merge: true }).catch(() => {});
+}
+
 function setupOnlineStatus() {
   window.addEventListener('online',  () => hide('offline-banner'));
   window.addEventListener('offline', () => show('offline-banner'));
   if (!navigator.onLine) show('offline-banner');
+  window.addEventListener('beforeunload', () => updatePresence('offline'));
+  document.addEventListener('visibilitychange', () => updatePresence(document.hidden ? 'offline' : 'online'));
+}
+
+/* ─── PUSH NOTIFICATIONS (FCM) ───────────────────────────────── */
+function setupPushNotifications() {
+  if (!App.db || !App.auth?.currentUser || !window.firebase?.messaging) return;
+  const uid = App.auth.currentUser.uid;
+  const registerFcmToken = async () => {
+    try {
+      const messaging = firebase.messaging();
+      const reg = await navigator.serviceWorker.ready;
+      const token = await messaging.getToken({
+        vapidKey: typeof FCM_VAPID_KEY !== 'undefined' ? FCM_VAPID_KEY : undefined,
+        serviceWorkerRegistration: reg
+      });
+      if (!token) return;
+      const key = token.replace(/[^a-zA-Z0-9]/g, '').slice(-120);
+      await App.db.collection('users').doc(uid).set({
+        fcmTokens: { [key]: { token, platform: navigator.userAgent || 'web', updatedAt: firebase.firestore.FieldValue.serverTimestamp(), permission: Notification.permission, purpose: 'all' } },
+        notificationsEnabled: true,
+        lastFcmTokenUpdateAt: firebase.firestore.FieldValue.serverTimestamp()
+      }, { merge: true });
+    } catch (e) { console.warn('[Push] Token registration failed:', e); }
+  };
+  if (Notification.permission === 'granted') {
+    registerFcmToken();
+  } else if (Notification.permission !== 'denied') {
+    const banner = document.createElement('div');
+    banner.id = 'pushPromptBanner';
+    banner.style.cssText = 'position:fixed;bottom:70px;left:50%;transform:translateX(-50%);width:min(90vw,360px);background:var(--surface-container);color:var(--on-surface);border-radius:12px;padding:14px 16px;z-index:99990;box-shadow:0 6px 24px rgba(0,0,0,0.4);display:flex;flex-direction:column;gap:10px;font-family:inherit;';
+    banner.innerHTML =
+      '<div style="display:flex;align-items:flex-start;gap:12px;"><div style="font-size:22px;flex-shrink:0;">🔔</div><div style="flex:1;min-width:0;"><div style="font-weight:700;font-size:14px;margin-bottom:3px;">Stay notified</div><div style="font-size:12.5px;color:var(--on-surface-variant);line-height:1.45;">Get alerts for new messages and calls even when the app is closed.</div></div><button id="pushPromptClose" style="background:none;border:none;color:var(--on-surface-variant);font-size:18px;cursor:pointer;padding:0 2px;">✕</button></div>' +
+      '<div style="display:flex;gap:8px;justify-content:flex-end;"><button id="pushPromptNo" style="background:none;border:none;color:var(--on-surface-variant);font-size:13px;cursor:pointer;padding:6px 10px;border-radius:6px;">Not now</button><button id="pushPromptYes" style="background:var(--primary);border:none;color:var(--on-primary);font-size:13px;font-weight:600;cursor:pointer;padding:7px 16px;border-radius:8px;">Enable notifications</button></div>';
+    document.body.appendChild(banner);
+    const dismiss = () => { banner.remove(); };
+    document.getElementById('pushPromptClose').onclick = dismiss;
+    document.getElementById('pushPromptNo').onclick = dismiss;
+    document.getElementById('pushPromptYes').onclick = async () => {
+      dismiss();
+      try {
+        const permission = await Notification.requestPermission();
+        if (permission === 'granted') registerFcmToken();
+      } catch (e) { console.warn('[Push] Permission request failed:', e); }
+    };
+    setTimeout(dismiss, 15000);
+  }
 }
 
 function getInitials(name) {
@@ -2072,11 +2338,91 @@ function getDirectChatId(uid1, uid2) {
   return [uid1, uid2].sort().join('_');
 }
 
+/* ══════════════════════════════════════════════════
+    CHAT REQUESTS — SEND / ACCEPT / DECLINE
+   ══════════════════════════════════════════════════ */
+function searchUserByEmail(email) {
+  if (!App.db || !email || !email.includes('@')) return Promise.resolve(null);
+  return App.db.collection('users').where('email', '==', email).limit(1).get()
+    .then(snap => {
+      if (snap.empty) return null;
+      const doc = snap.docs[0];
+      const data = doc.data();
+      return { uid: doc.id, name: data.displayName || data.email || 'User', email: data.email, avatar: data.avatar || 'gradient-2', initials: getInitials(data.displayName || data.email || 'User') };
+    })
+    .catch(() => null);
+}
+
+function sendChatRequestBtn(btn) {
+  const uid = btn.dataset.reqUid;
+  const email = btn.dataset.reqEmail;
+  const name = btn.dataset.reqName;
+  sendChatRequest(uid, email, name);
+}
+
+async function sendChatRequest(toUid, toEmail, toName) {
+  if (!App.db || !App.auth?.currentUser) { showToast('Please sign in first', 'error'); return; }
+  const uid = App.auth.currentUser.uid;
+  const myEmail = App.currentUser.email || '';
+  const myName = App.currentUser.displayName || myEmail;
+  const existingChat = App.chats.find(c => c.uid === toUid);
+  if (existingChat) { showToast('You already have a chat with this user', 'info'); return; }
+  try {
+    const q = await App.db.collection('chatRequests')
+      .where('fromEmail', '==', myEmail)
+      .where('toEmail', '==', toEmail)
+      .where('status', '==', 'pending')
+      .get();
+    if (!q.empty) { showToast('Request already sent', 'info'); return; }
+    await App.db.collection('chatRequests').add({
+      from: uid, fromEmail: myEmail, fromName: myName,
+      to: toUid, toEmail: toEmail, toName: toName,
+      fromUserId: uid, toUserId: toUid,
+      fromUserName: myName, toUserName: toName,
+      status: 'pending', timestamp: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    showToast(`Chat request sent to ${toName}`, 'success');
+  } catch(e) { showToast('Failed to send request', 'error'); console.warn(e); }
+}
+
+async function acceptChatRequest(requestId) {
+  if (!App.db || !App.auth?.currentUser) return;
+  const req = (App.chatRequests.incoming || []).find(r => r.id === requestId);
+  if (!req) { showToast('Request not found', 'error'); return; }
+  const uid = App.auth.currentUser.uid;
+  const myEmail = App.currentUser.email || '';
+  const chatId = getDirectChatId(uid, req.fromUid);
+  try {
+    await App.db.collection('directChats').doc(chatId).set({
+      participants: [uid, req.fromUid],
+      participantNames: { [uid]: App.currentUser.displayName || myEmail, [req.fromUid]: req.fromName },
+      participantEmails: { [uid]: myEmail, [fromUid]: req.fromEmail },
+      status: 'active'
+    }, { merge: true });
+    await App.db.collection('chatRequests').doc(requestId).update({
+      status: 'accepted',
+      toUserName: App.currentUser.displayName || myEmail
+    });
+    showToast(`Chat request from ${req.fromName} accepted`, 'success');
+    if (App.chatsUnsubscribe) { App.chatsUnsubscribe(); App.chatsUnsubscribe = null; }
+    subscribeToChats();
+  } catch(e) { showToast('Failed to accept request', 'error'); console.warn(e); }
+}
+
+async function declineChatRequest(requestId) {
+  if (!App.db) return;
+  try {
+    await App.db.collection('chatRequests').doc(requestId).update({ status: 'declined' });
+    showToast('Chat request declined', 'info');
+  } catch(e) { console.warn(e); }
+}
+
 function signOut() {
-  if (App.usersUnsubscribe)    App.usersUnsubscribe();
-  if (App.chatsUnsubscribe)    App.chatsUnsubscribe();
-  if (App.groupsUnsubscribe)   App.groupsUnsubscribe();
-  if (App.messagesUnsubscribe) App.messagesUnsubscribe();
+  if (App.usersUnsubscribe)       App.usersUnsubscribe();
+  if (App.chatsUnsubscribe)       App.chatsUnsubscribe();
+  if (App.groupsUnsubscribe)      App.groupsUnsubscribe();
+  if (App.messagesUnsubscribe)    App.messagesUnsubscribe();
+  if (App.chatRequestsUnsubscribe) App.chatRequestsUnsubscribe();
   if (App.auth) App.auth.signOut().then(() => location.reload());
   else location.reload();
 }

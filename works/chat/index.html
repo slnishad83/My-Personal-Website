@@ -982,6 +982,13 @@
       <span class="material-symbols-outlined text-2xl">call</span>
       <span class="text-[10px] font-semibold">Calls</span>
     </button>
+    <button class="bottom-nav-item flex flex-col items-center justify-center gap-1 text-on-surface-variant" data-tab="requests" onclick="switchTab('requests')">
+      <div class="relative">
+        <span class="material-symbols-outlined text-2xl">handshake</span>
+        <div class="absolute -top-1.5 -right-2 bg-secondary text-white text-[9px] w-4 h-4 rounded-full flex items-center justify-center font-bold hidden" id="requests-badge">0</div>
+      </div>
+      <span class="text-[10px] font-semibold">Requests</span>
+    </button>
     <button class="bottom-nav-item flex flex-col items-center justify-center gap-1 text-on-surface-variant" onclick="openProfile()">
       <span class="material-symbols-outlined text-2xl">person</span>
       <span class="text-[10px] font-semibold">Profile</span>
@@ -996,6 +1003,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-storage-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-messaging-compat.js"></script>
   <script src="../app-extras.js"></script>
   <script src="config.js"></script>
   <!-- Main App JS Core (shared logic) -->
