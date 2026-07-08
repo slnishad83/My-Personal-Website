@@ -222,7 +222,9 @@ function subscribeToUsers() {
         initials: getInitials(data.displayName || data.email || 'User'),
         photoURL: data.photoURL || data.avatar || null,
         status: data.onlineStatus || 'offline',
-        about: data.about || data.statusText || 'Available'
+        about: data.about || data.statusText || 'Available',
+        email: data.email || '',
+        phone: data.phone || data.phoneNumber || ''
       });
     });
     App.contacts = contacts;
@@ -372,8 +374,6 @@ function subscribeToCallLogs(uid) {
   if (App.callLogsUnsubscribe) App.callLogsUnsubscribe();
   App.callLogsUnsubscribe = App.db.collection('callLogs')
     .where('participants', 'array-contains', uid)
-    .orderBy('timestamp', 'desc')
-    .limit(100)
     .onSnapshot(snapshot => {
       const logs = [];
       snapshot.forEach(doc => {
@@ -384,11 +384,13 @@ function subscribeToCallLogs(uid) {
           calleeId: data.calleeId,
           type: data.type || 'voice',
           duration: data.duration || 0,
-          timestamp: data.timestamp?.toMillis ? data.timestamp.toMillis() : 0,
+          timestamp: data.timestamp?.toMillis ? data.timestamp.toMillis() : (data.timestamp || 0),
           status: data.status || 'missed',
           participants: data.participants || []
         });
       });
+      // In-memory sorting to avoid composite index requirement
+      logs.sort((a, b) => b.timestamp - a.timestamp);
       App.callLogs = logs;
       if (App.activeTab === 'calls') renderCallsTab();
     }, e => console.warn('callLogs err:', e));
@@ -585,8 +587,11 @@ function subscribeToMessages(chatId) {
         
         if (data.attachment) {
           const att = data.attachment;
-          if (att.type === 'image' || att.type === 'video') {
+          if (att.type === 'image') {
             type = 'image';
+            url = att.url || '';
+          } else if (att.type === 'video') {
+            type = 'video';
             url = att.url || '';
           } else if (att.type === 'voice' || att.type === 'audio') {
             type = 'voice';
@@ -771,6 +776,42 @@ function updateProfileUI() {
   setEl('profile-email', u.email || '');
   setEl('settings-name', name);
   setEl('settings-status', u.statusText || 'Available');
+  setEl('settings-phone', u.phone || 'Not provided');
+}
+
+function validatePhone(phone) {
+  const normalized = phone.trim().replace(/[\s().-]/g, "");
+  return /^\+?[1-9]\d{6,14}$/.test(normalized);
+}
+
+function editPhone() {
+  const currentPhone = App.currentUser?.phone || '';
+  const newPhone = prompt("Enter your phone number:", currentPhone);
+  if (newPhone === null) return;
+  
+  const cleanPhone = newPhone.trim();
+  if (cleanPhone && !validatePhone(cleanPhone)) {
+    showToast("Please enter a valid phone number.", "error");
+    return;
+  }
+  
+  if (App.db && App.auth?.currentUser) {
+    App.db.collection('users').doc(App.auth.currentUser.uid).update({
+      phone: cleanPhone
+    }).then(() => {
+      showToast("Phone number updated!", "success");
+      App.currentUser.phone = cleanPhone;
+      updateProfileUI();
+    }).catch(err => {
+      console.error(err);
+      showToast("Failed to update phone number.", "error");
+    });
+  } else {
+    // Demo mode fallback
+    showToast("Phone number updated (Demo Mode)!", "success");
+    App.currentUser.phone = cleanPhone;
+    updateProfileUI();
+  }
 }
 
 /* ══════════════════════════════════════════════════
@@ -951,7 +992,15 @@ function renderChatList(filter = '') {
   
   const sidebarTitle = document.getElementById('chats-sidebar-title');
   if (sidebarTitle) {
-    sidebarTitle.textContent = isMyselfOverride ? __('savedItems') : __('messages');
+    if (isMyselfOverride) {
+      sidebarTitle.textContent = __('savedItems');
+    } else {
+      if (tab === 'groups') sidebarTitle.textContent = 'Groups';
+      else if (tab === 'calls') sidebarTitle.textContent = 'Calls';
+      else if (tab === 'requests') sidebarTitle.textContent = 'Requests';
+      else if (tab === 'more') sidebarTitle.textContent = 'Saved Items';
+      else sidebarTitle.textContent = __('messages');
+    }
   }
   
   const sidebarSearchInput = document.getElementById('sidebar-search');
@@ -991,29 +1040,38 @@ function renderChatList(filter = '') {
       if (sidebarTitleEl) sidebarTitleEl.textContent = "NSL Chat";
       if (sidebarSubtitleEl) sidebarSubtitleEl.textContent = "NSL Chat";
       
+      const isChatsActive = tab === 'chats';
+      const isGroupsActive = tab === 'groups';
+      const isCallsActive = tab === 'calls';
+      const isRequestsActive = tab === 'requests';
+      const isMoreActive = tab === 'more';
+      
+      const activeClass = "tab-item w-full flex items-center gap-4 bg-primary/10 text-primary border-l-4 border-primary px-4 py-3 cursor-pointer active:scale-95 transition-all duration-200";
+      const inactiveClass = "tab-item w-full flex items-center gap-4 text-on-surface/60 hover:text-on-surface hover:bg-surface-container-highest px-4 py-3 cursor-pointer active:scale-95 transition-all duration-200";
+
       sidebarNav.innerHTML = `
-        <button class="tab-item w-full flex items-center gap-4 bg-primary/10 text-primary border-l-4 border-primary px-4 py-3 cursor-pointer active:scale-95" onclick="switchTab('chats')">
-          <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">chat</span>
-          <span class="hidden xl:block font-body-md text-body-md font-semibold">Chats</span>
+        <button class="${isChatsActive ? activeClass : inactiveClass}" onclick="switchTab('chats')">
+          <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' ${isChatsActive ? 1 : 0};">chat</span>
+          <span class="hidden xl:block font-body-md text-body-md ${isChatsActive ? 'font-semibold' : ''}">Chats</span>
         </button>
-        <button class="tab-item w-full flex items-center gap-4 text-on-surface/60 hover:text-on-surface hover:bg-surface-container-highest px-4 py-3 cursor-pointer active:scale-95" onclick="switchTab('groups')">
-          <span class="material-symbols-outlined">group</span>
-          <span class="hidden xl:block font-body-md text-body-md">Groups</span>
+        <button class="${isGroupsActive ? activeClass : inactiveClass}" onclick="switchTab('groups')">
+          <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' ${isGroupsActive ? 1 : 0};">group</span>
+          <span class="hidden xl:block font-body-md text-body-md ${isGroupsActive ? 'font-semibold' : ''}">Groups</span>
         </button>
-        <button class="tab-item w-full flex items-center gap-4 text-on-surface/60 hover:text-on-surface hover:bg-surface-container-highest px-4 py-3 cursor-pointer active:scale-95" onclick="switchTab('calls')">
-          <span class="material-symbols-outlined">call</span>
-          <span class="hidden xl:block font-body-md text-body-md">Calls</span>
+        <button class="${isCallsActive ? activeClass : inactiveClass}" onclick="switchTab('calls')">
+          <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' ${isCallsActive ? 1 : 0};">call</span>
+          <span class="hidden xl:block font-body-md text-body-md ${isCallsActive ? 'font-semibold' : ''}">Calls</span>
         </button>
-        <button class="tab-item w-full flex items-center gap-4 text-on-surface/60 hover:text-on-surface hover:bg-surface-container-highest px-4 py-3 cursor-pointer active:scale-95" onclick="switchTab('requests')">
+        <button class="${isRequestsActive ? activeClass : inactiveClass}" onclick="switchTab('requests')">
           <div class="relative">
-            <span class="material-symbols-outlined">handshake</span>
+            <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' ${isRequestsActive ? 1 : 0};">handshake</span>
             <div class="absolute -top-1.5 -right-2 bg-secondary text-white text-[9px] w-4 h-4 rounded-full flex items-center justify-center font-bold hidden" id="requests-badge">0</div>
           </div>
-          <span class="hidden xl:block font-body-md text-body-md">Requests</span>
+          <span class="hidden xl:block font-body-md text-body-md ${isRequestsActive ? 'font-semibold' : ''}">Requests</span>
         </button>
-        <button class="tab-item w-full flex items-center gap-4 text-on-surface/60 hover:text-on-surface hover:bg-surface-container-highest px-4 py-3 cursor-pointer active:scale-95" onclick="switchTab('more')">
-          <span class="material-symbols-outlined">bookmark</span>
-          <span class="hidden xl:block font-body-md text-body-md">Saved Items</span>
+        <button class="${isMoreActive ? activeClass : inactiveClass}" onclick="switchTab('more')">
+          <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' ${isMoreActive ? 1 : 0};">bookmark</span>
+          <span class="hidden xl:block font-body-md text-body-md ${isMoreActive ? 'font-semibold' : ''}">Saved Items</span>
         </button>
       `;
     }
@@ -1079,10 +1137,11 @@ function chatItemHTML(chat) {
       photoURL = contact.photoURL;
       status = contact.status;
     } else {
-      name = 'Deleted User';
-      initials = '?';
-      avatar = 'bg-surface-container-highest text-on-surface-variant';
-      photoURL = null;
+      name = chat.name || 'User';
+      initials = chat.initials || '?';
+      avatar = chat.avatar || 'bg-surface-container-highest text-on-surface-variant';
+      photoURL = chat.photoURL || null;
+      status = chat.status || 'offline';
     }
   }
 
@@ -1312,7 +1371,7 @@ function openChat(chatId) {
     if (msgInput) msgInput.placeholder = "Message in Dev Team...";
   } else {
     // Personal Chat header
-    const contact = App.contacts.find(c=>c.uid===chat.uid);
+    const contact = App.contacts.find(c=>c.uid===chat.uid) || App.chats.find(c=>c.uid===chat.uid);
     const statusText = contact?.status === 'online' ? 'Active Now' : contact?.about || 'Offline';
     if (headerStatus) {
       headerStatus.textContent = statusText;
@@ -1455,7 +1514,7 @@ function renderMessages(chatId) {
     }
 
     const isMe = msg.from === 'me';
-    const contact = isMe ? null : App.contacts.find(c=>c.uid===msg.from);
+    const contact = isMe ? null : (App.contacts.find(c=>c.uid===msg.from) || App.chats.find(c=>c.uid===msg.from));
     const showAvatar = !isMe && (i === msgs.length-1 || msgs[i+1]?.from !== msg.from);
     const showSender = !isMe && App.currentChat?.type==='group';
     const senderName = contact?.name || 'Unknown';
@@ -1506,7 +1565,7 @@ function renderMessages(chatId) {
         <span class="text-[10px] font-timestamp text-on-surface-variant">${msg.duration||'0:00'}</span>
       </div>`;
     } else if (msg.type === 'doc') {
-      contentHTML = `<div class="flex items-center gap-4 bg-surface-container-high p-4 rounded-xl border border-outline-variant/20 cursor-pointer" onclick="window.open('${escHtml(msg.url||'')}', '_blank')">
+      contentHTML = `<div class="flex items-center gap-4 bg-surface-container-high p-4 rounded-xl border border-outline-variant/20 cursor-pointer" onclick="openMediaViewer('${msg.id}')">
         <div class="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center text-primary"><span class="material-symbols-outlined">description</span></div>
         <div class="flex-1"><p class="text-xs font-bold truncate">${escHtml(msg.fileName||'Document')}</p><p class="text-[10px] text-on-surface-variant">${msg.fileSize||''}</p></div>
         <span class="material-symbols-rounded" style="font-size:20px;opacity:.7">download</span>
@@ -1531,17 +1590,21 @@ function renderMessages(chatId) {
       <div class="flex flex-col ${isMe?'items-end':'items-start'} max-w-full">
         ${showSender&&!isMe ? `<div class="text-[10px] text-on-surface-variant font-bold mb-1 ml-2">${escHtml(senderName)}</div>` : ''}
         ${fwdBadge ? `<div class="${isMe?'text-right':'text-left'}">${fwdBadge}</div>` : ''}
-        <div class="p-bubble_padding_xy ${bubbleClass} relative group"
-             oncontextmenu="showMsgContextMenu(event,'${msg.id}')"
-             ondblclick="showQuickReactions(event,'${msg.id}')">
-          ${replyHTML}
-          ${contentHTML}
-          <div class="flex items-center justify-end gap-1 mt-1.5 select-none opacity-80">
-            ${editBadge}
-            <span class="text-[9px] font-timestamp ${isMe?'text-white/80':'text-on-surface-variant'}">${formatMsgTime(msg.time)}</span>
-            ${starBadge}
-            ${tickIcon}
+        <div class="flex items-center gap-2 group relative max-w-full">
+          ${isMe ? `<button class="opacity-0 group-hover:opacity-100 p-1 hover:bg-surface-container-high rounded-full text-on-surface-variant transition-opacity cursor-pointer flex items-center justify-center flex-shrink-0" onclick="showMsgContextMenu(event,'${msg.id}')" title="Options"><span class="material-symbols-outlined text-lg">more_vert</span></button>` : ''}
+          <div class="p-bubble_padding_xy ${bubbleClass} relative"
+               oncontextmenu="showMsgContextMenu(event,'${msg.id}')"
+               ondblclick="showQuickReactions(event,'${msg.id}')">
+            ${replyHTML}
+            ${contentHTML}
+            <div class="flex items-center justify-end gap-1 mt-1.5 select-none opacity-80">
+              ${editBadge}
+              <span class="text-[9px] font-timestamp ${isMe?'text-white/80':'text-on-surface-variant'}">${formatMsgTime(msg.time)}</span>
+              ${starBadge}
+              ${tickIcon}
+            </div>
           </div>
+          ${!isMe ? `<button class="opacity-0 group-hover:opacity-100 p-1 hover:bg-surface-container-high rounded-full text-on-surface-variant transition-opacity cursor-pointer flex items-center justify-center flex-shrink-0" onclick="showMsgContextMenu(event,'${msg.id}')" title="Options"><span class="material-symbols-outlined text-lg">more_vert</span></button>` : ''}
         </div>
         ${reactions ? `<div class="flex flex-wrap gap-1 mt-1">${reactions}</div>` : ''}
       </div>
@@ -1930,7 +1993,7 @@ function openChatInfo() {
 }
 
 function openContactInfoPanel(uid) {
-  const contact = App.contacts.find(c=>c.uid===uid) || {};
+  const contact = App.contacts.find(c=>c.uid===uid) || App.chats.find(c=>c.uid===uid) || {};
   const panel = document.getElementById('detail-panel');
   if (!panel) return;
   
@@ -1955,11 +2018,11 @@ function openContactInfoPanel(uid) {
     <div class="px-6 py-4 border-t border-outline-variant/10 space-y-4">
       <div class="space-y-1">
         <span class="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">Mobile Number</span>
-        <p class="text-sm font-semibold text-on-surface">+1 (555) 987-6543</p>
+        <p class="text-sm font-semibold text-on-surface">${escHtml(contact.phone || 'Not provided')}</p>
       </div>
       <div class="space-y-1">
         <span class="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">Email Address</span>
-        <p class="text-sm font-semibold text-on-surface">${contact.name?.toLowerCase() || 'user'}@neonchat.app</p>
+        <p class="text-sm font-semibold text-on-surface">${escHtml(contact.email || 'Not provided')}</p>
       </div>
     </div>
 
@@ -2307,7 +2370,7 @@ function showConfirm(msg, onConfirm) {
   show('confirm-overlay');
 }
 
-function openProfile() { show('profile-overlay'); }
+function openProfile() { updateProfileUI(); show('profile-overlay'); }
 function closeModal(id) { hide(id); }
 function showOverlay(id) { show(id); }
 function closeOverlay(id) { hide(id); }

@@ -284,56 +284,7 @@
             <button class="bg-primary text-on-primary px-6 py-3 rounded-2xl text-sm font-bold shadow-lg hover:scale-105 active:scale-95 transition-transform" onclick="openNewChat()">Start Message</button>
           </div>
 
-          <!-- Lobby Grid (Bento Style widgets) -->
-          <div class="grid grid-cols-1 @md:grid-cols-3 gap-6">
-            <!-- Widget 1: My Notepad Shortcut -->
-            <div class="bg-surface-container rounded-2xl p-6 border border-outline-variant/15 flex flex-col justify-between hover:scale-[1.01] transition-transform shadow-md">
-              <div class="space-y-2">
-                <div class="flex justify-between items-center text-primary">
-                  <span class="material-symbols-outlined text-2xl" style="font-variation-settings: 'FILL' 1;">bookmark</span>
-                  <span class="text-[10px] font-label-caps uppercase tracking-wider bg-primary/10 px-2.5 py-0.5 rounded-full">Private</span>
-                </div>
-                <h4 class="font-bold text-lg text-on-surface">My Space Notepad</h4>
-                <p class="text-xs text-on-surface-variant leading-relaxed">Save links, draft quick notes, pin files, and set reminders securely in your personal notepad.</p>
-              </div>
-              <button class="text-xs text-primary font-bold flex items-center gap-1 mt-4 hover:underline" onclick="startChatWith(App.currentUser?.uid)">
-                Open Notepad <span class="material-symbols-outlined text-xs">arrow_forward</span>
-              </button>
-            </div>
 
-            <!-- Widget 2: Recent / Active Pinned Chats -->
-            <div class="bg-surface-container rounded-2xl p-6 border border-outline-variant/15 flex flex-col justify-between hover:scale-[1.01] transition-transform shadow-md">
-              <div class="space-y-3">
-                <div class="flex justify-between items-center text-secondary">
-                  <span class="material-symbols-outlined text-2xl">group</span>
-                  <span class="text-[10px] font-label-caps uppercase tracking-wider bg-secondary/10 px-2.5 py-0.5 rounded-full">Channels</span>
-                </div>
-                <h4 class="font-bold text-lg text-on-surface">Dev Team Spaces</h4>
-                <div class="space-y-2" id="lobby-active-chats">
-                  <div class="text-xs text-on-surface-variant flex items-center gap-2 bg-surface-container-high/50 p-2 rounded-lg"><span class="w-1.5 h-1.5 bg-primary-fixed rounded-full"></span> Design Team 🎨</div>
-                  <div class="text-xs text-on-surface-variant flex items-center gap-2 bg-surface-container-high/50 p-2 rounded-lg"><span class="w-1.5 h-1.5 bg-outline rounded-full"></span> Project Alpha 🚀</div>
-                </div>
-              </div>
-              <button class="text-xs text-secondary font-bold flex items-center gap-1 mt-4 hover:underline" onclick="switchTab('groups')">
-                View Groups <span class="material-symbols-outlined text-xs">arrow_forward</span>
-              </button>
-            </div>
-
-            <!-- Widget 3: Theme Toggle Quick Card -->
-            <div class="bg-surface-container rounded-2xl p-6 border border-outline-variant/15 flex flex-col justify-between hover:scale-[1.01] transition-transform shadow-md">
-              <div class="space-y-2">
-                <div class="flex justify-between items-center text-tertiary">
-                  <span class="material-symbols-outlined text-2xl">light_mode</span>
-                  <span class="text-[10px] font-label-caps uppercase tracking-wider bg-tertiary/10 px-2.5 py-0.5 rounded-full">Style</span>
-                </div>
-                <h4 class="font-bold text-lg text-on-surface">NSL Chat Theme</h4>
-                <p class="text-xs text-on-surface-variant leading-relaxed">Toggle between Midnight Dark Mode and high-legibility light theme layouts instantly.</p>
-              </div>
-              <div class="flex gap-2 mt-4">
-                <button class="flex-1 bg-surface-container-high border border-outline-variant/30 text-xs font-bold py-2 rounded-xl text-on-surface hover:brightness-110 active:scale-95 transition-all" onclick="cycleTheme()">Toggle Theme</button>
-              </div>
-            </div>
-          </div>
 
 
         </div>
@@ -526,6 +477,16 @@
                 </div>
                 <span class="material-symbols-outlined text-on-surface-variant">chevron_right</span>
               </div>
+              <div class="flex items-center justify-between p-4 cursor-pointer hover:bg-surface-container transition-colors" onclick="editPhone()">
+                <div class="flex items-center gap-3">
+                  <span class="material-symbols-outlined text-primary">phone</span>
+                  <div>
+                    <p class="text-sm font-bold">Phone Number</p>
+                    <p class="text-xs text-on-surface-variant" id="settings-phone">Not provided</p>
+                  </div>
+                </div>
+                <span class="material-symbols-outlined text-on-surface-variant">chevron_right</span>
+              </div>
             </div>
           </div>
 
@@ -712,9 +673,17 @@
         <span class="material-symbols-outlined">close</span>
       </button>
       <div class="text-sm font-semibold max-w-md truncate" id="media-viewer-caption"></div>
-      <button class="w-10 h-10 bg-white/10 rounded-full flex items-center justify-center hover:bg-white/20 transition-colors" onclick="downloadMedia()">
-        <span class="material-symbols-outlined">download</span>
-      </button>
+      <div class="flex items-center gap-2">
+        <button class="w-10 h-10 bg-white/10 rounded-full flex items-center justify-center hover:bg-white/20 transition-colors" onclick="forwardCurrentMedia()" title="Forward">
+          <span class="material-symbols-outlined">share</span>
+        </button>
+        <button id="media-viewer-delete-btn" class="w-10 h-10 bg-white/10 rounded-full flex items-center justify-center hover:bg-red-500/20 text-white hover:text-red-400 transition-colors" onclick="deleteCurrentMedia()" title="Delete">
+          <span class="material-symbols-outlined">delete</span>
+        </button>
+        <button class="w-10 h-10 bg-white/10 rounded-full flex items-center justify-center hover:bg-white/20 transition-colors" onclick="downloadMedia()" title="Download">
+          <span class="material-symbols-outlined">download</span>
+        </button>
+      </div>
     </div>
     <div class="flex-1 flex items-center justify-between p-6 relative">
       <button class="w-12 h-12 bg-white/10 rounded-full flex items-center justify-center hover:bg-white/20 transition-all text-white border border-white/10" onclick="prevMedia()">

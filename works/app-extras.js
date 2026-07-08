@@ -11,10 +11,10 @@
    ══════════════════════════════════════════════════════════════ */
 
 function openMediaViewer(msgIdOrUrl, forceType) {
-  // Build a gallery from all image/video messages in current chat
+  // Build a gallery from all media messages in current chat
   const chatId = App.currentChat && App.currentChat.id;
   const msgs = (chatId && App.messages[chatId]) || [];
-  const gallery = msgs.filter(m => m.type === 'image' || m.type === 'video');
+  const gallery = msgs.filter(m => m.type === 'image' || m.type === 'video' || m.type === 'doc' || m.type === 'voice');
 
   // Find start index: could be called with msg id or raw URL
   let startIdx = gallery.findIndex(m => m.id === msgIdOrUrl || m.url === msgIdOrUrl);
@@ -42,12 +42,24 @@ function _renderMediaViewer() {
   if (!content) return;
 
   if (caption) {
-    const contact = !item.from || item.from === 'me' ? 'You' : (App.contacts.find(c => c.uid === item.from)?.name || 'Unknown');
+    const contact = !item.from || item.from === 'me' ? 'You' : (App.contacts.find(c => c.uid === item.from)?.name || App.chats.find(c => c.uid === item.from)?.name || 'Unknown');
     caption.textContent = `${contact} · ${formatMsgTime(item.time || Date.now())} ${items.length > 1 ? `(${idx + 1} / ${items.length})` : ''}`;
   }
 
+  const isMsg = item.id && item.id !== '_single';
+  const deleteBtn = document.getElementById('media-viewer-delete-btn');
+  if (deleteBtn) deleteBtn.style.display = isMsg ? 'flex' : 'none';
+
   if (item.type === 'video') {
     content.innerHTML = `<video src="${escHtml(item.url)}" controls autoplay class="max-w-full max-h-full rounded-xl" style="max-height:75vh"></video>`;
+  } else if (item.type === 'voice' || item.type === 'audio') {
+    content.innerHTML = `
+      <div class="flex flex-col items-center gap-4 bg-surface-container-high/40 p-6 rounded-2xl border border-outline-variant/20 w-full max-w-md mx-auto">
+        <span class="material-symbols-outlined text-primary text-5xl">audiotrack</span>
+        <audio src="${escHtml(item.url)}" controls autoplay class="w-full"></audio>
+      </div>`;
+  } else if (item.type === 'doc') {
+    content.innerHTML = `<iframe src="${escHtml(item.url)}" class="w-full h-full rounded-xl border border-outline-variant/20" style="width:75vw; height:65vh; background:white;"></iframe>`;
   } else {
     content.innerHTML = `<img src="${escHtml(item.url)}" alt="Media" class="max-w-full max-h-full rounded-xl object-contain" style="max-height:75vh" ondragstart="return false">`;
   }
@@ -65,6 +77,9 @@ function closeMediaViewer() {
     // Pause video if playing
     const vid = content.querySelector('video');
     if (vid) { vid.pause(); vid.src = ''; }
+    // Pause audio if playing
+    const aud = content.querySelector('audio');
+    if (aud) { aud.pause(); aud.src = ''; }
     content.innerHTML = '';
   }
 }
@@ -86,12 +101,33 @@ function downloadMedia() {
   if (!url) return;
   const a = document.createElement('a');
   a.href = url;
-  a.download = `nsl-chat-media-${Date.now()}.${App._mediaViewerCurrentType === 'video' ? 'mp4' : 'jpg'}`;
+  const ext = App._mediaViewerCurrentType === 'video' ? 'mp4' : App._mediaViewerCurrentType === 'doc' ? 'pdf' : App._mediaViewerCurrentType === 'voice' ? 'mp3' : 'jpg';
+  a.download = `nsl-chat-media-${Date.now()}.${ext}`;
   a.target = '_blank';
   a.rel = 'noopener';
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
+}
+
+function forwardCurrentMedia() {
+  const items = App.mediaViewerItems || [];
+  const idx = App.mediaViewerIndex;
+  const item = items[idx];
+  if (!item || !item.id || item.id === '_single') return;
+  
+  closeMediaViewer();
+  openForwardModal(item.id);
+}
+
+function deleteCurrentMedia() {
+  const items = App.mediaViewerItems || [];
+  const idx = App.mediaViewerIndex;
+  const item = items[idx];
+  if (!item || !item.id || item.id === '_single') return;
+  
+  closeMediaViewer();
+  openDeleteMenu(item.id);
 }
 
 // Keyboard: Escape → close, Arrow → prev/next
