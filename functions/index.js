@@ -1490,6 +1490,125 @@ exports.aiChatBot = onCall(
   }
 );
 
+// ========================================
+// MIGRATION: backfill callLogs from existing calls
+// POST /migrateCallsToCallLogs (admin only — sl.nishad@gmail.com)
+// ========================================
+exports.migrateCallsToCallLogs = onRequest(
+  { region: 'us-central1', invoker: 'public', timeoutSeconds: 120 },
+  async (request, response) => {
+    setCorsHeaders(response);
+    if (request.method === 'OPTIONS') { response.status(204).send(''); return; }
+    if (request.method !== 'POST') { response.status(405).json({ error: 'Method not allowed' }); return; }
+    try {
+      const auth = await verifyFirebaseUser(request);
+      await assertAdmin(auth);
+      const callsSnap = await admin.firestore().collection('calls').get();
+      let created = 0;
+      for (const callDoc of callsSnap.docs) {
+        const call = callDoc.data();
+        const logId = callDoc.id;
+        const existingLog = await admin.firestore().collection('callLogs').doc(logId).get();
+        if (existingLog.exists) continue;
+        await admin.firestore().collection('callLogs').doc(logId).set({
+          callerId: call.fromUserId || call.callerId || '',
+          calleeId: call.toUserId || call.calleeId || '',
+          type: call.type || 'voice',
+          duration: call.duration || 0,
+          timestamp: call.timestamp || call.createdAt || admin.firestore.FieldValue.serverTimestamp(),
+          status: call.status || 'ended',
+          participants: [call.fromUserId, call.toUserId].filter(Boolean)
+        });
+        created++;
+      }
+      response.status(200).json({ migrated: created, total: callsSnap.size });
+    } catch (error) {
+      response.status(401).json({ error: 'Unauthorized' });
+    }
+  }
+);
+
+// ========================================
+// AUTO-CREATE callLogs when a call is completed
+// Listens for status changes to ended/missed/cancelled/rejected/declined/failed/busy
+// ========================================
+exports.exportCallToCallLog = onDocumentUpdated(
+  {
+    document: 'calls/{callId}',
+    region: 'us-central1'
+  },
+  async (event) => {
+    const before = event.data?.before.data() || {};
+    const call = event.data?.after.data() || {};
+    if (before.status === call.status) return null;
+    if (!['ended', 'missed', 'cancelled', 'rejected', 'declined', 'failed', 'busy'].includes(call.status)) return null;
+    const callId = event.params.callId;
+    const existingLog = await admin.firestore().collection('callLogs').doc(callId).get();
+    if (existingLog.exists) return null;
+    await admin.firestore().collection('callLogs').doc(callId).set({
+      callerId: call.fromUserId || call.callerId || '',
+      calleeId: call.toUserId || call.calleeId || '',
+      type: call.type || 'voice',
+      duration: call.duration || 0,
+      timestamp: call.timestamp || call.createdAt || admin.firestore.FieldValue.serverTimestamp(),
+      status: call.status || 'ended',
+      participants: [call.fromUserId, call.toUserId].filter(Boolean)
+    });
+    return null;
+  }
+);
+
+// ========================================
+// MIGRATION: backfill participantEmails on existing messages
+// POST /backfillMessageEmails (admin only — sl.nishad@gmail.com)
+// ========================================
+exports.backfillMessageEmails = onRequest(
+  { region: 'us-central1', invoker: 'public', timeoutSeconds: 300 },
+  async (request, response) => {
+    setCorsHeaders(response);
+    if (request.method === 'OPTIONS') { response.status(204).send(''); return; }
+    if (request.method !== 'POST') { response.status(405).json({ error: 'Method not allowed' }); return; }
+    try {
+      const auth = await verifyFirebaseUser(request);
+      await assertAdmin(auth);
+      const msgSnap = await admin.firestore().collection('messages').get();
+      let updated = 0;
+      const emailCache = {};
+      let batch = admin.firestore().batch();
+      let opCount = 0;
+      for (const msgDoc of msgSnap.docs) {
+        const msg = msgDoc.data();
+        if (msg.participantEmails && msg.participantEmails.length > 0) continue;
+        if (!msg.participants || !msg.participants.length) continue;
+        const emails = [];
+        for (const uid of msg.participants) {
+          if (emailCache[uid]) { emails.push(emailCache[uid]); continue; }
+          try {
+            const userSnap = await admin.firestore().collection('users').doc(uid).get();
+            const email = userSnap.data()?.email || '';
+            emailCache[uid] = email;
+            if (email) emails.push(email);
+          } catch (e) { emailCache[uid] = ''; }
+        }
+        if (emails.length) {
+          batch.update(msgDoc.ref, { participantEmails: emails });
+          opCount++;
+          updated++;
+        }
+        if (opCount >= 400) {
+          await batch.commit();
+          batch = admin.firestore().batch();
+          opCount = 0;
+        }
+      }
+      if (opCount > 0) await batch.commit();
+      response.status(200).json({ updated, total: msgSnap.size });
+    } catch (error) {
+      response.status(500).json({ error: error.message });
+    }
+  }
+);
+
 // ── Summarize Thread ──────────────────────────────────────────────────────
 exports.summarizeThread = onCall(
   { region: 'us-central1', secrets: [geminiApiKey] },
@@ -1992,5 +2111,111 @@ exports.generateUrlPreview = onRequest(async (req, res) => {
     res.status(500).json({ error: e.message });
   }
 });
+
+// ========================================
+// FIRESTORE-TRIGGERED MIGRATIONS
+// Create a document in migrationTriggers/{id} with type 'backfillEmails'
+// or 'migrateCalls' to run one-time migrations
+// ========================================
+exports.runMigrationOnTrigger = onDocumentCreated(
+  { document: 'migrationTriggers/{triggerId}', region: 'us-central1', timeoutSeconds: 300 },
+  async (event) => {
+    const trigger = event.data?.data() || {};
+    const db = admin.firestore();
+
+    if (trigger.type === 'backfillEmails') {
+      console.log('Migration: backfillEmails started');
+      const msgSnap = await db.collection('messages').get();
+      let updated = 0;
+      const emailCache = {};
+      let batch = db.batch();
+      let opCount = 0;
+      for (const msgDoc of msgSnap.docs) {
+        const msg = msgDoc.data();
+        if (msg.participantEmails && msg.participantEmails.length > 0) continue;
+        if (!msg.participants || !msg.participants.length) continue;
+        const emails = [];
+        for (const uid of msg.participants) {
+          if (emailCache[uid]) { emails.push(emailCache[uid]); continue; }
+          try {
+            const userSnap = await db.collection('users').doc(uid).get();
+            const email = userSnap.data()?.email || '';
+            emailCache[uid] = email;
+            if (email) emails.push(email);
+          } catch (e) { emailCache[uid] = ''; }
+        }
+        if (emails.length) {
+          batch.update(msgDoc.ref, { participantEmails: emails });
+          opCount++; updated++;
+        }
+        if (opCount >= 400) { await batch.commit(); batch = db.batch(); opCount = 0; }
+      }
+      if (opCount > 0) await batch.commit();
+      console.log('Migration: backfillEmails complete. Updated:', updated, 'Total:', msgSnap.size);
+      await event.data.ref.set({ done: true, updated, total: msgSnap.size, completedAt: admin.firestore.FieldValue.serverTimestamp() }, { merge: true });
+    }
+
+    if (trigger.type === 'migrateCalls') {
+      console.log('Migration: migrateCalls started');
+      const callsSnap = await db.collection('calls').get();
+      let created = 0;
+      for (const callDoc of callsSnap.docs) {
+        const call = callDoc.data();
+        const logId = callDoc.id;
+        const existingLog = await db.collection('callLogs').doc(logId).get();
+        if (existingLog.exists) continue;
+        await db.collection('callLogs').doc(logId).set({
+          callerId: call.fromUserId || call.callerId || '',
+          calleeId: call.toUserId || call.calleeId || '',
+          type: call.type || 'voice',
+          duration: call.duration || 0,
+          timestamp: call.timestamp || call.createdAt || admin.firestore.FieldValue.serverTimestamp(),
+          status: call.status || 'ended',
+          participants: [call.fromUserId, call.toUserId].filter(Boolean)
+        });
+        created++;
+      }
+      console.log('Migration: migrateCalls complete. Created:', created, 'Total:', callsSnap.size);
+      await event.data.ref.set({ done: true, created, total: callsSnap.size, completedAt: admin.firestore.FieldValue.serverTimestamp() }, { merge: true });
+    }
+
+    return null;
+  }
+);
+
+// ════════════════════════════════════════════════════════════════════════════
+// TEMPORARY — Diagnostics: check callLogs, messages, calls data
+// ════════════════════════════════════════════════════════════════════════════
+exports.diagnoseData = onRequest(
+  { region: 'us-central1', invoker: 'public' },
+  async (req, res) => {
+    res.set('Access-Control-Allow-Origin', '*');
+    if (req.method === 'OPTIONS') { res.status(204).send(''); return; }
+    const db = admin.firestore();
+    
+    const result = {};
+
+    // Check callLogs collection
+    const callLogsSnap = await db.collection('callLogs').limit(20).get();
+    result.callLogsCount = callLogsSnap.size;
+    result.callLogs = callLogsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+    // Check calls collection
+    const callsSnap = await db.collection('calls').limit(20).get();
+    result.callsCount = callsSnap.size;
+    result.calls = callsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+    // Check messages: sample messages with participantEmails
+    const msgSnap = await db.collection('messages').limit(5).get();
+    result.messagesSample = msgSnap.docs.map(d => ({ id: d.id, participants: d.data().participants, participantEmails: d.data().participantEmails, senderId: d.data().senderId, directId: d.data().directId }));
+
+    // Check directChats
+    const dcSnap = await db.collection('directChats').limit(20).get();
+    result.directChatsCount = dcSnap.size;
+    result.directChats = dcSnap.docs.map(d => ({ id: d.id, participants: d.data().participants }));
+
+    res.json(result);
+  }
+);
 
 

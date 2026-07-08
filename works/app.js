@@ -383,15 +383,26 @@ function subscribeToCallLogs(uid) {
   }
   console.log('[CallLogs] Subscribing to callLogs for uid:', uid);
   if (App.callLogsUnsubscribe) App.callLogsUnsubscribe();
+  if (App.callsUnsubscriber) App.callsUnsubscriber();
+  
+  const allLogs = {};
+  
+  function mergeLogs() {
+    const list = Object.values(allLogs);
+    list.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+    App.callLogs = list;
+    console.log('[CallLogs] App.callLogs updated, count:', list.length);
+    if (App.activeTab === 'calls') renderCallsTab();
+  }
+  
+  // Listen to callLogs collection (from beginCall/endCall flow)
   App.callLogsUnsubscribe = App.db.collection('callLogs')
     .where('participants', 'array-contains', uid)
     .onSnapshot(snapshot => {
-      console.log('[CallLogs] Snapshot received, docs count:', snapshot.size);
-      const logs = [];
+      console.log('[CallLogs] callLogs snapshot received, docs count:', snapshot.size);
       snapshot.forEach(doc => {
         const data = doc.data();
-        console.log('[CallLogs] Log doc:', doc.id, 'caller:', data.callerId, 'callee:', data.calleeId, 'status:', data.status, 'participants:', data.participants);
-        logs.push({
+        allLogs[doc.id] = {
           id: doc.id,
           callerId: data.callerId,
           calleeId: data.calleeId,
@@ -400,14 +411,56 @@ function subscribeToCallLogs(uid) {
           timestamp: getMillis(data.timestamp),
           status: data.status || 'missed',
           participants: data.participants || []
-        });
+        };
       });
-      // In-memory sorting to avoid composite index requirement
-      logs.sort((a, b) => getMillis(b.timestamp) - getMillis(a.timestamp));
-      App.callLogs = logs;
-      console.log('[CallLogs] App.callLogs updated, count:', logs.length);
-      if (App.activeTab === 'calls') renderCallsTab();
-    }, e => console.error('[CallLogs] Subscription FAILED:', e));
+      mergeLogs();
+    }, e => console.error('[CallLogs] callLogs Subscription FAILED:', e));
+  
+  // Also listen to calls collection (WebRTC / legacy call flow)
+  App.callsUnsubscriber = App.db.collection('calls')
+    .where('fromUserId', '==', uid)
+    .onSnapshot(snapshot => {
+      console.log('[CallLogs] calls snapshot received (fromUserId), docs count:', snapshot.size);
+      snapshot.forEach(doc => {
+        const data = doc.data();
+        if (['ended','missed','cancelled','rejected','declined','failed','busy'].includes(data.status)) {
+          allLogs['calls_' + doc.id] = {
+            id: doc.id,
+            callerId: data.fromUserId || data.callerId || '',
+            calleeId: data.toUserId || data.calleeId || '',
+            type: data.type || 'voice',
+            duration: data.duration || 0,
+            timestamp: getMillis(data.timestamp) || Date.now(),
+            status: data.status || 'ended',
+            participants: [data.fromUserId, data.toUserId].filter(Boolean)
+          };
+        }
+      });
+      mergeLogs();
+    }, e => console.error('[CallLogs] calls Subscription FAILED:', e));
+  
+  // Also listen to calls collection where user is the callee
+  App.callsUnsubscriber2 = App.db.collection('calls')
+    .where('toUserId', '==', uid)
+    .onSnapshot(snapshot => {
+      console.log('[CallLogs] calls snapshot received (toUserId), docs count:', snapshot.size);
+      snapshot.forEach(doc => {
+        const data = doc.data();
+        if (['ended','missed','cancelled','rejected','declined','failed','busy'].includes(data.status)) {
+          allLogs['calls_' + doc.id] = {
+            id: doc.id,
+            callerId: data.fromUserId || data.callerId || '',
+            calleeId: data.toUserId || data.calleeId || '',
+            type: data.type || 'voice',
+            duration: data.duration || 0,
+            timestamp: getMillis(data.timestamp) || Date.now(),
+            status: data.status || 'ended',
+            participants: [data.fromUserId, data.toUserId].filter(Boolean)
+          };
+        }
+      });
+      mergeLogs();
+    }, e => console.error('[CallLogs] calls Subscription FAILED:', e));
 }
 
 function mergeAndRenderChats() {
@@ -418,13 +471,25 @@ function mergeAndRenderChats() {
 }
 
 async function loadMessageHistory(email, uid) {
-  if (!App.db || !email) return;
+  if (!App.db || !uid) return;
   try {
-    const snap = await App.db.collection('messages')
-      .where('participantEmails', 'array-contains', email)
-      .orderBy('timestamp', 'asc')
-      .limit(200)
-      .get();
+    // Primary query: by participantEmails (works for re-registered users with same email)
+    let snap = null;
+    if (email) {
+      snap = await App.db.collection('messages')
+        .where('participantEmails', 'array-contains', email)
+        .orderBy('timestamp', 'asc')
+        .limit(200)
+        .get();
+    }
+    // Fallback: by participants array-contains uid (for users whose UID didn't change)
+    if (!snap || snap.empty) {
+      snap = await App.db.collection('messages')
+        .where('participants', 'array-contains', uid)
+        .orderBy('timestamp', 'asc')
+        .limit(200)
+        .get();
+    }
     const chatMap = {};
     const groupMap = {};
     snap.forEach(doc => {
@@ -3172,11 +3237,14 @@ function saveLanguage() {
 }
 
 function signOut() {
-  if (App.usersUnsubscribe)       App.usersUnsubscribe();
-  if (App.chatsUnsubscribe)       App.chatsUnsubscribe();
-  if (App.groupsUnsubscribe)      App.groupsUnsubscribe();
-  if (App.messagesUnsubscribe)    App.messagesUnsubscribe();
+  if (App.usersUnsubscribe)        App.usersUnsubscribe();
+  if (App.chatsUnsubscribe)        App.chatsUnsubscribe();
+  if (App.groupsUnsubscribe)       App.groupsUnsubscribe();
+  if (App.messagesUnsubscribe)     App.messagesUnsubscribe();
   if (App.chatRequestsUnsubscribe) App.chatRequestsUnsubscribe();
+  if (App.callLogsUnsubscribe)     App.callLogsUnsubscribe();
+  if (App.callsUnsubscriber)       App.callsUnsubscriber();
+  if (App.callsUnsubscriber2)      App.callsUnsubscriber2();
   if (App.auth) App.auth.signOut().then(() => location.reload());
   else location.reload();
 }
