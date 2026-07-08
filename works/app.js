@@ -1405,7 +1405,7 @@ function renderCallsTab(filter = '') {
     const durationStr = log.duration ? `${Math.floor(log.duration/60)}:${(log.duration%60).toString().padStart(2,'0')} min` : '';
     const timeStr = log.timestamp ? formatChatTime(log.timestamp) : '';
     html += `
-      <div class="flex items-center justify-between gap-3 p-3 rounded-xl hover:bg-surface-container/40 cursor-pointer transition-all">
+      <div class="flex items-center justify-between gap-3 p-3 rounded-xl hover:bg-surface-container/40 transition-all">
         <div class="flex items-center gap-3 min-w-0 flex-1">
           <div class="w-12 h-12 rounded-xl flex items-center justify-center font-bold text-lg bg-surface-container-highest text-on-surface-variant flex-shrink-0">${initials}</div>
           <div class="flex-1 min-w-0">
@@ -1420,9 +1420,17 @@ function renderCallsTab(filter = '') {
             </div>
           </div>
         </div>
-        <button class="p-2 hover:bg-red-500/10 hover:text-red-500 rounded-full flex items-center justify-center transition-colors flex-shrink-0 cursor-pointer text-on-surface-variant/70 hover:text-red-500" onclick="event.stopPropagation(); deleteCallLog('${log.id}')" title="Delete Call Log">
-          <span class="material-symbols-outlined text-lg">delete</span>
-        </button>
+        <div class="flex items-center gap-1">
+          <button class="p-2 hover:bg-green-500/10 hover:text-green-500 rounded-full flex items-center justify-center transition-colors flex-shrink-0 cursor-pointer text-on-surface-variant/70" onclick="event.stopPropagation(); callFromLog('${otherId}','voice')" title="Voice call">
+            <span class="material-symbols-outlined text-lg">call</span>
+          </button>
+          <button class="p-2 hover:bg-blue-500/10 hover:text-blue-500 rounded-full flex items-center justify-center transition-colors flex-shrink-0 cursor-pointer text-on-surface-variant/70" onclick="event.stopPropagation(); callFromLog('${otherId}','video')" title="Video call">
+            <span class="material-symbols-outlined text-lg">videocam</span>
+          </button>
+          <button class="p-2 hover:bg-red-500/10 hover:text-red-500 rounded-full flex items-center justify-center transition-colors flex-shrink-0 cursor-pointer text-on-surface-variant/70 hover:text-red-500" onclick="event.stopPropagation(); deleteCallLog('${log.id}')" title="Delete Call Log">
+            <span class="material-symbols-outlined text-lg">delete</span>
+          </button>
+        </div>
       </div>`;
   });
   list.innerHTML = html;
@@ -1442,6 +1450,21 @@ async function deleteCallLog(logId) {
     console.error(err);
     showToast('Failed to delete call log', 'error');
   }
+}
+
+function callFromLog(otherUid, type) {
+  const chat = App.chats.find(c => c.uid === otherUid);
+  if (!chat) {
+    showToast('Chat not found for this user', 'error');
+    return;
+  }
+  App.currentChat = chat;
+  renderMessages(chat.id);
+  scrollToBottom(true);
+  renderChatList();
+  document.getElementById('chat-header')?.style.removeProperty('display');
+  document.getElementById('chat-area')?.classList.remove('hidden');
+  beginCall(type);
 }
 
 function renderMoreTab() {
