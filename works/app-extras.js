@@ -229,11 +229,13 @@ function showMsgContextMenu(event, msgId) {
     animation: ctxFadeIn 0.12s ease;
   `;
 
+  const isPinned = (App.currentChatPinnedMessages || []).some(p => p.messageId === msgId);
   const actions = [
     { icon: '↩️', label: 'Reply',   fn: `replyToMsg('${msgId}')` },
     { icon: '✏️', label: 'Edit',    fn: `editMessage('${msgId}')`,  show: isMyMsg },
     { icon: '↪️', label: 'Forward', fn: `openForwardModal('${msgId}')` },
     { icon: '📋', label: 'Copy',    fn: `copyMsgText('${msgId}')` },
+    { icon: '📌', label: isPinned ? 'Unpin message' : 'Pin message', fn: isPinned ? `unpinMessageByMsgId('${msgId}')` : `pinMessage('${msgId}')` },
     { icon: '⭐', label: 'Star',    fn: `starMessage('${msgId}')` },
     { icon: 'ℹ️', label: 'Info',    fn: `openMsgInfo('${msgId}')` },
     { icon: '🗑️', label: 'Delete',  fn: `openDeleteMenu('${msgId}')`, danger: true },
@@ -1475,13 +1477,14 @@ async function createGroupNow() {
     members: _newGroupMembers.map(m => m.uid).concat(uid ? [uid] : []),
   };
 
-  App.chats.unshift(newGroup);
+  if (!App.groupChats) App.groupChats = [];
+  App.groupChats.unshift(newGroup);
   App.messages[chatId] = [{
     id: 'sys_' + Date.now(), from: 'system',
     text: `${App.currentUser?.displayName || 'You'} created this group`,
     type: 'text', time: Date.now(), status: 'read',
   }];
-  renderChatList();
+  mergeAndRenderChats();
   openChat(chatId);
   showToast(`Group "${name}" created!`, 'success');
 

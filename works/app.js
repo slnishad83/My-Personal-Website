@@ -967,14 +967,10 @@ function renderChatList(filter = '') {
 
   const tab = App.activeTab;
   let items = App.chats.filter(c => {
-    if (tab === 'chats')  return c.type === 'personal';
+    if (tab === 'chats')  return true; // Show all (personal, groups, saved_me)
     if (tab === 'groups') return c.type === 'group';
     return true;
   });
-
-  if (tab === 'calls')    { renderCallsTab(); return; }
-  if (tab === 'more')     { renderMoreTab(); return; }
-  if (tab === 'requests') { renderRequestsTab(); return; }
 
   if (filter) {
     const q = filter.toLowerCase();
@@ -1076,6 +1072,10 @@ function renderChatList(filter = '') {
       `;
     }
   }
+
+  if (tab === 'calls')    { renderCallsTab(filter); return; }
+  if (tab === 'more')     { renderMoreTab(); return; }
+  if (tab === 'requests') { renderRequestsTab(); return; }
 
   if (!items.length) {
     list.innerHTML = '';
@@ -1190,21 +1190,33 @@ function chatItemHTML(chat) {
   </div>`;
 }
 
-function renderCallsTab() {
+function renderCallsTab(filter = '') {
   const list = document.getElementById('chat-list');
-  const logs = App.callLogs || [];
+  let logs = App.callLogs || [];
+  const uid = App.auth?.currentUser?.uid;
+
+  if (filter) {
+    const q = filter.toLowerCase();
+    logs = logs.filter(log => {
+      const isIncoming = log.calleeId === uid;
+      const otherId = isIncoming ? log.callerId : log.calleeId;
+      const contact = App.contacts.find(c => c.uid === otherId) || App.chats.find(c => c.uid === otherId) || {};
+      const name = contact.name || 'Unknown';
+      return name.toLowerCase().includes(q) || (log.status || '').toLowerCase().includes(q) || (log.type || '').toLowerCase().includes(q);
+    });
+  }
+
   if (!logs.length) {
     list.innerHTML = `
       <div class="flex flex-col items-center py-12 text-center w-full">
         <div class="w-16 h-16 rounded-2xl bg-surface-container-high flex items-center justify-center mb-4 border border-outline-variant/20 shadow-md">
           <span class="material-symbols-outlined text-secondary text-3xl">call</span>
         </div>
-        <h4 class="font-bold mb-1">No call logs</h4>
-        <p class="text-on-surface-variant text-xs max-w-xs">Start high-definition calls directly with any of your workspace team members.</p>
+        <h4 class="font-bold mb-1">${filter ? 'No results found' : 'No call logs'}</h4>
+        <p class="text-on-surface-variant text-xs max-w-xs">${filter ? 'Try searching for another participant or call type.' : 'Start high-definition calls directly with any of your workspace team members.'}</p>
       </div>`;
     return;
   }
-  const uid = App.auth?.currentUser?.uid;
   let html = '';
   logs.forEach(log => {
     const isIncoming = log.calleeId === uid;
@@ -1319,6 +1331,7 @@ function openChat(chatId) {
 
   App.currentChat = chat;
   chat.unread = 0;
+  loadPinnedMessages(chatId);
 
   // Render header title & icons
   const headerName = document.getElementById('header-name');
@@ -2271,6 +2284,129 @@ function togglePin(chatId) {
     chat.pinned = !chat.pinned;
     renderChatList();
     showToast(chat.pinned ? 'Conversation pinned' : 'Conversation unpinned', 'success');
+  }
+}
+
+async function pinMessage(msgId) {
+  const chat = App.currentChat;
+  if (!chat || !App.db || !App.auth?.currentUser) return;
+  
+  const msgs = App.messages[chat.id] || [];
+  const msg = msgs.find(m => m.id === msgId);
+  if (!msg) return;
+
+  const senderName = msg.from === 'me' ? 'You' : (App.contacts.find(c => c.uid === msg.from)?.name || App.chats.find(c => c.uid === msg.from)?.name || 'User');
+
+  const pin = {
+    chatId: chat.id,
+    messageId: msgId,
+    text: msg.text || (msg.type !== 'text' ? '📎 Media attachment' : ''),
+    senderName: senderName,
+    timestamp: msg.time,
+    pinnedAt: firebase.firestore.FieldValue.serverTimestamp(),
+    pinnedBy: App.auth.currentUser.uid,
+    isGroupPin: chat.type === 'group'
+  };
+
+  try {
+    await App.db.collection('pinnedMessages').add(pin);
+    showToast('Message pinned!', 'success');
+    loadPinnedMessages(chat.id);
+  } catch (err) {
+    console.error(err);
+    showToast('Failed to pin message', 'error');
+  }
+}
+
+async function unpinMessageByMsgId(msgId) {
+  const chat = App.currentChat;
+  if (!chat || !App.db) return;
+
+  try {
+    const snap = await App.db.collection('pinnedMessages')
+      .where('chatId', '==', chat.id)
+      .where('messageId', '==', msgId)
+      .get();
+    
+    const batch = App.db.batch();
+    snap.forEach(doc => batch.delete(doc.ref));
+    await batch.commit();
+    
+    showToast('Message unpinned!', 'success');
+    loadPinnedMessages(chat.id);
+  } catch (err) {
+    console.error(err);
+    showToast('Failed to unpin message', 'error');
+  }
+}
+
+async function unpinCurrentMessage() {
+  const pins = App.currentChatPinnedMessages || [];
+  if (!pins.length) return;
+  await unpinMessageByMsgId(pins[0].messageId);
+}
+
+async function loadPinnedMessages(chatId) {
+  if (!App.db || !chatId) {
+    App.currentChatPinnedMessages = [];
+    renderPinnedMessageBar();
+    return;
+  }
+  
+  try {
+    const snap = await App.db.collection('pinnedMessages')
+      .where('chatId', '==', chatId)
+      .get();
+    
+    const pins = [];
+    snap.forEach(doc => {
+      pins.push(Object.assign({ id: doc.id }, doc.data()));
+    });
+    
+    // Sort by pinnedAt descending (most recent first)
+    pins.sort((a, b) => {
+      const tA = a.pinnedAt?.toMillis ? a.pinnedAt.toMillis() : (a.pinnedAt || 0);
+      const tB = b.pinnedAt?.toMillis ? b.pinnedAt.toMillis() : (b.pinnedAt || 0);
+      return tB - tA;
+    });
+    
+    App.currentChatPinnedMessages = pins;
+    renderPinnedMessageBar();
+  } catch (err) {
+    console.warn('Failed to load pinned messages:', err);
+  }
+}
+
+function renderPinnedMessageBar() {
+  const bar = document.getElementById('pinned-message-bar');
+  const senderEl = document.getElementById('pinned-msg-sender');
+  const textEl = document.getElementById('pinned-msg-text');
+  if (!bar || !senderEl || !textEl) return;
+
+  const pins = App.currentChatPinnedMessages || [];
+  if (!pins.length) {
+    bar.classList.add('hidden');
+    return;
+  }
+
+  const currentPin = pins[0]; // Display the most recently pinned message
+  senderEl.textContent = currentPin.senderName || 'User';
+  textEl.textContent = currentPin.text || '📎 Media attachment';
+  bar.classList.remove('hidden');
+}
+
+function scrollToPinnedMessage() {
+  const pins = App.currentChatPinnedMessages || [];
+  if (!pins.length) return;
+  
+  const msgId = pins[0].messageId;
+  const el = document.getElementById(`msg-${msgId}`);
+  if (el) {
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    el.classList.add('bg-primary/20');
+    setTimeout(() => el.classList.remove('bg-primary/20'), 2000);
+  } else {
+    showToast('Scroll up to find the message', 'info');
   }
 }
 function confirmClearChat(chatId) {
