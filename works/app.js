@@ -273,7 +273,7 @@ function subscribeToChats() {
         if (chatId === myselfChatId) {
           if (data.lastMessage) {
             myselfChat.lastMsg = data.lastMessage;
-            myselfChat.lastTime = data.lastMessageTime?.toMillis ? data.lastMessageTime.toMillis() : (data.lastMessageTime || myselfChat.lastTime);
+            myselfChat.lastTime = getMillis(data.lastMessageTime) || myselfChat.lastTime;
           }
           return;
         }
@@ -300,7 +300,7 @@ function subscribeToChats() {
           initials: otherUser.initials,
           photoURL: otherUser.photoURL,
           lastMsg: data.lastMessage || 'No messages yet',
-          lastTime: data.lastMessageTime?.toMillis ? data.lastMessageTime.toMillis() : (data.lastMessageTime || 0),
+          lastTime: getMillis(data.lastMessageTime),
           unread: data.unreadCount?.[uid] || 0,
           pinned: data.pinned?.[uid] || false,
           muted: data.muted?.[uid] || false,
@@ -355,7 +355,7 @@ function subscribeToGroups() {
           initials: getInitials(data.name || 'Group'),
           photoURL: data.icon || null,
           lastMsg: data.lastMessage || 'No messages yet',
-          lastTime: data.lastMessageTime?.toMillis ? data.lastMessageTime.toMillis() : (data.lastMessageTime || 0),
+          lastTime: getMillis(data.lastMessageTime),
           unread: data.unreadCount?.[uid] || 0,
           pinned: data.pinned?.[uid] || false,
           muted: data.muted?.[uid] || false,
@@ -384,13 +384,13 @@ function subscribeToCallLogs(uid) {
           calleeId: data.calleeId,
           type: data.type || 'voice',
           duration: data.duration || 0,
-          timestamp: data.timestamp?.toMillis ? data.timestamp.toMillis() : (data.timestamp || 0),
+          timestamp: getMillis(data.timestamp),
           status: data.status || 'missed',
           participants: data.participants || []
         });
       });
       // In-memory sorting to avoid composite index requirement
-      logs.sort((a, b) => b.timestamp - a.timestamp);
+      logs.sort((a, b) => getMillis(b.timestamp) - getMillis(a.timestamp));
       App.callLogs = logs;
       if (App.activeTab === 'calls') renderCallsTab();
     }, e => console.warn('callLogs err:', e));
@@ -1921,6 +1921,24 @@ function beginCall(type) {
 
   show('call-screen');
 
+  // Create immediate call log record in Firestore to preserve logs on refresh
+  App.currentCallLogId = null;
+  if (App.db && App.auth?.currentUser && chat) {
+    const uid = App.auth.currentUser.uid;
+    const otherUid = chat.uid;
+    App.db.collection('callLogs').add({
+      callerId: uid,
+      calleeId: otherUid || uid,
+      type: type,
+      duration: 0,
+      timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+      status: 'calling',
+      participants: otherUid && otherUid !== uid ? [uid, otherUid] : [uid]
+    }).then(ref => {
+      App.currentCallLogId = ref.id;
+    }).catch(e => console.warn('callLog add err:', e));
+  }
+
   setTimeout(() => {
     setEl('call-status','Active Connection');
     show('call-timer');
@@ -1929,6 +1947,13 @@ function beginCall(type) {
       const s = Math.floor((Date.now()-App.callStartTime)/1000);
       setEl('call-timer', formatDuration(s));
     }, 1000);
+
+    // Update status to active in Firestore if ID is available
+    if (App.db && App.currentCallLogId) {
+      App.db.collection('callLogs').doc(App.currentCallLogId).update({
+        status: 'active'
+      }).catch(() => {});
+    }
   }, 2500);
 }
 
@@ -1937,7 +1962,16 @@ function endCall() {
   clearInterval(App.callTimerInterval);
   hide('call-screen');
   showToast('Call session ended','info');
-  if (App.db && App.auth?.currentUser && App.currentChat) {
+  
+  if (App.db && App.auth?.currentUser && App.currentCallLogId) {
+    const duration = App.callStartTime ? Math.floor((Date.now()-App.callStartTime)/1000) : 0;
+    App.db.collection('callLogs').doc(App.currentCallLogId).update({
+      duration,
+      status: 'ended'
+    }).catch(e => console.warn('callLog update err:', e));
+    App.currentCallLogId = null;
+  } else if (App.db && App.auth?.currentUser && App.currentChat) {
+    // Fallback if document creation was delayed
     const duration = App.callStartTime ? Math.floor((Date.now()-App.callStartTime)/1000) : 0;
     const uid = App.auth.currentUser.uid;
     const otherUid = App.currentChat.uid;
@@ -2398,11 +2432,7 @@ async function loadPinnedMessages(chatId) {
     });
     
     // Sort by pinnedAt descending (most recent first)
-    pins.sort((a, b) => {
-      const tA = a.pinnedAt?.toMillis ? a.pinnedAt.toMillis() : (a.pinnedAt || 0);
-      const tB = b.pinnedAt?.toMillis ? b.pinnedAt.toMillis() : (b.pinnedAt || 0);
-      return tB - tA;
-    });
+    pins.sort((a, b) => getMillis(b.pinnedAt) - getMillis(a.pinnedAt));
     
     App.currentChatPinnedMessages = pins;
     renderPinnedMessageBar();
@@ -2756,6 +2786,17 @@ function setupPushNotifications() {
     };
     setTimeout(dismiss, 15000);
   }
+}
+
+function getMillis(val) {
+  if (!val) return 0;
+  if (typeof val === 'number') return val;
+  if (typeof val.toMillis === 'function') return val.toMillis();
+  if (typeof val.toDate === 'function') return val.toDate().getTime();
+  if (val instanceof Date) return val.getTime();
+  if (typeof val === 'string') return Date.parse(val) || 0;
+  if (val.seconds) return val.seconds * 1000 + (val.nanoseconds || 0) / 1000000;
+  return 0;
 }
 
 function getInitials(name) {

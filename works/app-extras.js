@@ -1540,6 +1540,7 @@ async function createGroupNow() {
         memberCount: memberIds.length,
       });
       newGroup.id = ref.id;
+      mergeAndRenderChats();
 
       // Re-open chat with real Firestore ID so message subscription uses correct groupId
       if (App.messagesUnsubscribe) {
