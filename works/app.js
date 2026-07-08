@@ -43,6 +43,8 @@ const App = {
   chatFolders: [],
   activeFolderIndex: -1,
   notifSoundEnabled: {},
+  chatSelectionMode: false,
+  selectedChatIds: [],
   
   // Showroom overrides
   showroomOverride: null, // { type: 'myself'|'personal'|'group', viewport: 'desktop'|'laptop'|'tablet'|'mobile' }
@@ -655,8 +657,13 @@ function subscribeToMessages(chatId) {
       const msgs = [];
       const decryptPromises = [];
       
+      const uid = App.auth?.currentUser?.uid;
       snapshot.forEach(doc => {
         const data = doc.data();
+        
+        // Skip deleted messages
+        if (data.deletedForEveryone) return;
+        if (uid && data.deletedFor && data.deletedFor[uid]) return;
         
         let type = 'text';
         let url = '';
@@ -1252,14 +1259,17 @@ function chatItemHTML(chat) {
     avatarIconHtml = `<div class="w-12 h-12 rounded-xl flex items-center justify-center font-bold text-lg ${avatar || 'bg-surface-container-highest text-on-surface-variant'}">${initials}</div>`;
   }
 
+  const isSelected = App.selectedChatIds.includes(chat.id);
+
   return `
-  <div class="relative flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all duration-200 ${activeClass}"
-       onclick="openChat('${chat.id}')"
+  <div class="relative flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all duration-200 ${activeClass} ${isSelected ? 'ring-2 ring-primary' : ''}"
+       onclick="${App.chatSelectionMode ? `toggleChatSelection('${chat.id}')` : `openChat('${chat.id}')`}"
        oncontextmenu="chatContextMenu(event,'${chat.id}')"
        role="listitem"
        tabindex="0"
        onkeydown="if(event.key==='Enter')openChat('${chat.id}')">
     <div class="relative flex-shrink-0">
+      ${App.chatSelectionMode ? `<div class="absolute -left-1 -top-1 z-10 w-5 h-5 rounded-full border-2 ${isSelected ? 'bg-primary border-primary text-white' : 'bg-surface-container border-outline-variant'} flex items-center justify-center" onclick="event.stopPropagation();toggleChatSelection('${chat.id}')"><span class="material-symbols-outlined text-[12px]" style="font-variation-settings: 'FILL' 1;">${isSelected ? 'check' : ''}</span></div>` : ''}
       ${avatarIconHtml}
       ${statusDot}
     </div>
@@ -1277,6 +1287,79 @@ function chatItemHTML(chat) {
       </div>
     </div>
   </div>`;
+}
+
+/* ─── Multi-select Chat ─── */
+function toggleChatSelectionMode() {
+  App.chatSelectionMode = !App.chatSelectionMode;
+  if (!App.chatSelectionMode) {
+    App.selectedChatIds = [];
+  }
+  document.getElementById('btn-multi-select')?.classList.toggle('text-primary', App.chatSelectionMode);
+  document.getElementById('btn-select-all')?.classList.toggle('hidden', !App.chatSelectionMode);
+  document.getElementById('btn-delete-selected')?.classList.add('hidden');
+  renderChatList();
+}
+
+function toggleChatSelection(chatId) {
+  const idx = App.selectedChatIds.indexOf(chatId);
+  if (idx >= 0) {
+    App.selectedChatIds.splice(idx, 1);
+  } else {
+    App.selectedChatIds.push(chatId);
+  }
+  document.getElementById('btn-delete-selected')?.classList.toggle('hidden', App.selectedChatIds.length === 0);
+  renderChatList();
+}
+
+function toggleSelectAllChats() {
+  const tab = App.activeTab;
+  let items = App.chats.filter(c => {
+    if (tab === 'chats') return true;
+    if (tab === 'groups') return c.type === 'group';
+    return true;
+  });
+  if (App.selectedChatIds.length === items.length) {
+    App.selectedChatIds = [];
+  } else {
+    App.selectedChatIds = items.map(c => c.id);
+  }
+  document.getElementById('btn-delete-selected')?.classList.toggle('hidden', App.selectedChatIds.length === 0);
+  renderChatList();
+}
+
+async function deleteSelectedChats() {
+  const ids = [...App.selectedChatIds];
+  if (!ids.length) return;
+  showConfirm(`Delete ${ids.length} chat(s)? This cannot be undone.`, async () => {
+    for (const chatId of ids) {
+      App.chats = App.chats.filter(c => c.id !== chatId);
+      delete App.messages[chatId];
+      if (App.db) {
+        try {
+          const q = App.db.collection('directChats').where('userId', '==', App.auth?.currentUser?.uid).where('contactUid', '==', chatId);
+          const snap = await q.get();
+          snap.forEach(doc => doc.ref.delete());
+        } catch (e) { console.warn('Delete chat error:', e); }
+        try {
+          const msgs = await App.db.collection('messages').where('directId', '==', chatId).get();
+          msgs.forEach(doc => doc.ref.delete());
+        } catch (e) { console.warn('Delete messages error:', e); }
+      }
+    }
+    App.selectedChatIds = [];
+    App.chatSelectionMode = false;
+    document.getElementById('btn-multi-select')?.classList.remove('text-primary');
+    document.getElementById('btn-select-all')?.classList.add('hidden');
+    document.getElementById('btn-delete-selected')?.classList.add('hidden');
+    if (App.currentChat && ids.includes(App.currentChat.id)) {
+      App.currentChat = null;
+      document.getElementById('chat-area')?.classList.add('hidden');
+      document.getElementById('chat-header')?.style.setProperty('display', 'none');
+    }
+    renderChatList();
+    showToast(`${ids.length} chat(s) deleted`, 'info');
+  });
 }
 
 function renderCallsTab(filter = '') {
@@ -1716,8 +1799,11 @@ function renderMessages(chatId) {
       <div class="flex flex-col ${isMe?'items-end':'items-start'} max-w-full">
         ${showSender&&!isMe ? `<div class="text-[10px] text-on-surface-variant font-bold mb-1 ml-2">${escHtml(senderName)}</div>` : ''}
         ${fwdBadge ? `<div class="${isMe?'text-right':'text-left'}">${fwdBadge}</div>` : ''}
-        <div class="flex items-center gap-2 group relative max-w-full">
-          ${isMe ? `<button class="opacity-0 group-hover:opacity-100 p-1 hover:bg-surface-container-high rounded-full text-on-surface-variant transition-opacity cursor-pointer flex items-center justify-center flex-shrink-0" onclick="showMsgContextMenu(event,'${msg.id}')" title="Options"><span class="material-symbols-outlined text-lg">more_vert</span></button>` : ''}
+        <div class="flex items-center gap-1 group relative max-w-full">
+          ${isMe ? `
+          <button class="opacity-0 group-hover:opacity-100 p-1 hover:bg-surface-container-high rounded-full text-on-surface-variant transition-opacity cursor-pointer flex items-center justify-center flex-shrink-0" onclick="event.stopPropagation();openForwardModal('${msg.id}')" title="Forward"><span class="material-symbols-outlined text-lg">arrow_forward</span></button>
+          <button class="opacity-0 group-hover:opacity-100 p-1 hover:bg-red-500/10 rounded-full text-on-surface-variant hover:text-red-500 transition-opacity cursor-pointer flex items-center justify-center flex-shrink-0" onclick="event.stopPropagation();openDeleteMenu('${msg.id}')" title="Delete"><span class="material-symbols-outlined text-lg">delete</span></button>
+          <button class="opacity-0 group-hover:opacity-100 p-1 hover:bg-surface-container-high rounded-full text-on-surface-variant transition-opacity cursor-pointer flex items-center justify-center flex-shrink-0" onclick="showMsgContextMenu(event,'${msg.id}')" title="More"><span class="material-symbols-outlined text-lg">more_vert</span></button>` : ''}
           <div class="p-bubble_padding_xy ${bubbleClass} relative"
                oncontextmenu="showMsgContextMenu(event,'${msg.id}')"
                ondblclick="showQuickReactions(event,'${msg.id}')">
@@ -1730,7 +1816,10 @@ function renderMessages(chatId) {
               ${tickIcon}
             </div>
           </div>
-          ${!isMe ? `<button class="opacity-0 group-hover:opacity-100 p-1 hover:bg-surface-container-high rounded-full text-on-surface-variant transition-opacity cursor-pointer flex items-center justify-center flex-shrink-0" onclick="showMsgContextMenu(event,'${msg.id}')" title="Options"><span class="material-symbols-outlined text-lg">more_vert</span></button>` : ''}
+          ${!isMe ? `
+          <button class="opacity-0 group-hover:opacity-100 p-1 hover:bg-red-500/10 rounded-full text-on-surface-variant hover:text-red-500 transition-opacity cursor-pointer flex items-center justify-center flex-shrink-0" onclick="event.stopPropagation();openDeleteMenu('${msg.id}')" title="Delete"><span class="material-symbols-outlined text-lg">delete</span></button>
+          <button class="opacity-0 group-hover:opacity-100 p-1 hover:bg-surface-container-high rounded-full text-on-surface-variant transition-opacity cursor-pointer flex items-center justify-center flex-shrink-0" onclick="event.stopPropagation();openForwardModal('${msg.id}')" title="Forward"><span class="material-symbols-outlined text-lg">arrow_forward</span></button>
+          <button class="opacity-0 group-hover:opacity-100 p-1 hover:bg-surface-container-high rounded-full text-on-surface-variant transition-opacity cursor-pointer flex items-center justify-center flex-shrink-0" onclick="showMsgContextMenu(event,'${msg.id}')" title="More"><span class="material-symbols-outlined text-lg">more_vert</span></button>` : ''}
         </div>
         ${reactions ? `<div class="flex flex-wrap gap-1 mt-1">${reactions}</div>` : ''}
       </div>

@@ -51,7 +51,7 @@ function _renderMediaViewer() {
   if (deleteBtn) deleteBtn.style.display = isMsg ? 'flex' : 'none';
 
   if (item.type === 'video') {
-    content.innerHTML = `<video src="${escHtml(item.url)}" controls autoplay class="max-w-full max-h-full rounded-xl" style="max-height:75vh"></video>`;
+    content.innerHTML = `<video src="${escHtml(item.url)}" controls autoplay class="max-w-full max-h-full rounded-xl" style="max-height:85vh;max-width:90vw"></video>`;
   } else if (item.type === 'voice' || item.type === 'audio') {
     content.innerHTML = `
       <div class="flex flex-col items-center gap-4 bg-surface-container-high/40 p-6 rounded-2xl border border-outline-variant/20 w-full max-w-md mx-auto">
@@ -59,14 +59,42 @@ function _renderMediaViewer() {
         <audio src="${escHtml(item.url)}" controls autoplay class="w-full"></audio>
       </div>`;
   } else if (item.type === 'doc') {
-    content.innerHTML = `<iframe src="${escHtml(item.url)}" class="w-full h-full rounded-xl border border-outline-variant/20" style="width:75vw; height:65vh; background:white;"></iframe>`;
+    content.innerHTML = `<iframe src="${escHtml(item.url)}" class="w-full h-full rounded-xl border border-outline-variant/20" style="width:85vw; height:75vh; background:white;"></iframe>`;
   } else {
-    content.innerHTML = `<img src="${escHtml(item.url)}" alt="Media" class="max-w-full max-h-full rounded-xl object-contain" style="max-height:75vh" ondragstart="return false">`;
+    content.innerHTML = `<div class="relative flex items-center justify-center w-full h-full" id="media-zoom-container">
+      <img src="${escHtml(item.url)}" alt="Media" id="media-zoom-img"
+           class="max-w-full max-h-full rounded-xl object-contain transition-transform duration-200 cursor-zoom-in"
+           style="max-height:85vh"
+           ondragstart="return false"
+           onclick="toggleMediaZoom()">
+    </div>`;
   }
 
   // Store current url for download
   App._mediaViewerCurrentUrl = item.url;
   App._mediaViewerCurrentType = item.type;
+  App._mediaViewerZoomed = false;
+}
+
+function toggleMediaZoom() {
+  const img = document.getElementById('media-zoom-img');
+  if (!img) return;
+  App._mediaViewerZoomed = !App._mediaViewerZoomed;
+  if (App._mediaViewerZoomed) {
+    img.style.maxHeight = 'none';
+    img.style.maxWidth = 'none';
+    img.style.width = 'auto';
+    img.style.height = 'auto';
+    img.style.cursor = 'zoom-out';
+    img.style.transform = 'scale(1)';
+  } else {
+    img.style.maxHeight = '85vh';
+    img.style.maxWidth = '100%';
+    img.style.width = '';
+    img.style.height = '';
+    img.style.cursor = 'zoom-in';
+    img.style.transform = '';
+  }
 }
 
 function closeMediaViewer() {

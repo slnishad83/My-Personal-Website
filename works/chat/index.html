@@ -207,7 +207,12 @@
       <div class="p-6 border-b border-outline-variant/10">
         <div class="flex items-center justify-between mb-4">
           <h2 class="font-headline-md text-headline-md font-bold tracking-tight" id="chats-sidebar-title">Messages</h2>
-          <span class="material-symbols-outlined text-on-surface-variant cursor-pointer hover:bg-surface-variant/30 p-2 rounded-full transition-all" onclick="openNewChat()">edit_square</span>
+          <div class="flex items-center gap-1">
+            <span class="material-symbols-outlined text-on-surface-variant cursor-pointer hover:bg-surface-variant/30 p-2 rounded-full transition-all hidden" id="btn-select-all" onclick="toggleSelectAllChats()" title="Select all">select_all</span>
+            <span class="material-symbols-outlined text-on-surface-variant cursor-pointer hover:bg-surface-variant/30 p-2 rounded-full transition-all" onclick="toggleChatSelectionMode()" id="btn-multi-select" title="Multi-select">library_add_check</span>
+            <span class="material-symbols-outlined text-on-surface-variant cursor-pointer hover:bg-surface-variant/30 p-2 rounded-full transition-all hidden" id="btn-delete-selected" onclick="deleteSelectedChats()" title="Delete selected">delete</span>
+            <span class="material-symbols-outlined text-on-surface-variant cursor-pointer hover:bg-surface-variant/30 p-2 rounded-full transition-all" onclick="openNewChat()">edit_square</span>
+          </div>
         </div>
 
         <!-- Search conversations -->
