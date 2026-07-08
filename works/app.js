@@ -656,11 +656,10 @@ function checkSession() {
           subscribeToUsers();
           subscribeToChats();
           subscribeToGroups();
-          subscribeToCallLogs(user.uid);
-          const user = App.currentUser;
-          if (user.email) {
-            loadMessageHistory(user.email, user.uid);
-            subscribeToChatRequests(user.email, user.uid);
+          subscribeToCallLogs(App.currentUser.uid);
+          if (App.currentUser.email) {
+            loadMessageHistory(App.currentUser.email, App.currentUser.uid);
+            subscribeToChatRequests(App.currentUser.email, App.currentUser.uid);
           }
           updatePresence('online');
           setupPushNotifications();
