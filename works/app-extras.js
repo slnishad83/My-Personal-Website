@@ -436,7 +436,7 @@ async function deleteMessage(msgId, scope) {
     // If connected to Firebase, mark deleted for this user
     if (App.db && App.auth && App.auth.currentUser) {
       const uid = App.auth.currentUser.uid;
-      const col = App.currentChat.type === 'group' ? 'groupMessages' : 'messages';
+      const col = 'messages';
       App.db.collection(col).doc(msgId).update({
         [`deletedFor.${uid}`]: true
       }).catch(() => {});
@@ -448,7 +448,7 @@ async function deleteMessage(msgId, scope) {
     showToast('Message deleted for everyone', 'success');
 
     if (App.db && App.auth && App.auth.currentUser) {
-      const col = App.currentChat.type === 'group' ? 'groupMessages' : 'messages';
+      const col = 'messages';
       App.db.collection(col).doc(msgId).update({
         deletedForEveryone: true,
         text: '',
@@ -653,7 +653,7 @@ async function saveEdit(newText) {
 
   // Firebase
   if (App.db && App.auth && App.auth.currentUser) {
-    const col = App.currentChat.type === 'group' ? 'groupMessages' : 'messages';
+    const col = 'messages';
     App.db.collection(col).doc(msgId).update({
       text: newText,
       edited: true,
@@ -700,7 +700,7 @@ function toggleReaction(msgId, emoji) {
     const uid = App.auth.currentUser.uid;
     const reactionData = {};
     (msg.reactions || []).forEach(r => { reactionData[r.emoji] = r.count; });
-    const col = App.currentChat.type === 'group' ? 'groupMessages' : 'messages';
+    const col = 'messages';
     App.db.collection(col).doc(msgId).update({ reactions: reactionData }).catch(() => {});
   }
 }
@@ -1464,6 +1464,13 @@ async function createGroupNow() {
         memberCount: memberIds.length,
       });
       newGroup.id = ref.id;
+
+      // Re-open chat with real Firestore ID so message subscription uses correct groupId
+      if (App.messagesUnsubscribe) {
+        App.messagesUnsubscribe();
+        App.messagesUnsubscribe = null;
+      }
+      openChat(ref.id);
 
       // Send invites to members
       for (const memberId of _newGroupMembers.map(m => m.uid)) {

@@ -38,6 +38,8 @@ const App = {
   chatRequests: { incoming: [], outgoing: [] },
   chatRequestsUnsubscribe: null,
   pendingRequestsCount: 0,
+  callLogs: [],
+  callLogsUnsubscribe: null,
   chatFolders: [],
   activeFolderIndex: -1,
   notifSoundEnabled: {},
@@ -365,6 +367,33 @@ function subscribeToGroups() {
     });
 }
 
+function subscribeToCallLogs(uid) {
+  if (!App.db || !uid) return;
+  if (App.callLogsUnsubscribe) App.callLogsUnsubscribe();
+  App.callLogsUnsubscribe = App.db.collection('callLogs')
+    .where('participants', 'array-contains', uid)
+    .orderBy('timestamp', 'desc')
+    .limit(100)
+    .onSnapshot(snapshot => {
+      const logs = [];
+      snapshot.forEach(doc => {
+        const data = doc.data();
+        logs.push({
+          id: doc.id,
+          callerId: data.callerId,
+          calleeId: data.calleeId,
+          type: data.type || 'voice',
+          duration: data.duration || 0,
+          timestamp: data.timestamp?.toMillis ? data.timestamp.toMillis() : 0,
+          status: data.status || 'missed',
+          participants: data.participants || []
+        });
+      });
+      App.callLogs = logs;
+      if (App.activeTab === 'calls') renderCallsTab();
+    }, e => console.warn('callLogs err:', e));
+}
+
 function mergeAndRenderChats() {
   const direct = App.directChats || [];
   const groups = App.groupChats || [];
@@ -381,18 +410,64 @@ async function loadMessageHistory(email, uid) {
       .limit(200)
       .get();
     const chatMap = {};
+    const groupMap = {};
     snap.forEach(doc => {
       const data = doc.data();
-      if (!data.directId) return;
-      if (!chatMap[data.directId]) chatMap[data.directId] = { msgs: 0, lastTime: 0, participants: data.participants || [], participantEmails: data.participantEmails || [] };
-      chatMap[data.directId].msgs++;
-      if (data.timestamp?.toMillis) chatMap[data.directId].lastTime = Math.max(chatMap[data.directId].lastTime, data.timestamp.toMillis());
+      if (data.directId) {
+        if (!chatMap[data.directId]) chatMap[data.directId] = { msgs: 0, lastTime: 0, participants: data.participants || [], participantEmails: data.participantEmails || [] };
+        chatMap[data.directId].msgs++;
+        if (data.timestamp?.toMillis) chatMap[data.directId].lastTime = Math.max(chatMap[data.directId].lastTime, data.timestamp.toMillis());
+      }
+      if (data.groupId) {
+        if (!groupMap[data.groupId]) groupMap[data.groupId] = { msgs: 0, lastTime: 0, name: data.groupName || 'Group' };
+        groupMap[data.groupId].msgs++;
+        if (data.timestamp?.toMillis) groupMap[data.groupId].lastTime = Math.max(groupMap[data.groupId].lastTime, data.timestamp.toMillis());
+      }
     });
     const existingIds = new Set(App.directChats.map(c => c.id));
     for (const [chatId, info] of Object.entries(chatMap)) {
-      if (existingIds.has(chatId) || chatId === `saved_${uid}`) continue;
       const otherEmail = info.participantEmails.find(e => e !== email) || '';
       const otherUid = info.participants.find(p => p !== uid) || '';
+      const expectedId = getDirectChatId(uid, otherUid);
+
+      // Re-registration merge: if chatId differs from expectedId, the messages use an old UID.
+      // Migrate the old directChats doc to the new ID so the snapshot subscription picks it up.
+      if (App.db && chatId !== expectedId && otherUid) {
+        try {
+          const oldDoc = await App.db.collection('directChats').doc(chatId).get();
+          if (oldDoc.exists) {
+            const oldData = oldDoc.data();
+            await App.db.collection('directChats').doc(expectedId).set({
+              participants: [uid, otherUid],
+              participantNames: { ...(oldData.participantNames || {}), [uid]: App.currentUser.displayName || App.currentUser.email || 'Me' },
+              participantEmails: { ...(oldData.participantEmails || {}), [uid]: email },
+              status: 'active',
+              lastMessage: oldData.lastMessage || null,
+              lastMessageTime: oldData.lastMessageTime || null,
+              lastMessageSenderId: oldData.lastMessageSenderId || null
+            }, { merge: true }).catch(() => {});
+            // Update old messages to reference users by email and new UID
+            const msgSnap = await App.db.collection('messages')
+              .where('directId', '==', chatId)
+              .get();
+            const batch = App.db.batch();
+            msgSnap.forEach(doc => {
+              const ref = App.db.collection('messages').doc(doc.id);
+              batch.update(ref, {
+                participants: firebase.firestore.FieldValue.arrayUnion(uid),
+                participantEmails: firebase.firestore.FieldValue.arrayUnion(email),
+                directId: expectedId
+              });
+            });
+            await batch.commit().catch(() => {});
+            // Delete old directChats doc
+            await App.db.collection('directChats').doc(chatId).delete().catch(() => {});
+          }
+        } catch(e) { console.warn('merge chat err:', e); }
+        continue;
+      }
+
+      if (existingIds.has(chatId) || chatId === `saved_${uid}`) continue;
       const contact = App.contacts.find(c => c.email === otherEmail || c.uid === otherUid) || { name: otherEmail.split('@')[0] || 'User', avatar: 'gradient-2', initials: '?', photoURL: null, status: 'offline', about: otherEmail };
       const chatObj = {
         id: chatId, type: 'personal', uid: otherUid,
@@ -411,7 +486,23 @@ async function loadMessageHistory(email, uid) {
         }, { merge: true }).catch(() => {});
       }
     }
-    if (Object.keys(chatMap).length) mergeAndRenderChats();
+    const existingGroupIds = new Set(App.groupChats.map(c => c.id));
+    for (const [groupId, info] of Object.entries(groupMap)) {
+      if (existingGroupIds.has(groupId)) continue;
+      const groupObj = {
+        id: groupId, type: 'group',
+        name: info.name,
+        avatar: 'gradient-3',
+        initials: getInitials(info.name || 'Group'),
+        photoURL: null,
+        lastMsg: `${info.msgs} message${info.msgs > 1 ? 's' : ''}`,
+        lastTime: info.lastTime || Date.now(),
+        unread: 0, pinned: false, muted: false,
+        memberCount: 0
+      };
+      App.groupChats.push(groupObj);
+    }
+    if (Object.keys(chatMap).length || Object.keys(groupMap).length) mergeAndRenderChats();
   } catch(e) { console.warn('loadMessageHistory:', e); }
 }
 
@@ -565,6 +656,7 @@ function checkSession() {
           subscribeToUsers();
           subscribeToChats();
           subscribeToGroups();
+          subscribeToCallLogs(user.uid);
           const user = App.currentUser;
           if (user.email) {
             loadMessageHistory(user.email, user.uid);
@@ -987,6 +1079,11 @@ function chatItemHTML(chat) {
       initials = contact.initials;
       photoURL = contact.photoURL;
       status = contact.status;
+    } else {
+      name = 'Deleted User';
+      initials = '?';
+      avatar = 'bg-surface-container-highest text-on-surface-variant';
+      photoURL = null;
     }
   }
 
@@ -1037,14 +1134,48 @@ function chatItemHTML(chat) {
 
 function renderCallsTab() {
   const list = document.getElementById('chat-list');
-  list.innerHTML = `
-    <div class="flex flex-col items-center py-12 text-center w-full">
-      <div class="w-16 h-16 rounded-2xl bg-surface-container-high flex items-center justify-center mb-4 border border-outline-variant/20 shadow-md">
-        <span class="material-symbols-outlined text-secondary text-3xl">call</span>
-      </div>
-      <h4 class="font-bold mb-1">No call logs</h4>
-      <p class="text-on-surface-variant text-xs max-w-xs">Start high-definition calls directly with any of your workspace team members.</p>
-    </div>`;
+  const logs = App.callLogs || [];
+  if (!logs.length) {
+    list.innerHTML = `
+      <div class="flex flex-col items-center py-12 text-center w-full">
+        <div class="w-16 h-16 rounded-2xl bg-surface-container-high flex items-center justify-center mb-4 border border-outline-variant/20 shadow-md">
+          <span class="material-symbols-outlined text-secondary text-3xl">call</span>
+        </div>
+        <h4 class="font-bold mb-1">No call logs</h4>
+        <p class="text-on-surface-variant text-xs max-w-xs">Start high-definition calls directly with any of your workspace team members.</p>
+      </div>`;
+    return;
+  }
+  const uid = App.auth?.currentUser?.uid;
+  let html = '';
+  logs.forEach(log => {
+    const isIncoming = log.calleeId === uid;
+    const otherId = isIncoming ? log.callerId : log.calleeId;
+    const contact = App.contacts.find(c => c.uid === otherId) || App.chats.find(c => c.uid === otherId) || {};
+    const name = contact.name || 'Unknown';
+    const initials = contact.initials || '?';
+    const icon = log.type === 'video' ? 'videocam' : 'call';
+    const dirIcon = isIncoming ? 'call_received' : 'call_made';
+    const statusClass = log.status === 'missed' ? 'text-red-500' : (log.status === 'ended' ? 'text-on-surface-variant' : 'text-green-500');
+    const durationStr = log.duration ? `${Math.floor(log.duration/60)}:${(log.duration%60).toString().padStart(2,'0')} min` : '';
+    const timeStr = log.timestamp ? formatChatTime(log.timestamp) : '';
+    html += `
+      <div class="flex items-center gap-3 p-3 rounded-xl hover:bg-surface-container/40 cursor-pointer transition-all">
+        <div class="w-12 h-12 rounded-xl flex items-center justify-center font-bold text-lg bg-surface-container-highest text-on-surface-variant">${initials}</div>
+        <div class="flex-1 min-w-0">
+          <div class="flex justify-between items-center">
+            <span class="font-bold text-on-surface truncate">${escHtml(name)}</span>
+            <span class="font-timestamp text-timestamp text-on-surface-variant">${timeStr}</span>
+          </div>
+          <div class="flex items-center gap-1 text-xs">
+            <span class="material-symbols-outlined text-[14px] ${statusClass}">${dirIcon}</span>
+            <span class="material-symbols-outlined text-[14px] ${statusClass}">${icon}</span>
+            <span class="text-on-surface-variant">${log.status === 'missed' ? 'Missed' : (log.status === 'ended' ? durationStr : log.status)}</span>
+          </div>
+        </div>
+      </div>`;
+  });
+  list.innerHTML = html;
 }
 
 function renderMoreTab() {
@@ -1697,6 +1828,20 @@ function endCall() {
   clearInterval(App.callTimerInterval);
   hide('call-screen');
   showToast('Call session ended','info');
+  if (App.db && App.auth?.currentUser && App.currentChat) {
+    const duration = App.callStartTime ? Math.floor((Date.now()-App.callStartTime)/1000) : 0;
+    const uid = App.auth.currentUser.uid;
+    const otherUid = App.currentChat.uid;
+    App.db.collection('callLogs').add({
+      callerId: uid,
+      calleeId: otherUid || uid,
+      type: App.cameraOff ? 'voice' : 'video',
+      duration,
+      timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+      status: 'ended',
+      participants: otherUid && otherUid !== uid ? [uid, otherUid] : [uid]
+    }).catch(e => console.warn('callLog add err:', e));
+  }
 }
 
 function toggleMute() {
