@@ -45,6 +45,8 @@ const App = {
   notifSoundEnabled: {},
   chatSelectionMode: false,
   selectedChatIds: [],
+  callSelectionMode: false,
+  selectedCallIds: [],
   
   // Showroom overrides
   showroomOverride: null, // { type: 'myself'|'personal'|'group', viewport: 'desktop'|'laptop'|'tablet'|'mobile' }
@@ -984,6 +986,22 @@ function switchTab(tab) {
   }
 
   // Adapt lists
+  // Toggle multi-select buttons for chat vs calls tab
+  const isCallTab = tab === 'calls';
+  ['btn-multi-select','btn-select-all','btn-delete-selected'].forEach(id => {
+    document.getElementById(id)?.classList.toggle('hidden', isCallTab);
+  });
+  ['btn-call-multi-select','btn-call-select-all','btn-call-delete-selected'].forEach(id => {
+    document.getElementById(id)?.classList.toggle('hidden', !isCallTab);
+  });
+  // Exit selection modes on tab switch
+  if (isCallTab) {
+    App.chatSelectionMode = false;
+    App.selectedChatIds = [];
+  } else {
+    App.callSelectionMode = false;
+    App.selectedCallIds = [];
+  }
   renderChatList();
 }
 
@@ -1275,7 +1293,7 @@ function chatItemHTML(chat) {
     </div>
     <div class="flex-1 overflow-hidden">
       <div class="flex justify-between items-center mb-1">
-        <span class="font-bold text-on-surface truncate ${isActive?'text-primary':''}">${escHtml(name)}</span>
+        <span class="font-bold text-on-surface truncate ${isActive?'text-primary':''}">${escHtml(name)}</span>${chat.imported ? '<span class="text-[9px] text-on-surface-variant ml-1">📥</span>' : ''}
         <span class="font-timestamp text-timestamp text-on-surface-variant">${timeStr}</span>
       </div>
       <div class="flex justify-between items-center">
@@ -1315,7 +1333,7 @@ function toggleChatSelection(chatId) {
 function toggleSelectAllChats() {
   const tab = App.activeTab;
   let items = App.chats.filter(c => {
-    if (tab === 'chats') return true;
+    if (tab === 'chats') return c.type === 'personal' || c.type === 'group';
     if (tab === 'groups') return c.type === 'group';
     return true;
   });
@@ -1389,11 +1407,13 @@ function renderCallsTab(filter = '') {
       </div>`;
     return;
   }
+  const isSelMode = App.callSelectionMode;
   let html = '';
   logs.forEach(log => {
     const isIncoming = log.calleeId === uid;
     const otherId = isIncoming ? log.callerId : log.calleeId;
     const contact = App.contacts.find(c => c.uid === otherId);
+    const isSelected = App.selectedCallIds.includes(log.id);
     
     // If not in App.contacts, it's an unregistered/deleted user
     const name = contact ? contact.name : 'Deleted User';
@@ -1405,8 +1425,10 @@ function renderCallsTab(filter = '') {
     const durationStr = log.duration ? `${Math.floor(log.duration/60)}:${(log.duration%60).toString().padStart(2,'0')} min` : '';
     const timeStr = log.timestamp ? formatChatTime(log.timestamp) : '';
     html += `
-      <div class="flex items-center justify-between gap-3 p-3 rounded-xl hover:bg-surface-container/40 transition-all">
+      <div class="flex items-center justify-between gap-3 p-3 rounded-xl hover:bg-surface-container/40 transition-all ${isSelected ? 'ring-2 ring-primary' : ''}"
+           oncontextmenu="callLogContextMenu(event,'${log.id}')">
         <div class="flex items-center gap-3 min-w-0 flex-1">
+          ${isSelMode ? `<div class="flex-shrink-0 w-5 h-5 rounded-full border-2 ${isSelected ? 'bg-primary border-primary text-white' : 'bg-surface-container border-outline-variant'} flex items-center justify-center cursor-pointer" onclick="event.stopPropagation();toggleCallSelection('${log.id}')"><span class="material-symbols-outlined text-[12px]" style="font-variation-settings: 'FILL' 1;">${isSelected ? 'check' : ''}</span></div>` : ''}
           <div class="w-12 h-12 rounded-xl flex items-center justify-center font-bold text-lg bg-surface-container-highest text-on-surface-variant flex-shrink-0">${initials}</div>
           <div class="flex-1 min-w-0">
             <div class="flex justify-between items-center">
@@ -1420,6 +1442,7 @@ function renderCallsTab(filter = '') {
             </div>
           </div>
         </div>
+        ${isSelMode ? '' : `
         <div class="flex items-center gap-1">
           <button class="p-2 hover:bg-green-500/10 hover:text-green-500 rounded-full flex items-center justify-center transition-colors flex-shrink-0 cursor-pointer text-on-surface-variant/70" onclick="event.stopPropagation(); callFromLog('${otherId}','voice')" title="Voice call">
             <span class="material-symbols-outlined text-lg">call</span>
@@ -1430,7 +1453,7 @@ function renderCallsTab(filter = '') {
           <button class="p-2 hover:bg-red-500/10 hover:text-red-500 rounded-full flex items-center justify-center transition-colors flex-shrink-0 cursor-pointer text-on-surface-variant/70 hover:text-red-500" onclick="event.stopPropagation(); deleteCallLog('${log.id}')" title="Delete Call Log">
             <span class="material-symbols-outlined text-lg">delete</span>
           </button>
-        </div>
+        </div>`}
       </div>`;
   });
   list.innerHTML = html;
@@ -1449,6 +1472,198 @@ async function deleteCallLog(logId) {
   } catch (err) {
     console.error(err);
     showToast('Failed to delete call log', 'error');
+  }
+}
+
+function confirmDeleteCallLog(logId) {
+  showConfirm('Delete this call log?', () => deleteCallLog(logId));
+}
+
+/* ─── Calls Multi-select ─── */
+function toggleCallSelectionMode() {
+  App.callSelectionMode = !App.callSelectionMode;
+  if (!App.callSelectionMode) App.selectedCallIds = [];
+  document.getElementById('btn-call-multi-select')?.classList.toggle('text-primary', App.callSelectionMode);
+  document.getElementById('btn-call-select-all')?.classList.toggle('hidden', !App.callSelectionMode);
+  document.getElementById('btn-call-delete-selected')?.classList.add('hidden');
+  if (App.activeTab === 'calls') renderCallsTab();
+}
+
+function toggleCallSelection(logId) {
+  const idx = App.selectedCallIds.indexOf(logId);
+  if (idx >= 0) App.selectedCallIds.splice(idx, 1);
+  else App.selectedCallIds.push(logId);
+  document.getElementById('btn-call-delete-selected')?.classList.toggle('hidden', App.selectedCallIds.length === 0);
+  if (App.activeTab === 'calls') renderCallsTab();
+}
+
+function toggleSelectAllCalls() {
+  const logs = App.callLogs || [];
+  if (App.selectedCallIds.length === logs.length) {
+    App.selectedCallIds = [];
+  } else {
+    App.selectedCallIds = logs.map(l => l.id);
+  }
+  document.getElementById('btn-call-delete-selected')?.classList.toggle('hidden', App.selectedCallIds.length === 0);
+  if (App.activeTab === 'calls') renderCallsTab();
+}
+
+function deleteSelectedCalls() {
+  const ids = [...App.selectedCallIds];
+  if (!ids.length) return;
+  showConfirm(`Delete ${ids.length} call log(s)?`, async () => {
+    for (const id of ids) {
+      App.callLogs = (App.callLogs || []).filter(l => l.id !== id);
+      if (App.db) {
+        try { await App.db.collection('callLogs').doc(id).delete(); } catch (e) {}
+      }
+    }
+    App.selectedCallIds = [];
+    App.callSelectionMode = false;
+    document.getElementById('btn-call-multi-select')?.classList.remove('text-primary');
+    document.getElementById('btn-call-select-all')?.classList.add('hidden');
+    document.getElementById('btn-call-delete-selected')?.classList.add('hidden');
+    if (App.activeTab === 'calls') renderCallsTab();
+    showToast(`${ids.length} call log(s) deleted`, 'info');
+  });
+}
+
+/* ─── Export / Import Chat ─── */
+function exportChatAsZip(chatId) {
+  const chat = App.chats.find(c => c.id === chatId);
+  if (!chat) { showToast('Chat not found', 'error'); return; }
+  const msgs = App.messages[chatId] || [];
+  const safeName = chat.name.replace(/[^a-zA-Z0-9_\- ]/g, '').trim() || 'chat';
+  
+  const messageRows = msgs.map(m => {
+    const from = m.from === 'me' ? 'You' : 'Other';
+    const time = new Date(m.time).toLocaleString();
+    const text = escHtml(m.text || '');
+    const att = m.type && m.type !== 'text' ? `<br><small>[${m.type}: ${escHtml(m.fileName||m.url||'')}]</small>` : '';
+    const dur = m.duration ? ` · ${m.duration}` : '';
+    return `<tr><td style="padding:6px 12px;border-bottom:1px solid #333;white-space:nowrap;color:#888">${time}</td><td style="padding:6px 12px;border-bottom:1px solid #333;font-weight:700;color:${from==='You'?'#4ade80':'#60a5fa'}">${from}</td><td style="padding:6px 12px;border-bottom:1px solid #333">${text}${att}${dur}</td></tr>`;
+  }).join('');
+
+  const html = `<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"><title>${escHtml(chat.name)}</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,sans-serif;background:#111;color:#eee;padding:20px}
+h1{color:#4ade80;margin-bottom:4px}
+.sub{color:#888;font-size:13px;margin-bottom:20px}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th{text-align:left;padding:8px 12px;border-bottom:2px solid #4ade80;color:#4ade80}
+</style></head>
+<body><h1>${escHtml(chat.name)}</h1>
+<div class="sub">${msgs.length} messages · ${chat.type || 'personal'} · Exported ${new Date().toLocaleString()}</div>
+<table><thead><tr><th>Time</th><th>From</th><th>Message</th></tr></thead><tbody>${messageRows}</tbody></table></body></html>`;
+
+  const data = {
+    chatName: chat.name,
+    chatType: chat.type,
+    exportTime: Date.now(),
+    messages: msgs.map(m => ({
+      from: m.from,
+      text: m.text,
+      type: m.type || 'text',
+      url: m.url || '',
+      fileName: m.fileName || '',
+      fileSize: m.fileSize || '',
+      duration: m.duration || '',
+      time: m.time,
+      reactions: m.reactions || [],
+    }))
+  };
+
+  if (typeof JSZip === 'undefined') {
+    showToast('JSZip library not loaded', 'error');
+    return;
+  }
+  const zip = new JSZip();
+  zip.file(`${safeName}.html`, html);
+  zip.file(`${safeName}.json`, JSON.stringify(data, null, 2));
+  zip.generateAsync({ type: 'blob' }).then(blob => {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `${safeName}.zip`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+    showToast('Chat exported', 'success');
+  });
+}
+
+function importChatFromZip() {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = '.zip';
+  input.onchange = async () => {
+    const file = input.files && input.files[0];
+    if (!file) return;
+    if (typeof JSZip === 'undefined') { showToast('JSZip library not loaded', 'error'); return; }
+    try {
+      const zip = await JSZip.loadAsync(file);
+      const jsonFile = Object.values(zip.files).find(f => f.name.endsWith('.json'));
+      if (!jsonFile) { showToast('Invalid chat export: no JSON found', 'error'); return; }
+      const content = await jsonFile.async('string');
+      const data = JSON.parse(content);
+      if (!data.chatName || !data.messages) { showToast('Invalid chat export format', 'error'); return; }
+      
+      const importId = 'imported_' + Date.now();
+      const importedMsgs = data.messages.map(m => ({ ...m, id: 'imp_' + Date.now() + '_' + Math.random().toString(36).slice(2,6) }));
+      
+      App.messages[importId] = importedMsgs;
+      
+      const existing = App.chats.find(c => c.name === data.chatName);
+      if (existing) {
+        App.messages[existing.id] = importedMsgs;
+        if (App.currentChat?.id === existing.id) renderMessages(existing.id);
+        showToast(`Imported ${importedMsgs.length} messages into ${data.chatName}`, 'success');
+        return;
+      }
+      
+      // Create imported chat entry
+      const chatEntry = {
+        id: importId,
+        name: data.chatName,
+        type: 'personal',
+        lastMsg: importedMsgs[importedMsgs.length-1]?.text || 'Imported chat',
+        lastTime: Date.now(),
+        unread: 0,
+        initials: data.chatName.charAt(0).toUpperCase(),
+        imported: true,
+        importedReadOnly: true,
+      };
+      App.chats.push(chatEntry);
+      App.currentChat = chatEntry;
+      renderMessages(importId);
+      scrollToBottom(true);
+      renderChatList();
+      document.getElementById('chat-header')?.style.removeProperty('display');
+      document.getElementById('chat-area')?.classList.remove('hidden');
+      showToast('Chat imported — send a request to start messaging', 'info');
+    } catch (e) {
+      console.error(e);
+      showToast('Failed to import chat', 'error');
+    }
+  };
+  input.click();
+}
+
+function sendChatRequest(chatId) {
+  const chat = App.chats.find(c => c.id === chatId);
+  if (!chat) return;
+  chat.requestSent = true;
+  if (App.currentChat?.id === chatId) openChat(chatId);
+  showToast('Request sent to start chatting', 'success');
+  // Optionally store in Firebase
+  if (App.db && App.auth?.currentUser) {
+    App.db.collection('chatRequests').add({
+      from: App.auth.currentUser.uid,
+      to: chat.name,
+      chatId: chatId,
+      timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+      status: 'pending'
+    }).catch(() => {});
   }
 }
 
@@ -1654,7 +1869,20 @@ function openChat(chatId) {
   const wrap = document.getElementById('messages-wrap');
   if (wrap) wrap.style.display = '';
   const inputBar = document.getElementById('input-bar');
-  if (inputBar) inputBar.style.display = '';
+  
+  // Handle imported/read-only chats
+  if (chat.imported) {
+    if (inputBar) {
+      if (chat.requestSent) {
+        inputBar.innerHTML = `<div class="p-4 text-center text-xs text-on-surface-variant bg-surface-container-high/50 rounded-xl mx-4 mb-2">⏳ Request sent — waiting for acceptance</div>`;
+      } else {
+        inputBar.innerHTML = `<div class="p-4 text-center"><button class="px-6 py-2 bg-primary text-on-primary rounded-full text-sm font-bold hover:scale-105 transition-all" onclick="sendChatRequest('${chat.id}')">📨 Send Chat Request to Start Messaging</button><p class="text-[10px] text-on-surface-variant mt-2">The imported history is only visible to you</p></div>`;
+      }
+      inputBar.style.display = '';
+    }
+  } else {
+    if (inputBar) inputBar.style.display = '';
+  }
 
   // Retrieve messages
   if (App.db && App.auth?.currentUser) {
@@ -2666,42 +2894,35 @@ function scrollToPinnedMessage() {
 }
 function confirmDeleteChat(chatId) {
   showConfirm('Delete this conversation? All messages will be lost.', async () => {
+    App.chats = App.chats.filter(c => c.id !== chatId);
+    delete App.messages[chatId];
+    renderChatList();
+    if (App.currentChat?.id === chatId) showWelcome();
+    
     if (!App.db) {
-      // Local fallback
-      App.chats = App.chats.filter(c => c.id !== chatId);
-      renderChatList();
       showToast('Conversation deleted (Demo)', 'info');
-      if (App.currentChat?.id === chatId) showWelcome();
       return;
     }
     try {
-      await App.db.collection('directChats').doc(chatId).delete();
-      
-      // Also delete group reference if it is a group
-      if (chatId.startsWith('grp_') || !chatId.includes('_')) {
-        await App.db.collection('groups').doc(chatId).delete().catch(() => {});
-      }
-      
-      // Also delete messages associated with this chat
+      // Delete associated messages
+      const batch = App.db.batch();
       const msgsSnap = await App.db.collection('messages')
         .where('directId', '==', chatId)
         .get();
-      const batch = App.db.batch();
       msgsSnap.forEach(doc => batch.delete(doc.ref));
-      
-      // Also check for group messages
       const grpMsgsSnap = await App.db.collection('messages')
         .where('groupId', '==', chatId)
         .get();
       grpMsgsSnap.forEach(doc => batch.delete(doc.ref));
-      
       await batch.commit();
       
+      // Delete directChat or group doc
+      await App.db.collection('directChats').where('userId', '==', App.auth?.currentUser?.uid).where('contactUid', '==', chatId).get().then(s => s.forEach(d => d.ref.delete()));
+      await App.db.collection('groups').doc(chatId).delete().catch(() => {});
+      
       showToast('Conversation deleted', 'success');
-      if (App.currentChat?.id === chatId) showWelcome();
     } catch (err) {
       console.error(err);
-      showToast('Failed to delete conversation', 'error');
     }
   });
 }

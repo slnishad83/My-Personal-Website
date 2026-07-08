@@ -366,6 +366,7 @@ function chatContextMenu(event, chatId) {
     { icon: '📌', label: chat.pinned ? 'Unpin Chat' : 'Pin Chat', fn: `togglePin('${chatId}')` },
     { icon: '🔔', label: chat.muted ? 'Unmute Chat' : 'Mute Chat', fn: `toggleChatMute('${chatId}')` },
     { icon: '📂', label: 'Archive Chat', fn: `archiveChat('${chatId}')` },
+    { icon: '📦', label: 'Export Chat', fn: `exportChatAsZip('${chatId}')` },
     { icon: '🗑️', label: 'Delete Chat', fn: `confirmDeleteChat('${chatId}')`, danger: true },
   ];
 
@@ -388,6 +389,57 @@ function chatContextMenu(event, chatId) {
   document.body.appendChild(menu);
   
   // Measure rect boundaries to prevent offscreen/cut-off menu display
+  const rect = menu.getBoundingClientRect();
+  const x = Math.min(event.clientX, window.innerWidth - rect.width - 20);
+  const y = Math.min(event.clientY, window.innerHeight - rect.height - 20);
+  menu.style.left = Math.max(10, x) + 'px';
+  menu.style.top  = Math.max(10, y) + 'px';
+
+  _ctxMenu = menu;
+  setTimeout(() => {
+    document.addEventListener('click', _removeCtxMenu, { once: true });
+    document.addEventListener('contextmenu', _removeCtxMenu, { once: true });
+  }, 50);
+}
+
+/* ─── Call Log Context Menu ─── */
+function callLogContextMenu(event, logId) {
+  event.preventDefault();
+  event.stopPropagation();
+  _removeCtxMenu();
+
+  const menu = document.createElement('div');
+  menu.id = '_msg-ctx-menu';
+  menu.style.cssText = `
+    position:fixed; z-index:9999;
+    background:var(--surface-container-high);
+    border:1px solid var(--outline-variant);
+    border-radius:16px; padding:6px;
+    box-shadow:0 8px 32px rgba(0,0,0,0.4);
+    min-width:160px; font-size:13px; font-weight:600;
+  `;
+
+  const actions = [
+    { icon: '🗑️', label: 'Delete Call Log', fn: `confirmDeleteCallLog('${logId}')`, danger: true },
+  ];
+
+  actions.forEach(({ icon, label, fn, danger }) => {
+    const btn = document.createElement('button');
+    btn.style.cssText = `
+      display:flex; align-items:center; gap:10px; width:100%;
+      padding:10px 14px; border-radius:10px; border:none;
+      background:transparent; cursor:pointer; text-align:left;
+      color:${danger ? 'var(--error)' : 'var(--on-surface)'};
+      transition:background 0.15s;
+    `;
+    btn.innerHTML = `<span style="font-size:16px">${icon}</span> ${label}`;
+    btn.onmouseenter = () => btn.style.background = danger ? 'rgba(186,26,26,0.1)' : 'var(--surface-container-highest)';
+    btn.onmouseleave = () => btn.style.background = 'transparent';
+    btn.onclick = () => { _removeCtxMenu(); eval(fn); };
+    menu.appendChild(btn);
+  });
+
+  document.body.appendChild(menu);
   const rect = menu.getBoundingClientRect();
   const x = Math.min(event.clientX, window.innerWidth - rect.width - 20);
   const y = Math.min(event.clientY, window.innerHeight - rect.height - 20);
@@ -424,6 +476,7 @@ function openChatMenu(btn) {
     { icon: '🔍', label: 'Search in chat',     fn: `openChatSearch()` },
     { icon: '📌', label: chat.pinned ? 'Unpin' : 'Pin',   fn: `togglePin('${chat.id}')` },
     { icon: '🔔', label: chat.muted ? 'Unmute' : 'Mute',  fn: `toggleChatMute('${chat.id}')` },
+    { icon: '📦', label: 'Export Chat',          fn: `exportChatAsZip('${chat.id}')` },
     { icon: '🖼️', label: 'Media & Attachments', fn: `openMediaGallery()` },
     { icon: '🗑️', label: 'Clear History',        fn: `confirmClearChat('${chat.id}')`, danger: true },
   ];

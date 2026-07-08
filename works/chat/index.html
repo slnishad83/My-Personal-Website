@@ -208,9 +208,15 @@
         <div class="flex items-center justify-between mb-4">
           <h2 class="font-headline-md text-headline-md font-bold tracking-tight" id="chats-sidebar-title">Messages</h2>
           <div class="flex items-center gap-1">
+            <!-- Chat Multi-select buttons -->
             <span class="material-symbols-outlined text-on-surface-variant cursor-pointer hover:bg-surface-variant/30 p-2 rounded-full transition-all hidden" id="btn-select-all" onclick="toggleSelectAllChats()" title="Select all">select_all</span>
-            <span class="material-symbols-outlined text-on-surface-variant cursor-pointer hover:bg-surface-variant/30 p-2 rounded-full transition-all" onclick="toggleChatSelectionMode()" id="btn-multi-select" title="Multi-select">library_add_check</span>
+            <span class="material-symbols-outlined text-on-surface-variant cursor-pointer hover:bg-surface-variant/30 p-2 rounded-full transition-all" id="btn-multi-select" onclick="toggleChatSelectionMode()" title="Multi-select">library_add_check</span>
             <span class="material-symbols-outlined text-on-surface-variant cursor-pointer hover:bg-surface-variant/30 p-2 rounded-full transition-all hidden" id="btn-delete-selected" onclick="deleteSelectedChats()" title="Delete selected">delete</span>
+            <!-- Call Multi-select buttons -->
+            <span class="material-symbols-outlined text-on-surface-variant cursor-pointer hover:bg-surface-variant/30 p-2 rounded-full transition-all hidden" id="btn-call-select-all" onclick="toggleSelectAllCalls()" title="Select all calls">select_all</span>
+            <span class="material-symbols-outlined text-on-surface-variant cursor-pointer hover:bg-surface-variant/30 p-2 rounded-full transition-all hidden" id="btn-call-multi-select" onclick="toggleCallSelectionMode()" title="Multi-select calls">library_add_check</span>
+            <span class="material-symbols-outlined text-on-surface-variant cursor-pointer hover:bg-surface-variant/30 p-2 rounded-full transition-all hidden" id="btn-call-delete-selected" onclick="deleteSelectedCalls()" title="Delete selected calls">delete</span>
+            <span class="material-symbols-outlined text-on-surface-variant cursor-pointer hover:bg-surface-variant/30 p-2 rounded-full transition-all" onclick="importChatFromZip()" title="Import Chat">unarchive</span>
             <span class="material-symbols-outlined text-on-surface-variant cursor-pointer hover:bg-surface-variant/30 p-2 rounded-full transition-all" onclick="openNewChat()">edit_square</span>
           </div>
         </div>
@@ -833,6 +839,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-storage-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-messaging-compat.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
   <script src="../app-extras.js"></script>
   <script src="config.js"></script>
   <!-- Main App JS Core (shared logic) -->
