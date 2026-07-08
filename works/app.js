@@ -402,8 +402,11 @@ function subscribeToCallLogs(uid) {
   // Listen to callLogs collection (from beginCall/endCall flow)
   App.callLogsUnsubscribe = App.db.collection('callLogs')
     .where('participants', 'array-contains', uid)
-    .onSnapshot(snapshot => {
+    .onSnapshot({ includeMetadataChanges: true }, snapshot => {
+      if (snapshot.metadata.fromCache) return; // skip cache — wait for server
       console.log('[CallLogs] callLogs snapshot received, docs count:', snapshot.size);
+      // Clear stale entries before rebuilding
+      Object.keys(allLogs).forEach(k => delete allLogs[k]);
       snapshot.forEach(doc => {
         const data = doc.data();
         allLogs[doc.id] = {
@@ -757,6 +760,7 @@ function checkSession() {
           updatePresence('online');
           setupPushNotifications();
           loadChatFolders();
+          mergeOrphanedChats(App.currentUser.uid, App.currentUser.email);
           setLoadingStatus('Ready');
           setTimeout(bootApp, 400);
         });
@@ -994,6 +998,9 @@ function switchTab(tab) {
   ['btn-call-multi-select','btn-call-select-all','btn-call-delete-selected'].forEach(id => {
     document.getElementById(id)?.classList.toggle('hidden', !isCallTab);
   });
+  // Show call button in calls tab, edit_square in others
+  document.getElementById('btn-new-call')?.classList.toggle('hidden', !isCallTab);
+  document.querySelector('[onclick="openNewChat()"]')?.classList.toggle('hidden', isCallTab);
   // Exit selection modes on tab switch
   if (isCallTab) {
     App.chatSelectionMode = false;
@@ -1460,9 +1467,9 @@ function renderCallsTab(filter = '') {
 }
 
 async function deleteCallLog(logId) {
+  App.callLogs = (App.callLogs || []).filter(l => l.id !== logId);
+  if (App.activeTab === 'calls') renderCallsTab();
   if (!App.db) {
-    App.callLogs = (App.callLogs || []).filter(l => l.id !== logId);
-    if (App.activeTab === 'calls') renderCallsTab();
     showToast('Call log deleted (Demo)', 'info');
     return;
   }
@@ -1512,18 +1519,18 @@ function deleteSelectedCalls() {
   const ids = [...App.selectedCallIds];
   if (!ids.length) return;
   showConfirm(`Delete ${ids.length} call log(s)?`, async () => {
-    for (const id of ids) {
-      App.callLogs = (App.callLogs || []).filter(l => l.id !== id);
-      if (App.db) {
-        try { await App.db.collection('callLogs').doc(id).delete(); } catch (e) {}
-      }
-    }
+    App.callLogs = (App.callLogs || []).filter(l => !ids.includes(l.id));
     App.selectedCallIds = [];
     App.callSelectionMode = false;
     document.getElementById('btn-call-multi-select')?.classList.remove('text-primary');
     document.getElementById('btn-call-select-all')?.classList.add('hidden');
     document.getElementById('btn-call-delete-selected')?.classList.add('hidden');
     if (App.activeTab === 'calls') renderCallsTab();
+    if (App.db) {
+      for (const id of ids) {
+        try { await App.db.collection('callLogs').doc(id).delete(); } catch (e) {}
+      }
+    }
     showToast(`${ids.length} call log(s) deleted`, 'info');
   });
 }
@@ -1667,8 +1674,85 @@ function sendChatRequest(chatId) {
   }
 }
 
+/* ─── Orphaned Chat Merge on Re-registration ─── */
+function mergeOrphanedChats(newUid, email) {
+  if (!App.db || !email) return;
+  // Find chats where uid doesn't match any contact (orphaned)
+  App.chats.forEach(chat => {
+    if (chat.type !== 'personal' || chat.id === 'saved_me' || chat.uid === newUid) return;
+    const contact = App.contacts.find(c => c.uid === chat.uid);
+    if (contact) return; // not orphaned
+    // Check if this chat's email matches current user's email
+    if (chat.email && chat.email.toLowerCase() === email.toLowerCase()) {
+      console.log('[Merge] Found orphaned chat:', chat.name, 'oldUid:', chat.uid, '-> newUid:', newUid);
+      // Update messages in Firebase with old senderId → newUid
+      App.db.collection('messages')
+        .where('senderId', '==', chat.uid)
+        .get().then(snap => {
+          const batch = App.db.batch();
+          snap.forEach(doc => batch.update(doc.ref, { senderId: newUid }));
+          return batch.commit();
+        }).then(() => {
+          // Update the local chat uid
+          chat.uid = newUid;
+          renderChatList();
+          console.log('[Merge] Completed merge for', chat.name);
+        }).catch(e => console.warn('[Merge] Error:', e));
+    }
+  });
+  
+  // Also check messages by participantEmails
+  App.db.collection('messages')
+    .where('participantEmails', 'array-contains', email)
+    .limit(1)
+    .get().then(snap => {
+      snap.forEach(doc => {
+        const data = doc.data();
+        if (data.senderId && data.senderId !== newUid) {
+          // This message has our email but old UID — update senderId
+          App.db.collection('messages').doc(doc.id).update({ senderId: newUid }).catch(() => {});
+        }
+        // Fix directId references with old UID
+        const emailParts = email.split('@')[0].replace(/[^a-zA-Z0-9]/g,'').toLowerCase();
+        App.chats.forEach(chat => {
+          if (chat.uid && chat.uid !== newUid && chat.email === email) {
+            chat.uid = newUid;
+            renderChatList();
+          }
+        });
+      });
+    }).catch(() => {});
+}
+
+function openCallPicker() {
+  const list = document.getElementById('call-picker-list');
+  if (!list) return;
+  const uid = App.auth?.currentUser?.uid;
+  let items = App.chats.filter(c => (c.type === 'personal' || c.type === 'group') && c.id !== 'saved_me');
+  list.innerHTML = items.map(c => {
+    const initials = c.initials || '?';
+    const avatar = c.photoURL
+      ? `<img src="${c.photoURL}" alt="${escHtml(c.name)}" class="w-10 h-10 rounded-full object-cover">`
+      : `<div class="w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm bg-surface-container-highest text-on-surface-variant">${initials}</div>`;
+    return `<div class="flex items-center justify-between p-3 rounded-xl hover:bg-surface-variant/30 transition-all">
+      <div class="flex items-center gap-3 min-w-0 flex-1">
+        ${avatar}
+        <div class="min-w-0">
+          <div class="font-bold text-sm text-on-surface truncate">${escHtml(c.name)}</div>
+          <div class="text-[10px] text-on-surface-variant">${c.type === 'group' ? 'Group' : 'Personal'}</div>
+        </div>
+      </div>
+      <div class="flex items-center gap-2">
+        <button class="w-9 h-9 rounded-full bg-green-500/10 text-green-500 hover:bg-green-500/20 flex items-center justify-center transition-all" onclick="closeModal('call-picker-overlay');callFromLog('${c.uid || c.id}','voice')" title="Voice call"><span class="material-symbols-outlined text-lg">call</span></button>
+        <button class="w-9 h-9 rounded-full bg-blue-500/10 text-blue-500 hover:bg-blue-500/20 flex items-center justify-center transition-all" onclick="closeModal('call-picker-overlay');callFromLog('${c.uid || c.id}','video')" title="Video call"><span class="material-symbols-outlined text-lg">videocam</span></button>
+      </div>
+    </div>`;
+  }).join('');
+  show('call-picker-overlay');
+}
+
 function callFromLog(otherUid, type) {
-  const chat = App.chats.find(c => c.uid === otherUid);
+  const chat = App.chats.find(c => c.uid === otherUid) || App.chats.find(c => c.id === otherUid);
   if (!chat) {
     showToast('Chat not found for this user', 'error');
     return;

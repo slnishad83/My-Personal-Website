@@ -216,6 +216,7 @@
             <span class="material-symbols-outlined text-on-surface-variant cursor-pointer hover:bg-surface-variant/30 p-2 rounded-full transition-all hidden" id="btn-call-select-all" onclick="toggleSelectAllCalls()" title="Select all calls">select_all</span>
             <span class="material-symbols-outlined text-on-surface-variant cursor-pointer hover:bg-surface-variant/30 p-2 rounded-full transition-all hidden" id="btn-call-multi-select" onclick="toggleCallSelectionMode()" title="Multi-select calls">library_add_check</span>
             <span class="material-symbols-outlined text-on-surface-variant cursor-pointer hover:bg-surface-variant/30 p-2 rounded-full transition-all hidden" id="btn-call-delete-selected" onclick="deleteSelectedCalls()" title="Delete selected calls">delete</span>
+            <span class="material-symbols-outlined text-on-surface-variant cursor-pointer hover:bg-surface-variant/30 p-2 rounded-full transition-all hidden" id="btn-new-call" onclick="openCallPicker()" title="New Call">add_call</span>
             <span class="material-symbols-outlined text-on-surface-variant cursor-pointer hover:bg-surface-variant/30 p-2 rounded-full transition-all" onclick="importChatFromZip()" title="Import Chat">unarchive</span>
             <span class="material-symbols-outlined text-on-surface-variant cursor-pointer hover:bg-surface-variant/30 p-2 rounded-full transition-all" onclick="openNewChat()">edit_square</span>
           </div>
@@ -723,6 +724,22 @@
       <button class="w-12 h-12 bg-white/10 rounded-full flex items-center justify-center hover:bg-white/20 transition-all text-white border border-white/10" onclick="nextMedia()">
         <span class="material-symbols-outlined">chevron_right</span>
       </button>
+    </div>
+  </div>
+
+  <!-- Call Picker Overlay -->
+  <div class="overlay fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center hidden" id="call-picker-overlay" onclick="closeOnBackdrop(event,'call-picker-overlay')">
+    <div class="bg-surface-container border border-outline-variant/30 rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden max-h-[85vh] flex flex-col m-4 animate-in fade-in zoom-in-95 duration-200">
+      <div class="flex items-center justify-between p-6 border-b border-outline-variant/10">
+        <div class="flex items-center gap-3 text-primary">
+          <span class="material-symbols-outlined">add_call</span>
+          <h2 class="font-bold text-on-surface">Select a contact to call</h2>
+        </div>
+        <button class="text-on-surface-variant hover:text-on-surface p-1" onclick="closeModal('call-picker-overlay')">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+      <div class="overflow-y-auto p-2 space-y-1 custom-scrollbar" id="call-picker-list"></div>
     </div>
   </div>
 
