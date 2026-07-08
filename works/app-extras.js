@@ -225,9 +225,41 @@ function showMsgContextMenu(event, msgId) {
     border:1px solid var(--outline-variant);
     border-radius:16px; padding:6px;
     box-shadow:0 8px 32px rgba(0,0,0,0.4);
-    min-width:160px; font-size:13px; font-weight:600;
+    min-width:180px; font-size:13px; font-weight:600;
     animation: ctxFadeIn 0.12s ease;
   `;
+
+  // Horizontal Quick Reactions bar at the top of context menu
+  const emojiRow = document.createElement('div');
+  emojiRow.style.cssText = `
+    display:flex; justify-content:space-between; align-items:center;
+    padding:6px 10px; border-bottom:1px solid var(--outline-variant);
+    margin-bottom:6px; gap:4px;
+  `;
+  const quickReactions = ['👍', '❤️', '😂', '😮', '😢', '🙏'];
+  quickReactions.forEach(emoji => {
+    const rBtn = document.createElement('button');
+    rBtn.style.cssText = `
+      background:none; border:none; font-size:20px; cursor:pointer;
+      padding:4px; border-radius:8px; display:flex; align-items:center;
+      justify-content:center; transition:transform 0.15s, background 0.1s;
+    `;
+    rBtn.onmouseenter = () => {
+      rBtn.style.transform = 'scale(1.25)';
+      rBtn.style.background = 'var(--surface-container-highest)';
+    };
+    rBtn.onmouseleave = () => {
+      rBtn.style.transform = 'scale(1)';
+      rBtn.style.background = 'transparent';
+    };
+    rBtn.onclick = () => {
+      _removeCtxMenu();
+      toggleReaction(msgId, emoji);
+    };
+    rBtn.textContent = emoji;
+    emojiRow.appendChild(rBtn);
+  });
+  menu.appendChild(emojiRow);
 
   const isPinned = (App.currentChatPinnedMessages || []).some(p => p.messageId === msgId);
   const actions = [
@@ -258,13 +290,15 @@ function showMsgContextMenu(event, msgId) {
     menu.appendChild(btn);
   });
 
-  // Position intelligently
-  const x = Math.min(event.clientX, window.innerWidth  - 180);
-  const y = Math.min(event.clientY, window.innerHeight - 320);
-  menu.style.left = x + 'px';
-  menu.style.top  = y + 'px';
-
   document.body.appendChild(menu);
+
+  // Intelligently fit menu inside viewport to prevent offscreen cut-offs
+  const rect = menu.getBoundingClientRect();
+  const x = Math.min(event.clientX, window.innerWidth - rect.width - 20);
+  const y = Math.min(event.clientY, window.innerHeight - rect.height - 20);
+  menu.style.left = Math.max(10, x) + 'px';
+  menu.style.top  = Math.max(10, y) + 'px';
+
   _ctxMenu = menu;
 
   // Close on outside click
@@ -304,7 +338,7 @@ function chatContextMenu(event, chatId) {
     { icon: '📌', label: chat.pinned ? 'Unpin Chat' : 'Pin Chat', fn: `togglePin('${chatId}')` },
     { icon: '🔔', label: chat.muted ? 'Unmute Chat' : 'Mute Chat', fn: `toggleChatMute('${chatId}')` },
     { icon: '📂', label: 'Archive Chat', fn: `archiveChat('${chatId}')` },
-    { icon: '🗑️', label: 'Clear History', fn: `confirmClearChat('${chatId}')`, danger: true },
+    { icon: '🗑️', label: 'Delete Chat', fn: `confirmDeleteChat('${chatId}')`, danger: true },
   ];
 
   actions.forEach(({ icon, label, fn, danger }) => {
@@ -323,12 +357,15 @@ function chatContextMenu(event, chatId) {
     menu.appendChild(btn);
   });
 
-  const x = Math.min(event.clientX, window.innerWidth  - 180);
-  const y = Math.min(event.clientY, window.innerHeight - 200);
-  menu.style.left = x + 'px';
-  menu.style.top  = y + 'px';
-
   document.body.appendChild(menu);
+  
+  // Measure rect boundaries to prevent offscreen/cut-off menu display
+  const rect = menu.getBoundingClientRect();
+  const x = Math.min(event.clientX, window.innerWidth - rect.width - 20);
+  const y = Math.min(event.clientY, window.innerHeight - rect.height - 20);
+  menu.style.left = Math.max(10, x) + 'px';
+  menu.style.top  = Math.max(10, y) + 'px';
+
   _ctxMenu = menu;
   setTimeout(() => {
     document.addEventListener('click', _removeCtxMenu, { once: true });

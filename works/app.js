@@ -888,6 +888,15 @@ function switchTab(tab) {
     el.classList.toggle('text-on-surface/60', !active);
   });
 
+  // Clear active chat viewport if not matching active tab
+  if (App.currentChat) {
+    if (tab === 'groups' && App.currentChat.type !== 'group') {
+      showWelcome();
+    } else if (tab !== 'chats' && tab !== 'groups') {
+      showWelcome();
+    }
+  }
+
   // Adapt lists
   renderChatList();
 }
@@ -1128,7 +1137,7 @@ function chatItemHTML(chat) {
   let photoURL = chat.photoURL;
   let status = chat.status;
 
-  if (chat.type === 'personal' && chat.id !== `saved_me`) {
+  if (chat.type === 'personal' && chat.id !== `saved_me` && !chat.id.startsWith('saved_')) {
     const contact = App.contacts.find(c => c.uid === chat.uid);
     if (contact) {
       name = contact.name;
@@ -1137,11 +1146,12 @@ function chatItemHTML(chat) {
       photoURL = contact.photoURL;
       status = contact.status;
     } else {
-      name = chat.name || 'User';
-      initials = chat.initials || '?';
-      avatar = chat.avatar || 'bg-surface-container-highest text-on-surface-variant';
-      photoURL = chat.photoURL || null;
-      status = chat.status || 'offline';
+      // Unregistered or deleted user
+      name = 'Deleted User';
+      initials = '?';
+      avatar = 'bg-surface-container-highest text-on-surface-variant';
+      photoURL = null;
+      status = 'offline';
     }
   }
 
@@ -1221,31 +1231,55 @@ function renderCallsTab(filter = '') {
   logs.forEach(log => {
     const isIncoming = log.calleeId === uid;
     const otherId = isIncoming ? log.callerId : log.calleeId;
-    const contact = App.contacts.find(c => c.uid === otherId) || App.chats.find(c => c.uid === otherId) || {};
-    const name = contact.name || 'Unknown';
-    const initials = contact.initials || '?';
+    const contact = App.contacts.find(c => c.uid === otherId);
+    
+    // If not in App.contacts, it's an unregistered/deleted user
+    const name = contact ? contact.name : 'Deleted User';
+    const initials = contact ? contact.initials : '?';
+    
     const icon = log.type === 'video' ? 'videocam' : 'call';
     const dirIcon = isIncoming ? 'call_received' : 'call_made';
     const statusClass = log.status === 'missed' ? 'text-red-500' : (log.status === 'ended' ? 'text-on-surface-variant' : 'text-green-500');
     const durationStr = log.duration ? `${Math.floor(log.duration/60)}:${(log.duration%60).toString().padStart(2,'0')} min` : '';
     const timeStr = log.timestamp ? formatChatTime(log.timestamp) : '';
     html += `
-      <div class="flex items-center gap-3 p-3 rounded-xl hover:bg-surface-container/40 cursor-pointer transition-all">
-        <div class="w-12 h-12 rounded-xl flex items-center justify-center font-bold text-lg bg-surface-container-highest text-on-surface-variant">${initials}</div>
-        <div class="flex-1 min-w-0">
-          <div class="flex justify-between items-center">
-            <span class="font-bold text-on-surface truncate">${escHtml(name)}</span>
-            <span class="font-timestamp text-timestamp text-on-surface-variant">${timeStr}</span>
-          </div>
-          <div class="flex items-center gap-1 text-xs">
-            <span class="material-symbols-outlined text-[14px] ${statusClass}">${dirIcon}</span>
-            <span class="material-symbols-outlined text-[14px] ${statusClass}">${icon}</span>
-            <span class="text-on-surface-variant">${log.status === 'missed' ? 'Missed' : (log.status === 'ended' ? durationStr : log.status)}</span>
+      <div class="flex items-center justify-between gap-3 p-3 rounded-xl hover:bg-surface-container/40 cursor-pointer transition-all">
+        <div class="flex items-center gap-3 min-w-0 flex-1">
+          <div class="w-12 h-12 rounded-xl flex items-center justify-center font-bold text-lg bg-surface-container-highest text-on-surface-variant flex-shrink-0">${initials}</div>
+          <div class="flex-1 min-w-0">
+            <div class="flex justify-between items-center">
+              <span class="font-bold text-on-surface truncate">${escHtml(name)}</span>
+              <span class="font-timestamp text-timestamp text-on-surface-variant">${timeStr}</span>
+            </div>
+            <div class="flex items-center gap-1 text-xs">
+              <span class="material-symbols-outlined text-[14px] ${statusClass}">${dirIcon}</span>
+              <span class="material-symbols-outlined text-[14px] ${statusClass}">${icon}</span>
+              <span class="text-on-surface-variant">${log.status === 'missed' ? 'Missed' : (log.status === 'ended' ? durationStr : log.status)}</span>
+            </div>
           </div>
         </div>
+        <button class="p-2 hover:bg-red-500/10 hover:text-red-500 rounded-full flex items-center justify-center transition-colors flex-shrink-0 cursor-pointer text-on-surface-variant/70 hover:text-red-500" onclick="event.stopPropagation(); deleteCallLog('${log.id}')" title="Delete Call Log">
+          <span class="material-symbols-outlined text-lg">delete</span>
+        </button>
       </div>`;
   });
   list.innerHTML = html;
+}
+
+async function deleteCallLog(logId) {
+  if (!App.db) {
+    App.callLogs = (App.callLogs || []).filter(l => l.id !== logId);
+    if (App.activeTab === 'calls') renderCallsTab();
+    showToast('Call log deleted (Demo)', 'info');
+    return;
+  }
+  try {
+    await App.db.collection('callLogs').doc(logId).delete();
+    showToast('Call log deleted', 'success');
+  } catch (err) {
+    console.error(err);
+    showToast('Failed to delete call log', 'error');
+  }
 }
 
 function renderMoreTab() {
@@ -2409,6 +2443,48 @@ function scrollToPinnedMessage() {
     showToast('Scroll up to find the message', 'info');
   }
 }
+function confirmDeleteChat(chatId) {
+  showConfirm('Delete this conversation? All messages will be lost.', async () => {
+    if (!App.db) {
+      // Local fallback
+      App.chats = App.chats.filter(c => c.id !== chatId);
+      renderChatList();
+      showToast('Conversation deleted (Demo)', 'info');
+      if (App.currentChat?.id === chatId) showWelcome();
+      return;
+    }
+    try {
+      await App.db.collection('directChats').doc(chatId).delete();
+      
+      // Also delete group reference if it is a group
+      if (chatId.startsWith('grp_') || !chatId.includes('_')) {
+        await App.db.collection('groups').doc(chatId).delete().catch(() => {});
+      }
+      
+      // Also delete messages associated with this chat
+      const msgsSnap = await App.db.collection('messages')
+        .where('directId', '==', chatId)
+        .get();
+      const batch = App.db.batch();
+      msgsSnap.forEach(doc => batch.delete(doc.ref));
+      
+      // Also check for group messages
+      const grpMsgsSnap = await App.db.collection('messages')
+        .where('groupId', '==', chatId)
+        .get();
+      grpMsgsSnap.forEach(doc => batch.delete(doc.ref));
+      
+      await batch.commit();
+      
+      showToast('Conversation deleted', 'success');
+      if (App.currentChat?.id === chatId) showWelcome();
+    } catch (err) {
+      console.error(err);
+      showToast('Failed to delete conversation', 'error');
+    }
+  });
+}
+
 function confirmClearChat(chatId) {
   showConfirm('Clear conversation message history? This cannot be undone.', () => {
     if (chatId) App.messages[chatId] = [];
