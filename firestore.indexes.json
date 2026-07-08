@@ -51,6 +51,14 @@
       ]
     },
     {
+      "collectionGroup": "messages",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "participants", "arrayConfig": "CONTAINS" },
+        { "fieldPath": "timestamp", "order": "ASCENDING" }
+      ]
+    },
+    {
       "collectionGroup": "pinnedMessages",
       "queryScope": "COLLECTION",
       "fields": [

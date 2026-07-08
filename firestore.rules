@@ -50,7 +50,12 @@ service cloud.firestore {
 
     function isRequestParticipant(data) {
       return signedIn()
-        && (data.fromUserId == request.auth.uid || data.toUserId == request.auth.uid);
+        && (
+          data.fromUserId == request.auth.uid
+          || data.toUserId == request.auth.uid
+          || data.fromEmail == request.auth.token.email
+          || data.toEmail == request.auth.token.email
+        );
     }
 
     function isPersonalOwner(data) {
@@ -135,7 +140,10 @@ service cloud.firestore {
     }
 
     match /messages/{messageId} {
-      allow read: if signedIn();
+      allow read: if signedIn() && (
+        isDirectMessageParticipant(resource.data)
+        || (resource.data.groupId is string && isGroupMember(resource.data.groupId))
+      );
       allow create: if signedIn() && request.resource.data.senderId == request.auth.uid && (
         (request.resource.data.directId is string && isExistingDirectParticipant(request.resource.data.directId))
         || (request.resource.data.groupId is string && isGroupMember(request.resource.data.groupId))

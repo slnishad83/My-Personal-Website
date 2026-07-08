@@ -418,10 +418,10 @@ function mergeAndRenderChats() {
 }
 
 async function loadMessageHistory(email, uid) {
-  if (!App.db || !email) return;
+  if (!App.db || !uid) return;
   try {
     const snap = await App.db.collection('messages')
-      .where('participantEmails', 'array-contains', email)
+      .where('participants', 'array-contains', uid)
       .orderBy('timestamp', 'asc')
       .limit(200)
       .get();
