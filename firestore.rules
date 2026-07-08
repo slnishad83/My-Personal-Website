@@ -143,6 +143,7 @@ service cloud.firestore {
       allow read: if signedIn() && (
         isDirectMessageParticipant(resource.data)
         || (resource.data.groupId is string && isGroupMember(resource.data.groupId))
+        || (resource.data.participantEmails is list && request.auth.token.email in resource.data.participantEmails)
       );
       allow create: if signedIn() && request.resource.data.senderId == request.auth.uid && (
         (request.resource.data.directId is string && isExistingDirectParticipant(request.resource.data.directId))
@@ -151,6 +152,7 @@ service cloud.firestore {
       allow update: if signedIn() && validMessageUpdate() && (
         isDirectMessageParticipant(resource.data)
         || (resource.data.groupId is string && isGroupMember(resource.data.groupId))
+        || (resource.data.participantEmails is list && request.auth.token.email in resource.data.participantEmails)
       );
       allow delete: if signedIn() && resource.data.senderId == request.auth.uid;
     }

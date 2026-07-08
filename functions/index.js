@@ -1992,3 +1992,5 @@ exports.generateUrlPreview = onRequest(async (req, res) => {
     res.status(500).json({ error: e.message });
   }
 });
+
+
