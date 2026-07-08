@@ -337,16 +337,22 @@ function subscribeToChats() {
 }
 
 function subscribeToGroups() {
-  if (!App.db || !App.auth?.currentUser) return;
+  if (!App.db || !App.auth?.currentUser) {
+    console.warn('[Groups] No db or no auth user — skipping subscription');
+    return;
+  }
   const uid = App.auth.currentUser.uid;
+  console.log('[Groups] Subscribing to groups for uid:', uid);
   if (App.groupsUnsubscribe) App.groupsUnsubscribe();
   
   App.groupsUnsubscribe = App.db.collection('groups')
     .where('members', 'array-contains', uid)
     .onSnapshot((snapshot) => {
+      console.log('[Groups] Snapshot received, docs count:', snapshot.size);
       const groupsList = [];
       snapshot.forEach(doc => {
         const data = doc.data();
+        console.log('[Groups] Group doc:', doc.id, 'name:', data.name, 'members:', data.members);
         groupsList.push({
           id: doc.id,
           type: 'group',
@@ -363,21 +369,28 @@ function subscribeToGroups() {
         });
       });
       App.groupChats = groupsList;
+      console.log('[Groups] App.groupChats updated, count:', groupsList.length);
       mergeAndRenderChats();
     }, (error) => {
-      console.warn("Groups subscription failed:", error);
+      console.error('[Groups] Subscription FAILED:', error);
     });
 }
 
 function subscribeToCallLogs(uid) {
-  if (!App.db || !uid) return;
+  if (!App.db || !uid) {
+    console.warn('[CallLogs] No db or no uid — skipping subscription');
+    return;
+  }
+  console.log('[CallLogs] Subscribing to callLogs for uid:', uid);
   if (App.callLogsUnsubscribe) App.callLogsUnsubscribe();
   App.callLogsUnsubscribe = App.db.collection('callLogs')
     .where('participants', 'array-contains', uid)
     .onSnapshot(snapshot => {
+      console.log('[CallLogs] Snapshot received, docs count:', snapshot.size);
       const logs = [];
       snapshot.forEach(doc => {
         const data = doc.data();
+        console.log('[CallLogs] Log doc:', doc.id, 'caller:', data.callerId, 'callee:', data.calleeId, 'status:', data.status, 'participants:', data.participants);
         logs.push({
           id: doc.id,
           callerId: data.callerId,
@@ -392,8 +405,9 @@ function subscribeToCallLogs(uid) {
       // In-memory sorting to avoid composite index requirement
       logs.sort((a, b) => getMillis(b.timestamp) - getMillis(a.timestamp));
       App.callLogs = logs;
+      console.log('[CallLogs] App.callLogs updated, count:', logs.length);
       if (App.activeTab === 'calls') renderCallsTab();
-    }, e => console.warn('callLogs err:', e));
+    }, e => console.error('[CallLogs] Subscription FAILED:', e));
 }
 
 function mergeAndRenderChats() {
