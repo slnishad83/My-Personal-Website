@@ -389,13 +389,15 @@ function subscribeToCallLogs(uid) {
   if (App.callLogsUnsubscribe) App.callLogsUnsubscribe();
   if (App.callsUnsubscriber) App.callsUnsubscriber();
   
+  // Track deleted call log IDs to prevent re-appearance from calls collection
+  if (!App._deletedCallLogIds) App._deletedCallLogIds = new Set();
+  
   const allLogs = {};
   
   function mergeLogs() {
-    const list = Object.values(allLogs);
+    const list = Object.values(allLogs).filter(l => !App._deletedCallLogIds.has(l.id));
     list.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
     App.callLogs = list;
-    console.log('[CallLogs] App.callLogs updated, count:', list.length);
     if (App.activeTab === 'calls') renderCallsTab();
   }
   
@@ -403,22 +405,22 @@ function subscribeToCallLogs(uid) {
   App.callLogsUnsubscribe = App.db.collection('callLogs')
     .where('participants', 'array-contains', uid)
     .onSnapshot({ includeMetadataChanges: true }, snapshot => {
-      if (snapshot.metadata.fromCache) return; // skip cache — wait for server
-      console.log('[CallLogs] callLogs snapshot received, docs count:', snapshot.size);
-      // Clear stale entries before rebuilding
+      if (snapshot.metadata.fromCache) return;
       Object.keys(allLogs).forEach(k => delete allLogs[k]);
       snapshot.forEach(doc => {
         const data = doc.data();
-        allLogs[doc.id] = {
-          id: doc.id,
-          callerId: data.callerId,
-          calleeId: data.calleeId,
-          type: data.type || 'voice',
-          duration: data.duration || 0,
-          timestamp: getMillis(data.timestamp),
-          status: data.status || 'missed',
-          participants: data.participants || []
-        };
+        if (!App._deletedCallLogIds.has(doc.id)) {
+          allLogs[doc.id] = {
+            id: doc.id,
+            callerId: data.callerId,
+            calleeId: data.calleeId,
+            type: data.type || 'voice',
+            duration: data.duration || 0,
+            timestamp: getMillis(data.timestamp),
+            status: data.status || 'missed',
+            participants: data.participants || []
+          };
+        }
       });
       mergeLogs();
     }, e => console.error('[CallLogs] callLogs Subscription FAILED:', e));
@@ -427,20 +429,26 @@ function subscribeToCallLogs(uid) {
   App.callsUnsubscriber = App.db.collection('calls')
     .where('fromUserId', '==', uid)
     .onSnapshot(snapshot => {
-      console.log('[CallLogs] calls snapshot received (fromUserId), docs count:', snapshot.size);
       snapshot.forEach(doc => {
         const data = doc.data();
+        if (data.status === 'deleted') {
+          delete allLogs['calls_' + doc.id];
+          return;
+        }
         if (['ended','missed','cancelled','rejected','declined','failed','busy'].includes(data.status)) {
-          allLogs['calls_' + doc.id] = {
-            id: doc.id,
-            callerId: data.fromUserId || data.callerId || '',
-            calleeId: data.toUserId || data.calleeId || '',
-            type: data.type || 'voice',
-            duration: data.duration || 0,
-            timestamp: getMillis(data.timestamp) || Date.now(),
-            status: data.status || 'ended',
-            participants: [data.fromUserId, data.toUserId].filter(Boolean)
-          };
+          const logId = doc.id;
+          if (!App._deletedCallLogIds.has(logId)) {
+            allLogs['calls_' + doc.id] = {
+              id: logId,
+              callerId: data.fromUserId || data.callerId || '',
+              calleeId: data.toUserId || data.calleeId || '',
+              type: data.type || 'voice',
+              duration: data.duration || 0,
+              timestamp: getMillis(data.timestamp) || Date.now(),
+              status: data.status || 'ended',
+              participants: [data.fromUserId, data.toUserId].filter(Boolean)
+            };
+          }
         }
       });
       mergeLogs();
@@ -450,20 +458,26 @@ function subscribeToCallLogs(uid) {
   App.callsUnsubscriber2 = App.db.collection('calls')
     .where('toUserId', '==', uid)
     .onSnapshot(snapshot => {
-      console.log('[CallLogs] calls snapshot received (toUserId), docs count:', snapshot.size);
       snapshot.forEach(doc => {
         const data = doc.data();
+        if (data.status === 'deleted') {
+          delete allLogs['calls_' + doc.id];
+          return;
+        }
         if (['ended','missed','cancelled','rejected','declined','failed','busy'].includes(data.status)) {
-          allLogs['calls_' + doc.id] = {
-            id: doc.id,
-            callerId: data.fromUserId || data.callerId || '',
-            calleeId: data.toUserId || data.calleeId || '',
-            type: data.type || 'voice',
-            duration: data.duration || 0,
-            timestamp: getMillis(data.timestamp) || Date.now(),
-            status: data.status || 'ended',
-            participants: [data.fromUserId, data.toUserId].filter(Boolean)
-          };
+          const logId = doc.id;
+          if (!App._deletedCallLogIds.has(logId)) {
+            allLogs['calls_' + doc.id] = {
+              id: logId,
+              callerId: data.fromUserId || data.callerId || '',
+              calleeId: data.toUserId || data.calleeId || '',
+              type: data.type || 'voice',
+              duration: data.duration || 0,
+              timestamp: getMillis(data.timestamp) || Date.now(),
+              status: data.status || 'ended',
+              participants: [data.fromUserId, data.toUserId].filter(Boolean)
+            };
+          }
         }
       });
       mergeLogs();
@@ -1257,9 +1271,9 @@ function chatItemHTML(chat) {
       photoURL = contact.photoURL;
       status = contact.status;
     } else {
-      // Unregistered or deleted user
-      name = 'Deleted User';
-      initials = '?';
+      // Unregistered or deleted user — show as Unknown
+      name = 'Unknown User';
+      initials = '';
       avatar = 'bg-surface-container-highest text-on-surface-variant';
       photoURL = null;
       status = 'offline';
@@ -1276,12 +1290,13 @@ function chatItemHTML(chat) {
 
   let avatarIconHtml = '';
   if (chat.id === 'saved_me') {
-    // Notepad icon for Myself Chat
     avatarIconHtml = `<div class="w-12 h-12 rounded-xl bg-primary-container/20 flex items-center justify-center text-primary"><span class="material-symbols-outlined text-2xl">person</span></div>`;
   } else if (photoURL) {
     avatarIconHtml = `<img src="${photoURL}" alt="${escHtml(name)}" class="w-12 h-12 rounded-xl object-cover">`;
-  } else {
+  } else if (initials) {
     avatarIconHtml = `<div class="w-12 h-12 rounded-xl flex items-center justify-center font-bold text-lg ${avatar || 'bg-surface-container-highest text-on-surface-variant'}">${initials}</div>`;
+  } else {
+    avatarIconHtml = `<div class="w-12 h-12 rounded-xl flex items-center justify-center bg-surface-container-highest text-on-surface-variant"><span class="material-symbols-outlined text-2xl">person_off</span></div>`;
   }
 
   const isSelected = App.selectedChatIds.includes(chat.id);
@@ -1423,8 +1438,11 @@ function renderCallsTab(filter = '') {
     const isSelected = App.selectedCallIds.includes(log.id);
     
     // If not in App.contacts, it's an unregistered/deleted user
-    const name = contact ? contact.name : 'Deleted User';
-    const initials = contact ? contact.initials : '?';
+    const name = contact ? contact.name : 'Unknown User';
+    const initials = contact ? contact.initials : '';
+    const avatarHtml = initials
+      ? `<div class="w-12 h-12 rounded-xl flex items-center justify-center font-bold text-lg bg-surface-container-highest text-on-surface-variant flex-shrink-0">${initials}</div>`
+      : `<div class="w-12 h-12 rounded-xl flex items-center justify-center bg-surface-container-highest text-on-surface-variant flex-shrink-0"><span class="material-symbols-outlined">person_off</span></div>`;
     
     const icon = log.type === 'video' ? 'videocam' : 'call';
     const dirIcon = isIncoming ? 'call_received' : 'call_made';
@@ -1436,7 +1454,7 @@ function renderCallsTab(filter = '') {
            oncontextmenu="callLogContextMenu(event,'${log.id}')">
         <div class="flex items-center gap-3 min-w-0 flex-1">
           ${isSelMode ? `<div class="flex-shrink-0 w-5 h-5 rounded-full border-2 ${isSelected ? 'bg-primary border-primary text-white' : 'bg-surface-container border-outline-variant'} flex items-center justify-center cursor-pointer" onclick="event.stopPropagation();toggleCallSelection('${log.id}')"><span class="material-symbols-outlined text-[12px]" style="font-variation-settings: 'FILL' 1;">${isSelected ? 'check' : ''}</span></div>` : ''}
-          <div class="w-12 h-12 rounded-xl flex items-center justify-center font-bold text-lg bg-surface-container-highest text-on-surface-variant flex-shrink-0">${initials}</div>
+          ${avatarHtml}
           <div class="flex-1 min-w-0">
             <div class="flex justify-between items-center">
               <span class="font-bold text-on-surface truncate">${escHtml(name)}</span>
@@ -1467,6 +1485,8 @@ function renderCallsTab(filter = '') {
 }
 
 async function deleteCallLog(logId) {
+  if (!App._deletedCallLogIds) App._deletedCallLogIds = new Set();
+  App._deletedCallLogIds.add(logId);
   App.callLogs = (App.callLogs || []).filter(l => l.id !== logId);
   if (App.activeTab === 'calls') renderCallsTab();
   if (!App.db) {
@@ -1475,10 +1495,18 @@ async function deleteCallLog(logId) {
   }
   try {
     await App.db.collection('callLogs').doc(logId).delete();
+    // Also try to mark the corresponding calls collection doc as deleted
+    try {
+      await App.db.collection('calls').doc(logId).update({ status: 'deleted' });
+    } catch (_) { /* calls doc may not exist */ }
     showToast('Call log deleted', 'success');
   } catch (err) {
     console.error(err);
     showToast('Failed to delete call log', 'error');
+    // Revert deletion tracking on failure
+    App._deletedCallLogIds.delete(logId);
+    App.callLogs = (App.callLogs || []).concat([{ id: logId }]);
+    if (App.activeTab === 'calls') renderCallsTab();
   }
 }
 
@@ -1519,6 +1547,8 @@ function deleteSelectedCalls() {
   const ids = [...App.selectedCallIds];
   if (!ids.length) return;
   showConfirm(`Delete ${ids.length} call log(s)?`, async () => {
+    if (!App._deletedCallLogIds) App._deletedCallLogIds = new Set();
+    ids.forEach(id => App._deletedCallLogIds.add(id));
     App.callLogs = (App.callLogs || []).filter(l => !ids.includes(l.id));
     App.selectedCallIds = [];
     App.callSelectionMode = false;
@@ -1528,7 +1558,10 @@ function deleteSelectedCalls() {
     if (App.activeTab === 'calls') renderCallsTab();
     if (App.db) {
       for (const id of ids) {
-        try { await App.db.collection('callLogs').doc(id).delete(); } catch (e) {}
+        try {
+          await App.db.collection('callLogs').doc(id).delete();
+          try { await App.db.collection('calls').doc(id).update({ status: 'deleted' }); } catch (_) {}
+        } catch (e) { console.warn('Failed to delete call log:', id, e); }
       }
     }
     showToast(`${ids.length} call log(s) deleted`, 'info');
@@ -1677,50 +1710,95 @@ function sendChatRequest(chatId) {
 /* ─── Orphaned Chat Merge on Re-registration ─── */
 function mergeOrphanedChats(newUid, email) {
   if (!App.db || !email) return;
-  // Find chats where uid doesn't match any contact (orphaned)
+  const emailLower = email.toLowerCase();
+  
+  // Phase 1: Find orphaned chats by scanning Firestore directChats
+  App.db.collection('directChats')
+    .where('participantEmails.' + emailLower.replace('.', '_'), '==', true)
+    .get()
+    .then(snap => {
+      snap.forEach(doc => {
+        const data = doc.data();
+        if (!data.participants) return;
+        const otherId = data.participants.find(p => p !== newUid);
+        if (!otherId) return;
+        // Check if the other participant is actually us with an old UID
+        const otherEmail = data.participantEmails && (
+          data.participantEmails[otherId] || 
+          Object.entries(data.participantEmails).find(([k, v]) => k !== newUid && v === email)?.[0]
+        );
+        if (otherEmail === email || Object.values(data.participantEmails || {}).includes(email)) {
+          // This chat has our email but with a different UID — migrate it
+          const expectedId = getDirectChatId(newUid, otherId);
+          if (doc.id !== expectedId) {
+            console.log('[Merge] Migrating directChats doc:', doc.id, '->', expectedId);
+            App.db.collection('directChats').doc(expectedId).set(data, { merge: true }).then(() => {
+              return App.db.collection('directChats').doc(doc.id).delete();
+            }).then(() => {
+              // Update messages with old directId
+              return App.db.collection('messages').where('directId', '==', doc.id).get();
+            }).then(msgSnap => {
+              const batch = App.db.batch();
+              msgSnap.forEach(m => {
+                batch.update(m.ref, { directId: expectedId, participants: firebase.firestore.FieldValue.arrayUnion(newUid) });
+              });
+              return batch.commit();
+            }).then(() => {
+              // Update senderId in messages where it matches the old UID
+              return App.db.collection('messages').where('senderId', '==', otherId).get();
+            }).then(senderSnap => {
+              const batch = App.db.batch();
+              senderSnap.forEach(m => batch.update(m.ref, { senderId: newUid }));
+              return batch.commit();
+            }).then(() => {
+              showToast('Previous chat history merged to your new account', 'info');
+              // Reload chats subscription to pick up changes
+              subscribeToChats();
+            }).catch(e => console.warn('[Merge] Migration error:', e));
+          }
+        }
+      });
+    }).catch(() => {});
+  
+  // Phase 2: Update local state for chats already loaded
   App.chats.forEach(chat => {
-    if (chat.type !== 'personal' || chat.id === 'saved_me' || chat.uid === newUid) return;
+    if (chat.type !== 'personal' || chat.id === 'saved_me' || !chat.uid || chat.uid === newUid) return;
     const contact = App.contacts.find(c => c.uid === chat.uid);
-    if (contact) return; // not orphaned
-    // Check if this chat's email matches current user's email
-    if (chat.email && chat.email.toLowerCase() === email.toLowerCase()) {
-      console.log('[Merge] Found orphaned chat:', chat.name, 'oldUid:', chat.uid, '-> newUid:', newUid);
-      // Update messages in Firebase with old senderId → newUid
-      App.db.collection('messages')
-        .where('senderId', '==', chat.uid)
-        .get().then(snap => {
-          const batch = App.db.batch();
-          snap.forEach(doc => batch.update(doc.ref, { senderId: newUid }));
-          return batch.commit();
-        }).then(() => {
-          // Update the local chat uid
-          chat.uid = newUid;
-          renderChatList();
-          console.log('[Merge] Completed merge for', chat.name);
-        }).catch(e => console.warn('[Merge] Error:', e));
+    if (contact) return;
+    if (chat.email && chat.email.toLowerCase() === emailLower) {
+      console.log('[Merge] Updating local chat uid:', chat.name, chat.uid, '->', newUid);
+      chat.uid = newUid;
     }
   });
   
-  // Also check messages by participantEmails
+  // Phase 3: Fix senderId in any messages that have old UID
   App.db.collection('messages')
     .where('participantEmails', 'array-contains', email)
-    .limit(1)
-    .get().then(snap => {
+    .get()
+    .then(snap => {
+      const batch = App.db.batch();
+      let count = 0;
       snap.forEach(doc => {
         const data = doc.data();
         if (data.senderId && data.senderId !== newUid) {
-          // This message has our email but old UID — update senderId
-          App.db.collection('messages').doc(doc.id).update({ senderId: newUid }).catch(() => {});
+          batch.update(doc.ref, { senderId: newUid });
+          count++;
         }
-        // Fix directId references with old UID
-        const emailParts = email.split('@')[0].replace(/[^a-zA-Z0-9]/g,'').toLowerCase();
-        App.chats.forEach(chat => {
-          if (chat.uid && chat.uid !== newUid && chat.email === email) {
-            chat.uid = newUid;
-            renderChatList();
+        if (data.directId) {
+          // Fix directId if it contains old UID pattern
+          const expectedId = 'direct_' + [newUid, data.directId.split('_').slice(1).find(id => id !== newUid)].sort().join('_');
+          if (data.directId !== expectedId && !data.directId.startsWith('direct_' + newUid)) {
+            batch.update(doc.ref, { directId: expectedId });
+            count++;
           }
-        });
+        }
       });
+      if (count > 0) {
+        batch.commit().then(() => {
+          console.log('[Merge] Fixed', count, 'message(s) with old UID');
+          renderChatList();
+        }).catch(e => console.warn('[Merge] Message fix error:', e));
+      }
     }).catch(() => {});
 }
 
@@ -2096,11 +2174,11 @@ function renderMessages(chatId) {
         </div>
       </div>`;
     } else if (msg.type === 'video') {
-      contentHTML = `<div class="bubble-media cursor-pointer relative rounded-xl overflow-hidden" onclick="openMediaViewer('${msg.id}')">
-        <video src="${escHtml(msg.url)}" class="max-w-xs max-h-48 rounded-xl border border-outline-variant/20" preload="metadata" muted></video>
-        <div class="absolute inset-0 flex items-center justify-center">
-          <div class="w-12 h-12 bg-black/60 rounded-full flex items-center justify-center text-white text-xl">▶</div>
-        </div>
+      contentHTML = `<div class="bubble-media relative rounded-xl overflow-hidden max-w-xs">
+        <video src="${escHtml(msg.url)}" class="max-h-48 rounded-xl border border-outline-variant/20 w-full" preload="metadata" controls playsinline style="cursor:pointer"></video>
+        <button onclick="event.stopPropagation();openMediaViewer('${msg.id}')" class="absolute top-2 right-2 w-8 h-8 bg-black/50 rounded-full flex items-center justify-center text-white hover:bg-black/70 transition-colors" title="Full screen">
+          <span class="material-symbols-outlined text-sm">fullscreen</span>
+        </button>
       </div>`;
     } else if (msg.type === 'voice') {
       contentHTML = `<div class="flex items-center gap-3 bg-surface-container-high/40 p-2.5 rounded-xl border border-outline-variant/20">
@@ -2612,6 +2690,10 @@ function openContactInfoPanel(uid) {
 
     <div class="px-6 py-4 border-t border-outline-variant/10 space-y-3">
       <span class="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider block">Privacy & Actions</span>
+      <button class="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-surface-variant/40 transition-colors text-xs font-semibold text-on-surface" onclick="openMediaGallery()">
+        <span class="material-symbols-outlined text-primary text-base">perm_media</span>
+        <span>Media & Files</span>
+      </button>
       <button class="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-surface-variant/40 transition-colors text-xs font-semibold text-on-surface" onclick="toggleMute(App.currentChat?.id)">
         <span class="material-symbols-outlined text-primary text-base">notifications_off</span>
         <span>Mute Notifications</span>
@@ -2669,6 +2751,10 @@ function openGroupInfoPanel() {
 
     <div class="px-6 py-4 border-t border-outline-variant/10 space-y-3">
       <span class="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider block">Channel Management</span>
+      <button class="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-surface-variant/40 transition-colors text-xs font-semibold text-on-surface" onclick="openMediaGallery()">
+        <span class="material-symbols-outlined text-primary text-base">perm_media</span>
+        <span>Media & Files</span>
+      </button>
       <button class="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-surface-variant/40 transition-colors text-xs font-semibold text-on-surface" onclick="copyInviteLink()">
         <span class="material-symbols-outlined text-primary text-base">link</span>
         <span>Copy Invite Link</span>
@@ -3664,4 +3750,76 @@ function signOut() {
   if (App.callsUnsubscriber2)      App.callsUnsubscriber2();
   if (App.auth) App.auth.signOut().then(() => location.reload());
   else location.reload();
+}
+
+function confirmDeleteAccount() {
+  closeModal('profile-overlay');
+  // Show a multi-step confirmation
+  const email = App.currentUser?.email || '';
+  showConfirm(
+    'Delete your account permanently?\n\nThis will:\n• Delete all your messages\n• Remove you from all groups\n• Delete your call history\n• Log you out\n\nThis cannot be undone!',
+    () => {
+      // Second confirmation with email prompt
+      const confirmEmail = prompt('Type your email to confirm:\n' + email);
+      if (confirmEmail && confirmEmail.toLowerCase() === email.toLowerCase()) {
+        deleteAccount();
+      } else {
+        showToast('Email does not match. Account not deleted.', 'error');
+      }
+    }
+  );
+}
+
+async function deleteAccount() {
+  showToast('Deleting account...', 'info');
+  const uid = App.auth?.currentUser?.uid;
+  if (!uid) { showToast('Not logged in', 'error'); return; }
+  
+  try {
+    // 1. Clean up user data
+    if (App.db) {
+      const batch = App.db.batch();
+      // Delete user document
+      batch.delete(App.db.collection('users').doc(uid));
+      // Delete all directChats where user is participant
+      const chatsSnap = await App.db.collection('directChats')
+        .where('participants', 'array-contains', uid).get();
+      chatsSnap.forEach(doc => batch.delete(doc.ref));
+      // Delete call logs
+      const callLogsSnap = await App.db.collection('callLogs')
+        .where('participants', 'array-contains', uid).get();
+      callLogsSnap.forEach(doc => batch.delete(doc.ref));
+      // Delete chat requests
+      const reqSnap = await App.db.collection('chatRequests')
+        .where('fromUserId', '==', uid).get();
+      reqSnap.forEach(doc => batch.delete(doc.ref));
+      const reqToSnap = await App.db.collection('chatRequests')
+        .where('toUserId', '==', uid).get();
+      reqToSnap.forEach(doc => batch.delete(doc.ref));
+      
+      await batch.commit();
+    }
+    
+    // 2. Unsubscribe all listeners
+    signOut();
+    
+    showToast('Account deleted successfully', 'success');
+  } catch (err) {
+    console.error('Delete account error:', err);
+    // Try Firebase Auth delete even if Firestore cleanup fails
+    if (App.auth?.currentUser) {
+      try {
+        await App.auth.currentUser.delete();
+        signOut();
+        showToast('Account deleted', 'success');
+      } catch (authErr) {
+        // If token is too old, need re-auth
+        if (authErr.code === 'auth/requires-recent-login') {
+          showToast('Please log out and log in again before deleting your account', 'error');
+        } else {
+          showToast('Failed to delete account: ' + authErr.message, 'error');
+        }
+      }
+    }
+  }
 }

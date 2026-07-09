@@ -568,6 +568,10 @@
                 <span class="text-sm font-bold">Log out of Account</span>
                 <span class="material-symbols-outlined">logout</span>
               </div>
+              <div class="flex items-center justify-between p-4 cursor-pointer hover:bg-error/5 transition-colors text-red-700 border-t border-error/10" onclick="confirmDeleteAccount()">
+                <span class="text-sm font-bold">Delete Account</span>
+                <span class="material-symbols-outlined">delete_forever</span>
+              </div>
             </div>
           </div>
         </div>
@@ -703,7 +707,10 @@
       <button class="w-10 h-10 bg-white/10 rounded-full flex items-center justify-center hover:bg-white/20 transition-colors" onclick="closeMediaViewer()">
         <span class="material-symbols-outlined">close</span>
       </button>
-      <div class="text-sm font-semibold max-w-md truncate" id="media-viewer-caption"></div>
+      <div class="flex flex-col items-center min-w-0 mx-4">
+        <div class="text-sm font-semibold truncate max-w-md" id="media-viewer-caption"></div>
+        <div class="text-xs text-white/60 truncate max-w-md" id="media-viewer-caption-sub"></div>
+      </div>
       <div class="flex items-center gap-2">
         <button class="w-10 h-10 bg-white/10 rounded-full flex items-center justify-center hover:bg-white/20 transition-colors" onclick="forwardCurrentMedia()" title="Forward">
           <span class="material-symbols-outlined">share</span>

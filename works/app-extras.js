@@ -10,16 +10,29 @@
    1. MEDIA VIEWER — open/close/prev/next/download
    ══════════════════════════════════════════════════════════════ */
 
+function _getSenderInfo(item) {
+  if (!item.from || item.from === 'me') return { name: 'You', isMe: true };
+  const contact = App.contacts.find(c => c.uid === item.from);
+  if (contact) return { name: contact.name, isMe: false };
+  const chat = App.chats.find(c => c.uid === item.from);
+  if (chat) return { name: chat.name, isMe: false };
+  return { name: 'Unknown', isMe: false };
+}
+
+function _formatViewerDate(ms) {
+  if (!ms) return '';
+  const d = new Date(ms);
+  return d.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }) + ' ' +
+    d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+}
+
 function openMediaViewer(msgIdOrUrl, forceType) {
-  // Build a gallery from all media messages in current chat
   const chatId = App.currentChat && App.currentChat.id;
   const msgs = (chatId && App.messages[chatId]) || [];
   const gallery = msgs.filter(m => m.type === 'image' || m.type === 'video' || m.type === 'doc' || m.type === 'voice');
 
-  // Find start index: could be called with msg id or raw URL
   let startIdx = gallery.findIndex(m => m.id === msgIdOrUrl || m.url === msgIdOrUrl);
   if (startIdx < 0) {
-    // Single image passed directly (e.g. from profile/attachment)
     App.mediaViewerItems = [{ type: forceType || 'image', url: msgIdOrUrl, id: '_single' }];
     startIdx = 0;
   } else {
@@ -39,11 +52,17 @@ function _renderMediaViewer() {
 
   const content = document.getElementById('media-viewer-content');
   const caption = document.getElementById('media-viewer-caption');
+  const captionSub = document.getElementById('media-viewer-caption-sub');
   if (!content) return;
 
   if (caption) {
-    const contact = !item.from || item.from === 'me' ? 'You' : (App.contacts.find(c => c.uid === item.from)?.name || App.chats.find(c => c.uid === item.from)?.name || 'Unknown');
-    caption.textContent = `${contact} · ${formatMsgTime(item.time || Date.now())} ${items.length > 1 ? `(${idx + 1} / ${items.length})` : ''}`;
+    const sender = _getSenderInfo(item);
+    const nameStr = sender.name;
+    const position = items.length > 1 ? ` · ${idx + 1} / ${items.length}` : '';
+    caption.textContent = `${nameStr}${position}`;
+  }
+  if (captionSub) {
+    captionSub.textContent = _formatViewerDate(item.time || Date.now());
   }
 
   const isMsg = item.id && item.id !== '_single';
@@ -51,7 +70,7 @@ function _renderMediaViewer() {
   if (deleteBtn) deleteBtn.style.display = isMsg ? 'flex' : 'none';
 
   if (item.type === 'video') {
-    content.innerHTML = `<video src="${escHtml(item.url)}" controls autoplay class="max-w-full max-h-full rounded-xl" style="max-height:85vh;max-width:90vw"></video>`;
+    content.innerHTML = `<video src="${escHtml(item.url)}" controls autoplay class="max-w-full max-h-full rounded-xl" style="max-height:85vh;max-width:90vw" playsinline></video>`;
   } else if (item.type === 'voice' || item.type === 'audio') {
     content.innerHTML = `
       <div class="flex flex-col items-center gap-4 bg-surface-container-high/40 p-6 rounded-2xl border border-outline-variant/20 w-full max-w-md mx-auto">
@@ -70,7 +89,6 @@ function _renderMediaViewer() {
     </div>`;
   }
 
-  // Store current url for download
   App._mediaViewerCurrentUrl = item.url;
   App._mediaViewerCurrentType = item.type;
   App._mediaViewerZoomed = false;
@@ -102,10 +120,8 @@ function closeMediaViewer() {
   document.body.style.overflow = '';
   const content = document.getElementById('media-viewer-content');
   if (content) {
-    // Pause video if playing
     const vid = content.querySelector('video');
     if (vid) { vid.pause(); vid.src = ''; }
-    // Pause audio if playing
     const aud = content.querySelector('audio');
     if (aud) { aud.pause(); aud.src = ''; }
     content.innerHTML = '';
@@ -154,8 +170,29 @@ function deleteCurrentMedia() {
   const item = items[idx];
   if (!item || !item.id || item.id === '_single') return;
   
-  closeMediaViewer();
-  openDeleteMenu(item.id);
+  const chatId = App.currentChat && App.currentChat.id;
+  const msgs = (chatId && App.messages[chatId]) || [];
+  const msg = msgs.find(m => m.id === item.id);
+  if (!msg) return;
+  
+  const isMe = msg.from === 'me';
+  const uid = App.auth && App.auth.currentUser && App.auth.currentUser.uid;
+  const isMyMsg = isMe || (uid && msg.senderId === uid);
+  
+  showConfirm('Delete this media?', async () => {
+    const scope = isMyMsg ? 'everyone' : 'me';
+    await deleteMessage(item.id, scope);
+    
+    // Remove from viewer items and navigate
+    App.mediaViewerItems.splice(idx, 1);
+    if (App.mediaViewerItems.length === 0) {
+      closeMediaViewer();
+      return;
+    }
+    // Navigate to previous item (or stay within bounds)
+    App.mediaViewerIndex = Math.min(idx, App.mediaViewerItems.length - 1);
+    _renderMediaViewer();
+  });
 }
 
 // Keyboard: Escape → close, Arrow → prev/next
@@ -584,35 +621,56 @@ async function deleteMessage(msgId, scope) {
   const msg = msgs[msgIdx];
 
   if (scope === 'me') {
-    // Local only removal
+    // Remove from local state
     msgs.splice(msgIdx, 1);
     renderMessages(chatId);
-    showToast('Message deleted', 'info');
+    renderChatList();
 
-    // If connected to Firebase, mark deleted for this user
     if (App.db && App.auth && App.auth.currentUser) {
       const uid = App.auth.currentUser.uid;
-      const col = 'messages';
-      App.db.collection(col).doc(msgId).update({
-        [`deletedFor.${uid}`]: true
-      }).catch(() => {});
+      try {
+        await App.db.collection('messages').doc(msgId).update({
+          [`deletedFor.${uid}`]: true
+        });
+        showToast('Message deleted', 'info');
+      } catch (err) {
+        console.warn('Delete for me failed:', err);
+        showToast('Could not delete message. Check connection.', 'error');
+        // Re-add message on failure
+        msgs.splice(msgIdx, 0, msg);
+        renderMessages(chatId);
+      }
+    } else {
+      showToast('Message deleted (offline)', 'info');
     }
   } else {
     // Delete for everyone
     msgs.splice(msgIdx, 1);
     renderMessages(chatId);
-    showToast('Message deleted for everyone', 'success');
+    renderChatList();
 
     if (App.db && App.auth && App.auth.currentUser) {
-      const col = 'messages';
-      App.db.collection(col).doc(msgId).update({
-        deletedForEveryone: true,
-        text: '',
-        attachment: null
-      }).catch(() => {
-        // Fallback: delete the document
-        App.db.collection(col).doc(msgId).delete().catch(() => {});
-      });
+      try {
+        await App.db.collection('messages').doc(msgId).update({
+          deletedForEveryone: true,
+          text: '',
+          attachment: null
+        });
+        showToast('Message deleted for everyone', 'success');
+      } catch (err) {
+        console.warn('Delete for everyone failed, trying fallback:', err);
+        try {
+          await App.db.collection('messages').doc(msgId).delete();
+          showToast('Message deleted for everyone', 'success');
+        } catch (err2) {
+          console.error('Delete fallback also failed:', err2);
+          showToast('Could not delete message for everyone', 'error');
+          msgs.splice(msgIdx, 0, msg);
+          renderMessages(chatId);
+        }
+      }
+    } else {
+      showToast('Message deleted for everyone (offline)', 'success');
     }
   }
 }
@@ -621,66 +679,104 @@ async function deleteMessage(msgId, scope) {
    7. FORWARD MESSAGE
    ══════════════════════════════════════════════════════════════ */
 let _forwardMsgId = null;
+let _forwardOverlayCleanup = null;
+
+function _closeForwardModal() {
+  const overlay = document.getElementById('_forward-overlay');
+  if (overlay) {
+    overlay.classList.add('hidden');
+    // Remove event listeners
+    if (_forwardOverlayCleanup) {
+      _forwardOverlayCleanup();
+      _forwardOverlayCleanup = null;
+    }
+  }
+}
 
 function openForwardModal(msgId) {
   _forwardMsgId = msgId;
-  const overlay = document.getElementById('_forward-overlay');
+  let overlay = document.getElementById('_forward-overlay');
   if (!overlay) { _createForwardOverlay(); }
+  overlay = document.getElementById('_forward-overlay');
+  if (!overlay) return;
+  
   const list = document.getElementById('_forward-chat-list');
   if (!list) return;
-
-  list.innerHTML = App.chats.map(c => `
-    <div onclick="forwardToChat('${c.id}')" style="
-      display:flex; align-items:center; gap:12px; padding:12px 16px;
-      border-radius:12px; cursor:pointer; transition:background 0.15s;
-    " onmouseenter="this.style.background='var(--surface-container-highest)'"
-       onmouseleave="this.style.background='transparent'">
-      <div style="
-        width:40px; height:40px; border-radius:50%;
-        background:var(--surface-container-highest);
-        display:flex; align-items:center; justify-content:center;
-        font-weight:700; font-size:14px; color:var(--on-surface-variant);
-      ">${escHtml(c.initials || '?')}</div>
+  
+  // Build chat list with proper event references
+  list.innerHTML = '';
+  App.chats.forEach(c => {
+    const item = document.createElement('div');
+    item.style.cssText = 'display:flex; align-items:center; gap:12px; padding:12px 16px; border-radius:12px; cursor:pointer; transition:background 0.15s;';
+    item.onmouseenter = () => item.style.background = 'var(--surface-container-highest)';
+    item.onmouseleave = () => item.style.background = 'transparent';
+    item.onclick = () => forwardToChat(c.id);
+    item.innerHTML = `
+      <div style="width:40px; height:40px; border-radius:50%; background:var(--surface-container-highest); display:flex; align-items:center; justify-content:center; font-weight:700; font-size:14px; color:var(--on-surface-variant);">${escHtml(c.initials || '?')}</div>
       <div>
         <div style="font-weight:700;font-size:14px;color:var(--on-surface)">${escHtml(c.name)}</div>
         <div style="font-size:11px;color:var(--on-surface-variant)">${c.type === 'group' ? 'Group' : 'Personal'}</div>
       </div>
-    </div>
-  `).join('');
-
-  show('_forward-overlay');
+    `;
+    list.appendChild(item);
+  });
+  
+  overlay.classList.remove('hidden');
 }
 
 function _createForwardOverlay() {
-  const div = document.createElement('div');
-  div.id = '_forward-overlay';
-  div.className = 'hidden';
-  div.style.cssText = `
-    position:fixed; inset:0; z-index:9998;
-    background:rgba(0,0,0,0.6); backdrop-filter:blur(4px);
-    display:flex; align-items:center; justify-content:center;
-  `;
-  div.innerHTML = `
-    <div style="
-      background:var(--surface-container);
-      border:1px solid var(--outline-variant);
-      border-radius:24px; width:100%; max-width:440px; max-height:80vh;
-      display:flex; flex-direction:column; margin:16px; overflow:hidden;
-      box-shadow: 0 24px 64px rgba(0,0,0,0.5);
-    ">
-      <div style="display:flex;align-items:center;justify-content:space-between;padding:20px 24px;border-bottom:1px solid var(--outline-variant);">
-        <h3 style="font-size:18px;font-weight:700;color:var(--on-surface)">↪️ Forward Message</h3>
-        <button onclick="hide('_forward-overlay')" style="background:none;border:none;cursor:pointer;color:var(--on-surface-variant);font-size:20px;">✕</button>
-      </div>
-      <div id="_forward-chat-list" style="overflow-y:auto;padding:8px;flex:1;"></div>
-    </div>
-  `;
-  div.onclick = e => { if (e.target === div) hide('_forward-overlay'); };
-  document.body.appendChild(div);
+  // Remove any existing overlay first
+  const existing = document.getElementById('_forward-overlay');
+  if (existing) existing.remove();
+  if (_forwardOverlayCleanup) { _forwardOverlayCleanup(); _forwardOverlayCleanup = null; }
+  
+  const overlay = document.createElement('div');
+  overlay.id = '_forward-overlay';
+  overlay.className = 'hidden';
+  overlay.style.cssText = 'position:fixed; inset:0; z-index:9998; background:rgba(0,0,0,0.6); backdrop-filter:blur(4px); display:flex; align-items:center; justify-content:center;';
+  
+  const modal = document.createElement('div');
+  modal.style.cssText = 'background:var(--surface-container); border:1px solid var(--outline-variant); border-radius:24px; width:100%; max-width:440px; max-height:80vh; display:flex; flex-direction:column; margin:16px; overflow:hidden; box-shadow:0 24px 64px rgba(0,0,0,0.5);';
+  
+  const header = document.createElement('div');
+  header.style.cssText = 'display:flex; align-items:center; justify-content:space-between; padding:20px 24px; border-bottom:1px solid var(--outline-variant);';
+  header.innerHTML = '<h3 style="font-size:18px;font-weight:700;color:var(--on-surface)">↪️ Forward Message</h3>';
+  
+  const closeBtn = document.createElement('button');
+  closeBtn.textContent = '✕';
+  closeBtn.style.cssText = 'background:none; border:none; cursor:pointer; color:var(--on-surface-variant); font-size:20px; padding:4px 8px; border-radius:8px;';
+  closeBtn.onmouseenter = () => closeBtn.style.background = 'var(--surface-variant)';
+  closeBtn.onmouseleave = () => closeBtn.style.background = 'none';
+  closeBtn.onclick = _closeForwardModal;
+  header.appendChild(closeBtn);
+  
+  const list = document.createElement('div');
+  list.id = '_forward-chat-list';
+  list.style.cssText = 'overflow-y:auto; padding:8px; flex:1;';
+  
+  modal.appendChild(header);
+  modal.appendChild(list);
+  overlay.appendChild(modal);
+  
+  // Backdrop click to close
+  const backdropHandler = e => { if (e.target === overlay) _closeForwardModal(); };
+  overlay.addEventListener('click', backdropHandler);
+  
+  // ESC key to close
+  const escHandler = e => { if (e.key === 'Escape') _closeForwardModal(); };
+  document.addEventListener('keydown', escHandler);
+  
+  // Store cleanup
+  _forwardOverlayCleanup = () => {
+    overlay.removeEventListener('click', backdropHandler);
+    document.removeEventListener('keydown', escHandler);
+  };
+  
+  document.body.appendChild(overlay);
 }
 
 async function forwardToChat(targetChatId) {
-  hide('_forward-overlay');
+  _closeForwardModal();
   if (!_forwardMsgId) return;
 
   const srcChatId = App.currentChat && App.currentChat.id;
@@ -1698,50 +1794,152 @@ function confirmClearAllChats() {
 }
 
 /* ══════════════════════════════════════════════════════════════
-   23. MEDIA GALLERY VIEWER (in-chat media browser)
+   23. MEDIA GALLERY VIEWER (in-chat media browser with tabs)
    ══════════════════════════════════════════════════════════════ */
-function openMediaGallery() {
+let _galleryCleanup = null;
+
+function _closeMediaGallery() {
+  const overlay = document.getElementById('_media-gallery');
+  if (overlay) overlay.classList.add('hidden');
+  if (_galleryCleanup) { _galleryCleanup(); _galleryCleanup = null; }
+}
+
+function _renderGalleryTab(tab) {
   const chatId = App.currentChat && App.currentChat.id;
-  const msgs   = (chatId && App.messages[chatId]) || [];
-  const media  = msgs.filter(m => m.type === 'image' || m.type === 'video');
-
-  let overlay = document.getElementById('_media-gallery');
-  if (!overlay) {
-    overlay = document.createElement('div');
-    overlay.id = '_media-gallery';
-    overlay.className = 'hidden';
-    overlay.style.cssText = `
-      position:fixed;inset:0;z-index:9997;
-      background:rgba(0,0,0,0.8);backdrop-filter:blur(8px);
-      display:flex;flex-direction:column;
-    `;
-    document.body.appendChild(overlay);
+  const msgs = (chatId && App.messages[chatId]) || [];
+  const container = document.getElementById('_gallery-content');
+  if (!container) return;
+  
+  let filtered = [];
+  if (tab === 'photos') filtered = msgs.filter(m => m.type === 'image');
+  else if (tab === 'videos') filtered = msgs.filter(m => m.type === 'video');
+  else if (tab === 'docs') filtered = msgs.filter(m => m.type === 'doc');
+  else if (tab === 'urls') filtered = msgs.filter(m => m.text && (m.text.includes('http://') || m.text.includes('https://') || m.text.includes('www.')));
+  else filtered = msgs.filter(m => m.type === 'image' || m.type === 'video' || m.type === 'doc');
+  
+  // Update tab button styles
+  document.querySelectorAll('._gallery-tab').forEach(btn => {
+    const isActive = btn.dataset.tab === tab;
+    btn.style.background = isActive ? 'rgba(255,255,255,0.15)' : 'transparent';
+    btn.style.color = isActive ? 'white' : 'rgba(255,255,255,0.6)';
+    btn.style.fontWeight = isActive ? '700' : '500';
+  });
+  
+  if (!filtered.length) {
+    container.innerHTML = '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:rgba(255,255,255,0.4);gap:12px;"><span class="material-symbols-outlined" style="font-size:48px;">perm_media</span><p style="font-size:14px;">No ' + tab + ' shared yet</p></div>';
+    return;
   }
-
-  overlay.innerHTML = `
-    <div style="display:flex;align-items:center;justify-content:space-between;padding:20px 24px;color:white;">
-      <h3 style="font-size:18px;font-weight:700">🖼️ Media & Files</h3>
-      <button onclick="hide('_media-gallery')" style="background:rgba(255,255,255,0.1);border:none;
-        border-radius:50%;width:36px;height:36px;color:white;cursor:pointer;font-size:18px;">✕</button>
-    </div>
-    <div style="flex:1;overflow-y:auto;padding:16px;display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px;">
-      ${media.length ? media.map((m, i) => `
-        <div onclick="openMediaViewer('${m.id}')" style="
-          aspect-ratio:1;border-radius:12px;overflow:hidden;cursor:pointer;
-          background:rgba(255,255,255,0.05);position:relative;
-          transition:transform 0.15s;
-        " onmouseenter="this.style.transform='scale(1.05)'" onmouseleave="this.style.transform='scale(1)'">
-          ${m.type === 'video'
-            ? `<video src="${escHtml(m.url)}" preload="metadata" muted style="width:100%;height:100%;object-fit:cover"></video>
-               <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:white;font-size:28px;">▶</div>`
+  
+  if (tab === 'urls') {
+    // List view for URLs
+    container.innerHTML = '<div style="display:flex;flex-direction:column;gap:8px;padding:16px;">' +
+      filtered.map(m => {
+        const urlMatch = m.text.match(/(https?:\/\/[^\s]+)/g);
+        const url = urlMatch ? urlMatch[0] : m.text;
+        return `<div onclick="openMediaViewer('${m.id}','text')" style="display:flex;align-items:center;gap:12px;padding:12px 16px;background:rgba(255,255,255,0.05);border-radius:12px;cursor:pointer;transition:background 0.15s;" onmouseenter="this.style.background='rgba(255,255,255,0.1)'" onmouseleave="this.style.background='rgba(255,255,255,0.05)'">
+          <div style="width:40px;height:40px;border-radius:10px;background:rgba(255,255,255,0.08);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><span class="material-symbols-outlined" style="color:rgba(255,255,255,0.7);">link</span></div>
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:13px;font-weight:600;color:white;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escHtml(new URL(url).hostname || url)}</div>
+            <div style="font-size:11px;color:rgba(255,255,255,0.5);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escHtml(url)}</div>
+          </div>
+        </div>`;
+      }).join('') + '</div>';
+  } else if (tab === 'docs') {
+    // List view for documents
+    container.innerHTML = '<div style="display:flex;flex-direction:column;gap:8px;padding:16px;">' +
+      filtered.map(m => {
+        const ext = (m.fileName || '').split('.').pop().toUpperCase() || 'FILE';
+        return `<div onclick="openMediaViewer('${m.id}')" style="display:flex;align-items:center;gap:12px;padding:12px 16px;background:rgba(255,255,255,0.05);border-radius:12px;cursor:pointer;transition:background 0.15s;" onmouseenter="this.style.background='rgba(255,255,255,0.1)'" onmouseleave="this.style.background='rgba(255,255,255,0.05)'">
+          <div style="width:40px;height:40px;border-radius:10px;background:rgba(66,133,244,0.2);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><span style="font-size:10px;font-weight:800;color:#4285f4;">${escHtml(ext)}</span></div>
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:13px;font-weight:600;color:white;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escHtml(m.fileName || 'Document')}</div>
+            <div style="font-size:11px;color:rgba(255,255,255,0.5);">${m.fileSize || ''}</div>
+          </div>
+        </div>`;
+      }).join('') + '</div>';
+  } else {
+    // Grid view for photos and videos
+    container.innerHTML = '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px;padding:16px;">' +
+      filtered.map(m => {
+        const isVideo = m.type === 'video';
+        return `<div onclick="openMediaViewer('${m.id}')" style="aspect-ratio:1;border-radius:12px;overflow:hidden;cursor:pointer;background:rgba(255,255,255,0.05);position:relative;transition:transform 0.15s;" onmouseenter="this.style.transform='scale(1.05)'" onmouseleave="this.style.transform='scale(1)'">
+          ${isVideo
+            ? `<video src="${escHtml(m.url)}" preload="metadata" muted style="width:100%;height:100%;object-fit:cover"></video><div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:white;font-size:28px;background:rgba(0,0,0,0.15);"><span class="material-symbols-outlined" style="font-size:36px;">play_circle</span></div>`
             : `<img src="${escHtml(m.url)}" loading="lazy" style="width:100%;height:100%;object-fit:cover">`
           }
-        </div>
-      `).join('') : '<div style="color:rgba(255,255,255,0.5);text-align:center;padding:40px;grid-column:1/-1">No media shared yet</div>'}
-    </div>
-  `;
+        </div>`;
+      }).join('') + '</div>';
+  }
+}
 
-  show('_media-gallery');
+function openMediaGallery(initialTab) {
+  initialTab = initialTab || 'photos';
+  let overlay = document.getElementById('_media-gallery');
+  
+  // Remove existing overlay to rebuild
+  if (overlay) {
+    overlay.remove();
+    if (_galleryCleanup) { _galleryCleanup(); _galleryCleanup = null; }
+  }
+  
+  overlay = document.createElement('div');
+  overlay.id = '_media-gallery';
+  overlay.style.cssText = 'position:fixed;inset:0;z-index:9997;background:rgba(0,0,0,0.9);backdrop-filter:blur(12px);display:flex;flex-direction:column;';
+  
+  // Header
+  const header = document.createElement('div');
+  header.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:20px 24px;color:white;flex-shrink:0;';
+  header.innerHTML = '<h3 style="font-size:18px;font-weight:700;">Media & Files</h3>';
+  const closeBtn = document.createElement('button');
+  closeBtn.innerHTML = '<span class="material-symbols-outlined">close</span>';
+  closeBtn.style.cssText = 'background:rgba(255,255,255,0.1);border:none;border-radius:50%;width:36px;height:36px;color:white;cursor:pointer;display:flex;align-items:center;justify-content:center;';
+  closeBtn.onclick = _closeMediaGallery;
+  header.appendChild(closeBtn);
+  overlay.appendChild(header);
+  
+  // Tabs
+  const tabs = document.createElement('div');
+  tabs.style.cssText = 'display:flex;gap:4px;padding:0 24px 12px;flex-shrink:0;overflow-x:auto;';
+  const tabDefs = [
+    { id: 'photos', label: 'Photos', icon: 'photo_library' },
+    { id: 'videos', label: 'Videos', icon: 'video_library' },
+    { id: 'docs',   label: 'Documents', icon: 'description' },
+    { id: 'urls',   label: 'Links', icon: 'link' }
+  ];
+  tabDefs.forEach(t => {
+    const btn = document.createElement('button');
+    btn.className = '_gallery-tab';
+    btn.dataset.tab = t.id;
+    btn.innerHTML = `<span class="material-symbols-outlined" style="font-size:16px;">${t.icon}</span> ${t.label}`;
+    btn.style.cssText = 'display:flex;align-items:center;gap:6px;padding:8px 16px;border-radius:20px;border:none;cursor:pointer;font-size:13px;white-space:nowrap;transition:all 0.15s;';
+    btn.onclick = () => _renderGalleryTab(t.id);
+    tabs.appendChild(btn);
+  });
+  overlay.appendChild(tabs);
+  
+  // Content area
+  const content = document.createElement('div');
+  content.id = '_gallery-content';
+  content.style.cssText = 'flex:1;overflow-y:auto;';
+  overlay.appendChild(content);
+  
+  // Backdrop click
+  const backdropHandler = e => { if (e.target === overlay) _closeMediaGallery(); };
+  overlay.addEventListener('click', backdropHandler);
+  
+  // ESC key
+  const escHandler = e => { if (e.key === 'Escape') _closeMediaGallery(); };
+  document.addEventListener('keydown', escHandler);
+  
+  _galleryCleanup = () => {
+    overlay.removeEventListener('click', backdropHandler);
+    document.removeEventListener('keydown', escHandler);
+  };
+  
+  document.body.appendChild(overlay);
+  _renderGalleryTab(initialTab);
+  overlay.classList.remove('hidden');
+  overlay.style.display = 'flex';
 }
 
 /* ══════════════════════════════════════════════════════════════
