@@ -108,8 +108,10 @@ service cloud.firestore {
     }
 
     function validMessageUpdate() {
-      let affected = request.resource.data.diff(resource.data).affectedKeys();
-      let onlyDeletedFor = affected.size() == 1 && affected.hasAny(['deletedFor']);
+      let diff = request.resource.data.diff(resource.data);
+      // deletedFor can be added (first delete) or changed (subsequent deletes)
+      let onlyDeletedFor = (diff.affectedKeys().size() == 1 && diff.affectedKeys().hasAny(['deletedFor']))
+        || (diff.changedKeys().size() == 1 && diff.changedKeys().hasAny(['deletedFor']));
       let isParticipant = (resource.data.directId is string && isExistingDirectParticipant(resource.data.directId))
         || (resource.data.groupId is string && isGroupMember(resource.data.groupId))
         || (resource.data.participants is list && request.auth.uid in resource.data.participants)

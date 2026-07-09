@@ -632,6 +632,14 @@ async function deleteMessage(msgId, scope) {
         await App.db.collection('messages').doc(msgId).update({
           [`deletedFor.${uid}`]: true
         });
+        // Persist to localStorage as backup defense
+        try {
+          const key = 'nsl_deleted_msgs';
+          const o = JSON.parse(localStorage.getItem(key) || '{}');
+          o[chatId] = o[chatId] || [];
+          if (!o[chatId].includes(msgId)) o[chatId].push(msgId);
+          localStorage.setItem(key, JSON.stringify(o));
+        } catch(_) {}
         showToast('Message deleted', 'info');
       } catch (err) {
         console.warn('Delete for me failed:', err);
@@ -641,6 +649,7 @@ async function deleteMessage(msgId, scope) {
         renderMessages(chatId);
       }
     } else {
+      try { const key='nsl_deleted_msgs'; const o=JSON.parse(localStorage.getItem(key)||'{}'); o[chatId]=o[chatId]||[]; if(!o[chatId].includes(msgId)) o[chatId].push(msgId); localStorage.setItem(key,JSON.stringify(o)); } catch(_) {}
       showToast('Message deleted (offline)', 'info');
     }
   } else {
@@ -656,11 +665,13 @@ async function deleteMessage(msgId, scope) {
           text: '',
           attachment: null
         });
+        try { const key='nsl_deleted_msgs'; const o=JSON.parse(localStorage.getItem(key)||'{}'); o[chatId]=o[chatId]||[]; if(!o[chatId].includes(msgId)) o[chatId].push(msgId); localStorage.setItem(key,JSON.stringify(o)); } catch(_) {}
         showToast('Message deleted for everyone', 'success');
       } catch (err) {
         console.warn('Delete for everyone failed, trying fallback:', err);
         try {
           await App.db.collection('messages').doc(msgId).delete();
+          try { const key='nsl_deleted_msgs'; const o=JSON.parse(localStorage.getItem(key)||'{}'); o[chatId]=o[chatId]||[]; if(!o[chatId].includes(msgId)) o[chatId].push(msgId); localStorage.setItem(key,JSON.stringify(o)); } catch(_) {}
           showToast('Message deleted for everyone', 'success');
         } catch (err2) {
           console.error('Delete fallback also failed:', err2);
@@ -1806,7 +1817,10 @@ let _galleryCleanup = null;
 
 function _closeMediaGallery() {
   const overlay = document.getElementById('_media-gallery');
-  if (overlay) overlay.classList.add('hidden');
+  if (overlay) {
+    overlay.style.display = 'none';
+    overlay.classList.add('hidden');
+  }
   if (_galleryCleanup) { _galleryCleanup(); _galleryCleanup = null; }
 }
 

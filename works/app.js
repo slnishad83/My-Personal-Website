@@ -395,7 +395,8 @@ function subscribeToCallLogs(uid) {
   const allLogs = {};
   
   function mergeLogs() {
-    const list = Object.values(allLogs).filter(l => !App._deletedCallLogIds.has(l.id));
+    const persistedDeleted = loadDeletedCallIds();
+    const list = Object.values(allLogs).filter(l => !App._deletedCallLogIds.has(l.id) && !persistedDeleted.has(l.id));
     list.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
     App.callLogs = list;
     if (App.activeTab === 'calls') renderCallsTab();
@@ -683,6 +684,8 @@ function subscribeToMessages(chatId) {
         // Skip deleted messages
         if (data.deletedForEveryone) return;
         if (uid && data.deletedFor && data.deletedFor[uid]) return;
+        // localStorage persistence backup
+        { const ls = loadDeletedMsgIds(chatId); if (ls.has(doc.id)) return; }
         
         let type = 'text';
         let url = '';
@@ -755,6 +758,21 @@ function subscribeToMessages(chatId) {
     });
 }
 
+/* ─── Persistent deleted state (survives refresh) ─── */
+function loadDeletedCallIds() {
+  try { return new Set(JSON.parse(localStorage.getItem('nsl_deleted_calls') || '[]')); } catch { return new Set(); }
+}
+function addDeletedCallId(logId) {
+  const ids = loadDeletedCallIds(); ids.add(logId);
+  localStorage.setItem('nsl_deleted_calls', JSON.stringify([...ids]));
+}
+function loadDeletedMsgIds(chatId) {
+  try { const o = JSON.parse(localStorage.getItem('nsl_deleted_msgs') || '{}'); return new Set(o[chatId] || []); } catch { return new Set(); }
+}
+function addDeletedMsgId(chatId, msgId) {
+  try { const o = JSON.parse(localStorage.getItem('nsl_deleted_msgs') || '{}'); o[chatId] = o[chatId] || []; if (!o[chatId].includes(msgId)) o[chatId].push(msgId); localStorage.setItem('nsl_deleted_msgs', JSON.stringify(o)); } catch {}
+}
+
 function checkSession() {
   setLoadingStatus('Checking session…');
   if (App.auth) {
@@ -767,6 +785,7 @@ function checkSession() {
           subscribeToChats();
           subscribeToGroups();
           subscribeToCallLogs(App.currentUser.uid);
+          App._deletedCallLogIds = loadDeletedCallIds();
           if (App.currentUser.email) {
             loadMessageHistory(App.currentUser.email, App.currentUser.uid);
             subscribeToChatRequests(App.currentUser.email, App.currentUser.uid);
@@ -1499,6 +1518,7 @@ async function deleteCallLog(logId) {
     try {
       await App.db.collection('calls').doc(logId).update({ status: 'deleted' });
     } catch (_) { /* calls doc may not exist */ }
+    addDeletedCallId(logId);
     showToast('Call log deleted', 'success');
   } catch (err) {
     console.error(err);
@@ -2696,7 +2716,7 @@ function openContactInfoPanel(uid) {
 
     <div class="px-6 py-4 border-t border-outline-variant/10 space-y-3">
       <span class="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider block">Privacy & Actions</span>
-      <button class="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-surface-variant/40 transition-colors text-xs font-semibold text-on-surface" onclick="openMediaGallery()">
+      <button class="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-surface-variant/40 transition-colors text-xs font-semibold text-on-surface" onclick="renderInlineGallery()">
         <span class="material-symbols-outlined text-primary text-base">perm_media</span>
         <span>Media & Files</span>
       </button>
@@ -2757,7 +2777,7 @@ function openGroupInfoPanel() {
 
     <div class="px-6 py-4 border-t border-outline-variant/10 space-y-3">
       <span class="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider block">Channel Management</span>
-      <button class="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-surface-variant/40 transition-colors text-xs font-semibold text-on-surface" onclick="openMediaGallery()">
+      <button class="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-surface-variant/40 transition-colors text-xs font-semibold text-on-surface" onclick="renderInlineGallery()">
         <span class="material-symbols-outlined text-primary text-base">perm_media</span>
         <span>Media & Files</span>
       </button>
@@ -2823,7 +2843,120 @@ function closeDetailPanel() {
 }
 
 /* ══════════════════════════════════════════════════
-   20. DIRECT CHAT GENERATIONS
+   20a. INLINE MEDIA GALLERY (in detail panel)
+   ══════════════════════════════════════════════════ */
+let _galleryPanelMode = null;
+
+function renderInlineGallery() {
+  const panel = document.getElementById('detail-panel');
+  if (!panel) return;
+  const chat = App.currentChat;
+  if (!chat) return;
+  _galleryPanelMode = chat.type === 'group' ? 'group' : 'contact';
+
+  panel.innerHTML = `
+    <div class="p-4 border-b border-outline-variant/10 flex items-center gap-3 bg-surface-container">
+      <button onclick="restoreDetailPanel()" class="text-on-surface-variant hover:text-on-surface flex items-center justify-center w-8 h-8 rounded-full hover:bg-surface-variant/40 transition-all">
+        <span class="material-symbols-outlined">arrow_back</span>
+      </button>
+      <h3 class="font-bold text-on-surface flex-1">Media & Files</h3>
+      <button onclick="closeDetailPanel()" class="text-on-surface-variant hover:text-on-surface flex items-center justify-center w-8 h-8 rounded-full hover:bg-surface-variant/40 transition-all">
+        <span class="material-symbols-outlined">close</span>
+      </button>
+    </div>
+    <div class="flex gap-2 p-4 border-b border-outline-variant/10 overflow-x-auto" id="_inline-gallery-tabs">
+      <button class="_g-tab px-4 py-1.5 rounded-full text-xs font-semibold border transition-all cursor-pointer" data-tab="photos" onclick="renderInlineGalleryTab('photos')">Photos</button>
+      <button class="_g-tab px-4 py-1.5 rounded-full text-xs font-semibold border transition-all cursor-pointer" data-tab="videos" onclick="renderInlineGalleryTab('videos')">Videos</button>
+      <button class="_g-tab px-4 py-1.5 rounded-full text-xs font-semibold border transition-all cursor-pointer" data-tab="docs" onclick="renderInlineGalleryTab('docs')">Documents</button>
+      <button class="_g-tab px-4 py-1.5 rounded-full text-xs font-semibold border transition-all cursor-pointer" data-tab="urls" onclick="renderInlineGalleryTab('urls')">Links</button>
+    </div>
+    <div class="flex-1 overflow-y-auto" id="_inline-gallery-content" style="max-height:calc(100vh - 200px)"></div>
+  `;
+  renderInlineGalleryTab('photos');
+}
+
+function restoreDetailPanel() {
+  if (_galleryPanelMode === 'group') openGroupInfoPanel();
+  else openContactInfoPanel();
+}
+
+function renderInlineGalleryTab(tab) {
+  const chatId = App.currentChat && App.currentChat.id;
+  const msgs = (chatId && App.messages[chatId]) || [];
+  const container = document.getElementById('_inline-gallery-content');
+  if (!container) return;
+
+  let filtered = [];
+  if (tab === 'photos') filtered = msgs.filter(m => m.type === 'image');
+  else if (tab === 'videos') filtered = msgs.filter(m => m.type === 'video');
+  else if (tab === 'docs') filtered = msgs.filter(m => m.type === 'doc');
+  else if (tab === 'urls') filtered = msgs.filter(m => m.text && (m.text.includes('http://') || m.text.includes('https://') || m.text.includes('www.')));
+  else filtered = [];
+
+  // Update tab styles
+  document.querySelectorAll('._g-tab').forEach(btn => {
+    const isActive = btn.dataset.tab === tab;
+    btn.style.background = isActive ? 'var(--primary)' : 'transparent';
+    btn.style.color = isActive ? 'var(--on-primary)' : 'var(--on-surface-variant)';
+    btn.style.borderColor = isActive ? 'var(--primary)' : 'var(--outline-variant)';
+  });
+
+  if (!filtered.length) {
+    container.innerHTML = `<div class="flex flex-col items-center justify-center h-48 gap-3" style="color:var(--on-surface-variant);opacity:0.5">
+      <span class="material-symbols-outlined" style="font-size:40px;">perm_media</span>
+      <p class="text-sm">No ${tab} shared yet</p>
+    </div>`;
+    return;
+  }
+
+  const escHtml = window.escHtml || (s => { const d=document.createElement('div'); d.textContent=s; return d.innerHTML; });
+
+  if (tab === 'urls') {
+    container.innerHTML = `<div class="flex flex-col gap-2 p-4">${
+      filtered.map(m => {
+        const urlMatch = m.text.match(/(https?:\/\/[^\s]+)/g);
+        const url = urlMatch ? urlMatch[0] : m.text;
+        let hostname = '';
+        try { hostname = new URL(url).hostname; } catch(e) { hostname = url; }
+        return `<div onclick="openMediaViewer('${m.id}','text')" class="flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-colors" style="background:var(--surface-container);" onmouseenter="this.style.background='var(--surface-container-high)'" onmouseleave="this.style.background='var(--surface-container)'">
+          <div class="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0" style="background:var(--surface-container-highest);color:var(--on-surface-variant)"><span class="material-symbols-outlined">link</span></div>
+          <div class="flex-1 min-w-0">
+            <div class="text-xs font-semibold truncate" style="color:var(--on-surface)">${escHtml(hostname)}</div>
+            <div class="text-[10px] truncate" style="color:var(--on-surface-variant)">${escHtml(url)}</div>
+          </div>
+        </div>`;
+      }).join('')
+    }</div>`;
+  } else if (tab === 'docs') {
+    container.innerHTML = `<div class="flex flex-col gap-2 p-4">${
+      filtered.map(m => {
+        const ext = (m.fileName || '').split('.').pop().toUpperCase() || 'FILE';
+        return `<div onclick="openMediaViewer('${m.id}')" class="flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-colors" style="background:var(--surface-container);" onmouseenter="this.style.background='var(--surface-container-high)'" onmouseleave="this.style.background='var(--surface-container)'">
+          <div class="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0" style="background:rgba(66,133,244,0.15);"><span class="text-[10px] font-bold" style="color:#4285f4;">${escHtml(ext)}</span></div>
+          <div class="flex-1 min-w-0">
+            <div class="text-xs font-semibold truncate" style="color:var(--on-surface)">${escHtml(m.fileName || 'Document')}</div>
+            <div class="text-[10px]" style="color:var(--on-surface-variant)">${m.fileSize || ''}</div>
+          </div>
+        </div>`;
+      }).join('')
+    }</div>`;
+  } else {
+    container.innerHTML = `<div class="grid gap-2 p-4" style="grid-template-columns:repeat(auto-fill,minmax(100px,1fr));">${
+      filtered.map(m => {
+        const isVideo = m.type === 'video';
+        return `<div onclick="openMediaViewer('${m.id}')" class="aspect-square rounded-xl overflow-hidden cursor-pointer relative transition-transform" onmouseenter="this.style.transform='scale(1.05)'" onmouseleave="this.style.transform='scale(1)'" style="background:var(--surface-container);">
+          ${isVideo
+            ? `<video src="${escHtml(m.url)}" preload="metadata" muted class="w-full h-full object-cover"></video><div class="absolute inset-0 flex items-center justify-center" style="background:rgba(0,0,0,0.15);color:white;"><span class="material-symbols-outlined" style="font-size:32px;">play_circle</span></div>`
+            : `<img src="${escHtml(m.url)}" loading="lazy" class="w-full h-full object-cover">`
+          }
+        </div>`;
+      }).join('')
+    }</div>`;
+  }
+}
+
+/* ══════════════════════════════════════════════════
+   21. DIRECT CHAT GENERATIONS
    ══════════════════════════════════════════════════ */
 function openNewChat() {
   show('new-chat-overlay');
