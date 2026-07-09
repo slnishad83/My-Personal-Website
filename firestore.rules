@@ -108,22 +108,16 @@ service cloud.firestore {
     }
 
     function validMessageUpdate() {
-      // Allow updating deletedFor.{uid} for any participant
       let affected = request.resource.data.diff(resource.data).affectedKeys();
       let onlyDeletedFor = affected.size() == 1 && affected.hasAny(['deletedFor']);
-      if (onlyDeletedFor) {
-        // Must be a participant in the message
-        return (resource.data.directId is string && isExistingDirectParticipant(resource.data.directId))
-          || (resource.data.groupId is string && isGroupMember(resource.data.groupId))
-          || (resource.data.participants is list && request.auth.uid in resource.data.participants)
-          || (resource.data.participantEmails is list && request.auth.token.email in resource.data.participantEmails);
-      }
-      // Delete for everyone — only sender can set deletedForEveryone
-      return (
-        resource.data.senderId == request.auth.uid
+      let isParticipant = (resource.data.directId is string && isExistingDirectParticipant(resource.data.directId))
+        || (resource.data.groupId is string && isGroupMember(resource.data.groupId))
+        || (resource.data.participants is list && request.auth.uid in resource.data.participants)
+        || (resource.data.participantEmails is list && request.auth.token.email in resource.data.participantEmails);
+      let isSenderDeleting = resource.data.senderId == request.auth.uid
         && request.resource.data.deletedForEveryone == true
-        && request.resource.data.deletedForEveryoneBy == request.auth.uid
-      );
+        && request.resource.data.deletedForEveryoneBy == request.auth.uid;
+      return (onlyDeletedFor && isParticipant) || isSenderDeleting;
     }
 
     match /users/{userId} {

@@ -570,10 +570,10 @@ async function loadMessageHistory(email, uid) {
       }
 
       if (existingIds.has(chatId) || chatId === `saved_${uid}`) continue;
-      const contact = App.contacts.find(c => c.email === otherEmail || c.uid === otherUid) || { name: otherEmail.split('@')[0] || 'User', avatar: 'gradient-2', initials: '?', photoURL: null, status: 'offline', about: otherEmail };
+      const contact = App.contacts.find(c => c.email === otherEmail || c.uid === otherUid) || { name: otherEmail.split('@')[0] || 'User', avatar: 'gradient-2', initials: '', photoURL: null, status: 'offline', about: otherEmail };
       const chatObj = {
         id: chatId, type: 'personal', uid: otherUid,
-        name: contact.name, avatar: contact.avatar, initials: contact.initials || '?',
+        name: contact.name, avatar: contact.avatar, initials: contact.initials || '',
         photoURL: contact.photoURL || null,
         lastMsg: `${info.msgs} message${info.msgs > 1 ? 's' : ''}`, lastTime: info.lastTime || Date.now(),
         unread: 0, pinned: false, muted: false, status: 'offline', email: otherEmail
@@ -1808,10 +1808,12 @@ function openCallPicker() {
   const uid = App.auth?.currentUser?.uid;
   let items = App.chats.filter(c => (c.type === 'personal' || c.type === 'group') && c.id !== 'saved_me');
   list.innerHTML = items.map(c => {
-    const initials = c.initials || '?';
+    const initials = c.initials || '';
     const avatar = c.photoURL
       ? `<img src="${c.photoURL}" alt="${escHtml(c.name)}" class="w-10 h-10 rounded-full object-cover">`
-      : `<div class="w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm bg-surface-container-highest text-on-surface-variant">${initials}</div>`;
+      : initials
+        ? `<div class="w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm bg-surface-container-highest text-on-surface-variant">${initials}</div>`
+        : `<div class="w-10 h-10 rounded-full flex items-center justify-center bg-surface-container-highest text-on-surface-variant"><span class="material-symbols-outlined text-lg">person_off</span></div>`;
     return `<div class="flex items-center justify-between p-3 rounded-xl hover:bg-surface-variant/30 transition-all">
       <div class="flex items-center gap-3 min-w-0 flex-1">
         ${avatar}
@@ -2144,7 +2146,9 @@ function renderMessages(chatId) {
     const avatarHTML = showAvatar
       ? (contact?.photoURL
         ? `<img src="${contact.photoURL}" alt="${escHtml(senderName)}" class="w-10 h-10 rounded-full object-cover border border-outline-variant/10">`
-        : `<div class="w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm bg-surface-container-highest text-on-surface-variant">${contact?.initials||'?'}</div>`)
+        : contact?.initials
+          ? `<div class="w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm bg-surface-container-highest text-on-surface-variant">${contact.initials}</div>`
+          : `<div class="w-10 h-10 rounded-full flex items-center justify-center bg-surface-container-highest text-on-surface-variant"><span class="material-symbols-outlined text-sm">person_off</span></div>`)
       : `<div class="w-10"></div>`;
 
     const reactions = (msg.reactions||[]).map(r =>
@@ -2666,7 +2670,9 @@ function openContactInfoPanel(uid) {
       <button onclick="closeDetailPanel()" class="text-on-surface-variant hover:text-on-surface"><span class="material-symbols-outlined">close</span></button>
     </div>
     <div class="p-6 flex flex-col items-center text-center space-y-4">
-      <div class="w-24 h-24 rounded-full bg-surface-container-highest flex items-center justify-center font-bold text-3xl border border-outline-variant/20">${contact.initials || '?'}</div>
+      ${contact.initials
+        ? `<div class="w-24 h-24 rounded-full bg-surface-container-highest flex items-center justify-center font-bold text-3xl border border-outline-variant/20">${contact.initials}</div>`
+        : `<div class="w-24 h-24 rounded-full bg-surface-container-highest flex items-center justify-center border border-outline-variant/20"><span class="material-symbols-outlined text-4xl" style="color:var(--on-surface-variant)">person_off</span></div>`}
       <div>
         <h4 class="font-bold text-lg text-on-surface">${escHtml(contact.name || 'Unknown')}</h4>
         <p class="text-xs text-on-surface-variant">${escHtml(contact.about || 'Available')}</p>
@@ -2842,12 +2848,15 @@ function renderContactList() {
     <div class="px-4 py-2 text-xs font-bold text-on-surface-variant uppercase tracking-wider">Workspace Directory</div>
     <div class="space-y-1">
       ${App.contacts.map(c => {
-        const initials = c.initials || '?';
+        const initials = c.initials || '';
+        const avatarHtml = initials
+          ? `<div class="w-10 h-10 rounded-xl flex items-center justify-center font-bold text-sm bg-surface-container-highest text-on-surface-variant">${initials}</div>`
+          : `<div class="w-10 h-10 rounded-xl flex items-center justify-center bg-surface-container-highest text-on-surface-variant"><span class="material-symbols-outlined text-lg">person_off</span></div>`;
         
         return `
         <div class="flex items-center gap-3 p-3 rounded-xl hover:bg-surface-container transition-all cursor-pointer group" onclick="startChatWith('${c.uid}')">
           <div class="relative flex-shrink-0">
-            <div class="w-10 h-10 rounded-xl flex items-center justify-center font-bold text-sm bg-surface-container-highest text-on-surface-variant">${initials}</div>
+            ${avatarHtml}
             ${c.status === 'online' ? '<div class="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 rounded-full border border-surface-container-lowest"></div>' : ''}
           </div>
           <div class="flex-1 min-w-0">
@@ -3800,7 +3809,12 @@ async function deleteAccount() {
       await batch.commit();
     }
     
-    // 2. Unsubscribe all listeners
+    // 2. Delete Firebase Auth account
+    if (App.auth?.currentUser) {
+      await App.auth.currentUser.delete();
+    }
+    
+    // 3. Sign out
     signOut();
     
     showToast('Account deleted successfully', 'success');

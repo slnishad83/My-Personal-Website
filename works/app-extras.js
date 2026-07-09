@@ -712,7 +712,9 @@ function openForwardModal(msgId) {
     item.onmouseleave = () => item.style.background = 'transparent';
     item.onclick = () => forwardToChat(c.id);
     item.innerHTML = `
-      <div style="width:40px; height:40px; border-radius:50%; background:var(--surface-container-highest); display:flex; align-items:center; justify-content:center; font-weight:700; font-size:14px; color:var(--on-surface-variant);">${escHtml(c.initials || '?')}</div>
+      ${c.initials
+        ? `<div style="width:40px; height:40px; border-radius:50%; background:var(--surface-container-highest); display:flex; align-items:center; justify-content:center; font-weight:700; font-size:14px; color:var(--on-surface-variant);">${escHtml(c.initials)}</div>`
+        : `<div style="width:40px; height:40px; border-radius:50%; background:var(--surface-container-highest); display:flex; align-items:center; justify-content:center; color:var(--on-surface-variant);"><span class="material-symbols-outlined" style="font-size:18px;">person_off</span></div>`}
       <div>
         <div style="font-weight:700;font-size:14px;color:var(--on-surface)">${escHtml(c.name)}</div>
         <div style="font-size:11px;color:var(--on-surface-variant)">${c.type === 'group' ? 'Group' : 'Personal'}</div>
@@ -1617,9 +1619,13 @@ function openNewGroup() {
         <div style="width:16px;height:16px;border-radius:4px;border:2px solid var(--outline);
           background:transparent;display:flex;align-items:center;justify-content:center;
           transition:all 0.15s;" id="_chk-${c.uid}"></div>
-        <div style="width:36px;height:36px;border-radius:50%;background:var(--surface-container-highest);
-          display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;
-          color:var(--on-surface-variant);">${escHtml(c.initials || '?')}</div>
+        ${c.initials
+          ? `<div style="width:36px;height:36px;border-radius:50%;background:var(--surface-container-highest);
+            display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;
+            color:var(--on-surface-variant);">${escHtml(c.initials)}</div>`
+          : `<div style="width:36px;height:36px;border-radius:50%;background:var(--surface-container-highest);
+            display:flex;align-items:center;justify-content:center;
+            color:var(--on-surface-variant);"><span class="material-symbols-outlined" style="font-size:16px;">person_off</span></div>`}
         <div>
           <div style="font-weight:700;font-size:14px;color:var(--on-surface)">${escHtml(c.name)}</div>
           <div style="font-size:11px;color:var(--on-surface-variant)">${escHtml(c.about || c.status || '')}</div>
@@ -1659,7 +1665,7 @@ function toggleGroupMember(uid) {
     chips.innerHTML = _newGroupMembers.map(m => `
       <span style="display:inline-flex;align-items:center;gap:4px;background:var(--primary-container);
         color:var(--on-primary-container);padding:4px 10px;border-radius:999px;font-size:12px;font-weight:700;">
-        ${escHtml(m.initials || m.name[0] || '?')} ${escHtml(m.name)}
+        ${escHtml(m.initials || m.name[0] || '')} ${escHtml(m.name)}
         <button onclick="toggleGroupMember('${m.uid}')" style="background:none;border:none;cursor:pointer;
           color:var(--on-primary-container);font-size:14px;padding:0 0 0 4px;line-height:1;">✕</button>
       </span>
