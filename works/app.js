@@ -3719,6 +3719,78 @@ function confirmLeaveGroup() {
     showToast('Left the group', 'info');
   });
 }
+
+function renameGroup() {
+  const chat = App.currentChat;
+  if (!chat || chat.type !== 'group') return;
+  const overlay = document.createElement('div');
+  overlay.className = 'overlay';
+  overlay.id = 'rename-group-overlay';
+  overlay.innerHTML = `
+    <div class="modal" style="max-width:400px;width:90%">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-lg font-bold text-on-surface">Rename Group</h3>
+        <button class="text-on-surface-variant hover:text-on-surface" onclick="document.getElementById('rename-group-overlay').remove()"><span class="material-symbols-outlined">close</span></button>
+      </div>
+      <input id="rename-group-input" type="text" value="${escHtml(chat.name || '')}" maxlength="50" class="w-full p-3 rounded-xl bg-surface-container border border-outline-variant/30 text-on-surface focus:outline-none focus:border-primary" placeholder="Group name">
+      <div class="flex justify-end gap-2 mt-4">
+        <button class="px-4 py-2 rounded-xl text-on-surface-variant hover:bg-surface-container-high" onclick="document.getElementById('rename-group-overlay').remove()">Cancel</button>
+        <button class="px-4 py-2 rounded-xl bg-primary text-on-primary font-bold" onclick="_saveGroupName('${chat.id}')">Save</button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+  const input = document.getElementById('rename-group-input');
+  if (input) { input.focus(); input.select(); }
+}
+
+async function _saveGroupName(groupId) {
+  const input = document.getElementById('rename-group-input');
+  if (!input) return;
+  const newName = input.value.trim();
+  if (!newName) { showToast('Name cannot be empty', 'error'); return; }
+  document.getElementById('rename-group-overlay')?.remove();
+  App.chats = App.chats.map(c => c.id === groupId ? { ...c, name: newName } : c);
+  App.groupChats = (App.groupChats || []).map(c => c.id === groupId ? { ...c, name: newName } : c);
+  if (App.currentChat?.id === groupId) App.currentChat.name = newName;
+  renderChatList();
+  if (App.db) {
+    try {
+      await App.db.collection('groups').doc(groupId).update({ name: newName });
+      showToast('Group renamed', 'success');
+    } catch(e) { console.warn('Rename group error:', e); showToast('Rename failed', 'error'); }
+  }
+}
+
+function changeGroupAvatar() {
+  const chat = App.currentChat;
+  if (!chat || chat.type !== 'group') return;
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = 'image/*';
+  input.onchange = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) { showToast('Please select an image', 'error'); return; }
+    showToast('Uploading avatar…', 'info');
+    try {
+      const reader = new FileReader();
+      reader.onload = async (ev) => {
+        const dataUrl = ev.target.result;
+        if (App.db) {
+          await App.db.collection('groups').doc(chat.id).update({ icon: dataUrl }).catch(() => {});
+        }
+        App.chats = App.chats.map(c => c.id === chat.id ? { ...c, photoURL: dataUrl } : c);
+        App.groupChats = (App.groupChats || []).map(c => c.id === chat.id ? { ...c, photoURL: dataUrl } : c);
+        if (App.currentChat?.id === chat.id) App.currentChat.photoURL = dataUrl;
+        renderChatList();
+        showToast('Group avatar updated', 'success');
+      };
+      reader.readAsDataURL(file);
+    } catch(e) { showToast('Upload failed', 'error'); }
+  };
+  input.click();
+}
+
 App._blockedUsers = new Set();
 
 function blockContact(uid) {
