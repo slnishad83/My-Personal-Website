@@ -243,10 +243,29 @@ function playVoice(msgId) {
   _currentAudio = audio;
   App._currentVoiceMsgId = msgId;
 
+  // Get speed from button
+  const speedBtn = document.querySelector(`.voice-speed[data-msg-id="${msgId}"]`);
+  const speed = speedBtn ? parseFloat(speedBtn.dataset.speed) || 1 : 1;
+  audio.playbackRate = speed;
+
+  const scrub = document.querySelector(`.voice-scrub[data-msg-id="${msgId}"]`);
+  const timeLabel = document.querySelector(`.voice-time[data-msg-id="${msgId}"]`);
+  const maxDur = scrub ? parseInt(scrub.max) || 0 : 0;
+
+  audio.addEventListener('timeupdate', () => {
+    if (scrub && !scrub._dragging) scrub.value = audio.currentTime;
+    if (timeLabel) {
+      const remaining = maxDur ? Math.max(0, maxDur - Math.floor(audio.currentTime)) : Math.floor(audio.currentTime);
+      if (maxDur) timeLabel.textContent = '-' + _fmtDur(remaining);
+      else timeLabel.textContent = _fmtDur(Math.floor(audio.currentTime));
+    }
+  });
   audio.addEventListener('play',  () => _updatePlayBtn(msgId, true));
   audio.addEventListener('pause', () => _updatePlayBtn(msgId, false));
   audio.addEventListener('ended', () => {
     _updatePlayBtn(msgId, false);
+    if (scrub) scrub.value = 0;
+    if (timeLabel && maxDur) timeLabel.textContent = _fmtDur(maxDur);
     _currentAudio = null;
     App._currentVoiceMsgId = null;
   });
@@ -256,6 +275,25 @@ function playVoice(msgId) {
   });
 
   audio.play().catch(() => showToast('Could not play voice message', 'error'));
+}
+
+function scrubVoice(msgId, time) {
+  if (_currentAudio && App._currentVoiceMsgId === msgId) {
+    _currentAudio.currentTime = parseFloat(time);
+  }
+}
+
+function cycleVoiceSpeed(btn) {
+  const speeds = [1, 1.5, 2, 0.75];
+  let current = parseFloat(btn.dataset.speed) || 1;
+  let idx = speeds.indexOf(current);
+  idx = (idx + 1) % speeds.length;
+  const newSpeed = speeds[idx];
+  btn.dataset.speed = newSpeed;
+  btn.textContent = newSpeed + 'x';
+  if (_currentAudio && App._currentVoiceMsgId === btn.dataset.msgId) {
+    _currentAudio.playbackRate = newSpeed;
+  }
 }
 
 function _updatePlayBtn(msgId, isPlaying) {
@@ -1224,8 +1262,15 @@ function attachPhoto() {
   input.accept = 'image/*,video/*';
   input.multiple = true;
   input.onchange = async () => {
-    for (const file of Array.from(input.files || [])) {
-      await _sendFileMessage(file);
+    const files = Array.from(input.files || []);
+    for (const file of files) {
+      if (file.size > 16 * 1024 * 1024) { showToast(file.name + ': too large (max 16MB)', 'error'); continue; }
+      if (file.type.startsWith('image/') && file.size > 2 * 1024 * 1024) {
+        const compressed = await _compressImage(file, 0.8, 2048);
+        await _sendFileMessage(compressed || file);
+      } else {
+        await _sendFileMessage(file);
+      }
     }
   };
   input.click();
@@ -1239,6 +1284,7 @@ function attachDocument() {
   input.multiple = true;
   input.onchange = async () => {
     for (const file of Array.from(input.files || [])) {
+      if (file.size > 50 * 1024 * 1024) { showToast(file.name + ': too large (max 50MB)', 'error'); continue; }
       await _sendFileMessage(file);
     }
   };
@@ -1251,12 +1297,71 @@ function attachCamera() {
   input.type = 'file';
   input.accept = 'image/*,video/*';
   input.capture = 'environment';
+  input.multiple = false;
   input.onchange = async () => {
-    for (const file of Array.from(input.files || [])) {
-      await _sendFileMessage(file);
+    const file = input.files && input.files[0];
+    if (!file) return;
+    if (file.size > 16 * 1024 * 1024) { showToast('File too large (max 16MB)', 'error'); return; }
+    if (file.type.startsWith('image/') && file.size > 2 * 1024 * 1024) {
+      showToast('Compressing image…', 'info');
+      const compressed = await _compressImage(file, 0.8, 2048);
+      if (compressed) { _showMediaPreview(compressed, 'image'); return; }
     }
+    _showMediaPreview(file, file.type.startsWith('video/') ? 'video' : 'image');
   };
   input.click();
+}
+
+function _showMediaPreview(file, type) {
+  const blobUrl = URL.createObjectURL(file);
+  const overlay = document.createElement('div');
+  overlay.id = 'media-preview-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.92);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;animation:fadeIn 0.2s ease';
+  if (type === 'image') {
+    overlay.innerHTML = `
+      <img src="${blobUrl}" style="max-width:90vw;max-height:65vh;border-radius:12px;object-fit:contain">
+      <div style="display:flex;gap:12px;padding:16px">
+        <button onclick="document.getElementById('media-preview-overlay')?.remove()" style="padding:12px 24px;border-radius:12px;border:none;background:var(--surface-variant);color:var(--on-surface);font-size:14px;font-weight:700;cursor:pointer">Retake</button>
+        <button id="media-preview-send" style="padding:12px 24px;border-radius:12px;border:none;background:var(--primary);color:var(--on-primary);font-size:14px;font-weight:700;cursor:pointer">Send</button>
+      </div>`;
+  } else {
+    overlay.innerHTML = `
+      <video src="${blobUrl}" controls style="max-width:90vw;max-height:65vh;border-radius:12px"></video>
+      <div style="display:flex;gap:12px;padding:16px">
+        <button onclick="document.getElementById('media-preview-overlay')?.remove()" style="padding:12px 24px;border-radius:12px;border:none;background:var(--surface-variant);color:var(--on-surface);font-size:14px;font-weight:700;cursor:pointer">Retake</button>
+        <button id="media-preview-send" style="padding:12px 24px;border-radius:12px;border:none;background:var(--primary);color:var(--on-primary);font-size:14px;font-weight:700;cursor:pointer">Send</button>
+      </div>`;
+  }
+  document.body.appendChild(overlay);
+  overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+  document.getElementById('media-preview-send')?.addEventListener('click', () => {
+    overlay.remove();
+    _sendFileMessage(file);
+  });
+}
+
+async function _compressImage(file, quality, maxDim) {
+  return new Promise(resolve => {
+    try {
+      const img = new Image();
+      img.onload = () => {
+        let w = img.width, h = img.height;
+        if (w > maxDim || h > maxDim) {
+          const ratio = Math.min(maxDim / w, maxDim / h);
+          w = Math.round(w * ratio); h = Math.round(h * ratio);
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+        canvas.toBlob(blob => {
+          if (blob) resolve(new File([blob], file.name, { type: 'image/jpeg' }));
+          else resolve(file);
+        }, 'image/jpeg', quality);
+      };
+      img.onerror = () => resolve(file);
+      img.src = URL.createObjectURL(file);
+    } catch(_) { resolve(file); }
+  });
 }
 
 async function _sendFileMessage(file) {
@@ -1346,32 +1451,53 @@ function _fmtBytes(b) {
 }
 
 /* ══════════════════════════════════════════════════════════════
-   16. VOICE MESSAGE — real MediaRecorder
+   16. VOICE MESSAGE — real MediaRecorder with pause/resume
    ══════════════════════════════════════════════════════════════ */
 let _mediaRecorder = null;
 let _audioChunks   = [];
 let _recTimerInt   = null;
 let _recSec        = 0;
+let _recPaused     = false;
+let _audioContext  = null;
+let _analyser      = null;
+let _waveformAnim  = null;
+const REC_MAX_SECONDS = 300; // 5 minutes
 
-// Override the stub
 function startRecording() {
   App.isRecording = true;
   App.recordingSeconds = 0;
   _recSec = 0;
+  _recPaused = false;
   _audioChunks = [];
 
   show('recording-bar');
   hide('input-bar');
   setEl('rec-timer', '0:00');
-  _animateWaveform(true);
+  setEl('rec-limit', '');
+  const pauseIcon = document.getElementById('rec-pause-icon');
+  if (pauseIcon) pauseIcon.textContent = 'pause';
+  const dot = document.getElementById('rec-dot');
+  if (dot) { dot.classList.remove('bg-warning'); dot.classList.add('bg-error'); dot.style.animationPlayState = 'running'; }
 
   _recTimerInt = setInterval(() => {
+    if (_recPaused) return;
     _recSec++;
     App.recordingSeconds = _recSec;
     setEl('rec-timer', _fmtDur(_recSec));
+    if (_recSec >= REC_MAX_SECONDS - 30) {
+      setEl('rec-limit', '(' + (REC_MAX_SECONDS - _recSec) + 's left)');
+    }
+    if (_recSec >= REC_MAX_SECONDS) { stopRecording(); sendVoiceMessage(); }
   }, 1000);
 
   navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
+    _audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    _analyser = _audioContext.createAnalyser();
+    _analyser.fftSize = 64;
+    const source = _audioContext.createMediaStreamSource(stream);
+    source.connect(_analyser);
+    _animateRealWaveform();
+
     _mediaRecorder = new MediaRecorder(stream, { mimeType: getSupportedMimeType() });
     _mediaRecorder.ondataavailable = e => { if (e.data.size) _audioChunks.push(e.data); };
     _mediaRecorder.start(100);
@@ -1379,6 +1505,25 @@ function startRecording() {
     showToast('Microphone permission denied', 'error');
     cancelRecording();
   });
+}
+
+function togglePauseRecording() {
+  if (!_mediaRecorder || _mediaRecorder.state === 'inactive') return;
+  if (_recPaused) {
+    _mediaRecorder.resume();
+    _recPaused = false;
+    const dot = document.getElementById('rec-dot');
+    if (dot) { dot.style.animationPlayState = 'running'; dot.classList.remove('bg-warning'); dot.classList.add('bg-error'); }
+    const icon = document.getElementById('rec-pause-icon');
+    if (icon) icon.textContent = 'pause';
+  } else {
+    _mediaRecorder.pause();
+    _recPaused = true;
+    const dot = document.getElementById('rec-dot');
+    if (dot) { dot.style.animationPlayState = 'paused'; dot.classList.remove('bg-error'); dot.classList.add('bg-warning'); }
+    const icon = document.getElementById('rec-pause-icon');
+    if (icon) icon.textContent = 'play_arrow';
+  }
 }
 
 function getSupportedMimeType() {
@@ -1389,16 +1534,18 @@ function getSupportedMimeType() {
 function stopRecording() {
   App.isRecording = false;
   clearInterval(_recTimerInt);
-  _animateWaveform(false);
+  if (_waveformAnim) { cancelAnimationFrame(_waveformAnim); _waveformAnim = null; }
   if (_mediaRecorder && _mediaRecorder.state !== 'inactive') {
     _mediaRecorder.stop();
     _mediaRecorder.stream.getTracks().forEach(t => t.stop());
   }
+  if (_audioContext) { _audioContext.close().catch(()=>{}); _audioContext = null; _analyser = null; }
 }
 
 function cancelRecording() {
   stopRecording();
   _audioChunks = [];
+  _recPaused = false;
   hide('recording-bar');
   show('input-bar');
 }
@@ -1424,6 +1571,7 @@ function sendVoiceMessage() {
     type: 'voice',
     url: blobUrl,
     duration,
+    durationSec: _recSec,
     time: Date.now(),
     status: 'sending',
   };
@@ -1437,20 +1585,26 @@ function sendVoiceMessage() {
   renderChatList();
   showToast('Voice message sent', 'success');
 
-  // Upload audio
   _sendFileMessage(new File([blob], 'voice_' + Date.now() + '.webm', { type: blob.type })).then(() => {}).catch(() => {});
 }
 
-function _animateWaveform(on) {
+function _animateRealWaveform() {
   const wf = document.getElementById('recording-waveform');
-  if (!wf) return;
-  if (!on) { wf.innerHTML = ''; clearInterval(wf._wfTimer); return; }
-  wf._wfTimer = setInterval(() => {
-    wf.innerHTML = Array.from({ length: 24 }, () => {
-      const h = on ? Math.floor(Math.random() * 70 + 10) : 10;
-      return `<div style="width:3px;height:${h}%;background:var(--primary);border-radius:2px;transition:height 0.1s"></div>`;
-    }).join('');
-  }, 100);
+  if (!wf || !_analyser) return;
+  const data = new Uint8Array(_analyser.frequencyBinCount);
+  function draw() {
+    if (!App.isRecording) return;
+    _analyser.getByteFrequencyData(data);
+    const bars = Math.min(data.length, 30);
+    let html = '';
+    for (let i = 0; i < bars; i++) {
+      const h = Math.max(8, (data[i] / 255) * 100);
+      html += `<div style="width:3px;height:${h}%;background:${_recPaused ? 'var(--warning)' : 'var(--primary)'};border-radius:2px;transition:height 0.08s"></div>`;
+    }
+    wf.innerHTML = html;
+    _waveformAnim = requestAnimationFrame(draw);
+  }
+  draw();
 }
 
 function _fmtDur(sec) {

@@ -368,13 +368,16 @@
       <!-- Voice recorder container panel -->
       <div class="bg-surface-container border-t border-outline-variant/30 px-6 py-4 flex items-center justify-between gap-4 hidden" id="recording-bar">
         <div class="flex items-center gap-3">
-          <span class="w-2.5 h-2.5 bg-error rounded-full animate-ping"></span>
+          <span class="w-2.5 h-2.5 bg-error rounded-full animate-ping" id="rec-dot"></span>
           <span class="font-bold text-sm text-error" id="rec-timer">0:00</span>
+          <span class="text-[10px] text-on-surface-variant" id="rec-limit"></span>
         </div>
         <div class="flex-1 flex items-end gap-0.5 h-8 justify-center overflow-hidden max-w-sm" id="recording-waveform">
-          <!-- Waveform peaks generated on record -->
         </div>
-        <div class="flex gap-2">
+        <div class="flex gap-2 items-center">
+          <button class="w-9 h-9 flex items-center justify-center rounded-full border border-outline-variant hover:bg-surface-variant transition-colors" id="rec-pause-btn" onclick="togglePauseRecording()" title="Pause/Resume">
+            <span class="material-symbols-outlined text-sm" id="rec-pause-icon">pause</span>
+          </button>
           <button class="px-4 py-2 border border-outline-variant rounded-xl text-xs font-bold text-on-surface hover:bg-surface-variant transition-colors" onclick="cancelRecording()">Cancel</button>
           <button class="px-4 py-2 bg-primary text-on-primary rounded-xl text-xs font-bold hover:brightness-110 flex items-center gap-1.5 transition-all" onclick="sendVoiceMessage()">
             <span class="material-symbols-outlined text-[14px]">send</span> Send
@@ -435,17 +438,27 @@
       </div>
 
       <!-- Emoji Popover Pick Grid -->
-      <div class="absolute bottom-20 right-6 bg-surface-container border border-outline-variant/30 rounded-2xl shadow-xl flex flex-col hidden z-30 w-72 h-80 overflow-hidden" id="emoji-picker" role="dialog">
-        <div class="flex items-center justify-between p-2.5 border-b border-outline-variant/10 overflow-x-auto gap-1 scrollbar-hide">
-          <button class="emoji-cat-btn active px-2.5 py-1 bg-primary/10 rounded-lg text-sm" onclick="setEmojiCat(this,'recent')">🕐</button>
-          <button class="emoji-cat-btn px-2.5 py-1 rounded-lg text-sm" onclick="setEmojiCat(this,'smileys')">😊</button>
-          <button class="emoji-cat-btn px-2.5 py-1 rounded-lg text-sm" onclick="setEmojiCat(this,'people')">👋</button>
-          <button class="emoji-cat-btn px-2.5 py-1 rounded-lg text-sm" onclick="setEmojiCat(this,'nature')">🌿</button>
-          <button class="emoji-cat-btn px-2.5 py-1 rounded-lg text-sm" onclick="setEmojiCat(this,'food')">🍕</button>
-          <button class="emoji-cat-btn px-2.5 py-1 rounded-lg text-sm" onclick="setEmojiCat(this,'symbols')">❤️</button>
+      <div class="absolute bottom-20 right-6 bg-surface-container border border-outline-variant/30 rounded-2xl shadow-xl flex flex-col hidden z-30 w-80 h-96 overflow-hidden" id="emoji-picker" role="dialog">
+        <div class="p-2 border-b border-outline-variant/10">
+          <input type="text" id="emoji-search" placeholder="Search emoji..." class="w-full px-3 py-1.5 text-xs bg-surface-variant/40 border border-outline-variant/20 rounded-lg focus:outline-none focus:ring-1 focus:ring-primary/50 text-on-surface placeholder:text-on-surface-variant/60" oninput="searchEmoji(this.value)">
         </div>
-        <div class="flex-1 overflow-y-auto p-3 grid grid-cols-6 gap-2 text-center text-xl custom-scrollbar" id="emoji-grid">
-          <!-- Rendered icons -->
+        <div class="flex items-center justify-between p-2 border-b border-outline-variant/10 overflow-x-auto gap-1 scrollbar-hide">
+          <button class="emoji-cat-btn active px-2 py-1 bg-primary/10 rounded-lg text-sm" onclick="setEmojiCat(this,'recent')" title="Recent">🕐</button>
+          <button class="emoji-cat-btn px-2 py-1 rounded-lg text-sm" onclick="setEmojiCat(this,'smileys')" title="Smileys & Emotion">😊</button>
+          <button class="emoji-cat-btn px-2 py-1 rounded-lg text-sm" onclick="setEmojiCat(this,'people')" title="People & Body">👋</button>
+          <button class="emoji-cat-btn px-2 py-1 rounded-lg text-sm" onclick="setEmojiCat(this,'nature')" title="Animals & Nature">🌿</button>
+          <button class="emoji-cat-btn px-2 py-1 rounded-lg text-sm" onclick="setEmojiCat(this,'food')" title="Food & Drink">🍕</button>
+          <button class="emoji-cat-btn px-2 py-1 rounded-lg text-sm" onclick="setEmojiCat(this,'activities')" title="Activities">⚽</button>
+          <button class="emoji-cat-btn px-2 py-1 rounded-lg text-sm" onclick="setEmojiCat(this,'travel')" title="Travel & Places">✈️</button>
+          <button class="emoji-cat-btn px-2 py-1 rounded-lg text-sm" onclick="setEmojiCat(this,'objects')" title="Objects">💡</button>
+          <button class="emoji-cat-btn px-2 py-1 rounded-lg text-sm" onclick="setEmojiCat(this,'symbols')" title="Symbols">❤️</button>
+          <button class="emoji-cat-btn px-2 py-1 rounded-lg text-sm" onclick="setEmojiCat(this,'flags')" title="Flags">🏁</button>
+        </div>
+        <div class="flex-1 overflow-y-auto p-2 grid grid-cols-8 gap-0.5 text-center text-lg custom-scrollbar" id="emoji-grid">
+        </div>
+        <div class="flex items-center gap-2 border-t border-outline-variant/10 px-3 py-1.5 min-h-[28px]" id="emoji-preview">
+          <span class="text-xl" id="emoji-preview-icon"></span>
+          <span class="text-[10px] text-on-surface-variant truncate" id="emoji-preview-name"></span>
         </div>
       </div>
 
@@ -457,8 +470,20 @@
           </button>
           <h3 class="font-bold text-sm text-on-surface flex-1">Share Contact</h3>
         </div>
+        <div class="px-3 pt-2 pb-1">
+          <button onclick="shareMyProfile()" class="w-full flex items-center gap-3 p-2.5 rounded-xl bg-primary/10 hover:bg-primary/20 transition-colors text-left">
+            <div class="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-on-primary font-bold text-sm" id="contact-picker-my-avatar">Me</div>
+            <div class="flex-1 min-w-0">
+              <div class="text-xs font-bold text-primary">Share My Profile</div>
+              <div class="text-[10px] text-on-surface-variant truncate" id="contact-picker-my-email">Your name, email & phone</div>
+            </div>
+            <span class="material-symbols-outlined text-primary text-sm">person</span>
+          </button>
+        </div>
+        <div class="px-3 pb-2">
+          <input type="text" id="contact-search" placeholder="Search contacts..." class="w-full px-3 py-1.5 text-xs bg-surface-variant/40 border border-outline-variant/20 rounded-lg focus:outline-none focus:ring-1 focus:ring-primary/50 text-on-surface placeholder:text-on-surface-variant/60" oninput="filterContactPicker(this.value)">
+        </div>
         <div class="flex-1 overflow-y-auto p-3 space-y-1 custom-scrollbar" id="contact-picker-list">
-          <!-- Rendered dynamically -->
         </div>
       </div>
 

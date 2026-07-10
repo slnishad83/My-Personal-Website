@@ -54,12 +54,15 @@ const App = {
   showroomViewport: 'auto', // auto | mobile | tablet | laptop | desktop
 
   emojiCategories: {
-    recent: ['😊','👍','❤️','😂','🙏','🔥','✨','😍'],
-    smileys: ['😀','😃','😄','😁','😆','😅','😂','🤣','😊','😇','🥰','😍','🤩','😘','😗','😚','😙','🥲','😋','😛','😜','🤪','😝','🤑','🤗','🤭','🤫','🤔','🤐','🤨','😐','😑','😶','😏','😒','🙄','😬','🤥','😌','😔','😪','🤤','😴','😷','🤒','🤕','🤢','🤮','🤧','🥵','🥶','🥴','😵','💫','🤯','🤠','🥳','🥸','😎','🤓','🧐'],
-    people: ['👋','🤚','🖐','✋','🖖','👌','🤌','🤏','✌','🤞','🤟','🤘','🤙','👈','👉','👆','🖕','👇','☝','👍','👎','✊','👊','🤛','🤜','👏','🙌','👐','🤲','🤝','🙏','💅','🤳','💪','🦾','🦵','🦶','👂','🦻','👃','🫀','🫁','🧠','🦷','🦴','👀','👁','👅','👄','💋','🩸'],
-    nature: ['🌱','🌿','🍀','🍁','🍂','🍃','🌸','🌺','🌻','🌹','🥀','🌷','🌼','💐','🌾','🍄','🐚','🪸','🪨','🌵','🎋','🎍','🍇','🍈','🍉','🍊','🍋','🍌','🍍','🥭','🍎','🍏','🍐','🍑','🍒','🍓','🫐','🥝','🍅','🫒','🥥'],
-    food: ['🍕','🍔','🍟','🌭','🍿','🧂','🥓','🥚','🍳','🧇','🥞','🧗','🍞','🥐','🥖','🫓','🥨','🥯','🧀','🥗','🥙','🥪','🌮','🌯','🫔','🧆','🥜','🫘','🍱','🍘','🍙','🍚','🍛','🍜','🍝','🍠','🍢','🍣','🍤','🍥','🥮','🍡','🥟','🥠','🥡','🍦','🍧','🍨','🍩','🍪','🎂','🍰','🧁','🥧','🍫','🍬','🍭','🍮','🍯'],
-    symbols: ['❤️','🧡','💛','💚','💙','💜','🖤','🤍','🤎','💔','❣️','💕','💞','💓','💗','💖','💘','💝','💟','☮️','✝️','☪️','🕉','☸️','✡️','🔯','🕎','☯️','☦️','🛐','⛎','♈','♉','♊','♋','♌','♍','♎','♏','♐','♑','♒','♓','🆔','⚛️','🉑','☢️','☣️','📴','📳','🈶','🈚','🈸','🈺','🈷️','✴️','🆚','💮','🉐','㊙️','㊗️','🈴','🈵','🈹','🈲','🅰️','🅱️','🆎','🆑','🅾️','🆘','❌','⭕','🛑','⛔','📛','🚫','💯','💢','%','🚷','🚯','🚳','🚱','🔞','📵','🚭','❗','❕','❓','❔','‼️','⁉️','🔅','🔆','〽️','⚠️','🔱','⚜️','🔰','♻️','✅','🈯','💹','❎','🌐','💠','Ⓜ️','🌀','💤','🏧','🚾','♿','🅿️','🛗','🈳','🈹','🚰','🚹','🚺','🚻','🚼','🚽','🛁','🚿']
+    recent: ['😊','👍','❤️','😂','🙏','🔥','✨','😍','😭','🥺','🤣','💀','🫡','🤝'],
+    smileys: ['😀','😃','😄','😁','😆','😅','🤣','😂','🙂','🙃','😉','😊','😇','🥰','😍','🤩','😘','😗','😚','😙','🥲','😋','😛','😜','🤪','😝','🤑','🤗','🤭','🫢','🫣','🤫','🤔','🫡','🤐','🤨','😐','😑','😶','🫥','😏','😒','🙄','😬','🤥','😌','😔','😪','🤤','😴','😷','🤒','🤕','🤢','🤮','🥵','🥶','🥴','😵','🤯','🤠','🥳','🥸','😎','🤓','🧐','😕','🫤','😟','🙁','😮','😯','😲','😳','🥺','🥹','😦','😧','😨','😰','😥','😢','😭','😱','😖','😣','😞','😓','😩','😫','🥱','😤','😡','😠','🤬','😈','👿','💀','☠️','💩','🤡','👹','👺','👻','👽','👾','🤖','😺','😸','😹','😻','😼','😽','🙀','😿','😾','🫶','🫰','🫱','🫲','🫳','🫴','🫷','🫸'],
+    people: ['👋','🤚','🖐️','✋','🖖','🫱','🫲','🫳','🫴','🫷','🫸','👌','🤌','🤏','✌️','🤞','🫰','🤟','🤘','🤙','👈','👉','👆','🖕','👇','☝️','🫵','👍','👎','✊','👊','🤛','🤜','👏','🙌','👐','🤲','🤝','🙏','✍️','💅','🤳','💪','🦾','🦿','🦵','🦶','👂','🦻','👃','🧠','🫀','🫁','🦷','🦴','👀','👁️','👅','👄','🫦','💋','🩸','👶','🧒','👦','👧','🧑','👱','👨','🧔','👩','🧓','👴','👵','🙍','🙎','🙅','🙆','💁','🙋','🧏','🙇','🤦','🤷','👮','🕵️','💂','🥷','👷','🫅','🤴','👸','👳','👲','🧕','🤵','👰','🤰','🫃','🫄','🤱','👼','🎅','🤶','🦸','🦹','🧙','🧚','🧛','🧜','🧝','🧞','🧟','🧌','💆','💇','🚶','🧍','🧎','🏃','💃','🕺','👯','🧖','🧗','🏇','⛷️','🏂','🏋️','🤸','🤺','⛹️','🤾','🏌️','🏇','🧘','🏄','🏊','🤽','🚣','🧗','🚵','🚴','🏆','🥇','🥈','🥉','🏅','🎖️','🏵️','🎗️','🎫','🎟️','🎪','🤹','🎭','🩰','🎨','🎬','🎤','🎧','🎼','🎹','🥁','🪘','🎷','🎺','🪗','🎸','🪕','🎻','🎲','♟️','🎯','🎳','🎮','🎰','🧩','🪀','🪁','🪅','🪆','♠️','♥️','♦️','♣️','♟️','🃏','🀄','🎴','🎭','🖼️','🎨','🧵','🪡','🧶','🪢','👓','🕶️','🥽','🥼','🦺','👔','👕','👖','🧣','🧤','🧥','🧦','👗','👘','🥻','🩱','🩲','🩳','👙','👚','🪭','👛','👜','👝','🧳','👞','👟','🥾','🥿','👠','👡','🩰','👢','🪮','👒','🎓','🪖','⛑️','📿','💄','💍','💎'],
+    nature: ['🐶','🐱','🐭','🐹','🐰','🦊','🐻','🐼','🐻‍❄️','🐨','🐯','🦁','🐮','🐷','🐸','🐵','🙈','🙉','🙊','🐒','🐔','🐧','🐦','🐤','🐣','🐥','🦆','🦅','🦉','🦇','🐺','🐗','🐴','🦄','🐝','🪱','🐛','🦋','🐌','🐞','🐜','🪰','🪲','🪳','🦟','🦗','🕷️','🦂','🐢','🐍','🦎','🦖','🦕','🐙','🦑','🦐','🦞','🦀','🪸','🐡','🐠','🐟','🐬','🐳','🐋','🦈','🦭','🐊','🐅','🐆','🦓','🦍','🦧','🐘','🦛','🦏','🐪','🐫','🦒','🦘','🦬','🐃','🐂','🐄','🐎','🐖','🐏','🐑','🦙','🐐','🦌','🐕','🐩','🦮','🐕‍🦺','🐈','🐈‍⬛','🪶','🐓','🦃','🦤','🦚','🦜','🦢','🪿','🦩','🕊️','🐇','🦝','🦨','🦡','🦫','🦦','🦥','🐁','🐀','🐿️','🦔','🐾','🐉','🐲','🌵','🎄','🌲','🌳','🌴','🪵','🪹','🪺','🍁','🍂','🍃','🪹','🪺','🍄','🪨','🪸','🌾','🌱','🌿','☘️','🍀','🌵','🎍','🎍','🎋','🎑','🌲','🌳','🌴','🪴','🏵️','🌹','🥀','🌷','🪻','🌸','💮','🏵️','🏵️','🌻','🌼','🌺','🌿','☘️','🍀','🍁','🍂','🍃','🪹','🪺','🍄','🪵','🪸','🪨','🌾','🌶️','🫑','🥒','🥬','🥦','🧄','🧅','🥜','🫘','🌰','🫚','🫛','🍞','🥐','🥖','🫓','🥨','🥯','🥞','🧇','🧀','🍖','🍗','🥩','🥓','🍔','🍟','🍕','🌭','🥪','🌮','🌯','🫔','🧆','🥙','🧈','🥚','🍳','🥘','🍲','🫕','🥣','🥗','🍿','🧈','🧂','🥫','🫙','🍱','🍘','🍙','🍚','🍛','🍜','🍝','🍠','🍢','🍣','🍤','🍥','🥮','🍡','🥟','🥠','🥡','🦀','🦞','🦐','🦑','🦦','🦥','🐪','🐫','🦒','🦘','🦬','🐃','🐂','🐄','🐎','🐖','🐏','🐑','🦙','🐐','🦌','🐕','🐩','🦮','🐕‍🦺','🐈','🐈‍⬛','🪶','🐓','🦃','🦤','🦚','🦜','🦢','🪿','🦩','🕊️','🐇','🦝','🦨','🦡','🦫','🦦','🦥','🐁','🐀','🐿️','🦔','🐾','🐉','🐲'],
+    food: ['🍇','🍈','🍉','🍊','🍋','🍌','🍍','🥭','🍎','🍏','🍐','🍑','🍒','🍓','🫐','🥝','🍅','🫒','🥥','🥑','🍆','🥔','🥕','🌽','🌶️','🫑','🥒','🥬','🥦','🧄','🧅','🍄','🥜','🫘','🌰','🫚','🫛','🍞','🥐','🥖','🫓','🥨','🥯','🥞','🧇','🧀','🍖','🍗','🥩','🥓','🍔','🍟','🍕','🌭','🥪','🌮','🌯','🫔','🧆','🥙','🧈','🥚','🍳','🥘','🍲','🫕','🥣','🥗','🍿','🧈','🧂','🥫','🫙','🍱','🍘','🍙','🍚','🍛','🍜','🍝','🍠','🍢','🍣','🍤','🍥','🥮','🍡','🥟','🥠','🥡','🦀','🦞','🦐','🦑','🦪','🍦','🍧','🍨','🍩','🍪','🎂','🍰','🧁','🥧','🍫','🍬','🍭','🍮','🍯','🍼','🥛','☕','🫖','🍵','🍶','🍾','🍷','🍸','🍹','🍺','🍻','🥂','🥃','🫗','🥤','🧋','🧃','🧉','🧊','🥢','🍽️','🍴','🥄','🔪','🫙','🏺'],
+    activities: ['⚽','🏀','🏈','⚾','🥎','🎾','🏐','🏉','🥏','🎱','🪀','🪁','🏒','🏑','🥍','🏏','🪃','🥅','⛳','🪁','🏹','🎣','🤿','🥊','🥋','🎽','🛹','🛼','🛷','⛸️','🥌','🎿','🎯','🪀','🪁','🎱','🔮','🪄','🧿','🎮','🕹️','🎰','🎲','🧩','🧸','🪅','🪆','♠️','♥️','♦️','♣️','♟️','🃏','🀄','🎴','🎭','🖼️','🎨','🧵','🪡','🧶','🪢','🎪','🤹','🎭','🩰','🎬','🎤','🎧','🎼','🎹','🥁','🪘','🎷','🎺','🪗','🎸','🪕','🎻','🎲','♟️','🎯','🎳','🎮','🎰','🧩','🪀','🪁','🪅','🪆'],
+    travel: ['🚗','🚕','🚙','🚌','🚎','🏎️','🚓','🚑','🚒','🚐','🛻','🚚','🚛','🚜','🏍️','🛵','🚲','🛴','🛺','🚍','🚘','🚖','🛞','🚡','🚠','🚟','🚃','🚋','🚞','🚝','🚄','🚅','🚈','🚂','🚆','🚇','🚊','🚉','✈️','🛫','🛬','🛩️','💺','🛰️','🚀','🛸','🚁','🛶','⛵','🚤','🛥️','🛳️','⛴️','🚢','⚓','🪝','⛽','🚧','🚦','🚥','🚏','🗺️','🗿','🗽','🗼','🏰','🏯','🏟️','🎡','🎢','🎠','⛲','⛱️','🏖️','🏝️','🏜️','🌋','⛰️','🏔️','🗻','🏕️','🛖','🏠','🏡','🏘️','🏚️','🏗️','🏭','🏢','🏬','🏣','🏤','🏥','🏦','🏨','🏪','🏫','🏩','💒','🏛️','⛪','🕌','🕍','🛕','🕋','⛩️','🛤️','🛣️','🗾','🎑','🏞️','🌅','🌄','🌠','🎇','🎆','🌇','🌆','🏙️','🌃','🌌','🌉','🌁','🎮','🕹️','🎰','🎲','🧩','🧸','🪅','🪆'],
+    objects: ['⌚','📱','📲','💻','⌨️','🖥️','🖨️','🖱️','🖲️','🕹️','🗜️','💽','💾','💿','📀','📼','📷','📸','📹','🎥','📽️','🎞️','📞','☎️','📟','📠','📺','📻','🎙️','🎚️','🎛️','🧭','⏱️','⏲️','⏰','🕰️','⌛','⏳','📡','🔋','🪫','🔌','💡','🔦','🕯️','🪔','🧯','🛢️','💸','💵','💴','💶','💷','🪙','💰','💳','🪪','🧾','📊','📈','📉','🗂️','📋','📁','📂','🗂️','🗃️','🗄️','🗑️','🔒','🔓','🔏','🔐','🗝️','🔑','❤️','🩹','🩺','💊','💉','🩸','🧬','🧫','🧪','🌡️','🧹','🪠','🧺','🧻','🚽','🚰','🚿','🛁','🛀','🧼','🪥','🪒','🧽','🪣','🧴','🛎️','🔑','🗝️','🚪','🪑','🛋️','🛏️','🛌','🧸','🪆','🪞','🪟','🧳','🛒','🎁','🎈','🎏','🎀','🪄','🪅','🎊','🎉','🎎','🏮','🎐','🧧','✉️','📩','📨','📧','💌','📥','📤','📦','🏷️','🪧','📪','📫','📬','📭','📮','📯','📜','📃','📄','📑','🧾','📊','📈','📉','🗒️','🗓️','📆','📅','🗑️','📇','🗃️','🗳️','🗄️','📋','📁','📂','🗂️','🗞️','📰','📓','📔','📒','📕','📖','📗','📘','📙','📚','📖','🔖','🧷','🔗','📎','🖇️','📐','📏','🧮','📌','📍','✂️','🖊️','🖋️','✒️','🖌️','🖍️','📝','✏️','🔍','🔎','🔏','🔐','🗝️','🔑'],
+    symbols: ['❤️','🧡','💛','💚','💙','💜','🖤','🤍','🤎','💔','❤️‍🔥','❤️‍🩹','❣️','💕','💞','💓','💗','💖','💘','💝','💟','☮️','✝️','☪️','🕉️','☸️','✡️','🔯','🕎','☯️','☦️','🛐','⛎','♈','♉','♊','♋','♌','♍','♎','♏','♐','♑','♒','♓','🆔','⚛️','🉑','☢️','☣️','📴','📳','🈶','🈚','🈸','🈺','🈷️','✴️','🆚','💮','🉐','㊙️','㊗️','🈴','🈵','🈹','🈲','🅰️','🅱️','🆎','🆑','🅾️','🆘','❌','⭕','🛑','⛔','📛','🚫','💯','💢','🚷','🚯','🚳','🚱','🔞','📵','🚭','❗','❕','❓','❔','‼️','⁉️','🔅','🔆','〽️','⚠️','🔱','⚜️','🔰','♻️','✅','🈯','💹','❎','🌐','💠','Ⓜ️','🌀','💤','🏧','🚾','♿','🅿️','🛗','🈳','🈹','🚰','🚹','🚺','🚻','🚼','🚽','🛁','🚿','🔴','🟠','🟡','🟢','🔵','🟣','⚫','⚪','🟤','🔺','🔻','💠','🔶','🔷','🔳','🔲','▪️','▫️','◾','◽','◼️','◻️','🟥','🟧','🟨','🟩','🟦','🟪','⬛','⬜','🟫','♈','♉','♊','♋','♌','♍','♎','♏','♐','♑','♒','♓','⛎','🔀','🔁','🔂','▶️','⏩','⏭️','⏯️','◀️','⏪','⏮️','🔼','⏫','🔽','⏬','⏸️','⏹️','⏺️','⏏️','🎦','🔅','🔆','📶','🛜','📳','📴','♀️','♂️','⚧️','✖️','➕','➖','➗','🟰','♾️','‼️','⁉️','❓','❔','❕','❗','〰️','💱','💲','⚕️','♻️','⚜️','🔱','📛','🔰','⭕','✅','☑️','✔️','❌','❎','➰','➿','〽️','✳️','✴️','❇️','©️','®️','™️','#️⃣','*️⃣','0️⃣','1️⃣','2️⃣','3️⃣','4️⃣','5️⃣','6️⃣','7️⃣','8️⃣','9️⃣','🔟','🔠','🔡','🔢','🔣','🔤','🅰️','🆎','🅱️','🆑','🆒','🆓','ℹ️','🆔','Ⓜ️','🆕','🆖','🅾️','🆗','🅿️','🆘','🆙','vs','🈁','🈂️','🈷️','🈶','🉐','㊙️','㊗️','🈴','🈵','🈹','🈲','🅰️','🅱️','🆑','🅾️','🆘','🏁','🚩','🎌','🏴','🏳️','🏳️‍🌈','🏳️‍⚧️','🏴‍☠️','🇦🇨','🇦🇩','🇦🇪','🇦🇫','🇦🇬','🇦🇮','🇦🇱','🇦🇲','🇦🇴','🇦🇶','🇦🇷','🇦🇸','🇦🇹','🇦🇺','🇦🇼','🇦🇽','🇦🇿','🇧🇦','🇧🇧','🇧🇩','🇧🇪','🇧🇫','🇧🇬','🇧🇭','🇧🇮','🇧🇯','🇧🇱','🇧🇲','🇧🇳','🇧🇴','🇧🇶','🇧🇷','🇧🇸','🇧🇹','🇧🇻','🇧🇼','🇧🇾','🇧🇿','🇨🇦','🇨🇨','🇨🇩','🇨🇫','🇨🇬','🇨🇭','🇨🇮','🇨🇰','🇨🇱','🇨🇲','🇨🇳','🇨🇴','🇨🇵','🇨🇷','🇨🇺','🇨🇻','🇨🇼','🇨🇽','🇨🇾','🇨🇿','🇩🇪','🇩🇬','🇩🇯','🇩🇰','🇩🇲','🇩🇴','🇩🇿','🇪🇦','🇪🇨','🇪🇪','🇪🇬','🇪🇭','🇪🇷','🇪🇸','🇪🇹','🇪🇺','🇫🇮','🇫🇯','🇫🇰','🇫🇲','🇫🇴','🇫🇷','🇬🇦','🇬🇧','🇬🇩','🇬🇪','🇬🇫','🇬🇬','🇬🇭','🇬🇮','🇬🇱','🇬🇲','🇬🇳','🇬🇵','🇬🇶','🇬🇷','🇬🇸','🇬🇹','🇬🇺','🇬🇼','🇬🇾','🇭🇰','🇭🇲','🇭🇳','🇭🇷','🇭🇹','🇭🇺','🇮🇨','🇮🇩','🇮🇪','🇮🇱','🇮🇲','🇮🇳','🇮🇴','🇮🇶','🇮🇷','🇮🇸','🇮🇹','🇯🇪','🇯🇲','🇯🇴','🇯🇵','🇰🇪','🇰🇬','🇰🇭','🇰🇮','🇰🇲','🇰🇳','🇰🇵','🇰🇷','🇰🇼','🇰🇾','🇰🇿','🇱🇦','🇱🇧','🇱🇨','🇱🇮','🇱🇰','🇱🇷','🇱🇸','🇱🇹','🇱🇺','🇱🇻','🇱🇾','🇲🇦','🇲🇨','🇲🇩','🇲🇪','🇲🇫','🇲🇬','🇲🇭','🇲🇰','🇲🇱','🇲🇲','🇲🇳','🇲🇴','🇲🇵','🇲🇶','🇲🇷','🇲🇸','🇲🇹','🇲🇺','🇲🇻','🇲🇼','🇲🇽','🇲🇾','🇲🇿','🇳🇦','🇳🇨','🇳🇪','🇳🇫','🇳🇬','🇳🇮','🇳🇱','🇳🇴','🇳🇵','🇳🇷','🇳🇺','🇳🇿','🇴🇲','🇵🇦','🇵🇪','🇵🇫','🇵🇬','🇵🇭','🇵🇰','🇵🇱','🇵🇲','🇵🇳','🇵🇷','🇵🇸','🇵🇹','🇵🇼','🇵🇾','🇶🇦','🇶🇪','🇶🇫','🇶🇬','🇶🇮','🇶🇱','🇶🇲','🇶🇳','🇶🇴','🇶🇵','🇶🇷','🇶🇸','🇶🇹','🇶🇺','🇶🇻','🇶🇼','🇶🇽','🇶🇾','🇶🇿','🇷🇦','🇷🇧','🇷🇨','🇷🇩','🇷🇪','🇷🇫','🇷🇬','🇷🇭','🇷🇮','🇷🇯','🇷🇰','🇷🇱','🇷🇲','🇷🇳','🇷🇴','🇷🇵','🇷🇶','🇷🇷','🇷🇸','🇷🇹','🇷🇺','🇷🇼','🇷🇽','🇷🇾','🇷🇿','🇸🇦','🇸🇧','🇸🇨','🇸🇩','🇸🇪','🇸🇬','🇸🇭','🇸🇮','🇸🇯','🇸🇰','🇸🇱','🇸🇲','🇸🇳','🇸🇴','🇸🇷','🇸🇸','🇸🇹','🇸🇻','🇸🇽','🇸🇾','🇸🇿','🇹🇦','🇹🇨','🇹🇩','🇹🇫','🇹🇬','🇹🇭','🇹🇯','🇹🇰','🇹🇱','🇹🇲','🇹🇳','🇹🇴','🇹🇷','🇹🇹','🇹🇻','🇹🇼','🇹🇿','🇺🇦','🇺🇬','🇺🇲','🇺🇳','🇺🇸','🇺🇾','🇺🇿','🇻🇦','🇻🇨','🇻🇪','🇻🇬','🇻🇮','🇻🇳','🇻🇺','🇼🇫','🇼🇸','🇽🇰','🇾🇪','🇾🇹','🇿🇦','🇿🇲','🇿🇼'],
   }
 };
 
@@ -86,6 +89,9 @@ document.addEventListener('DOMContentLoaded', () => {
   setupKeyboardShortcuts();
   setupOnlineStatus();
   setupAutoResize();
+  // Load recent emojis from localStorage
+  try { const r = JSON.parse(localStorage.getItem('nsl_emoji_recent') || '[]'); if (r.length) App.emojiCategories.recent = r; } catch(_) {}
+  App._currentEmojiCat = 'recent';
   loadEmojiGrid('recent');
   document.addEventListener('click', handleDocumentClick);
   document.addEventListener('keydown', e => { if (e.key==='Escape') closeTopModal(); });
@@ -2385,10 +2391,17 @@ function renderMessages(chatId) {
         </button>
       </div>`;
     } else if (msg.type === 'voice') {
-      contentHTML = `<div class="flex items-center gap-3 bg-surface-container-high/40 p-2.5 rounded-xl border border-outline-variant/20">
-        <button class="voice-play w-8 h-8 rounded-full bg-primary text-on-primary flex items-center justify-center" data-msg-id="${msg.id}" onclick="playVoice('${msg.id}')" aria-label="Play voice message">▶</button>
-        <div class="flex-1 flex items-end gap-0.5 h-6 overflow-hidden">${generateWaveform()}</div>
-        <span class="text-[10px] font-timestamp text-on-surface-variant">${msg.duration||'0:00'}</span>
+      const dur = msg.duration || '0:00';
+      const durSec = msg.durationSec || 0;
+      contentHTML = `<div class="voice-player bg-surface-container-high/40 p-2.5 rounded-xl border border-outline-variant/20" data-msg-id="${msg.id}">
+        <div class="flex items-center gap-2">
+          <button class="voice-play w-8 h-8 rounded-full bg-primary text-on-primary flex items-center justify-center shrink-0" data-msg-id="${msg.id}" onclick="playVoice('${msg.id}')" aria-label="Play voice message">▶</button>
+          <div class="flex-1">
+            <input type="range" min="0" max="${durSec || 100}" value="0" step="0.1" class="voice-scrub w-full h-1 accent-primary cursor-pointer" data-msg-id="${msg.id}" oninput="scrubVoice('${msg.id}', this.value)" style="accent-color:var(--primary)">
+          </div>
+          <button class="voice-speed text-[10px] font-bold px-1.5 py-0.5 rounded bg-surface-variant/60 hover:bg-surface-variant text-on-surface-variant cursor-pointer" data-msg-id="${msg.id}" data-speed="1" onclick="cycleVoiceSpeed(this)">1x</button>
+          <span class="text-[10px] font-timestamp text-on-surface-variant voice-time" data-msg-id="${msg.id}">${dur}</span>
+        </div>
       </div>`;
     } else if (msg.type === 'doc') {
       contentHTML = `<div class="flex items-center gap-4 bg-surface-container-high p-4 rounded-xl border border-outline-variant/20 cursor-pointer" onclick="openMediaViewer('${msg.id}')">
@@ -2404,15 +2417,26 @@ function renderMessages(chatId) {
       </div>`;
     } else if (msg.type === 'contact') {
       const initial = (msg.contactName||'?').charAt(0).toUpperCase();
+      const phone = msg.contactPhone || '';
+      const avatar = msg.contactAvatar || '';
+      const email = msg.contactEmail || '';
+      const existingChat = email ? App.chats.find(c => c.email && c.email.toLowerCase() === email.toLowerCase()) : null;
       contentHTML = `<div class="contact-card">
         <div class="contact-header">
-          <div class="contact-avatar">${escHtml(initial)}</div>
+          ${avatar
+            ? `<img src="${escHtml(avatar)}" class="contact-avatar object-cover">`
+            : `<div class="contact-avatar">${escHtml(initial)}</div>`
+          }
           <div class="contact-info">
             <div class="contact-name">${escHtml(msg.contactName||'Unknown')}</div>
-            <div class="contact-email">${escHtml(msg.contactEmail||'')}</div>
+            <div class="contact-email">${escHtml(email)}</div>
+            ${phone ? `<div class="contact-email">${escHtml(phone)}</div>` : ''}
           </div>
         </div>
-        <button onclick="event.stopPropagation();sendRequestFromContact('${escHtml(msg.contactEmail||'')}','${escHtml(msg.contactName||'')}')" class="send-request-btn">Send Request</button>
+        ${existingChat
+          ? `<button onclick="event.stopPropagation();openChat('${existingChat.id}')" class="send-request-btn" style="background:var(--secondary)">Open Chat</button>`
+          : `<button onclick="event.stopPropagation();sendRequestFromContact('${escHtml(email)}','${escHtml(msg.contactName||'')}')" class="send-request-btn">Send Request</button>`
+        }
       </div>`;
     } else {
       contentHTML = `<div class="text-sm font-normal leading-relaxed text-on-surface">${formatMsgText(msg.text||'')}</div>`;
@@ -3750,30 +3774,70 @@ function shareContact() {
 function showContactPicker() {
   const overlay = document.getElementById('contact-picker-overlay');
   if (!overlay) return;
+  // Set "Share My Profile" info
+  const myAvatar = document.getElementById('contact-picker-my-avatar');
+  const myEmail = document.getElementById('contact-picker-my-email');
+  if (myAvatar) myAvatar.textContent = (App.currentUser?.displayName || 'Me').charAt(0).toUpperCase();
+  if (myEmail) myEmail.textContent = App.currentUser?.email || 'Your email';
+  // Clear search
+  const search = document.getElementById('contact-search');
+  if (search) search.value = '';
+  _renderContactPickerList('');
+  show('contact-picker-overlay');
+}
+
+function _renderContactPickerList(query) {
   const list = document.getElementById('contact-picker-list');
-  const contacts = App.contacts.filter(c => c.uid !== App.auth?.currentUser?.uid);
-  list.innerHTML = contacts.map(c => `
+  if (!list) return;
+  let contacts = App.contacts.filter(c => c.uid !== App.auth?.currentUser?.uid);
+  if (query) {
+    const q = query.toLowerCase();
+    contacts = contacts.filter(c => (c.name||'').toLowerCase().includes(q) || (c.email||'').toLowerCase().includes(q) || (c.phone||'').includes(q));
+  }
+  list.innerHTML = contacts.map(c => {
+    const existingChat = App.chats.find(ch => ch.uid === c.uid);
+    const hasChat = !!existingChat;
+    return `
     <div class="flex items-center gap-3 p-3 rounded-xl hover:bg-surface-variant/40 transition-all cursor-pointer" onclick="selectContactToShare('${c.uid}')">
-      <div class="w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm ${c.avatar || 'bg-surface-container-highest text-on-surface-variant'}">${escHtml(c.initials || c.name.charAt(0).toUpperCase())}</div>
+      ${c.photoURL
+        ? `<img src="${escHtml(c.photoURL)}" class="w-10 h-10 rounded-full object-cover">`
+        : `<div class="w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm ${c.avatar || 'bg-surface-container-highest text-on-surface-variant'}">${escHtml(c.initials || c.name.charAt(0).toUpperCase())}</div>`
+      }
       <div class="flex-1 min-w-0">
-        <div class="text-sm font-bold truncate">${escHtml(c.name)}</div>
-        <div class="text-[10px] text-on-surface-variant truncate">${escHtml(c.email || '')}</div>
+        <div class="flex items-center gap-2">
+          <span class="text-sm font-bold truncate">${escHtml(c.name)}</span>
+          ${hasChat ? '<span class="text-[9px] px-1.5 py-0.5 bg-primary/15 text-primary rounded-full font-bold">In chats</span>' : ''}
+        </div>
+        <div class="text-[10px] text-on-surface-variant truncate">${escHtml(c.email || '')}${c.phone ? ' · ' + escHtml(c.phone) : ''}</div>
       </div>
       <span class="material-symbols-outlined text-on-surface-variant text-sm">chevron_right</span>
-    </div>
-  `).join('');
-  show('contact-picker-overlay');
+    </div>`;
+  }).join('') || '<div class="text-center text-xs text-on-surface-variant py-4">No contacts found</div>';
+}
+
+function filterContactPicker(query) {
+  _renderContactPickerList(query);
+}
+
+function shareMyProfile() {
+  if (!App.currentChat) return;
+  const name = App.currentUser?.displayName || App.currentUser?.email || 'Me';
+  const email = App.currentUser?.email || '';
+  const phone = App.currentUser?.phoneNumber || '';
+  const avatar = App.currentUser?.photoURL || '';
+  hide('contact-picker-overlay');
+  _sendContactMessage(name, email, phone, avatar);
 }
 
 function selectContactToShare(uid) {
   const contact = App.contacts.find(c => c.uid === uid);
   if (!contact) return;
   hide('contact-picker-overlay');
-  _sendContactMessage(contact.name, contact.email || '');
+  _sendContactMessage(contact.name, contact.email || '', contact.phone || '', contact.photoURL || '');
 }
 
-function _sendContactMessage(contactName, contactEmail) {
-  if (!App.currentChat || !contactName || !contactEmail) return;
+function _sendContactMessage(contactName, contactEmail, contactPhone, contactAvatar) {
+  if (!App.currentChat || !contactName) return;
   const chatId = App.currentChat.id;
   if (!App.messages[chatId]) App.messages[chatId] = [];
   const msg = {
@@ -3781,7 +3845,9 @@ function _sendContactMessage(contactName, contactEmail) {
     from: 'me',
     type: 'contact',
     contactName,
-    contactEmail,
+    contactEmail: contactEmail || '',
+    contactPhone: contactPhone || '',
+    contactAvatar: contactAvatar || '',
     time: Date.now(),
     status: 'sent'
   };
@@ -3790,7 +3856,6 @@ function _sendContactMessage(contactName, contactEmail) {
   App.currentChat.lastTime = msg.time;
   renderMessages(chatId); scrollToBottom(true); renderChatList();
 
-  // Write to Firebase
   if (App.db && App.auth?.currentUser) {
     const uid = App.auth.currentUser.uid;
     const isGroup = App.currentChat.type === 'group';
@@ -3798,7 +3863,7 @@ function _sendContactMessage(contactName, contactEmail) {
       senderId: uid,
       senderName: App.currentUser.displayName || App.currentUser.email || 'Me',
       text: '',
-      attachment: { type: 'contact', contactName, contactEmail },
+      attachment: { type: 'contact', contactName, contactEmail: contactEmail || '', contactPhone: contactPhone || '', contactAvatar: contactAvatar || '' },
       timestamp: firebase.firestore.FieldValue.serverTimestamp(),
       status: 'sent',
     };
@@ -3875,20 +3940,77 @@ function stopLiveLocation() {
 /* ══════════════════════════════════════════════════
    24. EMOJI LOADINGS
    ══════════════════════════════════════════════════ */
+const EMOJI_NAMES = {
+  '😀':'grinning face','😃':'grinning face with big eyes','😄':'grinning face with smiling eyes','😁':'beaming face','😆':'grinning squinting face','😅':'grinning face with sweat','🤣':'rolling on the floor laughing','😂':'face with tears of joy','🙂':'slightly smiling face','🙃':'upside-down face','😉':'winking face','😊':'smiling face with smiling eyes','😇':'smiling face with halo','🥰':'smiling face with hearts','😍':'heart eyes','🤩':'star struck','😘':'face blowing a kiss','😗':'kissing face','😚':'kissing closed eyes','😙':'kissing smiling eyes','🥲':'smiling face with tear','😋':'face savoring food','😛':'face with tongue','😜':'winking face with tongue','🤪':'zany face','😝':'squinting face with tongue','🤑':'money mouth face','🤗':'hugging face','🤭':'face with hand over mouth','🤫':'shushing face','🤔':'thinking face','🫡':'saluting face','🤐':'zipper mouth face','🤨':'face with raised eyebrow','😐':'neutral face','😑':'expressionless face','😶':'face without mouth','🫥':'dotted line face','😏':'smirking face','😒':'unamused face','🙄':'face with rolling eyes','😬':'grimacing face','🤥':'lying face','😌':'relieved face','😔':'pensive face','😪':'sleepy face','🤤':'drooling face','😴':'sleeping face','😷':'face with medical mask','🤒':'face with thermometer','🤕':'face with head bandage','🤢':'nauseated face','🤮':'face vomiting','🥵':'hot face','🥶':'cold face','🥴':'woozy face','😵':'face with crossed-out eyes','🤯':'exploding head','🤠':'cowboy hat face','🥳':'partying face','🥸':'disguised face','😎':'smiling face with sunglasses','🤓':'nerd face','🧐':'face with monocle','😕':'confused face','🫤':'face with diagonal mouth','😟':'worried face','🙁':'slightly frowning face','😮':'face with open mouth','😯':'hushed face','😲':'astonished face','😳':'flushed face','🥺':'pleading face','🥹':'face holding back tears','😦':'frowning face with open mouth','😧':'anguished face','😨':'fearful face','😰':'anxious face with sweat','😥':'sad but relieved face','😢':'crying face','😭':'loudly crying face','😱':'face screaming in fear','😖':'confounded face','😣':'persevering face','😞':'disappointed face','😓':'downcast face with sweat','😩':'weary face','😫':'tired face','🥱':'yawning face','😤':'face with steam from nose','😡':'enraged face','😠':'angry face','🤬':'face with symbols on mouth','😈':'smiling face with horns','👿':'angry face with horns','💀':'skull','☠️':'skull and crossbones','💩':'pile of poo','🤡':'clown face','👹':'ogre','👺':'goblin','👻':'ghost','👽':'alien','👾':'alien monster','🤖':'robot','😺':'grinning cat','😸':'grinning cat with smiling eyes','😹':'cat with tears of joy','😻':'smiling cat with heart eyes','😼':'cat with wry smile','😽':'kissing cat','🙀':'weary cat','😿':'crying cat','😾':'pouting cat',
+  '👋':'waving hand','🤚':'raised back of hand','🖐️':'hand with fingers splayed','✋':'raised hand','🖖':'vulcan salute','👌':'ok hand','🤌':'pinched fingers','🤏':'pinching hand','✌️':'victory hand','🤞':'crossed fingers','🤟':'love you gesture','🤘':'sign of the horns','🤙':'call me hand','👈':'backhand index pointing left','👉':'backhand index pointing right','👆':'backhand index pointing up','🖕':'middle finger','👇':'backhand index pointing down','☝️':'index pointing up','👍':'thumbs up','👎':'thumbs down','✊':'raised fist','👊':'oncoming fist','🤛':'left facing fist','🤜':'right facing fist','👏':'clapping hands','🙌':'raising hands','👐':'open hands','🤲':'palms up together','🤝':'handshake','🙏':'folded hands','✍️':'writing hand','💅':'nail polish','🤳':'selfie','💪':'flexed biceps',
+  '🐶':'dog face','🐱':'cat face','🐭':'mouse face','🐹':'hamster','🐰':'rabbit face','🦊':'fox','🐻':'bear','🐼':'panda','🐨':'koala','🐯':'tiger face','🦁':'lion','🐮':'cow face','🐷':'pig face','🐸':'frog','🐵':'monkey face','🙈':'see no evil monkey','🙉':'hear no evil monkey','🙊':'speak no evil monkey','🐒':'monkey','🐔':'chicken','🐧':'penguin','🐦':'bird','🐤':'baby chick','🐣':'hatching chick','🐥':'front facing baby chick','🦆':'duck','🦅':'eagle','owl':'owl','🦇':'bat','🐺':'wolf','🐗':'boar','🐴':'horse face','🦄':'unicorn','🐝':'honeybee','🐛':'bug','🦋':'butterfly','🐌':'snail','🐞':'lady beetle','🐜':'ant','🐢':'turtle','🐍':'snake','🦎':'lizard','🐙':'octopus','🦑':'squid','🦐':'shrimp','🦞':'lobster','🦀':'crab','🐡':'blowfish','🐠':'tropical fish','🐟':'fish','🐬':'dolphin','🐳':'whale face','🐋':'whale','🦈':'shark','🐊':'crocodile','🐅':'tiger','🐆':'leopard','🦓':'zebra','🦍':'gorilla','🐘':'elephant','🦛':'hippopotamus','🐪':'camel','🐫':'two hump camel','🦒':'giraffe','🐃':'water buffalo','cow':'cow','horse':'horse','pig':'pig','sheep':'sheep','goat':'goat','dog':'dog','cat':'cat','mouse':'mouse','rabbit':'rabbit','hamster':'hamster',
+  '🍇':'grapes','🍈':'melon','🍉':'watermelon','🍊':'tangerine','lemon':'lemon','🍌':'banana','🍍':'pineapple','🥭':'mango','🍎':'red apple','🍏':'green apple','🍐':'pear','🍑':'peach','🍒':'cherries','🍓':'strawberry','🫐':'blueberries','🥝':'kiwi fruit','🍅':'tomato','🥑':'avocado','🍆':'eggplant','🥔':'potato','🥕':'carrot','🌽':'ear of corn','🌶️':'hot pepper','🥒':'cucumber','🥬':'leafy green','🥦':'broccoli','🧄':'garlic','🧅':'onion','🍄':'mushroom','🥜':'peanuts','🌰':'chestnut','🍞':'bread','🥐':'croissant','🥖':'baguette bread','🥨':'pretzel','🥯':'bagel','🥞':'pancakes','🧇':'waffle','🧀':'cheese wedge','🍖':'meat on bone','🍗':'poultry leg','🥩':'cut of meat','🥓':'bacon','🍔':'hamburger','🍟':'french fries','🍕':'pizza','🌭':'hot dog','🥪':'sandwich','🌮':'taco','🌯':'burrito','🧆':'falafel','🥚':'egg','🍳':'cooking','🥘':'shallow pan of food','🍲':'pot of food','🥣':'bowl with spoon','🥗':'green salad','🍿':'popcorn','🧈':'butter','🧂':'salt','🥫':'canned food','🍱':'bento box','🍘':'rice cracker','🍙':'rice ball','🍚':'cooked rice','🍛':'curry rice','🍜':'steaming bowl','🍝':'spaghetti','🍠':'roasted sweet potato','🍢':'oden','🍣':'sushi','🍤':'fried shrimp','🍥':'fish cake with swirl','🥮':'moon cake','🍡':'dango','🥟':'dumpling','🥠':'fortune cookie','🥡':'takeout box','🦀':'crab','🦞':'lobster','🦐':'shrimp','🦑':'squid','🍦':'soft ice cream','🍧':'shaved ice','🍨':'ice cream','🍩':'doughnut','🍪':'cookie','🎂':'birthday cake','🍰':'shortcake','🧁':'cupcake','🥧':'pie','🍫':'chocolate bar','🍬':'candy','🍭':'lollipop','🍮':'custard','🍯':'honey pot','🍼':'baby bottle','🥛':'glass of milk','☕':'hot beverage','🍵':'teacup without handle','🍶':'sake','🍾':'bottle with popping cork','wine':'wine glass','🍸':'cocktail glass','🍹':'tropical drink','🍺':'beer mug','🍻':'clinking beer mugs','🥂':'clinking glasses','🥃':'tumbler glass','🥤':'cup with straw',
+  '⚽':'soccer ball','🏀':'basketball','🏈':'american football','⚾':'baseball','🎾':'tennis','🏐':'volleyball','🏉':'rugby football','🎱':'pool 8 ball','🏒':'ice hockey','🏑':'field hockey','🏏':'cricket game','🥅':'goal net','⛳':'flag in hole','🏹':'bow and arrow','🎣':'fishing pole','🤿':'diving mask','🥊':'boxing glove','🥋':'martial arts uniform','🛹':'skateboard','🛼':'roller skate','🛷':'sled','⛸️':'ice skate','🎿':'skis','🎯':'bullseye','🪀':'yo yo','🪁':'kite','🎱':'pool 8 ball','🔮':'crystal ball','🎮':'video game','🕹️':'joystick','🎰':'slot machine','🎲':'game die','🧩':'puzzle piece','🧸':'teddy bear','🎪':'circus tent','🎭':'performing arts','🎬':'clapper board','🎤':'microphone','🎧':'headphone','🎼':'musical score','🎹':'musical keyboard','🥁':'drum','🎷':'saxophone','🎺':'trumpet','🎸':'guitar','🎻':'violin',
+  '🚗':'automobile','🚕':'taxi','🚙':'sport utility vehicle','🚌':'bus','🏎️':'racing car','🚓':'police car','🚑':'ambulance','🚒':'fire engine','🚐':'minibus','🚚':'delivery truck','🚛':'articulated lorry','🚜':'tractor','🏍️':'motorcycle','🛵':'motor scooter','🚲':'bicycle','🛴':'kick scooter','🛺':'auto rickshaw','✈️':'airplane','🛫':'airplane departure','🛬':'airplane arrival','🛩️':'small airplane','💺':'seat','🛰️':'satellite','🚀':'rocket','🛸':'flying saucer','🚁':'helicopter','🛶':'canoe','⛵':'sailboat','🚤':'speedboat','🛥️':'motor boat','🛳️':'passenger ship','⛴️':'ferry','🚢':'ship','⚓':'anchor','⛽':'fuel pump','🚧':'construction','🚦':'vertical traffic light','🚥':'horizontal traffic light','🗺️':'world map','🗿':'moai','🗽':'statue of liberty','🗼':'tokyo tower','🏰':'castle','🏯':'japanese castle','🏟️':'stadium','🎡':'ferris wheel','🎢':'roller coaster','🎠':'carousel horse','⛲':'fountain','⛱️':'umbrella on ground','🏖️':'beach with umbrella','🏝️':'desert island','🏜️':'desert','🌋':'volcano','⛰️':'mountain','🏔️':'snow capped mountain','🗻':'mount fuji','🏕️':'camping','⛺':'tent','🛖':'hut','🏠':'house','🏡':'house with garden','🏘️':'houses','🏚️':'derelict house','🏗️':'building construction','🏭':'factory','🏢':'office building','🏬':'department store','🏣':'japanese post office','🏤':'post office','🏥':'hospital','🏦':'bank','🏨':'hotel','🏪':'convenience store','🏫':'school','💒':'wedding','🏛️':'classical building','⛪':'church','🕌':'mosque','🕍':'synagogue','⛩️':'shinto shrine',
+  '⌚':'watch','📱':'mobile phone','📲':'mobile phone with arrow','💻':'laptop','⌨️':'keyboard','🖥️':'desktop computer','🖨️':'printer','🖱️':'computer mouse','💡':'light bulb','🔦':'flashlight','🕯️':'candle','🧯':'fire extinguisher','💰':'money bag','💳':'credit card','📊':'bar chart','📈':'chart increasing','📉':'chart decreasing','📋':'clipboard','📁':'file folder','📂':'open file folder','🗑️':'wastebasket','🔒':'locked','🔓':'unlocked','🔑':'key','🗝️':'old key','✉️':'envelope','📩':'envelope with arrow','📨':'incoming envelope','📧':'e-mail','💌':'love letter','📦':'package','🏷️':'label','📜':'scroll','📄':'page facing up','📑':'bookmark tabs','📊':'bar chart','📅':'calendar','📆':'tear off calendar','📇':'card index','🗃️':'card file box','🗄️':'file cabinet','📝':'memo','✏️':'pencil','🖊️':'pen','🖋️':'fountain pen','✒️':'black nib','🖌️':'paintbrush','🖍️':'crayon','🔍':'magnifying glass tilted left','🔎':'magnifying glass tilted right',
+  '❤️':'red heart','🧡':'orange heart','💛':'yellow heart','💚':'green heart','💙':'blue heart','💜':'purple heart','🖤':'black heart','🤍':'white heart','🤎':'brown heart','💔':'broken heart','❤️‍🔥':'heart on fire','❣️':'heart exclamation','💕':'two hearts','💞':'revolving hearts','💓':'beating heart','💗':'growing heart','💖':'sparkling heart','💘':'heart with arrow','💝':'heart with ribbon','💟':'heart decoration','☮️':'peace symbol','✝️':'latin cross','☪️':'star and crescent','🕉️':'om','☸️':'wheel of dharma','✡️':'star of david','🔯':'six pointed star','☯️':'yin yang','✝️':'latin cross','🛐':'worship symbol','⛎':'ophiuchus','♈':'aries','♉':'taurus','♊':'gemini','♋':'cancer','♌':'leo','♍':'virgo','♎':'libra','♏':'scorpio','♐':'sagittarius','♑':'capricorn','♒':'aquarius','♓':'pisces','🆔':'id button','⚛️':'atom symbol','🉑':'acceptable','☢️':'radioactive','☣️':'biohazard','📴':'mobile phone off','📳':'vibration mode','🈶':'Japanese "not free of charge" button','🈚':'Japanese "free of charge" button','🈸':'Japanese "application" button','🈺':'Japanese "reserved" button','🈷️':'Japanese "monthly amount" button','✴️':'eight pointed star','🆚':'VS button','💮':'white flower','🉐':'Japanese "bargain" button','㊙️':'Japanese "secret" button','㊗️':'Japanese "congratulations" button','🈴':'Japanese "passing grade" button','🈵':'Japanese "no vacancy" button','🈹':'Japanese "discount" button','🈲':'Japanese "prohibited" button','🅰️':'A button (blood type)','🅱️':'B button (blood type)','🆎':'AB button (blood type)','🆑':'CL button','🅾️':'O button (blood type)','🆘':'SOS button','❌':'cross mark','⭕':'hollow red circle','🛑':'stop sign','⛔':'no entry','📛':'name badge','🚫':'prohibited','💯':'hundred points','💢':'anger symbol','🚷':'no pedestrians','🚯':'no littering','🚳':'no bicycles','🚱':'non-potable water','🔞':'no one under eighteen','📵':'no mobile phones','🚭':'no smoking','❗':'red exclamation mark','❕':'white exclamation mark','❓':'red question mark','❔':'white question mark','‼️':'double exclamation mark','⁉️':'exclamation question mark','🔅':'dim button','🔆':'bright button','〽️':'part alternation mark','⚠️':'warning','🔱':'trident emblem','⚜️':'fleur de lis','🔰':'Japanese symbol for beginner','♻️':'recycling symbol','✅':'check mark button','🈯':'Japanese "reserved" button','💹':'chart increasing with yen','❎':'cross mark button','🌐':'globe with meridians','💠':'diamond with a dot','Ⓜ️':'circled M','🌀':'cyclone','💤':'zzz','🏧':'ATM sign','🚾':'water closet','♿':'wheelchair symbol','🅿️':'P button','🛗':'elevator','🔺':'red triangle pointed up','🔻':'red triangle pointed down','🔶':'large orange diamond','🔷':'large blue diamond','🔳':'white square button','🔲':'black square button','▪️':'black small square','▫️':'white small square','◾':'black medium small square','◽':'white medium small square','◼️':'black medium square','◻️':'white medium square','🟥':'red square','🟧':'orange square','🟨':'yellow square','🟩':'green square','🟦':'blue square','🟪':'purple square','⬛':'black large square','⬜':'white large square','🟫':'brown square','🔴':'red circle','🟠':'orange circle','🟡':'yellow circle','🟢':'green circle','🔵':'blue circle','🟣':'purple circle','⚫':'black circle','⚪':'white circle','🟤':'brown circle',
+  '🏁':'chequered flag','🚩':'triangular flag','🎌':'crossed flags','🏴':'black flag','🏳️':'white flag','🏳️‍🌈':'rainbow flag','🏳️‍⚧️':'transgender flag','🏴‍☠️':'pirate flag',
+};
 function loadEmojiGrid(cat) {
   const grid = document.getElementById('emoji-grid');
   if (!grid) return;
   const list = App.emojiCategories[cat] || [];
-  grid.innerHTML = list.map(em => `<span class="cursor-pointer hover:scale-125 transition-transform" onclick="insertEmoji('${em}')">${em}</span>`).join('');
+  grid.innerHTML = list.map(em => {
+    const name = EMOJI_NAMES[em] || '';
+    return `<span class="cursor-pointer hover:scale-125 transition-transform p-0.5 rounded hover:bg-surface-variant/40" data-emoji="${em}" data-name="${name}" onclick="insertEmoji('${em}')" onmouseenter="previewEmoji('${em}','${(name||'').replace(/'/g,"\\'")}')" onmouseleave="clearEmojiPreview()">${em}</span>`;
+  }).join('');
+  grid.parentElement.scrollTop = 0;
 }
 function setEmojiCat(btn, cat) {
   qsa('.emoji-cat-btn').forEach(b=>b.classList.remove('active','bg-primary/10'));
   btn.classList.add('active','bg-primary/10');
+  const search = document.getElementById('emoji-search');
+  if (search) search.value = '';
   loadEmojiGrid(cat);
+  App._currentEmojiCat = cat;
+}
+function searchEmoji(query) {
+  const grid = document.getElementById('emoji-grid');
+  if (!grid) return;
+  if (!query.trim()) { loadEmojiGrid(App._currentEmojiCat || 'recent'); return; }
+  const q = query.toLowerCase();
+  const results = [];
+  for (const [cat, emojis] of Object.entries(App.emojiCategories)) {
+    if (cat === 'recent') continue;
+    for (const em of emojis) {
+      const name = (EMOJI_NAMES[em] || '').toLowerCase();
+      if (name.includes(q) || em === q) results.push({ em, name });
+    }
+  }
+  grid.innerHTML = results.length ? results.map(r =>
+    `<span class="cursor-pointer hover:scale-125 transition-transform p-0.5 rounded hover:bg-surface-variant/40" data-emoji="${r.em}" data-name="${r.name}" onclick="insertEmoji('${r.em}')" onmouseenter="previewEmoji('${r.em}','${(r.name||'').replace(/'/g,"\\'")}')" onmouseleave="clearEmojiPreview()">${r.em}</span>`
+  ).join('') : '<div class="col-span-8 text-center text-xs text-on-surface-variant py-4">No emojis found</div>';
+}
+function previewEmoji(em, name) {
+  const icon = document.getElementById('emoji-preview-icon');
+  const label = document.getElementById('emoji-preview-name');
+  if (icon) icon.textContent = em;
+  if (label) label.textContent = name || '';
+}
+function clearEmojiPreview() {
+  const icon = document.getElementById('emoji-preview-icon');
+  const label = document.getElementById('emoji-preview-name');
+  if (icon) icon.textContent = '';
+  if (label) label.textContent = '';
 }
 function insertEmoji(em) {
   const input = document.getElementById('msg-input');
   if (input) { input.value += em; input.focus(); toggleSendMic(); }
+  // Track recent
+  try {
+    const key = 'nsl_emoji_recent';
+    let recent = JSON.parse(localStorage.getItem(key) || '[]');
+    recent = recent.filter(e => e !== em);
+    recent.unshift(em);
+    if (recent.length > 30) recent = recent.slice(0, 30);
+    localStorage.setItem(key, JSON.stringify(recent));
+    App.emojiCategories.recent = recent;
+  } catch(_) {}
 }
 
 /* ══════════════════════════════════════════════════
