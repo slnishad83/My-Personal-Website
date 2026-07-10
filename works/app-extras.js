@@ -306,6 +306,21 @@ function _updatePlayBtn(msgId, isPlaying) {
    ══════════════════════════════════════════════════════════════ */
 let _ctxMenu = null;
 
+function _execAction(actionStr) {
+  try {
+    const match = actionStr.match(/^(\w+)\((?:'([^']*)'|"([^"]*)")?\)$/);
+    if (match) {
+      const fnName = match[1];
+      const arg = match[2] || match[3] || '';
+      if (typeof window[fnName] === 'function') {
+        window[fnName](arg);
+        return;
+      }
+    }
+    console.warn('Unknown action:', actionStr);
+  } catch(e) { console.error('Action exec error:', e); }
+}
+
 function showMsgContextMenu(event, msgId) {
   event.preventDefault();
   event.stopPropagation();
@@ -389,7 +404,7 @@ function showMsgContextMenu(event, msgId) {
     btn.innerHTML = `<span style="font-size:16px">${icon}</span> ${label}`;
     btn.onmouseenter = () => btn.style.background = danger ? 'rgba(186,26,26,0.1)' : 'var(--surface-container-highest)';
     btn.onmouseleave = () => btn.style.background = 'transparent';
-    btn.onclick = () => { _removeCtxMenu(); eval(fn); };
+    btn.onclick = () => { _removeCtxMenu(); _execAction(fn); };
     menu.appendChild(btn);
   });
 
@@ -397,8 +412,14 @@ function showMsgContextMenu(event, msgId) {
 
   // Intelligently fit menu inside viewport to prevent offscreen cut-offs
   const rect = menu.getBoundingClientRect();
-  const x = Math.min(event.clientX, window.innerWidth - rect.width - 20);
-  const y = Math.min(event.clientY, window.innerHeight - rect.height - 20);
+  let cx = event.clientX || event.pageX || 0;
+  let cy = event.clientY || event.pageY || 0;
+  if (!cx && !cy && event.touches && event.touches.length) {
+    cx = event.touches[0].clientX;
+    cy = event.touches[0].clientY;
+  }
+  const x = Math.min(cx || (window.innerWidth / 2), window.innerWidth - rect.width - 20);
+  const y = Math.min(cy || (window.innerHeight / 2), window.innerHeight - rect.height - 20);
   menu.style.left = Math.max(10, x) + 'px';
   menu.style.top  = Math.max(10, y) + 'px';
 
@@ -457,7 +478,7 @@ function chatContextMenu(event, chatId) {
     btn.innerHTML = `<span style="font-size:16px">${icon}</span> ${label}`;
     btn.onmouseenter = () => btn.style.background = danger ? 'rgba(186,26,26,0.1)' : 'var(--surface-container-highest)';
     btn.onmouseleave = () => btn.style.background = 'transparent';
-    btn.onclick = () => { _removeCtxMenu(); eval(fn); };
+    btn.onclick = () => { _removeCtxMenu(); _execAction(fn); };
     menu.appendChild(btn);
   });
 
@@ -465,8 +486,14 @@ function chatContextMenu(event, chatId) {
   
   // Measure rect boundaries to prevent offscreen/cut-off menu display
   const rect = menu.getBoundingClientRect();
-  const x = Math.min(event.clientX, window.innerWidth - rect.width - 20);
-  const y = Math.min(event.clientY, window.innerHeight - rect.height - 20);
+  let cx2 = event.clientX || event.pageX || 0;
+  let cy2 = event.clientY || event.pageY || 0;
+  if (!cx2 && !cy2 && event.touches && event.touches.length) {
+    cx2 = event.touches[0].clientX;
+    cy2 = event.touches[0].clientY;
+  }
+  const x = Math.min(cx2 || (window.innerWidth / 2), window.innerWidth - rect.width - 20);
+  const y = Math.min(cy2 || (window.innerHeight / 2), window.innerHeight - rect.height - 20);
   menu.style.left = Math.max(10, x) + 'px';
   menu.style.top  = Math.max(10, y) + 'px';
 
@@ -510,7 +537,7 @@ function callLogContextMenu(event, logId) {
     btn.innerHTML = `<span style="font-size:16px">${icon}</span> ${label}`;
     btn.onmouseenter = () => btn.style.background = danger ? 'rgba(186,26,26,0.1)' : 'var(--surface-container-highest)';
     btn.onmouseleave = () => btn.style.background = 'transparent';
-    btn.onclick = () => { _removeCtxMenu(); eval(fn); };
+    btn.onclick = () => { _removeCtxMenu(); _execAction(fn); };
     menu.appendChild(btn);
   });
 
@@ -571,7 +598,7 @@ function openChatMenu(btn) {
     item.innerHTML = `<span style="font-size:16px">${icon}</span> ${label}`;
     item.onmouseenter = () => item.style.background = danger ? 'rgba(186,26,26,0.1)' : 'var(--surface-container-highest)';
     item.onmouseleave = () => item.style.background = 'transparent';
-    item.onclick = () => { _removeCtxMenu(); eval(fn); };
+    item.onclick = () => { _removeCtxMenu(); _execAction(fn); };
     menu.appendChild(item);
   });
 
@@ -1056,9 +1083,13 @@ function showQuickReactions(event, msgId) {
   picker.appendChild(moreBtn);
 
   const el = event.currentTarget || event.target;
-  const rect = el.getBoundingClientRect();
-  const x = Math.min(rect.left, window.innerWidth - 340);
-  const y = rect.top - 60;
+  const rect = el ? el.getBoundingClientRect() : { left: 0, top: 0 };
+  const pw = 340, ph = 56;
+  let x = Math.min(rect.left, window.innerWidth - pw - 8);
+  let y = rect.top - ph - 8;
+  if (y < 8) y = rect.bottom + 8;
+  if (x < 8) x = 8;
+  if (x + pw > window.innerWidth - 8) x = window.innerWidth - pw - 8;
   picker.style.left = Math.max(8, x) + 'px';
   picker.style.top  = Math.max(8, y) + 'px';
 
@@ -1079,13 +1110,25 @@ function copyMsgText(msgId) {
   if (!msg) return;
   const text = msg.text || (msg.fileName ? msg.fileName : '');
   if (!text) { showToast('Nothing to copy', 'info'); return; }
-  navigator.clipboard.writeText(text).then(() => showToast('Copied to clipboard', 'success'))
-    .catch(() => {
-      const ta = document.createElement('textarea');
-      ta.value = text; document.body.appendChild(ta); ta.select();
-      document.execCommand('copy'); ta.remove();
-      showToast('Copied', 'success');
-    });
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(() => showToast('Copied to clipboard', 'success')).catch(() => _fallbackCopy(text));
+  } else {
+    _fallbackCopy(text);
+  }
+}
+
+function _fallbackCopy(text) {
+  const ta = document.createElement('textarea');
+  ta.value = text;
+  ta.style.cssText = 'position:fixed;left:-9999px;top:-9999px;opacity:0';
+  document.body.appendChild(ta);
+  ta.focus();
+  ta.setSelectionRange(0, ta.value.length);
+  let ok = false;
+  try { ok = document.execCommand('copy'); } catch(_) {}
+  ta.remove();
+  if (ok) showToast('Copied to clipboard', 'success');
+  else showToast('Copy failed — long-press to select', 'info');
 }
 
 /* ══════════════════════════════════════════════════════════════
@@ -1261,6 +1304,7 @@ function attachPhoto() {
   input.type = 'file';
   input.accept = 'image/*,video/*';
   input.multiple = true;
+  input.style.cssText = 'position:fixed;left:-9999px;top:-9999px;opacity:0';
   input.onchange = async () => {
     const files = Array.from(input.files || []);
     for (const file of files) {
@@ -1272,7 +1316,9 @@ function attachPhoto() {
         await _sendFileMessage(file);
       }
     }
+    input.remove();
   };
+  document.body.appendChild(input);
   input.click();
 }
 
@@ -1282,12 +1328,15 @@ function attachDocument() {
   input.type = 'file';
   input.accept = '*/*';
   input.multiple = true;
+  input.style.cssText = 'position:fixed;left:-9999px;top:-9999px;opacity:0';
   input.onchange = async () => {
     for (const file of Array.from(input.files || [])) {
       if (file.size > 50 * 1024 * 1024) { showToast(file.name + ': too large (max 50MB)', 'error'); continue; }
       await _sendFileMessage(file);
     }
+    input.remove();
   };
+  document.body.appendChild(input);
   input.click();
 }
 
@@ -1350,15 +1399,23 @@ function _openCameraUI() {
 async function _startCameraStream() {
   try {
     if (_cameraStream) { _cameraStream.getTracks().forEach(t => t.stop()); }
+    const videoConstraints = { width: { ideal: 1920 }, height: { ideal: 1080 } };
+    try { videoConstraints.facingMode = { ideal: _cameraFacing }; } catch(_) { videoConstraints.facingMode = _cameraFacing; }
     _cameraStream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: _cameraFacing, width: { ideal: 1920 }, height: { ideal: 1080 } },
+      video: videoConstraints,
       audio: _cameraMode === 'video'
     });
     const video = document.getElementById('camera-preview');
-    if (video) { video.srcObject = _cameraStream; video.play(); }
+    if (video) { video.srcObject = _cameraStream; video.play().catch(()=>{}); }
   } catch(e) {
     console.warn('Camera error:', e);
-    showToast('Camera access denied', 'error');
+    let msg = 'Camera error';
+    if (e.name === 'NotAllowedError' || e.name === 'PermissionDeniedError') msg = 'Camera permission denied';
+    else if (e.name === 'NotFoundError') msg = 'No camera found';
+    else if (e.name === 'NotReadableError') msg = 'Camera in use by another app';
+    else if (e.name === 'OverconstrainedError') msg = 'Camera does not support required settings';
+    else if (e.name === 'AbortError') msg = 'Camera start aborted';
+    showToast(msg, 'error');
     _closeCamera();
   }
 }
@@ -1413,8 +1470,10 @@ async function _capturePhoto() {
 
 let _cameraRecTimer = null;
 let _cameraRecSec = 0;
+let _cameraRecMimeType = '';
 function _startVideoCapture() {
   if (!_cameraStream) return;
+  if (typeof MediaRecorder === 'undefined') { showToast('Video recording not supported in this browser', 'error'); return; }
   _cameraChunks = [];
   _cameraRecSec = 0;
   const shutter = document.getElementById('camera-shutter');
@@ -1428,10 +1487,18 @@ function _startVideoCapture() {
     if (_cameraRecSec >= 60) _stopVideoCapture();
   }, 1000);
 
-  const mimeType = ['video/webm;codecs=vp9','video/webm','video/mp4'].find(t => MediaRecorder.isTypeSupported(t)) || '';
-  _cameraRecorder = new MediaRecorder(_cameraStream, { mimeType });
-  _cameraRecorder.ondataavailable = e => { if (e.data.size) _cameraChunks.push(e.data); };
-  _cameraRecorder.start(100);
+  try {
+    const mimeTypes = ['video/webm;codecs=vp9','video/webm','video/mp4;codecs=h264','video/mp4'];
+    _cameraRecMimeType = mimeTypes.find(t => MediaRecorder.isTypeSupported(t)) || '';
+    _cameraRecorder = new MediaRecorder(_cameraStream, _cameraRecMimeType ? { mimeType: _cameraRecMimeType } : {});
+    _cameraRecorder.ondataavailable = e => { if (e.data.size) _cameraChunks.push(e.data); };
+    _cameraRecorder.onerror = () => { showToast('Video recording failed', 'error'); _stopVideoCapture(); };
+    _cameraRecorder.start(100);
+  } catch(e) {
+    console.warn('MediaRecorder error:', e);
+    showToast('Video recording not supported', 'error');
+    _stopVideoCapture();
+  }
 }
 
 function _stopVideoCapture() {
@@ -1445,9 +1512,10 @@ function _stopVideoCapture() {
   if (shutter) { shutter.style.borderColor = '#fff'; shutter.querySelector('div').style.background = _cameraMode === 'video' ? '#f44336' : '#fff'; }
   setTimeout(() => {
     if (!_cameraChunks.length) return;
-    const mimeType = _cameraRecorder?.mimeType || 'video/webm';
-    const blob = new Blob(_cameraChunks, { type: mimeType });
-    const file = new File([blob], 'video_' + Date.now() + '.webm', { type: mimeType });
+    const actualMime = _cameraRecMimeType || _cameraRecorder?.mimeType || 'video/webm';
+    const ext = actualMime.includes('mp4') ? 'mp4' : 'webm';
+    const blob = new Blob(_cameraChunks, { type: actualMime });
+    const file = new File([blob], 'video_' + Date.now() + '.' + ext, { type: actualMime });
     _closeCamera();
     _showMediaPreview(file, 'video');
   }, 200);
@@ -1493,22 +1561,26 @@ async function _compressImage(file, quality, maxDim) {
   return new Promise(resolve => {
     try {
       const img = new Image();
+      const blobUrl = URL.createObjectURL(file);
       img.onload = () => {
-        let w = img.width, h = img.height;
-        if (w > maxDim || h > maxDim) {
-          const ratio = Math.min(maxDim / w, maxDim / h);
-          w = Math.round(w * ratio); h = Math.round(h * ratio);
-        }
-        const canvas = document.createElement('canvas');
-        canvas.width = w; canvas.height = h;
-        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-        canvas.toBlob(blob => {
-          if (blob) resolve(new File([blob], file.name, { type: 'image/jpeg' }));
-          else resolve(file);
-        }, 'image/jpeg', quality);
+        try {
+          let w = img.width, h = img.height;
+          if (w > maxDim || h > maxDim) {
+            const ratio = Math.min(maxDim / w, maxDim / h);
+            w = Math.round(w * ratio); h = Math.round(h * ratio);
+          }
+          const canvas = document.createElement('canvas');
+          canvas.width = w; canvas.height = h;
+          canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+          canvas.toBlob(blob => {
+            try { URL.revokeObjectURL(blobUrl); } catch(_) {}
+            if (blob) resolve(new File([blob], file.name, { type: 'image/jpeg' }));
+            else resolve(file);
+          }, 'image/jpeg', quality);
+        } catch(_) { try { URL.revokeObjectURL(blobUrl); } catch(_) {} resolve(file); }
       };
-      img.onerror = () => resolve(file);
-      img.src = URL.createObjectURL(file);
+      img.onerror = () => { try { URL.revokeObjectURL(blobUrl); } catch(_) {} resolve(file); };
+      img.src = blobUrl;
     } catch(_) { resolve(file); }
   });
 }
@@ -1565,6 +1637,10 @@ async function _sendFileMessage(file) {
     msg.url    = uploadUrl;
     msg.status = 'sent';
     renderMessages(chatId);
+    if (uploadUrl !== blobUrl) {
+      try { URL.revokeObjectURL(blobUrl); } catch(_) {}
+      msg.localBlobUrl = blobUrl;
+    }
     showToast('File sent', 'success');
 
     // Write to Firebase
@@ -1613,6 +1689,14 @@ let _waveformAnim  = null;
 const REC_MAX_SECONDS = 300; // 5 minutes
 
 function startRecording() {
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    showToast('Microphone not supported on this device', 'error');
+    return;
+  }
+  if (typeof MediaRecorder === 'undefined') {
+    showToast('Audio recording not supported in this browser', 'error');
+    return;
+  }
   App.isRecording = true;
   App.recordingSeconds = 0;
   _recSec = 0;
@@ -1625,6 +1709,9 @@ function startRecording() {
   setEl('rec-limit', '');
   const pauseIcon = document.getElementById('rec-pause-icon');
   if (pauseIcon) pauseIcon.textContent = 'pause';
+  const pauseBtn = document.getElementById('rec-pause-btn');
+  const canPauseResume = typeof MediaRecorder.prototype.pause === 'function';
+  if (pauseBtn && !canPauseResume) pauseBtn.style.display = 'none';
   const dot = document.getElementById('rec-dot');
   if (dot) { dot.classList.remove('bg-warning'); dot.classList.add('bg-error'); dot.style.animationPlayState = 'running'; }
 
@@ -1640,17 +1727,31 @@ function startRecording() {
   }, 1000);
 
   navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
-    _audioContext = new (window.AudioContext || window.webkitAudioContext)();
-    _analyser = _audioContext.createAnalyser();
-    _analyser.fftSize = 64;
-    const source = _audioContext.createMediaStreamSource(stream);
-    source.connect(_analyser);
-    _animateRealWaveform();
+    try { _audioContext = new (window.AudioContext || window.webkitAudioContext)(); } catch(_) { _audioContext = null; }
+    if (_audioContext) {
+      try {
+        _analyser = _audioContext.createAnalyser();
+        _analyser.fftSize = 64;
+        const source = _audioContext.createMediaStreamSource(stream);
+        source.connect(_analyser);
+        _animateRealWaveform();
+      } catch(_) { _analyser = null; }
+    }
 
-    _mediaRecorder = new MediaRecorder(stream, { mimeType: getSupportedMimeType() });
+    try {
+      const mimeType = getSupportedMimeType();
+      _mediaRecorder = new MediaRecorder(stream, mimeType ? { mimeType } : {});
+    } catch(e) {
+      console.warn('MediaRecorder init failed:', e);
+      showToast('Audio recording not supported', 'error');
+      stream.getTracks().forEach(t => t.stop());
+      cancelRecording();
+      return;
+    }
     _mediaRecorder.ondataavailable = e => { if (e.data.size) _audioChunks.push(e.data); };
     _mediaRecorder.start(100);
-  }).catch(() => {
+  }).catch(e => {
+    console.warn('Mic error:', e);
     showToast('Microphone permission denied', 'error');
     cancelRecording();
   });
@@ -1658,15 +1759,19 @@ function startRecording() {
 
 function togglePauseRecording() {
   if (!_mediaRecorder || _mediaRecorder.state === 'inactive') return;
+  if (typeof _mediaRecorder.pause !== 'function') {
+    showToast('Pause not supported — stop to finish', 'info');
+    return;
+  }
   if (_recPaused) {
-    _mediaRecorder.resume();
+    try { _mediaRecorder.resume(); } catch(_) {}
     _recPaused = false;
     const dot = document.getElementById('rec-dot');
     if (dot) { dot.style.animationPlayState = 'running'; dot.classList.remove('bg-warning'); dot.classList.add('bg-error'); }
     const icon = document.getElementById('rec-pause-icon');
     if (icon) icon.textContent = 'pause';
   } else {
-    _mediaRecorder.pause();
+    try { _mediaRecorder.pause(); } catch(_) { showToast('Pause not available', 'info'); return; }
     _recPaused = true;
     const dot = document.getElementById('rec-dot');
     if (dot) { dot.style.animationPlayState = 'paused'; dot.classList.remove('bg-error'); dot.classList.add('bg-warning'); }
@@ -1676,7 +1781,8 @@ function togglePauseRecording() {
 }
 
 function getSupportedMimeType() {
-  const types = ['audio/webm;codecs=opus','audio/webm','audio/ogg;codecs=opus','audio/mp4'];
+  if (typeof MediaRecorder === 'undefined') return '';
+  const types = ['audio/webm;codecs=opus','audio/webm','audio/ogg;codecs=opus','audio/mp4;codecs=aac','audio/mp4'];
   return types.find(t => MediaRecorder.isTypeSupported(t)) || '';
 }
 
@@ -1734,23 +1840,31 @@ function sendVoiceMessage() {
   renderChatList();
   showToast('Voice message sent', 'success');
 
-  _sendFileMessage(new File([blob], 'voice_' + Date.now() + '.webm', { type: blob.type })).then(() => {}).catch(() => {});
+  _sendFileMessage(new File([blob], 'voice_' + Date.now() + '.' + (blob.type.includes('mp4') ? 'm4a' : blob.type.includes('ogg') ? 'ogg' : 'webm'), { type: blob.type })).then(() => {}).catch(() => {});
 }
 
 function _animateRealWaveform() {
   const wf = document.getElementById('recording-waveform');
   if (!wf || !_analyser) return;
   const data = new Uint8Array(_analyser.frequencyBinCount);
+  const bars = Math.min(data.length, 30);
+  wf.innerHTML = '';
+  const barEls = [];
+  for (let i = 0; i < bars; i++) {
+    const div = document.createElement('div');
+    div.style.cssText = 'width:3px;height:8%;border-radius:2px;transition:height 0.08s';
+    wf.appendChild(div);
+    barEls.push(div);
+  }
   function draw() {
     if (!App.isRecording) return;
     _analyser.getByteFrequencyData(data);
-    const bars = Math.min(data.length, 30);
-    let html = '';
+    const color = _recPaused ? 'var(--warning)' : 'var(--primary)';
     for (let i = 0; i < bars; i++) {
       const h = Math.max(8, (data[i] / 255) * 100);
-      html += `<div style="width:3px;height:${h}%;background:${_recPaused ? 'var(--warning)' : 'var(--primary)'};border-radius:2px;transition:height 0.08s"></div>`;
+      barEls[i].style.height = h + '%';
+      barEls[i].style.background = color;
     }
-    wf.innerHTML = html;
     _waveformAnim = requestAnimationFrame(draw);
   }
   draw();

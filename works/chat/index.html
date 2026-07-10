@@ -2,7 +2,7 @@
 <html lang="en" class="dark">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, viewport-fit=cover, maximum-scale=5">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="mobile-web-app-capable" content="yes">
@@ -440,7 +440,7 @@
       <!-- Emoji Popover Pick Grid -->
       <div class="absolute bottom-20 right-6 bg-surface-container border border-outline-variant/30 rounded-2xl shadow-xl flex flex-col hidden z-30 w-80 h-96 overflow-hidden" id="emoji-picker" role="dialog">
         <div class="p-2 border-b border-outline-variant/10">
-          <input type="text" id="emoji-search" placeholder="Search emoji..." class="w-full px-3 py-1.5 text-xs bg-surface-variant/40 border border-outline-variant/20 rounded-lg focus:outline-none focus:ring-1 focus:ring-primary/50 text-on-surface placeholder:text-on-surface-variant/60" oninput="searchEmoji(this.value)">
+          <input type="search" inputmode="search" id="emoji-search" placeholder="Search emoji..." class="w-full px-3 py-1.5 text-xs bg-surface-variant/40 border border-outline-variant/20 rounded-lg focus:outline-none focus:ring-1 focus:ring-primary/50 text-on-surface placeholder:text-on-surface-variant/60" oninput="searchEmoji(this.value)">
         </div>
         <div class="flex items-center justify-between p-2 border-b border-outline-variant/10 overflow-x-auto gap-1 scrollbar-hide">
           <button class="emoji-cat-btn active px-2 py-1 bg-primary/10 rounded-lg text-sm" onclick="setEmojiCat(this,'recent')" title="Recent">🕐</button>
@@ -900,7 +900,7 @@
   </div>
 
   <!-- File Input for avatar updates -->
-  <input type="file" id="file-input-avatar" class="hidden" accept="image/*">
+  <input type="file" id="file-input-avatar" class="hidden-input" accept="image/*">
 
   <!-- Firebase SDKs -->
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>

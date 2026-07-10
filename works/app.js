@@ -15,7 +15,7 @@ const App = {
   messages: {},
   contacts: [],
   activeTab: 'chats',
-  theme: localStorage.getItem('tc_theme') || 'dark', // NSL Chat default
+  theme: (function() { try { return localStorage.getItem('tc_theme') || 'dark'; } catch(_) { return 'dark'; } })(),
   isRecording: false,
   recordingTimer: null,
   recordingSeconds: 0,
@@ -807,7 +807,7 @@ function loadDeletedCallIds() {
 }
 function addDeletedCallId(logId) {
   const ids = loadDeletedCallIds(); ids.add(logId);
-  localStorage.setItem('nsl_deleted_calls', JSON.stringify([...ids]));
+  try { localStorage.setItem('nsl_deleted_calls', JSON.stringify([...ids])); } catch(_) {}
 }
 function loadDeletedMsgIds(chatId) {
   try { const o = JSON.parse(localStorage.getItem('nsl_deleted_msgs') || '{}'); return new Set(o[chatId] || []); } catch { return new Set(); }
@@ -822,7 +822,7 @@ function loadDeletedChatIds() {
 }
 function addDeletedChatId(chatId) {
   const ids = loadDeletedChatIds(); ids.add(chatId);
-  localStorage.setItem('nsl_deleted_chats', JSON.stringify([...ids]));
+  try { localStorage.setItem('nsl_deleted_chats', JSON.stringify([...ids])); } catch(_) {}
 }
 
 function checkSession() {
@@ -864,7 +864,8 @@ function checkSession() {
 }
 
 function bootApp() {
-  const savedTheme = localStorage.getItem('nsl-theme') || 'dark';
+  let savedTheme = 'dark';
+  try { savedTheme = localStorage.getItem('nsl-theme') || 'dark'; } catch(_) {}
   applyTheme(savedTheme);
   
   const loading = document.getElementById('loading-screen');
@@ -3957,7 +3958,8 @@ function loadEmojiGrid(cat) {
   const list = App.emojiCategories[cat] || [];
   grid.innerHTML = list.map(em => {
     const name = EMOJI_NAMES[em] || '';
-    return `<span class="cursor-pointer hover:scale-125 transition-transform p-0.5 rounded hover:bg-surface-variant/40" data-emoji="${em}" data-name="${name}" onclick="insertEmoji('${em}')" onmouseenter="previewEmoji('${em}','${(name||'').replace(/'/g,"\\'")}')" onmouseleave="clearEmojiPreview()">${em}</span>`;
+    const safeName = (name||'').replace(/'/g,"\\'").replace(/"/g,"&quot;");
+    return `<span class="cursor-pointer transition-transform p-0.5 rounded" data-emoji="${em}" data-name="${name}" onclick="insertEmoji('${em}')" onmouseenter="previewEmoji('${em}','${safeName}')" onmouseleave="clearEmojiPreview()" ontouchstart="previewEmoji('${em}','${safeName}')" ontouchend="clearEmojiPreview()">${em}</span>`;
   }).join('');
   grid.parentElement.scrollTop = 0;
 }
@@ -3969,22 +3971,27 @@ function setEmojiCat(btn, cat) {
   loadEmojiGrid(cat);
   App._currentEmojiCat = cat;
 }
+let _emojiSearchTimer = null;
 function searchEmoji(query) {
   const grid = document.getElementById('emoji-grid');
   if (!grid) return;
   if (!query.trim()) { loadEmojiGrid(App._currentEmojiCat || 'recent'); return; }
-  const q = query.toLowerCase();
-  const results = [];
-  for (const [cat, emojis] of Object.entries(App.emojiCategories)) {
-    if (cat === 'recent') continue;
-    for (const em of emojis) {
-      const name = (EMOJI_NAMES[em] || '').toLowerCase();
-      if (name.includes(q) || em === q) results.push({ em, name });
+  clearTimeout(_emojiSearchTimer);
+  _emojiSearchTimer = setTimeout(() => {
+    const q = query.toLowerCase();
+    const results = [];
+    for (const [cat, emojis] of Object.entries(App.emojiCategories)) {
+      if (cat === 'recent') continue;
+      for (const em of emojis) {
+        const name = (EMOJI_NAMES[em] || '').toLowerCase();
+        if (name.includes(q) || em === q) results.push({ em, name });
+      }
     }
-  }
-  grid.innerHTML = results.length ? results.map(r =>
-    `<span class="cursor-pointer hover:scale-125 transition-transform p-0.5 rounded hover:bg-surface-variant/40" data-emoji="${r.em}" data-name="${r.name}" onclick="insertEmoji('${r.em}')" onmouseenter="previewEmoji('${r.em}','${(r.name||'').replace(/'/g,"\\'")}')" onmouseleave="clearEmojiPreview()">${r.em}</span>`
-  ).join('') : '<div class="col-span-8 text-center text-xs text-on-surface-variant py-4">No emojis found</div>';
+    grid.innerHTML = results.length ? results.map(r => {
+      const safeName = (r.name||'').replace(/'/g,"\\'").replace(/"/g,"&quot;");
+      return `<span class="cursor-pointer transition-transform p-0.5 rounded" data-emoji="${r.em}" data-name="${r.name}" onclick="insertEmoji('${r.em}')" onmouseenter="previewEmoji('${r.em}','${safeName}')" onmouseleave="clearEmojiPreview()" ontouchstart="previewEmoji('${r.em}','${safeName}')" ontouchend="clearEmojiPreview()">${r.em}</span>`;
+    }).join('') : '<div class="col-span-8 text-center text-xs text-on-surface-variant py-4">No emojis found</div>';
+  }, 150);
 }
 function previewEmoji(em, name) {
   const icon = document.getElementById('emoji-preview-icon');
