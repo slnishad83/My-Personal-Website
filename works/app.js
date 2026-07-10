@@ -3192,8 +3192,6 @@ function renderInlineGalleryTab(tab) {
     return;
   }
 
-  const escHtml = window.escHtml || (s => { const d=document.createElement('div'); d.textContent=s; return d.innerHTML; });
-
   if (tab === 'urls') {
     container.innerHTML = `<div class="flex flex-col gap-2 p-4">${
       filtered.map(m => {
@@ -3590,17 +3588,19 @@ function confirmDeleteChat(chatId) {
       return;
     }
     try {
-      // Delete associated messages
-      const batch = App.db.batch();
+      // Delete associated messages (chunked by 500)
       const msgsSnap = await App.db.collection('messages')
         .where('directId', '==', chatId)
         .get();
-      msgsSnap.forEach(doc => batch.delete(doc.ref));
       const grpMsgsSnap = await App.db.collection('messages')
         .where('groupId', '==', chatId)
         .get();
-      grpMsgsSnap.forEach(doc => batch.delete(doc.ref));
-      await batch.commit();
+      const allRefs = [...msgsSnap.docs.map(d => d.ref), ...grpMsgsSnap.docs.map(d => d.ref)];
+      for (let i = 0; i < allRefs.length; i += 500) {
+        const batch = App.db.batch();
+        allRefs.slice(i, i + 500).forEach(ref => batch.delete(ref));
+        await batch.commit();
+      }
       
       // Delete the directChats or group doc directly (chatId IS the doc ID)
       await App.db.collection('directChats').doc(chatId).delete().catch(() => {});

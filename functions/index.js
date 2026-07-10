@@ -2071,7 +2071,6 @@ exports.generateUrlPreview = onRequest(async (req, res) => {
 
   const https = require('https');
   const http  = require('http');
-  const { URL } = require('url');
 
   function getHtml(rawUrl, redirects) {
     redirects = redirects || 0;
