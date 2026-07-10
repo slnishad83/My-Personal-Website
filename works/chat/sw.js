@@ -157,8 +157,9 @@ self.addEventListener('notificationclick', event => {
   );
 });
 
-const CACHE_NAME = 'team-chat-v222-ui-shell';
+const CACHE_NAME = 'team-chat-v223-ui-shell';
 const STATIC_ASSETS = [
+  'chat.css',
   'config.js',
   'chat-theme.css',
   'notification-reply.js',
@@ -166,6 +167,7 @@ const STATIC_ASSETS = [
   'app-icon.svg',
   'app-icon-192.png',
   'app-icon-512.png',
+  'pwa-install.js',
   '../app-extras.js',
   '../app.js'
 ];

@@ -373,19 +373,16 @@ function subscribeToGroups() {
     return;
   }
   const uid = App.auth.currentUser.uid;
-  console.log('[Groups] Subscribing to groups for uid:', uid);
   if (App.groupsUnsubscribe) App.groupsUnsubscribe();
   
   App.groupsUnsubscribe = App.db.collection('groups')
     .where('members', 'array-contains', uid)
     .onSnapshot((snapshot) => {
-      console.log('[Groups] Snapshot received, docs count:', snapshot.size);
       const groupsList = [];
       snapshot.forEach(doc => {
         const data = doc.data();
         if (data.deletedFor && data.deletedFor[uid]) return;
         if (App._deletedChatIds.has(doc.id)) return;
-        console.log('[Groups] Group doc:', doc.id, 'name:', data.name, 'members:', data.members);
         groupsList.push({
           id: doc.id,
           type: 'group',
@@ -402,10 +399,9 @@ function subscribeToGroups() {
         });
       });
       App.groupChats = groupsList;
-      console.log('[Groups] App.groupChats updated, count:', groupsList.length);
       mergeAndRenderChats();
     }, (error) => {
-      console.error('[Groups] Subscription FAILED:', error);
+      console.error('[Groups] Subscription error:', error);
     });
 }
 
@@ -414,7 +410,6 @@ function subscribeToCallLogs(uid) {
     console.warn('[CallLogs] No db or no uid — skipping subscription');
     return;
   }
-  console.log('[CallLogs] Subscribing to callLogs for uid:', uid);
   if (App.callLogsUnsubscribe) App.callLogsUnsubscribe();
   if (App.callsUnsubscriber) App.callsUnsubscriber();
   
@@ -885,7 +880,6 @@ function checkSession() {
         });
       } else {
         // Run demo mode if not authenticated
-        console.log('No auth user, initializing demo mode');
         loadDemoData();
         bootApp();
       }
@@ -2717,7 +2711,16 @@ function onInputKeyDown(e) {
   }
 }
 
-function setupAutoResize() {}
+function setupAutoResize() {
+  const input = document.getElementById('msg-input');
+  if (!input) return;
+  const resize = () => {
+    input.style.height = 'auto';
+    input.style.height = Math.min(input.scrollHeight, 120) + 'px';
+  };
+  input.addEventListener('input', resize);
+  input.addEventListener('focus', resize);
+}
 
 /* ══════════════════════════════════════════════════
    13. REPLIES

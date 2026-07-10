@@ -16,10 +16,11 @@
      Drop files onto the chat panel to attach them
   ================================================================ */
   function initDragAndDrop() {
-    const chatPanel = document.querySelector('.chat-panel') ||
-                      document.getElementById('chatPanel') ||
+    const chatPanel = document.getElementById('chat-area') ||
+                      document.getElementById('messages-wrap') ||
+                      document.querySelector('.chat-panel') ||
                       document.querySelector('.messages-wrapper, .chat-main');
-    const messagesArea = document.getElementById('messagesArea');
+    const messagesArea = document.getElementById('messages-wrap');
     const target = chatPanel || messagesArea || document.body;
 
     let dragCounter = 0;
@@ -42,7 +43,7 @@
     document.addEventListener('dragenter', (e) => {
       if (!e.dataTransfer?.types?.includes('Files')) return;
       // Only show overlay if a chat is open
-      if (!window.currentChat) return;
+      if (!window.currentChat && !window.App?.currentChat) return;
       dragCounter++;
       overlay.classList.add('active');
     });
@@ -66,7 +67,7 @@
       e.preventDefault();
       dragCounter = 0;
       overlay.classList.remove('active');
-      if (!window.currentChat) return;
+      if (!window.currentChat && !window.App?.currentChat) return;
 
       const files = Array.from(e.dataTransfer.files || []);
       if (!files.length) return;
@@ -78,7 +79,8 @@
         } else {
           // Fallback: trigger the hidden file input
           const fileInput = document.getElementById('fileInput') ||
-                            document.querySelector('input[type="file"]');
+                            document.querySelector('input[type="file"]') ||
+                            document.getElementById('media-file-input');
           if (fileInput) {
             const dt = new DataTransfer();
             dt.items.add(file);

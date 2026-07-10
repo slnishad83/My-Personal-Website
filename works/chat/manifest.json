@@ -13,13 +13,26 @@
   "lang": "en",
   "dir": "ltr",
   "categories": ["productivity", "social"],
-  "screenshots": [],
   "shortcuts": [
     {
       "name": "New Chat",
       "short_name": "Chat",
       "description": "Start a new conversation",
       "url": "/works/chat/?action=new-chat",
+      "icons": [{ "src": "app-icon-192.png", "sizes": "192x192", "type": "image/png" }]
+    },
+    {
+      "name": "New Group",
+      "short_name": "Group",
+      "description": "Create a new group",
+      "url": "/works/chat/?action=new-group",
+      "icons": [{ "src": "app-icon-192.png", "sizes": "192x192", "type": "image/png" }]
+    },
+    {
+      "name": "Calls",
+      "short_name": "Calls",
+      "description": "View call history",
+      "url": "/works/chat/?action=calls",
       "icons": [{ "src": "app-icon-192.png", "sizes": "192x192", "type": "image/png" }]
     }
   ],
