@@ -2224,6 +2224,8 @@ function openChat(chatId) {
 
   // Resizing layouts for mobile view override
   if (window.innerWidth < 768 || App.showroomViewport === 'mobile') {
+    const chatArea = document.getElementById('chat-area');
+    if (chatArea) { chatArea.classList.remove('hidden-mobile'); chatArea.classList.add('visible-mobile'); }
     const listSidebar = document.getElementById('chat-list-sidebar');
     if (listSidebar) listSidebar.classList.add('hidden');
     const sidebar = document.getElementById('sidebar');
@@ -2943,6 +2945,12 @@ function showWelcome() {
   if (wrap) wrap.style.display = 'none';
   const inputBar = document.getElementById('input-bar');
   if (inputBar) inputBar.style.display = 'none';
+  
+  // On mobile, hide the chat-area so the chat list is visible again
+  if (window.innerWidth < 768 || App.showroomViewport === 'mobile') {
+    const chatArea = document.getElementById('chat-area');
+    if (chatArea) { chatArea.classList.remove('visible-mobile'); chatArea.classList.add('hidden-mobile'); }
+  }
   
   App.currentChat = null;
   renderChatList();
