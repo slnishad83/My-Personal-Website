@@ -662,6 +662,7 @@ async function deleteMessage(msgId, scope) {
       try {
         await App.db.collection('messages').doc(msgId).update({
           deletedForEveryone: true,
+          deletedForEveryoneBy: App.auth.currentUser.uid,
           text: '',
           attachment: null
         });
@@ -681,6 +682,7 @@ async function deleteMessage(msgId, scope) {
         }
       }
     } else {
+      try { const key='nsl_deleted_msgs'; const o=JSON.parse(localStorage.getItem(key)||'{}'); o[chatId]=o[chatId]||[]; if(!o[chatId].includes(msgId)) o[chatId].push(msgId); localStorage.setItem(key,JSON.stringify(o)); } catch(_) {}
       showToast('Message deleted for everyone (offline)', 'success');
     }
   }
@@ -1247,10 +1249,12 @@ function attachCamera() {
   toggleAttachMenu();
   const input = document.createElement('input');
   input.type = 'file';
-  input.accept = 'image/*';
+  input.accept = 'image/*,video/*';
   input.capture = 'environment';
   input.onchange = async () => {
-    if (input.files && input.files[0]) await _sendFileMessage(input.files[0]);
+    for (const file of Array.from(input.files || [])) {
+      await _sendFileMessage(file);
+    }
   };
   input.click();
 }

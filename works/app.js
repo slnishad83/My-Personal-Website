@@ -719,6 +719,12 @@ function subscribeToMessages(chatId) {
             type = 'voice';
             url = att.url || '';
             duration = att.duration || '0:00';
+          } else if (att.type === 'location') {
+            type = 'location';
+            url = att.mapUrl || '';
+          } else if (att.type === 'contact') {
+            type = 'contact';
+            url = '';
           } else {
             type = 'doc';
             fileName = att.name || 'Document';
@@ -726,6 +732,7 @@ function subscribeToMessages(chatId) {
           }
         }
         
+        const a = data.attachment || {};
         const msgObj = {
           id: doc.id,
           from: data.senderId === App.auth.currentUser.uid ? 'me' : data.senderId,
@@ -738,7 +745,12 @@ function subscribeToMessages(chatId) {
           url: url,
           duration: duration,
           fileName: fileName,
-          fileSize: fileSize
+          fileSize: fileSize,
+          lat: a.lat,
+          lng: a.lng,
+          mapUrl: a.mapUrl || url,
+          contactName: a.contactName,
+          contactEmail: a.contactEmail
         };
         
         if (data.encrypted && data.iv) {
@@ -2250,6 +2262,24 @@ function renderMessages(chatId) {
         <div class="flex-1"><p class="text-xs font-bold truncate">${escHtml(msg.fileName||'Document')}</p><p class="text-[10px] text-on-surface-variant">${msg.fileSize||''}</p></div>
         <span class="material-symbols-rounded" style="font-size:20px;opacity:.7">download</span>
       </div>`;
+    } else if (msg.type === 'location') {
+      const staticMapUrl = `https://staticmap.openstreetmap.de/staticmap.php?center=${msg.lat},${msg.lng}&zoom=15&size=280x140&markers=${msg.lat},${msg.lng},red-pushpin`;
+      contentHTML = `<div onclick="window.open('${msg.mapUrl || `https://maps.google.com/?q=${msg.lat},${msg.lng}`}','_blank')" class="location-preview border border-outline-variant/20 max-w-xs">
+        <img src="${escHtml(staticMapUrl)}" alt="Location" loading="lazy" onerror="this.style.display='none'">
+        <div class="location-label"><span class="material-symbols-outlined text-primary text-sm">location_on</span><span>Shared location</span></div>
+      </div>`;
+    } else if (msg.type === 'contact') {
+      const initial = (msg.contactName||'?').charAt(0).toUpperCase();
+      contentHTML = `<div class="contact-card">
+        <div class="contact-header">
+          <div class="contact-avatar">${escHtml(initial)}</div>
+          <div class="contact-info">
+            <div class="contact-name">${escHtml(msg.contactName||'Unknown')}</div>
+            <div class="contact-email">${escHtml(msg.contactEmail||'')}</div>
+          </div>
+        </div>
+        <button onclick="event.stopPropagation();sendRequestFromContact('${escHtml(msg.contactEmail||'')}','${escHtml(msg.contactName||'')}')" class="send-request-btn">Send Request</button>
+      </div>`;
     } else {
       contentHTML = `<div class="text-sm font-normal leading-relaxed text-on-surface">${formatMsgText(msg.text||'')}</div>`;
     }
@@ -3340,10 +3370,33 @@ function confirmDeleteChat(chatId) {
   });
 }
 
-function confirmClearChat(chatId) {
-  showConfirm('Clear conversation message history? This cannot be undone.', () => {
-    if (chatId) App.messages[chatId] = [];
+async function confirmClearChat(chatId) {
+  showConfirm('Clear conversation message history? This cannot be undone.', async () => {
+    if (!chatId) return;
+    const msgs = App.messages[chatId] || [];
+    const uid = App.auth && App.auth.currentUser && App.auth.currentUser.uid;
+    App.messages[chatId] = [];
     if (App.currentChat?.id === chatId) renderMessages(chatId);
+    renderChatList();
+    if (App.db && uid && msgs.length) {
+      try {
+        const batch = App.db.batch();
+        msgs.forEach(m => {
+          if (m.id) {
+            const ref = App.db.collection('messages').doc(m.id);
+            batch.update(ref, { [`deletedFor.${uid}`]: true });
+          }
+        });
+        await batch.commit();
+      } catch (_) {}
+      try {
+        const key = 'nsl_deleted_msgs';
+        const o = JSON.parse(localStorage.getItem(key) || '{}');
+        o[chatId] = o[chatId] || [];
+        msgs.forEach(m => { if (m.id && !o[chatId].includes(m.id)) o[chatId].push(m.id); });
+        localStorage.setItem(key, JSON.stringify(o));
+      } catch (_) {}
+    }
     showToast('Chat history cleared', 'info');
   });
 }
@@ -3402,6 +3455,9 @@ function handleDocumentClick(e) {
   if (!e.target.closest('button[onclick="toggleEmojiPicker()"]') && !e.target.closest('#emoji-picker')) {
     App.emojiPickerOpen = false;
     document.getElementById('emoji-picker')?.classList.add('hidden');
+  }
+  if (!e.target.closest('#contact-picker-overlay')) {
+    document.getElementById('contact-picker-overlay')?.classList.add('hidden');
   }
 }
 
@@ -3498,23 +3554,188 @@ if (typeof attachCamera === 'undefined') {
   var attachCamera = function() { showToast('Accessing device camera...','info'); toggleAttachMenu(); };
 }
 function shareLocation() {
-  if (navigator.geolocation) {
-    navigator.geolocation.getCurrentPosition(
-      pos => {
-        const url = `https://maps.google.com/?q=${pos.coords.latitude},${pos.coords.longitude}`;
-        if (!App.messages[App.currentChat.id]) App.messages[App.currentChat.id] = [];
-        const msg = { id:'msg_'+Date.now(), from:'me', type:'text', text:'📍 My Location: ' + url, time:Date.now(), status:'sent' };
-        App.messages[App.currentChat.id].push(msg);
-        App.currentChat.lastMsg = '📍 Location shared'; App.currentChat.lastTime = msg.time;
-        renderMessages(App.currentChat.id); scrollToBottom(true); renderChatList();
-        showToast('Location shared', 'success');
-      },
-      () => showToast('Location access denied', 'error')
-    );
-  } else {
-    showToast('Location not available', 'error');
-  }
   toggleAttachMenu();
+  if (!navigator.geolocation) { showToast('Location not available', 'error'); return; }
+  showToast('Getting location…', 'info');
+  navigator.geolocation.getCurrentPosition(
+    pos => _sendLocationMessage(pos.coords.latitude, pos.coords.longitude),
+    () => showToast('Location access denied', 'error'),
+    { enableHighAccuracy: true, timeout: 10000 }
+  );
+}
+
+function _sendLocationMessage(lat, lng) {
+  if (!App.currentChat) return;
+  const chatId = App.currentChat.id;
+  const mapUrl = `https://maps.google.com/?q=${lat},${lng}`;
+  if (!App.messages[chatId]) App.messages[chatId] = [];
+  const msg = {
+    id: 'msg_' + Date.now() + '_' + Math.random().toString(36).slice(2,6),
+    from: 'me',
+    type: 'location',
+    lat, lng,
+    mapUrl,
+    time: Date.now(),
+    status: 'sending'
+  };
+  App.messages[chatId].push(msg);
+  App.currentChat.lastMsg = '📍 Location';
+  App.currentChat.lastTime = msg.time;
+  renderMessages(chatId); scrollToBottom(true); renderChatList();
+  msg.status = 'sent';
+  renderMessages(chatId);
+
+  // Write to Firebase
+  if (App.db && App.auth?.currentUser) {
+    const uid = App.auth.currentUser.uid;
+    const isGroup = App.currentChat.type === 'group';
+    const data = {
+      senderId: uid,
+      senderName: App.currentUser.displayName || App.currentUser.email || 'Me',
+      text: '',
+      attachment: { type: 'location', lat, lng, mapUrl },
+      timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+      status: 'sent',
+    };
+    if (isGroup) { data.groupId = chatId; } else {
+      data.directId = chatId;
+      data.participants = [uid, App.currentChat.uid || ''];
+      data.participantEmails = [App.currentUser.email || '', App.currentChat.about || App.currentChat.email || ''];
+    }
+    App.db.collection('messages').add(data).catch(console.error);
+  }
+  showToast('Location shared', 'success');
+}
+
+/* ─── Contact Sharing ─── */
+function shareContact() {
+  toggleAttachMenu();
+  showContactPicker();
+}
+
+function showContactPicker() {
+  const overlay = document.getElementById('contact-picker-overlay');
+  if (!overlay) return;
+  const list = document.getElementById('contact-picker-list');
+  const contacts = App.contacts.filter(c => c.uid !== App.auth?.currentUser?.uid);
+  list.innerHTML = contacts.map(c => `
+    <div class="flex items-center gap-3 p-3 rounded-xl hover:bg-surface-variant/40 transition-all cursor-pointer" onclick="selectContactToShare('${c.uid}')">
+      <div class="w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm ${c.avatar || 'bg-surface-container-highest text-on-surface-variant'}">${escHtml(c.initials || c.name.charAt(0).toUpperCase())}</div>
+      <div class="flex-1 min-w-0">
+        <div class="text-sm font-bold truncate">${escHtml(c.name)}</div>
+        <div class="text-[10px] text-on-surface-variant truncate">${escHtml(c.email || '')}</div>
+      </div>
+      <span class="material-symbols-outlined text-on-surface-variant text-sm">chevron_right</span>
+    </div>
+  `).join('');
+  show('contact-picker-overlay');
+}
+
+function selectContactToShare(uid) {
+  const contact = App.contacts.find(c => c.uid === uid);
+  if (!contact) return;
+  hide('contact-picker-overlay');
+  _sendContactMessage(contact.name, contact.email || '');
+}
+
+function _sendContactMessage(contactName, contactEmail) {
+  if (!App.currentChat || !contactName || !contactEmail) return;
+  const chatId = App.currentChat.id;
+  if (!App.messages[chatId]) App.messages[chatId] = [];
+  const msg = {
+    id: 'msg_' + Date.now() + '_' + Math.random().toString(36).slice(2,6),
+    from: 'me',
+    type: 'contact',
+    contactName,
+    contactEmail,
+    time: Date.now(),
+    status: 'sent'
+  };
+  App.messages[chatId].push(msg);
+  App.currentChat.lastMsg = '👤 Contact: ' + contactName;
+  App.currentChat.lastTime = msg.time;
+  renderMessages(chatId); scrollToBottom(true); renderChatList();
+
+  // Write to Firebase
+  if (App.db && App.auth?.currentUser) {
+    const uid = App.auth.currentUser.uid;
+    const isGroup = App.currentChat.type === 'group';
+    const data = {
+      senderId: uid,
+      senderName: App.currentUser.displayName || App.currentUser.email || 'Me',
+      text: '',
+      attachment: { type: 'contact', contactName, contactEmail },
+      timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+      status: 'sent',
+    };
+    if (isGroup) { data.groupId = chatId; } else {
+      data.directId = chatId;
+      data.participants = [uid, App.currentChat.uid || ''];
+      data.participantEmails = [App.currentUser.email || '', App.currentChat.about || App.currentChat.email || ''];
+    }
+    App.db.collection('messages').add(data).catch(console.error);
+  }
+  showToast('Contact shared', 'success');
+}
+
+function sendRequestFromContact(email, name) {
+  const contact = App.contacts.find(c => c.email && c.email.toLowerCase() === email.toLowerCase());
+  if (contact) {
+    sendChatRequest(contact.uid, contact.email, contact.name);
+  } else {
+    showToast('User not found — share your email to connect', 'info');
+  }
+}
+
+/* ─── Live Location Sharing ─── */
+function startLiveLocation() {
+  if (!App.currentChat || !navigator.geolocation) {
+    showToast('Live location not available', 'error');
+    return;
+  }
+  if (App._liveLocationWatcher !== undefined) {
+    showToast('Already sharing live location', 'info');
+    return;
+  }
+  showToast('Starting live location…', 'info');
+  App._liveLocationInterval = setInterval(() => {
+    navigator.geolocation.getCurrentPosition(
+      pos => _sendLocationMessage(pos.coords.latitude, pos.coords.longitude),
+      () => {},
+      { enableHighAccuracy: true, timeout: 5000 }
+    );
+  }, 30000);
+  // Send first update immediately
+  navigator.geolocation.getCurrentPosition(
+    pos => {
+      _sendLocationMessage(pos.coords.latitude, pos.coords.longitude);
+      showToast('Live location sharing started', 'success');
+    },
+    () => showToast('Location access denied', 'error'),
+    { enableHighAccuracy: true, timeout: 10000 }
+  );
+  App._liveLocationWatcher = true;
+  const btn = document.querySelector('[onclick="startLiveLocation()"]');
+  if (btn) {
+    btn.innerHTML = '<span class="text-base">🔴</span> Live (On)';
+    btn.onclick = stopLiveLocation;
+    btn.classList.add('text-error');
+  }
+}
+
+function stopLiveLocation() {
+  if (App._liveLocationInterval) {
+    clearInterval(App._liveLocationInterval);
+    App._liveLocationInterval = null;
+  }
+  App._liveLocationWatcher = undefined;
+  const btn = document.querySelector('[onclick="stopLiveLocation()"]');
+  if (btn) {
+    btn.innerHTML = '<span class="text-base">🔴</span> Live Location';
+    btn.onclick = startLiveLocation;
+    btn.classList.remove('text-error');
+  }
+  showToast('Live location sharing stopped', 'info');
 }
 
 /* ══════════════════════════════════════════════════
