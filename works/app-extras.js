@@ -1293,23 +1293,172 @@ function attachDocument() {
 
 function attachCamera() {
   toggleAttachMenu();
-  const input = document.createElement('input');
-  input.type = 'file';
-  input.accept = 'image/*,video/*';
-  input.capture = 'environment';
-  input.multiple = false;
-  input.onchange = async () => {
-    const file = input.files && input.files[0];
-    if (!file) return;
-    if (file.size > 16 * 1024 * 1024) { showToast('File too large (max 16MB)', 'error'); return; }
-    if (file.type.startsWith('image/') && file.size > 2 * 1024 * 1024) {
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    showToast('Camera not supported on this device', 'error');
+    return;
+  }
+  _openCameraUI();
+}
+
+let _cameraStream = null;
+let _cameraFacing = 'environment';
+let _cameraMode = 'photo'; // 'photo' or 'video'
+let _cameraRecorder = null;
+let _cameraChunks = [];
+
+function _openCameraUI() {
+  const overlay = document.createElement('div');
+  overlay.id = 'camera-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;z-index:99999;background:#000;display:flex;flex-direction:column';
+  overlay.innerHTML = `
+    <div style="flex:1;position:relative;display:flex;align-items:center;justify-content:center;overflow:hidden">
+      <video id="camera-preview" autoplay playsinline muted style="width:100%;height:100%;object-fit:cover"></video>
+      <div id="camera-rec-indicator" class="hidden" style="position:absolute;top:16px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:8px;background:rgba(0,0,0,0.6);padding:6px 14px;border-radius:20px">
+        <span style="width:10px;height:10px;border-radius:50%;background:#f44336;animation:pulse 1s infinite"></span>
+        <span style="color:#fff;font-size:13px;font-weight:600" id="camera-rec-timer">0:00</span>
+      </div>
+      <button id="camera-close" style="position:absolute;top:16px;left:16px;width:40px;height:40px;border-radius:50%;background:rgba(0,0,0,0.5);border:none;color:#fff;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center">✕</button>
+      <button id="camera-flip" style="position:absolute;top:16px;right:16px;width:40px;height:40px;border-radius:50%;background:rgba(0,0,0,0.5);border:none;color:#fff;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center">🔄</button>
+    </div>
+    <div style="background:#000;padding:20px 24px 32px;display:flex;flex-direction:column;align-items:center;gap:16px">
+      <div style="display:flex;gap:20px">
+        <button id="camera-mode-photo" style="padding:6px 16px;border-radius:20px;border:none;font-size:13px;font-weight:700;cursor:pointer;background:#fff;color:#000">Photo</button>
+        <button id="camera-mode-video" style="padding:6px 16px;border-radius:20px;border:none;font-size:13px;font-weight:700;cursor:pointer;background:transparent;color:#888;border:1px solid #444">Video</button>
+      </div>
+      <div style="display:flex;align-items:center;gap:40px">
+        <button id="camera-gallery" style="width:44px;height:44px;border-radius:12px;border:2px solid #555;background:transparent;color:#fff;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center">🖼️</button>
+        <button id="camera-shutter" style="width:72px;height:72px;border-radius:50%;border:4px solid #fff;background:transparent;cursor:pointer;position:relative;transition:all 0.15s">
+          <div style="position:absolute;inset:4px;border-radius:50%;background:#fff;transition:all 0.15s"></div>
+        </button>
+        <div style="width:44px"></div>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+
+  document.getElementById('camera-close').onclick = () => _closeCamera();
+  document.getElementById('camera-flip').onclick = () => _flipCamera();
+  document.getElementById('camera-gallery').onclick = () => { _closeCamera(); attachPhoto(); };
+  document.getElementById('camera-shutter').onclick = () => _capturePhoto();
+  document.getElementById('camera-mode-photo').onclick = () => _setCameraMode('photo');
+  document.getElementById('camera-mode-video').onclick = () => _setCameraMode('video');
+
+  _cameraFacing = 'environment';
+  _cameraMode = 'photo';
+  _startCameraStream();
+}
+
+async function _startCameraStream() {
+  try {
+    if (_cameraStream) { _cameraStream.getTracks().forEach(t => t.stop()); }
+    _cameraStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: _cameraFacing, width: { ideal: 1920 }, height: { ideal: 1080 } },
+      audio: _cameraMode === 'video'
+    });
+    const video = document.getElementById('camera-preview');
+    if (video) { video.srcObject = _cameraStream; video.play(); }
+  } catch(e) {
+    console.warn('Camera error:', e);
+    showToast('Camera access denied', 'error');
+    _closeCamera();
+  }
+}
+
+function _flipCamera() {
+  _cameraFacing = _cameraFacing === 'environment' ? 'user' : 'environment';
+  _startCameraStream();
+}
+
+function _setCameraMode(mode) {
+  _cameraMode = mode;
+  const photoBtn = document.getElementById('camera-mode-photo');
+  const videoBtn = document.getElementById('camera-mode-video');
+  const shutter = document.getElementById('camera-shutter');
+  if (mode === 'photo') {
+    photoBtn.style.background = '#fff'; photoBtn.style.color = '#000';
+    videoBtn.style.background = 'transparent'; videoBtn.style.color = '#888'; videoBtn.style.border = '1px solid #444';
+    if (shutter) shutter.querySelector('div').style.background = '#fff';
+  } else {
+    videoBtn.style.background = '#f44336'; videoBtn.style.color = '#fff'; videoBtn.style.border = 'none';
+    photoBtn.style.background = 'transparent'; photoBtn.style.color = '#888'; photoBtn.style.border = '1px solid #444';
+    if (shutter) shutter.querySelector('div').style.background = '#f44336';
+  }
+  _startCameraStream();
+}
+
+async function _capturePhoto() {
+  if (_cameraMode === 'video') {
+    if (_cameraRecorder && _cameraRecorder.state === 'recording') { _stopVideoCapture(); return; }
+    _startVideoCapture();
+    return;
+  }
+  const video = document.getElementById('camera-preview');
+  if (!video || !video.srcObject) return;
+  const canvas = document.createElement('canvas');
+  canvas.width = video.videoWidth || 1280;
+  canvas.height = video.videoHeight || 720;
+  canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
+  canvas.toBlob(async blob => {
+    if (!blob) return;
+    const file = new File([blob], 'photo_' + Date.now() + '.jpg', { type: 'image/jpeg' });
+    _closeCamera();
+    if (file.size > 2 * 1024 * 1024) {
       showToast('Compressing image…', 'info');
       const compressed = await _compressImage(file, 0.8, 2048);
-      if (compressed) { _showMediaPreview(compressed, 'image'); return; }
+      _showMediaPreview(compressed || file, 'image');
+    } else {
+      _showMediaPreview(file, 'image');
     }
-    _showMediaPreview(file, file.type.startsWith('video/') ? 'video' : 'image');
-  };
-  input.click();
+  }, 'image/jpeg', 0.92);
+}
+
+let _cameraRecTimer = null;
+let _cameraRecSec = 0;
+function _startVideoCapture() {
+  if (!_cameraStream) return;
+  _cameraChunks = [];
+  _cameraRecSec = 0;
+  const shutter = document.getElementById('camera-shutter');
+  if (shutter) { shutter.style.borderColor = '#f44336'; shutter.querySelector('div').style.background = '#f44336'; }
+  const indicator = document.getElementById('camera-rec-indicator');
+  if (indicator) indicator.classList.remove('hidden');
+  _cameraRecTimer = setInterval(() => {
+    _cameraRecSec++;
+    const el = document.getElementById('camera-rec-timer');
+    if (el) el.textContent = Math.floor(_cameraRecSec/60) + ':' + String(_cameraRecSec%60).padStart(2,'0');
+    if (_cameraRecSec >= 60) _stopVideoCapture();
+  }, 1000);
+
+  const mimeType = ['video/webm;codecs=vp9','video/webm','video/mp4'].find(t => MediaRecorder.isTypeSupported(t)) || '';
+  _cameraRecorder = new MediaRecorder(_cameraStream, { mimeType });
+  _cameraRecorder.ondataavailable = e => { if (e.data.size) _cameraChunks.push(e.data); };
+  _cameraRecorder.start(100);
+}
+
+function _stopVideoCapture() {
+  clearInterval(_cameraRecTimer);
+  if (_cameraRecorder && _cameraRecorder.state === 'recording') {
+    _cameraRecorder.stop();
+  }
+  const indicator = document.getElementById('camera-rec-indicator');
+  if (indicator) indicator.classList.add('hidden');
+  const shutter = document.getElementById('camera-shutter');
+  if (shutter) { shutter.style.borderColor = '#fff'; shutter.querySelector('div').style.background = _cameraMode === 'video' ? '#f44336' : '#fff'; }
+  setTimeout(() => {
+    if (!_cameraChunks.length) return;
+    const mimeType = _cameraRecorder?.mimeType || 'video/webm';
+    const blob = new Blob(_cameraChunks, { type: mimeType });
+    const file = new File([blob], 'video_' + Date.now() + '.webm', { type: mimeType });
+    _closeCamera();
+    _showMediaPreview(file, 'video');
+  }, 200);
+}
+
+function _closeCamera() {
+  if (_cameraStream) { _cameraStream.getTracks().forEach(t => t.stop()); _cameraStream = null; }
+  clearInterval(_cameraRecTimer);
+  _cameraChunks = [];
+  const overlay = document.getElementById('camera-overlay');
+  if (overlay) overlay.remove();
 }
 
 function _showMediaPreview(file, type) {
