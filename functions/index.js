@@ -109,7 +109,7 @@ async function getUnreadMessageCount(userId, chatId, chatType) {
       !data.deletedFor?.[userId] &&
       !data.openedBy?.[userId] &&
       !data.readBy?.[userId];
-  }).length);
+  }).length;
 }
 
 async function addNotificationCenterItem({
