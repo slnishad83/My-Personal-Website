@@ -80,10 +80,10 @@ function _renderMediaViewer() {
   } else if (item.type === 'doc') {
     content.innerHTML = `<iframe src="${escHtml(item.url)}" class="w-full h-full rounded-xl border border-outline-variant/20" style="width:85vw; height:75vh; background:white;"></iframe>`;
   } else {
-    content.innerHTML = `<div class="relative flex items-center justify-center w-full h-full" id="media-zoom-container">
+    content.innerHTML = `<div class="relative flex items-center justify-center w-full h-full" id="media-zoom-container" style="touch-action:none">
       <img src="${escHtml(item.url)}" alt="Media" id="media-zoom-img"
            class="max-w-full max-h-full rounded-xl object-contain transition-transform duration-200 cursor-zoom-in"
-           style="max-height:85vh"
+           style="max-height:85vh;transform-origin:center center"
            ondragstart="return false"
            onclick="toggleMediaZoom()">
     </div>`;
@@ -92,6 +92,64 @@ function _renderMediaViewer() {
   App._mediaViewerCurrentUrl = item.url;
   App._mediaViewerCurrentType = item.type;
   App._mediaViewerZoomed = false;
+  App._mediaViewerScale = 1;
+  App._mediaViewerPanX = 0;
+  App._mediaViewerPanY = 0;
+  // Pinch-to-zoom support
+  const zoomContainer = document.getElementById('media-zoom-container');
+  if (zoomContainer && item.type !== 'video' && item.type !== 'voice' && item.type !== 'audio' && item.type !== 'doc') {
+    let lastDist = 0, lastMidX = 0, lastMidY = 0, isPinching = false;
+    zoomContainer.addEventListener('touchstart', e => {
+      if (e.touches.length === 2) {
+        isPinching = true;
+        const dx = e.touches[0].clientX - e.touches[1].clientX;
+        const dy = e.touches[0].clientY - e.touches[1].clientY;
+        lastDist = Math.hypot(dx, dy);
+        lastMidX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+        lastMidY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+        e.preventDefault();
+      }
+    }, { passive: false });
+    zoomContainer.addEventListener('touchmove', e => {
+      if (isPinching && e.touches.length === 2) {
+        const dx = e.touches[0].clientX - e.touches[1].clientX;
+        const dy = e.touches[0].clientY - e.touches[1].clientY;
+        const dist = Math.hypot(dx, dy);
+        const scaleDelta = dist / lastDist;
+        App._mediaViewerScale = Math.max(0.5, Math.min(5, App._mediaViewerScale * scaleDelta));
+        const midX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+        const midY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+        App._mediaViewerPanX += midX - lastMidX;
+        App._mediaViewerPanY += midY - lastMidY;
+        lastDist = dist;
+        lastMidX = midX;
+        lastMidY = midY;
+        const img = document.getElementById('media-zoom-img');
+        if (img) {
+          img.style.transform = `translate(${App._mediaViewerPanX}px, ${App._mediaViewerPanY}px) scale(${App._mediaViewerScale})`;
+          img.style.maxHeight = 'none';
+          img.style.maxWidth = 'none';
+        }
+        e.preventDefault();
+      }
+    }, { passive: false });
+    zoomContainer.addEventListener('touchend', e => {
+      if (isPinching && e.touches.length < 2) {
+        isPinching = false;
+        if (App._mediaViewerScale < 1.1) {
+          App._mediaViewerScale = 1;
+          App._mediaViewerPanX = 0;
+          App._mediaViewerPanY = 0;
+          const img = document.getElementById('media-zoom-img');
+          if (img) {
+            img.style.transform = '';
+            img.style.maxHeight = '85vh';
+            img.style.maxWidth = '100%';
+          }
+        }
+      }
+    });
+  }
 }
 
 function toggleMediaZoom() {

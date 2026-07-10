@@ -96,7 +96,10 @@ html, body, #app { height: 100%; }
 
 /* ── Landscape mode on mobile ───────────────────────── */
 @media (max-width: 767px) and (orientation: landscape) {
-  #chat-area { height: 100dvh !important; }
+  #chat-area { height: 100vh !important; }
+  @supports (height: 100dvh) {
+    #chat-area { height: 100dvh !important; }
+  }
   #chat-header { height: 48px !important; min-height: 48px !important; padding: 4px 12px !important; }
   #chat-header img { width: 28px !important; height: 28px !important; }
   #input-bar { padding: 4px 12px !important; }
@@ -107,6 +110,17 @@ html, body, #app { height: 100%; }
   @supports (height: 100dvh) {
     .overlay > div { max-height: 95dvh !important; }
   }
+}
+
+/* ── Landscape mode on tablet (768-1024px) ──────────── */
+@media (min-width: 768px) and (max-width: 1023px) and (orientation: landscape) {
+  #sidebar { width: 72px !important; }
+  #sidebar .xl\\:block { display: none !important; }
+  #sidebar button { justify-content: center !important; padding-left: 0 !important; padding-right: 0 !important; }
+  #chat-list-sidebar { width: 280px !important; }
+  #detail-panel { display: flex !important; width: 320px !important; min-width: 320px !important; }
+  #bottom-nav { display: none !important; }
+  #app { padding-bottom: 0 !important; }
 }
 
 /* ── Dark Mode Enhancements ──────────────────────────── */

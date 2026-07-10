@@ -232,10 +232,23 @@
     ],
     "ignore": [
       "firebase.json",
+      ".firebaserc",
       "**/.*",
       "**/node_modules/**",
       "functions/**",
-      "works/chat/android/**"
+      "works/chat/android/**",
+      "works/chat/node_modules/**",
+      "works/chat/package.json",
+      "works/chat/package-lock.json",
+      "works/chat/eslint.config.js",
+      "works/chat/capacitor.config.json",
+      "works/chat/my-team-chat.apk",
+      ".github/**",
+      "*.bat",
+      "firestore.indexes.json",
+      "firestore.rules",
+      "storage.rules",
+      "README.md"
     ]
   }
 }
