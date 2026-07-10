@@ -157,19 +157,19 @@
 
       <!-- Navigation links mapping switchTab -->
       <div class="mt-4 flex-1 space-y-1 px-3" id="sidebar-nav-container">
-        <button class="tab-item w-full flex items-center gap-4 bg-primary-fixed/10 text-primary-fixed border-l-4 border-primary px-4 py-3 cursor-pointer active:scale-95 transition-all duration-200" data-tab="chats" onclick="switchTab('chats')">
+        <button class="tab-item w-full flex items-center gap-4 bg-primary-fixed/10 text-primary-fixed border-l-4 border-primary px-4 py-3 cursor-pointer active:scale-95 transition-all duration-200" data-tab="chats" onclick="switchTab('chats')" aria-label="Chats">
           <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">chat</span>
           <span class="hidden xl:block font-body-md text-body-md font-semibold">Chats</span>
         </button>
-        <button class="tab-item w-full flex items-center gap-4 text-on-surface-variant hover:text-on-surface hover:bg-surface-container-highest transition-colors duration-200 px-4 py-3 cursor-pointer active:scale-95" data-tab="groups" onclick="switchTab('groups')">
+        <button class="tab-item w-full flex items-center gap-4 text-on-surface-variant hover:text-on-surface hover:bg-surface-container-highest transition-colors duration-200 px-4 py-3 cursor-pointer active:scale-95" data-tab="groups" onclick="switchTab('groups')" aria-label="Groups">
           <span class="material-symbols-outlined">group</span>
           <span class="hidden xl:block font-body-md text-body-md">Groups</span>
         </button>
-        <button class="tab-item w-full flex items-center gap-4 text-on-surface-variant hover:text-on-surface hover:bg-surface-container-highest transition-colors duration-200 px-4 py-3 cursor-pointer active:scale-95" data-tab="calls" onclick="switchTab('calls')">
+        <button class="tab-item w-full flex items-center gap-4 text-on-surface-variant hover:text-on-surface hover:bg-surface-container-highest transition-colors duration-200 px-4 py-3 cursor-pointer active:scale-95" data-tab="calls" onclick="switchTab('calls')" aria-label="Calls">
           <span class="material-symbols-outlined">call</span>
           <span class="hidden xl:block font-body-md text-body-md">Calls</span>
         </button>
-        <button class="tab-item w-full flex items-center gap-4 text-on-surface-variant hover:text-on-surface hover:bg-surface-container-highest transition-colors duration-200 px-4 py-3 cursor-pointer active:scale-95" data-tab="more" onclick="switchTab('more')">
+        <button class="tab-item w-full flex items-center gap-4 text-on-surface-variant hover:text-on-surface hover:bg-surface-container-highest transition-colors duration-200 px-4 py-3 cursor-pointer active:scale-95" data-tab="more" onclick="switchTab('more')" aria-label="Saved Items">
           <span class="material-symbols-outlined">bookmark</span>
           <span class="hidden xl:block font-body-md text-body-md">Saved Items</span>
         </button>
@@ -237,6 +237,14 @@
       <div class="flex-1 overflow-y-auto scrollbar-hide p-2 space-y-1" id="chat-list" role="list" aria-label="Conversations">
         <!-- Rendered dynamically -->
       </div>
+      <!-- Empty state shown when no chats -->
+      <div id="chats-empty" class="hidden flex-col items-center py-12 text-center px-4">
+        <div class="w-16 h-16 rounded-2xl bg-surface-container-high flex items-center justify-center mb-4 border border-outline-variant/20">
+          <span class="material-symbols-outlined text-on-surface-variant text-3xl">chat</span>
+        </div>
+        <p class="text-sm font-bold text-on-surface mb-1">No conversations yet</p>
+        <p class="text-[11px] text-on-surface-variant">Tap the + button to start messaging</p>
+      </div>
     </aside>
 
     <!-- 💡 COLUMN 3: MAIN CHAT DISPLAY CANVAS -->
@@ -263,16 +271,16 @@
         </div>
 
         <div class="flex items-center gap-2" id="header-actions-container">
-          <button class="text-on-surface-variant hover:text-primary transition-all p-2 rounded-full hover:bg-surface-container/50" onclick="startVoiceCall()" id="btn-voice-call" title="Voice Call">
+          <button class="text-on-surface-variant hover:text-primary transition-all p-2 rounded-full hover:bg-surface-container/50" onclick="startVoiceCall()" id="btn-voice-call" title="Voice Call" aria-label="Voice call">
             <span class="material-symbols-outlined">call</span>
           </button>
-          <button class="text-on-surface-variant hover:text-primary transition-all p-2 rounded-full hover:bg-surface-container/50" onclick="startVideoCall()" id="btn-video-call" title="Video Call">
+          <button class="text-on-surface-variant hover:text-primary transition-all p-2 rounded-full hover:bg-surface-container/50" onclick="startVideoCall()" id="btn-video-call" title="Video Call" aria-label="Video call">
             <span class="material-symbols-outlined">videocam</span>
           </button>
-          <button class="text-on-surface-variant hover:text-on-surface transition-all p-2 rounded-full hover:bg-surface-container/50" onclick="openChatSearch()" title="Search chat">
+          <button class="text-on-surface-variant hover:text-on-surface transition-all p-2 rounded-full hover:bg-surface-container/50" onclick="openChatSearch()" title="Search chat" aria-label="Search messages">
             <span class="material-symbols-outlined">search</span>
           </button>
-          <button class="text-on-surface-variant hover:text-on-surface transition-all p-2 rounded-full hover:bg-surface-container/50" onclick="openChatMenu(this)" id="btn-chat-menu" title="More options">
+          <button class="text-on-surface-variant hover:text-on-surface transition-all p-2 rounded-full hover:bg-surface-container/50" onclick="openChatMenu(this)" id="btn-chat-menu" title="More options" aria-label="More options">
             <span class="material-symbols-outlined">more_vert</span>
           </button>
         </div>
@@ -392,26 +400,26 @@
       <footer class="p-4 bg-background border-t border-outline-variant/20 z-10" id="input-bar" style="display:none">
         <div class="flex items-end gap-3 glass-panel p-2 rounded-full focus-within:ring-1 focus-within:ring-primary/50 transition-all duration-300">
           <!-- Attach button -->
-          <button class="w-10 h-10 flex items-center justify-center text-on-surface-variant hover:text-primary hover:bg-surface-variant/30 rounded-full transition-all" id="attach-btn" onclick="toggleAttachMenu()">
+          <button class="w-10 h-10 flex items-center justify-center text-on-surface-variant hover:text-primary hover:bg-surface-variant/30 rounded-full transition-all" id="attach-btn" onclick="toggleAttachMenu()" aria-label="Attach file">
             <span class="material-symbols-outlined">add_circle</span>
           </button>
 
           <!-- Dynamic text input -->
-          <textarea class="flex-1 bg-transparent border-none focus:ring-0 text-on-surface font-body-md text-body-md resize-none py-2 max-h-32 custom-scrollbar focus:outline-none" id="msg-input" placeholder="Type your message..." rows="1" oninput="onInputChange()" onkeydown="onInputKeyDown(event)"></textarea>
+          <textarea class="flex-1 bg-transparent border-none focus:ring-0 text-on-surface font-body-md text-body-md resize-none py-2 max-h-32 custom-scrollbar focus:outline-none" id="msg-input" placeholder="Type your message..." rows="1" oninput="onInputChange()" onkeydown="onInputKeyDown(event)" aria-label="Message input"></textarea>
 
           <!-- Input Extras -->
           <div class="flex items-center gap-1">
-            <button class="w-10 h-10 flex items-center justify-center text-on-surface-variant hover:text-primary hover:bg-surface-variant/30 rounded-full transition-all" onclick="toggleEmojiPicker()">
+            <button class="w-10 h-10 flex items-center justify-center text-on-surface-variant hover:text-primary hover:bg-surface-variant/30 rounded-full transition-all" onclick="toggleEmojiPicker()" aria-label="Emoji picker">
               <span class="material-symbols-outlined">mood</span>
             </button>
-            <button class="w-10 h-10 flex items-center justify-center text-on-surface-variant hover:text-primary hover:bg-surface-variant/30 rounded-full transition-all" onclick="toggleFormatBar()">
+            <button class="w-10 h-10 flex items-center justify-center text-on-surface-variant hover:text-primary hover:bg-surface-variant/30 rounded-full transition-all" onclick="toggleFormatBar()" aria-label="Text formatting">
               <span class="material-symbols-outlined">format_size</span>
             </button>
             <!-- Mic / Send buttons -->
-            <button class="w-10 h-10 flex items-center justify-center bg-primary text-on-primary-container rounded-full hover:scale-105 active:scale-95 transition-all shadow-md" id="mic-btn" onclick="toggleRecording()">
+            <button class="w-10 h-10 flex items-center justify-center bg-primary text-on-primary-container rounded-full hover:scale-105 active:scale-95 transition-all shadow-md" id="mic-btn" onclick="toggleRecording()" aria-label="Record voice message">
               <span class="material-symbols-outlined">mic</span>
             </button>
-            <button class="w-10 h-10 flex items-center justify-center bg-primary text-on-primary-container rounded-full hover:scale-105 active:scale-95 transition-all shadow-md hidden" id="send-btn" onclick="sendMessage()">
+            <button class="w-10 h-10 flex items-center justify-center bg-primary text-on-primary-container rounded-full hover:scale-105 active:scale-95 transition-all shadow-md hidden" id="send-btn" onclick="sendMessage()" aria-label="Send message">
               <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">send</span>
             </button>
           </div>
@@ -641,7 +649,7 @@
       </div>
       <div class="p-4 border-b border-outline-variant/10">
         <div class="relative">
-          <input class="w-full bg-surface-container border-none rounded-xl py-3 pl-12 pr-4 text-on-surface focus:ring-1 focus:ring-primary font-body-md" placeholder="Search team members…" id="contact-search" type="text"/>
+          <input class="w-full bg-surface-container border-none rounded-xl py-3 pl-12 pr-4 text-on-surface focus:ring-1 focus:ring-primary font-body-md" placeholder="Search team members…" id="new-chat-search" type="text" oninput="filterNewChatList(this.value)"/>
           <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant">search</span>
         </div>
       </div>
@@ -752,7 +760,7 @@
   <!-- Global Media Viewer Slide Overlay -->
   <div class="overlay fixed inset-0 z-[110] bg-black flex flex-col hidden" id="media-viewer" role="dialog">
     <div class="flex justify-between items-center p-6 text-white bg-gradient-to-b from-black/80 to-transparent relative z-10">
-      <button class="w-10 h-10 bg-white/10 rounded-full flex items-center justify-center hover:bg-white/20 transition-colors" onclick="closeMediaViewer()">
+      <button class="w-10 h-10 bg-white/10 rounded-full flex items-center justify-center hover:bg-white/20 transition-colors" onclick="closeMediaViewer()" aria-label="Close media viewer">
         <span class="material-symbols-outlined">close</span>
       </button>
       <div class="flex flex-col items-center min-w-0 mx-4">
@@ -760,23 +768,23 @@
         <div class="text-xs text-white/60 truncate max-w-md" id="media-viewer-caption-sub"></div>
       </div>
       <div class="flex items-center gap-2">
-        <button class="w-10 h-10 bg-white/10 rounded-full flex items-center justify-center hover:bg-white/20 transition-colors" onclick="forwardCurrentMedia()" title="Forward">
+        <button class="w-10 h-10 bg-white/10 rounded-full flex items-center justify-center hover:bg-white/20 transition-colors" onclick="forwardCurrentMedia()" title="Forward" aria-label="Forward media">
           <span class="material-symbols-outlined">share</span>
         </button>
-        <button id="media-viewer-delete-btn" class="w-10 h-10 bg-white/10 rounded-full flex items-center justify-center hover:bg-red-500/20 text-white hover:text-red-400 transition-colors" onclick="deleteCurrentMedia()" title="Delete">
+        <button id="media-viewer-delete-btn" class="w-10 h-10 bg-white/10 rounded-full flex items-center justify-center hover:bg-red-500/20 text-white hover:text-red-400 transition-colors" onclick="deleteCurrentMedia()" title="Delete" aria-label="Delete media">
           <span class="material-symbols-outlined">delete</span>
         </button>
-        <button class="w-10 h-10 bg-white/10 rounded-full flex items-center justify-center hover:bg-white/20 transition-colors" onclick="downloadMedia()" title="Download">
+        <button class="w-10 h-10 bg-white/10 rounded-full flex items-center justify-center hover:bg-white/20 transition-colors" onclick="downloadMedia()" title="Download" aria-label="Download media">
           <span class="material-symbols-outlined">download</span>
         </button>
       </div>
     </div>
     <div class="flex-1 flex items-center justify-between p-6 relative">
-      <button class="w-12 h-12 bg-white/10 rounded-full flex items-center justify-center hover:bg-white/20 transition-all text-white border border-white/10" onclick="prevMedia()">
+      <button class="w-12 h-12 bg-white/10 rounded-full flex items-center justify-center hover:bg-white/20 transition-all text-white border border-white/10" onclick="prevMedia()" aria-label="Previous media">
         <span class="material-symbols-outlined">chevron_left</span>
       </button>
       <div id="media-viewer-content" class="max-w-[85vw] max-h-[75vh] flex items-center justify-center"></div>
-      <button class="w-12 h-12 bg-white/10 rounded-full flex items-center justify-center hover:bg-white/20 transition-all text-white border border-white/10" onclick="nextMedia()">
+      <button class="w-12 h-12 bg-white/10 rounded-full flex items-center justify-center hover:bg-white/20 transition-all text-white border border-white/10" onclick="nextMedia()" aria-label="Next media">
         <span class="material-symbols-outlined">chevron_right</span>
       </button>
     </div>
@@ -799,33 +807,33 @@
   </div>
 
   <!-- Mobile Bottom Navigation Tab Bar (mobile only) -->
-  <nav class="md:hidden fixed bottom-0 left-0 right-0 h-16 bg-surface-container border-t border-outline-variant/30 flex items-center justify-around z-40" id="bottom-nav">
-    <button class="bottom-nav-item flex flex-col items-center justify-center gap-1 text-primary-fixed" data-tab="chats" onclick="switchTab('chats')">
+  <nav class="md:hidden fixed bottom-0 left-0 right-0 h-16 bg-surface-container border-t border-outline-variant/30 flex items-center justify-around z-40" id="bottom-nav" aria-label="Main navigation">
+    <button class="bottom-nav-item flex flex-col items-center justify-center gap-1 text-primary-fixed" data-tab="chats" onclick="switchTab('chats')" aria-label="Chats">
       <div class="relative">
         <span class="material-symbols-outlined text-2xl">chat</span>
         <div class="absolute -top-1.5 -right-2 bg-secondary text-white text-[9px] w-4 h-4 rounded-full flex items-center justify-center font-bold hidden" id="chats-badge">0</div>
       </div>
       <span class="text-[10px] font-semibold">Chats</span>
     </button>
-    <button class="bottom-nav-item flex flex-col items-center justify-center gap-1 text-on-surface-variant" data-tab="groups" onclick="switchTab('groups')">
+    <button class="bottom-nav-item flex flex-col items-center justify-center gap-1 text-on-surface-variant" data-tab="groups" onclick="switchTab('groups')" aria-label="Groups">
       <div class="relative">
         <span class="material-symbols-outlined text-2xl">group</span>
         <div class="absolute -top-1.5 -right-2 bg-secondary text-white text-[9px] w-4 h-4 rounded-full flex items-center justify-center font-bold hidden" id="groups-badge">0</div>
       </div>
       <span class="text-[10px] font-semibold">Groups</span>
     </button>
-    <button class="bottom-nav-item flex flex-col items-center justify-center gap-1 text-on-surface-variant" data-tab="calls" onclick="switchTab('calls')">
+    <button class="bottom-nav-item flex flex-col items-center justify-center gap-1 text-on-surface-variant" data-tab="calls" onclick="switchTab('calls')" aria-label="Calls">
       <span class="material-symbols-outlined text-2xl">call</span>
       <span class="text-[10px] font-semibold">Calls</span>
     </button>
-    <button class="bottom-nav-item flex flex-col items-center justify-center gap-1 text-on-surface-variant" data-tab="requests" onclick="switchTab('requests')">
+    <button class="bottom-nav-item flex flex-col items-center justify-center gap-1 text-on-surface-variant" data-tab="requests" onclick="switchTab('requests')" aria-label="Chat requests">
       <div class="relative">
         <span class="material-symbols-outlined text-2xl">handshake</span>
         <div class="absolute -top-1.5 -right-2 bg-secondary text-white text-[9px] w-4 h-4 rounded-full flex items-center justify-center font-bold hidden" id="requests-badge">0</div>
       </div>
       <span class="text-[10px] font-semibold">Requests</span>
     </button>
-    <button class="bottom-nav-item flex flex-col items-center justify-center gap-1 text-on-surface-variant" onclick="openProfile()">
+    <button class="bottom-nav-item flex flex-col items-center justify-center gap-1 text-on-surface-variant" onclick="openProfile()" aria-label="Profile">
       <span class="material-symbols-outlined text-2xl">person</span>
       <span class="text-[10px] font-semibold">Profile</span>
     </button>

@@ -98,14 +98,32 @@ html.dark ::-webkit-scrollbar-track { background: var(--surface-dim); }
 html.dark ::-webkit-scrollbar-thumb { background: var(--surface-container-highest); border-radius: 4px; }
 html.dark ::-webkit-scrollbar-thumb:hover { background: var(--outline-variant); }
 html.dark ::-webkit-scrollbar-corner { background: var(--surface-dim); }
-html.dark * { scrollbar-color: var(--surface-container-highest) var(--surface-dim); scrollbar-width: thin; }
 
 /* Light mode scrollbars */
 html ::-webkit-scrollbar { width: 5px; height: 5px; background: var(--surface-bright); }
 html ::-webkit-scrollbar-track { background: var(--surface-bright); }
 html ::-webkit-scrollbar-thumb { background: var(--outline-variant); border-radius: 4px; }
 html ::-webkit-scrollbar-thumb:hover { background: var(--outline); }
-html * { scrollbar-color: var(--outline-variant) var(--surface-bright); scrollbar-width: thin; }
+
+/* Scrollbar styles for scrollable containers only */
+html.dark .overflow-y-auto,
+html.dark .custom-scrollbar,
+html.dark #emoji-grid,
+html.dark #messages-wrap,
+html.dark #chat-list,
+html.dark .modal-body {
+  scrollbar-color: var(--surface-container-highest) var(--surface-dim);
+  scrollbar-width: thin;
+}
+html .overflow-y-auto,
+html .custom-scrollbar,
+html #emoji-grid,
+html #messages-wrap,
+html #chat-list,
+html .modal-body {
+  scrollbar-color: var(--outline-variant) var(--surface-bright);
+  scrollbar-width: thin;
+}
 
 /* ── Input / Textarea dark mode fixes ────────────────── */
 html.dark input,
@@ -198,7 +216,7 @@ html.dark .chat-list-item.active { background: rgba(196, 192, 255, 0.08); }
 
 /* ── Safe area top for notch/Dynamic Island ──────────── */
 @supports (padding-top: env(safe-area-inset-top)) {
-  #chat-header { padding-top: env(safe-area-inset-top); }
+  #chat-header { padding-top: env(safe-area-inset-top); min-height: calc(64px + env(safe-area-inset-top)); }
   #toast-container { top: calc(24px + env(safe-area-inset-top)) !important; }
   #camera-overlay > div:first-child { padding-top: env(safe-area-inset-top); }
   #camera-overlay > div:last-child { padding-bottom: calc(16px + env(safe-area-inset-bottom)); }

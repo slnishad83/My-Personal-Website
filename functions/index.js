@@ -11,8 +11,8 @@ if (!admin.apps.length) {
 const meteredApiKey = defineSecret('METERED_API_KEY');
 const METERED_APP_URL = 'teamchatnishad.metered.live';
 const TURN_CREDENTIAL_LABEL = 'team-chat-secure-turn';
-const BACKEND_RUNTIME_GENERATION = 'nodejs22';
 const CHAT_APP_URL = 'https://nishadsl.com/works/chat/';
+const ADMIN_EMAIL = 'sl.nishad@gmail.com';
 
 async function getUserPushTokens(userId) {
   if (!userId) return { userSnap: null, user: {}, tokens: [] };
@@ -98,10 +98,10 @@ async function getChatNotificationPreferences(userId, chatId) {
 }
 
 async function getUnreadMessageCount(userId, chatId, chatType) {
-  if (!userId || !chatId) return 1;
+  if (!userId || !chatId) return 0;
   const field = chatType === 'group' ? 'groupId' : 'directId';
   const snapshot = await admin.firestore().collection('messages').where(field, '==', chatId).get();
-  return Math.max(1, snapshot.docs.filter((doc) => {
+  return snapshot.docs.filter((doc) => {
     const data = doc.data() || {};
     return data.senderId &&
       data.senderId !== userId &&
@@ -336,7 +336,7 @@ exports.lookupVerifiedUserByEmail = onRequest(
     invoker: 'public'
   },
   async (request, response) => {
-    setCorsHeaders(response);
+    setCorsHeaders(response, request.get('Origin'));
     response.set('Cache-Control', 'private, no-store');
     if (request.method === 'OPTIONS') {
       response.status(204).send('');
@@ -446,7 +446,7 @@ exports.lookupVerifiedUserByEmailV2 = onRequest(
     timeoutSeconds: 30
   },
   async (request, response) => {
-    setCorsHeaders(response);
+    setCorsHeaders(response, request.get('Origin'));
     response.set('Cache-Control', 'private, no-store');
     if (request.method === 'OPTIONS') {
       response.status(204).send('');
@@ -481,8 +481,10 @@ exports.lookupVerifiedUserByEmailV2 = onRequest(
   }
 );
 
-function setCorsHeaders(response) {
-  response.set('Access-Control-Allow-Origin', '*');
+const ALLOWED_ORIGINS = ['https://nishadsl.com', 'https://my-team-chat-2255.web.app'];
+function setCorsHeaders(response, origin) {
+  const allowed = ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
+  response.set('Access-Control-Allow-Origin', allowed);
   response.set('Access-Control-Allow-Methods', 'GET, OPTIONS');
   response.set('Access-Control-Allow-Headers', 'Authorization, Content-Type');
   response.set('Access-Control-Max-Age', '3600');
@@ -548,7 +550,7 @@ exports.syncGroupMemberDeleted = onDocumentDeleted(
 exports.repairGroupAccessMetadata = onRequest(
   { region: 'us-central1', invoker: 'public' },
   async (request, response) => {
-    setCorsHeaders(response);
+    setCorsHeaders(response, request.get('Origin'));
     response.set('Cache-Control', 'private, no-store');
     if (request.method === 'OPTIONS') {
       response.status(204).send('');
@@ -676,7 +678,7 @@ exports.getTurnCredentials = onRequest(
     secrets: [meteredApiKey]
   },
   async (request, response) => {
-    setCorsHeaders(response);
+    setCorsHeaders(response, request.get('Origin'));
     response.set('Cache-Control', 'private, no-store');
 
     if (request.method === 'OPTIONS') {
@@ -1497,7 +1499,7 @@ exports.aiChatBot = onCall(
 exports.migrateCallsToCallLogs = onRequest(
   { region: 'us-central1', invoker: 'public', timeoutSeconds: 120 },
   async (request, response) => {
-    setCorsHeaders(response);
+    setCorsHeaders(response, request.get('Origin'));
     if (request.method === 'OPTIONS') { response.status(204).send(''); return; }
     if (request.method !== 'POST') { response.status(405).json({ error: 'Method not allowed' }); return; }
     try {
@@ -1565,7 +1567,7 @@ exports.exportCallToCallLog = onDocumentUpdated(
 exports.backfillMessageEmails = onRequest(
   { region: 'us-central1', invoker: 'public', timeoutSeconds: 300 },
   async (request, response) => {
-    setCorsHeaders(response);
+    setCorsHeaders(response, request.get('Origin'));
     if (request.method === 'OPTIONS') { response.status(204).send(''); return; }
     if (request.method !== 'POST') { response.status(405).json({ error: 'Method not allowed' }); return; }
     try {
@@ -1707,8 +1709,6 @@ function _storagePathFromUrl(url) {
 // ADMIN FUNCTIONS — Only callable by sl.nishad@gmail.com
 // ════════════════════════════════════════════════════════════════════════════
 
-const ADMIN_EMAIL = 'sl.nishad@gmail.com';
-
 async function assertAdmin(auth) {
   if (!auth) throw new HttpsError('unauthenticated', 'Must be signed in.');
   const userRecord = await admin.auth().getUser(auth.uid);
@@ -1832,6 +1832,12 @@ exports.transcribeVoiceMessage = onCall(
     if (!request.auth) throw new HttpsError('unauthenticated', 'Must be signed in.');
     const { messageId, audioUrl } = request.data || {};
     if (!audioUrl) throw new HttpsError('invalid-argument', 'Missing audioUrl.');
+    // Validate URL — only allow Firebase Storage and Cloudinary
+    const audioUrlObj = new URL(audioUrl);
+    const audioHost = audioUrlObj.hostname.toLowerCase();
+    if (!audioHost.endsWith('firebasestorage.googleapis.com') && !audioHost.endsWith('cloudinary.com')) {
+      throw new HttpsError('invalid-argument', 'Audio URL must be from Firebase Storage or Cloudinary.');
+    }
     const apiKey = geminiApiKey.value();
     if (!apiKey) throw new HttpsError('failed-precondition', 'GEMINI_API_KEY not set.');
     try {
@@ -2031,15 +2037,36 @@ exports.sendNotificationReply = onRequest(
 );
 
 // ── generateUrlPreview — item #24 ─────────────────────────────────────────
+const ALLOWED_URL_HOSTS = ['nishadsl.com', 'my-team-chat-2255.web.app', 'github.com', 'github.io'];
 exports.generateUrlPreview = onRequest(async (req, res) => {
-  res.set('Access-Control-Allow-Origin', '*');
+  res.set('Access-Control-Allow-Origin', ALLOWED_ORIGINS[0]);
   res.set('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
   res.set('Access-Control-Allow-Headers', 'Content-Type');
   if (req.method === 'OPTIONS') { res.status(204).send(''); return; }
 
+  // Require authentication
+  let caller;
+  try { caller = await verifyFirebaseUser(req); } catch (_) {
+    res.status(401).json({ error: 'Unauthorized' }); return;
+  }
+
   const url = (req.body && req.body.url) || req.query.url;
   if (!url || !/^https?:\/\//.test(url)) {
     res.status(400).json({ error: 'Missing or invalid url parameter' }); return;
+  }
+
+  // Validate URL — block private IPs and localhost
+  const { URL } = require('url');
+  let parsedUrl;
+  try { parsedUrl = new URL(url); } catch (_) {
+    res.status(400).json({ error: 'Invalid URL' }); return;
+  }
+  const hostname = parsedUrl.hostname.toLowerCase();
+  if (/^(localhost|127\.|10\.|172\.(1[6-9]|2\d|3[01])\.|192\.168\.|0\.|metadata\.google|169\.254\.)/.test(hostname)) {
+    res.status(400).json({ error: 'URL not allowed' }); return;
+  }
+  if (!ALLOWED_URL_HOSTS.some(h => hostname === h || hostname.endsWith('.' + h))) {
+    res.status(403).json({ error: 'Domain not allowed' }); return;
   }
 
   const https = require('https');
@@ -2121,6 +2148,20 @@ exports.runMigrationOnTrigger = onDocumentCreated(
   { document: 'migrationTriggers/{triggerId}', region: 'us-central1', timeoutSeconds: 300 },
   async (event) => {
     const trigger = event.data?.data() || {};
+    // Verify the creator is admin
+    const createdBy = trigger.createdBy;
+    if (!createdBy) { console.warn('Migration trigger missing createdBy — skipping'); return null; }
+    try {
+      const creatorSnap = await admin.firestore().collection('users').doc(createdBy).get();
+      const creator = creatorSnap.data();
+      if (!creator || creator.email !== ADMIN_EMAIL) {
+        console.warn('Migration trigger by non-admin:', createdBy, '— skipping');
+        return null;
+      }
+    } catch (_) {
+      console.warn('Could not verify migration creator — skipping');
+      return null;
+    }
     const db = admin.firestore();
 
     if (trigger.type === 'backfillEmails') {
@@ -2183,39 +2224,6 @@ exports.runMigrationOnTrigger = onDocumentCreated(
   }
 );
 
-// ════════════════════════════════════════════════════════════════════════════
-// TEMPORARY — Diagnostics: check callLogs, messages, calls data
-// ════════════════════════════════════════════════════════════════════════════
-exports.diagnoseData = onRequest(
-  { region: 'us-central1', invoker: 'public' },
-  async (req, res) => {
-    res.set('Access-Control-Allow-Origin', '*');
-    if (req.method === 'OPTIONS') { res.status(204).send(''); return; }
-    const db = admin.firestore();
-    
-    const result = {};
-
-    // Check callLogs collection
-    const callLogsSnap = await db.collection('callLogs').limit(20).get();
-    result.callLogsCount = callLogsSnap.size;
-    result.callLogs = callLogsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-
-    // Check calls collection
-    const callsSnap = await db.collection('calls').limit(20).get();
-    result.callsCount = callsSnap.size;
-    result.calls = callsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-
-    // Check messages: sample messages with participantEmails
-    const msgSnap = await db.collection('messages').limit(5).get();
-    result.messagesSample = msgSnap.docs.map(d => ({ id: d.id, participants: d.data().participants, participantEmails: d.data().participantEmails, senderId: d.data().senderId, directId: d.data().directId }));
-
-    // Check directChats
-    const dcSnap = await db.collection('directChats').limit(20).get();
-    result.directChatsCount = dcSnap.size;
-    result.directChats = dcSnap.docs.map(d => ({ id: d.id, participants: d.data().participants }));
-
-    res.json(result);
-  }
-);
+// diagnoseData removed — was a security risk (public, no auth, leaked all user data)
 
 

@@ -256,6 +256,7 @@ function subscribeToChats() {
   if (!App.db || !App.auth?.currentUser) return;
   const uid = App.auth.currentUser.uid;
   if (App.chatsUnsubscribe) App.chatsUnsubscribe();
+  let _chatsGen = 0;
   
   App.chatsUnsubscribe = App.db.collection('directChats')
     .where('participants', 'array-contains', uid)
@@ -348,7 +349,9 @@ function subscribeToChats() {
       });
       
       if (decryptPromises.length > 0) {
+        const myGen = ++_chatsGen;
         Promise.all(decryptPromises).then(() => {
+          if (_chatsGen !== myGen) return; // stale snapshot, discard
           App.directChats = chatsList;
           mergeAndRenderChats();
           detectAndMergeOrphanedChatsForUser();
@@ -643,6 +646,7 @@ async function loadMessageHistory(email, uid) {
 function subscribeToChatRequests(email, uid) {
   if (!App.db || !email) return;
   if (App.chatRequestsUnsubscribe) App.chatRequestsUnsubscribe();
+  if (App.chatRequestsOutgoingUnsubscribe) App.chatRequestsOutgoingUnsubscribe();
   let incomingFirstLoad = true;
   App.chatRequestsUnsubscribe = App.db.collection('chatRequests')
     .where('toEmail', '==', email)
@@ -664,7 +668,7 @@ function subscribeToChatRequests(email, uid) {
       if (App.activeTab === 'requests') renderRequestsTab();
     }, e => console.warn('chatRequests incoming err:', e));
   let prevAcceptedIds = new Set();
-  App.db.collection('chatRequests')
+  App.chatRequestsOutgoingUnsubscribe = App.db.collection('chatRequests')
     .where('fromEmail', '==', email)
     .onSnapshot(snapshot => {
       const outgoing = [];
@@ -702,9 +706,11 @@ function subscribeToMessages(chatId) {
   const chat = App.chats.find(c => c.id === chatId);
   if (!chat) return;
   const queryField = chat.type === 'group' ? 'groupId' : 'directId';
+  let _msgsGen = 0;
   App.messagesUnsubscribe = App.db.collection('messages')
     .where(queryField, '==', chatId)
     .onSnapshot(async (snapshot) => {
+      const myGen = ++_msgsGen;
       const msgs = [];
       const decryptPromises = [];
       
@@ -792,6 +798,7 @@ function subscribeToMessages(chatId) {
         await Promise.all(decryptPromises);
       }
       
+      if (_msgsGen !== myGen) return; // stale snapshot, discard
       msgs.sort((a, b) => a.time - b.time);
       App.messages[chatId] = msgs;
       renderMessages(chatId);
@@ -1465,14 +1472,16 @@ async function deleteSelectedChats() {
         try {
           await App.db.collection('groups').doc(chatId).delete();
         } catch (e) { /* not a group chat */ }
-        // Delete all associated messages (both directId and groupId)
+        // Delete all associated messages (both directId and groupId), chunked by 500
         try {
           const dirMsgs = await App.db.collection('messages').where('directId', '==', chatId).get();
-          const batch = App.db.batch();
-          dirMsgs.forEach(doc => batch.delete(doc.ref));
           const grpMsgs = await App.db.collection('messages').where('groupId', '==', chatId).get();
-          grpMsgs.forEach(doc => batch.delete(doc.ref));
-          await batch.commit();
+          const allRefs = [...dirMsgs.docs.map(d => d.ref), ...grpMsgs.docs.map(d => d.ref)];
+          for (let i = 0; i < allRefs.length; i += 500) {
+            const batch = App.db.batch();
+            allRefs.slice(i, i + 500).forEach(ref => batch.delete(ref));
+            await batch.commit();
+          }
         } catch (e) { console.warn('Delete messages error:', e); }
       }
     }
@@ -1778,24 +1787,6 @@ function importChatFromZip() {
     }
   };
   input.click();
-}
-
-function sendChatRequest(chatId) {
-  const chat = App.chats.find(c => c.id === chatId);
-  if (!chat) return;
-  chat.requestSent = true;
-  if (App.currentChat?.id === chatId) openChat(chatId);
-  showToast('Request sent to start chatting', 'success');
-  // Optionally store in Firebase
-  if (App.db && App.auth?.currentUser) {
-    App.db.collection('chatRequests').add({
-      from: App.auth.currentUser.uid,
-      to: chat.name,
-      chatId: chatId,
-      timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-      status: 'pending'
-    }).catch(() => {});
-  }
 }
 
 /* ─── Orphaned Chat Merge on Re-registration ─── */
@@ -2252,7 +2243,7 @@ function openChat(chatId) {
       if (chat.requestSent) {
         inputBar.innerHTML = `<div class="p-4 text-center text-xs text-on-surface-variant bg-surface-container-high/50 rounded-xl mx-4 mb-2">⏳ Request sent — waiting for acceptance</div>`;
       } else {
-        inputBar.innerHTML = `<div class="p-4 text-center"><button class="px-6 py-2 bg-primary text-on-primary rounded-full text-sm font-bold hover:scale-105 transition-all" onclick="sendChatRequest('${chat.id}')">📨 Send Chat Request to Start Messaging</button><p class="text-[10px] text-on-surface-variant mt-2">The imported history is only visible to you</p></div>`;
+        inputBar.innerHTML = `<div class="p-4 text-center"><button class="px-6 py-2 bg-primary text-on-primary rounded-full text-sm font-bold hover:scale-105 transition-all" onclick="sendChatRequest('${chat.uid || ''}', '${escHtml(chat.email || '')}', '${escHtml(chat.name || '')}')">📨 Send Chat Request to Start Messaging</button><p class="text-[10px] text-on-surface-variant mt-2">The imported history is only visible to you</p></div>`;
       }
       inputBar.style.display = '';
     }
@@ -2760,7 +2751,7 @@ function beginCall(type) {
   App.currentCallLogId = null;
   if (App.db && App.auth?.currentUser && chat) {
     const uid = App.auth.currentUser.uid;
-    const otherUid = chat.uid;
+    const otherUid = chat.uid || null;
     App.db.collection('callLogs').add({
       callerId: uid,
       calleeId: otherUid || uid,
@@ -2768,7 +2759,9 @@ function beginCall(type) {
       duration: 0,
       timestamp: firebase.firestore.FieldValue.serverTimestamp(),
       status: 'calling',
-      participants: otherUid && otherUid !== uid ? [uid, otherUid] : [uid]
+      participants: otherUid && otherUid !== uid ? [uid, otherUid] : [uid],
+      chatId: chat.id || '',
+      chatName: chat.name || ''
     }).then(ref => {
       App.currentCallLogId = ref.id;
     }).catch(e => console.warn('callLog add err:', e));
@@ -3010,7 +3003,7 @@ function openContactInfoPanel(uid) {
         <span class="material-symbols-outlined text-primary text-base">perm_media</span>
         <span>Media & Files</span>
       </button>
-      <button class="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-surface-variant/40 transition-colors text-xs font-semibold text-on-surface" onclick="toggleMute(App.currentChat?.id)">
+      <button class="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-surface-variant/40 transition-colors text-xs font-semibold text-on-surface" onclick="toggleChatMute(App.currentChat?.id)">
         <span class="material-symbols-outlined text-primary text-base">notifications_off</span>
         <span>Mute Notifications</span>
       </button>
@@ -3167,7 +3160,7 @@ function renderInlineGallery() {
 
 function restoreDetailPanel() {
   if (_galleryPanelMode === 'group') openGroupInfoPanel();
-  else openContactInfoPanel();
+  else openContactInfoPanel(App.currentChat?.uid);
 }
 
 function renderInlineGalleryTab(tab) {
@@ -3251,6 +3244,17 @@ function renderInlineGalleryTab(tab) {
 function openNewChat() {
   show('new-chat-overlay');
   renderContactList();
+}
+
+function filterNewChatList(query) {
+  const list = document.getElementById('contact-list');
+  if (!list) return;
+  const q = (query || '').toLowerCase();
+  const items = list.querySelectorAll('[onclick^="startChatWith"]');
+  items.forEach(el => {
+    const text = el.textContent.toLowerCase();
+    el.style.display = text.includes(q) ? '' : 'none';
+  });
 }
 
 function renderContactList() {
@@ -3612,8 +3616,9 @@ function confirmDeleteChat(chatId) {
 async function confirmClearChat(chatId) {
   showConfirm('Clear conversation message history? This cannot be undone.', async () => {
     if (!chatId) return;
-    const msgs = App.messages[chatId] || [];
     const uid = App.auth && App.auth.currentUser && App.auth.currentUser.uid;
+    if (!uid) { showToast('Not logged in', 'error'); return; }
+    const msgs = App.messages[chatId] || [];
     App.messages[chatId] = [];
     if (App.currentChat?.id === chatId) renderMessages(chatId);
     renderChatList();
@@ -3795,7 +3800,12 @@ function showToast(msg, type='info') {
   const t = document.createElement('div');
   const typeClasses = type === 'success' ? 'bg-secondary text-white' : 'bg-surface-container-highest text-on-surface';
   t.className = `px-5 py-3 rounded-2xl text-xs font-bold shadow-xl border border-outline-variant/30 flex items-center gap-2 animate-bounce ${typeClasses}`;
-  t.innerHTML = `<span>💬</span> <span>${msg}</span>`;
+  const iconSpan = document.createElement('span');
+  iconSpan.textContent = '💬';
+  const msgSpan = document.createElement('span');
+  msgSpan.textContent = msg;
+  t.appendChild(iconSpan);
+  t.appendChild(msgSpan);
   container.appendChild(t);
   setTimeout(() => t.remove(), 3500);
 }
@@ -4632,9 +4642,12 @@ function signOut() {
   if (App.groupsUnsubscribe)       App.groupsUnsubscribe();
   if (App.messagesUnsubscribe)     App.messagesUnsubscribe();
   if (App.chatRequestsUnsubscribe) App.chatRequestsUnsubscribe();
+  if (App.chatRequestsOutgoingUnsubscribe) App.chatRequestsOutgoingUnsubscribe();
   if (App.callLogsUnsubscribe)     App.callLogsUnsubscribe();
   if (App.callsUnsubscriber)       App.callsUnsubscriber();
   if (App.callsUnsubscriber2)      App.callsUnsubscriber2();
+  // Clear E2E key cache to prevent stale keys for next user
+  Object.keys(_e2eSharedKeys).forEach(k => delete _e2eSharedKeys[k]);
   if (App.auth) App.auth.signOut().then(() => location.reload());
   else location.reload();
 }
@@ -4665,26 +4678,32 @@ async function deleteAccount() {
   try {
     // 1. Clean up user data
     if (App.db) {
-      const batch = App.db.batch();
       // Delete user document
-      batch.delete(App.db.collection('users').doc(uid));
+      await App.db.collection('users').doc(uid).delete();
       // Delete all directChats where user is participant
       const chatsSnap = await App.db.collection('directChats')
         .where('participants', 'array-contains', uid).get();
-      chatsSnap.forEach(doc => batch.delete(doc.ref));
+      for (const doc of chatsSnap.docs) { try { await doc.ref.delete(); } catch(_) {} }
       // Delete call logs
       const callLogsSnap = await App.db.collection('callLogs')
         .where('participants', 'array-contains', uid).get();
-      callLogsSnap.forEach(doc => batch.delete(doc.ref));
-      // Delete chat requests
+      for (const doc of callLogsSnap.docs) { try { await doc.ref.delete(); } catch(_) {} }
+      // Delete chat requests (both from and to)
       const reqSnap = await App.db.collection('chatRequests')
         .where('fromUserId', '==', uid).get();
-      reqSnap.forEach(doc => batch.delete(doc.ref));
+      for (const doc of reqSnap.docs) { try { await doc.ref.delete(); } catch(_) {} }
       const reqToSnap = await App.db.collection('chatRequests')
         .where('toUserId', '==', uid).get();
-      reqToSnap.forEach(doc => batch.delete(doc.ref));
-      
-      await batch.commit();
+      for (const doc of reqToSnap.docs) { try { await doc.ref.delete(); } catch(_) {} }
+      // Delete user's messages (chunked by 500)
+      const msgsSnap = await App.db.collection('messages')
+        .where('senderId', '==', uid).get();
+      const msgRefs = msgsSnap.docs.map(d => d.ref);
+      for (let i = 0; i < msgRefs.length; i += 500) {
+        const batch = App.db.batch();
+        msgRefs.slice(i, i + 500).forEach(ref => batch.delete(ref));
+        await batch.commit();
+      }
     }
     
     // 2. Delete Firebase Auth account

@@ -235,6 +235,11 @@ function playVoice(msgId) {
   // Stop any currently playing
   if (_currentAudio) {
     _currentAudio.pause();
+    _currentAudio.onended = null;
+    _currentAudio.ontimeupdate = null;
+    _currentAudio.onplay = null;
+    _currentAudio.onpause = null;
+    _currentAudio.onerror = null;
     _currentAudio = null;
     if (App._currentVoiceMsgId) _updatePlayBtn(App._currentVoiceMsgId, false);
   }
@@ -975,7 +980,7 @@ function editMessage(msgId) {
   const chatId = App.currentChat && App.currentChat.id;
   const msgs = (chatId && App.messages[chatId]) || [];
   const msg = msgs.find(m => m.id === msgId);
-  if (!msg || msg.type !== 'text' && !msg.text) {
+  if (!msg || (msg.type !== 'text' && !msg.text)) {
     showToast('Only text messages can be edited', 'info');
     return;
   }
@@ -1673,8 +1678,13 @@ function _stopVideoCapture() {
 }
 
 function _closeCamera() {
+  if (_cameraRecorder && _cameraRecorder.state === 'recording') {
+    try { _cameraRecorder.stop(); } catch(_) {}
+  }
+  _cameraRecorder = null;
   if (_cameraStream) { _cameraStream.getTracks().forEach(t => t.stop()); _cameraStream = null; }
   clearInterval(_cameraRecTimer);
+  _cameraRecTimer = null;
   _cameraChunks = [];
   const overlay = document.getElementById('camera-overlay');
   if (overlay) overlay.remove();
@@ -1701,9 +1711,10 @@ function _showMediaPreview(file, type) {
       </div>`;
   }
   document.body.appendChild(overlay);
-  overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+  overlay.addEventListener('click', e => { if (e.target === overlay) { overlay.remove(); URL.revokeObjectURL(blobUrl); } });
   document.getElementById('media-preview-send')?.addEventListener('click', () => {
     overlay.remove();
+    URL.revokeObjectURL(blobUrl);
     _sendFileMessage(file);
   });
 }
@@ -1967,31 +1978,15 @@ function sendVoiceMessage() {
   }
 
   const blob = new Blob(_audioChunks, { type: getSupportedMimeType() || 'audio/webm' });
-  const blobUrl = URL.createObjectURL(blob);
   const duration = _fmtDur(_recSec);
   const chatId = App.currentChat.id;
 
-  const msg = {
-    id: 'msg_' + Date.now(),
-    from: 'me',
-    type: 'voice',
-    url: blobUrl,
-    duration,
-    durationSec: _recSec,
-    time: Date.now(),
-    status: 'sending',
-  };
-
-  if (!App.messages[chatId]) App.messages[chatId] = [];
-  App.messages[chatId].push(msg);
   App.currentChat.lastMsg  = '🎙️ Voice (' + duration + ')';
-  App.currentChat.lastTime = msg.time;
-  renderMessages(chatId);
-  scrollToBottom(true);
+  App.currentChat.lastTime = Date.now();
   renderChatList();
   showToast('Voice message sent', 'success');
 
-  _sendFileMessage(new File([blob], 'voice_' + Date.now() + '.' + (blob.type.includes('mp4') ? 'm4a' : blob.type.includes('ogg') ? 'ogg' : 'webm'), { type: blob.type })).then(() => {}).catch(() => {});
+  _sendFileMessage(new File([blob], 'voice_' + Date.now() + '.' + (blob.type.includes('mp4') ? 'm4a' : blob.type.includes('ogg') ? 'ogg' : 'webm'), { type: blob.type })).catch(() => {});
 }
 
 function _animateRealWaveform() {
