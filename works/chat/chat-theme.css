@@ -3,6 +3,13 @@
    Load AFTER tailwind, BEFORE app.js
    ════════════════════════════════════════════════════════════ */
 
+/* ── Viewport height: use dvh with vh fallback ──────── */
+html, body, #app { height: 100%; }
+@supports (height: 100dvh) {
+  html, body, #app { height: 100dvh; }
+  #chat-area { min-height: 100dvh; }
+}
+
 /* ── Responsive Layout ────────────────────────────────── */
 @media (max-width: 767px) {
   #sidebar { display: none !important; }
@@ -16,43 +23,72 @@
     inset: 0 !important;
     z-index: 50 !important;
     background: var(--background) !important;
+    height: 100dvh !important;
   }
   #chat-area.hidden-mobile { display: none !important; }
   #chat-area.visible-mobile { display: flex !important; }
   #bottom-nav { display: flex !important; }
   #app { padding-bottom: 64px; }
   .glass-panel { border-radius: 24px !important; }
-  #detail-panel { width: 100% !important; max-width: 100% !important; }
-  #attach-menu { left: 12px !important; bottom: 80px !important; }
+  #detail-panel { display: none !important; }
+  #attach-menu { left: 12px !important; bottom: 80px !important; max-height: calc(100dvh - 160px); overflow-y: auto; }
   #emoji-picker {
     right: 12px !important;
     left: 12px !important;
     width: auto !important;
     max-width: calc(100vw - 24px) !important;
-    max-height: calc(100vh - 160px) !important;
+    max-height: calc(100dvh - 160px) !important;
     bottom: 80px !important;
     height: auto !important;
   }
   body { user-select: none; -webkit-tap-highlight-color: transparent; }
-  .overlay > div { margin: 8px !important; max-height: 90vh !important; }
+  .overlay > div { margin: 8px !important; max-height: 90dvh !important; }
   /* Show message action buttons on touch devices (no hover) */
   .group > button.opacity-0 { opacity: 0.7 !important; }
+  /* Hide format button on very small screens — saves input space */
+  #format-bar-btn { display: none !important; }
+  /* Emoji grid fewer columns on narrow screens */
+  #emoji-grid { grid-template-columns: repeat(7, 1fr) !important; }
+  /* Recording bar: smaller buttons on mobile */
+  #recording-bar .btn-cancel { padding: 6px 10px !important; font-size: 11px !important; }
+  #recording-bar .btn-send { padding: 6px 10px !important; font-size: 11px !important; }
+}
+
+@media (max-width: 380px) {
+  #emoji-grid { grid-template-columns: repeat(6, 1fr) !important; }
+  #recording-bar .btn-send span:last-child { display: none; }
 }
 
 @media (min-width: 768px) and (max-width: 1023px) {
   #sidebar { width: 72px !important; }
   #sidebar .xl\\:block { display: none !important; }
+  #sidebar button { justify-content: center !important; padding-left: 0 !important; padding-right: 0 !important; }
   #chat-list-sidebar { width: 280px !important; }
   #bottom-nav { display: none !important; }
+  #detail-panel { display: none !important; }
 }
 
 @media (min-width: 1024px) and (max-width: 1279px) {
   #sidebar { width: 72px !important; }
   #sidebar .xl\\:block { display: none !important; }
+  #sidebar button { justify-content: center !important; padding-left: 0 !important; padding-right: 0 !important; }
+  #detail-panel { display: none !important; }
 }
 
 @media (min-width: 1280px) {
   #sidebar { width: 256px !important; }
+}
+
+/* ── Landscape mode on mobile ───────────────────────── */
+@media (max-width: 767px) and (orientation: landscape) {
+  #chat-area { height: 100dvh !important; }
+  #chat-header { height: 48px !important; min-height: 48px !important; padding: 4px 12px !important; }
+  #chat-header img { width: 28px !important; height: 28px !important; }
+  #input-bar { padding: 4px 12px !important; }
+  #input-bar .glass-panel { padding: 4px 8px !important; border-radius: 16px !important; }
+  #bottom-nav { display: none !important; }
+  #app { padding-bottom: 0 !important; }
+  .overlay > div { max-height: 95dvh !important; }
 }
 
 /* ── Dark Mode Enhancements ──────────────────────────── */
@@ -150,7 +186,7 @@ html.dark .tab-item.active {
 .chat-list-item.active { background: var(--surface-container-highest); }
 html.dark .chat-list-item.active { background: rgba(196, 192, 255, 0.08); }
 
-/* ── Safe area for modern phones ─────────────────────── */
+/* ── Safe area for modern phones (bottom) ────────────── */
 @supports (padding-bottom: env(safe-area-inset-bottom)) {
   #bottom-nav { padding-bottom: env(safe-area-inset-bottom); }
   .overlay > div { margin-bottom: calc(8px + env(safe-area-inset-bottom)); }
@@ -160,21 +196,32 @@ html.dark .chat-list-item.active { background: rgba(196, 192, 255, 0.08); }
   #attach-menu { bottom: calc(80px + env(safe-area-inset-bottom)); }
 }
 
+/* ── Safe area top for notch/Dynamic Island ──────────── */
+@supports (padding-top: env(safe-area-inset-top)) {
+  #chat-header { padding-top: env(safe-area-inset-top); }
+  #toast-container { top: calc(24px + env(safe-area-inset-top)) !important; }
+  #camera-overlay > div:first-child { padding-top: env(safe-area-inset-top); }
+  #camera-overlay > div:last-child { padding-bottom: calc(16px + env(safe-area-inset-bottom)); }
+  #media-viewer .p-6 { padding-top: calc(24px + env(safe-area-inset-top)); }
+  .call-screen { padding-top: env(safe-area-inset-top); }
+}
+
 /* ── Touch feedback ──────────────────────────────────── */
 @media (hover: none) {
   .chat-list-item:active { background: var(--surface-container-highest); transform: scale(0.98); }
   button:active { transform: scale(0.95); }
+  /* Ensure minimum 44px touch targets */
+  .voice-play { width: 44px; height: 44px; font-size: 16px; }
+  .voice-speed { min-width: 44px; min-height: 28px; padding: 4px 8px; font-size: 11px; }
+  #pinned-message-bar button { min-width: 44px; min-height: 44px; }
+  #recording-bar button { min-width: 44px; min-height: 44px; }
+  #_msg-ctx-menu button { min-height: 44px; }
+  .confirm-btn { min-height: 44px; padding: 10px 20px !important; }
 }
 
 /* ── Emoji picker touch: show preview on tap ──────────── */
 @media (hover: none) {
   #emoji-grid span:active { transform: scale(1.3); background: var(--surface-variant); }
-}
-
-/* ── Camera overlay safe areas ───────────────────────── */
-@supports (padding: env(safe-area-inset-top)) {
-  #camera-overlay > div:first-child { padding-top: env(safe-area-inset-top); }
-  #camera-overlay > div:last-child { padding-bottom: calc(16px + env(safe-area-inset-bottom)); }
 }
 
 /* ── Momentum scrolling for iOS ──────────────────────── */
@@ -192,8 +239,8 @@ html.dark .chat-list-item.active { background: rgba(196, 192, 255, 0.08); }
   width: 100%;
 }
 .voice-play {
-  width: 32px;
-  height: 32px;
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
   border: none;
   background: var(--primary);
@@ -219,24 +266,24 @@ html.dark .chat-list-item.active { background: rgba(196, 192, 255, 0.08); }
 }
 .voice-scrub::-webkit-slider-thumb {
   -webkit-appearance: none;
-  width: 14px;
-  height: 14px;
+  width: 16px;
+  height: 16px;
   border-radius: 50%;
   background: var(--primary);
   cursor: pointer;
 }
 .voice-scrub::-moz-range-thumb {
-  width: 14px;
-  height: 14px;
+  width: 16px;
+  height: 16px;
   border-radius: 50%;
   background: var(--primary);
   cursor: pointer;
   border: none;
 }
 .voice-speed {
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 700;
-  padding: 2px 6px;
+  padding: 4px 8px;
   border-radius: 8px;
   border: 1px solid var(--outline-variant);
   background: transparent;
@@ -244,10 +291,12 @@ html.dark .chat-list-item.active { background: rgba(196, 192, 255, 0.08); }
   cursor: pointer;
   flex-shrink: 0;
   -webkit-tap-highlight-color: transparent;
+  min-width: 44px;
+  text-align: center;
 }
 .voice-speed:active { background: var(--surface-variant); }
 .voice-time {
-  font-size: 10px;
+  font-size: 11px;
   color: var(--on-surface-variant);
   min-width: 30px;
   text-align: right;
@@ -270,6 +319,12 @@ input[type="file"].hidden-input {
   #recording-bar .flex-1 { min-width: 0; }
 }
 
+/* ── Confirm dialog touch targets ────────────────────── */
+.confirm-btn {
+  min-height: 44px;
+  padding: 10px 20px;
+}
+
 /* ── System dark mode preference fallback ────────────── */
 @media (prefers-color-scheme: dark) {
   html:not([data-theme]) { color-scheme: dark; }
@@ -278,6 +333,16 @@ input[type="file"].hidden-input {
 /* ── Prevent double-tap zoom on iOS ──────────────────── */
 button, a, [role="button"], input, textarea, select {
   touch-action: manipulation;
+}
+
+/* ── Reduced motion preference ───────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
 
 /* ── Recording waveform container ────────────────────── */
@@ -292,4 +357,16 @@ button, a, [role="button"], input, textarea, select {
 @keyframes pulse {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.3; }
+}
+
+/* ── Toast container safe area (fallback for IDs) ────── */
+.toast-container,
+[id*="toast"] {
+  z-index: 9999;
+}
+
+/* ── Pinned message bar responsive ───────────────────── */
+@media (max-width: 380px) {
+  #pinned-message-bar { padding: 6px 12px !important; }
+  #pinned-message-bar .text-xs { font-size: 10px !important; }
 }
