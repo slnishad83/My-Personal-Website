@@ -237,6 +237,8 @@ function subscribeToUsers() {
     App.contacts = contacts;
     renderChatList();
     renderContactList();
+    // Re-check for orphaned chats now that contacts are available
+    detectAndMergeOrphanedChatsForUser();
   }, (error) => {
     console.warn("Users subscription failed, loading demo mode:", error);
     loadDemoData();
@@ -290,6 +292,13 @@ function subscribeToChats() {
         const otherUserId = data.participants.find(p => p !== uid);
         if (!otherUserId) return;
         
+        // Dedup: if this UID is stale (contact re-registered), skip orphaned chat
+        const otherEmail = data.participantEmails?.[otherUserId] || '';
+        if (otherEmail) {
+          const realContact = App.contacts.find(c => c.email && c.email.toLowerCase() === otherEmail.toLowerCase());
+          if (realContact && realContact.uid !== otherUserId) return; // skip stale chat
+        }
+        
         const otherUser = App.contacts.find(c => c.uid === otherUserId) || {
           uid: otherUserId,
           name: data.participantNames?.[otherUserId] || data.participantEmails?.[otherUserId]?.split('@')[0] || 'User',
@@ -336,10 +345,12 @@ function subscribeToChats() {
         Promise.all(decryptPromises).then(() => {
           App.directChats = chatsList;
           mergeAndRenderChats();
+          detectAndMergeOrphanedChatsForUser();
         });
       } else {
         App.directChats = chatsList;
         mergeAndRenderChats();
+        detectAndMergeOrphanedChatsForUser();
       }
     }, (error) => {
       console.warn("Chats subscription failed:", error);
@@ -1810,12 +1821,19 @@ function mergeOrphanedChats(newUid, email) {
               });
               return batch.commit();
             }).then(() => {
-              // Update senderId in messages where it matches the old UID
-              return App.db.collection('messages').where('senderId', '==', otherId).get();
-            }).then(senderSnap => {
-              const batch = App.db.batch();
-              senderSnap.forEach(m => batch.update(m.ref, { senderId: newUid }));
-              return batch.commit();
+              // Update senderId in messages where it matches the old UID (not the other user)
+              if (myOldUid && myOldUid !== newUid) {
+                return App.db.collection('messages')
+                  .where('senderId', '==', myOldUid)
+                  .where('directId', '==', expectedId)
+                  .get().then(senderSnap => {
+                    const batch = App.db.batch();
+                    let fixed = 0;
+                    senderSnap.forEach(m => { batch.update(m.ref, { senderId: newUid }); fixed++; });
+                    if (fixed > 0) console.log('[Merge] Fixed', fixed, 'message senderIds');
+                    return batch.commit();
+                  });
+              }
             }).then(() => {
               showToast('Previous chat history merged to your new account', 'info');
               // Reload chats subscription to pick up changes
@@ -1837,7 +1855,7 @@ function mergeOrphanedChats(newUid, email) {
     }
   });
   
-  // Phase 3: Fix senderId in any messages that have old UID
+  // Phase 3: Fix senderId and directId in messages for all chats involving this email
   App.db.collection('messages')
     .where('participantEmails', 'array-contains', email)
     .get()
@@ -1846,15 +1864,22 @@ function mergeOrphanedChats(newUid, email) {
       let count = 0;
       snap.forEach(doc => {
         const data = doc.data();
-        if (data.senderId && data.senderId !== newUid) {
-          batch.update(doc.ref, { senderId: newUid });
-          count++;
+        // Fix directId: messages may reference old chat ID with old UID
+        if (data.directId && data.participants) {
+          const otherParticipant = data.participants.find(p => p !== newUid);
+          if (otherParticipant) {
+            const correctId = getDirectChatId(newUid, otherParticipant);
+            if (data.directId !== correctId) {
+              batch.update(doc.ref, { directId: correctId });
+              count++;
+            }
+          }
         }
-        if (data.directId) {
-          // Fix directId if it contains old UID pattern
-          const expectedId = 'direct_' + [newUid, data.directId.split('_').slice(1).find(id => id !== newUid)].sort().join('_');
-          if (data.directId !== expectedId && !data.directId.startsWith('direct_' + newUid)) {
-            batch.update(doc.ref, { directId: expectedId });
+        // Fix senderId: only fix messages where senderId is the old UID of THIS user
+        if (data.senderId && data.senderId !== newUid && data.participantEmails) {
+          const senderEmail = data.participantEmails[data.senderId];
+          if (senderEmail && senderEmail.toLowerCase() === emailLower) {
+            batch.update(doc.ref, { senderId: newUid });
             count++;
           }
         }
@@ -1866,6 +1891,115 @@ function mergeOrphanedChats(newUid, email) {
         }).catch(e => console.warn('[Merge] Message fix error:', e));
       }
     }).catch(() => {});
+}
+
+/* ─── Detect & merge orphaned chats for ANY user (User A side) ───
+   When a contact re-registers (new UID, same email), User A may have
+   TWO directChats docs: old one with stale UID + new one. This detects
+   that and merges the old into the new. Runs a Firestore query so it
+   catches orphans even if they were filtered from the UI list. */
+function detectAndMergeOrphanedChatsForUser() {
+  if (!App.db || !App.auth?.currentUser) return;
+  const myUid = App.auth.currentUser.uid;
+  const myEmail = (App.currentUser?.email || '').toLowerCase();
+  if (!myEmail) return;
+
+  // Query Firestore for ALL directChats involving this user (not just App.directChats
+  // which may have already filtered stale chats from the UI)
+  App.db.collection('directChats')
+    .where('participants', 'array-contains', myUid)
+    .get()
+    .then(snap => {
+      snap.forEach(doc => {
+        const data = doc.data();
+        if (!data.participants) return;
+        const otherUserId = data.participants.find(p => p !== myUid);
+        if (!otherUserId) return;
+        const chatEmail = (data.participantEmails?.[otherUserId] || '').toLowerCase();
+        if (!chatEmail || chatEmail === myEmail) return;
+
+        // Check if the other user's UID is stale (re-registered)
+        const realContact = App.contacts.find(c => c.email && c.email.toLowerCase() === chatEmail);
+        if (!realContact) return; // no known current UID for this email
+        if (realContact.uid === otherUserId) return; // UID is current, no merge needed
+
+        // This chat has a stale UID — merge it
+        console.log('[Merge-A] Orphaned chat found:', doc.id, 'stale UID:', otherUserId, '-> current:', realContact.uid);
+        _mergeOldChatForUserA(otherUserId, realContact.uid, chatEmail, myUid);
+      });
+    }).catch(() => {});
+}
+
+/* Merge an old directChats doc (stale UID) into the current one for User A */
+function _mergeOldChatForUserA(oldUid, newUid, peerEmail, myUid) {
+  const oldChatId = getDirectChatId(myUid, oldUid);
+  const newChatId = getDirectChatId(myUid, newUid);
+
+  // If the new chat doesn't exist yet, create it from the old one
+  App.db.collection('directChats').doc(newChatId).get().then(newDoc => {
+    const promises = [];
+
+    if (!newDoc.exists) {
+      // Copy old chat data to new chat ID
+      promises.push(
+        App.db.collection('directChats').doc(oldChatId).get().then(oldDoc => {
+          if (!oldDoc.exists) return;
+          const oldData = oldDoc.data();
+          return App.db.collection('directChats').doc(newChatId).set({
+            participants: [myUid, newUid],
+            participantNames: { [myUid]: App.currentUser?.displayName || 'Me', [newUid]: oldData.participantNames?.[oldUid] || peerEmail.split('@')[0] },
+            participantEmails: { [myUid]: App.currentUser?.email || '', [newUid]: peerEmail },
+            participantEmailList: [App.currentUser?.email || '', peerEmail],
+            status: 'active',
+            lastMessage: oldData.lastMessage || null,
+            lastMessageTime: oldData.lastMessageTime || null
+          }, { merge: true });
+        })
+      );
+    }
+
+    // Migrate messages: update directId and participants
+    promises.push(
+      App.db.collection('messages').where('directId', '==', oldChatId).get().then(msgSnap => {
+        if (msgSnap.empty) return;
+        const batch = App.db.batch();
+        msgSnap.forEach(m => {
+          batch.update(m.ref, {
+            directId: newChatId,
+            participants: firebase.firestore.FieldValue.arrayUnion(newUid)
+          });
+        });
+        return batch.commit();
+      })
+    );
+
+    // Delete the old directChats doc
+    promises.push(
+      App.db.collection('directChats').doc(oldChatId).delete().catch(() => {})
+    );
+
+    return Promise.all(promises);
+  }).then(() => {
+    // Update local state: remove old chat from App.chats / App.directChats
+    App.directChats = (App.directChats || []).filter(c => c.id !== oldChatId);
+    App.chats = (App.chats || []).filter(c => c.id !== oldChatId);
+    // If we don't have the new chat locally yet, add it
+    if (!App.directChats.find(c => c.id === newChatId)) {
+      const contact = App.contacts.find(c => c.uid === newUid) || {};
+      App.directChats.push({
+        id: newChatId, type: 'personal', uid: newUid,
+        name: contact.name || peerEmail.split('@')[0],
+        avatar: contact.avatar || 'gradient-2',
+        initials: contact.initials || '',
+        photoURL: contact.photoURL || null,
+        about: contact.about || peerEmail,
+        lastMsg: 'Chat merged', lastTime: Date.now(),
+        unread: 0, pinned: false, muted: false, status: 'offline', email: peerEmail
+      });
+    }
+    mergeAndRenderChats();
+    showToast('Chat history merged', 'info');
+  }).catch(e => console.warn('[Merge-A] Error:', e));
 }
 
 function openCallPicker() {
