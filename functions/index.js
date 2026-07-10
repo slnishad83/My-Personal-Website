@@ -579,7 +579,8 @@ exports.repairGroupAccessMetadata = onRequest(
       });
       response.status(200).json({ repaired: groupSnap.size, alreadyComplete: false });
     } catch (error) {
-      response.status(401).json({ error: 'Unauthorized' });
+      console.error('[repairGroupAccessMetadata]', error);
+      response.status(500).json({ error: error.message || 'Internal error' });
     }
   }
 );
@@ -1525,7 +1526,8 @@ exports.migrateCallsToCallLogs = onRequest(
       }
       response.status(200).json({ migrated: created, total: callsSnap.size });
     } catch (error) {
-      response.status(401).json({ error: 'Unauthorized' });
+      console.error('[migrateCallsToCallLogs]', error);
+      response.status(500).json({ error: error.message || 'Internal error' });
     }
   }
 );
@@ -1743,9 +1745,11 @@ exports.adminBanUser = onCall(
         .where('userId', '==', targetUid)
         .where('isActive', '==', true)
         .get();
-      const batch = admin.firestore().batch();
-      sessions.docs.forEach(doc => batch.update(doc.ref, { revoked: true, isActive: false }));
-      await batch.commit();
+      for (let i = 0; i < sessions.docs.length; i += 500) {
+        const batch = admin.firestore().batch();
+        sessions.docs.slice(i, i + 500).forEach(doc => batch.update(doc.ref, { revoked: true, isActive: false }));
+        await batch.commit();
+      }
     } catch (_) {}
 
     return { ok: true };
@@ -1803,18 +1807,22 @@ exports.adminDeleteUser = onCall(
     try {
       const sessions = await admin.firestore()
         .collection('userSessions').where('userId', '==', targetUid).get();
-      const batch = admin.firestore().batch();
-      sessions.docs.forEach(doc => batch.delete(doc.ref));
-      await batch.commit();
+      for (let i = 0; i < sessions.docs.length; i += 500) {
+        const batch = admin.firestore().batch();
+        sessions.docs.slice(i, i + 500).forEach(doc => batch.delete(doc.ref));
+        await batch.commit();
+      }
     } catch (_) {}
 
     // Remove username reservation
     try {
       const usernames = await admin.firestore()
         .collection('usernames').where('uid', '==', targetUid).get();
-      const batch2 = admin.firestore().batch();
-      usernames.docs.forEach(doc => batch2.delete(doc.ref));
-      await batch2.commit();
+      for (let i = 0; i < usernames.docs.length; i += 500) {
+        const batch = admin.firestore().batch();
+        usernames.docs.slice(i, i + 500).forEach(doc => batch.delete(doc.ref));
+        await batch.commit();
+      }
     } catch (_) {}
 
     return { ok: true };
@@ -1912,6 +1920,10 @@ exports.catchMeUp = onCall(
           })
         }
       );
+      if (!gemRes.ok) {
+        console.error('[catchMeUp] Gemini API error:', gemRes.status);
+        return { summary: 'Could not generate summary.' };
+      }
       const gemData = await gemRes.json();
       const summary = gemData?.candidates?.[0]?.content?.parts?.[0]?.text || 'Could not generate summary.';
       return { summary };
@@ -1971,6 +1983,10 @@ exports.detectCalendarEvent = onCall(
           })
         }
       );
+      if (!gemRes.ok) {
+        console.error('[detectCalendarEvent] Gemini API error:', gemRes.status);
+        return { hasEvent: false };
+      }
       const gemData = await gemRes.json();
       const raw = gemData?.candidates?.[0]?.content?.parts?.[0]?.text || '{"hasEvent":false}';
       const jsonMatch = raw.match(/\{[\s\S]*\}/);
@@ -2039,9 +2055,7 @@ exports.sendNotificationReply = onRequest(
 // ── generateUrlPreview — item #24 ─────────────────────────────────────────
 const ALLOWED_URL_HOSTS = ['nishadsl.com', 'my-team-chat-2255.web.app', 'github.com', 'github.io'];
 exports.generateUrlPreview = onRequest(async (req, res) => {
-  res.set('Access-Control-Allow-Origin', ALLOWED_ORIGINS[0]);
-  res.set('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
-  res.set('Access-Control-Allow-Headers', 'Content-Type');
+  setCorsHeaders(res, req.get('Origin'));
   if (req.method === 'OPTIONS') { res.status(204).send(''); return; }
 
   // Require authentication
@@ -2089,6 +2103,17 @@ exports.generateUrlPreview = onRequest(async (req, res) => {
           const loc = response.headers.location;
           if (!loc) { reject(new Error('Redirect without location')); return; }
           const next = loc.startsWith('http') ? loc : parsed.origin + loc;
+          // Re-validate redirect target against IP blocklist and allowlist
+          try {
+            const nextParsed = new URL(next);
+            const nextHost = nextParsed.hostname.toLowerCase();
+            if (/^(localhost|127\.|10\.|172\.(1[6-9]|2\d|3[01])\.|192\.168\.|0\.|metadata\.google|169\.254\.|::1|\[::)/.test(nextHost)) {
+              reject(new Error('Redirect to private IP blocked')); return;
+            }
+            if (!ALLOWED_URL_HOSTS.some(h => nextHost === h || nextHost.endsWith('.' + h))) {
+              reject(new Error('Redirect to disallowed domain')); return;
+            }
+          } catch (_) { reject(new Error('Invalid redirect URL')); return; }
           resolve(getHtml(next, redirects + 1));
           return;
         }

@@ -23,7 +23,13 @@ html, body, #app { height: 100%; }
     inset: 0 !important;
     z-index: 50 !important;
     background: var(--background) !important;
-    height: 100dvh !important;
+    height: 100vh !important;
+  }
+  @supports (height: 100dvh) {
+  #chat-area { height: 100vh !important; }
+  @supports (height: 100dvh) {
+    #chat-area { height: 100dvh !important; }
+  }
   }
   #chat-area.hidden-mobile { display: none !important; }
   #chat-area.visible-mobile { display: flex !important; }
@@ -31,18 +37,27 @@ html, body, #app { height: 100%; }
   #app { padding-bottom: 64px; }
   .glass-panel { border-radius: 24px !important; }
   #detail-panel { display: none !important; }
-  #attach-menu { left: 12px !important; bottom: 80px !important; max-height: calc(100dvh - 160px); overflow-y: auto; }
+  #attach-menu { left: 12px !important; bottom: 80px !important; max-height: calc(100vh - 160px); overflow-y: auto; }
+  @supports (height: 100dvh) {
+    #attach-menu { max-height: calc(100dvh - 160px); }
+  }
   #emoji-picker {
     right: 12px !important;
     left: 12px !important;
     width: auto !important;
     max-width: calc(100vw - 24px) !important;
-    max-height: calc(100dvh - 160px) !important;
+    max-height: calc(100vh - 160px) !important;
     bottom: 80px !important;
     height: auto !important;
   }
+  @supports (height: 100dvh) {
+    #emoji-picker { max-height: calc(100dvh - 160px) !important; }
+  }
   body { user-select: none; -webkit-tap-highlight-color: transparent; }
-  .overlay > div { margin: 8px !important; max-height: 90dvh !important; }
+  .overlay > div { margin: 8px !important; max-height: 90vh !important; }
+  @supports (height: 100dvh) {
+    .overlay > div { max-height: 90dvh !important; }
+  }
   /* Show message action buttons on touch devices (no hover) */
   .group > button.opacity-0 { opacity: 0.7 !important; }
   /* Hide format button on very small screens — saves input space */
@@ -88,7 +103,10 @@ html, body, #app { height: 100%; }
   #input-bar .glass-panel { padding: 4px 8px !important; border-radius: 16px !important; }
   #bottom-nav { display: none !important; }
   #app { padding-bottom: 0 !important; }
-  .overlay > div { max-height: 95dvh !important; }
+  .overlay > div { max-height: 95vh !important; }
+  @supports (height: 100dvh) {
+    .overlay > div { max-height: 95dvh !important; }
+  }
 }
 
 /* ── Dark Mode Enhancements ──────────────────────────── */
@@ -208,10 +226,17 @@ html.dark .chat-list-item.active { background: rgba(196, 192, 255, 0.08); }
 @supports (padding-bottom: env(safe-area-inset-bottom)) {
   #bottom-nav { padding-bottom: env(safe-area-inset-bottom); }
   .overlay > div { margin-bottom: calc(8px + env(safe-area-inset-bottom)); }
-  #input-bar { padding-bottom: env(safe-area-inset-bottom); }
+  #input-bar { padding-bottom: calc(16px + env(safe-area-inset-bottom)); }
   #recording-bar { padding-bottom: calc(8px + env(safe-area-inset-bottom)); }
   #emoji-picker { bottom: calc(80px + env(safe-area-inset-bottom)); }
   #attach-menu { bottom: calc(80px + env(safe-area-inset-bottom)); }
+  #app { padding-bottom: calc(64px + env(safe-area-inset-bottom)); }
+}
+
+/* ── Safe area left/right for landscape notch ────────── */
+@supports (padding-left: env(safe-area-inset-left)) {
+  #sidebar, #chat-list-sidebar { padding-left: env(safe-area-inset-left); }
+  #chat-area, #bottom-nav { padding-left: env(safe-area-inset-left); padding-right: env(safe-area-inset-right); }
 }
 
 /* ── Safe area top for notch/Dynamic Island ──────────── */
@@ -230,7 +255,7 @@ html.dark .chat-list-item.active { background: rgba(196, 192, 255, 0.08); }
   button:active { transform: scale(0.95); }
   /* Ensure minimum 44px touch targets */
   .voice-play { width: 44px; height: 44px; font-size: 16px; }
-  .voice-speed { min-width: 44px; min-height: 28px; padding: 4px 8px; font-size: 11px; }
+  .voice-speed { min-width: 44px; min-height: 44px; padding: 4px 8px; font-size: 11px; }
   #pinned-message-bar button { min-width: 44px; min-height: 44px; }
   #recording-bar button { min-width: 44px; min-height: 44px; }
   #_msg-ctx-menu button { min-height: 44px; }

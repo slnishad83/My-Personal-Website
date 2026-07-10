@@ -954,7 +954,7 @@ function updateProfileUI() {
 
   const pa = document.getElementById('profile-avatar');
   if (pa) {
-    if (u.photoURL) pa.innerHTML = `<img src="${u.photoURL}" alt="${name}" class="w-full h-full object-cover rounded-full">`;
+    if (u.photoURL) pa.innerHTML = `<img src="${escHtml(u.photoURL)}" alt="${name}" class="w-full h-full object-cover rounded-full">`;
     else pa.textContent = initials;
   }
   
@@ -1023,8 +1023,8 @@ function applyTheme(mode) {
     html.classList.toggle('light', !dark);
     html.setAttribute('data-theme', resolvedTheme);
   }
-  localStorage.setItem('tc_theme', mode);
-  localStorage.setItem('nsl-theme', resolvedTheme);
+  try { localStorage.setItem('tc_theme', mode); } catch(_) {}
+  try { localStorage.setItem('nsl-theme', resolvedTheme); } catch(_) {}
   
   // Update header meta theme color
   const meta = document.getElementById('theme-color-meta');
@@ -2215,7 +2215,7 @@ function openChat(chatId) {
   const ha = document.getElementById('header-avatar');
   if (ha) {
     if (chat.photoURL) {
-      ha.innerHTML = `<img src="${chat.photoURL}" alt="${escHtml(chat.name)}" class="w-10 h-10 rounded-full object-cover">`;
+      ha.innerHTML = `<img src="${escHtml(chat.photoURL)}" alt="${escHtml(chat.name)}" class="w-10 h-10 rounded-full object-cover">`;
     } else {
       ha.textContent = chat.initials;
       ha.className = `w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm bg-surface-container-highest text-on-surface-variant`;
@@ -2243,7 +2243,7 @@ function openChat(chatId) {
       if (chat.requestSent) {
         inputBar.innerHTML = `<div class="p-4 text-center text-xs text-on-surface-variant bg-surface-container-high/50 rounded-xl mx-4 mb-2">⏳ Request sent — waiting for acceptance</div>`;
       } else {
-        inputBar.innerHTML = `<div class="p-4 text-center"><button class="px-6 py-2 bg-primary text-on-primary rounded-full text-sm font-bold hover:scale-105 transition-all" onclick="sendChatRequest('${chat.uid || ''}', '${escHtml(chat.email || '')}', '${escHtml(chat.name || '')}')">📨 Send Chat Request to Start Messaging</button><p class="text-[10px] text-on-surface-variant mt-2">The imported history is only visible to you</p></div>`;
+        inputBar.innerHTML = `<div class="p-4 text-center"><button class="px-6 py-2 bg-primary text-on-primary rounded-full text-sm font-bold hover:scale-105 transition-all" onclick="sendChatRequest('${escHtml(chat.uid || '')}', '${escHtml(chat.email || '')}', '${escHtml(chat.name || '')}')">📨 Send Chat Request to Start Messaging</button><p class="text-[10px] text-on-surface-variant mt-2">The imported history is only visible to you</p></div>`;
       }
       inputBar.style.display = '';
     }
@@ -2408,7 +2408,8 @@ function renderMessages(chatId) {
       </div>`;
     } else if (msg.type === 'location') {
       const staticMapUrl = `https://staticmap.openstreetmap.de/staticmap.php?center=${msg.lat},${msg.lng}&zoom=15&size=280x140&markers=${msg.lat},${msg.lng},red-pushpin`;
-      contentHTML = `<div onclick="window.open('${msg.mapUrl || `https://maps.google.com/?q=${msg.lat},${msg.lng}`}','_blank')" class="location-preview border border-outline-variant/20 max-w-xs">
+      const mapUrlVal = msg.mapUrl || `https://maps.google.com/?q=${msg.lat},${msg.lng}`;
+      contentHTML = `<div onclick="window.open('${escHtml(mapUrlVal)}','_blank')" class="location-preview border border-outline-variant/20 max-w-xs">
         <img src="${escHtml(staticMapUrl)}" alt="Location" loading="lazy" onerror="this.style.display='none'">
         <div class="location-label"><span class="material-symbols-outlined text-primary text-sm">location_on</span><span>Shared location</span></div>
       </div>`;
@@ -3736,8 +3737,18 @@ async function loadBlockedUsers() {
   } catch(_) {}
 }
 function copyInviteLink() {
-  navigator.clipboard.writeText('https://neonchat.app/join/' + Math.random().toString(36).slice(2));
-  showToast('Channel link copied to clipboard', 'success');
+  const url = 'https://neonchat.app/join/' + Math.random().toString(36).slice(2);
+  if (navigator.clipboard?.writeText) {
+    navigator.clipboard.writeText(url).then(() => showToast('Channel link copied to clipboard', 'success')).catch(() => {
+      const ta = document.createElement('textarea'); ta.value = url; ta.style.position = 'fixed'; ta.style.opacity = '0';
+      document.body.appendChild(ta); ta.select(); try { document.execCommand('copy'); showToast('Channel link copied', 'success'); } catch(_) { showToast('Copy failed', 'error'); }
+      document.body.removeChild(ta);
+    });
+  } else {
+    const ta = document.createElement('textarea'); ta.value = url; ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.select(); try { document.execCommand('copy'); showToast('Channel link copied', 'success'); } catch(_) { showToast('Copy failed', 'error'); }
+    document.body.removeChild(ta);
+  }
 }
 
 /* ══════════════════════════════════════════════════
@@ -4218,7 +4229,10 @@ function setupOnlineStatus() {
   window.addEventListener('offline', () => show('offline-banner'));
   if (!navigator.onLine) show('offline-banner');
   window.addEventListener('beforeunload', () => updatePresence('offline'));
-  document.addEventListener('visibilitychange', () => updatePresence(document.hidden ? 'offline' : 'online'));
+  document.addEventListener('visibilitychange', () => {
+    clearTimeout(App._presenceDebounce);
+    App._presenceDebounce = setTimeout(() => updatePresence(document.hidden ? 'offline' : 'online'), 300);
+  });
 }
 
 /* ─── PUSH NOTIFICATIONS (FCM) ───────────────────────────────── */
@@ -4228,6 +4242,7 @@ function setupPushNotifications() {
   const registerFcmToken = async () => {
     try {
       const messaging = firebase.messaging();
+      if (!('serviceWorker' in navigator)) return;
       const reg = await navigator.serviceWorker.ready;
       const token = await messaging.getToken({
         vapidKey: typeof FCM_VAPID_KEY !== 'undefined' ? FCM_VAPID_KEY : undefined,
@@ -4597,12 +4612,13 @@ const TRANSLATIONS = {
 };
 
 function __(key) {
-  const lang = localStorage.getItem('tc_language') || 'en';
+  let lang = 'en';
+  try { lang = localStorage.getItem('tc_language') || 'en'; } catch(_) {}
   return TRANSLATIONS[lang]?.[key] || TRANSLATIONS.en[key] || key;
 }
 
 function setLanguage(lang) {
-  localStorage.setItem('tc_language', lang || 'en');
+  try { localStorage.setItem('tc_language', lang || 'en'); } catch(_) {}
   document.documentElement.lang = lang || 'en';
   // Update static sidebar labels
   const sidebarNav = document.getElementById('sidebar-nav-container');

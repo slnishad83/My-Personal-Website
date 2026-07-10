@@ -2,8 +2,8 @@
   "appId": "com.nishad.myteamchat",
   "appName": "My Team Chat",
   "webDir": "www",
+  "androidScheme": "https",
   "server": {
-    "url": "https://my-team-chat-2255.web.app/works/chat",
     "cleartext": false
   },
   "plugins": {

@@ -240,6 +240,8 @@ function playVoice(msgId) {
     _currentAudio.onplay = null;
     _currentAudio.onpause = null;
     _currentAudio.onerror = null;
+    _currentAudio.src = '';
+    _currentAudio.load();
     _currentAudio = null;
     if (App._currentVoiceMsgId) _updatePlayBtn(App._currentVoiceMsgId, false);
   }
@@ -277,6 +279,8 @@ function playVoice(msgId) {
   audio.addEventListener('error', () => {
     showToast('Could not play voice message', 'error');
     _updatePlayBtn(msgId, false);
+    _currentAudio = null;
+    App._currentVoiceMsgId = null;
   });
 
   audio.play().catch(() => showToast('Could not play voice message', 'error'));
@@ -1332,7 +1336,7 @@ function openMsgInfo(msgId) {
       </div>
       <div style="display:flex;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--outline-variant)">
         <span style="font-size:13px;color:var(--on-surface-variant);font-weight:600">Status</span>
-        <span style="font-size:13px;font-weight:700;color:var(--primary)">${msg.status || 'sent'}</span>
+        <span style="font-size:13px;font-weight:700;color:var(--primary)">${escHtml(msg.status || 'sent')}</span>
       </div>
       ${msg.edited ? `<div style="display:flex;justify-content:space-between;padding:12px 0">
         <span style="font-size:13px;color:var(--on-surface-variant);font-weight:600">Edited</span>
@@ -1712,6 +1716,8 @@ function _showMediaPreview(file, type) {
   }
   document.body.appendChild(overlay);
   overlay.addEventListener('click', e => { if (e.target === overlay) { overlay.remove(); URL.revokeObjectURL(blobUrl); } });
+  const escHandler = e => { if (e.key === 'Escape') { overlay.remove(); URL.revokeObjectURL(blobUrl); document.removeEventListener('keydown', escHandler); } };
+  document.addEventListener('keydown', escHandler);
   document.getElementById('media-preview-send')?.addEventListener('click', () => {
     overlay.remove();
     URL.revokeObjectURL(blobUrl);
@@ -1800,8 +1806,8 @@ async function _sendFileMessage(file) {
     msg.status = 'sent';
     renderMessages(chatId);
     if (uploadUrl !== blobUrl) {
-      try { URL.revokeObjectURL(blobUrl); } catch(_) {}
       msg.localBlobUrl = blobUrl;
+      try { URL.revokeObjectURL(blobUrl); } catch(_) {}
     }
     showToast('File sent', 'success');
 
@@ -2423,10 +2429,12 @@ function _renderGalleryTab(tab) {
       filtered.map(m => {
         const urlMatch = m.text.match(/(https?:\/\/[^\s]+)/g);
         const url = urlMatch ? urlMatch[0] : m.text;
+        let hostname = '';
+        try { hostname = new URL(url).hostname || url; } catch(_) { hostname = url; }
         return `<div onclick="openMediaViewer('${m.id}','text')" style="display:flex;align-items:center;gap:12px;padding:12px 16px;background:rgba(255,255,255,0.05);border-radius:12px;cursor:pointer;transition:background 0.15s;" onmouseenter="this.style.background='rgba(255,255,255,0.1)'" onmouseleave="this.style.background='rgba(255,255,255,0.05)'">
           <div style="width:40px;height:40px;border-radius:10px;background:rgba(255,255,255,0.08);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><span class="material-symbols-outlined" style="color:rgba(255,255,255,0.7);">link</span></div>
           <div style="flex:1;min-width:0;">
-            <div style="font-size:13px;font-weight:600;color:white;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escHtml(new URL(url).hostname || url)}</div>
+            <div style="font-size:13px;font-weight:600;color:white;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escHtml(hostname)}</div>
             <div style="font-size:11px;color:rgba(255,255,255,0.5);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escHtml(url)}</div>
           </div>
         </div>`;

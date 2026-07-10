@@ -2,7 +2,7 @@
   "name": "NSL Chat",
   "short_name": "NSL Chat",
   "description": "Complete team chat application — messaging, calls, and more.",
-  "id": "/works/chat/",
+  "id": "https://my-team-chat-2255.web.app/works/chat/",
   "start_url": "/works/chat/",
   "scope": "/works/chat/",
   "display": "standalone",
@@ -20,7 +20,7 @@
       "short_name": "Chat",
       "description": "Start a new conversation",
       "url": "/works/chat/?action=new-chat",
-      "icons": [{ "src": "app-icon-192.png", "sizes": "192x192" }]
+      "icons": [{ "src": "app-icon-192.png", "sizes": "192x192", "type": "image/png" }]
     }
   ],
   "icons": [
