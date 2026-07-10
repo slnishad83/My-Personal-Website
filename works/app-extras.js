@@ -786,6 +786,8 @@ function openForwardModal(msgId) {
   App.chats.forEach(c => {
     const item = document.createElement('div');
     item.style.cssText = 'display:flex; align-items:center; gap:12px; padding:12px 16px; border-radius:12px; cursor:pointer; transition:background 0.15s;';
+    item.setAttribute('data-fwd-chat', c.id);
+    item.setAttribute('data-chat-name', c.name || '');
     item.onmouseenter = () => item.style.background = 'var(--surface-container-highest)';
     item.onmouseleave = () => item.style.background = 'transparent';
     item.onclick = () => forwardToChat(c.id);
@@ -830,11 +832,27 @@ function _createForwardOverlay() {
   closeBtn.onclick = _closeForwardModal;
   header.appendChild(closeBtn);
   
+  const searchWrap = document.createElement('div');
+  searchWrap.style.cssText = 'padding:8px 16px;border-bottom:1px solid var(--outline-variant);';
+  const searchInput = document.createElement('input');
+  searchInput.type = 'search';
+  searchInput.inputMode = 'search';
+  searchInput.placeholder = 'Search chats...';
+  searchInput.style.cssText = 'width:100%;padding:8px 12px;border-radius:10px;border:1px solid var(--outline-variant);background:var(--surface-variant);color:var(--on-surface);font-size:13px;outline:none;';
+  searchInput.oninput = () => {
+    const q = searchInput.value.toLowerCase();
+    list.querySelectorAll('div[data-fwd-chat]').forEach(el => {
+      el.style.display = !q || el.dataset.chatName.toLowerCase().includes(q) ? '' : 'none';
+    });
+  };
+  searchWrap.appendChild(searchInput);
+
   const list = document.createElement('div');
   list.id = '_forward-chat-list';
   list.style.cssText = 'overflow-y:auto; padding:8px; flex:1;';
   
   modal.appendChild(header);
+  modal.appendChild(searchWrap);
   modal.appendChild(list);
   overlay.appendChild(modal);
   
@@ -857,15 +875,38 @@ function _createForwardOverlay() {
 
 async function forwardToChat(targetChatId) {
   _closeForwardModal();
-  if (!_forwardMsgId) return;
+  const targetChat = App.chats.find(c => c.id === targetChatId);
+  if (!targetChat) return;
 
+  // Handle media forward (from viewer)
+  if (_forwardMediaUrl && _forwardMediaType) {
+    const fwdMsg = {
+      id: 'msg_fwd_' + Date.now(),
+      from: 'me',
+      text: '',
+      type: _forwardMediaType,
+      url: _forwardMediaUrl,
+      time: Date.now(),
+      status: 'sent',
+      forwarded: true,
+    };
+    if (!App.messages[targetChatId]) App.messages[targetChatId] = [];
+    App.messages[targetChatId].push(fwdMsg);
+    if (App.currentChat && App.currentChat.id === targetChatId) {
+      renderMessages(targetChatId);
+      scrollToBottom(true);
+    }
+    showToast(`Forwarded to ${targetChat.name}`, 'success');
+    _forwardMediaUrl = null;
+    _forwardMediaType = null;
+    return;
+  }
+
+  if (!_forwardMsgId) return;
   const srcChatId = App.currentChat && App.currentChat.id;
   const msgs = (srcChatId && App.messages[srcChatId]) || [];
   const msg   = msgs.find(m => m.id === _forwardMsgId);
   if (!msg) { showToast('Message not found', 'error'); return; }
-
-  const targetChat = App.chats.find(c => c.id === targetChatId);
-  if (!targetChat) return;
 
   const fwdMsg = {
     id:        'msg_fwd_' + Date.now(),
@@ -914,6 +955,16 @@ async function forwardToChat(targetChatId) {
     App.db.collection('messages').add(data).catch(console.error);
   }
 }
+
+function openForwardModalForMedia(url, type) {
+  _forwardMsgId = null;
+  _forwardMediaUrl = url;
+  _forwardMediaType = type;
+  openForwardModal('_forward_media');
+}
+
+let _forwardMediaUrl = null;
+let _forwardMediaType = null;
 
 /* ══════════════════════════════════════════════════════════════
    8. EDIT MESSAGE
@@ -985,12 +1036,24 @@ async function saveEdit(newText) {
 
   // Firebase
   if (App.db && App.auth && App.auth.currentUser) {
-    const col = 'messages';
-    App.db.collection(col).doc(msgId).update({
+    const uid = App.auth.currentUser.uid;
+    const isOffline = msgId.startsWith('msg_');
+    const data = {
       text: newText,
       edited: true,
       editedAt: firebase.firestore.FieldValue.serverTimestamp(),
-    }).catch(() => {
+    };
+    const col = 'messages';
+    const promise = isOffline
+      ? App.db.collection(col).doc(msgId).set(Object.assign({
+          senderId: uid,
+          senderName: App.currentUser?.displayName || '',
+          timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+          status: 'sent',
+          chatId: chatId,
+        }, data), { merge: true })
+      : App.db.collection(col).doc(msgId).update(data);
+    promise.catch(() => {
       msg.text = oldText; // rollback
       renderMessages(chatId);
       showToast('Could not save edit', 'error');
@@ -1142,6 +1205,94 @@ function starMessage(msgId) {
   msg.starred = !msg.starred;
   renderMessages(chatId);
   showToast(msg.starred ? '⭐ Message starred' : 'Star removed', 'success');
+  // Firestore persistence
+  if (App.db && msgId && !msgId.startsWith('msg_')) {
+    App.db.collection('messages').doc(msgId).update({ starred: msg.starred }).catch(() => {});
+  }
+}
+
+function openStarredMessages() {
+  let overlay = document.getElementById('_starred-overlay');
+  if (overlay) overlay.remove();
+  if (_starredCleanup) { _starredCleanup(); _starredCleanup = null; }
+
+  overlay = document.createElement('div');
+  overlay.id = '_starred-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;z-index:9998;background:rgba(0,0,0,0.6);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;';
+
+  const modal = document.createElement('div');
+  modal.style.cssText = 'background:var(--surface-container);border:1px solid var(--outline-variant);border-radius:24px;width:100%;max-width:480px;max-height:85vh;display:flex;flex-direction:column;margin:16px;overflow:hidden;box-shadow:0 24px 64px rgba(0,0,0,0.5);';
+
+  modal.innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:20px 24px;border-bottom:1px solid var(--outline-variant);">
+      <h3 style="font-size:18px;font-weight:700;color:var(--on-surface)">⭐ Starred Messages</h3>
+      <button id="_starred-close" style="background:none;border:none;cursor:pointer;color:var(--on-surface-variant);font-size:20px;padding:4px 8px;border-radius:8px;">✕</button>
+    </div>
+    <div id="_starred-list" style="overflow-y:auto;padding:8px 12px;flex:1;"></div>`;
+
+  overlay.appendChild(modal);
+  document.body.appendChild(overlay);
+
+  const closeBtn = modal.querySelector('#_starred-close');
+  const backdropHandler = e => { if (e.target === overlay) overlay.remove(); };
+  const escHandler = e => { if (e.key === 'Escape') { overlay.remove(); _starredCleanup(); } };
+  overlay.addEventListener('click', backdropHandler);
+  document.addEventListener('keydown', escHandler);
+  _starredCleanup = () => { overlay.removeEventListener('click', backdropHandler); document.removeEventListener('keydown', escHandler); };
+  if (closeBtn) closeBtn.onclick = () => { overlay.remove(); _starredCleanup(); };
+
+  _renderStarredMessages();
+}
+
+let _starredCleanup = null;
+
+function _renderStarredMessages() {
+  const list = document.getElementById('_starred-list');
+  if (!list) return;
+  const starred = [];
+  for (const [chatId, msgs] of Object.entries(App.messages)) {
+    const chat = App.chats.find(c => c.id === chatId);
+    msgs.filter(m => m.starred).forEach(m => {
+      starred.push({ msg, chatName: chat?.name || 'Unknown', chatId });
+    });
+  }
+  starred.sort((a, b) => (b.msg.time || 0) - (a.msg.time || 0));
+
+  if (!starred.length) {
+    list.innerHTML = '<div style="text-align:center;padding:40px 20px;color:var(--on-surface-variant);font-size:14px;">No starred messages yet.<br>Long-press any message and tap ⭐ to star it.</div>';
+    return;
+  }
+
+  list.innerHTML = starred.map(({ msg, chatName, chatId }) => {
+    const text = escHtml(msg.text || (msg.type === 'image' ? '📸 Photo' : msg.type === 'video' ? '🎥 Video' : msg.type === 'voice' ? '🎙️ Voice' : msg.fileName || '📎 Attachment'));
+    const time = new Date(msg.time || Date.now()).toLocaleDateString([], { month: 'short', day: 'numeric' }) + ' ' + new Date(msg.time || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    return `<div style="padding:12px;border-radius:12px;border-bottom:1px solid var(--outline-variant);cursor:pointer;transition:background 0.15s;" data-msg-id="${msg.id}" data-chat-id="${chatId}">
+      <div style="font-size:11px;font-weight:700;color:var(--primary);margin-bottom:4px;">${escHtml(chatName)}</div>
+      <div style="font-size:13px;color:var(--on-surface);word-break:break-word;">${text}</div>
+      <div style="font-size:10px;color:var(--on-surface-variant);margin-top:4px;">${time}</div>
+    </div>`;
+  }).join('');
+
+  list.querySelectorAll('div[data-msg-id]').forEach(el => {
+    el.onclick = () => {
+      const targetChatId = el.dataset.chatId;
+      const targetMsgId = el.dataset.msgId;
+      const chat = App.chats.find(c => c.id === targetChatId);
+      if (chat) {
+        openChat(targetChatId);
+        setTimeout(() => {
+          const msgEl = document.getElementById('msg-' + targetMsgId);
+          if (msgEl) {
+            msgEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            msgEl.classList.add('bg-primary/20');
+            setTimeout(() => msgEl.classList.remove('bg-primary/20'), 2000);
+          }
+        }, 300);
+      }
+      const overlay = document.getElementById('_starred-overlay');
+      if (overlay) { overlay.remove(); if (_starredCleanup) _starredCleanup(); }
+    };
+  });
 }
 
 /* ══════════════════════════════════════════════════════════════

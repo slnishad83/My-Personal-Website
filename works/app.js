@@ -839,6 +839,7 @@ function checkSession() {
           subscribeToChats();
           subscribeToGroups();
           subscribeToCallLogs(App.currentUser.uid);
+          loadBlockedUsers();
           if (App.currentUser.email) {
             loadMessageHistory(App.currentUser.email, App.currentUser.uid);
             subscribeToChatRequests(App.currentUser.email, App.currentUser.uid);
@@ -1178,6 +1179,10 @@ function renderChatList(filter = '') {
     if (tab === 'groups') return c.type === 'group';
     return true;
   });
+  // Filter out blocked users
+  if (App._blockedUsers && App._blockedUsers.size) {
+    items = items.filter(c => !c.uid || !App._blockedUsers.has(c.uid));
+  }
 
   if (filter) {
     const q = filter.toLowerCase();
@@ -2057,7 +2062,7 @@ function renderMoreTab() {
   const list = document.getElementById('chat-list');
   list.innerHTML = `
     <div class="p-4 space-y-1">
-      ${moreRow('star','Starred Messages','showToast("Starred Messages","info")')}
+      ${moreRow('star','Starred Messages','openStarredMessages()')}
       ${moreRow('bookmark','Bookmarks','showToast("Bookmarks","info")')}
       ${moreRow('schedule','Scheduled Messages','showToast("Scheduled Messages","info")')}
       ${moreRow('quick_reply','Quick Replies','showToast("Quick Replies","info")')}
@@ -2513,6 +2518,7 @@ function sendMessage() {
   const input = document.getElementById('msg-input');
   const text  = input.value.trim();
   if (!text || !App.currentChat) return;
+  if (App.currentChat.uid && isUserBlocked(App.currentChat.uid)) { showToast('Cannot send — user is blocked', 'error'); return; }
 
   const msg = {
     id:     'msg_' + Date.now(),
@@ -3490,6 +3496,80 @@ function scrollToPinnedMessage() {
     showToast('Scroll up to find the message', 'info');
   }
 }
+
+let _pinnedPanelCleanup = null;
+
+function openPinnedMessagesPanel() {
+  const pins = App.currentChatPinnedMessages || [];
+  if (!pins.length) { showToast('No pinned messages in this chat', 'info'); return; }
+
+  let overlay = document.getElementById('_pinned-panel-overlay');
+  if (overlay) { overlay.remove(); if (_pinnedPanelCleanup) _pinnedPanelCleanup(); }
+
+  overlay = document.createElement('div');
+  overlay.id = '_pinned-panel-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;z-index:9998;background:rgba(0,0,0,0.6);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;';
+
+  const modal = document.createElement('div');
+  modal.style.cssText = 'background:var(--surface-container);border:1px solid var(--outline-variant);border-radius:24px;width:100%;max-width:480px;max-height:85vh;display:flex;flex-direction:column;margin:16px;overflow:hidden;box-shadow:0 24px 64px rgba(0,0,0,0.5);';
+
+  modal.innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:20px 24px;border-bottom:1px solid var(--outline-variant);">
+      <h3 style="font-size:18px;font-weight:700;color:var(--on-surface)">📌 Pinned Messages</h3>
+      <button id="_pinned-close" style="background:none;border:none;cursor:pointer;color:var(--on-surface-variant);font-size:20px;padding:4px 8px;border-radius:8px;">✕</button>
+    </div>
+    <div id="_pinned-panel-list" style="overflow-y:auto;padding:8px 12px;flex:1;"></div>`;
+
+  overlay.appendChild(modal);
+  document.body.appendChild(overlay);
+
+  const backdropHandler = e => { if (e.target === overlay) { overlay.remove(); _pinnedPanelCleanup(); } };
+  const escHandler = e => { if (e.key === 'Escape') { overlay.remove(); _pinnedPanelCleanup(); } };
+  overlay.addEventListener('click', backdropHandler);
+  document.addEventListener('keydown', escHandler);
+  _pinnedPanelCleanup = () => { overlay.removeEventListener('click', backdropHandler); document.removeEventListener('keydown', escHandler); };
+  modal.querySelector('#_pinned-close').onclick = () => { overlay.remove(); _pinnedPanelCleanup(); };
+
+  const list = modal.querySelector('#_pinned-panel-list');
+  list.innerHTML = pins.map(pin => {
+    const text = escHtml(pin.text || '📎 Media attachment');
+    const time = pin.timestamp ? new Date(pin.timestamp).toLocaleDateString([], { month: 'short', day: 'numeric' }) + ' ' + new Date(pin.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
+    return `<div style="padding:12px;border-radius:12px;border-bottom:1px solid var(--outline-variant);cursor:pointer;transition:background 0.15s;" data-pin-msg="${pin.messageId}">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+        <span style="font-size:11px;font-weight:700;color:var(--primary);">${escHtml(pin.senderName || 'User')}</span>
+        <button class="_unpin-btn" data-msg-id="${pin.messageId}" style="background:none;border:none;cursor:pointer;color:var(--error);font-size:10px;padding:2px 6px;border-radius:6px;">Unpin</button>
+      </div>
+      <div style="font-size:13px;color:var(--on-surface);word-break:break-word;">${text}</div>
+      <div style="font-size:10px;color:var(--on-surface-variant);margin-top:4px;">${time}</div>
+    </div>`;
+  }).join('');
+
+  list.querySelectorAll('div[data-pin-msg]').forEach(el => {
+    el.onclick = (e) => {
+      if (e.target.closest('._unpin-btn')) return;
+      const msgId = el.dataset.pinMsg;
+      const msgEl = document.getElementById('msg-' + msgId);
+      if (msgEl) {
+        msgEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        msgEl.classList.add('bg-primary/20');
+        setTimeout(() => msgEl.classList.remove('bg-primary/20'), 2000);
+      }
+      overlay.remove();
+      if (_pinnedPanelCleanup) _pinnedPanelCleanup();
+    };
+  });
+
+  list.querySelectorAll('._unpin-btn').forEach(btn => {
+    btn.onclick = (e) => {
+      e.stopPropagation();
+      unpinMessageByMsgId(btn.dataset.msgId).then(() => {
+        const pins2 = App.currentChatPinnedMessages || [];
+        if (!pins2.length) { overlay.remove(); if (_pinnedPanelCleanup) _pinnedPanelCleanup(); }
+        else openPinnedMessagesPanel();
+      });
+    };
+  });
+}
 function confirmDeleteChat(chatId) {
   showConfirm('Delete this conversation? All messages will be lost.', async () => {
     App.chats = App.chats.filter(c => c.id !== chatId);
@@ -3560,16 +3640,95 @@ async function confirmClearChat(chatId) {
   });
 }
 function confirmLeaveGroup() {
-  showConfirm('Leave this group channel room?', () => {
-    App.chats = App.chats.filter(c => c.id !== App.currentChat?.id);
+  const chat = App.currentChat;
+  if (!chat) return;
+  showConfirm('Leave this group channel room?', async () => {
+    const uid = App.auth && App.auth.currentUser && App.auth.currentUser.uid;
+    // Firestore: remove user from group members
+    if (App.db && uid) {
+      try {
+        const groupRef = App.db.collection('groups').doc(chat.id);
+        const groupDoc = await groupRef.get();
+        if (groupDoc.exists) {
+          const data = groupDoc.data();
+          const members = (data.members || []).filter(m => m !== uid && m.uid !== uid);
+          await groupRef.update({ members });
+        }
+        // Also try cloud function if available
+        if (window.firebase && firebase.functions) {
+          try {
+            const fn = firebase.functions().httpsCallable('leaveGroup');
+            await fn({ groupId: chat.id });
+          } catch(_) {} // CF may not exist, fallback to direct update is fine
+        }
+      } catch(e) { console.warn('Leave group Firestore error:', e); }
+    }
+    App.chats = App.chats.filter(c => c.id !== chat.id);
+    App.directChats = (App.directChats || []).filter(c => c.id !== chat.id);
+    App.groupChats = (App.groupChats || []).filter(c => c.id !== chat.id);
+    delete App.messages[chat.id];
+    addDeletedChatId(chat.id);
+    App._deletedChatIds.add(chat.id);
+    renderChatList();
     showWelcome();
-    showToast('Left the channel', 'info');
+    showToast('Left the group', 'info');
   });
 }
+App._blockedUsers = new Set();
+
 function blockContact(uid) {
-  showConfirm('Block this user? They will not be able to direct message you.', () => {
+  if (!uid || uid === 'me') return;
+  showConfirm('Block this user? They will not be able to message you.', async () => {
+    App._blockedUsers.add(uid);
+    // Filter from chat list
+    App.chats = App.chats.filter(c => c.uid !== uid);
+    renderChatList();
+    if (App.currentChat && App.currentChat.uid === uid) showWelcome();
     showToast('User has been blocked', 'success');
+    // Firestore
+    if (App.db && App.auth && App.auth.currentUser) {
+      const myUid = App.auth.currentUser.uid;
+      try {
+        const userRef = App.db.collection('users').doc(myUid);
+        const userDoc = await userRef.get();
+        const blocked = (userDoc.exists && userDoc.data().blockedUsers) || [];
+        if (!blocked.includes(uid)) blocked.push(uid);
+        await userRef.set({ blockedUsers: blocked }, { merge: true });
+      } catch(e) { console.warn('Block user Firestore error:', e); }
+    }
   });
+}
+
+function unblockContact(uid) {
+  if (!uid) return;
+  App._blockedUsers.delete(uid);
+  showToast('User unblocked', 'success');
+  // Reload chats to restore blocked user
+  if (typeof subscribeToChats === 'function') subscribeToChats();
+  // Firestore
+  if (App.db && App.auth && App.auth.currentUser) {
+    const myUid = App.auth.currentUser.uid;
+    App.db.collection('users').doc(myUid).get().then(doc => {
+      if (doc.exists) {
+        const blocked = (doc.data().blockedUsers || []).filter(u => u !== uid);
+        return App.db.collection('users').doc(myUid).set({ blockedUsers: blocked }, { merge: true });
+      }
+    }).catch(() => {});
+  }
+}
+
+function isUserBlocked(uid) {
+  return App._blockedUsers && App._blockedUsers.has(uid);
+}
+
+async function loadBlockedUsers() {
+  if (!App.db || !App.auth || !App.auth.currentUser) return;
+  try {
+    const doc = await App.db.collection('users').doc(App.auth.currentUser.uid).get();
+    if (doc.exists && doc.data().blockedUsers) {
+      App._blockedUsers = new Set(doc.data().blockedUsers);
+    }
+  } catch(_) {}
 }
 function copyInviteLink() {
   navigator.clipboard.writeText('https://neonchat.app/join/' + Math.random().toString(36).slice(2));
