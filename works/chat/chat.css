@@ -208,7 +208,7 @@ body {
   border-radius: 12px;
   overflow: hidden;
   cursor: pointer;
-  max-width: 280px;
+  max-width: 100%;
 }
 .location-preview img {
   width: 100%;
@@ -230,7 +230,7 @@ body {
   border-radius: 12px;
   overflow: hidden;
   border: 1px solid var(--outline-variant);
-  max-width: 280px;
+  max-width: 100%;
   background: var(--surface-container-high);
 }
 .contact-card .contact-header {

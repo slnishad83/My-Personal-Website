@@ -295,6 +295,7 @@ function subscribeToChats() {
         }
         
         if (App._deletedChatIds.has(chatId)) return;
+        if (data.deletedFor && data.deletedFor[uid]) return;
         
         const otherUserId = data.participants.find(p => p !== uid);
         if (!otherUserId) return;
@@ -382,6 +383,8 @@ function subscribeToGroups() {
       const groupsList = [];
       snapshot.forEach(doc => {
         const data = doc.data();
+        if (data.deletedFor && data.deletedFor[uid]) return;
+        if (App._deletedChatIds.has(doc.id)) return;
         console.log('[Groups] Group doc:', doc.id, 'name:', data.name, 'members:', data.members);
         groupsList.push({
           id: doc.id,
@@ -603,6 +606,10 @@ async function loadMessageHistory(email, uid) {
 
       if (existingIds.has(chatId) || chatId === `saved_${uid}`) continue;
       if (App._deletedChatIds && App._deletedChatIds.has(chatId)) continue;
+      try {
+        const chatDoc = await App.db.collection('directChats').doc(chatId).get();
+        if (chatDoc.exists && chatDoc.data().deletedFor && chatDoc.data().deletedFor[uid]) continue;
+      } catch (e) { /* skip check on error */ }
       const contact = App.contacts.find(c => c.email === otherEmail || c.uid === otherUid) || { name: otherEmail.split('@')[0] || 'User', avatar: 'gradient-2', initials: '', photoURL: null, status: 'offline', about: otherEmail };
       const chatObj = {
         id: chatId, type: 'personal', uid: otherUid,
@@ -831,6 +838,23 @@ function addDeletedChatId(chatId) {
   const ids = loadDeletedChatIds(); ids.add(chatId);
   try { localStorage.setItem('nsl_deleted_chats', JSON.stringify([...ids])); } catch(_) {}
 }
+async function syncDeletedChatsFromFirestore() {
+  if (!App.db || !App.auth?.currentUser?.uid) return;
+  const uid = App.auth.currentUser.uid;
+  try {
+    const [directSnap, groupSnap] = await Promise.all([
+      App.db.collection('directChats').where('participants', 'array-contains', uid).get(),
+      App.db.collection('groups').where('members', 'array-contains', uid).get()
+    ]);
+    [...directSnap.docs, ...groupSnap.docs].forEach(doc => {
+      const data = doc.data();
+      if (data.deletedFor && data.deletedFor[uid]) {
+        App._deletedChatIds.add(doc.id);
+        addDeletedChatId(doc.id);
+      }
+    });
+  } catch (e) { console.warn('syncDeletedChats err:', e); }
+}
 
 function checkSession() {
   setLoadingStatus('Checking session…');
@@ -842,6 +866,7 @@ function checkSession() {
         loadUserProfile(user).then(() => {
           App._deletedChatIds = loadDeletedChatIds();
           App._deletedCallLogIds = loadDeletedCallIds();
+          syncDeletedChatsFromFirestore();
           subscribeToUsers();
           subscribeToChats();
           subscribeToGroups();
@@ -1465,13 +1490,12 @@ async function deleteSelectedChats() {
       addDeletedChatId(chatId);
       App._deletedChatIds.add(chatId);
       if (App.db) {
-        // Delete the directChats or groups doc
-        try {
-          await App.db.collection('directChats').doc(chatId).delete();
-        } catch (e) { console.warn('Delete directChat error:', e); }
-        try {
-          await App.db.collection('groups').doc(chatId).delete();
-        } catch (e) { /* not a group chat */ }
+        const uid = App.auth?.currentUser?.uid;
+        // Mark as deleted for this user (cross-device sync)
+        if (uid) {
+          try { await App.db.collection('directChats').doc(chatId).update({ [`deletedFor.${uid}`]: true }); } catch (e) { /* doc may not exist */ }
+          try { await App.db.collection('groups').doc(chatId).update({ [`deletedFor.${uid}`]: true }); } catch (e) { /* doc may not exist */ }
+        }
         // Delete all associated messages (both directId and groupId), chunked by 500
         try {
           const dirMsgs = await App.db.collection('messages').where('directId', '==', chatId).get();
@@ -2376,14 +2400,14 @@ function renderMessages(chatId) {
 
     let contentHTML = '';
     if (msg.type === 'image') {
-      contentHTML = `<div class="bubble-media cursor-pointer relative rounded-xl overflow-hidden" onclick="openMediaViewer('${msg.id}')">
-        <img src="${escHtml(msg.url)}" alt="Image" loading="lazy" class="max-w-xs max-h-48 object-cover rounded-xl border border-outline-variant/20">
+      contentHTML = `<div class="bubble-media cursor-pointer relative rounded-xl overflow-hidden max-w-full" onclick="openMediaViewer('${msg.id}')">
+        <img src="${escHtml(msg.url)}" alt="Image" loading="lazy" class="w-full max-h-48 object-cover rounded-xl border border-outline-variant/20">
         <div class="absolute inset-0 bg-black/0 hover:bg-black/10 transition-all rounded-xl flex items-center justify-center opacity-0 hover:opacity-100">
           <span class="material-symbols-outlined text-white text-2xl drop-shadow">fullscreen</span>
         </div>
       </div>`;
     } else if (msg.type === 'video') {
-      contentHTML = `<div class="bubble-media relative rounded-xl overflow-hidden max-w-xs">
+      contentHTML = `<div class="bubble-media relative rounded-xl overflow-hidden max-w-full">
         <video src="${escHtml(msg.url)}" class="max-h-48 rounded-xl border border-outline-variant/20 w-full" preload="metadata" controls playsinline style="cursor:pointer"></video>
         <button onclick="event.stopPropagation();openMediaViewer('${msg.id}')" class="absolute top-2 right-2 w-8 h-8 bg-black/50 rounded-full flex items-center justify-center text-white hover:bg-black/70 transition-colors" title="Full screen">
           <span class="material-symbols-outlined text-sm">fullscreen</span>
@@ -2411,7 +2435,7 @@ function renderMessages(chatId) {
     } else if (msg.type === 'location') {
       const staticMapUrl = `https://staticmap.openstreetmap.de/staticmap.php?center=${msg.lat},${msg.lng}&zoom=15&size=280x140&markers=${msg.lat},${msg.lng},red-pushpin`;
       const mapUrlVal = msg.mapUrl || `https://maps.google.com/?q=${msg.lat},${msg.lng}`;
-      contentHTML = `<div onclick="window.open('${escHtml(mapUrlVal)}','_blank')" class="location-preview border border-outline-variant/20 max-w-xs">
+      contentHTML = `<div onclick="window.open('${escHtml(mapUrlVal)}','_blank')" class="location-preview border border-outline-variant/20 max-w-full">
         <img src="${escHtml(staticMapUrl)}" alt="Location" loading="lazy" onerror="this.style.display='none'">
         <div class="location-label"><span class="material-symbols-outlined text-primary text-sm">location_on</span><span>Shared location</span></div>
       </div>`;
@@ -2439,7 +2463,7 @@ function renderMessages(chatId) {
         }
       </div>`;
     } else {
-      contentHTML = `<div class="text-sm font-normal leading-relaxed text-on-surface">${formatMsgText(msg.text||'')}</div>`;
+      contentHTML = `<div class="text-sm font-normal leading-relaxed text-on-surface break-words overflow-wrap-anywhere">${formatMsgText(msg.text||'')}</div>`;
     }
 
     // Status badges: forwarded, starred, edited
@@ -2463,7 +2487,7 @@ function renderMessages(chatId) {
           <button class="opacity-0 group-hover:opacity-100 p-1 hover:bg-surface-container-high rounded-full text-on-surface-variant transition-opacity cursor-pointer flex items-center justify-center flex-shrink-0" onclick="event.stopPropagation();openForwardModal('${msg.id}')" title="Forward"><span class="material-symbols-outlined text-lg">arrow_forward</span></button>
           <button class="opacity-0 group-hover:opacity-100 p-1 hover:bg-red-500/10 rounded-full text-on-surface-variant hover:text-red-500 transition-opacity cursor-pointer flex items-center justify-center flex-shrink-0" onclick="event.stopPropagation();openDeleteMenu('${msg.id}')" title="Delete"><span class="material-symbols-outlined text-lg">delete</span></button>
           <button class="opacity-0 group-hover:opacity-100 p-1 hover:bg-surface-container-high rounded-full text-on-surface-variant transition-opacity cursor-pointer flex items-center justify-center flex-shrink-0" onclick="showMsgContextMenu(event,'${msg.id}')" title="More"><span class="material-symbols-outlined text-lg">more_vert</span></button>` : ''}
-          <div class="p-bubble_padding_xy ${bubbleClass} relative"
+          <div class="p-bubble_padding_xy ${bubbleClass} relative overflow-hidden max-w-full"
                oncontextmenu="showMsgContextMenu(event,'${msg.id}')"
                ondblclick="showQuickReactions(event,'${msg.id}')">
             ${replyHTML}
@@ -3597,6 +3621,14 @@ function confirmDeleteChat(chatId) {
       return;
     }
     try {
+      const uid = App.auth?.currentUser?.uid;
+      
+      // Mark as deleted for this user in Firestore (cross-device sync)
+      if (uid) {
+        await App.db.collection('directChats').doc(chatId).update({ [`deletedFor.${uid}`]: true }).catch(() => {});
+        await App.db.collection('groups').doc(chatId).update({ [`deletedFor.${uid}`]: true }).catch(() => {});
+      }
+      
       // Delete associated messages (chunked by 500)
       const msgsSnap = await App.db.collection('messages')
         .where('directId', '==', chatId)
@@ -3610,10 +3642,6 @@ function confirmDeleteChat(chatId) {
         allRefs.slice(i, i + 500).forEach(ref => batch.delete(ref));
         await batch.commit();
       }
-      
-      // Delete the directChats or group doc directly (chatId IS the doc ID)
-      await App.db.collection('directChats').doc(chatId).delete().catch(() => {});
-      await App.db.collection('groups').doc(chatId).delete().catch(() => {});
       
       showToast('Conversation deleted', 'success');
     } catch (err) {

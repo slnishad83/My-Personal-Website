@@ -227,11 +227,20 @@ html.dark .tab-item.active {
   color: var(--primary) !important;
 }
 
+/* ── Universal overflow utilities for message content ── */
+.overflow-wrap-anywhere { overflow-wrap: anywhere; word-break: break-word; }
+.bubble-media img, .bubble-media video { max-width: 100%; height: auto; }
+
 /* ── Chat list item hover/active ─────────────────────── */
 .chat-list-item { cursor: pointer; border-radius: 12px; transition: background 0.15s; }
 .chat-list-item:hover { background: var(--surface-container-high); }
 .chat-list-item.active { background: var(--surface-container-highest); }
 html.dark .chat-list-item.active { background: rgba(196, 192, 255, 0.08); }
+
+/* ── Chat list: extra bottom padding so last item clears the fixed bottom-nav ── */
+@media (max-width: 767px) {
+  #chat-list { padding-bottom: 72px; }
+}
 
 /* ── Safe area for modern phones (bottom) ────────────── */
 @supports (padding-bottom: env(safe-area-inset-bottom)) {
@@ -242,6 +251,7 @@ html.dark .chat-list-item.active { background: rgba(196, 192, 255, 0.08); }
   #emoji-picker { bottom: calc(80px + env(safe-area-inset-bottom)); }
   #attach-menu { bottom: calc(80px + env(safe-area-inset-bottom)); }
   #app { padding-bottom: calc(64px + env(safe-area-inset-bottom)); }
+  #chat-list { padding-bottom: calc(72px + env(safe-area-inset-bottom)); }
 }
 
 /* ── Safe area left/right for landscape notch ────────── */
