@@ -671,16 +671,26 @@
   <!-- Active Call View Overlay -->
   <div class="overlay fixed inset-0 z-[100] bg-black flex flex-col hidden" id="call-screen" role="dialog" aria-modal="true">
     <div class="absolute inset-0 bg-cover bg-center opacity-30 blur-2xl transition-all duration-1000" id="call-blur-bg" style="background-image:none"></div>
+    <!-- Remote video (fills entire screen during video call) -->
+    <video id="remote-video" autoplay playsinline class="absolute inset-0 w-full h-full object-cover hidden z-0"></video>
+    <!-- Local video PiP (bottom-right corner) -->
+    <div class="absolute bottom-28 right-4 w-32 h-44 rounded-xl overflow-hidden border-2 border-white/30 shadow-xl z-20 hidden" id="local-video-container">
+      <video id="local-video" autoplay playsinline muted class="w-full h-full object-cover"></video>
+      <button class="absolute top-1 right-1 w-5 h-5 bg-black/50 rounded-full flex items-center justify-center text-white" onclick="switchCamera()" title="Switch camera">
+        <span class="material-symbols-outlined text-xs">flip_camera_ios</span>
+      </button>
+    </div>
     <div class="flex-1 flex flex-col justify-between p-8 relative z-10 text-white">
       <div class="flex justify-between items-center">
-        <div class="flex items-center gap-2 bg-white/10 px-3 py-1 rounded-full text-xs backdrop-blur-md">
-          <span class="material-symbols-outlined text-sm text-primary">signal_cellular_alt</span> HD Voice call
+        <div class="flex items-center gap-2 bg-white/10 px-3 py-1 rounded-full text-xs backdrop-blur-md" id="call-quality-badge">
+          <span class="material-symbols-outlined text-sm text-primary" id="call-quality-icon">signal_cellular_alt</span>
+          <span id="call-quality-text">HD Voice call</span>
         </div>
         <button class="w-10 h-10 bg-white/10 rounded-full flex items-center justify-center hover:bg-white/20 transition-colors" onclick="minimizeCall()">
           <span class="material-symbols-outlined">expand_more</span>
         </button>
       </div>
-      <div class="flex flex-col items-center text-center my-auto">
+      <div class="flex flex-col items-center text-center my-auto" id="call-info-section">
         <div class="relative mb-6">
           <div class="w-32 h-32 rounded-full border-4 border-primary/30 flex items-center justify-center text-5xl bg-white/10 animate-pulse" id="call-avatar">?</div>
         </div>
@@ -688,12 +698,15 @@
         <p class="text-white/60 font-semibold uppercase tracking-wider text-xs" id="call-status">Connecting securely</p>
         <div class="text-lg font-mono mt-4 hidden" id="call-timer">0:00</div>
       </div>
-      <div class="flex justify-center gap-6">
+      <div class="flex justify-center gap-4 flex-wrap" id="call-controls">
         <button class="w-14 h-14 bg-white/10 rounded-full flex items-center justify-center hover:bg-white/20 transition-all text-white" id="btn-mute" onclick="toggleMute()">
           <span class="material-symbols-outlined" id="mute-icon">mic</span>
         </button>
-        <button class="w-14 h-14 bg-white/10 rounded-full flex items-center justify-center hover:bg-white/20 transition-all text-white" id="btn-cam" onclick="toggleCamera()">
+        <button class="w-14 h-14 bg-white/10 rounded-full flex items-center justify-center hover:bg-white/20 transition-all text-white hidden" id="btn-cam" onclick="toggleCamera()">
           <span class="material-symbols-outlined" id="cam-icon">videocam</span>
+        </button>
+        <button class="w-14 h-14 bg-white/10 rounded-full flex items-center justify-center hover:bg-white/20 transition-all text-white" id="btn-speaker" onclick="toggleSpeaker()">
+          <span class="material-symbols-outlined" id="speaker-icon">volume_up</span>
         </button>
         <button class="w-14 h-14 bg-error rounded-full flex items-center justify-center hover:brightness-110 active:scale-95 transition-all text-white shadow-lg shadow-error/35" onclick="endCall()">
           <span class="material-symbols-outlined">call_end</span>

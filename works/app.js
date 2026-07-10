@@ -867,6 +867,7 @@ function checkSession() {
           subscribeToGroups();
           subscribeToCallLogs(App.currentUser.uid);
           loadBlockedUsers();
+          listenForIncomingCalls();
           if (App.currentUser.email) {
             loadMessageHistory(App.currentUser.email, App.currentUser.uid);
             subscribeToChatRequests(App.currentUser.email, App.currentUser.uid);
@@ -2754,113 +2755,407 @@ function toggleRecording() {
 // are defined in app-extras.js with full MediaRecorder support
 
 /* ══════════════════════════════════════════════════
-   15. CALL SCREENS
+   15. CALL SCREENS — Real WebRTC Engine
    ══════════════════════════════════════════════════ */
 function startVoiceCall() { if(!App.currentChat)return; beginCall('voice'); }
 function startVideoCall()  { if(!App.currentChat)return; beginCall('video'); }
 
-function beginCall(type) {
-  App.callActive=true; App.callMuted=false; App.cameraOff=(type==='voice');
+async function beginCall(type) {
   const chat = App.currentChat;
+  if (!chat || !App.db || !App.auth?.currentUser) return;
+  const uid = App.auth.currentUser.uid;
+  const otherUid = chat.uid;
+  if (!otherUid) return;
+
+  currentCallType = type;
+  App.callActive = true;
+  micMuted = false;
+  cameraOff = (type === 'voice');
+  callLogWritten = false;
+
   setEl('call-name', chat.name);
   setEl('call-status', 'Calling…');
   hide('call-timer');
+  document.getElementById('call-screen')?.classList.remove('hidden');
+  document.getElementById('call-quality-text').textContent = type === 'video' ? 'HD Video call' : 'HD Voice call';
+  document.getElementById('btn-cam')?.classList.toggle('hidden', type === 'voice');
+  document.getElementById('remote-video')?.classList.add('hidden');
+  document.getElementById('local-video-container')?.classList.add('hidden');
+  document.getElementById('call-info-section')?.classList.remove('hidden');
 
   const av = document.getElementById('call-avatar');
-  if (av) {
-    av.className=`w-32 h-32 rounded-full border-4 border-primary/30 flex items-center justify-center text-5xl bg-white/10 animate-pulse`;
-    av.textContent=chat.initials;
+  if (av) { av.className = 'w-32 h-32 rounded-full border-4 border-primary/30 flex items-center justify-center text-5xl bg-white/10 animate-pulse'; av.textContent = chat.initials; }
+
+  try {
+    const constraints = { audio: true, video: type === 'video' ? { facingMode: preferredCameraFacingMode, width: { ideal: 1280 }, height: { ideal: 720 } } : false };
+    localCallStream = await navigator.mediaDevices.getUserMedia(constraints);
+    const localVideo = document.getElementById('local-video');
+    if (localVideo && type === 'video') { localVideo.srcObject = localCallStream; document.getElementById('local-video-container')?.classList.remove('hidden'); }
+
+    const rtcConfig = await getRtcConfig();
+    peerConnection = new RTCPeerConnection(rtcConfig);
+
+    localCallStream.getTracks().forEach(track => peerConnection.addTrack(track, localCallStream));
+
+    peerConnection.onicecandidate = async (e) => {
+      if (e.candidate && App.db && App._activeCallId) {
+        await App.db.collection('calls').doc(App._activeCallId).collection('candidates').add({
+          candidate: e.candidate.toJSON(), sender: uid, createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        }).catch(() => {});
+      }
+    };
+
+    peerConnection.ontrack = (e) => {
+      remoteCallStream = e.streams[0];
+      const remoteVideo = document.getElementById('remote-video');
+      if (remoteVideo) { remoteVideo.srcObject = remoteCallStream; remoteVideo.classList.toggle('hidden', currentCallType === 'voice'); }
+      if (currentCallType === 'video') document.getElementById('call-info-section')?.classList.add('hidden');
+    };
+
+    peerConnection.onconnectionstatechange = () => {
+      const state = peerConnection?.connectionState;
+      if (state === 'connected') {
+        setEl('call-status', 'Active');
+        show('call-timer');
+        callStartedAt = Date.now();
+        startCallTimer();
+        if (App.db && App._activeCallId) {
+          App.db.collection('calls').doc(App._activeCallId).update({ status: 'active', startedAt: firebase.firestore.FieldValue.serverTimestamp() }).catch(() => {});
+        }
+      } else if (state === 'failed' || state === 'disconnected') {
+        setEl('call-status', 'Reconnecting…');
+        try { peerConnection?.restartIce(); } catch(_) {}
+      }
+    };
+
+    const offer = await peerConnection.createOffer();
+    await peerConnection.setLocalDescription(offer);
+
+    const callRef = await App.db.collection('calls').add({
+      fromUserId: uid, fromUserName: App.currentUser?.displayName || 'User',
+      toUserId: otherUid, type, status: 'ringing', groupCall: false,
+      offer: { sdp: offer.sdp, type: offer.type },
+      participants: [uid, otherUid],
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    App._activeCallId = callRef.id;
+
+    listenForCallAnswer(callRef.id);
+    listenForCallCandidates(callRef.id);
+    listenForCallStatus(callRef.id);
+
+    callTimeoutTimer = setTimeout(() => {
+      if (App._activeCallId && App.callActive) {
+        setEl('call-status', 'No answer');
+        endCall();
+      }
+    }, 45000);
+
+  } catch (err) {
+    console.error('beginCall error:', err);
+    showToast('Could not start call: ' + (err.name === 'NotAllowedError' ? 'Camera/mic permission denied' : err.message), 'error');
+    endCall();
   }
+}
 
-  const camIcon = document.getElementById('cam-icon');
-  if (camIcon) camIcon.textContent = type==='video' ? 'videocam' : 'videocam_off';
-
-  show('call-screen');
-
-  // Create immediate call log record in Firestore to preserve logs on refresh
-  App.currentCallLogId = null;
-  if (App.db && App.auth?.currentUser && chat) {
-    const uid = App.auth.currentUser.uid;
-    const otherUid = chat.uid || null;
-    App.db.collection('callLogs').add({
-      callerId: uid,
-      calleeId: otherUid || uid,
-      type: type,
-      duration: 0,
-      timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-      status: 'calling',
-      participants: otherUid && otherUid !== uid ? [uid, otherUid] : [uid],
-      chatId: chat.id || '',
-      chatName: chat.name || ''
-    }).then(ref => {
-      App.currentCallLogId = ref.id;
-    }).catch(e => console.warn('callLog add err:', e));
-  }
-
-  setTimeout(() => {
-    setEl('call-status','Active Connection');
-    show('call-timer');
-    App.callStartTime = Date.now();
-    App.callTimerInterval = setInterval(() => {
-      const s = Math.floor((Date.now()-App.callStartTime)/1000);
-      setEl('call-timer', formatDuration(s));
-    }, 1000);
-
-    // Update status to active in Firestore if ID is available
-    if (App.db && App.currentCallLogId) {
-      App.db.collection('callLogs').doc(App.currentCallLogId).update({
-        status: 'active'
-      }).catch(() => {});
+function listenForCallAnswer(callId) {
+  if (!App.db) return;
+  callDocUnsubscribe = App.db.collection('calls').doc(callId).onSnapshot(doc => {
+    const data = doc.data();
+    if (!data) return;
+    if (data.status === 'active' && data.answer && peerConnection && peerConnection.signalingState === 'have-local-offer') {
+      peerConnection.setRemoteDescription(new RTCSessionDescription(data.answer)).catch(() => {});
     }
-  }, 2500);
+    if (data.status === 'ended' || data.status === 'missed' || data.status === 'rejected' || data.status === 'cancelled') {
+      endCall();
+    }
+  });
+}
+
+function listenForCallCandidates(callId) {
+  if (!App.db) return;
+  const uid = App.auth?.currentUser?.uid;
+  callCandidatesUnsubscribe = App.db.collection('calls').doc(callId).collection('candidates')
+    .orderBy('createdAt').onSnapshot(snap => {
+      snap.docChanges().forEach(change => {
+        if (change.type === 'added') {
+          const c = change.doc.data();
+          if (c.sender !== uid && peerConnection) {
+            peerConnection.addIceCandidate(new RTCIceCandidate(c.candidate)).catch(() => {});
+          }
+        }
+      });
+    });
+}
+
+function listenForCallStatus(callId) {
+  if (!App.db) return;
+  callDocUnsubscribe = App.db.collection('calls').doc(callId).onSnapshot(doc => {
+    const data = doc.data();
+    if (!data) return;
+    if (data.status === 'ended' || data.status === 'missed' || data.status === 'rejected') endCall();
+  });
+}
+
+function startCallTimer() {
+  clearInterval(callDurationTimer);
+  callDurationTimer = setInterval(() => {
+    const s = Math.floor((Date.now() - callStartedAt) / 1000);
+    setEl('call-timer', formatDuration(s));
+  }, 1000);
 }
 
 function endCall() {
-  App.callActive=false;
-  clearInterval(App.callTimerInterval);
-  hide('call-screen');
-  showToast('Call session ended','info');
-  
-  if (App.db && App.auth?.currentUser && App.currentCallLogId) {
-    const duration = App.callStartTime ? Math.floor((Date.now()-App.callStartTime)/1000) : 0;
-    App.db.collection('callLogs').doc(App.currentCallLogId).update({
-      duration,
-      status: 'ended'
-    }).catch(e => console.warn('callLog update err:', e));
-    App.currentCallLogId = null;
-  } else if (App.db && App.auth?.currentUser && App.currentChat) {
-    // Fallback if document creation was delayed
-    const duration = App.callStartTime ? Math.floor((Date.now()-App.callStartTime)/1000) : 0;
-    const uid = App.auth.currentUser.uid;
-    const otherUid = App.currentChat.uid;
-    App.db.collection('callLogs').add({
-      callerId: uid,
-      calleeId: otherUid || uid,
-      type: App.cameraOff ? 'voice' : 'video',
-      duration,
-      timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-      status: 'ended',
-      participants: otherUid && otherUid !== uid ? [uid, otherUid] : [uid]
-    }).catch(e => console.warn('callLog add err:', e));
+  const wasActive = App.callActive;
+  App.callActive = false;
+  clearTimeout(callTimeoutTimer);
+  clearInterval(callDurationTimer);
+  clearInterval(callHeartbeatTimer);
+  stopRingtone();
+
+  const duration = callStartedAt ? Math.floor((Date.now() - callStartedAt) / 1000) : 0;
+
+  if (peerConnection) {
+    peerConnection.close();
+    peerConnection = null;
   }
+  if (localCallStream) {
+    localCallStream.getTracks().forEach(t => t.stop());
+    localCallStream = null;
+  }
+  remoteCallStream = null;
+  document.getElementById('remote-video').srcObject = null;
+  document.getElementById('local-video').srcObject = null;
+  document.getElementById('call-screen')?.classList.add('hidden');
+  document.getElementById('remote-video')?.classList.add('hidden');
+  document.getElementById('local-video-container')?.classList.add('hidden');
+  document.getElementById('call-info-section')?.classList.remove('hidden');
+
+  if (callDocUnsubscribe) { callDocUnsubscribe(); callDocUnsubscribe = null; }
+  if (callCandidatesUnsubscribe) { callCandidatesUnsubscribe(); callCandidatesUnsubscribe = null; }
+
+  if (wasActive && App.db && App._activeCallId) {
+    App.db.collection('calls').doc(App._activeCallId).update({ status: 'ended', duration, endedAt: firebase.firestore.FieldValue.serverTimestamp() }).catch(() => {});
+    App._activeCallId = null;
+  }
+  if (callStartedAt && duration > 0) {
+    showToast('Call ended · ' + formatDuration(duration), 'info');
+  }
+  callStartedAt = null;
+  releaseWakeLock();
 }
 
 function toggleMute() {
-  // This is the CALL mute — toggleChatMute() handles per-chat muting
-  App.callMuted = !App.callMuted;
-  const btn  = document.getElementById('btn-mute');
+  micMuted = !micMuted;
+  if (localCallStream) localCallStream.getAudioTracks().forEach(t => t.enabled = !micMuted);
+  const btn = document.getElementById('btn-mute');
   const icon = document.getElementById('mute-icon');
-  if (btn) btn.classList.toggle('bg-red-500', App.callMuted);
-  if (icon) icon.textContent = App.callMuted ? 'mic_off' : 'mic';
+  if (btn) btn.classList.toggle('bg-red-500', micMuted);
+  if (icon) icon.textContent = micMuted ? 'mic_off' : 'mic';
 }
+
 function toggleCamera() {
-  App.cameraOff = !App.cameraOff;
+  cameraOff = !cameraOff;
+  if (localCallStream) localCallStream.getVideoTracks().forEach(t => t.enabled = !cameraOff);
   const icon = document.getElementById('cam-icon');
-  if (icon) icon.textContent = App.cameraOff ? 'videocam_off' : 'videocam';
+  if (icon) icon.textContent = cameraOff ? 'videocam_off' : 'videocam';
 }
-function minimizeCall() { hide('call-screen'); showToast('Call active — click status to return','info'); }
-function acceptCall()  { closeModal('incoming-call-overlay'); beginCall('voice'); }
-function declineCall() { closeModal('incoming-call-overlay'); showToast('Call request declined','info'); }
+
+async function switchCamera() {
+  preferredCameraFacingMode = preferredCameraFacingMode === 'user' ? 'environment' : 'user';
+  if (!localCallStream || currentCallType !== 'video') return;
+  try {
+    const newStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: preferredCameraFacingMode, width: { ideal: 1280 }, height: { ideal: 720 } } });
+    const newTrack = newStream.getVideoTracks()[0];
+    const sender = peerConnection?.getSenders().find(s => s.track?.kind === 'video');
+    if (sender) await sender.replaceTrack(newTrack);
+    localCallStream.getVideoTracks()[0].stop();
+    localCallStream.removeTrack(localCallStream.getVideoTracks()[0]);
+    localCallStream.addTrack(newTrack);
+    document.getElementById('local-video').srcObject = localCallStream;
+  } catch(e) { console.warn('Camera switch error:', e); }
+}
+
+function toggleSpeaker() {
+  speakerOn = !speakerOn;
+  const icon = document.getElementById('speaker-icon');
+  if (icon) icon.textContent = speakerOn ? 'volume_off' : 'volume_up';
+  document.getElementById('btn-speaker')?.classList.toggle('bg-primary/30', speakerOn);
+}
+
+function minimizeCall() {
+  document.getElementById('call-screen')?.classList.add('hidden');
+  showToast('Call active — tap status to return', 'info');
+}
+
+function acceptCall() {
+  stopRingtone();
+  document.getElementById('incoming-call-overlay')?.classList.add('hidden');
+  if (App._incomingCallData) _handleAcceptedCall(App._incomingCallData);
+}
+
+function declineCall() {
+  stopRingtone();
+  document.getElementById('incoming-call-overlay')?.classList.add('hidden');
+  if (App._incomingCallData && App.db) {
+    App.db.collection('calls').doc(App._incomingCallData.callId).update({ status: 'rejected' }).catch(() => {});
+  }
+  App._incomingCallData = null;
+}
+
+async function _handleAcceptedCall(callData) {
+  const { callId, type: callType, fromUserId, fromUserName } = callData;
+  const uid = App.auth?.currentUser?.uid;
+  if (!uid || !App.db) return;
+
+  currentCallType = callType;
+  App.callActive = true;
+  micMuted = false;
+  cameraOff = (callType === 'voice');
+  App._activeCallId = callId;
+  callStartedAt = null;
+
+  setEl('call-name', fromUserName || 'Unknown');
+  setEl('call-status', 'Connecting…');
+  hide('call-timer');
+  document.getElementById('call-screen')?.classList.remove('hidden');
+  document.getElementById('call-quality-text').textContent = callType === 'video' ? 'HD Video call' : 'HD Voice call';
+  document.getElementById('btn-cam')?.classList.toggle('hidden', callType === 'voice');
+  document.getElementById('remote-video')?.classList.add('hidden');
+  document.getElementById('local-video-container')?.classList.add('hidden');
+
+  const av = document.getElementById('call-avatar');
+  if (av) { av.className = 'w-32 h-32 rounded-full border-4 border-primary/30 flex items-center justify-center text-5xl bg-white/10 animate-pulse'; av.textContent = (fromUserName || '?')[0].toUpperCase(); }
+
+  try {
+    const constraints = { audio: true, video: callType === 'video' ? { facingMode: preferredCameraFacingMode, width: { ideal: 1280 }, height: { ideal: 720 } } : false };
+    localCallStream = await navigator.mediaDevices.getUserMedia(constraints);
+    const localVideo = document.getElementById('local-video');
+    if (localVideo && callType === 'video') { localVideo.srcObject = localCallStream; document.getElementById('local-video-container')?.classList.remove('hidden'); }
+
+    const rtcConfig = await getRtcConfig();
+    peerConnection = new RTCPeerConnection(rtcConfig);
+
+    localCallStream.getTracks().forEach(track => peerConnection.addTrack(track, localCallStream));
+
+    peerConnection.onicecandidate = async (e) => {
+      if (e.candidate && App.db) {
+        await App.db.collection('calls').doc(callId).collection('candidates').add({
+          candidate: e.candidate.toJSON(), sender: uid, createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        }).catch(() => {});
+      }
+    };
+
+    peerConnection.ontrack = (e) => {
+      remoteCallStream = e.streams[0];
+      const remoteVideo = document.getElementById('remote-video');
+      if (remoteVideo) { remoteVideo.srcObject = remoteCallStream; remoteVideo.classList.toggle('hidden', currentCallType === 'voice'); }
+      if (currentCallType === 'video') document.getElementById('call-info-section')?.classList.add('hidden');
+    };
+
+    peerConnection.onconnectionstatechange = () => {
+      const state = peerConnection?.connectionState;
+      if (state === 'connected') {
+        setEl('call-status', 'Active');
+        show('call-timer');
+        callStartedAt = Date.now();
+        startCallTimer();
+        App.db.collection('calls').doc(callId).update({ status: 'active', startedAt: firebase.firestore.FieldValue.serverTimestamp() }).catch(() => {});
+      } else if (state === 'failed') {
+        try { peerConnection?.restartIce(); } catch(_) {}
+      }
+    };
+
+    const callDoc = await App.db.collection('calls').doc(callId).get();
+    const callDataSnap = callDoc.data();
+    if (callDataSnap?.offer) {
+      await peerConnection.setRemoteDescription(new RTCSessionDescription(callDataSnap.offer));
+      const answer = await peerConnection.createAnswer();
+      await peerConnection.setLocalDescription(answer);
+      await App.db.collection('calls').doc(callId).update({
+        answer: { sdp: answer.sdp, type: answer.type }
+      });
+    }
+
+    listenForCallCandidates(callId);
+    listenForCallStatus(callId);
+
+  } catch (err) {
+    console.error('Accept call error:', err);
+    showToast('Could not connect call', 'error');
+    endCall();
+  }
+}
+
+function listenForIncomingCalls() {
+  if (!App.db || !App.auth?.currentUser) return;
+  const uid = App.auth.currentUser.uid;
+  if (incomingCallsUnsubscribe) incomingCallsUnsubscribe();
+  incomingCallsUnsubscribe = App.db.collection('calls')
+    .where('toUserId', '==', uid)
+    .where('status', '==', 'ringing')
+    .onSnapshot(snap => {
+      snap.docChanges().forEach(change => {
+        if (change.type === 'added') {
+          const call = change.doc.data();
+          if (call.fromUserId === uid) return;
+          App._incomingCallData = { callId: change.doc.id, type: call.type, fromUserId: call.fromUserId, fromUserName: call.fromUserName };
+          const callerName = call.fromUserName || 'Unknown';
+          setEl('incoming-call-name', callerName);
+          setEl('incoming-call-type', call.type === 'video' ? '📹 Incoming Video Call' : '📞 Incoming Voice Call');
+          document.getElementById('incoming-call-avatar').textContent = callerName[0]?.toUpperCase() || '?';
+          document.getElementById('incoming-call-overlay')?.classList.remove('hidden');
+          playRingtone();
+          if (navigator.vibrate) navigator.vibrate([700, 250, 700, 250, 700, 250, 700, 250, 700]);
+          requestWakeLock();
+        }
+      });
+    });
+}
+
+/* ─── Ringtone via Web Audio API ─── */
+let _ringtoneInterval = null;
+function playRingtone() {
+  stopRingtone();
+  try {
+    ringtoneAudioContext = new (window.AudioContext || window.webkitAudioContext)();
+    const playTone = () => {
+      if (!ringtoneAudioContext) return;
+      const osc = ringtoneAudioContext.createOscillator();
+      const gain = ringtoneAudioContext.createGain();
+      osc.connect(gain);
+      gain.connect(ringtoneAudioContext.destination);
+      osc.frequency.value = 440;
+      osc.type = 'sine';
+      gain.gain.setValueAtTime(0.3, ringtoneAudioContext.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, ringtoneAudioContext.currentTime + 0.8);
+      osc.start(ringtoneAudioContext.currentTime);
+      osc.stop(ringtoneAudioContext.currentTime + 0.8);
+    };
+    playTone();
+    _ringtoneInterval = setInterval(playTone, 1200);
+  } catch(_) {}
+}
+
+function stopRingtone() {
+  clearInterval(_ringtoneInterval);
+  _ringtoneInterval = null;
+  if (ringtoneAudioContext) { ringtoneAudioContext.close().catch(() => {}); ringtoneAudioContext = null; }
+  if (navigator.vibrate) navigator.vibrate(0);
+}
+
+async function requestWakeLock() {
+  try { wakeLock = await navigator.wakeLock?.request('screen'); } catch(_) {}
+}
+function releaseWakeLock() {
+  if (wakeLock) { wakeLock.release().catch(() => {}); wakeLock = null; }
+}
+
+function formatDuration(sec) {
+  const m = Math.floor(sec / 60);
+  const s = sec % 60;
+  return m + ':' + String(s).padStart(2, '0');
+}
 
 /* ══════════════════════════════════════════════════
    16. SEARCH SYSTEM
