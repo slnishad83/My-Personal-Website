@@ -42,8 +42,8 @@ const authPersistenceReady = Promise.race([
 });
 
 window.addEventListener("beforeunload", () => {
-  stopSessionHeartbeat();
-  saveCallState();
+  if (typeof stopSessionHeartbeat === 'function') stopSessionHeartbeat();
+  if (typeof saveCallState === 'function') saveCallState();
 });
 
 const db = firebase.firestore();

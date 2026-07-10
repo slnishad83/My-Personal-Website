@@ -1253,7 +1253,7 @@ function _renderStarredMessages() {
   for (const [chatId, msgs] of Object.entries(App.messages)) {
     const chat = App.chats.find(c => c.id === chatId);
     msgs.filter(m => m.starred).forEach(m => {
-      starred.push({ msg, chatName: chat?.name || 'Unknown', chatId });
+      starred.push({ msg: m, chatName: chat?.name || 'Unknown', chatId });
     });
   }
   starred.sort((a, b) => (b.msg.time || 0) - (a.msg.time || 0));
