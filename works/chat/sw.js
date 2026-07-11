@@ -157,7 +157,7 @@ self.addEventListener('notificationclick', event => {
   );
 });
 
-const CACHE_NAME = 'team-chat-v223-ui-shell';
+const CACHE_NAME = 'team-chat-v224-ui-shell';
 const STATIC_ASSETS = [
   'chat.css',
   'config.js',

@@ -802,9 +802,21 @@ function subscribeToMessages(chatId) {
       
       if (_msgsGen !== myGen) return; // stale snapshot, discard
       msgs.sort((a, b) => a.time - b.time);
+
+      const prevCount = (App.messages[chatId] || []).length;
       App.messages[chatId] = msgs;
       renderMessages(chatId);
       scrollToBottom(true);
+
+      if (msgs.length > prevCount) {
+        const newMsgs = msgs.slice(prevCount);
+        const incomingNew = newMsgs.filter(m => m.from !== 'me');
+        if (incomingNew.length > 0 && App.currentChat?.id !== chatId) {
+          playMsgReceivedSound(chatId);
+        } else if (incomingNew.length > 0) {
+          playMsgReceivedSound(chatId);
+        }
+      }
     }, (error) => {
       console.warn("Messages subscription error:", error);
     });
@@ -875,6 +887,7 @@ function checkSession() {
           updatePresence('online');
           setupPushNotifications();
           loadChatFolders();
+          _loadMuteState();
           mergeOrphanedChats(App.currentUser.uid, App.currentUser.email);
           setLoadingStatus('Ready');
           setTimeout(bootApp, 400);
@@ -2193,10 +2206,12 @@ function openChat(chatId) {
     }
     if (statusDot) statusDot.style.display = 'none';
     if (actionContainer) {
+      const muted = App._mutedChats?.has(chat.id);
       actionContainer.innerHTML = `
-        <button class="text-on-surface-variant hover:text-primary transition-all p-2 rounded-full hover:bg-surface-container/50" onclick="startVoiceCall()"><span class="material-symbols-outlined">call</span></button>
-        <button class="text-on-surface-variant hover:text-primary transition-all p-2 rounded-full hover:bg-surface-container/50" onclick="startVideoCall()"><span class="material-symbols-outlined">videocam</span></button>
+        <button class="text-on-surface-variant hover:text-primary transition-all p-2 rounded-full hover:bg-surface-container/50" onclick="startGroupVoiceCall()"><span class="material-symbols-outlined">call</span></button>
+        <button class="text-on-surface-variant hover:text-primary transition-all p-2 rounded-full hover:bg-surface-container/50" onclick="startGroupVideoCall()"><span class="material-symbols-outlined">videocam</span></button>
         <button class="text-on-surface-variant hover:text-on-surface transition-all p-2 rounded-full hover:bg-surface-container/50" onclick="openChatSearch()"><span class="material-symbols-outlined">search</span></button>
+        <button class="text-on-surface-variant hover:text-on-surface transition-all p-2 rounded-full hover:bg-surface-container/50" onclick="toggleMuteChat()" title="${muted ? 'Unmute' : 'Mute'}"><span class="material-symbols-outlined">${muted ? 'notifications_off' : 'notifications'}</span></button>
         <button class="text-on-surface-variant hover:text-on-surface transition-all p-2 rounded-full hover:bg-surface-container/50" onclick="openChatMenu(this)"><span class="material-symbols-outlined">more_vert</span></button>
       `;
     }
@@ -2219,10 +2234,12 @@ function openChat(chatId) {
       }
     }
     if (actionContainer) {
+      const muted = App._mutedChats?.has(chat.id);
       actionContainer.innerHTML = `
         <button class="text-on-surface-variant hover:text-primary transition-all p-2 rounded-full hover:bg-surface-container/50" onclick="startVoiceCall()"><span class="material-symbols-outlined">call</span></button>
         <button class="text-on-surface-variant hover:text-primary transition-all p-2 rounded-full hover:bg-surface-container/50" onclick="startVideoCall()"><span class="material-symbols-outlined">videocam</span></button>
         <button class="text-on-surface-variant hover:text-on-surface transition-all p-2 rounded-full hover:bg-surface-container/50" onclick="openChatSearch()"><span class="material-symbols-outlined">search</span></button>
+        <button class="text-on-surface-variant hover:text-on-surface transition-all p-2 rounded-full hover:bg-surface-container/50" onclick="toggleMuteChat()" title="${muted ? 'Unmute' : 'Mute'}"><span class="material-symbols-outlined">${muted ? 'notifications_off' : 'notifications'}</span></button>
         <button class="text-on-surface-variant hover:text-on-surface transition-all p-2 rounded-full hover:bg-surface-container/50" onclick="openChatMenu(this)"><span class="material-symbols-outlined">more_vert</span></button>
       `;
     }
@@ -2556,6 +2573,7 @@ function sendMessage() {
   renderMessages(App.currentChat.id);
   scrollToBottom(true);
   renderChatList();
+  playMsgSentSound();
 
   if (!App.db || !App.auth?.currentUser) {
     setTimeout(() => { msg.status = 'delivered'; renderMessages(App.currentChat.id); }, 800);
@@ -2931,6 +2949,8 @@ function endCall() {
   document.getElementById('local-video-container')?.classList.add('hidden');
   document.getElementById('call-info-section')?.classList.remove('hidden');
 
+  cleanupGroupCalls();
+
   if (callDocUnsubscribe) { callDocUnsubscribe(); callDocUnsubscribe = null; }
   if (callCandidatesUnsubscribe) { callCandidatesUnsubscribe(); callCandidatesUnsubscribe = null; }
 
@@ -2939,6 +2959,7 @@ function endCall() {
     App._activeCallId = null;
   }
   if (callStartedAt && duration > 0) {
+    playCallEndedSound();
     showToast('Call ended · ' + formatDuration(duration), 'info');
   }
   callStartedAt = null;
@@ -2991,7 +3012,10 @@ function minimizeCall() {
 function acceptCall() {
   stopRingtone();
   document.getElementById('incoming-call-overlay')?.classList.add('hidden');
-  if (App._incomingCallData) _handleAcceptedCall(App._incomingCallData);
+  if (App._incomingCallData) {
+    if (App._incomingCallData.groupCall) _handleAcceptedGroupCall(App._incomingCallData);
+    else _handleAcceptedCall(App._incomingCallData);
+  }
 }
 
 function declineCall() {
@@ -3099,10 +3123,11 @@ function listenForIncomingCalls() {
         if (change.type === 'added') {
           const call = change.doc.data();
           if (call.fromUserId === uid) return;
-          App._incomingCallData = { callId: change.doc.id, type: call.type, fromUserId: call.fromUserId, fromUserName: call.fromUserName };
+          App._incomingCallData = { callId: change.doc.id, type: call.type, fromUserId: call.fromUserId, fromUserName: call.fromUserName, groupCall: call.groupCall, groupId: call.groupId, groupName: call.groupName };
           const callerName = call.fromUserName || 'Unknown';
           setEl('incoming-call-name', callerName);
-          setEl('incoming-call-type', call.type === 'video' ? '📹 Incoming Video Call' : '📞 Incoming Voice Call');
+          const isGroup = call.groupCall === true;
+          setEl('incoming-call-type', (isGroup ? '👥 ' : '') + (call.type === 'video' ? '📹 Incoming Video Call' : '📞 Incoming Voice Call'));
           document.getElementById('incoming-call-avatar').textContent = callerName[0]?.toUpperCase() || '?';
           document.getElementById('incoming-call-overlay')?.classList.remove('hidden');
           playRingtone();
@@ -3151,10 +3176,353 @@ function releaseWakeLock() {
   if (wakeLock) { wakeLock.release().catch(() => {}); wakeLock = null; }
 }
 
+/* ══════════════════════════════════════════════════
+   15c. NOTIFICATION SOUNDS — WhatsApp-style Web Audio
+   ══════════════════════════════════════════════════ */
+let _notifAudioCtx = null;
+function _getNotifCtx() {
+  if (!_notifAudioCtx || _notifAudioCtx.state === 'closed') {
+    try { _notifAudioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch(_) { return null; }
+  }
+  if (_notifAudioCtx.state === 'suspended') _notifAudioCtx.resume().catch(() => {});
+  return _notifAudioCtx;
+}
+
+const _SOUND_DEFS = {
+  default:    { notes: [880, 1100, 880], dur: [0.08, 0.08, 0.12], type: 'sine', vol: 0.25 },
+  notification_1: { notes: [1047, 1319, 1568], dur: [0.1, 0.1, 0.15], type: 'sine', vol: 0.2 },
+  notification_2: { notes: [880, 1100, 1320, 1100], dur: [0.07, 0.07, 0.07, 0.12], type: 'triangle', vol: 0.2 },
+  notification_3: { notes: [1200, 900, 1200], dur: [0.1, 0.1, 0.15], type: 'sine', vol: 0.22 },
+  chime:      { notes: [1047, 1319, 1568, 2093], dur: [0.08, 0.08, 0.08, 0.2], type: 'sine', vol: 0.18 },
+  bell:       { notes: [1568, 1568, 1175, 1568], dur: [0.06, 0.04, 0.06, 0.2], type: 'square', vol: 0.12 },
+  sent:       { notes: [1200, 1600], dur: [0.05, 0.08], type: 'sine', vol: 0.12 },
+  call_ring:  { notes: [440, 480, 440, 480], dur: [0.3, 0.15, 0.3, 0.15], type: 'sine', vol: 0.3 },
+  call_end:   { notes: [600, 400], dur: [0.15, 0.25], type: 'sine', vol: 0.15 },
+  error:      { notes: [300, 250], dur: [0.15, 0.2], type: 'square', vol: 0.1 },
+};
+
+function playNotifSound(name) {
+  const ctx = _getNotifCtx();
+  if (!ctx) return;
+  const def = _SOUND_DEFS[name] || _SOUND_DEFS.default;
+  if (!def) return;
+  let t = ctx.currentTime;
+  def.notes.forEach((freq, i) => {
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.type = def.type;
+    osc.frequency.value = freq;
+    gain.gain.setValueAtTime(def.vol, t);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + def.dur[i]);
+    osc.start(t);
+    osc.stop(t + def.dur[i]);
+    t += def.dur[i];
+  });
+}
+
+function _isDeviceSilent() {
+  if (document.hasFocus && document.hasFocus()) return false;
+  return false;
+}
+
+function _shouldPlaySound(chatId) {
+  if (App.callActive) return false;
+  if (App._isMutedGlobal) return false;
+  if (chatId && App._mutedChats && App._mutedChats.has(chatId)) return false;
+  if (chatId) {
+    const customSound = getChatSound(chatId);
+    if (customSound === 'silent') return false;
+  }
+  if (document.hasFocus && document.hasFocus()) return true;
+  return true;
+}
+
+function playMsgReceivedSound(chatId) {
+  if (!_shouldPlaySound(chatId)) return;
+  const customSound = chatId ? getChatSound(chatId) : '';
+  const soundName = customSound && _SOUND_DEFS[customSound] ? customSound : 'default';
+  playNotifSound(soundName);
+  if (navigator.vibrate) navigator.vibrate([180, 80, 180]);
+}
+
+function playMsgSentSound() {
+  playNotifSound('sent');
+}
+
+function playCallIncomingRing() {
+  stopRingtone();
+  playNotifSound('call_ring');
+  _ringtoneInterval = setInterval(() => playNotifSound('call_ring'), 1200);
+  if (navigator.vibrate) navigator.vibrate([700, 250, 700, 250, 700, 250, 700, 250, 700]);
+}
+
+function playCallEndedSound() {
+  playNotifSound('call_end');
+}
+
 function formatDuration(sec) {
   const m = Math.floor(sec / 60);
   const s = sec % 60;
   return m + ':' + String(s).padStart(2, '0');
+}
+
+/* ══════════════════════════════════════════════════
+   15b. GROUP CALLS — Multi-peer mesh (up to 4)
+   ══════════════════════════════════════════════════ */
+function startGroupVoiceCall() { startGroupCall('voice'); }
+function startGroupVideoCall() { startGroupCall('video'); }
+
+async function startGroupCall(type) {
+  const chat = App.currentChat;
+  if (!chat || !App.db || !App.auth?.currentUser) return;
+  if (chat.type !== 'group') return startGroupCall._directFallback?.(type);
+  const uid = App.auth.currentUser.uid;
+  const memberIds = (chat.members || []).filter(m => m && m !== uid);
+  if (!memberIds.length) { showToast('No other members to call', 'info'); return; }
+
+  currentCallType = type;
+  App.callActive = true;
+  micMuted = false;
+  cameraOff = (type === 'voice');
+  activeCallMode = 'group';
+  activeGroupCallParticipants = [];
+
+  setEl('call-name', chat.name);
+  setEl('call-status', 'Calling ' + memberIds.length + ' people…');
+  hide('call-timer');
+  document.getElementById('call-screen')?.classList.remove('hidden');
+  document.getElementById('call-quality-text').textContent = type === 'video' ? 'HD Group Video' : 'HD Group Voice';
+  document.getElementById('btn-cam')?.classList.toggle('hidden', type === 'voice');
+  document.getElementById('remote-video')?.classList.add('hidden');
+  document.getElementById('local-video-container')?.classList.add('hidden');
+  document.getElementById('call-info-section')?.classList.remove('hidden');
+
+  const av = document.getElementById('call-avatar');
+  if (av) { av.className = 'w-32 h-32 rounded-full border-4 border-primary/30 flex items-center justify-center text-5xl bg-white/10 animate-pulse'; av.textContent = chat.initials || 'G'; }
+
+  try {
+    const constraints = { audio: true, video: type === 'video' ? { facingMode: preferredCameraFacingMode, width: { ideal: 1280 }, height: { ideal: 720 } } : false };
+    localCallStream = await navigator.mediaDevices.getUserMedia(constraints);
+    const localVideo = document.getElementById('local-video');
+    if (localVideo && type === 'video') { localVideo.srcObject = localCallStream; document.getElementById('local-video-container')?.classList.remove('hidden'); }
+
+    const allParticipants = [uid, ...memberIds];
+    const callRef = await App.db.collection('calls').add({
+      fromUserId: uid, fromUserName: App.currentUser?.displayName || 'User',
+      type, status: 'ringing', groupCall: true, groupId: chat.id,
+      groupName: chat.name, participantIds: allParticipants,
+      offer: null, participants: allParticipants,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    App._activeCallId = callRef.id;
+
+    listenForGroupCallParticipants(callRef.id, type);
+    listenForCallStatus(callRef.id);
+
+    callTimeoutTimer = setTimeout(() => {
+      if (App._activeCallId && App.callActive && !activeGroupCallParticipants.length) {
+        setEl('call-status', 'No answer');
+        endCall();
+      }
+    }, 45000);
+
+    requestWakeLock();
+
+  } catch (err) {
+    console.error('startGroupCall error:', err);
+    showToast('Could not start group call: ' + err.message, 'error');
+    endCall();
+  }
+}
+
+function listenForGroupCallParticipants(callId, callType) {
+  if (!App.db || !App.auth?.currentUser) return;
+  const uid = App.auth.currentUser.uid;
+
+  if (groupCallDocUnsubscribe) groupCallDocUnsubscribe();
+  groupCallDocUnsubscribe = App.db.collection('calls').doc(callId).onSnapshot(async doc => {
+    const data = doc.data();
+    if (!data) return;
+
+    if (data.status === 'ended' || data.status === 'cancelled') { endCall(); return; }
+
+    const participants = data.participantIds || [];
+    const existingPeers = new Set(groupCallPeerConnections.keys());
+
+    for (const puid of participants) {
+      if (puid === uid) continue;
+      if (groupCallPeerConnections.has(puid)) continue;
+
+      await _createGroupPeerConnection(callId, puid, callType, uid);
+    }
+
+    const participantNames = participants.map(p => p === uid ? 'You' : (data.participantNames?.[p] || p.substring(0, 6)));
+    setEl('call-status', activeGroupCallParticipants.length + 1 + ' connected');
+  });
+}
+
+async function _createGroupPeerConnection(callId, remoteUid, callType, myUid) {
+  if (!App.db) return;
+  try {
+    const rtcConfig = await getRtcConfig();
+    const pc = new RTCPeerConnection(rtcConfig);
+    groupCallPeerConnections.set(remoteUid, pc);
+
+    localCallStream.getTracks().forEach(track => pc.addTrack(track, localCallStream));
+
+    pc.onicecandidate = async (e) => {
+      if (e.candidate && App.db) {
+        await App.db.collection('calls').doc(callId).collection('candidates').add({
+          candidate: e.candidate.toJSON(), sender: myUid, targetUid: remoteUid,
+          createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        }).catch(() => {});
+      }
+    };
+
+    pc.ontrack = (e) => {
+      const stream = e.streams[0];
+      activeGroupCallParticipants = activeGroupCallParticipants.filter(p => p.uid !== remoteUid);
+      activeGroupCallParticipants.push({ uid: remoteUid, stream, pc });
+
+      if (callType === 'video') _renderGroupVideoGrid();
+      else {
+        const existingAudio = document.getElementById('group-audio-' + remoteUid);
+        if (existingAudio) { existingAudio.srcObject = stream; }
+        else { const audio = document.createElement('audio'); audio.id = 'group-audio-' + remoteUid; audio.srcObject = stream; audio.autoplay = true; document.body.appendChild(audio); }
+      }
+
+      const count = activeGroupCallParticipants.length + 1;
+      setEl('call-status', count + ' participant' + (count > 1 ? 's' : ''));
+    };
+
+    pc.onconnectionstatechange = () => {
+      if (pc.connectionState === 'failed') {
+        activeGroupCallParticipants = activeGroupCallParticipants.filter(p => p.uid !== remoteUid);
+        groupCallPeerConnections.delete(remoteUid);
+        pc.close();
+        _renderGroupVideoGrid();
+      }
+    };
+
+    const offer = await pc.createOffer();
+    await pc.setLocalDescription(offer);
+
+    await App.db.collection('calls').doc(callId).update({
+      ['offers.' + remoteUid]: { sdp: offer.sdp, type: offer.type, from: myUid }
+    });
+
+    const callDoc = await App.db.collection('calls').doc(callId).get();
+    const callData = callDoc.data();
+    if (callData?.offers?.[myUid] && callData.offers[myUid].from !== myUid) {
+      await pc.setRemoteDescription(new RTCSessionDescription(callData.offers[myUid]));
+      const answer = await pc.createAnswer();
+      await pc.setLocalDescription(answer);
+      await App.db.collection('calls').doc(callId).update({
+        ['answers.' + myUid]: { sdp: answer.sdp, type: answer.type }
+      });
+    }
+
+    _listenGroupCandidates(callId, remoteUid, pc, myUid);
+
+  } catch(e) { console.warn('Group peer connection error:', e); }
+}
+
+function _listenGroupCandidates(callId, remoteUid, pc, myUid) {
+  if (!App.db) return;
+  const unsub = App.db.collection('calls').doc(callId).collection('candidates')
+    .where('targetUid', '==', myUid)
+    .orderBy('createdAt').onSnapshot(snap => {
+      snap.docChanges().forEach(change => {
+        if (change.type === 'added') {
+          const c = change.doc.data();
+          if (c.sender === remoteUid && pc.signalingState !== 'closed') {
+            pc.addIceCandidate(new RTCIceCandidate(c.candidate)).catch(() => {});
+          }
+        }
+      });
+    });
+  groupCallCandidateUnsubscribes.push(unsub);
+}
+
+function _renderGroupVideoGrid() {
+  let grid = document.getElementById('group-video-grid');
+  if (!grid) {
+    grid = document.createElement('div');
+    grid.id = 'group-video-grid';
+    grid.className = 'absolute inset-0 z-0 p-2 grid gap-1';
+    document.getElementById('call-screen')?.insertBefore(grid, document.getElementById('call-screen').firstChild);
+  }
+  const count = activeGroupCallParticipants.length;
+  const cols = count <= 2 ? 2 : 2;
+  const rows = count <= 2 ? 1 : 2;
+  grid.style.gridTemplateColumns = 'repeat(' + cols + ', 1fr)';
+  grid.style.gridTemplateRows = 'repeat(' + rows + ', 1fr)';
+  grid.innerHTML = '';
+  activeGroupCallParticipants.forEach(p => {
+    const div = document.createElement('div');
+    div.className = 'relative rounded-lg overflow-hidden bg-black/50';
+    const video = document.createElement('video');
+    video.srcObject = p.stream;
+    video.autoplay = true;
+    video.playsinline = true;
+    video.className = 'w-full h-full object-cover';
+    div.appendChild(video);
+    const label = document.createElement('div');
+    label.className = 'absolute bottom-1 left-1 bg-black/50 text-white text-[10px] px-2 py-0.5 rounded';
+    label.textContent = p.uid.substring(0, 6);
+    div.appendChild(label);
+    grid.appendChild(div);
+  });
+  document.getElementById('remote-video')?.classList.add('hidden');
+  document.getElementById('call-info-section')?.classList.add('hidden');
+}
+
+async function _handleAcceptedGroupCall(callData) {
+  const { callId, type: callType, groupId } = callData;
+  const uid = App.auth?.currentUser?.uid;
+  if (!uid || !App.db) return;
+
+  currentCallType = callType;
+  App.callActive = true;
+  micMuted = false;
+  cameraOff = (callType === 'voice');
+  activeCallMode = 'group';
+  App._activeCallId = callId;
+  activeGroupCallParticipants = [];
+
+  const callDoc = await App.db.collection('calls').doc(callId).get();
+  const callSnap = callDoc.data();
+  setEl('call-name', callSnap?.groupName || 'Group Call');
+  setEl('call-status', 'Connecting…');
+  hide('call-timer');
+  document.getElementById('call-screen')?.classList.remove('hidden');
+  document.getElementById('call-quality-text').textContent = callType === 'video' ? 'HD Group Video' : 'HD Group Voice';
+  document.getElementById('btn-cam')?.classList.toggle('hidden', callType === 'voice');
+
+  try {
+    const constraints = { audio: true, video: callType === 'video' ? { facingMode: preferredCameraFacingMode, width: { ideal: 1280 }, height: { ideal: 720 } } : false };
+    localCallStream = await navigator.mediaDevices.getUserMedia(constraints);
+    const localVideo = document.getElementById('local-video');
+    if (localVideo && callType === 'video') { localVideo.srcObject = localCallStream; document.getElementById('local-video-container')?.classList.remove('hidden'); }
+
+    await App.db.collection('calls').doc(callId).update({ status: 'active' });
+    listenForGroupCallParticipants(callId, callType);
+    listenForCallStatus(callId);
+
+  } catch(err) { console.error('Accept group call error:', err); showToast('Could not join call', 'error'); endCall(); }
+}
+
+function cleanupGroupCalls() {
+  groupCallPeerConnections.forEach((pc, uid) => { pc.close(); });
+  groupCallPeerConnections.clear();
+  groupCallCandidateUnsubscribes.forEach(unsub => { unsub(); });
+  groupCallCandidateUnsubscribes = [];
+  if (groupCallDocUnsubscribe) { groupCallDocUnsubscribe(); groupCallDocUnsubscribe = null; }
+  activeGroupCallParticipants = [];
+  document.getElementById('group-video-grid')?.remove();
+  document.querySelectorAll('[id^="group-audio-"]').forEach(el => el.remove());
 }
 
 /* ══════════════════════════════════════════════════
@@ -4907,7 +5275,48 @@ function saveChatSound() {
   if (!select || !chatId) return;
   setChatSound(chatId, select.value);
   closeOverlay('sound-picker-overlay');
-  showToast(select.value ? 'Notification sound set' : 'Default sound restored', 'success');
+  showToast(select.value === 'silent' ? 'Notifications silenced for this chat' : select.value ? 'Notification sound set' : 'Default sound restored', 'success');
+}
+
+/* ─── Global + per-chat mute ─── */
+function toggleGlobalMute() {
+  App._isMutedGlobal = !App._isMutedGlobal;
+  try { localStorage.setItem('nsl_muted_global', App._isMutedGlobal ? '1' : '0'); } catch(_) {}
+  _updateGlobalMuteUI();
+}
+function _updateGlobalMuteUI() {
+  const icon = document.getElementById('global-mute-icon');
+  const label = document.getElementById('global-mute-label');
+  const toggle = document.getElementById('global-mute-toggle');
+  const knob = document.getElementById('global-mute-knob');
+  if (icon) icon.textContent = App._isMutedGlobal ? 'notifications_off' : 'notifications_active';
+  if (label) label.textContent = App._isMutedGlobal ? 'All sounds muted' : 'All sounds on';
+  if (toggle) toggle.style.background = App._isMutedGlobal ? 'var(--outline-variant)' : 'var(--primary)';
+  if (knob) knob.style.transform = App._isMutedGlobal ? 'translateX(0px)' : 'translateX(20px)';
+}
+function toggleMuteChat() {
+  const chatId = App.currentChat?.id;
+  if (!chatId) return;
+  if (!App._mutedChats) App._mutedChats = new Set();
+  if (App._mutedChats.has(chatId)) {
+    App._mutedChats.delete(chatId);
+    showToast('Chat unmuted', 'success');
+  } else {
+    App._mutedChats.add(chatId);
+    showToast('Chat muted — no notification sounds', 'info');
+  }
+  try { localStorage.setItem('nsl_muted_chats', JSON.stringify([...App._mutedChats])); } catch(_) {}
+}
+function _loadMuteState() {
+  try {
+    App._isMutedGlobal = localStorage.getItem('nsl_muted_global') === '1';
+    const arr = JSON.parse(localStorage.getItem('nsl_muted_chats') || '[]');
+    App._mutedChats = new Set(arr);
+  } catch(_) {
+    App._isMutedGlobal = false;
+    App._mutedChats = new Set();
+  }
+  _updateGlobalMuteUI();
 }
 
 /* ══════════════════════════════════════════════════

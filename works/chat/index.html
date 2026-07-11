@@ -280,6 +280,9 @@
           <button class="text-on-surface-variant hover:text-on-surface transition-all p-2 rounded-full hover:bg-surface-container/50" onclick="openChatSearch()" title="Search chat" aria-label="Search messages">
             <span class="material-symbols-outlined">search</span>
           </button>
+          <button class="text-on-surface-variant hover:text-on-surface transition-all p-2 rounded-full hover:bg-surface-container/50" onclick="toggleMuteChat()" id="btn-chat-mute" title="Toggle mute" aria-label="Toggle notification mute">
+            <span class="material-symbols-outlined" id="chat-mute-icon">notifications</span>
+          </button>
           <button class="text-on-surface-variant hover:text-on-surface transition-all p-2 rounded-full hover:bg-surface-container/50" onclick="openChatMenu(this)" id="btn-chat-menu" title="More options" aria-label="More options">
             <span class="material-symbols-outlined">more_vert</span>
           </button>
@@ -614,6 +617,24 @@
           </div>
 
           <div class="space-y-2">
+            <h4 class="text-xs font-bold text-on-surface-variant uppercase tracking-wider pl-1">Notifications & Sounds</h4>
+            <div class="bg-surface-container-low border border-outline-variant/20 rounded-xl overflow-hidden divide-y divide-outline-variant/10">
+              <div class="flex items-center justify-between p-4" id="global-mute-row">
+                <div class="flex items-center gap-3">
+                  <span class="material-symbols-outlined text-primary" id="global-mute-icon">notifications_active</span>
+                  <div>
+                    <p class="text-sm font-bold">Notification Sounds</p>
+                    <p class="text-xs text-on-surface-variant" id="global-mute-label">All sounds on</p>
+                  </div>
+                </div>
+                <button class="relative w-11 h-6 rounded-full transition-colors duration-200 cursor-pointer flex-shrink-0" id="global-mute-toggle" onclick="toggleGlobalMute()" style="background:var(--primary)">
+                  <span class="absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform duration-200" id="global-mute-knob" style="transform:translateX(20px)"></span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div class="space-y-2">
             <h4 class="text-xs font-bold text-error uppercase tracking-wider pl-1">Danger Zone</h4>
             <div class="bg-surface-container-low border border-error/10 rounded-xl overflow-hidden divide-y divide-outline-variant/10">
               <div class="flex items-center justify-between p-4 cursor-pointer hover:bg-error/5 transition-colors text-error" onclick="confirmClearAllChats()">
@@ -877,6 +898,7 @@
       <label class="text-sm font-semibold text-on-surface-variant block mb-2">Choose a notification sound</label>
       <select id="chat-sound-select" class="w-full bg-surface-container border border-outline-variant/30 rounded-xl px-4 py-3 text-sm text-on-surface mb-4">
         <option value="">Default</option>
+        <option value="silent">Silent</option>
         <option value="notification_1">Notification 1</option>
         <option value="notification_2">Notification 2</option>
         <option value="notification_3">Notification 3</option>
