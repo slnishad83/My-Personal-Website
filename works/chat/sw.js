@@ -157,7 +157,7 @@ self.addEventListener('notificationclick', event => {
   );
 });
 
-const CACHE_NAME = 'team-chat-v226-ui-shell';
+const CACHE_NAME = 'team-chat-v227-call-fix';
 const STATIC_ASSETS = [
   'chat.css',
   'config.js',
@@ -179,6 +179,7 @@ const STATIC_ASSETS = [
   'virtual-scroll.js',
   'accessibility.js',
   'keyboard-shortcuts.js',
+  'chat-missing-features.js',
   '../app-extras.js',
   '../app.js'
 ];

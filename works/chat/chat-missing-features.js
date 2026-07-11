@@ -339,7 +339,7 @@
     const btn = document.createElement('button');
     btn.id = 'holdCallBtn';
     btn.type = 'button';
-    btn.className = 'call-icon-btn';
+    btn.className = 'w-14 h-14 bg-white/10 rounded-full flex items-center justify-center hover:bg-white/20 transition-all text-white';
     btn.setAttribute('aria-label', 'Hold call');
     btn.setAttribute('aria-pressed', 'false');
     btn.dataset.controlLabel = 'HOLD';
@@ -371,17 +371,15 @@
       btn.dataset.controlLabel = _callOnHold ? 'RESUME' : 'HOLD';
     }
 
-    // Show hold banner in call modal
+    // Show hold banner in call screen
     let holdBanner = document.getElementById('callHoldBanner');
     if (_callOnHold) {
       if (!holdBanner) {
         holdBanner = document.createElement('div');
         holdBanner.id = 'callHoldBanner';
+        holdBanner.className = 'fixed top-4 left-1/2 -translate-x-1/2 z-[150] bg-surface-container text-on-surface px-4 py-2 rounded-full shadow-lg text-sm font-semibold';
         holdBanner.textContent = 'Call on hold — tap Resume to continue';
-        const callModal = document.getElementById('callModal');
-        const callInfo = callModal?.querySelector('.call-info, .call-avatar-area, .call-modal-top');
-        if (callInfo) callInfo.appendChild(holdBanner);
-        else if (callModal) callModal.prepend(holdBanner);
+        document.body.appendChild(holdBanner);
       }
       holdBanner.style.display = 'flex';
     } else {

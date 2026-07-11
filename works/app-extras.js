@@ -1958,6 +1958,7 @@ let _waveformAnim  = null;
 const REC_MAX_SECONDS = 300; // 5 minutes
 
 function startRecording() {
+  if (App.isRecording) { cancelRecording(); }
   if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
     showToast('Microphone not supported on this device', 'error');
     return;

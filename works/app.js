@@ -89,6 +89,13 @@ document.addEventListener('DOMContentLoaded', () => {
   setupKeyboardShortcuts();
   setupOnlineStatus();
   setupAutoResize();
+
+  window.addEventListener('popstate', (e) => {
+    if (App.callActive && document.getElementById('call-screen') && !document.getElementById('call-screen').classList.contains('hidden')) {
+      minimizeCall();
+      history.pushState({ callMinimized: true }, '');
+    }
+  });
   // Load recent emojis from localStorage
   try { const r = JSON.parse(localStorage.getItem('nsl_emoji_recent') || '[]'); if (r.length) App.emojiCategories.recent = r; } catch(_) {}
   App._currentEmojiCat = 'recent';
@@ -2804,6 +2811,7 @@ async function beginCall(type) {
   setEl('call-status', 'Calling…');
   hide('call-timer');
   document.getElementById('call-screen')?.classList.remove('hidden');
+  history.pushState({ callActive: true }, '');
   document.getElementById('call-quality-text').textContent = type === 'video' ? 'HD Video call' : 'HD Voice call';
   document.getElementById('btn-cam')?.classList.toggle('hidden', type === 'voice');
   document.getElementById('btn-screenshare')?.classList.toggle('hidden', type === 'voice');
@@ -2925,7 +2933,7 @@ function listenForCallStatus(callId) {
   callDocUnsubscribe = App.db.collection('calls').doc(callId).onSnapshot(doc => {
     const data = doc.data();
     if (!data) return;
-    if (data.status === 'ended' || data.status === 'missed' || data.status === 'rejected') endCall();
+    if (data.status === 'ended' || data.status === 'missed' || data.status === 'rejected' || data.status === 'cancelled') endCall();
   });
 }
 
@@ -2933,7 +2941,9 @@ function startCallTimer() {
   clearInterval(callDurationTimer);
   callDurationTimer = setInterval(() => {
     const s = Math.floor((Date.now() - callStartedAt) / 1000);
-    setEl('call-timer', formatDuration(s));
+    const dur = formatDuration(s);
+    setEl('call-timer', dur);
+    setEl('bubble-call-timer', dur);
   }, 1000);
 }
 
@@ -2943,9 +2953,15 @@ function endCall() {
   clearTimeout(callTimeoutTimer);
   clearInterval(callDurationTimer);
   clearInterval(callHeartbeatTimer);
+  if (_callQualityInterval) { clearInterval(_callQualityInterval); _callQualityInterval = null; }
   stopRingtone();
 
   if (_screenShareStream) { _screenShareStream.getTracks().forEach(t => t.stop()); _screenShareStream = null; _screenShareSender = null; }
+  App._incomingCallData = null;
+  activeCallMode = null;
+  speakerOn = false;
+  micMuted = false;
+  cameraOff = false;
 
   const duration = callStartedAt ? Math.floor((Date.now() - callStartedAt) / 1000) : 0;
 
@@ -2963,6 +2979,8 @@ function endCall() {
   const lv = document.getElementById('local-video');
   if (lv) lv.srcObject = null;
   document.getElementById('call-screen')?.classList.add('hidden');
+  const cb = document.getElementById('call-bubble');
+  if (cb) cb.style.display = 'none';
   document.getElementById('remote-video')?.classList.add('hidden');
   document.getElementById('local-video-container')?.classList.add('hidden');
   document.getElementById('btn-screenshare')?.classList.add('hidden');
@@ -3025,19 +3043,39 @@ function toggleSpeaker() {
   if (remoteCallStream) {
     const audioEl = document.getElementById('remote-video');
     if (audioEl) {
-      audioEl.setSinkId?.(speakerOn ? '' : 'default').catch(() => {});
-      audioEl.volume = speakerOn ? 1.0 : 0.8;
+      audioEl.volume = speakerOn ? 1.0 : 0.7;
+      if (speakerOn && typeof audioEl.setSinkId === 'function') {
+        navigator.mediaDevices?.enumerateDevices?.().then(devices => {
+          const speaker = devices.find(d => d.kind === 'audiooutput' && d.label.toLowerCase().includes('speaker'));
+          if (speaker) audioEl.setSinkId(speaker.deviceId).catch(() => {});
+        }).catch(() => {});
+      }
     }
   }
 }
 
 function minimizeCall() {
   document.getElementById('call-screen')?.classList.add('hidden');
-  showToast('Call active — tap status to return', 'info');
+  if (App.callActive) {
+    const bubble = document.getElementById('call-bubble');
+    if (bubble) {
+      bubble.style.display = 'flex';
+      setEl('bubble-call-name', document.getElementById('call-name')?.textContent || 'Call');
+    }
+    if (navigator.vibrate) navigator.vibrate(30);
+  }
+}
+
+function maximizeCall() {
+  if (!App.callActive) return;
+  const bubble = document.getElementById('call-bubble');
+  if (bubble) bubble.style.display = 'none';
+  document.getElementById('call-screen')?.classList.remove('hidden');
 }
 
 let _screenShareStream = null;
 let _screenShareSender = null;
+let _callQualityInterval = null;
 
 async function toggleScreenShare() {
   if (_screenShareStream) {
@@ -3070,6 +3108,7 @@ async function toggleScreenShare() {
 
 function startCallQualityAdaptation() {
   if (!peerConnection || currentCallType !== 'video') return;
+  clearInterval(_callQualityInterval);
   const adapt = async () => {
     if (!peerConnection || !App.callActive) return;
     try {
@@ -3091,7 +3130,7 @@ function startCallQualityAdaptation() {
       }
     } catch(_) {}
   };
-  setInterval(adapt, 5000);
+  _callQualityInterval = setInterval(adapt, 5000);
 }
 
 function acceptCall() {
@@ -3128,10 +3167,15 @@ async function _handleAcceptedCall(callData) {
   setEl('call-status', 'Connecting…');
   hide('call-timer');
   document.getElementById('call-screen')?.classList.remove('hidden');
+  const _cb = document.getElementById('call-bubble');
+  if (_cb) _cb.style.display = 'none';
+  history.pushState({ callActive: true }, '');
   document.getElementById('call-quality-text').textContent = callType === 'video' ? 'HD Video call' : 'HD Voice call';
   document.getElementById('btn-cam')?.classList.toggle('hidden', callType === 'voice');
+  document.getElementById('btn-screenshare')?.classList.toggle('hidden', true);
   document.getElementById('remote-video')?.classList.add('hidden');
   document.getElementById('local-video-container')?.classList.add('hidden');
+  document.getElementById('call-info-section')?.classList.remove('hidden');
 
   const av = document.getElementById('call-avatar');
   if (av) { av.className = 'w-32 h-32 rounded-full border-4 border-primary/30 flex items-center justify-center text-5xl bg-white/10 animate-pulse'; av.textContent = (fromUserName || '?')[0].toUpperCase(); }
@@ -3169,8 +3213,11 @@ async function _handleAcceptedCall(callData) {
         show('call-timer');
         callStartedAt = Date.now();
         startCallTimer();
+        startCallQualityAdaptation();
+        document.getElementById('btn-screenshare')?.classList.toggle('hidden', currentCallType === 'voice');
         App.db.collection('calls').doc(callId).update({ status: 'active', startedAt: firebase.firestore.FieldValue.serverTimestamp() }).catch(() => {});
       } else if (state === 'failed') {
+        setEl('call-status', 'Reconnecting…');
         try { peerConnection?.restartIce(); } catch(_) {}
       }
     };
@@ -3188,6 +3235,8 @@ async function _handleAcceptedCall(callData) {
 
     listenForCallCandidates(callId);
     listenForCallStatus(callId);
+    requestWakeLock();
+    startCallHeartbeat(callId);
 
   } catch (err) {
     console.error('Accept call error:', err);
@@ -3444,6 +3493,8 @@ function listenForGroupCallParticipants(callId, callType) {
     }
 
     const participantNames = participants.map(p => p === uid ? 'You' : (data.participantNames?.[p] || p.substring(0, 6)));
+    App._groupParticipantNames = {};
+    participants.forEach((p, i) => { App._groupParticipantNames[p] = participantNames[i]; });
     setEl('call-status', activeGroupCallParticipants.length + 1 + ' connected');
 
     if (data.answers) {
@@ -3533,8 +3584,9 @@ async function _createGroupPeerConnection(callId, remoteUid, callType, myUid) {
 
     pc.ontrack = (e) => {
       const stream = e.streams[0];
+      const name = App._groupParticipantNames?.[remoteUid] || remoteUid.substring(0, 6);
       activeGroupCallParticipants = activeGroupCallParticipants.filter(p => p.uid !== remoteUid);
-      activeGroupCallParticipants.push({ uid: remoteUid, stream, pc });
+      activeGroupCallParticipants.push({ uid: remoteUid, stream, pc, name });
 
       if (callType === 'video') _renderGroupVideoGrid();
       else {
@@ -3660,6 +3712,8 @@ async function _handleAcceptedGroupCall(callData) {
     await App.db.collection('calls').doc(callId).update({ status: 'active' });
     listenForGroupCallParticipants(callId, callType);
     listenForCallStatus(callId);
+    requestWakeLock();
+    startCallHeartbeat(callId);
 
   } catch(err) { console.error('Accept group call error:', err); showToast('Could not join call', 'error'); endCall(); }
 }
