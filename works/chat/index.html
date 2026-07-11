@@ -428,6 +428,9 @@
             <button class="w-10 h-10 flex items-center justify-center text-on-surface-variant hover:text-primary hover:bg-surface-variant/30 rounded-full transition-all" onclick="toggleEmojiPicker()" aria-label="Emoji picker">
               <span class="material-symbols-outlined">mood</span>
             </button>
+            <button class="w-10 h-10 flex items-center justify-center text-on-surface-variant hover:text-primary hover:bg-surface-variant/30 rounded-full transition-all" onclick="openGifPicker()" aria-label="GIF search" title="GIFs">
+              <span class="material-symbols-outlined">gif_box</span>
+            </button>
             <button class="w-10 h-10 flex items-center justify-center text-on-surface-variant hover:text-primary hover:bg-surface-variant/30 rounded-full transition-all" onclick="toggleFormatBar()" aria-label="Text formatting">
               <span class="material-symbols-outlined">format_size</span>
             </button>
@@ -459,8 +462,8 @@
         <button class="flex items-center gap-3 w-full px-3 py-2 rounded-xl text-left text-xs font-semibold hover:bg-surface-variant transition-colors" onclick="shareLocation()">
           <span class="text-base">📍</span> Location
         </button>
-        <button class="flex items-center gap-3 w-full px-3 py-2 rounded-xl text-left text-xs font-semibold hover:bg-surface-variant transition-colors" onclick="startLiveLocation()">
-          <span class="text-base">🔴</span> Live Location
+        <button class="flex items-center gap-3 w-full px-3 py-2 rounded-xl text-left text-xs font-semibold hover:bg-surface-variant transition-colors" onclick="toggleAttachMenu();openPollCreator()">
+          <span class="text-base">📊</span> Poll
         </button>
       </div>
 
@@ -626,6 +629,16 @@
                 </div>
                 <span class="material-symbols-outlined text-on-surface-variant">chevron_right</span>
               </div>
+              <div class="flex items-center justify-between p-4 cursor-pointer hover:bg-surface-container transition-colors" id="appPermissionsBtn" onclick="PermissionsManager.showScreen()">
+                <div class="flex items-center gap-3">
+                  <span class="material-symbols-outlined text-primary">shield</span>
+                  <div>
+                    <p class="text-sm font-bold">App Permissions</p>
+                    <p class="text-xs text-on-surface-variant">Camera, mic, notifications & more</p>
+                  </div>
+                </div>
+                <span class="material-symbols-outlined text-on-surface-variant">chevron_right</span>
+              </div>
             </div>
           </div>
 
@@ -691,6 +704,10 @@
         <button class="flex-1 flex items-center gap-3 bg-surface-container-high hover:brightness-110 p-3 rounded-xl transition-all" onclick="openNewGroup()">
           <span class="text-xl">👥</span>
           <div class="text-left"><p class="text-sm font-bold leading-none">New Group</p><p class="text-[10px] text-on-surface-variant mt-0.5">Start group channel</p></div>
+        </button>
+        <button class="flex-1 flex items-center gap-3 bg-surface-container-high hover:brightness-110 p-3 rounded-xl transition-all" onclick="closeModal('new-chat-overlay');openBroadcastCreator()">
+          <span class="text-xl">📢</span>
+          <div class="text-left"><p class="text-sm font-bold leading-none">Broadcast</p><p class="text-[10px] text-on-surface-variant mt-0.5">Message multiple contacts</p></div>
         </button>
       </div>
       <div class="modal-body overflow-y-auto flex-1 p-2 space-y-1 custom-scrollbar" id="contact-list">

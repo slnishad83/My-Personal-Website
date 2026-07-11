@@ -338,7 +338,8 @@ function subscribeToChats() {
           unread: data.unreadCount?.[uid] || 0,
           pinned: data.pinned?.[uid] || false,
           muted: data.muted?.[uid] || false,
-          status: otherUser.status
+          status: otherUser.status,
+          disappearingMessages: data.disappearingMessages || 0
         };
         
         if (data.lastMessage && data.lastMessageEncrypted && data.lastMessageIv) {
@@ -405,7 +406,8 @@ function subscribeToGroups() {
           unread: data.unreadCount?.[uid] || 0,
           pinned: data.pinned?.[uid] || false,
           muted: data.muted?.[uid] || false,
-          memberCount: data.members?.length || 0
+          memberCount: data.members?.length || 0,
+          disappearingMessages: data.disappearingMessages || 0
         });
       });
       App.groupChats = groupsList;
@@ -736,12 +738,22 @@ function subscribeToMessages(chatId) {
         // localStorage persistence backup
         { const ls = loadDeletedMsgIds(chatId); if (ls.has(doc.id)) return; }
         
+        // Skip expired disappearing messages
+        if (data.expiresAt) {
+          const expiresAt = typeof data.expiresAt === 'number' ? data.expiresAt : (data.expiresAt?.toMillis ? data.expiresAt.toMillis() : 0);
+          if (expiresAt > 0 && Date.now() > expiresAt) return;
+        }
+        
         let type = 'text';
         let url = '';
         let duration = '';
         let fileName = '';
         let fileSize = '';
-        
+
+        if (data.type === 'poll') {
+          type = 'poll';
+        }
+
         if (data.attachment) {
           const att = data.attachment;
           if (att.type === 'image') {
@@ -792,7 +804,10 @@ function subscribeToMessages(chatId) {
           mapUrl: a.mapUrl || url,
           contactName: a.contactName,
           contactEmail: a.contactEmail,
-          starred: data.starred || false
+          starred: data.starred || false,
+          edited: data.edited || false,
+          forwarded: data.forwarded || false,
+          liveLocation: data.liveLocation || null,
         };
         
         if (data.encrypted && data.iv) {
@@ -802,7 +817,38 @@ function subscribeToMessages(chatId) {
               decryptMessageText(data.text, data.iv, peerUid).then(decryptedText => {
                 if (decryptedText !== null) {
                   msgObj.text = decryptedText;
-                } else {
+    } else if (msg.type === 'poll' && msg.poll) {
+      const poll = msg.poll;
+      const totalVotes = poll.options.reduce((sum, o) => sum + (o.voters?.length || 0), 0);
+      const myUid = App.auth?.currentUser?.uid;
+      contentHTML = `
+        <div class="max-w-[340px] rounded-xl overflow-hidden ${isMe ? 'bg-primary/10 border border-primary/20' : 'bg-surface-container border border-outline-variant/20'}">
+          <div class="px-4 py-3 border-b border-outline-variant/20">
+            <div class="text-sm font-semibold mb-1">\ud83d\udcca ${escHtml(poll.question)}</div>
+            <div class="text-[10px] text-on-surface-variant">${totalVotes} vote${totalVotes !== 1 ? 's' : ''} \u00b7 ${poll.allowMultiple ? 'Multiple choice' : 'Single choice'}</div>
+          </div>
+          <div class="p-3 space-y-2">
+            ${poll.options.map((opt, i) => {
+              const count = opt.voters?.length || 0;
+              const pct = totalVotes > 0 ? Math.round(count / totalVotes * 100) : 0;
+              const isSelected = opt.voters?.includes(myUid);
+              return `
+                <div class="relative cursor-pointer rounded-lg overflow-hidden border ${isSelected ? 'border-primary/50' : 'border-outline-variant/30'} hover:border-primary/30 transition-all" onclick="votePoll('${msg.id}', ${i})">
+                  <div class="absolute inset-0 bg-primary/15 transition-all" style="width:${pct}%"></div>
+                  <div class="relative flex items-center justify-between px-3 py-2">
+                    <div class="flex items-center gap-2">
+                      ${isSelected ? '<span class="material-symbols-outlined text-primary text-sm">check_circle</span>' : '<span class="material-symbols-outlined text-on-surface-variant/40 text-sm">radio_button_unchecked</span>'}
+                      <span class="text-sm">${escHtml(opt.text)}</span>
+                    </div>
+                    <span class="text-xs font-medium text-on-surface-variant">${count > 0 ? pct + '%' : ''}</span>
+                  </div>
+                </div>
+              `;
+            }).join('')}
+          </div>
+        </div>
+      `;
+    } else {
                   msgObj.text = "🔒 Encrypted message";
                 }
               })
@@ -842,6 +888,28 @@ function subscribeToMessages(chatId) {
 /* ─── Persistent deleted state (survives refresh) ─── */
 function loadDeletedCallIds() {
   try { return new Set(JSON.parse(localStorage.getItem('nsl_deleted_calls') || '[]')); } catch { return new Set(); }
+}
+
+// Disappearing messages cleanup — runs every 5 minutes
+let _disappearCleanupInterval = null;
+function startDisappearingMessagesCleanup() {
+  if (_disappearCleanupInterval) return;
+  _disappearCleanupInterval = setInterval(async () => {
+    if (!App.db || !App.auth?.currentUser) return;
+    try {
+      const cutoff = Date.now();
+      const snap = await App.db.collection('messages')
+        .where('expiresAt', '>', 0)
+        .where('expiresAt', '<', cutoff)
+        .limit(50)
+        .get();
+      if (!snap.empty) {
+        const batch = App.db.batch();
+        snap.forEach(doc => batch.delete(doc.ref));
+        await batch.commit();
+      }
+    } catch(_) {}
+  }, 5 * 60 * 1000);
 }
 function addDeletedCallId(logId) {
   const ids = loadDeletedCallIds(); ids.add(logId);
@@ -895,6 +963,7 @@ function checkSession() {
           subscribeToChats();
           subscribeToGroups();
           subscribeToCallLogs(App.currentUser.uid);
+          startDisappearingMessagesCleanup();
           loadBlockedUsers();
           listenForIncomingCalls();
           handleCallNotificationUrlParams();
@@ -2180,6 +2249,10 @@ function openChat(chatId) {
   const chat = App.chats.find(c => c.id === chatId);
   if (!chat) return;
 
+  if (App.currentChat && App.currentChat.id !== chatId) {
+    if (typeof stopLiveLocation === 'function') stopLiveLocation();
+  }
+
   App.currentChat = chat;
   chat.unread = 0;
 
@@ -2363,6 +2436,198 @@ function openChat(chatId) {
 /* ══════════════════════════════════════════════════
    10. MESSAGE RENDERING
    ══════════════════════════════════════════════════ */
+App._vsActive = false;
+App._vsChatId = null;
+
+function renderSingleMessageHTML(msg, msgs, i, lastDate) {
+  const msgDate = new Date(msg.time);
+  const dateKey = msgDate.toDateString();
+  let sep = '';
+  if (dateKey !== lastDate) {
+    sep = `<div class="flex justify-center my-6"><span class="bg-surface-container-highest/50 px-4 py-1 rounded-full text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">${formatDateSep(msgDate)}</span></div>`;
+  }
+
+  const isMe = msg.from === 'me';
+  const contact = isMe ? null : (App.contacts.find(c=>c.uid===msg.from) || App.chats.find(c=>c.uid===msg.from));
+  const showAvatar = !isMe && (i === msgs.length-1 || msgs[i+1]?.from !== msg.from);
+  const showSender = !isMe && App.currentChat?.type==='group';
+  const senderName = contact?.name || 'Unknown';
+
+  const avatarHTML = showAvatar
+    ? (contact?.photoURL
+      ? `<img src="${contact.photoURL}" alt="${escHtml(senderName)}" class="w-10 h-10 rounded-full object-cover border border-outline-variant/10">`
+      : contact?.initials
+        ? `<div class="w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm bg-surface-container-highest text-on-surface-variant">${contact.initials}</div>`
+        : `<div class="w-10 h-10 rounded-full flex items-center justify-center bg-surface-container-highest text-on-surface-variant"><span class="material-symbols-outlined text-sm">person_off</span></div>`)
+    : `<div class="w-10"></div>`;
+
+  const reactions = (msg.reactions||[]).map(r =>
+    `<div class="flex items-center gap-1 bg-surface-container border border-outline-variant/30 px-2 py-0.5 rounded-lg text-xs cursor-pointer hover:bg-surface-variant transition-all ${r.mine?'border-primary/50 text-primary':''}" onclick="toggleReaction('${msg.id}','${r.emoji}')">
+      <span>${r.emoji}</span><span class="font-bold text-[10px]">${r.count}</span>
+    </div>`
+  ).join('');
+
+  const tickIcon = isMe
+    ? msg.status==='read'      ? '<span class="material-symbols-outlined text-[14px] text-primary" style="font-variation-settings: \'FILL\' 1;">done_all</span>'
+    : msg.status==='delivered' ? '<span class="material-symbols-outlined text-[14px] text-on-surface-variant" style="font-variation-settings: \'FILL\' 1;">done_all</span>'
+    :                            '<span class="material-symbols-outlined text-[14px] text-on-surface-variant">done</span>'
+    : '';
+
+  const replyHTML = msg.replyTo ? `
+    <div class="border-l-2 border-primary/50 pl-3 mb-2 opacity-80 text-xs">
+      <div class="font-bold text-primary">${escHtml(msg.replyTo.name)}</div>
+      <div class="truncate text-on-surface-variant">${escHtml(msg.replyTo.text)}</div>
+    </div>` : '';
+
+  let contentHTML = '';
+  if (msg.type === 'image') {
+    contentHTML = `<div class="bubble-media cursor-pointer relative rounded-xl overflow-hidden max-w-full" onclick="openMediaViewer('${msg.id}')">
+      <img src="${escHtml(msg.url)}" alt="Image" loading="lazy" class="w-full max-h-48 object-cover rounded-xl border border-outline-variant/20">
+      <div class="absolute inset-0 bg-black/0 hover:bg-black/10 transition-all rounded-xl flex items-center justify-center opacity-0 hover:opacity-100">
+        <span class="material-symbols-outlined text-white text-2xl drop-shadow">fullscreen</span>
+      </div>
+    </div>`;
+  } else if (msg.type === 'video') {
+    contentHTML = `<div class="bubble-media relative rounded-xl overflow-hidden max-w-full">
+      <video src="${escHtml(msg.url)}" class="max-h-48 rounded-xl border border-outline-variant/20 w-full" preload="metadata" controls playsinline style="cursor:pointer"></video>
+      <button onclick="event.stopPropagation();openMediaViewer('${msg.id}')" class="absolute top-2 right-2 w-8 h-8 bg-black/50 rounded-full flex items-center justify-center text-white hover:bg-black/70 transition-colors" title="Full screen">
+        <span class="material-symbols-outlined text-sm">fullscreen</span>
+      </button>
+    </div>`;
+  } else if (msg.type === 'voice') {
+    const dur = msg.duration || '0:00';
+    const durSec = msg.durationSec || 0;
+    contentHTML = `<div class="voice-player bg-surface-container-high/40 p-2.5 rounded-xl border border-outline-variant/20" data-msg-id="${msg.id}">
+      <div class="flex items-center gap-2">
+        <button class="voice-play w-8 h-8 rounded-full bg-primary text-on-primary flex items-center justify-center shrink-0" data-msg-id="${msg.id}" onclick="playVoice('${msg.id}')" aria-label="Play voice message">▶</button>
+        <div class="flex-1">
+          <input type="range" min="0" max="${durSec || 100}" value="0" step="0.1" class="voice-scrub w-full h-1 accent-primary cursor-pointer" data-msg-id="${msg.id}" oninput="scrubVoice('${msg.id}', this.value)" style="accent-color:var(--primary)">
+        </div>
+        <button class="voice-speed text-[10px] font-bold px-1.5 py-0.5 rounded bg-surface-variant/60 hover:bg-surface-variant text-on-surface-variant cursor-pointer" data-msg-id="${msg.id}" data-speed="1" onclick="cycleVoiceSpeed(this)">1x</button>
+        <span class="text-[10px] font-timestamp text-on-surface-variant voice-time" data-msg-id="${msg.id}">${dur}</span>
+      </div>
+    </div>`;
+  } else if (msg.type === 'doc') {
+    contentHTML = `<div class="flex items-center gap-4 bg-surface-container-high p-4 rounded-xl border border-outline-variant/20 cursor-pointer" onclick="openMediaViewer('${msg.id}')">
+      <div class="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center text-primary"><span class="material-symbols-outlined">description</span></div>
+      <div class="flex-1"><p class="text-xs font-bold truncate">${escHtml(msg.fileName||'Document')}</p><p class="text-[10px] text-on-surface-variant">${msg.fileSize||''}</p></div>
+      <span class="material-symbols-rounded" style="font-size:20px;opacity:.7">download</span>
+    </div>`;
+  } else if (msg.type === 'location') {
+    const mapUrlVal = msg.mapUrl || `https://maps.google.com/?q=${msg.lat},${msg.lng}`;
+    const staticMapUrl = `https://staticmap.openstreetmap.de/staticmap.php?center=${msg.lat},${msg.lng}&zoom=15&size=280x140&markers=${msg.lat},${msg.lng},red-pushpin`;
+    if (msg.liveLocation && msg.liveLocation.active) {
+      const remaining = msg.liveLocation.expiresAt - Date.now();
+      if (remaining > 0) {
+        contentHTML = `<div class="rounded-xl overflow-hidden border border-outline-variant/20 max-w-[300px]">
+          <div class="bg-secondary/10 px-3 py-2 flex items-center gap-2">
+            <div class="w-2 h-2 rounded-full bg-secondary animate-pulse"></div>
+            <span class="text-xs font-medium text-secondary">Live Location · ${formatLiveDuration(remaining)} left</span>
+          </div>
+          <a href="${escHtml(mapUrlVal)}" target="_blank" rel="noopener" class="block relative">
+            <img src="${escHtml(staticMapUrl)}" alt="Live location" class="w-full h-[150px] object-cover" onerror="this.style.display='none'">
+            <div class="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/50 to-transparent p-2">
+              <span class="text-white text-xs">Tap to view on map</span>
+            </div>
+          </a>
+        </div>`;
+      } else {
+        msg.liveLocation.active = false;
+        contentHTML = `<div onclick="window.open('${escHtml(mapUrlVal)}','_blank')" class="location-preview border border-outline-variant/20 max-w-full">
+          <img src="${escHtml(staticMapUrl)}" alt="Location" loading="lazy" onerror="this.style.display='none'">
+          <div class="location-label"><span class="material-symbols-outlined text-primary text-sm">location_on</span><span>Shared location</span></div>
+        </div>`;
+      }
+    } else {
+      contentHTML = `<div onclick="window.open('${escHtml(mapUrlVal)}','_blank')" class="location-preview border border-outline-variant/20 max-w-full">
+        <img src="${escHtml(staticMapUrl)}" alt="Location" loading="lazy" onerror="this.style.display='none'">
+        <div class="location-label"><span class="material-symbols-outlined text-primary text-sm">location_on</span><span>Shared location</span></div>
+      </div>`;
+    }
+  } else if (msg.type === 'poll') {
+    const poll = msg.poll || {};
+    const opts = (poll.options || []).map((o, oi) => {
+      const total = poll.options.reduce((s, x) => s + (x.voters||[]).length, 0);
+      const pct = total > 0 ? Math.round((o.voters||[]).length / total * 100) : 0;
+      const mine = (o.voters||[]).includes(App.user?.uid);
+      return `<div class="poll-option cursor-pointer rounded-lg border ${mine?'border-primary bg-primary/10':'border-outline-variant/30 bg-surface-container-high/40'} p-2 mb-1 relative overflow-hidden" onclick="votePoll('${msg.id}',${oi})">
+        <div class="poll-bar absolute inset-y-0 left-0 bg-primary/20 transition-all" style="width:${pct}%"></div>
+        <div class="relative flex items-center gap-2"><span class="text-xs font-bold flex-1">${escHtml(o.text)}</span><span class="text-[10px] text-on-surface-variant">${o.voters?.length||0}</span></div>
+      </div>`;
+    }).join('');
+    contentHTML = `<div class="rounded-xl border border-outline-variant/20 overflow-hidden p-3">
+      <p class="text-sm font-bold mb-2">📊 ${escHtml(poll.question||'Poll')}</p>${opts}
+      <p class="text-[10px] text-on-surface-variant mt-1">${poll.options?.reduce((s,o)=>s+(o.voters||[]).length,0)||0} votes${poll.allowMultiple?' · Multi-choice':''}</p>
+    </div>`;
+  } else if (msg.type === 'contact') {
+    const initial = (msg.contactName||'?').charAt(0).toUpperCase();
+    const phone = msg.contactPhone || '';
+    const avatar = msg.contactAvatar || '';
+    const email = msg.contactEmail || '';
+    const existingChat = email ? App.chats.find(c => c.email && c.email.toLowerCase() === email.toLowerCase()) : null;
+    contentHTML = `<div class="contact-card">
+      <div class="contact-header">
+        ${avatar ? `<img src="${escHtml(avatar)}" class="contact-avatar object-cover">` : `<div class="contact-avatar">${escHtml(initial)}</div>`}
+        <div class="contact-info">
+          <div class="contact-name">${escHtml(msg.contactName||'Unknown')}</div>
+          <div class="contact-email">${escHtml(email)}</div>
+          ${phone ? `<div class="contact-email">${escHtml(phone)}</div>` : ''}
+        </div>
+      </div>
+      ${existingChat
+        ? `<button onclick="event.stopPropagation();openChat('${existingChat.id}')" class="send-request-btn" style="background:var(--secondary)">Open Chat</button>`
+        : `<button onclick="event.stopPropagation();sendRequestFromContact('${escHtml(email)}','${escHtml(msg.contactName||'')}')" class="send-request-btn">Send Request</button>`
+      }
+    </div>`;
+  } else {
+    contentHTML = `<div class="text-sm font-normal leading-relaxed text-on-surface break-words overflow-wrap-anywhere">${formatMsgText(msg.text||'')}</div>`;
+  }
+
+  const fwdBadge  = msg.forwarded ? `<span class="text-[9px] text-on-surface-variant italic opacity-70 mb-1">↪ Forwarded</span>` : '';
+  const starBadge = msg.starred   ? `<span class="text-[10px]">⭐</span>` : '';
+  const editBadge = msg.edited    ? `<span class="text-[9px] text-on-surface-variant italic opacity-60">(edited)</span>` : '';
+
+  const bubbleClass = isMe
+    ? 'bg-primary text-on-primary rounded-2xl rounded-tr-none shadow-md'
+    : 'bg-surface-container-highest rounded-2xl rounded-tl-none border border-outline-variant/15';
+
+  return sep + `
+  <div class="flex items-end gap-3 ${isMe?'justify-end ml-auto':'justify-start'} w-full max-w-[85%] mb-4" id="msg-${msg.id}">
+    ${!isMe ? avatarHTML : ''}
+    <div class="flex flex-col ${isMe?'items-end':'items-start'} max-w-full">
+      ${showSender&&!isMe ? `<div class="text-[10px] text-on-surface-variant font-bold mb-1 ml-2">${escHtml(senderName)}</div>` : ''}
+      ${fwdBadge ? `<div class="${isMe?'text-right':'text-left'}">${fwdBadge}</div>` : ''}
+      <div class="flex items-center gap-1 group relative max-w-full">
+        ${isMe ? `
+        <button class="opacity-0 group-hover:opacity-100 p-1 hover:bg-surface-container-high rounded-full text-on-surface-variant transition-opacity cursor-pointer flex items-center justify-center flex-shrink-0" onclick="event.stopPropagation();openForwardModal('${msg.id}')" title="Forward"><span class="material-symbols-outlined text-lg">arrow_forward</span></button>
+        <button class="opacity-0 group-hover:opacity-100 p-1 hover:bg-red-500/10 rounded-full text-on-surface-variant hover:text-red-500 transition-opacity cursor-pointer flex items-center justify-center flex-shrink-0" onclick="event.stopPropagation();openDeleteMenu('${msg.id}')" title="Delete"><span class="material-symbols-outlined text-lg">delete</span></button>
+        <button class="opacity-0 group-hover:opacity-100 p-1 hover:bg-surface-container-high rounded-full text-on-surface-variant transition-opacity cursor-pointer flex items-center justify-center flex-shrink-0" onclick="showMsgContextMenu(event,'${msg.id}')" title="More"><span class="material-symbols-outlined text-lg">more_vert</span></button>` : ''}
+        <div class="p-bubble_padding_xy ${bubbleClass} relative overflow-hidden max-w-full"
+             oncontextmenu="showMsgContextMenu(event,'${msg.id}')"
+             ondblclick="showQuickReactions(event,'${msg.id}')"
+             onpointerdown="handleBubblePointerDown(event,'${msg.id}')"
+             onpointerup="handleBubblePointerUp(event)"
+             onpointercancel="handleBubblePointerUp(event)"
+             onpointerleave="handleBubblePointerUp(event)">
+          ${replyHTML}
+          ${contentHTML}
+          <div class="flex items-center justify-end gap-1 mt-1.5 select-none opacity-80">
+            ${editBadge}
+            <span class="text-[9px] font-timestamp ${isMe?'text-white/80':'text-on-surface-variant'}">${formatMsgTime(msg.time)}</span>
+            ${starBadge}
+            ${tickIcon}
+          </div>
+        </div>
+        ${!isMe ? `
+        <button class="opacity-0 group-hover:opacity-100 p-1 hover:bg-red-500/10 rounded-full text-on-surface-variant hover:text-red-500 transition-opacity cursor-pointer flex items-center justify-center flex-shrink-0" onclick="event.stopPropagation();openDeleteMenu('${msg.id}')" title="Delete"><span class="material-symbols-outlined text-lg">delete</span></button>
+        <button class="opacity-0 group-hover:opacity-100 p-1 hover:bg-surface-container-high rounded-full text-on-surface-variant transition-opacity cursor-pointer flex items-center justify-center flex-shrink-0" onclick="event.stopPropagation();openForwardModal('${msg.id}')" title="Forward"><span class="material-symbols-outlined text-lg">arrow_forward</span></button>
+        <button class="opacity-0 group-hover:opacity-100 p-1 hover:bg-surface-container-high rounded-full text-on-surface-variant transition-opacity cursor-pointer flex items-center justify-center flex-shrink-0" onclick="showMsgContextMenu(event,'${msg.id}')" title="More"><span class="material-symbols-outlined text-lg">more_vert</span></button>` : ''}
+      </div>
+      ${reactions ? `<div class="flex flex-wrap gap-1 mt-1">${reactions}</div>` : ''}
+    </div>
+  </div>`;
+}
+
 function renderMessages(chatId) {
   const msgs = App.messages[chatId] || [];
   const wrap = document.getElementById('messages-wrap');
@@ -2371,6 +2636,9 @@ function renderMessages(chatId) {
   const isMyselfChat = App.currentChat && App.currentChat.id === 'saved_me';
 
   if (!msgs.length) {
+    VirtualScroll.destroy();
+    App._vsActive = false;
+    App._vsChatId = null;
     if (isMyselfChat) {
       wrap.innerHTML = `
         <div class="flex flex-col items-center py-12 text-center w-full">
@@ -2397,181 +2665,57 @@ function renderMessages(chatId) {
     return;
   }
 
-  let html = '';
-  if (isMyselfChat) {
-    html += `
-      <div class="flex flex-col items-center py-8 text-center w-full">
-        <div class="w-20 h-20 rounded-3xl bg-surface-container-high flex items-center justify-center mb-4 border border-outline-variant/20 shadow-2xl neon-border">
-          <span class="material-symbols-outlined text-primary text-4xl" style="font-variation-settings: 'FILL' 1;">lock</span>
-        </div>
-        <h4 class="font-headline-md text-headline-md font-bold mb-2">Personal Workspace</h4>
-        <p class="text-on-surface-variant text-xs max-w-xs">End-to-end encrypted notepad</p>
-      </div>`;
-  }
+  const useVirtualScroll = !isMyselfChat && msgs.length > 150;
 
-  let lastDate = null;
+  if (useVirtualScroll) {
+    if (!App._vsActive || App._vsChatId !== chatId) {
+      VirtualScroll.destroy();
+      wrap.innerHTML = '';
+      VirtualScroll.init(wrap, (item) => item.html, { rowHeight: 80, bufferRows: 10, threshold: 150 });
+      App._vsActive = true;
+      App._vsChatId = chatId;
+    }
 
-  msgs.forEach((msg, i) => {
-    const msgDate = new Date(msg.time);
-    const dateKey = msgDate.toDateString();
-    if (dateKey !== lastDate) {
+    let lastDate = null;
+    const vsItems = [];
+    for (let i = 0; i < msgs.length; i++) {
+      const msg = msgs[i];
+      const html = renderSingleMessageHTML(msg, msgs, i, lastDate);
+      const dateKey = new Date(msg.time).toDateString();
+      if (dateKey !== lastDate) lastDate = dateKey;
+      vsItems.push({ html });
+    }
+    VirtualScroll.setItems(vsItems);
+    requestAnimationFrame(() => {
+      if (App._vsActive && VirtualScroll._enabled) VirtualScroll._render();
+    });
+  } else {
+    if (App._vsActive) {
+      VirtualScroll.destroy();
+      App._vsActive = false;
+      App._vsChatId = null;
+    }
+
+    let html = '';
+    if (isMyselfChat) {
       html += `
-        <div class="flex justify-center my-6">
-          <span class="bg-surface-container-highest/50 px-4 py-1 rounded-full text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">
-            ${formatDateSep(msgDate)}
-          </span>
+        <div class="flex flex-col items-center py-8 text-center w-full">
+          <div class="w-20 h-20 rounded-3xl bg-surface-container-high flex items-center justify-center mb-4 border border-outline-variant/20 shadow-2xl neon-border">
+            <span class="material-symbols-outlined text-primary text-4xl" style="font-variation-settings: 'FILL' 1;">lock</span>
+          </div>
+          <h4 class="font-headline-md text-headline-md font-bold mb-2">Personal Workspace</h4>
+          <p class="text-on-surface-variant text-xs max-w-xs">End-to-end encrypted notepad</p>
         </div>`;
-      lastDate = dateKey;
     }
 
-    const isMe = msg.from === 'me';
-    const contact = isMe ? null : (App.contacts.find(c=>c.uid===msg.from) || App.chats.find(c=>c.uid===msg.from));
-    const showAvatar = !isMe && (i === msgs.length-1 || msgs[i+1]?.from !== msg.from);
-    const showSender = !isMe && App.currentChat?.type==='group';
-    const senderName = contact?.name || 'Unknown';
+    let lastDate = null;
+    msgs.forEach((msg, i) => {
+      html += renderSingleMessageHTML(msg, msgs, i, lastDate);
+      lastDate = new Date(msg.time).toDateString();
+    });
 
-    const avatarHTML = showAvatar
-      ? (contact?.photoURL
-        ? `<img src="${contact.photoURL}" alt="${escHtml(senderName)}" class="w-10 h-10 rounded-full object-cover border border-outline-variant/10">`
-        : contact?.initials
-          ? `<div class="w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm bg-surface-container-highest text-on-surface-variant">${contact.initials}</div>`
-          : `<div class="w-10 h-10 rounded-full flex items-center justify-center bg-surface-container-highest text-on-surface-variant"><span class="material-symbols-outlined text-sm">person_off</span></div>`)
-      : `<div class="w-10"></div>`;
-
-    const reactions = (msg.reactions||[]).map(r =>
-      `<div class="flex items-center gap-1 bg-surface-container border border-outline-variant/30 px-2 py-0.5 rounded-lg text-xs cursor-pointer hover:bg-surface-variant transition-all ${r.mine?'border-primary/50 text-primary':''}" onclick="toggleReaction('${msg.id}','${r.emoji}')">
-        <span>${r.emoji}</span><span class="font-bold text-[10px]">${r.count}</span>
-      </div>`
-    ).join('');
-
-    const tickIcon = isMe
-      ? msg.status==='read'      ? '<span class="material-symbols-outlined text-[14px] text-primary" style="font-variation-settings: \'FILL\' 1;">done_all</span>'
-      : msg.status==='delivered' ? '<span class="material-symbols-outlined text-[14px] text-on-surface-variant" style="font-variation-settings: \'FILL\' 1;">done_all</span>'
-      :                            '<span class="material-symbols-outlined text-[14px] text-on-surface-variant">done</span>'
-      : '';
-
-    const replyHTML = msg.replyTo ? `
-      <div class="border-l-2 border-primary/50 pl-3 mb-2 opacity-80 text-xs">
-        <div class="font-bold text-primary">${escHtml(msg.replyTo.name)}</div>
-        <div class="truncate text-on-surface-variant">${escHtml(msg.replyTo.text)}</div>
-      </div>` : '';
-
-    let contentHTML = '';
-    if (msg.type === 'image') {
-      contentHTML = `<div class="bubble-media cursor-pointer relative rounded-xl overflow-hidden max-w-full" onclick="openMediaViewer('${msg.id}')">
-        <img src="${escHtml(msg.url)}" alt="Image" loading="lazy" class="w-full max-h-48 object-cover rounded-xl border border-outline-variant/20">
-        <div class="absolute inset-0 bg-black/0 hover:bg-black/10 transition-all rounded-xl flex items-center justify-center opacity-0 hover:opacity-100">
-          <span class="material-symbols-outlined text-white text-2xl drop-shadow">fullscreen</span>
-        </div>
-      </div>`;
-    } else if (msg.type === 'video') {
-      contentHTML = `<div class="bubble-media relative rounded-xl overflow-hidden max-w-full">
-        <video src="${escHtml(msg.url)}" class="max-h-48 rounded-xl border border-outline-variant/20 w-full" preload="metadata" controls playsinline style="cursor:pointer"></video>
-        <button onclick="event.stopPropagation();openMediaViewer('${msg.id}')" class="absolute top-2 right-2 w-8 h-8 bg-black/50 rounded-full flex items-center justify-center text-white hover:bg-black/70 transition-colors" title="Full screen">
-          <span class="material-symbols-outlined text-sm">fullscreen</span>
-        </button>
-      </div>`;
-    } else if (msg.type === 'voice') {
-      const dur = msg.duration || '0:00';
-      const durSec = msg.durationSec || 0;
-      contentHTML = `<div class="voice-player bg-surface-container-high/40 p-2.5 rounded-xl border border-outline-variant/20" data-msg-id="${msg.id}">
-        <div class="flex items-center gap-2">
-          <button class="voice-play w-8 h-8 rounded-full bg-primary text-on-primary flex items-center justify-center shrink-0" data-msg-id="${msg.id}" onclick="playVoice('${msg.id}')" aria-label="Play voice message">▶</button>
-          <div class="flex-1">
-            <input type="range" min="0" max="${durSec || 100}" value="0" step="0.1" class="voice-scrub w-full h-1 accent-primary cursor-pointer" data-msg-id="${msg.id}" oninput="scrubVoice('${msg.id}', this.value)" style="accent-color:var(--primary)">
-          </div>
-          <button class="voice-speed text-[10px] font-bold px-1.5 py-0.5 rounded bg-surface-variant/60 hover:bg-surface-variant text-on-surface-variant cursor-pointer" data-msg-id="${msg.id}" data-speed="1" onclick="cycleVoiceSpeed(this)">1x</button>
-          <span class="text-[10px] font-timestamp text-on-surface-variant voice-time" data-msg-id="${msg.id}">${dur}</span>
-        </div>
-      </div>`;
-    } else if (msg.type === 'doc') {
-      contentHTML = `<div class="flex items-center gap-4 bg-surface-container-high p-4 rounded-xl border border-outline-variant/20 cursor-pointer" onclick="openMediaViewer('${msg.id}')">
-        <div class="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center text-primary"><span class="material-symbols-outlined">description</span></div>
-        <div class="flex-1"><p class="text-xs font-bold truncate">${escHtml(msg.fileName||'Document')}</p><p class="text-[10px] text-on-surface-variant">${msg.fileSize||''}</p></div>
-        <span class="material-symbols-rounded" style="font-size:20px;opacity:.7">download</span>
-      </div>`;
-    } else if (msg.type === 'location') {
-      const staticMapUrl = `https://staticmap.openstreetmap.de/staticmap.php?center=${msg.lat},${msg.lng}&zoom=15&size=280x140&markers=${msg.lat},${msg.lng},red-pushpin`;
-      const mapUrlVal = msg.mapUrl || `https://maps.google.com/?q=${msg.lat},${msg.lng}`;
-      contentHTML = `<div onclick="window.open('${escHtml(mapUrlVal)}','_blank')" class="location-preview border border-outline-variant/20 max-w-full">
-        <img src="${escHtml(staticMapUrl)}" alt="Location" loading="lazy" onerror="this.style.display='none'">
-        <div class="location-label"><span class="material-symbols-outlined text-primary text-sm">location_on</span><span>Shared location</span></div>
-      </div>`;
-    } else if (msg.type === 'contact') {
-      const initial = (msg.contactName||'?').charAt(0).toUpperCase();
-      const phone = msg.contactPhone || '';
-      const avatar = msg.contactAvatar || '';
-      const email = msg.contactEmail || '';
-      const existingChat = email ? App.chats.find(c => c.email && c.email.toLowerCase() === email.toLowerCase()) : null;
-      contentHTML = `<div class="contact-card">
-        <div class="contact-header">
-          ${avatar
-            ? `<img src="${escHtml(avatar)}" class="contact-avatar object-cover">`
-            : `<div class="contact-avatar">${escHtml(initial)}</div>`
-          }
-          <div class="contact-info">
-            <div class="contact-name">${escHtml(msg.contactName||'Unknown')}</div>
-            <div class="contact-email">${escHtml(email)}</div>
-            ${phone ? `<div class="contact-email">${escHtml(phone)}</div>` : ''}
-          </div>
-        </div>
-        ${existingChat
-          ? `<button onclick="event.stopPropagation();openChat('${existingChat.id}')" class="send-request-btn" style="background:var(--secondary)">Open Chat</button>`
-          : `<button onclick="event.stopPropagation();sendRequestFromContact('${escHtml(email)}','${escHtml(msg.contactName||'')}')" class="send-request-btn">Send Request</button>`
-        }
-      </div>`;
-    } else {
-      contentHTML = `<div class="text-sm font-normal leading-relaxed text-on-surface break-words overflow-wrap-anywhere">${formatMsgText(msg.text||'')}</div>`;
-    }
-
-    // Status badges: forwarded, starred, edited
-    const fwdBadge  = msg.forwarded ? `<span class="text-[9px] text-on-surface-variant italic opacity-70 mb-1">↪ Forwarded</span>` : '';
-    const starBadge = msg.starred   ? `<span class="text-[10px]">⭐</span>` : '';
-    const editBadge = msg.edited    ? `<span class="text-[9px] text-on-surface-variant italic opacity-60">(edited)</span>` : '';
-
-    // Alignment and bubbled classes mapping mockups
-    const bubbleClass = isMe
-      ? 'bg-primary text-on-primary rounded-2xl rounded-tr-none shadow-md'
-      : 'bg-surface-container-highest rounded-2xl rounded-tl-none border border-outline-variant/15';
-
-    html += `
-    <div class="flex items-end gap-3 ${isMe?'justify-end ml-auto':'justify-start'} w-full max-w-[85%] mb-4" id="msg-${msg.id}">
-      ${!isMe ? avatarHTML : ''}
-      <div class="flex flex-col ${isMe?'items-end':'items-start'} max-w-full">
-        ${showSender&&!isMe ? `<div class="text-[10px] text-on-surface-variant font-bold mb-1 ml-2">${escHtml(senderName)}</div>` : ''}
-        ${fwdBadge ? `<div class="${isMe?'text-right':'text-left'}">${fwdBadge}</div>` : ''}
-        <div class="flex items-center gap-1 group relative max-w-full">
-          ${isMe ? `
-          <button class="opacity-0 group-hover:opacity-100 p-1 hover:bg-surface-container-high rounded-full text-on-surface-variant transition-opacity cursor-pointer flex items-center justify-center flex-shrink-0" onclick="event.stopPropagation();openForwardModal('${msg.id}')" title="Forward"><span class="material-symbols-outlined text-lg">arrow_forward</span></button>
-          <button class="opacity-0 group-hover:opacity-100 p-1 hover:bg-red-500/10 rounded-full text-on-surface-variant hover:text-red-500 transition-opacity cursor-pointer flex items-center justify-center flex-shrink-0" onclick="event.stopPropagation();openDeleteMenu('${msg.id}')" title="Delete"><span class="material-symbols-outlined text-lg">delete</span></button>
-          <button class="opacity-0 group-hover:opacity-100 p-1 hover:bg-surface-container-high rounded-full text-on-surface-variant transition-opacity cursor-pointer flex items-center justify-center flex-shrink-0" onclick="showMsgContextMenu(event,'${msg.id}')" title="More"><span class="material-symbols-outlined text-lg">more_vert</span></button>` : ''}
-          <div class="p-bubble_padding_xy ${bubbleClass} relative overflow-hidden max-w-full"
-               oncontextmenu="showMsgContextMenu(event,'${msg.id}')"
-               ondblclick="showQuickReactions(event,'${msg.id}')"
-               onpointerdown="handleBubblePointerDown(event,'${msg.id}')"
-               onpointerup="handleBubblePointerUp(event)"
-               onpointercancel="handleBubblePointerUp(event)"
-               onpointerleave="handleBubblePointerUp(event)">
-            ${replyHTML}
-            ${contentHTML}
-            <div class="flex items-center justify-end gap-1 mt-1.5 select-none opacity-80">
-              ${editBadge}
-              <span class="text-[9px] font-timestamp ${isMe?'text-white/80':'text-on-surface-variant'}">${formatMsgTime(msg.time)}</span>
-              ${starBadge}
-              ${tickIcon}
-            </div>
-          </div>
-          ${!isMe ? `
-          <button class="opacity-0 group-hover:opacity-100 p-1 hover:bg-red-500/10 rounded-full text-on-surface-variant hover:text-red-500 transition-opacity cursor-pointer flex items-center justify-center flex-shrink-0" onclick="event.stopPropagation();openDeleteMenu('${msg.id}')" title="Delete"><span class="material-symbols-outlined text-lg">delete</span></button>
-          <button class="opacity-0 group-hover:opacity-100 p-1 hover:bg-surface-container-high rounded-full text-on-surface-variant transition-opacity cursor-pointer flex items-center justify-center flex-shrink-0" onclick="event.stopPropagation();openForwardModal('${msg.id}')" title="Forward"><span class="material-symbols-outlined text-lg">arrow_forward</span></button>
-          <button class="opacity-0 group-hover:opacity-100 p-1 hover:bg-surface-container-high rounded-full text-on-surface-variant transition-opacity cursor-pointer flex items-center justify-center flex-shrink-0" onclick="showMsgContextMenu(event,'${msg.id}')" title="More"><span class="material-symbols-outlined text-lg">more_vert</span></button>` : ''}
-        </div>
-        ${reactions ? `<div class="flex flex-wrap gap-1 mt-1">${reactions}</div>` : ''}
-      </div>
-    </div>`;
-  });
-
-  wrap.innerHTML = html;
+    wrap.innerHTML = html;
+  }
 }
 
 function generateWaveform() {
@@ -2601,6 +2745,16 @@ function sendMessage() {
   const input = document.getElementById('msg-input');
   const text  = input.value.trim();
   if (!text || !App.currentChat) return;
+
+  // Handle message editing
+  if (_editingMsgId) {
+    saveEdit(text);
+    input.value = '';
+    input.style.height = 'auto';
+    toggleSendMic();
+    return;
+  }
+
   if (App.currentChat.uid && isUserBlocked(App.currentChat.uid)) { showToast('Cannot send — user is blocked', 'error'); return; }
 
   const msg = {
@@ -2642,6 +2796,7 @@ function sendMessage() {
     const isGroup = App.currentChat.type === 'group';
     
     (async () => {
+      const chatTTL = App.chats.find(c => c.id === chatId)?.disappearingMessages || 0;
       const messageData = {
         senderId: uid,
         senderName: App.currentUser.displayName || App.currentUser.email || 'Me',
@@ -2649,7 +2804,8 @@ function sendMessage() {
         text: text,
         timestamp: firebase.firestore.FieldValue.serverTimestamp(),
         status: 'sent',
-        read: false
+        read: false,
+        expiresAt: chatTTL > 0 ? Date.now() + chatTTL : null
       };
       
       let isEncrypted = false;
@@ -3083,6 +3239,7 @@ function endCall() {
   clearInterval(callHeartbeatTimer);
   if (_callQualityInterval) { clearInterval(_callQualityInterval); _callQualityInterval = null; }
   stopRingtone();
+  if (typeof stopLiveLocation === 'function') stopLiveLocation();
 
   if (_screenShareStream) { _screenShareStream.getTracks().forEach(t => t.stop()); _screenShareStream = null; _screenShareSender = null; }
   App._incomingCallData = null;
@@ -4040,9 +4197,19 @@ function clearSidebarSearch() {
 function scrollToBottom(instant=false) {
   const wrap = document.getElementById('messages-wrap');
   if (!wrap) return;
-  requestAnimationFrame(() => {
-    wrap.scrollTo({ top: wrap.scrollHeight, behavior: instant ? 'auto' : 'smooth' });
-  });
+  if (App._vsActive) {
+    const msgs = App.messages[App._vsChatId] || [];
+    if (msgs.length > 0) {
+      requestAnimationFrame(() => {
+        VirtualScroll.scrollToIndex(msgs.length - 1);
+        wrap.scrollTop = wrap.scrollHeight;
+      });
+    }
+  } else {
+    requestAnimationFrame(() => {
+      wrap.scrollTo({ top: wrap.scrollHeight, behavior: instant ? 'auto' : 'smooth' });
+    });
+  }
   hide('scroll-to-bottom');
   App.unreadScrollCount = 0;
 }
@@ -4051,7 +4218,12 @@ document.addEventListener('DOMContentLoaded', () => {
   const wrap = document.getElementById('messages-wrap');
   if (!wrap) return;
   wrap.addEventListener('scroll', () => {
-    const atBottom = wrap.scrollHeight - wrap.scrollTop - wrap.clientHeight < 100;
+    let atBottom;
+    if (App._vsActive) {
+      atBottom = wrap.scrollHeight - wrap.scrollTop - wrap.clientHeight < 200;
+    } else {
+      atBottom = wrap.scrollHeight - wrap.scrollTop - wrap.clientHeight < 100;
+    }
     const btn = document.getElementById('scroll-to-bottom');
     if (btn) btn.classList.toggle('hidden', atBottom);
   });
@@ -4072,6 +4244,9 @@ function showWelcome() {
   show('welcome-screen');
   hide('chat-header');
   closeDetailPanel();
+  VirtualScroll.destroy();
+  App._vsActive = false;
+  App._vsChatId = null;
   const wrap = document.getElementById('messages-wrap');
   if (wrap) wrap.style.display = 'none';
   const inputBar = document.getElementById('input-bar');
@@ -4147,6 +4322,21 @@ function openContactInfoPanel(uid) {
         <span class="material-symbols-outlined text-primary text-base">notifications_off</span>
         <span>Mute Notifications</span>
       </button>
+      <div class="flex items-center justify-between p-3 rounded-xl hover:bg-surface-variant/40 transition-colors">
+        <div class="flex items-center gap-3">
+          <span class="material-symbols-outlined text-primary text-base">timer</span>
+          <div>
+            <div class="text-xs font-semibold text-on-surface">Disappearing Messages</div>
+            <div class="text-[10px] text-on-surface-variant">${(function(){const v=App.currentChat?.disappearingMessages||0;return v>=86400000*90?'90 days':v>=86400000*7?'7 days':v>=86400000?'24 hours':'Off';})()}</div>
+          </div>
+        </div>
+        <select onchange="setDisappearingMessages(App.currentChat?.id, Number(this.value))" class="bg-surface-container border border-outline-variant/30 rounded-lg px-2 py-1 text-xs">
+          <option value="0" ${(App.currentChat?.disappearingMessages||0)===0?'selected':''}>Off</option>
+          <option value="${86400000}" ${(App.currentChat?.disappearingMessages||0)===86400000?'selected':''}>24 hours</option>
+          <option value="${604800000}" ${(App.currentChat?.disappearingMessages||0)===604800000?'selected':''}>7 days</option>
+          <option value="${7776000000}" ${(App.currentChat?.disappearingMessages||0)===7776000000?'selected':''}>90 days</option>
+        </select>
+      </div>
       <button class="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-red-500/10 hover:text-red-400 transition-colors text-xs font-semibold text-red-500" onclick="blockContact('${uid}')">
         <span class="material-symbols-outlined text-base">block</span>
         <span>Block User</span>
@@ -4208,6 +4398,21 @@ function openGroupInfoPanel() {
         <span class="material-symbols-outlined text-primary text-base">link</span>
         <span>Copy Invite Link</span>
       </button>
+      <div class="flex items-center justify-between p-3 rounded-xl hover:bg-surface-variant/40 transition-colors">
+        <div class="flex items-center gap-3">
+          <span class="material-symbols-outlined text-primary text-base">timer</span>
+          <div>
+            <div class="text-xs font-semibold text-on-surface">Disappearing Messages</div>
+            <div class="text-[10px] text-on-surface-variant">${(function(){const v=App.currentChat?.disappearingMessages||0;return v>=86400000*90?'90 days':v>=86400000*7?'7 days':v>=86400000?'24 hours':'Off';})()}</div>
+          </div>
+        </div>
+        <select onchange="setDisappearingMessages(App.currentChat?.id, Number(this.value))" class="bg-surface-container border border-outline-variant/30 rounded-lg px-2 py-1 text-xs">
+          <option value="0" ${(App.currentChat?.disappearingMessages||0)===0?'selected':''}>Off</option>
+          <option value="${86400000}" ${(App.currentChat?.disappearingMessages||0)===86400000?'selected':''}>24 hours</option>
+          <option value="${604800000}" ${(App.currentChat?.disappearingMessages||0)===604800000?'selected':''}>7 days</option>
+          <option value="${7776000000}" ${(App.currentChat?.disappearingMessages||0)===7776000000?'selected':''}>90 days</option>
+        </select>
+      </div>
       <button class="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-red-500/10 hover:text-red-400 transition-colors text-xs font-semibold text-red-500" onclick="confirmLeaveGroup()">
         <span class="material-symbols-outlined text-base">exit_to_app</span>
         <span>Leave Channel</span>
@@ -5017,6 +5222,10 @@ function handleDocumentClick(e) {
     App.emojiPickerOpen = false;
     document.getElementById('emoji-picker')?.classList.add('hidden');
   }
+  if (!e.target.closest('button[onclick="openGifPicker()"]') && !e.target.closest('#gif-picker')) {
+    const gifPicker = document.getElementById('gif-picker');
+    if (gifPicker) gifPicker.style.display = 'none';
+  }
   if (!e.target.closest('#contact-picker-overlay')) {
     document.getElementById('contact-picker-overlay')?.classList.add('hidden');
   }
@@ -5131,6 +5340,58 @@ async function shareLocation() {
     const granted = await PermissionsManager.ensureForFeature('Share Location');
     if (!granted) return;
   }
+  
+  let picker = document.getElementById('location-pick-modal');
+  if (!picker) {
+    picker = document.createElement('div');
+    picker.id = 'location-pick-modal';
+    picker.className = 'fixed inset-0 z-[9998] flex items-end sm:items-center justify-center bg-black/50';
+    picker.onclick = (e) => { if (e.target === picker) picker.classList.add('hidden'); };
+    document.body.appendChild(picker);
+  }
+  
+  picker.innerHTML = `
+    <div class="bg-surface-container rounded-t-2xl sm:rounded-2xl w-full sm:w-[min(90vw,360px)] p-5 shadow-2xl">
+      <h3 class="text-base font-semibold mb-4">Share Location</h3>
+      <div class="space-y-2">
+        <button onclick="sendStaticLocation()" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-surface-variant transition-colors text-left">
+          <span class="material-symbols-outlined text-primary">location_on</span>
+          <div>
+            <div class="text-sm font-medium">Send current location</div>
+            <div class="text-xs text-on-surface-variant">One-time location share</div>
+          </div>
+        </button>
+        <button onclick="startLiveLocation(900000)" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-surface-variant transition-colors text-left">
+          <span class="material-symbols-outlined text-secondary">my_location</span>
+          <div>
+            <div class="text-sm font-medium">Share live location</div>
+            <div class="text-xs text-on-surface-variant">Visible for 15 minutes</div>
+          </div>
+        </button>
+        <button onclick="startLiveLocation(3600000)" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-surface-variant transition-colors text-left">
+          <span class="material-symbols-outlined text-secondary">my_location</span>
+          <div>
+            <div class="text-sm font-medium">Share live location</div>
+            <div class="text-xs text-on-surface-variant">Visible for 1 hour</div>
+          </div>
+        </button>
+        <button onclick="startLiveLocation(28800000)" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-surface-variant transition-colors text-left">
+          <span class="material-symbols-outlined text-secondary">my_location</span>
+          <div>
+            <div class="text-sm font-medium">Share live location</div>
+            <div class="text-xs text-on-surface-variant">Visible for 8 hours</div>
+          </div>
+        </button>
+      </div>
+      <button onclick="document.getElementById('location-pick-modal').classList.add('hidden')" class="w-full mt-3 py-2 text-sm text-on-surface-variant hover:bg-surface-variant rounded-xl">Cancel</button>
+    </div>
+  `;
+  picker.classList.remove('hidden');
+}
+
+function sendStaticLocation() {
+  document.getElementById('location-pick-modal')?.classList.add('hidden');
+  if (!navigator.geolocation) { showToast('Location not available', 'error'); return; }
   showToast('Getting location…', 'info');
   navigator.geolocation.getCurrentPosition(
     pos => _sendLocationMessage(pos.coords.latitude, pos.coords.longitude),
@@ -5304,54 +5565,105 @@ function sendRequestFromContact(email, name) {
 }
 
 /* ─── Live Location Sharing ─── */
-function startLiveLocation() {
-  if (!App.currentChat || !navigator.geolocation) {
-    showToast('Live location not available', 'error');
-    return;
-  }
-  if (App._liveLocationWatcher !== undefined) {
+let _liveLocationWatchId = null;
+let _liveLocationDocId = null;
+let _liveLocationExpiryTimer = null;
+
+function startLiveLocation(durationMs) {
+  document.getElementById('location-pick-modal')?.classList.add('hidden');
+  if (!App.db || !App.auth?.currentUser || !App.currentChat) return;
+  if (!navigator.geolocation) { showToast('Location not available', 'error'); return; }
+  
+  if (_liveLocationDocId) {
     showToast('Already sharing live location', 'info');
     return;
   }
-  showToast('Starting live location…', 'info');
-  App._liveLocationInterval = setInterval(() => {
-    navigator.geolocation.getCurrentPosition(
-      pos => _sendLocationMessage(pos.coords.latitude, pos.coords.longitude),
+  
+  const uid = App.auth.currentUser.uid;
+  const chatId = App.currentChat.id;
+  const isGroup = App.currentChat.type === 'group';
+  
+  showToast('Starting live location sharing…', 'info');
+  
+  navigator.geolocation.getCurrentPosition(async (pos) => {
+    const { latitude: lat, longitude: lng } = pos.coords;
+    
+    const messageData = {
+      senderId: uid,
+      senderName: App.currentUser.displayName || 'Me',
+      text: '',
+      timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+      status: 'sent',
+      read: true,
+      attachment: { type: 'location', lat, lng, mapUrl: `https://maps.google.com/?q=${lat},${lng}` },
+      liveLocation: {
+        active: true,
+        startedAt: Date.now(),
+        expiresAt: Date.now() + durationMs,
+        duration: durationMs
+      }
+    };
+    
+    if (isGroup) {
+      messageData.groupId = chatId;
+    } else {
+      messageData.directId = chatId;
+      messageData.participants = [uid, App.currentChat.uid];
+    }
+    
+    const docRef = await App.db.collection('messages').add(messageData).catch(() => null);
+    if (!docRef) return;
+    
+    _liveLocationDocId = docRef.id;
+    
+    _liveLocationWatchId = navigator.geolocation.watchPosition(
+      async (update) => {
+        if (!_liveLocationDocId) return;
+        const { latitude, longitude } = update.coords;
+        await App.db.collection('messages').doc(_liveLocationDocId).update({
+          'attachment.lat': latitude,
+          'attachment.lng': longitude,
+          'attachment.mapUrl': `https://maps.google.com/?q=${latitude},${longitude}`
+        }).catch(() => {});
+      },
       () => {},
-      { enableHighAccuracy: true, timeout: 5000 }
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 5000 }
     );
-  }, 30000);
-  // Send first update immediately
-  navigator.geolocation.getCurrentPosition(
-    pos => {
-      _sendLocationMessage(pos.coords.latitude, pos.coords.longitude);
-      showToast('Live location sharing started', 'success');
-    },
-    () => showToast('Location access denied', 'error'),
-    { enableHighAccuracy: true, timeout: 10000 }
-  );
-  App._liveLocationWatcher = true;
-  const btn = document.querySelector('[onclick="startLiveLocation()"]');
-  if (btn) {
-    btn.innerHTML = '<span class="text-base">🔴</span> Live (On)';
-    btn.onclick = stopLiveLocation;
-    btn.classList.add('text-error');
-  }
+    
+    _liveLocationExpiryTimer = setTimeout(() => stopLiveLocation(), durationMs);
+    
+    showToast(`Live location active for ${formatLiveDuration(durationMs)}`, 'success');
+    
+    const coll = isGroup ? 'groups' : 'directChats';
+    App.db.collection(coll).doc(chatId).set({
+      lastMessage: '📍 Live Location',
+      lastMessageTime: firebase.firestore.FieldValue.serverTimestamp(),
+      lastMessageSenderId: uid
+    }, { merge: true }).catch(() => {});
+    
+  }, () => showToast('Location access denied', 'error'), { enableHighAccuracy: true, timeout: 10000 });
 }
 
 function stopLiveLocation() {
-  if (App._liveLocationInterval) {
-    clearInterval(App._liveLocationInterval);
-    App._liveLocationInterval = null;
+  if (_liveLocationWatchId !== null) {
+    navigator.geolocation.clearWatch(_liveLocationWatchId);
+    _liveLocationWatchId = null;
   }
-  App._liveLocationWatcher = undefined;
-  const btn = document.querySelector('[onclick="stopLiveLocation()"]');
-  if (btn) {
-    btn.innerHTML = '<span class="text-base">🔴</span> Live Location';
-    btn.onclick = startLiveLocation;
-    btn.classList.remove('text-error');
+  if (_liveLocationExpiryTimer) {
+    clearTimeout(_liveLocationExpiryTimer);
+    _liveLocationExpiryTimer = null;
   }
-  showToast('Live location sharing stopped', 'info');
+  if (_liveLocationDocId && App.db) {
+    App.db.collection('messages').doc(_liveLocationDocId).update({
+      'liveLocation.active': false
+    }).catch(() => {});
+    _liveLocationDocId = null;
+  }
+}
+
+function formatLiveDuration(ms) {
+  if (ms >= 3600000) return Math.round(ms / 3600000) + ' hour' + (ms > 3600000 ? 's' : '');
+  return Math.round(ms / 60000) + ' minutes';
 }
 
 /* ══════════════════════════════════════════════════
@@ -5468,7 +5780,10 @@ function setupOnlineStatus() {
   window.addEventListener('online',  () => hide('offline-banner'));
   window.addEventListener('offline', () => show('offline-banner'));
   if (!navigator.onLine) show('offline-banner');
-  window.addEventListener('beforeunload', () => updatePresence('offline'));
+  window.addEventListener('beforeunload', () => {
+    if (typeof stopLiveLocation === 'function') stopLiveLocation();
+    updatePresence('offline');
+  });
   document.addEventListener('visibilitychange', () => {
     clearTimeout(App._presenceDebounce);
     App._presenceDebounce = setTimeout(() => {

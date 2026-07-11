@@ -447,9 +447,10 @@ function showMsgContextMenu(event, msgId) {
   menu.appendChild(emojiRow);
 
   const isPinned = (App.currentChatPinnedMessages || []).some(p => p.messageId === msgId);
+  const canEdit = isMyMsg && (Date.now() - (msg.time || 0)) < 15 * 60 * 1000;
   const actions = [
     { icon: '↩️', label: 'Reply',   fn: `replyToMsg('${msgId}')` },
-    { icon: '✏️', label: 'Edit',    fn: `editMessage('${msgId}')`,  show: isMyMsg },
+    { icon: '✏️', label: 'Edit',    fn: `editMessage('${msgId}')`,  show: canEdit },
     { icon: '↪️', label: 'Forward', fn: `openForwardModal('${msgId}')` },
     { icon: '📋', label: 'Copy',    fn: `copyMsgText('${msgId}')` },
     { icon: '📌', label: isPinned ? 'Unpin message' : 'Pin message', fn: isPinned ? `unpinMessageByMsgId('${msgId}')` : `pinMessage('${msgId}')` },
@@ -1044,6 +1045,10 @@ function editMessage(msgId) {
   const msg = msgs.find(m => m.id === msgId);
   if (!msg || (msg.type !== 'text' && !msg.text)) {
     showToast('Only text messages can be edited', 'info');
+    return;
+  }
+  if ((Date.now() - (msg.time || 0)) >= 15 * 60 * 1000) {
+    showToast('Messages can only be edited within 15 minutes', 'info');
     return;
   }
 
@@ -2470,6 +2475,51 @@ function toggleChatMute(chatId) {
 }
 
 /* ══════════════════════════════════════════════════════════════
+   20b. DISAPPEARING MESSAGES
+   ══════════════════════════════════════════════════════════════ */
+function setDisappearingMessages(chatId, ttlMs) {
+  if (!App.db || !App.auth?.currentUser) return;
+  const chat = App.chats.find(c => c.id === chatId);
+  if (!chat) return;
+  const isGroup = chat.type === 'group';
+  const col = isGroup ? 'groups' : 'directChats';
+  
+  App.db.collection(col).doc(chatId).set({
+    disappearingMessages: ttlMs
+  }, { merge: true }).catch(() => {});
+  
+  chat.disappearingMessages = ttlMs;
+  
+  if (ttlMs > 0) {
+    applyTTLToExistingMessages(chatId, ttlMs);
+  }
+  
+  showToast(ttlMs > 0 ? `Messages will disappear after ${formatTTL(ttlMs)}` : 'Disappearing messages off', 'info');
+}
+
+function formatTTL(ms) {
+  if (ms >= 86400000 * 90) return '90 days';
+  if (ms >= 86400000 * 7) return '7 days';
+  if (ms >= 86400000) return '24 hours';
+  return 'shortly';
+}
+
+function applyTTLToExistingMessages(chatId, ttlMs) {
+  const msgs = App.messages[chatId] || [];
+  const now = Date.now();
+  msgs.forEach(msg => {
+    if (!msg.expiresAt && msg.time) {
+      const expiresAt = msg.time + ttlMs;
+      if (expiresAt > now && !msg.id.startsWith('msg_')) {
+        App.db.collection('messages').doc(msg.id).update({
+          expiresAt: expiresAt
+        }).catch(() => {});
+      }
+    }
+  });
+}
+
+/* ══════════════════════════════════════════════════════════════
    21. ARCHIVE CHAT
    ══════════════════════════════════════════════════════════════ */
 function archiveChat(chatId) {
@@ -2704,6 +2754,385 @@ document.addEventListener('DOMContentLoaded', function() {
       if (typeof sendTypingIndicator === 'function') sendTypingIndicator();
     });
   }
+
+/* ══════════════════════════════════════════════════════════════
+   GIF SEARCH — Tenor API integration
+   ══════════════════════════════════════════════════════════════ */
+const TENOR_API_KEY = 'AIzaSyBBJFS7BYOhPz2G0JmTlOPgRk0TvNMIJQc';
+const TENOR_BASE = 'https://tenor.googleapis.com/v2';
+
+let _gifSearchTimeout = null;
+let _gifSearchQuery = '';
+let _gifPage = 0;
+
+function openGifPicker() {
+  let picker = document.getElementById('gif-picker');
+  if (!picker) {
+    picker = document.createElement('div');
+    picker.id = 'gif-picker';
+    picker.className = 'fixed bottom-20 left-1/2 -translate-x-1/2 w-[min(90vw,380px)] h-[350px] bg-surface-container rounded-2xl shadow-2xl z-[9997] flex flex-col overflow-hidden border border-outline-variant/20';
+    picker.style.display = 'none';
+    
+    picker.innerHTML = `
+      <div class="p-3 border-b border-outline-variant/20">
+        <div class="relative">
+          <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-lg">search</span>
+          <input id="gif-search-input" type="text" placeholder="Search GIFs..." 
+            class="w-full bg-surface-variant/50 border border-outline-variant/30 rounded-xl pl-9 pr-3 py-2 text-sm focus:outline-none focus:border-primary"
+            oninput="onGifSearchInput(this.value)">
+        </div>
+      </div>
+      <div id="gif-results" class="flex-1 overflow-y-auto p-2 grid grid-cols-2 gap-1"></div>
+      <button onclick="document.getElementById('gif-picker').style.display='none'" class="p-2 text-center text-xs text-on-surface-variant hover:bg-surface-variant">Close</button>
+    `;
+    document.body.appendChild(picker);
+    
+    loadGifResults('trending');
+  }
+  
+  picker.style.display = picker.style.display === 'none' ? 'flex' : 'none';
+  if (picker.style.display !== 'none') {
+    document.getElementById('gif-search-input')?.focus();
+  }
+}
+
+function onGifSearchInput(query) {
+  _gifSearchQuery = query;
+  _gifPage = 0;
+  clearTimeout(_gifSearchTimeout);
+  _gifSearchTimeout = setTimeout(() => {
+    loadGifResults(query || 'trending');
+  }, 300);
+}
+
+async function loadGifResults(query, page) {
+  const container = document.getElementById('gif-results');
+  if (!container) return;
+  
+  try {
+    const endpoint = query === 'trending'
+      ? `${TENOR_BASE}/featured?key=${TENOR_API_KEY}&limit=20&media_filter=gif,tinygif&pos=${page || 0}`
+      : `${TENOR_BASE}/search?key=${TENOR_API_KEY}&q=${encodeURIComponent(query)}&limit=20&media_filter=gif,tinygif&pos=${page || 0}`;
+    
+    const resp = await fetch(endpoint);
+    const data = await resp.json();
+    
+    if (!page) container.innerHTML = '';
+    
+    (data.results || []).forEach(gif => {
+      const tinyUrl = gif.media_formats?.tinygif?.url;
+      const fullUrl = gif.media_formats?.gif?.url;
+      if (!tinyUrl) return;
+      
+      const img = document.createElement('img');
+      img.src = tinyUrl;
+      img.className = 'w-full h-24 object-cover rounded-lg cursor-pointer hover:ring-2 hover:ring-primary transition-all';
+      img.loading = 'lazy';
+      img.onclick = () => sendGifMessage(fullUrl || tinyUrl);
+      container.appendChild(img);
+    });
+  } catch(e) {
+    if (!page) container.innerHTML = '<div class="col-span-2 text-center text-sm text-on-surface-variant py-8">Failed to load GIFs</div>';
+  }
+}
+
+function sendGifMessage(gifUrl) {
+  document.getElementById('gif-picker').style.display = 'none';
+  
+  if (!App.currentChat || !App.db || !App.auth?.currentUser) return;
+  const uid = App.auth.currentUser.uid;
+  const chatId = App.currentChat.id;
+  const isGroup = App.currentChat.type === 'group';
+  
+  const messageData = {
+    senderId: uid,
+    senderName: App.currentUser.displayName || 'Me',
+    text: '',
+    timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+    status: 'sent',
+    read: true,
+    attachment: { type: 'image', url: gifUrl }
+  };
+  
+  if (isGroup) {
+    messageData.groupId = chatId;
+  } else {
+    messageData.directId = chatId;
+    messageData.participants = [uid, App.currentChat.uid];
+  }
+  
+  App.db.collection('messages').add(messageData).catch(console.error);
+  
+  const coll = isGroup ? 'groups' : 'directChats';
+  App.db.collection(coll).doc(chatId).set({
+    lastMessage: '📎 GIF',
+    lastMessageTime: firebase.firestore.FieldValue.serverTimestamp(),
+    lastMessageSenderId: uid
+  }, { merge: true }).catch(() => {});
+}
+
+/* ══════════════════════════════════════════════════════════════
+   BROADCAST LISTS — Send same message to multiple contacts
+   ══════════════════════════════════════════════════════════════ */
+function openBroadcastCreator() {
+  let modal = document.getElementById('broadcast-modal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'broadcast-modal';
+    modal.className = 'fixed inset-0 z-[9998] flex items-end sm:items-center justify-center bg-black/50';
+    modal.onclick = (e) => { if (e.target === modal) modal.classList.add('hidden'); };
+    document.body.appendChild(modal);
+  }
+  
+  const contacts = App.contacts.filter(c => c.uid !== App.auth?.currentUser?.uid);
+  
+  modal.innerHTML = `
+    <div class="bg-surface-container rounded-t-2xl sm:rounded-2xl w-full sm:w-[min(90vw,420px)] max-h-[80vh] flex flex-col shadow-2xl">
+      <div class="flex items-center justify-between p-4 border-b border-outline-variant/20">
+        <h3 class="text-lg font-semibold">New Broadcast</h3>
+        <button onclick="document.getElementById('broadcast-modal').classList.add('hidden')" class="p-1 rounded-full hover:bg-surface-variant">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+      <div class="p-3 border-b border-outline-variant/20">
+        <input id="broadcast-search" type="text" placeholder="Search contacts..." 
+          class="w-full bg-surface-variant/50 border border-outline-variant/30 rounded-xl px-4 py-2 text-sm focus:outline-none focus:border-primary"
+          oninput="filterBroadcastContacts(this.value)">
+      </div>
+      <div id="broadcast-contacts" class="flex-1 overflow-y-auto max-h-[40vh]">
+        ${contacts.map(c => `
+          <label class="flex items-center gap-3 px-4 py-3 hover:bg-surface-variant/50 cursor-pointer border-b border-outline-variant/10">
+            <input type="checkbox" value="${c.uid}" class="broadcast-contact-cb w-4 h-4 accent-primary rounded">
+            <div class="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center text-sm font-bold text-primary">${escHtml(c.initials)}</div>
+            <div>
+              <div class="text-sm font-medium">${escHtml(c.name)}</div>
+              <div class="text-xs text-on-surface-variant">${c.status === 'online' ? 'Online' : ''}</div>
+            </div>
+          </label>
+        `).join('')}
+      </div>
+      <div class="p-4 border-t border-outline-variant/20">
+        <div id="broadcast-count" class="text-xs text-on-surface-variant mb-2">0 contacts selected</div>
+        <div class="flex gap-2">
+          <input id="broadcast-msg-input" type="text" placeholder="Type broadcast message..." 
+            class="flex-1 bg-surface-variant/50 border border-outline-variant/30 rounded-xl px-4 py-2 text-sm focus:outline-none focus:border-primary">
+          <button onclick="sendBroadcast()" class="px-4 py-2 bg-primary text-on-primary rounded-xl text-sm font-medium hover:brightness-110">Send</button>
+        </div>
+      </div>
+    </div>
+  `;
+  
+  modal.classList.remove('hidden');
+  
+  modal.querySelectorAll('.broadcast-contact-cb').forEach(cb => {
+    cb.addEventListener('change', () => {
+      const count = modal.querySelectorAll('.broadcast-contact-cb:checked').length;
+      document.getElementById('broadcast-count').textContent = `${count} contact${count !== 1 ? 's' : ''} selected`;
+    });
+  });
+}
+
+function filterBroadcastContacts(query) {
+  const q = query.toLowerCase();
+  document.querySelectorAll('#broadcast-contacts label').forEach(label => {
+    const name = label.querySelector('.text-sm')?.textContent?.toLowerCase() || '';
+    label.style.display = name.includes(q) ? '' : 'none';
+  });
+}
+
+async function sendBroadcast() {
+  const modal = document.getElementById('broadcast-modal');
+  if (!modal) return;
+  
+  const selectedUIDs = [...modal.querySelectorAll('.broadcast-contact-cb:checked')].map(cb => cb.value);
+  const text = document.getElementById('broadcast-msg-input')?.value.trim();
+  
+  if (!selectedUIDs.length) { showToast('Select at least one contact', 'error'); return; }
+  if (!text) { showToast('Type a message', 'error'); return; }
+  if (!App.db || !App.auth?.currentUser) return;
+  
+  const uid = App.auth.currentUser.uid;
+  
+  showToast(`Broadcasting to ${selectedUIDs.length} contacts...`, 'info');
+  
+  for (const otherUid of selectedUIDs) {
+    const chatId = [uid, otherUid].sort().join('_');
+    
+    const messageData = {
+      senderId: uid,
+      senderName: App.currentUser.displayName || 'Me',
+      senderEmail: App.currentUser.email || '',
+      text: text,
+      timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+      status: 'sent',
+      read: false,
+      directId: chatId,
+      participants: [uid, otherUid],
+      isBroadcast: true
+    };
+    
+    App.db.collection('messages').add(messageData).catch(console.error);
+    App.db.collection('directChats').doc(chatId).set({
+      participants: [uid, otherUid],
+      lastMessage: text,
+      lastMessageTime: firebase.firestore.FieldValue.serverTimestamp(),
+      lastMessageSenderId: uid,
+      status: 'active'
+    }, { merge: true }).catch(console.error);
+  }
+  
+  modal.classList.add('hidden');
+  showToast(`Message broadcast to ${selectedUIDs.length} contacts`, 'success');
+}
+
+/* ══════════════════════════════════════════════════════════════
+    POLL CREATION & VOTING
+    ══════════════════════════════════════════════════════════════ */
+let _pollCreatorState = { question: '', options: ['', ''], allowMultiple: false };
+
+function openPollCreator() {
+  if (!App.currentChat || App.currentChat.type !== 'group') {
+    showToast('Polls are only available in group chats', 'info');
+    return;
+  }
+  _pollCreatorState = { question: '', options: ['', ''], allowMultiple: false };
+
+  let modal = document.getElementById('poll-creator-modal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'poll-creator-modal';
+    modal.className = 'fixed inset-0 z-[9998] flex items-center justify-center bg-black/50';
+    modal.onclick = (e) => { if (e.target === modal) modal.classList.add('hidden'); };
+    document.body.appendChild(modal);
+  }
+
+  renderPollCreator();
+  modal.classList.remove('hidden');
+}
+
+function renderPollCreator() {
+  const modal = document.getElementById('poll-creator-modal');
+  if (!modal) return;
+  const s = _pollCreatorState;
+
+  modal.innerHTML = `
+    <div class="bg-surface-container rounded-2xl w-[min(90vw,420px)] max-h-[80vh] overflow-y-auto shadow-2xl">
+      <div class="flex items-center justify-between p-4 border-b border-outline-variant/20">
+        <h3 class="text-lg font-semibold">Create Poll</h3>
+        <button onclick="document.getElementById('poll-creator-modal').classList.add('hidden')" class="p-1 rounded-full hover:bg-surface-variant">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+      <div class="p-4 space-y-4">
+        <input id="poll-question" type="text" placeholder="Ask a question..."
+          class="w-full bg-surface-variant/50 border border-outline-variant/30 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary"
+          value="${escHtml(s.question)}" oninput="_pollCreatorState.question=this.value" maxlength="200">
+
+        <div id="poll-options-list" class="space-y-2">
+          ${s.options.map((opt, i) => `
+            <div class="flex items-center gap-2">
+              <span class="text-on-surface-variant/60 text-sm w-5">${i + 1}.</span>
+              <input type="text" placeholder="Option ${i + 1}"
+                class="flex-1 bg-surface-variant/50 border border-outline-variant/30 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-primary"
+                value="${escHtml(opt)}" oninput="_pollCreatorState.options[${i}]=this.value" maxlength="100">
+              ${s.options.length > 2 ? `<button onclick="_pollCreatorState.options.splice(${i},1);renderPollCreator()" class="p-1 rounded-full hover:bg-surface-variant"><span class="material-symbols-outlined text-sm">close</span></button>` : ''}
+            </div>
+          `).join('')}
+        </div>
+
+        ${s.options.length < 6 ? `
+          <button onclick="_pollCreatorState.options.push('');renderPollCreator()" class="flex items-center gap-2 text-primary text-sm font-medium">
+            <span class="material-symbols-outlined text-lg">add</span> Add option
+          </button>
+        ` : ''}
+
+        <label class="flex items-center gap-3 py-2 cursor-pointer">
+          <input type="checkbox" ${s.allowMultiple ? 'checked' : ''} onchange="_pollCreatorState.allowMultiple=this.checked" class="w-4 h-4 accent-primary">
+          <span class="text-sm">Allow multiple selections</span>
+        </label>
+      </div>
+      <div class="flex justify-end gap-2 p-4 border-t border-outline-variant/20">
+        <button onclick="document.getElementById('poll-creator-modal').classList.add('hidden')" class="px-4 py-2 text-sm rounded-xl hover:bg-surface-variant">Cancel</button>
+        <button onclick="submitPoll()" class="px-4 py-2 text-sm font-medium bg-primary text-on-primary rounded-xl hover:brightness-110">Create Poll</button>
+      </div>
+    </div>
+  `;
+}
+
+function submitPoll() {
+  const s = _pollCreatorState;
+  if (!s.question.trim()) { showToast('Please enter a question', 'error'); return; }
+  const validOptions = s.options.filter(o => o.trim());
+  if (validOptions.length < 2) { showToast('Add at least 2 options', 'error'); return; }
+  if (!App.db || !App.auth?.currentUser || !App.currentChat) return;
+
+  const uid = App.auth.currentUser.uid;
+  const chatId = App.currentChat.id;
+
+  const pollData = {
+    senderId: uid,
+    senderName: App.currentUser.displayName || 'Me',
+    text: '',
+    groupId: chatId,
+    type: 'poll',
+    poll: {
+      question: s.question.trim(),
+      options: validOptions.map(text => ({ text: text.trim(), voters: [] })),
+      allowMultiple: s.allowMultiple,
+      createdBy: uid,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    },
+    timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+    status: 'sent',
+    read: true
+  };
+
+  App.db.collection('messages').add(pollData).catch(console.error);
+  App.db.collection('groups').doc(chatId).update({
+    lastMessage: '\ud83d\udcca Poll: ' + s.question.trim(),
+    lastMessageTime: firebase.firestore.FieldValue.serverTimestamp(),
+    lastMessageSenderId: uid,
+    lastMessageSenderName: App.currentUser.displayName || 'Me'
+  }).catch(console.error);
+
+  document.getElementById('poll-creator-modal')?.classList.add('hidden');
+  showToast('Poll created', 'success');
+}
+
+function votePoll(msgId, optionIndex) {
+  if (!App.db || !App.auth?.currentUser) return;
+  const uid = App.auth.currentUser.uid;
+  const chatId = App.currentChat?.id;
+  if (!chatId) return;
+
+  const msgs = App.messages[chatId] || [];
+  const msg = msgs.find(m => m.id === msgId);
+  if (!msg || !msg.poll) return;
+
+  const poll = msg.poll;
+  const alreadyVotedAt = poll.options.findIndex(o => o.voters?.includes(uid));
+
+  if (!poll.allowMultiple && alreadyVotedAt >= 0 && alreadyVotedAt !== optionIndex) {
+    poll.options[alreadyVotedAt].voters = (poll.options[alreadyVotedAt].voters || []).filter(v => v !== uid);
+  }
+
+  const opt = poll.options[optionIndex];
+  if (!opt.voters) opt.voters = [];
+  const voterIdx = opt.voters.indexOf(uid);
+  if (voterIdx >= 0) {
+    opt.voters.splice(voterIdx, 1);
+  } else {
+    opt.voters.push(uid);
+  }
+
+  renderMessages(chatId);
+
+  if (!msgId.startsWith('msg_')) {
+    App.db.collection('messages').doc(msgId).update({
+      'poll.options': poll.options
+    }).catch(() => {});
+  }
+}
 
   // Apply CSS animation for context menu
   if (!document.getElementById('_extras-style')) {
