@@ -162,6 +162,7 @@ let localCallStream = null;
 let remoteCallStream = null;
 let incomingCallsUnsubscribe = null;
 let callDocUnsubscribe = null;
+let callAnswerUnsubscribe = null;
 let callCandidatesUnsubscribe = null;
 let currentCallType = "voice";
 let micMuted = false;

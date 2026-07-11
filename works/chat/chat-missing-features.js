@@ -217,14 +217,14 @@
       <span class="nq-label">Good</span>`;
     _netQualityBar = bar;
 
-    // Inject into call modal header area
-    const callTimer = document.getElementById('callTimer') ||
-                      document.querySelector('.call-status-text, .call-header');
+    // Inject into call screen header area
+    const callTimer = document.getElementById('call-timer') ||
+                      document.getElementById('call-status');
     if (callTimer && callTimer.parentElement) {
       callTimer.parentElement.insertBefore(bar, callTimer.nextSibling);
     } else {
-      const callModal = document.getElementById('callModal');
-      if (callModal) callModal.querySelector('.call-info, .call-header, .call-modal-top')?.appendChild(bar);
+      const callScreen = document.getElementById('call-screen');
+      if (callScreen) callScreen.querySelector('#call-info-section, #call-controls')?.appendChild(bar);
     }
   }
 
@@ -281,14 +281,14 @@
 
   // Hook into call start/end events via MutationObserver on callModal display
   function watchCallModal() {
-    const callModal = document.getElementById('callModal');
-    if (!callModal) return;
+    const callScreen = document.getElementById('call-screen');
+    if (!callScreen) return;
     const obs = new MutationObserver(() => {
-      const visible = callModal.style.display !== 'none' && callModal.style.display !== '';
-      if (visible) startNetworkQualityMonitor();
+      const hidden = callScreen.classList.contains('hidden');
+      if (!hidden) startNetworkQualityMonitor();
       else stopNetworkQualityMonitor();
     });
-    obs.observe(callModal, { attributes: true, attributeFilter: ['style'] });
+    obs.observe(callScreen, { attributes: true, attributeFilter: ['class'] });
   }
 
   /* ================================================================
@@ -330,10 +330,10 @@
 
   function addHoldButton() {
     if (document.getElementById('holdCallBtn')) return;
-    const controls = document.querySelector('.call-controls');
+    const controls = document.getElementById('call-controls');
     if (!controls) return;
 
-    const muteBtn = document.getElementById('muteCallBtn');
+    const muteBtn = document.getElementById('btn-mute');
     if (!muteBtn) return;
 
     const btn = document.createElement('button');
@@ -403,13 +403,13 @@
   }
 
   function watchCallEnd() {
-    const callModal = document.getElementById('callModal');
-    if (!callModal) return;
+    const callScreen = document.getElementById('call-screen');
+    if (!callScreen) return;
     new MutationObserver(() => {
-      const visible = callModal.style.display !== 'none' && callModal.style.display !== '';
-      if (!visible) resetHoldState();
+      const hidden = callScreen.classList.contains('hidden');
+      if (hidden) resetHoldState();
       else addHoldButton();
-    }).observe(callModal, { attributes: true, attributeFilter: ['style'] });
+    }).observe(callScreen, { attributes: true, attributeFilter: ['class'] });
   }
 
   /* ================================================================

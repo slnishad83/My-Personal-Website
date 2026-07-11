@@ -769,6 +769,7 @@ function subscribeToMessages(chatId) {
           type: type,
           url: url,
           duration: duration,
+          durationSec: a.durationSec || 0,
           fileName: fileName,
           fileSize: fileSize,
           lat: a.lat,
@@ -880,6 +881,7 @@ function checkSession() {
           subscribeToCallLogs(App.currentUser.uid);
           loadBlockedUsers();
           listenForIncomingCalls();
+          handleCallNotificationUrlParams();
           if (App.currentUser.email) {
             loadMessageHistory(App.currentUser.email, App.currentUser.uid);
             subscribeToChatRequests(App.currentUser.email, App.currentUser.uid);
@@ -2804,6 +2806,7 @@ async function beginCall(type) {
   document.getElementById('call-screen')?.classList.remove('hidden');
   document.getElementById('call-quality-text').textContent = type === 'video' ? 'HD Video call' : 'HD Voice call';
   document.getElementById('btn-cam')?.classList.toggle('hidden', type === 'voice');
+  document.getElementById('btn-screenshare')?.classList.toggle('hidden', type === 'voice');
   document.getElementById('remote-video')?.classList.add('hidden');
   document.getElementById('local-video-container')?.classList.add('hidden');
   document.getElementById('call-info-section')?.classList.remove('hidden');
@@ -2844,6 +2847,8 @@ async function beginCall(type) {
         show('call-timer');
         callStartedAt = Date.now();
         startCallTimer();
+        startCallQualityAdaptation();
+        document.getElementById('btn-screenshare')?.classList.toggle('hidden', currentCallType === 'voice');
         if (App.db && App._activeCallId) {
           App.db.collection('calls').doc(App._activeCallId).update({ status: 'active', startedAt: firebase.firestore.FieldValue.serverTimestamp() }).catch(() => {});
         }
@@ -2868,6 +2873,8 @@ async function beginCall(type) {
     listenForCallAnswer(callRef.id);
     listenForCallCandidates(callRef.id);
     listenForCallStatus(callRef.id);
+    requestWakeLock();
+    startCallHeartbeat(callRef.id);
 
     callTimeoutTimer = setTimeout(() => {
       if (App._activeCallId && App.callActive) {
@@ -2885,7 +2892,7 @@ async function beginCall(type) {
 
 function listenForCallAnswer(callId) {
   if (!App.db) return;
-  callDocUnsubscribe = App.db.collection('calls').doc(callId).onSnapshot(doc => {
+  callAnswerUnsubscribe = App.db.collection('calls').doc(callId).onSnapshot(doc => {
     const data = doc.data();
     if (!data) return;
     if (data.status === 'active' && data.answer && peerConnection && peerConnection.signalingState === 'have-local-offer') {
@@ -2938,6 +2945,8 @@ function endCall() {
   clearInterval(callHeartbeatTimer);
   stopRingtone();
 
+  if (_screenShareStream) { _screenShareStream.getTracks().forEach(t => t.stop()); _screenShareStream = null; _screenShareSender = null; }
+
   const duration = callStartedAt ? Math.floor((Date.now() - callStartedAt) / 1000) : 0;
 
   if (peerConnection) {
@@ -2949,16 +2958,20 @@ function endCall() {
     localCallStream = null;
   }
   remoteCallStream = null;
-  document.getElementById('remote-video').srcObject = null;
-  document.getElementById('local-video').srcObject = null;
+  const rv = document.getElementById('remote-video');
+  if (rv) rv.srcObject = null;
+  const lv = document.getElementById('local-video');
+  if (lv) lv.srcObject = null;
   document.getElementById('call-screen')?.classList.add('hidden');
   document.getElementById('remote-video')?.classList.add('hidden');
   document.getElementById('local-video-container')?.classList.add('hidden');
+  document.getElementById('btn-screenshare')?.classList.add('hidden');
   document.getElementById('call-info-section')?.classList.remove('hidden');
 
   cleanupGroupCalls();
 
   if (callDocUnsubscribe) { callDocUnsubscribe(); callDocUnsubscribe = null; }
+  if (callAnswerUnsubscribe) { callAnswerUnsubscribe(); callAnswerUnsubscribe = null; }
   if (callCandidatesUnsubscribe) { callCandidatesUnsubscribe(); callCandidatesUnsubscribe = null; }
 
   if (wasActive && App.db && App._activeCallId) {
@@ -3007,13 +3020,78 @@ async function switchCamera() {
 function toggleSpeaker() {
   speakerOn = !speakerOn;
   const icon = document.getElementById('speaker-icon');
-  if (icon) icon.textContent = speakerOn ? 'volume_off' : 'volume_up';
+  if (icon) icon.textContent = speakerOn ? 'volume_up' : 'volume_off';
   document.getElementById('btn-speaker')?.classList.toggle('bg-primary/30', speakerOn);
+  if (remoteCallStream) {
+    const audioEl = document.getElementById('remote-video');
+    if (audioEl) {
+      audioEl.setSinkId?.(speakerOn ? '' : 'default').catch(() => {});
+      audioEl.volume = speakerOn ? 1.0 : 0.8;
+    }
+  }
 }
 
 function minimizeCall() {
   document.getElementById('call-screen')?.classList.add('hidden');
   showToast('Call active — tap status to return', 'info');
+}
+
+let _screenShareStream = null;
+let _screenShareSender = null;
+
+async function toggleScreenShare() {
+  if (_screenShareStream) {
+    _screenShareStream.getTracks().forEach(t => t.stop());
+    _screenShareStream = null;
+    if (_screenShareSender && peerConnection && localCallStream) {
+      const camTrack = localCallStream.getVideoTracks()[0];
+      if (camTrack) await _screenShareSender.replaceTrack(camTrack).catch(() => {});
+    }
+    _screenShareSender = null;
+    const localVideo = document.getElementById('local-video');
+    if (localVideo && localCallStream) localVideo.srcObject = localCallStream;
+    document.getElementById('screenshare-icon').textContent = 'screen_share';
+    showToast('Screen share stopped', 'info');
+    return;
+  }
+  try {
+    const screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: false });
+    _screenShareStream = screenStream;
+    const screenTrack = screenStream.getVideoTracks()[0];
+    _screenShareSender = peerConnection?.getSenders().find(s => s.track?.kind === 'video');
+    if (_screenShareSender) await _screenShareSender.replaceTrack(screenTrack);
+    const localVideo = document.getElementById('local-video');
+    if (localVideo) localVideo.srcObject = screenStream;
+    document.getElementById('screenshare-icon').textContent = 'stop_screen_share';
+    screenTrack.onended = () => toggleScreenShare();
+    showToast('Sharing your screen', 'info');
+  } catch(e) { showToast('Screen share cancelled', 'info'); }
+}
+
+function startCallQualityAdaptation() {
+  if (!peerConnection || currentCallType !== 'video') return;
+  const adapt = async () => {
+    if (!peerConnection || !App.callActive) return;
+    try {
+      const stats = await peerConnection.getStats();
+      let rtt = null, packetsLost = 0, packetsSent = 0;
+      stats.forEach(report => {
+        if (report.type === 'candidate-pair' && report.state === 'succeeded' && report.currentRoundTripTime != null) rtt = report.currentRoundTripTime * 1000;
+        if (report.type === 'outbound-rtp') { packetsLost += report.packetsLost || 0; packetsSent += report.packetsSent || 1; }
+      });
+      const sender = peerConnection.getSenders().find(s => s.track?.kind === 'video');
+      if (sender && sender.getParameters) {
+        const params = sender.getParameters();
+        if (!params.encodings || !params.encodings.length) params.encodings = [{}];
+        let maxBitrate = 2500000;
+        if (rtt !== null && rtt > 300) maxBitrate = 500000;
+        else if (rtt !== null && rtt > 150) maxBitrate = 1000000;
+        params.encodings[0].maxBitrate = maxBitrate;
+        sender.setParameters(params).catch(() => {});
+      }
+    } catch(_) {}
+  };
+  setInterval(adapt, 5000);
 }
 
 function acceptCall() {
@@ -3367,7 +3445,72 @@ function listenForGroupCallParticipants(callId, callType) {
 
     const participantNames = participants.map(p => p === uid ? 'You' : (data.participantNames?.[p] || p.substring(0, 6)));
     setEl('call-status', activeGroupCallParticipants.length + 1 + ' connected');
+
+    if (data.answers) {
+      Object.entries(data.answers).forEach(([answerUid, answerData]) => {
+        if (answerUid === uid) return;
+        const pc = groupCallPeerConnections.get(answerUid);
+        if (pc && pc.signalingState === 'have-local-offer' && answerData?.sdp) {
+          pc.setRemoteDescription(new RTCSessionDescription(answerData)).catch(() => {});
+        }
+      });
+    }
+
+    if (data.offers) {
+      Object.entries(data.offers).forEach(([offerUid, offerData]) => {
+        if (offerUid === uid || !offerData?.sdp) return;
+        if (groupCallPeerConnections.has(offerUid)) return;
+        _answerGroupCallOffer(callId, offerUid, offerData, callType, uid);
+      });
+    }
   });
+}
+
+async function _answerGroupCallOffer(callId, remoteUid, offerData, callType, myUid) {
+  if (!App.db) return;
+  try {
+    const rtcConfig = await getRtcConfig();
+    const pc = new RTCPeerConnection(rtcConfig);
+    groupCallPeerConnections.set(remoteUid, pc);
+    localCallStream.getTracks().forEach(track => pc.addTrack(track, localCallStream));
+    pc.onicecandidate = async (e) => {
+      if (e.candidate && App.db) {
+        await App.db.collection('calls').doc(callId).collection('candidates').add({
+          candidate: e.candidate.toJSON(), sender: myUid, targetUid: remoteUid,
+          createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        }).catch(() => {});
+      }
+    };
+    pc.ontrack = (e) => {
+      const stream = e.streams[0];
+      activeGroupCallParticipants = activeGroupCallParticipants.filter(p => p.uid !== remoteUid);
+      const name = App._groupParticipantNames?.[remoteUid] || remoteUid.substring(0, 6);
+      activeGroupCallParticipants.push({ uid: remoteUid, stream, pc, name });
+      if (callType === 'video') _renderGroupVideoGrid();
+      else {
+        const existingAudio = document.getElementById('group-audio-' + remoteUid);
+        if (existingAudio) { existingAudio.srcObject = stream; }
+        else { const audio = document.createElement('audio'); audio.id = 'group-audio-' + remoteUid; audio.srcObject = stream; audio.autoplay = true; document.body.appendChild(audio); }
+      }
+      const count = activeGroupCallParticipants.length + 1;
+      setEl('call-status', count + ' participant' + (count > 1 ? 's' : ''));
+    };
+    pc.onconnectionstatechange = () => {
+      if (pc.connectionState === 'failed') {
+        activeGroupCallParticipants = activeGroupCallParticipants.filter(p => p.uid !== remoteUid);
+        groupCallPeerConnections.delete(remoteUid);
+        pc.close();
+        _renderGroupVideoGrid();
+      }
+    };
+    await pc.setRemoteDescription(new RTCSessionDescription(offerData));
+    const answer = await pc.createAnswer();
+    await pc.setLocalDescription(answer);
+    await App.db.collection('calls').doc(callId).update({
+      ['answers.' + myUid]: { sdp: answer.sdp, type: answer.type }
+    });
+    _listenGroupCandidates(callId, remoteUid, pc, myUid);
+  } catch(e) { console.warn('Group answer error:', e); }
 }
 
 async function _createGroupPeerConnection(callId, remoteUid, callType, myUid) {
@@ -3478,7 +3621,7 @@ function _renderGroupVideoGrid() {
     div.appendChild(video);
     const label = document.createElement('div');
     label.className = 'absolute bottom-1 left-1 bg-black/50 text-white text-[10px] px-2 py-0.5 rounded';
-    label.textContent = p.uid.substring(0, 6);
+    label.textContent = p.name || p.uid.substring(0, 6);
     div.appendChild(label);
     grid.appendChild(div);
   });
@@ -3530,6 +3673,41 @@ function cleanupGroupCalls() {
   activeGroupCallParticipants = [];
   document.getElementById('group-video-grid')?.remove();
   document.querySelectorAll('[id^="group-audio-"]').forEach(el => el.remove());
+}
+
+function startCallHeartbeat(callId) {
+  clearInterval(callHeartbeatTimer);
+  callHeartbeatTimer = setInterval(() => {
+    if (!App.callActive || !App.db || !App._activeCallId) { clearInterval(callHeartbeatTimer); return; }
+    App.db.collection('calls').doc(callId).update({
+      heartbeat: firebase.firestore.FieldValue.serverTimestamp(),
+      heartbeatUid: App.auth?.currentUser?.uid
+    }).catch(() => {});
+  }, 15000);
+}
+
+function handleCallNotificationUrlParams() {
+  const params = new URLSearchParams(location.search);
+  const callId = params.get('callId');
+  const action = params.get('callAction');
+  if (!callId) return;
+  if (action === 'accept') {
+    setTimeout(() => {
+      App.db?.collection('calls').doc(callId).get().then(doc => {
+        const data = doc.data();
+        if (!data || data.status !== 'ringing') return;
+        const uid = App.auth?.currentUser?.uid;
+        if (!data.participants?.includes(uid)) return;
+        App._incomingCallData = { callId, type: data.type, fromUserId: data.fromUserId, fromUserName: data.fromUserName, groupCall: data.groupCall };
+        acceptCall();
+      }).catch(() => {});
+    }, 1500);
+  } else if (action === 'decline') {
+    setTimeout(() => {
+      App.db?.collection('calls').doc(callId).update({ status: 'rejected' }).catch(() => {});
+    }, 500);
+  }
+  window.history.replaceState({}, '', location.pathname);
 }
 
 /* ══════════════════════════════════════════════════
@@ -4577,7 +4755,12 @@ function handleDocumentClick(e) {
 }
 
 function setEl(id, val) { const el=document.getElementById(id); if(el) el.textContent=val; }
-function show(id) { document.getElementById(id)?.classList.remove('hidden'); }
+function show(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.classList.remove('hidden');
+  if (el.style.display === 'none') el.style.removeProperty('display');
+}
 function hide(id) { document.getElementById(id)?.classList.add('hidden'); }
 function qsa(sel) { return document.querySelectorAll(sel); }
 
@@ -5012,7 +5195,10 @@ function setupOnlineStatus() {
   window.addEventListener('beforeunload', () => updatePresence('offline'));
   document.addEventListener('visibilitychange', () => {
     clearTimeout(App._presenceDebounce);
-    App._presenceDebounce = setTimeout(() => updatePresence(document.hidden ? 'offline' : 'online'), 300);
+    App._presenceDebounce = setTimeout(() => {
+      if (App.callActive) return;
+      updatePresence(document.hidden ? 'offline' : 'online');
+    }, 300);
   });
 }
 

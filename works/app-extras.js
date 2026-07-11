@@ -1843,15 +1843,16 @@ async function _compressImage(file, quality, maxDim) {
   });
 }
 
-async function _sendFileMessage(file) {
+async function _sendFileMessage(file, _unused, extraMeta) {
   if (!App.currentChat) return;
   const chatId = App.currentChat.id;
   const isImage = file.type.startsWith('image/');
   const isVideo = file.type.startsWith('video/');
+  const isVoice = file.type.startsWith('audio/');
 
   // Create local blob URL for preview
   const blobUrl = URL.createObjectURL(file);
-  const type = isImage ? 'image' : isVideo ? 'video' : 'doc';
+  const type = isVoice ? 'voice' : isImage ? 'image' : isVideo ? 'video' : 'doc';
   const fmtSize = _fmtBytes(file.size);
 
   const msg = {
@@ -1863,7 +1864,13 @@ async function _sendFileMessage(file) {
     fileSize: fmtSize,
     time:     Date.now(),
     status:   'sending',
+    ...(extraMeta || {}),
   };
+
+  if (isVoice && extraMeta) {
+    msg.duration = extraMeta.duration || '0:00';
+    msg.durationSec = extraMeta.durationSec || 0;
+  }
 
   if (!App.messages[chatId]) App.messages[chatId] = [];
   App.messages[chatId].push(msg);
@@ -1913,6 +1920,10 @@ async function _sendFileMessage(file) {
         timestamp: firebase.firestore.FieldValue.serverTimestamp(),
         status: 'sent',
       };
+      if (isVoice) {
+        data.attachment.duration = msg.duration;
+        data.attachment.durationSec = msg.durationSec;
+      }
       if (isGroup) data.groupId = chatId;
       else { data.directId = chatId; data.participants = [uid, App.currentChat.uid || '']; }
       App.db.collection('messages').add(data).catch(console.error);
@@ -2075,6 +2086,7 @@ function sendVoiceMessage() {
 
   const blob = new Blob(_audioChunks, { type: getSupportedMimeType() || 'audio/webm' });
   const duration = _fmtDur(_recSec);
+  const durSec = _recSec;
   const chatId = App.currentChat.id;
 
   App.currentChat.lastMsg  = '🎙️ Voice (' + duration + ')';
@@ -2082,7 +2094,7 @@ function sendVoiceMessage() {
   renderChatList();
   showToast('Voice message sent', 'success');
 
-  _sendFileMessage(new File([blob], 'voice_' + Date.now() + '.' + (blob.type.includes('mp4') ? 'm4a' : blob.type.includes('ogg') ? 'ogg' : 'webm'), { type: blob.type })).catch(() => {});
+  _sendFileMessage(new File([blob], 'voice_' + Date.now() + '.' + (blob.type.includes('mp4') ? 'm4a' : blob.type.includes('ogg') ? 'ogg' : 'webm'), { type: blob.type }), null, { duration: duration, durationSec: durSec }).catch(() => {});
 }
 
 function _animateRealWaveform() {
