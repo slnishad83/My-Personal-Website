@@ -4,9 +4,9 @@
    ════════════════════════════════════════════════════════════ */
 
 /* ── Viewport height: use dvh with vh fallback ──────── */
-html, body, #app { height: 100%; }
+html, body, #app { height: 100%; margin: 0; padding: 0; }
 @supports (height: 100dvh) {
-  html, body, #app { height: 100dvh; }
+  html, body, #app { height: 100dvh; margin: 0; padding: 0; }
   #chat-area { min-height: 100dvh; }
 }
 
@@ -250,8 +250,10 @@ html.dark .chat-list-item.active { background: rgba(196, 192, 255, 0.08); }
   #recording-bar { padding-bottom: calc(8px + env(safe-area-inset-bottom)); }
   #emoji-picker { bottom: calc(80px + env(safe-area-inset-bottom)); }
   #attach-menu { bottom: calc(80px + env(safe-area-inset-bottom)); }
-  #app { padding-bottom: calc(64px + env(safe-area-inset-bottom)); }
-  #chat-list { padding-bottom: calc(72px + env(safe-area-inset-bottom)); }
+  @media (max-width: 767px) {
+    #app { padding-bottom: calc(64px + env(safe-area-inset-bottom)); }
+    #chat-list { padding-bottom: calc(72px + env(safe-area-inset-bottom)); }
+  }
 }
 
 /* ── Safe area left/right for landscape notch ────────── */
