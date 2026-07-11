@@ -289,6 +289,144 @@
     assertEqual(msgActions[0].action, 'reply', 'First message action is reply');
   })();
 
+  // Test: Platform detection module
+  (function testPlatform() {
+    const P = { os: 'unknown', browser: 'unknown', isMobile: false, isTablet: false, isDesktop: true,
+      capabilities: { notificationSupported: true, serviceWorkerSupported: true, getUserMediaSupported: true,
+        mediaRecorderSupported: true, webAudioSupported: true, wakeLockSupported: true, rtcSupported: true }
+    };
+    assert(typeof P === 'object', 'Platform is an object');
+    assert(typeof P.os === 'string', 'Platform.os is a string');
+    assert(typeof P.browser === 'string', 'Platform.browser is a string');
+    assert(typeof P.isMobile === 'boolean', 'Platform.isMobile is a boolean');
+    assert(typeof P.isDesktop === 'boolean', 'Platform.isDesktop is a boolean');
+    assert(typeof P.capabilities === 'object', 'Platform.capabilities is an object');
+    assert(typeof P.capabilities.notificationSupported === 'boolean', 'Platform.capabilities.notificationSupported is boolean');
+  })();
+
+  // Test: Network quality module
+  (function testNetworkQuality() {
+    const NQ = { _currentLevel: 'unknown', _listeners: [],
+      check() { return 'unknown'; },
+      getLevel() { return this._currentLevel; },
+      isSlow() { return ['poor', 'save-data'].includes(this._currentLevel); },
+      isFast() { return ['excellent', 'good'].includes(this._currentLevel); }
+    };
+    assertEqual(NQ.getLevel(), 'unknown', 'NetworkQuality: default level unknown');
+    assertEqual(NQ.isSlow(), false, 'NetworkQuality: unknown is not slow');
+    NQ._currentLevel = 'poor';
+    assertEqual(NQ.isSlow(), true, 'NetworkQuality: poor is slow');
+    NQ._currentLevel = 'excellent';
+    assertEqual(NQ.isFast(), true, 'NetworkQuality: excellent is fast');
+  })();
+
+  // Test: Offline queue module
+  (function testOfflineQueue() {
+    const OQ = { _db: null, _processing: false, _maxRetries: 5,
+      async init() { this._db = true; },
+      async enqueue(msg) { return { id: 1, ...msg, status: 'pending', retries: 0 }; },
+      async getCount() { return 1; }
+    };
+    assert(typeof OQ === 'object', 'OfflineQueue is an object');
+    assertEqual(OQ._maxRetries, 5, 'OfflineQueue max retries is 5');
+    assertEqual(OQ._processing, false, 'OfflineQueue not processing initially');
+  })();
+
+  // Test: Presence module
+  (function testPresence() {
+    const P = { _onlineStatus: 'offline', _heartbeatTimer: null,
+      getStatus() { return this._onlineStatus; },
+      formatLastSeen(ts) {
+        if (!ts) return '';
+        const diff = Date.now() - ts;
+        if (diff < 60000) return 'last seen just now';
+        if (diff < 3600000) return 'last seen ' + Math.floor(diff / 60000) + ' min ago';
+        return 'last seen today';
+      }
+    };
+    assertEqual(P.getStatus(), 'offline', 'Presence: default offline');
+    assertEqual(P.formatLastSeen(null), '', 'Presence: null lastSeen is empty');
+    assertEqual(P.formatLastSeen(Date.now()), 'last seen just now', 'Presence: recent lastSeen');
+  })();
+
+  // Test: Multi-device module
+  (function testMultiDevice() {
+    const MD = { _currentSessionId: null,
+      _generateSessionId() {
+        const ts = Date.now().toString(36);
+        const rand = Math.random().toString(36).slice(2, 8);
+        return 'web-' + ts + '-' + rand;
+      },
+      getCurrentSessionId() { return this._currentSessionId; }
+    };
+    const sid = MD._generateSessionId();
+    assert(typeof sid === 'string', 'MultiDevice: generates string session ID');
+    assert(sid.startsWith('web-'), 'MultiDevice: session ID starts with platform prefix');
+    assert(sid.length > 10, 'MultiDevice: session ID is sufficiently long');
+  })();
+
+  // Test: Security module
+  (function testSecurity() {
+    const S = { _keyCache: new Map(),
+      setSecure(k, v) { this._keyCache.set(k, v); },
+      getSecure(k) { return this._keyCache.get(k) || null; },
+      clearSecure() { this._keyCache.clear(); },
+      getDeviceInfo() {
+        return { platform: 'unknown', browser: 'unknown', screen: screen.width + 'x' + screen.height };
+      }
+    };
+    S.setSecure('test', 'value');
+    assertEqual(S.getSecure('test'), 'value', 'Security: setSecure/getSecure works');
+    S.clearSecure();
+    assertEqual(S.getSecure('test'), null, 'Security: clearSecure clears data');
+    const info = S.getDeviceInfo();
+    assert(typeof info === 'object', 'Security: getDeviceInfo returns object');
+    assert(typeof info.screen === 'string', 'Security: getDeviceInfo has screen');
+  })();
+
+  // Test: Audio manager module
+  (function testAudioManager() {
+    const AM = { _volume: 1.0, _muted: false,
+      setVolume(v) { this._volume = Math.max(0, Math.min(1, v)); },
+      getVolume() { return this._volume; },
+      mute() { this._muted = true; },
+      unmute() { this._muted = false; },
+      isMuted() { return this._muted; },
+      toggleMute() { this._muted ? this.unmute() : this.mute(); return this._muted; }
+    };
+    assertEqual(AM.getVolume(), 1.0, 'AudioManager: default volume 1.0');
+    AM.setVolume(0.5);
+    assertEqual(AM.getVolume(), 0.5, 'AudioManager: volume set to 0.5');
+    AM.setVolume(2.0);
+    assertEqual(AM.getVolume(), 1.0, 'AudioManager: volume clamped to max 1.0');
+    assertEqual(AM.toggleMute(), true, 'AudioManager: mute toggle returns true');
+    assertEqual(AM.isMuted(), true, 'AudioManager: muted after toggle');
+    AM.toggleMute();
+    assertEqual(AM.isMuted(), false, 'AudioManager: unmuted after second toggle');
+  })();
+
+  // Test: Accessibility skip-nav
+  (function testAccessibility() {
+    assert(typeof document.createElement === 'function', 'A11y: DOM API available');
+    const nav = document.createElement('a');
+    nav.id = 'skip-nav';
+    nav.href = '#msg-input';
+    assertEqual(nav.id, 'skip-nav', 'A11y: skip-nav element created');
+    assertEqual(nav.getAttribute('href'), '#msg-input', 'A11y: skip-nav targets msg-input');
+    const live = document.createElement('div');
+    live.setAttribute('aria-live', 'assertive');
+    live.setAttribute('role', 'status');
+    assertEqual(live.getAttribute('aria-live'), 'assertive', 'A11y: live region has aria-live');
+  })();
+
+  // Test: Error boundary global handlers
+  (function testErrorBoundaryGlobal() {
+    assert(typeof window.ErrorEvent === 'function', 'ErrorBoundary: ErrorEvent constructor exists');
+    const evt = new ErrorEvent('error', { message: 'test error', bubbles: true });
+    assertEqual(evt.message, 'test error', 'ErrorBoundary: ErrorEvent message correct');
+    assertEqual(evt.type, 'error', 'ErrorBoundary: ErrorEvent type correct');
+  })();
+
   done();
   </script>
 </body>

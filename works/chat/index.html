@@ -960,7 +960,14 @@
   <!-- Main App JS Core (shared logic) -->
   <script src="../app.js"></script>
 
-  <!-- Error Boundary, Virtual Scroll & Accessibility -->
+  <!-- Infrastructure Modules -->
+  <script src="platform-detect.js"></script>
+  <script src="network-quality.js"></script>
+  <script src="audio-manager.js"></script>
+  <script src="offline-queue.js"></script>
+  <script src="presence.js"></script>
+  <script src="multi-device.js"></script>
+  <script src="security.js"></script>
   <script src="error-boundary.js"></script>
   <script src="virtual-scroll.js"></script>
   <script src="accessibility.js"></script>
@@ -978,6 +985,28 @@
     window.addEventListener('load', () => {
       if (window.ErrorBoundary) ErrorBoundary.init();
       if (window.A11y) A11y.init();
+      if (window.NetworkQuality) NetworkQuality.init();
+      if (window.AudioManager) AudioManager.init();
+    });
+
+    window.addEventListener('load', () => {
+      setTimeout(async () => {
+        if (window.OfflineQueue) await OfflineQueue.init();
+      }, 3000);
+    });
+
+    firebase.auth().onAuthStateChanged((user) => {
+      if (user) {
+        setTimeout(async () => {
+          if (window.Presence) await Presence.init();
+          if (window.MultiDevice) await MultiDevice.init();
+          if (window.Security) await Security.init();
+        }, 2000);
+      } else {
+        if (window.Presence) Presence.destroy();
+        if (window.MultiDevice) MultiDevice.destroy();
+        if (window.Security) Security.destroy();
+      }
     });
   </script>
 </body>
