@@ -1147,13 +1147,9 @@ body {
 }
 
 /* ────────────────────────────────────────────────────────────
-   19. PRINT — Hide the entire app (it's not printable)
+   19. PRINT — Let chat-theme.css handle print styles
    ──────────────────────────────────────────────────────────── */
-@media print {
-  body {
-    display: none !important;
-  }
-}
+/* Print styles handled by chat-theme.css @media print block */
 
 /* ────────────────────────────────────────────────────────────
    20. REDUCED MOTION — Respect user preference

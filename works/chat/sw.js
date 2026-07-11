@@ -157,7 +157,7 @@ self.addEventListener('notificationclick', event => {
   );
 });
 
-const CACHE_NAME = 'team-chat-v230-full-sync';
+const CACHE_NAME = 'team-chat-v231-audit-fixes';
 const STATIC_ASSETS = [
   'chat.css',
   'config.js',

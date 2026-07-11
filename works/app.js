@@ -599,15 +599,6 @@ async function loadMessageHistory(email, uid) {
                 directId: expectedId
       });
     });
-  if (_callBroadcast) {
-    _callBroadcast.onmessage = (e) => {
-      if (e.data?.type === 'call-accepted' || e.data?.type === 'call-ended') {
-        document.getElementById('incoming-call-overlay')?.classList.add('hidden');
-        stopRingtone();
-        App._incomingCallData = null;
-      }
-    };
-  }
 }
           // Delete old directChats doc if it existed
           if (oldDoc.exists) {
@@ -3440,6 +3431,18 @@ function listenForIncomingCalls() {
         }
       });
     });
+
+  // Listen for cross-tab call broadcasts
+  if (_callBroadcast) {
+    _callBroadcast.onmessage = (e) => {
+      if (e.data?.type === 'call-accepted' || e.data?.type === 'call-ended') {
+        document.getElementById('incoming-call-overlay')?.classList.add('hidden');
+        stopRingtone();
+        if (App._incomingCallTimeout) { clearTimeout(App._incomingCallTimeout); App._incomingCallTimeout = null; }
+        App._incomingCallData = null;
+      }
+    };
+  }
 }
 
 /* ─── Ringtone via Web Audio API ─── */
@@ -4516,7 +4519,8 @@ function togglePin(chatId) {
   showToast(chat.pinned ? 'Conversation pinned' : 'Conversation unpinned', 'success');
   if (App.db && App.auth?.currentUser) {
     const uid = App.auth.currentUser.uid;
-    App.db.collection('chats').doc(chatId).set(
+    const col = chat.type === 'group' ? 'groups' : 'directChats';
+    App.db.collection(col).doc(chatId).set(
       { pinned: { [uid]: chat.pinned } },
       { merge: true }
     ).catch(() => {});
