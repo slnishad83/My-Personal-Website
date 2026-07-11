@@ -1168,6 +1168,38 @@ function toggleReaction(msgId, emoji) {
 }
 
 /* ══════════════════════════════════════════════════════════════
+   9b. LONG-PRESS REACTION HANDLER
+   ══════════════════════════════════════════════════════════════ */
+let _longPressTimer = null;
+let _longPressMsgId = null;
+let _longPressTriggered = false;
+const LONG_PRESS_DURATION = 500;
+
+function handleBubblePointerDown(event, msgId) {
+  if (event.button && event.button !== 0) return;
+  _longPressTriggered = false;
+  _longPressMsgId = msgId;
+  _longPressTimer = setTimeout(() => {
+    _longPressTriggered = true;
+    if (navigator.vibrate) navigator.vibrate(30);
+    const fakeEvent = { preventDefault(){}, currentTarget: event.currentTarget, target: event.target, clientX: event.clientX, clientY: event.clientY };
+    showQuickReactions(fakeEvent, msgId);
+  }, LONG_PRESS_DURATION);
+}
+
+function handleBubblePointerUp(event) {
+  if (_longPressTimer) {
+    clearTimeout(_longPressTimer);
+    _longPressTimer = null;
+  }
+  if (_longPressTriggered) {
+    _longPressTriggered = false;
+    event.preventDefault();
+    event.stopPropagation();
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════
    10. QUICK REACTION PICKER (long-press or hover)
    ══════════════════════════════════════════════════════════════ */
 const QUICK_REACTIONS = ['❤️','😂','👍','😮','😢','🙏','🔥','🎉'];

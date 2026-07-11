@@ -960,6 +960,11 @@
   <!-- Main App JS Core (shared logic) -->
   <script src="../app.js"></script>
 
+  <!-- Error Boundary, Virtual Scroll & Accessibility -->
+  <script src="error-boundary.js"></script>
+  <script src="virtual-scroll.js"></script>
+  <script src="accessibility.js"></script>
+
   <!-- PWA Service Worker Registration -->
   <script>
     if ('serviceWorker' in navigator) {
@@ -969,6 +974,11 @@
           .catch(err => console.warn('[SW] Registration failed:', err));
       });
     }
+
+    window.addEventListener('load', () => {
+      if (window.ErrorBoundary) ErrorBoundary.init();
+      if (window.A11y) A11y.init();
+    });
   </script>
 </body>
 </html>

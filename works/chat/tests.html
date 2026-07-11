@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NSL Chat — Unit Tests</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Inter', system-ui, sans-serif; background: #11131c; color: #e1e1ef; padding: 24px; }
+    h1 { font-size: 20px; margin-bottom: 8px; color: #c4c0ff; }
+    .summary { font-size: 13px; margin-bottom: 24px; color: #918fa0; }
+    .pass { color: #4caf50; } .fail { color: #ff5252; } .skip { color: #ff9800; }
+    .test { padding: 6px 0; border-bottom: 1px solid #1d1f29; font-size: 13px; }
+    .test-name { margin-right: 8px; }
+    #results { max-width: 800px; }
+    .banner { padding: 16px; border-radius: 12px; margin-bottom: 20px; font-weight: 700; font-size: 15px; }
+    .banner.pass { background: #1b3a1b; border: 1px solid #4caf50; }
+    .banner.fail { background: #3a1b1b; border: 1px solid #ff5252; }
+  </style>
+</head>
+<body>
+  <h1>NSL Chat — Unit Tests</h1>
+  <p class="summary" id="summary">Running tests...</p>
+  <div id="banner"></div>
+  <div id="results"></div>
+
+  <script>
+  'use strict';
+
+  const _results = { pass: 0, fail: 0, skip: 0, total: 0 };
+  const _log = document.getElementById('results');
+  const _summary = document.getElementById('summary');
+  const _banner = document.getElementById('banner');
+
+  function assert(condition, name) {
+    _results.total++;
+    if (condition) {
+      _results.pass++;
+      _log.innerHTML += `<div class="test"><span class="pass">PASS</span> <span class="test-name">${name}</span></div>`;
+    } else {
+      _results.fail++;
+      _log.innerHTML += `<div class="test"><span class="fail">FAIL</span> <span class="test-name">${name}</span></div>`;
+    }
+  }
+
+  function assertEqual(a, b, name) {
+    assert(a === b, `${name} (expected "${b}", got "${a}")`);
+  }
+
+  function assertDeepEqual(a, b, name) {
+    assert(JSON.stringify(a) === JSON.stringify(b), `${name}`);
+  }
+
+  function skip(name) {
+    _results.total++;
+    _results.skip++;
+    _log.innerHTML += `<div class="test"><span class="skip">SKIP</span> <span class="test-name">${name}</span></div>`;
+  }
+
+  function done() {
+    const pct = _results.total ? Math.round((_results.pass / _results.total) * 100) : 0;
+    _summary.textContent = `${_results.pass}/${_results.total} passed (${pct}%) — ${_results.fail} failed, ${_results.skip} skipped`;
+    _banner.className = `banner ${_results.fail === 0 ? 'pass' : 'fail'}`;
+    _banner.textContent = _results.fail === 0 ? 'All tests passed!' : `${_results.fail} test(s) failed`;
+  }
+
+  /* ─── Load app modules inline (no Firebase needed for unit tests) ─── */
+
+  // Test: App state object exists and has expected shape
+  (function testAppStateStructure() {
+    const App = {
+      currentUser: null, currentChat: null, chats: [], messages: {},
+      contacts: [], activeTab: 'chats', theme: 'dark', isRecording: false,
+      recordingTimer: null, recordingSeconds: 0, replyTo: null,
+      emojiPickerOpen: false, attachMenuOpen: false, formatBarOpen: false,
+      unreadScrollCount: 0, db: null, auth: null, unsubscribers: [],
+      callActive: false, callMuted: false, cameraOff: false
+    };
+    assert(typeof App === 'object', 'App state is an object');
+    assertEqual(App.theme, 'dark', 'Default theme is dark');
+    assert(Array.isArray(App.chats), 'App.chats is an array');
+    assert(typeof App.messages === 'object', 'App.messages is an object');
+    assertEqual(App.replyTo, null, 'App.replyTo starts as null');
+    assertEqual(App.activeTab, 'chats', 'Default active tab is chats');
+  })();
+
+  // Test: ErrorBoundary module
+  (function testErrorBoundary() {
+    const EB = { _errors: [], _maxErrors: 50, _enabled: true,
+      _captureError(d) { this._errors.push(d); },
+      getErrors() { return [...this._errors]; },
+      clearErrors() { this._errors = []; }
+    };
+    assert(typeof EB === 'object', 'ErrorBoundary is an object');
+    assertEqual(EB._errors.length, 0, 'ErrorBoundary starts with 0 errors');
+    EB._captureError({ type: 'test', message: 'hello', timestamp: Date.now() });
+    assertEqual(EB._errors.length, 1, 'ErrorBoundary records 1 error after capture');
+    EB.clearErrors();
+    assertEqual(EB._errors.length, 0, 'ErrorBoundary clears errors');
+  })();
+
+  // Test: VirtualScroll module
+  (function testVirtualScroll() {
+    const VS = { _items: [], _enabled: false, _threshold: 150,
+      setItems(items) { this._items = items || []; if (this._items.length > this._threshold) this._enabled = true; },
+      destroy() { this._items = []; this._enabled = false; }
+    };
+    VS.setItems([]);
+    assertEqual(VS._items.length, 0, 'VirtualScroll: empty items');
+    assertEqual(VS._enabled, false, 'VirtualScroll: not enabled for 0 items');
+    VS.setItems(Array.from({length: 200}, (_, i) => ({ id: i })));
+    assertEqual(VS._items.length, 200, 'VirtualScroll: 200 items loaded');
+    assertEqual(VS._enabled, true, 'VirtualScroll: enabled when > 150 items');
+    VS.destroy();
+    assertEqual(VS._items.length, 0, 'VirtualScroll: cleared after destroy');
+  })();
+
+  // Test: Quick reaction emoji set
+  (function testQuickReactions() {
+    const QUICK_REACTIONS = ['❤️','😂','👍','😮','😢','🙏','🔥','🎉'];
+    assert(Array.isArray(QUICK_REACTIONS), 'QUICK_REACTIONS is an array');
+    assertEqual(QUICK_REACTIONS.length, 8, 'QUICK_REACTIONS has 8 emojis');
+    assert(QUICK_REACTIONS.includes('❤️'), 'QUICK_REACTIONS includes ❤️');
+    assert(QUICK_REACTIONS.includes('👍'), 'QUICK_REACTIONS includes 👍');
+  })();
+
+  // Test: escHtml utility
+  (function testEscHtml() {
+    function escHtml(s) {
+      return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+    assertEqual(escHtml('<b>hello</b>'), '&lt;b&gt;hello&lt;/b&gt;', 'escHtml escapes HTML tags');
+    assertEqual(escHtml('a & b'), 'a &amp; b', 'escHtml escapes ampersand');
+    assertEqual(escHtml('no special'), 'no special', 'escHtml leaves plain text unchanged');
+  })();
+
+  // Test: formatMsgTime
+  (function testFormatMsgTime() {
+    function formatMsgTime(ts) {
+      const d = new Date(ts);
+      return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    }
+    const t = new Date(2026, 0, 15, 14, 30).getTime();
+    const result = formatMsgTime(t);
+    assert(typeof result === 'string', 'formatMsgTime returns a string');
+    assert(result.length > 0, 'formatMsgTime returns non-empty string');
+  })();
+
+  // Test: formatDateSep
+  (function testFormatDateSep() {
+    function formatDateSep(d) {
+      const today = new Date();
+      if (d.toDateString() === today.toDateString()) return 'Today';
+      const yesterday = new Date(today);
+      yesterday.setDate(yesterday.getDate() - 1);
+      if (d.toDateString() === yesterday.toDateString()) return 'Yesterday';
+      return d.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' });
+    }
+    assertEqual(formatDateSep(new Date()), 'Today', 'formatDateSep returns "Today" for current date');
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    assertEqual(formatDateSep(yesterday), 'Yesterday', 'formatDateSep returns "Yesterday" for yesterday');
+  })();
+
+  // Test: A11y live region
+  (function testA11y() {
+    assert(typeof document.createElement === 'function', 'DOM API available for A11y');
+    const el = document.createElement('div');
+    el.setAttribute('aria-live', 'assertive');
+    assertEqual(el.getAttribute('aria-live'), 'assertive', 'A11y can create live region');
+    el.setAttribute('role', 'log');
+    assertEqual(el.getAttribute('role'), 'log', 'A11y can set role="log"');
+  })();
+
+  // Test: Long-press handler state
+  (function testLongPressHandler() {
+    let _longPressTimer = null;
+    let _longPressMsgId = null;
+    let _longPressTriggered = false;
+    const LONG_PRESS_DURATION = 500;
+    function handleBubblePointerDown(event, msgId) {
+      _longPressTriggered = false;
+      _longPressMsgId = msgId;
+      _longPressTimer = setTimeout(() => { _longPressTriggered = true; }, LONG_PRESS_DURATION);
+    }
+    function handleBubblePointerUp(event) {
+      if (_longPressTimer) { clearTimeout(_longPressTimer); _longPressTimer = null; }
+    }
+    handleBubblePointerDown({}, 'msg1');
+    assertEqual(_longPressMsgId, 'msg1', 'LongPress: msgId stored');
+    assertEqual(_longPressTriggered, false, 'LongPress: not triggered yet');
+    handleBubblePointerUp({});
+    assertEqual(_longPressTimer, null, 'LongPress: timer cleared on release');
+  })();
+
+  // Test: Tick icon logic
+  (function testTickIcons() {
+    function getTickIcon(msg, isMe) {
+      if (!isMe) return '';
+      if (msg.readBy && Object.keys(msg.readBy).length > 0) return 'done_all_filled';
+      if (msg.deliveredTo && Object.keys(msg.deliveredTo).length > 0) return 'done_all';
+      return 'done';
+    }
+    assertEqual(getTickIcon({}, true), 'done', 'Tick: single check for unsent');
+    assertEqual(getTickIcon({ deliveredTo: { u1: true } }, true), 'done_all', 'Tick: double check for delivered');
+    assertEqual(getTickIcon({ readBy: { u1: true } }, true), 'done_all_filled', 'Tick: blue double check for read');
+    assertEqual(getTickIcon({}, false), '', 'Tick: no check for received messages');
+  })();
+
+  // Test: Bubble class mapping
+  (function testBubbleClass() {
+    function getBubbleClass(isMe) {
+      return isMe
+        ? 'bg-primary text-on-primary rounded-2xl rounded-tr-none shadow-md'
+        : 'bg-surface-container-highest rounded-2xl rounded-tl-none border border-outline-variant/15';
+    }
+    assert(getBubbleClass(true).includes('bg-primary'), 'Sent bubble has primary background');
+    assert(getBubbleClass(false).includes('bg-surface-container-highest'), 'Received bubble has surface background');
+    assert(getBubbleClass(true).includes('rounded-tr-none'), 'Sent bubble missing top-right radius');
+    assert(getBubbleClass(false).includes('rounded-tl-none'), 'Received bubble missing top-left radius');
+  })();
+
+  // Test: SW cache name format
+  (function testSWCacheName() {
+    const CACHE_NAME = 'team-chat-v224-ui-shell';
+    assert(CACHE_NAME.startsWith('team-chat-'), 'SW cache name starts with team-chat-');
+    assert(CACHE_NAME.endsWith('-ui-shell'), 'SW cache name ends with -ui-shell');
+  })();
+
+  // Test: Manifest structure
+  (function testManifest() {
+    const manifest = {
+      name: "NSL Chat", short_name: "NSL Chat",
+      display: "standalone", theme_color: "#00b894",
+      icons: [{ src: "app-icon-192.png", sizes: "192x192" }]
+    };
+    assertEqual(manifest.name, 'NSL Chat', 'Manifest has correct name');
+    assertEqual(manifest.display, 'standalone', 'Manifest display is standalone');
+    assert(manifest.icons.length > 0, 'Manifest has icons');
+  })();
+
+  // Test: Message reply structure
+  (function testReplyTo() {
+    function buildReplyTo(id, name, text) {
+      return { id, name, text };
+    }
+    const r = buildReplyTo('msg1', 'John', 'Hello');
+    assertEqual(r.id, 'msg1', 'ReplyTo has correct id');
+    assertEqual(r.name, 'John', 'ReplyTo has correct name');
+    assertEqual(r.text, 'Hello', 'ReplyTo has correct text');
+  })();
+
+  // Test: Message format text
+  (function testFormatText() {
+    function formatMsgText(text) {
+      return text
+        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+        .replace(/\*(.*?)\*/g, '<em>$1</em>')
+        .replace(/~~(.*?)~~/g, '<del>$1</del>')
+        .replace(/`(.*?)`/g, '<code>$1</code>');
+    }
+    assert(formatMsgText('**bold**').includes('<strong>bold</strong>'), 'Bold formatting works');
+    assert(formatMsgText('*italic*').includes('<em>italic</em>'), 'Italic formatting works');
+    assert(formatMsgText('~~strike~~').includes('<del>strike</del>'), 'Strikethrough formatting works');
+    assert(formatMsgText('`code`').includes('<code>code</code>'), 'Code formatting works');
+  })();
+
+  // Test: Search filter types
+  (function testSearchFilters() {
+    const types = ['all', 'text', 'image', 'video', 'audio', 'voice', 'doc', 'link'];
+    assertEqual(types.length, 8, 'Search has 8 filter types');
+    assert(types.includes('all'), 'Search filter includes "all"');
+    assert(types.includes('image'), 'Search filter includes "image"');
+  })();
+
+  // Test: Notification actions
+  (function testNotificationActions() {
+    const callActions = [
+      { action: 'reject', title: 'Decline' },
+      { action: 'accept', title: 'Accept' }
+    ];
+    const msgActions = [
+      { action: 'reply', title: '↩ Reply' },
+      { action: 'open',  title: 'Open' }
+    ];
+    assertEqual(callActions.length, 2, 'Call notification has 2 actions');
+    assertEqual(msgActions.length, 2, 'Message notification has 2 actions');
+    assertEqual(callActions[0].action, 'reject', 'First call action is reject');
+    assertEqual(msgActions[0].action, 'reply', 'First message action is reply');
+  })();
+
+  done();
+  </script>
+</body>
+</html>

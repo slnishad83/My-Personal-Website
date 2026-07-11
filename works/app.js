@@ -2501,7 +2501,11 @@ function renderMessages(chatId) {
           <button class="opacity-0 group-hover:opacity-100 p-1 hover:bg-surface-container-high rounded-full text-on-surface-variant transition-opacity cursor-pointer flex items-center justify-center flex-shrink-0" onclick="showMsgContextMenu(event,'${msg.id}')" title="More"><span class="material-symbols-outlined text-lg">more_vert</span></button>` : ''}
           <div class="p-bubble_padding_xy ${bubbleClass} relative overflow-hidden max-w-full"
                oncontextmenu="showMsgContextMenu(event,'${msg.id}')"
-               ondblclick="showQuickReactions(event,'${msg.id}')">
+               ondblclick="showQuickReactions(event,'${msg.id}')"
+               onpointerdown="handleBubblePointerDown(event,'${msg.id}')"
+               onpointerup="handleBubblePointerUp(event)"
+               onpointercancel="handleBubblePointerUp(event)"
+               onpointerleave="handleBubblePointerUp(event)">
             ${replyHTML}
             ${contentHTML}
             <div class="flex items-center justify-end gap-1 mt-1.5 select-none opacity-80">
