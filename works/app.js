@@ -2541,7 +2541,10 @@ function formatMsgText(text) {
     .replace(/\*(.*?)\*/g, '<em>$1</em>')
     .replace(/~~(.*?)~~/g, '<del>$1</del>')
     .replace(/`(.*?)`/g, '<code class="bg-surface-container px-1 py-0.5 rounded font-mono text-xs">$1</code>')
-    .replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" rel="noopener" class="underline text-primary hover:text-secondary">$1</a>')
+    .replace(/(https?:\/\/[^\s&]+)/g, (url) => {
+      const display = url.replace(/&amp;/g, '&');
+      return `<a href="${url}" target="_blank" rel="noopener" class="underline text-primary hover:text-secondary">${display}</a>`;
+    })
     .replace(/\n/g, '<br>');
 }
 
