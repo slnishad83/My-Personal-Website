@@ -1967,6 +1967,17 @@ function startRecording() {
     showToast('Audio recording not supported in this browser', 'error');
     return;
   }
+  if (typeof PermissionsManager !== 'undefined') {
+    PermissionsManager.ensureForFeature('Record Voice Message').then(ok => {
+      if (!ok) return;
+      _doStartRecording();
+    });
+    return;
+  }
+  _doStartRecording();
+}
+
+function _doStartRecording() {
   App.isRecording = true;
   App.recordingSeconds = 0;
   _recSec = 0;
@@ -2690,6 +2701,7 @@ document.addEventListener('DOMContentLoaded', function() {
       if (App.currentChat && !_editingMsgId) {
         saveDraft(App.currentChat.id, msgInput.value);
       }
+      if (typeof sendTypingIndicator === 'function') sendTypingIndicator();
     });
   }
 

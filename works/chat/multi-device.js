@@ -18,12 +18,16 @@ const MultiDevice = {
   },
 
   _getOrCreateSessionId() {
-    let sid = sessionStorage.getItem('tcSessionId');
-    if (!sid) {
-      sid = this._generateSessionId();
-      sessionStorage.setItem('tcSessionId', sid);
+    try {
+      let sid = sessionStorage.getItem('tcSessionId');
+      if (!sid) {
+        sid = this._generateSessionId();
+        sessionStorage.setItem('tcSessionId', sid);
+      }
+      return sid;
+    } catch (_) {
+      return this._generateSessionId();
     }
-    return sid;
   },
 
   _generateSessionId() {

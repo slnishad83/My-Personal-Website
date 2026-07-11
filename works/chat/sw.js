@@ -157,7 +157,7 @@ self.addEventListener('notificationclick', event => {
   );
 });
 
-const CACHE_NAME = 'team-chat-v227-call-fix';
+const CACHE_NAME = 'team-chat-v230-full-sync';
 const STATIC_ASSETS = [
   'chat.css',
   'config.js',
@@ -180,6 +180,7 @@ const STATIC_ASSETS = [
   'accessibility.js',
   'keyboard-shortcuts.js',
   'chat-missing-features.js',
+  'permissions-manager.js',
   '../app-extras.js',
   '../app.js'
 ];

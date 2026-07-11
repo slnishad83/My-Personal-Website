@@ -360,6 +360,9 @@ function subscribeToChats() {
         const myGen = ++_chatsGen;
         Promise.all(decryptPromises).then(() => {
           if (_chatsGen !== myGen) return; // stale snapshot, discard
+          // Sync _mutedChats Set from Firestore data
+          if (!App._mutedChats) App._mutedChats = new Set();
+          chatsList.forEach(c => { if (c.muted) App._mutedChats.add(c.id); else App._mutedChats.delete(c.id); });
           App.directChats = chatsList;
           mergeAndRenderChats();
           detectAndMergeOrphanedChatsForUser();
@@ -594,10 +597,18 @@ async function loadMessageHistory(email, uid) {
                 participants: firebase.firestore.FieldValue.arrayUnion(uid),
                 participantEmails: firebase.firestore.FieldValue.arrayUnion(email),
                 directId: expectedId
-              });
-            });
-            await batch.commit().catch(() => {});
-          }
+      });
+    });
+  if (_callBroadcast) {
+    _callBroadcast.onmessage = (e) => {
+      if (e.data?.type === 'call-accepted' || e.data?.type === 'call-ended') {
+        document.getElementById('incoming-call-overlay')?.classList.add('hidden');
+        stopRingtone();
+        App._incomingCallData = null;
+      }
+    };
+  }
+}
           // Delete old directChats doc if it existed
           if (oldDoc.exists) {
             await App.db.collection('directChats').doc(chatId).delete().catch(() => {});
@@ -712,6 +723,7 @@ function subscribeToMessages(chatId) {
     App.messagesUnsubscribe();
     App.messagesUnsubscribe = null;
   }
+  cleanupTypingSubscription();
   const chat = App.chats.find(c => c.id === chatId);
   if (!chat) return;
   const queryField = chat.type === 'group' ? 'groupId' : 'directId';
@@ -772,7 +784,12 @@ function subscribeToMessages(chatId) {
           time: data.timestamp?.toMillis ? data.timestamp.toMillis() : (data.time || Date.now()),
           status: data.status || 'read',
           replyTo: data.replyTo ? { name: data.replyTo.senderName, text: data.replyTo.text } : null,
-          reactions: data.reactions || [],
+          reactions: Array.isArray(data.reactions)
+            ? data.reactions
+            : Object.entries(data.reactions || {}).map(([emoji, count]) => {
+                const uid = App.auth?.currentUser?.uid;
+                return { emoji, count: typeof count === 'number' ? count : (count?.count || 0), mine: Array.isArray(count?.users) ? count.users.includes(uid) : false };
+              }).filter(r => r.count > 0),
           type: type,
           url: url,
           duration: duration,
@@ -783,7 +800,8 @@ function subscribeToMessages(chatId) {
           lng: a.lng,
           mapUrl: a.mapUrl || url,
           contactName: a.contactName,
-          contactEmail: a.contactEmail
+          contactEmail: a.contactEmail,
+          starred: data.starred || false
         };
         
         if (data.encrypted && data.iv) {
@@ -2173,6 +2191,34 @@ function openChat(chatId) {
 
   App.currentChat = chat;
   chat.unread = 0;
+
+  // Sync read status to Firestore
+  if (App.db && App.auth?.currentUser && chatId !== 'saved_me') {
+    const uid = App.auth.currentUser.uid;
+    const isGroup = chat.type === 'group';
+    const collection = isGroup ? 'groups' : 'directChats';
+    
+    // Clear unread count in Firestore
+    const unreadUpdate = {};
+    unreadUpdate[`unreadCount.${uid}`] = 0;
+    App.db.collection(collection).doc(chatId).set(unreadUpdate, { merge: true }).catch(() => {});
+    
+    // Mark received messages as read
+    const msgs = App.messages[chatId] || [];
+    const unreadMsgIds = msgs.filter(m => m.from !== 'me' && m.status !== 'read').map(m => m.id);
+    if (unreadMsgIds.length > 0) {
+      const batch = App.db.batch();
+      unreadMsgIds.forEach(msgId => {
+        if (msgId && !msgId.startsWith('msg_')) {
+          const msgRef = App.db.collection('messages').doc(msgId);
+          batch.update(msgRef, { read: true, status: 'read' });
+        }
+      });
+      batch.commit().catch(() => {});
+    }
+  }
+
+  subscribeToTyping(chatId);
   loadPinnedMessages(chatId);
 
   // Render header title & icons
@@ -2654,6 +2700,13 @@ function sendMessage() {
           lastMessageSenderId: uid,
           lastMessageSenderName: App.currentUser.displayName || App.currentUser.email || 'Me'
         }).catch(console.error);
+        // Increment unread count for group members
+        const members = chat.members || [];
+        const unreadInc = {};
+        members.forEach(m => { if (m !== uid) unreadInc[m] = firebase.firestore.FieldValue.increment(1); });
+        if (Object.keys(unreadInc).length > 0) {
+          App.db.collection('groups').doc(chatId).set({ unreadCount: unreadInc }, { merge: true }).catch(() => {});
+        }
       } else {
         App.db.collection('directChats').doc(chatId).set({
           participants: [uid, otherUserId],
@@ -2674,6 +2727,12 @@ function sendMessage() {
           lastMessageIv: ivStr,
           status: 'active'
         }, { merge: true }).catch(console.error);
+        // Increment unread count for recipient
+        if (otherUserId && otherUserId !== uid) {
+          App.db.collection('directChats').doc(chatId).set({
+            unreadCount: { [otherUserId]: firebase.firestore.FieldValue.increment(1) }
+          }, { merge: true }).catch(() => {});
+        }
       }
     })();
   }
@@ -2716,6 +2775,78 @@ function showTyping() {
 function hideTyping() {
   const el = document.getElementById('typing-indicator');
   if (el) el.classList.add('hidden');
+}
+
+let _typingDebounce = null;
+let _typingTimeout = null;
+let _remoteTypingUnsub = null;
+
+function sendTypingIndicator() {
+  if (!App.db || !App.auth?.currentUser || !App.currentChat) return;
+  const uid = App.auth.currentUser.uid;
+  const chatId = App.currentChat.id;
+  const isGroup = App.currentChat.type === 'group';
+  const collection = isGroup ? 'groups' : 'directChats';
+
+  clearTimeout(_typingDebounce);
+  _typingDebounce = setTimeout(() => {
+    App.db.collection(collection).doc(chatId).set({
+      typing: { [uid]: Date.now() }
+    }, { merge: true }).catch(() => {});
+  }, 1000);
+
+  clearTimeout(_typingTimeout);
+  _typingTimeout = setTimeout(() => {
+    stopTypingIndicator();
+  }, 3000);
+}
+
+function stopTypingIndicator() {
+  if (!App.db || !App.auth?.currentUser || !App.currentChat) return;
+  const uid = App.auth.currentUser.uid;
+  const chatId = App.currentChat.id;
+  const isGroup = App.currentChat.type === 'group';
+  const collection = isGroup ? 'groups' : 'directChats';
+
+  const update = {};
+  update[`typing.${uid}`] = firebase.firestore.FieldValue.delete();
+  App.db.collection(collection).doc(chatId).set(update, { merge: true }).catch(() => {});
+}
+
+function subscribeToTyping(chatId) {
+  if (_remoteTypingUnsub) { _remoteTypingUnsub(); _remoteTypingUnsub = null; }
+  if (!App.db || !App.auth?.currentUser) return;
+
+  const uid = App.auth.currentUser.uid;
+  const chat = App.chats.find(c => c.id === chatId);
+  if (!chat || chat.id === 'saved_me') return;
+
+  const isGroup = chat.type === 'group';
+  const collection = isGroup ? 'groups' : 'directChats';
+
+  _remoteTypingUnsub = App.db.collection(collection).doc(chatId).onSnapshot((doc) => {
+    const data = doc.data();
+    if (!data || !data.typing) { hideTyping(); return; }
+
+    const now = Date.now();
+    const TYPING_TIMEOUT = 5000;
+    let anyTyping = false;
+
+    Object.entries(data.typing).forEach(([userId, timestamp]) => {
+      if (userId !== uid) {
+        const ts = typeof timestamp === 'number' ? timestamp : (timestamp?.toMillis ? timestamp.toMillis() : 0);
+        if (now - ts < TYPING_TIMEOUT) anyTyping = true;
+      }
+    });
+
+    if (anyTyping) showTyping(); else hideTyping();
+  }, () => hideTyping());
+}
+
+function cleanupTypingSubscription() {
+  if (_remoteTypingUnsub) { _remoteTypingUnsub(); _remoteTypingUnsub = null; }
+  clearTimeout(_typingDebounce);
+  clearTimeout(_typingTimeout);
 }
 
 /* ══════════════════════════════════════════════════
@@ -2800,6 +2931,12 @@ async function beginCall(type) {
   const uid = App.auth.currentUser.uid;
   const otherUid = chat.uid;
   if (!otherUid) return;
+
+  if (typeof PermissionsManager !== 'undefined') {
+    const permFeature = type === 'video' ? 'Video Call' : 'Audio Call';
+    const granted = await PermissionsManager.ensureForFeature(permFeature);
+    if (!granted) return;
+  }
 
   currentCallType = type;
   App.callActive = true;
@@ -2991,6 +3128,8 @@ function endCall() {
   if (callDocUnsubscribe) { callDocUnsubscribe(); callDocUnsubscribe = null; }
   if (callAnswerUnsubscribe) { callAnswerUnsubscribe(); callAnswerUnsubscribe = null; }
   if (callCandidatesUnsubscribe) { callCandidatesUnsubscribe(); callCandidatesUnsubscribe = null; }
+  if (App._incomingCallTimeout) { clearTimeout(App._incomingCallTimeout); App._incomingCallTimeout = null; }
+  if (typeof cleanupTypingSubscription === 'function') cleanupTypingSubscription();
 
   if (wasActive && App.db && App._activeCallId) {
     App.db.collection('calls').doc(App._activeCallId).update({ status: 'ended', duration, endedAt: firebase.firestore.FieldValue.serverTimestamp() }).catch(() => {});
@@ -3076,6 +3215,8 @@ function maximizeCall() {
 let _screenShareStream = null;
 let _screenShareSender = null;
 let _callQualityInterval = null;
+let _callBroadcast = null;
+try { _callBroadcast = new BroadcastChannel('tc-calls'); } catch(_) {}
 
 async function toggleScreenShare() {
   if (_screenShareStream) {
@@ -3136,6 +3277,7 @@ function startCallQualityAdaptation() {
 function acceptCall() {
   stopRingtone();
   document.getElementById('incoming-call-overlay')?.classList.add('hidden');
+  if (_callBroadcast) _callBroadcast.postMessage({ type: 'call-accepted', callId: App._incomingCallData?.callId });
   if (App._incomingCallData) {
     if (App._incomingCallData.groupCall) _handleAcceptedGroupCall(App._incomingCallData);
     else _handleAcceptedCall(App._incomingCallData);
@@ -3145,6 +3287,7 @@ function acceptCall() {
 function declineCall() {
   stopRingtone();
   document.getElementById('incoming-call-overlay')?.classList.add('hidden');
+  if (_callBroadcast) _callBroadcast.postMessage({ type: 'call-ended', callId: App._incomingCallData?.callId });
   if (App._incomingCallData && App.db) {
     App.db.collection('calls').doc(App._incomingCallData.callId).update({ status: 'rejected' }).catch(() => {});
   }
@@ -3155,6 +3298,12 @@ async function _handleAcceptedCall(callData) {
   const { callId, type: callType, fromUserId, fromUserName } = callData;
   const uid = App.auth?.currentUser?.uid;
   if (!uid || !App.db) return;
+
+  if (typeof PermissionsManager !== 'undefined') {
+    const permFeature = callType === 'video' ? 'Video Call' : 'Audio Call';
+    const granted = await PermissionsManager.ensureForFeature(permFeature);
+    if (!granted) { endCall(); return; }
+  }
 
   currentCallType = callType;
   App.callActive = true;
@@ -3265,8 +3414,29 @@ function listenForIncomingCalls() {
           document.getElementById('incoming-call-avatar').textContent = callerName[0]?.toUpperCase() || '?';
           document.getElementById('incoming-call-overlay')?.classList.remove('hidden');
           playRingtone();
+          if (_callBroadcast) _callBroadcast.postMessage({ type: 'incoming-call', callId: change.doc.id });
           if (navigator.vibrate) navigator.vibrate([700, 250, 700, 250, 700, 250, 700, 250, 700]);
           requestWakeLock();
+          // Auto-dismiss after 45 seconds if not answered
+          App._incomingCallTimeout = setTimeout(() => {
+            if (App._incomingCallData && App._incomingCallData.callId === change.doc.id) {
+              document.getElementById('incoming-call-overlay')?.classList.add('hidden');
+              stopRingtone();
+              App._incomingCallData = null;
+            }
+          }, 45000);
+        }
+        // Handle removed/modified — call was accepted/ended elsewhere, dismiss overlay
+        if (change.type === 'removed' || change.type === 'modified') {
+          const callData = change.doc.data();
+          if (callData && (callData.status === 'active' || callData.status === 'ended' || callData.status === 'rejected' || callData.status === 'missed' || callData.status === 'cancelled')) {
+            document.getElementById('incoming-call-overlay')?.classList.add('hidden');
+            stopRingtone();
+            if (App._incomingCallTimeout) { clearTimeout(App._incomingCallTimeout); App._incomingCallTimeout = null; }
+            if (App._incomingCallData && App._incomingCallData.callId === change.doc.id) {
+              App._incomingCallData = null;
+            }
+          }
         }
       });
     });
@@ -3304,7 +3474,14 @@ function stopRingtone() {
 }
 
 async function requestWakeLock() {
-  try { wakeLock = await navigator.wakeLock?.request('screen'); } catch(_) {}
+  try {
+    wakeLock = await navigator.wakeLock?.request('screen');
+  } catch(e) {
+    if (e?.name !== 'AbortError') {
+      console.warn('Wake lock failed:', e);
+      showToast('Screen may turn off during calls', 'info');
+    }
+  }
 }
 function releaseWakeLock() {
   if (wakeLock) { wakeLock.release().catch(() => {}); wakeLock = null; }
@@ -3415,6 +3592,12 @@ async function startGroupCall(type) {
   const uid = App.auth.currentUser.uid;
   const memberIds = (chat.members || []).filter(m => m && m !== uid);
   if (!memberIds.length) { showToast('No other members to call', 'info'); return; }
+
+  if (typeof PermissionsManager !== 'undefined') {
+    const permFeature = type === 'video' ? 'Video Call' : 'Audio Call';
+    const granted = await PermissionsManager.ensureForFeature(permFeature);
+    if (!granted) return;
+  }
 
   currentCallType = type;
   App.callActive = true;
@@ -3551,6 +3734,11 @@ async function _answerGroupCallOffer(callId, remoteUid, offerData, callType, myU
         activeGroupCallParticipants = activeGroupCallParticipants.filter(p => p.uid !== remoteUid);
         groupCallPeerConnections.delete(remoteUid);
         pc.close();
+        if (App.db && App._activeCallId) {
+          App.db.collection('calls').doc(App._activeCallId).update({
+            participantIds: firebase.firestore.FieldValue.arrayRemove(remoteUid)
+          }).catch(() => {});
+        }
         _renderGroupVideoGrid();
       }
     };
@@ -3604,6 +3792,11 @@ async function _createGroupPeerConnection(callId, remoteUid, callType, myUid) {
         activeGroupCallParticipants = activeGroupCallParticipants.filter(p => p.uid !== remoteUid);
         groupCallPeerConnections.delete(remoteUid);
         pc.close();
+        if (App.db && App._activeCallId) {
+          App.db.collection('calls').doc(App._activeCallId).update({
+            participantIds: firebase.firestore.FieldValue.arrayRemove(remoteUid)
+          }).catch(() => {});
+        }
         _renderGroupVideoGrid();
       }
     };
@@ -3693,6 +3886,12 @@ async function _handleAcceptedGroupCall(callData) {
   activeCallMode = 'group';
   App._activeCallId = callId;
   activeGroupCallParticipants = [];
+
+  if (typeof PermissionsManager !== 'undefined') {
+    const permFeature = callType === 'video' ? 'Video Call' : 'Audio Call';
+    const granted = await PermissionsManager.ensureForFeature(permFeature);
+    if (!granted) { endCall(); return; }
+  }
 
   const callDoc = await App.db.collection('calls').doc(callId).get();
   const callSnap = callDoc.data();
@@ -4311,10 +4510,16 @@ function startChatWith(uid) {
    ══════════════════════════════════════════════════ */
 function togglePin(chatId) {
   const chat = App.chats.find(c=>c.id===chatId);
-  if (chat) {
-    chat.pinned = !chat.pinned;
-    renderChatList();
-    showToast(chat.pinned ? 'Conversation pinned' : 'Conversation unpinned', 'success');
+  if (!chat) return;
+  chat.pinned = !chat.pinned;
+  renderChatList();
+  showToast(chat.pinned ? 'Conversation pinned' : 'Conversation unpinned', 'success');
+  if (App.db && App.auth?.currentUser) {
+    const uid = App.auth.currentUser.uid;
+    App.db.collection('chats').doc(chatId).set(
+      { pinned: { [uid]: chat.pinned } },
+      { merge: true }
+    ).catch(() => {});
   }
 }
 
@@ -4740,13 +4945,18 @@ function isUserBlocked(uid) {
   return App._blockedUsers && App._blockedUsers.has(uid);
 }
 
+let _blockedUsersUnsub = null;
 async function loadBlockedUsers() {
   if (!App.db || !App.auth || !App.auth.currentUser) return;
+  if (_blockedUsersUnsub) { _blockedUsersUnsub(); _blockedUsersUnsub = null; }
   try {
-    const doc = await App.db.collection('users').doc(App.auth.currentUser.uid).get();
-    if (doc.exists && doc.data().blockedUsers) {
-      App._blockedUsers = new Set(doc.data().blockedUsers);
-    }
+    _blockedUsersUnsub = App.db.collection('users').doc(App.auth.currentUser.uid).onSnapshot((doc) => {
+      if (doc.exists && doc.data().blockedUsers) {
+        App._blockedUsers = new Set(doc.data().blockedUsers);
+      } else {
+        App._blockedUsers = new Set();
+      }
+    }, () => {});
   } catch(_) {}
 }
 function copyInviteLink() {
@@ -4910,9 +5120,13 @@ if (typeof attachDocument === 'undefined') {
 if (typeof attachCamera === 'undefined') {
   var attachCamera = function() { showToast('Accessing device camera...','info'); toggleAttachMenu(); };
 }
-function shareLocation() {
+async function shareLocation() {
   toggleAttachMenu();
   if (!navigator.geolocation) { showToast('Location not available', 'error'); return; }
+  if (typeof PermissionsManager !== 'undefined') {
+    const granted = await PermissionsManager.ensureForFeature('Share Location');
+    if (!granted) return;
+  }
   showToast('Getting location…', 'info');
   navigator.geolocation.getCurrentPosition(
     pos => _sendLocationMessage(pos.coords.latitude, pos.coords.longitude),
@@ -5239,6 +5453,10 @@ function setupKeyboardShortcuts() {
 
 function updatePresence(status) {
   if (!App.db || !App.auth?.currentUser) return;
+  if (typeof Presence !== 'undefined' && Presence.setOnline && Presence.setOffline) {
+    if (status === 'online') Presence.setOnline(); else Presence.setOffline();
+    return;
+  }
   App.db.collection('users').doc(App.auth.currentUser.uid).set({ onlineStatus: status }, { merge: true }).catch(() => {});
 }
 
@@ -5251,7 +5469,7 @@ function setupOnlineStatus() {
     clearTimeout(App._presenceDebounce);
     App._presenceDebounce = setTimeout(() => {
       if (App.callActive) return;
-      updatePresence(document.hidden ? 'offline' : 'online');
+      if (!document.hidden) updatePresence('online');
     }, 300);
   });
 }
@@ -5300,6 +5518,16 @@ function setupPushNotifications() {
     };
     setTimeout(dismiss, 15000);
   }
+}
+
+function requestNativeNotificationPermission() {
+  const Push = window.Capacitor?.Plugins?.PushNotifications;
+  if (!Push) return;
+  Push.requestPermissions().then(result => {
+    if (result.display === 'granted' || result.display === 'prompt') {
+      Push.register().catch(() => {});
+    }
+  }).catch(() => {});
 }
 
 function getMillis(val) {
@@ -5545,7 +5773,8 @@ function toggleMuteChat() {
   const chatId = App.currentChat?.id;
   if (!chatId) return;
   if (!App._mutedChats) App._mutedChats = new Set();
-  if (App._mutedChats.has(chatId)) {
+  const wasMuted = App._mutedChats.has(chatId);
+  if (wasMuted) {
     App._mutedChats.delete(chatId);
     showToast('Chat unmuted', 'success');
   } else {
@@ -5553,6 +5782,13 @@ function toggleMuteChat() {
     showToast('Chat muted — no notification sounds', 'info');
   }
   try { localStorage.setItem('nsl_muted_chats', JSON.stringify([...App._mutedChats])); } catch(_) {}
+  // Also write to Firestore for cross-device sync
+  if (App.db && App.auth?.currentUser) {
+    const uid = App.auth.currentUser.uid;
+    const chat = App.chats.find(c => c.id === chatId);
+    const col = chat?.type === 'group' ? 'groups' : 'directChats';
+    App.db.collection(col).doc(chatId).set({ [`muted.${uid}`]: !wasMuted }, { merge: true }).catch(() => {});
+  }
 }
 function _loadMuteState() {
   try {

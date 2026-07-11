@@ -74,11 +74,11 @@ const Presence = {
   _startHeartbeat() {
     this._stopHeartbeat();
     this._heartbeatTimer = setInterval(async () => {
-      if (!navigator.onLine || document.visibilityState !== 'visible') return;
+      if (!navigator.onLine) return;
       try {
         await window.db.collection('users').doc(window.currentUser.uid).update({
           lastHeartbeat: Date.now(),
-          onlineStatus: 'online'
+          onlineStatus: document.visibilityState === 'visible' ? 'online' : this._onlineStatus
         });
       } catch (_) {}
     }, this._heartbeatInterval);
@@ -92,12 +92,16 @@ const Presence = {
   },
 
   _getSessionId() {
-    let sid = sessionStorage.getItem('tcSessionId');
-    if (!sid) {
-      sid = 'sess_' + Date.now() + '_' + Math.random().toString(36).slice(2, 10);
-      sessionStorage.setItem('tcSessionId', sid);
+    try {
+      let sid = sessionStorage.getItem('tcSessionId');
+      if (!sid) {
+        sid = 'sess_' + Date.now() + '_' + Math.random().toString(36).slice(2, 10);
+        sessionStorage.setItem('tcSessionId', sid);
+      }
+      return sid;
+    } catch (_) {
+      return 'sess_' + Date.now() + '_' + Math.random().toString(36).slice(2, 10);
     }
-    return sid;
   },
 
   async getUserStatus(uid) {
@@ -147,3 +151,4 @@ const Presence = {
 };
 
 window.Presence = Presence;
+window.formatLastSeen = Presence.formatLastSeen.bind(Presence);
