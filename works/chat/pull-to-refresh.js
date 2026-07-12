@@ -22,6 +22,8 @@ const PullToRefresh = {
     if (!this._indicator) {
       this._indicator = document.createElement('div');
       this._indicator.id = 'pull-to-refresh';
+      this._indicator.setAttribute('role', 'status');
+      this._indicator.setAttribute('aria-live', 'polite');
       this._indicator.innerHTML = '<div class="spinner"></div><span>Pull to refresh</span>';
       this._container.prepend(this._indicator);
     }
@@ -44,20 +46,20 @@ const PullToRefresh = {
     if (!this._pulling || this._refreshing) return;
     const dy = e.touches[0].clientY - this._startY;
     if (dy <= 0) {
-      this._indicator.classList.remove('visible', 'pulling');
+      this._indicator?.classList?.remove('visible', 'pulling');
       return;
     }
     if (this._container.scrollTop > 0) return;
 
     e.preventDefault();
     const progress = Math.min(dy / this._threshold, 1);
-    this._indicator.classList.add('visible');
+    this._indicator?.classList?.add('visible');
     if (progress < 1) {
-      this._indicator.classList.add('pulling');
-      this._indicator.querySelector('span').textContent = 'Pull to refresh';
+      this._indicator?.classList?.add('pulling');
+      this._indicator?.querySelector('span').textContent = 'Pull to refresh';
     } else {
-      this._indicator.classList.remove('pulling');
-      this._indicator.querySelector('span').textContent = 'Release to refresh';
+      this._indicator?.classList?.remove('pulling');
+      this._indicator?.querySelector('span').textContent = 'Release to refresh';
     }
   },
 
@@ -65,7 +67,7 @@ const PullToRefresh = {
     if (!this._pulling) return;
     this._pulling = false;
 
-    if (this._indicator.classList.contains('visible') && !this._indicator.classList.contains('pulling')) {
+    if (this._indicator?.classList?.contains('visible') && !this._indicator?.classList?.contains('pulling')) {
       this._refreshing = true;
       this._indicator.querySelector('span').textContent = 'Refreshing…';
 
@@ -79,9 +81,9 @@ const PullToRefresh = {
       }
 
       this._refreshing = false;
-      this._indicator.classList.remove('visible', 'pulling');
+      this._indicator?.classList?.remove('visible', 'pulling');
     } else {
-      this._indicator.classList.remove('visible', 'pulling');
+      this._indicator?.classList?.remove('visible', 'pulling');
     }
   },
 

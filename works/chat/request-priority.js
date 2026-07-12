@@ -278,6 +278,7 @@
     const adBtn = document.getElementById('rpAutoDeclineBtn');
     if (adBtn) {
       adBtn.classList.toggle('active', _adEnabled);
+      adBtn.setAttribute('aria-pressed', String(_adEnabled));
       adBtn.title = `Auto-decline requests older than ${_adDays} days (${_adEnabled ? 'ON' : 'OFF'})`;
     }
   }

@@ -70,7 +70,6 @@
 
   function _cfRenderRequests(list, requestList) {
     /* preserve the search bar, clear only request cards */
-    var searchWrap = requestList.querySelector('.cf-search-wrap');
     requestList.querySelectorAll('.request-card').forEach(function(el){ el.remove(); });
 
     if (!list.length) {
@@ -215,9 +214,11 @@
     input.addEventListener('search', applyFilter); /* clear button on mobile */
 
     chips.forEach(function(chip){
+      chip.setAttribute('aria-pressed', chip.classList.contains('cf-chip-active') ? 'true' : 'false');
       chip.addEventListener('click', function(){
-        chips.forEach(function(c){ c.classList.remove('cf-chip-active'); });
+        chips.forEach(function(c){ c.classList.remove('cf-chip-active'); c.setAttribute('aria-pressed', 'false'); });
         chip.classList.add('cf-chip-active');
+        chip.setAttribute('aria-pressed', 'true');
         activeKind = chip.dataset.kind;
         applyFilter();
       });
@@ -380,13 +381,15 @@
           var byLine = isGroup && p.pinnedByName ? ' · by '+esc(p.pinnedByName) : '';
           var div = document.createElement('div');
           div.className = 'pinned-message-item cf-pin-item';
+          div.setAttribute('role', 'button');
+          div.setAttribute('tabindex', '0');
           div.innerHTML =
               '<span class="cf-pin-icon">📌</span>'
             + '<div class="cf-pin-body">'
             +   '<div class="cf-pin-sender">'+esc(p.senderName||'')+byLine+'</div>'
             +   '<div class="cf-pin-text">'+esc((p.text||'').substring(0,60)||'📎 Media')+'</div>'
             + '</div>'
-            + '<button class="unpin-btn cf-unpin-btn" data-id="'+esc(p.id)+'" title="Unpin">✖</button>';
+            + '<button class="unpin-btn cf-unpin-btn" data-id="'+esc(p.id)+'" title="Unpin" aria-label="Unpin message">✖</button>';
           div.addEventListener('click', function(e){
             if (e.target.classList.contains('cf-unpin-btn')) return;
             var el = document.querySelector('[data-message-id="'+p.messageId+'"]');
@@ -396,6 +399,12 @@
               setTimeout(function(){ el.classList.remove('cf-highlight'); }, 1800);
             } else {
               window.showToast('Scroll up to find the pinned message');
+            }
+          });
+          div.addEventListener('keydown', function(e){
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              div.click();
             }
           });
           div.querySelector('.cf-unpin-btn').addEventListener('click', async function(e){
@@ -599,7 +608,8 @@
             window.toggleDarkMode();
           }
         } else if (btn.id === 'dockSupportBtn') {
-          alert('System status: Nominal. Protocol V2.0.26 secure.');
+          if (typeof showToast === 'function') showToast('System status: Nominal. Protocol V2.0.26 secure.', 'success');
+          else console.log('[chat-fixes] System status: Nominal.');
         }
       });
     }

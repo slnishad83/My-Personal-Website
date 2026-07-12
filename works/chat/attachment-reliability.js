@@ -124,8 +124,10 @@
     document.addEventListener('change', e => {
       if (e.target.type !== 'file') return;
       const over = Array.from(e.target.files || []).filter(f => f.size > MAX_BYTES);
-      if (over.length) {
-        alert(over.map(f => f.name).join(', ') + ' exceeds the 100 MB limit. Please choose a smaller file.');
+        if (over.length) {
+        var msg = over.map(function(f){ return f.name; }).join(', ') + ' exceeds the 100 MB limit. Please choose a smaller file.';
+        if (typeof showToast === 'function') showToast(msg, 'error');
+        else console.warn('[AttachmentReliability] ' + msg);
         e.target.value = '';
       }
     });

@@ -289,7 +289,7 @@
     window.closeBusyModal = () => modal.classList.remove('show');
     window.saveBusyStatus = async () => {
       const msg = document.getElementById('busyMsg').value.trim();
-      if (!msg) { alert('Enter a status message'); return; }
+      if (!msg) { if (typeof showToast === 'function') showToast('Enter a status message', 'error'); return; }
       const user = auth.currentUser;
       if (!user) return;
       await db.collection('users').doc(user.uid).update({ busyStatus: msg, busySetAt: firebase.firestore.FieldValue.serverTimestamp() });
@@ -310,7 +310,8 @@
     const banner = document.createElement('div');
     banner.id = 'busyBanner';
     banner.className = 'busy-banner';
-    banner.innerHTML = `🔴 Busy: "${busyStatus}" — Auto-reply is on <button onclick="clearBusyStatus()">Clear</button>`;
+    banner.setAttribute('aria-live', 'polite');
+    banner.innerHTML = `🔴 Busy: "${window.sanitizeHTML(busyStatus)}" — Auto-reply is on <button onclick="clearBusyStatus()">Clear</button>`;
     const nav = document.getElementById('featureNavBar');
     if (nav && nav.parentNode) nav.parentNode.insertBefore(banner, nav.nextSibling);
     else document.body.prepend(banner);
@@ -366,7 +367,7 @@
             const g = d.data();
             if (g.memberIds && g.memberIds.includes(user.uid)) chats.push({ value: `group_${d.id}`, label: `👥 ${g.name || 'Group'}` });
           });
-          document.getElementById('capsuleTarget').innerHTML = chats.map(c => `<option value="${c.value}">${c.label}</option>`).join('');
+          document.getElementById('capsuleTarget').innerHTML = chats.map(c => `<option value="${c.value}">${window.sanitizeHTML(c.label)}</option>`).join('');
         } catch (_) {}
       }
       modal.classList.add('show');
@@ -376,9 +377,9 @@
       const msg = document.getElementById('capsuleMsg').value.trim();
       const dateVal = document.getElementById('capsuleDate').value;
       const target = document.getElementById('capsuleTarget').value;
-      if (!msg || !dateVal || !target) { alert('Fill in all fields'); return; }
+      if (!msg || !dateVal || !target) { if (typeof showToast === 'function') showToast('Fill in all fields', 'error'); return; }
       const dueAt = new Date(dateVal);
-      if (dueAt <= new Date()) { alert('Choose a future date'); return; }
+      if (dueAt <= new Date()) { if (typeof showToast === 'function') showToast('Choose a future date', 'error'); return; }
       const user = auth.currentUser;
       const [type, id] = target.split('_');
       await db.collection('scheduledMessages').add({
@@ -426,6 +427,8 @@
       const result = document.createElement('div');
       result.id = 'catchupResult';
       result.className = 'catchup-result';
+      result.setAttribute('role', 'status');
+      result.setAttribute('aria-live', 'polite');
       result.innerHTML = '<div class="catchup-title">🧠 AI Summary</div><div>Analysing messages…</div>';
       const area = document.querySelector('.messages-area, #messagesArea, [class*="messages"]');
       if (area) area.before(result);
@@ -434,7 +437,7 @@
         const fn = functions.httpsCallable('catchMeUp', { timeout: 30000 });
         const chatType = typeof currentChatType !== 'undefined' ? currentChatType : 'direct';
         const res = await fn({ chatId: currentChat.id, chatType });
-        result.innerHTML = `<div class="catchup-title">🧠 What you missed</div>${res.data.summary || 'Nothing new since you were last here.'}`;
+        result.innerHTML = `<div class="catchup-title">🧠 What you missed</div>${window.sanitizeHTML(res.data.summary || 'Nothing new since you were last here.')}`;
       } catch (e) {
         result.innerHTML = '<div class="catchup-title">🧠 Catch Me Up</div>Could not generate summary. Try again.';
       }
@@ -455,7 +458,7 @@
         <input type="text" id="taskInput" placeholder="Add a task…" onkeydown="if(event.key==='Enter')addTask()"/>
         <button onclick="addTask()">Add</button>
       </div>
-      <div class="tasks-list" id="tasksList"><div class="tasks-empty">No tasks yet. Add one above!</div></div>
+      <div class="tasks-list" id="tasksList" aria-live="polite"><div class="tasks-empty">No tasks yet. Add one above!</div></div>
     `;
     document.body.appendChild(panel);
 

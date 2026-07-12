@@ -90,7 +90,12 @@ const ErrorBoundary = {
       'background:var(--error);color:var(--on-error);padding:12px 24px;border-radius:12px;' +
       'font-size:14px;font-weight:600;box-shadow:0 8px 32px rgba(0,0,0,0.3);cursor:pointer;max-width:90vw;text-align:center;';
     toast.textContent = 'Something went wrong. Tap to reload.';
+    toast.setAttribute('role', 'button');
+    toast.setAttribute('tabindex', '0');
     toast.onclick = () => location.reload();
+    toast.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toast.click(); }
+    });
     document.body.appendChild(toast);
     setTimeout(() => toast.remove(), 8000);
   },

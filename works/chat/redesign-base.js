@@ -1,5 +1,6 @@
 /* 2026 Universal Design - Global Enhancements & Theme Controller */
 (function() {
+  'use strict';
   /* ── Unified Theme Controller ── */
   var mq = window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)') : null;
 

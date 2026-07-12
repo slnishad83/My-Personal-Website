@@ -43,7 +43,7 @@
         return `<div class="gmi-row" role="listitem">
   <div class="gmi-avatar" aria-hidden="true">${avatarHtml}<span class="gmi-initials"${avatarHtml ? ' style="display:none"' : ''}>${esc(getInitials(m.displayName||m.name))}</span></div>
   <div class="gmi-info">
-    <div class="gmi-name">${name}</div>
+    <div class="gmi-name">${window.sanitizeHTML(name)}</div>
     <div class="gmi-statuses">
       <span class="gmi-status gmi-delivered${delTime?'':' gmi-pending'}"><span class="gmi-check" aria-hidden="true">✓✓</span>${delTime?'Delivered: '+delTime:'Not yet delivered'}</span>
       <span class="gmi-status gmi-read${readTime?' gmi-seen':' gmi-pending'}"><span class="gmi-check" aria-hidden="true">✓✓</span>${readTime?'Read: '+readTime:'Not yet read'}</span>

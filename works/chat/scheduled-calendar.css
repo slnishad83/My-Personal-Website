@@ -26,8 +26,8 @@
 }
 .sc-tab:hover { color: var(--text, #111b21); }
 .sc-tab.sc-tab-active {
-  color: #008069;
-  border-bottom-color: #008069;
+  color: var(--brand);
+  border-bottom-color: var(--brand);
   font-weight: 600;
 }
 
@@ -111,7 +111,7 @@
   padding: 2px;
 }
 .sc-cal-cell:hover:not(.sc-empty) { background: var(--hover, #f0f2f5); }
-.sc-cal-cell:focus-visible { outline: 2px solid #008069; }
+.sc-cal-cell:focus-visible { outline: 2px solid var(--brand); }
 .sc-cal-cell.sc-empty { cursor: default; }
 .sc-day-num {
   font-size: 12px;
@@ -120,7 +120,7 @@
   line-height: 1;
 }
 .sc-cal-cell.sc-today .sc-day-num {
-  background: #008069;
+  background: var(--brand);
   color: #fff;
   width: 22px;
   height: 22px;
@@ -131,8 +131,8 @@
   font-weight: 700;
 }
 .sc-cal-cell.sc-selected {
-  background: rgba(0,128,105,0.12);
-  outline: 2px solid #008069;
+  background: var(--brand-soft);
+  outline: 2px solid var(--brand);
 }
 .sc-dot-row {
   display: flex;
@@ -144,10 +144,10 @@
   width: 5px;
   height: 5px;
   border-radius: 50%;
-  background: #008069;
+  background: var(--brand);
   display: inline-block;
 }
-.sc-cal-cell.sc-overdue .sc-dot { background: #ef4444; }
+.sc-cal-cell.sc-overdue .sc-dot { background: var(--error); }
 .sc-dot-more {
   font-size: 7px;
   background: none;
@@ -167,12 +167,12 @@
   color: var(--muted, #667781);
 }
 .sc-legend-item { display: flex; align-items: center; gap: 4px; }
-.sc-legend-item.sc-overdue .sc-dot { background: #ef4444; }
+.sc-legend-item.sc-overdue .sc-dot { background: var(--error); }
 .sc-today-dot {
   width: 14px;
   height: 14px;
   border-radius: 50%;
-  background: #008069;
+  background: var(--brand);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -206,7 +206,7 @@
 .sc-day-count {
   font-size: 11px;
   font-weight: 500;
-  background: #008069;
+  background: var(--brand);
   color: #fff;
   padding: 2px 8px;
   border-radius: 999px;
@@ -244,7 +244,7 @@
 .sc-msg-chat {
   font-size: 12px;
   font-weight: 600;
-  color: #008069;
+  color: var(--brand);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -255,7 +255,7 @@
   color: var(--muted, #667781);
   white-space: nowrap;
 }
-.sc-overdue-label { color: #ef4444; font-weight: 600; }
+.sc-overdue-label { color: var(--error); font-weight: 600; }
 .sc-msg-text {
   font-size: 13px;
   color: var(--text, #111b21);
@@ -285,11 +285,11 @@
   transition: background 0.13s, color 0.13s, border-color 0.13s;
   color: var(--text, #111b21);
 }
-.sc-send-now { border-color: #008069; color: #008069; }
-.sc-send-now:hover { background: #008069; color: #fff; }
+.sc-send-now { border-color: var(--brand); color: var(--brand); }
+.sc-send-now:hover { background: var(--brand); color: #fff; }
 .sc-edit-time { border-color: #3b82f6; color: #3b82f6; }
 .sc-edit-time:hover { background: #3b82f6; color: #fff; }
-.sc-cancel-msg { border-color: #ef4444; color: #ef4444; }
+.sc-cancel-msg { border-color: var(--error); color: var(--error); }
 .sc-cancel-msg:hover { background: #ef4444; color: #fff; }
 .sc-action-btn:disabled { opacity: 0.5; cursor: default; }
 
@@ -314,9 +314,9 @@
   background: var(--surface, #fff);
   color: var(--text, #111b21);
 }
-.sc-dt-input:focus { border-color: #008069; }
-.sc-save-time { border-color: #008069; color: #008069; }
-.sc-save-time:hover { background: #008069; color: #fff; }
+.sc-dt-input:focus { border-color: var(--brand); }
+.sc-save-time { border-color: var(--brand); color: var(--brand); }
+.sc-save-time:hover { background: var(--brand); color: #fff; }
 .sc-cancel-edit { color: var(--muted, #667781); }
 
 /* ── Loading state ────────────────────────────────────────── */
@@ -333,7 +333,7 @@
   width: 20px;
   height: 20px;
   border: 2px solid var(--border, #e9edef);
-  border-top-color: #008069;
+  border-top-color: var(--brand);
   border-radius: 50%;
   animation: sc-spin 0.7s linear infinite;
 }
@@ -359,12 +359,12 @@
 /* ── Dark mode ────────────────────────────────────────────── */
 body.dark .sc-tab-bar { background: #202c33; border-color: #2a3942; }
 body.dark .sc-tab { color: #aebac1; }
-body.dark .sc-tab.sc-tab-active { color: #00a884; border-bottom-color: #00a884; }
+body.dark .sc-tab.sc-tab-active { color: var(--brand); border-bottom-color: var(--brand); }
 body.dark .sc-left { border-color: #2a3942; }
 body.dark .sc-msg-card { background: #202c33; border-color: #2a3942; }
 body.dark .sc-msg-card.sc-msg-overdue { background: #2d1515; border-color: #7f1d1d; }
 body.dark .sc-day-num { color: #e9edef; }
-body.dark .sc-cal-cell.sc-today .sc-day-num { background: #00a884; }
-body.dark .sc-cal-cell.sc-selected { background: rgba(0,168,132,0.15); outline-color: #00a884; }
-body.dark .sc-msg-chat { color: #00a884; }
+body.dark .sc-cal-cell.sc-today .sc-day-num { background: var(--brand); }
+body.dark .sc-cal-cell.sc-selected { background: var(--brand-soft); outline-color: var(--brand); }
+body.dark .sc-msg-chat { color: var(--brand); }
 body.dark .sc-dt-input { background: #2a3942; border-color: #3b4a54; color: #e9edef; }

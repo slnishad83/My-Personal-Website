@@ -152,6 +152,9 @@ const VirtualScroll = {
     this._items = [];
     this._startIdx = 0;
     this._endIdx = 0;
+    if (this._container) this._container.innerHTML = '';
+    this._container = null;
+    this._renderFn = null;
   }
 };
 

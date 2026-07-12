@@ -14,7 +14,7 @@ const MultiDevice = {
     this._currentSessionId = this._getOrCreateSessionId();
     await this._registerSession();
     this._startCleanup();
-    console.log('[MultiDevice] Session:', this._currentSessionId);
+    console.debug('[MultiDevice] Session:', this._currentSessionId);
   },
 
   _getOrCreateSessionId() {

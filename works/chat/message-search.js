@@ -160,10 +160,12 @@
 
 
         toggleBar.querySelectorAll('.ms-scope-btn').forEach(btn => {
+          btn.setAttribute('aria-pressed', btn.classList.contains('ms-active') ? 'true' : 'false');
           btn.addEventListener('click', () => {
             _scope = btn.dataset.scope;
-            toggleBar.querySelectorAll('.ms-scope-btn').forEach(b => b.classList.remove('ms-active'));
+            toggleBar.querySelectorAll('.ms-scope-btn').forEach(b => { b.classList.remove('ms-active'); b.setAttribute('aria-pressed', 'false'); });
             btn.classList.add('ms-active');
+            btn.setAttribute('aria-pressed', 'true');
             doSearch(true);
           });
         });
@@ -430,9 +432,10 @@
       btn.className = 'ms-filter-pill' + (_filterType === val ? ' active' : '');
       btn.dataset.filterType = val;
       btn.textContent = label;
+      btn.setAttribute('aria-pressed', _filterType === val ? 'true' : 'false');
       btn.addEventListener('click', () => {
         _filterType = val;
-        row.querySelectorAll('[data-filter-type]').forEach(b => b.classList.toggle('active', b.dataset.filterType === val));
+        row.querySelectorAll('[data-filter-type]').forEach(b => { b.classList.toggle('active', b.dataset.filterType === val); b.setAttribute('aria-pressed', b.dataset.filterType === val ? 'true' : 'false'); });
         resetSearch(); runSearch();
       });
       row.appendChild(btn);
@@ -450,9 +453,10 @@
       btn.className = 'ms-filter-pill' + (_filterDate === val ? ' active' : '');
       btn.dataset.filterDate = val;
       btn.textContent = label;
+      btn.setAttribute('aria-pressed', _filterDate === val ? 'true' : 'false');
       btn.addEventListener('click', () => {
         _filterDate = val;
-        row.querySelectorAll('[data-filter-date]').forEach(b => b.classList.toggle('active', b.dataset.filterDate === val));
+        row.querySelectorAll('[data-filter-date]').forEach(b => { b.classList.toggle('active', b.dataset.filterDate === val); b.setAttribute('aria-pressed', b.dataset.filterDate === val ? 'true' : 'false'); });
         resetSearch(); runSearch();
       });
       row.appendChild(btn);

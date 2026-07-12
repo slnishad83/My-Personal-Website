@@ -215,12 +215,20 @@ const Platform = (() => {
   }
 
   /* ── Init ───────────────────────────────────────────────── */
+  let _connHandler = null;
   function init() {
     if (navigator.connection?.addEventListener) {
-      navigator.connection.addEventListener('change', () => {
+      _connHandler = () => {
         getInternetQuality();
         if (typeof window._onNetworkChange === 'function') window._onNetworkChange(getInternetQuality());
-      });
+      };
+      navigator.connection.addEventListener('change', _connHandler);
+    }
+  }
+  function destroy() {
+    if (_connHandler && navigator.connection?.removeEventListener) {
+      navigator.connection.removeEventListener('change', _connHandler);
+      _connHandler = null;
     }
   }
 
@@ -244,7 +252,7 @@ const Platform = (() => {
     isNativeApp, isStandalone, isPWA, isWeb,
     capabilities, getBattery, isDND, getFingerprint, getScreenInfo,
     getInternetQuality, getNotificationStrategy,
-    isVisible, isForeground, init
+    isVisible, isForeground, init, destroy
   };
 })();
 

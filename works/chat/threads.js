@@ -1,3 +1,4 @@
+'use strict';
 // ========================================
 // THREADS — SUB-CONVERSATIONS
 // ========================================
@@ -76,6 +77,7 @@ function subscribeToThreadReplies(messageId) {
 
   const container = document.getElementById("threadRepliesList");
   if (!container) return;
+  container.setAttribute('aria-live', 'polite');
 
   container.innerHTML = '<div class="thread-loading">Loading replies…</div>';
 
@@ -122,7 +124,7 @@ function renderThreadReplies(docs, container) {
 
     div.innerHTML = `
       <div class="thread-reply-bubble">
-        ${!isMe ? `<div class="thread-reply-sender">${escapeHtml(msg.senderName || "Unknown")}</div>` : ""}
+        ${!isMe ? `<div class="thread-reply-sender">${window.sanitizeHTML(escapeHtml(msg.senderName || "Unknown"))}</div>` : ""}
         ${msg.text ? `<div class="thread-reply-text">${renderMessageText(msg.text, msg.mentions || [])}</div>` : ""}
         ${msg.attachment ? `<div class="thread-reply-attachment">${renderAttachment(msg.attachment)}</div>` : ""}
         <div class="thread-reply-time">${escapeHtml(time)}</div>

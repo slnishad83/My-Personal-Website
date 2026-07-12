@@ -45,7 +45,6 @@
       return tb - ta;
     });
 
-    const groups = new Map();      // key = `sender_${fromUserId}` or unique for non-message
     const result = [];
     const used   = new Set();
 
@@ -119,6 +118,12 @@
           openChat(notifChatId, notifChatType || 'direct');
         }
       });
+      el.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          el.click();
+        }
+      });
     });
 
     // Update badge
@@ -127,13 +132,13 @@
 
   function _renderSingle(n) {
     const icon   = _notifIcon(n);
-    const name   = _esc(n.fromUserName || n.title || 'Notification');
-    const msg    = _esc((n.message || n.body || '').substring(0, 100));
+    const name   = window.sanitizeHTML(_esc(n.fromUserName || n.title || 'Notification'));
+    const msg    = window.sanitizeHTML(_esc((n.message || n.body || '').substring(0, 100)));
     const time   = _relTime(n.createdAt);
     const attrs  = n.chatId
       ? `data-notif-chat-id="${_esc(n.chatId)}" data-notif-chat-type="${_esc(n.chatType || 'direct')}" data-notif-user-id="${_esc(n.chatUserId || n.fromUserId || '')}"`
       : '';
-    return `<div class="nd-item nd-single" ${attrs}>
+    return `<div class="nd-item nd-single" role="button" tabindex="0" ${attrs}>
       <div class="nd-icon">${icon}</div>
       <div class="nd-body">
         <div class="nd-name">${name}</div>
@@ -147,13 +152,13 @@
     const n     = item.latest;
     const count = item.notifs.length;
     const icon  = _notifIcon(n);
-    const name  = _esc(n.fromUserName || n.title || 'Messages');
-    const preview = _esc((n.message || '').substring(0, 80));
+    const name  = window.sanitizeHTML(_esc(n.fromUserName || n.title || 'Messages'));
+    const preview = window.sanitizeHTML(_esc((n.message || '').substring(0, 80)));
     const time  = _relTime(n.createdAt);
     const attrs = n.chatId
       ? `data-notif-chat-id="${_esc(n.chatId)}" data-notif-chat-type="${_esc(n.chatType || 'direct')}" data-notif-user-id="${_esc(n.chatUserId || n.fromUserId || '')}"`
       : '';
-    return `<div class="nd-item nd-group" ${attrs}>
+    return `<div class="nd-item nd-group" role="button" tabindex="0" ${attrs}>
       <div class="nd-icon">${icon}</div>
       <div class="nd-body">
         <div class="nd-name">${name} <span class="nd-count">${count} messages</span></div>

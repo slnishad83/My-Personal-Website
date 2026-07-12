@@ -26,9 +26,9 @@
   max-width: 100%;
   max-height: min(760px, calc(100dvh - 40px));
   overflow: hidden;
-  border: 1px solid #dfe5e7;
+  border: 1px solid var(--border);
   border-radius: 24px !important;
-  background: #fff;
+  background: var(--card);
   box-shadow: 0 24px 70px rgb(17 27 33 / 24%);
 }
 
@@ -36,7 +36,7 @@
   box-sizing: border-box;
   width: auto !important;
   padding: 20px 22px 16px;
-  border-bottom: 1px solid #edf0f2;
+  border-bottom: 1px solid var(--bg);
 }
 
 .translate-title {
@@ -50,7 +50,7 @@
   flex: 0 0 auto;
   width: 28px !important;
   height: 28px !important;
-  color: #008069;
+  color: var(--brand);
 }
 
 .translate-title h3,
@@ -59,14 +59,14 @@
 }
 
 .translate-title h3 {
-  color: #111b21;
+  color: var(--text);
   font-size: 18px;
   line-height: 1.3;
 }
 
 .translate-title p {
   margin-top: 2px;
-  color: #667781;
+  color: var(--text-secondary);
   font-size: 12px;
 }
 
@@ -78,8 +78,8 @@
   place-items: center;
   border: 0;
   border-radius: 50%;
-  background: #f0f2f5;
-  color: #54656f;
+  background: var(--bg);
+  color: var(--text-secondary);
   font-size: 26px;
   line-height: 1;
   cursor: pointer;
@@ -93,7 +93,7 @@
   gap: 14px;
   overflow-y: auto;
   padding: 18px 22px 22px !important;
-  background: #fff !important;
+  background: var(--card) !important;
 }
 
 .translate-body > * {
@@ -104,14 +104,14 @@
 
 .translate-panel {
   padding: 14px 16px;
-  border: 1px solid #e1e7e9;
+  border: 1px solid var(--border);
   border-radius: 16px;
-  background: #f7f9fa;
+  background: var(--bg);
 }
 
 .translate-panel-label {
   margin-bottom: 6px;
-  color: #008069;
+  color: var(--brand);
   font-size: 11px;
   font-weight: 700;
   letter-spacing: .06em;
@@ -122,7 +122,7 @@
 .translate-output-text {
   max-height: 150px;
   overflow-y: auto;
-  color: #111b21;
+  color: var(--text);
   font-size: 14px;
   line-height: 1.55;
   white-space: pre-wrap;
@@ -134,10 +134,10 @@
   align-items: flex-start;
   gap: 11px;
   padding: 12px 14px;
-  border: 1px solid #dfe5e7;
+  border: 1px solid var(--border);
   border-radius: 14px;
-  background: #fff;
-  color: #111b21;
+  background: var(--card);
+  color: var(--text);
   cursor: pointer;
 }
 
@@ -146,7 +146,7 @@
   width: 18px;
   height: 18px;
   margin: 2px 0 0;
-  accent-color: #008069;
+  accent-color: var(--brand);
 }
 
 .auto-translate-toggle span {
@@ -159,7 +159,7 @@
 }
 
 .auto-translate-toggle small {
-  color: #667781;
+  color: var(--text-secondary);
   font-size: 11px;
   line-height: 1.4;
 }
@@ -188,7 +188,7 @@
 
 .message-translation-label .auto-translation-badge {
   margin-left: 5px;
-  color: #667781;
+  color: var(--text-secondary);
   font-weight: 600;
   text-transform: none;
 }
@@ -200,8 +200,8 @@
   align-items: center;
   padding: 0 7px;
   border-radius: 999px;
-  background: rgb(0 128 105 / 10%);
-  color: #008069;
+  background: var(--brand-soft);
+  color: var(--brand);
   font-size: 10px;
   font-weight: 700;
   letter-spacing: 0;
@@ -212,19 +212,19 @@
   margin-top: 8px;
   padding-top: 7px;
   border-top: 1px solid rgb(84 101 111 / 18%);
-  color: #54656f;
+  color: var(--text-secondary);
   font-size: 12px;
 }
 
 .sent-translation-details summary {
-  color: #008069;
+  color: var(--brand);
   font-weight: 700;
   cursor: pointer;
 }
 
 .sent-translation-details div {
   margin-top: 6px;
-  color: #3b4a54;
+  color: var(--text);
   line-height: 1.45;
 }
 
@@ -244,7 +244,7 @@
 .translate-language-grid label {
   display: grid;
   gap: 6px;
-  color: #54656f;
+  color: var(--text-secondary);
   font-size: 11px;
   font-weight: 700;
   letter-spacing: .04em;
@@ -255,10 +255,10 @@
   width: 100%;
   height: 44px;
   padding: 0 34px 0 12px;
-  border: 1px solid #d7dee1;
+  border: 1px solid var(--border);
   border-radius: 12px;
-  background: #fff;
-  color: #111b21;
+  background: var(--card);
+  color: var(--text);
   font: inherit;
   font-size: 14px;
   text-transform: none;
@@ -267,18 +267,18 @@
 .translate-swap-btn {
   width: 42px;
   height: 42px;
-  border: 1px solid #d7dee1;
+  border: 1px solid var(--border);
   border-radius: 50%;
-  background: #fff;
-  color: #008069;
+  background: var(--card);
+  color: var(--brand);
 }
 
 .translate-capability-note {
   margin: 0;
   padding: 10px 12px;
   border-radius: 12px;
-  background: #e9f7f3 !important;
-  color: #3b4a54 !important;
+  background: var(--brand-soft) !important;
+  color: var(--text) !important;
   font-size: 12px;
   line-height: 1.45;
   overflow-wrap: anywhere;
@@ -298,14 +298,14 @@
 }
 
 .translate-output-heading span {
-  color: #667781;
+  color: var(--text-secondary);
   font-size: 12px;
 }
 
 .translate-output-heading button {
   border: 0;
   background: transparent;
-  color: #008069;
+  color: var(--brand);
   font-weight: 700;
   cursor: pointer;
 }
@@ -331,38 +331,38 @@ body.dark .translate-modal {
 }
 
 body.dark .translate-modal-content {
-  border-color: #34434b;
-  background: #111b21;
+  border-color: var(--border);
+  background: var(--card);
   box-shadow: 0 24px 70px rgb(0 0 0 / 55%);
 }
 
 body.dark .translate-body {
-  background: #111b21 !important;
+  background: var(--card) !important;
 }
 
 body.dark .translate-modal-header {
-  border-color: #2a3942;
+  border-color: var(--border);
 }
 
 body.dark .translate-title h3,
 body.dark .translate-source-preview,
 body.dark .translate-output-text {
-  color: #e9edef;
+  color: var(--text);
 }
 
 body.dark .translate-title p,
 body.dark .translate-language-grid label,
 body.dark .translate-output-heading span {
-  color: #8696a0;
+  color: var(--text-secondary);
 }
 
 body.dark .translate-modal-header .closeTranslateModal,
 body.dark .translate-panel,
 body.dark .translate-language-grid select,
 body.dark .translate-swap-btn {
-  border-color: #34434b;
-  background: #202c33;
-  color: #e9edef;
+  border-color: var(--border);
+  background: var(--surface);
+  color: var(--text);
 }
 
 body.dark .translate-capability-note,
@@ -374,26 +374,26 @@ body.dark .translate-output-panel {
 
 body.dark .auto-translate-toggle,
 body.dark .outgoing-confirm-choice {
-  border-color: #34434b;
-  background: #202c33;
-  color: #e9edef;
+  border-color: var(--border);
+  background: var(--surface);
+  color: var(--text);
 }
 
 body.dark .auto-translate-toggle small {
-  color: #aebac1;
+  color: var(--text-secondary);
 }
 
 body.dark .sent-translation-details {
   border-color: rgb(174 186 193 / 20%);
-  color: #aebac1;
+  color: var(--text-secondary);
 }
 
 body.dark .sent-translation-details summary {
-  color: #00a884;
+  color: var(--brand);
 }
 
 body.dark .sent-translation-details div {
-  color: #d1d7db;
+  color: var(--text-secondary);
 }
 
 body.dark .translation-method-badge,
@@ -424,7 +424,7 @@ body.dark .message-translation-label .auto-translation-badge {
     height: 4px;
     margin: 9px auto 0;
     border-radius: 4px;
-    background: #c7ced1;
+    background: var(--border);
   }
 
   body.dark .translate-modal-content::before {

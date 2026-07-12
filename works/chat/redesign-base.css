@@ -131,8 +131,8 @@ body {
 .btn:active { transform: scale(0.97); }
 
 .btn-primary {
-  background: linear-gradient(135deg, #008069, #00a884);
-  color: #fff;
+  background: var(--brand-gradient);
+  color: var(--on-primary);
   box-shadow: 0 4px 14px rgba(0,128,105,0.3);
 }
 .btn-primary:hover {
@@ -155,7 +155,7 @@ body {
 
 .btn-danger {
   background: linear-gradient(135deg, #ef4444, #dc2626);
-  color: #fff;
+  color: var(--on-primary);
   box-shadow: 0 4px 14px rgba(239,68,68,0.3);
 }
 .btn-danger:hover { box-shadow: 0 6px 20px rgba(239,68,68,0.45); }
@@ -236,8 +236,8 @@ body {
 
 /* ── Header / Navigation Bar ── */
 .app-header {
-  background: linear-gradient(135deg, #008069, #00a884);
-  color: #fff;
+  background: var(--brand-gradient);
+  color: var(--on-primary);
   padding: max(14px, calc(10px + var(--app-safe-top)))
            max(18px, calc(12px + var(--app-safe-right)))
            14px
@@ -262,7 +262,7 @@ body {
 .app-header .back-btn {
   background: none;
   border: none;
-  color: #fff;
+  color: var(--on-primary);
   font-size: 24px;
   cursor: pointer;
   padding: 4px;
@@ -279,7 +279,7 @@ body {
 .app-header .header-action {
   background: rgba(255,255,255,0.15);
   border: none;
-  color: #fff;
+  color: var(--on-primary);
   width: 36px;
   height: 36px;
   border-radius: 50%;
@@ -319,9 +319,9 @@ body {
   max-width: 90vw;
 }
 
-.toast-success { background: #065f46; color: #fff; }
-.toast-error { background: #991b1b; color: #fff; }
-.toast-info { background: #1e3a5f; color: #fff; }
+.toast-success { background: var(--green); color: var(--on-primary); }
+.toast-error { background: var(--red); color: var(--on-primary); }
+.toast-info { background: var(--blue); color: var(--on-primary); }
 
 @keyframes toastIn {
   from { opacity: 0; transform: translateY(16px); }
@@ -501,7 +501,7 @@ body {
   flex-shrink: 0;
 }
 .status-dot--online { background: #31a24c; box-shadow: 0 0 0 2px var(--card); }
-.status-dot--offline { background: #8696a0; }
+.status-dot--offline { background: var(--text-secondary); }
 .status-dot--away { background: #f5a623; }
 
 /* ── Avatar ── */
@@ -613,7 +613,7 @@ body.dark {
 }
 
 /* ── Dark Mode Overrides ── */
-.app-header { background: linear-gradient(135deg, #008069, #00a884); }
+.app-header { background: var(--brand-gradient); }
 :root[data-theme="dark"] .app-header,
 body.dark .app-header { background: linear-gradient(135deg, #00574d, #008069); }
 

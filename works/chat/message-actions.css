@@ -124,7 +124,7 @@ body.dark .message-quick-actions {
 }
 
 body.dark .message-quick-actions .quick-message-action {
-  color: #aebac1 !important;
+  color: var(--text-secondary) !important;
 }
 
 /* Applied only after JavaScript measures insufficient side room. */
@@ -178,7 +178,7 @@ body.dark .message-quick-actions .quick-message-action {
   display: block !important;
   width: 17px !important;
   height: 17px !important;
-  background: #fff !important;
+  background: var(--on-primary) !important;
   -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='9 10 4 15 9 20'/%3E%3Cpath d='M20 4v7a4 4 0 0 1-4 4H4'/%3E%3C/svg%3E") center / contain no-repeat !important;
   mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='9 10 4 15 9 20'/%3E%3Cpath d='M20 4v7a4 4 0 0 1-4 4H4'/%3E%3C/svg%3E") center / contain no-repeat !important;
 }
@@ -213,7 +213,7 @@ body.dark .message-quick-actions .quick-message-action {
   content: "" !important;
   width: 17px !important;
   height: 17px !important;
-  background: #fff !important;
+  background: var(--on-primary) !important;
   -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 6h18M8 6V4h8v2m-9 0 1 14h8l1-14M10 10v6m4-6v6'/%3E%3C/svg%3E") center / contain no-repeat !important;
   mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 6h18M8 6V4h8v2m-9 0 1 14h8l1-14M10 10v6m4-6v6'/%3E%3C/svg%3E") center / contain no-repeat !important;
 }

@@ -125,7 +125,7 @@
 
 .snooze-picker-set {
   background: var(--brand, #00a884);
-  color: #fff;
+  color: var(--on-primary);
 }
 
 .snooze-picker-set:hover:not(:disabled) {

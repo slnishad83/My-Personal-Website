@@ -9,8 +9,8 @@
   transition: color 0.3s ease, opacity 0.3s ease;
 }
 .read-receipt.read       { color: #53bdeb; }
-.read-receipt.delivered  { color: #8696a0; }
-.read-receipt.sent       { color: #8696a0; opacity: 0.6; }
+.read-receipt.delivered  { color: var(--text-secondary); }
+.read-receipt.sent       { color: var(--text-secondary); opacity: 0.6; }
 .read-receipt.updating   { opacity: 0.4; }
 
 /* --- Offline / network-loss banner --- */
@@ -31,7 +31,7 @@
   animation: tcSlideBanner 0.25s ease;
 }
 #tcOfflineBanner.visible { display: flex; }
-#tcOfflineBanner.reconnecting { background: #008069; color: #fff; }
+#tcOfflineBanner.reconnecting { background: var(--brand); color: var(--on-primary); }
 @keyframes tcSlideBanner {
   from { transform: translateY(-100%); }
   to   { transform: translateY(0); }
@@ -47,7 +47,7 @@
 }
 .tc-download-progress-bar {
   height: 100%;
-  background: #00a884;
+  background: var(--brand);
   border-radius: 3px;
   transition: width 0.2s ease;
   width: 0%;

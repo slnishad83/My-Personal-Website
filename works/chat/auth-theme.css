@@ -143,7 +143,7 @@ textarea:focus {
 button:not(.auth-tab):not(.password-toggle):not(.btn-link):not(.secondary):not(.btn-outline),
 a:not(.secondary) {
   background: var(--primary);
-  color: #ffffff;
+  color: var(--on-primary);
 }
 
 .btn-primary:hover,

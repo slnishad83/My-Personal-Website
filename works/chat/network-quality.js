@@ -12,9 +12,12 @@ const NetworkQuality = {
   _timer: null,
   _stats: [],
 
+  _connHandler: null,
+
   init() {
     if (navigator.connection) {
-      navigator.connection.addEventListener('change', () => this.check());
+      this._connHandler = () => this.check();
+      navigator.connection.addEventListener('change', this._connHandler);
     }
     this.check();
     this._timer = setInterval(() => this.check(), this._checkInterval);
@@ -66,6 +69,10 @@ const NetworkQuality = {
 
   destroy() {
     if (this._timer) { clearInterval(this._timer); this._timer = null; }
+    if (this._connHandler && navigator.connection) {
+      navigator.connection.removeEventListener('change', this._connHandler);
+      this._connHandler = null;
+    }
     this._listeners = [];
   }
 };
