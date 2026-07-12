@@ -64,11 +64,36 @@ html, body, #app { height: 100%; margin: 0; padding: 0; }
   /* Recording bar: smaller buttons on mobile */
   #recording-bar .btn-cancel { padding: 6px 10px !important; font-size: 11px !important; }
   #recording-bar .btn-send { padding: 6px 10px !important; font-size: 11px !important; }
+  /* Input bar buttons: prevent flex shrink on tap */
+  #input-bar button { flex-shrink: 0; }
+  /* Header action buttons: prevent overflow */
+  #header-actions-container { flex-shrink: 0; gap: 2px !important; }
+  #header-actions-container button { flex-shrink: 0; width: 36px; height: 36px; }
+  /* Scroll-to-bottom FAB: safe-area aware */
+  #scroll-to-bottom { bottom: calc(96px + var(--safe-bottom, 0px)) !important; }
 }
 
 @media (max-width: 380px) {
   #emoji-grid { grid-template-columns: repeat(6, 1fr) !important; }
   #recording-bar .btn-send span:last-child { display: none; }
+}
+
+/* ── Small phones (<480px): hide extra input buttons, shrink header ── */
+@media (max-width: 479px) {
+  /* Hide GIF and format buttons to save input space */
+  #input-bar .flex.items-center.gap-1 > button:nth-child(2) { display: none !important; }
+  #input-bar .flex.items-center.gap-1 > button:nth-child(3) { display: none !important; }
+  /* Shrink header action buttons */
+  #header-actions-container { gap: 0 !important; }
+  #header-actions-container button { width: 32px; height: 32px; padding: 4px; }
+  #header-actions-container button span { font-size: 20px; }
+  /* Hide video call button on small phones */
+  #btn-video-call { display: none !important; }
+  /* Input bar: tighter gaps */
+  #input-bar .glass-panel { gap: 4px !important; }
+  #input-bar .flex.items-center.gap-1 { gap: 2px !important; }
+  /* Call bubble: raise above bottom nav */
+  #call-bubble { bottom: calc(80px + var(--safe-bottom, 0px)) !important; }
 }
 
 @media (min-width: 768px) and (max-width: 1023px) {
@@ -214,7 +239,7 @@ html.dark .msg-received { background: var(--surface-container-highest); }
 /* ── Bottom nav active state ─────────────────────────── */
 .bottom-nav-item.active { color: var(--primary) !important; }
 .bottom-nav-item.active .material-symbols-outlined { font-variation-settings: 'FILL' 1 !important; }
-nav#bottom-nav { z-index: 40; }
+nav#bottom-nav { z-index: 51; }
 
 /* ── Sidebar tab active state ────────────────────────── */
 .tab-item.active {
@@ -269,7 +294,7 @@ html.dark .chat-list-item.active { background: rgba(196, 192, 255, 0.08); }
   #camera-overlay > div:first-child { padding-top: env(safe-area-inset-top); }
   #camera-overlay > div:last-child { padding-bottom: calc(16px + env(safe-area-inset-bottom)); }
   #media-viewer .p-6 { padding-top: calc(24px + env(safe-area-inset-top)); }
-  .call-screen { padding-top: env(safe-area-inset-top); }
+  #call-screen { padding-top: env(safe-area-inset-top); }
 }
 
 /* ── Touch feedback ──────────────────────────────────── */
@@ -487,8 +512,8 @@ button:focus-visible,
   #bottom-nav { height: 56px !important; }
   #bottom-nav .text-2xl { font-size: 20px !important; }
   .overlay > div { margin: 4px !important; border-radius: 16px !important; }
-  #attach-menu { left: 4px !important; bottom: 64px !important; }
-  #emoji-picker { right: 4px !important; left: 4px !important; bottom: 64px !important; height: auto !important; max-height: 60vh !important; }
+  #attach-menu { left: 4px !important; bottom: calc(64px + var(--safe-bottom, 0px)) !important; }
+  #emoji-picker { right: 4px !important; left: 4px !important; bottom: calc(64px + var(--safe-bottom, 0px)) !important; height: auto !important; max-height: 60vh !important; }
   .emoji-cat-btn { padding: 4px 6px !important; font-size: 13px !important; }
   #pinned-message-bar { padding: 4px 8px !important; }
   #format-bar { padding: 4px 8px !important; }
@@ -590,3 +615,17 @@ button:focus-visible,
 /* ── Dark mode scrollbar track for messages ────────────── */
 html.dark #messages-wrap::-webkit-scrollbar-track { background: var(--surface-dim); }
 html #messages-wrap::-webkit-scrollbar-track { background: var(--surface-bright); }
+
+/* ── Safe area for dynamically-created bottom sheets ───── */
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+  /* GIF picker */
+  #gif-picker { bottom: calc(80px + env(safe-area-inset-bottom)) !important; }
+  /* Broadcast modal bottom sheet */
+  #broadcast-modal > div { padding-bottom: env(safe-area-inset-bottom); }
+  /* Location picker bottom sheet */
+  #location-pick-modal > div { padding-bottom: env(safe-area-inset-bottom); }
+  /* Poll creator modal */
+  #poll-creator-modal > div { padding-bottom: env(safe-area-inset-bottom); }
+  /* Camera overlay */
+  #camera-overlay > div:last-child { padding-bottom: env(safe-area-inset-bottom); }
+}

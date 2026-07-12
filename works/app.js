@@ -4227,6 +4227,41 @@ document.addEventListener('DOMContentLoaded', () => {
     const btn = document.getElementById('scroll-to-bottom');
     if (btn) btn.classList.toggle('hidden', atBottom);
   });
+
+  /* ── Mobile keyboard avoidance via visualViewport ── */
+  if (window.visualViewport) {
+    let _lastVpHeight = window.visualViewport.height;
+    window.visualViewport.addEventListener('resize', () => {
+      const vp = window.visualViewport;
+      const inputBar = document.getElementById('input-bar');
+      if (inputBar && inputBar.style.display !== 'none') {
+        inputBar.style.transform = `translateY(${Math.max(0, window.innerHeight - vp.height - vp.offsetTop)}px)`;
+      }
+      /* Scroll to bottom when keyboard opens */
+      if (vp.height < _lastVpHeight - 100 && App.currentChat) {
+        setTimeout(() => scrollToBottom(true), 100);
+      }
+      _lastVpHeight = vp.height;
+    });
+    window.visualViewport.addEventListener('scroll', () => {
+      const inputBar = document.getElementById('input-bar');
+      if (inputBar) inputBar.style.transform = '';
+    });
+  }
+
+  /* ── Orientation / resize: recalculate layout ── */
+  let _resizeTimer;
+  window.addEventListener('resize', () => {
+    clearTimeout(_resizeTimer);
+    _resizeTimer = setTimeout(() => {
+      App._viewportWidth = window.innerWidth;
+      App._viewportHeight = window.innerHeight;
+      if (App.currentChat) {
+        renderMessages(App.currentChat.id);
+        scrollToBottom(true);
+      }
+    }, 250);
+  });
 });
 
 /* ══════════════════════════════════════════════════
@@ -5820,7 +5855,7 @@ function setupPushNotifications() {
   } else if (Notification.permission !== 'denied') {
     const banner = document.createElement('div');
     banner.id = 'pushPromptBanner';
-    banner.style.cssText = 'position:fixed;bottom:70px;left:50%;transform:translateX(-50%);width:min(90vw,360px);background:var(--surface-container);color:var(--on-surface);border-radius:12px;padding:14px 16px;z-index:99990;box-shadow:0 6px 24px rgba(0,0,0,0.4);display:flex;flex-direction:column;gap:10px;font-family:inherit;';
+    banner.style.cssText = 'position:fixed;bottom:calc(70px + env(safe-area-inset-bottom, 0px));left:50%;transform:translateX(-50%);width:min(90vw,360px);background:var(--surface-container);color:var(--on-surface);border-radius:12px;padding:14px 16px;z-index:99990;box-shadow:0 6px 24px rgba(0,0,0,0.4);display:flex;flex-direction:column;gap:10px;font-family:inherit;';
     banner.innerHTML =
       '<div style="display:flex;align-items:flex-start;gap:12px;"><div style="font-size:22px;flex-shrink:0;">🔔</div><div style="flex:1;min-width:0;"><div style="font-weight:700;font-size:14px;margin-bottom:3px;">Stay notified</div><div style="font-size:12.5px;color:var(--on-surface-variant);line-height:1.45;">Get alerts for new messages and calls even when the app is closed.</div></div><button id="pushPromptClose" style="background:none;border:none;color:var(--on-surface-variant);font-size:18px;cursor:pointer;padding:0 2px;">✕</button></div>' +
       '<div style="display:flex;gap:8px;justify-content:flex-end;"><button id="pushPromptNo" style="background:none;border:none;color:var(--on-surface-variant);font-size:13px;cursor:pointer;padding:6px 10px;border-radius:6px;">Not now</button><button id="pushPromptYes" style="background:var(--primary);border:none;color:var(--on-primary);font-size:13px;font-weight:600;cursor:pointer;padding:7px 16px;border-radius:8px;">Enable notifications</button></div>';

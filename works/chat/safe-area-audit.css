@@ -1,13 +1,20 @@
 :root {
-  --app-safe-top: env(safe-area-inset-top, 0px);
-  --app-safe-right: env(safe-area-inset-right, 0px);
-  --app-safe-bottom: env(safe-area-inset-bottom, 0px);
-  --app-safe-left: env(safe-area-inset-left, 0px);
-  --app-bottom-clearance: max(var(--app-safe-bottom), var(--mobile-footer-clearance, 0px));
+  /* Primary safe-area variables (defined in cross-platform-v2.css) */
+  --safe-top:    env(safe-area-inset-top,    0px);
+  --safe-right:  env(safe-area-inset-right,  0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left:   env(safe-area-inset-left,   0px);
+
+  /* Alias variables for backward compatibility */
+  --app-safe-top: var(--safe-top);
+  --app-safe-right: var(--safe-right);
+  --app-safe-bottom: var(--safe-bottom);
+  --app-safe-left: var(--safe-left);
+  --app-bottom-clearance: max(var(--safe-bottom), var(--mobile-footer-clearance, 0px));
 }
 
 body.native-android {
-  --app-bottom-clearance: max(48px, var(--app-safe-bottom));
+  --app-bottom-clearance: max(48px, var(--safe-bottom));
 }
 
 html,

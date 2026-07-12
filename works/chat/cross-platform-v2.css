@@ -212,7 +212,7 @@ html {
    ──────────────────────────────────────────────────────────── */
 
 /* --- Mobile first: single-column layout -------------------- */
-@media (max-width: 759px) {
+@media (max-width: 767px) {
   /* Full viewport, no rounded card */
   .chat-container {
     width:  100% !important;
@@ -308,7 +308,7 @@ html {
 }
 
 /* --- Tablets portrait (760–1023 px) ------------------------ */
-@media (min-width: 760px) and (max-width: 1023px) {
+@media (min-width: 768px) and (max-width: 1023px) {
   .chat-container {
     width:  100% !important;
     height: 100dvh !important;
@@ -1245,5 +1245,77 @@ body {
 }
 
 /* ────────────────────────────────────────────────────────────
-   END OF cross-platform-v2.css
-   ──────────────────────────────────────────────────────────── */
+    DARK MODE BRIDGE — html.dark selector compatibility
+    Ensures dark mode rules apply when JS sets html.dark class
+    (used by chat-theme.css) in addition to [data-theme="dark"]
+    ──────────────────────────────────────────────────────────── */
+html.dark {
+  background: linear-gradient(#0b141a 0 128px, #0b141a 128px 100%) !important;
+  color: #e9edef !important;
+}
+
+html.dark .chat-container {
+  background: #111b21 !important;
+}
+
+html.dark .sidebar,
+html.dark .chat-main {
+  background: #111b21 !important;
+  color: #e9edef !important;
+}
+
+html.dark .sidebar-header,
+html.dark .chat-header {
+  background: rgba(17, 27, 33, 0.92) !important;
+  border-color: #2f3f48 !important;
+}
+
+html.dark .list-item {
+  background: #111b21 !important;
+  color: #e9edef !important;
+  border-color: #2f3f48 !important;
+}
+
+html.dark .list-item:hover,
+html.dark .list-item.active {
+  background: #202c33 !important;
+}
+
+html.dark .message-sent .bubble {
+  background: #005c4b !important;
+}
+
+html.dark .message-received .bubble {
+  background: #202c33 !important;
+  color: #e9edef !important;
+}
+
+html.dark #messageInput,
+html.dark [contenteditable="true"] {
+  background: #2a3942 !important;
+  color: #e9edef !important;
+}
+
+html.dark .modal-content {
+  background: #111b21 !important;
+  color: #e9edef !important;
+}
+
+/* ────────────────────────────────────────────────────────────
+    NATIVE iOS — body class set by config.js
+    Mirrors body.native-android rules for iOS-specific layout
+    ──────────────────────────────────────────────────────────── */
+body.native-ios .sidebar-header,
+body.native-ios .chat-header {
+  padding-top: max(20px, var(--safe-top)) !important;
+}
+
+body.native-ios .tabs,
+body.native-ios .bottom-nav,
+body.native-ios .message-input-row {
+  padding-bottom: max(16px, var(--safe-bottom)) !important;
+}
+
+/* ────────────────────────────────────────────────────────────
+    END OF cross-platform-v2.css
+    ──────────────────────────────────────────────────────────── */

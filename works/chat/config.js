@@ -65,6 +65,14 @@ if (isNativeAndroidApp) {
   document.body.classList.add("native-android");
 }
 
+const isNativeIOSApp =
+  window.Capacitor?.isNativePlatform?.() === true &&
+  window.Capacitor?.getPlatform?.() === "ios";
+
+if (isNativeIOSApp) {
+  document.body.classList.add("native-ios");
+}
+
 const PushNotifications = window.Capacitor?.Plugins?.PushNotifications;
 // Firebase Cloud Messaging (FCM)
 // IMPORTANT: replace this with your Firebase Console > Project settings > Cloud Messaging > Web Push certificate public key.
