@@ -325,6 +325,7 @@
         a.click();
         a.remove();
         setTimeout(() => URL.revokeObjectURL(objUrl), 10000);
+        if (typeof showToast === 'function') showToast('File saved to Downloads', 'success');
       } catch (err) {
         console.warn('[TC Sync] Download error:', err);
         // Fallback to native download

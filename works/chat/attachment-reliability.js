@@ -108,6 +108,7 @@
         document.body.appendChild(a);
         a.click();
         setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 2000);
+        if (typeof showToast === 'function') showToast('File saved to Downloads', 'success');
       };
       xhr.onerror = () => {
         if (txt) txt.textContent = 'Download failed — tap to retry';

@@ -17,11 +17,13 @@
   /* ── environment checks ────────────────────────────────────────────── */
 
   function isTouchEnv() {
-    return window.matchMedia('(max-width: 900px)').matches
-        || window.matchMedia('(display-mode: standalone)').matches
-        || (typeof navigator.standalone === 'boolean' && navigator.standalone)
-        || (typeof navigator.maxTouchPoints === 'number' && navigator.maxTouchPoints > 0
-            && window.matchMedia('(hover: none)').matches);
+    /* C5: Only activate on phones (<768px) or PWA — not tablets with mouse/trackpad */
+    if (window.matchMedia('(display-mode: standalone)').matches) return true;
+    if (typeof navigator.standalone === 'boolean' && navigator.standalone) return true;
+    /* On tablets, only enable if pure touch (no fine pointer = no mouse/trackpad) */
+    if (window.matchMedia('(max-width: 767px)').matches) return true;
+    if (window.matchMedia('(pointer: coarse) and (hover: none)').matches && window.innerWidth < 1024) return true;
+    return false;
   }
 
   function isChatOpen() {

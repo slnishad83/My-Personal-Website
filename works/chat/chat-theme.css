@@ -96,9 +96,35 @@ html, body, #app { height: 100%; margin: 0; padding: 0; }
   #sidebar { width: 72px !important; }
   #sidebar .xl\\:block { display: none !important; }
   #sidebar button { justify-content: center !important; padding-left: 0 !important; padding-right: 0 !important; }
-  #chat-list-sidebar { width: 280px !important; }
+  #chat-list-sidebar { width: clamp(240px, 30vw, 320px) !important; }
   #bottom-nav { display: none !important; }
-  #detail-panel { display: none !important; }
+  /* C2: Detail panel as overlay on tablet portrait */
+  #detail-panel.tablet-overlay-panel {
+    position: fixed !important; right: 0 !important; top: 0 !important; bottom: 0 !important;
+    width: min(360px, 85vw) !important; min-width: 0 !important;
+    z-index: 50 !important; box-shadow: -8px 0 32px rgba(0,0,0,0.3) !important;
+    border-left: 1px solid var(--outline-variant) !important;
+    transform: translateX(0) !important; transition: transform 0.25s ease !important;
+  }
+  /* H2: Sidebar toggle button on tablet */
+  #sidebar-toggle-btn { display: flex !important; }
+  /* H5: Emoji picker responsive on tablet */
+  #emoji-picker { right: 50% !important; transform: translateX(50%) !important; width: min(380px, 80vw) !important; max-height: 70vh !important; }
+  /* H11: Profile overlay as side panel on tablet */
+  #profile-overlay .bg-surface-container { max-width: min(420px, 85vw) !important; margin: 0 !important; border-radius: 0 !important; height: 100vh !important; max-height: 100vh !important; position: fixed !important; right: 0 !important; top: 0 !important; }
+  /* H12: New chat overlay centered on tablet */
+  #new-chat-overlay .bg-surface-container { max-width: min(480px, 80vw) !important; max-height: 80vh !important; }
+  /* M7: Toast centered on tablet */
+  .toast-container, [id*="toast"] { left: 50% !important; right: auto !important; transform: translateX(-50%) !important; }
+  /* M8: Search modal narrower on tablet */
+  #globalSearchModal { max-width: min(560px, 85vw) !important; }
+  /* H8: Larger touch targets on tablet (coarse pointer) */
+  @media (pointer: coarse) {
+    button, [role="button"], .tab-item, .bottom-nav-item, .chat-list-item { min-height: 48px !important; min-width: 48px !important; }
+    .emoji-cat-btn { min-width: 40px !important; min-height: 40px !important; }
+  }
+  /* L1: Smooth transitions on orientation change */
+  html, body, #app, #sidebar, #chat-list-sidebar, #chat-area, #detail-panel { transition: width 0.2s ease, transform 0.2s ease !important; }
 }
 
 @media (min-width: 1024px) and (max-width: 1279px) {
@@ -135,10 +161,13 @@ html, body, #app { height: 100%; margin: 0; padding: 0; }
   #sidebar { width: 72px !important; }
   #sidebar .xl\\:block { display: none !important; }
   #sidebar button { justify-content: center !important; padding-left: 0 !important; padding-right: 0 !important; }
-  #chat-list-sidebar { width: 280px !important; }
-  #detail-panel { display: flex !important; width: 320px !important; min-width: 320px !important; }
+  #chat-list-sidebar { width: clamp(240px, 28vw, 320px) !important; }
+  #detail-panel { display: flex !important; width: 320px !important; min-width: 320px !important; position: relative !important; box-shadow: none !important; }
+  #detail-panel.tablet-overlay-panel { position: relative !important; box-shadow: none !important; width: 320px !important; }
   #bottom-nav { display: none !important; }
   #app { padding-bottom: 0 !important; }
+  /* H4: Media viewer wider on tablet landscape */
+  #media-viewer-content img { max-height: 92vh !important; max-width: 92vw !important; }
 }
 
 /* ── Dark Mode Enhancements ──────────────────────────── */
@@ -629,4 +658,77 @@ html #messages-wrap::-webkit-scrollbar-track { background: var(--surface-bright)
   #poll-creator-modal > div { padding-bottom: env(safe-area-inset-bottom); }
   /* Camera overlay */
   #camera-overlay > div:last-child { padding-bottom: env(safe-area-inset-bottom); }
+}
+
+/* ══════════════════════════════════════════════════════════════
+   TABLET-ONLY ADDITIONAL FIXES
+   ══════════════════════════════════════════════════════════════ */
+
+/* M3/M4: GIF picker and sticker panel responsive on tablet */
+@media (min-width: 768px) {
+  #gif-picker { max-width: min(520px, 80vw) !important; }
+  #sticker-panel { max-width: min(480px, 80vw) !important; grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)) !important; }
+}
+
+/* M11: Empty state split layout on tablet */
+@media (min-width: 768px) and (max-width: 1023px) {
+  #chats-empty { flex-direction: row !important; text-align: left !important; padding: 48px 32px !important; gap: 24px !important; }
+  #chats-empty > div { flex-shrink: 0 !important; }
+}
+
+/* M15: Scroll-to-bottom dynamic bottom offset */
+#scroll-to-bottom { bottom: max(96px, calc(var(--input-bar-h, 72px) + 24px)) !important; }
+
+/* M14: Permission modals centered on tablet */
+@media (min-width: 768px) {
+  #prePermissionModal > div, #reEnablePermissionModal > div, #permissionsModal > div, #revokePermissionsGuideModal > div {
+    max-width: min(480px, 80vw) !important; margin: 0 auto !important;
+  }
+}
+
+/* L4: Print page-break optimization */
+@media print {
+  @page { margin: 1.5cm; size: A4; }
+  .msg-bubble { page-break-inside: avoid; margin-bottom: 8px; }
+}
+
+/* M5: Call screen tablet optimized */
+@media (min-width: 768px) {
+  #call-screen .w-32 { width: 160px !important; height: 160px !important; font-size: 3.5rem !important; }
+  #call-screen .text-3xl { font-size: 2rem !important; }
+  #call-screen .text-lg { font-size: 1.25rem !important; }
+  #call-screen button[class*="w-14"] { width: 64px !important; height: 64px !important; }
+  #call-screen .flex-1 { padding: 48px !important; }
+  #local-video-container { width: 160px !important; height: 220px !important; bottom: 120px !important; right: 32px !important; }
+}
+
+/* M6: Incoming call overlay tablet optimized */
+@media (min-width: 768px) {
+  #incoming-call-overlay > div {
+    max-width: min(400px, 80vw) !important;
+    padding: 32px !important;
+    animation: none !important;
+  }
+  #incoming-call-avatar { width: 100px !important; height: 100px !important; font-size: 2rem !important; }
+  #incoming-call-overlay button[class*="w-12"] { width: 56px !important; height: 56px !important; }
+}
+
+/* H8: Touch targets minimum 48px on tablet */
+@media (pointer: coarse) and (min-width: 768px) {
+  button, a, [role="button"] { min-height: 48px; min-width: 48px; }
+}
+
+/* L8: Battery saver — reduce animations when battery low */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
+}
+
+/* H2 sidebar expanded state */
+#sidebar.sidebar-expanded { width: 256px !important; }
+#sidebar.sidebar-expanded .xl\\:block { display: block !important; }
+
+/* C2 detail panel overlay animation */
+@media (min-width: 768px) and (max-width: 1023px) {
+  #detail-panel.tablet-overlay-panel { animation: slideInRight 0.2s ease-out; }
+  @keyframes slideInRight { from { transform: translateX(100%); } to { transform: translateX(0); } }
 }

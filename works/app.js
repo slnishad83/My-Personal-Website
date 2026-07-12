@@ -1313,6 +1313,7 @@ function resetShowroomVariant() {
 function renderChatList(filter = '') {
   const list = document.getElementById('chat-list');
   if (!list) return;
+  _hideChatListSkeleton();
 
   const tab = App.activeTab;
   let items = App.chats.filter(c => {
@@ -2433,16 +2434,23 @@ function openChat(chatId) {
   // Redraw chat lists for updates
   renderChatList();
 
-  // Populate Right Info Panel if viewport permits (>=1024px)
+  // Populate Right Info Panel if viewport permits
   const panel = document.getElementById('detail-panel');
   if (panel) {
     if (window.innerWidth >= 1024 && App.showroomViewport !== 'mobile' && App.showroomViewport !== 'tablet') {
+      /* Desktop: side-by-side panel */
       panel.classList.remove('hidden');
       panel.classList.add('flex');
+      panel.classList.remove('tablet-overlay-panel');
+      openChatInfo();
+    } else if (window.innerWidth >= 768 && window.innerWidth < 1024 && App.showroomViewport !== 'mobile') {
+      /* Tablet portrait: overlay panel */
+      panel.classList.remove('hidden');
+      panel.classList.add('flex', 'tablet-overlay-panel');
       openChatInfo();
     } else {
       panel.classList.add('hidden');
-      panel.classList.remove('flex');
+      panel.classList.remove('flex', 'tablet-overlay-panel');
     }
   }
 }
@@ -3032,7 +3040,9 @@ function toggleSendMic() {
 
 function onInputKeyDown(e) {
   const isMobile = window.innerWidth < 768 || App.showroomViewport === 'mobile';
-  if (e.key === 'Enter' && !e.shiftKey && !isMobile) {
+  /* On touch devices with on-screen keyboard, Enter creates newline; only physical keyboard sends */
+  const isTouchWithKeyboard = window.matchMedia('(pointer: coarse)').matches && window.visualViewport && window.visualViewport.height < window.innerHeight * 0.75;
+  if (e.key === 'Enter' && !e.shiftKey && !isMobile && !isTouchWithKeyboard) {
     e.preventDefault();
     sendMessage();
   }
@@ -3121,7 +3131,7 @@ async function beginCall(type) {
   if (av) { av.className = 'w-32 h-32 rounded-full border-4 border-primary/30 flex items-center justify-center text-5xl bg-white/10 animate-pulse'; av.textContent = chat.initials; }
 
   try {
-    const constraints = { audio: true, video: type === 'video' ? { facingMode: preferredCameraFacingMode, width: { ideal: 1280 }, height: { ideal: 720 } } : false };
+    const constraints = { audio: true, video: type === 'video' ? { facingMode: preferredCameraFacingMode, width: { ideal: window.isTablet ? 1920 : 1280 }, height: { ideal: window.isTablet ? 1080 : 720 } } : false };
     localCallStream = await navigator.mediaDevices.getUserMedia(constraints);
     const localVideo = document.getElementById('local-video');
     if (localVideo && type === 'video') { localVideo.srcObject = localCallStream; document.getElementById('local-video-container')?.classList.remove('hidden'); }
@@ -3325,7 +3335,7 @@ async function switchCamera() {
   preferredCameraFacingMode = preferredCameraFacingMode === 'user' ? 'environment' : 'user';
   if (!localCallStream || currentCallType !== 'video') return;
   try {
-    const newStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: preferredCameraFacingMode, width: { ideal: 1280 }, height: { ideal: 720 } } });
+    const newStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: preferredCameraFacingMode, width: { ideal: window.isTablet ? 1920 : 1280 }, height: { ideal: window.isTablet ? 1080 : 720 } } });
     const newTrack = newStream.getVideoTracks()[0];
     const sender = peerConnection?.getSenders().find(s => s.track?.kind === 'video');
     if (sender) await sender.replaceTrack(newTrack);
@@ -3492,7 +3502,7 @@ async function _handleAcceptedCall(callData) {
   if (av) { av.className = 'w-32 h-32 rounded-full border-4 border-primary/30 flex items-center justify-center text-5xl bg-white/10 animate-pulse'; av.textContent = (fromUserName || '?')[0].toUpperCase(); }
 
   try {
-    const constraints = { audio: true, video: callType === 'video' ? { facingMode: preferredCameraFacingMode, width: { ideal: 1280 }, height: { ideal: 720 } } : false };
+    const constraints = { audio: true, video: callType === 'video' ? { facingMode: preferredCameraFacingMode, width: { ideal: window.isTablet ? 1920 : 1280 }, height: { ideal: window.isTablet ? 1080 : 720 } } : false };
     localCallStream = await navigator.mediaDevices.getUserMedia(constraints);
     const localVideo = document.getElementById('local-video');
     if (localVideo && callType === 'video') { localVideo.srcObject = localCallStream; document.getElementById('local-video-container')?.classList.remove('hidden'); }
@@ -3794,7 +3804,7 @@ async function startGroupCall(type) {
   if (av) { av.className = 'w-32 h-32 rounded-full border-4 border-primary/30 flex items-center justify-center text-5xl bg-white/10 animate-pulse'; av.textContent = chat.initials || 'G'; }
 
   try {
-    const constraints = { audio: true, video: type === 'video' ? { facingMode: preferredCameraFacingMode, width: { ideal: 1280 }, height: { ideal: 720 } } : false };
+    const constraints = { audio: true, video: type === 'video' ? { facingMode: preferredCameraFacingMode, width: { ideal: window.isTablet ? 1920 : 1280 }, height: { ideal: window.isTablet ? 1080 : 720 } } : false };
     localCallStream = await navigator.mediaDevices.getUserMedia(constraints);
     const localVideo = document.getElementById('local-video');
     if (localVideo && type === 'video') { localVideo.srcObject = localCallStream; document.getElementById('local-video-container')?.classList.remove('hidden'); }
@@ -4077,7 +4087,7 @@ async function _handleAcceptedGroupCall(callData) {
   document.getElementById('btn-cam')?.classList.toggle('hidden', callType === 'voice');
 
   try {
-    const constraints = { audio: true, video: callType === 'video' ? { facingMode: preferredCameraFacingMode, width: { ideal: 1280 }, height: { ideal: 720 } } : false };
+    const constraints = { audio: true, video: callType === 'video' ? { facingMode: preferredCameraFacingMode, width: { ideal: window.isTablet ? 1920 : 1280 }, height: { ideal: window.isTablet ? 1080 : 720 } } : false };
     localCallStream = await navigator.mediaDevices.getUserMedia(constraints);
     const localVideo = document.getElementById('local-video');
     if (localVideo && callType === 'video') { localVideo.srcObject = localCallStream; document.getElementById('local-video-container')?.classList.remove('hidden'); }
@@ -4242,8 +4252,8 @@ document.addEventListener('DOMContentLoaded', () => {
     if (btn) btn.classList.toggle('hidden', atBottom);
   });
 
-  /* ── Mobile keyboard avoidance via visualViewport ── */
-  if (window.visualViewport && window.innerWidth < 768) {
+  /* ── Keyboard avoidance via visualViewport (mobile + tablet) ── */
+  if (window.visualViewport) {
     let _lastVpHeight = window.visualViewport.height;
     window.visualViewport.addEventListener('resize', () => {
       const vp = window.visualViewport;
@@ -4263,17 +4273,27 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  /* ── Orientation / resize: recalculate layout ── */
+  /* ── Orientation / resize: recalculate layout (mobile + tablet + desktop) ── */
   let _resizeTimer;
+  let _lastOrientation = window.innerWidth > window.innerHeight ? 'landscape' : 'portrait';
   window.addEventListener('resize', () => {
     clearTimeout(_resizeTimer);
     _resizeTimer = setTimeout(() => {
+      const prevW = App._viewportWidth || window.innerWidth;
+      const prevH = App._viewportHeight || window.innerHeight;
       App._viewportWidth = window.innerWidth;
       App._viewportHeight = window.innerHeight;
       const isMobile = window.innerWidth < 768;
+      const isTablet = window.innerWidth >= 768 && window.innerWidth < 1024;
+      const isDesktop = window.innerWidth >= 1024;
       const chatArea = document.getElementById('chat-area');
       const sidebar = document.getElementById('sidebar');
       const chatListSidebar = document.getElementById('chat-list-sidebar');
+      const detailPanel = document.getElementById('detail-panel');
+      const curOrientation = window.innerWidth > window.innerHeight ? 'landscape' : 'portrait';
+      const orientationChanged = curOrientation !== _lastOrientation;
+      _lastOrientation = curOrientation;
+
       if (isMobile) {
         if (chatArea) chatArea.classList.add('hidden-mobile');
         if (chatArea) chatArea.classList.remove('visible-mobile');
@@ -4284,11 +4304,25 @@ document.addEventListener('DOMContentLoaded', () => {
         if (chatListSidebar) chatListSidebar.classList.remove('hidden');
         if (sidebar) sidebar.classList.remove('hidden');
       }
+
+      /* C6: Handle split-screen — if width dropped below tablet while previously desktop, adjust */
+      if (prevW >= 1024 && window.innerWidth < 1024 && window.innerWidth >= 768) {
+        if (detailPanel) { detailPanel.classList.add('hidden'); detailPanel.classList.remove('flex'); }
+      }
+      if (prevW < 1024 && window.innerWidth >= 1024 && App.currentChat) {
+        if (detailPanel) { detailPanel.classList.remove('hidden'); detailPanel.classList.add('flex'); if (typeof openChatInfo === 'function') openChatInfo(); }
+      }
+
+      /* C4: Re-run openChatInfo on orientation change so detail panel content updates */
+      if (orientationChanged && App.currentChat && typeof openChatInfo === 'function') {
+        openChatInfo();
+      }
+
       if (App.currentChat) {
         renderMessages(App.currentChat.id);
         scrollToBottom(true);
       }
-    }, 250);
+    }, 150);
   });
 });
 
@@ -4315,10 +4349,22 @@ function showWelcome() {
   const inputBar = document.getElementById('input-bar');
   if (inputBar) inputBar.style.display = 'none';
   
-  // On mobile, hide the chat-area so the chat list is visible again
-  if (window.innerWidth < 768 || App.showroomViewport === 'mobile') {
+  // On mobile/tablet-portrait, hide the chat-area so the chat list is visible again
+  if (window.innerWidth < 1024 || App.showroomViewport === 'mobile') {
     const chatArea = document.getElementById('chat-area');
     if (chatArea) { chatArea.classList.remove('visible-mobile'); chatArea.classList.add('hidden-mobile'); }
+    const detailPanel = document.getElementById('detail-panel');
+    if (detailPanel) { detailPanel.classList.add('hidden'); detailPanel.classList.remove('flex', 'tablet-overlay-panel'); }
+  }
+  
+  // L7: Tablet first-time onboarding tip
+  if (window.isTablet && !localStorage.getItem('nsl-tablet-onboarded')) {
+    setTimeout(() => {
+      if (typeof showToast === 'function') {
+        showToast('Tip: Tap the sidebar icon (☰) to expand the chat list', 'info');
+      }
+      localStorage.setItem('nsl-tablet-onboarded', '1');
+    }, 1500);
   }
   
   App.currentChat = null;
@@ -4330,6 +4376,15 @@ function showWelcome() {
    ══════════════════════════════════════════════════ */
 function openChatInfo() {
   if (!App.currentChat) return;
+  /* H10: Show close button header on tablet overlay mode */
+  const panel = document.getElementById('detail-panel');
+  if (panel) {
+    const hdr = panel.querySelector('.tablet-panel-header');
+    if (hdr) {
+      const isTabletOverlay = panel.classList.contains('tablet-overlay-panel');
+      hdr.style.display = isTabletOverlay ? 'flex' : 'none';
+    }
+  }
   if (App.currentChat.id === 'saved_me') {
     openMyselfInfo();
   } else if (App.currentChat.type==='group') {
@@ -4529,7 +4584,9 @@ function closeDetailPanel() {
   const panel = document.getElementById('detail-panel');
   if (panel) {
     panel.classList.add('hidden');
-    panel.classList.remove('flex');
+    panel.classList.remove('flex', 'tablet-overlay-panel');
+    const hdr = panel.querySelector('.tablet-panel-header');
+    if (hdr) hdr.style.display = 'none';
   }
 }
 
@@ -6442,4 +6499,90 @@ async function deleteAccount() {
       }
     }
   }
+}
+
+/* ══════════════════════════════════════════════════
+   TABLET UTILITY FUNCTIONS
+   ══════════════════════════════════════════════════ */
+
+/* H2: Toggle sidebar expand on tablet */
+function toggleSidebarExpand() {
+  const sidebar = document.getElementById('sidebar');
+  if (!sidebar) return;
+  const isExpanded = sidebar.classList.contains('sidebar-expanded');
+  if (isExpanded) {
+    sidebar.classList.remove('sidebar-expanded');
+    sidebar.style.width = '';
+    sidebar.querySelectorAll('.xl\\:block').forEach(el => el.style.display = '');
+    const icon = document.getElementById('sidebar-toggle-icon');
+    if (icon) icon.textContent = 'menu_open';
+  } else {
+    sidebar.classList.add('sidebar-expanded');
+    sidebar.style.width = '256px';
+    sidebar.querySelectorAll('.xl\\:block').forEach(el => el.style.display = '');
+    const icon = document.getElementById('sidebar-toggle-icon');
+    if (icon) icon.textContent = 'menu';
+  }
+}
+
+/* H9: Hide skeleton when chat list renders — called from renderChatList */
+function _hideChatListSkeleton() {
+  const sk = document.getElementById('chat-list-skeleton');
+  if (sk) sk.style.display = 'none';
+}
+
+/* H7: Stylus hover preview on message bubbles */
+(function _initStylusHover() {
+  let _hoverTimeout = null;
+  let _hoverBubble = null;
+  document.addEventListener('pointermove', (e) => {
+    if (e.pointerType !== 'pen') return;
+    clearTimeout(_hoverTimeout);
+    _hoverTimeout = setTimeout(() => {
+      const bubble = e.target.closest('.msg-sent, .msg-received, .message-bubble');
+      if (bubble && bubble !== _hoverBubble) {
+        if (_hoverBubble) _hoverBubble.style.outline = '';
+        _hoverBubble = bubble;
+        bubble.style.outline = '2px solid var(--primary)';
+        bubble.style.outlineOffset = '2px';
+      }
+    }, 150);
+  });
+  document.addEventListener('pointerleave', () => {
+    clearTimeout(_hoverTimeout);
+    if (_hoverBubble) { _hoverBubble.style.outline = ''; _hoverBubble = null; }
+  }, true);
+})();
+
+/* M10: Long-press to copy text from messages (alongside reactions) */
+function _addCopyOptionToLongPress(msgId) {
+  const picker = document.querySelector('[id^="_quick-react-"]');
+  if (!picker) return;
+  const msg = (App.messages[App.currentChat?.id] || []).find(m => m.id === msgId);
+  if (!msg || !msg.text) return;
+  const copyBtn = document.createElement('button');
+  copyBtn.style.cssText = 'display:flex;align-items:center;gap:6px;width:100%;padding:8px 14px;border-radius:10px;border:none;background:transparent;cursor:pointer;text-align:left;color:var(--on-surface);font-size:13px;transition:background 0.15s;';
+  copyBtn.innerHTML = '<span style="font-size:16px">📋</span> Copy text';
+  copyBtn.onmouseenter = () => copyBtn.style.background = 'var(--surface-container-highest)';
+  copyBtn.onmouseleave = () => copyBtn.style.background = 'transparent';
+  copyBtn.onclick = () => {
+    if (navigator.clipboard) navigator.clipboard.writeText(msg.text);
+    else { const ta = document.createElement('textarea'); ta.value = msg.text; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove(); }
+    showToast('Copied to clipboard', 'success');
+    const qp = document.querySelector('[id^="_quick-react-"]');
+    if (qp) qp.remove();
+  };
+  picker.appendChild(copyBtn);
+}
+
+/* L5: Pressure-sensitive drawing on iPad with Apple Pencil */
+function _applyPressureToCanvas(canvas, ctx) {
+  canvas.addEventListener('pointerdown', (e) => {
+    if (e.pointerType !== 'pen') return;
+    ctx.lineWidth = Math.max(1, (e.pressure || 0.5) * 12);
+  });
+  canvas.addEventListener('pointermove', (e) => {
+    if (e.pointerType !== 'pen') return;
+    ctx.lineWidth = Math.max(1, (e.pressure || 0.5) * 12);
+  });
 }

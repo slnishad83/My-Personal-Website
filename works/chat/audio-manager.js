@@ -114,7 +114,7 @@ const AudioManager = {
     try {
       const audio = new Audio(type === 'video' ? 'ringtone-video.mp3' : 'ringtone-voice.mp3');
       audio.loop = true;
-      audio.volume = this._volume;
+      audio.volume = this.getTabletVolume();
       this._currentRingtone = audio;
       audio.play().catch(() => {});
     } catch (_) {}
@@ -133,7 +133,7 @@ const AudioManager = {
       const gain = ctx.createGain();
       osc.type = 'sine';
       osc.frequency.value = type === 'group' ? 660 : 880;
-      gain.gain.value = this._volume * 0.12;
+      gain.gain.value = this.getTabletVolume() * 0.12;
       osc.connect(gain);
       gain.connect(ctx.destination);
       osc.start(ctx.currentTime);
@@ -155,7 +155,7 @@ const AudioManager = {
       const gain = ctx.createGain();
       osc.type = type || 'sine';
       osc.frequency.value = freq;
-      gain.gain.value = this._volume * 0.08;
+      gain.gain.value = this.getTabletVolume() * 0.08;
       osc.connect(gain);
       gain.connect(ctx.destination);
       osc.start(ctx.currentTime);
@@ -167,6 +167,8 @@ const AudioManager = {
   /* ── Volume / Mute ───────────────────────────────────── */
   setVolume(v) { this._volume = Math.max(0, Math.min(1, v)); },
   getVolume() { return this._volume; },
+  /* L3: Tablet notification volume — louder on tablets for better hearing */
+  getTabletVolume() { return (window.isTablet && this._volume < 0.8) ? Math.min(1, this._volume + 0.2) : this._volume; },
   mute() { this._muted = true; this.stopRingtone(); },
   unmute() { this._muted = false; },
   isMuted() { return this._muted; },

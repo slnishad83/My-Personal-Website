@@ -334,6 +334,7 @@
   let _items = [], _idx = 0, _rotDeg = 0, _zoom = 1, _panX = 0, _panY = 0;
   let _isDragging = false, _dragStartX = 0, _dragStartY = 0, _dragBasePanX = 0, _dragBasePanY = 0;
   let _pinchStartDist = 0, _pinchStartZoom = 1, _swipeStartX = 0, _swipeStartY = 0;
+  let _isPinching = false;
 
   // ============================================================
   // 4. OPEN
@@ -418,7 +419,7 @@
 
     // Download button
     const dlBtn = document.getElementById("_fva_dl");
-    if (dlBtn) dlBtn.onclick = () => { const a = document.createElement("a"); a.href = url; a.download = fname; a.target = "_blank"; a.click(); };
+    if (dlBtn) dlBtn.onclick = () => { const a = document.createElement("a"); a.href = url; a.download = fname; a.target = "_blank"; a.click(); if (typeof showToast === 'function') showToast('File saved to Downloads', 'success'); };
 
     // Nav
     const mediaItems = _items.filter(i => i.type === "image" || i.type === "video");
@@ -463,9 +464,9 @@
     document.addEventListener("mousemove", e => { if (!_isDragging) return; _panX = _dragBasePanX + (e.clientX - _dragStartX) / _zoom; _panY = _dragBasePanY + (e.clientY - _dragStartY) / _zoom; _applyImgT(); });
     document.addEventListener("mouseup", () => { if (!_isDragging) return; _isDragging = false; img.style.cursor = _zoom > 1 ? "grab" : "zoom-in"; });
 
-    ov.addEventListener("touchstart", e => { if (e.touches.length === 2) { _pinchStartDist = _tdist(e.touches); _pinchStartZoom = _zoom; } else if (e.touches.length === 1) { _swipeStartX = e.touches[0].clientX; _swipeStartY = e.touches[0].clientY; if (_zoom > 1) { _isDragging = true; _dragStartX = e.touches[0].clientX; _dragStartY = e.touches[0].clientY; _dragBasePanX = _panX; _dragBasePanY = _panY; } } }, { passive: true });
-    ov.addEventListener("touchmove", e => { if (e.touches.length === 2) { e.preventDefault(); _zoom = Math.max(1, Math.min(6, _pinchStartZoom * (_tdist(e.touches) / _pinchStartDist))); if (_zoom <= 1) { _panX = 0; _panY = 0; } _applyImgT(); } else if (e.touches.length === 1 && _isDragging && _zoom > 1) { _panX = _dragBasePanX + (e.touches[0].clientX - _dragStartX) / _zoom; _panY = _dragBasePanY + (e.touches[0].clientY - _dragStartY) / _zoom; _applyImgT(); } }, { passive: false });
-    ov.addEventListener("touchend", e => { _isDragging = false; if (_zoom <= 1 && e.changedTouches.length === 1) { const dx = e.changedTouches[0].clientX - _swipeStartX, dy = e.changedTouches[0].clientY - _swipeStartY; if (Math.abs(dx) > 55 && Math.abs(dx) > Math.abs(dy) * 1.5) _navigate(dx < 0 ? 1 : -1); } }, { passive: true });
+    ov.addEventListener("touchstart", e => { if (e.touches.length === 2) { _isPinching = true; _pinchStartDist = _tdist(e.touches); _pinchStartZoom = _zoom; } else if (e.touches.length === 1 && !_isPinching) { _swipeStartX = e.touches[0].clientX; _swipeStartY = e.touches[0].clientY; if (_zoom > 1) { _isDragging = true; _dragStartX = e.touches[0].clientX; _dragStartY = e.touches[0].clientY; _dragBasePanX = _panX; _dragBasePanY = _panY; } } }, { passive: true });
+    ov.addEventListener("touchmove", e => { if (e.touches.length === 2 || _isPinching) { e.preventDefault(); _isPinching = true; _zoom = Math.max(1, Math.min(6, _pinchStartZoom * (_tdist(e.touches) / _pinchStartDist))); if (_zoom <= 1) { _panX = 0; _panY = 0; } _applyImgT(); } else if (e.touches.length === 1 && _isDragging && _zoom > 1) { _panX = _dragBasePanX + (e.touches[0].clientX - _dragStartX) / _zoom; _panY = _dragBasePanY + (e.touches[0].clientY - _dragStartY) / _zoom; _applyImgT(); } }, { passive: false });
+    ov.addEventListener("touchend", e => { if (_isPinching && e.touches.length < 2) { _isPinching = false; } _isDragging = false; if (!_isPinching && _zoom <= 1 && e.changedTouches.length === 1) { const dx = e.changedTouches[0].clientX - _swipeStartX, dy = e.changedTouches[0].clientY - _swipeStartY; if (Math.abs(dx) > 55 && Math.abs(dx) > Math.abs(dy) * 1.5) _navigate(dx < 0 ? 1 : -1); } }, { passive: true });
   }
 
   function _applyImgT() { const img = document.getElementById("_fv_img"); if (!img) return; img.style.transform = `rotate(${_rotDeg}deg) scale(${_zoom}) translate(${_panX}px,${_panY}px)`; img.style.cursor = _zoom > 1 ? "grab" : "zoom-in"; }
@@ -667,6 +668,7 @@
           }).catch(err => _toast("Upload failed: " + err.message, "error"));
         } else {
           const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = fname; a.click();
+          if (typeof showToast === 'function') showToast('File saved to Downloads', 'success');
           document.getElementById("_fv_edit").style.display = "none";
         }
       }, "image/png");
@@ -724,6 +726,7 @@
       document.getElementById("_fv_stickercanvas").toBlob(blob => {
         if (!blob) { _toast("Export failed", "error"); return; }
         const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "sticker.png"; a.click();
+        if (typeof showToast === 'function') showToast('Sticker saved to Downloads', 'success');
         document.getElementById("_fv_sticker").style.display = "none";
       }, "image/png");
     });

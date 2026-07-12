@@ -40,6 +40,33 @@
       </div>`;
     document.body.appendChild(overlay);
 
+    // M9: Pointer events fallback for touch/pen-based drag-and-drop (S Pen, finger)
+    let pointerDragActive = false;
+    let pointerStartY = 0;
+    let pointerLongPressTimer = null;
+    target.addEventListener('pointerdown', (e) => {
+      if (e.pointerType === 'touch' || e.pointerType === 'pen') {
+        pointerStartY = e.clientY;
+        pointerLongPressTimer = setTimeout(() => { pointerDragActive = true; overlay.classList.add('active'); }, 400);
+      }
+    });
+    target.addEventListener('pointermove', (e) => {
+      if (!pointerDragActive) { if (Math.abs(e.clientY - pointerStartY) > 10) clearTimeout(pointerLongPressTimer); return; }
+      e.preventDefault();
+    });
+    target.addEventListener('pointerup', () => {
+      clearTimeout(pointerLongPressTimer);
+      if (pointerDragActive) {
+        pointerDragActive = false;
+        overlay.classList.remove('active');
+      }
+    });
+    target.addEventListener('pointercancel', () => {
+      clearTimeout(pointerLongPressTimer);
+      pointerDragActive = false;
+      overlay.classList.remove('active');
+    });
+
     document.addEventListener('dragenter', (e) => {
       if (!e.dataTransfer?.types?.includes('Files')) return;
       // Only show overlay if a chat is open

@@ -213,6 +213,7 @@ function downloadMedia() {
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
+  if (typeof showToast === 'function') showToast('File saved to Downloads', 'success');
 }
 
 function forwardCurrentMedia() {
@@ -263,6 +264,15 @@ document.addEventListener('keydown', function(e) {
   if (e.key === 'Escape') closeMediaViewer();
   if (e.key === 'ArrowLeft')  prevMedia();
   if (e.key === 'ArrowRight') nextMedia();
+});
+
+/* L6: S Pen button handler — button 5 (stylus side button) for undo/redo in drawing */
+document.addEventListener('pointerdown', function(e) {
+  if (e.button === 5) {
+    e.preventDefault();
+    if (e.shiftKey || e.ctrlKey) { if (typeof redo === 'function') redo(); }
+    else { if (typeof undo === 'function') undo(); }
+  }
 });
 
 /* ══════════════════════════════════════════════════════════════
@@ -535,6 +545,7 @@ function showMsgContextMenu(event, msgId) {
   document.body.appendChild(menu);
 
   // Intelligently fit menu inside viewport to prevent offscreen cut-offs
+  // H6: On tablet, clamp within chat area bounds (sidebar 72px + chat-list varies)
   const rect = menu.getBoundingClientRect();
   let cx = event.clientX || event.pageX || 0;
   let cy = event.clientY || event.pageY || 0;
@@ -542,9 +553,11 @@ function showMsgContextMenu(event, msgId) {
     cx = event.touches[0].clientX;
     cy = event.touches[0].clientY;
   }
+  const chatAreaEl = document.getElementById('chat-area');
+  const chatAreaLeft = chatAreaEl ? chatAreaEl.getBoundingClientRect().left : 0;
   const x = Math.min(cx || (window.innerWidth / 2), window.innerWidth - rect.width - 20);
   const y = Math.min(cy || (window.innerHeight / 2), window.innerHeight - rect.height - 20);
-  menu.style.left = Math.max(10, x) + 'px';
+  menu.style.left = Math.max(chatAreaLeft + 10, x) + 'px';
   menu.style.top  = Math.max(10, y) + 'px';
 
   _ctxMenu = menu;
@@ -613,6 +626,7 @@ function chatContextMenu(event, chatId) {
   document.body.appendChild(menu);
   
   // Measure rect boundaries to prevent offscreen/cut-off menu display
+  // H6: Clamp within chat area bounds on tablet
   const rect = menu.getBoundingClientRect();
   let cx2 = event.clientX || event.pageX || 0;
   let cy2 = event.clientY || event.pageY || 0;
@@ -620,9 +634,11 @@ function chatContextMenu(event, chatId) {
     cx2 = event.touches[0].clientX;
     cy2 = event.touches[0].clientY;
   }
+  const chatAreaEl2 = document.getElementById('chat-area');
+  const chatAreaLeft2 = chatAreaEl2 ? chatAreaEl2.getBoundingClientRect().left : 0;
   const x = Math.min(cx2 || (window.innerWidth / 2), window.innerWidth - rect.width - 20);
   const y = Math.min(cy2 || (window.innerHeight / 2), window.innerHeight - rect.height - 20);
-  menu.style.left = Math.max(10, x) + 'px';
+  menu.style.left = Math.max(chatAreaLeft2 + 10, x) + 'px';
   menu.style.top  = Math.max(10, y) + 'px';
 
   _ctxMenu = menu;
@@ -1322,6 +1338,8 @@ function showQuickReactions(event, msgId) {
 
   document.body.appendChild(picker);
   _ctxMenu = picker;
+  /* M10: Add copy text option for tablets/long-press */
+  if (typeof _addCopyOptionToLongPress === 'function') _addCopyOptionToLongPress(msgId);
   setTimeout(() => {
     document.addEventListener('click', _removeCtxMenu, { once: true });
   }, 50);
@@ -1714,7 +1732,7 @@ function _openCameraUI() {
 async function _startCameraStream() {
   try {
     if (_cameraStream) { _cameraStream.getTracks().forEach(t => t.stop()); }
-    const videoConstraints = { width: { ideal: 1920 }, height: { ideal: 1080 } };
+    const videoConstraints = { width: { ideal: window.isTablet ? 1920 : 1280 }, height: { ideal: window.isTablet ? 1080 : 720 } };
     try { videoConstraints.facingMode = { ideal: _cameraFacing }; } catch(_) { videoConstraints.facingMode = _cameraFacing; }
     _cameraStream = await navigator.mediaDevices.getUserMedia({
       video: videoConstraints,
