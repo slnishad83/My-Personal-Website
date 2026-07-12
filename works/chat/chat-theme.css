@@ -235,7 +235,7 @@ html.dark .msg-received { background: var(--surface-container-highest); }
 /* ── Bottom nav active state ─────────────────────────── */
 .bottom-nav-item.active { color: var(--primary) !important; }
 .bottom-nav-item.active .material-symbols-outlined { font-variation-settings: 'FILL' 1 !important; }
-nav#bottom-nav { z-index: 51; }
+nav#bottom-nav { z-index: 40; }
 
 /* ── Sidebar tab active state ────────────────────────── */
 .tab-item.active {
@@ -596,10 +596,12 @@ button:focus-visible,
 
 /* ── Print styles ──────────────────────────────────────── */
 @media print {
-  #sidebar, #bottom-nav, #chat-header, #input-bar, #scroll-to-bottom, .overlay { display: none !important; }
+  #sidebar, #bottom-nav, #chat-header, #input-bar, #scroll-to-bottom, .overlay, #chat-list-sidebar, #detail-panel { display: none !important; }
   #chat-area { position: static !important; height: auto !important; }
   #messages-wrap { overflow: visible !important; height: auto !important; }
   .msg-bubble { break-inside: avoid; }
+  body { background: #fff !important; color: #000 !important; }
+  .msg-sent, .msg-received { background: #f0f0f0 !important; color: #000 !important; }
 }
 
 /* ── Reduced data mode ─────────────────────────────────── */

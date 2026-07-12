@@ -461,10 +461,10 @@
     container.appendChild(row);
   }
 
-  /* ─── keyboard shortcut Ctrl+F / Cmd+F ──────────────────────────── */
+  /* ─── keyboard shortcut Ctrl+Shift+F / Cmd+Shift+F ──────────────── */
   function initShortcut() {
     document.addEventListener('keydown', e => {
-      if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'F') {
         const active = document.activeElement;
         if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA') && active.id !== 'globalSearchInput') return;
         e.preventDefault();
@@ -490,7 +490,7 @@
     btn.id = 'msGlobalSearchBtn';
     btn.className = 'icon-btn ms-global-btn';
     btn.type = 'button';
-    btn.title = 'Search all messages (Ctrl+F)';
+    btn.title = 'Search all messages (Ctrl+Shift+F)';
     btn.setAttribute('aria-label', 'Search all messages');
     btn.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>`;
     btn.addEventListener('click', () => {

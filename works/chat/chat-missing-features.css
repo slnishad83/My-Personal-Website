@@ -41,13 +41,6 @@
   font-size: 13px;
   color: #667781;
 }
-@media (prefers-color-scheme: dark) {
-#dropZoneOverlay .drop-zone-inner {
-  background: #202c33;
-  border-color: #00a884;
-  color: #00a884;
-}
-}
 body.dark #dropZoneOverlay .drop-zone-inner {
   background: #202c33;
   border-color: #00a884;

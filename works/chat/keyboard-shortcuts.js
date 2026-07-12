@@ -1,6 +1,6 @@
 /* ============================================================
    KEYBOARD SHORTCUTS — WhatsApp-style keyboard navigation
-   Escape to close, Ctrl+F to search, Arrow keys, etc.
+   Escape to close, Ctrl+Shift+F to search, Arrow keys, etc.
    ============================================================ */
 'use strict';
 
@@ -18,28 +18,29 @@ const KeyboardShortcuts = {
     const target = e.target;
     const isInput = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable;
     const isMeta = e.ctrlKey || e.metaKey;
+    const isOverlayOpen = document.querySelector('.overlay:not(.hidden)');
 
     /* ── Escape: Close overlays/modals ──────────────────── */
     if (e.key === 'Escape') {
-      const overlays = document.querySelectorAll('.overlay:not(.hidden)');
-      for (const overlay of overlays) {
-        const closeBtn = overlay.querySelector('[onclick*="close"], [onclick*="hide"], [onclick*="Overlay"]');
-        if (closeBtn) { closeBtn.click(); e.preventDefault(); return; }
-      }
+      if (isOverlayOpen) return;
       if (window.App?.emojiPickerOpen) { if (typeof toggleEmojiPicker === 'function') toggleEmojiPicker(); e.preventDefault(); return; }
       if (window.App?.attachMenuOpen) { if (typeof toggleAttachMenu === 'function') toggleAttachMenu(); e.preventDefault(); return; }
       if (window.App?.formatBarOpen) { if (typeof hideFormatBar === 'function') hideFormatBar(); e.preventDefault(); return; }
+      if (!isInput && typeof clearSidebarSearch === 'function') {
+        const searchInput = document.getElementById('sidebar-search');
+        if (searchInput && searchInput.value) { clearSidebarSearch(); e.preventDefault(); return; }
+      }
     }
 
-    /* ── Ctrl+F / Cmd+F: Open search (when not in input) ── */
-    if (isMeta && e.key === 'f' && !isInput) {
+    /* ── Ctrl+Shift+F / Cmd+Shift+F: Open search (when not in input) ── */
+    if (isMeta && e.shiftKey && e.key === 'F' && !isInput) {
       e.preventDefault();
       if (typeof openChatSearch === 'function') openChatSearch();
       return;
     }
 
-    /* ── Ctrl+N / Cmd+N: New chat ──────────────────────── */
-    if (isMeta && e.key === 'n' && !isInput) {
+    /* ── Ctrl+Shift+N / Cmd+Shift+N: New chat ──────────── */
+    if (isMeta && e.shiftKey && e.key === 'N' && !isInput) {
       e.preventDefault();
       if (typeof openNewChat === 'function') openNewChat();
       return;
@@ -60,28 +61,11 @@ const KeyboardShortcuts = {
       }
     }
 
-    /* ── Tab navigation: trap in modal ─────────────────── */
-    if (e.key === 'Tab') {
-      const openOverlay = document.querySelector('.overlay:not(.hidden)');
-      if (openOverlay) {
-        const focusable = openOverlay.querySelectorAll(
-          'button:not([disabled]):not([tabindex="-1"]), [href]:not([tabindex="-1"]), ' +
-          'input:not([disabled]):not([tabindex="-1"]), select:not([disabled]):not([tabindex="-1"]), ' +
-          'textarea:not([disabled]):not([tabindex="-1"]), [tabindex]:not([tabindex="-1"])'
-        );
-        if (focusable.length === 0) return;
-        const first = focusable[0];
-        const last = focusable[focusable.length - 1];
-        if (e.shiftKey) {
-          if (document.activeElement === first) { e.preventDefault(); last.focus(); }
-        } else {
-          if (document.activeElement === last) { e.preventDefault(); first.focus(); }
-        }
-      }
-    }
+    /* ── Tab navigation: trap in modal (handled by accessibility.js) ── */
+    /* Focus trap is managed by A11y._trapFocus to avoid duplicate handlers */
 
     /* ── Arrow keys in chat list ───────────────────────── */
-    if ((e.key === 'ArrowDown' || e.key === 'ArrowUp') && !isInput) {
+    if ((e.key === 'ArrowDown' || e.key === 'ArrowUp') && !isInput && !isOverlayOpen) {
       const chatItems = document.querySelectorAll('#chat-list .chat-list-item, #chat-list [role="listitem"]');
       if (chatItems.length === 0) return;
       const current = document.activeElement;
@@ -95,12 +79,18 @@ const KeyboardShortcuts = {
       e.preventDefault();
     }
 
-    /* ── Number keys: switch tabs ──────────────────────── */
-    if (!isInput && !isMeta && !e.altKey) {
+    /* ── Number keys: switch tabs (with modal guard) ───── */
+    if (!isInput && !isMeta && !e.altKey && !isOverlayOpen) {
       const tabMap = { '1': 'chats', '2': 'groups', '3': 'calls' };
       if (tabMap[e.key] && typeof switchTab === 'function') {
         switchTab(tabMap[e.key]);
       }
+    }
+
+    /* ── ? key: Show keyboard shortcuts help ────────────── */
+    if (e.key === '?' && !isInput && !isMeta && !isOverlayOpen) {
+      e.preventDefault();
+      if (typeof showKeyboardHelp === 'function') showKeyboardHelp();
     }
   },
 

@@ -95,7 +95,10 @@ function _renderMediaViewer() {
   App._mediaViewerScale = 1;
   App._mediaViewerPanX = 0;
   App._mediaViewerPanY = 0;
-  // Pinch-to-zoom support
+  // Pinch-to-zoom support (use AbortController to prevent listener accumulation)
+  if (App._mediaViewerAbort) { try { App._mediaViewerAbort.abort(); } catch(_) {} }
+  App._mediaViewerAbort = new AbortController();
+  const _mvSignal = App._mediaViewerAbort.signal;
   const zoomContainer = document.getElementById('media-zoom-container');
   if (zoomContainer && item.type !== 'video' && item.type !== 'voice' && item.type !== 'audio' && item.type !== 'doc') {
     let lastDist = 0, lastMidX = 0, lastMidY = 0, isPinching = false;
@@ -109,7 +112,7 @@ function _renderMediaViewer() {
         lastMidY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
         e.preventDefault();
       }
-    }, { passive: false });
+    }, { passive: false, signal: _mvSignal });
     zoomContainer.addEventListener('touchmove', e => {
       if (isPinching && e.touches.length === 2) {
         const dx = e.touches[0].clientX - e.touches[1].clientX;
@@ -132,7 +135,7 @@ function _renderMediaViewer() {
         }
         e.preventDefault();
       }
-    }, { passive: false });
+    }, { passive: false, signal: _mvSignal });
     zoomContainer.addEventListener('touchend', e => {
       if (isPinching && e.touches.length < 2) {
         isPinching = false;
@@ -148,7 +151,7 @@ function _renderMediaViewer() {
           }
         }
       }
-    });
+    }, { signal: _mvSignal });
   }
 }
 
@@ -369,6 +372,58 @@ function _updatePlayBtn(msgId, isPlaying) {
 }
 
 /* ══════════════════════════════════════════════════════════════
+   KEYBOARD SHORTCUTS HELP DIALOG
+   ══════════════════════════════════════════════════════════════ */
+function showKeyboardHelp() {
+  const existing = document.getElementById('kb-help-overlay');
+  if (existing) { existing.remove(); return; }
+
+  const shortcuts = [
+    { keys: 'Ctrl + Shift + F', desc: 'Search messages' },
+    { keys: 'Ctrl + Shift + N', desc: 'New chat' },
+    { keys: 'Ctrl + I', desc: 'Toggle info panel' },
+    { keys: 'Ctrl + Shift + D', desc: 'Toggle dark mode' },
+    { keys: 'Ctrl + L', desc: 'Clear chat' },
+    { keys: 'Ctrl + Shift + M', desc: 'Toggle mute' },
+    { keys: 'Ctrl + E', desc: 'Toggle emoji picker' },
+    { keys: 'Escape', desc: 'Close overlay / Cancel search' },
+    { keys: '1 / 2 / 3', desc: 'Switch to Chats / Groups / Calls' },
+    { keys: '?', desc: 'Show this help' },
+  ];
+
+  const overlay = document.createElement('div');
+  overlay.id = 'kb-help-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;animation:ctxFadeIn 0.15s ease;';
+
+  const panel = document.createElement('div');
+  panel.style.cssText = 'background:var(--surface-container-high);border:1px solid var(--outline-variant);border-radius:20px;padding:28px 32px;max-width:420px;width:90%;max-height:80vh;overflow-y:auto;box-shadow:0 16px 48px rgba(0,0,0,0.4);';
+
+  panel.innerHTML = `
+    <h2 style="margin:0 0 16px;font-size:18px;font-weight:700;color:var(--on-surface);display:flex;align-items:center;gap:8px;">
+      <span class="material-symbols-outlined" style="font-size:22px;">keyboard</span> Keyboard Shortcuts
+    </h2>
+    <div style="display:flex;flex-direction:column;gap:6px;">
+      ${shortcuts.map(s => `
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--outline-variant,rgba(255,255,255,0.08));">
+          <span style="color:var(--on-surface);font-size:13px;">${s.desc}</span>
+          <kbd style="background:var(--surface-container-highest,var(--surface));padding:3px 8px;border-radius:6px;font-size:12px;font-family:monospace;color:var(--on-surface);border:1px solid var(--outline-variant);white-space:nowrap;">${s.keys}</kbd>
+        </div>
+      `).join('')}
+    </div>
+    <p style="margin:14px 0 0;font-size:11px;color:var(--on-surface-variant);text-align:center;">Press <kbd style="background:var(--surface-container-highest);padding:1px 5px;border-radius:4px;font-family:monospace;border:1px solid var(--outline-variant);">Esc</kbd> or <kbd style="background:var(--surface-container-highest);padding:1px 5px;border-radius:4px;font-family:monospace;border:1px solid var(--outline-variant);">?</kbd> to close</p>
+  `;
+
+  overlay.appendChild(panel);
+  document.body.appendChild(overlay);
+
+  const close = () => { overlay.remove(); };
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
+  document.addEventListener('keydown', function _kbHelpEsc(e) {
+    if (e.key === 'Escape' || e.key === '?') { close(); document.removeEventListener('keydown', _kbHelpEsc); }
+  });
+}
+
+/* ══════════════════════════════════════════════════════════════
    3. MESSAGE RIGHT-CLICK CONTEXT MENU
    ══════════════════════════════════════════════════════════════ */
 let _ctxMenu = null;
@@ -378,7 +433,8 @@ function _execAction(actionStr) {
     const match = actionStr.match(/^(\w+)\((?:'([^']*)'|"([^"]*)")?\)$/);
     if (match) {
       const fnName = match[1];
-      const arg = match[2] || match[3] || '';
+      const rawArg = match[2] || match[3] || '';
+      const arg = rawArg.replace(/\\'/g, "'").replace(/\\"/g, '"');
       if (typeof window[fnName] === 'function') {
         window[fnName](arg);
         return;
@@ -493,10 +549,14 @@ function showMsgContextMenu(event, msgId) {
 
   _ctxMenu = menu;
 
-  // Close on outside click
+  // Close on outside click or Escape key
   setTimeout(() => {
     document.addEventListener('click', _removeCtxMenu, { once: true });
     document.addEventListener('contextmenu', _removeCtxMenu, { once: true });
+    const _ctxEscHandler = (e) => {
+      if (e.key === 'Escape') { _removeCtxMenu(); document.removeEventListener('keydown', _ctxEscHandler); }
+    };
+    document.addEventListener('keydown', _ctxEscHandler);
   }, 50);
 }
 
@@ -2456,22 +2516,14 @@ async function createGroupNow() {
 }
 
 /* ══════════════════════════════════════════════════════════════
-   20. MUTE CHAT (proper per-chat)
+   20. MUTE CHAT (proper per-chat) — delegates to app.js toggleMuteChat
    ══════════════════════════════════════════════════════════════ */
 function toggleChatMute(chatId) {
-  const chat = App.chats.find(c => c.id === chatId);
-  if (!chat) return;
-  chat.muted = !chat.muted;
+  const prevChat = App.currentChat;
+  App.currentChat = App.chats.find(c => c.id === chatId) || App.currentChat;
+  if (typeof toggleMuteChat === 'function') toggleMuteChat();
+  App.currentChat = prevChat;
   renderChatList();
-  showToast(chat.muted ? '🔕 Chat muted' : '🔔 Chat unmuted', 'success');
-
-  if (App.db && App.auth && App.auth.currentUser) {
-    const uid = App.auth.currentUser.uid;
-    const col = chat.type === 'group' ? 'groups' : 'directChats';
-    App.db.collection(col).doc(chatId).update({
-      [`muted.${uid}`]: chat.muted
-    }).catch(() => {});
-  }
 }
 
 /* ══════════════════════════════════════════════════════════════

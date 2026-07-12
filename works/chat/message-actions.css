@@ -25,7 +25,7 @@
   inset: auto !important;
   order: 2 !important;
   display: inline-grid !important;
-  grid-template-columns: repeat(3, 36px) !important;
+  grid-template-columns: repeat(3, 44px) !important;
   place-items: center !important;
   flex: 0 0 auto !important;
   width: auto !important;

@@ -13,6 +13,7 @@
   --on-primary-fixed-variant: #3b2bbc;
   
   --secondary: #a90050;
+  --danger: #e5484d;
   --on-secondary: #ffffff;
   --secondary-container: #ffd9e0;
   --on-secondary-container: #3f001a;
@@ -122,10 +123,21 @@ body {
   overflow: hidden;
   transition: background-color 0.3s, color 0.3s;
 }
+html, body, #app, #sidebar, #chat-list-sidebar, #chat-area, #detail-panel,
+#chat-header, #input-bar, #format-bar, #recording-bar,
+#sidebar-nav-container .tab-item, #bottom-nav .bottom-nav-item,
+.glass-panel, .msg-sent, .msg-received, .message-bubble,
+#attach-menu, #emoji-picker, #scroll-to-bottom {
+  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+}
 
 /* ── Scrollbars ── */
 .scrollbar-hide::-webkit-scrollbar {
   display: none;
+}
+.scrollbar-hide {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
 }
 .custom-scrollbar::-webkit-scrollbar {
   width: 4px;
@@ -165,6 +177,9 @@ body {
 
 .message-gradient-sent {
   background: linear-gradient(135deg, #7c73ff 0%, #5348d4 100%);
+}
+html.dark .message-gradient-sent {
+  background: linear-gradient(135deg, #4a42cc 0%, #3b2f9e 100%);
 }
 
 .material-symbols-outlined, .material-symbols-rounded {

@@ -1,0 +1,111 @@
+/* ============================================================
+   ACCESSIBILITY — Reduced motion, high contrast, sr-only,
+   focus indicators, forced-colors support
+   ============================================================ */
+
+/* ── Screen reader only (visually hidden) ─────────────── */
+.sr-only, .visually-hidden {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
+
+/* ── Skip navigation link (visible on focus) ──────────── */
+#skip-nav:focus {
+  position: fixed !important;
+  top: 0 !important;
+  left: 8px !important;
+  z-index: 99999 !important;
+  padding: 12px 24px !important;
+  background: var(--primary) !important;
+  color: var(--on-primary) !important;
+  border-radius: 0 0 12px 12px !important;
+  font-weight: 700 !important;
+  font-size: 14px !important;
+  text-decoration: none !important;
+  transition: top 0.2s !important;
+}
+
+/* ── Reduced motion ───────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  .animate-bounce, .animate-pulse, .animate-spin,
+  .animate-fade-in, .animate-slide-up, .animate-scale-in,
+  .animate-fade-in-up {
+    animation: none !important;
+  }
+  #atmosphere-glow-1, #atmosphere-glow-2 {
+    transform: none !important;
+    transition: none !important;
+  }
+}
+
+/* ── Focus indicators (enhanced) ──────────────────────── */
+*:focus-visible {
+  outline: 2px solid var(--primary) !important;
+  outline-offset: 2px !important;
+}
+button:focus-visible, a:focus-visible, [role="button"]:focus-visible {
+  outline: 2px solid var(--primary) !important;
+  outline-offset: 2px !important;
+  border-radius: 8px;
+}
+input:focus-visible, textarea:focus-visible, select:focus-visible {
+  outline: 2px solid var(--primary) !important;
+  outline-offset: 1px !important;
+}
+
+/* ── High contrast mode (Windows) ─────────────────────── */
+@media (forced-colors: active) {
+  * {
+    border-color: ButtonText !important;
+  }
+  .btn, button, [role="button"] {
+    border: 1px solid ButtonText !important;
+  }
+  .msg-sent, .msg-received {
+    border: 1px solid ButtonText !important;
+  }
+  :focus-visible {
+    outline: 2px solid Highlight !important;
+  }
+}
+
+/* ── Forced colors — link detection ───────────────────── */
+@media (forced-colors: none) {
+  a {
+    color: var(--primary);
+  }
+}
+
+/* ── Contrast preferences ─────────────────────────────── */
+@media (prefers-contrast: more) {
+  :root {
+    --outline-variant: rgba(0, 0, 0, 0.5);
+  }
+  .msg-sent {
+    border: 1px solid var(--primary) !important;
+  }
+  .msg-received {
+    border: 1px solid var(--outline-variant) !important;
+  }
+}
+
+/* ── Touch target minimum sizes (WCAG 2.5.8) ─────────── */
+@media (pointer: coarse) {
+  button, a, [role="button"], [role="menuitem"], input[type="checkbox"], input[type="radio"] {
+    min-height: 44px !important;
+    min-width: 44px !important;
+  }
+}

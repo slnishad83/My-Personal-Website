@@ -160,10 +160,10 @@ const Platform = (() => {
 
   /* ── Do Not Disturb ─────────────────────────────────────── */
   function isDND() {
+    if ('connection' in navigator && navigator.connection?.saveData) return true;
     if ('scheduler' in navigator && 'postTask' in navigator.scheduler) {
-      return false;
+      try { navigator.scheduler.postTask(() => {}, { priority: 'user-visible' }); } catch (_) { return true; }
     }
-    if (navigator.connection?.saveData) return true;
     if (Platform?.capabilities?.reducedMotion) return true;
     return false;
   }

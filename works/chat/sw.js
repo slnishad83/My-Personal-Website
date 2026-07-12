@@ -157,7 +157,7 @@ self.addEventListener('notificationclick', event => {
   );
 });
 
-const CACHE_NAME = 'team-chat-v232-mobile-ui-fixes';
+const CACHE_NAME = 'team-chat-v233-desktop-audit';
 const STATIC_ASSETS = [
   'chat.css',
   'config.js',
@@ -180,6 +180,13 @@ const STATIC_ASSETS = [
   'accessibility.js',
   'keyboard-shortcuts.js',
   'chat-missing-features.js',
+  'chat-enhancements.js',
+  'chat-fixes.js',
+  'message-actions.css',
+  'threads.js',
+  'message-search.js',
+  'notification-prefs.js',
+  'notification-digest.js',
   'permissions-manager.js',
   '../app-extras.js',
   '../app.js'
@@ -235,15 +242,15 @@ self.addEventListener('fetch', event => {
 
   if (isStatic) {
     event.respondWith(
-      caches.match(event.request).then(cached => {
-        if (cached) return cached;
-        return fetch(event.request).then(response => {
-          if (response.ok) {
-            const copy = response.clone();
-            caches.open(CACHE_NAME).then(cache => cache.put(event.request, copy));
-          }
-          return response;
-        }).catch(() => caches.match(event.request).then(fallback => fallback || new Response('Offline', { status: 503 })));
+      caches.open(CACHE_NAME).then(cache => {
+        return cache.match(event.request).then(cached => {
+          const fetchPromise = fetch(event.request).then(response => {
+            if (response.ok) cache.put(event.request, response.clone());
+            return response;
+          }).catch(() => cached);
+          if (cached) { fetchPromise.catch(() => {}); return cached; }
+          return fetchPromise;
+        });
       })
     );
     return;

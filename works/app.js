@@ -104,16 +104,21 @@ document.addEventListener('DOMContentLoaded', () => {
   document.addEventListener('keydown', e => { if (e.key==='Escape') closeTopModal(); });
 
   // Add micro-animation depth with mouse movement for glows
+  let _glowRafPending = false;
   document.addEventListener('mousemove', (e) => {
-    const glow1 = document.getElementById('atmosphere-glow-1');
-    const glow2 = document.getElementById('atmosphere-glow-2');
-    if (!glow1 || !glow2) return;
-    
-    const moveX = (e.clientX - window.innerWidth / 2) * 0.015;
-    const moveY = (e.clientY - window.innerHeight / 2) * 0.015;
-    
-    glow1.style.transform = `translate(${moveX}px, ${moveY}px)`;
-    glow2.style.transform = `translate(${-moveX}px, ${-moveY}px)`;
+    if (_glowRafPending) return;
+    _glowRafPending = true;
+    requestAnimationFrame(() => {
+      const glow1 = document.getElementById('atmosphere-glow-1');
+      const glow2 = document.getElementById('atmosphere-glow-2');
+      if (glow1 && glow2) {
+        const moveX = (e.clientX - window.innerWidth / 2) * 0.015;
+        const moveY = (e.clientY - window.innerHeight / 2) * 0.015;
+        glow1.style.transform = `translate(${moveX}px, ${moveY}px)`;
+        glow2.style.transform = `translate(${-moveX}px, ${-moveY}px)`;
+      }
+      _glowRafPending = false;
+    });
   });
 });
 
@@ -1177,6 +1182,13 @@ function cycleTheme() {
    ══════════════════════════════════════════════════ */
 function switchTab(tab) {
   App.activeTab = tab;
+
+  // Clear search filter when switching tabs
+  const searchInput = document.getElementById('sidebar-search');
+  if (searchInput && searchInput.value) {
+    searchInput.value = '';
+    if (typeof clearSidebarSearch === 'function') clearSidebarSearch();
+  }
 
   // Sidebar navigation items active classes revamp
   qsa('.tab-item').forEach(el => {
@@ -4231,7 +4243,7 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   /* ── Mobile keyboard avoidance via visualViewport ── */
-  if (window.visualViewport) {
+  if (window.visualViewport && window.innerWidth < 768) {
     let _lastVpHeight = window.visualViewport.height;
     window.visualViewport.addEventListener('resize', () => {
       const vp = window.visualViewport;
@@ -4258,6 +4270,20 @@ document.addEventListener('DOMContentLoaded', () => {
     _resizeTimer = setTimeout(() => {
       App._viewportWidth = window.innerWidth;
       App._viewportHeight = window.innerHeight;
+      const isMobile = window.innerWidth < 768;
+      const chatArea = document.getElementById('chat-area');
+      const sidebar = document.getElementById('sidebar');
+      const chatListSidebar = document.getElementById('chat-list-sidebar');
+      if (isMobile) {
+        if (chatArea) chatArea.classList.add('hidden-mobile');
+        if (chatArea) chatArea.classList.remove('visible-mobile');
+        if (chatListSidebar) chatListSidebar.classList.remove('hidden');
+        if (sidebar) sidebar.classList.add('hidden');
+      } else {
+        if (chatArea) chatArea.classList.remove('hidden-mobile', 'visible-mobile');
+        if (chatListSidebar) chatListSidebar.classList.remove('hidden');
+        if (sidebar) sidebar.classList.remove('hidden');
+      }
       if (App.currentChat) {
         renderMessages(App.currentChat.id);
         scrollToBottom(true);
@@ -6282,8 +6308,22 @@ function setLanguage(lang) {
       { el: btns[0]?.querySelector('span:last-child'), key: 'chats' },
       { el: btns[1]?.querySelector('span:last-child'), key: 'groups' },
       { el: btns[2]?.querySelector('span:last-child'), key: 'calls' },
+      { el: btns[3]?.querySelector('span:last-child'), key: 'saved_items' },
     ] : [];
     labels.forEach(({ el, key }) => { if (el) el.textContent = __(key); });
+  }
+  // Update bottom nav labels
+  const bottomNav = document.getElementById('bottom-nav');
+  if (bottomNav) {
+    const navBtns = bottomNav.querySelectorAll('.bottom-nav-item');
+    const navLabels = [
+      { el: navBtns[0]?.querySelector('span:last-child'), key: 'chats' },
+      { el: navBtns[1]?.querySelector('span:last-child'), key: 'groups' },
+      { el: navBtns[2]?.querySelector('span:last-child'), key: 'calls' },
+      { el: navBtns[3]?.querySelector('span:last-child'), key: 'requests' },
+      { el: navBtns[4]?.querySelector('span:last-child'), key: 'saved_items' },
+    ];
+    navLabels.forEach(({ el, key }) => { if (el) el.textContent = __(key); });
   }
   // Re-render current view
   if (App.activeTab) switchTab(App.activeTab);
@@ -6381,18 +6421,17 @@ async function deleteAccount() {
       await App.auth.currentUser.delete();
     }
     
-    // 3. Sign out
-    signOut();
-    
-    showToast('Account deleted successfully', 'success');
+    // 3. Show success, then sign out
+    showToast('Account deleted successfully. Signing out...', 'success');
+    setTimeout(() => signOut(), 1500);
   } catch (err) {
     console.error('Delete account error:', err);
     // Try Firebase Auth delete even if Firestore cleanup fails
     if (App.auth?.currentUser) {
       try {
         await App.auth.currentUser.delete();
-        signOut();
-        showToast('Account deleted', 'success');
+        showToast('Account deleted. Signing out...', 'success');
+        setTimeout(() => signOut(), 1500);
       } catch (authErr) {
         // If token is too old, need re-auth
         if (authErr.code === 'auth/requires-recent-login') {
