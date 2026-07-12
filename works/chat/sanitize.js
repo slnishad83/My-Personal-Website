@@ -6,57 +6,87 @@
 (function () {
   'use strict';
 
-  const SAFE_TAGS = new Set([
+  var SAFE_TAGS = new Set([
     'b', 'i', 'u', 'em', 'strong', 'span', 'br', 'p', 'a',
     'code', 'pre', 'blockquote', 'mark', 'small', 'sub', 'sup',
     'ul', 'ol', 'li', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
-    'table', 'thead', 'tbody', 'tr', 'th', 'td', 'img',
-    'svg', 'path', 'circle', 'line', 'polyline', 'rect'
+    'table', 'thead', 'tbody', 'tr', 'th', 'td', 'img'
   ]);
 
-  const SAFE_ATTRS = new Set([
+  var SAFE_ATTRS = new Set([
     'href', 'target', 'rel', 'title', 'alt', 'src', 'class',
-    'style', 'width', 'height', 'viewBox', 'fill', 'stroke',
-    'stroke-width', 'stroke-linecap', 'stroke-linejoin', 'd',
-    'cx', 'cy', 'r', 'x', 'y', 'x1', 'y1', 'x2', 'y2',
-    'points', 'rx', 'ry', 'data-type', 'data-id', 'role',
+    'width', 'height', 'data-type', 'data-id', 'role',
     'aria-label', 'aria-hidden', 'tabindex', 'colspan', 'rowspan'
   ]);
 
-  const BLOCKED_PROTOCOLS = ['javascript:', 'data:', 'vbscript:', 'file:'];
+  var EVENT_ATTR_REGEX = /^on[a-z]/i;
 
-  const ENTITY_MAP = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#x27;' };
-  const ENTITY_REGEX = /[&<>"']/g;
+  var DANGEROUS_CSS_PROPS = [
+    'position', 'z-index', 'behavior', '-moz-binding',
+    'expression', 'javascript', 'vbscript', 'data:'
+  ];
+
+  var BLOCKED_PROTOCOLS = ['javascript:', 'data:', 'vbscript:', 'file:', 'blob:'];
+
+  var ENTITY_MAP = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#x27;', '/': '&#x2F;' };
+  var ENTITY_REGEX = /[&<>"'\/]/g;
 
   function escapeHTML(str) {
     if (typeof str !== 'string') return '';
-    return str.replace(ENTITY_REGEX, c => ENTITY_MAP[c]);
+    return str.replace(ENTITY_REGEX, function (c) { return ENTITY_MAP[c]; });
+  }
+
+  function decodeHTMLEntities(str) {
+    if (typeof str !== 'string') return '';
+    var el = document.createElement('div');
+    el.textContent = str;
+    return el.textContent;
   }
 
   function sanitizeURL(url) {
     if (typeof url !== 'string') return '';
-    const trimmed = url.trim().toLowerCase();
-    for (const proto of BLOCKED_PROTOCOLS) {
-      if (trimmed.startsWith(proto)) return '';
+    var decoded = decodeHTMLEntities(url).trim();
+    var trimmed = decoded.toLowerCase();
+    for (var i = 0; i < BLOCKED_PROTOCOLS.length; i++) {
+      if (trimmed.startsWith(BLOCKED_PROTOCOLS[i])) return '';
+    }
+    var stripped = trimmed.replace(/[\s\x00-\x1f]+/g, '');
+    for (var j = 0; j < BLOCKED_PROTOCOLS.length; j++) {
+      if (stripped.startsWith(BLOCKED_PROTOCOLS[j])) return '';
     }
     return url;
   }
 
+  function sanitizeCSSValue(value) {
+    if (typeof value !== 'string') return '';
+    var lower = value.toLowerCase();
+    for (var i = 0; i < DANGEROUS_CSS_PROPS.length; i++) {
+      if (lower.indexOf(DANGEROUS_CSS_PROPS[i]) !== -1) return '';
+    }
+    if (lower.indexOf('url(') !== -1) return '';
+    return value;
+  }
+
   function sanitizeAttributes(tagName, attrStr) {
     if (!attrStr) return '';
-    const result = [];
-    const attrRegex = /([a-zA-Z\-]+)\s*=\s*(?:"([^"]*)"|'([^']*)')/g;
-    let match;
+    var result = [];
+    var attrRegex = /([a-zA-Z\-]+)\s*=\s*(?:"([^"]*)"|'([^']*)')/g;
+    var match;
     while ((match = attrRegex.exec(attrStr))) {
-      const name = match[1].toLowerCase();
-      const value = match[2] !== undefined ? match[2] : match[3];
-      if (SAFE_ATTRS.has(name)) {
-        if (name === 'href' || name === 'src') {
-          const safeURL = sanitizeURL(value);
-          if (safeURL) result.push(`${name}="${escapeHTML(safeURL)}"`);
-        } else {
-          result.push(`${name}="${escapeHTML(value)}"`);
-        }
+      var name = match[1].toLowerCase();
+      var value = match[2] !== undefined ? match[2] : match[3];
+
+      if (EVENT_ATTR_REGEX.test(name)) continue;
+      if (!SAFE_ATTRS.has(name)) continue;
+
+      if (name === 'href' || name === 'src') {
+        var safeURL = sanitizeURL(value);
+        if (safeURL) result.push(name + '="' + escapeHTML(safeURL) + '"');
+      } else if (name === 'style') {
+        var safeCSS = sanitizeCSSValue(value);
+        if (safeCSS) result.push(name + '="' + escapeHTML(safeCSS) + '"');
+      } else {
+        result.push(name + '="' + escapeHTML(value) + '"');
       }
     }
     return result.join(' ');
@@ -66,19 +96,17 @@
     if (typeof html !== 'string') return '';
     if (html.indexOf('<') === -1 && html.indexOf('&') === -1) return html;
 
-    let result = '';
-    let i = 0;
-    const len = html.length;
+    var result = '';
+    var i = 0;
+    var len = html.length;
 
     while (i < len) {
       if (html[i] === '<') {
-        // Check for closing tag
-        const isClosing = html[i + 1] === '/';
-        const startIdx = isClosing ? i + 2 : i + 1;
+        var isClosing = html[i + 1] === '/';
+        var startIdx = isClosing ? i + 2 : i + 1;
 
-        // Read tag name
-        let tagName = '';
-        let j = startIdx;
+        var tagName = '';
+        var j = startIdx;
         while (j < len && /[a-zA-Z0-9\-]/.test(html[j])) {
           tagName += html[j];
           j++;
@@ -86,10 +114,9 @@
         tagName = tagName.toLowerCase();
 
         if (tagName && SAFE_TAGS.has(tagName)) {
-          // Find end of opening tag
-          let tagEnd = j;
-          let inQuote = false;
-          let quoteChar = '';
+          var tagEnd = j;
+          var inQuote = false;
+          var quoteChar = '';
           while (tagEnd < len) {
             if (inQuote) {
               if (html[tagEnd] === quoteChar) inQuote = false;
@@ -104,27 +131,21 @@
             tagEnd++;
           }
 
-          const fullTag = html.substring(i, tagEnd + 1);
-          const isSelfClosing = fullTag.endsWith('/>');
-          const attrStr = html.substring(j, tagEnd).replace(/\/$/, '').trim();
+          var fullTag = html.substring(i, tagEnd + 1);
+          var isSelfClosing = fullTag.endsWith('/>');
+          var attrStr = html.substring(j, tagEnd).replace(/\/$/, '').trim();
 
           if (isClosing) {
-            result += `</${tagName}>`;
+            result += '</' + tagName + '>';
           } else {
-            const safeAttrs = sanitizeAttributes(tagName, attrStr);
-            result += `<${tagName}${safeAttrs ? ' ' + safeAttrs : ''}${isSelfClosing ? ' /' : ''}>`;
+            var safeAttrs = sanitizeAttributes(tagName, attrStr);
+            result += '<' + tagName + (safeAttrs ? ' ' + safeAttrs : '') + (isSelfClosing ? ' /' : '') + '>';
           }
           i = tagEnd + 1;
         } else {
-          // Unsafe tag — escape it
           result += escapeHTML(html[i]);
           i++;
         }
-      } else if (html.substring(i, i + 4) === '&lt;' || html.substring(i, i + 4) === '&gt;' ||
-                 html.substring(i, i + 5) === '&amp;' || html.substring(i, i + 6) === '&quot;') {
-        // Already escaped HTML entities — pass through
-        result += html[i];
-        i++;
       } else {
         result += html[i];
         i++;
@@ -134,14 +155,10 @@
     return result;
   }
 
-  // Expose globally
-  window.NSLSanitize = { sanitize, escapeHTML, sanitizeURL };
-
-  // Also provide a safe innerHTML helper
+  window.NSLSanitize = { sanitize: sanitize, escapeHTML: escapeHTML, sanitizeURL: sanitizeURL };
   window.sanitizeHTML = sanitize;
   window.sanitizeContent = sanitize;
 
-  // Monkey-patch helper: use this in place of innerHTML for user content
   function safeInner(el, html) {
     if (el) el.innerHTML = sanitize(html);
   }

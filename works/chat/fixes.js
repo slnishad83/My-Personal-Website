@@ -17,6 +17,27 @@
 (function () {
   "use strict";
 
+  // roundRect polyfill for Firefox <112
+  if (typeof CanvasRenderingContext2D !== 'undefined' && !CanvasRenderingContext2D.prototype.roundRect) {
+    CanvasRenderingContext2D.prototype.roundRect = function (x, y, w, h, r) {
+      if (typeof r === 'number') r = [r, r, r, r];
+      else if (!Array.isArray(r)) r = [0, 0, 0, 0];
+      var tl = r[0] || 0, tr = r[1] || r[0] || 0, br = r[2] || r[0] || 0, bl = r[3] || r[1] || r[0] || 0;
+      this.beginPath();
+      this.moveTo(x + tl, y);
+      this.lineTo(x + w - tr, y);
+      this.quadraticCurveTo(x + w, y, x + w, y + tr);
+      this.lineTo(x + w, y + h - br);
+      this.quadraticCurveTo(x + w, y + h, x + w - br, y + h);
+      this.lineTo(x + bl, y + h);
+      this.quadraticCurveTo(x, y + h, x, y + h - bl);
+      this.lineTo(x, y + tl);
+      this.quadraticCurveTo(x, y, x + tl, y);
+      this.closePath();
+      return this;
+    };
+  }
+
   // ============================================================
   // 1. STYLES  — all scoped to #_fv, no app theme bleeds in
   // ============================================================
@@ -322,6 +343,7 @@
         <button class="_fva danger"   id="_fva_delete">  <span class="ico">&#128465;</span><span class="lbl">Delete</span></button>
       </div>`;
     document.body.appendChild(d);
+    _viewerBuilt = true;
     _bindViewerEvents();
     _bindActionBar();
     _bindEditMode();
@@ -335,6 +357,8 @@
   let _isDragging = false, _dragStartX = 0, _dragStartY = 0, _dragBasePanX = 0, _dragBasePanY = 0;
   let _pinchStartDist = 0, _pinchStartZoom = 1, _swipeStartX = 0, _swipeStartY = 0;
   let _isPinching = false;
+  let _docKeyHandler = null, _docMouseMoveHandler = null, _docMouseUpHandler = null;
+  let _viewerBuilt = false;
 
   // ============================================================
   // 4. OPEN
@@ -376,6 +400,10 @@
     const vid = document.getElementById("_fv_video");
     if (vid) { try { vid.pause(); } catch(_){} vid.src = ""; }
     const doc = document.getElementById("_fv_doc"); if (doc) doc.src = "about:blank";
+    const img = document.getElementById("_fv_img");
+    if (img && img.src && img.src.startsWith("blob:")) {
+      try { URL.revokeObjectURL(img.src); } catch(_) {}
+    }
     ov.style.display = "none";
     document.body.style.overflow = "";
     ["_fv_edit","_fv_sticker","_fv_delmenu"].forEach(id => { const el = document.getElementById(id); if (el) el.style.display = "none"; });
@@ -446,23 +474,26 @@
     const img = document.getElementById("_fv_img");
 
     document.getElementById("_fv_x").addEventListener("click", _closeViewer);
-    document.getElementById("_fv_prev").addEventListener("click", () => _navigate(-1));
-    document.getElementById("_fv_next").addEventListener("click", () => _navigate(1));
+    document.getElementById("_fv_prev").addEventListener("click", function () { _navigate(-1); });
+    document.getElementById("_fv_next").addEventListener("click", function () { _navigate(1); });
 
-    ov.addEventListener("click", e => { if (e.target === ov || e.target.id === "_fv_stage") _closeViewer(); });
+    ov.addEventListener("click", function (e) { if (e.target === ov || e.target.id === "_fv_stage") _closeViewer(); });
 
-    document.addEventListener("keydown", e => {
-      const v = document.getElementById("_fv"); if (!v || v.style.display === "none") return;
+    _docKeyHandler = function (e) {
+      var v = document.getElementById("_fv"); if (!v || v.style.display === "none") return;
       if (e.key === "Escape") _closeViewer();
       if (e.key === "ArrowLeft")  _navigate(-1);
       if (e.key === "ArrowRight") _navigate(1);
-    });
+    };
+    document.addEventListener("keydown", _docKeyHandler);
 
-    img.addEventListener("wheel", e => { e.preventDefault(); _zoom = Math.max(1, Math.min(6, _zoom + (e.deltaY > 0 ? -0.2 : 0.2))); if (_zoom <= 1) { _panX = 0; _panY = 0; } _applyImgT(); }, { passive: false });
+    img.addEventListener("wheel", function (e) { e.preventDefault(); _zoom = Math.max(1, Math.min(6, _zoom + (e.deltaY > 0 ? -0.2 : 0.2))); if (_zoom <= 1) { _panX = 0; _panY = 0; } _applyImgT(); }, { passive: false });
 
-    img.addEventListener("mousedown", e => { if (_zoom <= 1) return; e.preventDefault(); _isDragging = true; _dragStartX = e.clientX; _dragStartY = e.clientY; _dragBasePanX = _panX; _dragBasePanY = _panY; img.style.cursor = "grabbing"; });
-    document.addEventListener("mousemove", e => { if (!_isDragging) return; _panX = _dragBasePanX + (e.clientX - _dragStartX) / _zoom; _panY = _dragBasePanY + (e.clientY - _dragStartY) / _zoom; _applyImgT(); });
-    document.addEventListener("mouseup", () => { if (!_isDragging) return; _isDragging = false; img.style.cursor = _zoom > 1 ? "grab" : "zoom-in"; });
+    img.addEventListener("mousedown", function (e) { if (_zoom <= 1) return; e.preventDefault(); _isDragging = true; _dragStartX = e.clientX; _dragStartY = e.clientY; _dragBasePanX = _panX; _dragBasePanY = _panY; img.style.cursor = "grabbing"; });
+    _docMouseMoveHandler = function (e) { if (!_isDragging) return; _panX = _dragBasePanX + (e.clientX - _dragStartX) / _zoom; _panY = _dragBasePanY + (e.clientY - _dragStartY) / _zoom; _applyImgT(); };
+    _docMouseUpHandler = function () { if (!_isDragging) return; _isDragging = false; img.style.cursor = _zoom > 1 ? "grab" : "zoom-in"; };
+    document.addEventListener("mousemove", _docMouseMoveHandler);
+    document.addEventListener("mouseup", _docMouseUpHandler);
 
     ov.addEventListener("touchstart", e => { if (e.touches.length === 2) { _isPinching = true; _pinchStartDist = _tdist(e.touches); _pinchStartZoom = _zoom; } else if (e.touches.length === 1 && !_isPinching) { _swipeStartX = e.touches[0].clientX; _swipeStartY = e.touches[0].clientY; if (_zoom > 1) { _isDragging = true; _dragStartX = e.touches[0].clientX; _dragStartY = e.touches[0].clientY; _dragBasePanX = _panX; _dragBasePanY = _panY; } } }, { passive: true });
     ov.addEventListener("touchmove", e => { if (e.touches.length === 2 || _isPinching) { e.preventDefault(); _isPinching = true; _zoom = Math.max(1, Math.min(6, _pinchStartZoom * (_tdist(e.touches) / _pinchStartDist))); if (_zoom <= 1) { _panX = 0; _panY = 0; } _applyImgT(); } else if (e.touches.length === 1 && _isDragging && _zoom > 1) { _panX = _dragBasePanX + (e.touches[0].clientX - _dragStartX) / _zoom; _panY = _dragBasePanY + (e.touches[0].clientY - _dragStartY) / _zoom; _applyImgT(); } }, { passive: false });
@@ -670,7 +701,9 @@
             _toast("Edited image ready — tap Send"); document.getElementById("_fv_edit").style.display = "none"; _closeViewer();
           }).catch(err => _toast("Upload failed: " + err.message, "error"));
         } else {
-          const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = fname; a.click();
+          var blobUrl = URL.createObjectURL(blob);
+          var a = document.createElement("a"); a.href = blobUrl; a.download = fname; a.click();
+          setTimeout(function () { try { URL.revokeObjectURL(blobUrl); } catch(_) {} }, 1000);
           if (typeof showToast === 'function') showToast('File saved to Downloads', 'success');
           document.getElementById("_fv_edit").style.display = "none";
         }
@@ -725,10 +758,12 @@
 
   function _bindStickerMode() {
     document.getElementById("_fv_stk_cancel").addEventListener("click", () => { document.getElementById("_fv_sticker").style.display = "none"; });
-    document.getElementById("_fv_stk_dl").addEventListener("click", () => {
-      document.getElementById("_fv_stickercanvas").toBlob(blob => {
+    document.getElementById("_fv_stk_dl").addEventListener("click", function () {
+      document.getElementById("_fv_stickercanvas").toBlob(function (blob) {
         if (!blob) { _toast("Export failed", "error"); return; }
-        const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "sticker.png"; a.click();
+        var blobUrl = URL.createObjectURL(blob);
+        var a = document.createElement("a"); a.href = blobUrl; a.download = "sticker.png"; a.click();
+        setTimeout(function () { try { URL.revokeObjectURL(blobUrl); } catch(_) {} }, 1000);
         if (typeof showToast === 'function') showToast('Sticker saved to Downloads', 'success');
         document.getElementById("_fv_sticker").style.display = "none";
       }, "image/png");
@@ -822,9 +857,9 @@
     return await ref.getDownloadURL();
   }
 
-  window.uploadToCloudinary  = _uploadToStorage;
-  window.uploadDocument      = _uploadToStorage;
-  window.uploadRecordedMedia = _uploadToStorage;
+  window.uploadToCloudinary  = window.uploadToCloudinary  || _uploadToStorage;
+  window.uploadDocument      = window.uploadDocument      || _uploadToStorage;
+  window.uploadRecordedMedia = window.uploadRecordedMedia || _uploadToStorage;
 
   // ============================================================
   // 14. BUG FIX — Profile name truncated in sidebar header

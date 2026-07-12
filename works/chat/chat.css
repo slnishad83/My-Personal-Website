@@ -160,22 +160,22 @@ html.theme-switching *::after {
 
 /* ── Bento & Neon Glow Details ── */
 .glass-panel {
-  background: rgba(25, 27, 36, 0.4);
+  background: color-mix(in srgb, var(--surface-container) 60%, transparent);
   -webkit-backdrop-filter: blur(16px);
   backdrop-filter: blur(16px);
-  border: 1px solid rgba(124, 115, 255, 0.05);
+  border: 1px solid color-mix(in srgb, var(--outline-variant) 15%, transparent);
 }
 
 .light .glass-panel {
-  background: rgba(255, 255, 255, 0.6);
-  border: 1px solid rgba(83, 72, 212, 0.08);
+  background: color-mix(in srgb, var(--surface-container-lowest) 60%, transparent);
+  border: 1px solid color-mix(in srgb, var(--primary) 8%, transparent);
 }
 
 .neon-glow {
-  box-shadow: 0 0 15px rgba(124, 115, 255, 0.15);
+  box-shadow: 0 0 15px color-mix(in srgb, var(--primary) 15%, transparent);
 }
 .dark .neon-glow {
-  box-shadow: 0 0 20px rgba(196, 192, 255, 0.2);
+  box-shadow: 0 0 20px color-mix(in srgb, var(--primary) 20%, transparent);
 }
 
 .neon-border {
@@ -183,10 +183,10 @@ html.theme-switching *::after {
 }
 
 .message-gradient-sent {
-  background: linear-gradient(135deg, #7c73ff 0%, #5348d4 100%);
+  background: linear-gradient(135deg, var(--primary-fixed-dim) 0%, var(--primary) 100%);
 }
 html.dark .message-gradient-sent {
-  background: linear-gradient(135deg, #4a42cc 0%, #3b2f9e 100%);
+  background: linear-gradient(135deg, color-mix(in srgb, var(--primary) 80%, transparent) 0%, color-mix(in srgb, var(--primary) 60%, transparent) 100%);
 }
 
 .material-symbols-outlined, .material-symbols-rounded {

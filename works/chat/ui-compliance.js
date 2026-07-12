@@ -95,12 +95,15 @@
   /* ─── #12 Fix button double-fire on iOS (click + touchend) ─────── */
   function fixDoubleFire() {
     if (!('ontouchstart' in window)) return;
-    document.addEventListener('touchend', e => {
-      if (e.target.closest('button, [role="button"], a')) {
-        e.preventDefault(); // prevent ghost click
-        e.target.click();
-      }
-    }, { passive: false, capture: true });
+    var lastTouchEnd = 0;
+    document.addEventListener('touchend', function (e) {
+      var now = Date.now();
+      if (now - lastTouchEnd <= 300) return;
+      var target = e.target.closest('button, [role="button"], a');
+      if (!target) return;
+      if (target.tagName === 'A' && target.href) return;
+      lastTouchEnd = now;
+    }, { passive: true, capture: false });
   }
 
   /* ─── #9 Fix modal: trap scroll, prevent body scroll behind ─────── */

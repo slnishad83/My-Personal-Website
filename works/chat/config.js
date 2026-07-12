@@ -3,6 +3,7 @@
 // All WhatsApp features + extras
 // Works on all devices, all browsers
 // ========================================
+'use strict';
 
 // Firebase Configuration
 const firebaseConfig = {

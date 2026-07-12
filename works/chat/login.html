@@ -178,18 +178,18 @@
             vertical-align: middle;
         }
         .glass-panel {
-            background: rgba(255, 255, 255, 0.7);
+            background: color-mix(in srgb, var(--surface-container-lowest) 70%, transparent);
             backdrop-filter: blur(12px);
             -webkit-backdrop-filter: blur(12px);
-            border: 1px solid rgba(15, 23, 42, 0.05);
-            box-shadow: 0 8px 32px rgba(15, 23, 42, 0.08);
+            border: 1px solid color-mix(in srgb, var(--primary) 5%, transparent);
+            box-shadow: 0 8px 32px color-mix(in srgb, var(--inverse-surface) 8%, transparent);
             transition: all 0.3s ease;
         }
         .dark .glass-panel {
-            background: rgba(16, 19, 26, 0.7);
+            background: color-mix(in srgb, var(--surface-container) 70%, transparent);
             backdrop-filter: blur(20px);
-            border: 0.5px solid rgba(255, 255, 255, 0.08);
-            box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.05);
+            border: 0.5px solid color-mix(in srgb, var(--on-surface) 8%, transparent);
+            box-shadow: inset 0 1px 1px color-mix(in srgb, var(--on-surface) 5%, transparent);
         }
         .cyber-mint-gradient {
             background: linear-gradient(135deg, #34ffc5 0%, #00e1ac 100%);
@@ -226,11 +226,11 @@
 
         /* Errors and Validation colors */
         .auth-form .form-group input.error {
-          border-color: #ba1a1a !important;
-          box-shadow: 0 0 0 3px rgba(186, 26, 26, 0.15) !important;
+          border-color: var(--error) !important;
+          box-shadow: 0 0 0 3px color-mix(in srgb, var(--error) 15%, transparent) !important;
         }
         .field-error {
-          color: #ba1a1a;
+          color: var(--error);
           font-size: 11px;
           margin-top: 4px;
           display: none;
@@ -241,7 +241,7 @@
         }
 
         .dark .field-error {
-          color: #ffb4ab;
+          color: var(--error);
         }
 
         /* Modals style */
@@ -267,22 +267,22 @@
           width: 44px;
           height: 44px;
           border-radius: 50%;
-          border: 1px solid rgba(15, 23, 42, 0.08);
-          background: rgba(255, 255, 255, 0.8);
-          color: #0f172a;
+          border: 1px solid color-mix(in srgb, var(--outline-variant) 8%, transparent);
+          background: color-mix(in srgb, var(--surface-container-lowest) 80%, transparent);
+          color: var(--on-surface);
           display: flex;
           align-items: center;
           justify-content: center;
           cursor: pointer;
           z-index: 100;
-          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+          box-shadow: 0 4px 12px color-mix(in srgb, var(--inverse-surface) 5%, transparent);
           transition: all 0.25s ease;
         }
         .dark .dm-toggle {
-          background: rgba(16, 19, 26, 0.8);
-          border-color: rgba(255, 255, 255, 0.08);
-          color: #e1e2eb;
-          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+          background: color-mix(in srgb, var(--surface-container) 80%, transparent);
+          border-color: color-mix(in srgb, var(--on-surface) 8%, transparent);
+          color: var(--on-surface);
+          box-shadow: 0 4px 12px color-mix(in srgb, var(--inverse-surface) 30%, transparent);
         }
         .dm-toggle:hover {
           transform: scale(1.05);
@@ -292,8 +292,8 @@
           min-height: 100dvh;
         }
         .dark body {
-          background: #10131a;
-          color: #e1e2eb;
+          background: var(--background);
+          color: var(--on-surface);
         }
         
         /* Shimmer background animation */
@@ -309,7 +309,7 @@
             animation: gradient 15s ease infinite;
         }
         .dark .shimmer-bg {
-            background: #10131a;
+            background: var(--background);
         }
         @keyframes gradient {
             0% { background-position: 0% 50%; }
@@ -575,7 +575,6 @@
       const auth = firebase.auth();
       const db = firebase.firestore();
       let lastUnverifiedEmail = "";
-      let lastUnverifiedPassword = "";
 
       function isLikelyPrivateSession() {
         try {
@@ -793,7 +792,6 @@
           });
           if (!userCred.user.emailVerified) {
             lastUnverifiedEmail = email;
-            lastUnverifiedPassword = password;
             await auth.signOut();
             errorDiv.textContent = "Please verify your email first. Check your inbox, then login again.";
             errorDiv.style.display = "block";
@@ -834,7 +832,7 @@
         const successDiv = document.getElementById("authSuccess");
         const btn = document.getElementById("resendVerificationBtn");
         const email = lastUnverifiedEmail || cleanEmail(document.getElementById("loginEmail").value);
-        const password = lastUnverifiedPassword || document.getElementById("loginPassword").value;
+        const password = document.getElementById("loginPassword").value;
 
         errorDiv.style.display = "none";
         successDiv.style.display = "none";
@@ -958,9 +956,11 @@
       document.getElementById("sendResetBtn").addEventListener("click", async () => {
         const email = document.getElementById("resetEmail").value.trim();
         const btn = document.getElementById("sendResetBtn");
+        const resetModal = document.getElementById("resetModal");
 
         if (!email) {
-          alert("Please enter your email");
+          btn.insertAdjacentHTML('afterend', '<div id="resetInlineError" class="mt-xs p-xs text-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/20 rounded text-center">Please enter your email</div>');
+          setTimeout(() => { var el = document.getElementById('resetInlineError'); if (el) el.remove(); }, 3000);
           return;
         }
 
@@ -969,12 +969,15 @@
 
         try {
           await auth.sendPasswordResetEmail(email);
-          alert("Password reset email sent! Check your inbox.");
           resetModal.classList.remove("show");
+          const successDiv = document.getElementById("authSuccess");
+          successDiv.textContent = "Password reset email sent! Check your inbox.";
+          successDiv.style.display = "block";
           btn.disabled = false;
           btn.textContent = "Send Reset Link";
         } catch (error) {
-          alert(error.message || "Failed to send reset email");
+          btn.insertAdjacentHTML('afterend', '<div id="resetInlineError" class="mt-xs p-xs text-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/20 rounded text-center">' + (error.message || 'Failed to send reset email').replace(/</g, '&lt;') + '</div>');
+          setTimeout(() => { var el = document.getElementById('resetInlineError'); if (el) el.remove(); }, 5000);
           btn.disabled = false;
           btn.textContent = "Send Reset Link";
         }

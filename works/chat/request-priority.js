@@ -106,16 +106,22 @@
 
     let declined = 0;
     for (const card of old) {
-      const declineBtn = card.querySelector('.decline-request-btn');
-      if (!declineBtn) continue;
+      const reqId = card.dataset.reqId || card.dataset.rpReqId;
+      if (!reqId) continue;
       try {
-        declineBtn.click();
+        await database.collection('chatRequests').doc(reqId).update({
+          status: 'declined',
+          declinedAt: firebase.firestore.FieldValue.serverTimestamp(),
+          declinedBy: uid,
+          declineReason: 'auto-decline'
+        });
+        card.style.display = 'none';
         declined++;
         await new Promise(r => setTimeout(r, 200));
       } catch (_) {}
     }
     if (declined > 0 && typeof showToast === 'function') {
-      showToast(`Auto-declined ${declined} request${declined > 1 ? 's' : ''} older than ${_adDays} days`, 'info');
+      showToast('Auto-declined ' + declined + ' request' + (declined > 1 ? 's' : '') + ' older than ' + _adDays + ' days', 'info');
     }
   }
 
@@ -354,20 +360,22 @@
   // ── Boot ─────────────────────────────────────────────────────────────────
 
   _loadPrefs();
+  var _booted = false;
 
   function _boot() {
+    if (_booted) return;
+    _booted = true;
     _observe();
     _subscribe();
-    setTimeout(_boot, 3000); // re-check after auth
   }
 
   // Wait for auth
   if (typeof firebase !== 'undefined' && firebase.auth) {
-    firebase.auth().onAuthStateChanged(user => {
-      if (user) { setTimeout(_boot, 500); }
+    firebase.auth().onAuthStateChanged(function (user) {
+      if (user && !_booted) { setTimeout(_boot, 500); }
     });
   } else if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => setTimeout(_boot, 800));
+    document.addEventListener('DOMContentLoaded', function () { setTimeout(_boot, 800); });
   } else {
     setTimeout(_boot, 800);
   }

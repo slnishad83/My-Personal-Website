@@ -10,42 +10,47 @@ const ErrorBoundary = {
   _sentryDsn: null,
   _enabled: true,
 
+  _initialized: false,
+
   init(sentryDsn) {
+    if (this._initialized) return;
+    this._initialized = true;
     this._sentryDsn = sentryDsn || null;
     this._installHandlers();
     console.log('[ErrorBoundary] Initialized');
   },
 
   _installHandlers() {
-    window.addEventListener('error', (event) => {
-      this._captureError({
+    var self = this;
+    window.addEventListener('error', function (event) {
+      self._captureError({
         type: 'uncaught_error',
         message: event.message || 'Unknown error',
         filename: event.filename || '',
         lineno: event.lineno || 0,
         colno: event.colno || 0,
         error: event.error || null,
-        stack: event.error?.stack || '',
+        stack: event.error && event.error.stack || '',
         timestamp: Date.now()
       });
     });
 
-    window.addEventListener('unhandledrejection', (event) => {
-      const reason = event.reason || {};
-      this._captureError({
+    window.addEventListener('unhandledrejection', function (event) {
+      var reason = event.reason || {};
+      self._captureError({
         type: 'unhandled_rejection',
         message: typeof reason === 'string' ? reason : (reason.message || 'Unhandled promise rejection'),
         error: reason,
-        stack: reason?.stack || '',
+        stack: reason && reason.stack || '',
         timestamp: Date.now()
       });
     });
 
-    window.addEventListener('error', (event) => {
+    window.addEventListener('error', function (event) {
       if (event.target && event.target.tagName) {
-        this._captureError({
+        self._captureError({
           type: 'resource_error',
-          message: `Failed to load: ${event.target.src || event.target.href || 'unknown'}`,
+          message: 'Failed to load: ' + (event.target.src || event.target.href || 'unknown'),
           timestamp: Date.now()
         });
       }

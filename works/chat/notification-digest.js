@@ -19,7 +19,7 @@
 
   function _uid()  { return (typeof currentUser !== 'undefined' ? currentUser : auth?.currentUser)?.uid || null; }
   function _db()   { return typeof db !== 'undefined' ? db : null; }
-  function _esc(s) { return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  function _esc(s) { return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#x27;'); }
 
   function _relTime(ts) {
     if (!ts) return '';

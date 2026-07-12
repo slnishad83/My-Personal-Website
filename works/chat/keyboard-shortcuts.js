@@ -9,8 +9,11 @@ const KeyboardShortcuts = {
   _enabled: true,
   _selectedMsgId: null,
 
+  _keydownBound: null,
+
   init() {
-    document.addEventListener('keydown', (e) => this._handleKeydown(e));
+    this._keydownBound = (e) => this._handleKeydown(e);
+    document.addEventListener('keydown', this._keydownBound);
     this._buildHelpPanel();
     console.log('[KeyboardShortcuts] Initialized — 30+ shortcuts active');
   },
@@ -633,31 +636,47 @@ const KeyboardShortcuts = {
     ];
 
     let html = `<div class="overlay hidden" id="keyboard-help-panel" role="dialog" aria-label="Keyboard Shortcuts" style="position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;">
-      <div style="background:var(--panel-bg, #1f2c34);border-radius:12px;max-width:720px;width:95%;max-height:85vh;overflow-y:auto;padding:24px;color:var(--text-primary, #e9edef);">
+      <div style="background:var(--surface-container, #1f2c34);border-radius:12px;max-width:720px;width:95%;max-height:85vh;overflow-y:auto;padding:24px;color:var(--on-surface, #e9edef);">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
           <h2 style="margin:0;font-size:20px;font-weight:600;">Keyboard Shortcuts</h2>
-          <button onclick="this.closest('.overlay').classList.add('hidden')" style="background:none;border:none;color:var(--text-primary, #e9edef);font-size:24px;cursor:pointer;padding:4px 8px;" aria-label="Close">✕</button>
+          <button id="kb-help-close" style="background:none;border:none;color:var(--on-surface, #e9edef);font-size:24px;cursor:pointer;padding:4px 8px;" aria-label="Close">&#10005;</button>
         </div>
         <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(200px, 1fr));gap:16px;">`;
 
-    for (const group of shortcuts) {
-      html += `<div><h3 style="margin:0 0 8px;font-size:13px;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-secondary, #8696a0);">${group.group}</h3>`;
-      for (const [key, desc] of group.items) {
-        html += `<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;">
-          <span style="font-size:13px;color:var(--text-primary, #e9edef);">${desc}</span>
-          <kbd style="background:var(--input-bg, #2a3942);padding:2px 8px;border-radius:4px;font-size:11px;font-family:monospace;color:var(--text-secondary, #8696a0);border:1px solid var(--border, #313d45);margin-left:8px;white-space:nowrap;">${key}</kbd>
-        </div>`;
+    for (var g = 0; g < shortcuts.length; g++) {
+      html += '<div><h3 style="margin:0 0 8px;font-size:13px;text-transform:uppercase;letter-spacing:0.5px;color:var(--on-surface-variant, #8696a0);">' + shortcuts[g].group + '</h3>';
+      for (var k = 0; k < shortcuts[g].items.length; k++) {
+        var item = shortcuts[g].items[k];
+        html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;">' +
+          '<span style="font-size:13px;color:var(--on-surface, #e9edef);">' + item[1].replace(/</g, '&lt;') + '</span>' +
+          '<kbd style="background:var(--surface-container-high, #2a3942);padding:2px 8px;border-radius:4px;font-size:11px;font-family:monospace;color:var(--on-surface-variant, #8696a0);border:1px solid var(--outline-variant, #313d45);margin-left:8px;white-space:nowrap;">' + item[0].replace(/</g, '&lt;') + '</kbd>' +
+          '</div>';
       }
       html += '</div>';
     }
 
     html += '</div></div></div>';
     document.body.insertAdjacentHTML('beforeend', html);
+    var closeBtn = document.getElementById('kb-help-close');
+    if (closeBtn) {
+      closeBtn.addEventListener('click', function () {
+        var panel = document.getElementById('keyboard-help-panel');
+        if (panel) panel.classList.add('hidden');
+      });
+    }
   },
 
   enable() { this._enabled = true; },
   disable() { this._enabled = false; },
-  destroy() { this._enabled = false; }
+  destroy() {
+    this._enabled = false;
+    if (this._keydownBound) {
+      document.removeEventListener('keydown', this._keydownBound);
+      this._keydownBound = null;
+    }
+    var panel = document.getElementById('keyboard-help-panel');
+    if (panel) panel.remove();
+  }
 };
 
 window.KeyboardShortcuts = KeyboardShortcuts;

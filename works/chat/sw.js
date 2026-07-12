@@ -157,7 +157,8 @@ self.addEventListener('notificationclick', event => {
   );
 });
 
-const CACHE_NAME = 'nsl-chat-v1';
+const CACHE_NAME = 'nsl-chat-v2';
+const CACHE_MAX_ENTRIES = 100;
 const STATIC_ASSETS = [
   'chat.css',
   'config.js',
@@ -209,17 +210,31 @@ self.addEventListener('install', event => {
         ...STATIC_ASSETS.map(url => cache.add(url).catch(() => null)),
         ...HTML_PAGES.map(url => cache.add(url).catch(() => null))
       ])
-    )).then(() => self.skipWaiting())
+    )).then(function () { return self.skipWaiting(); })
   );
 });
 
 self.addEventListener('activate', event => {
   event.waitUntil(
     caches.keys()
-      .then(keys => Promise.all(keys.map(key => {
-        if (key !== CACHE_NAME) return caches.delete(key);
-      })))
-      .then(() => self.clients.claim())
+      .then(function (keys) {
+        return Promise.all(keys.map(function (key) {
+          if (key !== CACHE_NAME) return caches.delete(key);
+        }));
+      })
+      .then(function () {
+        if (self.clients && self.clients.claim) return self.clients.claim();
+      })
+      .then(function () {
+        return caches.open(CACHE_NAME).then(function (cache) {
+          return cache.keys().then(function (keys) {
+            if (keys.length > CACHE_MAX_ENTRIES) {
+              var toDelete = keys.slice(0, keys.length - CACHE_MAX_ENTRIES);
+              return Promise.all(toDelete.map(function (req) { return cache.delete(req); }));
+            }
+          });
+        });
+      })
   );
 });
 
