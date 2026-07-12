@@ -57,8 +57,6 @@ html, body, #app { height: 100%; margin: 0; padding: 0; }
   }
   /* Show message action buttons on touch devices (no hover) */
   .group > button.opacity-0 { opacity: 0.7 !important; }
-  /* Hide format button on very small screens — saves input space */
-  #format-bar-btn { display: none !important; }
   /* Emoji grid fewer columns on narrow screens */
   #emoji-grid { grid-template-columns: repeat(7, 1fr) !important; }
   /* Recording bar: smaller buttons on mobile */
@@ -81,14 +79,12 @@ html, body, #app { height: 100%; margin: 0; padding: 0; }
 /* ── Small phones (<480px): hide extra input buttons, shrink header ── */
 @media (max-width: 479px) {
   /* Hide GIF and format buttons to save input space */
-  #input-bar .flex.items-center.gap-1 > button:nth-child(2) { display: none !important; }
-  #input-bar .flex.items-center.gap-1 > button:nth-child(3) { display: none !important; }
+  #gif-btn { display: none !important; }
+  #format-toggle { display: none !important; }
   /* Shrink header action buttons */
   #header-actions-container { gap: 0 !important; }
   #header-actions-container button { width: 32px; height: 32px; padding: 4px; }
   #header-actions-container button span { font-size: 20px; }
-  /* Hide video call button on small phones */
-  #btn-video-call { display: none !important; }
   /* Input bar: tighter gaps */
   #input-bar .glass-panel { gap: 4px !important; }
   #input-bar .flex.items-center.gap-1 { gap: 2px !important; }
@@ -608,8 +604,11 @@ button:focus-visible,
 
 /* ── Reduced data mode ─────────────────────────────────── */
 @media (prefers-reduced-data: reduce) {
-  .loading-skeleton { animation: none; }
-  .animate-bounce, .animate-pulse, .animate-spin { animation: none; }
+  .loading-skeleton { animation: none !important; }
+  .animate-bounce, .animate-pulse, .animate-spin,
+  .animate-fade-in, .animate-slide-up, .animate-scale-in { animation: none !important; }
+  .transition, .transition-all { transition-duration: 0.01s !important; }
+  img, video, .lazy-media { loading: lazy !important; }
 }
 
 /* ── Dark mode scrollbar track for messages ────────────── */

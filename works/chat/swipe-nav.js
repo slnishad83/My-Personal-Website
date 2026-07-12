@@ -25,7 +25,8 @@
   }
 
   function isChatOpen() {
-    return !!document.querySelector('.chat-container.chat-open');
+    var el = document.getElementById('chat-area');
+    return el && !el.classList.contains('hidden') && !el.classList.contains('hidden-mobile');
   }
 
   function isModalOpen() {
@@ -60,8 +61,8 @@
 
   /* ── DOM refs ──────────────────────────────────────────────────────── */
 
-  function chatContainer() { return document.querySelector('.chat-container'); }
-  function chatMainEl()    { return document.querySelector('.chat-main'); }
+  function chatContainer() { return document.getElementById('chat-area'); }
+  function chatMainEl()    { return document.getElementById('messages-wrap'); }
 
   /* ── drag visual state ─────────────────────────────────────────────── */
 
@@ -192,4 +193,18 @@
   } else {
     attach();
   }
+
+  /* ── Close mobile chat panel (called by swipe gesture) ─────────── */
+  window.closeMobileChatPanel = function() {
+    var chatArea = document.getElementById('chat-area');
+    var sidebar = document.getElementById('chat-list-sidebar');
+    var chatHeader = document.getElementById('chat-header');
+    if (chatArea) {
+      chatArea.classList.remove('visible-mobile');
+      chatArea.classList.add('hidden-mobile');
+    }
+    if (sidebar) sidebar.classList.remove('hidden');
+    if (chatHeader) chatHeader.style.display = 'none';
+    if (typeof renderChatList === 'function') renderChatList();
+  };
 })();

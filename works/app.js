@@ -1186,6 +1186,7 @@ function switchTab(tab) {
     } else {
       el.className = "tab-item w-full flex items-center gap-4 text-on-surface/60 hover:text-on-surface hover:bg-surface-container-highest transition-colors duration-200 px-4 py-3 cursor-pointer active:scale-95";
     }
+    el.setAttribute('aria-current', active ? 'page' : 'false');
   });
 
   // Bottom nav tab items active classes revamp
@@ -1193,6 +1194,7 @@ function switchTab(tab) {
     const active = el.dataset.tab === tab;
     el.classList.toggle('text-primary', active);
     el.classList.toggle('text-on-surface/60', !active);
+    el.setAttribute('aria-current', active ? 'page' : 'false');
   });
 
   // Clear active chat viewport if not matching active tab

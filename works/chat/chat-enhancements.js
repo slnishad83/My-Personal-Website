@@ -504,7 +504,7 @@
   }
 
   new MutationObserver(function () { enhanceScrollBtn(); })
-    .observe(document.getElementById('chatMain') || document.querySelector('.chat-main') || document.body,
+    .observe(document.getElementById('messages-wrap') || document.getElementById('chat-area') || document.body,
              { childList: true, subtree: false });
 
 

@@ -25,6 +25,12 @@
   <link rel="icon" href="/favicon.ico">
   <link rel="apple-touch-icon" href="app-icon-192.png">
 
+  <!-- Preconnect for faster external resource loading -->
+  <link rel="preconnect" href="https://cdn.tailwindcss.com">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="preconnect" href="https://cdnjs.cloudflare.com">
+
   <!-- Tailwind CSS Engine -->
   <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
 
@@ -428,10 +434,10 @@
             <button class="w-10 h-10 flex items-center justify-center text-on-surface-variant hover:text-primary hover:bg-surface-variant/30 rounded-full transition-all" onclick="toggleEmojiPicker()" aria-label="Emoji picker">
               <span class="material-symbols-outlined">mood</span>
             </button>
-            <button class="w-10 h-10 flex items-center justify-center text-on-surface-variant hover:text-primary hover:bg-surface-variant/30 rounded-full transition-all" onclick="openGifPicker()" aria-label="GIF search" title="GIFs">
+            <button class="w-10 h-10 flex items-center justify-center text-on-surface-variant hover:text-primary hover:bg-surface-variant/30 rounded-full transition-all" id="gif-btn" onclick="openGifPicker()" aria-label="GIF search" title="GIFs">
               <span class="material-symbols-outlined">gif_box</span>
             </button>
-            <button class="w-10 h-10 flex items-center justify-center text-on-surface-variant hover:text-primary hover:bg-surface-variant/30 rounded-full transition-all" onclick="toggleFormatBar()" aria-label="Text formatting">
+            <button class="w-10 h-10 flex items-center justify-center text-on-surface-variant hover:text-primary hover:bg-surface-variant/30 rounded-full transition-all" id="format-toggle" onclick="toggleFormatBar()" aria-label="Text formatting">
               <span class="material-symbols-outlined">format_size</span>
             </button>
             <!-- Mic / Send buttons -->
@@ -468,7 +474,7 @@
       </div>
 
       <!-- Emoji Popover Pick Grid -->
-      <div class="absolute bottom-20 right-6 bg-surface-container border border-outline-variant/30 rounded-2xl shadow-xl flex flex-col hidden z-30 w-80 h-96 overflow-hidden" id="emoji-picker" role="dialog">
+      <div class="absolute bottom-20 right-6 bg-surface-container border border-outline-variant/30 rounded-2xl shadow-xl flex flex-col hidden z-30 w-80 h-96 overflow-hidden" id="emoji-picker" role="dialog" aria-modal="true">
         <div class="p-2 border-b border-outline-variant/10">
           <input type="search" inputmode="search" id="emoji-search" placeholder="Search emoji..." class="w-full px-3 py-1.5 text-xs bg-surface-variant/40 border border-outline-variant/20 rounded-lg focus:outline-none focus:ring-1 focus:ring-primary/50 text-on-surface placeholder:text-on-surface-variant/60" oninput="searchEmoji(this.value)" aria-label="Search emoji">
         </div>
@@ -899,6 +905,10 @@
         <div class="absolute -top-1.5 -right-2 bg-secondary text-white text-[9px] w-4 h-4 rounded-full flex items-center justify-center font-bold hidden" id="requests-badge">0</div>
       </div>
       <span class="text-[10px] font-semibold">Requests</span>
+    </button>
+    <button class="bottom-nav-item flex flex-col items-center justify-center gap-1 text-on-surface-variant" data-tab="more" onclick="switchTab('more')" aria-label="Saved Items">
+      <span class="material-symbols-outlined text-2xl">bookmark</span>
+      <span class="text-[10px] font-semibold">Saved</span>
     </button>
     <button class="bottom-nav-item flex flex-col items-center justify-center gap-1 text-on-surface-variant" onclick="openProfile()" aria-label="Profile">
       <span class="material-symbols-outlined text-2xl">person</span>

@@ -19,7 +19,7 @@
     const chatPanel = document.getElementById('chat-area') ||
                       document.getElementById('messages-wrap') ||
                       document.querySelector('.chat-panel') ||
-                      document.querySelector('.messages-wrapper, .chat-main');
+                      document.querySelector('.messages-wrapper, #chat-area');
     const messagesArea = document.getElementById('messages-wrap');
     const target = chatPanel || messagesArea || document.body;
 
@@ -411,6 +411,119 @@
   }
 
   /* ================================================================
+     7. SWIPE-TO-REPLY GESTURE
+     Swipe left on a message bubble to trigger reply mode.
+     CSS for indicators is in message-actions.css.
+  ================================================================ */
+  function initSwipeToReply() {
+    const messagesWrap = document.getElementById('messages-wrap');
+    if (!messagesWrap) return;
+
+    const THRESHOLD = 70;
+    const MAX_DRAG = 120;
+    let activeMsg = null;
+    let startX = 0;
+    let startY = 0;
+    let dx = 0;
+    let locked = false;
+
+    function findMessageEl(target) {
+      let node = target;
+      while (node && node !== messagesWrap) {
+        if (node.classList && node.classList.contains('message') && node.dataset.msgId) return node;
+        node = node.parentElement;
+      }
+      return null;
+    }
+
+    function onStart(cx, cy, target) {
+      const msg = findMessageEl(target);
+      if (!msg) return;
+      const bubble = msg.querySelector('.message-bubble');
+      if (!bubble) return;
+      activeMsg = msg;
+      startX = cx;
+      startY = cy;
+      dx = 0;
+      locked = false;
+    }
+
+    function onMove(cx, cy) {
+      if (!activeMsg) return;
+      const bubble = activeMsg.querySelector('.message-bubble');
+      if (!bubble) { reset(); return; }
+      const diffX = cx - startX;
+      const diffY = cy - startY;
+      if (!locked) {
+        if (Math.abs(diffY) > 8 && Math.abs(diffY) > Math.abs(diffX)) { reset(); return; }
+        if (Math.abs(diffX) > 6) locked = true;
+        else return;
+      }
+      if (diffX > 0) { reset(); return; }
+      dx = Math.max(-MAX_DRAG, diffX);
+      bubble.style.setProperty('--reply-swipe-x', dx + 'px');
+      bubble.style.transition = 'none';
+      activeMsg.classList.toggle('reply-swipe-active', Math.abs(dx) >= 20);
+      activeMsg.classList.toggle('delete-swipe-active', dx < -50);
+    }
+
+    function onEnd() {
+      if (!activeMsg) return;
+      const msg = activeMsg;
+      const bubble = msg.querySelector('.message-bubble');
+      const shouldReply = Math.abs(dx) >= THRESHOLD;
+      const shouldDelete = dx < -90;
+      if (shouldReply && !shouldDelete) {
+        const msgId = msg.dataset.msgId;
+        const sender = msg.dataset.sender || '';
+        const text = (bubble?.textContent || '').substring(0, 80);
+        if (typeof window.startReply === 'function') {
+          window.startReply(msgId, sender, text);
+        } else if (typeof window.replyToMessage === 'function') {
+          window.replyToMessage(msgId);
+        } else {
+          const input = document.getElementById('msg-input');
+          if (input) {
+            input.dataset.replyTo = msgId;
+            input.dataset.replyToSender = sender;
+            input.placeholder = 'Reply to ' + (sender || 'message') + '...';
+            input.focus();
+          }
+        }
+      }
+      reset();
+    }
+
+    function reset() {
+      if (activeMsg) {
+        const bubble = activeMsg.querySelector('.message-bubble');
+        if (bubble) {
+          bubble.style.transition = 'transform 200ms ease';
+          bubble.style.removeProperty('--reply-swipe-x');
+        }
+        activeMsg.classList.remove('reply-swipe-active', 'delete-swipe-active');
+      }
+      activeMsg = null;
+      dx = 0;
+      locked = false;
+    }
+
+    messagesWrap.addEventListener('touchstart', function(e) {
+      const t = e.touches[0];
+      onStart(t.clientX, t.clientY, e.target);
+    }, { passive: true });
+
+    messagesWrap.addEventListener('touchmove', function(e) {
+      const t = e.touches[0];
+      onMove(t.clientX, t.clientY);
+      if (locked && dx < 0 && e.cancelable) e.preventDefault();
+    }, { passive: false });
+
+    messagesWrap.addEventListener('touchend', onEnd, { passive: true });
+    messagesWrap.addEventListener('touchcancel', reset, { passive: true });
+  }
+
+  /* ================================================================
      INIT — run after DOM + app is ready
   ================================================================ */
   function init() {
@@ -419,6 +532,7 @@
     patchSendMessageRateLimit();
     watchCallModal();
     watchCallEnd();
+    initSwipeToReply();
   }
 
   if (document.readyState === 'complete' || document.readyState === 'interactive') {

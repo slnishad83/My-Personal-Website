@@ -4,9 +4,9 @@
     <meta charset="UTF-8" />
     <meta
       name="viewport"
-      content="width=device-width, initial-scale=1.0, user-scalable=yes, viewport-fit=cover"
+      content="width=device-width, initial-scale=1.0, user-scalable=yes, maximum-scale=5, viewport-fit=cover, interactive-widget=resizes-content"
     />
-    <meta name="theme-color" content="#008069" />
+    <meta name="theme-color" content="#11131c" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta
@@ -17,6 +17,9 @@
     <link rel="canonical" href="https://nishadsl.com/works/chat" />
     <link rel="manifest" href="manifest.json?v=98" />
     <link rel="apple-touch-icon" href="app-icon-192.png" />
+    <link rel="preconnect" href="https://cdn.tailwindcss.com">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;700&amp;family=Geist:wght@400;600;700&amp;family=Inter:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
@@ -465,13 +468,13 @@
                 Download App
               </button>
               
-              <!-- Hardware Auth elements -->
-              <div class="flex items-center justify-center gap-md mt-lg">
-                <button type="button" class="flex items-center gap-2 px-md py-sm rounded-full glass-panel text-on-surface dark:text-white hover:text-primary-container dark:hover:text-[#34ffc5] transition-all text-xs font-medium border border-slate-200 dark:border-white/10 bg-white/40 dark:bg-[#161d28]/40">
+              <!-- Hardware Auth elements (placeholder — not yet implemented) -->
+              <div class="flex items-center justify-center gap-md mt-lg hidden">
+                <button type="button" disabled class="flex items-center gap-2 px-md py-sm rounded-full glass-panel text-on-surface dark:text-white transition-all text-xs font-medium border border-slate-200 dark:border-white/10 bg-white/40 dark:bg-[#161d28]/40 opacity-50 cursor-not-allowed">
                   <span class="material-symbols-outlined text-sm">fingerprint</span>
                   Biometric
                 </button>
-                <button type="button" class="flex items-center gap-2 px-md py-sm rounded-full glass-panel text-on-surface dark:text-white hover:text-primary-container dark:hover:text-[#34ffc5] transition-all text-xs font-medium border border-slate-200 dark:border-white/10 bg-white/40 dark:bg-[#161d28]/40">
+                <button type="button" disabled class="flex items-center gap-2 px-md py-sm rounded-full glass-panel text-on-surface dark:text-white transition-all text-xs font-medium border border-slate-200 dark:border-white/10 bg-white/40 dark:bg-[#161d28]/40 opacity-50 cursor-not-allowed">
                   <span class="material-symbols-outlined text-sm">key</span>
                   SSO
                 </button>
