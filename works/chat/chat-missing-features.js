@@ -214,6 +214,23 @@
   }
   window._generateVideoThumbnail = generateVideoThumbnail;
 
+  /* ================================================================
+     2b. IMAGE COMPRESSION PATCH
+     Wraps handleFileUpload to compress images before sending
+  ================================================================ */
+  function patchImageCompression() {
+    const _orig = window.handleFileUpload;
+    if (typeof _orig !== 'function') return;
+    window.handleFileUpload = async function (file) {
+      if (file && file.type && file.type.startsWith('image/') && file.type !== 'image/gif') {
+        try {
+          file = await compressImage(file);
+        } catch (_) {}
+      }
+      return _orig.call(this, file);
+    };
+  }
+
   // Patch handleFileUpload to auto-generate and store thumbnail for videos
   function patchVideoThumbnail() {
     const _orig = window.handleFileUpload;
@@ -591,6 +608,7 @@
   ================================================================ */
   function init() {
     initDragAndDrop();
+    patchImageCompression();
     patchVideoThumbnail();
     patchSendMessageRateLimit();
     watchCallModal();

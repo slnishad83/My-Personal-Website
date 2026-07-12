@@ -143,7 +143,11 @@
       return;
     }
 
-    window.alert(message);
+    if (typeof window.showToast === "function") {
+      window.showToast(message, "info");
+    } else {
+      console.debug("[PWA]", message);
+    }
   }
 
   function getManualInstallMessage() {
