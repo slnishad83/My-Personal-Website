@@ -433,7 +433,7 @@
 .cf-pill-received{color:#1565c0;background:#e3f0ff}\
 .cf-pill-sent{color:#e65100;background:#fff3e0}\
 .cf-pill-accepted{color:#2e7d32;background:#e8f5e9}\
-.cf-pill-count{color:#555;background:#f0f0f0;font-size:11px;min-width:22px;\
+.cf-pill-count{color:var(--text-secondary,#555);background:var(--bg,#f0f0f0);font-size:11px;min-width:22px;\
   justify-content:center;border-radius:12px;padding:2px 8px}\
 \
 /* ── Request preview row ─────────────────────────── */\
@@ -480,7 +480,7 @@
 .cf-chip:hover{background:var(--panel-hover,#f5f5f5)}\
 .cf-chip-active{\
   background:var(--brand,#075e54) !important;\
-  color:#fff !important;border-color:var(--brand,#075e54) !important;\
+  color:var(--on-primary,#fff) !important;border-color:var(--brand,#075e54) !important;\
 }\
 \
 /* ── Pinned bar ──────────────────────────────────── */\
@@ -495,15 +495,15 @@
 .cf-pin-body{flex:1;min-width:0}\
 .cf-pin-sender{font-weight:600;font-size:11px;color:var(--primary,#075e54);\
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis}\
-.cf-pin-text{font-size:12px;color:#555;\
+.cf-pin-text{font-size:12px;color:var(--text-secondary,#555);\
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis}\
 .cf-unpin-btn{\
-  background:none;border:none;cursor:pointer;color:#aaa;\
+  background:none;border:none;cursor:pointer;color:var(--text-secondary,#aaa);\
   font-size:16px;padding:4px 6px;flex-shrink:0;line-height:1;\
   min-width:32px;min-height:32px;\
   display:flex;align-items:center;justify-content:center;\
 }\
-.cf-unpin-btn:hover{color:#e53935}\
+.cf-unpin-btn:hover{color:var(--error,#e53935)}\
 \
 /* ══ RESPONSIVE ═══════════════════════════════════════════ */\
 @media(max-width:720px){\
@@ -536,16 +536,16 @@
 \
 /* Dark mode */\
 @media(prefers-color-scheme:dark){\
-  .cf-pill-received{color:#90caf9;background:#1a2a3a}\
-  .cf-pill-sent{color:#ffcc80;background:#2a1a0a}\
-  .cf-pill-accepted{color:#a5d6a7;background:#0a2a0a}\
-  .cf-pill-count{color:#ccc;background:#333}\
-  .cf-search-inner{background:var(--input-bg,#2a2a2a);border-color:#444}\
+  .cf-pill-received{color:#90caf9;background:var(--surface,#1a2a3a)}\
+  .cf-pill-sent{color:#ffcc80;background:var(--surface,#2a1a0a)}\
+  .cf-pill-accepted{color:#a5d6a7;background:var(--surface,#0a2a0a)}\
+  .cf-pill-count{color:var(--text-secondary,#ccc);background:var(--surface,#333)}\
+  .cf-search-inner{background:var(--input-bg,#2a2a2a);border-color:var(--border,#444)}\
   .cf-search-input{color:var(--text,#eee)}\
-  .cf-chip{background:var(--panel,#1e1e1e);color:var(--text,#ddd);border-color:#444}\
+  .cf-chip{background:var(--panel,#1e1e1e);color:var(--text,#ddd);border-color:var(--border,#444)}\
   .cf-chip:hover{background:var(--panel-hover,#2a2a2a)}\
   .cf-pin-item{border-bottom-color:var(--border,#333)}\
-  .cf-pin-text{color:#aaa}\
+  .cf-pin-text{color:var(--text-secondary,#aaa)}\
 }\
 ';
   document.head.appendChild(style);
