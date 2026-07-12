@@ -99,30 +99,37 @@
       const files = Array.from(e.dataTransfer.files || []);
       if (!files.length) return;
 
-      const file = files[0]; // handle first file (batch can be added later)
-      try {
-        if (typeof window.handleFileUpload === 'function') {
-          await window.handleFileUpload(file);
-        } else {
-          // Fallback: trigger the hidden file input
-          const fileInput = document.getElementById('fileInput') ||
-                            document.querySelector('input[type="file"]') ||
-                            document.getElementById('media-file-input');
-          if (fileInput) {
-            const dt = new DataTransfer();
-            dt.items.add(file);
-            fileInput.files = dt.files;
-            fileInput.dispatchEvent(new Event('change', { bubbles: true }));
+      // D-M16: Process ALL dropped files (batch upload), not just the first
+      let sentCount = 0;
+      let failedCount = 0;
+      for (const file of files) {
+        try {
+          if (typeof window.handleFileUpload === 'function') {
+            await window.handleFileUpload(file);
+            sentCount++;
+          } else {
+            // Fallback: trigger the hidden file input for each file
+            const fileInput = document.getElementById('fileInput') ||
+                              document.querySelector('input[type="file"]') ||
+                              document.getElementById('media-file-input');
+            if (fileInput) {
+              const dt = new DataTransfer();
+              dt.items.add(file);
+              fileInput.files = dt.files;
+              fileInput.dispatchEvent(new Event('change', { bubbles: true }));
+              sentCount++;
+            }
           }
+        } catch (err) {
+          failedCount++;
         }
-        if (files.length > 1) {
-          if (typeof window.showToast === 'function') {
-            window.showToast(`${files.length - 1} more file(s) dropped — send one at a time`, 'info');
-          }
-        }
-      } catch (err) {
+      }
+      if (files.length > 1) {
+        const msg = failedCount > 0
+          ? `${sentCount} file(s) attached, ${failedCount} failed`
+          : `${sentCount} file(s) attached`;
         if (typeof window.showToast === 'function') {
-          window.showToast('Could not attach dropped file', 'error');
+          window.showToast(msg, failedCount > 0 ? 'error' : 'success');
         }
       }
     });

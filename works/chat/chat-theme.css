@@ -1504,3 +1504,79 @@ html[data-theme="light"], html:not(.dark) {
     max-width: none !important;
   }
 }
+
+/* ── D-M19: Desktop-optimized group call layout ────────────────── */
+@media (min-width: 1024px) and (pointer: fine) {
+  #call-screen .call-participants {
+    display: grid !important;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)) !important;
+    gap: 16px !important;
+    padding: 24px !important;
+  }
+  #call-screen .call-participant {
+    border-radius: 16px !important;
+    overflow: hidden !important;
+  }
+}
+
+/* ── D-M1: Enhanced tooltip styles (CSS-based, supplements title) ── */
+[data-tooltip] {
+  position: relative;
+}
+[data-tooltip]::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--surface-container-highest, #323739);
+  color: var(--text-primary, #e9edef);
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+  z-index: 9999;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+}
+[data-tooltip]:hover::after {
+  opacity: 1;
+}
+[data-tooltip][data-tooltip-pos="bottom"]::after {
+  bottom: auto;
+  top: calc(100% + 8px);
+}
+
+/* ── D-M18: Desktop notification sound indicator ────────────────── */
+.notification-sound-active {
+  position: relative;
+}
+.notification-sound-active::after {
+  content: "🔊";
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  font-size: 10px;
+}
+
+/* ── D-M22: Quick new message button on desktop ─────────────────── */
+@media (min-width: 1024px) and (pointer: fine) {
+  #scroll-to-bottom {
+    width: 48px !important;
+    height: 48px !important;
+    border-radius: 50% !important;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.2) !important;
+  }
+}
+
+/* ── D-M9: Chat list hover effect — desktop only ────────────────── */
+@media (hover: hover) and (pointer: fine) {
+  .chat-list-item {
+    transition: background 0.15s ease, transform 0.1s ease !important;
+  }
+  .chat-list-item:hover {
+    transform: translateX(2px) !important;
+  }
+}

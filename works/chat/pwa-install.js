@@ -12,6 +12,8 @@
   const isEdge = /edg/i.test(userAgent);
   const isFirefox = /firefox|fxios/i.test(userAgent);
   const isAndroid = /android/i.test(userAgent);
+  const isLinux = /linux/i.test(userAgent) && !isAndroid && !isIos;
+  const isChrome = /chrome|crios/i.test(userAgent);
   const supportsAndroidIntent = /chrome|crios|edg|opr|samsungbrowser/i.test(
     userAgent,
   );
@@ -154,6 +156,17 @@
       return "Open Safari Share, then choose Add to Dock or Add to Home Screen.";
     }
 
+    // D-C8: Linux-specific PWA install instructions
+    if (isLinux) {
+      if (isChrome || /chrome|crios/i.test(userAgent)) {
+        return "In Chrome, click the three-dot menu (⋮) → "Install app" or "Create shortcut" to install NSL Chat on your Linux desktop. You can also pin it to your taskbar from the installed app.";
+      }
+      if (isEdge || /edg/i.test(userAgent)) {
+        return "In Edge, click the three-dot menu → "Install this site as an app" to add NSL Chat to your Linux desktop.";
+      }
+      return "Open your browser menu (three dots or hamburger) and choose "Install app", "Add to desktop", or "Create shortcut" to install NSL Chat on your Linux system.";
+    }
+
     return "Open your browser menu and choose Install app, Add to desktop, or Add to Home Screen.";
   }
 
@@ -170,6 +183,14 @@
       setHelp(
         "Already installed? This opens the Android app. Otherwise, it downloads the APK for installation.",
       );
+      return;
+    }
+
+    // D-C8: Linux — always show manual install (beforeinstallprompt never fires on Linux)
+    if (isLinux) {
+      setButtonLabels("Install App");
+      setButtonsVisible(true);
+      setHelp(getManualInstallMessage());
       return;
     }
 

@@ -505,11 +505,14 @@
       }, 120);
     });
 
-    // Copy link
+    // Copy link (D-L8: Modern Clipboard API first, fallback to execCommand)
     document.getElementById("_fva_copy").addEventListener("click", () => {
       const url = (_items[_idx] || {}).url; if (!url) return;
-      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(url).then(() => _toast("Link copied"));
-      else { const ta = document.createElement("textarea"); ta.value = url; document.body.appendChild(ta); ta.select(); document.execCommand("copy"); document.body.removeChild(ta); _toast("Link copied"); }
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(url).then(() => _toast("Link copied")).catch(() => _fallbackCopy(url));
+      } else {
+        _fallbackCopy(url);
+      }
     });
 
     // Rotate
@@ -757,6 +760,19 @@
   }
   function _basename(url) {
     try { return decodeURIComponent((url || "").split("?")[0].split("/").pop()) || "Media"; } catch(_) { return "Media"; }
+  }
+  // D-L8: Modern clipboard fallback (no deprecated execCommand)
+  function _fallbackCopy(text) {
+    const ta = document.createElement("textarea");
+    ta.value = text;
+    ta.style.position = "fixed";
+    ta.style.left = "-9999px";
+    ta.setAttribute("readonly", "");
+    document.body.appendChild(ta);
+    ta.select();
+    try { document.execCommand("copy"); _toast("Copied"); }
+    catch(e) { _toast("Copy failed — select and copy manually", "error"); }
+    document.body.removeChild(ta);
   }
   function _toast(msg, type) {
     if (typeof window.showToast === "function") window.showToast(msg, type || "success");
