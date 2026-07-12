@@ -26,17 +26,17 @@
     <script>
       (function() {
         var mode = localStorage.getItem("themeMode") || "system";
+        var dark;
         if (mode === "system") {
-          var dark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
-          document.documentElement.className = dark ? "dark" : "light";
-          document.documentElement.dataset.theme = dark ? "dark" : "light";
+          dark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
         } else {
-          document.documentElement.className = mode;
-          document.documentElement.dataset.theme = mode;
+          dark = mode === "dark";
         }
-        document.addEventListener("DOMContentLoaded", function () {
-          document.body.classList.toggle("dark", document.documentElement.dataset.theme === "dark");
-        });
+        document.documentElement.className = dark ? "dark" : "light";
+        document.documentElement.dataset.theme = dark ? "dark" : "light";
+        if (dark) {
+          document.documentElement.style.colorScheme = "dark";
+        }
       })();
     </script>
     <script id="tailwind-config">
@@ -45,53 +45,53 @@
           theme: {
             extend: {
               "colors": {
-                      "surface-variant": "#e0e3e5",
-                      "tertiary-fixed-dim": "#7bd0ff",
-                      "surface-bright": "#f7f9fb",
-                      "secondary-fixed-dim": "#bec6e0",
-                      "surface-container-lowest": "#ffffff",
-                      "surface-container-low": "#f2f4f6",
-                      "error-container": "#ffdad6",
-                      "outline": "#6a7b72",
-                      "on-tertiary-fixed-variant": "#004c69",
-                      "on-primary-container": "#007255",
-                      "secondary-container": "#dae2fd",
-                      "primary-fixed": "#34ffc5",
-                      "on-surface-variant": "#3a4a43",
-                      "on-secondary-fixed-variant": "#3f465c",
-                      "secondary": "#565e74",
-                      "primary": "#006c51",
-                      "on-secondary": "#ffffff",
-                      "error": "#ba1a1a",
-                      "on-error": "#ffffff",
-                      "tertiary-fixed": "#c4e7ff",
-                      "surface-container": "#eceef0",
-                      "inverse-primary": "#00e1ac",
-                      "on-error-container": "#93000a",
-                      "on-tertiary": "#ffffff",
-                      "on-surface": "#191c1e",
-                      "surface-tint": "#006c51",
-                      "primary-fixed-dim": "#00e1ac",
-                      "on-secondary-container": "#5c647a",
-                      "surface-dim": "#d8dadc",
-                      "inverse-on-surface": "#eff1f3",
-                      "tertiary": "#00668a",
-                      "on-secondary-fixed": "#131b2e",
-                      "secondary-fixed": "#dae2fd",
-                      "on-primary-fixed-variant": "#00513c",
-                      "primary-container": "#00ffc3",
-                      "on-primary-fixed": "#002116",
-                      "on-tertiary-fixed": "#001e2c",
-                      "outline-variant": "#b9cbc1",
-                      "surface-container-high": "#e6e8ea",
-                      "on-primary": "#ffffff",
-                      "surface": "#f7f9fb",
-                      "on-background": "#191c1e",
-                      "background": "#f7f9fb",
-                      "on-tertiary-container": "#006b92",
-                      "tertiary-container": "#c2e7ff",
-                      "surface-container-highest": "#e0e3e5",
-                      "inverse-surface": "#2d3133"
+                      "surface-variant": "var(--surface-variant)",
+                      "tertiary-fixed-dim": "var(--tertiary-fixed-dim)",
+                      "surface-bright": "var(--surface-bright)",
+                      "secondary-fixed-dim": "var(--secondary-fixed-dim)",
+                      "surface-container-lowest": "var(--surface-container-lowest)",
+                      "surface-container-low": "var(--surface-container-low)",
+                      "error-container": "var(--error-container)",
+                      "outline": "var(--outline)",
+                      "on-tertiary-fixed-variant": "var(--on-tertiary-fixed-variant)",
+                      "on-primary-container": "var(--on-primary-container)",
+                      "secondary-container": "var(--secondary-container)",
+                      "primary-fixed": "var(--primary-fixed)",
+                      "on-surface-variant": "var(--on-surface-variant)",
+                      "on-secondary-fixed-variant": "var(--on-secondary-fixed-variant)",
+                      "secondary": "var(--secondary)",
+                      "primary": "var(--primary)",
+                      "on-secondary": "var(--on-secondary)",
+                      "error": "var(--error)",
+                      "on-error": "var(--on-error)",
+                      "tertiary-fixed": "var(--tertiary-fixed)",
+                      "surface-container": "var(--surface-container)",
+                      "inverse-primary": "var(--inverse-primary)",
+                      "on-error-container": "var(--on-error-container)",
+                      "on-tertiary": "var(--on-tertiary)",
+                      "on-surface": "var(--on-surface)",
+                      "surface-tint": "var(--surface-tint)",
+                      "primary-fixed-dim": "var(--primary-fixed-dim)",
+                      "on-secondary-container": "var(--on-secondary-container)",
+                      "surface-dim": "var(--surface-dim)",
+                      "inverse-on-surface": "var(--inverse-on-surface)",
+                      "tertiary": "var(--tertiary)",
+                      "on-secondary-fixed": "var(--on-secondary-fixed)",
+                      "secondary-fixed": "var(--secondary-fixed)",
+                      "on-primary-fixed-variant": "var(--on-primary-fixed-variant)",
+                      "primary-container": "var(--primary-container)",
+                      "on-primary-fixed": "var(--on-primary-fixed)",
+                      "on-tertiary-fixed": "var(--on-tertiary-fixed)",
+                      "outline-variant": "var(--outline-variant)",
+                      "surface-container-high": "var(--surface-container-high)",
+                      "on-primary": "var(--on-primary)",
+                      "surface": "var(--surface)",
+                      "on-background": "var(--on-background)",
+                      "background": "var(--background)",
+                      "on-tertiary-container": "var(--on-tertiary-container)",
+                      "tertiary-container": "var(--tertiary-container)",
+                      "surface-container-highest": "var(--surface-container-highest)",
+                      "inverse-surface": "var(--inverse-surface)"
               },
               "borderRadius": {
                       "DEFAULT": "0.125rem",
@@ -131,6 +131,48 @@
         }
     </script>
     <style>
+        :root {
+          --primary: #5348d4; --on-primary: #ffffff; --primary-container: #e3dfff;
+          --on-primary-container: #120068; --primary-fixed: #e3dfff; --primary-fixed-dim: #c4c0ff;
+          --on-primary-fixed: #120068; --on-primary-fixed-variant: #3b2bbc;
+          --secondary: #a90050; --on-secondary: #ffffff; --secondary-container: #ffd9e0;
+          --on-secondary-container: #3f001a; --secondary-fixed: #ffd9e0; --secondary-fixed-dim: #ffb1c4;
+          --on-secondary-fixed: #3f001a; --on-secondary-fixed-variant: #8f0043;
+          --tertiary: #5a5d89; --on-tertiary: #ffffff; --tertiary-container: #dfe0ff;
+          --on-tertiary-container: #171b3c; --tertiary-fixed: #dfe0ff; --tertiary-fixed-dim: #4e5481;
+          --on-tertiary-fixed: #13183f; --on-tertiary-fixed-variant: #3f446d;
+          --background: #fdfbff; --on-background: #191b24;
+          --surface: #fdfbff; --on-surface: #191b24; --surface-variant: #e4e1f1;
+          --on-surface-variant: #474554; --surface-dim: #dad9e5; --surface-bright: #fdfbff;
+          --surface-container-lowest: #ffffff; --surface-container-low: #f5f3ff;
+          --surface-container: #efedf8; --surface-container-high: #e7e6f0;
+          --surface-container-highest: #e1e1ef;
+          --outline: #777685; --outline-variant: #c8c4d7; --surface-tint: #5348d4;
+          --inverse-surface: #2e303a; --inverse-on-surface: #f2f0f7; --inverse-primary: #c4c0ff;
+          --error: #ba1a1a; --on-error: #ffffff; --error-container: #ffdad6;
+          --on-error-container: #410002;
+        }
+        .dark {
+          --primary: #c4c0ff; --on-primary: #2200a3; --primary-container: #8881ff;
+          --on-primary-container: #1d0090; --primary-fixed: #e3dfff; --primary-fixed-dim: #c4c0ff;
+          --on-primary-fixed: #120068; --on-primary-fixed-variant: #3b2bbc;
+          --secondary: #ffb1c4; --on-secondary: #65002e; --secondary-container: #9c014a;
+          --on-secondary-container: #ffa6bc; --secondary-fixed: #ffd9e0; --secondary-fixed-dim: #ffb1c4;
+          --on-secondary-fixed: #3f001a; --on-secondary-fixed-variant: #8f0043;
+          --tertiary: #bfc3f4; --on-tertiary: #282d55; --tertiary-container: #898ebb;
+          --on-tertiary-container: #21264e; --tertiary-fixed: #dfe0ff; --tertiary-fixed-dim: #bfc3f4;
+          --on-tertiary-fixed: #13183f; --on-tertiary-fixed-variant: #3f446d;
+          --background: #11131c; --on-background: #e1e1ef;
+          --surface: #11131c; --on-surface: #e1e1ef; --surface-variant: #32343e;
+          --on-surface-variant: #c8c4d7; --surface-dim: #11131c; --surface-bright: #373943;
+          --surface-container-lowest: #0c0e17; --surface-container-low: #191b24;
+          --surface-container: #1d1f29; --surface-container-high: #282933;
+          --surface-container-highest: #32343e;
+          --outline: #918fa0; --outline-variant: #474554; --surface-tint: #c4c0ff;
+          --inverse-surface: #e1e1ef; --inverse-on-surface: #2e303a; --inverse-primary: #5348d4;
+          --error: #ffb4ab; --on-error: #690005; --error-container: #93000a;
+          --on-error-container: #ffdad6;
+        }
         .material-symbols-outlined {
             font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
             vertical-align: middle;

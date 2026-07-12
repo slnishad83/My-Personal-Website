@@ -37,8 +37,13 @@ function getAuthPersistence() {
 const authPersistenceReady = Promise.race([
   auth.setPersistence(getAuthPersistence()),
   new Promise((resolve) => setTimeout(resolve, 1000)),
-]).catch((error) => {
+]).then(() => {
+  if (typeof window.showToast === 'function' && !isLikelyPrivateSession()) return;
+}).catch((error) => {
   console.error("Persistence error:", error);
+  if (typeof window.showToast === 'function') {
+    window.showToast('Login session storage unavailable. You may need to sign in again after closing the app.', 'error');
+  }
 });
 
 window.addEventListener("beforeunload", () => {
@@ -321,3 +326,50 @@ let privacySettings = {
 
 // Wallpaper Settings (per chat)
 let chatWallpapers = {};
+
+/* ── NP2: Firestore listener dedup guard ───────────────────── */
+const _activeListeners = new Map();
+function dedupFirestoreListener(key, subscribeFn) {
+  if (_activeListeners.has(key)) {
+    console.warn(`[Firestore] Duplicate listener suppressed: ${key}`);
+    return _activeListeners.get(key);
+  }
+  const unsub = subscribeFn();
+  _activeListeners.set(key, unsub);
+  return unsub;
+}
+function removeDedupListener(key) {
+  const unsub = _activeListeners.get(key);
+  if (unsub) { try { unsub(); } catch (_) {} _activeListeners.delete(key); }
+}
+
+/* ── BR1: Pause/resume Firestore listeners in background ───── */
+let _bgPaused = false;
+let _bgPauseTimer = null;
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden') {
+    _bgPauseTimer = setTimeout(() => {
+      _bgPaused = true;
+      console.log('[App] Background — pausing non-critical listeners');
+      if (typeof window.pauseBackgroundListeners === 'function') window.pauseBackgroundListeners();
+    }, 30000);
+  } else {
+    clearTimeout(_bgPauseTimer);
+    if (_bgPaused) {
+      _bgPaused = false;
+      console.log('[App] Foreground — resuming listeners');
+      if (typeof window.resumeBackgroundListeners === 'function') window.resumeBackgroundListeners();
+    }
+  }
+});
+
+/* ── C3: Release wake lock when call ends or page hidden ───── */
+function releaseWakeLock() {
+  if (window.wakeLock) {
+    try { window.wakeLock.release(); } catch (_) {}
+    window.wakeLock = null;
+  }
+}
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden') releaseWakeLock();
+});

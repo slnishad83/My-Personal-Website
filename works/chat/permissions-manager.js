@@ -455,7 +455,13 @@ window.PermissionsManager = {
         }
       }
     }
-    _showToast("Please open device settings to manage permissions", "info");
+    if (/iPhone|iPad|iPod/i.test(navigator.userAgent)) {
+      _showToast("Go to Settings > Safari > Camera to enable camera access", "info");
+    } else if (/Android/i.test(navigator.userAgent)) {
+      _showToast("Go to Settings > Apps > NSL Chat > Permissions > Camera", "info");
+    } else {
+      _showToast("Please open device settings to manage permissions", "info");
+    }
   },
 
   getInfo(id) {

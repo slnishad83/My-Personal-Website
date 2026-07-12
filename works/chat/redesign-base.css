@@ -50,6 +50,20 @@
   --app-safe-right: env(safe-area-inset-right, 0px);
   --app-safe-bottom: env(safe-area-inset-bottom, 0px);
   --app-safe-left: env(safe-area-inset-left, 0px);
+
+  /* D-H3: Z-index system (base layer) */
+  --z-base: 1;
+  --z-sidebar: 20;
+  --z-chatlist: 25;
+  --z-chatarea: 30;
+  --z-bottomnav: 40;
+  --z-detail-panel: 45;
+  --z-overlay: 50;
+  --z-context-menu: 80;
+  --z-toast: 99;
+  --z-modal-overlay: 100;
+  --z-modal: 101;
+  --z-fullscreen: 9999;
 }
 
 /* ── Base ── */
@@ -329,7 +343,7 @@ body {
 }
 
 /* ── Skeleton Shimmer ── */
-.skeleton {
+.skeleton, .loading-skeleton {
   background: linear-gradient(90deg, var(--border) 25%, transparent 50%, var(--border) 75%);
   background-size: 200% 100%;
   animation: shimmer 1.5s infinite;
@@ -342,7 +356,7 @@ body {
 }
 
 /* ── Loading Spinner ── */
-.spinner {
+.spinner, .loading-spinner {
   width: 40px;
   height: 40px;
   border-radius: 50%;
@@ -376,6 +390,28 @@ body {
 }
 
 .empty-state p { margin: 0; font-size: 14px; line-height: 1.5; }
+
+/* D-H16: Desktop-optimized empty states */
+@media (min-width: 1024px) {
+  .empty-state {
+    padding: 80px 48px !important;
+    gap: 16px !important;
+  }
+  .empty-state .mat-icon {
+    font-size: 80px !important;
+    opacity: 0.25 !important;
+  }
+  .empty-state p {
+    font-size: 16px !important;
+    max-width: 420px !important;
+  }
+  .empty-state h3 {
+    font-size: 22px !important;
+  }
+  .empty-state .btn {
+    margin-top: 8px !important;
+  }
+}
 
 /* ── Bottom Navigation ── */
 .bottom-nav {

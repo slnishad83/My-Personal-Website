@@ -18,7 +18,7 @@ const Platform = (() => {
     window.matchMedia('(spanning: single-fold-vertical)').matches ||
     window.matchMedia('(spanning: single-fold-horizontal)').matches ||
     window.matchMedia('(spanning: none)').matches && maxTouch > 0 && /Samsung/i.test(ua)
-  );
+  ) || (isMobile && screen.width >= 600 && screen.width <= 900 && maxTouch > 0);
 
   /* ── Operating System ───────────────────────────────────── */
   const isIOS = /iPhone|iPad|iPod/i.test(ua) || (pf === 'MacIntel' && maxTouch > 1);

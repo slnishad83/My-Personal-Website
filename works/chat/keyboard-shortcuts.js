@@ -1,16 +1,18 @@
 /* ============================================================
-   KEYBOARD SHORTCUTS — WhatsApp-style keyboard navigation
-   Escape to close, Ctrl+Shift+F to search, Arrow keys, etc.
+   KEYBOARD SHORTCUTS — Desktop-Grade Keyboard Navigation (D-C4)
+   30+ shortcuts covering every desktop interaction pattern.
    ============================================================ */
 'use strict';
 
 const KeyboardShortcuts = {
   _handlers: [],
   _enabled: true,
+  _selectedMsgId: null,
 
   init() {
     document.addEventListener('keydown', (e) => this._handleKeydown(e));
-    console.log('[KeyboardShortcuts] Initialized');
+    this._buildHelpPanel();
+    console.log('[KeyboardShortcuts] Initialized — 30+ shortcuts active');
   },
 
   _handleKeydown(e) {
@@ -18,53 +20,437 @@ const KeyboardShortcuts = {
     const target = e.target;
     const isInput = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable;
     const isMeta = e.ctrlKey || e.metaKey;
+    const isAlt = e.altKey;
+    const isShift = e.shiftKey;
     const isOverlayOpen = document.querySelector('.overlay:not(.hidden)');
+    const isChatInput = target.id === 'msg-input';
 
-    /* ── Escape: Close overlays/modals ──────────────────── */
+    /* ── Escape: Close overlays/modals/popovers ──────────── */
     if (e.key === 'Escape') {
-      if (isOverlayOpen) return;
+      // Priority order: fullscreen > picture-in-picture > overlays > emoji > attach > format > search > detail panel
+      if (typeof document.fullscreenElement !== 'undefined' && document.fullscreenElement) {
+        document.exitFullscreen().catch(() => {});
+        e.preventDefault();
+        return;
+      }
+      if (document.pictureInPictureElement) {
+        document.pictureInPictureElement.exitPictureInPicture().catch(() => {});
+        e.preventDefault();
+        return;
+      }
       if (window.App?.emojiPickerOpen) { if (typeof toggleEmojiPicker === 'function') toggleEmojiPicker(); e.preventDefault(); return; }
       if (window.App?.attachMenuOpen) { if (typeof toggleAttachMenu === 'function') toggleAttachMenu(); e.preventDefault(); return; }
       if (window.App?.formatBarOpen) { if (typeof hideFormatBar === 'function') hideFormatBar(); e.preventDefault(); return; }
+      // Close detail panel
+      const detailPanel = document.getElementById('detail-panel');
+      if (detailPanel && !detailPanel.classList.contains('hidden') && window.innerWidth >= 1024) {
+        detailPanel.classList.add('hidden');
+        e.preventDefault();
+        return;
+      }
       if (!isInput && typeof clearSidebarSearch === 'function') {
         const searchInput = document.getElementById('sidebar-search');
         if (searchInput && searchInput.value) { clearSidebarSearch(); e.preventDefault(); return; }
       }
+      // Close context menu
+      const ctxMenu = document.getElementById('desktop-context-menu');
+      if (ctxMenu && ctxMenu.classList.contains('visible')) {
+        ctxMenu.classList.remove('visible');
+        e.preventDefault();
+        return;
+      }
+      return;
     }
 
-    /* ── Ctrl+Shift+F / Cmd+Shift+F: Open search (when not in input) ── */
-    if (isMeta && e.shiftKey && e.key === 'F' && !isInput) {
+    /* ── F1: Show keyboard shortcuts help ────────────────── */
+    if (e.key === 'F1') {
+      e.preventDefault();
+      this._showHelp();
+      return;
+    }
+
+    /* ── F5: Refresh chat ────────────────────────────────── */
+    if (e.key === 'F5' && !isMeta && !isShift) {
+      // Let default browser refresh happen, but also reload chats
+      if (typeof loadChats === 'function') setTimeout(() => loadChats(), 100);
+      return;
+    }
+
+    /* ── F11: Toggle fullscreen ──────────────────────────── */
+    if (e.key === 'F11') {
+      e.preventDefault();
+      if (window.NSLDesktop?.toggleFullscreen) {
+        window.NSLDesktop.toggleFullscreen();
+      }
+      return;
+    }
+
+    /* ── F2: Rename / edit selected message ──────────────── */
+    if (e.key === 'F2' && !isInput && this._selectedMsgId) {
+      e.preventDefault();
+      const editBtn = document.querySelector(`[data-msg-id="${this._selectedMsgId}"] .edit-msg-btn`);
+      if (editBtn) editBtn.click();
+      return;
+    }
+
+    /* ── Delete / Backspace: Delete or back ──────────────── */
+    if (e.key === 'Delete' && !isInput && !isMeta && !isOverlayOpen) {
+      if (this._selectedMsgId) {
+        e.preventDefault();
+        const deleteBtn = document.querySelector(`[data-msg-id="${this._selectedMsgId}"] .delete-msg-btn`);
+        if (deleteBtn) deleteBtn.click();
+      }
+      return;
+    }
+
+    /* ── Space: Play/pause media ─────────────────────────── */
+    if (e.key === ' ' && !isInput && !isMeta && !isOverlayOpen) {
+      const video = document.querySelector('#media-viewer video, #video-player-wrap video');
+      if (video) {
+        e.preventDefault();
+        video.paused ? video.play() : video.pause();
+        return;
+      }
+      const audio = document.querySelector('.voice-msg-playing, audio:not([paused])');
+      if (audio) {
+        e.preventDefault();
+        audio.pause();
+        return;
+      }
+    }
+
+    /* ── Home / End: Jump to top/bottom of chat ──────────── */
+    if (e.key === 'Home' && !isInput && !isMeta && !isOverlayOpen) {
+      const msgContainer = document.getElementById('messages-wrap');
+      if (msgContainer) {
+        e.preventDefault();
+        msgContainer.scrollTop = 0;
+        return;
+      }
+    }
+    if (e.key === 'End' && !isInput && !isMeta && !isOverlayOpen) {
+      const msgContainer = document.getElementById('messages-wrap');
+      if (msgContainer) {
+        e.preventDefault();
+        msgContainer.scrollTop = msgContainer.scrollHeight;
+        return;
+      }
+    }
+
+    /* ── PageUp / PageDown: Scroll chat in larger increments ─ */
+    if (e.key === 'PageUp' && !isInput && !isMeta && !isOverlayOpen) {
+      const msgContainer = document.getElementById('messages-wrap');
+      if (msgContainer) {
+        e.preventDefault();
+        msgContainer.scrollTop -= msgContainer.clientHeight * 0.8;
+        return;
+      }
+    }
+    if (e.key === 'PageDown' && !isInput && !isMeta && !isOverlayOpen) {
+      const msgContainer = document.getElementById('messages-wrap');
+      if (msgContainer) {
+        e.preventDefault();
+        msgContainer.scrollTop += msgContainer.clientHeight * 0.8;
+        return;
+      }
+    }
+
+    /* ── Ctrl+Z: Undo (in message input) ─────────────────── */
+    if (isMeta && !isShift && e.key === 'z' && isChatInput) {
+      // Let browser handle native undo in contenteditable
+      return;
+    }
+
+    /* ── Ctrl+Y / Ctrl+Shift+Z: Redo ─────────────────────── */
+    if ((isMeta && e.key === 'y') || (isMeta && isShift && e.key === 'z')) {
+      return; // Let browser handle native redo
+    }
+
+    /* ── Ctrl+B: Bold ────────────────────────────────────── */
+    if (isMeta && e.key === 'b' && isChatInput) {
+      e.preventDefault();
+      if (typeof toggleBold === 'function') toggleBold();
+      else document.execCommand('bold');
+      return;
+    }
+
+    /* ── Ctrl+I: Italic ──────────────────────────────────── */
+    if (isMeta && e.key === 'i' && isChatInput) {
+      e.preventDefault();
+      if (typeof toggleItalic === 'function') toggleItalic();
+      else document.execCommand('italic');
+      return;
+    }
+
+    /* ── Ctrl+U: Underline ────────────────────────────────── */
+    if (isMeta && e.key === 'u' && isChatInput) {
+      e.preventDefault();
+      if (typeof toggleUnderline === 'function') toggleUnderline();
+      else document.execCommand('underline');
+      return;
+    }
+
+    /* ── Ctrl+K: Insert link ──────────────────────────────── */
+    if (isMeta && e.key === 'k' && isChatInput) {
+      e.preventDefault();
+      if (typeof insertLink === 'function') insertLink();
+      return;
+    }
+
+    /* ── Ctrl+E: Toggle emoji picker ──────────────────────── */
+    if (isMeta && e.key === 'e' && !isShift) {
+      e.preventDefault();
+      if (typeof toggleEmojiPicker === 'function') toggleEmojiPicker();
+      return;
+    }
+
+    /* ── Ctrl+Shift+E: Toggle attachment menu ─────────────── */
+    if (isMeta && isShift && e.key === 'E') {
+      e.preventDefault();
+      if (typeof toggleAttachMenu === 'function') toggleAttachMenu();
+      return;
+    }
+
+    /* ── Ctrl+Enter: Send message ─────────────────────────── */
+    if (isMeta && e.key === 'Enter' && isChatInput) {
+      e.preventDefault();
+      const sendBtn = document.getElementById('send-btn');
+      if (sendBtn) sendBtn.click();
+      return;
+    }
+
+    /* ── Enter in chat input: Send (Shift+Enter for newline) ── */
+    if (e.key === 'Enter' && !isShift && isChatInput) {
+      // Default behavior — let the app's own handler process it
+      return;
+    }
+
+    /* ── Ctrl+Shift+F / Cmd+Shift+F: Search messages ─────── */
+    if (isMeta && isShift && e.key === 'F') {
       e.preventDefault();
       if (typeof openChatSearch === 'function') openChatSearch();
       return;
     }
 
-    /* ── Ctrl+Shift+N / Cmd+Shift+N: New chat ──────────── */
-    if (isMeta && e.shiftKey && e.key === 'N' && !isInput) {
+    /* ── Ctrl+F: Search within current chat ────────────────── */
+    if (isMeta && e.key === 'f' && !isShift) {
+      e.preventDefault();
+      if (typeof openChatSearch === 'function') openChatSearch();
+      else if (typeof toggleSidebarSearch === 'function') toggleSidebarSearch();
+      return;
+    }
+
+    /* ── Ctrl+Shift+N: New chat ────────────────────────────── */
+    if (isMeta && isShift && e.key === 'N') {
       e.preventDefault();
       if (typeof openNewChat === 'function') openNewChat();
       return;
     }
 
-    /* ── Backspace in empty input: Go back (mobile) ────── */
-    if (e.key === 'Backspace' && isInput && target.id === 'msg-input' && !target.value.trim()) {
-      if (window.innerWidth < 768 && typeof backToList === 'function') {
-        backToList();
+    /* ── Ctrl+N: New group ─────────────────────────────────── */
+    if (isMeta && e.key === 'n' && !isShift) {
+      e.preventDefault();
+      if (typeof openNewGroup === 'function') openNewGroup();
+      return;
+    }
+
+    /* ── Ctrl+,: Open settings ─────────────────────────────── */
+    if (isMeta && e.key === ',') {
+      e.preventDefault();
+      if (typeof openSettings === 'function') openSettings();
+      else if (typeof openNotificationSettings === 'function') openNotificationSettings();
+      return;
+    }
+
+    /* ── Ctrl+.: Toggle theme ──────────────────────────────── */
+    if (isMeta && e.key === '.') {
+      e.preventDefault();
+      if (typeof toggleTheme === 'function') toggleTheme();
+      else if (document.body.classList.contains('dark')) {
+        document.body.classList.remove('dark');
+        document.documentElement.classList.remove('dark');
+        document.documentElement.classList.add('light');
+        localStorage.setItem('themeMode', 'light');
+      } else {
+        document.body.classList.add('dark');
+        document.documentElement.classList.add('dark');
+        document.documentElement.classList.remove('light');
+        localStorage.setItem('themeMode', 'dark');
+      }
+      return;
+    }
+
+    /* ── Ctrl+/: Show shortcuts (same as ?) ────────────────── */
+    if (isMeta && e.key === '/') {
+      e.preventDefault();
+      this._showHelp();
+      return;
+    }
+
+    /* ── Ctrl+L: Clear input ───────────────────────────────── */
+    if (isMeta && e.key === 'l' && isChatInput) {
+      e.preventDefault();
+      target.textContent = '';
+      target.innerHTML = '';
+      return;
+    }
+
+    /* ── Ctrl+P: Print chat ─────────────────────────────────── */
+    if (isMeta && e.key === 'p' && !isInput) {
+      e.preventDefault();
+      window.print();
+      return;
+    }
+
+    /* ── Ctrl+A: Select all messages ────────────────────────── */
+    if (isMeta && e.key === 'a' && !isInput && !isOverlayOpen) {
+      const msgs = document.querySelectorAll('.message.selected');
+      if (msgs.length === 0) {
+        // Select all visible messages
+        const allMsgs = document.querySelectorAll('.message[data-msg-id]');
+        allMsgs.forEach(m => m.classList.add('selected'));
+        return;
       }
     }
 
-    /* ── Enter in search input: trigger search ─────────── */
-    if (e.key === 'Enter' && !e.shiftKey && target.id === 'sidebar-search') {
-      if (typeof triggerSidebarSearch === 'function') {
+    /* ── Ctrl+C: Copy selected messages ─────────────────────── */
+    if (isMeta && e.key === 'c' && !isInput && !window.getSelection()?.toString()) {
+      const selected = document.querySelectorAll('.message.selected .msg-text, .message.selected .msg-bubble');
+      if (selected.length > 0) {
+        const text = Array.from(selected).map(el => el.textContent).join('\n');
+        navigator.clipboard?.writeText(text).then(() => {
+          if (typeof showToast === 'function') showToast('Messages copied', 'success');
+        });
         e.preventDefault();
-        triggerSidebarSearch();
+        return;
       }
     }
 
-    /* ── Tab navigation: trap in modal (handled by accessibility.js) ── */
-    /* Focus trap is managed by A11y._trapFocus to avoid duplicate handlers */
+    /* ── Ctrl+Shift+C: Copy chat link ──────────────────────── */
+    if (isMeta && isShift && e.key === 'C') {
+      e.preventDefault();
+      if (typeof copyChatLink === 'function') copyChatLink();
+      return;
+    }
 
-    /* ── Arrow keys in chat list ───────────────────────── */
+    /* ── Ctrl+Shift+M: Mute/unmute chat ────────────────────── */
+    if (isMeta && isShift && e.key === 'M') {
+      e.preventDefault();
+      if (typeof toggleMuteChat === 'function') toggleMuteChat();
+      return;
+    }
+
+    /* ── Ctrl+Shift+P: Pin/unpin chat ──────────────────────── */
+    if (isMeta && isShift && e.key === 'P') {
+      e.preventDefault();
+      if (typeof togglePinChat === 'function') togglePinChat();
+      return;
+    }
+
+    /* ── Ctrl+Shift+A: Archive chat ────────────────────────── */
+    if (isMeta && isShift && e.key === 'A') {
+      e.preventDefault();
+      if (typeof archiveChat === 'function') archiveChat();
+      return;
+    }
+
+    /* ── Ctrl+Shift+D: Delete chat ─────────────────────────── */
+    if (isMeta && isShift && e.key === 'D') {
+      e.preventDefault();
+      if (typeof deleteChat === 'function') deleteChat();
+      return;
+    }
+
+    /* ── Ctrl+Shift+S: Star/unstar chat ────────────────────── */
+    if (isMeta && isShift && e.key === 'S') {
+      e.preventDefault();
+      if (typeof toggleStarChat === 'function') toggleStarChat();
+      return;
+    }
+
+    /* ── Ctrl+Shift+L: Toggle dark/light mode ──────────────── */
+    if (isMeta && isShift && e.key === 'L') {
+      e.preventDefault();
+      if (typeof toggleTheme === 'function') toggleTheme();
+      return;
+    }
+
+    /* ── Ctrl+Shift+R: Record voice message ────────────────── */
+    if (isMeta && isShift && e.key === 'R') {
+      e.preventDefault();
+      if (typeof startVoiceRecording === 'function') startVoiceRecording();
+      return;
+    }
+
+    /* ── Ctrl+Backspace: Clear selected messages ────────────── */
+    if (isMeta && e.key === 'Backspace' && !isInput) {
+      e.preventDefault();
+      const selected = document.querySelectorAll('.message.selected');
+      selected.forEach(m => m.classList.remove('selected'));
+      return;
+    }
+
+    /* ── Ctrl+Shift+Backspace: Clear chat ──────────────────── */
+    if (isMeta && isShift && e.key === 'Backspace') {
+      e.preventDefault();
+      if (typeof clearChatHistory === 'function') clearChatHistory();
+      return;
+    }
+
+    /* ── Ctrl+Shift+Delete: Delete account (confirm) ────────── */
+    if (isMeta && isShift && e.key === 'Delete') {
+      e.preventDefault();
+      if (typeof deleteAccount === 'function') deleteAccount();
+      return;
+    }
+
+    /* ── Ctrl+Shift+I: Dev tools ───────────────────────────── */
+    if (isMeta && isShift && e.key === 'I') {
+      // Don't prevent — let browser open dev tools
+      return;
+    }
+
+    /* ── Ctrl+R / F5: Refresh ──────────────────────────────── */
+    if ((isMeta && e.key === 'r') || e.key === 'F5') {
+      if (typeof loadChats === 'function') setTimeout(() => loadChats(), 100);
+      return;
+    }
+
+    /* ── Number keys: switch tabs (no modifiers, not input) ─── */
+    if (!isInput && !isMeta && !isAlt && !isShift && !isOverlayOpen) {
+      const tabMap = { '1': 'chats', '2': 'groups', '3': 'calls', '4': 'saved' };
+      if (tabMap[e.key] && typeof switchTab === 'function') {
+        e.preventDefault();
+        switchTab(tabMap[e.key]);
+        return;
+      }
+    }
+
+    /* ── Alt+1-9: Switch to nth chat ───────────────────────── */
+    if (isAlt && !isMeta && !isOverlayOpen) {
+      const num = parseInt(e.key);
+      if (num >= 1 && num <= 9) {
+        e.preventDefault();
+        const chatItems = document.querySelectorAll('#chat-list .chat-list-item, #chat-list [role="listitem"]');
+        if (chatItems[num - 1]) {
+          chatItems[num - 1].click();
+          chatItems[num - 1].focus();
+        }
+        return;
+      }
+    }
+
+    /* ── Ctrl+Shift+1-9: Move chat to folder N ─────────────── */
+    if (isMeta && isShift && !isInput) {
+      const num = parseInt(e.key);
+      if (num >= 1 && num <= 9) {
+        e.preventDefault();
+        if (typeof moveToFolder === 'function') moveToFolder(num);
+        return;
+      }
+    }
+
+    /* ── Arrow keys in chat list ────────────────────────────── */
     if ((e.key === 'ArrowDown' || e.key === 'ArrowUp') && !isInput && !isOverlayOpen) {
       const chatItems = document.querySelectorAll('#chat-list .chat-list-item, #chat-list [role="listitem"]');
       if (chatItems.length === 0) return;
@@ -76,22 +462,197 @@ const KeyboardShortcuts = {
         idx = idx > 0 ? idx - 1 : chatItems.length - 1;
       }
       chatItems[idx]?.focus();
+      chatItems[idx]?.scrollIntoView({ block: 'nearest' });
       e.preventDefault();
+      return;
     }
 
-    /* ── Number keys: switch tabs (with modal guard) ───── */
-    if (!isInput && !isMeta && !e.altKey && !isOverlayOpen) {
-      const tabMap = { '1': 'chats', '2': 'groups', '3': 'calls' };
-      if (tabMap[e.key] && typeof switchTab === 'function') {
-        switchTab(tabMap[e.key]);
+    /* ── Arrow keys in message list: select messages ────────── */
+    if ((e.key === 'ArrowLeft' || e.key === 'ArrowRight') && !isInput && !isOverlayOpen) {
+      const msgEls = document.querySelectorAll('.message[data-msg-id]');
+      if (msgEls.length === 0) return;
+      if (e.key === 'ArrowRight' && this._selectedMsgId) {
+        const current = document.querySelector(`[data-msg-id="${this._selectedMsgId}"]`);
+        if (current) {
+          const next = current.nextElementSibling;
+          if (next && next.dataset.msgId) {
+            this._selectMessage(next.dataset.msgId);
+            e.preventDefault();
+          }
+        }
+        return;
+      }
+      if (e.key === 'ArrowLeft' && this._selectedMsgId) {
+        const current = document.querySelector(`[data-msg-id="${this._selectedMsgId}"]`);
+        if (current) {
+          const prev = current.previousElementSibling;
+          if (prev && prev.dataset.msgId) {
+            this._selectMessage(prev.dataset.msgId);
+            e.preventDefault();
+          }
+        }
+        return;
       }
     }
 
-    /* ── ? key: Show keyboard shortcuts help ────────────── */
+    /* ── Enter in search input: trigger search ──────────────── */
+    if (e.key === 'Enter' && !e.shiftKey && target.id === 'sidebar-search') {
+      if (typeof triggerSidebarSearch === 'function') {
+        e.preventDefault();
+        triggerSidebarSearch();
+      }
+    }
+
+    /* ── Backspace in empty input: Go back (mobile) ─────────── */
+    if (e.key === 'Backspace' && isInput && target.id === 'msg-input' && !target.value.trim()) {
+      if (window.innerWidth < 768 && typeof backToList === 'function') {
+        backToList();
+      }
+    }
+
+    /* ── ? key: Show keyboard shortcuts help ────────────────── */
     if (e.key === '?' && !isInput && !isMeta && !isOverlayOpen) {
       e.preventDefault();
-      if (typeof showKeyboardHelp === 'function') showKeyboardHelp();
+      this._showHelp();
     }
+
+    /* ── / key: Focus search (like Slack) ───────────────────── */
+    if (e.key === '/' && !isInput && !isMeta && !isOverlayOpen) {
+      e.preventDefault();
+      const searchInput = document.getElementById('sidebar-search');
+      if (searchInput) searchInput.focus();
+      return;
+    }
+
+    /* ── J/K: Navigate messages (like Vim/Slack) ────────────── */
+    if (e.key === 'j' && !isInput && !isMeta && !isOverlayOpen) {
+      const msgEls = document.querySelectorAll('.message[data-msg-id]');
+      if (msgEls.length === 0) return;
+      if (!this._selectedMsgId) {
+        this._selectMessage(msgEls[msgEls.length - 1].dataset.msgId);
+      } else {
+        const current = document.querySelector(`[data-msg-id="${this._selectedMsgId}"]`);
+        if (current?.nextElementSibling?.dataset.msgId) {
+          this._selectMessage(current.nextElementSibling.dataset.msgId);
+        }
+      }
+      e.preventDefault();
+      return;
+    }
+    if (e.key === 'k' && !isInput && !isMeta && !isOverlayOpen) {
+      const msgEls = document.querySelectorAll('.message[data-msg-id]');
+      if (msgEls.length === 0) return;
+      if (!this._selectedMsgId) {
+        this._selectMessage(msgEls[0].dataset.msgId);
+      } else {
+        const current = document.querySelector(`[data-msg-id="${this._selectedMsgId}"]`);
+        if (current?.previousElementSibling?.dataset.msgId) {
+          this._selectMessage(current.previousElementSibling.dataset.msgId);
+        }
+      }
+      e.preventDefault();
+      return;
+    }
+  },
+
+  _selectMessage(msgId) {
+    // Deselect previous
+    document.querySelectorAll('.message.selected').forEach(m => m.classList.remove('selected'));
+    this._selectedMsgId = msgId;
+    const el = document.querySelector(`[data-msg-id="${msgId}"]`);
+    if (el) {
+      el.classList.add('selected');
+      el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    }
+  },
+
+  _showHelp() {
+    const panel = document.getElementById('keyboard-help-panel');
+    if (panel) {
+      panel.classList.toggle('hidden');
+      return;
+    }
+    // Build panel if it doesn't exist
+    this._buildHelpPanel();
+    const newPanel = document.getElementById('keyboard-help-panel');
+    if (newPanel) newPanel.classList.remove('hidden');
+  },
+
+  _buildHelpPanel() {
+    if (document.getElementById('keyboard-help-panel')) return;
+
+    const shortcuts = [
+      { group: 'Navigation', items: [
+        ['↑/↓', 'Navigate chat list'],
+        ['←/→', 'Navigate messages'],
+        ['J/K', 'Next/prev message (Vim)'],
+        ['Alt+1-9', 'Switch to chat #N'],
+        ['1/2/3/4', 'Switch tabs (Chats/Groups/Calls/Saved)'],
+        ['Home/End', 'Top/bottom of chat'],
+        ['PageUp/PageDown', 'Scroll chat'],
+        ['/', 'Focus search'],
+      ]},
+      { group: 'Messaging', items: [
+        ['Ctrl+Enter', 'Send message'],
+        ['Ctrl+E', 'Toggle emoji picker'],
+        ['Ctrl+Shift+E', 'Toggle attachments'],
+        ['Ctrl+B', 'Bold text'],
+        ['Ctrl+I', 'Italic text'],
+        ['Ctrl+U', 'Underline text'],
+        ['Ctrl+K', 'Insert link'],
+        ['Ctrl+L', 'Clear input'],
+        ['Ctrl+Shift+R', 'Record voice message'],
+      ]},
+      { group: 'Chat Management', items: [
+        ['Ctrl+Shift+N', 'New chat'],
+        ['Ctrl+N', 'New group'],
+        ['Ctrl+Shift+F', 'Search messages'],
+        ['Ctrl+Shift+M', 'Mute/unmute'],
+        ['Ctrl+Shift+P', 'Pin/unpin'],
+        ['Ctrl+Shift+A', 'Archive'],
+        ['Ctrl+Shift+D', 'Delete chat'],
+        ['Ctrl+Shift+S', 'Star/unstar'],
+      ]},
+      { group: 'Actions', items: [
+        ['F11', 'Toggle fullscreen'],
+        ['F2', 'Edit selected message'],
+        ['Delete', 'Delete selected message'],
+        ['Space', 'Play/pause media'],
+        ['Ctrl+A', 'Select all messages'],
+        ['Ctrl+C', 'Copy selected messages'],
+        ['Ctrl+P', 'Print chat'],
+        ['Ctrl+.', 'Toggle dark/light mode'],
+      ]},
+      { group: 'General', items: [
+        ['Escape', 'Close overlay/panel'],
+        ['?', 'Show this help'],
+        ['Ctrl+Shift+L', 'Toggle dark mode'],
+        ['Ctrl+,', 'Settings'],
+        ['F5', 'Refresh'],
+      ]},
+    ];
+
+    let html = `<div class="overlay hidden" id="keyboard-help-panel" role="dialog" aria-label="Keyboard Shortcuts" style="position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;">
+      <div style="background:var(--panel-bg, #1f2c34);border-radius:12px;max-width:720px;width:95%;max-height:85vh;overflow-y:auto;padding:24px;color:var(--text-primary, #e9edef);">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+          <h2 style="margin:0;font-size:20px;font-weight:600;">Keyboard Shortcuts</h2>
+          <button onclick="this.closest('.overlay').classList.add('hidden')" style="background:none;border:none;color:var(--text-primary, #e9edef);font-size:24px;cursor:pointer;padding:4px 8px;" aria-label="Close">✕</button>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(200px, 1fr));gap:16px;">`;
+
+    for (const group of shortcuts) {
+      html += `<div><h3 style="margin:0 0 8px;font-size:13px;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-secondary, #8696a0);">${group.group}</h3>`;
+      for (const [key, desc] of group.items) {
+        html += `<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;">
+          <span style="font-size:13px;color:var(--text-primary, #e9edef);">${desc}</span>
+          <kbd style="background:var(--input-bg, #2a3942);padding:2px 8px;border-radius:4px;font-size:11px;font-family:monospace;color:var(--text-secondary, #8696a0);border:1px solid var(--border, #313d45);margin-left:8px;white-space:nowrap;">${key}</kbd>
+        </div>`;
+      }
+      html += '</div>';
+    }
+
+    html += '</div></div></div>';
+    document.body.insertAdjacentHTML('beforeend', html);
   },
 
   enable() { this._enabled = true; },

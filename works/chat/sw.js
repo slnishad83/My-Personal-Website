@@ -205,14 +205,11 @@ const HTML_PAGES = [
 self.addEventListener('install', event => {
   event.waitUntil(
     caches.open(CACHE_NAME).then(cache => (
-      cache.addAll([...STATIC_ASSETS, ...HTML_PAGES])
-    )).then(() => self.skipWaiting())
-  );
       Promise.all([
         ...STATIC_ASSETS.map(url => cache.add(url).catch(() => null)),
         ...HTML_PAGES.map(url => cache.add(url).catch(() => null))
       ])
-    ))
+    )).then(() => self.skipWaiting())
   );
 });
 

@@ -109,3 +109,70 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
     min-width: 44px !important;
   }
 }
+
+/* ── D-H2: Expanded focus-visible for ALL interactive elements ─── */
+.chat-list-item:focus-visible,
+.tab-item:focus-visible,
+.emoji-cat-btn:focus-visible,
+.bottom-nav-item:focus-visible,
+#sidebar-search:focus-visible,
+#msg-input:focus-visible,
+.message[data-msg-id]:focus-visible,
+#scroll-to-bottom:focus-visible,
+#pinned-message-bar button:focus-visible,
+#format-bar button:focus-visible,
+#attach-menu button:focus-visible,
+#recording-bar button:focus-visible {
+  outline: 2px solid var(--primary) !important;
+  outline-offset: 2px !important;
+}
+
+/* ── D-H2: Focus ring for keyboard navigation only ─────────────── */
+.chat-list-item:focus:not(:focus-visible),
+button:focus:not(:focus-visible),
+[role="button"]:focus:not(:focus-visible) {
+  outline: none !important;
+}
+
+/* ── D-H17: Visible focus indicator for tab navigation ─────────── */
+[tabindex]:focus-visible {
+  outline: 2px solid var(--primary) !important;
+  outline-offset: 2px !important;
+}
+
+/* ── Skip to content link (desktop enhanced) ───────────────────── */
+@media (min-width: 1024px) {
+  #skip-nav:focus {
+    padding: 16px 32px !important;
+    font-size: 16px !important;
+  }
+}
+
+/* ── High contrast mode improvements ───────────────────────────── */
+@media (forced-colors: active) {
+  .msg-sent, .msg-received {
+    border: 2px solid ButtonText !important;
+  }
+  .chat-list-item.active {
+    border: 2px solid Highlight !important;
+  }
+  #sidebar button.active {
+    border: 2px solid Highlight !important;
+  }
+  .tab-item.active {
+    border: 2px solid Highlight !important;
+  }
+}
+
+/* ── ARIA live region styling ──────────────────────────────────── */
+[role="alert"], [role="status"], .sr-only:focus {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}

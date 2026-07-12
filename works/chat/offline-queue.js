@@ -1,6 +1,8 @@
 /* ============================================================
    OFFLINE QUEUE — IndexedDB-backed message retry queue
    Stores failed messages, retries on reconnect, shows status
+   v1.1: Added attachment blob upload before retry, pending
+          message count indicator in UI
    ============================================================ */
 'use strict';
 
@@ -17,6 +19,7 @@ const OfflineQueue = {
       this._db = await this._openDB();
       console.log('[OfflineQueue] Initialized, pending:', await this.getCount());
       this._setupListeners();
+      this._emitStatus();
     } catch (e) {
       console.warn('[OfflineQueue] Init failed:', e);
     }
@@ -116,12 +119,32 @@ const OfflineQueue = {
   },
 
   async _retrySend(msg) {
+    const processedAttachments = [];
+    if (msg.attachments && msg.attachments.length > 0) {
+      for (const att of msg.attachments) {
+        if (att.blobUrl) {
+          try {
+            const response = await fetch(att.blobUrl);
+            const blob = await response.blob();
+            const file = new File([blob], att.name || 'upload', { type: att.type || blob.type });
+            const uploadedUrl = await this._uploadToCloudinary(file);
+            processedAttachments.push({ url: uploadedUrl, name: att.name, type: att.type, size: att.size });
+          } catch (e) {
+            console.warn('[OfflineQueue] Attachment upload failed:', e);
+            throw new Error(`Failed to upload attachment: ${att.name}`);
+          }
+        } else if (att.url) {
+          processedAttachments.push(att);
+        }
+      }
+    }
+
     if (typeof window._sendMessageToChat === 'function') {
       await window._sendMessageToChat({
         chatId: msg.chatId,
         chatType: msg.chatType,
         text: msg.text,
-        attachments: msg.attachments,
+        attachments: processedAttachments.length > 0 ? processedAttachments : msg.attachments,
         replyTo: msg.replyTo,
         tempId: msg.tempId
       });
@@ -132,6 +155,7 @@ const OfflineQueue = {
         chatId: msg.chatId,
         chatType: msg.chatType,
         text: msg.text,
+        attachments: processedAttachments.length > 0 ? processedAttachments : undefined,
         senderId: window.currentUser.uid,
         senderName: window.currentUser.displayName || '',
         time: Date.now(),
@@ -141,6 +165,20 @@ const OfflineQueue = {
       return;
     }
     throw new Error('No send mechanism available');
+  },
+
+  async _uploadToCloudinary(file) {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('upload_preset', window.CHAT_UPLOAD_PRESET || 'chat_app_uploads');
+    const cloudName = window.CLOUDINARY_CLOUD_NAME || 'du2dsimyz';
+    const res = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/auto/upload`, {
+      method: 'POST',
+      body: formData
+    });
+    if (!res.ok) throw new Error(`Cloudinary upload failed: ${res.status}`);
+    const data = await res.json();
+    return data.secure_url;
   },
 
   async updateStatus(id, status) {
@@ -211,7 +249,32 @@ const OfflineQueue = {
   _emitStatus() {
     this.getCount().then(count => {
       document.dispatchEvent(new CustomEvent('offline-queue-change', { detail: { count } }));
+      this._updatePendingIndicator(count);
     });
+  },
+
+  _updatePendingIndicator(count) {
+    let indicator = document.getElementById('offline-pending-indicator');
+    if (count > 0) {
+      if (!indicator) {
+        indicator = document.createElement('div');
+        indicator.id = 'offline-pending-indicator';
+        indicator.setAttribute('role', 'status');
+        indicator.setAttribute('aria-live', 'polite');
+        indicator.style.cssText = `
+          position:fixed;top:8px;left:50%;transform:translateX(-50%);
+          background:var(--tertiary);color:var(--on-tertiary);
+          padding:6px 14px;border-radius:20px;font-size:12px;font-weight:600;
+          z-index:99998;display:flex;align-items:center;gap:6px;
+          box-shadow:0 2px 8px rgba(0,0,0,0.2);animation:fadeIn 0.2s ease;
+        `;
+        document.body.appendChild(indicator);
+      }
+      indicator.innerHTML = `<span class="material-symbols-outlined" style="font-size:14px;">schedule</span> ${count} message${count > 1 ? 's' : ''} pending`;
+      indicator.style.display = 'flex';
+    } else if (indicator) {
+      indicator.style.display = 'none';
+    }
   },
 
   destroy() {

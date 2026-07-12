@@ -8,7 +8,7 @@
   position: fixed;
   inset: 0;
   z-index: 99000;
-  background: rgba(0, 128, 105, 0.12);
+  background: color-mix(in srgb, var(--primary) 12%, transparent);
   backdrop-filter: blur(3px);
   -webkit-backdrop-filter: blur(3px);
   align-items: center;
@@ -19,48 +19,48 @@
   display: flex;
 }
 .drop-zone-inner {
-  background: #fff;
-  border: 2px dashed #008069;
+  background: var(--surface-container-lowest, #fff);
+  border: 2px dashed var(--primary);
   border-radius: 20px;
   padding: 48px 64px;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 12px;
-  color: #008069;
-  box-shadow: 0 12px 48px rgba(0,128,105,0.18);
+  color: var(--primary);
+  box-shadow: 0 12px 48px color-mix(in srgb, var(--primary) 18%, transparent);
 }
 .drop-zone-inner svg { opacity: 0.75; }
 .drop-zone-inner p {
   margin: 0;
   font-size: 18px;
   font-weight: 600;
-  color: #008069;
+  color: var(--primary);
 }
 .drop-zone-sub {
   font-size: 13px;
-  color: #667781;
+  color: var(--on-surface-variant, #667781);
 }
 body.dark #dropZoneOverlay .drop-zone-inner {
-  background: #202c33;
-  border-color: #00a884;
-  color: #00a884;
+  background: var(--surface-container, #202c33);
+  border-color: var(--primary);
+  color: var(--primary);
 }
 
 /* ── 2. Hashtag styling ───────────────────────────────────── */
 .message-hashtag {
-  color: #008069;
+  color: var(--primary);
   font-weight: 500;
   cursor: pointer;
   border-radius: 3px;
   transition: background 0.15s;
 }
 .message-hashtag:hover {
-  background: rgba(0,128,105,0.10);
+  background: color-mix(in srgb, var(--primary) 10%, transparent);
   text-decoration: underline;
 }
 body.dark .message-hashtag {
-  color: #00d9a6;
+  color: var(--primary);
 }
 
 /* ── 3. Network quality indicator ─────────────────────────── */
@@ -149,9 +149,9 @@ body.dark .message-hashtag {
 }
 .ms-filter-pill.active,
 .ms-filter-pill:hover {
-  background: #008069;
-  color: #fff;
-  border-color: #008069;
+  background: var(--primary);
+  color: var(--on-primary);
+  border-color: var(--primary);
 }
 .ms-filter-group-label {
   font-size: 11px;

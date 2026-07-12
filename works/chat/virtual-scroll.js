@@ -34,6 +34,8 @@ const VirtualScroll = {
       this._enable();
     }
     if (this._enabled) {
+      this._startIdx = 0;
+      this._endIdx = 0;
       this._render();
     }
   },
@@ -134,8 +136,8 @@ const VirtualScroll = {
 
     if (prevEnd === 0) {
       this._container.innerHTML = '';
-      this._container.appendChild(fragment);
     }
+    this._container.appendChild(fragment);
   },
 
   scrollToIndex(idx) {
