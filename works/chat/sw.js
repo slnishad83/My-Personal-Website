@@ -33,7 +33,7 @@ messaging.onBackgroundMessage(payload => {
     tag: isCall && data.callId ? `call-${data.callId}` : (chatKey ? `chat-${chatKey}` : `${data.kind || 'team-chat'}-${data.messageId || data.callId || Date.now()}`),
     renotify: Boolean(isCall),
     requireInteraction: Boolean(isCall),
-    silent: data.soundEnabled === 'false',
+    silent: data.soundEnabled === false || data.soundEnabled === 'false',
     icon: data.senderAvatar || 'app-icon-192.png',
     badge: 'app-icon-192.png',
     image: data.senderAvatar || 'app-icon-512.png',
@@ -157,7 +157,7 @@ self.addEventListener('notificationclick', event => {
   );
 });
 
-const CACHE_NAME = 'team-chat-v233-desktop-audit';
+const CACHE_NAME = 'nsl-chat-v1';
 const STATIC_ASSETS = [
   'chat.css',
   'config.js',
@@ -182,7 +182,6 @@ const STATIC_ASSETS = [
   'chat-missing-features.js',
   'chat-enhancements.js',
   'chat-fixes.js',
-  'message-actions.css',
   'threads.js',
   'message-search.js',
   'notification-prefs.js',
@@ -204,9 +203,11 @@ const HTML_PAGES = [
 ];
 
 self.addEventListener('install', event => {
-  self.skipWaiting();
   event.waitUntil(
     caches.open(CACHE_NAME).then(cache => (
+      cache.addAll([...STATIC_ASSETS, ...HTML_PAGES])
+    )).then(() => self.skipWaiting())
+  );
       Promise.all([
         ...STATIC_ASSETS.map(url => cache.add(url).catch(() => null)),
         ...HTML_PAGES.map(url => cache.add(url).catch(() => null))

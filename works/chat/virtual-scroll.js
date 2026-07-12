@@ -1,6 +1,6 @@
 /* ============================================================
-   VIRTUAL SCROLL — Lightweight windowed message renderer
-   Renders only visible messages + buffer for smooth scrolling
+   VIRTUAL SCROLL — DOM-recycling windowed message renderer
+   Renders only visible messages + buffer, reuses DOM nodes
    ============================================================ */
 'use strict';
 
@@ -12,9 +12,9 @@ const VirtualScroll = {
   _bufferRows: 10,
   _enabled: false,
   _threshold: 150,
-  _observer: null,
-  _sentinelTop: null,
-  _sentinelBottom: null,
+  _pool: new Map(),
+  _startIdx: 0,
+  _endIdx: 0,
 
   init(container, renderFn, options) {
     this._container = container;
@@ -23,6 +23,9 @@ const VirtualScroll = {
     this._bufferRows = options?.bufferRows || 10;
     this._threshold = options?.threshold || 150;
     this._enabled = false;
+    this._pool.clear();
+    this._startIdx = 0;
+    this._endIdx = 0;
   },
 
   setItems(items) {
@@ -38,83 +41,115 @@ const VirtualScroll = {
   _enable() {
     this._enabled = true;
     if (!this._container) return;
+    console.log(`[VirtualScroll] Enabled for ${this._items.length} messages`);
+    this._render();
+  },
 
-    this._container.style.contentVisibility = 'auto';
-    this._container.style.containIntrinsicSize = `auto ${this._rowHeight * Math.min(this._items.length, 20)}px`;
+  _getCachedEl(i) {
+    if (this._pool.has(i)) return this._pool.get(i);
+    const el = this._renderFn(this._items[i], i);
+    if (el) {
+      if (typeof el === 'string') {
+        const wrapper = document.createElement('div');
+        wrapper.innerHTML = el;
+        this._pool.set(i, wrapper.firstElementChild || wrapper);
+      } else {
+        this._pool.set(i, el);
+      }
+    }
+    return this._pool.get(i) || null;
+  },
 
-    if ('IntersectionObserver' in window) {
-      this._observer = new IntersectionObserver((entries) => {
-        for (const entry of entries) {
-          if (entry.isIntersecting) {
-            const idx = parseInt(entry.target.dataset.vsIdx, 10);
-            if (!isNaN(idx)) this._renderAround(idx);
-          }
-        }
-      }, { root: this._container, rootMargin: '400px 0px' });
+  _recycle(prevStart, prevEnd, newStart, newEnd) {
+    const keep = new Set();
+    for (let i = newStart; i < newEnd; i++) keep.add(i);
+
+    const toRemove = [];
+    for (let i = prevStart; i < prevEnd; i++) {
+      if (!keep.has(i)) toRemove.push(i);
     }
 
-    console.log(`[VirtualScroll] Enabled for ${this._items.length} messages`);
+    const children = Array.from(this._container.children);
+    const idxAttr = 'data-vs-idx';
+    const toRecycle = [];
+
+    for (const child of children) {
+      const idx = parseInt(child.getAttribute(idxAttr), 10);
+      if (isNaN(idx)) continue;
+      if (!keep.has(idx)) {
+        toRecycle.push(child);
+      }
+    }
+
+    for (const el of toRecycle) {
+      el.remove();
+      const idx = parseInt(el.getAttribute(idxAttr), 10);
+      if (!isNaN(idx)) this._pool.delete(idx);
+    }
   },
 
   _render() {
     if (!this._enabled || !this._container) return;
 
     const scrollTop = this._container.scrollTop;
-    const viewHeight = this._container.clientHeight;
-    const startIdx = Math.max(0, Math.floor(scrollTop / this._rowHeight) - this._bufferRows);
-    const endIdx = Math.min(this._items.length, Math.ceil((scrollTop + viewHeight) / this._rowHeight) + this._bufferRows);
+    const viewHeight = this._container.clientHeight || Math.max(document.documentElement.clientHeight, window.innerHeight || 600);
+    const newStart = Math.max(0, Math.floor(scrollTop / this._rowHeight) - this._bufferRows);
+    const newEnd = Math.min(this._items.length, Math.ceil((scrollTop + viewHeight) / this._rowHeight) + this._bufferRows);
+
+    const prevStart = this._startIdx;
+    const prevEnd = this._endIdx;
+
+    if (newStart === prevStart && newEnd === prevEnd && prevEnd > 0) return;
+
+    if (prevEnd > 0 && prevStart < prevEnd) {
+      this._recycle(prevStart, prevEnd, newStart, newEnd);
+    }
+
+    this._startIdx = newStart;
+    this._endIdx = newEnd;
 
     const fragment = document.createDocumentFragment();
 
     const topSpacer = document.createElement('div');
-    topSpacer.style.height = (startIdx * this._rowHeight) + 'px';
-    topSpacer.dataset.vsIdx = startIdx;
+    topSpacer.style.height = (newStart * this._rowHeight) + 'px';
+    topSpacer.style.minHeight = (newStart * this._rowHeight) + 'px';
     fragment.appendChild(topSpacer);
 
-    for (let i = startIdx; i < endIdx; i++) {
-      const el = this._renderFn(this._items[i], i);
+    for (let i = newStart; i < newEnd; i++) {
+      let el = this._pool.get(i);
+      if (!el) {
+        el = this._getCachedEl(i);
+      }
       if (el) {
-        if (typeof el === 'string') {
-          const wrapper = document.createElement('div');
-          wrapper.innerHTML = el;
-          fragment.appendChild(wrapper.firstElementChild || wrapper);
-        } else {
-          fragment.appendChild(el);
-        }
+        el.setAttribute('data-vs-idx', String(i));
+        fragment.appendChild(el);
       }
     }
 
     const bottomSpacer = document.createElement('div');
-    bottomSpacer.style.height = Math.max(0, (this._items.length - endIdx) * this._rowHeight) + 'px';
+    const bottomH = Math.max(0, (this._items.length - newEnd) * this._rowHeight);
+    bottomSpacer.style.height = bottomH + 'px';
+    bottomSpacer.style.minHeight = bottomH + 'px';
     fragment.appendChild(bottomSpacer);
 
-    this._container.innerHTML = '';
-    this._container.appendChild(fragment);
-
-    if (this._observer) {
-      this._observer.disconnect();
-      const spacers = this._container.querySelectorAll('[data-vs-idx]');
-      spacers.forEach(s => this._observer.observe(s));
+    if (prevEnd === 0) {
+      this._container.innerHTML = '';
+      this._container.appendChild(fragment);
     }
-  },
-
-  _renderAround(centerIdx) {
-    this._render();
   },
 
   scrollToIndex(idx) {
     if (!this._container) return;
     this._container.scrollTop = idx * this._rowHeight;
-    this._render();
+    if (this._enabled) this._render();
   },
 
   destroy() {
-    if (this._observer) {
-      this._observer.disconnect();
-      this._observer = null;
-    }
+    this._pool.clear();
     this._enabled = false;
     this._items = [];
+    this._startIdx = 0;
+    this._endIdx = 0;
   }
 };
 

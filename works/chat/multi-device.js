@@ -32,7 +32,9 @@ const MultiDevice = {
 
   _generateSessionId() {
     const ts = Date.now().toString(36);
-    const rand = Math.random().toString(36).slice(2, 8);
+    const arr = new Uint8Array(6);
+    crypto.getRandomValues(arr);
+    const rand = Array.from(arr, b => b.toString(36).padStart(2, '0')).join('');
     const plat = (window.Platform?.os || 'web').slice(0, 3);
     return `${plat}-${ts}-${rand}`;
   },
@@ -68,7 +70,7 @@ const MultiDevice = {
         .collection('sessions').doc(this._currentSessionId).update({
           lastActive: Date.now()
         });
-    } catch (_) {}
+    } catch (e) { console.warn('[MultiDevice] Heartbeat failed:', e?.message || e); }
   },
 
   _startCleanup() {
@@ -89,7 +91,7 @@ const MultiDevice = {
           isOnline: (now - (data.lastActive || 0)) < this._staleThreshold
         };
       });
-    } catch (_) { return []; }
+    } catch (e) { console.warn('[MultiDevice] getActiveSessions failed:', e?.message || e); return []; }
   },
 
   async revokeSession(sessionId) {
@@ -98,7 +100,7 @@ const MultiDevice = {
       await window.db.collection('users').doc(window.currentUser.uid)
         .collection('sessions').doc(sessionId).delete();
       return true;
-    } catch (_) { return false; }
+    } catch (e) { console.warn('[MultiDevice] revokeSession failed:', e?.message || e); return false; }
   },
 
   async revokeAllSessions() {
@@ -111,7 +113,7 @@ const MultiDevice = {
         if (doc.id !== this._currentSessionId) batch.delete(doc.ref);
       });
       await batch.commit();
-    } catch (_) {}
+    } catch (e) { console.warn('[MultiDevice] revokeAllSessions failed:', e?.message || e); }
   },
 
   async removeCurrentSession() {
@@ -119,7 +121,7 @@ const MultiDevice = {
     try {
       await window.db.collection('users').doc(window.currentUser.uid)
         .collection('sessions').doc(this._currentSessionId).delete();
-    } catch (_) {}
+    } catch (e) { console.warn('[MultiDevice] removeCurrentSession failed:', e?.message || e); }
   },
 
   getCurrentSessionId() { return this._currentSessionId; },

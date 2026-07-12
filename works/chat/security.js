@@ -17,7 +17,7 @@ const Security = {
   _startTokenRefresh() {
     this._tokenRefreshTimer = setInterval(async () => {
       if (window.currentUser) {
-        try { await window.currentUser.getIdToken(true); } catch (_) {}
+        try { await window.currentUser.getIdToken(true); } catch (e) { console.error('[Security] Token refresh failed:', e?.message || e); }
       }
     }, this._tokenRefreshInterval);
   },
@@ -30,25 +30,25 @@ const Security = {
         true,
         ['encrypt', 'decrypt']
       );
-    } catch (_) { return null; }
+    } catch (e) { console.error('[Security] generateKeyPair failed:', e?.message || e); return null; }
   },
 
   async exportKey(key) {
     try {
       const raw = await crypto.subtle.exportKey('raw', key);
       return btoa(String.fromCharCode(...new Uint8Array(raw)));
-    } catch (_) { return null; }
+    } catch (e) { console.error('[Security] exportKey failed:', e?.message || e); return null; }
   },
 
   async importKey(b64) {
     try {
       const bytes = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
       return await crypto.subtle.importKey('raw', bytes, 'AES-GCM', true, ['encrypt', 'decrypt']);
-    } catch (_) { return null; }
+    } catch (e) { console.error('[Security] importKey failed:', e?.message || e); return null; }
   },
 
   async encrypt(text, key) {
-    if (!key) return { ciphertext: text, iv: null };
+    if (!key) throw new Error('[Security] encrypt() called without encryption key');
     try {
       const iv = crypto.getRandomValues(new Uint8Array(12));
       const encoded = new TextEncoder().encode(text);
@@ -57,17 +57,17 @@ const Security = {
         ciphertext: btoa(String.fromCharCode(...new Uint8Array(ciphertext))),
         iv: btoa(String.fromCharCode(...iv))
       };
-    } catch (_) { return { ciphertext: text, iv: null }; }
+    } catch (e) { console.error('[Security] encrypt failed:', e?.message || e); throw e; }
   },
 
   async decrypt(ciphertext, iv, key) {
-    if (!key || !iv) return ciphertext;
+    if (!key || !iv) return { error: true, message: 'Missing key or IV' };
     try {
       const ct = Uint8Array.from(atob(ciphertext), c => c.charCodeAt(0));
       const ivBytes = Uint8Array.from(atob(iv), c => c.charCodeAt(0));
       const plain = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: ivBytes }, key, ct);
       return new TextDecoder().decode(plain);
-    } catch (_) { return ciphertext; }
+    } catch (e) { console.error('[Security] decrypt failed:', e?.message || e); return { error: true, message: 'Decryption failed' }; }
   },
 
   /* ── Key Exchange Helpers ────────────────────────────── */
@@ -83,7 +83,7 @@ const Security = {
     if (!window.currentUser) return null;
     try {
       return await window.currentUser.getIdToken();
-    } catch (_) { return null; }
+    } catch (e) { console.error('[Security] getIdToken failed:', e?.message || e); return null; }
   },
 
   async forceTokenRefresh() {
@@ -91,7 +91,7 @@ const Security = {
     try {
       await window.currentUser.getIdToken(true);
       return true;
-    } catch (_) { return false; }
+    } catch (e) { console.error('[Security] forceTokenRefresh failed:', e?.message || e); return false; }
   },
 
   /* ── Secure Storage ──────────────────────────────────── */
@@ -99,7 +99,7 @@ const Security = {
     try {
       const encoded = btoa(JSON.stringify({ v: value, t: Date.now() }));
       sessionStorage.setItem('_tc_' + key, encoded);
-    } catch (_) {}
+    } catch (e) { console.error('[Security] setSecure failed:', e?.message || e); }
   },
 
   getSecure(key) {
@@ -108,14 +108,14 @@ const Security = {
       if (!raw) return null;
       const { v } = JSON.parse(atob(raw));
       return v;
-    } catch (_) { return null; }
+    } catch (e) { console.error('[Security] getSecure failed:', e?.message || e); return null; }
   },
 
   clearSecure() {
     try {
       const keys = Object.keys(sessionStorage).filter(k => k.startsWith('_tc_'));
       keys.forEach(k => sessionStorage.removeItem(k));
-    } catch (_) {}
+    } catch (e) { console.error('[Security] clearSecure failed:', e?.message || e); }
   },
 
   /* ── Device Verification ─────────────────────────────── */
