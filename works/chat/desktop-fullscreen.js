@@ -1,10 +1,15 @@
 /* ============================================================
-   Desktop Fullscreen & PiP (D-C2 / D-C3)
+   Desktop Fullscreen & PiP (D-C2 / D-C3) v1.1
    Adds actual fullscreen toggle and picture-in-picture support
    for media viewer, video calls, and image viewer.
+   ── v1.1: MutationBus + named handlers + destroy()
    ============================================================ */
 (function () {
   'use strict';
+
+  var _cleanupFns = [];
+  var _observers = [];
+  function _trackCleanup(fn) { _cleanupFns.push(fn); }
 
   /* --- Fullscreen (D-C2) --- */
 
@@ -92,7 +97,6 @@
   /* --- Hook into UI elements --- */
 
   function addFullscreenButtons() {
-    // Add fullscreen toggle to media viewer if it exists
     const mediaViewer = document.querySelector('#media-viewer');
     if (mediaViewer && !mediaViewer.querySelector('.fs-toggle-btn')) {
       const btn = document.createElement('button');
@@ -101,11 +105,12 @@
       btn.setAttribute('title', 'Fullscreen (F11)');
       btn.innerHTML = '⛶';
       btn.style.cssText = 'position:absolute;top:12px;right:48px;z-index:10010;background:rgba(0,0,0,0.6);color:#fff;border:none;border-radius:50%;width:36px;height:36px;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;';
-      btn.addEventListener('click', () => toggleFullscreen(mediaViewer));
+      function _onFSClick() { toggleFullscreen(mediaViewer); }
+      btn.addEventListener('click', _onFSClick);
+      _trackCleanup(function () { btn.removeEventListener('click', _onFSClick); });
       mediaViewer.appendChild(btn);
     }
 
-    // Add PiP button to video player if it exists
     const videoPlayer = document.querySelector('#video-player-wrap, #media-viewer video');
     if (videoPlayer && isPiPSupported()) {
       const videoEl = videoPlayer.tagName === 'VIDEO' ? videoPlayer : videoPlayer.querySelector('video');
@@ -116,13 +121,12 @@
         btn.setAttribute('title', 'Picture in Picture');
         btn.innerHTML = '⧉';
         btn.style.cssText = 'position:absolute;bottom:48px;right:12px;z-index:10010;background:rgba(0,0,0,0.6);color:#fff;border:none;border-radius:50%;width:36px;height:36px;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;';
-        btn.addEventListener('click', () => {
-          if (document.pictureInPictureElement) {
-            exitPiP();
-          } else {
-            requestPiP(videoEl);
-          }
-        });
+        function _onPiPClick() {
+          if (document.pictureInPictureElement) exitPiP();
+          else requestPiP(videoEl);
+        }
+        btn.addEventListener('click', _onPiPClick);
+        _trackCleanup(function () { btn.removeEventListener('click', _onPiPClick); });
         videoPlayer.appendChild(btn);
       }
     }
@@ -131,15 +135,19 @@
   /* --- Fullscreen change indicator for body class --- */
 
   function watchFullscreenChange() {
-    const evtName = 'fullscreenchange webkitfullscreenchange mozfullscreenchange MSFullscreenChange';
+    function onFSChange() {
+      document.body.classList.toggle('is-fullscreen', isCurrentlyFullscreen());
+    }
     document.addEventListener('fullscreenchange', onFSChange);
     document.addEventListener('webkitfullscreenchange', onFSChange);
     document.addEventListener('mozfullscreenchange', onFSChange);
     document.addEventListener('MSFullscreenChange', onFSChange);
-  }
-
-  function onFSChange() {
-    document.body.classList.toggle('is-fullscreen', isCurrentlyFullscreen());
+    _trackCleanup(function () {
+      document.removeEventListener('fullscreenchange', onFSChange);
+      document.removeEventListener('webkitfullscreenchange', onFSChange);
+      document.removeEventListener('mozfullscreenchange', onFSChange);
+      document.removeEventListener('MSFullscreenChange', onFSChange);
+    });
   }
 
   /* --- Init --- */
@@ -148,7 +156,6 @@
     addFullscreenButtons();
     watchFullscreenChange();
 
-    // Expose globally for keyboard shortcuts to use
     window.NSLDesktop = window.NSLDesktop || {};
     window.NSLDesktop.toggleFullscreen = toggleFullscreen;
     window.NSLDesktop.requestPiP = requestPiP;
@@ -156,14 +163,31 @@
     window.NSLDesktop.isFullscreenSupported = isFullscreenSupported;
     window.NSLDesktop.isPiPSupported = isPiPSupported;
 
-    // Observe DOM for dynamically added media viewers
-    if (typeof MutationObserver !== 'undefined') {
-      const obs = new MutationObserver(() => {
+    if (window.MutationBus) {
+      MutationBus.onBodyChildList('df:media-btns', function () {
+        requestAnimationFrame(addFullscreenButtons);
+      });
+    } else if (typeof MutationObserver !== 'undefined') {
+      var obs = new MutationObserver(function () {
         requestAnimationFrame(addFullscreenButtons);
       });
       obs.observe(document.body, { childList: true, subtree: true });
+      _observers.push(obs);
     }
   }
+
+  /* --- destroy --- */
+  function destroy() {
+    if (window.MutationBus) MutationBus.off('df:media-btns');
+    _observers.forEach(function (o) { try { o.disconnect(); } catch (e) {} });
+    _observers = [];
+    _cleanupFns.forEach(function (fn) { try { fn(); } catch (e) {} });
+    _cleanupFns = [];
+    document.body.classList.remove('is-fullscreen');
+  }
+
+  window.NSLDesktop = window.NSLDesktop || {};
+  window.NSLDesktop.destroy = destroy;
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);

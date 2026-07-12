@@ -10,6 +10,9 @@
 (function () {
   'use strict';
 
+  var _cleanupFns = [];
+  function _trackCleanup(fn) { _cleanupFns.push(fn); }
+
   /* ================================================
      OFFLINE / RECONNECT BANNER
      Shows a yellow banner when network is lost,
@@ -42,6 +45,11 @@
 
     window.addEventListener('online',  showReconnected);
     window.addEventListener('offline', showOffline);
+    _trackCleanup(function () {
+      window.removeEventListener('online', showReconnected);
+      window.removeEventListener('offline', showOffline);
+      clearTimeout(hideTimer);
+    });
 
     if (!navigator.onLine) showOffline();
   }
@@ -165,12 +173,16 @@
 
     document.addEventListener('visibilitychange', handleVisible);
     window.addEventListener('focus', handleVisible);
+    _trackCleanup(function () {
+      document.removeEventListener('visibilitychange', handleVisible);
+      window.removeEventListener('focus', handleVisible);
+    });
 
     // Also mark read on scroll to bottom
     const area = document.getElementById('messagesArea');
     if (area) {
       let scrollTimer = null;
-      area.addEventListener('scroll', function () {
+      function _onAreaScroll() {
         clearTimeout(scrollTimer);
         scrollTimer = setTimeout(async function () {
           const atBottom = area.scrollHeight - area.scrollTop - area.clientHeight < 80;
@@ -182,6 +194,11 @@
             try { await window.markMessagesAsRead(); } catch (e) {}
           }
         }, 400);
+      }
+      area.addEventListener('scroll', _onAreaScroll);
+      _trackCleanup(function () {
+        area.removeEventListener('scroll', _onAreaScroll);
+        clearTimeout(scrollTimer);
       });
     }
   }
@@ -199,24 +216,31 @@
 
     const seenReceipts = new Map(); // msgId → last class
 
-    const obs = new MutationObserver(function (mutations) {
-      mutations.forEach(function (m) {
-        m.addedNodes.forEach(function (node) {
-          if (node.nodeType !== 1) return;
-          // Find receipt elements in added/changed nodes
-          const receipts = node.querySelectorAll
-            ? node.querySelectorAll('.read-receipt')
-            : [];
-          receipts.forEach(animateReceiptIfChanged);
-
-          if (node.classList && node.classList.contains('read-receipt')) {
-            animateReceiptIfChanged(node);
-          }
+    if (window.MutationBus) {
+      MutationBus.observe('sync:receipts', area, { childList: true, subtree: true }, function (mutations) {
+        for (var i = 0; i < mutations.length; i++) {
+          mutations[i].addedNodes.forEach(function (node) {
+            if (node.nodeType !== 1) return;
+            var receipts = node.querySelectorAll ? node.querySelectorAll('.read-receipt') : [];
+            receipts.forEach(animateReceiptIfChanged);
+            if (node.classList && node.classList.contains('read-receipt')) animateReceiptIfChanged(node);
+          });
+        }
+      });
+    } else {
+      var obs = new MutationObserver(function (mutations) {
+        mutations.forEach(function (m) {
+          m.addedNodes.forEach(function (node) {
+            if (node.nodeType !== 1) return;
+            var receipts = node.querySelectorAll ? node.querySelectorAll('.read-receipt') : [];
+            receipts.forEach(animateReceiptIfChanged);
+            if (node.classList && node.classList.contains('read-receipt')) animateReceiptIfChanged(node);
+          });
         });
       });
-    });
-
-    obs.observe(area, { childList: true, subtree: true });
+      obs.observe(area, { childList: true, subtree: true });
+      _trackCleanup(function () { obs.disconnect(); });
+    }
 
     function animateReceiptIfChanged(el) {
       const bubble = el.closest('[data-msg-id], .message-bubble-wrap, .message-row');
@@ -239,27 +263,24 @@
      ================================================ */
   function setupNetworkRecovery() {
     let wasOffline = false;
-
-    window.addEventListener('offline', function () {
-      wasOffline = true;
-    });
-
-    window.addEventListener('online', function () {
+    function _onOffline() { wasOffline = true; }
+    function _onOnline() {
       if (!wasOffline) return;
       wasOffline = false;
-
-      // Re-trigger chat list refresh if function exists
       setTimeout(function () {
         try {
-          if (typeof window.loadCurrentChatList === 'function') {
-            window.loadCurrentChatList();
-          }
-          // Re-open current chat to refresh messages
+          if (typeof window.loadCurrentChatList === 'function') window.loadCurrentChatList();
           if (window.currentChat && typeof window.openChat === 'function') {
             window.openChat(window.currentChat.id, window.currentChatType, window.currentChat);
           }
         } catch (e) {}
       }, 1500);
+    }
+    window.addEventListener('offline', _onOffline);
+    window.addEventListener('online', _onOnline);
+    _trackCleanup(function () {
+      window.removeEventListener('offline', _onOffline);
+      window.removeEventListener('online', _onOnline);
     });
   }
 
@@ -269,7 +290,7 @@
      progress bar below the file card using fetch + streams
      ================================================ */
   function setupDownloadProgress() {
-    document.addEventListener('click', async function (e) {
+    async function _onDocClick(e) {
       const link = e.target.closest('a[href][download], .file-attachment-card[href], .pdf-attachment-card[href]');
       if (!link) return;
 
@@ -335,7 +356,9 @@
           if (wrap && wrap.parentElement) wrap.remove();
         }, 800);
       }
-    });
+    }
+    document.addEventListener('click', _onDocClick);
+    _trackCleanup(function () { document.removeEventListener('click', _onDocClick); });
   }
 
   /* ================================================
@@ -346,19 +369,14 @@
      ================================================ */
   function setupListenerHealthCheck() {
     let lastMessageTime = Date.now();
+    function _onMessageReceived() { lastMessageTime = Date.now(); }
+    document.addEventListener('tc:message:received', _onMessageReceived);
 
-    // Track incoming messages
-    document.addEventListener('tc:message:received', function () {
-      lastMessageTime = Date.now();
-    });
-
-    setInterval(function () {
+    var _healthTimer = setInterval(function () {
       if (document.visibilityState !== 'visible') return;
       if (!window.currentChat || !window.currentUser) return;
       const stale = Date.now() - lastMessageTime > 5 * 60 * 1000;
       if (!stale) return;
-
-      // Silently re-subscribe
       try {
         if (typeof window.listenToMessages === 'function') {
           window.listenToMessages();
@@ -366,6 +384,11 @@
         }
       } catch (e) {}
     }, 5 * 60 * 1000);
+
+    _trackCleanup(function () {
+      clearInterval(_healthTimer);
+      document.removeEventListener('tc:message:received', _onMessageReceived);
+    });
   }
 
   /* ================================================
@@ -408,4 +431,15 @@
   } else {
     window.addEventListener('load', function () { setTimeout(init, 0); });
   }
+
+  /* ─── destroy (logout cleanup) ──────────────────────────────── */
+  function destroy() {
+    if (window.MutationBus) MutationBus.off('sync:receipts');
+    _cleanupFns.forEach(function (fn) { try { fn(); } catch (e) {} });
+    _cleanupFns = [];
+    var banner = document.getElementById('tcOfflineBanner');
+    if (banner) banner.remove();
+  }
+
+  window.SyncAudit = { destroy: destroy };
 })();

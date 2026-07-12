@@ -45,15 +45,17 @@
     apple.content = dark ? 'black-translucent' : 'default';
   }
 
-  new MutationObserver(function (mutations) {
-    mutations.forEach(function (m) {
-      if (m.attributeName === 'class') {
-        var d = isDark();
-        syncThemeColor(d);
-        refreshDocIconColors(d);
+  if (window.MutationBus) {
+    MutationBus.onBodyAttribute('ce:dark-mode', function (mutations) {
+      for (var i = 0; i < mutations.length; i++) {
+        if (mutations[i].attributeName === 'class') {
+          var d = isDark();
+          syncThemeColor(d);
+          refreshDocIconColors(d);
+        }
       }
     });
-  }).observe(document.body, { attributes: true, attributeFilter: ['class'] });
+  }
 
   function setupOsSync() {
     var mq = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)');
@@ -253,18 +255,18 @@
       Array.prototype.forEach.call(msgs, function (el) { observer.observe(el); });
     }
 
-    new MutationObserver(function (mutations) {
-      mutations.forEach(function (m) {
-        m.addedNodes.forEach(function (node) {
-          if (node.nodeType !== 1) return;
+    if (window.MutationBus) {
+      MutationBus.onBodyChildList('ce:incoming-read', function (added) {
+        for (var i = 0; i < added.length; i++) {
+          var node = added[i];
           if (node.classList && node.classList.contains('message') &&
               !node.classList.contains('my-message') &&
               node.dataset && node.dataset.messageId) {
             observer.observe(node);
           } else if (node.querySelectorAll) { observeIncoming(node); }
-        });
+        }
       });
-    }).observe(document.body, { childList: true, subtree: true });
+    }
 
     observeIncoming();
   }
@@ -272,19 +274,20 @@
   function initReadReceipts() {
     if (!window.db || !window.currentUser) { setTimeout(initReadReceipts, 600); return; }
 
-    new MutationObserver(function (mutations) {
-      mutations.forEach(function (m) {
-        m.addedNodes.forEach(function (node) {
-          if (node.nodeType !== 1) return;
+    if (window.MutationBus) {
+      MutationBus.onBodyChildList('ce:outgoing-seen', function (added) {
+        for (var i = 0; i < added.length; i++) {
+          var node = added[i];
           if (node.classList && node.classList.contains('my-message') &&
               node.dataset && node.dataset.messageId) {
             attachSeenByListener(node);
           } else if (node.querySelectorAll) {
-            node.querySelectorAll('.my-message[data-message-id]').forEach(attachSeenByListener);
+            var msgs = node.querySelectorAll('.my-message[data-message-id]');
+            for (var j = 0; j < msgs.length; j++) attachSeenByListener(msgs[j]);
           }
-        });
+        }
       });
-    }).observe(document.body, { childList: true, subtree: true });
+    }
 
     scanOutgoingMessages();
     setupReadOnScroll();
@@ -469,15 +472,15 @@
   }
 
   /* MutationObserver: catch cards added dynamically (new messages from Firestore) */
-  new MutationObserver(function (mutations) {
-    mutations.forEach(function (m) {
-      m.addedNodes.forEach(function (node) {
-        if (node.nodeType !== 1) return;
+  if (window.MutationBus) {
+    MutationBus.onBodyChildList('ce:file-cards', function (added) {
+      for (var i = 0; i < added.length; i++) {
+        var node = added[i];
         if (node.matches && node.matches('a.file-attachment-card')) enhanceFileCard(node);
         else scanFileCards(node);
-      });
+      }
     });
-  }).observe(document.body, { childList: true, subtree: true });
+  }
 
   /* ✅ FIXED: Delayed retries catch messages that arrive from Firestore
      after the initial synchronous scan at boot */
@@ -503,9 +506,21 @@
     btn.setAttribute('aria-label', 'Jump to latest messages');
   }
 
-  new MutationObserver(function () { enhanceScrollBtn(); })
-    .observe(document.getElementById('messages-wrap') || document.getElementById('chat-area') || document.body,
-             { childList: true, subtree: false });
+  function _observeScrollBtn() {
+    var target = document.getElementById('messages-wrap') || document.getElementById('chat-area');
+    if (!target) {
+      setTimeout(_observeScrollBtn, 500);
+      return;
+    }
+    if (window.MutationBus) {
+      MutationBus.observe('ce:scroll-btn', target, { childList: true, subtree: false }, function () {
+        enhanceScrollBtn();
+      });
+    } else {
+      new MutationObserver(function () { enhanceScrollBtn(); })
+        .observe(target, { childList: true, subtree: false });
+    }
+  }
 
 
   /* ══════════════════════════════════════════════════════════
@@ -518,10 +533,29 @@
 
     scanFileCards();          /* immediate pass */
     scheduleRetryScans();     /* delayed retries for Firestore-loaded messages */
-    enhanceScrollBtn();
+    _observeScrollBtn();
 
     initReadReceipts();       /* waits for Firebase globals */
   }
+
+  /* ── cleanup on logout ─────────────────────────────────────────── */
+  function destroy() {
+    if (window.MutationBus) {
+      MutationBus.off('ce:dark-mode');
+      MutationBus.off('ce:incoming-read');
+      MutationBus.off('ce:outgoing-seen');
+      MutationBus.off('ce:file-cards');
+      MutationBus.off('ce:scroll-btn');
+    }
+    var keys = Object.keys(_snapListeners);
+    for (var i = 0; i < keys.length; i++) {
+      try { _snapListeners[keys[i]](); } catch (e) {}
+    }
+    _snapListeners = Object.create(null);
+    _userCache = Object.create(null);
+  }
+
+  window.ChatEnhancements = { destroy: destroy };
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', boot);

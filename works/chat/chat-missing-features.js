@@ -317,12 +317,20 @@
   function watchCallModal() {
     const callScreen = document.getElementById('call-screen');
     if (!callScreen) return;
-    const obs = new MutationObserver(() => {
-      const hidden = callScreen.classList.contains('hidden');
-      if (!hidden) startNetworkQualityMonitor();
-      else stopNetworkQualityMonitor();
-    });
-    obs.observe(callScreen, { attributes: true, attributeFilter: ['class'] });
+    if (window.MutationBus) {
+      MutationBus.observe('cmf:call-watch', callScreen, { attributes: true, attributeFilter: ['class'] }, function () {
+        const hidden = callScreen.classList.contains('hidden');
+        if (!hidden) startNetworkQualityMonitor();
+        else stopNetworkQualityMonitor();
+      });
+    } else {
+      var obs = new MutationObserver(function () {
+        const hidden = callScreen.classList.contains('hidden');
+        if (!hidden) startNetworkQualityMonitor();
+        else stopNetworkQualityMonitor();
+      });
+      obs.observe(callScreen, { attributes: true, attributeFilter: ['class'] });
+    }
   }
 
   /* ================================================================
@@ -437,11 +445,19 @@
   function watchCallEnd() {
     const callScreen = document.getElementById('call-screen');
     if (!callScreen) return;
-    new MutationObserver(() => {
-      const hidden = callScreen.classList.contains('hidden');
-      if (hidden) resetHoldState();
-      else addHoldButton();
-    }).observe(callScreen, { attributes: true, attributeFilter: ['class'] });
+    if (window.MutationBus) {
+      MutationBus.observe('cmf:call-end', callScreen, { attributes: true, attributeFilter: ['class'] }, function () {
+        const hidden = callScreen.classList.contains('hidden');
+        if (hidden) resetHoldState();
+        else addHoldButton();
+      });
+    } else {
+      new MutationObserver(function () {
+        const hidden = callScreen.classList.contains('hidden');
+        if (hidden) resetHoldState();
+        else addHoldButton();
+      }).observe(callScreen, { attributes: true, attributeFilter: ['class'] });
+    }
   }
 
   /* ================================================================
@@ -574,5 +590,16 @@
   } else {
     window.addEventListener('DOMContentLoaded', () => setTimeout(init, 800));
   }
+
+  /* ─── destroy (logout cleanup) ──────────────────────────────── */
+  function destroy() {
+    if (window.MutationBus) {
+      MutationBus.off('cmf:call-watch');
+      MutationBus.off('cmf:call-end');
+    }
+    stopNetworkQualityMonitor();
+  }
+
+  window.ChatMissingFeatures = { destroy: destroy };
 
 })();

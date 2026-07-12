@@ -616,7 +616,8 @@
     
     var latencyVal = document.getElementById('statusLatency');
     if (latencyVal) {
-      setInterval(function () {
+      var _latencyTimer = setInterval(function () {
+        if (!latencyVal.isConnected) { clearInterval(_latencyTimer); return; }
         var ms = Math.floor(Math.random() * 6) + 6;
         latencyVal.textContent = ms + 'ms';
       }, 6000);

@@ -27,6 +27,9 @@
   let _unreadCount = 0;
   const _originalTitle = document.title;
   const _notifiedIds = new Set();  // deduplication
+  const _cleanupFns = [];
+
+  function _trackCleanup(fn) { _cleanupFns.push(fn); }
 
   // ================================================================
   function boot() {
@@ -146,32 +149,37 @@
 
   // ── 2. TYPING INDICATOR UI INJECTION ────────────────────────────
   function injectTypingUI() {
-    // Inject typing indicator element near the message input
-    // We try several selectors to find the right place
-    const observer = new MutationObserver(() => {
+    function _inject() {
       if (document.getElementById('_wa_typing')) return;
       const inputArea = findInputArea();
       if (!inputArea) return;
 
-      // Connection banner — insert at top of chat panel
       const banner = document.createElement('div');
       banner.id = '_wa_conn_banner';
       banner.innerHTML = '<div class="conn-dot"></div><span>Checking connection…</span>';
       const chatPanel = findChatPanel();
       if (chatPanel) chatPanel.prepend(banner);
 
-      // Typing indicator — insert just above the message input
       const typingEl = document.createElement('div');
       typingEl.id = '_wa_typing';
       typingEl.innerHTML = '<div class="wa-dots"><span></span><span></span><span></span></div><span class="wa-typing-text"></span>';
       inputArea.parentNode.insertBefore(typingEl, inputArea);
 
-      // Hook input events for sending our own typing status
       hookInputTyping();
-      observer.disconnect();
-    });
-    observer.observe(document.body, { childList: true, subtree: true });
+      if (window.MutationBus) MutationBus.off('wa:typing-ui');
+      else if (_typingUiObs) { _typingUiObs.disconnect(); _typingUiObs = null; }
+    }
+
+    if (window.MutationBus) {
+      MutationBus.onBodyChildList('wa:typing-ui', function (added) {
+        for (var i = 0; i < added.length; i++) { _inject(); if (document.getElementById('_wa_typing')) return; }
+      });
+    } else {
+      _typingUiObs = new MutationObserver(_inject);
+      _typingUiObs.observe(document.body, { childList: true, subtree: true });
+    }
   }
+  var _typingUiObs = null;
 
   function findInputArea() {
     const selectors = [
@@ -315,19 +323,58 @@
 
   // ── 6. MONITOR CHAT SWITCHES (re-subscribe typing on chat change) ─
   function monitorChatSwitch() {
-    let lastKey = null;
-    setInterval(() => {
-      const key = getChatKey();
-      if (key !== lastKey) {
-        lastKey = key;
-        stopTyping();
-        _isTyping = false;
-        listenTyping(key);
-        // Re-hook input (DOM may have been re-rendered)
-        setTimeout(hookInputTyping, 300);
-        setTimeout(hookInputTyping, 1000);
-      }
-    }, 400);
+    function _onChatSwitch(key) {
+      stopTyping();
+      _isTyping = false;
+      listenTyping(key);
+      setTimeout(hookInputTyping, 300);
+      setTimeout(hookInputTyping, 1000);
+    }
+
+    // Prefer custom events from the app (tc:chat:opened, nsl:chat-opened)
+    function _onCustomEvent(e) {
+      var key = getChatKey();
+      if (key !== _lastChatKey) { _lastChatKey = key; _onChatSwitch(key); }
+    }
+    document.addEventListener('tc:chat:opened', _onCustomEvent);
+    document.addEventListener('nsl:chat-opened', _onCustomEvent);
+    _trackCleanup(function () {
+      document.removeEventListener('tc:chat:opened', _onCustomEvent);
+      document.removeEventListener('nsl:chat-opened', _onCustomEvent);
+    });
+
+    // Fallback: MutationObserver on chat header area for apps that don't fire events
+    var _pollFallback = null;
+    var _lastKey = null;
+    function _startFallbackPoll() {
+      var chatPanel = findChatPanel();
+      if (!chatPanel) return;
+      _pollFallback = new MutationObserver(function () {
+        var key = getChatKey();
+        if (key !== _lastKey) { _lastKey = key; _onChatSwitch(key); }
+      });
+      _pollFallback.observe(chatPanel, { childList: true, subtree: true });
+    }
+    // Try event-based first; fall back to observer if no events fire within 2s
+    var _eventFired = false;
+    function _onAnyEvent() { _eventFired = true; }
+    document.addEventListener('tc:chat:opened', _onAnyEvent);
+    document.addEventListener('nsl:chat-opened', _onAnyEvent);
+    setTimeout(function () {
+      document.removeEventListener('tc:chat:opened', _onAnyEvent);
+      document.removeEventListener('nsl:chat-opened', _onAnyEvent);
+      if (!_eventFired) _startFallbackPoll();
+    }, 2000);
+
+    // Also poll every 5s (much less aggressive than 400ms) as a safety net
+    var _safetyPoll = setInterval(function () {
+      var key = getChatKey();
+      if (key !== _lastChatKey) { _lastChatKey = key; _onChatSwitch(key); }
+    }, 5000);
+    _trackCleanup(function () {
+      clearInterval(_safetyPoll);
+      if (_pollFallback) _pollFallback.disconnect();
+    });
   }
 
   function getChatKey() {
@@ -358,38 +405,41 @@
       } else if (state === 'reconnecting') {
         banner.className = 'reconnecting';
         banner.innerHTML = '<div class="conn-dot"></div><span>Reconnecting…</span>';
-      } else {
-        banner.className = '';
       }
     }
 
-    window.addEventListener('online', () => {
+    function _onOnline() {
       isOnline = true;
       clearTimeout(offlineTimer);
       updateBanner('reconnecting');
       setTimeout(() => updateBanner(''), 2000);
-    });
-
-    window.addEventListener('offline', () => {
+    }
+    function _onOffline() {
       isOnline = false;
       offlineTimer = setTimeout(() => updateBanner('offline'), 500);
+    }
+
+    window.addEventListener('online', _onOnline);
+    window.addEventListener('offline', _onOffline);
+    _trackCleanup(function () {
+      window.removeEventListener('online', _onOnline);
+      window.removeEventListener('offline', _onOffline);
+      clearTimeout(offlineTimer);
     });
 
-    // Firestore connection state via .info/connected (Realtime DB pattern doesn't apply)
-    // Instead, monitor failed Firestore ops
     if (!navigator.onLine) updateBanner('offline');
   }
 
   // ── 8. TAB BADGE (unread count in title) ─────────────────────────
   function setupTabBadge() {
-    // Listen for custom events from the app (if it fires them)
-    window.addEventListener('wa-unread-update', (e) => {
+    function _onUnreadEvent(e) {
       _unreadCount = e.detail?.count || 0;
       updateTabTitle();
-    });
+    }
+    window.addEventListener('wa-unread-update', _onUnreadEvent);
+    _trackCleanup(function () { window.removeEventListener('wa-unread-update', _onUnreadEvent); });
 
-    // Fallback: observe unread count DOM elements
-    const observer = new MutationObserver(() => {
+    function _scanBadges() {
       const badges = document.querySelectorAll('.unread-count, .unread-badge, [class*="unread-count"], [class*="badge-count"]');
       let total = 0;
       badges.forEach(b => {
@@ -400,8 +450,15 @@
         _unreadCount = total;
         updateTabTitle();
       }
-    });
-    observer.observe(document.body, { childList: true, subtree: true, characterData: true });
+    }
+
+    if (window.MutationBus) {
+      MutationBus.onBodyChildList('wa:tab-badge', _scanBadges);
+    } else {
+      var badgeObs = new MutationObserver(_scanBadges);
+      badgeObs.observe(document.body, { childList: true, subtree: true, characterData: true });
+      _trackCleanup(function () { badgeObs.disconnect(); });
+    }
   }
 
   function updateTabTitle() {
@@ -419,26 +476,44 @@
 
   // ── 9. PAGE VISIBILITY (mark read / stop typing) ────────────────
   function setupPageVisibility() {
-    document.addEventListener('visibilitychange', () => {
+    function _onVisibilityChange() {
       if (document.hidden) {
-        // User left the tab — stop typing
         stopTyping();
       } else {
-        // User returned — clear badge
         _unreadCount = 0;
         updateTabTitle();
       }
-    });
+    }
+    document.addEventListener('visibilitychange', _onVisibilityChange);
+    _trackCleanup(function () { document.removeEventListener('visibilitychange', _onVisibilityChange); });
   }
 
   // ── 10. CLEANUP ON WINDOW UNLOAD ────────────────────────────────
   function setupWindowBeforeUnload() {
-    window.addEventListener('beforeunload', () => {
-      stopTyping();
-    });
-    window.addEventListener('pagehide', () => {
-      stopTyping();
+    function _onUnload() { stopTyping(); }
+    window.addEventListener('beforeunload', _onUnload);
+    window.addEventListener('pagehide', _onUnload);
+    _trackCleanup(function () {
+      window.removeEventListener('beforeunload', _onUnload);
+      window.removeEventListener('pagehide', _onUnload);
     });
   }
+
+  // ── 11. DESTROY (logout cleanup) ──────────────────────────────
+  function destroy() {
+    stopTyping();
+    if (_typingUnsubscribe) { _typingUnsubscribe(); _typingUnsubscribe = null; }
+    if (_typingUiObs) { _typingUiObs.disconnect(); _typingUiObs = null; }
+    if (window.MutationBus) {
+      MutationBus.off('wa:typing-ui');
+      MutationBus.off('wa:tab-badge');
+    }
+    _cleanupFns.forEach(function (fn) { try { fn(); } catch (e) {} });
+    _cleanupFns.length = 0;
+    _notifiedIds.clear();
+    document.title = _originalTitle;
+  }
+
+  window.WAEnhance = { destroy: destroy };
 
 })();

@@ -41,16 +41,28 @@
     });
   }
 
-  // Tick every 30 s, plus immediately
+  // Tick every 30 s, plus immediately (only while page visible)
   refreshCountdowns();
-  setInterval(refreshCountdowns, 30000);
+  var _countdownTimer = null;
+  function _startCountdownTick() {
+    _countdownTimer = setInterval(function () {
+      if (document.visibilityState !== 'visible') return;
+      refreshCountdowns();
+    }, 30000);
+  }
+  _startCountdownTick();
 
   // Also refresh whenever the request list re-renders (new cards added)
-  const _listObserver = new MutationObserver(refreshCountdowns);
+  var _listObserver = null;
   function _attachListObserver() {
-    const list = document.getElementById('requestList');
+    var list = document.getElementById('requestList');
     if (list) {
-      _listObserver.observe(list, { childList: true, subtree: true });
+      if (window.MutationBus) {
+        MutationBus.onBodyChildList('snooze:list', function () { refreshCountdowns(); });
+      } else {
+        _listObserver = new MutationObserver(refreshCountdowns);
+        _listObserver.observe(list, { childList: true, subtree: true });
+      }
     } else {
       setTimeout(_attachListObserver, 500);
     }
@@ -169,31 +181,37 @@
     setTimeout(() => _pickerEl?.querySelector('.snooze-picker-input')?.focus(), 50);
   }
 
-  // Expose for app.js to call and for the event handler below
-  window.snoozeEnhancements = { openCustomPicker, refreshCountdowns };
+  // Expose for app.js to call (updated below with destroy)
 
   // ── Event delegation: handle custom-btn clicks ────────────────────────────
-  // (Works even if app.js patch is not applied — MutationObserver injects
-  //  the custom button into every snooze menu as it appears.)
-  document.addEventListener('click', (e) => {
+  var _cleanupFns = [];
+  function _trackCleanup(fn) { _cleanupFns.push(fn); }
+
+  function _onDocClickCapture(e) {
     const btn = e.target.closest('.snooze-custom-btn');
     if (!btn) return;
     e.stopPropagation();
     const reqId = btn.dataset.id;
     if (reqId) openCustomPicker(reqId);
-  }, true);
+  }
+  document.addEventListener('click', _onDocClickCapture, true);
+  _trackCleanup(function () { document.removeEventListener('click', _onDocClickCapture, true); });
 
   // Close custom picker on outside click
-  document.addEventListener('click', (e) => {
+  function _onDocClick(e) {
     if (_pickerEl && !_pickerEl.contains(e.target) && !e.target.closest('.snooze-custom-btn')) {
       _destroyPicker();
     }
-  });
+  }
+  document.addEventListener('click', _onDocClick);
+  _trackCleanup(function () { document.removeEventListener('click', _onDocClick); });
 
   // Escape key closes picker
-  document.addEventListener('keydown', (e) => {
+  function _onDocKeydown(e) {
     if (e.key === 'Escape' && _pickerEl) _destroyPicker();
-  });
+  }
+  document.addEventListener('keydown', _onDocKeydown);
+  _trackCleanup(function () { document.removeEventListener('keydown', _onDocKeydown); });
 
   // ── MutationObserver: inject "Custom time…" into snooze menus ─────────────
   // This handles menus that already exist AND new ones added dynamically.
@@ -214,18 +232,45 @@
     else menu.appendChild(btn);
   }
 
-  const _menuObserver = new MutationObserver((mutations) => {
-    mutations.forEach((m) => {
-      m.addedNodes.forEach((node) => {
-        if (node.nodeType !== 1) return;
-        if (node.classList?.contains('snooze-menu')) _injectCustomBtn(node);
-        node.querySelectorAll?.('.snooze-menu').forEach(_injectCustomBtn);
+  var _menuObserver = null;
+  if (window.MutationBus) {
+    MutationBus.onBodyChildList('snooze:menus', function (added) {
+      for (var i = 0; i < added.length; i++) {
+        var node = added[i];
+        if (node.nodeType !== 1) continue;
+        if (node.classList && node.classList.contains('snooze-menu')) _injectCustomBtn(node);
+        if (node.querySelectorAll) node.querySelectorAll('.snooze-menu').forEach(_injectCustomBtn);
+      }
+    });
+  } else {
+    _menuObserver = new MutationObserver(function (mutations) {
+      mutations.forEach(function (m) {
+        m.addedNodes.forEach(function (node) {
+          if (node.nodeType !== 1) return;
+          if (node.classList && node.classList.contains('snooze-menu')) _injectCustomBtn(node);
+          if (node.querySelectorAll) node.querySelectorAll('.snooze-menu').forEach(_injectCustomBtn);
+        });
       });
     });
-  });
-  _menuObserver.observe(document.body, { childList: true, subtree: true });
+    _menuObserver.observe(document.body, { childList: true, subtree: true });
+  }
   // Also handle menus already in the DOM at init time
   document.querySelectorAll('.snooze-menu').forEach(_injectCustomBtn);
+
+  // ── destroy (logout cleanup) ──────────────────────────────────
+  function destroy() {
+    clearInterval(_countdownTimer);
+    if (_listObserver) { _listObserver.disconnect(); _listObserver = null; }
+    if (_menuObserver) { _menuObserver.disconnect(); _menuObserver = null; }
+    if (window.MutationBus) {
+      MutationBus.off('snooze:list');
+      MutationBus.off('snooze:menus');
+    }
+    _cleanupFns.forEach(function (fn) { try { fn(); } catch (e) {} });
+    _cleanupFns = [];
+    _destroyPicker();
+  }
+  window.SnoozeEnhancements = { openCustomPicker: openCustomPicker, refreshCountdowns: refreshCountdowns, destroy: destroy };
 
 })();
 
