@@ -7,6 +7,7 @@
       content="width=device-width, initial-scale=1.0, user-scalable=yes, maximum-scale=5, viewport-fit=cover, interactive-widget=resizes-content"
     />
     <meta name="theme-color" content="#11131c" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self' https: blob: data: 'unsafe-inline' 'unsafe-eval'; script-src 'self' https://cdn.tailwindcss.com https://www.gstatic.com 'unsafe-inline' 'unsafe-eval'; style-src 'self' https://fonts.googleapis.com 'unsafe-inline'; img-src 'self' https: blob: data:; font-src 'self' https://fonts.gstatic.com; connect-src 'self' https://*.googleapis.com https://*.firebaseio.com https://*.firebaseapp.com; frame-ancestors 'self'; form-action 'self';">
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta
@@ -559,9 +560,9 @@
     </footer>
 
     <!-- Firebase Script integrations -->
-    <script src="https://www.gstatic.com/firebasejs/12.15.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/12.15.0/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/12.15.0/firebase-app-compat.js" integrity="sha384-J6/i9DnWkWsyWwWJNVKfJNA+7Erlaznpv7qbt2lfqjnYt5xUjG6gjQEvByiLR53j" crossorigin="anonymous"></script>
+    <script src="https://www.gstatic.com/firebasejs/12.15.0/firebase-auth-compat.js" integrity="sha384-WCMvq+IYULWMFMeYO/fKLTgpCgLaOUxgQc1dFPdo6uk9tv7Cq3ZKwFEvTteutP1M" crossorigin="anonymous"></script>
+    <script src="https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore-compat.js" integrity="sha384-d8pcTwIXxLlzBmBTgziO/hoPmJ6tO6j7Z+ZJ4rBWfhBJh51Io3qwudexDJkAT+uW" crossorigin="anonymous"></script>
     <script>
       const firebaseConfig = {
         apiKey: "AIzaSyCdbut_FdscAjl-OVSlAUhb7TOTiRNkh34",

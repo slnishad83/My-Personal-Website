@@ -172,7 +172,7 @@ const OfflineQueue = {
     formData.append('file', file);
     formData.append('upload_preset', window.CHAT_UPLOAD_PRESET || 'chat_app_uploads');
     const cloudName = window.CLOUDINARY_CLOUD_NAME || 'du2dsimyz';
-    const res = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/auto/upload`, {
+    const res = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, {
       method: 'POST',
       body: formData
     });

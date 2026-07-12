@@ -102,9 +102,16 @@
       return Promise.resolve(null);
     }
 
+    if (navigator.serviceWorker.controller) {
+      if (!serviceWorkerReadyPromise) {
+        serviceWorkerReadyPromise = Promise.resolve(navigator.serviceWorker.ready);
+      }
+      return serviceWorkerReadyPromise;
+    }
+
     if (!serviceWorkerReadyPromise) {
       serviceWorkerReadyPromise = navigator.serviceWorker
-        .register("sw.js?v=189", { scope: "/works/chat/" })
+        .register("sw.js", { scope: "/works/chat/" })
         .then((registration) => {
           registration.update?.().catch(() => {});
           return navigator.serviceWorker.ready;
@@ -159,12 +166,12 @@
     // D-C8: Linux-specific PWA install instructions
     if (isLinux) {
       if (isChrome || /chrome|crios/i.test(userAgent)) {
-        return "In Chrome, click the three-dot menu (⋮) → "Install app" or "Create shortcut" to install NSL Chat on your Linux desktop. You can also pin it to your taskbar from the installed app.";
+        return "In Chrome, click the three-dot menu (⋮) → 'Install app' or 'Create shortcut' to install NSL Chat on your Linux desktop. You can also pin it to your taskbar from the installed app.";
       }
       if (isEdge || /edg/i.test(userAgent)) {
-        return "In Edge, click the three-dot menu → "Install this site as an app" to add NSL Chat to your Linux desktop.";
+        return "In Edge, click the three-dot menu → 'Install this site as an app' to add NSL Chat to your Linux desktop.";
       }
-      return "Open your browser menu (three dots or hamburger) and choose "Install app", "Add to desktop", or "Create shortcut" to install NSL Chat on your Linux system.";
+      return "Open your browser menu (three dots or hamburger) and choose 'Install app', 'Add to desktop', or 'Create shortcut' to install NSL Chat on your Linux system.";
     }
 
     return "Open your browser menu and choose Install app, Add to desktop, or Add to Home Screen.";

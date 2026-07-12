@@ -334,24 +334,37 @@
   }
 
   /* ================================================================
-     5. RATE LIMITING / SPAM PREVENTION (client-side)
-     Prevents users from sending more than N messages per time window
+     5. RATE LIMITING / SPAM PREVENTION (client-side, dual-window)
+     Burst: max 5 messages per 1 second
+     Sustained: max 30 messages per 60 seconds
   ================================================================ */
-  const RATE_LIMIT_MAX = 10;      // max messages
-  const RATE_LIMIT_WINDOW = 10000; // per 10 seconds
-  let _rateMsgTimestamps = [];
+  const RATE_BURST_MAX = 5;
+  const RATE_BURST_WINDOW = 1000;
+  const RATE_SUSTAINED_MAX = 30;
+  const RATE_SUSTAINED_WINDOW = 60000;
+  let _rateBurstTimestamps = [];
+  let _rateSustainedTimestamps = [];
 
   function checkClientRateLimit() {
     const now = Date.now();
-    _rateMsgTimestamps = _rateMsgTimestamps.filter(t => now - t < RATE_LIMIT_WINDOW);
-    if (_rateMsgTimestamps.length >= RATE_LIMIT_MAX) {
-      const wait = Math.ceil((RATE_LIMIT_WINDOW - (now - _rateMsgTimestamps[0])) / 1000);
+    _rateBurstTimestamps = _rateBurstTimestamps.filter(t => now - t < RATE_BURST_WINDOW);
+    _rateSustainedTimestamps = _rateSustainedTimestamps.filter(t => now - t < RATE_SUSTAINED_WINDOW);
+    if (_rateBurstTimestamps.length >= RATE_BURST_MAX) {
+      const wait = Math.ceil((RATE_BURST_WINDOW - (now - _rateBurstTimestamps[0])) / 1000);
       if (typeof window.showToast === 'function') {
         window.showToast(`Slow down — wait ${wait}s before sending more messages`, 'error');
       }
       return false;
     }
-    _rateMsgTimestamps.push(now);
+    if (_rateSustainedTimestamps.length >= RATE_SUSTAINED_MAX) {
+      const wait = Math.ceil((RATE_SUSTAINED_WINDOW - (now - _rateSustainedTimestamps[0])) / 1000);
+      if (typeof window.showToast === 'function') {
+        window.showToast(`Rate limit reached — wait ${wait}s`, 'error');
+      }
+      return false;
+    }
+    _rateBurstTimestamps.push(now);
+    _rateSustainedTimestamps.push(now);
     return true;
   }
 

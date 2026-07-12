@@ -9,7 +9,7 @@
   <meta name="theme-color" content="#11131c" id="theme-color-meta">
   <meta name="description" content="NSL Chat — Modern team messaging by Nishad SL">
   <meta name="robots" content="noindex, nofollow">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self' https: blob: data: 'unsafe-inline' 'unsafe-eval'; script-src 'self' https://cdn.tailwindcss.com https://www.gstatic.com 'unsafe-inline' 'unsafe-eval'; style-src 'self' https://fonts.googleapis.com 'unsafe-inline'; img-src 'self' https: blob: data:; font-src 'self' https://fonts.gstatic.com; connect-src 'self' https://*.googleapis.com https://*.firebaseio.com https://*.firebaseapp.com https://us-central1-*.cloudfunctions.net wss://*.firebaseio.com; frame-src 'self' https://*.firebaseapp.com; worker-src 'self' blob:;">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' https: blob: data: 'unsafe-inline' 'unsafe-eval'; script-src 'self' https://cdn.tailwindcss.com https://www.gstatic.com 'unsafe-inline' 'unsafe-eval'; style-src 'self' https://fonts.googleapis.com 'unsafe-inline'; img-src 'self' https: blob: data:; font-src 'self' https://fonts.gstatic.com; connect-src 'self' https://*.googleapis.com https://*.firebaseio.com https://*.firebaseapp.com https://us-central1-*.cloudfunctions.net wss://*.firebaseio.com; frame-src 'self' https://*.firebaseapp.com; worker-src 'self' blob:; frame-ancestors 'self'; form-action 'self';">
   <link rel="canonical" href="https://nishadsl.com/works/chat">
   <meta property="og:title" content="NSL Chat">
   <meta property="og:description" content="Modern team messaging by Nishad SL">
@@ -1034,12 +1034,12 @@
   <input type="file" id="file-input-avatar" class="hidden-input" accept="image/*">
 
   <!-- Firebase SDKs -->
-  <script src="https://www.gstatic.com/firebasejs/12.15.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/12.15.0/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/12.15.0/firebase-storage-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/12.15.0/firebase-messaging-compat.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/12.15.0/firebase-app-compat.js" integrity="sha384-J6/i9DnWkWsyWwWJNVKfJNA+7Erlaznpv7qbt2lfqjnYt5xUjG6gjQEvByiLR53j" crossorigin="anonymous"></script>
+  <script src="https://www.gstatic.com/firebasejs/12.15.0/firebase-auth-compat.js" integrity="sha384-WCMvq+IYULWMFMeYO/fKLTgpCgLaOUxgQc1dFPdo6uk9tv7Cq3ZKwFEvTteutP1M" crossorigin="anonymous"></script>
+  <script src="https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore-compat.js" integrity="sha384-d8pcTwIXxLlzBmBTgziO/hoPmJ6tO6j7Z+ZJ4rBWfhBJh51Io3qwudexDJkAT+uW" crossorigin="anonymous"></script>
+  <script src="https://www.gstatic.com/firebasejs/12.15.0/firebase-storage-compat.js" integrity="sha384-sd1OYrFqCVkWMaobDVrdC7NR0YamsMCKdY5cyoeSqVQecfG9FcL7Xkyetu1P6IsE" crossorigin="anonymous"></script>
+  <script src="https://www.gstatic.com/firebasejs/12.15.0/firebase-messaging-compat.js" integrity="sha384-08oAXFgVl5PWPSCdHs/8+cUx7iUwBPVT//OlDnv4Upil8Xsdp0kytFIDMmtZEv+y" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js" integrity="sha384-+mbV2IY1Zk/X1p/nWllGySJSUN8uMs+gUAN10Or95UBH0fpj6GfKgPmgC5EXieXG" crossorigin="anonymous"></script>
   <script src="../app-extras.js"></script>
   <script src="config.js"></script>
   <!-- Main App JS Core (shared logic) -->
@@ -1074,7 +1074,7 @@
 
   <!-- PWA Service Worker Registration -->
   <script>
-    if ('serviceWorker' in navigator) {
+    if ('serviceWorker' in navigator && !navigator.serviceWorker.controller) {
       window.addEventListener('load', () => {
         navigator.serviceWorker.register('/works/chat/sw.js', { scope: '/works/chat/' })
           .then(reg => {
@@ -1236,6 +1236,48 @@
   </div>
 
   <!-- ═══ END PERMISSION MODALS ═══ -->
+
+  <!-- C5: Auto-logout on 20min idle -->
+  <script>
+    (function() {
+      const IDLE_TIMEOUT = 20 * 60 * 1000;
+      const WARNING_TIMEOUT = 19 * 60 * 1000;
+      let _idleTimer = null;
+      let _warningShown = false;
+
+      function resetIdleTimer() {
+        clearTimeout(_idleTimer);
+        _warningShown = false;
+        _idleTimer = setTimeout(function() {
+          if (typeof showToast === 'function') showToast('Session expired due to inactivity.', 'info');
+          setTimeout(function() {
+            if (typeof firebase !== 'undefined' && firebase.auth) {
+              firebase.auth().signOut().then(function() { window.location.reload(); });
+            }
+          }, 3000);
+        }, IDLE_TIMEOUT);
+        setTimeout(function() {
+          if (!_warningShown && document.visibilityState === 'visible') {
+            _warningShown = true;
+            if (typeof showToast === 'function') showToast('Session will expire in 1 minute due to inactivity.', 'warning');
+          }
+        }, WARNING_TIMEOUT);
+      }
+
+      ['mousemove', 'keydown', 'touchstart', 'scroll', 'click'].forEach(function(evt) {
+        document.addEventListener(evt, resetIdleTimer, { passive: true });
+      });
+
+      document.addEventListener('visibilitychange', function() {
+        if (document.visibilityState === 'visible') resetIdleTimer();
+      });
+
+      if (firebase && firebase.auth && firebase.auth().currentUser) resetIdleTimer();
+      firebase.auth().onAuthStateChanged(function(user) {
+        if (user) resetIdleTimer(); else clearTimeout(_idleTimer);
+      });
+    })();
+  </script>
 
   <!-- Floating Active Call Bubble (WhatsApp-style minimized PiP) -->
   <div id="call-bubble" class="fixed z-[200] bottom-6 right-6 flex items-center gap-3 bg-primary text-on-primary rounded-full px-4 py-2.5 shadow-2xl cursor-pointer transition-all duration-300 select-none" style="display:none;" onclick="maximizeCall()" role="button" aria-label="Return to active call" tabindex="0">
