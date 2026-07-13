@@ -13,11 +13,22 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const messaging = firebase.messaging();
 
+function notifyWindowClients(message) {
+  return clients.matchAll({ type: 'window', includeUncontrolled: true })
+    .then(clientList => {
+      clientList.forEach(client => {
+        try { client.postMessage(message); } catch (_) {}
+      });
+      return clientList;
+    });
+}
+
 messaging.onBackgroundMessage(payload => {
   const data = payload.data || {};
   if (data.kind === 'call_ended' && data.callId) {
     return self.registration.getNotifications({ tag: `call-${data.callId}` })
-      .then(notifications => notifications.forEach(notification => notification.close()));
+      .then(notifications => notifications.forEach(notification => notification.close()))
+      .then(() => notifyWindowClients({ type: 'TC_CALL_STOP', callId: data.callId }));
   }
   const isCall = data.kind === 'call';
   const title = payload.notification?.title || data.title ||
@@ -186,6 +197,7 @@ const STATIC_ASSETS = [
   'message-search.js',
   'notification-prefs.js',
   'notification-digest.js',
+  'notification-orchestrator.js',
   'permissions-manager.js',
   '../app-extras.js',
   '../app.js'
