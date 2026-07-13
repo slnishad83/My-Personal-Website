@@ -383,11 +383,6 @@ service cloud.firestore {
       allow create: if isPersonalOwner(request.resource.data);
     }
 
-    match /scheduledMessages/{docId} {
-      allow read, update, delete: if isPersonalOwner(resource.data);
-      allow create: if isPersonalOwner(request.resource.data);
-    }
-
     match /userSessions/{docId} {
       allow read, update, delete: if isPersonalOwner(resource.data);
       allow create: if isPersonalOwner(request.resource.data);

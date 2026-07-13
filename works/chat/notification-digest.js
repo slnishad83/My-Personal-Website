@@ -19,7 +19,6 @@
 
   function _uid()  { const u = window.currentUser || App?.currentUser; return u?.uid || null; }
   function _db()   { return window.db || App?.db || null; }
-  function _esc(s) { return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#x27;'); }
 
   function _relTime(ts) {
     if (!ts) return '';
@@ -139,7 +138,7 @@
     const msg    = window.sanitizeHTML((n.message || n.body || '').substring(0, 100));
     const time   = _relTime(n.createdAt);
     const attrs  = n.chatId
-      ? `data-notif-chat-id="${_esc(n.chatId)}" data-notif-chat-type="${_esc(n.chatType || 'direct')}" data-notif-user-id="${_esc(n.chatUserId || n.fromUserId || '')}"`
+      ? `data-notif-chat-id="${window.sanitizeHTML(n.chatId)}" data-notif-chat-type="${window.sanitizeHTML(n.chatType || 'direct')}" data-notif-user-id="${window.sanitizeHTML(n.chatUserId || n.fromUserId || '')}"`
       : '';
     return `<div class="nd-item nd-single" role="button" tabindex="0" ${attrs}>
       <div class="nd-icon">${icon}</div>
@@ -159,7 +158,7 @@
     const preview = window.sanitizeHTML((n.message || '').substring(0, 80));
     const time  = _relTime(n.createdAt);
     const attrs = n.chatId
-      ? `data-notif-chat-id="${_esc(n.chatId)}" data-notif-chat-type="${_esc(n.chatType || 'direct')}" data-notif-user-id="${_esc(n.chatUserId || n.fromUserId || '')}"`
+      ? `data-notif-chat-id="${window.sanitizeHTML(n.chatId)}" data-notif-chat-type="${window.sanitizeHTML(n.chatType || 'direct')}" data-notif-user-id="${window.sanitizeHTML(n.chatUserId || n.fromUserId || '')}"`
       : '';
     return `<div class="nd-item nd-group" role="button" tabindex="0" ${attrs}>
       <div class="nd-icon">${icon}</div>

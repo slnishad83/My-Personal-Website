@@ -114,23 +114,25 @@ public class IncomingCallActivity extends Activity {
             layout.addView(avatarImage, avatarParams);
             avatarExecutor.execute(() -> {
                 try {
-                    Bitmap bitmap = BitmapFactory.decodeStream(new URL(callerAvatar).openStream());
-                    if (!isFinishing() && !isDestroyed()) {
+                    java.net.HttpURLConnection conn = (java.net.HttpURLConnection) new URL(callerAvatar).openConnection();
+                    conn.setConnectTimeout(5000);
+                    conn.setReadTimeout(5000);
+                    conn.setInstanceFollowRedirects(true);
+                    java.io.InputStream in = new java.io.BufferedInputStream(conn.getInputStream());
+                    Bitmap bitmap = BitmapFactory.decodeStream(in);
+                    in.close();
+                    conn.disconnect();
+                    if (bitmap != null && !isFinishing() && !isDestroyed()) {
                         runOnUiThread(() -> {
                             if (!isFinishing() && !isDestroyed()) {
                                 avatarImage.setImageBitmap(bitmap);
                             }
                         });
+                    } else {
+                        _showInitialFallback(layout, avatarImage, avatarView, avatarParams);
                     }
                 } catch (Exception ignored) {
-                    if (!isFinishing() && !isDestroyed()) {
-                        runOnUiThread(() -> {
-                            if (!isFinishing() && !isDestroyed()) {
-                                layout.removeView(avatarImage);
-                                layout.addView(avatarView, 1, avatarParams);
-                            }
-                        });
-                    }
+                    _showInitialFallback(layout, avatarImage, avatarView, avatarParams);
                 }
             });
         } else {
@@ -149,6 +151,15 @@ public class IncomingCallActivity extends Activity {
 
     private int dp(int value) {
         return Math.round(value * getResources().getDisplayMetrics().density);
+    }
+
+    private void _showInitialFallback(LinearLayout layout, ImageView avatarImage, TextView avatarView, LinearLayout.LayoutParams avatarParams) {
+        if (isFinishing() || isDestroyed()) return;
+        runOnUiThread(() -> {
+            if (isFinishing() || isDestroyed()) return;
+            layout.removeView(avatarImage);
+            layout.addView(avatarView, 1, avatarParams);
+        });
     }
 
     private void openCallInApp(String callId, String action, int notificationId) {

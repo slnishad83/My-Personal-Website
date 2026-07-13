@@ -95,7 +95,7 @@ global.expect = expect;
 
 var path = require('path');
 var testDir = __dirname;
-var testFiles = ['test-sanitize.js', 'test-offline-queue.js', 'test-call-sync.js', 'test-threads.js', 'test-notification-orchestrator.js', 'test-notification-sounds.js', 'test-telemetry.js'];
+var testFiles = ['test-sanitize.js', 'test-offline-queue.js', 'test-call-sync.js', 'test-threads.js', 'test-notification-orchestrator.js', 'test-notification-sounds.js', 'test-telemetry.js', 'test-webrtc-signaling.js', 'test-call-state-fanout.js', 'test-notification-digest.js'];
 
 var GLOBAL_KEYS = ['window', 'document', 'navigator', 'indexedDB', 'CustomEvent', 'localStorage', 'firebase'];
 
