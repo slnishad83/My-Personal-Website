@@ -6,6 +6,7 @@
 
 const Security = {
   _keyCache: new Map(),
+  _KEY_CACHE_MAX: 100,
   _tokenRefreshTimer: null,
   _tokenRefreshInterval: 30 * 60 * 1000,
 
@@ -74,7 +75,13 @@ const Security = {
   async getOrCreateRoomKey(chatId) {
     if (this._keyCache.has(chatId)) return this._keyCache.get(chatId);
     const key = await this.generateKeyPair();
-    if (key) this._keyCache.set(chatId, key);
+    if (key) {
+      if (this._keyCache.size >= this._KEY_CACHE_MAX) {
+        var firstKey = this._keyCache.keys().next().value;
+        this._keyCache.delete(firstKey);
+      }
+      this._keyCache.set(chatId, key);
+    }
     return key;
   },
 

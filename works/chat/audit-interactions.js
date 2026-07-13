@@ -200,17 +200,23 @@
   /* ─── #20 Prevent accidental pull-to-refresh in chat area ──── */
   function preventPullRefresh() {
     let lastY = 0;
+    let _moveRaf = null;
     function _onTouchStart(e) { lastY = e.touches[0].clientY; }
     function _onTouchMove(e) {
-      const el = e.target.closest('#chatMessages, .messages-list');
-      if (!el) return;
-      if (el.scrollTop <= 0 && e.touches[0].clientY - lastY > 0) e.preventDefault();
+      if (_moveRaf) return;
+      _moveRaf = requestAnimationFrame(function () {
+        _moveRaf = null;
+        const el = e.target.closest('#chatMessages, .messages-list');
+        if (!el) return;
+        if (el.scrollTop <= 0 && e.touches[0].clientY - lastY > 0) e.preventDefault();
+      });
     }
     document.addEventListener('touchstart', _onTouchStart, { passive: true });
     document.addEventListener('touchmove', _onTouchMove, { passive: false });
     _trackCleanup(function () {
       document.removeEventListener('touchstart', _onTouchStart);
       document.removeEventListener('touchmove', _onTouchMove);
+      if (_moveRaf) cancelAnimationFrame(_moveRaf);
     });
   }
 

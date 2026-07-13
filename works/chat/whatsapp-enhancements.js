@@ -27,6 +27,7 @@
   let _unreadCount = 0;
   const _originalTitle = document.title;
   const _notifiedIds = new Set();  // deduplication
+  const _NOTIFIED_MAX = 500;
   const _cleanupFns = [];
 
   function _trackCleanup(fn) { _cleanupFns.push(fn); }
@@ -355,7 +356,7 @@
       });
       _pollFallback.observe(chatPanel, { childList: true, subtree: true });
     }
-    // Try event-based first; fall back to observer if no events fire within 2s
+    // Try event-based first; fall back to MutationObserver if no events fire within 2s
     var _eventFired = false;
     function _onAnyEvent() { _eventFired = true; }
     document.addEventListener('tc:chat:opened', _onAnyEvent);
@@ -366,13 +367,14 @@
       if (!_eventFired) _startFallbackPoll();
     }, 2000);
 
-    // Also poll every 5s (much less aggressive than 400ms) as a safety net
-    var _safetyPoll = setInterval(function () {
+    // Safety net: MutationObserver on body for chat key changes (replaces polling)
+    var _safetyObs = new MutationObserver(function () {
       var key = getChatKey();
       if (key !== _lastChatKey) { _lastChatKey = key; _onChatSwitch(key); }
-    }, 5000);
+    });
+    if (document.body) _safetyObs.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['data-chat-id', 'class'] });
     _trackCleanup(function () {
-      clearInterval(_safetyPoll);
+      _safetyObs.disconnect();
       if (_pollFallback) _pollFallback.disconnect();
     });
   }

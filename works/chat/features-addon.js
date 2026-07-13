@@ -401,8 +401,7 @@
 
   // ── 5. CATCH ME UP AI (Feature 4) ────────────────────────────────
   function setupCatchMeUpButton() {
-    // Inject "Catch Me Up" button into chat header when a chat is opened
-    const observer = new MutationObserver(() => {
+    function _injectCatchUpBtn() {
       const chatHeader = document.querySelector('.chat-header, [class*="chat-header"], .message-header');
       if (!chatHeader || chatHeader.querySelector('.catchup-btn')) return;
       if (window.matchMedia('(min-width: 901px)').matches) return;
@@ -414,8 +413,13 @@
       btn.onclick = catchMeUp;
       const actionsArea = chatHeader.querySelector('[class*="actions"], [class*="right"], [class*="icons"]');
       if (actionsArea) actionsArea.prepend(btn);
-    });
-    observer.observe(document.body, { childList: true, subtree: true });
+    }
+    if (window.MutationBus) {
+      MutationBus.onBodyChildList('feat:catchup-btn', function () { _injectCatchUpBtn(); });
+    } else {
+      const observer = new MutationObserver(_injectCatchUpBtn);
+      observer.observe(document.body, { childList: true, subtree: true });
+    }
 
     window.catchMeUp = async () => {
       const existing = document.getElementById('catchupResult');
@@ -508,8 +512,7 @@
 
   // ── 7. VOICE TRANSCRIPTION (Feature 1) ───────────────────────────
   function setupVoiceTranscription() {
-    const observer = new MutationObserver(() => {
-      // Find all voice message bubbles that don't have transcription yet
+    function _scanVoiceMessages() {
       document.querySelectorAll('.voice-message, [class*="voice"], audio').forEach(el => {
         const bubble = el.closest('.message-bubble, [class*="bubble"], [class*="message-content"]');
         if (!bubble || bubble.querySelector('.transcribe-btn, .transcription-text')) return;
@@ -521,8 +524,13 @@
         btn.onclick = () => transcribeVoice(msgId, btn, bubble);
         bubble.appendChild(btn);
       });
-    });
-    observer.observe(document.body, { childList: true, subtree: true });
+    }
+    if (window.MutationBus) {
+      MutationBus.onBodyChildList('feat:voice-tx', function () { _scanVoiceMessages(); });
+    } else {
+      const observer = new MutationObserver(_scanVoiceMessages);
+      observer.observe(document.body, { childList: true, subtree: true });
+    }
 
     window.transcribeVoice = async (msgId, btn, bubble) => {
       if (!msgId) return;
@@ -559,8 +567,7 @@
 
   // ── 8. AUTO-TRANSLATE PREFERENCE (Feature 6) ─────────────────────
   function setupAutoTranslatePreference() {
-    // Add toggle to settings if settings panel exists
-    const observer = new MutationObserver(() => {
+    function _injectAutoTranslate() {
       const settingsPanel = document.querySelector('#settingsModal, [id*="settings"], [class*="settings-modal"]');
       if (!settingsPanel || settingsPanel.querySelector('.auto-translate-toggle')) return;
       const toggle = document.createElement('div');
@@ -576,12 +583,16 @@
           <span style="position:absolute;cursor:pointer;inset:0;background:#ccc;border-radius:24px;transition:0.2s"></span>
         </label>`;
       settingsPanel.querySelector('[class*="body"], [class*="content"], div')?.appendChild(toggle);
-      // Set initial state
       const pref = localStorage.getItem('autoTranslate') === 'true';
       const cb = document.getElementById('autoTranslateToggle');
       if (cb) cb.checked = pref;
-    });
-    observer.observe(document.body, { childList: true, subtree: true });
+    }
+    if (window.MutationBus) {
+      MutationBus.onBodyChildList('feat:auto-translate', function () { _injectAutoTranslate(); });
+    } else {
+      const observer = new MutationObserver(_injectAutoTranslate);
+      observer.observe(document.body, { childList: true, subtree: true });
+    }
 
     window.setAutoTranslate = (enabled) => {
       localStorage.setItem('autoTranslate', enabled);

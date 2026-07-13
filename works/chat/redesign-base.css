@@ -346,8 +346,8 @@ body {
   to { transform: scale(4); opacity: 0; }
 }
 
-/* ── Skeleton Shimmer ── */
-.skeleton, .loading-skeleton {
+/* ── Skeleton Shimmer (base definition, theme overrides in chat-theme.css) ── */
+.skeleton {
   background: linear-gradient(90deg, var(--border) 25%, transparent 50%, var(--border) 75%);
   background-size: 200% 100%;
   animation: shimmer 1.5s infinite;

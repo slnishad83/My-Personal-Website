@@ -6404,6 +6404,7 @@ function saveLanguage() {
 }
 
 function signOut() {
+  if (typeof window.resetAppState === 'function') window.resetAppState();
   if (App.usersUnsubscribe)        App.usersUnsubscribe();
   if (App.chatsUnsubscribe)        App.chatsUnsubscribe();
   if (App.groupsUnsubscribe)       App.groupsUnsubscribe();

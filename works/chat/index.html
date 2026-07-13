@@ -50,9 +50,19 @@
   <!-- Consolidated Theme CSS (responsive + dark/light mode) -->
   <link rel="stylesheet" href="chat-theme.css">
 
+  <link rel="stylesheet" href="redesign-base.css">
+  <link rel="stylesheet" href="chat-enhancements.css">
   <link rel="stylesheet" href="chat.css">
   <link rel="stylesheet" href="chat-missing-features.css">
   <link rel="stylesheet" href="accessibility.css">
+  <link rel="stylesheet" href="message-actions.css">
+  <link rel="stylesheet" href="scheduled-calendar.css">
+  <link rel="stylesheet" href="notification-prefs.css">
+  <link rel="stylesheet" href="url-preview.css">
+  <link rel="stylesheet" href="translation-ui.css">
+  <link rel="stylesheet" href="sync-audit.css">
+  <link rel="stylesheet" href="snooze-history.css">
+  <link rel="stylesheet" href="snooze-enhancements.css">
 
   <script id="tailwind-config">
     tailwind.config = {
@@ -695,17 +705,17 @@
           <div class="space-y-2">
             <h4 class="text-xs font-bold text-error uppercase tracking-wider pl-1">Danger Zone</h4>
             <div class="bg-surface-container-low border border-error/10 rounded-xl overflow-hidden divide-y divide-outline-variant/10">
-              <div class="flex items-center justify-between p-4 cursor-pointer hover:bg-error/5 transition-colors text-error" onclick="confirmClearAllChats()">
+              <div class="flex items-center justify-between p-4 cursor-pointer hover:bg-error/5 transition-colors text-error" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' ')confirmClearAllChats()" onclick="confirmClearAllChats()">
                 <span class="text-sm font-bold">Clear All Conversation History</span>
-                <span class="material-symbols-outlined">delete_sweep</span>
+                <span class="material-symbols-outlined" aria-hidden="true">delete_sweep</span>
               </div>
-              <div class="flex items-center justify-between p-4 cursor-pointer hover:bg-error/5 transition-colors text-error" onclick="signOut()">
+              <div class="flex items-center justify-between p-4 cursor-pointer hover:bg-error/5 transition-colors text-error" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' ')signOut()" onclick="signOut()">
                 <span class="text-sm font-bold">Log out of Account</span>
-                <span class="material-symbols-outlined">logout</span>
+                <span class="material-symbols-outlined" aria-hidden="true">logout</span>
               </div>
-              <div class="flex items-center justify-between p-4 cursor-pointer hover:bg-error/5 transition-colors text-red-700 border-t border-error/10" onclick="confirmDeleteAccount()">
+              <div class="flex items-center justify-between p-4 cursor-pointer hover:bg-error/5 transition-colors text-red-700 border-t border-error/10" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' ')confirmDeleteAccount()" onclick="confirmDeleteAccount()">
                 <span class="text-sm font-bold">Delete Account</span>
-                <span class="material-symbols-outlined">delete_forever</span>
+                <span class="material-symbols-outlined" aria-hidden="true">delete_forever</span>
               </div>
             </div>
           </div>
@@ -1073,34 +1083,61 @@
   <script src="notification-prefs.js"></script>
   <script src="notification-digest.js"></script>
   <script src="notification-reply.js"></script>
+  <script src="notification-bell.js"></script>
   <script src="pwa-install.js"></script>
-  <!-- Desktop enterprise features -->
+  <script src="ui-compliance.js"></script>
+  <script src="audit-interactions.js"></script>
+  <script src="whatsapp-enhancements.js"></script>
+  <script src="features-addon.js"></script>
+  <script src="scheduled-calendar.js"></script>
+  <script src="snooze-history.js"></script>
+  <script src="snooze-enhancements.js"></script>
+  <script src="ai-bot.js"></script>
+  <script src="group-message-info.js"></script>
+  <script src="fixes.js"></script>
+  <script src="feature-updates.js"></script>
+  <script src="sync-www.js"></script>
+  <script src="sync-audit.js"></script>
+  <script src="url-preview.js"></script>
+  <script src="redesign-base.js"></script>
+  <script src="request-priority.js"></script>
   <script src="sanitize.js"></script>
   <script src="clipboard-paste.js"></script>
   <script src="desktop-fullscreen.js"></script>
-  <script src="window-title.js"></script>
   <script src="desktop-context-menu.js"></script>
+  <script src="window-title.js"></script>
+  <script src="app-extras.js"></script>
+  <script src="app-core.js"></script>
+  <script src="whatsapp-share.js"></script>
+  <script src="swipe-nav.js"></script>
+  <script src="push-notifications.js"></script>
+  <script src="attachment-reliability.js"></script>
+  <script src="app-init.js"></script>
 
   <!-- PWA Service Worker Registration -->
   <script>
-    if ('serviceWorker' in navigator && !navigator.serviceWorker.controller) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/works/chat/sw.js', { scope: '/works/chat/' })
-          .then(reg => {
-            console.log('[SW] Registered:', reg.scope);
-            reg.addEventListener('updatefound', () => {
-              const newWorker = reg.installing;
-              if (newWorker) {
-                newWorker.addEventListener('statechange', () => {
-                  if (newWorker.state === 'activated' && navigator.serviceWorker.controller) {
-                    if (typeof showToast === 'function') showToast('App updated! Refresh for the latest version.', 'info');
-                  }
-                });
-              }
-            });
-          })
-          .catch(err => console.warn('[SW] Registration failed:', err));
-      });
+    if ('serviceWorker' in navigator) {
+      if (navigator.serviceWorker.controller) {
+        navigator.serviceWorker.controller.update().catch(function() {});
+      } else {
+        window.addEventListener('load', function () {
+          navigator.serviceWorker.register('/works/chat/sw.js', { scope: '/works/chat/' })
+            .then(function (reg) {
+              console.log('[SW] Registered:', reg.scope);
+              reg.addEventListener('updatefound', function () {
+                var newWorker = reg.installing;
+                if (newWorker) {
+                  newWorker.addEventListener('statechange', function () {
+                    if (newWorker.state === 'activated' && navigator.serviceWorker.controller) {
+                      if (typeof showToast === 'function') showToast('App updated! Refresh for the latest version.', 'info');
+                    }
+                  });
+                }
+              });
+            })
+            .catch(function (err) { console.warn('[SW] Registration failed:', err); });
+        });
+      }
     }
 
     window.addEventListener('load', () => {
@@ -1246,26 +1283,29 @@
 
   <!-- ═══ END PERMISSION MODALS ═══ -->
 
-  <!-- C5: Auto-logout on 20min idle -->
+  <!-- C5: Auto-logout on 20min idle + C11: resetAppState on signout -->
   <script>
     (function() {
-      const IDLE_TIMEOUT = 20 * 60 * 1000;
-      const WARNING_TIMEOUT = 19 * 60 * 1000;
-      let _idleTimer = null;
-      let _warningShown = false;
+      var IDLE_TIMEOUT = 20 * 60 * 1000;
+      var WARNING_TIMEOUT = 19 * 60 * 1000;
+      var _idleTimer = null;
+      var _warningShown = false;
+      var _warningTimer = null;
 
       function resetIdleTimer() {
         clearTimeout(_idleTimer);
+        clearTimeout(_warningTimer);
         _warningShown = false;
         _idleTimer = setTimeout(function() {
           if (typeof showToast === 'function') showToast('Session expired due to inactivity.', 'info');
           setTimeout(function() {
-            if (typeof firebase !== 'undefined' && firebase.auth) {
+            if (typeof window.signOut === 'function') window.signOut();
+            else if (typeof firebase !== 'undefined' && firebase.auth) {
               firebase.auth().signOut().then(function() { window.location.reload(); });
             }
           }, 3000);
         }, IDLE_TIMEOUT);
-        setTimeout(function() {
+        _warningTimer = setTimeout(function() {
           if (!_warningShown && document.visibilityState === 'visible') {
             _warningShown = true;
             if (typeof showToast === 'function') showToast('Session will expire in 1 minute due to inactivity.', 'warning');
@@ -1281,10 +1321,32 @@
         if (document.visibilityState === 'visible') resetIdleTimer();
       });
 
-      if (firebase && firebase.auth && firebase.auth().currentUser) resetIdleTimer();
+      if (typeof firebase !== 'undefined' && firebase.auth && firebase.auth().currentUser) resetIdleTimer();
       firebase.auth().onAuthStateChanged(function(user) {
-        if (user) resetIdleTimer(); else clearTimeout(_idleTimer);
+        if (user) resetIdleTimer(); else { clearTimeout(_idleTimer); clearTimeout(_warningTimer); }
       });
+
+      window.resetAppState = function() {
+        clearTimeout(_idleTimer);
+        clearTimeout(_warningTimer);
+        if (typeof window.currentChat !== 'undefined') window.currentChat = null;
+        if (typeof window.currentChatType !== 'undefined') window.currentChatType = null;
+        if (typeof window.MutationBus !== 'undefined') MutationBus.destroyAll();
+        if (typeof window.ChatEnhancements !== 'undefined') ChatEnhancements.destroy();
+        if (typeof window.UICompliance !== 'undefined') UICompliance.destroy();
+        if (typeof window.AuditInteractions !== 'undefined') AuditInteractions.destroy();
+        if (typeof window.WAEnhance !== 'undefined') WAEnhance.destroy();
+        if (typeof window.Security !== 'undefined') Security.destroy();
+        if (typeof window.OfflineQueue !== 'undefined') OfflineQueue.destroy && OfflineQueue.destroy();
+        document.removeEventListener('mousemove', resetIdleTimer);
+        document.removeEventListener('keydown', resetIdleTimer);
+        document.removeEventListener('touchstart', resetIdleTimer);
+        document.removeEventListener('scroll', resetIdleTimer);
+        document.removeEventListener('click', resetIdleTimer);
+        if (window.NSLBroadcastChannel) {
+          try { window.NSLBroadcastChannel.postMessage({ type: 'logout' }); } catch(_) {}
+        }
+      };
     })();
   </script>
 

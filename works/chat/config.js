@@ -344,6 +344,28 @@ function removeDedupListener(key) {
   if (unsub) { try { unsub(); } catch (_) {} _activeListeners.delete(key); }
 }
 
+/* ── H5: Rate limiter for message sends ─────────────────────────── */
+const _msgRateLimiter = {
+  _timestamps: [],
+  _maxPerMinute: 30,
+  _cooldownMs: 2000,
+  canSend() {
+    const now = Date.now();
+    this._timestamps = this._timestamps.filter(t => now - t < 60000);
+    if (this._timestamps.length >= this._maxPerMinute) return false;
+    if (this._timestamps.length > 0 && now - this._timestamps[this._timestamps.length - 1] < this._cooldownMs) return false;
+    return true;
+  },
+  record() {
+    this._timestamps.push(Date.now());
+    if (this._timestamps.length > this._maxPerMinute + 10) {
+      this._timestamps = this._timestamps.slice(-this._maxPerMinute);
+    }
+  },
+  reset() { this._timestamps = []; }
+};
+window._msgRateLimiter = _msgRateLimiter;
+
 /* ── BR1: Pause/resume Firestore listeners in background ───── */
 let _bgPaused = false;
 let _bgPauseTimer = null;

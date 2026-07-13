@@ -79,6 +79,14 @@
   var _userCache     = Object.create(null);
   var _snapListeners = Object.create(null);
   var _MAX_LISTENERS = 40;
+  var _MAX_USER_CACHE = 200;
+
+  function _evictUserCache() {
+    var keys = Object.keys(_userCache);
+    if (keys.length <= _MAX_USER_CACHE) return;
+    var toRemove = keys.length - _MAX_USER_CACHE + 20;
+    for (var i = 0; i < toRemove; i++) delete _userCache[keys[i]];
+  }
 
   function getUserInfo(uid) {
     if (_userCache[uid]) return Promise.resolve(_userCache[uid]);
@@ -89,6 +97,7 @@
       if ((m.id || m.uid) === uid) {
         var info = { name: m.name || m.displayName || uid.slice(0, 6), photoURL: m.avatar || m.photoURL || null };
         _userCache[uid] = info;
+        _evictUserCache();
         return Promise.resolve(info);
       }
     }
@@ -101,6 +110,7 @@
         if ((tm.id || tm.uid) === uid) {
           var tinfo = { name: tm.name || tm.displayName || uid.slice(0, 6), photoURL: tm.avatar || tm.photoURL || null };
           _userCache[uid] = tinfo;
+          _evictUserCache();
           return Promise.resolve(tinfo);
         }
       }
@@ -112,6 +122,7 @@
         var d = (doc && doc.exists) ? (doc.data() || {}) : {};
         var r = { name: d.displayName || d.name || d.email || uid.slice(0, 6), photoURL: d.photoURL || d.avatar || null };
         _userCache[uid] = r;
+        _evictUserCache();
         return r;
       })
       .catch(function () { return { name: uid.slice(0, 6), photoURL: null }; });

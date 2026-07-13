@@ -15,10 +15,19 @@ const SwipeDelete = {
   init() {
     if (this._enabled) return;
     document.addEventListener('touchstart', this._onTouchStart.bind(this), { passive: true });
-    document.addEventListener('touchmove', this._onTouchMove.bind(this), { passive: false });
+    document.addEventListener('touchmove', this._throttledTouchMove.bind(this), { passive: false });
     document.addEventListener('touchend', this._onTouchEnd.bind(this), { passive: true });
     this._enabled = true;
     console.log('[SwipeDelete] Initialized');
+  },
+
+  _throttledTouchMove(e) {
+    if (!this._activeContainer) return;
+    if (this._moveRaf) return;
+    this._moveRaf = requestAnimationFrame(() => {
+      this._moveRaf = null;
+      this._onTouchMove(e);
+    });
   },
 
   _findChatItem(target) {

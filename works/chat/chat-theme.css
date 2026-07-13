@@ -603,7 +603,6 @@ button:focus-visible,
   animation: shimmer 1.5s infinite;
   border-radius: 8px;
 }
-@keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
 
 /* ── Message status indicators ─────────────────────────── */
 .msg-status-pending { opacity: 0.5; }
@@ -718,11 +717,6 @@ html #messages-wrap::-webkit-scrollbar-track { background: var(--surface-bright)
 /* H8: Touch targets minimum 48px on tablet */
 @media (pointer: coarse) and (min-width: 768px) {
   button, a, [role="button"] { min-height: 48px; min-width: 48px; }
-}
-
-/* L8: Battery saver — reduce animations when battery low */
-@media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
 }
 
 /* H2 sidebar expanded state */
