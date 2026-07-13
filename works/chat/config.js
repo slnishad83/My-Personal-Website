@@ -1,9 +1,19 @@
+/**
+ * @typedef {Object} AppUser
+ * @property {string} uid
+ * @property {string} [displayName]
+ * @property {string} [email]
+ * @property {string} [photoURL]
+ * @property {string} [phoneNumber]
+ */
+
 // ========================================
 // COMPLETE CHAT APP - FINAL BEST WEB/PWA VERSION
 // All WhatsApp features + extras
 // Works on all devices, all browsers
 // ========================================
 'use strict';
+window.__DEBUG__ = window.__DEBUG__ || false;
 
 // Firebase Configuration
 const firebaseConfig = {
@@ -373,14 +383,14 @@ document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'hidden') {
     _bgPauseTimer = setTimeout(() => {
       _bgPaused = true;
-      console.log('[App] Background — pausing non-critical listeners');
+      if (window.__DEBUG__) console.log('[App] Background — pausing non-critical listeners');
       if (typeof window.pauseBackgroundListeners === 'function') window.pauseBackgroundListeners();
     }, 30000);
   } else {
     clearTimeout(_bgPauseTimer);
     if (_bgPaused) {
       _bgPaused = false;
-      console.log('[App] Foreground — resuming listeners');
+      if (window.__DEBUG__) console.log('[App] Foreground — resuming listeners');
       if (typeof window.resumeBackgroundListeners === 'function') window.resumeBackgroundListeners();
     }
   }

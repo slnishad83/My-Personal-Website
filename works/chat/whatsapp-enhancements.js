@@ -41,7 +41,7 @@
     setupTabBadge();
     setupPageVisibility();
     setupWindowBeforeUnload();
-    console.log('[WA-Enhance] Typing indicators + WhatsApp improvements loaded');
+    if (window.__DEBUG__) console.log('[WA-Enhance] Typing indicators + WhatsApp improvements loaded');
   }
 
   // ── 1. STYLES ────────────────────────────────────────────────────

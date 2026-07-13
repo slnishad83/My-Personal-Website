@@ -32,7 +32,7 @@ const PullToRefresh = {
     this._container.addEventListener('touchmove', this._onTouchMove.bind(this), { passive: false });
     this._container.addEventListener('touchend', this._onTouchEnd.bind(this), { passive: true });
     this._enabled = true;
-    console.log('[PullToRefresh] Initialized');
+    if (window.__DEBUG__) console.log('[PullToRefresh] Initialized');
   },
 
   _onTouchStart(e) {

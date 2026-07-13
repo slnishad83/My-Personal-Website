@@ -15,7 +15,7 @@ const KeyboardShortcuts = {
     this._keydownBound = (e) => this._handleKeydown(e);
     document.addEventListener('keydown', this._keydownBound);
     this._buildHelpPanel();
-    console.log('[KeyboardShortcuts] Initialized — 30+ shortcuts active');
+    if (window.__DEBUG__) console.log('[KeyboardShortcuts] Initialized — 30+ shortcuts active');
   },
 
   _handleKeydown(e) {

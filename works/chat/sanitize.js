@@ -31,6 +31,7 @@
   var ENTITY_MAP = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#x27;', '/': '&#x2F;' };
   var ENTITY_REGEX = /[&<>"'\/]/g;
 
+  /** @param {string} str - Raw string to escape @returns {string} HTML-entity-safe string */
   function escapeHTML(str) {
     if (typeof str !== 'string') return '';
     return str.replace(ENTITY_REGEX, function (c) { return ENTITY_MAP[c]; });
@@ -43,6 +44,7 @@
     return el.textContent;
   }
 
+  /** @param {string} url - URL to validate @returns {string} The original URL or empty string if dangerous */
   function sanitizeURL(url) {
     if (typeof url !== 'string') return '';
     var decoded = decodeHTMLEntities(url).trim();
@@ -92,6 +94,7 @@
     return result.join(' ');
   }
 
+  /** @param {string} html - Raw HTML string @returns {string} Sanitized HTML with only safe tags/attributes */
   function sanitize(html) {
     if (typeof html !== 'string') return '';
     if (html.indexOf('<') === -1 && html.indexOf('&') === -1) return html;

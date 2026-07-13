@@ -924,5 +924,5 @@
     };
   })();
 
-  console.log("[fixes.js v5] Loaded — viewer + profile fix + tick fix.");
+  if (window.__DEBUG__) console.log("[fixes.js v5] Loaded — viewer + profile fix + tick fix.");
 })();

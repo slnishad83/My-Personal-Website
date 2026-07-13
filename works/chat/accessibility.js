@@ -12,7 +12,7 @@ const A11y = {
     this._setupFocusTrapObserver();
     this._addLiveRegions();
     this._enhanceDynamicContent();
-    console.log('[A11y] Initialized');
+    if (window.__DEBUG__) console.log('[A11y] Initialized');
   },
 
   _addSkipNav() {

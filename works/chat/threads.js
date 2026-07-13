@@ -7,35 +7,6 @@
 //
 // Parent message gets: threadCount, lastThreadAt, lastThreadSenderName
 
-/* ── Polyfill: renderMessageText (safe, sanitized) ─────── */
-if (typeof renderMessageText === 'undefined') {
-  window.renderMessageText = function renderMessageText(text, mentions) {
-    var esc = window.escHtml || window.escapeHtml || window.NSLSanitize?.escapeHTML || function(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#x27;');};
-    var safe = esc(text || '');
-    safe = safe
-      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-      .replace(/\*(.*?)\*/g, '<em>$1</em>')
-      .replace(/~~(.*?)~~/g, '<del>$1</del>')
-      .replace(/`(.*?)`/g, '<code>$1</code>')
-      .replace(/(https?:\/\/[^\s&<]+)/g, '<a href="$1" target="_blank" rel="noopener">$1</a>')
-      .replace(/\n/g, '<br>');
-    return safe;
-  };
-}
-
-if (typeof renderAttachment === 'undefined') {
-  window.renderAttachment = function renderAttachment(att) {
-    if (!att) return '';
-    var esc = window.escHtml || window.escapeHtml || window.NSLSanitize?.escapeHTML || function(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');};
-    if (att.url) {
-      if (att.type && att.type.startsWith('image/')) return '<img src="' + esc(att.url) + '" alt="' + esc(att.name || 'attachment') + '" style="max-width:200px;border-radius:8px;">';
-      if (att.type && att.type.startsWith('video/')) return '<video src="' + esc(att.url) + '" controls style="max-width:200px;border-radius:8px;"></video>';
-      return '<a href="' + esc(att.url) + '" target="_blank" rel="noopener">' + esc(att.name || 'Attachment') + '</a>';
-    }
-    return '<span>' + esc(att.name || 'Attachment') + '</span>';
-  };
-}
-
 let currentThreadMessageId = null;
 let currentThreadMessageData = null;
 let threadRepliesUnsubscribe = null;

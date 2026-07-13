@@ -9,6 +9,7 @@ const MultiDevice = {
   _cleanupTimer: null,
   _staleThreshold: 120000,
 
+  /** Register this browser/tab as an active session in Firestore. */
   async init() {
     if (!window.db || !window.currentUser) return;
     this._currentSessionId = this._getOrCreateSessionId();
@@ -77,6 +78,10 @@ const MultiDevice = {
     this._cleanupTimer = setInterval(() => this._updateHeartbeat(), 30000);
   },
 
+  /**
+   * Fetch all sessions for the current user, annotated with isCurrent and isOnline flags.
+   * @returns {Promise<Array<Object>>} List of session records
+   */
   async getActiveSessions() {
     if (!window.db || !window.currentUser) return [];
     try {
@@ -126,6 +131,7 @@ const MultiDevice = {
 
   getCurrentSessionId() { return this._currentSessionId; },
 
+  /** Stop the cleanup timer and remove the current session from Firestore. */
   destroy() {
     if (this._cleanupTimer) { clearInterval(this._cleanupTimer); this._cleanupTimer = null; }
     this.removeCurrentSession();

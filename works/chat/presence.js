@@ -12,12 +12,13 @@ const Presence = {
   _lastSeen: null,
   _listeners: [],
 
+  /** Initialize presence tracking, set user online, and start heartbeat. */
   async init() {
     if (!window.db || !window.currentUser) return;
     this._setupListeners();
     this.setOnline();
     this._startHeartbeat();
-    console.log('[Presence] Initialized');
+    if (window.__DEBUG__) console.log('[Presence] Initialized');
   },
 
   _setupListeners() {
@@ -143,6 +144,7 @@ const Presence = {
 
   getStatus() { return this._onlineStatus; },
 
+  /** Stop heartbeat, set user offline, and clean up listeners. */
   destroy() {
     this._stopHeartbeat();
     this.setOffline();

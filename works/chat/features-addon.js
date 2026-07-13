@@ -30,7 +30,7 @@
     setupTasksButton();
     setupVoiceTranscription();
     setupAutoTranslatePreference();
-    console.log('[FeaturesAddon] All 10 features loaded');
+    if (window.__DEBUG__) console.log('[FeaturesAddon] All 10 features loaded');
   }
 
   // ── 1. STYLES ────────────────────────────────────────────────────

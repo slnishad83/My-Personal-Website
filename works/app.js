@@ -2747,6 +2747,7 @@ function generateWaveform() {
   }).join('');
 }
 
+/** @param {string} text - User message text with markdown-like syntax @returns {string} Sanitized HTML string */
 function formatMsgText(text) {
   return escHtml(text)
     .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
@@ -2759,6 +2760,22 @@ function formatMsgText(text) {
     })
     .replace(/\n/g, '<br>');
 }
+
+/** Alias of formatMsgText exposed globally for cross-module rendering. */
+window.renderMessageText = formatMsgText;
+
+/** @param {Object} att - Attachment with {url?, name?, type?} @returns {string} HTML for image, video, or download link */
+window.renderAttachment = function renderAttachment(att) {
+  if (!att) return '';
+  if (att.url) {
+    const safeUrl = escHtml(att.url);
+    const safeName = escHtml(att.name || 'attachment');
+    if (att.type && att.type.startsWith('image/')) return `<img src="${safeUrl}" alt="${safeName}" style="max-width:200px;border-radius:8px;">`;
+    if (att.type && att.type.startsWith('video/')) return `<video src="${safeUrl}" controls style="max-width:200px;border-radius:8px;"></video>`;
+    return `<a href="${safeUrl}" target="_blank" rel="noopener">${safeName}</a>`;
+  }
+  return `<span>${escHtml(att.name || 'Attachment')}</span>`;
+};
 
 /* ══════════════════════════════════════════════════
    11. SEND MESSAGES
@@ -6013,6 +6030,7 @@ function sendChatRequestBtn(btn) {
   sendChatRequest(uid, email, name);
 }
 
+/** @param {string} toUid - Recipient user ID @param {string} toEmail - Recipient email @param {string} toName - Recipient display name */
 async function sendChatRequest(toUid, toEmail, toName) {
   if (!App.db || !App.auth?.currentUser) { showToast('Please sign in first', 'error'); return; }
   const uid = App.auth.currentUser.uid;
@@ -6040,6 +6058,7 @@ async function sendChatRequest(toUid, toEmail, toName) {
   } catch(e) { showToast('Failed to send request', 'error'); console.warn(e); }
 }
 
+/** @param {string} requestId - Firestore chat request document ID */
 async function acceptChatRequest(requestId) {
   if (!App.db || !App.auth?.currentUser) return;
   const req = (App.chatRequests.incoming || []).find(r => r.id === requestId);
@@ -6067,6 +6086,7 @@ async function acceptChatRequest(requestId) {
   } catch(e) { showToast('Failed to accept request', 'error'); console.warn(e); }
 }
 
+/** @param {string} requestId - Firestore chat request document ID */
 async function declineChatRequest(requestId) {
   if (!App.db) return;
   try {
@@ -6075,6 +6095,7 @@ async function declineChatRequest(requestId) {
   } catch(e) { console.warn(e); }
 }
 
+/** @param {string} requestId - Firestore chat request document ID */
 async function cancelChatRequest(requestId) {
   if (!App.db || !App.auth?.currentUser) return;
   try {
@@ -6083,6 +6104,7 @@ async function cancelChatRequest(requestId) {
   } catch(e) { console.warn(e); }
 }
 
+/** @param {string} userId - UID of the user to block @description Blocks the user and declines all their pending chat requests */
 async function blockRequestSender(userId) {
   if (!App.db || !App.auth?.currentUser) return;
   const uid = App.auth.currentUser.uid;
@@ -6098,6 +6120,7 @@ async function blockRequestSender(userId) {
   } catch(e) { console.warn(e); }
 }
 
+/** @param {string} inviteId - Firestore group invite document ID @description Adds current user to the group and marks invite accepted */
 async function acceptGroupInvite(inviteId) {
   if (!App.db || !App.auth?.currentUser) return;
   const uid = App.auth.currentUser.uid;
@@ -6117,6 +6140,7 @@ async function acceptGroupInvite(inviteId) {
   } catch(e) { showToast('Failed to accept invite', 'error'); console.warn(e); }
 }
 
+/** @param {string} inviteId - Firestore group invite document ID */
 async function declineGroupInvite(inviteId) {
   if (!App.db) return;
   try {

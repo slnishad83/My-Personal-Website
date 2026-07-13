@@ -17,7 +17,7 @@ const ErrorBoundary = {
     this._initialized = true;
     this._sentryDsn = sentryDsn || null;
     this._installHandlers();
-    console.log('[ErrorBoundary] Initialized');
+    if (window.__DEBUG__) console.log('[ErrorBoundary] Initialized');
   },
 
   _installHandlers() {

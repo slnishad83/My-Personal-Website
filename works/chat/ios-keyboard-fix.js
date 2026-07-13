@@ -33,7 +33,7 @@ const IOSKeyboardFix = {
     window.addEventListener('focusin', this._onFocusIn.bind(this));
     window.addEventListener('focusout', this._onFocusOut.bind(this));
     this._enabled = true;
-    console.log('[IOSKeyboardFix] Initialized');
+    if (window.__DEBUG__) console.log('[IOSKeyboardFix] Initialized');
   },
 
   _onResize() {

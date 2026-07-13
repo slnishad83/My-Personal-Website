@@ -221,7 +221,7 @@
     injectStyles();
     patchShowContextMenu();
     observeContextMenus();
-    console.log('[wa-share] Share to WhatsApp + Save to My Notes ready');
+    if (window.__DEBUG__) console.log('[wa-share] Share to WhatsApp + Save to My Notes ready');
   }
 
   waitForApp(boot);

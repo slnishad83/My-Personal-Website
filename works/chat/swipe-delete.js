@@ -18,7 +18,7 @@ const SwipeDelete = {
     document.addEventListener('touchmove', this._throttledTouchMove.bind(this), { passive: false });
     document.addEventListener('touchend', this._onTouchEnd.bind(this), { passive: true });
     this._enabled = true;
-    console.log('[SwipeDelete] Initialized');
+    if (window.__DEBUG__) console.log('[SwipeDelete] Initialized');
   },
 
   _throttledTouchMove(e) {

@@ -14,10 +14,11 @@ const OfflineQueue = {
   _retryDelay: 2000,
   _processing: false,
 
+  /** Initialize the IndexedDB-backed queue and begin processing on reconnect. */
   async init() {
     try {
       this._db = await this._openDB();
-      console.log('[OfflineQueue] Initialized, pending:', await this.getCount());
+      if (window.__DEBUG__) console.log('[OfflineQueue] Initialized, pending:', await this.getCount());
       this._setupListeners();
       this._emitStatus();
       setTimeout(() => this.processQueue(), 5000);
@@ -53,6 +54,17 @@ const OfflineQueue = {
     }
   },
 
+  /**
+   * Add a failed message to the retry queue.
+   * @param {Object} message - The message to enqueue
+   * @param {string} message.chatId - Target chat identifier
+   * @param {string} message.chatType - 'direct' or 'group'
+   * @param {string} message.text - Message body text
+   * @param {Array}  [message.attachments] - Attachment objects with url/blobUrl/name/type
+   * @param {string|null} [message.replyTo] - ID of message being replied to
+   * @param {string} [message.tempId] - Client-generated temporary ID
+   * @returns {Promise<Object|null>} The stored record, or null on failure
+   */
   async enqueue(message) {
     if (!this._db) return null;
     const record = {
@@ -76,7 +88,7 @@ const OfflineQueue = {
         req.onerror = () => reject(req.error);
       });
       record.id = id;
-      console.log('[OfflineQueue] Enqueued message:', record.tempId);
+      if (window.__DEBUG__) console.log('[OfflineQueue] Enqueued message:', record.tempId);
       this._emitStatus();
       return record;
     } catch (e) {
@@ -85,6 +97,7 @@ const OfflineQueue = {
     }
   },
 
+  /** Retry all pending messages that are within the retry limit. */
   async processQueue() {
     if (this._processing || !this._db || !navigator.onLine) return;
     this._processing = true;
@@ -217,6 +230,7 @@ const OfflineQueue = {
     });
   },
 
+  /** @returns {Promise<number>} Total number of messages currently in the queue */
   async getCount() {
     if (!this._db) return 0;
     return new Promise((resolve) => {
@@ -227,6 +241,7 @@ const OfflineQueue = {
     });
   },
 
+  /** Remove all sent and failed messages from the queue. */
   async clearSent() {
     if (!this._db) return;
     const tx = this._db.transaction(this._storeName, 'readwrite');

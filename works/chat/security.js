@@ -10,11 +10,13 @@ const Security = {
   _tokenRefreshTimer: null,
   _tokenRefreshInterval: 30 * 60 * 1000,
 
+  /** Initialize security module and start periodic token refresh. */
   async init() {
     this._startTokenRefresh();
-    console.log('[Security] Initialized');
+    if (window.__DEBUG__) console.log('[Security] Initialized');
   },
 
+  /** Start a recurring timer that refreshes the Firebase ID token every 30 minutes. */
   _startTokenRefresh() {
     this._tokenRefreshTimer = setInterval(async () => {
       const user = window.currentUser || App?.currentUser;
@@ -87,6 +89,7 @@ const Security = {
   },
 
   /* ── Token Management ────────────────────────────────── */
+  /** @returns {Promise<string|null>} The current Firebase ID token, or null if not signed in */
   async getIdToken() {
     const user = window.currentUser || App?.currentUser;
     if (!user) return null;
@@ -95,6 +98,7 @@ const Security = {
     } catch (e) { console.error('[Security] getIdToken failed:', e?.message || e); return null; }
   },
 
+  /** Force a fresh token fetch from Firebase. @returns {Promise<boolean>} True if refresh succeeded */
   async forceTokenRefresh() {
     const user = window.currentUser || App?.currentUser;
     if (!user) return false;

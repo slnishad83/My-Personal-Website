@@ -20,7 +20,7 @@ const BackButton = {
       window.Capacitor.Plugins.App.addListener('backButton', this._onBack.bind(this));
     }
     this._enabled = true;
-    console.log('[BackButton] Initialized');
+    if (window.__DEBUG__) console.log('[BackButton] Initialized');
   },
 
   _onBack(e) {

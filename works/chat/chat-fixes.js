@@ -609,7 +609,7 @@
           }
         } else if (btn.id === 'dockSupportBtn') {
           if (typeof showToast === 'function') showToast('System status: Nominal. Protocol V2.0.26 secure.', 'success');
-          else console.log('[chat-fixes] System status: Nominal.');
+          else if (window.__DEBUG__) console.log('[chat-fixes] System status: Nominal.');
         }
       });
     }
@@ -630,5 +630,5 @@
     document.addEventListener('DOMContentLoaded', initCyberDock);
   }
 
-  console.log('[chat-fixes] v3 applied ✓');
+  if (window.__DEBUG__) console.log('[chat-fixes] v3 applied ✓');
 })();

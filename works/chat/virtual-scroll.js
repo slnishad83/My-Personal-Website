@@ -43,7 +43,7 @@ const VirtualScroll = {
   _enable() {
     this._enabled = true;
     if (!this._container) return;
-    console.log(`[VirtualScroll] Enabled for ${this._items.length} messages`);
+    if (window.__DEBUG__) console.log(`[VirtualScroll] Enabled for ${this._items.length} messages`);
     this._render();
   },
 
