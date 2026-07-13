@@ -171,6 +171,7 @@ const STATIC_ASSETS = [
   'pwa-install.js',
   'platform-detect.js',
   'offline-queue.js',
+  'call-sync.js',
   'presence.js',
   'multi-device.js',
   'security.js',
