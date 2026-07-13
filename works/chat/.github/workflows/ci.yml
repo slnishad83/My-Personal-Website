@@ -2,9 +2,12 @@ name: CI
 
 on:
   push:
-    branches: [main, master]
+    branches: [main]
   pull_request:
-    branches: [main, master]
+    branches: [main]
+
+permissions:
+  contents: read
 
 jobs:
   test:
@@ -60,10 +63,7 @@ jobs:
       - name: Sync web assets
         run: node sync-www.js
 
-      - name: Add iOS platform
-        run: npx cap add ios
-
-      - name: Sync Capacitor
+      - name: Sync Capacitor (iOS)
         run: npx cap sync ios
 
       - name: Install CocoaPods
@@ -125,4 +125,6 @@ jobs:
           cache: npm
       - run: npm install
       - name: Deploy to Firebase Hosting
-        run: npx firebase-tools deploy --only hosting --token ${{ secrets.FIREBASE_TOKEN }}
+        env:
+          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
+        run: npx firebase-tools deploy --only hosting

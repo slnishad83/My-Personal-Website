@@ -6,6 +6,8 @@ def capacitor_pods
   pod 'CapacitorCore', :path => '../node_modules/@capacitor/core'
   pod 'CapacitorApp', :path => '../node_modules/@capacitor/app'
   pod 'CapacitorPushNotifications', :path => '../node_modules/@capacitor/push-notifications'
+  pod 'CapacitorStatusBar', :path => '../node_modules/@capacitor/status-bar'
+  pod 'CapacitorKeyboard', :path => '../node_modules/@capacitor/keyboard'
 end
 
 target 'App' do

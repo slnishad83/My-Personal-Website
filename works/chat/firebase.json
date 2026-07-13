@@ -1,4 +1,16 @@
 {
+  "firestore": {
+    "rules": "firestore.rules",
+    "indexes": "firestore.indexes.json"
+  },
+  "functions": {
+    "source": "functions",
+    "runtime": "nodejs18",
+    "ignore": [
+      "node_modules",
+      ".git"
+    ]
+  },
   "hosting": {
     "public": ".",
     "ignore": [
@@ -15,8 +27,13 @@
       "electron/**",
       "dist-electron/**",
       "scripts/**",
+      "functions/**",
       "package*.json",
-      "my-team-chat.apk"
+      "my-team-chat.apk",
+      "www/**",
+      ".firebase/**",
+      "firestore.rules",
+      "firestore.indexes.json"
     ],
     "headers": [
       {

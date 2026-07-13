@@ -318,7 +318,7 @@ self.addEventListener('fetch', event => {
   const isHtml = requestUrl.pathname.endsWith('.html') || requestUrl.pathname === '/' || requestUrl.pathname === '';
   const isStatic = STATIC_ASSETS.some(asset => requestUrl.pathname.endsWith(asset));
   const isFirestore = requestUrl.hostname.indexOf('firestore') !== -1 || requestUrl.hostname.indexOf('firebaseio') !== -1;
-  const isFunction = requestUrl.pathname.indexOf('cloudfunctions') !== -1;
+  const isFunction = requestUrl.hostname.indexOf('cloudfunctions') !== -1;
 
   if (isApk || isFirestore || isFunction) {
     event.respondWith(fetch(event.request));

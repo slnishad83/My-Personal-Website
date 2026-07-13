@@ -33,6 +33,7 @@ const INCLUDE = [
   'scheduled-calendar.js', 'scheduled-calendar.css',
   'security.js', 'translation-ui.css',
   'manifest.json', 'sw.js',
+  'accessibility.js', 'permissions-manager.js', 'fixes.js',
   'app-icon-192.png', 'app-icon-512.png', 'app-icon.svg', 'nsl-logo.png'
 ];
 

@@ -25,15 +25,11 @@ win:
       arch: [x64]
     - target: portable
       arch: [x64]
-  icon: electron/build-resources/icon.ico
   publisherName: Nishad SL
 
 nsis:
   oneClick: false
   allowToChangeInstallationDirectory: true
-  installerIcon: electron/build-resources/icon.ico
-  uninstallerIcon: electron/build-resources/icon.ico
-  installerHeaderIcon: electron/build-resources/icon.ico
   createDesktopShortcut: true
   createStartMenuShortcut: true
   shortcutName: NSL Chat
@@ -48,7 +44,6 @@ mac:
       arch: [x64, arm64]
     - target: zip
       arch: [x64, arm64]
-  icon: electron/build-resources/icon.icns
   category: public.app-category.social-networking
   hardenedRuntime: true
   entitlements: electron/build-resources/entitlements.mac.plist
@@ -71,7 +66,6 @@ linux:
       arch: [x64]
     - target: rpm
       arch: [x64]
-  icon: electron/build-resources/icons
   category: Chat
   desktop:
     Name: NSL Chat

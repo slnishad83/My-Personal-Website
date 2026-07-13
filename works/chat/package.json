@@ -18,7 +18,11 @@
     "ios:setup": "bash scripts/setup-ios.sh",
     "ios:build": "npx cap sync ios && cd ios/App && xcodebuild -workspace App.xcworkspace -scheme App -configuration Release -archivePath build/App.xcarchive archive"
   },
-  "keywords": ["chat", "messaging", "team"],
+  "keywords": [
+    "chat",
+    "messaging",
+    "team"
+  ],
   "author": "Nishad SL",
   "license": "ISC",
   "type": "commonjs",
@@ -28,7 +32,9 @@
     "@capacitor/cli": "^8.3.4",
     "@capacitor/core": "^8.3.4",
     "@capacitor/ios": "^8.3.4",
+    "@capacitor/keyboard": "^8.0.5",
     "@capacitor/push-notifications": "^8.1.1",
+    "@capacitor/status-bar": "^8.0.2",
     "acorn": "^8.16.0"
   },
   "devDependencies": {

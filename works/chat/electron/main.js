@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, shell, Notification, nativeTheme, Tray, Menu, session } = require('electron');
+const { app, BrowserWindow, ipcMain, shell, Notification, nativeTheme, Tray, Menu } = require('electron');
 const path = require('path');
 const fs = require('fs');
 
@@ -11,6 +11,10 @@ let deepLinkUrl = null;
 function getWebDir() {
   if (isDev) return path.join(__dirname, '..');
   return path.join(process.resourcesPath, 'www');
+}
+
+function isAllowedUrl(url) {
+  return typeof url === 'string' && (url.startsWith('https://') || url.startsWith('http://'));
 }
 
 function createWindow() {
@@ -55,7 +59,7 @@ function createWindow() {
   });
 
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
-    shell.openExternal(url);
+    if (isAllowedUrl(url)) shell.openExternal(url);
     return { action: 'deny' };
   });
 
@@ -112,12 +116,14 @@ function setupIPC() {
       icon: opts.icon || path.join(getWebDir(), 'app-icon-192.png'),
       silent: opts.silent || false
     });
-    if (opts.onClick) notif.on('click', () => { mainWindow && mainWindow.show(); opts.onClick(); });
+    notif.on('click', () => { mainWindow && mainWindow.show(); });
     notif.show();
     return true;
   });
 
-  ipcMain.handle('shell:open-external', (_, url) => shell.openExternal(url));
+  ipcMain.handle('shell:open-external', (_, url) => {
+    if (isAllowedUrl(url)) shell.openExternal(url);
+  });
 
   ipcMain.handle('theme:should-use-dark', () => nativeTheme.shouldUseDarkColors);
 

@@ -30,6 +30,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   },
 
   onDeepLink: (callback) => {
-    ipcRenderer.on('deep-link', (_, url) => callback(url));
+    const handler = (_, url) => callback(url);
+    ipcRenderer.on('deep-link', handler);
+    return () => ipcRenderer.removeListener('deep-link', handler);
   }
 });

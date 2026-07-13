@@ -16,7 +16,7 @@ class AppDelegate: CAPAppDelegate {
         open url: URL,
         options: [UIApplication.OpenURLOptionsKey: Any] = [:]
     ) -> Bool {
-        return CAPBridge.application(app, open: url, options: options)
+        return super.application(app, open: url, options: options)
     }
 
     override func application(
