@@ -991,9 +991,15 @@ exports.clearEndedCallNotification = onDocumentUpdated(
     if (before.status === call.status || !['ended', 'cancelled', 'rejected', 'declined', 'missed', 'failed', 'busy'].includes(call.status)) {
       return null;
     }
-    const receiverIds = call.groupCall === true
-      ? (call.participantIds || []).filter((uid) => uid && uid !== call.fromUserId)
-      : [call.toUserId].filter(Boolean);
+
+    // Fan out to ALL participants (both caller and callee) so every device clears the notification
+    const allParticipantIds = new Set([
+      call.fromUserId,
+      call.toUserId,
+      ...(call.participantIds || [])
+    ].filter(Boolean));
+    const receiverIds = [...allParticipantIds].filter(uid => uid !== call.fromUserId || call.groupCall === true);
+
     await Promise.all(receiverIds.map(async (receiverId) => {
       const { userSnap, user, tokens } = await getUserPushTokens(receiverId);
       if (!tokens.length) return;
@@ -1002,13 +1008,115 @@ exports.clearEndedCallNotification = onDocumentUpdated(
         data: {
           kind: 'call_ended',
           callId: event.params.callId,
-          status: call.status || 'ended'
+          status: call.status || 'ended',
+          fromUserId: call.fromUserId || '',
+          toUserId: call.toUserId || ''
         },
         android: { priority: 'high' },
-        webpush: { headers: { Urgency: 'normal', TTL: '120' } }
+        webpush: { headers: { Urgency: 'high', TTL: '60' } }
       });
       await removeStalePushTokens(userSnap, user, tokens, response);
     }));
+    return null;
+  }
+);
+
+// ========================================
+// CALL STATE FAN-OUT — Notify caller when callee accepts/declines
+// and notify all participants on any state change
+// ========================================
+exports.fanOutCallStateChange = onDocumentUpdated(
+  {
+    document: 'calls/{callId}',
+    region: 'us-central1'
+  },
+  async (event) => {
+    const before = event.data?.before.data() || {};
+    const call = event.data?.after.data() || {};
+    const callId = event.params.callId;
+    if (before.status === call.status) return null;
+
+    const newStatus = call.status;
+    const oldStatus = before.status;
+
+    // Notify the CALLER when the callee accepts or declines
+    if (newStatus === 'connected' && oldStatus === 'ringing' && call.fromUserId) {
+      const { userSnap, user, tokens } = await getUserPushTokens(call.fromUserId);
+      if (tokens.length) {
+        const response = await admin.messaging().sendEachForMulticast({
+          tokens,
+          data: {
+            kind: 'call_accepted',
+            callId,
+            type: call.type || 'voice',
+            fromUserId: call.toUserId || '',
+            fromUserName: call.toUserName || ''
+          },
+          android: { priority: 'high' },
+          webpush: { headers: { Urgency: 'high', TTL: '30' } }
+        });
+        await removeStalePushTokens(userSnap, user, tokens, response);
+      }
+    }
+
+    // Notify the CALLER when callee declines
+    if (newStatus === 'declined' && oldStatus === 'ringing' && call.fromUserId) {
+      const { userSnap, user, tokens } = await getUserPushTokens(call.fromUserId);
+      if (tokens.length) {
+        const response = await admin.messaging().sendEachForMulticast({
+          tokens,
+          data: {
+            kind: 'call_declined',
+            callId,
+            type: call.type || 'voice',
+            fromUserId: call.toUserId || '',
+            fromUserName: call.toUserName || ''
+          },
+          android: { priority: 'high' },
+          webpush: { headers: { Urgency: 'normal', TTL: '60' } }
+        });
+        await removeStalePushTokens(userSnap, user, tokens, response);
+      }
+    }
+
+    // Notify the CALLER when callee is busy
+    if (newStatus === 'busy' && oldStatus === 'ringing' && call.fromUserId) {
+      const { userSnap, user, tokens } = await getUserPushTokens(call.fromUserId);
+      if (tokens.length) {
+        const response = await admin.messaging().sendEachForMulticast({
+          tokens,
+          data: {
+            kind: 'call_busy',
+            callId,
+            type: call.type || 'voice',
+            fromUserId: call.toUserId || ''
+          },
+          android: { priority: 'normal' },
+          webpush: { headers: { Urgency: 'normal', TTL: '60' } }
+        });
+        await removeStalePushTokens(userSnap, user, tokens, response);
+      }
+    }
+
+    // Notify the CALLER when callee fails to connect
+    if (newStatus === 'failed' && oldStatus === 'ringing' && call.fromUserId) {
+      const { userSnap, user, tokens } = await getUserPushTokens(call.fromUserId);
+      if (tokens.length) {
+        const response = await admin.messaging().sendEachForMulticast({
+          tokens,
+          data: {
+            kind: 'call_failed',
+            callId,
+            type: call.type || 'voice',
+            reason: call.failureReason || 'connection_failed'
+          },
+          android: { priority: 'normal' },
+          webpush: { headers: { Urgency: 'normal', TTL: '60' } }
+        });
+        await removeStalePushTokens(userSnap, user, tokens, response);
+      }
+    }
+
     return null;
   }
 );

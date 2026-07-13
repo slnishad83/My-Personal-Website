@@ -1,0 +1,13 @@
+platform :ios, '15.0'
+
+def capacitor_pods
+  pod 'Capacitor', :path => '../node_modules/@capacitor/ios'
+  pod 'CapacitorCordova', :path => '../node_modules/@capacitor/ios'
+  pod 'CapacitorCore', :path => '../node_modules/@capacitor/core'
+  pod 'CapacitorApp', :path => '../node_modules/@capacitor/app'
+  pod 'CapacitorPushNotifications', :path => '../node_modules/@capacitor/push-notifications'
+end
+
+target 'App' do
+  capacitor_pods
+end

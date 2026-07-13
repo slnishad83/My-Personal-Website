@@ -1,11 +1,18 @@
 package com.nishad.myteamchat;
 
 import android.Manifest;
+import android.bluetooth.BluetoothAdapter;
+import android.bluetooth.BluetoothHeadset;
+import android.bluetooth.BluetoothProfile;
+import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
+import android.media.AudioDeviceInfo;
 import android.media.AudioManager;
 import android.app.NotificationManager;
 import android.net.Uri;
+import android.os.Build;
 import android.provider.Settings;
 import com.getcapacitor.JSObject;
 import com.getcapacitor.Plugin;
@@ -33,6 +40,11 @@ import com.getcapacitor.PermissionState;
     }
 )
 public class AppPermissionsPlugin extends Plugin {
+
+    private AudioManager audioManager;
+    private BluetoothHeadset bluetoothHeadset;
+    private boolean isBluetoothConnected = false;
+    private BroadcastReceiver audioRouteReceiver;
 
     @PluginMethod
     public void checkPermission(PluginCall call) {
@@ -91,8 +103,7 @@ public class AppPermissionsPlugin extends Plugin {
     public void setSpeakerphone(PluginCall call) {
         Boolean enabledValue = call.getBoolean("enabled");
         boolean enabled = enabledValue != null && enabledValue;
-        AudioManager audioManager =
-            (AudioManager) getContext().getSystemService(Context.AUDIO_SERVICE);
+        AudioManager audioManager = getAudioManager();
         if (audioManager == null) {
             call.reject("Audio routing is unavailable");
             return;
@@ -101,16 +112,168 @@ public class AppPermissionsPlugin extends Plugin {
         audioManager.setSpeakerphoneOn(enabled);
         JSObject response = new JSObject();
         response.put("enabled", enabled);
+        response.put("output", enabled ? "speaker" : "earpiece");
         call.resolve(response);
     }
 
     @PluginMethod
+    public void setAudioOutput(PluginCall call) {
+        String output = call.getString("output");
+        if (output == null) {
+            call.reject("Missing output parameter (speaker/earpiece/bluetooth)");
+            return;
+        }
+        AudioManager am = getAudioManager();
+        if (am == null) {
+            call.reject("Audio routing is unavailable");
+            return;
+        }
+
+        am.setMode(AudioManager.MODE_IN_COMMUNICATION);
+
+        switch (output.toLowerCase()) {
+            case "speaker":
+                am.setSpeakerphoneOn(true);
+                am.setBluetoothScoOn(false);
+                break;
+            case "earpiece":
+                am.setSpeakerphoneOn(false);
+                am.setBluetoothScoOn(false);
+                break;
+            case "bluetooth":
+                am.setSpeakerphoneOn(false);
+                if (am.isBluetoothScoAvailableOffCall()) {
+                    am.setBluetoothScoOn(true);
+                    am.startBluetoothSco();
+                    am.setMode(AudioManager.MODE_IN_COMMUNICATION);
+                }
+                break;
+            default:
+                am.setSpeakerphoneOn(true);
+                break;
+        }
+
+        JSObject response = new JSObject();
+        response.put("output", output);
+        response.put("isBluetoothConnected", isBluetoothConnected);
+        call.resolve(response);
+    }
+
+    @PluginMethod
+    public void getAudioRouteInfo(PluginCall call) {
+        AudioManager am = getAudioManager();
+        JSObject response = new JSObject();
+        if (am == null) {
+            response.put("available", false);
+            call.resolve(response);
+            return;
+        }
+
+        boolean hasEarpiece = am.hasReceiver(AudioManager.TYPE_BUILTIN_EARPIECE);
+        boolean hasSpeaker = am.hasReceiver(AudioManager.TYPE_BUILTIN_SPEAKER);
+        boolean hasBluetooth = isBluetoothConnected || am.isBluetoothScoOn();
+        boolean hasWiredHeadset = am.isWiredHeadsetOn();
+
+        String currentRoute = "earpiece";
+        if (am.isSpeakerphoneOn()) {
+            currentRoute = "speaker";
+        } else if (hasBluetooth && am.isBluetoothScoOn()) {
+            currentRoute = "bluetooth";
+        } else if (hasWiredHeadset) {
+            currentRoute = "wired";
+        }
+
+        response.put("available", true);
+        response.put("hasEarpiece", hasEarpiece);
+        response.put("hasSpeaker", hasSpeaker);
+        response.put("hasBluetooth", hasBluetooth);
+        response.put("hasWiredHeadset", hasWiredHeadset);
+        response.put("currentRoute", currentRoute);
+        response.put("isBluetoothSCOOn", am.isBluetoothScoOn());
+        call.resolve(response);
+    }
+
+    @PluginMethod
+    public void setupBluetoothListener(PluginCall call) {
+        registerBluetoothReceiver();
+        JSObject response = new JSObject();
+        response.put("listening", true);
+        call.resolve(response);
+    }
+
+    private void registerBluetoothReceiver() {
+        if (audioRouteReceiver != null) return;
+
+        audioRouteReceiver = new BroadcastReceiver() {
+            @Override
+            public void onReceive(Context context, Intent intent) {
+                String action = intent.getAction();
+                if (AudioManager.ACTION_SCO_AUDIO_STATE_UPDATED.equals(action)) {
+                    int state = intent.getIntExtra(AudioManager.EXTRA_SCO_AUDIO_STATE, -1);
+                    isBluetoothConnected = (state == AudioManager.SCO_AUDIO_STATE_CONNECTED);
+                    JSObject data = new JSObject();
+                    data.put("connected", isBluetoothConnected);
+                    data.put("state", state);
+                    notifyListeners("bluetoothStateChanged", data);
+                }
+            }
+        };
+
+        IntentFilter filter = new IntentFilter(AudioManager.ACTION_SCO_AUDIO_STATE_UPDATED);
+        getContext().registerReceiver(audioRouteReceiver, filter);
+    }
+
+    @PluginMethod
+    public void enterCallMode(PluginCall call) {
+        AudioManager am = getAudioManager();
+        if (am == null) {
+            call.reject("Audio routing is unavailable");
+            return;
+        }
+
+        am.setMode(AudioManager.MODE_IN_COMMUNICATION);
+
+        boolean useSpeaker = call.getBoolean("useSpeaker", false);
+        boolean useBluetooth = call.getBoolean("useBluetooth", false);
+
+        if (useBluetooth && am.isBluetoothScoAvailableOffCall()) {
+            am.setBluetoothScoOn(true);
+            am.startBluetoothSco();
+        } else if (useSpeaker) {
+            am.setSpeakerphoneOn(true);
+        }
+
+        JSObject response = new JSObject();
+        response.put("mode", "in_communication");
+        response.put("speaker", useSpeaker);
+        response.put("bluetooth", useBluetooth);
+        call.resolve(response);
+    }
+
+    @PluginMethod
+    public void exitCallMode(PluginCall call) {
+        AudioManager am = getAudioManager();
+        if (am != null) {
+            if (am.isBluetoothScoOn()) {
+                am.stopBluetoothSco();
+                am.setBluetoothScoOn(false);
+            }
+            am.setSpeakerphoneOn(false);
+            am.setMode(AudioManager.MODE_NORMAL);
+        }
+        call.resolve();
+    }
+
+    @PluginMethod
     public void clearAudioMode(PluginCall call) {
-        AudioManager audioManager =
-            (AudioManager) getContext().getSystemService(Context.AUDIO_SERVICE);
-        if (audioManager != null) {
-            audioManager.setMode(AudioManager.MODE_NORMAL);
-            audioManager.setSpeakerphoneOn(false);
+        AudioManager am = getAudioManager();
+        if (am != null) {
+            if (am.isBluetoothScoOn()) {
+                am.stopBluetoothSco();
+                am.setBluetoothScoOn(false);
+            }
+            am.setSpeakerphoneOn(false);
+            am.setMode(AudioManager.MODE_NORMAL);
         }
         call.resolve();
     }
@@ -143,5 +306,32 @@ public class AppPermissionsPlugin extends Plugin {
             (NotificationManager) getContext().getSystemService(Context.NOTIFICATION_SERVICE);
         if (manager != null) manager.cancel(callId.hashCode() & 0x7fffffff);
         call.resolve();
+    }
+
+    private AudioManager getAudioManager() {
+        if (audioManager == null) {
+            audioManager = (AudioManager) getContext().getSystemService(Context.AUDIO_SERVICE);
+        }
+        return audioManager;
+    }
+
+    @Override
+    protected void handleOnDestroy() {
+        super.handleOnDestroy();
+        if (audioRouteReceiver != null) {
+            try {
+                getContext().unregisterReceiver(audioRouteReceiver);
+            } catch (Exception _) {}
+            audioRouteReceiver = null;
+        }
+        AudioManager am = getAudioManager();
+        if (am != null && am.getMode() == AudioManager.MODE_IN_COMMUNICATION) {
+            if (am.isBluetoothScoOn()) {
+                am.stopBluetoothSco();
+                am.setBluetoothScoOn(false);
+            }
+            am.setSpeakerphoneOn(false);
+            am.setMode(AudioManager.MODE_NORMAL);
+        }
     }
 }

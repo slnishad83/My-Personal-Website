@@ -256,6 +256,9 @@ const STATIC_ASSETS = [
   'notification-prefs.js',
   'notification-digest.js',
   'notification-orchestrator.js',
+  'notification-telemetry.js',
+  'ios-callkit.js',
+  'desktop-notifications.js',
   'permissions-manager.js',
   '../app-extras.js',
   '../app.js'

@@ -537,9 +537,16 @@ service cloud.firestore {
     }
 
     match /scheduledCalls/{docId} {
-      allow create: if signedIn();
-      allow read: if signedIn();
-      allow update, delete: if signedIn() && resource.data.creatorId == request.auth.uid;
+      allow read: if signedIn() && (
+        resource.data.participantIds is list && request.auth.uid in resource.data.participantIds
+        || resource.data.participants is list && request.auth.uid in resource.data.participants
+      );
+      allow create: if signedIn()
+        && request.resource.data.creatorId == request.auth.uid
+        && request.resource.data.participantIds is list
+        && request.auth.uid in request.resource.data.participantIds;
+      allow update: if signedIn() && resource.data.creatorId == request.auth.uid;
+      allow delete: if signedIn() && resource.data.creatorId == request.auth.uid;
     }
 
     match /tasks/{taskId} {
@@ -547,19 +554,30 @@ service cloud.firestore {
       allow update, delete: if signedIn() && resource.data.userId == request.auth.uid;
     }
     match /callLogs/{callLogId} {
-      allow read: if signedIn();
-      allow create: if signedIn();
-      allow update: if signedIn();
-      allow delete: if signedIn();
+      allow read: if signedIn() && (
+        resource.data.participants is list && request.auth.uid in resource.data.participants
+        || resource.data.callerId == request.auth.uid
+        || resource.data.calleeId == request.auth.uid
+      );
+      allow create: if signedIn()
+        && request.resource.data.participants is list
+        && request.auth.uid in request.resource.data.participants;
+      allow update: if signedIn()
+        && resource.data.participants is list
+        && request.auth.uid in resource.data.participants
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'read', 'starred', 'deletedFor'
+        ]);
+      allow delete: if false;
     }
     match /calendarEvents/{eventId} {
       allow read: if signedIn();
-      allow create: if signedIn();
+      allow create: if signedIn() && request.resource.data.addedBy == request.auth.uid;
       allow update, delete: if signedIn() && resource.data.addedBy == request.auth.uid;
     }
     match /groupExpenses/{expId} {
       allow read: if signedIn();
-      allow create: if signedIn();
+      allow create: if signedIn() && request.resource.data.addedBy == request.auth.uid;
       allow update, delete: if signedIn() && resource.data.addedBy == request.auth.uid;
     }
     match /scheduledMessages/{msgId} {
