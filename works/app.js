@@ -2271,6 +2271,9 @@ function openChat(chatId) {
   App.currentChat = chat;
   chat.unread = 0;
 
+  // Update header mute icon to reflect current chat's mute state
+  _updateChatMuteIcon(chatId);
+
   // Sync read status to Firestore
   if (App.db && App.auth?.currentUser && chatId !== 'saved_me') {
     const uid = App.auth.currentUser.uid;
@@ -6463,6 +6466,15 @@ function _renderMuteBadge(chatId) {
   } else if (!isMuted && badge) {
     badge.remove();
   }
+  _updateChatMuteIcon(chatId);
+}
+
+function _updateChatMuteIcon(chatId) {
+  if (App.currentChat?.id !== chatId) return;
+  const icon = document.getElementById('chat-mute-icon');
+  if (!icon) return;
+  const isMuted = App._mutedChats?.has(chatId);
+  icon.textContent = isMuted ? 'notifications_off' : 'notifications';
 }
 
 function _saveMuteState() {

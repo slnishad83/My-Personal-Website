@@ -339,7 +339,10 @@ const KeyboardShortcuts = {
     /* ── Ctrl+Shift+M: Mute/unmute chat ────────────────────── */
     if (isMeta && isShift && e.key === 'M') {
       e.preventDefault();
-      if (typeof toggleMuteChat === 'function') toggleMuteChat();
+      if (typeof App !== 'undefined' && App.currentChat?.id) {
+        if (App._mutedChats?.has(App.currentChat.id)) { if (typeof toggleMuteChat === 'function') toggleMuteChat(App.currentChat.id); }
+        else { if (typeof showMuteChatOptions === 'function') showMuteChatOptions(App.currentChat.id); }
+      }
       return;
     }
 

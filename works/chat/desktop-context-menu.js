@@ -116,7 +116,7 @@
     const isMuted = chatEl?.classList?.contains('muted');
     const items = [
       { icon: '📌', label: isPinned ? 'Unpin' : 'Pin', action: () => { if (typeof togglePinChat === 'function') togglePinChat(chatId); } },
-      { icon: '🔇', label: isMuted ? 'Unmute' : 'Mute', action: () => { if (typeof toggleMuteChat === 'function') toggleMuteChat(chatId); } },
+      { icon: '🔇', label: isMuted ? 'Unmute' : 'Mute', action: () => { if (isMuted) { if (typeof toggleMuteChat === 'function') toggleMuteChat(chatId); } else { if (typeof showMuteChatOptions === 'function') showMuteChatOptions(chatId); } } },
       { icon: '📁', label: 'Archive', shortcut: 'Ctrl+Shift+A', action: () => { if (typeof archiveChat === 'function') archiveChat(chatId); } },
       { separator: true },
       { icon: '👤', label: 'View contact', action: () => { if (typeof viewContact === 'function') viewContact(chatId); } },
