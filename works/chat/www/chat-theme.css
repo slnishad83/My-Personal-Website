@@ -1,0 +1,1499 @@
+/* ════════════════════════════════════════════════════════════
+   CHAT THEME — Consolidated responsive + dark/light mode
+   Load AFTER tailwind, BEFORE app.js
+   ════════════════════════════════════════════════════════════ */
+
+/* ── Viewport height: use dvh with vh fallback ──────── */
+html, body, #app { height: 100%; margin: 0; padding: 0; }
+@supports (height: 100dvh) {
+  html, body, #app { height: 100dvh; margin: 0; padding: 0; }
+  #chat-area { min-height: 100dvh; }
+}
+
+/* ── Responsive Layout ────────────────────────────────── */
+@media (max-width: 767px) {
+  #sidebar { display: none !important; }
+  #chat-list-sidebar {
+    width: 100% !important;
+    max-width: 100% !important;
+    flex: 1 1 100% !important;
+  }
+  #chat-area {
+    position: fixed !important;
+    inset: 0 !important;
+    z-index: 50 !important;
+    background: var(--background) !important;
+    height: 100vh !important;
+    overflow-x: hidden !important;
+  }
+  @supports (height: 100dvh) {
+    #chat-area { height: 100dvh !important; }
+  }
+  #chat-area.hidden-mobile { display: none !important; }
+  #chat-area.visible-mobile { display: flex !important; }
+  #bottom-nav { display: flex !important; }
+  #app { padding-bottom: 64px; }
+  .glass-panel { border-radius: 24px !important; }
+  #detail-panel { display: none !important; }
+  #attach-menu { left: 12px !important; bottom: 80px !important; max-height: calc(100vh - 160px); overflow-y: auto; }
+  @supports (height: 100dvh) {
+    #attach-menu { max-height: calc(100dvh - 160px); }
+  }
+  #emoji-picker {
+    right: 12px !important;
+    left: 12px !important;
+    width: auto !important;
+    max-width: calc(100vw - 24px) !important;
+    max-height: calc(100vh - 160px) !important;
+    bottom: 80px !important;
+    height: auto !important;
+  }
+  @supports (height: 100dvh) {
+    #emoji-picker { max-height: calc(100dvh - 160px) !important; }
+  }
+  body { user-select: none; -webkit-tap-highlight-color: transparent; }
+  .overlay > div { margin: 8px !important; max-height: 90vh !important; }
+  @supports (height: 100dvh) {
+    .overlay > div { max-height: 90dvh !important; }
+  }
+  /* Show message action buttons on touch devices (no hover) */
+  .group > button.opacity-0 { opacity: 0.7 !important; }
+  /* Emoji grid fewer columns on narrow screens */
+  #emoji-grid { grid-template-columns: repeat(7, 1fr) !important; }
+  /* Recording bar: smaller buttons on mobile */
+  #recording-bar .btn-cancel { padding: 6px 10px !important; font-size: 11px !important; }
+  #recording-bar .btn-send { padding: 6px 10px !important; font-size: 11px !important; }
+  /* Input bar buttons: prevent flex shrink on tap */
+  #input-bar button { flex-shrink: 0; }
+  /* Header action buttons: prevent overflow */
+  #header-actions-container { flex-shrink: 0; gap: 2px !important; }
+  #header-actions-container button { flex-shrink: 0; width: 36px; height: 36px; }
+  /* Scroll-to-bottom FAB: safe-area aware */
+  #scroll-to-bottom { bottom: calc(96px + var(--safe-bottom, 0px)) !important; }
+}
+
+@media (max-width: 380px) {
+  #emoji-grid { grid-template-columns: repeat(6, 1fr) !important; }
+  #recording-bar .btn-send span:last-child { display: none; }
+}
+
+/* ── Small phones (<480px): hide extra input buttons, shrink header ── */
+@media (max-width: 479px) {
+  /* Hide GIF and format buttons to save input space */
+  #gif-btn { display: none !important; }
+  #format-toggle { display: none !important; }
+  /* Shrink header action buttons */
+  #header-actions-container { gap: 0 !important; }
+  #header-actions-container button { width: 32px; height: 32px; padding: 4px; }
+  #header-actions-container button span { font-size: 20px; }
+  /* Input bar: tighter gaps */
+  #input-bar .glass-panel { gap: 4px !important; }
+  #input-bar .flex.items-center.gap-1 { gap: 2px !important; }
+  /* Call bubble: safe-area aware */
+  #call-bubble { bottom: calc(24px + var(--safe-bottom, 0px)) !important; }
+}
+
+@media (min-width: 768px) and (max-width: 1023px) {
+  #sidebar { width: 72px !important; }
+  #sidebar .xl\\:block { display: none !important; }
+  #sidebar button { justify-content: center !important; padding-left: 0 !important; padding-right: 0 !important; }
+  #chat-list-sidebar { width: clamp(240px, 30vw, 320px) !important; }
+  #bottom-nav { display: none !important; }
+  /* C2: Detail panel as overlay on tablet portrait */
+  #detail-panel.tablet-overlay-panel {
+    position: fixed !important; right: 0 !important; top: 0 !important; bottom: 0 !important;
+    width: min(360px, 85vw) !important; min-width: 0 !important;
+    z-index: 50 !important; box-shadow: -8px 0 32px rgba(0,0,0,0.3) !important;
+    border-left: 1px solid var(--outline-variant) !important;
+    transform: translateX(0) !important; transition: transform 0.25s ease !important;
+  }
+  /* H2: Sidebar toggle button on tablet */
+  #sidebar-toggle-btn { display: flex !important; }
+  /* H5: Emoji picker responsive on tablet */
+  #emoji-picker { right: 50% !important; transform: translateX(50%) !important; width: min(380px, 80vw) !important; max-height: 70vh !important; }
+  /* H11: Profile overlay as side panel on tablet */
+  #profile-overlay .bg-surface-container { max-width: min(420px, 85vw) !important; margin: 0 !important; border-radius: 0 !important; height: 100vh !important; max-height: 100vh !important; position: fixed !important; right: 0 !important; top: 0 !important; }
+  /* H12: New chat overlay centered on tablet */
+  #new-chat-overlay .bg-surface-container { max-width: min(480px, 80vw) !important; max-height: 80vh !important; }
+  /* M7: Toast centered on tablet */
+  .toast-container, [id*="toast"] { left: 50% !important; right: auto !important; transform: translateX(-50%) !important; }
+  /* M8: Search modal narrower on tablet */
+  #globalSearchModal { max-width: min(560px, 85vw) !important; }
+  /* H8: Larger touch targets on tablet (coarse pointer) */
+  @media (pointer: coarse) {
+    button, [role="button"], .tab-item, .bottom-nav-item, .chat-list-item { min-height: 48px !important; min-width: 48px !important; }
+    .emoji-cat-btn { min-width: 40px !important; min-height: 40px !important; }
+  }
+  /* L1: Smooth transitions on orientation change */
+  html, body, #app, #sidebar, #chat-list-sidebar, #chat-area, #detail-panel { transition: width 0.2s ease, transform 0.2s ease !important; }
+}
+
+@media (min-width: 1024px) and (max-width: 1279px) {
+  #sidebar { width: 72px !important; }
+  #sidebar .xl\\:block { display: none !important; }
+  #sidebar button { justify-content: center !important; padding-left: 0 !important; padding-right: 0 !important; }
+  #detail-panel { display: none !important; }
+}
+
+@media (min-width: 1280px) {
+  #sidebar { width: 256px !important; }
+}
+
+/* ── Landscape mode on mobile ───────────────────────── */
+@media (max-width: 767px) and (orientation: landscape) {
+  #chat-area { height: 100vh !important; overflow-x: hidden !important; }
+  @supports (height: 100dvh) {
+    #chat-area { height: 100dvh !important; }
+  }
+  #chat-header { height: 48px !important; min-height: 48px !important; padding: 4px 12px !important; }
+  #chat-header img { width: 28px !important; height: 28px !important; }
+  #input-bar { padding: 4px 12px !important; }
+  #input-bar .glass-panel { padding: 4px 8px !important; border-radius: 16px !important; }
+  #bottom-nav { display: none !important; }
+  #landscape-tabs { display: flex !important; }
+  #app { padding-bottom: 0 !important; }
+  .overlay > div { max-height: 95vh !important; }
+  @supports (height: 100dvh) {
+    .overlay > div { max-height: 95dvh !important; }
+  }
+}
+
+/* ── Landscape mode on tablet (768-1024px) ──────────── */
+@media (min-width: 768px) and (max-width: 1023px) and (orientation: landscape) {
+  #sidebar { width: 72px !important; }
+  #sidebar .xl\\:block { display: none !important; }
+  #sidebar button { justify-content: center !important; padding-left: 0 !important; padding-right: 0 !important; }
+  #chat-list-sidebar { width: clamp(240px, 28vw, 320px) !important; }
+  #detail-panel { display: flex !important; width: 320px !important; min-width: 320px !important; position: relative !important; box-shadow: none !important; }
+  #detail-panel.tablet-overlay-panel { position: relative !important; box-shadow: none !important; width: 320px !important; }
+  #bottom-nav { display: none !important; }
+  #app { padding-bottom: 0 !important; }
+  /* H4: Media viewer wider on tablet landscape */
+  #media-viewer-content img { max-height: 92vh !important; max-width: 92vw !important; }
+}
+
+/* ── Dark Mode Enhancements ──────────────────────────── */
+html.dark ::-webkit-scrollbar { width: 5px; height: 5px; background: var(--surface-dim); }
+html.dark ::-webkit-scrollbar-track { background: var(--surface-dim); }
+html.dark ::-webkit-scrollbar-thumb { background: var(--surface-container-highest); border-radius: 4px; }
+html.dark ::-webkit-scrollbar-thumb:hover { background: var(--outline-variant); }
+html.dark ::-webkit-scrollbar-corner { background: var(--surface-dim); }
+
+/* Light mode scrollbars */
+html ::-webkit-scrollbar { width: 5px; height: 5px; background: var(--surface-bright); }
+html ::-webkit-scrollbar-track { background: var(--surface-bright); }
+html ::-webkit-scrollbar-thumb { background: var(--outline-variant); border-radius: 4px; }
+html ::-webkit-scrollbar-thumb:hover { background: var(--outline); }
+
+/* Scrollbar styles for scrollable containers only */
+html.dark .overflow-y-auto,
+html.dark .custom-scrollbar,
+html.dark #emoji-grid,
+html.dark #messages-wrap,
+html.dark #chat-list,
+html.dark .modal-body {
+  scrollbar-color: var(--surface-container-highest) var(--surface-dim);
+  scrollbar-width: thin;
+}
+html .overflow-y-auto,
+html .custom-scrollbar,
+html #emoji-grid,
+html #messages-wrap,
+html #chat-list,
+html .modal-body {
+  scrollbar-color: var(--outline-variant) var(--surface-bright);
+  scrollbar-width: thin;
+}
+
+/* ── Input / Textarea dark mode fixes ────────────────── */
+html.dark input,
+html.dark textarea,
+html.dark select { color-scheme: dark; }
+input::placeholder, textarea::placeholder { color: var(--on-surface-variant); opacity: 0.5; }
+
+/* Allow text selection in search inputs on mobile */
+input[type="text"],
+input[type="search"],
+textarea {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+/* ── Overlay animations ──────────────────────────────── */
+.overlay { transition: opacity 0.2s ease; }
+.animate-in { animation: fadeInZoom 0.2s ease-out; }
+@keyframes fadeInZoom {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+/* ── Glass panel dark mode override ──────────────────── */
+html.dark .glass-panel {
+  background: rgba(17, 19, 28, 0.6) !important;
+  border-color: rgba(196, 192, 255, 0.08) !important;
+}
+html:not(.dark) .glass-panel {
+  background: rgba(255, 255, 255, 0.7) !important;
+  border-color: rgba(83, 72, 212, 0.1) !important;
+}
+
+/* ── Message bubble styles ───────────────────────────── */
+.msg-bubble {
+  max-width: 75%;
+  padding: 10px 14px;
+  border-radius: 18px;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  line-height: 1.45;
+  font-size: 14px;
+}
+.msg-sent {
+  align-self: flex-end;
+  background: var(--primary);
+  color: var(--on-primary);
+  border-bottom-right-radius: 4px;
+}
+.msg-received {
+  align-self: flex-start;
+  background: var(--surface-container-high);
+  color: var(--on-surface);
+  border-bottom-left-radius: 4px;
+}
+html.dark .msg-sent { background: var(--primary-fixed-dim); color: var(--on-primary-fixed); }
+html.dark .msg-received { background: var(--surface-container-highest); }
+
+/* ── Bottom nav active state ─────────────────────────── */
+.bottom-nav-item.active { color: var(--primary) !important; }
+.bottom-nav-item.active .material-symbols-outlined { font-variation-settings: 'FILL' 1 !important; }
+nav#bottom-nav { z-index: 40; }
+
+/* ── Sidebar tab active state ────────────────────────── */
+.tab-item.active {
+  background: var(--primary-fixed) !important;
+  color: var(--on-primary-fixed) !important;
+  border-color: var(--primary) !important;
+}
+html.dark .tab-item.active {
+  background: rgba(196, 192, 255, 0.15) !important;
+  color: var(--primary) !important;
+}
+
+/* ── Universal overflow utilities for message content ── */
+.overflow-wrap-anywhere { overflow-wrap: anywhere; word-break: break-word; }
+.bubble-media img, .bubble-media video { max-width: 100%; height: auto; }
+
+/* ── Chat list item hover/active ─────────────────────── */
+.chat-list-item { cursor: pointer; border-radius: 12px; transition: background 0.15s; }
+.chat-list-item:hover { background: var(--surface-container-high); }
+.chat-list-item.active { background: var(--surface-container-highest); }
+html.dark .chat-list-item.active { background: rgba(196, 192, 255, 0.08); }
+
+/* ── Chat list: extra bottom padding so last item clears the fixed bottom-nav ── */
+@media (max-width: 767px) {
+  #chat-list { padding-bottom: 72px; }
+}
+
+/* ── Safe area for modern phones (bottom) ────────────── */
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+  #bottom-nav { padding-bottom: env(safe-area-inset-bottom); }
+  .overlay > div { margin-bottom: calc(8px + env(safe-area-inset-bottom)); }
+  #input-bar { padding-bottom: calc(16px + env(safe-area-inset-bottom)); }
+  #recording-bar { padding-bottom: calc(8px + env(safe-area-inset-bottom)); }
+  #emoji-picker { bottom: calc(80px + env(safe-area-inset-bottom)); }
+  #attach-menu { bottom: calc(80px + env(safe-area-inset-bottom)); }
+  @media (max-width: 767px) {
+    #app { padding-bottom: calc(64px + env(safe-area-inset-bottom)); }
+    #chat-list { padding-bottom: calc(72px + env(safe-area-inset-bottom)); }
+  }
+}
+
+/* ── Safe area left/right for landscape notch ────────── */
+@supports (padding-left: env(safe-area-inset-left)) {
+  #sidebar, #chat-list-sidebar { padding-left: env(safe-area-inset-left); }
+  #chat-area, #bottom-nav { padding-left: env(safe-area-inset-left); padding-right: env(safe-area-inset-right); }
+}
+
+/* ── Safe area top for notch/Dynamic Island ──────────── */
+@supports (padding-top: env(safe-area-inset-top)) {
+  #chat-header { padding-top: env(safe-area-inset-top); min-height: calc(64px + env(safe-area-inset-top)); }
+  #toast-container { top: calc(24px + env(safe-area-inset-top)) !important; }
+  #camera-overlay > div:first-child { padding-top: env(safe-area-inset-top); }
+  #camera-overlay > div:last-child { padding-bottom: calc(16px + env(safe-area-inset-bottom)); }
+  #media-viewer .p-6 { padding-top: calc(24px + env(safe-area-inset-top)); }
+  #call-screen { padding-top: env(safe-area-inset-top); }
+}
+
+/* ── Touch feedback ──────────────────────────────────── */
+@media (hover: none) {
+  .chat-list-item:active { background: var(--surface-container-highest); transform: scale(0.98); }
+  button:active { transform: scale(0.95); }
+  /* Ensure minimum 44px touch targets */
+  .voice-play { width: 44px; height: 44px; font-size: 16px; }
+  .voice-speed { min-width: 44px; min-height: 44px; padding: 4px 8px; font-size: 11px; }
+  #pinned-message-bar button { min-width: 44px; min-height: 44px; }
+  #recording-bar button { min-width: 44px; min-height: 44px; }
+  #_msg-ctx-menu button { min-height: 44px; }
+  .confirm-btn { min-height: 44px; padding: 10px 20px !important; }
+}
+
+/* ── Emoji picker touch: show preview on tap ──────────── */
+@media (hover: none) {
+  #emoji-grid span:active { transform: scale(1.3); background: var(--surface-variant); }
+}
+
+/* ── Momentum scrolling for iOS ──────────────────────── */
+.overflow-y-auto,
+.custom-scrollbar,
+#emoji-grid {
+  -webkit-overflow-scrolling: touch;
+}
+
+/* ── Voice player styles ─────────────────────────────── */
+.voice-player-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+}
+.voice-play {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: none;
+  background: var(--primary);
+  color: var(--on-primary);
+  font-size: 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+.voice-play:active { transform: scale(0.9); }
+.voice-scrub {
+  flex: 1;
+  height: 4px;
+  -webkit-appearance: none;
+  appearance: none;
+  background: var(--outline-variant);
+  border-radius: 2px;
+  outline: none;
+  cursor: pointer;
+}
+.voice-scrub::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--primary);
+  cursor: pointer;
+}
+.voice-scrub::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--primary);
+  cursor: pointer;
+  border: none;
+}
+.voice-speed {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 8px;
+  border-radius: 8px;
+  border: 1px solid var(--outline-variant);
+  background: transparent;
+  color: var(--on-surface-variant);
+  cursor: pointer;
+  flex-shrink: 0;
+  -webkit-tap-highlight-color: transparent;
+  min-width: 44px;
+  text-align: center;
+}
+.voice-speed:active { background: var(--surface-variant); }
+.voice-time {
+  font-size: 11px;
+  color: var(--on-surface-variant);
+  min-width: 30px;
+  text-align: right;
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── File input visibility fix for iOS Safari ────────── */
+input[type="file"].hidden-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  overflow: hidden;
+}
+
+/* ── Recording bar responsive ────────────────────────── */
+@media (max-width: 767px) {
+  #recording-bar { padding: 8px 12px !important; }
+  #recording-bar .flex-1 { min-width: 0; }
+}
+
+/* ── Confirm dialog touch targets ────────────────────── */
+.confirm-btn {
+  min-height: 44px;
+  padding: 10px 20px;
+}
+
+/* ── System dark mode preference fallback ────────────── */
+@media (prefers-color-scheme: dark) {
+  html:not([data-theme]) { color-scheme: dark; }
+}
+
+/* ── Prevent double-tap zoom on iOS ──────────────────── */
+button, a, [role="button"], input, textarea, select {
+  touch-action: manipulation;
+}
+
+/* ── Recording waveform container ────────────────────── */
+#recording-waveform {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  min-width: 0;
+}
+
+/* ── Pulse animation for recording dot ───────────────── */
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+/* ── Pinned message bar responsive ───────────────────── */
+@media (max-width: 380px) {
+  #pinned-message-bar { padding: 6px 12px !important; }
+  #pinned-message-bar .text-xs { font-size: 10px !important; }
+}
+
+/* ── Extra-small screens (<380px) ──────────────────────── */
+@media (max-width: 379px) {
+  #chat-list { padding-bottom: 60px; }
+  #app { padding-bottom: 56px; }
+  .msg-bubble { max-width: 90%; padding: 8px 10px; font-size: 13px; }
+  .chat-list-item { padding: 8px !important; }
+  #chat-header { height: 52px !important; padding: 4px 8px !important; }
+  #input-bar { padding: 6px !important; }
+  .glass-panel { padding: 8px !important; border-radius: 20px !important; }
+  #bottom-nav { height: 56px !important; }
+  #bottom-nav .text-2xl { font-size: 20px !important; }
+  .overlay > div { margin: 4px !important; border-radius: 16px !important; }
+  #attach-menu { left: 4px !important; bottom: calc(64px + var(--safe-bottom, 0px)) !important; }
+  #emoji-picker { right: 4px !important; left: 4px !important; bottom: calc(64px + var(--safe-bottom, 0px)) !important; height: auto !important; max-height: 60vh !important; }
+  .emoji-cat-btn { padding: 4px 6px !important; font-size: 13px !important; }
+  #pinned-message-bar { padding: 4px 8px !important; }
+  #format-bar { padding: 4px 8px !important; }
+  #recording-bar { padding: 6px 8px !important; }
+}
+@media (max-width: 379px) and (orientation: landscape) {
+  #chat-area { height: 100dvh !important; }
+  #chat-header { height: 40px !important; min-height: 40px !important; }
+  #input-bar { padding: 2px 6px !important; }
+}
+
+/* ── Ultra-wide screens (>1920px) ──────────────────────── */
+@media (min-width: 1920px) {
+  #sidebar { width: 280px !important; }
+  #sidebar .xl\\:block { display: flex !important; }
+  #chat-list-sidebar { width: 360px !important; }
+  #detail-panel { width: 380px !important; }
+}
+@media (min-width: 2560px) {
+  #sidebar { width: 320px !important; }
+  #chat-list-sidebar { width: 420px !important; }
+  #detail-panel { width: 420px !important; }
+  .msg-bubble { max-width: 70%; }
+}
+
+/* ── Foldable devices ──────────────────────────────────── */
+@media (spanning: single-fold-vertical) {
+  #sidebar { width: 72px !important; }
+  #chat-list-sidebar { width: 320px !important; }
+  #detail-panel { display: flex !important; width: 360px !important; }
+}
+@media (spanning: single-fold-horizontal) {
+  #sidebar { width: 72px !important; }
+  #chat-list-sidebar { width: 400px !important; }
+  #detail-panel { display: flex !important; width: 400px !important; }
+}
+
+/* ── High DPI adjustments ──────────────────────────────── */
+@media (-webkit-min-device-pixel-ratio: 3), (min-resolution: 288dpi) {
+  .material-symbols-outlined, .material-symbols-rounded {
+    -webkit-font-smoothing: antialiased;
+  }
+}
+
+/* ── Loading spinner for async operations ──────────────── */
+.loading-spinner {
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  border: 2px solid var(--outline-variant);
+  border-top-color: var(--primary);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.loading-skeleton {
+  background: linear-gradient(90deg, var(--surface-container) 25%, var(--surface-container-high) 50%, var(--surface-container) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: 8px;
+}
+
+/* ── Message status indicators ─────────────────────────── */
+.msg-status-pending { opacity: 0.5; }
+.msg-status-sent { opacity: 1; }
+.msg-status-delivered { opacity: 1; }
+.msg-status-read { color: var(--primary) !important; }
+.msg-status-failed { color: var(--error) !important; }
+
+/* ── Smooth page transitions ───────────────────────────── */
+.view-enter { animation: viewSlideIn 0.2s ease-out; }
+.view-exit { animation: viewSlideOut 0.15s ease-in; }
+@keyframes viewSlideIn { from { transform: translateX(20px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+@keyframes viewSlideOut { from { transform: translateX(0); opacity: 1; } to { transform: translateX(-20px); opacity: 0; } }
+
+/* ── Touch feedback improvements ───────────────────────── */
+@media (hover: none) and (pointer: coarse) {
+  .chat-list-item:active { background: var(--surface-container-highest); transform: scale(0.98); transition: transform 0.1s; }
+  button:active:not([disabled]) { transform: scale(0.95); transition: transform 0.1s; }
+  .msg-bubble:active { opacity: 0.9; }
+}
+
+/* ── Print styles ──────────────────────────────────────── */
+@media print {
+  #sidebar, #bottom-nav, #chat-header, #input-bar, #scroll-to-bottom, .overlay, #chat-list-sidebar, #detail-panel { display: none !important; }
+  #chat-area { position: static !important; height: auto !important; }
+  #messages-wrap { overflow: visible !important; height: auto !important; }
+  .msg-bubble { break-inside: avoid; }
+  body { background: #fff !important; color: #000 !important; }
+  .msg-sent, .msg-received { background: #f0f0f0 !important; color: #000 !important; }
+}
+
+/* ── Reduced data mode ─────────────────────────────────── */
+@media (prefers-reduced-data: reduce) {
+  .loading-skeleton { animation: none !important; }
+  .animate-bounce, .animate-pulse, .animate-spin,
+  .animate-fade-in, .animate-slide-up, .animate-scale-in { animation: none !important; }
+  .transition, .transition-all { transition-duration: 0.01s !important; }
+  img, video, .lazy-media { loading: lazy !important; }
+}
+
+/* ── Dark mode scrollbar track for messages ────────────── */
+html.dark #messages-wrap::-webkit-scrollbar-track { background: var(--surface-dim); }
+html #messages-wrap::-webkit-scrollbar-track { background: var(--surface-bright); }
+
+/* ── Safe area for dynamically-created bottom sheets ───── */
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+  /* GIF picker */
+  #gif-picker { bottom: calc(80px + env(safe-area-inset-bottom)) !important; }
+  /* Broadcast modal bottom sheet */
+  #broadcast-modal > div { padding-bottom: env(safe-area-inset-bottom); }
+  /* Location picker bottom sheet */
+  #location-pick-modal > div { padding-bottom: env(safe-area-inset-bottom); }
+  /* Poll creator modal */
+  #poll-creator-modal > div { padding-bottom: env(safe-area-inset-bottom); }
+  /* Camera overlay */
+  #camera-overlay > div:last-child { padding-bottom: env(safe-area-inset-bottom); }
+}
+
+/* ══════════════════════════════════════════════════════════════
+   TABLET-ONLY ADDITIONAL FIXES
+   ══════════════════════════════════════════════════════════════ */
+
+/* M3/M4: GIF picker and sticker panel responsive on tablet */
+@media (min-width: 768px) {
+  #gif-picker { max-width: min(520px, 80vw) !important; }
+  #sticker-panel { max-width: min(480px, 80vw) !important; grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)) !important; }
+}
+
+/* M11: Empty state split layout on tablet */
+@media (min-width: 768px) and (max-width: 1023px) {
+  #chats-empty { flex-direction: row !important; text-align: left !important; padding: 48px 32px !important; gap: 24px !important; }
+  #chats-empty > div { flex-shrink: 0 !important; }
+}
+
+/* M15: Scroll-to-bottom dynamic bottom offset */
+#scroll-to-bottom { bottom: max(96px, calc(var(--input-bar-h, 72px) + 24px)) !important; }
+
+/* M14: Permission modals centered on tablet */
+@media (min-width: 768px) {
+  #prePermissionModal > div, #reEnablePermissionModal > div, #permissionsModal > div, #revokePermissionsGuideModal > div {
+    max-width: min(480px, 80vw) !important; margin: 0 auto !important;
+  }
+}
+
+/* L4: Print page-break optimization */
+@media print {
+  @page { margin: 1.5cm; size: A4; }
+  .msg-bubble { page-break-inside: avoid; margin-bottom: 8px; }
+}
+
+/* M5: Call screen tablet optimized */
+@media (min-width: 768px) {
+  #call-screen .w-32 { width: 160px !important; height: 160px !important; font-size: 3.5rem !important; }
+  #call-screen .text-3xl { font-size: 2rem !important; }
+  #call-screen .text-lg { font-size: 1.25rem !important; }
+  #call-screen button[class*="w-14"] { width: 64px !important; height: 64px !important; }
+  #call-screen .flex-1 { padding: 48px !important; }
+  #local-video-container { width: 160px !important; height: 220px !important; bottom: 120px !important; right: 32px !important; }
+}
+
+/* M6: Incoming call overlay tablet optimized */
+@media (min-width: 768px) {
+  #incoming-call-overlay > div {
+    max-width: min(400px, 80vw) !important;
+    padding: 32px !important;
+    animation: none !important;
+  }
+  #incoming-call-avatar { width: 100px !important; height: 100px !important; font-size: 2rem !important; }
+  #incoming-call-overlay button[class*="w-12"] { width: 56px !important; height: 56px !important; }
+}
+
+/* H8: Touch targets minimum 48px on tablet */
+@media (pointer: coarse) and (min-width: 768px) {
+  button, a, [role="button"] { min-height: 48px; min-width: 48px; }
+}
+
+/* H2 sidebar expanded state */
+#sidebar.sidebar-expanded { width: 256px !important; }
+#sidebar.sidebar-expanded .xl\\:block { display: block !important; }
+
+/* C2 detail panel overlay animation */
+@media (min-width: 768px) and (max-width: 1023px) {
+  #detail-panel.tablet-overlay-panel { animation: slideInRight 0.2s ease-out; }
+  @keyframes slideInRight { from { transform: translateX(100%); } to { transform: translateX(0); } }
+}
+
+/* ══════════════════════════════════════════════════════════════
+   FIX BATCH — All 38 audit fixes
+   ══════════════════════════════════════════════════════════════ */
+
+/* ── R1: Call bubble safe area ─────────────────────────────── */
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+  #call-bubble { bottom: calc(24px + env(safe-area-inset-bottom)) !important; }
+}
+
+/* ── R2: Landscape compact tab bar (shown when bottom nav hidden) ── */
+#landscape-tabs {
+  display: none !important;
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  z-index: 41 !important;
+  background: var(--surface-container) !important;
+  border-bottom: 1px solid var(--outline-variant) !important;
+  padding: 4px 12px !important;
+  gap: 4px !important;
+  justify-content: center !important;
+  align-items: center !important;
+}
+#landscape-tabs button {
+  padding: 6px 14px !important;
+  border-radius: 8px !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  color: var(--on-surface-variant) !important;
+  background: transparent !important;
+  border: none !important;
+  cursor: pointer !important;
+  transition: all 0.15s !important;
+  min-height: 36px !important;
+}
+#landscape-tabs button.active {
+  background: var(--primary) !important;
+  color: var(--on-primary) !important;
+}
+#landscape-tabs button:active { transform: scale(0.95); }
+
+/* ── R3: Foldable fallback via width ───────────────────────── */
+@media (min-width: 600px) and (max-width: 900px) and (hover: none) and (pointer: coarse) {
+  #sidebar { width: 72px !important; }
+  #sidebar .xl\\:block { display: none !important; }
+  #chat-list-sidebar { width: 320px !important; }
+  #detail-panel { display: flex !important; width: 360px !important; }
+}
+
+/* ── R4: Emoji picker short screen fix ─────────────────────── */
+@media (max-height: 500px) {
+  #emoji-preview { display: none !important; }
+  #emoji-picker { max-height: calc(100dvh - 100px) !important; max-height: calc(100vh - 100px) !important; }
+  #emoji-grid { grid-template-columns: repeat(8, 1fr) !important; }
+}
+
+/* ── B2: iOS 100vh overflow fix ────────────────────────────── */
+@supports (height: 100dvh) {
+  #app { height: 100dvh !important; }
+}
+@media (max-width: 767px) {
+  #chat-list-sidebar { overflow: hidden !important; }
+}
+
+/* ── B3: Firefox backdrop-filter fallback ──────────────────── */
+@supports not ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) {
+  .glass-panel {
+    background: var(--surface-container) !important;
+    border-color: var(--outline-variant) !important;
+  }
+  #chat-header {
+    background: var(--background) !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    border-bottom: 1px solid var(--outline-variant) !important;
+  }
+}
+
+/* ── C1: Call screen landscape on phone ────────────────────── */
+@media (max-width: 767px) and (orientation: landscape) {
+  #call-screen .flex-1 { padding: 16px 32px !important; }
+  #call-screen .w-32 { width: 80px !important; height: 80px !important; font-size: 2rem !important; }
+  #call-screen .text-3xl { font-size: 1.5rem !important; }
+  #call-controls { gap: 12px !important; }
+  #call-controls button { width: 48px !important; height: 48px !important; }
+  #local-video-container {
+    width: 120px !important;
+    height: 80px !important;
+    bottom: 80px !important;
+    right: 16px !important;
+  }
+}
+
+/* ── P2: Theme transition optimization ─────────────────────── */
+.theme-switching * {
+  transition: none !important;
+  animation: none !important;
+}
+
+/* ── BR3: Reduced data mode enhancements ───────────────────── */
+@media (prefers-reduced-data: reduce) {
+  #atmosphere-glow-1, #atmosphere-glow-2 { display: none !important; }
+  .neon-glow { box-shadow: none !important; }
+  .glass-panel { backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
+}
+
+/* ── AC3: Dynamic Type / font scaling support ──────────────── */
+@media (min-resolution: 1dppx) {
+  html { font-size: 100%; }
+}
+@media screen and (min--moz-device-pixel-ratio: 0) {
+  .msg-bubble { font-size: max(14px, 0.875rem); }
+}
+
+/* ── D2: Dynamic theme-color (JS will update) ─────────────── */
+html.light #theme-color-meta { content: ""; }
+
+/* ── UX1: Pull-to-refresh indicator ────────────────────────── */
+#pull-to-refresh {
+  display: none !important;
+  position: absolute !important;
+  top: 0 !important;
+  left: 50% !important;
+  transform: translateX(-50%) !important;
+  z-index: 10 !important;
+  padding: 8px !important;
+  color: var(--on-surface-variant) !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+}
+#pull-to-refresh.visible { display: flex !important; align-items: center !important; gap: 8px !important; }
+#pull-to-refresh .spinner {
+  width: 16px !important;
+  height: 16px !important;
+  border: 2px solid var(--outline-variant) !important;
+  border-top-color: var(--primary) !important;
+  border-radius: 50% !important;
+  animation: spin 0.8s linear infinite !important;
+}
+#pull-to-refresh.pulling .spinner { animation: none !important; }
+
+/* ── UX2: Swipe-to-delete on chat list items ───────────────── */
+.chat-list-swipe-container {
+  position: relative !important;
+  overflow: hidden !important;
+  border-radius: 12px !important;
+}
+.chat-list-swipe-actions {
+  position: absolute !important;
+  right: 0 !important;
+  top: 0 !important;
+  bottom: 0 !important;
+  display: flex !important;
+  align-items: stretch !important;
+  transform: translateX(100%) !important;
+  transition: transform 0.2s ease !important;
+  z-index: 1 !important;
+}
+.chat-list-swipe-actions button {
+  min-width: 72px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 2px !important;
+  font-size: 10px !important;
+  font-weight: 600 !important;
+  border: none !important;
+  cursor: pointer !important;
+  padding: 0 12px !important;
+}
+.chat-list-swipe-actions .swipe-delete {
+  background: var(--error) !important;
+  color: var(--on-error) !important;
+}
+.chat-list-swipe-actions .swipe-archive {
+  background: var(--tertiary) !important;
+  color: var(--on-tertiary) !important;
+}
+.chat-list-swipe-container.swiping .chat-list-swipe-actions {
+  transform: translateX(0) !important;
+}
+
+/* ── M2: Pinch-to-zoom container ───────────────────────────── */
+.media-zoom-container {
+  touch-action: none !important;
+  transform-origin: center center !important;
+  transition: transform 0.1s ease-out !important;
+  cursor: grab !important;
+}
+.media-zoom-container.zooming { cursor: grabbing !important; }
+
+/* ── M3: Upload progress bar ───────────────────────────────── */
+.upload-progress-bar {
+  width: 100% !important;
+  height: 4px !important;
+  background: var(--surface-container-highest) !important;
+  border-radius: 2px !important;
+  overflow: hidden !important;
+}
+.upload-progress-bar .fill {
+  height: 100% !important;
+  background: var(--primary) !important;
+  border-radius: 2px !important;
+  transition: width 0.3s ease !important;
+}
+
+/* ── O2: Offline pending message indicator ──────────────────── */
+.msg-offline-pending::after {
+  content: "" !important;
+  display: inline-block !important;
+  width: 12px !important;
+  height: 12px !important;
+  margin-left: 4px !important;
+  border: 2px solid var(--on-surface-variant) !important;
+  border-top-color: transparent !important;
+  border-radius: 50% !important;
+  animation: spin 1s linear infinite !important;
+  vertical-align: middle !important;
+}
+
+/* ── AC5: Emoji picker keyboard focus ──────────────────────── */
+#emoji-grid span:focus-visible {
+  outline: 2px solid var(--primary) !important;
+  outline-offset: 1px !important;
+  border-radius: 4px !important;
+  background: var(--surface-variant) !important;
+}
+
+/* ── C2: PiP overlay styling ───────────────────────────────── */
+.pip-active #local-video-container {
+  border-radius: 8px !important;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.5) !important;
+}
+
+/* ── UX3: Attach menu keyboard-aware ───────────────────────── */
+.attach-menu-above {
+  bottom: auto !important;
+  top: auto !important;
+}
+
+/* ── N4: Call notification auto-dismiss visual ──────────────── */
+@keyframes notification-fade {
+  0% { opacity: 1; }
+  80% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+/* ── X2: Capacitor keyboard theme support ──────────────────── */
+.native-android .glass-panel, .native-ios .glass-panel {
+  transition: background 0.2s ease !important;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   DESKTOP ENTERPRISE AUDIT FIXES — 62 Issues Addressed
+   ══════════════════════════════════════════════════════════════ */
+
+/* ── D-C6: Detail panel on small laptops (1024-1279px) — show as toggleable overlay ── */
+@media (min-width: 1024px) and (max-width: 1279px) {
+  #detail-panel {
+    display: none !important;
+  }
+  #detail-panel.detail-panel-visible {
+    display: flex !important;
+    position: fixed !important;
+    right: 0 !important;
+    top: 0 !important;
+    bottom: 0 !important;
+    width: min(380px, 40vw) !important;
+    min-width: 320px !important;
+    z-index: 50 !important;
+    box-shadow: -8px 0 32px rgba(0,0,0,0.3) !important;
+    border-left: 1px solid var(--outline-variant) !important;
+    background: var(--background) !important;
+    animation: slideInRight 0.2s ease-out !important;
+  }
+}
+
+/* ── D-C6: Detail panel toggle button for 1024-1279px ────────── */
+.detail-panel-toggle {
+  display: none !important;
+}
+@media (min-width: 1024px) and (max-width: 1279px) {
+  .detail-panel-toggle {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 36px !important;
+    height: 36px !important;
+    border-radius: 50% !important;
+    background: transparent !important;
+    border: none !important;
+    color: var(--text-primary, var(--on-surface-variant)) !important;
+    cursor: pointer !important;
+    transition: background 0.15s !important;
+    flex-shrink: 0 !important;
+  }
+  .detail-panel-toggle:hover {
+    background: var(--surface-container-high) !important;
+  }
+}
+
+/* ── D-H1: Desktop hover states for ALL interactive elements ──── */
+@media (hover: hover) and (pointer: fine) {
+  /* Chat list items */
+  .chat-list-item:hover {
+    background: var(--surface-container-high) !important;
+    transition: background 0.15s ease !important;
+  }
+  .chat-list-item:active {
+    background: var(--surface-container-highest) !important;
+  }
+
+  /* Sidebar items */
+  #sidebar button:hover {
+    background: var(--surface-container-high) !important;
+    border-radius: 12px !important;
+  }
+
+  /* Header action buttons */
+  #header-actions-container button:hover {
+    background: var(--surface-container-high) !important;
+    transform: scale(1.05) !important;
+  }
+
+  /* Message action buttons — already handled by message-actions.css */
+
+  /* Bottom nav items */
+  .bottom-nav-item:hover {
+    color: var(--primary) !important;
+    background: var(--surface-container-high) !important;
+  }
+
+  /* Tab items */
+  .tab-item:hover {
+    background: var(--surface-container-high) !important;
+  }
+
+  /* Overlay buttons */
+  .overlay button:hover {
+    opacity: 0.9 !important;
+  }
+
+  /* Emoji picker buttons */
+  .emoji-cat-btn:hover {
+    background: var(--surface-container-high) !important;
+  }
+
+  /* Format bar buttons */
+  #format-bar button:hover {
+    background: var(--surface-container-high) !important;
+  }
+
+  /* Voice player buttons */
+  .voice-play:hover {
+    transform: scale(1.08) !important;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2) !important;
+  }
+  .voice-speed:hover {
+    background: var(--surface-container-high) !important;
+  }
+
+  /* Recording bar buttons */
+  #recording-bar button:hover {
+    opacity: 0.85 !important;
+  }
+
+  /* Confirm dialog buttons */
+  .confirm-btn:hover {
+    opacity: 0.9 !important;
+    transform: scale(1.02) !important;
+  }
+
+  /* Attach menu items */
+  #attach-menu button:hover, #attach-menu .attach-option:hover {
+    background: var(--surface-container-high) !important;
+  }
+
+  /* Pinned message bar */
+  #pinned-message-bar:hover {
+    background: var(--surface-container-high) !important;
+  }
+
+  /* Scroll to bottom FAB */
+  #scroll-to-bottom:hover {
+    transform: scale(1.1) !important;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.3) !important;
+  }
+
+  /* Call controls */
+  #call-controls button:hover {
+    transform: scale(1.08) !important;
+  }
+}
+
+#msg-input:focus-visible {
+  outline: none !important;
+  border-color: var(--primary) !important;
+  box-shadow: 0 0 0 2px var(--primary-fixed) !important;
+}
+#sidebar-search:focus-visible {
+  outline: 2px solid var(--primary) !important;
+  outline-offset: -2px !important;
+}
+.message[data-msg-id]:focus-visible {
+  outline: 2px solid var(--primary) !important;
+  outline-offset: -1px !important;
+}
+
+/* ── D-H3: Consistent z-index system ─────────────────────────── */
+:root {
+  --z-base: 1;
+  --z-sidebar: 20;
+  --z-chatlist: 25;
+  --z-chatarea: 30;
+  --z-bottomnav: 40;
+  --z-landscape-tabs: 41;
+  --z-detail-panel: 45;
+  --z-chat-header: 46;
+  --z-input-bar: 47;
+  --z-scroll-fab: 48;
+  --z-overlay: 50;
+  --z-attach-menu: 60;
+  --z-emoji-picker: 65;
+  --z-format-bar: 70;
+  --z-recording-bar: 71;
+  --z-context-menu: 80;
+  --z-toast: 99;
+  --z-modal-overlay: 100;
+  --z-modal: 101;
+  --z-fullscreen: 9999;
+  --z-skip-nav: 99999;
+}
+
+#sidebar { z-index: var(--z-sidebar) !important; }
+#chat-list-sidebar { z-index: var(--z-chatlist) !important; }
+#chat-area { z-index: var(--z-chatarea) !important; }
+nav#bottom-nav { z-index: var(--z-bottomnav) !important; }
+#landscape-tabs { z-index: var(--z-landscape-tabs) !important; }
+#detail-panel { z-index: var(--z-detail-panel) !important; }
+#chat-header { z-index: var(--z-chat-header) !important; }
+#input-bar { z-index: var(--z-input-bar) !important; }
+#scroll-to-bottom { z-index: var(--z-scroll-fab) !important; }
+.overlay { z-index: var(--z-overlay) !important; }
+#attach-menu { z-index: var(--z-attach-menu) !important; }
+#emoji-picker { z-index: var(--z-emoji-picker) !important; }
+#format-bar { z-index: var(--z-format-bar) !important; }
+#recording-bar { z-index: var(--z-recording-bar) !important; }
+#desktop-context-menu { z-index: var(--z-context-menu) !important; }
+.toast-container, [id*="toast"] { z-index: var(--z-toast) !important; }
+.modal-overlay { z-index: var(--z-modal-overlay) !important; }
+
+/* ── D-H6: Detail panel adaptive width on large desktops ─────── */
+@media (min-width: 1920px) {
+  #detail-panel {
+    width: 400px !important;
+    min-width: 360px !important;
+  }
+}
+@media (min-width: 2560px) {
+  #detail-panel {
+    width: 480px !important;
+    min-width: 420px !important;
+  }
+}
+
+/* ── D-H7: Scheduled calendar — flexible max-height ──────────── */
+#scheduled-calendar-modal, .scheduled-calendar {
+  max-height: min(80vh, 600px) !important;
+}
+@media (min-height: 900px) {
+  #scheduled-calendar-modal, .scheduled-calendar {
+    max-height: 80vh !important;
+  }
+}
+@media (max-height: 600px) {
+  #scheduled-calendar-modal, .scheduled-calendar {
+    max-height: 70vh !important;
+  }
+}
+
+/* ── D-H8: Body overflow — only hidden when modal open, not globally ── */
+body.modal-open {
+  overflow: hidden !important;
+}
+
+/* ── D-M2: Message bubble font-size responsive ────────────────── */
+.msg-bubble {
+  --msg-font-size: 14px;
+  font-size: var(--msg-font-size) !important;
+}
+@media (min-width: 1280px) {
+  .msg-bubble {
+    --msg-font-size: 15px;
+  }
+}
+@media (min-width: 1920px) {
+  .msg-bubble {
+    --msg-font-size: 16px;
+  }
+}
+
+/* ── D-M3: URL preview card — responsive max-width ────────────── */
+.url-preview-card {
+  max-width: min(320px, 80vw) !important;
+}
+@media (min-width: 1280px) {
+  .url-preview-card {
+    max-width: 400px !important;
+  }
+}
+
+/* ── D-M4: Message bubble max-width as custom property ────────── */
+.msg-bubble {
+  --msg-max-width: 75%;
+  max-width: var(--msg-max-width) !important;
+}
+@media (min-width: 1280px) {
+  .msg-bubble {
+    --msg-max-width: 65%;
+  }
+}
+
+/* ── D-M5: Voice scrubber thumb — scalable on desktop ─────────── */
+@media (hover: hover) and (pointer: fine) {
+  .voice-scrub::-webkit-slider-thumb {
+    width: 14px !important;
+    height: 14px !important;
+    transition: transform 0.1s !important;
+  }
+  .voice-scrub::-webkit-slider-thumb:hover {
+    width: 18px !important;
+    height: 18px !important;
+  }
+  .voice-scrub::-moz-range-thumb {
+    width: 14px !important;
+    height: 14px !important;
+  }
+  .voice-scrub::-moz-range-thumb:hover {
+    width: 18px !important;
+    height: 18px !important;
+  }
+}
+
+/* ── D-M7: Notification prefs panel — responsive max-height ───── */
+#notification-prefs-panel, .notification-prefs {
+  max-height: min(85vh, 650px) !important;
+}
+@media (max-height: 600px) {
+  #notification-prefs-panel, .notification-prefs {
+    max-height: 70vh !important;
+  }
+}
+
+/* ── D-M9: Desktop-optimized scrollbar on chat list ───────────── */
+@media (hover: hover) and (pointer: fine) {
+  #chat-list::-webkit-scrollbar { width: 6px; }
+  #chat-list::-webkit-scrollbar-track { background: transparent; }
+  #chat-list::-webkit-scrollbar-thumb { background: var(--outline-variant); border-radius: 3px; }
+  #chat-list::-webkit-scrollbar-thumb:hover { background: var(--outline); }
+
+  #messages-wrap::-webkit-scrollbar { width: 6px; }
+  #messages-wrap::-webkit-scrollbar-track { background: transparent; }
+  #messages-wrap::-webkit-scrollbar-thumb { background: var(--outline-variant); border-radius: 3px; }
+  #messages-wrap::-webkit-scrollbar-thumb:hover { background: var(--outline); }
+
+  #detail-panel::-webkit-scrollbar { width: 6px; }
+  #detail-panel::-webkit-scrollbar-track { background: transparent; }
+  #detail-panel::-webkit-scrollbar-thumb { background: var(--outline-variant); border-radius: 3px; }
+}
+
+/* ── D-M10: Loading skeleton — adapt to desktop width ─────────── */
+@media (min-width: 1280px) {
+  .loading-skeleton {
+    min-width: 300px;
+  }
+}
+
+/* ── D-M17: Theme persistence class on html ──────────────────── */
+html[data-theme="dark"], html.dark {
+  color-scheme: dark;
+}
+html[data-theme="light"], html:not(.dark) {
+  color-scheme: light;
+}
+
+/* ── D-M20: Scheduled calendar — responsive min-height ────────── */
+.scheduled-calendar-grid {
+  min-height: min(400px, 60vh) !important;
+}
+
+/* ── D-M23: Detail panel keyboard dismiss — Escape closes ─────── */
+#detail-panel.detail-panel-visible {
+  transition: transform 0.2s ease, opacity 0.2s ease !important;
+}
+
+/* ── D-M24: Desktop-optimized chat wallpaper ──────────────────── */
+@media (min-width: 1024px) and (pointer: fine) {
+  #messages-wrap {
+    background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80"><rect width="80" height="80" fill="none"/><path d="M20 20h40v40H20z" fill="none" stroke="rgba(134,150,160,0.04)" stroke-width="0.5"/><circle cx="20" cy="20" r="2" fill="rgba(134,150,160,0.03)"/><circle cx="60" cy="60" r="2" fill="rgba(134,150,160,0.03)"/></svg>') !important;
+    background-repeat: repeat !important;
+  }
+}
+
+/* ── D-H16: Desktop-optimized empty states ────────────────────── */
+@media (min-width: 1024px) {
+  .empty-state {
+    padding: 80px 48px !important;
+  }
+  .empty-state .mat-icon, .empty-state .material-symbols-outlined {
+    font-size: 80px !important;
+    opacity: 0.3 !important;
+  }
+  .empty-state p {
+    font-size: 16px !important;
+    max-width: 400px !important;
+  }
+  .empty-state h3 {
+    font-size: 22px !important;
+  }
+}
+
+/* ── D-H5: matchMedia for responsive JS ───────────────────────── */
+/* (JS will use these breakpoints) */
+
+/* ── D-L9: Desktop loading spinner — larger size ──────────────── */
+@media (min-width: 1024px) and (pointer: fine) {
+  .loading-spinner {
+    width: 28px !important;
+    height: 28px !important;
+    border-width: 3px !important;
+  }
+}
+
+/* ── D-L10: Material Symbols — font-display swap ──────────────── */
+.material-symbols-outlined, .material-symbols-rounded {
+  font-display: swap;
+}
+
+/* ── D-M9: Desktop scrollbar — Firefox ────────────────────────── */
+@media (hover: hover) and (pointer: fine) {
+  #chat-list, #messages-wrap, #detail-panel {
+    scrollbar-width: thin !important;
+    scrollbar-color: var(--outline-variant) transparent !important;
+  }
+}
+
+/* ── D-H4: Reduce !important by using CSS variables ───────────── */
+/* The existing !important usage is a specificity arms race. For new
+   desktop rules we use specificity instead of !important where possible. */
+
+/* ── Desktop context menu ─────────────────────────────────────── */
+#desktop-context-menu {
+  position: fixed !important;
+  z-index: var(--z-context-menu) !important;
+  background: var(--surface-container) !important;
+  border: 1px solid var(--outline-variant) !important;
+  border-radius: 12px !important;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.25) !important;
+  min-width: 200px !important;
+  max-width: 320px !important;
+  padding: 6px !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+  transform: scale(0.95) !important;
+  transform-origin: top left !important;
+  transition: opacity 0.15s ease, transform 0.15s ease, visibility 0.15s !important;
+  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
+}
+#desktop-context-menu.visible {
+  opacity: 1 !important;
+  visibility: visible !important;
+  transform: scale(1) !important;
+}
+#desktop-context-menu button {
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+  width: 100% !important;
+  padding: 8px 14px !important;
+  border: none !important;
+  background: transparent !important;
+  color: var(--text-primary, var(--on-surface)) !important;
+  font-size: 13px !important;
+  border-radius: 8px !important;
+  cursor: pointer !important;
+  text-align: left !important;
+  transition: background 0.1s !important;
+}
+#desktop-context-menu button:hover {
+  background: var(--surface-container-high) !important;
+}
+#desktop-context-menu button.danger {
+  color: var(--error) !important;
+}
+#desktop-context-menu .ctx-separator {
+  height: 1px !important;
+  background: var(--outline-variant) !important;
+  margin: 4px 8px !important;
+}
+#desktop-context-menu .ctx-shortcut {
+  margin-left: auto !important;
+  font-size: 11px !important;
+  color: var(--text-secondary, var(--on-surface-variant)) !important;
+  opacity: 0.7 !important;
+}
+
+/* ── Desktop-optimized media viewer controls ──────────────────── */
+@media (min-width: 1024px) and (pointer: fine) {
+  #media-viewer .media-nav {
+    opacity: 0 !important;
+    transition: opacity 0.2s !important;
+  }
+  #media-viewer:hover .media-nav {
+    opacity: 1 !important;
+  }
+}
+
+/* ── Desktop notification toast — positioned top-right ─────────── */
+@media (min-width: 1024px) and (pointer: fine) {
+  .toast-container, [id*="toast"] {
+    top: 24px !important;
+    right: 24px !important;
+    left: auto !important;
+    bottom: auto !important;
+    transform: none !important;
+    align-items: flex-end !important;
+  }
+}
+
+/* ── Desktop drag ghost styling ────────────────────────────────── */
+.drag-ghost {
+  opacity: 0.8 !important;
+  transform: rotate(2deg) scale(1.02) !important;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.3) !important;
+  border-radius: 12px !important;
+  pointer-events: none !important;
+}
+
+/* ── Desktop split-screen indicator ────────────────────────────── */
+@media (min-width: 1440px) and (min-height: 900px) {
+  #app {
+    max-width: none !important;
+  }
+}
+
+/* ── D-M19: Desktop-optimized group call layout ────────────────── */
+@media (min-width: 1024px) and (pointer: fine) {
+  #call-screen .call-participants {
+    display: grid !important;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)) !important;
+    gap: 16px !important;
+    padding: 24px !important;
+  }
+  #call-screen .call-participant {
+    border-radius: 16px !important;
+    overflow: hidden !important;
+  }
+}
+
+/* ── D-M1: Enhanced tooltip styles (CSS-based, supplements title) ── */
+[data-tooltip] {
+  position: relative;
+}
+[data-tooltip]::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--surface-container-highest, #323739);
+  color: var(--text-primary, #e9edef);
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+  z-index: 9999;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+}
+[data-tooltip]:hover::after {
+  opacity: 1;
+}
+[data-tooltip][data-tooltip-pos="bottom"]::after {
+  bottom: auto;
+  top: calc(100% + 8px);
+}
+
+/* ── D-M18: Desktop notification sound indicator ────────────────── */
+.notification-sound-active {
+  position: relative;
+}
+.notification-sound-active::after {
+  content: "🔊";
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  font-size: 10px;
+}
+
+/* ── D-M22: Quick new message button on desktop ─────────────────── */
+@media (min-width: 1024px) and (pointer: fine) {
+  #scroll-to-bottom {
+    width: 48px !important;
+    height: 48px !important;
+    border-radius: 50% !important;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.2) !important;
+  }
+}
+
+/* ── D-M9: Chat list hover effect — desktop only ────────────────── */
+@media (hover: hover) and (pointer: fine) {
+  .chat-list-item {
+    transition: background 0.15s ease, transform 0.1s ease !important;
+  }
+  .chat-list-item:hover {
+    transform: translateX(2px) !important;
+  }
+}

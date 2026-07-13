@@ -1,0 +1,191 @@
+/* ============================================================
+   chat-missing-features.css — styles for missing features
+   ============================================================ */
+
+/* ── 1. Drag-and-Drop overlay ─────────────────────────────── */
+#dropZoneOverlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 99000;
+  background: color-mix(in srgb, var(--primary) 12%, transparent);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+#dropZoneOverlay.active {
+  display: flex;
+}
+.drop-zone-inner {
+  background: var(--surface-container-lowest, #fff);
+  border: 2px dashed var(--primary);
+  border-radius: 20px;
+  padding: 48px 64px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  color: var(--primary);
+  box-shadow: 0 12px 48px color-mix(in srgb, var(--primary) 18%, transparent);
+}
+.drop-zone-inner svg { opacity: 0.75; }
+.drop-zone-inner p {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--primary);
+}
+.drop-zone-sub {
+  font-size: 13px;
+  color: var(--on-surface-variant, #667781);
+}
+body.dark #dropZoneOverlay .drop-zone-inner {
+  background: var(--surface-container, #202c33);
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+/* ── 2. Hashtag styling ───────────────────────────────────── */
+.message-hashtag {
+  color: var(--primary);
+  font-weight: 500;
+  cursor: pointer;
+  border-radius: 3px;
+  transition: background 0.15s;
+}
+.message-hashtag:hover {
+  background: color-mix(in srgb, var(--primary) 10%, transparent);
+  text-decoration: underline;
+}
+body.dark .message-hashtag {
+  color: var(--primary);
+}
+
+/* ── 3. Network quality indicator ─────────────────────────── */
+#callNetworkQuality {
+  display: none;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px 3px 6px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.15);
+  font-size: 11px;
+  font-weight: 600;
+  color: #fff;
+  letter-spacing: 0.3px;
+  margin-left: 10px;
+}
+.nq-bar { opacity: 0.25; transition: opacity 0.4s; }
+#callNetworkQuality[data-level="excellent"] .nq-bar,
+#callNetworkQuality[data-level="good"] .nq-bar-1,
+#callNetworkQuality[data-level="good"] .nq-bar-2,
+#callNetworkQuality[data-level="good"] .nq-bar-3,
+#callNetworkQuality[data-level="fair"] .nq-bar-1,
+#callNetworkQuality[data-level="fair"] .nq-bar-2,
+#callNetworkQuality[data-level="poor"] .nq-bar-1 { opacity: 1; }
+
+#callNetworkQuality[data-level="excellent"] { color: #4ade80; }
+#callNetworkQuality[data-level="good"]      { color: #86efac; }
+#callNetworkQuality[data-level="fair"]      { color: #fbbf24; }
+#callNetworkQuality[data-level="poor"]      { color: #f97316; }
+#callNetworkQuality[data-level="bad"]       { color: #ef4444; }
+
+#callNetworkQuality[data-level="excellent"] .nq-bar,
+#callNetworkQuality[data-level="good"] .nq-bar-1,
+#callNetworkQuality[data-level="good"] .nq-bar-2,
+#callNetworkQuality[data-level="good"] .nq-bar-3 { opacity: 1; }
+#callNetworkQuality[data-level="fair"] .nq-bar-1,
+#callNetworkQuality[data-level="fair"] .nq-bar-2 { opacity: 1; }
+#callNetworkQuality[data-level="poor"] .nq-bar-1 { opacity: 1; }
+#callNetworkQuality[data-level="bad"]  .nq-bar   { opacity: 0.2; }
+.nq-label { font-size: 11px; white-space: nowrap; }
+
+/* ── 4. Call Hold button & banner ─────────────────────────── */
+#holdCallBtn.active {
+  background: #f59e0b;
+  color: #fff;
+}
+#holdCallBtn.active svg {
+  stroke: #fff;
+}
+#callHoldBanner {
+  display: none;
+  background: rgba(245, 158, 11, 0.92);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  text-align: center;
+  padding: 8px 20px;
+  border-radius: 8px;
+  margin: 8px 16px 0;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ── 5. Search filter pills (advanced search) ─────────────── */
+.ms-filter-row {
+  display: flex;
+  gap: 6px;
+  padding: 6px 12px 2px;
+  flex-wrap: wrap;
+  border-bottom: 1px solid var(--border, #e9edef);
+}
+.ms-filter-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--border, #e9edef);
+  background: transparent;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  color: var(--text, #111b21);
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  white-space: nowrap;
+}
+.ms-filter-pill.active,
+.ms-filter-pill:hover {
+  background: var(--primary);
+  color: var(--on-primary);
+  border-color: var(--primary);
+}
+.ms-filter-group-label {
+  font-size: 11px;
+  color: var(--muted, #667781);
+  align-self: center;
+  padding: 0 4px;
+}
+@media (max-width: 480px) {
+  .ms-filter-row { padding: 5px 8px 2px; gap: 5px; }
+  .ms-filter-pill { font-size: 11px; padding: 3px 9px; }
+}
+
+/* ── 6. Video thumbnail in attachment preview ─────────────── */
+.video-thumb-preview {
+  position: relative;
+  width: 100%;
+  max-width: 220px;
+  border-radius: 10px;
+  overflow: hidden;
+  background: #000;
+}
+.video-thumb-preview img {
+  width: 100%;
+  display: block;
+  object-fit: cover;
+}
+.video-thumb-play-icon {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(255,255,255,0.85);
+  font-size: 36px;
+  pointer-events: none;
+  text-shadow: 0 2px 8px rgba(0,0,0,0.4);
+}

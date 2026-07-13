@@ -1,17 +1,25 @@
 {
-  "name": "chat",
+  "name": "nsl-chat",
   "version": "1.0.0",
-  "description": "",
-  "main": "app.js",
+  "description": "NSL Chat — Modern team messaging",
+  "main": "electron/main.js",
   "scripts": {
     "test": "node tests/run-all.js",
     "lint": "eslint app.js www/app.js",
     "lint:fix": "eslint --fix app.js www/app.js",
     "sync:www": "node sync-www.js",
-    "sync:android": "node sync-www.js && cap sync android"
+    "sync:android": "node sync-www.js && cap sync android",
+    "sync:ios": "node sync-www.js && cap sync ios",
+    "electron:dev": "npx electron .",
+    "electron:build": "npx electron-builder --config electron-builder.yml",
+    "electron:build:win": "npx electron-builder --config electron-builder.yml --win",
+    "electron:build:mac": "npx electron-builder --config electron-builder.yml --mac",
+    "electron:build:linux": "npx electron-builder --config electron-builder.yml --linux",
+    "ios:setup": "bash scripts/setup-ios.sh",
+    "ios:build": "npx cap sync ios && cd ios/App && xcodebuild -workspace App.xcworkspace -scheme App -configuration Release -archivePath build/App.xcarchive archive"
   },
-  "keywords": [],
-  "author": "",
+  "keywords": ["chat", "messaging", "team"],
+  "author": "Nishad SL",
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
@@ -19,11 +27,14 @@
     "@capacitor/app": "^8.1.0",
     "@capacitor/cli": "^8.3.4",
     "@capacitor/core": "^8.3.4",
+    "@capacitor/ios": "^8.3.4",
     "@capacitor/push-notifications": "^8.1.1",
     "acorn": "^8.16.0"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "electron": "^33.3.1",
+    "electron-builder": "^25.1.8",
     "eslint": "^10.5.0"
   }
 }

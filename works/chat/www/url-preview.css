@@ -1,0 +1,82 @@
+/* =============================================
+   URL PREVIEW v1.0 — #24
+   Rich link-preview cards for chat messages
+   ============================================= */
+
+.tc-url-preview-wrap { margin-top: 6px; }
+
+.tc-url-preview-card {
+  display: flex; flex-direction: column;
+  border-radius: 10px; overflow: hidden;
+  border: 1px solid rgba(0,0,0,0.1);
+  background: rgba(255,255,255,0.85);
+  text-decoration: none; color: inherit;
+  max-width: 320px;
+  transition: opacity 0.15s, transform 0.15s;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+}
+.tc-url-preview-card:hover {
+  opacity: 0.9; transform: translateY(-1px);
+  box-shadow: 0 3px 10px rgba(0,0,0,0.12);
+}
+.tc-url-preview-img-wrap {
+  width: 100%; max-height: 160px; overflow: hidden; background: var(--bg);
+}
+.tc-url-preview-img {
+  width: 100%; height: 160px; object-fit: cover; display: block;
+}
+.tc-url-preview-body {
+  padding: 10px 12px; display: flex; flex-direction: column; gap: 3px;
+}
+.tc-url-preview-domain {
+  font-size: 11px; font-weight: 600; color: var(--brand);
+  text-transform: uppercase; letter-spacing: 0.04em;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.tc-url-preview-title {
+  font-size: 13px; font-weight: 600; color: var(--text); line-height: 1.35;
+  display: -webkit-box; -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical; overflow: hidden;
+}
+.tc-url-preview-desc {
+  font-size: 12px; color: var(--text-secondary); line-height: 1.4;
+  display: -webkit-box; -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical; overflow: hidden;
+}
+
+/* Loading skeleton */
+.tc-url-preview-skeleton {
+  margin-top: 6px; height: 80px; border-radius: 10px;
+  background: linear-gradient(90deg,rgba(0,0,0,0.05) 25%,rgba(0,0,0,0.09) 50%,rgba(0,0,0,0.05) 75%);
+  background-size: 200% 100%;
+  animation: tcUrlSkeletonShimmer 1.4s ease-in-out infinite;
+  max-width: 320px;
+}
+@keyframes tcUrlSkeletonShimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* Dark mode */
+.dark-mode .tc-url-preview-card, body.dark .tc-url-preview-card {
+  background: rgba(32,44,51,0.95); border-color: rgba(255,255,255,0.1);
+}
+.dark-mode .tc-url-preview-title, body.dark .tc-url-preview-title { color: var(--text); }
+.dark-mode .tc-url-preview-desc,  body.dark .tc-url-preview-desc  { color: var(--text-secondary); }
+.dark-mode .tc-url-preview-img-wrap, body.dark .tc-url-preview-img-wrap { background: var(--surface); }
+.dark-mode .tc-url-preview-skeleton, body.dark .tc-url-preview-skeleton {
+  background: linear-gradient(90deg,rgba(255,255,255,0.04) 25%,rgba(255,255,255,0.08) 50%,rgba(255,255,255,0.04) 75%);
+  background-size: 200% 100%;
+  animation: tcUrlSkeletonShimmer 1.4s ease-in-out infinite;
+}
+@media (prefers-color-scheme: dark) {
+  .tc-url-preview-card { background: rgba(32,44,51,0.95); border-color: rgba(255,255,255,0.1); }
+  .tc-url-preview-title { color: var(--text); }
+  .tc-url-preview-desc  { color: var(--text-secondary); }
+}
+
+/* Responsive */
+@media (max-width: 480px) {
+  .tc-url-preview-card { max-width: 100%; }
+  .tc-url-preview-img  { height: 130px; }
+}

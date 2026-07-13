@@ -1,0 +1,88 @@
+appId: com.nishad.myteamchat
+productName: NSL Chat
+copyright: Copyright © 2026 Nishad SL
+
+directories:
+  output: dist-electron
+  buildResources: electron/build-resources
+
+files:
+  - electron/**/*
+  - www/**/*
+  - "!node_modules/**/{test,tests,__tests__}/**"
+  - "!node_modules/**/*.{md,txt,ts}"
+  - "!**/*.map"
+
+extraResources:
+  - from: sounds/
+    to: sounds/
+
+asar: true
+
+win:
+  target:
+    - target: nsis
+      arch: [x64]
+    - target: portable
+      arch: [x64]
+  icon: electron/build-resources/icon.ico
+  publisherName: Nishad SL
+
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  installerIcon: electron/build-resources/icon.ico
+  uninstallerIcon: electron/build-resources/icon.ico
+  installerHeaderIcon: electron/build-resources/icon.ico
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: NSL Chat
+  artifactName: "${productName}-${version}-Setup.${ext}"
+
+portable:
+  artifactName: "${productName}-${version}-Portable.${ext}"
+
+mac:
+  target:
+    - target: dmg
+      arch: [x64, arm64]
+    - target: zip
+      arch: [x64, arm64]
+  icon: electron/build-resources/icon.icns
+  category: public.app-category.social-networking
+  hardenedRuntime: true
+  entitlements: electron/build-resources/entitlements.mac.plist
+  entitlementsInherit: electron/build-resources/entitlements.mac.plist
+
+dmg:
+  contents:
+    - x: 130
+      y: 220
+    - x: 410
+      y: 220
+      type: link
+      path: /Applications
+
+linux:
+  target:
+    - target: AppImage
+      arch: [x64]
+    - target: deb
+      arch: [x64]
+    - target: rpm
+      arch: [x64]
+  icon: electron/build-resources/icons
+  category: Chat
+  desktop:
+    Name: NSL Chat
+    Comment: Modern team messaging
+    Keywords: chat;message;messaging;team;
+
+appImage:
+  artifactName: "${productName}-${version}.${ext}"
+
+deb:
+  artifactName: "${productName}-${version}.${ext}"
+
+rpm:
+  artifactName: "${productName}-${version}.${ext}"

@@ -17,6 +17,9 @@
       "resize": "body",
       "style": "DEFAULT",
       "resizeOnFullScreen": true
+    },
+    "PushNotifications": {
+      "presentationOptions": ["badge", "sound", "alert"]
     }
   },
   "android": {
@@ -24,6 +27,9 @@
     "useLegacyBridge": false
   },
   "ios": {
-    "contentInset": "always"
+    "contentInset": "always",
+    "backgroundColor": "#11131c",
+    "preferredContentMode": "mobile",
+    "scheme": "app"
   }
 }
