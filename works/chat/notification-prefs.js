@@ -28,6 +28,129 @@
   // Expose for app.js to call
   window._notifPrefs = { getSnoozedDisplayPref: getPref };
 
+  // ── DND / Quiet Hours ────────────────────────────────────────────────────
+  const DND_STORAGE_KEY = 'nsl_dnd_settings';
+
+  function getDndSettings() {
+    try {
+      return JSON.parse(localStorage.getItem(DND_STORAGE_KEY) || '{}');
+    } catch (_) { return {}; }
+  }
+
+  function saveDndSettings(settings) {
+    try {
+      localStorage.setItem(DND_STORAGE_KEY, JSON.stringify(settings));
+    } catch (_) {}
+    // Sync to Firestore
+    if (typeof firebase !== 'undefined' && firebase.auth && firebase.auth().currentUser) {
+      const uid = firebase.auth().currentUser.uid;
+      if (firebase.firestore) {
+        firebase.firestore().collection('users').doc(uid).set({
+          dndSettings: {
+            enabled: Boolean(settings.enabled),
+            from: settings.from || null,
+            to: settings.to || null,
+            tzOffset: settings.tzOffset || new Date().getTimezoneOffset()
+          }
+        }, { merge: true }).catch(() => {});
+      }
+    }
+    document.dispatchEvent(new CustomEvent('dndSettingsChanged', { detail: settings }));
+  }
+
+  function renderDndSettingsPanel() {
+    const s = getDndSettings();
+    const fromTime = s.from || '22:00';
+    const toTime = s.to || '07:00';
+    const enabled = Boolean(s.enabled);
+
+    return `
+      <div class="snz-pref-panel-inner" style="padding:12px;">
+        <div class="snz-pref-title" style="margin-bottom:12px;">Do Not Disturb</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+          <span style="font-size:13px;color:var(--on-surface,#fff);">Quiet hours</span>
+          <button id="dnd-toggle" style="
+            width:44px;height:24px;border-radius:12px;border:none;cursor:pointer;
+            background:${enabled ? 'var(--primary,#6750a4)' : 'var(--outline-variant,rgba(255,255,255,0.15))'};
+            position:relative;transition:background 0.2s;
+          ">
+            <span style="
+              position:absolute;top:2px;
+              left:${enabled ? '22px' : '2px'};
+              width:20px;height:20px;border-radius:50%;
+              background:white;transition:left 0.2s;
+            "></span>
+          </button>
+        </div>
+        <div id="dnd-time-settings" style="display:${enabled ? 'block' : 'none'};">
+          <div style="display:flex;gap:12px;margin-bottom:12px;">
+            <div style="flex:1;">
+              <label style="font-size:11px;color:var(--on-surface-variant,#aaa);display:block;margin-bottom:4px;">From</label>
+              <input type="time" id="dnd-from" value="${fromTime}" style="
+                width:100%;padding:8px;border-radius:8px;border:1px solid var(--outline-variant,rgba(255,255,255,0.12));
+                background:var(--surface-container,#2a2a3e);color:var(--on-surface,#fff);font-size:13px;
+              ">
+            </div>
+            <div style="flex:1;">
+              <label style="font-size:11px;color:var(--on-surface-variant,#aaa);display:block;margin-bottom:4px;">To</label>
+              <input type="time" id="dnd-to" value="${toTime}" style="
+                width:100%;padding:8px;border-radius:8px;border:1px solid var(--outline-variant,rgba(255,255,255,0.12));
+                background:var(--surface-container,#2a2a3e);color:var(--on-surface,#fff);font-size:13px;
+              ">
+            </div>
+          </div>
+          <div style="font-size:11px;color:var(--on-surface-variant,#aaa);text-align:center;">
+            Notifications silenced during quiet hours
+          </div>
+        </div>
+      </div>`;
+  }
+
+  function initDndSettings() {
+    const container = document.getElementById('notification-settings-container');
+    if (!container) {
+      setTimeout(initDndSettings, 500);
+      return;
+    }
+    // Don't duplicate
+    if (container.querySelector('#dnd-toggle')) return;
+
+    const wrapper = document.createElement('div');
+    wrapper.id = 'dnd-settings-section';
+    wrapper.style.cssText = 'margin-top:12px;padding:0 4px;';
+    wrapper.innerHTML = renderDndSettingsPanel();
+    container.appendChild(wrapper);
+
+    const toggle = wrapper.querySelector('#dnd-toggle');
+    const timeSection = wrapper.querySelector('#dnd-time-settings');
+
+    toggle.addEventListener('click', () => {
+      const s = getDndSettings();
+      s.enabled = !s.enabled;
+      saveDndSettings(s);
+      toggle.style.background = s.enabled ? 'var(--primary,#6750a4)' : 'var(--outline-variant,rgba(255,255,255,0.15))';
+      toggle.querySelector('span').style.left = s.enabled ? '22px' : '2px';
+      timeSection.style.display = s.enabled ? 'block' : 'none';
+    });
+
+    const fromInput = wrapper.querySelector('#dnd-from');
+    const toInput = wrapper.querySelector('#dnd-to');
+
+    fromInput.addEventListener('change', () => {
+      const s = getDndSettings();
+      s.from = fromInput.value;
+      s.tzOffset = new Date().getTimezoneOffset();
+      saveDndSettings(s);
+    });
+
+    toInput.addEventListener('change', () => {
+      const s = getDndSettings();
+      s.to = toInput.value;
+      s.tzOffset = new Date().getTimezoneOffset();
+      saveDndSettings(s);
+    });
+  }
+
   // ── SVG gear icon ──────────────────────────────────────────────────────────
   const SVG_GEAR = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14"
     viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -156,6 +279,7 @@
   // ── Bootstrap ─────────────────────────────────────────────────────────────
   function boot() {
     inject();
+    initDndSettings();
     // Also watch for the auth gate closing (sidebar hidden until login)
     const authGate = document.getElementById('authGate');
     if (authGate) {
@@ -164,11 +288,12 @@
           authGate.style.display === 'none' ||
           authGate.classList.contains('hidden') ||
           authGate.style.visibility === 'hidden';
-        if (hidden) { setTimeout(inject, 400); mo.disconnect(); }
+        if (hidden) { setTimeout(inject, 400); setTimeout(initDndSettings, 500); mo.disconnect(); }
       });
       mo.observe(authGate, { attributes: true, attributeFilter: ['style', 'class'] });
     }
     setTimeout(inject, 1500); // safety net
+    setTimeout(initDndSettings, 2000); // safety net for DND
   }
 
   if (document.readyState === 'loading') {

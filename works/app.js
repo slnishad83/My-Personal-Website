@@ -6299,7 +6299,8 @@ function toggleMuteChat() {
     App._mutedChats.add(chatId);
     showToast('Chat muted — no notification sounds', 'info');
   }
-  try { localStorage.setItem('nsl_muted_chats', JSON.stringify([...App._mutedChats])); } catch(_) {}
+  _saveMuteState();
+  _renderMuteBadge(chatId);
   // Also write to Firestore for cross-device sync
   if (App.db && App.auth?.currentUser) {
     const uid = App.auth.currentUser.uid;
@@ -6308,14 +6309,189 @@ function toggleMuteChat() {
     App.db.collection(col).doc(chatId).set({ [`muted.${uid}`]: !wasMuted }, { merge: true }).catch(() => {});
   }
 }
+
+function showMuteChatOptions(chatId) {
+  const chat = App.chats.find(c => c.id === chatId);
+  if (!chat) return;
+  const isMuted = App._mutedChats?.has(chatId);
+
+  // Remove any existing mute picker
+  const existing = document.getElementById('mute-duration-picker');
+  if (existing) existing.remove();
+
+  const picker = document.createElement('div');
+  picker.id = 'mute-duration-picker';
+  picker.style.cssText = `
+    position:fixed; z-index:10000;
+    background:var(--surface-container-high, #1e1e2e);
+    border:1px solid var(--outline-variant, rgba(255,255,255,0.12));
+    border-radius:16px; padding:8px;
+    box-shadow:0 8px 32px rgba(0,0,0,0.5);
+    min-width:200px; font-size:13px; font-weight:600;
+  `;
+
+  if (isMuted) {
+    // Already muted — show unmute option
+    const btn = document.createElement('button');
+    btn.style.cssText = `
+      display:flex; align-items:center; gap:10px; width:100%;
+      padding:10px 14px; border-radius:10px; border:none;
+      background:transparent; cursor:pointer; text-align:left;
+      color:var(--on-surface, #fff); transition:background 0.15s;
+    `;
+    btn.innerHTML = '<span style="font-size:16px">🔔</span> Unmute';
+    btn.onmouseenter = () => btn.style.background = 'var(--surface-container-highest, #2a2a3e)';
+    btn.onmouseleave = () => btn.style.background = 'transparent';
+    btn.onclick = () => { picker.remove(); toggleChatMute(chatId); };
+    picker.appendChild(btn);
+  } else {
+    // Show duration options
+    const durations = [
+      { label: '1 hour', ms: 3600000 },
+      { label: '8 hours', ms: 28800000 },
+      { label: '1 week', ms: 604800000 },
+      { label: 'Until I turn it back on', ms: -1 }
+    ];
+
+    durations.forEach(({ label, ms }) => {
+      const btn = document.createElement('button');
+      btn.style.cssText = `
+        display:flex; align-items:center; gap:10px; width:100%;
+        padding:10px 14px; border-radius:10px; border:none;
+        background:transparent; cursor:pointer; text-align:left;
+        color:var(--on-surface, #fff); transition:background 0.15s;
+      `;
+      btn.innerHTML = `<span style="font-size:14px">🔕</span> ${label}`;
+      btn.onmouseenter = () => btn.style.background = 'var(--surface-container-highest, #2a2a3e)';
+      btn.onmouseleave = () => btn.style.background = 'transparent';
+      btn.onclick = () => {
+        picker.remove();
+        _muteChatWithDuration(chatId, ms);
+      };
+      picker.appendChild(btn);
+    });
+  }
+
+  document.body.appendChild(picker);
+
+  // Position near center of viewport
+  const rect = picker.getBoundingClientRect();
+  picker.style.left = Math.max(10, (window.innerWidth - rect.width) / 2) + 'px';
+  picker.style.top = Math.max(10, (window.innerHeight - rect.height) / 2) + 'px';
+
+  // Dismiss on click outside
+  setTimeout(() => {
+    const dismiss = (e) => {
+      if (!picker.contains(e.target)) {
+        picker.remove();
+        document.removeEventListener('click', dismiss);
+      }
+    };
+    document.addEventListener('click', dismiss);
+  }, 50);
+}
+
+function _muteChatWithDuration(chatId, durationMs) {
+  if (!App._mutedChats) App._mutedChats = new Set();
+  if (!App._mutedUntil) App._mutedUntil = {};
+
+  App._mutedChats.add(chatId);
+
+  // Store mute expiry (-1 = forever)
+  if (durationMs === -1) {
+    App._mutedUntil[chatId] = -1;
+  } else {
+    App._mutedUntil[chatId] = Date.now() + durationMs;
+  }
+
+  _saveMuteState();
+
+  const label = durationMs === -1 ? 'until manually unmuted' :
+    durationMs >= 604800000 ? 'for 1 week' :
+    durationMs >= 28800000 ? 'for 8 hours' : 'for 1 hour';
+  showToast(`Chat muted ${label}`, 'info');
+
+  _renderMuteBadge(chatId);
+
+  // Persist to Firestore
+  if (App.db && App.auth?.currentUser) {
+    const uid = App.auth.currentUser.uid;
+    const chat = App.chats.find(c => c.id === chatId);
+    const col = chat?.type === 'group' ? 'groups' : 'directChats';
+    App.db.collection(col).doc(chatId).set({
+      [`muted.${uid}`]: true,
+      [`mutedUntil.${uid}`]: durationMs === -1 ? null : new Date(Date.now() + durationMs).toISOString()
+    }, { merge: true }).catch(() => {});
+  }
+}
+
+function toggleChatMute(chatId) {
+  if (!App._mutedChats) App._mutedChats = new Set();
+  const wasMuted = App._mutedChats.has(chatId);
+  if (wasMuted) {
+    App._mutedChats.delete(chatId);
+    if (App._mutedUntil) delete App._mutedUntil[chatId];
+    showToast('Chat unmuted', 'success');
+  } else {
+    App._mutedChats.add(chatId);
+    showToast('Chat muted — no notification sounds', 'info');
+  }
+  _saveMuteState();
+  _renderMuteBadge(chatId);
+  if (App.db && App.auth?.currentUser) {
+    const uid = App.auth.currentUser.uid;
+    const chat = App.chats.find(c => c.id === chatId);
+    const col = chat?.type === 'group' ? 'groups' : 'directChats';
+    App.db.collection(col).doc(chatId).set({ [`muted.${uid}`]: !wasMuted }, { merge: true }).catch(() => {});
+  }
+}
+
+function _renderMuteBadge(chatId) {
+  const chatEl = document.querySelector(`[data-chat-id="${chatId}"]`) ||
+    document.querySelector(`.chat-list-item[onclick*="${chatId}"]`);
+  if (!chatEl) return;
+  const isMuted = App._mutedChats?.has(chatId);
+  chatEl.classList.toggle('muted', isMuted);
+  let badge = chatEl.querySelector('.mute-badge');
+  if (isMuted && !badge) {
+    badge = document.createElement('span');
+    badge.className = 'mute-badge';
+    badge.textContent = '🔕';
+    badge.style.cssText = 'font-size:12px;margin-left:4px;';
+    const nameEl = chatEl.querySelector('.chat-name, .chat-item-name');
+    if (nameEl) nameEl.appendChild(badge);
+  } else if (!isMuted && badge) {
+    badge.remove();
+  }
+}
+
+function _saveMuteState() {
+  try {
+    localStorage.setItem('nsl_muted_chats', JSON.stringify([...App._mutedChats || []]));
+    localStorage.setItem('nsl_muted_until', JSON.stringify(App._mutedUntil || {}));
+  } catch(_) {}
+}
+
 function _loadMuteState() {
   try {
     App._isMutedGlobal = localStorage.getItem('nsl_muted_global') === '1';
     const arr = JSON.parse(localStorage.getItem('nsl_muted_chats') || '[]');
     App._mutedChats = new Set(arr);
+    App._mutedUntil = JSON.parse(localStorage.getItem('nsl_muted_until') || '{}');
+
+    // Check for expired mutes
+    const now = Date.now();
+    for (const [chatId, until] of Object.entries(App._mutedUntil)) {
+      if (until > 0 && until <= now) {
+        App._mutedChats.delete(chatId);
+        delete App._mutedUntil[chatId];
+      }
+    }
+    _saveMuteState();
   } catch(_) {
     App._isMutedGlobal = false;
     App._mutedChats = new Set();
+    App._mutedUntil = {};
   }
   _updateGlobalMuteUI();
 }

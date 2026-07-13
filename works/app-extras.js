@@ -601,7 +601,7 @@ function chatContextMenu(event, chatId) {
 
   const actions = [
     { icon: '📌', label: chat.pinned ? 'Unpin Chat' : 'Pin Chat', fn: `togglePin('${chatId}')` },
-    { icon: '🔔', label: chat.muted ? 'Unmute Chat' : 'Mute Chat', fn: `toggleChatMute('${chatId}')` },
+    { icon: '🔔', label: chat.muted ? 'Unmute Chat' : 'Mute Chat', fn: `showMuteChatOptions('${chatId}')` },
     { icon: '📂', label: 'Archive Chat', fn: `archiveChat('${chatId}')` },
     { icon: '📦', label: 'Export Chat', fn: `exportChatAsZip('${chatId}')` },
     { icon: '🗑️', label: 'Delete Chat', fn: `confirmDeleteChat('${chatId}')`, danger: true },

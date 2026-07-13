@@ -61,14 +61,13 @@ async function getChatNotificationPreferences(userId, chatId) {
   if (!userId || !chatId) return { muted: false, showPreview: true, soundEnabled: true, vibrate: true };
   const [settingsSnap, muteSnap, userSnap] = await Promise.all([
     admin.firestore().collection('chatNotifSettings').doc(`${userId}_${chatId}`).get(),
-    admin.firestore().collection('mutedChats').where('userId', '==', userId).get(),
+    admin.firestore().collection('mutedChats').where('userId', '==', userId).where('chatId', '==', chatId).get(),
     admin.firestore().collection('users').doc(userId).get()
   ]);
   const settings = settingsSnap.data() || {};
   const now = Date.now();
   const mutedByUser = muteSnap.docs.some((doc) => {
     const mute = doc.data() || {};
-    if (mute.chatId !== chatId) return false;
     const until = mute.muteUntil?.toMillis?.();
     return !until || until > now;
   });
@@ -2249,5 +2248,137 @@ exports.runMigrationOnTrigger = onDocumentCreated(
 );
 
 // diagnoseData removed — was a security risk (public, no auth, leaked all user data)
+
+// ========================================
+// CROSS-DEVICE NOTIFICATION READ SYNC
+// When a message is read on one device, notify all other devices
+// to clear the notification and update badge counts.
+// ========================================
+exports.syncReadStatus = onDocumentUpdated(
+  {
+    document: 'messages/{messageId}',
+    region: 'us-central1'
+  },
+  async (event) => {
+    const before = event.data?.before.data() || {};
+    const after = event.data?.after.data() || {};
+    const messageId = event.params.messageId;
+
+    // Detect newly added readBy entries
+    const beforeReadBy = before.readBy || {};
+    const afterReadBy = after.readBy || {};
+    const newlyReadBy = [];
+
+    for (const [uid, ts] of Object.entries(afterReadBy)) {
+      if (!beforeReadBy[uid] && ts) {
+        newlyReadBy.push(uid);
+      }
+    }
+
+    if (!newlyReadBy.length) return null;
+
+    // For each user who just read the message, send a sync notification
+    // to their OTHER devices so they can clear the notification badge
+    await Promise.all(newlyReadBy.map(async (readerId) => {
+      try {
+        const userSnap = await admin.firestore().collection('users').doc(readerId).get();
+        const user = userSnap.data() || {};
+        const tokens = Object.values(user.fcmTokens || {})
+          .map((entry) => entry && entry.token)
+          .filter(Boolean);
+
+        if (tokens.length <= 1) return null; // Only one device, no sync needed
+
+        const chatId = after.directId || after.groupId || '';
+        const chatType = after.groupId ? 'group' : 'direct';
+
+        const response = await admin.messaging().sendEachForMulticast({
+          tokens,
+          data: {
+            kind: 'read_sync',
+            messageId,
+            chatId,
+            chatType,
+            readBy: readerId,
+            unreadCount: '0'
+          },
+          android: { priority: 'normal' },
+          webpush: {
+            headers: { Urgency: 'normal', TTL: '30' }
+          }
+        });
+
+        await removeStalePushTokens(userSnap, user, tokens, response);
+      } catch (e) {
+        console.warn('[syncReadStatus] Error syncing for user', readerId, e.message);
+      }
+    }));
+
+    return null;
+  }
+);
+
+// ========================================
+// NOTIFICATION MUTE — Per-chat mute management
+// ========================================
+exports.muteChatNotification = onCall(
+  { region: 'us-central1' },
+  async (request) => {
+    if (!request.auth) throw new HttpsError('unauthenticated', 'Must be signed in.');
+    const { chatId, duration } = request.data || {};
+    if (!chatId) throw new HttpsError('invalid-argument', 'Missing chatId.');
+
+    const uid = request.auth.uid;
+    const docId = `${uid}_${chatId}`;
+
+    if (duration === 0 || duration === 'off') {
+      // Unmute: delete the mute document and mutedChats entry
+      await admin.firestore().collection('chatNotifSettings').doc(docId).delete().catch(() => {});
+      const muteDocs = await admin.firestore().collection('mutedChats')
+        .where('userId', '==', uid).where('chatId', '==', chatId).get();
+      for (const doc of muteDocs.docs) {
+        await doc.ref.delete();
+      }
+      return { muted: false };
+    }
+
+    // Mute for a duration (in milliseconds)
+    const muteUntil = duration === -1
+      ? null // Mute forever
+      : admin.firestore.Timestamp.fromMillis(Date.now() + Number(duration));
+
+    await admin.firestore().collection('mutedChats').add({
+      userId: uid,
+      chatId,
+      muteUntil,
+      createdAt: admin.firestore.FieldValue.serverTimestamp()
+    });
+
+    return { muted: true, muteUntil: muteUntil?.toMillis?.() || null };
+  }
+);
+
+// ========================================
+// DND SCHEDULE — Set quiet hours
+// ========================================
+exports.setDndSchedule = onCall(
+  { region: 'us-central1' },
+  async (request) => {
+    if (!request.auth) throw new HttpsError('unauthenticated', 'Must be signed in.');
+    const { enabled, from, to, tzOffset } = request.data || {};
+
+    await admin.firestore().collection('users').doc(request.auth.uid).set({
+      dndSettings: {
+        enabled: Boolean(enabled),
+        from: from || null,
+        to: to || null,
+        tzOffset: typeof tzOffset === 'number' ? tzOffset : 0,
+        updatedAt: admin.firestore.FieldValue.serverTimestamp()
+      }
+    }, { merge: true });
+
+    return { ok: true };
+  }
+);
 
 
