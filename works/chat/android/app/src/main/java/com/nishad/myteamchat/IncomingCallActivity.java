@@ -16,11 +16,15 @@ import android.widget.TextView;
 import android.widget.ImageView;
 import android.net.Uri;
 import java.net.URL;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public class IncomingCallActivity extends Activity {
+    private ExecutorService avatarExecutor;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        avatarExecutor = Executors.newSingleThreadExecutor();
 
         getWindow().addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
@@ -108,17 +112,27 @@ public class IncomingCallActivity extends Activity {
         layout.addView(titleView);
         if (callerAvatar != null && !callerAvatar.trim().isEmpty()) {
             layout.addView(avatarImage, avatarParams);
-            new Thread(() -> {
+            avatarExecutor.execute(() -> {
                 try {
                     Bitmap bitmap = BitmapFactory.decodeStream(new URL(callerAvatar).openStream());
-                    runOnUiThread(() -> avatarImage.setImageBitmap(bitmap));
+                    if (!isFinishing() && !isDestroyed()) {
+                        runOnUiThread(() -> {
+                            if (!isFinishing() && !isDestroyed()) {
+                                avatarImage.setImageBitmap(bitmap);
+                            }
+                        });
+                    }
                 } catch (Exception ignored) {
-                    runOnUiThread(() -> {
-                        layout.removeView(avatarImage);
-                        layout.addView(avatarView, 1, avatarParams);
-                    });
+                    if (!isFinishing() && !isDestroyed()) {
+                        runOnUiThread(() -> {
+                            if (!isFinishing() && !isDestroyed()) {
+                                layout.removeView(avatarImage);
+                                layout.addView(avatarView, 1, avatarParams);
+                            }
+                        });
+                    }
                 }
-            }).start();
+            });
         } else {
             layout.addView(avatarView, avatarParams);
         }
@@ -169,6 +183,10 @@ public class IncomingCallActivity extends Activity {
 
     @Override
     protected void onDestroy() {
+        if (avatarExecutor != null) {
+            avatarExecutor.shutdownNow();
+            avatarExecutor = null;
+        }
         stopEffects();
         super.onDestroy();
     }

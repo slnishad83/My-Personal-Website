@@ -30,6 +30,22 @@ messaging.onBackgroundMessage(payload => {
       .then(notifications => notifications.forEach(notification => notification.close()))
       .then(() => notifyWindowClients({ type: 'TC_CALL_STOP', callId: data.callId }));
   }
+
+  /* Read sync — another device marked messages as read, clear notifications for that chat */
+  if (data.kind === 'read_sync' && data.chatId) {
+    const chatKey = `${data.chatType || 'chat'}-${data.chatId}`;
+    return self.registration.getNotifications({ tag: `chat-${chatKey}` })
+      .then(notifications => {
+        notifications.forEach(notification => notification.close());
+        notifyWindowClients({
+          type: 'TC_READ_SYNC',
+          chatId: data.chatId,
+          chatType: data.chatType || 'direct',
+          readBy: data.readBy || ''
+        });
+      });
+  }
+
   const isCall = data.kind === 'call';
   const title = payload.notification?.title || data.title ||
     (isCall ? (data.type === 'video' ? 'Incoming video call' : 'Incoming voice call') : 'Team Chat');
@@ -38,10 +54,11 @@ messaging.onBackgroundMessage(payload => {
   const notificationUrl = data.url || payload.notification?.data?.url || './index.html';
   const chatKey = data.chatId && data.chatType ? `${data.chatType}-${data.chatId}` : '';
   const unreadCount = Number(data.unreadCount || 0);
+  const chatTag = isCall && data.callId ? `call-${data.callId}` : (chatKey ? `chat-${chatKey}` : `${data.kind || 'team-chat'}-${data.messageId || data.callId || Date.now()}`);
 
   self.registration.showNotification(title, {
     body,
-    tag: isCall && data.callId ? `call-${data.callId}` : (chatKey ? `chat-${chatKey}` : `${data.kind || 'team-chat'}-${data.messageId || data.callId || Date.now()}`),
+    tag: chatTag,
     renotify: Boolean(isCall),
     requireInteraction: Boolean(isCall),
     silent: data.soundEnabled === false || data.soundEnabled === 'false',
@@ -66,9 +83,27 @@ messaging.onBackgroundMessage(payload => {
       { action: 'accept', title: 'Accept' }
     ] : [
       { action: 'reply', title: '↩ Reply', type: 'text', placeholder: 'Type a reply…' },
+      { action: 'mark_read', title: '✓ Mark read' },
       { action: 'open',  title: 'Open' }
     ]
   });
+
+  /* Update badge count by notifying all clients */
+  if (!isCall && chatKey) {
+    notifyWindowClients({
+      type: 'TC_PUSH_MESSAGE',
+      payload: {
+        chatId: data.chatId || '',
+        chatType: data.chatType || 'direct',
+        chatUserId: data.chatUserId || '',
+        groupId: data.groupId || '',
+        unreadCount,
+        title,
+        body,
+        messageId: data.messageId || ''
+      }
+    });
+  }
 });
 
 /* ── IDB helper: read Firebase ID token stored by notification-reply.js ── */
@@ -150,6 +185,28 @@ self.addEventListener('notificationclick', event => {
     return;
   }
 
+  /* Mark as read — notify all app tabs to mark the chat as read */
+  if (action === 'mark_read') {
+    event.waitUntil(
+      clients.matchAll({ type: 'window', includeUncontrolled: true }).then(clientList => {
+        clientList.forEach(client => {
+          try {
+            client.postMessage({
+              type: 'TC_MARK_READ',
+              scope: {
+                chatId: data.chatId || '',
+                chatType: data.chatType || 'direct',
+                chatUserId: data.chatUserId || '',
+                groupId: data.groupId || ''
+              }
+            });
+          } catch (_) {}
+        });
+      })
+    );
+    return;
+  }
+
   const url = data.kind === 'call' && data.callId
     ? `./index.html?callId=${encodeURIComponent(data.callId)}&callAction=${encodeURIComponent(action)}`
     : (data.url || './index.html');
@@ -175,6 +232,7 @@ const STATIC_ASSETS = [
   'config.js',
   'chat-theme.css',
   'notification-reply.js',
+  'notification-sounds.js',
   'manifest.json',
   'app-icon.svg',
   'app-icon-192.png',

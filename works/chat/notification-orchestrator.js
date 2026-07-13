@@ -30,6 +30,8 @@
     _activeCallId: '',
     _audio: null,
 
+    _storedUnreadCount: 0,
+
     init() {
       this._setupBroadcastChannel();
       this._setupServiceWorkerBridge();
@@ -54,7 +56,9 @@
       this._recordHistory(item);
       this._setBadge(item.unreadCount);
       document.dispatchEvent(new CustomEvent('tc:notification:message', { detail: item }));
-      if (!this._isSilent(item)) {
+      // Check if chat is muted
+      const isMuted = this._isChatMuted(item.chatId);
+      if (!isMuted && !this._isSilent(item)) {
         this._messageTone(item);
         this._vibrate(item.priority === 'high' ? [220, 90, 220] : [140]);
       }
@@ -69,9 +73,51 @@
       this._activeCallId = item.callId;
       this._broadcast({ type: 'call-ringing', callId: item.callId });
       document.dispatchEvent(new CustomEvent('tc:notification:call', { detail: item }));
+      // Calls always ring even if chat is muted (user should be able to decline)
       if (!this._isSilent(item)) this.startRingtone(item);
       if (document.visibilityState !== 'visible') this._showBrowserNotification(item);
       return true;
+    },
+
+    _isChatMuted(chatId) {
+      if (!chatId) return false;
+      // Check global mute
+      if (typeof App !== 'undefined' && App._isMutedGlobal) return true;
+      // Check per-chat mute with expiry
+      if (typeof App !== 'undefined' && App._mutedChats?.has(chatId)) {
+        if (typeof App !== 'undefined' && App._mutedUntil?.[chatId]) {
+          const until = App._mutedUntil[chatId];
+          if (until > 0 && until <= Date.now()) {
+            // Mute expired, clean up
+            App._mutedChats.delete(chatId);
+            delete App._mutedUntil[chatId];
+            return false;
+          }
+        }
+        return true;
+      }
+      // Check DND settings from localStorage
+      try {
+        const dnd = JSON.parse(localStorage.getItem('nsl_dnd_settings') || '{}');
+        if (dnd.enabled && dnd.from && dnd.to) {
+          const now = new Date();
+          const tzOffset = dnd.tzOffset || -now.getTimezoneOffset();
+          const serverUtcMinutes = now.getUTCHours() * 60 + now.getUTCMinutes();
+          const userLocalMinutes = (serverUtcMinutes - tzOffset + 1440) % 1440;
+          const [fromH, fromM] = dnd.from.split(':').map(Number);
+          const [toH, toM] = dnd.to.split(':').map(Number);
+          const fromMinutes = fromH * 60 + fromM;
+          const toMinutes = toH * 60 + toM;
+          let inDnd;
+          if (fromMinutes <= toMinutes) {
+            inDnd = userLocalMinutes >= fromMinutes && userLocalMinutes <= toMinutes;
+          } else {
+            inDnd = userLocalMinutes >= fromMinutes || userLocalMinutes <= toMinutes;
+          }
+          if (inDnd) return true;
+        }
+      } catch (_) {}
+      return false;
     },
 
     markRead(scope) {
@@ -84,12 +130,14 @@
 
     callAnswered(callId) {
       this.stopRingtone(callId);
+      if (window.NotificationSounds) window.NotificationSounds.play('callConnected');
       this._broadcast({ type: 'call-answered', callId });
       if (window.recordCallSyncEvent) window.recordCallSyncEvent({ callId, direction: 'incoming', status: 'answered' });
     },
 
     callDeclined(callId) {
       this.stopRingtone(callId);
+      if (window.NotificationSounds) window.NotificationSounds.play('callDeclined');
       this._broadcast({ type: 'call-declined', callId });
       if (window.recordCallSyncEvent) window.recordCallSyncEvent({ callId, direction: 'incoming', status: 'declined' });
     },
@@ -99,7 +147,15 @@
       const item = this._normalizeCall({ ...(payload || {}), callId, kind: 'missed_call', status: 'missed' });
       this._recordHistory(item);
       if (window.recordCallSyncEvent) window.recordCallSyncEvent(item);
-      if (!this._isSilent(item)) this._messageTone({ priority: 'high' });
+      if (window.NotificationSounds) {
+        window.NotificationSounds.play('missedCall');
+      } else if (!this._isSilent(item)) {
+        this._messageTone({ priority: 'high' });
+      }
+    },
+
+    callEnded() {
+      if (window.NotificationSounds) window.NotificationSounds.play('callEnded');
     },
 
     startRingtone(call) {
@@ -261,14 +317,22 @@
       const prefs = this.getPrefs();
       if (!prefs.messageSound) return;
       if (item?.chatType === 'group' && !prefs.groupSound) return;
-      this._beep(880, 0.055, 0.045);
-      setTimeout(() => this._beep(1174, 0.05, 0.035), 75);
+      if (window.NotificationSounds) {
+        window.NotificationSounds.play(item?.chatType === 'group' ? 'groupMessage' : 'message');
+      } else {
+        this._beep(880, 0.055, 0.045);
+        setTimeout(() => this._beep(1174, 0.05, 0.035), 75);
+      }
     },
 
     _ringPattern() {
       if (!this.getPrefs().callSound) return;
-      this._beep(740, 0.45, 0.06);
-      setTimeout(() => this._beep(880, 0.45, 0.055), 520);
+      if (window.NotificationSounds) {
+        window.NotificationSounds.play('callRing');
+      } else {
+        this._beep(740, 0.45, 0.06);
+        setTimeout(() => this._beep(880, 0.45, 0.055), 520);
+      }
     },
 
     _beep(freq, seconds, volume) {
@@ -295,6 +359,7 @@
 
     _setBadge(count) {
       const unread = Math.max(0, Number(count || 0));
+      this._storedUnreadCount = unread;
       if (navigator.setAppBadge) {
         if (unread > 0) navigator.setAppBadge(unread).catch(() => {});
         else navigator.clearAppBadge?.().catch(() => {});
@@ -303,6 +368,7 @@
     },
 
     _readUnreadCount() {
+      if (typeof this._storedUnreadCount === 'number') return this._storedUnreadCount;
       let total = 0;
       document.querySelectorAll('.unread-badge,.chat-unread-count,[data-unread-count]').forEach((node) => {
         total += Number(node.dataset.unreadCount || node.textContent || 0) || 0;
@@ -332,6 +398,10 @@
         if (msg.type === 'TC_PUSH_CALL') this.notifyCall(msg.payload || {});
         if (msg.type === 'TC_MARK_READ') this.markRead(msg.scope || {});
         if (msg.type === 'TC_CALL_STOP') this.stopRingtone(msg.callId);
+        if (msg.type === 'TC_READ_SYNC') {
+          document.dispatchEvent(new CustomEvent('tc:notification:read-sync', { detail: msg }));
+          this.syncBadge();
+        }
       });
     },
 

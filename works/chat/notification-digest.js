@@ -95,7 +95,10 @@
       return;
     }
 
-    let html = '';
+    let html = `<div class="nd-actions" style="display:flex;gap:8px;padding:8px 12px;border-bottom:1px solid var(--outline-variant,rgba(255,255,255,0.1));">
+      <button class="nd-mark-all-read" style="flex:1;padding:6px 12px;border-radius:8px;border:1px solid var(--outline-variant,rgba(255,255,255,0.15));background:transparent;color:var(--on-surface-variant,#aaa);font-size:12px;font-weight:600;cursor:pointer;" onclick="window._notifDigest?.markAllRead()">Mark all read</button>
+      <button class="nd-clear-all" style="flex:1;padding:6px 12px;border-radius:8px;border:1px solid var(--error,#f44336);background:transparent;color:var(--error,#f44336);font-size:12px;font-weight:600;cursor:pointer;" onclick="window._notifDigest?.clearAll()">Clear all</button>
+    </div>`;
     items.forEach(item => {
       if (item.type === 'single') {
         const n = item.notif;
@@ -132,8 +135,8 @@
 
   function _renderSingle(n) {
     const icon   = _notifIcon(n);
-    const name   = window.sanitizeHTML(_esc(n.fromUserName || n.title || 'Notification'));
-    const msg    = window.sanitizeHTML(_esc((n.message || n.body || '').substring(0, 100)));
+    const name   = window.sanitizeHTML(n.fromUserName || n.title || 'Notification');
+    const msg    = window.sanitizeHTML((n.message || n.body || '').substring(0, 100));
     const time   = _relTime(n.createdAt);
     const attrs  = n.chatId
       ? `data-notif-chat-id="${_esc(n.chatId)}" data-notif-chat-type="${_esc(n.chatType || 'direct')}" data-notif-user-id="${_esc(n.chatUserId || n.fromUserId || '')}"`
@@ -152,8 +155,8 @@
     const n     = item.latest;
     const count = item.notifs.length;
     const icon  = _notifIcon(n);
-    const name  = window.sanitizeHTML(_esc(n.fromUserName || n.title || 'Messages'));
-    const preview = window.sanitizeHTML(_esc((n.message || '').substring(0, 80)));
+    const name  = window.sanitizeHTML(n.fromUserName || n.title || 'Messages');
+    const preview = window.sanitizeHTML((n.message || '').substring(0, 80));
     const time  = _relTime(n.createdAt);
     const attrs = n.chatId
       ? `data-notif-chat-id="${_esc(n.chatId)}" data-notif-chat-type="${_esc(n.chatType || 'direct')}" data-notif-user-id="${_esc(n.chatUserId || n.fromUserId || '')}"`
@@ -235,6 +238,36 @@
       setTimeout(_subscribe, 1200);
     }
   }
+
+  // ── Public API ──────────────────────────────────────────────────────────
+
+  const digest = {
+    markAllRead() {
+      const uid = _uid();
+      const database = _db();
+      if (!uid || !database) return;
+      const batch = database.batch();
+      _rawNotifs.forEach(n => {
+        if (!n.read) {
+          batch.update(database.collection('inAppNotifications').doc(n.id), { read: true });
+        }
+      });
+      batch.commit().catch(() => {});
+      _updateBadge(0);
+    },
+    clearAll() {
+      const uid = _uid();
+      const database = _db();
+      if (!uid || !database) return;
+      const batch = database.batch();
+      _rawNotifs.forEach(n => {
+        batch.delete(database.collection('inAppNotifications').doc(n.id));
+      });
+      batch.commit().catch(() => {});
+      _updateBadge(0);
+    }
+  };
+  window._notifDigest = digest;
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', _boot);

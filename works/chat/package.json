@@ -4,7 +4,7 @@
   "description": "",
   "main": "app.js",
   "scripts": {
-    "test": "node --check app.js && node --check www/app.js",
+    "test": "node tests/run-all.js",
     "lint": "eslint app.js www/app.js",
     "lint:fix": "eslint --fix app.js www/app.js",
     "sync:www": "node sync-www.js",

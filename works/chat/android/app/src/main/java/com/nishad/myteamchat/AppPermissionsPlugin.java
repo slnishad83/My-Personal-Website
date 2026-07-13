@@ -105,6 +105,17 @@ public class AppPermissionsPlugin extends Plugin {
     }
 
     @PluginMethod
+    public void clearAudioMode(PluginCall call) {
+        AudioManager audioManager =
+            (AudioManager) getContext().getSystemService(Context.AUDIO_SERVICE);
+        if (audioManager != null) {
+            audioManager.setMode(AudioManager.MODE_NORMAL);
+            audioManager.setSpeakerphoneOn(false);
+        }
+        call.resolve();
+    }
+
+    @PluginMethod
     public void clearChatNotification(PluginCall call) {
         String chatId = call.getString("chatId");
         String chatType = call.getString("chatType");

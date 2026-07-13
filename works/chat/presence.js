@@ -34,18 +34,34 @@ const Presence = {
     window.addEventListener('offline', () => this.setOffline());
   },
 
-  async setOnline() {
+  async setAway() {
     if (!window.db || !window.currentUser) return;
-    this._onlineStatus = 'online';
+    this._onlineStatus = 'away';
     try {
       await window.db.collection('users').doc(window.currentUser.uid).update({
-        onlineStatus: 'online',
+        onlineStatus: 'away',
         lastSeen: Date.now(),
         lastHeartbeat: Date.now(),
         sessionId: this._getSessionId(),
         userAgent: navigator.userAgent.slice(0, 100),
         platform: window.Platform?.os || 'unknown'
       });
+    } catch (_) {}
+    this._emit('status', { status: 'away' });
+  },
+
+  async setOnline() {
+    if (!window.db || !window.currentUser) return;
+    this._onlineStatus = 'online';
+    try {
+      await window.db.collection('users').doc(window.currentUser.uid).set({
+        onlineStatus: 'online',
+        lastSeen: Date.now(),
+        lastHeartbeat: Date.now(),
+        sessionId: this._getSessionId(),
+        userAgent: navigator.userAgent.slice(0, 100),
+        platform: window.Platform?.os || 'unknown'
+      }, { merge: true });
     } catch (_) {}
     this._emit('status', { status: 'online' });
   },
@@ -56,10 +72,10 @@ const Presence = {
     this._lastSeen = Date.now();
     this._stopHeartbeat();
     try {
-      await window.db.collection('users').doc(window.currentUser.uid).update({
+      await window.db.collection('users').doc(window.currentUser.uid).set({
         onlineStatus: 'offline',
         lastSeen: Date.now()
-      });
+      }, { merge: true });
     } catch (_) {}
     this._emit('status', { status: 'offline' });
   },
@@ -67,10 +83,10 @@ const Presence = {
   async setCustomStatus(status) {
     if (!window.db || !window.currentUser) return;
     try {
-      await window.db.collection('users').doc(window.currentUser.uid).update({
+      await window.db.collection('users').doc(window.currentUser.uid).set({
         customStatus: status,
         lastSeen: Date.now()
-      });
+      }, { merge: true });
     } catch (_) {}
   },
 
@@ -98,7 +114,15 @@ const Presence = {
     try {
       let sid = sessionStorage.getItem('tcSessionId');
       if (!sid) {
-        sid = 'sess_' + Date.now() + '_' + Math.random().toString(36).slice(2, 10);
+        if (window.MultiDevice?.getCurrentSessionId) {
+          sid = window.MultiDevice.getCurrentSessionId();
+        } else {
+          const ts = Date.now().toString(36);
+          const arr = new Uint8Array(6);
+          crypto.getRandomValues(arr);
+          const rand = Array.from(arr, b => b.toString(36).padStart(2, '0')).join('');
+          sid = (window.Platform?.os || 'web').slice(0, 3) + '-' + ts + '-' + rand;
+        }
         sessionStorage.setItem('tcSessionId', sid);
       }
       return sid;

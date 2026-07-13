@@ -164,7 +164,7 @@ const Platform = (() => {
     if ('scheduler' in navigator && 'postTask' in navigator.scheduler) {
       try { navigator.scheduler.postTask(() => {}, { priority: 'user-visible' }); } catch (_) { return true; }
     }
-    if (Platform?.capabilities?.reducedMotion) return true;
+    if (typeof Notification !== 'undefined' && Notification.permission === 'denied') return true;
     return false;
   }
 

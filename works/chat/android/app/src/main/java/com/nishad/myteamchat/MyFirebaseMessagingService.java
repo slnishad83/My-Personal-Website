@@ -11,7 +11,14 @@ import android.provider.Settings;
 import android.os.Build;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.Canvas;
+import android.graphics.Paint;
+import android.graphics.PorterDuff;
+import android.graphics.PorterDuffXfermode;
+import android.graphics.RectF;
 import java.net.URL;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import androidx.core.app.NotificationCompat;
 
@@ -21,6 +28,7 @@ import com.google.firebase.messaging.RemoteMessage;
 public class MyFirebaseMessagingService extends FirebaseMessagingService {
     private static final String CHANNEL_ID = "incoming_calls_v2";
     private static final String MESSAGE_CHANNEL_ID = "chat_messages_v2";
+    private static final ExecutorService bitmapExecutor = Executors.newFixedThreadPool(2);
 
     @Override
     public void onMessageReceived(RemoteMessage message) {
@@ -49,6 +57,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
         if (callId == null || callId.isEmpty()) return;
         NotificationManager manager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
         if (manager != null) manager.cancel(callId.hashCode() & 0x7fffffff);
+        CallForegroundService.stopService(this);
     }
 
     private void showIncomingCall(String callId, String type, String fromUserName, String fromUserAvatar) {
@@ -94,6 +103,19 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
 
         NotificationManager manager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
         manager.notify(notificationId, builder.build());
+
+        /* Start foreground service to keep call alive and ring properly */
+        Intent serviceIntent = new Intent(this, CallForegroundService.class);
+        serviceIntent.putExtra("callId", callId);
+        serviceIntent.putExtra("type", type);
+        serviceIntent.putExtra("fromUserName", fromUserName);
+        serviceIntent.putExtra("fromUserAvatar", fromUserAvatar);
+        serviceIntent.putExtra("notificationId", notificationId);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            startForegroundService(serviceIntent);
+        } else {
+            startService(serviceIntent);
+        }
     }
 
     private PendingIntent createCallActionIntent(
@@ -169,18 +191,46 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
             .setCategory(NotificationCompat.CATEGORY_MESSAGE)
             .setAutoCancel(true)
             .setVisibility(NotificationCompat.VISIBILITY_PRIVATE)
-            .setGroup("team_chat_" + chatKey)
+            .setGroup("chat_messages")
             .setNumber(unreadCount)
             .setContentIntent(pendingIntent);
-        Bitmap avatar = loadRemoteBitmap(senderAvatar);
-        if (avatar != null) builder.setLargeIcon(avatar);
         if (soundEnabled) builder.setSound(Settings.System.DEFAULT_NOTIFICATION_URI);
         else builder.setSound(null);
         if (vibrate) builder.setVibrate(new long[]{0, 180, 80, 180});
         else builder.setVibrate(new long[]{0});
         NotificationManager manager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
         int notificationId = chatKey.hashCode() & 0x7fffffff;
-        manager.notify("chat:" + chatKey, notificationId, builder.build());
+        Notification notification = builder.build();
+        manager.notify("chat:" + chatKey, notificationId, notification);
+
+        /* Load avatar bitmap on a background thread to avoid ANR */
+        if (senderAvatar != null && !senderAvatar.trim().isEmpty()) {
+            String avatarUrl = senderAvatar;
+            bitmapExecutor.execute(() -> {
+                try {
+                    Bitmap bitmap = BitmapFactory.decodeStream(new URL(avatarUrl).openStream());
+                    if (bitmap != null) {
+                        NotificationCompat.Builder updateBuilder = new NotificationCompat.Builder(this, MESSAGE_CHANNEL_ID)
+                            .setSmallIcon(getApplicationInfo().icon)
+                            .setContentTitle(title != null ? title : "My Team Chat")
+                            .setContentText(body != null ? body : "New message")
+                            .setPriority(NotificationCompat.PRIORITY_HIGH)
+                            .setCategory(NotificationCompat.CATEGORY_MESSAGE)
+                            .setAutoCancel(true)
+                            .setVisibility(NotificationCompat.VISIBILITY_PRIVATE)
+                            .setGroup("chat_messages")
+                            .setLargeIcon(bitmap)
+                            .setNumber(unreadCount)
+                            .setContentIntent(pendingIntent);
+                        if (soundEnabled) updateBuilder.setSound(Settings.System.DEFAULT_NOTIFICATION_URI);
+                        else updateBuilder.setSound(null);
+                        if (vibrate) updateBuilder.setVibrate(new long[]{0, 180, 80, 180});
+                        else updateBuilder.setVibrate(new long[]{0});
+                        manager.notify("chat:" + chatKey, notificationId, updateBuilder.build());
+                    }
+                } catch (Exception ignored) {}
+            });
+        }
     }
 
     private int parsePositiveInt(String value, int fallback) {
@@ -188,15 +238,6 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
             return Math.max(1, Integer.parseInt(value));
         } catch (Exception ignored) {
             return fallback;
-        }
-    }
-
-    private Bitmap loadRemoteBitmap(String url) {
-        if (url == null || url.trim().isEmpty()) return null;
-        try {
-            return BitmapFactory.decodeStream(new URL(url).openStream());
-        } catch (Exception ignored) {
-            return null;
         }
     }
 
