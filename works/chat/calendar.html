@@ -179,7 +179,7 @@ function renderCalendar(){
     const cell=document.createElement('div');
     cell.className='day-cell'+(isToday(y,m,d)?' today':'');
     const dayEvents=allEvents.filter(e=>e.date===`${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`);
-    cell.innerHTML=`<div class="day-num">${d}</div>${dayEvents.slice(0,2).map(e=>`<div class="event-dot" style="background:${e.color||'#008069'}22;color:${e.color||'#008069'};--event-color:${e.color||'#008069'}">${esc(e.title)}</div>`).join('')}${dayEvents.length>2?`<div class="event-dot" style="color:var(--text-secondary)">+${dayEvents.length-2} more</div>`:''}`;
+    cell.innerHTML=`<div class="day-num">${d}</div>${dayEvents.slice(0,2).map(e=>{const c=(e.color||'#008069').replace(/[^#0-9a-fA-F]/g,'').slice(0,7);return`<div class="event-dot" style="background:${c}22;color:${c};--event-color:${c}">${esc(e.title)}</div>`}).join('')}${dayEvents.length>2?`<div class="event-dot" style="color:var(--text-secondary)">+${dayEvents.length-2} more</div>`:''}`;
     cell.onclick=()=>openModal(`${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`);
     grid.appendChild(cell);
   }
@@ -198,7 +198,7 @@ function renderUpcoming(){
     return`<div class="event-item">
       <div class="event-date-box"><div class="event-day">${d.getDate()}</div><div class="event-month">${d.toLocaleDateString('en',{month:'short'})}</div></div>
       <div class="event-body">
-        <div class="event-title" style="color:${e.color||'var(--brand)'};--event-color:${e.color||'#008069'}">${esc(e.title)}</div>
+        <div class="event-title" style="color:${(e.color||'var(--brand)').replace(/[^#0-9a-fA-F()%,.\-]/g,'').slice(0,40)};--event-color:${(e.color||'#008069').replace(/[^#0-9a-fA-F]/g,'').slice(0,7)}">${esc(e.title)}</div>
         <div class="event-meta">${e.time?e.time+' · ':''}${esc(e.note||'')} · Added by ${esc(e.addedByName||'Someone')}</div>
       </div>
       ${e.addedBy===currentUser.uid?`<div class="event-actions"><button class="btn-del-evt" onclick="deleteEvent('${e.id}')">🗑</button></div>`:''}
@@ -232,7 +232,7 @@ async function deleteEvent(id){if(!confirm('Delete this event?'))return;await db
 
 function isToday(y,m,d){return y===today.getFullYear()&&m===today.getMonth()&&d===today.getDate();}
 function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2500);}
-function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#x27;');}
 </script>
 
 <script>

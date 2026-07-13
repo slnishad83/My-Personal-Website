@@ -17,8 +17,8 @@
 
   // ── Helpers ───────────────────────────────────────────────────────────────
 
-  function _uid()  { return (typeof currentUser !== 'undefined' ? currentUser : auth?.currentUser)?.uid || null; }
-  function _db()   { return typeof db !== 'undefined' ? db : null; }
+  function _uid()  { const u = window.currentUser || App?.currentUser; return u?.uid || null; }
+  function _db()   { return window.db || App?.db || null; }
   function _esc(s) { return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#x27;'); }
 
   function _relTime(ts) {
@@ -204,7 +204,7 @@
         _rawNotifs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
         const grouped = _groupNotifs(_rawNotifs);
         _renderPanel(grouped);
-      }, () => {});
+      }, err => { console.warn('[NotifDigest] Snapshot error:', err?.message); });
   }
 
   // ── Deduplicate browser push notifications ────────────────────────────────

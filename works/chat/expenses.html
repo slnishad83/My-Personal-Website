@@ -182,7 +182,7 @@ function renderExpenses(){
     const paidByUser=members.find(m=>m.id===e.paidBy);
     const d=e.createdAt?.toDate?e.createdAt.toDate():new Date();
     return`<div class="expense-item">
-      <div class="expense-icon">${e.icon||'💰'}</div>
+      <div class="expense-icon">${esc(e.icon||'💰')}</div>
       <div class="expense-info">
         <div class="expense-desc">${esc(e.description)}</div>
         <div class="expense-meta">${d.toLocaleDateString('en-IN',{day:'2-digit',month:'short'})} · Split ${e.splitCount||1} ways</div>
@@ -251,7 +251,7 @@ async function deleteExpense(id){
 }
 
 function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2500);}
-function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#x27;');}
 </script>
 
 <script>

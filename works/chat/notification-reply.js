@@ -14,7 +14,10 @@
   const STORE_NAME  = 'tokens';
 
   /* ── IndexedDB helpers ────────────────────────────────────────────── */
+  let _idbConn = null;
+
   function openIdb() {
+    if (_idbConn) return Promise.resolve(_idbConn);
     return new Promise((resolve, reject) => {
       const req = indexedDB.open(IDB_NAME, IDB_VERSION);
       req.onupgradeneeded = e => {
@@ -23,7 +26,7 @@
           db.createObjectStore(STORE_NAME, { keyPath: 'key' });
         }
       };
-      req.onsuccess = e => resolve(e.target.result);
+      req.onsuccess = e => { _idbConn = e.target.result; resolve(_idbConn); };
       req.onerror   = () => reject(req.error);
     });
   }
@@ -91,6 +94,7 @@
         senderId: user.uid,
         senderName: user.displayName || '',
         senderAvatar: user.photoURL || '',
+        senderEmail: user.email || '',
         timestamp: firebase.firestore.FieldValue.serverTimestamp(),
         status: 'sent',
         readBy:      { [user.uid]: firebase.firestore.FieldValue.serverTimestamp() },
@@ -104,9 +108,26 @@
         msgData.directId   = chatId;
         msgData.receiverId = chatUserId;
         msgData.participants = [user.uid, chatUserId].filter(Boolean);
+        msgData.participantEmails = [user.email || '', ''];
       }
 
       await db.collection('messages').add(msgData);
+
+      if (chatType === 'group' && groupId) {
+        db.collection('groups').doc(groupId).update({
+          lastMessage: text,
+          lastMessageTime: firebase.firestore.FieldValue.serverTimestamp(),
+          lastMessageSenderId: user.uid,
+          lastMessageSenderName: user.displayName || user.email || 'Me'
+        }).catch(() => {});
+      } else {
+        db.collection('chats').doc(chatId).update({
+          lastMessage: text,
+          lastMessageTime: firebase.firestore.FieldValue.serverTimestamp(),
+          lastMessageSenderId: user.uid,
+          lastMessageSenderName: user.displayName || user.email || 'Me'
+        }).catch(() => {});
+      }
 
       // Show brief toast if the app is visible
       if (typeof window.showToast === 'function' && document.visibilityState === 'visible') {

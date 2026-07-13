@@ -1057,8 +1057,6 @@
 
   <!-- Infrastructure Modules -->
   <script src="platform-detect.js"></script>
-  <script src="network-quality.js"></script>
-  <script src="audio-manager.js"></script>
   <script src="offline-queue.js"></script>
   <script src="presence.js"></script>
   <script src="multi-device.js"></script>
@@ -1096,7 +1094,6 @@
   <script src="group-message-info.js"></script>
   <script src="fixes.js"></script>
   <script src="feature-updates.js"></script>
-  <script src="sync-www.js"></script>
   <script src="sync-audit.js"></script>
   <script src="url-preview.js"></script>
   <script src="redesign-base.js"></script>
@@ -1141,8 +1138,6 @@
     window.addEventListener('load', () => {
       if (window.ErrorBoundary) ErrorBoundary.init();
       if (window.A11y) A11y.init();
-      if (window.NetworkQuality) NetworkQuality.init();
-      if (window.AudioManager) AudioManager.init();
       if (window.KeyboardShortcuts) KeyboardShortcuts.init();
       if (window.SwipeDelete) SwipeDelete.init();
       if (window.BackButton) BackButton.init();
@@ -1159,6 +1154,7 @@
     });
 
     firebase.auth().onAuthStateChanged((user) => {
+      window.currentUser = user || null;
       if (user) {
         setTimeout(async () => {
           if (window.Presence) await Presence.init();
@@ -1169,6 +1165,7 @@
         if (window.Presence) Presence.destroy();
         if (window.MultiDevice) MultiDevice.destroy();
         if (window.Security) Security.destroy();
+        window.location.replace('login.html');
       }
     });
   </script>

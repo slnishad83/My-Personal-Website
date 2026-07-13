@@ -158,6 +158,7 @@
   window.NSLSanitize = { sanitize: sanitize, escapeHTML: escapeHTML, sanitizeURL: sanitizeURL };
   window.sanitizeHTML = sanitize;
   window.sanitizeContent = sanitize;
+  window.escHtml = escapeHTML;
 
   function safeInner(el, html) {
     if (el) el.innerHTML = sanitize(html);

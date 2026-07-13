@@ -3,17 +3,17 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="robots" content="noindex,nofollow" />
-  <meta http-equiv="refresh" content="0;url=/reset.html" />
+  <meta http-equiv="refresh" content="0;url=login.html" />
   <title>Reset Redirect</title>
   <script>
     (function () {
       var parentPath = location.pathname.replace(/\/reset(?:\.html)?\/?$/, "") || "/";
-      var target = location.origin + "/reset.html?return=" + encodeURIComponent(location.origin + parentPath);
+      var target = location.origin + "/login.html";
       location.replace(target);
     })();
   </script>
 </head>
 <body>
-  <p><a href="/reset.html">Continue to reset</a></p>
+  <p>Redirecting to <a href="login.html">login page</a>...</p>
 </body>
 </html>

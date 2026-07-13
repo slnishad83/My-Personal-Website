@@ -158,8 +158,8 @@ function renderAlbum(){
     if(month!==lastMonth){html+=`<div class="month-header">${month}</div>`;lastMonth=month;}
     const isVideo=m.attachment.type==='video';
     html+=`<div class="photo-item" onclick="openLb(${i})">
-      ${isVideo?`<video src="${m.attachment.url}" style="width:100%;height:100%;object-fit:cover"></video>`
-        :`<img src="${m.attachment.url}" loading="lazy" alt=""/>`}
+      ${isVideo?`<video src="${esc(m.attachment.url)}" style="width:100%;height:100%;object-fit:cover"></video>`
+        :`<img src="${esc(m.attachment.url)}" loading="lazy" alt=""/>`}
       <div class="photo-meta">
         <span class="photo-sender">${esc(m.senderName||'Unknown')}</span>
         <span class="photo-date">${d.toLocaleDateString('en-IN',{day:'2-digit',month:'short'})}</span>
@@ -189,7 +189,7 @@ function showLb(){
   document.getElementById('lbDownload').href=m.attachment.url;
   document.getElementById('lbCounter').textContent=(lbIndex+1)+' of '+filtered.length;
 }
-function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#x27;');}
 </script>
 <nav class="bottom-nav" id="bottomNav">
   <a class="nav-item" href="index.html"><span class="mat-icon">chat</span><span>Chat</span></a>

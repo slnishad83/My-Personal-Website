@@ -17,8 +17,9 @@ const Security = {
 
   _startTokenRefresh() {
     this._tokenRefreshTimer = setInterval(async () => {
-      if (window.currentUser) {
-        try { await window.currentUser.getIdToken(true); } catch (e) { console.error('[Security] Token refresh failed:', e?.message || e); }
+      const user = window.currentUser || App?.currentUser;
+      if (user) {
+        try { await user.getIdToken(true); } catch (e) { console.error('[Security] Token refresh failed:', e?.message || e); }
       }
     }, this._tokenRefreshInterval);
   },
@@ -87,16 +88,18 @@ const Security = {
 
   /* ── Token Management ────────────────────────────────── */
   async getIdToken() {
-    if (!window.currentUser) return null;
+    const user = window.currentUser || App?.currentUser;
+    if (!user) return null;
     try {
-      return await window.currentUser.getIdToken();
+      return await user.getIdToken();
     } catch (e) { console.error('[Security] getIdToken failed:', e?.message || e); return null; }
   },
 
   async forceTokenRefresh() {
-    if (!window.currentUser) return false;
+    const user = window.currentUser || App?.currentUser;
+    if (!user) return false;
     try {
-      await window.currentUser.getIdToken(true);
+      await user.getIdToken(true);
       return true;
     } catch (e) { console.error('[Security] forceTokenRefresh failed:', e?.message || e); return false; }
   },

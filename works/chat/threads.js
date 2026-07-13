@@ -7,13 +7,42 @@
 //
 // Parent message gets: threadCount, lastThreadAt, lastThreadSenderName
 
+/* ── Polyfill: renderMessageText (safe, sanitized) ─────── */
+if (typeof renderMessageText === 'undefined') {
+  window.renderMessageText = function renderMessageText(text, mentions) {
+    var esc = window.escHtml || window.escapeHtml || window.NSLSanitize?.escapeHTML || function(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#x27;');};
+    var safe = esc(text || '');
+    safe = safe
+      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+      .replace(/\*(.*?)\*/g, '<em>$1</em>')
+      .replace(/~~(.*?)~~/g, '<del>$1</del>')
+      .replace(/`(.*?)`/g, '<code>$1</code>')
+      .replace(/(https?:\/\/[^\s&<]+)/g, '<a href="$1" target="_blank" rel="noopener">$1</a>')
+      .replace(/\n/g, '<br>');
+    return safe;
+  };
+}
+
+if (typeof renderAttachment === 'undefined') {
+  window.renderAttachment = function renderAttachment(att) {
+    if (!att) return '';
+    var esc = window.escHtml || window.escapeHtml || window.NSLSanitize?.escapeHTML || function(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');};
+    if (att.url) {
+      if (att.type && att.type.startsWith('image/')) return '<img src="' + esc(att.url) + '" alt="' + esc(att.name || 'attachment') + '" style="max-width:200px;border-radius:8px;">';
+      if (att.type && att.type.startsWith('video/')) return '<video src="' + esc(att.url) + '" controls style="max-width:200px;border-radius:8px;"></video>';
+      return '<a href="' + esc(att.url) + '" target="_blank" rel="noopener">' + esc(att.name || 'Attachment') + '</a>';
+    }
+    return '<span>' + esc(att.name || 'Attachment') + '</span>';
+  };
+}
+
 let currentThreadMessageId = null;
 let currentThreadMessageData = null;
 let threadRepliesUnsubscribe = null;
 
 // Open the thread panel for a given parent message
 async function openThreadPanel(messageId, messageData) {
-  if (!messageId || !currentUser) return;
+  if (!messageId || !window.currentUser) return;
   currentThreadMessageId = messageId;
   currentThreadMessageData = messageData || {};
 
@@ -81,7 +110,7 @@ function subscribeToThreadReplies(messageId) {
 
   container.innerHTML = '<div class="thread-loading">Loading replies…</div>';
 
-  threadRepliesUnsubscribe = db
+  threadRepliesUnsubscribe = window.db
     .collection("messages")
     .doc(messageId)
     .collection("threadReplies")
@@ -115,7 +144,7 @@ function renderThreadReplies(docs, container) {
   container.innerHTML = "";
   docs.forEach((doc) => {
     const msg = doc.data();
-    const isMe = msg.senderId === currentUser?.uid;
+    const isMe = msg.senderId === window.currentUser?.uid;
     const time = msg.timestamp ? formatTime(msg.timestamp) : "";
 
     const div = document.createElement("div");
@@ -137,7 +166,7 @@ function renderThreadReplies(docs, container) {
 }
 
 async function sendThreadReply() {
-  if (!currentThreadMessageId || !currentUser) return;
+  if (!currentThreadMessageId || !window.currentUser) return;
 
   const composer = document.getElementById("threadComposer");
   if (!composer) return;
@@ -151,22 +180,22 @@ async function sendThreadReply() {
   try {
     const replyData = {
       text,
-      senderId: currentUser.uid,
-      senderName: currentUser.displayName || currentUser.email || "User",
+      senderId: window.currentUser.uid,
+      senderName: window.currentUser.displayName || window.currentUser.email || "User",
       timestamp: firebase.firestore.FieldValue.serverTimestamp(),
       parentMessageId: currentThreadMessageId,
     };
 
-    await db
+    await window.db
       .collection("messages")
       .doc(currentThreadMessageId)
       .collection("threadReplies")
       .add(replyData);
 
-    await db.collection("messages").doc(currentThreadMessageId).update({
+    await window.db.collection("messages").doc(currentThreadMessageId).update({
       threadCount: firebase.firestore.FieldValue.increment(1),
       lastThreadAt: firebase.firestore.FieldValue.serverTimestamp(),
-      lastThreadSenderName: currentUser.displayName || currentUser.email || "User",
+      lastThreadSenderName: window.currentUser.displayName || window.currentUser.email || "User",
     });
 
     composer.value = "";

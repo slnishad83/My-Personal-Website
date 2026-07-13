@@ -6032,7 +6032,9 @@ async function sendChatRequest(toUid, toEmail, toName) {
       to: toUid, toEmail: toEmail, toName: toName,
       fromUserId: uid, toUserId: toUid,
       fromUserName: myName, toUserName: toName,
-      status: 'pending', timestamp: firebase.firestore.FieldValue.serverTimestamp()
+      status: 'pending',
+      timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
     });
     showToast(`Chat request sent to ${toName}`, 'success');
   } catch(e) { showToast('Failed to send request', 'error'); console.warn(e); }
@@ -6051,6 +6053,7 @@ async function acceptChatRequest(requestId) {
       participantNames: { [uid]: App.currentUser.displayName || myEmail, [req.fromUid]: req.fromName },
       participantEmails: { [uid]: myEmail, [req.fromUid]: req.fromEmail },
       participantEmailList: [myEmail, req.fromEmail],
+      name: req.fromName,
       status: 'active'
     }, { merge: true });
     await App.db.collection('chatRequests').doc(requestId).update({
@@ -6060,6 +6063,7 @@ async function acceptChatRequest(requestId) {
     showToast(`Chat request from ${req.fromName} accepted`, 'success');
     if (App.chatsUnsubscribe) { App.chatsUnsubscribe(); App.chatsUnsubscribe = null; }
     subscribeToChats();
+    openChat(chatId, 'direct');
   } catch(e) { showToast('Failed to accept request', 'error'); console.warn(e); }
 }
 
@@ -6068,6 +6072,56 @@ async function declineChatRequest(requestId) {
   try {
     await App.db.collection('chatRequests').doc(requestId).update({ status: 'declined' });
     showToast('Chat request declined', 'info');
+  } catch(e) { console.warn(e); }
+}
+
+async function cancelChatRequest(requestId) {
+  if (!App.db || !App.auth?.currentUser) return;
+  try {
+    await App.db.collection('chatRequests').doc(requestId).update({ status: 'cancelled' });
+    showToast('Chat request cancelled', 'info');
+  } catch(e) { console.warn(e); }
+}
+
+async function blockRequestSender(userId) {
+  if (!App.db || !App.auth?.currentUser) return;
+  const uid = App.auth.currentUser.uid;
+  try {
+    const userRef = App.db.collection('users').doc(uid);
+    await userRef.update({ blockedUsers: firebase.firestore.FieldValue.arrayUnion(userId) });
+    const q = await App.db.collection('chatRequests')
+      .where('fromUserId', '==', userId).where('toUserId', '==', uid).where('status', '==', 'pending').get();
+    const batch = App.db.batch();
+    q.forEach(doc => batch.update(doc.ref, { status: 'blocked' }));
+    await batch.commit();
+    showToast('User blocked', 'info');
+  } catch(e) { console.warn(e); }
+}
+
+async function acceptGroupInvite(inviteId) {
+  if (!App.db || !App.auth?.currentUser) return;
+  const uid = App.auth.currentUser.uid;
+  try {
+    const doc = await App.db.collection('groupInvites').doc(inviteId).get();
+    if (!doc.exists) { showToast('Invite not found', 'error'); return; }
+    const data = doc.data();
+    const chatId = data.groupId || data.chatId;
+    if (!chatId) { showToast('Invalid invite', 'error'); return; }
+    await App.db.collection('groups').doc(chatId).update({
+      members: firebase.firestore.FieldValue.arrayUnion(uid)
+    });
+    await App.db.collection('groupInvites').doc(inviteId).update({ status: 'accepted' });
+    showToast('Joined the group', 'success');
+    if (App.chatsUnsubscribe) { App.chatsUnsubscribe(); App.chatsUnsubscribe = null; }
+    subscribeToChats();
+  } catch(e) { showToast('Failed to accept invite', 'error'); console.warn(e); }
+}
+
+async function declineGroupInvite(inviteId) {
+  if (!App.db) return;
+  try {
+    await App.db.collection('groupInvites').doc(inviteId).update({ status: 'declined' });
+    showToast('Group invite declined', 'info');
   } catch(e) { console.warn(e); }
 }
 

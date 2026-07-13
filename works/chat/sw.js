@@ -170,8 +170,6 @@ const STATIC_ASSETS = [
   'app-icon-512.png',
   'pwa-install.js',
   'platform-detect.js',
-  'network-quality.js',
-  'audio-manager.js',
   'offline-queue.js',
   'presence.js',
   'multi-device.js',

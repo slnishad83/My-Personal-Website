@@ -20,6 +20,7 @@ const OfflineQueue = {
       console.log('[OfflineQueue] Initialized, pending:', await this.getCount());
       this._setupListeners();
       this._emitStatus();
+      setTimeout(() => this.processQueue(), 5000);
     } catch (e) {
       console.warn('[OfflineQueue] Init failed:', e);
     }
@@ -108,6 +109,9 @@ const OfflineQueue = {
           msg.error = e.message || String(e);
           await this._updateRecord(msg);
           console.warn(`[OfflineQueue] Retry ${msg.retries}/${this._maxRetries} failed:`, e.message);
+          if (msg.retries < this._maxRetries) {
+            await new Promise(r => setTimeout(r, this._retryDelay * msg.retries));
+          }
         }
       }
     } catch (e) {
@@ -150,14 +154,16 @@ const OfflineQueue = {
       });
       return;
     }
-    if (window.db && window.currentUser) {
-      await window.db.collection('messages').add({
+    const db = window.db || App?.db;
+    const user = window.currentUser || App?.currentUser;
+    if (db && user) {
+      await db.collection('messages').add({
         chatId: msg.chatId,
         chatType: msg.chatType,
         text: msg.text,
         attachments: processedAttachments.length > 0 ? processedAttachments : undefined,
-        senderId: window.currentUser.uid,
-        senderName: window.currentUser.displayName || '',
+        senderId: user.uid,
+        senderName: user.displayName || '',
         time: Date.now(),
         replyTo: msg.replyTo,
         status: 'sent'

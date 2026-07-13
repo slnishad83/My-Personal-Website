@@ -154,8 +154,8 @@
       if (perm === 'granted') {
         _setUserDisabled(false);
         // Call the app's existing FCM registration if available
-        if (typeof registerFcmTokenForCurrentUser === 'function') {
-          await registerFcmTokenForCurrentUser({ force: true });
+        if (typeof window.registerFcmTokenForCurrentUser === 'function') {
+          await window.registerFcmTokenForCurrentUser({ force: true });
         }
         _renderBell();
         _closeDropdown();
@@ -177,11 +177,11 @@
     _setUserDisabled(true);
     // Remove FCM token from Firestore if app globals are available
     try {
-      const user = typeof currentUser !== 'undefined' ? currentUser : (typeof auth !== 'undefined' ? auth.currentUser : null);
-      const _db = typeof db !== 'undefined' ? db : null;
-      const _messaging = typeof messaging !== 'undefined' ? messaging : null;
+      const user = window.currentUser || App?.currentUser;
+      const _db = window.db || App?.db;
+      const _messaging = window.firebase?.messaging ? firebase.messaging() : null;
       if (user && _db && _messaging && typeof _messaging.getToken === 'function') {
-        const token = await _messaging.getToken({ vapidKey: typeof FCM_VAPID_KEY !== 'undefined' ? FCM_VAPID_KEY : undefined }).catch(() => null);
+        const token = await _messaging.getToken({ vapidKey: window.FCM_VAPID_KEY }).catch(() => null);
         if (token) {
           const tokenKey = token.replace(/[^a-zA-Z0-9]/g, '').slice(-120);
           await _db.collection('users').doc(user.uid).update({
