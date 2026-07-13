@@ -2920,6 +2920,7 @@ function sendMessage() {
           }, { merge: true }).catch(() => {});
         }
       }
+      if (typeof broadcastToTabs === 'function') broadcastToTabs('new-message', { chatId, chatType: isGroup ? 'group' : 'direct' });
     })();
   }
 }

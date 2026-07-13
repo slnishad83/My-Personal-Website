@@ -26,6 +26,8 @@ const Presence = {
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState === 'visible') {
         this.setOnline();
+      } else {
+        this.setAway();
       }
     });
     window.addEventListener('online', () => this.setOnline());

@@ -1179,10 +1179,26 @@
         if (!e.data || !e.data.type) return;
         switch (e.data.type) {
           case 'new-message':
-            if (typeof loadChats === 'function') loadChats();
-            break;
           case 'chat-update':
-            if (typeof loadChats === 'function') loadChats();
+            if (typeof subscribeToChats === 'function') subscribeToChats();
+            if (typeof subscribeToGroups === 'function') subscribeToGroups();
+            break;
+          case 'message-deleted':
+          case 'chat-deleted':
+            if (typeof subscribeToChats === 'function') subscribeToChats();
+            if (App?.currentChat?.id && typeof renderMessages === 'function') {
+              renderMessages(App.currentChat.id);
+            }
+            break;
+          case 'message-read':
+            if (App?.currentChat?.id && typeof renderMessages === 'function') {
+              renderMessages(App.currentChat.id);
+            }
+            break;
+          case 'typing':
+            if (e.data.chatId && e.data.userId !== App?.currentUser?.uid) {
+              if (typeof showTypingIndicator === 'function') showTypingIndicator(e.data.userId, e.data.chatId);
+            }
             break;
           case 'theme-change':
             document.documentElement.classList.toggle('dark', e.data.dark);
@@ -1191,10 +1207,17 @@
           case 'logout':
             window.location.reload();
             break;
+          case 'focus-chat':
+            if (e.data.chatId && typeof openChat === 'function') {
+              openChat(e.data.chatId, e.data.chatType || 'direct');
+            }
+            break;
         }
       };
       window.NSLBroadcastChannel = channel;
-      // Broadcast theme changes to other windows
+      window.broadcastToTabs = function(type, data) {
+        try { channel.postMessage({ type, ...data }); } catch (_) {}
+      };
       const origToggle = window.toggleTheme;
       window.toggleTheme = function() {
         if (origToggle) origToggle();

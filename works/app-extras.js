@@ -850,6 +850,7 @@ async function deleteMessage(msgId, scope) {
           localStorage.setItem(key, JSON.stringify(o));
         } catch(_) {}
         showToast('Message deleted', 'info');
+        if (typeof broadcastToTabs === 'function') broadcastToTabs('message-deleted', { chatId, msgId });
       } catch (err) {
         console.warn('Delete for me failed:', err);
         showToast('Could not delete message. Check connection.', 'error');
@@ -877,12 +878,14 @@ async function deleteMessage(msgId, scope) {
         });
         try { const key='nsl_deleted_msgs'; const o=JSON.parse(localStorage.getItem(key)||'{}'); o[chatId]=o[chatId]||[]; if(!o[chatId].includes(msgId)) o[chatId].push(msgId); localStorage.setItem(key,JSON.stringify(o)); } catch(_) {}
         showToast('Message deleted for everyone', 'success');
+        if (typeof broadcastToTabs === 'function') broadcastToTabs('message-deleted', { chatId, msgId });
       } catch (err) {
         console.warn('Delete for everyone failed, trying fallback:', err);
         try {
           await App.db.collection('messages').doc(msgId).delete();
           try { const key='nsl_deleted_msgs'; const o=JSON.parse(localStorage.getItem(key)||'{}'); o[chatId]=o[chatId]||[]; if(!o[chatId].includes(msgId)) o[chatId].push(msgId); localStorage.setItem(key,JSON.stringify(o)); } catch(_) {}
           showToast('Message deleted for everyone', 'success');
+          if (typeof broadcastToTabs === 'function') broadcastToTabs('message-deleted', { chatId, msgId });
         } catch (err2) {
           console.error('Delete fallback also failed:', err2);
           showToast('Could not delete message for everyone', 'error');
