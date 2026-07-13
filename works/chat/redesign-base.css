@@ -360,7 +360,7 @@ body {
 }
 
 /* ── Loading Spinner ── */
-.spinner, .loading-spinner {
+.spinner {
   width: 40px;
   height: 40px;
   border-radius: 50%;
@@ -371,10 +371,6 @@ body {
 
 .spinner--sm { width: 20px; height: 20px; border-width: 2px; }
 .spinner--lg { width: 56px; height: 56px; border-width: 4px; }
-
-@keyframes spin {
-  to { transform: rotate(360deg); }
-}
 
 /* ── Empty State ── */
 .empty-state {
@@ -395,13 +391,13 @@ body {
 
 .empty-state p { margin: 0; font-size: 14px; line-height: 1.5; }
 
-/* D-H16: Desktop-optimized empty states */
+/* D-H16: Desktop-optimized empty states (overrides in chat-theme.css) */
 @media (min-width: 1024px) {
   .empty-state {
     padding: 80px 48px !important;
     gap: 16px !important;
   }
-  .empty-state .mat-icon {
+  .empty-state .mat-icon, .empty-state .material-symbols-outlined {
     font-size: 80px !important;
     opacity: 0.25 !important;
   }

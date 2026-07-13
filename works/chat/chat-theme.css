@@ -173,7 +173,6 @@ html, body, #app { height: 100%; margin: 0; padding: 0; }
 }
 
 /* ── Dark Mode Enhancements ──────────────────────────── */
-html.dark { color-scheme: dark; }
 html.dark ::-webkit-scrollbar { width: 5px; height: 5px; background: var(--surface-dim); }
 html.dark ::-webkit-scrollbar-track { background: var(--surface-dim); }
 html.dark ::-webkit-scrollbar-thumb { background: var(--surface-container-highest); border-radius: 4px; }
@@ -453,16 +452,6 @@ button, a, [role="button"], input, textarea, select {
   touch-action: manipulation;
 }
 
-/* ── Reduced motion preference ───────────────────────── */
-@media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-    scroll-behavior: auto !important;
-  }
-}
-
 /* ── Recording waveform container ────────────────────── */
 #recording-waveform {
   display: flex;
@@ -477,54 +466,10 @@ button, a, [role="button"], input, textarea, select {
   50% { opacity: 0.3; }
 }
 
-/* ── Toast container safe area (fallback for IDs) ────── */
-.toast-container,
-[id*="toast"] {
-  z-index: 9999;
-}
-
 /* ── Pinned message bar responsive ───────────────────── */
 @media (max-width: 380px) {
   #pinned-message-bar { padding: 6px 12px !important; }
   #pinned-message-bar .text-xs { font-size: 10px !important; }
-}
-
-/* ── Accessibility: skip-nav & screen-reader utilities ── */
-.sr-only {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  margin: -1px;
-  overflow: hidden;
-  clip: rect(0, 0, 0, 0);
-  white-space: nowrap;
-  border: 0;
-}
-#skip-nav:focus {
-  position: fixed;
-  top: 0;
-  left: 8px;
-  z-index: 999999;
-  padding: 12px 24px;
-  background: var(--primary);
-  color: var(--on-primary);
-  border-radius: 0 0 12px 12px;
-  font-weight: 700;
-  font-size: 14px;
-  text-decoration: none;
-  outline: 2px solid var(--primary);
-  outline-offset: 2px;
-}
-*:focus-visible {
-  outline: 2px solid var(--primary);
-  outline-offset: 2px;
-}
-button:focus-visible,
-[role="button"]:focus-visible {
-  outline: 2px solid var(--primary);
-  outline-offset: 2px;
-  border-radius: 8px;
 }
 
 /* ── Extra-small screens (<380px) ──────────────────────── */
@@ -1125,28 +1070,6 @@ html.light #theme-color-meta { content: ""; }
   }
 }
 
-/* ── D-H2: Enhanced focus-visible for ALL interactive elements ── */
-*:focus-visible {
-  outline: 2px solid var(--primary) !important;
-  outline-offset: 2px !important;
-}
-button:focus-visible,
-[role="button"]:focus-visible,
-a:focus-visible,
-.tab-item:focus-visible,
-.chat-list-item:focus-visible,
-.emoji-cat-btn:focus-visible,
-.bottom-nav-item:focus-visible {
-  outline: 2px solid var(--primary) !important;
-  outline-offset: 2px !important;
-  border-radius: 8px !important;
-}
-input:focus-visible,
-textarea:focus-visible,
-select:focus-visible {
-  outline: 2px solid var(--primary) !important;
-  outline-offset: 1px !important;
-}
 #msg-input:focus-visible {
   outline: none !important;
   border-color: var(--primary) !important;

@@ -1655,10 +1655,6 @@ body.dark .search-result-card [style*="border-bottom: 1px solid #f1f5f9"] {
 
 /* ── GAP 1 FIX: message quick-action icon colour in dark mode ──── */
 
-body.dark .message-quick-actions .quick-message-action {
-  color: var(--text-secondary) !important;
-}
-
 body.dark .message-quick-actions .quick-message-action:hover {
   color: var(--text) !important;
   background: rgba(255, 255, 255, 0.10) !important;

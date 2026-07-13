@@ -149,6 +149,8 @@
   }
 
   // ── 2. TYPING INDICATOR UI INJECTION ────────────────────────────
+  var _typingUiObs = null;
+
   function injectTypingUI() {
     function _inject() {
       if (document.getElementById('_wa_typing')) return;
@@ -180,7 +182,6 @@
       _typingUiObs.observe(document.body, { childList: true, subtree: true });
     }
   }
-  var _typingUiObs = null;
 
   function findInputArea() {
     const selectors = [
