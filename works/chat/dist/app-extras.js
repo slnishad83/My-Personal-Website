@@ -1672,8 +1672,8 @@ function attachPhoto() {
     const files = Array.from(input.files || []);
     for (const file of files) {
       if (file.size > 16 * 1024 * 1024) { showToast(file.name + ': too large (max 16MB)', 'error'); continue; }
-      if (file.type.startsWith('image/') && file.size > 2 * 1024 * 1024) {
-        const compressed = await _compressImage(file, 0.8, 2048);
+      if (file.type.startsWith('image/') && file.size > 200 * 1024) {
+        const compressed = await _compressImage(file, 0.7, 1280);
         await _sendFileMessage(compressed || file);
       } else {
         await _sendFileMessage(file);
@@ -1821,9 +1821,9 @@ async function _capturePhoto() {
     if (!blob) return;
     const file = new File([blob], 'photo_' + Date.now() + '.jpg', { type: 'image/jpeg' });
     _closeCamera();
-    if (file.size > 2 * 1024 * 1024) {
+    if (file.size > 200 * 1024) {
       showToast('Compressing image…', 'info');
-      const compressed = await _compressImage(file, 0.8, 2048);
+      const compressed = await _compressImage(file, 0.7, 1280);
       _showMediaPreview(compressed || file, 'image');
     } else {
       _showMediaPreview(file, 'image');

@@ -2796,6 +2796,16 @@ function sendMessage() {
   const text  = input.value.trim();
   if (!text || !App.currentChat) return;
 
+  // Anti-Spam Rate Limiter (Max 5 msgs / 5 seconds)
+  sendMessage._ts = sendMessage._ts || [];
+  const now = Date.now();
+  sendMessage._ts = sendMessage._ts.filter(t => now - t < 5000);
+  if (sendMessage._ts.length >= 5) {
+    showToast('Sending too fast. Please wait a moment.', 'error');
+    return;
+  }
+  sendMessage._ts.push(now);
+
   // Handle message editing
   if (_editingMsgId) {
     saveEdit(text);
