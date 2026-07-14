@@ -1,4 +1,6 @@
-/* Final compact side-by-side message actions. Loaded after style.css. */
+/* Final compact side-by-side message actions. Loaded after style.css.
+   !important is intentional — this file is the final override sheet
+   and must win over all other CSS loaded before it. */
 .message:not(.call-message) {
   position: relative !important;
   display: flex !important;
@@ -37,8 +39,8 @@
   /* var(--actions-border/bg) let ui-audit.css theme this without !important fights */
   border: 1px solid var(--actions-border, rgba(134, 150, 160, 0.2)) !important;
   border-radius: 999px !important;
-  background: var(--actions-bg, rgba(255, 255, 255, 0.94)) !important;
-  box-shadow: 0 2px 7px rgba(11, 20, 26, 0.15) !important;
+  background: var(--actions-bg, color-mix(in srgb, var(--surface-container-lowest, #fff) 94%, transparent)) !important;
+  box-shadow: 0 2px 7px color-mix(in srgb, var(--background, #0b141a) 15%, transparent) !important;
   transform: none !important;
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
@@ -75,7 +77,7 @@
 .message-quick-actions .quick-message-action:hover,
 .message-quick-actions .quick-message-action:focus-visible,
 .message-quick-actions .quick-message-action:active {
-  background: var(--brand-hover-subtle, rgba(0, 128, 105, 0.11)) !important;
+  background: var(--brand-hover-subtle, color-mix(in srgb, var(--primary, #008069) 11%, transparent)) !important;
   /* --brand-dark is defined in style.css :root as #008069 */
   color: var(--brand-dark, #008069) !important;
 }
@@ -167,7 +169,7 @@ html.dark .message-quick-actions .quick-message-action {
   place-items: center !important;
   border-radius: 50% !important;
   background: var(--brand-dark, #008069) !important;
-  box-shadow: 0 3px 12px rgba(0, 128, 105, 0.25) !important;
+  box-shadow: 0 3px 12px color-mix(in srgb, var(--primary, #008069) 25%, transparent) !important;
   opacity: 0 !important;
   visibility: hidden !important;
   transform: translateY(-50%) scale(0.82) !important;

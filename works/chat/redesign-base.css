@@ -586,20 +586,21 @@ body {
   to { transform: translateY(0); }
 }
 
-/* ── Dark Mode Variables ── */
-@supports (color: oklch(0 0 0)) {
-  @media (prefers-color-scheme: dark) {
-    :root:not([data-theme="light"]) {
-      --brand: #00a884;
-      --bg: #0b141a;
-      --card: #111b21;
-      --text: #e9edef;
-      --text-secondary: #8696a0;
-      --border: #2a3942;
-      --border-hover: rgba(0,168,132,0.35);
-      --brand-soft: rgba(0,168,132,0.12);
-      --brand-soft-hover: rgba(0,168,132,0.2);
-    }
+/* ── Dark Mode Variables ──
+   Two triggers: (1) OS prefers-color-scheme when no explicit theme set,
+   (2) JS-driven body/html.dark toggle. Same variables, both needed. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]):not([data-theme="dark"]) {
+    --brand: #00a884;
+    --bg: #0b141a;
+    --card: #111b21;
+    --text: #e9edef;
+    --text-secondary: #8696a0;
+    --border: #2a3942;
+    --border-hover: rgba(0,168,132,0.35);
+    --brand-soft: rgba(0,168,132,0.12);
+    --brand-soft-hover: rgba(0,168,132,0.2);
+    --panel-soft: #111b21;
   }
 }
 
