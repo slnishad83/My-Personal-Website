@@ -326,15 +326,15 @@ self.addEventListener('fetch', event => {
   }
 
   if (isStatic) {
+    // H10: Cache-first for versioned static assets (CACHE_NAME is versioned)
     event.respondWith(
       caches.open(CACHE_NAME).then(cache => {
         return cache.match(event.request).then(cached => {
-          const fetchPromise = fetch(event.request).then(response => {
+          if (cached) return cached;
+          return fetch(event.request).then(response => {
             if (response.ok) cache.put(event.request, response.clone());
             return response;
-          }).catch(() => cached);
-          if (cached) { fetchPromise.catch(() => {}); return cached; }
-          return fetchPromise;
+          });
         });
       })
     );

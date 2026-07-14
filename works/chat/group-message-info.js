@@ -38,7 +38,7 @@
         const readTime = readBy[uid]      ? fmtTime(readBy[uid])      : null;
         const delTime  = deliveredTo[uid] ? fmtTime(deliveredTo[uid]) : null;
         const avatarHtml = avatar
-          ? `<img src="${esc(avatar)}" alt="${name}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">`
+          ? `<img src="${esc(avatar)}" alt="${name}" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">`
           : '';
         return `<div class="gmi-row" role="listitem">
   <div class="gmi-avatar" aria-hidden="true">${avatarHtml}<span class="gmi-initials"${avatarHtml ? ' style="display:none"' : ''}>${esc(getInitials(m.displayName||m.name))}</span></div>

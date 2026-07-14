@@ -12,11 +12,17 @@
   let featureNavSyncBound = false;
 
   // ── Wait for app to be ready ────────────────────────────────────
-  function waitFor(check, cb, ms = 200, max = 50) {
-    let tries = 0;
-    const t = setInterval(() => {
-      if (check() || ++tries > max) { clearInterval(t); if (check()) cb(); }
-    }, ms);
+  function waitFor(check, cb) {
+    if (check()) { cb(); return; }
+    document.addEventListener('nsl:app-ready', function onReady() {
+      document.removeEventListener('nsl:app-ready', onReady);
+      if (check()) cb();
+    });
+    // H8: Event-driven only — no polling fallback. Warn after 10s if not ready.
+    const timeout = setTimeout(() => {
+      if (!check()) console.warn('[FeaturesAddon] App not ready after 10s — features may not load');
+    }, 10000);
+    document.addEventListener('nsl:app-ready', () => clearTimeout(timeout));
   }
 
   waitFor(() => typeof db !== 'undefined' && typeof auth !== 'undefined' && typeof firebase !== 'undefined', init);

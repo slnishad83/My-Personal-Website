@@ -1079,7 +1079,7 @@ function updateProfileUI() {
 
   const pa = document.getElementById('profile-avatar');
   if (pa) {
-    if (u.photoURL) pa.innerHTML = `<img src="${escHtml(u.photoURL)}" alt="${name}" class="w-full h-full object-cover rounded-full">`;
+    if (u.photoURL) pa.innerHTML = `<img src="${escHtml(u.photoURL)}" alt="${name}" class="w-full h-full object-cover rounded-full" loading="lazy">`;
     else pa.textContent = initials;
   }
   
@@ -1512,7 +1512,7 @@ function chatItemHTML(chat) {
   if (chat.id === 'saved_me') {
     avatarIconHtml = `<div class="w-12 h-12 rounded-xl bg-primary-container/20 flex items-center justify-center text-primary"><span class="material-symbols-outlined text-2xl">person</span></div>`;
   } else if (photoURL) {
-    avatarIconHtml = `<img src="${photoURL}" alt="${escHtml(name)}" class="w-12 h-12 rounded-xl object-cover">`;
+    avatarIconHtml = `<img src="${photoURL}" alt="${escHtml(name)}" class="w-12 h-12 rounded-xl object-cover" loading="lazy">`;
   } else if (initials) {
     avatarIconHtml = `<div class="w-12 h-12 rounded-xl flex items-center justify-center font-bold text-lg ${avatar || 'bg-surface-container-highest text-on-surface-variant'}">${initials}</div>`;
   } else {
@@ -2147,7 +2147,7 @@ function openCallPicker() {
   list.innerHTML = items.map(c => {
     const initials = c.initials || '';
     const avatar = c.photoURL
-      ? `<img src="${c.photoURL}" alt="${escHtml(c.name)}" class="w-10 h-10 rounded-full object-cover">`
+      ? `<img src="${c.photoURL}" alt="${escHtml(c.name)}" class="w-10 h-10 rounded-full object-cover" loading="lazy">`
       : initials
         ? `<div class="w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm bg-surface-container-highest text-on-surface-variant">${initials}</div>`
         : `<div class="w-10 h-10 rounded-full flex items-center justify-center bg-surface-container-highest text-on-surface-variant"><span class="material-symbols-outlined text-lg">person_off</span></div>`;
@@ -2388,7 +2388,7 @@ function openChat(chatId) {
   const ha = document.getElementById('header-avatar');
   if (ha) {
     if (chat.photoURL) {
-      ha.innerHTML = `<img src="${escHtml(chat.photoURL)}" alt="${escHtml(chat.name)}" class="w-10 h-10 rounded-full object-cover">`;
+      ha.innerHTML = `<img src="${escHtml(chat.photoURL)}" alt="${escHtml(chat.name)}" class="w-10 h-10 rounded-full object-cover" loading="lazy">`;
     } else {
       ha.textContent = chat.initials;
       ha.className = `w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm bg-surface-container-highest text-on-surface-variant`;
@@ -2480,7 +2480,7 @@ function renderSingleMessageHTML(msg, msgs, i, lastDate) {
 
   const avatarHTML = showAvatar
     ? (contact?.photoURL
-      ? `<img src="${contact.photoURL}" alt="${escHtml(senderName)}" class="w-10 h-10 rounded-full object-cover border border-outline-variant/10">`
+      ? `<img src="${contact.photoURL}" alt="${escHtml(senderName)}" class="w-10 h-10 rounded-full object-cover border border-outline-variant/10" loading="lazy">`
       : contact?.initials
         ? `<div class="w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm bg-surface-container-highest text-on-surface-variant">${contact.initials}</div>`
         : `<div class="w-10 h-10 rounded-full flex items-center justify-center bg-surface-container-highest text-on-surface-variant"><span class="material-symbols-outlined text-sm">person_off</span></div>`)
@@ -2592,7 +2592,7 @@ function renderSingleMessageHTML(msg, msgs, i, lastDate) {
     const existingChat = email ? App.chats.find(c => c.email && c.email.toLowerCase() === email.toLowerCase()) : null;
     contentHTML = `<div class="contact-card">
       <div class="contact-header">
-        ${avatar ? `<img src="${escHtml(avatar)}" class="contact-avatar object-cover">` : `<div class="contact-avatar">${escHtml(initial)}</div>`}
+        ${avatar ? `<img src="${escHtml(avatar)}" class="contact-avatar object-cover" loading="lazy">` : `<div class="contact-avatar">${escHtml(initial)}</div>`}
         <div class="contact-info">
           <div class="contact-name">${escHtml(msg.contactName||'Unknown')}</div>
           <div class="contact-email">${escHtml(email)}</div>
@@ -2773,7 +2773,7 @@ window.renderAttachment = function renderAttachment(att) {
   if (att.url) {
     const safeUrl = escHtml(att.url);
     const safeName = escHtml(att.name || 'attachment');
-    if (att.type && att.type.startsWith('image/')) return `<img src="${safeUrl}" alt="${safeName}" style="max-width:200px;border-radius:8px;">`;
+    if (att.type && att.type.startsWith('image/')) return `<img src="${safeUrl}" alt="${safeName}" style="max-width:200px;border-radius:8px;" loading="lazy">`;
     if (att.type && att.type.startsWith('video/')) return `<video src="${safeUrl}" controls style="max-width:200px;border-radius:8px;"></video>`;
     return `<a href="${safeUrl}" target="_blank" rel="noopener">${safeName}</a>`;
   }
@@ -5619,7 +5619,7 @@ function _renderContactPickerList(query) {
     return `
     <div class="flex items-center gap-3 p-3 rounded-xl hover:bg-surface-variant/40 transition-all cursor-pointer" onclick="selectContactToShare('${c.uid}')">
       ${c.photoURL
-        ? `<img src="${escHtml(c.photoURL)}" class="w-10 h-10 rounded-full object-cover">`
+        ? `<img src="${escHtml(c.photoURL)}" class="w-10 h-10 rounded-full object-cover" loading="lazy">`
         : `<div class="w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm ${c.avatar || 'bg-surface-container-highest text-on-surface-variant'}">${escHtml(c.initials || c.name.charAt(0).toUpperCase())}</div>`
       }
       <div class="flex-1 min-w-0">
@@ -5825,11 +5825,22 @@ function loadEmojiGrid(cat) {
   const grid = document.getElementById('emoji-grid');
   if (!grid) return;
   const list = App.emojiCategories[cat] || [];
-  grid.innerHTML = list.map(em => {
-    const name = EMOJI_NAMES[em] || '';
-    const safeName = (name||'').replace(/'/g,"\\'").replace(/"/g,"&quot;");
-    return `<span class="cursor-pointer transition-transform p-0.5 rounded" data-emoji="${em}" data-name="${name}" onclick="insertEmoji('${em}')" onmouseenter="previewEmoji('${em}','${safeName}')" onmouseleave="clearEmojiPreview()" ontouchstart="previewEmoji('${em}','${safeName}')" ontouchend="clearEmojiPreview()">${em}</span>`;
-  }).join('');
+  grid.textContent = '';
+  const frag = document.createDocumentFragment();
+  list.forEach(em => {
+    const span = document.createElement('span');
+    span.className = 'cursor-pointer transition-transform p-0.5 rounded';
+    span.dataset.emoji = em;
+    span.dataset.name = EMOJI_NAMES[em] || '';
+    span.textContent = em;
+    span.addEventListener('click', () => insertEmoji(em));
+    span.addEventListener('mouseenter', () => previewEmoji(em, EMOJI_NAMES[em] || ''));
+    span.addEventListener('mouseleave', clearEmojiPreview);
+    span.addEventListener('touchstart', () => previewEmoji(em, EMOJI_NAMES[em] || ''));
+    span.addEventListener('touchend', clearEmojiPreview);
+    frag.appendChild(span);
+  });
+  grid.appendChild(frag);
   grid.parentElement.scrollTop = 0;
 }
 function setEmojiCat(btn, cat) {
@@ -5856,10 +5867,29 @@ function searchEmoji(query) {
         if (name.includes(q) || em === q) results.push({ em, name });
       }
     }
-    grid.innerHTML = results.length ? results.map(r => {
-      const safeName = (r.name||'').replace(/'/g,"\\'").replace(/"/g,"&quot;");
-      return `<span class="cursor-pointer transition-transform p-0.5 rounded" data-emoji="${r.em}" data-name="${r.name}" onclick="insertEmoji('${r.em}')" onmouseenter="previewEmoji('${r.em}','${safeName}')" onmouseleave="clearEmojiPreview()" ontouchstart="previewEmoji('${r.em}','${safeName}')" ontouchend="clearEmojiPreview()">${r.em}</span>`;
-    }).join('') : '<div class="col-span-8 text-center text-xs text-on-surface-variant py-4">No emojis found</div>';
+    grid.textContent = '';
+    if (results.length) {
+      const frag = document.createDocumentFragment();
+      results.forEach(r => {
+        const span = document.createElement('span');
+        span.className = 'cursor-pointer transition-transform p-0.5 rounded';
+        span.dataset.emoji = r.em;
+        span.dataset.name = r.name;
+        span.textContent = r.em;
+        span.addEventListener('click', () => insertEmoji(r.em));
+        span.addEventListener('mouseenter', () => previewEmoji(r.em, r.name));
+        span.addEventListener('mouseleave', clearEmojiPreview);
+        span.addEventListener('touchstart', () => previewEmoji(r.em, r.name));
+        span.addEventListener('touchend', clearEmojiPreview);
+        frag.appendChild(span);
+      });
+      grid.appendChild(frag);
+    } else {
+      const div = document.createElement('div');
+      div.className = 'col-span-8 text-center text-xs text-on-surface-variant py-4';
+      div.textContent = 'No emojis found';
+      grid.appendChild(div);
+    }
   }, 150);
 }
 function previewEmoji(em, name) {

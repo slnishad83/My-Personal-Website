@@ -18,9 +18,9 @@ const A11y = {
   _addSkipNav() {
     if (document.getElementById('skip-nav')) return;
     const nav = document.createElement('a');
-    nav.href = '#msg-input';
+    nav.href = '#chat-list';
     nav.className = 'sr-only';
-    nav.textContent = 'Skip to message input';
+    nav.textContent = 'Skip to chat list';
     nav.id = 'skip-nav';
     nav.style.cssText = 'position:fixed;top:-100px;left:8px;z-index:99999;padding:12px 24px;' +
       'background:var(--primary);color:var(--on-primary);border-radius:0 0 12px 12px;' +
@@ -30,8 +30,8 @@ const A11y = {
     nav.onkeydown = (e) => {
       if (e.key === 'Enter' || e.key === ' ') {
         e.preventDefault();
-        const input = document.getElementById('msg-input');
-        if (input) { input.focus(); nav.style.top = '-100px'; }
+        const target = document.getElementById('chat-list') || document.getElementById('msg-input');
+        if (target) { target.focus(); target.scrollIntoView({ behavior: 'smooth', block: 'start' }); nav.style.top = '-100px'; }
       }
     };
     document.body.prepend(nav);

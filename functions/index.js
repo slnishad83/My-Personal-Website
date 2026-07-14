@@ -347,6 +347,8 @@ exports.lookupVerifiedUserByEmail = onRequest(
     }
     try {
       const caller = await verifyFirebaseUser(request);
+      assertValidOrigin(request);
+      checkRateLimit(caller.uid, 'lookupUser', 10);
       const email = String(request.query.email || '').trim().toLowerCase();
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/i.test(email)) {
         response.status(400).json({ error: 'A valid email address is required' });
@@ -457,6 +459,8 @@ exports.lookupVerifiedUserByEmailV2 = onRequest(
     }
     try {
       const caller = await verifyFirebaseUser(request);
+      assertValidOrigin(request);
+      checkRateLimit(caller.uid, 'lookupUser', 10);
       const email = String(request.query.email || '').trim().toLowerCase();
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/i.test(email)) {
         response.status(400).json({ error: 'A valid email address is required' });
@@ -484,7 +488,7 @@ const ALLOWED_ORIGINS = ['https://nishadsl.com', 'https://my-team-chat-2255.web.
 function setCorsHeaders(response, origin) {
   const allowed = ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
   response.set('Access-Control-Allow-Origin', allowed);
-  response.set('Access-Control-Allow-Methods', 'GET, OPTIONS');
+  response.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   response.set('Access-Control-Allow-Headers', 'Authorization, Content-Type');
   response.set('Access-Control-Max-Age', '3600');
 }
@@ -499,6 +503,39 @@ async function verifyFirebaseUser(request) {
 
   return admin.auth().verifyIdToken(match[1]);
 }
+
+// H6: Origin validation helper
+function assertValidOrigin(request) {
+  const origin = request.get('Origin') || request.get('Referer') || '';
+  if (origin && !ALLOWED_ORIGINS.some(o => origin.startsWith(o))) {
+    throw new Error('Invalid origin');
+  }
+}
+
+// M9: Simple in-memory rate limiter (per-function, per-user)
+const _rateLimitBuckets = new Map();
+function checkRateLimit(userId, action, maxPerMinute) {
+  if (!userId || !action) return;
+  const key = `${userId}:${action}`;
+  const now = Date.now();
+  const windowMs = 60000;
+  let bucket = _rateLimitBuckets.get(key);
+  if (!bucket || (now - bucket.start) > windowMs) {
+    bucket = { start: now, count: 0 };
+    _rateLimitBuckets.set(key, bucket);
+  }
+  bucket.count++;
+  if (bucket.count > maxPerMinute) {
+    throw new Error(`Rate limit exceeded for ${action}. Try again later.`);
+  }
+}
+// Periodic cleanup of stale rate limit buckets (every 5 min)
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, bucket] of _rateLimitBuckets) {
+    if ((now - bucket.start) > 120000) _rateLimitBuckets.delete(key);
+  }
+}, 300000);
 
 async function syncGroupAccessMetadata(groupId) {
   if (!groupId) return;
@@ -560,7 +597,9 @@ exports.repairGroupAccessMetadata = onRequest(
       return;
     }
     try {
-      await verifyFirebaseUser(request);
+      const auth = await verifyFirebaseUser(request);
+      // M10: Require admin access
+      await assertAdmin(auth);
       const migrationRef = admin.firestore().collection('systemMigrations').doc('groupAccessMetadataV1');
       const migration = await migrationRef.get();
       if (migration.exists && migration.data()?.completed === true) {
@@ -686,13 +725,16 @@ exports.getTurnCredentials = onRequest(
       return;
     }
 
-    if (request.method !== 'GET') {
+    // H6: Require POST (not GET) for CSRF protection
+    if (request.method !== 'POST') {
       response.status(405).json({ error: 'Method not allowed' });
       return;
     }
 
     try {
-      await verifyFirebaseUser(request);
+      const caller = await verifyFirebaseUser(request);
+      assertValidOrigin(request);
+      checkRateLimit(caller.uid, 'getTurnCredentials', 10);
 
       const apiKey = meteredApiKey.value().trim();
       if (!apiKey) {
@@ -708,7 +750,11 @@ exports.getTurnCredentials = onRequest(
 
       response.status(200).json(meteredResult.iceServers);
     } catch (error) {
-      response.status(401).json({ error: 'Unauthorized' });
+      if (error.message === 'Invalid origin' || error.message.startsWith('Rate limit')) {
+        response.status(403).json({ error: error.message });
+      } else {
+        response.status(401).json({ error: 'Unauthorized' });
+      }
     }
   }
 );
@@ -1895,7 +1941,7 @@ exports.adminListUsers = onCall(
   }
 );
 
-// ── Delete a user permanently ─────────────────────────────────────────────
+// ── Delete a user permanently (H9: full data cleanup) ──────────────────────
 exports.adminDeleteUser = onCall(
   { region: 'us-central1' },
   async (request) => {
@@ -1904,30 +1950,123 @@ exports.adminDeleteUser = onCall(
     if (!targetUid) throw new HttpsError('invalid-argument', 'Missing targetUid.');
     if (targetUid === request.auth.uid) throw new HttpsError('invalid-argument', 'Cannot delete your own admin account.');
 
-    // Delete from Firebase Auth
-    try { await admin.auth().deleteUser(targetUid); } catch (_) {}
-
-    // Delete Firestore user document
-    try { await admin.firestore().collection('users').doc(targetUid).delete(); } catch (_) {}
-
-    // Remove all sessions
-    try {
-      const sessions = await admin.firestore()
-        .collection('userSessions').where('userId', '==', targetUid).get();
-      for (let i = 0; i < sessions.docs.length; i += 500) {
+    // Helper: batch-delete documents from a collection query
+    async function batchDeleteQuery(query) {
+      const snap = await query.get();
+      for (let i = 0; i < snap.docs.length; i += 500) {
         const batch = admin.firestore().batch();
-        sessions.docs.slice(i, i + 500).forEach(doc => batch.delete(doc.ref));
+        snap.docs.slice(i, i + 500).forEach(doc => batch.delete(doc.ref));
         await batch.commit();
       }
-    } catch (_) {}
+    }
 
-    // Remove username reservation
+    // Helper: batch-delete all documents in a collection (full scan)
+    async function batchDeleteAll(collectionName) {
+      const snap = await admin.firestore().collection(collectionName).limit(500).get();
+      if (snap.empty) return;
+      const batch = admin.firestore().batch();
+      snap.docs.forEach(doc => batch.delete(doc.ref));
+      await batch.commit();
+    }
+
+    // 1. Delete from Firebase Auth
+    try { await admin.auth().deleteUser(targetUid); } catch (_) {}
+
+    // 2. Delete Firestore user document
+    try { await admin.firestore().collection('users').doc(targetUid).delete(); } catch (_) {}
+
+    // 3. Remove all sessions
+    try { await batchDeleteQuery(admin.firestore().collection('userSessions').where('userId', '==', targetUid)); } catch (_) {}
+
+    // 4. Remove username reservation
+    try { await batchDeleteQuery(admin.firestore().collection('usernames').where('uid', '==', targetUid)); } catch (_) {}
+
+    // 5. Remove group memberships
+    try { await batchDeleteQuery(admin.firestore().collection('groupMembers').where('userId', '==', targetUid)); } catch (_) {}
+
+    // 6. Remove chat requests (sent or received)
+    try { await batchDeleteQuery(admin.firestore().collection('chatRequests').where('fromUserId', '==', targetUid)); } catch (_) {}
+    try { await batchDeleteQuery(admin.firestore().collection('chatRequests').where('toUserId', '==', targetUid)); } catch (_) {}
+
+    // 7. Remove group join requests
+    try { await batchDeleteQuery(admin.firestore().collection('groupJoinRequests').where('userId', '==', targetUid)); } catch (_) {}
+
+    // 8. Remove group invites
+    try { await batchDeleteQuery(admin.firestore().collection('groupInvites').where('fromUserId', '==', targetUid)); } catch (_) {}
+    try { await batchDeleteQuery(admin.firestore().collection('groupInvites').where('toUserId', '==', targetUid)); } catch (_) {}
+
+    // 9. Remove blocked users entries
+    try { await batchDeleteQuery(admin.firestore().collection('blockedUsers').where('userId', '==', targetUid)); } catch (_) {}
+    try { await batchDeleteQuery(admin.firestore().collection('blockedUsers').where('blockedUserId', '==', targetUid)); } catch (_) {}
+
+    // 10. Remove favorite chats
+    try { await batchDeleteQuery(admin.firestore().collection('favoriteChats').where('userId', '==', targetUid)); } catch (_) {}
+
+    // 11. Remove archived chats
+    try { await batchDeleteQuery(admin.firestore().collection('archivedChats').where('userId', '==', targetUid)); } catch (_) {}
+
+    // 12. Remove locked chats
+    try { await batchDeleteQuery(admin.firestore().collection('lockedChats').where('userId', '==', targetUid)); } catch (_) {}
+
+    // 13. Remove muted chats
+    try { await batchDeleteQuery(admin.firestore().collection('mutedChats').where('userId', '==', targetUid)); } catch (_) {}
+
+    // 14. Remove deleted chats
+    try { await batchDeleteQuery(admin.firestore().collection('deletedChats').where('userId', '==', targetUid)); } catch (_) {}
+
+    // 15. Remove notification preferences
+    try { await batchDeleteQuery(admin.firestore().collection('chatNotifSettings').where('userId', '==', targetUid)); } catch (_) {}
+
+    // 16. Remove in-app notifications (sent and received)
+    try { await batchDeleteQuery(admin.firestore().collection('inAppNotifications').where('toUserId', '==', targetUid)); } catch (_) {}
+    try { await batchDeleteQuery(admin.firestore().collection('inAppNotifications').where('fromUserId', '==', targetUid)); } catch (_) {}
+
+    // 17. Remove notification telemetry
+    try { await batchDeleteQuery(admin.firestore().collection('notificationTelemetry').where('userId', '==', targetUid)); } catch (_) {}
+
+    // 18. Remove statuses
+    try { await batchDeleteQuery(admin.firestore().collection('statuses').where('userId', '==', targetUid)); } catch (_) {}
+
+    // 19. Remove typing indicators
+    try { await batchDeleteQuery(admin.firestore().collection('typingIndicators').where('userId', '==', targetUid)); } catch (_) {}
+
+    // 20. Remove typing status
+    try { await batchDeleteQuery(admin.firestore().collection('typingStatus').where('userId', '==', targetUid)); } catch (_) {}
+
+    // 21. Remove user reports filed by or against this user
+    try { await batchDeleteQuery(admin.firestore().collection('userReports').where('reporterId', '==', targetUid)); } catch (_) {}
+    try { await batchDeleteQuery(admin.firestore().collection('userReports').where('reportedUserId', '==', targetUid)); } catch (_) {}
+
+    // 22. Remove message reports
+    try { await batchDeleteQuery(admin.firestore().collection('messageReports').where('reporterId', '==', targetUid)); } catch (_) {}
+
+    // 23. Remove blocked words
+    try { await batchDeleteQuery(admin.firestore().collection('blockedWords').where('userId', '==', targetUid)); } catch (_) {}
+
+    // 24. Remove pinned/starred messages
+    try { await batchDeleteQuery(admin.firestore().collection('pinnedMessages').where('userId', '==', targetUid)); } catch (_) {}
+    try { await batchDeleteQuery(admin.firestore().collection('starredMessages').where('userId', '==', targetUid)); } catch (_) {}
+
+    // 25. Remove calendar events
+    try { await batchDeleteQuery(admin.firestore().collection('calendarEvents').where('userId', '==', targetUid)); } catch (_) {}
+
+    // 26. Remove tasks
+    try { await batchDeleteQuery(admin.firestore().collection('tasks').where('userId', '==', targetUid)); } catch (_) {}
+    try { await batchDeleteQuery(admin.firestore().collection('tasks').where('assignedTo', '==', targetUid)); } catch (_) {}
+
+    // 27. Remove scheduled messages
+    try { await batchDeleteQuery(admin.firestore().collection('scheduledMessages').where('senderId', '==', targetUid)); } catch (_) {}
+
+    // 28. Mark messages as deleted (don't batch-delete all messages — too expensive, but anonymize)
     try {
-      const usernames = await admin.firestore()
-        .collection('usernames').where('uid', '==', targetUid).get();
-      for (let i = 0; i < usernames.docs.length; i += 500) {
+      const msgSnap = await admin.firestore().collection('messages').where('senderId', '==', targetUid).limit(500).get();
+      for (let i = 0; i < msgSnap.docs.length; i += 500) {
         const batch = admin.firestore().batch();
-        usernames.docs.slice(i, i + 500).forEach(doc => batch.delete(doc.ref));
+        msgSnap.docs.slice(i, i + 500).forEach(doc => batch.update(doc.ref, {
+          senderName: 'Deleted User',
+          senderAvatar: '',
+          deletedByAdmin: true
+        }));
         await batch.commit();
       }
     } catch (_) {}
@@ -2122,16 +2261,35 @@ exports.sendNotificationReply = onRequest(
       const decoded = await admin.auth().verifyIdToken(idToken);
       const uid = decoded.uid;
 
+      // M9: Rate limit — 30 replies per minute per user
+      checkRateLimit(uid, 'sendNotificationReply', 30);
+
       const { chatId, chatType, chatUserId, groupId, text } = req.body || {};
       const trimmedText = (text || '').trim();
       if (!trimmedText)  { res.status(400).json({ error: 'Empty reply text' }); return; }
       if (!chatId)       { res.status(400).json({ error: 'Missing chatId' });   return; }
 
+      // H7: Input validation — enforce length limit and sanitize
+      const MAX_REPLY_LENGTH = 4000;
+      if (trimmedText.length > MAX_REPLY_LENGTH) {
+        res.status(400).json({ error: `Message too long (max ${MAX_REPLY_LENGTH} characters)` });
+        return;
+      }
+      // H7: Validate chatType
+      const validChatTypes = ['direct', 'group', ''];
+      if (chatType !== undefined && !validChatTypes.includes(chatType)) {
+        res.status(400).json({ error: 'Invalid chatType' });
+        return;
+      }
+      // H7: Sanitize text — strip potential script tags
+      const sanitizedText = trimmedText.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+        .replace(/javascript:/gi, '');
+
       const userSnap = await admin.firestore().collection('users').doc(uid).get();
       const user = userSnap.data() || {};
 
       const msgData = {
-        text: trimmedText,
+        text: sanitizedText,
         senderId: uid,
         senderName: user.displayName || user.name || 'Team Chat',
         senderAvatar: user.avatar || user.photoURL || '',
@@ -2165,13 +2323,20 @@ exports.generateUrlPreview = onRequest(async (req, res) => {
   setCorsHeaders(res, req.get('Origin'));
   if (req.method === 'OPTIONS') { res.status(204).send(''); return; }
 
+  // H6: Require POST for CSRF protection (no URL in query string)
+  if (req.method !== 'POST') { res.status(405).json({ error: 'Method not allowed' }); return; }
+
   // Require authentication
   let caller;
-  try { caller = await verifyFirebaseUser(req); } catch (_) {
+  try {
+    caller = await verifyFirebaseUser(req);
+    assertValidOrigin(req);
+    checkRateLimit(caller.uid, 'generateUrlPreview', 20);
+  } catch (_) {
     res.status(401).json({ error: 'Unauthorized' }); return;
   }
 
-  const url = (req.body && req.body.url) || req.query.url;
+  const url = (req.body && req.body.url) || '';
   if (!url || !/^https?:\/\//.test(url)) {
     res.status(400).json({ error: 'Missing or invalid url parameter' }); return;
   }

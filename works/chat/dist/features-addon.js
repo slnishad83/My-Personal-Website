@@ -18,11 +18,11 @@
       document.removeEventListener('nsl:app-ready', onReady);
       if (check()) cb();
     });
-    // Fallback: poll every 500ms for up to 10s
-    let tries = 0;
-    const t = setInterval(() => {
-      if (check() || ++tries > 20) { clearInterval(t); if (check()) cb(); }
-    }, 500);
+    // H8: Event-driven only — no polling fallback. Warn after 10s if not ready.
+    const timeout = setTimeout(() => {
+      if (!check()) console.warn('[FeaturesAddon] App not ready after 10s — features may not load');
+    }, 10000);
+    document.addEventListener('nsl:app-ready', () => clearTimeout(timeout));
   }
 
   waitFor(() => typeof db !== 'undefined' && typeof auth !== 'undefined' && typeof firebase !== 'undefined', init);

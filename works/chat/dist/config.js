@@ -286,6 +286,7 @@ async function getBackendTurnServers() {
 
   const token = await currentUser.getIdToken();
   const response = await fetch(TURN_CREDENTIALS_ENDPOINT, {
+    method: 'POST',
     headers: {
       Authorization: `Bearer ${token}`,
     },

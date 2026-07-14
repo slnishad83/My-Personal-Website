@@ -217,19 +217,33 @@ if ('serviceWorker' in navigator) {
   }
 }
 
+/* M2: Sidebar expand/collapse toggle */
+window.toggleSidebarExpand = function() {
+  var sidebar = document.getElementById('sidebar');
+  var icon = document.getElementById('sidebar-toggle-icon');
+  if (!sidebar) return;
+  if (sidebar.classList.contains('w-20')) {
+    sidebar.classList.remove('w-20');
+    sidebar.classList.add('w-64');
+    if (icon) icon.textContent = 'menu';
+  } else {
+    sidebar.classList.remove('w-64');
+    sidebar.classList.add('w-20');
+    if (icon) icon.textContent = 'menu_open';
+  }
+};
+
 window.addEventListener('load', () => {
   if (window.ErrorBoundary) ErrorBoundary.init();
   if (window.A11y) A11y.init();
   if (window.KeyboardShortcuts) KeyboardShortcuts.init();
   if (window.SwipeDelete) SwipeDelete.init();
   if (window.BackButton) BackButton.init();
-  if (window.IOSKeyboardFix) IOSKeyboardFix.init();
+  if (/iPhone|iPad|iPod/i.test(navigator.userAgent) && window.IOSKeyboardFix) IOSKeyboardFix.init();
   const chatList = document.getElementById('chat-list');
   if (chatList && window.PullToRefresh) PullToRefresh.init(chatList);
   if (window.PinchZoom) PinchZoom.init(document.getElementById('messages-wrap'));
-});
 
-window.addEventListener('load', () => {
   setTimeout(async () => {
     if (window.OfflineQueue) await OfflineQueue.init();
   }, 3000);
@@ -299,13 +313,13 @@ const bcScript = `/* D-C5: Multi-window support via BroadcastChannel */
 
 writeFileSync(join(DIST, 'inline-broadcast-channel.js'), bcScript);
 
-// Version display script
-const versionScript = `/* D-L7: App version display in console */
+// Version display script — reads from version.js single source of truth
+const versionScript = `/* D-L7: App version display in console (backwards compat for build output) */
 (function() {
-    const VERSION = '2.5.0';
-  const BUILD = new Date().toISOString().split('T')[0];
-  console.log('%c NSL Chat v' + VERSION + ' (built ' + BUILD + ') ', 'background:#008069;color:#fff;padding:2px 8px;border-radius:4px;font-weight:bold;');
-  window.NSL_VERSION = VERSION;
+  /* Version is defined in version.js — this is a fallback for bundled builds */
+  if (window.NSL_VERSION) {
+    console.log('%c NSL Chat v' + window.NSL_VERSION + ' ', 'background:#008069;color:#fff;padding:2px 8px;border-radius:4px;font-weight:bold;');
+  }
   document.addEventListener('DOMContentLoaded', function() {
     if (!document.title.includes('NSL Chat')) document.title = 'NSL Chat';
   });
@@ -478,7 +492,7 @@ console.log('[build] Copying static assets...');
 ensureDir(join(DIST, 'sounds'));
 
 // Copy JS files not in bundle
-const extraJs = ['sw.js', 'notification-sounds.js', 'pwa-install.js'];
+const extraJs = ['sw.js', 'notification-sounds.js', 'pwa-install.js', 'version.js'];
 for (const f of extraJs) {
   try { copyFile(f, join(DIST, f)); } catch (_) {}
 }
