@@ -41,7 +41,8 @@
   font-size: 13px;
   color: var(--on-surface-variant, #667781);
 }
-body.dark #dropZoneOverlay .drop-zone-inner {
+body.dark #dropZoneOverlay .drop-zone-inner,
+html.dark #dropZoneOverlay .drop-zone-inner {
   background: var(--surface-container, #202c33);
   border-color: var(--primary);
   color: var(--primary);
@@ -59,7 +60,8 @@ body.dark #dropZoneOverlay .drop-zone-inner {
   background: color-mix(in srgb, var(--primary) 10%, transparent);
   text-decoration: underline;
 }
-body.dark .message-hashtag {
+body.dark .message-hashtag,
+html.dark .message-hashtag {
   color: var(--primary);
 }
 
@@ -70,10 +72,10 @@ body.dark .message-hashtag {
   gap: 5px;
   padding: 3px 10px 3px 6px;
   border-radius: 999px;
-  background: rgba(255,255,255,0.15);
+  background: color-mix(in srgb, var(--on-surface) 15%, transparent);
   font-size: 11px;
   font-weight: 600;
-  color: #fff;
+  color: var(--on-surface, #fff);
   letter-spacing: 0.3px;
   margin-left: 10px;
 }
@@ -104,16 +106,16 @@ body.dark .message-hashtag {
 
 /* ── 4. Call Hold button & banner ─────────────────────────── */
 #holdCallBtn.active {
-  background: #f59e0b;
-  color: #fff;
+  background: var(--tertiary, #f59e0b);
+  color: var(--on-tertiary, #fff);
 }
 #holdCallBtn.active svg {
-  stroke: #fff;
+  stroke: var(--on-tertiary, #fff);
 }
 #callHoldBanner {
   display: none;
-  background: rgba(245, 158, 11, 0.92);
-  color: #fff;
+  background: color-mix(in srgb, var(--tertiary, #f59e0b) 92%, transparent);
+  color: var(--on-tertiary, #fff);
   font-size: 13px;
   font-weight: 600;
   text-align: center;
@@ -136,7 +138,8 @@ body.dark .message-hashtag {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  padding: 4px 12px;
+  padding: 8px 14px;
+  min-height: 36px;
   border-radius: 999px;
   border: 1px solid var(--border, #e9edef);
   background: transparent;
@@ -161,7 +164,7 @@ body.dark .message-hashtag {
 }
 @media (max-width: 480px) {
   .ms-filter-row { padding: 5px 8px 2px; gap: 5px; }
-  .ms-filter-pill { font-size: 11px; padding: 3px 9px; }
+  .ms-filter-pill { font-size: 11px; padding: 6px 10px; min-height: 34px; }
 }
 
 /* ── 6. Video thumbnail in attachment preview ─────────────── */

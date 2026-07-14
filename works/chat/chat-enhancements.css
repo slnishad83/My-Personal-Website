@@ -600,7 +600,6 @@ html.dark {
   --shadow: 0 6px 18px rgba(0, 0, 0, 0.45);
 
   /* Core structural tokens (consolidated — was split across 2 blocks) */
-  --bg:              var(--background);
   --surface:         var(--surface-container);
   --incoming-bubble: var(--surface-container-high);
   --outgoing-bubble: var(--primary);

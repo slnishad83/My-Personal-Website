@@ -251,12 +251,12 @@ textarea {
 
 /* ── Glass panel dark mode override ──────────────────── */
 html.dark .glass-panel {
-  background: rgba(17, 19, 28, 0.6) !important;
-  border-color: rgba(196, 192, 255, 0.08) !important;
+  background: color-mix(in srgb, var(--surface-container) 60%, transparent) !important;
+  border-color: color-mix(in srgb, var(--outline-variant) 8%, transparent) !important;
 }
 html:not(.dark) .glass-panel {
-  background: rgba(255, 255, 255, 0.7) !important;
-  border-color: rgba(83, 72, 212, 0.1) !important;
+  background: color-mix(in srgb, var(--surface-container-lowest) 70%, transparent) !important;
+  border-color: color-mix(in srgb, var(--primary) 10%, transparent) !important;
 }
 
 /* ── Message bubble styles ───────────────────────────── */
@@ -609,7 +609,7 @@ button, a, [role="button"], input, textarea, select {
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
 }
-@keyframes spin { to { transform: rotate(360deg); } }
+/* @keyframes spin defined in redesign-base.css */
 
 .loading-skeleton {
   background: linear-gradient(90deg, var(--surface-container) 25%, var(--surface-container-high) 50%, var(--surface-container) 75%);
@@ -617,10 +617,7 @@ button, a, [role="button"], input, textarea, select {
   animation: shimmer 1.5s ease-in-out infinite;
   border-radius: 8px;
 }
-@keyframes shimmer {
-  0% { background-position: 200% 0; }
-  100% { background-position: -200% 0; }
-}
+/* @keyframes shimmer defined in redesign-base.css */
 
 /* Chat list skeleton item */
 .skeleton-chat-item {

@@ -169,10 +169,10 @@ body {
 }
 .btn-danger:hover { box-shadow: 0 6px 20px rgba(239,68,68,0.45); }
 
-.btn-sm { padding: 6px 14px; font-size: 12px; border-radius: var(--radius-sm); }
+.btn-sm { padding: 10px 14px; font-size: 12px; border-radius: var(--radius-sm); min-height: 44px; }
 .btn-lg { padding: 14px 28px; font-size: 16px; border-radius: var(--radius-lg); }
 .btn-icon {
-  width: 40px; height: 40px; padding: 0;
+  width: 44px; height: 44px; padding: 0;
   border-radius: 50%;
   display: inline-flex; align-items: center; justify-content: center;
 }
@@ -278,8 +278,8 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
   transition: var(--transition);
 }
@@ -289,8 +289,8 @@ body {
   background: rgba(255,255,255,0.15);
   border: none;
   color: var(--on-primary);
-  width: 36px;
-  height: 36px;
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
   cursor: pointer;
   display: flex;
@@ -605,8 +605,7 @@ body {
 
 :root[data-theme="dark"],
 body.dark,
-html.dark,
-.dark {
+html.dark {
   --brand: #00a884;
   --bg: #0b141a;
   --card: #111b21;
@@ -665,10 +664,8 @@ textarea:focus-visible {
 .app-header { background: var(--brand-gradient); }
 :root[data-theme="dark"] .app-header,
 body.dark .app-header,
-html.dark .app-header,
-.dark .app-header { background: linear-gradient(135deg, #00574d, #008069); }
+html.dark .app-header { background: linear-gradient(135deg, #00574d, #008069); }
 
 :root[data-theme="dark"] .bottom-nav,
 body.dark .bottom-nav,
-html.dark .bottom-nav,
-.dark .bottom-nav { border-top-color: var(--border); }
+html.dark .bottom-nav { border-top-color: var(--border); }
