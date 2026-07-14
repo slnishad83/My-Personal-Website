@@ -42,13 +42,15 @@
   }
   .animate-bounce, .animate-pulse, .animate-spin,
   .animate-fade-in, .animate-slide-up, .animate-scale-in,
-  .animate-fade-in-up {
+  .animate-fade-in-up, .animate-float {
     animation: none !important;
   }
   #atmosphere-glow-1, #atmosphere-glow-2 {
     transform: none !important;
     transition: none !important;
   }
+  /* Disable smooth scroll for users who prefer reduced motion */
+  html { scroll-behavior: auto !important; }
 }
 
 /* ── Focus indicators (enhanced) ──────────────────────── */
@@ -99,6 +101,10 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
   }
   .msg-received {
     border: 1px solid var(--outline-variant) !important;
+  }
+  /* Increase text contrast */
+  .text-on-surface-variant {
+    color: var(--on-surface) !important;
   }
 }
 
@@ -162,10 +168,107 @@ button:focus:not(:focus-visible),
   .tab-item.active {
     border: 2px solid Highlight !important;
   }
+  /* Ensure toggles are visible */
+  .relative.w-11.h-6 {
+    border: 2px solid ButtonText !important;
+  }
 }
 
 /* ── ARIA live region styling ──────────────────────────────────── */
 [role="alert"], [role="status"] {
   clip: rect(0, 0, 0, 0);
   white-space: nowrap;
+}
+
+/* ── Visible live region for important announcements ───────────── */
+[role="alert"].visible-status,
+[role="status"].visible-status {
+  clip: auto;
+  white-space: normal;
+  position: relative;
+}
+
+/* ── Keyboard navigation helpers ───────────────────────────────── */
+.keyboard-nav *:focus {
+  outline: 2px solid var(--primary) !important;
+  outline-offset: 2px !important;
+}
+
+/* ── Emoji picker keyboard accessibility ───────────────────────── */
+#emoji-grid span {
+  cursor: pointer;
+  border-radius: 6px;
+  transition: background 0.1s ease;
+}
+#emoji-grid span:focus-visible {
+  outline: 2px solid var(--primary) !important;
+  outline-offset: 1px !important;
+  background: var(--surface-variant) !important;
+}
+
+/* ── Context menu keyboard support ────────────────────────────── */
+#_msg-ctx-menu button:focus-visible,
+.context-menu-item:focus-visible {
+  outline: 2px solid var(--primary) !important;
+  outline-offset: -2px !important;
+  background: var(--surface-container-high) !important;
+}
+
+/* ── Call controls accessibility ───────────────────────────────── */
+#call-controls button:focus-visible {
+  outline: 2px solid white !important;
+  outline-offset: 3px !important;
+}
+
+/* ── Modal focus trap visual indicator ─────────────────────────── */
+.overlay[role="dialog"] > div:first-child {
+  /* Ensure modal content is in the accessibility tree */
+}
+
+/* ── Loading state announcements ───────────────────────────────── */
+#loading-screen {
+  /* Screen readers will announce the role="status" text */
+}
+
+/* ── Toast notification accessibility ──────────────────────────── */
+#toast-container > div {
+  /* Toast items should be announced by aria-live="polite" on container */
+}
+
+/* ── Prevent layout shift on font load ─────────────────────────── */
+.material-symbols-outlined {
+  font-display: swap;
+}
+
+/* ── Chat message accessibility ────────────────────────────────── */
+.message[data-msg-id] {
+  cursor: default;
+}
+.message[data-msg-id]:focus-visible {
+  outline: 2px solid var(--primary) !important;
+  outline-offset: -1px !important;
+  border-radius: 8px;
+}
+
+/* ── Reduced data mode ─────────────────────────────────────────── */
+@media (prefers-reduced-data: reduce) {
+  .loading-skeleton { animation: none !important; }
+  .animate-bounce, .animate-pulse, .animate-spin,
+  .animate-fade-in, .animate-slide-up, .animate-scale-in,
+  .animate-fade-in-up { animation: none !important; }
+  .transition, .transition-all { transition-duration: 0.01s !important; }
+  img, video, .lazy-media { loading: lazy !important; }
+}
+
+/* ── Color blindness support — use shape + color for status ──── */
+.msg-status-read::after { content: " ✓✓"; font-size: 10px; }
+.msg-status-delivered::after { content: " ✓✓"; font-size: 10px; opacity: 0.6; }
+.msg-status-sent::after { content: " ✓"; font-size: 10px; }
+.msg-status-pending::after { content: " ○"; font-size: 10px; }
+
+/* ── Print accessibility ──────────────────────────────────────── */
+@media print {
+  * { color: #000 !important; background: #fff !important; }
+  a { text-decoration: underline !important; }
+  a[href]::after { content: " (" attr(href) ")"; font-size: 10px; }
 }

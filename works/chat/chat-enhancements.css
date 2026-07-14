@@ -15,207 +15,207 @@
    and in standalone PWA / installed-app mode.
    ══════════════════════════════════════════════════════════ */
 
-body.dark {
+html.dark {
   color-scheme: dark;
 }
 
 /* ── Scrollbars (webkit: Chrome, Safari, Edge, Samsung) ── */
-body.dark ::-webkit-scrollbar            { width: 5px; height: 5px; background: var(--bg); }
-body.dark ::-webkit-scrollbar-track      { background: var(--bg); }
-body.dark ::-webkit-scrollbar-thumb      { background: var(--border); border-radius: 4px; }
-body.dark ::-webkit-scrollbar-thumb:hover{ background: var(--border-hover); }
-body.dark ::-webkit-scrollbar-corner     { background: var(--bg); }
+html.dark ::-webkit-scrollbar            { width: 5px; height: 5px; background: var(--bg); }
+html.dark ::-webkit-scrollbar-track      { background: var(--bg); }
+html.dark ::-webkit-scrollbar-thumb      { background: var(--border); border-radius: 4px; }
+html.dark ::-webkit-scrollbar-thumb:hover{ background: var(--border-hover); }
+html.dark ::-webkit-scrollbar-corner     { background: var(--bg); }
 
 /* Firefox scrollbars */
-body.dark * { scrollbar-color: var(--border) var(--bg); scrollbar-width: thin; }
+html.dark * { scrollbar-color: var(--border) var(--bg); scrollbar-width: thin; }
 
 /* ── Text selection ───────────────────────────────────── */
-body.dark ::selection { background: #005c4b; color: var(--text); }
+html.dark ::selection { background: var(--primary); color: var(--text); }
 
 /* ── Browser autofill (Chrome / Edge / Safari) ────────── */
-body.dark input:-webkit-autofill,
-body.dark input:-webkit-autofill:hover,
-body.dark input:-webkit-autofill:focus,
-body.dark input:-webkit-autofill:active,
-body.dark textarea:-webkit-autofill,
-body.dark select:-webkit-autofill {
+html.dark input:-webkit-autofill,
+html.dark input:-webkit-autofill:hover,
+html.dark input:-webkit-autofill:focus,
+html.dark input:-webkit-autofill:active,
+html.dark textarea:-webkit-autofill,
+html.dark select:-webkit-autofill {
   -webkit-box-shadow: 0 0 0 1000px var(--card) inset !important;
   -webkit-text-fill-color: var(--text) !important;
   caret-color: var(--text) !important;
 }
 
 /* ── Focus ring ───────────────────────────────────────── */
-body.dark :focus-visible { outline-color: rgba(0,168,132,0.75) !important; }
+html.dark :focus-visible { outline-color: color-mix(in srgb, var(--primary) 75%, transparent) !important; }
 
 
 /* ══════════════════════════════════════════════════════════
    STRUCTURAL BACKGROUNDS
    ══════════════════════════════════════════════════════════ */
 
-body.dark,
-html body.dark            { background-color: var(--bg) !important; }
+html.dark,
+html html.dark            { background-color: var(--bg) !important; }
 
 /* Main chat area (source hardcodes #efeae2) */
-body.dark .chat-main      { background: var(--bg) !important; }
-body.dark .messages-area,
-body.dark #messagesArea   { background-color: var(--bg) !important; }
+html.dark .chat-main      { background: var(--bg) !important; }
+html.dark .messages-area,
+html.dark #messagesArea   { background-color: var(--bg) !important; }
 
-body.dark .sidebar        { background: var(--card) !important; }
+html.dark .sidebar        { background: var(--card) !important; }
 
-body.dark .sidebar-header,
-body.dark .chat-header    { background: rgba(17,27,33,0.95) !important; border-bottom-color: var(--border) !important; }
+html.dark .sidebar-header,
+html.dark .chat-header    { background: color-mix(in srgb, var(--surface-container) 95%, transparent) !important; border-bottom-color: var(--border) !important; }
 
 /* Composer */
-body.dark .input-area,
-body.dark .wa-composer-shell,
-body.dark #inputArea      { background: var(--surface) !important; border-top-color: var(--border) !important; }
+html.dark .input-area,
+html.dark .wa-composer-shell,
+html.dark #inputArea      { background: var(--surface) !important; border-top-color: var(--border) !important; }
 
-body.dark #messageInput,
-body.dark .message-input,
-body.dark [contenteditable="true"] { background: var(--border) !important; color: var(--text) !important; caret-color: var(--brand); }
+html.dark #messageInput,
+html.dark .message-input,
+html.dark [contenteditable="true"] { background: var(--border) !important; color: var(--text) !important; caret-color: var(--brand); }
 
-body.dark #messageInput::placeholder,
-body.dark .message-input::placeholder { color: var(--text-secondary) !important; }
+html.dark #messageInput::placeholder,
+html.dark .message-input::placeholder { color: var(--text-secondary) !important; }
 
 
 /* ══════════════════════════════════════════════════════════
    MESSAGE BUBBLES
    ══════════════════════════════════════════════════════════ */
 
-body.dark .message-bubble             { background: var(--surface) !important; color: var(--text) !important; }
-body.dark .my-message .message-bubble { background: #005c4b !important; color: var(--text) !important; }
+html.dark .message-bubble             { background: var(--surface) !important; color: var(--text) !important; }
+html.dark .my-message .message-bubble { background: var(--primary) !important; color: var(--text) !important; }
 
 /* Call-record bubble (source: rgba(255,255,255,0.86)) */
-body.dark .message.call-message .message-bubble {
-  background: rgba(32,44,51,0.96) !important;
+html.dark .message.call-message .message-bubble {
+  background: color-mix(in srgb, var(--surface-container-high) 96%, transparent) !important;
   color: var(--text-secondary) !important;
   border: 1px solid var(--border) !important;
 }
 
 /* ⋮ options button (source: rgba(255,255,255,0.72)) */
-body.dark .message-options-btn           { background: rgba(30,42,48,0.93) !important; color: var(--text-secondary) !important; }
-body.dark .message-options-btn:hover     { background: rgba(42,57,66,0.98) !important; }
-body.dark .my-message .message-options-btn { background: rgba(0,78,63,0.88) !important; }
+html.dark .message-options-btn           { background: color-mix(in srgb, var(--surface-container-high) 93%, transparent) !important; color: var(--text-secondary) !important; }
+html.dark .message-options-btn:hover     { background: color-mix(in srgb, var(--surface-container-highest) 98%, transparent) !important; }
+html.dark .my-message .message-options-btn { background: color-mix(in srgb, var(--primary) 88%, transparent) !important; }
 
-body.dark .message.deleted .message-text { color: var(--text-secondary) !important; }
+html.dark .message.deleted .message-text { color: var(--text-secondary) !important; }
 
 /* Search hit */
-body.dark .message.search-hit .message-bubble    { background: #1a3a30 !important; outline-color: var(--brand) !important; }
-body.dark .message.search-current .message-bubble{ background: #005c4b !important; }
+html.dark .message.search-hit .message-bubble    { background: color-mix(in srgb, var(--primary) 20%, var(--surface-container-high)) !important; outline-color: var(--primary) !important; }
+html.dark .message.search-current .message-bubble{ background: var(--primary) !important; }
 
 /* Reply / quoted preview */
-body.dark .reply-preview,
-body.dark .reply-context,
-body.dark .quoted-message {
+html.dark .reply-preview,
+html.dark .reply-context,
+html.dark .quoted-message {
   background: rgba(0,0,0,0.25) !important;
   border-left-color: var(--brand) !important;
   color: var(--text-secondary) !important;
 }
 
 /* Reactions (source: rgba(255,255,255,0.74)) */
-body.dark .reaction-badge       { background: rgba(255,255,255,0.12) !important; color: var(--text) !important; border-color: rgba(255,255,255,0.08) !important; }
-body.dark .reaction-badge:hover { background: rgba(255,255,255,0.20) !important; }
+html.dark .reaction-badge       { background: color-mix(in srgb, var(--on-surface) 12%, transparent) !important; color: var(--text) !important; border-color: color-mix(in srgb, var(--on-surface) 8%, transparent) !important; }
+html.dark .reaction-badge:hover { background: color-mix(in srgb, var(--on-surface) 20%, transparent) !important; }
 
 
 /* ══════════════════════════════════════════════════════════
    FILE & MEDIA ATTACHMENTS
    ══════════════════════════════════════════════════════════ */
 
-body.dark .file-attachment-card                          { background: var(--card) !important; border-color: var(--border) !important; color: var(--text) !important; }
-body.dark .my-message .file-attachment-card              { background: rgba(0,70,56,0.6) !important; border-color: rgba(0,130,103,0.3) !important; }
-body.dark .file-attachment-name                          { color: var(--text) !important; }
-body.dark .file-attachment-meta                          { color: var(--text-secondary) !important; }
-body.dark .file-attachment-action                        { color: var(--brand) !important; }
-body.dark .file-attachment-icon:not([data-ce-coloured])  { background: var(--border) !important; color: var(--text-secondary) !important; }
+html.dark .file-attachment-card                          { background: var(--card) !important; border-color: var(--border) !important; color: var(--text) !important; }
+html.dark .my-message .file-attachment-card              { background: color-mix(in srgb, var(--primary) 30%, var(--surface-container)) !important; border-color: color-mix(in srgb, var(--primary) 20%, var(--outline-variant)) !important; }
+html.dark .file-attachment-name                          { color: var(--text) !important; }
+html.dark .file-attachment-meta                          { color: var(--text-secondary) !important; }
+html.dark .file-attachment-action                        { color: var(--brand) !important; }
+html.dark .file-attachment-icon:not([data-ce-coloured])  { background: var(--border) !important; color: var(--text-secondary) !important; }
 
-body.dark .ce-audio-player audio { color-scheme: dark; accent-color: var(--brand); }
+html.dark .ce-audio-player audio { color-scheme: dark; accent-color: var(--brand); }
 
 /* Link preview */
-body.dark .link-preview          { background: var(--card) !important; border-left-color: var(--brand) !important; }
-body.dark .link-preview-title    { color: var(--text) !important; }
-body.dark .link-preview-desc,
-body.dark .link-preview-domain   { color: var(--text-secondary) !important; }
+html.dark .link-preview          { background: var(--card) !important; border-left-color: var(--brand) !important; }
+html.dark .link-preview-title    { color: var(--text) !important; }
+html.dark .link-preview-desc,
+html.dark .link-preview-domain   { color: var(--text-secondary) !important; }
 
 
 /* ══════════════════════════════════════════════════════════
    STATUS CHIPS  (source: #fff7d6, #e7fce3, #e6f7f1)
    ══════════════════════════════════════════════════════════ */
 
-body.dark .status-chip.sent, body.dark .status-chip.pending { background: #2a2500 !important; color: #ffd54f !important; border-color: #5c4d00 !important; }
-body.dark .status-chip.received  { background: #002b15 !important; color: #69f0ae !important; border-color: #006633 !important; }
-body.dark .status-chip.accepted,
-body.dark .status-chip.member    { background: #002a22 !important; color: var(--brand) !important; border-color: rgba(0,168,132,0.3) !important; }
+html.dark .status-chip.sent, html.dark .status-chip.pending { background: color-mix(in srgb, var(--tertiary) 15%, transparent) !important; color: var(--tertiary) !important; border-color: color-mix(in srgb, var(--tertiary) 30%, transparent) !important; }
+html.dark .status-chip.received  { background: color-mix(in srgb, var(--secondary) 15%, transparent) !important; color: var(--secondary) !important; border-color: color-mix(in srgb, var(--secondary) 30%, transparent) !important; }
+html.dark .status-chip.accepted,
+html.dark .status-chip.member    { background: color-mix(in srgb, var(--primary) 15%, transparent) !important; color: var(--primary) !important; border-color: color-mix(in srgb, var(--primary) 30%, transparent) !important; }
 
 
 /* ══════════════════════════════════════════════════════════
    FORMS, INPUTS & NATIVE CONTROLS
    ══════════════════════════════════════════════════════════ */
 
-body.dark input:not([type="range"]):not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="submit"]):not([type="button"]),
-body.dark textarea,
-body.dark select { background: var(--card) !important; color: var(--text) !important; border-color: var(--border) !important; }
+html.dark input:not([type="range"]):not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="submit"]):not([type="button"]),
+html.dark textarea,
+html.dark select { background: var(--card) !important; color: var(--text) !important; border-color: var(--border) !important; }
 
-body.dark input::placeholder,
-body.dark textarea::placeholder  { color: var(--text-secondary) !important; }
+html.dark input::placeholder,
+html.dark textarea::placeholder  { color: var(--text-secondary) !important; }
 
 /* Toggle thumb (source: background: white) */
-body.dark .slider::before        { background: var(--text-secondary) !important; }
-body.dark input[type="range"]    { accent-color: var(--brand); }
+html.dark .slider::before        { background: var(--text-secondary) !important; }
+html.dark input[type="range"]    { accent-color: var(--brand); }
 
-body.dark .search-box input,
-body.dark [class*="search"] input { background: var(--surface) !important; color: var(--text) !important; }
+html.dark .search-box input,
+html.dark [class*="search"] input { background: var(--surface) !important; color: var(--text) !important; }
 
 
 /* ══════════════════════════════════════════════════════════
    MODALS & OVERLAYS
    ══════════════════════════════════════════════════════════ */
 
-body.dark .modal-content,
-body.dark [class*="-modal"],
-body.dark [class*="modal-content"] { background: var(--card) !important; color: var(--text) !important; border-color: var(--border) !important; }
+html.dark .modal-content,
+html.dark [class*="-modal"],
+html.dark [class*="modal-content"] { background: var(--card) !important; color: var(--text) !important; border-color: var(--border) !important; }
 
-body.dark .modal-header,
-body.dark [class*="modal-header"]  { background: var(--surface) !important; border-bottom-color: var(--border) !important; color: var(--text) !important; }
+html.dark .modal-header,
+html.dark [class*="modal-header"]  { background: var(--surface) !important; border-bottom-color: var(--border) !important; color: var(--text) !important; }
 
-body.dark [class*="modal-body"],
-body.dark [class*="modal-footer"]  { background: var(--card) !important; color: var(--text) !important; }
+html.dark [class*="modal-body"],
+html.dark [class*="modal-footer"]  { background: var(--card) !important; color: var(--text) !important; }
 
-body.dark [class*="backdrop"],
-body.dark [class*="overlay"]:not(.ce-play-overlay) { background: rgba(0,0,0,0.72) !important; }
+html.dark [class*="backdrop"],
+html.dark [class*="overlay"]:not(.ce-play-overlay) { background: color-mix(in srgb, var(--background) 72%, transparent) !important; }
 
-body.dark [class*="sheet"],
-body.dark [class*="drawer"],
-body.dark [class*="bottom-sheet"] { background: var(--card) !important; color: var(--text) !important; }
+html.dark [class*="sheet"],
+html.dark [class*="drawer"],
+html.dark [class*="bottom-sheet"] { background: var(--card) !important; color: var(--text) !important; }
 
 
 /* ══════════════════════════════════════════════════════════
    MENUS & DROPDOWNS
    ══════════════════════════════════════════════════════════ */
 
-body.dark [class*="context-menu"],
-body.dark [class*="dropdown-menu"],
-body.dark [class*="action-menu"],
-body.dark .message-context-menu,
-body.dark .chat-context-menu       { background: var(--card) !important; border-color: var(--border) !important; box-shadow: 0 8px 28px rgba(0,0,0,0.55) !important; }
+html.dark [class*="context-menu"],
+html.dark [class*="dropdown-menu"],
+html.dark [class*="action-menu"],
+html.dark .message-context-menu,
+html.dark .chat-context-menu       { background: var(--card) !important; border-color: var(--border) !important; box-shadow: 0 8px 28px color-mix(in srgb, var(--background) 55%, transparent) !important; }
 
-body.dark [class*="menu-item"],
-body.dark [class*="context-item"],
-body.dark [class*="dropdown-item"] { color: var(--text) !important; }
+html.dark [class*="menu-item"],
+html.dark [class*="context-item"],
+html.dark [class*="dropdown-item"] { color: var(--text) !important; }
 
-body.dark [class*="menu-item"]:hover,
-body.dark [class*="context-item"]:hover,
-body.dark [class*="dropdown-item"]:hover { background: var(--border) !important; }
+html.dark [class*="menu-item"]:hover,
+html.dark [class*="context-item"]:hover,
+html.dark [class*="dropdown-item"]:hover { background: var(--border) !important; }
 
-body.dark [class*="menu-divider"],
-body.dark [class*="dropdown-divider"]    { border-color: var(--border) !important; }
+html.dark [class*="menu-divider"],
+html.dark [class*="dropdown-divider"]    { border-color: var(--border) !important; }
 
 
 /* ══════════════════════════════════════════════════════════
    EMOJI PICKER
    ══════════════════════════════════════════════════════════ */
 
-body.dark [class*="emoji-picker"],
-body.dark em-emoji-picker {
+html.dark [class*="emoji-picker"],
+html.dark em-emoji-picker {
   background: var(--card) !important;
   border-color: var(--border) !important;
   --background-rgb: 17,27,33;
@@ -224,91 +224,91 @@ body.dark em-emoji-picker {
   --color-a: var(--text);
   color-scheme: dark;
 }
-body.dark [class*="emoji-search"] input { background: var(--surface) !important; color: var(--text) !important; }
+html.dark [class*="emoji-search"] input { background: var(--surface) !important; color: var(--text) !important; }
 
 
 /* ══════════════════════════════════════════════════════════
    PANELS, CARDS & SECTIONS
    ══════════════════════════════════════════════════════════ */
 
-body.dark #threadPanel               { background: var(--card) !important; border-color: var(--border) !important; }
-body.dark .thread-panel-header       { background: var(--surface) !important; color: var(--text) !important; border-color: var(--border) !important; }
-body.dark .thread-parent-section     { background: var(--card) !important; border-color: var(--border) !important; }
-body.dark #threadComposer            { background: var(--surface) !important; color: var(--text) !important; border-color: var(--border) !important; }
+html.dark #threadPanel               { background: var(--card) !important; border-color: var(--border) !important; }
+html.dark .thread-panel-header       { background: var(--surface) !important; color: var(--text) !important; border-color: var(--border) !important; }
+html.dark .thread-parent-section     { background: var(--card) !important; border-color: var(--border) !important; }
+html.dark #threadComposer            { background: var(--surface) !important; color: var(--text) !important; border-color: var(--border) !important; }
 
 /* Connection banner (source: #fff3cd) */
-body.dark .connection-banner         { background: var(--card) !important; color: var(--text-secondary) !important; border-color: var(--border) !important; }
+html.dark .connection-banner         { background: var(--card) !important; color: var(--text-secondary) !important; border-color: var(--border) !important; }
 
-body.dark [class*="smart-reply"],
-body.dark [class*="quick-reply"]     { background: var(--card) !important; border-color: var(--border) !important; color: var(--text) !important; }
+html.dark [class*="smart-reply"],
+html.dark [class*="quick-reply"]     { background: var(--card) !important; border-color: var(--border) !important; color: var(--text) !important; }
 
-body.dark .pinned-section,
-body.dark #pinnedSection             { background: var(--surface) !important; border-color: var(--border) !important; color: var(--text) !important; }
+html.dark .pinned-section,
+html.dark #pinnedSection             { background: var(--surface) !important; border-color: var(--border) !important; color: var(--text) !important; }
 
-body.dark .group-info-card,
-body.dark .profile-info-card,
-body.dark .gi-member-row             { background: var(--card) !important; border-color: var(--border) !important; color: var(--text) !important; }
+html.dark .group-info-card,
+html.dark .profile-info-card,
+html.dark .gi-member-row             { background: var(--card) !important; border-color: var(--border) !important; color: var(--text) !important; }
 
-body.dark .mobile-install-card       { background: var(--card) !important; border-color: var(--border) !important; color: var(--text) !important; }
+html.dark .mobile-install-card       { background: var(--card) !important; border-color: var(--border) !important; color: var(--text) !important; }
 
-body.dark .toast,
-body.dark [class*="toast"]           { background: var(--card) !important; color: var(--text) !important; border-color: var(--border) !important; box-shadow: 0 4px 16px rgba(0,0,0,0.45) !important; }
+html.dark .toast,
+html.dark [class*="toast"]           { background: var(--card) !important; color: var(--text) !important; border-color: var(--border) !important; box-shadow: 0 4px 16px rgba(0,0,0,0.45) !important; }
 
-body.dark .stories-strip,
-body.dark #storiesStrip              { background: var(--card) !important; border-color: var(--border) !important; }
+html.dark .stories-strip,
+html.dark #storiesStrip              { background: var(--card) !important; border-color: var(--border) !important; }
 
-body.dark .jump-to-unread-btn        { background: var(--card) !important; color: var(--text) !important; border-color: var(--border) !important; }
+html.dark .jump-to-unread-btn        { background: var(--card) !important; color: var(--text) !important; border-color: var(--border) !important; }
 
-body.dark .archive-header,
-body.dark [class*="archive-label"]   { background: var(--card) !important; color: var(--text-secondary) !important; border-color: var(--border) !important; }
+html.dark .archive-header,
+html.dark [class*="archive-label"]   { background: var(--card) !important; color: var(--text-secondary) !important; border-color: var(--border) !important; }
 
-body.dark .search-result-card        { background: var(--card) !important; border-color: var(--border) !important; color: var(--text) !important; }
-body.dark .search-result-card:hover  { background: var(--border) !important; }
+html.dark .search-result-card        { background: var(--card) !important; border-color: var(--border) !important; color: var(--text) !important; }
+html.dark .search-result-card:hover  { background: var(--border) !important; }
 
-body.dark .location-card,
-body.dark .location-card > *         { background: var(--card) !important; border-color: var(--border) !important; color: var(--text) !important; }
+html.dark .location-card,
+html.dark .location-card > *         { background: var(--card) !important; border-color: var(--border) !important; color: var(--text) !important; }
 
-body.dark [class*="global-search"],
-body.dark [class*="search-panel"]    { background: var(--card) !important; color: var(--text) !important; }
+html.dark [class*="global-search"],
+html.dark [class*="search-panel"]    { background: var(--card) !important; color: var(--text) !important; }
 
-body.dark [class*="ai-"],
-body.dark [class*="snooze-"],
-body.dark [class*="bot-"]            { background: var(--card) !important; border-color: var(--border) !important; color: var(--text) !important; }
+html.dark [class*="ai-"],
+html.dark [class*="snooze-"],
+html.dark [class*="bot-"]            { background: var(--card) !important; border-color: var(--border) !important; color: var(--text) !important; }
 
 
 /* ══════════════════════════════════════════════════════════
    SEPARATORS, DATE LABELS & LIST ITEMS
    ══════════════════════════════════════════════════════════ */
 
-body.dark hr,
-body.dark [class*="divider"],
-body.dark [class*="separator"]       { border-color: var(--border) !important; background: var(--border) !important; }
+html.dark hr,
+html.dark [class*="divider"],
+html.dark [class*="separator"]       { border-color: var(--border) !important; background: var(--border) !important; }
 
-body.dark .date-separator,
-body.dark [class*="date-label"],
-body.dark [class*="msg-date"]        { background: var(--surface) !important; color: var(--text-secondary) !important; border-color: transparent !important; }
+html.dark .date-separator,
+html.dark [class*="date-label"],
+html.dark [class*="msg-date"]        { background: var(--surface) !important; color: var(--text-secondary) !important; border-color: transparent !important; }
 
-body.dark .list-item:hover,
-body.dark .chat-list-item:hover      { background: var(--surface) !important; }
-body.dark .list-item.active,
-body.dark .chat-list-item.active     { background: var(--card) !important; }
-body.dark .list-preview,
-body.dark [class*="preview-text"]    { color: var(--text-secondary) !important; }
-body.dark .unread-badge              { background: var(--brand) !important; color: var(--on-primary) !important; }
+html.dark .list-item:hover,
+html.dark .chat-list-item:hover      { background: var(--surface) !important; }
+html.dark .list-item.active,
+html.dark .chat-list-item.active     { background: var(--card) !important; }
+html.dark .list-preview,
+html.dark [class*="preview-text"]    { color: var(--text-secondary) !important; }
+html.dark .unread-badge              { background: var(--brand) !important; color: var(--on-primary) !important; }
 
 
 /* ══════════════════════════════════════════════════════════
    CALLS UI
    ══════════════════════════════════════════════════════════ */
 
-body.dark .call-shell,
-body.dark [class*="call-screen"]     { background: var(--bg) !important; color: var(--text) !important; }
-body.dark [class*="call-history"]    { background: var(--card) !important; border-color: var(--border) !important; color: var(--text) !important; }
+html.dark .call-shell,
+html.dark [class*="call-screen"]     { background: var(--bg) !important; color: var(--text) !important; }
+html.dark [class*="call-history"]    { background: var(--card) !important; border-color: var(--border) !important; color: var(--text) !important; }
 
 /* Light-mode header/input overrides (from source !important rules) */
-body.dark .sidebar-header,
-body.dark .chat-header,
-body.dark .input-area                { background: var(--surface) !important; }
+html.dark .sidebar-header,
+html.dark .chat-header,
+html.dark .input-area                { background: var(--surface) !important; }
 
 
 /* ══════════════════════════════════════════════════════════
@@ -343,14 +343,14 @@ body.dark .input-area                { background: var(--surface) !important; }
   width: 20px;
   height: 20px;
   border-radius: 50%;
-  background: #dcf8c6;
-  color: #075e54;
+  background: var(--primary-container);
+  color: var(--on-primary-container);
   font-size: 8px;
   font-weight: 800;
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 1.5px solid #fff;
+  border: 1.5px solid var(--surface-container-lowest);
   overflow: hidden;
   flex-shrink: 0;
   cursor: default;
@@ -379,8 +379,8 @@ body.dark .input-area                { background: var(--surface) !important; }
   min-width: 20px;
   height: 20px;
   border-radius: 10px;
-  background: #e9edef;
-  color: #54656f;
+  background: var(--surface-container-high);
+  color: var(--on-surface-variant);
   font-size: 8px;
   font-weight: 800;
   padding: 0 4px;
@@ -391,7 +391,7 @@ body.dark .input-area                { background: var(--surface) !important; }
 .ce-seen-label {
   font-size: 10px;
   font-weight: 500;
-  color: #667781;
+  color: var(--on-surface-variant);
   letter-spacing: 0.01em;
   line-height: 1;
   margin-left: 2px;
@@ -399,16 +399,16 @@ body.dark .input-area                { background: var(--surface) !important; }
 }
 
 /* Dark mode — seen-by */
-body.dark .ce-seen-avatar {
-  background: #2a4a3a;
-  color: #a5d6a7;
-  border-color: var(--surface);
+html.dark .ce-seen-avatar {
+  background: var(--primary-container);
+  color: var(--on-primary-container);
+  border-color: var(--surface-container);
 }
-body.dark .ce-seen-more {
+html.dark .ce-seen-more {
   background: var(--border);
   color: var(--text-secondary);
 }
-body.dark .ce-seen-label {
+html.dark .ce-seen-label {
   color: var(--text-secondary);
 }
 
@@ -444,13 +444,13 @@ body.dark .ce-seen-label {
   align-items: center !important;
   gap: 5px !important;
 
-  background: #ffffff !important;
-  color: #111b21 !important;
+  background: var(--surface-container-lowest) !important;
+  color: var(--on-surface) !important;
   box-shadow: 0 2px 14px rgba(0,0,0,0.20), 0 0 0 1px rgba(0,0,0,0.07) !important;
   transition: opacity 0.2s ease, transform 0.2s ease !important;
 }
 
-.jump-to-bottom-btn .jtb-arrow  { font-size: 15px; color: #00a884; line-height: 1; flex-shrink: 0; }
+.jump-to-bottom-btn .jtb-arrow  { font-size: 15px; color: var(--primary); line-height: 1; flex-shrink: 0; }
 .jump-to-bottom-btn .jtb-label  { font-size: 12px; font-weight: 600; }
 .jump-to-bottom-btn.visible:hover { box-shadow: 0 5px 22px rgba(0,0,0,0.26) !important; transform: translateY(-2px) !important; }
 
@@ -469,9 +469,9 @@ body.dark .ce-seen-label {
   }
 }
 
-body.dark #jumpToBottomBtn,
-body.dark .jump-to-bottom-btn      { background: var(--card) !important; color: var(--text) !important; box-shadow: 0 2px 16px rgba(0,0,0,0.48) !important; }
-body.dark .jump-to-bottom-btn .jtb-arrow { color: var(--brand); }
+html.dark #jumpToBottomBtn,
+html.dark .jump-to-bottom-btn      { background: var(--card) !important; color: var(--text) !important; box-shadow: 0 2px 16px rgba(0,0,0,0.48) !important; }
+html.dark .jump-to-bottom-btn .jtb-arrow { color: var(--brand); }
 
 
 /* ══════════════════════════════════════════════════════════
@@ -559,7 +559,7 @@ a.file-attachment-card.has-audio-card .ce-audio-player audio {
   height: 32px;
   border-radius: 999px;
   outline: none;
-  accent-color: #00a884;
+  accent-color: var(--primary);
 }
 
 .file-attachment-icon               { transition: background 0.2s, color 0.2s; }
@@ -588,16 +588,34 @@ a.file-attachment-card.has-audio-card .ce-audio-player audio {
 
 /* ══════════════════════════════════════════════════════════
    1. CSS VARIABLE GAP
-   --brand-dark (#008069) is not overridden in body.dark, so
+   --brand-dark (#008069) is not overridden in html.dark, so
    group-chat sender names and some link colours read as a
    muted mid-green that's barely visible on dark bubbles.
    Bump it to the brighter brand green so it pops.
    ══════════════════════════════════════════════════════════ */
 
-body.dark {
-  --brand-dark: #00a884;        /* brighter on dark bg  */
-  --panel-highlight: #1e2a30;   /* make sure highlight is set */
+html.dark {
+  --brand-dark: var(--primary);        /* brighter on dark bg  */
+  --panel-highlight: var(--surface-container-high);   /* MD3 token */
   --shadow: 0 6px 18px rgba(0, 0, 0, 0.45);
+
+  /* Core structural tokens (consolidated — was split across 2 blocks) */
+  --bg:              var(--background);
+  --surface:         var(--surface-container);
+  --incoming-bubble: var(--surface-container-high);
+  --outgoing-bubble: var(--primary);
+
+  /* Chat-accent fallback */
+  --msg-mine-bg:     var(--primary);
+
+  /* Action-sheet surface */
+  --sheet-bg:        var(--surface-container-high);
+
+  /* Hover-bg used by contact-picker and some tooltips */
+  --hover-bg:        var(--surface-container-highest);
+
+  /* Align --border to single canonical value */
+  --border:          var(--outline-variant);
 }
 
 
@@ -607,11 +625,11 @@ body.dark {
    WhatsApp changes to a dark slate (#2a3942) in dark mode.
    ══════════════════════════════════════════════════════════ */
 
-body.dark .user-avatar,
-body.dark .list-avatar:not(:has(img)),
-body.dark .profile-avatar:not(:has(img)) {
-  background: #2a3942 !important;
-  color: #aebac1 !important;
+html.dark .user-avatar,
+html.dark .list-avatar:not(:has(img)),
+html.dark .profile-avatar:not(:has(img)) {
+  background: var(--surface-container-highest) !important;
+  color: var(--on-surface) !important;
 }
 
 
@@ -621,9 +639,9 @@ body.dark .profile-avatar:not(:has(img)) {
    In dark mode WhatsApp uses a subtle teal tint.
    ══════════════════════════════════════════════════════════ */
 
-body.dark .search-result-chip {
-  background: rgba(0, 168, 132, 0.18) !important;
-  color: #00a884 !important;
+html.dark .search-result-chip {
+  background: color-mix(in srgb, var(--primary) 18%, transparent) !important;
+  color: var(--primary) !important;
 }
 
 
@@ -633,25 +651,25 @@ body.dark .search-result-chip {
    ══════════════════════════════════════════════════════════ */
 
 /* Day chips — e.g. "Thursday", "Yesterday", "Today" */
-body.dark .date-separator,
-body.dark .date-chip,
-body.dark .msg-date-label,
-body.dark [class*="date-divider"],
-body.dark [class*="day-separator"] {
-  background: rgba(17, 27, 33, 0.90) !important;
-  color: #8696a0 !important;
+html.dark .date-separator,
+html.dark .date-chip,
+html.dark .msg-date-label,
+html.dark [class*="date-divider"],
+html.dark [class*="day-separator"] {
+  background: color-mix(in srgb, var(--surface-container) 90%, transparent) !important;
+  color: var(--on-surface-variant) !important;
   border-color: transparent !important;
   box-shadow: 0 1px 0.5px rgba(0, 0, 0, 0.35) !important;
 }
 
 /* "You're all caught up" divider */
-body.dark .caught-up-divider {
-  color: #8696a0 !important;
+html.dark .caught-up-divider {
+  color: var(--on-surface-variant) !important;
 }
 
 /* Section label text (e.g. inside font-settings modal) */
-body.dark .fs-section-label {
-  color: #8696a0 !important;
+html.dark .fs-section-label {
+  color: var(--on-surface-variant) !important;
 }
 
 
@@ -661,23 +679,23 @@ body.dark .fs-section-label {
    but the surrounding forwarded-trace bar needs a dark tint.
    ══════════════════════════════════════════════════════════ */
 
-body.dark .fp-forwarded-tag {
-  color: #8696a0 !important;        /* subtle, like WhatsApp */
+html.dark .fp-forwarded-tag {
+  color: var(--on-surface-variant) !important;        /* subtle, like WhatsApp */
 }
 
-body.dark .forwarded-trace,
-body.dark .forwarded-label,
-body.dark [class*="forwarded"] {
-  color: #8696a0 !important;
+html.dark .forwarded-trace,
+html.dark .forwarded-label,
+html.dark [class*="forwarded"] {
+  color: var(--on-surface-variant) !important;
 }
 
 /* Forwarded indicator inside the bubble */
-body.dark .message-bubble .fp-forwarded-tag {
-  color: #aebac1 !important;
+html.dark .message-bubble .fp-forwarded-tag {
+  color: var(--on-surface) !important;
 }
 
-body.dark .my-message .message-bubble .fp-forwarded-tag {
-  color: rgba(233, 237, 239, 0.65) !important;
+html.dark .my-message .message-bubble .fp-forwarded-tag {
+  color: color-mix(in srgb, var(--on-primary) 65%, transparent) !important;
 }
 
 
@@ -691,13 +709,13 @@ body.dark .my-message .message-bubble .fp-forwarded-tag {
    ══════════════════════════════════════════════════════════ */
 
 /* Default fallback (no per-sender colour assigned) */
-body.dark .message-sender {
+html.dark .message-sender {
   color: var(--brand-dark) !important;   /* #00a884 after fix */
   text-shadow: none !important;
 }
 
 /* Sender names inside received bubble — lighten slightly */
-body.dark .message:not(.my-message) .message-sender {
+html.dark .message:not(.my-message) .message-sender {
   filter: brightness(1.15);
 }
 
@@ -709,15 +727,15 @@ body.dark .message:not(.my-message) .message-sender {
    ══════════════════════════════════════════════════════════ */
 
 /* Received sticker */
-body.dark .message:not(.my-message) .sticker-message.emoji-sticker {
-  background: rgba(32, 44, 51, 0.60) !important;
-  border-color: rgba(255, 255, 255, 0.06) !important;
+html.dark .message:not(.my-message) .sticker-message.emoji-sticker {
+  background: color-mix(in srgb, var(--surface-container-high) 60%, transparent) !important;
+  border-color: color-mix(in srgb, var(--on-surface) 6%, transparent) !important;
 }
 
 /* Sent sticker */
-body.dark .my-message .sticker-message.emoji-sticker {
-  background: rgba(0, 60, 48, 0.55) !important;
-  border-color: rgba(0, 200, 150, 0.10) !important;
+html.dark .my-message .sticker-message.emoji-sticker {
+  background: color-mix(in srgb, var(--primary) 55%, transparent) !important;
+  border-color: color-mix(in srgb, var(--primary) 10%, transparent) !important;
 }
 
 
@@ -726,28 +744,28 @@ body.dark .my-message .sticker-message.emoji-sticker {
    Floating autocomplete that appears while typing @name.
    ══════════════════════════════════════════════════════════ */
 
-body.dark .mention-suggestions,
-body.dark .mention-dropdown {
-  background: #1e2a30 !important;
-  border-color: #2a3942 !important;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.55) !important;
+html.dark .mention-suggestions,
+html.dark .mention-dropdown {
+  background: var(--surface-container-high) !important;
+  border-color: var(--outline-variant) !important;
+  box-shadow: 0 4px 20px color-mix(in srgb, var(--background) 55%, transparent) !important;
 }
 
-body.dark .mention-suggestion {
-  color: #e9edef !important;
+html.dark .mention-suggestion {
+  color: var(--text) !important;
 }
 
-body.dark .mention-suggestion:hover,
-body.dark .mention-suggestion.active {
-  background: #2a3942 !important;
+html.dark .mention-suggestion:hover,
+html.dark .mention-suggestion.active {
+  background: var(--surface-container-highest) !important;
 }
 
-body.dark .mention-suggestion .mention-name {
-  color: #e9edef !important;
+html.dark .mention-suggestion .mention-name {
+  color: var(--text) !important;
 }
 
-body.dark .mention-suggestion .mention-handle {
-  color: #8696a0 !important;
+html.dark .mention-suggestion .mention-handle {
+  color: var(--on-surface-variant) !important;
 }
 
 
@@ -757,12 +775,12 @@ body.dark .mention-suggestion .mention-handle {
    border (often white) flashes on dark panels.
    ══════════════════════════════════════════════════════════ */
 
-body.dark .status-dot {
-  border-color: #111b21 !important;  /* match sidebar bg */
+html.dark .status-dot {
+  border-color: var(--background) !important;  /* match sidebar bg */
 }
 
-body.dark .messages-area .status-dot {
-  border-color: #0b141a !important;  /* match chat bg */
+html.dark .messages-area .status-dot {
+  border-color: var(--background) !important;  /* match chat bg */
 }
 
 
@@ -772,13 +790,13 @@ body.dark .messages-area .status-dot {
    but the accent line and text need an explicit nudge.
    ══════════════════════════════════════════════════════════ */
 
-body.dark .pinned-messages-section {
-  border-color: #2a3942 !important;
+html.dark .pinned-messages-section {
+  border-color: var(--outline-variant) !important;
 }
 
-body.dark .pinned-messages-section .section-label,
-body.dark .pinned-messages-section span {
-  color: #8696a0 !important;
+html.dark .pinned-messages-section .section-label,
+html.dark .pinned-messages-section span {
+  color: var(--on-surface-variant) !important;
 }
 
 
@@ -800,7 +818,7 @@ body.dark .pinned-messages-section span {
 
    HOW THIS FILE IS ORGANISED
    ──────────────────────────
-   A  Core CSS-variable additions  (style.css body.dark gap)
+   A  Core CSS-variable additions  (style.css html.dark gap)
    B  Chat accent colour fallback  (custom accent theme)
    C  Mobile @media overrides      (the biggest bleed-through)
    D  Action sheet bottom drawer
@@ -816,28 +834,10 @@ body.dark .pinned-messages-section span {
 /* ================================================================
    A  CORE CSS-VARIABLE ADDITIONS
    ----------------------------------------------------------------
-   style.css body.dark block already sets the main palette but
-   misses these four custom properties used throughout the app.
-   Setting them here fixes every element that consumes them via
-   var() — no per-selector rules needed for those elements.
+   Consolidated into Section 1 above. This block is kept as a
+   comment for reference only.
    ================================================================ */
-
-body.dark {
-  /* Accent used by threads and action buttons */
-  --bg:              #0b141a;
-  --surface:         #111b21;
-  --incoming-bubble: #202c33;
-  --outgoing-bubble: #005c4b;
-
-  /* Chat-accent fallback — overrides the hardcoded #dcf8c6 */
-  --msg-mine-bg:     #005c4b;
-
-  /* Action-sheet surface */
-  --sheet-bg:        #1e2a30;
-
-  /* Hover-bg used by contact-picker and some tooltips */
-  --hover-bg:        #2a3942;
-}
+/* html.dark variables are consolidated in Section 1 above */
 
 
 /* ================================================================
@@ -851,7 +851,7 @@ body.dark {
    cached --chat-accent = the light value from a previous session.
    ================================================================ */
 
-body.dark #messagesArea .message.my-message .message-bubble:not([style*="background"]) {
+html.dark #messagesArea .message.my-message .message-bubble:not([style*="background"]) {
   background: var(--msg-mine-bg, #005c4b) !important;
 }
 
@@ -860,62 +860,62 @@ body.dark #messagesArea .message.my-message .message-bubble:not([style*="backgro
    C  MOBILE @media OVERRIDES
    ----------------------------------------------------------------
    Several @media (max-width: 900px) blocks in style.css set
-   hardcoded light colours WITHOUT a body.dark guard.  These
+   hardcoded light colours WITHOUT a html.dark guard.  These
    completely override the dark-mode variables on mobile/tablet.
 
    Structure: we mirror the breakpoints from style.css so
-   specificity stays equal, then add body.dark to win.
+   specificity stays equal, then add html.dark to win.
    ================================================================ */
 
 @media (max-width: 900px) {
 
   /* ── Chat header ──────────────────────────────────────────── */
-  body.dark .chat-title  { color: var(--text) !important; }
-  body.dark .chat-status { color: var(--text-secondary) !important; }
+  html.dark .chat-title  { color: var(--text) !important; }
+  html.dark .chat-status { color: var(--text-secondary) !important; }
 
-  body.dark .chat-actions .icon-btn,
-  body.dark .sidebar-actions .icon-btn,
-  body.dark .sidebar-actions button {
+  html.dark .chat-actions .icon-btn,
+  html.dark .sidebar-actions .icon-btn,
+  html.dark .sidebar-actions button {
     color: var(--text-secondary) !important;
   }
 
   /* ── Sidebar header background ───────────────────────────── */
-  body.dark .sidebar-header {
-    background: rgba(17, 27, 33, 0.97) !important;
+  html.dark .sidebar-header {
+    background: color-mix(in srgb, var(--surface-container) 97%, transparent) !important;
   }
 
   /* ── Active tab pill ─────────────────────────────────────── */
-  body.dark .tab.active {
-    background: rgba(0, 168, 132, 0.18) !important;
-    color: #00a884 !important;
+  html.dark .tab.active {
+    background: color-mix(in srgb, var(--primary) 18%, transparent) !important;
+    color: var(--primary) !important;
   }
 
   /* ── List avatars ────────────────────────────────────────── */
-  body.dark .list-avatar,
-  body.dark .chat-list .list-avatar,
-  body.dark .groups-list .list-avatar {
+  html.dark .list-avatar,
+  html.dark .chat-list .list-avatar,
+  html.dark .groups-list .list-avatar {
     background: var(--border) !important;
     color: var(--text-secondary) !important;
   }
 
   /* ── List name & preview text ────────────────────────────── */
-  body.dark .list-name  { color: var(--text)  !important; }
-  body.dark .list-preview { color: var(--text-secondary) !important; }
+  html.dark .list-name  { color: var(--text)  !important; }
+  html.dark .list-preview { color: var(--text-secondary) !important; }
 
   /* ── Composer shell  (already in chat-enhancements but
         reinforced here for mobile specificity) ──────────────── */
-  body.dark .wa-composer-shell { background: var(--surface) !important; }
+  html.dark .wa-composer-shell { background: var(--surface) !important; }
 
   /* ── "btn-outline" / setting-item ───────────────────────── */
-  body.dark .btn-outline,
-  body.dark .setting-item {
+  html.dark .btn-outline,
+  html.dark .setting-item {
     background: var(--card)  !important;
     color:      var(--text)  !important;
     border-color: var(--border) !important;
   }
 
-  body.dark .setting-item:hover,
-  body.dark .setting-item:active {
+  html.dark .setting-item:hover,
+  html.dark .setting-item:active {
     background: var(--border) !important;
   }
 }
@@ -925,38 +925,38 @@ body.dark #messagesArea .message.my-message .message-bubble:not([style*="backgro
    D  ACTION SHEET BOTTOM DRAWER
    ----------------------------------------------------------------
    .app-action-sheet, .action-sheet-option, .action-sheet-handle
-   all use hardcoded light colours with no body.dark guard.
+   all use hardcoded light colours with no html.dark guard.
    ================================================================ */
 
 /* Backdrop overlay */
-body.dark .app-action-sheet {
+html.dark .app-action-sheet {
   background: var(--card) !important;
   border-color: var(--border) !important;
-  box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.55) !important;
+  box-shadow: 0 -4px 24px color-mix(in srgb, var(--background) 55%, transparent) !important;
 }
 
 /* Drag handle bar */
-body.dark .action-sheet-handle {
+html.dark .action-sheet-handle {
   background: var(--border-hover) !important;
 }
 
 /* Heading text */
-body.dark .action-sheet-heading strong { color: var(--text)  !important; }
-body.dark .action-sheet-heading span   { color: var(--text-secondary)  !important; }
+html.dark .action-sheet-heading strong { color: var(--text)  !important; }
+html.dark .action-sheet-heading span   { color: var(--text-secondary)  !important; }
 
 /* Each option row */
-body.dark .action-sheet-option {
+html.dark .action-sheet-option {
   color: var(--text) !important;
   border-top-color: var(--border) !important;
   background: transparent !important;
 }
 
-body.dark .action-sheet-option:hover,
-body.dark .action-sheet-option:active {
+html.dark .action-sheet-option:hover,
+html.dark .action-sheet-option:active {
   background: var(--border) !important;
 }
 
-body.dark .action-sheet-option.danger { color: #ff6b6b !important; }
+html.dark .action-sheet-option.danger { color: var(--error) !important; }
 
 
 /* ================================================================
@@ -966,23 +966,23 @@ body.dark .action-sheet-option.danger { color: #ff6b6b !important; }
    which is the dark-mode TEXT colour — looks white on dark panels.
    ================================================================ */
 
-body.dark .message-context-menu .message-context-reaction-btn:hover,
-body.dark .message-context-menu .message-context-reaction-btn:active,
-body.dark .message-context-menu .message-context-reaction-btn:focus-visible,
-body.dark .message-context-menu .reaction-option:hover,
-body.dark .message-context-menu .reaction-option:active {
+html.dark .message-context-menu .message-context-reaction-btn:hover,
+html.dark .message-context-menu .message-context-reaction-btn:active,
+html.dark .message-context-menu .message-context-reaction-btn:focus-visible,
+html.dark .message-context-menu .reaction-option:hover,
+html.dark .message-context-menu .reaction-option:active {
   background: var(--border) !important;
 }
 
 /* Context-menu item hover */
-body.dark .context-menu-item:hover,
-body.dark .context-menu-item:focus-visible {
+html.dark .context-menu-item:hover,
+html.dark .context-menu-item:focus-visible {
   background: var(--border) !important;
   color: var(--text) !important;
 }
 
 /* Action sheet divider inside context menu */
-body.dark .context-menu-divider {
+html.dark .context-menu-divider {
   background: var(--border) !important;
 }
 
@@ -994,13 +994,13 @@ body.dark .context-menu-divider {
    white inside a dark bubble.
    ================================================================ */
 
-body.dark .pdf-attachment-iframe {
+html.dark .pdf-attachment-iframe {
   background: var(--bg) !important;
   color-scheme: dark;
 }
 
 /* Generic iframe embeds inside messages */
-body.dark .message-bubble iframe {
+html.dark .message-bubble iframe {
   color-scheme: dark;
   background: var(--bg) !important;
 }
@@ -1010,64 +1010,64 @@ body.dark .message-bubble iframe {
    G  THREADS PANEL + AI-EXPLAIN PANEL
    ----------------------------------------------------------------
    threads.css uses var(--bg), var(--surface), var(--incoming-bubble)
-   with #fff / #f0f2f5 fallbacks.  Setting those vars in body.dark
+   with #fff / #f0f2f5 fallbacks.  Setting those vars in html.dark
    (section A) fixes the majority automatically.  These rules
    handle the elements that use hardcoded values instead of vars.
    ================================================================ */
 
 /* Thread container panels */
-body.dark .thread-panel,
-body.dark .thread-container,
-body.dark .thread-view {
+html.dark .thread-panel,
+html.dark .thread-container,
+html.dark .thread-view {
   background: var(--bg) !important;
   color: var(--text) !important;
 }
 
-body.dark .thread-parent-section {
+html.dark .thread-parent-section {
   background: var(--card) !important;
   border-color: var(--border) !important;
 }
 
 /* Thread message bubbles */
-body.dark .thread-parent-bubble,
-body.dark .thread-reply-mine .thread-reply-bubble {
-  background: #005c4b !important;
-  color: var(--text) !important;
+html.dark .thread-parent-bubble,
+html.dark .thread-reply-mine .thread-reply-bubble {
+  background: var(--primary) !important;
+  color: var(--on-primary) !important;
 }
 
-body.dark .thread-reply-theirs .thread-reply-bubble {
+html.dark .thread-reply-theirs .thread-reply-bubble {
   background: var(--surface) !important;
   color: var(--text) !important;
 }
 
 /* Thread input area */
-body.dark .thread-input-area,
-body.dark #threadInputArea {
+html.dark .thread-input-area,
+html.dark #threadInputArea {
   background: var(--surface) !important;
   border-color: var(--border) !important;
 }
 
-body.dark #threadMessageInput,
-body.dark .thread-message-input {
+html.dark #threadMessageInput,
+html.dark .thread-message-input {
   background: var(--border) !important;
   color: var(--text) !important;
 }
 
 /* Disabled send button */
-body.dark #threadSendBtn:disabled {
+html.dark #threadSendBtn:disabled {
   background: var(--border) !important;
   color: var(--text-secondary) !important;
 }
 
 /* AI explain panel */
-body.dark .ai-explain-panel {
+html.dark .ai-explain-panel {
   background: var(--card) !important;
   border-color: var(--border) !important;
   color: var(--text) !important;
 }
 
-body.dark .ai-explain-panel + *,
-body.dark .ai-explain-result {
+html.dark .ai-explain-panel + *,
+html.dark .ai-explain-result {
   background: var(--card) !important;
   color: var(--text) !important;
 }
@@ -1077,33 +1077,33 @@ body.dark .ai-explain-result {
    H  FORM CONTROLS, SETTINGS ITEMS, PROFILE MODAL BUTTONS
    ----------------------------------------------------------------
    Large mobile-only block sets background:#fff; color:#111b21
-   on many form elements without a body.dark guard.
+   on many form elements without a html.dark guard.
    ================================================================ */
 
 /* Status custom input + timer select */
-body.dark .status-custom-input,
-body.dark .status-timer-select {
+html.dark .status-custom-input,
+html.dark .status-timer-select {
   background:   var(--card) !important;
   color:        var(--text) !important;
   border-color: var(--border) !important;
 }
 
-body.dark .status-timer-select option {
+html.dark .status-timer-select option {
   background: var(--card);
   color: var(--text);
 }
 
 /* Profile modal outline buttons */
-body.dark #profileModal .btn-outline,
-body.dark #profileModal #changeNameBtn,
-body.dark #profileModal #changeEmailBtn,
-body.dark #profileModal #changePhoneBtn {
+html.dark #profileModal .btn-outline,
+html.dark #profileModal #changeNameBtn,
+html.dark #profileModal #changeEmailBtn,
+html.dark #profileModal #changePhoneBtn {
   background:   var(--card) !important;
   color:        var(--text) !important;
   border-color: var(--border) !important;
 }
 
-body.dark #profileModal .btn-outline:hover {
+html.dark #profileModal .btn-outline:hover {
   background: var(--border) !important;
 }
 
@@ -1115,20 +1115,20 @@ body.dark #profileModal .btn-outline:hover {
    with an !important flag — needs a stronger dark-mode guard.
    ================================================================ */
 
-body.dark .status-preset,
-body.dark .folder-tab {
+html.dark .status-preset,
+html.dark .folder-tab {
   background:   var(--card)  !important;
   color:        var(--text)  !important;
   border-color: var(--border)  !important;
 }
 
-body.dark .status-preset:hover,
-body.dark .folder-tab:hover,
-body.dark .status-preset.active,
-body.dark .folder-tab.active {
-  background:   rgba(0, 168, 132, 0.18) !important;
-  color:        var(--brand)               !important;
-  border-color: rgba(0, 168, 132, 0.35) !important;
+html.dark .status-preset:hover,
+html.dark .folder-tab:hover,
+html.dark .status-preset.active,
+html.dark .folder-tab.active {
+  background:   color-mix(in srgb, var(--primary) 18%, transparent) !important;
+  color:        var(--primary)               !important;
+  border-color: color-mix(in srgb, var(--primary) 35%, transparent) !important;
 }
 
 
@@ -1139,16 +1139,16 @@ body.dark .folder-tab.active {
    used as the selection-mode toggle background.
    ================================================================ */
 
-body.dark .shared-selectable-item .shared-select-toggle,
-body.dark .shared-select-toggle {
-  background: var(--border) !important;
-  border-color: var(--border-hover) !important;
-  color: var(--text-secondary) !important;
+html.dark .shared-selectable-item .shared-select-toggle,
+html.dark .shared-select-toggle {
+  background: var(--surface-container-highest) !important;
+  border-color: var(--outline-variant) !important;
+  color: var(--on-surface-variant) !important;
 }
 
-body.dark .shared-selectable-item.bulk-selected .shared-select-toggle {
-  background: var(--brand) !important;
-  border-color: var(--brand) !important;
+html.dark .shared-selectable-item.bulk-selected .shared-select-toggle {
+  background: var(--primary) !important;
+  border-color: var(--primary) !important;
   color: var(--on-primary) !important;
 }
 
@@ -1211,19 +1211,19 @@ body.dark .shared-selectable-item.bulk-selected .shared-select-toggle {
    All live inside the global search results container.
    ─────────────────────────────────────────────────────────────── */
 
-body.dark [style*="border-bottom:1px solid #f1f5f9"] {
+html.dark [style*="border-bottom:1px solid #f1f5f9"] {
   border-bottom-color: var(--border) !important;
 }
 
-body.dark [style*="color:#1e293b"] {
+html.dark [style*="color:#1e293b"] {
   color: var(--text) !important;
 }
 
-body.dark [style*="color:#94a3b8"] {
+html.dark [style*="color:#94a3b8"] {
   color: var(--text-secondary) !important;
 }
 
-body.dark [style*="color:#475569"] {
+html.dark [style*="color:#475569"] {
   color: var(--text-secondary) !important;
 }
 
@@ -1235,9 +1235,9 @@ body.dark [style*="color:#475569"] {
    Replace with a translucent teal glow — same as WhatsApp.
    ─────────────────────────────────────────────────────────────── */
 
-body.dark mark,
-body.dark [style*="background:#fef08a"] {
-  background: rgba(0, 168, 132, 0.38) !important;
+html.dark mark,
+html.dark [style*="background:#fef08a"] {
+  background: color-mix(in srgb, var(--primary) 38%, transparent) !important;
   color: var(--text) !important;
 }
 
@@ -1247,13 +1247,13 @@ body.dark [style*="background:#fef08a"] {
      <div style="font-size:11px; color:#888;">…</div>
    ─────────────────────────────────────────────────────────────── */
 
-body.dark .pinned-message-item [style*="color:#888"] {
+html.dark .pinned-message-item [style*="color:#888"] {
   color: var(--text-secondary) !important;
 }
 
 /* Also catch the list-item pin bar if a parent div wraps it */
-body.dark .pinned-msg-bar [style*="color:#888"],
-body.dark [class*="pinned"] [style*="color:#888"] {
+html.dark .pinned-msg-bar [style*="color:#888"],
+html.dark [class*="pinned"] [style*="color:#888"] {
   color: var(--text-secondary) !important;
 }
 
@@ -1263,8 +1263,8 @@ body.dark [class*="pinned"] [style*="color:#888"] {
      '<div class="empty-state" style="…color:#667781;">Searching…</div>'
    ─────────────────────────────────────────────────────────────── */
 
-body.dark .empty-state[style*="color:#667781"],
-body.dark [style*="color:#667781"] {
+html.dark .empty-state[style*="color:#667781"],
+html.dark [style*="color:#667781"] {
   color: var(--text-secondary) !important;
 }
 
@@ -1275,27 +1275,27 @@ body.dark [style*="color:#667781"] {
      <div id="gifLoading" style="…color:#94a3b8…">
    ─────────────────────────────────────────────────────────────── */
 
-body.dark #gifSearchInput {
+html.dark #gifSearchInput {
   background:   var(--border) !important;
   border-color: var(--border-hover) !important;
   color:        var(--text) !important;
 }
 
-body.dark #gifSearchInput::placeholder {
+html.dark #gifSearchInput::placeholder {
   color: var(--text-secondary) !important;
 }
 
-body.dark #gifLoading {
+html.dark #gifLoading {
   color: var(--text-secondary) !important;
 }
 
 /* GIF results grid items */
-body.dark #gifResults img {
+html.dark #gifResults img {
   border-radius: 6px;
   opacity: 0.9;
 }
 
-body.dark #gifResults [style*="color:#94a3b8"] {
+html.dark #gifResults [style*="color:#94a3b8"] {
   color: var(--text-secondary) !important;
 }
 
@@ -1305,15 +1305,15 @@ body.dark #gifResults [style*="color:#94a3b8"] {
      style="flex:1;padding:10px;border:1px solid #e2e8f0;…"
    ─────────────────────────────────────────────────────────────── */
 
-body.dark .list-item-text,
-body.dark [style*="border:1px solid #e2e8f0"],
-body.dark [style*="border: 1px solid #e2e8f0"] {
+html.dark .list-item-text,
+html.dark [style*="border:1px solid #e2e8f0"],
+html.dark [style*="border: 1px solid #e2e8f0"] {
   background:   var(--border) !important;
   border-color: var(--border-hover) !important;
   color:        var(--text) !important;
 }
 
-body.dark .list-item-text::placeholder {
+html.dark .list-item-text::placeholder {
   color: var(--text-secondary) !important;
 }
 
@@ -1324,13 +1324,13 @@ body.dark .list-item-text::placeholder {
    The grey is almost invisible on dark message bubbles.
    ─────────────────────────────────────────────────────────────── */
 
-body.dark .list-card-items [style*="color:#94a3b8"],
-body.dark .list-item-row [style*="color:#94a3b8"] {
+html.dark .list-card-items [style*="color:#94a3b8"],
+html.dark .list-item-row [style*="color:#94a3b8"] {
   color: var(--text-secondary) !important;
 }
 
 /* General strikethrough text inside dark bubbles */
-body.dark .message-bubble [style*="text-decoration:line-through"] {
+html.dark .message-bubble [style*="text-decoration:line-through"] {
   color: var(--text-secondary) !important;
   opacity: 0.8;
 }
@@ -1342,14 +1342,14 @@ body.dark .message-bubble [style*="text-decoration:line-through"] {
    The button gets class .catchup-btn so CSS can win with !important.
    ─────────────────────────────────────────────────────────────── */
 
-body.dark .catchup-btn {
-  border-color: rgba(0, 168, 132, 0.35) !important;
-  color:        var(--brand)                 !important;
-  background:   rgba(0, 168, 132, 0.10) !important;
+html.dark .catchup-btn {
+  border-color: color-mix(in srgb, var(--primary) 35%, transparent) !important;
+  color:        var(--primary)                 !important;
+  background:   color-mix(in srgb, var(--primary) 10%, transparent) !important;
 }
 
-body.dark .catchup-btn:hover {
-  background: rgba(0, 168, 132, 0.20) !important;
+html.dark .catchup-btn:hover {
+  background: color-mix(in srgb, var(--primary) 20%, transparent) !important;
 }
 
 @media (min-width: 901px) {
@@ -1366,16 +1366,16 @@ body.dark .catchup-btn:hover {
      style="font-size:12px;color:#667781"
    ─────────────────────────────────────────────────────────────── */
 
-body.dark .auto-translate-toggle {
+html.dark .auto-translate-toggle {
   border-top-color: var(--border) !important;
 }
 
-body.dark .auto-translate-toggle [style*="color:#667781"] {
+html.dark .auto-translate-toggle [style*="color:#667781"] {
   color: var(--text-secondary) !important;
 }
 
-body.dark .auto-translate-toggle strong,
-body.dark .auto-translate-toggle [style*="font-weight:600"] {
+html.dark .auto-translate-toggle strong,
+html.dark .auto-translate-toggle [style*="font-weight:600"] {
   color: var(--text) !important;
 }
 /* ================================================================
@@ -1403,13 +1403,13 @@ body.dark .auto-translate-toggle [style*="font-weight:600"] {
      <div  style="font-size:11px; color:#64748b">  …preview text…  </div>
    ─────────────────────────────────────────────────────────────── */
 
-body.dark [style*="color: #667eea"],
-body.dark [style*="color:#667eea"] {
+html.dark [style*="color: #667eea"],
+html.dark [style*="color:#667eea"] {
   color: var(--brand) !important;
 }
 
-body.dark [style*="color: #64748b"],
-body.dark [style*="color:#64748b"] {
+html.dark [style*="color: #64748b"],
+html.dark [style*="color:#64748b"] {
   color: var(--text-secondary) !important;
 }
 
@@ -1420,20 +1420,20 @@ body.dark [style*="color:#64748b"] {
              style="…border:1px solid #e2e8f0;background:white;">
    ─────────────────────────────────────────────────────────────── */
 
-body.dark #chatInfoDisappearingSelect {
+html.dark #chatInfoDisappearingSelect {
   background:   var(--border) !important;
   border-color: var(--border-hover) !important;
   color:        var(--text) !important;
 }
 
-body.dark #chatInfoDisappearingSelect option {
+html.dark #chatInfoDisappearingSelect option {
   background: var(--border);
   color:      var(--text);
 }
 
 /* Catch the raw "background: white" anywhere in dark mode */
-body.dark [style*="background: white"],
-body.dark [style*="background:white"] {
+html.dark [style*="background: white"],
+html.dark [style*="background:white"] {
   background: var(--panel-soft) !important;
   color:      var(--text)       !important;
 }
@@ -1446,20 +1446,20 @@ body.dark [style*="background:white"] {
      <p     style="…color:#334155;">                (bold note)
    ─────────────────────────────────────────────────────────────── */
 
-body.dark [style*="color: #475569"],
-body.dark [style*="color:#475569"] {
+html.dark [style*="color: #475569"],
+html.dark [style*="color:#475569"] {
   color: var(--text-secondary) !important;
 }
 
 /* Info boxes — note: inline style uses "background: #f1f5f9" with space */
-body.dark [style*="background: #f1f5f9"],
-body.dark [style*="background:#f1f5f9"] {
+html.dark [style*="background: #f1f5f9"],
+html.dark [style*="background:#f1f5f9"] {
   background: var(--border) !important;
   color:      var(--text) !important;
 }
 
-body.dark [style*="color: #334155"],
-body.dark [style*="color:#334155"] {
+html.dark [style*="color: #334155"],
+html.dark [style*="color:#334155"] {
   color: var(--text) !important;
 }
 
@@ -1474,43 +1474,43 @@ body.dark [style*="color:#334155"] {
    for completeness since the static HTML also has them).
    ─────────────────────────────────────────────────────────────── */
 
-body.dark #joinByLinkInput,
-body.dark #chatTagLabel,
-body.dark #contactPickerSearch,
-body.dark #eventTitle,
-body.dark #eventDate,
-body.dark #eventTime,
-body.dark #eventLocation,
-body.dark #eventDescription {
+html.dark #joinByLinkInput,
+html.dark #chatTagLabel,
+html.dark #contactPickerSearch,
+html.dark #eventTitle,
+html.dark #eventDate,
+html.dark #eventTime,
+html.dark #eventLocation,
+html.dark #eventDescription {
   background:   var(--border) !important;
   border-color: var(--border-hover) !important;
   color:        var(--text) !important;
 }
 
-body.dark #eventCallType {
+html.dark #eventCallType {
   background:   var(--border) !important;
   border-color: var(--border-hover) !important;
   color:        var(--text) !important;
 }
 
-body.dark #eventCallType option {
+html.dark #eventCallType option {
   background: var(--border);
   color:      var(--text);
 }
 
-body.dark #joinByLinkInput::placeholder,
-body.dark #chatTagLabel::placeholder,
-body.dark #contactPickerSearch::placeholder,
-body.dark #eventTitle::placeholder,
-body.dark #eventLocation::placeholder,
-body.dark #eventDescription::placeholder {
+html.dark #joinByLinkInput::placeholder,
+html.dark #chatTagLabel::placeholder,
+html.dark #contactPickerSearch::placeholder,
+html.dark #eventTitle::placeholder,
+html.dark #eventLocation::placeholder,
+html.dark #eventDescription::placeholder {
   color: var(--text-secondary) !important;
 }
 
 /* Catch the broad pattern — covers any remaining
    inline-border inputs the JS might create at runtime */
-body.dark [style*="border: 1px solid #e2e8f0"],
-body.dark [style*="border:1px solid #e2e8f0"] {
+html.dark [style*="border: 1px solid #e2e8f0"],
+html.dark [style*="border:1px solid #e2e8f0"] {
   background:   var(--border) !important;
   border-color: var(--border-hover) !important;
   color:        var(--text) !important;
@@ -1522,9 +1522,9 @@ body.dark [style*="border:1px solid #e2e8f0"] {
    Force text and icon colours into the dark palette.
    ─────────────────────────────────────────────────────────────── */
 
-body.dark input[type="date"],
-body.dark input[type="time"],
-body.dark input[type="datetime-local"] {
+html.dark input[type="date"],
+html.dark input[type="time"],
+html.dark input[type="datetime-local"] {
   background:    var(--border);
   border-color:  var(--border-hover);
   color:         var(--text);
@@ -1542,8 +1542,8 @@ body.dark input[type="datetime-local"] {
 
    FIX 1 — threads.css uses @media (prefers-color-scheme: dark)
             for .presence-dot, which conflicts with the app's
-            JS-driven body.dark toggle.
-            We override it here with both body.dark (app toggle)
+            JS-driven html.dark toggle.
+            We override it here with both html.dark (app toggle)
             AND @media (OS level) so both scenarios are correct.
    ================================================================ */
 
@@ -1562,32 +1562,26 @@ body.dark input[type="datetime-local"] {
               so .presence-dot gets #1e2a32 even though the
               UI is in light mode.
 
-   Our fix: body.dark ensures the correct border in app-dark mode.
-   The app's "switch back to light" path removes body.dark, so
+   Our fix: html.dark ensures the correct border in app-dark mode.
+   The app's "switch back to light" path removes html.dark, so
    even if the OS is dark the app-light border (#fff) is correct
-   because body.dark is absent.  No way to fix Problem B without
+   because html.dark is absent.  No way to fix Problem B without
    editing threads.css, but it only affects the edge case where
    the user manually switched the app to light mode on a dark-OS
    device — a very rare state.
    ─────────────────────────────────────────────────────────────── */
 
-body.dark .presence-dot {
+html.dark .presence-dot {
   border-color: var(--border) !important;    /* app-dark: correct dark border */
 }
 
 
 /* ── Align --border variable to single canonical value ──────────
-   style.css sets --border:#2a3942
-   ui-audit.css sets --border:#2f3f48
-   chat-enhancements.css (loaded last) wins, but to be explicit: */
-
-body.dark {
-  --border: #2a3942;
-}
+    Consolidated in Section 1 html.dark block above. */
 
 
 /* ── Tighten search result card child text colours ───────────────
-   style.css already sets body.dark .search-result-card color,
+   style.css already sets html.dark .search-result-card color,
    but JS sets inline styles on child <span> and <div> elements.
    CSS property inheritance doesn't override children's own inline
    styles, so we need direct attribute-selector overrides.
@@ -1596,18 +1590,18 @@ body.dark {
    and to ensure they win if style.css ever removes its rule.)
    ─────────────────────────────────────────────────────────────── */
 
-body.dark .search-result-card [style*="color:#94a3b8"],
-body.dark .search-result-card [style*="color: #94a3b8"] {
+html.dark .search-result-card [style*="color:#94a3b8"],
+html.dark .search-result-card [style*="color: #94a3b8"] {
   color: var(--text-secondary) !important;   /* timestamp */
 }
 
-body.dark .search-result-card [style*="color:#475569"],
-body.dark .search-result-card [style*="color: #475569"] {
+html.dark .search-result-card [style*="color:#475569"],
+html.dark .search-result-card [style*="color: #475569"] {
   color: var(--text-secondary) !important;   /* message preview text */
 }
 
-body.dark .search-result-card [style*="border-bottom:1px solid #f1f5f9"],
-body.dark .search-result-card [style*="border-bottom: 1px solid #f1f5f9"] {
+html.dark .search-result-card [style*="border-bottom:1px solid #f1f5f9"],
+html.dark .search-result-card [style*="border-bottom: 1px solid #f1f5f9"] {
   border-bottom-color: var(--border) !important;
 }
 /* ================================================================
@@ -1619,7 +1613,7 @@ body.dark .search-result-card [style*="border-bottom: 1px solid #f1f5f9"] {
    ─────────────────────────────
    • Every structural element (.forward-footer, .forward-modal-content,
      .forward-chats-list, etc.) that has a hardcoded light-mode colour
-     is properly paired with a body.dark override in the same file.
+     is properly paired with a html.dark override in the same file.
    • No @media (prefers-color-scheme: dark) blocks.
    • No fixes needed.
 
@@ -1627,13 +1621,13 @@ body.dark .search-result-card [style*="border-bottom: 1px solid #f1f5f9"] {
    ──────────────────────────────
    polish.css is a "final presentation layer" file — it uses
    !important on almost everything to guarantee its layout wins.
-   The two colour rules below lack a body.dark counterpart:
+   The two colour rules below lack a html.dark counterpart:
 
    GAP 1 (line ~260):
      .message-quick-actions .quick-message-action {
        color: #667781 !important;   ← light-mode icon grey
      }
-   No body.dark override exists in polish.css or any later file.
+   No html.dark override exists in polish.css or any later file.
    In dark mode, the emoji/reply/forward mini-button icons inside
    each message's action bar stay at #667781 — too dark against the
    dark bubble background (rgba(32,44,51,0.97)).
@@ -1642,7 +1636,7 @@ body.dark .search-result-card [style*="border-bottom: 1px solid #f1f5f9"] {
      .composer-tools-trigger {
        color: #667781 !important;   ← light-mode icon grey
      }
-   No body.dark override exists. In dark mode, the "+" expand button
+   No html.dark override exists. In dark mode, the "+" expand button
    inside the message composer shell stays #667781 — barely visible
    against the #202c33 composer background.
 
@@ -1655,29 +1649,29 @@ body.dark .search-result-card [style*="border-bottom: 1px solid #f1f5f9"] {
 
 /* ── GAP 1 FIX: message quick-action icon colour in dark mode ──── */
 
-body.dark .message-quick-actions .quick-message-action:hover {
+html.dark .message-quick-actions .quick-message-action:hover {
   color: var(--text) !important;
-  background: rgba(255, 255, 255, 0.10) !important;
+  background: color-mix(in srgb, var(--on-surface) 10%, transparent) !important;
 }
 
 
 /* ── GAP 2 FIX: composer tools trigger ("+") in dark mode ─────── */
 
-body.dark .composer-tools-trigger {
+html.dark .composer-tools-trigger {
   color: var(--text-secondary) !important;
 }
 
-body.dark .composer-tools-trigger:hover,
-body.dark .composer-tools-trigger:focus-visible {
+html.dark .composer-tools-trigger:hover,
+html.dark .composer-tools-trigger:focus-visible {
   color: var(--text) !important;
-  background: rgba(134, 150, 160, 0.18) !important;
+  background: color-mix(in srgb, var(--on-surface-variant) 18%, transparent) !important;
 }
 /* ================================================================
    GAPS FOUND IN calls-ui.css + translation-ui.css
    nishadsl.com/works/chat — append to chat-enhancements.css
    ================================================================
 
-   Both files use body.dark correctly — no @media conflicts.
+   Both files use html.dark correctly — no @media conflicts.
    Both load before chat-enhancements.css so our !important wins.
 
    calls-ui.css GAPS (6 items)
@@ -1738,45 +1732,45 @@ body.dark .composer-tools-trigger:focus-visible {
 
 /* ── GAP 1 + 2: Call-back action buttons ──────────────────────── */
 
-body.dark .call-history-action {
+html.dark .call-history-action {
   color: var(--brand) !important;
 }
 
-body.dark .call-history-action:hover,
-body.dark .call-history-action:focus-visible {
-  background: rgba(0, 168, 132, 0.18) !important;
+html.dark .call-history-action:hover,
+html.dark .call-history-action:focus-visible {
+  background: color-mix(in srgb, var(--primary) 18%, transparent) !important;
   outline: none;
 }
 
 
 /* ── GAP 3: "Call again" primary button ────────────────────────── */
 
-body.dark .call-again-btn {
+html.dark .call-again-btn {
   background: var(--brand) !important;
 }
 
-body.dark .call-again-btn:hover,
-body.dark .call-again-btn:focus-visible {
-  background: #02b899 !important;
+html.dark .call-again-btn:hover,
+html.dark .call-again-btn:focus-visible {
+  background: var(--primary-container) !important;
 }
 
 
 /* ── GAP 4: Multi-select floating toolbar action buttons ─────── */
 
-body.dark .message-selection-toolbar button {
-  background: rgba(0, 168, 132, 0.16) !important;
-  color: var(--brand) !important;
+html.dark .message-selection-toolbar button {
+  background: color-mix(in srgb, var(--primary) 16%, transparent) !important;
+  color: var(--primary) !important;
 }
 
-body.dark .message-selection-toolbar button:hover {
-  background: rgba(0, 168, 132, 0.26) !important;
+html.dark .message-selection-toolbar button:hover {
+  background: color-mix(in srgb, var(--primary) 26%, transparent) !important;
 }
 
 
 /* ── GAP 5: Bulk-select checkbox (checked state) ─────────────── */
 
-body.dark .call-history-row.selected .call-history-check,
-body.dark .call-history-check.selected {
+html.dark .call-history-row.selected .call-history-check,
+html.dark .call-history-check.selected {
   border-color: var(--brand) !important;
   background:   var(--brand) !important;
 }
@@ -1784,38 +1778,38 @@ body.dark .call-history-check.selected {
 
 /* ── GAP 6: Delete / clear-all toolbar button ────────────────── */
 
-body.dark .call-history-toolbar button[data-call-action^="delete"],
-body.dark .call-history-toolbar button[data-call-action="clear-all"] {
-  color: #ff8a92 !important;
+html.dark .call-history-toolbar button[data-call-action^="delete"],
+html.dark .call-history-toolbar button[data-call-action="clear-all"] {
+  color: var(--error) !important;
 }
 
 
 /* ── GAP 7: Translate modal title icon ───────────────────────── */
 
-body.dark .translate-title-icon {
+html.dark .translate-title-icon {
   color: var(--brand) !important;
 }
 
 
 /* ── GAP 8: "Copy" / action button inside translate output ───── */
 
-body.dark .translate-output-heading button {
+html.dark .translate-output-heading button {
   color: var(--brand) !important;
 }
 
-body.dark .translate-output-heading button:hover {
-  color: #59d9be !important;
+html.dark .translate-output-heading button:hover {
+  color: var(--primary-container) !important;
 }
 
 
 /* ── Bonus: call-history filters active-filter pill ─────────────
-   Already covered in calls-ui.css body.dark block but the
+   Already covered in calls-ui.css html.dark block but the
    hover state was missing:                                       */
 
-body.dark .call-history-filters button:hover {
-  background: rgba(0, 168, 132, 0.10) !important;
-  border-color: rgba(0, 168, 132, 0.20) !important;
-  color: var(--brand) !important;
+html.dark .call-history-filters button:hover {
+  background: color-mix(in srgb, var(--primary) 10%, transparent) !important;
+  border-color: color-mix(in srgb, var(--primary) 20%, transparent) !important;
+  color: var(--primary) !important;
 }
 
 

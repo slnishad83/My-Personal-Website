@@ -224,6 +224,17 @@
         .auth-form.active {
           display: block !important;
         }
+        .auth-tab.active {
+          background: var(--surface-container-lowest, #fff);
+          color: var(--on-surface, #191b24);
+          box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+          font-weight: 700;
+        }
+        html.dark .auth-tab.active {
+          background: var(--surface-container-high, #282933);
+          color: var(--on-surface, #e1e1ef);
+          box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+        }
 
         /* Errors and Validation colors */
         .auth-form .form-group input.error {
@@ -232,10 +243,11 @@
         }
         .field-error {
           color: var(--error);
-          font-size: 11px;
+          font-size: 12px;
           margin-top: 4px;
           display: none;
-          font-family: monospace;
+          font-family: 'Inter', sans-serif;
+          line-height: 1.4;
         }
         .field-error.show {
           display: block;
@@ -253,11 +265,22 @@
           z-index: 1000;
           align-items: center;
           justify-content: center;
-          background: rgba(0, 0, 0, 0.4);
+          background: rgba(0, 0, 0, 0.5);
           backdrop-filter: blur(8px);
+          -webkit-backdrop-filter: blur(8px);
+          opacity: 0;
+          transition: opacity 0.2s ease;
         }
         .modal.show {
           display: flex;
+          opacity: 1;
+        }
+        .animate-in {
+          animation: fadeInZoom 0.2s ease-out;
+        }
+        @keyframes fadeInZoom {
+          from { opacity: 0; transform: scale(0.95); }
+          to { opacity: 1; transform: scale(1); }
         }
 
         /* Toggle Dark Mode Button */
@@ -292,7 +315,7 @@
         body {
           min-height: 100dvh;
         }
-        .dark body {
+        html.dark body, html.dark {
           background: var(--background);
           color: var(--on-surface);
         }
@@ -321,7 +344,7 @@
         :focus-visible {
           outline: 2px solid var(--primary);
           outline-offset: 2px;
-          box-shadow: 0 0 0 4px rgba(83, 72, 212, 0.2);
+          box-shadow: 0 0 0 4px color-mix(in srgb, var(--primary) 20%, transparent);
         }
         :focus:not(:focus-visible) {
           outline: none;
@@ -355,9 +378,9 @@
     </button>
 
     <!-- Main Content Canvas -->
-    <main class="relative z-10 flex-grow flex flex-col items-center justify-center px-margin-mobile py-lg">
+    <main class="relative z-10 flex-grow flex flex-col items-center justify-center px-margin-mobile py-lg" role="main">
       <!-- Login Container -->
-      <div class="w-full max-w-md animate-float py-md">
+      <div class="w-full max-w-md py-md">
         
         <!-- Logo/Identity Anchor: NSL Chat Style -->
         <div class="flex flex-col items-center mb-lg space-y-sm">
@@ -382,13 +405,13 @@
           
           <div class="relative z-10">
             <!-- Sleek Switch Tabs (Login vs Register) -->
-            <div class="auth-tabs flex gap-1 mb-lg p-1 bg-slate-100 dark:bg-[#1d2026] rounded-lg" role="tablist">
-              <button class="auth-tab flex-grow active text-center py-2 rounded font-semibold text-xs transition-all uppercase tracking-wider text-slate-500 hover:text-primary dark:text-[#b9cbc1] dark:hover:text-[#34ffc5]" role="tab" aria-selected="true" data-tab="login">Secure Access</button>
-              <button class="auth-tab flex-grow text-center py-2 rounded font-semibold text-xs transition-all uppercase tracking-wider text-slate-500 hover:text-primary dark:text-[#b9cbc1] dark:hover:text-[#34ffc5]" role="tab" aria-selected="false" data-tab="register">Initiate Protocol</button>
+            <div class="auth-tabs flex gap-1 mb-lg p-1 bg-slate-100 dark:bg-[#1d2026] rounded-lg" role="tablist" aria-label="Authentication method">
+              <button class="auth-tab flex-grow active text-center py-2.5 rounded-md font-semibold text-xs transition-all uppercase tracking-wider text-slate-500 hover:text-primary dark:text-[#b9cbc1] dark:hover:text-[#34ffc5]" role="tab" aria-selected="true" aria-controls="loginForm" id="tab-login" data-tab="login">Secure Access</button>
+              <button class="auth-tab flex-grow text-center py-2.5 rounded-md font-semibold text-xs transition-all uppercase tracking-wider text-slate-500 hover:text-primary dark:text-[#b9cbc1] dark:hover:text-[#34ffc5]" role="tab" aria-selected="false" aria-controls="registerForm" id="tab-register" data-tab="register">Initiate Protocol</button>
             </div>
 
             <!-- Login Form -->
-            <form id="loginForm" class="auth-form active space-y-md">
+            <form id="loginForm" class="auth-form active space-y-md" aria-labelledby="tab-login" role="tabpanel">
               <h2 class="font-headline-lg-mobile text-headline-lg-mobile text-on-surface dark:text-white mb-xs">Authorization</h2>
               <p class="font-body-sm text-body-sm text-on-surface-variant dark:text-[#b9cbc1] mb-lg">Please enter your verified credentials to access the Nexus core network.</p>
 
@@ -411,7 +434,7 @@
                     <span class="material-symbols-outlined text-outline dark:text-slate-500">key</span>
                   </div>
                   <input class="w-full bg-transparent border-none focus:ring-0 text-on-surface dark:text-white font-data-mono text-sm py-sm pl-8 placeholder:text-slate-400 dark:placeholder:text-white/20" id="loginPassword" placeholder="••••••••••••" type="password" required autocomplete="current-password"/>
-                  <button type="button" class="password-toggle absolute right-1 top-1/2 -translate-y-1/2 text-outline dark:text-slate-500 hover:text-primary dark:hover:text-[#34ffc5]" data-password-toggle="loginPassword" aria-label="Show password" title="Show password">
+                  <button type="button" class="password-toggle absolute right-1 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center text-outline dark:text-slate-500 hover:text-primary dark:hover:text-[#34ffc5] rounded-full transition-colors" data-password-toggle="loginPassword" aria-label="Show password" title="Show password">
                     <span class="material-symbols-outlined text-lg">visibility</span>
                   </button>
                 </div>
@@ -438,7 +461,7 @@
             </form>
 
             <!-- Registration Form -->
-            <form id="registerForm" class="auth-form space-y-md">
+            <form id="registerForm" class="auth-form space-y-md" aria-labelledby="tab-register" role="tabpanel">
               <h2 class="font-headline-lg-mobile text-headline-lg-mobile text-on-surface dark:text-white mb-xs">Establish Identity</h2>
               <p class="font-body-sm text-body-sm text-on-surface-variant dark:text-[#b9cbc1] mb-lg">Synthesize credential profile below.</p>
 
@@ -485,7 +508,7 @@
                     <span class="material-symbols-outlined text-outline dark:text-slate-500">key</span>
                   </div>
                   <input class="w-full bg-transparent border-none focus:ring-0 text-on-surface dark:text-white font-data-mono text-sm py-sm pl-8 placeholder:text-slate-400 dark:placeholder:text-white/20" id="registerPassword" placeholder="Min 6 characters" type="password" required autocomplete="new-password"/>
-                  <button type="button" class="password-toggle absolute right-1 top-1/2 -translate-y-1/2 text-outline dark:text-slate-500 hover:text-primary dark:hover:text-[#34ffc5]" data-password-toggle="registerPassword" aria-label="Show password" title="Show password">
+                  <button type="button" class="password-toggle absolute right-1 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center text-outline dark:text-slate-500 hover:text-primary dark:hover:text-[#34ffc5] rounded-full transition-colors" data-password-toggle="registerPassword" aria-label="Show password" title="Show password">
                     <span class="material-symbols-outlined text-lg">visibility</span>
                   </button>
                 </div>
@@ -507,8 +530,8 @@
             <div class="mt-lg pt-lg border-t border-slate-100 dark:border-white/10 text-center">
               
               <!-- Google login button -->
-              <button id="googleAuthBtn" class="w-full py-2 mb-md border border-slate-200 dark:border-white/10 rounded-lg bg-white/40 hover:bg-white dark:bg-[#161d28]/40 dark:hover:bg-[#1d2634] transition-all active:scale-[0.98] flex items-center justify-center gap-sm font-semibold text-sm text-on-surface dark:text-[#edf3f6]">
-                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none">
+              <button id="googleAuthBtn" class="w-full py-2.5 mb-md border border-slate-200 dark:border-white/10 rounded-lg bg-white/40 hover:bg-white dark:bg-[#161d28]/40 dark:hover:bg-[#1d2634] transition-all active:scale-[0.98] flex items-center justify-center gap-sm font-semibold text-sm text-on-surface dark:text-[#edf3f6]" aria-label="Sign in with Google">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                   <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/>
                   <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
                   <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
@@ -520,11 +543,12 @@
               <!-- App Download option -->
               <button
                 id="installAppBtn"
-                class="w-full py-2 border border-dashed border-primary dark:border-[#34ffc5] rounded-lg text-primary dark:text-[#34ffc5] bg-transparent hover:bg-slate-50 dark:hover:bg-[#1d2634]/30 transition-all active:scale-[0.98] flex items-center justify-center gap-sm font-semibold text-sm"
+                class="w-full py-2.5 border border-dashed border-primary dark:border-[#34ffc5] rounded-lg text-primary dark:text-[#34ffc5] bg-transparent hover:bg-slate-50 dark:hover:bg-[#1d2634]/30 transition-all active:scale-[0.98] flex items-center justify-center gap-sm font-semibold text-sm"
                 type="button"
                 style="display: none"
+                aria-label="Download NSL Chat app"
               >
-                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                   <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
                   <polyline points="7 10 12 15 17 10"/>
                   <line x1="12" y1="15" x2="12" y2="3"/>
@@ -558,10 +582,10 @@
 
     <!-- Password Reset Modal -->
     <div id="resetModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="resetModalTitle">
-      <div class="glass-panel w-full max-w-sm rounded-xl p-md md:p-lg border border-white/40 dark:border-white/10 relative flex flex-col gap-md text-left mx-margin-mobile">
+      <div class="glass-panel w-full max-w-sm rounded-xl p-md md:p-lg border border-white/40 dark:border-white/10 relative flex flex-col gap-md text-left mx-margin-mobile animate-in">
         <div class="modal-header flex items-center justify-between border-b border-slate-100 dark:border-white/10 pb-sm">
           <h3 id="resetModalTitle" class="font-headline-lg-mobile text-headline-lg-mobile text-on-surface dark:text-white">Reset Password</h3>
-          <button type="button" class="close-modal resetClose text-slate-400 dark:text-slate-500 hover:text-slate-700 dark:hover:text-white font-bold text-2xl" aria-label="Close">&times;</button>
+          <button type="button" class="close-modal resetClose w-8 h-8 flex items-center justify-center text-slate-400 dark:text-slate-500 hover:text-slate-700 dark:hover:text-white hover:bg-surface-variant/30 rounded-full transition-colors" aria-label="Close reset password dialog">&times;</button>
         </div>
         <div class="form-group space-y-xs">
           <label class="font-label-mono text-label-mono text-on-surface-variant dark:text-[#b9cbc1] uppercase ml-xs" for="resetEmail">Email address</label>

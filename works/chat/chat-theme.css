@@ -227,6 +227,28 @@ textarea {
   to { opacity: 1; transform: scale(1); }
 }
 
+/* ── Message send animation ──────────────────────────── */
+@keyframes messageSendIn {
+  0% { opacity: 0; transform: translateY(8px) scale(0.96); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes typing-dot {
+  0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
+  30% { transform: translateY(-4px); opacity: 1; }
+}
+.msg-bubble.animate-send {
+  animation: messageSendIn 0.25s ease-out;
+}
+
+/* ── Smooth scroll-to-bottom ─────────────────────────── */
+#messages-wrap {
+  scroll-behavior: smooth;
+}
+@media (prefers-reduced-motion: reduce) {
+  #messages-wrap { scroll-behavior: auto; }
+}
+
 /* ── Glass panel dark mode override ──────────────────── */
 html.dark .glass-panel {
   background: rgba(17, 19, 28, 0.6) !important;
@@ -246,6 +268,7 @@ html:not(.dark) .glass-panel {
   overflow-wrap: break-word;
   line-height: 1.45;
   font-size: 14px;
+  position: relative;
 }
 .msg-sent {
   align-self: flex-end;
@@ -261,6 +284,14 @@ html:not(.dark) .glass-panel {
 }
 html.dark .msg-sent { background: var(--primary-fixed-dim); color: var(--on-primary-fixed); }
 html.dark .msg-received { background: var(--surface-container-highest); }
+
+/* ── Message status indicators ─────────────────────────── */
+.msg-status-pending { opacity: 0.5; }
+.msg-status-sent { opacity: 1; }
+.msg-status-delivered { opacity: 1; }
+.msg-status-read { color: var(--primary) !important; }
+.msg-status-failed { color: var(--error) !important; cursor: pointer; }
+.msg-status-failed:hover { opacity: 0.8; }
 
 /* ── Bottom nav active state ─────────────────────────── */
 .bottom-nav-item.active { color: var(--primary) !important; }
@@ -283,10 +314,22 @@ html.dark .tab-item.active {
 .bubble-media img, .bubble-media video { max-width: 100%; height: auto; }
 
 /* ── Chat list item hover/active ─────────────────────── */
-.chat-list-item { cursor: pointer; border-radius: 12px; transition: background 0.15s; }
+.chat-list-item { cursor: pointer; border-radius: 12px; transition: background 0.15s ease, transform 0.1s ease; }
 .chat-list-item:hover { background: var(--surface-container-high); }
-.chat-list-item.active { background: var(--surface-container-highest); }
-html.dark .chat-list-item.active { background: rgba(196, 192, 255, 0.08); }
+.chat-list-item:active { transform: scale(0.98); }
+.chat-list-item.active { background: var(--surface-container-highest); border-left: 3px solid var(--primary); }
+html.dark .chat-list-item.active { background: rgba(196, 192, 255, 0.08); border-left-color: var(--primary); }
+
+/* ── Empty state improved styling ────────────────────── */
+.empty-state {
+  padding: 48px 24px;
+  text-align: center;
+}
+.empty-state .material-symbols-outlined {
+  font-size: 56px;
+  opacity: 0.35;
+  margin-bottom: 12px;
+}
 
 /* ── Chat list: extra bottom padding so last item clears the fixed bottom-nav ── */
 @media (max-width: 767px) {
@@ -321,6 +364,14 @@ html.dark .chat-list-item.active { background: rgba(196, 192, 255, 0.08); }
   #camera-overlay > div:last-child { padding-bottom: calc(16px + env(safe-area-inset-bottom)); }
   #media-viewer .p-6 { padding-top: calc(24px + env(safe-area-inset-top)); }
   #call-screen { padding-top: env(safe-area-inset-top); }
+}
+
+/* ── Call screen gradient background ──────────────────── */
+#call-screen {
+  background: linear-gradient(180deg, var(--primary-container) 0%, var(--background) 40%, var(--background) 100%);
+}
+html.dark #call-screen {
+  background: linear-gradient(180deg, color-mix(in srgb, var(--primary) 15%, var(--background)) 0%, var(--background) 40%, var(--background) 100%);
 }
 
 /* ── Touch feedback ──────────────────────────────────── */
@@ -460,6 +511,24 @@ button, a, [role="button"], input, textarea, select {
   min-width: 0;
 }
 
+/* Animated waveform bars */
+#recording-waveform .wave-bar {
+  width: 3px;
+  background: var(--error);
+  border-radius: 2px;
+  animation: waveBar 0.8s ease-in-out infinite;
+}
+#recording-waveform .wave-bar:nth-child(1) { animation-delay: 0s; }
+#recording-waveform .wave-bar:nth-child(2) { animation-delay: 0.1s; }
+#recording-waveform .wave-bar:nth-child(3) { animation-delay: 0.2s; }
+#recording-waveform .wave-bar:nth-child(4) { animation-delay: 0.3s; }
+#recording-waveform .wave-bar:nth-child(5) { animation-delay: 0.4s; }
+
+@keyframes waveBar {
+  0%, 100% { height: 6px; }
+  50% { height: 20px; }
+}
+
 /* ── Pulse animation for recording dot ───────────────── */
 @keyframes pulse {
   0%, 100% { opacity: 1; }
@@ -545,16 +614,39 @@ button, a, [role="button"], input, textarea, select {
 .loading-skeleton {
   background: linear-gradient(90deg, var(--surface-container) 25%, var(--surface-container-high) 50%, var(--surface-container) 75%);
   background-size: 200% 100%;
-  animation: shimmer 1.5s infinite;
+  animation: shimmer 1.5s ease-in-out infinite;
   border-radius: 8px;
 }
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
 
-/* ── Message status indicators ─────────────────────────── */
-.msg-status-pending { opacity: 0.5; }
-.msg-status-sent { opacity: 1; }
-.msg-status-delivered { opacity: 1; }
-.msg-status-read { color: var(--primary) !important; }
-.msg-status-failed { color: var(--error) !important; }
+/* Chat list skeleton item */
+.skeleton-chat-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+}
+.skeleton-chat-item .skeleton-avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.skeleton-chat-item .skeleton-lines {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.skeleton-chat-item .skeleton-line {
+  height: 12px;
+  border-radius: 6px;
+}
+.skeleton-chat-item .skeleton-line:first-child { width: 60%; }
+.skeleton-chat-item .skeleton-line:last-child { width: 80%; }
 
 /* ── Smooth page transitions ───────────────────────────── */
 .view-enter { animation: viewSlideIn 0.2s ease-out; }
@@ -1496,4 +1588,38 @@ html[data-theme="light"], html:not(.dark) {
   .chat-list-item:hover {
     transform: translateX(2px) !important;
   }
+}
+
+/* ── Foldable device support (Samsung Fold, Surface Duo) ──────── */
+@media (spanning: single-fold-vertical) {
+  #sidebar { width: 72px !important; }
+  #sidebar .xl\\:block { display: none !important; }
+  #chat-list-sidebar { width: clamp(240px, 28vw, 320px) !important; }
+  #detail-panel { display: flex !important; width: 320px !important; min-width: 320px !important; position: relative !important; box-shadow: none !important; }
+  #bottom-nav { display: none !important; }
+  #app { padding-bottom: 0 !important; }
+}
+
+/* ── Foldable horizontal span (Surface Duo landscape) ─────────── */
+@media (spanning: single-fold-horizontal) {
+  #sidebar { width: 72px !important; }
+  #sidebar .xl\\:block { display: none !important; }
+  #chat-list-sidebar { width: clamp(240px, 28vw, 320px) !important; }
+  #detail-panel { display: flex !important; width: 340px !important; min-width: 340px !important; position: relative !important; box-shadow: none !important; }
+  #bottom-nav { display: none !important; }
+  #app { padding-bottom: 0 !important; }
+}
+
+/* ── Tablet overlay panels (768-1024px portrait) ──────────────── */
+@media (min-width: 768px) and (max-width: 1023px) {
+  .overlay > div { max-width: min(560px, 88vw) !important; max-height: 88vh !important; }
+  #profile-overlay > div,
+  #new-chat-overlay > div,
+  #confirm-overlay > div { max-width: min(480px, 85vw) !important; }
+}
+
+/* ── Safe area for notch devices (landscape) ──────────────────── */
+@media (orientation: landscape) and (max-height: 500px) {
+  #chat-header { padding-top: env(safe-area-inset-top, 0px) !important; }
+  #input-bar { padding-bottom: env(safe-area-inset-bottom, 0px) !important; }
 }

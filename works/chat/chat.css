@@ -125,9 +125,8 @@ body {
 html, body, #app, #sidebar, #chat-list-sidebar, #chat-area, #detail-panel,
 #chat-header, #input-bar, #format-bar, #recording-bar,
 #sidebar-nav-container .tab-item, #bottom-nav .bottom-nav-item,
-.glass-panel, .msg-sent, .msg-received, .message-bubble,
-#attach-menu, #emoji-picker, #scroll-to-bottom {
-  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+.glass-panel, #attach-menu, #emoji-picker, #scroll-to-bottom {
+  transition: background-color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
 }
 
 /* Theme switching: disable all transitions for instant swap */
@@ -164,9 +163,10 @@ html.theme-switching *::after {
   -webkit-backdrop-filter: blur(16px);
   backdrop-filter: blur(16px);
   border: 1px solid color-mix(in srgb, var(--outline-variant) 15%, transparent);
+  transition: background 0.2s ease, border-color 0.2s ease;
 }
 
-.light .glass-panel {
+html.light .glass-panel, .light .glass-panel {
   background: color-mix(in srgb, var(--surface-container-lowest) 60%, transparent);
   border: 1px solid color-mix(in srgb, var(--primary) 8%, transparent);
 }
@@ -255,6 +255,11 @@ html.dark .message-gradient-sent {
   border: 1px solid var(--outline-variant);
   max-width: 100%;
   background: var(--surface-container-high);
+  transition: background 0.2s ease;
+}
+html.dark .contact-card {
+  background: var(--surface-container);
+  border-color: var(--outline-variant);
 }
 .contact-card .contact-header {
   display: flex;
@@ -297,13 +302,17 @@ html.dark .message-gradient-sent {
   text-align: center;
   font-size: 12px;
   font-weight: bold;
-  padding: 8px;
+  padding: 10px;
+  min-height: 44px;
   background: var(--primary);
   color: var(--on-primary);
   border: none;
   cursor: pointer;
-  transition: opacity 0.15s;
+  transition: opacity 0.15s, filter 0.15s;
 }
 .contact-card .send-request-btn:hover {
-  opacity: 0.85;
+  filter: brightness(1.1);
+}
+.contact-card .send-request-btn:active {
+  transform: scale(0.98);
 }
