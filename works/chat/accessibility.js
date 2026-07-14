@@ -16,6 +16,7 @@ const A11y = {
   },
 
   _addSkipNav() {
+    if (document.getElementById('skip-nav')) return;
     const nav = document.createElement('a');
     nav.href = '#msg-input';
     nav.className = 'sr-only';

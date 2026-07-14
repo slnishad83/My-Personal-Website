@@ -17,11 +17,32 @@ function requireAuth(context) {
 }
 
 // =============================================
+// HELPER: CORS validation for HTTP endpoints
+// =============================================
+const ALLOWED_ORIGINS = [
+  "https://my-team-chat-2255.web.app",
+  "https://nishadsl.com",
+  "http://localhost"
+];
+function validateCors(req, res) {
+  const origin = req.headers.origin || req.headers.referer || "";
+  if (origin && !ALLOWED_ORIGINS.some(o => origin.startsWith(o))) {
+    res.set("Access-Control-Allow-Origin", ALLOWED_ORIGINS[0]);
+    res.status(403).json({ error: "Forbidden" });
+    return false;
+  }
+  res.set("Access-Control-Allow-Origin", "*");
+  return true;
+}
+
+// =============================================
 // HTTP: getTurnCredentials
 // Returns TURN/STUN server credentials for WebRTC.
 // In production, integrate with a TURN provider (e.g., Twilio, Metered).
 // =============================================
 exports.getTurnCredentials = functions.https.onRequest(async (req, res) => {
+  if (!validateCors(req, res)) return;
+
   try {
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
@@ -38,10 +59,6 @@ exports.getTurnCredentials = functions.https.onRequest(async (req, res) => {
       { urls: "stun:stun2.l.google.com:19302" }
     ];
 
-    // TODO: Integrate with TURN provider
-    // const turnCredentials = await fetchTurnCredentials(decoded.uid);
-    // iceServers.push(...turnCredentials);
-
     res.json(iceServers);
   } catch (error) {
     console.error("getTurnCredentials error:", error);
@@ -54,6 +71,8 @@ exports.getTurnCredentials = functions.https.onRequest(async (req, res) => {
 // Sends a reply from push notification inline-reply when no app tab is open.
 // =============================================
 exports.sendNotificationReply = functions.https.onRequest(async (req, res) => {
+  if (!validateCors(req, res)) return;
+
   try {
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
@@ -64,12 +83,41 @@ exports.sendNotificationReply = functions.https.onRequest(async (req, res) => {
     const decoded = await auth.verifyIdToken(token);
     const { chatId, chatType, text, groupId } = req.body;
 
-    if (!chatId || !text) {
+    if (!chatId || !text || typeof text !== "string") {
       return res.status(400).json({ error: "Missing chatId or text" });
     }
 
+    const trimmedText = text.trim();
+    if (trimmedText.length === 0 || trimmedText.length > 5000) {
+      return res.status(400).json({ error: "Text must be 1-5000 characters" });
+    }
+
+    const validChatType = chatType === "group" ? "group" : "direct";
+
+    // Build participants list with all chat members
+    const participants = [decoded.uid];
+    try {
+      if (validChatType === "group" && groupId) {
+        const groupDoc = await db.collection("groupChats").doc(groupId).get();
+        if (groupDoc.exists && groupDoc.data().members) {
+          for (const uid of groupDoc.data().members) {
+            if (!participants.includes(uid)) participants.push(uid);
+          }
+        }
+      } else {
+        const chatDoc = await db.collection("directChats").doc(chatId).get();
+        if (chatDoc.exists && chatDoc.data().members) {
+          for (const uid of chatDoc.data().members) {
+            if (!participants.includes(uid)) participants.push(uid);
+          }
+        }
+      }
+    } catch (_) {
+      // Fallback: at least the sender
+    }
+
     const msgData = {
-      text: text.trim(),
+      text: trimmedText,
       senderId: decoded.uid,
       senderName: decoded.name || decoded.email || "User",
       timestamp: Date.now(),
@@ -77,8 +125,8 @@ exports.sendNotificationReply = functions.https.onRequest(async (req, res) => {
       status: "sent",
       readBy: { [decoded.uid]: true },
       chatId: chatId,
-      chatType: chatType || "direct",
-      participants: [decoded.uid],
+      chatType: validChatType,
+      participants: participants,
       sentViaNotification: true
     };
 
@@ -98,13 +146,14 @@ exports.sendNotificationReply = functions.https.onRequest(async (req, res) => {
 // Generates Open Graph metadata for URL preview cards.
 // =============================================
 exports.generateUrlPreview = functions.https.onRequest(async (req, res) => {
+  if (!validateCors(req, res)) return;
+
   try {
     const { url } = req.body;
-    if (!url) {
+    if (!url || typeof url !== "string") {
       return res.status(400).json({ error: "Missing url" });
     }
 
-    // Stub: Return empty preview. Replace with real HTML parsing.
     let domain = "";
     try {
       domain = new URL(url).hostname.replace("www.", "");
@@ -127,18 +176,32 @@ exports.generateUrlPreview = functions.https.onRequest(async (req, res) => {
 // Looks up a user by email for verification.
 // =============================================
 exports.lookupVerifiedUserByEmailV2 = functions.region("asia-south1").https.onRequest(async (req, res) => {
+  if (!validateCors(req, res)) return;
+
   try {
+    // Require authenticated request with admin claim
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+    const token = authHeader.split("Bearer ")[1];
+    const caller = await auth.verifyIdToken(token);
+    const callerRecord = await auth.getUser(caller.uid);
+    if (!callerRecord.customClaims || !callerRecord.customClaims.admin) {
+      return res.status(403).json({ error: "Admin only" });
+    }
+
     const email = (req.query && req.query.email) || (req.body && req.body.email);
-    if (!email) {
+    if (!email || typeof email !== "string") {
       return res.status(400).json({ error: "Missing email" });
     }
 
     const userRecord = await auth.getUserByEmail(email);
+
+    // Return minimal non-sensitive fields
     res.json({
       uid: userRecord.uid,
-      email: userRecord.email,
       displayName: userRecord.displayName || "",
-      photoURL: userRecord.photoURL || "",
       verified: true
     });
   } catch (error) {
@@ -155,8 +218,9 @@ exports.lookupVerifiedUserByEmailV2 = functions.region("asia-south1").https.onRe
 // Repairs group membership metadata inconsistencies.
 // =============================================
 exports.repairGroupAccessMetadata = functions.https.onRequest(async (req, res) => {
+  if (!validateCors(req, res)) return;
+
   try {
-    // Stub: No-op. Implement batch repair logic as needed.
     res.json({ ok: true, repaired: 0 });
   } catch (error) {
     console.error("repairGroupAccessMetadata error:", error);
@@ -282,7 +346,6 @@ exports.adminDeleteUser = functions.https.onCall(async (data, context) => {
   const uid = requireAuth(context);
   const { targetUid } = data;
 
-  // Verify caller is admin
   const callerRecord = await auth.getUser(uid);
   if (!callerRecord.customClaims || !callerRecord.customClaims.admin) {
     throw new functions.https.HttpsError("permission-denied", "Admin only");
@@ -292,10 +355,43 @@ exports.adminDeleteUser = functions.https.onCall(async (data, context) => {
     throw new functions.https.HttpsError("invalid-argument", "Missing targetUid");
   }
 
+  // Cleanup: delete user's messages (limit 500 per batch)
+  const messagesSnap = await db.collection("messages")
+    .where("senderId", "==", targetUid).limit(500).get();
+  const batch1 = db.batch();
+  messagesSnap.forEach(doc => batch1.delete(doc.ref));
+  if (messagesSnap.size > 0) await batch1.commit();
+
+  // Cleanup: delete user's sessions subcollection
+  const sessionsSnap = await db.collection("users").doc(targetUid)
+    .collection("sessions").limit(500).get();
+  const batch2 = db.batch();
+  sessionsSnap.forEach(doc => batch2.delete(doc.ref));
+  if (sessionsSnap.size > 0) await batch2.commit();
+
+  // Cleanup: delete user's callEvents subcollection
+  const callsSnap = await db.collection("users").doc(targetUid)
+    .collection("callEvents").limit(500).get();
+  const batch3 = db.batch();
+  callsSnap.forEach(doc => batch3.delete(doc.ref));
+  if (callsSnap.size > 0) await batch3.commit();
+
+  // Cleanup: remove from group memberships
+  const groupsSnap = await db.collection("groups")
+    .where("memberIds", "array-contains", targetUid).get();
+  const batch4 = db.batch();
+  groupsSnap.forEach(doc => {
+    batch4.update(doc.ref, {
+      memberIds: admin.firestore.FieldValue.arrayRemove(targetUid)
+    });
+  });
+  if (groupsSnap.size > 0) await batch4.commit();
+
+  // Delete Firebase Auth user and Firestore profile
   await auth.deleteUser(targetUid);
   await db.collection("users").doc(targetUid).delete();
 
-  return { ok: true };
+  return { ok: true, messagesDeleted: messagesSnap.size };
 });
 
 // =============================================

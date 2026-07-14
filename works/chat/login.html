@@ -23,7 +23,8 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
-    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;700&amp;family=Geist:wght@400;600;700&amp;family=Inter:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;700&amp;family=Manrope:wght@400;600;700&amp;family=Inter:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+    <link rel="stylesheet" href="chat-theme.css">
     <script>
       (function() {
         var mode = localStorage.getItem("themeMode") || "system";
@@ -113,11 +114,11 @@
               },
               "fontFamily": {
                       "label-mono": ["JetBrains Mono"],
-                      "headline-xl": ["Geist", "Inter"],
-                      "headline-lg": ["Geist", "Inter"],
-                      "body-sm": ["Geist", "Inter"],
-                      "body-md": ["Geist", "Inter"],
-                      "headline-lg-mobile": ["Geist", "Inter"]
+                      "headline-xl": ["Manrope", "Inter"],
+                      "headline-lg": ["Manrope", "Inter"],
+                      "body-sm": ["Manrope", "Inter"],
+                      "body-md": ["Manrope", "Inter"],
+                      "headline-lg-mobile": ["Manrope", "Inter"]
               },
               "fontSize": {
                       "label-mono": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "500"}],
@@ -132,48 +133,6 @@
         }
     </script>
     <style>
-        :root {
-          --primary: #008069; --on-primary: #ffffff; --primary-container: #b3f5e0;
-          --on-primary-container: #002117; --primary-fixed: #b3f5e0; --primary-fixed-dim: #7ddbc7;
-          --on-primary-fixed: #002117; --on-primary-fixed-variant: #005042;
-          --secondary: #a90050; --on-secondary: #ffffff; --secondary-container: #ffd9e0;
-          --on-secondary-container: #3f001a; --secondary-fixed: #ffd9e0; --secondary-fixed-dim: #ffb1c4;
-          --on-secondary-fixed: #3f001a; --on-secondary-fixed-variant: #8f0043;
-          --tertiary: #5a5d89; --on-tertiary: #ffffff; --tertiary-container: #dfe0ff;
-          --on-tertiary-container: #171b3c; --tertiary-fixed: #dfe0ff; --tertiary-fixed-dim: #4e5481;
-          --on-tertiary-fixed: #13183f; --on-tertiary-fixed-variant: #3f446d;
-          --background: #fdfbff; --on-background: #191b24;
-          --surface: #fdfbff; --on-surface: #191b24; --surface-variant: #e4e1f1;
-          --on-surface-variant: #474554; --surface-dim: #dad9e5; --surface-bright: #fdfbff;
-          --surface-container-lowest: #ffffff; --surface-container-low: #f5f3ff;
-          --surface-container: #efedf8; --surface-container-high: #e7e6f0;
-          --surface-container-highest: #e1e1ef;
-          --outline: #777685; --outline-variant: #c8c4d7; --surface-tint: #008069;
-          --inverse-surface: #2e303a; --inverse-on-surface: #f2f0f7; --inverse-primary: #7ddbc7;
-          --error: #ba1a1a; --on-error: #ffffff; --error-container: #ffdad6;
-          --on-error-container: #410002;
-        }
-        .dark {
-          --primary: #56b89d; --on-primary: #003828; --primary-container: #005042;
-          --on-primary-container: #b3f5e0; --primary-fixed: #b3f5e0; --primary-fixed-dim: #7ddbc7;
-          --on-primary-fixed: #002117; --on-primary-fixed-variant: #005042;
-          --secondary: #ffb1c4; --on-secondary: #65002e; --secondary-container: #9c014a;
-          --on-secondary-container: #ffa6bc; --secondary-fixed: #ffd9e0; --secondary-fixed-dim: #ffb1c4;
-          --on-secondary-fixed: #3f001a; --on-secondary-fixed-variant: #8f0043;
-          --tertiary: #bfc3f4; --on-tertiary: #282d55; --tertiary-container: #898ebb;
-          --on-tertiary-container: #21264e; --tertiary-fixed: #dfe0ff; --tertiary-fixed-dim: #bfc3f4;
-          --on-tertiary-fixed: #13183f; --on-tertiary-fixed-variant: #3f446d;
-          --background: #11131c; --on-background: #e1e1ef;
-          --surface: #11131c; --on-surface: #e1e1ef; --surface-variant: #32343e;
-          --on-surface-variant: #c8c4d7; --surface-dim: #11131c; --surface-bright: #373943;
-          --surface-container-lowest: #0c0e17; --surface-container-low: #191b24;
-          --surface-container: #1d1f29; --surface-container-high: #282933;
-          --surface-container-highest: #32343e;
-          --outline: #918fa0; --outline-variant: #474554; --surface-tint: #56b89d;
-          --inverse-surface: #e1e1ef; --inverse-on-surface: #2e303a; --inverse-primary: #008069;
-          --error: #ffb4ab; --on-error: #690005; --error-container: #93000a;
-          --on-error-container: #ffdad6;
-        }
         .material-symbols-outlined {
             font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
             vertical-align: middle;
@@ -393,7 +352,7 @@
           <div class="flex items-center space-y-1">
             <span class="font-data-mono text-[10px] text-slate-500 dark:text-[#b9cbc1] tracking-widest uppercase flex items-center gap-1.5">
               <span class="w-1.5 h-1.5 bg-[#006c51] dark:bg-[#34ffc5] rounded-full pulse-dot"></span>
-              v2.4.0 // Secure Link
+              v2.5.0 // Secure Link
             </span>
           </div>
         </div>

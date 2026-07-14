@@ -14,11 +14,13 @@ service cloud.firestore {
 
     function isChatParticipant(chatId) {
       return isAuth() && (
-        exists(/databases/$(database)/documents/directChats/$(chatId)) &&
-        request.auth.uid in get(/databases/$(database)/documents/directChats/$(chatId)).data.members
-      ) || (
-        exists(/databases/$(database)/documents/groupChats/$(chatId)) &&
-        request.auth.uid in get(/databases/$(database)/documents/groupChats/$(chatId)).data.members
+        (
+          exists(/databases/$(database)/documents/directChats/$(chatId)) &&
+          request.auth.uid in get(/databases/$(database)/documents/directChats/$(chatId)).data.members
+        ) || (
+          exists(/databases/$(database)/documents/groupChats/$(chatId)) &&
+          request.auth.uid in get(/databases/$(database)/documents/groupChats/$(chatId)).data.members
+        )
       );
     }
 
@@ -92,8 +94,8 @@ service cloud.firestore {
     // CHATS (legacy direct chat metadata)
     // =============================================
     match /chats/{chatId} {
-      allow read: if isAuth();
-      allow update: if isAuth();
+      allow read: if isAuth() && request.auth.uid in resource.data.members;
+      allow update: if isAuth() && request.auth.uid in resource.data.members;
       allow create: if false;
       allow delete: if false;
     }
@@ -118,7 +120,7 @@ service cloud.firestore {
     // GROUP MEMBERS (flat collection)
     // =============================================
     match /groupMembers/{docId} {
-      allow read: if isAuth();
+      allow read: if isAuth() && request.auth.uid in resource.data.memberIds;
       allow write: if false;
     }
 

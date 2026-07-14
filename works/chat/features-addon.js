@@ -12,11 +12,17 @@
   let featureNavSyncBound = false;
 
   // ── Wait for app to be ready ────────────────────────────────────
-  function waitFor(check, cb, ms = 200, max = 50) {
+  function waitFor(check, cb) {
+    if (check()) { cb(); return; }
+    document.addEventListener('nsl:app-ready', function onReady() {
+      document.removeEventListener('nsl:app-ready', onReady);
+      if (check()) cb();
+    });
+    // Fallback: poll every 500ms for up to 10s
     let tries = 0;
     const t = setInterval(() => {
-      if (check() || ++tries > max) { clearInterval(t); if (check()) cb(); }
-    }, ms);
+      if (check() || ++tries > 20) { clearInterval(t); if (check()) cb(); }
+    }, 500);
   }
 
   waitFor(() => typeof db !== 'undefined' && typeof auth !== 'undefined' && typeof firebase !== 'undefined', init);
