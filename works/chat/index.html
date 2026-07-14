@@ -169,10 +169,10 @@
   <!-- ═══════════════════════════════════
        TOAST CONTAINER
        ═══════════════════════════════════ -->
-  <div class="fixed top-6 right-6 z-[999] flex flex-col gap-2" id="toast-container" aria-live="polite"></div>
+  <div class="fixed top-6 right-6 z-[999] flex flex-col gap-2" id="toast-container" aria-live="polite" role="status" aria-atomic="false"></div>
 
   <!-- Skip to content link for keyboard users -->
-  <a id="skip-nav" href="#msg-input" class="sr-only" tabindex="0">Skip to message input</a>
+  <a id="skip-nav" href="#chat-list" class="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[99999] focus:bg-primary focus:text-on-primary focus:px-4 focus:py-2 focus:rounded-lg" tabindex="0">Skip to chat list</a>
 
   <!-- ═══════════════════════════════════
        MAIN APP CONTAINER (Supports device framing simulation)
@@ -1247,9 +1247,9 @@
     })();
   </script>
   <!-- Pre-Permission Explanation Dialog -->
-  <div id="prePermissionModal" class="overlay fixed inset-0 z-[110] bg-black/60 backdrop-blur-sm flex items-center justify-center hidden" style="display:none;">
+  <div id="prePermissionModal" class="overlay fixed inset-0 z-[110] bg-black/60 backdrop-blur-sm flex items-center justify-center hidden" role="dialog" aria-modal="true" aria-labelledby="prePermissionTitle">
     <div class="bg-surface-container border border-outline-variant/30 rounded-2xl w-full max-w-sm shadow-2xl p-6 m-4 text-center">
-      <div id="prePermissionIcon" class="text-5xl mb-3">📷</div>
+      <div id="prePermissionIcon" class="text-5xl mb-3" aria-hidden="true">📷</div>
       <h3 id="prePermissionTitle" class="font-bold text-lg mb-2 text-on-surface">Camera Access Required</h3>
       <p id="prePermissionDescription" class="text-sm text-on-surface-variant mb-4 leading-relaxed"></p>
       <div id="prePermissionFeatures" class="flex flex-wrap gap-1.5 justify-center mb-5"></div>
@@ -1261,9 +1261,9 @@
   </div>
 
   <!-- Re-Enable Permission Dialog (for revoked permissions) -->
-  <div id="reEnablePermissionModal" class="overlay fixed inset-0 z-[110] bg-black/60 backdrop-blur-sm flex items-center justify-center hidden" style="display:none;">
+  <div id="reEnablePermissionModal" class="overlay fixed inset-0 z-[110] bg-black/60 backdrop-blur-sm flex items-center justify-center hidden" role="dialog" aria-modal="true" aria-labelledby="reEnableTitle">
     <div class="bg-surface-container border border-outline-variant/30 rounded-2xl w-full max-w-sm shadow-2xl p-6 m-4 text-center">
-      <div id="reEnableIcon" class="text-5xl mb-3">📷</div>
+      <div id="reEnableIcon" class="text-5xl mb-3" aria-hidden="true">📷</div>
       <h3 id="reEnableTitle" class="font-bold text-lg mb-2 text-on-surface">Permission Required</h3>
       <p id="reEnableDescription" class="text-sm text-on-surface-variant mb-4 leading-relaxed"></p>
       <div id="reEnableFeatures" class="flex flex-wrap gap-1.5 justify-center mb-5"></div>
@@ -1276,18 +1276,18 @@
   </div>
 
   <!-- Permissions Management Screen -->
-  <div id="permissionsModal" class="overlay fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-center justify-center hidden" style="display:none;">
+  <div id="permissionsModal" class="overlay fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-center justify-center hidden" role="dialog" aria-modal="true" aria-label="App Permissions">
     <div class="bg-surface-container border border-outline-variant/30 rounded-2xl w-full max-w-md shadow-2xl overflow-hidden max-h-[85vh] flex flex-col m-4">
       <div class="flex items-center justify-between p-5 border-b border-outline-variant/10">
         <h2 class="font-bold text-on-surface">App Permissions</h2>
-        <button class="closePermissionsModal text-on-surface-variant hover:text-on-surface p-1" aria-label="Close permissions"><span class="material-symbols-outlined">close</span></button>
+        <button class="closePermissionsModal text-on-surface-variant hover:text-on-surface p-1" aria-label="Close permissions"><span class="material-symbols-outlined" aria-hidden="true">close</span></button>
       </div>
-      <div id="permissionsModalBody" class="overflow-y-auto flex-1 p-4 space-y-3 custom-scrollbar"></div>
+      <div id="permissionsModalBody" class="overflow-y-auto flex-1 p-4 space-y-3 custom-scrollbar" role="status"></div>
     </div>
   </div>
 
   <!-- Revoke Permissions Guide Modal -->
-  <div id="revokePermissionsGuideModal" class="overlay fixed inset-0 z-[110] bg-black/60 backdrop-blur-sm flex items-center justify-center hidden" style="display:none;">
+  <div id="revokePermissionsGuideModal" class="overlay fixed inset-0 z-[110] bg-black/60 backdrop-blur-sm flex items-center justify-center hidden" role="dialog" aria-modal="true" aria-label="How to manage permissions">
     <div class="bg-surface-container border border-outline-variant/30 rounded-2xl w-full max-w-sm shadow-2xl p-6 m-4">
       <div class="flex items-center justify-between mb-4">
         <h3 class="font-bold text-lg text-on-surface modal-header">How to Manage Permissions</h3>

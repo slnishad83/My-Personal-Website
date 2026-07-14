@@ -1102,7 +1102,7 @@ html.light #theme-color-meta { content: ""; }
   --z-format-bar: 70;
   --z-recording-bar: 71;
   --z-context-menu: 80;
-  --z-toast: 99;
+  --z-toast: 9000;
   --z-modal-overlay: 100;
   --z-modal: 101;
   --z-fullscreen: 9999;

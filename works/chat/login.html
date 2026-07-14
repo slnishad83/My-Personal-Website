@@ -133,9 +133,9 @@
     </script>
     <style>
         :root {
-          --primary: #5348d4; --on-primary: #ffffff; --primary-container: #e3dfff;
-          --on-primary-container: #120068; --primary-fixed: #e3dfff; --primary-fixed-dim: #c4c0ff;
-          --on-primary-fixed: #120068; --on-primary-fixed-variant: #3b2bbc;
+          --primary: #008069; --on-primary: #ffffff; --primary-container: #b3f5e0;
+          --on-primary-container: #002117; --primary-fixed: #b3f5e0; --primary-fixed-dim: #7ddbc7;
+          --on-primary-fixed: #002117; --on-primary-fixed-variant: #005042;
           --secondary: #a90050; --on-secondary: #ffffff; --secondary-container: #ffd9e0;
           --on-secondary-container: #3f001a; --secondary-fixed: #ffd9e0; --secondary-fixed-dim: #ffb1c4;
           --on-secondary-fixed: #3f001a; --on-secondary-fixed-variant: #8f0043;
@@ -148,15 +148,15 @@
           --surface-container-lowest: #ffffff; --surface-container-low: #f5f3ff;
           --surface-container: #efedf8; --surface-container-high: #e7e6f0;
           --surface-container-highest: #e1e1ef;
-          --outline: #777685; --outline-variant: #c8c4d7; --surface-tint: #5348d4;
-          --inverse-surface: #2e303a; --inverse-on-surface: #f2f0f7; --inverse-primary: #c4c0ff;
+          --outline: #777685; --outline-variant: #c8c4d7; --surface-tint: #008069;
+          --inverse-surface: #2e303a; --inverse-on-surface: #f2f0f7; --inverse-primary: #7ddbc7;
           --error: #ba1a1a; --on-error: #ffffff; --error-container: #ffdad6;
           --on-error-container: #410002;
         }
         .dark {
-          --primary: #c4c0ff; --on-primary: #2200a3; --primary-container: #8881ff;
-          --on-primary-container: #1d0090; --primary-fixed: #e3dfff; --primary-fixed-dim: #c4c0ff;
-          --on-primary-fixed: #120068; --on-primary-fixed-variant: #3b2bbc;
+          --primary: #56b89d; --on-primary: #003828; --primary-container: #005042;
+          --on-primary-container: #b3f5e0; --primary-fixed: #b3f5e0; --primary-fixed-dim: #7ddbc7;
+          --on-primary-fixed: #002117; --on-primary-fixed-variant: #005042;
           --secondary: #ffb1c4; --on-secondary: #65002e; --secondary-container: #9c014a;
           --on-secondary-container: #ffa6bc; --secondary-fixed: #ffd9e0; --secondary-fixed-dim: #ffb1c4;
           --on-secondary-fixed: #3f001a; --on-secondary-fixed-variant: #8f0043;
@@ -169,8 +169,8 @@
           --surface-container-lowest: #0c0e17; --surface-container-low: #191b24;
           --surface-container: #1d1f29; --surface-container-high: #282933;
           --surface-container-highest: #32343e;
-          --outline: #918fa0; --outline-variant: #474554; --surface-tint: #c4c0ff;
-          --inverse-surface: #e1e1ef; --inverse-on-surface: #2e303a; --inverse-primary: #5348d4;
+          --outline: #918fa0; --outline-variant: #474554; --surface-tint: #56b89d;
+          --inverse-surface: #e1e1ef; --inverse-on-surface: #2e303a; --inverse-primary: #008069;
           --error: #ffb4ab; --on-error: #690005; --error-container: #93000a;
           --on-error-container: #ffdad6;
         }
@@ -316,6 +316,27 @@
             0% { background-position: 0% 50%; }
             50% { background-position: 100% 50%; }
             100% { background-position: 0% 50%; }
+        }
+        /* Focus Visible (WCAG 2.4.7) */
+        :focus-visible {
+          outline: 2px solid var(--primary);
+          outline-offset: 2px;
+          box-shadow: 0 0 0 4px rgba(83, 72, 212, 0.2);
+        }
+        :focus:not(:focus-visible) {
+          outline: none;
+          box-shadow: none;
+        }
+        /* Reduced Motion (WCAG 2.3.3) */
+        @media (prefers-reduced-motion: reduce) {
+          *, *::before, *::after {
+            animation-duration: 0.01ms !important;
+            animation-iteration-count: 1 !important;
+            transition-duration: 0.01ms !important;
+          }
+          .animate-float, .animate-pulse, .animate-spin {
+            animation: none !important;
+          }
         }
     </style>
   </head>
@@ -527,8 +548,8 @@
             </div>
 
             <!-- Error and Success Messages -->
-            <div id="authError" class="mt-md p-sm text-sm text-[#ba1a1a] dark:text-[#ffb4ab] bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-950/50 rounded-lg text-center font-semibold" style="display: none"></div>
-            <div id="authSuccess" class="mt-md p-sm text-sm text-[#006c51] dark:text-[#34ffc5] bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-950/50 rounded-lg text-center font-semibold" style="display: none"></div>
+            <div id="authError" class="mt-md p-sm text-sm text-[#ba1a1a] dark:text-[#ffb4ab] bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-950/50 rounded-lg text-center font-semibold" style="display: none" role="alert" aria-live="assertive"></div>
+            <div id="authSuccess" class="mt-md p-sm text-sm text-[#006c51] dark:text-[#34ffc5] bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-950/50 rounded-lg text-center font-semibold" style="display: none" role="status" aria-live="polite"></div>
 
           </div>
         </div>
@@ -536,15 +557,15 @@
     </main>
 
     <!-- Password Reset Modal -->
-    <div id="resetModal" class="modal">
+    <div id="resetModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="resetModalTitle">
       <div class="glass-panel w-full max-w-sm rounded-xl p-md md:p-lg border border-white/40 dark:border-white/10 relative flex flex-col gap-md text-left mx-margin-mobile">
         <div class="modal-header flex items-center justify-between border-b border-slate-100 dark:border-white/10 pb-sm">
-          <h3 class="font-headline-lg-mobile text-headline-lg-mobile text-on-surface dark:text-white">Reset Password</h3>
+          <h3 id="resetModalTitle" class="font-headline-lg-mobile text-headline-lg-mobile text-on-surface dark:text-white">Reset Password</h3>
           <button type="button" class="close-modal resetClose text-slate-400 dark:text-slate-500 hover:text-slate-700 dark:hover:text-white font-bold text-2xl" aria-label="Close">&times;</button>
         </div>
         <div class="form-group space-y-xs">
           <label class="font-label-mono text-label-mono text-on-surface-variant dark:text-[#b9cbc1] uppercase ml-xs" for="resetEmail">Email address</label>
-          <input class="w-full bg-surface-container-low border-none rounded-lg py-sm px-md focus:ring-2 focus:ring-primary-fixed dark:bg-transparent dark:border-none dark:border-b dark:border-white/10 dark:rounded-none dark:focus:ring-0 dark:focus:border-[#00ffc3] transition-all text-body-md font-body-md text-on-surface dark:text-white" type="email" id="resetEmail" placeholder="your@email.com" />
+          <input class="w-full bg-surface-container-low border-none rounded-lg py-sm px-md focus:ring-2 focus:ring-primary-fixed dark:bg-transparent dark:border-none dark:border-b dark:border-white/10 dark:rounded-none dark:focus:ring-0 dark:focus:border-[#00ffc3] transition-all text-body-md font-body-md text-on-surface dark:text-white" type="email" id="resetEmail" placeholder="your@email.com" required autocomplete="email" />
         </div>
         <button id="sendResetBtn" class="w-full py-md cyber-mint-gradient dark:bg-primary-container dark:text-on-primary rounded-lg text-on-primary-fixed font-semibold text-sm active:scale-95 transition-all shadow-md">
           Send Reset Link
@@ -554,7 +575,7 @@
 
     <!-- Clean Center-flow Footer -->
     <footer class="relative z-10 py-md w-full mt-auto text-center">
-      <span class="font-label-mono text-label-mono text-outline-variant/60">
+      <span class="font-label-mono text-label-mono text-slate-500 dark:text-slate-400">
         © 2026 NSL Chat Systems Corp. All rights reserved.
       </span>
     </footer>
@@ -950,9 +971,18 @@
       const resetModal = document.getElementById("resetModal");
       document.getElementById("forgotPasswordBtn").addEventListener("click", () => {
         resetModal.classList.add("show");
+        resetModal.querySelector('input')?.focus();
       });
       document.querySelectorAll(".resetClose").forEach((btn) => {
         btn.addEventListener("click", () => resetModal.classList.remove("show"));
+      });
+      resetModal.addEventListener("click", (e) => {
+        if (e.target === resetModal) resetModal.classList.remove("show");
+      });
+      document.addEventListener("keydown", (e) => {
+        if (e.key === "Escape" && resetModal.classList.contains("show")) {
+          resetModal.classList.remove("show");
+        }
       });
       document.getElementById("sendResetBtn").addEventListener("click", async () => {
         const email = document.getElementById("resetEmail").value.trim();
@@ -977,7 +1007,7 @@
           btn.disabled = false;
           btn.textContent = "Send Reset Link";
         } catch (error) {
-          btn.insertAdjacentHTML('afterend', '<div id="resetInlineError" class="mt-xs p-xs text-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/20 rounded text-center">' + (error.message || 'Failed to send reset email').replace(/</g, '&lt;') + '</div>');
+          btn.insertAdjacentHTML('afterend', '<div id="resetInlineError" class="mt-xs p-xs text-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/20 rounded text-center">' + (error.message || 'Failed to send reset email').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;') + '</div>');
           setTimeout(() => { var el = document.getElementById('resetInlineError'); if (el) el.remove(); }, 5000);
           btn.disabled = false;
           btn.textContent = "Send Reset Link";

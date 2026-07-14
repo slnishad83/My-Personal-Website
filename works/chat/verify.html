@@ -89,11 +89,31 @@
       font-weight: 700;
       text-decoration: none;
     }
+    /* Focus Visible (WCAG 2.4.7) */
+    :focus-visible {
+      outline: 2px solid #00a884;
+      outline-offset: 2px;
+      box-shadow: 0 0 0 4px rgba(0, 168, 132, 0.2);
+    }
+    :focus:not(:focus-visible) { outline: none; box-shadow: none; }
+    /* Reduced Motion (WCAG 2.3.3) */
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+      }
+    }
+    /* Forced Colors (Windows High Contrast) */
+    @media (forced-colors: active) {
+      main { border: 2px solid ButtonText; }
+      a { border: 2px solid ButtonText; forced-color-adjust: none; }
+    }
   </style>
   <link rel="stylesheet" href="auth-theme.css?v=1">
 </head>
 <body>
-  <main>
+  <main role="main" aria-label="Email verification status">
     <div id="statusMark" class="status-mark">&#10003;</div>
     <h1 id="title">Email verified successfully</h1>
     <p id="message">You can now log in to use Team Chat.</p>

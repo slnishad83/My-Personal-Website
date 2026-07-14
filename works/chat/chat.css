@@ -3,14 +3,14 @@
    ══════════════════════════════════════════════════ */
 :root {
   /* Light Mode theme constants */
-  --primary: #5348d4;
+  --primary: #008069;
   --on-primary: #ffffff;
-  --primary-container: #e3dfff;
-  --on-primary-container: #120068;
-  --primary-fixed: #e3dfff;
-  --primary-fixed-dim: #c4c0ff;
-  --on-primary-fixed: #120068;
-  --on-primary-fixed-variant: #3b2bbc;
+  --primary-container: #b3f5e0;
+  --on-primary-container: #002117;
+  --primary-fixed: #b3f5e0;
+  --primary-fixed-dim: #7ddbc7;
+  --on-primary-fixed: #002117;
+  --on-primary-fixed-variant: #005042;
   
   --secondary: #a90050;
   --danger: #e5484d;
@@ -48,10 +48,10 @@
   
   --outline: #777685;
   --outline-variant: #c8c4d7;
-  --surface-tint: #5348d4;
+  --surface-tint: #008069;
   --inverse-surface: #2e303a;
   --inverse-on-surface: #f2f0f7;
-  --inverse-primary: #c4c0ff;
+  --inverse-primary: #7ddbc7;
   
   --error: #ba1a1a;
   --on-error: #ffffff;
@@ -61,14 +61,14 @@
 
 .dark {
   /* Dark Mode NSL Chat theme constants */
-  --primary: #c4c0ff;
-  --on-primary: #2200a3;
-  --primary-container: #8881ff;
-  --on-primary-container: #1d0090;
-  --primary-fixed: #e3dfff;
-  --primary-fixed-dim: #c4c0ff;
-  --on-primary-fixed: #120068;
-  --on-primary-fixed-variant: #3b2bbc;
+  --primary: #56b89d;
+  --on-primary: #003828;
+  --primary-container: #005042;
+  --on-primary-container: #b3f5e0;
+  --primary-fixed: #b3f5e0;
+  --primary-fixed-dim: #7ddbc7;
+  --on-primary-fixed: #002117;
+  --on-primary-fixed-variant: #005042;
   
   --secondary: #ffb1c4;
   --on-secondary: #65002e;
@@ -105,10 +105,10 @@
   
   --outline: #918fa0;
   --outline-variant: #474554;
-  --surface-tint: #c4c0ff;
+  --surface-tint: #56b89d;
   --inverse-surface: #e1e1ef;
   --inverse-on-surface: #2e303a;
-  --inverse-primary: #5348d4;
+  --inverse-primary: #008069;
   
   --error: #ffb4ab;
   --on-error: #690005;
