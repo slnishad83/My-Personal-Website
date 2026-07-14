@@ -1,0 +1,70 @@
+/* =============================================
+   SYNC AUDIT v1.0  (#29 & #30)
+   Receipt live updates | Network recovery
+   Download progress | Sync status indicators
+   ============================================= */
+
+/* --- Receipt transition (smooth live update) --- */
+.read-receipt, .message-status {
+  transition: color 0.3s ease, opacity 0.3s ease;
+}
+.read-receipt.read       { color: #53bdeb; }
+.read-receipt.delivered  { color: var(--text-secondary); }
+.read-receipt.sent       { color: var(--text-secondary); opacity: 0.6; }
+.read-receipt.updating   { opacity: 0.4; }
+
+/* --- Offline / network-loss banner --- */
+#tcOfflineBanner {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  z-index: 99998;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: #f0ad00;
+  color: #1a1200;
+  font-size: 13px;
+  font-weight: 600;
+  text-align: center;
+  animation: tcSlideBanner 0.25s ease;
+}
+#tcOfflineBanner.visible { display: flex; }
+#tcOfflineBanner.reconnecting { background: var(--brand); color: var(--on-primary); }
+@keyframes tcSlideBanner {
+  from { transform: translateY(-100%); }
+  to   { transform: translateY(0); }
+}
+
+/* --- File download progress --- */
+.tc-download-progress-wrap {
+  margin-top: 5px;
+  height: 3px;
+  border-radius: 3px;
+  background: rgba(0,0,0,0.1);
+  overflow: hidden;
+}
+.tc-download-progress-bar {
+  height: 100%;
+  background: var(--brand);
+  border-radius: 3px;
+  transition: width 0.2s ease;
+  width: 0%;
+}
+.dark-mode .tc-download-progress-wrap { background: rgba(255,255,255,0.12); }
+
+/* --- Sync pulse on message receipt change --- */
+@keyframes tcReceiptPop {
+  0%   { transform: scale(1); }
+  40%  { transform: scale(1.35); }
+  100% { transform: scale(1); }
+}
+.read-receipt.just-updated {
+  animation: tcReceiptPop 0.35s ease;
+}
+
+/* Responsive */
+@media (max-width: 600px) {
+  #tcOfflineBanner { font-size: 12px; padding: 7px 10px; }
+}

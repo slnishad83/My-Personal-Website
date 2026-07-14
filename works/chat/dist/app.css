@@ -1,0 +1,119 @@
+@import "tailwindcss";
+
+/* ══════════════════════════════════════════════════════════════
+   NSL Chat — Tailwind v4 Theme Configuration
+   Maps CSS custom properties to Tailwind utility classes.
+   Single source of truth for all design tokens.
+   ══════════════════════════════════════════════════════════════ */
+
+@theme {
+  /* ── Colors ─────────────────────────────────────── */
+  --color-primary: var(--primary);
+  --color-on-primary: var(--on-primary);
+  --color-primary-container: var(--primary-container);
+  --color-on-primary-container: var(--on-primary-container);
+  --color-primary-fixed: var(--primary-fixed);
+  --color-primary-fixed-dim: var(--primary-fixed-dim);
+  --color-on-primary-fixed: var(--on-primary-fixed);
+  --color-on-primary-fixed-variant: var(--on-primary-fixed-variant);
+
+  --color-secondary: var(--secondary);
+  --color-on-secondary: var(--on-secondary);
+  --color-secondary-container: var(--secondary-container);
+  --color-on-secondary-container: var(--on-secondary-container);
+  --color-secondary-fixed: var(--secondary-fixed);
+  --color-secondary-fixed-dim: var(--secondary-fixed-dim);
+  --color-on-secondary-fixed: var(--on-secondary-fixed);
+  --color-on-secondary-fixed-variant: var(--on-secondary-fixed-variant);
+
+  --color-tertiary: var(--tertiary);
+  --color-on-tertiary: var(--on-tertiary);
+  --color-tertiary-container: var(--tertiary-container);
+  --color-on-tertiary-container: var(--on-tertiary-container);
+  --color-tertiary-fixed: var(--tertiary-fixed);
+  --color-tertiary-fixed-dim: var(--tertiary-fixed-dim);
+  --color-on-tertiary-fixed: var(--on-tertiary-fixed);
+  --color-on-tertiary-fixed-variant: var(--on-tertiary-fixed-variant);
+
+  --color-background: var(--background);
+  --color-on-background: var(--on-background);
+
+  --color-surface: var(--surface);
+  --color-on-surface: var(--on-surface);
+  --color-surface-variant: var(--surface-variant);
+  --color-on-surface-variant: var(--on-surface-variant);
+  --color-surface-dim: var(--surface-dim);
+  --color-surface-bright: var(--surface-bright);
+  --color-surface-container-lowest: var(--surface-container-lowest);
+  --color-surface-container-low: var(--surface-container-low);
+  --color-surface-container: var(--surface-container);
+  --color-surface-container-high: var(--surface-container-high);
+  --color-surface-container-highest: var(--surface-container-highest);
+
+  --color-outline: var(--outline);
+  --color-outline-variant: var(--outline-variant);
+  --color-surface-tint: var(--surface-tint);
+  --color-inverse-surface: var(--inverse-surface);
+  --color-inverse-on-surface: var(--inverse-on-surface);
+  --color-inverse-primary: var(--inverse-primary);
+
+  --color-error: var(--error);
+  --color-on-error: var(--on-error);
+  --color-error-container: var(--error-container);
+  --color-on-error-container: var(--on-error-container);
+
+  /* ── Border Radius ──────────────────────────────── */
+  --radius-DEFAULT: 0.5rem;
+  --radius-lg: 0.5rem;
+  --radius-xl: 1rem;
+  --radius-full: 9999px;
+
+  /* ── Spacing ────────────────────────────────────── */
+  --spacing-sidebar_width: 280px;
+  --spacing-gutter: 16px;
+  --spacing-container_padding: 24px;
+  --spacing-bubble_padding_xy: 12px 16px;
+  --spacing-unit: 4px;
+
+  /* ── Font Family ────────────────────────────────── */
+  --font-timestamp: "JetBrains Mono", ui-monospace, monospace;
+  --font-headline-lg: "Manrope", system-ui, sans-serif;
+  --font-headline-md: "Manrope", system-ui, sans-serif;
+  --font-headline-lg-mobile: "Manrope", system-ui, sans-serif;
+  --font-body-md: "Inter", system-ui, sans-serif;
+  --font-body-lg: "Inter", system-ui, sans-serif;
+  --font-label-caps: "Inter", system-ui, sans-serif;
+  --font-label-mono: "JetBrains Mono", ui-monospace, monospace;
+
+  /* ── Font Size ──────────────────────────────────── */
+  --text-timestamp: 10px;
+  --text-headline-lg: 24px;
+  --text-headline-md: 18px;
+  --text-headline-lg-mobile: 20px;
+  --text-body-md: 14px;
+  --text-body-lg: 16px;
+  --text-label-caps: 11px;
+
+  /* ── Z-Index ────────────────────────────────────── */
+  --z-base: 1;
+  --z-sidebar: 20;
+  --z-chatlist: 25;
+  --z-chatarea: 30;
+  --z-bottomnav: 40;
+  --z-landscape-tabs: 41;
+  --z-detail-panel: 45;
+  --z-chat-header: 46;
+  --z-input-bar: 47;
+  --z-scroll-fab: 48;
+  --z-overlay: 50;
+  --z-attach-menu: 60;
+  --z-emoji-picker: 65;
+  --z-format-bar: 70;
+  --z-recording-bar: 71;
+  --z-context-menu: 80;
+  --z-toast: 9000;
+  --z-modal-overlay: 100;
+  --z-modal: 101;
+  --z-fullscreen: 9999;
+  --z-skip-nav: 99999;
+}

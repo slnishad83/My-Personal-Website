@@ -56,10 +56,12 @@ const PullToRefresh = {
     this._indicator?.classList?.add('visible');
     if (progress < 1) {
       this._indicator?.classList?.add('pulling');
-      this._indicator?.querySelector('span').textContent = 'Pull to refresh';
+      const span1 = this._indicator?.querySelector('span');
+      if (span1) span1.textContent = 'Pull to refresh';
     } else {
       this._indicator?.classList?.remove('pulling');
-      this._indicator?.querySelector('span').textContent = 'Release to refresh';
+      const span2 = this._indicator?.querySelector('span');
+      if (span2) span2.textContent = 'Release to refresh';
     }
   },
 

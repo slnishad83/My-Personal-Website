@@ -9,7 +9,7 @@
   <meta name="theme-color" content="#11131c" id="theme-color-meta">
   <meta name="description" content="NSL Chat — Modern team messaging by Nishad SL">
   <meta name="robots" content="noindex, nofollow">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self' https: blob: data: 'unsafe-inline' 'unsafe-eval'; script-src 'self' https://cdn.tailwindcss.com https://www.gstatic.com 'unsafe-inline' 'unsafe-eval'; style-src 'self' https://fonts.googleapis.com 'unsafe-inline'; img-src 'self' https: blob: data:; font-src 'self' https://fonts.gstatic.com; connect-src 'self' https://*.googleapis.com https://*.firebaseio.com https://*.firebaseapp.com https://*.cloudfunctions.net wss://*.firebaseio.com; frame-src 'self' https://*.firebaseapp.com; worker-src 'self' blob:; frame-ancestors 'self'; form-action 'self';">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' https: blob: data: 'unsafe-inline'; script-src 'self' https://www.gstatic.com 'wasm-unsafe-eval'; style-src 'self' https://fonts.googleapis.com 'unsafe-inline'; img-src 'self' https: blob: data:; font-src 'self' https://fonts.gstatic.com; connect-src 'self' https://*.googleapis.com https://*.firebaseio.com https://*.firebaseapp.com https://*.cloudfunctions.net wss://*.firebaseio.com; frame-src 'self' https://*.firebaseapp.com; worker-src 'self' blob:; frame-ancestors 'self'; form-action 'self';">
   <link rel="canonical" href="https://nishadsl.com/works/chat">
   <meta property="og:title" content="NSL Chat">
   <meta property="og:description" content="Modern team messaging by Nishad SL">
@@ -17,19 +17,10 @@
   <meta property="og:type" content="website">
   <title>NSL Chat</title>
 
-  <noscript>
-    <div style="display:flex;align-items:center;justify-content:center;min-height:100vh;background:#11131c;color:#e1e1ef;font-family:system-ui,sans-serif;padding:24px;text-align:center;">
-      <div>
-        <h1 style="font-size:24px;margin-bottom:12px;">NSL Chat requires JavaScript</h1>
-        <p style="color:#918fa0;font-size:14px;">Please enable JavaScript in your browser settings to use NSL Chat.</p>
-      </div>
-    </div>
-  </noscript>
-
   <!-- PWA Manifest & Icons -->
-  <link rel="manifest" href="/assets/manifest-ByARCu5e.json">
+  <link rel="manifest" href="manifest.json">
   <link rel="icon" href="/favicon.ico">
-  <link rel="apple-touch-icon" href="/assets/app-icon-192-vvhPsVPK.png">
+  <link rel="apple-touch-icon" href="app-icon-192.png">
 
   <!-- Preconnect for faster external resource loading -->
   <link rel="preconnect" href="https://cdn.tailwindcss.com">
@@ -38,8 +29,6 @@
   <link rel="preconnect" href="https://cdnjs.cloudflare.com">
 
   <!-- Tailwind CSS Engine -->
-  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
-
   <!-- Google Fonts (font-display: swap for performance) -->
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Manrope:wght@400;500;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
@@ -48,103 +37,26 @@
   <style>.material-symbols-outlined, .material-symbols-rounded { font-display: swap; }</style>
 
   <!-- Consolidated Theme CSS (responsive + dark/light mode) -->
+  <link rel="stylesheet" href="chat-theme.css">
+  <link rel="stylesheet" href="app.css">
 
+  <link rel="stylesheet" href="redesign-base.css">
+  <link rel="stylesheet" href="chat-enhancements.css">
+  <link rel="stylesheet" href="chat.css">
+  <link rel="stylesheet" href="chat-missing-features.css">
+  <link rel="stylesheet" href="accessibility.css">
+  <link rel="stylesheet" href="message-actions.css">
+  <link rel="stylesheet" href="scheduled-calendar.css">
+  <link rel="stylesheet" href="notification-prefs.css">
+  <link rel="stylesheet" href="url-preview.css">
+  <link rel="stylesheet" href="translation-ui.css">
+  <link rel="stylesheet" href="sync-audit.css">
+  <link rel="stylesheet" href="snooze-history.css">
+  <link rel="stylesheet" href="snooze-enhancements.css">
 
-  <script src="notification-sounds.js" defer></script>
-  <script id="tailwind-config">
-    tailwind.config = {
-      darkMode: "class",
-      theme: {
-        extend: {
-          colors: {
-            primary: "var(--primary)",
-            "on-primary": "var(--on-primary)",
-            "primary-container": "var(--primary-container)",
-            "on-primary-container": "var(--on-primary-container)",
-            "primary-fixed": "var(--primary-fixed)",
-            "primary-fixed-dim": "var(--primary-fixed-dim)",
-            "on-primary-fixed": "var(--on-primary-fixed)",
-            "on-primary-fixed-variant": "var(--on-primary-fixed-variant)",
-            secondary: "var(--secondary)",
-            "on-secondary": "var(--on-secondary)",
-            "secondary-container": "var(--secondary-container)",
-            "on-secondary-container": "var(--on-secondary-container)",
-            "secondary-fixed": "var(--secondary-fixed)",
-            "secondary-fixed-dim": "var(--secondary-fixed-dim)",
-            "on-secondary-fixed": "var(--on-secondary-fixed)",
-            "on-secondary-fixed-variant": "var(--on-secondary-fixed-variant)",
-            tertiary: "var(--tertiary)",
-            "on-tertiary": "var(--on-tertiary)",
-            "tertiary-container": "var(--tertiary-container)",
-            "on-tertiary-container": "var(--on-tertiary-container)",
-            "tertiary-fixed": "var(--tertiary-fixed)",
-            "tertiary-fixed-dim": "var(--tertiary-fixed-dim)",
-            "on-tertiary-fixed": "var(--on-tertiary-fixed)",
-            "on-tertiary-fixed-variant": "var(--on-tertiary-fixed-variant)",
-            background: "var(--background)",
-            "on-background": "var(--on-background)",
-            surface: "var(--surface)",
-            "on-surface": "var(--on-surface)",
-            "surface-variant": "var(--surface-variant)",
-            "on-surface-variant": "var(--on-surface-variant)",
-            "surface-dim": "var(--surface-dim)",
-            "surface-bright": "var(--surface-bright)",
-            "surface-container-lowest": "var(--surface-container-lowest)",
-            "surface-container-low": "var(--surface-container-low)",
-            "surface-container": "var(--surface-container)",
-            "surface-container-high": "var(--surface-container-high)",
-            "surface-container-highest": "var(--surface-container-highest)",
-            outline: "var(--outline)",
-            "outline-variant": "var(--outline-variant)",
-            "surface-tint": "var(--surface-tint)",
-            "inverse-surface": "var(--inverse-surface)",
-            "inverse-on-surface": "var(--inverse-on-surface)",
-            "inverse-primary": "var(--inverse-primary)",
-            error: "var(--error)",
-            "on-error": "var(--on-error)",
-            "error-container": "var(--error-container)",
-            "on-error-container": "var(--on-error-container)"
-          },
-          borderRadius: {
-            DEFAULT: "0.5rem",
-            lg: "0.5rem",
-            xl: "1rem",
-            full: "9999px"
-          },
-          spacing: {
-            sidebar_width: "280px",
-            gutter: "16px",
-            container_padding: "24px",
-            bubble_padding_xy: "12px 16px",
-            unit: "4px"
-          },
-          fontFamily: {
-            timestamp: ["JetBrains Mono"],
-            "headline-lg": ["Manrope"],
-            "headline-md": ["Manrope"],
-            "headline-lg-mobile": ["Manrope"],
-            "body-md": ["Inter"],
-            "body-lg": ["Inter"],
-            "label-caps": ["Inter"]
-          },
-          fontSize: {
-            timestamp: ["10px", { lineHeight: "12px", fontWeight: "400" }],
-            "headline-lg": ["24px", { lineHeight: "32px", fontWeight: "700" }],
-            "headline-md": ["18px", { lineHeight: "24px", fontWeight: "600" }],
-            "headline-lg-mobile": ["20px", { lineHeight: "28px", fontWeight: "700" }],
-            "body-md": ["14px", { lineHeight: "20px", fontWeight: "400" }],
-            "body-lg": ["16px", { lineHeight: "24px", fontWeight: "400" }],
-            "label-caps": ["11px", { lineHeight: "16px", letterSpacing: "0.05em", fontWeight: "700" }]
-          }
-        }
-      }
-    };
-  </script>
-  <link rel="stylesheet" crossorigin href="/assets/main-ChGIL-eD.css">
-  <link rel="stylesheet" crossorigin href="/assets/chat-theme-C27Agign.css">
-  <link rel="stylesheet" crossorigin href="/assets/redesign-base-Ui55SofK.css">
-</head>
-<body class="w-full h-full flex overflow-hidden antialiased bg-surface-container-low transition-colors duration-300">
+  </head>
+<body>
+  <noscript><div style="display:flex;align-items:center;justify-content:center;min-height:100vh;background:#11131c;color:#e1e1ef;font-family:system-ui,sans-serif;padding:24px;text-align:center;"><div><h1 style="font-size:24px;margin-bottom:12px;">NSL Chat requires JavaScript</h1><p style="color:#918fa0;font-size:14px;">Please enable JavaScript in your browser settings to use NSL Chat.</p></div></div></noscript> class="w-full h-full flex overflow-hidden antialiased bg-surface-container-low transition-colors duration-300">
 
   <!-- ═══════════════════════════════════
        LOADING SCREEN
@@ -162,8 +74,7 @@
        ═══════════════════════════════════ -->
   <div class="fixed top-6 right-6 z-[999] flex flex-col gap-2 max-sm:left-4 max-sm:right-4 max-sm:top-4 max-sm:items-center" id="toast-container" aria-live="polite" role="status" aria-atomic="false"></div>
 
-  <!-- Skip to content link for keyboard users -->
-  <a id="skip-nav" href="#chat-list" class="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[99999] focus:bg-primary focus:text-on-primary focus:px-4 focus:py-2 focus:rounded-lg" tabindex="0">Skip to chat list</a>
+  <!-- Skip to content link for keyboard users (created by A11y module) -->
 
   <!-- ═══════════════════════════════════
        MAIN APP CONTAINER (Supports device framing simulation)
@@ -205,9 +116,10 @@
 
       <!-- Bottom Actions in Navigation -->
       <div class="p-4 mt-auto border-t border-outline-variant/30 space-y-4">
-        <!-- H2: Sidebar expand toggle (hidden on desktop, shown on tablet) -->
-        <button class="w-full items-center gap-4 text-on-surface-variant hover:text-on-surface transition-colors duration-200 px-4 py-2 cursor-pointer" id="sidebar-toggle-btn" onclick="toggleSidebarExpand()" aria-label="Expand sidebar">
+        <!-- H2: Sidebar expand toggle (shown on tablet only) -->
+        <button class="hidden md:flex xl:hidden w-full items-center gap-4 text-on-surface-variant hover:text-on-surface transition-colors duration-200 px-4 py-2 cursor-pointer" id="sidebar-toggle-btn" aria-label="Expand sidebar">
           <span class="material-symbols-outlined" id="sidebar-toggle-icon">menu_open</span>
+          <span class="hidden xl:block font-body-md text-body-md">Collapse</span>
         </button>
         <!-- Scanner Sidebar Row -->
         <button class="w-full flex items-center gap-4 text-on-surface-variant hover:text-on-surface transition-colors duration-200 px-4 py-2 cursor-pointer" onclick="openScanner()" aria-label="Scan QR code">
@@ -1039,207 +951,14 @@
   <input type="file" id="file-input-avatar" class="hidden-input" accept="image/*">
 
   <!-- Firebase SDKs -->
-  <script src="https://www.gstatic.com/firebasejs/12.15.0/firebase-app-compat.js" integrity="sha384-J6/i9DnWkWsyWwWJNVKfJNA+7Erlaznpv7qbt2lfqjnYt5xUjG6gjQEvByiLR53j" crossorigin="anonymous"></script>
-  <script src="https://www.gstatic.com/firebasejs/12.15.0/firebase-auth-compat.js" integrity="sha384-WCMvq+IYULWMFMeYO/fKLTgpCgLaOUxgQc1dFPdo6uk9tv7Cq3ZKwFEvTteutP1M" crossorigin="anonymous"></script>
-  <script src="https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore-compat.js" integrity="sha384-d8pcTwIXxLlzBmBTgziO/hoPmJ6tO6j7Z+ZJ4rBWfhBJh51Io3qwudexDJkAT+uW" crossorigin="anonymous"></script>
-  <script src="https://www.gstatic.com/firebasejs/12.15.0/firebase-storage-compat.js" integrity="sha384-sd1OYrFqCVkWMaobDVrdC7NR0YamsMCKdY5cyoeSqVQecfG9FcL7Xkyetu1P6IsE" crossorigin="anonymous"></script>
-  <script src="https://www.gstatic.com/firebasejs/12.15.0/firebase-messaging-compat.js" integrity="sha384-08oAXFgVl5PWPSCdHs/8+cUx7iUwBPVT//OlDnv4Upil8Xsdp0kytFIDMmtZEv+y" crossorigin="anonymous"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js" integrity="sha384-+mbV2IY1Zk/X1p/nWllGySJSUN8uMs+gUAN10Or95UBH0fpj6GfKgPmgC5EXieXG" crossorigin="anonymous"></script>
-  <script src="../app-extras.js"></script>
-  <script src="config.js"></script>
   <!-- Main App JS Core (shared logic) -->
-  <script src="../app.js"></script>
-
   <!-- Infrastructure Modules -->
-  <script src="platform-detect.js"></script>
-  <script src="offline-queue.js"></script>
-  <script src="call-sync.js"></script>
-  <script src="presence.js"></script>
-  <script src="multi-device.js"></script>
-  <script src="security.js"></script>
-  <script src="error-boundary.js"></script>
-  <script src="mutation-bus.js"></script>
-  <script src="virtual-scroll.js"></script>
-  <script src="accessibility.js"></script>
-  <script src="keyboard-shortcuts.js"></script>
-  <script src="permissions-manager.js"></script>
-  <script src="chat-missing-features.js"></script>
-  <script src="pull-to-refresh.js"></script>
-  <script src="pinch-zoom.js"></script>
-  <script src="swipe-delete.js"></script>
-  <script src="back-button.js"></script>
-  <script src="ios-keyboard-fix.js"></script>
   <!-- Feature modules -->
-  <script src="chat-enhancements.js"></script>
-  <script src="chat-fixes.js"></script>
-  <script src="threads.js"></script>
-  <script src="message-search.js"></script>
-  <script src="notification-prefs.js"></script>
-  <script src="notification-digest.js"></script>
-  <script src="notification-reply.js"></script>
-  <script src="notification-orchestrator.js"></script>
-  <script src="notification-bell.js"></script>
-  <script src="notification-telemetry.js"></script>
-  <script src="ios-callkit.js"></script>
-  <script src="desktop-notifications.js"></script>
-  <script src="pwa-install.js"></script>
-  <script src="ui-compliance.js"></script>
-  <script src="audit-interactions.js"></script>
-  <script src="whatsapp-enhancements.js"></script>
-  <script src="features-addon.js"></script>
-  <script src="scheduled-calendar.js"></script>
-  <script src="snooze-history.js"></script>
-  <script src="snooze-enhancements.js"></script>
-  <script src="ai-bot.js"></script>
-  <script src="group-message-info.js"></script>
-  <script src="fixes.js"></script>
-  <script src="feature-updates.js"></script>
-  <script src="sync-audit.js"></script>
-  <script src="url-preview.js"></script>
-  <script src="redesign-base.js"></script>
-  <script src="request-priority.js"></script>
-  <script src="sanitize.js"></script>
-  <script src="clipboard-paste.js"></script>
-  <script src="desktop-fullscreen.js"></script>
-  <script src="desktop-context-menu.js"></script>
-  <script src="window-title.js"></script>
-  <script src="whatsapp-share.js"></script>
-  <script src="swipe-nav.js"></script>
-  <script src="push-notifications.js"></script>
-  <script src="attachment-reliability.js"></script>
-  <script src="app-init.js"></script>
+  
 
-  <!-- PWA Service Worker Registration -->
-  <script>
-    if ('serviceWorker' in navigator) {
-      if (navigator.serviceWorker.controller) {
-        navigator.serviceWorker.controller.update().catch(function() {});
-      } else {
-        window.addEventListener('load', function () {
-          navigator.serviceWorker.register('/works/chat/sw.js', { scope: '/works/chat/' })
-            .then(function (reg) {
-              console.log('[SW] Registered:', reg.scope);
-              reg.addEventListener('updatefound', function () {
-                var newWorker = reg.installing;
-                if (newWorker) {
-                  newWorker.addEventListener('statechange', function () {
-                    if (newWorker.state === 'activated' && navigator.serviceWorker.controller) {
-                      if (typeof showToast === 'function') showToast('App updated! Refresh for the latest version.', 'info');
-                    }
-                  });
-                }
-              });
-            })
-            .catch(function (err) { console.warn('[SW] Registration failed:', err); });
-        });
-      }
-    }
+  
 
-    window.addEventListener('load', () => {
-      if (window.ErrorBoundary) ErrorBoundary.init();
-      if (window.A11y) A11y.init();
-      if (window.KeyboardShortcuts) KeyboardShortcuts.init();
-      if (window.SwipeDelete) SwipeDelete.init();
-      if (window.BackButton) BackButton.init();
-      if (window.IOSKeyboardFix) IOSKeyboardFix.init();
-      const chatList = document.getElementById('chat-list');
-      if (chatList && window.PullToRefresh) PullToRefresh.init(chatList);
-      if (window.PinchZoom) PinchZoom.init(document.getElementById('messages-wrap'));
-    });
-
-    window.addEventListener('load', () => {
-      setTimeout(async () => {
-        if (window.OfflineQueue) await OfflineQueue.init();
-      }, 3000);
-    });
-
-    firebase.auth().onAuthStateChanged((user) => {
-      window.currentUser = user || null;
-      if (user) {
-        setTimeout(async () => {
-          if (window.Presence) await Presence.init();
-          if (window.MultiDevice) await MultiDevice.init();
-          if (window.Security) await Security.init();
-        }, 2000);
-      } else {
-        if (window.Presence) Presence.destroy();
-        if (window.MultiDevice) MultiDevice.destroy();
-        if (window.Security) Security.destroy();
-        window.location.replace('login.html');
-      }
-    });
-  </script>
-
-  <!-- D-C5: Multi-window support via BroadcastChannel -->
-  <script>
-    (function() {
-      if (!('BroadcastChannel' in window)) return;
-      const channel = new BroadcastChannel('nsl-chat-sync');
-      channel.onmessage = function(e) {
-        if (!e.data || !e.data.type) return;
-        switch (e.data.type) {
-          case 'new-message':
-          case 'chat-update':
-            if (typeof subscribeToChats === 'function') subscribeToChats();
-            if (typeof subscribeToGroups === 'function') subscribeToGroups();
-            break;
-          case 'message-deleted':
-          case 'chat-deleted':
-            if (typeof subscribeToChats === 'function') subscribeToChats();
-            if (App?.currentChat?.id && typeof renderMessages === 'function') {
-              renderMessages(App.currentChat.id);
-            }
-            break;
-          case 'message-read':
-            if (App?.currentChat?.id && typeof renderMessages === 'function') {
-              renderMessages(App.currentChat.id);
-            }
-            break;
-          case 'typing':
-            if (e.data.chatId && e.data.userId !== App?.currentUser?.uid) {
-              if (typeof showTypingIndicator === 'function') showTypingIndicator(e.data.userId, e.data.chatId);
-            }
-            break;
-          case 'theme-change':
-            document.documentElement.classList.toggle('dark', e.data.dark);
-            localStorage.setItem('themeMode', e.data.dark ? 'dark' : 'light');
-            break;
-          case 'logout':
-            window.location.reload();
-            break;
-          case 'focus-chat':
-            if (e.data.chatId && typeof openChat === 'function') {
-              openChat(e.data.chatId, e.data.chatType || 'direct');
-            }
-            break;
-        }
-      };
-      window.NSLBroadcastChannel = channel;
-      window.broadcastToTabs = function(type, data) {
-        try { channel.postMessage({ type, ...data }); } catch (_) {}
-      };
-      const origToggle = window.toggleTheme;
-      window.toggleTheme = function() {
-        if (origToggle) origToggle();
-        const isDark = document.documentElement.classList.contains('dark');
-        channel.postMessage({ type: 'theme-change', dark: isDark });
-      };
-    })();
-  </script>
-
-  <!-- D-L7: App version display in console -->
-  <script>
-    (function() {
-        const VERSION = '2.5.0';
-      const BUILD = new Date().toISOString().split('T')[0];
-      console.log('%c NSL Chat v' + VERSION + ' (built ' + BUILD + ') ', 'background:#008069;color:#fff;padding:2px 8px;border-radius:4px;font-weight:bold;');
-      window.NSL_VERSION = VERSION;
-      // Expose in document title for debugging
-      document.addEventListener('DOMContentLoaded', function() {
-        if (!document.title.includes('NSL Chat')) document.title = 'NSL Chat';
-      });
-    })();
-  </script>
+  <!-- D-L7: App version display in console (version from version.js) -->
   <!-- Pre-Permission Explanation Dialog -->
   <div id="prePermissionModal" class="overlay fixed inset-0 z-[110] bg-black/60 backdrop-blur-sm flex items-center justify-center hidden" role="dialog" aria-modal="true" aria-labelledby="prePermissionTitle">
     <div class="bg-surface-container border border-outline-variant/30 rounded-2xl w-full max-w-sm shadow-2xl p-6 m-4 text-center">
@@ -1301,72 +1020,7 @@
 
   <!-- ═══ END PERMISSION MODALS ═══ -->
 
-  <!-- C5: Auto-logout on 20min idle + C11: resetAppState on signout -->
-  <script>
-    (function() {
-      var IDLE_TIMEOUT = 20 * 60 * 1000;
-      var WARNING_TIMEOUT = 19 * 60 * 1000;
-      var _idleTimer = null;
-      var _warningShown = false;
-      var _warningTimer = null;
-
-      function resetIdleTimer() {
-        clearTimeout(_idleTimer);
-        clearTimeout(_warningTimer);
-        _warningShown = false;
-        _idleTimer = setTimeout(function() {
-          if (typeof showToast === 'function') showToast('Session expired due to inactivity.', 'info');
-          setTimeout(function() {
-            if (typeof window.signOut === 'function') window.signOut();
-            else if (typeof firebase !== 'undefined' && firebase.auth) {
-              firebase.auth().signOut().then(function() { window.location.reload(); });
-            }
-          }, 3000);
-        }, IDLE_TIMEOUT);
-        _warningTimer = setTimeout(function() {
-          if (!_warningShown && document.visibilityState === 'visible') {
-            _warningShown = true;
-            if (typeof showToast === 'function') showToast('Session will expire in 1 minute due to inactivity.', 'warning');
-          }
-        }, WARNING_TIMEOUT);
-      }
-
-      ['mousemove', 'keydown', 'touchstart', 'scroll', 'click'].forEach(function(evt) {
-        document.addEventListener(evt, resetIdleTimer, { passive: true });
-      });
-
-      document.addEventListener('visibilitychange', function() {
-        if (document.visibilityState === 'visible') resetIdleTimer();
-      });
-
-      if (typeof firebase !== 'undefined' && firebase.auth && firebase.auth().currentUser) resetIdleTimer();
-      firebase.auth().onAuthStateChanged(function(user) {
-        if (user) resetIdleTimer(); else { clearTimeout(_idleTimer); clearTimeout(_warningTimer); }
-      });
-
-      window.resetAppState = function() {
-        clearTimeout(_idleTimer);
-        clearTimeout(_warningTimer);
-        if (typeof window.currentChat !== 'undefined') window.currentChat = null;
-        if (typeof window.currentChatType !== 'undefined') window.currentChatType = null;
-        if (typeof window.MutationBus !== 'undefined') MutationBus.destroyAll();
-        if (typeof window.ChatEnhancements !== 'undefined') ChatEnhancements.destroy();
-        if (typeof window.UICompliance !== 'undefined') UICompliance.destroy();
-        if (typeof window.AuditInteractions !== 'undefined') AuditInteractions.destroy();
-        if (typeof window.WAEnhance !== 'undefined') WAEnhance.destroy();
-        if (typeof window.Security !== 'undefined') Security.destroy();
-        if (typeof window.OfflineQueue !== 'undefined') OfflineQueue.destroy && OfflineQueue.destroy();
-        document.removeEventListener('mousemove', resetIdleTimer);
-        document.removeEventListener('keydown', resetIdleTimer);
-        document.removeEventListener('touchstart', resetIdleTimer);
-        document.removeEventListener('scroll', resetIdleTimer);
-        document.removeEventListener('click', resetIdleTimer);
-        if (window.NSLBroadcastChannel) {
-          try { window.NSLBroadcastChannel.postMessage({ type: 'logout' }); } catch(_) {}
-        }
-      };
-    })();
-  </script>
+  
 
   <!-- Floating Active Call Bubble (WhatsApp-style minimized PiP) -->
   <div id="call-bubble" class="fixed z-[200] bottom-6 right-6 flex items-center gap-3 bg-primary text-on-primary rounded-full px-4 py-2.5 shadow-2xl cursor-pointer transition-all duration-300 select-none" style="display:none;" onclick="maximizeCall()" role="button" aria-label="Return to active call" tabindex="0">
@@ -1381,5 +1035,11 @@
       <span class="material-symbols-outlined text-sm">call_end</span>
     </button>
   </div>
+  <script src="notification-sounds.js" defer></script>
+  <script src="app-bundle.f5003c79.js"></script>
+  <script src="inline-sw-register.js"></script>
+  <script src="inline-broadcast-channel.js"></script>
+  <script src="inline-version.js"></script>
+  <script src="inline-idle-timeout.js"></script>
 </body>
 </html>

@@ -72,6 +72,9 @@ const db = firebase.firestore();
       console.warn('[Firestore] Offline persistence not supported in this browser.');
     }
     });
+
+// Signal to addons that core Firebase services are ready
+document.dispatchEvent(new CustomEvent('nsl:app-ready'));
 const storage = firebase.storage();
 const isNativeAndroidApp =
   window.Capacitor?.isNativePlatform?.() === true &&
