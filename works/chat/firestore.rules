@@ -108,7 +108,10 @@ service cloud.firestore {
     // GROUP MEMBERS (flat collection)
     // =============================================
     match /groupMembers/{docId} {
-      allow read: if isAuth() && request.auth.uid in resource.data.memberIds;
+      allow read: if isAuth() && (
+        resource.data.userId == request.auth.uid ||
+        isGroupMember(resource.data.groupId)
+      );
       allow write: if false;
     }
 

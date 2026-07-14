@@ -24,14 +24,74 @@ const ALLOWED_ORIGINS = [
   "https://nishadsl.com",
   "http://localhost"
 ];
-function validateCors(req, res) {
-  const origin = req.headers.origin || req.headers.referer || "";
-  if (origin && !ALLOWED_ORIGINS.some(o => origin.startsWith(o))) {
-    res.set("Access-Control-Allow-Origin", ALLOWED_ORIGINS[0]);
-    res.status(403).json({ error: "Forbidden" });
+
+const rateLimitCache = new Map();
+const LIMIT_WINDOW = 60 * 1000; // 1 minute
+const MAX_REQUESTS = 30; // max 30 requests per minute
+
+function checkRateLimit(req, res) {
+  const ip = req.ip || req.headers["x-forwarded-for"] || "unknown";
+  const now = Date.now();
+  
+  if (!rateLimitCache.has(ip)) {
+    rateLimitCache.set(ip, []);
+  }
+  
+  const timestamps = rateLimitCache.get(ip);
+  const activeTimestamps = timestamps.filter(t => now - t < LIMIT_WINDOW);
+  
+  if (activeTimestamps.length >= MAX_REQUESTS) {
+    res.status(429).json({ error: "Too many requests. Please try again later." });
     return false;
   }
-  res.set("Access-Control-Allow-Origin", "*");
+  
+  activeTimestamps.push(now);
+  rateLimitCache.set(ip, activeTimestamps);
+  return true;
+}
+
+function validateCors(req, res) {
+  res.set("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  res.set("Access-Control-Allow-Methods", "POST, OPTIONS");
+
+  const origin = req.headers.origin;
+  const referer = req.headers.referer;
+
+  let matchedOrigin = null;
+  if (origin && ALLOWED_ORIGINS.some(o => origin.startsWith(o))) {
+    matchedOrigin = origin;
+  } else if (referer) {
+    try {
+      const parsedUrl = new URL(referer);
+      const refOrigin = parsedUrl.origin;
+      if (ALLOWED_ORIGINS.some(o => refOrigin.startsWith(o))) {
+        matchedOrigin = refOrigin;
+      }
+    } catch (_) {}
+  }
+
+  if (req.method === "OPTIONS") {
+    if (matchedOrigin) {
+      res.set("Access-Control-Allow-Origin", matchedOrigin);
+      res.status(204).send();
+    } else {
+      res.set("Access-Control-Allow-Origin", ALLOWED_ORIGINS[0]);
+      res.status(403).send();
+    }
+    return false;
+  }
+
+  if (req.method !== "POST") {
+    res.status(405).json({ error: "Method Not Allowed" });
+    return false;
+  }
+
+  if (!matchedOrigin) {
+    res.status(403).json({ error: "Access Denied" });
+    return false;
+  }
+
+  res.set("Access-Control-Allow-Origin", matchedOrigin);
   return true;
 }
 
@@ -41,6 +101,7 @@ function validateCors(req, res) {
 // In production, integrate with a TURN provider (e.g., Twilio, Metered).
 // =============================================
 exports.getTurnCredentials = onRequest(async (req, res) => {
+  if (!checkRateLimit(req, res)) return;
   if (!validateCors(req, res)) return;
 
   try {
@@ -71,6 +132,7 @@ exports.getTurnCredentials = onRequest(async (req, res) => {
 // Sends a reply from push notification inline-reply when no app tab is open.
 // =============================================
 exports.sendNotificationReply = onRequest(async (req, res) => {
+  if (!checkRateLimit(req, res)) return;
   if (!validateCors(req, res)) return;
 
   try {
@@ -91,6 +153,9 @@ exports.sendNotificationReply = onRequest(async (req, res) => {
     if (trimmedText.length === 0 || trimmedText.length > 5000) {
       return res.status(400).json({ error: "Text must be 1-5000 characters" });
     }
+
+    // H7: Escape HTML tags to prevent XSS
+    const sanitizedText = trimmedText.replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
     const validChatType = chatType === "group" ? "group" : "direct";
 
@@ -117,7 +182,7 @@ exports.sendNotificationReply = onRequest(async (req, res) => {
     }
 
     const msgData = {
-      text: trimmedText,
+      text: sanitizedText,
       senderId: decoded.uid,
       senderName: decoded.name || decoded.email || "User",
       timestamp: Date.now(),
@@ -146,6 +211,7 @@ exports.sendNotificationReply = onRequest(async (req, res) => {
 // Generates Open Graph metadata for URL preview cards.
 // =============================================
 exports.generateUrlPreview = onRequest(async (req, res) => {
+  if (!checkRateLimit(req, res)) return;
   if (!validateCors(req, res)) return;
 
   try {
@@ -176,6 +242,7 @@ exports.generateUrlPreview = onRequest(async (req, res) => {
 // Looks up a user by email for verification.
 // =============================================
 exports.lookupVerifiedUserByEmailV2 = onRequest({ region: "asia-south1" }, async (req, res) => {
+  if (!checkRateLimit(req, res)) return;
   if (!validateCors(req, res)) return;
 
   try {
@@ -218,10 +285,54 @@ exports.lookupVerifiedUserByEmailV2 = onRequest({ region: "asia-south1" }, async
 // Repairs group membership metadata inconsistencies.
 // =============================================
 exports.repairGroupAccessMetadata = onRequest(async (req, res) => {
+  if (!checkRateLimit(req, res)) return;
   if (!validateCors(req, res)) return;
 
   try {
-    res.json({ ok: true, repaired: 0 });
+    // Require authenticated admin user
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+    const token = authHeader.split("Bearer ")[1];
+    const caller = await auth.verifyIdToken(token);
+    const callerRecord = await auth.getUser(caller.uid);
+    if (!callerRecord.customClaims || !callerRecord.customClaims.admin) {
+      return res.status(403).json({ error: "Admin only" });
+    }
+
+    let repaired = 0;
+    const groupsSnap = await db.collection("groups").get();
+    
+    for (const groupDoc of groupsSnap.docs) {
+      const groupId = groupDoc.id;
+      const groupData = groupDoc.data();
+      
+      // Get all members from groupMembers collection
+      const membersSnap = await db.collection("groupMembers")
+        .where("groupId", "==", groupId)
+        .get();
+      
+      const actualMemberIds = membersSnap.docs.map(doc => doc.data().userId).filter(Boolean);
+      const currentMemberIds = groupData.memberIds || [];
+      
+      // Check for mismatches
+      const hasMismatch = 
+        actualMemberIds.length !== currentMemberIds.length ||
+        !actualMemberIds.every(id => currentMemberIds.includes(id)) ||
+        groupData.memberCount !== actualMemberIds.length;
+        
+      if (hasMismatch) {
+        await db.collection("groups").doc(groupId).update({
+          memberIds: actualMemberIds,
+          members: actualMemberIds, // Sync both fields if both exist
+          memberCount: actualMemberIds.length
+        });
+        repaired++;
+      }
+    }
+
+    res.json({ ok: true, repaired: repaired });
   } catch (error) {
     console.error("repairGroupAccessMetadata error:", error);
     res.status(500).json({ error: "Repair failed" });
@@ -375,6 +486,55 @@ exports.adminDeleteUser = onCall(async (request) => {
   const batch3 = db.batch();
   callsSnap.forEach(doc => batch3.delete(doc.ref));
   if (callsSnap.size > 0) await batch3.commit();
+
+  // Cleanup: delete user's groupMembers flat collection documents
+  const groupMembersSnap = await db.collection("groupMembers")
+    .where("userId", "==", targetUid).limit(500).get();
+  const batchGM = db.batch();
+  groupMembersSnap.forEach(doc => batchGM.delete(doc.ref));
+  if (groupMembersSnap.size > 0) await batchGM.commit();
+
+  // Cleanup: delete user's status documents
+  const statusSnap = await db.collection("statuses")
+    .where("userId", "==", targetUid).limit(500).get();
+  const batchStatus = db.batch();
+  statusSnap.forEach(doc => batchStatus.delete(doc.ref));
+  if (statusSnap.size > 0) await batchStatus.commit();
+
+  // Cleanup: delete user's tasks
+  const tasksSnap = await db.collection("tasks")
+    .where("userId", "==", targetUid).limit(500).get();
+  const batchTasks = db.batch();
+  tasksSnap.forEach(doc => batchTasks.delete(doc.ref));
+  if (tasksSnap.size > 0) await batchTasks.commit();
+
+  // Cleanup: delete calendar events added by user
+  const calendarSnap = await db.collection("calendarEvents")
+    .where("addedBy", "==", targetUid).limit(500).get();
+  const batchCal = db.batch();
+  calendarSnap.forEach(doc => batchCal.delete(doc.ref));
+  if (calendarSnap.size > 0) await batchCal.commit();
+
+  // Cleanup: delete group expenses added by user
+  const expensesSnap = await db.collection("groupExpenses")
+    .where("addedBy", "==", targetUid).limit(500).get();
+  const batchExp = db.batch();
+  expensesSnap.forEach(doc => batchExp.delete(doc.ref));
+  if (expensesSnap.size > 0) await batchExp.commit();
+
+  // Cleanup: delete direct chats user was in
+  const directChatsSnap = await db.collection("directChats")
+    .where("participants", "array-contains", targetUid).limit(500).get();
+  const batchDC = db.batch();
+  directChatsSnap.forEach(doc => batchDC.delete(doc.ref));
+  if (directChatsSnap.size > 0) await batchDC.commit();
+
+  // Cleanup: delete notification telemetry
+  const telemetrySnap = await db.collection("notificationTelemetry")
+    .where("userId", "==", targetUid).limit(500).get();
+  const batchTel = db.batch();
+  telemetrySnap.forEach(doc => batchTel.delete(doc.ref));
+  if (telemetrySnap.size > 0) await batchTel.commit();
 
   // Cleanup: remove from group memberships
   const groupsSnap = await db.collection("groups")

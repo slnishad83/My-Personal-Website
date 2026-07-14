@@ -2550,7 +2550,7 @@ function renderSingleMessageHTML(msg, msgs, i, lastDate) {
             <span class="text-xs font-medium text-secondary">Live Location · ${formatLiveDuration(remaining)} left</span>
           </div>
           <a href="${escHtml(mapUrlVal)}" target="_blank" rel="noopener" class="block relative">
-            <img src="${escHtml(staticMapUrl)}" alt="Live location" class="w-full h-[150px] object-cover" onerror="this.style.display='none'">
+            <img src="${escHtml(staticMapUrl)}" alt="Live location" class="w-full h-[150px] object-cover" loading="lazy" onerror="this.style.display='none'">
             <div class="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/50 to-transparent p-2">
               <span class="text-white text-xs">Tap to view on map</span>
             </div>
@@ -5827,12 +5827,12 @@ function loadEmojiGrid(cat) {
   const list = App.emojiCategories[cat] || [];
   grid.textContent = '';
   const frag = document.createDocumentFragment();
-  list.forEach(em => {
-    const span = document.createElement('span');
-    span.className = 'cursor-pointer transition-transform p-0.5 rounded';
-    span.dataset.emoji = em;
-    span.dataset.name = EMOJI_NAMES[em] || '';
-    span.textContent = em;
+    list.forEach(em => {
+      const span = document.createElement('span');
+      span.className = 'cursor-pointer transition-transform p-0.5 rounded';
+      span.dataset.emoji = em;
+      span.dataset.name = escHtml(EMOJI_NAMES[em] || '');
+      span.textContent = em;
     span.addEventListener('click', () => insertEmoji(em));
     span.addEventListener('mouseenter', () => previewEmoji(em, EMOJI_NAMES[em] || ''));
     span.addEventListener('mouseleave', clearEmojiPreview);
@@ -5874,7 +5874,7 @@ function searchEmoji(query) {
         const span = document.createElement('span');
         span.className = 'cursor-pointer transition-transform p-0.5 rounded';
         span.dataset.emoji = r.em;
-        span.dataset.name = r.name;
+        span.dataset.name = escHtml(r.name);
         span.textContent = r.em;
         span.addEventListener('click', () => insertEmoji(r.em));
         span.addEventListener('mouseenter', () => previewEmoji(r.em, r.name));

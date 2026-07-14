@@ -491,10 +491,37 @@ for (const page of HTML_PAGES) {
 console.log('[build] Copying static assets...');
 ensureDir(join(DIST, 'sounds'));
 
-// Copy JS files not in bundle
+// Copy JS files not in bundle (processing sw.js for dynamic caching)
 const extraJs = ['sw.js', 'notification-sounds.js', 'pwa-install.js', 'version.js'];
 for (const f of extraJs) {
-  try { copyFile(f, join(DIST, f)); } catch (_) {}
+  try {
+    if (f === 'sw.js') {
+      let swContent = readFile('sw.js');
+      swContent = swContent.replace(
+        "const CACHE_NAME = 'nsl-chat-v2.5.0';",
+        `const CACHE_NAME = 'nsl-chat-v2.5.0-${jsHash}';`
+      );
+      const newStaticAssets = `const STATIC_ASSETS = [
+  'app.css',
+  'config.js',
+  'notification-sounds.js',
+  'manifest.json',
+  'app-icon.svg',
+  'app-icon-192.png',
+  'app-icon-512.png',
+  'pwa-install.js',
+  '${jsFilename}',
+  'inline-sw-register.js',
+  'inline-broadcast-channel.js',
+  'inline-version.js',
+  'inline-idle-timeout.js'
+];`;
+      swContent = swContent.replace(/const STATIC_ASSETS = \[\s*[\s\S]*?\];/m, newStaticAssets);
+      writeFileSync(join(DIST, 'sw.js'), swContent);
+    } else {
+      copyFile(f, join(DIST, f));
+    }
+  } catch (_) {}
 }
 
 // Copy parent dir files
