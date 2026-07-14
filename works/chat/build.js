@@ -119,6 +119,7 @@ const CSS_FILES = [
   'sync-audit.css',
   'snooze-history.css',
   'snooze-enhancements.css',
+  'chat-consolidated.css',
 ];
 
 function ensureDir(dir) {
@@ -181,6 +182,23 @@ const jsHash = hash(bundle);
 const jsFilename = `app-bundle.${jsHash}.js`;
 writeFileSync(join(DIST, jsFilename), bundle);
 console.log(`[build] Bundled ${filesBundled} files → ${jsFilename} (${(bundle.length / 1024).toFixed(1)} KB)`);
+
+// ── Step 1.5: Bundle CSS ──
+console.log('[build] Bundling CSS files...');
+let cssBundle = '';
+for (const file of CSS_FILES) {
+  try {
+    const content = readFile(file);
+    cssBundle += `\n/* ═══ ${file} ═══ */\n`;
+    cssBundle += content;
+  } catch (e) {
+    console.warn(`[warn] Skipping CSS file ${file}: ${e.message}`);
+  }
+}
+const cssHash = hash(cssBundle);
+const cssFilename = `chat-bundle.${cssHash}.css`;
+writeFileSync(join(DIST, cssFilename), cssBundle);
+console.log(`[build] Bundled CSS files → ${cssFilename} (${(cssBundle.length / 1024).toFixed(1)} KB)`);
 
 // ── Step 2: Copy notification-sounds.js separately (loaded with defer) ──
 try {
@@ -407,10 +425,13 @@ function processIndexHtml() {
   // Remove the inline tailwind config script
   html = html.replace(/<script id="tailwind-config">[\s\S]*?<\/script>\s*\n?/, '');
 
-  // Add app.css reference (build-time Tailwind)
+  // Replace all individual CSS links with bundled CSS and app.css
+  const cssLinkRegex = /<link rel="stylesheet" href="(?:chat-theme|redesign-base|chat-enhancements|chat-consolidated|chat|chat-missing-features|accessibility|message-actions|scheduled-calendar|notification-prefs|url-preview|translation-ui|sync-audit|snooze-history|snooze-enhancements)\.css">\s*\n?/g;
+  html = html.replace(cssLinkRegex, '');
+  
   html = html.replace(
-    /(<link rel="stylesheet" href="chat-theme\.css">)/,
-    '$1\n  <link rel="stylesheet" href="app.css">'
+    /<!-- Consolidated Theme CSS \(responsive \+ dark\/light mode\) -->\s*\n?/,
+    `<link rel="stylesheet" href="app.css">\n  <link rel="stylesheet" href="${cssFilename}">\n`
   );
 
   // Remove noscript from <head> (invalid HTML, move to body)
@@ -503,6 +524,7 @@ for (const f of extraJs) {
       );
       const newStaticAssets = `const STATIC_ASSETS = [
   'app.css',
+  '${cssFilename}',
   'config.js',
   'notification-sounds.js',
   'manifest.json',

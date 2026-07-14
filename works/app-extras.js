@@ -326,12 +326,19 @@ function playVoice(msgId) {
   const speed = speedBtn ? parseFloat(speedBtn.dataset.speed) || 1 : 1;
   audio.playbackRate = speed;
 
-  const scrub = document.querySelector(`.voice-scrub[data-msg-id="${msgId}"]`);
   const timeLabel = document.querySelector(`.voice-time[data-msg-id="${msgId}"]`);
-  const maxDur = scrub ? parseInt(scrub.max) || 0 : 0;
+  const maxDur = msg.durationSec || 0;
 
   audio.addEventListener('timeupdate', () => {
-    if (scrub && !scrub._dragging) scrub.value = audio.currentTime;
+    const wave = document.getElementById(`wave-${msgId}`);
+    if (wave && audio.duration) {
+      const pct = audio.currentTime / audio.duration;
+      const spans = wave.querySelectorAll('span');
+      const activeCount = Math.floor(pct * spans.length);
+      spans.forEach((span, idx) => {
+        span.classList.toggle('active', idx <= activeCount);
+      });
+    }
     if (timeLabel) {
       const remaining = maxDur ? Math.max(0, maxDur - Math.floor(audio.currentTime)) : Math.floor(audio.currentTime);
       if (maxDur) timeLabel.textContent = '-' + _fmtDur(remaining);
@@ -342,7 +349,10 @@ function playVoice(msgId) {
   audio.addEventListener('pause', () => _updatePlayBtn(msgId, false));
   audio.addEventListener('ended', () => {
     _updatePlayBtn(msgId, false);
-    if (scrub) scrub.value = 0;
+    const wave = document.getElementById(`wave-${msgId}`);
+    if (wave) {
+      wave.querySelectorAll('span').forEach(span => span.classList.remove('active'));
+    }
     if (timeLabel && maxDur) timeLabel.textContent = _fmtDur(maxDur);
     _currentAudio = null;
     App._currentVoiceMsgId = null;
@@ -379,7 +389,24 @@ function cycleVoiceSpeed(btn) {
 function _updatePlayBtn(msgId, isPlaying) {
   const el = document.querySelector(`.voice-play[data-msg-id="${msgId}"]`);
   if (el) el.textContent = isPlaying ? '⏸' : '▶';
+  const wave = document.getElementById(`wave-${msgId}`);
+  if (wave) {
+    wave.classList.toggle('playing', isPlaying);
+  }
 }
+
+function scrubVoiceFromWave(msgId, event) {
+  const wave = document.getElementById(`wave-${msgId}`);
+  if (!wave || !_currentAudio || App._currentVoiceMsgId !== msgId) return;
+  const rect = wave.getBoundingClientRect();
+  const clickX = event.clientX - rect.left;
+  const percentage = Math.max(0, Math.min(1, clickX / rect.width));
+  const newTime = percentage * _currentAudio.duration;
+  if (!isNaN(newTime)) {
+    _currentAudio.currentTime = newTime;
+  }
+}
+window.scrubVoiceFromWave = scrubVoiceFromWave;
 
 /* ══════════════════════════════════════════════════════════════
    KEYBOARD SHORTCUTS HELP DIALOG

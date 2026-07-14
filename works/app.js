@@ -879,9 +879,8 @@ function subscribeToMessages(chatId) {
       if (msgs.length > prevCount) {
         const newMsgs = msgs.slice(prevCount);
         const incomingNew = newMsgs.filter(m => m.from !== 'me');
-        if (incomingNew.length > 0 && App.currentChat?.id !== chatId) {
-          playMsgReceivedSound(chatId);
-        } else if (incomingNew.length > 0) {
+        if (incomingNew.length > 0) {
+          document.dispatchEvent(new CustomEvent('nsl:new-message', { detail: { chatId } }));
           playMsgReceivedSound(chatId);
         }
       }
@@ -2434,6 +2433,9 @@ function openChat(chatId) {
     scrollToBottom(true);
   }
 
+  // Dispatch custom event for window title manager
+  document.dispatchEvent(new CustomEvent('nsl:chat-opened', { detail: chat }));
+
   // Redraw chat lists for updates
   renderChatList();
 
@@ -2495,6 +2497,7 @@ function renderSingleMessageHTML(msg, msgs, i, lastDate) {
   const tickIcon = isMe
     ? msg.status==='read'      ? '<span class="material-symbols-outlined text-[14px] text-primary" style="font-variation-settings: \'FILL\' 1;">done_all</span>'
     : msg.status==='delivered' ? '<span class="material-symbols-outlined text-[14px] text-on-surface-variant" style="font-variation-settings: \'FILL\' 1;">done_all</span>'
+    : msg.status==='sending'   ? '<span class="material-symbols-outlined text-[14px] text-on-surface-variant sync-badge pending" style="animation: syncRotate 2s infinite linear; display: inline-block;">schedule</span>'
     :                            '<span class="material-symbols-outlined text-[14px] text-on-surface-variant">done</span>'
     : '';
 
@@ -2525,8 +2528,15 @@ function renderSingleMessageHTML(msg, msgs, i, lastDate) {
     contentHTML = `<div class="voice-player bg-surface-container-high/40 p-2.5 rounded-xl border border-outline-variant/20" data-msg-id="${msg.id}">
       <div class="flex items-center gap-2">
         <button class="voice-play w-8 h-8 rounded-full bg-primary text-on-primary flex items-center justify-center shrink-0" data-msg-id="${msg.id}" onclick="playVoice('${msg.id}')" aria-label="Play voice message">▶</button>
-        <div class="flex-1">
-          <input type="range" min="0" max="${durSec || 100}" value="0" step="0.1" class="voice-scrub w-full h-1 accent-primary cursor-pointer" data-msg-id="${msg.id}" oninput="scrubVoice('${msg.id}', this.value)" style="accent-color:var(--primary)">
+        <div class="flex-1 flex items-center">
+          <div class="audio-visualizer-wave cursor-pointer w-full flex items-center gap-[3px]" data-msg-id="${msg.id}" id="wave-${msg.id}" onclick="scrubVoiceFromWave('${msg.id}', event)">
+            <span style="height:12px"></span><span style="height:8px"></span><span style="height:16px"></span>
+            <span style="height:10px"></span><span style="height:14px"></span><span style="height:6px"></span>
+            <span style="height:18px"></span><span style="height:10px"></span><span style="height:12px"></span>
+            <span style="height:15px"></span><span style="height:7px"></span><span style="height:11px"></span>
+            <span style="height:14px"></span><span style="height:9px"></span><span style="height:13px"></span>
+            <span style="height:8px"></span><span style="height:16px"></span><span style="height:10px"></span>
+          </div>
         </div>
         <button class="voice-speed text-[10px] font-bold px-1.5 py-0.5 rounded bg-surface-variant/60 hover:bg-surface-variant text-on-surface-variant cursor-pointer" data-msg-id="${msg.id}" data-speed="1" onclick="cycleVoiceSpeed(this)">1x</button>
         <span class="text-[10px] font-timestamp text-on-surface-variant voice-time" data-msg-id="${msg.id}">${dur}</span>
