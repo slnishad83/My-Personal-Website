@@ -1,4 +1,4 @@
-const functions = require("firebase-functions");
+const { onCall, onRequest, HttpsError } = require("firebase-functions/v2/https");
 const admin = require("firebase-admin");
 
 admin.initializeApp();
@@ -11,7 +11,7 @@ const auth = admin.auth();
 // =============================================
 function requireAuth(context) {
   if (!context.auth) {
-    throw new functions.https.HttpsError("unauthenticated", "Must be signed in.");
+    throw new HttpsError("unauthenticated", "Must be signed in.");
   }
   return context.auth.uid;
 }
@@ -40,7 +40,7 @@ function validateCors(req, res) {
 // Returns TURN/STUN server credentials for WebRTC.
 // In production, integrate with a TURN provider (e.g., Twilio, Metered).
 // =============================================
-exports.getTurnCredentials = functions.https.onRequest(async (req, res) => {
+exports.getTurnCredentials = onRequest(async (req, res) => {
   if (!validateCors(req, res)) return;
 
   try {
@@ -70,7 +70,7 @@ exports.getTurnCredentials = functions.https.onRequest(async (req, res) => {
 // HTTP: sendNotificationReply
 // Sends a reply from push notification inline-reply when no app tab is open.
 // =============================================
-exports.sendNotificationReply = functions.https.onRequest(async (req, res) => {
+exports.sendNotificationReply = onRequest(async (req, res) => {
   if (!validateCors(req, res)) return;
 
   try {
@@ -145,7 +145,7 @@ exports.sendNotificationReply = functions.https.onRequest(async (req, res) => {
 // HTTP: generateUrlPreview
 // Generates Open Graph metadata for URL preview cards.
 // =============================================
-exports.generateUrlPreview = functions.https.onRequest(async (req, res) => {
+exports.generateUrlPreview = onRequest(async (req, res) => {
   if (!validateCors(req, res)) return;
 
   try {
@@ -175,7 +175,7 @@ exports.generateUrlPreview = functions.https.onRequest(async (req, res) => {
 // HTTP: lookupVerifiedUserByEmailV2
 // Looks up a user by email for verification.
 // =============================================
-exports.lookupVerifiedUserByEmailV2 = functions.region("asia-south1").https.onRequest(async (req, res) => {
+exports.lookupVerifiedUserByEmailV2 = onRequest({ region: "asia-south1" }, async (req, res) => {
   if (!validateCors(req, res)) return;
 
   try {
@@ -217,7 +217,7 @@ exports.lookupVerifiedUserByEmailV2 = functions.region("asia-south1").https.onRe
 // HTTP: repairGroupAccessMetadata
 // Repairs group membership metadata inconsistencies.
 // =============================================
-exports.repairGroupAccessMetadata = functions.https.onRequest(async (req, res) => {
+exports.repairGroupAccessMetadata = onRequest(async (req, res) => {
   if (!validateCors(req, res)) return;
 
   try {
@@ -232,12 +232,12 @@ exports.repairGroupAccessMetadata = functions.https.onRequest(async (req, res) =
 // CALLABLE: catchMeUp
 // AI-powered summary of missed messages in a chat.
 // =============================================
-exports.catchMeUp = functions.https.onCall(async (data, context) => {
-  requireAuth(context);
-  const { chatId, chatType } = data;
+exports.catchMeUp = onCall(async (request) => {
+  requireAuth(request);
+  const { chatId, chatType } = request.data;
 
   if (!chatId) {
-    throw new functions.https.HttpsError("invalid-argument", "Missing chatId");
+    throw new HttpsError("invalid-argument", "Missing chatId");
   }
 
   // Stub: Return placeholder. Replace with AI summary (Gemini, OpenAI, etc.).
@@ -248,12 +248,12 @@ exports.catchMeUp = functions.https.onCall(async (data, context) => {
 // CALLABLE: transcribeVoiceMessage
 // Transcribes voice message audio to text.
 // =============================================
-exports.transcribeVoiceMessage = functions.https.onCall(async (data, context) => {
-  requireAuth(context);
-  const { messageId, audioUrl } = data;
+exports.transcribeVoiceMessage = onCall(async (request) => {
+  requireAuth(request);
+  const { messageId, audioUrl } = request.data;
 
   if (!messageId || !audioUrl) {
-    throw new functions.https.HttpsError("invalid-argument", "Missing messageId or audioUrl");
+    throw new HttpsError("invalid-argument", "Missing messageId or audioUrl");
   }
 
   // Stub: Return placeholder. Replace with Speech-to-Text API.
@@ -264,12 +264,12 @@ exports.transcribeVoiceMessage = functions.https.onCall(async (data, context) =>
 // CALLABLE: aiChatBot
 // AI chatbot that responds to @AI messages.
 // =============================================
-exports.aiChatBot = functions.https.onCall(async (data, context) => {
-  requireAuth(context);
-  const { prompt, chatId, chatType, senderName } = data;
+exports.aiChatBot = onCall(async (request) => {
+  requireAuth(request);
+  const { prompt, chatId, chatType, senderName } = request.data;
 
   if (!prompt || !chatId) {
-    throw new functions.https.HttpsError("invalid-argument", "Missing prompt or chatId");
+    throw new HttpsError("invalid-argument", "Missing prompt or chatId");
   }
 
   // Stub: Post a placeholder response. Replace with AI API call.
@@ -295,12 +295,12 @@ exports.aiChatBot = functions.https.onCall(async (data, context) => {
 // CALLABLE: summarizeThread
 // Generates an AI summary of a threaded conversation.
 // =============================================
-exports.summarizeThread = functions.https.onCall(async (data, context) => {
-  requireAuth(context);
-  const { messageId } = data;
+exports.summarizeThread = onCall(async (request) => {
+  requireAuth(request);
+  const { messageId } = request.data;
 
   if (!messageId) {
-    throw new functions.https.HttpsError("invalid-argument", "Missing messageId");
+    throw new HttpsError("invalid-argument", "Missing messageId");
   }
 
   // Stub: Return placeholder. Replace with AI summarization.
@@ -311,24 +311,24 @@ exports.summarizeThread = functions.https.onCall(async (data, context) => {
 // CALLABLE: leaveGroup
 // Removes the current user from a group chat.
 // =============================================
-exports.leaveGroup = functions.https.onCall(async (data, context) => {
-  const uid = requireAuth(context);
-  const { groupId } = data;
+exports.leaveGroup = onCall(async (request) => {
+  const uid = requireAuth(request);
+  const { groupId } = request.data;
 
   if (!groupId) {
-    throw new functions.https.HttpsError("invalid-argument", "Missing groupId");
+    throw new HttpsError("invalid-argument", "Missing groupId");
   }
 
   const groupRef = db.collection("groups").doc(groupId);
   const groupDoc = await groupRef.get();
 
   if (!groupDoc.exists) {
-    throw new functions.https.HttpsError("not-found", "Group not found");
+    throw new HttpsError("not-found", "Group not found");
   }
 
   const groupData = groupDoc.data();
   if (!groupData.memberIds || !groupData.memberIds.includes(uid)) {
-    throw new functions.https.HttpsError("failed-precondition", "You are not a member of this group");
+    throw new HttpsError("failed-precondition", "You are not a member of this group");
   }
 
   await groupRef.update({
@@ -342,17 +342,17 @@ exports.leaveGroup = functions.https.onCall(async (data, context) => {
 // CALLABLE: adminDeleteUser
 // Permanently deletes a user (admin only).
 // =============================================
-exports.adminDeleteUser = functions.https.onCall(async (data, context) => {
-  const uid = requireAuth(context);
-  const { targetUid } = data;
+exports.adminDeleteUser = onCall(async (request) => {
+  const uid = requireAuth(request);
+  const { targetUid } = request.data;
 
   const callerRecord = await auth.getUser(uid);
   if (!callerRecord.customClaims || !callerRecord.customClaims.admin) {
-    throw new functions.https.HttpsError("permission-denied", "Admin only");
+    throw new HttpsError("permission-denied", "Admin only");
   }
 
   if (!targetUid) {
-    throw new functions.https.HttpsError("invalid-argument", "Missing targetUid");
+    throw new HttpsError("invalid-argument", "Missing targetUid");
   }
 
   // Cleanup: delete user's messages (limit 500 per batch)
@@ -398,17 +398,17 @@ exports.adminDeleteUser = functions.https.onCall(async (data, context) => {
 // CALLABLE: adminBanUser
 // Bans a user (admin only).
 // =============================================
-exports.adminBanUser = functions.https.onCall(async (data, context) => {
-  const uid = requireAuth(context);
-  const { targetUid, reason } = data;
+exports.adminBanUser = onCall(async (request) => {
+  const uid = requireAuth(request);
+  const { targetUid, reason } = request.data;
 
   const callerRecord = await auth.getUser(uid);
   if (!callerRecord.customClaims || !callerRecord.customClaims.admin) {
-    throw new functions.https.HttpsError("permission-denied", "Admin only");
+    throw new HttpsError("permission-denied", "Admin only");
   }
 
   if (!targetUid) {
-    throw new functions.https.HttpsError("invalid-argument", "Missing targetUid");
+    throw new HttpsError("invalid-argument", "Missing targetUid");
   }
 
   await auth.setCustomUserClaims(targetUid, { banned: true });
@@ -426,17 +426,17 @@ exports.adminBanUser = functions.https.onCall(async (data, context) => {
 // CALLABLE: adminUnbanUser
 // Unbans a user (admin only).
 // =============================================
-exports.adminUnbanUser = functions.https.onCall(async (data, context) => {
-  const uid = requireAuth(context);
-  const { targetUid } = data;
+exports.adminUnbanUser = onCall(async (request) => {
+  const uid = requireAuth(request);
+  const { targetUid } = request.data;
 
   const callerRecord = await auth.getUser(uid);
   if (!callerRecord.customClaims || !callerRecord.customClaims.admin) {
-    throw new functions.https.HttpsError("permission-denied", "Admin only");
+    throw new HttpsError("permission-denied", "Admin only");
   }
 
   if (!targetUid) {
-    throw new functions.https.HttpsError("invalid-argument", "Missing targetUid");
+    throw new HttpsError("invalid-argument", "Missing targetUid");
   }
 
   const targetRecord = await auth.getUser(targetUid);

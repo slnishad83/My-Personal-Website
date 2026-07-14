@@ -95,7 +95,7 @@ html, body, #app { height: 100%; margin: 0; padding: 0; }
 
 @media (min-width: 768px) and (max-width: 1023px) {
   #sidebar { width: 72px !important; }
-  #sidebar .xl\\:block { display: none !important; }
+  #sidebar [class~="xl:block"] { display: none !important; }
   #sidebar button { justify-content: center !important; padding-left: 0 !important; padding-right: 0 !important; }
   #chat-list-sidebar { width: clamp(240px, 30vw, 320px) !important; }
   #bottom-nav { display: none !important; }
@@ -130,7 +130,7 @@ html, body, #app { height: 100%; margin: 0; padding: 0; }
 
 @media (min-width: 1024px) and (max-width: 1279px) {
   #sidebar { width: 72px !important; }
-  #sidebar .xl\\:block { display: none !important; }
+  #sidebar [class~="xl:block"] { display: none !important; }
   #sidebar button { justify-content: center !important; padding-left: 0 !important; padding-right: 0 !important; }
   #detail-panel { display: none !important; }
 }
@@ -161,7 +161,7 @@ html, body, #app { height: 100%; margin: 0; padding: 0; }
 /* ── Landscape mode on tablet (768-1024px) ──────────── */
 @media (min-width: 768px) and (max-width: 1023px) and (orientation: landscape) {
   #sidebar { width: 72px !important; }
-  #sidebar .xl\\:block { display: none !important; }
+  #sidebar [class~="xl:block"] { display: none !important; }
   #sidebar button { justify-content: center !important; padding-left: 0 !important; padding-right: 0 !important; }
   #chat-list-sidebar { width: clamp(240px, 28vw, 320px) !important; }
   #detail-panel { display: flex !important; width: 320px !important; min-width: 320px !important; position: relative !important; box-shadow: none !important; }
@@ -569,7 +569,7 @@ button, a, [role="button"], input, textarea, select {
 /* ── Ultra-wide screens (>1920px) ──────────────────────── */
 @media (min-width: 1920px) {
   #sidebar { width: 280px !important; }
-  #sidebar .xl\\:block { display: flex !important; }
+  #sidebar [class~="xl:block"] { display: flex !important; }
   #chat-list-sidebar { width: 360px !important; }
   #detail-panel { width: 380px !important; }
 }
@@ -755,7 +755,7 @@ html #messages-wrap::-webkit-scrollbar-track { background: var(--surface-bright)
 
 /* H2 sidebar expanded state */
 #sidebar.sidebar-expanded { width: 256px !important; }
-#sidebar.sidebar-expanded .xl\\:block { display: block !important; }
+#sidebar.sidebar-expanded [class~="xl:block"] { display: block !important; }
 
 /* C2 detail panel overlay animation */
 @media (min-width: 768px) and (max-width: 1023px) {
@@ -808,7 +808,7 @@ html #messages-wrap::-webkit-scrollbar-track { background: var(--surface-bright)
 /* ── R3: Foldable fallback via width ───────────────────────── */
 @media (min-width: 600px) and (max-width: 900px) and (hover: none) and (pointer: coarse) {
   #sidebar { width: 72px !important; }
-  #sidebar .xl\\:block { display: none !important; }
+  #sidebar [class~="xl:block"] { display: none !important; }
   #chat-list-sidebar { width: 320px !important; }
   #detail-panel { display: flex !important; width: 360px !important; }
 }
@@ -1590,7 +1590,7 @@ html[data-theme="light"], html:not(.dark) {
 /* ── Foldable device support (Samsung Fold, Surface Duo) ──────── */
 @media (spanning: single-fold-vertical) {
   #sidebar { width: 72px !important; }
-  #sidebar .xl\\:block { display: none !important; }
+  #sidebar [class~="xl:block"] { display: none !important; }
   #chat-list-sidebar { width: clamp(240px, 28vw, 320px) !important; }
   #detail-panel { display: flex !important; width: 320px !important; min-width: 320px !important; position: relative !important; box-shadow: none !important; }
   #bottom-nav { display: none !important; }
@@ -1600,7 +1600,7 @@ html[data-theme="light"], html:not(.dark) {
 /* ── Foldable horizontal span (Surface Duo landscape) ─────────── */
 @media (spanning: single-fold-horizontal) {
   #sidebar { width: 72px !important; }
-  #sidebar .xl\\:block { display: none !important; }
+  #sidebar [class~="xl:block"] { display: none !important; }
   #chat-list-sidebar { width: clamp(240px, 28vw, 320px) !important; }
   #detail-panel { display: flex !important; width: 340px !important; min-width: 340px !important; position: relative !important; box-shadow: none !important; }
   #bottom-nav { display: none !important; }
