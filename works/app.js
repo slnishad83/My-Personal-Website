@@ -1062,6 +1062,7 @@ function checkSession() {
           syncDeletedChatsFromFirestore();
           subscribeToUsers();
           subscribeToChats();
+          subscribeToMyReactions();
           subscribeToGroups();
           subscribeToCallLogs(App.currentUser.uid);
           startDisappearingMessagesCleanup();
@@ -1426,15 +1427,35 @@ function renderChatList(filter = '') {
   _hideChatListSkeleton();
 
   const tab = App.activeTab;
+  
+  // Show or hide WhatsApp Web filter chips based on current tab
+  const chipsContainer = document.getElementById('wa-filter-chips');
+  if (chipsContainer) {
+    chipsContainer.classList.toggle('hidden', tab !== 'chats');
+  }
+
   let items = App.chats.filter(c => {
     if (App._archivedChatIds && App._archivedChatIds.has(c.id)) return false;
     if (tab === 'chats')  return true; // Show all (personal, groups, saved_me)
     if (tab === 'groups') return c.type === 'group';
     return true;
   });
+  
   // Filter out blocked users
   if (App._blockedUsers && App._blockedUsers.size) {
     items = items.filter(c => !c.uid || !App._blockedUsers.has(c.uid));
+  }
+
+  // Apply WhatsApp Web filter chips
+  if (tab === 'chats') {
+    const waFilter = App.activeWaFilter || 'all';
+    if (waFilter === 'unread') {
+      items = items.filter(c => c.unread > 0 || c.unreadReaction);
+    } else if (waFilter === 'favourites') {
+      items = items.filter(c => c.pinned);
+    } else if (waFilter === 'groups') {
+      items = items.filter(c => c.type === 'group');
+    }
   }
 
   if (filter) {
@@ -1462,7 +1483,13 @@ function renderChatList(filter = '') {
   
   const sidebarSearchInput = document.getElementById('sidebar-search');
   if (sidebarSearchInput) {
-    sidebarSearchInput.placeholder = __('search');
+    if (tab === 'chats' && App.activeWaFilter === 'unread') {
+      sidebarSearchInput.placeholder = 'Search unread chats';
+    } else if (tab === 'chats' && App.activeWaFilter === 'groups') {
+      sidebarSearchInput.placeholder = 'Search group chats';
+    } else {
+      sidebarSearchInput.placeholder = __('search') || 'Search conversations...';
+    }
   }
 
   // Sidebar navigation — always show normal nav (Myself Chat accessible via More tab)
@@ -1512,6 +1539,21 @@ function renderChatList(filter = '') {
   if (tab === 'requests') { renderRequestsTab(); return; }
 
   const hasArchived = tab === 'chats' && App._archivedChatIds && App._archivedChatIds.size > 0;
+  
+  if (tab === 'chats' && (App.activeWaFilter || 'all') === 'unread' && !items.length) {
+    hide('chats-empty');
+    list.innerHTML = `
+      <div class="wa-unread-empty-container">
+        <div class="wa-unread-empty-icon animate-bounce">
+          <span class="material-symbols-outlined">done</span>
+        </div>
+        <h3 class="wa-unread-empty-title">No unread chats</h3>
+        <p class="wa-unread-empty-desc">You're all caught up.</p>
+        <button class="wa-unread-empty-link" onclick="setWaFilter('all')">View all chats</button>
+      </div>`;
+    return;
+  }
+
   if (!items.length) {
     if (hasArchived) {
       hide('chats-empty');
@@ -1536,13 +1578,17 @@ function renderChatList(filter = '') {
 
   let html = '';
   if (hasArchived) {
+    const unreadArchivedCount = App.chats.filter(c => App._archivedChatIds.has(c.id) && (c.unread > 0 || c.unreadReaction)).length;
+    const archivedBadge = unreadArchivedCount > 0
+      ? `<span class="text-[11px] font-bold text-primary px-2 py-0.5 rounded-full bg-primary/10">${unreadArchivedCount}</span>`
+      : '';
     html += `
     <div class="flex items-center justify-between px-5 py-3 hover:bg-surface-container-high/40 cursor-pointer transition-colors border-b border-outline-variant/10" onclick="openArchivedChats()">
       <div class="flex items-center gap-3 text-on-surface">
         <span class="material-symbols-outlined text-primary text-xl">archive</span>
         <span class="text-sm font-semibold">Archived</span>
       </div>
-      <span class="text-[11px] font-bold text-primary px-2 py-0.5 rounded-full bg-primary/10">${App._archivedChatIds.size}</span>
+      ${archivedBadge}
     </div>`;
   }
   if (pinned.length) {
@@ -1570,7 +1616,10 @@ function chatItemHTML(chat) {
   const isActive  = App.currentChat && App.currentChat.id === chat.id;
   const timeStr   = formatChatTime(chat.lastTime);
   const unreadBadge = chat.unread > 0
-    ? `<div class="bg-secondary text-white text-[10px] px-1.5 py-0.5 rounded-full font-bold ml-2 shadow">${chat.unread}</div>` : '';
+    ? `<div class="bg-secondary text-white text-[10px] px-1.5 py-0.5 rounded-full font-bold ml-2 shadow">${chat.unread}</div>`
+    : (chat.unreadReaction
+       ? `<div class="bg-secondary text-[11px] w-5 h-5 rounded-full flex items-center justify-center font-bold ml-2 shadow" title="New reaction">${chat.unreadReactionEmoji}</div>`
+       : '');
   const pinIcon   = chat.pinned ? `<span class="material-symbols-outlined text-[13px] text-primary" style="font-variation-settings: 'FILL' 1;">push_pin</span>` : '';
 
   let name = chat.name;
@@ -1636,7 +1685,11 @@ function chatItemHTML(chat) {
         <span class="font-timestamp text-timestamp text-on-surface-variant">${timeStr}</span>
       </div>
       <div class="flex justify-between items-center">
-        <p class="text-xs text-on-surface-variant truncate pr-2">${escHtml(chat.lastMsg || '')}</p>
+        <p class="text-xs text-on-surface-variant truncate pr-2 ${chat.unreadReaction ? 'text-primary font-semibold' : ''}">
+          ${chat.unreadReaction 
+            ? `Reacted ${chat.unreadReactionEmoji} to: "${escHtml(chat.unreadReactionText || '')}"`
+            : escHtml(chat.lastMsg || '')}
+        </p>
         <div class="flex items-center gap-1.5 flex-shrink-0">
           ${pinIcon}
           ${unreadBadge}
@@ -2422,6 +2475,10 @@ function openChat(chatId) {
 
   App.currentChat = chat;
   chat.unread = 0;
+  chat.unreadReaction = false;
+  delete chat.unreadReactionEmoji;
+  delete chat.unreadReactionText;
+  delete chat.unreadReactionMsgId;
 
   // Update header mute icon to reflect current chat's mute state
   _updateChatMuteIcon(chatId);
@@ -7142,3 +7199,114 @@ function _applyPressureToCanvas(canvas, ctx) {
     ctx.lineWidth = Math.max(1, (e.pressure || 0.5) * 12);
   });
 }
+
+/* WhatsApp Filter Chip Functions */
+window.setWaFilter = function(filterName) {
+  App.activeWaFilter = filterName;
+  document.querySelectorAll('#wa-filter-chips .wa-chip').forEach(btn => {
+    const isMatching = btn.getAttribute('data-filter') === filterName;
+    btn.classList.toggle('active', isMatching);
+  });
+  renderChatList();
+};
+
+window.addNewFilterChip = function() {
+  showToast('Custom lists feature coming soon!', 'info');
+};
+
+/* WhatsApp Reaction Notification Listeners */
+window.subscribeToMyReactions = function() {
+  if (!App.db || !App.auth?.currentUser) return;
+  const myUid = App.auth.currentUser.uid;
+  if (App.reactionsUnsubscribe) {
+    App.reactionsUnsubscribe();
+    App.reactionsUnsubscribe = null;
+  }
+
+  const knownReactions = new Map();
+
+  App.reactionsUnsubscribe = App.db.collection('messages')
+    .where('senderId', '==', myUid)
+    .onSnapshot((snapshot) => {
+      snapshot.docChanges().forEach(change => {
+        const msgId = change.doc.id;
+        const msgData = change.doc.data();
+        const reactions = msgData.reactions || [];
+        const chatId = msgData.directId || msgData.groupId;
+        if (!chatId) return;
+
+        const currentKeys = reactions.map(r => r.userId + ':' + r.emoji);
+
+        if (change.type === 'added') {
+          knownReactions.set(msgId, currentKeys);
+          return;
+        }
+
+        if (change.type === 'modified') {
+          const prevKeys = knownReactions.get(msgId) || [];
+          knownReactions.set(msgId, currentKeys);
+
+          reactions.forEach(r => {
+            if (r.userId !== myUid) {
+              const key = r.userId + ':' + r.emoji;
+              if (!prevKeys.includes(key)) {
+                triggerReactionNotification(chatId, msgId, msgData, r);
+              }
+            }
+          });
+        }
+      });
+    }, (err) => {
+      console.warn('[Reactions] Subscription error:', err);
+    });
+};
+
+window.triggerReactionNotification = function(chatId, msgId, msgData, reaction) {
+  const chat = App.chats.find(c => c.id === chatId);
+  if (!chat) return;
+
+  chat.unreadReaction = true;
+  chat.unreadReactionEmoji = reaction.emoji;
+  chat.unreadReactionText = msgData.text || (msgData.attachment?.type || 'attachment');
+  chat.unreadReactionMsgId = msgId;
+
+  // Move chat to top of list
+  chat.lastTime = Date.now();
+
+  let reactorName = 'Someone';
+  const contact = App.contacts.find(c => c.uid === reaction.userId);
+  if (contact) {
+    reactorName = contact.name;
+  }
+
+  // Display system notification
+  if (window.DesktopNotifications && DesktopNotifications.isSupported()) {
+    DesktopNotifications.show({
+      title: `New Reaction on ${chat.name}`,
+      body: `${reactorName} reacted ${reaction.emoji} to: "${msgData.text || 'message'}"`,
+      onClick: () => {
+        window.focus();
+        openChat(chatId);
+        setTimeout(() => {
+          const bubble = document.getElementById(`msg-${msgId}`);
+          if (bubble) {
+            bubble.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            bubble.classList.add('animate-pulse');
+            setTimeout(() => bubble.classList.remove('animate-pulse'), 2000);
+          }
+        }, 300);
+      }
+    });
+  }
+
+  // Fallback in-app toast
+  showToast(`${reactorName} reacted ${reaction.emoji} to your message`, 'info');
+
+  // Notification Sound
+  if (typeof App !== 'undefined' && !App._isMutedGlobal && !App._mutedChats?.has(chatId)) {
+    const audio = new Audio('sounds/notification.mp3');
+    audio.play().catch(() => {});
+  }
+
+  renderChatList();
+};

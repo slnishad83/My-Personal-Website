@@ -2115,6 +2115,201 @@ html:not(.dark) .wa-input-footer {
   .wa-textarea {
     font-size: 14px;
     padding: 5px 4px;
+  min-height: 56px;
+}
+.wa-input-footer:not(.hidden) {
+  display: flex;
+}
+
+/* ── Rounded input box (left part) ── */
+.wa-input-box {
+  flex: 1;
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  background: var(--wa-input-bg, #2a3942);
+  border-radius: 8px;
+  padding: 6px 8px;
+  min-height: 42px;
+  transition: border-radius 0.15s ease;
+}
+
+/* Multi-line: increase border radius slightly */
+.wa-input-box:has(.wa-textarea[style*="height"]) {
+  border-radius: 8px;
+}
+
+/* ── Icon buttons inside input box ── */
+.wa-input-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  border: none;
+  background: transparent;
+  color: var(--wa-icon-color, #8696a0);
+  cursor: pointer;
+  border-radius: 50%;
+  transition: color 0.15s, background 0.15s;
+  padding: 0;
+  margin-bottom: 0;
+  align-self: flex-end;
+}
+.wa-input-icon:hover {
+  color: var(--wa-icon-hover, #d1d7db);
+}
+.wa-input-icon:active {
+  background: rgba(134, 150, 160, 0.1);
+}
+.wa-input-icon .material-symbols-outlined {
+  font-size: 24px;
+}
+
+/* Attach icon — rotated 45° like WhatsApp paperclip */
+#attach-btn .material-symbols-outlined {
+  transform: rotate(45deg);
+}
+
+/* ── Textarea ── */
+.wa-textarea {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--wa-text-color, #e9edef);
+  font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
+  font-size: 15px;
+  line-height: 20px;
+  padding: 7px 8px;
+  resize: none;
+  max-height: 120px;
+  min-height: 20px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(134, 150, 160, 0.3) transparent;
+}
+.wa-textarea::placeholder {
+  color: var(--wa-placeholder, #8696a0);
+  opacity: 1;
+}
+.wa-textarea::-webkit-scrollbar {
+  width: 4px;
+}
+.wa-textarea::-webkit-scrollbar-thumb {
+  background: rgba(134, 150, 160, 0.3);
+  border-radius: 4px;
+}
+
+/* ── Circular send/mic button (separate, right side) ── */
+.wa-send-mic-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  flex-shrink: 0;
+  border: none;
+  background: var(--wa-green, #00a884);
+  color: var(--wa-send-icon-color, #111b21);
+  border-radius: 50%;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.1s;
+  padding: 0;
+  margin-bottom: 0;
+  align-self: flex-end;
+}
+.wa-send-mic-btn:hover {
+  background: var(--wa-green-hover, #06cf9c);
+}
+.wa-send-mic-btn:active {
+  transform: scale(0.92);
+}
+.wa-send-mic-btn .material-symbols-outlined {
+  font-size: 22px;
+}
+
+/* Send icon rotation to match WhatsApp */
+#send-btn .material-symbols-outlined {
+  transform: rotate(-42deg) translateX(1px);
+}
+
+/* ── Emoji picker: reposition to bottom-left ── */
+#emoji-picker {
+  left: 10px !important;
+  right: auto !important;
+  bottom: 62px !important;
+  transform-origin: bottom left !important;
+}
+
+/* ── Attach menu: reposition above attach button ── */
+#attach-menu {
+  left: 44px !important;
+  right: auto !important;
+  bottom: 62px !important;
+  transform-origin: bottom left !important;
+}
+
+/* ── Reply preview bar adaptation ── */
+#reply-preview {
+  background: var(--wa-footer-bg, #202c33) !important;
+  border-top-color: rgba(134, 150, 160, 0.15) !important;
+  padding: 8px 14px !important;
+}
+
+/* ── Format bar adaptation ── */
+#format-bar {
+  background: var(--wa-footer-bg, #202c33) !important;
+  border-top-color: rgba(134, 150, 160, 0.15) !important;
+}
+
+/* ── Recording bar adaptation ── */
+#recording-bar {
+  background: var(--wa-footer-bg, #202c33) !important;
+  border-top-color: rgba(134, 150, 160, 0.15) !important;
+}
+
+/* ── Light mode overrides ── */
+html:not(.dark) .wa-input-footer {
+  --wa-footer-bg: #f0f2f5;
+  --wa-input-bg: #ffffff;
+  --wa-icon-color: #54656f;
+  --wa-icon-hover: #3b4a54;
+  --wa-text-color: #111b21;
+  --wa-placeholder: #667781;
+  --wa-green: #00a884;
+  --wa-green-hover: #06cf9c;
+  --wa-send-icon-color: #ffffff;
+}
+
+/* ── Mobile responsiveness ── */
+@media (max-width: 767px) {
+  .wa-input-footer {
+    padding: 5px 6px;
+    gap: 6px;
+  }
+  .wa-input-box {
+    padding: 4px 4px;
+    gap: 0;
+  }
+  .wa-input-icon {
+    width: 32px;
+    height: 32px;
+  }
+  .wa-input-icon .material-symbols-outlined {
+    font-size: 22px;
+  }
+  .wa-send-mic-btn {
+    width: 40px;
+    height: 40px;
+  }
+  .wa-send-mic-btn .material-symbols-outlined {
+    font-size: 20px;
+  }
+  .wa-textarea {
+    font-size: 14px;
+    padding: 5px 4px;
   }
 }
 
@@ -2123,4 +2318,119 @@ html:not(.dark) .wa-input-footer {
   .wa-input-footer {
     padding: 6px 8px;
   }
+}
+
+/* ── WhatsApp Filter Chips ── */
+#wa-filter-chips {
+  margin-top: 10px;
+  padding: 4px 8px;
+  border-bottom: 1px solid rgba(134, 150, 160, 0.08);
+}
+.wa-chip {
+  background: var(--wa-chip-bg, #202c33);
+  color: var(--wa-chip-text, #8696a0);
+  border: 1px solid transparent;
+  border-radius: 9999px;
+  padding: 6px 12px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+  line-height: 1;
+}
+.wa-chip:hover {
+  background: var(--wa-chip-hover, #2a3942);
+}
+.wa-chip.active {
+  background: var(--wa-chip-active-bg, #0a332c);
+  color: var(--wa-chip-active-text, #00bfa5);
+}
+.wa-chip-add {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  background: var(--wa-chip-bg, #202c33);
+  color: var(--wa-chip-text, #8696a0);
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all 0.15s ease;
+}
+.wa-chip-add:hover {
+  background: var(--wa-chip-hover, #2a3942);
+  color: var(--wa-chip-hover-text, #d1d7db);
+}
+
+/* Unread Empty State */
+.wa-unread-empty-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 24px;
+  text-align: center;
+  width: 100%;
+}
+.wa-unread-empty-icon {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: rgba(0, 191, 165, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 24px;
+  color: #00bfa5;
+}
+.wa-unread-empty-icon .material-symbols-outlined {
+  font-size: 32px;
+}
+.wa-unread-empty-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--wa-text-color, #e9edef);
+  margin-bottom: 8px;
+}
+.wa-unread-empty-desc {
+  font-size: 13px;
+  color: var(--wa-placeholder, #8696a0);
+  margin-bottom: 12px;
+}
+.wa-unread-empty-link {
+  font-size: 13px;
+  color: #00bfa5;
+  font-weight: 600;
+  cursor: pointer;
+  background: transparent;
+  border: none;
+  padding: 0;
+  text-decoration: none;
+}
+.wa-unread-empty-link:hover {
+  text-decoration: underline;
+}
+
+/* Light mode overrides */
+html:not(.dark) .wa-chip {
+  --wa-chip-bg: #f0f2f5;
+  --wa-chip-text: #54656f;
+  --wa-chip-hover: #e9edef;
+  --wa-chip-active-bg: #e7f7f4;
+  --wa-chip-active-text: #00a884;
+}
+html:not(.dark) .wa-chip-add {
+  --wa-chip-bg: #f0f2f5;
+  --wa-chip-text: #54656f;
+  --wa-chip-hover: #e9edef;
+}
+html:not(.dark) .wa-unread-empty-icon {
+  background: rgba(0, 168, 132, 0.1);
+  color: #00a884;
+}
+html:not(.dark) .wa-unread-empty-link {
+  color: #00a884;
 }
