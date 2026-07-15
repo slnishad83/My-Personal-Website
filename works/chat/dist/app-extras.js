@@ -621,12 +621,18 @@ function chatContextMenu(event, chatId) {
   const chat = App.chats.find(c => c.id === chatId);
   if (!chat) return;
 
+  const isDark = document.documentElement.classList.contains('dark') || document.body.contains('dark') || document.documentElement.getAttribute('data-theme') === 'dark';
+  const bg = isDark ? '#1f2c34' : '#ffffff';
+  const border = isDark ? '#2a3942' : '#e9edef';
+  const fg = isDark ? '#e9edef' : '#111b21';
+
   const menu = document.createElement('div');
   menu.id = '_msg-ctx-menu';
   menu.style.cssText = `
     position:fixed; z-index:9999;
-    background:var(--surface-container-high);
-    border:1px solid var(--outline-variant);
+    background:${bg};
+    border:1px solid ${border};
+    color:${fg};
     border-radius:16px; padding:6px;
     box-shadow:0 8px 32px rgba(0,0,0,0.4);
     min-width:160px; font-size:13px; font-weight:600;
@@ -646,7 +652,7 @@ function chatContextMenu(event, chatId) {
       display:flex; align-items:center; gap:10px; width:100%;
       padding:10px 14px; border-radius:10px; border:none;
       background:transparent; cursor:pointer; text-align:left;
-      color:${danger ? 'var(--error)' : 'var(--on-surface)'};
+      color:${danger ? 'var(--error, #ef4444)' : 'inherit'};
       transition:background 0.15s;
     `;
     btn.innerHTML = `<span style="font-size:16px">${icon}</span> ${label}`;
@@ -659,7 +665,6 @@ function chatContextMenu(event, chatId) {
   document.body.appendChild(menu);
   
   // Measure rect boundaries to prevent offscreen/cut-off menu display
-  // H6: Clamp within chat area bounds on tablet
   const rect = menu.getBoundingClientRect();
   let cx2 = event.clientX || event.pageX || 0;
   let cy2 = event.clientY || event.pageY || 0;
@@ -667,11 +672,9 @@ function chatContextMenu(event, chatId) {
     cx2 = event.touches[0].clientX;
     cy2 = event.touches[0].clientY;
   }
-  const chatAreaEl2 = document.getElementById('chat-area');
-  const chatAreaLeft2 = chatAreaEl2 ? chatAreaEl2.getBoundingClientRect().left : 0;
   const x = Math.min(cx2 || (window.innerWidth / 2), window.innerWidth - rect.width - 20);
   const y = Math.min(cy2 || (window.innerHeight / 2), window.innerHeight - rect.height - 20);
-  menu.style.left = Math.max(chatAreaLeft2 + 10, x) + 'px';
+  menu.style.left = Math.max(10, x) + 'px';
   menu.style.top  = Math.max(10, y) + 'px';
 
   _ctxMenu = menu;
@@ -687,12 +690,18 @@ function callLogContextMenu(event, logId) {
   event.stopPropagation();
   _removeCtxMenu();
 
+  const isDark = document.documentElement.classList.contains('dark') || document.body.contains('dark') || document.documentElement.getAttribute('data-theme') === 'dark';
+  const bg = isDark ? '#1f2c34' : '#ffffff';
+  const border = isDark ? '#2a3942' : '#e9edef';
+  const fg = isDark ? '#e9edef' : '#111b21';
+
   const menu = document.createElement('div');
   menu.id = '_msg-ctx-menu';
   menu.style.cssText = `
     position:fixed; z-index:9999;
-    background:var(--surface-container-high);
-    border:1px solid var(--outline-variant);
+    background:${bg};
+    border:1px solid ${border};
+    color:${fg};
     border-radius:16px; padding:6px;
     box-shadow:0 8px 32px rgba(0,0,0,0.4);
     min-width:160px; font-size:13px; font-weight:600;
@@ -708,7 +717,7 @@ function callLogContextMenu(event, logId) {
       display:flex; align-items:center; gap:10px; width:100%;
       padding:10px 14px; border-radius:10px; border:none;
       background:transparent; cursor:pointer; text-align:left;
-      color:${danger ? 'var(--error)' : 'var(--on-surface)'};
+      color:${danger ? 'var(--error, #ef4444)' : 'inherit'};
       transition:background 0.15s;
     `;
     btn.innerHTML = `<span style="font-size:16px">${icon}</span> ${label}`;
@@ -740,12 +749,18 @@ function openChatMenu(btn) {
   if (!App.currentChat) return;
   const chat = App.currentChat;
 
+  const isDark = document.documentElement.classList.contains('dark') || document.body.contains('dark') || document.documentElement.getAttribute('data-theme') === 'dark';
+  const bg = isDark ? '#1f2c34' : '#ffffff';
+  const border = isDark ? '#2a3942' : '#e9edef';
+  const fg = isDark ? '#e9edef' : '#111b21';
+
   const menu = document.createElement('div');
   menu.id = '_msg-ctx-menu';
   menu.style.cssText = `
     position:fixed; z-index:9999;
-    background:var(--surface-container-high);
-    border:1px solid var(--outline-variant);
+    background:${bg};
+    border:1px solid ${border};
+    color:${fg};
     border-radius:16px; padding:6px;
     box-shadow:0 8px 32px rgba(0,0,0,0.4);
     min-width:190px; font-size:13px; font-weight:600;
@@ -769,7 +784,7 @@ function openChatMenu(btn) {
       display:flex; align-items:center; gap:10px; width:100%;
       padding:10px 14px; border-radius:10px; border:none;
       background:transparent; cursor:pointer; text-align:left;
-      color:${danger ? 'var(--error)' : 'var(--on-surface)'};
+      color:${danger ? 'var(--error, #ef4444)' : 'inherit'};
       transition:background 0.15s;
     `;
     item.innerHTML = `<span style="font-size:16px">${icon}</span> ${label}`;
