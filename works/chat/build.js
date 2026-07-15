@@ -6,13 +6,9 @@
  * - No ES module conversion needed - preserves global scope
  */
 
-import { readFileSync, writeFileSync, mkdirSync, readdirSync, copyFileSync, statSync } from 'fs';
-import { join, resolve, dirname } from 'path';
-import { fileURLToPath } from 'url';
-import { createHash } from 'crypto';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
+const { readFileSync, writeFileSync, mkdirSync, readdirSync, copyFileSync, statSync } = require('fs');
+const { join, resolve, dirname } = require('path');
+const { createHash } = require('crypto');
 
 const ROOT = __dirname;
 const DIST = join(ROOT, 'dist');

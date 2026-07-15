@@ -1511,12 +1511,18 @@ function renderChatList(filter = '') {
   if (tab === 'more')     { renderMoreTab(); return; }
   if (tab === 'requests') { renderRequestsTab(); return; }
 
+  const hasArchived = tab === 'chats' && App._archivedChatIds && App._archivedChatIds.size > 0;
   if (!items.length) {
-    list.innerHTML = '';
-    show('chats-empty');
-    return;
+    if (hasArchived) {
+      hide('chats-empty');
+    } else {
+      list.innerHTML = '';
+      show('chats-empty');
+      return;
+    }
+  } else {
+    hide('chats-empty');
   }
-  hide('chats-empty');
 
   // Pinned items first
   items.sort((a,b) => {
@@ -1529,6 +1535,16 @@ function renderChatList(filter = '') {
   const unpinned = items.filter(c=>!c.pinned);
 
   let html = '';
+  if (hasArchived) {
+    html += `
+    <div class="flex items-center justify-between px-5 py-3 hover:bg-surface-container-high/40 cursor-pointer transition-colors border-b border-outline-variant/10" onclick="openArchivedChats()">
+      <div class="flex items-center gap-3 text-on-surface">
+        <span class="material-symbols-outlined text-primary text-xl">archive</span>
+        <span class="text-sm font-semibold">Archived</span>
+      </div>
+      <span class="text-[11px] font-bold text-primary px-2 py-0.5 rounded-full bg-primary/10">${App._archivedChatIds.size}</span>
+    </div>`;
+  }
   if (pinned.length) {
     html += `<div class="px-4 py-2 flex items-center gap-2 text-[10px] font-bold text-primary uppercase tracking-widest bg-surface-container-low/20">
       <span class="material-symbols-outlined text-[12px]" style="font-variation-settings: 'FILL' 1;">push_pin</span> Pinned
@@ -2470,7 +2486,7 @@ function openChat(chatId) {
     }
     // Update input area placeholder
     const msgInput = document.getElementById('msg-input');
-    if (msgInput) msgInput.placeholder = "Type a message";
+    if (msgInput) msgInput.placeholder = "Type a note to yourself...";
   } else if (chat.type === 'group') {
     // Group Channel header
     if (headerStatus) {
@@ -2489,7 +2505,7 @@ function openChat(chatId) {
       `;
     }
     const msgInput = document.getElementById('msg-input');
-    if (msgInput) msgInput.placeholder = "Type a message";
+    if (msgInput) msgInput.placeholder = "Message in Dev Team...";
   } else {
     // Personal Chat header
     const contact = App.contacts.find(c=>c.uid===chat.uid) || App.chats.find(c=>c.uid===chat.uid);
@@ -2524,7 +2540,7 @@ function openChat(chatId) {
       `;
     }
     const msgInput = document.getElementById('msg-input');
-    if (msgInput) msgInput.placeholder = "Type a message";
+    if (msgInput) msgInput.placeholder = "Type your message...";
   }
 
   // Header avatar updates
@@ -5587,7 +5603,7 @@ function handleDocumentClick(e) {
   if (!e.target.closest('#attach-btn') && !e.target.closest('#attach-menu')) {
     if (App.attachMenuOpen) { App.attachMenuOpen = false; const el = document.getElementById('attach-menu'); if (el) { el.style.transform = 'scale(0.95)'; el.style.opacity = '0'; setTimeout(() => { if (!App.attachMenuOpen) el.classList.add('hidden'); }, 200); } }
   }
-  if (!e.target.closest('#wa-emoji-btn') && !e.target.closest('button[onclick="toggleEmojiPicker()"]') && !e.target.closest('#emoji-picker')) {
+  if (!e.target.closest('button[onclick="toggleEmojiPicker()"]') && !e.target.closest('#emoji-picker')) {
     if (App.emojiPickerOpen) { App.emojiPickerOpen = false; const el = document.getElementById('emoji-picker'); if (el) { el.style.transform = 'scale(0.95)'; el.style.opacity = '0'; setTimeout(() => { if (!App.emojiPickerOpen) el.classList.add('hidden'); }, 200); } }
   }
   if (!e.target.closest('button[onclick="openGifPicker()"]') && !e.target.closest('#gif-picker')) {
