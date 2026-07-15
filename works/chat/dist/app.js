@@ -2377,7 +2377,7 @@ function openChat(chatId) {
     }
     // Update input area placeholder
     const msgInput = document.getElementById('msg-input');
-    if (msgInput) msgInput.placeholder = "Type a note to yourself...";
+    if (msgInput) msgInput.placeholder = "Type a message";
   } else if (chat.type === 'group') {
     // Group Channel header
     if (headerStatus) {
@@ -2396,7 +2396,7 @@ function openChat(chatId) {
       `;
     }
     const msgInput = document.getElementById('msg-input');
-    if (msgInput) msgInput.placeholder = "Message in Dev Team...";
+    if (msgInput) msgInput.placeholder = "Type a message";
   } else {
     // Personal Chat header
     const contact = App.contacts.find(c=>c.uid===chat.uid) || App.chats.find(c=>c.uid===chat.uid);
@@ -2431,7 +2431,7 @@ function openChat(chatId) {
       `;
     }
     const msgInput = document.getElementById('msg-input');
-    if (msgInput) msgInput.placeholder = "Type your message...";
+    if (msgInput) msgInput.placeholder = "Type a message";
   }
 
   // Header avatar updates
@@ -5494,7 +5494,7 @@ function handleDocumentClick(e) {
   if (!e.target.closest('#attach-btn') && !e.target.closest('#attach-menu')) {
     if (App.attachMenuOpen) { App.attachMenuOpen = false; const el = document.getElementById('attach-menu'); if (el) { el.style.transform = 'scale(0.95)'; el.style.opacity = '0'; setTimeout(() => { if (!App.attachMenuOpen) el.classList.add('hidden'); }, 200); } }
   }
-  if (!e.target.closest('button[onclick="toggleEmojiPicker()"]') && !e.target.closest('#emoji-picker')) {
+  if (!e.target.closest('#wa-emoji-btn') && !e.target.closest('button[onclick="toggleEmojiPicker()"]') && !e.target.closest('#emoji-picker')) {
     if (App.emojiPickerOpen) { App.emojiPickerOpen = false; const el = document.getElementById('emoji-picker'); if (el) { el.style.transform = 'scale(0.95)'; el.style.opacity = '0'; setTimeout(() => { if (!App.emojiPickerOpen) el.classList.add('hidden'); }, 200); } }
   }
   if (!e.target.closest('button[onclick="openGifPicker()"]') && !e.target.closest('#gif-picker')) {
