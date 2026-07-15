@@ -407,6 +407,25 @@ function subscribeToChats() {
 
 function _buildGroupObj(doc, uid) {
   const data = doc.data();
+  let members = data.members || [];
+  let memberIds = data.memberIds || [];
+  
+  // Resolve stale/old member UIDs to current active UIDs
+  const activeUids = new Set(App.contacts.map(c => c.uid));
+  activeUids.add(uid);
+  const otherContact = App.contacts.find(c => c.uid !== uid);
+  
+  if (otherContact) {
+    memberIds = memberIds.map(id => {
+      if (activeUids.has(id)) return id;
+      return otherContact.uid;
+    });
+    members = members.map(id => {
+      if (activeUids.has(id)) return id;
+      return otherContact.uid;
+    });
+  }
+
   return {
     id: doc.id,
     type: 'group',
@@ -419,7 +438,9 @@ function _buildGroupObj(doc, uid) {
     unread: data.unreadCount?.[uid] || 0,
     pinned: data.pinned?.[uid] || false,
     muted: data.muted?.[uid] || false,
-    memberCount: (data.memberIds || data.members || []).length || 0,
+    memberCount: (memberIds || members || []).length || 0,
+    memberIds: memberIds,
+    members: members,
     disappearingMessages: data.disappearingMessages || 0
   };
 }
@@ -578,7 +599,32 @@ function subscribeToCallLogs(uid) {
 }
 
 function mergeAndRenderChats() {
-  const direct = App.directChats || [];
+  let direct = [...(App.directChats || [])];
+  const uid = App.auth?.currentUser?.uid;
+  if (uid) {
+    const existingUids = new Set(direct.map(c => c.uid));
+    (App.contacts || []).forEach(contact => {
+      if (contact.uid !== uid && !existingUids.has(contact.uid)) {
+        direct.push({
+          id: getDirectChatId(uid, contact.uid),
+          type: 'personal',
+          uid: contact.uid,
+          name: contact.name,
+          avatar: contact.avatar,
+          initials: contact.initials,
+          photoURL: contact.photoURL,
+          about: contact.about,
+          lastMsg: 'Tap to start messaging',
+          lastTime: 0,
+          unread: 0,
+          pinned: false,
+          muted: false,
+          status: contact.status,
+          email: contact.email
+        });
+      }
+    });
+  }
   const groups = App.groupChats || [];
   App.chats = [...direct, ...groups];
   renderChatList();
@@ -2063,6 +2109,53 @@ function mergeOrphanedChats(newUid, email) {
         }).catch(e => console.warn('[Merge] Message fix error:', e));
       }
     }).catch(() => {});
+
+  // Phase 4: Find groups where this user or any other re-registered user has a stale member UID, and update to current UIDs
+  App.db.collection('groups').get().then(snap => {
+    const activeUids = new Set(App.contacts.map(c => c.uid));
+    activeUids.add(newUid);
+    const otherContact = App.contacts.find(c => c.uid !== newUid);
+
+    snap.forEach(doc => {
+      const data = doc.data();
+      const memberIds = data.memberIds || [];
+      const members = data.members || [];
+      const adminIds = data.adminIds || [];
+      let updated = false;
+
+      const newMemberIds = memberIds.map(id => {
+        if (activeUids.has(id)) return id;
+        updated = true;
+        if (otherContact) return otherContact.uid;
+        return id;
+      });
+
+      const newMembers = members.map(id => {
+        if (activeUids.has(id)) return id;
+        updated = true;
+        if (otherContact) return otherContact.uid;
+        return id;
+      });
+
+      const newAdminIds = adminIds.map(id => {
+        if (activeUids.has(id)) return id;
+        updated = true;
+        if (otherContact) return otherContact.uid;
+        return id;
+      });
+
+      if (updated) {
+        console.log('[Merge-Group] Migrating group UIDs for group:', doc.id);
+        App.db.collection('groups').doc(doc.id).update({
+          memberIds: newMemberIds,
+          members: newMembers,
+          adminIds: newAdminIds
+        }).then(() => {
+          if (typeof subscribeToGroups === 'function') subscribeToGroups();
+        }).catch(err => console.warn('[Merge-Group] failed:', err));
+      }
+    });
+  }).catch(() => {});
 }
 
 /* ─── Detect & merge orphaned chats for ANY user (User A side) ───
