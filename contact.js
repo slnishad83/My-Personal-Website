@@ -4,7 +4,7 @@
 
 // REPLACE THIS with your Turnstile Site Key from https://dash.cloudflare.com/turnstile
 // Go to Turnstile → Add Widget → copy the "Site Key"
-var TURNSTILE_SITE_KEY = 'REPLACE_WITH_YOUR_TURNSTILE_SITE_KEY';
+var TURNSTILE_SITE_KEY = '0x4AAAAAAD2U5xJmWJFAej_B';
 
 document.addEventListener('DOMContentLoaded', function () {
   var form = document.getElementById('contactForm');
