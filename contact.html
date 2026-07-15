@@ -5,11 +5,14 @@
     <link rel="icon" type="image/x-icon" href="https://raw.githubusercontent.com/nishadsl/Fav-Icon/main/favicon.ico" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content="Contact Nishad S L - Senior Digital Marketing Specialist based in Thrissur, Kerala" />
-    <meta name="robots" content="index, follow" />
+    <meta name="robots" content="noindex, nofollow, noarchive, nosnippet, noimageindex" />
+    <meta name="googlebot" content="noindex, nofollow, noarchive, nosnippet" />
+    <meta name="bingbot" content="noindex, nofollow, noarchive, nosnippet" />
     <meta property="og:image" content="https://nishadsl.com/og-image.jpg" />
     <title>Contact Nishad S L | Senior Digital Marketing Specialist</title>
     <link rel="canonical" href="https://nishadsl.com/contact.html" />
     <link rel="stylesheet" href="style.css" />
+    <script src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit" defer></script>
     <script src="nav.js" defer></script>
     <script src="contact.js" defer></script>
   </head>
@@ -69,6 +72,9 @@
                 </div>
                 <div class="form-group">
                   <textarea name="message" id="message" rows="5" placeholder="Your Message" required></textarea>
+                </div>
+                <div class="form-group">
+                  <div id="cf-turnstile" class="cf-turnstile-wrap"></div>
                 </div>
                 <button type="submit" class="btn btn-primary" id="submitBtn">Send Message &rarr;</button>
               </form>

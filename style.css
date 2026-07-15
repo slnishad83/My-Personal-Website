@@ -653,6 +653,16 @@ body.dark .status-badge.available {
     border-color: var(--accent);
 }
 
+.cf-turnstile-wrap {
+    margin-bottom: 0.5rem;
+    display: flex;
+    justify-content: flex-start;
+}
+
+.cf-turnstile-wrap iframe {
+    max-width: 100%;
+}
+
 .success-message {
     text-align: center;
     padding: 2rem 1.5rem;
