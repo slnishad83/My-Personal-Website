@@ -1137,6 +1137,19 @@ function updateProfileUI() {
   setEl('settings-name', name);
   setEl('settings-status', u.statusText || 'Available');
   setEl('settings-phone', u.phone || 'Not provided');
+  updateSidebarPresence();
+}
+
+function updateSidebarPresence() {
+  const dot = document.getElementById('sidebar-presence-dot');
+  if (!dot) return;
+  const status = Presence?.getStatus?.() || 'offline';
+  if (status === 'online') {
+    dot.style.display = '';
+    dot.className = 'absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-surface-container-high';
+  } else {
+    dot.style.display = 'none';
+  }
 }
 
 function validatePhone(phone) {
@@ -1436,7 +1449,7 @@ function renderChatList(filter = '') {
       `;
     } else {
       if (sidebarTitleEl) sidebarTitleEl.textContent = "NSL Chat";
-      if (sidebarSubtitleEl) sidebarSubtitleEl.textContent = "NSL Chat";
+      if (sidebarSubtitleEl) sidebarSubtitleEl.textContent = "Secure messaging";
       
       const isChatsActive = tab === 'chats';
       const isGroupsActive = tab === 'groups';
@@ -6027,6 +6040,7 @@ function updatePresence(status) {
   if (!App.db || !App.auth?.currentUser) return;
   if (typeof Presence !== 'undefined' && Presence.setOnline && Presence.setOffline) {
     if (status === 'online') Presence.setOnline(); else Presence.setOffline();
+    updateSidebarPresence();
     return;
   }
   App.db.collection('users').doc(App.auth.currentUser.uid).set({ onlineStatus: status }, { merge: true }).catch(() => {});
@@ -6122,8 +6136,9 @@ function getMillis(val) {
 function getInitials(name) {
   if (!name) return '?';
   const parts = name.trim().split(/\s+/);
-  if (parts.length >= 2) return (parts[0][0] + parts[parts.length-1][0]).toUpperCase();
-  return name.slice(0,2).toUpperCase();
+  if (parts.length === 1) return name.slice(0,2).toUpperCase();
+  if (parts.length === 2) return (parts[0][0] + parts[1][0]).toUpperCase();
+  return (parts[0][0] + parts.slice(1, -1).map(p => p[0]).join('') + parts[parts.length-1][0]).toUpperCase();
 }
 
 function getDirectChatId(uid1, uid2) {

@@ -91,7 +91,7 @@
         </div>
         <div class="hidden xl:block">
           <h1 class="font-headline-md text-headline-md font-bold text-on-background tracking-tight" id="sidebar-app-title">NSL Chat</h1>
-          <p class="text-xs text-on-surface-variant font-medium mt-0.5" id="sidebar-app-subtitle">NSL Chat</p>
+          <p class="text-xs text-on-surface-variant font-medium mt-0.5" id="sidebar-app-subtitle">Secure messaging</p>
         </div>
       </div>
 
@@ -137,7 +137,7 @@
         <div class="flex items-center gap-3 px-2 py-1 bg-surface-container-high rounded-xl cursor-pointer hover:brightness-110 active:scale-95 transition-all" onclick="openProfile()" role="button" tabindex="0" aria-label="Open profile and settings" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openProfile()}">
           <div class="relative">
             <div class="w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm bg-surface-container-highest text-on-surface-variant" id="sidebar-avatar">U</div>
-            <div class="absolute bottom-0 right-0 w-3 h-3 bg-primary-fixed border-2 border-surface-container-low rounded-full"></div>
+            <div class="absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-surface-container-low hidden" id="sidebar-presence-dot"></div>
           </div>
           <div class="hidden xl:block overflow-hidden">
             <p class="text-sm font-bold truncate text-on-surface" id="profile-name-sidebar">User</p>
