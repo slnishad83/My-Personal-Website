@@ -19045,6 +19045,30 @@ const DesktopNotifications = (() => {
     return Notification.permission;
   }
 
+  // ── State ───────────────────────────────────────────────────────
+  let _typingUnsubscribe = null;
+  let _typingTimer = null;
+  let _isTyping = false;
+  let _lastChatKey = null;
+  let _unreadCount = 0;
+  const _originalTitle = document.title;
+  const _notifiedIds = new Set();  // deduplication
+  const _NOTIFIED_MAX = 500;
+  const _cleanupFns = [];
+
+  function _trackCleanup(fn) { _cleanupFns.push(fn); }
+
+  // ── Wait for core app to be ready ──────────────────────────────
+  let _readyTrials = 0;
+  function waitForApp(cb) {
+    if (typeof db !== 'undefined' && typeof auth !== 'undefined' && typeof firebase !== 'undefined') {
+      setTimeout(cb, 50);
+    } else if (_readyTrials++ < 100) {
+      setTimeout(() => waitForApp(cb), 150);
+    }
+  }
+  waitForApp(boot);
+
   function show(options) {
     if (!options || !options.title) return null;
 
@@ -26601,7 +26625,9 @@ window.toggleSidebarExpand = function() {
 };
 
 // Run framework initializes
-init().catch((error) => {
-  console.error("Application startup failed:", error);
-  showStartupRecovery("Team Chat could not start. Please retry.");
-});
+if (typeof init === 'function') {
+  init().catch((error) => {
+    console.error("Application startup failed:", error);
+    showStartupRecovery("Team Chat could not start. Please retry.");
+  });
+}

@@ -19,15 +19,6 @@
       if (check()) cb();
     });
     // H8: Event-driven only — no polling fallback. Warn after 10s if not ready.
-
-  // ── Wait for app to be ready ────────────────────────────────────
-  function waitFor(check, cb) {
-    if (check()) { cb(); return; }
-    document.addEventListener('nsl:app-ready', function onReady() {
-      document.removeEventListener('nsl:app-ready', onReady);
-      if (check()) cb();
-    });
-    // H8: Event-driven only — no polling fallback. Warn after 10s if not ready.
     const timeout = setTimeout(() => {
       if (!check()) console.warn('[FeaturesAddon] App not ready after 10s — features may not load');
     }, 10000);

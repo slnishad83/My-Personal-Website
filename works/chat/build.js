@@ -213,7 +213,9 @@ const indexHtml = readFile('index.html');
 const swScript = `/* PWA Service Worker Registration */
 if ('serviceWorker' in navigator) {
   if (navigator.serviceWorker.controller) {
-    navigator.serviceWorker.controller.update().catch(function() {});
+    navigator.serviceWorker.ready.then(function(reg) {
+      if (reg && typeof reg.update === 'function') reg.update().catch(function() {});
+    }).catch(function() {});
   } else {
     window.addEventListener('load', function () {
       navigator.serviceWorker.register('/works/chat/sw.js', { scope: '/works/chat/' })

@@ -8,17 +8,6 @@
 (function () {
   'use strict';
 
-  // ── Wait for core app to be ready ──────────────────────────────
-  let _readyTrials = 0;
-  function waitForApp(cb) {
-    if (typeof db !== 'undefined' && typeof auth !== 'undefined' && typeof firebase !== 'undefined') {
-      cb();
-    } else if (_readyTrials++ < 100) {
-      setTimeout(() => waitForApp(cb), 150);
-    }
-  }
-  waitForApp(boot);
-
   // ── State ───────────────────────────────────────────────────────
   let _typingUnsubscribe = null;
   let _typingTimer = null;
@@ -31,6 +20,17 @@
   const _cleanupFns = [];
 
   function _trackCleanup(fn) { _cleanupFns.push(fn); }
+
+  // ── Wait for core app to be ready ──────────────────────────────
+  let _readyTrials = 0;
+  function waitForApp(cb) {
+    if (typeof db !== 'undefined' && typeof auth !== 'undefined' && typeof firebase !== 'undefined') {
+      cb();
+    } else if (_readyTrials++ < 100) {
+      setTimeout(() => waitForApp(cb), 150);
+    }
+  }
+  waitForApp(boot);
 
   // ================================================================
   function boot() {
