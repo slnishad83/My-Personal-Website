@@ -292,6 +292,7 @@ html.dark .msg-received { background: var(--surface-container-highest); }
 .msg-status-read { color: var(--primary) !important; }
 .msg-status-failed { color: var(--error) !important; cursor: pointer; }
 .msg-status-failed:hover { opacity: 0.8; }
+.bg-error { background-color: var(--error, #ba1a1a) !important; }
 
 /* ── Bottom nav active state ─────────────────────────── */
 .bottom-nav-item.active { color: var(--primary) !important; }
