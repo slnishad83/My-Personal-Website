@@ -156,7 +156,7 @@
     requestList.querySelectorAll('.cf-block-btn').forEach(function(b){
       b.addEventListener('click', async function(e){
         e.stopPropagation();
-        await window.blockRequestSender(b.dataset.type, b.dataset.id, b.dataset.from, b.dataset.name);
+        await window.blockRequestSender(b.dataset.from);
       });
     });
   }

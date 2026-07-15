@@ -6163,11 +6163,19 @@ async function sendChatRequest(toUid, toEmail, toName) {
   } catch(e) { showToast('Failed to send request', 'error'); console.warn(e); }
 }
 
-/** @param {string} requestId - Firestore chat request document ID */
-async function acceptChatRequest(requestId) {
+/** @param {string} requestId - Firestore chat request document ID @param {object} [reqData] - Optional pre-fetched request data */
+async function acceptChatRequest(requestId, reqData) {
   if (!App.db || !App.auth?.currentUser) return;
-  const req = (App.chatRequests.incoming || []).find(r => r.id === requestId);
-  if (!req) { showToast('Request not found', 'error'); return; }
+  let req = reqData || (App.chatRequests.incoming || []).find(r => r.id === requestId);
+  if (!req || !req.fromUid) {
+    try {
+      const doc = await App.db.collection('chatRequests').doc(requestId).get();
+      if (!doc.exists) { showToast('Request not found', 'error'); return; }
+      const d = doc.data();
+      req = { id: doc.id, fromUid: d.fromUserId || d.from, fromEmail: d.fromEmail, fromName: d.fromUserName || d.fromName };
+    } catch(e) { showToast('Failed to load request', 'error'); return; }
+  }
+  if (!req || !req.fromUid) { showToast('Request not found', 'error'); return; }
   const uid = App.auth.currentUser.uid;
   const myEmail = App.currentUser.email || '';
   const chatId = getDirectChatId(uid, req.fromUid);
@@ -6182,7 +6190,8 @@ async function acceptChatRequest(requestId) {
     }, { merge: true });
     await App.db.collection('chatRequests').doc(requestId).update({
       status: 'accepted',
-      toUserName: App.currentUser.displayName || myEmail
+      toUserName: App.currentUser.displayName || myEmail,
+      acceptedAt: firebase.firestore.FieldValue.serverTimestamp()
     });
     showToast(`Chat request from ${req.fromName} accepted`, 'success');
     if (App.chatsUnsubscribe) { App.chatsUnsubscribe(); App.chatsUnsubscribe = null; }
