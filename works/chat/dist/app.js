@@ -1544,8 +1544,8 @@ function renderChatList(filter = '') {
     hide('chats-empty');
     list.innerHTML = `
       <div class="wa-unread-empty-container">
-        <div class="wa-unread-empty-icon animate-bounce">
-          <span class="material-symbols-outlined">done</span>
+        <div class="wa-unread-empty-icon">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
         </div>
         <h3 class="wa-unread-empty-title">No unread chats</h3>
         <p class="wa-unread-empty-desc">You're all caught up.</p>
