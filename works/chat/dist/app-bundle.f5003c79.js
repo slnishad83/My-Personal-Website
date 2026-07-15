@@ -4072,35 +4072,61 @@ function subscribeToGroups() {
   }
   const uid = App.auth.currentUser.uid;
   if (App.groupsUnsubscribe) App.groupsUnsubscribe();
-  
+  if (App._groupsUnsubscribe2) { App._groupsUnsubscribe2(); App._groupsUnsubscribe2 = null; }
+
+  const _groupSnapshots = { byMemberIds: [], byMembers: [] };
+
+  function _buildGroupObj(doc) {
+    const data = doc.data();
+    return {
+      id: doc.id, type: 'group',
+      name: data.name || 'Unnamed Group',
+      avatar: data.avatar || 'gradient-3',
+      initials: getInitials(data.name || 'Group'),
+      photoURL: data.icon || null,
+      lastMsg: data.lastMessage || 'No messages yet',
+      lastTime: getMillis(data.lastMessageTime),
+      unread: data.unreadCount?.[uid] || 0,
+      pinned: data.pinned?.[uid] || false,
+      muted: data.muted?.[uid] || false,
+      memberCount: (data.memberIds || data.members || []).length || 0,
+      disappearingMessages: data.disappearingMessages || 0
+    };
+  }
+
+  function _mergeGroupSnapshots() {
+    const seen = new Set();
+    const groupsList = [];
+    [..._groupSnapshots.byMemberIds, ..._groupSnapshots.byMembers].forEach(doc => {
+      if (seen.has(doc.id)) return;
+      const data = doc.data();
+      if (data.deletedFor && data.deletedFor[uid]) return;
+      if (App._deletedChatIds.has(doc.id)) return;
+      seen.add(doc.id);
+      groupsList.push(_buildGroupObj(doc));
+    });
+    App.groupChats = groupsList;
+    mergeAndRenderChats();
+  }
+
+  // Primary query: uses memberIds — matches Firestore security rule
   App.groupsUnsubscribe = App.db.collection('groups')
+    .where('memberIds', 'array-contains', uid)
+    .onSnapshot((snapshot) => {
+      _groupSnapshots.byMemberIds = snapshot.docs;
+      _mergeGroupSnapshots();
+    }, (error) => {
+      console.error('[Groups] memberIds subscription error:', error);
+    });
+
+  // Fallback: uses members — for groups with older schema
+  App._groupsUnsubscribe2 = App.db.collection('groups')
     .where('members', 'array-contains', uid)
     .onSnapshot((snapshot) => {
-      const groupsList = [];
-      snapshot.forEach(doc => {
-        const data = doc.data();
-        if (data.deletedFor && data.deletedFor[uid]) return;
-        if (App._deletedChatIds.has(doc.id)) return;
-        groupsList.push({
-          id: doc.id,
-          type: 'group',
-          name: data.name || 'Unnamed Group',
-          avatar: data.avatar || 'gradient-3',
-          initials: getInitials(data.name || 'Group'),
-          photoURL: data.icon || null,
-          lastMsg: data.lastMessage || 'No messages yet',
-          lastTime: getMillis(data.lastMessageTime),
-          unread: data.unreadCount?.[uid] || 0,
-          pinned: data.pinned?.[uid] || false,
-          muted: data.muted?.[uid] || false,
-          memberCount: data.members?.length || 0,
-          disappearingMessages: data.disappearingMessages || 0
-        });
-      });
-      App.groupChats = groupsList;
-      mergeAndRenderChats();
+      _groupSnapshots.byMembers = snapshot.docs;
+      _mergeGroupSnapshots();
     }, (error) => {
-      console.error('[Groups] Subscription error:', error);
+      console.warn('[Groups] members fallback error (non-critical):', error);
     });
 }
 
@@ -4623,7 +4649,7 @@ async function syncDeletedChatsFromFirestore() {
   try {
     const [directSnap, groupSnap] = await Promise.all([
       App.db.collection('directChats').where('participants', 'array-contains', uid).get(),
-      App.db.collection('groups').where('members', 'array-contains', uid).get()
+      App.db.collection('groups').where('memberIds', 'array-contains', uid).get()
     ]);
     [...directSnap.docs, ...groupSnap.docs].forEach(doc => {
       const data = doc.data();
