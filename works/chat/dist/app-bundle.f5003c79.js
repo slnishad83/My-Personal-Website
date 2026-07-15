@@ -3937,6 +3937,7 @@ function subscribeToUsers() {
     App.contacts = contacts;
     renderChatList();
     renderContactList();
+    updateHeaderPresence();
     // Re-check for orphaned chats now that contacts are available
     detectAndMergeOrphanedChatsForUser();
   }, (error) => {
@@ -3944,6 +3945,26 @@ function subscribeToUsers() {
     loadDemoData();
     bootApp();
   });
+}
+
+function updateHeaderPresence() {
+  if (!App.currentChat || App.currentChat.type !== 'direct') return;
+  const contact = App.contacts.find(c => c.uid === App.currentChat.uid);
+  if (!contact) return;
+  const headerStatus = document.getElementById('header-status');
+  const statusDot = document.getElementById('header-status-dot');
+  if (headerStatus) {
+    headerStatus.textContent = contact.status === 'online' ? 'Active Now' : (contact.about || '');
+    headerStatus.className = "text-[10px] uppercase tracking-widest font-label-caps" + (contact.status === 'online' ? ' text-green-500' : ' text-on-surface-variant');
+  }
+  if (statusDot) {
+    if (contact.status === 'online') {
+      statusDot.style.display = '';
+      statusDot.className = 'absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-background';
+    } else {
+      statusDot.style.display = 'none';
+    }
+  }
 }
 
 function subscribeToChats() {
