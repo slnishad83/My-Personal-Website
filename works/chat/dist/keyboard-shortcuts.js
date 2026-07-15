@@ -643,8 +643,29 @@ const KeyboardShortcuts = {
       ]},
     ];
 
-    let html = `<div class="overlay hidden" id="keyboard-help-panel" role="dialog" aria-label="Keyboard Shortcuts" style="position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,0.5);display:none;align-items:center;justify-content:center;">
-      <div style="background:var(--surface-container, #1f2c34);border-radius:12px;max-width:720px;width:95%;max-height:85vh;overflow-y:auto;padding:24px;color:var(--on-surface, #e9edef);">
+    let html = `<style>
+      #keyboard-help-panel-content {
+        background: var(--surface-container, #1f2c34);
+        border-radius: 12px;
+        max-width: 720px;
+        width: 95%;
+        max-height: 85vh;
+        overflow-y: auto;
+        padding: 24px;
+        color: var(--on-surface, #e9edef);
+      }
+      @media (max-width: 768px) {
+        #keyboard-help-panel-content {
+          width: 100% !important;
+          height: 100% !important;
+          max-height: 100vh !important;
+          border-radius: 0px !important;
+          padding: 20px !important;
+        }
+      }
+    </style>
+    <div class="overlay hidden" id="keyboard-help-panel" role="dialog" aria-label="Keyboard Shortcuts" style="position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,0.5);display:none;align-items:center;justify-content:center;">
+      <div id="keyboard-help-panel-content">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
           <h2 style="margin:0;font-size:20px;font-weight:600;">Keyboard Shortcuts</h2>
           <button id="kb-help-close" style="background:none;border:none;color:var(--on-surface, #e9edef);font-size:24px;cursor:pointer;padding:4px 8px;" aria-label="Close">&#10005;</button>
@@ -675,6 +696,10 @@ const KeyboardShortcuts = {
         }
       });
     }
+  },
+
+  showHelp() {
+    this._showHelp();
   },
 
   enable() { this._enabled = true; },
