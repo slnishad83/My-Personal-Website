@@ -229,7 +229,7 @@ const CACHE_NAME = 'nsl-chat-v2.5.2';
 const CACHE_MAX_ENTRIES = 100;
 const STATIC_ASSETS = [
   'app.css',
-  'chat-bundle.d1ca459e.css',
+  'chat-bundle.7ff41df5.css',
   'config.js',
   'notification-sounds.js',
   'manifest.json',
@@ -237,7 +237,7 @@ const STATIC_ASSETS = [
   'app-icon-192.png',
   'app-icon-512.png',
   'pwa-install.js',
-  'app-bundle.b6233785.js',
+  'app-bundle.cec57adb.js',
   'inline-sw-register.js',
   'inline-broadcast-channel.js',
   'inline-version.js',

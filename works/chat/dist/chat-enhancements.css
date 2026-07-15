@@ -2115,7 +2115,7 @@ html:not(.dark) .wa-input-footer {
   .wa-textarea {
     font-size: 14px;
     padding: 5px 4px;
-min-height: 56px;
+  min-height: 56px;
 }
 .wa-input-footer:not(.hidden) {
   display: flex;
