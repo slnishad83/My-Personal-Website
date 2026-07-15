@@ -1407,89 +1407,59 @@ function renderChatList(filter = '') {
   
   const sidebarTitle = document.getElementById('chats-sidebar-title');
   if (sidebarTitle) {
-    if (isMyselfOverride) {
-      sidebarTitle.textContent = __('savedItems');
-    } else {
-      if (tab === 'groups') sidebarTitle.textContent = 'Groups';
-      else if (tab === 'calls') sidebarTitle.textContent = 'Calls';
-      else if (tab === 'requests') sidebarTitle.textContent = 'Requests';
-      else if (tab === 'more') sidebarTitle.textContent = 'Saved Items';
-      else sidebarTitle.textContent = __('messages');
-    }
+    if (tab === 'groups') sidebarTitle.textContent = 'Groups';
+    else if (tab === 'calls') sidebarTitle.textContent = 'Calls';
+    else if (tab === 'requests') sidebarTitle.textContent = 'Requests';
+    else if (tab === 'more') sidebarTitle.textContent = 'Saved Items';
+    else sidebarTitle.textContent = __('messages');
   }
   
   const sidebarSearchInput = document.getElementById('sidebar-search');
   if (sidebarSearchInput) {
-    sidebarSearchInput.placeholder = isMyselfOverride ? 'Search notes...' : __('search');
+    sidebarSearchInput.placeholder = __('search');
   }
 
-  // Revamp navigation items in sidebar depending on Myself mode
+  // Sidebar navigation — always show normal nav (Myself Chat accessible via More tab)
   const sidebarNav = document.getElementById('sidebar-nav-container');
   const sidebarTitleEl = document.getElementById('sidebar-app-title');
   const sidebarSubtitleEl = document.getElementById('sidebar-app-subtitle');
   
   if (sidebarNav) {
-    if (isMyselfOverride) {
-      if (sidebarTitleEl) sidebarTitleEl.textContent = "My Space";
-      if (sidebarSubtitleEl) sidebarSubtitleEl.textContent = "Private Notepad";
-      
-      sidebarNav.innerHTML = `
-        <button class="tab-item w-full flex items-center gap-4 bg-primary/10 text-primary border-l-4 border-primary px-4 py-3 cursor-pointer active:scale-95" onclick="switchTab('chats')">
-          <span class="material-symbols-outlined">description</span>
-          <span class="hidden xl:block font-body-md text-body-md font-semibold">Notes</span>
-        </button>
-        <button class="tab-item w-full flex items-center gap-4 text-on-surface/60 hover:text-on-surface hover:bg-surface-container-highest px-4 py-3 cursor-pointer active:scale-95" onclick="showToast('Cloud Files Storage','info')">
-          <span class="material-symbols-outlined">folder</span>
-          <span class="hidden xl:block font-body-md text-body-md">Files</span>
-        </button>
-        <button class="tab-item w-full flex items-center gap-4 text-on-surface/60 hover:text-on-surface hover:bg-surface-container-highest px-4 py-3 cursor-pointer active:scale-95" onclick="showToast('Reminders & Alerts','info')">
-          <span class="material-symbols-outlined">notifications</span>
-          <span class="hidden xl:block font-body-md text-body-md">Reminders</span>
-        </button>
-        <button class="tab-item w-full flex items-center gap-4 text-on-surface/60 hover:text-on-surface hover:bg-surface-container-highest px-4 py-3 cursor-pointer active:scale-95" onclick="openProfile()">
-          <span class="material-symbols-outlined">settings</span>
-          <span class="hidden xl:block font-body-md text-body-md">Settings</span>
-        </button>
-      `;
-    } else {
-      if (sidebarTitleEl) sidebarTitleEl.textContent = "NSL Chat";
-      if (sidebarSubtitleEl) sidebarSubtitleEl.textContent = "Secure messaging";
-      
-      const isChatsActive = tab === 'chats';
-      const isGroupsActive = tab === 'groups';
-      const isCallsActive = tab === 'calls';
-      const isRequestsActive = tab === 'requests';
-      const isMoreActive = tab === 'more';
-      
-      const activeClass = "tab-item w-full flex items-center gap-4 bg-primary/10 text-primary border-l-4 border-primary px-4 py-3 cursor-pointer active:scale-95 transition-all duration-200";
-      const inactiveClass = "tab-item w-full flex items-center gap-4 text-on-surface/60 hover:text-on-surface hover:bg-surface-container-highest px-4 py-3 cursor-pointer active:scale-95 transition-all duration-200";
+    if (sidebarTitleEl) sidebarTitleEl.textContent = "NSL Chat";
+    if (sidebarSubtitleEl) sidebarSubtitleEl.textContent = "Secure messaging";
+    
+    const isChatsActive = tab === 'chats';
+    const isGroupsActive = tab === 'groups';
+    const isCallsActive = tab === 'calls';
+    const isRequestsActive = tab === 'requests';
+    const isMoreActive = tab === 'more';
+    
+    const activeClass = "tab-item w-full flex items-center gap-4 bg-primary/10 text-primary border-l-4 border-primary px-4 py-3 cursor-pointer active:scale-95 transition-all duration-200";
+    const inactiveClass = "tab-item w-full flex items-center gap-4 text-on-surface/60 hover:text-on-surface hover:bg-surface-container-highest px-4 py-3 cursor-pointer active:scale-95 transition-all duration-200";
 
-      sidebarNav.innerHTML = `
-        <button class="${isChatsActive ? activeClass : inactiveClass}" onclick="switchTab('chats')">
-          <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' ${isChatsActive ? 1 : 0};">chat</span>
-          <span class="hidden xl:block font-body-md text-body-md ${isChatsActive ? 'font-semibold' : ''}">Chats</span>
-        </button>
-        <button class="${isGroupsActive ? activeClass : inactiveClass}" onclick="switchTab('groups')">
-          <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' ${isGroupsActive ? 1 : 0};">group</span>
-          <span class="hidden xl:block font-body-md text-body-md ${isGroupsActive ? 'font-semibold' : ''}">Groups</span>
-        </button>
-        <button class="${isCallsActive ? activeClass : inactiveClass}" onclick="switchTab('calls')">
-          <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' ${isCallsActive ? 1 : 0};">call</span>
-          <span class="hidden xl:block font-body-md text-body-md ${isCallsActive ? 'font-semibold' : ''}">Calls</span>
-        </button>
-        <button class="${isRequestsActive ? activeClass : inactiveClass}" onclick="switchTab('requests')">
-          <div class="relative">
-            <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' ${isRequestsActive ? 1 : 0};">handshake</span>
-            <div class="absolute -top-1.5 -right-2 bg-secondary text-white text-[9px] w-4 h-4 rounded-full flex items-center justify-center font-bold hidden" id="requests-badge">0</div>
-          </div>
-          <span class="hidden xl:block font-body-md text-body-md ${isRequestsActive ? 'font-semibold' : ''}">Requests</span>
-        </button>
-        <button class="${isMoreActive ? activeClass : inactiveClass}" onclick="switchTab('more')">
-          <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' ${isMoreActive ? 1 : 0};">bookmark</span>
-          <span class="hidden xl:block font-body-md text-body-md ${isMoreActive ? 'font-semibold' : ''}">Saved Items</span>
-        </button>
-      `;
-    }
+    sidebarNav.innerHTML = `
+      <button class="${isChatsActive ? activeClass : inactiveClass}" onclick="switchTab('chats')">
+        <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' ${isChatsActive ? 1 : 0};">chat</span>
+        <span class="hidden xl:block font-body-md text-body-md ${isChatsActive ? 'font-semibold' : ''}">Chats</span>
+      </button>
+      <button class="${isGroupsActive ? activeClass : inactiveClass}" onclick="switchTab('groups')">
+        <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' ${isGroupsActive ? 1 : 0};">group</span>
+        <span class="hidden xl:block font-body-md text-body-md ${isGroupsActive ? 'font-semibold' : ''}">Groups</span>
+      </button>
+      <button class="${isCallsActive ? activeClass : inactiveClass}" onclick="switchTab('calls')">
+        <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' ${isCallsActive ? 1 : 0};">call</span>
+        <span class="hidden xl:block font-body-md text-body-md ${isCallsActive ? 'font-semibold' : ''}">Calls</span>
+      </button>
+      <button class="${isRequestsActive ? activeClass : inactiveClass}" onclick="switchTab('requests')">
+        <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' ${isRequestsActive ? 1 : 0};">mark_email_read</span>
+        <span class="hidden xl:block font-body-md text-body-md ${isRequestsActive ? 'font-semibold' : ''}">Requests</span>
+      </button>
+      <button class="${isMoreActive ? activeClass : inactiveClass}" onclick="switchTab('more')">
+        <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' ${isMoreActive ? 1 : 0};">bookmark</span>
+        <span class="hidden xl:block font-body-md text-body-md ${isMoreActive ? 'font-semibold' : ''}">Saved</span>
+      </button>
+    `;
+  }
   }
 
   if (tab === 'calls')    { renderCallsTab(filter); return; }

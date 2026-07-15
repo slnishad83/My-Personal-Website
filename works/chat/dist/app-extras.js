@@ -2648,12 +2648,17 @@ if (!App._archivedChatIds) App._archivedChatIds = new Set();
 function loadArchivedChats() {
   if (!App.db || !App.auth?.currentUser) return;
   const uid = App.auth.currentUser.uid;
-  App.db.collection('users').doc(uid).get().then(doc => {
+  App._archivedLoading = true;
+  return App.db.collection('users').doc(uid).get().then(doc => {
     const data = doc.data();
     const ids = data?.archivedChats || [];
     App._archivedChatIds = new Set(ids);
+    App._archivedLoading = false;
     renderChatList();
-  }).catch(() => {});
+  }).catch(e => {
+    console.warn('[Archive] load failed:', e);
+    App._archivedLoading = false;
+  });
 }
 
 function _persistArchivedChats() {
@@ -2661,7 +2666,7 @@ function _persistArchivedChats() {
   const uid = App.auth.currentUser.uid;
   App.db.collection('users').doc(uid).set({
     archivedChats: Array.from(App._archivedChatIds)
-  }, { merge: true }).catch(() => {});
+  }, { merge: true }).catch(e => console.warn('[Archive] persist failed:', e));
 }
 
 function archiveChat(chatId) {
@@ -2960,14 +2965,38 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 
 /* ══════════════════════════════════════════════════════════════
-   GIF SEARCH — Tenor API integration
+   GIF SEARCH — curated popular GIFs + Tenor web search
    ══════════════════════════════════════════════════════════════ */
-const TENOR_API_KEY = 'AIzaSyBBJFS7BYOhPz2G0JmTlOPgRk0TvNMIJQc';
-const TENOR_BASE = 'https://tenor.googleapis.com/v2';
+
+const _curatedGifs = [
+  { url: 'https://media.tenor.com/WNCf9x0b3AMAAAAd/thumbs-up-thumbsup.gif', label: '👍' },
+  { url: 'https://media.tenor.com/lADl_22UvBEAAAAd/fire.gif', label: '🔥' },
+  { url: 'https://media.tenor.com/2roUQw7CU8oAAAAC/love-heart.gif', label: '❤️' },
+  { url: 'https://media.tenor.com/hJfU44Uu9LkAAAAC/laughing-wiping-tears.gif', label: '😂' },
+  { url: 'https://media.tenor.com/qRnpUw8CxH8AAAAC/clapping-applause.gif', label: '👏' },
+  { url: 'https://media.tenor.com/2YgExBf1qNgAAAAC/celebration-celebrate.gif', label: '🎉' },
+  { url: 'https://media.tenor.com/gJz4vBG0uqIAAAAC/sad-crying.gif', label: '😢' },
+  { url: 'https://media.tenor.com/VIf4DvFfQd4AAAAC/emoji-thumbs-up.gif', label: '👍🏻' },
+  { url: 'https://media.tenor.com/HjgT1aOKuYsAAAAC/ok-hand-ok.gif', label: '👌' },
+  { url: 'https://media.tenor.com/bQIwP-1pQbgAAAAC/heart-eyes.gif', label: '😍' },
+  { url: 'https://media.tenor.com/mE7XiWbm-3QAAAAC/cool-sunglasses.gif', label: '😎' },
+  { url: 'https://media.tenor.com/DHbBIqA7bhYAAAAC/dancing-dance.gif', label: '💃' },
+  { url: 'https://media.tenor.com/GwZz0Gxp1bYAAAAC/high-five.gif', label: '🤝' },
+  { url: 'https://media.tenor.com/0D3CwA46HdYAAAAC/fire-flame.gif', label: '🔥' },
+  { url: 'https://media.tenor.com/6JMBTwh26GgAAAAC/thinking-hmm.gif', label: '🤔' },
+  { url: 'https://media.tenor.com/5Bn6uLlKbbkAAAAC/surprise-shock.gif', label: '😮' },
+  { url: 'https://media.tenor.com/M3V2hBFq2NkAAAAC/angry-mad.gif', label: '😡' },
+  { url: 'https://media.tenor.com/BiYVU41Cfp8AAAAC/love-you.gif', label: '🥰' },
+  { url: 'https://media.tenor.com/WqFDABzCOX8AAAAC/peace-sign-victory.gif', label: '✌️' },
+  { url: 'https://media.tenor.com/6xTz-1SjDpEAAAAC/pray-hands.gif', label: '🙏' },
+  { url: 'https://media.tenor.com/pHgqI1rN5e8AAAAC/wave-hello.gif', label: '👋' },
+  { url: 'https://media.tenor.com/f0wFpCf6vVYAAAAC/yes-nod.gif', label: '点头' },
+  { url: 'https://media.tenor.com/rw6h4JfI3dYAAAAC/no-shake-head.gif', label: '🙅' },
+  { url: 'https://media.tenor.com/NdtMiuMPqBcAAAAC/shrug-idk.gif', label: '🤷' },
+];
 
 let _gifSearchTimeout = null;
 let _gifSearchQuery = '';
-let _gifPage = 0;
 
 function openGifPicker() {
   let picker = document.getElementById('gif-picker');
@@ -2980,17 +3009,34 @@ function openGifPicker() {
     picker.innerHTML = `
       <div class="flex items-center justify-between p-3 border-b border-outline-variant/20">
         <span class="text-sm font-semibold text-on-surface">GIFs</span>
-        <button onclick="document.getElementById('gif-picker').style.display='none'" class="w-7 h-7 flex items-center justify-center rounded-full hover:bg-surface-variant/40 text-on-surface-variant">
-          <span class="material-symbols-outlined text-[18px]">close</span>
-        </button>
+        <div class="flex items-center gap-1">
+          <button onclick="document.getElementById('gif-iframe-src')?.focus();document.getElementById('gif-iframe-src')?.select()" class="w-7 h-7 flex items-center justify-center rounded-full hover:bg-surface-variant/40 text-on-surface-variant" title="Search on Tenor">
+            <span class="material-symbols-outlined text-[18px]">open_in_new</span>
+          </button>
+          <button onclick="document.getElementById('gif-picker').style.display='none'" class="w-7 h-7 flex items-center justify-center rounded-full hover:bg-surface-variant/40 text-on-surface-variant">
+            <span class="material-symbols-outlined text-[18px]">close</span>
+          </button>
+        </div>
       </div>
-      <iframe id="gif-iframe" src="https://giphy.com/search/hello?embed=true&rid=giphy.gif" class="flex-1 w-full border-none" loading="lazy" allow="autoplay" title="GIF Search"></iframe>
+      <div class="p-2 border-b border-outline-variant/10">
+        <div class="relative">
+          <span class="material-symbols-outlined absolute left-2.5 top-1/2 -translate-y-1/2 text-on-surface-variant text-[16px]">search</span>
+          <input id="gif-iframe-src" type="text" placeholder="Search GIFs..."
+            class="w-full bg-surface-variant/50 border border-outline-variant/30 rounded-xl pl-8 pr-8 py-1.5 text-sm focus:outline-none focus:border-primary text-on-surface placeholder:text-on-surface-variant/60"
+            oninput="onGifSearchInput(this.value)"
+            onkeydown="if(event.key==='Enter'){event.preventDefault();openTenorSearch(this.value)}">
+          <button onclick="openTenorSearch(document.getElementById('gif-iframe-src')?.value || '')" class="absolute right-2 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-primary transition-colors" title="Search on Tenor">
+            <span class="material-symbols-outlined text-[16px]">arrow_forward</span>
+          </button>
+        </div>
+      </div>
+      <div id="gif-results" class="flex-1 overflow-y-auto p-2 grid grid-cols-3 gap-1 auto-rows-min"></div>
     `;
     const chatArea = document.getElementById('chat-area');
     if (chatArea) chatArea.appendChild(picker);
     else document.body.appendChild(picker);
 
-    setupGifIframeListener();
+    renderCuratedGifs();
   }
 
   if (picker.style.display === 'none' || picker.style.display === '') {
@@ -3000,58 +3046,38 @@ function openGifPicker() {
   }
 }
 
-let _gifIframeListenerSetup = false;
-function setupGifIframeListener() {
-  if (_gifIframeListenerSetup) return;
-  _gifIframeListenerSetup = true;
-  window.addEventListener('message', (e) => {
-    try {
-      const data = typeof e.data === 'string' ? JSON.parse(e.data) : e.data;
-      if (data && data.url && data.url.includes('.gif')) {
-        sendGifMessage(data.url);
-      }
-    } catch(_) {}
+function renderCuratedGifs() {
+  const container = document.getElementById('gif-results');
+  if (!container) return;
+  container.innerHTML = '';
+  _curatedGifs.forEach(gif => {
+    const img = document.createElement('img');
+    img.src = gif.url;
+    img.className = 'w-full aspect-square object-cover rounded-lg cursor-pointer hover:ring-2 hover:ring-primary hover:scale-[1.03] transition-all bg-surface-variant/30';
+    img.loading = 'lazy';
+    img.title = gif.label;
+    img.onerror = function() { this.style.display = 'none'; };
+    img.onclick = () => sendGifMessage(gif.url);
+    container.appendChild(img);
   });
 }
 
 function onGifSearchInput(query) {
   _gifSearchQuery = query;
-  _gifPage = 0;
   clearTimeout(_gifSearchTimeout);
   _gifSearchTimeout = setTimeout(() => {
-    loadGifResults(query || 'trending');
+    if (!query || query.length < 2) {
+      renderCuratedGifs();
+      return;
+    }
   }, 300);
 }
 
-async function loadGifResults(query, page) {
-  const container = document.getElementById('gif-results');
-  if (!container) return;
-  
-  try {
-    const endpoint = query === 'trending'
-      ? `${TENOR_BASE}/featured?key=${TENOR_API_KEY}&limit=20&media_filter=gif,tinygif&pos=${page || 0}`
-      : `${TENOR_BASE}/search?key=${TENOR_API_KEY}&q=${encodeURIComponent(query)}&limit=20&media_filter=gif,tinygif&pos=${page || 0}`;
-    
-    const resp = await fetch(endpoint);
-    const data = await resp.json();
-    
-    if (!page) container.innerHTML = '';
-    
-    (data.results || []).forEach(gif => {
-      const tinyUrl = gif.media_formats?.tinygif?.url;
-      const fullUrl = gif.media_formats?.gif?.url;
-      if (!tinyUrl) return;
-      
-      const img = document.createElement('img');
-      img.src = tinyUrl;
-      img.className = 'w-full h-24 object-cover rounded-lg cursor-pointer hover:ring-2 hover:ring-primary transition-all';
-      img.loading = 'lazy';
-      img.onclick = () => sendGifMessage(fullUrl || tinyUrl);
-      container.appendChild(img);
-    });
-  } catch(e) {
-    if (!page) container.innerHTML = '<div class="col-span-2 text-center text-sm text-on-surface-variant py-8">Failed to load GIFs</div>';
-  }
+function openTenorSearch(query) {
+  const q = (query || _gifSearchQuery || 'trending').trim();
+  if (!q) return;
+  window.open(`https://tenor.com/search/${encodeURIComponent(q)}-gifs`, '_blank');
+  showToast('Search Tenor for GIFs, then paste the GIF URL in chat', 'info');
 }
 
 function sendGifMessage(gifUrl) {
