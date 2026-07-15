@@ -66,6 +66,16 @@
   <link rel="stylesheet" href="snooze-enhancements.css">
 
   <script src="notification-sounds.js" defer></script>
+  <script src="https://unpkg.com/twemoji@14.0.2/dist/twemoji.min.js" crossorigin="anonymous" defer></script>
+  <script>
+    function renderEmojis(el) {
+      if (typeof twemoji === 'undefined' || !el) return;
+      twemoji.parse(el, { folder: 'svg', ext: '.svg', base: 'https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/' });
+      el.querySelectorAll('img.emoji').forEach(img => {
+        img.style.cssText = 'display:inline-block;width:1.2em;height:1.2em;vertical-align:-0.2em;margin:0 1px;';
+      });
+    }
+  </script>
   <script id="tailwind-config">
     tailwind.config = {
       darkMode: "class",
@@ -404,10 +414,14 @@
 
       <!-- Typing indicators -->
       <div class="px-6 py-2 flex items-center gap-2 hidden" id="typing-indicator" aria-live="polite">
-        <div class="flex gap-1 bg-surface-container-high px-3 py-2 rounded-full border border-outline-variant/30">
-          <div class="w-1.5 h-1.5 bg-primary rounded-full" style="animation: typing-dot 1.2s ease-in-out infinite; animation-delay: 0ms;"></div>
-          <div class="w-1.5 h-1.5 bg-primary rounded-full" style="animation: typing-dot 1.2s ease-in-out infinite; animation-delay: 0.2s;"></div>
-          <div class="w-1.5 h-1.5 bg-primary rounded-full" style="animation: typing-dot 1.2s ease-in-out infinite; animation-delay: 0.4s;"></div>
+        <div class="flex items-center gap-2 bg-surface-container-high px-3 py-2 rounded-full border border-outline-variant/30">
+          <span class="text-xs text-on-surface-variant font-medium typing-user-name">Someone</span>
+          <div class="flex gap-1">
+            <div class="w-1.5 h-1.5 bg-primary rounded-full" style="animation: typing-dot 1.2s ease-in-out infinite; animation-delay: 0ms;"></div>
+            <div class="w-1.5 h-1.5 bg-primary rounded-full" style="animation: typing-dot 1.2s ease-in-out infinite; animation-delay: 0.2s;"></div>
+            <div class="w-1.5 h-1.5 bg-primary rounded-full" style="animation: typing-dot 1.2s ease-in-out infinite; animation-delay: 0.4s;"></div>
+          </div>
+          <span class="text-[10px] text-on-surface-variant/60">typing...</span>
         </div>
       </div>
 
@@ -488,7 +502,7 @@
       </footer>
 
       <!-- Attachment popover popup menu — WhatsApp-style 3x2 grid -->
-      <div class="absolute bottom-20 left-6 bg-surface-container-low border border-outline-variant/20 p-4 rounded-2xl shadow-2xl hidden z-30 w-[260px] transition-all duration-200 origin-bottom-left" id="attach-menu" role="menu" aria-label="Attach file" style="transform:scale(0.95);opacity:0;">
+      <div class="absolute bottom-20 left-6 bg-surface-container-low border border-outline-variant/40 p-4 rounded-2xl shadow-[0_8px_40px_rgba(0,0,0,0.35)] backdrop-blur-sm hidden z-30 w-[260px] transition-all duration-200 origin-bottom-left" id="attach-menu" role="menu" aria-label="Attach file" style="transform:scale(0.95);opacity:0;">
         <div class="grid grid-cols-3 gap-4">
           <button class="flex flex-col items-center gap-1.5 group" onclick="attachPhoto()" role="menuitem">
             <div class="w-12 h-12 rounded-2xl bg-[#7C4DFF] flex items-center justify-center transition-transform group-hover:scale-105 group-active:scale-95">
@@ -530,7 +544,7 @@
       </div>
 
       <!-- Emoji Picker — WhatsApp-style polished panel -->
-      <div class="absolute bottom-20 right-6 bg-surface-container-low border border-outline-variant/20 rounded-2xl shadow-2xl flex flex-col hidden z-30 w-[320px] h-[400px] overflow-hidden transition-all duration-200 origin-bottom-right" id="emoji-picker" role="dialog" aria-modal="true" style="transform:scale(0.95);opacity:0;">
+      <div class="absolute bottom-20 right-6 bg-surface-container-low border border-outline-variant/40 rounded-2xl shadow-[0_8px_40px_rgba(0,0,0,0.35)] backdrop-blur-sm flex flex-col hidden z-30 w-[320px] h-[400px] overflow-hidden transition-all duration-200 origin-bottom-right" id="emoji-picker" role="dialog" aria-modal="true" style="transform:scale(0.95);opacity:0;">
         <div class="px-3 pt-3 pb-2">
           <div class="relative">
             <span class="material-symbols-outlined absolute left-2.5 top-1/2 -translate-y-1/2 text-on-surface-variant/60 text-[18px]">search</span>

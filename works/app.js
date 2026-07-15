@@ -249,7 +249,8 @@ function subscribeToUsers() {
         status: data.onlineStatus || 'offline',
         about: data.about || data.statusText || 'Available',
         email: data.email || '',
-        phone: data.phone || data.phoneNumber || ''
+        phone: data.phone || data.phoneNumber || '',
+        lastSeen: data.lastSeen || null
       });
     });
     App.contacts = contacts;
@@ -1523,6 +1524,7 @@ function renderChatList(filter = '') {
   }
 
   list.innerHTML = html;
+  renderEmojiInElement(list);
 
   // Update badges
   const totalUnread = App.chats.filter(c=>c.type==='personal').reduce((a,c)=>a+c.unread,0);
@@ -2419,10 +2421,17 @@ function openChat(chatId) {
   } else {
     // Personal Chat header
     const contact = App.contacts.find(c=>c.uid===chat.uid) || App.chats.find(c=>c.uid===chat.uid);
-    const statusText = contact?.status === 'online' ? 'Active Now' : contact?.about || 'Offline';
+    let statusText;
+    if (contact?.status === 'online') {
+      statusText = 'Active Now';
+    } else if (contact?.lastSeen) {
+      statusText = 'last seen ' + formatLastSeenTime(contact.lastSeen);
+    } else {
+      statusText = contact?.about || '';
+    }
     if (headerStatus) {
       headerStatus.textContent = statusText;
-      headerStatus.className = "text-[10px] text-primary-fixed-dim uppercase tracking-widest font-label-caps" + (contact?.status === 'online' ? ' text-secondary' : '');
+      headerStatus.className = "text-[10px] text-primary-fixed-dim uppercase tracking-widest font-label-caps" + (contact?.status === 'online' ? ' text-green-500' : ' text-on-surface-variant');
     }
     if (statusDot) {
       if (contact?.status === 'online') {
@@ -2812,6 +2821,7 @@ function renderMessages(chatId) {
     });
 
     wrap.innerHTML = html;
+    renderEmojiInElement(wrap);
   }
 }
 
@@ -2824,7 +2834,7 @@ function generateWaveform() {
 
 /** @param {string} text - User message text with markdown-like syntax @returns {string} Sanitized HTML string */
 function formatMsgText(text) {
-  return escHtml(text)
+  const html = escHtml(text)
     .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
     .replace(/\*(.*?)\*/g, '<em>$1</em>')
     .replace(/~~(.*?)~~/g, '<del>$1</del>')
@@ -2834,6 +2844,24 @@ function formatMsgText(text) {
       return `<a href="${url}" target="_blank" rel="noopener" class="underline text-primary hover:text-secondary">${display}</a>`;
     })
     .replace(/\n/g, '<br>');
+  return html;
+}
+
+function renderEmojiInElement(el) {
+  if (typeof renderEmojis === 'function') renderEmojis(el);
+}
+
+function formatLastSeenTime(ts) {
+  if (!ts) return '';
+  const now = Date.now();
+  const t = typeof ts === 'number' ? ts : (ts?.toMillis ? ts.toMillis() : 0);
+  if (!t) return '';
+  const diff = now - t;
+  if (diff < 60000) return 'just now';
+  if (diff < 3600000) return Math.floor(diff / 60000) + ' min ago';
+  if (diff < 86400000) return Math.floor(diff / 3600000) + ' hr ago';
+  const d = new Date(t);
+  return d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 }
 
 /** Alias of formatMsgText exposed globally for cross-module rendering. */
@@ -3039,9 +3067,16 @@ function simulateReply(userText) {
   }, 1500 + Math.random()*1000);
 }
 
-function showTyping() {
+function showTyping(typingUsers) {
   const el = document.getElementById('typing-indicator');
-  if (el) el.classList.remove('hidden');
+  if (el) {
+    el.classList.remove('hidden');
+    const nameEl = el.querySelector('.typing-user-name');
+    if (nameEl && typingUsers && typingUsers.length) {
+      const name = typingUsers.length === 1 ? typingUsers[0] : typingUsers.slice(0, 2).join(' & ');
+      nameEl.textContent = typingUsers.length > 2 ? `${name} & others` : name;
+    }
+  }
   scrollToBottom(true);
 }
 function hideTyping() {
@@ -3102,16 +3137,19 @@ function subscribeToTyping(chatId) {
 
     const now = Date.now();
     const TYPING_TIMEOUT = 5000;
-    let anyTyping = false;
+    let typingUsers = [];
 
     Object.entries(data.typing).forEach(([userId, timestamp]) => {
       if (userId !== uid) {
         const ts = typeof timestamp === 'number' ? timestamp : (timestamp?.toMillis ? timestamp.toMillis() : 0);
-        if (now - ts < TYPING_TIMEOUT) anyTyping = true;
+        if (now - ts < TYPING_TIMEOUT) {
+          const contact = App.contacts.find(c => c.uid === userId);
+          typingUsers.push(contact?.name || 'Someone');
+        }
       }
     });
 
-    if (anyTyping) showTyping(); else hideTyping();
+    if (typingUsers.length) showTyping(typingUsers); else hideTyping();
   }, () => hideTyping());
 }
 
