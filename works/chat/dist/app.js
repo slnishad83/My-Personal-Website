@@ -5444,22 +5444,37 @@ function toggleFormatBar() {
 function hideFormatBar() { App.formatBarOpen=false; hide('format-bar'); }
 
 function toggleAttachMenu() {
+  const el = document.getElementById('attach-menu');
+  if (!el) return;
   App.attachMenuOpen = !App.attachMenuOpen;
-  document.getElementById('attach-menu')?.classList.toggle('hidden', !App.attachMenuOpen);
+  if (App.attachMenuOpen) {
+    el.classList.remove('hidden');
+    requestAnimationFrame(() => { el.style.transform = 'scale(1)'; el.style.opacity = '1'; });
+  } else {
+    el.style.transform = 'scale(0.95)'; el.style.opacity = '0';
+    setTimeout(() => { if (!App.attachMenuOpen) el.classList.add('hidden'); }, 200);
+  }
 }
 function toggleEmojiPicker() {
+  const el = document.getElementById('emoji-picker');
+  if (!el) return;
   App.emojiPickerOpen = !App.emojiPickerOpen;
-  document.getElementById('emoji-picker')?.classList.toggle('hidden', !App.emojiPickerOpen);
+  if (App.emojiPickerOpen) {
+    el.classList.remove('hidden');
+    requestAnimationFrame(() => { el.style.transform = 'scale(1)'; el.style.opacity = '1'; });
+    setTimeout(() => { const g = document.getElementById('emoji-grid'); if (g && !g.children.length) loadEmojiGrid(App._currentEmojiCat || 'recent'); }, 50);
+  } else {
+    el.style.transform = 'scale(0.95)'; el.style.opacity = '0';
+    setTimeout(() => { if (!App.emojiPickerOpen) el.classList.add('hidden'); }, 200);
+  }
 }
 
 function handleDocumentClick(e) {
   if (!e.target.closest('#attach-btn') && !e.target.closest('#attach-menu')) {
-    App.attachMenuOpen = false;
-    document.getElementById('attach-menu')?.classList.add('hidden');
+    if (App.attachMenuOpen) { App.attachMenuOpen = false; const el = document.getElementById('attach-menu'); if (el) { el.style.transform = 'scale(0.95)'; el.style.opacity = '0'; setTimeout(() => { if (!App.attachMenuOpen) el.classList.add('hidden'); }, 200); } }
   }
   if (!e.target.closest('button[onclick="toggleEmojiPicker()"]') && !e.target.closest('#emoji-picker')) {
-    App.emojiPickerOpen = false;
-    document.getElementById('emoji-picker')?.classList.add('hidden');
+    if (App.emojiPickerOpen) { App.emojiPickerOpen = false; const el = document.getElementById('emoji-picker'); if (el) { el.style.transform = 'scale(0.95)'; el.style.opacity = '0'; setTimeout(() => { if (!App.emojiPickerOpen) el.classList.add('hidden'); }, 200); } }
   }
   if (!e.target.closest('button[onclick="openGifPicker()"]') && !e.target.closest('#gif-picker')) {
     const gifPicker = document.getElementById('gif-picker');
