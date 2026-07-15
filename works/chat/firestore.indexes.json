@@ -66,20 +66,6 @@
       ]
     },
     {
-      "collectionGroup": "notificationTelemetry",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "ts", "order": "DESCENDING" }
-      ]
-    },
-    {
-      "collectionGroup": "groupMembers",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "groupId", "order": "ASCENDING" }
-      ]
-    },
-    {
       "collectionGroup": "pinnedMessages",
       "queryScope": "COLLECTION",
       "fields": [
