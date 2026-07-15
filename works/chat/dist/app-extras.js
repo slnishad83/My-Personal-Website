@@ -495,12 +495,18 @@ function showMsgContextMenu(event, msgId) {
   const uid  = App.auth && App.auth.currentUser && App.auth.currentUser.uid;
   const isMyMsg = isMe || (uid && msg.senderId === uid);
 
+  const isDark = document.documentElement.classList.contains('dark') || document.body.classList.contains('dark') || document.documentElement.getAttribute('data-theme') === 'dark';
+  const bg = isDark ? '#1f2c34' : '#ffffff';
+  const border = isDark ? '#2a3942' : '#e9edef';
+  const fg = isDark ? '#e9edef' : '#111b21';
+
   const menu = document.createElement('div');
   menu.id = '_msg-ctx-menu';
   menu.style.cssText = `
     position:fixed; z-index:9999;
-    background:var(--surface-container-high);
-    border:1px solid var(--outline-variant);
+    background:${bg};
+    border:1px solid ${border};
+    color:${fg};
     border-radius:16px; padding:6px;
     box-shadow:0 8px 32px rgba(0,0,0,0.4);
     min-width:180px; font-size:13px; font-weight:600;
@@ -559,7 +565,7 @@ function showMsgContextMenu(event, msgId) {
       display:flex; align-items:center; gap:10px; width:100%;
       padding:10px 14px; border-radius:10px; border:none;
       background:transparent; cursor:pointer; text-align:left;
-      color:${danger ? 'var(--error)' : 'var(--on-surface)'};
+      color:${danger ? 'var(--error, #ef4444)' : 'inherit'};
       transition:background 0.15s;
     `;
     btn.innerHTML = `<span style="font-size:16px">${icon}</span> ${label}`;
