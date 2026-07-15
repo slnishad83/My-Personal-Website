@@ -2641,17 +2641,100 @@ function applyTTLToExistingMessages(chatId, ttlMs) {
 }
 
 /* ══════════════════════════════════════════════════════════════
-   21. ARCHIVE CHAT
+   21. ARCHIVE CHAT — persisted to Firestore users/{uid}.archivedChats
    ══════════════════════════════════════════════════════════════ */
+if (!App._archivedChatIds) App._archivedChatIds = new Set();
+
+function loadArchivedChats() {
+  if (!App.db || !App.auth?.currentUser) return;
+  const uid = App.auth.currentUser.uid;
+  App.db.collection('users').doc(uid).get().then(doc => {
+    const data = doc.data();
+    const ids = data?.archivedChats || [];
+    App._archivedChatIds = new Set(ids);
+    renderChatList();
+  }).catch(() => {});
+}
+
+function _persistArchivedChats() {
+  if (!App.db || !App.auth?.currentUser) return;
+  const uid = App.auth.currentUser.uid;
+  App.db.collection('users').doc(uid).set({
+    archivedChats: Array.from(App._archivedChatIds)
+  }, { merge: true }).catch(() => {});
+}
+
 function archiveChat(chatId) {
   const chat = App.chats.find(c => c.id === chatId);
   if (!chat) return;
-  showConfirm(`Archive "${chat.name}"? You can find it in archived chats.`, () => {
-    App.chats = App.chats.filter(c => c.id !== chatId);
+  showConfirm(`Archive "${chat.name}"? You can find it in the More > Archived Chats.`, () => {
+    App._archivedChatIds.add(chatId);
+    _persistArchivedChats();
     if (App.currentChat && App.currentChat.id === chatId) showWelcome();
     renderChatList();
     showToast(`"${chat.name}" archived`, 'success');
   });
+}
+
+function unarchiveChat(chatId) {
+  const chat = App.chats.find(c => c.id === chatId);
+  const name = chat?.name || 'Chat';
+  App._archivedChatIds.delete(chatId);
+  _persistArchivedChats();
+  renderChatList();
+  openArchivedChats();
+  showToast(`"${name}" restored to chat list`, 'success');
+}
+
+function openArchivedChats() {
+  const archived = App.chats.filter(c => App._archivedChatIds.has(c.id));
+  const list = document.getElementById('chat-list');
+  if (!list) return;
+
+  if (!archived.length) {
+    list.innerHTML = `
+      <div class="flex flex-col items-center py-16 text-center px-6">
+        <div class="w-16 h-16 rounded-2xl bg-surface-container-high flex items-center justify-center mb-4 border border-outline-variant/20">
+          <span class="material-symbols-outlined text-on-surface-variant text-3xl">archive</span>
+        </div>
+        <h4 class="font-bold text-on-surface mb-1">No archived chats</h4>
+        <p class="text-on-surface-variant text-sm">Chats you archive will appear here.</p>
+      </div>`;
+    return;
+  }
+
+  let html = `
+    <div class="px-4 py-3 flex items-center gap-2 border-b border-outline-variant/20 bg-surface-container-low/30">
+      <button onclick="switchTab(App.activeTab)" class="p-2 -ml-2 rounded-full hover:bg-surface-variant/40 text-on-surface-variant">
+        <span class="material-symbols-outlined text-xl">arrow_back</span>
+      </button>
+      <span class="material-symbols-outlined text-primary text-xl">archive</span>
+      <span class="text-sm font-bold text-on-surface">Archived Chats</span>
+      <span class="text-[10px] bg-surface-variant rounded-full px-2 py-0.5 font-semibold text-on-surface-variant">${archived.length}</span>
+    </div>`;
+
+  html += archived.map(chat => {
+    const timeStr = formatChatTime(chat.lastTime);
+    return `
+    <div class="flex items-center gap-3 px-4 py-3 hover:bg-surface-container-high/50 cursor-pointer transition-colors" onclick="openChat('${chat.id}');switchTab('chats');">
+      <div class="relative flex-shrink-0">
+        <div class="w-12 h-12 rounded-full bg-surface-container-highest flex items-center justify-center font-bold text-sm text-on-surface-variant">${chat.initials || '?'}</div>
+      </div>
+      <div class="flex-1 min-w-0">
+        <div class="flex justify-between items-baseline">
+          <span class="text-sm font-semibold text-on-surface truncate">${escHtml(chat.name)}</span>
+          <span class="text-[10px] text-on-surface-variant ml-2 flex-shrink-0">${timeStr}</span>
+        </div>
+        <p class="text-xs text-on-surface-variant truncate mt-0.5">${escHtml(chat.lastMsg || '')}</p>
+      </div>
+      <button onclick="event.stopPropagation();unarchiveChat('${chat.id}')" class="p-2 rounded-full hover:bg-surface-variant/40 text-on-surface-variant flex-shrink-0" title="Unarchive">
+        <span class="material-symbols-outlined text-lg">unarchive</span>
+      </button>
+    </div>`;
+  }).join('');
+
+  list.innerHTML = html;
+  renderEmojiInElement(list);
 }
 
 /* ══════════════════════════════════════════════════════════════
@@ -2891,32 +2974,44 @@ function openGifPicker() {
   if (!picker) {
     picker = document.createElement('div');
     picker.id = 'gif-picker';
-    picker.className = 'absolute bottom-20 left-1/2 -translate-x-1/2 w-[min(90vw,380px)] h-[350px] bg-surface-container-low border border-outline-variant/40 rounded-2xl shadow-[0_8px_40px_rgba(0,0,0,0.35)] backdrop-blur-sm z-30 flex flex-col overflow-hidden';
+    picker.className = 'absolute bottom-20 left-1/2 -translate-x-1/2 w-[min(90vw,400px)] h-[420px] bg-surface-container-low border border-outline-variant/40 rounded-2xl shadow-[0_8px_40px_rgba(0,0,0,0.35)] backdrop-blur-sm z-30 flex flex-col overflow-hidden';
     picker.style.display = 'none';
-    
+
     picker.innerHTML = `
-      <div class="p-3 border-b border-outline-variant/20">
-        <div class="relative">
-          <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-lg">search</span>
-          <input id="gif-search-input" type="text" placeholder="Search GIFs..." 
-            class="w-full bg-surface-variant/50 border border-outline-variant/30 rounded-xl pl-9 pr-3 py-2 text-sm focus:outline-none focus:border-primary text-on-surface placeholder:text-on-surface-variant/60"
-            oninput="onGifSearchInput(this.value)">
-        </div>
+      <div class="flex items-center justify-between p-3 border-b border-outline-variant/20">
+        <span class="text-sm font-semibold text-on-surface">GIFs</span>
+        <button onclick="document.getElementById('gif-picker').style.display='none'" class="w-7 h-7 flex items-center justify-center rounded-full hover:bg-surface-variant/40 text-on-surface-variant">
+          <span class="material-symbols-outlined text-[18px]">close</span>
+        </button>
       </div>
-      <div id="gif-results" class="flex-1 overflow-y-auto p-2 grid grid-cols-2 gap-1"></div>
-      <button onclick="document.getElementById('gif-picker').style.display='none'" class="p-2 text-center text-xs font-semibold text-on-surface-variant hover:bg-surface-variant/40 border-t border-outline-variant/20">Close</button>
+      <iframe id="gif-iframe" src="https://giphy.com/search/hello?embed=true&rid=giphy.gif" class="flex-1 w-full border-none" loading="lazy" allow="autoplay" title="GIF Search"></iframe>
     `;
     const chatArea = document.getElementById('chat-area');
     if (chatArea) chatArea.appendChild(picker);
     else document.body.appendChild(picker);
-    
-    loadGifResults('trending');
+
+    setupGifIframeListener();
   }
-  
-  picker.style.display = picker.style.display === 'none' ? 'flex' : 'none';
-  if (picker.style.display !== 'none') {
-    document.getElementById('gif-search-input')?.focus();
+
+  if (picker.style.display === 'none' || picker.style.display === '') {
+    picker.style.display = 'flex';
+  } else {
+    picker.style.display = 'none';
   }
+}
+
+let _gifIframeListenerSetup = false;
+function setupGifIframeListener() {
+  if (_gifIframeListenerSetup) return;
+  _gifIframeListenerSetup = true;
+  window.addEventListener('message', (e) => {
+    try {
+      const data = typeof e.data === 'string' ? JSON.parse(e.data) : e.data;
+      if (data && data.url && data.url.includes('.gif')) {
+        sendGifMessage(data.url);
+      }
+    } catch(_) {}
+  });
 }
 
 function onGifSearchInput(query) {

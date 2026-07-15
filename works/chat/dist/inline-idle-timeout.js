@@ -1,4 +1,4 @@
-/* C5: Auto-logout script removed to enforce permanent sessions */
+
 (function() {
   window.resetAppState = function() {
     if (typeof window.currentChat !== 'undefined') window.currentChat = null;

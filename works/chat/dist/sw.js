@@ -225,43 +225,23 @@ self.addEventListener('notificationclick', event => {
   );
 });
 
-const CACHE_NAME = 'nsl-chat-v2.5.1';
+const CACHE_NAME = 'nsl-chat-v2.5.2';
 const CACHE_MAX_ENTRIES = 100;
 const STATIC_ASSETS = [
-  'chat.css',
+  'app.css',
+  'chat-bundle.d3cb20e1.css',
   'config.js',
-  'chat-theme.css',
-  'notification-reply.js',
   'notification-sounds.js',
   'manifest.json',
   'app-icon.svg',
   'app-icon-192.png',
   'app-icon-512.png',
   'pwa-install.js',
-  'platform-detect.js',
-  'offline-queue.js',
-  'call-sync.js',
-  'presence.js',
-  'multi-device.js',
-  'security.js',
-  'error-boundary.js',
-  'virtual-scroll.js',
-  'accessibility.js',
-  'keyboard-shortcuts.js',
-  'chat-missing-features.js',
-  'chat-enhancements.js',
-  'chat-fixes.js',
-  'threads.js',
-  'message-search.js',
-  'notification-prefs.js',
-  'notification-digest.js',
-  'notification-orchestrator.js',
-  'notification-telemetry.js',
-  'ios-callkit.js',
-  'desktop-notifications.js',
-  'permissions-manager.js',
-  '../app-extras.js',
-  '../app.js'
+  'app-bundle.1b6009a9.js',
+  'inline-sw-register.js',
+  'inline-broadcast-channel.js',
+  'inline-version.js',
+  'inline-idle-timeout.js'
 ];
 const HTML_PAGES = [
   'index.html',

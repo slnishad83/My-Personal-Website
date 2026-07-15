@@ -1020,6 +1020,7 @@ function checkSession() {
           subscribeToCallLogs(App.currentUser.uid);
           startDisappearingMessagesCleanup();
           loadBlockedUsers();
+          loadArchivedChats();
           listenForIncomingCalls();
           handleCallNotificationUrlParams();
           if (App.currentUser.email) {
@@ -1380,6 +1381,7 @@ function renderChatList(filter = '') {
 
   const tab = App.activeTab;
   let items = App.chats.filter(c => {
+    if (App._archivedChatIds && App._archivedChatIds.has(c.id)) return false;
     if (tab === 'chats')  return true; // Show all (personal, groups, saved_me)
     if (tab === 'groups') return c.type === 'group';
     return true;
@@ -1401,7 +1403,7 @@ function renderChatList(filter = '') {
   }
 
   // Determine if Myself Workspace styling should override sidebar headers
-  const isMyselfOverride = App.showroomOverride?.type === 'myself' || (App.currentChat && App.currentChat.id === 'saved_me');
+  const isMyselfOverride = App.showroomOverride?.type === 'myself' || (App.currentChat && isMyselfChatId(App.currentChat.id));
   
   const sidebarTitle = document.getElementById('chats-sidebar-title');
   if (sidebarTitle) {
@@ -1573,7 +1575,7 @@ function chatItemHTML(chat) {
     ? `<div class="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-surface-container-low"></div>` : '';
 
   let avatarIconHtml = '';
-  if (chat.id === 'saved_me') {
+  if (isMyselfChatId(chat.id)) {
     avatarIconHtml = `<div class="w-12 h-12 rounded-xl bg-primary-container/20 flex items-center justify-center text-primary"><span class="material-symbols-outlined text-2xl">person</span></div>`;
   } else if (photoURL) {
     avatarIconHtml = `<img src="${photoURL}" alt="${escHtml(name)}" class="w-12 h-12 rounded-xl object-cover" loading="lazy">`;
@@ -2047,7 +2049,7 @@ function mergeOrphanedChats(newUid, email) {
   
   // Phase 2: Update local state for chats already loaded
   App.chats.forEach(chat => {
-    if (chat.type !== 'personal' || chat.id === 'saved_me' || !chat.uid || chat.uid === newUid) return;
+    if (chat.type !== 'personal' || isMyselfChatId(chat.id) || !chat.uid || chat.uid === newUid) return;
     const contact = App.contacts.find(c => c.uid === chat.uid);
     if (contact) return;
     if (chat.email && chat.email.toLowerCase() === emailLower) {
@@ -2207,7 +2209,7 @@ function openCallPicker() {
   const list = document.getElementById('call-picker-list');
   if (!list) return;
   const uid = App.auth?.currentUser?.uid;
-  let items = App.chats.filter(c => (c.type === 'personal' || c.type === 'group') && c.id !== 'saved_me');
+  let items = App.chats.filter(c => (c.type === 'personal' || c.type === 'group') && !isMyselfChatId(c.id));
   list.innerHTML = items.map(c => {
     const initials = c.initials || '';
     const avatar = c.photoURL
@@ -2248,16 +2250,16 @@ function callFromLog(otherUid, type) {
 }
 
 function renderMoreTab() {
+  const uid = App.currentUser?.uid;
+  const savedChatId = uid ? `saved_${uid}` : 'saved_me';
+  const archivedCount = App._archivedChatIds ? App._archivedChatIds.size : 0;
   const list = document.getElementById('chat-list');
   list.innerHTML = `
     <div class="p-4 space-y-1">
+      ${moreRow('person','Myself Chat',`openChat('${savedChatId}')`)}
       ${moreRow('star','Starred Messages','openStarredMessages()')}
-      ${moreRow('bookmark','Bookmarks','showToast("Bookmarks","info")')}
-      ${moreRow('schedule','Scheduled Messages','showToast("Scheduled Messages","info")')}
-      ${moreRow('quick_reply','Quick Replies','showToast("Quick Replies","info")')}
+      ${moreRow('archive','Archived Chats' + (archivedCount > 0 ? ` <span class="ml-1 text-[10px] bg-surface-variant rounded-full px-1.5 py-0.5 font-bold">${archivedCount}</span>` : ''),'openArchivedChats()')}
       ${moreRow('folder','Folders','openFolderManager()')}
-      ${moreRow('insights','Chat Insights','showToast("Insights","info")')}
-      ${moreRow('photo_library','Media Album','showToast("Media Album","info")')}
     </div>`;
 }
 
@@ -2324,6 +2326,14 @@ function renderRequestsTab() {
 /* ══════════════════════════════════════════════════
    9. OPEN CHAT & STATE SYNC
    ══════════════════════════════════════════════════ */
+function isMyselfChatId(id) {
+  if (!id) return false;
+  if (id === 'saved_me') return true;
+  if (id.startsWith('saved_')) return true;
+  const uid = App.auth?.currentUser?.uid;
+  return uid && id === `saved_${uid}`;
+}
+
 function openChat(chatId) {
   const chat = App.chats.find(c => c.id === chatId);
   if (!chat) return;
@@ -2339,7 +2349,7 @@ function openChat(chatId) {
   _updateChatMuteIcon(chatId);
 
   // Sync read status to Firestore
-  if (App.db && App.auth?.currentUser && chatId !== 'saved_me') {
+  if (App.db && App.auth?.currentUser && !isMyselfChatId(chatId)) {
     const uid = App.auth.currentUser.uid;
     const isGroup = chat.type === 'group';
     const collection = isGroup ? 'groups' : 'directChats';
@@ -2377,7 +2387,7 @@ function openChat(chatId) {
   // Adapt Header actions based on chat type
   const actionContainer = document.getElementById('header-actions-container');
   
-  if (chat.id === 'saved_me') {
+  if (isMyselfChatId(chat.id)) {
     // Notepad Workspace specific header
     if (headerName) headerName.textContent = "Myself Chat";
     if (headerStatus) {
@@ -2739,7 +2749,7 @@ function renderMessages(chatId) {
   const wrap = document.getElementById('messages-wrap');
   if (!wrap) return;
 
-  const isMyselfChat = App.currentChat && App.currentChat.id === 'saved_me';
+  const isMyselfChat = App.currentChat && isMyselfChatId(App.currentChat.id);
 
   if (!msgs.length) {
     VirtualScroll.destroy();
@@ -3039,7 +3049,7 @@ function sendMessage() {
 }
 
 function simulateReply(userText) {
-  if (!App.currentChat || App.currentChat.type !== 'personal' || App.currentChat.id === 'saved_me') return;
+  if (!App.currentChat || App.currentChat.type !== 'personal' || isMyselfChatId(App.currentChat.id)) return;
   
   showTyping();
   setTimeout(() => {
@@ -3126,7 +3136,7 @@ function subscribeToTyping(chatId) {
 
   const uid = App.auth.currentUser.uid;
   const chat = App.chats.find(c => c.id === chatId);
-  if (!chat || chat.id === 'saved_me') return;
+  if (!chat || isMyselfChatId(chat.id)) return;
 
   const isGroup = chat.type === 'group';
   const collection = isGroup ? 'groups' : 'directChats';
@@ -4526,7 +4536,7 @@ function openChatInfo() {
       hdr.style.display = isTabletOverlay ? 'flex' : 'none';
     }
   }
-  if (App.currentChat.id === 'saved_me') {
+  if (isMyselfChatId(App.currentChat.id)) {
     openMyselfInfo();
   } else if (App.currentChat.type==='group') {
     openGroupInfoPanel();
@@ -4731,7 +4741,7 @@ function openMyselfInfo() {
     </div>
 
     <div class="px-6 py-4 border-t border-outline-variant/10 space-y-3">
-      <button class="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-surface-variant/40 transition-colors text-xs font-semibold text-on-surface" onclick="confirmClearChat('saved_me')">
+      <button class="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-surface-variant/40 transition-colors text-xs font-semibold text-on-surface" onclick="confirmClearChat(App.currentChat?.id || 'saved_me')">
         <span class="material-symbols-outlined text-primary text-base">delete_sweep</span>
         <span>Clear Notepad History</span>
       </button>

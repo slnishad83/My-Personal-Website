@@ -433,6 +433,7 @@ function subscribeToGroups() {
   if (App.groupsUnsubscribe) App.groupsUnsubscribe();
   if (App._groupsUnsubscribe2) { App._groupsUnsubscribe2(); App._groupsUnsubscribe2 = null; }
 
+  // Track groups seen across both queries to avoid duplicates
   const _groupSnapshots = { byMemberIds: [], byMembers: [] };
 
   function _mergeGroupSnapshots() {
@@ -460,13 +461,14 @@ function subscribeToGroups() {
       console.error('[Groups] memberIds subscription error:', error);
     });
 
-  // Fallback: uses members — for groups created with older schema
+  // Fallback query: uses members — for groups created with older schema
   App._groupsUnsubscribe2 = App.db.collection('groups')
     .where('members', 'array-contains', uid)
     .onSnapshot((snapshot) => {
       _groupSnapshots.byMembers = snapshot.docs;
       _mergeGroupSnapshots();
     }, (error) => {
+      // Silently ignore if this also fails — primary query is sufficient
       console.warn('[Groups] members fallback subscription error (non-critical):', error);
     });
 }
@@ -928,9 +930,8 @@ function subscribeToMessages(chatId) {
       if (msgs.length > prevCount) {
         const newMsgs = msgs.slice(prevCount);
         const incomingNew = newMsgs.filter(m => m.from !== 'me');
-        if (incomingNew.length > 0 && App.currentChat?.id !== chatId) {
-          playMsgReceivedSound(chatId);
-        } else if (incomingNew.length > 0) {
+        if (incomingNew.length > 0) {
+          document.dispatchEvent(new CustomEvent('nsl:new-message', { detail: { chatId } }));
           playMsgReceivedSound(chatId);
         }
       }
@@ -1019,6 +1020,7 @@ function checkSession() {
           subscribeToCallLogs(App.currentUser.uid);
           startDisappearingMessagesCleanup();
           loadBlockedUsers();
+          loadArchivedChats();
           listenForIncomingCalls();
           handleCallNotificationUrlParams();
           if (App.currentUser.email) {
@@ -1379,6 +1381,7 @@ function renderChatList(filter = '') {
 
   const tab = App.activeTab;
   let items = App.chats.filter(c => {
+    if (App._archivedChatIds && App._archivedChatIds.has(c.id)) return false;
     if (tab === 'chats')  return true; // Show all (personal, groups, saved_me)
     if (tab === 'groups') return c.type === 'group';
     return true;
@@ -1400,7 +1403,7 @@ function renderChatList(filter = '') {
   }
 
   // Determine if Myself Workspace styling should override sidebar headers
-  const isMyselfOverride = App.showroomOverride?.type === 'myself' || (App.currentChat && App.currentChat.id === 'saved_me');
+  const isMyselfOverride = App.showroomOverride?.type === 'myself' || (App.currentChat && isMyselfChatId(App.currentChat.id));
   
   const sidebarTitle = document.getElementById('chats-sidebar-title');
   if (sidebarTitle) {
@@ -1572,7 +1575,7 @@ function chatItemHTML(chat) {
     ? `<div class="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-surface-container-low"></div>` : '';
 
   let avatarIconHtml = '';
-  if (chat.id === 'saved_me') {
+  if (isMyselfChatId(chat.id)) {
     avatarIconHtml = `<div class="w-12 h-12 rounded-xl bg-primary-container/20 flex items-center justify-center text-primary"><span class="material-symbols-outlined text-2xl">person</span></div>`;
   } else if (photoURL) {
     avatarIconHtml = `<img src="${photoURL}" alt="${escHtml(name)}" class="w-12 h-12 rounded-xl object-cover" loading="lazy">`;
@@ -2046,7 +2049,7 @@ function mergeOrphanedChats(newUid, email) {
   
   // Phase 2: Update local state for chats already loaded
   App.chats.forEach(chat => {
-    if (chat.type !== 'personal' || chat.id === 'saved_me' || !chat.uid || chat.uid === newUid) return;
+    if (chat.type !== 'personal' || isMyselfChatId(chat.id) || !chat.uid || chat.uid === newUid) return;
     const contact = App.contacts.find(c => c.uid === chat.uid);
     if (contact) return;
     if (chat.email && chat.email.toLowerCase() === emailLower) {
@@ -2206,7 +2209,7 @@ function openCallPicker() {
   const list = document.getElementById('call-picker-list');
   if (!list) return;
   const uid = App.auth?.currentUser?.uid;
-  let items = App.chats.filter(c => (c.type === 'personal' || c.type === 'group') && c.id !== 'saved_me');
+  let items = App.chats.filter(c => (c.type === 'personal' || c.type === 'group') && !isMyselfChatId(c.id));
   list.innerHTML = items.map(c => {
     const initials = c.initials || '';
     const avatar = c.photoURL
@@ -2247,16 +2250,16 @@ function callFromLog(otherUid, type) {
 }
 
 function renderMoreTab() {
+  const uid = App.currentUser?.uid;
+  const savedChatId = uid ? `saved_${uid}` : 'saved_me';
+  const archivedCount = App._archivedChatIds ? App._archivedChatIds.size : 0;
   const list = document.getElementById('chat-list');
   list.innerHTML = `
     <div class="p-4 space-y-1">
+      ${moreRow('person','Myself Chat',`openChat('${savedChatId}')`)}
       ${moreRow('star','Starred Messages','openStarredMessages()')}
-      ${moreRow('bookmark','Bookmarks','showToast("Bookmarks","info")')}
-      ${moreRow('schedule','Scheduled Messages','showToast("Scheduled Messages","info")')}
-      ${moreRow('quick_reply','Quick Replies','showToast("Quick Replies","info")')}
+      ${moreRow('archive','Archived Chats' + (archivedCount > 0 ? ` <span class="ml-1 text-[10px] bg-surface-variant rounded-full px-1.5 py-0.5 font-bold">${archivedCount}</span>` : ''),'openArchivedChats()')}
       ${moreRow('folder','Folders','openFolderManager()')}
-      ${moreRow('insights','Chat Insights','showToast("Insights","info")')}
-      ${moreRow('photo_library','Media Album','showToast("Media Album","info")')}
     </div>`;
 }
 
@@ -2323,6 +2326,14 @@ function renderRequestsTab() {
 /* ══════════════════════════════════════════════════
    9. OPEN CHAT & STATE SYNC
    ══════════════════════════════════════════════════ */
+function isMyselfChatId(id) {
+  if (!id) return false;
+  if (id === 'saved_me') return true;
+  if (id.startsWith('saved_')) return true;
+  const uid = App.auth?.currentUser?.uid;
+  return uid && id === `saved_${uid}`;
+}
+
 function openChat(chatId) {
   const chat = App.chats.find(c => c.id === chatId);
   if (!chat) return;
@@ -2338,7 +2349,7 @@ function openChat(chatId) {
   _updateChatMuteIcon(chatId);
 
   // Sync read status to Firestore
-  if (App.db && App.auth?.currentUser && chatId !== 'saved_me') {
+  if (App.db && App.auth?.currentUser && !isMyselfChatId(chatId)) {
     const uid = App.auth.currentUser.uid;
     const isGroup = chat.type === 'group';
     const collection = isGroup ? 'groups' : 'directChats';
@@ -2376,7 +2387,7 @@ function openChat(chatId) {
   // Adapt Header actions based on chat type
   const actionContainer = document.getElementById('header-actions-container');
   
-  if (chat.id === 'saved_me') {
+  if (isMyselfChatId(chat.id)) {
     // Notepad Workspace specific header
     if (headerName) headerName.textContent = "Myself Chat";
     if (headerStatus) {
@@ -2503,6 +2514,9 @@ function openChat(chatId) {
     scrollToBottom(true);
   }
 
+  // Dispatch custom event for window title manager
+  document.dispatchEvent(new CustomEvent('nsl:chat-opened', { detail: chat }));
+
   // Redraw chat lists for updates
   renderChatList();
 
@@ -2627,7 +2641,7 @@ function renderSingleMessageHTML(msg, msgs, i, lastDate) {
             <span class="text-xs font-medium text-secondary">Live Location · ${formatLiveDuration(remaining)} left</span>
           </div>
           <a href="${escHtml(mapUrlVal)}" target="_blank" rel="noopener" class="block relative">
-            <img src="${escHtml(staticMapUrl)}" alt="Live location" class="w-full h-[150px] object-cover" onerror="this.style.display='none'">
+            <img src="${escHtml(staticMapUrl)}" alt="Live location" class="w-full h-[150px] object-cover" loading="lazy" onerror="this.style.display='none'">
             <div class="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/50 to-transparent p-2">
               <span class="text-white text-xs">Tap to view on map</span>
             </div>
@@ -2735,7 +2749,7 @@ function renderMessages(chatId) {
   const wrap = document.getElementById('messages-wrap');
   if (!wrap) return;
 
-  const isMyselfChat = App.currentChat && App.currentChat.id === 'saved_me';
+  const isMyselfChat = App.currentChat && isMyselfChatId(App.currentChat.id);
 
   if (!msgs.length) {
     VirtualScroll.destroy();
@@ -3035,7 +3049,7 @@ function sendMessage() {
 }
 
 function simulateReply(userText) {
-  if (!App.currentChat || App.currentChat.type !== 'personal' || App.currentChat.id === 'saved_me') return;
+  if (!App.currentChat || App.currentChat.type !== 'personal' || isMyselfChatId(App.currentChat.id)) return;
   
   showTyping();
   setTimeout(() => {
@@ -3122,7 +3136,7 @@ function subscribeToTyping(chatId) {
 
   const uid = App.auth.currentUser.uid;
   const chat = App.chats.find(c => c.id === chatId);
-  if (!chat || chat.id === 'saved_me') return;
+  if (!chat || isMyselfChatId(chat.id)) return;
 
   const isGroup = chat.type === 'group';
   const collection = isGroup ? 'groups' : 'directChats';
@@ -4522,7 +4536,7 @@ function openChatInfo() {
       hdr.style.display = isTabletOverlay ? 'flex' : 'none';
     }
   }
-  if (App.currentChat.id === 'saved_me') {
+  if (isMyselfChatId(App.currentChat.id)) {
     openMyselfInfo();
   } else if (App.currentChat.type==='group') {
     openGroupInfoPanel();
@@ -4687,10 +4701,10 @@ async function loadGroupMembersList(chat) {
       let roleClass = 'bg-surface-container-high text-on-surface-variant';
       if (uid === ownerId) { role = 'Owner'; roleClass = 'bg-secondary/25 text-secondary'; }
       else if (adminIds.includes(uid)) { role = 'Admin'; roleClass = 'bg-primary/25 text-primary'; }
-      return '<div class="flex items-center justify-between p-2 hover:bg-surface-container rounded-lg">' +
-        '<div class="flex items-center gap-2"><div class="w-8 h-8 rounded-full bg-surface-container-highest flex items-center justify-center font-bold text-xs">' + initials + '</div><span class="text-xs font-semibold">' + name + '</span></div>' +
-        '<span class="text-[9px] font-bold uppercase tracking-wider ' + roleClass + ' px-2 py-0.5 rounded">' + role + '</span>' +
-        '</div>';
+      return `<div class="flex items-center justify-between p-2 hover:bg-surface-container rounded-lg">
+        <div class="flex items-center gap-2"><div class="w-8 h-8 rounded-full bg-surface-container-highest flex items-center justify-center font-bold text-xs">${initials}</div><span class="text-xs font-semibold">${name}</span></div>
+        <span class="text-[9px] font-bold uppercase tracking-wider ${roleClass} px-2 py-0.5 rounded">${role}</span>
+      </div>`;
     });
     listEl.innerHTML = rows.join('') || '<div class="text-xs text-on-surface-variant">No members found</div>';
   } catch (e) {
@@ -4727,7 +4741,7 @@ function openMyselfInfo() {
     </div>
 
     <div class="px-6 py-4 border-t border-outline-variant/10 space-y-3">
-      <button class="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-surface-variant/40 transition-colors text-xs font-semibold text-on-surface" onclick="confirmClearChat('saved_me')">
+      <button class="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-surface-variant/40 transition-colors text-xs font-semibold text-on-surface" onclick="confirmClearChat(App.currentChat?.id || 'saved_me')">
         <span class="material-symbols-outlined text-primary text-base">delete_sweep</span>
         <span>Clear Notepad History</span>
       </button>
@@ -5978,12 +5992,12 @@ function loadEmojiGrid(cat) {
   const list = App.emojiCategories[cat] || [];
   grid.textContent = '';
   const frag = document.createDocumentFragment();
-  list.forEach(em => {
-    const span = document.createElement('span');
-    span.className = 'cursor-pointer transition-transform p-0.5 rounded';
-    span.dataset.emoji = em;
-    span.dataset.name = EMOJI_NAMES[em] || '';
-    span.textContent = em;
+    list.forEach(em => {
+      const span = document.createElement('span');
+      span.className = 'cursor-pointer transition-transform p-0.5 rounded';
+      span.dataset.emoji = em;
+      span.dataset.name = escHtml(EMOJI_NAMES[em] || '');
+      span.textContent = em;
     span.addEventListener('click', () => insertEmoji(em));
     span.addEventListener('mouseenter', () => previewEmoji(em, EMOJI_NAMES[em] || ''));
     span.addEventListener('mouseleave', clearEmojiPreview);
@@ -6025,7 +6039,7 @@ function searchEmoji(query) {
         const span = document.createElement('span');
         span.className = 'cursor-pointer transition-transform p-0.5 rounded';
         span.dataset.emoji = r.em;
-        span.dataset.name = r.name;
+        span.dataset.name = escHtml(r.name);
         span.textContent = r.em;
         span.addEventListener('click', () => insertEmoji(r.em));
         span.addEventListener('mouseenter', () => previewEmoji(r.em, r.name));
@@ -6191,6 +6205,7 @@ function getInitials(name) {
   const parts = name.trim().split(/\s+/);
   if (parts.length === 1) return name.slice(0,2).toUpperCase();
   if (parts.length === 2) return (parts[0][0] + parts[1][0]).toUpperCase();
+  // 3+ parts: take first letter of first, middle(s), and last
   return (parts[0][0] + parts.slice(1, -1).map(p => p[0]).join('') + parts[parts.length-1][0]).toUpperCase();
 }
 
@@ -6248,7 +6263,6 @@ async function sendChatRequest(toUid, toEmail, toName) {
   } catch(e) { showToast('Failed to send request', 'error'); console.warn(e); }
 }
 
-/** @param {string} requestId - Firestore chat request document ID */
 /** @param {string} requestId - Firestore chat request document ID @param {object} [reqData] - Optional pre-fetched request data */
 async function acceptChatRequest(requestId, reqData) {
   if (!App.db || !App.auth?.currentUser) return;
