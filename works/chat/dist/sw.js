@@ -237,7 +237,7 @@ const STATIC_ASSETS = [
   'app-icon-192.png',
   'app-icon-512.png',
   'pwa-install.js',
-  'app-bundle.19e4ed15.js',
+  'app-bundle.5d2054d9.js',
   'inline-sw-register.js',
   'inline-broadcast-channel.js',
   'inline-version.js',

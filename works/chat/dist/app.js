@@ -1460,7 +1460,6 @@ function renderChatList(filter = '') {
       </button>
     `;
   }
-  }
 
   if (tab === 'calls')    { renderCallsTab(filter); return; }
   if (tab === 'more')     { renderMoreTab(); return; }
