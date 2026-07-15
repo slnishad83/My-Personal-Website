@@ -4555,19 +4555,8 @@ function openGroupInfoPanel() {
 
     <div class="px-6 py-4 border-t border-outline-variant/10 space-y-3">
       <span class="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider block">Participants</span>
-      <div class="space-y-2">
-        <div class="flex items-center justify-between p-2 hover:bg-surface-container rounded-lg">
-          <div class="flex items-center gap-2"><div class="w-8 h-8 rounded-full bg-surface-container-highest flex items-center justify-center font-bold text-xs">H</div><span class="text-xs font-semibold">Halid</span></div>
-          <span class="text-[9px] font-bold uppercase tracking-wider bg-secondary/25 text-secondary px-2 py-0.5 rounded">Owner</span>
-        </div>
-        <div class="flex items-center justify-between p-2 hover:bg-surface-container rounded-lg">
-          <div class="flex items-center gap-2"><div class="w-8 h-8 rounded-full bg-surface-container-highest flex items-center justify-center font-bold text-xs">AR</div><span class="text-xs font-semibold">Aisha Rahman</span></div>
-          <span class="text-[9px] font-bold uppercase tracking-wider bg-primary/25 text-primary px-2 py-0.5 rounded">Admin</span>
-        </div>
-        <div class="flex items-center justify-between p-2 hover:bg-surface-container rounded-lg">
-          <div class="flex items-center gap-2"><div class="w-8 h-8 rounded-full bg-surface-container-highest flex items-center justify-center font-bold text-xs">PN</div><span class="text-xs font-semibold">Priya Nair</span></div>
-          <span class="text-[9px] font-bold uppercase tracking-wider bg-surface-container-high text-on-surface-variant px-2 py-0.5 rounded">Member</span>
-        </div>
+      <div class="space-y-2" id="group-members-list">
+        <div class="text-xs text-on-surface-variant">Loading members...</div>
       </div>
     </div>
 
@@ -4604,6 +4593,37 @@ function openGroupInfoPanel() {
   `;
   panel.classList.remove('hidden');
   panel.classList.add('flex');
+
+  loadGroupMembersList(chat);
+}
+
+async function loadGroupMembersList(chat) {
+  const listEl = document.getElementById('group-members-list');
+  if (!listEl || !App.db) return;
+  try {
+    const memberIds = chat.memberIds || chat.members || [];
+    if (!memberIds.length) { listEl.innerHTML = '<div class="text-xs text-on-surface-variant">No members found</div>'; return; }
+    const ownerId = chat.ownerId || chat.createdBy || '';
+    const adminIds = chat.adminIds || [];
+    const userSnaps = await Promise.all(memberIds.map(id => App.db.collection('users').doc(id).get()));
+    const rows = userSnaps.filter(d => d.exists).map(d => {
+      const u = d.data();
+      const uid = d.id;
+      const name = escHtml(u.displayName || u.email || 'Member');
+      const initials = (name || '?').split(' ').map(w => w[0] || '').join('').toUpperCase().slice(0, 2) || '?';
+      let role = 'Member';
+      let roleClass = 'bg-surface-container-high text-on-surface-variant';
+      if (uid === ownerId) { role = 'Owner'; roleClass = 'bg-secondary/25 text-secondary'; }
+      else if (adminIds.includes(uid)) { role = 'Admin'; roleClass = 'bg-primary/25 text-primary'; }
+      return '<div class="flex items-center justify-between p-2 hover:bg-surface-container rounded-lg">' +
+        '<div class="flex items-center gap-2"><div class="w-8 h-8 rounded-full bg-surface-container-highest flex items-center justify-center font-bold text-xs">' + initials + '</div><span class="text-xs font-semibold">' + name + '</span></div>' +
+        '<span class="text-[9px] font-bold uppercase tracking-wider ' + roleClass + ' px-2 py-0.5 rounded">' + role + '</span>' +
+        '</div>';
+    });
+    listEl.innerHTML = rows.join('') || '<div class="text-xs text-on-surface-variant">No members found</div>';
+  } catch (e) {
+    listEl.innerHTML = '<div class="text-xs text-on-surface-variant">Failed to load members</div>';
+  }
 }
 
 function openMyselfInfo() {
