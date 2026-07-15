@@ -1,0 +1,21 @@
+{
+  "name": "my",
+  "version": "1.0.0",
+  "description": "Personal website and portfolio for Nishad S L — Senior Digital Marketing Specialist.",
+  "main": "contact.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/slnishad83/My-Personal-Website.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/slnishad83/My-Personal-Website/issues"
+  },
+  "homepage": "https://github.com/slnishad83/My-Personal-Website#readme"
+}
