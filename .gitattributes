@@ -1,0 +1,30 @@
+﻿# Normalize all text files to LF in the repo, checkout as CRLF on Windows
+* text=auto eol=lf
+
+# Windows-specific
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.ps1 text eol=crlf
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.ps1 text eol=crlf
+
+# Binary files - don't touch
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.webp binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.eot binary
+*.zip binary
+*.apk binary
+*.pdf binary
+*.mp4 binary
+*.webm binary
+*.mp3 binary
+*.ogg binary
+*.wav binary
