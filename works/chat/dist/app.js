@@ -3381,18 +3381,22 @@ function replyToMsg(msgId) {
   let replyText = msg.text || '';
   let replyImageUrl = '';
 
-  if (msg.attachment) {
-    if (msg.attachment.type === 'image') {
-      replyText = replyText || '📷 Photo';
-      replyImageUrl = msg.attachment.url;
-    } else if (msg.attachment.type === 'video') {
-      replyText = replyText || '🎥 Video';
-      replyImageUrl = msg.attachment.thumbnail || msg.attachment.url;
-    } else if (msg.attachment.type === 'voice') {
-      replyText = replyText || '🎤 Voice message';
-    } else if (msg.attachment.type === 'file') {
-      replyText = replyText || '📄 Document';
-    }
+  if (msg.type === 'image') {
+    replyText = replyText || '📷 Photo';
+    replyImageUrl = msg.url || (msg.attachment && msg.attachment.url);
+  } else if (msg.type === 'video') {
+    replyText = replyText || '🎥 Video';
+    replyImageUrl = msg.url || (msg.attachment && (msg.attachment.thumbnail || msg.attachment.url));
+  } else if (msg.type === 'voice') {
+    replyText = replyText || '🎤 Voice message';
+  } else if (msg.type === 'doc' || msg.type === 'file') {
+    replyText = replyText || '📄 Document';
+  } else if (msg.type === 'location') {
+    replyText = replyText || '📍 Location';
+  } else if (msg.attachment) {
+    // Fallback for older attachment structure
+    replyImageUrl = msg.attachment.thumbnail || msg.attachment.url || '';
+    replyText = replyText || '📎 Attachment';
   }
 
   App.replyTo = { id: msgId, name: senderName, text: replyText, image: replyImageUrl };
