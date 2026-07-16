@@ -69,8 +69,14 @@ let copied = 0;
 let missing = 0;
 
 for (const file of INCLUDE) {
-  const src = path.join(ROOT, file);
+  let src = path.join(ROOT, file);
   const dest = path.join(WWW, file);
+  
+  // Fallback: check one level up if not in current root
+  if (!fs.existsSync(src)) {
+    src = path.join(ROOT, '..', file);
+  }
+
   if (copyFile(src, dest)) {
     copied++;
   } else {
@@ -80,8 +86,14 @@ for (const file of INCLUDE) {
 }
 
 for (const dir of COPY_DIRS) {
-  const src = path.join(ROOT, dir);
+  let src = path.join(ROOT, dir);
   const dest = path.join(WWW, dir);
+  
+  // Fallback: check one level up
+  if (!fs.existsSync(src)) {
+    src = path.join(ROOT, '..', dir);
+  }
+
   if (fs.existsSync(src)) {
     copyDir(src, dest);
     copied++;
@@ -97,8 +109,18 @@ console.log(`Done: ${copied} copied, ${missing} missing`);
 try {
   console.log('Compiling Tailwind CSS for Capacitor www/app.css...');
   const { execSync } = require('child_process');
-  execSync('npx tailwindcss -i app.css -o www/app.css --minify', { cwd: ROOT, stdio: 'inherit' });
+  const localCli = path.join(ROOT, 'node_modules', 'tailwindcss', 'lib', 'cli.js');
+  let cmd = 'npx tailwindcss -i app.css -o www/app.css --minify';
+  if (fs.existsSync(localCli)) {
+    cmd = `node "${localCli}" -i app.css -o www/app.css --minify`;
+  }
+  execSync(cmd, { cwd: ROOT, stdio: 'inherit' });
   console.log('Successfully compiled Tailwind CSS to www/app.css');
 } catch (e) {
   console.warn('Tailwind compilation failed for www/app.css, using raw file: ' + e.message);
+  try {
+    let rawSrc = path.join(ROOT, 'app.css');
+    if (!fs.existsSync(rawSrc)) rawSrc = path.join(ROOT, '..', 'app.css');
+    fs.copyFileSync(rawSrc, path.join(WWW, 'app.css'));
+  } catch (_) {}
 }

@@ -536,7 +536,12 @@ for (const css of CSS_FILES) {
 try {
   console.log('[build] Compiling Tailwind CSS v4 via CLI...');
   const { execSync } = require('child_process');
-  execSync('npx tailwindcss -i app.css -o dist/app.css --minify', { cwd: ROOT, stdio: 'inherit' });
+  const localCli = join(ROOT, 'node_modules', 'tailwindcss', 'lib', 'cli.js');
+  let cmd = 'npx tailwindcss -i app.css -o dist/app.css --minify';
+  if (existsSync(localCli)) {
+    cmd = `node "${localCli}" -i app.css -o dist/app.css --minify`;
+  }
+  execSync(cmd, { cwd: ROOT, stdio: 'inherit' });
   console.log('[build] Tailwind CSS compiled successfully to dist/app.css');
 } catch (e) {
   console.warn('[build] Tailwind compilation failed, copying raw app.css: ' + e.message);
