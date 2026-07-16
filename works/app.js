@@ -2411,6 +2411,10 @@ function renderMoreTab() {
       ${moreRow('photo_library','Shared Album',"window.location.href='album.html'")}
       ${moreRow('calendar_month','Team Calendar',"window.location.href='calendar.html'")}
       ${moreRow('monitoring','Chat Insights',"window.location.href='insights.html'")}
+
+      <div class="text-[11px] font-bold text-on-surface-variant uppercase px-3 pb-2 pt-4 tracking-wider" style="opacity: 0.7;">🔒 Privacy & Safety</div>
+      ${moreRow('lock','Chat Lock','openChatLockSettings()')}
+      ${moreRow('ghost_program','Ghost Mode','openGhostModeSettings()')}
     </div>`;
 }
 

@@ -646,6 +646,15 @@ function chatContextMenu(event, chatId) {
     { icon: '🗑️', label: 'Delete Chat', fn: `confirmDeleteChat('${chatId}')`, danger: true },
   ];
 
+  if (typeof isChatLocked === 'function') {
+    const locked = isChatLocked(chatId);
+    actions.splice(4, 0, { icon: locked ? '🔓' : '🔒', label: locked ? 'Unlock Chat' : 'Lock Chat', fn: `toggleChatLock('${chatId}')` });
+  }
+  if (typeof isScreenshotRestricted === 'function') {
+    const ssRestricted = isScreenshotRestricted(chatId);
+    actions.splice(5, 0, { icon: ssRestricted ? '📸' : '🚫', label: ssRestricted ? 'Allow Screenshots' : 'Restrict Screenshots', fn: `toggleScreenshotRestriction('${chatId}')` });
+  }
+
   actions.forEach(({ icon, label, fn, danger }) => {
     const btn = document.createElement('button');
     btn.style.cssText = `

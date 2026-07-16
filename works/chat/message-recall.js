@@ -1,0 +1,119 @@
+// Message Recall Window — allow delete for everyone up to 7 days
+(function() {
+  'use strict';
+
+  const RECALL_WINDOW_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
+
+  window.canRecallMessage = function(msg) {
+    if (!msg || !msg.time) return false;
+    const msgTime = typeof msg.time === 'number' ? msg.time : (msg.time?.toMillis ? msg.time.toMillis() : 0);
+    if (!msgTime) return false;
+    return (Date.now() - msgTime) < RECALL_WINDOW_MS;
+  };
+
+  window.getRecallTimeRemaining = function(msg) {
+    if (!msg || !msg.time) return null;
+    const msgTime = typeof msg.time === 'number' ? msg.time : (msg.time?.toMillis ? msg.time.toMillis() : 0);
+    if (!msgTime) return null;
+    const remaining = RECALL_WINDOW_MS - (Date.now() - msgTime);
+    if (remaining <= 0) return null;
+    const days = Math.floor(remaining / (24 * 60 * 60 * 1000));
+    const hours = Math.floor((remaining % (24 * 60 * 60 * 1000)) / (60 * 60 * 1000));
+    if (days > 0) return `${days}d ${hours}h`;
+    const minutes = Math.floor((remaining % (60 * 60 * 1000)) / (60 * 1000));
+    return `${hours}h ${minutes}m`;
+  };
+
+  const _origOpenDeleteMenu = window.openDeleteMenu;
+  if (typeof _origOpenDeleteMenu === 'function') {
+    window.openDeleteMenu = function(msgId) {
+      const chatId = App.currentChat?.id;
+      if (!chatId) return _origOpenDeleteMenu(msgId);
+
+      const msgs = App.messages[chatId] || [];
+      const msg = msgs.find(m => m.id === msgId);
+      if (!msg) return _origOpenDeleteMenu(msgId);
+
+      const isMyMsg = msg.from === 'me';
+      const canRecall = isMyMsg && canRecallMessage(msg);
+
+      if (!canRecall && isMyMsg) {
+        _showRecallExpiredMenu(msgId, msg);
+        return;
+      }
+
+      _origOpenDeleteMenu(msgId);
+    };
+  }
+
+  function _showRecallExpiredMenu(msgId, msg) {
+    _removeCtxMenu();
+    const menu = document.createElement('div');
+    menu.id = 'recall-expired-menu';
+    menu.style.cssText = 'position:fixed;inset:0;z-index:9998;background:rgba(0,0,0,0.5);display:flex;align-items:flex-end;justify-content:center;padding-bottom:20px;animation:fadeIn 0.15s ease';
+
+    const sheet = document.createElement('div');
+    sheet.style.cssText = 'background:var(--surface-container-high);border-radius:24px 24px 0 0;padding:24px;width:100%;max-width:480px;display:flex;flex-direction:column;gap:8px;animation:slideUp 0.2s ease';
+
+    const timeRemaining = getRecallTimeRemaining(msg);
+
+    sheet.innerHTML = `
+      <div style="font-size:16px;font-weight:700;margin-bottom:8px;color:var(--on-surface)">Delete Message</div>
+      <div style="padding:16px;border-radius:12px;background:rgba(255,255,255,0.04);margin-bottom:8px">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+          <span class="material-symbols-outlined" style="font-size:24px;color:var(--on-surface-variant)">schedule</span>
+          <div>
+            <div style="font-size:13px;font-weight:600;color:var(--on-surface)">Recall window expired</div>
+            <div style="font-size:12px;color:var(--on-surface-variant);margin-top:2px">Messages can only be deleted for everyone within 7 days of sending.</div>
+          </div>
+        </div>
+      </div>
+      <button onclick="deleteMessage('${msgId}','me')" style="padding:14px 16px;border-radius:12px;border:none;background:var(--surface-variant);color:var(--on-surface);font-size:14px;font-weight:700;cursor:pointer;text-align:left">🚫 Delete for me only</button>
+      <button onclick="_removeCtxMenu()" style="padding:14px 16px;border-radius:12px;border:none;background:transparent;color:var(--on-surface-variant);font-size:14px;font-weight:600;cursor:pointer">Cancel</button>`;
+
+    menu.appendChild(sheet);
+    menu.onclick = e => { if (e.target === menu) _removeCtxMenu(); };
+    document.body.appendChild(menu);
+    window._ctxMenu = menu;
+  }
+
+  window._addRecallInfoToMenu = function(menu, msgId) {
+    const chatId = App.currentChat?.id;
+    if (!chatId) return;
+
+    const msgs = App.messages[chatId] || [];
+    const msg = msgs.find(m => m.id === msgId);
+    if (!msg || msg.from !== 'me') return;
+
+    const remaining = getRecallTimeRemaining(msg);
+    const info = document.createElement('div');
+    info.style.cssText = 'padding:8px 16px;font-size:11px;color:var(--on-surface-variant)';
+
+    if (remaining) {
+      info.innerHTML = `<span class="material-symbols-outlined" style="font-size:12px;vertical-align:middle">schedule</span> Recall available for ${remaining}`;
+    } else {
+      info.innerHTML = `<span class="material-symbols-outlined" style="font-size:12px;vertical-align:middle">info</span> Recall window expired (7-day limit)`;
+    }
+
+    const deleteBtn = menu.querySelector('[onclick*="deleteMessage"]');
+    if (deleteBtn) deleteBtn.parentElement?.insertBefore(info, deleteBtn.nextSibling);
+  };
+
+  const _origDeleteMessage = window.deleteMessage;
+  if (typeof _origDeleteMessage === 'function') {
+    window.deleteMessage = async function(msgId, scope) {
+      if (scope === 'everyone') {
+        const chatId = App.currentChat?.id;
+        if (chatId) {
+          const msgs = App.messages[chatId] || [];
+          const msg = msgs.find(m => m.id === msgId);
+          if (msg && !canRecallMessage(msg)) {
+            showToast('Recall window expired — can only delete for yourself', 'error');
+            return;
+          }
+        }
+      }
+      return _origDeleteMessage(msgId, scope);
+    };
+  }
+})();
