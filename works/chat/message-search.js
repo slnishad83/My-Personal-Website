@@ -507,12 +507,71 @@
     header.prepend(btn);
   }
 
+  /* ─── AI-Assisted Search ───────────────────────────────────────── */
+  async function aiRerankSearch(query, existingResults) {
+    if (!query || !existingResults.length) return existingResults;
+
+    try {
+      const functions = firebase.functions();
+      const aiSearch = functions.httpsCallable('aiSearchMessages', { timeout: 20000 });
+      const chatIds = [...new Set(existingResults.map(r => r.chatId))];
+      const result = await aiSearch({ query, chatIds });
+      if (result.data && result.data.results && result.data.aiRanked) {
+        return result.data.results;
+      }
+    } catch (err) {
+      console.warn('[MsgSearch] AI rerank failed:', err.message);
+    }
+    return existingResults;
+  }
+
+  /* ─── Enhanced doSearch with AI mode ──────────────────────────── */
+  const _origDoSearch = doSearch;
+  async function doSearchWithAI(reset) {
+    await _origDoSearch.call(this, reset);
+
+    // If AI search is active and we have keyword results, rerank them
+    if (window.AIFeatures?.isAiSearchActive?.() && _query.trim()) {
+      const container = document.getElementById('globalSearchResults');
+      if (!container) return;
+
+      const cards = container.querySelectorAll('.ms-card');
+      if (cards.length > 1) {
+        // Collect current results
+        const results = Array.from(cards).map(card => ({
+          id: card.dataset.msgId,
+          chatId: card.dataset.chatId,
+          text: card.querySelector('.ms-card-snippet')?.textContent || '',
+          senderName: card.querySelector('.ms-card-sender')?.textContent || '',
+          chatName: card.querySelector('.ms-card-chat')?.textContent || ''
+        }));
+
+        // Show reranking indicator
+        const indicator = document.createElement('div');
+        indicator.className = 'ms-ai-rerank-indicator';
+        indicator.innerHTML = '<span style="font-size:12px;color:var(--primary);font-weight:600;">✨ AI reranking results...</span>';
+        container.insertBefore(indicator, container.firstChild);
+
+        const reranked = await aiRerankSearch(_query, results);
+
+        // Re-render with reranked order
+        indicator.remove();
+        container.innerHTML = '';
+        renderResults(reranked, _query, false);
+      }
+    }
+  }
+
   /* ─── init ──────────────────────────────────────────────────────── */
   function init() {
     initModal();
     initShortcut();
     // wait a tick for DOM to settle before adding header btn
     setTimeout(initHeaderBtn, 800);
+
+    // Override doSearch to add AI mode
+    doSearch = doSearchWithAI;
+
     // expose API
     window.messageSearch = { open: () => {
       const modal = document.getElementById('globalSearchModal');
