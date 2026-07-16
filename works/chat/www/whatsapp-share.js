@@ -185,40 +185,8 @@
     };
   }
 
-  // ── CSS injection ────────────────────────────────────────────
-  function injectStyles() {
-    if (document.getElementById('_wa_share_styles')) return;
-    const s = document.createElement('style');
-    s.id = '_wa_share_styles';
-    s.textContent = `
-      .wa-share-btn .wa-share-icon,
-      .wa-notes-btn .wa-notes-icon {
-        margin-right: 6px;
-        font-size: 15px;
-      }
-      .wa-share-btn:hover {
-        background: #e7f8ee !important;
-        color: #128c7e !important;
-      }
-      body.dark .wa-share-btn:hover {
-        background: #0b3d35 !important;
-        color: #25d366 !important;
-      }
-      .wa-notes-btn:hover {
-        background: #fffbe6 !important;
-        color: #b8860b !important;
-      }
-      body.dark .wa-notes-btn:hover {
-        background: #3a3000 !important;
-        color: #ffd700 !important;
-      }
-    `;
-    document.head.appendChild(s);
-  }
-
   // ── Boot ────────────────────────────────────────────────────
   function boot() {
-    injectStyles();
     patchShowContextMenu();
     observeContextMenus();
     if (window.__DEBUG__) console.log('[wa-share] Share to WhatsApp + Save to My Notes ready');

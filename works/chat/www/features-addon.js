@@ -28,7 +28,6 @@
   waitFor(() => typeof db !== 'undefined' && typeof auth !== 'undefined' && typeof firebase !== 'undefined', init);
 
   function init() {
-    injectStyles();
     injectFeatureNav();
     setupBusyStatus();
     setupTimeCapsuleButton();
@@ -37,156 +36,6 @@
     setupVoiceTranscription();
     setupAutoTranslatePreference();
     if (window.__DEBUG__) console.log('[FeaturesAddon] All 10 features loaded');
-  }
-
-  // ── 1. STYLES ────────────────────────────────────────────────────
-  function injectStyles() {
-    const style = document.createElement('style');
-    style.textContent = `
-      /* Feature Nav Bar */
-      .feature-nav-bar {
-        display: none; gap: 0; overflow-x: auto; background: var(--bg,#f0f2f5);
-        border-top: 1px solid var(--border,#e2e8f0); padding: 0;
-        scrollbar-width: none; position: relative; z-index: 5;
-      }
-      .feature-nav-bar::-webkit-scrollbar { display: none; }
-      .feat-nav-btn {
-        flex-shrink: 0; display: flex; flex-direction: column; align-items: center;
-        gap: 3px; padding: 8px 14px; cursor: pointer; font-size: 11px;
-        color: var(--text-secondary,#667781); font-family: inherit; background: none; border: none;
-        transition: background 0.15s; border-bottom: 2px solid transparent;
-        font-weight: 600;
-      }
-      .feat-nav-btn:hover { background: rgba(0,128,105,0.06); color: var(--brand,#008069); }
-      .feat-nav-btn .fn-icon { font-size: 18px; }
-
-      @media (max-width: 768px) {
-        .feature-nav-bar { display: flex; }
-      }
-
-      @media (min-width: 769px) {
-        .feature-nav-bar { display: none !important; }
-      }
-
-      /* Busy Status Banner */
-      .busy-banner {
-        background: #fff3cd; border-bottom: 1px solid #ffc107; padding: 8px 16px;
-        display: flex; align-items: center; gap: 10px; font-size: 13px; font-weight: 600;
-        color: #856404;
-      }
-      .busy-banner button { margin-left: auto; font-size: 11px; padding: 4px 10px;
-        border: 1px solid #856404; border-radius: 6px; background: none;
-        color: #856404; cursor: pointer; font-family: inherit; font-weight: 600; }
-
-      /* Feature modals */
-      .feat-modal-overlay {
-        position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 9000;
-        display: flex; align-items: center; justify-content: center;
-        padding: 16px; box-sizing: border-box;
-        opacity: 0; visibility: hidden; transition: opacity 0.2s, visibility 0.2s;
-      }
-      .feat-modal-overlay.show { opacity: 1; visibility: visible; }
-      .feat-modal-box {
-        background: var(--card,#fff); border-radius: 16px;
-        padding: 24px;
-        width: 100%; max-width: 480px;
-        max-height: min(90dvh, calc(100vh - 32px));
-        overflow-y: auto; overflow-x: hidden;
-        -webkit-overflow-scrolling: touch;
-        box-sizing: border-box;
-      }
-      /* Mobile: bottom-sheet style */
-      @media (max-width: 540px) {
-        .feat-modal-overlay {
-          align-items: flex-end;
-          padding: 0;
-        }
-        .feat-modal-box {
-          border-radius: 18px 18px 0 0;
-          padding: 20px 16px calc(20px + env(safe-area-inset-bottom, 0px));
-          max-width: 100%;
-          max-height: min(88dvh, 88vh);
-        }
-      }
-      /* Very small screens / landscape with keyboard */
-      @media (max-height: 500px) {
-        .feat-modal-box {
-          max-height: min(96dvh, 96vh);
-          padding: 12px 14px calc(12px + env(safe-area-inset-bottom, 0px));
-        }
-        .feat-modal-box h3 { font-size: 14px; margin-bottom: 6px; }
-        .feat-modal-box > p { display: none; }
-        .feat-form-group { margin-bottom: 6px; }
-        .feat-form-group input,
-        .feat-form-group select,
-        .feat-form-group textarea { padding: 7px 10px; font-size: 13px; }
-      }
-      .feat-modal-box h3 { font-size: 17px; font-weight: 700; margin-bottom: 16px; }
-      .feat-form-group { margin-bottom: 13px; }
-      .feat-form-group label { font-size: 11px; font-weight: 700; color: var(--text-secondary,#667781);
-        display: block; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.4px; }
-      .feat-form-group input, .feat-form-group select, .feat-form-group textarea {
-        width: 100%; padding: 10px 12px; border: 1.5px solid var(--border,#e2e8f0); border-radius: 9px;
-        font-size: 14px; font-family: inherit; outline: none; background: var(--card,#fff); color: var(--text,#111); }
-      .feat-form-group input:focus, .feat-form-group select:focus { border-color: var(--brand,#008069); }
-      .feat-modal-btns { display: flex; gap: 10px; margin-top: 16px; }
-      .feat-btn-cancel { flex: 1; padding: 11px; border: 1.5px solid var(--border,#e2e8f0); border-radius: 9px;
-        background: var(--card,#fff); color: var(--text,#111); font-family: inherit; font-size: 14px; font-weight: 600; cursor: pointer; }
-      .feat-btn-save { flex: 2; padding: 11px; border: none; border-radius: 9px;
-        background: var(--brand,#008069); color: var(--on-primary,#fff); font-family: inherit; font-size: 14px; font-weight: 700; cursor: pointer; }
-
-      /* Tasks panel */
-      .tasks-panel {
-        position: fixed; right: 0; top: 0; bottom: 0; width: 320px;
-        background: var(--card,#fff); box-shadow: -4px 0 20px rgba(0,0,0,0.12); z-index: 8000;
-        display: flex; flex-direction: column; transform: translateX(100%);
-        transition: transform 0.3s ease;
-      }
-      .tasks-panel.open { transform: translateX(0); }
-      .tasks-header { background: var(--brand,#008069); color: var(--on-primary,#fff); padding: 16px 18px;
-        display: flex; align-items: center; gap: 12px; }
-      .tasks-header h3 { flex: 1; font-size: 16px; font-weight: 700; }
-      .tasks-close { background: none; border: none; color: var(--on-primary,#fff); font-size: 22px; cursor: pointer; }
-      .tasks-add-row { padding: 12px; border-bottom: 1px solid var(--border,#e2e8f0); display: flex; gap: 8px; }
-      .tasks-add-row input { flex: 1; padding: 9px 12px; border: 1.5px solid var(--border,#e2e8f0);
-        border-radius: 8px; font-size: 14px; font-family: inherit; outline: none; background: var(--card,#fff); color: var(--text,#111); }
-      .tasks-add-row input:focus { border-color: var(--brand,#008069); }
-      .tasks-add-row button { padding: 9px 14px; background: var(--brand,#008069); color: var(--on-primary,#fff);
-        border: none; border-radius: 8px; font-weight: 700; cursor: pointer; font-family: inherit; }
-      .tasks-list { flex: 1; overflow-y: auto; padding: 8px; }
-      .task-item { display: flex; align-items: flex-start; gap: 10px; padding: 10px 8px;
-        border-bottom: 1px solid var(--border,#f0f2f5); }
-      .task-cb { width: 20px; height: 20px; flex-shrink: 0; cursor: pointer; accent-color: var(--brand,#008069); margin-top: 2px; }
-      .task-text { flex: 1; font-size: 14px; line-height: 1.4; color: var(--text,#111); }
-      .task-text.done { text-decoration: line-through; color: var(--text-secondary,#667781); }
-      .task-del { background: none; border: none; color: var(--text-secondary,#667781); cursor: pointer; font-size: 15px; padding: 2px; }
-      .tasks-empty { text-align: center; padding: 40px 20px; color: var(--text-secondary,#667781); font-size: 14px; }
-
-      /* Transcription badge */
-      .transcription-text {
-        font-size: 12px; color: var(--text-secondary,#667781); font-style: italic; padding: 4px 8px;
-        background: var(--bg,#f0f2f5); border-radius: 6px; margin-top: 4px; display: block;
-        line-height: 1.4;
-      }
-      .transcribe-btn {
-        font-size: 11px; color: var(--brand,#008069); background: none; border: none;
-        cursor: pointer; font-family: inherit; font-weight: 600; padding: 2px 0;
-        text-decoration: underline;
-      }
-
-      /* Catch me up */
-      .catchup-result {
-        background: var(--brand-soft,#f0f9f6); border: 1px solid var(--border,#b2dfdb); border-radius: 10px;
-        padding: 12px 14px; margin: 8px 16px; font-size: 13px; line-height: 1.6;
-        color: var(--text,#111b21);
-      }
-      .catchup-result .catchup-title { font-weight: 700; color: var(--brand,#008069); margin-bottom: 6px; }
-
-      /* Auto-translate indicator */
-      .auto-translate-on { font-size: 10px; background: var(--brand-soft,#e8f5e9); color: var(--brand,#2e7d32);
-        padding: 2px 8px; border-radius: 10px; font-weight: 600; }
-    `;
-    document.head.appendChild(style);
   }
 
   // ── 2. FEATURE NAVIGATION BAR ────────────────────────────────────
@@ -234,6 +83,9 @@
       </button>
       <button class="feat-nav-btn" onclick="openBusyModal()" title="Busy Status">
         <span class="fn-icon">🔴</span>Busy
+      </button>
+      <button class="feat-nav-btn" onclick="toggleCalculator()" title="Calculator">
+        <span class="fn-icon">🧮</span>Calculator
       </button>
     `;
     // Try to insert after header or at bottom of sidebar

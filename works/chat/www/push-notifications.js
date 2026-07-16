@@ -106,26 +106,11 @@
     banner.setAttribute('role', 'dialog');
     banner.setAttribute('aria-label', 'Enable notifications');
 
-    const isDark = document.documentElement.classList.contains('dark');
-    const bg = isDark ? 'var(--surface-container)' : 'var(--surface-container-lowest, #fff)';
-    const fg = isDark ? 'var(--on-surface)' : 'var(--on-surface)';
     const muted = 'var(--on-surface-variant)';
     const btnBg = 'var(--primary)';
     const btnFg = 'var(--on-primary)';
 
-    banner.style.cssText = `
-      position:fixed;bottom:70px;left:50%;transform:translateX(-50%);
-      width:min(90vw,360px);background:${bg};color:${fg};
-      border-radius:12px;padding:14px 16px;z-index:99990;
-      box-shadow:0 6px 24px rgba(0,0,0,0.4);display:flex;
-      flex-direction:column;gap:10px;font-family:inherit;
-      animation:tcBannerIn 0.3s ease;
-      border:1px solid var(--outline-variant);
-    `;
-
-    const style = document.createElement('style');
-    style.textContent = `@keyframes tcBannerIn{from{opacity:0;transform:translateX(-50%) translateY(16px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}`;
-    document.head.appendChild(style);
+    banner.className = 'push-prompt-banner glass-panel';
 
     const iosHint = isIOSSafari() && !isStandalone()
       ? `<div style="font-size:11px;color:${muted};margin-top:4px;line-height:1.4;">

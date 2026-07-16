@@ -337,7 +337,7 @@
     </button>
 
     <!-- Main Content Canvas -->
-    <main class="relative z-10 flex-grow flex flex-col items-center justify-center px-margin-mobile py-lg" role="main">
+    <main class="relative z-10 flex-grow flex flex-col items-center justify-center px-margin-mobile py-lg" style="padding-top: max(24px, env(safe-area-inset-top, 24px)); padding-bottom: max(24px, env(safe-area-inset-bottom, 24px));" role="main">
       <!-- Login Container -->
       <div class="w-full max-w-md py-md">
         
@@ -358,15 +358,15 @@
         </div>
 
         <!-- Glassmorphism Auth Card -->
-        <div class="glass-panel rounded-xl p-md md:p-lg border border-white/40 dark:border-white/8 overflow-hidden relative">
+        <div class="glass-panel rounded-xl p-4 sm:p-md md:p-lg border border-white/40 dark:border-white/8 overflow-hidden relative">
           <!-- Inner Edge Light Effect -->
           <div class="absolute inset-0 border border-white/20 dark:border-white/5 rounded-xl pointer-events-none"></div>
           
           <div class="relative z-10">
             <!-- Sleek Switch Tabs (Login vs Register) -->
             <div class="auth-tabs flex gap-1 mb-lg p-1 bg-slate-100 dark:bg-[#1d2026] rounded-lg" role="tablist" aria-label="Authentication method">
-              <button class="auth-tab flex-grow active text-center py-2.5 rounded-md font-semibold text-xs transition-all uppercase tracking-wider text-slate-500 hover:text-primary dark:text-[#b9cbc1] dark:hover:text-[#34ffc5]" role="tab" aria-selected="true" aria-controls="loginForm" id="tab-login" data-tab="login">Secure Access</button>
-              <button class="auth-tab flex-grow text-center py-2.5 rounded-md font-semibold text-xs transition-all uppercase tracking-wider text-slate-500 hover:text-primary dark:text-[#b9cbc1] dark:hover:text-[#34ffc5]" role="tab" aria-selected="false" aria-controls="registerForm" id="tab-register" data-tab="register">Initiate Protocol</button>
+              <button class="auth-tab flex-grow active text-center py-2.5 rounded-md font-semibold text-[10px] min-[360px]:text-xs transition-all uppercase tracking-normal min-[360px]:tracking-wider px-1 text-slate-500 hover:text-primary dark:text-[#b9cbc1] dark:hover:text-[#34ffc5]" role="tab" aria-selected="true" aria-controls="loginForm" id="tab-login" data-tab="login">Secure Access</button>
+              <button class="auth-tab flex-grow text-center py-2.5 rounded-md font-semibold text-[10px] min-[360px]:text-xs transition-all uppercase tracking-normal min-[360px]:tracking-wider px-1 text-slate-500 hover:text-primary dark:text-[#b9cbc1] dark:hover:text-[#34ffc5]" role="tab" aria-selected="false" aria-controls="registerForm" id="tab-register" data-tab="register">Initiate Protocol</button>
             </div>
 
             <!-- Login Form -->

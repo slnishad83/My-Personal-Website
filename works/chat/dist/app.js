@@ -6878,25 +6878,76 @@ async function openScanner() {
   if (status) status.textContent = 'Initializing camera…';
   showOverlay('scanner-overlay');
 
-  if (!navigator.mediaDevices?.getUserMedia || !('BarcodeDetector' in window)) {
-    if (status) status.textContent = 'QR scanning is not supported by this browser.';
+  if (!navigator.mediaDevices?.getUserMedia) {
+    if (status) status.textContent = 'Camera access is not supported by this browser.';
     return;
   }
+
+  let useJsQRFallback = !('BarcodeDetector' in window);
+
+  if (useJsQRFallback) {
+    if (status) status.textContent = 'Loading scanner engine...';
+    try {
+      if (!window.jsQR) {
+        await new Promise((resolve, reject) => {
+          const script = document.createElement('script');
+          script.src = 'https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js';
+          script.onload = resolve;
+          script.onerror = () => reject(new Error('Failed to load JSQR library'));
+          document.head.appendChild(script);
+        });
+      }
+    } catch (e) {
+      if (status) status.textContent = 'Failed to load QR scanner library.';
+      console.error(e);
+      return;
+    }
+  }
+
   try {
     scannerStream = await navigator.mediaDevices.getUserMedia({
       video: { facingMode: { ideal: 'environment' } }, audio: false
     });
     video.srcObject = scannerStream;
     await video.play();
-    if (status) status.textContent = 'Point camera at a QR code or barcode.';
-    const formats = await window.BarcodeDetector.getSupportedFormats().catch(() => ['qr_code']);
-    const detector = new window.BarcodeDetector({ formats });
+    if (status) status.textContent = 'Point camera at a QR code.';
+
+    let detector = null;
+    let canvas = null;
+    let ctx = null;
+
+    if (!useJsQRFallback) {
+      const formats = await window.BarcodeDetector.getSupportedFormats().catch(() => ['qr_code']);
+      detector = new window.BarcodeDetector({ formats });
+    } else {
+      canvas = document.createElement('canvas');
+      ctx = canvas.getContext('2d');
+    }
+
     const detectFrame = async () => {
       if (!scannerStream || overlay.classList.contains('hidden')) return;
       try {
-        const codes = video.readyState >= 2 ? await detector.detect(video) : [];
-        if (codes.length > 0 && codes[0].rawValue) {
-          scannerValue = codes[0].rawValue;
+        let scannedValue = '';
+        if (!useJsQRFallback && detector) {
+          const codes = video.readyState >= 2 ? await detector.detect(video) : [];
+          if (codes.length > 0 && codes[0].rawValue) {
+            scannedValue = codes[0].rawValue;
+          }
+        } else if (useJsQRFallback && canvas && ctx && video.readyState >= 2) {
+          canvas.width = video.videoWidth;
+          canvas.height = video.videoHeight;
+          ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+          const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+          const code = jsQR(imageData.data, imageData.width, imageData.height, {
+            inversionAttempts: "dontInvert",
+          });
+          if (code && code.data) {
+            scannedValue = code.data;
+          }
+        }
+
+        if (scannedValue) {
+          scannerValue = scannedValue;
           if (status) status.textContent = 'Scanned!';
           if (result) { result.textContent = scannerValue; result.classList.remove('hidden'); }
           closeScanner();
@@ -7207,7 +7258,25 @@ window.setWaFilter = function(filterName) {
     const isMatching = btn.getAttribute('data-filter') === filterName;
     btn.classList.toggle('active', isMatching);
   });
+
+  // Keep the filter list button highlight state in sync
+  const filterBtn = document.getElementById('btn-filter-unread');
+  if (filterBtn) {
+    if (filterName === 'unread') {
+      filterBtn.classList.add('bg-primary/20', 'text-primary');
+      filterBtn.classList.remove('text-on-surface-variant');
+    } else {
+      filterBtn.classList.remove('bg-primary/20', 'text-primary');
+      filterBtn.classList.add('text-on-surface-variant');
+    }
+  }
+
   renderChatList();
+};
+
+window.toggleUnreadFilter = function() {
+  const isUnread = App.activeWaFilter === 'unread';
+  setWaFilter(isUnread ? 'all' : 'unread');
 };
 
 window.addNewFilterChip = function() {

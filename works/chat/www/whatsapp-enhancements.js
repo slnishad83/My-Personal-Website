@@ -8,17 +8,6 @@
 (function () {
   'use strict';
 
-  // ── Wait for core app to be ready ──────────────────────────────
-  let _readyTrials = 0;
-  function waitForApp(cb) {
-    if (typeof db !== 'undefined' && typeof auth !== 'undefined' && typeof firebase !== 'undefined') {
-      cb();
-    } else if (_readyTrials++ < 100) {
-      setTimeout(() => waitForApp(cb), 150);
-    }
-  }
-  waitForApp(boot);
-
   // ── State ───────────────────────────────────────────────────────
   let _typingUnsubscribe = null;
   let _typingTimer = null;
@@ -32,9 +21,19 @@
 
   function _trackCleanup(fn) { _cleanupFns.push(fn); }
 
+  // ── Wait for core app to be ready ──────────────────────────────
+  let _readyTrials = 0;
+  function waitForApp(cb) {
+    if (typeof db !== 'undefined' && typeof auth !== 'undefined' && typeof firebase !== 'undefined') {
+      cb();
+    } else if (_readyTrials++ < 100) {
+      setTimeout(() => waitForApp(cb), 150);
+    }
+  }
+  waitForApp(boot);
+
   // ================================================================
   function boot() {
-    injectStyles();
     injectTypingUI();
     monitorChatSwitch();
     setupConnectionMonitor();
@@ -42,110 +41,6 @@
     setupPageVisibility();
     setupWindowBeforeUnload();
     if (window.__DEBUG__) console.log('[WA-Enhance] Typing indicators + WhatsApp improvements loaded');
-  }
-
-  // ── 1. STYLES ────────────────────────────────────────────────────
-  function injectStyles() {
-    if (document.getElementById('_wa_style')) return;
-    const s = document.createElement('style');
-    s.id = '_wa_style';
-    s.textContent = `
-      /* ── Typing Indicator ────────────────────────────── */
-      #_wa_typing {
-        height: 22px;
-        padding: 0 16px;
-        display: flex;
-        align-items: center;
-        gap: 6px;
-        font-size: 12px;
-        color: var(--wa-typing-color, #008069);
-        font-style: italic;
-        font-weight: 500;
-        transition: opacity 0.25s;
-        opacity: 0;
-        pointer-events: none;
-        user-select: none;
-        flex-shrink: 0;
-        line-height: 1;
-        overflow: hidden;
-        white-space: nowrap;
-        text-overflow: ellipsis;
-        max-width: 100%;
-      }
-      #_wa_typing.visible { opacity: 1; }
-
-      /* Animated dots */
-      #_wa_typing .wa-dots {
-        display: inline-flex;
-        align-items: center;
-        gap: 3px;
-        flex-shrink: 0;
-      }
-      #_wa_typing .wa-dots span {
-        width: 4px;
-        height: 4px;
-        border-radius: 50%;
-        background: currentColor;
-        animation: _waTypingBounce 1.2s infinite ease-in-out;
-      }
-      #_wa_typing .wa-dots span:nth-child(1) { animation-delay: 0s; }
-      #_wa_typing .wa-dots span:nth-child(2) { animation-delay: 0.2s; }
-      #_wa_typing .wa-dots span:nth-child(3) { animation-delay: 0.4s; }
-      @keyframes _waTypingBounce {
-        0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
-        30% { transform: translateY(-4px); opacity: 1; }
-      }
-
-      /* ── Connection Status Banner ────────────────────── */
-      #_wa_conn_banner {
-        display: none;
-        align-items: center;
-        justify-content: center;
-        gap: 8px;
-        padding: 7px 16px;
-        font-size: 12px;
-        font-weight: 600;
-        font-style: normal;
-        flex-shrink: 0;
-        z-index: 100;
-      }
-      #_wa_conn_banner.offline {
-        display: flex;
-        background: #fef3c7;
-        color: #92400e;
-        border-bottom: 1px solid #fde68a;
-      }
-      #_wa_conn_banner.reconnecting {
-        display: flex;
-        background: #e0f2fe;
-        color: #0369a1;
-        border-bottom: 1px solid #bae6fd;
-      }
-      #_wa_conn_banner .conn-dot {
-        width: 8px; height: 8px;
-        border-radius: 50%;
-        background: currentColor;
-        animation: _waPulse 1.2s infinite;
-      }
-      @keyframes _waPulse {
-        0%, 100% { opacity: 1; }
-        50% { opacity: 0.3; }
-      }
-
-      /* ── Dark mode overrides ─────────────────────────── */
-      [data-theme="dark"] #_wa_typing,
-      .dark #_wa_typing,
-      body.dark-mode #_wa_typing {
-        --wa-typing-color: #25d366;
-      }
-      [data-theme="dark"] #_wa_conn_banner.offline,
-      .dark #_wa_conn_banner.offline {
-        background: #44380a;
-        color: #fcd34d;
-        border-color: #6b4f0a;
-      }
-    `;
-    document.head.appendChild(s);
   }
 
   // ── 2. TYPING INDICATOR UI INJECTION ────────────────────────────

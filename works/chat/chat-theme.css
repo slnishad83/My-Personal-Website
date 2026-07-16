@@ -3,11 +3,100 @@
    Load AFTER tailwind, BEFORE app.js
    ════════════════════════════════════════════════════════════ */
 
-/* ── Viewport height: use dvh with vh fallback ──────── */
-html, body, #app { height: 100%; margin: 0; padding: 0; }
+/* ── Viewport height and overscroll behavior ────────── */
+html, body, #app { 
+  height: 100%; 
+  margin: 0; 
+  padding: 0; 
+  overscroll-behavior: none; 
+}
 @supports (height: 100dvh) {
-  html, body, #app { height: 100dvh; margin: 0; padding: 0; }
+  html, body, #app { 
+    height: 100dvh; 
+    margin: 0; 
+    padding: 0; 
+    overscroll-behavior: none; 
+  }
   #chat-area { min-height: 100dvh; }
+}
+
+/* Prevent iOS Zoom on focus for inputs on mobile screens */
+@media (max-width: 767px) {
+  input, textarea, select, .wa-textarea {
+    font-size: 16px !important;
+  }
+}
+
+/* ── WhatsApp Web Filter Chips ───────────────────────── */
+.wa-chip {
+  --wa-chip-bg: #202c33;
+  --wa-chip-text: #8696a0;
+  --wa-chip-hover: #2a3942;
+  --wa-chip-active-bg: #0a332c;
+  --wa-chip-active-text: #00bfa5;
+
+  background: var(--wa-chip-bg) !important;
+  color: var(--wa-chip-text) !important;
+  border: none !important;
+  border-radius: 9999px !important;
+  padding: 6px 14px !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  cursor: pointer !important;
+  white-space: nowrap !important;
+  transition: all 0.15s ease !important;
+  line-height: 1.2 !important;
+  min-height: 32px !important;
+  height: 32px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  margin-right: 8px !important;
+}
+.wa-chip:hover {
+  background: var(--wa-chip-hover) !important;
+  color: #d1d7db !important;
+}
+.wa-chip.active {
+  background: var(--wa-chip-active-bg) !important;
+  color: var(--wa-chip-active-text) !important;
+  font-weight: 600 !important;
+}
+.wa-chip-add {
+  --wa-chip-bg: #202c33;
+  --wa-chip-text: #8696a0;
+  --wa-chip-hover: #2a3942;
+
+  background: var(--wa-chip-bg) !important;
+  color: var(--wa-chip-text) !important;
+  border: none !important;
+  border-radius: 50% !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 32px !important;
+  height: 32px !important;
+  min-height: 32px !important;
+  cursor: pointer !important;
+  transition: all 0.15s ease !important;
+}
+.wa-chip-add:hover {
+  background: var(--wa-chip-hover) !important;
+  color: #d1d7db !important;
+}
+
+/* Light mode overrides */
+html:not(.dark) .wa-chip {
+  --wa-chip-bg: #f0f2f5;
+  --wa-chip-text: #54656f;
+  --wa-chip-hover: #e9edef;
+  --wa-chip-active-bg: #e7f7f4;
+  --wa-chip-active-text: #00a884;
+}
+html:not(.dark) .wa-chip-add {
+  --wa-chip-bg: #f0f2f5;
+  --wa-chip-text: #54656f;
+  --wa-chip-hover: #e9edef;
 }
 
 /* ── Responsive Layout ────────────────────────────────── */
@@ -360,6 +449,7 @@ html.dark .chat-list-item.active { background: rgba(196, 192, 255, 0.08); border
 /* ── Safe area top for notch/Dynamic Island ──────────── */
 @supports (padding-top: env(safe-area-inset-top)) {
   #chat-header { padding-top: env(safe-area-inset-top); min-height: calc(64px + env(safe-area-inset-top)); }
+  #chat-list-sidebar > div:first-child { padding-top: calc(16px + env(safe-area-inset-top)) !important; }
   #toast-container { top: calc(24px + env(safe-area-inset-top)) !important; }
   #camera-overlay > div:first-child { padding-top: env(safe-area-inset-top); }
   #camera-overlay > div:last-child { padding-bottom: calc(16px + env(safe-area-inset-bottom)); }
@@ -386,6 +476,26 @@ html.dark #call-screen {
   #recording-bar button { min-width: 44px; min-height: 44px; }
   #_msg-ctx-menu button { min-height: 44px; }
   .confirm-btn { min-height: 44px; padding: 10px 20px !important; }
+
+  /* Enforce touch-compliant 44px targets for action controls on mobile/tablet */
+  .overlay button,
+  .overlay [role="button"],
+  #confirm-overlay button,
+  #chat-header button,
+  #attach-menu button,
+  .bottom-nav button,
+  .dm-toggle,
+  .wa-chip,
+  .wa-chip-add {
+    min-height: 44px !important;
+    min-width: 44px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
+  .wa-chip {
+    padding: 6px 16px !important;
+  }
 }
 
 /* ── Emoji picker touch: show preview on tap ──────────── */

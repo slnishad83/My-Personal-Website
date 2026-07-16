@@ -19,7 +19,9 @@ window.toggleSidebarExpand = function() {
 };
 
 // Run framework initializes
-init().catch((error) => {
-  console.error("Application startup failed:", error);
-  showStartupRecovery("Team Chat could not start. Please retry.");
-});
+if (typeof init === 'function') {
+  init().catch((error) => {
+    console.error("Application startup failed:", error);
+    showStartupRecovery("Team Chat could not start. Please retry.");
+  });
+}

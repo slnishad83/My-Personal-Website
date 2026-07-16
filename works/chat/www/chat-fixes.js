@@ -156,7 +156,7 @@
     requestList.querySelectorAll('.cf-block-btn').forEach(function(b){
       b.addEventListener('click', async function(e){
         e.stopPropagation();
-        await window.blockRequestSender(b.dataset.type, b.dataset.id, b.dataset.from, b.dataset.name);
+        await window.blockRequestSender(b.dataset.from);
       });
     });
   }
@@ -417,138 +417,7 @@
     };
   });
 
-  /* ════════════════════════════════════════════════════════════
-     5. CSS — fully responsive + dark mode + Capacitor safe-area
-     ════════════════════════════════════════════════════════════ */
-  var style = document.createElement('style');
-  style.id = 'chat-fixes-css';
-  style.textContent = '\
-/* highlight on scroll-to */\
-.cf-highlight{animation:cfHL 1.8s ease}\
-@keyframes cfHL{0%,100%{background:transparent}25%,75%{background:rgba(0,150,136,.22)}}\
-\
-/* ── Kind pills ──────────────────────────────────── */\
-.cf-pill{display:inline-flex;align-items:center;font-size:10px;font-weight:700;\
-  line-height:1;padding:2px 7px;border-radius:10px;flex-shrink:0;white-space:nowrap}\
-.cf-pill-received{color:#1565c0;background:#e3f0ff}\
-.cf-pill-sent{color:#e65100;background:#fff3e0}\
-.cf-pill-accepted{color:#2e7d32;background:#e8f5e9}\
-.cf-pill-count{color:var(--text-secondary,#555);background:var(--bg,#f0f0f0);font-size:11px;min-width:22px;\
-  justify-content:center;border-radius:12px;padding:2px 8px}\
-\
-/* ── Request preview row ─────────────────────────── */\
-.cf-req-preview{display:flex;align-items:center;gap:5px;flex-wrap:wrap;max-width:100%}\
-.cf-req-text{font-size:11px;color:var(--muted-strong,#888)}\
-.cf-req-actions{display:flex;flex-wrap:wrap;gap:5px;justify-content:flex-end;margin-top:4px}\
-\
-/* ── Search bar wrapper ──────────────────────────── */\
-.cf-search-wrap{\
-  padding:8px 10px 6px;\
-  border-bottom:1px solid var(--border,#eee);\
-  background:var(--panel,#fff);\
-  position:sticky;top:0;z-index:10;\
-}\
-.cf-search-inner{\
-  display:flex;align-items:center;gap:6px;\
-  background:var(--input-bg,#f0f2f5);\
-  border-radius:20px;padding:5px 12px;\
-  border:1px solid var(--border,#e0e0e0);\
-}\
-.cf-search-icon{font-size:13px;flex-shrink:0;opacity:.6}\
-.cf-search-input{\
-  flex:1;border:none;background:transparent;outline:none;\
-  font-size:13px;color:var(--text,#111);\
-  min-width:0;padding:0;\
-}\
-.cf-search-input::placeholder{color:var(--muted,#aaa)}\
-\
-/* ── Filter chips ────────────────────────────────── */\
-.cf-filter-chips{\
-  display:flex;gap:6px;flex-wrap:nowrap;\
-  overflow-x:auto;padding:6px 2px 2px;\
-  scrollbar-width:none;\
-}\
-.cf-filter-chips::-webkit-scrollbar{display:none}\
-.cf-chip{\
-  flex-shrink:0;border:1px solid var(--border,#e0e0e0);\
-  border-radius:16px;padding:4px 12px;\
-  font-size:11px;font-weight:600;\
-  background:var(--panel,#fff);color:var(--text,#333);\
-  cursor:pointer;white-space:nowrap;\
-  transition:background .15s,color .15s;\
-}\
-.cf-chip:hover{background:var(--panel-hover,#f5f5f5)}\
-.cf-chip-active{\
-  background:var(--brand,#075e54) !important;\
-  color:var(--on-primary,#fff) !important;border-color:var(--brand,#075e54) !important;\
-}\
-\
-/* ── Pinned bar ──────────────────────────────────── */\
-#pinnedSection{max-height:140px;overflow-y:auto}\
-.cf-pin-item{\
-  display:flex;align-items:center;gap:8px;\
-  padding:7px 10px;cursor:pointer;\
-  border-bottom:1px solid var(--border,#f0f0f0);min-height:44px;\
-}\
-.cf-pin-item:hover,.cf-pin-item:active{background:var(--panel-hover,#f5f5f5)}\
-.cf-pin-icon{font-size:14px;flex-shrink:0}\
-.cf-pin-body{flex:1;min-width:0}\
-.cf-pin-sender{font-weight:600;font-size:11px;color:var(--primary,#075e54);\
-  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}\
-.cf-pin-text{font-size:12px;color:var(--text-secondary,#555);\
-  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}\
-.cf-unpin-btn{\
-  background:none;border:none;cursor:pointer;color:var(--text-secondary,#aaa);\
-  font-size:16px;padding:4px 6px;flex-shrink:0;line-height:1;\
-  min-width:32px;min-height:32px;\
-  display:flex;align-items:center;justify-content:center;\
-}\
-.cf-unpin-btn:hover{color:var(--error,#e53935)}\
-\
-/* ══ RESPONSIVE ═══════════════════════════════════════════ */\
-@media(max-width:720px){\
-  .cf-req-actions{justify-content:flex-start}\
-  .cf-req-actions .btn{font-size:11px;padding:0 8px;min-height:28px}\
-}\
-@media(max-width:520px){\
-  .request-card{flex-wrap:wrap;padding:8px}\
-  .cf-req-actions{width:100%;justify-content:flex-start;margin-top:6px}\
-  .cf-req-actions .btn{flex:1 1 auto;min-height:32px;font-size:11px;text-align:center}\
-  .cf-pin-item{padding:6px 8px}\
-  .cf-pill{font-size:9px;padding:2px 5px}\
-  #pinnedSection{max-height:110px}\
-  .cf-search-inner{padding:4px 10px}\
-  .cf-search-input{font-size:12px}\
-  .cf-chip{font-size:10px;padding:3px 9px}\
-}\
-@media(max-width:380px){\
-  .cf-req-actions .btn{font-size:10px;padding:0 6px;min-height:30px}\
-  .cf-chip{font-size:9px;padding:3px 7px}\
-  .cf-pin-sender,.cf-pin-text{font-size:10px}\
-}\
-\
-/* Capacitor / standalone PWA — safe-area */\
-@media(display-mode:standalone){\
-  #pinnedSection{padding-bottom:env(safe-area-inset-bottom,0px)}\
-  .request-section{padding-bottom:env(safe-area-inset-bottom,0px)}\
-  .cf-search-wrap{padding-top:max(8px,env(safe-area-inset-top,8px))}\
-}\
-\
-/* Dark mode */\
-@media(prefers-color-scheme:dark){\
-  .cf-pill-received{color:#90caf9;background:var(--surface,#1a2a3a)}\
-  .cf-pill-sent{color:#ffcc80;background:var(--surface,#2a1a0a)}\
-  .cf-pill-accepted{color:#a5d6a7;background:var(--surface,#0a2a0a)}\
-  .cf-pill-count{color:var(--text-secondary,#ccc);background:var(--surface,#333)}\
-  .cf-search-inner{background:var(--input-bg,#2a2a2a);border-color:var(--border,#444)}\
-  .cf-search-input{color:var(--text,#eee)}\
-  .cf-chip{background:var(--panel,#1e1e1e);color:var(--text,#ddd);border-color:var(--border,#444)}\
-  .cf-chip:hover{background:var(--panel-hover,#2a2a2a)}\
-  .cf-pin-item{border-bottom-color:var(--border,#333)}\
-  .cf-pin-text{color:var(--text-secondary,#aaa)}\
-}\
-';
-  document.head.appendChild(style);
+
 
   /* ── 9. Cyber Navigation & Status Bar Interceptors ── */
   function updateDockThemeIcon() {

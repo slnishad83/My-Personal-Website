@@ -49,6 +49,7 @@
 
   <!-- Consolidated Theme CSS (responsive + dark/light mode) -->
   <link rel="stylesheet" href="chat-theme.css">
+  <link rel="stylesheet" href="chat-consolidated.css">
 
   <link rel="stylesheet" href="redesign-base.css">
   <link rel="stylesheet" href="chat-enhancements.css">
@@ -65,6 +66,16 @@
   <link rel="stylesheet" href="snooze-enhancements.css">
 
   <script src="notification-sounds.js" defer></script>
+  <script src="https://unpkg.com/twemoji@14.0.2/dist/twemoji.min.js" crossorigin="anonymous" defer></script>
+  <script>
+    function renderEmojis(el) {
+      if (typeof twemoji === 'undefined' || !el) return;
+      twemoji.parse(el, { folder: 'svg', ext: '.svg', base: 'https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/' });
+      el.querySelectorAll('img.emoji').forEach(img => {
+        img.style.cssText = 'display:inline-block;width:1.2em;height:1.2em;vertical-align:-0.2em;margin:0 1px;';
+      });
+    }
+  </script>
   <script id="tailwind-config">
     tailwind.config = {
       darkMode: "class",
@@ -174,7 +185,7 @@
   <div class="fixed top-6 right-6 z-[999] flex flex-col gap-2 max-sm:left-4 max-sm:right-4 max-sm:top-4 max-sm:items-center" id="toast-container" aria-live="polite" role="status" aria-atomic="false"></div>
 
   <!-- Skip to content link for keyboard users (created by A11y module) -->
-
+  <a href="#chat-list" id="skip-nav" class="sr-only" style="position:fixed;top:-100px;left:8px;z-index:99999;padding:12px 24px;background:var(--primary);color:var(--on-primary);border-radius:0 0 12px 12px;font-weight:700;font-size:14px;text-decoration:none;transition:top 0.2s;" onfocus="this.style.top='0'" onblur="this.style.top='-100px'" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();const t=document.getElementById('chat-list')||document.getElementById('msg-input');if(t){t.focus();t.scrollIntoView({behavior:'smooth',block:'start'});this.style.top='-100px';}}">Skip to chat list</a>
   <!-- ═══════════════════════════════════
        MAIN APP CONTAINER (Supports device framing simulation)
        ═══════════════════════════════════ -->
@@ -189,7 +200,7 @@
         </div>
         <div class="hidden xl:block">
           <h1 class="font-headline-md text-headline-md font-bold text-on-background tracking-tight" id="sidebar-app-title">NSL Chat</h1>
-          <p class="text-xs text-on-surface-variant font-medium mt-0.5" id="sidebar-app-subtitle">NSL Chat</p>
+          <p class="text-xs text-on-surface-variant font-medium mt-0.5" id="sidebar-app-subtitle">Secure messaging</p>
         </div>
       </div>
 
@@ -216,7 +227,7 @@
       <!-- Bottom Actions in Navigation -->
       <div class="p-4 mt-auto border-t border-outline-variant/30 space-y-4">
         <!-- H2: Sidebar expand toggle (shown on tablet only) -->
-        <button class="hidden md:flex xl:hidden w-full items-center gap-4 text-on-surface-variant hover:text-on-surface transition-colors duration-200 px-4 py-2 cursor-pointer" id="sidebar-toggle-btn" aria-label="Expand sidebar">
+        <button class="hidden md:flex xl:hidden w-full items-center gap-4 text-on-surface-variant hover:text-on-surface transition-colors duration-200 px-4 py-2 cursor-pointer" id="sidebar-toggle-btn" aria-label="Expand sidebar" onclick="toggleSidebarExpand()">
           <span class="material-symbols-outlined" id="sidebar-toggle-icon">menu_open</span>
           <span class="hidden xl:block font-body-md text-body-md">Collapse</span>
         </button>
@@ -226,6 +237,10 @@
           <span class="hidden xl:block font-body-md text-body-md">Scan QR</span>
         </button>
         <!-- Theme Switcher Sidebar Row -->
+        <button class="w-full flex items-center gap-4 text-on-surface-variant hover:text-on-surface transition-colors duration-200 px-4 py-2 cursor-pointer" onclick="toggleCalculator()" aria-label="Calculator">
+          <span class="material-symbols-outlined">calculate</span>
+          <span class="hidden xl:block font-body-md text-body-md">Calculator</span>
+        </button>
         <button class="w-full flex items-center gap-4 text-on-surface-variant hover:text-on-surface transition-colors duration-200 px-4 py-2 cursor-pointer" onclick="cycleTheme()" aria-label="Toggle theme">
           <span class="material-symbols-outlined" id="theme-icon-sidebar">light_mode</span>
           <span class="hidden xl:block font-body-md text-body-md">Theme Toggle</span>
@@ -235,7 +250,7 @@
         <div class="flex items-center gap-3 px-2 py-1 bg-surface-container-high rounded-xl cursor-pointer hover:brightness-110 active:scale-95 transition-all" onclick="openProfile()" role="button" tabindex="0" aria-label="Open profile and settings" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openProfile()}">
           <div class="relative">
             <div class="w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm bg-surface-container-highest text-on-surface-variant" id="sidebar-avatar">U</div>
-            <div class="absolute bottom-0 right-0 w-3 h-3 bg-primary-fixed border-2 border-surface-container-low rounded-full"></div>
+            <div class="absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-surface-container-low hidden" id="sidebar-presence-dot"></div>
           </div>
           <div class="hidden xl:block overflow-hidden">
             <p class="text-sm font-bold truncate text-on-surface" id="profile-name-sidebar">User</p>
@@ -265,11 +280,25 @@
           </div>
         </div>
 
-        <!-- Search conversations -->
-        <div class="relative">
-          <input class="w-full bg-surface-container border-none rounded-xl py-3 pl-12 pr-10 text-on-surface focus:ring-1 focus:ring-primary font-body-md placeholder-on-surface-variant/50" placeholder="Search conversations..." id="sidebar-search" oninput="filterChats(this.value)" onkeydown="handleSidebarSearch(event)" type="text" autocomplete="off" aria-label="Search conversations"/>
-          <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant cursor-pointer" onclick="triggerSidebarSearch()" role="button" tabindex="0" aria-label="Search">search</span>
-          <span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant cursor-pointer hover:text-primary hidden" id="sidebar-search-clear" onclick="clearSidebarSearch()" role="button" tabindex="0" aria-label="Clear search">close</span>
+        <!-- Search conversations and filter -->
+        <div class="flex items-center gap-2 mb-3">
+          <div class="relative flex-1">
+            <input class="w-full bg-surface-container border-none rounded-xl py-2.5 pl-12 pr-10 text-on-surface focus:ring-1 focus:ring-primary font-body-md placeholder-on-surface-variant/50" placeholder="Search conversations..." id="sidebar-search" oninput="filterChats(this.value)" onkeydown="handleSidebarSearch(event)" type="text" autocomplete="off" aria-label="Search conversations"/>
+            <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant cursor-pointer text-[20px]" onclick="triggerSidebarSearch()" role="button" tabindex="0" aria-label="Search">search</span>
+            <span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant cursor-pointer hover:text-primary hidden text-[20px]" id="sidebar-search-clear" onclick="clearSidebarSearch()" role="button" tabindex="0" aria-label="Clear search">close</span>
+          </div>
+          <button class="p-2 hover:bg-surface-variant/30 rounded-xl text-on-surface-variant transition-colors flex items-center justify-center cursor-pointer" id="btn-filter-unread" onclick="toggleUnreadFilter()" title="Filter unread" aria-label="Filter unread chats">
+            <span class="material-symbols-outlined text-[20px]">filter_list</span>
+          </button>
+        </div>
+
+        <!-- WhatsApp Web filter chips -->
+        <div class="flex items-center gap-2 pt-1 px-0 pb-1 overflow-x-auto scrollbar-hide select-none" id="wa-filter-chips">
+          <button class="wa-chip active" onclick="setWaFilter('all')" data-filter="all">All</button>
+          <button class="wa-chip" onclick="setWaFilter('unread')" data-filter="unread">Unread</button>
+          <button class="wa-chip" onclick="setWaFilter('favourites')" data-filter="favourites">Favourites</button>
+          <button class="wa-chip" onclick="setWaFilter('groups')" data-filter="groups">Groups</button>
+          <button class="wa-chip-add" onclick="addNewFilterChip()" aria-label="Add filter"><span class="material-symbols-outlined text-[16px]">add</span></button>
         </div>
       </div>
 
@@ -403,10 +432,14 @@
 
       <!-- Typing indicators -->
       <div class="px-6 py-2 flex items-center gap-2 hidden" id="typing-indicator" aria-live="polite">
-        <div class="flex gap-1 bg-surface-container-high px-3 py-2 rounded-full border border-outline-variant/30">
-          <div class="w-1.5 h-1.5 bg-primary rounded-full" style="animation: typing-dot 1.2s ease-in-out infinite; animation-delay: 0ms;"></div>
-          <div class="w-1.5 h-1.5 bg-primary rounded-full" style="animation: typing-dot 1.2s ease-in-out infinite; animation-delay: 0.2s;"></div>
-          <div class="w-1.5 h-1.5 bg-primary rounded-full" style="animation: typing-dot 1.2s ease-in-out infinite; animation-delay: 0.4s;"></div>
+        <div class="flex items-center gap-2 bg-surface-container-high px-3 py-2 rounded-full border border-outline-variant/30">
+          <span class="text-xs text-on-surface-variant font-medium typing-user-name">Someone</span>
+          <div class="flex gap-1">
+            <div class="w-1.5 h-1.5 bg-primary rounded-full" style="animation: typing-dot 1.2s ease-in-out infinite; animation-delay: 0ms;"></div>
+            <div class="w-1.5 h-1.5 bg-primary rounded-full" style="animation: typing-dot 1.2s ease-in-out infinite; animation-delay: 0.2s;"></div>
+            <div class="w-1.5 h-1.5 bg-primary rounded-full" style="animation: typing-dot 1.2s ease-in-out infinite; animation-delay: 0.4s;"></div>
+          </div>
+          <span class="text-[10px] text-on-surface-variant/60">typing...</span>
         </div>
       </div>
 
@@ -453,83 +486,98 @@
         </div>
       </div>
 
-      <!-- Input Footer Bar -->
-      <footer class="p-4 bg-background border-t border-outline-variant/20 z-10 hidden" id="input-bar" role="form" aria-label="Message input">
-        <div class="flex items-end gap-3 glass-panel p-2 rounded-full focus-within:ring-1 focus-within:ring-primary/50 transition-all duration-300">
-          <!-- Attach button -->
-          <button class="w-10 h-10 flex items-center justify-center text-on-surface-variant hover:text-primary hover:bg-surface-variant/30 rounded-full transition-all" id="attach-btn" onclick="toggleAttachMenu()" aria-label="Attach file">
-            <span class="material-symbols-outlined">add_circle</span>
+      <!-- Input Footer Bar — WhatsApp-exact layout -->
+      <footer class="wa-input-footer hidden" id="input-bar" role="form" aria-label="Message input">
+        <!-- Left: rounded input box with emoji, attach, and textarea -->
+        <div class="wa-input-box" id="wa-input-box">
+          <!-- Emoji button (inside input, left) -->
+          <button class="wa-input-icon" onclick="toggleEmojiPicker()" aria-label="Emoji" id="wa-emoji-btn">
+            <span class="material-symbols-outlined">mood</span>
           </button>
-
+          <!-- Attach button (paperclip, inside input) -->
+          <button class="wa-input-icon" id="attach-btn" onclick="toggleAttachMenu()" aria-label="Attach file">
+            <span class="material-symbols-outlined">attach_file</span>
+          </button>
           <!-- Dynamic text input -->
-          <textarea class="flex-1 bg-transparent border-none focus:ring-0 text-on-surface font-body-md text-body-md resize-none py-2 max-h-32 custom-scrollbar focus:outline-none" id="msg-input" placeholder="Type your message..." rows="1" oninput="onInputChange()" onkeydown="onInputKeyDown(event)" aria-label="Message input"></textarea>
-
-          <!-- Input Extras -->
-          <div class="flex items-center gap-1">
-            <button class="w-10 h-10 flex items-center justify-center text-on-surface-variant hover:text-primary hover:bg-surface-variant/30 rounded-full transition-all" onclick="toggleEmojiPicker()" aria-label="Emoji picker">
-              <span class="material-symbols-outlined">mood</span>
-            </button>
-            <button class="w-10 h-10 flex items-center justify-center text-on-surface-variant hover:text-primary hover:bg-surface-variant/30 rounded-full transition-all" id="gif-btn" onclick="openGifPicker()" aria-label="GIF search" title="GIFs">
-              <span class="material-symbols-outlined">gif_box</span>
-            </button>
-            <button class="w-10 h-10 flex items-center justify-center text-on-surface-variant hover:text-primary hover:bg-surface-variant/30 rounded-full transition-all" id="format-toggle" onclick="toggleFormatBar()" aria-label="Text formatting">
-              <span class="material-symbols-outlined">format_size</span>
-            </button>
-            <!-- Mic / Send buttons -->
-            <button class="w-10 h-10 flex items-center justify-center bg-primary text-on-primary-container rounded-full hover:scale-105 active:scale-95 transition-all shadow-md" id="mic-btn" onclick="toggleRecording()" aria-label="Record voice message">
-              <span class="material-symbols-outlined">mic</span>
-            </button>
-            <button class="w-10 h-10 flex items-center justify-center bg-primary text-on-primary-container rounded-full hover:scale-105 active:scale-95 transition-all shadow-md hidden" id="send-btn" onclick="sendMessage()" aria-label="Send message">
-              <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">send</span>
-            </button>
-          </div>
+          <textarea class="wa-textarea" id="msg-input" placeholder="Type a message" rows="1" oninput="onInputChange()" onkeydown="onInputKeyDown(event)" aria-label="Message input"></textarea>
         </div>
+        <!-- Right: circular mic/send button -->
+        <button class="wa-send-mic-btn" id="mic-btn" onclick="toggleRecording()" aria-label="Record voice message">
+          <span class="material-symbols-outlined">mic</span>
+        </button>
+        <button class="wa-send-mic-btn hidden" id="send-btn" onclick="sendMessage()" aria-label="Send message">
+          <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">send</span>
+        </button>
       </footer>
 
-      <!-- Attachment popover popup menu -->
-      <div class="absolute bottom-20 left-6 bg-surface-container border border-outline-variant/30 p-2.5 rounded-2xl shadow-xl flex flex-col gap-1 hidden z-30 w-48" id="attach-menu" role="menu" aria-label="Attach file">
-        <button class="flex items-center gap-3 w-full px-3 py-2 rounded-xl text-left text-xs font-semibold hover:bg-surface-variant transition-colors" onclick="attachPhoto()" role="menuitem">
-          <span class="text-base">🖼️</span> Gallery
-        </button>
-        <button class="flex items-center gap-3 w-full px-3 py-2 rounded-xl text-left text-xs font-semibold hover:bg-surface-variant transition-colors" onclick="attachCamera()" role="menuitem">
-          <span class="text-base">📷</span> Camera
-        </button>
-        <button class="flex items-center gap-3 w-full px-3 py-2 rounded-xl text-left text-xs font-semibold hover:bg-surface-variant transition-colors" onclick="attachDocument()" role="menuitem">
-          <span class="text-base">📄</span> Document
-        </button>
-        <button class="flex items-center gap-3 w-full px-3 py-2 rounded-xl text-left text-xs font-semibold hover:bg-surface-variant transition-colors" onclick="shareContact()" role="menuitem">
-          <span class="text-base">👤</span> Contact
-        </button>
-        <button class="flex items-center gap-3 w-full px-3 py-2 rounded-xl text-left text-xs font-semibold hover:bg-surface-variant transition-colors" onclick="shareLocation()" role="menuitem">
-          <span class="text-base">📍</span> Location
-        </button>
-        <button class="flex items-center gap-3 w-full px-3 py-2 rounded-xl text-left text-xs font-semibold hover:bg-surface-variant transition-colors" onclick="toggleAttachMenu();openPollCreator()" role="menuitem">
-          <span class="text-base">📊</span> Poll
-        </button>
+
+      <!-- Attachment popover popup menu — WhatsApp-style 3x2 grid -->
+      <div class="absolute bottom-20 left-6 bg-surface-container-low border border-outline-variant/40 p-4 rounded-2xl shadow-[0_8px_40px_rgba(0,0,0,0.35)] backdrop-blur-sm hidden z-30 w-[260px] transition-all duration-200 origin-bottom-left" id="attach-menu" role="menu" aria-label="Attach file" style="transform:scale(0.95);opacity:0;">
+        <div class="grid grid-cols-3 gap-4">
+          <button class="flex flex-col items-center gap-1.5 group" onclick="attachPhoto()" role="menuitem">
+            <div class="w-12 h-12 rounded-2xl bg-[#7C4DFF] flex items-center justify-center transition-transform group-hover:scale-105 group-active:scale-95">
+              <span class="material-symbols-outlined text-white text-[22px]" style="font-variation-settings:'FILL' 1;">photo_library</span>
+            </div>
+            <span class="text-[11px] text-on-surface-variant font-medium">Gallery</span>
+          </button>
+          <button class="flex flex-col items-center gap-1.5 group" onclick="attachCamera()" role="menuitem">
+            <div class="w-12 h-12 rounded-2xl bg-[#00A884] flex items-center justify-center transition-transform group-hover:scale-105 group-active:scale-95">
+              <span class="material-symbols-outlined text-white text-[22px]" style="font-variation-settings:'FILL' 1;">photo_camera</span>
+            </div>
+            <span class="text-[11px] text-on-surface-variant font-medium">Camera</span>
+          </button>
+          <button class="flex flex-col items-center gap-1.5 group" onclick="attachDocument()" role="menuitem">
+            <div class="w-12 h-12 rounded-2xl bg-[#5157AE] flex items-center justify-center transition-transform group-hover:scale-105 group-active:scale-95">
+              <span class="material-symbols-outlined text-white text-[22px]" style="font-variation-settings:'FILL' 1;">description</span>
+            </div>
+            <span class="text-[11px] text-on-surface-variant font-medium">Files</span>
+          </button>
+          <button class="flex flex-col items-center gap-1.5 group" onclick="shareContact()" role="menuitem">
+            <div class="w-12 h-12 rounded-2xl bg-[#00A0B0] flex items-center justify-center transition-transform group-hover:scale-105 group-active:scale-95">
+              <span class="material-symbols-outlined text-white text-[22px]" style="font-variation-settings:'FILL' 1;">person</span>
+            </div>
+            <span class="text-[11px] text-on-surface-variant font-medium">Contact</span>
+          </button>
+          <button class="flex flex-col items-center gap-1.5 group" onclick="shareLocation()" role="menuitem">
+            <div class="w-12 h-12 rounded-2xl bg-[#1FA855] flex items-center justify-center transition-transform group-hover:scale-105 group-active:scale-95">
+              <span class="material-symbols-outlined text-white text-[22px]" style="font-variation-settings:'FILL' 1;">location_on</span>
+            </div>
+            <span class="text-[11px] text-on-surface-variant font-medium">Location</span>
+          </button>
+          <button class="flex flex-col items-center gap-1.5 group" onclick="toggleAttachMenu();openPollCreator()" role="menuitem">
+            <div class="w-12 h-12 rounded-2xl bg-[#53BDEB] flex items-center justify-center transition-transform group-hover:scale-105 group-active:scale-95">
+              <span class="material-symbols-outlined text-white text-[22px]" style="font-variation-settings:'FILL' 1;">poll</span>
+            </div>
+            <span class="text-[11px] text-on-surface-variant font-medium">Poll</span>
+          </button>
+        </div>
       </div>
 
-      <!-- Emoji Popover Pick Grid -->
-      <div class="absolute bottom-20 right-6 bg-surface-container border border-outline-variant/30 rounded-2xl shadow-xl flex flex-col hidden z-30 w-80 h-96 overflow-hidden" id="emoji-picker" role="dialog" aria-modal="true">
-        <div class="p-2 border-b border-outline-variant/10">
-          <input type="search" inputmode="search" id="emoji-search" placeholder="Search emoji..." class="w-full px-3 py-1.5 text-xs bg-surface-variant/40 border border-outline-variant/20 rounded-lg focus:outline-none focus:ring-1 focus:ring-primary/50 text-on-surface placeholder:text-on-surface-variant/60" oninput="searchEmoji(this.value)" aria-label="Search emoji">
+      <!-- Emoji Picker — WhatsApp-style polished panel -->
+      <div class="absolute bottom-20 right-6 bg-surface-container-low border border-outline-variant/40 rounded-2xl shadow-[0_8px_40px_rgba(0,0,0,0.35)] backdrop-blur-sm flex flex-col hidden z-30 w-[320px] h-[400px] overflow-hidden transition-all duration-200 origin-bottom-right" id="emoji-picker" role="dialog" aria-modal="true" style="transform:scale(0.95);opacity:0;">
+        <div class="px-3 pt-3 pb-2">
+          <div class="relative">
+            <span class="material-symbols-outlined absolute left-2.5 top-1/2 -translate-y-1/2 text-on-surface-variant/60 text-[18px]">search</span>
+            <input type="search" inputmode="search" id="emoji-search" placeholder="Search emoji" class="w-full pl-9 pr-3 py-2 text-sm bg-surface-variant/50 rounded-full focus:outline-none focus:ring-1 focus:ring-primary/40 text-on-surface placeholder:text-on-surface-variant/50" oninput="searchEmoji(this.value)" aria-label="Search emoji">
+          </div>
         </div>
-        <div class="flex items-center justify-between p-2 border-b border-outline-variant/10 overflow-x-auto gap-1 scrollbar-hide">
-          <button class="emoji-cat-btn active px-2 py-1 bg-primary/10 rounded-lg text-sm" onclick="setEmojiCat(this,'recent')" title="Recent">🕐</button>
-          <button class="emoji-cat-btn px-2 py-1 rounded-lg text-sm" onclick="setEmojiCat(this,'smileys')" title="Smileys & Emotion">😊</button>
-          <button class="emoji-cat-btn px-2 py-1 rounded-lg text-sm" onclick="setEmojiCat(this,'people')" title="People & Body">👋</button>
-          <button class="emoji-cat-btn px-2 py-1 rounded-lg text-sm" onclick="setEmojiCat(this,'nature')" title="Animals & Nature">🌿</button>
-          <button class="emoji-cat-btn px-2 py-1 rounded-lg text-sm" onclick="setEmojiCat(this,'food')" title="Food & Drink">🍕</button>
-          <button class="emoji-cat-btn px-2 py-1 rounded-lg text-sm" onclick="setEmojiCat(this,'activities')" title="Activities">⚽</button>
-          <button class="emoji-cat-btn px-2 py-1 rounded-lg text-sm" onclick="setEmojiCat(this,'travel')" title="Travel & Places">✈️</button>
-          <button class="emoji-cat-btn px-2 py-1 rounded-lg text-sm" onclick="setEmojiCat(this,'objects')" title="Objects">💡</button>
-          <button class="emoji-cat-btn px-2 py-1 rounded-lg text-sm" onclick="setEmojiCat(this,'symbols')" title="Symbols">❤️</button>
-          <button class="emoji-cat-btn px-2 py-1 rounded-lg text-sm" onclick="setEmojiCat(this,'flags')" title="Flags">🏁</button>
+        <div class="flex items-center px-2 pb-1.5 border-b border-outline-variant/10 overflow-x-auto gap-0.5 scrollbar-hide">
+          <button class="emoji-cat-btn active flex-shrink-0 w-9 h-9 flex items-center justify-center rounded-full text-base bg-primary/10 transition-colors" onclick="setEmojiCat(this,'recent')" title="Recent"><span class="material-symbols-outlined text-[18px] text-primary">schedule</span></button>
+          <button class="emoji-cat-btn flex-shrink-0 w-9 h-9 flex items-center justify-center rounded-full text-base transition-colors hover:bg-surface-variant/40" onclick="setEmojiCat(this,'smileys')" title="Smileys & Emotion">😊</button>
+          <button class="emoji-cat-btn flex-shrink-0 w-9 h-9 flex items-center justify-center rounded-full text-base transition-colors hover:bg-surface-variant/40" onclick="setEmojiCat(this,'people')" title="People & Body">👋</button>
+          <button class="emoji-cat-btn flex-shrink-0 w-9 h-9 flex items-center justify-center rounded-full text-base transition-colors hover:bg-surface-variant/40" onclick="setEmojiCat(this,'nature')" title="Animals & Nature">🌿</button>
+          <button class="emoji-cat-btn flex-shrink-0 w-9 h-9 flex items-center justify-center rounded-full text-base transition-colors hover:bg-surface-variant/40" onclick="setEmojiCat(this,'food')" title="Food & Drink">🍕</button>
+          <button class="emoji-cat-btn flex-shrink-0 w-9 h-9 flex items-center justify-center rounded-full text-base transition-colors hover:bg-surface-variant/40" onclick="setEmojiCat(this,'activities')" title="Activities">⚽</button>
+          <button class="emoji-cat-btn flex-shrink-0 w-9 h-9 flex items-center justify-center rounded-full text-base transition-colors hover:bg-surface-variant/40" onclick="setEmojiCat(this,'travel')" title="Travel & Places">✈️</button>
+          <button class="emoji-cat-btn flex-shrink-0 w-9 h-9 flex items-center justify-center rounded-full text-base transition-colors hover:bg-surface-variant/40" onclick="setEmojiCat(this,'objects')" title="Objects">💡</button>
+          <button class="emoji-cat-btn flex-shrink-0 w-9 h-9 flex items-center justify-center rounded-full text-base transition-colors hover:bg-surface-variant/40" onclick="setEmojiCat(this,'symbols')" title="Symbols">❤️</button>
+          <button class="emoji-cat-btn flex-shrink-0 w-9 h-9 flex items-center justify-center rounded-full text-base transition-colors hover:bg-surface-variant/40" onclick="setEmojiCat(this,'flags')" title="Flags">🏁</button>
         </div>
-        <div class="flex-1 overflow-y-auto p-2 grid grid-cols-8 gap-0.5 text-center text-lg custom-scrollbar" id="emoji-grid">
+        <div class="flex-1 overflow-y-auto p-2 grid grid-cols-7 gap-0.5 text-center text-xl custom-scrollbar" id="emoji-grid">
         </div>
-        <div class="flex items-center gap-2 border-t border-outline-variant/10 px-3 py-1.5 min-h-[28px]" id="emoji-preview">
-          <span class="text-xl" id="emoji-preview-icon"></span>
-          <span class="text-[10px] text-on-surface-variant truncate" id="emoji-preview-name"></span>
+        <div class="flex items-center gap-3 border-t border-outline-variant/10 px-4 py-2 min-h-[40px]" id="emoji-preview">
+          <span class="text-2xl" id="emoji-preview-icon"></span>
+          <span class="text-xs font-medium text-on-surface-variant truncate" id="emoji-preview-name"></span>
         </div>
       </div>
 
@@ -683,6 +731,16 @@
                   <div>
                     <p class="text-sm font-bold">App Permissions</p>
                     <p class="text-xs text-on-surface-variant">Camera, mic, notifications & more</p>
+                  </div>
+                </div>
+                <span class="material-symbols-outlined text-on-surface-variant">chevron_right</span>
+              </div>
+              <div class="flex items-center justify-between p-4 cursor-pointer hover:bg-surface-container transition-colors" id="keyboardShortcutsBtn" onclick="closeModal('profile-overlay'); KeyboardShortcuts.showHelp()">
+                <div class="flex items-center gap-3">
+                  <span class="material-symbols-outlined text-primary">keyboard</span>
+                  <div>
+                    <p class="text-sm font-bold">Keyboard Shortcuts</p>
+                    <p class="text-xs text-on-surface-variant">View all keyboard shortcuts and hotkeys</p>
                   </div>
                 </div>
                 <span class="material-symbols-outlined text-on-surface-variant">chevron_right</span>
@@ -1097,6 +1155,7 @@
   <script src="ui-compliance.js"></script>
   <script src="audit-interactions.js"></script>
   <script src="whatsapp-enhancements.js"></script>
+  <script src="calculator.js"></script>
   <script src="features-addon.js"></script>
   <script src="scheduled-calendar.js"></script>
   <script src="snooze-history.js"></script>
@@ -1124,7 +1183,9 @@
   <script>
     if ('serviceWorker' in navigator) {
       if (navigator.serviceWorker.controller) {
-        navigator.serviceWorker.controller.update().catch(function() {});
+        navigator.serviceWorker.ready.then(function(reg) {
+          if (reg && typeof reg.update === 'function') reg.update().catch(function() {});
+        }).catch(function() {});
       } else {
         window.addEventListener('load', function () {
           navigator.serviceWorker.register('/works/chat/sw.js', { scope: '/works/chat/' })
@@ -1299,72 +1360,7 @@
 
   <!-- ═══ END PERMISSION MODALS ═══ -->
 
-  <!-- C5: Auto-logout on 20min idle + C11: resetAppState on signout -->
-  <script>
-    (function() {
-      var IDLE_TIMEOUT = 20 * 60 * 1000;
-      var WARNING_TIMEOUT = 19 * 60 * 1000;
-      var _idleTimer = null;
-      var _warningShown = false;
-      var _warningTimer = null;
-
-      function resetIdleTimer() {
-        clearTimeout(_idleTimer);
-        clearTimeout(_warningTimer);
-        _warningShown = false;
-        _idleTimer = setTimeout(function() {
-          if (typeof showToast === 'function') showToast('Session expired due to inactivity.', 'info');
-          setTimeout(function() {
-            if (typeof window.signOut === 'function') window.signOut();
-            else if (typeof firebase !== 'undefined' && firebase.auth) {
-              firebase.auth().signOut().then(function() { window.location.reload(); });
-            }
-          }, 3000);
-        }, IDLE_TIMEOUT);
-        _warningTimer = setTimeout(function() {
-          if (!_warningShown && document.visibilityState === 'visible') {
-            _warningShown = true;
-            if (typeof showToast === 'function') showToast('Session will expire in 1 minute due to inactivity.', 'warning');
-          }
-        }, WARNING_TIMEOUT);
-      }
-
-      ['mousemove', 'keydown', 'touchstart', 'scroll', 'click'].forEach(function(evt) {
-        document.addEventListener(evt, resetIdleTimer, { passive: true });
-      });
-
-      document.addEventListener('visibilitychange', function() {
-        if (document.visibilityState === 'visible') resetIdleTimer();
-      });
-
-      if (typeof firebase !== 'undefined' && firebase.auth && firebase.auth().currentUser) resetIdleTimer();
-      firebase.auth().onAuthStateChanged(function(user) {
-        if (user) resetIdleTimer(); else { clearTimeout(_idleTimer); clearTimeout(_warningTimer); }
-      });
-
-      window.resetAppState = function() {
-        clearTimeout(_idleTimer);
-        clearTimeout(_warningTimer);
-        if (typeof window.currentChat !== 'undefined') window.currentChat = null;
-        if (typeof window.currentChatType !== 'undefined') window.currentChatType = null;
-        if (typeof window.MutationBus !== 'undefined') MutationBus.destroyAll();
-        if (typeof window.ChatEnhancements !== 'undefined') ChatEnhancements.destroy();
-        if (typeof window.UICompliance !== 'undefined') UICompliance.destroy();
-        if (typeof window.AuditInteractions !== 'undefined') AuditInteractions.destroy();
-        if (typeof window.WAEnhance !== 'undefined') WAEnhance.destroy();
-        if (typeof window.Security !== 'undefined') Security.destroy();
-        if (typeof window.OfflineQueue !== 'undefined') OfflineQueue.destroy && OfflineQueue.destroy();
-        document.removeEventListener('mousemove', resetIdleTimer);
-        document.removeEventListener('keydown', resetIdleTimer);
-        document.removeEventListener('touchstart', resetIdleTimer);
-        document.removeEventListener('scroll', resetIdleTimer);
-        document.removeEventListener('click', resetIdleTimer);
-        if (window.NSLBroadcastChannel) {
-          try { window.NSLBroadcastChannel.postMessage({ type: 'logout' }); } catch(_) {}
-        }
-      };
-    })();
-  </script>
+  <!-- Idle Timeout (Removed to enforce permanent sessions across devices) -->
 
   <!-- Floating Active Call Bubble (WhatsApp-style minimized PiP) -->
   <div id="call-bubble" class="fixed z-[200] bottom-6 right-6 flex items-center gap-3 bg-primary text-on-primary rounded-full px-4 py-2.5 shadow-2xl cursor-pointer transition-all duration-300 select-none" style="display:none;" onclick="maximizeCall()" role="button" aria-label="Return to active call" tabindex="0">
