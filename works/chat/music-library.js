@@ -8,6 +8,7 @@
   const LANGUAGES = ['Malayalam','Tamil','Telugu','Hindi','Kannada','Bengali','Marathi','Punjabi','English','Other'];
   const JAMENDO_CLIENT_ID = 'e24b4955'; // free Jamendo API client ID
   const YOUTUBE_SEARCH_ENABLED = true;
+  const _trackCache = {}; // cache track data for onclick references
 
   // ─── UPLOAD MUSIC ───
   window.uploadMusicFile = async function(file, meta = {}) {
@@ -118,6 +119,23 @@
     } catch(_) {}
   };
 
+  // ─── PLAY LIBRARY TRACK ───
+  window.playLibraryTrack = function(trackId) {
+    const track = App.musicLibrary.find(t => t.id === trackId);
+    if (!track) { showToast('Track not found', 'error'); return; }
+    if (!track.url) { showToast('No audio URL', 'error'); return; }
+    MusicPlayer.play({
+      id: track.id,
+      title: track.title,
+      artist: track.artist,
+      url: track.url,
+      thumbnail: track.thumbnail,
+      duration: track.duration,
+      source: track.source || 'upload',
+      addedByName: track.addedByName,
+    });
+  };
+
   // ─── JAMENDO FREE MUSIC ───
   window.searchJamendo = async function(query, page = 1) {
     if (!query || query.length < 2) return [];
@@ -195,8 +213,6 @@
   // ─── YOUTUBE SEARCH ───
   window.searchYouTubeMusic = async function(query) {
     if (!query || query.length < 2) return [];
-    // Use YouTube oEmbed for search results (limited but free)
-    // For full search we'd need API key — fallback to search link
     try {
       const searchUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(query + ' song audio')}`;
       return [{ _youtubeSearch: true, query, url: searchUrl }];
@@ -204,7 +220,6 @@
   };
 
   window.playYouTubeVideo = function(videoId, title) {
-    // Show YouTube player overlay
     const overlay = document.createElement('div');
     overlay.id = 'yt-player-overlay';
     overlay.style.cssText = 'position:fixed;inset:0;z-index:9998;background:rgba(0,0,0,0.92);display:flex;flex-direction:column;align-items:center;justify-content:center;animation:fadeIn 0.2s ease';
@@ -446,25 +461,32 @@
           el.innerHTML = '<p style="text-align:center;font-size:12px;color:var(--on-surface-variant)">No results found</p>';
           return;
         }
+        results.forEach(t => { _trackCache[t.id] = t; });
         el.innerHTML = results.map(t => `
-          <div style="display:flex;align-items:center;gap:10px;padding:10px;border-radius:12px;background:rgba(255,255,255,0.03);margin-bottom:6px;cursor:pointer" onclick="playJamendoTrack('${t.id}','${escHtml(t.url)}','${escHtml(t.title.replace(/'/g,"\\'"))}','${escHtml(t.artist.replace(/'/g,"\\'"))}','${escHtml((t.thumbnail||'').replace(/'/g,"\\'"))}',${t.duration || 0})">
+          <div style="display:flex;align-items:center;gap:10px;padding:10px;border-radius:12px;background:rgba(255,255,255,0.03);margin-bottom:6px;cursor:pointer" onclick="playCachedTrack('${t.id}')">
             <div style="width:42px;height:42px;border-radius:8px;background:rgba(255,255,255,0.05);display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden">
-              ${t.thumbnail ? `<img src="${t.thumbnail}" style="width:100%;height:100%;object-fit:cover">` : '<span style="font-size:16px">🎵</span>'}
+              ${t.thumbnail ? `<img src="${escHtml(t.thumbnail)}" style="width:100%;height:100%;object-fit:cover">` : '<span style="font-size:16px">🎵</span>'}
             </div>
             <div style="flex:1;min-width:0">
               <div style="font-size:13px;font-weight:600;color:var(--on-surface);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escHtml(t.title)}</div>
               <div style="font-size:11px;color:var(--on-surface-variant)">${escHtml(t.artist)} · ${t.language || 'CC'}</div>
             </div>
-            <button onclick="event.stopPropagation();addToLibraryFromJamendo('${t.id}','${escHtml(t.url.replace(/'/g,"\\'"))}','${escHtml(t.title.replace(/'/g,"\\'"))}','${escHtml(t.artist.replace(/'/g,"\\'"))}','${escHtml((t.thumbnail||'').replace(/'/g,"\\'"))}',${t.duration || 0},'${t.language||'Other'}')" style="background:rgba(124,77,255,0.15);border:none;border-radius:8px;padding:6px 10px;color:var(--primary);font-size:11px;font-weight:600;cursor:pointer" title="Add to library">+ Add</button>
+            <button onclick="event.stopPropagation();addCachedTrackToLibrary('${t.id}')" style="background:rgba(124,77,255,0.15);border:none;border-radius:8px;padding:6px 10px;color:var(--primary);font-size:11px;font-weight:600;cursor:pointer" title="Add to library">+ Add</button>
           </div>`).join('');
       }
     }, 500);
   };
 
-  window.playJamendoTrack = function(id, url, title, artist, thumb, dur) {
-    MusicPlayer.play({
-      id, title, artist, url, thumbnail: thumb || null, duration: dur, source: 'jamendo'
-    });
+  window.playCachedTrack = function(trackId) {
+    const t = _trackCache[trackId];
+    if (!t) return;
+    MusicPlayer.play({ id: t.id, title: t.title, artist: t.artist, url: t.url, thumbnail: t.thumbnail || null, duration: t.duration, source: 'jamendo' });
+  };
+
+  window.addCachedTrackToLibrary = function(trackId) {
+    const t = _trackCache[trackId];
+    if (!t) return;
+    addToLibraryFromJamendo(t.id, t.url, t.title, t.artist, t.thumbnail, t.duration, t.language);
   };
 
   window.addToLibraryFromJamendo = async function(id, url, title, artist, thumb, dur, lang) {
@@ -526,17 +548,18 @@
     if (!results.length) {
       html += '<p style="text-align:center;color:var(--on-surface-variant);font-size:12px;padding:20px">No results found for this language</p>';
     } else {
+      results.forEach(t => { _trackCache[t.id] = t; });
       results.forEach(t => {
         html += `
-        <div style="display:flex;align-items:center;gap:10px;padding:10px;border-radius:12px;background:rgba(255,255,255,0.03);margin-bottom:6px;cursor:pointer" onclick="playJamendoTrack('${t.id}','${escHtml(t.url)}','${escHtml(t.title.replace(/'/g,"\\'"))}','${escHtml(t.artist.replace(/'/g,"\\'"))}','${escHtml((t.thumbnail||'').replace(/'/g,"\\'"))}',${t.duration || 0})">
+        <div style="display:flex;align-items:center;gap:10px;padding:10px;border-radius:12px;background:rgba(255,255,255,0.03);margin-bottom:6px;cursor:pointer" onclick="playCachedTrack('${t.id}')">
           <div style="width:42px;height:42px;border-radius:8px;background:rgba(255,255,255,0.05);display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden">
-            ${t.thumbnail ? `<img src="${t.thumbnail}" style="width:100%;height:100%;object-fit:cover">` : '<span style="font-size:16px">🎵</span>'}
+            ${t.thumbnail ? `<img src="${escHtml(t.thumbnail)}" style="width:100%;height:100%;object-fit:cover">` : '<span style="font-size:16px">🎵</span>'}
           </div>
           <div style="flex:1;min-width:0">
             <div style="font-size:13px;font-weight:600;color:var(--on-surface);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escHtml(t.title)}</div>
             <div style="font-size:11px;color:var(--on-surface-variant)">${escHtml(t.artist)}</div>
           </div>
-          <button onclick="event.stopPropagation();addToLibraryFromJamendo('${t.id}','${escHtml(t.url.replace(/'/g,"\\'"))}','${escHtml(t.title.replace(/'/g,"\\'"))}','${escHtml(t.artist.replace(/'/g,"\\'"))}','${escHtml((t.thumbnail||'').replace(/'/g,"\\'"))}',${t.duration || 0},'${lang}')" style="background:rgba(124,77,255,0.15);border:none;border-radius:8px;padding:6px 10px;color:var(--primary);font-size:11px;font-weight:600;cursor:pointer">+ Add</button>
+          <button onclick="event.stopPropagation();addCachedTrackToLibrary('${t.id}')" style="background:rgba(124,77,255,0.15);border:none;border-radius:8px;padding:6px 10px;color:var(--primary);font-size:11px;font-weight:600;cursor:pointer">+ Add</button>
         </div>`;
       });
     }
@@ -596,12 +619,17 @@
     const el = document.getElementById('yt-overlay-results');
     if (!el) return;
     el.innerHTML = `
-      <div style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;border-radius:12px;margin-bottom:12px">
-        <iframe src="https://www.youtube.com/embed?listType=search&list=${encodeURIComponent(query)}&autoplay=1" style="position:absolute;top:0;left:0;width:100%;height:100%;border:none;border-radius:12px" allow="autoplay; encrypted-media" allowfullscreen></iframe>
+      <div style="border-radius:12px;overflow:hidden;margin-bottom:12px;background:#000;position:relative;padding-bottom:56.25%;height:0">
+        <iframe src="https://www.youtube.com/embed?listType=search&list=${encodeURIComponent(query)}" style="position:absolute;top:0;left:0;width:100%;height:100%;border:none" allow="autoplay; encrypted-media" allowfullscreen></iframe>
       </div>
-      <p style="color:rgba(255,255,255,0.4);font-size:10px;text-align:center">Click any video in the player above. YouTube does not support background playback in browsers.</p>
+      <div style="text-align:center;margin-bottom:16px">
+        <a href="https://www.youtube.com/results?search_query=${encodeURIComponent(query + ' song')}" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:6px;padding:10px 20px;border-radius:10px;background:rgba(255,0,0,0.15);color:#ff4444;font-size:13px;font-weight:600;text-decoration:none">
+          <span class="material-symbols-outlined" style="font-size:18px">open_in_new</span> Open in YouTube
+        </a>
+      </div>
+      <p style="color:rgba(255,255,255,0.4);font-size:10px;text-align:center">Click any video in the player above to play. YouTube does not support background playback in browsers.</p>
       <div style="margin-top:16px;padding:12px;border-radius:10px;background:rgba(255,255,255,0.05)">
-        <p style="color:var(--primary);font-size:12px;font-weight:600;margin:0 0 4px">💡 Tip</p>
+        <p style="color:var(--primary);font-size:12px;font-weight:600;margin:0 0 4px">Tip</p>
         <p style="color:rgba(255,255,255,0.5);font-size:11px;margin:0">For background music, upload your own MP3 files in the Upload tab — they play even when minimized or locked!</p>
       </div>`;
   };
