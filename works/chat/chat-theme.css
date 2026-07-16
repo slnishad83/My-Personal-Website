@@ -1775,3 +1775,414 @@ html:not(.dark) #desktop-context-menu,
   #chat-header { padding-top: env(safe-area-inset-top, 0px) !important; }
   #input-bar { padding-bottom: env(safe-area-inset-bottom, 0px) !important; }
 }
+
+/* ══════════════════════════════════════════════════════════════
+   FULL-DEVICE RESPONSIVE AUDIT — 4-inch to 50-inch
+   Covers: phones, tablets, laptops, desktops, TVs, PWA, installed app
+   ══════════════════════════════════════════════════════════════ */
+
+/* ── Root clamp-based font scaling ────────────────────────────── */
+:root {
+  --chat-font-sm:   clamp(12px, 1.8vw, 14px);   /* labels, timestamps */
+  --chat-font-base: clamp(13px, 2vw,   15px);   /* message body */
+  --chat-font-lg:   clamp(14px, 2.2vw, 16px);   /* name, headers */
+  --chat-avatar-sm: clamp(32px, 5vw,   40px);
+  --chat-avatar-md: clamp(40px, 6vw,   48px);
+  --chat-avatar-lg: clamp(52px, 8vw,   64px);
+}
+
+/* ── Minimum usable screen: 320px (4-inch) ────────────────────── */
+@media (max-width: 320px) {
+  body { font-size: 13px !important; }
+  .msg-bubble { max-width: 94% !important; padding: 7px 9px !important; font-size: 12px !important; }
+  #chat-header { padding: 4px 6px !important; height: 50px !important; min-height: 50px !important; }
+  #chat-header img, #chat-header .avatar { width: 30px !important; height: 30px !important; }
+  #input-bar { padding: 4px 6px !important; }
+  #input-bar .glass-panel { border-radius: 16px !important; padding: 4px 6px !important; }
+  #bottom-nav { height: 52px !important; }
+  #bottom-nav .text-2xl, #bottom-nav .material-symbols-outlined { font-size: 18px !important; }
+  #bottom-nav span.text-xs { font-size: 9px !important; }
+  .chat-list-item { padding: 8px 6px !important; }
+  .chat-list-item .name { font-size: 13px !important; }
+  .chat-list-item .last-msg { font-size: 11px !important; }
+  .wa-chip { padding: 4px 10px !important; font-size: 11px !important; }
+  #emoji-picker { left: 2px !important; right: 2px !important; bottom: 58px !important; max-height: 55vh !important; }
+  #attach-menu { left: 2px !important; bottom: 60px !important; }
+  .overlay > div { margin: 2px !important; border-radius: 14px !important; max-height: 95dvh !important; }
+  #sidebar { display: none !important; }
+}
+
+/* ── Very small phones: 321-359px ─────────────────────────────── */
+@media (min-width: 321px) and (max-width: 359px) {
+  .msg-bubble { max-width: 92% !important; font-size: 13px !important; }
+  #chat-header { padding: 4px 8px !important; }
+  #input-bar { padding: 5px 8px !important; }
+  #bottom-nav { height: 54px !important; }
+  #bottom-nav .material-symbols-outlined { font-size: 20px !important; }
+  .wa-chip { font-size: 12px !important; padding: 5px 10px !important; }
+}
+
+/* ── Standard small phones: 360-479px ─────────────────────────── */
+@media (min-width: 360px) and (max-width: 479px) {
+  .msg-bubble { max-width: 88% !important; }
+  #chat-list-sidebar { width: 100% !important; }
+  .overlay > div { margin: 8px !important; }
+}
+
+/* ── Standard phones: 480-767px ──────────────────────────────── */
+@media (min-width: 480px) and (max-width: 767px) {
+  .msg-bubble { max-width: 82% !important; }
+  #chat-list-sidebar { width: 100% !important; }
+  .overlay > div { max-width: 90vw !important; }
+}
+
+/* ── Chat input bar: always rows, never wraps ─────────────────── */
+#input-bar .flex { flex-wrap: nowrap !important; }
+#input-bar button { flex-shrink: 0 !important; min-width: 36px; }
+
+/* ── Prevent overflow on header actions ───────────────────────── */
+#chat-header { overflow: hidden !important; min-width: 0 !important; }
+#header-actions-container { flex-shrink: 0 !important; flex-wrap: nowrap !important; }
+#chat-header .flex-1, #chat-header > div:nth-child(2) {
+  min-width: 0 !important;
+  overflow: hidden !important;
+}
+#chat-header h2, #chat-header .chat-name {
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+  min-width: 0 !important;
+}
+
+/* ── Chat list item: no overflow ─────────────────────────────── */
+.chat-list-item { min-width: 0 !important; overflow: hidden !important; }
+.chat-list-item .min-w-0 { min-width: 0 !important; }
+.chat-list-item .truncate, .chat-list-item p, .chat-list-item span {
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+  max-width: 100% !important;
+}
+
+/* ── Message bubbles: always break long words/URLs ────────────── */
+.msg-bubble {
+  word-break: break-word !important;
+  overflow-wrap: anywhere !important;
+  hyphens: auto !important;
+}
+
+/* ── Tablet portrait: 768–1023px ─────────────────────────────── */
+@media (min-width: 768px) and (max-width: 1023px) and (orientation: portrait) {
+  #chat-area { flex: 1 !important; }
+  #detail-panel { display: none !important; }
+  .overlay > div { max-width: min(520px, 90vw) !important; }
+  .msg-bubble { max-width: 72% !important; }
+  #chat-list-sidebar { width: clamp(260px, 35vw, 340px) !important; }
+  #sidebar { width: 64px !important; }
+}
+
+/* ── Tablet landscape: 768–1023px ────────────────────────────── */
+@media (min-width: 768px) and (max-width: 1023px) and (orientation: landscape) {
+  #detail-panel { display: flex !important; width: 280px !important; min-width: 280px !important; }
+  .msg-bubble { max-width: 68% !important; }
+}
+
+/* ── Laptop small: 1024-1279px ────────────────────────────────── */
+@media (min-width: 1024px) and (max-width: 1279px) {
+  .msg-bubble { max-width: 68% !important; }
+  #chat-list-sidebar { width: clamp(260px, 28vw, 320px) !important; }
+  #sidebar { width: 64px !important; }
+}
+
+/* ── Standard laptop: 1280-1439px ────────────────────────────── */
+@media (min-width: 1280px) and (max-width: 1439px) {
+  #chat-list-sidebar { width: clamp(280px, 26vw, 340px) !important; }
+  #detail-panel { width: clamp(300px, 26vw, 380px) !important; }
+  .msg-bubble { max-width: 65% !important; }
+}
+
+/* ── Full HD desktop: 1440-1919px ────────────────────────────── */
+@media (min-width: 1440px) and (max-width: 1919px) {
+  #sidebar { width: 260px !important; }
+  #chat-list-sidebar { width: 340px !important; }
+  #detail-panel { width: 360px !important; }
+  .msg-bubble { max-width: 62% !important; font-size: 15px !important; }
+}
+
+/* ── 2K / QHD: 1920-2559px ───────────────────────────────────── */
+@media (min-width: 1920px) and (max-width: 2559px) {
+  #sidebar { width: 300px !important; }
+  #chat-list-sidebar { width: 380px !important; }
+  #detail-panel { width: 400px !important; }
+  .msg-bubble { max-width: 58% !important; font-size: 16px !important; }
+  #chat-header { height: 72px !important; }
+  #chat-header img, #chat-header .avatar { width: 52px !important; height: 52px !important; }
+}
+
+/* ── 4K / Ultra-wide / TV: 2560px+ ───────────────────────────── */
+@media (min-width: 2560px) {
+  #app {
+    max-width: 2200px !important;
+    margin: auto !important;
+  }
+  #sidebar { width: 340px !important; }
+  #chat-list-sidebar { width: 440px !important; }
+  #detail-panel { width: 460px !important; }
+  .msg-bubble { max-width: 55% !important; font-size: 18px !important; padding: 14px 18px !important; }
+  #chat-header { height: 80px !important; padding: 0 32px !important; }
+  #chat-header img, #chat-header .avatar { width: 60px !important; height: 60px !important; }
+  #input-bar { padding: 16px 32px !important; }
+  .chat-list-item { padding: 16px 20px !important; }
+  .chat-list-item .name { font-size: 17px !important; }
+  .chat-list-item .last-msg { font-size: 15px !important; }
+  .chat-list-item img, .chat-list-item .avatar { width: 56px !important; height: 56px !important; }
+  #bottom-nav { height: 80px !important; }
+  #bottom-nav .material-symbols-outlined { font-size: 32px !important; }
+  #bottom-nav span.text-xs { font-size: 13px !important; }
+  .overlay > div { max-width: min(800px, 70vw) !important; }
+  #emoji-picker { width: 560px !important; }
+  button { font-size: 15px !important; }
+}
+
+/* ── 50-inch TV: 3840px+ ─────────────────────────────────────── */
+@media (min-width: 3840px) {
+  #app { max-width: 3000px !important; }
+  body { font-size: 20px !important; }
+  .msg-bubble { font-size: 22px !important; max-width: 50% !important; border-radius: 24px !important; padding: 18px 24px !important; }
+  #sidebar { width: 400px !important; }
+  #chat-list-sidebar { width: 520px !important; }
+  #detail-panel { width: 540px !important; }
+  #chat-header { height: 96px !important; padding: 0 40px !important; }
+  #chat-header img, #chat-header .avatar { width: 72px !important; height: 72px !important; }
+  .chat-list-item { padding: 20px 24px !important; }
+  .chat-list-item img, .chat-list-item .avatar { width: 68px !important; height: 68px !important; }
+  #input-bar { padding: 20px 40px !important; }
+  button, [role="button"] { min-height: 56px !important; min-width: 56px !important; }
+}
+
+/* ── PWA / Installed app: standalone display mode ─────────────── */
+@media (display-mode: standalone) {
+  /* Ensure proper safe-area padding for home-bar on iOS */
+  #input-bar { padding-bottom: max(16px, env(safe-area-inset-bottom)) !important; }
+  #bottom-nav { padding-bottom: env(safe-area-inset-bottom) !important; }
+  #chat-list-sidebar > div:first-child { padding-top: max(16px, env(safe-area-inset-top)) !important; }
+  /* Remove browser chrome accommodations not needed in standalone */
+  html { overflow: hidden !important; }
+}
+
+/* ── Capacitor / Native wrapper ───────────────────────────────── */
+.capacitor-android #input-bar,
+.capacitor-ios #input-bar {
+  padding-bottom: max(8px, env(safe-area-inset-bottom)) !important;
+}
+.capacitor-android #chat-header,
+.capacitor-ios #chat-header {
+  padding-top: max(0px, env(safe-area-inset-top)) !important;
+}
+
+/* ── Mobile browser bottom bar aware (dynamic viewport) ──────── */
+@supports (height: 100dvh) {
+  #app { height: 100dvh !important; }
+  #chat-area { min-height: 100dvh !important; max-height: 100dvh !important; }
+  .overlay > div { max-height: 92dvh !important; }
+}
+
+/* ── Keyboard visible: shrink messages area, keep input ──────── */
+@media (max-width: 767px) and (max-height: 400px) {
+  /* When virtual keyboard is up on phone */
+  #messages-wrap { flex: 1 1 auto !important; min-height: 80px !important; }
+  #input-bar { flex-shrink: 0 !important; position: sticky !important; bottom: 0 !important; }
+  #chat-header { flex-shrink: 0 !important; }
+  #bottom-nav { display: none !important; }
+  #emoji-picker { max-height: 40vh !important; bottom: 60px !important; }
+  #attach-menu { max-height: 40vh !important; bottom: 60px !important; }
+}
+
+/* ── All overlays: center properly on all screen sizes ────────── */
+.overlay {
+  position: fixed !important;
+  inset: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 12px !important;
+}
+.overlay > div {
+  width: 100% !important;
+  max-height: 90dvh !important;
+  overflow-y: auto !important;
+  -webkit-overflow-scrolling: touch !important;
+  overscroll-behavior: contain !important;
+}
+
+/* ── Sub-pages: album, calendar, expenses, insights ───────────── */
+
+/* Shared sub-page shell */
+.app-header {
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 100 !important;
+  padding-top: max(16px, env(safe-area-inset-top)) !important;
+}
+.bottom-nav.sub-page-nav {
+  padding-bottom: max(8px, env(safe-area-inset-bottom)) !important;
+}
+
+/* Album page grid — 4-column on desktop, 2-col on phones */
+.album-grid {
+  grid-template-columns: repeat(auto-fill, minmax(clamp(80px, 20vw, 180px), 1fr)) !important;
+}
+@media (max-width: 360px) {
+  .album-grid { grid-template-columns: repeat(3, 1fr) !important; gap: 2px !important; }
+}
+@media (min-width: 768px) and (max-width: 1023px) {
+  .album-grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)) !important; }
+}
+@media (min-width: 1024px) {
+  .album-grid { grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)) !important; gap: 4px !important; }
+}
+@media (min-width: 1920px) {
+  .album-grid { grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)) !important; }
+}
+
+/* Album toolbar: stack on small screens */
+.toolbar {
+  flex-wrap: wrap !important;
+  gap: 8px !important;
+  padding: 10px 12px !important;
+}
+.search-box {
+  max-width: 100% !important;
+  width: clamp(120px, 40vw, 220px) !important;
+}
+@media (max-width: 400px) {
+  .search-box { width: 100% !important; margin-left: 0 !important; }
+  .toolbar { flex-direction: column !important; align-items: flex-start !important; }
+}
+
+/* Lightbox: full-safe-area aware */
+.lightbox {
+  padding-top: env(safe-area-inset-top) !important;
+  padding-bottom: env(safe-area-inset-bottom) !important;
+  padding-left: env(safe-area-inset-left) !important;
+  padding-right: env(safe-area-inset-right) !important;
+}
+.lb-nav { width: clamp(36px, 6vw, 52px) !important; height: clamp(36px, 6vw, 52px) !important; }
+@media (max-width: 400px) {
+  .lb-header { padding: 8px 10px !important; }
+  .lb-sender { font-size: 13px !important; }
+  .lb-download { padding: 5px 10px !important; font-size: 12px !important; }
+}
+
+/* Calendar page: responsive event cards */
+@media (max-width: 479px) {
+  .calendar-event-card, .event-card { padding: 8px 10px !important; font-size: 13px !important; }
+  .calendar-grid { grid-template-columns: repeat(7, 1fr) !important; font-size: 11px !important; }
+}
+@media (min-width: 1024px) {
+  .calendar-grid { gap: 4px !important; }
+  .calendar-event-card, .event-card { padding: 12px 16px !important; }
+}
+
+/* Expenses page: table responsive */
+@media (max-width: 600px) {
+  .expense-table { display: block !important; overflow-x: auto !important; -webkit-overflow-scrolling: touch !important; }
+  .expense-table td, .expense-table th { padding: 8px 10px !important; font-size: 13px !important; white-space: nowrap !important; }
+  #groupSelect { width: 100% !important; font-size: 16px !important; }
+}
+
+/* Insights page: charts responsive */
+@media (max-width: 479px) {
+  .chart-container, canvas { max-width: 100% !important; height: auto !important; min-height: 160px !important; }
+  .insights-stat { padding: 12px !important; }
+  .insights-stat .value { font-size: 22px !important; }
+}
+@media (min-width: 1024px) {
+  .insights-grid { grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)) !important; }
+}
+
+/* ── Touch targets: enforce 44px on all interactive elements ─── */
+@media (pointer: coarse) {
+  button,
+  [role="button"],
+  a,
+  input[type="checkbox"],
+  input[type="radio"],
+  select,
+  .wa-chip,
+  .wa-chip-add,
+  .chat-list-item,
+  .bottom-nav-item,
+  .tab-item,
+  .filter-btn,
+  .nav-item,
+  .lb-nav,
+  .lb-close,
+  .lb-download,
+  .voice-play,
+  .voice-speed,
+  .emoji-cat-btn {
+    min-height: 44px !important;
+    min-width: 44px !important;
+  }
+  /* Chips can be narrower, just taller */
+  .wa-chip { min-width: 36px !important; }
+  .filter-btn { min-width: 44px !important; }
+  /* Inline text links can be narrower */
+  a.inline-link { min-height: unset !important; min-width: unset !important; }
+}
+
+/* ── Photo meta: always visible on touch ─────────────────────── */
+@media (pointer: coarse) {
+  .photo-meta { opacity: 0.85 !important; }
+}
+
+/* ── Ensure body and html never cause horizontal scroll ──────── */
+html, body {
+  max-width: 100vw !important;
+  overflow-x: hidden !important;
+}
+
+/* ── Sub-page nav items: proper sizing ────────────────────────── */
+.nav-item {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  flex: 1 !important;
+  gap: 2px !important;
+  padding: 6px 4px !important;
+  min-height: 52px !important;
+  font-size: 10px !important;
+  font-weight: 600 !important;
+  text-decoration: none !important;
+  transition: color 0.15s !important;
+}
+@media (min-width: 480px) {
+  .nav-item { font-size: 11px !important; gap: 3px !important; }
+}
+@media (min-width: 768px) {
+  .nav-item { font-size: 12px !important; padding: 8px 12px !important; }
+}
+
+/* ── Prevent overlays from overflowing safe area ─────────────── */
+.overlay {
+  padding-top: max(12px, env(safe-area-inset-top)) !important;
+  padding-bottom: max(12px, env(safe-area-inset-bottom)) !important;
+  padding-left: max(12px, env(safe-area-inset-left)) !important;
+  padding-right: max(12px, env(safe-area-inset-right)) !important;
+}
+
+/* ── Orientation: portrait-only resets ───────────────────────── */
+@media (orientation: portrait) and (min-width: 768px) and (max-width: 1023px) {
+  #chat-list-sidebar { border-right: 1px solid var(--outline-variant) !important; }
+}
+
+/* ── High contrast / forced-colors support ───────────────────── */
+@media (forced-colors: active) {
+  .msg-bubble { border: 1px solid ButtonText !important; }
+  .chat-list-item.active { border: 2px solid Highlight !important; }
+  .wa-chip.active { border: 2px solid Highlight !important; background: Highlight !important; color: HighlightText !important; }
+  #input-bar .glass-panel { border: 1px solid ButtonText !important; }
+}
+

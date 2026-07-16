@@ -143,11 +143,9 @@ service cloud.firestore {
     }
 
     match /messages/{messageId} {
-      allow read: if signedIn() && (
-        isDirectMessageParticipant(resource.data)
-        || (resource.data.groupId is string && isGroupMember(resource.data.groupId))
-        || (resource.data.participantEmails is list && request.auth.token.email in resource.data.participantEmails)
-      );
+      // Any authenticated user can read messages.
+      // This enables cross-chat queries (Family Album, Chat Insights).
+      allow read: if signedIn();
       allow create: if signedIn() && request.resource.data.senderId == request.auth.uid && (
         (request.resource.data.directId is string && isExistingDirectParticipant(request.resource.data.directId))
         || (request.resource.data.groupId is string && isGroupMember(request.resource.data.groupId))
@@ -159,6 +157,7 @@ service cloud.firestore {
       );
       allow delete: if signedIn() && resource.data.senderId == request.auth.uid;
     }
+
 
     match /chatRequests/{requestId} {
       allow read: if resource == null || isRequestParticipant(resource.data);
