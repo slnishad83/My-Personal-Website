@@ -209,6 +209,8 @@ exports.sendNotificationReply = onRequest(async (req, res) => {
 // =============================================
 // HTTP: generateUrlPreview
 // Generates Open Graph metadata for URL preview cards.
+// Fetches the target URL server-side and extracts <meta> OG tags.
+// Falls back to <title> and <meta name="description"> if OG tags missing.
 // =============================================
 exports.generateUrlPreview = onRequest(async (req, res) => {
   if (!checkRateLimit(req, res)) return;
@@ -223,14 +225,97 @@ exports.generateUrlPreview = onRequest(async (req, res) => {
     let domain = "";
     try {
       domain = new URL(url).hostname.replace("www.", "");
-    } catch (_) {}
+    } catch (_) {
+      return res.status(400).json({ error: "Invalid URL" });
+    }
 
-    res.json({
-      title: "",
-      description: "",
-      image: "",
+    // Fetch the page HTML with a timeout
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 8000);
+
+    let html = "";
+    try {
+      const resp = await fetch(url, {
+        signal: controller.signal,
+        headers: {
+          "User-Agent": "Mozilla/5.0 (compatible; NSLChatBot/1.0; +https://nishadsl.com)",
+          "Accept": "text/html,application/xhtml+xml"
+        },
+        redirect: "follow"
+      });
+      clearTimeout(timeout);
+
+      if (!resp.ok) {
+        return res.json({ title: "", description: "", image: "", domain });
+      }
+
+      // Read only first 50KB to avoid downloading huge pages
+      const reader = resp.body.getReader();
+      const chunks = [];
+      let totalBytes = 0;
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        chunks.push(value);
+        totalBytes += value.length;
+        if (totalBytes > 50000) break;
+      }
+      const decoder = new TextDecoder("utf-8", { fatal: false });
+      html = decoder.decode(Buffer.concat(chunks));
+    } catch (fetchErr) {
+      clearTimeout(timeout);
+      // Fetch failed (timeout, DNS, etc.) — return empty preview
+      return res.json({ title: "", description: "", image: "", domain });
+    }
+
+    // Extract OG/meta tags using regex (no external deps needed)
+    const getMeta = (property) => {
+      // Try property attribute first (og:*, twitter:*)
+      let match = html.match(new RegExp(`<meta[^>]+property=["']${property}["'][^>]+content=["']([^"']+)["']`, "i"));
+      if (match) return match[1].trim();
+      // Try content before property
+      match = html.match(new RegExp(`<meta[^>]+content=["']([^"']+)["'][^>]+property=["']${property}["']`, "i"));
+      if (match) return match[1].trim();
+      // Try name attribute (twitter:*, description)
+      match = html.match(new RegExp(`<meta[^>]+name=["']${property}["'][^>]+content=["']([^"']+)["']`, "i"));
+      if (match) return match[1].trim();
+      match = html.match(new RegExp(`<meta[^>]+content=["']([^"']+)["'][^>]+name=["']${property}["']`, "i"));
+      if (match) return match[1].trim();
+      return "";
+    };
+
+    const getTitle = () => {
+      const og = getMeta("og:title");
+      if (og) return og;
+      const match = html.match(/<title[^>]*>([^<]+)<\/title>/i);
+      return match ? match[1].trim() : "";
+    };
+
+    const getDescription = () => {
+      const og = getMeta("og:description");
+      if (og) return og;
+      const twitter = getMeta("twitter:description");
+      if (twitter) return twitter;
+      return getMeta("description");
+    };
+
+    const getImage = () => {
+      const og = getMeta("og:image");
+      if (og) return og;
+      const twitter = getMeta("twitter:image");
+      if (twitter) return twitter;
+      // Try twitter:image:src
+      return getMeta("twitter:image:src");
+    };
+
+    const result = {
+      title: getTitle(),
+      description: getDescription(),
+      image: getImage(),
       domain: domain
-    });
+    };
+
+    res.json(result);
   } catch (error) {
     console.error("generateUrlPreview error:", error);
     res.status(500).json({ error: "Failed to generate preview" });

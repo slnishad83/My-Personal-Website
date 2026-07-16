@@ -36,6 +36,22 @@ service cloud.firestore {
         allow read: if isOwner(userId);
         allow write: if isOwner(userId);
       }
+
+      // Saved Messages (Bookmarks) subcollection
+      match /savedMessages/{msgId} {
+        allow read: if isOwner(userId);
+        allow create: if isOwner(userId);
+        allow update: if isOwner(userId);
+        allow delete: if isOwner(userId);
+      }
+
+      // Scheduled Messages subcollection
+      match /scheduledMessages/{msgId} {
+        allow read: if isOwner(userId);
+        allow create: if isOwner(userId);
+        allow update: if isOwner(userId);
+        allow delete: if isOwner(userId);
+      }
     }
 
     // =============================================
@@ -148,16 +164,6 @@ service cloud.firestore {
       allow create: if isAuth() && request.auth.uid == request.resource.data.pinnedBy;
       allow update: if isAuth();
       allow delete: if isAuth();
-    }
-
-    // =============================================
-    // SCHEDULED MESSAGES
-    // =============================================
-    match /scheduledMessages/{msgId} {
-      allow read: if isAuth() && request.auth.uid == resource.data.userId;
-      allow create: if isAuth() && request.auth.uid == request.resource.data.userId;
-      allow update: if isAuth() && request.auth.uid == resource.data.userId;
-      allow delete: if false;
     }
 
     // =============================================
