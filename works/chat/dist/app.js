@@ -2400,10 +2400,17 @@ function renderMoreTab() {
   const list = document.getElementById('chat-list');
   list.innerHTML = `
     <div class="p-4 space-y-1">
+      <div class="text-[11px] font-bold text-on-surface-variant uppercase px-3 pb-2 pt-1 tracking-wider" style="opacity: 0.7;">Saved & Archive</div>
       ${moreRow('person','Myself Chat',`openChat('${savedChatId}')`)}
       ${moreRow('star','Starred Messages','openStarredMessages()')}
       ${moreRow('archive','Archived Chats' + (archivedCount > 0 ? ` <span class="ml-1 text-[10px] bg-surface-variant rounded-full px-1.5 py-0.5 font-bold">${archivedCount}</span>` : ''),'openArchivedChats()')}
       ${moreRow('folder','Folders','openFolderManager()')}
+      
+      <div class="text-[11px] font-bold text-on-surface-variant uppercase px-3 pb-2 pt-4 tracking-wider" style="opacity: 0.7;">NSL Utilities</div>
+      ${moreRow('receipt_long','Expense Splitter',"window.location.href='expenses.html'")}
+      ${moreRow('photo_library','Shared Album',"window.location.href='album.html'")}
+      ${moreRow('calendar_month','Team Calendar',"window.location.href='calendar.html'")}
+      ${moreRow('monitoring','Chat Insights',"window.location.href='insights.html'")}
     </div>`;
 }
 
