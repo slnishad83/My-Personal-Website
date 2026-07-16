@@ -46,6 +46,26 @@
   <!-- Material Symbols -->
   <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=block" rel="stylesheet">
   <style>
+    :root {
+      --wa-empty-icon-bg: rgba(0, 191, 165, 0.1);
+      --wa-empty-icon-color: #00bfa5;
+      --wa-empty-title-color: #e9edef;
+      --wa-empty-desc-color: #8696a0;
+      --wa-empty-link-color: #53bdeb;
+      --wa-empty-border-color: #222e35;
+      --wa-empty-promo-bg: #00bfa5;
+    }
+
+    html:not(.dark) {
+      --wa-empty-icon-bg: rgba(0, 168, 132, 0.1);
+      --wa-empty-icon-color: #00a884;
+      --wa-empty-title-color: #111b21;
+      --wa-empty-desc-color: #667781;
+      --wa-empty-link-color: #008069;
+      --wa-empty-border-color: #e9edef;
+      --wa-empty-promo-bg: #00a884;
+    }
+
     .material-symbols-outlined, .material-symbols-rounded { font-display: swap; }
     
     /* ── WhatsApp Web Filter Chips Specific Styles ── */
@@ -1225,7 +1245,7 @@
   <script src="ui-compliance.js"></script>
   <script src="audit-interactions.js"></script>
   <script src="whatsapp-enhancements.js"></script>
-  <script src="jsQR.js"></script>
+  <script src="jsQR.js?v=2"></script>
   <script src="calculator.js"></script>
   <script src="features-addon.js"></script>
   <script src="scheduled-calendar.js"></script>

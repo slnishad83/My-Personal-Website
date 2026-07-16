@@ -1543,13 +1543,26 @@ function renderChatList(filter = '') {
   if (tab === 'chats' && (App.activeWaFilter || 'all') === 'unread' && !items.length) {
     hide('chats-empty');
     list.innerHTML = `
-      <div class="wa-unread-empty-container">
-        <div class="wa-unread-empty-icon">
-          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+      <div class="wa-unread-empty-container" style="display: flex; flex-direction: column; align-items: center; justify-content: space-between; min-height: 100%; padding: 40px 16px 16px 16px; text-align: center; box-sizing: border-box;">
+        <div style="flex-grow: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+          <div class="wa-unread-empty-icon" style="width: 80px; height: 80px; border-radius: 50%; background: var(--wa-empty-icon-bg); display: flex; align-items: center; justify-content: center; margin-bottom: 24px; color: var(--wa-empty-icon-color);">
+            <span class="material-symbols-outlined" style="font-size: 40px; font-variation-settings: 'FILL' 1;">check_circle</span>
+          </div>
+          <h3 class="wa-unread-empty-title" style="font-size: 20px; font-weight: 600; color: var(--wa-empty-title-color); margin-bottom: 8px;">No unread chats</h3>
+          <p class="wa-unread-empty-desc" style="font-size: 14px; color: var(--wa-empty-desc-color); margin-bottom: 20px;">You're all caught up.</p>
+          <button class="wa-unread-empty-link" onclick="setWaFilter('all')" style="font-size: 14px; color: var(--wa-empty-link-color); font-weight: 500; cursor: pointer; background: transparent; border: none; padding: 0; text-decoration: none; transition: all 0.15s ease;">View all chats</button>
         </div>
-        <h3 class="wa-unread-empty-title">No unread chats</h3>
-        <p class="wa-unread-empty-desc">You're all caught up.</p>
-        <button class="wa-unread-empty-link" onclick="setWaFilter('all')">View all chats</button>
+        
+        <!-- Promo Desktop Card (Branded as NSL) -->
+        <div class="wa-promo-card" style="width: 100%; margin-top: 32px; border-top: 1px solid var(--wa-empty-border-color); padding-top: 24px; display: flex; align-items: center; justify-content: center; gap: 12px; opacity: 0.95;">
+          <div style="width: 36px; height: 36px; border-radius: 8px; background: var(--wa-empty-promo-bg); display: flex; align-items: center; justify-content: center; color: white; flex-shrink: 0;">
+            <span class="material-symbols-outlined" style="font-size: 22px; font-variation-settings: 'FILL' 1;">forum</span>
+          </div>
+          <div style="text-align: left;">
+            <div style="font-size: 13px; font-weight: 500; color: var(--wa-empty-title-color);">Get NSL Chat for Windows</div>
+            <div style="font-size: 11px; color: var(--wa-empty-desc-color); margin-top: 2px;">Fast, secure, and native desktop app.</div>
+          </div>
+        </div>
       </div>`;
     return;
   }
