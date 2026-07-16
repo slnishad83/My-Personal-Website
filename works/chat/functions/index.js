@@ -845,6 +845,55 @@ Response format: [2, 0, 5, ...]`;
 });
 
 // =============================================
+// CALLABLE: classifyNotification
+// AI decides notification priority: high / medium / low
+// =============================================
+exports.classifyNotification = onCall({ secrets: [GEMINI_API_KEY] }, async (request) => {
+  requireAuth(request);
+  const { senderName, text, chatType, chatName, isGroup, isMentioned, isReply, hasAttachment } = request.data;
+
+  const apiKey = GEMINI_API_KEY.value();
+  if (!apiKey) {
+    return { priority: "high", reason: "AI not configured — defaulting to show" };
+  }
+
+  const prompt = `Classify this chat notification's priority. Be strict — only truly important messages should be "high".
+
+Notification details:
+- From: ${senderName || "Unknown"}
+- Chat: ${chatName || "Direct message"} (${isGroup ? "group" : "direct"})
+- Mentioned you: ${isMentioned ? "yes" : "no"}
+- Is a reply: ${isReply ? "yes" : "no"}
+- Has attachment: ${hasAttachment ? "yes" : "no"}
+- Message: "${(text || "").slice(0, 300)}"
+
+Respond in this EXACT JSON format only:
+{"priority": "high" or "medium" or "low", "reason": "brief 1-sentence explanation"}
+
+Rules:
+- "high": Mentions your name, urgent/time-sensitive, from a boss/admin, contains "urgent"/"asap"/"emergency", or is a direct question to you
+- "medium": Normal conversation in a group you're in, reply to your message, relevant work discussion
+- "low": Group chatter not directed at you, generic updates, casual conversation, "thanks"/"ok"/emoji-only messages, broadcast announcements`;
+
+  try {
+    const result = await callGemini(prompt, apiKey);
+    const jsonMatch = result.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      const parsed = JSON.parse(jsonMatch[0]);
+      // Validate priority value
+      if (["high", "medium", "low"].includes(parsed.priority)) {
+        return parsed;
+      }
+    }
+  } catch (_) {}
+
+  // Fallback: mention = high, group = medium, direct = high
+  if (isMentioned) return { priority: "high", reason: "You were mentioned" };
+  if (isGroup) return { priority: "medium", reason: "Group message" };
+  return { priority: "high", reason: "Direct message" };
+});
+
+// =============================================
 // CALLABLE: leaveGroup
 // Removes the current user from a group chat.
 // =============================================
