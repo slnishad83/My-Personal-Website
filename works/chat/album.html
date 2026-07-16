@@ -37,7 +37,7 @@
     .filter-btn.active{background:var(--brand);color:#fff;border-color:var(--brand)}
     .search-box{margin-left:auto;padding:7px 12px;border:1.5px solid var(--border);border-radius:20px;font-size:13px;font-family:inherit;outline:none;width:180px;background:var(--card);color:var(--text)}
     .search-box:focus{border-color:var(--brand)}
-    .album-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:3px;padding:3px}
+    .album-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:3px;padding:3px;width:100%}
     .photo-item{position:relative;aspect-ratio:1;overflow:hidden;cursor:pointer;background:var(--border)}
     .photo-item img{width:100%;height:100%;object-fit:cover;transition:transform 0.2s}
     .photo-item:hover img{transform:scale(1.05)}
@@ -46,7 +46,7 @@
     .photo-sender{font-weight:600;display:block}
     .photo-date{opacity:0.8}
     .month-header{grid-column:1/-1;padding:12px 8px 6px;font-size:13px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.5px}
-    .empty{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:50vh;color:var(--text-secondary);gap:12px}
+    .empty{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:60vh;color:var(--text-secondary);gap:12px;width:100%;text-align:center;padding:24px}
     .empty .icon{font-size:48px}
     .loading{display:flex;align-items:center;justify-content:center;min-height:50vh;color:var(--text-secondary);font-size:14px}
 
@@ -148,7 +148,13 @@ function renderAlbum(){
   });
   document.getElementById('photoCount').textContent=filtered.length+' items';
   if(!filtered.length){
-    document.getElementById('albumGrid').innerHTML='<div class="empty"><div class="icon">📷</div><p>No photos yet. Share images in any chat!</p></div>';
+    const emptyIcon = currentFilter==='video' ? '🎥' : '📷';
+    const emptyMsg = currentFilter==='video'
+      ? 'No videos yet. Share videos in any chat!'
+      : currentFilter==='image'
+        ? 'No photos yet. Share images in any chat!'
+        : 'No media yet. Share photos or videos in any chat!';
+    document.getElementById('albumGrid').innerHTML=`<div class="empty" style="grid-column:1/-1;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:60vh;width:100%;text-align:center;"><div class="icon" style="font-size:56px;margin-bottom:16px">${emptyIcon}</div><p style="color:var(--text-secondary);font-size:15px;max-width:260px;line-height:1.5">${emptyMsg}</p></div>`;
     return;
   }
   // Group by month
