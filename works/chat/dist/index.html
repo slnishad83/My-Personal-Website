@@ -1061,6 +1061,80 @@
     </div>
   </div>
 
+  <!-- NSL Utilities Choice Overlay -->
+  <div id="nsl-utilities-overlay" class="overlay hidden fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+    <div class="bg-surface-container border border-outline-variant/30 rounded-2xl w-full max-w-sm shadow-2xl overflow-hidden m-4">
+      <!-- Header -->
+      <div class="px-6 py-4 border-b border-outline-variant/10 flex items-center justify-between">
+        <h3 class="text-lg font-bold flex items-center gap-2 text-on-surface">
+          <span class="material-symbols-outlined text-primary" style="font-variation-settings: 'FILL' 1;">apps</span>
+          NSL Chat Utilities
+        </h3>
+        <button class="w-8 h-8 rounded-full flex items-center justify-center hover:bg-surface-container-highest transition-colors cursor-pointer text-on-surface-variant" onclick="closeOverlay('nsl-utilities-overlay')" aria-label="Close menu">
+          <span class="material-symbols-outlined text-xl">close</span>
+        </button>
+      </div>
+      <!-- List of Utilities -->
+      <div class="p-4 space-y-2 max-h-[70vh] overflow-y-auto">
+        <p class="text-xs text-on-surface-variant px-2 pb-2 font-medium">Select a utility tool to launch:</p>
+        
+        <!-- Expense Splitter -->
+        <div class="flex items-center gap-4 p-3 rounded-xl hover:bg-surface-container-highest cursor-pointer active:scale-98 transition-all" onclick="window.location.href='expenses.html'">
+          <div class="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary flex-shrink-0">
+            <span class="material-symbols-outlined text-[24px]">receipt_long</span>
+          </div>
+          <div class="text-left flex-1">
+            <div class="text-sm font-semibold text-on-surface">Expense Splitter</div>
+            <div class="text-xs text-on-surface-variant mt-0.5">Calculate and split group bills.</div>
+          </div>
+          <span class="material-symbols-outlined text-on-surface-variant text-base">chevron_right</span>
+        </div>
+        
+        <!-- Shared Album -->
+        <div class="flex items-center gap-4 p-3 rounded-xl hover:bg-surface-container-highest cursor-pointer active:scale-98 transition-all" onclick="window.location.href='album.html'">
+          <div class="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary flex-shrink-0">
+            <span class="material-symbols-outlined text-[24px]">photo_library</span>
+          </div>
+          <div class="text-left flex-1">
+            <div class="text-sm font-semibold text-on-surface">Shared Album</div>
+            <div class="text-xs text-on-surface-variant mt-0.5">View and upload group media/images.</div>
+          </div>
+          <span class="material-symbols-outlined text-on-surface-variant text-base">chevron_right</span>
+        </div>
+        
+        <!-- Team Calendar -->
+        <div class="flex items-center gap-4 p-3 rounded-xl hover:bg-surface-container-highest cursor-pointer active:scale-98 transition-all" onclick="window.location.href='calendar.html'">
+          <div class="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary flex-shrink-0">
+            <span class="material-symbols-outlined text-[24px]">calendar_month</span>
+          </div>
+          <div class="text-left flex-1">
+            <div class="text-sm font-semibold text-on-surface">Team Calendar</div>
+            <div class="text-xs text-on-surface-variant mt-0.5">Schedule and coordinate group tasks.</div>
+          </div>
+          <span class="material-symbols-outlined text-on-surface-variant text-base">chevron_right</span>
+        </div>
+        
+        <!-- Chat Insights -->
+        <div class="flex items-center gap-4 p-3 rounded-xl hover:bg-surface-container-highest cursor-pointer active:scale-98 transition-all" onclick="window.location.href='insights.html'">
+          <div class="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary flex-shrink-0">
+            <span class="material-symbols-outlined text-[24px]">monitoring</span>
+          </div>
+          <div class="text-left flex-1">
+            <div class="text-sm font-semibold text-on-surface">Chat Insights</div>
+            <div class="text-xs text-on-surface-variant mt-0.5">View analytics and chat traffic patterns.</div>
+          </div>
+          <span class="material-symbols-outlined text-on-surface-variant text-base">chevron_right</span>
+        </div>
+      </div>
+      <!-- Footer -->
+      <div class="px-6 py-4 bg-surface-container border-t border-outline-variant/10 text-center">
+        <button class="w-full py-2.5 rounded-xl bg-primary text-on-primary font-bold text-sm hover:brightness-110 active:scale-95 transition-all cursor-pointer" onclick="closeOverlay('nsl-utilities-overlay')">
+          Close Menu
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- Language Selector Overlay -->
   <div class="overlay fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center hidden" id="language-overlay" onclick="closeOnBackdrop(event,'language-overlay')">
     <div class="bg-surface-container border border-outline-variant/30 rounded-2xl w-full max-w-sm shadow-2xl p-6 m-4">
@@ -1174,7 +1248,7 @@
     </button>
   </div>
   <script src="notification-sounds.js" defer></script>
-  <script src="app-bundle.537f682a.js"></script>
+  <script src="app-bundle.521b0b15.js"></script>
   <script src="inline-sw-register.js"></script>
   <script src="inline-broadcast-channel.js"></script>
   <script src="inline-version.js"></script>

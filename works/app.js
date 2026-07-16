@@ -7298,7 +7298,7 @@ window.toggleUnreadFilter = function() {
 };
 
 window.addNewFilterChip = function() {
-  showToast('Custom lists feature coming soon!', 'info');
+  showOverlay('nsl-utilities-overlay');
 };
 
 /* WhatsApp Reaction Notification Listeners */
