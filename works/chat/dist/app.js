@@ -6885,23 +6885,9 @@ async function openScanner() {
 
   let useJsQRFallback = !('BarcodeDetector' in window);
 
-  if (useJsQRFallback) {
-    if (status) status.textContent = 'Loading scanner engine...';
-    try {
-      if (!window.jsQR) {
-        await new Promise((resolve, reject) => {
-          const script = document.createElement('script');
-          script.src = 'https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js';
-          script.onload = resolve;
-          script.onerror = () => reject(new Error('Failed to load JSQR library'));
-          document.head.appendChild(script);
-        });
-      }
-    } catch (e) {
-      if (status) status.textContent = 'Failed to load QR scanner library.';
-      console.error(e);
-      return;
-    }
+  if (useJsQRFallback && !window.jsQR) {
+    if (status) status.textContent = 'Failed to load QR scanner library.';
+    return;
   }
 
   try {
