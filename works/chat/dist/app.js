@@ -3080,7 +3080,7 @@ function sendMessage() {
     text:   text,
     time:   Date.now(),
     status: 'sending',
-    replyTo: App.replyTo ? { name: App.replyTo.name, text: App.replyTo.text } : null,
+    replyTo: App.replyTo ? { name: App.replyTo.name, text: App.replyTo.text, id: App.replyTo.id, image: App.replyTo.image || null } : null,
   };
 
   if (!App.messages[App.currentChat.id]) App.messages[App.currentChat.id] = [];
@@ -3373,11 +3373,44 @@ function replyToMsg(msgId) {
   const msg  = msgs.find(m => m.id === msgId);
   if (!msg) return;
 
-  const contact = App.contacts.find(c => c.uid === msg.from);
-  App.replyTo = { id: msgId, name: msg.from==='me' ? 'You' : (contact?.name||'Unknown'), text: msg.text || '' };
+  const senderId = msg.senderId || (msg.from !== 'me' ? msg.from : App.currentUser.uid);
+  const senderName = msg.from === 'me' || msg.senderId === App.currentUser.uid 
+    ? 'You' 
+    : (msg.senderName || App.contacts.find(c => c.uid === senderId)?.name || App.chats.find(c => c.id === App.currentChat?.id)?.name || 'User');
+    
+  let replyText = msg.text || '';
+  let replyImageUrl = '';
+
+  if (msg.attachment) {
+    if (msg.attachment.type === 'image') {
+      replyText = replyText || '📷 Photo';
+      replyImageUrl = msg.attachment.url;
+    } else if (msg.attachment.type === 'video') {
+      replyText = replyText || '🎥 Video';
+      replyImageUrl = msg.attachment.thumbnail || msg.attachment.url;
+    } else if (msg.attachment.type === 'voice') {
+      replyText = replyText || '🎤 Voice message';
+    } else if (msg.attachment.type === 'file') {
+      replyText = replyText || '📄 Document';
+    }
+  }
+
+  App.replyTo = { id: msgId, name: senderName, text: replyText, image: replyImageUrl };
 
   setEl('reply-name', App.replyTo.name);
   setEl('reply-text', App.replyTo.text);
+  
+  const imgEl = document.getElementById('reply-image');
+  if (imgEl) {
+    if (replyImageUrl) {
+      imgEl.src = replyImageUrl;
+      imgEl.classList.remove('hidden');
+    } else {
+      imgEl.classList.add('hidden');
+      imgEl.src = '';
+    }
+  }
+  
   show('reply-preview');
   document.getElementById('msg-input')?.focus();
 }
