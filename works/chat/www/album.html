@@ -106,10 +106,11 @@ const firebaseConfig={apiKey:"AIzaSyCdbut_FdscAjl-OVSlAUhb7TOTiRNkh34",authDomai
 firebase.initializeApp(firebaseConfig);
 const auth=firebase.auth(),db=firebase.firestore();
 
-let allPhotos=[],filtered=[],currentFilter='all',lbIndex=0;
+let currentUser=null,allPhotos=[],filtered=[],currentFilter='all',lbIndex=0;
 
 auth.onAuthStateChanged(u=>{
   if(!u){window.location.href='login.html';return;}
+  currentUser=u;
   loadAlbum();
 });
 

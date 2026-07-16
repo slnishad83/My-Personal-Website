@@ -220,7 +220,7 @@ service cloud.firestore {
     // CALENDAR EVENTS
     // =============================================
     match /calendarEvents/{eventId} {
-      allow read: if isAuth() && request.auth.uid in resource.data.participants;
+      allow read: if isAuth();
       allow create: if isAuth() && request.auth.uid == request.resource.data.addedBy;
       allow update: if isAuth();
       allow delete: if false;

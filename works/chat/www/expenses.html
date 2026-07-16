@@ -149,12 +149,17 @@ let currentUser=null,groups=[],members=[],selectedIcon='💰',currentExpenses=[]
 auth.onAuthStateChanged(u=>{if(!u){window.location.href='login.html';return;}currentUser=u;loadGroups();});
 
 async function loadGroups(){
-  const snap=await db.collection('groups').get();
-  groups=snap.docs.map(d=>({id:d.id,...d.data()})).filter(g=>g.memberIds&&g.memberIds.includes(currentUser.uid));
-  const sel=document.getElementById('groupSelect');
-  if(!groups.length){sel.innerHTML='<option>No groups found</option>';return;}
-  sel.innerHTML=groups.map(g=>`<option value="${g.id}">${esc(g.name||'Group')}</option>`).join('');
-  loadExpenses();
+  try {
+    const snap=await db.collection('groups').where('memberIds','array-contains',currentUser.uid).get();
+    groups=snap.docs.map(d=>({id:d.id,...d.data()})).filter(g=>g.memberIds&&g.memberIds.includes(currentUser.uid));
+    const sel=document.getElementById('groupSelect');
+    if(!groups.length){sel.innerHTML='<option>No groups found</option>';return;}
+    sel.innerHTML=groups.map(g=>`<option value="${g.id}">${esc(g.name||'Group')}</option>`).join('');
+    loadExpenses();
+  } catch(e) {
+    document.getElementById('groupSelect').innerHTML='<option>Error loading groups</option>';
+    console.error(e);
+  }
 }
 
 async function loadExpenses(){
