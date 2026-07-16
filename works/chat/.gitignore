@@ -7,3 +7,4 @@ electron/build-resources/*.ico
 electron/build-resources/*.icns
 electron/build-resources/icons/
 www/
+*.apk
