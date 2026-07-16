@@ -280,5 +280,38 @@ service cloud.firestore {
       allow update: if isAuth() && request.auth.uid in resource.data.participants;
       allow delete: if false;
     }
+
+    // =============================================
+    // MUSIC LIBRARY
+    // =============================================
+    match /musicLibrary/{trackId} {
+      allow read: if isAuth();
+      allow create: if isAuth() && request.auth.uid == request.resource.data.addedBy;
+      allow update: if isAuth() && request.auth.uid == resource.data.addedBy;
+      allow delete: if isAuth() && request.auth.uid == resource.data.addedBy;
+    }
+
+    // =============================================
+    // PLAYLISTS
+    // =============================================
+    match /playlists/{playlistId} {
+      allow read: if isAuth();
+      allow create: if isAuth() && request.auth.uid == request.resource.data.ownerUid;
+      allow update: if isAuth() && (
+        resource.data.ownerUid == request.auth.uid ||
+        request.auth.uid in resource.data.collaborators
+      );
+      allow delete: if isAuth() && request.auth.uid == resource.data.ownerUid;
+    }
+
+    // =============================================
+    // LISTENING ROOMS
+    // =============================================
+    match /listeningRooms/{chatId} {
+      allow read: if isAuth();
+      allow create: if isAuth() && request.auth.uid == request.resource.data.hostUid;
+      allow update: if isAuth();
+      allow delete: if isAuth();
+    }
   }
 }

@@ -74,6 +74,7 @@ function initFirebase() {
     App.db   = firebase.firestore ? firebase.firestore()   : null;
     App.auth = firebase.auth      ? firebase.auth()        : null;
     App.rtdb = firebase.database  ? firebase.database()    : null;
+    App.storage = firebase.storage ? firebase.storage()    : null;
   } catch(e) {
     console.warn('Firebase not available, running in demo mode');
   }
@@ -2409,7 +2410,7 @@ function renderMoreTab() {
       <div class="text-[11px] font-bold text-on-surface-variant uppercase px-3 pb-2 pt-4 tracking-wider" style="opacity: 0.7;">NSL Utilities</div>
       ${moreRow('receipt_long','Expense Splitter',"window.location.href='expenses.html'")}
       ${moreRow('photo_library','Shared Album',"window.location.href='album.html'")}
-      ${moreRow('queue_music','Playlists & Music','openPlaylists()')}
+      ${moreRow('queue_music','Music Library','openMusicLibrary()')}
       ${moreRow('calendar_month','Team Calendar',"window.location.href='calendar.html'")}
       ${moreRow('monitoring','Chat Insights',"window.location.href='insights.html'")}
 

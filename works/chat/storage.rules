@@ -1,0 +1,32 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    // Music uploads — users can upload/read/delete their own files
+    match /music/{userId}/{fileName} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && request.auth.uid == userId
+                   && request.resource.size < 25 * 1024 * 1024
+                   && request.resource.contentType.matches('audio/.*');
+    }
+
+    // Profile photos
+    match /profilePhotos/{userId}/{fileName} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && request.auth.uid == userId
+                   && request.resource.size < 5 * 1024 * 1024;
+    }
+
+    // Chat attachments
+    match /chatAttachments/{chatId}/{fileName} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && request.resource.size < 50 * 1024 * 1024;
+    }
+
+    // Default deny
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}
