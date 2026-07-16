@@ -262,8 +262,13 @@
   <script src="message-scheduler.js"></script>
   <script src="translation.js"></script>
   <script src="message-copy.js"></script>
-  <script src="smart-notifications.js"></script>
-  <script src="ai-features.js"></script>
+<script src="smart-notifications.js"></script>
+<script src="file-versioning.js"></script>
+<script src="cloud-drive.js"></script>
+<script src="collaborative-whiteboard.js"></script>
+<script src="image-annotation.js"></script>
+<script src="screen-share.js"></script>
+<script src="ai-features.js"></script>
 </head>
 <body class="w-full h-full flex overflow-hidden antialiased bg-surface-container-low transition-colors duration-300">
 
@@ -614,7 +619,7 @@
 
       <!-- Attachment popover popup menu — WhatsApp-style 3x2 grid -->
       <div class="absolute bottom-20 left-6 bg-surface-container-low border border-outline-variant/40 p-4 rounded-2xl shadow-[0_8px_40px_rgba(0,0,0,0.35)] backdrop-blur-sm hidden z-30 w-[260px] transition-all duration-200 origin-bottom-left" id="attach-menu" role="menu" aria-label="Attach file" style="transform:scale(0.95);opacity:0;">
-        <div class="grid grid-cols-3 gap-4">
+        <div class="grid grid-cols-3 gap-3">
           <button class="flex flex-col items-center gap-1.5 group" onclick="attachPhoto()" role="menuitem">
             <div class="w-12 h-12 rounded-2xl bg-[#7C4DFF] flex items-center justify-center transition-transform group-hover:scale-105 group-active:scale-95">
               <span class="material-symbols-outlined text-white text-[22px]" style="font-variation-settings:'FILL' 1;">photo_library</span>
@@ -650,6 +655,24 @@
               <span class="material-symbols-outlined text-white text-[22px]" style="font-variation-settings:'FILL' 1;">poll</span>
             </div>
             <span class="text-[11px] text-on-surface-variant font-medium">Poll</span>
+          </button>
+          <button class="flex flex-col items-center gap-1.5 group" onclick="toggleAttachMenu();openGoogleDrivePicker()" role="menuitem">
+            <div class="w-12 h-12 rounded-2xl bg-[#4285F4] flex items-center justify-center transition-transform group-hover:scale-105 group-active:scale-95">
+              <span class="material-symbols-outlined text-white text-[22px]" style="font-variation-settings:'FILL' 1;">cloud</span>
+            </div>
+            <span class="text-[11px] text-on-surface-variant font-medium">Drive</span>
+          </button>
+          <button class="flex flex-col items-center gap-1.5 group" onclick="toggleAttachMenu();openOneDrivePicker()" role="menuitem">
+            <div class="w-12 h-12 rounded-2xl bg-[#0078D4] flex items-center justify-center transition-transform group-hover:scale-105 group-active:scale-95">
+              <span class="material-symbols-outlined text-white text-[22px]" style="font-variation-settings:'FILL' 1;">cloud_upload</span>
+            </div>
+            <span class="text-[11px] text-on-surface-variant font-medium">OneDrive</span>
+          </button>
+          <button class="flex flex-col items-center gap-1.5 group" onclick="toggleAttachMenu();openWhiteboard()" role="menuitem">
+            <div class="w-12 h-12 rounded-2xl bg-[#E91E63] flex items-center justify-center transition-transform group-hover:scale-105 group-active:scale-95">
+              <span class="material-symbols-outlined text-white text-[22px]" style="font-variation-settings:'FILL' 1;">draw</span>
+            </div>
+            <span class="text-[11px] text-on-surface-variant font-medium">Draw</span>
           </button>
         </div>
       </div>
