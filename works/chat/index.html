@@ -45,7 +45,77 @@
 
   <!-- Material Symbols -->
   <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=block" rel="stylesheet">
-  <style>.material-symbols-outlined, .material-symbols-rounded { font-display: swap; }</style>
+  <style>
+    .material-symbols-outlined, .material-symbols-rounded { font-display: swap; }
+    
+    /* ── WhatsApp Web Filter Chips Specific Styles ── */
+    #wa-filter-chips .wa-chip {
+      background-color: #202c33 !important;
+      color: #8696a0 !important;
+      border: none !important;
+      border-radius: 9999px !important;
+      padding: 6px 14px !important;
+      font-size: 13px !important;
+      font-weight: 500 !important;
+      cursor: pointer !important;
+      white-space: nowrap !important;
+      transition: all 0.15s ease !important;
+      line-height: 1.2 !important;
+      min-height: 32px !important;
+      height: 32px !important;
+      display: inline-flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      margin-right: 8px !important;
+    }
+    #wa-filter-chips .wa-chip:hover {
+      background-color: #2a3942 !important;
+      color: #d1d7db !important;
+    }
+    #wa-filter-chips .wa-chip.active {
+      background-color: #0a332c !important;
+      color: #00bfa5 !important;
+      font-weight: 600 !important;
+    }
+    #wa-filter-chips .wa-chip-add {
+      background-color: #202c33 !important;
+      color: #8696a0 !important;
+      border: none !important;
+      border-radius: 50% !important;
+      display: inline-flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      width: 32px !important;
+      height: 32px !important;
+      min-height: 32px !important;
+      cursor: pointer !important;
+      transition: all 0.15s ease !important;
+    }
+    #wa-filter-chips .wa-chip-add:hover {
+      background-color: #2a3942 !important;
+      color: #d1d7db !important;
+    }
+
+    /* Light mode overrides */
+    html:not(.dark) #wa-filter-chips .wa-chip {
+      background-color: #f0f2f5 !important;
+      color: #54656f !important;
+    }
+    html:not(.dark) #wa-filter-chips .wa-chip:hover {
+      background-color: #e9edef !important;
+    }
+    html:not(.dark) #wa-filter-chips .wa-chip.active {
+      background-color: #e7f7f4 !important;
+      color: #00a884 !important;
+    }
+    html:not(.dark) #wa-filter-chips .wa-chip-add {
+      background-color: #f0f2f5 !important;
+      color: #54656f !important;
+    }
+    html:not(.dark) #wa-filter-chips .wa-chip-add:hover {
+      background-color: #e9edef !important;
+    }
+  </style>
 
   <!-- Consolidated Theme CSS (responsive + dark/light mode) -->
   <link rel="stylesheet" href="chat-theme.css">
@@ -1155,6 +1225,7 @@
   <script src="ui-compliance.js"></script>
   <script src="audit-interactions.js"></script>
   <script src="whatsapp-enhancements.js"></script>
+  <script src="jsQR.js"></script>
   <script src="calculator.js"></script>
   <script src="features-addon.js"></script>
   <script src="scheduled-calendar.js"></script>

@@ -54,6 +54,7 @@ const BUNDLE_ORDER = [
   'ui-compliance.js',
   'audit-interactions.js',
   'whatsapp-enhancements.js',
+  'jsQR.js',
   'calculator.js',
   'features-addon.js',
   'scheduled-calendar.js',
