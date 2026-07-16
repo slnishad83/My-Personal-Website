@@ -77,6 +77,11 @@ const BUNDLE_ORDER = [
   'swipe-nav.js',
   'push-notifications.js',
   'attachment-reliability.js',
+  'task-from-message.js',
+  'meeting-scheduler.js',
+  'chat-permissions.js',
+  'announcement-mode.js',
+  'channel-mode.js',
   'app-init.js',
 ];
 

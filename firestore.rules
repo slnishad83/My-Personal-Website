@@ -594,6 +594,18 @@ service cloud.firestore {
       allow read: if signedIn();
       allow write: if signedIn();
     }
+    match /meetings/{meetingId} {
+      allow read: if signedIn() && request.auth.uid in resource.data.participants;
+      allow create: if signedIn() && request.auth.uid == request.resource.data.createdBy;
+      allow update: if signedIn() && request.auth.uid in resource.data.participants;
+      allow delete: if signedIn() && request.auth.uid == resource.data.createdBy;
+    }
+    match /channels/{channelId} {
+      allow read: if signedIn() && request.auth.uid in resource.data.members;
+      allow create: if signedIn() && request.auth.uid in resource.data.members;
+      allow update: if signedIn() && request.auth.uid in resource.data.members;
+      allow delete: if false;
+    }
     match /{document=**} {
       allow read, write: if false;
     }

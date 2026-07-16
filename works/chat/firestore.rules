@@ -252,6 +252,26 @@ service cloud.firestore {
     }
 
     // =============================================
+    // MEETINGS
+    // =============================================
+    match /meetings/{meetingId} {
+      allow read: if isAuth() && request.auth.uid in resource.data.participants;
+      allow create: if isAuth() && request.auth.uid == request.resource.data.createdBy;
+      allow update: if isAuth() && request.auth.uid in resource.data.participants;
+      allow delete: if isAuth() && request.auth.uid == resource.data.createdBy;
+    }
+
+    // =============================================
+    // CHANNELS
+    // =============================================
+    match /channels/{channelId} {
+      allow read: if isAuth() && request.auth.uid in resource.data.members;
+      allow create: if isAuth() && request.auth.uid in resource.data.members;
+      allow update: if isAuth() && request.auth.uid in resource.data.members;
+      allow delete: if false;
+    }
+
+    // =============================================
     // CALL LOGS
     // =============================================
     match /callLogs/{logId} {
