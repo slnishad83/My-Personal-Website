@@ -1,158 +1,164 @@
-/**
- * Streak Counter (Feature 3)
- * Calculates consecutive days chatted between two users.
- */
+// Streak Counter — consecutive days chatted between two users
+(function() {
+  'use strict';
 
-(function () {
-  function initStreaks() {
-    // Inject CSS for streak badge
+  function _initStreaks() {
     const style = document.createElement('style');
     style.textContent = `
       .streak-badge {
-        display: inline-flex;
-        align-items: center;
-        gap: 2px;
-        background: rgba(255, 152, 0, 0.15);
-        color: #ff9800;
-        padding: 2px 6px;
-        border-radius: 12px;
-        font-size: 10px;
-        font-weight: 700;
-        margin-left: 6px;
-        vertical-align: middle;
+        display: inline-flex; align-items: center; gap: 2px;
+        background: rgba(255, 152, 0, 0.15); color: #ff9800;
+        padding: 2px 6px; border-radius: 12px; font-size: 10px;
+        font-weight: 700; margin-left: 6px; vertical-align: middle;
       }
-      .streak-badge.fire {
-        animation: pulseFire 2s infinite;
-      }
-      @keyframes pulseFire {
-        0% { transform: scale(1); }
-        50% { transform: scale(1.1); }
-        100% { transform: scale(1); }
-      }
+      .streak-badge.fire { animation: pulseFire 2s infinite; }
+      @keyframes pulseFire { 0%{transform:scale(1)} 50%{transform:scale(1.1)} 100%{transform:scale(1)} }
+      .streak-details { display:none; position:absolute; top:100%; left:0; z-index:50; background:var(--surface-container-high); border-radius:12px; padding:12px; min-width:160px; box-shadow:0 4px 20px rgba(0,0,0,0.3); margin-top:4px; }
+      .streak-badge:hover .streak-details { display:block; }
     `;
     document.head.appendChild(style);
 
-    // Render streaks on chat list update
-    document.addEventListener('nsl:app-ready', () => {
-      if (window.MutationBus) {
-        window.MutationBus.onBodyChildList('streak-render', () => {
-          renderStreaksInList();
-          renderStreakInHeader();
-        });
-      }
-    });
+    const origRenderChatList = window.renderChatList;
+    if (typeof origRenderChatList === 'function') {
+      window.renderChatList = function() {
+        origRenderChatList();
+        setTimeout(_renderStreaksInList, 100);
+      };
+    }
   }
 
-  function calculateStreak(chatId) {
-    if (!window.App || !window.App.messages) return 0;
-    
-    const messages = window.App.messages.filter(m => m.chatId === chatId);
-    if (!messages.length) return 0;
+  function _calculateStreak(chatId) {
+    if (!window.App || !window.App.messages) return { count: 0, maxStreak: 0 };
+    const messages = window.App.messages[chatId];
+    if (!messages || !messages.length) return { count: 0, maxStreak: 0 };
 
-    // Group messages by day string (YYYY-MM-DD)
     const daysChatted = new Set();
     messages.forEach(m => {
-      if (m.timestamp) {
-        const date = new Date(m.timestamp);
-        daysChatted.add(`${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`);
+      const ts = m.time || m.timestamp;
+      if (ts) {
+        const d = new Date(typeof ts === 'number' ? ts : (ts?.toMillis ? ts.toMillis() : 0));
+        if (!isNaN(d.getTime())) {
+          daysChatted.add(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`);
+        }
       }
     });
 
-    const sortedDays = Array.from(daysChatted).sort((a, b) => new Date(b) - new Date(a));
-    
-    let streak = 0;
+    if (!daysChatted.size) return { count: 0, maxStreak: 0 };
+
+    const sortedDays = Array.from(daysChatted).sort().reverse();
     const today = new Date();
-    today.setHours(0,0,0,0);
-    
+    const todayKey = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
     const yesterday = new Date(today);
     yesterday.setDate(yesterday.getDate() - 1);
-    
-    let expectedDay = today;
-    let foundTodayOrYesterday = false;
-    
+    const yesterdayKey = `${yesterday.getFullYear()}-${String(yesterday.getMonth()+1).padStart(2,'0')}-${String(yesterday.getDate()).padStart(2,'0')}`;
+
+    let streak = 0;
+    let expectedDate = null;
+
     for (let i = 0; i < sortedDays.length; i++) {
-      const dayDate = new Date(sortedDays[i]);
-      dayDate.setHours(0,0,0,0);
-      
+      const dayStr = sortedDays[i];
       if (i === 0) {
-        if (dayDate.getTime() === today.getTime() || dayDate.getTime() === yesterday.getTime()) {
-          foundTodayOrYesterday = true;
-          streak++;
-          expectedDay = new Date(dayDate);
+        if (dayStr === todayKey || dayStr === yesterdayKey) {
+          streak = 1;
+          expectedDate = new Date(dayStr + 'T00:00:00');
         } else {
-          break; // Streak lost
+          break;
         }
       } else {
-        expectedDay.setDate(expectedDay.getDate() - 1);
-        if (dayDate.getTime() === expectedDay.getTime()) {
+        const prev = new Date(expectedDate);
+        prev.setDate(prev.getDate() - 1);
+        const prevKey = `${prev.getFullYear()}-${String(prev.getMonth()+1).padStart(2,'0')}-${String(prev.getDate()).padStart(2,'0')}`;
+        if (dayStr === prevKey) {
           streak++;
+          expectedDate = prev;
         } else {
           break;
         }
       }
     }
-    
-    return streak;
+
+    let maxStreak = streak;
+    let currentRun = 1;
+    for (let i = 1; i < sortedDays.length; i++) {
+      const curr = new Date(sortedDays[i] + 'T00:00:00');
+      const prev = new Date(sortedDays[i-1] + 'T00:00:00');
+      const diff = (prev - curr) / (1000 * 60 * 60 * 24);
+      if (Math.abs(diff - 1) < 0.01) {
+        currentRun++;
+        maxStreak = Math.max(maxStreak, currentRun);
+      } else {
+        currentRun = 1;
+      }
+    }
+
+    return { count: streak, maxStreak };
   }
 
-  function renderStreaksInList() {
+  function _renderStreaksInList() {
     if (!window.App) return;
-    const chatItems = document.querySelectorAll('.chat-list-item');
+
+    const chatItems = document.querySelectorAll('[onclick*="openChat("]');
     chatItems.forEach(item => {
-      const chatId = item.getAttribute('data-chat-id');
-      if (!chatId) return;
-      
-      // Only show streaks for 1-on-1 chats for now
-      const chat = window.App.chats.find(c => c.id === chatId);
-      if (chat && chat.type === 'group') return;
-      
-      const streakCount = calculateStreak(chatId);
-      
+      const onclick = item.getAttribute('onclick') || '';
+      const match = onclick.match(/openChat\('([^']+)'\)/);
+      if (!match) return;
+      const chatId = match[1];
+
+      const chat = window.App.chats?.find(c => c.id === chatId);
+      if (chat?.type === 'group') return;
+
+      const { count, maxStreak } = _calculateStreak(chatId);
       let badge = item.querySelector('.streak-badge');
-      if (streakCount >= 3) {
+
+      if (count >= 3) {
         if (!badge) {
           badge = document.createElement('span');
           badge.className = 'streak-badge fire';
-          // Find the name container
-          const nameEl = item.querySelector('.name');
-          if (nameEl) {
-            nameEl.appendChild(badge);
-          }
+          const nameEl = item.querySelector('.font-bold');
+          if (nameEl) nameEl.appendChild(badge);
         }
-        badge.innerHTML = `🔥 ${streakCount}`;
+        badge.innerHTML = `🔥 ${count}`;
+        badge.style.position = 'relative';
+        badge.innerHTML = `🔥 ${count}<div class="streak-details">
+          <div style="font-size:13px;font-weight:700;margin-bottom:4px">🔥 ${count} day streak!</div>
+          <div style="font-size:11px;color:var(--on-surface-variant)">Best: ${maxStreak} days</div>
+        </div>`;
       } else if (badge) {
         badge.remove();
       }
     });
   }
 
-  function renderStreakInHeader() {
-    if (!window.App || !window.App.currentChatId) return;
-    
-    const chat = window.App.chats.find(c => c.id === window.App.currentChatId);
-    if (!chat || chat.type === 'group') return; // Skip groups
-    
-    const streakCount = calculateStreak(chat.id);
-    const headerName = document.querySelector('#chat-header h2');
-    
+  function _renderStreakInHeader() {
+    if (!window.App?.currentChat) return;
+    const chat = window.App.currentChat;
+    if (chat.type === 'group') return;
+
+    const { count, maxStreak } = _calculateStreak(chat.id);
+    const headerName = document.querySelector('#chat-header h2, #chat-header .chat-name');
+
     if (headerName) {
       let badge = headerName.querySelector('.streak-badge');
-      if (streakCount >= 3) {
+      if (count >= 3) {
         if (!badge) {
           badge = document.createElement('span');
           badge.className = 'streak-badge fire';
           headerName.appendChild(badge);
         }
-        badge.innerHTML = `🔥 ${streakCount}`;
+        badge.innerHTML = `🔥 ${count}`;
       } else if (badge) {
         badge.remove();
       }
     }
   }
 
+  window.getStreakCount = function(chatId) {
+    return _calculateStreak(chatId).count;
+  };
+
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initStreaks);
+    document.addEventListener('DOMContentLoaded', _initStreaks);
   } else {
-    initStreaks();
+    _initStreaks();
   }
 })();

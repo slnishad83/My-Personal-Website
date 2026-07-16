@@ -273,6 +273,9 @@
 <script src="screenshot-control.js"></script>
 <script src="message-recall.js"></script>
 <script src="sensitive-content.js"></script>
+<script src="mini-games.js"></script>
+<script src="mood-status.js"></script>
+<script src="date-reminders.js"></script>
 <script src="ai-features.js"></script>
 </head>
 <body class="w-full h-full flex overflow-hidden antialiased bg-surface-container-low transition-colors duration-300">
@@ -678,6 +681,12 @@
               <span class="material-symbols-outlined text-white text-[22px]" style="font-variation-settings:'FILL' 1;">draw</span>
             </div>
             <span class="text-[11px] text-on-surface-variant font-medium">Draw</span>
+          </button>
+          <button class="flex flex-col items-center gap-1.5 group" onclick="toggleAttachMenu();openMiniGames()" role="menuitem">
+            <div class="w-12 h-12 rounded-2xl bg-[#FF9800] flex items-center justify-center transition-transform group-hover:scale-105 group-active:scale-95">
+              <span class="material-symbols-outlined text-white text-[22px]" style="font-variation-settings:'FILL' 1;">sports_esports</span>
+            </div>
+            <span class="text-[11px] text-on-surface-variant font-medium">Games</span>
           </button>
         </div>
       </div>
