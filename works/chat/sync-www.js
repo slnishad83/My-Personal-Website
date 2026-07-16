@@ -14,7 +14,7 @@ const INCLUDE = [
   'notification-prefs.js', 'notification-sounds.js', 'notification-telemetry.js',
   'notification-prefs.css', 'notification-reply.js',
   'push-notifications.js', 'whatsapp-enhancements.js', 'whatsapp-share.js',
-  'message-search.js', 'message-actions.css', 'message-actions.js',
+  'message-search.js', 'message-actions.css',
   'desktop-context-menu.js', 'desktop-notifications.js', 'desktop-fullscreen.js',
   'ios-callkit.js', 'ios-keyboard-fix.js',
   'keyboard-shortcuts.js', 'swipe-nav.js', 'swipe-delete.js',
@@ -109,7 +109,7 @@ console.log(`Done: ${copied} copied, ${missing} missing`);
 try {
   console.log('Compiling Tailwind CSS for Capacitor www/app.css...');
   const { execSync } = require('child_process');
-  const localCli = path.join(ROOT, 'node_modules', 'tailwindcss', 'lib', 'cli.js');
+  const localCli = path.join(ROOT, 'node_modules', '@tailwindcss', 'cli', 'dist', 'index.mjs');
   let cmd = 'npx tailwindcss -i app.css -o www/app.css --minify';
   if (fs.existsSync(localCli)) {
     cmd = `node "${localCli}" -i app.css -o www/app.css --minify`;
