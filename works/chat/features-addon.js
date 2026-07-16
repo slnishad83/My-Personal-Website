@@ -84,6 +84,9 @@
       <button class="feat-nav-btn" onclick="openBusyModal()" title="Busy Status">
         <span class="fn-icon">🔴</span>Busy
       </button>
+      <button class="feat-nav-btn" onclick="toggleCalculator()" title="Calculator">
+        <span class="fn-icon">🧮</span>Calculator
+      </button>
     `;
     // Try to insert after header or at bottom of sidebar
     const sidebarHeader = sidebar.querySelector('.sidebar-header, [class*="header"]');

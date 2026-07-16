@@ -54,6 +54,7 @@ const BUNDLE_ORDER = [
   'ui-compliance.js',
   'audit-interactions.js',
   'whatsapp-enhancements.js',
+  'calculator.js',
   'features-addon.js',
   'scheduled-calendar.js',
   'snooze-history.js',
@@ -451,7 +452,7 @@ for (const page of HTML_PAGES) {
     processed = processed.replace(/<script>\s*\/\* NSL Login[\s\S]*?<\/script>/, '');
     // Add app.css for login
     processed = processed.replace(
-      /(<link rel="stylesheet" href="auth-theme\.css">)/,
+      /(<link rel="stylesheet" href="chat-theme\.css">)/,
       '$1\n  <link rel="stylesheet" href="app.css">'
     );
   } else {
@@ -531,8 +532,16 @@ for (const css of CSS_FILES) {
   try { copyFile(css, join(DIST, css)); } catch (_) {}
 }
 
-// Copy app.css (the Vite-compiled Tailwind file we created)
-try { copyFile('app.css', join(DIST, 'app.css')); } catch (_) {}
+// Compile and copy app.css (runs Tailwind v4 CLI dynamically)
+try {
+  console.log('[build] Compiling Tailwind CSS v4 via CLI...');
+  const { execSync } = require('child_process');
+  execSync('npx tailwindcss -i app.css -o dist/app.css --minify', { cwd: ROOT, stdio: 'inherit' });
+  console.log('[build] Tailwind CSS compiled successfully to dist/app.css');
+} catch (e) {
+  console.warn('[build] Tailwind compilation failed, copying raw app.css: ' + e.message);
+  try { copyFile('app.css', join(DIST, 'app.css')); } catch (_) {}
+}
 
 // Copy manifest
 try { copyFile('manifest.json', join(DIST, 'manifest.json')); } catch (_) {}

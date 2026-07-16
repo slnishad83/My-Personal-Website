@@ -237,6 +237,10 @@
           <span class="hidden xl:block font-body-md text-body-md">Scan QR</span>
         </button>
         <!-- Theme Switcher Sidebar Row -->
+        <button class="w-full flex items-center gap-4 text-on-surface-variant hover:text-on-surface transition-colors duration-200 px-4 py-2 cursor-pointer" onclick="toggleCalculator()" aria-label="Calculator">
+          <span class="material-symbols-outlined">calculate</span>
+          <span class="hidden xl:block font-body-md text-body-md">Calculator</span>
+        </button>
         <button class="w-full flex items-center gap-4 text-on-surface-variant hover:text-on-surface transition-colors duration-200 px-4 py-2 cursor-pointer" onclick="cycleTheme()" aria-label="Toggle theme">
           <span class="material-symbols-outlined" id="theme-icon-sidebar">light_mode</span>
           <span class="hidden xl:block font-body-md text-body-md">Theme Toggle</span>
@@ -276,15 +280,20 @@
           </div>
         </div>
 
-        <!-- Search conversations -->
-        <div class="relative">
-          <input class="w-full bg-surface-container border-none rounded-xl py-3 pl-12 pr-10 text-on-surface focus:ring-1 focus:ring-primary font-body-md placeholder-on-surface-variant/50" placeholder="Search conversations..." id="sidebar-search" oninput="filterChats(this.value)" onkeydown="handleSidebarSearch(event)" type="text" autocomplete="off" aria-label="Search conversations"/>
-          <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant cursor-pointer" onclick="triggerSidebarSearch()" role="button" tabindex="0" aria-label="Search">search</span>
-          <span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant cursor-pointer hover:text-primary hidden" id="sidebar-search-clear" onclick="clearSidebarSearch()" role="button" tabindex="0" aria-label="Clear search">close</span>
+        <!-- Search conversations and filter -->
+        <div class="flex items-center gap-2 mb-3">
+          <div class="relative flex-1">
+            <input class="w-full bg-surface-container border-none rounded-xl py-2.5 pl-12 pr-10 text-on-surface focus:ring-1 focus:ring-primary font-body-md placeholder-on-surface-variant/50" placeholder="Search conversations..." id="sidebar-search" oninput="filterChats(this.value)" onkeydown="handleSidebarSearch(event)" type="text" autocomplete="off" aria-label="Search conversations"/>
+            <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant cursor-pointer text-[20px]" onclick="triggerSidebarSearch()" role="button" tabindex="0" aria-label="Search">search</span>
+            <span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant cursor-pointer hover:text-primary hidden text-[20px]" id="sidebar-search-clear" onclick="clearSidebarSearch()" role="button" tabindex="0" aria-label="Clear search">close</span>
+          </div>
+          <button class="p-2 hover:bg-surface-variant/30 rounded-xl text-on-surface-variant transition-colors flex items-center justify-center cursor-pointer" id="btn-filter-unread" onclick="toggleUnreadFilter()" title="Filter unread" aria-label="Filter unread chats">
+            <span class="material-symbols-outlined text-[20px]">filter_list</span>
+          </button>
         </div>
 
         <!-- WhatsApp Web filter chips -->
-        <div class="flex items-center gap-2 pt-2 px-1 pb-1 overflow-x-auto scrollbar-hide select-none" id="wa-filter-chips">
+        <div class="flex items-center gap-2 pt-1 px-0 pb-1 overflow-x-auto scrollbar-hide select-none" id="wa-filter-chips">
           <button class="wa-chip active" onclick="setWaFilter('all')" data-filter="all">All</button>
           <button class="wa-chip" onclick="setWaFilter('unread')" data-filter="unread">Unread</button>
           <button class="wa-chip" onclick="setWaFilter('favourites')" data-filter="favourites">Favourites</button>

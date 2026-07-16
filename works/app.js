@@ -7207,7 +7207,25 @@ window.setWaFilter = function(filterName) {
     const isMatching = btn.getAttribute('data-filter') === filterName;
     btn.classList.toggle('active', isMatching);
   });
+
+  // Keep the filter list button highlight state in sync
+  const filterBtn = document.getElementById('btn-filter-unread');
+  if (filterBtn) {
+    if (filterName === 'unread') {
+      filterBtn.classList.add('bg-primary/20', 'text-primary');
+      filterBtn.classList.remove('text-on-surface-variant');
+    } else {
+      filterBtn.classList.remove('bg-primary/20', 'text-primary');
+      filterBtn.classList.add('text-on-surface-variant');
+    }
+  }
+
   renderChatList();
+};
+
+window.toggleUnreadFilter = function() {
+  const isUnread = App.activeWaFilter === 'unread';
+  setWaFilter(isUnread ? 'all' : 'unread');
 };
 
 window.addNewFilterChip = function() {

@@ -26,7 +26,7 @@ const INCLUDE = [
   'redesign-base.js', 'redesign-base.css',
   'chat.css', 'chat-enhancements.js', 'chat-enhancements.css',
   'chat-theme.css', 'chat-missing-features.js', 'chat-missing-features.css',
-  'chat-fixes.js', 'auth-theme.css', 'features-addon.js', 'feature-updates.js',
+  'chat-fixes.js', 'auth-theme.css', 'features-addon.js', 'feature-updates.js', 'calculator.js',
   'group-message-info.js', 'audit-interactions.js', 'ui-compliance.js',
   'snooze-enhancements.js', 'snooze-enhancements.css',
   'snooze-history.js', 'snooze-history.css',
@@ -92,3 +92,13 @@ for (const dir of COPY_DIRS) {
 }
 
 console.log(`Done: ${copied} copied, ${missing} missing`);
+
+// Compile Tailwind CSS for Capacitor www folder
+try {
+  console.log('Compiling Tailwind CSS for Capacitor www/app.css...');
+  const { execSync } = require('child_process');
+  execSync('npx tailwindcss -i app.css -o www/app.css --minify', { cwd: ROOT, stdio: 'inherit' });
+  console.log('Successfully compiled Tailwind CSS to www/app.css');
+} catch (e) {
+  console.warn('Tailwind compilation failed for www/app.css, using raw file: ' + e.message);
+}

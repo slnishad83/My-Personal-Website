@@ -2322,47 +2322,74 @@ html:not(.dark) .wa-input-footer {
 
 /* ── WhatsApp Filter Chips ── */
 #wa-filter-chips {
-  margin-top: 10px;
-  padding: 4px 8px;
-  border-bottom: 1px solid rgba(134, 150, 160, 0.08);
+  margin-top: 12px !important;
+  padding: 4px 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  overflow-x: auto !important;
+  scrollbar-width: none !important; /* Firefox */
+  border-bottom: none !important;
+}
+#wa-filter-chips::-webkit-scrollbar {
+  display: none !important; /* Chrome, Safari, Opera */
 }
 .wa-chip {
-  background: var(--wa-chip-bg, #202c33);
-  color: var(--wa-chip-text, #8696a0);
-  border: 1px solid transparent;
-  border-radius: 9999px;
-  padding: 6px 12px;
-  font-size: 13px;
-  font-weight: 500;
-  cursor: pointer;
-  white-space: nowrap;
-  transition: all 0.15s ease;
-  line-height: 1;
+  --wa-chip-bg: #202c33;
+  --wa-chip-text: #8696a0;
+  --wa-chip-hover: #2a3942;
+  --wa-chip-active-bg: #0a332c;
+  --wa-chip-active-text: #00bfa5;
+
+  background: var(--wa-chip-bg) !important;
+  color: var(--wa-chip-text) !important;
+  border: none !important;
+  border-radius: 9999px !important;
+  padding: 6px 14px !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  cursor: pointer !important;
+  white-space: nowrap !important;
+  transition: all 0.15s ease !important;
+  line-height: 1.2 !important;
+  min-height: 32px !important;
+  height: 32px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
 }
 .wa-chip:hover {
-  background: var(--wa-chip-hover, #2a3942);
+  background: var(--wa-chip-hover) !important;
 }
 .wa-chip.active {
-  background: var(--wa-chip-active-bg, #0a332c);
-  color: var(--wa-chip-active-text, #00bfa5);
+  background: var(--wa-chip-active-bg) !important;
+  color: var(--wa-chip-active-text) !important;
+  font-weight: 600 !important;
 }
 .wa-chip-add {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  background: var(--wa-chip-bg, #202c33);
-  color: var(--wa-chip-text, #8696a0);
-  border: none;
-  border-radius: 50%;
-  cursor: pointer;
-  flex-shrink: 0;
-  transition: all 0.15s ease;
+  --wa-chip-bg: #202c33;
+  --wa-chip-text: #8696a0;
+  --wa-chip-hover: #2a3942;
+  --wa-chip-hover-text: #d1d7db;
+
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 32px !important;
+  height: 32px !important;
+  min-height: 32px !important;
+  background: var(--wa-chip-bg) !important;
+  color: var(--wa-chip-text) !important;
+  border: none !important;
+  border-radius: 50% !important;
+  cursor: pointer !important;
+  flex-shrink: 0 !important;
+  transition: all 0.15s ease !important;
+  padding: 0 !important;
 }
 .wa-chip-add:hover {
-  background: var(--wa-chip-hover, #2a3942);
-  color: var(--wa-chip-hover-text, #d1d7db);
+  background: var(--wa-chip-hover) !important;
+  color: var(--wa-chip-hover-text) !important;
 }
 
 /* Unread Empty State */
