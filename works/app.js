@@ -1553,16 +1553,16 @@ function renderChatList(filter = '') {
           <button class="wa-unread-empty-link" onclick="setWaFilter('all')" style="font-size: 14px; color: var(--wa-empty-link-color); font-weight: 500; cursor: pointer; background: transparent; border: none; padding: 0; text-decoration: none; transition: all 0.15s ease;">View all chats</button>
         </div>
         
-        <!-- Promo Desktop Card (Branded as NSL) -->
-        <div class="wa-promo-card" style="width: 100%; margin-top: 32px; border-top: 1px solid var(--wa-empty-border-color); padding-top: 24px; display: flex; align-items: center; justify-content: center; gap: 12px; opacity: 0.95;">
+        <!-- Promo Desktop Card (Clickable to download the Android APK) -->
+        <a href="my-team-chat.apk" download="my-team-chat.apk" class="wa-promo-card" style="width: 100%; margin-top: 32px; border-top: 1px solid var(--wa-empty-border-color); padding-top: 24px; display: flex; align-items: center; justify-content: center; gap: 12px; text-decoration: none; cursor: pointer; transition: opacity 0.15s ease;" onmouseover="this.style.opacity=0.75" onmouseout="this.style.opacity=1.0">
           <div style="width: 36px; height: 36px; border-radius: 8px; background: var(--wa-empty-promo-bg); display: flex; align-items: center; justify-content: center; color: white; flex-shrink: 0;">
-            <span class="material-symbols-outlined" style="font-size: 22px; font-variation-settings: 'FILL' 1;">forum</span>
+            <span class="material-symbols-outlined" style="font-size: 22px; font-variation-settings: 'FILL' 1;">download</span>
           </div>
           <div style="text-align: left;">
-            <div style="font-size: 13px; font-weight: 500; color: var(--wa-empty-title-color);">Get NSL Chat for Windows</div>
-            <div style="font-size: 11px; color: var(--wa-empty-desc-color); margin-top: 2px;">Fast, secure, and native desktop app.</div>
+            <div style="font-size: 13px; font-weight: 600; color: var(--wa-empty-title-color);">Download NSL Chat (APK)</div>
+            <div style="font-size: 11px; color: var(--wa-empty-desc-color); margin-top: 2px;">Tap to install native Android application.</div>
           </div>
-        </div>
+        </a>
       </div>`;
     return;
   }
@@ -6899,8 +6899,20 @@ async function openScanner() {
   let useJsQRFallback = !('BarcodeDetector' in window);
 
   if (useJsQRFallback && !window.jsQR) {
-    if (status) status.textContent = 'Failed to load QR scanner library.';
-    return;
+    if (status) status.textContent = 'Loading scanner library...';
+    try {
+      await new Promise((resolve, reject) => {
+        const script = document.createElement('script');
+        script.src = 'jsQR.js?v=3';
+        script.onload = resolve;
+        script.onerror = () => reject(new Error('Failed to load local JSQR'));
+        document.head.appendChild(script);
+      });
+    } catch (e) {
+      if (status) status.textContent = 'Failed to load QR scanner library.';
+      console.error(e);
+      return;
+    }
   }
 
   try {
