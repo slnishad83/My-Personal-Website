@@ -1,0 +1,23 @@
+# Normalize line endings for all text files
+* text=auto
+
+# Explicitly declare text files
+*.js text
+*.css text
+*.html text
+*.json text
+*.md text
+*.txt text
+*.xml text
+
+# Denote binary files
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.svg binary
+*.apk binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
