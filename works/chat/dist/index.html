@@ -418,16 +418,17 @@
       </div>
 
       <!-- Reply previews -->
-      <div class="bg-surface-container border-t border-outline-variant/30 px-6 py-3 flex items-center justify-between gap-4 hidden" id="reply-preview">
-        <div class="flex items-center gap-2 min-w-0 border-l-2 border-primary pl-3">
-          <img id="reply-image" class="hidden w-10 h-10 object-cover rounded-md shadow-sm" alt="Reply thumbnail" />
-          <div class="min-w-0">
-            <div class="font-bold text-xs text-primary truncate" id="reply-name">Name</div>
-            <div class="text-xs text-on-surface-variant truncate" id="reply-text">Message</div>
+      <div class="bg-surface-container border-t border-outline-variant/30 px-4 py-2 flex items-center justify-between hidden" id="reply-preview">
+        <div class="flex-1 flex items-stretch bg-surface-variant/50 rounded-lg overflow-hidden relative min-w-0">
+          <div class="w-1.5 bg-primary flex-shrink-0"></div>
+          <div class="flex-1 flex flex-col justify-center px-3 py-2 min-w-0">
+            <div class="font-bold text-sm text-primary truncate" id="reply-name">Name</div>
+            <div class="text-xs text-on-surface-variant truncate mt-0.5 flex items-center gap-1" id="reply-text">Message</div>
           </div>
+          <img id="reply-image" class="hidden w-14 h-14 object-cover bg-surface-variant flex-shrink-0" alt="Reply thumbnail" />
         </div>
-        <button class="text-on-surface-variant hover:text-on-surface p-1" onclick="cancelReply()" aria-label="Cancel reply">
-          <span class="material-symbols-outlined text-[18px]">close</span>
+        <button class="text-on-surface-variant hover:text-on-surface p-3 ml-1 flex-shrink-0" onclick="cancelReply()" aria-label="Cancel reply">
+          <span class="material-symbols-outlined text-[20px]">close</span>
         </button>
       </div>
 
@@ -1249,7 +1250,7 @@
     </button>
   </div>
   <script src="notification-sounds.js" defer></script>
-  <script src="app-bundle.9274cbea.js"></script>
+  <script src="app-bundle.ddfed58c.js"></script>
   <script src="inline-sw-register.js"></script>
   <script src="inline-broadcast-channel.js"></script>
   <script src="inline-version.js"></script>
