@@ -2411,6 +2411,7 @@ function renderMoreTab() {
       ${moreRow('receipt_long','Expense Splitter',"window.location.href='expenses.html'")}
       ${moreRow('photo_library','Shared Album',"window.location.href='album.html'")}
       ${moreRow('queue_music','Music Library','openMusicLibrary()')}
+      ${moreRow('download','Chat Export','openChatExport()')}
       ${moreRow('calendar_month','Team Calendar',"window.location.href='calendar.html'")}
       ${moreRow('monitoring','Chat Insights',"window.location.href='insights.html'")}
 

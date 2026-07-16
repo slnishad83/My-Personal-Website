@@ -160,6 +160,8 @@
         <button onclick="document.getElementById('playlist-detail-overlay')?.remove()" style="background:none;border:none;color:var(--on-surface);cursor:pointer"><span class="material-symbols-outlined">arrow_back</span></button>
         <h3 style="margin:0;font-size:16px;font-weight:700;color:var(--on-surface);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escHtml(pl.name)}</h3>
         ${canEdit ? `<button onclick="showAddTrackDialog('${playlistId}')" style="background:none;border:none;color:var(--primary);cursor:pointer;font-size:13px;font-weight:700">+ Add</button>` : ''}
+        ${isOwner ? `<button onclick="showCollaboratorManager('${playlistId}')" style="background:none;border:none;color:var(--on-surface-variant);cursor:pointer" title="Manage collaborators"><span class="material-symbols-outlined" style="font-size:20px">group</span></button>` : ''}
+        ${isOwner ? `<button onclick="uploadPlaylistCover('${playlistId}')" style="background:none;border:none;color:var(--on-surface-variant);cursor:pointer" title="Change cover"><span class="material-symbols-outlined" style="font-size:20px">add_a_photo</span></button>` : ''}
         <button onclick="sharePlaylist('${playlistId}')" style="background:none;border:none;color:var(--on-surface-variant);cursor:pointer"><span class="material-symbols-outlined" style="font-size:20px">share</span></button>
         ${isOwner ? `<button onclick="deletePlaylist('${playlistId}');document.getElementById('playlist-detail-overlay')?.remove()" style="background:none;border:none;color:var(--error);cursor:pointer"><span class="material-symbols-outlined" style="font-size:20px">delete</span></button>` : ''}
       </div>
@@ -349,6 +351,93 @@
     } else if (navigator.clipboard) {
       navigator.clipboard.writeText(url).then(() => showToast('Playlist link copied', 'success'));
     }
+  };
+
+  // ─── COLLABORATOR MANAGER ───
+  window.showCollaboratorManager = async function(playlistId) {
+    const pl = await getPlaylist(playlistId);
+    if (!pl) return;
+
+    const overlay = document.createElement('div');
+    overlay.id = 'collab-manager-overlay';
+    overlay.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.85);display:flex;align-items:flex-end;justify-content:center;animation:fadeIn 0.2s ease';
+
+    const panel = document.createElement('div');
+    panel.style.cssText = 'background:var(--surface-container,#1e1e2e);border-radius:20px 20px 0 0;padding:20px;width:100%;max-width:500px;max-height:60vh;color:var(--on-surface)';
+
+    let html = `
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+        <h3 style="margin:0;font-size:16px;font-weight:700">Manage Collaborators</h3>
+        <button onclick="document.getElementById('collab-manager-overlay')?.remove()" style="background:none;border:none;color:var(--on-surface-variant);cursor:pointer;font-size:20px">&times;</button>
+      </div>
+      <div style="display:flex;gap:8px;margin-bottom:16px">
+        <input type="text" id="collab-uid-input" placeholder="Enter user UID..." style="flex:1;padding:10px 12px;border-radius:10px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);color:var(--on-surface);font-size:13px">
+        <button onclick="addCollaboratorToPlaylist('${playlistId}')" style="padding:10px 16px;border-radius:10px;border:none;background:var(--primary);color:var(--on-primary);font-size:13px;font-weight:700;cursor:pointer">Add</button>
+      </div>
+      <div style="font-size:12px;font-weight:700;color:var(--on-surface-variant);margin-bottom:8px">OWNER</div>
+      <div style="display:flex;align-items:center;gap:10px;padding:10px;border-radius:10px;background:rgba(255,255,255,0.03);margin-bottom:8px">
+        <div style="width:32px;height:32px;border-radius:50%;background:var(--primary);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:white">${(pl.ownerName || 'U')[0].toUpperCase()}</div>
+        <div style="flex:1;font-size:13px;font-weight:600">${escHtml(pl.ownerName || 'Owner')}</div>
+        <span style="font-size:10px;padding:2px 8px;border-radius:4px;background:var(--primary);color:var(--on-primary);font-weight:700">YOU</span>
+      </div>`;
+
+    if (pl.collaborators?.length) {
+      html += '<div style="font-size:12px;font-weight:700;color:var(--on-surface-variant);margin:12px 0 8px">COLLABORATORS</div>';
+      pl.collaborators.forEach(uid => {
+        html += `
+        <div style="display:flex;align-items:center;gap:10px;padding:10px;border-radius:10px;background:rgba(255,255,255,0.03);margin-bottom:4px">
+          <div style="width:32px;height:32px;border-radius:50%;background:rgba(255,255,255,0.1);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:var(--on-surface-variant)">${uid[0].toUpperCase()}</div>
+          <div style="flex:1;font-size:13px;color:var(--on-surface-variant)">${escHtml(uid)}</div>
+          <button onclick="removeCollaboratorFromPlaylist('${playlistId}','${uid}')" style="background:none;border:none;color:var(--error);cursor:pointer;padding:4px"><span class="material-symbols-outlined" style="font-size:18px">close</span></button>
+        </div>`;
+      });
+    } else {
+      html += '<p style="font-size:12px;color:var(--on-surface-variant);text-align:center;padding:12px">No collaborators yet</p>';
+    }
+
+    panel.innerHTML = html;
+    overlay.appendChild(panel);
+    overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+    document.body.appendChild(overlay);
+  };
+
+  window.addCollaboratorToPlaylist = async function(playlistId) {
+    const input = document.getElementById('collab-uid-input');
+    const uid = input?.value?.trim();
+    if (!uid) { showToast('Enter a user UID', 'error'); return; }
+    await addCollaborator(playlistId, uid);
+    showCollaboratorManager(playlistId);
+  };
+
+  window.removeCollaboratorFromPlaylist = async function(playlistId, uid) {
+    await removeCollaborator(playlistId, uid);
+    showCollaboratorManager(playlistId);
+  };
+
+  // ─── COVER UPLOAD ───
+  window.uploadPlaylistCover = function(playlistId) {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.onchange = async (e) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      if (!App.storage || !App.auth?.currentUser) { showToast('Storage not available', 'error'); return; }
+
+      showToast('Uploading cover...', 'info');
+      try {
+        const path = `playlist-covers/${playlistId}_${Date.now()}.${file.name.split('.').pop()}`;
+        const ref = App.storage.ref(path);
+        await ref.put(file);
+        const url = await ref.getDownloadURL();
+        await setPlaylistCover(playlistId, url);
+        showToast('Cover updated', 'success');
+        openPlaylistDetail(playlistId);
+      } catch(e) {
+        showToast('Upload failed', 'error');
+      }
+    };
+    input.click();
   };
 
   // ─── FROM URL HASH ───

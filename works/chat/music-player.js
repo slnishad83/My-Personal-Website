@@ -15,9 +15,13 @@
     isMuted: false,
     currentTime: 0,
     duration: 0,
+    playbackSpeed: 1,
     _seeking: false,
     _shuffleOrder: [],
     _originalOrder: [],
+    _retryCount: 0,
+    _maxRetries: 3,
+    _isOnline: navigator.onLine !== false,
   };
   window.MusicPlayer = Player;
 
@@ -38,8 +42,10 @@
     Player.audio.volume = Player.volume;
     Player.isShuffle = localStorage.getItem('nsl_music_shuffle') === 'true';
     Player.repeatMode = localStorage.getItem('nsl_music_repeat') || 'off';
+    Player.playbackSpeed = parseFloat(localStorage.getItem('nsl_music_speed') || '1');
 
     _setupMediaSession();
+    _setupNetworkListener();
   }
 
   // ─── PLAYBACK ───
@@ -241,9 +247,85 @@
 
   function _onError(e) {
     console.warn('Audio error:', e);
-    showToast('Track unavailable — skipping', 'error');
-    setTimeout(() => Player.next(), 1500);
+    if (Player._retryCount < Player._maxRetries && Player._isOnline) {
+      Player._retryCount++;
+      showToast(`Retrying... (${Player._retryCount}/${Player._maxRetries})`, 'info');
+      setTimeout(() => {
+        if (Player._currentTrack) {
+          Player.audio.src = Player._currentTrack.url;
+          Player.audio.load();
+          Player.audio.play().catch(() => {});
+        }
+      }, 2000 * Player._retryCount);
+    } else {
+      showToast('Track unavailable — skipping', 'error');
+      Player._retryCount = 0;
+      setTimeout(() => Player.next(), 1500);
+    }
   }
+
+  // ─── PLAYBACK SPEED ───
+  Player.setPlaybackSpeed = function(speed) {
+    Player.playbackSpeed = speed;
+    if (Player.audio) Player.audio.playbackRate = speed;
+    localStorage.setItem('nsl_music_speed', speed.toString());
+    _updateSpeedUI();
+  };
+
+  Player.cyclePlaybackSpeed = function() {
+    const speeds = [0.5, 0.75, 1, 1.25, 1.5, 2];
+    const idx = speeds.indexOf(Player.playbackSpeed);
+    const next = speeds[(idx + 1) % speeds.length];
+    Player.setPlaybackSpeed(next);
+  };
+
+  function _updateSpeedUI() {
+    const el = document.getElementById('music-speed-btn');
+    if (el) {
+      el.textContent = Player.playbackSpeed + 'x';
+      el.style.color = Player.playbackSpeed !== 1 ? 'var(--primary)' : 'var(--on-surface-variant)';
+    }
+    const fullEl = document.getElementById('music-full-speed');
+    if (fullEl) {
+      fullEl.textContent = Player.playbackSpeed + 'x';
+      fullEl.style.color = Player.playbackSpeed !== 1 ? 'var(--primary)' : 'var(--on-surface-variant)';
+    }
+  }
+
+  // ─── NETWORK HANDLING ───
+  function _setupNetworkListener() {
+    window.addEventListener('online', () => {
+      Player._isOnline = true;
+      if (Player._currentTrack && !Player.isPlaying) {
+        showToast('Back online — resuming', 'success');
+        Player.audio.play().catch(() => {});
+      }
+    });
+    window.addEventListener('offline', () => {
+      Player._isOnline = false;
+      showToast('You are offline', 'info');
+    });
+  }
+
+  // ─── QUALITY DISPLAY ───
+  Player.getAudioInfo = function() {
+    if (!Player.audio) return null;
+    return {
+      sampleRate: Player.audio.sampleRate || 'unknown',
+      channels: Player.audio.numberOfChannels || 'unknown',
+      speed: Player.playbackSpeed,
+      volume: Math.round(Player.volume * 100) + '%',
+      networkType: navigator.connection?.effectiveType || 'unknown',
+      downlink: navigator.connection?.downlink ? navigator.connection.downlink + ' Mbps' : 'unknown',
+    };
+  };
+
+  Player.showAudioInfo = function() {
+    const info = Player.getAudioInfo();
+    if (!info) return;
+    const track = Player._currentTrack;
+    showToast(`Speed: ${info.speed}x | Volume: ${info.volume} | Network: ${info.networkType} | ${info.downlink}`, 'info');
+  };
 
   // ─── MEDIA SESSION ───
   function _setupMediaSession() {
@@ -366,6 +448,8 @@
     if (document.getElementById('music-mini-player')) return;
     const mini = document.createElement('div');
     mini.id = 'music-mini-player';
+    mini.setAttribute('role', 'region');
+    mini.setAttribute('aria-label', 'Music mini player');
     mini.style.cssText = 'position:fixed;bottom:60px;left:0;right:0;z-index:90;background:var(--surface-container-high,#1e2a34);border-top:1px solid rgba(255,255,255,0.08);padding:8px 12px;display:flex;align-items:center;gap:10px;cursor:pointer;animation:slideUp 0.2s ease';
     mini.onclick = (e) => { if (e.target.closest('button')) return; openFullPlayer(); };
     document.body.appendChild(mini);
@@ -388,10 +472,10 @@
         <div style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escHtml(track.title)}</div>
         <div style="font-size:11px;color:var(--on-surface-variant);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escHtml(track.artist)}</div>
       </div>
-      <button class="music-play-btn" onclick="event.stopPropagation();MusicPlayer.togglePlay()" style="background:none;border:none;color:var(--on-surface);cursor:pointer;padding:4px">
+      <button class="music-play-btn" onclick="event.stopPropagation();MusicPlayer.togglePlay()" aria-label="${Player.isPlaying ? 'Pause' : 'Play'}" style="background:none;border:none;color:var(--on-surface);cursor:pointer;padding:4px">
         <span class="material-symbols-outlined" style="font-size:28px">${Player.isPlaying ? 'pause_circle' : 'play_circle'}</span>
       </button>
-      <button onclick="event.stopPropagation();MusicPlayer.next()" style="background:none;border:none;color:var(--on-surface-variant);cursor:pointer;padding:4px">
+      <button onclick="event.stopPropagation();MusicPlayer.next()" aria-label="Next track" style="background:none;border:none;color:var(--on-surface-variant);cursor:pointer;padding:4px">
         <span class="material-symbols-outlined" style="font-size:22px">skip_next</span>
       </button>
       <div style="position:absolute;bottom:0;left:0;right:0;height:2px;background:rgba(255,255,255,0.1)">
@@ -411,6 +495,9 @@
 
     const overlay = document.createElement('div');
     overlay.id = 'full-player-overlay';
+    overlay.setAttribute('role', 'dialog');
+    overlay.setAttribute('aria-label', 'Music player');
+    overlay.setAttribute('aria-modal', 'true');
     overlay.style.cssText = 'position:fixed;inset:0;z-index:9998;background:var(--surface-container,#0d1b2a);display:flex;flex-direction:column;animation:slideUp 0.3s ease';
 
     overlay.innerHTML = `
@@ -440,7 +527,7 @@
       <div style="padding:0 24px 8px">
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
           <span id="music-current-time" style="font-size:11px;color:var(--on-surface-variant);width:40px;text-align:right">0:00</span>
-          <input type="range" id="music-seek-bar" min="0" max="100" value="0" oninput="MusicPlayer.seekPercent(this.value)" onmousedown="MusicPlayer._seeking=true" onmouseup="MusicPlayer._seeking=false" style="flex:1;accent-color:var(--primary);height:4px">
+          <input type="range" id="music-seek-bar" min="0" max="100" value="0" oninput="MusicPlayer.seekPercent(this.value)" onmousedown="MusicPlayer._seeking=true" onmouseup="MusicPlayer._seeking=false" aria-label="Seek" role="slider" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" style="flex:1;accent-color:var(--primary);height:4px">
           <span id="music-duration" style="font-size:11px;color:var(--on-surface-variant);width:40px">0:00</span>
         </div>
 
@@ -466,10 +553,16 @@
           <button id="music-volume-icon" onclick="MusicPlayer.toggleMute()" style="background:none;border:none;color:var(--on-surface-variant);cursor:pointer;padding:4px">
             <span class="material-symbols-outlined" style="font-size:20px">${Player.isMuted?'volume_off':'volume_up'}</span>
           </button>
-          <input type="range" id="music-volume" min="0" max="100" value="${Player.volume*100}" oninput="MusicPlayer.setVolume(this.value/100)" style="flex:1;accent-color:var(--primary);height:3px">
+          <input type="range" id="music-volume" min="0" max="100" value="${Player.volume*100}" oninput="MusicPlayer.setVolume(this.value/100)" aria-label="Volume" role="slider" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round(Player.volume*100)}" style="flex:1;accent-color:var(--primary);height:3px">
           <button onclick="MusicPlayer.toggleTrackFavorite(Player._currentTrack)" style="background:none;border:none;color:${isTrackFavorite(track.url)?'var(--error)':'var(--on-surface-variant)'};cursor:pointer;padding:4px">
             <span class="material-symbols-outlined" style="font-size:20px">${isTrackFavorite(track.url)?'favorite':'favorite_border'}</span>
           </button>
+        </div>
+
+        <div style="display:flex;align-items:center;justify-content:center;gap:12px;margin-bottom:8px">
+          <button id="music-full-speed" onclick="MusicPlayer.cyclePlaybackSpeed()" style="background:rgba(255,255,255,0.06);border:none;border-radius:8px;padding:4px 10px;color:${Player.playbackSpeed!==1?'var(--primary)':'var(--on-surface-variant)'};cursor:pointer;font-size:11px;font-weight:700">${Player.playbackSpeed}x</button>
+          <button id="music-speed-btn" onclick="MusicPlayer.cyclePlaybackSpeed()" style="background:rgba(255,255,255,0.06);border:none;border-radius:8px;padding:4px 10px;color:${Player.playbackSpeed!==1?'var(--primary)':'var(--on-surface-variant)'};cursor:pointer;font-size:11px;font-weight:700;display:none">${Player.playbackSpeed}x</button>
+          <button onclick="MusicPlayer.showAudioInfo()" style="background:rgba(255,255,255,0.06);border:none;border-radius:8px;padding:4px 10px;color:var(--on-surface-variant);cursor:pointer;font-size:11px;font-weight:600">Audio Info</button>
         </div>
       </div>`;
 
@@ -513,16 +606,22 @@
       if (last && last.url) {
         Player._currentTrack = last;
         Player.audio.src = last.url;
+        if (last._savedPosition && last._savedPosition > 0) {
+          Player.audio.currentTime = last._savedPosition;
+        }
         _updateMiniPlayer(last);
       }
     } catch(_) {}
   }
 
   setInterval(() => {
-    if (Player._currentTrack) {
-      try { localStorage.setItem('nsl_last_track', JSON.stringify(Player._currentTrack)); } catch(_) {}
+    if (Player._currentTrack && Player.audio) {
+      try {
+        const toSave = { ...Player._currentTrack, _savedPosition: Player.audio.currentTime || 0 };
+        localStorage.setItem('nsl_last_track', JSON.stringify(toSave));
+      } catch(_) {}
     }
-  }, 10000);
+  }, 5000);
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => { _init(); _restoreSession(); });
