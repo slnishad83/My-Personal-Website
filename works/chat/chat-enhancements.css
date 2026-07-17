@@ -457,7 +457,7 @@ html.dark .ce-seen-label {
   z-index: 10000 !important;
 
   width: auto !important;
-  height: 36px !important;
+  min-height: 44px !important;
   min-width: 36px;
   border-radius: 999px !important;
   padding: 0 14px 0 10px !important;
@@ -2363,7 +2363,7 @@ html:not(.dark) .wa-input-footer {
 }
 .wa-chip {
   --wa-chip-bg: #202c33;
-  --wa-chip-text: #8696a0;
+  --wa-chip-text: #aab4bd;
   --wa-chip-hover: #2a3942;
   --wa-chip-active-bg: #0a332c;
   --wa-chip-active-text: #00bfa5;
@@ -2395,7 +2395,7 @@ html:not(.dark) .wa-input-footer {
 }
 .wa-chip-add {
   --wa-chip-bg: #202c33;
-  --wa-chip-text: #8696a0;
+  --wa-chip-text: #aab4bd;
   --wa-chip-hover: #2a3942;
   --wa-chip-hover-text: #d1d7db;
 

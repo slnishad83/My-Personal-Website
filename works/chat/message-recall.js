@@ -24,27 +24,39 @@
     return `${hours}h ${minutes}m`;
   };
 
-  const _origOpenDeleteMenu = window.openDeleteMenu;
-  if (typeof _origOpenDeleteMenu === 'function') {
-    window.openDeleteMenu = function(msgId) {
-      const chatId = App.currentChat?.id;
-      if (!chatId) return _origOpenDeleteMenu(msgId);
+  let _origOpenDeleteMenu = null;
+  function _initRecallPatch() {
+    if (_origOpenDeleteMenu) return;
+    if (typeof window.openDeleteMenu === 'function') {
+      _origOpenDeleteMenu = window.openDeleteMenu;
+      window.openDeleteMenu = function(e, msgId) {
+        const chatId = App.currentChat?.id;
+        if (!chatId) return _origOpenDeleteMenu(e, msgId);
 
-      const msgs = App.messages[chatId] || [];
-      const msg = msgs.find(m => m.id === msgId);
-      if (!msg) return _origOpenDeleteMenu(msgId);
+        const msgs = App.messages[chatId] || [];
+        const msg = msgs.find(m => m.id === msgId);
+        if (!msg) return _origOpenDeleteMenu(e, msgId);
 
-      const isMyMsg = msg.from === 'me';
-      const canRecall = isMyMsg && canRecallMessage(msg);
+        const isMyMsg = msg.from === 'me';
+        const canRecall = isMyMsg && canRecallMessage(msg);
 
-      if (!canRecall && isMyMsg) {
-        _showRecallExpiredMenu(msgId, msg);
-        return;
-      }
+        if (!canRecall && isMyMsg) {
+          _showRecallExpiredMenu(msgId, msg);
+          return;
+        }
 
-      _origOpenDeleteMenu(msgId);
-    };
+        _origOpenDeleteMenu(e, msgId);
+      };
+    }
   }
+  _initRecallPatch();
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', _initRecallPatch);
+  }
+  const _recallInterval = setInterval(() => {
+    if (!_origOpenDeleteMenu && typeof window.openDeleteMenu === 'function') _initRecallPatch();
+  }, 500);
+  setTimeout(() => { clearInterval(_recallInterval); }, 10000);
 
   function _showRecallExpiredMenu(msgId, msg) {
     _removeCtxMenu();

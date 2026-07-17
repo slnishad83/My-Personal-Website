@@ -17,6 +17,7 @@ const SwipeDelete = {
     document.addEventListener('touchstart', this._onTouchStart.bind(this), { passive: true });
     document.addEventListener('touchmove', this._throttledTouchMove.bind(this), { passive: false });
     document.addEventListener('touchend', this._onTouchEnd.bind(this), { passive: true });
+    document.addEventListener('click', this._onDocumentClick.bind(this));
     this._enabled = true;
     if (window.__DEBUG__) console.log('[SwipeDelete] Initialized');
   },
@@ -81,6 +82,13 @@ const SwipeDelete = {
     this._swiping = false;
   },
 
+  _onDocumentClick(e) {
+    const openItems = document.querySelectorAll('.chat-list-swipe-container.swiping');
+    if (!openItems.length) return;
+    if (e.target.closest('.chat-list-swipe-container')) return;
+    this._closeAll();
+  },
+
   _closeAll() {
     document.querySelectorAll('.chat-list-swipe-container.swiping').forEach(el => {
       el.style.transform = '';
@@ -94,6 +102,7 @@ const SwipeDelete = {
 
   destroy() {
     this._enabled = false;
+    this._closeAll();
   }
 };
 

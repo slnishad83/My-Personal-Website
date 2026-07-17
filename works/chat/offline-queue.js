@@ -283,6 +283,7 @@ const OfflineQueue = {
         indicator.setAttribute('role', 'status');
         indicator.setAttribute('aria-live', 'polite');
         indicator.className = 'glass-panel';
+        indicator.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);z-index:95;display:flex;align-items:center;gap:6px;padding:8px 16px;border-radius:20px;background:rgba(30,30,46,0.9);backdrop-filter:blur(12px);color:var(--on-surface);font-size:13px;font-weight:600;box-shadow:0 4px 16px rgba(0,0,0,0.3);pointer-events:none';
         document.body.appendChild(indicator);
       }
       indicator.innerHTML = `<span class="material-symbols-outlined" style="font-size:14px;">schedule</span> ${count} message${count > 1 ? 's' : ''} pending`;

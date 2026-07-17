@@ -9,7 +9,7 @@ const A11y = {
 
   init() {
     this._addSkipNav();
-    this._setupFocusTrapObserver();
+    this._setupFocusTrap();
     this._addLiveRegions();
     this._enhanceDynamicContent();
     if (window.__DEBUG__) console.log('[A11y] Initialized');
@@ -37,52 +37,60 @@ const A11y = {
     document.body.prepend(nav);
   },
 
-  _setupFocusTrapObserver() {
-    if (!('MutationObserver' in window)) return;
-    const observer = new MutationObserver((mutations) => {
-      for (const m of mutations) {
-        for (const node of m.addedNodes) {
-          if (node.nodeType === 1 && node.classList?.contains('overlay') && !node.classList.contains('hidden')) {
-            this._trapFocus(node);
-          }
-        }
+  _findTopOverlay() {
+    let best = null;
+    let bestZ = -1;
+    const overlays = document.querySelectorAll('.overlay');
+    for (const el of overlays) {
+      if (el.classList.contains('hidden') || !el.offsetParent && getComputedStyle(el).position !== 'fixed') {
+        continue;
       }
-    });
-    observer.observe(document.body, { childList: true, subtree: true });
+      if (!el.isConnected) continue;
+      const z = parseInt(getComputedStyle(el).zIndex, 10) || 0;
+      if (z > bestZ) { bestZ = z; best = el; }
+    }
+    return best;
   },
 
-  _trapFocus(overlay) {
-    const focusable = overlay.querySelectorAll(
+  _getFocusable(container) {
+    return Array.from(container.querySelectorAll(
       'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), ' +
       'textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
-    );
-    if (!focusable.length) return;
+    ));
+  },
 
-    this._lastFocused = document.activeElement;
-    const first = focusable[0];
-    const last = focusable[focusable.length - 1];
-
-    const trap = (e) => {
-      if (e.key !== 'Tab') {
-        if (e.key === 'Escape') {
-          const closeBtn = overlay.querySelector('[onclick*="close"], [onclick*="hide"]');
-          if (closeBtn) closeBtn.click();
-          this._releaseFocus();
-          return;
-        }
-        return;
-      }
-      if (e.shiftKey) {
-        if (document.activeElement === first) { e.preventDefault(); last.focus(); }
-      } else {
-        if (document.activeElement === last) { e.preventDefault(); first.focus(); }
+  _setupFocusTrap() {
+    this._focusTrapHandler = (e) => {
+      if (e.key !== 'Tab') return;
+      const overlay = this._findTopOverlay();
+      if (!overlay) return;
+      const focusable = this._getFocusable(overlay);
+      if (!focusable.length) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
       }
     };
+    document.addEventListener('keydown', this._focusTrapHandler);
 
-    overlay._a11yTrap = trap;
-    overlay._a11yRelease = () => this._releaseFocus();
-    overlay.addEventListener('keydown', trap);
-    first.focus();
+    this._focusTrapKeyHandler = (e) => {
+      if (e.key !== 'Escape') return;
+      const overlay = this._findTopOverlay();
+      if (!overlay) return;
+      const closeBtn = overlay.querySelector('[onclick*="close"], [onclick*="hide"]');
+      if (closeBtn) closeBtn.click();
+      this._releaseFocus();
+    };
+    document.addEventListener('keydown', this._focusTrapKeyHandler);
+  },
+
+  _trapFocusCleanup() {
+    this._releaseFocus();
   },
 
   _releaseFocus() {

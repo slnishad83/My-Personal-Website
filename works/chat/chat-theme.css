@@ -30,7 +30,7 @@ html, body, #app {
 /* ── WhatsApp Web Filter Chips ───────────────────────── */
 .wa-chip {
   --wa-chip-bg: #202c33;
-  --wa-chip-text: #8696a0;
+  --wa-chip-text: #aab4bd;
   --wa-chip-hover: #2a3942;
   --wa-chip-active-bg: #0a332c;
   --wa-chip-active-text: #00bfa5;
@@ -64,7 +64,7 @@ html, body, #app {
 }
 .wa-chip-add {
   --wa-chip-bg: #202c33;
-  --wa-chip-text: #8696a0;
+  --wa-chip-text: #aab4bd;
   --wa-chip-hover: #2a3942;
 
   background: var(--wa-chip-bg) !important;
@@ -908,7 +908,7 @@ html #messages-wrap::-webkit-scrollbar-track { background: var(--surface-bright)
   border: none !important;
   cursor: pointer !important;
   transition: all 0.15s !important;
-  min-height: 36px !important;
+  min-height: 44px !important;
 }
 #landscape-tabs button.active {
   background: var(--primary) !important;
@@ -1764,7 +1764,7 @@ html:not(.dark) #desktop-context-menu,
 
 /* ── Tablet overlay panels (768-1024px portrait) ──────────────── */
 @media (min-width: 768px) and (max-width: 1023px) {
-  .overlay > div { max-width: min(560px, 88vw) !important; max-height: 88vh !important; }
+  .overlay > div { max-width: min(560px, 88vw) !important; max-height: 88dvh !important; }
   #profile-overlay > div,
   #new-chat-overlay > div,
   #confirm-overlay > div { max-width: min(480px, 85vw) !important; }
@@ -1772,7 +1772,7 @@ html:not(.dark) #desktop-context-menu,
 
 /* ── Safe area for notch devices (landscape) ──────────────────── */
 @media (orientation: landscape) and (max-height: 500px) {
-  #chat-header { padding-top: env(safe-area-inset-top, 0px) !important; }
+  #chat-header { min-height: calc(64px + env(safe-area-inset-top, 0px)) !important; }
   #input-bar { padding-bottom: env(safe-area-inset-bottom, 0px) !important; }
 }
 
@@ -1801,10 +1801,10 @@ html:not(.dark) #desktop-context-menu,
   #input-bar .glass-panel { border-radius: 16px !important; padding: 4px 6px !important; }
   #bottom-nav { height: 52px !important; }
   #bottom-nav .text-2xl, #bottom-nav .material-symbols-outlined { font-size: 18px !important; }
-  #bottom-nav span.text-xs { font-size: 9px !important; }
+  #bottom-nav span.text-xs { font-size: 11px !important; }
   .chat-list-item { padding: 8px 6px !important; }
   .chat-list-item .name { font-size: 13px !important; }
-  .chat-list-item .last-msg { font-size: 11px !important; }
+  .chat-list-item .last-msg { font-size: 12px !important; }
   .wa-chip { padding: 4px 10px !important; font-size: 11px !important; }
   #emoji-picker { left: 2px !important; right: 2px !important; bottom: 58px !important; max-height: 55vh !important; }
   #attach-menu { left: 2px !important; bottom: 60px !important; }
@@ -1883,7 +1883,7 @@ html:not(.dark) #desktop-context-menu,
 
 /* ── Tablet landscape: 768–1023px ────────────────────────────── */
 @media (min-width: 768px) and (max-width: 1023px) and (orientation: landscape) {
-  #detail-panel { display: flex !important; width: 280px !important; min-width: 280px !important; }
+  #detail-panel { display: flex !important; min-width: 320px !important; }
   .msg-bubble { max-width: 68% !important; }
 }
 
@@ -1931,7 +1931,7 @@ html:not(.dark) #desktop-context-menu,
   .msg-bubble { max-width: 55% !important; font-size: 18px !important; padding: 14px 18px !important; }
   #chat-header { height: 80px !important; padding: 0 32px !important; }
   #chat-header img, #chat-header .avatar { width: 60px !important; height: 60px !important; }
-  #input-bar { padding: 16px 32px !important; }
+  #input-bar { padding: 16px 32px calc(16px + env(safe-area-inset-bottom)) !important; }
   .chat-list-item { padding: 16px 20px !important; }
   .chat-list-item .name { font-size: 17px !important; }
   .chat-list-item .last-msg { font-size: 15px !important; }

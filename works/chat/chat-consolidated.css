@@ -240,6 +240,8 @@
 .busy-banner button { margin-left: auto; font-size: 11px; padding: 4px 10px;
   border: 1px solid #856404; border-radius: 6px; background: none;
   color: #856404; cursor: pointer; font-family: inherit; font-weight: 600; }
+html.dark .busy-banner { background: #3d3200; border-bottom-color: #5a4a00; color: #ffd54f; }
+html.dark .busy-banner button { border-color: #ffd54f; color: #ffd54f; }
 
 .feat-modal-overlay {
   position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 9000;
@@ -429,8 +431,8 @@
 }
 @media(max-width:380px){
   .cf-req-actions .btn{font-size:10px;padding:0 6px;min-height:30px}
-  .cf-chip{font-size:9px;padding:3px 7px}
-  .cf-pin-sender,.cf-pin-text{font-size:10px}
+  .cf-chip{font-size:11px;padding:3px 7px}
+  .cf-pin-sender,.cf-pin-text{font-size:11px}
 }
 
 @media(display-mode:standalone){
