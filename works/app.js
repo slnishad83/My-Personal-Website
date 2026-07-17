@@ -841,44 +841,6 @@ function subscribeToMessages(chatId) {
   App.messagesUnsubscribe = App.db.collection('messages')
     .where(queryField, '==', chatId)
     .onSnapshot(async (snapshot) => {
-      const chatObj = App.chats.find(c => c.id === chatId);
-      if (snapshot.empty && chatObj) {
-        if (chatObj.type === 'personal' && chatObj.uid === 'c1') {
-          const myUid = App.auth.currentUser.uid;
-          const myName = App.currentUser?.displayName || App.currentUser?.email?.split('@')[0] || 'You';
-          const now = Date.now();
-          const mockMsgs = [
-            { senderId: 'c1', senderName: 'Halid', text: 'Hey! How is the design system update looking?', time: now - 20*60000 },
-            { senderId: myUid, senderName: myName, text: 'Sleek! Fully customized around the Midnight palette with Neon Pink highlights.', time: now - 18*60000 },
-            { senderId: 'c1', senderName: 'Halid', text: 'Awesome! Is the right sidebar info panel working too?', time: now - 15*60000 },
-            { senderId: myUid, senderName: myName, text: 'Yes, detail panels adapt for groups and personal chats dynamically.', time: now - 12*60000 },
-            { senderId: 'c1', senderName: 'Halid', text: 'Perfect, let\'s review quarterly reports before our standup.', time: now - 8*60000 }
-          ];
-          const batch = App.db.batch();
-          mockMsgs.forEach((m, idx) => {
-            const docRef = App.db.collection('messages').doc(`mock_halid_${chatId}_${idx}`);
-            batch.set(docRef, {
-              directId: chatId,
-              senderId: m.senderId,
-              senderName: m.senderName,
-              text: m.text,
-              time: m.time,
-              timestamp: new Date(m.time),
-              status: 'read',
-              read: true,
-              type: 'text',
-              participants: [myUid, 'c1']
-            });
-          });
-          const chatRef = App.db.collection('directChats').doc(chatId);
-          batch.set(chatRef, {
-            lastMessage: 'Perfect, let\'s review quarterly reports before our standup.',
-            lastMessageTime: new Date(now - 8*60000)
-          }, { merge: true });
-          batch.commit().catch(e => console.warn('Failed to seed Halid messages:', e));
-          return;
-        }
-      }
       const myGen = ++_msgsGen;
       const msgs = [];
       const decryptPromises = [];
@@ -972,38 +934,7 @@ function subscribeToMessages(chatId) {
               decryptMessageText(data.text, data.iv, peerUid).then(decryptedText => {
                 if (decryptedText !== null) {
                   msgObj.text = decryptedText;
-    } else if (msg.type === 'poll' && msg.poll) {
-      const poll = msg.poll;
-      const totalVotes = poll.options.reduce((sum, o) => sum + (o.voters?.length || 0), 0);
-      const myUid = App.auth?.currentUser?.uid;
-      contentHTML = `
-        <div class="max-w-[340px] rounded-xl overflow-hidden ${isMe ? 'bg-primary/10 border border-primary/20' : 'bg-surface-container border border-outline-variant/20'}">
-          <div class="px-4 py-3 border-b border-outline-variant/20">
-            <div class="text-sm font-semibold mb-1">\ud83d\udcca ${escHtml(poll.question)}</div>
-            <div class="text-[10px] text-on-surface-variant">${totalVotes} vote${totalVotes !== 1 ? 's' : ''} \u00b7 ${poll.allowMultiple ? 'Multiple choice' : 'Single choice'}</div>
-          </div>
-          <div class="p-3 space-y-2">
-            ${poll.options.map((opt, i) => {
-              const count = opt.voters?.length || 0;
-              const pct = totalVotes > 0 ? Math.round(count / totalVotes * 100) : 0;
-              const isSelected = opt.voters?.includes(myUid);
-              return `
-                <div class="relative cursor-pointer rounded-lg overflow-hidden border ${isSelected ? 'border-primary/50' : 'border-outline-variant/30'} hover:border-primary/30 transition-all" onclick="votePoll('${msg.id}', ${i})">
-                  <div class="absolute inset-0 bg-primary/15 transition-all" style="width:${pct}%"></div>
-                  <div class="relative flex items-center justify-between px-3 py-2">
-                    <div class="flex items-center gap-2">
-                      ${isSelected ? '<span class="material-symbols-outlined text-primary text-sm">check_circle</span>' : '<span class="material-symbols-outlined text-on-surface-variant/40 text-sm">radio_button_unchecked</span>'}
-                      <span class="text-sm">${escHtml(opt.text)}</span>
-                    </div>
-                    <span class="text-xs font-medium text-on-surface-variant">${count > 0 ? pct + '%' : ''}</span>
-                  </div>
-                </div>
-              `;
-            }).join('')}
-          </div>
-        </div>
-      `;
-    } else {
+                } else {
                   msgObj.text = "🔒 Encrypted message";
                 }
               })
@@ -1020,6 +951,33 @@ function subscribeToMessages(chatId) {
       
       if (_msgsGen !== myGen) return; // stale snapshot, discard
       msgs.sort((a, b) => a.time - b.time);
+
+      if (chat.type === 'personal' && chat.uid === 'c1') {
+        const myUid = App.auth?.currentUser?.uid || 'me';
+        const myName = App.currentUser?.displayName || App.currentUser?.email?.split('@')[0] || 'You';
+        const now = Date.now() - 24*3600*1000;
+        const mockMsgs = [
+          { id: 'mock_1', from: 'c1', senderId: 'c1', senderName: 'Halid', text: 'Hey! How is the design system update looking?', time: now, status: 'read', type: 'text' },
+          { id: 'mock_2', from: 'me', senderId: myUid, senderName: myName, text: 'Sleek! Fully customized around the Midnight palette with Neon Pink highlights.', time: now + 2*60000, status: 'read', type: 'text' },
+          { id: 'mock_3', from: 'c1', senderId: 'c1', senderName: 'Halid', text: 'Awesome! Is the right sidebar info panel working too?', time: now + 5*60000, status: 'read', type: 'text' },
+          { id: 'mock_4', from: 'me', senderId: myUid, senderName: myName, text: 'Yes, detail panels adapt for groups and personal chats dynamically.', time: now + 8*60000, status: 'read', type: 'text' },
+          { id: 'mock_5', from: 'c1', senderId: 'c1', senderName: 'Halid', text: 'Perfect, let\'s review quarterly reports before our standup.', time: now + 12*60000, status: 'read', type: 'text' }
+        ];
+        if (!msgs.some(m => m.id.startsWith('mock_'))) {
+          msgs.unshift(...mockMsgs);
+        }
+      }
+
+      if (chat.type === 'group' && msgs.length === 0) {
+        const myUid = App.auth?.currentUser?.uid || 'me';
+        const now = Date.now() - 3600*1000;
+        const groupMockMsgs = [
+          { id: 'gmock_1', from: 'c3', senderId: 'c3', senderName: 'Priya Nair', text: 'Hey team! Welcome to the new We The Friends group chat.', time: now, status: 'read', type: 'text' },
+          { id: 'gmock_2', from: 'c1', senderId: 'c1', senderName: 'Halid', text: 'Thanks Priya! Glad to be here.', time: now + 15*60000, status: 'read', type: 'text' },
+          { id: 'gmock_3', from: 'me', senderId: myUid, senderName: App.currentUser?.displayName || 'You', text: 'Hey guys! Looking forward to chatting here.', time: now + 30*60000, status: 'read', type: 'text' }
+        ];
+        msgs.push(...groupMockMsgs);
+      }
 
       const prevCount = (App.messages[chatId] || []).length;
       App.messages[chatId] = msgs;

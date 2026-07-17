@@ -109,6 +109,38 @@
     }
   };
 
+  // ─── EDIT TRACK ───
+  window.editMusicTrack = async function(trackId) {
+    if (!App.db || !App.auth?.currentUser) return;
+    const track = App.musicLibrary.find(t => t.id === trackId);
+    if (!track) return;
+    if (track.addedBy !== App.auth.currentUser.uid) { showToast('Not your track', 'error'); return; }
+
+    const newTitle = prompt('Edit Title:', track.title);
+    if (newTitle === null) return;
+    if (!newTitle.trim()) { showToast('Title cannot be empty', 'error'); return; }
+
+    const newArtist = prompt('Edit Artist:', track.artist || '');
+    if (newArtist === null) return;
+
+    const newLang = prompt('Edit Language:', track.language || 'Other');
+    if (newLang === null) return;
+
+    try {
+      const updates = {
+        title: newTitle.trim(),
+        artist: newArtist.trim(),
+        language: newLang.trim()
+      };
+      await App.db.collection('musicLibrary').doc(trackId).update(updates);
+      Object.assign(track, updates);
+      showToast('Updated', 'success');
+      switchMusicLibTab('my');
+    } catch(e) {
+      showToast('Update failed', 'error');
+    }
+  };
+
   // ─── TOGGLE FAVORITE ───
   window.toggleMusicFavorite = async function(trackId) {
     const track = App.musicLibrary.find(t => t.id === trackId);
@@ -252,12 +284,17 @@
       <div style="padding:16px 16px 0">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
           <h2 style="margin:0;font-size:18px;font-weight:700">🎵 Music Library</h2>
-          <button onclick="document.getElementById('music-library-overlay')?.remove()" style="background:none;border:none;color:var(--on-surface-variant);cursor:pointer;font-size:20px">&times;</button>
+          <div style="display:flex;align-items:center;gap:10px">
+            <button onclick="openPlaylists(App.currentChat?.id)" style="background:rgba(124,77,255,0.15);border:none;border-radius:12px;padding:6px 12px;color:var(--primary);font-size:11px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:4px">
+              <span class="material-symbols-outlined" style="font-size:14px">playlist_play</span> Playlists
+            </button>
+            <button onclick="document.getElementById('music-library-overlay')?.remove()" style="background:none;border:none;color:var(--on-surface-variant);cursor:pointer;font-size:20px">&times;</button>
+          </div>
         </div>
         <div style="display:flex;gap:6px;overflow-x:auto;padding-bottom:8px" id="ml-tabs">
           <button class="ml-tab active" onclick="switchMusicLibTab('my')" style="flex-shrink:0;padding:6px 14px;border-radius:20px;border:none;font-size:12px;font-weight:600;cursor:pointer;background:var(--primary);color:var(--on-primary)">My Music</button>
           <button class="ml-tab" onclick="switchMusicLibTab('upload')" style="flex-shrink:0;padding:6px 14px;border-radius:20px;border:none;font-size:12px;font-weight:600;cursor:pointer;background:rgba(255,255,255,0.06);color:var(--on-surface-variant)">Upload</button>
-          <button class="ml-tab" onclick="switchMusicLibTab('discover')" style="flex-shrink:0;padding:6px 14px;border-radius:20px;border:none;font-size:12px;font-weight:600;cursor:pointer;background:rgba(255,255,255,0.06);color:var(--on-surface-variant)">Discover</button>
+          <button class="ml-tab" onclick="switchMusicLibTab('discover')" style="flex-shrink:0;padding:6px 14px;border-radius:20px;border:none;font-size:12px;font-weight:600;cursor:pointer;background:rgba(255,255,255,0.06);color:var(--on-surface-variant)">Search Online</button>
           <button class="ml-tab" onclick="switchMusicLibTab('languages')" style="flex-shrink:0;padding:6px 14px;border-radius:20px;border:none;font-size:12px;font-weight:600;cursor:pointer;background:rgba(255,255,255,0.06);color:var(--on-surface-variant)">Languages</button>
           <button class="ml-tab" onclick="switchMusicLibTab('youtube')" style="flex-shrink:0;padding:6px 14px;border-radius:20px;border:none;font-size:12px;font-weight:600;cursor:pointer;background:rgba(255,255,255,0.06);color:var(--on-surface-variant)">YouTube</button>
         </div>
@@ -348,7 +385,8 @@
       </div>
       <div style="display:flex;gap:4px">
         <button onclick="event.stopPropagation();toggleMusicFavorite('${t.id}');switchMusicLibTab('my')" style="background:none;border:none;cursor:pointer;padding:4px;font-size:16px">${t.favorite ? '❤️' : '🤍'}</button>
-        <button onclick="event.stopPropagation();deleteMusicTrack('${t.id}');switchMusicLibTab('my')" style="background:none;border:none;cursor:pointer;padding:4px;font-size:14px;opacity:0.5" title="Delete">🗑️</button>
+        ${t.addedBy === App.auth?.currentUser?.uid ? `<button onclick="event.stopPropagation();editMusicTrack('${t.id}')" style="background:none;border:none;cursor:pointer;padding:4px;font-size:14px;opacity:0.5" title="Edit">✏️</button>` : ''}
+        ${t.addedBy === App.auth?.currentUser?.uid ? `<button onclick="event.stopPropagation();deleteMusicTrack('${t.id}');switchMusicLibTab('my')" style="background:none;border:none;cursor:pointer;padding:4px;font-size:14px;opacity:0.5" title="Delete">🗑️</button>` : ''}
       </div>
     </div>`;
   }
@@ -439,7 +477,8 @@
     el.innerHTML = `
       <div style="margin-bottom:12px">
         <div style="display:flex;gap:8px;margin-bottom:12px">
-          <input type="search" id="jamendo-search" placeholder="Search free music (Jamendo)..." oninput="debounceJamendoSearch(this.value)" style="flex:1;padding:8px 12px;border-radius:10px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);color:var(--on-surface);font-size:13px;outline:none">
+          <input type="search" id="jamendo-search" placeholder="Search online songs..." onkeydown="if(event.key==='Enter')doJamendoSearch()" style="flex:1;padding:8px 12px;border-radius:10px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);color:var(--on-surface);font-size:13px;outline:none">
+          <button onclick="doJamendoSearch()" style="padding:8px 16px;border-radius:10px;border:none;background:var(--primary);color:var(--on-primary);font-size:12px;font-weight:700;cursor:pointer">Search</button>
         </div>
         <p style="font-size:10px;color:var(--on-surface-variant);margin:0 0 8px">Free Creative Commons music via Jamendo</p>
       </div>
@@ -447,6 +486,11 @@
         <p style="font-size:12px">Search for songs or browse by language</p>
       </div>`;
   }
+
+  window.doJamendoSearch = function() {
+    const q = document.getElementById('jamendo-search')?.value;
+    if (q) window.debounceJamendoSearch(q);
+  };
 
   let _jamendoTimeout;
   window.debounceJamendoSearch = function(q) {
