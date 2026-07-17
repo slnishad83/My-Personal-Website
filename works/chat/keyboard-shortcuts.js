@@ -55,6 +55,14 @@ const KeyboardShortcuts = {
         const searchInput = document.getElementById('sidebar-search');
         if (searchInput && searchInput.value) { clearSidebarSearch(); e.preventDefault(); return; }
       }
+      // Close keyboard help panel
+      const kbPanel = document.getElementById('keyboard-help-panel');
+      if (kbPanel && kbPanel.style.display !== 'none') {
+        kbPanel.classList.add('hidden');
+        kbPanel.style.display = 'none';
+        e.preventDefault();
+        return;
+      }
       // Close context menu
       const ctxMenu = document.getElementById('desktop-context-menu');
       if (ctxMenu && ctxMenu.classList.contains('visible')) {
@@ -693,6 +701,16 @@ const KeyboardShortcuts = {
         if (panel) {
           panel.classList.add('hidden');
           panel.style.display = 'none';
+        }
+      });
+    }
+    // Close on backdrop click
+    var panelEl = document.getElementById('keyboard-help-panel');
+    if (panelEl) {
+      panelEl.addEventListener('click', function (ev) {
+        if (ev.target === panelEl) {
+          panelEl.classList.add('hidden');
+          panelEl.style.display = 'none';
         }
       });
     }

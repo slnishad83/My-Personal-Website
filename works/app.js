@@ -1119,6 +1119,35 @@ function bootApp() {
   const app = document.getElementById('app');
   if (app) app.classList.remove('hidden');
   
+  // H21: Force-close any overlays that should not auto-show after boot
+  const bootOverlays = ['language-overlay','keyboard-help-panel','nsl-utilities-overlay','profile-overlay','prePermissionModal','permissionsModal','reEnablePermissionModal','revokePermissionsGuideModal'];
+  bootOverlays.forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    if (id === 'keyboard-help-panel') {
+      el.classList.add('hidden');
+      el.style.display = 'none';
+    } else {
+      hide(id);
+      el.style.display = 'none';
+    }
+  });
+
+  // H21: Run overlay guard again after 1s to catch any async auto-shows
+  setTimeout(() => {
+    bootOverlays.forEach(id => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      if (id === 'keyboard-help-panel') {
+        el.classList.add('hidden');
+        el.style.display = 'none';
+      } else if (el.style.display === 'flex' || (el.style.display !== 'none' && !el.classList.contains('hidden'))) {
+        hide(id);
+        el.style.display = 'none';
+      }
+    });
+  }, 1000);
+
   updateProfileUI();
   renderChatList();
   showWelcome();
@@ -5818,7 +5847,16 @@ function closeModal(id) { hide(id); }
 function showOverlay(id) { show(id); }
 function closeOverlay(id) { hide(id); }
 function closeTopModal() {
-  ['profile-overlay','new-chat-overlay','confirm-overlay','group-info-overlay','msg-info-overlay','media-viewer'].forEach(hide);
+  ['profile-overlay','new-chat-overlay','confirm-overlay','group-info-overlay','msg-info-overlay','media-viewer','keyboard-help-panel','language-overlay','nsl-utilities-overlay'].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    if (id === 'keyboard-help-panel') {
+      el.classList.add('hidden');
+      el.style.display = 'none';
+    } else {
+      hide(id);
+    }
+  });
 }
 function closeOnBackdrop(e, id) { if (e.target.id === id) hide(id); }
 
