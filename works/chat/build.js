@@ -6,7 +6,7 @@
  * - No ES module conversion needed - preserves global scope
  */
 
-const { readFileSync, writeFileSync, mkdirSync, readdirSync, copyFileSync, statSync } = require('fs');
+const { readFileSync, writeFileSync, mkdirSync, readdirSync, copyFileSync, statSync, rmSync, existsSync } = require('fs');
 const { join, resolve, dirname } = require('path');
 const { createHash } = require('crypto');
 
@@ -156,6 +156,16 @@ function readParentFile(path) {
 
 function hash(content) {
   return createHash('md5').update(content).digest('hex').slice(0, 8);
+}
+
+// ── Step 0: Clean DIST ──
+if (existsSync(DIST)) {
+  console.log('[build] Cleaning dist directory...');
+  try {
+    rmSync(DIST, { recursive: true, force: true });
+  } catch (e) {
+    console.warn('[warn] Failed to clean dist:', e.message);
+  }
 }
 
 // ── Step 1: Bundle JS ──
