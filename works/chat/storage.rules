@@ -18,10 +18,33 @@ service firebase.storage {
                    && request.resource.size < 5 * 1024 * 1024;
     }
 
-    // Chat attachments
+    // Avatars (legacy path)
+    match /avatars/{userId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && request.auth.uid == userId
+                   && request.resource.size < 5 * 1024 * 1024
+                   && request.resource.contentType.matches('image/.*');
+    }
+
+    // Chat attachments (legacy path)
     match /chatAttachments/{chatId}/{fileName} {
       allow read: if request.auth != null;
       allow write: if request.auth != null && request.resource.size < 50 * 1024 * 1024;
+    }
+
+    // Chat uploads (current path — used by fixes.js and app-extras.js)
+    match /chat_uploads/{uid}/{fileName} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && request.auth.uid == uid
+                   && request.resource.size < 50 * 1024 * 1024;
+    }
+
+    // Playlist covers (uploaded by playlist owners/collaborators)
+    match /playlist-covers/{fileName} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null
+                   && request.resource.size < 5 * 1024 * 1024
+                   && request.resource.contentType.matches('image/.*');
     }
 
     // Default deny

@@ -228,7 +228,7 @@ service cloud.firestore {
       allow read: if isAuth();
       allow create: if isAuth() && request.auth.uid == request.resource.data.addedBy;
       allow update: if isAuth();
-      allow delete: if false;
+      allow delete: if isAuth() && request.auth.uid == resource.data.addedBy;
     }
 
     // =============================================
@@ -238,7 +238,7 @@ service cloud.firestore {
       allow read: if isAuth();
       allow create: if isAuth() && request.auth.uid == request.resource.data.addedBy;
       allow update: if isAuth();
-      allow delete: if false;
+      allow delete: if isAuth() && request.auth.uid == resource.data.addedBy;
     }
 
     // =============================================
@@ -312,6 +312,43 @@ service cloud.firestore {
       allow create: if isAuth() && request.auth.uid == request.resource.data.hostUid;
       allow update: if isAuth();
       allow delete: if isAuth();
+    }
+
+    // =============================================
+    // WHITEBOARDS (collaborative drawing sessions)
+    // =============================================
+    match /whiteboards/{sessionId} {
+      allow read: if isAuth();
+      allow create: if isAuth();
+      allow update: if isAuth();
+      allow delete: if isAuth() && request.auth.uid == resource.data.createdBy;
+
+      match /strokes/{strokeId} {
+        allow read: if isAuth();
+        allow create: if isAuth();
+        allow update: if isAuth();
+        allow delete: if isAuth();
+      }
+    }
+
+    // =============================================
+    // REMINDERS (date-based reminders from date-reminders.js)
+    // =============================================
+    match /reminders/{reminderId} {
+      allow read: if isAuth() && request.auth.uid == resource.data.userId;
+      allow create: if isAuth() && request.auth.uid == request.resource.data.userId;
+      allow update: if isAuth() && request.auth.uid == resource.data.userId;
+      allow delete: if isAuth() && request.auth.uid == resource.data.userId;
+    }
+
+    // =============================================
+    // SCHEDULED MESSAGES (top-level — features-addon.js)
+    // =============================================
+    match /scheduledMessages/{msgId} {
+      allow read: if isAuth() && request.auth.uid == resource.data.userId;
+      allow create: if isAuth() && request.auth.uid == request.resource.data.userId;
+      allow update: if isAuth() && request.auth.uid == resource.data.userId;
+      allow delete: if isAuth() && request.auth.uid == resource.data.userId;
     }
   }
 }

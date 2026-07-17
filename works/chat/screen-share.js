@@ -2,27 +2,6 @@
 (function() {
   'use strict';
 
-  const _origToggleScreenShare = window.toggleScreenShare;
-
-  if (typeof _origToggleScreenShare === 'function') {
-    window.toggleScreenShare = async function() {
-      if (_screenShareStream) {
-        _notifyScreenShareEnd();
-        return _origToggleScreenShare();
-      }
-
-      try {
-        await _origToggleScreenShare();
-        if (_screenShareStream) {
-          _notifyScreenShareStart();
-          _handleScreenShareEnd();
-        }
-      } catch(e) {
-        console.warn('Screen share error:', e);
-      }
-    };
-  }
-
   function _notifyScreenShareStart() {
     if (!App.db || !App.currentChat || !App.auth?.currentUser) return;
     const chatId = App.currentChat.id;
@@ -88,9 +67,36 @@
     btn.setAttribute('aria-label', 'Share screen');
   }
 
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', _enhanceScreenShareButton);
-  } else {
+  function _patchToggleScreenShare() {
+    const orig = window.toggleScreenShare;
+    if (typeof orig !== 'function') return;
+
+    window.toggleScreenShare = async function() {
+      if (_screenShareStream) {
+        _notifyScreenShareEnd();
+        return orig();
+      }
+
+      try {
+        await orig();
+        if (_screenShareStream) {
+          _notifyScreenShareStart();
+          _handleScreenShareEnd();
+        }
+      } catch(e) {
+        console.warn('Screen share error:', e);
+      }
+    };
+  }
+
+  function init() {
     _enhanceScreenShareButton();
+    _patchToggleScreenShare();
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
   }
 })();

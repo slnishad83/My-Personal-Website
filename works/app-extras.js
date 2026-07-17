@@ -549,6 +549,7 @@ function showMsgContextMenu(event, msgId) {
   const canEdit = isMyMsg && (Date.now() - (msg.time || 0)) < 15 * 60 * 1000;
   const actions = [
     { icon: '↩️', label: 'Reply',   fn: `replyToMsg('${msgId}')` },
+    { icon: '🧵', label: 'Thread',  fn: `_openThreadForMsg('${msgId}')` },
     { icon: '✏️', label: 'Edit',    fn: `editMessage('${msgId}')`,  show: canEdit },
     { icon: '↪️', label: 'Forward', fn: `openForwardModal('${msgId}')` },
     { icon: '📋', label: 'Copy',    fn: `copyMsgText('${msgId}')` },
