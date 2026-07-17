@@ -135,7 +135,7 @@
     showToast('Mood cleared', 'info');
   };
 
-  setInterval(() => {
+  const _expiryTimer = setInterval(() => {
     if (_isMoodExpired() && _getMood()) {
       _setMood('');
       showToast('Your mood has expired', 'info');
@@ -143,11 +143,13 @@
   }, 60000);
 
   const origRenderChatList = window.renderChatList;
+  let _patchedRenderChatList = false;
   if (typeof origRenderChatList === 'function') {
     window.renderChatList = function() {
       origRenderChatList();
       _injectMoodInChatList();
     };
+    _patchedRenderChatList = true;
   }
 
   function _injectMoodInChatList() {
@@ -180,11 +182,19 @@
     else menu.appendChild(btn);
   };
 
-  setInterval(_updateMoodUI, 5000);
+  const _uiTimer = setInterval(_updateMoodUI, 5000);
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', _updateMoodUI);
   } else {
     setTimeout(_updateMoodUI, 1000);
   }
+
+  window._moodStatusCleanup = function() {
+    clearInterval(_expiryTimer);
+    clearInterval(_uiTimer);
+    if (_patchedRenderChatList && origRenderChatList) {
+      window.renderChatList = origRenderChatList;
+    }
+  };
 })();

@@ -4,6 +4,7 @@
 
   function _initStreaks() {
     const style = document.createElement('style');
+    style.id = 'streak-styles';
     style.textContent = `
       .streak-badge {
         display: inline-flex; align-items: center; gap: 2px;
@@ -24,8 +25,11 @@
         origRenderChatList();
         setTimeout(_renderStreaksInList, 100);
       };
+      _streakOrigRenderChatList = origRenderChatList;
     }
   }
+
+  let _streakOrigRenderChatList = null;
 
   function _calculateStreak(chatId) {
     if (!window.App || !window.App.messages) return { count: 0, maxStreak: 0 };
@@ -161,4 +165,11 @@
   } else {
     _initStreaks();
   }
+
+  window._streakCleanup = function() {
+    if (_streakOrigRenderChatList) {
+      window.renderChatList = _streakOrigRenderChatList;
+    }
+    document.getElementById('streak-styles')?.remove();
+  };
 })();

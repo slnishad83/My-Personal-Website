@@ -3354,6 +3354,18 @@ function cleanupTypingSubscription() {
   clearTimeout(_typingTimeout);
 }
 
+/* ─── GLOBAL MODULE CLEANUP (logout / beforeunload) ─────────── */
+function _moduleCleanupAll() {
+  const fns = [
+    window._moodStatusCleanup,
+    window._dateRemindersCleanup,
+    window._ghostModeCleanup,
+    window._streakCleanup,
+    window._playlistSyncCleanup,
+  ];
+  fns.forEach(fn => { if (typeof fn === 'function') { try { fn(); } catch(_){} } });
+}
+
 /* ══════════════════════════════════════════════════
    12. INPUT ACTIONS
    ══════════════════════════════════════════════════ */
@@ -6341,6 +6353,7 @@ function setupOnlineStatus() {
   if (!navigator.onLine) show('offline-banner');
   window.addEventListener('beforeunload', () => {
     if (typeof stopLiveLocation === 'function') stopLiveLocation();
+    if (typeof _moduleCleanupAll === 'function') _moduleCleanupAll();
     updatePresence('offline');
   });
   document.addEventListener('visibilitychange', () => {
@@ -7152,6 +7165,7 @@ function saveLanguage() {
 }
 
 function signOut() {
+  if (typeof _moduleCleanupAll === 'function') _moduleCleanupAll();
   if (typeof window.resetAppState === 'function') window.resetAppState();
   if (App.usersUnsubscribe)        App.usersUnsubscribe();
   if (App.chatsUnsubscribe)        App.chatsUnsubscribe();

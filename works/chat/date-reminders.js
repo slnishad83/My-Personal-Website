@@ -236,11 +236,15 @@
     openDateReminders();
   };
 
-  setInterval(_checkReminders, 3600000);
+  const _reminderTimer = setInterval(_checkReminders, 3600000);
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', _checkReminders);
   } else {
     setTimeout(_checkReminders, 5000);
   }
+
+  window._dateRemindersCleanup = function() {
+    clearInterval(_reminderTimer);
+  };
 })();

@@ -403,4 +403,13 @@
       }
     };
   }
+
+  window._playlistSyncCleanup = function() {
+    if (App._listeningRoomUnsub) { App._listeningRoomUnsub(); App._listeningRoomUnsub = null; }
+    App._listeningRoom = null;
+    if (origAddTrack) window.addTrackToPlaylist = origAddTrack;
+    if (origPlay) MusicPlayer.play = origPlay;
+    if (origTogglePlay) MusicPlayer.togglePlay = origTogglePlay;
+    if (origNext) MusicPlayer.next = origNext;
+  };
 })();

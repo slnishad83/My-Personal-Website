@@ -276,4 +276,16 @@
       origShowMsgContextMenu(e, msgId);
     };
   }
+
+  window._ghostModeCleanup = function() {
+    if (_ghostOriginalSetOnline && typeof Presence !== 'undefined') {
+      Presence.setOnline = _ghostOriginalSetOnline;
+    }
+    if (_origSetOffline && typeof Presence !== 'undefined') {
+      Presence.setOffline = _origSetOffline;
+    }
+    if (origShowMsgContextMenu) {
+      window.showMsgContextMenu = origShowMsgContextMenu;
+    }
+  };
 })();
