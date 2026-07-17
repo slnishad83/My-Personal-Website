@@ -841,6 +841,44 @@ function subscribeToMessages(chatId) {
   App.messagesUnsubscribe = App.db.collection('messages')
     .where(queryField, '==', chatId)
     .onSnapshot(async (snapshot) => {
+      const chatObj = App.chats.find(c => c.id === chatId);
+      if (snapshot.empty && chatObj) {
+        if (chatObj.type === 'personal' && chatObj.uid === 'c1') {
+          const myUid = App.auth.currentUser.uid;
+          const myName = App.currentUser?.displayName || App.currentUser?.email?.split('@')[0] || 'You';
+          const now = Date.now();
+          const mockMsgs = [
+            { senderId: 'c1', senderName: 'Halid', text: 'Hey! How is the design system update looking?', time: now - 20*60000 },
+            { senderId: myUid, senderName: myName, text: 'Sleek! Fully customized around the Midnight palette with Neon Pink highlights.', time: now - 18*60000 },
+            { senderId: 'c1', senderName: 'Halid', text: 'Awesome! Is the right sidebar info panel working too?', time: now - 15*60000 },
+            { senderId: myUid, senderName: myName, text: 'Yes, detail panels adapt for groups and personal chats dynamically.', time: now - 12*60000 },
+            { senderId: 'c1', senderName: 'Halid', text: 'Perfect, let\'s review quarterly reports before our standup.', time: now - 8*60000 }
+          ];
+          const batch = App.db.batch();
+          mockMsgs.forEach((m, idx) => {
+            const docRef = App.db.collection('messages').doc(`mock_halid_${chatId}_${idx}`);
+            batch.set(docRef, {
+              directId: chatId,
+              senderId: m.senderId,
+              senderName: m.senderName,
+              text: m.text,
+              time: m.time,
+              timestamp: new Date(m.time),
+              status: 'read',
+              read: true,
+              type: 'text',
+              participants: [myUid, 'c1']
+            });
+          });
+          const chatRef = App.db.collection('directChats').doc(chatId);
+          batch.set(chatRef, {
+            lastMessage: 'Perfect, let\'s review quarterly reports before our standup.',
+            lastMessageTime: new Date(now - 8*60000)
+          }, { merge: true });
+          batch.commit().catch(e => console.warn('Failed to seed Halid messages:', e));
+          return;
+        }
+      }
       const myGen = ++_msgsGen;
       const msgs = [];
       const decryptPromises = [];
