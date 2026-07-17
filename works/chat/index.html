@@ -354,10 +354,15 @@
           <span class="material-symbols-outlined">qr_code_scanner</span>
           <span class="hidden xl:block font-body-md text-body-md">Scan QR</span>
         </button>
-        <!-- Theme Switcher Sidebar Row -->
+        <!-- Calculator Sidebar Row -->
         <button class="w-full flex items-center gap-4 text-on-surface-variant hover:text-on-surface transition-colors duration-200 px-4 py-2 cursor-pointer" onclick="toggleCalculator()" aria-label="Calculator">
           <span class="material-symbols-outlined">calculate</span>
           <span class="hidden xl:block font-body-md text-body-md">Calculator</span>
+        </button>
+        <!-- Music Player Sidebar Row -->
+        <button class="w-full flex items-center gap-4 text-on-surface-variant hover:text-on-surface transition-colors duration-200 px-4 py-2 cursor-pointer" onclick="openMusicLibrary()" aria-label="Music Player">
+          <span class="material-symbols-outlined">queue_music</span>
+          <span class="hidden xl:block font-body-md text-body-md">Music Player</span>
         </button>
         <button class="w-full flex items-center gap-4 text-on-surface-variant hover:text-on-surface transition-colors duration-200 px-4 py-2 cursor-pointer" onclick="cycleTheme()" aria-label="Toggle theme">
           <span class="material-symbols-outlined" id="theme-icon-sidebar">light_mode</span>
@@ -1274,6 +1279,18 @@
           <div class="text-left flex-1">
             <div class="text-sm font-semibold text-on-surface">Shared Album</div>
             <div class="text-xs text-on-surface-variant mt-0.5">View and upload group media/images.</div>
+          </div>
+          <span class="material-symbols-outlined text-on-surface-variant text-base">chevron_right</span>
+        </div>
+        
+        <!-- Music Player -->
+        <div class="flex items-center gap-4 p-3 rounded-xl hover:bg-surface-container-highest cursor-pointer active:scale-98 transition-all" onclick="closeOverlay('nsl-utilities-overlay');openMusicLibrary()" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click();}">
+          <div class="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary flex-shrink-0">
+            <span class="material-symbols-outlined text-[24px]">queue_music</span>
+          </div>
+          <div class="text-left flex-1">
+            <div class="text-sm font-semibold text-on-surface">Music Player</div>
+            <div class="text-xs text-on-surface-variant mt-0.5">Upload, discover and play music.</div>
           </div>
           <span class="material-symbols-outlined text-on-surface-variant text-base">chevron_right</span>
         </div>

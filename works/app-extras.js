@@ -780,7 +780,7 @@ function openChatMenu(btn) {
     { icon: '🔍', label: 'Search in chat',     fn: `openChatSearch()` },
     { icon: '📌', label: chat.pinned ? 'Unpin' : 'Pin',   fn: `togglePin('${chat.id}')` },
     { icon: '🔔', label: chat.muted ? 'Unmute' : 'Mute',  fn: `toggleChatMute('${chat.id}')` },
-    { icon: '📦', label: 'Export Chat',          fn: `exportChatAsZip('${chat.id}')` },
+    { icon: '📦', label: 'Export Chat',          fn: typeof window.openChatExport === 'function' ? 'openChatExport()' : `exportChatAsZip('${chat.id}')` },
     { icon: '🖼️', label: 'Media & Attachments', fn: `openMediaGallery()` },
     { icon: '🗑️', label: 'Clear History',        fn: `confirmClearChat('${chat.id}')`, danger: true },
   ];
@@ -2850,7 +2850,7 @@ function _renderGalleryTab(tab) {
   }
 }
 
-function openMediaGallery(initialTab) {
+window.openMediaGallery = function openMediaGallery(initialTab) {
   initialTab = initialTab || 'photos';
   let overlay = document.getElementById('_media-gallery');
   
@@ -2862,7 +2862,7 @@ function openMediaGallery(initialTab) {
   
   overlay = document.createElement('div');
   overlay.id = '_media-gallery';
-  overlay.style.cssText = 'position:fixed;inset:0;z-index:9997;background:rgba(0,0,0,0.9);backdrop-filter:blur(12px);display:flex;flex-direction:column;';
+  overlay.style.cssText = 'position:fixed;inset:0;z-index:90;background:rgba(0,0,0,0.9);backdrop-filter:blur(12px);display:flex;flex-direction:column;';
   
   // Header
   const header = document.createElement('div');
