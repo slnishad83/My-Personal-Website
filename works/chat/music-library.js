@@ -346,10 +346,13 @@
     let html = `
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
         <input type="search" placeholder="Search my music..." oninput="filterMyMusic(this.value)" style="flex:1;padding:8px 12px;border-radius:10px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);color:var(--on-surface);font-size:13px;outline:none">
-        <select id="ml-lang-filter" onchange="filterMyMusicByLang(this.value)" style="padding:8px 12px;border-radius:10px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);color:var(--on-surface);font-size:12px">
+        <select id="ml-lang-filter" onchange="filterMyMusicByLang(this.value)" style="padding:8px 12px;border-radius:10px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);color:var(--on-surface);font-size:12px;margin-right:4px;">
           <option value="">All Languages</option>
           ${LANGUAGES.map(l => `<option value="${l}">${l}</option>`).join('')}
         </select>
+        <button onclick="switchMusicLibTab('upload')" style="padding:8px 14px;border-radius:10px;border:none;background:var(--primary);color:var(--on-primary);font-size:12px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:4px;white-space:nowrap;">
+          <span class="material-symbols-outlined" style="font-size:16px;">add</span> Add
+        </button>
       </div>
       <div id="my-music-list">`;
     tracks.forEach((t, i) => {

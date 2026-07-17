@@ -1145,6 +1145,7 @@ function bootApp() {
   }, 1000);
 
   updateProfileUI();
+  if (typeof renderWaFilterChips === 'function') renderWaFilterChips();
   renderChatList();
   showWelcome();
 }
@@ -1474,8 +1475,14 @@ function renderChatList(filter = '') {
     chipsContainer.classList.toggle('hidden', tab !== 'chats');
   }
 
+  const waFilter = App.activeWaFilter || 'all';
   let items = App.chats.filter(c => {
-    if (App._archivedChatIds && App._archivedChatIds.has(c.id)) return false;
+    const isArchived = App._archivedChatIds && App._archivedChatIds.has(c.id);
+    if (tab === 'chats' && waFilter === 'archived') {
+      return isArchived;
+    }
+    if (isArchived) return false;
+    
     if (tab === 'chats')  return true; // Show all (personal, groups, saved_me)
     if (tab === 'groups') return c.type === 'group';
     return true;
@@ -1488,13 +1495,19 @@ function renderChatList(filter = '') {
 
   // Apply WhatsApp Web filter chips
   if (tab === 'chats') {
-    const waFilter = App.activeWaFilter || 'all';
     if (waFilter === 'unread') {
       items = items.filter(c => c.unread > 0 || c.unreadReaction);
     } else if (waFilter === 'favourites') {
       items = items.filter(c => c.pinned);
     } else if (waFilter === 'groups') {
       items = items.filter(c => c.type === 'group');
+    } else if (waFilter === 'personal') {
+      items = items.filter(c => c.type === 'personal');
+    } else if (waFilter === 'muted') {
+      items = items.filter(c => App._mutedChats?.has(c.id));
+    } else if (waFilter.startsWith('custom_')) {
+      const keyword = waFilter.replace('custom_', '').toLowerCase();
+      items = items.filter(c => c.name.toLowerCase().includes(keyword));
     }
   }
 
@@ -7413,7 +7426,7 @@ window.toggleUnreadFilter = function() {
 };
 
 window.addNewFilterChip = function() {
-  showOverlay('nsl-utilities-overlay');
+  openManageFiltersDialog();
 };
 
 /* WhatsApp Reaction Notification Listeners */
@@ -7511,4 +7524,167 @@ window.triggerReactionNotification = function(chatId, msgId, msgData, reaction) 
   }
 
   renderChatList();
+};
+
+/* WhatsApp Dynamic Filter Chips & Management */
+window.renderWaFilterChips = function() {
+  const container = document.getElementById('wa-filter-chips');
+  if (!container) return;
+
+  let activeFilters;
+  try {
+    activeFilters = JSON.parse(localStorage.getItem('nsl_wa_filters')) || ['all', 'unread', 'favourites', 'groups'];
+  } catch(e) {
+    activeFilters = ['all', 'unread', 'favourites', 'groups'];
+  }
+
+  const labelMap = {
+    all: 'All',
+    unread: 'Unread',
+    favourites: 'Favourites',
+    groups: 'Groups',
+    personal: 'Personal',
+    archived: 'Archived',
+    muted: 'Muted'
+  };
+
+  let html = '';
+  activeFilters.forEach(f => {
+    const label = labelMap[f] || (f.startsWith('custom_') ? f.replace('custom_', '') : f);
+    const isActive = App.activeWaFilter === f;
+    html += `<button class="wa-chip ${isActive ? 'active' : ''}" onclick="setWaFilter('${f}')" data-filter="${f}">${escHtml(label)}</button>`;
+  });
+
+  html += `<button class="wa-chip-add" onclick="openManageFiltersDialog()" aria-label="Manage filters"><span class="material-symbols-outlined text-[16px]">add</span></button>`;
+  container.innerHTML = html;
+};
+
+window.openManageFiltersDialog = function() {
+  const overlay = document.createElement('div');
+  overlay.id = 'manage-filters-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.85);display:flex;align-items:center;justify-content:center;animation:fadeIn 0.2s ease;padding:20px;';
+
+  let activeFilters;
+  try {
+    activeFilters = JSON.parse(localStorage.getItem('nsl_wa_filters')) || ['all', 'unread', 'favourites', 'groups'];
+  } catch(e) {
+    activeFilters = ['all', 'unread', 'favourites', 'groups'];
+  }
+
+  const allAvailable = [
+    { id: 'all', label: 'All (Default)' },
+    { id: 'unread', label: 'Unread Messages' },
+    { id: 'favourites', label: 'Favourites (Pinned)' },
+    { id: 'groups', label: 'Groups Only' },
+    { id: 'personal', label: 'Personal Chats' },
+    { id: 'archived', label: 'Archived Chats' },
+    { id: 'muted', label: 'Muted Chats' }
+  ];
+
+  function renderList() {
+    let activeHTML = '';
+    activeFilters.forEach((f, index) => {
+      const isCustom = f.startsWith('custom_');
+      const label = isCustom ? `Keyword: "${f.replace('custom_', '')}"` : (allAvailable.find(a => a.id === f)?.label || f);
+      
+      activeHTML += `
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:10px;background:rgba(255,255,255,0.03);border-radius:10px;margin-bottom:6px;gap:8px;">
+          <div style="font-size:13px;font-weight:600;flex:1;color:var(--on-surface)">${escHtml(label)}</div>
+          <div style="display:flex;align-items:center;gap:4px">
+            <button onclick="moveFilterUp(${index})" style="background:none;border:none;color:var(--primary);cursor:pointer;padding:4px;font-size:12px;" title="Move Up">▲</button>
+            <button onclick="moveFilterDown(${index})" style="background:none;border:none;color:var(--primary);cursor:pointer;padding:4px;font-size:12px;" title="Move Down">▼</button>
+            <button onclick="removeFilter(${index})" style="background:none;border:none;color:#ff4444;cursor:pointer;padding:4px;font-size:14px;" title="Remove">🗑️</button>
+          </div>
+        </div>`;
+    });
+
+    const inactiveHTML = allAvailable
+      .filter(a => !activeFilters.includes(a.id))
+      .map(a => `<button onclick="addFilterId('${a.id}')" style="padding:6px 12px;border-radius:8px;border:none;background:rgba(124,77,255,0.15);color:var(--primary);font-size:11px;font-weight:600;cursor:pointer;margin-right:6px;margin-bottom:6px;">+ ${a.label}</button>`)
+      .join('');
+
+    return `
+      <div style="background:var(--surface-container,#1e1e2e);border-radius:16px;width:100%;max-width:400px;color:var(--on-surface);display:flex;flex-direction:column;max-height:85vh;box-shadow:0 12px 40px rgba(0,0,0,0.5);" onclick="event.stopPropagation()">
+        <div style="padding:16px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid rgba(255,255,255,0.08);">
+          <h3 style="margin:0;font-size:16px;font-weight:700">⚙️ Manage Chat Filters</h3>
+          <button onclick="document.getElementById('manage-filters-overlay')?.remove()" style="background:none;border:none;color:var(--on-surface-variant);cursor:pointer;font-size:20px">&times;</button>
+        </div>
+        <div style="padding:16px;overflow-y:auto;flex:1;">
+          <div style="font-size:11px;font-weight:700;color:var(--on-surface-variant);margin-bottom:8px;letter-spacing:0.05em;text-transform:uppercase;">Active Filters & Order</div>
+          <div id="active-filters-list">${activeHTML}</div>
+          
+          <div style="font-size:11px;font-weight:700;color:var(--on-surface-variant);margin-top:16px;margin-bottom:8px;letter-spacing:0.05em;text-transform:uppercase;">Add Preset Filters</div>
+          <div style="display:flex;flex-wrap:wrap;">${inactiveHTML}</div>
+
+          <div style="font-size:11px;font-weight:700;color:var(--on-surface-variant);margin-top:16px;margin-bottom:8px;letter-spacing:0.05em;text-transform:uppercase;">Create Custom Keyword Filter</div>
+          <div style="display:flex;gap:6px;">
+            <input type="text" id="custom-filter-input" placeholder="e.g. Work, Family" style="flex:1;padding:8px 12px;border-radius:10px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);color:var(--on-surface);font-size:13px;outline:none;">
+            <button onclick="addCustomFilter()" style="padding:8px 14px;border-radius:10px;border:none;background:var(--primary);color:var(--on-primary);font-size:12px;font-weight:700;cursor:pointer">Add</button>
+          </div>
+        </div>
+        <div style="padding:12px 16px;border-top:1px solid rgba(255,255,255,0.08);display:flex;justify-content:flex-end;gap:8px;">
+          <button onclick="resetFiltersToDefault()" style="padding:8px 12px;border-radius:10px;border:none;background:none;color:var(--on-surface-variant);font-size:12px;font-weight:600;cursor:pointer;">Reset Default</button>
+          <button onclick="document.getElementById('manage-filters-overlay')?.remove()" style="padding:8px 16px;border-radius:10px;border:none;background:var(--primary);color:var(--on-primary);font-size:12px;font-weight:700;cursor:pointer;">Done</button>
+        </div>
+      </div>
+    `;
+  }
+
+  overlay.innerHTML = renderList();
+  overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+  document.body.appendChild(overlay);
+
+  window.moveFilterUp = function(idx) {
+    if (idx === 0) return;
+    const temp = activeFilters[idx];
+    activeFilters[idx] = activeFilters[idx - 1];
+    activeFilters[idx - 1] = temp;
+    save();
+  };
+
+  window.moveFilterDown = function(idx) {
+    if (idx === activeFilters.length - 1) return;
+    const temp = activeFilters[idx];
+    activeFilters[idx] = activeFilters[idx + 1];
+    activeFilters[idx + 1] = temp;
+    save();
+  };
+
+  window.removeFilter = function(idx) {
+    activeFilters.splice(idx, 1);
+    save();
+  };
+
+  window.addFilterId = function(id) {
+    if (!activeFilters.includes(id)) {
+      activeFilters.push(id);
+      save();
+    }
+  };
+
+  window.addCustomFilter = function() {
+    const input = document.getElementById('custom-filter-input');
+    const val = input?.value?.trim();
+    if (!val) return;
+    const id = 'custom_' + val;
+    if (!activeFilters.includes(id)) {
+      activeFilters.push(id);
+      save();
+    }
+    if (input) input.value = '';
+  };
+
+  window.resetFiltersToDefault = function() {
+    activeFilters = ['all', 'unread', 'favourites', 'groups'];
+    save();
+  };
+
+  function save() {
+    localStorage.setItem('nsl_wa_filters', JSON.stringify(activeFilters));
+    overlay.innerHTML = renderList();
+    renderWaFilterChips();
+    if (!activeFilters.includes(App.activeWaFilter)) {
+      setWaFilter('all');
+    }
+  }
 };
