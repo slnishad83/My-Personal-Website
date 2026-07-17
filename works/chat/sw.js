@@ -264,6 +264,7 @@ const STATIC_ASSETS = [
   '../app.js'
 ];
 const HTML_PAGES = [
+  'offline.html',
   'index.html',
   'login.html',
   'reset.html',
@@ -353,7 +354,7 @@ self.addEventListener('fetch', event => {
         })
         .catch(() => caches.match(event.request).then(cached => {
           if (cached) return cached;
-          return caches.match('index.html');
+          return caches.match('offline.html').then(off => off || new Response('<!DOCTYPE html><html><body style="background:#0d0d0f;color:#e2e4e9;font-family:sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;text-align:center"><div><h1 style="font-size:20px;margin-bottom:8px">You\'re offline</h1><p style="color:#8d92a0">Check your connection and try again.</p></div></body></html>', { headers: { 'Content-Type': 'text/html' } }));
         }))
     );
     return;
