@@ -309,7 +309,7 @@ textarea {
 }
 
 /* ── Overlay animations ──────────────────────────────── */
-.overlay { transition: opacity 0.2s ease; }
+.overlay:not(.hidden) { transition: opacity 0.2s ease; }
 .animate-in { animation: fadeInZoom 0.2s ease-out; }
 @keyframes fadeInZoom {
   from { opacity: 0; transform: scale(0.95); }
@@ -1318,7 +1318,7 @@ nav#bottom-nav { z-index: var(--z-bottomnav) !important; }
 #chat-header { z-index: var(--z-chat-header) !important; }
 #input-bar { z-index: var(--z-input-bar) !important; }
 #scroll-to-bottom { z-index: var(--z-scroll-fab) !important; }
-.overlay { z-index: var(--z-overlay) !important; }
+.overlay:not(.hidden) { z-index: var(--z-overlay) !important; }
 #attach-menu { z-index: var(--z-attach-menu) !important; }
 #emoji-picker { z-index: var(--z-emoji-picker) !important; }
 #format-bar { z-index: var(--z-format-bar) !important; }
@@ -1999,13 +1999,16 @@ html:not(.dark) #desktop-context-menu,
 }
 
 /* ── All overlays: center properly on all screen sizes ────────── */
-.overlay {
+.overlay:not(.hidden) {
   position: fixed !important;
   inset: 0 !important;
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
   padding: 12px !important;
+}
+.overlay.hidden {
+  display: none !important;
 }
 .overlay > div {
   width: 100% !important;
@@ -2166,7 +2169,7 @@ html, body {
 }
 
 /* ── Prevent overlays from overflowing safe area ─────────────── */
-.overlay {
+.overlay:not(.hidden) {
   padding-top: max(12px, env(safe-area-inset-top)) !important;
   padding-bottom: max(12px, env(safe-area-inset-bottom)) !important;
   padding-left: max(12px, env(safe-area-inset-left)) !important;
