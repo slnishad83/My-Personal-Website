@@ -4,6 +4,10 @@
 
   const STORAGE_KEY = 'nsl_chat_locks';
   const PIN_HASH_KEY = 'nsl_lock_pin_hash';
+  const PIN_ATTEMPTS_KEY = 'nsl_lock_pin_attempts';
+  const PIN_LOCKOUT_KEY = 'nsl_lock_pin_lockout';
+  const MAX_ATTEMPTS = 5;
+  const LOCKOUT_MS = 30000;
 
   function _getLockedChats() {
     try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}'); } catch(_) { return {}; }
@@ -18,20 +22,45 @@
     } catch(_) {}
   }
 
-  function _hashPin(pin) {
-    let h = 0;
-    for (let i = 0; i < pin.length; i++) {
-      h = ((h << 5) - h + pin.charCodeAt(i)) | 0;
-    }
-    return 'h_' + Math.abs(h).toString(36);
+  async function _hashPin(pin) {
+    const enc = new TextEncoder();
+    const data = enc.encode('nsl_chat_lock_salt_v2:' + pin);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
   }
 
   function _getStoredPinHash() {
     return localStorage.getItem(PIN_HASH_KEY) || null;
   }
 
-  function _setStoredPinHash(pin) {
-    localStorage.setItem(PIN_HASH_KEY, _hashPin(pin));
+  async function _setStoredPinHash(pin) {
+    const hash = await _hashPin(pin);
+    localStorage.setItem(PIN_HASH_KEY, hash);
+  }
+
+  function _checkRateLimit() {
+    const lockoutUntil = parseInt(localStorage.getItem(PIN_LOCKOUT_KEY) || '0');
+    if (Date.now() < lockoutUntil) {
+      const remaining = Math.ceil((lockoutUntil - Date.now()) / 1000);
+      showToast('Too many attempts. Try again in ' + remaining + 's', 'error');
+      return false;
+    }
+    return true;
+  }
+
+  function _recordFailedAttempt() {
+    const attempts = parseInt(localStorage.getItem(PIN_ATTEMPTS_KEY) || '0') + 1;
+    localStorage.setItem(PIN_ATTEMPTS_KEY, attempts.toString());
+    if (attempts >= MAX_ATTEMPTS) {
+      localStorage.setItem(PIN_LOCKOUT_KEY, (Date.now() + LOCKOUT_MS).toString());
+      localStorage.setItem(PIN_ATTEMPTS_KEY, '0');
+    }
+  }
+
+  function _clearAttempts() {
+    localStorage.setItem(PIN_ATTEMPTS_KEY, '0');
+    localStorage.removeItem(PIN_LOCKOUT_KEY);
   }
 
   window.isChatLocked = function(chatId) {
@@ -60,41 +89,49 @@
     else lockChat(chatId);
   };
 
-  window.setLockPin = function(pin) {
+  window.setLockPin = async function(pin) {
     if (!pin || pin.length < 4) { showToast('PIN must be at least 4 digits', 'error'); return false; }
-    _setStoredPinHash(pin);
+    await _setStoredPinHash(pin);
     showToast('Lock PIN set', 'success');
     return true;
   };
 
+  // WebAuthn — use credentials.get() for authentication, not create() for registration
   async function _authenticateBiometric() {
     try {
       if (!window.PublicKeyCredential) return false;
-
       const available = await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
       if (!available) return false;
 
       const challenge = new Uint8Array(32);
       crypto.getRandomValues(challenge);
 
-      const credential = await navigator.credentials.create({
+      // Use credentials.get() to VERIFY an existing biometric, not create a new one
+      await navigator.credentials.get({
         publicKey: {
           challenge: challenge,
-          rp: { name: 'NSL Chat', id: window.location.hostname },
-          user: {
-            id: new Uint8Array(16),
-            name: 'chat-lock',
-            displayName: 'Chat Lock'
-          },
-          pubKeyCredParams: [{ alg: -7, type: 'public-key' }],
-          authenticatorSelection: { authenticatorAttachment: 'platform', userVerification: 'required' },
-          timeout: 60000
+          timeout: 60000,
+          userVerification: 'required',
+          allowCredentials: []
         }
       });
-      return !!credential;
+      return true;
     } catch(e) {
       return false;
     }
+  }
+
+  async function _verifyPin(inputPin) {
+    if (!_checkRateLimit()) return false;
+    const storedHash = _getStoredPinHash();
+    if (!storedHash) return true;
+    const inputHash = await _hashPin(inputPin);
+    if (inputHash === storedHash) {
+      _clearAttempts();
+      return true;
+    }
+    _recordFailedAttempt();
+    return false;
   }
 
   window.promptChatUnlock = function(chatId, callback) {
@@ -122,6 +159,9 @@
         <button id="lock-pin-btn" style="padding:14px;border-radius:14px;border:none;background:rgba(255,255,255,0.08);color:var(--on-surface);font-size:14px;font-weight:600;cursor:pointer">
           Use PIN Instead
         </button>
+        <button id="lock-forgot-btn" style="padding:10px;border-radius:10px;border:none;background:transparent;color:var(--primary);font-size:13px;cursor:pointer;display:none">
+          Forgot PIN?
+        </button>
         <button onclick="document.getElementById('chat-lock-overlay')?.remove()" style="padding:10px;border-radius:10px;border:none;background:transparent;color:var(--on-surface-variant);font-size:13px;cursor:pointer">Cancel</button>
       </div>`;
 
@@ -131,6 +171,8 @@
     const biometricBtn = document.getElementById('lock-bio-btn');
     const pinBtn = document.getElementById('lock-pin-btn');
     const pinSection = document.getElementById('lock-pin-section');
+    const forgotBtn = document.getElementById('lock-forgot-btn');
+    const pinInput = document.getElementById('lock-pin-input');
 
     biometricBtn?.addEventListener('click', async () => {
       biometricBtn.innerHTML = '<span class="material-symbols-outlined animate-spin" style="font-size:20px">progress_activity</span> Authenticating...';
@@ -141,7 +183,8 @@
       } else {
         biometricBtn.innerHTML = '<span class="material-symbols-outlined" style="font-size:20px">fingerprint</span> Unlock with Biometric';
         pinSection.style.display = 'block';
-        document.getElementById('lock-pin-input')?.focus();
+        forgotBtn.style.display = 'block';
+        pinInput?.focus();
       }
     });
 
@@ -149,44 +192,65 @@
       biometricBtn.style.display = 'none';
       pinBtn.style.display = 'none';
       pinSection.style.display = 'block';
-      document.getElementById('lock-pin-input')?.focus();
+      forgotBtn.style.display = 'block';
+      pinInput?.focus();
     });
 
-    document.getElementById('lock-pin-input')?.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') {
-        const input = document.getElementById('lock-pin-input');
-        const storedHash = _getStoredPinHash();
-        if (!storedHash || _hashPin(input.value) === storedHash) {
-          overlay.remove();
-          callback();
-        } else {
-          document.getElementById('pin-error').style.display = 'block';
-          input.value = '';
-          input.style.borderColor = 'var(--error)';
-          setTimeout(() => { input.style.borderColor = 'rgba(255,255,255,0.1)'; }, 1000);
-        }
+    forgotBtn?.addEventListener('click', async () => {
+      if (confirm('This will reset your PIN. All locked chats will need to be re-locked. Continue?')) {
+        localStorage.removeItem(PIN_HASH_KEY);
+        _clearAttempts();
+        showToast('PIN reset. Set a new PIN below.', 'info');
+        pinBtn.textContent = 'Set PIN & Unlock';
+        pinBtn.style.display = 'block';
+        forgotBtn.style.display = 'none';
       }
     });
 
-    const hasPin = !!_getStoredPinHash();
-    if (!hasPin) {
-      biometricBtn.style.display = 'none';
-      pinBtn.textContent = 'Set PIN & Unlock';
-      pinSection.style.display = 'block';
-      document.getElementById('lock-pin-input')?.focus();
+    // Handle PIN Enter key — use named function, no arguments.callee
+    function _handlePinEnter(e) {
+      if (e.key !== 'Enter') return;
+      const input = document.getElementById('lock-pin-input');
+      if (!input) return;
+      const val = input.value;
 
-      document.getElementById('lock-pin-input')?.removeEventListener('keydown', arguments.callee);
-      document.getElementById('lock-pin-input')?.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') {
-          const input = document.getElementById('lock-pin-input');
-          if (input.value.length >= 4) {
-            _setStoredPinHash(input.value);
+      const hasPin = !!_getStoredPinHash();
+      if (hasPin) {
+        // Verify existing PIN
+        _verifyPin(val).then(ok => {
+          if (ok) {
+            overlay.remove();
+            callback();
+          } else {
+            const errEl = document.getElementById('pin-error');
+            if (errEl) errEl.style.display = 'block';
+            input.value = '';
+            input.style.borderColor = 'var(--error)';
+            setTimeout(() => { input.style.borderColor = 'rgba(255,255,255,0.1)'; }, 1000);
+          }
+        });
+      } else {
+        // Set new PIN
+        if (val.length >= 4) {
+          _setStoredPinHash(val).then(() => {
             overlay.remove();
             callback();
             showToast('PIN set for future unlocks', 'success');
-          }
+          });
         }
-      });
+      }
+    }
+
+    pinInput?.addEventListener('keydown', _handlePinEnter);
+
+    // Show/hide forgot PIN button
+    const hasPin = !!_getStoredPinHash();
+    if (!hasPin) {
+      biometricBtn.style.display = 'none';
+      forgotBtn.style.display = 'none';
+      pinBtn.textContent = 'Set PIN & Unlock';
+      pinSection.style.display = 'block';
+      pinInput?.focus();
     }
 
     overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
@@ -235,7 +299,7 @@
 
     let html = `
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
-        <h3 style="margin:0;font-size:18px;font-weight:700">🔒 Locked Chats</h3>
+        <h3 style="margin:0;font-size:18px;font-weight:700">Locked Chats</h3>
         <button onclick="document.getElementById('chat-lock-settings-overlay')?.remove()" style="background:none;border:none;color:var(--on-surface-variant);cursor:pointer;font-size:20px">&times;</button>
       </div>`;
 
@@ -256,8 +320,11 @@
     html += `
       <div style="margin-top:16px;padding:16px;border-radius:12px;background:rgba(255,255,255,0.04)">
         <h4 style="margin:0 0 10px;font-size:14px;font-weight:600">Security</h4>
-        <button onclick="const p=prompt('Enter new 4+ digit PIN:');if(p)setLockPin(p)" style="width:100%;padding:10px;border-radius:10px;border:none;background:rgba(255,255,255,0.08);color:var(--on-surface);font-size:13px;font-weight:600;cursor:pointer;text-align:left;display:flex;align-items:center;gap:8px">
+        <button id="settings-change-pin-btn" style="width:100%;padding:10px;border-radius:10px;border:none;background:rgba(255,255,255,0.08);color:var(--on-surface);font-size:13px;font-weight:600;cursor:pointer;text-align:left;display:flex;align-items:center;gap:8px">
           <span class="material-symbols-outlined" style="font-size:18px">pin</span> ${_getStoredPinHash() ? 'Change Lock PIN' : 'Set Lock PIN'}
+        </button>
+        <button id="settings-reset-pin-btn" style="width:100%;padding:10px;border-radius:10px;border:none;background:rgba(255,255,255,0.08);color:var(--error);font-size:13px;font-weight:600;cursor:pointer;text-align:left;display:flex;align-items:center;gap:8px;margin-top:8px">
+          <span class="material-symbols-outlined" style="font-size:18px">lock_reset</span> Forgot PIN? Reset
         </button>
       </div>`;
 
@@ -265,6 +332,40 @@
     overlay.appendChild(panel);
     overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
     document.body.appendChild(overlay);
+
+    // Wire up Change PIN button — requires old PIN verification
+    document.getElementById('settings-change-pin-btn')?.addEventListener('click', () => {
+      const storedHash = _getStoredPinHash();
+      const promptAndSet = (requireOld) => {
+        if (requireOld) {
+          const oldPin = prompt('Enter current PIN:');
+          if (!oldPin) return;
+          _verifyPin(oldPin).then(ok => {
+            if (!ok) { showToast('Incorrect current PIN', 'error'); return; }
+            const newPin = prompt('Enter new 4+ digit PIN:');
+            if (newPin && newPin.length >= 4) {
+              _setStoredPinHash(newPin).then(() => showToast('PIN changed', 'success'));
+            }
+          });
+        } else {
+          const newPin = prompt('Enter new 4+ digit PIN:');
+          if (newPin && newPin.length >= 4) {
+            _setStoredPinHash(newPin).then(() => showToast('PIN set', 'success'));
+          }
+        }
+      };
+      promptAndSet(!!storedHash);
+    });
+
+    // Wire up Reset PIN button
+    document.getElementById('settings-reset-pin-btn')?.addEventListener('click', () => {
+      if (confirm('Reset PIN? This will remove the PIN and all locked chats will need to be re-locked.')) {
+        localStorage.removeItem(PIN_HASH_KEY);
+        _clearAttempts();
+        showToast('PIN reset. You will be prompted to set a new PIN on next unlock.', 'success');
+        document.getElementById('chat-lock-settings-overlay')?.remove();
+      }
+    });
   };
 
   window._addChatLockOption = function(menu, chatId) {

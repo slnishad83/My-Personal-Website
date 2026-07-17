@@ -761,6 +761,10 @@
           provider.setCustomParameters({ prompt: "select_account" });
           await auth.signInWithPopup(provider);
         } catch (error) {
+          if (error.code === 'auth/popup-blocked') {
+            if (typeof showToast === 'function') showToast('Popup blocked. Redirecting to Google...', 'info');
+            return auth.signInWithRedirect(provider);
+          }
           errorDiv.textContent = getFriendlyAuthError(
             error,
             "Google sign-in failed. Please try again.",
@@ -953,8 +957,13 @@
 
       const resetModal = document.getElementById("resetModal");
       document.getElementById("forgotPasswordBtn").addEventListener("click", () => {
+        const loginEmail = document.getElementById('loginEmail')?.value || '';
         resetModal.classList.add("show");
-        resetModal.querySelector('input')?.focus();
+        const resetInput = resetModal.querySelector('input');
+        if (resetInput) {
+          resetInput.value = loginEmail;
+          resetInput.focus();
+        }
       });
       document.querySelectorAll(".resetClose").forEach((btn) => {
         btn.addEventListener("click", () => resetModal.classList.remove("show"));
@@ -974,6 +983,12 @@
 
         if (!email) {
           btn.insertAdjacentHTML('afterend', '<div id="resetInlineError" class="mt-xs p-xs text-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/20 rounded text-center">Please enter your email</div>');
+          setTimeout(() => { var el = document.getElementById('resetInlineError'); if (el) el.remove(); }, 3000);
+          return;
+        }
+
+        if (!validateEmail(email)) {
+          btn.insertAdjacentHTML('afterend', '<div id="resetInlineError" class="mt-xs p-xs text-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/20 rounded text-center">Please enter a valid email address</div>');
           setTimeout(() => { var el = document.getElementById('resetInlineError'); if (el) el.remove(); }, 3000);
           return;
         }

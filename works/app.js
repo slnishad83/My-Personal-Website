@@ -774,6 +774,15 @@ function subscribeToChatRequests(email, uid) {
           incoming.push({ id: change.doc.id, fromUid: data.from, fromEmail: data.fromEmail, fromName: data.fromName, timestamp: data.timestamp?.toMillis ? data.timestamp.toMillis() : 0 });
           if (!incomingFirstLoad && change.type === 'added') {
             showToast(`New chat request from ${data.fromName || data.fromEmail}`, 'info');
+            try {
+              if ('Notification' in window && Notification.permission === 'granted') {
+                new Notification('NSL Chat — New Chat Request', {
+                  body: `${data.fromName || data.fromEmail || 'Someone'} wants to chat with you`,
+                  icon: '/icon-192.png',
+                  tag: 'chat-request-' + change.doc.id,
+                });
+              }
+            } catch(_) {}
           }
         }
       });
@@ -784,6 +793,7 @@ function subscribeToChatRequests(email, uid) {
       if (App.activeTab === 'requests') renderRequestsTab();
     }, e => console.warn('chatRequests incoming err:', e));
   let prevAcceptedIds = new Set();
+  let prevDeclinedIds = new Set();
   App.chatRequestsOutgoingUnsubscribe = App.db.collection('chatRequests')
     .where('fromEmail', '==', email)
     .onSnapshot(snapshot => {
@@ -795,6 +805,10 @@ function subscribeToChatRequests(email, uid) {
         } else if (data.status === 'accepted' && change.type === 'modified' && !prevAcceptedIds.has(change.doc.id)) {
           showToast('Your chat request was accepted!', 'success');
           prevAcceptedIds.add(change.doc.id);
+        }
+        if (change.type === 'modified' && data.status === 'declined' && !prevDeclinedIds.has(change.doc.id)) {
+          prevDeclinedIds.add(change.doc.id);
+          if (typeof showToast === 'function') showToast(`Your chat request to ${data.toName || data.toEmail || 'user'} was declined`, 'info');
         }
       });
       App.chatRequests.outgoing = outgoing;
@@ -2480,6 +2494,7 @@ function renderRequestsTab() {
           <div class="text-xs text-on-surface-variant truncate">${escHtml(r.toEmail)} — Awaiting response</div>
         </div>
         <span class="text-xs text-on-surface-variant italic">Pending</span>
+        <button onclick="cancelChatRequest('${r.id}')" style="padding:4px 10px;border-radius:8px;border:1px solid var(--outline-variant);background:transparent;color:var(--on-surface-variant);font-size:11px;font-weight:600;cursor:pointer;margin-left:8px">Cancel</button>
       </div>
     `).join('');
   }
