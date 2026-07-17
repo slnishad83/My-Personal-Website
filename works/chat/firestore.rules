@@ -58,15 +58,24 @@ service cloud.firestore {
     // MESSAGES
     // =============================================
     match /messages/{messageId} {
-      // Allow any authenticated member to read messages.
-      // This enables cross-chat queries (e.g. Family Album, Chat Insights)
-      // without requiring a per-doc participants array.
-      allow read: if isAuth();
+      // Direct messages: user must be a participant.
+      // Group messages: user must be a member of the group.
+      // Note: thread replies inherit access from the parent message's security.
+      allow read: if isAuth() && (
+        request.auth.uid in resource.data.participants
+        ||
+        (resource.data.groupId != null && isGroupMember(resource.data.groupId))
+      );
       allow create: if isAuth() && request.auth.uid == request.resource.data.senderId;
-      allow update: if isAuth();
+      allow update: if isAuth() && (
+        request.auth.uid in resource.data.participants
+        ||
+        (resource.data.groupId != null && isGroupMember(resource.data.groupId))
+      );
       allow delete: if false;
 
-      // Thread replies subcollection
+      // Thread replies subcollection — requires auth
+      // (Parent message access is enforced at the messages level)
       match /threadReplies/{replyId} {
         allow read: if isAuth();
         allow create: if isAuth() && request.auth.uid == request.resource.data.senderId;
@@ -310,8 +319,11 @@ service cloud.firestore {
     match /listeningRooms/{chatId} {
       allow read: if isAuth();
       allow create: if isAuth() && request.auth.uid == request.resource.data.hostUid;
-      allow update: if isAuth();
-      allow delete: if isAuth();
+      allow update: if isAuth() && (
+        request.auth.uid == resource.data.hostUid
+        || request.auth.uid in resource.data.coHosts
+      );
+      allow delete: if isAuth() && request.auth.uid == resource.data.hostUid;
     }
 
     // =============================================

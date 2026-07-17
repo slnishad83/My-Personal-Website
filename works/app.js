@@ -2883,6 +2883,7 @@ function renderSingleMessageHTML(msg, msgs, i, lastDate) {
       <div class="flex items-center gap-1 group relative max-w-full">
         ${isMe ? `
         <button class="opacity-0 group-hover:opacity-100 p-1 hover:bg-surface-container-high rounded-full text-on-surface-variant transition-opacity cursor-pointer flex items-center justify-center flex-shrink-0" onclick="event.stopPropagation();openForwardModal('${msg.id}')" title="Forward"><span class="material-symbols-outlined text-lg">arrow_forward</span></button>
+        <button class="opacity-0 group-hover:opacity-100 p-1 hover:bg-surface-container-high rounded-full text-on-surface-variant transition-opacity cursor-pointer flex items-center justify-center flex-shrink-0" onclick="event.stopPropagation();window._openThreadForMsg('${msg.id}')" title="Thread"><span class="material-symbols-outlined text-lg">forum</span></button>
         <button class="opacity-0 group-hover:opacity-100 p-1 hover:bg-red-500/10 rounded-full text-on-surface-variant hover:text-red-500 transition-opacity cursor-pointer flex items-center justify-center flex-shrink-0" onclick="event.stopPropagation();openDeleteMenu('${msg.id}')" title="Delete"><span class="material-symbols-outlined text-lg">delete</span></button>
         <button class="opacity-0 group-hover:opacity-100 p-1 hover:bg-surface-container-high rounded-full text-on-surface-variant transition-opacity cursor-pointer flex items-center justify-center flex-shrink-0" onclick="showMsgContextMenu(event,'${msg.id}')" title="More"><span class="material-symbols-outlined text-lg">more_vert</span></button>` : ''}
         <div class="p-bubble_padding_xy ${bubbleClass} relative overflow-hidden max-w-full"
@@ -2904,9 +2905,11 @@ function renderSingleMessageHTML(msg, msgs, i, lastDate) {
         ${!isMe ? `
         <button class="opacity-0 group-hover:opacity-100 p-1 hover:bg-red-500/10 rounded-full text-on-surface-variant hover:text-red-500 transition-opacity cursor-pointer flex items-center justify-center flex-shrink-0" onclick="event.stopPropagation();openDeleteMenu('${msg.id}')" title="Delete"><span class="material-symbols-outlined text-lg">delete</span></button>
         <button class="opacity-0 group-hover:opacity-100 p-1 hover:bg-surface-container-high rounded-full text-on-surface-variant transition-opacity cursor-pointer flex items-center justify-center flex-shrink-0" onclick="event.stopPropagation();openForwardModal('${msg.id}')" title="Forward"><span class="material-symbols-outlined text-lg">arrow_forward</span></button>
+        <button class="opacity-0 group-hover:opacity-100 p-1 hover:bg-surface-container-high rounded-full text-on-surface-variant transition-opacity cursor-pointer flex items-center justify-center flex-shrink-0" onclick="event.stopPropagation();window._openThreadForMsg('${msg.id}')" title="Thread"><span class="material-symbols-outlined text-lg">forum</span></button>
         <button class="opacity-0 group-hover:opacity-100 p-1 hover:bg-surface-container-high rounded-full text-on-surface-variant transition-opacity cursor-pointer flex items-center justify-center flex-shrink-0" onclick="showMsgContextMenu(event,'${msg.id}')" title="More"><span class="material-symbols-outlined text-lg">more_vert</span></button>` : ''}
       </div>
       ${reactions ? `<div class="flex flex-wrap gap-1 mt-1">${reactions}</div>` : ''}
+      ${msg.threadCount > 0 ? `<div class="flex items-center gap-1 mt-1 cursor-pointer hover:opacity-80" onclick="event.stopPropagation();window._openThreadForMsg('${msg.id}')"><span class="material-symbols-outlined text-[12px] text-primary">forum</span><span class="text-[10px] font-bold text-primary">${msg.threadCount} ${msg.threadCount === 1 ? 'reply' : 'replies'}</span></div>` : ''}
     </div>
   </div>`;
 }

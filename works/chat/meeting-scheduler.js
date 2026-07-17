@@ -13,6 +13,7 @@
     };
 
     injectMeetingAttachmentBtn();
+    _initMeetingReminders();
   }
 
   function injectMeetingAttachmentBtn() {
@@ -194,11 +195,79 @@
       }
 
       if (window.showToast) window.showToast('Meeting scheduled!', 'success');
+
+      // Set up reminder notifications
+      _scheduleMeetingReminder(dateTime, title, duration);
     } catch (e) {
       console.error('Error scheduling meeting:', e);
       if (window.showToast) window.showToast('Failed to schedule meeting', 'error');
     }
   };
+
+  function _scheduleMeetingReminder(dateTime, title, duration) {
+    const now = Date.now();
+    const meetingTime = dateTime.getTime();
+    const reminder15m = meetingTime - 15 * 60 * 1000; // 15 min before
+    const reminderStart = meetingTime; // at start time
+
+    // 15-minute reminder
+    if (reminder15m > now) {
+      setTimeout(() => {
+        if (typeof showToast === 'function') showToast(`⏰ Reminder: "${title}" starts in 15 minutes!`, 'success');
+        _sendMeetingReminderNotification(title, 'starts in 15 minutes');
+      }, reminder15m - now);
+    }
+
+    // Meeting start reminder
+    if (reminderStart > now) {
+      setTimeout(() => {
+        if (typeof showToast === 'function') showToast(`📅 Meeting "${title}" is starting now!`, 'success');
+        _sendMeetingReminderNotification(title, 'is starting now');
+      }, reminderStart - now);
+    }
+
+    // End-of-meeting reminder
+    const endTime = meetingTime + duration * 60 * 1000;
+    if (endTime > now) {
+      setTimeout(() => {
+        if (typeof showToast === 'function') showToast(`🕐 Meeting "${title}" should be ending now`, 'info');
+      }, endTime - now);
+    }
+  }
+
+  function _sendMeetingReminderNotification(title, message) {
+    try {
+      if ('Notification' in window && Notification.permission === 'granted') {
+        new Notification('NSL Chat — Meeting', {
+          body: `"${title}" ${message}`,
+          icon: '/icon-192.png',
+          tag: 'meeting-reminder',
+        });
+      }
+    } catch (_) {}
+  }
+
+  // Check for upcoming meetings on page load and set reminders
+  function _initMeetingReminders() {
+    if (!window.App || !window.App.db || !window.App.auth?.currentUser) return;
+    const uid = window.App.auth.currentUser.uid;
+
+    window.App.db.collection('meetings')
+      .where('participants', 'array-contains', uid)
+      .where('date', '>=', firebase.firestore.Timestamp.fromDate(new Date()))
+      .limit(10)
+      .get()
+      .then(snap => {
+        snap.forEach(doc => {
+          const m = doc.data();
+          if (m.date && m.title) {
+            const meetingDate = m.date.toDate ? m.date.toDate() : new Date(m.date);
+            _scheduleMeetingReminder(meetingDate, m.title, m.duration || 30);
+          }
+        });
+      })
+      .catch(() => {});
+  }
 
   window._acceptMeeting = async function (meetingId) {
     if (!window.App || !window.App.db) return;
