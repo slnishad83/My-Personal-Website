@@ -94,10 +94,10 @@
 
   // ─── DELETE TRACK ───
   window.deleteMusicTrack = async function(trackId) {
-    if (!App.db || !App.auth?.currentUser) return;
+    if (!App.db || !App.auth?.currentUser) return false;
     const track = App.musicLibrary.find(t => t.id === trackId);
-    if (!track) return;
-    if (track.addedBy !== App.auth.currentUser.uid) { showToast('Not your track', 'error'); return; }
+    if (!track) return false;
+    if (track.addedBy !== App.auth.currentUser.uid) { showToast('Not your track', 'error'); return false; }
 
     try {
       if (track.storagePath && App.storage) {
@@ -106,8 +106,11 @@
       await App.db.collection('musicLibrary').doc(trackId).delete();
       App.musicLibrary = App.musicLibrary.filter(t => t.id !== trackId);
       showToast('Deleted', 'success');
+      return true;
     } catch(e) {
       showToast('Delete failed', 'error');
+      return false;
+    }
     }
   };
 
@@ -170,66 +173,61 @@
     });
   };
 
-  // ─── JAMENDO FREE MUSIC ───
+  // ─── ARCHIVE.ORG MP3 SEARCH (Mapped to Jamendo names for HTML compatibility) ───
   window.searchJamendo = async function(query, page = 1) {
     if (!query || query.length < 2) return [];
     try {
-      const url = `https://api.jamendo.com/v3.0/tracks/?client_id=${JAMENDO_CLIENT_ID}&search=${encodeURIComponent(query)}&limit=20&page=${page}&audioformat=mp3&include=musicinfo&order=popularity_total`;
+      const url = `https://archive.org/advancedsearch.php?q=(title:(${encodeURIComponent(query)}) OR creator:(${encodeURIComponent(query)})) AND format:(MP3 OR "VBR MP3")&fl[]=identifier,title,creator,downloads&rows=30&output=json`;
       const res = await fetch(url);
       const data = await res.json();
-      return (data.results || []).map(t => ({
-        id: 'jm_' + t.id,
-        title: t.name,
-        artist: t.artist_name,
-        url: t.audio,
-        thumbnail: t.image || t.album_image,
-        duration: t.duration,
-        source: 'jamendo',
-        genre: t.musicinfo?.genres?.[0] || '',
-        language: _guessLanguage(t.name + ' ' + t.artist_name + ' ' + (t.musicinfo?.tags?.join(' ') || '')),
-        license: 'CC',
+      const docs = data.response?.docs || [];
+      return docs.map(t => ({
+        id: 'arc_' + t.identifier,
+        identifier: t.identifier,
+        title: t.title || 'Unknown Title',
+        artist: t.creator || 'Unknown Artist',
+        url: null, // resolved on play/add
+        thumbnail: `https://archive.org/services/img/${t.identifier}`,
+        duration: 0,
+        source: 'archive',
+        genre: '',
+        language: _guessLanguage((t.title || '') + ' ' + (t.creator || '')),
+        license: 'Public Domain / CC',
       }));
     } catch(e) {
-      console.warn('Jamendo search failed:', e);
+      console.warn('Archive search failed:', e);
       return [];
     }
   };
 
   window.searchJamendoByLanguage = async function(language) {
-    try {
-      const tags = _jamendoTagsForLanguage(language);
-      const url = `https://api.jamendo.com/v3.0/tracks/?client_id=${JAMENDO_CLIENT_ID}&tags=${encodeURIComponent(tags)}&limit=30&audioformat=mp3&include=musicinfo&order=popularity_total`;
-      const res = await fetch(url);
-      const data = await res.json();
-      return (data.results || []).map(t => ({
-        id: 'jm_' + t.id,
-        title: t.name,
-        artist: t.artist_name,
-        url: t.audio,
-        thumbnail: t.image || t.album_image,
-        duration: t.duration,
-        source: 'jamendo',
-        genre: t.musicinfo?.genres?.[0] || '',
-        language: language,
-        license: 'CC',
-      }));
-    } catch(e) { return []; }
+    const query = `${language} songs`;
+    return window.searchJamendo(query);
   };
 
-  function _jamendoTagsForLanguage(lang) {
-    const map = {
-      'Malayalam': 'indian,world,asia',
-      'Tamil': 'indian,world,asia',
-      'Telugu': 'indian,world,asia',
-      'Hindi': 'indian,bollywood,world',
-      'Kannada': 'indian,world',
-      'Bengali': 'indian,world',
-      'Marathi': 'indian,world',
-      'Punjabi': 'indian,punjabi,world',
-      'English': 'english,pop,rock',
-    };
-    return map[lang] || 'world,indian';
-  }
+  window.resolveArchiveTrackUrl = async function(identifier) {
+    try {
+      const url = `https://archive.org/metadata/${identifier}`;
+      const res = await fetch(url);
+      const data = await res.json();
+      const files = data.files || [];
+      const mp3File = files.find(f => f.name.endsWith('.mp3') && (f.format === 'VBR MP3' || f.format === 'MP3'));
+      if (mp3File) {
+        const downloadUrl = `https://archive.org/download/${identifier}/${encodeURIComponent(mp3File.name)}`;
+        let duration = 0;
+        if (mp3File.length) {
+          const parts = mp3File.length.split(':').map(Number);
+          if (parts.length === 3) duration = parts[0] * 3600 + parts[1] * 60 + parts[2];
+          else if (parts.length === 2) duration = parts[0] * 60 + parts[1];
+        }
+        return { url: downloadUrl, duration };
+      }
+      return null;
+    } catch(e) {
+      console.warn('Failed to resolve Archive file:', e);
+      return null;
+    }
+  };
 
   function _guessLanguage(text) {
     const lower = (text || '').toLowerCase();
@@ -391,7 +389,7 @@
       <div style="display:flex;gap:4px">
         <button onclick="event.stopPropagation();toggleMusicFavorite('${t.id}');switchMusicLibTab('my')" style="background:none;border:none;cursor:pointer;padding:4px;font-size:16px">${t.favorite ? '❤️' : '🤍'}</button>
         ${t.addedBy === App.auth?.currentUser?.uid ? `<button onclick="event.stopPropagation();editMusicTrack('${t.id}')" style="background:none;border:none;cursor:pointer;padding:4px;font-size:14px;opacity:0.5" title="Edit">✏️</button>` : ''}
-        ${t.addedBy === App.auth?.currentUser?.uid ? `<button onclick="event.stopPropagation();deleteMusicTrack('${t.id}');switchMusicLibTab('my')" style="background:none;border:none;cursor:pointer;padding:4px;font-size:14px;opacity:0.5" title="Delete">🗑️</button>` : ''}
+        ${t.addedBy === App.auth?.currentUser?.uid ? `<button onclick="event.stopPropagation();deleteMusicTrack('${t.id}').then(()=>switchMusicLibTab('my'))" style="background:none;border:none;cursor:pointer;padding:4px;font-size:14px;opacity:0.5" title="Delete">🗑️</button>` : ''}
       </div>
     </div>`;
   }
@@ -485,7 +483,7 @@
           <input type="search" id="jamendo-search" placeholder="Search online songs..." onkeydown="if(event.key==='Enter')doJamendoSearch()" style="flex:1;padding:8px 12px;border-radius:10px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);color:var(--on-surface);font-size:13px;outline:none">
           <button onclick="doJamendoSearch()" style="padding:8px 16px;border-radius:10px;border:none;background:var(--primary);color:var(--on-primary);font-size:12px;font-weight:700;cursor:pointer">Search</button>
         </div>
-        <p style="font-size:10px;color:var(--on-surface-variant);margin:0 0 8px">Free Creative Commons music via Jamendo</p>
+        <p style="font-size:10px;color:var(--on-surface-variant);margin:0 0 8px">Search Indian and International Music (direct streams)</p>
       </div>
       <div id="discover-results" style="color:var(--on-surface-variant);text-align:center;padding:20px">
         <p style="font-size:12px">Search for songs or browse by language</p>
@@ -526,19 +524,45 @@
     }, 500);
   };
 
-  window.playCachedTrack = function(trackId) {
+  window.playCachedTrack = async function(trackId) {
     const t = _trackCache[trackId];
     if (!t) return;
-    MusicPlayer.play({ id: t.id, title: t.title, artist: t.artist, url: t.url, thumbnail: t.thumbnail || null, duration: t.duration, source: 'jamendo' });
+    
+    if (t.source === 'archive' && !t.url) {
+      showToast('Resolving audio link...', 'info');
+      const res = await window.resolveArchiveTrackUrl(t.identifier);
+      if (res) {
+        t.url = res.url;
+        t.duration = res.duration;
+      } else {
+        showToast('Could not resolve audio link', 'error');
+        return;
+      }
+    }
+    
+    MusicPlayer.play({ id: t.id, title: t.title, artist: t.artist, url: t.url, thumbnail: t.thumbnail || null, duration: t.duration, source: t.source });
   };
 
-  window.addCachedTrackToLibrary = function(trackId) {
+  window.addCachedTrackToLibrary = async function(trackId) {
     const t = _trackCache[trackId];
     if (!t) return;
-    addToLibraryFromJamendo(t.id, t.url, t.title, t.artist, t.thumbnail, t.duration, t.language);
+
+    if (t.source === 'archive' && !t.url) {
+      showToast('Resolving audio link...', 'info');
+      const res = await window.resolveArchiveTrackUrl(t.identifier);
+      if (res) {
+        t.url = res.url;
+        t.duration = res.duration;
+      } else {
+        showToast('Could not resolve audio link', 'error');
+        return;
+      }
+    }
+    
+    addToLibraryFromJamendo(t.id, t.url, t.title, t.artist, t.thumbnail, t.duration, t.language, t.source);
   };
 
-  window.addToLibraryFromJamendo = async function(id, url, title, artist, thumb, dur, lang) {
+  window.addToLibraryFromJamendo = async function(id, url, title, artist, thumb, dur, lang, source = 'jamendo') {
     if (!App.db || !App.auth?.currentUser) { showToast('Sign in required', 'error'); return; }
     const uid = App.auth.currentUser.uid;
     const track = {
@@ -547,7 +571,7 @@
       language: lang || 'Other',
       url, thumbnail: thumb || null,
       duration: dur,
-      source: 'jamendo',
+      source: source || 'jamendo',
       addedBy: uid,
       addedByName: App.currentUser?.displayName || 'User',
       addedAt: Date.now(),
@@ -568,7 +592,7 @@
       'Hindi': '#FF9800', 'Kannada': '#4CAF50', 'Bengali': '#2196F3',
       'Marathi': '#00BCD4', 'Punjabi': '#FF5722', 'English': '#607D8B', 'Other': '#78909C',
     };
-    let html = '<p style="font-size:12px;color:var(--on-surface-variant);margin-bottom:12px">Browse free music by language (via Jamendo)</p>';
+    let html = '<p style="font-size:12px;color:var(--on-surface-variant);margin-bottom:12px">Browse music by language (via Archive.org)</p>';
     LANGUAGES.forEach(lang => {
       html += `
         <div style="display:flex;align-items:center;gap:12px;padding:12px;border-radius:12px;background:rgba(255,255,255,0.03);margin-bottom:6px;cursor:pointer" onclick="browseLanguageMusic('${lang}')">

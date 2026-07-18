@@ -224,6 +224,15 @@
     Player.currentTime = Player.audio.currentTime;
     _updateSeekUI();
     _updateMiniPlayerProgress();
+    if ('mediaSession' in navigator && 'setPositionState' in navigator.mediaSession && Player.duration) {
+      try {
+        navigator.mediaSession.setPositionState({
+          duration: Player.duration,
+          playbackRate: Player.playbackSpeed || 1,
+          position: Player.currentTime
+        });
+      } catch (e) {}
+    }
   }
 
   function _onMetadata() {
@@ -238,11 +247,17 @@
   function _onPlay() {
     Player.isPlaying = true;
     _updatePlayButtons();
+    if ('mediaSession' in navigator) {
+      navigator.mediaSession.playbackState = 'playing';
+    }
   }
 
   function _onPause() {
     Player.isPlaying = false;
     _updatePlayButtons();
+    if ('mediaSession' in navigator) {
+      navigator.mediaSession.playbackState = 'paused';
+    }
   }
 
   function _onError(e) {
@@ -527,7 +542,7 @@
       <div style="padding:0 24px 8px">
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
           <span id="music-current-time" style="font-size:11px;color:var(--on-surface-variant);width:40px;text-align:right">0:00</span>
-          <input type="range" id="music-seek-bar" min="0" max="100" value="0" oninput="MusicPlayer.seekPercent(this.value)" onmousedown="MusicPlayer._seeking=true" onmouseup="MusicPlayer._seeking=false" aria-label="Seek" role="slider" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" style="flex:1;accent-color:var(--primary);height:4px">
+          <input type="range" id="music-seek-bar" min="0" max="100" value="0" oninput="MusicPlayer.seekPercent(this.value)" onmousedown="MusicPlayer._seeking=true" onmouseup="MusicPlayer._seeking=false" onchange="MusicPlayer._seeking=false" ontouchstart="MusicPlayer._seeking=true" ontouchend="MusicPlayer._seeking=false" aria-label="Seek" role="slider" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" style="flex:1;accent-color:var(--primary);height:4px">
           <span id="music-duration" style="font-size:11px;color:var(--on-surface-variant);width:40px">0:00</span>
         </div>
 
