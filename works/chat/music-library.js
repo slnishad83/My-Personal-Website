@@ -176,8 +176,11 @@
   window.searchJamendo = async function(query, page = 1) {
     if (!query || query.length < 2) return [];
     try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000);
       const url = `https://archive.org/advancedsearch.php?q=(title:(${encodeURIComponent(query)}) OR creator:(${encodeURIComponent(query)})) AND format:(MP3 OR "VBR MP3")&fl[]=identifier,title,creator,downloads&rows=30&output=json`;
-      const res = await fetch(url);
+      const res = await fetch(url, { signal: controller.signal });
+      clearTimeout(timeoutId);
       const data = await res.json();
       const docs = data.response?.docs || [];
       return docs.map(t => ({
@@ -206,8 +209,11 @@
 
   window.resolveArchiveTrackUrl = async function(identifier) {
     try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000);
       const url = `https://archive.org/metadata/${identifier}`;
-      const res = await fetch(url);
+      const res = await fetch(url, { signal: controller.signal });
+      clearTimeout(timeoutId);
       const data = await res.json();
       const files = data.files || [];
       const mp3File = files.find(f => f.name.endsWith('.mp3') && (f.format === 'VBR MP3' || f.format === 'MP3'));
@@ -622,10 +628,8 @@
   window._refreshYouTubeResults = function(query) {
     const el = document.getElementById('yt-overlay-list');
     if (!el) return;
-    el.innerHTML = `<div style="text-align:center;padding:20px"><span class="material-symbols-outlined animate-spin" style="color:var(--primary);font-size:24px">progress_activity</span><p style="color:rgba(255,255,255,0.5);font-size:11px;margin-top:8px">Searching YouTube for "${escHtml(query)}"...</p></div>`;
-
     const searchUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(query + ' song')}`;
-    el.innerHTML += `
+    el.innerHTML = `
       <a href="${searchUrl}" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:8px;padding:12px;border-radius:12px;background:rgba(255,0,0,0.1);border:1px solid rgba(255,0,0,0.2);margin-bottom:8px;text-decoration:none">
         <span class="material-symbols-outlined" style="color:#ff4444;font-size:20px">play_circle</span>
         <div>

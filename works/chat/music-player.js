@@ -257,6 +257,7 @@
   function _onPause() {
     Player.isPlaying = false;
     _updatePlayButtons();
+    _deactivateBackgroundMode();
     if ('mediaSession' in navigator) {
       navigator.mediaSession.playbackState = 'paused';
     }
@@ -492,7 +493,7 @@
     mini.id = 'music-mini-player';
     mini.setAttribute('role', 'region');
     mini.setAttribute('aria-label', 'Music mini player');
-    mini.style.cssText = 'position:fixed;bottom:60px;left:0;right:0;z-index:90;background:var(--surface-container-high,#1e2a34);border-top:1px solid rgba(255,255,255,0.08);padding:8px 12px;display:flex;align-items:center;gap:10px;cursor:pointer;animation:slideUp 0.2s ease';
+    mini.style.cssText = 'position:fixed;bottom:60px;left:0;right:0;z-index:95;background:var(--surface-container-high,#1e2a34);border-top:1px solid rgba(255,255,255,0.08);padding:8px 12px;padding-bottom:calc(8px + env(safe-area-inset-bottom,0px));display:flex;align-items:center;gap:10px;cursor:pointer;animation:slideUp 0.2s ease';
     mini.onclick = (e) => { if (e.target.closest('button')) return; openFullPlayer(); };
     document.body.appendChild(mini);
   }
@@ -609,6 +610,15 @@
       </div>`;
 
     overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+
+    const _fullPlayerEscHandler = function(e) {
+      if (e.key === 'Escape') {
+        const el = document.getElementById('full-player-overlay');
+        if (el) el.remove();
+        document.removeEventListener('keydown', _fullPlayerEscHandler);
+      }
+    };
+    document.addEventListener('keydown', _fullPlayerEscHandler);
     document.body.appendChild(overlay);
   };
 

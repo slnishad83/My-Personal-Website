@@ -123,8 +123,11 @@
   function _trackRowHTML(track, playlistId, showPlay) {
     const isFav = isTrackFavorite(track.url);
     const isCurrent = MusicPlayer._currentTrack?.url === track.url;
+    const trackRef = '_plTrackCache_' + Math.random().toString(36).slice(2,8);
+    if (!window._plTrackCache) window._plTrackCache = {};
+    window._plTrackCache[trackRef] = track;
     return `
-    <div class="flex items-center gap-3 p-2 rounded-lg ${isCurrent ? 'bg-primary/10' : 'hover:bg-white/5'}" style="cursor:pointer" onclick="${showPlay ? `playTrackFromUrl(${JSON.stringify(track).replace(/"/g, '&quot;')})` : `playTrackInPlaylist('${playlistId}','${track.id}')`}">
+    <div class="flex items-center gap-3 p-2 rounded-lg ${isCurrent ? 'bg-primary/10' : 'hover:bg-white/5'}" style="cursor:pointer" data-track-ref="${trackRef}" onclick="${showPlay ? `playTrackFromRef('${trackRef}')` : `playTrackInPlaylist('${playlistId}','${track.id}')`}">
       <div style="width:40px;height:40px;border-radius:6px;overflow:hidden;flex-shrink:0;background:rgba(255,255,255,0.05);display:flex;align-items:center;justify-content:center">
         ${track.thumbnail ? `<img src="${escHtml(track.thumbnail)}" style="width:100%;height:100%;object-fit:cover">` : '<span class="material-symbols-outlined" style="font-size:18px;color:var(--on-surface-variant)">music_note</span>'}
       </div>
@@ -133,7 +136,7 @@
         <div style="font-size:11px;color:var(--on-surface-variant);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escHtml(track.artist)}${track.addedByName ? ' · ' + escHtml(track.addedByName) : ''}</div>
       </div>
       <span style="font-size:10px;color:var(--on-surface-variant)">${formatTrackDuration(track.duration)}</span>
-      <button onclick="event.stopPropagation();toggleTrackFavorite(${JSON.stringify(track).replace(/"/g, '&quot;')});openPlaylistDetail('${playlistId}')" style="background:none;border:none;color:${isFav ? 'var(--error)' : 'var(--on-surface-variant)'};cursor:pointer;padding:4px">
+      <button onclick="event.stopPropagation();toggleTrackFavorite(window._plTrackCache['${trackRef}']);openPlaylistDetail('${playlistId}')" style="background:none;border:none;color:${isFav ? 'var(--error)' : 'var(--on-surface-variant)'};cursor:pointer;padding:4px">
         <span class="material-symbols-outlined" style="font-size:16px">${isFav ? 'favorite' : 'favorite_border'}</span>
       </button>
       ${playlistId && canEditPlaylist(App.playlists[playlistId]) ? `
@@ -341,6 +344,11 @@
 
   window.playTrackFromUrl = function(track) {
     MusicPlayer.play(track);
+  };
+
+  window.playTrackFromRef = function(ref) {
+    const track = window._plTrackCache?.[ref];
+    if (track) MusicPlayer.play(track);
   };
 
   // ─── SHARE ───
