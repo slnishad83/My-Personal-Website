@@ -7405,6 +7405,10 @@ function _applyPressureToCanvas(canvas, ctx) {
 
 /* WhatsApp Filter Chip Functions */
 window.setWaFilter = function(filterName) {
+  if (filterName === 'music') {
+    if (typeof openMusicLibrary === 'function') openMusicLibrary();
+    return;
+  }
   App.activeWaFilter = filterName;
   document.querySelectorAll('#wa-filter-chips .wa-chip').forEach(btn => {
     const isMatching = btn.getAttribute('data-filter') === filterName;
@@ -7551,7 +7555,8 @@ window.renderWaFilterChips = function() {
     groups: 'Groups',
     personal: 'Personal',
     archived: 'Archived',
-    muted: 'Muted'
+    muted: 'Muted',
+    music: 'Music'
   };
 
   let html = '';
@@ -7584,7 +7589,8 @@ window.openManageFiltersDialog = function() {
     { id: 'groups', label: 'Groups Only' },
     { id: 'personal', label: 'Personal Chats' },
     { id: 'archived', label: 'Archived Chats' },
-    { id: 'muted', label: 'Muted Chats' }
+    { id: 'muted', label: 'Muted Chats' },
+    { id: 'music', label: 'Music Player' }
   ];
 
   function renderList() {
