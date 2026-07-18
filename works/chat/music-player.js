@@ -924,9 +924,17 @@
         <div style="text-align:center">
           <div style="font-size:11px;color:var(--on-surface-variant);text-transform:uppercase;letter-spacing:1px">Now Playing</div>
         </div>
-        <button onclick="document.getElementById('full-player-overlay')?.remove();openPlaylistQueue()" style="background:none;border:none;color:var(--on-surface-variant);cursor:pointer">
-          <span class="material-symbols-outlined">queue_music</span>
-        </button>
+        <div style="display:flex;align-items:center;gap:4px">
+          <button id="music-screen-lock-btn" onclick="MusicPlayer.toggleWakeLock()" style="background:none;border:none;color:var(--on-surface-variant);cursor:pointer;padding:8px" title="Keep screen on">
+            <span class="material-symbols-outlined" id="music-lock-icon">screen_lock_portrait</span>
+          </button>
+          <button onclick="MusicPlayer.minimizePlayer()" style="background:none;border:none;color:var(--on-surface-variant);cursor:pointer;padding:8px" title="Minimize player">
+            <span class="material-symbols-outlined">picture_in_picture_alt</span>
+          </button>
+          <button onclick="document.getElementById('full-player-overlay')?.remove();openPlaylistQueue()" style="background:none;border:none;color:var(--on-surface-variant);cursor:pointer;padding:8px">
+            <span class="material-symbols-outlined">queue_music</span>
+          </button>
+        </div>
       </div>
 
       <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0 32px">
@@ -1032,6 +1040,60 @@
     overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
     document.body.appendChild(overlay);
     _updateQueueUI();
+  };
+
+  // ─── SCREEN WAKE LOCK ───
+  let _wakeLockSentinel = null;
+  Player._wakeLockActive = false;
+
+  Player.toggleWakeLock = async function() {
+    if (Player._wakeLockActive) {
+      Player.releaseWakeLock();
+      return;
+    }
+    try {
+      if ('wakeLock' in navigator) {
+        _wakeLockSentinel = await navigator.wakeLock.request('screen');
+        Player._wakeLockActive = true;
+        showToast('Screen will stay on', 'success');
+        _updateWakeLockUI();
+        _wakeLockSentinel.addEventListener('release', () => {
+          Player._wakeLockActive = false;
+          _updateWakeLockUI();
+        });
+      } else {
+        showToast('Screen lock not supported on this device', 'error');
+      }
+    } catch(e) {
+      console.warn('Wake lock failed:', e);
+      showToast('Could not lock screen', 'error');
+    }
+  };
+
+  Player.releaseWakeLock = function() {
+    if (_wakeLockSentinel) {
+      _wakeLockSentinel.release().catch(() => {});
+      _wakeLockSentinel = null;
+    }
+    Player._wakeLockActive = false;
+    _updateWakeLockUI();
+  };
+
+  function _updateWakeLockUI() {
+    const icon = document.getElementById('music-lock-icon');
+    if (icon) {
+      icon.textContent = Player._wakeLockActive ? 'screen_lock_portrait' : 'screen_lock_portrait';
+      icon.style.color = Player._wakeLockActive ? 'var(--primary)' : 'var(--on-surface-variant)';
+    }
+  }
+
+  // ─── MINIMIZE PLAYER (Picture-in-Picture style) ───
+  Player.minimizePlayer = function() {
+    const overlay = document.getElementById('full-player-overlay');
+    if (overlay) overlay.remove();
+    showToast('Player minimized to mini player', 'info');
+    _showMiniPlayer();
+    _updateMiniPlayer(Player._currentTrack);
   };
 
   // ─── RESTORE ───

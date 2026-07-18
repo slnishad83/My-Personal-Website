@@ -297,7 +297,7 @@
 
       <!-- Navigation links mapping switchTab -->
       <div class="mt-4 flex-1 space-y-1 px-3" id="sidebar-nav-container">
-        <button class="tab-item w-full flex items-center gap-4 bg-primary-fixed/10 text-primary-fixed border-l-4 border-primary px-4 py-3 cursor-pointer active:scale-95 transition-all duration-200" data-tab="chats" onclick="switchTab('chats')" aria-label="Chats" aria-current="page">
+        <button class="tab-item active w-full flex items-center gap-4 bg-primary-fixed/10 text-primary-fixed border-l-4 border-primary px-4 py-3 cursor-pointer active:scale-95 transition-all duration-200" data-tab="chats" onclick="switchTab('chats')" aria-label="Chats" aria-current="page">
           <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">chat</span>
           <span class="hidden xl:block font-body-md text-body-md font-semibold">Chats</span>
         </button>
@@ -428,40 +428,43 @@
     <main id="chat-area" role="main" aria-label="Chat area" class="flex-1 flex flex-col relative bg-background min-w-0 h-full">
 
       <!-- Top Chat Navigation Header Bar -->
-      <header id="chat-header" class="hidden flex justify-between items-center px-6 h-16 w-full sticky top-0 bg-background/80 backdrop-blur-xl border-b border-outline-variant/30 z-30">
-        <div class="flex items-center gap-4 min-w-0">
+      <header id="chat-header" class="hidden flex justify-between items-center px-4 md:px-6 h-14 md:h-16 w-full sticky top-0 bg-background/80 backdrop-blur-xl border-b border-outline-variant/20 z-30">
+        <div class="flex items-center gap-3 min-w-0 flex-1">
           <!-- Back button on mobile -->
-          <button class="md:hidden text-on-surface-variant hover:text-on-surface mr-1 transition-all" onclick="backToList()" aria-label="Back">
-            <span class="material-symbols-outlined">arrow_back</span>
+          <button class="md:hidden text-on-surface-variant hover:text-on-surface active:scale-90 transition-all p-1.5 -ml-1 rounded-full" onclick="backToList()" aria-label="Back">
+            <span class="material-symbols-outlined" style="font-size:22px">arrow_back</span>
           </button>
 
-          <div class="flex items-center gap-3 cursor-pointer min-w-0" id="chat-header-info" onclick="openChatInfo()">
+          <div class="flex items-center gap-3 cursor-pointer min-w-0 flex-1 py-1 rounded-xl hover:bg-surface-variant/30 active:bg-surface-variant/50 transition-colors px-2 -ml-2" id="chat-header-info" onclick="openChatInfo()">
             <div class="relative flex-shrink-0">
-              <div class="w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm bg-surface-container-highest text-on-surface-variant" id="header-avatar">?</div>
-              <div class="absolute bottom-0 right-0 w-3 h-3 bg-primary-fixed border-2 border-background rounded-full" id="header-status-dot"></div>
+              <div class="w-11 h-11 rounded-full flex items-center justify-center font-bold text-base bg-gradient-to-br from-primary/20 to-primary/5 border border-primary/10 text-on-surface-variant overflow-hidden" id="header-avatar">?</div>
+              <div class="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-green-500 border-[2.5px] border-background rounded-full z-10 hidden" id="header-status-dot"></div>
             </div>
-            <div class="flex flex-col justify-center min-w-0">
-              <h2 class="font-bold text-on-surface text-[17px] truncate leading-tight" id="header-name">Select a chat</h2>
-              <span class="text-[10px] text-primary-fixed-dim uppercase tracking-widest font-label-caps truncate whitespace-nowrap" id="header-status">—</span>
+            <div class="flex flex-col justify-center min-w-0 gap-0.5">
+              <h2 class="font-bold text-on-surface text-[15px] md:text-[16px] truncate leading-tight" id="header-name">Select a chat</h2>
+              <div class="flex items-center gap-1.5 min-w-0">
+                <span class="text-[11px] text-on-surface-variant/70 truncate whitespace-nowrap max-w-[180px] md:max-w-[240px]" id="header-status">—</span>
+              </div>
             </div>
+            <span class="material-symbols-outlined text-on-surface-variant/40 text-lg flex-shrink-0 hidden sm:block">chevron_right</span>
           </div>
         </div>
 
-        <div class="flex items-center gap-2" id="header-actions-container">
-          <button class="text-on-surface-variant hover:text-primary transition-all p-2 rounded-full hover:bg-surface-container/50" onclick="startVoiceCall()" id="btn-voice-call" title="Voice Call" aria-label="Voice call">
-            <span class="material-symbols-outlined">call</span>
+        <div class="flex items-center gap-0.5 md:gap-1 flex-shrink-0" id="header-actions-container">
+          <button class="text-on-surface-variant/70 hover:text-primary transition-all p-2 rounded-full hover:bg-primary/10 active:scale-90" onclick="startVoiceCall()" id="btn-voice-call" title="Voice Call" aria-label="Voice call">
+            <span class="material-symbols-outlined" style="font-size:20px">call</span>
           </button>
-          <button class="text-on-surface-variant hover:text-primary transition-all p-2 rounded-full hover:bg-surface-container/50" onclick="startVideoCall()" id="btn-video-call" title="Video Call" aria-label="Video call">
-            <span class="material-symbols-outlined">videocam</span>
+          <button class="text-on-surface-variant/70 hover:text-primary transition-all p-2 rounded-full hover:bg-primary/10 active:scale-90" onclick="startVideoCall()" id="btn-video-call" title="Video Call" aria-label="Video call">
+            <span class="material-symbols-outlined" style="font-size:20px">videocam</span>
           </button>
-          <button class="text-on-surface-variant hover:text-on-surface transition-all p-2 rounded-full hover:bg-surface-container/50" onclick="openChatSearch()" title="Search chat" aria-label="Search messages">
-            <span class="material-symbols-outlined">search</span>
+          <button class="text-on-surface-variant/70 hover:text-on-surface transition-all p-2 rounded-full hover:bg-surface-variant/50 active:scale-90" onclick="openChatSearch()" title="Search chat" aria-label="Search messages">
+            <span class="material-symbols-outlined" style="font-size:20px">search</span>
           </button>
-          <button class="text-on-surface-variant hover:text-on-surface transition-all p-2 rounded-full hover:bg-surface-container/50" onclick="(App._mutedChats?.has(App.currentChat?.id) ? toggleMuteChat : showMuteChatOptions)(App.currentChat?.id)" id="btn-chat-mute" title="Toggle mute" aria-label="Toggle notification mute">
-            <span class="material-symbols-outlined" id="chat-mute-icon">notifications</span>
+          <button class="text-on-surface-variant/70 hover:text-on-surface transition-all p-2 rounded-full hover:bg-surface-variant/50 active:scale-90" onclick="(App._mutedChats?.has(App.currentChat?.id) ? toggleMuteChat : showMuteChatOptions)(App.currentChat?.id)" id="btn-chat-mute" title="Toggle mute" aria-label="Toggle notification mute">
+            <span class="material-symbols-outlined" style="font-size:20px" id="chat-mute-icon">notifications</span>
           </button>
-          <button class="text-on-surface-variant hover:text-on-surface transition-all p-2 rounded-full hover:bg-surface-container/50" onclick="openChatMenu(this)" id="btn-chat-menu" title="More options" aria-label="More options">
-            <span class="material-symbols-outlined">more_vert</span>
+          <button class="text-on-surface-variant/70 hover:text-on-surface transition-all p-2 rounded-full hover:bg-surface-variant/50 active:scale-90" onclick="openChatMenu(this)" id="btn-chat-menu" title="More options" aria-label="More options">
+            <span class="material-symbols-outlined" style="font-size:20px">more_vert</span>
           </button>
         </div>
       </header>
@@ -1110,7 +1113,7 @@
 
   <!-- Landscape compact tab bar (shown on phone landscape when bottom nav is hidden) -->
   <nav id="landscape-tabs" aria-label="Navigation (landscape)">
-    <button data-tab="chats" onclick="switchTab('chats')" aria-label="Chats">
+    <button class="active" data-tab="chats" onclick="switchTab('chats')" aria-label="Chats">
       <span class="material-symbols-outlined" style="font-size:16px;">chat</span> Chats
     </button>
     <button data-tab="groups" onclick="switchTab('groups')" aria-label="Groups">
@@ -1126,9 +1129,9 @@
 
   <!-- Mobile Bottom Navigation Tab Bar (mobile only) -->
   <nav class="md:hidden fixed bottom-0 left-0 right-0 h-16 bg-surface-container border-t border-outline-variant/30 flex items-center justify-around z-40" id="bottom-nav" aria-label="Main navigation">
-    <button class="bottom-nav-item flex flex-col items-center justify-center gap-1 text-primary-fixed min-h-[44px] min-w-[44px]" data-tab="chats" onclick="switchTab('chats')" aria-label="Chats" aria-current="page">
+    <button class="bottom-nav-item active flex flex-col items-center justify-center gap-1 text-primary-fixed min-h-[44px] min-w-[44px]" data-tab="chats" onclick="switchTab('chats')" aria-label="Chats" aria-current="page">
       <div class="relative">
-        <span class="material-symbols-outlined text-2xl">chat</span>
+        <span class="material-symbols-outlined text-2xl" style="font-variation-settings: 'FILL' 1;">chat</span>
         <div class="absolute -top-1.5 -right-2 bg-secondary text-white text-[9px] w-4 h-4 rounded-full flex items-center justify-center font-bold hidden" id="chats-badge" aria-hidden="true">0</div>
       </div>
       <span class="text-[10px] font-semibold">Chats</span>

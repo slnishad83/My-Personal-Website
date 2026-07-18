@@ -3,49 +3,12 @@
    Replaces dynamic script stylesheet injections.
    ════════════════════════════════════════════════════════════ */
 
-/* ── 1. Glassmorphism Design Tokens ────────────────────── */
-.glass-panel {
-  background: rgba(25, 27, 38, 0.65) !important;
-  backdrop-filter: blur(20px) !important;
-  -webkit-backdrop-filter: blur(20px) !important;
-  border: 1px solid rgba(255, 255, 255, 0.08) !important;
-  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3) !important;
-}
-.light .glass-panel,
-[data-theme="light"] .glass-panel {
-  background: rgba(255, 255, 255, 0.7) !important;
-  backdrop-filter: blur(20px) !important;
-  -webkit-backdrop-filter: blur(20px) !important;
-  border: 1px solid rgba(0, 0, 0, 0.06) !important;
-  box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.06) !important;
-}
+/* NOTE: .glass-panel base styles are in chat.css (color-mix approach).
+   Dark/light overrides are in chat-theme.css.
+   Scrollbar styles are in chat-theme.css and chat-enhancements.css.
+   Do NOT duplicate them here with hardcoded rgba values. */
 
-/* ── 2. Unified Scrollbar System ──────────────────────── */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.12);
-  border-radius: 99px;
-  transition: background 0.2s;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.25);
-}
-.light ::-webkit-scrollbar-thumb,
-[data-theme="light"] ::-webkit-scrollbar-thumb {
-  background: rgba(0, 0, 0, 0.12);
-}
-.light ::-webkit-scrollbar-thumb:hover,
-[data-theme="light"] ::-webkit-scrollbar-thumb:hover {
-  background: rgba(0, 0, 0, 0.24);
-}
-
-/* ── 3. WhatsApp Typing Indicator ────────────────────── */
+/* ── 1. WhatsApp Typing Indicator ────────────────────── */
 #_wa_typing {
   height: 22px;
   padding: 0 16px;
@@ -132,11 +95,17 @@
   50% { opacity: 0.3; }
 }
 
-[data-theme="dark"] #_wa_conn_banner.offline,
+html.dark #_wa_conn_banner.offline,
 .dark #_wa_conn_banner.offline {
   background: #44380a;
   color: #fcd34d;
   border-color: #6b4f0a;
+}
+html.dark #_wa_conn_banner.reconnecting,
+.dark #_wa_conn_banner.reconnecting {
+  background: #0c2d48;
+  color: #7dd3fc;
+  border-color: #164e63;
 }
 
 /* ── 5. WhatsApp Hover Actions & Shares ────────────── */

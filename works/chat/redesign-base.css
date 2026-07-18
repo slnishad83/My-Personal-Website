@@ -432,7 +432,7 @@ body {
   background: var(--card);
   border-top: 1px solid var(--border);
   padding: 6px 0 max(6px, var(--app-safe-bottom));
-  z-index: 99;
+  z-index: var(--z-bottomnav, 40);
   justify-content: space-around;
   box-shadow: 0 -4px 20px rgba(0,0,0,0.08);
 }
@@ -453,7 +453,8 @@ body {
   transition: var(--transition);
   text-decoration: none;
   border-radius: var(--radius-sm);
-  min-width: 56px;
+  min-width: 44px;
+  min-height: 44px;
 }
 
 .bottom-nav .nav-item .mat-icon {

@@ -34,7 +34,7 @@
         border: 1px solid var(--outline-variant, rgba(134, 150, 160, 0.15));
         border-radius: 16px;
         box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
-        z-index: 9999;
+        z-index: 9000;
         display: none;
         flex-direction: column;
         user-select: none;

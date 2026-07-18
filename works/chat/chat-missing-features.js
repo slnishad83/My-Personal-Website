@@ -40,32 +40,86 @@
       </div>`;
     document.body.appendChild(overlay);
 
-    // M9: Pointer events fallback for touch/pen-based drag-and-drop (S Pen, finger)
-    let pointerDragActive = false;
-    let pointerStartY = 0;
-    let pointerLongPressTimer = null;
+    // M9: Long-press on messages — show context menu (paste, copy, reply, etc.)
+    let longPressTimer = null;
+    let longPressTarget = null;
     target.addEventListener('pointerdown', (e) => {
-      if (e.pointerType === 'touch' || e.pointerType === 'pen') {
-        pointerStartY = e.clientY;
-        pointerLongPressTimer = setTimeout(() => { pointerDragActive = true; overlay.classList.add('active'); }, 400);
-      }
+      if (e.pointerType !== 'touch' && e.pointerType !== 'pen') return;
+      longPressTarget = e.target;
+      longPressTimer = setTimeout(() => {
+        _showMessageContextMenu(e, longPressTarget);
+        longPressTimer = null;
+      }, 500);
     });
     target.addEventListener('pointermove', (e) => {
-      if (!pointerDragActive) { if (Math.abs(e.clientY - pointerStartY) > 10) clearTimeout(pointerLongPressTimer); return; }
-      e.preventDefault();
-    });
-    target.addEventListener('pointerup', () => {
-      clearTimeout(pointerLongPressTimer);
-      if (pointerDragActive) {
-        pointerDragActive = false;
-        overlay.classList.remove('active');
+      if (longPressTimer && longPressTarget) {
+        const dx = Math.abs(e.clientX - (longPressTarget._startX || 0));
+        const dy = Math.abs(e.clientY - (longPressTarget._startY || 0));
+        if (dx > 10 || dy > 10) { clearTimeout(longPressTimer); longPressTimer = null; }
       }
     });
-    target.addEventListener('pointercancel', () => {
-      clearTimeout(pointerLongPressTimer);
-      pointerDragActive = false;
-      overlay.classList.remove('active');
-    });
+    target.addEventListener('pointerup', () => { clearTimeout(longPressTimer); longPressTimer = null; });
+    target.addEventListener('pointercancel', () => { clearTimeout(longPressTimer); longPressTimer = null; });
+
+    function _showMessageContextMenu(e, targetEl) {
+      const existing = document.getElementById('msg-context-menu');
+      if (existing) existing.remove();
+
+      const clipboardHasText = navigator.clipboard && navigator.clipboard.readText;
+      let clipText = '';
+      navigator.clipboard?.readText?.().then(t => { clipText = t; }).catch(() => {});
+
+      const menu = document.createElement('div');
+      menu.id = 'msg-context-menu';
+      menu.style.cssText = 'position:fixed;z-index:99999;background:var(--surface-container-high,#1e2a34);border:1px solid rgba(255,255,255,0.12);border-radius:14px;padding:6px;box-shadow:0 8px 32px rgba(0,0,0,0.4);min-width:180px;animation:fadeIn 0.15s ease;';
+
+      const x = Math.min(e.clientX, window.innerWidth - 200);
+      const y = Math.min(e.clientY, window.innerHeight - 250);
+      menu.style.left = x + 'px';
+      menu.style.top = y + 'px';
+
+      let items = [];
+
+      // Always show paste if input is focused
+      const input = document.getElementById('msg-input');
+      if (input && App.currentChat) {
+        navigator.clipboard?.readText?.().then(text => {
+          if (text && text.trim()) {
+            items.push({ icon: 'content_paste', label: 'Paste', action: () => { input.value = text; input.focus(); onInputChange(); } });
+          }
+          _renderContextMenuItems(menu, items);
+        }).catch(() => {});
+      }
+
+      // Also add a file drop option for drag
+      if (App.currentChat) {
+        items.push({ icon: 'attach_file', label: 'Attach file', action: () => { document.getElementById('attach-btn')?.click(); } });
+      }
+
+      _renderContextMenuItems(menu, items);
+      document.body.appendChild(menu);
+
+      const closeMenu = (ev) => {
+        if (!menu.contains(ev.target)) { menu.remove(); document.removeEventListener('pointerdown', closeMenu); }
+      };
+      setTimeout(() => document.addEventListener('pointerdown', closeMenu), 50);
+    }
+
+    function _renderContextMenuItems(menu, items) {
+      if (!items.length) {
+        menu.innerHTML = '<div style="padding:12px 16px;color:var(--on-surface-variant);font-size:12px;text-align:center">No actions available</div>';
+        return;
+      }
+      menu.innerHTML = items.map(item => `
+        <button class="ctx-menu-item" style="display:flex;align-items:center;gap:10px;width:100%;padding:10px 14px;border:none;background:none;color:var(--on-surface);font-size:13px;font-weight:500;cursor:pointer;border-radius:10px;transition:background 0.15s;text-align:left" onpointerenter="this.style.background='rgba(255,255,255,0.06)'" onpointerleave="this.style.background='none'">
+          <span class="material-symbols-outlined" style="font-size:18px;color:var(--on-surface-variant)">${item.icon}</span>
+          ${item.label}
+        </button>
+      `).join('');
+      menu.querySelectorAll('.ctx-menu-item').forEach((btn, i) => {
+        btn.addEventListener('click', () => { items[i].action(); menu.remove(); });
+      });
+    }
 
     document.addEventListener('dragenter', (e) => {
       if (!e.dataTransfer?.types?.includes('Files')) return;

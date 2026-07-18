@@ -375,7 +375,7 @@ body {
   background: var(--card);
   border-top: 1px solid var(--border);
   padding: 6px 0 env(safe-area-inset-bottom, 6px);
-  z-index: 99;
+  z-index: var(--z-bottomnav, 40);
   justify-content: space-around;
   box-shadow: 0 -4px 20px rgba(0,0,0,0.08);
 }

@@ -1346,7 +1346,7 @@ function switchTab(tab) {
   qsa('.tab-item').forEach(el => {
     const active = el.dataset.tab === tab;
     if (active) {
-      el.className = "tab-item w-full flex items-center gap-4 bg-primary/10 text-primary border-l-4 border-primary px-4 py-3 cursor-pointer active:scale-95 transition-all duration-200";
+      el.className = "tab-item active w-full flex items-center gap-4 bg-primary/10 text-primary border-l-4 border-primary px-4 py-3 cursor-pointer active:scale-95 transition-all duration-200";
     } else {
       el.className = "tab-item w-full flex items-center gap-4 text-on-surface/60 hover:text-on-surface hover:bg-surface-container-highest transition-colors duration-200 px-4 py-3 cursor-pointer active:scale-95";
     }
@@ -1356,9 +1356,19 @@ function switchTab(tab) {
   // Bottom nav tab items active classes revamp
   qsa('.bottom-nav-item').forEach(el => {
     const active = el.dataset.tab === tab;
-    el.classList.toggle('text-primary', active);
-    el.classList.toggle('text-on-surface/60', !active);
+    el.classList.toggle('active', active);
+    el.classList.toggle('text-primary-fixed', active);
+    el.classList.toggle('text-on-surface-variant', !active);
     el.setAttribute('aria-current', active ? 'page' : 'false');
+    // Toggle filled icon
+    const icon = el.querySelector('.material-symbols-outlined');
+    if (icon) icon.style.fontVariationSettings = active ? "'FILL' 1" : "'FILL' 0";
+  });
+
+  // Landscape tabs active state
+  qsa('#landscape-tabs button').forEach(el => {
+    const active = el.dataset.tab === tab;
+    el.classList.toggle('active', active);
   });
 
   // Clear active chat viewport if not matching active tab
@@ -1625,6 +1635,23 @@ function renderChatList(filter = '') {
       hide('chats-empty');
     } else {
       list.innerHTML = '';
+      const emptyEl = document.getElementById('chats-empty');
+      if (emptyEl) {
+        const isGroups = tab === 'groups';
+        const isMore = tab === 'more';
+        const iconEl = emptyEl.querySelector('.material-symbols-outlined');
+        const titleEl = emptyEl.querySelector('p.text-sm, p.font-bold');
+        const descEl = emptyEl.querySelectorAll('p')[1];
+        const btnEl = emptyEl.querySelector('button');
+        if (iconEl) iconEl.textContent = isGroups ? 'group' : isMore ? 'bookmark' : 'chat';
+        if (titleEl) titleEl.textContent = isGroups ? 'No groups yet' : isMore ? 'No saved items yet' : 'No conversations yet';
+        if (descEl) descEl.textContent = isGroups ? 'Create or join a group to get started' : isMore ? 'Save messages to revisit them later' : 'Tap the + button to start messaging';
+        if (btnEl) {
+          if (isGroups) { btnEl.textContent = 'New Group'; btnEl.setAttribute('onclick', 'openNewChat()'); }
+          else if (isMore) { btnEl.classList.add('hidden'); }
+          else { btnEl.textContent = 'New Conversation'; btnEl.setAttribute('onclick', 'openNewChat()'); btnEl.classList.remove('hidden'); }
+        }
+      }
       show('chats-empty');
       return;
     }
@@ -2554,6 +2581,14 @@ function openChat(chatId) {
   const chat = App.chats.find(c => c.id === chatId);
   if (!chat) return;
 
+  // Push chat state to browser history so back button returns to chat list
+  if (!history.state || history.state.view !== 'chat') {
+    history.pushState({ view: 'chat', chatId: chatId }, '', window.location.pathname + '#chat');
+  }
+
+  // Suppress sounds/vibration for 2s after opening a chat
+  App._chatOpenSilenceUntil = Date.now() + 2000;
+
   if (App.currentChat && App.currentChat.id !== chatId) {
     if (typeof stopLiveLocation === 'function') stopLiveLocation();
   }
@@ -3190,7 +3225,8 @@ function sendMessage() {
         timestamp: firebase.firestore.FieldValue.serverTimestamp(),
         status: 'sent',
         read: false,
-        expiresAt: chatTTL > 0 ? Date.now() + chatTTL : null
+        expiresAt: chatTTL > 0 ? Date.now() + chatTTL : null,
+        replyTo: App.replyTo ? { senderName: App.replyTo.name, text: App.replyTo.text, id: App.replyTo.id, image: App.replyTo.image || null } : null
       };
       
       let isEncrypted = false;
@@ -3503,6 +3539,16 @@ function cancelReply() {
   App.replyTo = null;
   hide('reply-preview');
 }
+
+/* ══════════════════════════════════════════════════
+   13b. REPLY ENTRY POINTS (called by swipe-to-reply & context menu)
+   ══════════════════════════════════════════════════ */
+window.startReply = function(msgId, sender, text) {
+  replyToMsg(msgId);
+};
+window.replyToMessage = function(msgId) {
+  replyToMsg(msgId);
+};
 
 /* ══════════════════════════════════════════════════
    14. AUDIO RECORDER
@@ -4159,6 +4205,8 @@ function _shouldPlaySound(chatId) {
 
 function playMsgReceivedSound(chatId) {
   if (!_shouldPlaySound(chatId)) return;
+  // Suppress sounds right after opening a chat (avoids vibration/tone on first open)
+  if (App._chatOpenSilenceUntil && Date.now() < App._chatOpenSilenceUntil) return;
   const customSound = chatId ? getChatSound(chatId) : '';
   const soundName = customSound && _SOUND_DEFS[customSound] ? customSound : 'default';
   playNotifSound(soundName);
@@ -4745,6 +4793,12 @@ document.addEventListener('DOMContentLoaded', () => {
         renderMessages(App.currentChat.id);
         scrollToBottom(true);
       }
+
+      // Re-measure filter chips on resize
+      const chipsContainer = document.getElementById('wa-filter-chips');
+      if (chipsContainer && !chipsContainer._expanded) {
+        _fitFilterChips(chipsContainer);
+      }
     }, 150);
   });
 });
@@ -4752,11 +4806,16 @@ document.addEventListener('DOMContentLoaded', () => {
 /* ══════════════════════════════════════════════════
    18. BACK TO CHAT LIST
    ══════════════════════════════════════════════════ */
-function backToList() {
+function backToList(pushState) {
   const listSidebar = document.getElementById('chat-list-sidebar');
   if (listSidebar) listSidebar.classList.remove('hidden');
   const sidebar = document.getElementById('sidebar');
   if (sidebar) sidebar.classList.remove('hidden');
+
+  // Push home state so back button doesn't exit the app
+  if (pushState !== false) {
+    history.pushState({ view: 'home' }, '', window.location.pathname + '#home');
+  }
   
   showWelcome();
 }
@@ -7559,6 +7618,7 @@ window.renderWaFilterChips = function() {
     music: 'Music'
   };
 
+  // Build all chips first
   let html = '';
   activeFilters.forEach(f => {
     const label = labelMap[f] || (f.startsWith('custom_') ? f.replace('custom_', '') : f);
@@ -7566,8 +7626,72 @@ window.renderWaFilterChips = function() {
     html += `<button class="wa-chip ${isActive ? 'active' : ''}" onclick="setWaFilter('${f}')" data-filter="${f}">${escHtml(label)}</button>`;
   });
 
-  html += `<button class="wa-chip-add" onclick="openManageFiltersDialog()" aria-label="Manage filters"><span class="material-symbols-outlined text-[16px]">add</span></button>`;
+  html += `<button class="wa-chip-add wa-expand-btn" onclick="toggleFilterExpand()" aria-label="Show more filters"><span class="material-symbols-outlined text-[16px]">add</span></button>`;
+  html += `<button class="wa-chip-add wa-collapse-btn" onclick="toggleFilterExpand()" aria-label="Show fewer filters" style="display:none"><span class="material-symbols-outlined text-[16px]">remove</span></button>`;
   container.innerHTML = html;
+
+  // Measure and hide chips that overflow
+  requestAnimationFrame(() => _fitFilterChips(container));
+};
+
+function _fitFilterChips(container) {
+  if (!container || container._expanded) return;
+  const addBtn = container.querySelector('.wa-expand-btn');
+  if (!addBtn) return;
+
+  const containerWidth = container.offsetWidth;
+  const gap = 8; // gap between chips in px
+  let totalWidth = addBtn.offsetWidth + gap; // always reserve space for + button
+  const chips = Array.from(container.querySelectorAll('.wa-chip'));
+
+  // Reset all chips to visible first
+  chips.forEach(c => { c.style.display = ''; c.classList.remove('wa-chip-overflow'); });
+
+  // Measure and hide overflow chips
+  let hiddenCount = 0;
+  for (let i = chips.length - 1; i >= 0; i--) {
+    const chipWidth = chips[i].offsetWidth + gap;
+    if (totalWidth + chipWidth > containerWidth) {
+      chips[i].style.display = 'none';
+      chips[i].classList.add('wa-chip-overflow');
+      hiddenCount++;
+    } else {
+      totalWidth += chipWidth;
+    }
+  }
+
+  // If no chips are hidden, show expand button as just the manage icon
+  if (hiddenCount === 0) {
+    addBtn.style.display = '';
+    addBtn.querySelector('.material-symbols-outlined').textContent = 'tune';
+    addBtn.onclick = function() { openManageFiltersDialog(); };
+  } else {
+    addBtn.style.display = '';
+    addBtn.querySelector('.material-symbols-outlined').textContent = '+' + hiddenCount;
+    addBtn.onclick = function() { toggleFilterExpand(); };
+  }
+}
+
+window.toggleFilterExpand = function() {
+  const container = document.getElementById('wa-filter-chips');
+  if (!container) return;
+  container._expanded = !container._expanded;
+
+  const expandBtn = container.querySelector('.wa-expand-btn');
+  const collapseBtn = container.querySelector('.wa-collapse-btn');
+  const chips = Array.from(container.querySelectorAll('.wa-chip'));
+
+  if (container._expanded) {
+    // Show all chips
+    chips.forEach(c => { c.style.display = ''; c.classList.remove('wa-chip-overflow'); });
+    if (expandBtn) expandBtn.style.display = 'none';
+    if (collapseBtn) collapseBtn.style.display = '';
+  } else {
+    // Re-measure and hide overflow
+    if (expandBtn) expandBtn.style.display = '';
+    if (collapseBtn) collapseBtn.style.display = 'none';
+    _fitFilterChips(container);
+  }
 };
 
 window.openManageFiltersDialog = function() {
@@ -7700,3 +7824,42 @@ window.openManageFiltersDialog = function() {
     }
   }
 };
+
+/* ══════════════════════════════════════════════════
+   SPA BACK BUTTON — prevent exiting the chat app
+   ══════════════════════════════════════════════════ */
+(function() {
+  'use strict';
+
+  // Ensure initial state exists
+  if (!history.state || !history.state.view) {
+    history.replaceState({ view: 'home' }, '', window.location.pathname);
+  }
+
+  window.addEventListener('popstate', function(e) {
+    const state = e.state;
+
+    // If we have state and it says we're in a chat, go back to chat list
+    if (state && state.view === 'chat') {
+      if (typeof backToList === 'function') backToList();
+      return;
+    }
+
+    // If no state or home view, stay on the chat list (don't navigate away)
+    if (App.currentChat) {
+      if (typeof backToList === 'function') backToList();
+      return;
+    }
+
+    // If already on home/chat list, push state back to prevent exit
+    history.pushState({ view: 'home' }, '', window.location.pathname + '#home');
+  });
+
+  // Block beforeunload from navigating away accidentally
+  window.addEventListener('beforeunload', function(e) {
+    if (App.currentChat) {
+      // Go back to list instead of exiting
+      if (typeof backToList === 'function') backToList();
+    }
+  });
+})();

@@ -16,7 +16,7 @@
 
   // ─── YOUTUBE PROXY BACKENDS (100% free, no API key) ───
 
-  // Invidious instances
+  // Invidious instances (expanded for reliability)
   const INV_INSTANCES = [
     'https://inv.nadeko.net',
     'https://invidious.nerdvpn.de',
@@ -25,6 +25,12 @@
     'https://yewtu.be',
     'https://iv.ggtyler.dev',
     'https://invidious.privacyredirect.com',
+    'https://invidious.perennialte.ch',
+    'https://yt.artemislena.eu',
+    'https://invidious.fdn.fr',
+    'https://inv.tux.pizza',
+    'https://invidious.protokolla.fi',
+    'https://invidious.lunar.icu',
   ];
   let _workingInv = null;
 
@@ -38,6 +44,10 @@
     'https://pipedapi.moomoo.me',
     'https://pipedapi.tokhmi.xyz',
     'https://pipedapi.mint.lgbt',
+    'https://pipedapi.drgns.space',
+    'https://api.piped.yt',
+    'https://pipedapi.in.projectsegfau.lt',
+    'https://watchapi.whatever.social',
   ];
   let _workingPiped = null;
 
@@ -122,10 +132,13 @@
 
   window.searchInvidious = async function(query) {
     if (!query || query.length < 2) return [];
-    // Try Invidious first, fallback to Piped
+    // Try Invidious first, fallback to Piped, then Jamendo
     let results = await _searchInvidiousRaw(query);
     if (!results.length) {
       results = await _searchPipedRaw(query);
+    }
+    if (!results.length) {
+      results = await _searchJamendoAPI(query);
     }
     return results;
   };
@@ -249,8 +262,7 @@
     showToast('Loading audio...', 'info');
     const audioUrl = await getYouTubeAudioUrl(videoId);
     if (!audioUrl) {
-      showToast('Audio unavailable — opening YouTube', 'info');
-      window.open('https://www.youtube.com/watch?v=' + videoId, '_blank');
+      showToast('Audio unavailable — try again later', 'error');
       return;
     }
     MusicPlayer.play({
@@ -442,6 +454,49 @@
       duration: track.duration,
       source: track.source || 'upload',
       addedByName: track.addedByName,
+    });
+  };
+
+  // ─── JAMENDO API (Free CC-licensed music, no auth for streaming) ───
+  const JAMENDO_CLIENT_ID = 'b2301a74'; // public Jamendo demo client ID
+  const JAMENDO_BASE = 'https://api.jamendo.com/v3.0';
+
+  async function _searchJamendoAPI(query) {
+    try {
+      const ctrl = new AbortController();
+      const tid = setTimeout(() => ctrl.abort(), 10000);
+      const url = `${JAMENDO_BASE}/tracks/?client_id=${JAMENDO_CLIENT_ID}&search=${encodeURIComponent(query)}&format=json&limit=30&include=musicinfo&audioformat=mp32`;
+      const res = await fetch(url, { signal: ctrl.signal });
+      clearTimeout(tid);
+      const data = await res.json();
+      if (!data || !data.results) return [];
+      return data.results.filter(t => t && t.audio).map(t => ({
+        id: 'jam_' + t.id,
+        title: t.name || 'Untitled',
+        artist: t.artist_name || 'Unknown',
+        duration: t.duration || 0,
+        thumbnail: t.album_image || t.image || null,
+        audioUrl: t.audio,
+        source: 'jamendo',
+        genre: t.musicinfo?.genres?.[0]?.name || '',
+        license: 'CC-BY',
+      }));
+    } catch(e) {
+      console.warn('Jamendo search failed:', e);
+      return [];
+    }
+  }
+
+  window.playJamendoTrack = function(track) {
+    if (!track || !track.audioUrl) { showToast('No audio URL', 'error'); return; }
+    MusicPlayer.play({
+      id: track.id,
+      title: track.title,
+      artist: track.artist,
+      url: track.audioUrl,
+      thumbnail: track.thumbnail,
+      duration: track.duration,
+      source: 'jamendo',
     });
   };
 

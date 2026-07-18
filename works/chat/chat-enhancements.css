@@ -2146,91 +2146,6 @@ html:not(.dark) .wa-input-footer {
   }
 }
 
-.wa-input-footer:not(.hidden) {
-  display: flex;
-}
-
-/* ── Rounded input box (left part) ── */
-.wa-input-box {
-  flex: 1;
-  display: flex;
-  align-items: flex-end;
-  gap: 2px;
-  background: var(--wa-input-bg, #2a3942);
-  border-radius: 8px;
-  padding: 6px 8px;
-  min-height: 42px;
-  transition: border-radius 0.15s ease;
-}
-
-/* Multi-line: increase border radius slightly */
-.wa-input-box:has(.wa-textarea[style*="height"]) {
-  border-radius: 8px;
-}
-
-/* ── Icon buttons inside input box ── */
-.wa-input-icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 34px;
-  height: 34px;
-  flex-shrink: 0;
-  border: none;
-  background: transparent;
-  color: var(--wa-icon-color, #8696a0);
-  cursor: pointer;
-  border-radius: 50%;
-  transition: color 0.15s, background 0.15s;
-  padding: 0;
-  margin-bottom: 4px;
-  align-self: flex-end;
-}
-.wa-input-icon:hover {
-  color: var(--wa-icon-hover, #d1d7db);
-}
-.wa-input-icon:active {
-  background: rgba(134, 150, 160, 0.1);
-}
-.wa-input-icon .material-symbols-outlined {
-  font-size: 24px;
-}
-
-/* Attach icon — rotated 45° like WhatsApp paperclip */
-#attach-btn .material-symbols-outlined {
-  transform: rotate(45deg);
-}
-
-/* ── Textarea ── */
-.wa-textarea {
-  flex: 1;
-  background: transparent;
-  border: none;
-  outline: none;
-  color: var(--wa-text-color, #e9edef);
-  font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
-  font-size: 15px;
-  line-height: 20px;
-  padding: 7px 8px;
-  resize: none;
-  max-height: 120px;
-  min-height: 20px;
-  overflow-y: auto;
-  scrollbar-width: thin;
-  scrollbar-color: rgba(134, 150, 160, 0.3) transparent;
-}
-.wa-textarea::placeholder {
-  color: var(--wa-placeholder, #8696a0);
-  opacity: 1;
-}
-.wa-textarea::-webkit-scrollbar {
-  width: 4px;
-}
-.wa-textarea::-webkit-scrollbar-thumb {
-  background: rgba(134, 150, 160, 0.3);
-  border-radius: 4px;
-}
-
 /* ── Circular send/mic button (separate, right side) ── */
 .wa-send-mic-btn {
   display: flex;
@@ -2363,38 +2278,6 @@ html:not(.dark) .wa-input-footer {
 #wa-filter-chips::-webkit-scrollbar {
   display: none !important; /* Chrome, Safari, Opera */
 }
-.wa-chip {
-  --wa-chip-bg: #202c33;
-  --wa-chip-text: #aab4bd;
-  --wa-chip-hover: #2a3942;
-  --wa-chip-active-bg: #0a332c;
-  --wa-chip-active-text: #00bfa5;
-
-  background: var(--wa-chip-bg) !important;
-  color: var(--wa-chip-text) !important;
-  border: none !important;
-  border-radius: 9999px !important;
-  padding: 6px 14px !important;
-  font-size: 13px !important;
-  font-weight: 500 !important;
-  cursor: pointer !important;
-  white-space: nowrap !important;
-  transition: all 0.15s ease !important;
-  line-height: 1.2 !important;
-  min-height: 32px !important;
-  height: 32px !important;
-  display: inline-flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-}
-.wa-chip:hover {
-  background: var(--wa-chip-hover) !important;
-}
-.wa-chip.active {
-  background: var(--wa-chip-active-bg) !important;
-  color: var(--wa-chip-active-text) !important;
-  font-weight: 600 !important;
-}
 .wa-chip-add {
   --wa-chip-bg: #202c33;
   --wa-chip-text: #aab4bd;
@@ -2471,13 +2354,6 @@ html:not(.dark) .wa-input-footer {
 }
 
 /* Light mode overrides */
-html:not(.dark) .wa-chip {
-  --wa-chip-bg: #f0f2f5;
-  --wa-chip-text: #54656f;
-  --wa-chip-hover: #e9edef;
-  --wa-chip-active-bg: #e7f7f4;
-  --wa-chip-active-text: #00a884;
-}
 html:not(.dark) .wa-chip-add {
   --wa-chip-bg: #f0f2f5;
   --wa-chip-text: #54656f;
