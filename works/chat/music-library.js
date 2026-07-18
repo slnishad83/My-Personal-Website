@@ -51,6 +51,39 @@
   ];
   let _workingPiped = null;
 
+  // ─── VEROME API (YouTube Music search + stream, no key) ───
+  const VEROME_BASE = 'https://verome-api.deno.dev';
+
+  async function _searchVeromeAPI(query) {
+    try {
+      const ctrl = new AbortController();
+      const tid = setTimeout(() => ctrl.abort(), 12000);
+      const url = `${VEROME_BASE}/api/search?q=${encodeURIComponent(query)}&filter=songs`;
+      const res = await fetch(url, { signal: ctrl.signal });
+      clearTimeout(tid);
+      if (!res.ok) return [];
+      const data = await res.json();
+      if (!data || !data.songs) return [];
+      return data.songs.filter(v => v && v.id).slice(0, 30).map(v => {
+        const videoId = v.id;
+        return {
+          id: 'verome_' + videoId,
+          videoId,
+          title: v.title || 'Untitled',
+          artist: v.artist || v.channel || 'Unknown',
+          duration: v.duration || 0,
+          thumbnail: v.thumbnail || v.thumbnails?.[0]?.url || `https://i.ytimg.com/vi/${videoId}/mqdefault.jpg`,
+          viewCount: v.views || 0,
+          publishedText: v.publishedDate || '',
+          source: 'youtube',
+        };
+      });
+    } catch (e) {
+      console.warn('Verome search failed:', e);
+      return [];
+    }
+  }
+
   // ─── Invidious fetcher ───
   async function _invFetch(path, timeout) {
     const instances = _workingInv
@@ -132,13 +165,19 @@
 
   window.searchInvidious = async function(query) {
     if (!query || query.length < 2) return [];
-    // Try Invidious first, fallback to Piped, then Jamendo
+    // Try Invidious → Piped → Verome → Jamendo → Archive.org
     let results = await _searchInvidiousRaw(query);
     if (!results.length) {
       results = await _searchPipedRaw(query);
     }
     if (!results.length) {
+      results = await _searchVeromeAPI(query);
+    }
+    if (!results.length) {
       results = await _searchJamendoAPI(query);
+    }
+    if (!results.length) {
+      results = await window.searchJamendo(query);
     }
     return results;
   };
@@ -191,6 +230,27 @@
       }
       localStorage.setItem(_YT_CACHE_KEY, JSON.stringify(cache));
     } catch(_) {}
+  }
+
+  async function _getVeromeAudioUrl(videoId) {
+    try {
+      const ctrl = new AbortController();
+      const tid = setTimeout(() => ctrl.abort(), 12000);
+      const url = `${VEROME_BASE}/api/stream?id=${videoId}`;
+      const res = await fetch(url, { signal: ctrl.signal });
+      clearTimeout(tid);
+      if (!res.ok) return null;
+      const data = await res.json();
+      if (data && data.url) return data.url;
+      if (data && data.audioStreams && data.audioStreams.length) {
+        const best = data.audioStreams.sort((a, b) => (b.bitrate || 0) - (a.bitrate || 0))[0];
+        if (best && best.url) return best.url;
+      }
+      return null;
+    } catch (e) {
+      console.warn('Verome audio extraction failed:', e);
+      return null;
+    }
   }
 
   // ─── YOUTUBE PLAYLIST IMPORT ───
@@ -249,9 +309,10 @@
     // 1. Try cached URL first (fast, works offline)
     const cached = _getCachedAudioUrl(videoId);
     if (cached) return cached;
-    // 2. Try Invidious, fallback to Piped
+    // 2. Try Invidious → Piped → Verome
     let url = await _getInvAudioUrl(videoId);
     if (!url) url = await _getPipedAudioUrl(videoId);
+    if (!url) url = await _getVeromeAudioUrl(videoId);
     // 3. Cache successful result
     if (url) _cacheAudioUrl(videoId, url);
     return url;
@@ -299,6 +360,7 @@
   window.uploadMusicFile = async function(file, meta = {}) {
     if (!App.auth?.currentUser || !App.db) { showToast('Sign in required', 'error'); return null; }
     if (!file || !file.type.startsWith('audio/')) { showToast('Please select an audio file', 'error'); return null; }
+    if (file.size > 50 * 1024 * 1024) { showToast('File too large — max 50MB', 'error'); return null; }
 
     const uid = App.auth.currentUser.uid;
     const ext = file.name.split('.').pop() || 'mp3';
@@ -320,6 +382,11 @@
         (err) => {
           console.error('Upload failed:', err);
           showToast('Upload failed: ' + err.message, 'error');
+          const bar = document.getElementById('music-upload-progress');
+          if (bar) bar.style.width = '0%';
+          const container = document.getElementById('upload-progress-container');
+          if (container) container.style.display = 'none';
+          _pendingUploadFile = null;
         }
       );
 
@@ -773,13 +840,15 @@
   window.handleMusicFileSelect = function(e) {
     const files = e.target.files;
     if (!files || !files.length) return;
-    _prepareUpload(files[0]);
+    if (files.length === 1) { _prepareUpload(files[0]); return; }
+    _prepareUploadBatch(Array.from(files));
   };
 
   window.handleMusicFileDrop = function(e) {
     const files = e.dataTransfer.files;
     if (!files || !files.length) return;
-    _prepareUpload(files[0]);
+    if (files.length === 1) { _prepareUpload(files[0]); return; }
+    _prepareUploadBatch(Array.from(files));
   };
 
   let _pendingUploadFile = null;
@@ -796,6 +865,26 @@
       dropZone.innerHTML = `<div style="font-size:32px;margin-bottom:4px">🎵</div><p style="font-size:12px;font-weight:600;color:var(--primary)">${file.name}</p><p style="font-size:10px;color:var(--on-surface-variant)">${(file.size / (1024*1024)).toFixed(1)} MB</p>`;
       dropZone.onclick = null;
     }
+  }
+
+  function _prepareUploadBatch(files) {
+    const audioFiles = files.filter(f => f.type.startsWith('audio/'));
+    if (!audioFiles.length) { showToast('No audio files found', 'error'); return; }
+    const total = audioFiles.length;
+    showToast(`Uploading ${total} files...`, 'info');
+    const container = document.getElementById('upload-progress-container');
+    if (container) container.style.display = 'block';
+    let uploaded = 0;
+    async function uploadNext() {
+      if (uploaded >= total) { showToast(`${total} files uploaded!`, 'success'); switchMusicLibTab('my'); return; }
+      const file = audioFiles[uploaded];
+      const bar = document.getElementById('music-upload-progress');
+      if (bar) bar.style.width = Math.round((uploaded / total) * 100) + '%';
+      await uploadMusicFile(file, { title: file.name.replace(/\.[^.]+$/, ''), artist: 'Unknown' });
+      uploaded++;
+      uploadNext();
+    }
+    uploadNext();
   }
 
   window.submitMusicUpload = async function() {
@@ -1085,10 +1174,11 @@
       container.innerHTML = `
         <div style="text-align:center;padding:16px">
           <p style="color:var(--on-surface-variant);font-size:12px;margin:0 0 8px">${results.length ? 'No results match current filters' : 'No results found'}</p>
-          ${results.length ? '<button onclick="resetSearchFilters();doYouTubeSearch()" style="padding:6px 14px;border-radius:8px;border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.03);color:var(--on-surface-variant);font-size:11px;cursor:pointer;margin-bottom:8px">Reset Filters & Retry</button>' : ''}
-          <a href="https://www.youtube.com/results?search_query=${encodeURIComponent(query + ' song')}" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:8px;background:rgba(255,0,0,0.1);color:#ff4444;font-size:12px;font-weight:600;text-decoration:none">
-            <span class="material-symbols-outlined" style="font-size:16px">open_in_new</span> Search on YouTube
-          </a>
+          <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
+            ${results.length ? '<button onclick="resetSearchFilters();doYouTubeSearch()" style="padding:6px 14px;border-radius:8px;border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.03);color:var(--on-surface-variant);font-size:11px;cursor:pointer">Reset Filters & Retry</button>' : ''}
+            <button onclick="doYouTubeSearchFor('${escHtml(query + ' music').replace(/'/g, "\\'")}');showToast('Trying broader search...','info')" style="padding:6px 14px;border-radius:8px;border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.03);color:var(--on-surface-variant);font-size:11px;cursor:pointer">Try Broader Search</button>
+            <button onclick="document.getElementById('yt-search-input').value='';document.getElementById('yt-search-input').focus()" style="padding:6px 14px;border-radius:8px;border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.03);color:var(--on-surface-variant);font-size:11px;cursor:pointer">Clear Search</button>
+          </div>
         </div>`;
       return;
     }

@@ -2558,16 +2558,19 @@ html.dark .thread-typing-indicator {
   padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
-/* -- Mini Player safe area (above bottom bar) -- */
-#music-mini-player {
-  bottom: calc(60px + env(safe-area-inset-bottom, 0px));
-  padding-left: calc(12px + env(safe-area-inset-left, 0px));
-  padding-right: calc(12px + env(safe-area-inset-right, 0px));
+/* -- Music Mini Player (floating, draggable) -- */
+#nsm-mini {
+  padding-left: calc(8px + env(safe-area-inset-left, 0px));
+  padding-right: calc(8px + env(safe-area-inset-right, 0px));
+  transition: box-shadow 0.2s ease;
+}
+#nsm-mini:hover {
+  box-shadow: 0 8px 32px rgba(0,0,0,0.5);
 }
 
-/* -- Music Library: tablet & desktop → centered modal -- */
+/* -- Music Library: tablet+ centered modal -- */
 @media (min-width: 768px) {
-  #music-library-overlay {
+  #nsm-lib {
     align-items: center !important;
   }
   .music-lib-panel {
@@ -2577,7 +2580,18 @@ html.dark .thread-typing-indicator {
     border: 1px solid rgba(255, 255, 255, 0.08);
     max-width: 640px !important;
   }
-  #music-library-overlay .ml-tab { flex-shrink: 0 !important; }
+  .nsm-tab { flex-shrink: 0 !important; }
+}
+
+/* -- Landscape: compact mini player -- */
+@media (max-height: 500px) and (orientation: landscape) {
+  #nsm-mini {
+    width: 180px !important;
+    padding: 4px 8px !important;
+  }
+  #nsm-mini button span.material-symbols-outlined {
+    font-size: 20px !important;
+  }
 }
 
 /* -- Music Library: large desktop → wider panel -- */
@@ -2759,25 +2773,23 @@ html.dark .thread-typing-indicator {
   }
 }
 
-/* -- Landscape mobile: adjust mini player height -- */
+/* -- Landscape mobile: compact floating mini player -- */
 @media (max-height: 500px) and (orientation: landscape) {
-  #music-mini-player {
-    bottom: 40px;
-    padding: 4px 12px;
+  #nsm-mini {
+    width: 180px !important;
+    padding: 4px 8px !important;
   }
-  #music-mini-player button[aria-label] span.material-symbols-outlined {
-    font-size: 22px !important;
+  #nsm-mini button span.material-symbols-outlined {
+    font-size: 20px !important;
   }
 }
 
 /* -- Dark mode / Light mode toggle safe for music panels -- */
 html:not(.dark) .music-lib-panel,
-html:not(.dark) #full-player-overlay > div,
-html:not(.dark) #equalizer-overlay > div,
-html:not(.dark) #playlist-queue-overlay > div,
+html:not(.dark) #nsm-full > div,
+html:not(.dark) #nsm-lib,
 html:not(.dark) #listening-room-overlay > div,
 html:not(.dark) #room-chat-overlay > div,
-html:not(.dark) #recently-played-overlay > div,
 html:not(.dark) #playlists-overlay > div,
 html:not(.dark) #playlist-detail-overlay > div {
   border-color: rgba(0, 0, 0, 0.08) !important;
@@ -2785,7 +2797,7 @@ html:not(.dark) #playlist-detail-overlay > div {
 
 /* -- Touch-friendly minimum targets on mobile -- */
 @media (pointer: coarse) {
-  #music-mini-player button,
+  #nsm-mini button,
   #full-player-overlay button,
   #equalizer-overlay button,
   #music-queue-list button,

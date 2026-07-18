@@ -84,9 +84,13 @@
   let _eqGains = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
 
   Player.initEqualizer = function() {
-    if (_audioCtx) return;
+    if (_audioCtx) {
+      if (_audioCtx.state === 'suspended') _audioCtx.resume().catch(()=>{});
+      return;
+    }
     try {
       _audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      if (_audioCtx.state === 'suspended') _audioCtx.resume().catch(()=>{});
       const source = _audioCtx.createMediaElementSource(Player.audio);
       _analyser = _audioCtx.createAnalyser();
       _analyser.fftSize = 256;
@@ -212,6 +216,11 @@
     _haptic('light');
     if (!track || !track.url) { showToast('No audio URL', 'error'); return; }
     if (playlistId) Player.playlistId = playlistId;
+
+    // Resume AudioContext if suspended (mobile autoplay policy)
+    if (_audioCtx && _audioCtx.state === 'suspended') {
+      _audioCtx.resume().catch(()=>{});
+    }
 
     if (Player.audio.src === track.url) {
       Player.audio.play().catch(() => {});
@@ -413,6 +422,7 @@
 
   function _onPlay() {
     Player.isPlaying = true;
+    Player._retryCount = 0;
     _updatePlayButtons();
     _activateBackgroundMode();
     if ('mediaSession' in navigator) {
@@ -501,15 +511,18 @@
 
   function _crossfadeIn() {
     if (Player.crossfadeDuration <= 0) return;
+    // Clear any existing crossfade interval to prevent leaks
+    if (Player._crossfadeInInterval) { clearInterval(Player._crossfadeInInterval); Player._crossfadeInInterval = null; }
     Player._isCrossfading = true;
     Player.audio.volume = 0;
     const targetVol = Player.isMuted ? 0 : Player.volume;
     const step = targetVol / (Player.crossfadeDuration * 10);
-    const fadeIn = setInterval(() => {
+    Player._crossfadeInInterval = setInterval(() => {
       if (!Player._isCrossfading || Player.audio.volume >= targetVol) {
         Player.audio.volume = targetVol;
         Player._isCrossfading = false;
-        clearInterval(fadeIn);
+        clearInterval(Player._crossfadeInInterval);
+        Player._crossfadeInInterval = null;
         return;
       }
       Player.audio.volume = Math.min(Player.audio.volume + step, targetVol);
@@ -782,7 +795,7 @@
     }
     list.innerHTML = Player.queue.map((t, i) => `
       <div class="queue-item" data-idx="${i}" draggable="true" ondragstart="_qDragStart(event,${i})" ondragover="event.preventDefault()" ondrop="_qDrop(event,${i})" ondragend="_qDragEnd()" style="display:flex;align-items:center;gap:3px;padding:6px 8px;border-radius:10px;background:${i===Player.queueIndex?'rgba(124,77,255,0.1)':'rgba(255,255,255,0.02)'};margin-bottom:3px;transition:all 0.3s ease;${i===Player.queueIndex?'transform:scale(1.02);box-shadow:0 0 12px rgba(124,77,255,0.15);':'transform:scale(1);'}">
-        <span class="material-symbols-outlined" style="font-size:14px;color:var(--on-surface-variant);cursor:grab;opacity:0.4;flex-shrink:0;user-select:none;min-width:32px;min-height:32px;display:inline-flex;align-items:center;justify-content:center" title="Drag to reorder">drag_indicator</span>
+        <span class="material-symbols-outlined" style="font-size:14px;color:var(--on-surface-variant);cursor:grab;opacity:0.4;flex-shrink:0;user-select:none;min-width:44px;min-height:44px;display:inline-flex;align-items:center;justify-content:center" title="Drag to reorder">drag_indicator</span>
         <div style="width:36px;height:36px;border-radius:6px;overflow:hidden;flex-shrink:0;background:rgba(255,255,255,0.05);display:flex;align-items:center;justify-content:center;cursor:pointer" onclick="MusicPlayer.playTrack(${i})">
           ${t.thumbnail ? `<img src="${escHtml(t.thumbnail)}" style="width:100%;height:100%;object-fit:cover">` : '<span class="material-symbols-outlined" style="font-size:14px;color:var(--on-surface-variant)">music_note</span>'}
         </div>
@@ -792,7 +805,7 @@
         </div>
         ${i===Player.queueIndex ? '<div style="display:flex;gap:1px;align-items:flex-end;height:12px;flex-shrink:0"><span style="display:inline-block;width:2px;background:var(--primary);border-radius:1px;animation:eqBar 0.8s ease-in-out infinite alternate"></span><span style="display:inline-block;width:2px;background:var(--primary);border-radius:1px;animation:eqBar 0.6s ease-in-out 0.2s infinite alternate"></span><span style="display:inline-block;width:2px;background:var(--primary);border-radius:1px;animation:eqBar 0.7s ease-in-out 0.1s infinite alternate"></span></div>' : ''}
         <span style="font-size:10px;color:var(--on-surface-variant);flex-shrink:0">${formatTrackDuration(t.duration)}</span>
-        <button onclick="event.stopPropagation();MusicPlayer.removeFromQueue(${i})" style="background:none;border:none;color:var(--on-surface-variant);cursor:pointer;padding:4px;flex-shrink:0;min-width:32px;min-height:32px;display:inline-flex;align-items:center;justify-content:center">
+        <button onclick="event.stopPropagation();MusicPlayer.removeFromQueue(${i})" style="background:none;border:none;color:var(--on-surface-variant);cursor:pointer;padding:4px;flex-shrink:0;min-width:44px;min-height:44px;display:inline-flex;align-items:center;justify-content:center">
           <span class="material-symbols-outlined" style="font-size:14px">close</span>
         </button>
       </div>
@@ -817,30 +830,92 @@
     document.querySelectorAll('.queue-item').forEach(el => el.style.opacity = '');
   };
 
-  // ─── MINI PLAYER ───
+  // ─── MINI PLAYER (Floating, draggable) ───
+  const _MINI_POS_KEY = 'nsl_mini_player_pos';
+  let _miniDragging = false;
+  let _miniDragStartX = 0;
+  let _miniDragStartY = 0;
+  let _miniStartLeft = 0;
+  let _miniStartTop = 0;
+  let _miniMoved = false;
+
   function _showMiniPlayer() {
     if (document.getElementById('music-mini-player')) return;
     const mini = document.createElement('div');
     mini.id = 'music-mini-player';
     mini.setAttribute('role', 'region');
     mini.setAttribute('aria-label', 'Music mini player');
-    mini.style.cssText = 'position:fixed;bottom:calc(60px + env(safe-area-inset-bottom,0px));left:0;right:0;z-index:95;background:var(--surface-container-high,#1e2a34);border-top:1px solid rgba(255,255,255,0.08);padding:8px 12px;padding-bottom:calc(8px + env(safe-area-inset-bottom,0px));display:flex;align-items:center;gap:10px;cursor:pointer;animation:slideUp 0.2s ease;touch-action:manipulation;user-select:none;-webkit-user-select:none';
-    mini.onclick = (e) => { if (e.target.closest('button')) return; openFullPlayer(); };
+    // Restore saved position or default to bottom-right
+    let pos;
+    try { pos = JSON.parse(localStorage.getItem(_MINI_POS_KEY)); } catch(_) {}
+    if (!pos || typeof pos.left !== 'number' || typeof pos.top !== 'number') {
+      pos = { left: window.innerWidth - 220 - 16, top: window.innerHeight - 80 - 16 };
+    }
+    pos.left = Math.max(8, Math.min(pos.left, window.innerWidth - 220));
+    pos.top = Math.max(8, Math.min(pos.top, window.innerHeight - 80));
+    mini.style.cssText = `position:fixed;left:${pos.left}px;top:${pos.top}px;z-index:95;width:210px;background:var(--surface-container-high,#1e2a34);border-radius:14px;border:1px solid rgba(255,255,255,0.1);box-shadow:0 6px 24px rgba(0,0,0,0.4);padding:8px 10px;display:flex;align-items:center;gap:8px;cursor:grab;animation:fadeIn 0.2s ease;touch-action:none;user-select:none;-webkit-user-select:none;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)`;
+    mini.onclick = (e) => {
+      if (_miniMoved) return;
+      if (e.target.closest('button')) return;
+      openFullPlayer();
+    };
     document.body.appendChild(mini);
-    let _swipeStartX = 0;
-    let _swipeStartY = 0;
+
+    // Drag handlers (touch + mouse)
+    function _onDragStart(ex, ey) {
+      _miniDragging = true;
+      _miniMoved = false;
+      _miniDragStartX = ex;
+      _miniDragStartY = ey;
+      const rect = mini.getBoundingClientRect();
+      _miniStartLeft = rect.left;
+      _miniStartTop = rect.top;
+      mini.style.cursor = 'grabbing';
+      mini.style.transition = 'none';
+    }
+    function _onDragMove(ex, ey) {
+      if (!_miniDragging) return;
+      const dx = ex - _miniDragStartX;
+      const dy = ey - _miniDragStartY;
+      if (Math.abs(dx) > 3 || Math.abs(dy) > 3) _miniMoved = true;
+      let newLeft = _miniStartLeft + dx;
+      let newTop = _miniStartTop + dy;
+      newLeft = Math.max(0, Math.min(newLeft, window.innerWidth - 210));
+      newTop = Math.max(0, Math.min(newTop, window.innerHeight - 80));
+      mini.style.left = newLeft + 'px';
+      mini.style.top = newTop + 'px';
+    }
+    function _onDragEnd() {
+      if (!_miniDragging) return;
+      _miniDragging = false;
+      mini.style.cursor = 'grab';
+      mini.style.transition = '';
+      const rect = mini.getBoundingClientRect();
+      localStorage.setItem(_MINI_POS_KEY, JSON.stringify({ left: rect.left, top: rect.top }));
+      // Snap to nearest edge if close
+      setTimeout(() => { _miniMoved = false; }, 50);
+    }
+    // Touch events
     mini.addEventListener('touchstart', (e) => {
-      _swipeStartX = e.touches[0].clientX;
-      _swipeStartY = e.touches[0].clientY;
+      if (e.target.closest('button')) return;
+      _onDragStart(e.touches[0].clientX, e.touches[0].clientY);
     }, { passive: true });
-    mini.addEventListener('touchend', (e) => {
-      const dx = e.changedTouches[0].clientX - _swipeStartX;
-      const dy = e.changedTouches[0].clientY - _swipeStartY;
-      if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) {
-        if (dx > 0) { Player.prev(); showToast('Previous', 'info'); }
-        else { Player.next(); showToast('Next', 'info'); }
-      }
-    }, { passive: true });
+    mini.addEventListener('touchmove', (e) => {
+      if (!_miniDragging) return;
+      e.preventDefault();
+      _onDragMove(e.touches[0].clientX, e.touches[0].clientY);
+    }, { passive: false });
+    mini.addEventListener('touchend', () => _onDragEnd(), { passive: true });
+    // Mouse events
+    mini.addEventListener('mousedown', (e) => {
+      if (e.target.closest('button')) return;
+      e.preventDefault();
+      _onDragStart(e.clientX, e.clientY);
+      const _mm = (ev) => _onDragMove(ev.clientX, ev.clientY);
+      const _mu = () => { _onDragEnd(); document.removeEventListener('mousemove', _mm); document.removeEventListener('mouseup', _mu); };
+      document.addEventListener('mousemove', _mm);
+      document.addEventListener('mouseup', _mu);
+    });
   }
 
   function _hideMiniPlayer() {
@@ -853,21 +928,21 @@
     const mini = document.getElementById('music-mini-player');
     if (!mini) return;
     mini.innerHTML = `
-      <div style="width:42px;height:42px;border-radius:8px;overflow:hidden;flex-shrink:0;background:rgba(255,255,255,0.05)">
-        ${track.thumbnail ? `<img src="${escHtml(track.thumbnail)}" style="width:100%;height:100%;object-fit:cover">` : '<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center"><span class="material-symbols-outlined" style="font-size:20px;color:var(--primary)">music_note</span></div>'}
+      <div style="width:38px;height:38px;border-radius:8px;overflow:hidden;flex-shrink:0;background:rgba(255,255,255,0.05)">
+        ${track.thumbnail ? `<img src="${escHtml(track.thumbnail)}" style="width:100%;height:100%;object-fit:cover">` : '<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center"><span class="material-symbols-outlined" style="font-size:18px;color:var(--primary)">music_note</span></div>'}
       </div>
-      <div class="flex-1 min-w-0">
-        <div style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escHtml(track.title)}</div>
-        <div style="font-size:11px;color:var(--on-surface-variant);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escHtml(track.artist)}</div>
+      <div style="flex:1;min-width:0;pointer-events:none">
+        <div style="font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--on-surface)">${escHtml(track.title)}</div>
+        <div style="font-size:10px;color:var(--on-surface-variant);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escHtml(track.artist)}</div>
       </div>
-      <button class="music-play-btn" onclick="event.stopPropagation();MusicPlayer.togglePlay()" aria-label="${Player.isPlaying ? 'Pause' : 'Play'}" style="background:none;border:none;color:var(--on-surface);cursor:pointer;padding:4px;min-width:44px;min-height:44px;display:inline-flex;align-items:center;justify-content:center">
-        <span class="material-symbols-outlined" style="font-size:28px">${Player.isPlaying ? 'pause_circle' : 'play_circle'}</span>
+      <button class="music-play-btn" onclick="event.stopPropagation();event.preventDefault();MusicPlayer.togglePlay()" aria-label="${Player.isPlaying ? 'Pause' : 'Play'}" style="background:none;border:none;color:var(--on-surface);cursor:pointer;padding:2px;min-width:36px;min-height:36px;display:inline-flex;align-items:center;justify-content:center">
+        <span class="material-symbols-outlined" style="font-size:26px">${Player.isPlaying ? 'pause_circle' : 'play_circle'}</span>
       </button>
-      <button onclick="event.stopPropagation();MusicPlayer.next()" aria-label="Next track" style="background:none;border:none;color:var(--on-surface-variant);cursor:pointer;padding:4px;min-width:44px;min-height:44px;display:inline-flex;align-items:center;justify-content:center">
-        <span class="material-symbols-outlined" style="font-size:22px">skip_next</span>
+      <button onclick="event.stopPropagation();event.preventDefault();MusicPlayer.next()" aria-label="Next track" style="background:none;border:none;color:var(--on-surface-variant);cursor:pointer;padding:2px;min-width:32px;min-height:32px;display:inline-flex;align-items:center;justify-content:center">
+        <span class="material-symbols-outlined" style="font-size:18px">skip_next</span>
       </button>
-      <div style="position:absolute;bottom:0;left:0;right:0;height:2px;background:rgba(255,255,255,0.1)">
-        <div id="mini-progress-bar" style="height:100%;background:var(--primary);transition:width 0.3s;width:0%"></div>
+      <div style="position:absolute;bottom:0;left:8px;right:8px;height:2px;background:rgba(255,255,255,0.08);border-radius:1px">
+        <div id="mini-progress-bar" style="height:100%;background:var(--primary);transition:width 0.3s;width:0%;border-radius:1px"></div>
       </div>`;
   }
 
@@ -914,7 +989,7 @@
     overlay.setAttribute('role', 'dialog');
     overlay.setAttribute('aria-label', 'Music player');
     overlay.setAttribute('aria-modal', 'true');
-    overlay.style.cssText = 'position:fixed;inset:0;z-index:9998;background:var(--surface-container,#0d1b2a);display:flex;flex-direction:column;animation:slideUp 0.3s ease;touch-action:manipulation';
+    overlay.style.cssText = 'position:fixed;inset:0;z-index:9998;background:var(--surface-container,#0d1b2a);display:flex;flex-direction:column;animation:slideUp 0.3s ease;touch-action:manipulation;padding:env(safe-area-inset-top,0px) 0 env(safe-area-inset-bottom,0px) 0';
 
     overlay.innerHTML = `
       <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px">
@@ -1082,7 +1157,7 @@
   function _updateWakeLockUI() {
     const icon = document.getElementById('music-lock-icon');
     if (icon) {
-      icon.textContent = Player._wakeLockActive ? 'screen_lock_portrait' : 'screen_lock_portrait';
+      icon.textContent = Player._wakeLockActive ? 'screen_lock_portrait' : 'lock_open';
       icon.style.color = Player._wakeLockActive ? 'var(--primary)' : 'var(--on-surface-variant)';
     }
   }
@@ -1101,6 +1176,27 @@
     try {
       const last = JSON.parse(localStorage.getItem('nsl_last_track') || 'null');
       if (last && last.url) {
+        // Check if YouTube URL is stale (>4 hours old)
+        const isYouTube = last.source === 'youtube' || (last.url && last.url.includes('googlevideo'));
+        const isStale = isYouTube && last._savedTs && (Date.now() - last._savedTs > 4 * 60 * 60 * 1000);
+        if (isStale) {
+          // Re-fetch audio URL for expired YouTube tracks
+          if (last.videoId && typeof getYouTubeAudioUrl === 'function') {
+            showToast('Refreshing audio link...', 'info');
+            getYouTubeAudioUrl(last.videoId).then(freshUrl => {
+              if (freshUrl) {
+                last.url = freshUrl;
+                Player._currentTrack = last;
+                Player.audio.src = freshUrl;
+                if (last._savedPosition > 0) Player.audio.currentTime = last._savedPosition;
+                _updateMiniPlayer(last);
+              } else {
+                showToast('Audio expired — search to play again', 'error');
+              }
+            });
+            return;
+          }
+        }
         Player._currentTrack = last;
         Player.audio.src = last.url;
         if (last._savedPosition && last._savedPosition > 0) {
@@ -1112,9 +1208,9 @@
   }
 
   setInterval(() => {
-    if (Player._currentTrack && Player.audio) {
+    if (Player._currentTrack && Player.audio && Player.isPlaying) {
       try {
-        const toSave = { ...Player._currentTrack, _savedPosition: Player.audio.currentTime || 0 };
+        const toSave = { ...Player._currentTrack, _savedPosition: Player.audio.currentTime || 0, _savedTs: Date.now() };
         localStorage.setItem('nsl_last_track', JSON.stringify(toSave));
       } catch(_) {}
     }
