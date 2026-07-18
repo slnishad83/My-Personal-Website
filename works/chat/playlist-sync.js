@@ -6,6 +6,7 @@
   App._listeningRoom = null;
   App._listeningRoomUnsub = null;
   App._listeningRoomListeners = [];
+  let _roomChatUnsub = null;
 
   // ─── Firestore schema: listeningRooms/{chatId}
   // {
@@ -206,9 +207,11 @@
       } catch(_) {}
     }
 
+    if (_roomChatUnsub) { _roomChatUnsub(); _roomChatUnsub = null; }
     if (App._listeningRoomUnsub) { App._listeningRoomUnsub(); App._listeningRoomUnsub = null; }
     App._listeningRoom = null;
     _hideListeningIndicator();
+    document.getElementById('room-chat-overlay')?.remove();
     showToast('Left listening room', 'info');
   };
 
@@ -239,7 +242,7 @@
     if (!indicator) {
       indicator = document.createElement('div');
       indicator.id = 'listening-room-indicator';
-      indicator.style.cssText = 'position:fixed;bottom:120px;left:12px;right:12px;z-index:89;background:linear-gradient(135deg,rgba(124,77,255,0.15),rgba(74,0,224,0.15));border:1px solid rgba(124,77,255,0.3);border-radius:14px;padding:10px 14px;display:flex;align-items:center;gap:10px;animation:slideUp 0.2s ease;cursor:pointer';
+      indicator.style.cssText = 'position:fixed;bottom:calc(120px + env(safe-area-inset-bottom,0px));left:12px;right:12px;z-index:89;background:linear-gradient(135deg,rgba(124,77,255,0.15),rgba(74,0,224,0.15));border:1px solid rgba(124,77,255,0.3);border-radius:14px;padding:10px 14px;display:flex;align-items:center;gap:10px;animation:slideUp 0.2s ease;cursor:pointer;max-width:360px;margin:0 auto;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)';
       indicator.onclick = () => { if (room) openListeningRoomPanel(room.chatId); };
       document.body.appendChild(indicator);
     }
@@ -253,7 +256,7 @@
         <div style="font-size:12px;font-weight:700;color:var(--on-surface)">🎵 Listening Room ${isHost ? '(Host)' : ''}</div>
         <div style="font-size:11px;color:var(--on-surface-variant)">${room.listeners?.length || 1} listener${(room.listeners?.length || 1) > 1 ? 's' : ''}</div>
       </div>
-      <button onclick="event.stopPropagation();openListeningRoomPanel('${room.chatId}')" style="background:none;border:none;color:var(--on-surface-variant);cursor:pointer;padding:4px">
+      <button onclick="event.stopPropagation();openListeningRoomPanel('${room.chatId}')" style="background:none;border:none;color:var(--on-surface-variant);cursor:pointer;padding:4px;min-width:44px;min-height:44px;display:inline-flex;align-items:center;justify-content:center">
         <span class="material-symbols-outlined" style="font-size:18px">open_in_new</span>
       </button>`;
   }
@@ -282,7 +285,7 @@
     const isHost = room.hostUid === App.auth?.currentUser?.uid;
 
     const panel = document.createElement('div');
-    panel.style.cssText = 'background:var(--surface-container,#1e1e2e);border-radius:20px 20px 0 0;padding:20px;width:100%;max-width:500px;max-height:70vh;overflow-y:auto;color:var(--on-surface)';
+    panel.style.cssText = 'background:var(--surface-container,#1e1e2e);border-radius:20px 20px 0 0;padding:20px 20px calc(20px + env(safe-area-inset-bottom,0px)) 20px;width:100%;max-width:500px;max-height:70vh;overflow-y:auto;color:var(--on-surface)';
 
     let html = `
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
@@ -327,9 +330,9 @@
             <input type="checkbox" ${room.settings?.allowSkip ? 'checked' : ''} onchange="toggleRoomSetting('allowSkip',this.checked)" style="accent-color:var(--primary)">
           </label>
         </div>
-        <button onclick="endListeningRoom();document.getElementById('listening-room-overlay')?.remove()" style="width:100%;padding:12px;border-radius:10px;border:none;background:rgba(239,68,68,0.15);color:var(--error);font-size:13px;font-weight:700;cursor:pointer;margin-top:12px">End Session</button>`;
+        <button onclick="endListeningRoom();document.getElementById('listening-room-overlay')?.remove()" style="width:100%;min-height:48px;padding:12px;border-radius:10px;border:none;background:rgba(239,68,68,0.15);color:var(--error);font-size:13px;font-weight:700;cursor:pointer;margin-top:12px">End Session</button>`;
     } else {
-      html += `<button onclick="endListeningRoom();document.getElementById('listening-room-overlay')?.remove()" style="width:100%;padding:12px;border-radius:10px;border:none;background:rgba(255,255,255,0.06);color:var(--on-surface-variant);font-size:13px;font-weight:600;cursor:pointer;margin-top:12px">Leave Room</button>`;
+      html += `<button onclick="endListeningRoom();document.getElementById('listening-room-overlay')?.remove()" style="width:100%;min-height:48px;padding:12px;border-radius:10px;border:none;background:rgba(255,255,255,0.06);color:var(--on-surface-variant);font-size:13px;font-weight:600;cursor:pointer;margin-top:12px">Leave Room</button>`;
     }
 
     panel.innerHTML = html;
@@ -440,8 +443,89 @@
         userName: App.currentUser?.displayName || 'User',
         timestamp: Date.now(),
       });
+      const inp = document.getElementById('room-chat-input');
+      if (inp) inp.value = '';
     } catch(e) {}
   };
+
+  // ─── ROOM CHAT UI ───
+  window.openRoomChat = async function(roomId) {
+    const existing = document.getElementById('room-chat-overlay');
+    if (existing) { existing.remove(); return; }
+
+    const overlay = document.createElement('div');
+    overlay.id = 'room-chat-overlay';
+    overlay.style.cssText = 'position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,0.85);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);display:flex;align-items:flex-end;justify-content:center;animation:fadeIn 0.2s ease';
+
+    const panel = document.createElement('div');
+    panel.style.cssText = 'background:var(--surface-container,#1e1e2e);border-radius:20px 20px 0 0;padding:0;width:100%;max-width:500px;height:70vh;display:flex;flex-direction:column;color:var(--on-surface)';
+
+    panel.innerHTML = `
+      <div style="padding:16px 20px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid rgba(255,255,255,0.06)">
+        <div>
+          <h3 style="margin:0;font-size:15px;font-weight:700">Room Chat</h3>
+          <div id="room-listener-count" style="font-size:11px;color:var(--on-surface-variant)"></div>
+        </div>
+        <button onclick="document.getElementById('room-chat-overlay')?.remove()" style="background:none;border:none;color:var(--on-surface-variant);cursor:pointer;font-size:18px">&times;</button>
+      </div>
+      <div id="room-chat-messages" style="flex:1;overflow-y:auto;padding:12px 16px;display:flex;flex-direction:column;gap:6px"></div>
+      <div id="room-typing-indicator" style="padding:0 16px;font-size:11px;color:var(--on-surface-variant);min-height:18px;display:none"></div>
+      <div style="padding:12px 16px calc(12px + env(safe-area-inset-bottom,0px)) 16px;display:flex;gap:8px;border-top:1px solid rgba(255,255,255,0.06)">
+        <input type="text" id="room-chat-input" placeholder="Type a message..." style="flex:1;padding:10px 14px;border-radius:20px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);color:var(--on-surface);font-size:13px;outline:none;min-height:44px" onkeydown="if(event.key==='Enter'){sendRoomChat('${roomId}',this.value);this.value=''}">
+        <button onclick="const inp=document.getElementById('room-chat-input');if(inp?.value)sendRoomChat('${roomId}',inp.value);inp.value=''" style="min-width:60px;min-height:44px;padding:10px 16px;border-radius:20px;border:none;background:var(--primary);color:var(--on-primary);font-size:13px;font-weight:600;cursor:pointer">Send</button>
+      </div>`;
+
+    overlay.appendChild(panel);
+    overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+    document.body.appendChild(overlay);
+
+    _updateRoomChatListeners(roomId);
+    _subscribeRoomChat(roomId);
+  };
+
+  function _subscribeRoomChat(roomId) {
+    if (_roomChatUnsub) _roomChatUnsub();
+    if (!App.db) return;
+
+    _roomChatUnsub = App.db.collection('listeningRooms').doc(roomId).collection('chat')
+      .orderBy('timestamp', 'asc')
+      .limitToLast(50)
+      .onSnapshot(snap => {
+        const container = document.getElementById('room-chat-messages');
+        if (!container) return;
+
+        const messages = [];
+        snap.forEach(doc => messages.push({ id: doc.id, ...doc.data() }));
+
+        container.innerHTML = messages.map(msg => {
+          const isMe = msg.userId === App.auth?.currentUser?.uid;
+          return `
+            <div style="display:flex;flex-direction:column;align-items:${isMe ? 'flex-end' : 'flex-start'}">
+              ${!isMe ? `<div style="font-size:10px;font-weight:600;color:var(--primary);margin-bottom:2px;padding:0 8px">${escHtml(msg.userName || 'User')}</div>` : ''}
+              <div style="max-width:75%;padding:8px 12px;border-radius:${isMe ? '12px 12px 2px 12px' : '12px 12px 12px 2px'};background:${isMe ? 'var(--primary)' : 'rgba(255,255,255,0.06)'};color:${isMe ? 'var(--on-primary)' : 'var(--on-surface)'};font-size:13px;line-height:1.4;word-break:break-word">
+                ${escHtml(msg.text || '')}
+              </div>
+              <div style="font-size:9px;color:var(--on-surface-variant);margin-top:2px;padding:0 8px;opacity:0.6">${_formatRoomTime(msg.timestamp)}</div>
+            </div>`;
+        }).join('');
+
+        container.scrollTop = container.scrollHeight;
+      });
+  }
+
+  function _formatRoomTime(ts) {
+    if (!ts) return '';
+    const d = ts.toDate ? ts.toDate() : new Date(ts);
+    return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  }
+
+  function _updateRoomChatListeners(roomId) {
+    const el = document.getElementById('room-listener-count');
+    if (!el) return;
+    const room = App._listeningRoom;
+    const count = (room?.roomListeners || room?.listeners || []).length;
+    el.textContent = count ? `${count} listening now` : '';
+  }
 
   // ─── HOOK INTO PLAYER ───
   const origPlay = MusicPlayer?.play;
@@ -479,6 +563,7 @@
   }
 
   window._playlistSyncCleanup = function() {
+    if (_roomChatUnsub) { _roomChatUnsub(); _roomChatUnsub = null; }
     if (App._listeningRoomUnsub) { App._listeningRoomUnsub(); App._listeningRoomUnsub = null; }
     App._listeningRoom = null;
     if (origAddTrack) window.addTrackToPlaylist = origAddTrack;

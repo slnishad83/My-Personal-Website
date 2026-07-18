@@ -2670,13 +2670,257 @@ html.dark .thread-typing-indicator {
   to { opacity: 1; transform: scale(1); }
 }
 
+/* ── Music UI Responsive — Mobile / Tablet / Desktop ────────────── */
+
+/* -- Mobile bottom-sheet for overlays that use align-items:flex-end -- */
+#music-library-overlay,
+#playlists-overlay,
+#playlist-detail-overlay,
+#listening-room-overlay,
+#collab-manager-overlay,
+#room-chat-overlay {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* -- Mini Player safe area (above bottom bar) -- */
+#music-mini-player {
+  bottom: calc(60px + env(safe-area-inset-bottom, 0px));
+  padding-left: calc(12px + env(safe-area-inset-left, 0px));
+  padding-right: calc(12px + env(safe-area-inset-right, 0px));
+}
+
+/* -- Music Library: tablet & desktop → centered modal -- */
 @media (min-width: 768px) {
   #music-library-overlay {
     align-items: center !important;
   }
   .music-lib-panel {
     border-radius: 24px !important;
+    max-height: 82vh !important;
     animation: fadeInZoom 0.25s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
     border: 1px solid rgba(255, 255, 255, 0.08);
+    max-width: 640px !important;
+  }
+  #music-library-overlay .ml-tab { flex-shrink: 0 !important; }
+}
+
+/* -- Music Library: large desktop → wider panel -- */
+@media (min-width: 1200px) {
+  .music-lib-panel { max-width: 720px !important; }
+}
+
+/* -- Full Player: tablet+ desktop → centered modal with wider art -- */
+@media (min-width: 768px) {
+  #full-player-overlay {
+    align-items: center !important;
+    justify-content: center !important;
+  }
+  #full-player-overlay > div {
+    max-width: 440px !important;
+    width: 90vw !important;
+    border-radius: 24px !important;
+    max-height: 90vh !important;
+    border: 1px solid rgba(255,255,255,0.06) !important;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5) !important;
+  }
+}
+
+/* -- Equalizer: tablet+ centered, wider -- */
+#equalizer-overlay {
+  padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px);
+}
+@media (min-width: 768px) {
+  #equalizer-overlay > div {
+    max-width: 440px !important;
+  }
+}
+
+/* -- Sleep Timer: centered on tablet+ -- */
+#sleep-timer-menu {
+  padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px);
+}
+
+/* -- Queue Panel: tablet+ → wider, desktop → centered -- */
+@media (min-width: 768px) {
+  #playlist-queue-overlay > div {
+    max-width: 460px !important;
+    border-radius: 20px !important;
+    max-height: 60vh !important;
+    margin: auto !important;
+  }
+}
+
+/* -- Recently Played overlay: tablet+ centered -- */
+@media (min-width: 768px) {
+  #recently-played-overlay > div {
+    max-width: 440px !important;
+    border-radius: 20px !important;
+    margin: auto !important;
+  }
+}
+
+/* -- Listening Room Panel: tablet+ centered -- */
+@media (min-width: 768px) {
+  #listening-room-overlay > div {
+    max-width: 440px !important;
+    border-radius: 20px !important;
+    margin: auto !important;
+  }
+}
+
+/* -- Room Chat: tablet+ centered -- */
+@media (min-width: 768px) {
+  #room-chat-overlay > div {
+    max-width: 440px !important;
+    border-radius: 20px !important;
+    margin: auto !important;
+  }
+}
+
+/* -- Collaborator Manager: tablet+ centered -- */
+@media (min-width: 768px) {
+  #collab-manager-overlay > div {
+    max-width: 440px !important;
+    border-radius: 20px !important;
+    margin: auto !important;
+  }
+}
+
+/* -- Playlist Detail: tablet+ centered -- */
+#playlist-detail-overlay {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+@media (min-width: 768px) {
+  #playlist-detail-overlay {
+    align-items: center !important;
+    justify-content: center !important;
+  }
+  #playlist-detail-overlay > div {
+    max-width: 540px !important;
+    border-radius: 20px !important;
+    border: 1px solid rgba(255,255,255,0.06) !important;
+    max-height: 85vh !important;
+  }
+}
+
+/* -- Playlists Browser: tablet+ centered -- */
+#playlists-overlay {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+@media (min-width: 768px) {
+  #playlists-overlay {
+    align-items: center !important;
+    justify-content: center !important;
+  }
+  #playlists-overlay > div {
+    max-width: 560px !important;
+    border-radius: 20px !important;
+    max-height: 85vh !important;
+    border: 1px solid rgba(255,255,255,0.06) !important;
+  }
+  #playlists-overlay .pl-tab { flex-shrink: 0 !important; }
+}
+
+/* -- Onboarding: tablet+ centered -- */
+#onboarding-overlay > div {
+  max-width: 400px !important;
+}
+
+/* -- Mobile: reduce padding, ensure touch targets -- */
+@media (max-width: 480px) {
+  #full-player-overlay button[style*="padding:4px"] {
+    min-width: 40px;
+    min-height: 40px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* EQ sliders: ensure scrollable on short screens */
+  #equalizer-overlay > div {
+    max-height: 90vh;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Prevent overscroll bounce from closing overlays */
+  #music-library-overlay,
+  #full-player-overlay,
+  #playlist-queue-overlay,
+  #equalizer-overlay,
+  #listening-room-overlay,
+  #room-chat-overlay {
+    overscroll-behavior: contain;
+  }
+
+  /* Full player: smaller artwork, more compact */
+  #full-player-overlay .music-track-thumb {
+    max-width: min(250px, 65vw) !important;
+    max-height: min(250px, 65vw) !important;
+  }
+
+  /* Search tab: stack search input and buttons properly */
+  #yt-search-input {
+    min-width: 0 !important;
+  }
+}
+
+/* -- Tablet (481-767px): slightly larger panels -- */
+@media (min-width: 481px) and (max-width: 767px) {
+  .music-lib-panel {
+    max-width: 520px !important;
+    border-radius: 24px 24px 0 0 !important;
+  }
+}
+
+/* -- Large desktop (1200px+): wider playlist detail -- */
+@media (min-width: 1200px) {
+  #playlist-detail-overlay > div {
+    max-width: 640px !important;
+  }
+  #playlists-overlay > div {
+    max-width: 640px !important;
+  }
+}
+
+/* -- Landscape mobile: adjust mini player height -- */
+@media (max-height: 500px) and (orientation: landscape) {
+  #music-mini-player {
+    bottom: 40px;
+    padding: 4px 12px;
+  }
+  #music-mini-player button[aria-label] span.material-symbols-outlined {
+    font-size: 22px !important;
+  }
+}
+
+/* -- Dark mode / Light mode toggle safe for music panels -- */
+html:not(.dark) .music-lib-panel,
+html:not(.dark) #full-player-overlay > div,
+html:not(.dark) #equalizer-overlay > div,
+html:not(.dark) #playlist-queue-overlay > div,
+html:not(.dark) #listening-room-overlay > div,
+html:not(.dark) #room-chat-overlay > div,
+html:not(.dark) #recently-played-overlay > div,
+html:not(.dark) #playlists-overlay > div,
+html:not(.dark) #playlist-detail-overlay > div {
+  border-color: rgba(0, 0, 0, 0.08) !important;
+}
+
+/* -- Touch-friendly minimum targets on mobile -- */
+@media (pointer: coarse) {
+  #music-mini-player button,
+  #full-player-overlay button,
+  #equalizer-overlay button,
+  #music-queue-list button,
+  .ml-tab,
+  .pl-tab {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  /* EQ sliders taller on touch */
+  #equalizer-overlay input[type="range"] {
+    height: 180px !important;
   }
 }

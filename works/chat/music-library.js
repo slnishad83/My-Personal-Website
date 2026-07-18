@@ -546,7 +546,7 @@
       panel.className = 'music-lib-panel';
 
       panel.innerHTML = `
-        <div style="padding:16px 16px 0">
+        <div style="padding:16px 16px calc(16px + env(safe-area-inset-bottom,0px))">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
             <h2 style="margin:0;font-size:18px;font-weight:700;color:var(--on-surface)">Music Library</h2>
             <div style="display:flex;align-items:center;gap:10px">
@@ -556,12 +556,12 @@
               <button onclick="document.getElementById('music-library-overlay')?.remove()" style="background:none;border:none;color:var(--on-surface-variant);cursor:pointer;font-size:20px">&times;</button>
             </div>
           </div>
-          <div style="display:flex;gap:6px;overflow-x:auto;padding-bottom:8px" id="ml-tabs">
-            <button class="ml-tab active" onclick="switchMusicLibTab('my')" style="flex-shrink:0;padding:6px 14px;border-radius:20px;border:none;font-size:12px;font-weight:600;cursor:pointer;background:var(--primary);color:var(--on-primary)">My Music</button>
-            <button class="ml-tab" onclick="switchMusicLibTab('upload')" style="flex-shrink:0;padding:6px 14px;border-radius:20px;border:none;font-size:12px;font-weight:600;cursor:pointer;background:rgba(255,255,255,0.06);color:var(--on-surface-variant)">Upload</button>
-            <button class="ml-tab" onclick="switchMusicLibTab('search')" style="flex-shrink:0;padding:6px 14px;border-radius:20px;border:none;font-size:12px;font-weight:600;cursor:pointer;background:rgba(255,255,255,0.06);color:var(--on-surface-variant)">Search</button>
-            <button class="ml-tab" onclick="switchMusicLibTab('discover')" style="flex-shrink:0;padding:6px 14px;border-radius:20px;border:none;font-size:12px;font-weight:600;cursor:pointer;background:rgba(255,255,255,0.06);color:var(--on-surface-variant)">Discover</button>
-            <button class="ml-tab" onclick="switchMusicLibTab('languages')" style="flex-shrink:0;padding:6px 14px;border-radius:20px;border:none;font-size:12px;font-weight:600;cursor:pointer;background:rgba(255,255,255,0.06);color:var(--on-surface-variant)">Languages</button>
+          <div style="display:flex;gap:6px;overflow-x:auto;padding-bottom:8px;scrollbar-width:none;-ms-overflow-style:none" id="ml-tabs">
+            <button class="ml-tab active" onclick="switchMusicLibTab('my')" style="min-height:36px;flex-shrink:0;padding:6px 14px;border-radius:20px;border:none;font-size:12px;font-weight:600;cursor:pointer;background:var(--primary);color:var(--on-primary)">My Music</button>
+            <button class="ml-tab" onclick="switchMusicLibTab('upload')" style="min-height:36px;flex-shrink:0;padding:6px 14px;border-radius:20px;border:none;font-size:12px;font-weight:600;cursor:pointer;background:rgba(255,255,255,0.06);color:var(--on-surface-variant)">Upload</button>
+            <button class="ml-tab" onclick="switchMusicLibTab('search')" style="min-height:36px;flex-shrink:0;padding:6px 14px;border-radius:20px;border:none;font-size:12px;font-weight:600;cursor:pointer;background:rgba(255,255,255,0.06);color:var(--on-surface-variant)">Search</button>
+            <button class="ml-tab" onclick="switchMusicLibTab('discover')" style="min-height:36px;flex-shrink:0;padding:6px 14px;border-radius:20px;border:none;font-size:12px;font-weight:600;cursor:pointer;background:rgba(255,255,255,0.06);color:var(--on-surface-variant)">Discover</button>
+            <button class="ml-tab" onclick="switchMusicLibTab('languages')" style="min-height:36px;flex-shrink:0;padding:6px 14px;border-radius:20px;border:none;font-size:12px;font-weight:600;cursor:pointer;background:rgba(255,255,255,0.06);color:var(--on-surface-variant)">Languages</button>
           </div>
         </div>
         <div id="music-lib-content" style="flex:1;overflow-y:auto;padding:8px 16px 20px"></div>`;
@@ -569,6 +569,13 @@
       overlay.appendChild(panel);
       overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
       document.body.appendChild(overlay);
+
+      if (!document.getElementById('ml-responsive-css')) {
+        const s = document.createElement('style');
+        s.id = 'ml-responsive-css';
+        s.textContent = '@media(max-width:400px){.filter-label{display:none!important}}#ml-tabs::-webkit-scrollbar{display:none}';
+        document.head.appendChild(s);
+      }
 
       const _mlEscHandler = function(e) {
         if (e.key === 'Escape') {
@@ -623,12 +630,12 @@
 
     let html = `
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
-        <input type="search" placeholder="Search my music..." oninput="filterMyMusic(this.value)" style="flex:1;padding:8px 12px;border-radius:10px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);color:var(--on-surface);font-size:13px;outline:none">
-        <select id="ml-lang-filter" onchange="filterMyMusicByLang(this.value)" style="padding:8px 12px;border-radius:10px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);color:var(--on-surface);font-size:12px;margin-right:4px;">
+        <input type="search" placeholder="Search my music..." oninput="filterMyMusic(this.value)" style="flex:1;min-width:0;padding:8px 12px;border-radius:10px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);color:var(--on-surface);font-size:13px;outline:none">
+        <select id="ml-lang-filter" onchange="filterMyMusicByLang(this.value)" style="max-width:120px;padding:8px 12px;border-radius:10px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);color:var(--on-surface);font-size:12px;margin-right:4px;">
           <option value="">All Languages</option>
           ${LANGUAGES.map(l => `<option value="${l}">${l}</option>`).join('')}
         </select>
-        <button onclick="switchMusicLibTab('upload')" style="padding:8px 14px;border-radius:10px;border:none;background:var(--primary);color:var(--on-primary);font-size:12px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:4px;white-space:nowrap;">
+        <button onclick="switchMusicLibTab('upload')" style="min-height:44px;flex-shrink:0;padding:8px 14px;border-radius:10px;border:none;background:var(--primary);color:var(--on-primary);font-size:12px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:4px;white-space:nowrap;">
           <span class="material-symbols-outlined" style="font-size:16px;">add</span> Add
         </button>
       </div>
@@ -665,9 +672,9 @@
         <div style="font-size:11px;color:var(--on-surface-variant);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escHtml(t.artist)} · ${t.language}</div>
       </div>
       <div style="display:flex;gap:4px">
-        <button onclick="event.stopPropagation();toggleMusicFavorite('${t.id}');switchMusicLibTab('my')" style="background:none;border:none;cursor:pointer;padding:4px;font-size:16px">${t.favorite ? '❤️' : '🤍'}</button>
-        ${t.addedBy === App.auth?.currentUser?.uid ? `<button onclick="event.stopPropagation();editMusicTrack('${t.id}')" style="background:none;border:none;cursor:pointer;padding:4px;font-size:14px;opacity:0.5" title="Edit">✏️</button>` : ''}
-        ${t.addedBy === App.auth?.currentUser?.uid ? `<button onclick="event.stopPropagation();deleteMusicTrack('${t.id}').then(()=>switchMusicLibTab('my'))" style="background:none;border:none;cursor:pointer;padding:4px;font-size:14px;opacity:0.5" title="Delete">🗑️</button>` : ''}
+        <button onclick="event.stopPropagation();toggleMusicFavorite('${t.id}');switchMusicLibTab('my')" style="background:none;border:none;cursor:pointer;padding:8px;min-width:44px;min-height:44px;display:inline-flex;align-items:center;justify-content:center;font-size:16px">${t.favorite ? '❤️' : '🤍'}</button>
+        ${t.addedBy === App.auth?.currentUser?.uid ? `<button onclick="event.stopPropagation();editMusicTrack('${t.id}')" style="background:none;border:none;cursor:pointer;padding:8px;min-width:44px;min-height:44px;display:inline-flex;align-items:center;justify-content:center;font-size:14px;opacity:0.5" title="Edit">✏️</button>` : ''}
+        ${t.addedBy === App.auth?.currentUser?.uid ? `<button onclick="event.stopPropagation();deleteMusicTrack('${t.id}').then(()=>switchMusicLibTab('my'))" style="background:none;border:none;cursor:pointer;padding:8px;min-width:44px;min-height:44px;display:inline-flex;align-items:center;justify-content:center;font-size:14px;opacity:0.5" title="Delete">🗑️</button>` : ''}
       </div>
     </div>`;
   }
@@ -766,9 +773,9 @@
     el.innerHTML = `
       <div style="margin-bottom:12px">
         <div style="display:flex;gap:8px;margin-bottom:8px">
-          <input type="search" id="yt-search-input" placeholder="Search any song on YouTube..." style="flex:1;padding:10px 14px;border-radius:12px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);color:var(--on-surface);font-size:13px;outline:none" onkeydown="if(event.key==='Enter')doYouTubeSearch()">
-          <button onclick="doYouTubeSearch()" style="padding:10px 18px;border-radius:12px;border:none;background:var(--primary);color:var(--on-primary);font-size:12px;font-weight:700;cursor:pointer">Search</button>
-          <button onclick="toggleSearchFilters()" id="yt-filter-toggle" style="padding:10px 12px;border-radius:12px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);color:var(--on-surface-variant);font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:4px;white-space:nowrap"><span class="material-symbols-outlined" style="font-size:15px">tune</span>Filters</button>
+          <input type="search" id="yt-search-input" placeholder="Search any song on YouTube..." style="flex:1;min-width:0;padding:10px 14px;border-radius:12px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);color:var(--on-surface);font-size:13px;outline:none" onkeydown="if(event.key==='Enter')doYouTubeSearch()">
+          <button onclick="doYouTubeSearch()" style="min-height:44px;flex-shrink:0;padding:10px 18px;border-radius:12px;border:none;background:var(--primary);color:var(--on-primary);font-size:12px;font-weight:700;cursor:pointer">Search</button>
+          <button onclick="toggleSearchFilters()" id="yt-filter-toggle" style="padding:10px 12px;border-radius:12px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);color:var(--on-surface-variant);font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:4px;white-space:nowrap;flex-shrink:0;min-width:44px;min-height:44px;justify-content:center"><span class="material-symbols-outlined" style="font-size:18px">tune</span><span class="filter-label">Filters</span></button>
         </div>
         <div id="yt-filter-panel" style="display:none;margin-bottom:10px;padding:12px;border-radius:12px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06)">
           <div style="display:flex;gap:10px;flex-wrap:wrap">
@@ -964,7 +971,7 @@
             <div style="font-size:12px;font-weight:600;color:var(--on-surface);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escHtml(t.title)}</div>
             <div style="font-size:10px;color:var(--on-surface-variant)">${escHtml(t.artist)}${t.duration ? ' · ' + formatTrackDuration(t.duration) : ''}</div>
           </div>
-          <button onclick="event.stopPropagation();MusicPlayer.addToQueue(_trackCache['${t.id}']);showToast('Added to queue','success')" style="background:rgba(124,77,255,0.15);border:none;border-radius:6px;padding:3px 6px;color:var(--primary);font-size:10px;font-weight:600;cursor:pointer;flex-shrink:0">+ Q</button>
+          <button onclick="event.stopPropagation();MusicPlayer.addToQueue(_trackCache['${t.id}']);showToast('Added to queue','success')" style="background:rgba(124,77,255,0.15);border:none;border-radius:6px;padding:3px 6px;min-height:32px;color:var(--primary);font-size:10px;font-weight:600;cursor:pointer;flex-shrink:0">+ Q</button>
         </div>`).join('')}`;
   };
 
@@ -1004,7 +1011,7 @@
           <div style="font-size:12px;font-weight:600;color:var(--on-surface);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escHtml(t.title)}</div>
           <div style="font-size:10px;color:var(--on-surface-variant)">${escHtml(t.artist)}</div>
         </div>
-        <button onclick="event.stopPropagation();addCachedTrackToLibrary('${t.id}')" style="background:rgba(124,77,255,0.15);border:none;border-radius:6px;padding:4px 8px;color:var(--primary);font-size:10px;font-weight:600;cursor:pointer">+ Add</button>
+        <button onclick="event.stopPropagation();addCachedTrackToLibrary('${t.id}')" style="background:rgba(124,77,255,0.15);border:none;border-radius:6px;padding:4px 8px;min-height:32px;color:var(--primary);font-size:10px;font-weight:600;cursor:pointer">+ Add</button>
       </div>`).join('');
   }
 
@@ -1114,46 +1121,74 @@
   };
 
   // ─── DISCOVER TAB ───
+  function _renderDiscoverTrackCard(t) {
+    return `
+      <div style="display:flex;align-items:center;gap:10px;padding:8px;border-radius:10px;background:rgba(255,255,255,0.03);margin-bottom:4px;cursor:pointer" onclick="playYouTubeTrack('${t.videoId}','${escHtml(t.title).replace(/'/g, "\\'")}','${escHtml(t.artist).replace(/'/g, "\\'")}','${escHtml(t.thumbnail).replace(/'/g, "\\'")}',${t.duration})">
+        <div style="width:48px;height:36px;border-radius:6px;background:rgba(0,0,0,0.3);display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden">
+          <img src="${escHtml(t.thumbnail)}" style="width:100%;height:100%;object-fit:cover" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" loading="lazy">
+          <span class="material-symbols-outlined" style="font-size:16px;color:var(--on-surface-variant);display:none">play_circle</span>
+        </div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:12px;font-weight:600;color:var(--on-surface);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escHtml(t.title)}</div>
+          <div style="font-size:10px;color:var(--on-surface-variant)">${escHtml(t.artist)}${t.duration ? ' · ' + formatTrackDuration(t.duration) : ''}</div>
+        </div>
+        <button onclick="event.stopPropagation();MusicPlayer.addToQueue(_trackCache['${t.id}']);showToast('Added to queue','success')" style="background:rgba(124,77,255,0.15);border:none;border-radius:6px;padding:4px 8px;color:var(--primary);font-size:10px;font-weight:600;cursor:pointer;flex-shrink:0" title="Add to queue">+ Q</button>
+      </div>`;
+  }
+
+  function _discoverSpinner() {
+    return `<div style="text-align:center;padding:20px">
+      <span class="material-symbols-outlined animate-spin" style="color:var(--primary);font-size:24px">progress_activity</span>
+      <p style="color:var(--on-surface-variant);font-size:11px;margin-top:8px">Fetching live results...</p>
+    </div>`;
+  }
+
+  async function _fetchDiscoverSection(sectionId, queries) {
+    const container = document.getElementById(sectionId);
+    if (!container) return;
+    container.innerHTML = _discoverSpinner();
+
+    let allResults = [];
+    const seen = new Set();
+    for (const q of queries) {
+      try {
+        const results = await searchInvidious(q);
+        for (const t of results) {
+          if (!seen.has(t.id)) { seen.add(t.id); allResults.push(t); _trackCache[t.id] = t; }
+        }
+      } catch(_) {}
+    }
+
+    if (!allResults.length) {
+      container.innerHTML = '<p style="text-align:center;font-size:11px;color:var(--on-surface-variant);padding:12px">No results found</p>';
+      return;
+    }
+
+    container.innerHTML = allResults.slice(0, 15).map(t => _renderDiscoverTrackCard(t)).join('');
+  }
+
   async function _renderDiscoverTab(el) {
     const sections = [
       {
         title: 'Trending Now',
         icon: 'trending_up',
         color: '#FF6B35',
-        queries: [
-          { label: 'Trending Malayalam', q: 'Trending Malayalam songs 2025' },
-          { label: 'Trending Hindi', q: 'Trending Hindi songs 2025' },
-          { label: 'Trending Tamil', q: 'Trending Tamil songs 2025' },
-          { label: 'Trending Telugu', q: 'Trending Telugu songs 2025' },
-          { label: 'Trending Indian', q: 'Trending Indian songs 2025' },
-          { label: 'Viral Music India', q: 'Viral music India 2025' },
-        ],
+        id: 'discover-trending',
+        queries: ['Trending songs 2025', 'Viral songs India'],
       },
       {
         title: 'New Releases',
         icon: 'new_releases',
         color: '#E91E63',
-        queries: [
-          { label: 'Latest Malayalam', q: 'Latest Malayalam songs 2025' },
-          { label: 'New Hindi Hits', q: 'New Hindi songs 2025' },
-          { label: 'New Tamil Releases', q: 'New Tamil releases 2025' },
-          { label: 'New Telugu Songs', q: 'New Telugu songs 2025' },
-          { label: 'New Bollywood', q: 'New Bollywood songs 2025' },
-          { label: 'Fresh Indie India', q: 'Fresh indie Indian music 2025' },
-        ],
+        id: 'discover-new',
+        queries: ['New music releases 2025', 'Latest hits 2025'],
       },
       {
         title: 'Top Charts',
         icon: 'emoji_events',
         color: '#FFD700',
-        queries: [
-          { label: 'Most Viewed Indian', q: 'Most viewed Indian songs' },
-          { label: 'Billboard India', q: 'Billboard India top songs' },
-          { label: 'YouTube Music India', q: 'YouTube Music India top charts' },
-          { label: 'Gaana Top 50', q: 'Gaana top 50 Hindi' },
-          { label: 'Spotify India Viral', q: 'Spotify India viral hits 2025' },
-          { label: 'Apple Music India', q: 'Apple Music India top songs' },
-        ],
+        id: 'discover-charts',
+        queries: ['Top songs India 2025', 'Most popular songs'],
       },
     ];
 
@@ -1166,20 +1201,22 @@
               <span class="material-symbols-outlined" style="font-size:18px;color:${sec.color}">${sec.icon}</span>
             </div>
             <span style="font-size:14px;font-weight:700;color:var(--on-surface)">${sec.title}</span>
+            <div style="flex:1"></div>
+            <button onclick="_fetchDiscoverSection('${sec.id}',${JSON.stringify(sec.queries).replace(/"/g, '&quot;')})" style="padding:4px 10px;border-radius:8px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);color:var(--on-surface-variant);font-size:10px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:4px">
+              <span class="material-symbols-outlined" style="font-size:13px">refresh</span>Refresh
+            </button>
           </div>
-          <div style="display:flex;flex-wrap:wrap;gap:8px">
-            ${sec.queries.map(item => `
-              <button onclick="doYouTubeSearchFor('${item.q.replace(/'/g, "\\'")}')" style="padding:8px 14px;border-radius:20px;border:1px solid ${sec.color}30;background:${sec.color}10;color:var(--on-surface);font-size:12px;font-weight:500;cursor:pointer;transition:all 0.2s" onmouseover="this.style.background='${sec.color}30';this.style.borderColor='${sec.color}'" onmouseout="this.style.background='${sec.color}10';this.style.borderColor='${sec.color}30'">${item.label}</button>
-            `).join('')}
-          </div>
+          <div id="${sec.id}">${_discoverSpinner()}</div>
         </div>`;
     });
 
     el.innerHTML = `
       <div style="margin-bottom:12px">
-        <p style="font-size:12px;color:var(--on-surface-variant);margin:0 0 16px">Discover music across languages — tap any chip to search</p>
+        <p style="font-size:12px;color:var(--on-surface-variant);margin:0 0 16px">Live trending music — results fetched in real time</p>
         ${html}
       </div>`;
+
+    sections.forEach(sec => _fetchDiscoverSection(sec.id, sec.queries));
   }
 
   // ─── LANGUAGES TAB (YouTube-powered) ───
@@ -1231,7 +1268,7 @@
     overlay.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.85);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);display:flex;align-items:flex-end;justify-content:center;animation:fadeIn 0.2s ease';
 
     const panel = document.createElement('div');
-    panel.style.cssText = 'background:var(--surface-container,#1e1e2e);border-radius:20px 20px 0 0;padding:20px;width:100%;max-width:500px;max-height:75vh;overflow:hidden;display:flex;flex-direction:column;color:var(--on-surface)';
+    panel.style.cssText = 'background:var(--surface-container,#1e1e2e);border-radius:20px 20px 0 0;padding:20px 20px calc(20px + env(safe-area-inset-bottom,0px));width:100%;max-width:500px;max-height:75vh;overflow:hidden;display:flex;flex-direction:column;color:var(--on-surface)';
 
     if (!recent.length) {
       panel.innerHTML = '<div style="text-align:center;padding:32px;color:var(--on-surface-variant)"><span class="material-symbols-outlined" style="font-size:40px;opacity:0.3">history</span><p style="margin:8px 0 0;font-size:13px">No recently played tracks</p></div>';
@@ -1251,7 +1288,7 @@
               <div style="font-size:12px;font-weight:600;color:var(--on-surface);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escHtml(t.title || 'Unknown')}</div>
               <div style="font-size:10px;color:var(--on-surface-variant)">${escHtml(t.artist || 'Unknown')}</div>
             </div>
-            <button onclick="event.stopPropagation();MusicPlayer.addToQueue(_trackCache['${t.id}'] || ${JSON.stringify(t).replace(/'/g, "\\'")});showToast('Added to queue','success')" style="background:rgba(124,77,255,0.15);border:none;border-radius:6px;padding:4px 8px;color:var(--primary);font-size:10px;font-weight:600;cursor:pointer">+ Q</button>
+            <button onclick="event.stopPropagation();MusicPlayer.addToQueue(_trackCache['${t.id}'] || ${JSON.stringify(t).replace(/'/g, "\\'")});showToast('Added to queue','success')" style="background:rgba(124,77,255,0.15);border:none;border-radius:6px;padding:4px 8px;min-height:32px;color:var(--primary);font-size:10px;font-weight:600;cursor:pointer">+ Q</button>
           </div>
         `).join('')}
       </div>`;

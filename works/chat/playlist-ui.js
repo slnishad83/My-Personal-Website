@@ -12,14 +12,14 @@
       <div style="padding:12px 16px;display:flex;align-items:center;gap:12px;background:rgba(0,0,0,0.3);backdrop-filter:blur(10px)">
         <button onclick="document.getElementById('playlists-overlay')?.remove()" style="background:none;border:none;color:var(--on-surface);cursor:pointer"><span class="material-symbols-outlined">arrow_back</span></button>
         <h3 style="margin:0;font-size:18px;font-weight:700;color:var(--on-surface);flex:1">Playlists</h3>
-        <button onclick="showCreatePlaylistDialog('${chatId || ''}')" style="background:none;border:none;color:var(--primary);cursor:pointer;font-size:13px;font-weight:700">+ New</button>
-        <button onclick="showCreateFolderDialog()" style="background:none;border:none;color:var(--primary);cursor:pointer;font-size:13px;font-weight:700">+ Folder</button>
+        <button onclick="showCreatePlaylistDialog('${chatId || ''}')" style="background:none;border:none;color:var(--primary);cursor:pointer;font-size:13px;font-weight:700;white-space:nowrap;flex-shrink:0;min-height:44px;min-width:44px;display:inline-flex;align-items:center;justify-content:center">+ New</button>
+        <button onclick="showCreateFolderDialog()" style="background:none;border:none;color:var(--primary);cursor:pointer;font-size:13px;font-weight:700;white-space:nowrap;flex-shrink:0;min-height:44px;min-width:44px;display:inline-flex;align-items:center;justify-content:center">+ Folder</button>
       </div>
-      <div id="playlists-tabs" style="display:flex;gap:4px;padding:8px 16px">
-        <button class="pl-tab active" onclick="switchPlaylistTab('my',this)" style="padding:6px 14px;border-radius:8px;border:none;background:var(--primary);color:var(--on-primary);font-size:12px;font-weight:600;cursor:pointer">My Playlists</button>
-        <button class="pl-tab" onclick="switchPlaylistTab('recent',this)" style="padding:6px 14px;border-radius:8px;border:none;background:rgba(255,255,255,0.06);color:var(--on-surface-variant);font-size:12px;font-weight:600;cursor:pointer">Recently Played</button>
-        <button class="pl-tab" onclick="switchPlaylistTab('favs',this)" style="padding:6px 14px;border-radius:8px;border:none;background:rgba(255,255,255,0.06);color:var(--on-surface-variant);font-size:12px;font-weight:600;cursor:pointer">Favorites</button>
-        ${chatId ? `<button class="pl-tab" onclick="switchPlaylistTab('chat',this)" style="padding:6px 14px;border-radius:8px;border:none;background:rgba(255,255,255,0.06);color:var(--on-surface-variant);font-size:12px;font-weight:600;cursor:pointer">Chat</button>` : ''}
+      <div id="playlists-tabs" style="display:flex;gap:4px;padding:8px 16px;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch">
+        <button class="pl-tab active" onclick="switchPlaylistTab('my',this)" style="padding:6px 14px;border-radius:8px;border:none;background:var(--primary);color:var(--on-primary);font-size:12px;font-weight:600;cursor:pointer;flex-shrink:0;min-height:36px">My Playlists</button>
+        <button class="pl-tab" onclick="switchPlaylistTab('recent',this)" style="padding:6px 14px;border-radius:8px;border:none;background:rgba(255,255,255,0.06);color:var(--on-surface-variant);font-size:12px;font-weight:600;cursor:pointer;flex-shrink:0;min-height:36px">Recently Played</button>
+        <button class="pl-tab" onclick="switchPlaylistTab('favs',this)" style="padding:6px 14px;border-radius:8px;border:none;background:rgba(255,255,255,0.06);color:var(--on-surface-variant);font-size:12px;font-weight:600;cursor:pointer;flex-shrink:0;min-height:36px">Favorites</button>
+        ${chatId ? `<button class="pl-tab" onclick="switchPlaylistTab('chat',this)" style="padding:6px 14px;border-radius:8px;border:none;background:rgba(255,255,255,0.06);color:var(--on-surface-variant);font-size:12px;font-weight:600;cursor:pointer;flex-shrink:0;min-height:36px">Chat</button>` : ''}
       </div>
       <div id="playlists-content" style="flex:1;overflow-y:auto;padding:0 16px 80px"></div>`;
 
@@ -113,7 +113,7 @@
       : `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,var(--primary),#4a00e0)"><span class="material-symbols-outlined" style="font-size:28px;color:white;opacity:0.6">music_note</span></div>`;
 
     return `
-    <div style="display:flex;gap:12px;padding:12px;border-radius:14px;background:rgba(255,255,255,0.03);margin-bottom:8px;cursor:pointer" onclick="openPlaylistDetail('${pl.id}')">
+    <div style="display:flex;gap:12px;padding:12px;border-radius:14px;background:rgba(255,255,255,0.03);margin-bottom:8px;cursor:pointer;min-height:72px" onclick="openPlaylistDetail('${pl.id}')">
       <div style="width:60px;height:60px;border-radius:10px;overflow:hidden;flex-shrink:0">${coverHtml}</div>
       <div style="flex:1;min-width:0">
         <div style="font-size:14px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escHtml(pl.name)}</div>
@@ -144,11 +144,11 @@
         <div style="font-size:11px;color:var(--on-surface-variant);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escHtml(track.artist)}${track.addedByName ? ' · ' + escHtml(track.addedByName) : ''}</div>
       </div>
       <span style="font-size:10px;color:var(--on-surface-variant)">${formatTrackDuration(track.duration)}</span>
-      <button onclick="event.stopPropagation();toggleTrackFavorite(window._plTrackCache['${trackRef}']);openPlaylistDetail('${playlistId}')" style="background:none;border:none;color:${isFav ? 'var(--error)' : 'var(--on-surface-variant)'};cursor:pointer;padding:4px">
+      <button onclick="event.stopPropagation();toggleTrackFavorite(window._plTrackCache['${trackRef}']);openPlaylistDetail('${playlistId}')" style="background:none;border:none;color:${isFav ? 'var(--error)' : 'var(--on-surface-variant)'};cursor:pointer;padding:8px;min-width:40px;min-height:40px;display:inline-flex;align-items:center;justify-content:center">
         <span class="material-symbols-outlined" style="font-size:16px">${isFav ? 'favorite' : 'favorite_border'}</span>
       </button>
       ${playlistId && canEditPlaylist(App.playlists[playlistId]) ? `
-      <button onclick="event.stopPropagation();removeTrackFromPlaylist('${playlistId}','${track.id}');setTimeout(()=>openPlaylistDetail('${playlistId}'),300)" style="background:none;border:none;color:var(--on-surface-variant);cursor:pointer;padding:4px">
+      <button onclick="event.stopPropagation();removeTrackFromPlaylist('${playlistId}','${track.id}');setTimeout(()=>openPlaylistDetail('${playlistId}'),300)" style="background:none;border:none;color:var(--on-surface-variant);cursor:pointer;padding:8px;min-width:40px;min-height:40px;display:inline-flex;align-items:center;justify-content:center">
         <span class="material-symbols-outlined" style="font-size:16px">close</span>
       </button>` : ''}
     </div>`;
@@ -170,17 +170,17 @@
       <div style="padding:12px 16px;display:flex;align-items:center;gap:12px;background:rgba(0,0,0,0.3)">
         <button onclick="document.getElementById('playlist-detail-overlay')?.remove()" style="background:none;border:none;color:var(--on-surface);cursor:pointer"><span class="material-symbols-outlined">arrow_back</span></button>
         <h3 style="margin:0;font-size:16px;font-weight:700;color:var(--on-surface);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escHtml(pl.name)}</h3>
-        ${canEdit ? `<button onclick="showAddTrackDialog('${playlistId}')" style="background:none;border:none;color:var(--primary);cursor:pointer;font-size:13px;font-weight:700">+ Add</button>` : ''}
-        ${isOwner ? `<button onclick="showCollaboratorManager('${playlistId}')" style="background:none;border:none;color:var(--on-surface-variant);cursor:pointer" title="Manage collaborators"><span class="material-symbols-outlined" style="font-size:20px">group</span></button>` : ''}
-        ${isOwner ? `<button onclick="uploadPlaylistCover('${playlistId}')" style="background:none;border:none;color:var(--on-surface-variant);cursor:pointer" title="Change cover"><span class="material-symbols-outlined" style="font-size:20px">add_a_photo</span></button>` : ''}
-        <button onclick="sharePlaylist('${playlistId}')" style="background:rgba(124,77,255,0.15);border:none;border-radius:8px;padding:6px 12px;color:var(--primary);font-size:11px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:4px">
+        ${canEdit ? `<button onclick="showAddTrackDialog('${playlistId}')" style="background:none;border:none;color:var(--primary);cursor:pointer;font-size:13px;font-weight:700;white-space:nowrap;flex-shrink:0">+ Add</button>` : ''}
+        ${isOwner ? `<button onclick="showCollaboratorManager('${playlistId}')" style="background:none;border:none;color:var(--on-surface-variant);cursor:pointer;min-width:40px;min-height:40px;display:inline-flex;align-items:center;justify-content:center" title="Manage collaborators"><span class="material-symbols-outlined" style="font-size:20px">group</span></button>` : ''}
+        ${isOwner ? `<button onclick="uploadPlaylistCover('${playlistId}')" style="background:none;border:none;color:var(--on-surface-variant);cursor:pointer;min-width:40px;min-height:40px;display:inline-flex;align-items:center;justify-content:center" title="Change cover"><span class="material-symbols-outlined" style="font-size:20px">add_a_photo</span></button>` : ''}
+        <button onclick="sharePlaylist('${playlistId}')" style="background:rgba(124,77,255,0.15);border:none;border-radius:8px;padding:6px 12px;color:var(--primary);font-size:11px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:4px;min-width:40px;min-height:40px">
           <span class="material-symbols-outlined" style="font-size:14px">share</span> Share
         </button>
-        ${isOwner ? `<button onclick="deletePlaylist('${playlistId}');document.getElementById('playlist-detail-overlay')?.remove()" style="background:none;border:none;color:var(--error);cursor:pointer"><span class="material-symbols-outlined" style="font-size:20px">delete</span></button>` : ''}
+        ${isOwner ? `<button onclick="deletePlaylist('${playlistId}');document.getElementById('playlist-detail-overlay')?.remove()" style="background:none;border:none;color:var(--error);cursor:pointer;min-width:40px;min-height:40px;display:inline-flex;align-items:center;justify-content:center"><span class="material-symbols-outlined" style="font-size:20px">delete</span></button>` : ''}
       </div>
       <div style="flex:1;overflow-y:auto;padding:0 16px 80px">
         <div style="display:flex;gap:16px;padding:16px 0">
-          <div style="width:100px;height:100px;border-radius:12px;overflow:hidden;flex-shrink:0;background:linear-gradient(135deg,var(--primary),#4a00e0);display:flex;align-items:center;justify-content:center">
+          <div style="width:min(100px,22vw);height:min(100px,22vw);border-radius:12px;overflow:hidden;flex-shrink:0;background:linear-gradient(135deg,var(--primary),#4a00e0);display:flex;align-items:center;justify-content:center">
             ${pl.coverUrl ? `<img src="${escHtml(pl.coverUrl)}" style="width:100%;height:100%;object-fit:cover">` : '<span class="material-symbols-outlined" style="font-size:40px;color:white;opacity:0.6">music_note</span>'}
           </div>
           <div style="flex:1;display:flex;flex-direction:column;justify-content:center">
@@ -295,7 +295,7 @@
         </select>
       </div>
       <div style="margin-bottom:16px">
-        <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;min-height:44px">
           <input type="checkbox" id="create-pl-public" checked style="accent-color:var(--primary)">
           <span style="font-size:13px">Public (others can discover)</span>
         </label>
@@ -397,7 +397,7 @@
     let html = `
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
         <h3 style="margin:0;font-size:16px;font-weight:700">Manage Collaborators</h3>
-        <button onclick="document.getElementById('collab-manager-overlay')?.remove()" style="background:none;border:none;color:var(--on-surface-variant);cursor:pointer;font-size:20px">&times;</button>
+        <button onclick="document.getElementById('collab-manager-overlay')?.remove()" style="background:none;border:none;color:var(--on-surface-variant);cursor:pointer;font-size:20px;min-width:44px;min-height:44px;display:inline-flex;align-items:center;justify-content:center">&times;</button>
       </div>
       <div style="display:flex;gap:8px;margin-bottom:16px">
         <input type="text" id="collab-uid-input" placeholder="Enter user UID..." style="flex:1;padding:10px 12px;border-radius:10px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);color:var(--on-surface);font-size:13px">

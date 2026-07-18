@@ -29,6 +29,17 @@
   };
   window.MusicPlayer = Player;
 
+  function _haptic(style) {
+    try {
+      if (navigator.vibrate) {
+        if (style === 'light') navigator.vibrate(10);
+        else if (style === 'medium') navigator.vibrate(20);
+        else if (style === 'heavy') navigator.vibrate(40);
+        else navigator.vibrate(10);
+      }
+    } catch(_) {}
+  }
+
   // ─── INIT ───
   function _init() {
     Player.audio = new Audio();
@@ -60,6 +71,16 @@
   let _eqBands = null;
   let _eqEnabled = false;
   const _EQ_FREQUENCIES = [60, 170, 310, 600, 1000, 3000, 6000, 12000, 14000, 16000];
+  const _EQ_PRESETS = {
+    'Flat': [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    'Bass Boost': [8, 6, 4, 2, 0, 0, 0, 0, 0, 0],
+    'Vocal': [-2, 0, 2, 4, 4, 3, 1, 0, -1, -2],
+    'Classical': [0, 0, 0, 0, 0, 0, -4, -4, -4, -6],
+    'Pop': [-1, 2, 4, 5, 3, 0, -1, -1, 2, 3],
+    'Rock': [5, 4, 2, 0, -1, -1, 0, 2, 3, 4],
+    'Jazz': [0, 0, 2, 4, 4, 4, 0, 2, 3, 3],
+    'Electronic': [6, 4, 0, -2, 0, 0, 0, 2, 4, 6],
+  };
   let _eqGains = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
 
   Player.initEqualizer = function() {
@@ -103,6 +124,15 @@
     showToast('Equalizer reset', 'info');
   };
 
+  Player.applyEqPreset = function(name) {
+    const gains = _EQ_PRESETS[name];
+    if (!gains) return;
+    _eqGains = [...gains];
+    if (_eqBands) _eqBands.forEach((b, i) => b.gain.value = _eqGains[i]);
+    localStorage.setItem('nsl_eq_gains', JSON.stringify(_eqGains));
+    showToast('Preset: ' + name, 'info');
+  };
+
   Player.getAnalyserData = function() {
     if (!_analyser) return null;
     const data = new Uint8Array(_analyser.frequencyBinCount);
@@ -122,12 +152,15 @@
     overlay.style.cssText = 'position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,0.85);display:flex;align-items:center;justify-content:center;animation:fadeIn 0.2s ease';
 
     const panel = document.createElement('div');
-    panel.style.cssText = 'background:var(--surface-container,#1e1e2e);border-radius:20px;padding:24px;max-width:400px;width:90vw;color:var(--on-surface)';
+    panel.style.cssText = 'background:var(--surface-container,#1e1e2e);border-radius:20px;padding:24px;max-width:400px;width:92vw;max-height:85vh;overflow-y:auto;-webkit-overflow-scrolling:touch;color:var(--on-surface)';
 
     panel.innerHTML = `
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
         <h3 style="margin:0;font-size:16px;font-weight:700">Equalizer</h3>
         <button onclick="document.getElementById(\'equalizer-overlay\')?.remove()" style="background:none;border:none;color:var(--on-surface-variant);cursor:pointer;font-size:18px">&times;</button>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;justify-content:center">
+        ${Object.keys(_EQ_PRESETS).map(name => `<button onclick="MusicPlayer.applyEqPreset('${name}')" style="padding:6px 12px;border-radius:8px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);color:var(--on-surface-variant);font-size:11px;font-weight:600;cursor:pointer;min-height:32px">${name}</button>`).join('')}
       </div>
       <canvas id="eq-visualizer" width="360" height="80" style="width:100%;height:80px;border-radius:10px;background:rgba(0,0,0,0.3);margin-bottom:16px"></canvas>
       <div style="display:flex;gap:4px;justify-content:space-between;align-items:flex-end;height:200px;margin-bottom:8px">
@@ -140,7 +173,7 @@
         `).join('')}
       </div>
       <div style="display:flex;gap:8px;justify-content:center">
-        <button onclick="MusicPlayer.resetEq()" style="padding:8px 16px;border-radius:8px;border:none;background:rgba(255,255,255,0.06);color:var(--on-surface-variant);font-size:12px;font-weight:600;cursor:pointer">Reset</button>
+        <button onclick="MusicPlayer.resetEq()" style="padding:8px 16px;border-radius:8px;border:none;background:rgba(255,255,255,0.06);color:var(--on-surface-variant);font-size:12px;font-weight:600;cursor:pointer;min-height:44px">Reset</button>
       </div>`;
 
     overlay.appendChild(panel);
@@ -176,6 +209,7 @@
 
   // ─── PLAYBACK ───
   Player.play = function(track, playlistId) {
+    _haptic('light');
     if (!track || !track.url) { showToast('No audio URL', 'error'); return; }
     if (playlistId) Player.playlistId = playlistId;
 
@@ -207,6 +241,7 @@
   };
 
   Player.togglePlay = function() {
+    _haptic('light');
     if (Player.isPlaying) Player.pause();
     else if (Player._currentTrack) Player.audio?.play().catch(() => {});
     else if (Player.queue.length) Player.playTrack(0);
@@ -239,6 +274,7 @@
   };
 
   Player.addToQueue = function(track) {
+    _haptic('light');
     Player.queue.push(track);
     Player._originalOrder.push(track);
     showToast(`Added "${track.title}" to queue`, 'success');
@@ -269,6 +305,7 @@
   };
 
   Player.next = function() {
+    _haptic('light');
     if (!Player.queue.length) return;
     if (Player.repeatMode === 'one') {
       Player.audio.currentTime = 0;
@@ -284,6 +321,7 @@
   };
 
   Player.prev = function() {
+    _haptic('light');
     if (!Player.queue.length) return;
     if (Player.audio.currentTime > 3) {
       Player.audio.currentTime = 0;
@@ -526,7 +564,7 @@
     overlay.style.cssText = 'position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,0.85);display:flex;align-items:center;justify-content:center;animation:fadeIn 0.2s ease';
 
     const panel = document.createElement('div');
-    panel.style.cssText = 'background:var(--surface-container,#1e1e2e);border-radius:20px;padding:24px;max-width:320px;width:85vw;color:var(--on-surface)';
+    panel.style.cssText = 'background:var(--surface-container,#1e1e2e);border-radius:20px;padding:24px;padding-bottom:calc(24px + env(safe-area-inset-bottom,0px));max-width:320px;width:85vw;color:var(--on-surface)';
 
     const presets = [
       { label: '15 min', minutes: 15 },
@@ -743,8 +781,8 @@
       return;
     }
     list.innerHTML = Player.queue.map((t, i) => `
-      <div class="queue-item" data-idx="${i}" draggable="true" ondragstart="_qDragStart(event,${i})" ondragover="event.preventDefault()" ondrop="_qDrop(event,${i})" ondragend="_qDragEnd()" style="display:flex;align-items:center;gap:3px;padding:6px 8px;border-radius:10px;background:${i===Player.queueIndex?'rgba(124,77,255,0.1)':'rgba(255,255,255,0.02)'};margin-bottom:3px;transition:background 0.15s">
-        <span class="material-symbols-outlined" style="font-size:14px;color:var(--on-surface-variant);cursor:grab;opacity:0.4;flex-shrink:0;user-select:none" title="Drag to reorder">drag_indicator</span>
+      <div class="queue-item" data-idx="${i}" draggable="true" ondragstart="_qDragStart(event,${i})" ondragover="event.preventDefault()" ondrop="_qDrop(event,${i})" ondragend="_qDragEnd()" style="display:flex;align-items:center;gap:3px;padding:6px 8px;border-radius:10px;background:${i===Player.queueIndex?'rgba(124,77,255,0.1)':'rgba(255,255,255,0.02)'};margin-bottom:3px;transition:all 0.3s ease;${i===Player.queueIndex?'transform:scale(1.02);box-shadow:0 0 12px rgba(124,77,255,0.15);':'transform:scale(1);'}">
+        <span class="material-symbols-outlined" style="font-size:14px;color:var(--on-surface-variant);cursor:grab;opacity:0.4;flex-shrink:0;user-select:none;min-width:32px;min-height:32px;display:inline-flex;align-items:center;justify-content:center" title="Drag to reorder">drag_indicator</span>
         <div style="width:36px;height:36px;border-radius:6px;overflow:hidden;flex-shrink:0;background:rgba(255,255,255,0.05);display:flex;align-items:center;justify-content:center;cursor:pointer" onclick="MusicPlayer.playTrack(${i})">
           ${t.thumbnail ? `<img src="${escHtml(t.thumbnail)}" style="width:100%;height:100%;object-fit:cover">` : '<span class="material-symbols-outlined" style="font-size:14px;color:var(--on-surface-variant)">music_note</span>'}
         </div>
@@ -752,8 +790,9 @@
           <div style="font-size:12px;font-weight:${i===Player.queueIndex?700:500};${i===Player.queueIndex?'color:var(--primary)':''}" class="truncate">${escHtml(t.title)}</div>
           <div style="font-size:10px;color:var(--on-surface-variant)" class="truncate">${escHtml(t.artist)}</div>
         </div>
+        ${i===Player.queueIndex ? '<div style="display:flex;gap:1px;align-items:flex-end;height:12px;flex-shrink:0"><span style="display:inline-block;width:2px;background:var(--primary);border-radius:1px;animation:eqBar 0.8s ease-in-out infinite alternate"></span><span style="display:inline-block;width:2px;background:var(--primary);border-radius:1px;animation:eqBar 0.6s ease-in-out 0.2s infinite alternate"></span><span style="display:inline-block;width:2px;background:var(--primary);border-radius:1px;animation:eqBar 0.7s ease-in-out 0.1s infinite alternate"></span></div>' : ''}
         <span style="font-size:10px;color:var(--on-surface-variant);flex-shrink:0">${formatTrackDuration(t.duration)}</span>
-        <button onclick="event.stopPropagation();MusicPlayer.removeFromQueue(${i})" style="background:none;border:none;color:var(--on-surface-variant);cursor:pointer;padding:4px;flex-shrink:0">
+        <button onclick="event.stopPropagation();MusicPlayer.removeFromQueue(${i})" style="background:none;border:none;color:var(--on-surface-variant);cursor:pointer;padding:4px;flex-shrink:0;min-width:32px;min-height:32px;display:inline-flex;align-items:center;justify-content:center">
           <span class="material-symbols-outlined" style="font-size:14px">close</span>
         </button>
       </div>
@@ -785,7 +824,7 @@
     mini.id = 'music-mini-player';
     mini.setAttribute('role', 'region');
     mini.setAttribute('aria-label', 'Music mini player');
-    mini.style.cssText = 'position:fixed;bottom:60px;left:0;right:0;z-index:95;background:var(--surface-container-high,#1e2a34);border-top:1px solid rgba(255,255,255,0.08);padding:8px 12px;padding-bottom:calc(8px + env(safe-area-inset-bottom,0px));display:flex;align-items:center;gap:10px;cursor:pointer;animation:slideUp 0.2s ease';
+    mini.style.cssText = 'position:fixed;bottom:calc(60px + env(safe-area-inset-bottom,0px));left:0;right:0;z-index:95;background:var(--surface-container-high,#1e2a34);border-top:1px solid rgba(255,255,255,0.08);padding:8px 12px;padding-bottom:calc(8px + env(safe-area-inset-bottom,0px));display:flex;align-items:center;gap:10px;cursor:pointer;animation:slideUp 0.2s ease;touch-action:manipulation;user-select:none;-webkit-user-select:none';
     mini.onclick = (e) => { if (e.target.closest('button')) return; openFullPlayer(); };
     document.body.appendChild(mini);
     let _swipeStartX = 0;
@@ -821,10 +860,10 @@
         <div style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escHtml(track.title)}</div>
         <div style="font-size:11px;color:var(--on-surface-variant);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escHtml(track.artist)}</div>
       </div>
-      <button class="music-play-btn" onclick="event.stopPropagation();MusicPlayer.togglePlay()" aria-label="${Player.isPlaying ? 'Pause' : 'Play'}" style="background:none;border:none;color:var(--on-surface);cursor:pointer;padding:4px">
+      <button class="music-play-btn" onclick="event.stopPropagation();MusicPlayer.togglePlay()" aria-label="${Player.isPlaying ? 'Pause' : 'Play'}" style="background:none;border:none;color:var(--on-surface);cursor:pointer;padding:4px;min-width:44px;min-height:44px;display:inline-flex;align-items:center;justify-content:center">
         <span class="material-symbols-outlined" style="font-size:28px">${Player.isPlaying ? 'pause_circle' : 'play_circle'}</span>
       </button>
-      <button onclick="event.stopPropagation();MusicPlayer.next()" aria-label="Next track" style="background:none;border:none;color:var(--on-surface-variant);cursor:pointer;padding:4px">
+      <button onclick="event.stopPropagation();MusicPlayer.next()" aria-label="Next track" style="background:none;border:none;color:var(--on-surface-variant);cursor:pointer;padding:4px;min-width:44px;min-height:44px;display:inline-flex;align-items:center;justify-content:center">
         <span class="material-symbols-outlined" style="font-size:22px">skip_next</span>
       </button>
       <div style="position:absolute;bottom:0;left:0;right:0;height:2px;background:rgba(255,255,255,0.1)">
@@ -875,7 +914,7 @@
     overlay.setAttribute('role', 'dialog');
     overlay.setAttribute('aria-label', 'Music player');
     overlay.setAttribute('aria-modal', 'true');
-    overlay.style.cssText = 'position:fixed;inset:0;z-index:9998;background:var(--surface-container,#0d1b2a);display:flex;flex-direction:column;animation:slideUp 0.3s ease';
+    overlay.style.cssText = 'position:fixed;inset:0;z-index:9998;background:var(--surface-container,#0d1b2a);display:flex;flex-direction:column;animation:slideUp 0.3s ease;touch-action:manipulation';
 
     overlay.innerHTML = `
       <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px">
@@ -891,7 +930,7 @@
       </div>
 
       <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0 32px">
-        <div style="width:min(300px,70vw);height:min(300px,70vw);border-radius:16px;overflow:hidden;box-shadow:0 8px 40px rgba(0,0,0,0.5);margin-bottom:32px;background:rgba(255,255,255,0.05)">
+        <div style="width:min(280px,65vw);height:min(280px,65vw);max-height:50vh;border-radius:16px;overflow:hidden;box-shadow:0 8px 40px rgba(0,0,0,0.5);margin-bottom:32px;background:rgba(255,255,255,0.05)">
           ${track.thumbnail ? `<img class="music-track-thumb" src="${escHtml(track.thumbnail)}" style="width:100%;height:100%;object-fit:cover">` : '<div class="music-track-thumb" style="width:100%;height:100%;display:flex;align-items:center;justify-content:center"><span class="material-symbols-outlined" style="font-size:80px;color:var(--primary);opacity:0.4">music_note</span></div>'}
         </div>
         <div style="text-align:center;width:100%">
@@ -904,34 +943,34 @@
       <div style="padding:0 24px 8px">
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
           <span id="music-current-time" style="font-size:11px;color:var(--on-surface-variant);width:40px;text-align:right">0:00</span>
-          <input type="range" id="music-seek-bar" min="0" max="100" value="0" oninput="MusicPlayer.seekPercent(this.value)" onmousedown="MusicPlayer._seeking=true" onmouseup="MusicPlayer._seeking=false" onchange="MusicPlayer._seeking=false" ontouchstart="MusicPlayer._seeking=true" ontouchend="MusicPlayer._seeking=false" aria-label="Seek" role="slider" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" style="flex:1;accent-color:var(--primary);height:4px">
+          <input type="range" id="music-seek-bar" min="0" max="100" value="0" oninput="MusicPlayer.seekPercent(this.value)" onmousedown="MusicPlayer._seeking=true" onmouseup="MusicPlayer._seeking=false" onchange="MusicPlayer._seeking=false" ontouchstart="MusicPlayer._seeking=true" ontouchend="MusicPlayer._seeking=false" aria-label="Seek" role="slider" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" style="flex:1;accent-color:var(--primary);height:4px;touch-action:pan-x">
           <span id="music-duration" style="font-size:11px;color:var(--on-surface-variant);width:40px">0:00</span>
         </div>
 
         <div style="display:flex;align-items:center;justify-content:center;gap:16px;margin:8px 0">
-          <button id="music-shuffle-btn" onclick="MusicPlayer.toggleShuffle()" style="background:none;border:none;color:${Player.isShuffle?'var(--primary)':'var(--on-surface-variant)'};cursor:pointer;padding:4px">
+          <button id="music-shuffle-btn" onclick="MusicPlayer.toggleShuffle()" style="background:none;border:none;color:${Player.isShuffle?'var(--primary)':'var(--on-surface-variant)'};cursor:pointer;padding:8px">
             <span class="material-symbols-outlined" style="font-size:22px">shuffle</span>
           </button>
-          <button onclick="MusicPlayer.prev()" style="background:none;border:none;color:var(--on-surface);cursor:pointer;padding:4px">
+          <button onclick="MusicPlayer.prev()" style="background:none;border:none;color:var(--on-surface);cursor:pointer;padding:8px">
             <span class="material-symbols-outlined" style="font-size:32px">skip_previous</span>
           </button>
           <button class="music-play-btn" onclick="MusicPlayer.togglePlay()" style="background:var(--primary);border:none;color:var(--on-primary);width:64px;height:64px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 16px rgba(124,77,255,0.4)">
             <span class="material-symbols-outlined" style="font-size:36px">${Player.isPlaying ? 'pause' : 'play_arrow'}</span>
           </button>
-          <button onclick="MusicPlayer.next()" style="background:none;border:none;color:var(--on-surface);cursor:pointer;padding:4px">
+          <button onclick="MusicPlayer.next()" style="background:none;border:none;color:var(--on-surface);cursor:pointer;padding:8px">
             <span class="material-symbols-outlined" style="font-size:32px">skip_next</span>
           </button>
-          <button id="music-repeat-btn" onclick="MusicPlayer.cycleRepeat()" style="background:none;border:none;color:${Player.repeatMode!=='off'?'var(--primary)':'var(--on-surface-variant)'};cursor:pointer;padding:4px">
+          <button id="music-repeat-btn" onclick="MusicPlayer.cycleRepeat()" style="background:none;border:none;color:${Player.repeatMode!=='off'?'var(--primary)':'var(--on-surface-variant)'};cursor:pointer;padding:8px">
             <span class="material-symbols-outlined" style="font-size:22px">${Player.repeatMode==='one'?'repeat_one':'repeat'}</span>
           </button>
         </div>
 
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px">
-          <button id="music-volume-icon" onclick="MusicPlayer.toggleMute()" style="background:none;border:none;color:var(--on-surface-variant);cursor:pointer;padding:4px">
+          <button id="music-volume-icon" onclick="MusicPlayer.toggleMute()" style="background:none;border:none;color:var(--on-surface-variant);cursor:pointer;padding:4px;min-width:44px;min-height:44px;display:inline-flex;align-items:center;justify-content:center">
             <span class="material-symbols-outlined" style="font-size:20px">${Player.isMuted?'volume_off':'volume_up'}</span>
           </button>
           <input type="range" id="music-volume" min="0" max="100" value="${Player.volume*100}" oninput="MusicPlayer.setVolume(this.value/100)" aria-label="Volume" role="slider" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round(Player.volume*100)}" style="flex:1;accent-color:var(--primary);height:3px">
-          <button onclick="toggleTrackFavorite(Player._currentTrack)" style="background:none;border:none;color:${isTrackFavorite(track.url)?'var(--error)':'var(--on-surface-variant)'};cursor:pointer;padding:4px">
+          <button onclick="toggleTrackFavorite(Player._currentTrack)" style="background:none;border:none;color:${isTrackFavorite(track.url)?'var(--error)':'var(--on-surface-variant)'};cursor:pointer;padding:4px;min-width:44px;min-height:44px;display:inline-flex;align-items:center;justify-content:center">
             <span class="material-symbols-outlined" style="font-size:20px">${isTrackFavorite(track.url)?'favorite':'favorite_border'}</span>
           </button>
         </div>
@@ -976,7 +1015,7 @@
     overlay.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.85);display:flex;align-items:flex-end;justify-content:center;animation:fadeIn 0.2s ease';
 
     const panel = document.createElement('div');
-    panel.style.cssText = 'background:var(--surface-container,#1e1e2e);border-radius:20px 20px 0 0;padding:20px;width:100%;max-width:500px;max-height:70vh;overflow:hidden;display:flex;flex-direction:column;color:var(--on-surface)';
+    panel.style.cssText = 'background:var(--surface-container,#1e1e2e);border-radius:20px 20px 0 0;padding:20px;width:100%;max-width:500px;max-height:70vh;overflow:hidden;display:flex;flex-direction:column;color:var(--on-surface);overscroll-behavior:contain';
 
     panel.innerHTML = `
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
