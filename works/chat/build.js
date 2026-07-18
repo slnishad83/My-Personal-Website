@@ -16,9 +16,9 @@ const DIST = join(ROOT, 'dist');
 // JS files in load order (matching index.html script tags)
 const BUNDLE_ORDER = [
   // Parent dir files referenced by index.html
-  'app-extras.js',
   'config.js',
   'app.js',
+  'app-extras.js',
   // Feature files from works/chat/
   'platform-detect.js',
   'offline-queue.js',
@@ -105,9 +105,9 @@ const BUNDLE_ORDER = [
   'date-reminders.js',
   'ai-features.js',
   'chat-export.js',
+  'music-player.js',
   'music-library.js',
   'playlist-core.js',
-  'music-player.js',
   'playlist-ui.js',
   'playlist-sync.js',
   'app-init.js',
