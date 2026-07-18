@@ -2181,7 +2181,7 @@ html:not(.dark) .wa-input-footer {
   border-radius: 50%;
   transition: color 0.15s, background 0.15s;
   padding: 0;
-  margin-bottom: 0;
+  margin-bottom: 4px;
   align-self: flex-end;
 }
 .wa-input-icon:hover {

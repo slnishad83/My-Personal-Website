@@ -219,6 +219,10 @@ for (const file of BUNDLE_ORDER) {
 }
 
 ensureDir(DIST);
+const buildVersion = Date.now().toString();
+writeFileSync(join(DIST, 'version.json'), JSON.stringify({ version: buildVersion }));
+console.log(`[build] Created version.json (Build ID: ${buildVersion})`);
+
 const jsHash = hash(bundle);
 const jsFilename = `app-bundle.${jsHash}.js`;
 writeFileSync(join(DIST, jsFilename), bundle);
@@ -251,32 +255,82 @@ console.log('[build] Extracting inline scripts...');
 const indexHtml = readFile('index.html');
 
 // Inline SW registration script
-const swScript = `/* PWA Service Worker Registration */
-if ('serviceWorker' in navigator) {
-  if (navigator.serviceWorker.controller) {
-    navigator.serviceWorker.ready.then(function(reg) {
-      if (reg && typeof reg.update === 'function') reg.update().catch(function() {});
-    }).catch(function() {});
-  } else {
-    window.addEventListener('load', function () {
-      navigator.serviceWorker.register('/works/chat/sw.js', { scope: '/works/chat/' })
-        .then(function (reg) {
-          console.log('[SW] Registered:', reg.scope);
-          reg.addEventListener('updatefound', function () {
-            var newWorker = reg.installing;
-            if (newWorker) {
-              newWorker.addEventListener('statechange', function () {
-                if (newWorker.state === 'activated' && navigator.serviceWorker.controller) {
-                  if (typeof showToast === 'function') showToast('App updated! Refresh for the latest version.', 'info');
-                }
+const swScript = `/* PWA Service Worker Registration & Version Control */
+(function() {
+  if (!('serviceWorker' in navigator)) return;
+
+  // ── Strategy 2: Listen for Controller Changes (New SW Activation) ──
+  let refreshing = false;
+  navigator.serviceWorker.addEventListener('controllerchange', function() {
+    if (refreshing) return;
+    refreshing = true;
+    window.location.reload();
+  });
+
+  // ── Strategy 3: Check version.json for updates ──
+  function checkVersion() {
+    fetch('/works/chat/version.json?t=' + Date.now())
+      .then(function(res) { return res.json(); })
+      .then(function(data) {
+        if (!data || !data.version) return;
+        const currentVersion = localStorage.getItem('nsl_app_version');
+        
+        // If no version stored yet, set it and initialize
+        if (!currentVersion) {
+          localStorage.setItem('nsl_app_version', data.version);
+          return;
+        }
+
+        // If version has changed, clear caches and reload
+        if (currentVersion !== data.version) {
+          console.log('[VersionControl] New update detected:', data.version, '. Cleaning caches...');
+          localStorage.setItem('nsl_app_version', data.version);
+          
+          // Clear all caches
+          if ('caches' in window) {
+            caches.keys().then(function(keys) {
+              return Promise.all(keys.map(function(key) {
+                return caches.delete(key);
+              }));
+            }).then(function() {
+              // Unregister service workers
+              navigator.serviceWorker.getRegistrations().then(function(regs) {
+                return Promise.all(regs.map(function(reg) {
+                  return reg.unregister();
+                }));
+              }).then(function() {
+                console.log('[VersionControl] Caches and SW cleared. Reloading page...');
+                window.location.reload();
               });
-            }
-          });
-        })
-        .catch(function (err) { console.warn('[SW] Registration failed:', err); });
-    });
+            }).catch(function() {
+              window.location.reload();
+            });
+          } else {
+            window.location.reload();
+          }
+        }
+      })
+      .catch(function(err) {
+        console.warn('[VersionControl] Check failed:', err);
+      });
   }
-}
+
+  // Run version check on load
+  checkVersion();
+
+  // Register service worker
+  window.addEventListener('load', function() {
+    navigator.serviceWorker.register('/works/chat/sw.js', { scope: '/works/chat/' })
+      .then(function(reg) {
+        console.log('[SW] Registered:', reg.scope);
+        // Force service worker update check
+        if (typeof reg.update === 'function') reg.update().catch(function() {});
+      })
+      .catch(function(err) {
+        console.warn('[SW] Registration failed:', err);
+      });
+  });
+})();
 
 /* M2: Sidebar expand/collapse toggle */
 window.toggleSidebarExpand = function() {

@@ -275,7 +275,7 @@ function updateHeaderPresence() {
   const statusDot = document.getElementById('header-status-dot');
   if (headerStatus) {
     headerStatus.textContent = contact.status === 'online' ? 'Active Now' : (contact.about || '');
-    headerStatus.className = "text-[10px] uppercase tracking-widest font-label-caps" + (contact.status === 'online' ? ' text-green-500' : ' text-on-surface-variant');
+    headerStatus.className = "text-[10px] uppercase tracking-widest font-label-caps truncate whitespace-nowrap" + (contact.status === 'online' ? ' text-green-500' : ' text-on-surface-variant');
   }
   if (statusDot) {
     if (contact.status === 'online') {
@@ -2612,7 +2612,7 @@ function openChat(chatId) {
     if (headerName) headerName.textContent = "Myself Chat";
     if (headerStatus) {
       headerStatus.textContent = "Personal Workspace";
-      headerStatus.className = "text-[10px] text-secondary uppercase tracking-widest font-label-caps";
+      headerStatus.className = "text-[10px] text-secondary uppercase tracking-widest font-label-caps truncate whitespace-nowrap";
     }
     if (statusDot) {
       statusDot.style.display = '';
@@ -2633,7 +2633,7 @@ function openChat(chatId) {
     // Group Channel header
     if (headerStatus) {
       headerStatus.textContent = `${chat.memberCount || 3} members`;
-      headerStatus.className = "text-[10px] text-on-surface-variant uppercase tracking-widest font-label-caps";
+      headerStatus.className = "text-[10px] text-on-surface-variant uppercase tracking-widest font-label-caps truncate whitespace-nowrap";
     }
     if (statusDot) statusDot.style.display = 'none';
     if (actionContainer) {
@@ -2661,7 +2661,7 @@ function openChat(chatId) {
     }
     if (headerStatus) {
       headerStatus.textContent = statusText;
-      headerStatus.className = "text-[10px] text-primary-fixed-dim uppercase tracking-widest font-label-caps" + (contact?.status === 'online' ? ' text-green-500' : ' text-on-surface-variant');
+      headerStatus.className = "text-[10px] text-primary-fixed-dim uppercase tracking-widest font-label-caps truncate whitespace-nowrap" + (contact?.status === 'online' ? ' text-green-500' : ' text-on-surface-variant');
     }
     if (statusDot) {
       if (contact?.status === 'online') {
@@ -4824,64 +4824,66 @@ function openContactInfoPanel(uid) {
   
   // Design details matched exactly with Column 4 personal mockup
   panel.innerHTML = `
-    <div class="p-6 border-b border-outline-variant/10 flex justify-between items-center bg-surface-container">
-      <h3 class="font-bold text-on-surface">User Details</h3>
-      <button onclick="closeDetailPanel()" class="text-on-surface-variant hover:text-on-surface"><span class="material-symbols-outlined">close</span></button>
+    <div class="h-16 border-b border-outline-variant/30 flex justify-between items-center px-6 bg-background flex-shrink-0">
+      <h3 class="font-bold text-on-surface text-[17px]">User Details</h3>
+      <button onclick="closeDetailPanel()" class="text-on-surface-variant hover:text-on-surface flex items-center justify-center p-2 rounded-full hover:bg-surface-variant/30 transition-all"><span class="material-symbols-outlined">close</span></button>
     </div>
-    <div class="p-6 flex flex-col items-center text-center space-y-4">
-      ${contact.initials
-        ? `<div class="w-24 h-24 rounded-full bg-surface-container-highest flex items-center justify-center font-bold text-3xl border border-outline-variant/20">${contact.initials}</div>`
-        : `<div class="w-24 h-24 rounded-full bg-surface-container-highest flex items-center justify-center border border-outline-variant/20"><span class="material-symbols-outlined text-4xl" style="color:var(--on-surface-variant)">person_off</span></div>`}
-      <div>
-        <h4 class="font-bold text-lg text-on-surface">${escHtml(contact.name || 'Unknown')}</h4>
-        <p class="text-xs text-on-surface-variant">${escHtml(contact.about || 'Available')}</p>
-      </div>
-      <span class="px-3 py-1 bg-secondary/10 border border-secondary/20 rounded-full text-xs font-semibold text-secondary flex items-center gap-1.5">
-        <span class="w-1.5 h-1.5 bg-secondary rounded-full animate-pulse"></span>
-        ${contact.status === 'online' ? 'Online' : 'Offline'}
-      </span>
-    </div>
-    
-    <div class="px-6 py-4 border-t border-outline-variant/10 space-y-4">
-      <div class="space-y-1">
-        <span class="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">Mobile Number</span>
-        <p class="text-sm font-semibold text-on-surface">${escHtml(contact.phone || 'Not provided')}</p>
-      </div>
-      <div class="space-y-1">
-        <span class="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">Email Address</span>
-        <p class="text-sm font-semibold text-on-surface">${escHtml(contact.email || 'Not provided')}</p>
-      </div>
-    </div>
-
-    <div class="px-6 py-4 border-t border-outline-variant/10 space-y-3">
-      <span class="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider block">Privacy & Actions</span>
-      <button class="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-surface-variant/40 transition-colors text-xs font-semibold text-on-surface" onclick="renderInlineGallery()">
-        <span class="material-symbols-outlined text-primary text-base">perm_media</span>
-        <span>Media & Files</span>
-      </button>
-      <button class="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-surface-variant/40 transition-colors text-xs font-semibold text-on-surface" onclick="toggleChatMute(App.currentChat?.id)">
-        <span class="material-symbols-outlined text-primary text-base">notifications_off</span>
-        <span>Mute Notifications</span>
-      </button>
-      <div class="flex items-center justify-between p-3 rounded-xl hover:bg-surface-variant/40 transition-colors">
-        <div class="flex items-center gap-3">
-          <span class="material-symbols-outlined text-primary text-base">timer</span>
-          <div>
-            <div class="text-xs font-semibold text-on-surface">Disappearing Messages</div>
-            <div class="text-[10px] text-on-surface-variant">${(function(){const v=App.currentChat?.disappearingMessages||0;return v>=86400000*90?'90 days':v>=86400000*7?'7 days':v>=86400000?'24 hours':'Off';})()}</div>
-          </div>
+    <div class="flex-1 overflow-y-auto scrollbar-hide">
+      <div class="p-6 flex flex-col items-center text-center space-y-4">
+        ${contact.initials
+          ? `<div class="w-24 h-24 rounded-full bg-surface-container-highest flex items-center justify-center font-bold text-3xl border border-outline-variant/20">${contact.initials}</div>`
+          : `<div class="w-24 h-24 rounded-full bg-surface-container-highest flex items-center justify-center border border-outline-variant/20"><span class="material-symbols-outlined text-4xl" style="color:var(--on-surface-variant)">person_off</span></div>`}
+        <div>
+          <h4 class="font-bold text-lg text-on-surface">${escHtml(contact.name || 'Unknown')}</h4>
+          <p class="text-xs text-on-surface-variant">${escHtml(contact.about || 'Available')}</p>
         </div>
-        <select onchange="setDisappearingMessages(App.currentChat?.id, Number(this.value))" class="bg-surface-container border border-outline-variant/30 rounded-lg px-2 py-1 text-xs">
-          <option value="0" ${(App.currentChat?.disappearingMessages||0)===0?'selected':''}>Off</option>
-          <option value="${86400000}" ${(App.currentChat?.disappearingMessages||0)===86400000?'selected':''}>24 hours</option>
-          <option value="${604800000}" ${(App.currentChat?.disappearingMessages||0)===604800000?'selected':''}>7 days</option>
-          <option value="${7776000000}" ${(App.currentChat?.disappearingMessages||0)===7776000000?'selected':''}>90 days</option>
-        </select>
+        <span class="px-3 py-1 bg-secondary/10 border border-secondary/20 rounded-full text-xs font-semibold text-secondary flex items-center gap-1.5 justify-center">
+          <span class="w-1.5 h-1.5 bg-secondary rounded-full animate-pulse"></span>
+          ${contact.status === 'online' ? 'Online' : 'Offline'}
+        </span>
       </div>
-      <button class="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-red-500/10 hover:text-red-400 transition-colors text-xs font-semibold text-red-500" onclick="blockContact('${uid}')">
-        <span class="material-symbols-outlined text-base">block</span>
-        <span>Block User</span>
-      </button>
+      
+      <div class="px-6 py-4 border-t border-outline-variant/10 space-y-4">
+        <div class="space-y-1">
+          <span class="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">Mobile Number</span>
+          <p class="text-sm font-semibold text-on-surface">${escHtml(contact.phone || 'Not provided')}</p>
+        </div>
+        <div class="space-y-1">
+          <span class="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">Email Address</span>
+          <p class="text-sm font-semibold text-on-surface">${escHtml(contact.email || 'Not provided')}</p>
+        </div>
+      </div>
+
+      <div class="px-6 py-4 border-t border-outline-variant/10 space-y-3">
+        <span class="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider block">Privacy & Actions</span>
+        <button class="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-surface-variant/40 transition-colors text-xs font-semibold text-on-surface" onclick="renderInlineGallery()">
+          <span class="material-symbols-outlined text-primary text-base">perm_media</span>
+          <span>Media & Files</span>
+        </button>
+        <button class="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-surface-variant/40 transition-colors text-xs font-semibold text-on-surface" onclick="toggleChatMute(App.currentChat?.id)">
+          <span class="material-symbols-outlined text-primary text-base">notifications_off</span>
+          <span>Mute Notifications</span>
+        </button>
+        <div class="flex items-center justify-between p-3 rounded-xl hover:bg-surface-variant/40 transition-colors">
+          <div class="flex items-center gap-3">
+            <span class="material-symbols-outlined text-primary text-base">timer</span>
+            <div>
+              <div class="text-xs font-semibold text-on-surface">Disappearing Messages</div>
+              <div class="text-[10px] text-on-surface-variant">${(function(){const v=App.currentChat?.disappearingMessages||0;return v>=86400000*90?'90 days':v>=86400000*7?'7 days':v>=86400000?'24 hours':'Off';})()}</div>
+            </div>
+          </div>
+          <select onchange="setDisappearingMessages(App.currentChat?.id, Number(this.value))" class="bg-surface-container border border-outline-variant/30 rounded-lg px-2 py-1 text-xs">
+            <option value="0" ${(App.currentChat?.disappearingMessages||0)===0?'selected':''}>Off</option>
+            <option value="${86400000}" ${(App.currentChat?.disappearingMessages||0)===86400000?'selected':''}>24 hours</option>
+            <option value="${604800000}" ${(App.currentChat?.disappearingMessages||0)===604800000?'selected':''}>7 days</option>
+            <option value="${7776000000}" ${(App.currentChat?.disappearingMessages||0)===7776000000?'selected':''}>90 days</option>
+          </select>
+        </div>
+        <button class="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-red-500/10 hover:text-red-400 transition-colors text-xs font-semibold text-red-500" onclick="blockContact('${uid}')">
+          <span class="material-symbols-outlined text-base">block</span>
+          <span>Block User</span>
+        </button>
+      </div>
     </div>
   `;
   panel.classList.remove('hidden');
@@ -4896,57 +4898,59 @@ function openGroupInfoPanel() {
 
   // Design details matched exactly with Column 4 group chat mockup
   panel.innerHTML = `
-    <div class="p-6 border-b border-outline-variant/10 flex justify-between items-center bg-surface-container">
-      <h3 class="font-bold text-on-surface">Channel Details</h3>
-      <button onclick="closeDetailPanel()" class="text-on-surface-variant hover:text-on-surface"><span class="material-symbols-outlined">close</span></button>
+    <div class="h-16 border-b border-outline-variant/30 flex justify-between items-center px-6 bg-background flex-shrink-0">
+      <h3 class="font-bold text-on-surface text-[17px]">Channel Details</h3>
+      <button onclick="closeDetailPanel()" class="text-on-surface-variant hover:text-on-surface flex items-center justify-center p-2 rounded-full hover:bg-surface-variant/30 transition-all"><span class="material-symbols-outlined">close</span></button>
     </div>
-    <div class="p-6 flex flex-col items-center text-center space-y-4">
-      <div class="w-20 h-20 rounded-2xl bg-primary-container/20 flex items-center justify-center font-bold text-2xl text-primary border border-outline-variant/20 shadow">${chat.initials}</div>
-      <div>
-        <h4 class="font-bold text-lg text-on-surface">${escHtml(chat.name)}</h4>
-        <p class="text-xs text-on-surface-variant">Group channel room</p>
-      </div>
-      <span class="px-3 py-1 bg-primary/10 border border-primary/20 rounded-full text-xs font-semibold text-primary">
-        ${chat.memberCount || 3} Members
-      </span>
-    </div>
-
-    <div class="px-6 py-4 border-t border-outline-variant/10 space-y-3">
-      <span class="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider block">Participants</span>
-      <div class="space-y-2" id="group-members-list">
-        <div class="text-xs text-on-surface-variant">Loading members...</div>
-      </div>
-    </div>
-
-    <div class="px-6 py-4 border-t border-outline-variant/10 space-y-3">
-      <span class="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider block">Channel Management</span>
-      <button class="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-surface-variant/40 transition-colors text-xs font-semibold text-on-surface" onclick="renderInlineGallery()">
-        <span class="material-symbols-outlined text-primary text-base">perm_media</span>
-        <span>Media & Files</span>
-      </button>
-      <button class="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-surface-variant/40 transition-colors text-xs font-semibold text-on-surface" onclick="copyInviteLink()">
-        <span class="material-symbols-outlined text-primary text-base">link</span>
-        <span>Copy Invite Link</span>
-      </button>
-      <div class="flex items-center justify-between p-3 rounded-xl hover:bg-surface-variant/40 transition-colors">
-        <div class="flex items-center gap-3">
-          <span class="material-symbols-outlined text-primary text-base">timer</span>
-          <div>
-            <div class="text-xs font-semibold text-on-surface">Disappearing Messages</div>
-            <div class="text-[10px] text-on-surface-variant">${(function(){const v=App.currentChat?.disappearingMessages||0;return v>=86400000*90?'90 days':v>=86400000*7?'7 days':v>=86400000?'24 hours':'Off';})()}</div>
-          </div>
+    <div class="flex-1 overflow-y-auto scrollbar-hide">
+      <div class="p-6 flex flex-col items-center text-center space-y-4">
+        <div class="w-20 h-20 rounded-2xl bg-primary-container/20 flex items-center justify-center font-bold text-2xl text-primary border border-outline-variant/20 shadow">${chat.initials}</div>
+        <div>
+          <h4 class="font-bold text-lg text-on-surface">${escHtml(chat.name)}</h4>
+          <p class="text-xs text-on-surface-variant">Group channel room</p>
         </div>
-        <select onchange="setDisappearingMessages(App.currentChat?.id, Number(this.value))" class="bg-surface-container border border-outline-variant/30 rounded-lg px-2 py-1 text-xs">
-          <option value="0" ${(App.currentChat?.disappearingMessages||0)===0?'selected':''}>Off</option>
-          <option value="${86400000}" ${(App.currentChat?.disappearingMessages||0)===86400000?'selected':''}>24 hours</option>
-          <option value="${604800000}" ${(App.currentChat?.disappearingMessages||0)===604800000?'selected':''}>7 days</option>
-          <option value="${7776000000}" ${(App.currentChat?.disappearingMessages||0)===7776000000?'selected':''}>90 days</option>
-        </select>
+        <span class="px-3 py-1 bg-primary/10 border border-primary/20 rounded-full text-xs font-semibold text-primary">
+          ${chat.memberCount || 3} Members
+        </span>
       </div>
-      <button class="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-red-500/10 hover:text-red-400 transition-colors text-xs font-semibold text-red-500" onclick="confirmLeaveGroup()">
-        <span class="material-symbols-outlined text-base">exit_to_app</span>
-        <span>Leave Channel</span>
-      </button>
+
+      <div class="px-6 py-4 border-t border-outline-variant/10 space-y-3">
+        <span class="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider block">Participants</span>
+        <div class="space-y-2" id="group-members-list">
+          <div class="text-xs text-on-surface-variant">Loading members...</div>
+        </div>
+      </div>
+
+      <div class="px-6 py-4 border-t border-outline-variant/10 space-y-3">
+        <span class="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider block">Channel Management</span>
+        <button class="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-surface-variant/40 transition-colors text-xs font-semibold text-on-surface" onclick="renderInlineGallery()">
+          <span class="material-symbols-outlined text-primary text-base">perm_media</span>
+          <span>Media & Files</span>
+        </button>
+        <button class="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-surface-variant/40 transition-colors text-xs font-semibold text-on-surface" onclick="copyInviteLink()">
+          <span class="material-symbols-outlined text-primary text-base">link</span>
+          <span>Copy Invite Link</span>
+        </button>
+        <div class="flex items-center justify-between p-3 rounded-xl hover:bg-surface-variant/40 transition-colors">
+          <div class="flex items-center gap-3">
+            <span class="material-symbols-outlined text-primary text-base">timer</span>
+            <div>
+              <div class="text-xs font-semibold text-on-surface">Disappearing Messages</div>
+              <div class="text-[10px] text-on-surface-variant">${(function(){const v=App.currentChat?.disappearingMessages||0;return v>=86400000*90?'90 days':v>=86400000*7?'7 days':v>=86400000?'24 hours':'Off';})()}</div>
+            </div>
+          </div>
+          <select onchange="setDisappearingMessages(App.currentChat?.id, Number(this.value))" class="bg-surface-container border border-outline-variant/30 rounded-lg px-2 py-1 text-xs">
+            <option value="0" ${(App.currentChat?.disappearingMessages||0)===0?'selected':''}>Off</option>
+            <option value="${86400000}" ${(App.currentChat?.disappearingMessages||0)===86400000?'selected':''}>24 hours</option>
+            <option value="${604800000}" ${(App.currentChat?.disappearingMessages||0)===604800000?'selected':''}>7 days</option>
+            <option value="${7776000000}" ${(App.currentChat?.disappearingMessages||0)===7776000000?'selected':''}>90 days</option>
+          </select>
+        </div>
+        <button class="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-red-500/10 hover:text-red-400 transition-colors text-xs font-semibold text-red-500" onclick="confirmLeaveGroup()">
+          <span class="material-symbols-outlined text-base">exit_to_app</span>
+          <span>Leave Channel</span>
+        </button>
+      </div>
     </div>
   `;
   panel.classList.remove('hidden');
@@ -4989,34 +4993,36 @@ function openMyselfInfo() {
   if (!panel) return;
   
   panel.innerHTML = `
-    <div class="p-6 border-b border-outline-variant/10 flex justify-between items-center bg-surface-container">
-      <h3 class="font-bold text-on-surface">Notepad Settings</h3>
-      <button onclick="closeDetailPanel()" class="text-on-surface-variant hover:text-on-surface"><span class="material-symbols-outlined">close</span></button>
+    <div class="h-16 border-b border-outline-variant/30 flex justify-between items-center px-6 bg-background flex-shrink-0">
+      <h3 class="font-bold text-on-surface text-[17px]">Notepad Settings</h3>
+      <button onclick="closeDetailPanel()" class="text-on-surface-variant hover:text-on-surface flex items-center justify-center p-2 rounded-full hover:bg-surface-variant/30 transition-all"><span class="material-symbols-outlined">close</span></button>
     </div>
-    <div class="p-6 flex flex-col items-center text-center space-y-4">
-      <div class="w-20 h-20 rounded-3xl bg-primary/20 flex items-center justify-center font-bold text-2xl text-primary border border-outline-variant/20 shadow"><span class="material-symbols-outlined text-3xl" style="font-variation-settings: 'FILL' 1;">lock</span></div>
-      <div>
-        <h4 class="font-bold text-lg text-on-surface">Cloud Notepad</h4>
-        <p class="text-xs text-on-surface-variant">Private end-to-end encrypted notes</p>
-      </div>
-    </div>
-
-    <div class="px-6 py-4 border-t border-outline-variant/10 space-y-4">
-      <div class="space-y-1">
-        <span class="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">Features Available</span>
-        <div class="space-y-2 pt-1">
-          <div class="flex items-center gap-2 text-xs font-semibold text-on-surface-variant"><span class="text-primary">✔</span> Personal Quick Notes</div>
-          <div class="flex items-center gap-2 text-xs font-semibold text-on-surface-variant"><span class="text-primary">✔</span> Attachment Cloud Storage</div>
-          <div class="flex items-center gap-2 text-xs font-semibold text-on-surface-variant"><span class="text-primary">✔</span> Starred & Bookmarked Notes</div>
+    <div class="flex-1 overflow-y-auto scrollbar-hide">
+      <div class="p-6 flex flex-col items-center text-center space-y-4">
+        <div class="w-20 h-20 rounded-3xl bg-primary/20 flex items-center justify-center font-bold text-2xl text-primary border border-outline-variant/20 shadow"><span class="material-symbols-outlined text-3xl" style="font-variation-settings: 'FILL' 1;">lock</span></div>
+        <div>
+          <h4 class="font-bold text-lg text-on-surface">Cloud Notepad</h4>
+          <p class="text-xs text-on-surface-variant">Private end-to-end encrypted notes</p>
         </div>
       </div>
-    </div>
 
-    <div class="px-6 py-4 border-t border-outline-variant/10 space-y-3">
-      <button class="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-surface-variant/40 transition-colors text-xs font-semibold text-on-surface" onclick="confirmClearChat(App.currentChat?.id || 'saved_me')">
-        <span class="material-symbols-outlined text-primary text-base">delete_sweep</span>
-        <span>Clear Notepad History</span>
-      </button>
+      <div class="px-6 py-4 border-t border-outline-variant/10 space-y-4">
+        <div class="space-y-1">
+          <span class="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">Features Available</span>
+          <div class="space-y-2 pt-1">
+            <div class="flex items-center gap-2 text-xs font-semibold text-on-surface-variant"><span class="text-primary">✔</span> Personal Quick Notes</div>
+            <div class="flex items-center gap-2 text-xs font-semibold text-on-surface-variant"><span class="text-primary">✔</span> Attachment Cloud Storage</div>
+            <div class="flex items-center gap-2 text-xs font-semibold text-on-surface-variant"><span class="text-primary">✔</span> Starred & Bookmarked Notes</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="px-6 py-4 border-t border-outline-variant/10 space-y-3">
+        <button class="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-surface-variant/40 transition-colors text-xs font-semibold text-on-surface" onclick="confirmClearChat(App.currentChat?.id || 'saved_me')">
+          <span class="material-symbols-outlined text-primary text-base">delete_sweep</span>
+          <span>Clear Notepad History</span>
+        </button>
+      </div>
     </div>
   `;
   panel.classList.remove('hidden');

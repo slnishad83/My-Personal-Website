@@ -467,9 +467,9 @@
               <div class="w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm bg-surface-container-highest text-on-surface-variant" id="header-avatar">?</div>
               <div class="absolute bottom-0 right-0 w-3 h-3 bg-primary-fixed border-2 border-background rounded-full" id="header-status-dot"></div>
             </div>
-            <div class="flex flex-col min-w-0">
+            <div class="flex flex-col justify-center min-w-0">
               <h2 class="font-bold text-on-surface text-[17px] truncate leading-tight" id="header-name">Select a chat</h2>
-              <span class="text-[10px] text-primary-fixed-dim uppercase tracking-widest font-label-caps" id="header-status">—</span>
+              <span class="text-[10px] text-primary-fixed-dim uppercase tracking-widest font-label-caps truncate whitespace-nowrap" id="header-status">—</span>
             </div>
           </div>
         </div>
@@ -613,16 +613,17 @@
 
       <!-- Input Footer Bar — WhatsApp-exact layout -->
       <footer class="wa-input-footer hidden" id="input-bar" role="form" aria-label="Message input">
-        <!-- Left: rounded input box with emoji, attach, and textarea -->
+        <!-- Emoji button (outside input, left) -->
+        <button class="wa-input-icon" onclick="toggleEmojiPicker()" aria-label="Emoji" id="wa-emoji-btn">
+          <span class="material-symbols-outlined">mood</span>
+        </button>
+        <!-- Attach button (paperclip, outside input) -->
+        <button class="wa-input-icon" id="attach-btn" onclick="toggleAttachMenu()" aria-label="Attach file">
+          <span class="material-symbols-outlined">attach_file</span>
+        </button>
+        
+        <!-- Center: rounded input box with textarea -->
         <div class="wa-input-box" id="wa-input-box">
-          <!-- Emoji button (inside input, left) -->
-          <button class="wa-input-icon" onclick="toggleEmojiPicker()" aria-label="Emoji" id="wa-emoji-btn">
-            <span class="material-symbols-outlined">mood</span>
-          </button>
-          <!-- Attach button (paperclip, inside input) -->
-          <button class="wa-input-icon" id="attach-btn" onclick="toggleAttachMenu()" aria-label="Attach file">
-            <span class="material-symbols-outlined">attach_file</span>
-          </button>
           <!-- Dynamic text input -->
           <textarea class="wa-textarea" id="msg-input" placeholder="Type a message" rows="1" oninput="onInputChange()" onkeydown="onInputKeyDown(event)" aria-label="Message input"></textarea>
         </div>
@@ -767,7 +768,7 @@
     </main>
 
     <!-- 💡 COLUMN 4: RIGHT-SIDE DETAIL INFO PANEL -->
-    <aside id="detail-panel" class="hidden flex-col h-full w-80 bg-surface-container border-l border-outline-variant/30 flex-shrink-0 z-20 overflow-y-auto scrollbar-hide" aria-label="Chat details">
+    <aside id="detail-panel" class="hidden flex-col h-full w-80 bg-surface-container border-l border-outline-variant/30 flex-shrink-0 z-20 overflow-hidden" aria-label="Chat details">
       <!-- H10: Close button for tablet overlay mode -->
       <div class="flex items-center justify-between p-3 border-b border-outline-variant/10 tablet-panel-header" style="display:none;">
         <span class="font-semibold text-sm text-on-surface">Details</span>
