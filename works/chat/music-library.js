@@ -146,12 +146,96 @@
     return null;
   }
 
+  // ─── AUDIO URL CACHE (4-hour TTL for offline fallback) ───
+  const _YT_CACHE_KEY = 'nsl_yt_audio_cache';
+  const _YT_CACHE_TTL = 4 * 60 * 60 * 1000;
+
+  function _getCachedAudioUrl(videoId) {
+    try {
+      const cache = JSON.parse(localStorage.getItem(_YT_CACHE_KEY) || '{}');
+      const entry = cache[videoId];
+      if (entry && (Date.now() - entry.ts < _YT_CACHE_TTL)) return entry.url;
+      if (entry) delete cache[videoId];
+      localStorage.setItem(_YT_CACHE_KEY, JSON.stringify(cache));
+    } catch(_) {}
+    return null;
+  }
+
+  function _cacheAudioUrl(videoId, url) {
+    if (!videoId || !url) return;
+    try {
+      const cache = JSON.parse(localStorage.getItem(_YT_CACHE_KEY) || '{}');
+      cache[videoId] = { url, ts: Date.now() };
+      const keys = Object.keys(cache);
+      if (keys.length > 50) {
+        keys.sort((a, b) => (cache[a].ts || 0) - (cache[b].ts || 0));
+        keys.slice(0, keys.length - 50).forEach(k => delete cache[k]);
+      }
+      localStorage.setItem(_YT_CACHE_KEY, JSON.stringify(cache));
+    } catch(_) {}
+  }
+
+  // ─── YOUTUBE PLAYLIST IMPORT ───
+  function _parseYouTubePlaylistId(url) {
+    if (!url) return null;
+    try {
+      const u = new URL(url);
+      return u.searchParams.get('list') || null;
+    } catch(_) {
+      const m = url.match(/[?&]list=([a-zA-Z0-9_-]+)/);
+      return m ? m[1] : null;
+    }
+  }
+
+  async function _fetchPipedPlaylist(playlistId) {
+    const data = await _pipedFetch('/playlists/' + playlistId, 15000);
+    if (!data || !data.relatedStreams) return [];
+    return data.relatedStreams.map(v => {
+      const vid = (v.url || '').replace('/watch?v=', '');
+      return {
+        id: 'yt_' + vid,
+        videoId: vid,
+        title: v.title || 'Untitled',
+        artist: v.uploaderName || 'Unknown',
+        duration: v.duration || 0,
+        thumbnail: v.thumbnailUrl || ('https://i.ytimg.com/vi/' + vid + '/mqdefault.jpg'),
+        source: 'youtube',
+      };
+    });
+  }
+
+  async function _fetchInvPlaylist(playlistId) {
+    const data = await _invFetch('/api/v1/playlists/' + playlistId, 15000);
+    if (!data || !data.videos) return [];
+    return data.videos.map(v => ({
+      id: 'yt_' + v.videoId,
+      videoId: v.videoId,
+      title: v.title || 'Untitled',
+      artist: v.author || 'Unknown',
+      duration: v.lengthSeconds || 0,
+      thumbnail: (v.videoThumbnails && v.videoThumbnails.find(t => t.quality === 'medium') || (v.videoThumbnails && v.videoThumbnails[0]) || {}).url || ('https://i.ytimg.com/vi/' + v.videoId + '/mqdefault.jpg'),
+      source: 'youtube',
+    }));
+  }
+
+  window.fetchYouTubePlaylist = async function(url) {
+    const playlistId = _parseYouTubePlaylistId(url);
+    if (!playlistId) { showToast('Invalid playlist URL', 'error'); return []; }
+    let tracks = await _fetchPipedPlaylist(playlistId);
+    if (!tracks.length) tracks = await _fetchInvPlaylist(playlistId);
+    return tracks;
+  };
+
   window.getYouTubeAudioUrl = async function(videoId) {
     if (!videoId) return null;
-    // Try Invidious first, fallback to Piped
+    // 1. Try cached URL first (fast, works offline)
+    const cached = _getCachedAudioUrl(videoId);
+    if (cached) return cached;
+    // 2. Try Invidious, fallback to Piped
     let url = await _getInvAudioUrl(videoId);
-    if (url) return url;
-    url = await _getPipedAudioUrl(videoId);
+    if (!url) url = await _getPipedAudioUrl(videoId);
+    // 3. Cache successful result
+    if (url) _cacheAudioUrl(videoId, url);
     return url;
   };
 
@@ -712,6 +796,15 @@
           <button onclick="doArchiveSearch()" style="padding:8px 14px;border-radius:10px;border:none;background:rgba(124,77,255,0.15);color:var(--primary);font-size:11px;font-weight:600;cursor:pointer">Search</button>
         </div>
         <div id="archive-search-results" style="margin-top:8px"></div>
+      </div>
+      <div style="margin-top:12px;padding:12px;border-radius:12px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.05)">
+        <div style="font-size:11px;font-weight:700;color:var(--on-surface-variant);margin-bottom:6px">YouTube Playlist Import</div>
+        <p style="font-size:11px;color:var(--on-surface-variant);margin:0 0 8px">Paste a YouTube playlist URL to import all tracks</p>
+        <div style="display:flex;gap:8px">
+          <input type="text" id="yt-playlist-url-input" placeholder="https://youtube.com/playlist?list=..." style="flex:1;padding:8px 12px;border-radius:10px;border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.04);color:var(--on-surface);font-size:12px;outline:none">
+          <button onclick="doYouTubePlaylistImport()" style="padding:8px 14px;border-radius:10px;border:none;background:rgba(124,77,255,0.15);color:var(--primary);font-size:11px;font-weight:600;cursor:pointer">Import</button>
+        </div>
+        <div id="yt-playlist-import-results" style="margin-top:8px"></div>
       </div>`;
   }
 
@@ -731,6 +824,58 @@
     const q = document.getElementById('archive-search-input')?.value;
     if (!q || q.length < 2) return;
     _doArchiveSearch(q);
+  };
+
+  window.doYouTubePlaylistImport = async function() {
+    const url = document.getElementById('yt-playlist-url-input')?.value;
+    if (!url) { showToast('Paste a YouTube playlist URL', 'error'); return; }
+    const el = document.getElementById('yt-playlist-import-results');
+    if (!el) return;
+    el.innerHTML = `
+      <div style="text-align:center;padding:16px">
+        <span class="material-symbols-outlined animate-spin" style="color:var(--primary);font-size:24px">progress_activity</span>
+        <p style="color:var(--on-surface-variant);font-size:11px;margin-top:8px">Loading playlist...</p>
+      </div>`;
+    const tracks = await fetchYouTubePlaylist(url);
+    if (!tracks.length) {
+      el.innerHTML = '<p style="text-align:center;font-size:12px;color:var(--on-surface-variant);padding:12px">No tracks found. Check the URL and try again.</p>';
+      return;
+    }
+    tracks.forEach(t => { _trackCache[t.id] = t; });
+    el.innerHTML = `
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+        <span style="font-size:11px;font-weight:700;color:var(--primary)">${tracks.length} tracks found</span>
+        <button onclick="playAllPlaylistTracks()" style="padding:5px 10px;border-radius:8px;border:none;background:var(--primary);color:var(--on-primary);font-size:10px;font-weight:700;cursor:pointer">Play All</button>
+      </div>
+      ${tracks.map((t, i) => `
+        <div style="display:flex;align-items:center;gap:8px;padding:7px;border-radius:10px;background:rgba(255,255,255,0.03);margin-bottom:3px;cursor:pointer" onclick="playYouTubeTrack('${t.videoId}','${escHtml(t.title).replace(/'/g, "\\'")}','${escHtml(t.artist).replace(/'/g, "\\'")}','${escHtml(t.thumbnail).replace(/'/g, "\\'")}',${t.duration})">
+          <div style="width:18px;font-size:10px;color:var(--on-surface-variant);text-align:center;flex-shrink:0">${i + 1}</div>
+          <div style="width:36px;height:36px;border-radius:6px;background:rgba(0,0,0,0.3);display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden">
+            <img src="${escHtml(t.thumbnail)}" style="width:100%;height:100%;object-fit:cover" onerror="this.style.display='none'" loading="lazy">
+          </div>
+          <div style="flex:1;min-width:0">
+            <div style="font-size:12px;font-weight:600;color:var(--on-surface);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escHtml(t.title)}</div>
+            <div style="font-size:10px;color:var(--on-surface-variant)">${escHtml(t.artist)}${t.duration ? ' · ' + formatTrackDuration(t.duration) : ''}</div>
+          </div>
+          <button onclick="event.stopPropagation();MusicPlayer.addToQueue(_trackCache['${t.id}']);showToast('Added to queue','success')" style="background:rgba(124,77,255,0.15);border:none;border-radius:6px;padding:3px 6px;color:var(--primary);font-size:10px;font-weight:600;cursor:pointer;flex-shrink:0">+ Q</button>
+        </div>`).join('')}`;
+  };
+
+  window.playAllPlaylistTracks = function() {
+    const el = document.getElementById('yt-playlist-import-results');
+    if (!el) return;
+    const items = el.querySelectorAll('[onclick*="playYouTubeTrack"]');
+    if (!items.length) return;
+    items[0]?.click();
+    for (let i = 1; i < items.length; i++) {
+      const match = items[i].getAttribute('onclick')?.match(/playYouTubeTrack\('([^']+)','([^']*)','([^']*)','([^']*)',(\d+)\)/);
+      if (match) {
+        const t = { id: 'yt_' + match[1], videoId: match[1], title: match[2] || 'YouTube', artist: match[3] || 'YouTube', thumbnail: match[4] || null, duration: parseInt(match[5]) || 0, source: 'youtube' };
+        _trackCache[t.id] = t;
+        MusicPlayer.addToQueue(t);
+      }
+    }
+    showToast('Added all tracks to queue', 'success');
   };
 
   async function _doArchiveSearch(q) {
