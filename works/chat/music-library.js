@@ -273,39 +273,59 @@
 
   // ─── CURATED INDIAN MUSIC ───
   window.openMusicLibrary = function() {
-    const overlay = document.createElement('div');
-    overlay.id = 'music-library-overlay';
-    overlay.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.7);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);display:flex;align-items:flex-end;justify-content:center;transition:all 0.3s ease';
+    try {
+      const existing = document.getElementById('music-library-overlay');
+      if (existing) { existing.remove(); return; }
 
-    const panel = document.createElement('div');
-    panel.className = 'music-lib-panel';
+      const overlay = document.createElement('div');
+      overlay.id = 'music-library-overlay';
+      overlay.setAttribute('role', 'dialog');
+      overlay.setAttribute('aria-modal', 'true');
+      overlay.setAttribute('aria-label', 'Music Library');
+      overlay.style.cssText = 'position:fixed !important;inset:0 !important;z-index:9999 !important;background:rgba(0,0,0,0.7);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);display:flex !important;align-items:flex-end;justify-content:center;transition:all 0.3s ease;';
 
-    panel.innerHTML = `
-      <div style="padding:16px 16px 0">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-          <h2 style="margin:0;font-size:18px;font-weight:700">🎵 Music Library</h2>
-          <div style="display:flex;align-items:center;gap:10px">
-            <button onclick="openPlaylists(App.currentChat?.id)" style="background:rgba(124,77,255,0.15);border:none;border-radius:12px;padding:6px 12px;color:var(--primary);font-size:11px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:4px">
-              <span class="material-symbols-outlined" style="font-size:14px">playlist_play</span> Playlists
-            </button>
-            <button onclick="document.getElementById('music-library-overlay')?.remove()" style="background:none;border:none;color:var(--on-surface-variant);cursor:pointer;font-size:20px">&times;</button>
+      const panel = document.createElement('div');
+      panel.className = 'music-lib-panel';
+
+      panel.innerHTML = `
+        <div style="padding:16px 16px 0">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+            <h2 style="margin:0;font-size:18px;font-weight:700;color:var(--on-surface)">Music Library</h2>
+            <div style="display:flex;align-items:center;gap:10px">
+              <button onclick="openPlaylists(App.currentChat?.id)" style="background:rgba(124,77,255,0.15);border:none;border-radius:12px;padding:6px 12px;color:var(--primary);font-size:11px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:4px">
+                <span class="material-symbols-outlined" style="font-size:14px">playlist_play</span> Playlists
+              </button>
+              <button onclick="document.getElementById('music-library-overlay')?.remove()" style="background:none;border:none;color:var(--on-surface-variant);cursor:pointer;font-size:20px">&times;</button>
+            </div>
+          </div>
+          <div style="display:flex;gap:6px;overflow-x:auto;padding-bottom:8px" id="ml-tabs">
+            <button class="ml-tab active" onclick="switchMusicLibTab('my')" style="flex-shrink:0;padding:6px 14px;border-radius:20px;border:none;font-size:12px;font-weight:600;cursor:pointer;background:var(--primary);color:var(--on-primary)">My Music</button>
+            <button class="ml-tab" onclick="switchMusicLibTab('upload')" style="flex-shrink:0;padding:6px 14px;border-radius:20px;border:none;font-size:12px;font-weight:600;cursor:pointer;background:rgba(255,255,255,0.06);color:var(--on-surface-variant)">Upload</button>
+            <button class="ml-tab" onclick="switchMusicLibTab('discover')" style="flex-shrink:0;padding:6px 14px;border-radius:20px;border:none;font-size:12px;font-weight:600;cursor:pointer;background:rgba(255,255,255,0.06);color:var(--on-surface-variant)">Search Online</button>
+            <button class="ml-tab" onclick="switchMusicLibTab('languages')" style="flex-shrink:0;padding:6px 14px;border-radius:20px;border:none;font-size:12px;font-weight:600;cursor:pointer;background:rgba(255,255,255,0.06);color:var(--on-surface-variant)">Languages</button>
+            <button class="ml-tab" onclick="switchMusicLibTab('youtube')" style="flex-shrink:0;padding:6px 14px;border-radius:20px;border:none;font-size:12px;font-weight:600;cursor:pointer;background:rgba(255,255,255,0.06);color:var(--on-surface-variant)">YouTube</button>
           </div>
         </div>
-        <div style="display:flex;gap:6px;overflow-x:auto;padding-bottom:8px" id="ml-tabs">
-          <button class="ml-tab active" onclick="switchMusicLibTab('my')" style="flex-shrink:0;padding:6px 14px;border-radius:20px;border:none;font-size:12px;font-weight:600;cursor:pointer;background:var(--primary);color:var(--on-primary)">My Music</button>
-          <button class="ml-tab" onclick="switchMusicLibTab('upload')" style="flex-shrink:0;padding:6px 14px;border-radius:20px;border:none;font-size:12px;font-weight:600;cursor:pointer;background:rgba(255,255,255,0.06);color:var(--on-surface-variant)">Upload</button>
-          <button class="ml-tab" onclick="switchMusicLibTab('discover')" style="flex-shrink:0;padding:6px 14px;border-radius:20px;border:none;font-size:12px;font-weight:600;cursor:pointer;background:rgba(255,255,255,0.06);color:var(--on-surface-variant)">Search Online</button>
-          <button class="ml-tab" onclick="switchMusicLibTab('languages')" style="flex-shrink:0;padding:6px 14px;border-radius:20px;border:none;font-size:12px;font-weight:600;cursor:pointer;background:rgba(255,255,255,0.06);color:var(--on-surface-variant)">Languages</button>
-          <button class="ml-tab" onclick="switchMusicLibTab('youtube')" style="flex-shrink:0;padding:6px 14px;border-radius:20px;border:none;font-size:12px;font-weight:600;cursor:pointer;background:rgba(255,255,255,0.06);color:var(--on-surface-variant)">YouTube</button>
-        </div>
-      </div>
-      <div id="music-lib-content" style="flex:1;overflow-y:auto;padding:8px 16px 20px"></div>`;
+        <div id="music-lib-content" style="flex:1;overflow-y:auto;padding:8px 16px 20px"></div>`;
 
-    overlay.appendChild(panel);
-    overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
-    document.body.appendChild(overlay);
+      overlay.appendChild(panel);
+      overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+      document.body.appendChild(overlay);
 
-    switchMusicLibTab('my');
+      const _mlEscHandler = function(e) {
+        if (e.key === 'Escape') {
+          const el = document.getElementById('music-library-overlay');
+          if (el) el.remove();
+          document.removeEventListener('keydown', _mlEscHandler);
+        }
+      };
+      document.addEventListener('keydown', _mlEscHandler);
+
+      switchMusicLibTab('my');
+    } catch(err) {
+      console.error('[MusicLibrary] openMusicLibrary error:', err);
+      if (typeof showToast === 'function') showToast('Failed to open Music Library', 'error');
+    }
   };
 
   // ─── TAB SWITCHING ───

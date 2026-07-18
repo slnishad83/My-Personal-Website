@@ -5862,7 +5862,7 @@ function closeModal(id) { hide(id); }
 function showOverlay(id) { show(id); }
 function closeOverlay(id) { hide(id); }
 function closeTopModal() {
-  ['profile-overlay','new-chat-overlay','confirm-overlay','group-info-overlay','msg-info-overlay','media-viewer','keyboard-help-panel','language-overlay','nsl-utilities-overlay'].forEach(id => {
+  ['profile-overlay','new-chat-overlay','confirm-overlay','group-info-overlay','msg-info-overlay','media-viewer','keyboard-help-panel','language-overlay','nsl-utilities-overlay','music-library-overlay'].forEach(id => {
     const el = document.getElementById(id);
     if (!el) return;
     if (id === 'keyboard-help-panel') {
