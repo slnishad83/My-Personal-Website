@@ -1,4 +1,4 @@
-// Music Library — user uploads, Archive.org free music, YouTube via Invidious, language filters
+// Music Library — user uploads, Archive.org free music, YouTube via Piped+Invidious, language filters
 (function() {
   'use strict';
 
@@ -9,7 +9,9 @@
   const _trackCache = {};
   window._trackCache = _trackCache;
 
-  // ─── INVIDIOUS YOUTUBE API (100% free, no API key) ───
+  // ─── YOUTUBE PROXY BACKENDS (100% free, no API key) ───
+
+  // Invidious instances
   const INV_INSTANCES = [
     'https://inv.nadeko.net',
     'https://invidious.nerdvpn.de',
@@ -19,11 +21,25 @@
     'https://iv.ggtyler.dev',
     'https://invidious.privacyredirect.com',
   ];
-  let _workingInstance = null;
+  let _workingInv = null;
 
+  // Piped instances (second backend — independent infrastructure)
+  const PIPED_INSTANCES = [
+    'https://pipedapi.kavin.rocks',
+    'https://api.piped.projectsegfau.lt',
+    'https://pipedapi.adminforge.de',
+    'https://pipedapi.r4fo.com',
+    'https://pipedapi.leptons.xyz',
+    'https://pipedapi.moomoo.me',
+    'https://pipedapi.tokhmi.xyz',
+    'https://pipedapi.mint.lgbt',
+  ];
+  let _workingPiped = null;
+
+  // ─── Invidious fetcher ───
   async function _invFetch(path, timeout) {
-    const instances = _workingInstance
-      ? [_workingInstance, ...INV_INSTANCES.filter(i => i !== _workingInstance)]
+    const instances = _workingInv
+      ? [_workingInv, ...INV_INSTANCES.filter(i => i !== _workingInv)]
       : INV_INSTANCES;
     for (const inst of instances) {
       try {
@@ -34,15 +50,37 @@
         if (!res.ok) continue;
         const data = await res.json();
         if (!data || (Array.isArray(data) && !data.length)) continue;
-        _workingInstance = inst;
+        _workingInv = inst;
         return data;
       } catch(_) { continue; }
     }
     return null;
   }
 
-  window.searchInvidious = async function(query) {
-    if (!query || query.length < 2) return [];
+  // ─── Piped fetcher ───
+  async function _pipedFetch(path, timeout) {
+    const instances = _workingPiped
+      ? [_workingPiped, ...PIPED_INSTANCES.filter(i => i !== _workingPiped)]
+      : PIPED_INSTANCES;
+    for (const inst of instances) {
+      try {
+        const ctrl = new AbortController();
+        const tid = setTimeout(() => ctrl.abort(), timeout || 8000);
+        const res = await fetch(inst + path, { signal: ctrl.signal });
+        clearTimeout(tid);
+        if (!res.ok) continue;
+        const data = await res.json();
+        if (!data) continue;
+        if (data.error) continue;
+        _workingPiped = inst;
+        return data;
+      } catch(_) { continue; }
+    }
+    return null;
+  }
+
+  // ─── YouTube search: try Invidious, fallback to Piped ───
+  async function _searchInvidiousRaw(query) {
     const data = await _invFetch('/api/v1/search?q=' + encodeURIComponent(query) + '&type=video', 10000);
     if (!data || !Array.isArray(data)) return [];
     return data.filter(v => v && v.videoId).slice(0, 30).map(v => ({
@@ -56,10 +94,39 @@
       publishedText: v.publishedText || '',
       source: 'youtube',
     }));
+  }
+
+  async function _searchPipedRaw(query) {
+    const data = await _pipedFetch('/search?q=' + encodeURIComponent(query) + '&filter=music_songs', 10000);
+    if (!data || !data.items) return [];
+    return data.items.filter(v => v && v.url).slice(0, 30).map(v => {
+      const videoId = (v.url || '').replace('/watch?v=', '');
+      return {
+        id: 'yt_' + videoId,
+        videoId,
+        title: v.title || 'Untitled',
+        artist: v.uploaderName || 'Unknown',
+        duration: v.duration || 0,
+        thumbnail: v.thumbnailUrl || ('https://i.ytimg.com/vi/' + videoId + '/mqdefault.jpg'),
+        viewCount: v.views || 0,
+        publishedText: v.uploadedDate || '',
+        source: 'youtube',
+      };
+    });
+  }
+
+  window.searchInvidious = async function(query) {
+    if (!query || query.length < 2) return [];
+    // Try Invidious first, fallback to Piped
+    let results = await _searchInvidiousRaw(query);
+    if (!results.length) {
+      results = await _searchPipedRaw(query);
+    }
+    return results;
   };
 
-  window.getYouTubeAudioUrl = async function(videoId) {
-    if (!videoId) return null;
+  // ─── YouTube audio extraction: try Invidious, fallback to Piped ───
+  async function _getInvAudioUrl(videoId) {
     const data = await _invFetch('/api/v1/videos/' + videoId + '?fields=adaptiveFormats,title,author', 12000);
     if (!data || !data.adaptiveFormats) return null;
     const audio = data.adaptiveFormats
@@ -67,6 +134,25 @@
       .sort((a, b) => (b.audioBitrate || b.bitrate || 0) - (a.audioBitrate || a.bitrate || 0));
     if (audio.length && audio[0].url) return audio[0].url;
     return null;
+  }
+
+  async function _getPipedAudioUrl(videoId) {
+    const data = await _pipedFetch('/streams/' + videoId, 12000);
+    if (!data || !data.audioStreams) return null;
+    const audio = data.audioStreams
+      .filter(s => s.mimeType && s.mimeType.startsWith('audio/'))
+      .sort((a, b) => (b.bitrate || 0) - (a.bitrate || 0));
+    if (audio.length && audio[0].url) return audio[0].url;
+    return null;
+  }
+
+  window.getYouTubeAudioUrl = async function(videoId) {
+    if (!videoId) return null;
+    // Try Invidious first, fallback to Piped
+    let url = await _getInvAudioUrl(videoId);
+    if (url) return url;
+    url = await _getPipedAudioUrl(videoId);
+    return url;
   };
 
   window.playYouTubeTrack = async function(videoId, title, artist, thumbnail, duration) {
@@ -576,7 +662,7 @@
     }
   };
 
-  // ─── SEARCH TAB (YouTube via Invidious + Archive.org) ───
+  // ─── SEARCH TAB (YouTube via Piped+Invidious + Archive.org) ───
   const YT_CATEGORIES = [
     { lang: 'Malayalam', color: '#FF6B35', queries: ['Malayalam songs', 'Malayalam old hits', 'Malayalam new 2025', 'Malayalam devotional', 'Malayalam romantic', 'Mollywood songs'] },
     { lang: 'Hindi', color: '#FF9800', queries: ['Hindi songs', 'Hindi old hits', 'Bollywood 2025', 'Hindi devotional', 'Hindi romantic', 'Hindi classical'] },
