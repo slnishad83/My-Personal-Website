@@ -2142,8 +2142,10 @@ html:not(.dark) .wa-input-footer {
   .wa-textarea {
     font-size: 14px;
     padding: 5px 4px;
-  min-height: 56px;
+    min-height: 56px;
+  }
 }
+
 .wa-input-footer:not(.hidden) {
   display: flex;
 }
@@ -2634,4 +2636,15 @@ html.dark .thread-typing-indicator {
 .thread-swipe-active {
   transition: none !important;
   will-change: transform;
+}
+
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
 }
