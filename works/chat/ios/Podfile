@@ -8,6 +8,7 @@ def capacitor_pods
   pod 'CapacitorPushNotifications', :path => '../node_modules/@capacitor/push-notifications'
   pod 'CapacitorStatusBar', :path => '../node_modules/@capacitor/status-bar'
   pod 'CapacitorKeyboard', :path => '../node_modules/@capacitor/keyboard'
+  pod 'AnuradevCapacitorBackgroundMode', :path => '../node_modules/@anuradev/capacitor-background-mode'
 end
 
 target 'App' do

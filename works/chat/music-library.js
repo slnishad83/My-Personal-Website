@@ -111,7 +111,6 @@
       showToast('Delete failed', 'error');
       return false;
     }
-    }
   };
 
   // ─── EDIT TRACK ───
@@ -301,9 +300,8 @@
           <div style="display:flex;gap:6px;overflow-x:auto;padding-bottom:8px" id="ml-tabs">
             <button class="ml-tab active" onclick="switchMusicLibTab('my')" style="flex-shrink:0;padding:6px 14px;border-radius:20px;border:none;font-size:12px;font-weight:600;cursor:pointer;background:var(--primary);color:var(--on-primary)">My Music</button>
             <button class="ml-tab" onclick="switchMusicLibTab('upload')" style="flex-shrink:0;padding:6px 14px;border-radius:20px;border:none;font-size:12px;font-weight:600;cursor:pointer;background:rgba(255,255,255,0.06);color:var(--on-surface-variant)">Upload</button>
-            <button class="ml-tab" onclick="switchMusicLibTab('discover')" style="flex-shrink:0;padding:6px 14px;border-radius:20px;border:none;font-size:12px;font-weight:600;cursor:pointer;background:rgba(255,255,255,0.06);color:var(--on-surface-variant)">Search Online</button>
+            <button class="ml-tab" onclick="switchMusicLibTab('search')" style="flex-shrink:0;padding:6px 14px;border-radius:20px;border:none;font-size:12px;font-weight:600;cursor:pointer;background:rgba(255,255,255,0.06);color:var(--on-surface-variant)">Search</button>
             <button class="ml-tab" onclick="switchMusicLibTab('languages')" style="flex-shrink:0;padding:6px 14px;border-radius:20px;border:none;font-size:12px;font-weight:600;cursor:pointer;background:rgba(255,255,255,0.06);color:var(--on-surface-variant)">Languages</button>
-            <button class="ml-tab" onclick="switchMusicLibTab('youtube')" style="flex-shrink:0;padding:6px 14px;border-radius:20px;border:none;font-size:12px;font-weight:600;cursor:pointer;background:rgba(255,255,255,0.06);color:var(--on-surface-variant)">YouTube</button>
           </div>
         </div>
         <div id="music-lib-content" style="flex:1;overflow-y:auto;padding:8px 16px 20px"></div>`;
@@ -343,9 +341,8 @@
 
     if (tab === 'my') await _renderMyMusic(content);
     else if (tab === 'upload') _renderUploadTab(content);
-    else if (tab === 'discover') await _renderDiscoverTab(content);
+    else if (tab === 'search') _renderSearchTab(content);
     else if (tab === 'languages') _renderLanguagesTab(content);
-    else if (tab === 'youtube') _renderYouTubeTab(content);
   };
 
   // ─── MY MUSIC TAB ───
@@ -495,53 +492,151 @@
     }
   };
 
-  // ─── DISCOVER TAB ───
-  async function _renderDiscoverTab(el) {
+  // ─── SEARCH TAB (YouTube Primary + Archive.org Secondary) ───
+  const YT_CATEGORIES = [
+    { lang: 'Malayalam', color: '#FF6B35', queries: ['Malayalam songs', 'Malayalam old songs', 'Malayalam new songs 2025', 'Malayalam devotional songs', 'Malayalam romantic songs', 'Malayalam film songs'] },
+    { lang: 'Hindi', color: '#FF9800', queries: ['Hindi songs', 'Hindi old songs', 'Bollywood songs 2025', 'Hindi devotional songs', 'Hindi romantic songs', 'Hindi classical songs'] },
+    { lang: 'Tamil', color: '#E91E63', queries: ['Tamil songs', 'Tamil old songs', 'Tamil new songs 2025', 'Tamil devotional songs', 'Tamil romantic songs', 'Kollywood songs'] },
+    { lang: 'Telugu', color: '#9C27B0', queries: ['Telugu songs', 'Telugu old songs', 'Telugu new songs 2025', 'Telugu devotional songs', 'Telugu romantic songs', 'Tollywood songs'] },
+  ];
+
+  function _renderSearchTab(el) {
     el.innerHTML = `
       <div style="margin-bottom:12px">
-        <div style="display:flex;gap:8px;margin-bottom:12px">
-          <input type="search" id="jamendo-search" placeholder="Search online songs..." onkeydown="if(event.key==='Enter')doJamendoSearch()" style="flex:1;padding:8px 12px;border-radius:10px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);color:var(--on-surface);font-size:13px;outline:none">
-          <button onclick="doJamendoSearch()" style="padding:8px 16px;border-radius:10px;border:none;background:var(--primary);color:var(--on-primary);font-size:12px;font-weight:700;cursor:pointer">Search</button>
+        <div style="display:flex;gap:8px;margin-bottom:8px">
+          <input type="search" id="yt-search-input" placeholder="Search any song on YouTube..." style="flex:1;padding:10px 14px;border-radius:12px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);color:var(--on-surface);font-size:13px;outline:none" onkeydown="if(event.key==='Enter')doYouTubeSearch()">
+          <button onclick="doYouTubeSearch()" style="padding:10px 18px;border-radius:12px;border:none;background:var(--primary);color:var(--on-primary);font-size:12px;font-weight:700;cursor:pointer">Search</button>
         </div>
-        <p style="font-size:10px;color:var(--on-surface-variant);margin:0 0 8px">Search Indian and International Music (direct streams)</p>
       </div>
-      <div id="discover-results" style="color:var(--on-surface-variant);text-align:center;padding:20px">
-        <p style="font-size:12px">Search for songs or browse by language</p>
+      <div id="yt-search-results" style="margin-bottom:16px"></div>
+      <div style="font-size:11px;font-weight:700;color:var(--on-surface-variant);margin-bottom:10px;text-transform:uppercase;letter-spacing:1px">Browse by Language</div>
+      ${YT_CATEGORIES.map(cat => `
+        <div style="margin-bottom:16px">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+            <div style="width:36px;height:36px;border-radius:10px;background:${cat.color}20;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:800;color:${cat.color}">${cat.lang[0]}</div>
+            <div style="font-size:14px;font-weight:700;color:var(--on-surface)">${cat.lang}</div>
+          </div>
+          <div style="display:flex;flex-wrap:wrap;gap:6px">
+            ${cat.queries.map(q => `
+              <button onclick="doYouTubeSearchFor('${q.replace(/'/g, "\\'")}')" style="padding:6px 12px;border-radius:20px;border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.03);color:var(--on-surface-variant);font-size:11px;cursor:pointer;transition:all 0.2s" onmouseover="this.style.borderColor='${cat.color}';this.style.color='${cat.color}'" onmouseout="this.style.borderColor='rgba(255,255,255,0.08)';this.style.color='var(--on-surface-variant)'">${q.replace(cat.lang + ' ', '')}</button>
+            `).join('')}
+          </div>
+        </div>
+      `).join('')}
+      <div style="margin-top:12px;padding:12px;border-radius:12px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.05)">
+        <div style="font-size:11px;font-weight:700;color:var(--on-surface-variant);margin-bottom:6px">Direct Stream (Archive.org)</div>
+        <p style="font-size:11px;color:var(--on-surface-variant);margin:0 0 8px">Public domain & Creative Commons music — plays in background</p>
+        <div style="display:flex;gap:8px">
+          <input type="search" id="archive-search-input" placeholder="Search Archive.org..." style="flex:1;padding:8px 12px;border-radius:10px;border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.04);color:var(--on-surface);font-size:12px;outline:none" onkeydown="if(event.key==='Enter')doArchiveSearch()">
+          <button onclick="doArchiveSearch()" style="padding:8px 14px;border-radius:10px;border:none;background:rgba(124,77,255,0.15);color:var(--primary);font-size:11px;font-weight:600;cursor:pointer">Search</button>
+        </div>
+        <div id="archive-search-results" style="margin-top:8px"></div>
       </div>`;
   }
 
-  window.doJamendoSearch = function() {
-    const q = document.getElementById('jamendo-search')?.value;
-    if (q) window.debounceJamendoSearch(q);
+  window.doYouTubeSearch = function() {
+    const q = document.getElementById('yt-search-input')?.value;
+    if (!q) return;
+    _openYouTubeSearch(q);
   };
 
-  let _jamendoTimeout;
-  window.debounceJamendoSearch = function(q) {
-    clearTimeout(_jamendoTimeout);
-    _jamendoTimeout = setTimeout(async () => {
-      if (!q || q.length < 2) return;
-      const el = document.getElementById('discover-results');
-      if (el) el.innerHTML = '<p style="text-align:center;font-size:12px;color:var(--on-surface-variant)">Searching...</p>';
-      const results = await searchJamendo(q);
-      if (el) {
-        if (!results.length) {
-          el.innerHTML = '<p style="text-align:center;font-size:12px;color:var(--on-surface-variant)">No results found</p>';
-          return;
-        }
-        results.forEach(t => { _trackCache[t.id] = t; });
-        el.innerHTML = results.map(t => `
-          <div style="display:flex;align-items:center;gap:10px;padding:10px;border-radius:12px;background:rgba(255,255,255,0.03);margin-bottom:6px;cursor:pointer" onclick="playCachedTrack('${t.id}')">
-            <div style="width:42px;height:42px;border-radius:8px;background:rgba(255,255,255,0.05);display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden">
-              ${t.thumbnail ? `<img src="${escHtml(t.thumbnail)}" style="width:100%;height:100%;object-fit:cover">` : '<span style="font-size:16px">🎵</span>'}
-            </div>
-            <div style="flex:1;min-width:0">
-              <div style="font-size:13px;font-weight:600;color:var(--on-surface);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escHtml(t.title)}</div>
-              <div style="font-size:11px;color:var(--on-surface-variant)">${escHtml(t.artist)} · ${t.language || 'CC'}</div>
-            </div>
-            <button onclick="event.stopPropagation();addCachedTrackToLibrary('${t.id}')" style="background:rgba(124,77,255,0.15);border:none;border-radius:8px;padding:6px 10px;color:var(--primary);font-size:11px;font-weight:600;cursor:pointer" title="Add to library">+ Add</button>
-          </div>`).join('');
-      }
-    }, 500);
+  window.doYouTubeSearchFor = function(q) {
+    _openYouTubeSearch(q);
+  };
+
+  window.doArchiveSearch = function() {
+    const q = document.getElementById('archive-search-input')?.value;
+    if (!q || q.length < 2) return;
+    _doArchiveSearch(q);
+  };
+
+  let _archiveSearchTimeout;
+  async function _doArchiveSearch(q) {
+    const el = document.getElementById('archive-search-results');
+    if (!el) return;
+    el.innerHTML = '<p style="text-align:center;font-size:11px;color:var(--on-surface-variant)">Searching...</p>';
+    const results = await searchJamendo(q);
+    if (!results.length) {
+      el.innerHTML = '<p style="text-align:center;font-size:11px;color:var(--on-surface-variant)">No results</p>';
+      return;
+    }
+    results.forEach(t => { _trackCache[t.id] = t; });
+    el.innerHTML = results.slice(0, 10).map(t => `
+      <div style="display:flex;align-items:center;gap:8px;padding:8px;border-radius:10px;background:rgba(255,255,255,0.03);margin-bottom:4px;cursor:pointer" onclick="playCachedTrack('${t.id}')">
+        <div style="width:36px;height:36px;border-radius:6px;background:rgba(255,255,255,0.05);display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden">
+          ${t.thumbnail ? `<img src="${escHtml(t.thumbnail)}" style="width:100%;height:100%;object-fit:cover">` : '<span class="material-symbols-outlined" style="font-size:14px;color:var(--on-surface-variant)">music_note</span>'}
+        </div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:12px;font-weight:600;color:var(--on-surface);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escHtml(t.title)}</div>
+          <div style="font-size:10px;color:var(--on-surface-variant)">${escHtml(t.artist)}</div>
+        </div>
+        <button onclick="event.stopPropagation();addCachedTrackToLibrary('${t.id}')" style="background:rgba(124,77,255,0.15);border:none;border-radius:6px;padding:4px 8px;color:var(--primary);font-size:10px;font-weight:600;cursor:pointer">+ Add</button>
+      </div>`).join('');
+  }
+
+  function _openYouTubeSearch(query) {
+    const overlay = document.createElement('div');
+    overlay.id = 'yt-search-overlay';
+    overlay.style.cssText = 'position:fixed;inset:0;z-index:9998;background:rgba(0,0,0,0.95);display:flex;flex-direction:column;animation:fadeIn 0.2s ease';
+
+    overlay.innerHTML = `
+      <div style="padding:12px 16px;display:flex;align-items:center;gap:8px;border-bottom:1px solid rgba(255,255,255,0.1);background:rgba(0,0,0,0.5)">
+        <button onclick="document.getElementById('yt-search-overlay')?.remove()" style="background:none;border:none;color:white;cursor:pointer;font-size:20px">←</button>
+        <div style="flex:1;font-size:14px;font-weight:600;color:white;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escHtml(query)}</div>
+        <button onclick="_refreshYouTubeResults(document.getElementById('yt-overlay-search').value)" style="background:none;border:none;color:var(--primary);cursor:pointer;padding:4px"><span class="material-symbols-outlined" style="font-size:20px">refresh</span></button>
+      </div>
+      <div style="flex:1;overflow-y:auto;padding:0" id="yt-overlay-results">
+        <div style="padding:12px 16px">
+          <div style="border-radius:12px;overflow:hidden;background:#000;position:relative;padding-bottom:56.25%;height:0;margin-bottom:12px">
+            <iframe src="https://www.youtube.com/embed?listType=search&list=${encodeURIComponent(query)}" style="position:absolute;top:0;left:0;width:100%;height:100%;border:none" allow="autoplay; encrypted-media" allowfullscreen></iframe>
+          </div>
+          <div style="text-align:center;margin-bottom:16px">
+            <a href="https://www.youtube.com/results?search_query=${encodeURIComponent(query + ' song')}" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:6px;padding:10px 20px;border-radius:10px;background:rgba(255,0,0,0.15);color:#ff4444;font-size:13px;font-weight:600;text-decoration:none">
+              <span class="material-symbols-outlined" style="font-size:18px">open_in_new</span> Open in YouTube
+            </a>
+          </div>
+          <div style="display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin-bottom:16px">
+            <button onclick="document.getElementById('yt-overlay-search') && (document.getElementById('yt-overlay-search').value='${escHtml(query)} old songs');_refreshYouTubeResults('${escHtml(query)} old songs')" style="padding:5px 10px;border-radius:8px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.05);color:var(--on-surface-variant);font-size:10px;cursor:pointer">Old Songs</button>
+            <button onclick="document.getElementById('yt-overlay-search') && (document.getElementById('yt-overlay-search').value='${escHtml(query)} new 2025');_refreshYouTubeResults('${escHtml(query)} new 2025')" style="padding:5px 10px;border-radius:8px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.05);color:var(--on-surface-variant);font-size:10px;cursor:pointer">New 2025</button>
+            <button onclick="document.getElementById('yt-overlay-search') && (document.getElementById('yt-overlay-search').value='${escHtml(query)} romantic');_refreshYouTubeResults('${escHtml(query)} romantic')" style="padding:5px 10px;border-radius:8px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.05);color:var(--on-surface-variant);font-size:10px;cursor:pointer">Romantic</button>
+            <button onclick="document.getElementById('yt-overlay-search') && (document.getElementById('yt-overlay-search').value='${escHtml(query)} devotional');_refreshYouTubeResults('${escHtml(query)} devotional')" style="padding:5px 10px;border-radius:8px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.05);color:var(--on-surface-variant);font-size:10px;cursor:pointer">Devotional</button>
+            <button onclick="document.getElementById('yt-overlay-search') && (document.getElementById('yt-overlay-search').value='${escHtml(query)} hits');_refreshYouTubeResults('${escHtml(query)} hits')" style="padding:5px 10px;border-radius:8px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.05);color:var(--on-surface-variant);font-size:10px;cursor:pointer">Hits</button>
+          </div>
+          <div style="display:flex;gap:6px;align-items:center;margin-bottom:12px">
+            <input type="search" value="${escHtml(query)}" id="yt-overlay-search" style="flex:1;padding:8px 12px;border-radius:10px;border:1px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.08);color:white;font-size:13px;outline:none" onkeydown="if(event.key==='Enter')_refreshYouTubeResults(this.value)">
+            <button onclick="_refreshYouTubeResults(document.getElementById('yt-overlay-search').value)" style="padding:8px 14px;border-radius:10px;border:none;background:var(--primary);color:white;font-size:12px;font-weight:600;cursor:pointer">Go</button>
+          </div>
+        </div>
+        <div id="yt-overlay-list" style="padding:0 16px 16px"></div>
+      </div>`;
+
+    overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+    document.body.appendChild(overlay);
+
+    setTimeout(() => {
+      const searchInput = document.getElementById('yt-overlay-search');
+      if (searchInput) searchInput.focus();
+    }, 300);
+  }
+
+  window._refreshYouTubeResults = function(query) {
+    const el = document.getElementById('yt-overlay-list');
+    if (!el) return;
+    el.innerHTML = `<div style="text-align:center;padding:20px"><span class="material-symbols-outlined animate-spin" style="color:var(--primary);font-size:24px">progress_activity</span><p style="color:rgba(255,255,255,0.5);font-size:11px;margin-top:8px">Searching YouTube for "${escHtml(query)}"...</p></div>`;
+
+    const searchUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(query + ' song')}`;
+    el.innerHTML += `
+      <a href="${searchUrl}" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:8px;padding:12px;border-radius:12px;background:rgba(255,0,0,0.1);border:1px solid rgba(255,0,0,0.2);margin-bottom:8px;text-decoration:none">
+        <span class="material-symbols-outlined" style="color:#ff4444;font-size:20px">play_circle</span>
+        <div>
+          <div style="color:white;font-size:13px;font-weight:600">Search "${escHtml(query)}" on YouTube</div>
+          <div style="color:rgba(255,255,255,0.4);font-size:10px;margin-top:2px">Tap to browse & play any song</div>
+        </div>
+      </a>
+      <div style="padding:12px;border-radius:10px;background:rgba(255,255,255,0.03);margin-top:8px">
+        <p style="color:var(--primary);font-size:11px;font-weight:600;margin:0 0 4px">Tip</p>
+        <p style="color:rgba(255,255,255,0.4);font-size:10px;margin:0">YouTube plays in the embedded player above. For background music (minimized/locked), upload your own MP3 files in the Upload tab.</p>
+      </div>`;
   };
 
   window.playCachedTrack = async function(trackId) {
@@ -605,21 +700,21 @@
     } catch(e) { showToast('Failed to add', 'error'); }
   };
 
-  // ─── LANGUAGES TAB ───
+  // ─── LANGUAGES TAB (YouTube-powered) ───
   function _renderLanguagesTab(el) {
     const colors = {
       'Malayalam': '#FF6B35', 'Tamil': '#E91E63', 'Telugu': '#9C27B0',
       'Hindi': '#FF9800', 'Kannada': '#4CAF50', 'Bengali': '#2196F3',
       'Marathi': '#00BCD4', 'Punjabi': '#FF5722', 'English': '#607D8B', 'Other': '#78909C',
     };
-    let html = '<p style="font-size:12px;color:var(--on-surface-variant);margin-bottom:12px">Browse music by language (via Archive.org)</p>';
+    let html = '<p style="font-size:12px;color:var(--on-surface-variant);margin-bottom:12px">Browse music by language via YouTube</p>';
     LANGUAGES.forEach(lang => {
       html += `
-        <div style="display:flex;align-items:center;gap:12px;padding:12px;border-radius:12px;background:rgba(255,255,255,0.03);margin-bottom:6px;cursor:pointer" onclick="browseLanguageMusic('${lang}')">
+        <div style="display:flex;align-items:center;gap:12px;padding:12px;border-radius:12px;background:rgba(255,255,255,0.03);margin-bottom:6px;cursor:pointer" onclick="browseLanguageYT('${lang}')">
           <div style="width:42px;height:42px;border-radius:10px;background:${colors[lang] || '#666'}20;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:800;color:${colors[lang]}">${lang[0]}</div>
           <div style="flex:1">
             <div style="font-size:14px;font-weight:600;color:var(--on-surface)">${lang}</div>
-            <div style="font-size:11px;color:var(--on-surface-variant)">Browse free ${lang} music</div>
+            <div style="font-size:11px;color:var(--on-surface-variant)">Browse ${lang} songs on YouTube</div>
           </div>
           <span class="material-symbols-outlined" style="color:var(--on-surface-variant);font-size:18px">chevron_right</span>
         </div>`;
@@ -627,104 +722,12 @@
     el.innerHTML = html;
   }
 
+  window.browseLanguageYT = function(lang) {
+    _openYouTubeSearch(lang + ' songs');
+  };
+
   window.browseLanguageMusic = async function(lang) {
-    const el = document.getElementById('music-lib-content');
-    if (!el) return;
-    el.innerHTML = `<p style="text-align:center;font-size:12px;color:var(--on-surface-variant);padding:20px">Loading ${lang} music...</p>`;
-    const results = await searchJamendoByLanguage(lang);
-    let html = `
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
-        <button onclick="switchMusicLibTab('languages')" style="background:none;border:none;color:var(--primary);cursor:pointer;padding:4px"><span class="material-symbols-outlined" style="font-size:20px">arrow_back</span></button>
-        <h3 style="margin:0;font-size:15px;font-weight:700">${lang}</h3>
-        <span style="font-size:11px;color:var(--on-surface-variant)">${results.length} tracks</span>
-      </div>`;
-    if (!results.length) {
-      html += '<p style="text-align:center;color:var(--on-surface-variant);font-size:12px;padding:20px">No results found for this language</p>';
-    } else {
-      results.forEach(t => { _trackCache[t.id] = t; });
-      results.forEach(t => {
-        html += `
-        <div style="display:flex;align-items:center;gap:10px;padding:10px;border-radius:12px;background:rgba(255,255,255,0.03);margin-bottom:6px;cursor:pointer" onclick="playCachedTrack('${t.id}')">
-          <div style="width:42px;height:42px;border-radius:8px;background:rgba(255,255,255,0.05);display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden">
-            ${t.thumbnail ? `<img src="${escHtml(t.thumbnail)}" style="width:100%;height:100%;object-fit:cover">` : '<span style="font-size:16px">🎵</span>'}
-          </div>
-          <div style="flex:1;min-width:0">
-            <div style="font-size:13px;font-weight:600;color:var(--on-surface);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escHtml(t.title)}</div>
-            <div style="font-size:11px;color:var(--on-surface-variant)">${escHtml(t.artist)}</div>
-          </div>
-          <button onclick="event.stopPropagation();addCachedTrackToLibrary('${t.id}')" style="background:rgba(124,77,255,0.15);border:none;border-radius:8px;padding:6px 10px;color:var(--primary);font-size:11px;font-weight:600;cursor:pointer">+ Add</button>
-        </div>`;
-      });
-    }
-    el.innerHTML = html;
-  };
-
-  // ─── YOUTUBE TAB ───
-  function _renderYouTubeTab(el) {
-    el.innerHTML = `
-      <div style="margin-bottom:12px">
-        <div style="display:flex;gap:8px;margin-bottom:12px">
-          <input type="search" id="yt-search-input" placeholder="Search YouTube songs..." style="flex:1;padding:8px 12px;border-radius:10px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);color:var(--on-surface);font-size:13px;outline:none" onkeydown="if(event.key==='Enter')doYouTubeSearch()">
-          <button onclick="doYouTubeSearch()" style="padding:8px 16px;border-radius:10px;border:none;background:var(--primary);color:var(--on-primary);font-size:12px;font-weight:700;cursor:pointer">Search</button>
-        </div>
-        <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px">
-          <button onclick="doYouTubeSearchFor('Malayalam songs 2024')" style="padding:5px 10px;border-radius:8px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.03);color:var(--on-surface-variant);font-size:10px;cursor:pointer">Malayalam</button>
-          <button onclick="doYouTubeSearchFor('Tamil songs 2024')" style="padding:5px 10px;border-radius:8px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.03);color:var(--on-surface-variant);font-size:10px;cursor:pointer">Tamil</button>
-          <button onclick="doYouTubeSearchFor('Telugu songs 2024')" style="padding:5px 10px;border-radius:8px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.03);color:var(--on-surface-variant);font-size:10px;cursor:pointer">Telugu</button>
-          <button onclick="doYouTubeSearchFor('Hindi songs 2024')" style="padding:5px 10px;border-radius:8px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.03);color:var(--on-surface-variant);font-size:10px;cursor:pointer">Hindi</button>
-        </div>
-        <p style="font-size:10px;color:var(--on-surface-variant);margin:0">⚠️ YouTube plays in foreground only (browser limitation for background/lock screen)</p>
-      </div>
-      <div id="yt-results"></div>`;
-  }
-
-  window.doYouTubeSearch = function() {
-    const q = document.getElementById('yt-search-input')?.value;
-    if (!q) return;
-    _openYouTubeSearch(q);
-  };
-
-  window.doYouTubeSearchFor = function(q) {
-    _openYouTubeSearch(q);
-  };
-
-  function _openYouTubeSearch(query) {
-    // Open YouTube search in a new overlay with embed player
-    const overlay = document.createElement('div');
-    overlay.id = 'yt-search-overlay';
-    overlay.style.cssText = 'position:fixed;inset:0;z-index:9998;background:rgba(0,0,0,0.92);display:flex;flex-direction:column;animation:fadeIn 0.2s ease';
-
-    overlay.innerHTML = `
-      <div style="padding:12px 16px;display:flex;align-items:center;gap:8px;border-bottom:1px solid rgba(255,255,255,0.1)">
-        <button onclick="document.getElementById('yt-search-overlay')?.remove()" style="background:none;border:none;color:white;cursor:pointer;font-size:20px">←</button>
-        <input type="search" value="${escHtml(query)}" id="yt-overlay-search" style="flex:1;padding:8px 12px;border-radius:10px;border:1px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.08);color:white;font-size:13px;outline:none" onkeydown="if(event.key==='Enter')_refreshYouTubeResults(this.value)">
-        <button onclick="_refreshYouTubeResults(document.getElementById('yt-overlay-search').value)" style="padding:8px 12px;border-radius:10px;border:none;background:var(--primary);color:white;font-size:12px;font-weight:600;cursor:pointer">Go</button>
-      </div>
-      <div style="flex:1;overflow-y:auto;padding:12px 16px" id="yt-overlay-results">
-        <p style="color:rgba(255,255,255,0.5);font-size:12px;text-align:center;margin-top:40px">Loading YouTube results...</p>
-      </div>`;
-
-    document.body.appendChild(overlay);
-    window._refreshYouTubeResults(query);
-  }
-
-  window._refreshYouTubeResults = function(query) {
-    const el = document.getElementById('yt-overlay-results');
-    if (!el) return;
-    el.innerHTML = `
-      <div style="border-radius:12px;overflow:hidden;margin-bottom:12px;background:#000;position:relative;padding-bottom:56.25%;height:0">
-        <iframe src="https://www.youtube.com/embed?listType=search&list=${encodeURIComponent(query)}" style="position:absolute;top:0;left:0;width:100%;height:100%;border:none" allow="autoplay; encrypted-media" allowfullscreen></iframe>
-      </div>
-      <div style="text-align:center;margin-bottom:16px">
-        <a href="https://www.youtube.com/results?search_query=${encodeURIComponent(query + ' song')}" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:6px;padding:10px 20px;border-radius:10px;background:rgba(255,0,0,0.15);color:#ff4444;font-size:13px;font-weight:600;text-decoration:none">
-          <span class="material-symbols-outlined" style="font-size:18px">open_in_new</span> Open in YouTube
-        </a>
-      </div>
-      <p style="color:rgba(255,255,255,0.4);font-size:10px;text-align:center">Click any video in the player above to play. YouTube does not support background playback in browsers.</p>
-      <div style="margin-top:16px;padding:12px;border-radius:10px;background:rgba(255,255,255,0.05)">
-        <p style="color:var(--primary);font-size:12px;font-weight:600;margin:0 0 4px">Tip</p>
-        <p style="color:rgba(255,255,255,0.5);font-size:11px;margin:0">For background music, upload your own MP3 files in the Upload tab — they play even when minimized or locked!</p>
-      </div>`;
+    _openYouTubeSearch(lang + ' songs');
   };
 
 })();

@@ -20,6 +20,17 @@
     },
     "PushNotifications": {
       "presentationOptions": ["badge", "sound", "alert"]
+    },
+    "BackgroundMode": {
+      "title": "NSL Chat",
+      "text": "Music playback active",
+      "subtitle": "NSL Chat is playing music",
+      "icon": "ic_launcher",
+      "color": "1A1B2E",
+      "resume": true,
+      "silent": false,
+      "hidden": false,
+      "keep awake": true
     }
   },
   "android": {

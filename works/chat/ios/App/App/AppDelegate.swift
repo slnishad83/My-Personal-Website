@@ -1,5 +1,6 @@
 import UIKit
 import Capacitor
+import AVFoundation
 
 @objc(AppDelegate)
 class AppDelegate: CAPAppDelegate {
@@ -8,7 +9,18 @@ class AppDelegate: CAPAppDelegate {
         _ application: UIApplication,
         didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
     ) -> Bool {
+        configureAudioSession()
         return super.application(application, didFinishLaunchingWithOptions: launchOptions)
+    }
+
+    private func configureAudioSession() {
+        let session = AVAudioSession.sharedInstance()
+        do {
+            try session.setCategory(.playback, mode: .default, options: [.allowAirPlay, .allowBluetooth])
+            try session.setActive(true)
+        } catch {
+            NSLog("[AppDelegate] Failed to configure AVAudioSession: \(error)")
+        }
     }
 
     override func application(

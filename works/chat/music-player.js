@@ -91,6 +91,7 @@
     Player.isPlaying = false;
     Player._currentTrack = null;
     Player.queueIndex = -1;
+    _deactivateBackgroundMode();
     _hideMiniPlayer();
   };
 
@@ -247,6 +248,7 @@
   function _onPlay() {
     Player.isPlaying = true;
     _updatePlayButtons();
+    _activateBackgroundMode();
     if ('mediaSession' in navigator) {
       navigator.mediaSession.playbackState = 'playing';
     }
@@ -305,6 +307,31 @@
       fullEl.textContent = Player.playbackSpeed + 'x';
       fullEl.style.color = Player.playbackSpeed !== 1 ? 'var(--primary)' : 'var(--on-surface-variant)';
     }
+  }
+
+  // ─── BACKGROUND MODE (Capacitor) ───
+  let _bgModeActive = false;
+
+  function _activateBackgroundMode() {
+    if (_bgModeActive) return;
+    try {
+      if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.BackgroundMode) {
+        window.Capacitor.Plugins.BackgroundMode.enable().then(() => {
+          window.Capacitor.Plugins.BackgroundMode.set({ title: 'NSL Chat', text: 'Music playback active', color: '1A1B2E' });
+          _bgModeActive = true;
+        }).catch(() => {});
+      }
+    } catch(_) {}
+  }
+
+  function _deactivateBackgroundMode() {
+    if (!_bgModeActive) return;
+    try {
+      if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.BackgroundMode) {
+        window.Capacitor.Plugins.BackgroundMode.disable().catch(() => {});
+        _bgModeActive = false;
+      }
+    } catch(_) {}
   }
 
   // ─── NETWORK HANDLING ───
@@ -569,7 +596,7 @@
             <span class="material-symbols-outlined" style="font-size:20px">${Player.isMuted?'volume_off':'volume_up'}</span>
           </button>
           <input type="range" id="music-volume" min="0" max="100" value="${Player.volume*100}" oninput="MusicPlayer.setVolume(this.value/100)" aria-label="Volume" role="slider" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round(Player.volume*100)}" style="flex:1;accent-color:var(--primary);height:3px">
-          <button onclick="MusicPlayer.toggleTrackFavorite(Player._currentTrack)" style="background:none;border:none;color:${isTrackFavorite(track.url)?'var(--error)':'var(--on-surface-variant)'};cursor:pointer;padding:4px">
+          <button onclick="toggleTrackFavorite(Player._currentTrack)" style="background:none;border:none;color:${isTrackFavorite(track.url)?'var(--error)':'var(--on-surface-variant)'};cursor:pointer;padding:4px">
             <span class="material-symbols-outlined" style="font-size:20px">${isTrackFavorite(track.url)?'favorite':'favorite_border'}</span>
           </button>
         </div>
