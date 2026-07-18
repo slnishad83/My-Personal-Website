@@ -80,9 +80,11 @@
     try {
       const snap = await App.db.collection('musicLibrary')
         .where('addedBy', '==', uid)
-        .orderBy('addedAt', 'desc')
         .get();
-      App.musicLibrary = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      const tracks = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      // Sort in-memory to avoid requiring a composite index
+      tracks.sort((a, b) => (b.addedAt || 0) - (a.addedAt || 0));
+      App.musicLibrary = tracks;
       return App.musicLibrary;
     } catch(e) {
       console.warn('Load library failed:', e);

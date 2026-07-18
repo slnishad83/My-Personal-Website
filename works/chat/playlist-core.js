@@ -99,16 +99,14 @@
       let query;
       if (chatId) {
         query = App.db.collection(COLLECTION)
-          .where('chatId', '==', chatId)
-          .orderBy('updatedAt', 'desc');
+          .where('chatId', '==', chatId);
       } else {
         const uid = App.auth?.currentUser?.uid;
         if (!uid) return [];
         query = App.db.collection(COLLECTION)
-          .where('ownerUid', '==', uid)
-          .orderBy('updatedAt', 'desc');
+          .where('ownerUid', '==', uid);
       }
-      const snap = await query.limit(50).get();
+      const snap = await query.limit(200).get();
       const results = [];
       snap.forEach(doc => {
         const data = doc.data();
@@ -116,7 +114,9 @@
         App.playlists[doc.id] = data;
         results.push(data);
       });
-      return results;
+      // Sort in-memory to avoid requiring a composite index
+      results.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+      return results.slice(0, 50);
     } catch(e) {
       console.warn('Load playlists failed:', e);
       return [];
@@ -140,12 +140,9 @@
 
   window.searchPlaylists = async function(query) {
     if (!App.db || !query) return [];
-    const uid = App.auth?.currentUser?.uid;
     try {
       const snap = await App.db.collection(COLLECTION)
         .where('isPublic', '==', true)
-        .orderBy('playCount', 'desc')
-        .limit(30)
         .get();
       const results = [];
       const q = query.toLowerCase();
@@ -158,8 +155,13 @@
           results.push(data);
         }
       });
-      return results;
-    } catch(_) { return []; }
+      // Sort in-memory by playCount to avoid requiring a composite index
+      results.sort((a, b) => (b.playCount || 0) - (a.playCount || 0));
+      return results.slice(0, 30);
+    } catch(e) {
+      console.warn('Search playlists failed:', e);
+      return [];
+    }
   };
 
   // ─── UPDATE ───
