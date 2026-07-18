@@ -277,10 +277,10 @@
   window.openMusicLibrary = function() {
     const overlay = document.createElement('div');
     overlay.id = 'music-library-overlay';
-    overlay.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.85);display:flex;align-items:flex-end;justify-content:center;animation:fadeIn 0.2s ease';
+    overlay.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.7);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);display:flex;align-items:flex-end;justify-content:center;transition:all 0.3s ease';
 
     const panel = document.createElement('div');
-    panel.style.cssText = 'background:var(--surface-container,#1e1e2e);border-radius:20px 20px 0 0;width:100%;max-width:500px;max-height:85vh;color:var(--on-surface);display:flex;flex-direction:column';
+    panel.className = 'music-lib-panel';
 
     panel.innerHTML = `
       <div style="padding:16px 16px 0">
@@ -661,7 +661,7 @@
       </div>`;
 
     document.body.appendChild(overlay);
-    _refreshYouTubeResults(query);
+    window._refreshYouTubeResults(query);
   }
 
   window._refreshYouTubeResults = function(query) {

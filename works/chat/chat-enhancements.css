@@ -2648,3 +2648,35 @@ html.dark .thread-typing-indicator {
   from { transform: translateY(100%); }
   to { transform: translateY(0); }
 }
+
+/* ── Music Library Modal Aesthetics & Glassmorphism ──────────────── */
+.music-lib-panel {
+  background: var(--surface-container, #1e1e2d);
+  border-radius: 20px 20px 0 0;
+  width: 100%;
+  max-width: 500px;
+  max-height: 85vh;
+  color: var(--on-surface);
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  animation: slideUp 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  overflow: hidden;
+}
+
+@keyframes fadeInZoom {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@media (min-width: 768px) {
+  #music-library-overlay {
+    align-items: center !important;
+  }
+  .music-lib-panel {
+    border-radius: 24px !important;
+    animation: fadeInZoom 0.25s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+  }
+}
