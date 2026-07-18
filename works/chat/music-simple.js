@@ -539,10 +539,34 @@
     _updatePlayBtns();
   }
 
+  // ─── ONBOARDING (only shown when music player first opened) ───
+  function _showOnboarding() {
+    if (document.getElementById('nsm-onboard')) return;
+    const ov = document.createElement('div');
+    ov.id = 'nsm-onboard';
+    ov.style.cssText = 'position:fixed;inset:0;z-index:10001;background:rgba(0,0,0,0.8);display:flex;align-items:center;justify-content:center;animation:fadeIn 0.3s ease';
+    ov.innerHTML = `<div style="background:var(--surface-container,#1e1e2e);border-radius:24px;padding:32px;max-width:340px;width:85vw;text-align:center;color:var(--on-surface)">
+      <div style="width:72px;height:72px;border-radius:50%;background:rgba(124,77,255,0.15);display:flex;align-items:center;justify-content:center;margin:0 auto 16px">
+        <span class="material-symbols-outlined" style="font-size:32px;color:var(--primary)">music_note</span>
+      </div>
+      <h2 style="margin:0 0 8px;font-size:18px;font-weight:700">Music Player</h2>
+      <p style="margin:0 0 20px;font-size:13px;color:var(--on-surface-variant);line-height:1.5">Search any song, upload your music, and listen while you chat. Music plays in a floating mini player!</p>
+      <button onclick="document.getElementById('nsm-onboard')?.remove();document.getElementById('nsm-lib')?.remove()" style="width:100%;padding:12px;border-radius:12px;border:none;background:var(--primary);color:var(--on-primary);font-size:13px;font-weight:700;cursor:pointer">Got it!</button>
+    </div>`;
+    ov.addEventListener('click', e => { if (e.target === ov) ov.remove(); });
+    document.body.appendChild(ov);
+  }
+
   // ─── MUSIC LIBRARY OVERLAY ───
   window.openMusicLibrary = function() {
     const existing = document.getElementById('nsm-lib');
     if (existing) { existing.remove(); return; }
+
+    // Show onboarding only on first open
+    if (!localStorage.getItem('nsm_onboarded')) {
+      localStorage.setItem('nsm_onboarded', '1');
+      _showOnboarding();
+    }
 
     const ov = document.createElement('div');
     ov.id = 'nsm-lib';
@@ -906,31 +930,9 @@
 
   _setupMediaSession();
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => { _restore(); checkMusicOnboarding(); });
+    document.addEventListener('DOMContentLoaded', () => _restore());
   } else {
     _restore();
-    checkMusicOnboarding();
-  }
-
-  // ─── ONBOARDING ───
-  function checkMusicOnboarding() {
-    if (localStorage.getItem('nsm_onboarded')) return;
-    setTimeout(() => {
-      if (document.getElementById('nsm-onboard')) return;
-      const ov = document.createElement('div');
-      ov.id = 'nsm-onboard';
-      ov.style.cssText = 'position:fixed;inset:0;z-index:10001;background:rgba(0,0,0,0.8);display:flex;align-items:center;justify-content:center;animation:fadeIn 0.3s ease';
-      ov.innerHTML = `<div style="background:var(--surface-container,#1e1e2e);border-radius:24px;padding:32px;max-width:340px;width:85vw;text-align:center;color:var(--on-surface)">
-        <div style="width:72px;height:72px;border-radius:50%;background:rgba(124,77,255,0.15);display:flex;align-items:center;justify-content:center;margin:0 auto 16px">
-          <span class="material-symbols-outlined" style="font-size:32px;color:var(--primary)">music_note</span>
-        </div>
-        <h2 style="margin:0 0 8px;font-size:18px;font-weight:700">Music Player</h2>
-        <p style="margin:0 0 20px;font-size:13px;color:var(--on-surface-variant);line-height:1.5">Search any song, upload your music, and listen while you chat. Music plays in a floating mini player!</p>
-        <button onclick="localStorage.setItem('nsm_onboarded','1');document.getElementById('nsm-onboard')?.remove()" style="width:100%;padding:12px;border-radius:12px;border:none;background:var(--primary);color:var(--on-primary);font-size:13px;font-weight:700;cursor:pointer">Got it!</button>
-      </div>`;
-      ov.addEventListener('click', e => { if (e.target === ov) { localStorage.setItem('nsm_onboarded', '1'); ov.remove(); } });
-      document.body.appendChild(ov);
-    }, 2000);
   }
 
 })();
