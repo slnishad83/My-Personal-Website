@@ -50,6 +50,128 @@
 
     _setupMediaSession();
     _setupNetworkListener();
+    // Load saved EQ gains
+    try { _eqGains = JSON.parse(localStorage.getItem('nsl_eq_gains') || '[0,0,0,0,0,0,0,0,0,0]'); } catch(_) {}
+  }
+
+  // ─── EQUALIZER ───
+  let _audioCtx = null;
+  let _analyser = null;
+  let _eqBands = null;
+  let _eqEnabled = false;
+  const _EQ_FREQUENCIES = [60, 170, 310, 600, 1000, 3000, 6000, 12000, 14000, 16000];
+  let _eqGains = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+
+  Player.initEqualizer = function() {
+    if (_audioCtx) return;
+    try {
+      _audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      const source = _audioCtx.createMediaElementSource(Player.audio);
+      _analyser = _audioCtx.createAnalyser();
+      _analyser.fftSize = 256;
+
+      _eqBands = _EQ_FREQUENCIES.map((freq) => {
+        const filter = _audioCtx.createBiquadFilter();
+        filter.type = 'peaking';
+        filter.frequency.value = freq;
+        filter.Q.value = 1.4;
+        filter.gain.value = 0;
+        return filter;
+      });
+
+      source.connect(_analyser);
+      let lastNode = _analyser;
+      _eqBands.forEach(band => { lastNode.connect(band); lastNode = band; });
+      lastNode.connect(_audioCtx.destination);
+      _eqEnabled = true;
+    } catch (e) {
+      console.warn('Equalizer init failed:', e);
+    }
+  };
+
+  Player.setEqBand = function(index, gain) {
+    if (!_eqBands || !_eqBands[index]) return;
+    _eqGains[index] = gain;
+    _eqBands[index].gain.value = gain;
+    localStorage.setItem('nsl_eq_gains', JSON.stringify(_eqGains));
+  };
+
+  Player.resetEq = function() {
+    _eqGains = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+    if (_eqBands) _eqBands.forEach(b => b.gain.value = 0);
+    localStorage.setItem('nsl_eq_gains', JSON.stringify(_eqGains));
+    showToast('Equalizer reset', 'info');
+  };
+
+  Player.getAnalyserData = function() {
+    if (!_analyser) return null;
+    const data = new Uint8Array(_analyser.frequencyBinCount);
+    _analyser.getByteFrequencyData(data);
+    return data;
+  };
+
+  Player.showEqualizer = function() {
+    Player.initEqualizer();
+    const existing = document.getElementById('equalizer-overlay');
+    if (existing) { existing.remove(); return; }
+
+    const labels = ['60', '170', '310', '600', '1K', '3K', '6K', '12K', '14K', '16K'];
+
+    const overlay = document.createElement('div');
+    overlay.id = 'equalizer-overlay';
+    overlay.style.cssText = 'position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,0.85);display:flex;align-items:center;justify-content:center;animation:fadeIn 0.2s ease';
+
+    const panel = document.createElement('div');
+    panel.style.cssText = 'background:var(--surface-container,#1e1e2e);border-radius:20px;padding:24px;max-width:400px;width:90vw;color:var(--on-surface)';
+
+    panel.innerHTML = `
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+        <h3 style="margin:0;font-size:16px;font-weight:700">Equalizer</h3>
+        <button onclick="document.getElementById(\'equalizer-overlay\')?.remove()" style="background:none;border:none;color:var(--on-surface-variant);cursor:pointer;font-size:18px">&times;</button>
+      </div>
+      <canvas id="eq-visualizer" width="360" height="80" style="width:100%;height:80px;border-radius:10px;background:rgba(0,0,0,0.3);margin-bottom:16px"></canvas>
+      <div style="display:flex;gap:4px;justify-content:space-between;align-items:flex-end;height:200px;margin-bottom:8px">
+        ${labels.map((label, i) => `
+          <div style="display:flex;flex-direction:column;align-items:center;flex:1">
+            <input type="range" min="-12" max="12" value="${_eqGains[i]}" orient="vertical" oninput="MusicPlayer.setEqBand(${i},Number(this.value));this.nextElementSibling.textContent=this.value+'dB'" style="writing-mode:vertical-lr;direction:rtl;height:160px;accent-color:var(--primary);width:24px">
+            <div style="font-size:9px;color:var(--on-surface-variant);margin-top:4px">${_eqGains[i]}dB</div>
+            <div style="font-size:8px;color:var(--on-surface-variant);margin-top:2px">${label}</div>
+          </div>
+        `).join('')}
+      </div>
+      <div style="display:flex;gap:8px;justify-content:center">
+        <button onclick="MusicPlayer.resetEq()" style="padding:8px 16px;border-radius:8px;border:none;background:rgba(255,255,255,0.06);color:var(--on-surface-variant);font-size:12px;font-weight:600;cursor:pointer">Reset</button>
+      </div>`;
+
+    overlay.appendChild(panel);
+    overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+    document.body.appendChild(overlay);
+
+    // Start visualizer animation
+    _startVisualizer();
+  };
+
+  function _startVisualizer() {
+    const canvas = document.getElementById('eq-visualizer');
+    if (!canvas || !_analyser) return;
+    const ctx = canvas.getContext('2d');
+    const data = new Uint8Array(_analyser.frequencyBinCount);
+
+    function draw() {
+      const cv = document.getElementById('eq-visualizer');
+      if (!cv) return;
+      _analyser.getByteFrequencyData(data);
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      const barWidth = canvas.width / 32;
+      for (let i = 0; i < 32; i++) {
+        const val = data[i] / 255;
+        const h = val * canvas.height * 0.9;
+        ctx.fillStyle = `rgba(124, 77, 255, ${0.3 + val * 0.7})`;
+        ctx.fillRect(i * barWidth + 1, canvas.height - h, barWidth - 2, h);
+      }
+      requestAnimationFrame(draw);
+    }
+    draw();
   }
 
   // ─── PLAYBACK ───
@@ -666,6 +788,20 @@
     mini.style.cssText = 'position:fixed;bottom:60px;left:0;right:0;z-index:95;background:var(--surface-container-high,#1e2a34);border-top:1px solid rgba(255,255,255,0.08);padding:8px 12px;padding-bottom:calc(8px + env(safe-area-inset-bottom,0px));display:flex;align-items:center;gap:10px;cursor:pointer;animation:slideUp 0.2s ease';
     mini.onclick = (e) => { if (e.target.closest('button')) return; openFullPlayer(); };
     document.body.appendChild(mini);
+    let _swipeStartX = 0;
+    let _swipeStartY = 0;
+    mini.addEventListener('touchstart', (e) => {
+      _swipeStartX = e.touches[0].clientX;
+      _swipeStartY = e.touches[0].clientY;
+    }, { passive: true });
+    mini.addEventListener('touchend', (e) => {
+      const dx = e.changedTouches[0].clientX - _swipeStartX;
+      const dy = e.changedTouches[0].clientY - _swipeStartY;
+      if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) {
+        if (dx > 0) { Player.prev(); showToast('Previous', 'info'); }
+        else { Player.next(); showToast('Next', 'info'); }
+      }
+    }, { passive: true });
   }
 
   function _hideMiniPlayer() {
@@ -700,6 +836,34 @@
     const bar = document.getElementById('mini-progress-bar');
     if (bar && Player.duration) bar.style.width = ((Player.currentTime / Player.duration) * 100) + '%';
   }
+
+  // ─── NOW PLAYING BADGE ───
+  Player.getNowPlayingInfo = function() {
+    if (!Player._currentTrack || !Player.isPlaying) return null;
+    return { title: Player._currentTrack.title, artist: Player._currentTrack.artist, thumbnail: Player._currentTrack.thumbnail };
+  };
+
+  Player.renderNowPlayingBadge = function() {
+    const info = Player.getNowPlayingInfo();
+    if (!info) return '';
+    return `<div style="display:flex;align-items:center;gap:6px;padding:6px 10px;border-radius:10px;background:rgba(124,77,255,0.1);border:1px solid rgba(124,77,255,0.2);margin-bottom:8px;cursor:pointer" onclick="openFullPlayer()">
+    <div style="display:flex;gap:2px;align-items:flex-end;height:16px">
+      <span class="np-bar" style="display:inline-block;width:3px;background:var(--primary);border-radius:2px;animation:eqBar 0.8s ease-in-out infinite alternate"></span>
+      <span class="np-bar" style="display:inline-block;width:3px;background:var(--primary);border-radius:2px;animation:eqBar 0.6s ease-in-out 0.2s infinite alternate"></span>
+      <span class="np-bar" style="display:inline-block;width:3px;background:var(--primary);border-radius:2px;animation:eqBar 0.7s ease-in-out 0.1s infinite alternate"></span>
+      <span class="np-bar" style="display:inline-block;width:3px;background:var(--primary);border-radius:2px;animation:eqBar 0.5s ease-in-out 0.3s infinite alternate"></span>
+    </div>
+    <div style="flex:1;min-width:0">
+      <div style="font-size:11px;font-weight:600;color:var(--primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escHtml(info.title)}</div>
+      <div style="font-size:10px;color:var(--on-surface-variant);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escHtml(info.artist)}</div>
+    </div>
+    <span class="material-symbols-outlined" style="font-size:16px;color:var(--primary)">equalizer</span>
+  </div>`;
+  };
+
+  Player.renderNowPlayingCSS = function() {
+    return '<style>@keyframes eqBar{0%{height:4px}100%{height:16px}}</style>';
+  };
 
   // ─── FULL PLAYER ───
   window.openFullPlayer = function() {
@@ -779,6 +943,9 @@
             <span class="material-symbols-outlined" style="font-size:14px">bedtime</span>
             <span id="music-sleep-timer" style="display:none"></span>
             ${!Player._sleepTimerEnd ? 'Sleep' : ''}
+          </button>
+          <button onclick="MusicPlayer.showEqualizer()" style="background:rgba(255,255,255,0.06);border:none;border-radius:8px;padding:4px 10px;color:var(--on-surface-variant);cursor:pointer;font-size:11px;font-weight:700" title="Equalizer">
+            <span class="material-symbols-outlined" style="font-size:14px">equalizer</span>
           </button>
           <button onclick="MusicPlayer.shareTrack()" style="background:rgba(255,255,255,0.06);border:none;border-radius:8px;padding:4px 10px;color:var(--on-surface-variant);cursor:pointer;font-size:11px;font-weight:700" title="Share">
             <span class="material-symbols-outlined" style="font-size:14px">share</span>

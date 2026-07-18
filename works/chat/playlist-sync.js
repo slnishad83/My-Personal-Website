@@ -53,6 +53,7 @@
       position: 0,
       lastSyncAt: firebase.firestore.FieldValue.serverTimestamp(),
       listeners: [{ uid, name: App.currentUser?.displayName || 'User', joinedAt: Date.now(), isCoHost: false }],
+      roomListeners: [{ uid, name: App.currentUser?.displayName || 'User', joinedAt: Date.now(), isCoHost: false }],
       settings: { allowQueueAdd: true, allowSkip: true, syncPlayback: true },
       createdAt: firebase.firestore.FieldValue.serverTimestamp(),
     };
@@ -112,6 +113,7 @@
     }
 
     showToast('Joined listening room', 'success');
+    _updateRoomListeners();
   }
 
   // ─── LISTEN TO ROOM UPDATES ───
@@ -368,6 +370,78 @@
       return doc.exists ? doc.data() : null;
     } catch(_) { return null; }
   }
+
+  // ─── ROOM LISTENERS TRACKING ───
+  async function _updateRoomListeners() {
+    const room = App._listeningRoom;
+    if (!room || !App.db) return;
+    const uid = App.auth?.currentUser?.uid;
+    if (!uid) return;
+    try {
+      const doc = await App.db.collection('listeningRooms').doc(room.chatId).get();
+      if (!doc.exists) return;
+      const data = doc.data();
+      const roomListeners = data.roomListeners || [];
+      const existing = roomListeners.find(l => l.uid === uid);
+      if (!existing) {
+        roomListeners.push({ uid, name: App.currentUser?.displayName || 'User', lastSeen: Date.now() });
+      }
+      if (roomListeners.length > 100) {
+        const sorted = [...roomListeners];
+        sorted.sort((a, b) => (b.lastSeen || 0) - (a.lastSeen || 0));
+        sorted.splice(50);
+        roomListeners.length = 0;
+        sorted.forEach(l => roomListeners.push(l));
+      }
+      await App.db.collection('listeningRooms').doc(room.chatId).update({ 
+        roomListeners,
+        roomListenerCount: roomListeners.length 
+      });
+      App._listeningRoom.roomListeners = roomListeners;
+      App._listeningRoom.roomListenerCount = roomListeners.length;
+      // Clear from 'listeners' after a minute for clean tracking
+      setTimeout(() => {
+        const listeners = data.listeners || [];
+        if (listeners.length > 0) {
+          App.db.collection('listeningRooms').doc(room.chatId).update({
+            listeners: listeners.filter(l => l.uid !== uid)
+          }).catch(() => {});
+        }
+      }, 60000);
+    } catch(e) {
+      console.warn('Failed to update room listeners:', e);
+    }
+  }
+
+  // ─── VOTE FOR NEXT TRACK ───
+  window.voteNextTrack = async function(roomId, trackId) {
+    if (!App.db) return;
+    const uid = App.auth?.currentUser?.uid;
+    if (!uid) return;
+    try {
+      const voteRef = App.db.collection('listeningRooms').doc(roomId).collection('votes').doc(trackId);
+      const doc = await voteRef.get();
+      const voters = doc.exists ? (doc.data().voters || []) : [];
+      if (voters.includes(uid)) {
+        await voteRef.update({ voters: voters.filter(v => v !== uid), count: Math.max(0, voters.length - 1) });
+      } else {
+        await voteRef.set({ voters: [...voters, uid], count: voters.length + 1, trackId });
+      }
+    } catch(e) { console.warn('Vote failed:', e); }
+  };
+
+  // ─── ROOM CHAT ───
+  window.sendRoomChat = async function(roomId, message) {
+    if (!message?.trim() || !App.db || !App.auth?.currentUser) return;
+    try {
+      await App.db.collection('listeningRooms').doc(roomId).collection('chat').add({
+        text: message.trim(),
+        userId: App.auth.currentUser.uid,
+        userName: App.currentUser?.displayName || 'User',
+        timestamp: Date.now(),
+      });
+    } catch(e) {}
+  };
 
   // ─── HOOK INTO PLAYER ───
   const origPlay = MusicPlayer?.play;

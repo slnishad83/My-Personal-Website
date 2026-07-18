@@ -21,6 +21,7 @@
   //   chatId: string | null,        // null = personal, set = shared in chat
   //   groupId: string | null,       // set if shared in group
   //   type: 'personal' | 'shared' | 'group',
+  //   folderId: string | null,
   //   tracks: [{
   //     id: string,
   //     title: string,
@@ -67,6 +68,7 @@
       chatId: opts.chatId || null,
       groupId: opts.groupId || null,
       type: opts.type || (opts.chatId ? 'shared' : 'personal'),
+      folderId: opts.folderId || null,
       tracks: [],
       order: [],
       likedBy: [],
@@ -339,6 +341,101 @@
 
   window.getFavoriteTracks = function() {
     try { return JSON.parse(localStorage.getItem(FAV_KEY) || '[]'); } catch(_) { return []; }
+  };
+
+  // ─── SHARING ───
+  window.sharePlaylist = function(playlistId) {
+    const playlist = App._playlists?.find(p => p.id === playlistId) || App.playlists?.[playlistId];
+    if (!playlist) return;
+    const shareUrl = window.location.origin + window.location.pathname + '?playlist=' + playlistId;
+    if (navigator.share) {
+      navigator.share({ title: playlist.name || 'Playlist', text: `Check out this playlist: ${playlist.name}`, url: shareUrl }).catch(() => {});
+    } else if (navigator.clipboard) {
+      navigator.clipboard.writeText(shareUrl).then(() => showToast('Playlist link copied!', 'success'));
+    }
+  };
+
+  window.importSharedPlaylist = async function(playlistId) {
+    if (!App.db || !App.auth?.currentUser) { showToast('Sign in required', 'error'); return; }
+    if (!playlistId) { showToast('Enter a playlist ID or link', 'error'); return; }
+    try {
+      if (playlistId.includes('playlist=')) {
+        playlistId = playlistId.split('playlist=')[1].split('&')[0];
+      } else if (playlistId.includes('#playlist=')) {
+        playlistId = playlistId.split('#playlist=')[1].split('&')[0];
+      }
+      const doc = await App.db.collection('playlists').doc(playlistId).get();
+      if (!doc.exists) { showToast('Playlist not found', 'error'); return; }
+      const source = doc.data();
+      const uid = App.auth.currentUser.uid;
+      const newPlaylist = {
+        id: 'pl_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 8),
+        name: source.name + ' (imported)',
+        description: source.description || '',
+        tracks: source.tracks || [],
+        coverImage: source.coverImage || null,
+        createdBy: uid,
+        createdByName: App.currentUser?.displayName || 'User',
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+        isPublic: false,
+        importedFrom: playlistId,
+      };
+      await App.db.collection('playlists').doc(newPlaylist.id).set(newPlaylist);
+      showToast('Playlist imported!', 'success');
+    } catch(e) {
+      console.error('Import failed:', e);
+      showToast('Import failed', 'error');
+    }
+  };
+
+  // ─── FOLDERS ───
+  window.createPlaylistFolder = async function(name) {
+    if (!App.db || !App.auth?.currentUser) return null;
+    if (!name || !name.trim()) return null;
+    const folder = {
+      id: 'folder_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 8),
+      name: name.trim(),
+      createdBy: App.auth.currentUser.uid,
+      createdAt: Date.now(),
+    };
+    try {
+      await App.db.collection('playlistFolders').doc(folder.id).set(folder);
+      return folder;
+    } catch(e) { return null; }
+  };
+
+  window.renamePlaylistFolder = async function(folderId, newName) {
+    if (!App.db || !newName?.trim()) return;
+    try {
+      await App.db.collection('playlistFolders').doc(folderId).update({ name: newName.trim() });
+    } catch(_) {}
+  };
+
+  window.deletePlaylistFolder = async function(folderId) {
+    if (!App.db) return;
+    try {
+      await App.db.collection('playlistFolders').doc(folderId).delete();
+      const snap = await App.db.collection('playlists').where('folderId', '==', folderId).get();
+      const batch = App.db.batch();
+      snap.docs.forEach(doc => batch.update(doc.ref, { folderId: null }));
+      await batch.commit();
+    } catch(_) {}
+  };
+
+  window.movePlaylistToFolder = async function(playlistId, folderId) {
+    if (!App.db) return;
+    try {
+      await App.db.collection('playlists').doc(playlistId).update({ folderId: folderId || null });
+    } catch(_) {}
+  };
+
+  window.loadPlaylistFolders = async function() {
+    if (!App.db || !App.auth?.currentUser) return [];
+    try {
+      const snap = await App.db.collection('playlistFolders').where('createdBy', '==', App.auth.currentUser.uid).get();
+      return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    } catch(_) { return []; }
   };
 
   // ─── UTILITY ───

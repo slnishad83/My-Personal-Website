@@ -9,6 +9,11 @@
   const _trackCache = {};
   window._trackCache = _trackCache;
 
+  // ─── SEARCH FILTER STATE ───
+  let _ytFilterDuration = 'all';
+  let _ytFilterSort = 'relevance';
+  let _ytFilterLang = 'all';
+
   // ─── YOUTUBE PROXY BACKENDS (100% free, no API key) ───
 
   // Invidious instances
@@ -555,6 +560,7 @@
             <button class="ml-tab active" onclick="switchMusicLibTab('my')" style="flex-shrink:0;padding:6px 14px;border-radius:20px;border:none;font-size:12px;font-weight:600;cursor:pointer;background:var(--primary);color:var(--on-primary)">My Music</button>
             <button class="ml-tab" onclick="switchMusicLibTab('upload')" style="flex-shrink:0;padding:6px 14px;border-radius:20px;border:none;font-size:12px;font-weight:600;cursor:pointer;background:rgba(255,255,255,0.06);color:var(--on-surface-variant)">Upload</button>
             <button class="ml-tab" onclick="switchMusicLibTab('search')" style="flex-shrink:0;padding:6px 14px;border-radius:20px;border:none;font-size:12px;font-weight:600;cursor:pointer;background:rgba(255,255,255,0.06);color:var(--on-surface-variant)">Search</button>
+            <button class="ml-tab" onclick="switchMusicLibTab('discover')" style="flex-shrink:0;padding:6px 14px;border-radius:20px;border:none;font-size:12px;font-weight:600;cursor:pointer;background:rgba(255,255,255,0.06);color:var(--on-surface-variant)">Discover</button>
             <button class="ml-tab" onclick="switchMusicLibTab('languages')" style="flex-shrink:0;padding:6px 14px;border-radius:20px;border:none;font-size:12px;font-weight:600;cursor:pointer;background:rgba(255,255,255,0.06);color:var(--on-surface-variant)">Languages</button>
           </div>
         </div>
@@ -596,6 +602,7 @@
     if (tab === 'my') await _renderMyMusic(content);
     else if (tab === 'upload') _renderUploadTab(content);
     else if (tab === 'search') _renderSearchTab(content);
+    else if (tab === 'discover') await _renderDiscoverTab(content);
     else if (tab === 'languages') _renderLanguagesTab(content);
   };
 
@@ -761,6 +768,42 @@
         <div style="display:flex;gap:8px;margin-bottom:8px">
           <input type="search" id="yt-search-input" placeholder="Search any song on YouTube..." style="flex:1;padding:10px 14px;border-radius:12px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);color:var(--on-surface);font-size:13px;outline:none" onkeydown="if(event.key==='Enter')doYouTubeSearch()">
           <button onclick="doYouTubeSearch()" style="padding:10px 18px;border-radius:12px;border:none;background:var(--primary);color:var(--on-primary);font-size:12px;font-weight:700;cursor:pointer">Search</button>
+          <button onclick="toggleSearchFilters()" id="yt-filter-toggle" style="padding:10px 12px;border-radius:12px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);color:var(--on-surface-variant);font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:4px;white-space:nowrap"><span class="material-symbols-outlined" style="font-size:15px">tune</span>Filters</button>
+        </div>
+        <div id="yt-filter-panel" style="display:none;margin-bottom:10px;padding:12px;border-radius:12px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06)">
+          <div style="display:flex;gap:10px;flex-wrap:wrap">
+            <div style="flex:1;min-width:120px">
+              <label style="font-size:10px;font-weight:700;color:var(--on-surface-variant);text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:4px">Duration</label>
+              <select id="yt-filter-duration" onchange="updateSearchFilter('duration',this.value)" style="width:100%;padding:7px 10px;border-radius:8px;border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.04);color:var(--on-surface);font-size:12px">
+                <option value="all"${_ytFilterDuration === 'all' ? ' selected' : ''}>All</option>
+                <option value="short"${_ytFilterDuration === 'short' ? ' selected' : ''}>Short (&lt;4min)</option>
+                <option value="medium"${_ytFilterDuration === 'medium' ? ' selected' : ''}>Medium (4-20min)</option>
+                <option value="long"${_ytFilterDuration === 'long' ? ' selected' : ''}>Long (&gt;20min)</option>
+              </select>
+            </div>
+            <div style="flex:1;min-width:120px">
+              <label style="font-size:10px;font-weight:700;color:var(--on-surface-variant);text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:4px">Sort By</label>
+              <select id="yt-filter-sort" onchange="updateSearchFilter('sort',this.value)" style="width:100%;padding:7px 10px;border-radius:8px;border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.04);color:var(--on-surface);font-size:12px">
+                <option value="relevance"${_ytFilterSort === 'relevance' ? ' selected' : ''}>Relevance</option>
+                <option value="views"${_ytFilterSort === 'views' ? ' selected' : ''}>View Count</option>
+                <option value="date"${_ytFilterSort === 'date' ? ' selected' : ''}>Date (newest)</option>
+              </select>
+            </div>
+            <div style="flex:1;min-width:120px">
+              <label style="font-size:10px;font-weight:700;color:var(--on-surface-variant);text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:4px">Language</label>
+              <select id="yt-filter-lang" onchange="updateSearchFilter('lang',this.value)" style="width:100%;padding:7px 10px;border-radius:8px;border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.04);color:var(--on-surface);font-size:12px">
+                <option value="all"${_ytFilterLang === 'all' ? ' selected' : ''}>All</option>
+                <option value="malayalam"${_ytFilterLang === 'malayalam' ? ' selected' : ''}>Malayalam</option>
+                <option value="hindi"${_ytFilterLang === 'hindi' ? ' selected' : ''}>Hindi</option>
+                <option value="tamil"${_ytFilterLang === 'tamil' ? ' selected' : ''}>Tamil</option>
+                <option value="telugu"${_ytFilterLang === 'telugu' ? ' selected' : ''}>Telugu</option>
+                <option value="english"${_ytFilterLang === 'english' ? ' selected' : ''}>English</option>
+              </select>
+            </div>
+          </div>
+          <div style="margin-top:8px;text-align:right">
+            <button onclick="resetSearchFilters()" style="padding:5px 12px;border-radius:8px;border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.03);color:var(--on-surface-variant);font-size:11px;cursor:pointer">Reset Filters</button>
+          </div>
         </div>
         ${hist.length ? `
         <div id="yt-search-history" style="margin-bottom:8px">
@@ -819,6 +862,70 @@
     _addSearchHistory(q);
     _doInvidiousSearch(q, document.getElementById('yt-search-results'));
   };
+
+  // ─── SEARCH FILTER CONTROLS ───
+  window.toggleSearchFilters = function() {
+    const panel = document.getElementById('yt-filter-panel');
+    if (!panel) return;
+    const isVisible = panel.style.display !== 'none';
+    panel.style.display = isVisible ? 'none' : 'block';
+    const btn = document.getElementById('yt-filter-toggle');
+    if (btn) {
+      const hasFilters = _ytFilterDuration !== 'all' || _ytFilterSort !== 'relevance' || _ytFilterLang !== 'all';
+      btn.style.borderColor = (!isVisible && hasFilters) ? 'var(--primary)' : 'rgba(255,255,255,0.1)';
+      btn.style.color = (!isVisible && hasFilters) ? 'var(--primary)' : 'var(--on-surface-variant)';
+    }
+  };
+
+  window.updateSearchFilter = function(type, value) {
+    if (type === 'duration') _ytFilterDuration = value;
+    else if (type === 'sort') _ytFilterSort = value;
+    else if (type === 'lang') _ytFilterLang = value;
+  };
+
+  window.resetSearchFilters = function() {
+    _ytFilterDuration = 'all';
+    _ytFilterSort = 'relevance';
+    _ytFilterLang = 'all';
+    const d = document.getElementById('yt-filter-duration');
+    const s = document.getElementById('yt-filter-sort');
+    const l = document.getElementById('yt-filter-lang');
+    if (d) d.value = 'all';
+    if (s) s.value = 'relevance';
+    if (l) l.value = 'all';
+  };
+
+  function _applySearchFilters(results) {
+    let out = results.slice();
+    // Duration filter
+    if (_ytFilterDuration === 'short') out = out.filter(r => r.duration > 0 && r.duration < 240);
+    else if (_ytFilterDuration === 'medium') out = out.filter(r => r.duration >= 240 && r.duration <= 1200);
+    else if (_ytFilterDuration === 'long') out = out.filter(r => r.duration > 1200);
+    // Language filter
+    if (_ytFilterLang !== 'all') {
+      const langName = _ytFilterLang.charAt(0).toUpperCase() + _ytFilterLang.slice(1);
+      out = out.filter(r => {
+        const text = ((r.title || '') + ' ' + (r.artist || '')).toLowerCase();
+        return text.includes(_ytFilterLang.toLowerCase()) || text.includes(langName.toLowerCase());
+      });
+    }
+    // Sort
+    if (_ytFilterSort === 'views') out.sort((a, b) => (b.viewCount || 0) - (a.viewCount || 0));
+    else if (_ytFilterSort === 'date') out.sort((a, b) => {
+      const parseRecency = (txt) => {
+        if (!txt) return 0;
+        const t = txt.toLowerCase();
+        if (t.includes('minute') || t.includes('hour') || t.includes('just') || t.includes('second')) return 5;
+        if (t.includes('day')) return 4;
+        if (t.includes('week')) return 3;
+        if (t.includes('month')) return 2;
+        if (t.includes('year')) return 1;
+        return 0;
+      };
+      return parseRecency(b.publishedText) - parseRecency(a.publishedText);
+    });
+    return out;
+  }
 
   window.doArchiveSearch = function() {
     const q = document.getElementById('archive-search-input')?.value;
@@ -910,11 +1017,13 @@
       </div>`;
 
     const results = await searchInvidious(query);
+    const filtered = _applySearchFilters(results);
 
-    if (!results.length) {
+    if (!filtered.length) {
       container.innerHTML = `
         <div style="text-align:center;padding:16px">
-          <p style="color:var(--on-surface-variant);font-size:12px;margin:0 0 8px">No results found</p>
+          <p style="color:var(--on-surface-variant);font-size:12px;margin:0 0 8px">${results.length ? 'No results match current filters' : 'No results found'}</p>
+          ${results.length ? '<button onclick="resetSearchFilters();doYouTubeSearch()" style="padding:6px 14px;border-radius:8px;border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.03);color:var(--on-surface-variant);font-size:11px;cursor:pointer;margin-bottom:8px">Reset Filters & Retry</button>' : ''}
           <a href="https://www.youtube.com/results?search_query=${encodeURIComponent(query + ' song')}" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:8px;background:rgba(255,0,0,0.1);color:#ff4444;font-size:12px;font-weight:600;text-decoration:none">
             <span class="material-symbols-outlined" style="font-size:16px">open_in_new</span> Search on YouTube
           </a>
@@ -922,9 +1031,9 @@
       return;
     }
 
-    results.forEach(t => { _trackCache[t.id] = t; });
+    filtered.forEach(t => { _trackCache[t.id] = t; });
 
-    container.innerHTML = results.map(t => `
+    container.innerHTML = filtered.map(t => `
       <div style="display:flex;align-items:center;gap:10px;padding:8px;border-radius:10px;background:rgba(255,255,255,0.03);margin-bottom:4px;cursor:pointer" onclick="playYouTubeTrack('${t.videoId}','${escHtml(t.title).replace(/'/g, "\\'")}','${escHtml(t.artist).replace(/'/g, "\\'")}','${escHtml(t.thumbnail).replace(/'/g, "\\'")}',${t.duration})">
         <div style="width:48px;height:36px;border-radius:6px;background:rgba(0,0,0,0.3);display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden">
           <img src="${escHtml(t.thumbnail)}" style="width:100%;height:100%;object-fit:cover" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" loading="lazy">
@@ -1004,6 +1113,75 @@
     } catch(e) { showToast('Failed to add', 'error'); }
   };
 
+  // ─── DISCOVER TAB ───
+  async function _renderDiscoverTab(el) {
+    const sections = [
+      {
+        title: 'Trending Now',
+        icon: 'trending_up',
+        color: '#FF6B35',
+        queries: [
+          { label: 'Trending Malayalam', q: 'Trending Malayalam songs 2025' },
+          { label: 'Trending Hindi', q: 'Trending Hindi songs 2025' },
+          { label: 'Trending Tamil', q: 'Trending Tamil songs 2025' },
+          { label: 'Trending Telugu', q: 'Trending Telugu songs 2025' },
+          { label: 'Trending Indian', q: 'Trending Indian songs 2025' },
+          { label: 'Viral Music India', q: 'Viral music India 2025' },
+        ],
+      },
+      {
+        title: 'New Releases',
+        icon: 'new_releases',
+        color: '#E91E63',
+        queries: [
+          { label: 'Latest Malayalam', q: 'Latest Malayalam songs 2025' },
+          { label: 'New Hindi Hits', q: 'New Hindi songs 2025' },
+          { label: 'New Tamil Releases', q: 'New Tamil releases 2025' },
+          { label: 'New Telugu Songs', q: 'New Telugu songs 2025' },
+          { label: 'New Bollywood', q: 'New Bollywood songs 2025' },
+          { label: 'Fresh Indie India', q: 'Fresh indie Indian music 2025' },
+        ],
+      },
+      {
+        title: 'Top Charts',
+        icon: 'emoji_events',
+        color: '#FFD700',
+        queries: [
+          { label: 'Most Viewed Indian', q: 'Most viewed Indian songs' },
+          { label: 'Billboard India', q: 'Billboard India top songs' },
+          { label: 'YouTube Music India', q: 'YouTube Music India top charts' },
+          { label: 'Gaana Top 50', q: 'Gaana top 50 Hindi' },
+          { label: 'Spotify India Viral', q: 'Spotify India viral hits 2025' },
+          { label: 'Apple Music India', q: 'Apple Music India top songs' },
+        ],
+      },
+    ];
+
+    let html = '';
+    sections.forEach(sec => {
+      html += `
+        <div style="margin-bottom:20px">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+            <div style="width:32px;height:32px;border-radius:8px;background:${sec.color}20;display:flex;align-items:center;justify-content:center">
+              <span class="material-symbols-outlined" style="font-size:18px;color:${sec.color}">${sec.icon}</span>
+            </div>
+            <span style="font-size:14px;font-weight:700;color:var(--on-surface)">${sec.title}</span>
+          </div>
+          <div style="display:flex;flex-wrap:wrap;gap:8px">
+            ${sec.queries.map(item => `
+              <button onclick="doYouTubeSearchFor('${item.q.replace(/'/g, "\\'")}')" style="padding:8px 14px;border-radius:20px;border:1px solid ${sec.color}30;background:${sec.color}10;color:var(--on-surface);font-size:12px;font-weight:500;cursor:pointer;transition:all 0.2s" onmouseover="this.style.background='${sec.color}30';this.style.borderColor='${sec.color}'" onmouseout="this.style.background='${sec.color}10';this.style.borderColor='${sec.color}30'">${item.label}</button>
+            `).join('')}
+          </div>
+        </div>`;
+    });
+
+    el.innerHTML = `
+      <div style="margin-bottom:12px">
+        <p style="font-size:12px;color:var(--on-surface-variant);margin:0 0 16px">Discover music across languages — tap any chip to search</p>
+        ${html}
+      </div>`;
+  }
+
   // ─── LANGUAGES TAB (YouTube-powered) ───
   function _renderLanguagesTab(el) {
     const colors = {
@@ -1039,5 +1217,109 @@
   window.browseLanguageMusic = function(lang) {
     browseLanguageYT(lang);
   };
+
+  // ─── RECENTLY PLAYED QUICK ACCESS ───
+  window.showRecentlyPlayed = function() {
+    const existing = document.getElementById('recently-played-overlay');
+    if (existing) { existing.remove(); return; }
+
+    let recent = [];
+    try { recent = JSON.parse(localStorage.getItem('nsl_recent_tracks') || '[]'); } catch(_) {}
+
+    const overlay = document.createElement('div');
+    overlay.id = 'recently-played-overlay';
+    overlay.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.85);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);display:flex;align-items:flex-end;justify-content:center;animation:fadeIn 0.2s ease';
+
+    const panel = document.createElement('div');
+    panel.style.cssText = 'background:var(--surface-container,#1e1e2e);border-radius:20px 20px 0 0;padding:20px;width:100%;max-width:500px;max-height:75vh;overflow:hidden;display:flex;flex-direction:column;color:var(--on-surface)';
+
+    if (!recent.length) {
+      panel.innerHTML = '<div style="text-align:center;padding:32px;color:var(--on-surface-variant)"><span class="material-symbols-outlined" style="font-size:40px;opacity:0.3">history</span><p style="margin:8px 0 0;font-size:13px">No recently played tracks</p></div>';
+    } else {
+      panel.innerHTML = `
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <h3 style="margin:0;font-size:16px;font-weight:700">Recently Played (${recent.length})</h3>
+        <button onclick="document.getElementById('recently-played-overlay')?.remove()" style="background:none;border:none;color:var(--on-surface-variant);cursor:pointer;font-size:18px">&times;</button>
+      </div>
+      <div style="flex:1;overflow-y:auto">
+        ${recent.map((t, i) => `
+          <div style="display:flex;align-items:center;gap:10px;padding:8px;border-radius:10px;background:rgba(255,255,255,0.02);margin-bottom:4px;cursor:pointer" onclick="document.getElementById('recently-played-overlay')?.remove();playCachedTrack('${t.id}')">
+            <div style="width:40px;height:40px;border-radius:8px;overflow:hidden;flex-shrink:0;background:rgba(255,255,255,0.05)">
+              ${t.thumbnail ? `<img src="${escHtml(t.thumbnail)}" style="width:100%;height:100%;object-fit:cover" loading="lazy">` : '<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center"><span class="material-symbols-outlined" style="font-size:18px;color:var(--on-surface-variant)">music_note</span></div>'}
+            </div>
+            <div style="flex:1;min-width:0">
+              <div style="font-size:12px;font-weight:600;color:var(--on-surface);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escHtml(t.title || 'Unknown')}</div>
+              <div style="font-size:10px;color:var(--on-surface-variant)">${escHtml(t.artist || 'Unknown')}</div>
+            </div>
+            <button onclick="event.stopPropagation();MusicPlayer.addToQueue(_trackCache['${t.id}'] || ${JSON.stringify(t).replace(/'/g, "\\'")});showToast('Added to queue','success')" style="background:rgba(124,77,255,0.15);border:none;border-radius:6px;padding:4px 8px;color:var(--primary);font-size:10px;font-weight:600;cursor:pointer">+ Q</button>
+          </div>
+        `).join('')}
+      </div>`;
+    }
+
+    overlay.appendChild(panel);
+    overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+    document.body.appendChild(overlay);
+  };
+
+  // ─── ONBOARDING ───
+  const _ONBOARD_KEY = 'nsl_music_onboarded';
+
+  window.checkMusicOnboarding = function() {
+    if (localStorage.getItem(_ONBOARD_KEY)) return;
+    setTimeout(() => showMusicOnboarding(), 2000);
+  };
+
+  window.showMusicOnboarding = function() {
+    if (document.getElementById('onboarding-overlay')) return;
+
+    const steps = [
+      { icon: 'music_note', title: 'Welcome to Music!', desc: 'Search YouTube, upload your songs, or browse free music from Archive.org' },
+      { icon: 'search', title: 'Search Any Song', desc: 'Find any song on YouTube using our built-in search. Supports all languages!' },
+      { icon: 'library_music', title: 'Your Library', desc: 'Upload your own MP3s, create playlists, and organize by language' },
+      { icon: 'group', title: 'Listening Rooms', desc: 'Listen together in real-time with friends. Share your music taste!' },
+      { icon: 'download', title: 'Background Play', desc: 'Music keeps playing even when you switch apps or lock your phone' },
+    ];
+
+    let step = 0;
+
+    function renderStep() {
+      const s = steps[step];
+      const overlay = document.getElementById('onboarding-overlay');
+      if (!overlay) return;
+
+      overlay.innerHTML = `
+        <div style="background:var(--surface-container,#1e1e2e);border-radius:24px;padding:32px;max-width:360px;width:85vw;text-align:center;color:var(--on-surface)">
+          <div style="width:80px;height:80px;border-radius:50%;background:rgba(124,77,255,0.15);display:flex;align-items:center;justify-content:center;margin:0 auto 20px">
+            <span class="material-symbols-outlined" style="font-size:36px;color:var(--primary)">${s.icon}</span>
+          </div>
+          <h2 style="margin:0 0 8px;font-size:20px;font-weight:700">${s.title}</h2>
+          <p style="margin:0 0 24px;font-size:14px;color:var(--on-surface-variant);line-height:1.5">${s.desc}</p>
+          <div style="display:flex;gap:8px;justify-content:center;margin-bottom:16px">
+            ${steps.map((_, i) => `<div style="width:${i===step?'20px':'6px'};height:6px;border-radius:3px;background:${i===step?'var(--primary)':'rgba(255,255,255,0.2)'};transition:all 0.3s"></div>`).join('')}
+          </div>
+          <div style="display:flex;gap:8px">
+            ${step < steps.length - 1 ? `<button onclick="document.getElementById('onboarding-overlay')?.remove()" style="flex:1;padding:12px;border-radius:12px;border:none;background:rgba(255,255,255,0.06);color:var(--on-surface-variant);font-size:13px;font-weight:600;cursor:pointer">Skip</button>` : ''}
+            <button onclick="${step < steps.length - 1 ? 'window._onboardStep()' : 'window._finishOnboarding()'}" style="flex:1;padding:12px;border-radius:12px;border:none;background:var(--primary);color:var(--on-primary);font-size:13px;font-weight:700;cursor:pointer">${step < steps.length - 1 ? 'Next' : 'Get Started'}</button>
+          </div>
+        </div>`;
+    }
+
+    const overlay = document.createElement('div');
+    overlay.id = 'onboarding-overlay';
+    overlay.style.cssText = 'position:fixed;inset:0;z-index:10001;background:rgba(0,0,0,0.8);display:flex;align-items:center;justify-content:center;animation:fadeIn 0.3s ease';
+    overlay.addEventListener('click', e => { if (e.target === overlay) window._finishOnboarding(); });
+    document.body.appendChild(overlay);
+
+    window._onboardStep = function() { step++; renderStep(); };
+    window._finishOnboarding = function() {
+      localStorage.setItem(_ONBOARD_KEY, 'true');
+      document.getElementById('onboarding-overlay')?.remove();
+    };
+
+    renderStep();
+  };
+
+  checkMusicOnboarding();
 
 })();

@@ -13,6 +13,7 @@
         <button onclick="document.getElementById('playlists-overlay')?.remove()" style="background:none;border:none;color:var(--on-surface);cursor:pointer"><span class="material-symbols-outlined">arrow_back</span></button>
         <h3 style="margin:0;font-size:18px;font-weight:700;color:var(--on-surface);flex:1">Playlists</h3>
         <button onclick="showCreatePlaylistDialog('${chatId || ''}')" style="background:none;border:none;color:var(--primary);cursor:pointer;font-size:13px;font-weight:700">+ New</button>
+        <button onclick="showCreateFolderDialog()" style="background:none;border:none;color:var(--primary);cursor:pointer;font-size:13px;font-weight:700">+ Folder</button>
       </div>
       <div id="playlists-tabs" style="display:flex;gap:4px;padding:8px 16px">
         <button class="pl-tab active" onclick="switchPlaylistTab('my',this)" style="padding:6px 14px;border-radius:8px;border:none;background:var(--primary);color:var(--on-primary);font-size:12px;font-weight:600;cursor:pointer">My Playlists</button>
@@ -57,7 +58,14 @@
       return;
     }
 
-    content.innerHTML = playlists.map(pl => _playlistCardHTML(pl)).join('');
+    content.innerHTML = playlists.map(pl => _playlistCardHTML(pl)).join('') + `
+      <div style="margin-top:16px;padding:12px;border-radius:12px;background:rgba(255,255,255,0.03);border:1px dashed rgba(255,255,255,0.1)">
+        <div style="font-size:11px;font-weight:700;color:var(--on-surface-variant);margin-bottom:6px">Import Shared Playlist</div>
+        <div style="display:flex;gap:8px">
+          <input type="text" id="import-playlist-id" placeholder="Paste playlist link or ID..." style="flex:1;padding:8px 12px;border-radius:10px;border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.04);color:var(--on-surface);font-size:12px;outline:none">
+          <button onclick="importSharedPlaylist(document.getElementById('import-playlist-id')?.value)" style="padding:8px 14px;border-radius:10px;border:none;background:var(--primary);color:var(--on-primary);font-size:11px;font-weight:700;cursor:pointer">Import</button>
+        </div>
+      </div>`;
   }
 
   function _loadRecentlyPlayed() {
@@ -165,7 +173,9 @@
         ${canEdit ? `<button onclick="showAddTrackDialog('${playlistId}')" style="background:none;border:none;color:var(--primary);cursor:pointer;font-size:13px;font-weight:700">+ Add</button>` : ''}
         ${isOwner ? `<button onclick="showCollaboratorManager('${playlistId}')" style="background:none;border:none;color:var(--on-surface-variant);cursor:pointer" title="Manage collaborators"><span class="material-symbols-outlined" style="font-size:20px">group</span></button>` : ''}
         ${isOwner ? `<button onclick="uploadPlaylistCover('${playlistId}')" style="background:none;border:none;color:var(--on-surface-variant);cursor:pointer" title="Change cover"><span class="material-symbols-outlined" style="font-size:20px">add_a_photo</span></button>` : ''}
-        <button onclick="sharePlaylist('${playlistId}')" style="background:none;border:none;color:var(--on-surface-variant);cursor:pointer"><span class="material-symbols-outlined" style="font-size:20px">share</span></button>
+        <button onclick="sharePlaylist('${playlistId}')" style="background:rgba(124,77,255,0.15);border:none;border-radius:8px;padding:6px 12px;color:var(--primary);font-size:11px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:4px">
+          <span class="material-symbols-outlined" style="font-size:14px">share</span> Share
+        </button>
         ${isOwner ? `<button onclick="deletePlaylist('${playlistId}');document.getElementById('playlist-detail-overlay')?.remove()" style="background:none;border:none;color:var(--error);cursor:pointer"><span class="material-symbols-outlined" style="font-size:20px">delete</span></button>` : ''}
       </div>
       <div style="flex:1;overflow-y:auto;padding:0 16px 80px">
@@ -278,6 +288,12 @@
         <label style="font-size:12px;font-weight:600;color:var(--on-surface-variant);display:block;margin-bottom:4px">Description</label>
         <input type="text" id="create-pl-desc" placeholder="Optional description" style="width:100%;padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.05);color:var(--on-surface);font-size:13px;box-sizing:border-box">
       </div>
+      <div style="margin-bottom:12px">
+        <label style="font-size:11px;font-weight:600;color:var(--on-surface-variant);display:block;margin-bottom:4px">FOLDER</label>
+        <select id="playlist-folder-select" style="width:100%;padding:10px 12px;border-radius:10px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);color:var(--on-surface);font-size:13px">
+          <option value="">No folder</option>
+        </select>
+      </div>
       <div style="margin-bottom:16px">
         <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
           <input type="checkbox" id="create-pl-public" checked style="accent-color:var(--primary)">
@@ -294,6 +310,18 @@
     document.body.appendChild(overlay);
 
     setTimeout(() => document.getElementById('create-pl-name')?.focus(), 100);
+
+    loadPlaylistFolders().then(folders => {
+      const sel = document.getElementById('playlist-folder-select');
+      if (sel && folders.length) {
+        folders.forEach(f => {
+          const opt = document.createElement('option');
+          opt.value = f.id;
+          opt.textContent = f.name;
+          sel.appendChild(opt);
+        });
+      }
+    });
   };
 
   window._submitCreatePlaylist = async function(chatId) {
@@ -301,9 +329,10 @@
     if (!name) { showToast('Name is required', 'error'); return; }
     const desc = document.getElementById('create-pl-desc')?.value?.trim() || '';
     const isPublic = document.getElementById('create-pl-public')?.checked;
+    const folderId = document.getElementById('playlist-folder-select')?.value || null;
 
     const pl = await createPlaylist({
-      name, description: desc, isPublic,
+      name, description: desc, isPublic, folderId,
       chatId: chatId || null,
       type: chatId ? 'shared' : 'personal',
     });
@@ -352,14 +381,6 @@
   };
 
   // ─── SHARE ───
-  window.sharePlaylist = function(playlistId) {
-    const url = `${window.location.origin}${window.location.pathname}#playlist=${playlistId}`;
-    if (navigator.share) {
-      navigator.share({ title: 'Shared Playlist', url }).catch(() => {});
-    } else if (navigator.clipboard) {
-      navigator.clipboard.writeText(url).then(() => showToast('Playlist link copied', 'success'));
-    }
-  };
 
   // ─── COLLABORATOR MANAGER ───
   window.showCollaboratorManager = async function(playlistId) {
@@ -420,6 +441,42 @@
   window.removeCollaboratorFromPlaylist = async function(playlistId, uid) {
     await removeCollaborator(playlistId, uid);
     showCollaboratorManager(playlistId);
+  };
+
+  // ─── CREATE FOLDER DIALOG ───
+  window.showCreateFolderDialog = function() {
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,0.85);display:flex;align-items:center;justify-content:center;animation:fadeIn 0.2s ease';
+
+    const panel = document.createElement('div');
+    panel.style.cssText = 'background:var(--surface-container,#1e1e2e);border-radius:20px;padding:24px;max-width:380px;width:92vw;color:var(--on-surface)';
+
+    panel.innerHTML = `
+      <h3 style="margin:0 0 16px;font-size:16px;font-weight:700">Create Folder</h3>
+      <div style="margin-bottom:16px">
+        <label style="font-size:12px;font-weight:600;color:var(--on-surface-variant);display:block;margin-bottom:4px">Folder Name *</label>
+        <input type="text" id="create-folder-name" placeholder="My Folder" style="width:100%;padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.05);color:var(--on-surface);font-size:13px;box-sizing:border-box" autofocus>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button onclick="this.closest('[style*=\"fixed\"]')?.remove()" style="flex:1;padding:10px;border-radius:10px;border:none;background:rgba(255,255,255,0.06);color:var(--on-surface);font-size:13px;font-weight:600;cursor:pointer">Cancel</button>
+        <button onclick="_submitCreateFolder()" style="flex:1;padding:10px;border-radius:10px;border:none;background:var(--primary);color:var(--on-primary);font-size:13px;font-weight:700;cursor:pointer">Create</button>
+      </div>`;
+
+    overlay.appendChild(panel);
+    overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+    document.body.appendChild(overlay);
+
+    setTimeout(() => document.getElementById('create-folder-name')?.focus(), 100);
+  };
+
+  window._submitCreateFolder = async function() {
+    const name = document.getElementById('create-folder-name')?.value?.trim();
+    if (!name) { showToast('Name is required', 'error'); return; }
+    await createPlaylistFolder(name);
+    document.querySelectorAll('[style*="fixed"]').forEach(el => {
+      if (el.querySelector('#create-folder-name')) el.remove();
+    });
+    showToast('Folder created', 'success');
   };
 
   // ─── COVER UPLOAD ───
