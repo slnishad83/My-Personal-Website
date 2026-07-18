@@ -7,6 +7,7 @@
   App._musicUploadProgress = 0;
   const LANGUAGES = ['Malayalam','Tamil','Telugu','Hindi','Kannada','Bengali','Marathi','Punjabi','English','Other'];
   const _trackCache = {};
+  window._trackCache = _trackCache;
 
   // ─── INVIDIOUS YOUTUBE API (100% free, no API key) ───
   const INV_INSTANCES = [
