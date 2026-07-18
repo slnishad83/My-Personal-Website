@@ -1,4 +1,4 @@
-// Music Library — user uploads, Jamendo free music, YouTube search, language filters
+// Music Library — user uploads, Archive.org free music, YouTube via Invidious, language filters
 (function() {
   'use strict';
 
@@ -6,9 +6,106 @@
   App.musicLibrary = [];
   App._musicUploadProgress = 0;
   const LANGUAGES = ['Malayalam','Tamil','Telugu','Hindi','Kannada','Bengali','Marathi','Punjabi','English','Other'];
-  const JAMENDO_CLIENT_ID = 'e24b4955'; // free Jamendo API client ID
-  const YOUTUBE_SEARCH_ENABLED = true;
-  const _trackCache = {}; // cache track data for onclick references
+  const _trackCache = {};
+
+  // ─── INVIDIOUS YOUTUBE API (100% free, no API key) ───
+  const INV_INSTANCES = [
+    'https://inv.nadeko.net',
+    'https://invidious.nerdvpn.de',
+    'https://invidious.jing.rocks',
+    'https://vid.puffyan.us',
+    'https://yewtu.be',
+    'https://iv.ggtyler.dev',
+    'https://invidious.privacyredirect.com',
+  ];
+  let _workingInstance = null;
+
+  async function _invFetch(path, timeout) {
+    const instances = _workingInstance
+      ? [_workingInstance, ...INV_INSTANCES.filter(i => i !== _workingInstance)]
+      : INV_INSTANCES;
+    for (const inst of instances) {
+      try {
+        const ctrl = new AbortController();
+        const tid = setTimeout(() => ctrl.abort(), timeout || 8000);
+        const res = await fetch(inst + path, { signal: ctrl.signal });
+        clearTimeout(tid);
+        if (!res.ok) continue;
+        const data = await res.json();
+        if (!data || (Array.isArray(data) && !data.length)) continue;
+        _workingInstance = inst;
+        return data;
+      } catch(_) { continue; }
+    }
+    return null;
+  }
+
+  window.searchInvidious = async function(query) {
+    if (!query || query.length < 2) return [];
+    const data = await _invFetch('/api/v1/search?q=' + encodeURIComponent(query) + '&type=video', 10000);
+    if (!data || !Array.isArray(data)) return [];
+    return data.filter(v => v && v.videoId).slice(0, 30).map(v => ({
+      id: 'yt_' + v.videoId,
+      videoId: v.videoId,
+      title: v.title || 'Untitled',
+      artist: v.author || 'Unknown',
+      duration: v.lengthSeconds || 0,
+      thumbnail: (v.videoThumbnails && v.videoThumbnails.find(t => t.quality === 'medium') || (v.videoThumbnails && v.videoThumbnails[0]) || {}).url || ('https://i.ytimg.com/vi/' + v.videoId + '/mqdefault.jpg'),
+      viewCount: v.viewCount || 0,
+      publishedText: v.publishedText || '',
+      source: 'youtube',
+    }));
+  };
+
+  window.getYouTubeAudioUrl = async function(videoId) {
+    if (!videoId) return null;
+    const data = await _invFetch('/api/v1/videos/' + videoId + '?fields=adaptiveFormats,title,author', 12000);
+    if (!data || !data.adaptiveFormats) return null;
+    const audio = data.adaptiveFormats
+      .filter(f => f.type && f.type.startsWith('audio/'))
+      .sort((a, b) => (b.audioBitrate || b.bitrate || 0) - (a.audioBitrate || a.bitrate || 0));
+    if (audio.length && audio[0].url) return audio[0].url;
+    return null;
+  };
+
+  window.playYouTubeTrack = async function(videoId, title, artist, thumbnail, duration) {
+    if (!videoId) return;
+    showToast('Loading audio...', 'info');
+    const audioUrl = await getYouTubeAudioUrl(videoId);
+    if (!audioUrl) {
+      showToast('Audio unavailable — opening YouTube', 'info');
+      window.open('https://www.youtube.com/watch?v=' + videoId, '_blank');
+      return;
+    }
+    MusicPlayer.play({
+      id: 'yt_' + videoId,
+      title: title || 'YouTube',
+      artist: artist || 'YouTube',
+      url: audioUrl,
+      thumbnail: thumbnail || null,
+      duration: duration || 0,
+      source: 'youtube',
+    });
+  };
+
+  // ─── SEARCH HISTORY ───
+  const _SEARCH_HIST_KEY = 'nsl_yt_search_history';
+
+  function _getSearchHistory() {
+    try { return JSON.parse(localStorage.getItem(_SEARCH_HIST_KEY) || '[]'); } catch(_) { return []; }
+  }
+  function _addSearchHistory(query) {
+    if (!query) return;
+    let hist = _getSearchHistory().filter(h => h.toLowerCase() !== query.toLowerCase());
+    hist.unshift(query);
+    if (hist.length > 15) hist = hist.slice(0, 15);
+    localStorage.setItem(_SEARCH_HIST_KEY, JSON.stringify(hist));
+  }
+  window._clearSearchHistory = function() {
+    localStorage.removeItem(_SEARCH_HIST_KEY);
+    const el = document.getElementById('yt-search-history');
+    if (el) el.innerHTML = '<span style="font-size:11px;color:var(--on-surface-variant)">No recent searches</span>';
+  };
 
   // ─── UPLOAD MUSIC ───
   window.uploadMusicFile = async function(file, meta = {}) {
@@ -247,33 +344,13 @@
     return 'Other';
   }
 
-  // ─── YOUTUBE SEARCH ───
+  // ─── YOUTUBE SEARCH (via Invidious — free, no API key) ───
   window.searchYouTubeMusic = async function(query) {
-    if (!query || query.length < 2) return [];
-    try {
-      const searchUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(query + ' song audio')}`;
-      return [{ _youtubeSearch: true, query, url: searchUrl }];
-    } catch(e) { return []; }
+    return searchInvidious(query);
   };
 
   window.playYouTubeVideo = function(videoId, title) {
-    const overlay = document.createElement('div');
-    overlay.id = 'yt-player-overlay';
-    overlay.style.cssText = 'position:fixed;inset:0;z-index:9998;background:rgba(0,0,0,0.92);display:flex;flex-direction:column;align-items:center;justify-content:center;animation:fadeIn 0.2s ease';
-
-    overlay.innerHTML = `
-      <div style="width:100%;max-width:640px;padding:16px;text-align:center">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-          <h3 style="color:white;font-size:14px;font-weight:600;margin:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:80%">${escHtml(title || 'YouTube')}</h3>
-          <button onclick="document.getElementById('yt-player-overlay')?.remove()" style="background:none;border:none;color:white;cursor:pointer;font-size:20px">&times;</button>
-        </div>
-        <div style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;border-radius:12px">
-          <iframe src="https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0" style="position:absolute;top:0;left:0;width:100%;height:100%;border:none" allow="autoplay; encrypted-media" allowfullscreen></iframe>
-        </div>
-        <p style="color:rgba(255,255,255,0.5);font-size:11px;margin-top:12px">YouTube plays in foreground only (browser limitation)</p>
-      </div>`;
-
-    document.body.appendChild(overlay);
+    playYouTubeTrack(videoId, title, '', '', 0);
   };
 
   // ─── CURATED INDIAN MUSIC ───
@@ -498,21 +575,32 @@
     }
   };
 
-  // ─── SEARCH TAB (YouTube Primary + Archive.org Secondary) ───
+  // ─── SEARCH TAB (YouTube via Invidious + Archive.org) ───
   const YT_CATEGORIES = [
-    { lang: 'Malayalam', color: '#FF6B35', queries: ['Malayalam songs', 'Malayalam old songs', 'Malayalam new songs 2025', 'Malayalam devotional songs', 'Malayalam romantic songs', 'Malayalam film songs'] },
-    { lang: 'Hindi', color: '#FF9800', queries: ['Hindi songs', 'Hindi old songs', 'Bollywood songs 2025', 'Hindi devotional songs', 'Hindi romantic songs', 'Hindi classical songs'] },
-    { lang: 'Tamil', color: '#E91E63', queries: ['Tamil songs', 'Tamil old songs', 'Tamil new songs 2025', 'Tamil devotional songs', 'Tamil romantic songs', 'Kollywood songs'] },
-    { lang: 'Telugu', color: '#9C27B0', queries: ['Telugu songs', 'Telugu old songs', 'Telugu new songs 2025', 'Telugu devotional songs', 'Telugu romantic songs', 'Tollywood songs'] },
+    { lang: 'Malayalam', color: '#FF6B35', queries: ['Malayalam songs', 'Malayalam old hits', 'Malayalam new 2025', 'Malayalam devotional', 'Malayalam romantic', 'Mollywood songs'] },
+    { lang: 'Hindi', color: '#FF9800', queries: ['Hindi songs', 'Hindi old hits', 'Bollywood 2025', 'Hindi devotional', 'Hindi romantic', 'Hindi classical'] },
+    { lang: 'Tamil', color: '#E91E63', queries: ['Tamil songs', 'Tamil old hits', 'Tamil new 2025', 'Tamil devotional', 'Tamil romantic', 'Kollywood songs'] },
+    { lang: 'Telugu', color: '#9C27B0', queries: ['Telugu songs', 'Telugu old hits', 'Telugu new 2025', 'Telugu devotional', 'Telugu romantic', 'Tollywood songs'] },
   ];
 
   function _renderSearchTab(el) {
+    const hist = _getSearchHistory();
     el.innerHTML = `
       <div style="margin-bottom:12px">
         <div style="display:flex;gap:8px;margin-bottom:8px">
           <input type="search" id="yt-search-input" placeholder="Search any song on YouTube..." style="flex:1;padding:10px 14px;border-radius:12px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);color:var(--on-surface);font-size:13px;outline:none" onkeydown="if(event.key==='Enter')doYouTubeSearch()">
           <button onclick="doYouTubeSearch()" style="padding:10px 18px;border-radius:12px;border:none;background:var(--primary);color:var(--on-primary);font-size:12px;font-weight:700;cursor:pointer">Search</button>
         </div>
+        ${hist.length ? `
+        <div id="yt-search-history" style="margin-bottom:8px">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+            <span style="font-size:10px;font-weight:700;color:var(--on-surface-variant);text-transform:uppercase;letter-spacing:1px">Recent</span>
+            <button onclick="_clearSearchHistory()" style="background:none;border:none;color:var(--on-surface-variant);cursor:pointer;font-size:10px">Clear</button>
+          </div>
+          <div style="display:flex;flex-wrap:wrap;gap:6px">
+            ${hist.map(h => `<button onclick="document.getElementById('yt-search-input').value='${escHtml(h).replace(/'/g, "\\'")}';doYouTubeSearch()" style="padding:5px 10px;border-radius:16px;border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.03);color:var(--on-surface-variant);font-size:11px;cursor:pointer">${escHtml(h)}</button>`).join('')}
+          </div>
+        </div>` : '<div id="yt-search-history"></div>'}
       </div>
       <div id="yt-search-results" style="margin-bottom:16px"></div>
       <div style="font-size:11px;font-weight:700;color:var(--on-surface-variant);margin-bottom:10px;text-transform:uppercase;letter-spacing:1px">Browse by Language</div>
@@ -531,7 +619,7 @@
       `).join('')}
       <div style="margin-top:12px;padding:12px;border-radius:12px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.05)">
         <div style="font-size:11px;font-weight:700;color:var(--on-surface-variant);margin-bottom:6px">Direct Stream (Archive.org)</div>
-        <p style="font-size:11px;color:var(--on-surface-variant);margin:0 0 8px">Public domain & Creative Commons music — plays in background</p>
+        <p style="font-size:11px;color:var(--on-surface-variant);margin:0 0 8px">Public domain & Creative Commons — plays in background</p>
         <div style="display:flex;gap:8px">
           <input type="search" id="archive-search-input" placeholder="Search Archive.org..." style="flex:1;padding:8px 12px;border-radius:10px;border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.04);color:var(--on-surface);font-size:12px;outline:none" onkeydown="if(event.key==='Enter')doArchiveSearch()">
           <button onclick="doArchiveSearch()" style="padding:8px 14px;border-radius:10px;border:none;background:rgba(124,77,255,0.15);color:var(--primary);font-size:11px;font-weight:600;cursor:pointer">Search</button>
@@ -542,12 +630,14 @@
 
   window.doYouTubeSearch = function() {
     const q = document.getElementById('yt-search-input')?.value;
-    if (!q) return;
-    _openYouTubeSearch(q);
+    if (!q || q.length < 2) return;
+    _addSearchHistory(q);
+    _doInvidiousSearch(q, document.getElementById('yt-search-results'));
   };
 
   window.doYouTubeSearchFor = function(q) {
-    _openYouTubeSearch(q);
+    _addSearchHistory(q);
+    _doInvidiousSearch(q, document.getElementById('yt-search-results'));
   };
 
   window.doArchiveSearch = function() {
@@ -556,7 +646,6 @@
     _doArchiveSearch(q);
   };
 
-  let _archiveSearchTimeout;
   async function _doArchiveSearch(q) {
     const el = document.getElementById('archive-search-results');
     if (!el) return;
@@ -580,68 +669,42 @@
       </div>`).join('');
   }
 
-  function _openYouTubeSearch(query) {
-    const overlay = document.createElement('div');
-    overlay.id = 'yt-search-overlay';
-    overlay.style.cssText = 'position:fixed;inset:0;z-index:9998;background:rgba(0,0,0,0.95);display:flex;flex-direction:column;animation:fadeIn 0.2s ease';
-
-    overlay.innerHTML = `
-      <div style="padding:12px 16px;display:flex;align-items:center;gap:8px;border-bottom:1px solid rgba(255,255,255,0.1);background:rgba(0,0,0,0.5)">
-        <button onclick="document.getElementById('yt-search-overlay')?.remove()" style="background:none;border:none;color:white;cursor:pointer;font-size:20px">←</button>
-        <div style="flex:1;font-size:14px;font-weight:600;color:white;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escHtml(query)}</div>
-        <button onclick="_refreshYouTubeResults(document.getElementById('yt-overlay-search').value)" style="background:none;border:none;color:var(--primary);cursor:pointer;padding:4px"><span class="material-symbols-outlined" style="font-size:20px">refresh</span></button>
-      </div>
-      <div style="flex:1;overflow-y:auto;padding:0" id="yt-overlay-results">
-        <div style="padding:12px 16px">
-          <div style="border-radius:12px;overflow:hidden;background:#000;position:relative;padding-bottom:56.25%;height:0;margin-bottom:12px">
-            <iframe src="https://www.youtube.com/embed?listType=search&list=${encodeURIComponent(query)}" style="position:absolute;top:0;left:0;width:100%;height:100%;border:none" allow="autoplay; encrypted-media" allowfullscreen></iframe>
-          </div>
-          <div style="text-align:center;margin-bottom:16px">
-            <a href="https://www.youtube.com/results?search_query=${encodeURIComponent(query + ' song')}" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:6px;padding:10px 20px;border-radius:10px;background:rgba(255,0,0,0.15);color:#ff4444;font-size:13px;font-weight:600;text-decoration:none">
-              <span class="material-symbols-outlined" style="font-size:18px">open_in_new</span> Open in YouTube
-            </a>
-          </div>
-          <div style="display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin-bottom:16px">
-            <button onclick="document.getElementById('yt-overlay-search') && (document.getElementById('yt-overlay-search').value='${escHtml(query)} old songs');_refreshYouTubeResults('${escHtml(query)} old songs')" style="padding:5px 10px;border-radius:8px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.05);color:var(--on-surface-variant);font-size:10px;cursor:pointer">Old Songs</button>
-            <button onclick="document.getElementById('yt-overlay-search') && (document.getElementById('yt-overlay-search').value='${escHtml(query)} new 2025');_refreshYouTubeResults('${escHtml(query)} new 2025')" style="padding:5px 10px;border-radius:8px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.05);color:var(--on-surface-variant);font-size:10px;cursor:pointer">New 2025</button>
-            <button onclick="document.getElementById('yt-overlay-search') && (document.getElementById('yt-overlay-search').value='${escHtml(query)} romantic');_refreshYouTubeResults('${escHtml(query)} romantic')" style="padding:5px 10px;border-radius:8px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.05);color:var(--on-surface-variant);font-size:10px;cursor:pointer">Romantic</button>
-            <button onclick="document.getElementById('yt-overlay-search') && (document.getElementById('yt-overlay-search').value='${escHtml(query)} devotional');_refreshYouTubeResults('${escHtml(query)} devotional')" style="padding:5px 10px;border-radius:8px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.05);color:var(--on-surface-variant);font-size:10px;cursor:pointer">Devotional</button>
-            <button onclick="document.getElementById('yt-overlay-search') && (document.getElementById('yt-overlay-search').value='${escHtml(query)} hits');_refreshYouTubeResults('${escHtml(query)} hits')" style="padding:5px 10px;border-radius:8px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.05);color:var(--on-surface-variant);font-size:10px;cursor:pointer">Hits</button>
-          </div>
-          <div style="display:flex;gap:6px;align-items:center;margin-bottom:12px">
-            <input type="search" value="${escHtml(query)}" id="yt-overlay-search" style="flex:1;padding:8px 12px;border-radius:10px;border:1px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.08);color:white;font-size:13px;outline:none" onkeydown="if(event.key==='Enter')_refreshYouTubeResults(this.value)">
-            <button onclick="_refreshYouTubeResults(document.getElementById('yt-overlay-search').value)" style="padding:8px 14px;border-radius:10px;border:none;background:var(--primary);color:white;font-size:12px;font-weight:600;cursor:pointer">Go</button>
-          </div>
-        </div>
-        <div id="yt-overlay-list" style="padding:0 16px 16px"></div>
+  async function _doInvidiousSearch(query, container) {
+    if (!container) return;
+    container.innerHTML = `
+      <div style="text-align:center;padding:20px">
+        <span class="material-symbols-outlined animate-spin" style="color:var(--primary);font-size:24px">progress_activity</span>
+        <p style="color:var(--on-surface-variant);font-size:11px;margin-top:8px">Searching YouTube for "${escHtml(query)}"...</p>
       </div>`;
 
-    overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
-    document.body.appendChild(overlay);
+    const results = await searchInvidious(query);
 
-    setTimeout(() => {
-      const searchInput = document.getElementById('yt-overlay-search');
-      if (searchInput) searchInput.focus();
-    }, 300);
+    if (!results.length) {
+      container.innerHTML = `
+        <div style="text-align:center;padding:16px">
+          <p style="color:var(--on-surface-variant);font-size:12px;margin:0 0 8px">No results found</p>
+          <a href="https://www.youtube.com/results?search_query=${encodeURIComponent(query + ' song')}" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:8px;background:rgba(255,0,0,0.1);color:#ff4444;font-size:12px;font-weight:600;text-decoration:none">
+            <span class="material-symbols-outlined" style="font-size:16px">open_in_new</span> Search on YouTube
+          </a>
+        </div>`;
+      return;
+    }
+
+    results.forEach(t => { _trackCache[t.id] = t; });
+
+    container.innerHTML = results.map(t => `
+      <div style="display:flex;align-items:center;gap:10px;padding:8px;border-radius:10px;background:rgba(255,255,255,0.03);margin-bottom:4px;cursor:pointer" onclick="playYouTubeTrack('${t.videoId}','${escHtml(t.title).replace(/'/g, "\\'")}','${escHtml(t.artist).replace(/'/g, "\\'")}','${escHtml(t.thumbnail).replace(/'/g, "\\'")}',${t.duration})">
+        <div style="width:48px;height:36px;border-radius:6px;background:rgba(0,0,0,0.3);display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden">
+          <img src="${escHtml(t.thumbnail)}" style="width:100%;height:100%;object-fit:cover" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" loading="lazy">
+          <span class="material-symbols-outlined" style="font-size:16px;color:var(--on-surface-variant);display:none">play_circle</span>
+        </div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:12px;font-weight:600;color:var(--on-surface);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escHtml(t.title)}</div>
+          <div style="font-size:10px;color:var(--on-surface-variant)">${escHtml(t.artist)}${t.duration ? ' · ' + formatTrackDuration(t.duration) : ''}</div>
+        </div>
+        <button onclick="event.stopPropagation();MusicPlayer.addToQueue(_trackCache['${t.id}']);showToast('Added to queue','success')" style="background:rgba(124,77,255,0.15);border:none;border-radius:6px;padding:4px 8px;color:var(--primary);font-size:10px;font-weight:600;cursor:pointer;flex-shrink:0" title="Add to queue">+ Q</button>
+      </div>`).join('');
   }
-
-  window._refreshYouTubeResults = function(query) {
-    const el = document.getElementById('yt-overlay-list');
-    if (!el) return;
-    const searchUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(query + ' song')}`;
-    el.innerHTML = `
-      <a href="${searchUrl}" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:8px;padding:12px;border-radius:12px;background:rgba(255,0,0,0.1);border:1px solid rgba(255,0,0,0.2);margin-bottom:8px;text-decoration:none">
-        <span class="material-symbols-outlined" style="color:#ff4444;font-size:20px">play_circle</span>
-        <div>
-          <div style="color:white;font-size:13px;font-weight:600">Search "${escHtml(query)}" on YouTube</div>
-          <div style="color:rgba(255,255,255,0.4);font-size:10px;margin-top:2px">Tap to browse & play any song</div>
-        </div>
-      </a>
-      <div style="padding:12px;border-radius:10px;background:rgba(255,255,255,0.03);margin-top:8px">
-        <p style="color:var(--primary);font-size:11px;font-weight:600;margin:0 0 4px">Tip</p>
-        <p style="color:rgba(255,255,255,0.4);font-size:10px;margin:0">YouTube plays in the embedded player above. For background music (minimized/locked), upload your own MP3 files in the Upload tab.</p>
-      </div>`;
-  };
 
   window.playCachedTrack = async function(trackId) {
     const t = _trackCache[trackId];
@@ -659,6 +722,11 @@
       }
     }
     
+    if (t.source === 'youtube' && t.videoId) {
+      playYouTubeTrack(t.videoId, t.title, t.artist, t.thumbnail, t.duration);
+      return;
+    }
+
     MusicPlayer.play({ id: t.id, title: t.title, artist: t.artist, url: t.url, thumbnail: t.thumbnail || null, duration: t.duration, source: t.source });
   };
 
@@ -727,11 +795,17 @@
   }
 
   window.browseLanguageYT = function(lang) {
-    _openYouTubeSearch(lang + ' songs');
+    switchMusicLibTab('search');
+    setTimeout(() => {
+      const input = document.getElementById('yt-search-input');
+      if (input) { input.value = lang + ' songs'; }
+      _addSearchHistory(lang + ' songs');
+      _doInvidiousSearch(lang + ' songs', document.getElementById('yt-search-results'));
+    }, 100);
   };
 
-  window.browseLanguageMusic = async function(lang) {
-    _openYouTubeSearch(lang + ' songs');
+  window.browseLanguageMusic = function(lang) {
+    browseLanguageYT(lang);
   };
 
 })();

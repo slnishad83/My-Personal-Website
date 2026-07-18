@@ -22,6 +22,10 @@
     _retryCount: 0,
     _maxRetries: 3,
     _isOnline: navigator.onLine !== false,
+    crossfadeDuration: parseFloat(localStorage.getItem('nsl_music_crossfade') || '0'),
+    _sleepTimerEnd: null,
+    _sleepTimerInterval: null,
+    _isCrossfading: false,
   };
   window.MusicPlayer = Player;
 
@@ -73,6 +77,7 @@
     _updateMediaSession(track);
     _updateMiniPlayer(track);
     _showMiniPlayer();
+    _crossfadeIn();
   };
 
   Player.pause = function() {
@@ -225,6 +230,7 @@
     Player.currentTime = Player.audio.currentTime;
     _updateSeekUI();
     _updateMiniPlayerProgress();
+    _applyCrossfade();
     if ('mediaSession' in navigator && 'setPositionState' in navigator.mediaSession && Player.duration) {
       try {
         navigator.mediaSession.setPositionState({
@@ -309,6 +315,151 @@
       fullEl.style.color = Player.playbackSpeed !== 1 ? 'var(--primary)' : 'var(--on-surface-variant)';
     }
   }
+
+  // ─── CROSSFADE ───
+  Player.setCrossfade = function(seconds) {
+    Player.crossfadeDuration = Math.max(0, Math.min(10, seconds));
+    localStorage.setItem('nsl_music_crossfade', String(Player.crossfadeDuration));
+    _updateCrossfadeUI();
+  };
+
+  Player.cycleCrossfade = function() {
+    const opts = [0, 2, 3, 5, 8];
+    const idx = opts.indexOf(Player.crossfadeDuration);
+    Player.setCrossfade(opts[(idx + 1) % opts.length]);
+    showToast(Player.crossfadeDuration ? `Crossfade: ${Player.crossfadeDuration}s` : 'Crossfade off', 'info');
+  };
+
+  function _applyCrossfade() {
+    if (!Player.audio || Player.crossfadeDuration <= 0 || !Player.duration) return;
+    const remaining = Player.duration - Player.currentTime;
+    if (remaining < Player.crossfadeDuration && remaining > 0) {
+      const progress = remaining / Player.crossfadeDuration;
+      Player.audio.volume = Math.max(0, (Player.isMuted ? 0 : Player.volume) * progress);
+    }
+  }
+
+  function _crossfadeIn() {
+    if (Player.crossfadeDuration <= 0) return;
+    Player._isCrossfading = true;
+    Player.audio.volume = 0;
+    const targetVol = Player.isMuted ? 0 : Player.volume;
+    const step = targetVol / (Player.crossfadeDuration * 10);
+    const fadeIn = setInterval(() => {
+      if (!Player._isCrossfading || Player.audio.volume >= targetVol) {
+        Player.audio.volume = targetVol;
+        Player._isCrossfading = false;
+        clearInterval(fadeIn);
+        return;
+      }
+      Player.audio.volume = Math.min(Player.audio.volume + step, targetVol);
+    }, 100);
+  }
+
+  function _updateCrossfadeUI() {
+    const el = document.getElementById('music-crossfade-btn');
+    if (el) {
+      el.style.color = Player.crossfadeDuration > 0 ? 'var(--primary)' : 'var(--on-surface-variant)';
+      el.title = Player.crossfadeDuration ? `Crossfade: ${Player.crossfadeDuration}s` : 'Crossfade off';
+    }
+  }
+
+  // ─── SLEEP TIMER ───
+  Player.setSleepTimer = function(minutes) {
+    Player.cancelSleepTimer();
+    if (minutes <= 0) return;
+    Player._sleepTimerEnd = Date.now() + minutes * 60000;
+    Player._sleepTimerInterval = setInterval(() => {
+      const remaining = Player._sleepTimerEnd - Date.now();
+      if (remaining <= 0) {
+        Player.cancelSleepTimer();
+        Player.pause();
+        showToast('Sleep timer ended', 'info');
+        return;
+      }
+      if (remaining < 10000 && Player.isPlaying) {
+        const vol = Player.isMuted ? 0 : Player.volume;
+        Player.audio.volume = Math.max(0, vol * (remaining / 10000));
+      }
+      _updateSleepTimerUI(remaining);
+    }, 1000);
+    showToast(`Sleep timer: ${minutes} min`, 'success');
+    _updateSleepTimerUI(minutes * 60000);
+  };
+
+  Player.cancelSleepTimer = function() {
+    if (Player._sleepTimerInterval) clearInterval(Player._sleepTimerInterval);
+    Player._sleepTimerInterval = null;
+    Player._sleepTimerEnd = null;
+    if (Player.audio) Player.audio.volume = Player.isMuted ? 0 : Player.volume;
+    _updateSleepTimerUI(0);
+  };
+
+  Player.showSleepTimerMenu = function() {
+    const existing = document.getElementById('sleep-timer-menu');
+    if (existing) { existing.remove(); return; }
+
+    const overlay = document.createElement('div');
+    overlay.id = 'sleep-timer-menu';
+    overlay.style.cssText = 'position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,0.85);display:flex;align-items:center;justify-content:center;animation:fadeIn 0.2s ease';
+
+    const panel = document.createElement('div');
+    panel.style.cssText = 'background:var(--surface-container,#1e1e2e);border-radius:20px;padding:24px;max-width:320px;width:85vw;color:var(--on-surface)';
+
+    const presets = [
+      { label: '15 min', minutes: 15 },
+      { label: '30 min', minutes: 30 },
+      { label: '45 min', minutes: 45 },
+      { label: '1 hour', minutes: 60 },
+      { label: '2 hours', minutes: 120 },
+    ];
+
+    panel.innerHTML = `
+      <h3 style="margin:0 0 16px;font-size:16px;font-weight:700;text-align:center">Sleep Timer</h3>
+      ${Player._sleepTimerEnd ? `<p style="text-align:center;color:var(--primary);font-size:13px;margin:0 0 12px">Active — auto-stop in <span id="sleep-timer-countdown"></span></p>` : ''}
+      <div style="display:flex;flex-direction:column;gap:8px">
+        ${presets.map(p => `<button onclick="MusicPlayer.setSleepTimer(${p.minutes});document.getElementById('sleep-timer-menu')?.remove()" style="padding:12px;border-radius:12px;border:1px solid ${Player._sleepTimerEnd ? 'rgba(255,255,255,0.08)' : 'rgba(124,77,255,0.3)'};background:rgba(124,77,255,0.08);color:var(--on-surface);font-size:14px;font-weight:600;cursor:pointer;text-align:center">${p.label}</button>`).join('')}
+      </div>
+      ${Player._sleepTimerEnd ? `<button onclick="MusicPlayer.cancelSleepTimer();document.getElementById('sleep-timer-menu')?.remove()" style="width:100%;margin-top:12px;padding:12px;border-radius:12px;border:1px solid rgba(239,68,68,0.3);background:rgba(239,68,68,0.1);color:var(--error);font-size:13px;font-weight:700;cursor:pointer">Cancel Timer</button>` : ''}
+      <button onclick="document.getElementById('sleep-timer-menu')?.remove()" style="width:100%;margin-top:8px;padding:10px;border-radius:10px;border:none;background:rgba(255,255,255,0.06);color:var(--on-surface-variant);font-size:13px;font-weight:600;cursor:pointer">Close</button>`;
+
+    overlay.appendChild(panel);
+    overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+    document.body.appendChild(overlay);
+  };
+
+  function _updateSleepTimerUI(ms) {
+    const el = document.getElementById('music-sleep-timer');
+    if (!el) return;
+    if (!ms || ms <= 0) { el.textContent = ''; el.style.display = 'none'; return; }
+    el.style.display = '';
+    const m = Math.floor(ms / 60000);
+    const s = Math.floor((ms % 60000) / 1000);
+    el.textContent = `${m}:${String(s).padStart(2, '0')}`;
+  }
+
+  // ─── SHARE TRACK ───
+  Player.shareTrack = function(track) {
+    const t = track || Player._currentTrack;
+    if (!t) return;
+    if (navigator.share) {
+      navigator.share({ title: t.title || 'Song', text: `${t.title || 'Song'} — ${t.artist || 'Unknown'}`, url: window.location.href }).catch(() => {});
+    } else if (navigator.clipboard) {
+      navigator.clipboard.writeText(`${t.title || 'Song'} — ${t.artist || 'Unknown'}`).then(() => showToast('Copied to clipboard', 'success'));
+    }
+  };
+
+  // ─── QUEUE REORDER ───
+  Player.moveInQueue = function(fromIdx, toIdx) {
+    if (fromIdx < 0 || fromIdx >= Player.queue.length) return;
+    if (toIdx < 0 || toIdx >= Player.queue.length) return;
+    const [item] = Player.queue.splice(fromIdx, 1);
+    Player.queue.splice(toIdx, 0, item);
+    if (Player.queueIndex === fromIdx) Player.queueIndex = toIdx;
+    else if (fromIdx < Player.queueIndex && toIdx >= Player.queueIndex) Player.queueIndex--;
+    else if (fromIdx > Player.queueIndex && toIdx <= Player.queueIndex) Player.queueIndex++;
+    _updateQueueUI();
+  };
 
   // ─── BACKGROUND MODE (Capacitor) ───
   let _bgModeActive = false;
@@ -470,21 +621,40 @@
       return;
     }
     list.innerHTML = Player.queue.map((t, i) => `
-      <div class="flex items-center gap-3 p-2 rounded-lg ${i === Player.queueIndex ? 'bg-primary/10' : 'hover:bg-white/5'} cursor-pointer" onclick="MusicPlayer.playTrack(${i})">
-        <div style="width:40px;height:40px;border-radius:6px;overflow:hidden;flex-shrink:0;background:rgba(255,255,255,0.05);display:flex;align-items:center;justify-content:center">
-          ${t.thumbnail ? `<img src="${escHtml(t.thumbnail)}" style="width:100%;height:100%;object-fit:cover">` : '<span class="material-symbols-outlined" style="font-size:18px;color:var(--on-surface-variant)">music_note</span>'}
+      <div class="queue-item" data-idx="${i}" draggable="true" ondragstart="_qDragStart(event,${i})" ondragover="event.preventDefault()" ondrop="_qDrop(event,${i})" ondragend="_qDragEnd()" style="display:flex;align-items:center;gap:3px;padding:6px 8px;border-radius:10px;background:${i===Player.queueIndex?'rgba(124,77,255,0.1)':'rgba(255,255,255,0.02)'};margin-bottom:3px;transition:background 0.15s">
+        <span class="material-symbols-outlined" style="font-size:14px;color:var(--on-surface-variant);cursor:grab;opacity:0.4;flex-shrink:0;user-select:none" title="Drag to reorder">drag_indicator</span>
+        <div style="width:36px;height:36px;border-radius:6px;overflow:hidden;flex-shrink:0;background:rgba(255,255,255,0.05);display:flex;align-items:center;justify-content:center;cursor:pointer" onclick="MusicPlayer.playTrack(${i})">
+          ${t.thumbnail ? `<img src="${escHtml(t.thumbnail)}" style="width:100%;height:100%;object-fit:cover">` : '<span class="material-symbols-outlined" style="font-size:14px;color:var(--on-surface-variant)">music_note</span>'}
         </div>
-        <div class="flex-1 min-w-0">
-          <div style="font-size:13px;font-weight:${i===Player.queueIndex?700:500};${i===Player.queueIndex?'color:var(--primary)':''}" class="truncate">${escHtml(t.title)}</div>
-          <div style="font-size:11px;color:var(--on-surface-variant)" class="truncate">${escHtml(t.artist)}</div>
+        <div class="flex-1 min-w-0" style="cursor:pointer" onclick="MusicPlayer.playTrack(${i})">
+          <div style="font-size:12px;font-weight:${i===Player.queueIndex?700:500};${i===Player.queueIndex?'color:var(--primary)':''}" class="truncate">${escHtml(t.title)}</div>
+          <div style="font-size:10px;color:var(--on-surface-variant)" class="truncate">${escHtml(t.artist)}</div>
         </div>
-        <span style="font-size:10px;color:var(--on-surface-variant)">${formatTrackDuration(t.duration)}</span>
-        <button onclick="event.stopPropagation();MusicPlayer.removeFromQueue(${i})" style="background:none;border:none;color:var(--on-surface-variant);cursor:pointer;padding:4px">
-          <span class="material-symbols-outlined" style="font-size:16px">close</span>
+        <span style="font-size:10px;color:var(--on-surface-variant);flex-shrink:0">${formatTrackDuration(t.duration)}</span>
+        <button onclick="event.stopPropagation();MusicPlayer.removeFromQueue(${i})" style="background:none;border:none;color:var(--on-surface-variant);cursor:pointer;padding:4px;flex-shrink:0">
+          <span class="material-symbols-outlined" style="font-size:14px">close</span>
         </button>
       </div>
     `).join('');
   }
+
+  let _qDragIdx = null;
+  window._qDragStart = function(e, idx) {
+    _qDragIdx = idx;
+    e.dataTransfer.effectAllowed = 'move';
+    e.target.closest('.queue-item').style.opacity = '0.4';
+  };
+  window._qDrop = function(e, toIdx) {
+    e.preventDefault();
+    if (_qDragIdx !== null && _qDragIdx !== toIdx) {
+      Player.moveInQueue(_qDragIdx, toIdx);
+    }
+    _qDragIdx = null;
+  };
+  window._qDragEnd = function() {
+    _qDragIdx = null;
+    document.querySelectorAll('.queue-item').forEach(el => el.style.opacity = '');
+  };
 
   // ─── MINI PLAYER ───
   function _showMiniPlayer() {
@@ -602,10 +772,17 @@
           </button>
         </div>
 
-        <div style="display:flex;align-items:center;justify-content:center;gap:12px;margin-bottom:8px">
+        <div style="display:flex;align-items:center;justify-content:center;gap:12px;margin-bottom:8px;flex-wrap:wrap">
           <button id="music-full-speed" onclick="MusicPlayer.cyclePlaybackSpeed()" style="background:rgba(255,255,255,0.06);border:none;border-radius:8px;padding:4px 10px;color:${Player.playbackSpeed!==1?'var(--primary)':'var(--on-surface-variant)'};cursor:pointer;font-size:11px;font-weight:700">${Player.playbackSpeed}x</button>
-          <button id="music-speed-btn" onclick="MusicPlayer.cyclePlaybackSpeed()" style="background:rgba(255,255,255,0.06);border:none;border-radius:8px;padding:4px 10px;color:${Player.playbackSpeed!==1?'var(--primary)':'var(--on-surface-variant)'};cursor:pointer;font-size:11px;font-weight:700;display:none">${Player.playbackSpeed}x</button>
-          <button onclick="MusicPlayer.showAudioInfo()" style="background:rgba(255,255,255,0.06);border:none;border-radius:8px;padding:4px 10px;color:var(--on-surface-variant);cursor:pointer;font-size:11px;font-weight:600">Audio Info</button>
+          <button id="music-crossfade-btn" onclick="MusicPlayer.cycleCrossfade()" style="background:rgba(255,255,255,0.06);border:none;border-radius:8px;padding:4px 10px;color:${Player.crossfadeDuration>0?'var(--primary)':'var(--on-surface-variant)'};cursor:pointer;font-size:11px;font-weight:700" title="${Player.crossfadeDuration?'Crossfade: '+Player.crossfadeDuration+'s':'Crossfade off'}">${Player.crossfadeDuration ? Player.crossfadeDuration+'s' : 'X-Fade'}</button>
+          <button onclick="MusicPlayer.showSleepTimerMenu()" style="background:rgba(255,255,255,0.06);border:none;border-radius:8px;padding:4px 10px;color:${Player._sleepTimerEnd?'var(--primary)':'var(--on-surface-variant)'};cursor:pointer;font-size:11px;font-weight:700;display:flex;align-items:center;gap:4px" title="Sleep Timer">
+            <span class="material-symbols-outlined" style="font-size:14px">bedtime</span>
+            <span id="music-sleep-timer" style="display:none"></span>
+            ${!Player._sleepTimerEnd ? 'Sleep' : ''}
+          </button>
+          <button onclick="MusicPlayer.shareTrack()" style="background:rgba(255,255,255,0.06);border:none;border-radius:8px;padding:4px 10px;color:var(--on-surface-variant);cursor:pointer;font-size:11px;font-weight:700" title="Share">
+            <span class="material-symbols-outlined" style="font-size:14px">share</span>
+          </button>
         </div>
       </div>`;
 
