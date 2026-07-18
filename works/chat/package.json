@@ -27,24 +27,24 @@
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
-    "@capacitor/android": "^8.3.4",
-    "@capacitor/app": "^8.1.0",
-    "@capacitor/cli": "^8.3.4",
-    "@capacitor/core": "^8.3.4",
-    "@capacitor/ios": "^8.3.4",
+    "@capacitor/android": "^8.4.2",
+    "@capacitor/app": "^8.1.1",
+    "@capacitor/cli": "^8.4.2",
+    "@capacitor/core": "^8.4.2",
+    "@capacitor/ios": "^8.4.2",
     "@capacitor/keyboard": "^8.0.5",
-    "@capacitor/push-notifications": "^8.1.1",
-    "@capacitor/status-bar": "^8.0.2",
-    "acorn": "^8.16.0"
+    "@capacitor/push-notifications": "^8.1.2",
+    "@capacitor/status-bar": "^8.0.3",
+    "acorn": "^8.17.0"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
-    "@tailwindcss/cli": "^4.3.2",
-    "@tailwindcss/vite": "^4.3.2",
-    "electron": "^33.3.1",
+    "@tailwindcss/cli": "^4.3.3",
+    "@tailwindcss/vite": "^4.3.3",
+    "electron": "^33.4.11",
     "electron-builder": "^25.1.8",
-    "eslint": "^10.5.0",
-    "tailwindcss": "^4.3.2",
-    "vite": "^8.1.4"
+    "eslint": "^10.7.0",
+    "tailwindcss": "^4.3.3",
+    "vite": "^8.1.5"
   }
 }
