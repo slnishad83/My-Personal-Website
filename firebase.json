@@ -16,12 +16,12 @@
   "hosting": {
     "public": ".",
     "cleanUrls": true,
-    "trailingSlash": false,
+    "trailingSlash": true,
     "redirects": [
       {
         "source": "/works/chat",
         "type": 301,
-        "destination": "/works/chat/dist"
+        "destination": "/works/chat/dist/"
       },
       {
         "source": "/works/chat/",
