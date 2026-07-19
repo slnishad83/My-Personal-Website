@@ -108,7 +108,7 @@ html:not(.dark) .wa-chips-scroll {
   scrollbar-color: rgba(0,0,0,0.2) transparent;
 }
 .wa-chips-scroll::-webkit-scrollbar {
-  height: 4px;
+  height: 6px;
 }
 .wa-chips-scroll::-webkit-scrollbar-track {
   background: transparent;
