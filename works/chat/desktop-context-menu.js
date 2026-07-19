@@ -87,8 +87,8 @@
     const isMyMsg = msgEl?.classList?.contains('my-message');
     const items = [
       { icon: '↩', label: 'Reply', shortcut: '', action: () => { if (typeof replyToMessage === 'function') replyToMessage(msgId); } },
-      { icon: '🧵', label: 'Thread', action: () => { if (window.openThreadPanel) { const msgEl2 = document.querySelector(`[data-msg-id="${msgId}"]`); const msgText = msgEl2?.querySelector('.msg-text, .message-bubble')?.textContent || ''; window.openThreadPanel(msgId, { text: msgText.substring(0, 200) }); } } },
-      { icon: '⟳', label: 'Forward', action: () => { if (typeof forwardMessage === 'function') forwardMessage(msgId); } },
+      { icon: '🌐', label: 'Translate', action: () => { if (typeof showTranslationPopup === 'function') showTranslationPopup(msgId); } },
+      { icon: '⟳', label: 'Forward', action: () => { if (typeof openForwardModal === 'function') openForwardModal(msgId); } },
       { icon: '📋', label: 'Copy', shortcut: 'Ctrl+C', action: () => {
         const text = msgEl?.querySelector('.msg-text, .message-bubble')?.textContent;
         if (text) navigator.clipboard?.writeText(text);

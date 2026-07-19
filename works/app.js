@@ -7744,7 +7744,7 @@ function _applyPressureToCanvas(canvas, ctx) {
 }
 
 /* WhatsApp Filter Chip Functions */
-const WA_DEFAULT_FILTERS = ['all', 'unread', 'favourites', 'groups'];
+const WA_DEFAULT_FILTERS = ['all', 'unread', 'groups'];
 const WA_FILTER_CATALOG = [
   { id: 'all', label: 'All', icon: 'chat', searchLabel: 'all', emptyIcon: 'chat' },
   { id: 'unread', label: 'Unread', icon: 'mark_chat_unread', searchLabel: 'unread', emptyIcon: 'check_circle', emptyTitle: 'No unread chats', emptyDesc: "You're all caught up." },
@@ -7941,9 +7941,9 @@ window.renderWaFilterChips = function() {
 
   let activeFilters;
   try {
-    activeFilters = JSON.parse(localStorage.getItem('nsl_wa_filters')) || ['all', 'unread', 'favourites', 'groups'];
+    activeFilters = JSON.parse(localStorage.getItem('nsl_wa_filters')) || ['all', 'unread', 'groups'];
   } catch(e) {
-    activeFilters = ['all', 'unread', 'favourites', 'groups'];
+    activeFilters = ['all', 'unread', 'groups'];
   }
 
   const labelMap = {
@@ -7999,16 +7999,10 @@ function _fitFilterChips(container) {
     }
   }
 
-  // If no chips are hidden, show expand button as just the manage icon
-  if (hiddenCount === 0) {
-    addBtn.style.display = '';
-    addBtn.querySelector('.material-symbols-outlined').textContent = 'tune';
-    addBtn.onclick = function() { openManageFiltersDialog(); };
-  } else {
-    addBtn.style.display = '';
-    addBtn.querySelector('.material-symbols-outlined').textContent = '+' + hiddenCount;
-    addBtn.onclick = function() { toggleFilterExpand(); };
-  }
+  // Always show as a clean filter/tune icon
+  addBtn.style.display = '';
+  addBtn.querySelector('.material-symbols-outlined').textContent = 'tune';
+  addBtn.onclick = function() { openManageFiltersDialog(); };
 }
 
 window.toggleFilterExpand = function() {
@@ -8040,9 +8034,9 @@ window.openManageFiltersDialog = function() {
 
   let activeFilters;
   try {
-    activeFilters = JSON.parse(localStorage.getItem('nsl_wa_filters')) || ['all', 'unread', 'favourites', 'groups'];
+    activeFilters = JSON.parse(localStorage.getItem('nsl_wa_filters')) || ['all', 'unread', 'groups'];
   } catch(e) {
-    activeFilters = ['all', 'unread', 'favourites', 'groups'];
+    activeFilters = ['all', 'unread', 'groups'];
   }
 
   const allAvailable = [
@@ -8150,7 +8144,7 @@ window.openManageFiltersDialog = function() {
   };
 
   window.resetFiltersToDefault = function() {
-    activeFilters = ['all', 'unread', 'favourites', 'groups'];
+    activeFilters = ['all', 'unread', 'groups'];
     save();
   };
 

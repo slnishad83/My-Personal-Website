@@ -2083,116 +2083,16 @@ html.dark .call-history-filters button:hover {
   transform-origin: bottom left !important;
 }
 
-/* ── Reply preview bar adaptation ── */
-#reply-preview {
-  background: var(--wa-footer-bg, #202c33) !important;
-  border-top-color: rgba(134, 150, 160, 0.15) !important;
-  padding: 8px 14px !important;
-}
-
-/* ── Format bar adaptation ── */
-#format-bar {
-  background: var(--wa-footer-bg, #202c33) !important;
-  border-top-color: rgba(134, 150, 160, 0.15) !important;
-}
-
-/* ── Recording bar adaptation ── */
-#recording-bar {
-  background: var(--wa-footer-bg, #202c33) !important;
-  border-top-color: rgba(134, 150, 160, 0.15) !important;
-}
-
-/* ── Light mode overrides ── */
-html:not(.dark) .wa-input-footer {
-  --wa-footer-bg: #f0f2f5;
-  --wa-input-bg: #ffffff;
-  --wa-icon-color: #54656f;
-  --wa-icon-hover: #3b4a54;
-  --wa-text-color: #111b21;
-  --wa-placeholder: #667781;
-  --wa-green: #00a884;
-  --wa-green-hover: #06cf9c;
-  --wa-send-icon-color: #ffffff;
-}
-
-/* ── Mobile responsiveness ── */
+/* ── Mobile: fix emoji/attach menu positioning for bottom nav + safe areas ── */
 @media (max-width: 767px) {
-  .wa-input-footer {
-    padding: 5px 6px;
-    gap: 6px;
+  #emoji-picker {
+    left: 8px !important;
+    bottom: calc(72px + env(safe-area-inset-bottom, 0px)) !important;
   }
-  .wa-input-box {
-    padding: 4px 4px;
-    gap: 0;
+  #attach-menu {
+    left: 8px !important;
+    bottom: calc(72px + env(safe-area-inset-bottom, 0px)) !important;
   }
-  .wa-input-icon {
-    width: 32px;
-    height: 32px;
-  }
-  .wa-input-icon .material-symbols-outlined {
-    font-size: 22px;
-  }
-  .wa-send-mic-btn {
-    width: 40px;
-    height: 40px;
-  }
-  .wa-send-mic-btn .material-symbols-outlined {
-    font-size: 20px;
-  }
-  .wa-textarea {
-    font-size: 14px;
-    padding: 5px 4px;
-    min-height: 56px;
-  }
-}
-
-/* ── Circular send/mic button (separate, right side) ── */
-.wa-send-mic-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 42px;
-  height: 42px;
-  flex-shrink: 0;
-  border: none;
-  background: var(--wa-green, #00a884);
-  color: var(--wa-send-icon-color, #111b21);
-  border-radius: 50%;
-  cursor: pointer;
-  transition: background 0.15s, transform 0.1s;
-  padding: 0;
-  margin-bottom: 0;
-  align-self: flex-end;
-}
-.wa-send-mic-btn:hover {
-  background: var(--wa-green-hover, #06cf9c);
-}
-.wa-send-mic-btn:active {
-  transform: scale(0.92);
-}
-.wa-send-mic-btn .material-symbols-outlined {
-  font-size: 22px;
-}
-
-/* Send icon rotation to match WhatsApp */
-#send-btn .material-symbols-outlined {
-  transform: rotate(-42deg) translateX(1px);
-}
-
-/* ── Emoji picker: reposition to bottom-left ── */
-#emoji-picker {
-  left: 10px !important;
-  right: auto !important;
-  bottom: 62px !important;
-  transform-origin: bottom left !important;
-}
-
-/* ── Attach menu: reposition above attach button ── */
-#attach-menu {
-  left: 44px !important;
-  right: auto !important;
-  bottom: 62px !important;
-  transform-origin: bottom left !important;
 }
 
 /* ── Reply preview bar adaptation ── */
@@ -2254,6 +2154,7 @@ html:not(.dark) .wa-input-footer {
   .wa-textarea {
     font-size: 14px;
     padding: 5px 4px;
+    min-height: 56px;
   }
 }
 

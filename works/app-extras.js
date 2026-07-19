@@ -967,8 +967,7 @@ let _forwardOverlayCleanup = null;
 function _closeForwardModal() {
   const overlay = document.getElementById('_forward-overlay');
   if (overlay) {
-    overlay.classList.add('hidden');
-    // Remove event listeners
+    overlay.style.display = 'none';
     if (_forwardOverlayCleanup) {
       _forwardOverlayCleanup();
       _forwardOverlayCleanup = null;
@@ -1008,7 +1007,7 @@ function openForwardModal(msgId) {
     list.appendChild(item);
   });
   
-  overlay.classList.remove('hidden');
+  overlay.style.display = 'flex';
 }
 
 function _createForwardOverlay() {
@@ -1019,8 +1018,7 @@ function _createForwardOverlay() {
   
   const overlay = document.createElement('div');
   overlay.id = '_forward-overlay';
-  overlay.className = 'hidden';
-  overlay.style.cssText = 'position:fixed; inset:0; z-index:9998; background:rgba(0,0,0,0.6); backdrop-filter:blur(4px); display:flex; align-items:center; justify-content:center;';
+  overlay.style.cssText = 'position:fixed; inset:0; z-index:9998; background:rgba(0,0,0,0.6); backdrop-filter:blur(4px); display:none; align-items:center; justify-content:center;';
   
   const modal = document.createElement('div');
   modal.style.cssText = 'background:var(--surface-container); border:1px solid var(--outline-variant); border-radius:24px; width:100%; max-width:440px; max-height:80vh; display:flex; flex-direction:column; margin:16px; overflow:hidden; box-shadow:0 24px 64px rgba(0,0,0,0.5);';

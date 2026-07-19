@@ -8,21 +8,29 @@
 
   function initMessageScheduler() {
     // 1. Inject "Schedule" option into the Attachment menu
+    var _scheduleBtnHtml = '<button class="flex flex-col items-center gap-1.5 group schedule-msg-btn" onclick="toggleAttachMenu();window.openMessageScheduler()" role="menuitem"><div class="w-12 h-12 rounded-2xl bg-[#E64A19] flex items-center justify-center transition-transform group-hover:scale-105 group-active:scale-95"><span class="material-symbols-outlined text-white text-[22px]" style="font-variation-settings:\'FILL\' 1;">schedule_send</span></div><span class="text-[11px] text-on-surface-variant font-medium">Schedule</span></button>';
+
+    function _tryInjectScheduleBtn() {
+      var attachMenu = document.querySelector('#attach-menu .grid');
+      if (attachMenu && !attachMenu.querySelector('.schedule-msg-btn')) {
+        attachMenu.insertAdjacentHTML('beforeend', _scheduleBtnHtml);
+        return true;
+      }
+      return false;
+    }
+
+    // Try immediately, then retry with a timer until success (max 5 seconds)
+    if (!_tryInjectScheduleBtn()) {
+      var _attempts = 0;
+      var _retryTimer = setInterval(function() {
+        _attempts++;
+        if (_tryInjectScheduleBtn() || _attempts > 50) clearInterval(_retryTimer);
+      }, 100);
+    }
+
+    // Also listen for MutationBus as fallback
     if (window.MutationBus) {
-      window.MutationBus.onBodyChildList('inject-schedule-btn', () => {
-        const attachMenu = document.querySelector('#attach-menu .grid');
-        if (attachMenu && !attachMenu.querySelector('.schedule-msg-btn')) {
-          const btnHtml = `
-            <button class="flex flex-col items-center gap-1.5 group schedule-msg-btn" onclick="toggleAttachMenu();window.openMessageScheduler()" role="menuitem">
-              <div class="w-12 h-12 rounded-2xl bg-[#E64A19] flex items-center justify-center transition-transform group-hover:scale-105 group-active:scale-95">
-                <span class="material-symbols-outlined text-white text-[22px]" style="font-variation-settings:'FILL' 1;">schedule_send</span>
-              </div>
-              <span class="text-[11px] text-on-surface-variant font-medium">Schedule</span>
-            </button>
-          `;
-          attachMenu.insertAdjacentHTML('beforeend', btnHtml);
-        }
-      });
+      window.MutationBus.onBodyChildList('inject-schedule-btn', function() { _tryInjectScheduleBtn(); });
     }
 
     // Start background poller to send scheduled messages
