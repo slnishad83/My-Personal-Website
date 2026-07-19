@@ -489,7 +489,7 @@ function processIndexHtml() {
   html = html.replace(/<noscript>[\s\S]*?<\/noscript>\s*\n?/, '');
 
   // Add noscript to body
-  html = html.replace(/<body/, `<body>\n  <noscript><div style="display:flex;align-items:center;justify-content:center;min-height:100vh;background:#11131c;color:#e1e1ef;font-family:system-ui,sans-serif;padding:24px;text-align:center;"><div><h1 style="font-size:24px;margin-bottom:12px;">NSL Chat requires JavaScript</h1><p style="color:#918fa0;font-size:14px;">Please enable JavaScript in your browser settings to use NSL Chat.</p></div></div></noscript>`);
+  html = html.replace(/<body([^>]*)>/, `<body$1>\n  <noscript><div style="display:flex;align-items:center;justify-content:center;min-height:100vh;background:#11131c;color:#e1e1ef;font-family:system-ui,sans-serif;padding:24px;text-align:center;"><div><h1 style="font-size:24px;margin-bottom:12px;">NSL Chat requires JavaScript</h1><p style="color:#918fa0;font-size:14px;">Please enable JavaScript in your browser settings to use NSL Chat.</p></div></div></noscript>`);
 
   // Replace all individual local script tags with bundle
   const scriptRegex = /<script src="(?!http)[^"]*\.js"(?:\s*[^>]*)?><\/script>\s*\n?/g;
