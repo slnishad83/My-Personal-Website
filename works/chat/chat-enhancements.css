@@ -2272,11 +2272,7 @@ html:not(.dark) .wa-input-footer {
   align-items: center !important;
   gap: 8px !important;
   overflow-x: auto !important;
-  scrollbar-width: none !important; /* Firefox */
   border-bottom: none !important;
-}
-#wa-filter-chips::-webkit-scrollbar {
-  display: none !important; /* Chrome, Safari, Opera */
 }
 .wa-chip-add {
   --wa-chip-bg: #202c33;
