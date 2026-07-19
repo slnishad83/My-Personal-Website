@@ -29,6 +29,22 @@
   };
   window.MusicPlayer = Player;
 
+  // Safety fallback — playlist-core.js defines the real version, but this prevents crashes if load order changes
+  if (typeof window.formatTrackDuration !== 'function') {
+    window.formatTrackDuration = function(seconds) {
+      if (!seconds || seconds <= 0) return '0:00';
+      var m = Math.floor(seconds / 60);
+      var s = Math.floor(seconds % 60);
+      return m + ':' + String(s).padStart(2, '0');
+    };
+  }
+  if (typeof window.showToast !== 'function') {
+    window.showToast = function(msg) { console.log('[Music]', msg); };
+  }
+  if (typeof window.escHtml !== 'function') {
+    window.escHtml = function(s) { return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); };
+  }
+
   function _haptic(style) {
     try {
       if (navigator.vibrate) {
@@ -44,7 +60,6 @@
   function _init() {
     Player.audio = new Audio();
     Player.audio.preload = 'auto';
-    Player.audio.crossOrigin = 'anonymous';
 
     Player.audio.addEventListener('timeupdate', _onTimeUpdate);
     Player.audio.addEventListener('loadedmetadata', _onMetadata);
@@ -983,6 +998,9 @@
   window.openFullPlayer = function() {
     const track = Player._currentTrack;
     if (!track) { showToast('No track playing', 'info'); return; }
+
+    const existingOverlay = document.getElementById('full-player-overlay');
+    if (existingOverlay) existingOverlay.remove();
 
     const overlay = document.createElement('div');
     overlay.id = 'full-player-overlay';

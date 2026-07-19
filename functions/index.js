@@ -4,7 +4,7 @@ const { onDocumentCreated, onDocumentUpdated, onDocumentDeleted } = require('fir
 const { onSchedule } = require('firebase-functions/v2/scheduler');
 const { defineSecret } = require('firebase-functions/params');
 
-if (!admin.apps.length) {
+if (!admin.getApps().length) {
   admin.initializeApp();
 }
 
@@ -2653,5 +2653,256 @@ exports.setDndSchedule = onCall(
     return { ok: true };
   }
 );
+
+// ─── YOUTUBE INNERTUBE: Search + Stream URL extraction ───
+const YOUTUBE_CLIENTS = {
+  WEB: { clientName: 'WEB', clientVersion: '2.20250101.00.00', apiKey: 'AIzaSyAO_FJ2SlqU8Q4STEHLGCilw_Y9_11qcW8' },
+  ANDROID: { clientName: 'ANDROID', clientVersion: '19.09.37', androidSdkVersion: 30, apiKey: 'AIzaSyAO_FJ2SlqU8Q4STEHLGCilw_Y9_11qcW8' },
+  IOS: { clientName: 'IOS', clientVersion: '19.09.3', deviceModel: 'iPhone14,3' },
+  TVHTML5_SIMPLY_EMBEDDED: { clientName: 'TVHTML5_SIMPLY_EMBEDDED_PLAYER', clientVersion: '2.0' },
+};
+
+exports.youtubeSearch = onRequest(
+  { cors: true, timeoutSeconds: 30, memory: '256MB' },
+  async (req, res) => {
+    if (req.method === 'OPTIONS') { res.status(204).send(''); return; }
+    res.set('Access-Control-Allow-Origin', '*');
+    res.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+    res.set('Access-Control-Allow-Headers', 'Content-Type');
+
+    const { q, videoId, lang } = req.query || {};
+    const body = req.method === 'POST' ? req.body : {};
+
+    try {
+      if (videoId) {
+        const streamUrl = await _getYouTubeStreamUrl(videoId);
+        if (streamUrl) {
+          res.json({ ok: true, url: streamUrl });
+        } else {
+          res.json({ ok: false, error: 'Could not extract audio stream' });
+        }
+        return;
+      }
+
+      if (q || body.q) {
+        const query = (q || body.q || '').trim();
+        if (!query) { res.json({ ok: true, results: [] }); return; }
+
+        const langPrefix = lang || _detectLangPrefix(query);
+        const searchQuery = langPrefix ? `${query} ${langPrefix}` : query;
+        const results = await _youtubeSearch(searchQuery);
+        res.json({ ok: true, results });
+        return;
+      }
+
+      res.status(400).json({ ok: false, error: 'Missing q or videoId parameter' });
+    } catch (e) {
+      console.error('[youtubeSearch] Error:', e.message);
+      res.status(500).json({ ok: false, error: e.message });
+    }
+  }
+);
+
+function _detectLangPrefix(query) {
+  const q = query.toLowerCase();
+  if (/malayalam|mly|ml\b/.test(q)) return '';
+  if (/tamil|tl\b/.test(q)) return '';
+  if (/telugu|tlg\b/.test(q)) return '';
+  if (/hindi|hnd\b/.test(q)) return '';
+  if (/kannada|kn\b/.test(q)) return '';
+  if (/bengali|bn\b/.test(q)) return '';
+  return '';
+}
+
+async function _youtubeSearch(query) {
+  const context = {
+    client: {
+      clientName: 'WEB',
+      clientVersion: '2.20250101.00.00',
+      hl: 'en',
+      gl: 'IN',
+    },
+  };
+
+  const key = YOUTUBE_CLIENTS.WEB.apiKey;
+  const url = `https://www.youtube.com/youtubei/v1/search?key=${key}&prettyPrint=false`;
+
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+      'X-YouTube-Client-Name': '1',
+      'X-YouTube-Client-Version': '2.20250101.00.00',
+    },
+    body: JSON.stringify({ query, context }),
+  });
+
+  if (!response.ok) throw new Error(`YouTube search failed: ${response.status}`);
+  const data = await response.json();
+
+  const contents = data.contents?.twoColumnSearchResultsRenderer?.primaryContents?.sectionListRenderer?.contents || [];
+  const results = [];
+
+  for (const section of contents) {
+    const items = section.itemSectionRenderer?.contents || [];
+    for (const item of items) {
+      const video = item.videoRenderer;
+      if (!video || !video.videoId) continue;
+
+      const thumb = video.thumbnail?.thumbnails;
+      const bestThumb = thumb?.[thumb.length - 1] || thumb?.[0] || {};
+
+      results.push({
+        id: 'yt_' + video.videoId,
+        videoId: video.videoId,
+        title: video.title?.runs?.map(r => r.text).join('') || 'Untitled',
+        artist: video.ownerText?.runs?.[0]?.text || video.longBylineText?.runs?.[0]?.text || 'Unknown',
+        duration: _parseDuration(video.lengthText?.simpleText || video.lengthText?.accessibility?.accessibilityData?.label || ''),
+        thumbnail: bestThumb.url || `https://i.ytimg.com/vi/${video.videoId}/mqdefault.jpg`,
+        viewCount: parseInt((video.viewCountText?.simpleText || '0').replace(/[^0-9]/g, '')) || 0,
+        publishedText: video.publishedTimeText?.simpleText || '',
+      });
+
+      if (results.length >= 30) break;
+    }
+    if (results.length >= 30) break;
+  }
+
+  return results;
+}
+
+function _parseDuration(text) {
+  if (!text) return 0;
+  const clean = text.replace(/[^0-9:]/g, '');
+  const parts = clean.split(':').map(Number);
+  if (parts.length === 3) return parts[0] * 3600 + parts[1] * 60 + parts[2];
+  if (parts.length === 2) return parts[0] * 60 + parts[1];
+  if (parts.length === 1) return parts[0];
+  return 0;
+}
+
+async function _getYouTubeStreamUrl(videoId) {
+  const clients = [
+    {
+      clientName: 'ANDROID',
+      clientVersion: '19.09.37',
+      androidSdkVersion: 30,
+      apiKey: 'AIzaSyAO_FJ2SlqU8Q4STEHLGCilw_Y9_11qcW8',
+      ua: 'com.google.android.youtube/19.09.37 (Linux; U; Android 11) gzip',
+    },
+    {
+      clientName: 'IOS',
+      clientVersion: '19.09.3',
+      deviceModel: 'iPhone14,3',
+      userAgent: 'com.google.ios.youtube/19.09.3 (iPhone14,3; U; CPU iOS 15_6 like Mac OS X)',
+    },
+    {
+      clientName: 'TVHTML5_SIMPLY_EMBEDDED_PLAYER',
+      clientVersion: '2.0',
+    },
+  ];
+
+  for (const client of clients) {
+    try {
+      const context = { client: { ...client, hl: 'en', gl: 'US' } };
+      const key = client.apiKey || '';
+      const url = `https://www.youtube.com/youtubei/v1/player?key=${key}&prettyPrint=false`;
+
+      const headers = { 'Content-Type': 'application/json' };
+      if (client.ua) headers['User-Agent'] = client.ua;
+      if (client.userAgent) headers['User-Agent'] = client.userAgent;
+      if (client.clientName === 'ANDROID') {
+        headers['X-YouTube-Client-Name'] = '3';
+        headers['X-YouTube-Client-Version'] = client.clientVersion;
+      }
+
+      const response = await fetch(url, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ videoId, context }),
+      });
+
+      if (!response.ok) continue;
+      const data = await response.json();
+
+      if (data.playabilityStatus?.status === 'UNPLAYABLE' || data.playabilityStatus?.status === 'LOGIN_REQUIRED') {
+        continue;
+      }
+
+      const formats = data.streamingData?.adaptiveFormats || [];
+      const audioFormats = formats
+        .filter(f => f.mimeType && f.mimeType.startsWith('audio/'))
+        .sort((a, b) => (b.audioBitrate || b.bitrate || 0) - (a.audioBitrate || a.bitrate || 0));
+
+      if (audioFormats.length > 0 && audioFormats[0].url) {
+        return audioFormats[0].url;
+      }
+
+      if (audioFormats.length > 0 && audioFormats[0].signatureCipher) {
+        const decoded = _decodeSignatureCipher(audioFormats[0].signatureCipher);
+        if (decoded) return decoded;
+      }
+    } catch (e) {
+      console.warn(`[YouTube] Client ${client.clientName} failed:`, e.message);
+      continue;
+    }
+  }
+
+  return null;
+}
+
+function _decodeSignatureCipher(sc) {
+  try {
+    const params = Object.fromEntries(sc.split('&').map(p => {
+      const [k, v] = p.split('=');
+      return [k, decodeURIComponent(v)];
+    }));
+    if (!params.s || !params.url) return null;
+
+    const sig = params.s;
+    const age = sig.split('');
+    const transformations = [
+      (a) => { const b = a.splice(0, 1)[0]; a.push(b); return a; },
+      (a) => { a.reverse(); return a; },
+      (a) => { const b = a.splice(Math.floor(a.length / 2)); b.reverse(); return b.concat(a); },
+    ];
+
+    const actions = [];
+    const sigArray = age;
+    let i = 0;
+    while (i < sigArray.length) {
+      const ch = sigArray[i];
+      if (ch === 'R') {
+        const len = parseInt(sigArray[i + 1], 16);
+        actions.push({ type: 'r', len });
+        i += 2;
+      } else if (ch === 'S') {
+        const len = parseInt(sigArray[i + 1], 16);
+        actions.push({ type: 's', len });
+        i += 2;
+      } else if (ch === 'W') {
+        const pos = parseInt(sigArray[i + 1], 16);
+        actions.push({ type: 'w', pos });
+        i += 2;
+      } else {
+        break;
+      }
+    }
+
+    if (actions.length === 0) return null;
+
+    let arr = sig.split('');
+    for (const action of actions) {
+      if (action.type === 'r') arr.reverse();
+      else if (action.type === 's') { const sp = arr.splice(0, action.len); arr.push(...sp); }
+      else if (action.type === 'w') { const el = arr.splice(action.pos, 1)[0]; arr.unshift(el); }
+    }
+
+    return params.url + '&sig=' + encodeURIComponent(arr.join(''));
+  } catch (e) {
+    return null;
+  }
+}
 
 
