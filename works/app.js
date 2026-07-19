@@ -5,6 +5,288 @@
 
 'use strict';
 
+/* ============================================================
+   WhatsApp 2026 filter sheet override
+   ============================================================ */
+window.renderWaFilterChips = function() {
+  const container = document.getElementById('wa-filter-chips');
+  if (!container) return;
+
+  const activeFilters = getStoredWaFilters();
+  if (!activeFilters.includes(App.activeWaFilter || 'all')) {
+    App.activeWaFilter = 'all';
+    try { localStorage.setItem('nsl_active_wa_filter', 'all'); } catch (_) {}
+  }
+
+  container.innerHTML = activeFilters.map(f => {
+    const meta = getWaFilterMeta(f);
+    const count = getWaFilterCount(f);
+    const isActive = (App.activeWaFilter || 'all') === f;
+    const safeId = String(f).replace(/'/g, "\\'");
+    const badge = f === 'all' || count === 0 ? '' : `<span class="wa-chip-count">${count > 99 ? '99+' : count}</span>`;
+    return `
+      <button class="wa-chip ${isActive ? 'active' : ''}"
+              type="button"
+              onclick="setWaFilter('${safeId}')"
+              data-filter="${escHtml(f)}"
+              aria-pressed="${isActive ? 'true' : 'false'}"
+              title="${escHtml(meta.label)}">
+        <span class="wa-chip-label">${escHtml(meta.label)}</span>${badge}
+      </button>`;
+  }).join('') + `
+    <button class="wa-chip-add" type="button" onclick="addNewFilterChip()" aria-label="Manage chat filters" title="Manage filters">
+      <span class="material-symbols-outlined">tune</span>
+    </button>`;
+
+  syncWaFilterButton();
+};
+
+window.openManageFiltersDialog = function() {
+  document.getElementById('manage-filters-overlay')?.remove();
+
+  const overlay = document.createElement('div');
+  overlay.id = 'manage-filters-overlay';
+  overlay.className = 'wa-filter-sheet-overlay';
+  overlay.setAttribute('role', 'dialog');
+  overlay.setAttribute('aria-modal', 'true');
+  overlay.setAttribute('aria-labelledby', 'wa-filter-sheet-title');
+
+  let activeFilters = getStoredWaFilters();
+
+  function renderList() {
+    const activeHTML = activeFilters.map((f, index) => {
+      const meta = getWaFilterMeta(f);
+      const count = getWaFilterCount(f);
+      const canRemove = f !== 'all';
+      return `
+        <div class="wa-filter-row" data-filter="${escHtml(f)}">
+          <div class="wa-filter-row-icon"><span class="material-symbols-outlined">${escHtml(meta.icon || 'label')}</span></div>
+          <div class="wa-filter-row-main">
+            <div class="wa-filter-row-title">${escHtml(meta.label)}</div>
+            <div class="wa-filter-row-sub">${count} chat${count === 1 ? '' : 's'} matched</div>
+          </div>
+          <div class="wa-filter-row-actions">
+            <button type="button" onclick="moveFilterUp(${index})" ${index === 0 ? 'disabled' : ''} aria-label="Move ${escHtml(meta.label)} up"><span class="material-symbols-outlined">keyboard_arrow_up</span></button>
+            <button type="button" onclick="moveFilterDown(${index})" ${index === activeFilters.length - 1 ? 'disabled' : ''} aria-label="Move ${escHtml(meta.label)} down"><span class="material-symbols-outlined">keyboard_arrow_down</span></button>
+            <button type="button" onclick="removeFilter(${index})" ${canRemove ? '' : 'disabled'} aria-label="Remove ${escHtml(meta.label)}"><span class="material-symbols-outlined">close</span></button>
+          </div>
+        </div>`;
+    }).join('');
+
+    const inactiveHTML = WA_FILTER_CATALOG
+      .filter(a => !activeFilters.includes(a.id))
+      .map(a => `<button type="button" class="wa-filter-add-pill" onclick="addFilterId('${a.id}')"><span class="material-symbols-outlined">${escHtml(a.icon || 'add')}</span>${escHtml(a.label)}</button>`)
+      .join('');
+
+    return `
+      <div class="wa-filter-sheet" onclick="event.stopPropagation()">
+        <div class="wa-filter-sheet-handle"></div>
+        <div class="wa-filter-sheet-header">
+          <div>
+            <h3 id="wa-filter-sheet-title">Chat filters</h3>
+            <p>Choose, reorder, and create the filters shown above chats.</p>
+          </div>
+          <button type="button" class="wa-filter-sheet-close" onclick="document.getElementById('manage-filters-overlay')?.remove()" aria-label="Close filters">
+            <span class="material-symbols-outlined">close</span>
+          </button>
+        </div>
+        <div class="wa-filter-sheet-body">
+          <div class="wa-filter-sheet-label">Active filters</div>
+          <div id="active-filters-list">${activeHTML}</div>
+          <div class="wa-filter-sheet-label">Add filters</div>
+          <div class="wa-filter-add-grid">${inactiveHTML || '<span class="wa-filter-muted">All preset filters are already active.</span>'}</div>
+          <div class="wa-filter-sheet-label">Custom keyword</div>
+          <div class="wa-filter-custom">
+            <input type="text" id="custom-filter-input" placeholder="Work, Family, Project..." maxlength="24" onkeydown="if(event.key==='Enter')addCustomFilter()">
+            <button type="button" onclick="addCustomFilter()">Add</button>
+          </div>
+        </div>
+        <div class="wa-filter-sheet-footer">
+          <button type="button" class="wa-filter-secondary" onclick="resetFiltersToDefault()">Reset</button>
+          <button type="button" class="wa-filter-primary" onclick="document.getElementById('manage-filters-overlay')?.remove()">Done</button>
+        </div>
+      </div>`;
+  }
+
+  overlay.innerHTML = renderList();
+  overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+  document.body.appendChild(overlay);
+  setTimeout(() => overlay.querySelector('.wa-filter-sheet-close')?.focus(), 50);
+
+  window.moveFilterUp = function(idx) {
+    if (idx <= 0) return;
+    const temp = activeFilters[idx];
+    activeFilters[idx] = activeFilters[idx - 1];
+    activeFilters[idx - 1] = temp;
+    save();
+  };
+
+  window.moveFilterDown = function(idx) {
+    if (idx >= activeFilters.length - 1) return;
+    const temp = activeFilters[idx];
+    activeFilters[idx] = activeFilters[idx + 1];
+    activeFilters[idx + 1] = temp;
+    save();
+  };
+
+  window.removeFilter = function(idx) {
+    if (activeFilters[idx] === 'all') return;
+    activeFilters.splice(idx, 1);
+    save();
+  };
+
+  window.addFilterId = function(id) {
+    if (!activeFilters.includes(id)) {
+      activeFilters.push(id);
+      save();
+    }
+  };
+
+  window.addCustomFilter = function() {
+    const input = document.getElementById('custom-filter-input');
+    const val = input?.value?.trim().replace(/[^\w\s-]/g, '').slice(0, 24).trim();
+    if (!val) return;
+    const id = 'custom_' + val;
+    if (!activeFilters.includes(id)) activeFilters.push(id);
+    if (input) input.value = '';
+    save();
+  };
+
+  window.resetFiltersToDefault = function() {
+    activeFilters = WA_DEFAULT_FILTERS.slice();
+    save();
+  };
+
+  function save() {
+    if (!activeFilters.includes('all')) activeFilters.unshift('all');
+    activeFilters = activeFilters.filter((f, i) => activeFilters.indexOf(f) === i);
+    localStorage.setItem('nsl_wa_filters', JSON.stringify(activeFilters));
+    overlay.innerHTML = renderList();
+    renderWaFilterChips();
+    if (!activeFilters.includes(App.activeWaFilter)) setWaFilter('all');
+    else renderChatList(document.getElementById('sidebar-search')?.value || '');
+  }
+};
+
+/* ============================================================
+   WhatsApp 2026 responsive filter overflow
+   ============================================================ */
+function renderWaFilterChipButton(filterId, extraClass) {
+  const meta = getWaFilterMeta(filterId);
+  const count = getWaFilterCount(filterId);
+  const isActive = (App.activeWaFilter || 'all') === filterId;
+  const safeId = String(filterId).replace(/'/g, "\\'");
+  const badge = filterId === 'all' || count === 0 ? '' : `<span class="wa-chip-count">${count > 99 ? '99+' : count}</span>`;
+  return `
+    <button class="wa-chip ${extraClass || ''} ${isActive ? 'active' : ''}"
+            type="button"
+            onclick="setWaFilter('${safeId}')"
+            data-filter="${escHtml(filterId)}"
+            aria-pressed="${isActive ? 'true' : 'false'}"
+            title="${escHtml(meta.label)}">
+      <span class="wa-chip-label">${escHtml(meta.label)}</span>${badge}
+    </button>`;
+}
+
+window.renderWaFilterChips = function() {
+  const container = document.getElementById('wa-filter-chips');
+  if (!container) return;
+
+  const activeFilters = getStoredWaFilters();
+  if (!activeFilters.includes(App.activeWaFilter || 'all')) {
+    App.activeWaFilter = 'all';
+    try { localStorage.setItem('nsl_active_wa_filter', 'all'); } catch (_) {}
+  }
+
+  container.innerHTML = activeFilters.map(f => renderWaFilterChipButton(f)).join('') + `
+    <button class="wa-chip wa-chip-more" type="button" onclick="openWaFilterOverflowMenu()" aria-label="Show more filters" title="More filters" hidden>+0</button>
+    <button class="wa-chip-add" type="button" onclick="addNewFilterChip()" aria-label="Manage chat filters" title="Manage filters">
+      <span class="material-symbols-outlined">tune</span>
+    </button>`;
+
+  requestAnimationFrame(() => fitWaFilterChips(container));
+  syncWaFilterButton();
+};
+
+function fitWaFilterChips(container) {
+  if (!container) return;
+  const chips = Array.from(container.querySelectorAll('.wa-chip:not(.wa-chip-more)'));
+  const moreBtn = container.querySelector('.wa-chip-more');
+  const manageBtn = container.querySelector('.wa-chip-add');
+  if (!chips.length || !moreBtn || !manageBtn) return;
+
+  chips.forEach(chip => { chip.hidden = false; });
+  moreBtn.hidden = true;
+  moreBtn.textContent = '+0';
+
+  const gap = parseFloat(getComputedStyle(container).gap || '8') || 8;
+  const availableWidth = container.clientWidth;
+  const manageWidth = manageBtn.offsetWidth || 34;
+  const moreWidth = Math.max(moreBtn.offsetWidth || 44, 44);
+  const activeChip = chips.find(chip => chip.dataset.filter === (App.activeWaFilter || 'all'));
+  const required = new Set([chips[0], chips[1], chips.find(chip => chip.dataset.filter === 'groups'), activeChip].filter(Boolean));
+  let used = manageWidth + gap;
+  let hiddenCount = 0;
+
+  chips.forEach(chip => {
+    const width = chip.offsetWidth + gap;
+    const reserveMore = hiddenCount > 0 || (used + width + moreWidth + gap > availableWidth);
+    if (!required.has(chip) && reserveMore && used + moreWidth + gap <= availableWidth) {
+      chip.hidden = true;
+      hiddenCount++;
+    } else if (used + width + (hiddenCount > 0 ? moreWidth + gap : 0) <= availableWidth || required.has(chip)) {
+      used += width;
+    } else {
+      chip.hidden = true;
+      hiddenCount++;
+    }
+  });
+
+  if (hiddenCount > 0) {
+    moreBtn.hidden = false;
+    moreBtn.textContent = '+' + hiddenCount;
+    moreBtn.setAttribute('aria-label', `Show ${hiddenCount} more filters`);
+  }
+}
+
+window.openWaFilterOverflowMenu = function() {
+  const existing = document.getElementById('wa-filter-overflow-menu');
+  if (existing) { existing.remove(); return; }
+  const container = document.getElementById('wa-filter-chips');
+  const moreBtn = container?.querySelector('.wa-chip-more');
+  if (!container || !moreBtn) return;
+
+  const hiddenFilters = Array.from(container.querySelectorAll('.wa-chip:not(.wa-chip-more)[hidden]')).map(btn => btn.dataset.filter).filter(Boolean);
+  if (!hiddenFilters.length) return;
+
+  const menu = document.createElement('div');
+  menu.id = 'wa-filter-overflow-menu';
+  menu.className = 'wa-filter-overflow-menu';
+  menu.innerHTML = hiddenFilters.map(f => renderWaFilterChipButton(f, 'wa-chip-menu-item')).join('');
+  document.body.appendChild(menu);
+
+  const rect = moreBtn.getBoundingClientRect();
+  menu.style.top = `${rect.bottom + 8}px`;
+  menu.style.left = `${Math.max(8, Math.min(rect.left, window.innerWidth - menu.offsetWidth - 8))}px`;
+
+  setTimeout(() => {
+    const close = (event) => {
+      if (!menu.contains(event.target) && event.target !== moreBtn) {
+        menu.remove();
+        document.removeEventListener('click', close);
+      }
+    };
+    document.addEventListener('click', close);
+  }, 0);
+};
+
+window.addEventListener('resize', function() {
+  clearTimeout(window._waFilterResizeTimer);
+  window._waFilterResizeTimer = setTimeout(function() {
+    fitWaFilterChips(document.getElementById('wa-filter-chips'));
+  }, 120);
+});
+
 /* ══════════════════════════════════════════════════
    1. APP STATE
    ══════════════════════════════════════════════════ */
@@ -15,6 +297,7 @@ const App = {
   messages: {},
   contacts: [],
   activeTab: 'chats',
+  activeWaFilter: (function() { try { return localStorage.getItem('nsl_active_wa_filter') || 'all'; } catch(_) { return 'all'; } })(),
   theme: (function() { try { return localStorage.getItem('tc_theme') || 'dark'; } catch(_) { return 'dark'; } })(),
   isRecording: false,
   recordingTimer: null,
@@ -1546,10 +1829,9 @@ function renderChatList(filter = '') {
   
   const sidebarSearchInput = document.getElementById('sidebar-search');
   if (sidebarSearchInput) {
-    if (tab === 'chats' && App.activeWaFilter === 'unread') {
-      sidebarSearchInput.placeholder = 'Search unread chats';
-    } else if (tab === 'chats' && App.activeWaFilter === 'groups') {
-      sidebarSearchInput.placeholder = 'Search group chats';
+    if (tab === 'chats' && (App.activeWaFilter || 'all') !== 'all') {
+      const meta = getWaFilterMeta(App.activeWaFilter);
+      sidebarSearchInput.placeholder = `Search ${meta.searchLabel || meta.label.toLowerCase()} chats`;
     } else {
       sidebarSearchInput.placeholder = __('search') || 'Search conversations...';
     }
@@ -1603,27 +1885,26 @@ function renderChatList(filter = '') {
 
   const hasArchived = tab === 'chats' && App._archivedChatIds && App._archivedChatIds.size > 0;
   
-  if (tab === 'chats' && (App.activeWaFilter || 'all') === 'unread' && !items.length) {
+  if (tab === 'chats' && (App.activeWaFilter || 'all') !== 'all' && !items.length) {
+    const meta = getWaFilterMeta(App.activeWaFilter);
     hide('chats-empty');
     list.innerHTML = `
-      <div class="wa-unread-empty-container" style="display: flex; flex-direction: column; align-items: center; justify-content: space-between; min-height: 100%; padding: 40px 16px 16px 16px; text-align: center; box-sizing: border-box;">
-        <div style="flex-grow: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;">
-          <div class="wa-unread-empty-icon" style="width: 80px; height: 80px; border-radius: 50%; background: var(--wa-empty-icon-bg); display: flex; align-items: center; justify-content: center; margin-bottom: 24px; color: var(--wa-empty-icon-color);">
-            <span class="material-symbols-outlined" style="font-size: 40px; font-variation-settings: 'FILL' 1;">check_circle</span>
+      <div class="wa-filter-empty">
+        <div class="wa-filter-empty-main">
+          <div class="wa-filter-empty-icon">
+            <span class="material-symbols-outlined">${escHtml(meta.emptyIcon || 'filter_list_off')}</span>
           </div>
-          <h3 class="wa-unread-empty-title" style="font-size: 20px; font-weight: 600; color: var(--wa-empty-title-color); margin-bottom: 8px;">No unread chats</h3>
-          <p class="wa-unread-empty-desc" style="font-size: 14px; color: var(--wa-empty-desc-color); margin-bottom: 20px;">You're all caught up.</p>
-          <button class="wa-unread-empty-link" onclick="setWaFilter('all')" style="font-size: 14px; color: var(--wa-empty-link-color); font-weight: 500; cursor: pointer; background: transparent; border: none; padding: 0; text-decoration: none; transition: all 0.15s ease;">View all chats</button>
+          <h3 class="wa-filter-empty-title">${escHtml(meta.emptyTitle || `No ${meta.label.toLowerCase()} chats`)}</h3>
+          <p class="wa-filter-empty-desc">${escHtml(meta.emptyDesc || 'Try another filter or view all chats.')}</p>
+          <button class="wa-filter-empty-link" onclick="setWaFilter('all')">View all chats</button>
         </div>
-        
-        <!-- Promo Desktop Card (Clickable to download the Android APK) -->
-        <a href="my-team-chat.apk" download="my-team-chat.apk" class="wa-promo-card" style="width: 100%; margin-top: 32px; border-top: 1px solid var(--wa-empty-border-color); padding-top: 24px; display: flex; align-items: center; justify-content: center; gap: 12px; text-decoration: none; cursor: pointer; transition: opacity 0.15s ease;" onmouseover="this.style.opacity=0.75" onmouseout="this.style.opacity=1.0">
-          <div style="width: 36px; height: 36px; border-radius: 8px; background: var(--wa-empty-promo-bg); display: flex; align-items: center; justify-content: center; color: white; flex-shrink: 0;">
-            <span class="material-symbols-outlined" style="font-size: 22px; font-variation-settings: 'FILL' 1;">download</span>
+        <a href="my-team-chat.apk" download="my-team-chat.apk" class="wa-promo-card">
+          <div class="wa-promo-card-icon">
+            <span class="material-symbols-outlined">download</span>
           </div>
-          <div style="text-align: left;">
-            <div style="font-size: 13px; font-weight: 600; color: var(--wa-empty-title-color);">Download NSL Chat (APK)</div>
-            <div style="font-size: 11px; color: var(--wa-empty-desc-color); margin-top: 2px;">Tap to install native Android application.</div>
+          <div>
+            <div class="wa-promo-card-title">Download NSL Chat (APK)</div>
+            <div class="wa-promo-card-desc">Tap to install native Android application.</div>
           </div>
         </a>
       </div>`;
@@ -7463,30 +7744,88 @@ function _applyPressureToCanvas(canvas, ctx) {
 }
 
 /* WhatsApp Filter Chip Functions */
+const WA_DEFAULT_FILTERS = ['all', 'unread', 'favourites', 'groups'];
+const WA_FILTER_CATALOG = [
+  { id: 'all', label: 'All', icon: 'chat', searchLabel: 'all', emptyIcon: 'chat' },
+  { id: 'unread', label: 'Unread', icon: 'mark_chat_unread', searchLabel: 'unread', emptyIcon: 'check_circle', emptyTitle: 'No unread chats', emptyDesc: "You're all caught up." },
+  { id: 'favourites', label: 'Favourites', icon: 'push_pin', searchLabel: 'favourite', emptyIcon: 'push_pin', emptyTitle: 'No favourite chats', emptyDesc: 'Pin chats to keep them here.' },
+  { id: 'groups', label: 'Groups', icon: 'group', searchLabel: 'group', emptyIcon: 'group', emptyTitle: 'No group chats', emptyDesc: 'Create or join a group to see it here.' },
+  { id: 'personal', label: 'Personal', icon: 'person', searchLabel: 'personal', emptyIcon: 'person_search', emptyTitle: 'No personal chats', emptyDesc: 'One-to-one conversations will appear here.' },
+  { id: 'archived', label: 'Archived', icon: 'archive', searchLabel: 'archived', emptyIcon: 'archive', emptyTitle: 'No archived chats', emptyDesc: 'Archived conversations will appear here.' },
+  { id: 'muted', label: 'Muted', icon: 'notifications_off', searchLabel: 'muted', emptyIcon: 'notifications_off', emptyTitle: 'No muted chats', emptyDesc: 'Muted conversations will appear here.' },
+  { id: 'music', label: 'Music', icon: 'music_note', searchLabel: 'music', emptyIcon: 'music_note' }
+];
+
+function getStoredWaFilters() {
+  let filters = WA_DEFAULT_FILTERS.slice();
+  try {
+    const parsed = JSON.parse(localStorage.getItem('nsl_wa_filters') || '[]');
+    if (Array.isArray(parsed) && parsed.length) filters = parsed;
+  } catch (_) {}
+  const unique = [];
+  filters.forEach(f => {
+    if (typeof f === 'string' && f && !unique.includes(f)) unique.push(f);
+  });
+  if (!unique.includes('all')) unique.unshift('all');
+  return unique;
+}
+
+function getWaFilterMeta(filterName) {
+  const existing = WA_FILTER_CATALOG.find(f => f.id === filterName);
+  if (existing) return existing;
+  if (filterName && filterName.startsWith('custom_')) {
+    const raw = filterName.replace('custom_', '').trim();
+    return {
+      id: filterName,
+      label: raw || 'Custom',
+      icon: 'label',
+      searchLabel: raw || 'custom',
+      emptyIcon: 'label_off',
+      emptyTitle: `No chats for ${raw || 'this filter'}`,
+      emptyDesc: 'Custom filters match chat names.'
+    };
+  }
+  return { id: 'all', label: 'All', icon: 'chat', searchLabel: 'all' };
+}
+
+function getWaFilterCount(filterName) {
+  let items = App.chats || [];
+  if (filterName !== 'archived') {
+    items = items.filter(c => !(App._archivedChatIds && App._archivedChatIds.has(c.id)));
+  }
+  if (filterName === 'unread') return items.filter(c => c.unread > 0 || c.unreadReaction).length;
+  if (filterName === 'favourites') return items.filter(c => c.pinned).length;
+  if (filterName === 'groups') return items.filter(c => c.type === 'group').length;
+  if (filterName === 'personal') return items.filter(c => c.type === 'personal').length;
+  if (filterName === 'archived') return (App.chats || []).filter(c => App._archivedChatIds && App._archivedChatIds.has(c.id)).length;
+  if (filterName === 'muted') return items.filter(c => App._mutedChats?.has(c.id)).length;
+  if (filterName && filterName.startsWith('custom_')) {
+    const keyword = filterName.replace('custom_', '').toLowerCase();
+    return items.filter(c => (c.name || '').toLowerCase().includes(keyword)).length;
+  }
+  return items.length;
+}
+
+function syncWaFilterButton() {
+  const filterBtn = document.getElementById('btn-filter-unread');
+  if (!filterBtn) return;
+  const hasCustomState = (App.activeWaFilter || 'all') !== 'all' || getStoredWaFilters().join('|') !== WA_DEFAULT_FILTERS.join('|');
+  filterBtn.classList.toggle('wa-filter-manage-active', hasCustomState);
+  filterBtn.setAttribute('aria-pressed', String((App.activeWaFilter || 'all') !== 'all'));
+  filterBtn.setAttribute('title', hasCustomState ? 'Manage active chat filters' : 'Manage chat filters');
+  filterBtn.setAttribute('aria-label', hasCustomState ? 'Manage active chat filters' : 'Manage chat filters');
+}
+
 window.setWaFilter = function(filterName) {
   if (filterName === 'music') {
     if (typeof openMusicLibrary === 'function') openMusicLibrary();
     return;
   }
-  App.activeWaFilter = filterName;
-  document.querySelectorAll('#wa-filter-chips .wa-chip').forEach(btn => {
-    const isMatching = btn.getAttribute('data-filter') === filterName;
-    btn.classList.toggle('active', isMatching);
-  });
-
-  // Keep the filter list button highlight state in sync
-  const filterBtn = document.getElementById('btn-filter-unread');
-  if (filterBtn) {
-    if (filterName === 'unread') {
-      filterBtn.classList.add('bg-primary/20', 'text-primary');
-      filterBtn.classList.remove('text-on-surface-variant');
-    } else {
-      filterBtn.classList.remove('bg-primary/20', 'text-primary');
-      filterBtn.classList.add('text-on-surface-variant');
-    }
-  }
-
-  renderChatList();
+  App.activeWaFilter = filterName || 'all';
+  try { localStorage.setItem('nsl_active_wa_filter', App.activeWaFilter); } catch (_) {}
+  renderWaFilterChips();
+  const input = document.getElementById('sidebar-search');
+  renderChatList(input ? input.value : '');
 };
 
 window.toggleUnreadFilter = function() {
