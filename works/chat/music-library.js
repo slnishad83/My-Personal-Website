@@ -648,6 +648,9 @@
 
     el.innerHTML = html;
     console.log('[Music] Search results rendered:', results.length, 'tracks. Cache size:', Object.keys(_trackCache).length);
+    console.log('[Music] MusicPlayer available:', typeof MusicPlayer, 'play:', typeof MusicPlayer?.play);
+    console.log('[Music] _playSearchResult available:', typeof window._playSearchResult);
+    console.log('[Music] First track in cache:', Object.values(_trackCache)[0]?.id);
   };
 
   // Backward compat
@@ -685,6 +688,7 @@
   }
 
   window._playSearchResult = async function(trackId) {
+    showToast('🎵 Playing track...', 'info');
     console.log('[Music] _playSearchResult called:', trackId);
     const t = _trackCache[trackId];
     console.log('[Music] cache lookup:', t ? { id: t.id, audioUrl: t.audioUrl, url: t.url, videoId: t.videoId, source: t.source } : 'NOT FOUND');
