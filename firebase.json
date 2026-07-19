@@ -76,7 +76,7 @@
     ],
     "rewrites": [
       {
-        "source": "/works/chat/dist/**",
+        "source": "/works/chat/dist",
         "destination": "/works/chat/dist/index.html"
       },
       {

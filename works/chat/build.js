@@ -320,7 +320,7 @@ const swScript = `/* PWA Service Worker Registration & Version Control */
 
   // Register service worker
   window.addEventListener('load', function() {
-    navigator.serviceWorker.register('/works/chat/sw.js', { scope: '/works/chat/' })
+    navigator.serviceWorker.register('./sw.js', { scope: './' })
       .then(function(reg) {
         console.log('[SW] Registered:', reg.scope);
         // Force service worker update check
