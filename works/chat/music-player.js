@@ -868,11 +868,11 @@
     let pos;
     try { pos = JSON.parse(localStorage.getItem(_MINI_POS_KEY)); } catch(_) {}
     if (!pos || typeof pos.left !== 'number' || typeof pos.top !== 'number') {
-      pos = { left: window.innerWidth - 220 - 16, top: window.innerHeight - 80 - 16 };
+      pos = { left: window.innerWidth - 290 - 16, top: window.innerHeight - 80 - 16 };
     }
-    pos.left = Math.max(8, Math.min(pos.left, window.innerWidth - 220));
+    pos.left = Math.max(8, Math.min(pos.left, window.innerWidth - 290));
     pos.top = Math.max(8, Math.min(pos.top, window.innerHeight - 80));
-    mini.style.cssText = `position:fixed;left:${pos.left}px;top:${pos.top}px;z-index:95;width:210px;background:var(--surface-container-high,#1e2a34);border-radius:14px;border:1px solid rgba(255,255,255,0.1);box-shadow:0 6px 24px rgba(0,0,0,0.4);padding:8px 10px;display:flex;align-items:center;gap:8px;cursor:grab;animation:fadeIn 0.2s ease;touch-action:none;user-select:none;-webkit-user-select:none;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)`;
+    mini.style.cssText = `position:fixed;left:${pos.left}px;top:${pos.top}px;z-index:95;width:280px;background:var(--surface-container-high,#1e2a34);border-radius:14px;border:1px solid rgba(255,255,255,0.1);box-shadow:0 6px 24px rgba(0,0,0,0.4);padding:8px 10px;display:flex;align-items:center;gap:4px;cursor:grab;animation:fadeIn 0.2s ease;touch-action:none;user-select:none;-webkit-user-select:none;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)`;
     mini.onclick = (e) => {
       if (_miniMoved) return;
       if (e.target.closest('button')) return;
@@ -899,7 +899,7 @@
       if (Math.abs(dx) > 3 || Math.abs(dy) > 3) _miniMoved = true;
       let newLeft = _miniStartLeft + dx;
       let newTop = _miniStartTop + dy;
-      newLeft = Math.max(0, Math.min(newLeft, window.innerWidth - 210));
+      newLeft = Math.max(0, Math.min(newLeft, window.innerWidth - 280));
       newTop = Math.max(0, Math.min(newTop, window.innerHeight - 80));
       mini.style.left = newLeft + 'px';
       mini.style.top = newTop + 'px';
@@ -960,6 +960,12 @@
       <button onclick="event.stopPropagation();event.preventDefault();MusicPlayer.next()" aria-label="Next track" style="background:none;border:none;color:var(--on-surface-variant);cursor:pointer;padding:2px;min-width:32px;min-height:32px;display:inline-flex;align-items:center;justify-content:center">
         <span class="material-symbols-outlined" style="font-size:18px">skip_next</span>
       </button>
+      <button onclick="event.stopPropagation();event.preventDefault();openFullPlayer()" aria-label="Maximize player" style="background:none;border:none;color:var(--on-surface-variant);cursor:pointer;padding:2px;min-width:28px;min-height:28px;display:inline-flex;align-items:center;justify-content:center">
+        <span class="material-symbols-outlined" style="font-size:16px">open_in_full</span>
+      </button>
+      <button onclick="event.stopPropagation();event.preventDefault();MusicPlayer.stop()" aria-label="Close player" style="background:none;border:none;color:var(--on-surface-variant);cursor:pointer;padding:2px;min-width:28px;min-height:28px;display:inline-flex;align-items:center;justify-content:center">
+        <span class="material-symbols-outlined" style="font-size:16px">close</span>
+      </button>
       <div style="position:absolute;bottom:0;left:8px;right:8px;height:2px;background:rgba(255,255,255,0.08);border-radius:1px">
         <div id="mini-progress-bar" style="height:100%;background:var(--primary);transition:width 0.3s;width:0%;border-radius:1px"></div>
       </div>`;
@@ -1015,9 +1021,14 @@
 
     overlay.innerHTML = `
       <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px">
-        <button onclick="document.getElementById('full-player-overlay')?.remove()" style="background:none;border:none;color:var(--on-surface);cursor:pointer">
-          <span class="material-symbols-outlined">keyboard_arrow_down</span>
-        </button>
+        <div style="display:flex;align-items:center;gap:4px">
+          <button onclick="MusicPlayer.stop()" style="background:none;border:none;color:var(--on-surface-variant);cursor:pointer;padding:8px" title="Close player">
+            <span class="material-symbols-outlined">close</span>
+          </button>
+          <button onclick="document.getElementById('full-player-overlay')?.remove()" style="background:none;border:none;color:var(--on-surface);cursor:pointer;padding:8px" title="Minimize player">
+            <span class="material-symbols-outlined">keyboard_arrow_down</span>
+          </button>
+        </div>
         <div style="text-align:center">
           <div style="font-size:11px;color:var(--on-surface-variant);text-transform:uppercase;letter-spacing:1px">Now Playing</div>
         </div>
@@ -1025,7 +1036,7 @@
           <button id="music-screen-lock-btn" onclick="MusicPlayer.toggleWakeLock()" style="background:none;border:none;color:var(--on-surface-variant);cursor:pointer;padding:8px" title="Keep screen on">
             <span class="material-symbols-outlined" id="music-lock-icon">screen_lock_portrait</span>
           </button>
-          <button onclick="MusicPlayer.minimizePlayer()" style="background:none;border:none;color:var(--on-surface-variant);cursor:pointer;padding:8px" title="Minimize player">
+          <button onclick="MusicPlayer.minimizePlayer()" style="background:none;border:none;color:var(--on-surface-variant);cursor:pointer;padding:8px" title="Mini player">
             <span class="material-symbols-outlined">picture_in_picture_alt</span>
           </button>
           <button onclick="document.getElementById('full-player-overlay')?.remove();openPlaylistQueue()" style="background:none;border:none;color:var(--on-surface-variant);cursor:pointer;padding:8px">
