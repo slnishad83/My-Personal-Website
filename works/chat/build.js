@@ -510,7 +510,7 @@ function processIndexHtml() {
   // Production CSP — 'unsafe-inline' required for inline onclick handlers used throughout the app
   html = html.replace(
     /<meta http-equiv="Content-Security-Policy" content="[^"]*">/,
-    `<meta http-equiv="Content-Security-Policy" content="default-src 'self' https: blob: data: 'unsafe-inline' 'unsafe-eval'; script-src 'self' https://cdn.tailwindcss.com https://www.gstatic.com 'unsafe-inline' 'unsafe-eval'; style-src 'self' https://fonts.googleapis.com 'unsafe-inline'; img-src 'self' https: blob: data:; font-src 'self' https://fonts.gstatic.com; connect-src 'self' https://*.googleapis.com https://*.firebaseio.com https://*.firebaseapp.com https://*.cloudfunctions.net wss://*.firebaseio.com https://api.jamendo.com https://*.jamendo.com https://*.youtube.com https://archive.org https://*.archive.org; frame-src 'self' https://*.firebaseapp.com https://*.youtube.com https://youtube.com; worker-src 'self' blob:; frame-ancestors 'self'; form-action 'self';">`
+    `<meta http-equiv="Content-Security-Policy" content="default-src 'self' https: blob: data: 'unsafe-inline' 'unsafe-eval'; script-src 'self' https://cdn.tailwindcss.com https://www.gstatic.com 'unsafe-inline' 'unsafe-eval'; style-src 'self' https://fonts.googleapis.com 'unsafe-inline'; img-src 'self' https: blob: data:; font-src 'self' https://fonts.gstatic.com; connect-src 'self' https: wss://*.firebaseio.com; frame-src 'self' https:; worker-src 'self' blob:; frame-ancestors 'self'; form-action 'self';">`
   );
 
   return html;

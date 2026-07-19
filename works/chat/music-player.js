@@ -228,8 +228,9 @@
 
   // ─── PLAYBACK ───
   Player.play = function(track, playlistId) {
+    console.log('[MusicPlayer] play() called:', track ? { id: track.id, title: track.title, url: track.url?.substring(0, 80) } : 'null track');
     _haptic('light');
-    if (!track || !track.url) { showToast('No audio URL', 'error'); return; }
+    if (!track || !track.url) { console.warn('[MusicPlayer] No track or URL'); showToast('No audio URL', 'error'); return; }
     if (playlistId) Player.playlistId = playlistId;
 
     // Resume AudioContext if suspended (mobile autoplay policy)
@@ -244,8 +245,11 @@
 
     Player.audio.src = track.url;
     Player.audio.load();
-    Player.audio.play().catch(e => {
-      console.warn('Playback failed:', e);
+    console.log('[MusicPlayer] Calling audio.play(), src:', track.url?.substring(0, 100));
+    Player.audio.play().then(() => {
+      console.log('[MusicPlayer] Audio playback started successfully');
+    }).catch(e => {
+      console.error('[MusicPlayer] Playback failed:', e.name, e.message);
       showToast('Playback failed — tap to retry', 'error');
     });
 
@@ -1235,9 +1239,10 @@
   }, 5000);
 
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => { _init(); _restoreSession(); });
+    document.addEventListener('DOMContentLoaded', () => { _init(); _restoreSession(); console.log('[MusicPlayer] Initialized via DOMContentLoaded'); });
   } else {
     _init();
     _restoreSession();
+    console.log('[MusicPlayer] Initialized immediately. Player.play exists:', typeof Player.play);
   }
 })();
