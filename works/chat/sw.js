@@ -69,6 +69,7 @@ messaging.onBackgroundMessage(payload => {
     vibrate: data.vibrate === 'false' ? [] : (isCall ? [700, 250, 700, 250, 700, 250, 700, 250, 700] : [180, 80, 180]),
     data: {
       url: notificationUrl,
+      messageId: data.messageId || '',
       callId: data.callId || '',
       kind: data.kind || '',
       chatId: data.chatId || '',

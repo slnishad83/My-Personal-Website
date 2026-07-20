@@ -100,6 +100,7 @@ body {
     background: var(--bg-primary);
     border-bottom: 1px solid var(--border);
     z-index: 100;
+    -webkit-backdrop-filter: blur(10px);
     backdrop-filter: blur(10px);
 }
 
@@ -184,6 +185,7 @@ body.dark .logo span {
     align-items: center;
     justify-content: center;
     background: rgba(255, 255, 255, 0.7);
+    -webkit-backdrop-filter: blur(4px);
     backdrop-filter: blur(4px);
     border: 1px solid rgba(59, 130, 246, 0.3);
     color: #2563eb;
@@ -495,12 +497,6 @@ body.dark .theme-toggle {
     display: flex;
     flex-wrap: wrap;
     gap: 0.5rem;
-}
-
-.skills-list, .strengths-list {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.5rem;
     margin-bottom: 1.5rem;
 }
 
@@ -764,7 +760,8 @@ body.dark .success-message {
     transition: all 0.25s cubic-bezier(0.2, 0.9, 0.4, 1.1);
     opacity: 0;
     visibility: hidden;
-    z-index: 99999;
+    z-index: 9999;
+    -webkit-backdrop-filter: blur(4px);
     backdrop-filter: blur(4px);
     border: 1px solid rgba(255, 255, 255, 0.2);
 }
@@ -806,9 +803,6 @@ body.dark .back-to-top-modern:hover {
         bottom: 20px;
         right: 20px;
     }
-}
-
-@media (max-width: 768px) {
     .mobile-menu-btn {
         display: block;
     }
@@ -953,3 +947,45 @@ body.dark .strengths-list span {
 }
 .status-badge.available { background: #dcfce7; color: #15803d; }
 body.dark .status-badge.available { background: #14532d; color: #86efac; }
+
+/* ========================================
+   ACCESSIBILITY: Focus-visible styles
+   ======================================== */
+*:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+    border-radius: 4px;
+}
+
+/* ========================================
+   ACCESSIBILITY: Skip-to-content link
+   ======================================== */
+.skip-to-content {
+    position: absolute;
+    top: -100%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--accent);
+    color: white;
+    padding: 0.75rem 1.5rem;
+    border-radius: 0 0 var(--radius) var(--radius);
+    font-weight: 600;
+    z-index: 99999;
+    transition: top 0.2s;
+    text-decoration: none;
+}
+.skip-to-content:focus {
+    top: 0;
+}
+
+/* ========================================
+   ACCESSIBILITY: Reduced motion
+   ======================================== */
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
+}

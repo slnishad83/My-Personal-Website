@@ -159,9 +159,12 @@ service cloud.firestore {
     }
 
     match /messages/{messageId} {
-      // Any authenticated user can read messages.
-      // This enables cross-chat queries (Family Album, Chat Insights).
-      allow read: if signedIn();
+      allow read: if signedIn() && (
+        (resource.data.directId is string && isExistingDirectParticipant(resource.data.directId))
+        || (resource.data.groupId is string && isGroupMember(resource.data.groupId))
+        || (resource.data.participants is list && request.auth.uid in resource.data.participants)
+        || resource.data.senderId == request.auth.uid
+      );
       allow create: if signedIn() && request.resource.data.senderId == request.auth.uid && (
         (request.resource.data.directId is string && isExistingDirectParticipant(request.resource.data.directId))
         || (request.resource.data.groupId is string && isGroupMember(request.resource.data.groupId))
@@ -276,13 +279,21 @@ service cloud.firestore {
     }
 
     match /communities/{communityId} {
-      allow read: if signedIn();
+      allow read: if signedIn()
+        && (resource.data.createdBy == request.auth.uid
+            || (resource.data.memberIds is list && request.auth.uid in resource.data.memberIds));
       allow create: if isCommunityCreator(request.resource.data);
       allow update, delete: if isCommunityCreator(resource.data);
     }
 
     match /communityMembers/{memberId} {
-      allow read: if signedIn();
+      allow read: if signedIn()
+        && (resource.data.userId == request.auth.uid
+            || (resource.data.communityId is string
+                && exists(/databases/$(database)/documents/communities/$(resource.data.communityId))
+                && (get(/databases/$(database)/documents/communities/$(resource.data.communityId)).data.createdBy == request.auth.uid
+                    || (get(/databases/$(database)/documents/communities/$(resource.data.communityId)).data.memberIds is list
+                        && request.auth.uid in get(/databases/$(database)/documents/communities/$(resource.data.communityId)).data.memberIds))));
       allow create: if signedIn() && request.resource.data.userId == request.auth.uid;
       allow update, delete: if signedIn() && resource.data.userId == request.auth.uid;
     }
@@ -295,7 +306,11 @@ service cloud.firestore {
     }
 
     match /groups/{groupId} {
-      allow read: if signedIn();
+      allow read: if signedIn() && (
+        resource.data.memberIds is list && request.auth.uid in resource.data.memberIds
+        || resource.data.ownerId == request.auth.uid
+        || resource.data.createdBy == request.auth.uid
+      );
       allow create: if signedIn()
         && request.resource.data.createdBy == request.auth.uid
         && request.resource.data.ownerId == request.auth.uid
@@ -529,7 +544,9 @@ service cloud.firestore {
     }
 
     match /statuses/{statusId} {
-      allow read: if signedIn();
+      allow read: if signedIn()
+        && (resource.data.userId == request.auth.uid
+            || (resource.data.participants is list && request.auth.uid in resource.data.participants));
       allow create: if signedIn() && request.resource.data.userId == request.auth.uid;
       allow update, delete: if signedIn() && resource.data.userId == request.auth.uid;
     }
@@ -581,12 +598,15 @@ service cloud.firestore {
       allow delete: if false;
     }
     match /calendarEvents/{eventId} {
-      allow read: if signedIn();
+      allow read: if signedIn() && (resource.data.addedBy == request.auth.uid
+        || (resource.data.participants is list && request.auth.uid in resource.data.participants));
       allow create: if signedIn() && request.resource.data.addedBy == request.auth.uid;
       allow update, delete: if signedIn() && resource.data.addedBy == request.auth.uid;
     }
     match /groupExpenses/{expId} {
-      allow read: if signedIn();
+      allow read: if signedIn() && (resource.data.addedBy == request.auth.uid
+        || (resource.data.participants is list && request.auth.uid in resource.data.participants)
+        || (resource.data.groupId is string && isGroupMember(resource.data.groupId)));
       allow create: if signedIn() && request.resource.data.addedBy == request.auth.uid;
       allow update, delete: if signedIn() && resource.data.addedBy == request.auth.uid;
     }

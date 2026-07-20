@@ -117,9 +117,8 @@
       }
 
       try {
-        await window.App.db.collection('chats').doc(chatId).update({
-          [`roles.${targetUid}`]: newRole
-        });
+        const fn = firebase.functions().httpsCallable('updateChatRole');
+        await fn({ chatId, targetUid, newRole });
 
         if (window.App.currentChat.roles) {
           window.App.currentChat.roles[targetUid] = newRole;
@@ -128,7 +127,7 @@
         if (window.showToast) window.showToast(`Role updated to ${newRole}`, 'success');
       } catch (e) {
         console.error('Role update error:', e);
-        if (window.showToast) window.showToast('Failed to update role', 'error');
+        if (window.showToast) window.showToast(e.message || 'Failed to update role', 'error');
       }
     }
   };

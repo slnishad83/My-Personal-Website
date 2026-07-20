@@ -1385,7 +1385,7 @@ function checkSession() {
           loadBlockedUsers();
           loadArchivedChats();
           listenForIncomingCalls();
-          handleCallNotificationUrlParams();
+          handleUrlParams();
           if (App.currentUser.email) {
             loadMessageHistory(App.currentUser.email, App.currentUser.uid);
             subscribeToChatRequests(App.currentUser.email, App.currentUser.uid);
@@ -4999,29 +4999,82 @@ function startCallHeartbeat(callId) {
   }, 15000);
 }
 
-function handleCallNotificationUrlParams() {
+window.scrollToMessage = function(msgId) {
+  if (!msgId) return;
+  function _findAndScroll(attempt) {
+    const el = document.querySelector(
+      `[data-message-id="${CSS.escape(msgId)}"], [data-id="${CSS.escape(msgId)}"], #msg-${CSS.escape(msgId)}`
+    );
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      el.classList.add('cf-highlight');
+      setTimeout(() => el.classList.remove('cf-highlight'), 2000);
+    } else if (attempt < 8) {
+      setTimeout(() => _findAndScroll(attempt + 1), 400);
+    }
+  }
+  _findAndScroll(0);
+};
+
+function handleUrlParams() {
   const params = new URLSearchParams(location.search);
   const callId = params.get('callId');
   const action = params.get('callAction');
-  if (!callId) return;
-  if (action === 'accept') {
-    setTimeout(() => {
-      App.db?.collection('calls').doc(callId).get().then(doc => {
-        const data = doc.data();
-        if (!data || data.status !== 'ringing') return;
-        const uid = App.auth?.currentUser?.uid;
-        if (!data.participants?.includes(uid)) return;
-        App._incomingCallData = { callId, type: data.type, fromUserId: data.fromUserId, fromUserName: data.fromUserName, groupCall: data.groupCall };
-        acceptCall();
-      }).catch(() => {});
-    }, 1500);
-  } else if (action === 'decline') {
-    setTimeout(() => {
-      App.db?.collection('calls').doc(callId).update({ status: 'rejected' }).catch(() => {});
-    }, 500);
+  const chatUserId = params.get('chatUserId');
+  const groupId = params.get('groupId');
+  const messageId = params.get('messageId');
+
+  if (callId) {
+    if (action === 'accept') {
+      setTimeout(() => {
+        App.db?.collection('calls').doc(callId).get().then(doc => {
+          const data = doc.data();
+          if (!data || data.status !== 'ringing') return;
+          const uid = App.auth?.currentUser?.uid;
+          if (!data.participants?.includes(uid)) return;
+          App._incomingCallData = { callId, type: data.type, fromUserId: data.fromUserId, fromUserName: data.fromUserName, groupCall: data.groupCall };
+          acceptCall();
+        }).catch(() => {});
+      }, 1500);
+    } else if (action === 'decline') {
+      setTimeout(() => {
+        App.db?.collection('calls').doc(callId).update({ status: 'rejected' }).catch(() => {});
+      }, 500);
+    }
   }
+
+  if (messageId && (chatUserId || groupId)) {
+    const chatId = groupId || chatUserId;
+    setTimeout(() => {
+      if (typeof openChat === 'function') {
+        openChat(chatId);
+        setTimeout(() => scrollToMessage(messageId), 600);
+      }
+    }, 800);
+  }
+
   window.history.replaceState({}, '', location.pathname);
 }
+
+/* ─── Capacitor deep link handler ─── */
+(function initCapacitorDeepLink() {
+  if (window.Capacitor?.Plugins?.App) {
+    window.Capacitor.Plugins.App.addListener('appUrlOpen', function(data) {
+      const url = data?.url || '';
+      const params = new URLSearchParams(url.includes('?') ? url.split('?')[1] : '');
+      const chatUserId = params.get('chatUserId');
+      const groupId = params.get('groupId');
+      const messageId = params.get('messageId');
+      const chatId = groupId || chatUserId;
+      if (chatId && typeof openChat === 'function') {
+        setTimeout(function() {
+          openChat(chatId);
+          if (messageId) setTimeout(function() { scrollToMessage(messageId); }, 600);
+        }, 500);
+      }
+    });
+  }
+})();
 
 /* ══════════════════════════════════════════════════
    16. SEARCH SYSTEM
@@ -8055,14 +8108,7 @@ window.triggerReactionNotification = function(chatId, msgId, msgData, reaction) 
       onClick: () => {
         window.focus();
         openChat(chatId);
-        setTimeout(() => {
-          const bubble = document.getElementById(`msg-${msgId}`);
-          if (bubble) {
-            bubble.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            bubble.classList.add('animate-pulse');
-            setTimeout(() => bubble.classList.remove('animate-pulse'), 2000);
-          }
-        }, 300);
+        setTimeout(() => scrollToMessage(msgId), 400);
       }
     });
   }

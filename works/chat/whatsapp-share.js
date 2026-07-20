@@ -128,7 +128,7 @@
       const waBtn = document.createElement('button');
       waBtn.type = 'button';
       waBtn.className = 'context-menu-item wa-share-btn';
-      waBtn.innerHTML = '<span class="wa-share-icon">📤</span> Share to WhatsApp';
+      waBtn.innerHTML = '<span class="material-symbols-outlined" style="font-size:20px">share</span> Share to WhatsApp';
       waBtn.addEventListener('click', () => {
         if (typeof removeMessageContextMenu === 'function') removeMessageContextMenu();
         shareToWhatsApp(messageData);
@@ -140,7 +140,7 @@
     const notesBtn = document.createElement('button');
     notesBtn.type = 'button';
     notesBtn.className = 'context-menu-item wa-notes-btn';
-    notesBtn.innerHTML = '<span class="wa-notes-icon">⭐</span> Save to My Notes';
+    notesBtn.innerHTML = '<span class="material-symbols-outlined" style="font-size:20px">bookmark_add</span> Save to My Notes';
     notesBtn.addEventListener('click', () => {
       if (typeof removeMessageContextMenu === 'function') removeMessageContextMenu();
       saveToMyNotes(messageData);
@@ -150,9 +150,11 @@
 
   // ── MutationObserver: watch for context menu appearing ──────
   function observeContextMenus() {
-    const observer = new MutationObserver((mutations) => {
-      for (const m of mutations) {
-        for (const node of m.addedNodes) {
+    var observer = new MutationObserver(function(mutations) {
+      for (var m = 0; m < mutations.length; m++) {
+        var nodes = mutations[m].addedNodes;
+        for (var n = 0; n < nodes.length; n++) {
+          var node = nodes[n];
           if (node.nodeType !== 1) continue;
           if (!node.classList.contains('message-context-menu')) continue;
           // Retrieve message data from the currently selected message element

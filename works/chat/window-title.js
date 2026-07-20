@@ -69,6 +69,10 @@
 
   /* --- Favicon badge (D-L4) --- */
   let _originalFaviconHref = null;
+  let _cachedCanvas = null;
+  let _cachedCtx = null;
+  let _cachedImg = null;
+  let _pendingFavicon = false;
 
   function updateFaviconBadge() {
     const link = document.querySelector('link[rel="icon"], link[rel="shortcut icon"]');
@@ -78,49 +82,44 @@
       _originalFaviconHref = link.href;
     }
 
-    // Remove existing dynamic favicon
-    const existing = document.querySelector('link[rel="dynamic-favicon"]');
-    if (existing) existing.remove();
-
     if (_unreadCount === 0) {
       link.href = _originalFaviconHref;
       return;
     }
 
-    const canvas = document.createElement('canvas');
-    canvas.width = 64;
-    canvas.height = 64;
-    const ctx = canvas.getContext('2d');
+    if (_pendingFavicon) return;
+    _pendingFavicon = true;
 
-    const img = new Image();
-    img.crossOrigin = 'anonymous';
-    img.onload = function () {
-      ctx.drawImage(img, 0, 0, 64, 64);
+    if (!_cachedCanvas) {
+      _cachedCanvas = document.createElement('canvas');
+      _cachedCanvas.width = 64;
+      _cachedCanvas.height = 64;
+      _cachedCtx = _cachedCanvas.getContext('2d');
+      _cachedImg = new Image();
+      _cachedImg.crossOrigin = 'anonymous';
+    }
 
-      // Draw red badge circle
-      ctx.beginPath();
-      ctx.arc(48, 16, 14, 0, Math.PI * 2);
-      ctx.fillStyle = '#FF3B30';
-      ctx.fill();
+    _cachedImg.onload = function () {
+      _pendingFavicon = false;
+      _cachedCtx.clearRect(0, 0, 64, 64);
+      _cachedCtx.drawImage(_cachedImg, 0, 0, 64, 64);
 
-      // Draw count text
+      _cachedCtx.beginPath();
+      _cachedCtx.arc(48, 16, 14, 0, Math.PI * 2);
+      _cachedCtx.fillStyle = '#FF3B30';
+      _cachedCtx.fill();
+
       const badge = _unreadCount > 99 ? '99+' : String(_unreadCount);
-      ctx.fillStyle = '#FFFFFF';
-      ctx.font = 'bold 16px -apple-system, BlinkMacSystemFont, sans-serif';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(badge, 48, 16);
+      _cachedCtx.fillStyle = '#FFFFFF';
+      _cachedCtx.font = 'bold 16px -apple-system, BlinkMacSystemFont, sans-serif';
+      _cachedCtx.textAlign = 'center';
+      _cachedCtx.textBaseline = 'middle';
+      _cachedCtx.fillText(badge, 48, 16);
 
-      const dynLink = document.createElement('link');
-      dynLink.rel = 'dynamic-favicon';
-      dynLink.type = 'image/png';
-      dynLink.href = canvas.toDataURL('image/png');
-      document.head.appendChild(dynLink);
+      link.href = _cachedCanvas.toDataURL('image/png');
     };
-    img.onerror = function () {
-      // Fallback: just set a simple badge
-    };
-    img.src = _originalFaviconHref;
+    _cachedImg.onerror = function () { _pendingFavicon = false; };
+    _cachedImg.src = _originalFaviconHref;
   }
 
   /* --- Visibility change: flash title on message --- */

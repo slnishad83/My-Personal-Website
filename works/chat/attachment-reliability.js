@@ -40,9 +40,12 @@
 
   /* ─── Patch upload functions ────────────────────────────────── */
   function patchUploaders() {
-    ['uploadFile','uploadAttachment','uploadMedia','sendFileMessage'].forEach(name => {
-      const orig = window[name];
-      if (typeof orig !== 'function') return;
+    ['uploadFile','uploadAttachment','uploadMedia','sendFileMessage'].forEach(function(name) {
+      var orig = window[name];
+      if (typeof orig !== 'function') {
+        console.warn('[AttachmentReliability] ' + name + ' not found — retry patch deferred');
+        return;
+      }
       window[name] = async function() {
         const localId = (arguments[arguments.length-1]||{}).localId || null;
         try {

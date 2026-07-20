@@ -19,19 +19,22 @@ const IOSKeyboardFix = {
 
   init() {
     if (this._enabled) return;
-    if (!/iPhone|iPad|iPod/i.test(navigator.userAgent)) return;
+    if (!window.visualViewport) return;
 
     this._inputBar = document.getElementById('input-bar');
     this._messagesWrap = document.getElementById('messages-wrap');
     this._chatArea = document.getElementById('chat-area');
 
-    if (window.visualViewport) {
-      window.visualViewport.addEventListener('resize', this._onResize.bind(this));
-      window.visualViewport.addEventListener('scroll', this._onScroll.bind(this));
-    }
+    this._boundResize = this._onResize.bind(this);
+    this._boundScroll = this._onScroll.bind(this);
+    this._boundFocusIn = this._onFocusIn.bind(this);
+    this._boundFocusOut = this._onFocusOut.bind(this);
 
-    window.addEventListener('focusin', this._onFocusIn.bind(this));
-    window.addEventListener('focusout', this._onFocusOut.bind(this));
+    window.visualViewport.addEventListener('resize', this._boundResize);
+    window.visualViewport.addEventListener('scroll', this._boundScroll);
+
+    window.addEventListener('focusin', this._boundFocusIn);
+    window.addEventListener('focusout', this._boundFocusOut);
     this._enabled = true;
     if (window.__DEBUG__) console.log('[IOSKeyboardFix] Initialized');
   },
@@ -93,6 +96,15 @@ const IOSKeyboardFix = {
     this._enabled = false;
     document.documentElement.style.setProperty('--keyboard-height', '0px');
     document.body.classList.remove('ios-keyboard-open');
+    if (this._boundResize && window.visualViewport) {
+      window.visualViewport.removeEventListener('resize', this._boundResize);
+      window.visualViewport.removeEventListener('scroll', this._boundScroll);
+    }
+    if (this._boundFocusIn) {
+      window.removeEventListener('focusin', this._boundFocusIn);
+      window.removeEventListener('focusout', this._boundFocusOut);
+    }
+    if (this._inputBar) this._inputBar.style.transform = '';
   }
 };
 

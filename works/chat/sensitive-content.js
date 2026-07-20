@@ -27,26 +27,30 @@
 
   window.markContentSensitive = function(msgId) {
     if (!App.db || !App.currentChat) return;
-    try {
-      App.db.collection('messages').doc(msgId).update({
-        sensitiveContent: true,
-        flaggedBy: App.auth?.currentUser?.uid || '',
-        flaggedAt: firebase.firestore.FieldValue.serverTimestamp(),
-      }).catch(() => {});
-      showToast('Content marked as sensitive', 'info');
-    } catch(_) {}
+    if (typeof firebase !== 'undefined' && firebase.functions) {
+      try {
+        const fn = firebase.functions().httpsCallable('flagSensitiveContent');
+        fn({ messageId: msgId, chatId: App.currentChat.id }).then(() => {
+          showToast('Content marked as sensitive', 'info');
+        }).catch(() => showToast('Failed to flag content', 'error'));
+      } catch(_) {
+        showToast('Failed to flag content', 'error');
+      }
+    }
   };
 
   window.unmarkContentSensitive = function(msgId) {
     if (!App.db) return;
-    try {
-      App.db.collection('messages').doc(msgId).update({
-        sensitiveContent: false,
-        flaggedBy: null,
-        flaggedAt: null,
-      }).catch(() => {});
-      showToast('Content unmarked', 'info');
-    } catch(_) {}
+    if (typeof firebase !== 'undefined' && firebase.functions) {
+      try {
+        const fn = firebase.functions().httpsCallable('unflagSensitiveContent');
+        fn({ messageId: msgId }).then(() => {
+          showToast('Content unmarked', 'info');
+        }).catch(() => showToast('Failed to unmark content', 'error'));
+      } catch(_) {
+        showToast('Failed to unmark content', 'error');
+      }
+    }
   };
 
   window.revealSensitiveImage = function(msgId, el) {

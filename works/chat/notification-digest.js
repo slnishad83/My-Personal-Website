@@ -111,13 +111,17 @@
     // Click to navigate
     panel.querySelectorAll('[data-notif-chat-id]').forEach(el => {
       el.addEventListener('click', () => {
-        const { notifChatId, notifChatType, notifUserId } = el.dataset;
+        const { notifChatId, notifChatType, notifUserId, notifMsgId } = el.dataset;
+        const chatId = notifChatId;
         if (notifChatType === 'group' && typeof openGroupChat === 'function') {
-          openGroupChat(notifChatId);
+          openGroupChat(chatId);
         } else if (notifUserId && typeof openDirectChatWithUser === 'function') {
           openDirectChatWithUser(notifUserId);
         } else if (typeof openChat === 'function') {
-          openChat(notifChatId, notifChatType || 'direct');
+          openChat(chatId, notifChatType || 'direct');
+        }
+        if (notifMsgId && typeof scrollToMessage === 'function') {
+          setTimeout(() => scrollToMessage(notifMsgId), 600);
         }
       });
       el.addEventListener('keydown', (e) => {
@@ -138,7 +142,7 @@
     const msg    = window.sanitizeHTML((n.message || n.body || '').substring(0, 100));
     const time   = _relTime(n.createdAt);
     const attrs  = n.chatId
-      ? `data-notif-chat-id="${window.sanitizeHTML(n.chatId)}" data-notif-chat-type="${window.sanitizeHTML(n.chatType || 'direct')}" data-notif-user-id="${window.sanitizeHTML(n.chatUserId || n.fromUserId || '')}"`
+      ? `data-notif-chat-id="${window.sanitizeHTML(n.chatId)}" data-notif-chat-type="${window.sanitizeHTML(n.chatType || 'direct')}" data-notif-user-id="${window.sanitizeHTML(n.chatUserId || n.fromUserId || '')}"${n.messageId ? ` data-notif-msg-id="${window.sanitizeHTML(n.messageId)}"` : ''}`
       : '';
     return `<div class="nd-item nd-single" role="button" tabindex="0" ${attrs}>
       <div class="nd-icon">${icon}</div>

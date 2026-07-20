@@ -12,7 +12,8 @@ const IOSCallKit = (() => {
 
   function init() {
     _isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent) ||
-      (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+      (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1) ||
+      (navigator.userAgentData && navigator.userAgentData.platform === 'iOS');
     _isNative = !!(window.Capacitor?.Plugins?.IncomingCallPlugin);
 
     if (_isNative && window.Capacitor?.Plugins?.IncomingCallPlugin) {

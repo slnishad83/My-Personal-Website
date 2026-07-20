@@ -300,15 +300,17 @@
 
   const origOpenChat = window.openChat;
   if (typeof origOpenChat === 'function') {
+    let _unlockTarget = null;
     window.openChat = function(chatId) {
-      if (isChatLocked(chatId) && !App._justUnlockedChat) {
+      if (isChatLocked(chatId) && _unlockTarget !== chatId) {
+        _unlockTarget = null;
         promptChatUnlock(chatId, () => {
-          App._justUnlockedChat = chatId;
+          _unlockTarget = chatId;
           origOpenChat(chatId);
-          setTimeout(() => { App._justUnlockedChat = null; }, 500);
         });
         return;
       }
+      _unlockTarget = null;
       return origOpenChat(chatId);
     };
   }

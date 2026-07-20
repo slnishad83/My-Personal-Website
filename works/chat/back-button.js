@@ -108,6 +108,10 @@ const BackButton = {
 
   destroy() {
     this._enabled = false;
+    if (typeof window.Capacitor !== 'undefined') {
+      window.removeEventListener('backbutton', this._onBack);
+    }
+    window.removeEventListener('popstate', this._onWebBack);
   }
 };
 

@@ -73,8 +73,15 @@
         for (var i = 0; i < added.length; i++) { _inject(); if (document.getElementById('_wa_typing')) return; }
       });
     } else {
-      _typingUiObs = new MutationObserver(_inject);
-      _typingUiObs.observe(document.body, { childList: true, subtree: true });
+      _typingUiObs = new MutationObserver(function () {
+        if (!document.getElementById('_wa_typing')) _inject();
+      });
+      var chatPanel = findChatPanel();
+      if (chatPanel) {
+        _typingUiObs.observe(chatPanel, { childList: true, subtree: true });
+      } else {
+        _typingUiObs.observe(document.body, { childList: true, subtree: true });
+      }
     }
   }
 
@@ -263,14 +270,18 @@
       if (!_eventFired) _startFallbackPoll();
     }, 2000);
 
-    // Safety net: MutationObserver on body for chat key changes (replaces polling)
-    var _safetyObs = new MutationObserver(function () {
-      var key = getChatKey();
-      if (key !== _lastChatKey) { _lastChatKey = key; _onChatSwitch(key); }
-    });
-    if (document.body) _safetyObs.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['data-chat-id', 'class'] });
+    // Safety net: scoped MutationObserver (not body-level) for chat key changes
+    var _safetyObs = null;
+    var chatPanel = findChatPanel();
+    if (chatPanel) {
+      _safetyObs = new MutationObserver(function () {
+        var key = getChatKey();
+        if (key !== _lastChatKey) { _lastChatKey = key; _onChatSwitch(key); }
+      });
+      _safetyObs.observe(chatPanel, { childList: true, subtree: true, attributes: true, attributeFilter: ['data-chat-id', 'class'] });
+    }
     _trackCleanup(function () {
-      _safetyObs.disconnect();
+      if (_safetyObs) _safetyObs.disconnect();
       if (_pollFallback) _pollFallback.disconnect();
     });
   }
@@ -354,7 +365,9 @@
       MutationBus.onBodyChildList('wa:tab-badge', _scanBadges);
     } else {
       var badgeObs = new MutationObserver(_scanBadges);
-      badgeObs.observe(document.body, { childList: true, subtree: true, characterData: true });
+      var chatPanel = findChatPanel();
+      var observeTarget = chatPanel || document.body;
+      badgeObs.observe(observeTarget, { childList: true, subtree: true, characterData: true });
       _trackCleanup(function () { badgeObs.disconnect(); });
     }
   }
@@ -365,10 +378,16 @@
     } else {
       document.title = _originalTitle;
     }
-    // Update PWA badge if supported
     if (navigator.setAppBadge) {
-      if (_unreadCount > 0) navigator.setAppBadge(_unreadCount).catch(() => {});
-      else navigator.clearAppBadge().catch(() => {});
+      try {
+        if (_unreadCount > 0) navigator.setAppBadge(_unreadCount).catch(function() {});
+        else navigator.clearAppBadge().catch(function() {});
+      } catch (_) {}
+    } else if (navigator.mSetAppBadge) {
+      try {
+        if (_unreadCount > 0) navigator.mSetAppBadge(_unreadCount);
+        else navigator.mClearAppBadge();
+      } catch (_) {}
     }
   }
 

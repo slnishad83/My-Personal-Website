@@ -159,14 +159,18 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
         String chatType = message.getData().get("chatType");
         String senderAvatar = message.getData().get("senderAvatar");
         String kind = message.getData().get("kind");
+        String messageId = message.getData().get("messageId");
+        boolean hasMsgId = messageId != null && !messageId.isEmpty();
         if (chatUserId != null && !chatUserId.isEmpty()) {
-            launchIntent.setData(
-                Uri.parse("myteamchat://open?chatUserId=" + Uri.encode(chatUserId))
-            );
+            Uri.Builder ub = Uri.parse("myteamchat://open").buildUpon()
+                .appendQueryParameter("chatUserId", chatUserId);
+            if (hasMsgId) ub.appendQueryParameter("messageId", messageId);
+            launchIntent.setData(ub.build());
         } else if (groupId != null && !groupId.isEmpty()) {
-            launchIntent.setData(
-                Uri.parse("myteamchat://open?groupId=" + Uri.encode(groupId))
-            );
+            Uri.Builder ub = Uri.parse("myteamchat://open").buildUpon()
+                .appendQueryParameter("groupId", groupId);
+            if (hasMsgId) ub.appendQueryParameter("messageId", messageId);
+            launchIntent.setData(ub.build());
         } else if ("status_update".equals(kind)) {
             launchIntent.setData(Uri.parse("myteamchat://open?tab=status"));
         }

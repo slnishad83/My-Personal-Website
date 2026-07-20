@@ -60,13 +60,16 @@
      (sent to this user) as delivered across ALL chats
      ================================================ */
   let _deliveryRanOnce = false;
+  let _lastDeliveryTime = 0;
+  const DELIVERY_COOLDOWN = 300000; // 5 minutes between startup deliveries
 
   async function deliverUnreadOnStartup() {
     const user = window.currentUser;
     const db   = window.db;
     if (!user || !db) return;
-    if (_deliveryRanOnce) return;
+    if (_deliveryRanOnce && (Date.now() - _lastDeliveryTime) < DELIVERY_COOLDOWN) return;
     _deliveryRanOnce = true;
+    _lastDeliveryTime = Date.now();
 
     try {
       // Get all direct chats this user is part of

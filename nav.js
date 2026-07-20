@@ -32,7 +32,7 @@
         navLink('contact.html', 'Contact', ['/contact.html']) +
       '</ul>' +
       '<div class="right-buttons">' +
-        '<button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle dark mode">&#127769;</button>' +
+        '<button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle dark mode"><span aria-hidden="true">&#127769;</span></button>' +
         '<button class="mobile-menu-btn" onclick="toggleMenu()">&#9776;</button>' +
       '</div>' +
     '</div>' +
@@ -47,11 +47,11 @@
     if (body.classList.contains('dark')) {
       body.classList.remove('dark');
       localStorage.setItem('theme', 'light');
-      if (toggle) toggle.innerHTML = '&#127769;';
+      if (toggle) toggle.innerHTML = '<span aria-hidden="true">&#127769;</span>';
     } else {
       body.classList.add('dark');
       localStorage.setItem('theme', 'dark');
-      if (toggle) toggle.innerHTML = '&#9728;&#65039;';
+      if (toggle) toggle.innerHTML = '<span aria-hidden="true">&#9728;&#65039;</span>';
     }
   };
 
@@ -72,9 +72,9 @@
     var toggle = document.querySelector('.theme-toggle');
     if (saved === 'dark') {
       document.body.classList.add('dark');
-      if (toggle) toggle.innerHTML = '&#9728;&#65039;';
+      if (toggle) toggle.innerHTML = '<span aria-hidden="true">&#9728;&#65039;</span>';
     } else {
-      if (toggle) toggle.innerHTML = '&#127769;';
+      if (toggle) toggle.innerHTML = '<span aria-hidden="true">&#127769;</span>';
     }
   }
 

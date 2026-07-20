@@ -37,10 +37,18 @@ public class MainActivity extends BridgeActivity {
         String chatUserId = intent.getStringExtra("chatUserId");
         String groupId = intent.getStringExtra("groupId");
         String tab = intent.getStringExtra("tab");
+        String messageId = intent.getStringExtra("messageId");
+        boolean hasMsgId = messageId != null && !messageId.isEmpty();
         if (chatUserId != null && !chatUserId.isEmpty()) {
-            intent.setData(Uri.parse("myteamchat://open?chatUserId=" + Uri.encode(chatUserId)));
+            Uri.Builder ub = Uri.parse("myteamchat://open").buildUpon()
+                .appendQueryParameter("chatUserId", chatUserId);
+            if (hasMsgId) ub.appendQueryParameter("messageId", messageId);
+            intent.setData(ub.build());
         } else if (groupId != null && !groupId.isEmpty()) {
-            intent.setData(Uri.parse("myteamchat://open?groupId=" + Uri.encode(groupId)));
+            Uri.Builder ub = Uri.parse("myteamchat://open").buildUpon()
+                .appendQueryParameter("groupId", groupId);
+            if (hasMsgId) ub.appendQueryParameter("messageId", messageId);
+            intent.setData(ub.build());
         } else if (tab != null && !tab.isEmpty()) {
             intent.setData(Uri.parse("myteamchat://open?tab=" + Uri.encode(tab)));
         }

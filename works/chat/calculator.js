@@ -6,7 +6,8 @@
   let calcEl = null;
   let isDragging = false;
   let startX = 0, startY = 0;
-  let posX = 150, posY = 150; // Initial position from top/right
+  let _dragCleanup = null;
+  let _keyHandler = null;
 
   // Calculator State
   let expression = '';
@@ -268,10 +269,18 @@
     document.addEventListener('mousemove', dragMove);
     document.addEventListener('mouseup', dragEnd);
 
-    // Touch events for mobile dragging
     header.addEventListener('touchstart', dragStart, { passive: false });
     document.addEventListener('touchmove', dragMove, { passive: false });
     document.addEventListener('touchend', dragEnd);
+
+    _dragCleanup = function () {
+      header.removeEventListener('mousedown', dragStart);
+      document.removeEventListener('mousemove', dragMove);
+      document.removeEventListener('mouseup', dragEnd);
+      header.removeEventListener('touchstart', dragStart);
+      document.removeEventListener('touchmove', dragMove);
+      document.removeEventListener('touchend', dragEnd);
+    };
   }
 
   function dragStart(e) {
@@ -338,10 +347,9 @@
       }
     });
 
-    // Keyboard support
-    document.addEventListener('keydown', (e) => {
-      if (calcEl.style.display !== 'flex') return;
-      
+    // Keyboard support (stored reference for cleanup)
+    _keyHandler = function (e) {
+      if (!calcEl || calcEl.style.display !== 'flex') return;
       const key = e.key;
       if (/[0-9\.\+\-\*\/\(\)]/.test(key)) {
         e.preventDefault();
@@ -357,7 +365,8 @@
       } else if (key.toLowerCase() === 'c') {
         handleInput('C');
       }
-    });
+    };
+    document.addEventListener('keydown', _keyHandler);
   }
 
   function handleInput(val) {
@@ -396,26 +405,93 @@
   }
 
   function evaluateExpression(expr) {
-    // Basic sanitization and evaluation
-    // Replaces screen multiplication/division symbols
     let cleanExpr = expr.replace(/x/g, '*').replace(/÷/g, '/');
-    
-    // Validate characters: only numbers, operators, dots, brackets
     if (!/^[0-9\+\-\*\/\(\)\.\s]+$/.test(cleanExpr)) {
       throw new Error('Invalid characters');
     }
-
-    // Evaluate safely via simple parser or Function constructor
-    // Since we validated characters with strict regex, Function is secure here
-    const fn = new Function(`return (${cleanExpr})`);
-    const val = fn();
-    
+    var val = _safeEval(cleanExpr);
     if (val === undefined || isNaN(val) || !isFinite(val)) {
       throw new Error('Math error');
     }
-    
-    // Format floats
     return Number(val.toFixed(8)).toString();
+  }
+
+  /* ── Safe math expression evaluator (no eval / no Function) ──── */
+  function _safeEval(expr) {
+    var tokens = _tokenize(expr);
+    var pos = 0;
+
+    function peek() { return pos < tokens.length ? tokens[pos] : null; }
+    function consume() { return tokens[pos++]; }
+
+    function parseExpr() {
+      var left = parseTerm();
+      while (peek() === '+' || peek() === '-') {
+        var op = consume();
+        var right = parseTerm();
+        left = op === '+' ? left + right : left - right;
+      }
+      return left;
+    }
+
+    function parseTerm() {
+      var left = parseFactor();
+      while (peek() === '*' || peek() === '/') {
+        var op = consume();
+        var right = parseFactor();
+        if (op === '*') left = left * right;
+        else {
+          if (right === 0) throw new Error('Division by zero');
+          left = left / right;
+        }
+      }
+      return left;
+    }
+
+    function parseFactor() {
+      var token = peek();
+      if (token === '(') {
+        consume();
+        var val = parseExpr();
+        if (consume() !== ')') throw new Error('Mismatched parentheses');
+        return val;
+      }
+      if (token === '-') {
+        consume();
+        return -parseFactor();
+      }
+      if (token === '+') {
+        consume();
+        return parseFactor();
+      }
+      if (token !== null && /^[0-9]*\.?[0-9]+$/.test(token)) {
+        return parseFloat(consume());
+      }
+      throw new Error('Unexpected token: ' + token);
+    }
+
+    var result = parseExpr();
+    if (pos < tokens.length) throw new Error('Unexpected trailing characters');
+    return result;
+  }
+
+  function _tokenize(expr) {
+    var tokens = [];
+    var i = 0;
+    var s = expr.replace(/\s+/g, '');
+    while (i < s.length) {
+      if ('+-*/()'.indexOf(s[i]) !== -1) {
+        tokens.push(s[i]);
+        i++;
+      } else if (/[0-9.]/.test(s[i])) {
+        var num = '';
+        while (i < s.length && /[0-9.]/.test(s[i])) { num += s[i]; i++; }
+        tokens.push(num);
+      } else {
+        throw new Error('Unexpected character: ' + s[i]);
+      }
+    }
+    return tokens;
   }
 
   function insertIntoChat(text) {
@@ -442,6 +518,15 @@
   }
 
   // Expose global controller
+  /* ── Destroy: clean up all listeners ────────────────────────────── */
+  function destroyCalculator() {
+    if (_dragCleanup) { _dragCleanup(); _dragCleanup = null; }
+    if (_keyHandler) { document.removeEventListener('keydown', _keyHandler); _keyHandler = null; }
+    if (calcEl) { calcEl.remove(); calcEl = null; }
+    var styleEl = document.getElementById('calc-styles');
+    if (styleEl) styleEl.remove();
+  }
+
   window.toggleCalculator = function() {
     if (!calcEl) {
       init();
@@ -451,7 +536,6 @@
       calcEl.style.display = 'none';
     } else {
       calcEl.style.display = 'flex';
-      // Center if no dragging has occurred yet
       if (calcEl.style.left === '') {
         if (window.innerWidth <= 600) {
           calcEl.style.left = '12px';
@@ -464,5 +548,7 @@
       }
     }
   };
+
+  window.CalculatorWidget = { destroy: destroyCalculator };
 
 })();
