@@ -937,6 +937,16 @@
                 </div>
                 <span class="material-symbols-outlined text-on-surface-variant">chevron_right</span>
               </div>
+              <div class="flex items-center justify-between p-4 cursor-pointer hover:bg-surface-container transition-colors" onclick="closeModal('profile-overlay'); ContactSync.openFindFriends()">
+                <div class="flex items-center gap-3">
+                  <span class="material-symbols-outlined text-primary">contacts</span>
+                  <div>
+                    <p class="text-sm font-bold">Find Friends</p>
+                    <p class="text-xs text-on-surface-variant">Sync your phone contacts</p>
+                  </div>
+                </div>
+                <span class="material-symbols-outlined text-on-surface-variant">chevron_right</span>
+              </div>
             </div>
           </div>
 
@@ -1448,6 +1458,9 @@
   <script src="call-sync.js"></script>
   <script src="presence.js"></script>
   <script src="multi-device.js"></script>
+  <script src="qr-code-gen.js"></script>
+  <script src="qr-scanner.js"></script>
+  <script src="contact-sync.js"></script>
   <script src="security.js"></script>
   <script src="error-boundary.js"></script>
   <script src="mutation-bus.js"></script>

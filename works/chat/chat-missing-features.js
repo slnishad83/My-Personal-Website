@@ -193,7 +193,7 @@
      2. IMAGE COMPRESSION BEFORE UPLOAD
      Patches uploadRecordedMedia / uploadDocument to compress images
   ================================================================ */
-  async function compressImage(file, { maxWidth = 1920, maxHeight = 1920, quality = 0.85 } = {}) {
+  async function compressImage(file, { maxWidth = 1600, maxHeight = 1600, quality = 0.75 } = {}) {
     return new Promise((resolve) => {
       // Skip non-images or small images
       if (!file.type.startsWith('image/') || file.type === 'image/gif') {

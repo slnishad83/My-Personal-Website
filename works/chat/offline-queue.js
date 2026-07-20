@@ -191,7 +191,12 @@ const OfflineQueue = {
     formData.append('file', file);
     formData.append('upload_preset', window.CHAT_UPLOAD_PRESET || 'chat_app_uploads');
     const cloudName = window.CLOUDINARY_CLOUD_NAME || 'du2dsimyz';
-    const res = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, {
+    const isImage = file.type && file.type.startsWith('image/');
+    const isVideo = file.type && file.type.startsWith('video/');
+    if (isImage) formData.append('eager', 'c_limit,w_1920,q_auto:good,f_auto');
+    else if (isVideo) formData.append('eager', 'c_limit,w_1280,q_auto:good');
+    const endpoint = isImage || isVideo ? 'auto' : 'auto';
+    const res = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/${endpoint}/upload`, {
       method: 'POST',
       body: formData
     });

@@ -1,6 +1,7 @@
 /**
  * View-Once Media
  * Allows sending photos/videos that disappear after being opened once.
+ * Media is deleted when the viewer closes the overlay (not on a timer).
  */
 (function () {
   'use strict';
@@ -57,12 +58,12 @@
         return `
           <div class="view-once-msg sender" style="padding:12px 16px;border-radius:12px;background:var(--primary-container);text-align:center">
             <span class="material-symbols-outlined" style="font-size:24px;color:var(--primary);display:block;margin-bottom:4px">${mediaType === 'video' ? 'videocam' : 'photo_camera'}</span>
-            <p style="font-size:12px;color:var(--on-primary-container);margin:0">View once · ${mediaType}</p>
+            <p style="font-size:12px;color:var(--on-primary-container);margin:0">View once \u00b7 ${mediaType}</p>
           </div>`;
       }
 
       return `
-        <div class="view-once-msg" data-msg-id="${msg.id}" style="padding:12px 16px;border-radius:12px;background:var(--surface-container-highest);text-align:center;cursor:pointer" onclick="window.ViewOnce.openViewOnce('${msg.id}', '${msg.mediaUrl || ''}', '${msg.type || 'image'}')">
+        <div class="view-once-msg" data-msg-id="${msg.id}" style="padding:12px 16px;border-radius:12px;background:var(--surface-container-highest);text-align:center;cursor:pointer" onclick="window.ViewOnce.openViewOnce('${msg.id}', '${(msg.mediaUrl || '').replace(/'/g, "\\'")}', '${msg.type || 'image'}')">
           <span class="material-symbols-outlined" style="font-size:24px;color:var(--primary);display:block;margin-bottom:4px">visibility</span>
           <p style="font-size:12px;color:var(--on-surface-variant);margin:0">Tap to view once</p>
         </div>`;
@@ -74,18 +75,31 @@
       const overlay = document.createElement('div');
       overlay.style.cssText = 'position:fixed;inset:0;z-index:10001;background:rgba(0,0,0,0.95);display:flex;align-items:center;justify-content:center;animation:fadeIn 0.2s ease';
 
+      const badge = document.createElement('div');
+      badge.style.cssText = 'position:absolute;top:16px;left:16px;background:rgba(0,0,0,0.6);color:white;padding:6px 12px;border-radius:20px;font-size:11px;font-weight:600;display:flex;align-items:center;gap:6px;backdrop-filter:blur(8px)';
+      badge.innerHTML = '<span class="material-symbols-outlined" style="font-size:14px">visibility</span> 1 of 1 view';
+
+      const closeBtn = document.createElement('button');
+      closeBtn.style.cssText = 'position:absolute;top:16px;right:16px;background:rgba(0,0,0,0.5);border:none;color:white;width:40px;height:40px;border-radius:50%;cursor:pointer;font-size:20px;display:flex;align-items:center;justify-content:center';
+      closeBtn.innerHTML = '&times;';
+
       if (mediaType === 'video') {
-        overlay.innerHTML = `
-          <video id="view-once-video" src="${mediaUrl}" controls autoplay style="max-width:95vw;max-height:85vh;border-radius:12px"></video>
-          <button onclick="this.parentElement.remove()" style="position:absolute;top:16px;right:16px;background:rgba(0,0,0,0.5);border:none;color:white;width:40px;height:40px;border-radius:50%;cursor:pointer;font-size:20px;display:flex;align-items:center;justify-content:center">&times;</button>`;
+        const video = document.createElement('video');
+        video.src = mediaUrl;
+        video.controls = true;
+        video.autoplay = true;
+        video.style.cssText = 'max-width:95vw;max-height:85vh;border-radius:12px';
+        overlay.appendChild(video);
       } else {
-        overlay.innerHTML = `
-          <img src="${mediaUrl}" style="max-width:95vw;max-height:85vh;border-radius:12px;object-fit:contain" />
-          <button onclick="this.parentElement.remove()" style="position:absolute;top:16px;right:16px;background:rgba(0,0,0,0.5);border:none;color:white;width:40px;height:40px;border-radius:50%;cursor:pointer;font-size:20px;display:flex;align-items:center;justify-content:center">&times;</button>`;
+        const img = document.createElement('img');
+        img.src = mediaUrl;
+        img.style.cssText = 'max-width:95vw;max-height:85vh;border-radius:12px;object-fit:contain';
+        overlay.appendChild(img);
       }
 
+      overlay.appendChild(badge);
+      overlay.appendChild(closeBtn);
       document.body.appendChild(overlay);
-      overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
 
       await this.markAsViewed(msgId);
 
@@ -98,10 +112,16 @@
           </div>`;
       }
 
-      setTimeout(() => {
+      const doClose = async () => {
         overlay.remove();
-        this.deleteAfterView(msgId, { mediaUrl });
-      }, 15000);
+        document.removeEventListener('keydown', escHandler);
+        await this.deleteAfterView(msgId, { mediaUrl });
+      };
+
+      const escHandler = (e) => { if (e.key === 'Escape') doClose(); };
+      document.addEventListener('keydown', escHandler);
+      overlay.addEventListener('click', (e) => { if (e.target === overlay) doClose(); });
+      closeBtn.addEventListener('click', doClose);
     }
   };
 

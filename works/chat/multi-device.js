@@ -280,16 +280,16 @@ const MultiDevice = {
   _renderQRCode(canvasId, data) {
     const canvas = document.getElementById(canvasId);
     if (!canvas) return;
-    const size = 200;
-    canvas.width = size;
-    canvas.height = size;
+    const cellCount = 200;
+    canvas.width = cellCount;
+    canvas.height = cellCount;
     const ctx = canvas.getContext('2d');
 
-    const matrix = this._generateQRMatrix(data, 4);
-    const cellSize = size / matrix.length;
+    const matrix = (typeof QRCodeGen !== 'undefined') ? QRCodeGen.encode(data) : this._fallbackQRMatrix(data);
+    const cellSize = cellCount / matrix.length;
 
     ctx.fillStyle = 'white';
-    ctx.fillRect(0, 0, size, size);
+    ctx.fillRect(0, 0, cellCount, cellCount);
     ctx.fillStyle = 'black';
 
     for (let row = 0; row < matrix.length; row++) {
@@ -301,56 +301,48 @@ const MultiDevice = {
     }
   },
 
-  _generateQRMatrix(text, errorLevel) {
-    const len = text.length;
-    const size = Math.max(21, Math.ceil(Math.sqrt(len * 8)) + 13);
-    const matrix = [];
-    for (let i = 0; i < size; i++) {
-      matrix.push(new Array(size).fill(0));
-    }
-
-    const drawFinderPattern = (startRow, startCol) => {
-      for (let r = 0; r < 7; r++) {
-        for (let c = 0; c < 7; c++) {
-          if (r === 0 || r === 6 || c === 0 || c === 6 || (r >= 2 && r <= 4 && c >= 2 && c <= 4)) {
-            matrix[startRow + r][startCol + c] = 1;
-          }
-        }
+  _fallbackQRMatrix(text) {
+    const size = 21;
+    const matrix = Array.from({length: size}, () => new Array(size).fill(0));
+    const finder = (r0, c0) => {
+      for (let r = 0; r < 7; r++) for (let c = 0; c < 7; c++) {
+        const edge = r === 0 || r === 6 || c === 0 || c === 6;
+        const inner = r >= 2 && r <= 4 && c >= 2 && c <= 4;
+        matrix[r0 + r][c0 + c] = (edge || inner) ? 1 : 0;
       }
     };
-
-    drawFinderPattern(0, 0);
-    drawFinderPattern(0, size - 7);
-    drawFinderPattern(size - 7, 0);
-
-    for (let i = 8; i < size - 8; i++) {
-      matrix[Math.floor(size / 2)][i] = i % 2 === 0 ? 1 : 0;
-      matrix[i][Math.floor(size / 2)] = i % 2 === 0 ? 1 : 0;
-    }
-
-    let bitIndex = 0;
+    finder(0, 0); finder(0, 14); finder(14, 0);
+    for (let i = 8; i < 13; i++) { matrix[6][i] = i % 2; matrix[i][6] = i % 2; }
+    let idx = 0;
     const bits = [];
-    for (let i = 0; i < text.length; i++) {
-      const charCode = text.charCodeAt(i);
-      for (let b = 7; b >= 0; b--) {
-        bits.push((charCode >> b) & 1);
-      }
+    for (let i = 0; i < text.length; i++) for (let b = 7; b >= 0; b--) bits.push((text.charCodeAt(i) >> b) & 1);
+    for (let r = 0; r < size; r++) for (let c = 0; c < size; c++) {
+      if (!matrix[r][c] && r > 7 && r < 13 && c > 7 && c < 13) matrix[r][c] = idx < bits.length ? bits[idx++] : 0;
     }
-    while (bits.length < size * size) {
-      bits.push(bits.length % 2);
-    }
-
-    for (let row = 0; row < size; row++) {
-      for (let col = 0; col < size; col++) {
-        if (matrix[row][col] === 0 && row > 7 && row < size - 8 && col > 7 && col < size - 8) {
-          if (bitIndex < bits.length) {
-            matrix[row][col] = bits[bitIndex++];
-          }
-        }
-      }
-    }
-
     return matrix;
+  },
+
+  async _completePairing(data) {
+    if (!data || data.type !== 'nsl-chat-pair' || !data.uid || !data.token) return false;
+    try {
+      const tokenRef = App.db.collection('users').doc(data.uid)
+        .collection('pairingTokens').doc(data.token);
+      const tokenDoc = await tokenRef.get();
+      if (!tokenDoc.exists) { if (typeof showToast === 'function') showToast('Invalid pairing code', 'error'); return false; }
+      const td = tokenDoc.data();
+      if (td.used) { if (typeof showToast === 'function') showToast('This QR code has already been used', 'error'); return false; }
+      if (td.expiresAt && td.expiresAt.toDate && td.expiresAt.toDate().getTime() < Date.now()) {
+        if (typeof showToast === 'function') showToast('This QR code has expired', 'error'); return false;
+      }
+      await tokenRef.update({ used: true, usedAt: new Date(), usedBy: App.auth?.currentUser?.uid || 'unknown' });
+      await this._registerSession();
+      if (typeof showToast === 'function') showToast('Device linked successfully!', 'success');
+      return true;
+    } catch (e) {
+      console.warn('[MultiDevice] _completePairing error:', e);
+      if (typeof showToast === 'function') showToast('Pairing failed: ' + (e.message || e), 'error');
+      return false;
+    }
   },
 
   _timeAgo(timestamp) {

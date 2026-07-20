@@ -31,6 +31,9 @@
       "silent": false,
       "hidden": false,
       "keep awake": true
+    },
+    "Contacts": {
+      "permissions": ["readContacts"]
     }
   },
   "android": {
