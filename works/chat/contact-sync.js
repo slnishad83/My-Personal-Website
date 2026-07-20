@@ -1,7 +1,7 @@
 /**
  * Contact Sync — native address book integration
  * Reads device contacts and matches them against app users
- * Only works on native platforms (iOS/Android) via @capacitor/contacts
+ * Only works on native platforms (iOS/Android) via @capacitor-community/contacts
  */
 'use strict';
 const ContactSync = (() => {
@@ -22,13 +22,15 @@ const ContactSync = (() => {
   const _getDeviceContacts = async () => {
     if (!_isNative()) return [];
     try {
-      const perm = await Capacitor.Plugins.Contacts.requestPermission();
+      const { Contacts } = Capacitor.Plugins;
+      if (!Contacts) return [];
+      const perm = await Contacts.requestPermission();
       if (perm?.display !== 'granted') return [];
-      const result = await Capacitor.Plugins.Contacts.getContacts({
+      const result = await Contacts.getContacts({
         projection: { name: true, phones: true, emails: true, image: true }
       });
       return (result.contacts || []).map(c => ({
-        name: c.name || '',
+        name: [c.name?.first, c.name?.middle, c.name?.last].filter(Boolean).join(' ') || c.name?.display || '',
         phones: (c.phones || []).map(p => p.number || ''),
         emails: (c.emails || []).map(e => e.address || ''),
         avatar: c.image?.dataUrl || null,
