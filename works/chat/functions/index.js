@@ -1164,3 +1164,84 @@ exports.resetChatPin = onCall({ region: "us-central1" }, async (request) => {
   );
   return { ok: true };
 });
+
+// =============================================
+// TWO-FACTOR AUTHENTICATION — Server-side PIN (PBKDF2)
+// =============================================
+exports.setTwoFactorPin = onCall({ region: "us-central1" }, async (request) => {
+  const uid = requireAuth(request);
+  if (!checkPinRateLimit(uid, "2fa-set")) throw new HttpsError("resource-exhausted", "Too many attempts. Wait a minute.");
+  const { pin, oldPin } = request.data;
+  if (!pin || typeof pin !== "string" || pin.length < 4 || pin.length > 8 || !/^\d+$/.test(pin))
+    throw new HttpsError("invalid-argument", "PIN must be 4-8 digits");
+
+  const userDoc = await db.collection("users").doc(uid).get();
+  const userData = userDoc.data() || {};
+  if (userData.twofaPinHash && userData.twofaPinSalt) {
+    if (!oldPin) throw new HttpsError("invalid-argument", "Old PIN required");
+    const oldHash = await hashPinServer(oldPin, userData.twofaPinSalt);
+    if (oldHash !== userData.twofaPinHash) throw new HttpsError("permission-denied", "Incorrect current PIN");
+  }
+
+  const salt = crypto.randomBytes(32).toString("hex");
+  const hash = await hashPinServer(pin, salt);
+  await db.collection("users").doc(uid).set({ twofaPinSalt: salt, twofaPinHash: hash, twofaEnabled: true, twofaUpdatedAt: Date.now() }, { merge: true });
+  return { ok: true };
+});
+
+exports.verifyTwoFactorPin = onCall({ region: "us-central1" }, async (request) => {
+  const uid = requireAuth(request);
+  if (!checkPinRateLimit(uid, "2fa-verify")) throw new HttpsError("resource-exhausted", "Too many attempts. Wait a minute.");
+  const { pin } = request.data;
+  if (!pin || typeof pin !== "string") throw new HttpsError("invalid-argument", "Missing PIN");
+
+  const userDoc = await db.collection("users").doc(uid).get();
+  const userData = userDoc.data() || {};
+
+  if (!userData.twofaPinHash || !userData.twofaPinSalt) {
+    const salt = crypto.randomBytes(32).toString("hex");
+    const hash = await hashPinServer(pin, salt);
+    await db.collection("users").doc(uid).set({ twofaPinSalt: salt, twofaPinHash: hash, twofaEnabled: true, twofaUpdatedAt: Date.now() }, { merge: true });
+    return { ok: true, isNew: true };
+  }
+
+  const hash = await hashPinServer(pin, userData.twofaPinSalt);
+  if (hash !== userData.twofaPinHash) throw new HttpsError("permission-denied", "Incorrect PIN");
+  return { ok: true };
+});
+
+exports.resetTwoFactorPin = onCall({ region: "us-central1" }, async (request) => {
+  const uid = requireAuth(request);
+  if (!checkPinRateLimit(uid, "2fa-reset")) throw new HttpsError("resource-exhausted", "Too many attempts. Wait a minute.");
+  await db.collection("users").doc(uid).set(
+    {
+      twofaPinSalt: admin.firestore.FieldValue.delete(),
+      twofaPinHash: admin.firestore.FieldValue.delete(),
+      twofaEnabled: false,
+      twofaResetAt: Date.now()
+    },
+    { merge: true }
+  );
+  return { ok: true };
+});
+
+// =============================================
+// ACCOUNT DELETION — Server-side cleanup
+// =============================================
+exports.deleteUserAccount = onCall({ region: "us-central1" }, async (request) => {
+  const uid = requireAuth(request);
+  const userDoc = await db.collection("users").doc(uid).get();
+  if (!userDoc.exists) throw new HttpsError("not-found", "User not found");
+  const userData = userDoc.data() || {};
+
+  if (userData.deletionScheduledAt) {
+    const scheduled = userData.deletionScheduledAt.toDate ? userData.deletionScheduledAt.toDate() : new Date(userData.deletionScheduledAt);
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    if (scheduled < thirtyDaysAgo) {
+      await db.collection("users").doc(uid).delete();
+      return { ok: true, deleted: true };
+    }
+  }
+
+  return { ok: true, deleted: false, message: "Account not yet eligible for permanent deletion" };
+});

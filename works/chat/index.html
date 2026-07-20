@@ -877,6 +877,66 @@
                 </div>
                 <span class="material-symbols-outlined text-on-surface-variant">chevron_right</span>
               </div>
+              <div class="flex items-center justify-between p-4 cursor-pointer hover:bg-surface-container transition-colors" onclick="closeModal('profile-overlay'); TwoFactorAuth.openSettings()">
+                <div class="flex items-center gap-3">
+                  <span class="material-symbols-outlined text-primary">security</span>
+                  <div>
+                    <p class="text-sm font-bold">Two-Step Verification</p>
+                    <p class="text-xs text-on-surface-variant">Extra PIN security for your account</p>
+                  </div>
+                </div>
+                <span class="material-symbols-outlined text-on-surface-variant">chevron_right</span>
+              </div>
+              <div class="flex items-center justify-between p-4 cursor-pointer hover:bg-surface-container transition-colors" onclick="closeModal('profile-overlay'); DataSaver.openSettings()">
+                <div class="flex items-center gap-3">
+                  <span class="material-symbols-outlined text-primary">data_saver_on</span>
+                  <div>
+                    <p class="text-sm font-bold">Data Saver</p>
+                    <p class="text-xs text-on-surface-variant">Control media auto-download settings</p>
+                  </div>
+                </div>
+                <span class="material-symbols-outlined text-on-surface-variant">chevron_right</span>
+              </div>
+              <div class="flex items-center justify-between p-4 cursor-pointer hover:bg-surface-container transition-colors" onclick="closeModal('profile-overlay'); openHelp()">
+                <div class="flex items-center gap-3">
+                  <span class="material-symbols-outlined text-primary">help</span>
+                  <div>
+                    <p class="text-sm font-bold">Help & Support</p>
+                    <p class="text-xs text-on-surface-variant">FAQs, report bugs, contact support</p>
+                  </div>
+                </div>
+                <span class="material-symbols-outlined text-on-surface-variant">chevron_right</span>
+              </div>
+              <div class="flex items-center justify-between p-4 cursor-pointer hover:bg-surface-container transition-colors" onclick="closeModal('profile-overlay'); SelfDestruct.openGlobalDefaultSettings()">
+                <div class="flex items-center gap-3">
+                  <span class="material-symbols-outlined text-primary">timer</span>
+                  <div>
+                    <p class="text-sm font-bold">Disappearing Messages Default</p>
+                    <p class="text-xs text-on-surface-variant">Set default timer for new chats</p>
+                  </div>
+                </div>
+                <span class="material-symbols-outlined text-on-surface-variant">chevron_right</span>
+              </div>
+              <div class="flex items-center justify-between p-4 cursor-pointer hover:bg-surface-container transition-colors" onclick="closeModal('profile-overlay'); MultiDevice.openLinkedDevices()">
+                <div class="flex items-center gap-3">
+                  <span class="material-symbols-outlined text-primary">devices</span>
+                  <div>
+                    <p class="text-sm font-bold">Linked Devices</p>
+                    <p class="text-xs text-on-surface-variant">Manage your connected devices</p>
+                  </div>
+                </div>
+                <span class="material-symbols-outlined text-on-surface-variant">chevron_right</span>
+              </div>
+              <div class="flex items-center justify-between p-4 cursor-pointer hover:bg-surface-container transition-colors" onclick="closeModal('profile-overlay'); WallpaperGallery.openGallery(null)">
+                <div class="flex items-center gap-3">
+                  <span class="material-symbols-outlined text-primary">wallpaper</span>
+                  <div>
+                    <p class="text-sm font-bold">Chat Wallpaper</p>
+                    <p class="text-xs text-on-surface-variant">Customize chat background</p>
+                  </div>
+                </div>
+                <span class="material-symbols-outlined text-on-surface-variant">chevron_right</span>
+              </div>
             </div>
           </div>
 
@@ -1470,6 +1530,15 @@
   <script src="chat-permissions.js"></script>
   <script src="announcement-mode.js"></script>
   <script src="channel-mode.js"></script>
+  <script src="two-factor-auth.js"></script>
+  <script src="account-deletion.js"></script>
+  <script src="view-once.js"></script>
+  <script src="live-location.js"></script>
+  <script src="data-saver.js"></script>
+  <script src="wallpaper-gallery.js"></script>
+  <script src="help-support.js"></script>
+  <script src="reply-private.js"></script>
+  <script src="group-meta.js"></script>
   <script src="app-init.js"></script>
 
   <!-- PWA Service Worker Registration -->

@@ -1,10 +1,87 @@
 /**
  * Self-Destructing Messages (Feature 10)
  * Adds disappearing messages functionality to any chat.
+ * Includes global default timer setting.
  */
 
 (function () {
   let disappearingCheckInterval = null;
+  const GLOBAL_DEFAULT_KEY = 'nsl_disappearing_default';
+
+  const SelfDestruct = {
+    getGlobalDefault() {
+      try {
+        return parseInt(localStorage.getItem(GLOBAL_DEFAULT_KEY) || '0', 10);
+      } catch (_) { return 0; }
+    },
+
+    setGlobalDefault(timerMs) {
+      try {
+        localStorage.setItem(GLOBAL_DEFAULT_KEY, timerMs.toString());
+      } catch (_) {}
+    },
+
+    applyDefaultToNewChats(chatId) {
+      const defaultTimer = this.getGlobalDefault();
+      if (defaultTimer > 0 && App.db && App.auth?.currentUser) {
+        const chat = (App.chats || []).find(c => c.id === chatId);
+        if (chat && !chat.ephemeralTimer) {
+          const collection = chat.type === 'group' ? 'groups' : 'directChats';
+          App.db.collection(collection).doc(chatId).update({ ephemeralTimer: defaultTimer }).catch(() => {});
+        }
+      }
+    },
+
+    openGlobalDefaultSettings() {
+      const current = this.getGlobalDefault();
+      const options = [
+        { label: 'Off', value: 0 },
+        { label: '5 Minutes', value: 300000 },
+        { label: '1 Hour', value: 3600000 },
+        { label: '24 Hours', value: 86400000 },
+        { label: '7 Days', value: 604800000 },
+      ];
+
+      const modalHtml = `
+        <div id="global-disappearing-modal" class="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-sm flex items-center justify-center" style="display:flex;">
+          <div class="bg-surface-container border border-outline-variant/30 rounded-2xl w-full max-w-xs shadow-2xl p-6 m-4 relative">
+            <button class="absolute top-4 right-4 text-on-surface-variant hover:text-on-surface p-1" onclick="document.getElementById('global-disappearing-modal').remove()">
+              <span class="material-symbols-outlined text-[20px]">close</span>
+            </button>
+            <div class="flex flex-col items-center mb-6">
+              <div class="w-12 h-12 rounded-full bg-primary/10 text-primary flex items-center justify-center mb-3">
+                <span class="material-symbols-outlined text-[24px]">timer</span>
+              </div>
+              <h3 class="font-bold text-lg text-on-surface">Default Disappearing Messages</h3>
+              <p class="text-xs text-on-surface-variant text-center mt-1">Set the default timer for new chats. Existing chats won't be affected.</p>
+            </div>
+            <div class="space-y-2">
+              ${options.map(opt => `
+                <label class="flex items-center justify-between p-3 rounded-xl border border-outline-variant/30 cursor-pointer hover:bg-surface-variant/30 transition-colors">
+                  <span class="text-sm font-medium">${opt.label}</span>
+                  <input type="radio" name="global-ephemeral-timer" value="${opt.value}" ${current === opt.value ? 'checked' : ''} class="w-4 h-4 text-primary">
+                </label>`).join('')}
+            </div>
+            <button class="w-full mt-6 py-3 bg-primary text-on-primary rounded-xl text-sm font-bold shadow-md hover:brightness-110 transition-all" onclick="window.saveGlobalDisappearingDefault()">Save</button>
+          </div>
+        </div>`;
+
+      document.body.insertAdjacentHTML('beforeend', modalHtml);
+    }
+  };
+
+  window.SelfDestruct = SelfDestruct;
+
+  window.saveGlobalDisappearingDefault = function () {
+    const selected = document.querySelector('input[name="global-ephemeral-timer"]:checked');
+    if (!selected) return;
+    const timerVal = parseInt(selected.value, 10);
+    SelfDestruct.setGlobalDefault(timerVal);
+    if (window.showToast) {
+      showToast(timerVal === 0 ? 'Default turned off' : 'Default timer set for new chats', 'success');
+    }
+    document.getElementById('global-disappearing-modal')?.remove();
+  };
 
   function initSelfDestruct() {
     // 1. Hook into openChatMenu to add "Disappearing Messages" option
