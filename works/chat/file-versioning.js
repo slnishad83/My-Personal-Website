@@ -96,9 +96,9 @@
 
     versions.forEach((v, i) => {
       const isActive = v.id === msgId;
-      const border = isActive ? '2px solid var(--primary,#7C4DFF)' : '1px solid rgba(255,255,255,0.1)';
+      const border = isActive ? '2px solid var(--primary,#7C4DFF)' : '1px solid var(--outline-variant,rgba(0,0,0,0.1))';
       const time = new Date(v.time || Date.now()).toLocaleString();
-      html += `<div style="border:${border};border-radius:12px;padding:12px;margin-bottom:8px;background:${isActive ? 'rgba(124,77,255,0.1)' : 'rgba(255,255,255,0.03)'};cursor:pointer" onclick="window.open('${v.url}','_blank')">`;
+      html += `<div style="border:${border};border-radius:12px;padding:12px;margin-bottom:8px;background:${isActive ? 'rgba(124,77,255,0.1)' : 'var(--surface-container-low,rgba(0,0,0,0.03))'};cursor:pointer" onclick="window.open('${v.url}','_blank')">`;
       html += '<div style="display:flex;justify-content:space-between;align-items:center">';
       html += `<span style="font-size:14px;font-weight:600">v${v.version || (versions.length - i)}</span>`;
       html += `<span style="font-size:11px;color:var(--on-surface-variant,#aaa)">${time}</span>`;

@@ -170,20 +170,20 @@ html:not(.dark) .wa-chips-scroll::-webkit-scrollbar-thumb {
   min-width: 44px !important;
   padding: 0 13px !important;
   margin-right: 0 !important;
-  background: #202c33 !important;
-  color: #aebac1 !important;
+  background: var(--surface-container-high, #202c33) !important;
+  color: var(--on-surface-variant, #aebac1) !important;
 }
 #wa-filter-chips .wa-chip:hover,
 #wa-filter-chips .wa-chip:focus-visible,
 .wa-filter-manage-btn:hover,
 .wa-filter-manage-btn:focus-visible {
-  background: #2a3942 !important;
-  color: #e9edef !important;
+  background: var(--surface-container-highest, #2a3942) !important;
+  color: var(--on-surface, #e9edef) !important;
 }
 #wa-filter-chips .wa-chip.active {
-  background: #0a332c !important;
-  color: #00a884 !important;
-  box-shadow: inset 0 0 0 1px rgba(0,168,132,.2) !important;
+  background: var(--primary-container, #0a332c) !important;
+  color: var(--primary, #00a884) !important;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--primary, #00a884) 20%, transparent) !important;
 }
 #wa-filter-chips .wa-chip-count {
   min-width: 18px;
@@ -204,10 +204,10 @@ html:not(.dark) .wa-chips-scroll::-webkit-scrollbar-thumb {
 }
 #wa-filter-chips .wa-chip-add,
 .wa-filter-manage-btn {
-  width: 34px !important;
+  width: 44px !important;
   padding: 0 !important;
-  background: #202c33 !important;
-  color: #aebac1 !important;
+  background: var(--surface-container-high, #202c33) !important;
+  color: var(--on-surface-variant, #aebac1) !important;
 }
 #wa-filter-chips .wa-chip-more {
   min-width: 44px !important;
@@ -223,8 +223,8 @@ html:not(.dark) .wa-chips-scroll::-webkit-scrollbar-thumb {
   width: min(280px, calc(100vw - 16px));
   padding: 10px;
   border-radius: 16px;
-  background: #111b21;
-  border: 1px solid rgba(134,150,160,.2);
+  background: var(--surface-container, #111b21);
+  border: 1px solid var(--border, rgba(134,150,160,.2));
   box-shadow: 0 18px 50px rgba(0,0,0,.42);
 }
 .wa-filter-overflow-menu .wa-chip-menu-item {
@@ -363,8 +363,8 @@ html:not(.dark) .wa-filter-overflow-menu {
   display: flex;
   flex-direction: column;
   border-radius: 24px 24px 18px 18px;
-  background: #111b21;
-  color: #e9edef;
+  background: var(--surface-container, #111b21);
+  color: var(--on-surface, #e9edef);
   box-shadow: 0 24px 70px rgba(0,0,0,.5);
 }
 .wa-filter-sheet-handle {
@@ -638,7 +638,7 @@ html:not(.dark) .wa-filter-custom input {
   #input-bar button { flex-shrink: 0; }
   /* Header action buttons: prevent overflow */
   #header-actions-container { flex-shrink: 0; gap: 2px !important; }
-  #header-actions-container button { flex-shrink: 0; width: 36px; height: 36px; }
+  #header-actions-container button { flex-shrink: 0; width: 44px; height: 44px; }
   /* Scroll-to-bottom FAB: safe-area aware */
   #scroll-to-bottom { bottom: calc(96px + var(--safe-bottom, 0px)) !important; }
 }
@@ -655,7 +655,7 @@ html:not(.dark) .wa-filter-custom input {
   #format-toggle { display: none !important; }
   /* Shrink header action buttons */
   #header-actions-container { gap: 0 !important; }
-  #header-actions-container button { width: 32px; height: 32px; padding: 4px; }
+  #header-actions-container button { width: 44px; height: 44px; padding: 4px; }
   #header-actions-container button span { font-size: 20px; }
   /* Input bar: tighter gaps */
   #input-bar .glass-panel { gap: 4px !important; }
@@ -2111,7 +2111,7 @@ html:not(.dark) #desktop-context-menu,
 /* ── WhatsApp Desktop Viewport Centering (1600px limit) ─────────── */
 @media (min-width: 1600px) and (min-height: 800px) {
   body {
-    background-color: #0b141a !important; /* Dark theme outer background */
+    background-color: var(--viewport-bg, #0b141a) !important;
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
@@ -2119,7 +2119,7 @@ html:not(.dark) #desktop-context-menu,
     margin: 0 !important;
   }
   html:not(.dark) body {
-    background-color: #eae6df !important; /* Light theme outer background */
+    background-color: var(--viewport-bg, #eae6df) !important;
   }
   #app {
     max-width: 1600px !important;
@@ -2669,4 +2669,29 @@ html, body {
   .chat-list-item.active { border: 2px solid Highlight !important; }
   .wa-chip.active { border: 2px solid Highlight !important; background: Highlight !important; color: HighlightText !important; }
   #input-bar .glass-panel { border: 1px solid ButtonText !important; }
+}
+
+/* ── Camera overlay landscape ──────────────────────────────────── */
+@media (max-height: 500px) and (orientation: landscape) {
+  #camera-overlay > div:last-child {
+    flex-direction: row !important;
+    padding: 8px 16px !important;
+    gap: 16px !important;
+  }
+  #camera-overlay > div:last-child > div:first-child {
+    flex-direction: row !important;
+    gap: 8px !important;
+  }
+  #camera-shutter {
+    width: 56px !important;
+    height: 56px !important;
+  }
+  #camera-close, #camera-flip {
+    top: 8px !important;
+  }
+  #camera-close { left: 8px !important; }
+  #camera-flip { right: 8px !important; }
+  #camera-rec-indicator {
+    top: 8px !important;
+  }
 }

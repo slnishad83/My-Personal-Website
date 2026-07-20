@@ -104,7 +104,7 @@
       btn.setAttribute('aria-label', 'Toggle fullscreen');
       btn.setAttribute('title', 'Fullscreen (F11)');
       btn.innerHTML = '⛶';
-      btn.style.cssText = 'position:absolute;top:12px;right:48px;z-index:10010;background:rgba(0,0,0,0.6);color:#fff;border:none;border-radius:50%;width:36px;height:36px;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;';
+      btn.style.cssText = 'position:absolute;top:12px;right:48px;z-index:10010;background:rgba(0,0,0,0.6);color:#fff;border:none;border-radius:50%;width:44px;height:44px;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;';
       function _onFSClick() { toggleFullscreen(mediaViewer); }
       btn.addEventListener('click', _onFSClick);
       _trackCleanup(function () { btn.removeEventListener('click', _onFSClick); });
@@ -120,7 +120,7 @@
         btn.setAttribute('aria-label', 'Picture in Picture');
         btn.setAttribute('title', 'Picture in Picture');
         btn.innerHTML = '⧉';
-        btn.style.cssText = 'position:absolute;bottom:48px;right:12px;z-index:10010;background:rgba(0,0,0,0.6);color:#fff;border:none;border-radius:50%;width:36px;height:36px;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;';
+        btn.style.cssText = 'position:absolute;bottom:48px;right:12px;z-index:10010;background:rgba(0,0,0,0.6);color:#fff;border:none;border-radius:50%;width:44px;height:44px;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;';
         function _onPiPClick() {
           if (document.pictureInPictureElement) exitPiP();
           else requestPiP(videoEl);

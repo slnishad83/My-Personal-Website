@@ -115,11 +115,11 @@
       const icon = _getFileIcon(name);
       const thumb = file.thumbnailLink || file.thumbnails?.[0]?.medium?.url || '';
 
-      html += `<div class="drive-file-item" style="display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:10px;cursor:pointer;transition:background 0.15s" onmouseover="this.style.background='rgba(255,255,255,0.06)'" onmouseout="this.style.background='transparent'" onclick="_downloadDriveFile('${source}','${file.id}','${_escapeStr(name)}',this)">`;
+      html += `<div class="drive-file-item" style="display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:10px;cursor:pointer;transition:background 0.15s" onmouseover="this.style.background='var(--surface-container,rgba(0,0,0,0.06))'" onmouseout="this.style.background='transparent'" onclick="_downloadDriveFile('${source}','${file.id}','${_escapeStr(name)}',this)">`;
       if (thumb) {
         html += `<img src="${thumb}" style="width:40px;height:40px;border-radius:6px;object-fit:cover">`;
       } else {
-        html += `<div style="width:40px;height:40px;border-radius:6px;background:rgba(255,255,255,0.06);display:flex;align-items:center;justify-content:center"><span class="material-symbols-outlined" style="font-size:20px;color:var(--primary)">${icon}</span></div>`;
+        html += `<div style="width:40px;height:40px;border-radius:6px;background:var(--surface-container,rgba(0,0,0,0.06));display:flex;align-items:center;justify-content:center"><span class="material-symbols-outlined" style="font-size:20px;color:var(--primary)">${icon}</span></div>`;
       }
       html += '<div style="flex:1;min-width:0">';
       html += `<div style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${_escapeHtml(name)}</div>`;

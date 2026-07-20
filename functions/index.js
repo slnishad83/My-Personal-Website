@@ -484,13 +484,15 @@ exports.lookupVerifiedUserByEmailV2 = onRequest(
   }
 );
 
-const ALLOWED_ORIGINS = ['https://nishadsl.com', 'https://my-team-chat-2255.web.app'];
+const ALLOWED_ORIGINS = ['https://nishadsl.com', 'https://my-team-chat-2255.web.app', 'https://works.my-team-chat-2255.web.app'];
 function setCorsHeaders(response, origin) {
   const allowed = ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
   response.set('Access-Control-Allow-Origin', allowed);
   response.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   response.set('Access-Control-Allow-Headers', 'Authorization, Content-Type');
   response.set('Access-Control-Max-Age', '3600');
+  response.set('X-Content-Type-Options', 'nosniff');
+  response.set('X-Frame-Options', 'SAMEORIGIN');
 }
 
 async function verifyFirebaseUser(request) {
@@ -507,7 +509,8 @@ async function verifyFirebaseUser(request) {
 // H6: Origin validation helper
 function assertValidOrigin(request) {
   const origin = request.get('Origin') || request.get('Referer') || '';
-  if (origin && !ALLOWED_ORIGINS.some(o => origin.startsWith(o))) {
+  if (!origin) throw new Error('Missing origin header');
+  if (!ALLOWED_ORIGINS.some(o => origin.startsWith(o))) {
     throw new Error('Invalid origin');
   }
 }
@@ -2663,12 +2666,15 @@ const YOUTUBE_CLIENTS = {
 };
 
 exports.youtubeSearch = onRequest(
-  { cors: true, timeoutSeconds: 30, memory: '256MB' },
+  { cors: false, timeoutSeconds: 30, memory: '256MB' },
   async (req, res) => {
     if (req.method === 'OPTIONS') { res.status(204).send(''); return; }
-    res.set('Access-Control-Allow-Origin', '*');
-    res.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-    res.set('Access-Control-Allow-Headers', 'Content-Type');
+    const origin = req.get('Origin') || req.get('Referer') || '';
+    setCorsHeaders(res, origin);
+
+    try { await verifyFirebaseUser(req); } catch (e) {
+      res.status(401).json({ ok: false, error: 'Unauthorized' }); return;
+    }
 
     const { q, videoId, lang } = req.query || {};
     const body = req.method === 'POST' ? req.body : {};

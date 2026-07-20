@@ -73,15 +73,15 @@
 }
 #_wa_conn_banner.offline {
   display: flex;
-  background: #fef3c7;
-  color: #92400e;
-  border-bottom: 1px solid #fde68a;
+  background: var(--warning-container, #fef3c7);
+  color: var(--on-warning-container, #92400e);
+  border-bottom: 1px solid var(--warning-border, #fde68a);
 }
 #_wa_conn_banner.reconnecting {
   display: flex;
-  background: #e0f2fe;
-  color: #0369a1;
-  border-bottom: 1px solid #bae6fd;
+  background: var(--info-container, #e0f2fe);
+  color: var(--on-info-container, #0369a1);
+  border-bottom: 1px solid var(--info-border, #bae6fd);
 }
 #_wa_conn_banner .conn-dot {
   width: 8px; height: 8px;
@@ -97,15 +97,15 @@
 
 html.dark #_wa_conn_banner.offline,
 .dark #_wa_conn_banner.offline {
-  background: #44380a;
-  color: #fcd34d;
-  border-color: #6b4f0a;
+  background: var(--warning-container, #44380a);
+  color: var(--on-warning-container, #fcd34d);
+  border-color: var(--warning-border, #6b4f0a);
 }
 html.dark #_wa_conn_banner.reconnecting,
 .dark #_wa_conn_banner.reconnecting {
-  background: #0c2d48;
-  color: #7dd3fc;
-  border-color: #164e63;
+  background: var(--info-container, #0c2d48);
+  color: var(--on-info-container, #7dd3fc);
+  border-color: var(--info-border, #164e63);
 }
 
 /* ── 5. WhatsApp Hover Actions & Shares ────────────── */
@@ -180,13 +180,14 @@ html.dark #_wa_conn_banner.reconnecting,
 /* ── 8. Feature modal mod rules ────────────────────── */
 .feature-nav-bar {
   display: none; gap: 0; overflow-x: auto; background: var(--bg,#f0f2f5);
-  border-top: 1px solid var(--border,#e2e8f0); padding: 0;
-  scrollbar-width: none; position: relative; z-index: 5;
+  border-bottom: 1px solid var(--border,#e2e8f0); padding: 0;
+  scrollbar-width: none; z-index: 45;
 }
 .feature-nav-bar::-webkit-scrollbar { display: none; }
 .feat-nav-btn {
   flex-shrink: 0; display: flex; flex-direction: column; align-items: center;
-  gap: 3px; padding: 8px 14px; cursor: pointer; font-size: 11px;
+  gap: 3px; padding: 8px 14px; min-width: 44px; min-height: 44px;
+  cursor: pointer; font-size: 11px;
   color: var(--text-secondary,#667781); font-family: inherit; background: none; border: none;
   transition: background 0.15s; border-bottom: 2px solid transparent;
   font-weight: 600;
@@ -195,22 +196,26 @@ html.dark #_wa_conn_banner.reconnecting,
 .feat-nav-btn .fn-icon { font-size: 18px; }
 
 @media (max-width: 768px) {
-  .feature-nav-bar { display: flex; }
+  .feature-nav-bar {
+    display: flex; position: fixed; top: 0; left: 0; right: 0;
+    padding-top: env(safe-area-inset-top, 0px);
+    max-height: calc(56px + env(safe-area-inset-top, 0px));
+  }
 }
 @media (min-width: 769px) {
   .feature-nav-bar { display: none !important; }
 }
 
 .busy-banner {
-  background: #fff3cd; border-bottom: 1px solid #ffc107; padding: 8px 16px;
+  background: var(--warning-container, #fff3cd); border-bottom: 1px solid var(--warning-border, #ffc107); padding: 8px 16px;
   display: flex; align-items: center; gap: 10px; font-size: 13px; font-weight: 600;
-  color: #856404;
+  color: var(--on-warning-container, #856404);
 }
 .busy-banner button { margin-left: auto; font-size: 11px; padding: 4px 10px;
-  border: 1px solid #856404; border-radius: 6px; background: none;
-  color: #856404; cursor: pointer; font-family: inherit; font-weight: 600; }
-html.dark .busy-banner { background: #3d3200; border-bottom-color: #5a4a00; color: #ffd54f; }
-html.dark .busy-banner button { border-color: #ffd54f; color: #ffd54f; }
+  border: 1px solid var(--on-warning-container, #856404); border-radius: 6px; background: none;
+  color: var(--on-warning-container, #856404); cursor: pointer; font-family: inherit; font-weight: 600; }
+html.dark .busy-banner { background: var(--warning-container, #3d3200); border-bottom-color: var(--warning-border, #5a4a00); color: var(--on-warning-container, #ffd54f); }
+html.dark .busy-banner button { border-color: var(--on-warning-container, #ffd54f); color: var(--on-warning-container, #ffd54f); }
 
 .feat-modal-overlay {
   position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 9000;
@@ -312,9 +317,9 @@ html.dark .busy-banner button { border-color: #ffd54f; color: #ffd54f; }
 
 .cf-pill{display:inline-flex;align-items:center;font-size:10px;font-weight:700;
   line-height:1;padding:2px 7px;border-radius:10px;flex-shrink:0;white-space:nowrap}
-.cf-pill-received{color:#1565c0;background:#e3f0ff}
-.cf-pill-sent{color:#e65100;background:#fff3e0}
-.cf-pill-accepted{color:#2e7d32;background:#e8f5e9}
+.cf-pill-received{color:var(--info, #1565c0);background:var(--info-container, #e3f0ff)}
+.cf-pill-sent{color:var(--warning, #e65100);background:var(--warning-container, #fff3e0)}
+.cf-pill-accepted{color:var(--success, #2e7d32);background:var(--success-container, #e8f5e9)}
 .cf-pill-count{color:var(--text-secondary,#555);background:var(--bg,#f0f0f0);font-size:11px;min-width:22px;
   justify-content:center;border-radius:12px;padding:2px 8px}
 
@@ -438,6 +443,10 @@ html.dark .busy-banner button { border-color: #ffd54f; color: #ffd54f; }
 }
 .audio-visualizer-wave.playing span {
   animation: waveRipple 1.2s infinite ease-in-out;
+}
+.audio-visualizer-wave span.active {
+  background: var(--text-secondary, #667781);
+  height: 22px;
 }
 .audio-visualizer-wave span:nth-child(1) { animation-delay: 0.1s; }
 .audio-visualizer-wave span:nth-child(2) { animation-delay: 0.3s; }

@@ -170,7 +170,7 @@
       </div>
       <p style="font-size:13px;color:var(--on-surface-variant);margin:0 0 16px">Appear offline to others while still being able to use the app.</p>
 
-      <div style="padding:16px;border-radius:14px;background:rgba(255,255,255,0.04);margin-bottom:12px">
+      <div style="padding:16px;border-radius:14px;background:var(--surface-container-low,rgba(0,0,0,0.04));margin-bottom:12px">
         <div style="display:flex;align-items:center;justify-content:space-between">
           <div>
             <div style="font-size:14px;font-weight:600">Enable Ghost Mode</div>
@@ -178,14 +178,14 @@
           </div>
           <label style="position:relative;width:48px;height:26px;cursor:pointer">
             <input type="checkbox" ${state.enabled && !state.specificContacts?.length ? 'checked' : ''} onchange="toggleGhostMode()" style="display:none">
-            <div style="position:absolute;inset:0;border-radius:13px;background:${state.enabled && !state.specificContacts?.length ? 'var(--primary)' : 'rgba(255,255,255,0.15)'};transition:background 0.2s">
+            <div style="position:absolute;inset:0;border-radius:13px;background:${state.enabled && !state.specificContacts?.length ? 'var(--primary)' : 'var(--outline-variant,rgba(0,0,0,0.15))'};transition:background 0.2s">
               <div style="position:absolute;top:3px;left:${state.enabled && !state.specificContacts?.length ? '25px' : '3px'};width:20px;height:20px;border-radius:50%;background:white;transition:left 0.2s;box-shadow:0 1px 3px rgba(0,0,0,0.3)"></div>
             </div>
           </label>
         </div>
       </div>
 
-      <div style="padding:16px;border-radius:14px;background:rgba(255,255,255,0.04);margin-bottom:12px">
+      <div style="padding:16px;border-radius:14px;background:var(--surface-container-low,rgba(0,0,0,0.04));margin-bottom:12px">
         <div style="display:flex;align-items:center;justify-content:space-between">
           <div>
             <div style="font-size:14px;font-weight:600">Specific Contacts</div>
@@ -195,13 +195,13 @@
         </div>
       </div>
 
-      <div style="padding:16px;border-radius:14px;background:rgba(255,255,255,0.04)">
+      <div style="padding:16px;border-radius:14px;background:var(--surface-container-low,rgba(0,0,0,0.04))">
         <div style="display:flex;align-items:center;justify-content:space-between">
           <div>
             <div style="font-size:14px;font-weight:600">Status Override</div>
             <div style="font-size:12px;color:var(--on-surface-variant);margin-top:2px">Show a fake "last seen" time</div>
           </div>
-          <button onclick="showToast('Last seen will show as ' + new Date(Date.now() - 3600000).toLocaleTimeString(), 'info')" style="padding:6px 12px;border-radius:8px;border:none;background:rgba(255,255,255,0.08);color:var(--on-surface);font-size:12px;font-weight:600;cursor:pointer">1 hr ago</button>
+          <button onclick="showToast('Last seen will show as ' + new Date(Date.now() - 3600000).toLocaleTimeString(), 'info')" style="padding:6px 12px;border-radius:8px;border:none;background:var(--outline-variant,rgba(0,0,0,0.08));color:var(--on-surface);font-size:12px;font-weight:600;cursor:pointer">1 hr ago</button>
         </div>
       </div>`;
 
@@ -235,10 +235,10 @@
       const isSelected = selected.includes(c.uid);
       html += `<div style="display:flex;align-items:center;gap:10px;padding:10px;border-radius:10px;cursor:pointer;margin-bottom:4px;background:${isSelected ? 'rgba(124,77,255,0.15)' : 'transparent'}" onclick="_toggleGhostContact('${c.uid}')">
         <div style="width:36px;height:36px;border-radius:50%;overflow:hidden;flex-shrink:0">
-          ${c.photoURL ? `<img src="${c.photoURL}" style="width:100%;height:100%;object-fit:cover">` : `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,0.1);font-size:14px;font-weight:700">${c.initials || '?'}</div>`}
+          ${c.photoURL ? `<img src="${c.photoURL}" style="width:100%;height:100%;object-fit:cover">` : `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:var(--outline-variant,rgba(0,0,0,0.1));font-size:14px;font-weight:700">${c.initials || '?'}</div>`}
         </div>
         <div style="flex:1"><div style="font-size:13px;font-weight:600">${escHtml(c.name)}</div><div style="font-size:11px;color:var(--on-surface-variant)">${escHtml(c.email || '')}</div></div>
-        <div style="width:22px;height:22px;border-radius:50%;border:2px solid ${isSelected ? 'var(--primary)' : 'rgba(255,255,255,0.2)'};display:flex;align-items:center;justify-content:center;background:${isSelected ? 'var(--primary)' : 'transparent'}">
+        <div style="width:22px;height:22px;border-radius:50%;border:2px solid ${isSelected ? 'var(--primary)' : 'var(--outline-variant,rgba(0,0,0,0.2))'};display:flex;align-items:center;justify-content:center;background:${isSelected ? 'var(--primary)' : 'transparent'}">
           ${isSelected ? '<span class="material-symbols-outlined" style="font-size:14px;color:white">check</span>' : ''}
         </div>
       </div>`;

@@ -2719,17 +2719,6 @@ html.dark .thread-typing-indicator {
   }
 }
 
-/* -- Landscape mobile: compact floating mini player -- */
-@media (max-height: 500px) and (orientation: landscape) {
-  #nsm-mini {
-    width: 180px !important;
-    padding: 4px 8px !important;
-  }
-  #nsm-mini button span.material-symbols-outlined {
-    font-size: 20px !important;
-  }
-}
-
 /* -- Dark mode / Light mode toggle safe for music panels -- */
 html:not(.dark) .music-lib-panel,
 html:not(.dark) #nsm-full > div,
@@ -2756,5 +2745,775 @@ html:not(.dark) #playlist-detail-overlay > div {
   /* EQ sliders taller on touch */
   #equalizer-overlay input[type="range"] {
     height: 180px !important;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   UNIVERSAL RESPONSIVE FIXES — All Devices, All Screen Sizes
+   ═══════════════════════════════════════════════════════════════ */
+
+/* -- Mini player: responsive width, never overflow viewport -- */
+#nsm-mini {
+  width: min(280px, calc(100vw - 32px)) !important;
+  max-width: calc(100vw - 32px) !important;
+  bottom: calc(72px + env(safe-area-inset-bottom, 0px)) !important;
+}
+
+/* -- Close buttons: 44px minimum touch target -- */
+#_forward-overlay button,
+#auto-translate-dialog button,
+#rename-self-chat-overlay button,
+#schedule-modal button {
+  min-height: 44px;
+  min-width: 44px;
+}
+
+/* -- Close/dismiss buttons inside modals: larger touch area -- */
+#_forward-overlay .modal button:first-child,
+.starred-modal button,
+.pinned-panel button {
+  min-height: 44px !important;
+  min-width: 44px !important;
+}
+
+/* -- Full player: adapt to screen size -- */
+@media (min-width: 1024px) {
+  #full-player-overlay > div {
+    max-width: min(480px, 40vw) !important;
+    max-height: 85vh !important;
+  }
+}
+@media (min-width: 1920px) {
+  #full-player-overlay > div {
+    max-width: min(520px, 30vw) !important;
+    max-height: 80vh !important;
+  }
+}
+
+/* -- Seek bar & volume slider: thicker for touch -- */
+@media (pointer: coarse) {
+  #full-player-overlay input[type="range"],
+  #nsm-full input[type="range"] {
+    height: 8px !important;
+    min-height: 8px !important;
+  }
+  #full-player-overlay input[type="range"]::-webkit-slider-thumb,
+  #nsm-full input[type="range"]::-webkit-slider-thumb {
+    width: 24px !important;
+    height: 24px !important;
+  }
+}
+
+/* -- EQ sliders: wider for touch targets -- */
+@media (pointer: coarse) {
+  #equalizer-overlay input[type="range"] {
+    width: 32px !important;
+    min-width: 32px !important;
+  }
+}
+
+/* -- Schedule dialog: max-height and overflow -- */
+#schedule-modal > div:last-child {
+  max-height: 85vh;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* -- Auto-translate dialog: backdrop close + overflow -- */
+#auto-translate-dialog > div {
+  max-height: 85vh;
+  overflow-y: auto;
+}
+
+/* -- Translation popup: adapt to keyboard/short viewports -- */
+#translation-popup {
+  bottom: max(80px, calc(env(safe-area-inset-bottom, 0px) + 60px)) !important;
+  max-width: min(340px, 90vw) !important;
+}
+
+/* -- Small phones (<=360px): tighter spacing -- */
+@media (max-width: 360px) {
+  .music-lib-panel {
+    padding: 8px !important;
+  }
+  #full-player-overlay .music-track-thumb {
+    max-width: min(200px, 55vw) !important;
+    max-height: min(200px, 55vw) !important;
+  }
+}
+
+/* -- Very small phones (<=320px): compact everything -- */
+@media (max-width: 320px) {
+  #nsm-mini {
+    width: min(220px, calc(100vw - 16px)) !important;
+    padding: 4px 6px !important;
+  }
+  #nsm-mini button span.material-symbols-outlined {
+    font-size: 18px !important;
+  }
+  #full-player-overlay .music-track-thumb {
+    max-width: min(160px, 50vw) !important;
+    max-height: min(160px, 50vw) !important;
+  }
+}
+
+/* -- Landscape phones: compact layout -- */
+@media (max-height: 500px) and (orientation: landscape) {
+  #full-player-overlay > div {
+    max-height: 90vh !important;
+    flex-direction: row !important;
+    overflow: hidden !important;
+  }
+  #full-player-overlay .music-track-thumb {
+    max-width: min(180px, 30vw) !important;
+    max-height: min(180px, 60vh) !important;
+  }
+}
+
+/* -- Tablets (768-1024px): balanced layout -- */
+@media (min-width: 768px) and (max-width: 1024px) {
+  #nsm-mini {
+    width: min(300px, 35vw) !important;
+  }
+}
+
+/* -- Large desktops (1920px+): larger player -- */
+@media (min-width: 1920px) {
+  #nsm-mini {
+    width: 320px !important;
+  }
+  .music-lib-panel {
+    max-width: 700px !important;
+  }
+}
+
+/* -- 4K / TV (3840px+): extra large -- */
+@media (min-width: 3840px) {
+  #nsm-mini {
+    width: 380px !important;
+    padding: 12px 16px !important;
+  }
+  #nsm-mini button span.material-symbols-outlined {
+    font-size: 28px !important;
+  }
+  #full-player-overlay > div {
+    max-width: 600px !important;
+  }
+}
+
+/* -- Input font-size 16px on mobile to prevent iOS zoom -- */
+@media (max-width: 767px) {
+  #rename-self-chat-overlay input,
+  #auto-translate-dialog input,
+  #auto-translate-dialog select {
+    font-size: 16px !important;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   CHAT INTERFACE RESPONSIVE — Bottom Nav, Header, Input, Bubbles
+   ═══════════════════════════════════════════════════════════════ */
+
+/* -- Bottom nav safe area for all devices -- */
+#bottom-nav {
+  padding-bottom: max(6px, env(safe-area-inset-bottom, 0px)) !important;
+}
+
+/* -- Input bar safe area on mobile -- */
+@media (max-width: 767px) {
+  #input-bar {
+    padding-bottom: max(8px, env(safe-area-inset-bottom, 0px)) !important;
+  }
+}
+
+/* -- Mobile: prevent horizontal overflow on everything -- */
+@media (max-width: 767px) {
+  body, html, #app {
+    overflow-x: hidden !important;
+  }
+  .message-bubble, .msg-bubble {
+    max-width: 85% !important;
+    word-break: break-word !important;
+    overflow-wrap: anywhere !important;
+  }
+  .my-message .message-bubble,
+  .my-message .msg-bubble {
+    max-width: 80% !important;
+  }
+}
+
+/* -- Very small phones (320px): ultra-compact chat -- */
+@media (max-width: 320px) {
+  .message-bubble, .msg-bubble {
+    max-width: 90% !important;
+    padding: 6px 10px !important;
+    font-size: 13px !important;
+  }
+  #input-bar {
+    padding: 4px 6px !important;
+  }
+  #input-bar textarea,
+  #input-bar .wa-textarea {
+    font-size: 14px !important;
+    min-height: 40px !important;
+  }
+  #chat-header {
+    min-height: 44px !important;
+    padding: 0 8px !important;
+  }
+  #chat-header button {
+    min-width: 36px !important;
+    min-height: 36px !important;
+    padding: 4px !important;
+  }
+}
+
+/* -- Tablets portrait (768-1023px): balanced split -- */
+@media (min-width: 768px) and (max-width: 1023px) {
+  .message-bubble, .msg-bubble {
+    max-width: 70% !important;
+  }
+}
+
+/* -- Large tablets / small laptops (1024-1279px) -- */
+@media (min-width: 1024px) and (max-width: 1279px) {
+  .message-bubble, .msg-bubble {
+    max-width: 60% !important;
+  }
+}
+
+/* -- All touch devices: bigger interactive elements -- */
+@media (pointer: coarse) {
+  #bottom-nav button,
+  .bottom-nav-item {
+    min-height: 48px !important;
+    min-width: 48px !important;
+  }
+  #chat-header button {
+    min-height: 44px !important;
+    min-width: 44px !important;
+  }
+  #input-bar button {
+    min-height: 44px !important;
+    min-width: 44px !important;
+  }
+}
+
+/* -- PWA standalone: extra bottom safe area -- */
+@media (display-mode: standalone) {
+  #bottom-nav {
+    padding-bottom: max(8px, env(safe-area-inset-bottom, 0px)) !important;
+  }
+  #input-bar {
+    padding-bottom: max(10px, env(safe-area-inset-bottom, 0px)) !important;
+  }
+}
+
+/* -- Landscape phones: compact header and input -- */
+@media (max-height: 500px) and (orientation: landscape) {
+  #chat-header {
+    min-height: 40px !important;
+    max-height: 44px !important;
+  }
+  #input-bar {
+    min-height: 44px !important;
+    padding: 4px 8px !important;
+  }
+  #input-bar textarea,
+  #input-bar .wa-textarea {
+    min-height: 36px !important;
+    max-height: 60px !important;
+  }
+}
+
+/* -- 4K / TV (3840px+): larger everything -- */
+@media (min-width: 3840px) {
+  .message-bubble, .msg-bubble {
+    max-width: 45% !important;
+    padding: 14px 20px !important;
+    font-size: 19px !important;
+  }
+  #chat-header {
+    min-height: 96px !important;
+    padding: 0 32px !important;
+  }
+  #chat-header button {
+    min-height: 56px !important;
+    min-width: 56px !important;
+  }
+  #input-bar {
+    padding: 16px 32px !important;
+    min-height: 80px !important;
+  }
+  #bottom-nav {
+    height: 80px !important;
+  }
+}
+
+/* -- All modals: safe area padding, max-height, overflow -- */
+.forward-modal,
+.starred-modal,
+.pinned-modal,
+.group-create-modal {
+  max-height: 85vh;
+  overflow: hidden;
+}
+
+/* -- Context menu: safe area on mobile -- */
+#_msg-ctx-menu {
+  max-height: min(400px, 60vh) !important;
+  overflow-y: auto !important;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* -- Emoji picker: safe area on mobile -- */
+#emoji-picker-panel,
+.emoji-picker {
+  max-height: min(400px, 50vh) !important;
+}
+
+/* -- Profile overlay: safe area -- */
+#profile-overlay > div {
+  max-height: 85vh;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* -- Thread panel: full height on mobile -- */
+@media (max-width: 639px) {
+  #thread-panel {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+}
+
+/* -- Reduce motion for accessibility -- */
+@media (prefers-reduced-motion: reduce) {
+  #nsm-mini,
+  #full-player-overlay,
+  #nsm-lib,
+  #equalizer-overlay,
+  #playlist-queue-overlay,
+  #translation-popup,
+  #rename-self-chat-overlay,
+  #auto-translate-dialog,
+  #schedule-modal,
+  #_forward-overlay {
+    animation: none !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* -- High contrast / forced colors -- */
+@media (forced-colors: active) {
+  #nsm-mini,
+  .msg-bubble,
+  .message-bubble {
+    border: 1px solid ButtonText !important;
+  }
+}
+
+/* -- Print: hide player and overlays -- */
+@media print {
+  #nsm-mini,
+  #bottom-nav,
+  #jumpToBottomBtn,
+  #onboarding-overlay,
+  #full-player-overlay,
+  #nsm-lib,
+  #equalizer-overlay,
+  .tasks-panel,
+  .push-prompt-banner,
+  #offline-pending-indicator,
+  .connection-banner,
+  .wa-filter-overflow-menu,
+  .wa-filter-sheet-overlay,
+  #call-screen {
+    display: none !important;
+  }
+  body { color-scheme: light !important; }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   10/10 AUDIT FIXES — Touch Targets, Reduced Motion, Overscroll,
+   Z-Index, Safe Areas, Accessibility
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ── UNIVERSAL: prefers-reduced-motion ─────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ── TOUCH TARGETS: 44px minimum on all interactive elements ── */
+.wa-chip,
+.wa-chip-add,
+.wa-filter-manage-btn,
+.wa-filter-sheet-close,
+.wa-filter-row-actions button,
+.detail-panel-toggle,
+.thread-summary-close,
+.task-del,
+.cf-unpin-btn,
+#jumpToBottomBtn,
+.confirm-btn {
+  min-width: 44px !important;
+  min-height: 44px !important;
+}
+#header-actions-container button {
+  min-width: 44px !important;
+  min-height: 44px !important;
+}
+#attach-menu button,
+#emoji-picker-panel button,
+.emoji-picker button {
+  min-width: 44px !important;
+  min-height: 44px !important;
+}
+#_msg-ctx-menu button {
+  min-width: 44px !important;
+}
+.reaction-emoji-btn {
+  min-width: 44px !important;
+  min-height: 44px !important;
+}
+.tab-bar button,
+.folder-tab,
+.nsm-tab,
+.ml-tab,
+.pl-tab {
+  min-width: 44px !important;
+  min-height: 44px !important;
+}
+
+/* ── OVERSCROLL-BEHAVIOR: prevent iOS bounce-through ──────── */
+#chat-list,
+#messages-wrap,
+#welcome-screen,
+#contact-picker-list,
+.overflow-y-auto,
+.custom-scrollbar,
+#emoji-grid,
+.modal-body,
+.wa-filter-sheet-body,
+.tasks-list,
+#pinnedSection,
+.feat-modal-box,
+.cf-filter-chips,
+.thread-panel-body,
+#music-queue-list,
+.nsm-tab,
+.ml-tab,
+.profile-settings-scroll {
+  overscroll-behavior: contain;
+}
+.cf-filter-chips {
+  overscroll-behavior-inline: contain;
+}
+
+/* ── Z-INDEX FIXES: prevent layer conflicts ──────────────── */
+.wa-filter-overflow-menu { z-index: 8500 !important; }
+#jumpToBottomBtn { z-index: 8500 !important; }
+.feat-modal-overlay { z-index: 8800 !important; }
+#offline-pending-indicator { z-index: 8900 !important; }
+.push-prompt-banner { z-index: 8950 !important; }
+.tasks-panel { z-index: 8000 !important; }
+[data-tooltip]::after { z-index: 9500 !important; }
+
+/* ── SAFE AREAS: fixed-position elements ─────────────────── */
+.push-prompt-banner {
+  bottom: calc(70px + env(safe-area-inset-bottom, 0px)) !important;
+}
+#offline-pending-indicator {
+  top: max(8px, env(safe-area-inset-top, 8px)) !important;
+}
+.tasks-panel {
+  top: env(safe-area-inset-top, 0px) !important;
+  bottom: env(safe-area-inset-bottom, 0px) !important;
+  right: env(safe-area-inset-right, 0px) !important;
+}
+#desktop-context-menu {
+  max-width: min(280px, calc(100vw - 16px)) !important;
+}
+
+/* ── OVERFLOW: text containers ────────────────────────────── */
+.transcription-text,
+.catchup-result,
+.cf-req-text,
+.thread-empty-desc,
+.thread-loading,
+.thread-empty,
+.thread-error {
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+/* ── ASPECT-RATIO: media elements ─────────────────────────── */
+.bubble-media img,
+.bubble-media video {
+  aspect-ratio: 16/9;
+}
+.ce-preview-img,
+.ce-preview-video {
+  aspect-ratio: 16/9;
+}
+#local-video-container video {
+  aspect-ratio: 9/16;
+}
+
+/* ── HARDcoded COLORS → CSS Variables ─────────────────────── */
+html.dark .busy-banner {
+  background: var(--surface-container, #1f2c34) !important;
+  border-bottom-color: var(--warning, #ffc107) !important;
+  color: var(--on-surface, #e9edef) !important;
+}
+
+/* ── DARK MODE: ensure .dark class consistency ───────────── */
+.dark .cf-pill-received,
+html.dark .cf-pill-received { color: #8ab4f8; background: rgba(138,180,248,0.15); }
+.dark .cf-pill-sent,
+html.dark .cf-pill-sent { color: #f8b870; background: rgba(248,184,112,0.15); }
+.dark .cf-pill-accepted,
+html.dark .cf-pill-accepted { color: #81c995; background: rgba(129,201,149,0.15); }
+
+/* ── 375px breakpoint (iPhone 12/13/14) ──────────────────── */
+@media (min-width: 374px) and (max-width: 376px) {
+  .message-bubble, .msg-bubble {
+    max-width: 82% !important;
+  }
+  #input-bar {
+    padding: 6px 8px !important;
+  }
+}
+
+/* ── 414px breakpoint (iPhone Plus/Max) ───────────────────── */
+@media (min-width: 413px) and (max-width: 415px) {
+  .message-bubble, .msg-bubble {
+    max-width: 78% !important;
+  }
+}
+
+/* ── TASKS PANEL: responsive width ────────────────────────── */
+.tasks-panel {
+  width: min(320px, calc(100vw - 16px)) !important;
+}
+
+/* ── ATTACH MENU: responsive width on small screens ───────── */
+@media (max-width: 360px) {
+  #attach-menu {
+    max-width: calc(100vw - 16px) !important;
+  }
+}
+
+/* ── LANDSCAPE: compact tasks panel ───────────────────────── */
+@media (max-height: 500px) and (orientation: landscape) {
+  .tasks-panel {
+    width: min(240px, 40vw) !important;
+  }
+}
+
+/* ── TABLET DETAIL PANEL: prevent conflict ───────────────── */
+@media (min-width: 1024px) and (max-width: 1279px) {
+  #detail-panel {
+    display: none !important;
+  }
+  #detail-panel.detail-panel-visible {
+    display: flex !important;
+    position: fixed;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    z-index: 100;
+    width: min(380px, 50vw);
+    background: var(--background);
+    border-left: 1px solid var(--border);
+  }
+}
+
+/* ── LOADING STATES: respect reduced motion ───────────────── */
+.loading-spinner,
+.loading-skeleton {
+  animation: none !important;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .loading-spinner { animation: spin 0.8s linear infinite !important; }
+  .loading-skeleton { animation: shimmer 1.5s ease-in-out infinite !important; }
+}
+
+/* ── WIDE SCREEN: constrain app width ─────────────────────── */
+@media (min-width: 1920px) and (max-width: 2559px) {
+  #app {
+    max-width: 1800px;
+    margin: 0 auto;
+  }
+}
+
+/* ── iOS SAFARI: prevent zoom on input focus ──────────────── */
+@supports (-webkit-touch-callout: none) {
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="tel"],
+  input[type="number"],
+  textarea,
+  select {
+    font-size: 16px !important;
+  }
+}
+
+/* ── CLIPBOARD: handle permission error ───────────────────── */
+.clipboard-error {
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   GLOBAL RESPONSIVE FIXES — 4in to 50in+ screens
+   Ensures ALL features work on EVERY device and screen size
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ── Touch targets: minimum 44px everywhere ── */
+button, [role="button"], a, input[type="checkbox"], input[type="radio"],
+.feat-nav-btn, .bottom-nav-item, .calc-btn, .calc-share-btn,
+.wb-tool-btn, .ann-tool-btn, .trivia-opt,
+.chat-header-btn, .msg-action-btn,
+.material-symbols-outlined, .material-symbols-rounded {
+  min-height: 44px;
+  min-width: 44px;
+}
+
+/* Don't force min-width on small inline elements */
+.calc-btn, .feat-nav-btn, .bottom-nav-item,
+input[type="text"], input[type="search"], input[type="password"],
+input[type="email"], input[type="number"], input[type="url"],
+select, textarea {
+  min-width: unset;
+}
+
+/* ── All fixed-position bottom elements: safe area + bottom nav offset ── */
+.toast, .offline-indicator, #call-bubble,
+.feat-modal-overlay, [class*="toast"],
+[style*="bottom: 80px"], [style*="bottom:80px"],
+[style*="bottom: 100px"], [style*="bottom:100px"],
+[style*="bottom: 120px"], [style*="bottom:120px"] {
+  bottom: calc(var(--bottom-offset, 80px) + env(safe-area-inset-bottom, 0px)) !important;
+}
+
+/* ── All floating panels: responsive max-width ── */
+.calc-widget, .task-panel, .music-queue-panel,
+[style*="position: fixed"][style*="width: 320px"],
+[style*="position: fixed"][style*="width:320px"] {
+  max-width: calc(100vw - 32px);
+}
+
+/* ── Whiteboard & Annotation toolbars: flex-wrap on small screens ── */
+@media (max-width: 480px) {
+  .wb-toolbar, .ann-toolbar,
+  [style*="display:flex"][style*="gap:4px"][style*="padding:4px"],
+  .wb-tool-btn, .ann-tool-btn {
+    flex-wrap: wrap !important;
+    justify-content: center !important;
+  }
+  /* Color buttons: allow wrapping */
+  [style*="width:24px"][style*="height:24px"],
+  [style*="width: 24px"][style*="height: 24px"] {
+    min-width: 36px !important;
+    min-height: 36px !important;
+  }
+}
+
+/* ── All JS-created overlay panels: responsive ── */
+@media (max-width: 480px) {
+  /* Centered modals should be near-full-width */
+  [style*="max-width: 420px"][style*="width: 92vw"],
+  [style*="max-width:420px"][style*="width:92vw"],
+  [style*="max-width: 380px"][style*="width: 90vw"],
+  [style*="max-width:380px"][style*="width:90vw"],
+  [style*="max-width: 480px"][style*="width: 92vw"],
+  [style*="max-width:480px"][style*="width:92vw"] {
+    width: calc(100vw - 16px) !important;
+    max-width: none !important;
+    max-height: calc(100dvh - 32px) !important;
+  }
+}
+
+/* ── dvh fallback for older browsers ── */
+@supports not (height: 100dvh) {
+  .feat-modal-overlay, .overlay {
+    max-height: 100vh;
+  }
+}
+
+/* ── Translate popup: avoid bottom nav overlap ── */
+@media (max-width: 768px) {
+  [style*="bottom:100px"],
+  [style*="bottom: 100px"] {
+    bottom: calc(80px + env(safe-area-inset-bottom, 0px)) !important;
+  }
+}
+
+/* ── Format bar buttons: larger touch targets on mobile ── */
+@media (max-width: 768px) {
+  .format-bar button,
+  [style*="px-2"][style*="py-1"][style*="text-xs"] {
+    min-height: 44px !important;
+    min-width: 44px !important;
+    padding: 8px 12px !important;
+  }
+}
+
+/* ── Context menus: ensure they fit on small screens ── */
+@media (max-width: 400px) {
+  #_msg-ctx-menu, [id*="ctx-menu"] {
+    min-width: 160px !important;
+    max-width: calc(100vw - 24px) !important;
+  }
+}
+
+/* ── Desktop: larger screens get larger touch-friendly spacing ── */
+@media (min-width: 1200px) {
+  .calc-btn { height: 48px; font-size: 18px; }
+  .feat-nav-btn { padding: 10px 18px; font-size: 12px; }
+}
+
+/* ── Safe area padding for all fixed elements ── */
+@supports (padding: env(safe-area-inset-bottom)) {
+  #bottom-nav, .feature-nav-bar {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  #chat-header, [id*="header"] {
+    padding-top: env(safe-area-inset-top, 0px);
+  }
+}
+
+/* ── Tasks panel responsive ── */
+@media (max-width: 480px) {
+  .task-panel, [style*="width: 320px"][style*="right: 0"][style*="position: fixed"] {
+    width: calc(100vw - 16px) !important;
+    right: 8px !important;
+    left: 8px !important;
+  }
+}
+
+/* ── Music player mini: responsive width ── */
+@media (max-width: 400px) {
+  [style*="width:208px"][style*="position:fixed"],
+  [style*="width: 208px"][style*="position: fixed"] {
+    width: calc(100vw - 32px) !important;
+    max-width: 280px !important;
+  }
+}
+
+/* ── Emoji picker: full-width on mobile ── */
+@media (max-width: 480px) {
+  #emoji-picker, [class*="emoji"] {
+    left: 8px !important;
+    right: 8px !important;
+    width: auto !important;
+    max-width: none !important;
   }
 }

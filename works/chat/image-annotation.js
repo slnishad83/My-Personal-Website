@@ -69,18 +69,18 @@
       </div>
       <div style="display:flex;align-items:center;justify-content:center;gap:8px;padding:10px 16px;background:rgba(0,0,0,0.5);flex-wrap:wrap">
         <div style="display:flex;gap:4px">
-          <button onclick="annSetTool('pen')" class="ann-tool-btn active" data-tool="pen" style="width:34px;height:34px;border-radius:8px;border:2px solid var(--primary);background:rgba(124,77,255,0.2);color:white;cursor:pointer;display:flex;align-items:center;justify-content:center"><span class="material-symbols-outlined" style="font-size:16px">edit</span></button>
-          <button onclick="annSetTool('highlighter')" class="ann-tool-btn" data-tool="highlighter" style="width:34px;height:34px;border-radius:8px;border:2px solid transparent;background:rgba(255,255,255,0.06);color:white;cursor:pointer;display:flex;align-items:center;justify-content:center"><span class="material-symbols-outlined" style="font-size:16px">ink_highlighter</span></button>
-          <button onclick="annSetTool('arrow')" class="ann-tool-btn" data-tool="arrow" style="width:34px;height:34px;border-radius:8px;border:2px solid transparent;background:rgba(255,255,255,0.06);color:white;cursor:pointer;display:flex;align-items:center;justify-content:center"><span class="material-symbols-outlined" style="font-size:16px">north_east</span></button>
-          <button onclick="annSetTool('rect')" class="ann-tool-btn" data-tool="rect" style="width:34px;height:34px;border-radius:8px;border:2px solid transparent;background:rgba(255,255,255,0.06);color:white;cursor:pointer;display:flex;align-items:center;justify-content:center"><span class="material-symbols-outlined" style="font-size:16px">rectangle</span></button>
-          <button onclick="annSetTool('circle')" class="ann-tool-btn" data-tool="circle" style="width:34px;height:34px;border-radius:8px;border:2px solid transparent;background:rgba(255,255,255,0.06);color:white;cursor:pointer;display:flex;align-items:center;justify-content:center"><span class="material-symbols-outlined" style="font-size:16px">circle</span></button>
-          <button onclick="annSetTool('text')" class="ann-tool-btn" data-tool="text" style="width:34px;height:34px;border-radius:8px;border:2px solid transparent;background:rgba(255,255,255,0.06);color:white;cursor:pointer;display:flex;align-items:center;justify-content:center"><span class="material-symbols-outlined" style="font-size:16px">text_fields</span></button>
-          <button onclick="annSetTool('eraser')" class="ann-tool-btn" data-tool="eraser" style="width:34px;height:34px;border-radius:8px;border:2px solid transparent;background:rgba(255,255,255,0.06);color:white;cursor:pointer;display:flex;align-items:center;justify-content:center"><span class="material-symbols-outlined" style="font-size:16px">ink_eraser</span></button>
+          <button onclick="annSetTool('pen')" class="ann-tool-btn active" data-tool="pen" style="width:44px;height:44px;border-radius:8px;border:2px solid var(--primary);background:rgba(124,77,255,0.2);color:white;cursor:pointer;display:flex;align-items:center;justify-content:center"><span class="material-symbols-outlined" style="font-size:16px">edit</span></button>
+          <button onclick="annSetTool('highlighter')" class="ann-tool-btn" data-tool="highlighter" style="width:44px;height:44px;border-radius:8px;border:2px solid transparent;background:rgba(255,255,255,0.06);color:white;cursor:pointer;display:flex;align-items:center;justify-content:center"><span class="material-symbols-outlined" style="font-size:16px">ink_highlighter</span></button>
+          <button onclick="annSetTool('arrow')" class="ann-tool-btn" data-tool="arrow" style="width:44px;height:44px;border-radius:8px;border:2px solid transparent;background:rgba(255,255,255,0.06);color:white;cursor:pointer;display:flex;align-items:center;justify-content:center"><span class="material-symbols-outlined" style="font-size:16px">north_east</span></button>
+          <button onclick="annSetTool('rect')" class="ann-tool-btn" data-tool="rect" style="width:44px;height:44px;border-radius:8px;border:2px solid transparent;background:rgba(255,255,255,0.06);color:white;cursor:pointer;display:flex;align-items:center;justify-content:center"><span class="material-symbols-outlined" style="font-size:16px">rectangle</span></button>
+          <button onclick="annSetTool('circle')" class="ann-tool-btn" data-tool="circle" style="width:44px;height:44px;border-radius:8px;border:2px solid transparent;background:rgba(255,255,255,0.06);color:white;cursor:pointer;display:flex;align-items:center;justify-content:center"><span class="material-symbols-outlined" style="font-size:16px">circle</span></button>
+          <button onclick="annSetTool('text')" class="ann-tool-btn" data-tool="text" style="width:44px;height:44px;border-radius:8px;border:2px solid transparent;background:rgba(255,255,255,0.06);color:white;cursor:pointer;display:flex;align-items:center;justify-content:center"><span class="material-symbols-outlined" style="font-size:16px">text_fields</span></button>
+          <button onclick="annSetTool('eraser')" class="ann-tool-btn" data-tool="eraser" style="width:44px;height:44px;border-radius:8px;border:2px solid transparent;background:rgba(255,255,255,0.06);color:white;cursor:pointer;display:flex;align-items:center;justify-content:center"><span class="material-symbols-outlined" style="font-size:16px">ink_eraser</span></button>
         </div>
         <div style="width:1px;height:22px;background:rgba(255,255,255,0.15)"></div>
         <div style="display:flex;gap:3px">
           ${['#FF4081','#FFEA00','#00E676','#7C4DFF','#00BCD4','#FF6D00','#FFFFFF','#000000'].map(c =>
-            `<button onclick="annSetColor('${c}')" class="ann-color-btn" style="width:22px;height:22px;border-radius:50%;border:2px solid ${c === _annColor ? 'white' : 'transparent'};background:${c};cursor:pointer" data-color="${c}"></button>`
+            `<button onclick="annSetColor('${c}')" class="ann-color-btn" style="width:36px;height:36px;border-radius:50%;border:2px solid ${c === _annColor ? 'white' : 'transparent'};background:${c};cursor:pointer" data-color="${c}"></button>`
           ).join('')}
         </div>
         <div style="width:1px;height:22px;background:rgba(255,255,255,0.15)"></div>
@@ -89,8 +89,8 @@
         </div>
         <div style="width:1px;height:22px;background:rgba(255,255,255,0.15)"></div>
         <div style="display:flex;gap:4px">
-          <button onclick="annUndo()" title="Undo" style="background:rgba(255,255,255,0.1);border:none;color:white;width:32px;height:32px;border-radius:8px;cursor:pointer"><span class="material-symbols-outlined" style="font-size:16px">undo</span></button>
-          <button onclick="annRedo()" title="Redo" style="background:rgba(255,255,255,0.1);border:none;color:white;width:32px;height:32px;border-radius:8px;cursor:pointer"><span class="material-symbols-outlined" style="font-size:16px">redo</span></button>
+          <button onclick="annUndo()" title="Undo" style="background:rgba(255,255,255,0.1);border:none;color:white;width:44px;height:44px;border-radius:8px;cursor:pointer"><span class="material-symbols-outlined" style="font-size:16px">undo</span></button>
+          <button onclick="annRedo()" title="Redo" style="background:rgba(255,255,255,0.1);border:none;color:white;width:44px;height:44px;border-radius:8px;cursor:pointer"><span class="material-symbols-outlined" style="font-size:16px">redo</span></button>
         </div>
       </div>`;
 

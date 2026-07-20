@@ -418,6 +418,7 @@ App.groupChats = [];
 
 const _e2eSalt = new Uint8Array([87, 65, 45, 69, 50, 69, 45, 83, 65, 76, 84]);
 const _e2eSharedKeys = {};
+const _e2eKeyTimestamps = {};
 
 function _base64ToBuf(b64) {
   const binary = atob(b64);
@@ -447,11 +448,18 @@ async function _loadE2EPrivateKey() {
 
 async function _fetchPeerPublicKey(peerUid) {
   if (!App.db) return null;
+  // Force re-fetch if cached for more than 1 hour
+  if (_e2eSharedKeys[peerUid] && _e2eKeyTimestamps[peerUid]) {
+    if (Date.now() - _e2eKeyTimestamps[peerUid] > 3600000) {
+      delete _e2eSharedKeys[peerUid];
+    }
+  }
   try {
     const doc = await App.db.collection("userPublicKeys").doc(peerUid).get();
     if (!doc.exists) return null;
     const jwk = doc.data().publicKey;
     if (!jwk) return null;
+    _e2eKeyTimestamps[peerUid] = Date.now();
     return await crypto.subtle.importKey("jwk", jwk, { name: "ECDH", namedCurve: "P-256" }, true, []);
   } catch (e) { return null; }
 }
@@ -580,12 +588,12 @@ function subscribeToChats() {
     .where('participants', 'array-contains', uid)
     .onSnapshot((snapshot) => {
       const chatsList = [];
-      const myselfChatId = `saved_${uid}`;
-      const myselfChat = {
-        id: myselfChatId,
-        type: 'personal',
-        uid: uid,
-        name: 'Myself Chat',
+const myselfChatId = `saved_${uid}`;
+    const myselfChat = {
+      id: myselfChatId,
+      type: 'personal',
+      uid: uid,
+      name: getSelfChatName(),
         avatar: 'gradient-1',
         initials: getInitials(App.currentUser?.displayName || App.currentUser?.email || 'Me'),
         photoURL: App.currentUser?.photoURL || null,
@@ -803,7 +811,7 @@ function subscribeToCallLogs(uid) {
   App.callLogsUnsubscribe = App.db.collection('callLogs')
     .where('participants', 'array-contains', uid)
     .onSnapshot({ includeMetadataChanges: true }, snapshot => {
-      if (snapshot.metadata.fromCache) return;
+      if (snapshot.metadata.fromCache && snapshot.docChanges().every(c => c.type === 'metadata')) return;
       Object.keys(allLogs).forEach(k => delete allLogs[k]);
       snapshot.forEach(doc => {
         const data = doc.data();
@@ -1131,6 +1139,7 @@ function subscribeToMessages(chatId) {
       const uid = App.auth?.currentUser?.uid;
       snapshot.forEach(doc => {
         const data = doc.data();
+        const isPending = doc.metadata && doc.metadata.hasPendingWrites;
         
         // Skip deleted messages
         if (data.deletedForEveryone) return;
@@ -1208,6 +1217,7 @@ function subscribeToMessages(chatId) {
           edited: data.edited || false,
           forwarded: data.forwarded || false,
           liveLocation: data.liveLocation || null,
+          pendingWrite: isPending,
         };
         
         if (data.encrypted && data.iv) {
@@ -1325,22 +1335,34 @@ function addDeletedChatId(chatId) {
   const ids = loadDeletedChatIds(); ids.add(chatId);
   try { localStorage.setItem('nsl_deleted_chats', JSON.stringify([...ids])); } catch(_) {}
 }
-async function syncDeletedChatsFromFirestore() {
+function syncDeletedChatsFromFirestore() {
   if (!App.db || !App.auth?.currentUser?.uid) return;
   const uid = App.auth.currentUser.uid;
-  try {
-    const [directSnap, groupSnap] = await Promise.all([
-      App.db.collection('directChats').where('participants', 'array-contains', uid).get(),
-      App.db.collection('groups').where('memberIds', 'array-contains', uid).get()
-    ]);
-    [...directSnap.docs, ...groupSnap.docs].forEach(doc => {
-      const data = doc.data();
-      if (data.deletedFor && data.deletedFor[uid]) {
-        App._deletedChatIds.add(doc.id);
-        addDeletedChatId(doc.id);
-      }
-    });
-  } catch (e) { console.warn('syncDeletedChats err:', e); }
+  // Real-time listener on direct chats for deletedFor
+  App.db.collection('directChats').where('participants', 'array-contains', uid)
+    .onSnapshot(snap => {
+      snap.forEach(doc => {
+        const data = doc.data();
+        if (data.deletedFor && data.deletedFor[uid]) {
+          App._deletedChatIds.add(doc.id);
+          addDeletedChatId(doc.id);
+        }
+      });
+      if (typeof renderChatList === 'function') renderChatList();
+    }, err => console.warn('[Sync] deletedChats listener error:', err));
+  
+  // Also listen to groups
+  App.db.collection('groups').where('memberIds', 'array-contains', uid)
+    .onSnapshot(snap => {
+      snap.forEach(doc => {
+        const data = doc.data();
+        if (data.deletedFor && data.deletedFor[uid]) {
+          App._deletedChatIds.add(doc.id);
+          addDeletedChatId(doc.id);
+        }
+      });
+      if (typeof renderChatList === 'function') renderChatList();
+    }, err => console.warn('[Sync] deletedGroups listener error:', err));
 }
 
 function checkSession() {
@@ -1389,6 +1411,8 @@ function checkSession() {
 }
 
 function bootApp() {
+  if (App._booted) return;
+  App._booted = true;
   let savedTheme = 'dark';
   try { savedTheme = localStorage.getItem('nsl-theme') || 'dark'; } catch(_) {}
   applyTheme(savedTheme);
@@ -1488,6 +1512,23 @@ async function loadUserProfile(user) {
       if (doc.exists) Object.assign(App.currentUser, doc.data());
     }
   } catch(e) { /* offline fallback */ }
+
+  // Real-time profile sync across devices
+  if (App.db) {
+    App.db.collection('users').doc(user.uid).onSnapshot(doc => {
+      if (doc.exists) {
+        const data = doc.data();
+        App.currentUser = { ...App.currentUser, ...data };
+        // Update UI
+        const nameEl = document.getElementById('profile-name-sidebar');
+        if (nameEl && data.displayName) nameEl.textContent = data.displayName;
+        const avatarEl = document.getElementById('sidebar-avatar');
+        if (avatarEl && data.photoURL) {
+          avatarEl.innerHTML = `<img src="${data.photoURL}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`;
+        }
+      }
+    });
+  }
 }
 
 function updateProfileUI() {
@@ -1755,7 +1796,19 @@ function resetShowroomVariant() {
 /* ══════════════════════════════════════════════════
    8. CHAT RENDER & LISTINGS
    ══════════════════════════════════════════════════ */
+let _renderChatListPending = false;
+let _renderChatListFilter = '';
+function _doRenderChatList() {
+  _renderChatListPending = false;
+  renderChatListInner(_renderChatListFilter);
+}
 function renderChatList(filter = '') {
+  _renderChatListFilter = filter;
+  if (_renderChatListPending) return;
+  _renderChatListPending = true;
+  requestAnimationFrame(_doRenderChatList);
+}
+function renderChatListInner(filter = '') {
   const list = document.getElementById('chat-list');
   if (!list) return;
   _hideChatListSkeleton();
@@ -2385,7 +2438,7 @@ th{text-align:left;padding:8px 12px;border-bottom:2px solid #4ade80;color:#4ade8
     a.href = URL.createObjectURL(blob);
     a.download = `${safeName}.zip`;
     a.click();
-    URL.revokeObjectURL(a.href);
+    setTimeout(() => { try { URL.revokeObjectURL(a.href); } catch(_) {} }, 5000);
     showToast('Chat exported', 'success');
   });
 }
@@ -2762,7 +2815,7 @@ function renderMoreTab() {
   list.innerHTML = `
     <div class="p-4 space-y-1">
       <div class="text-[11px] font-bold text-on-surface-variant uppercase px-3 pb-2 pt-1 tracking-wider" style="opacity: 0.7;">Saved & Archive</div>
-      ${moreRow('person','Myself Chat',`openChat('${savedChatId}')`)}
+      ${moreRow('person',getSelfChatName(),`openChat('${savedChatId}')`)}
       ${moreRow('star','Starred Messages','openStarredMessages()')}
       ${moreRow('archive','Archived Chats' + (archivedCount > 0 ? ` <span class="ml-1 text-[10px] bg-surface-variant rounded-full px-1.5 py-0.5 font-bold">${archivedCount}</span>` : ''),'openArchivedChats()')}
       ${moreRow('folder','Folders','openFolderManager()')}
@@ -2774,6 +2827,8 @@ function renderMoreTab() {
       ${moreRow('download','Chat Export','openChatExport()')}
       ${moreRow('calendar_month','Team Calendar',"window.location.href='calendar.html'")}
       ${moreRow('monitoring','Chat Insights',"window.location.href='insights.html'")}
+      ${moreRow('calculate','Calculator','toggleCalculator()')}
+      ${moreRow('qr_code_scanner','Scan QR Code','openScanner()')}
 
       <div class="text-[11px] font-bold text-on-surface-variant uppercase px-3 pb-2 pt-4 tracking-wider" style="opacity: 0.7;">🔒 Privacy & Safety</div>
       ${moreRow('lock','Chat Lock','openChatLockSettings()')}
@@ -2858,6 +2913,60 @@ function isMyselfChatId(id) {
   return uid && id === `saved_${uid}`;
 }
 
+const _SELF_CHAT_NAME_KEY = 'nsl_self_chat_name';
+
+function getSelfChatName() {
+  try { return localStorage.getItem(_SELF_CHAT_NAME_KEY) || 'Myself Chat'; } catch (_) { return 'Myself Chat'; }
+}
+
+function setSelfChatName(newName) {
+  const trimmed = (newName || '').trim();
+  if (!trimmed) return;
+  try { localStorage.setItem(_SELF_CHAT_NAME_KEY, trimmed); } catch (_) {}
+  const chat = App.chats.find(function(c) { return isMyselfChatId(c.id); });
+  if (chat) chat.name = trimmed;
+  const headerName = document.getElementById('header-name');
+  if (headerName && App.currentChat && isMyselfChatId(App.currentChat.id)) {
+    headerName.textContent = trimmed;
+  }
+  renderChatList();
+}
+
+function renameSelfChat() {
+  const currentName = getSelfChatName();
+  const existing = document.getElementById('rename-self-chat-overlay');
+  if (existing) existing.remove();
+
+  const overlay = document.createElement('div');
+  overlay.id = 'rename-self-chat-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.6);backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center;';
+  overlay.innerHTML = '<div style="background:var(--surface-container);border:1px solid var(--outline-variant);border-radius:20px;width:90%;max-width:360px;padding:24px;box-shadow:0 16px 48px rgba(0,0,0,0.5)">' +
+    '<h3 style="font-size:16px;font-weight:700;color:var(--on-surface);margin-bottom:12px">Rename Your Chat</h3>' +
+    '<input type="text" id="rename-self-chat-input" value="' + escHtml(currentName) + '" maxlength="30" style="width:100%;padding:12px 16px;border-radius:12px;border:1px solid var(--outline-variant);background:var(--surface-variant);color:var(--on-surface);font-size:14px;outline:none;box-sizing:border-box" placeholder="e.g. Notes, Personal, Ideas...">' +
+    '<div style="display:flex;gap:8px;margin-top:16px;justify-content:flex-end">' +
+    '<button onclick="document.getElementById(\'rename-self-chat-overlay\').remove()" style="padding:10px 20px;border-radius:12px;border:none;background:var(--surface-container-high);color:var(--on-surface);font-weight:600;cursor:pointer;font-size:13px">Cancel</button>' +
+    '<button id="rename-self-chat-save" style="padding:10px 20px;border-radius:12px;border:none;background:var(--primary);color:var(--on-primary);font-weight:700;cursor:pointer;font-size:13px">Save</button>' +
+    '</div></div>';
+  document.body.appendChild(overlay);
+
+  const input = document.getElementById('rename-self-chat-input');
+  if (input) {
+    input.focus();
+    input.select();
+    input.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') document.getElementById('rename-self-chat-save').click();
+      if (e.key === 'Escape') overlay.remove();
+    });
+  }
+  document.getElementById('rename-self-chat-save').onclick = function() {
+    const val = (input ? input.value : '').trim();
+    if (val) setSelfChatName(val);
+    overlay.remove();
+    showToast('Chat renamed', 'success');
+  };
+  overlay.addEventListener('click', function(e) { if (e.target === overlay) overlay.remove(); });
+}
+
 function openChat(chatId) {
   const chat = App.chats.find(c => c.id === chatId);
   if (!chat) return;
@@ -2925,7 +3034,7 @@ function openChat(chatId) {
   
   if (isMyselfChatId(chat.id)) {
     // Notepad Workspace specific header
-    if (headerName) headerName.textContent = "Myself Chat";
+    if (headerName) headerName.textContent = getSelfChatName();
     if (headerStatus) {
       headerStatus.textContent = "Personal Workspace";
       headerStatus.className = "text-[10px] text-secondary uppercase tracking-widest font-label-caps truncate whitespace-nowrap";
@@ -3112,7 +3221,9 @@ function renderSingleMessageHTML(msg, msgs, i, lastDate) {
   ).join('');
 
   const tickIcon = isMe
-    ? msg.status==='read'      ? '<span class="material-symbols-outlined text-[14px] text-primary" style="font-variation-settings: \'FILL\' 1;">done_all</span>'
+    ? (msg.pendingWrite && msg.status !== 'sending')
+      ? '<span class="material-symbols-outlined text-[14px] text-on-surface-variant sync-badge pending" style="animation: syncRotate 2s infinite linear; display: inline-block;">schedule</span>'
+    : msg.status==='read'      ? '<span class="material-symbols-outlined text-[14px] text-primary" style="font-variation-settings: \'FILL\' 1;">done_all</span>'
     : msg.status==='delivered' ? '<span class="material-symbols-outlined text-[14px] text-on-surface-variant" style="font-variation-settings: \'FILL\' 1;">done_all</span>'
     : msg.status==='sending'   ? '<span class="material-symbols-outlined text-[14px] text-on-surface-variant sync-badge pending" style="animation: syncRotate 2s infinite linear; display: inline-block;">schedule</span>'
     :                            '<span class="material-symbols-outlined text-[14px] text-on-surface-variant">done</span>'
@@ -3910,6 +4021,7 @@ async function beginCall(type) {
       const state = peerConnection?.connectionState;
       if (state === 'connected') {
         setEl('call-status', 'Active');
+        stopRingtone();
         show('call-timer');
         callStartedAt = Date.now();
         startCallTimer();
@@ -3941,6 +4053,7 @@ async function beginCall(type) {
     listenForCallStatus(callRef.id);
     requestWakeLock();
     startCallHeartbeat(callRef.id);
+    playCallOutgoingRing();
 
     callTimeoutTimer = setTimeout(() => {
       if (App._activeCallId && App.callActive) {
@@ -4503,6 +4616,17 @@ function playCallIncomingRing() {
   playNotifSound('call_ring');
   _ringtoneInterval = setInterval(() => playNotifSound('call_ring'), 1200);
   if (navigator.vibrate) navigator.vibrate([700, 250, 700, 250, 700, 250, 700, 250, 700]);
+}
+
+function playCallOutgoingRing() {
+  stopRingtone();
+  if (typeof NotificationSounds !== 'undefined' && NotificationSounds.outgoingCall) {
+    NotificationSounds.outgoingCall();
+    _ringtoneInterval = setInterval(() => NotificationSounds.outgoingCall(), 2500);
+  } else {
+    playNotifSound('call_ring');
+    _ringtoneInterval = setInterval(() => playNotifSound('call_ring'), 1200);
+  }
 }
 
 function playCallEndedSound() {
@@ -5334,15 +5458,18 @@ function openMyselfInfo() {
   
   panel.innerHTML = `
     <div class="h-16 border-b border-outline-variant/30 flex justify-between items-center px-6 bg-background flex-shrink-0">
-      <h3 class="font-bold text-on-surface text-[17px]">Notepad Settings</h3>
-      <button onclick="closeDetailPanel()" class="text-on-surface-variant hover:text-on-surface flex items-center justify-center p-2 rounded-full hover:bg-surface-variant/30 transition-all"><span class="material-symbols-outlined">close</span></button>
+      <h3 class="font-bold text-on-surface text-[17px]">${escHtml(getSelfChatName())}</h3>
+      <div class="flex items-center gap-1">
+        <button onclick="renameSelfChat()" class="text-on-surface-variant hover:text-on-surface flex items-center justify-center p-2 rounded-full hover:bg-surface-variant/30 transition-all" title="Rename"><span class="material-symbols-outlined" style="font-size:20px">edit</span></button>
+        <button onclick="closeDetailPanel()" class="text-on-surface-variant hover:text-on-surface flex items-center justify-center p-2 rounded-full hover:bg-surface-variant/30 transition-all"><span class="material-symbols-outlined">close</span></button>
+      </div>
     </div>
     <div class="flex-1 overflow-y-auto scrollbar-hide">
       <div class="p-6 flex flex-col items-center text-center space-y-4">
         <div class="w-20 h-20 rounded-3xl bg-primary/20 flex items-center justify-center font-bold text-2xl text-primary border border-outline-variant/20 shadow"><span class="material-symbols-outlined text-3xl" style="font-variation-settings: 'FILL' 1;">lock</span></div>
         <div>
           <h4 class="font-bold text-lg text-on-surface">Cloud Notepad</h4>
-          <p class="text-xs text-on-surface-variant">Private end-to-end encrypted notes</p>
+          <p class="text-xs text-on-surface-variant">${escHtml(getSelfChatName())}</p>
         </div>
       </div>
 
@@ -7337,6 +7464,20 @@ function _loadMuteState() {
         delete App._mutedUntil[chatId];
       }
     }
+
+    // Also sync mute state from Firestore chats (cross-device)
+    if (App.chats && App.chats.length) {
+      App.chats.forEach(c => {
+        if (c.muted) App._mutedChats.add(c.id);
+      });
+    }
+    if (App.directChats && App.directChats.length) {
+      App.directChats.forEach(c => { if (c.muted) App._mutedChats.add(c.id); });
+    }
+    if (App.groupChats && App.groupChats.length) {
+      App.groupChats.forEach(c => { if (c.muted) App._mutedChats.add(c.id); });
+    }
+
     _saveMuteState();
   } catch(_) {
     App._isMutedGlobal = false;
@@ -7361,6 +7502,10 @@ function closeScanner() {
 }
 
 async function openScanner() {
+  if (typeof PermissionsManager !== 'undefined') {
+    const ok = await PermissionsManager.ensureForFeature('Take Photo');
+    if (!ok) return;
+  }
   const overlay = document.getElementById('scanner-overlay');
   const video = document.getElementById('scanner-video');
   const status = document.getElementById('scanner-status');
@@ -8057,12 +8202,12 @@ window.openManageFiltersDialog = function() {
       const label = isCustom ? `Keyword: "${f.replace('custom_', '')}"` : (allAvailable.find(a => a.id === f)?.label || f);
       
       activeHTML += `
-        <div style="display:flex;align-items:center;justify-content:space-between;padding:10px;background:rgba(255,255,255,0.03);border-radius:10px;margin-bottom:6px;gap:8px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:10px;background:var(--surface-container-low);border-radius:10px;margin-bottom:6px;gap:8px;">
           <div style="font-size:13px;font-weight:600;flex:1;color:var(--on-surface)">${escHtml(label)}</div>
           <div style="display:flex;align-items:center;gap:4px">
             <button onclick="moveFilterUp(${index})" style="background:none;border:none;color:var(--primary);cursor:pointer;padding:4px;font-size:12px;" title="Move Up">▲</button>
             <button onclick="moveFilterDown(${index})" style="background:none;border:none;color:var(--primary);cursor:pointer;padding:4px;font-size:12px;" title="Move Down">▼</button>
-            <button onclick="removeFilter(${index})" style="background:none;border:none;color:#ff4444;cursor:pointer;padding:4px;font-size:14px;" title="Remove">🗑️</button>
+            <button onclick="removeFilter(${index})" style="background:none;border:none;color:var(--error,#ff4444);cursor:pointer;padding:4px;font-size:14px;" title="Remove">🗑️</button>
           </div>
         </div>`;
     });
@@ -8074,7 +8219,7 @@ window.openManageFiltersDialog = function() {
 
     return `
       <div style="background:var(--surface-container,#1e1e2e);border-radius:16px;width:100%;max-width:400px;color:var(--on-surface);display:flex;flex-direction:column;max-height:85vh;box-shadow:0 12px 40px rgba(0,0,0,0.5);" onclick="event.stopPropagation()">
-        <div style="padding:16px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid rgba(255,255,255,0.08);">
+        <div style="padding:16px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--outline-variant,rgba(0,0,0,0.08));">
           <h3 style="margin:0;font-size:16px;font-weight:700">⚙️ Manage Chat Filters</h3>
           <button onclick="document.getElementById('manage-filters-overlay')?.remove()" style="background:none;border:none;color:var(--on-surface-variant);cursor:pointer;font-size:20px">&times;</button>
         </div>
@@ -8087,11 +8232,11 @@ window.openManageFiltersDialog = function() {
 
           <div style="font-size:11px;font-weight:700;color:var(--on-surface-variant);margin-top:16px;margin-bottom:8px;letter-spacing:0.05em;text-transform:uppercase;">Create Custom Keyword Filter</div>
           <div style="display:flex;gap:6px;">
-            <input type="text" id="custom-filter-input" placeholder="e.g. Work, Family" style="flex:1;padding:8px 12px;border-radius:10px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);color:var(--on-surface);font-size:13px;outline:none;">
+            <input type="text" id="custom-filter-input" placeholder="e.g. Work, Family" style="flex:1;padding:8px 12px;border-radius:10px;border:1px solid var(--outline-variant,rgba(0,0,0,0.1));background:var(--surface-container-low,rgba(0,0,0,0.04));color:var(--on-surface);font-size:13px;outline:none;">
             <button onclick="addCustomFilter()" style="padding:8px 14px;border-radius:10px;border:none;background:var(--primary);color:var(--on-primary);font-size:12px;font-weight:700;cursor:pointer">Add</button>
           </div>
         </div>
-        <div style="padding:12px 16px;border-top:1px solid rgba(255,255,255,0.08);display:flex;justify-content:flex-end;gap:8px;">
+        <div style="padding:12px 16px;border-top:1px solid var(--outline-variant,rgba(0,0,0,0.08));display:flex;justify-content:flex-end;gap:8px;">
           <button onclick="resetFiltersToDefault()" style="padding:8px 12px;border-radius:10px;border:none;background:none;color:var(--on-surface-variant);font-size:12px;font-weight:600;cursor:pointer;">Reset Default</button>
           <button onclick="document.getElementById('manage-filters-overlay')?.remove()" style="padding:8px 16px;border-radius:10px;border:none;background:var(--primary);color:var(--on-primary);font-size:12px;font-weight:700;cursor:pointer;">Done</button>
         </div>
@@ -8161,6 +8306,25 @@ window.openManageFiltersDialog = function() {
 /* ══════════════════════════════════════════════════
    SPA BACK BUTTON — prevent exiting the chat app
    ══════════════════════════════════════════════════ */
+
+// Expose recovery functions for sync-audit reconnection handler
+if (typeof window.loadCurrentChatList !== 'function') {
+  window.loadCurrentChatList = function() {
+    try {
+      if (typeof renderChatList === 'function') renderChatList();
+      else if (typeof mergeAndRenderChats === 'function') mergeAndRenderChats();
+    } catch(e) { console.warn('[Sync] loadCurrentChatList error:', e); }
+  };
+}
+if (typeof window.listenToMessages !== 'function') {
+  window.listenToMessages = function(chatId) {
+    try {
+      chatId = chatId || (App.currentChat && App.currentChat.id);
+      if (chatId && typeof subscribeToMessages === 'function') subscribeToMessages(chatId);
+    } catch(e) { console.warn('[Sync] listenToMessages error:', e); }
+  };
+}
+
 (function() {
   'use strict';
 

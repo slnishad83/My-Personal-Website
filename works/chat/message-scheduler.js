@@ -62,7 +62,7 @@
     const localISOTime = (new Date(now - tzoffset)).toISOString().slice(0, 16);
 
     const modalHtml = `
-      <div id="schedule-modal" class="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-sm flex items-center justify-center animate-fade-in" style="display:flex;">
+      <div id="schedule-modal" class="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-sm flex items-center justify-center animate-fade-in" style="display:flex;" onclick="if(event.target===this)this.remove()">
         <div class="bg-surface-container border border-outline-variant/30 rounded-2xl w-full max-w-sm shadow-2xl p-6 m-4 relative animate-scale-up">
           <button class="absolute top-4 right-4 text-on-surface-variant hover:text-on-surface p-1" onclick="document.getElementById('schedule-modal').remove()">
             <span class="material-symbols-outlined text-[20px]">close</span>

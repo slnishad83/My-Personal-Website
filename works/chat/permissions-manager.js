@@ -121,6 +121,15 @@ const FEATURE_PERMISSIONS = {
 const _statusCache = {};
 const _revokedPermissions = new Set();
 const _mediaStreams = new Set();
+const _REVOKED_STORAGE_KEY = 'nsl_revoked_permissions';
+
+// Load persisted revoked permissions from localStorage
+(function _loadRevokedPermissions() {
+  try {
+    const stored = JSON.parse(localStorage.getItem(_REVOKED_STORAGE_KEY) || '[]');
+    if (Array.isArray(stored)) stored.forEach(function(id) { _revokedPermissions.add(id); });
+  } catch (_) {}
+})();
 
 // ---- Internal Helpers ----
 function _getPermInfo(id) {
@@ -296,9 +305,11 @@ async function _requestWeb(id) {
       input.type = "file";
       input.accept = "image/*,video/*,audio/*,.pdf,.doc,.docx";
       input.style.display = "none";
-      input.addEventListener("change", () => input.remove(), { once: true });
+      const cleanup = () => { setTimeout(() => { if (input.parentNode) input.remove(); }, 100); };
+      input.addEventListener("change", cleanup, { once: true });
       document.body.appendChild(input);
       input.click();
+      window.addEventListener('focus', cleanup, { once: true, timeout: 3000 });
       return PERMISSION_STATES.ALLOWED;
     }
     if (id === "contacts") {
@@ -377,6 +388,7 @@ window.PermissionsManager = {
 
     _statusCache[id] = state;
     _revokedPermissions.delete(id);
+    try { localStorage.setItem(_REVOKED_STORAGE_KEY, JSON.stringify(Array.from(_revokedPermissions))); } catch (_) {}
 
     if (_isAllowed(state)) {
       _showToast(
@@ -399,6 +411,7 @@ window.PermissionsManager = {
     if (!info) return;
 
     _revokedPermissions.add(id);
+    try { localStorage.setItem(_REVOKED_STORAGE_KEY, JSON.stringify(Array.from(_revokedPermissions))); } catch (_) {}
 
     if (id === "camera" || id === "microphone") {
       _stopAllMediaTracks();
@@ -406,7 +419,7 @@ window.PermissionsManager = {
 
     _statusCache[id] = PERMISSION_STATES.REVOKED;
     this.refreshUI();
-    _showToast(`${info.name} permission has been revoked`, "info");
+    _showToast(`${info.name} permission has been revoked. Re-enable from Settings > Permissions.`, "info");
   },
 
   async ensure(id) {
@@ -570,9 +583,11 @@ window.PermissionsManager = {
       const featuresContainer = document.getElementById(
         "prePermissionFeatures"
       );
-      featuresContainer.innerHTML = info.features
-        .map((f) => `<span class="perm-feature-tag">${f}</span>`)
-        .join("");
+      if (featuresContainer) {
+        featuresContainer.innerHTML = info.features
+          .map((f) => `<span class="perm-feature-tag">${f}</span>`)
+          .join("");
+      }
 
       modal._permissionResolve = resolve;
       modal.style.display = "flex";

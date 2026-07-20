@@ -71,7 +71,7 @@
 
     sheet.innerHTML = `
       <div style="font-size:16px;font-weight:700;margin-bottom:8px;color:var(--on-surface)">Delete Message</div>
-      <div style="padding:16px;border-radius:12px;background:rgba(255,255,255,0.04);margin-bottom:8px">
+      <div style="padding:16px;border-radius:12px;background:var(--surface-container-low,rgba(0,0,0,0.04));margin-bottom:8px">
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
           <span class="material-symbols-outlined" style="font-size:24px;color:var(--on-surface-variant)">schedule</span>
           <div>

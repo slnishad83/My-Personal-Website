@@ -158,7 +158,9 @@ const NotificationSounds = (() => {
       }
     },
     sounds,
-    get isUnlocked() { return _unlocked; }
+    get isUnlocked() { return _unlocked; },
+    suspend() { if (_ctx && _ctx.state === 'running') _ctx.suspend().catch(() => {}); },
+    resume() { if (_ctx && _ctx.state === 'suspended') _ctx.resume().catch(() => {}); }
   };
 })();
 
@@ -167,4 +169,13 @@ window.NotificationSounds = NotificationSounds;
 /* Auto-unlock on first user interaction */
 ['click', 'touchstart', 'keydown'].forEach(evt => {
   document.addEventListener(evt, () => NotificationSounds.unlock(), { once: true, passive: true });
+});
+
+/* Suspend AudioContext when page hidden, resume when visible */
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) {
+    NotificationSounds.suspend();
+  } else {
+    NotificationSounds.resume();
+  }
 });

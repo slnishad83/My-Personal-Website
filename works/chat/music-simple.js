@@ -349,7 +349,7 @@
     }
     pos.left = Math.max(8, Math.min(pos.left, window.innerWidth - 216));
     pos.top = Math.max(8, Math.min(pos.top, window.innerHeight - 80));
-    el.style.cssText = `position:fixed;left:${pos.left}px;top:${pos.top}px;z-index:95;width:208px;background:var(--surface-container-high,#1e2a34);border-radius:14px;border:1px solid rgba(255,255,255,0.1);box-shadow:0 6px 24px rgba(0,0,0,0.4);padding:8px 10px;display:flex;align-items:center;gap:8px;cursor:grab;animation:fadeIn 0.2s ease;touch-action:none;user-select:none;-webkit-user-select:none;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)`;
+    el.style.cssText = `position:fixed;left:${pos.left}px;top:${pos.top}px;z-index:95;width:208px;background:var(--surface-container-high,#1e2a34);border-radius:14px;border:1px solid var(--outline-variant,rgba(0,0,0,0.1));box-shadow:0 6px 24px rgba(0,0,0,0.4);padding:8px 10px;display:flex;align-items:center;gap:8px;cursor:grab;animation:fadeIn 0.2s ease;touch-action:none;user-select:none;-webkit-user-select:none;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)`;
     el.onclick = (e) => { if (_dragMoved) return; if (e.target.closest('button')) return; openFullPlayer(); };
     document.body.appendChild(el);
 
@@ -394,20 +394,20 @@
     const el = document.getElementById('nsm-mini');
     if (!el) return;
     el.innerHTML = `
-      <div style="width:38px;height:38px;border-radius:8px;overflow:hidden;flex-shrink:0;background:rgba(255,255,255,0.05)">
+      <div style="width:38px;height:38px;border-radius:8px;overflow:hidden;flex-shrink:0;background:var(--surface-container-low,rgba(0,0,0,0.05))">
         ${t.thumbnail ? `<img src="${_esc(t.thumbnail)}" style="width:100%;height:100%;object-fit:cover">` : '<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center"><span class="material-symbols-outlined" style="font-size:18px;color:var(--primary)">music_note</span></div>'}
       </div>
       <div style="flex:1;min-width:0;pointer-events:none">
         <div style="font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--on-surface)">${_esc(t.title)}</div>
         <div style="font-size:10px;color:var(--on-surface-variant);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${_esc(t.artist)}</div>
       </div>
-      <button class="nsm-play" onclick="event.stopPropagation();event.preventDefault();MusicPlayer.togglePlay()" style="background:none;border:none;color:var(--on-surface);cursor:pointer;padding:2px;min-width:36px;min-height:36px;display:inline-flex;align-items:center;justify-content:center">
+      <button class="nsm-play" onclick="event.stopPropagation();event.preventDefault();MusicPlayer.togglePlay()" style="background:none;border:none;color:var(--on-surface);cursor:pointer;padding:2px;min-width:44px;min-height:44px;display:inline-flex;align-items:center;justify-content:center">
         <span class="material-symbols-outlined" style="font-size:26px">${S.playing ? 'pause_circle' : 'play_circle'}</span>
       </button>
-      <button onclick="event.stopPropagation();event.preventDefault();MusicPlayer.next()" style="background:none;border:none;color:var(--on-surface-variant);cursor:pointer;padding:2px;min-width:32px;min-height:32px;display:inline-flex;align-items:center;justify-content:center">
+      <button onclick="event.stopPropagation();event.preventDefault();MusicPlayer.next()" style="background:none;border:none;color:var(--on-surface-variant);cursor:pointer;padding:2px;min-width:44px;min-height:44px;display:inline-flex;align-items:center;justify-content:center">
         <span class="material-symbols-outlined" style="font-size:18px">skip_next</span>
       </button>
-      <div style="position:absolute;bottom:0;left:8px;right:8px;height:2px;background:rgba(255,255,255,0.08);border-radius:1px">
+      <div style="position:absolute;bottom:0;left:8px;right:8px;height:2px;background:var(--outline-variant,rgba(0,0,0,0.08));border-radius:1px">
         <div id="nsm-mini-progress" style="height:100%;background:var(--primary);transition:width 0.3s;width:0%;border-radius:1px"></div>
       </div>`;
   }
@@ -459,7 +459,7 @@
       </div>
 
       <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0 32px">
-        <div style="width:min(280px,65vw);height:min(280px,65vw);max-height:50vh;border-radius:16px;overflow:hidden;box-shadow:0 8px 40px rgba(0,0,0,0.5);margin-bottom:32px;background:rgba(255,255,255,0.05)">
+        <div style="width:min(280px,65vw);height:min(280px,65vw);max-height:50vh;border-radius:16px;overflow:hidden;box-shadow:0 8px 40px rgba(0,0,0,0.5);margin-bottom:32px;background:var(--surface-container-low,rgba(0,0,0,0.05))">
           ${t.thumbnail ? `<img class="nsm-thumb" src="${_esc(t.thumbnail)}" style="width:100%;height:100%;object-fit:cover">` : '<div class="nsm-thumb" style="width:100%;height:100%;display:flex;align-items:center;justify-content:center"><span class="material-symbols-outlined" style="font-size:80px;color:var(--primary);opacity:0.4">music_note</span></div>'}
         </div>
         <div style="text-align:center;width:100%">
@@ -586,8 +586,8 @@
         </div>
         <div id="nsm-tabs" style="display:flex;gap:6px;overflow-x:auto;padding-bottom:8px;scrollbar-width:none">
           <button class="nsm-tab active" onclick="window._nsmTab('my')" style="min-height:36px;flex-shrink:0;padding:6px 14px;border-radius:20px;border:none;font-size:12px;font-weight:600;cursor:pointer;background:var(--primary);color:var(--on-primary)">My Music</button>
-          <button class="nsm-tab" onclick="window._nsmTab('upload')" style="min-height:36px;flex-shrink:0;padding:6px 14px;border-radius:20px;border:none;font-size:12px;font-weight:600;cursor:pointer;background:rgba(255,255,255,0.06);color:var(--on-surface-variant)">Upload</button>
-          <button class="nsm-tab" onclick="window._nsmTab('search')" style="min-height:36px;flex-shrink:0;padding:6px 14px;border-radius:20px;border:none;font-size:12px;font-weight:600;cursor:pointer;background:rgba(255,255,255,0.06);color:var(--on-surface-variant)">Search</button>
+          <button class="nsm-tab" onclick="window._nsmTab('upload')" style="min-height:36px;flex-shrink:0;padding:6px 14px;border-radius:20px;border:none;font-size:12px;font-weight:600;cursor:pointer;background:var(--surface-container,rgba(0,0,0,0.06));color:var(--on-surface-variant)">Upload</button>
+          <button class="nsm-tab" onclick="window._nsmTab('search')" style="min-height:36px;flex-shrink:0;padding:6px 14px;border-radius:20px;border:none;font-size:12px;font-weight:600;cursor:pointer;background:var(--surface-container,rgba(0,0,0,0.06));color:var(--on-surface-variant)">Search</button>
         </div>
       </div>
       <div id="nsm-content" style="flex:1;overflow-y:auto;padding:12px 16px 24px"></div>`;
@@ -605,7 +605,7 @@
   // Tab switching
   window._nsmTab = function(tab) {
     $$('.nsm-tab').forEach(b => {
-      b.style.background = 'rgba(255,255,255,0.06)';
+      b.style.background = 'var(--surface-container,rgba(0,0,0,0.06))';
       b.style.color = 'var(--on-surface-variant)';
       b.classList.remove('active');
     });
@@ -633,7 +633,7 @@
     }
 
     el.innerHTML = `
-      <input type="search" placeholder="Search my music..." oninput="window._nsmFilterLib(this.value)" style="width:100%;padding:10px 14px;border-radius:12px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);color:var(--on-surface);font-size:13px;outline:none;margin-bottom:12px;box-sizing:border-box">
+      <input type="search" placeholder="Search my music..." oninput="window._nsmFilterLib(this.value)" style="width:100%;padding:10px 14px;border-radius:12px;border:1px solid var(--outline-variant,rgba(0,0,0,0.1));background:var(--surface-container-low,rgba(0,0,0,0.04));color:var(--on-surface);font-size:13px;outline:none;margin-bottom:12px;box-sizing:border-box">
       <div id="nsm-lib-list">${tracks.map((t, i) => _libRow(t, i)).join('')}</div>`;
   }
 
@@ -646,8 +646,8 @@
 
   function _libRow(t) {
     const isPlaying = S.track?.id === t.id;
-    return `<div style="display:flex;align-items:center;gap:10px;padding:10px;border-radius:12px;background:${isPlaying ? 'rgba(124,77,255,0.1)' : 'rgba(255,255,255,0.03)'};margin-bottom:6px;cursor:pointer" onclick="window._nsmPlayLib('${t.id}')">
-      <div style="width:42px;height:42px;border-radius:8px;overflow:hidden;flex-shrink:0;background:rgba(255,255,255,0.05);display:flex;align-items:center;justify-content:center">
+    return `<div style="display:flex;align-items:center;gap:10px;padding:10px;border-radius:12px;background:${isPlaying ? 'rgba(124,77,255,0.1)' : 'var(--surface-container-low,rgba(0,0,0,0.03))'};margin-bottom:6px;cursor:pointer" onclick="window._nsmPlayLib('${t.id}')">
+      <div style="width:42px;height:42px;border-radius:8px;overflow:hidden;flex-shrink:0;background:var(--surface-container-low,rgba(0,0,0,0.05));display:flex;align-items:center;justify-content:center">
         ${t.thumbnail ? `<img src="${_esc(t.thumbnail)}" style="width:100%;height:100%;object-fit:cover">` : '<span class="material-symbols-outlined" style="font-size:18px;color:var(--primary)">music_note</span>'}
       </div>
       <div style="flex:1;min-width:0">
@@ -690,14 +690,14 @@
   function _renderUpload(el) {
     el.innerHTML = `
       <div style="text-align:center;padding:20px 0">
-        <div id="nsm-dropzone" style="border:2px dashed rgba(255,255,255,0.15);border-radius:16px;padding:32px 20px;margin-bottom:16px;cursor:pointer;transition:all 0.2s" onclick="document.getElementById('nsm-fileinput').click()" ondragover="event.preventDefault();this.style.borderColor='var(--primary)'" ondrop="event.preventDefault();this.style.borderColor='rgba(255,255,255,0.15)';window._nsmHandleFiles(event.dataTransfer.files)">
+        <div id="nsm-dropzone" style="border:2px dashed var(--outline-variant,rgba(0,0,0,0.15));border-radius:16px;padding:32px 20px;margin-bottom:16px;cursor:pointer;transition:all 0.2s" onclick="document.getElementById('nsm-fileinput').click()" ondragover="event.preventDefault();this.style.borderColor='var(--primary)'" ondrop="event.preventDefault();this.style.borderColor='var(--outline-variant,rgba(0,0,0,0.15))';window._nsmHandleFiles(event.dataTransfer.files)">
           <span class="material-symbols-outlined" style="font-size:40px;color:var(--on-surface-variant);opacity:0.4">upload_file</span>
           <p style="font-size:13px;font-weight:600;color:var(--on-surface);margin:8px 0 4px">Tap to select audio files</p>
           <p style="font-size:11px;color:var(--on-surface-variant);margin:0">MP3, WAV, OGG, M4A — up to 50MB</p>
           <input type="file" id="nsm-fileinput" accept="audio/*" multiple style="display:none" onchange="window._nsmHandleFiles(this.files)">
         </div>
         <div id="nsm-upload-progress" style="display:none;margin-bottom:16px">
-          <div style="height:4px;background:rgba(255,255,255,0.1);border-radius:2px;overflow:hidden">
+          <div style="height:4px;background:var(--surface-container,rgba(0,0,0,0.1));border-radius:2px;overflow:hidden">
             <div id="nsm-upload-bar" style="height:100%;background:var(--primary);width:0%;transition:width 0.3s"></div>
           </div>
           <p id="nsm-upload-text" style="font-size:11px;color:var(--on-surface-variant);margin-top:4px">Uploading...</p>
@@ -705,11 +705,11 @@
         <div id="nsm-upload-form" style="display:none;text-align:left">
           <div style="margin-bottom:12px">
             <label style="font-size:11px;font-weight:600;color:var(--on-surface-variant);display:block;margin-bottom:4px">TITLE</label>
-            <input id="nsm-up-title" type="text" placeholder="Song title" style="width:100%;padding:10px 12px;border-radius:10px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);color:var(--on-surface);font-size:13px;box-sizing:border-box">
+            <input id="nsm-up-title" type="text" placeholder="Song title" style="width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--outline-variant,rgba(0,0,0,0.1));background:var(--surface-container-low,rgba(0,0,0,0.04));color:var(--on-surface);font-size:13px;box-sizing:border-box">
           </div>
           <div style="margin-bottom:12px">
             <label style="font-size:11px;font-weight:600;color:var(--on-surface-variant);display:block;margin-bottom:4px">ARTIST</label>
-            <input id="nsm-up-artist" type="text" placeholder="Artist name" style="width:100%;padding:10px 12px;border-radius:10px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);color:var(--on-surface);font-size:13px;box-sizing:border-box">
+            <input id="nsm-up-artist" type="text" placeholder="Artist name" style="width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--outline-variant,rgba(0,0,0,0.1));background:var(--surface-container-low,rgba(0,0,0,0.04));color:var(--on-surface);font-size:13px;box-sizing:border-box">
           </div>
           <button onclick="window._nsmSubmitUpload()" style="width:100%;padding:12px;border-radius:10px;border:none;background:var(--primary);color:var(--on-primary);font-size:13px;font-weight:700;cursor:pointer">Upload to Library</button>
         </div>
@@ -805,7 +805,7 @@
   function _renderSearch(el) {
     el.innerHTML = `
       <div style="display:flex;gap:8px;margin-bottom:16px">
-        <input type="search" id="nsm-search-input" placeholder="Search any song..." style="flex:1;min-width:0;padding:10px 14px;border-radius:12px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);color:var(--on-surface);font-size:13px;outline:none" onkeydown="if(event.key==='Enter')window._nsmDoSearch()">
+        <input type="search" id="nsm-search-input" placeholder="Search any song..." style="flex:1;min-width:0;padding:10px 14px;border-radius:12px;border:1px solid var(--outline-variant,rgba(0,0,0,0.1));background:var(--surface-container-low,rgba(0,0,0,0.04));color:var(--on-surface);font-size:13px;outline:none" onkeydown="if(event.key==='Enter')window._nsmDoSearch()">
         <button onclick="window._nsmDoSearch()" style="min-height:44px;flex-shrink:0;padding:10px 18px;border-radius:12px;border:none;background:var(--primary);color:var(--on-primary);font-size:12px;font-weight:700;cursor:pointer">Search</button>
       </div>
       <div id="nsm-search-results"></div>
@@ -813,7 +813,7 @@
         <div style="font-size:11px;font-weight:700;color:var(--on-surface-variant);margin-bottom:10px;text-transform:uppercase;letter-spacing:1px">Quick Browse</div>
         <div style="display:flex;flex-wrap:wrap;gap:6px">
           ${['Malayalam songs','Hindi songs','Tamil songs','Telugu songs','English songs','Old Bollywood','New releases 2025','Malayalam old hits','Hindi romantic','Tamil rock'].map(q =>
-            `<button onclick="document.getElementById('nsm-search-input').value='${q}';window._nsmDoSearch()" style="padding:6px 12px;border-radius:20px;border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.03);color:var(--on-surface-variant);font-size:11px;cursor:pointer;transition:all 0.2s">${q}</button>`
+            `<button onclick="document.getElementById('nsm-search-input').value='${q}';window._nsmDoSearch()" style="padding:6px 12px;border-radius:20px;border:1px solid var(--outline-variant,rgba(0,0,0,0.08));background:var(--surface-container-low,rgba(0,0,0,0.03));color:var(--on-surface-variant);font-size:11px;cursor:pointer;transition:all 0.2s">${q}</button>`
           ).join('')}
         </div>
       </div>`;
@@ -834,7 +834,7 @@
       return;
     }
     el.innerHTML = results.map((t, i) => `
-      <div style="display:flex;align-items:center;gap:10px;padding:8px;border-radius:10px;background:rgba(255,255,255,0.03);margin-bottom:4px;cursor:pointer" onclick="window._nsmPlaySearch(${i})">
+      <div style="display:flex;align-items:center;gap:10px;padding:8px;border-radius:10px;background:var(--surface-container-low,rgba(0,0,0,0.03));margin-bottom:4px;cursor:pointer" onclick="window._nsmPlaySearch(${i})">
         <div style="width:48px;height:36px;border-radius:6px;background:rgba(0,0,0,0.3);display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden">
           ${t.thumbnail ? `<img src="${_esc(t.thumbnail)}" style="width:100%;height:100%;object-fit:cover" onerror="this.style.display='none'" loading="lazy">` : '<span class="material-symbols-outlined" style="font-size:16px;color:var(--on-surface-variant)">play_circle</span>'}
         </div>

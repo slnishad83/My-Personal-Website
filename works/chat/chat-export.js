@@ -20,12 +20,12 @@
         <h3 style="margin:0;font-size:16px;font-weight:700">Export Chat</h3>
         <button onclick="document.getElementById('chat-export-overlay')?.remove()" style="background:none;border:none;color:var(--on-surface-variant);cursor:pointer;font-size:20px">&times;</button>
       </div>
-      <div style="padding:12px;border-radius:12px;background:rgba(255,255,255,0.04);margin-bottom:16px">
+      <div style="padding:12px;border-radius:12px;background:var(--surface-container-low,rgba(0,0,0,0.04));margin-bottom:16px">
         <div style="font-size:13px;font-weight:600">${escHtml(chatName)}</div>
         <div style="font-size:11px;color:var(--on-surface-variant)">${msgCount} messages</div>
       </div>
       <div style="display:flex;flex-direction:column;gap:8px">
-        <button onclick="exportChatAsText()" style="display:flex;align-items:center;gap:12px;padding:14px;border-radius:12px;border:none;background:rgba(255,255,255,0.04);color:var(--on-surface);cursor:pointer;text-align:left">
+        <button onclick="exportChatAsText()" style="display:flex;align-items:center;gap:12px;padding:14px;border-radius:12px;border:none;background:var(--surface-container-low,rgba(0,0,0,0.04));color:var(--on-surface);cursor:pointer;text-align:left">
           <div style="width:40px;height:40px;border-radius:10px;background:rgba(76,175,80,0.15);display:flex;align-items:center;justify-content:center">
             <span class="material-symbols-outlined" style="color:#4CAF50;font-size:20px">text_snippet</span>
           </div>
@@ -34,7 +34,7 @@
             <div style="font-size:11px;color:var(--on-surface-variant)">Plain text file (.txt)</div>
           </div>
         </button>
-        <button onclick="exportChatAsHTML()" style="display:flex;align-items:center;gap:12px;padding:14px;border-radius:12px;border:none;background:rgba(255,255,255,0.04);color:var(--on-surface);cursor:pointer;text-align:left">
+        <button onclick="exportChatAsHTML()" style="display:flex;align-items:center;gap:12px;padding:14px;border-radius:12px;border:none;background:var(--surface-container-low,rgba(0,0,0,0.04));color:var(--on-surface);cursor:pointer;text-align:left">
           <div style="width:40px;height:40px;border-radius:10px;background:rgba(33,150,243,0.15);display:flex;align-items:center;justify-content:center">
             <span class="material-symbols-outlined" style="color:#2196F3;font-size:20px">html</span>
           </div>
@@ -43,7 +43,7 @@
             <div style="font-size:11px;color:var(--on-surface-variant)">Formatted web page (.html)</div>
           </div>
         </button>
-        <button onclick="exportChatAsJSON()" style="display:flex;align-items:center;gap:12px;padding:14px;border-radius:12px;border:none;background:rgba(255,255,255,0.04);color:var(--on-surface);cursor:pointer;text-align:left">
+        <button onclick="exportChatAsJSON()" style="display:flex;align-items:center;gap:12px;padding:14px;border-radius:12px;border:none;background:var(--surface-container-low,rgba(0,0,0,0.04));color:var(--on-surface);cursor:pointer;text-align:left">
           <div style="width:40px;height:40px;border-radius:10px;background:rgba(255,152,0,0.15);display:flex;align-items:center;justify-content:center">
             <span class="material-symbols-outlined" style="color:#FF9800;font-size:20px">data_object</span>
           </div>

@@ -77,7 +77,7 @@
 #_fv_x {
   background: rgba(255,255,255,0.1);
   border: none; color: #fff; font-size: 18px; cursor: pointer;
-  width: 34px; height: 34px; border-radius: 50%;
+  width: 44px; height: 44px; border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
   flex-shrink: 0; transition: background .15s;
 }
@@ -220,7 +220,7 @@
 }
 ._fvet:hover { background: #303048; }
 ._fvet.active { background: #4fc3f7; color: #000; border-color: #4fc3f7; }
-#_fv_ecolor { width: 34px; height: 34px; border: 2px solid rgba(255,255,255,0.2); border-radius: 8px; cursor: pointer; padding: 0; flex-shrink: 0; }
+#_fv_ecolor { width: 44px; height: 44px; border: 2px solid rgba(255,255,255,0.2); border-radius: 8px; cursor: pointer; padding: 0; flex-shrink: 0; }
 #_fv_esize  { width: 72px; flex-shrink: 0; accent-color: #4fc3f7; }
 #_fv_efont  { width: 64px; flex-shrink: 0; accent-color: #4fc3f7; }
 #_fv_ebar2 {

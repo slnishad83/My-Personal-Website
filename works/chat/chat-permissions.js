@@ -15,8 +15,11 @@
 
   function getRole(chatId, uid) {
     if (!window.App || !window.App.db) return 'member';
-    const chat = window.App.currentChat;
-    if (!chat || chat.id !== chatId) return 'member';
+    const chat = (window.App.currentChat && window.App.currentChat.id === chatId)
+      ? window.App.currentChat
+      : (window.App.chats || []).find(c => c.id === chatId)
+        || (window.App.groups || []).find(g => g.id === chatId);
+    if (!chat) return 'member';
     const roles = chat.roles || {};
     return roles[uid] || 'member';
   }
@@ -129,8 +132,4 @@
       }
     }
   };
-
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => {});
-  }
 })();

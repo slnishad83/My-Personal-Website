@@ -247,8 +247,8 @@
         /* Toggle Dark Mode Button */
         .dm-toggle {
           position: fixed;
-          bottom: 24px;
-          right: 24px;
+          bottom: max(24px, calc(env(safe-area-inset-bottom, 0px) + 12px));
+          right: max(24px, env(safe-area-inset-right, 0px));
           width: 44px;
           height: 44px;
           border-radius: 50%;
@@ -348,7 +348,7 @@
           <div class="w-14 h-14 flex items-center justify-center bg-primary/10 dark:bg-[#00ffc3]/10 border border-[#006c51]/20 dark:border-[#00ffc3]/30 rounded-2xl mb-xs shadow-inner">
             <span class="material-symbols-outlined text-[#006c51] dark:text-[#34ffc5] text-[36px]" style="font-variation-settings: 'FILL' 1;">forum</span>
           </div>
-          <h1 class="font-display-lg text-[32px] font-extrabold tracking-tighter text-on-surface dark:text-[#34ffc5] dark:terminal-glow text-center leading-none">
+          <h1 class="font-display-lg font-extrabold tracking-tighter text-on-surface dark:text-[#34ffc5] dark:terminal-glow text-center leading-none" style="font-size:clamp(24px,6vw,32px)">
             NSL <span class="text-[#006c51] dark:text-[#34ffc5] font-light">Chat</span>
           </h1>
           <div class="flex items-center space-y-1">
@@ -395,7 +395,7 @@
                     <span class="material-symbols-outlined text-outline dark:text-slate-500">key</span>
                   </div>
                   <input class="w-full bg-transparent border-none focus:ring-0 text-on-surface dark:text-white font-data-mono text-sm py-sm pl-8 placeholder:text-slate-400 dark:placeholder:text-white/20" id="loginPassword" placeholder="••••••••••••" type="password" required autocomplete="current-password"/>
-                  <button type="button" class="password-toggle absolute right-1 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center text-outline dark:text-slate-500 hover:text-primary dark:hover:text-[#34ffc5] rounded-full transition-colors" data-password-toggle="loginPassword" aria-label="Show password" title="Show password">
+                  <button type="button" class="password-toggle absolute right-1 top-1/2 -translate-y-1/2 w-11 h-11 flex items-center justify-center text-outline dark:text-slate-500 hover:text-primary dark:hover:text-[#34ffc5] rounded-full transition-colors" data-password-toggle="loginPassword" aria-label="Show password" title="Show password">
                     <span class="material-symbols-outlined text-lg">visibility</span>
                   </button>
                 </div>
@@ -469,7 +469,7 @@
                     <span class="material-symbols-outlined text-outline dark:text-slate-500">key</span>
                   </div>
                   <input class="w-full bg-transparent border-none focus:ring-0 text-on-surface dark:text-white font-data-mono text-sm py-sm pl-8 placeholder:text-slate-400 dark:placeholder:text-white/20" id="registerPassword" placeholder="Min 6 characters" type="password" required autocomplete="new-password"/>
-                  <button type="button" class="password-toggle absolute right-1 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center text-outline dark:text-slate-500 hover:text-primary dark:hover:text-[#34ffc5] rounded-full transition-colors" data-password-toggle="registerPassword" aria-label="Show password" title="Show password">
+                  <button type="button" class="password-toggle absolute right-1 top-1/2 -translate-y-1/2 w-11 h-11 flex items-center justify-center text-outline dark:text-slate-500 hover:text-primary dark:hover:text-[#34ffc5] rounded-full transition-colors" data-password-toggle="registerPassword" aria-label="Show password" title="Show password">
                     <span class="material-symbols-outlined text-lg">visibility</span>
                   </button>
                 </div>
@@ -546,7 +546,7 @@
       <div class="glass-panel w-full max-w-sm rounded-xl p-md md:p-lg border border-white/40 dark:border-white/10 relative flex flex-col gap-md text-left mx-margin-mobile animate-in">
         <div class="modal-header flex items-center justify-between border-b border-slate-100 dark:border-white/10 pb-sm">
           <h3 id="resetModalTitle" class="font-headline-lg-mobile text-headline-lg-mobile text-on-surface dark:text-white">Reset Password</h3>
-          <button type="button" class="close-modal resetClose w-8 h-8 flex items-center justify-center text-slate-400 dark:text-slate-500 hover:text-slate-700 dark:hover:text-white hover:bg-surface-variant/30 rounded-full transition-colors" aria-label="Close reset password dialog">&times;</button>
+          <button type="button" class="close-modal resetClose w-11 h-11 flex items-center justify-center text-slate-400 dark:text-slate-500 hover:text-slate-700 dark:hover:text-white hover:bg-surface-variant/30 rounded-full transition-colors" aria-label="Close reset password dialog">&times;</button>
         </div>
         <div class="form-group space-y-xs">
           <label class="font-label-mono text-label-mono text-on-surface-variant dark:text-[#b9cbc1] uppercase ml-xs" for="resetEmail">Email address</label>

@@ -40,8 +40,6 @@
 
   // ── 2. FEATURE NAVIGATION BAR ────────────────────────────────────
   function injectFeatureNav() {
-    const sidebar = document.querySelector('.chat-sidebar, .sidebar, #chatSidebar, [class*="sidebar"]');
-    if (!sidebar) return;
     if (!featureNavSyncBound) {
       const syncFeatureNav = () => {
         const nav = document.getElementById('featureNavBar');
@@ -85,16 +83,11 @@
         <span class="fn-icon">🔴</span>Busy
       </button>
       <button class="feat-nav-btn" onclick="toggleCalculator()" title="Calculator">
-        <span class="fn-icon">🧮</span>Calculator
+        <span class="fn-icon">🧮</span>Calc
       </button>
     `;
-    // Try to insert after header or at bottom of sidebar
-    const sidebarHeader = sidebar.querySelector('.sidebar-header, [class*="header"]');
-    if (sidebarHeader && sidebarHeader.nextSibling) {
-      sidebar.insertBefore(nav, sidebarHeader.nextSibling);
-    } else {
-      sidebar.appendChild(nav);
-    }
+    // Insert into document.body so it's NOT inside the hidden sidebar
+    document.body.appendChild(nav);
     nav.hidden = !featureNavMedia.matches;
     nav.style.display = featureNavMedia.matches ? 'flex' : 'none';
     nav.setAttribute('aria-hidden', featureNavMedia.matches ? 'false' : 'true');

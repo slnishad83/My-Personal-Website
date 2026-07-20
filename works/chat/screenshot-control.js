@@ -157,7 +157,7 @@
       </div>
       <p style="font-size:13px;color:var(--on-surface-variant);margin:0 0 16px">Control whether the other person can take screenshots in this chat. You can still take screenshots unless they restrict you too.</p>
 
-      <div style="padding:16px;border-radius:14px;background:rgba(255,255,255,0.04);margin-bottom:12px">
+      <div style="padding:16px;border-radius:14px;background:var(--surface-container-low,rgba(0,0,0,0.04));margin-bottom:12px">
         <div style="display:flex;align-items:center;justify-content:space-between">
           <div>
             <div style="font-size:14px;font-weight:600">Restrict Screenshots</div>
@@ -165,14 +165,14 @@
           </div>
           <label style="position:relative;width:48px;height:26px;cursor:pointer">
             <input type="checkbox" ${restricted ? 'checked' : ''} onchange="toggleScreenshotRestriction('${chatId}');this.closest('[style*=\"fixed\"]')?.remove()" style="display:none">
-            <div style="position:absolute;inset:0;border-radius:13px;background:${restricted ? 'var(--primary)' : 'rgba(255,255,255,0.15)'};transition:background 0.2s">
+            <div style="position:absolute;inset:0;border-radius:13px;background:${restricted ? 'var(--primary)' : 'var(--outline-variant,rgba(0,0,0,0.15))'};transition:background 0.2s">
               <div style="position:absolute;top:3px;left:${restricted ? '25px' : '3px'};width:20px;height:20px;border-radius:50%;background:white;transition:left 0.2s;box-shadow:0 1px 3px rgba(0,0,0,0.3)"></div>
             </div>
           </label>
         </div>
       </div>
 
-      <div style="padding:12px;border-radius:10px;background:rgba(255,255,255,0.04);font-size:12px;color:var(--on-surface-variant)">
+      <div style="padding:12px;border-radius:10px;background:var(--surface-container-low,rgba(0,0,0,0.04));font-size:12px;color:var(--on-surface-variant)">
         <strong>Note:</strong> On web, screenshot restrictions are best-effort. The other person will see a warning, but technical bypasses may exist. For maximum security, use the mobile app.
       </div>`;
 

@@ -179,20 +179,20 @@
         <button onclick="document.getElementById(\'equalizer-overlay\')?.remove()" style="background:none;border:none;color:var(--on-surface-variant);cursor:pointer;font-size:18px">&times;</button>
       </div>
       <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;justify-content:center">
-        ${Object.keys(_EQ_PRESETS).map(name => `<button onclick="MusicPlayer.applyEqPreset('${name}')" style="padding:6px 12px;border-radius:8px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);color:var(--on-surface-variant);font-size:11px;font-weight:600;cursor:pointer;min-height:32px">${name}</button>`).join('')}
+        ${Object.keys(_EQ_PRESETS).map(name => `<button onclick="MusicPlayer.applyEqPreset('${name}')" style="padding:6px 12px;border-radius:8px;border:1px solid var(--outline-variant,rgba(0,0,0,0.1));background:var(--surface-container-low,rgba(0,0,0,0.04));color:var(--on-surface-variant);font-size:11px;font-weight:600;cursor:pointer;min-height:32px">${name}</button>`).join('')}
       </div>
       <canvas id="eq-visualizer" width="360" height="80" style="width:100%;height:80px;border-radius:10px;background:rgba(0,0,0,0.3);margin-bottom:16px"></canvas>
       <div style="display:flex;gap:4px;justify-content:space-between;align-items:flex-end;height:200px;margin-bottom:8px">
         ${labels.map((label, i) => `
           <div style="display:flex;flex-direction:column;align-items:center;flex:1">
-            <input type="range" min="-12" max="12" value="${_eqGains[i]}" orient="vertical" oninput="MusicPlayer.setEqBand(${i},Number(this.value));this.nextElementSibling.textContent=this.value+'dB'" style="writing-mode:vertical-lr;direction:rtl;height:160px;accent-color:var(--primary);width:24px">
+            <input type="range" min="-12" max="12" value="${_eqGains[i]}" orient="vertical" oninput="MusicPlayer.setEqBand(${i},Number(this.value));this.nextElementSibling.textContent=this.value+'dB'" style="writing-mode:vertical-lr;direction:rtl;height:160px;accent-color:var(--primary);width:28px">
             <div style="font-size:9px;color:var(--on-surface-variant);margin-top:4px">${_eqGains[i]}dB</div>
             <div style="font-size:8px;color:var(--on-surface-variant);margin-top:2px">${label}</div>
           </div>
         `).join('')}
       </div>
       <div style="display:flex;gap:8px;justify-content:center">
-        <button onclick="MusicPlayer.resetEq()" style="padding:8px 16px;border-radius:8px;border:none;background:rgba(255,255,255,0.06);color:var(--on-surface-variant);font-size:12px;font-weight:600;cursor:pointer;min-height:44px">Reset</button>
+        <button onclick="MusicPlayer.resetEq()" style="padding:8px 16px;border-radius:8px;border:none;background:var(--surface-container,rgba(0,0,0,0.06));color:var(--on-surface-variant);font-size:12px;font-weight:600;cursor:pointer;min-height:44px">Reset</button>
       </div>`;
 
     overlay.appendChild(panel);
@@ -206,20 +206,20 @@
   function _startVisualizer() {
     const canvas = document.getElementById('eq-visualizer');
     if (!canvas || !_analyser) return;
-    const ctx = canvas.getContext('2d');
     const data = new Uint8Array(_analyser.frequencyBinCount);
 
     function draw() {
       const cv = document.getElementById('eq-visualizer');
-      if (!cv) return;
+      if (!cv || !_analyser) return;
+      const ctx = cv.getContext('2d');
       _analyser.getByteFrequencyData(data);
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      const barWidth = canvas.width / 32;
+      ctx.clearRect(0, 0, cv.width, cv.height);
+      const barWidth = cv.width / 32;
       for (let i = 0; i < 32; i++) {
         const val = data[i] / 255;
-        const h = val * canvas.height * 0.9;
+        const h = val * cv.height * 0.9;
         ctx.fillStyle = `rgba(124, 77, 255, ${0.3 + val * 0.7})`;
-        ctx.fillRect(i * barWidth + 1, canvas.height - h, barWidth - 2, h);
+        ctx.fillRect(i * barWidth + 1, cv.height - h, barWidth - 2, h);
       }
       requestAnimationFrame(draw);
     }
@@ -610,10 +610,10 @@
       <h3 style="margin:0 0 16px;font-size:16px;font-weight:700;text-align:center">Sleep Timer</h3>
       ${Player._sleepTimerEnd ? `<p style="text-align:center;color:var(--primary);font-size:13px;margin:0 0 12px">Active — auto-stop in <span id="sleep-timer-countdown"></span></p>` : ''}
       <div style="display:flex;flex-direction:column;gap:8px">
-        ${presets.map(p => `<button onclick="MusicPlayer.setSleepTimer(${p.minutes});document.getElementById('sleep-timer-menu')?.remove()" style="padding:12px;border-radius:12px;border:1px solid ${Player._sleepTimerEnd ? 'rgba(255,255,255,0.08)' : 'rgba(124,77,255,0.3)'};background:rgba(124,77,255,0.08);color:var(--on-surface);font-size:14px;font-weight:600;cursor:pointer;text-align:center">${p.label}</button>`).join('')}
+        ${presets.map(p => `<button onclick="MusicPlayer.setSleepTimer(${p.minutes});document.getElementById('sleep-timer-menu')?.remove()" style="padding:12px;border-radius:12px;border:1px solid ${Player._sleepTimerEnd ? 'var(--outline-variant,rgba(0,0,0,0.08))' : 'rgba(124,77,255,0.3)'};background:rgba(124,77,255,0.08);color:var(--on-surface);font-size:14px;font-weight:600;cursor:pointer;text-align:center">${p.label}</button>`).join('')}
       </div>
       ${Player._sleepTimerEnd ? `<button onclick="MusicPlayer.cancelSleepTimer();document.getElementById('sleep-timer-menu')?.remove()" style="width:100%;margin-top:12px;padding:12px;border-radius:12px;border:1px solid rgba(239,68,68,0.3);background:rgba(239,68,68,0.1);color:var(--error);font-size:13px;font-weight:700;cursor:pointer">Cancel Timer</button>` : ''}
-      <button onclick="document.getElementById('sleep-timer-menu')?.remove()" style="width:100%;margin-top:8px;padding:10px;border-radius:10px;border:none;background:rgba(255,255,255,0.06);color:var(--on-surface-variant);font-size:13px;font-weight:600;cursor:pointer">Close</button>`;
+      <button onclick="document.getElementById('sleep-timer-menu')?.remove()" style="width:100%;margin-top:8px;padding:10px;border-radius:10px;border:none;background:var(--surface-container,rgba(0,0,0,0.06));color:var(--on-surface-variant);font-size:13px;font-weight:600;cursor:pointer">Close</button>`;
 
     overlay.appendChild(panel);
     overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
@@ -813,9 +813,9 @@
       return;
     }
     list.innerHTML = Player.queue.map((t, i) => `
-      <div class="queue-item" data-idx="${i}" draggable="true" ondragstart="_qDragStart(event,${i})" ondragover="event.preventDefault()" ondrop="_qDrop(event,${i})" ondragend="_qDragEnd()" style="display:flex;align-items:center;gap:3px;padding:6px 8px;border-radius:10px;background:${i===Player.queueIndex?'rgba(124,77,255,0.1)':'rgba(255,255,255,0.02)'};margin-bottom:3px;transition:all 0.3s ease;${i===Player.queueIndex?'transform:scale(1.02);box-shadow:0 0 12px rgba(124,77,255,0.15);':'transform:scale(1);'}">
+      <div class="queue-item" data-idx="${i}" draggable="true" ondragstart="_qDragStart(event,${i})" ondragover="event.preventDefault()" ondrop="_qDrop(event,${i})" ondragend="_qDragEnd()" style="display:flex;align-items:center;gap:3px;padding:6px 8px;border-radius:10px;background:${i===Player.queueIndex?'rgba(124,77,255,0.1)':'var(--surface-container-low,rgba(0,0,0,0.02))'};margin-bottom:3px;transition:all 0.3s ease;${i===Player.queueIndex?'transform:scale(1.02);box-shadow:0 0 12px rgba(124,77,255,0.15);':'transform:scale(1);'}">
         <span class="material-symbols-outlined" style="font-size:14px;color:var(--on-surface-variant);cursor:grab;opacity:0.4;flex-shrink:0;user-select:none;min-width:44px;min-height:44px;display:inline-flex;align-items:center;justify-content:center" title="Drag to reorder">drag_indicator</span>
-        <div style="width:36px;height:36px;border-radius:6px;overflow:hidden;flex-shrink:0;background:rgba(255,255,255,0.05);display:flex;align-items:center;justify-content:center;cursor:pointer" onclick="MusicPlayer.playTrack(${i})">
+        <div style="width:36px;height:36px;border-radius:6px;overflow:hidden;flex-shrink:0;background:var(--surface-container-low,rgba(0,0,0,0.05));display:flex;align-items:center;justify-content:center;cursor:pointer" onclick="MusicPlayer.playTrack(${i})">
           ${t.thumbnail ? `<img src="${escHtml(t.thumbnail)}" style="width:100%;height:100%;object-fit:cover">` : '<span class="material-symbols-outlined" style="font-size:14px;color:var(--on-surface-variant)">music_note</span>'}
         </div>
         <div class="flex-1 min-w-0" style="cursor:pointer" onclick="MusicPlayer.playTrack(${i})">
@@ -835,7 +835,8 @@
   window._qDragStart = function(e, idx) {
     _qDragIdx = idx;
     e.dataTransfer.effectAllowed = 'move';
-    e.target.closest('.queue-item').style.opacity = '0.4';
+    var item = e.target.closest('.queue-item');
+    if (item) item.style.opacity = '0.4';
   };
   window._qDrop = function(e, toIdx) {
     e.preventDefault();
@@ -868,11 +869,13 @@
     let pos;
     try { pos = JSON.parse(localStorage.getItem(_MINI_POS_KEY)); } catch(_) {}
     if (!pos || typeof pos.left !== 'number' || typeof pos.top !== 'number') {
-      pos = { left: window.innerWidth - 290 - 16, top: window.innerHeight - 80 - 16 };
+      const miniW = Math.min(280, window.innerWidth - 32);
+      pos = { left: window.innerWidth - miniW - 16, top: window.innerHeight - 80 - 16 };
     }
-    pos.left = Math.max(8, Math.min(pos.left, window.innerWidth - 290));
+    const miniW = Math.min(280, window.innerWidth - 32);
+    pos.left = Math.max(8, Math.min(pos.left, window.innerWidth - miniW));
     pos.top = Math.max(8, Math.min(pos.top, window.innerHeight - 80));
-    mini.style.cssText = `position:fixed;left:${pos.left}px;top:${pos.top}px;z-index:95;width:280px;background:var(--surface-container-high,#1e2a34);border-radius:14px;border:1px solid rgba(255,255,255,0.1);box-shadow:0 6px 24px rgba(0,0,0,0.4);padding:8px 10px;display:flex;align-items:center;gap:4px;cursor:grab;animation:fadeIn 0.2s ease;touch-action:none;user-select:none;-webkit-user-select:none;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)`;
+    mini.style.cssText = `position:fixed;left:${pos.left}px;top:${pos.top}px;z-index:95;width:${miniW}px;max-width:calc(100vw - 32px);background:var(--surface-container-high,#1e2a34);border-radius:14px;border:1px solid var(--outline-variant,rgba(255,255,255,0.1));box-shadow:0 6px 24px rgba(0,0,0,0.4);padding:8px 10px;display:flex;align-items:center;gap:4px;cursor:grab;animation:fadeIn 0.2s ease;touch-action:none;user-select:none;-webkit-user-select:none;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)`;
     mini.onclick = (e) => {
       if (_miniMoved) return;
       if (e.target.closest('button')) return;
@@ -899,7 +902,8 @@
       if (Math.abs(dx) > 3 || Math.abs(dy) > 3) _miniMoved = true;
       let newLeft = _miniStartLeft + dx;
       let newTop = _miniStartTop + dy;
-      newLeft = Math.max(0, Math.min(newLeft, window.innerWidth - 280));
+      const mw = Math.min(280, window.innerWidth - 32);
+      newLeft = Math.max(0, Math.min(newLeft, window.innerWidth - mw));
       newTop = Math.max(0, Math.min(newTop, window.innerHeight - 80));
       mini.style.left = newLeft + 'px';
       mini.style.top = newTop + 'px';
@@ -947,26 +951,26 @@
     const mini = document.getElementById('music-mini-player');
     if (!mini) return;
     mini.innerHTML = `
-      <div style="width:38px;height:38px;border-radius:8px;overflow:hidden;flex-shrink:0;background:rgba(255,255,255,0.05)">
+      <div style="width:38px;height:38px;border-radius:8px;overflow:hidden;flex-shrink:0;background:var(--surface-container-low,rgba(0,0,0,0.05))">
         ${track.thumbnail ? `<img src="${escHtml(track.thumbnail)}" style="width:100%;height:100%;object-fit:cover">` : '<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center"><span class="material-symbols-outlined" style="font-size:18px;color:var(--primary)">music_note</span></div>'}
       </div>
       <div style="flex:1;min-width:0;pointer-events:none">
         <div style="font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--on-surface)">${escHtml(track.title)}</div>
         <div style="font-size:10px;color:var(--on-surface-variant);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escHtml(track.artist)}</div>
       </div>
-      <button class="music-play-btn" onclick="event.stopPropagation();event.preventDefault();MusicPlayer.togglePlay()" aria-label="${Player.isPlaying ? 'Pause' : 'Play'}" style="background:none;border:none;color:var(--on-surface);cursor:pointer;padding:2px;min-width:36px;min-height:36px;display:inline-flex;align-items:center;justify-content:center">
+      <button class="music-play-btn" onclick="event.stopPropagation();event.preventDefault();MusicPlayer.togglePlay()" aria-label="${Player.isPlaying ? 'Pause' : 'Play'}" style="background:none;border:none;color:var(--on-surface);cursor:pointer;padding:2px;min-width:44px;min-height:44px;display:inline-flex;align-items:center;justify-content:center">
         <span class="material-symbols-outlined" style="font-size:26px">${Player.isPlaying ? 'pause_circle' : 'play_circle'}</span>
       </button>
-      <button onclick="event.stopPropagation();event.preventDefault();MusicPlayer.next()" aria-label="Next track" style="background:none;border:none;color:var(--on-surface-variant);cursor:pointer;padding:2px;min-width:32px;min-height:32px;display:inline-flex;align-items:center;justify-content:center">
+      <button onclick="event.stopPropagation();event.preventDefault();MusicPlayer.next()" aria-label="Next track" style="background:none;border:none;color:var(--on-surface-variant);cursor:pointer;padding:2px;min-width:44px;min-height:44px;display:inline-flex;align-items:center;justify-content:center">
         <span class="material-symbols-outlined" style="font-size:18px">skip_next</span>
       </button>
-      <button onclick="event.stopPropagation();event.preventDefault();openFullPlayer()" aria-label="Maximize player" style="background:none;border:none;color:var(--on-surface-variant);cursor:pointer;padding:2px;min-width:28px;min-height:28px;display:inline-flex;align-items:center;justify-content:center">
+      <button onclick="event.stopPropagation();event.preventDefault();openFullPlayer()" aria-label="Maximize player" style="background:none;border:none;color:var(--on-surface-variant);cursor:pointer;padding:2px;min-width:44px;min-height:44px;display:inline-flex;align-items:center;justify-content:center">
         <span class="material-symbols-outlined" style="font-size:16px">open_in_full</span>
       </button>
-      <button onclick="event.stopPropagation();event.preventDefault();MusicPlayer.stop()" aria-label="Close player" style="background:none;border:none;color:var(--on-surface-variant);cursor:pointer;padding:2px;min-width:28px;min-height:28px;display:inline-flex;align-items:center;justify-content:center">
+      <button onclick="event.stopPropagation();event.preventDefault();MusicPlayer.stop()" aria-label="Close player" style="background:none;border:none;color:var(--on-surface-variant);cursor:pointer;padding:2px;min-width:44px;min-height:44px;display:inline-flex;align-items:center;justify-content:center">
         <span class="material-symbols-outlined" style="font-size:16px">close</span>
       </button>
-      <div style="position:absolute;bottom:0;left:8px;right:8px;height:2px;background:rgba(255,255,255,0.08);border-radius:1px">
+      <div style="position:absolute;bottom:0;left:8px;right:8px;height:2px;background:var(--outline-variant,rgba(0,0,0,0.08));border-radius:1px">
         <div id="mini-progress-bar" style="height:100%;background:var(--primary);transition:width 0.3s;width:0%;border-radius:1px"></div>
       </div>`;
   }
@@ -1046,7 +1050,7 @@
       </div>
 
       <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0 32px">
-        <div style="width:min(280px,65vw);height:min(280px,65vw);max-height:50vh;border-radius:16px;overflow:hidden;box-shadow:0 8px 40px rgba(0,0,0,0.5);margin-bottom:32px;background:rgba(255,255,255,0.05)">
+        <div style="width:min(280px,65vw,40vh);height:min(280px,65vw,40vh);max-height:50vh;border-radius:16px;overflow:hidden;box-shadow:0 8px 40px rgba(0,0,0,0.5);margin-bottom:32px;background:var(--surface-container-low,rgba(0,0,0,0.05))">
           ${track.thumbnail ? `<img class="music-track-thumb" src="${escHtml(track.thumbnail)}" style="width:100%;height:100%;object-fit:cover">` : '<div class="music-track-thumb" style="width:100%;height:100%;display:flex;align-items:center;justify-content:center"><span class="material-symbols-outlined" style="font-size:80px;color:var(--primary);opacity:0.4">music_note</span></div>'}
         </div>
         <div style="text-align:center;width:100%">
@@ -1059,7 +1063,7 @@
       <div style="padding:0 24px 8px">
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
           <span id="music-current-time" style="font-size:11px;color:var(--on-surface-variant);width:40px;text-align:right">0:00</span>
-          <input type="range" id="music-seek-bar" min="0" max="100" value="0" oninput="MusicPlayer.seekPercent(this.value)" onmousedown="MusicPlayer._seeking=true" onmouseup="MusicPlayer._seeking=false" onchange="MusicPlayer._seeking=false" ontouchstart="MusicPlayer._seeking=true" ontouchend="MusicPlayer._seeking=false" aria-label="Seek" role="slider" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" style="flex:1;accent-color:var(--primary);height:4px;touch-action:pan-x">
+          <input type="range" id="music-seek-bar" min="0" max="100" value="0" oninput="MusicPlayer.seekPercent(this.value)" onmousedown="MusicPlayer._seeking=true" onmouseup="MusicPlayer._seeking=false" onchange="MusicPlayer._seeking=false" ontouchstart="MusicPlayer._seeking=true" ontouchend="MusicPlayer._seeking=false" aria-label="Seek" role="slider" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" style="flex:1;accent-color:var(--primary);height:6px;touch-action:pan-x">
           <span id="music-duration" style="font-size:11px;color:var(--on-surface-variant);width:40px">0:00</span>
         </div>
 
@@ -1085,24 +1089,24 @@
           <button id="music-volume-icon" onclick="MusicPlayer.toggleMute()" style="background:none;border:none;color:var(--on-surface-variant);cursor:pointer;padding:4px;min-width:44px;min-height:44px;display:inline-flex;align-items:center;justify-content:center">
             <span class="material-symbols-outlined" style="font-size:20px">${Player.isMuted?'volume_off':'volume_up'}</span>
           </button>
-          <input type="range" id="music-volume" min="0" max="100" value="${Player.volume*100}" oninput="MusicPlayer.setVolume(this.value/100)" aria-label="Volume" role="slider" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round(Player.volume*100)}" style="flex:1;accent-color:var(--primary);height:3px">
-          <button onclick="toggleTrackFavorite(Player._currentTrack)" style="background:none;border:none;color:${isTrackFavorite(track.url)?'var(--error)':'var(--on-surface-variant)'};cursor:pointer;padding:4px;min-width:44px;min-height:44px;display:inline-flex;align-items:center;justify-content:center">
-            <span class="material-symbols-outlined" style="font-size:20px">${isTrackFavorite(track.url)?'favorite':'favorite_border'}</span>
+          <input type="range" id="music-volume" min="0" max="100" value="${Player.volume*100}" oninput="MusicPlayer.setVolume(this.value/100)" aria-label="Volume" role="slider" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round(Player.volume*100)}" style="flex:1;accent-color:var(--primary);height:6px">
+          <button onclick="(typeof toggleTrackFavorite==='function') && toggleTrackFavorite(Player._currentTrack)" style="background:none;border:none;color:${typeof isTrackFavorite==='function' && isTrackFavorite(track.url)?'var(--error)':'var(--on-surface-variant)'};cursor:pointer;padding:4px;min-width:44px;min-height:44px;display:inline-flex;align-items:center;justify-content:center">
+            <span class="material-symbols-outlined" style="font-size:20px">${typeof isTrackFavorite==='function' && isTrackFavorite(track.url)?'favorite':'favorite_border'}</span>
           </button>
         </div>
 
         <div style="display:flex;align-items:center;justify-content:center;gap:12px;margin-bottom:8px;flex-wrap:wrap">
-          <button id="music-full-speed" onclick="MusicPlayer.cyclePlaybackSpeed()" style="background:rgba(255,255,255,0.06);border:none;border-radius:8px;padding:4px 10px;color:${Player.playbackSpeed!==1?'var(--primary)':'var(--on-surface-variant)'};cursor:pointer;font-size:11px;font-weight:700">${Player.playbackSpeed}x</button>
-          <button id="music-crossfade-btn" onclick="MusicPlayer.cycleCrossfade()" style="background:rgba(255,255,255,0.06);border:none;border-radius:8px;padding:4px 10px;color:${Player.crossfadeDuration>0?'var(--primary)':'var(--on-surface-variant)'};cursor:pointer;font-size:11px;font-weight:700" title="${Player.crossfadeDuration?'Crossfade: '+Player.crossfadeDuration+'s':'Crossfade off'}">${Player.crossfadeDuration ? Player.crossfadeDuration+'s' : 'X-Fade'}</button>
-          <button onclick="MusicPlayer.showSleepTimerMenu()" style="background:rgba(255,255,255,0.06);border:none;border-radius:8px;padding:4px 10px;color:${Player._sleepTimerEnd?'var(--primary)':'var(--on-surface-variant)'};cursor:pointer;font-size:11px;font-weight:700;display:flex;align-items:center;gap:4px" title="Sleep Timer">
+          <button id="music-full-speed" onclick="MusicPlayer.cyclePlaybackSpeed()" style="background:var(--surface-container,rgba(0,0,0,0.06));border:none;border-radius:8px;padding:4px 10px;color:${Player.playbackSpeed!==1?'var(--primary)':'var(--on-surface-variant)'};cursor:pointer;font-size:11px;font-weight:700">${Player.playbackSpeed}x</button>
+          <button id="music-crossfade-btn" onclick="MusicPlayer.cycleCrossfade()" style="background:var(--surface-container,rgba(0,0,0,0.06));border:none;border-radius:8px;padding:4px 10px;color:${Player.crossfadeDuration>0?'var(--primary)':'var(--on-surface-variant)'};cursor:pointer;font-size:11px;font-weight:700" title="${Player.crossfadeDuration?'Crossfade: '+Player.crossfadeDuration+'s':'Crossfade off'}">${Player.crossfadeDuration ? Player.crossfadeDuration+'s' : 'X-Fade'}</button>
+          <button onclick="MusicPlayer.showSleepTimerMenu()" style="background:var(--surface-container,rgba(0,0,0,0.06));border:none;border-radius:8px;padding:4px 10px;color:${Player._sleepTimerEnd?'var(--primary)':'var(--on-surface-variant)'};cursor:pointer;font-size:11px;font-weight:700;display:flex;align-items:center;gap:4px" title="Sleep Timer">
             <span class="material-symbols-outlined" style="font-size:14px">bedtime</span>
             <span id="music-sleep-timer" style="display:none"></span>
             ${!Player._sleepTimerEnd ? 'Sleep' : ''}
           </button>
-          <button onclick="MusicPlayer.showEqualizer()" style="background:rgba(255,255,255,0.06);border:none;border-radius:8px;padding:4px 10px;color:var(--on-surface-variant);cursor:pointer;font-size:11px;font-weight:700" title="Equalizer">
+          <button onclick="MusicPlayer.showEqualizer()" style="background:var(--surface-container,rgba(0,0,0,0.06));border:none;border-radius:8px;padding:4px 10px;color:var(--on-surface-variant);cursor:pointer;font-size:11px;font-weight:700" title="Equalizer">
             <span class="material-symbols-outlined" style="font-size:14px">equalizer</span>
           </button>
-          <button onclick="MusicPlayer.shareTrack()" style="background:rgba(255,255,255,0.06);border:none;border-radius:8px;padding:4px 10px;color:var(--on-surface-variant);cursor:pointer;font-size:11px;font-weight:700" title="Share">
+          <button onclick="MusicPlayer.shareTrack()" style="background:var(--surface-container,rgba(0,0,0,0.06));border:none;border-radius:8px;padding:4px 10px;color:var(--on-surface-variant);cursor:pointer;font-size:11px;font-weight:700" title="Share">
             <span class="material-symbols-outlined" style="font-size:14px">share</span>
           </button>
         </div>
@@ -1139,8 +1143,8 @@
         <button onclick="document.getElementById('playlist-queue-overlay')?.remove()" style="background:none;border:none;color:var(--on-surface-variant);cursor:pointer;font-size:18px">&times;</button>
       </div>
       <div style="display:flex;gap:8px;margin-bottom:12px">
-        <button onclick="MusicPlayer.clearQueue()" style="padding:6px 12px;border-radius:8px;border:none;background:rgba(255,255,255,0.06);color:var(--on-surface-variant);font-size:11px;font-weight:600;cursor:pointer">Clear All</button>
-        <button onclick="MusicPlayer.toggleShuffle()" style="padding:6px 12px;border-radius:8px;border:none;background:${Player.isShuffle?'rgba(124,77,255,0.2)':'rgba(255,255,255,0.06)'};color:${Player.isShuffle?'var(--primary)':'var(--on-surface-variant)'};font-size:11px;font-weight:600;cursor:pointer">Shuffle</button>
+        <button onclick="MusicPlayer.clearQueue()" style="padding:6px 12px;border-radius:8px;border:none;background:var(--surface-container,rgba(0,0,0,0.06));color:var(--on-surface-variant);font-size:11px;font-weight:600;cursor:pointer">Clear All</button>
+        <button onclick="MusicPlayer.toggleShuffle()" style="padding:6px 12px;border-radius:8px;border:none;background:${Player.isShuffle?'rgba(124,77,255,0.2)':'var(--surface-container,rgba(0,0,0,0.06))'};color:${Player.isShuffle?'var(--primary)':'var(--on-surface-variant)'};font-size:11px;font-weight:600;cursor:pointer">Shuffle</button>
       </div>
       <div id="music-queue-list" style="flex:1;overflow-y:auto"></div>`;
 
@@ -1239,6 +1243,10 @@
       }
     } catch(_) {}
   }
+
+  window.addEventListener('mouseup', function() { Player._seeking = false; });
+  window.addEventListener('touchend', function() { Player._seeking = false; });
+  window.addEventListener('touchcancel', function() { Player._seeking = false; });
 
   setInterval(() => {
     if (Player._currentTrack && Player.audio && Player.isPlaying) {

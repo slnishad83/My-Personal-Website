@@ -22,6 +22,10 @@ window.toggleSidebarExpand = function() {
 if (typeof init === 'function') {
   init().catch((error) => {
     console.error("Application startup failed:", error);
-    showStartupRecovery("Team Chat could not start. Please retry.");
+    if (typeof window.showStartupRecovery === 'function') {
+      window.showStartupRecovery("Team Chat could not start. Please retry.");
+    } else {
+      document.body.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100vh;font-family:sans-serif;background:#111b21;color:#e9edef;text-align:center;padding:20px"><div><h2 style="margin-bottom:12px">Something went wrong</h2><p style="color:#8696a0;margin-bottom:20px">Team Chat could not start. Please retry.</p><button onclick="location.reload()" style="padding:10px 24px;background:#00a884;color:#fff;border:none;border-radius:8px;font-size:15px;cursor:pointer">Retry</button></div></div>';
+    }
   });
 }

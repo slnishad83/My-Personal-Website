@@ -5,7 +5,15 @@
  */
 (function () {
   const translationsCache = {};
+  const CACHE_MAX = 200;
   const AUTO_TRANSLATE_KEY = 'nsl_auto_translate';
+
+  function _evictCache() {
+    const keys = Object.keys(translationsCache);
+    if (keys.length > CACHE_MAX) {
+      for (let i = 0; i < keys.length - CACHE_MAX; i++) delete translationsCache[keys[i]];
+    }
+  }
 
   function getAutoTranslateSettings() {
     try { return JSON.parse(localStorage.getItem(AUTO_TRANSLATE_KEY) || '{}'); } catch (_) { return {}; }
@@ -22,8 +30,12 @@
   }
 
   function initTranslation() {
-    // Inject translate button into context menu whenever it appears
-    const observer = new MutationObserver(() => {
+    // Inject translate button into context menu whenever it appears (throttled)
+    var _ctxMenuThrottle = false;
+    var observer = new MutationObserver(function() {
+      if (_ctxMenuThrottle) return;
+      _ctxMenuThrottle = true;
+      setTimeout(function() { _ctxMenuThrottle = false; }, 300);
       const menu = document.getElementById('_msg-ctx-menu');
       if (!menu || menu.querySelector('.translate-msg-injected')) return;
 
@@ -92,11 +104,14 @@
     popup.innerHTML = '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px"><span style="font-size:14px;font-weight:700;color:var(--on-surface)">🌐 Translate</span><button onclick="document.getElementById(\'translation-popup\').remove()" style="background:none;border:none;color:var(--on-surface-variant);cursor:pointer;padding:4px"><span class="material-symbols-outlined" style="font-size:18px">close</span></button></div><div id="translation-popup-content" style="text-align:center;padding:16px"><span class="material-symbols-outlined animate-spin" style="color:var(--primary);font-size:24px">progress_activity</span><p style="color:var(--on-surface-variant);font-size:12px;margin-top:8px">Translating...</p></div>';
     document.body.appendChild(popup);
 
-    fetch('https://api.mymemory.translated.net/get?q=' + text + '&langpair=autodetect|' + targetLang)
-      .then(function(res) { return res.json(); })
+    var controller = new AbortController();
+    var timeoutId = setTimeout(function() { controller.abort(); }, 8000);
+    fetch('https://api.mymemory.translated.net/get?q=' + text + '&langpair=autodetect|' + targetLang, { signal: controller.signal })
+      .then(function(res) { clearTimeout(timeoutId); return res.json(); })
       .then(function(data) {
         if (data && data.responseData && data.responseData.translatedText) {
           translationsCache[msgId] = { original: msg.text, translated: data.responseData.translatedText, lang: targetLang };
+          _evictCache();
           var content = document.getElementById('translation-popup-content');
           if (content) {
             content.innerHTML = '<div style="background:var(--surface-container,rgba(255,255,255,0.04));border-radius:10px;padding:12px;margin-bottom:10px"><div style="font-size:10px;font-weight:700;color:var(--on-surface-variant);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Original</div><div style="font-size:13px;color:var(--on-surface);line-height:1.4">' + escHtml(msg.text) + '</div></div><div style="background:var(--primary-container,rgba(124,77,255,0.1));border-radius:10px;padding:12px"><div style="font-size:10px;font-weight:700;color:var(--primary);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Translated</div><div style="font-size:13px;color:var(--on-surface);line-height:1.4">' + escHtml(data.responseData.translatedText) + '</div></div>';
@@ -144,7 +159,11 @@
 
   function _injectAutoTranslateToggle() {
     // Add a small translate icon in chat header for permanent auto-translate
+    var _autoTransThrottle = false;
     var observer = new MutationObserver(function() {
+      if (_autoTransThrottle) return;
+      _autoTransThrottle = true;
+      setTimeout(function() { _autoTransThrottle = false; }, 500);
       var headerBtns = document.querySelector('#chat-header-actions, .chat-header .flex.items-center.gap-1');
       if (!headerBtns || headerBtns.querySelector('#auto-translate-btn')) return;
       if (!window.App?.currentChat) return;
@@ -232,11 +251,14 @@
       var text = encodeURIComponent(detail.text);
       var targetLang = setting.lang || 'en';
 
-      fetch('https://api.mymemory.translated.net/get?q=' + text + '&langpair=autodetect|' + targetLang)
-        .then(function(res) { return res.json(); })
+      var ac2 = new AbortController();
+      var tid2 = setTimeout(function() { ac2.abort(); }, 8000);
+      fetch('https://api.mymemory.translated.net/get?q=' + text + '&langpair=autodetect|' + targetLang, { signal: ac2.signal })
+        .then(function(res) { clearTimeout(tid2); return res.json(); })
         .then(function(data) {
           if (data && data.responseData && data.responseData.translatedText) {
             translationsCache[detail.msgId] = { original: detail.text, translated: data.responseData.translatedText, lang: targetLang };
+            _evictCache();
             _injectTranslationIntoBubble(detail.msgId, data.responseData.translatedText);
           }
         })

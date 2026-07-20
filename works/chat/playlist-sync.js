@@ -293,11 +293,11 @@
         <button onclick="document.getElementById('listening-room-overlay')?.remove()" style="background:none;border:none;color:var(--on-surface-variant);cursor:pointer;font-size:18px">&times;</button>
       </div>
       <div style="display:flex;gap:8px;margin-bottom:16px">
-        <div style="flex:1;padding:10px;border-radius:10px;background:rgba(255,255,255,0.04);text-align:center">
+        <div style="flex:1;padding:10px;border-radius:10px;background:var(--surface-container-low,rgba(0,0,0,0.04));text-align:center">
           <div style="font-size:20px;font-weight:700;color:var(--primary)">${room.listeners?.length || 1}</div>
           <div style="font-size:11px;color:var(--on-surface-variant)">Listeners</div>
         </div>
-        <div style="flex:1;padding:10px;border-radius:10px;background:rgba(255,255,255,0.04);text-align:center">
+        <div style="flex:1;padding:10px;border-radius:10px;background:var(--surface-container-low,rgba(0,0,0,0.04));text-align:center">
           <div style="font-size:20px;font-weight:700;color:var(--on-surface)">${room.isPlaying ? '▶' : '⏸'}</div>
           <div style="font-size:11px;color:var(--on-surface-variant)">${room.isPlaying ? 'Playing' : 'Paused'}</div>
         </div>
@@ -305,11 +305,11 @@
       <div style="font-size:12px;font-weight:700;color:var(--on-surface-variant);margin-bottom:8px">LISTENERS</div>`;
 
     (room.listeners || []).forEach(l => {
-      html += `<div style="display:flex;align-items:center;gap:8px;padding:8px;border-radius:8px;background:rgba(255,255,255,0.03);margin-bottom:4px">
+      html += `<div style="display:flex;align-items:center;gap:8px;padding:8px;border-radius:8px;background:var(--surface-container-low,rgba(0,0,0,0.03));margin-bottom:4px">
         <div style="width:28px;height:28px;border-radius:50%;background:rgba(124,77,255,0.15);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:var(--primary)">${(l.name || '?')[0].toUpperCase()}</div>
         <div style="flex:1;font-size:13px;font-weight:500">${escHtml(l.name)}</div>
         ${l.uid === room.hostUid ? '<span style="font-size:10px;padding:2px 6px;border-radius:4px;background:var(--primary);color:var(--on-primary);font-weight:600">HOST</span>' : ''}
-        ${isHost && l.uid !== room.hostUid ? `<button onclick="promoteToCoHost('${l.uid}')" style="font-size:10px;padding:2px 6px;border-radius:4px;background:rgba(255,255,255,0.06);color:var(--on-surface-variant);border:none;cursor:pointer">Co-host</button>` : ''}
+        ${isHost && l.uid !== room.hostUid ? `<button onclick="promoteToCoHost('${l.uid}')" style="font-size:10px;padding:2px 6px;border-radius:4px;background:var(--surface-container,rgba(0,0,0,0.06));color:var(--on-surface-variant);border:none;cursor:pointer">Co-host</button>` : ''}
       </div>`;
     });
 
@@ -317,22 +317,22 @@
       html += `
         <div style="font-size:12px;font-weight:700;color:var(--on-surface-variant);margin:16px 0 8px">HOST CONTROLS</div>
         <div style="display:flex;flex-direction:column;gap:6px">
-          <label style="display:flex;align-items:center;justify-content:space-between;padding:10px;border-radius:8px;background:rgba(255,255,255,0.04)">
+          <label style="display:flex;align-items:center;justify-content:space-between;padding:10px;border-radius:8px;background:var(--surface-container-low,rgba(0,0,0,0.04))">
             <span style="font-size:13px">Sync playback for all</span>
             <input type="checkbox" ${room.settings?.syncPlayback ? 'checked' : ''} onchange="toggleRoomSetting('syncPlayback',this.checked)" style="accent-color:var(--primary)">
           </label>
-          <label style="display:flex;align-items:center;justify-content:space-between;padding:10px;border-radius:8px;background:rgba(255,255,255,0.04)">
+          <label style="display:flex;align-items:center;justify-content:space-between;padding:10px;border-radius:8px;background:var(--surface-container-low,rgba(0,0,0,0.04))">
             <span style="font-size:13px">Allow listeners to add tracks</span>
             <input type="checkbox" ${room.settings?.allowQueueAdd ? 'checked' : ''} onchange="toggleRoomSetting('allowQueueAdd',this.checked)" style="accent-color:var(--primary)">
           </label>
-          <label style="display:flex;align-items:center;justify-content:space-between;padding:10px;border-radius:8px;background:rgba(255,255,255,0.04)">
+          <label style="display:flex;align-items:center;justify-content:space-between;padding:10px;border-radius:8px;background:var(--surface-container-low,rgba(0,0,0,0.04))">
             <span style="font-size:13px">Allow listeners to skip</span>
             <input type="checkbox" ${room.settings?.allowSkip ? 'checked' : ''} onchange="toggleRoomSetting('allowSkip',this.checked)" style="accent-color:var(--primary)">
           </label>
         </div>
         <button onclick="endListeningRoom();document.getElementById('listening-room-overlay')?.remove()" style="width:100%;min-height:48px;padding:12px;border-radius:10px;border:none;background:rgba(239,68,68,0.15);color:var(--error);font-size:13px;font-weight:700;cursor:pointer;margin-top:12px">End Session</button>`;
     } else {
-      html += `<button onclick="endListeningRoom();document.getElementById('listening-room-overlay')?.remove()" style="width:100%;min-height:48px;padding:12px;border-radius:10px;border:none;background:rgba(255,255,255,0.06);color:var(--on-surface-variant);font-size:13px;font-weight:600;cursor:pointer;margin-top:12px">Leave Room</button>`;
+      html += `<button onclick="endListeningRoom();document.getElementById('listening-room-overlay')?.remove()" style="width:100%;min-height:48px;padding:12px;border-radius:10px;border:none;background:var(--surface-container,rgba(0,0,0,0.06));color:var(--on-surface-variant);font-size:13px;font-weight:600;cursor:pointer;margin-top:12px">Leave Room</button>`;
     }
 
     panel.innerHTML = html;
@@ -461,7 +461,7 @@
     panel.style.cssText = 'background:var(--surface-container,#1e1e2e);border-radius:20px 20px 0 0;padding:0;width:100%;max-width:500px;height:70vh;display:flex;flex-direction:column;color:var(--on-surface)';
 
     panel.innerHTML = `
-      <div style="padding:16px 20px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid rgba(255,255,255,0.06)">
+      <div style="padding:16px 20px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--surface-container,rgba(0,0,0,0.06))">
         <div>
           <h3 style="margin:0;font-size:15px;font-weight:700">Room Chat</h3>
           <div id="room-listener-count" style="font-size:11px;color:var(--on-surface-variant)"></div>
@@ -470,8 +470,8 @@
       </div>
       <div id="room-chat-messages" style="flex:1;overflow-y:auto;padding:12px 16px;display:flex;flex-direction:column;gap:6px"></div>
       <div id="room-typing-indicator" style="padding:0 16px;font-size:11px;color:var(--on-surface-variant);min-height:18px;display:none"></div>
-      <div style="padding:12px 16px calc(12px + env(safe-area-inset-bottom,0px)) 16px;display:flex;gap:8px;border-top:1px solid rgba(255,255,255,0.06)">
-        <input type="text" id="room-chat-input" placeholder="Type a message..." style="flex:1;padding:10px 14px;border-radius:20px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);color:var(--on-surface);font-size:13px;outline:none;min-height:44px" onkeydown="if(event.key==='Enter'){sendRoomChat('${roomId}',this.value);this.value=''}">
+      <div style="padding:12px 16px calc(12px + env(safe-area-inset-bottom,0px)) 16px;display:flex;gap:8px;border-top:1px solid var(--surface-container,rgba(0,0,0,0.06))">
+        <input type="text" id="room-chat-input" placeholder="Type a message..." style="flex:1;padding:10px 14px;border-radius:20px;border:1px solid var(--outline-variant,rgba(0,0,0,0.1));background:var(--surface-container-low,rgba(0,0,0,0.04));color:var(--on-surface);font-size:13px;outline:none;min-height:44px" onkeydown="if(event.key==='Enter'){sendRoomChat('${roomId}',this.value);this.value=''}">
         <button onclick="const inp=document.getElementById('room-chat-input');if(inp?.value)sendRoomChat('${roomId}',inp.value);inp.value=''" style="min-width:60px;min-height:44px;padding:10px 16px;border-radius:20px;border:none;background:var(--primary);color:var(--on-primary);font-size:13px;font-weight:600;cursor:pointer">Send</button>
       </div>`;
 
@@ -502,7 +502,7 @@
           return `
             <div style="display:flex;flex-direction:column;align-items:${isMe ? 'flex-end' : 'flex-start'}">
               ${!isMe ? `<div style="font-size:10px;font-weight:600;color:var(--primary);margin-bottom:2px;padding:0 8px">${escHtml(msg.userName || 'User')}</div>` : ''}
-              <div style="max-width:75%;padding:8px 12px;border-radius:${isMe ? '12px 12px 2px 12px' : '12px 12px 12px 2px'};background:${isMe ? 'var(--primary)' : 'rgba(255,255,255,0.06)'};color:${isMe ? 'var(--on-primary)' : 'var(--on-surface)'};font-size:13px;line-height:1.4;word-break:break-word">
+              <div style="max-width:75%;padding:8px 12px;border-radius:${isMe ? '12px 12px 2px 12px' : '12px 12px 12px 2px'};background:${isMe ? 'var(--primary)' : 'var(--surface-container,rgba(0,0,0,0.06))'};color:${isMe ? 'var(--on-primary)' : 'var(--on-surface)'};font-size:13px;line-height:1.4;word-break:break-word">
                 ${escHtml(msg.text || '')}
               </div>
               <div style="font-size:9px;color:var(--on-surface-variant);margin-top:2px;padding:0 8px;opacity:0.6">${_formatRoomTime(msg.timestamp)}</div>

@@ -60,6 +60,13 @@ const A11y = {
   },
 
   _setupFocusTrap() {
+    document.addEventListener('focusin', (e) => {
+      const overlay = this._findTopOverlay();
+      if (overlay && !this._lastFocused) {
+        this._lastFocused = e.target;
+      }
+    });
+
     this._focusTrapHandler = (e) => {
       if (e.key !== 'Tab') return;
       const overlay = this._findTopOverlay();
@@ -82,8 +89,9 @@ const A11y = {
       if (e.key !== 'Escape') return;
       const overlay = this._findTopOverlay();
       if (!overlay) return;
-      const closeBtn = overlay.querySelector('[onclick*="close"], [onclick*="hide"]');
+      const closeBtn = overlay.querySelector('[onclick*="close"], [onclick*="hide"], [onclick*="Close"], .close-btn, button[aria-label*="close" i], button[aria-label*="Close"]');
       if (closeBtn) closeBtn.click();
+      else overlay.click();
       this._releaseFocus();
     };
     document.addEventListener('keydown', this._focusTrapKeyHandler);

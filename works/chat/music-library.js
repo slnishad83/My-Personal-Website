@@ -241,7 +241,7 @@
   };
 
   window.playLibraryTrack = function(trackId) {
-    const track = App.musicLibrary.find(t => t.id === trackId);
+    const track = (App.musicLibrary || []).find(t => t.id === trackId);
     if (!track) { showToast('Track not found', 'error'); return; }
     if (!track.url) { showToast('No audio URL', 'error'); return; }
     MusicPlayer.play({
@@ -308,8 +308,8 @@
       </div>
       <div style="flex:1;overflow-y:auto">
         ${recent.map(t => `
-          <div style="display:flex;align-items:center;gap:10px;padding:8px;border-radius:10px;background:rgba(255,255,255,0.02);margin-bottom:4px;cursor:pointer" onclick="document.getElementById('recently-played-overlay')?.remove();playCachedTrack('${t.id}')">
-            <div style="width:40px;height:40px;border-radius:8px;overflow:hidden;flex-shrink:0;background:rgba(255,255,255,0.05)">
+          <div style="display:flex;align-items:center;gap:10px;padding:8px;border-radius:10px;background:var(--surface-container-low,rgba(0,0,0,0.02));margin-bottom:4px;cursor:pointer" onclick="document.getElementById('recently-played-overlay')?.remove();playCachedTrack('${t.id}')">
+            <div style="width:40px;height:40px;border-radius:8px;overflow:hidden;flex-shrink:0;background:var(--surface-container-low,rgba(0,0,0,0.05))">
               ${t.thumbnail ? `<img src="${escHtml(t.thumbnail)}" style="width:100%;height:100%;object-fit:cover" loading="lazy">` : '<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center"><span class="material-symbols-outlined" style="font-size:18px;color:var(--on-surface-variant)">music_note</span></div>'}
             </div>
             <div style="flex:1;min-width:0">
@@ -459,6 +459,11 @@
       const existing = document.getElementById('music-library-overlay');
       if (existing) { existing.remove(); return; }
 
+      if (!localStorage.getItem('nsl_music_onboarded')) {
+        showMusicOnboarding();
+        return;
+      }
+
       const overlay = document.createElement('div');
       overlay.id = 'music-library-overlay';
       overlay.setAttribute('role', 'dialog');
@@ -483,9 +488,9 @@
           </div>
           <div style="display:flex;gap:6px;overflow-x:auto;padding-bottom:8px;scrollbar-width:none;-ms-overflow-style:none" id="ml-tabs">
             <button class="ml-tab active" onclick="switchMusicLibTab('search')" style="min-height:36px;flex-shrink:0;padding:6px 14px;border-radius:20px;border:none;font-size:12px;font-weight:600;cursor:pointer;background:var(--primary);color:var(--on-primary)">Search</button>
-            <button class="ml-tab" onclick="switchMusicLibTab('my')" style="min-height:36px;flex-shrink:0;padding:6px 14px;border-radius:20px;border:none;font-size:12px;font-weight:600;cursor:pointer;background:rgba(255,255,255,0.06);color:var(--on-surface-variant)">My Music</button>
-            <button class="ml-tab" onclick="switchMusicLibTab('upload')" style="min-height:36px;flex-shrink:0;padding:6px 14px;border-radius:20px;border:none;font-size:12px;font-weight:600;cursor:pointer;background:rgba(255,255,255,0.06);color:var(--on-surface-variant)">Upload</button>
-            <button class="ml-tab" onclick="switchMusicLibTab('languages')" style="min-height:36px;flex-shrink:0;padding:6px 14px;border-radius:20px;border:none;font-size:12px;font-weight:600;cursor:pointer;background:rgba(255,255,255,0.06);color:var(--on-surface-variant)">Languages</button>
+            <button class="ml-tab" onclick="switchMusicLibTab('my')" style="min-height:36px;flex-shrink:0;padding:6px 14px;border-radius:20px;border:none;font-size:12px;font-weight:600;cursor:pointer;background:var(--surface-container,rgba(0,0,0,0.06));color:var(--on-surface-variant)">My Music</button>
+            <button class="ml-tab" onclick="switchMusicLibTab('upload')" style="min-height:36px;flex-shrink:0;padding:6px 14px;border-radius:20px;border:none;font-size:12px;font-weight:600;cursor:pointer;background:var(--surface-container,rgba(0,0,0,0.06));color:var(--on-surface-variant)">Upload</button>
+            <button class="ml-tab" onclick="switchMusicLibTab('languages')" style="min-height:36px;flex-shrink:0;padding:6px 14px;border-radius:20px;border:none;font-size:12px;font-weight:600;cursor:pointer;background:var(--surface-container,rgba(0,0,0,0.06));color:var(--on-surface-variant)">Languages</button>
           </div>
         </div>
         <div id="music-lib-content" style="flex:1;overflow-y:auto;padding:8px 16px 20px"></div>`;
@@ -520,7 +525,7 @@
   // ─── TAB SWITCHING ───
   window.switchMusicLibTab = async function(tab) {
     document.querySelectorAll('.ml-tab').forEach(b => {
-      b.style.background = 'rgba(255,255,255,0.06)';
+      b.style.background = 'var(--surface-container,rgba(0,0,0,0.06))';
       b.style.color = 'var(--on-surface-variant)';
       b.classList.remove('active');
     });
@@ -563,7 +568,7 @@
     el.innerHTML = `
       <div style="margin-bottom:12px">
         <div style="display:flex;gap:8px;margin-bottom:8px">
-          <input type="search" id="ml-search-input" placeholder="Search any song..." style="flex:1;min-width:0;padding:10px 14px;border-radius:12px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);color:var(--on-surface);font-size:13px;outline:none" onkeydown="if(event.key==='Enter')doMusicSearch()">
+          <input type="search" id="ml-search-input" placeholder="Search any song..." style="flex:1;min-width:0;padding:10px 14px;border-radius:12px;border:1px solid var(--outline-variant,rgba(0,0,0,0.1));background:var(--surface-container-low,rgba(0,0,0,0.04));color:var(--on-surface);font-size:13px;outline:none" onkeydown="if(event.key==='Enter')doMusicSearch()">
           <button onclick="doMusicSearch()" style="min-height:44px;flex-shrink:0;padding:10px 18px;border-radius:12px;border:none;background:var(--primary);color:var(--on-primary);font-size:12px;font-weight:700;cursor:pointer">Search</button>
         </div>
         ${hist.length ? `
@@ -573,7 +578,7 @@
             <button onclick="_clearSearchHistory()" style="background:none;border:none;color:var(--on-surface-variant);cursor:pointer;font-size:10px">Clear</button>
           </div>
           <div style="display:flex;flex-wrap:wrap;gap:6px">
-            ${hist.map(h => `<button onclick="document.getElementById('ml-search-input').value='${escHtml(h).replace(/'/g, "\\'").replace(/&#x27;/g, "\\'").replace(/&#39;/g, "\\'")}';doMusicSearch()" style="padding:5px 10px;border-radius:16px;border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.03);color:var(--on-surface-variant);font-size:11px;cursor:pointer">${escHtml(h)}</button>`).join('')}
+            ${hist.map(h => `<button onclick="document.getElementById('ml-search-input').value='${escHtml(h).replace(/'/g, "\\'").replace(/&#x27;/g, "\\'").replace(/&#39;/g, "\\'")}';doMusicSearch()" style="padding:5px 10px;border-radius:16px;border:1px solid var(--outline-variant,rgba(0,0,0,0.08));background:var(--surface-container-low,rgba(0,0,0,0.03));color:var(--on-surface-variant);font-size:11px;cursor:pointer">${escHtml(h)}</button>`).join('')}
           </div>
         </div>` : '<div id="yt-search-history"></div>'}
       </div>
@@ -587,7 +592,7 @@
           </div>
           <div style="display:flex;flex-wrap:wrap;gap:6px">
             ${cat.queries.map(q => `
-              <button onclick="document.getElementById('ml-search-input').value='${q.replace(/'/g, "\\'")}';doMusicSearch()" style="padding:6px 12px;border-radius:20px;border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.03);color:var(--on-surface-variant);font-size:11px;cursor:pointer;transition:all 0.2s" onmouseover="this.style.borderColor='${cat.color}';this.style.color='${cat.color}'" onmouseout="this.style.borderColor='rgba(255,255,255,0.08)';this.style.color='var(--on-surface-variant)'">${q.replace(cat.lang + ' ', '')}</button>
+              <button onclick="document.getElementById('ml-search-input').value='${q.replace(/'/g, "\\'")}';doMusicSearch()" style="padding:6px 12px;border-radius:20px;border:1px solid var(--outline-variant,rgba(0,0,0,0.08));background:var(--surface-container-low,rgba(0,0,0,0.03));color:var(--on-surface-variant);font-size:11px;cursor:pointer;transition:all 0.2s" onmouseover="this.style.borderColor='${cat.color}';this.style.color='${cat.color}'" onmouseout="this.style.borderColor='var(--outline-variant)';this.style.color='var(--on-surface-variant)'">${q.replace(cat.lang + ' ', '')}</button>
             `).join('')}
           </div>
         </div>
@@ -675,7 +680,7 @@
       : `_playSearchResult('${t.id}')`;
 
     return `
-      <div style="display:flex;align-items:center;gap:10px;padding:8px;border-radius:10px;background:rgba(255,255,255,0.03);margin-bottom:4px;cursor:pointer" onclick="${playAction}">
+      <div style="display:flex;align-items:center;gap:10px;padding:8px;border-radius:10px;background:var(--surface-container-low,rgba(0,0,0,0.03));margin-bottom:4px;cursor:pointer" onclick="${playAction}">
         <div style="width:48px;height:36px;border-radius:6px;background:rgba(0,0,0,0.3);display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden">
           ${t.thumbnail ? `<img src="${escHtml(t.thumbnail)}" style="width:100%;height:100%;object-fit:cover" onerror="this.style.display='none'" loading="lazy">` : '<span class="material-symbols-outlined" style="font-size:16px;color:var(--on-surface-variant)">play_circle</span>'}
         </div>
@@ -734,8 +739,8 @@
 
     let html = `
       <div style="display:flex;gap:8px;margin-bottom:12px">
-        <input type="search" placeholder="Search my music..." oninput="filterMyMusic(this.value)" style="flex:1;min-width:0;padding:8px 12px;border-radius:10px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);color:var(--on-surface);font-size:13px;outline:none">
-        <select id="ml-lang-filter" onchange="filterMyMusicByLang(this.value)" style="max-width:120px;padding:8px 12px;border-radius:10px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);color:var(--on-surface);font-size:12px">
+        <input type="search" placeholder="Search my music..." oninput="filterMyMusic(this.value)" style="flex:1;min-width:0;padding:8px 12px;border-radius:10px;border:1px solid var(--outline-variant,rgba(0,0,0,0.1));background:var(--surface-container-low,rgba(0,0,0,0.04));color:var(--on-surface);font-size:13px;outline:none">
+        <select id="ml-lang-filter" onchange="filterMyMusicByLang(this.value)" style="max-width:120px;padding:8px 12px;border-radius:10px;border:1px solid var(--outline-variant,rgba(0,0,0,0.1));background:var(--surface-container-low,rgba(0,0,0,0.04));color:var(--on-surface);font-size:12px">
           <option value="">All Languages</option>
           ${LANGUAGES.map(l => `<option value="${l}">${l}</option>`).join('')}
         </select>
@@ -762,7 +767,7 @@
   function _libRow(t) {
     const isPlaying = MusicPlayer?._currentTrack?.id === t.id || MusicPlayer?.track?.id === t.id;
     return `
-    <div style="display:flex;align-items:center;gap:10px;padding:10px;border-radius:12px;background:${isPlaying ? 'rgba(124,77,255,0.1)' : 'rgba(255,255,255,0.03)'};margin-bottom:6px;cursor:pointer" onclick="playLibraryTrack('${t.id}')">
+    <div style="display:flex;align-items:center;gap:10px;padding:10px;border-radius:12px;background:${isPlaying ? 'rgba(124,77,255,0.1)' : 'var(--surface-container-low,rgba(0,0,0,0.03))'};margin-bottom:6px;cursor:pointer" onclick="playLibraryTrack('${t.id}')">
       <div style="width:42px;height:42px;border-radius:8px;background:linear-gradient(135deg,rgba(124,77,255,0.2),rgba(74,0,224,0.1));display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden">
         ${t.thumbnail ? `<img src="${escHtml(t.thumbnail)}" style="width:100%;height:100%;object-fit:cover;border-radius:8px">` : '<span class="material-symbols-outlined" style="font-size:18px;color:var(--primary)">music_note</span>'}
       </div>
@@ -781,14 +786,14 @@
   function _renderUploadTab(el) {
     el.innerHTML = `
       <div style="text-align:center;padding:20px 0">
-        <div style="border:2px dashed rgba(255,255,255,0.15);border-radius:16px;padding:32px 20px;margin-bottom:16px;cursor:pointer;transition:all 0.2s" id="upload-drop-zone" onclick="document.getElementById('music-file-input').click()" ondragover="event.preventDefault();this.style.borderColor='var(--primary)'" ondragleave="this.style.borderColor='rgba(255,255,255,0.15)'" ondrop="event.preventDefault();this.style.borderColor='rgba(255,255,255,0.15)';handleMusicFileDrop(event)">
+        <div style="border:2px dashed var(--outline-variant,rgba(0,0,0,0.15));border-radius:16px;padding:32px 20px;margin-bottom:16px;cursor:pointer;transition:all 0.2s" id="upload-drop-zone" onclick="document.getElementById('music-file-input').click()" ondragover="event.preventDefault();this.style.borderColor='var(--primary)'" ondragleave="this.style.borderColor='var(--outline-variant,rgba(0,0,0,0.15))'" ondrop="event.preventDefault();this.style.borderColor='var(--outline-variant,rgba(0,0,0,0.15))';handleMusicFileDrop(event)">
           <span class="material-symbols-outlined" style="font-size:40px;color:var(--on-surface-variant);opacity:0.4">upload_file</span>
           <p style="font-size:13px;font-weight:600;color:var(--on-surface);margin:8px 0 4px">Tap to select audio files</p>
           <p style="font-size:11px;color:var(--on-surface-variant);margin:0">MP3, WAV, OGG, M4A — up to 50MB</p>
           <input type="file" id="music-file-input" accept="audio/*" multiple style="display:none" onchange="handleMusicFileSelect(event)">
         </div>
         <div id="upload-progress-container" style="display:none;margin-bottom:16px">
-          <div style="height:4px;background:rgba(255,255,255,0.1);border-radius:2px;overflow:hidden">
+          <div style="height:4px;background:var(--outline-variant,rgba(255,255,255,0.1));border-radius:2px;overflow:hidden">
             <div id="music-upload-progress" style="height:100%;background:var(--primary);width:0%;transition:width 0.3s"></div>
           </div>
           <p id="upload-status-text" style="font-size:11px;color:var(--on-surface-variant);margin-top:4px">Uploading...</p>
@@ -796,15 +801,15 @@
         <div id="upload-form" style="display:none;text-align:left">
           <div style="margin-bottom:12px">
             <label style="font-size:11px;font-weight:600;color:var(--on-surface-variant);display:block;margin-bottom:4px">TITLE</label>
-            <input id="upload-title" type="text" placeholder="Song title" style="width:100%;padding:10px 12px;border-radius:10px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);color:var(--on-surface);font-size:13px;box-sizing:border-box">
+            <input id="upload-title" type="text" placeholder="Song title" style="width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--outline-variant);background:var(--surface-container-low);color:var(--on-surface);font-size:13px;box-sizing:border-box">
           </div>
           <div style="margin-bottom:12px">
             <label style="font-size:11px;font-weight:600;color:var(--on-surface-variant);display:block;margin-bottom:4px">ARTIST</label>
-            <input id="upload-artist" type="text" placeholder="Artist name" style="width:100%;padding:10px 12px;border-radius:10px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);color:var(--on-surface);font-size:13px;box-sizing:border-box">
+            <input id="upload-artist" type="text" placeholder="Artist name" style="width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--outline-variant);background:var(--surface-container-low);color:var(--on-surface);font-size:13px;box-sizing:border-box">
           </div>
           <div style="margin-bottom:12px">
             <label style="font-size:11px;font-weight:600;color:var(--on-surface-variant);display:block;margin-bottom:4px">LANGUAGE</label>
-            <select id="upload-language" style="width:100%;padding:10px 12px;border-radius:10px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);color:var(--on-surface);font-size:13px">
+            <select id="upload-language" style="width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--outline-variant);background:var(--surface-container-low);color:var(--on-surface);font-size:13px">
               ${LANGUAGES.map(l => `<option value="${l}">${l}</option>`).join('')}
             </select>
           </div>
@@ -884,7 +889,7 @@
     let html = '<p style="font-size:12px;color:var(--on-surface-variant);margin-bottom:12px">Browse music by language — searches iTunes, Deezer, Jamendo & YouTube</p>';
     LANGUAGES.forEach(lang => {
       html += `
-        <div style="display:flex;align-items:center;gap:12px;padding:12px;border-radius:12px;background:rgba(255,255,255,0.03);margin-bottom:6px;cursor:pointer" onclick="browseLanguageYT('${lang}')">
+        <div style="display:flex;align-items:center;gap:12px;padding:12px;border-radius:12px;background:var(--surface-container-low,rgba(0,0,0,0.03));margin-bottom:6px;cursor:pointer" onclick="browseLanguageYT('${lang}')">
           <div style="width:42px;height:42px;border-radius:10px;background:${colors[lang] || '#666'}20;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:800;color:${colors[lang]}">${lang[0]}</div>
           <div style="flex:1">
             <div style="font-size:14px;font-weight:600;color:var(--on-surface)">${lang}</div>
@@ -954,7 +959,8 @@
 
   window.doArchiveSearch = function() {
     const q = document.getElementById('archive-search-input')?.value;
-    if (q) { document.getElementById('ml-search-input').value = q; doMusicSearch(); }
+    const searchInput = document.getElementById('ml-search-input');
+    if (q && searchInput) { searchInput.value = q; doMusicSearch(); }
   };
 
   // ─── YOUTUBE PLAYLIST IMPORT ───
@@ -998,10 +1004,10 @@
           <h2 style="margin:0 0 8px;font-size:20px;font-weight:700">${s.title}</h2>
           <p style="margin:0 0 24px;font-size:14px;color:var(--on-surface-variant);line-height:1.5">${s.desc}</p>
           <div style="display:flex;gap:8px;justify-content:center;margin-bottom:16px">
-            ${steps.map((_, i) => `<div style="width:${i===step?'20px':'6px'};height:6px;border-radius:3px;background:${i===step?'var(--primary)':'rgba(255,255,255,0.2)'};transition:all 0.3s"></div>`).join('')}
+            ${steps.map((_, i) => `<div style="width:${i===step?'20px':'6px'};height:6px;border-radius:3px;background:${i===step?'var(--primary)':'var(--outline-variant)'};transition:all 0.3s"></div>`).join('')}
           </div>
           <div style="display:flex;gap:8px">
-            ${step < steps.length - 1 ? `<button onclick="document.getElementById('onboarding-overlay')?.remove()" style="flex:1;padding:12px;border-radius:12px;border:none;background:rgba(255,255,255,0.06);color:var(--on-surface-variant);font-size:13px;font-weight:600;cursor:pointer">Skip</button>` : ''}
+            ${step < steps.length - 1 ? `<button onclick="document.getElementById('onboarding-overlay')?.remove()" style="flex:1;padding:12px;border-radius:12px;border:none;background:var(--surface-container-high);color:var(--on-surface-variant);font-size:13px;font-weight:600;cursor:pointer">Skip</button>` : ''}
             <button onclick="${step < steps.length - 1 ? 'window._onboardStep()' : 'window._finishOnboarding()'}" style="flex:1;padding:12px;border-radius:12px;border:none;background:var(--primary);color:var(--on-primary);font-size:13px;font-weight:700;cursor:pointer">${step < steps.length - 1 ? 'Next' : 'Get Started'}</button>
           </div>
         </div>`;
@@ -1020,7 +1026,5 @@
     };
     renderStep();
   };
-
-  checkMusicOnboarding();
 
 })();

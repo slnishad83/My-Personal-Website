@@ -1656,7 +1656,7 @@
   <!-- Idle Timeout (Removed to enforce permanent sessions across devices) -->
 
   <!-- Floating Active Call Bubble (WhatsApp-style minimized PiP) -->
-  <div id="call-bubble" class="fixed z-[200] bottom-6 right-6 flex items-center gap-3 bg-primary text-on-primary rounded-full px-4 py-2.5 shadow-2xl cursor-pointer transition-all duration-300 select-none" style="display:none;" onclick="maximizeCall()" role="button" aria-label="Return to active call" tabindex="0">
+  <div id="call-bubble" class="fixed z-[200] flex items-center gap-3 bg-primary text-on-primary rounded-full px-4 py-2.5 shadow-2xl cursor-pointer transition-all duration-300 select-none" style="display:none;bottom:max(24px,calc(env(safe-area-inset-bottom,0px) + 12px));right:max(24px,env(safe-area-inset-right,0px))" onclick="maximizeCall()" role="button" aria-label="Return to active call" tabindex="0">
     <div class="w-9 h-9 rounded-full bg-white/20 flex items-center justify-center animate-pulse">
       <span class="material-symbols-outlined text-lg">call</span>
     </div>

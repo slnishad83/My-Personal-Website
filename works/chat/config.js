@@ -383,6 +383,8 @@ window._msgRateLimiter = _msgRateLimiter;
 /* ── BR1: Pause/resume Firestore listeners in background ───── */
 let _bgPaused = false;
 let _bgPauseTimer = null;
+window.pauseBackgroundListeners = function() { /* no-op: keep listeners alive for instant sync */ };
+window.resumeBackgroundListeners = function() { /* no-op */ };
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'hidden') {
     _bgPauseTimer = setTimeout(() => {

@@ -46,18 +46,18 @@
       <p style="font-size:12px;color:var(--on-surface-variant);margin:0 0 12px">Type a word that starts with the last letter of the previous word.</p>
       <div style="display:flex;justify-content:space-between;margin-bottom:16px">
         <div style="padding:8px 16px;border-radius:10px;background:rgba(124,77,255,0.15);font-size:13px;font-weight:700;color:var(--primary)">You: <span id="wc-player-score">0</span></div>
-        <div style="padding:8px 16px;border-radius:10px;background:rgba(255,255,255,0.06);font-size:13px;font-weight:700;color:var(--on-surface-variant)">Bot: <span id="wc-bot-score">0</span></div>
+        <div style="padding:8px 16px;border-radius:10px;background:var(--surface-container,rgba(0,0,0,0.06));font-size:13px;font-weight:700;color:var(--on-surface-variant)">Bot: <span id="wc-bot-score">0</span></div>
       </div>
       <div id="wc-chat" style="max-height:250px;overflow-y:auto;margin-bottom:12px;padding:8px;border-radius:12px;background:rgba(0,0,0,0.2)">
         <div style="text-align:center;margin-bottom:8px"><span style="font-size:12px;color:var(--on-surface-variant)">Bot started with:</span></div>
-        <div style="text-align:center"><span style="display:inline-block;padding:8px 16px;border-radius:12px;background:rgba(255,255,255,0.08);font-size:16px;font-weight:700;letter-spacing:2px">${firstWord.toUpperCase()}</span></div>
+        <div style="text-align:center"><span style="display:inline-block;padding:8px 16px;border-radius:12px;background:var(--surface-container,rgba(0,0,0,0.08));font-size:16px;font-weight:700;letter-spacing:2px">${firstWord.toUpperCase()}</span></div>
       </div>
       <div style="display:flex;gap:8px">
-        <input id="wc-input" type="text" placeholder="Your word..." style="flex:1;padding:12px;border-radius:12px;border:2px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.05);color:var(--on-surface);font-size:14px;outline:none" autocomplete="off">
+        <input id="wc-input" type="text" placeholder="Your word..." style="flex:1;padding:12px;border-radius:12px;border:2px solid var(--outline-variant,rgba(0,0,0,0.1));background:var(--surface-container-low,rgba(0,0,0,0.05));color:var(--on-surface);font-size:14px;outline:none" autocomplete="off">
         <button onclick="submitWordChain()" style="padding:12px 18px;border-radius:12px;border:none;background:var(--primary);color:var(--on-primary);font-size:14px;font-weight:700;cursor:pointer">Go</button>
       </div>
       <div id="wc-msg" style="font-size:12px;color:var(--error);margin-top:8px;min-height:16px"></div>
-      <button onclick="sendGameResult('word-chain', {player:${() => _wcPlayerScore}, bot:${() => _wcBotScore}, words:${() => JSON.stringify(_wcUsedWords)}})" style="margin-top:12px;width:100%;padding:10px;border-radius:10px;border:none;background:rgba(255,255,255,0.06);color:var(--on-surface-variant);font-size:12px;font-weight:600;cursor:pointer">Send result to chat</button>`;
+      <button onclick="sendGameResult('word-chain', {player:${() => _wcPlayerScore}, bot:${() => _wcBotScore}, words:${() => JSON.stringify(_wcUsedWords)}})" style="margin-top:12px;width:100%;padding:10px;border-radius:10px;border:none;background:var(--surface-container,rgba(0,0,0,0.06));color:var(--on-surface-variant);font-size:12px;font-weight:600;cursor:pointer">Send result to chat</button>`;
 
     overlay.appendChild(panel);
     overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
@@ -106,7 +106,7 @@
       document.getElementById('wc-bot-score').textContent = _wcBotScore;
 
       if (chat) {
-        chat.innerHTML += `<div style="margin-bottom:8px"><span style="display:inline-block;padding:8px 16px;border-radius:12px;background:rgba(255,255,255,0.08);font-size:14px;font-weight:700">${botWord.toUpperCase()}</span></div>`;
+        chat.innerHTML += `<div style="margin-bottom:8px"><span style="display:inline-block;padding:8px 16px;border-radius:12px;background:var(--surface-container,rgba(0,0,0,0.08));font-size:14px;font-weight:700">${botWord.toUpperCase()}</span></div>`;
         chat.scrollTop = chat.scrollHeight;
       }
     }, 800);
@@ -177,17 +177,17 @@
         <div style="font-size:13px;font-weight:600;color:var(--primary)">Score: ${_triviaScore}/${_triviaTotal}</div>
         <div style="font-size:13px;color:var(--on-surface-variant)">Question ${_triviaTotal + 1} of 10</div>
       </div>
-      <div style="padding:16px;border-radius:14px;background:rgba(255,255,255,0.04);margin-bottom:16px">
+      <div style="padding:16px;border-radius:14px;background:var(--surface-container-low,rgba(0,0,0,0.04));margin-bottom:16px">
         <p style="font-size:15px;font-weight:600;margin:0;line-height:1.5">${_triviaCurrent.q}</p>
       </div>
       <div style="display:flex;flex-direction:column;gap:8px">`;
 
     _triviaCurrent.opts.forEach((opt, i) => {
-      html += `<button class="trivia-opt" data-idx="${i}" onclick="answerTrivia(${i})" style="padding:14px 16px;border-radius:12px;border:2px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);color:var(--on-surface);font-size:14px;font-weight:600;cursor:pointer;text-align:left;transition:all 0.15s">${String.fromCharCode(65 + i)}. ${opt}</button>`;
+      html += `<button class="trivia-opt" data-idx="${i}" onclick="answerTrivia(${i})" style="padding:14px 16px;border-radius:12px;border:2px solid var(--outline-variant,rgba(0,0,0,0.1));background:var(--surface-container-low,rgba(0,0,0,0.04));color:var(--on-surface);font-size:14px;font-weight:600;cursor:pointer;text-align:left;transition:all 0.15s">${String.fromCharCode(65 + i)}. ${opt}</button>`;
     });
 
     html += '</div><div id="trivia-msg" style="font-size:13px;margin-top:12px;min-height:20px"></div>';
-    html += `<button onclick="sendGameResult('trivia', {score:${_triviaScore}, total:${_triviaTotal}})" style="margin-top:8px;width:100%;padding:10px;border-radius:10px;border:none;background:rgba(255,255,255,0.06);color:var(--on-surface-variant);font-size:12px;font-weight:600;cursor:pointer;display:none" id="trivia-send-btn">Send result to chat</button>`;
+    html += `<button onclick="sendGameResult('trivia', {score:${_triviaScore}, total:${_triviaTotal}})" style="margin-top:8px;width:100%;padding:10px;border-radius:10px;border:none;background:var(--surface-container,rgba(0,0,0,0.06));color:var(--on-surface-variant);font-size:12px;font-weight:600;cursor:pointer;display:none" id="trivia-send-btn">Send result to chat</button>`;
 
     panel.innerHTML = html;
     ov.appendChild(panel);
@@ -264,7 +264,7 @@
       <div id="tq-chat" style="max-height:200px;overflow-y:auto;margin-bottom:12px;padding:8px;border-radius:12px;background:rgba(0,0,0,0.2)">
         <div style="text-align:center;color:var(--on-surface-variant);font-size:12px;padding:8px">Answer Yes or No to each question!</div>
       </div>
-      <div id="tq-question-area" style="text-align:center;padding:16px;border-radius:14px;background:rgba(255,255,255,0.04);margin-bottom:12px">
+      <div id="tq-question-area" style="text-align:center;padding:16px;border-radius:14px;background:var(--surface-container-low,rgba(0,0,0,0.04));margin-bottom:12px">
         <div style="font-size:15px;font-weight:600" id="tq-question">Loading...</div>
       </div>
       <div style="display:flex;gap:8px">
@@ -305,7 +305,7 @@
   window.answerTwentyQ = function(yes) {
     const chat = document.getElementById('tq-chat');
     if (chat) {
-      chat.innerHTML += `<div style="margin-bottom:6px;padding:6px 10px;border-radius:8px;background:rgba(255,255,255,0.06);font-size:13px"><span style="font-weight:600">Q${_tqQIdx + 1}:</span> ${_tqQuestions[_tqQIdx]}</div>`;
+      chat.innerHTML += `<div style="margin-bottom:6px;padding:6px 10px;border-radius:8px;background:var(--surface-container,rgba(0,0,0,0.06));font-size:13px"><span style="font-weight:600">Q${_tqQIdx + 1}:</span> ${_tqQuestions[_tqQIdx]}</div>`;
       chat.innerHTML += `<div style="text-align:right;margin-bottom:8px;padding:4px 10px;border-radius:8px;background:${yes ? 'rgba(0,230,118,0.15)' : 'rgba(239,68,68,0.15)'};font-size:13px;font-weight:600;color:${yes ? '#00E676' : '#ef4444'}">${yes ? 'Yes' : 'No'}</div>`;
       chat.scrollTop = chat.scrollHeight;
     }

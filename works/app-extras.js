@@ -495,18 +495,13 @@ function showMsgContextMenu(event, msgId) {
   const uid  = App.auth && App.auth.currentUser && App.auth.currentUser.uid;
   const isMyMsg = isMe || (uid && msg.senderId === uid);
 
-  const isDark = document.documentElement.classList.contains('dark') || document.body.classList.contains('dark') || document.documentElement.getAttribute('data-theme') === 'dark';
-  const bg = isDark ? '#1f2c34' : '#ffffff';
-  const border = isDark ? '#2a3942' : '#e9edef';
-  const fg = isDark ? '#e9edef' : '#111b21';
-
   const menu = document.createElement('div');
   menu.id = '_msg-ctx-menu';
   menu.style.cssText = `
     position:fixed; z-index:9999;
-    background:${bg};
-    border:1px solid ${border};
-    color:${fg};
+    background:var(--surface-container,#1f2c34);
+    border:1px solid var(--outline-variant,#2a3942);
+    color:var(--on-surface,#e9edef);
     border-radius:16px; padding:6px;
     box-shadow:0 8px 32px rgba(0,0,0,0.4);
     min-width:180px; font-size:13px; font-weight:600;
@@ -622,25 +617,17 @@ function chatContextMenu(event, chatId) {
   const chat = App.chats.find(c => c.id === chatId);
   if (!chat) return;
 
-  const isDark = document.documentElement.classList.contains('dark') || document.body.contains('dark') || document.documentElement.getAttribute('data-theme') === 'dark';
-  const bg = isDark ? '#1f2c34' : '#ffffff';
-  const border = isDark ? '#2a3942' : '#e9edef';
-  const fg = isDark ? '#e9edef' : '#111b21';
-
   const menu = document.createElement('div');
   menu.id = '_msg-ctx-menu';
   menu.style.cssText = `
     position:fixed; z-index:9999;
-    background:${bg};
-    border:1px solid ${border};
-    color:${fg};
+    background:var(--surface-container,#1f2c34);
+    border:1px solid var(--outline-variant,#2a3942);
+    color:var(--on-surface,#e9edef);
     border-radius:16px; padding:6px;
     box-shadow:0 8px 32px rgba(0,0,0,0.4);
     min-width:160px; font-size:13px; font-weight:600;
   `;
-
-  const actions = [
-    { icon: '📌', label: chat.pinned ? 'Unpin Chat' : 'Pin Chat', fn: `togglePin('${chatId}')` },
     { icon: '🔔', label: chat.muted ? 'Unmute Chat' : 'Mute Chat', fn: `showMuteChatOptions('${chatId}')` },
     { icon: '📂', label: 'Archive Chat', fn: `archiveChat('${chatId}')` },
     { icon: '📦', label: 'Export Chat', fn: `exportChatAsZip('${chatId}')` },
@@ -700,18 +687,13 @@ function callLogContextMenu(event, logId) {
   event.stopPropagation();
   _removeCtxMenu();
 
-  const isDark = document.documentElement.classList.contains('dark') || document.body.contains('dark') || document.documentElement.getAttribute('data-theme') === 'dark';
-  const bg = isDark ? '#1f2c34' : '#ffffff';
-  const border = isDark ? '#2a3942' : '#e9edef';
-  const fg = isDark ? '#e9edef' : '#111b21';
-
   const menu = document.createElement('div');
   menu.id = '_msg-ctx-menu';
   menu.style.cssText = `
     position:fixed; z-index:9999;
-    background:${bg};
-    border:1px solid ${border};
-    color:${fg};
+    background:var(--surface-container,#1f2c34);
+    border:1px solid var(--outline-variant,#2a3942);
+    color:var(--on-surface,#e9edef);
     border-radius:16px; padding:6px;
     box-shadow:0 8px 32px rgba(0,0,0,0.4);
     min-width:160px; font-size:13px; font-weight:600;
@@ -759,18 +741,13 @@ function openChatMenu(btn) {
   if (!App.currentChat) return;
   const chat = App.currentChat;
 
-  const isDark = document.documentElement.classList.contains('dark') || document.body.contains('dark') || document.documentElement.getAttribute('data-theme') === 'dark';
-  const bg = isDark ? '#1f2c34' : '#ffffff';
-  const border = isDark ? '#2a3942' : '#e9edef';
-  const fg = isDark ? '#e9edef' : '#111b21';
-
   const menu = document.createElement('div');
   menu.id = '_msg-ctx-menu';
   menu.style.cssText = `
     position:fixed; z-index:9999;
-    background:${bg};
-    border:1px solid ${border};
-    color:${fg};
+    background:var(--surface-container,#1f2c34);
+    border:1px solid var(--outline-variant,#2a3942);
+    color:var(--on-surface,#e9edef);
     border-radius:16px; padding:6px;
     box-shadow:0 8px 32px rgba(0,0,0,0.4);
     min-width:190px; font-size:13px; font-weight:600;
@@ -1736,6 +1713,12 @@ function attachCamera() {
   toggleAttachMenu();
   if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
     showToast('Camera not supported on this device', 'error');
+    return;
+  }
+  if (typeof PermissionsManager !== 'undefined') {
+    PermissionsManager.ensureForFeature('Take Photo').then(function(ok) {
+      if (ok) _openCameraUI();
+    });
     return;
   }
   _openCameraUI();
@@ -2794,13 +2777,13 @@ function _renderGalleryTab(tab) {
   // Update tab button styles
   document.querySelectorAll('._gallery-tab').forEach(btn => {
     const isActive = btn.dataset.tab === tab;
-    btn.style.background = isActive ? 'rgba(255,255,255,0.15)' : 'transparent';
-    btn.style.color = isActive ? 'white' : 'rgba(255,255,255,0.6)';
+    btn.style.background = isActive ? 'var(--surface-container-highest,rgba(255,255,255,0.15))' : 'transparent';
+    btn.style.color = isActive ? 'var(--on-surface)' : 'var(--on-surface-variant,rgba(255,255,255,0.6))';
     btn.style.fontWeight = isActive ? '700' : '500';
   });
   
   if (!filtered.length) {
-    container.innerHTML = '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:rgba(255,255,255,0.4);gap:12px;"><span class="material-symbols-outlined" style="font-size:48px;">perm_media</span><p style="font-size:14px;">No ' + tab + ' shared yet</p></div>';
+    container.innerHTML = '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:var(--on-surface-variant,rgba(255,255,255,0.4));gap:12px;"><span class="material-symbols-outlined" style="font-size:48px;">perm_media</span><p style="font-size:14px;">No ' + tab + ' shared yet</p></div>';
     return;
   }
   
@@ -2868,7 +2851,7 @@ window.openMediaGallery = function openMediaGallery(initialTab) {
   header.innerHTML = '<h3 style="font-size:18px;font-weight:700;">Media & Files</h3>';
   const closeBtn = document.createElement('button');
   closeBtn.innerHTML = '<span class="material-symbols-outlined">close</span>';
-  closeBtn.style.cssText = 'background:rgba(255,255,255,0.1);border:none;border-radius:50%;width:36px;height:36px;color:white;cursor:pointer;display:flex;align-items:center;justify-content:center;';
+    closeBtn.style.cssText = 'background:var(--surface-container-highest,rgba(255,255,255,0.1));border:none;border-radius:50%;width:44px;height:44px;color:var(--on-surface);cursor:pointer;display:flex;align-items:center;justify-content:center;';
   closeBtn.onclick = _closeMediaGallery;
   header.appendChild(closeBtn);
   overlay.appendChild(header);

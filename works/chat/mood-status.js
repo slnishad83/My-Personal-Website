@@ -90,21 +90,21 @@
 
     MOODS.forEach(m => {
       const isActive = currentMood === m.emoji;
-      html += `<button onclick="setMyMood('${m.emoji}')" style="padding:10px 4px;border-radius:12px;border:2px solid ${isActive ? 'var(--primary)' : 'transparent'};background:${isActive ? 'rgba(124,77,255,0.15)' : 'rgba(255,255,255,0.04)'};cursor:pointer;text-align:center;transition:all 0.15s">
+      html += `<button onclick="setMyMood('${m.emoji}')" style="padding:10px 4px;border-radius:12px;border:2px solid ${isActive ? 'var(--primary)' : 'transparent'};background:${isActive ? 'rgba(124,77,255,0.15)' : 'var(--surface-container-low,rgba(0,0,0,0.04))'};cursor:pointer;text-align:center;transition:all 0.15s">
         <div style="font-size:28px;line-height:1">${m.emoji}</div>
         <div style="font-size:10px;color:var(--on-surface-variant);margin-top:2px">${m.label}</div>
       </button>`;
     });
 
     html += `</div>
-      <div style="padding:14px;border-radius:14px;background:rgba(255,255,255,0.04);margin-bottom:12px">
+      <div style="padding:14px;border-radius:14px;background:var(--surface-container-low,rgba(0,0,0,0.04));margin-bottom:12px">
         <div style="font-size:13px;font-weight:600;margin-bottom:8px">Auto-clear after:</div>
         <div style="display:flex;gap:6px;flex-wrap:wrap">
-          <button onclick="setMoodExpiryAndClose(1)" style="padding:6px 12px;border-radius:8px;border:none;background:rgba(255,255,255,0.06);color:var(--on-surface);font-size:12px;font-weight:600;cursor:pointer">1 Hour</button>
-          <button onclick="setMoodExpiryAndClose(4)" style="padding:6px 12px;border-radius:8px;border:none;background:rgba(255,255,255,0.06);color:var(--on-surface);font-size:12px;font-weight:600;cursor:pointer">4 Hours</button>
-          <button onclick="setMoodExpiryAndClose(8)" style="padding:6px 12px;border-radius:8px;border:none;background:rgba(255,255,255,0.06);color:var(--on-surface);font-size:12px;font-weight:600;cursor:pointer">8 Hours</button>
-          <button onclick="setMoodExpiryAndClose(24)" style="padding:6px 12px;border-radius:8px;border:none;background:rgba(255,255,255,0.06);color:var(--on-surface);font-size:12px;font-weight:600;cursor:pointer">24 Hours</button>
-          <button onclick="setMoodExpiryAndClose(0)" style="padding:6px 12px;border-radius:8px;border:none;background:rgba(255,255,255,0.06);color:var(--on-surface);font-size:12px;font-weight:600;cursor:pointer">Until I change it</button>
+          <button onclick="setMoodExpiryAndClose(1)" style="padding:6px 12px;border-radius:8px;border:none;background:var(--surface-container,rgba(0,0,0,0.06));color:var(--on-surface);font-size:12px;font-weight:600;cursor:pointer">1 Hour</button>
+          <button onclick="setMoodExpiryAndClose(4)" style="padding:6px 12px;border-radius:8px;border:none;background:var(--surface-container,rgba(0,0,0,0.06));color:var(--on-surface);font-size:12px;font-weight:600;cursor:pointer">4 Hours</button>
+          <button onclick="setMoodExpiryAndClose(8)" style="padding:6px 12px;border-radius:8px;border:none;background:var(--surface-container,rgba(0,0,0,0.06));color:var(--on-surface);font-size:12px;font-weight:600;cursor:pointer">8 Hours</button>
+          <button onclick="setMoodExpiryAndClose(24)" style="padding:6px 12px;border-radius:8px;border:none;background:var(--surface-container,rgba(0,0,0,0.06));color:var(--on-surface);font-size:12px;font-weight:600;cursor:pointer">24 Hours</button>
+          <button onclick="setMoodExpiryAndClose(0)" style="padding:6px 12px;border-radius:8px;border:none;background:var(--surface-container,rgba(0,0,0,0.06));color:var(--on-surface);font-size:12px;font-weight:600;cursor:pointer">Until I change it</button>
         </div>
       </div>
       <button onclick="clearMyMood()" style="width:100%;padding:10px;border-radius:10px;border:none;background:rgba(239,68,68,0.1);color:var(--error);font-size:13px;font-weight:600;cursor:pointer">Clear Mood</button>`;

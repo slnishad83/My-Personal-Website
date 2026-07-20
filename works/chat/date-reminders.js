@@ -155,7 +155,7 @@
       html += `<div style="margin-bottom:16px"><div style="font-size:12px;font-weight:700;color:var(--on-surface-variant);margin-bottom:8px">UPCOMING</div>`;
       upcoming.forEach(r => {
         const urgencyColor = r.daysUntil === 0 ? '#00E676' : r.daysUntil <= 3 ? '#FF9800' : 'var(--primary)';
-        html += `<div style="display:flex;align-items:center;gap:10px;padding:12px;border-radius:12px;background:rgba(255,255,255,0.04);margin-bottom:6px">
+        html += `<div style="display:flex;align-items:center;gap:10px;padding:12px;border-radius:12px;background:var(--surface-container-low,rgba(0,0,0,0.04));margin-bottom:6px">
           <span style="font-size:24px">${r.emoji}</span>
           <div style="flex:1">
             <div style="font-size:13px;font-weight:600">${escHtml(r.name)}</div>
@@ -174,15 +174,15 @@
     (App.contacts || []).slice(0, 30).forEach(c => {
       const d = dates[c.uid] || {};
       const hasDate = d.birthday || d.anniversary;
-      html += `<div style="display:flex;align-items:center;gap:10px;padding:10px;border-radius:10px;background:rgba(255,255,255,0.03);margin-bottom:4px">
+      html += `<div style="display:flex;align-items:center;gap:10px;padding:10px;border-radius:10px;background:var(--surface-container-low,rgba(0,0,0,0.03));margin-bottom:4px">
         <div style="width:32px;height:32px;border-radius:50%;overflow:hidden;flex-shrink:0">
-          ${c.photoURL ? `<img src="${c.photoURL}" style="width:100%;height:100%;object-fit:cover">` : `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,0.1);font-size:12px;font-weight:700">${c.initials || '?'}</div>`}
+          ${c.photoURL ? `<img src="${c.photoURL}" style="width:100%;height:100%;object-fit:cover">` : `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:var(--outline-variant,rgba(0,0,0,0.1));font-size:12px;font-weight:700">${c.initials || '?'}</div>`}
         </div>
         <div style="flex:1;min-width:0">
           <div style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escHtml(c.name)}</div>
           <div style="font-size:11px;color:var(--on-surface-variant)">${d.birthday ? '🎂 ' + d.birthday : ''}${d.birthday && d.anniversary ? ' · ' : ''}${d.anniversary ? '💕 ' + d.anniversary : ''}${!hasDate ? 'No dates set' : ''}</div>
         </div>
-        <button onclick="_editContactDate('${c.uid}','${escHtml(c.name)}')" style="padding:4px 10px;border-radius:6px;border:none;background:rgba(255,255,255,0.06);color:var(--on-surface-variant);font-size:11px;font-weight:600;cursor:pointer">${hasDate ? 'Edit' : 'Add'}</button>
+        <button onclick="_editContactDate('${c.uid}','${escHtml(c.name)}')" style="padding:4px 10px;border-radius:6px;border:none;background:var(--surface-container,rgba(0,0,0,0.06));color:var(--on-surface-variant);font-size:11px;font-weight:600;cursor:pointer">${hasDate ? 'Edit' : 'Add'}</button>
       </div>`;
     });
 
@@ -206,14 +206,14 @@
       <h3 style="margin:0 0 16px;font-size:16px;font-weight:700">📅 ${escHtml(name)}</h3>
       <div style="margin-bottom:12px">
         <label style="font-size:12px;font-weight:600;color:var(--on-surface-variant);display:block;margin-bottom:4px">🎂 Birthday</label>
-        <input type="date" id="edit-birthday" value="${d.birthday || ''}" style="width:100%;padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.05);color:var(--on-surface);font-size:13px">
+        <input type="date" id="edit-birthday" value="${d.birthday || ''}" style="width:100%;padding:10px;border-radius:10px;border:1px solid var(--outline-variant,rgba(0,0,0,0.1));background:var(--surface-container-low,rgba(0,0,0,0.05));color:var(--on-surface);font-size:13px">
       </div>
       <div style="margin-bottom:16px">
         <label style="font-size:12px;font-weight:600;color:var(--on-surface-variant);display:block;margin-bottom:4px">💕 Anniversary</label>
-        <input type="date" id="edit-anniversary" value="${d.anniversary || ''}" style="width:100%;padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.05);color:var(--on-surface);font-size:13px">
+        <input type="date" id="edit-anniversary" value="${d.anniversary || ''}" style="width:100%;padding:10px;border-radius:10px;border:1px solid var(--outline-variant,rgba(0,0,0,0.1));background:var(--surface-container-low,rgba(0,0,0,0.05));color:var(--on-surface);font-size:13px">
       </div>
       <div style="display:flex;gap:8px">
-        <button onclick="this.closest('[style*=\"fixed\"]')?.remove()" style="flex:1;padding:10px;border-radius:10px;border:none;background:rgba(255,255,255,0.06);color:var(--on-surface);font-size:13px;font-weight:600;cursor:pointer">Cancel</button>
+        <button onclick="this.closest('[style*=\"fixed\"]')?.remove()" style="flex:1;padding:10px;border-radius:10px;border:none;background:var(--surface-container,rgba(0,0,0,0.06));color:var(--on-surface);font-size:13px;font-weight:600;cursor:pointer">Cancel</button>
         <button onclick="_saveContactDateEdit('${uid}')" style="flex:1;padding:10px;border-radius:10px;border:none;background:var(--primary);color:var(--on-primary);font-size:13px;font-weight:600;cursor:pointer">Save</button>
       </div>`;
 

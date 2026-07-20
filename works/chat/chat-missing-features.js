@@ -71,7 +71,7 @@
 
       const menu = document.createElement('div');
       menu.id = 'msg-context-menu';
-      menu.style.cssText = 'position:fixed;z-index:99999;background:var(--surface-container-high,#1e2a34);border:1px solid rgba(255,255,255,0.12);border-radius:14px;padding:6px;box-shadow:0 8px 32px rgba(0,0,0,0.4);min-width:180px;animation:fadeIn 0.15s ease;';
+      menu.style.cssText = 'position:fixed;z-index:99999;background:var(--surface-container-high,#1e2a34);border:1px solid var(--outline-variant,rgba(0,0,0,0.12));border-radius:14px;padding:6px;box-shadow:0 8px 32px rgba(0,0,0,0.4);min-width:180px;animation:fadeIn 0.15s ease;';
 
       const x = Math.min(e.clientX, window.innerWidth - 200);
       const y = Math.min(e.clientY, window.innerHeight - 250);
@@ -111,7 +111,7 @@
         return;
       }
       menu.innerHTML = items.map(item => `
-        <button class="ctx-menu-item" style="display:flex;align-items:center;gap:10px;width:100%;padding:10px 14px;border:none;background:none;color:var(--on-surface);font-size:13px;font-weight:500;cursor:pointer;border-radius:10px;transition:background 0.15s;text-align:left" onpointerenter="this.style.background='rgba(255,255,255,0.06)'" onpointerleave="this.style.background='none'">
+        <button class="ctx-menu-item" style="display:flex;align-items:center;gap:10px;width:100%;padding:10px 14px;border:none;background:none;color:var(--on-surface);font-size:13px;font-weight:500;cursor:pointer;border-radius:10px;transition:background 0.15s;text-align:left" onpointerenter="this.style.background='var(--surface-container,rgba(0,0,0,0.06))'" onpointerleave="this.style.background='none'">
           <span class="material-symbols-outlined" style="font-size:18px;color:var(--on-surface-variant)">${item.icon}</span>
           ${item.label}
         </button>

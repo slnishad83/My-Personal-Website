@@ -39,7 +39,7 @@
 
   function observeMessageInput() {
     document.addEventListener('keydown', async (e) => {
-      if (e.key !== 'Enter' || e.shiftKey || e.target.tagName === 'SELECT' || e.target.tagName === 'TEXTAREA') return;
+      if (e.key !== 'Enter' || e.shiftKey) return;
 
       if (!window.App || !window.App.currentChat) return;
       const chat = window.App.currentChat;
@@ -50,6 +50,11 @@
 
       const chatId = chat.id;
       if (window.ChatPermissions && window.ChatPermissions.hasPermission(chatId, uid, 'send')) return;
+
+      const isInputField = e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT'
+        || e.target.tagName === 'INPUT' || e.target.isContentEditable
+        || e.target.closest('#input-bar, .wa-textarea, .message-input');
+      if (!isInputField) return;
 
       if (window.showToast) window.showToast('Only admins can post in this announcement channel', 'error');
       e.preventDefault();

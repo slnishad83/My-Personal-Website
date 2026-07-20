@@ -166,14 +166,14 @@
       <h3 style="margin:0 0 4px;font-size:18px;font-weight:700">Chat Locked</h3>
       <p style="font-size:13px;color:var(--on-surface-variant);margin:0 0 20px">Authenticate to open this chat</p>
       <div id="lock-pin-section" style="display:none">
-        <input type="password" inputmode="numeric" id="lock-pin-input" placeholder="Enter PIN" maxlength="8" style="width:100%;padding:14px;border-radius:12px;border:2px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.05);color:var(--on-surface);font-size:24px;text-align:center;letter-spacing:8px;margin-bottom:12px;outline:none;box-sizing:border-box">
+        <input type="password" inputmode="numeric" id="lock-pin-input" placeholder="Enter PIN" maxlength="8" style="width:100%;padding:14px;border-radius:12px;border:2px solid var(--outline-variant,rgba(0,0,0,0.1));background:var(--surface-container-low,rgba(0,0,0,0.05));color:var(--on-surface);font-size:24px;text-align:center;letter-spacing:8px;margin-bottom:12px;outline:none;box-sizing:border-box">
         <p id="pin-error" style="color:var(--error);font-size:12px;margin:0 0 8px;display:none">Incorrect PIN</p>
       </div>
       <div style="display:flex;flex-direction:column;gap:8px">
         <button id="lock-bio-btn" style="padding:14px;border-radius:14px;border:none;background:var(--primary);color:var(--on-primary);font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px">
           <span class="material-symbols-outlined" style="font-size:20px">fingerprint</span> Unlock with Biometric
         </button>
-        <button id="lock-pin-btn" style="padding:14px;border-radius:14px;border:none;background:rgba(255,255,255,0.08);color:var(--on-surface);font-size:14px;font-weight:600;cursor:pointer">
+        <button id="lock-pin-btn" style="padding:14px;border-radius:14px;border:none;background:var(--surface-container,rgba(0,0,0,0.08));color:var(--on-surface);font-size:14px;font-weight:600;cursor:pointer">
           Use PIN Instead
         </button>
         <button id="lock-forgot-btn" style="padding:10px;border-radius:10px;border:none;background:transparent;color:var(--primary);font-size:13px;cursor:pointer;display:none">
@@ -248,7 +248,7 @@
             if (errEl) errEl.style.display = 'block';
             input.value = '';
             input.style.borderColor = 'var(--error)';
-            setTimeout(() => { input.style.borderColor = 'rgba(255,255,255,0.1)'; }, 1000);
+            setTimeout(() => { input.style.borderColor = 'var(--outline-variant,rgba(0,0,0,0.1))'; }, 1000);
           }
         } else {
           if (val.length >= 4) {
@@ -333,7 +333,7 @@
 
     if (chats.length) {
       chats.forEach(chat => {
-        html += `<div style="display:flex;align-items:center;justify-content:space-between;padding:12px;border-radius:12px;background:rgba(255,255,255,0.04);margin-bottom:8px">
+        html += `<div style="display:flex;align-items:center;justify-content:space-between;padding:12px;border-radius:12px;background:var(--surface-container-low,rgba(0,0,0,0.04));margin-bottom:8px">
           <div style="display:flex;align-items:center;gap:10px">
             <div style="width:36px;height:36px;border-radius:50%;background:rgba(124,77,255,0.15);display:flex;align-items:center;justify-content:center"><span class="material-symbols-outlined" style="font-size:18px;color:var(--primary)">lock</span></div>
             <span style="font-size:14px;font-weight:600">${escHtml(chat.name)}</span>
@@ -346,13 +346,13 @@
     }
 
     html += `
-      <div style="margin-top:16px;padding:16px;border-radius:12px;background:rgba(255,255,255,0.04)">
+      <div style="margin-top:16px;padding:16px;border-radius:12px;background:var(--surface-container-low,rgba(0,0,0,0.04))">
         <h4 style="margin:0 0 4px;font-size:14px;font-weight:600">Security</h4>
         <p style="font-size:11px;color:var(--on-surface-variant);margin:0 0 10px">PINs are encrypted server-side (PBKDF2, 100k iterations)</p>
-        <button id="settings-change-pin-btn" style="width:100%;padding:10px;border-radius:10px;border:none;background:rgba(255,255,255,0.08);color:var(--on-surface);font-size:13px;font-weight:600;cursor:pointer;text-align:left;display:flex;align-items:center;gap:8px">
+        <button id="settings-change-pin-btn" style="width:100%;padding:10px;border-radius:10px;border:none;background:var(--surface-container,rgba(0,0,0,0.08));color:var(--on-surface);font-size:13px;font-weight:600;cursor:pointer;text-align:left;display:flex;align-items:center;gap:8px">
           <span class="material-symbols-outlined" style="font-size:18px">pin</span> Change Lock PIN
         </button>
-        <button id="settings-reset-pin-btn" style="width:100%;padding:10px;border-radius:10px;border:none;background:rgba(255,255,255,0.08);color:var(--error);font-size:13px;font-weight:600;cursor:pointer;text-align:left;display:flex;align-items:center;gap:8px;margin-top:8px">
+        <button id="settings-reset-pin-btn" style="width:100%;padding:10px;border-radius:10px;border:none;background:var(--surface-container,rgba(0,0,0,0.08));color:var(--error);font-size:13px;font-weight:600;cursor:pointer;text-align:left;display:flex;align-items:center;gap:8px;margin-top:8px">
           <span class="material-symbols-outlined" style="font-size:18px">lock_reset</span> Forgot PIN? Reset
         </button>
       </div>`;

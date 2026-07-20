@@ -362,7 +362,7 @@
       this._storedUnreadCount = unread;
       if (navigator.setAppBadge) {
         if (unread > 0) navigator.setAppBadge(unread).catch(() => {});
-        else navigator.clearAppBadge?.().catch(() => {});
+        else { try { navigator.clearAppBadge?.(); } catch(_){} }
       }
       document.dispatchEvent(new CustomEvent('tc:badge:update', { detail: { unread } }));
     },

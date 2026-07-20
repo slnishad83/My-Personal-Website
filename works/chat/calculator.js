@@ -29,7 +29,7 @@
         position: fixed;
         right: 24px;
         top: 80px;
-        width: 280px;
+        width: 300px;
         background: var(--surface-container-highest, #222e35);
         border: 1px solid var(--outline-variant, rgba(134, 150, 160, 0.15));
         border-radius: 16px;
@@ -40,6 +40,22 @@
         user-select: none;
         overflow: hidden;
         font-family: var(--font-body-md, "Inter", sans-serif);
+      }
+      @media (max-width: 600px) {
+        .calc-widget {
+          right: 12px !important;
+          left: 12px !important;
+          width: auto !important;
+          max-width: 400px;
+          bottom: calc(76px + env(safe-area-inset-bottom, 0px)) !important;
+          top: auto !important;
+          border-radius: 16px 16px 0 0;
+        }
+      }
+      @media (min-width: 601px) and (max-width: 900px) {
+        .calc-widget {
+          width: 320px;
+        }
       }
       html:not(.dark) .calc-widget {
         background: var(--surface-container-highest, #ffffff);
@@ -64,8 +80,11 @@
         cursor: pointer;
         opacity: 0.8;
         padding: 2px;
+        min-width: 44px;
+        min-height: 44px;
         display: flex;
         align-items: center;
+        justify-content: center;
         transition: opacity 0.15s;
       }
       .calc-header-btn:hover {
@@ -115,7 +134,7 @@
         color: var(--text, #d1d7db);
         border: none;
         border-radius: 8px;
-        height: 42px;
+        height: 44px;
         font-size: 16px;
         font-weight: 500;
         cursor: pointer;
@@ -165,7 +184,7 @@
         color: var(--brand, #008069);
         border: none;
         border-radius: 8px;
-        padding: 8px;
+        padding: 10px;
         font-size: 11px;
         font-weight: 600;
         cursor: pointer;
@@ -434,8 +453,14 @@
       calcEl.style.display = 'flex';
       // Center if no dragging has occurred yet
       if (calcEl.style.left === '') {
-        calcEl.style.right = '24px';
-        calcEl.style.top = '80px';
+        if (window.innerWidth <= 600) {
+          calcEl.style.left = '12px';
+          calcEl.style.right = '12px';
+          calcEl.style.top = 'auto';
+        } else {
+          calcEl.style.right = '24px';
+          calcEl.style.top = '80px';
+        }
       }
     }
   };

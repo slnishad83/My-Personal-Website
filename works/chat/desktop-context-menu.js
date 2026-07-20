@@ -37,7 +37,12 @@
       }
       const btn = document.createElement('button');
       btn.setAttribute('role', 'menuitem');
-      btn.innerHTML = `<span>${item.icon || ''}</span><span>${item.label}</span>`;
+      const iconSpan = document.createElement('span');
+      iconSpan.textContent = item.icon || '';
+      const labelSpan = document.createElement('span');
+      labelSpan.textContent = item.label;
+      btn.appendChild(iconSpan);
+      btn.appendChild(labelSpan);
       if (item.shortcut) {
         btn.innerHTML += `<span class="ctx-shortcut">${item.shortcut}</span>`;
       }

@@ -17,9 +17,9 @@
       </div>
       <div id="playlists-tabs" style="display:flex;gap:4px;padding:8px 16px;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch">
         <button class="pl-tab active" onclick="switchPlaylistTab('my',this)" style="padding:6px 14px;border-radius:8px;border:none;background:var(--primary);color:var(--on-primary);font-size:12px;font-weight:600;cursor:pointer;flex-shrink:0;min-height:36px">My Playlists</button>
-        <button class="pl-tab" onclick="switchPlaylistTab('recent',this)" style="padding:6px 14px;border-radius:8px;border:none;background:rgba(255,255,255,0.06);color:var(--on-surface-variant);font-size:12px;font-weight:600;cursor:pointer;flex-shrink:0;min-height:36px">Recently Played</button>
-        <button class="pl-tab" onclick="switchPlaylistTab('favs',this)" style="padding:6px 14px;border-radius:8px;border:none;background:rgba(255,255,255,0.06);color:var(--on-surface-variant);font-size:12px;font-weight:600;cursor:pointer;flex-shrink:0;min-height:36px">Favorites</button>
-        ${chatId ? `<button class="pl-tab" onclick="switchPlaylistTab('chat',this)" style="padding:6px 14px;border-radius:8px;border:none;background:rgba(255,255,255,0.06);color:var(--on-surface-variant);font-size:12px;font-weight:600;cursor:pointer;flex-shrink:0;min-height:36px">Chat</button>` : ''}
+        <button class="pl-tab" onclick="switchPlaylistTab('recent',this)" style="padding:6px 14px;border-radius:8px;border:none;background:var(--surface-container,rgba(0,0,0,0.06));color:var(--on-surface-variant);font-size:12px;font-weight:600;cursor:pointer;flex-shrink:0;min-height:36px">Recently Played</button>
+        <button class="pl-tab" onclick="switchPlaylistTab('favs',this)" style="padding:6px 14px;border-radius:8px;border:none;background:var(--surface-container,rgba(0,0,0,0.06));color:var(--on-surface-variant);font-size:12px;font-weight:600;cursor:pointer;flex-shrink:0;min-height:36px">Favorites</button>
+        ${chatId ? `<button class="pl-tab" onclick="switchPlaylistTab('chat',this)" style="padding:6px 14px;border-radius:8px;border:none;background:var(--surface-container,rgba(0,0,0,0.06));color:var(--on-surface-variant);font-size:12px;font-weight:600;cursor:pointer;flex-shrink:0;min-height:36px">Chat</button>` : ''}
       </div>
       <div id="playlists-content" style="flex:1;overflow-y:auto;padding:0 16px 80px"></div>`;
 
@@ -29,7 +29,7 @@
 
   window.switchPlaylistTab = function(tab, btn) {
     document.querySelectorAll('.pl-tab').forEach(b => {
-      b.style.background = 'rgba(255,255,255,0.06)';
+      b.style.background = 'var(--surface-container,rgba(0,0,0,0.06))';
       b.style.color = 'var(--on-surface-variant)';
     });
     btn.style.background = 'var(--primary)';
@@ -59,10 +59,10 @@
     }
 
     content.innerHTML = playlists.map(pl => _playlistCardHTML(pl)).join('') + `
-      <div style="margin-top:16px;padding:12px;border-radius:12px;background:rgba(255,255,255,0.03);border:1px dashed rgba(255,255,255,0.1)">
+      <div style="margin-top:16px;padding:12px;border-radius:12px;background:var(--surface-container-low,rgba(0,0,0,0.03));border:1px dashed var(--outline-variant,rgba(0,0,0,0.1))">
         <div style="font-size:11px;font-weight:700;color:var(--on-surface-variant);margin-bottom:6px">Import Shared Playlist</div>
         <div style="display:flex;gap:8px">
-          <input type="text" id="import-playlist-id" placeholder="Paste playlist link or ID..." style="flex:1;padding:8px 12px;border-radius:10px;border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.04);color:var(--on-surface);font-size:12px;outline:none">
+          <input type="text" id="import-playlist-id" placeholder="Paste playlist link or ID..." style="flex:1;padding:8px 12px;border-radius:10px;border:1px solid var(--outline-variant,rgba(0,0,0,0.08));background:var(--surface-container-low,rgba(0,0,0,0.04));color:var(--on-surface);font-size:12px;outline:none">
           <button onclick="importSharedPlaylist(document.getElementById('import-playlist-id')?.value)" style="padding:8px 14px;border-radius:10px;border:none;background:var(--primary);color:var(--on-primary);font-size:11px;font-weight:700;cursor:pointer">Import</button>
         </div>
       </div>`;
@@ -113,7 +113,7 @@
       : `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,var(--primary),#4a00e0)"><span class="material-symbols-outlined" style="font-size:28px;color:white;opacity:0.6">music_note</span></div>`;
 
     return `
-    <div style="display:flex;gap:12px;padding:12px;border-radius:14px;background:rgba(255,255,255,0.03);margin-bottom:8px;cursor:pointer;min-height:72px" onclick="openPlaylistDetail('${pl.id}')">
+    <div style="display:flex;gap:12px;padding:12px;border-radius:14px;background:var(--surface-container-low,rgba(0,0,0,0.03));margin-bottom:8px;cursor:pointer;min-height:72px" onclick="openPlaylistDetail('${pl.id}')">
       <div style="width:60px;height:60px;border-radius:10px;overflow:hidden;flex-shrink:0">${coverHtml}</div>
       <div style="flex:1;min-width:0">
         <div style="font-size:14px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escHtml(pl.name)}</div>
@@ -136,7 +136,7 @@
     window._plTrackCache[trackRef] = track;
     return `
     <div class="flex items-center gap-3 p-2 rounded-lg ${isCurrent ? 'bg-primary/10' : 'hover:bg-white/5'}" style="cursor:pointer" data-track-ref="${trackRef}" onclick="${showPlay ? `playTrackFromRef('${trackRef}')` : `playTrackInPlaylist('${playlistId}','${track.id}')`}">
-      <div style="width:40px;height:40px;border-radius:6px;overflow:hidden;flex-shrink:0;background:rgba(255,255,255,0.05);display:flex;align-items:center;justify-content:center">
+      <div style="width:40px;height:40px;border-radius:6px;overflow:hidden;flex-shrink:0;background:var(--surface-container-low,rgba(0,0,0,0.05));display:flex;align-items:center;justify-content:center">
         ${track.thumbnail ? `<img src="${escHtml(track.thumbnail)}" style="width:100%;height:100%;object-fit:cover">` : '<span class="material-symbols-outlined" style="font-size:18px;color:var(--on-surface-variant)">music_note</span>'}
       </div>
       <div class="flex-1 min-w-0">
@@ -190,7 +190,7 @@
               <button onclick="playPlaylist('${playlistId}')" style="padding:8px 20px;border-radius:10px;border:none;background:var(--primary);color:var(--on-primary);font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:4px">
                 <span class="material-symbols-outlined" style="font-size:18px">play_arrow</span>Play
               </button>
-              <button onclick="shufflePlayPlaylist('${playlistId}')" style="padding:8px 16px;border-radius:10px;border:none;background:rgba(255,255,255,0.08);color:var(--on-surface);font-size:13px;font-weight:600;cursor:pointer">Shuffle</button>
+              <button onclick="shufflePlayPlaylist('${playlistId}')" style="padding:8px 16px;border-radius:10px;border:none;background:var(--outline-variant,rgba(0,0,0,0.08));color:var(--on-surface);font-size:13px;font-weight:600;cursor:pointer">Shuffle</button>
             </div>
           </div>
         </div>
@@ -220,22 +220,22 @@
       <h3 style="margin:0 0 16px;font-size:16px;font-weight:700">Add Track</h3>
       <div style="margin-bottom:12px">
         <label style="font-size:12px;font-weight:600;color:var(--on-surface-variant);display:block;margin-bottom:4px">Audio URL *</label>
-        <input type="url" id="add-track-url" placeholder="https://example.com/song.mp3" style="width:100%;padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.05);color:var(--on-surface);font-size:13px;box-sizing:border-box">
+        <input type="url" id="add-track-url" placeholder="https://example.com/song.mp3" style="width:100%;padding:10px;border-radius:10px;border:1px solid var(--outline-variant,rgba(0,0,0,0.1));background:var(--surface-container-low,rgba(0,0,0,0.05));color:var(--on-surface);font-size:13px;box-sizing:border-box">
       </div>
       <div style="margin-bottom:12px">
         <label style="font-size:12px;font-weight:600;color:var(--on-surface-variant);display:block;margin-bottom:4px">Title *</label>
-        <input type="text" id="add-track-title" placeholder="Song title" style="width:100%;padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.05);color:var(--on-surface);font-size:13px;box-sizing:border-box">
+        <input type="text" id="add-track-title" placeholder="Song title" style="width:100%;padding:10px;border-radius:10px;border:1px solid var(--outline-variant,rgba(0,0,0,0.1));background:var(--surface-container-low,rgba(0,0,0,0.05));color:var(--on-surface);font-size:13px;box-sizing:border-box">
       </div>
       <div style="margin-bottom:12px">
         <label style="font-size:12px;font-weight:600;color:var(--on-surface-variant);display:block;margin-bottom:4px">Artist</label>
-        <input type="text" id="add-track-artist" placeholder="Artist name" style="width:100%;padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.05);color:var(--on-surface);font-size:13px;box-sizing:border-box">
+        <input type="text" id="add-track-artist" placeholder="Artist name" style="width:100%;padding:10px;border-radius:10px;border:1px solid var(--outline-variant,rgba(0,0,0,0.1));background:var(--surface-container-low,rgba(0,0,0,0.05));color:var(--on-surface);font-size:13px;box-sizing:border-box">
       </div>
       <div style="margin-bottom:12px">
         <label style="font-size:12px;font-weight:600;color:var(--on-surface-variant);display:block;margin-bottom:4px">Thumbnail URL (optional)</label>
-        <input type="url" id="add-track-thumb" placeholder="https://example.com/cover.jpg" style="width:100%;padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.05);color:var(--on-surface);font-size:13px;box-sizing:border-box">
+        <input type="url" id="add-track-thumb" placeholder="https://example.com/cover.jpg" style="width:100%;padding:10px;border-radius:10px;border:1px solid var(--outline-variant,rgba(0,0,0,0.1));background:var(--surface-container-low,rgba(0,0,0,0.05));color:var(--on-surface);font-size:13px;box-sizing:border-box">
       </div>
       <div style="display:flex;gap:8px">
-        <button onclick="document.getElementById('add-track-overlay')?.remove()" style="flex:1;padding:10px;border-radius:10px;border:none;background:rgba(255,255,255,0.06);color:var(--on-surface);font-size:13px;font-weight:600;cursor:pointer">Cancel</button>
+        <button onclick="document.getElementById('add-track-overlay')?.remove()" style="flex:1;padding:10px;border-radius:10px;border:none;background:var(--surface-container,rgba(0,0,0,0.06));color:var(--on-surface);font-size:13px;font-weight:600;cursor:pointer">Cancel</button>
         <button onclick="_submitAddTrack('${playlistId}')" style="flex:1;padding:10px;border-radius:10px;border:none;background:var(--primary);color:var(--on-primary);font-size:13px;font-weight:700;cursor:pointer">Add Track</button>
       </div>`;
 
@@ -282,15 +282,15 @@
       <h3 style="margin:0 0 16px;font-size:16px;font-weight:700">Create Playlist</h3>
       <div style="margin-bottom:12px">
         <label style="font-size:12px;font-weight:600;color:var(--on-surface-variant);display:block;margin-bottom:4px">Name *</label>
-        <input type="text" id="create-pl-name" placeholder="My Playlist" style="width:100%;padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.05);color:var(--on-surface);font-size:13px;box-sizing:border-box" autofocus>
+        <input type="text" id="create-pl-name" placeholder="My Playlist" style="width:100%;padding:10px;border-radius:10px;border:1px solid var(--outline-variant,rgba(0,0,0,0.1));background:var(--surface-container-low,rgba(0,0,0,0.05));color:var(--on-surface);font-size:13px;box-sizing:border-box" autofocus>
       </div>
       <div style="margin-bottom:12px">
         <label style="font-size:12px;font-weight:600;color:var(--on-surface-variant);display:block;margin-bottom:4px">Description</label>
-        <input type="text" id="create-pl-desc" placeholder="Optional description" style="width:100%;padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.05);color:var(--on-surface);font-size:13px;box-sizing:border-box">
+        <input type="text" id="create-pl-desc" placeholder="Optional description" style="width:100%;padding:10px;border-radius:10px;border:1px solid var(--outline-variant,rgba(0,0,0,0.1));background:var(--surface-container-low,rgba(0,0,0,0.05));color:var(--on-surface);font-size:13px;box-sizing:border-box">
       </div>
       <div style="margin-bottom:12px">
         <label style="font-size:11px;font-weight:600;color:var(--on-surface-variant);display:block;margin-bottom:4px">FOLDER</label>
-        <select id="playlist-folder-select" style="width:100%;padding:10px 12px;border-radius:10px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);color:var(--on-surface);font-size:13px">
+        <select id="playlist-folder-select" style="width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--outline-variant,rgba(0,0,0,0.1));background:var(--surface-container-low,rgba(0,0,0,0.04));color:var(--on-surface);font-size:13px">
           <option value="">No folder</option>
         </select>
       </div>
@@ -301,7 +301,7 @@
         </label>
       </div>
       <div style="display:flex;gap:8px">
-        <button onclick="this.closest('[style*=\"fixed\"]')?.remove()" style="flex:1;padding:10px;border-radius:10px;border:none;background:rgba(255,255,255,0.06);color:var(--on-surface);font-size:13px;font-weight:600;cursor:pointer">Cancel</button>
+        <button onclick="this.closest('[style*=\"fixed\"]')?.remove()" style="flex:1;padding:10px;border-radius:10px;border:none;background:var(--surface-container,rgba(0,0,0,0.06));color:var(--on-surface);font-size:13px;font-weight:600;cursor:pointer">Cancel</button>
         <button onclick="_submitCreatePlaylist('${chatId || ''}')" style="flex:1;padding:10px;border-radius:10px;border:none;background:var(--primary);color:var(--on-primary);font-size:13px;font-weight:700;cursor:pointer">Create</button>
       </div>`;
 
@@ -400,11 +400,11 @@
         <button onclick="document.getElementById('collab-manager-overlay')?.remove()" style="background:none;border:none;color:var(--on-surface-variant);cursor:pointer;font-size:20px;min-width:44px;min-height:44px;display:inline-flex;align-items:center;justify-content:center">&times;</button>
       </div>
       <div style="display:flex;gap:8px;margin-bottom:16px">
-        <input type="text" id="collab-uid-input" placeholder="Enter user UID..." style="flex:1;padding:10px 12px;border-radius:10px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);color:var(--on-surface);font-size:13px">
+        <input type="text" id="collab-uid-input" placeholder="Enter user UID..." style="flex:1;padding:10px 12px;border-radius:10px;border:1px solid var(--outline-variant,rgba(0,0,0,0.1));background:var(--surface-container-low,rgba(0,0,0,0.04));color:var(--on-surface);font-size:13px">
         <button onclick="addCollaboratorToPlaylist('${playlistId}')" style="padding:10px 16px;border-radius:10px;border:none;background:var(--primary);color:var(--on-primary);font-size:13px;font-weight:700;cursor:pointer">Add</button>
       </div>
       <div style="font-size:12px;font-weight:700;color:var(--on-surface-variant);margin-bottom:8px">OWNER</div>
-      <div style="display:flex;align-items:center;gap:10px;padding:10px;border-radius:10px;background:rgba(255,255,255,0.03);margin-bottom:8px">
+      <div style="display:flex;align-items:center;gap:10px;padding:10px;border-radius:10px;background:var(--surface-container-low,rgba(0,0,0,0.03));margin-bottom:8px">
         <div style="width:32px;height:32px;border-radius:50%;background:var(--primary);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:white">${(pl.ownerName || 'U')[0].toUpperCase()}</div>
         <div style="flex:1;font-size:13px;font-weight:600">${escHtml(pl.ownerName || 'Owner')}</div>
         <span style="font-size:10px;padding:2px 8px;border-radius:4px;background:var(--primary);color:var(--on-primary);font-weight:700">YOU</span>
@@ -414,8 +414,8 @@
       html += '<div style="font-size:12px;font-weight:700;color:var(--on-surface-variant);margin:12px 0 8px">COLLABORATORS</div>';
       pl.collaborators.forEach(uid => {
         html += `
-        <div style="display:flex;align-items:center;gap:10px;padding:10px;border-radius:10px;background:rgba(255,255,255,0.03);margin-bottom:4px">
-          <div style="width:32px;height:32px;border-radius:50%;background:rgba(255,255,255,0.1);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:var(--on-surface-variant)">${uid[0].toUpperCase()}</div>
+        <div style="display:flex;align-items:center;gap:10px;padding:10px;border-radius:10px;background:var(--surface-container-low,rgba(0,0,0,0.03));margin-bottom:4px">
+          <div style="width:32px;height:32px;border-radius:50%;background:var(--surface-container,rgba(0,0,0,0.1));display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:var(--on-surface-variant)">${uid[0].toUpperCase()}</div>
           <div style="flex:1;font-size:13px;color:var(--on-surface-variant)">${escHtml(uid)}</div>
           <button onclick="removeCollaboratorFromPlaylist('${playlistId}','${uid}')" style="background:none;border:none;color:var(--error);cursor:pointer;padding:4px"><span class="material-symbols-outlined" style="font-size:18px">close</span></button>
         </div>`;
@@ -455,10 +455,10 @@
       <h3 style="margin:0 0 16px;font-size:16px;font-weight:700">Create Folder</h3>
       <div style="margin-bottom:16px">
         <label style="font-size:12px;font-weight:600;color:var(--on-surface-variant);display:block;margin-bottom:4px">Folder Name *</label>
-        <input type="text" id="create-folder-name" placeholder="My Folder" style="width:100%;padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.05);color:var(--on-surface);font-size:13px;box-sizing:border-box" autofocus>
+        <input type="text" id="create-folder-name" placeholder="My Folder" style="width:100%;padding:10px;border-radius:10px;border:1px solid var(--outline-variant,rgba(0,0,0,0.1));background:var(--surface-container-low,rgba(0,0,0,0.05));color:var(--on-surface);font-size:13px;box-sizing:border-box" autofocus>
       </div>
       <div style="display:flex;gap:8px">
-        <button onclick="this.closest('[style*=\"fixed\"]')?.remove()" style="flex:1;padding:10px;border-radius:10px;border:none;background:rgba(255,255,255,0.06);color:var(--on-surface);font-size:13px;font-weight:600;cursor:pointer">Cancel</button>
+        <button onclick="this.closest('[style*=\"fixed\"]')?.remove()" style="flex:1;padding:10px;border-radius:10px;border:none;background:var(--surface-container,rgba(0,0,0,0.06));color:var(--on-surface);font-size:13px;font-weight:600;cursor:pointer">Cancel</button>
         <button onclick="_submitCreateFolder()" style="flex:1;padding:10px;border-radius:10px;border:none;background:var(--primary);color:var(--on-primary);font-size:13px;font-weight:700;cursor:pointer">Create</button>
       </div>`;
 
