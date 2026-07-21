@@ -128,6 +128,13 @@ const BUNDLE_ORDER = [
   'unread-polish.js',
   'home-camera.js',
   'group-features.js',
+  // UI-UX enhancement modules
+  'onboarding.js',
+  'empty-states.js',
+  'form-validation.js',
+  'toast-ux.js',
+  'a11y-enhancements.js',
+  'message-errors.js',
   'app-init.js',
 ];
 

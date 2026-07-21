@@ -1582,6 +1582,13 @@
   <script src="unread-polish.js" defer></script>
   <script src="home-camera.js" defer></script>
   <script src="group-features.js" defer></script>
+  <!-- UI-UX enhancement modules -->
+  <script src="onboarding.js" defer></script>
+  <script src="empty-states.js" defer></script>
+  <script src="form-validation.js" defer></script>
+  <script src="toast-ux.js" defer></script>
+  <script src="a11y-enhancements.js" defer></script>
+  <script src="message-errors.js" defer></script>
   <script src="app-init.js" defer></script>
 
   <!-- PWA Service Worker Registration -->
@@ -1622,6 +1629,7 @@
       const chatList = document.getElementById('chat-list');
       if (chatList && window.PullToRefresh) PullToRefresh.init(chatList);
       if (window.PinchZoom) PinchZoom.init(document.getElementById('messages-wrap'));
+      if (window.InitA11yEnhancements) InitA11yEnhancements();
 
       setTimeout(async () => {
         if (window.OfflineQueue) await OfflineQueue.init();
@@ -1635,6 +1643,9 @@
           if (window.Presence) await Presence.init();
           if (window.MultiDevice) await MultiDevice.init();
           if (window.Security) await Security.init();
+          if (window.ShouldShowOnboarding && ShouldShowOnboarding()) {
+            setTimeout(() => { if (window.ShowOnboarding) ShowOnboarding(); }, 1500);
+          }
         }, 2000);
       } else {
         if (window.Presence) Presence.destroy();

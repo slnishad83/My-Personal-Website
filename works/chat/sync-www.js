@@ -37,6 +37,7 @@ const INCLUDE = [
   'video-notes.js', 'in-call-reactions.js', 'status.js', 'status-viewer.js',
   'new-features.css',
   'notification-nav.js', 'unread-polish.js', 'home-camera.js', 'group-features.js',
+  'onboarding.js', 'empty-states.js', 'form-validation.js', 'toast-ux.js', 'a11y-enhancements.js', 'message-errors.js',
   'qr-code-gen.js', 'qr-scanner.js', 'contact-sync.js',
   'snooze-enhancements.js', 'snooze-enhancements.css',
   'snooze-history.js', 'snooze-history.css',
