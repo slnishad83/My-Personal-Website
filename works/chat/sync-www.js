@@ -26,7 +26,7 @@ const INCLUDE = [
   'redesign-base.js', 'redesign-base.css',
   'chat.css', 'chat-enhancements.js', 'chat-enhancements.css',
   'chat-theme.css', 'chat-missing-features.js', 'chat-missing-features.css',
-  'chat-fixes.js', 'auth-theme.css', 'features-addon.js', 'feature-updates.js', 'jsQR.js', 'calculator.js',
+  'chat-fixes.js', 'auth-theme.css', 'login-styles.css', 'features-addon.js', 'feature-updates.js', 'jsQR.js', 'calculator.js',
   'group-message-info.js', 'audit-interactions.js', 'ui-compliance.js',
   'two-factor-auth.js', 'account-deletion.js', 'view-once.js', 'live-location.js',
   'data-saver.js', 'wallpaper-gallery.js', 'help-support.js', 'reply-private.js',
