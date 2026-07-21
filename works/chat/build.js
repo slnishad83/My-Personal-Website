@@ -139,6 +139,7 @@ const BUNDLE_ORDER = [
   'report-user.js',
   'gif-picker.js',
   'sticker-packs.js',
+  'micro-interactions.js',
   'app-init.js',
 ];
 
