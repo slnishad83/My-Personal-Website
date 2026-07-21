@@ -32,7 +32,6 @@
   <link rel="apple-touch-icon" href="app-icon-192.png">
 
   <!-- Preconnect for faster external resource loading -->
-  <link rel="preconnect" href="https://cdn.tailwindcss.com">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="preconnect" href="https://cdnjs.cloudflare.com">
@@ -41,10 +40,10 @@
   <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
 
   <!-- Google Fonts (font-display: swap for performance) -->
-  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Manrope:wght@400;500;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-
-  <!-- Material Symbols -->
-  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=block" rel="stylesheet">
+  <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
+  <link rel="preload" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=block" as="style" onload="this.onload=null;this.rel='stylesheet'">
+  <noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet"></noscript>
+  <noscript><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=block" rel="stylesheet"></noscript>
   <style>
     :root {
       --wa-empty-icon-bg: rgba(0, 191, 165, 0.1);
@@ -523,6 +522,14 @@
 
       <!-- Messages Container Wrap -->
       <div class="flex-1 overflow-y-scroll overflow-x-hidden p-gutter space-y-6 custom-scrollbar bg-surface-dim/40 flex flex-col hidden" id="messages-wrap" role="log" aria-live="polite" aria-label="Messages">
+        <!-- Loading skeleton shown while messages load -->
+        <div id="messages-skeleton" class="space-y-4 p-4">
+          <div class="flex justify-start"><div class="w-3/5 h-10 bg-surface-container-highest/50 rounded-2xl rounded-tl-sm animate-pulse"></div></div>
+          <div class="flex justify-end"><div class="w-2/5 h-12 bg-primary-container/30 rounded-2xl rounded-tr-sm animate-pulse"></div></div>
+          <div class="flex justify-start"><div class="w-1/2 h-8 bg-surface-container-highest/50 rounded-2xl rounded-tl-sm animate-pulse"></div></div>
+          <div class="flex justify-end"><div class="w-3/5 h-14 bg-primary-container/30 rounded-2xl rounded-tr-sm animate-pulse"></div></div>
+          <div class="flex justify-start"><div class="w-2/5 h-10 bg-surface-container-highest/50 rounded-2xl rounded-tl-sm animate-pulse"></div></div>
+        </div>
         <!-- Dynamically rendered messages -->
       </div>
 
@@ -1439,142 +1446,143 @@
   <input type="file" id="file-input-avatar" class="hidden-input" accept="image/*">
 
   <!-- Firebase SDKs -->
-  <script src="https://www.gstatic.com/firebasejs/12.16.0/firebase-app-compat.js" crossorigin="anonymous"></script>
-  <script src="https://www.gstatic.com/firebasejs/12.16.0/firebase-auth-compat.js" crossorigin="anonymous"></script>
-  <script src="https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore-compat.js" crossorigin="anonymous"></script>
-  <script src="https://www.gstatic.com/firebasejs/12.16.0/firebase-storage-compat.js" crossorigin="anonymous"></script>
-  <script src="https://www.gstatic.com/firebasejs/12.16.0/firebase-messaging-compat.js" crossorigin="anonymous"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js" integrity="sha384-+mbV2IY1Zk/X1p/nWllGySJSUN8uMs+gUAN10Or95UBH0fpj6GfKgPmgC5EXieXG" crossorigin="anonymous"></script>
-  <script src="config.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/12.16.0/firebase-app-compat.js" crossorigin="anonymous" defer></script>
+  <script src="https://www.gstatic.com/firebasejs/12.16.0/firebase-auth-compat.js" crossorigin="anonymous" defer></script>
+  <script src="https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore-compat.js" crossorigin="anonymous" defer></script>
+  <script src="https://www.gstatic.com/firebasejs/12.16.0/firebase-storage-compat.js" crossorigin="anonymous" defer></script>
+  <script src="https://www.gstatic.com/firebasejs/12.16.0/firebase-messaging-compat.js" crossorigin="anonymous" defer></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js" integrity="sha384-+mbV2IY1Zk/X1p/nWllGySJSUN8uMs+gUAN10Or95UBH0fpj6GfKgPmgC5EXieXG" crossorigin="anonymous" defer></script>
+  <script src="config.js" defer></script>
   <!-- Main App JS Core (shared logic) -->
-  <script src="../app.js"></script>
-  <script src="../app-extras.js"></script>
+  <script src="../app.js" defer></script>
+  <script src="../app-extras.js" defer></script>
+  <script src="lazy-modules.js" defer></script>
 
   <!-- Infrastructure Modules -->
-  <script src="platform-detect.js"></script>
-  <script src="smart-notifications.js"></script>
-  <script src="file-versioning.js"></script>
-  <script src="cloud-drive.js"></script>
-  <script src="collaborative-whiteboard.js"></script>
-  <script src="image-annotation.js"></script>
-  <script src="offline-queue.js"></script>
-  <script src="call-sync.js"></script>
-  <script src="presence.js"></script>
-  <script src="multi-device.js"></script>
-  <script src="qr-code-gen.js"></script>
-  <script src="qr-scanner.js"></script>
-  <script src="contact-sync.js"></script>
-  <script src="security.js"></script>
-  <script src="error-boundary.js"></script>
-  <script src="mutation-bus.js"></script>
-  <script src="virtual-scroll.js"></script>
-  <script src="accessibility.js"></script>
-  <script src="keyboard-shortcuts.js"></script>
-  <script src="permissions-manager.js"></script>
-  <script src="chat-missing-features.js"></script>
-  <script src="pull-to-refresh.js"></script>
-  <script src="pinch-zoom.js"></script>
-  <script src="swipe-delete.js"></script>
-  <script src="back-button.js"></script>
-  <script src="ios-keyboard-fix.js"></script>
+  <script src="platform-detect.js" defer></script>
+  <script src="smart-notifications.js" defer></script>
+  <script src="file-versioning.js" defer></script>
+  <script src="cloud-drive.js" defer></script>
+  <script src="collaborative-whiteboard.js" defer></script>
+  <script src="image-annotation.js" defer></script>
+  <script src="offline-queue.js" defer></script>
+  <script src="call-sync.js" defer></script>
+  <script src="presence.js" defer></script>
+  <script src="multi-device.js" defer></script>
+  <script src="qr-code-gen.js" defer></script>
+  <script src="qr-scanner.js" defer></script>
+  <script src="contact-sync.js" defer></script>
+  <script src="security.js" defer></script>
+  <script src="error-boundary.js" defer></script>
+  <script src="mutation-bus.js" defer></script>
+  <script src="virtual-scroll.js" defer></script>
+  <script src="accessibility.js" defer></script>
+  <script src="keyboard-shortcuts.js" defer></script>
+  <script src="permissions-manager.js" defer></script>
+  <script src="chat-missing-features.js" defer></script>
+  <script src="pull-to-refresh.js" defer></script>
+  <script src="pinch-zoom.js" defer></script>
+  <script src="swipe-delete.js" defer></script>
+  <script src="back-button.js" defer></script>
+  <script src="ios-keyboard-fix.js" defer></script>
   <!-- Feature modules -->
-  <script src="chat-enhancements.js"></script>
-  <script src="chat-fixes.js"></script>
+  <script src="chat-enhancements.js" defer></script>
+  <script src="chat-fixes.js" defer></script>
   <!-- Feature scripts moved from head to enforce correct App loading order -->
-  <script src="smart-reply.js"></script>
-  <script src="streak.js"></script>
-  <script src="saved-messages.js"></script>
-  <script src="self-destruct.js"></script>
-  <script src="message-scheduler.js"></script>
-  <script src="translation.js"></script>
-  <script src="message-copy.js"></script>
-  <script src="screen-share.js"></script>
-  <script src="chat-lock.js"></script>
-  <script src="ghost-mode.js"></script>
-  <script src="screenshot-control.js"></script>
-  <script src="message-recall.js"></script>
-  <script src="sensitive-content.js"></script>
-  <script src="mini-games.js"></script>
-  <script src="mood-status.js"></script>
-  <script src="date-reminders.js"></script>
-  <script src="ai-features.js"></script>
-  <script src="chat-export.js"></script>
-  <script src="music-player.js"></script>
-  <script src="music-library.js"></script>
-  <script src="playlist-core.js"></script>
-  <script src="playlist-ui.js"></script>
-  <script src="playlist-sync.js"></script>
-  <script src="threads.js"></script>
-  <script src="message-search.js"></script>
-  <script src="notification-prefs.js"></script>
-  <script src="notification-digest.js"></script>
-  <script src="notification-reply.js"></script>
-  <script src="notification-orchestrator.js"></script>
-  <script src="notification-bell.js"></script>
-  <script src="notification-telemetry.js"></script>
-  <script src="ios-callkit.js"></script>
-  <script src="desktop-notifications.js"></script>
-  <script src="pwa-install.js"></script>
-  <script src="ui-compliance.js"></script>
-  <script src="audit-interactions.js"></script>
-  <script src="whatsapp-enhancements.js"></script>
-  <script src="jsQR.js?v=2"></script>
-  <script src="calculator.js"></script>
-  <script src="features-addon.js"></script>
-  <script src="scheduled-calendar.js"></script>
-  <script src="snooze-history.js"></script>
-  <script src="snooze-enhancements.js"></script>
-  <script src="ai-bot.js"></script>
-  <script src="group-message-info.js"></script>
-  <script src="fixes.js"></script>
-  <script src="feature-updates.js"></script>
-  <script src="sync-audit.js"></script>
-  <script src="url-preview.js"></script>
-  <script src="redesign-base.js"></script>
-  <script src="request-priority.js"></script>
-  <script src="sanitize.js"></script>
-  <script src="clipboard-paste.js"></script>
-  <script src="desktop-fullscreen.js"></script>
-  <script src="desktop-context-menu.js"></script>
-  <script src="window-title.js"></script>
-  <script src="whatsapp-share.js"></script>
-  <script src="swipe-nav.js"></script>
-  <script src="push-notifications.js"></script>
-  <script src="attachment-reliability.js"></script>
-  <script src="task-from-message.js"></script>
-  <script src="meeting-scheduler.js"></script>
-  <script src="chat-permissions.js"></script>
-  <script src="announcement-mode.js"></script>
-  <script src="channel-mode.js"></script>
-  <script src="two-factor-auth.js"></script>
-  <script src="account-deletion.js"></script>
-  <script src="view-once.js"></script>
-  <script src="live-location.js"></script>
-  <script src="data-saver.js"></script>
-  <script src="wallpaper-gallery.js"></script>
-  <script src="help-support.js"></script>
-  <script src="reply-private.js"></script>
-  <script src="group-meta.js"></script>
+  <script src="smart-reply.js" defer></script>
+  <script src="streak.js" defer></script>
+  <script src="saved-messages.js" defer></script>
+  <script src="self-destruct.js" defer></script>
+  <script src="message-scheduler.js" defer></script>
+  <script src="translation.js" defer></script>
+  <script src="message-copy.js" defer></script>
+  <script src="screen-share.js" defer></script>
+  <script src="chat-lock.js" defer></script>
+  <script src="ghost-mode.js" defer></script>
+  <script src="screenshot-control.js" defer></script>
+  <script src="message-recall.js" defer></script>
+  <script src="sensitive-content.js" defer></script>
+  <script src="mini-games.js" defer></script>
+  <script src="mood-status.js" defer></script>
+  <script src="date-reminders.js" defer></script>
+  <script src="ai-features.js" defer></script>
+  <script src="chat-export.js" defer></script>
+  <script src="music-player.js" defer></script>
+  <script src="music-library.js" defer></script>
+  <script src="playlist-core.js" defer></script>
+  <script src="playlist-ui.js" defer></script>
+  <script src="playlist-sync.js" defer></script>
+  <script src="threads.js" defer></script>
+  <script src="message-search.js" defer></script>
+  <script src="notification-prefs.js" defer></script>
+  <script src="notification-digest.js" defer></script>
+  <script src="notification-reply.js" defer></script>
+  <script src="notification-orchestrator.js" defer></script>
+  <script src="notification-bell.js" defer></script>
+  <script src="notification-telemetry.js" defer></script>
+  <script src="ios-callkit.js" defer></script>
+  <script src="desktop-notifications.js" defer></script>
+  <script src="pwa-install.js" defer></script>
+  <script src="ui-compliance.js" defer></script>
+  <script src="audit-interactions.js" defer></script>
+  <script src="whatsapp-enhancements.js" defer></script>
+  <script src="jsQR.js?v=2" defer></script>
+  <script src="calculator.js" defer></script>
+  <script src="features-addon.js" defer></script>
+  <script src="scheduled-calendar.js" defer></script>
+  <script src="snooze-history.js" defer></script>
+  <script src="snooze-enhancements.js" defer></script>
+  <script src="ai-bot.js" defer></script>
+  <script src="group-message-info.js" defer></script>
+  <script src="fixes.js" defer></script>
+  <script src="feature-updates.js" defer></script>
+  <script src="sync-audit.js" defer></script>
+  <script src="url-preview.js" defer></script>
+  <script src="redesign-base.js" defer></script>
+  <script src="request-priority.js" defer></script>
+  <script src="sanitize.js" defer></script>
+  <script src="clipboard-paste.js" defer></script>
+  <script src="desktop-fullscreen.js" defer></script>
+  <script src="desktop-context-menu.js" defer></script>
+  <script src="window-title.js" defer></script>
+  <script src="whatsapp-share.js" defer></script>
+  <script src="swipe-nav.js" defer></script>
+  <script src="push-notifications.js" defer></script>
+  <script src="attachment-reliability.js" defer></script>
+  <script src="task-from-message.js" defer></script>
+  <script src="meeting-scheduler.js" defer></script>
+  <script src="chat-permissions.js" defer></script>
+  <script src="announcement-mode.js" defer></script>
+  <script src="channel-mode.js" defer></script>
+  <script src="two-factor-auth.js" defer></script>
+  <script src="account-deletion.js" defer></script>
+  <script src="view-once.js" defer></script>
+  <script src="live-location.js" defer></script>
+  <script src="data-saver.js" defer></script>
+  <script src="wallpaper-gallery.js" defer></script>
+  <script src="help-support.js" defer></script>
+  <script src="reply-private.js" defer></script>
+  <script src="group-meta.js" defer></script>
   <!-- WhatsApp feature parity modules -->
-  <script src="call-controller.js"></script>
-  <script src="group-call.js"></script>
-  <script src="call-history.js"></script>
-  <script src="archive-chat.js"></script>
-  <script src="forward-modal.js"></script>
-  <script src="block-user.js"></script>
-  <script src="message-reactions.js"></script>
-  <script src="delete-group.js"></script>
-  <script src="profile-edit.js"></script>
-  <script src="app-lock.js"></script>
-  <script src="video-notes.js"></script>
-  <script src="in-call-reactions.js"></script>
-  <script src="status.js"></script>
-  <script src="status-viewer.js"></script>
-  <script src="notification-nav.js"></script>
-  <script src="unread-polish.js"></script>
-  <script src="home-camera.js"></script>
-  <script src="group-features.js"></script>
-  <script src="app-init.js"></script>
+  <script src="call-controller.js" defer></script>
+  <script src="group-call.js" defer></script>
+  <script src="call-history.js" defer></script>
+  <script src="archive-chat.js" defer></script>
+  <script src="forward-modal.js" defer></script>
+  <script src="block-user.js" defer></script>
+  <script src="message-reactions.js" defer></script>
+  <script src="delete-group.js" defer></script>
+  <script src="profile-edit.js" defer></script>
+  <script src="app-lock.js" defer></script>
+  <script src="video-notes.js" defer></script>
+  <script src="in-call-reactions.js" defer></script>
+  <script src="status.js" defer></script>
+  <script src="status-viewer.js" defer></script>
+  <script src="notification-nav.js" defer></script>
+  <script src="unread-polish.js" defer></script>
+  <script src="home-camera.js" defer></script>
+  <script src="group-features.js" defer></script>
+  <script src="app-init.js" defer></script>
 
   <!-- PWA Service Worker Registration -->
   <script>
@@ -1695,7 +1703,7 @@
   </script>
 
   <!-- D-L7: App version display in console (version from version.js) -->
-  <script src="version.js"></script>
+  <script src="version.js" defer></script>
   <!-- Pre-Permission Explanation Dialog -->
   <div id="prePermissionModal" class="overlay fixed inset-0 z-[110] bg-black/60 backdrop-blur-sm flex items-center justify-center hidden" role="dialog" aria-modal="true" aria-labelledby="prePermissionTitle">
     <div class="bg-surface-container border border-outline-variant/30 rounded-2xl w-full max-w-sm shadow-2xl p-6 m-4 text-center">

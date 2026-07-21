@@ -22,7 +22,7 @@
   function _show(id) { var e = _$(id); if (e) e.classList.remove('hidden'); }
   function _hide(id) { var e = _$(id); if (e) e.classList.add('hidden'); }
   function _toast(msg, t) { if (typeof window.showToast === 'function') window.showToast(msg, t || 'info'); }
-  function _esc(s) { if (!s) return ''; return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;'); }
+  var _esc = function(s) { return App && App.escHtml ? App.escHtml(s) : (s ? String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;') : ''); };
 
   function _getCallDuration(durationMs) {
     if (durationMs == null || durationMs === 0) return '';

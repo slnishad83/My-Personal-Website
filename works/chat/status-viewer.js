@@ -19,7 +19,7 @@
 
   var REACTION_EMOJIS = ['👍', '❤️', '😂', '😮', '😢', '🙏'];
 
-  function _esc(s) { return (window.escHtml || (window.App && window.App.escHtml) || function (x) { return x; })(s); }
+  var _esc = function(s) { return App && App.escHtml ? App.escHtml(s) : (s ? String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;') : ''); };
   function _toast(msg, t) { if (typeof window.showToast === 'function') window.showToast(msg, t || 'info'); }
   function _uid() { return (window.App && window.App.auth && window.App.auth.currentUser) ? window.App.auth.currentUser.uid : (window.currentUser ? window.currentUser.uid : null); }
   function _now() { return Date.now(); }

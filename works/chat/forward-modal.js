@@ -17,12 +17,7 @@
     return (window.currentUser && window.currentUser.uid) || (typeof currentUser !== 'undefined' && currentUser && currentUser.uid) || null;
   }
 
-  function _esc(str) {
-    if (typeof window.escHtml === 'function') return window.escHtml(str);
-    var d = document.createElement('div');
-    d.textContent = str;
-    return d.innerHTML;
-  }
+  var _esc = function(s) { return App && App.escHtml ? App.escHtml(s) : (s ? String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;') : ''); };
 
   function _injectStyles() {
     if (document.getElementById('forward-modal-styles')) return;

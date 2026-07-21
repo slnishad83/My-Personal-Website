@@ -226,12 +226,27 @@ self.addEventListener('notificationclick', event => {
   );
 });
 
-const CACHE_NAME = 'nsl-chat-v2.5.4';
-const CACHE_MAX_ENTRIES = 100;
+const CACHE_NAME = 'nsl-chat-v3.0.0';
+const CACHE_MAX_ENTRIES = 300;
 const STATIC_ASSETS = [
   'chat.css',
   'config.js',
   'chat-theme.css',
+  'chat-enhancements.css',
+  'chat-missing-features.css',
+  'redesign-base.css',
+  'accessibility.css',
+  'new-features.css',
+  'auth-theme.css',
+  'chat-consolidated.css',
+  'message-actions.css',
+  'scheduled-calendar.css',
+  'notification-prefs.css',
+  'url-preview.css',
+  'translation-ui.css',
+  'sync-audit.css',
+  'snooze-history.css',
+  'snooze-enhancements.css',
   'notification-reply.js',
   'notification-sounds.js',
   'manifest.json',
@@ -261,6 +276,25 @@ const STATIC_ASSETS = [
   'ios-callkit.js',
   'desktop-notifications.js',
   'permissions-manager.js',
+  'call-controller.js',
+  'group-call.js',
+  'call-history.js',
+  'archive-chat.js',
+  'forward-modal.js',
+  'block-user.js',
+  'message-reactions.js',
+  'delete-group.js',
+  'profile-edit.js',
+  'app-lock.js',
+  'video-notes.js',
+  'in-call-reactions.js',
+  'status.js',
+  'status-viewer.js',
+  'notification-nav.js',
+  'unread-polish.js',
+  'home-camera.js',
+  'group-features.js',
+  'lazy-modules.js',
   '../app-extras.js',
   '../app.js'
 ];

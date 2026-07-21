@@ -110,6 +110,24 @@ const BUNDLE_ORDER = [
   'playlist-core.js',
   'playlist-ui.js',
   'playlist-sync.js',
+  'call-controller.js',
+  'group-call.js',
+  'call-history.js',
+  'archive-chat.js',
+  'forward-modal.js',
+  'block-user.js',
+  'message-reactions.js',
+  'delete-group.js',
+  'profile-edit.js',
+  'app-lock.js',
+  'video-notes.js',
+  'in-call-reactions.js',
+  'status.js',
+  'status-viewer.js',
+  'notification-nav.js',
+  'unread-polish.js',
+  'home-camera.js',
+  'group-features.js',
   'app-init.js',
 ];
 
@@ -151,6 +169,8 @@ const CSS_FILES = [
   'snooze-history.css',
   'snooze-enhancements.css',
   'chat-consolidated.css',
+  'new-features.css',
+  'auth-theme.css',
 ];
 
 function ensureDir(dir) {
@@ -477,7 +497,7 @@ function processIndexHtml() {
   html = html.replace(/<script id="tailwind-config">[\s\S]*?<\/script>\s*\n?/, '');
 
   // Replace all individual CSS links with bundled CSS and app.css
-  const cssLinkRegex = /<link rel="stylesheet" href="(?:chat-theme|redesign-base|chat-enhancements|chat-consolidated|chat|chat-missing-features|accessibility|message-actions|scheduled-calendar|notification-prefs|url-preview|translation-ui|sync-audit|snooze-history|snooze-enhancements)\.css">\s*\n?/g;
+  const cssLinkRegex = /<link rel="stylesheet" href="(?:chat-theme|redesign-base|chat-enhancements|chat-consolidated|chat|chat-missing-features|accessibility|message-actions|scheduled-calendar|notification-prefs|url-preview|translation-ui|sync-audit|snooze-history|snooze-enhancements|new-features|auth-theme)\.css">\s*\n?/g;
   html = html.replace(cssLinkRegex, '');
   
   html = html.replace(
@@ -507,10 +527,10 @@ function processIndexHtml() {
   // Insert before </body>
   html = html.replace(/<\/body>/, scriptTags + '</body>');
 
-  // Production CSP — 'unsafe-inline' required for inline onclick handlers used throughout the app
+  // Production CSP — nonce-based where possible, unsafe-inline for inline onclick handlers
   html = html.replace(
     /<meta http-equiv="Content-Security-Policy" content="[^"]*">/,
-    `<meta http-equiv="Content-Security-Policy" content="default-src 'self' https: blob: data: 'unsafe-inline' 'unsafe-eval'; script-src 'self' https://cdn.tailwindcss.com https://www.gstatic.com 'unsafe-inline' 'unsafe-eval'; style-src 'self' https://fonts.googleapis.com 'unsafe-inline'; img-src 'self' https: blob: data:; font-src 'self' https://fonts.gstatic.com; connect-src 'self' https: wss://*.firebaseio.com; frame-src 'self' https:; worker-src 'self' blob:; frame-ancestors 'self'; form-action 'self';">`
+    `<meta http-equiv="Content-Security-Policy" content="default-src 'self' https: blob: data:; script-src 'self' 'unsafe-eval' https://www.gstatic.com https://unpkg.com https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' https: blob: data:; font-src 'self' https://fonts.gstatic.com; connect-src 'self' https: wss://*.firebaseio.com; frame-src 'self' https:; worker-src 'self' blob:; frame-ancestors 'self'; form-action 'self'; base-uri 'self';">`
   );
 
   return html;
@@ -564,7 +584,7 @@ console.log('[build] Copying static assets...');
 ensureDir(join(DIST, 'sounds'));
 
 // Copy JS files not in bundle (processing sw.js for dynamic caching)
-const extraJs = ['sw.js', 'notification-sounds.js', 'pwa-install.js', 'version.js'];
+const extraJs = ['sw.js', 'notification-sounds.js', 'pwa-install.js', 'version.js', 'lazy-modules.js'];
 for (const f of extraJs) {
   try {
     if (f === 'sw.js') {

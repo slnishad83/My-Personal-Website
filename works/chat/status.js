@@ -19,7 +19,7 @@
     return u ? (u.photoURL || '') : '';
   }
   function _toast(msg, t) { if (typeof window.showToast === 'function') window.showToast(msg, t || 'info'); }
-  function _esc(s) { return (window.escHtml || (window.App && window.App.escHtml) || function (x) { return x; })(s); }
+  var _esc = function(s) { return App && App.escHtml ? App.escHtml(s) : (s ? String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;') : ''); };
   function _now() { return Date.now(); }
   function _expiresAt() { return _now() + STATUS_DURATION_MS; }
   function _isExpired(s) { return s && s.expiresAt && s.expiresAt < _now(); }

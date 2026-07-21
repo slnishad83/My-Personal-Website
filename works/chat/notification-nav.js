@@ -8,9 +8,7 @@
     return (window.App && window.App.db) ? window.App.db : (window.firebase ? window.firebase.firestore() : null);
   }
 
-  function _esc(s) {
-    return window.escHtml ? window.escHtml(String(s ?? '')) : String(s ?? '');
-  }
+  var _esc = function(s) { return App && App.escHtml ? App.escHtml(s) : (s ? String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;') : ''); };
 
   function _getChatId() {
     if (window.currentChat && window.currentChat.id) return window.currentChat.id;

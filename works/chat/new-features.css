@@ -851,3 +851,35 @@
   .app-lock-key:active, .group-call-controls button:active,
   .in-call-reaction-emoji { animation: none !important; transition: none !important; }
 }
+
+#messages-skeleton .animate-pulse {
+  animation: skeleton-pulse 1.5s ease-in-out infinite;
+}
+@keyframes skeleton-pulse {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 0.7; }
+}
+#messages-skeleton.hidden { display: none; }
+
+#messages-wrap { position: relative; }
+.msg-appear {
+  animation: msgSlideIn 0.2s ease-out;
+}
+@keyframes msgSlideIn {
+  from { opacity: 0; transform: translateY(8px) scale(0.97); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+.msg-appear-sent {
+  animation: msgSlideInRight 0.2s ease-out;
+}
+@keyframes msgSlideInRight {
+  from { opacity: 0; transform: translateX(12px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+.msg-appear-received {
+  animation: msgSlideInLeft 0.2s ease-out;
+}
+@keyframes msgSlideInLeft {
+  from { opacity: 0; transform: translateX(-12px); }
+  to { opacity: 1; transform: translateX(0); }
+}

@@ -4,7 +4,7 @@
   function _db() { return (window.App && window.App.db) ? window.App.db : (typeof firebase !== 'undefined' ? firebase.firestore() : null); }
   function _uid() { return (window.currentUser ? window.currentUser.uid : null); }
   function _toast(msg, t) { if (typeof window.showToast === 'function') window.showToast(msg, t || 'info'); }
-  function _esc(s) { return (window.escHtml ? window.escHtml(s) : String(s)); }
+  var _esc = function(s) { return App && App.escHtml ? App.escHtml(s) : (s ? String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;') : ''); };
 
   function _getGroupRef(groupId) {
     var f = _db();

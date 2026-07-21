@@ -31,7 +31,7 @@
     return (typeof currentUser !== 'undefined' ? currentUser : auth?.currentUser)?.uid || null;
   }
   function _db()  { return typeof db !== 'undefined' ? db : null; }
-  function _esc(s){ return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  var _esc = function(s) { return App && App.escHtml ? App.escHtml(s) : (s ? String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;') : ''); };
 
   const PRIORITY_CFG = {
     high:   { label: 'High',   icon: '🔴', cls: 'rp-high' },

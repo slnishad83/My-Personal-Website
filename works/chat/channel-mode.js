@@ -15,9 +15,7 @@
     return '_channel_' + channelId;
   }
 
-  function _esc(s) {
-    return window.escHtml ? window.escHtml(String(s ?? '')) : String(s ?? '');
-  }
+  var _esc = function(s) { return App && App.escHtml ? App.escHtml(s) : (s ? String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;') : ''); };
 
   function init() {
     injectChannelButton();

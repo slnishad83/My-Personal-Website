@@ -9,12 +9,7 @@
   'use strict';
 
   /* ---- safe helpers ---- */
-  function _esc(str) {
-    if (typeof window.escapeHtml === 'function') return window.escapeHtml(String(str ?? ''));
-    return String(str ?? '')
-      .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
-      .replace(/"/g,'&quot;').replace(/'/g,'&#x27;');
-  }
+  var _esc = function(s) { return App && App.escHtml ? App.escHtml(s) : (s ? String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;') : ''); };
   function _bytes(b) {
     if (typeof window.formatBytes === 'function') return window.formatBytes(b);
     if (!b) return '';
