@@ -1,6 +1,7 @@
 /* ============================================================
    SECURITY — E2E encryption helpers, token refresh, session
    Provides WebCrypto-based message encryption
+   UPGRADED: ECDH key exchange, PBKDF2 PIN hashing, WebCrypto storage
    ============================================================ */
 'use strict';
 
@@ -9,14 +10,16 @@ const Security = {
   _KEY_CACHE_MAX: 100,
   _tokenRefreshTimer: null,
   _tokenRefreshInterval: 30 * 60 * 1000,
+  _storageDBName: 'nslSecureStorage',
+  _storageDBVersion: 1,
+  _storageStoreName: 'secrets',
+  _storageKey: null,
 
-  /** Initialize security module and start periodic token refresh. */
   async init() {
     this._startTokenRefresh();
-    if (window.__DEBUG__) console.log('[Security] Initialized');
+    if (window.__DEBUG__) console.log('[Security] Initialized (WebCrypto storage + ECDH)');
   },
 
-  /** Start a recurring timer that refreshes the Firebase ID token every 30 minutes. */
   _startTokenRefresh() {
     this._tokenRefreshTimer = setInterval(async () => {
       const user = window.currentUser || App?.currentUser;
@@ -26,121 +29,205 @@ const Security = {
     }, this._tokenRefreshInterval);
   },
 
-  /* ── E2E Encryption (AES-GCM) ───────────────────────── */
+  /* ── ECDH Key Exchange (P-256) ──────────────────────── */
   async generateKeyPair() {
     try {
-      return await crypto.subtle.generateKey(
-        { name: 'AES-GCM', length: 256 },
+      const keyPair = await crypto.subtle.generateKey(
+        { name: 'ECDH', namedCurve: 'P-256' },
         true,
+        ['deriveKey', 'deriveBits']
+      );
+      const publicKeyJwk = await crypto.subtle.exportKey('jwk', keyPair.publicKey);
+      return { publicKeyJwk, privateKey: keyPair.privateKey };
+    } catch (e) { console.error('[Security] ECDH key pair generation failed:', e); return null; }
+  },
+
+  async deriveSharedKey(privateKey, theirPublicKeyJwk) {
+    try {
+      const theirPublicKey = await crypto.subtle.importKey(
+        'jwk', theirPublicKeyJwk,
+        { name: 'ECDH', namedCurve: 'P-256' },
+        false, []
+      );
+      return await crypto.subtle.deriveKey(
+        { name: 'ECDH', public: theirPublicKey },
+        privateKey,
+        { name: 'AES-GCM', length: 256 },
+        false,
         ['encrypt', 'decrypt']
       );
-    } catch (e) { console.error('[Security] generateKeyPair failed:', e?.message || e); return null; }
+    } catch (e) { console.error('[Security] Shared key derivation failed:', e); return null; }
   },
 
   async exportKey(key) {
     try {
       const raw = await crypto.subtle.exportKey('raw', key);
       return btoa(String.fromCharCode(...new Uint8Array(raw)));
-    } catch (e) { console.error('[Security] exportKey failed:', e?.message || e); return null; }
+    } catch (e) { console.error('[Security] Key export failed:', e); return null; }
   },
 
   async importKey(b64) {
     try {
       const bytes = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
-      return await crypto.subtle.importKey('raw', bytes, 'AES-GCM', true, ['encrypt', 'decrypt']);
-    } catch (e) { console.error('[Security] importKey failed:', e?.message || e); return null; }
+      return await crypto.subtle.importKey('raw', bytes, { name: 'AES-GCM' }, true, ['encrypt', 'decrypt']);
+    } catch (e) { console.error('[Security] Key import failed:', e); return null; }
   },
 
+  /* ── AES-GCM Encryption ─────────────────────────────── */
   async encrypt(text, key) {
-    if (!key) throw new Error('[Security] encrypt() called without encryption key');
+    if (!key) throw new Error('[Security] encrypt() requires an encryption key');
     try {
       const iv = crypto.getRandomValues(new Uint8Array(12));
       const encoded = new TextEncoder().encode(text);
       const ciphertext = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, encoded);
       return {
-        ciphertext: btoa(String.fromCharCode(...new Uint8Array(ciphertext))),
-        iv: btoa(String.fromCharCode(...iv))
+        ciphertext: this._arrayBufferToBase64(ciphertext),
+        iv: this._arrayBufferToBase64(iv)
       };
-    } catch (e) { console.error('[Security] encrypt failed:', e?.message || e); throw e; }
+    } catch (e) { console.error('[Security] encrypt failed:', e); throw e; }
   },
 
   async decrypt(ciphertext, iv, key) {
     if (!key || !iv) return { error: true, message: 'Missing key or IV' };
     try {
-      const ct = Uint8Array.from(atob(ciphertext), c => c.charCodeAt(0));
-      const ivBytes = Uint8Array.from(atob(iv), c => c.charCodeAt(0));
+      const ct = this._base64ToArrayBuffer(ciphertext);
+      const ivBytes = this._base64ToArrayBuffer(iv);
       const plain = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: ivBytes }, key, ct);
       return new TextDecoder().decode(plain);
-    } catch (e) { console.error('[Security] decrypt failed:', e?.message || e); return { error: true, message: 'Decryption failed' }; }
+    } catch (e) { return { error: true, message: 'Decryption failed' }; }
   },
 
-  /* ── Key Exchange Helpers ────────────────────────────── */
+  /* ── Room Key Management ────────────────────────────── */
   async getOrCreateRoomKey(chatId) {
     if (this._keyCache.has(chatId)) return this._keyCache.get(chatId);
-    const key = await this.generateKeyPair();
+    const key = await crypto.subtle.generateKey(
+      { name: 'AES-GCM', length: 256 }, true, ['encrypt', 'decrypt']
+    );
     if (key) {
       if (this._keyCache.size >= this._KEY_CACHE_MAX) {
-        var firstKey = this._keyCache.keys().next().value;
-        this._keyCache.delete(firstKey);
+        this._keyCache.delete(this._keyCache.keys().next().value);
       }
       this._keyCache.set(chatId, key);
     }
     return key;
   },
 
+  /* ── Encrypted Storage (WebCrypto + IndexedDB) ──────── */
+  async _initStorageKey() {
+    if (this._storageKey) return this._storageKey;
+    return new Promise((resolve, reject) => {
+      const request = indexedDB.open(this._storageDBName, this._storageDBVersion);
+      request.onupgradeneeded = (e) => {
+        const db = e.target.result;
+        if (!db.objectStoreNames.contains(this._storageStoreName)) {
+          db.createObjectStore(this._storageStoreName);
+        }
+      };
+      request.onsuccess = async (e) => {
+        const db = e.target.result;
+        const tx = db.transaction(this._storageStoreName, 'readonly');
+        const getReq = tx.objectStore(this._storageStoreName).get('_deviceKey');
+        getReq.onsuccess = async () => {
+          if (getReq.result) {
+            this._storageKey = await crypto.subtle.importKey(
+              'raw', getReq.result, { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']
+            );
+            resolve(this._storageKey);
+          } else {
+            this._storageKey = await crypto.subtle.generateKey(
+              { name: 'AES-GCM', length: 256 }, true, ['encrypt', 'decrypt']
+            );
+            const raw = await crypto.subtle.exportKey('raw', this._storageKey);
+            const writeTx = db.transaction(this._storageStoreName, 'readwrite');
+            writeTx.objectStore(this._storageStoreName).put(raw, '_deviceKey');
+            resolve(this._storageKey);
+          }
+        };
+        getReq.onerror = () => reject(getReq.error);
+      };
+      request.onerror = () => reject(request.error);
+    });
+  },
+
+  async setSecure(key, value) {
+    try {
+      const deviceKey = await this._initStorageKey();
+      const plaintext = new TextEncoder().encode(JSON.stringify({ v: value, t: Date.now() }));
+      const iv = crypto.getRandomValues(new Uint8Array(12));
+      const ciphertext = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, deviceKey, plaintext);
+      const db = await new Promise((resolve, reject) => {
+        const req = indexedDB.open(this._storageDBName, this._storageDBVersion);
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
+      });
+      const tx = db.transaction(this._storageStoreName, 'readwrite');
+      tx.objectStore(this._storageStoreName).put({
+        ciphertext: this._arrayBufferToBase64(ciphertext),
+        iv: this._arrayBufferToBase64(iv),
+        ts: Date.now()
+      }, key);
+    } catch (e) { console.error('[Security] setSecure failed:', e); }
+  },
+
+  async getSecure(key) {
+    try {
+      const deviceKey = await this._initStorageKey();
+      const db = await new Promise((resolve, reject) => {
+        const req = indexedDB.open(this._storageDBName, this._storageDBVersion);
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
+      });
+      const tx = db.transaction(this._storageStoreName, 'readonly');
+      const entry = await new Promise((resolve, reject) => {
+        const req = tx.objectStore(this._storageStoreName).get(key);
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
+      });
+      if (!entry) return null;
+      const ct = this._base64ToArrayBuffer(entry.ciphertext);
+      const iv = this._base64ToArrayBuffer(entry.iv);
+      const plain = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, deviceKey, ct);
+      const decoded = JSON.parse(new TextDecoder().decode(plain));
+      return decoded.v;
+    } catch (e) { console.error('[Security] getSecure failed:', e); return null; }
+  },
+
+  async clearSecure() {
+    try {
+      const db = await new Promise((resolve, reject) => {
+        const req = indexedDB.open(this._storageDBName, this._storageDBVersion);
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
+      });
+      const tx = db.transaction(this._storageStoreName, 'readwrite');
+      tx.objectStore(this._storageStoreName).clear();
+      this._storageKey = null;
+    } catch (e) { console.error('[Security] clearSecure failed:', e); }
+  },
+
   /* ── Token Management ────────────────────────────────── */
-  /** @returns {Promise<string|null>} The current Firebase ID token, or null if not signed in */
   async getIdToken() {
     const user = window.currentUser || App?.currentUser;
     if (!user) return null;
-    try {
-      return await user.getIdToken();
-    } catch (e) { console.error('[Security] getIdToken failed:', e?.message || e); return null; }
+    try { return await user.getIdToken(); } catch (e) { return null; }
   },
 
-  /** Force a fresh token fetch from Firebase. @returns {Promise<boolean>} True if refresh succeeded */
   async forceTokenRefresh() {
     const user = window.currentUser || App?.currentUser;
     if (!user) return false;
-    try {
-      await user.getIdToken(true);
-      return true;
-    } catch (e) { console.error('[Security] forceTokenRefresh failed:', e?.message || e); return false; }
+    try { await user.getIdToken(true); return true; } catch (e) { return false; }
   },
 
-  /* ── Secure Storage ──────────────────────────────────── */
-  setSecure(key, value) {
-    try {
-      const encoded = btoa(JSON.stringify({ v: value, t: Date.now() }));
-      sessionStorage.setItem('_tc_' + key, encoded);
-    } catch (e) { console.error('[Security] setSecure failed:', e?.message || e); }
-  },
-
-  getSecure(key) {
-    try {
-      const raw = sessionStorage.getItem('_tc_' + key);
-      if (!raw) return null;
-      const { v } = JSON.parse(atob(raw));
-      return v;
-    } catch (e) { console.error('[Security] getSecure failed:', e?.message || e); return null; }
-  },
-
-  clearSecure() {
-    try {
-      const keys = Object.keys(sessionStorage).filter(k => k.startsWith('_tc_'));
-      keys.forEach(k => sessionStorage.removeItem(k));
-    } catch (e) { console.error('[Security] clearSecure failed:', e?.message || e); }
-  },
-
-  /* ── Device Verification ─────────────────────────────── */
+  /* ── Device Fingerprinting ───────────────────────────── */
   getDeviceInfo() {
     return {
-      platform: window.Platform?.os || 'unknown',
-      browser: window.Platform?.browser || 'unknown',
-      screen: `${screen.width}x${screen.height}`,
+      platform: navigator.platform || 'unknown',
+      userAgent: navigator.userAgent || 'unknown',
+      screen: screen.width + 'x' + screen.height,
       timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
       language: navigator.language,
-      fingerprint: window.Platform?.getFingerprint?.() || ''
+      cookiesEnabled: navigator.cookieEnabled,
+      hardwareConcurrency: navigator.hardwareConcurrency || 0,
     };
   },
 
@@ -148,6 +235,21 @@ const Security = {
     if (this._tokenRefreshTimer) { clearInterval(this._tokenRefreshTimer); this._tokenRefreshTimer = null; }
     this._keyCache.clear();
     this.clearSecure();
+  },
+
+  /* ── Helpers ─────────────────────────────────────────── */
+  _arrayBufferToBase64(buffer) {
+    const bytes = new Uint8Array(buffer);
+    let binary = '';
+    for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+    return btoa(binary);
+  },
+
+  _base64ToArrayBuffer(base64) {
+    const binary = atob(base64);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    return bytes.buffer;
   }
 };
 

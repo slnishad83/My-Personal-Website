@@ -69,7 +69,6 @@
 
   async function _hashPin(pin) {
     var enc = new TextEncoder();
-    var data = enc.encode(pin);
     var settings = _getSettings();
     var salt = settings.pinSalt || '';
     if (!salt) {
@@ -78,9 +77,13 @@
       settings.pinSalt = salt;
       _saveSettings(settings);
     }
-    var saltData = enc.encode(salt + pin);
-    var hash = await crypto.subtle.digest('SHA-256', saltData);
-    return Array.from(new Uint8Array(hash)).map(function (b) { return b.toString(16).padStart(2, '0'); }).join('');
+    var saltBytes = Uint8Array.from(salt.match(/.{2}/g).map(function(b) { return parseInt(b, 16); }));
+    var keyMaterial = await crypto.subtle.importKey('raw', enc.encode(pin), 'PBKDF2', false, ['deriveBits']);
+    var bits = await crypto.subtle.deriveBits(
+      { name: 'PBKDF2', salt: saltBytes, iterations: 100000, hash: 'SHA-256' },
+      keyMaterial, 256
+    );
+    return Array.from(new Uint8Array(bits)).map(function (b) { return b.toString(16).padStart(2, '0'); }).join('');
   }
 
   function _ensureStyles() {

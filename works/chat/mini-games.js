@@ -2,8 +2,10 @@
 (function() {
   'use strict';
 
+  var _gameOverlayZIndex = 9999;
+
   // ─── WORD CHAIN ───
-  const _wordChainDict = [
+  var _wordChainDict = [
     'apple','elephant','tiger','rain','notebook','kite','elephant','tree','eagle','lion',
     'nose','ear','ring','girl','love','egg','goat','time','eye','yellow',
     'water','rainbow','wind','dog','green','night','train','net','ten','nice',
@@ -17,55 +19,64 @@
     'red','dog','guitar','rain','note','earth','home','egg','gate','apple'
   ];
 
-  let _wcUsedWords = [];
-  let _wcLastWord = '';
-  let _wcPlayerScore = 0;
-  let _wcBotScore = 0;
+  var _wcUsedWords = [];
+  var _wcLastWord = '';
+  var _wcPlayerScore = 0;
+  var _wcBotScore = 0;
 
   window.openWordChain = function() {
     _wcUsedWords = [];
     _wcLastWord = '';
     _wcPlayerScore = 0;
     _wcBotScore = 0;
-    const firstWord = _wordChainDict[Math.floor(Math.random() * _wordChainDict.length)];
+    var firstWord = _wordChainDict[Math.floor(Math.random() * _wordChainDict.length)];
     _wcUsedWords.push(firstWord);
     _wcLastWord = firstWord;
 
-    const overlay = document.createElement('div');
+    var overlay = document.createElement('div');
     overlay.id = 'game-overlay';
-    overlay.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.92);display:flex;align-items:center;justify-content:center;animation:fadeIn 0.2s ease';
+    overlay.style.cssText = 'position:fixed;inset:0;z-index:' + _gameOverlayZIndex + ';background:rgba(0,0,0,0.92);display:flex;align-items:center;justify-content:center;animation:fadeIn 0.2s ease';
 
-    const panel = document.createElement('div');
+    var panel = document.createElement('div');
     panel.style.cssText = 'background:var(--surface-container,#1e1e2e);border-radius:24px;padding:28px;max-width:420px;width:92vw;color:var(--on-surface)';
 
-    panel.innerHTML = `
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
-        <h3 style="margin:0;font-size:18px;font-weight:700">🔗 Word Chain</h3>
-        <button onclick="closeGame()" style="background:none;border:none;color:var(--on-surface-variant);cursor:pointer;font-size:20px">&times;</button>
-      </div>
-      <p style="font-size:12px;color:var(--on-surface-variant);margin:0 0 12px">Type a word that starts with the last letter of the previous word.</p>
-      <div style="display:flex;justify-content:space-between;margin-bottom:16px">
-        <div style="padding:8px 16px;border-radius:10px;background:rgba(124,77,255,0.15);font-size:13px;font-weight:700;color:var(--primary)">You: <span id="wc-player-score">0</span></div>
-        <div style="padding:8px 16px;border-radius:10px;background:var(--surface-container,rgba(0,0,0,0.06));font-size:13px;font-weight:700;color:var(--on-surface-variant)">Bot: <span id="wc-bot-score">0</span></div>
-      </div>
-      <div id="wc-chat" style="max-height:250px;overflow-y:auto;margin-bottom:12px;padding:8px;border-radius:12px;background:rgba(0,0,0,0.2)">
-        <div style="text-align:center;margin-bottom:8px"><span style="font-size:12px;color:var(--on-surface-variant)">Bot started with:</span></div>
-        <div style="text-align:center"><span style="display:inline-block;padding:8px 16px;border-radius:12px;background:var(--surface-container,rgba(0,0,0,0.08));font-size:16px;font-weight:700;letter-spacing:2px">${firstWord.toUpperCase()}</span></div>
-      </div>
-      <div style="display:flex;gap:8px">
-        <input id="wc-input" type="text" placeholder="Your word..." style="flex:1;padding:12px;border-radius:12px;border:2px solid var(--outline-variant,rgba(0,0,0,0.1));background:var(--surface-container-low,rgba(0,0,0,0.05));color:var(--on-surface);font-size:14px;outline:none" autocomplete="off">
-        <button onclick="submitWordChain()" style="padding:12px 18px;border-radius:12px;border:none;background:var(--primary);color:var(--on-primary);font-size:14px;font-weight:700;cursor:pointer">Go</button>
-      </div>
-      <div id="wc-msg" style="font-size:12px;color:var(--error);margin-top:8px;min-height:16px"></div>
-      <button onclick="sendGameResult('word-chain', {player:${() => _wcPlayerScore}, bot:${() => _wcBotScore}, words:${() => JSON.stringify(_wcUsedWords)}})" style="margin-top:12px;width:100%;padding:10px;border-radius:10px;border:none;background:var(--surface-container,rgba(0,0,0,0.06));color:var(--on-surface-variant);font-size:12px;font-weight:600;cursor:pointer">Send result to chat</button>`;
+    panel.innerHTML =
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">' +
+        '<h3 style="margin:0;font-size:18px;font-weight:700">🔗 Word Chain</h3>' +
+        '<button onclick="closeGame()" style="background:none;border:none;color:var(--on-surface-variant);cursor:pointer;font-size:20px">&times;</button>' +
+      '</div>' +
+      '<p style="font-size:12px;color:var(--on-surface-variant);margin:0 0 12px">Type a word that starts with the last letter of the previous word.</p>' +
+      '<div style="display:flex;justify-content:space-between;margin-bottom:16px">' +
+        '<div style="padding:8px 16px;border-radius:10px;background:rgba(124,77,255,0.15);font-size:13px;font-weight:700;color:var(--primary)">You: <span id="wc-player-score">0</span></div>' +
+        '<div style="padding:8px 16px;border-radius:10px;background:var(--surface-container,rgba(0,0,0,0.06));font-size:13px;font-weight:700;color:var(--on-surface-variant)">Bot: <span id="wc-bot-score">0</span></div>' +
+      '</div>' +
+      '<div id="wc-chat" style="max-height:250px;overflow-y:auto;margin-bottom:12px;padding:8px;border-radius:12px;background:rgba(0,0,0,0.2)">' +
+        '<div style="text-align:center;margin-bottom:8px"><span style="font-size:12px;color:var(--on-surface-variant)">Bot started with:</span></div>' +
+        '<div style="text-align:center"><span style="display:inline-block;padding:8px 16px;border-radius:12px;background:var(--surface-container,rgba(0,0,0,0.08));font-size:16px;font-weight:700;letter-spacing:2px">' + firstWord.toUpperCase() + '</span></div>' +
+      '</div>' +
+      '<div style="display:flex;gap:8px">' +
+        '<input id="wc-input" type="text" placeholder="Your word..." style="flex:1;padding:12px;border-radius:12px;border:2px solid var(--outline-variant,rgba(0,0,0,0.1));background:var(--surface-container-low,rgba(0,0,0,0.05));color:var(--on-surface);font-size:14px;outline:none" autocomplete="off">' +
+        '<button onclick="submitWordChain()" style="padding:12px 18px;border-radius:12px;border:none;background:var(--primary);color:var(--on-primary);font-size:14px;font-weight:700;cursor:pointer">Go</button>' +
+      '</div>' +
+      '<div id="wc-msg" style="font-size:12px;color:var(--error);margin-top:8px;min-height:16px"></div>' +
+      '<button id="wc-send-btn" style="margin-top:12px;width:100%;padding:10px;border-radius:10px;border:none;background:var(--surface-container,rgba(0,0,0,0.06));color:var(--on-surface-variant);font-size:12px;font-weight:600;cursor:pointer">Send result to chat</button>';
 
     overlay.appendChild(panel);
-    overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+    overlay.addEventListener('click', function(e) { if (e.target === overlay) overlay.remove(); });
     document.body.appendChild(overlay);
 
-    const input = document.getElementById('wc-input');
-    input?.focus();
-    input?.addEventListener('keydown', e => { if (e.key === 'Enter') submitWordChain(); });
+    var sendBtn = document.getElementById('wc-send-btn');
+    if (sendBtn) {
+      sendBtn.addEventListener('click', function() {
+        sendGameResult('word-chain', { player: _wcPlayerScore, bot: _wcBotScore, words: _wcUsedWords.slice() });
+      });
+    }
+
+    var input = document.getElementById('wc-input');
+    if (input) {
+      input.focus();
+      input.addEventListener('keydown', function(e) { if (e.key === 'Enter') submitWordChain(); });
+    }
   };
 
   window.submitWordChain = function() {
@@ -187,7 +198,7 @@
     });
 
     html += '</div><div id="trivia-msg" style="font-size:13px;margin-top:12px;min-height:20px"></div>';
-    html += `<button onclick="sendGameResult('trivia', {score:${_triviaScore}, total:${_triviaTotal}})" style="margin-top:8px;width:100%;padding:10px;border-radius:10px;border:none;background:var(--surface-container,rgba(0,0,0,0.06));color:var(--on-surface-variant);font-size:12px;font-weight:600;cursor:pointer;display:none" id="trivia-send-btn">Send result to chat</button>`;
+    html += '<button style="margin-top:8px;width:100%;padding:10px;border-radius:10px;border:none;background:var(--surface-container,rgba(0,0,0,0.06));color:var(--on-surface-variant);font-size:12px;font-weight:600;cursor:pointer;display:none" id="trivia-send-btn">Send result to chat</button>';
 
     panel.innerHTML = html;
     ov.appendChild(panel);
@@ -214,10 +225,16 @@
       msg.innerHTML = '<span style="color:#ef4444;font-weight:700">✗ Wrong!</span>';
     }
 
-    setTimeout(() => {
+    setTimeout(function() {
       if (_triviaTotal >= 10) {
-        document.getElementById('trivia-send-btn').style.display = 'block';
-        msg.innerHTML += `<br><span style="font-weight:700;color:var(--on-surface)">Final: ${_triviaScore}/10</span>`;
+        var sendBtn = document.getElementById('trivia-send-btn');
+        if (sendBtn) {
+          sendBtn.style.display = 'block';
+          sendBtn.addEventListener('click', function() {
+            sendGameResult('trivia', { score: _triviaScore, total: _triviaTotal });
+          });
+        }
+        msg.innerHTML += '<br><span style="font-weight:700;color:var(--on-surface)">Final: ' + _triviaScore + '/10</span>';
       } else {
         _showTriviaQuestion();
       }
@@ -295,7 +312,16 @@
   function _nextTwentyQQuestion() {
     if (_tqQIdx >= _tqQuestions.length) {
       document.getElementById('tq-question').textContent = 'My guess: ' + _tqThinking;
-      document.getElementById('tq-msg').innerHTML = '<button onclick="sendGameResult(\'20-questions\', {thinking:\'' + _tqThinking + '\', questions:' + _tqQIdx + '})" style="padding:8px 16px;border-radius:8px;border:none;background:var(--primary);color:var(--on-primary);font-size:12px;font-weight:600;cursor:pointer">Send result to chat</button>';
+      var msgEl = document.getElementById('tq-msg');
+      if (msgEl) {
+        var sendBtn = document.createElement('button');
+        sendBtn.style.cssText = 'padding:8px 16px;border-radius:8px;border:none;background:var(--primary);color:var(--on-primary);font-size:12px;font-weight:600;cursor:pointer';
+        sendBtn.textContent = 'Send result to chat';
+        sendBtn.addEventListener('click', function() {
+          sendGameResult('20-questions', { thinking: _tqThinking, questions: _tqQIdx });
+        });
+        msgEl.appendChild(sendBtn);
+      }
       return;
     }
     document.getElementById('tq-question').textContent = _tqQuestions[_tqQIdx];
@@ -359,20 +385,26 @@
   };
 
   window.sendGameResult = function(gameType, result) {
-    let text = '';
+    var text = '';
     if (gameType === 'word-chain') {
-      text = `🎮 Word Chain — You: ${result.player} | Bot: ${result.bot}\nWords: ${result.words?.join(' → ') || ''}`;
+      text = '🎮 Word Chain — You: ' + (result.player || 0) + ' | Bot: ' + (result.bot || 0) + '\nWords: ' + (result.words ? result.words.join(' → ') : '');
     } else if (gameType === 'trivia') {
-      text = `🧠 Trivia — Score: ${result.score}/${result.total}`;
+      text = '🧠 Trivia — Score: ' + (result.score || 0) + '/' + (result.total || 0);
     } else if (gameType === '20-questions') {
-      text = `❓ 20 Questions — Thought of: ${result.thinking} (${result.questions} questions)`;
+      text = '❓ 20 Questions — Thought of: ' + (result.thinking || 'something') + ' (' + (result.questions || 0) + ' questions)';
     }
 
-    if (text && App.currentChat) {
-      const input = document.getElementById('msg-input');
-      if (input) { input.value = text; }
+    if (!text) return;
+
+    var input = document.getElementById('msg-input');
+    if (input) {
+      input.value = text;
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+      input.focus();
       closeGame();
-      showToast('Game result ready to send', 'success');
+      if (typeof showToast === 'function') showToast('Game result pasted in chat input', 'success');
+    } else {
+      if (typeof showToast === 'function') showToast('Open a chat first to share results', 'warning');
     }
   };
 })();

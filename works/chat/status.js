@@ -491,7 +491,7 @@
       var emptyRow = document.createElement('div');
       emptyRow.id = 'status-row-container';
       emptyRow.className = 'px-3 py-2 border-b border-outline-variant/10';
-      emptyRow.innerHTML = '<div class="flex items-center gap-3 cursor-pointer py-2 px-2 rounded-xl hover:bg-surface-variant/20 transition-colors" onclick="openStatusComposer()">' +
+      emptyRow.innerHTML = '<div class="flex items-center gap-3 cursor-pointer py-2 px-2 rounded-xl hover:bg-surface-variant/20 transition-colors" data-action="openStatusComposer">' +
         '<div class="relative flex-shrink-0">' +
         '<div class="w-12 h-12 rounded-full bg-surface-container-highest flex items-center justify-center overflow-hidden border-2 border-dashed border-primary/40">' +
         '<span class="material-symbols-outlined text-primary/60 text-xl">add</span>' +
@@ -516,7 +516,7 @@
       myStatuses.forEach(function (s) {
         if (Array.isArray(s.seenBy)) myViewCount += s.seenBy.length;
       });
-      scrollHtml += '<div class="flex flex-col items-center gap-1 flex-shrink-0 cursor-pointer" style="scroll-snap-align:start;width:68px;" onclick="viewUserStatuses(\'' + _esc(uid) + '\')">' +
+      scrollHtml += '<div class="flex flex-col items-center gap-1 flex-shrink-0 cursor-pointer" style="scroll-snap-align:start;width:68px;" data-action="viewUserStatuses" data-action-arg="' + _esc(uid) + '">' +
         '<div class="relative">' +
         '<div class="w-14 h-14 rounded-full p-[3px] bg-gradient-to-br from-green-400 via-blue-500 to-purple-500">' +
         '<div class="w-full h-full rounded-full overflow-hidden border-2 border-surface-container-lowest bg-surface-container-highest">' +
@@ -529,7 +529,7 @@
         '<span class="text-[10px] text-on-surface-variant/50">' + myViewCount + ' views</span>' +
         '</div>';
     } else {
-      scrollHtml += '<div class="flex flex-col items-center gap-1 flex-shrink-0 cursor-pointer" style="scroll-snap-align:start;width:68px;" onclick="openStatusComposer()">' +
+      scrollHtml += '<div class="flex flex-col items-center gap-1 flex-shrink-0 cursor-pointer" style="scroll-snap-align:start;width:68px;" data-action="openStatusComposer">' +
         '<div class="relative">' +
         '<div class="w-14 h-14 rounded-full p-[3px] border-2 border-dashed border-primary/40 bg-surface-container-highest flex items-center justify-center">' +
         '<span class="material-symbols-outlined text-primary/60" style="font-size:24px;">add</span>' +
@@ -539,7 +539,7 @@
     }
     otherUsers.forEach(function (user) {
       var borderColor = user.hasUnseen ? 'bg-gradient-to-br from-green-400 via-blue-500 to-purple-500' : 'bg-gray-500';
-      scrollHtml += '<div class="flex flex-col items-center gap-1 flex-shrink-0 cursor-pointer" style="scroll-snap-align:start;width:68px;" onclick="viewUserStatuses(\'' + _esc(user.userId) + '\')">' +
+      scrollHtml += '<div class="flex flex-col items-center gap-1 flex-shrink-0 cursor-pointer" style="scroll-snap-align:start;width:68px;" data-action="viewUserStatuses" data-action-arg="' + _esc(user.userId) + '">' +
         '<div class="relative">' +
         '<div class="w-14 h-14 rounded-full p-[3px] ' + borderColor + '">' +
         '<div class="w-full h-full rounded-full overflow-hidden border-2 border-surface-container-lowest bg-surface-container-highest">' +
@@ -577,7 +577,7 @@
     var composerHtml = '<div class="bg-surface-container rounded-t-3xl md:rounded-3xl w-full max-w-lg max-h-[90vh] overflow-hidden flex flex-col animate-slide-up" onclick="event.stopPropagation()">' +
       '<div class="flex items-center justify-between px-5 py-4 border-b border-outline-variant/10">' +
       '<h3 class="font-bold text-on-surface text-base">Create Status</h3>' +
-      '<button class="p-1.5 rounded-full hover:bg-surface-variant/30 text-on-surface-variant transition-colors" onclick="closeStatusComposer()" aria-label="Close"><span class="material-symbols-outlined" style="font-size:22px">close</span></button>' +
+      '<button class="p-1.5 rounded-full hover:bg-surface-variant/30 text-on-surface-variant transition-colors" data-action="closeStatusComposer" aria-label="Close"><span class="material-symbols-outlined" style="font-size:22px">close</span></button>' +
       '</div>' +
       '<div class="flex-1 overflow-y-auto p-4 space-y-4">' +
       '<div class="flex gap-2">' +

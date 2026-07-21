@@ -1,0 +1,401 @@
+/* ════════════════════════════════════════════════════════════
+   NSL Chat — Consolidated Styles Entry Point (ES Module)
+   
+   Vite processes this file:
+   - Compiles Tailwind CSS (via @tailwindcss/vite plugin)
+   - Minifies all CSS into a single output bundle
+   - Replaces CDN Tailwind with local build
+   ════════════════════════════════════════════════════════════ */
+
+@import "tailwindcss";
+
+/* ── Tailwind Configuration ────────────────────────────── */
+@theme {
+  --color-primary: var(--primary);
+  --color-on-primary: var(--on-primary);
+  --color-primary-container: var(--primary-container);
+  --color-on-primary-container: var(--on-primary-container);
+  --color-secondary: var(--secondary);
+  --color-on-secondary: var(--on-secondary);
+  --color-secondary-container: var(--secondary-container);
+  --color-on-secondary-container: var(--on-secondary-container);
+  --color-tertiary: var(--tertiary);
+  --color-on-tertiary: var(--on-tertiary);
+  --color-tertiary-container: var(--tertiary-container);
+  --color-on-tertiary-container: var(--on-tertiary-container);
+  --color-background: var(--background);
+  --color-on-background: var(--on-background);
+  --color-surface: var(--surface);
+  --color-on-surface: var(--on-surface);
+  --color-surface-variant: var(--surface-variant);
+  --color-on-surface-variant: var(--on-surface-variant);
+  --color-surface-dim: var(--surface-dim);
+  --color-surface-bright: var(--surface-bright);
+  --color-surface-container-lowest: var(--surface-container-lowest);
+  --color-surface-container-low: var(--surface-container-low);
+  --color-surface-container: var(--surface-container);
+  --color-surface-container-high: var(--surface-container-high);
+  --color-surface-container-highest: var(--surface-container-highest);
+  --color-outline: var(--outline);
+  --color-outline-variant: var(--outline-variant);
+  --color-error: var(--error);
+  --color-on-error: var(--on-error);
+  --color-error-container: var(--error-container);
+  --color-on-error-container: var(--on-error-container);
+
+  --font-headline-lg: "Manrope", system-ui, sans-serif;
+  --font-headline-md: "Manrope", system-ui, sans-serif;
+  --font-body-md: "Inter", system-ui, sans-serif;
+  --font-body-lg: "Inter", system-ui, sans-serif;
+  --font-timestamp: "JetBrains Mono", monospace;
+
+  --breakpoint-sidebar_width: 280px;
+}
+
+/* ── Google Fonts (self-hosted via vite, no CDN needed) ── */
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('https://fonts.gstatic.com/s/inter/v18/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuBWYAZ9hiJ-Ek-_EeA.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url('https://fonts.gstatic.com/s/inter/v18/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuI6fAZ9hiJ-Ek-_EeA.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('https://fonts.gstatic.com/s/inter/v18/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuFuYAZ9hiJ-Ek-_EeA.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Manrope';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url('https://fonts.gstatic.com/s/manrope/v15/xn7_YHE41ni1AdIRqAuZuw1Bx9mbZk59FO_F87jxeN7B.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Manrope';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('https://fonts.gstatic.com/s/manrope/v15/xn7_YHE41ni1AdIRqAuZuw1Bx9mbZk59BOvF87jxeN7B.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('https://fonts.gstatic.com/s/jetbrainsmono/v20/tDbY2o-flEEny0FZhsfKu5WU4zr3E_BX0PnT8RD8yKxjPVmUsaaDhw.woff2') format('woff2');
+}
+
+/* ── Material Symbols (self-hosted subset via unicode-range) ── */
+@font-face {
+  font-family: 'Material Symbols Outlined';
+  font-style: normal;
+  font-weight: 100 700;
+  font-display: swap;
+  src: url('https://fonts.gstatic.com/s/materialsymbolsoutlined/v24/kJEhFvYmwKEoHFfMzQjRCTYAd_3f2ZzUKA.woff2') format('woff2');
+}
+
+/* ── CSS Custom Properties (Design Tokens) ─────────────── */
+:root {
+  --primary: #6750A4;
+  --on-primary: #FFFFFF;
+  --primary-container: #EADDFF;
+  --on-primary-container: #21005E;
+  --primary-fixed: #EADDFF;
+  --primary-fixed-dim: #D0BCFF;
+  --on-primary-fixed: #21005D;
+  --on-primary-fixed-variant: #4F378B;
+
+  --secondary: #625B71;
+  --on-secondary: #FFFFFF;
+  --secondary-container: #E8DEF8;
+  --on-secondary-container: #1E192B;
+  --secondary-fixed: #E8DEF8;
+  --secondary-fixed-dim: #CCC2DC;
+  --on-secondary-fixed: #1E192B;
+  --on-secondary-fixed-variant: #4A4458;
+
+  --tertiary: #7D5260;
+  --on-tertiary: #FFFFFF;
+  --tertiary-container: #FFD8E4;
+  --on-tertiary-container: #370B1E;
+  --tertiary-fixed: #FFD8E4;
+  --tertiary-fixed-dim: #EFB8C8;
+  --on-tertiary-fixed: #31111D;
+  --on-tertiary-fixed-variant: #633B48;
+
+  --background: #11131c;
+  --on-background: #E6E1E5;
+  --surface: #11131c;
+  --on-surface: #E6E1E5;
+  --surface-variant: #49454F;
+  --on-surface-variant: #CAC4D0;
+  --surface-dim: #141218;
+  --surface-bright: #3B383E;
+  --surface-container-lowest: #0F0D13;
+  --surface-container-low: #1D1B20;
+  --surface-container: #211F26;
+  --surface-container-high: #2B2930;
+  --surface-container-highest: #36343B;
+
+  --outline: #938F99;
+  --outline-variant: #49454F;
+  --surface-tint: #D0BCFF;
+  --inverse-surface: #E6E1E5;
+  --inverse-on-surface: #322F35;
+  --inverse-primary: #6750A4;
+
+  --error: #F2B8B5;
+  --on-error: #601410;
+  --error-container: #8C1D18;
+  --on-error-container: #F9DEDC;
+
+  --brand: #008069;
+  --brand-dark: #006d58;
+  --brand-light: #00a884;
+}
+
+html:not(.dark) {
+  --primary: #6750A4;
+  --on-primary: #FFFFFF;
+  --primary-container: #EADDFF;
+  --on-primary-container: #21005E;
+
+  --secondary: #625B71;
+  --on-secondary: #FFFFFF;
+  --secondary-container: #E8DEF8;
+  --on-secondary-container: #1E192B;
+
+  --tertiary: #7D5260;
+  --on-tertiary: #FFFFFF;
+  --tertiary-container: #FFD8E4;
+  --on-tertiary-container: #370B1E;
+
+  --background: #FEF7FF;
+  --on-background: #1D1B20;
+  --surface: #FEF7FF;
+  --on-surface: #1D1B20;
+  --surface-variant: #E7E0EC;
+  --on-surface-variant: #49454F;
+  --surface-dim: #DED8E1;
+  --surface-bright: #FEF7FF;
+  --surface-container-lowest: #FFFFFF;
+  --surface-container-low: #F7F2FA;
+  --surface-container: #F3EDF7;
+  --surface-container-high: #ECE6F0;
+  --surface-container-highest: #E6E0E9;
+
+  --outline: #79747E;
+  --outline-variant: #CAC4D0;
+
+  --error: #B3261E;
+  --on-error: #FFFFFF;
+  --error-container: #F9DEDC;
+  --on-error-container: #410E0B;
+}
+
+html.dark {
+  color-scheme: dark;
+}
+
+/* ── Viewport & Base Reset ─────────────────────────────── */
+html, body, #app {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  overscroll-behavior: none;
+}
+@supports (height: 100dvh) {
+  html, body, #app { height: 100dvh; }
+  #chat-area { min-height: 100dvh; }
+}
+
+/* Prevent iOS Zoom on focus */
+@media (max-width: 767px) {
+  input, textarea, select, .wa-textarea { font-size: 16px !important; }
+}
+
+/* ── WhatsApp Filter Chips (no !important, proper specificity) ── */
+.wa-chip {
+  background: var(--wa-chip-bg, #202c33);
+  color: var(--wa-chip-text, #aab4bd);
+  border: none;
+  border-radius: 9999px;
+  padding: 6px 14px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+  line-height: 1.2;
+  min-height: 32px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 8px;
+}
+.wa-chip:hover {
+  background: var(--wa-chip-hover, #2a3942);
+  color: #d1d7db;
+}
+.wa-chip.active {
+  background: var(--wa-chip-active-bg, #0a332c);
+  color: var(--wa-chip-active-text, #00bfa5);
+  font-weight: 600;
+}
+.wa-chip-add {
+  background: var(--wa-chip-bg, #202c33);
+  color: var(--wa-chip-text, #aab4bd);
+  border: none;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  min-height: 32px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.wa-chip-add:hover {
+  background: var(--wa-chip-hover, #2a3942);
+  color: #d1d7db;
+}
+
+/* Light mode chip overrides */
+html:not(.dark) .wa-chip {
+  --wa-chip-bg: #f0f2f5;
+  --wa-chip-text: #54656f;
+  --wa-chip-hover: #e9edef;
+  --wa-chip-active-bg: #e7f7f4;
+  --wa-chip-active-text: #00a884;
+}
+html:not(.dark) .wa-chip-add {
+  --wa-chip-bg: #f0f2f5;
+  --wa-chip-text: #54656f;
+  --wa-chip-hover: #e9edef;
+}
+
+/* ── Scrollbars ────────────────────────────────────────── */
+html.dark ::-webkit-scrollbar { width: 5px; height: 5px; background: var(--background); }
+html.dark ::-webkit-scrollbar-track { background: var(--background); }
+html.dark ::-webkit-scrollbar-thumb { background: var(--outline); border-radius: 4px; }
+html.dark ::-webkit-scrollbar-thumb:hover { background: var(--outline-variant); }
+html.dark ::-webkit-scrollbar-corner { background: var(--background); }
+html.dark * { scrollbar-color: var(--outline) var(--background); scrollbar-width: thin; }
+
+/* ── Selection ─────────────────────────────────────────── */
+html.dark ::selection { background: var(--primary); color: var(--on-surface); }
+
+/* ── Focus Ring ────────────────────────────────────────── */
+html.dark :focus-visible { outline-color: color-mix(in srgb, var(--primary) 75%, transparent); }
+html:not(.dark) :focus-visible { outline-color: color-mix(in srgb, var(--primary) 75%, transparent); }
+
+/* ── Animations ────────────────────────────────────────── */
+@keyframes slide-in-right {
+  from { transform: translateX(100%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+@keyframes slide-out-right {
+  from { transform: translateX(0); opacity: 1; }
+  to { transform: translateX(100%); opacity: 0; }
+}
+@keyframes modal-enter {
+  from { transform: scale(0.95); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+@keyframes sheet-enter {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+@keyframes typing-dot {
+  0%, 100% { opacity: 0.3; transform: scale(0.8); }
+  50% { opacity: 1; transform: scale(1); }
+}
+@keyframes nslAlFadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes nslAlShake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-12px); }
+  40% { transform: translateX(12px); }
+  60% { transform: translateX(-8px); }
+  80% { transform: translateX(8px); }
+}
+@keyframes neon-glow {
+  0%, 100% { box-shadow: 0 0 20px rgba(103, 80, 164, 0.1); }
+  50% { box-shadow: 0 0 40px rgba(103, 80, 164, 0.2); }
+}
+
+/* ── Tailwind Utilities ────────────────────────────────── */
+.neon-glow { animation: neon-glow 3s ease-in-out infinite; }
+.scrollbar-hide::-webkit-scrollbar { display: none; }
+.scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+.animate-slide-in-right { animation: slide-in-right 0.3s ease; }
+
+/* ── WhatsApp Input Footer ─────────────────────────────── */
+.wa-input-footer {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  background: var(--surface-container);
+  border-top: 1px solid var(--outline-variant);
+}
+.wa-input-icon {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  color: var(--on-surface-variant);
+  transition: all 0.15s;
+  flex-shrink: 0;
+}
+.wa-input-icon:hover { color: var(--on-surface); background: var(--surface-variant); }
+.wa-input-box {
+  flex: 1;
+  background: var(--surface-container-high);
+  border-radius: 24px;
+  padding: 8px 16px;
+  min-height: 42px;
+  display: flex;
+  align-items: center;
+}
+.wa-textarea {
+  width: 100%;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--on-surface);
+  font-size: 15px;
+  line-height: 1.4;
+  resize: none;
+  max-height: 120px;
+  font-family: inherit;
+}
+.wa-textarea::placeholder { color: var(--on-surface-variant); }
+.wa-send-mic-btn {
+  width: 42px;
+  height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--primary);
+  color: var(--on-primary);
+  transition: all 0.15s;
+  flex-shrink: 0;
+}
+.wa-send-mic-btn:hover { filter: brightness(1.1); }
+.wa-send-mic-btn:active { transform: scale(0.92); }

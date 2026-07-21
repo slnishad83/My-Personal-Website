@@ -480,17 +480,17 @@
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
             <h2 style="margin:0;font-size:18px;font-weight:700">Music</h2>
             <div style="display:flex;align-items:center;gap:10px">
-              <button onclick="showRecentlyPlayed()" style="background:rgba(124,77,255,0.15);border:none;border-radius:12px;padding:6px 12px;color:var(--primary);font-size:11px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:4px">
+              <button data-action="showRecentlyPlayed" style="background:rgba(124,77,255,0.15);border:none;border-radius:12px;padding:6px 12px;color:var(--primary);font-size:11px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:4px">
                 <span class="material-symbols-outlined" style="font-size:14px">history</span> Recent
               </button>
               <button onclick="document.getElementById('music-library-overlay')?.remove()" style="background:none;border:none;color:var(--on-surface-variant);cursor:pointer;font-size:20px;min-width:44px;min-height:44px;display:inline-flex;align-items:center;justify-content:center">&times;</button>
             </div>
           </div>
           <div style="display:flex;gap:6px;overflow-x:auto;padding-bottom:8px;scrollbar-width:none;-ms-overflow-style:none" id="ml-tabs">
-            <button class="ml-tab active" onclick="switchMusicLibTab('search')" style="min-height:36px;flex-shrink:0;padding:6px 14px;border-radius:20px;border:none;font-size:12px;font-weight:600;cursor:pointer;background:var(--primary);color:var(--on-primary)">Search</button>
-            <button class="ml-tab" onclick="switchMusicLibTab('my')" style="min-height:36px;flex-shrink:0;padding:6px 14px;border-radius:20px;border:none;font-size:12px;font-weight:600;cursor:pointer;background:var(--surface-container,rgba(0,0,0,0.06));color:var(--on-surface-variant)">My Music</button>
-            <button class="ml-tab" onclick="switchMusicLibTab('upload')" style="min-height:36px;flex-shrink:0;padding:6px 14px;border-radius:20px;border:none;font-size:12px;font-weight:600;cursor:pointer;background:var(--surface-container,rgba(0,0,0,0.06));color:var(--on-surface-variant)">Upload</button>
-            <button class="ml-tab" onclick="switchMusicLibTab('languages')" style="min-height:36px;flex-shrink:0;padding:6px 14px;border-radius:20px;border:none;font-size:12px;font-weight:600;cursor:pointer;background:var(--surface-container,rgba(0,0,0,0.06));color:var(--on-surface-variant)">Languages</button>
+            <button class="ml-tab active" data-action="switchMusicLibTab" data-action-arg="search" style="min-height:36px;flex-shrink:0;padding:6px 14px;border-radius:20px;border:none;font-size:12px;font-weight:600;cursor:pointer;background:var(--primary);color:var(--on-primary)">Search</button>
+            <button class="ml-tab" data-action="switchMusicLibTab" data-action-arg="my" style="min-height:36px;flex-shrink:0;padding:6px 14px;border-radius:20px;border:none;font-size:12px;font-weight:600;cursor:pointer;background:var(--surface-container,rgba(0,0,0,0.06));color:var(--on-surface-variant)">My Music</button>
+            <button class="ml-tab" data-action="switchMusicLibTab" data-action-arg="upload" style="min-height:36px;flex-shrink:0;padding:6px 14px;border-radius:20px;border:none;font-size:12px;font-weight:600;cursor:pointer;background:var(--surface-container,rgba(0,0,0,0.06));color:var(--on-surface-variant)">Upload</button>
+            <button class="ml-tab" data-action="switchMusicLibTab" data-action-arg="languages" style="min-height:36px;flex-shrink:0;padding:6px 14px;border-radius:20px;border:none;font-size:12px;font-weight:600;cursor:pointer;background:var(--surface-container,rgba(0,0,0,0.06));color:var(--on-surface-variant)">Languages</button>
           </div>
         </div>
         <div id="music-lib-content" style="flex:1;overflow-y:auto;padding:8px 16px 20px"></div>`;
@@ -529,7 +529,7 @@
       b.style.color = 'var(--on-surface-variant)';
       b.classList.remove('active');
     });
-    const activeBtn = document.querySelector(`.ml-tab[onclick*="'${tab}'"]`);
+    const activeBtn = document.querySelector(`.ml-tab[data-action-arg="${tab}"]`);
     if (activeBtn) { activeBtn.style.background = 'var(--primary)'; activeBtn.style.color = 'var(--on-primary)'; activeBtn.classList.add('active'); }
 
     const content = document.getElementById('music-lib-content');
@@ -569,13 +569,13 @@
       <div style="margin-bottom:12px">
         <div style="display:flex;gap:8px;margin-bottom:8px">
           <input type="search" id="ml-search-input" placeholder="Search any song..." style="flex:1;min-width:0;padding:10px 14px;border-radius:12px;border:1px solid var(--outline-variant,rgba(0,0,0,0.1));background:var(--surface-container-low,rgba(0,0,0,0.04));color:var(--on-surface);font-size:13px;outline:none" onkeydown="if(event.key==='Enter')doMusicSearch()">
-          <button onclick="doMusicSearch()" style="min-height:44px;flex-shrink:0;padding:10px 18px;border-radius:12px;border:none;background:var(--primary);color:var(--on-primary);font-size:12px;font-weight:700;cursor:pointer">Search</button>
+          <button data-action="doMusicSearch" style="min-height:44px;flex-shrink:0;padding:10px 18px;border-radius:12px;border:none;background:var(--primary);color:var(--on-primary);font-size:12px;font-weight:700;cursor:pointer">Search</button>
         </div>
         ${hist.length ? `
         <div id="yt-search-history" style="margin-bottom:8px">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
             <span style="font-size:10px;font-weight:700;color:var(--on-surface-variant);text-transform:uppercase;letter-spacing:1px">Recent</span>
-            <button onclick="_clearSearchHistory()" style="background:none;border:none;color:var(--on-surface-variant);cursor:pointer;font-size:10px">Clear</button>
+            <button data-action="_clearSearchHistory" style="background:none;border:none;color:var(--on-surface-variant);cursor:pointer;font-size:10px">Clear</button>
           </div>
           <div style="display:flex;flex-wrap:wrap;gap:6px">
             ${hist.map(h => `<button onclick="document.getElementById('ml-search-input').value='${escHtml(h).replace(/'/g, "\\'").replace(/&#x27;/g, "\\'").replace(/&#39;/g, "\\'")}';doMusicSearch()" style="padding:5px 10px;border-radius:16px;border:1px solid var(--outline-variant,rgba(0,0,0,0.08));background:var(--surface-container-low,rgba(0,0,0,0.03));color:var(--on-surface-variant);font-size:11px;cursor:pointer">${escHtml(h)}</button>`).join('')}
@@ -732,7 +732,7 @@
           <span class="material-symbols-outlined" style="font-size:48px;opacity:0.3">library_music</span>
           <p style="font-size:14px;font-weight:600;margin:12px 0 4px">Your library is empty</p>
           <p style="font-size:12px;margin:0 0 16px">Upload songs or search online</p>
-          <button onclick="switchMusicLibTab('upload')" style="padding:10px 24px;border-radius:10px;border:none;background:var(--primary);color:var(--on-primary);font-size:13px;font-weight:700;cursor:pointer">Upload Music</button>
+          <button data-action="switchMusicLibTab" data-action-arg="upload" style="padding:10px 24px;border-radius:10px;border:none;background:var(--primary);color:var(--on-primary);font-size:13px;font-weight:700;cursor:pointer">Upload Music</button>
         </div>`;
       return;
     }
@@ -767,7 +767,7 @@
   function _libRow(t) {
     const isPlaying = MusicPlayer?._currentTrack?.id === t.id || MusicPlayer?.track?.id === t.id;
     return `
-    <div style="display:flex;align-items:center;gap:10px;padding:10px;border-radius:12px;background:${isPlaying ? 'rgba(124,77,255,0.1)' : 'var(--surface-container-low,rgba(0,0,0,0.03))'};margin-bottom:6px;cursor:pointer" onclick="playLibraryTrack('${t.id}')">
+    <div style="display:flex;align-items:center;gap:10px;padding:10px;border-radius:12px;background:${isPlaying ? 'rgba(124,77,255,0.1)' : 'var(--surface-container-low,rgba(0,0,0,0.03))'};margin-bottom:6px;cursor:pointer" data-action="playLibraryTrack" data-action-arg="${t.id}">
       <div style="width:42px;height:42px;border-radius:8px;background:linear-gradient(135deg,rgba(124,77,255,0.2),rgba(74,0,224,0.1));display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden">
         ${t.thumbnail ? `<img src="${escHtml(t.thumbnail)}" style="width:100%;height:100%;object-fit:cover;border-radius:8px">` : '<span class="material-symbols-outlined" style="font-size:18px;color:var(--primary)">music_note</span>'}
       </div>
@@ -813,7 +813,7 @@
               ${LANGUAGES.map(l => `<option value="${l}">${l}</option>`).join('')}
             </select>
           </div>
-          <button onclick="submitMusicUpload()" style="width:100%;padding:12px;border-radius:10px;border:none;background:var(--primary);color:var(--on-primary);font-size:13px;font-weight:700;cursor:pointer">Upload to Library</button>
+          <button data-action="submitMusicUpload" style="width:100%;padding:12px;border-radius:10px;border:none;background:var(--primary);color:var(--on-primary);font-size:13px;font-weight:700;cursor:pointer">Upload to Library</button>
         </div>
       </div>`;
   }
@@ -889,7 +889,7 @@
     let html = '<p style="font-size:12px;color:var(--on-surface-variant);margin-bottom:12px">Browse music by language — searches iTunes, Deezer, Jamendo & YouTube</p>';
     LANGUAGES.forEach(lang => {
       html += `
-        <div style="display:flex;align-items:center;gap:12px;padding:12px;border-radius:12px;background:var(--surface-container-low,rgba(0,0,0,0.03));margin-bottom:6px;cursor:pointer" onclick="browseLanguageYT('${lang}')">
+        <div style="display:flex;align-items:center;gap:12px;padding:12px;border-radius:12px;background:var(--surface-container-low,rgba(0,0,0,0.03));margin-bottom:6px;cursor:pointer" data-action="browseLanguageYT" data-action-arg="${lang}">
           <div style="width:42px;height:42px;border-radius:10px;background:${colors[lang] || '#666'}20;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:800;color:${colors[lang]}">${lang[0]}</div>
           <div style="flex:1">
             <div style="font-size:14px;font-weight:600;color:var(--on-surface)">${lang}</div>

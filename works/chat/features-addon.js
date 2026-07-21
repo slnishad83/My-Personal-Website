@@ -61,28 +61,28 @@
     nav.className = 'feature-nav-bar';
     nav.id = 'featureNavBar';
     nav.innerHTML = `
-      <button class="feat-nav-btn" onclick="window.location.href='album.html'" title="Family Album">
+      <button class="feat-nav-btn" data-action="navigate" data-action-url="album.html" title="Family Album">
         <span class="fn-icon">📸</span>Album
       </button>
-      <button class="feat-nav-btn" onclick="window.location.href='insights.html'" title="Chat Insights">
+      <button class="feat-nav-btn" data-action="navigate" data-action-url="insights.html" title="Chat Insights">
         <span class="fn-icon">📊</span>Insights
       </button>
-      <button class="feat-nav-btn" onclick="window.location.href='calendar.html'" title="Family Calendar">
+      <button class="feat-nav-btn" data-action="navigate" data-action-url="calendar.html" title="Family Calendar">
         <span class="fn-icon">📅</span>Calendar
       </button>
-      <button class="feat-nav-btn" onclick="window.location.href='expenses.html'" title="Expense Splitter">
+      <button class="feat-nav-btn" data-action="navigate" data-action-url="expenses.html" title="Expense Splitter">
         <span class="fn-icon">💰</span>Expenses
       </button>
-      <button class="feat-nav-btn" onclick="openTasksPanel()" title="Tasks">
+      <button class="feat-nav-btn" data-action="openTasksPanel" title="Tasks">
         <span class="fn-icon">✅</span>Tasks
       </button>
-      <button class="feat-nav-btn" onclick="openTimeCapsuleModal()" title="Time Capsule">
+      <button class="feat-nav-btn" data-action="openTimeCapsuleModal" title="Time Capsule">
         <span class="fn-icon">⏳</span>Capsule
       </button>
-      <button class="feat-nav-btn" onclick="openBusyModal()" title="Busy Status">
+      <button class="feat-nav-btn" data-action="openBusyModal" title="Busy Status">
         <span class="fn-icon">🔴</span>Busy
       </button>
-      <button class="feat-nav-btn" onclick="toggleCalculator()" title="Calculator">
+      <button class="feat-nav-btn" data-action="toggleCalculator" title="Calculator">
         <span class="fn-icon">🧮</span>Calc
       </button>
     `;
@@ -132,8 +132,8 @@
           <input type="text" id="busyMsg" placeholder="e.g. At the gym, back in an hour"/>
         </div>
         <div class="feat-modal-btns">
-          <button class="feat-btn-cancel" onclick="closeBusyModal()">Cancel</button>
-          <button class="feat-btn-save" onclick="saveBusyStatus()">Set Busy</button>
+          <button class="feat-btn-cancel" data-action="closeBusyModal">Cancel</button>
+          <button class="feat-btn-save" data-action="saveBusyStatus">Set Busy</button>
         </div>
       </div>`;
     document.body.appendChild(modal);
@@ -174,7 +174,7 @@
     banner.id = 'busyBanner';
     banner.className = 'busy-banner';
     banner.setAttribute('aria-live', 'polite');
-    banner.innerHTML = `🔴 Busy: "${window.sanitizeHTML(busyStatus)}" — Auto-reply is on <button onclick="clearBusyStatus()">Clear</button>`;
+    banner.innerHTML = `🔴 Busy: "${window.sanitizeHTML(busyStatus)}" — Auto-reply is on <button data-action="clearBusyStatus">Clear</button>`;
     const nav = document.getElementById('featureNavBar');
     if (nav && nav.parentNode) nav.parentNode.insertBefore(banner, nav.nextSibling);
     else document.body.prepend(banner);
@@ -206,8 +206,8 @@
           </select>
         </div>
         <div class="feat-modal-btns">
-          <button class="feat-btn-cancel" onclick="closeTimeCapsuleModal()">Cancel</button>
-          <button class="feat-btn-save" onclick="saveTimeCapsule()">Schedule 🚀</button>
+          <button class="feat-btn-cancel" data-action="closeTimeCapsuleModal">Cancel</button>
+          <button class="feat-btn-save" data-action="saveTimeCapsule">Schedule 🚀</button>
         </div>
       </div>`;
     document.body.appendChild(modal);
@@ -324,11 +324,11 @@
     panel.innerHTML = `
       <div class="tasks-header">
         <h3>✅ My Tasks</h3>
-        <button class="tasks-close" onclick="closeTasksPanel()">✕</button>
+        <button class="tasks-close" data-action="closeTasksPanel">✕</button>
       </div>
       <div class="tasks-add-row">
         <input type="text" id="taskInput" placeholder="Add a task…" onkeydown="if(event.key==='Enter')addTask()"/>
-        <button onclick="addTask()">Add</button>
+        <button data-action="addTask">Add</button>
       </div>
       <div class="tasks-list" id="tasksList" aria-live="polite"><div class="tasks-empty">No tasks yet. Add one above!</div></div>
     `;
@@ -386,7 +386,7 @@
         <div class="task-item">
           <input class="task-cb" type="checkbox" ${t.done ? 'checked' : ''} onchange="toggleTask('${t.id}',${t.done})"/>
           <span class="task-text ${t.done ? 'done' : ''}">${esc(t.text)}</span>
-          <button class="task-del" onclick="deleteTask('${t.id}')">🗑</button>
+          <button class="task-del" data-action="deleteTask" data-action-arg="${t.id}">🗑</button>
         </div>`).join('');
     }
   }

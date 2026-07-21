@@ -1,418 +1,159 @@
 /**
- * @typedef {Object} AppUser
- * @property {string} uid
- * @property {string} [displayName]
- * @property {string} [email]
- * @property {string} [photoURL]
- * @property {string} [phoneNumber]
+ * NSL Chat — Configuration Module
+ * 
+ * Separation of concerns:
+ * - firebase.config.js: Firebase configuration constants only
+ * - This file: App-wide constants and runtime configuration
+ * 
+ * Firebase initialization is handled by the entry point (main.js or index.html).
  */
-
-// ========================================
-// COMPLETE CHAT APP - FINAL BEST WEB/PWA VERSION
-// All WhatsApp features + extras
-// Works on all devices, all browsers
-// ========================================
 'use strict';
-window.__DEBUG__ = window.__DEBUG__ || false;
 
-// Firebase Configuration
-const firebaseConfig = {
+/* ══════════════════════════════════════════════════════════════
+   FIREBASE CONFIGURATION
+   ══════════════════════════════════════════════════════════════ */
+
+const FIREBASE_CONFIG = Object.freeze({
   apiKey: "AIzaSyCdbut_FdscAjl-OVSlAUhb7TOTiRNkh34",
   authDomain: "my-team-chat-2255.firebaseapp.com",
   projectId: "my-team-chat-2255",
   storageBucket: "my-team-chat-2255.firebasestorage.app",
   messagingSenderId: "805016891521",
   appId: "1:805016891521:web:ac9bc7a252bcf33686dd80",
-};
-
-firebase.initializeApp(firebaseConfig);
-const auth = firebase.auth();
-
-function isLikelyPrivateSession() {
-  try {
-    const testKey = "teamChatStorageProbe";
-    localStorage.setItem(testKey, testKey);
-    localStorage.removeItem(testKey);
-    return false;
-  } catch (error) {
-    return true;
-  }
-}
-
-function getAuthPersistence() {
-  return isLikelyPrivateSession()
-    ? firebase.auth.Auth.Persistence.SESSION
-    : firebase.auth.Auth.Persistence.LOCAL;
-}
-
-const authPersistenceReady = Promise.race([
-  auth.setPersistence(getAuthPersistence()),
-  new Promise((resolve) => setTimeout(resolve, 1000)),
-]).then(() => {
-  if (typeof window.showToast === 'function' && !isLikelyPrivateSession()) return;
-}).catch((error) => {
-  console.error("Persistence error:", error);
-  if (typeof window.showToast === 'function') {
-    window.showToast('Login session storage unavailable. You may need to sign in again after closing the app.', 'error');
-  }
 });
 
-window.addEventListener("beforeunload", () => {
-  if (typeof stopSessionHeartbeat === 'function') stopSessionHeartbeat();
-  if (typeof saveCallState === 'function') saveCallState();
+/* ══════════════════════════════════════════════════════════════
+   APP CONSTANTS
+   ══════════════════════════════════════════════════════════════ */
+
+const APP_CONSTANTS = Object.freeze({
+  FCM_VAPID_KEY: "BDVoTx6AbM3T_AdVKV6IYFt3bbXiWRF5I7c5s-4w5AuUvYIzYPQYiODmJxnjH0DOLj-NhL83jiKMQ6RjkCvUALQ",
+  TURN_CREDENTIALS_ENDPOINT: "https://us-central1-my-team-chat-2255.cloudfunctions.net/getTurnCredentials",
+  VERIFIED_USER_LOOKUP_ENDPOINT: "https://asia-south1-my-team-chat-2255.cloudfunctions.net/lookupVerifiedUserByEmailV2",
+  GROUP_ACCESS_REPAIR_ENDPOINT: "https://us-central1-my-team-chat-2255.cloudfunctions.net/repairGroupAccessMetadata",
+  CLOUDINARY_CLOUD_NAME: "du2dsimyz",
+  CLOUDINARY_UPLOAD_PRESET: "chat_app_uploads",
+  AVATAR_MAX_BYTES: 5 * 1024 * 1024,
+  AVATAR_ALLOWED_EXTENSIONS: ["jpg", "jpeg", "png", "webp", "gif", "bmp", "heic", "heif"],
+  AVATAR_ALLOWED_MIME_TYPES: ["image/jpeg", "image/png", "image/webp", "image/gif", "image/bmp", "image/heic", "image/heif"],
+  AVATAR_FORMAT_HELP_TEXT: "Supported image formats: JPG, JPEG, PNG, WebP, GIF, BMP, HEIC, HEIF. Maximum size: 5 MB.",
+  MESSAGE_PAGE_SIZE: 120,
+  GROUP_CALL_MAX_PARTICIPANTS: 4,
+  DEFAULT_RTC_CONFIG: {
+    iceServers: [
+      { urls: "stun:stun.l.google.com:19302" },
+      { urls: "stun:stun1.l.google.com:19302" },
+    ],
+  },
 });
 
-const db = firebase.firestore();
-    // Firestore offline persistence — shows cached messages when offline.
-    // Must be called before any other Firestore operations.
-    db.enablePersistence({ synchronizeTabs: true }).catch(function(err) {
-    if (err.code === 'failed-precondition') {
-      console.warn('[Firestore] Offline persistence unavailable (multiple tabs open).');
-    } else if (err.code === 'unimplemented') {
-      console.warn('[Firestore] Offline persistence not supported in this browser.');
-    }
-    });
+/* ══════════════════════════════════════════════════════════════
+   PRIVACY SETTINGS (user-configurable)
+   ══════════════════════════════════════════════════════════════ */
 
-// Signal to addons that core Firebase services are ready
-document.dispatchEvent(new CustomEvent('nsl:app-ready'));
-const storage = firebase.storage();
-const isNativeAndroidApp =
-  window.Capacitor?.isNativePlatform?.() === true &&
-  window.Capacitor?.getPlatform?.() === "android";
-
-if (isNativeAndroidApp) {
-  document.body.classList.add("native-android");
-}
-
-const isNativeIOSApp =
-  window.Capacitor?.isNativePlatform?.() === true &&
-  window.Capacitor?.getPlatform?.() === "ios";
-
-if (isNativeIOSApp) {
-  document.body.classList.add("native-ios");
-}
-
-const PushNotifications = window.Capacitor?.Plugins?.PushNotifications;
-// Firebase Cloud Messaging (FCM)
-// IMPORTANT: replace this with your Firebase Console > Project settings > Cloud Messaging > Web Push certificate public key.
-const FCM_VAPID_KEY =
-  "BDVoTx6AbM3T_AdVKV6IYFt3bbXiWRF5I7c5s-4w5AuUvYIzYPQYiODmJxnjH0DOLj-NhL83jiKMQ6RjkCvUALQ";
-let messaging = null;
-let pushSetupStarted = false;
-let pushSetupDone = false;
-const recentCallNotificationKeys = new Map();
-
-// Cloudinary Configuration
-// SECURITY NOTE: This uses an unsigned upload preset, which means anyone with the
-// cloud name and preset can upload files to your Cloudinary account. This is a
-// known risk accepted for simplicity. Migrate uploads to Firebase Storage
-// (server-side signed URLs) to eliminate unauthorized upload abuse.
-const CLOUDINARY_CLOUD_NAME = "du2dsimyz";
-const CLOUDINARY_UPLOAD_PRESET = "chat_app_uploads";
-const TURN_CREDENTIALS_ENDPOINT =
-  "https://us-central1-my-team-chat-2255.cloudfunctions.net/getTurnCredentials";
-const VERIFIED_USER_LOOKUP_ENDPOINT =
-  "https://asia-south1-my-team-chat-2255.cloudfunctions.net/lookupVerifiedUserByEmailV2";
-const GROUP_ACCESS_REPAIR_ENDPOINT =
-  "https://us-central1-my-team-chat-2255.cloudfunctions.net/repairGroupAccessMetadata";
-const AVATAR_MAX_BYTES = 5 * 1024 * 1024;
-const AVATAR_ALLOWED_EXTENSIONS = [
-  "jpg",
-  "jpeg",
-  "png",
-  "webp",
-  "gif",
-  "bmp",
-  "heic",
-  "heif",
-];
-const AVATAR_ALLOWED_MIME_TYPES = [
-  "image/jpeg",
-  "image/png",
-  "image/webp",
-  "image/gif",
-  "image/bmp",
-  "image/heic",
-  "image/heif",
-];
-const AVATAR_FORMAT_HELP_TEXT =
-  "Supported image formats: JPG, JPEG, PNG, WebP, GIF, BMP, HEIC, HEIF. Maximum size: 5 MB.";
-// Global Variables
-let currentUser = null;
-let currentChat = null;
-let currentChatType = null;
-let allUsers = [];
-let messagesUnsubscribe = null;
-let typingUnsubscribe = null;
-let directChatsUnsubscribe = null;
-let groupChatsUnsubscribe = null;
-let usersUnsubscribe = null;
-let allUsersReadyPromise = null;
-let chatRequestsUnsubscribe = null;
-let sentChatRequestsUnsubscribe = null;
-let groupInvitesUnsubscribe = null;
-let statusesUnsubscribe = null;
-let outgoingCallsListUnsubscribe = null;
-let incomingCallsListUnsubscribe = null;
-let groupCallsListUnsubscribe = null;
-let currentGroup = null;
-let currentGroupMembers = [];
-let currentReplyTo = null;
-let currentAttachment = null;
-let typingTimeout = null;
-let blockedUsers = [];
-let mutedChats = [];
-let quickReplies = [];
-let pinnedMessages = [];
-let currentSearchResults = [];
-let currentSearchIndex = 0;
-let currentInChatSearchTerm = "";
-let favoriteChatIds = [];
-let pinnedChatIds = [];
-let currentForwardTargets = [];
-let currentForwardSelectionKeys = new Set();
-let currentForwardSelectionMap = new Map();
-let activeStatusSet = [];
-let activeStatusIndex = 0;
-let statusAutoAdvanceTimer = null;
-let mentionSuggestionItems = [];
-let mentionSuggestionRange = null;
-let mentionSuggestionIndex = -1;
-let mediaRecorder = null;
-let audioChunks = [];
-let isRecording = false;
-let recordingStartTime = null;
-let recordingTimer = null;
-let wallpaperModalMode = "global";
-let chatListRefreshTimer = null;
-let scheduledMessagesTimer = null;
-let statusImageAttachment = null;
-let activeCall = null;
-let peerConnection = null;
-let localCallStream = null;
-let remoteCallStream = null;
-let incomingCallsUnsubscribe = null;
-let callDocUnsubscribe = null;
-let callAnswerUnsubscribe = null;
-let callCandidatesUnsubscribe = null;
-let currentCallType = "voice";
-let micMuted = false;
-let cameraOff = false;
-let speakerOn = false;
-let preferredCameraFacingMode = "user";
-let pendingRemoteIceCandidates = [];
-let activeCallMode = null;
-let callTimeoutTimer = null;
-let callStartedAt = null;
-let callDurationTimer = null;
-let callHeartbeatTimer = null;
-let ringtoneAudioContext = null;
-let ringtoneTimer = null;
-let vibrationTimer = null;
-let wakeLock = null;
-let cameraSender = null;
-let callLogWritten = false;
-let lastHandledRenegotiationSdp = "";
-let seenPendingChatRequestIds = new Set();
-let seenSentChatRequestIds = new Set();
-let seenPendingGroupInviteIds = new Set();
-let chatRequestListenerReady = false;
-let sentChatRequestListenerReady = false;
-let groupInviteListenerReady = false;
-let mobileBackGuardReady = false;
-let mobileChatHistoryOpen = false;
-let lastSearchValue = "";
-let currentViewTab = "all";
-let isScreenSharing = false;
-let isPipActive = false;
-let chatTags = {};
-let videoRecorder = null;
-let videoChunks = [];
-let isVideoRecording = false;
-let videoRecordingStartTime = null;
-let videoRecordingTimer = null;
-let pendingRecordedMedia = null;
-let activeVoicePlayback = null;
-let callMiniBar = null;
-let callNetworkFailTimer = null;
-let callIceRestartTimer = null;
-let isIceRestarting = false;
-let callRenegotiationTimer = null;
-let isSpeakerView = false;
-let callHistoryLoadToken = 0;
-let callHistoryRefreshTimer = null;
-let statusRefreshTimer = null;
-let callHistorySelectionMode = false;
-let callHistoryFilter = "all";
-let selectedCallHistoryIds = new Set();
-let currentSessionId = "";
-let groupCallsUnsubscribe = null;
-let groupCallPeerConnections = new Map();
-let groupCallCandidateUnsubscribes = [];
-let groupCallDocUnsubscribe = null;
-let activeGroupCallParticipants = [];
-const GROUP_CALL_MAX_PARTICIPANTS = 4;
-let sessionHeartbeatTimer = null;
-let sessionWatchUnsubscribe = null;
-let presenceHeartbeatTimer = null;
-let appUnlockedForSession = false;
-let systemBackHandlerReady = false;
-const MESSAGE_PAGE_SIZE = 120;
-const messageRenderLimits = new Map();
-let failedQueueRetryTimer = null;
-let currentBroadcasts = [];
-let currentBroadcastUnsubscribe = null;
-let currentBroadcastMessagesUnsubscribe = null;
-let broadcastSelectedMemberIds = new Set();
-let chatFolders = [];
-let currentFolderIndex = -1;
-let activeFolderChatIds = null;
-let lastReadTimestamps = new Map();
-let lastMessageTimestamps = new Map();
-
-let blockedWordsCache = [];
-let currentJoinQuestions = [];
-let pendingJoinGroupId = null;
-let lockedChats = new Map();
-let lockPinVerifiedForSearch = false;
-let temporarilyUnlockedChatId = null;
-let lockedChatFolderVisible = false;
-
-const defaultRtcConfig = {
-  iceServers: [
-    { urls: "stun:stun.l.google.com:19302" },
-    { urls: "stun:stun1.l.google.com:19302" },
-  ],
-};
-
-async function getBackendTurnServers() {
-  if (!currentUser) return [];
-
-  const token = await currentUser.getIdToken();
-  const response = await fetch(TURN_CREDENTIALS_ENDPOINT, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  });
-
-  if (!response.ok) {
-    throw new Error(`TURN backend returned ${response.status}`);
-  }
-
-  const iceServers = await response.json();
-  if (!Array.isArray(iceServers) || !iceServers.length) {
-    throw new Error("TURN backend returned no servers");
-  }
-
-  return iceServers;
-}
-
-async function getRtcConfig() {
-  try {
-    const backendTurnServers = await getBackendTurnServers();
-    if (backendTurnServers.length) return { iceServers: backendTurnServers };
-  } catch (error) {
-    console.warn("Could not load secure TURN config:", error);
-  }
-
-  try {
-    const configuredServers = JSON.parse(
-      localStorage.getItem("teamChatTurnServers") || "[]",
-    );
-    if (Array.isArray(configuredServers) && configuredServers.length) {
-      return {
-        iceServers: [...defaultRtcConfig.iceServers, ...configuredServers],
-      };
-    }
-  } catch (error) {
-    console.warn("Invalid TURN server config:", error);
-  }
-  return defaultRtcConfig;
-}
-
-function updateTurnServerSettings() {
-  window.location.replace("turn.html");
-}
-
-let callWaitingUnsub = null;
-// Privacy Settings
 let privacySettings = {
   hideReadReceipts: false,
   hideTypingIndicator: false,
   hideLastSeen: false,
 };
 
-// Wallpaper Settings (per chat)
 let chatWallpapers = {};
 
-/* ── NP2: Firestore listener dedup guard ───────────────────── */
-const _activeListeners = new Map();
-function dedupFirestoreListener(key, subscribeFn) {
-  if (_activeListeners.has(key)) {
-    console.warn(`[Firestore] Duplicate listener suppressed: ${key}`);
-    return _activeListeners.get(key);
+/* ══════════════════════════════════════════════════════════════
+   FIREBASE INITIALIZATION (lazy — called once)
+   ══════════════════════════════════════════════════════════════ */
+
+let _firebaseInitialized = false;
+
+function initFirebase() {
+  if (_firebaseInitialized) return;
+  if (typeof firebase === 'undefined') {
+    console.error('[Config] Firebase SDK not loaded');
+    return;
   }
-  const unsub = subscribeFn();
-  _activeListeners.set(key, unsub);
-  return unsub;
-}
-function removeDedupListener(key) {
-  const unsub = _activeListeners.get(key);
-  if (unsub) { try { unsub(); } catch (_) {} _activeListeners.delete(key); }
+  firebase.initializeApp(FirebaseConfig);
+  _firebaseInitialized = true;
+  document.dispatchEvent(new CustomEvent('nsl:firebase-ready'));
 }
 
-/* ── H5: Rate limiter for message sends ─────────────────────────── */
-const _msgRateLimiter = {
-  _timestamps: [],
-  _maxPerMinute: 30,
-  _cooldownMs: 2000,
-  canSend() {
-    const now = Date.now();
-    this._timestamps = this._timestamps.filter(t => now - t < 60000);
-    if (this._timestamps.length >= this._maxPerMinute) return false;
-    if (this._timestamps.length > 0 && now - this._timestamps[this._timestamps.length - 1] < this._cooldownMs) return false;
-    return true;
-  },
-  record() {
-    this._timestamps.push(Date.now());
-    if (this._timestamps.length > this._maxPerMinute + 10) {
-      this._timestamps = this._timestamps.slice(-this._maxPerMinute);
+/* ══════════════════════════════════════════════════════════════
+   TURN SERVER CONFIGURATION
+   ══════════════════════════════════════════════════════════════ */
+
+async function getBackendTurnServers() {
+  if (!window.currentUser) return [];
+  try {
+    const token = await window.currentUser.getIdToken();
+    const response = await fetch(APP_CONSTANTS.TURN_CREDENTIALS_ENDPOINT, {
+      method: 'POST',
+      headers: { Authorization: 'Bearer ' + token },
+    });
+    if (!response.ok) throw new Error('TURN backend returned ' + response.status);
+    const iceServers = await response.json();
+    if (!Array.isArray(iceServers) || !iceServers.length) throw new Error('TURN backend returned no servers');
+    return iceServers;
+  } catch (error) {
+    console.warn('[Config] Could not load TURN servers:', error);
+    return [];
+  }
+}
+
+async function getRtcConfig() {
+  const backendTurnServers = await getBackendTurnServers();
+  if (backendTurnServers.length) return { iceServers: backendTurnServers };
+
+  try {
+    const configuredServers = JSON.parse(localStorage.getItem('teamChatTurnServers') || '[]');
+    if (Array.isArray(configuredServers) && configuredServers.length) {
+      return { iceServers: [...APP_CONSTANTS.DEFAULT_RTC_CONFIG.iceServers, ...configuredServers] };
     }
-  },
-  reset() { this._timestamps = []; }
-};
-window._msgRateLimiter = _msgRateLimiter;
-
-/* ── BR1: Pause/resume Firestore listeners in background ───── */
-let _bgPaused = false;
-let _bgPauseTimer = null;
-window.pauseBackgroundListeners = function() { /* no-op: keep listeners alive for instant sync */ };
-window.resumeBackgroundListeners = function() { /* no-op */ };
-document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'hidden') {
-    _bgPauseTimer = setTimeout(() => {
-      _bgPaused = true;
-      if (window.__DEBUG__) console.log('[App] Background — pausing non-critical listeners');
-      if (typeof window.pauseBackgroundListeners === 'function') window.pauseBackgroundListeners();
-    }, 30000);
-  } else {
-    clearTimeout(_bgPauseTimer);
-    if (_bgPaused) {
-      _bgPaused = false;
-      if (window.__DEBUG__) console.log('[App] Foreground — resuming listeners');
-      if (typeof window.resumeBackgroundListeners === 'function') window.resumeBackgroundListeners();
-    }
+  } catch (error) {
+    console.warn('[Config] Invalid TURN server config:', error);
   }
-});
-
-/* ── C3: Release wake lock when call ends or page hidden ───── */
-function releaseWakeLock() {
-  if (window.wakeLock) {
-    try { window.wakeLock.release(); } catch (_) {}
-    window.wakeLock = null;
-  }
+  return APP_CONSTANTS.DEFAULT_RTC_CONFIG;
 }
-document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'hidden') releaseWakeLock();
-});
+
+/* ══════════════════════════════════════════════════════════════
+   PLATFORM DETECTION
+   ══════════════════════════════════════════════════════════════ */
+
+const isNativeAndroidApp =
+  window.Capacitor?.isNativePlatform?.() === true &&
+  window.Capacitor?.getPlatform?.() === 'android';
+
+const isNativeIOSApp =
+  window.Capacitor?.isNativePlatform?.() === true &&
+  window.Capacitor?.getPlatform?.() === 'ios';
+
+/* ══════════════════════════════════════════════════════════════
+   GLOBAL STATE (backward compatibility)
+   ══════════════════════════════════════════════════════════════ */
+
+window.__DEBUG__ = window.__DEBUG__ || false;
+window.FIREBASE_CONFIG = FIREBASE_CONFIG;
+window.FIREBASE_CONFIG_KEYS = FIREBASE_CONFIG;
+window.FcmVapidKey = APP_CONSTANTS.FCM_VAPID_KEY;
+window.TURN_CREDENTIALS_ENDPOINT = APP_CONSTANTS.TURN_CREDENTIALS_ENDPOINT;
+window.VERIFIED_USER_LOOKUP_ENDPOINT = APP_CONSTANTS.VERIFIED_USER_LOOKUP_ENDPOINT;
+window.GROUP_ACCESS_REPAIR_ENDPOINT = APP_CONSTANTS.GROUP_ACCESS_REPAIR_ENDPOINT;
+window.CLOUDINARY_CLOUD_NAME = APP_CONSTANTS.CLOUDINARY_CLOUD_NAME;
+window.CLOUDINARY_UPLOAD_PRESET = APP_CONSTANTS.CLOUDINARY_UPLOAD_PRESET;
+window.TURN_CREDENTIALS_ENDPOINT = APP_CONSTANTS.TURN_CREDENTIALS_ENDPOINT;
+window.AVATAR_MAX_BYTES = APP_CONSTANTS.AVATAR_MAX_BYTES;
+window.AVATAR_ALLOWED_EXTENSIONS = APP_CONSTANTS.AVATAR_ALLOWED_EXTENSIONS;
+window.AVATAR_ALLOWED_MIME_TYPES = APP_CONSTANTS.AVATAR_ALLOWED_MIME_TYPES;
+window.AVATAR_FORMAT_HELP_TEXT = APP_CONSTANTS.AVATAR_FORMAT_HELP_TEXT;
+window.MEETING_SCHEDULER_ENDPOINT = APP_CONSTANTS.MEETING_SCHEDULER_ENDPOINT;
+window.GROUP_CALL_MAX_PARTICIPANTS = APP_CONSTANTS.GROUP_CALL_MAX_PARTICIPANTS;
+window.MESSAGE_PAGE_SIZE = APP_CONSTANTS.MESSAGE_PAGE_SIZE;
+window.privacySettings = privacySettings;
+window.chatWallpapers = chatWallpapers;
+window.getRtcConfig = getRtcConfig;
+window.getBackendTurnServers = getBackendTurnServers;
+window.initFirebase = initFirebase;
+
+if (isNativeAndroidApp) document.body.classList.add('native-android');
+if (isNativeIOSApp) document.body.classList.add('native-ios');
+
+window.isNativeAndroidApp = isNativeAndroidApp;
+window.isNativeIOSApp = isNativeIOSApp;

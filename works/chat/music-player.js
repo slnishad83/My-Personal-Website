@@ -989,7 +989,7 @@
   Player.renderNowPlayingBadge = function() {
     const info = Player.getNowPlayingInfo();
     if (!info) return '';
-    return `<div style="display:flex;align-items:center;gap:6px;padding:6px 10px;border-radius:10px;background:rgba(124,77,255,0.1);border:1px solid rgba(124,77,255,0.2);margin-bottom:8px;cursor:pointer" onclick="openFullPlayer()">
+    return `<div style="display:flex;align-items:center;gap:6px;padding:6px 10px;border-radius:10px;background:rgba(124,77,255,0.1);border:1px solid rgba(124,77,255,0.2);margin-bottom:8px;cursor:pointer" data-action="openFullPlayer">
     <div style="display:flex;gap:2px;align-items:flex-end;height:16px">
       <span class="np-bar" style="display:inline-block;width:3px;background:var(--primary);border-radius:2px;animation:eqBar 0.8s ease-in-out infinite alternate"></span>
       <span class="np-bar" style="display:inline-block;width:3px;background:var(--primary);border-radius:2px;animation:eqBar 0.6s ease-in-out 0.2s infinite alternate"></span>

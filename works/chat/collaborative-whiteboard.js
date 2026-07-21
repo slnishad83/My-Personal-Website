@@ -25,15 +25,15 @@
     overlay.innerHTML = `
       <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:rgba(0,0,0,0.5)">
         <div style="display:flex;align-items:center;gap:8px">
-          <button onclick="closeWhiteboard()" style="background:none;border:none;color:white;cursor:pointer"><span class="material-symbols-outlined">close</span></button>
+          <button data-action="closeWhiteboard" style="background:none;border:none;color:white;cursor:pointer"><span class="material-symbols-outlined">close</span></button>
           <span style="color:white;font-weight:700;font-size:15px">Whiteboard</span>
           <span id="wb-remote-cursor-label" style="font-size:11px;color:rgba(255,255,255,0.5);margin-left:8px"></span>
         </div>
         <div style="display:flex;align-items:center;gap:6px">
-          <button onclick="wbUndo()" title="Undo" style="background:rgba(255,255,255,0.1);border:none;color:white;width:44px;height:44px;border-radius:8px;cursor:pointer"><span class="material-symbols-outlined" style="font-size:18px">undo</span></button>
-          <button onclick="wbRedo()" title="Redo" style="background:rgba(255,255,255,0.1);border:none;color:white;width:44px;height:44px;border-radius:8px;cursor:pointer"><span class="material-symbols-outlined" style="font-size:18px">redo</span></button>
-          <button onclick="wbClear()" title="Clear" style="background:rgba(255,255,255,0.1);border:none;color:white;width:44px;height:44px;border-radius:8px;cursor:pointer"><span class="material-symbols-outlined" style="font-size:18px">delete</span></button>
-          <button onclick="wbSendAsImage()" title="Send as Image" style="background:var(--primary,#7C4DFF);border:none;color:white;padding:8px 14px;border-radius:8px;cursor:pointer;font-size:12px;font-weight:600;display:flex;align-items:center;gap:4px"><span class="material-symbols-outlined" style="font-size:16px">send</span>Send</button>
+          <button data-action="wbUndo" title="Undo" style="background:rgba(255,255,255,0.1);border:none;color:white;width:44px;height:44px;border-radius:8px;cursor:pointer"><span class="material-symbols-outlined" style="font-size:18px">undo</span></button>
+          <button data-action="wbRedo" title="Redo" style="background:rgba(255,255,255,0.1);border:none;color:white;width:44px;height:44px;border-radius:8px;cursor:pointer"><span class="material-symbols-outlined" style="font-size:18px">redo</span></button>
+          <button data-action="wbClear" title="Clear" style="background:rgba(255,255,255,0.1);border:none;color:white;width:44px;height:44px;border-radius:8px;cursor:pointer"><span class="material-symbols-outlined" style="font-size:18px">delete</span></button>
+          <button data-action="wbSendAsImage" title="Send as Image" style="background:var(--primary,#7C4DFF);border:none;color:white;padding:8px 14px;border-radius:8px;cursor:pointer;font-size:12px;font-weight:600;display:flex;align-items:center;gap:4px"><span class="material-symbols-outlined" style="font-size:16px">send</span>Send</button>
         </div>
       </div>
       <div style="flex:1;position:relative;overflow:hidden;display:flex">
@@ -42,17 +42,17 @@
       </div>
       <div style="display:flex;align-items:center;justify-content:center;gap:8px;padding:10px 16px;background:rgba(0,0,0,0.5);flex-wrap:wrap">
         <div style="display:flex;gap:4px">
-          <button onclick="wbSetTool('pen')" class="wb-tool-btn active" data-tool="pen" style="width:44px;height:44px;border-radius:8px;border:2px solid var(--primary);background:rgba(124,77,255,0.2);color:white;cursor:pointer;display:flex;align-items:center;justify-content:center"><span class="material-symbols-outlined" style="font-size:18px">edit</span></button>
-          <button onclick="wbSetTool('highlighter')" class="wb-tool-btn" data-tool="highlighter" style="width:44px;height:44px;border-radius:8px;border:2px solid transparent;background:rgba(255,255,255,0.06);color:white;cursor:pointer;display:flex;align-items:center;justify-content:center"><span class="material-symbols-outlined" style="font-size:18px">ink_highlighter</span></button>
-          <button onclick="wbSetTool('eraser')" class="wb-tool-btn" data-tool="eraser" style="width:44px;height:44px;border-radius:8px;border:2px solid transparent;background:rgba(255,255,255,0.06);color:white;cursor:pointer;display:flex;align-items:center;justify-content:center"><span class="material-symbols-outlined" style="font-size:18px">ink_eraser</span></button>
-          <button onclick="wbSetTool('line')" class="wb-tool-btn" data-tool="line" style="width:44px;height:44px;border-radius:8px;border:2px solid transparent;background:rgba(255,255,255,0.06);color:white;cursor:pointer;display:flex;align-items:center;justify-content:center"><span class="material-symbols-outlined" style="font-size:18px">horizontal_rule</span></button>
-          <button onclick="wbSetTool('rect')" class="wb-tool-btn" data-tool="rect" style="width:44px;height:44px;border-radius:8px;border:2px solid transparent;background:rgba(255,255,255,0.06);color:white;cursor:pointer;display:flex;align-items:center;justify-content:center"><span class="material-symbols-outlined" style="font-size:18px">rectangle</span></button>
-          <button onclick="wbSetTool('circle')" class="wb-tool-btn" data-tool="circle" style="width:44px;height:44px;border-radius:8px;border:2px solid transparent;background:rgba(255,255,255,0.06);color:white;cursor:pointer;display:flex;align-items:center;justify-content:center"><span class="material-symbols-outlined" style="font-size:18px">circle</span></button>
+          <button data-action="wbSetTool" data-action-arg="pen" class="wb-tool-btn active" data-tool="pen" style="width:44px;height:44px;border-radius:8px;border:2px solid var(--primary);background:rgba(124,77,255,0.2);color:white;cursor:pointer;display:flex;align-items:center;justify-content:center"><span class="material-symbols-outlined" style="font-size:18px">edit</span></button>
+          <button data-action="wbSetTool" data-action-arg="highlighter" class="wb-tool-btn" data-tool="highlighter" style="width:44px;height:44px;border-radius:8px;border:2px solid transparent;background:rgba(255,255,255,0.06);color:white;cursor:pointer;display:flex;align-items:center;justify-content:center"><span class="material-symbols-outlined" style="font-size:18px">ink_highlighter</span></button>
+          <button data-action="wbSetTool" data-action-arg="eraser" class="wb-tool-btn" data-tool="eraser" style="width:44px;height:44px;border-radius:8px;border:2px solid transparent;background:rgba(255,255,255,0.06);color:white;cursor:pointer;display:flex;align-items:center;justify-content:center"><span class="material-symbols-outlined" style="font-size:18px">ink_eraser</span></button>
+          <button data-action="wbSetTool" data-action-arg="line" class="wb-tool-btn" data-tool="line" style="width:44px;height:44px;border-radius:8px;border:2px solid transparent;background:rgba(255,255,255,0.06);color:white;cursor:pointer;display:flex;align-items:center;justify-content:center"><span class="material-symbols-outlined" style="font-size:18px">horizontal_rule</span></button>
+          <button data-action="wbSetTool" data-action-arg="rect" class="wb-tool-btn" data-tool="rect" style="width:44px;height:44px;border-radius:8px;border:2px solid transparent;background:rgba(255,255,255,0.06);color:white;cursor:pointer;display:flex;align-items:center;justify-content:center"><span class="material-symbols-outlined" style="font-size:18px">rectangle</span></button>
+          <button data-action="wbSetTool" data-action-arg="circle" class="wb-tool-btn" data-tool="circle" style="width:44px;height:44px;border-radius:8px;border:2px solid transparent;background:rgba(255,255,255,0.06);color:white;cursor:pointer;display:flex;align-items:center;justify-content:center"><span class="material-symbols-outlined" style="font-size:18px">circle</span></button>
         </div>
         <div style="width:1px;height:24px;background:rgba(255,255,255,0.15)"></div>
         <div style="display:flex;gap:4px">
           ${['#7C4DFF','#FF4081','#00E676','#FFEA00','#FF6D00','#00BCD4','#FFFFFF','#9E9E9E'].map(c =>
-            `<button onclick="wbSetColor('${c}')" class="wb-color-btn" style="width:36px;height:36px;border-radius:50%;border:2px solid ${c === _wbColor ? 'white' : 'transparent'};background:${c};cursor:pointer;transition:border-color 0.15s" data-color="${c}"></button>`
+            `<button data-action="wbSetColor" data-action-arg="${c}" class="wb-color-btn" style="width:36px;height:36px;border-radius:50%;border:2px solid ${c === _wbColor ? 'white' : 'transparent'};background:${c};cursor:pointer;transition:border-color 0.15s" data-color="${c}"></button>`
           ).join('')}
         </div>
         <div style="width:1px;height:24px;background:rgba(255,255,255,0.15)"></div>

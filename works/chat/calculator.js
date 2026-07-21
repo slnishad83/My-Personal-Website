@@ -167,8 +167,8 @@
         font-weight: 700;
       }
       .calc-btn.action-equal {
-        background: var(--brand, #008069) !important;
-        color: #ffffff !important;
+        background: var(--brand, #008069);
+        color: #ffffff;
         font-weight: 700;
       }
       .calc-btn.action-equal:hover {
@@ -215,7 +215,7 @@
           <span class="material-symbols-outlined" style="font-size:16px;">calculate</span>
           <span>Calculator</span>
         </div>
-        <button class="calc-header-btn" onclick="toggleCalculator()" title="Close">
+        <button class="calc-header-btn" data-action="toggleCalculator" title="Close">
           <span class="material-symbols-outlined" style="font-size:18px;">close</span>
         </button>
       </div>

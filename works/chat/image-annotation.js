@@ -34,7 +34,7 @@
       <img src="${blobUrl}" style="max-width:90vw;max-height:55vh;border-radius:12px;object-fit:contain">
       <div style="display:flex;gap:12px;padding:12px">
         <button onclick="document.getElementById('ann-preview-overlay')?.remove();URL.revokeObjectURL('${blobUrl}')" style="padding:12px 24px;border-radius:12px;border:none;background:rgba(255,255,255,0.1);color:white;font-size:14px;font-weight:700;cursor:pointer">Retake</button>
-        <button onclick="openImageAnnotation('${blobUrl}')" style="padding:12px 24px;border-radius:12px;border:none;background:rgba(255,255,255,0.15);color:white;font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px"><span class="material-symbols-outlined" style="font-size:18px">edit</span>Annotate</button>
+        <button data-action="openImageAnnotation" data-action-arg="${blobUrl}" style="padding:12px 24px;border-radius:12px;border:none;background:rgba(255,255,255,0.15);color:white;font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px"><span class="material-symbols-outlined" style="font-size:18px">edit</span>Annotate</button>
         <button id="ann-preview-send" style="padding:12px 24px;border-radius:12px;border:none;background:var(--primary,#7C4DFF);color:white;font-size:14px;font-weight:700;cursor:pointer">Send</button>
       </div>`;
 
@@ -60,7 +60,7 @@
 
     overlay.innerHTML = `
       <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 16px;background:rgba(0,0,0,0.5)">
-        <button onclick="closeImageAnnotation()" style="background:none;border:none;color:white;cursor:pointer"><span class="material-symbols-outlined">close</span></button>
+        <button data-action="closeImageAnnotation" style="background:none;border:none;color:white;cursor:pointer"><span class="material-symbols-outlined">close</span></button>
         <span style="color:white;font-weight:700;font-size:14px">Annotate Image</span>
         <button onclick="sendAnnotatedImage()" style="background:var(--primary,#7C4DFF);border:none;color:white;padding:8px 16px;border-radius:8px;cursor:pointer;font-size:12px;font-weight:600;display:flex;align-items:center;gap:4px"><span class="material-symbols-outlined" style="font-size:16px">send</span>Send</button>
       </div>

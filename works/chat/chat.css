@@ -212,3 +212,127 @@ html.dark .contact-card {
 .contact-card .send-request-btn:active {
   transform: scale(0.98);
 }
+
+/* ══════════════════════════════════════════════════
+   CONTACT POPUP — WhatsApp-style profile card
+   ══════════════════════════════════════════════════ */
+.cp-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9998;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(4px);
+  animation: cpFadeIn 0.15s ease;
+}
+.cp-card {
+  background: var(--surface-container-high, #202c33);
+  border-radius: 20px;
+  width: 300px;
+  max-width: 90vw;
+  overflow: hidden;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4), 0 0 0 1px var(--outline-variant, rgba(255,255,255,0.08));
+  animation: cpSlideUp 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+html:not(.dark) .cp-card {
+  background: #fff;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.12), 0 0 0 1px rgba(0,0,0,0.06);
+}
+.cp-header {
+  display: flex;
+  justify-content: flex-end;
+  padding: 8px 8px 0;
+}
+.cp-close {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  color: var(--on-surface-variant, #8696a0);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.cp-close:hover {
+  background: var(--surface-variant, rgba(255,255,255,0.08));
+}
+.cp-body {
+  padding: 0 24px 24px;
+}
+.cp-info-section {
+  border-top: 1px solid var(--outline-variant, rgba(255,255,255,0.08));
+  padding: 8px 0;
+  margin-bottom: 16px;
+}
+html:not(.dark) .cp-info-section {
+  border-top-color: rgba(0,0,0,0.08);
+}
+.cp-actions {
+  display: flex;
+  gap: 12px;
+}
+.cp-action-btn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 12px 8px;
+  border-radius: 14px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  background: var(--surface-variant, rgba(255,255,255,0.06));
+  color: var(--on-surface, #e9edef);
+}
+html:not(.dark) .cp-action-btn {
+  background: #f0f2f5;
+  color: #111b21;
+}
+.cp-action-btn .material-symbols-outlined {
+  font-size: 22px;
+}
+.cp-action-primary {
+  background: var(--primary, #00a884);
+  color: var(--on-primary, #fff);
+}
+.cp-action-primary .material-symbols-outlined {
+  color: var(--on-primary, #fff);
+}
+html:not(.dark) .cp-action-primary {
+  background: #00a884;
+  color: #fff;
+}
+.cp-action-voice:hover {
+  background: var(--primary, #00a884);
+  color: #fff;
+}
+.cp-action-voice:hover .material-symbols-outlined {
+  color: #fff;
+}
+.cp-action-video:hover {
+  background: var(--primary, #00a884);
+  color: #fff;
+}
+.cp-action-video:hover .material-symbols-outlined {
+  color: #fff;
+}
+.cp-sender-name {
+  transition: opacity 0.15s;
+}
+.cp-sender-name:hover {
+  opacity: 0.8;
+}
+@keyframes cpFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes cpSlideUp {
+  from { opacity: 0; transform: translateY(20px) scale(0.95); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
