@@ -135,6 +135,10 @@ const BUNDLE_ORDER = [
   'toast-ux.js',
   'a11y-enhancements.js',
   'message-errors.js',
+  // Feature modules (v3.5)
+  'report-user.js',
+  'gif-picker.js',
+  'sticker-packs.js',
   'app-init.js',
 ];
 
