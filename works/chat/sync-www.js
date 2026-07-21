@@ -40,6 +40,7 @@ const INCLUDE = [
   'onboarding.js', 'empty-states.js', 'form-validation.js', 'toast-ux.js', 'a11y-enhancements.js', 'message-errors.js',
   'report-user.js', 'gif-picker.js', 'sticker-packs.js', 'micro-interactions.js', 'profile-setup.js', 'lazy-images.js',
   'qr-code-gen.js', 'qr-scanner.js', 'contact-sync.js',
+  'biometric.js', 'screenshot-protection.js', 'in-app-update.js', 'app-shortcuts.js', 'haptic-feedback.js',
   'snooze-enhancements.js', 'snooze-enhancements.css',
   'snooze-history.js', 'snooze-history.css',
   'scheduled-calendar.js', 'scheduled-calendar.css',

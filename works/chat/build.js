@@ -142,6 +142,12 @@ const BUNDLE_ORDER = [
   'micro-interactions.js',
   'profile-setup.js',
   'lazy-images.js',
+  // Android native bridges
+  'biometric.js',
+  'screenshot-protection.js',
+  'in-app-update.js',
+  'app-shortcuts.js',
+  'haptic-feedback.js',
   'app-init.js',
 ];
 

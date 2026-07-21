@@ -169,8 +169,13 @@ public class AppPermissionsPlugin extends Plugin {
             return;
         }
 
-        boolean hasEarpiece = am.hasReceiver(AudioManager.TYPE_BUILTIN_EARPIECE);
-        boolean hasSpeaker = am.hasReceiver(AudioManager.TYPE_BUILTIN_SPEAKER);
+        android.media.AudioDeviceInfo[] devices = am.getDevices(AudioManager.GET_DEVICES_OUTPUTS);
+        boolean hasEarpiece = false;
+        boolean hasSpeaker = false;
+        for (android.media.AudioDeviceInfo d : devices) {
+            if (d.getType() == android.media.AudioDeviceInfo.TYPE_BUILTIN_EARPIECE) hasEarpiece = true;
+            if (d.getType() == android.media.AudioDeviceInfo.TYPE_BUILTIN_SPEAKER) hasSpeaker = true;
+        }
         boolean hasBluetooth = isBluetoothConnected || am.isBluetoothScoOn();
         boolean hasWiredHeadset = am.isWiredHeadsetOn();
 
@@ -321,7 +326,7 @@ public class AppPermissionsPlugin extends Plugin {
         if (audioRouteReceiver != null) {
             try {
                 getContext().unregisterReceiver(audioRouteReceiver);
-            } catch (Exception _) {}
+            } catch (Exception e) { /* ignore */ }
             audioRouteReceiver = null;
         }
         AudioManager am = getAudioManager();
