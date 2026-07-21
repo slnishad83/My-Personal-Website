@@ -137,7 +137,7 @@
       try {
         const expiryMs = chosen.getTime();
         // Use globals from app.js
-        const _db = typeof db !== 'undefined' ? db : null;
+        const _db = App && App.db ? App.db : (typeof firebase !== 'undefined' ? firebase.firestore() : null);
         const _user = typeof currentUser !== 'undefined' ? currentUser
           : (typeof auth !== 'undefined' ? auth.currentUser : null);
         if (!_db || !_user) throw new Error('Firebase not ready');

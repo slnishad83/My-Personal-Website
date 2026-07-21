@@ -11,17 +11,14 @@
   var _detailOverlay = null;
   var _dateGroups = {};
 
-  function _db() { return (window.App && window.App.db) ? window.App.db : null; }
-  function _uid() {
-    if (window.App && window.App.auth && window.App.auth.currentUser) return window.App.auth.currentUser.uid;
-    return null;
-  }
+  var _db = function() { return App && App.db ? App.db : (typeof firebase !== 'undefined' ? firebase.firestore() : null); };
+  var _uid = function() { return App && App.uid ? App.uid() : (window.currentUser ? window.currentUser.uid : null); };
   function _me() { return (window.App && window.App.currentUser) ? window.App.currentUser : null; }
   function _$(id) { return document.getElementById(id); }
   function _txt(id, v) { var e = _$(id); if (e) e.textContent = v; }
   function _show(id) { var e = _$(id); if (e) e.classList.remove('hidden'); }
   function _hide(id) { var e = _$(id); if (e) e.classList.add('hidden'); }
-  function _toast(msg, t) { if (typeof window.showToast === 'function') window.showToast(msg, t || 'info'); }
+  function _toast(msg, t) { if (App && App.toast) App.toast(msg, t); else if (typeof window.showToast === 'function') window.showToast(msg, t); }
   var _esc = function(s) { return App && App.escHtml ? App.escHtml(s) : (s ? String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;') : ''); };
 
   function _getCallDuration(durationMs) {

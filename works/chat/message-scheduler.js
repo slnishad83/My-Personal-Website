@@ -183,17 +183,22 @@
       type: 'text'
     };
     
-    const chatRef = window.App.db.collection(isGroup ? 'groups' : 'chats').doc(chatId);
-    await window.App.db.collection('messages').add({
-      ...msg,
-      chatId: chatId
-    });
-    
-    await chatRef.update({
-      lastMessage: text,
-      lastMessageTime: msg.time,
-      unread: window.firebase.firestore.FieldValue.increment(1) // Not accurate for the sender, but usually ignored on client sync
-    });
+    try {
+      const chatRef = window.App.db.collection(isGroup ? 'groups' : 'chats').doc(chatId);
+      await window.App.db.collection('messages').add({
+        ...msg,
+        chatId: chatId
+      });
+      
+      await chatRef.update({
+        lastMessage: text,
+        lastMessageTime: msg.time,
+        unread: window.firebase.firestore.FieldValue.increment(1) // Not accurate for the sender, but usually ignored on client sync
+      });
+    } catch (err) {
+      console.error('[MessageScheduler] sendMsgToDb write failed:', err);
+      if (typeof window.showToast === 'function') window.showToast('Failed to send scheduled message.', 'error');
+    }
   }
 
   if (document.readyState === 'loading') {

@@ -44,7 +44,7 @@
     return '📎 ' + (att.name || 'Attachment');
   }
 
-  function _db() { return (window.App && window.App.db) ? window.App.db : null; }
+  var _db = function() { return App && App.db ? App.db : (typeof firebase !== 'undefined' ? firebase.firestore() : null); };
 
   // Open the thread panel for a given parent message
   async function openThreadPanel(messageId, messageData) {

@@ -1,9 +1,9 @@
 (function () {
   'use strict';
 
-  function _db() { return (window.App && window.App.db) ? window.App.db : (typeof firebase !== 'undefined' ? firebase.firestore() : null); }
-  function _uid() { return (window.currentUser ? window.currentUser.uid : null); }
-  function _toast(msg, t) { if (typeof window.showToast === 'function') window.showToast(msg, t || 'info'); }
+  var _db = function() { return App && App.db ? App.db : (typeof firebase !== 'undefined' ? firebase.firestore() : null); };
+  var _uid = function() { return App && App.uid ? App.uid() : (window.currentUser ? window.currentUser.uid : null); };
+  function _toast(msg, t) { if (App && App.toast) App.toast(msg, t); else if (typeof window.showToast === 'function') window.showToast(msg, t); }
   var _esc = function(s) { return App && App.escHtml ? App.escHtml(s) : (s ? String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;') : ''); };
 
   function _getGroupRef(groupId) {
@@ -127,7 +127,7 @@
     return data;
   }
 
-  function openGroupParticipantPicker(groupId) {
+  async function openGroupParticipantPicker(groupId) {
     var existing = document.getElementById('gf-participant-picker');
     if (existing) existing.remove();
     var overlay = document.createElement('div');
@@ -289,8 +289,13 @@
       });
     }
     batch.update(groupRef, { memberCount: firebase.firestore.FieldValue.increment(userIds.length), updatedAt: Date.now() });
-    await batch.commit();
-    _toast(userIds.length + ' participant' + (userIds.length > 1 ? 's' : '') + ' added', 'success');
+    try {
+      await batch.commit();
+      _toast(userIds.length + ' participant' + (userIds.length > 1 ? 's' : '') + ' added', 'success');
+    } catch (err) {
+      console.error('[GroupFeatures] addParticipantsToGroup write failed:', err);
+      _toast('Failed to add participants. Please try again.', 'error');
+    }
   }
 
   async function removeParticipantFromGroup(groupId, userId) {
@@ -303,11 +308,16 @@
     var groupRef = _getGroupRef(groupId);
     var membersRef = _getGroupMembersRef(groupId);
     if (!groupRef || !membersRef) { _toast('Group error', 'error'); return; }
-    var batch = _db().batch();
-    batch.delete(membersRef.doc(userId));
-    batch.update(groupRef, { memberCount: firebase.firestore.FieldValue.increment(-1), updatedAt: Date.now() });
-    await batch.commit();
-    _toast('Participant removed', 'success');
+    try {
+      var batch = _db().batch();
+      batch.delete(membersRef.doc(userId));
+      batch.update(groupRef, { memberCount: firebase.firestore.FieldValue.increment(-1), updatedAt: Date.now() });
+      await batch.commit();
+      _toast('Participant removed', 'success');
+    } catch (err) {
+      console.error('[GroupFeatures] removeParticipantFromGroup write failed:', err);
+      _toast('Failed to remove participant. Please try again.', 'error');
+    }
   }
 
   async function promoteToAdmin(groupId, userId) {
@@ -317,12 +327,17 @@
     if (!isCreator) { _toast('Only the group creator can promote admins', 'error'); return; }
     var groupRef = _getGroupRef(groupId);
     if (!groupRef) { _toast('Group error', 'error'); return; }
-    await groupRef.update({ admins: firebase.firestore.FieldValue.arrayUnion(userId), updatedAt: Date.now() });
-    var membersRef = _getGroupMembersRef(groupId);
-    if (membersRef) {
-      await membersRef.doc(userId).update({ role: 'admin' }).catch(function () {});
+    try {
+      await groupRef.update({ admins: firebase.firestore.FieldValue.arrayUnion(userId), updatedAt: Date.now() });
+      var membersRef = _getGroupMembersRef(groupId);
+      if (membersRef) {
+        await membersRef.doc(userId).update({ role: 'admin' }).catch(function () {});
+      }
+      _toast('Promoted to admin', 'success');
+    } catch (err) {
+      console.error('[GroupFeatures] promoteToAdmin write failed:', err);
+      _toast('Failed to promote. Please try again.', 'error');
     }
-    _toast('Promoted to admin', 'success');
   }
 
   async function demoteFromAdmin(groupId, userId) {
@@ -332,12 +347,17 @@
     if (!isCreator) { _toast('Only the group creator can demote admins', 'error'); return; }
     var groupRef = _getGroupRef(groupId);
     if (!groupRef) { _toast('Group error', 'error'); return; }
-    await groupRef.update({ admins: firebase.firestore.FieldValue.arrayRemove(userId), updatedAt: Date.now() });
-    var membersRef = _getGroupMembersRef(groupId);
-    if (membersRef) {
-      await membersRef.doc(userId).update({ role: 'member' }).catch(function () {});
+    try {
+      await groupRef.update({ admins: firebase.firestore.FieldValue.arrayRemove(userId), updatedAt: Date.now() });
+      var membersRef = _getGroupMembersRef(groupId);
+      if (membersRef) {
+        await membersRef.doc(userId).update({ role: 'member' }).catch(function () {});
+      }
+      _toast('Removed admin status', 'success');
+    } catch (err) {
+      console.error('[GroupFeatures] demoteFromAdmin write failed:', err);
+      _toast('Failed to demote. Please try again.', 'error');
     }
-    _toast('Removed admin status', 'success');
   }
 
   async function setGroupDescription(groupId, description) {
@@ -350,8 +370,13 @@
     if (!isAdmin) { _toast('Only admins can change description', 'error'); return; }
     var groupRef = _getGroupRef(groupId);
     if (!groupRef) { _toast('Group error', 'error'); return; }
-    await groupRef.update({ description: trimmed, updatedAt: Date.now() });
-    _toast('Description updated', 'success');
+    try {
+      await groupRef.update({ description: trimmed, updatedAt: Date.now() });
+      _toast('Description updated', 'success');
+    } catch (err) {
+      console.error('[GroupFeatures] setGroupDescription write failed:', err);
+      _toast('Failed to update description. Please try again.', 'error');
+    }
   }
 
   async function setGroupPhoto(groupId, file) {
@@ -374,8 +399,13 @@
     }
     var groupRef = _getGroupRef(groupId);
     if (!groupRef) { _toast('Group error', 'error'); return; }
-    await groupRef.update({ photoURL: url, updatedAt: Date.now() });
-    _toast('Group photo updated', 'success');
+    try {
+      await groupRef.update({ photoURL: url, updatedAt: Date.now() });
+      _toast('Group photo updated', 'success');
+    } catch (err) {
+      console.error('[GroupFeatures] setGroupPhoto write failed:', err);
+      _toast('Failed to update group photo. Please try again.', 'error');
+    }
   }
 
   function muteGroupNotifications(groupId, duration) {
@@ -393,11 +423,16 @@
           var f = _db();
           if (!f) { _toast('Firestore unavailable', 'error'); return; }
           var until = o.value === -1 ? -1 : Date.now() + o.value;
-          await f.collection('users').doc(uid).collection('mutedChats').doc(groupId).set({ mutedUntil: until, groupId: groupId, mutedAt: Date.now() });
-          if (window._mutedChats && typeof window._mutedChats.set === 'function') {
-            window._mutedChats.set(groupId, { mutedUntil: until });
+          try {
+            await f.collection('users').doc(uid).collection('mutedChats').doc(groupId).set({ mutedUntil: until, groupId: groupId, mutedAt: Date.now() });
+            if (window._mutedChats && typeof window._mutedChats.set === 'function') {
+              window._mutedChats.set(groupId, { mutedUntil: until });
+            }
+            _toast('Muted for ' + o.label, 'success');
+          } catch (err) {
+            console.error('[GroupFeatures] muteGroupNotifications write failed:', err);
+            _toast('Failed to mute. Please try again.', 'error');
           }
-          _toast('Muted for ' + o.label, 'success');
         }
       };
     }));
@@ -413,12 +448,17 @@
     var groupRef = _getGroupRef(groupId);
     var membersRef = _getGroupMembersRef(groupId);
     if (!groupRef || !membersRef) { _toast('Group error', 'error'); return; }
-    var batch = _db().batch();
-    batch.delete(membersRef.doc(uid));
-    batch.update(groupRef, { memberCount: firebase.firestore.FieldValue.increment(-1), updatedAt: Date.now() });
-    await batch.commit();
-    _toast('You left the group', 'success');
-    if (typeof window.backToList === 'function') window.backToList();
+    try {
+      var batch = _db().batch();
+      batch.delete(membersRef.doc(uid));
+      batch.update(groupRef, { memberCount: firebase.firestore.FieldValue.increment(-1), updatedAt: Date.now() });
+      await batch.commit();
+      _toast('You left the group', 'success');
+      if (typeof window.backToList === 'function') window.backToList();
+    } catch (err) {
+      console.error('[GroupFeatures] exitGroup write failed:', err);
+      _toast('Failed to leave group. Please try again.', 'error');
+    }
   }
 
   async function deleteGroupForEveryone(groupId) {
@@ -433,15 +473,20 @@
     var f = _db();
     if (!f) { _toast('Firestore unavailable', 'error'); return; }
     var membersRef = _getGroupMembersRef(groupId);
-    if (membersRef) {
-      var membersSnap = await membersRef.get();
-      var batch = f.batch();
-      membersSnap.forEach(function (doc) { batch.delete(doc.ref); });
-      await batch.commit();
+    try {
+      if (membersRef) {
+        var membersSnap = await membersRef.get();
+        var batch = f.batch();
+        membersSnap.forEach(function (doc) { batch.delete(doc.ref); });
+        await batch.commit();
+      }
+      await f.collection('groups').doc(groupId).delete();
+      _toast('Group deleted for everyone', 'success');
+      if (typeof window.backToList === 'function') window.backToList();
+    } catch (err) {
+      console.error('[GroupFeatures] deleteGroupForEveryone write failed:', err);
+      _toast('Failed to delete group. Please try again.', 'error');
     }
-    await f.collection('groups').doc(groupId).delete();
-    _toast('Group deleted for everyone', 'success');
-    if (typeof window.backToList === 'function') window.backToList();
   }
 
   async function changeGroupSubject(groupId, name) {
@@ -452,8 +497,13 @@
     if (!isAdmin) { _toast('Only admins can rename the group', 'error'); return; }
     var groupRef = _getGroupRef(groupId);
     if (!groupRef) { _toast('Group error', 'error'); return; }
-    await groupRef.update({ name: name.trim(), updatedAt: Date.now() });
-    _toast('Group renamed', 'success');
+    try {
+      await groupRef.update({ name: name.trim(), updatedAt: Date.now() });
+      _toast('Group renamed', 'success');
+    } catch (err) {
+      console.error('[GroupFeatures] changeGroupSubject write failed:', err);
+      _toast('Failed to rename group. Please try again.', 'error');
+    }
   }
 
   async function searchInGroup(groupId, query) {
@@ -544,7 +594,13 @@
     var inviteCode = data.inviteCode;
     if (!inviteCode) {
       inviteCode = _generateCode(12);
-      await groupRef.update({ inviteCode: inviteCode, updatedAt: Date.now() });
+      try {
+        await groupRef.update({ inviteCode: inviteCode, updatedAt: Date.now() });
+      } catch (err) {
+        console.error('[GroupFeatures] openGroupInviteLink write failed:', err);
+        _toast('Failed to generate invite link. Please try again.', 'error');
+        return;
+      }
     }
     var baseUrl = window.location.origin + window.location.pathname.replace(/\/[^/]*$/, '/');
     var inviteUrl = baseUrl + 'invite.html?group=' + inviteCode;
@@ -618,8 +674,13 @@
     var groupRef = _getGroupRef(groupId);
     if (!groupRef) { _toast('Group error', 'error'); return; }
     var newCode = _generateCode(12);
-    await groupRef.update({ inviteCode: newCode, inviteRevokedAt: Date.now(), updatedAt: Date.now() });
-    _toast('Invite link revoked. A new link has been generated.', 'success');
+    try {
+      await groupRef.update({ inviteCode: newCode, inviteRevokedAt: Date.now(), updatedAt: Date.now() });
+      _toast('Invite link revoked. A new link has been generated.', 'success');
+    } catch (err) {
+      console.error('[GroupFeatures] revokeGroupInviteLink write failed:', err);
+      _toast('Failed to revoke invite link. Please try again.', 'error');
+    }
   }
 
   function _generateCode(len) {

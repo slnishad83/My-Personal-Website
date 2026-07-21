@@ -18,13 +18,7 @@
 
   // ── Storage helpers ───────────────────────────────────────────────────────
 
-  function _uid() {
-    try {
-      const u = typeof currentUser !== 'undefined' ? currentUser
-        : (typeof auth !== 'undefined' ? auth.currentUser : null);
-      return u?.uid || 'anon';
-    } catch (_) { return 'anon'; }
-  }
+  var _uid = function() { return App && App.uid ? App.uid() : (window.currentUser ? window.currentUser.uid : null); };
 
   function _load() {
     try {

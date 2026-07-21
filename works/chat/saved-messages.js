@@ -5,6 +5,7 @@
 
 (function () {
   let savedMessagesCache = [];
+  let _savedMessagesUnsub = null;
   
   function initSavedMessages() {
     // 1. Inject CSS for saved items
@@ -139,10 +140,11 @@
   }
 
   function fetchSavedMessages() {
+    if (_savedMessagesUnsub) { _savedMessagesUnsub(); _savedMessagesUnsub = null; }
     if (!window.App || !window.App.db || !window.App.auth.currentUser) return;
     const uid = window.App.auth.currentUser.uid;
     
-    window.App.db.collection('users').doc(uid).collection('savedMessages')
+    _savedMessagesUnsub = window.App.db.collection('users').doc(uid).collection('savedMessages')
       .orderBy('savedAt', 'desc')
       .onSnapshot(snap => {
         savedMessagesCache = snap.docs.map(doc => doc.data());

@@ -27,10 +27,8 @@
 
   // ── Helpers ───────────────────────────────────────────────────────────────
 
-  function _uid() {
-    return (typeof currentUser !== 'undefined' ? currentUser : auth?.currentUser)?.uid || null;
-  }
-  function _db()  { return typeof db !== 'undefined' ? db : null; }
+  var _uid = function() { return App && App.uid ? App.uid() : (window.currentUser ? window.currentUser.uid : null); };
+  var _db = function() { return App && App.db ? App.db : (typeof firebase !== 'undefined' ? firebase.firestore() : null); };
   var _esc = function(s) { return App && App.escHtml ? App.escHtml(s) : (s ? String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;') : ''); };
 
   const PRIORITY_CFG = {

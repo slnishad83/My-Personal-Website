@@ -809,10 +809,7 @@
     catch(e) { _toast("Copy failed — select and copy manually", "error"); }
     document.body.removeChild(ta);
   }
-  function _toast(msg, type) {
-    if (typeof window.showToast === "function") window.showToast(msg, type || "success");
-    else console.log("[fixes] " + msg);
-  }
+  function _toast(msg, type) { if (App && App.toast) App.toast(msg, type); else if (typeof window.showToast === "function") window.showToast(msg, type); else console.log("[fixes] " + msg); }
 
   // ============================================================
   // 12. EVENT DELEGATION — capture phase fires before any <a href>

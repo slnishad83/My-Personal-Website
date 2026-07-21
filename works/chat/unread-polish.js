@@ -9,17 +9,11 @@
   var _badgeBatchTimer = null;
   var _audioCtx = null;
 
-  function _db() {
-    return (window.App && window.App.db) ? window.App.db : (window.firebase ? window.firebase.firestore() : null);
-  }
+  var _db = function() { return App && App.db ? App.db : (typeof firebase !== 'undefined' ? firebase.firestore() : null); };
 
   var _esc = function(s) { return App && App.escHtml ? App.escHtml(s) : (s ? String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;') : ''); };
 
-  function _uid() {
-    if (window.currentUser && window.currentUser.uid) return window.currentUser.uid;
-    if (window.App && window.App.auth && window.App.auth.currentUser) return window.App.auth.currentUser.uid;
-    return null;
-  }
+  var _uid = function() { return App && App.uid ? App.uid() : (window.currentUser ? window.currentUser.uid : null); };
 
   function _loadState() {
     try {

@@ -94,11 +94,13 @@
   }
 
   // ── 3. BUSY STATUS (Feature 10) ──────────────────────────────────
+  let _busyStatusUnsub = null;
   function setupBusyStatus() {
     // Check if user is currently busy on load
     auth.onAuthStateChanged(user => {
+      if (_busyStatusUnsub) { _busyStatusUnsub(); _busyStatusUnsub = null; }
       if (!user) return;
-      db.collection('users').doc(user.uid).onSnapshot(snap => {
+      _busyStatusUnsub = db.collection('users').doc(user.uid).onSnapshot(snap => {
         const data = snap.data() || {};
         showOrHideBusyBanner(data.busyStatus);
       });
@@ -143,14 +145,24 @@
       if (!msg) { if (typeof showToast === 'function') showToast('Enter a status message', 'error'); return; }
       const user = auth.currentUser;
       if (!user) return;
-      await db.collection('users').doc(user.uid).update({ busyStatus: msg, busySetAt: firebase.firestore.FieldValue.serverTimestamp() });
-      modal.classList.remove('show');
-      if (typeof showToast === 'function') showToast('Busy status set. Auto-reply is active.');
+      try {
+        await db.collection('users').doc(user.uid).update({ busyStatus: msg, busySetAt: firebase.firestore.FieldValue.serverTimestamp() });
+        modal.classList.remove('show');
+        if (typeof showToast === 'function') showToast('Busy status set. Auto-reply is active.');
+      } catch (err) {
+        console.error('[FeaturesAddon] saveBusyStatus write failed:', err);
+        if (typeof showToast === 'function') showToast('Failed to save. Please try again.', 'error');
+      }
     };
     window.clearBusyStatus = async () => {
       const user = auth.currentUser;
       if (!user) return;
-      await db.collection('users').doc(user.uid).update({ busyStatus: null, busySetAt: null });
+      try {
+        await db.collection('users').doc(user.uid).update({ busyStatus: null, busySetAt: null });
+      } catch (err) {
+        console.error('[FeaturesAddon] clearBusyStatus write failed:', err);
+        if (typeof showToast === 'function') showToast('Failed to clear busy status. Please try again.', 'error');
+      }
     };
   }
 
@@ -233,20 +245,25 @@
       if (dueAt <= new Date()) { if (typeof showToast === 'function') showToast('Choose a future date', 'error'); return; }
       const user = auth.currentUser;
       const [type, id] = target.split('_');
-      await db.collection('scheduledMessages').add({
-        userId: user.uid,
-        text: msg,
-        dueAt: firebase.firestore.Timestamp.fromDate(dueAt),
-        status: 'pending',
-        chatType: type === 'saved' ? 'direct' : type,
-        chatId: type === 'saved' ? id : id,
-        directId: type === 'direct' ? id : (type === 'saved' ? id : null),
-        groupId: type === 'group' ? id : null,
-        isTimeCapsule: true,
-        createdAt: firebase.firestore.FieldValue.serverTimestamp()
-      });
-      modal.classList.remove('show');
-      if (typeof showToast === 'function') showToast(`⏳ Message scheduled for ${dueAt.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}`);
+      try {
+        await db.collection('scheduledMessages').add({
+          userId: user.uid,
+          text: msg,
+          dueAt: firebase.firestore.Timestamp.fromDate(dueAt),
+          status: 'pending',
+          chatType: type === 'saved' ? 'direct' : type,
+          chatId: type === 'saved' ? id : id,
+          directId: type === 'direct' ? id : (type === 'saved' ? id : null),
+          groupId: type === 'group' ? id : null,
+          isTimeCapsule: true,
+          createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        modal.classList.remove('show');
+        if (typeof showToast === 'function') showToast(`⏳ Message scheduled for ${dueAt.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}`);
+      } catch (err) {
+        console.error('[FeaturesAddon] saveTimeCapsule write failed:', err);
+        if (typeof showToast === 'function') showToast('Failed to schedule. Please try again.', 'error');
+      }
     };
   }
 
@@ -340,13 +357,26 @@
       const user = auth.currentUser;
       if (!user) return;
       input.value = '';
-      await db.collection('tasks').add({ userId: user.uid, text, done: false, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
+      try {
+        await db.collection('tasks').add({ userId: user.uid, text, done: false, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
+      } catch (err) {
+        console.error('[FeaturesAddon] addTask write failed:', err);
+        if (typeof showToast === 'function') showToast('Failed to add task. Please try again.', 'error');
+      }
     };
     window.toggleTask = async (id, done) => {
-      await db.collection('tasks').doc(id).update({ done: !done });
+      try {
+        await db.collection('tasks').doc(id).update({ done: !done });
+      } catch (err) {
+        console.error('[FeaturesAddon] toggleTask write failed:', err);
+      }
     };
     window.deleteTask = async (id) => {
-      await db.collection('tasks').doc(id).delete();
+      try {
+        await db.collection('tasks').doc(id).delete();
+      } catch (err) {
+        console.error('[FeaturesAddon] deleteTask write failed:', err);
+      }
     };
 
     function renderTasks(tasks) {

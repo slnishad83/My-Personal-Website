@@ -17,8 +17,8 @@
 
   // ── Helpers ───────────────────────────────────────────────────────────────
 
-  function _uid()  { const u = window.currentUser || App?.currentUser; return u?.uid || null; }
-  function _db()   { return window.db || App?.db || null; }
+  var _uid = function() { return App && App.uid ? App.uid() : (window.currentUser ? window.currentUser.uid : null); };
+  var _db = function() { return App && App.db ? App.db : (typeof firebase !== 'undefined' ? firebase.firestore() : null); };
 
   function _relTime(ts) {
     if (!ts) return '';

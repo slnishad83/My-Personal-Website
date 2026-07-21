@@ -7,9 +7,7 @@
   let _archiveSectionEl = null;
   let _undoTimers = new Map();
 
-  function _uid() {
-    return (window.currentUser && window.currentUser.uid) || (typeof currentUser !== 'undefined' && currentUser && currentUser.uid) || null;
-  }
+  var _uid = function() { return App && App.uid ? App.uid() : (window.currentUser ? window.currentUser.uid : null); };
 
   function _docRef() {
     const uid = _uid();
@@ -70,11 +68,7 @@
     if (el) el.style.display = '';
   }
 
-  function _showToast(msg, type) {
-    if (typeof showToast === 'function') {
-      showToast(msg, type || 'info');
-    }
-  }
+  function _showToast(msg, type) { if (App && App.toast) App.toast(msg, type); else if (typeof showToast === 'function') showToast(msg, type); }
 
   function _showUndoToast(chatId, action) {
     const toastId = 'archive-toast-' + Date.now();

@@ -8,8 +8,8 @@
   var _privacySetting = 'everyone';
   var _loadAttempted = false;
 
-  function _db() { return (window.App && window.App.db) ? window.App.db : (typeof db !== 'undefined' ? db : null); }
-  function _uid() { return (window.App && window.App.auth && window.App.auth.currentUser) ? window.App.auth.currentUser.uid : (window.currentUser ? window.currentUser.uid : null); }
+  var _db = function() { return App && App.db ? App.db : (typeof firebase !== 'undefined' ? firebase.firestore() : null); };
+  var _uid = function() { return App && App.uid ? App.uid() : (window.currentUser ? window.currentUser.uid : null); };
   function _userName() {
     var u = (window.App && window.App.auth && window.App.auth.currentUser) ? window.App.auth.currentUser : window.currentUser;
     return u ? (u.displayName || 'Me') : 'Me';
@@ -18,7 +18,7 @@
     var u = (window.App && window.App.auth && window.App.auth.currentUser) ? window.auth.currentUser : window.currentUser;
     return u ? (u.photoURL || '') : '';
   }
-  function _toast(msg, t) { if (typeof window.showToast === 'function') window.showToast(msg, t || 'info'); }
+  function _toast(msg, t) { if (App && App.toast) App.toast(msg, t); else if (typeof window.showToast === 'function') window.showToast(msg, t); }
   var _esc = function(s) { return App && App.escHtml ? App.escHtml(s) : (s ? String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;') : ''); };
   function _now() { return Date.now(); }
   function _expiresAt() { return _now() + STATUS_DURATION_MS; }

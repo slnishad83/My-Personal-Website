@@ -147,11 +147,7 @@ function _getNativePlugin() {
   return window.Capacitor?.Plugins?.AppPermissions || null;
 }
 
-function _showToast(msg, type) {
-  if (typeof showToast === "function") {
-    showToast(msg, type || "info");
-  }
-}
+function _showToast(msg, type) { if (App && App.toast) App.toast(msg, type); else if (typeof showToast === "function") showToast(msg, type || "info"); }
 
 function _stopMediaTracks(stream) {
   if (stream) {

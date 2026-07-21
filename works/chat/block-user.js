@@ -1,9 +1,7 @@
 (function() {
   'use strict';
 
-  function _uid() {
-    return (window.currentUser && window.currentUser.uid) || (typeof currentUser !== 'undefined' && currentUser && currentUser.uid) || null;
-  }
+  var _uid = function() { return App && App.uid ? App.uid() : (window.currentUser ? window.currentUser.uid : null); };
 
   function _esc(str) {
     if (typeof window.escHtml === 'function') return window.escHtml(str);
@@ -18,9 +16,7 @@
     return db.collection('users').doc(uid);
   }
 
-  function _showToast(msg, type) {
-    if (typeof showToast === 'function') showToast(msg, type || 'info');
-  }
+  function _showToast(msg, type) { if (App && App.toast) App.toast(msg, type); else if (typeof showToast === 'function') showToast(msg, type); }
 
   async function _persist() {
     var ref = _docRef();

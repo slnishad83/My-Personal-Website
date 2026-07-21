@@ -6,20 +6,13 @@
 
   var _esc = function(s) { return App && App.escHtml ? App.escHtml(s) : (s ? String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;') : ''); };
 
-  function _db() {
-    return (window.App && window.App.db) ? window.App.db : (typeof db !== 'undefined' ? db : null);
-  }
+  var _db = function() { return App && App.db ? App.db : (typeof firebase !== 'undefined' ? firebase.firestore() : null); };
 
   function _auth() {
     return (window.App && window.App.auth) ? window.App.auth : (typeof auth !== 'undefined' ? auth : null);
   }
 
-  function _uid() {
-    var a = _auth();
-    if (a && a.currentUser) return a.currentUser.uid;
-    if (window.currentUser && window.currentUser.uid) return window.currentUser.uid;
-    return null;
-  }
+  var _uid = function() { return App && App.uid ? App.uid() : (window.currentUser ? window.currentUser.uid : null); };
 
   function _removeOverlay() {
     if (_activeOverlay) { _activeOverlay.remove(); _activeOverlay = null; }

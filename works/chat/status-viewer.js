@@ -20,8 +20,8 @@
   var REACTION_EMOJIS = ['👍', '❤️', '😂', '😮', '😢', '🙏'];
 
   var _esc = function(s) { return App && App.escHtml ? App.escHtml(s) : (s ? String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;') : ''); };
-  function _toast(msg, t) { if (typeof window.showToast === 'function') window.showToast(msg, t || 'info'); }
-  function _uid() { return (window.App && window.App.auth && window.App.auth.currentUser) ? window.App.auth.currentUser.uid : (window.currentUser ? window.currentUser.uid : null); }
+  function _toast(msg, t) { if (App && App.toast) App.toast(msg, t); else if (typeof window.showToast === 'function') window.showToast(msg, t); }
+  var _uid = function() { return App && App.uid ? App.uid() : (window.currentUser ? window.currentUser.uid : null); };
   function _now() { return Date.now(); }
   function _timeAgo(ts) {
     var diff = _now() - ts;
