@@ -154,6 +154,7 @@
   <link rel="stylesheet" href="sync-audit.css">
   <link rel="stylesheet" href="snooze-history.css">
   <link rel="stylesheet" href="snooze-enhancements.css">
+  <link rel="stylesheet" href="new-features.css">
 
   <script src="notification-sounds.js" defer></script>
   <script src="https://unpkg.com/twemoji@14.0.2/dist/twemoji.min.js" crossorigin="anonymous" defer></script>
@@ -403,6 +404,8 @@
 
       <!-- Active List Container -->
       <div class="flex-1 overflow-y-scroll custom-scrollbar p-2 space-y-1" id="chat-list" role="list" aria-label="Conversations">
+        <!-- WhatsApp Status row (horizontal scroll above chats) -->
+        <div id="status-row" class="flex items-center gap-3 px-3 py-2 overflow-x-auto scrollbar-hide border-b border-outline-variant/10 mb-2 hidden" role="list" aria-label="Status updates"></div>
         <!-- H9: Loading skeleton shown while chats load -->
         <div id="chat-list-skeleton" class="space-y-2 p-2">
           <div class="flex items-center gap-3 p-3 animate-pulse"><div class="w-12 h-12 rounded-full bg-surface-container-highest"></div><div class="flex-1 space-y-2"><div class="h-3 bg-surface-container-highest rounded w-1/3"></div><div class="h-2 bg-surface-container-highest rounded w-2/3"></div></div></div>
@@ -1552,6 +1555,25 @@
   <script src="help-support.js"></script>
   <script src="reply-private.js"></script>
   <script src="group-meta.js"></script>
+  <!-- WhatsApp feature parity modules -->
+  <script src="call-controller.js"></script>
+  <script src="group-call.js"></script>
+  <script src="call-history.js"></script>
+  <script src="archive-chat.js"></script>
+  <script src="forward-modal.js"></script>
+  <script src="block-user.js"></script>
+  <script src="message-reactions.js"></script>
+  <script src="delete-group.js"></script>
+  <script src="profile-edit.js"></script>
+  <script src="app-lock.js"></script>
+  <script src="video-notes.js"></script>
+  <script src="in-call-reactions.js"></script>
+  <script src="status.js"></script>
+  <script src="status-viewer.js"></script>
+  <script src="notification-nav.js"></script>
+  <script src="unread-polish.js"></script>
+  <script src="home-camera.js"></script>
+  <script src="group-features.js"></script>
   <script src="app-init.js"></script>
 
   <!-- PWA Service Worker Registration -->
