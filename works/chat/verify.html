@@ -1,176 +1,307 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <title>Email Verification - Team Chat</title>
-  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=block" rel="stylesheet" />
-  <link rel="stylesheet" href="redesign-base.css" />
-  <script>
-    (function() {
-      var mode = localStorage.getItem("themeMode") || (localStorage.getItem("darkMode") === "true" ? "dark" : "system");
-      if (!localStorage.getItem("themeMode")) localStorage.setItem("themeMode", mode);
-      var theme = mode === "system" ? (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light") : mode;
-      document.documentElement.dataset.theme = theme;
-      var css = 'body { visibility: hidden !important; }';
-      var style = document.createElement('style');
-      style.type = 'text/css';
-      style.appendChild(document.createTextNode(css));
-      document.head.appendChild(style);
-      document.addEventListener("DOMContentLoaded", function () {
-        document.body.classList.toggle("dark", theme === "dark");
-        style.remove();
-      });
-    })();
-  </script>
-  <style>
-    * {
-      box-sizing: border-box;
-    }
-
-    body {
-      margin: 0;
-      min-height: 100vh;
-      display: grid;
-      place-items: center;
-      padding: 20px;
-      font-family: Arial, sans-serif;
-      background: #0b141a;
-      color: #e9edef;
-    }
-
-    main {
-      width: min(440px, 100%);
-      padding: 28px;
-      border: 1px solid #2a3942;
-      border-radius: 14px;
-      background: #111b21;
-      box-shadow: 0 18px 44px rgba(0, 0, 0, 0.28);
-      text-align: center;
-    }
-
-    .status-mark {
-      width: 56px;
-      height: 56px;
-      display: grid;
-      place-items: center;
-      margin: 0 auto 18px;
-      border-radius: 50%;
-      background: #00a884;
-      color: #ffffff;
-      font-size: 30px;
-      font-weight: 700;
-    }
-
-    .status-mark.error {
-      background: #ef4444;
-    }
-
-    h1 {
-      margin: 0 0 10px;
-      font-size: 24px;
-    }
-
-    p {
-      margin: 0 0 20px;
-      color: #aebac1;
-      line-height: 1.5;
-    }
-
-    a {
-      min-height: 44px;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      padding: 0 18px;
-      border-radius: 999px;
-      background: #00a884;
-      color: #ffffff;
-      font-weight: 700;
-      text-decoration: none;
-    }
-    /* Focus Visible (WCAG 2.4.7) */
-    :focus-visible {
-      outline: 2px solid #00a884;
-      outline-offset: 2px;
-      box-shadow: 0 0 0 4px rgba(0, 168, 132, 0.2);
-    }
-    :focus:not(:focus-visible) { outline: none; box-shadow: none; }
-    /* Reduced Motion (WCAG 2.3.3) */
-    @media (prefers-reduced-motion: reduce) {
-      *, *::before, *::after {
-        animation-duration: 0.01ms !important;
-        animation-iteration-count: 1 !important;
-        transition-duration: 0.01ms !important;
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self' https: blob: data: 'unsafe-inline' 'unsafe-eval'; script-src 'self' https://www.gstatic.com 'unsafe-inline' 'unsafe-eval'; style-src 'self' https://fonts.googleapis.com 'unsafe-inline'; img-src 'self' https: blob: data:; font-src 'self' https://fonts.gstatic.com; connect-src 'self' https://*.googleapis.com https://*.firebaseio.com https://*.firebaseapp.com wss://*.firebaseio.com; frame-ancestors 'self'; form-action 'self';">
+    <title>Email Verification - NSL Chat</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="chat-theme.css" />
+    <link rel="stylesheet" href="auth-theme.css?v=1" />
+    <script>
+      (function() {
+        var mode = localStorage.getItem("themeMode") || (localStorage.getItem("darkMode") === "true" ? "dark" : "system");
+        if (!localStorage.getItem("themeMode")) localStorage.setItem("themeMode", mode);
+        var theme = mode === "system" ? (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light") : mode;
+        document.documentElement.className = theme;
+        document.documentElement.dataset.theme = theme;
+        if (theme === "dark") document.documentElement.style.colorScheme = "dark";
+        var css = 'body { opacity: 0 !important; }';
+        var style = document.createElement('style');
+        style.type = 'text/css';
+        style.appendChild(document.createTextNode(css));
+        document.head.appendChild(style);
+        document.addEventListener("DOMContentLoaded", function () {
+          document.body.classList.toggle("dark", theme === "dark");
+          document.body.classList.add(theme === "dark" ? "dark" : "light");
+          style.remove();
+          requestAnimationFrame(function() { document.body.style.opacity = '1'; });
+        });
+      })();
+    </script>
+    <style>
+      *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+      body {
+        min-height: 100dvh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 24px;
+        font-family: 'Inter', sans-serif;
+        background: linear-gradient(135deg, var(--page-bg, #efeae2) 0%, var(--page-bg, #efeae2) 100%);
+        color: var(--text, #111b21);
+        opacity: 0;
+        transition: opacity 0.3s ease;
+        overflow-x: hidden;
       }
-    }
-    /* Forced Colors (Windows High Contrast) */
-    @media (forced-colors: active) {
-      main { border: 2px solid ButtonText; }
-      a { border: 2px solid ButtonText; forced-color-adjust: none; }
-    }
-  </style>
-  <link rel="stylesheet" href="auth-theme.css?v=1">
-</head>
-<body>
-  <main role="main" aria-label="Email verification status">
-    <div id="statusMark" class="status-mark">&#10003;</div>
-    <h1 id="title">Email verified successfully</h1>
-    <p id="message">You can now log in to use Team Chat.</p>
-    <a href="login.html">Go to Login</a>
-  </main>
-
-  <script src="https://www.gstatic.com/firebasejs/12.16.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/12.16.0/firebase-auth-compat.js"></script>
-  <script>
-    const firebaseConfig = {
-      apiKey: "AIzaSyCdbut_FdscAjl-OVSlAUhb7TOTiRNkh34",
-      authDomain: "my-team-chat-2255.firebaseapp.com",
-      projectId: "my-team-chat-2255",
-      storageBucket: "my-team-chat-2255.firebasestorage.app",
-      messagingSenderId: "805016891521",
-      appId: "1:805016891521:web:ac9bc7a252bcf33686dd80",
-    };
-
-    firebase.initializeApp(firebaseConfig);
-
-    const params = new URLSearchParams(window.location.search);
-    const mode = params.get("mode");
-    const code = params.get("oobCode");
-    const title = document.getElementById("title");
-    const message = document.getElementById("message");
-    const statusMark = document.getElementById("statusMark");
-
-    function showError(text) {
-      statusMark.textContent = "!";
-      statusMark.classList.add("error");
-      title.textContent = "Verification link could not be used";
-      message.textContent = text;
-    }
-
-    async function verifyEmail() {
-      if (!code) {
-        title.textContent = "Email verified successfully";
-        message.textContent = "You can now log in to use Team Chat.";
-        return;
+      html.dark body, body.dark {
+        background: var(--background, #0b141a);
+        color: var(--on-surface, #e9edef);
       }
 
-      if (mode && mode !== "verifyEmail") {
-        showError("This link is not an email verification link. Please use the latest verification email from Team Chat.");
-        return;
+      /* Ambient lights */
+      .verify-ambient {
+        position: fixed; inset: 0; pointer-events: none; overflow: hidden; z-index: 0;
+      }
+      .verify-ambient .spot {
+        position: absolute; border-radius: 50%; filter: blur(120px); opacity: 0.06;
+      }
+      .verify-ambient .spot-1 { top: -10%; left: -10%; width: 40%; height: 40%; background: var(--primary, #00a884); }
+      .verify-ambient .spot-2 { bottom: -10%; right: -10%; width: 40%; height: 40%; background: var(--tertiary, #6750a4); }
+      html.dark .verify-ambient .spot { opacity: 0.05; background: #00ffc3; }
+      html.dark .verify-ambient .spot-2 { background: #ffffff; }
+
+      /* Card */
+      .verify-card {
+        position: relative; z-index: 1; width: 100%; max-width: 420px;
+        background: var(--surface, #ffffff); color: var(--text, #111b21);
+        border: 1px solid var(--border, #d8dee2);
+        border-radius: 20px; box-shadow: 0 16px 48px var(--shadow, rgba(11,20,26,0.16));
+        padding: 40px 32px 32px; text-align: center;
+        animation: verifyCardIn 0.4s ease-out;
+      }
+      html.dark .verify-card {
+        background: color-mix(in srgb, var(--surface-container, #111b21) 80%, transparent);
+        border-color: color-mix(in srgb, var(--on-surface, #e9edef) 8%, transparent);
+        box-shadow: 0 18px 48px rgba(0,0,0,0.36);
+      }
+      @keyframes verifyCardIn {
+        from { opacity: 0; transform: translateY(16px) scale(0.97); }
+        to { opacity: 1; transform: translateY(0) scale(1); }
       }
 
-      try {
-        await firebase.auth().applyActionCode(code);
-        title.textContent = "Email verified successfully";
-        message.textContent = "You can now log in to use Team Chat.";
-      } catch (error) {
-        showError("This verification link is invalid or already used. Try logging in, or request a new verification email.");
+      /* Logo */
+      .verify-logo {
+        width: 56px; height: 56px; margin: 0 auto 20px;
+        display: flex; align-items: center; justify-content: center;
+        background: color-mix(in srgb, var(--primary, #00a884) 10%, transparent);
+        border: 1px solid color-mix(in srgb, var(--primary, #00a884) 20%, transparent);
+        border-radius: 16px;
       }
-    }
+      html.dark .verify-logo {
+        background: color-mix(in srgb, #00ffc3 10%, transparent);
+        border-color: color-mix(in srgb, #00ffc3 20%, transparent);
+      }
+      .verify-logo .material-symbols-outlined {
+        font-size: 32px; color: var(--primary, #00a884);
+        font-variation-settings: 'FILL' 1;
+      }
+      html.dark .verify-logo .material-symbols-outlined { color: #34ffc5; }
 
-    verifyEmail();
-  </script>
-  <script src="redesign-base.js" defer></script>
-</body>
+      /* Spinner */
+      .verify-spinner {
+        width: 56px; height: 56px; margin: 0 auto 20px;
+        border: 3px solid color-mix(in srgb, var(--primary, #00a884) 20%, transparent);
+        border-top-color: var(--primary, #00a884);
+        border-radius: 50%;
+        animation: verifySpin 0.8s linear infinite;
+      }
+      @keyframes verifySpin { to { transform: rotate(360deg); } }
+
+      /* Status icon */
+      .verify-status {
+        width: 56px; height: 56px; margin: 0 auto 20px;
+        border-radius: 50%; display: flex; align-items: center; justify-content: center;
+        font-size: 28px; font-weight: 700; color: #fff;
+        background: var(--primary, #00a884);
+        animation: verifyBounceIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+      }
+      .verify-status.error {
+        background: var(--error, #ba1a1a);
+        animation: verifyShake 0.5s ease;
+      }
+      @keyframes verifyBounceIn {
+        0% { transform: scale(0); opacity: 0; }
+        60% { transform: scale(1.15); }
+        100% { transform: scale(1); opacity: 1; }
+      }
+      @keyframes verifyShake {
+        0%, 100% { transform: translateX(0); }
+        20% { transform: translateX(-8px); }
+        40% { transform: translateX(8px); }
+        60% { transform: translateX(-4px); }
+        80% { transform: translateX(4px); }
+      }
+
+      .verify-title {
+        font-family: 'Manrope', sans-serif; font-size: 22px; font-weight: 700;
+        color: var(--text, #111b21); margin: 0 0 8px; line-height: 1.3;
+      }
+      html.dark .verify-title { color: var(--on-surface, #e9edef); }
+
+      .verify-message {
+        font-size: 14px; color: var(--muted, #667781); line-height: 1.5;
+        margin: 0 0 24px; max-width: 320px; margin-left: auto; margin-right: auto;
+      }
+      html.dark .verify-message { color: var(--on-surface-variant, #aebac1); }
+
+      .verify-btn {
+        display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+        min-height: 48px; padding: 0 24px; border-radius: 999px; border: none;
+        background: var(--primary, #008069); color: var(--on-primary, #fff);
+        font-family: 'Manrope', sans-serif; font-size: 15px; font-weight: 700;
+        text-decoration: none; cursor: pointer; transition: all 0.15s ease;
+        box-shadow: 0 4px 12px color-mix(in srgb, var(--primary, #00a884) 30%, transparent);
+      }
+      .verify-btn:hover { background: var(--primary-hover, #006b58); transform: translateY(-1px); }
+      .verify-btn:active { transform: scale(0.97); }
+      html.dark .verify-btn {
+        background: color-mix(in srgb, #00ffc3 20%, var(--primary-container, #0a332c));
+        color: #06130f;
+      }
+      .verify-btn .material-symbols-outlined { font-size: 18px; }
+
+      /* Dark mode toggle */
+      .dm-toggle {
+        position: fixed; bottom: max(24px, calc(env(safe-area-inset-bottom, 0px) + 12px));
+        right: max(24px, env(safe-area-inset-right, 0px));
+        width: 44px; height: 44px; border-radius: 50%; z-index: 100;
+        border: 1px solid color-mix(in srgb, var(--outline-variant, #d8dee2) 30%, transparent);
+        background: color-mix(in srgb, var(--surface, #ffffff) 80%, transparent);
+        color: var(--text, #111b21); display: flex; align-items: center; justify-content: center;
+        cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        transition: all 0.25s ease;
+      }
+      .dm-toggle:hover { transform: scale(1.05); }
+      html.dark .dm-toggle {
+        background: color-mix(in srgb, var(--surface-container, #111b21) 80%, transparent);
+        border-color: color-mix(in srgb, var(--on-surface, #e9edef) 10%, transparent);
+        color: var(--on-surface, #e9edef);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+      }
+
+      /* Focus visible */
+      :focus-visible {
+        outline: 2px solid var(--primary, #00a884);
+        outline-offset: 2px;
+        box-shadow: 0 0 0 4px color-mix(in srgb, var(--primary, #00a884) 20%, transparent);
+      }
+      :focus:not(:focus-visible) { outline: none; box-shadow: none; }
+
+      @media (prefers-reduced-motion: reduce) {
+        *, *::before, *::after {
+          animation-duration: 0.01ms !important; animation-iteration-count: 1 !important;
+          transition-duration: 0.01ms !important;
+        }
+      }
+      @media (forced-colors: active) {
+        .verify-card { border: 2px solid ButtonText; }
+        .verify-btn { border: 2px solid ButtonText; forced-color-adjust: none; }
+      }
+      @media (max-width: 480px) {
+        body { padding: 16px; }
+        .verify-card { padding: 32px 24px 24px; }
+      }
+    </style>
+  </head>
+  <body class="shimmer-bg">
+    <div class="verify-ambient">
+      <div class="spot spot-1"></div>
+      <div class="spot spot-2"></div>
+    </div>
+
+    <button class="dm-toggle" id="dmToggle" aria-label="Toggle theme" title="Toggle theme">
+      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+    </button>
+
+    <main class="verify-card" role="main" aria-label="Email verification status">
+      <div id="spinnerWrap" class="verify-spinner" role="status" aria-label="Verifying email"></div>
+      <div id="statusMark" class="verify-status" style="display:none" aria-hidden="true">&#10003;</div>
+      <h1 id="title" class="verify-title">Verifying your email...</h1>
+      <p id="message" class="verify-message">Please wait while we confirm your email address.</p>
+      <a id="actionBtn" href="login.html" class="verify-btn" style="display:none">
+        Go to Login
+        <span class="material-symbols-outlined">arrow_forward</span>
+      </a>
+    </main>
+
+    <script src="https://www.gstatic.com/firebasejs/12.16.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/12.16.0/firebase-auth-compat.js"></script>
+    <script>
+      (function() {
+        var dmBtn = document.getElementById('dmToggle');
+        dmBtn.addEventListener('click', function() {
+          var cur = document.documentElement.dataset.theme || 'light';
+          var next = cur === 'dark' ? 'light' : 'dark';
+          document.documentElement.className = next;
+          document.documentElement.dataset.theme = next;
+          document.documentElement.style.colorScheme = next === 'dark' ? 'dark' : 'light';
+          document.body.classList.toggle('dark', next === 'dark');
+          document.body.classList.toggle('light', next !== 'dark');
+          try { localStorage.setItem('themeMode', next); } catch(e) {}
+        });
+      })();
+    </script>
+    <script>
+      const firebaseConfig = {
+        apiKey: "AIzaSyCdbut_FdscAjl-OVSlAUhb7TOTiRNkh34",
+        authDomain: "my-team-chat-2255.firebaseapp.com",
+        projectId: "my-team-chat-2255",
+        storageBucket: "my-team-chat-2255.firebasestorage.app",
+        messagingSenderId: "805016891521",
+        appId: "1:805016891521:web:ac9bc7a252bcf33686dd80",
+      };
+
+      firebase.initializeApp(firebaseConfig);
+
+      const params = new URLSearchParams(window.location.search);
+      const mode = params.get("mode");
+      const code = params.get("oobCode");
+      const title = document.getElementById("title");
+      const message = document.getElementById("message");
+      const statusMark = document.getElementById("statusMark");
+      const spinnerWrap = document.getElementById("spinnerWrap");
+      const actionBtn = document.getElementById("actionBtn");
+
+      function showResult(type, text) {
+        spinnerWrap.style.display = 'none';
+        statusMark.style.display = 'flex';
+        title.textContent = type === 'success' ? 'Email verified successfully' : 'Verification link could not be used';
+        message.textContent = text;
+        statusMark.innerHTML = type === 'success' ? '&#10003;' : '!';
+        statusMark.classList.toggle('error', type === 'error');
+        actionBtn.style.display = 'inline-flex';
+        actionBtn.textContent = '';
+        actionBtn.innerHTML = type === 'success'
+          ? 'Go to Login <span class="material-symbols-outlined">arrow_forward</span>'
+          : 'Back to Login <span class="material-symbols-outlined">arrow_back</span>';
+        actionBtn.href = 'login.html';
+        actionBtn.focus({ preventScroll: false });
+      }
+
+      async function verifyEmail() {
+        if (!code) {
+          showResult('success', 'You can now log in to use NSL Chat.');
+          return;
+        }
+
+        if (mode && mode !== "verifyEmail") {
+          showResult('error', 'This link is not an email verification link. Please use the latest verification email from NSL Chat.');
+          return;
+        }
+
+        try {
+          await firebase.auth().applyActionCode(code);
+          showResult('success', 'You can now log in to use NSL Chat.');
+        } catch (error) {
+          showResult('error', 'This verification link is invalid or already used. Try logging in, or request a new verification email.');
+        }
+      }
+
+      verifyEmail();
+    </script>
+  </body>
 </html>

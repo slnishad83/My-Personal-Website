@@ -140,6 +140,8 @@ const BUNDLE_ORDER = [
   'gif-picker.js',
   'sticker-packs.js',
   'micro-interactions.js',
+  'profile-setup.js',
+  'lazy-images.js',
   'app-init.js',
 ];
 
@@ -249,6 +251,19 @@ for (const file of BUNDLE_ORDER) {
     console.warn(`[warn] Skipping ${file}: ${e.message}`);
   }
 }
+
+/* ── Minification passes ── */
+// Strip console.log(...) lines (preserve console.warn/error)
+bundle = bundle.replace(/^\s*console\.log\s*\([^)]*\)\s*;?\s*$/gm, '');
+
+// Strip single-line // comments (not inside strings, not URLs)
+bundle = bundle.replace(/(^\s+)(\/\/(?!\/)(?!.*https?:\/\/)[^\n]*)/gm, '$1');
+
+// Collapse multiple newlines into one
+bundle = bundle.replace(/\n{3,}/g, '\n\n');
+
+// Strip trailing whitespace per line
+bundle = bundle.replace(/[ \t]+$/gm, '');
 
 ensureDir(DIST);
 const buildVersion = Date.now().toString();
@@ -682,9 +697,26 @@ try {
 // Copy manifest
 try { copyFile('manifest.json', join(DIST, 'manifest.json')); } catch (_) {}
 
+/* ── Build size report ── */
+console.log('\n[build] === Size Report ===');
+let totalSize = 0;
+const distFiles = readdirSync(DIST);
+const jsFiles = distFiles.filter(f => f.endsWith('.js'));
+const cssFiles = distFiles.filter(f => f.endsWith('.css'));
+
+jsFiles.forEach(function (f) {
+  const s = statSync(join(DIST, f)).size;
+  totalSize += s;
+  console.log('[build]   ' + f + '  ' + (s / 1024).toFixed(1) + ' KB');
+});
+cssFiles.forEach(function (f) {
+  const s = statSync(join(DIST, f)).size;
+  totalSize += s;
+  console.log('[build]   ' + f + '  ' + (s / 1024).toFixed(1) + ' KB');
+});
+console.log('[build] ──────────────────');
+console.log('[build] Total (JS+CSS): ' + (totalSize / 1024).toFixed(1) + ' KB (' + (totalSize / 1048576).toFixed(2) + ' MB)');
+
 console.log(`[build] ✓ Build complete!`);
 console.log(`[build] Output: ${DIST}`);
-
-// Summary
-const distFiles = readdirSync(DIST);
 console.log(`[build] ${distFiles.length} files in dist/`);

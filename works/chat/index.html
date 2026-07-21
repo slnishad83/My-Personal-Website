@@ -1594,6 +1594,8 @@
   <script src="gif-picker.js" defer></script>
   <script src="sticker-packs.js" defer></script>
   <script src="micro-interactions.js" defer></script>
+  <script src="profile-setup.js" defer></script>
+  <script src="lazy-images.js" defer></script>
   <script src="app-init.js" defer></script>
 
   <!-- PWA Service Worker Registration -->
@@ -1635,6 +1637,7 @@
       if (chatList && window.PullToRefresh) PullToRefresh.init(chatList);
       if (window.PinchZoom) PinchZoom.init(document.getElementById('messages-wrap'));
       if (window.InitA11yEnhancements) InitA11yEnhancements();
+      if (window.InitLazyImages) InitLazyImages();
 
       setTimeout(async () => {
         if (window.OfflineQueue) await OfflineQueue.init();

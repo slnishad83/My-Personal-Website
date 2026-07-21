@@ -118,6 +118,11 @@ function dismissOnboarding() {
   }
   try { localStorage.setItem(STORAGE_KEY, 'true'); } catch(e) {}
   showGestureDiscovery();
+  setTimeout(function() {
+    if (typeof window.isProfileSetupComplete === 'function' && !window.isProfileSetupComplete() && typeof window.openProfileSetup === 'function') {
+      window.openProfileSetup();
+    }
+  }, 600);
 }
 
 function showPermissionFlow(index, callback) {
