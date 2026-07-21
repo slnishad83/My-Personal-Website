@@ -6,10 +6,21 @@
 (function () {
   'use strict';
 
+  const _esc = (s) => window.escHtml ? window.escHtml(String(s ?? '')) : String(s ?? '');
+
   const ViewOnce = {
     _enabledChats: new Set(),
 
-    init() {},
+    init() {
+      document.addEventListener('click', (e) => {
+        const msgEl = e.target.closest('.view-once-msg[data-media-url]');
+        if (!msgEl) return;
+        const msgId = msgEl.dataset.msgId;
+        const mediaUrl = msgEl.dataset.mediaUrl;
+        const mediaType = msgEl.dataset.mediaType;
+        if (msgId && mediaUrl) this.openViewOnce(msgId, mediaUrl, mediaType);
+      });
+    },
 
     isViewOnceMessage(msg) {
       return msg && msg.viewOnce === true;
@@ -63,7 +74,7 @@
       }
 
       return `
-        <div class="view-once-msg" data-msg-id="${msg.id}" style="padding:12px 16px;border-radius:12px;background:var(--surface-container-highest);text-align:center;cursor:pointer" onclick="window.ViewOnce.openViewOnce('${msg.id}', '${(msg.mediaUrl || '').replace(/'/g, "\\'")}', '${msg.type || 'image'}')">
+        <div class="view-once-msg" data-msg-id="${_esc(msg.id)}" data-media-url="${_esc(msg.mediaUrl || '')}" data-media-type="${_esc(msg.type || 'image')}" style="padding:12px 16px;border-radius:12px;background:var(--surface-container-highest);text-align:center;cursor:pointer">
           <span class="material-symbols-outlined" style="font-size:24px;color:var(--primary);display:block;margin-bottom:4px">visibility</span>
           <p style="font-size:12px;color:var(--on-surface-variant);margin:0">Tap to view once</p>
         </div>`;

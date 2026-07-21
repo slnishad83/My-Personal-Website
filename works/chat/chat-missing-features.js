@@ -305,6 +305,8 @@
   ================================================================ */
   let _netQualityInterval = null;
   let _netQualityBar = null;
+  let _callWatchFallbackObs = null;
+  let _callEndFallbackObs = null;
 
   function createNetworkQualityBar() {
     if (document.getElementById('callNetworkQuality')) return;
@@ -395,12 +397,12 @@
         else stopNetworkQualityMonitor();
       });
     } else {
-      var obs = new MutationObserver(function () {
+      _callWatchFallbackObs = new MutationObserver(function () {
         const hidden = callScreen.classList.contains('hidden');
         if (!hidden) startNetworkQualityMonitor();
         else stopNetworkQualityMonitor();
       });
-      obs.observe(callScreen, { attributes: true, attributeFilter: ['class'] });
+      _callWatchFallbackObs.observe(callScreen, { attributes: true, attributeFilter: ['class'] });
     }
   }
 
@@ -536,11 +538,12 @@
         else addHoldButton();
       });
     } else {
-      new MutationObserver(function () {
+      _callEndFallbackObs = new MutationObserver(function () {
         const hidden = callScreen.classList.contains('hidden');
         if (hidden) resetHoldState();
         else addHoldButton();
-      }).observe(callScreen, { attributes: true, attributeFilter: ['class'] });
+      });
+      _callEndFallbackObs.observe(callScreen, { attributes: true, attributeFilter: ['class'] });
     }
   }
 
@@ -682,6 +685,8 @@
       MutationBus.off('cmf:call-watch');
       MutationBus.off('cmf:call-end');
     }
+    if (_callWatchFallbackObs) { _callWatchFallbackObs.disconnect(); _callWatchFallbackObs = null; }
+    if (_callEndFallbackObs) { _callEndFallbackObs.disconnect(); _callEndFallbackObs = null; }
     stopNetworkQualityMonitor();
   }
 

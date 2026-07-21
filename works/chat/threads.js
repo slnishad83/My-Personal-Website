@@ -192,7 +192,7 @@
         emojiKeys.forEach(emoji => {
           const users = reactions[emoji] || [];
           const hasReacted = users.includes(window.currentUser?.uid);
-          reactionsHtml += `<button class="thread-reply-reaction px-1.5 py-0.5 rounded-full text-[11px] border cursor-pointer transition-all ${hasReacted ? 'bg-primary/15 border-primary text-primary' : 'bg-surface-container-high border-outline-variant/30 text-on-surface-variant hover:bg-surface-variant'}" onclick="event.stopPropagation();window._toggleThreadReaction('${currentThreadMessageId}','${replyId}','${emoji}')">${emoji} <span class="text-[9px] font-bold">${users.length}</span></button>`;
+          reactionsHtml += `<button class="thread-reply-reaction px-1.5 py-0.5 rounded-full text-[11px] border cursor-pointer transition-all ${hasReacted ? 'bg-primary/15 border-primary text-primary' : 'bg-surface-container-high border-outline-variant/30 text-on-surface-variant hover:bg-surface-variant'}" data-parent="${_esc(currentThreadMessageId)}" data-reply="${_esc(replyId)}" data-emoji="${_esc(emoji)}">${emoji} <span class="text-[9px] font-bold">${users.length}</span></button>`;
         });
         reactionsHtml += '</div>';
       }
@@ -202,7 +202,7 @@
       div.dataset.replyId = replyId;
 
       div.innerHTML = `
-        <div class="thread-reply-bubble" ondblclick="event.stopPropagation();window._showThreadReactionPicker(event,'${currentThreadMessageId}','${replyId}')">
+        <div class="thread-reply-bubble" data-parent="${_esc(currentThreadMessageId)}" data-reply="${_esc(replyId)}">
           ${!isMe ? `<div class="thread-reply-sender">${sanitize(_esc(msg.senderName || "Unknown"))}</div>` : ""}
           ${msg.text ? `<div class="thread-reply-text">${renderMsg(msg.text, msg.mentions || [])}</div>` : ""}
           ${msg.attachment ? `<div class="thread-reply-attachment">${renderAtt(msg.attachment)}</div>` : ""}
@@ -306,17 +306,22 @@
         parentMessageId: currentThreadMessageId,
       };
 
-      await db
+      const batch = db.batch();
+      const replyRef = db
         .collection("messages")
         .doc(currentThreadMessageId)
         .collection("threadReplies")
-        .add(replyData);
+        .doc();
+      batch.set(replyRef, replyData);
 
-      await db.collection("messages").doc(currentThreadMessageId).update({
+      const parentRef = db.collection("messages").doc(currentThreadMessageId);
+      batch.update(parentRef, {
         threadCount: firebase.firestore.FieldValue.increment(1),
         lastThreadAt: firebase.firestore.FieldValue.serverTimestamp(),
         lastThreadSenderName: window.currentUser.displayName || window.currentUser.email || "User",
       });
+
+      await batch.commit();
 
       composer.value = "";
       composer.style.height = "auto";
@@ -478,6 +483,18 @@
       card.querySelector(".thread-summary-close").addEventListener("click", () => card.remove());
 
       const repliesList = document.getElementById("threadRepliesList");
+    if (repliesList) repliesList.addEventListener('click', (e) => {
+      const btn = e.target.closest('.thread-reply-reaction[data-parent]');
+      if (!btn) return;
+      e.stopPropagation();
+      window._toggleThreadReaction(btn.dataset.parent, btn.dataset.reply, btn.dataset.emoji);
+    });
+    if (repliesList) repliesList.addEventListener('dblclick', (e) => {
+      const bubble = e.target.closest('.thread-reply-bubble[data-parent]');
+      if (!bubble) return;
+      e.stopPropagation();
+      window._showThreadReactionPicker(e, bubble.dataset.parent, bubble.dataset.reply);
+    });
       if (repliesList) repliesList.parentNode.insertBefore(card, repliesList);
     } catch (err) {
       console.error("[summarizeThread]", err);

@@ -9,20 +9,25 @@ const BackButton = {
   _enabled: false,
   _history: [],
   _overlayStack: [],
+  _boundOnBack: null,
+  _boundOnWebBack: null,
 
   init() {
     if (this._enabled) return;
 
+    this._boundOnBack = this._onBack.bind(this);
+    this._boundOnWebBack = this._onWebBack.bind(this);
+
     // Capacitor / Android system back button
     if (typeof window.Capacitor !== 'undefined') {
-      window.addEventListener('backbutton', this._onBack.bind(this), false);
+      window.addEventListener('backbutton', this._boundOnBack, false);
       if (window.Capacitor?.Plugins?.App) {
-        window.Capacitor.Plugins.App.addListener('backButton', this._onBack.bind(this));
+        window.Capacitor.Plugins.App.addListener('backButton', this._boundOnBack);
       }
     }
 
     // Web browser back button — intercept via popstate
-    window.addEventListener('popstate', this._onWebBack.bind(this));
+    window.addEventListener('popstate', this._boundOnWebBack);
 
     // Push initial state so first back doesn't exit
     if (!history.state || !history.state.view) {
@@ -59,7 +64,7 @@ const BackButton = {
     }
 
     // Push state back to prevent exit
-    history.pushState({ view: 'home' }, '', window.location.pathname + '#home');
+    history.back();
   },
 
   _handleBack() {
@@ -103,15 +108,16 @@ const BackButton = {
     }
 
     // 5. Default: prevent exit — push state back
-    history.pushState({ view: 'home' }, '', window.location.pathname + '#home');
+    history.back();
   },
 
   destroy() {
     this._enabled = false;
-    if (typeof window.Capacitor !== 'undefined') {
-      window.removeEventListener('backbutton', this._onBack);
+    if (typeof window.Capacitor !== 'undefined' && this._boundOnBack) {
+      window.removeEventListener('backbutton', this._boundOnBack);
     }
-    window.removeEventListener('popstate', this._onWebBack);
+    if (this._boundOnWebBack) window.removeEventListener('popstate', this._boundOnWebBack);
+    this._boundOnBack = this._boundOnWebBack = null;
   }
 };
 

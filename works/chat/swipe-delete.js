@@ -12,12 +12,21 @@ const SwipeDelete = {
   _swiping: false,
   _threshold: 80,
 
+  _boundTouchStart: null,
+  _boundTouchMove: null,
+  _boundTouchEnd: null,
+  _boundClick: null,
+
   init() {
     if (this._enabled) return;
-    document.addEventListener('touchstart', this._onTouchStart.bind(this), { passive: true });
-    document.addEventListener('touchmove', this._throttledTouchMove.bind(this), { passive: false });
-    document.addEventListener('touchend', this._onTouchEnd.bind(this), { passive: true });
-    document.addEventListener('click', this._onDocumentClick.bind(this));
+    this._boundTouchStart = this._onTouchStart.bind(this);
+    this._boundTouchMove = this._throttledTouchMove.bind(this);
+    this._boundTouchEnd = this._onTouchEnd.bind(this);
+    this._boundClick = this._onDocumentClick.bind(this);
+    document.addEventListener('touchstart', this._boundTouchStart, { passive: true });
+    document.addEventListener('touchmove', this._boundTouchMove, { passive: false });
+    document.addEventListener('touchend', this._boundTouchEnd, { passive: true });
+    document.addEventListener('click', this._boundClick);
     this._enabled = true;
     if (window.__DEBUG__) console.log('[SwipeDelete] Initialized');
   },
@@ -103,6 +112,11 @@ const SwipeDelete = {
   destroy() {
     this._enabled = false;
     this._closeAll();
+    if (this._boundTouchStart) document.removeEventListener('touchstart', this._boundTouchStart);
+    if (this._boundTouchMove) document.removeEventListener('touchmove', this._boundTouchMove);
+    if (this._boundTouchEnd) document.removeEventListener('touchend', this._boundTouchEnd);
+    if (this._boundClick) document.removeEventListener('click', this._boundClick);
+    this._boundTouchStart = this._boundTouchMove = this._boundTouchEnd = this._boundClick = null;
   }
 };
 

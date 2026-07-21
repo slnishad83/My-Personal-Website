@@ -185,10 +185,31 @@ exports.sendNotificationReply = onRequest(async (req, res) => {
       return res.status(400).json({ error: "Text must be 1-5000 characters" });
     }
 
-    // H7: Escape HTML tags to prevent XSS
-    const sanitizedText = trimmedText.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    // H7: Escape HTML to prevent XSS
+    const sanitizedText = trimmedText.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
 
     const validChatType = chatType === "group" ? "group" : "direct";
+
+    // Verify sender is a member of the chat
+    let isMember = false;
+    try {
+      if (validChatType === "group" && groupId) {
+        const groupDoc = await db.collection("groupChats").doc(groupId).get();
+        if (groupDoc.exists) {
+          const members = groupDoc.data().members || groupDoc.data().memberIds || [];
+          isMember = members.includes(decoded.uid);
+        }
+      } else {
+        const chatDoc = await db.collection("directChats").doc(chatId).get();
+        if (chatDoc.exists) {
+          const members = chatDoc.data().members || chatDoc.data().participants || [];
+          isMember = members.includes(decoded.uid);
+        }
+      }
+    } catch (_) {}
+    if (!isMember) {
+      return res.status(403).json({ error: "You are not a member of this chat" });
+    }
 
     // Build participants list with all chat members
     const participants = [decoded.uid];
@@ -254,10 +275,27 @@ exports.generateUrlPreview = onRequest(async (req, res) => {
     }
 
     let domain = "";
+    let parsedUrl;
     try {
-      domain = new URL(url).hostname.replace("www.", "");
+      parsedUrl = new URL(url);
+      domain = parsedUrl.hostname.replace("www.", "");
     } catch (_) {
       return res.status(400).json({ error: "Invalid URL" });
+    }
+
+    // SSRF protection: only allow http/https, block private IPs and internal hosts
+    if (!["http:", "https:"].includes(parsedUrl.protocol)) {
+      return res.status(400).json({ error: "Only HTTP/HTTPS URLs allowed" });
+    }
+    const hostname = parsedUrl.hostname.toLowerCase();
+    const blocked = ['localhost', '127.0.0.1', '0.0.0.0', '::1', 'metadata.google.internal',
+      'metadata.google', 'metadata', '169.254.169.254', '10.', '172.16.', '172.17.', '172.18.',
+      '172.19.', '172.20.', '172.21.', '172.22.', '172.23.', '172.24.', '172.25.', '172.26.',
+      '172.27.', '172.28.', '172.29.', '172.30.', '172.31.', '192.168.', '169.254.'];
+    for (const b of blocked) {
+      if (hostname === b || hostname.startsWith(b)) {
+        return res.status(400).json({ error: "Private/internal URLs not allowed" });
+      }
     }
 
     // Fetch the page HTML with a timeout
@@ -1144,10 +1182,7 @@ exports.verifyChatPin = onCall({ region: "us-central1" }, async (request) => {
   const userData = userDoc.data() || {};
 
   if (!userData.pinHash || !userData.pinSalt) {
-    const salt = crypto.randomBytes(32).toString("hex");
-    const hash = await hashPinServer(pin, salt);
-    await db.collection("users").doc(uid).set({ pinSalt: salt, pinHash: hash, pinUpdatedAt: Date.now() }, { merge: true });
-    return { ok: true, isNew: true };
+    throw new HttpsError("failed-precondition", "No chat PIN set. Use setChatPin to create one.");
   }
 
   const hash = await hashPinServer(pin, userData.pinSalt);
@@ -1199,10 +1234,7 @@ exports.verifyTwoFactorPin = onCall({ region: "us-central1" }, async (request) =
   const userData = userDoc.data() || {};
 
   if (!userData.twofaPinHash || !userData.twofaPinSalt) {
-    const salt = crypto.randomBytes(32).toString("hex");
-    const hash = await hashPinServer(pin, salt);
-    await db.collection("users").doc(uid).set({ twofaPinSalt: salt, twofaPinHash: hash, twofaEnabled: true, twofaUpdatedAt: Date.now() }, { merge: true });
-    return { ok: true, isNew: true };
+    throw new HttpsError("failed-precondition", "No 2FA PIN set. Use setTwoFactorPin to create one.");
   }
 
   const hash = await hashPinServer(pin, userData.twofaPinSalt);

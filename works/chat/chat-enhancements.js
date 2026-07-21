@@ -189,7 +189,7 @@
     var keys = Object.keys(_snapListeners);
     if (keys.length >= _MAX_LISTENERS) {
       var oldest = keys[0];
-      _snapListeners[oldest]();
+      try { _snapListeners[oldest](); } catch (e) {}
       delete _snapListeners[oldest];
     }
 
@@ -517,6 +517,8 @@
     btn.setAttribute('aria-label', 'Jump to latest messages');
   }
 
+  var _scrollBtnFallbackObs = null;
+
   function _observeScrollBtn() {
     var target = document.getElementById('messages-wrap') || document.getElementById('chat-area');
     if (!target) {
@@ -528,8 +530,8 @@
         enhanceScrollBtn();
       });
     } else {
-      new MutationObserver(function () { enhanceScrollBtn(); })
-        .observe(target, { childList: true, subtree: false });
+      _scrollBtnFallbackObs = new MutationObserver(function () { enhanceScrollBtn(); });
+      _scrollBtnFallbackObs.observe(target, { childList: true, subtree: false });
     }
   }
 
@@ -558,6 +560,7 @@
       MutationBus.off('ce:file-cards');
       MutationBus.off('ce:scroll-btn');
     }
+    if (_scrollBtnFallbackObs) { _scrollBtnFallbackObs.disconnect(); _scrollBtnFallbackObs = null; }
     var keys = Object.keys(_snapListeners);
     for (var i = 0; i < keys.length; i++) {
       try { _snapListeners[keys[i]](); } catch (e) {}

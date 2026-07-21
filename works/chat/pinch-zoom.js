@@ -17,13 +17,22 @@ const PinchZoom = {
   _originY: 0,
   _enabled: false,
 
+  _boundTouchStart: null,
+  _boundTouchMove: null,
+  _boundTouchEnd: null,
+  _boundWheel: null,
+
   init(container) {
     if (this._enabled || !container) return;
     this._container = container;
-    this._container.addEventListener('touchstart', this._onTouchStart.bind(this), { passive: false });
-    this._container.addEventListener('touchmove', this._onTouchMove.bind(this), { passive: false });
-    this._container.addEventListener('touchend', this._onTouchEnd.bind(this), { passive: true });
-    this._container.addEventListener('wheel', this._onWheel.bind(this), { passive: false });
+    this._boundTouchStart = this._onTouchStart.bind(this);
+    this._boundTouchMove = this._onTouchMove.bind(this);
+    this._boundTouchEnd = this._onTouchEnd.bind(this);
+    this._boundWheel = this._onWheel.bind(this);
+    this._container.addEventListener('touchstart', this._boundTouchStart, { passive: false });
+    this._container.addEventListener('touchmove', this._boundTouchMove, { passive: false });
+    this._container.addEventListener('touchend', this._boundTouchEnd, { passive: true });
+    this._container.addEventListener('wheel', this._boundWheel, { passive: false });
     this._enabled = true;
   },
 
@@ -115,6 +124,13 @@ const PinchZoom = {
 
   destroy() {
     this._enabled = false;
+    if (this._container) {
+      if (this._boundTouchStart) this._container.removeEventListener('touchstart', this._boundTouchStart);
+      if (this._boundTouchMove) this._container.removeEventListener('touchmove', this._boundTouchMove);
+      if (this._boundTouchEnd) this._container.removeEventListener('touchend', this._boundTouchEnd);
+      if (this._boundWheel) this._container.removeEventListener('wheel', this._boundWheel);
+    }
+    this._boundTouchStart = this._boundTouchMove = this._boundTouchEnd = this._boundWheel = null;
     this._target = null;
     this._container = null;
   }

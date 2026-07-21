@@ -340,7 +340,7 @@
             <div style="width:36px;height:36px;border-radius:50%;background:rgba(124,77,255,0.15);display:flex;align-items:center;justify-content:center"><span class="material-symbols-outlined" style="font-size:18px;color:var(--primary)">lock</span></div>
             <span style="font-size:14px;font-weight:600">${escHtml(chat.name)}</span>
           </div>
-          <button onclick="unlockChat('${chat.id}');document.getElementById('chat-lock-settings-overlay')?.remove();openChatLockSettings()" style="padding:6px 12px;border-radius:8px;border:none;background:var(--error);color:white;font-size:12px;font-weight:600;cursor:pointer">Unlock</button>
+          <button data-chat-id="${escHtml(chat.id)}" class="chat-lock-unlock-btn" style="padding:6px 12px;border-radius:8px;border:none;background:var(--error);color:white;font-size:12px;font-weight:600;cursor:pointer">Unlock</button>
         </div>`;
       });
     } else {
@@ -363,6 +363,14 @@
     overlay.appendChild(panel);
     overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
     document.body.appendChild(overlay);
+
+    panel.addEventListener('click', (e) => {
+      const unlockBtn = e.target.closest('.chat-lock-unlock-btn[data-chat-id]');
+      if (!unlockBtn) return;
+      unlockChat(unlockBtn.dataset.chatId);
+      document.getElementById('chat-lock-settings-overlay')?.remove();
+      openChatLockSettings();
+    });
 
     document.getElementById('settings-change-pin-btn')?.addEventListener('click', () => {
       const oldPin = prompt('Enter current PIN:');

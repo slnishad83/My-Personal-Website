@@ -196,6 +196,22 @@
     attach();
   }
 
+  function detach() {
+    var root = document.documentElement;
+    root.removeEventListener('touchstart',  onTouchStart);
+    root.removeEventListener('touchmove',   onTouchMove);
+    root.removeEventListener('touchend',    onTouchEnd);
+    root.removeEventListener('touchcancel', gestureCancel);
+    if (window.PointerEvent) {
+      root.removeEventListener('pointerdown',   onPointerDown);
+      root.removeEventListener('pointermove',   onPointerMove);
+      root.removeEventListener('pointerup',     onPointerUp);
+      root.removeEventListener('pointercancel', onPointerCancel);
+    }
+  }
+
+  window.SwipeNav = { destroy: detach };
+
   /* ── Close mobile chat panel (called by swipe gesture) ─────────── */
   window.closeMobileChatPanel = function() {
     var chatArea = document.getElementById('chat-area');

@@ -236,9 +236,7 @@ button:focus:not(:focus-visible),
 }
 
 /* ── Prevent layout shift on font load ─────────────────────────── */
-.material-symbols-outlined {
-  font-display: swap;
-}
+/* Note: font-display is a @font-face descriptor, not a CSS property */
 
 /* ── Chat message accessibility ────────────────────────────────── */
 .message[data-msg-id] {
@@ -257,7 +255,6 @@ button:focus:not(:focus-visible),
   .animate-fade-in, .animate-slide-up, .animate-scale-in,
   .animate-fade-in-up { animation: none !important; }
   .transition, .transition-all { transition-duration: 0.01s !important; }
-  img, video, .lazy-media { loading: lazy !important; }
 }
 
 /* ── Color blindness support — use shape + color for status ──── */

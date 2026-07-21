@@ -40,7 +40,7 @@
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 0;
-  min-height: 380px;
+  min-height: min(380px, 60vh);
 }
 @media (max-width: 560px) {
   .sc-layout { grid-template-columns: 1fr; }
@@ -88,7 +88,7 @@
   gap: 2px;
 }
 .sc-cal-dow {
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 600;
   text-align: center;
   color: var(--muted, #667781);
@@ -131,7 +131,7 @@
   font-weight: 700;
 }
 .sc-cal-cell.sc-selected {
-  background: var(--brand-soft);
+  background: var(--brand-soft, rgba(0,168,132,0.12));
   outline: 2px solid var(--brand);
 }
 .sc-dot-row {
@@ -149,7 +149,7 @@
 }
 .sc-cal-cell.sc-overdue .sc-dot { background: var(--error); }
 .sc-dot-more {
-  font-size: 7px;
+  font-size: 9px;
   background: none;
   color: var(--muted, #667781);
   width: auto;
@@ -192,7 +192,7 @@
 .sc-right {
   padding: 16px 14px;
   overflow-y: auto;
-  max-height: 420px;
+  max-height: min(420px, 50vh);
 }
 .sc-day-date-header {
   font-size: 14px;
@@ -275,8 +275,8 @@
   flex-wrap: wrap;
 }
 .sc-action-btn {
-  padding: 4px 12px;
-  font-size: 11px;
+  padding: 6px 14px;
+  font-size: 12px;
   font-weight: 600;
   border-radius: 999px;
   border: 1px solid var(--border, #e9edef);
@@ -284,13 +284,14 @@
   cursor: pointer;
   transition: background 0.13s, color 0.13s, border-color 0.13s;
   color: var(--text, #111b21);
+  min-height: 32px;
 }
 .sc-send-now { border-color: var(--brand); color: var(--brand); }
 .sc-send-now:hover { background: var(--brand); color: #fff; }
-.sc-edit-time { border-color: #3b82f6; color: #3b82f6; }
-.sc-edit-time:hover { background: #3b82f6; color: #fff; }
+.sc-edit-time { border-color: var(--info, #3b82f6); color: var(--info, #3b82f6); }
+.sc-edit-time:hover { background: var(--info, #3b82f6); color: #fff; }
 .sc-cancel-msg { border-color: var(--error); color: var(--error); }
-.sc-cancel-msg:hover { background: #ef4444; color: #fff; }
+.sc-cancel-msg:hover { background: var(--error); color: #fff; }
 .sc-action-btn:disabled { opacity: 0.5; cursor: default; }
 
 /* ── Inline edit-time form ────────────────────────────────── */
@@ -304,8 +305,8 @@
   border-top: 1px solid var(--border, #e9edef);
 }
 .sc-dt-input {
-  flex: 1;
-  min-width: 160px;
+  flex: 1 1 140px;
+  min-width: 0;
   font-size: 12px;
   padding: 4px 8px;
   border: 1px solid var(--border, #e9edef);
@@ -345,15 +346,15 @@
   bottom: 80px;
   left: 50%;
   transform: translateX(-50%);
-  background: #1f2937;
-  color: #fff;
-  padding: 8px 20px;
+  background: var(--inverse-surface, #1f2937);
+  color: var(--inverse-on-surface, #fff);
+  padding: 10px 24px;
   border-radius: 999px;
   font-size: 13px;
-  z-index: 99999;
+  z-index: var(--z-toast, 9000);
   animation: sc-fadein 0.2s ease;
 }
-.sc-toast-error { background: #dc2626; }
+.sc-toast-error { background: var(--error, #dc2626); }
 @keyframes sc-fadein { from { opacity: 0; transform: translateX(-50%) translateY(6px); } }
 
 /* ── Dark mode ────────────────────────────────────────────── */

@@ -103,6 +103,10 @@ let pushSetupDone = false;
 const recentCallNotificationKeys = new Map();
 
 // Cloudinary Configuration
+// SECURITY NOTE: This uses an unsigned upload preset, which means anyone with the
+// cloud name and preset can upload files to your Cloudinary account. This is a
+// known risk accepted for simplicity. Migrate uploads to Firebase Storage
+// (server-side signed URLs) to eliminate unauthorized upload abuse.
 const CLOUDINARY_CLOUD_NAME = "du2dsimyz";
 const CLOUDINARY_UPLOAD_PRESET = "chat_app_uploads";
 const TURN_CREDENTIALS_ENDPOINT =

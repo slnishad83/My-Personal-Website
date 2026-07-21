@@ -74,10 +74,9 @@ service cloud.firestore {
       );
       allow delete: if false;
 
-      // Thread replies subcollection — requires auth
-      // (Parent message access is enforced at the messages level)
+      // Thread replies subcollection — requires auth + participant check
       match /threadReplies/{replyId} {
-        allow read: if isAuth();
+        allow read: if isAuth() && request.auth.uid in resource.data.participants;
         allow create: if isAuth() && request.auth.uid == request.resource.data.senderId;
         allow update: if isAuth();
         allow delete: if false;
@@ -169,7 +168,7 @@ service cloud.firestore {
     // PINNED MESSAGES
     // =============================================
     match /pinnedMessages/{pinId} {
-      allow read: if isAuth();
+      allow read: if isAuth() && request.auth.uid in resource.data.participants;
       allow create: if isAuth() && request.auth.uid == request.resource.data.pinnedBy;
       allow update: if isAuth();
       allow delete: if isAuth();
@@ -189,16 +188,16 @@ service cloud.firestore {
     // TYPING INDICATORS
     // =============================================
     match /typingIndicators/{docId} {
-      allow read: if isAuth();
-      allow write: if isAuth();
+      allow read: if isAuth() && request.auth.uid == resource.data.userId;
+      allow write: if isAuth() && request.auth.uid == request.resource.data.userId;
     }
 
     // =============================================
     // TYPING STATUS
     // =============================================
     match /typingStatus/{docId} {
-      allow read: if isAuth();
-      allow write: if isAuth();
+      allow read: if isAuth() && request.auth.uid == resource.data.userId;
+      allow write: if isAuth() && request.auth.uid == request.resource.data.userId;
     }
 
     // =============================================
@@ -294,7 +293,7 @@ service cloud.firestore {
     // MUSIC LIBRARY
     // =============================================
     match /musicLibrary/{trackId} {
-      allow read: if isAuth();
+      allow read: if isAuth() && request.auth.uid == resource.data.addedBy;
       allow create: if isAuth() && request.auth.uid == request.resource.data.addedBy;
       allow update: if isAuth() && request.auth.uid == resource.data.addedBy;
       allow delete: if isAuth() && request.auth.uid == resource.data.addedBy;
@@ -304,7 +303,7 @@ service cloud.firestore {
     // PLAYLISTS
     // =============================================
     match /playlists/{playlistId} {
-      allow read: if isAuth();
+      allow read: if isAuth() && (request.auth.uid == resource.data.ownerUid || request.auth.uid in resource.data.collaborators);
       allow create: if isAuth() && request.auth.uid == request.resource.data.ownerUid;
       allow update: if isAuth() && (
         resource.data.ownerUid == request.auth.uid ||
@@ -330,13 +329,13 @@ service cloud.firestore {
     // WHITEBOARDS (collaborative drawing sessions)
     // =============================================
     match /whiteboards/{sessionId} {
-      allow read: if isAuth();
+      allow read: if isAuth() && (request.auth.uid == resource.data.createdBy || request.auth.uid in resource.data.participants);
       allow create: if isAuth();
-      allow update: if isAuth();
+      allow update: if isAuth() && (request.auth.uid == resource.data.createdBy || request.auth.uid in resource.data.participants);
       allow delete: if isAuth() && request.auth.uid == resource.data.createdBy;
 
       match /strokes/{strokeId} {
-        allow read: if isAuth();
+        allow read: if isAuth() && (request.auth.uid in get(/databases/$(database)/documents/whiteboards/$(sessionId)).data.participants || request.auth.uid == get(/databases/$(database)/documents/whiteboards/$(sessionId)).data.createdBy);
         allow create: if isAuth();
         allow update: if isAuth();
         allow delete: if isAuth();

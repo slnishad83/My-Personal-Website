@@ -749,7 +749,7 @@
     if (title) title.value = name;
     if (form) form.style.display = 'block';
     if (dz) {
-      dz.innerHTML = `<span class="material-symbols-outlined" style="font-size:32px;color:var(--primary)">audio_file</span><p style="font-size:12px;font-weight:600;color:var(--primary);margin:4px 0">${file.name}</p><p style="font-size:10px;color:var(--on-surface-variant)">${(file.size / (1024*1024)).toFixed(1)} MB</p>`;
+      dz.innerHTML = `<span class="material-symbols-outlined" style="font-size:32px;color:var(--primary)">audio_file</span><p style="font-size:12px;font-weight:600;color:var(--primary);margin:4px 0">${_esc(file.name)}</p><p style="font-size:10px;color:var(--on-surface-variant)">${(file.size / (1024*1024)).toFixed(1)} MB</p>`;
       dz.onclick = null;
     }
   }

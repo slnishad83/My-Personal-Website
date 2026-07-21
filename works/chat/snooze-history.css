@@ -15,14 +15,14 @@
   display: inline-flex;
   align-items: center;
   gap: 3px;
-  padding: 0 4px;
-  height: 24px;
+  padding: 6px 8px;
+  height: 32px;
   border: none;
   background: transparent;
   color: var(--muted, #888);
   cursor: pointer;
   border-radius: 5px;
-  font-size: 11px;
+  font-size: 12px;
   transition: color 0.15s, background 0.15s;
   flex-shrink: 0;
 }
@@ -34,14 +34,14 @@
 
 /* ── Badge dot ── */
 .sh-badge {
-  min-width: 14px;
-  height: 14px;
-  border-radius: 7px;
+  min-width: 16px;
+  height: 16px;
+  border-radius: 8px;
   background: var(--brand, #6366f1);
   color: var(--on-primary);
-  font-size: 9px;
+  font-size: 10px;
   font-weight: 700;
-  padding: 0 3px;
+  padding: 0 4px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -53,13 +53,13 @@
   position: absolute;
   bottom: calc(100% + 6px);
   right: 0;
-  width: 290px;
+  width: min(290px, 92vw);
   max-height: 340px;
   background: var(--bg-secondary, #ffffff);
   border: 1px solid var(--border, rgba(0,0,0,0.1));
   border-radius: 10px;
   box-shadow: 0 8px 28px rgba(0,0,0,0.45);
-  z-index: 200;
+  z-index: var(--z-context-menu, 80);
   display: none;
   overflow: hidden;
   flex-direction: column;
@@ -82,7 +82,7 @@
   align-items: center;
   justify-content: space-between;
   padding: 10px 12px 8px;
-  border-bottom: 1px solid var(--border, rgba(255,255,255,0.08));
+  border-bottom: 1px solid var(--border, rgba(0,0,0,0.1));
   flex-shrink: 0;
 }
 
@@ -119,6 +119,7 @@
 .sh-list::-webkit-scrollbar { width: 4px; }
 .sh-list::-webkit-scrollbar-track { background: transparent; }
 .sh-list::-webkit-scrollbar-thumb { background: var(--border, rgba(255,255,255,0.12)); border-radius: 2px; }
+.sh-list { scrollbar-width: thin; scrollbar-color: var(--border, rgba(0,0,0,0.12)) transparent; }
 
 /* ── Empty state ── */
 .sh-empty {
@@ -190,10 +191,10 @@
   border: none;
   color: var(--muted, #888);
   cursor: pointer;
-  font-size: 11px;
-  width: 20px;
-  height: 20px;
-  border-radius: 4px;
+  font-size: 14px;
+  width: 36px;
+  height: 36px;
+  border-radius: 6px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -211,7 +212,6 @@
   .sh-panel {
     bottom: auto;
     top: calc(100% + 6px);
-    width: min(280px, 92vw);
     right: 0;
   }
 }

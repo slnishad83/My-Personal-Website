@@ -3,6 +3,7 @@
   'use strict';
 
   const RECALL_WINDOW_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
+  function _escRecall(s) { return window.escHtml ? window.escHtml(String(s ?? '')) : String(s ?? ''); }
 
   window.canRecallMessage = function(msg) {
     if (!msg || !msg.time) return false;
@@ -80,11 +81,23 @@
           </div>
         </div>
       </div>
-      <button onclick="deleteMessage('${msgId}','me')" style="padding:14px 16px;border-radius:12px;border:none;background:var(--surface-variant);color:var(--on-surface);font-size:14px;font-weight:700;cursor:pointer;text-align:left">🚫 Delete for me only</button>
-      <button onclick="_removeCtxMenu()" style="padding:14px 16px;border-radius:12px;border:none;background:transparent;color:var(--on-surface-variant);font-size:14px;font-weight:600;cursor:pointer">Cancel</button>`;
+      <button data-action="delete-me" data-msg-id="${_escRecall(msgId)}" style="padding:14px 16px;border-radius:12px;border:none;background:var(--surface-variant);color:var(--on-surface);font-size:14px;font-weight:700;cursor:pointer;text-align:left">🚫 Delete for me only</button>
+      <button data-action="cancel" style="padding:14px 16px;border-radius:12px;border:none;background:transparent;color:var(--on-surface-variant);font-size:14px;font-weight:600;cursor:pointer">Cancel</button>`;
 
     menu.appendChild(sheet);
-    menu.onclick = e => { if (e.target === menu) _removeCtxMenu(); };
+    menu.onclick = e => {
+      if (e.target === menu) { _removeCtxMenu(); return; }
+      const actionBtn = e.target.closest('[data-action]');
+      if (!actionBtn) return;
+      const action = actionBtn.dataset.action;
+      if (action === 'delete-me') {
+        const mid = actionBtn.dataset.msgId;
+        _removeCtxMenu();
+        if (typeof deleteMessage === 'function') deleteMessage(mid, 'me');
+      } else if (action === 'cancel') {
+        _removeCtxMenu();
+      }
+    };
     document.body.appendChild(menu);
     window._ctxMenu = menu;
   }
@@ -111,8 +124,11 @@
     if (deleteBtn) deleteBtn.parentElement?.insertBefore(info, deleteBtn.nextSibling);
   };
 
-  const _origDeleteMessage = window.deleteMessage;
-  if (typeof _origDeleteMessage === 'function') {
+  function _patchDeleteMessage() {
+    if (window._recallDeletePatched) return;
+    if (typeof window.deleteMessage !== 'function') return;
+    window._recallDeletePatched = true;
+    const _origDeleteMessage = window.deleteMessage;
     window.deleteMessage = async function(msgId, scope) {
       if (scope === 'everyone') {
         const chatId = App.currentChat?.id;
@@ -128,4 +144,12 @@
       return _origDeleteMessage(msgId, scope);
     };
   }
+  _patchDeleteMessage();
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', _patchDeleteMessage);
+  }
+  const _recallDeleteInterval = setInterval(() => {
+    if (!window._recallDeletePatched) _patchDeleteMessage();
+  }, 500);
+  setTimeout(() => { clearInterval(_recallDeleteInterval); }, 10000);
 })();
