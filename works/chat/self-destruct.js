@@ -211,7 +211,7 @@
       if (window.App.currentChat.type === 'group') {
         await window.App.db.collection('groups').doc(chatId).update({ ephemeralTimer: timerVal });
       } else {
-        await window.App.db.collection('chats').doc(chatId).update({ ephemeralTimer: timerVal });
+        await window.App.db.collection('directChats').doc(chatId).update({ ephemeralTimer: timerVal });
       }
       
       window.App.currentChat.ephemeralTimer = timerVal;
@@ -266,10 +266,20 @@
       if (timer && timer > 0) {
         const msgs = window.App.messages[chatId];
         msgs.forEach(msg => {
-          // If message is older than timer
           if (msg.time && (now - msg.time > timer)) {
-            // Self-destruct!
-            window.App.db.collection('messages').doc(msg.id).delete().catch(e => console.error(e));
+            window.App.db.collection('messages').doc(msg.id).delete()
+              .then(() => {
+                if (window.App.messages[chatId]) {
+                  window.App.messages[chatId] = window.App.messages[chatId].filter(m => m.id !== msg.id);
+                }
+              })
+              .catch(e => {
+                if (e.code === 7 || e.message?.includes('PERMISSION_DENIED')) {
+                  console.warn('[SelfDestruct] Delete blocked by rules, server will handle');
+                } else {
+                  console.error('[SelfDestruct] Delete failed:', e);
+                }
+              });
             deletionsOccurred = true;
           }
         });

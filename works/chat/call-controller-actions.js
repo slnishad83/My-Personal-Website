@@ -132,7 +132,7 @@
       '<p class="text-white/50 text-sm mb-1">' + directionLabel + ' ' + typeLabel + ' Call</p>' +
       '<p class="text-white/70 text-2xl font-mono font-semibold mb-6">' + durText + '</p>' +
       '<div class="flex items-center gap-2 mb-6 text-white/40 text-xs">' +
-      '<span class="material-symbols-outlined" style="font-size:14px">lock</span> End-to-end encrypted' +
+      '<span class="material-symbols-outlined" style="font-size:14px">wifi</span> Peer-to-peer connection' +
       '</div>' +
       '<div class="flex items-center gap-6">' +
       '<button id="end-screen-callback" class="w-14 h-14 rounded-full bg-green-500 flex items-center justify-center hover:bg-green-600 transition-colors" title="Call back"><span class="material-symbols-outlined text-white text-2xl">call</span></button>' +

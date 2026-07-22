@@ -190,25 +190,7 @@ const OfflineQueue = {
     if (typeof window.uploadToFirebaseStorage === 'function') {
       return await window.uploadToFirebaseStorage(file, 'chat_uploads');
     }
-    if (typeof window.uploadToCloudinary === 'function' && window.uploadToCloudinary !== this._uploadToCloudinary) {
-      return await window.uploadToCloudinary(file);
-    }
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('upload_preset', window.CHAT_UPLOAD_PRESET || 'chat_app_uploads');
-    const cloudName = window.CLOUDINARY_CLOUD_NAME || 'du2dsimyz';
-    const isImage = file.type && file.type.startsWith('image/');
-    const isVideo = file.type && file.type.startsWith('video/');
-    if (isImage) formData.append('eager', 'c_limit,w_1920,q_auto:good,f_auto');
-    else if (isVideo) formData.append('eager', 'c_limit,w_1280,q_auto:good');
-    const endpoint = isImage || isVideo ? 'auto' : 'auto';
-    const res = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/${endpoint}/upload`, {
-      method: 'POST',
-      body: formData
-    });
-    if (!res.ok) throw new Error(`Upload failed: ${res.status}`);
-    const data = await res.json();
-    return data.secure_url;
+    throw new Error('No upload provider available. Message attachments cannot be uploaded offline.');
   },
 
   async updateStatus(id, status) {

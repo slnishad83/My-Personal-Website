@@ -1,8 +1,6 @@
 'use strict';
 (function () {
   var STORAGE_KEY = 'nsl_profile_setup_complete';
-  var CLOUDINARY_CLOUD = 'du2dsimyz';
-  var CLOUDINARY_PRESET = 'chat_app_uploads';
 
   var _overlay = null;
   var _currentStep = 1;
@@ -223,16 +221,8 @@
         var uploadUrl;
         if (typeof window.uploadToFirebaseStorage === 'function') {
           uploadUrl = await window.uploadToFirebaseStorage(file, 'avatars');
-        } else if (typeof window.uploadToCloudinary === 'function') {
-          uploadUrl = await window.uploadToCloudinary(file, 'avatars');
         } else {
-          var fd = new FormData();
-          fd.append('file', file);
-          fd.append('upload_preset', 'chat_app_uploads');
-          var resp = await fetch('https://api.cloudinary.com/v1_1/du2dsimyz/image/upload', { method: 'POST', body: fd });
-          if (!resp.ok) throw new Error('Upload failed');
-          var data = await resp.json();
-          uploadUrl = data.secure_url;
+          throw new Error('No upload provider available. Please ensure Firebase Storage is configured.');
         }
         _uploadedPhotoURL = uploadUrl;
         if (typeof showToast === 'function') showToast('Photo uploaded', 'success');

@@ -60,25 +60,37 @@ service cloud.firestore {
     match /messages/{messageId} {
       // Direct messages: user must be a participant.
       // Group messages: user must be a member of the group.
-      // Note: thread replies inherit access from the parent message's security.
       allow read: if isAuth() && (
         request.auth.uid in resource.data.participants
         ||
         (resource.data.groupId != null && isGroupMember(resource.data.groupId))
       );
-      allow create: if isAuth() && request.auth.uid == request.resource.data.senderId;
+      // Create: sender must match auth, and must be a participant of the target chat.
+      allow create: if isAuth()
+        && request.auth.uid == request.resource.data.senderId
+        && (
+          // Direct chat: sender must be in participants
+          (request.resource.data.chatType == 'direct' && request.auth.uid in request.resource.data.participants)
+          // Group chat: sender must be a group member
+          || (request.resource.data.groupId != null && isGroupMember(request.resource.data.groupId))
+        );
+      // Update: only allow status, readBy, reactions fields to be modified by participants.
+      // Do NOT allow modifying senderId, senderName, text, chatId, chatType, or other fields.
       allow update: if isAuth() && (
         request.auth.uid in resource.data.participants
-        ||
-        (resource.data.groupId != null && isGroupMember(resource.data.groupId))
+        || (resource.data.groupId != null && isGroupMember(resource.data.groupId))
+      ) && (
+        // Only these specific fields may be modified:
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'readBy', 'reactions', 'starred'])
       );
-      allow delete: if false;
+      allow delete: if isAuth() && request.auth.uid == resource.data.senderId;
 
       // Thread replies subcollection — requires auth + participant check
       match /threadReplies/{replyId} {
         allow read: if isAuth() && request.auth.uid in resource.data.participants;
         allow create: if isAuth() && request.auth.uid == request.resource.data.senderId;
-        allow update: if isAuth();
+        // Thread updates restricted to status/readBy only, by participants
+        allow update: if isAuth() && request.auth.uid in resource.data.participants;
         allow delete: if false;
       }
     }
@@ -100,6 +112,10 @@ service cloud.firestore {
       allow read: if isAuth() && request.auth.uid in resource.data.members;
       allow create: if isAuth() && request.auth.uid in request.resource.data.members;
       allow update: if isAuth() && request.auth.uid in resource.data.members;
+      // Roles field can only be modified by existing admins
+      allow update: if isAuth() && request.auth.uid in resource.data.members
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['roles'])
+        && request.auth.uid in resource.data.roles[resource.data.adminIds[0]];
       allow delete: if false;
     }
 
@@ -161,9 +177,13 @@ service cloud.firestore {
     // =============================================
     match /groupInvites/{inviteId} {
       allow read: if isAuth() && request.auth.uid == resource.data.toUserId;
-      allow create: if isAuth();
-      allow update: if isAuth();
-      allow delete: if false;
+      // Create: inviter must be the fromUserId and must be a group member
+      allow create: if isAuth()
+        && request.auth.uid == request.resource.data.fromUserId
+        && isGroupMember(request.resource.data.groupId);
+      // Update: only the recipient (toUserId) can accept/decline
+      allow update: if isAuth() && request.auth.uid == resource.data.toUserId;
+      allow delete: if isAuth() && request.auth.uid == resource.data.fromUserId;
     }
 
     // =============================================
