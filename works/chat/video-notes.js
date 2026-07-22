@@ -91,6 +91,7 @@
         <button class="vn-cancel-btn" id="vn-cancel-btn" aria-label="Cancel">✕</button>\
         <button class="vn-flip-btn" id="vn-flip-btn" aria-label="Flip camera">↻</button>\
         <button class="vn-record-btn" id="vn-record-btn" aria-label="Record"><div class="vn-inner"></div></button>\
+        <button class="vn-pause-btn" id="vn-pause-btn" aria-label="Pause" style="display:none"><span class="material-symbols-outlined">pause</span></button>\
         <button class="vn-send-btn" id="vn-send-btn" aria-label="Send" style="display:none">➤</button>\
       </div>';
     document.body.appendChild(vnOverlay);
@@ -102,11 +103,32 @@
     vnCancelBtn = document.getElementById('vn-cancel-btn');
     vnFlipBtn = document.getElementById('vn-flip-btn');
     vnTimerDisplay = document.getElementById('vn-timer');
+    var vnPauseBtn = document.getElementById('vn-pause-btn');
 
     vnRecordBtn.addEventListener('click', onRecordTap);
     vnSendBtn.addEventListener('click', function () { if (vnBlob) sendVideoNote(vnBlob); });
     vnCancelBtn.addEventListener('click', cancelVideoNoteRecording);
     vnFlipBtn.addEventListener('click', flipCamera);
+    if (vnPauseBtn) vnPauseBtn.addEventListener('click', togglePauseRecording);
+  }
+
+  function togglePauseRecording() {
+    if (!vnRecorder || vnRecorder.state === 'inactive') return;
+    var pauseBtn = document.getElementById('vn-pause-btn');
+    var pauseIcon = pauseBtn ? pauseBtn.querySelector('.material-symbols-outlined, span') : null;
+    if (vnPaused) {
+      vnRecorder.resume();
+      vnPaused = false;
+      vnPausedDuration += Date.now() - vnPauseStart;
+      if (pauseIcon) pauseIcon.textContent = 'pause';
+      vnRecordBtn.classList.add('recording');
+    } else {
+      vnRecorder.pause();
+      vnPaused = true;
+      vnPauseStart = Date.now();
+      if (pauseIcon) pauseIcon.textContent = 'play_arrow';
+      vnRecordBtn.classList.remove('recording');
+    }
   }
 
   function onRecordTap() {
@@ -167,7 +189,7 @@
     };
 
     vnRecorder.onstop = function () {
-      if (vnChunks.length > 0 && !vnPaused) {
+      if (vnChunks.length > 0) {
         vnBlob = new Blob(vnChunks, { type: vnRecorder.mimeType || 'video/webm' });
         vnRecordComplete = true;
         showSendState();
@@ -181,6 +203,8 @@
     vnRecordBtn.classList.add('recording');
     vnCircle.classList.add('recording');
     if (vnFlipBtn) vnFlipBtn.style.display = 'none';
+    var vnPauseBtn = document.getElementById('vn-pause-btn');
+    if (vnPauseBtn) vnPauseBtn.style.display = '';
 
     vnTimer = setInterval(updateTimer, 100);
   }
@@ -189,10 +213,13 @@
     if (!vnRecorder || vnRecorder.state === 'inactive') return;
     vnRecorder.stop();
     vnRecording = false;
+    vnPaused = false;
     clearInterval(vnTimer);
     vnRecordBtn.classList.remove('recording');
     vnCircle.classList.remove('recording');
     if (vnFlipBtn) vnFlipBtn.style.display = '';
+    var vnPauseBtn = document.getElementById('vn-pause-btn');
+    if (vnPauseBtn) vnPauseBtn.style.display = 'none';
   }
 
   function updateTimer() {
@@ -254,6 +281,8 @@
     }
     if (vnSendBtn) vnSendBtn.style.display = 'none';
     if (vnFlipBtn) vnFlipBtn.style.display = '';
+    var vnPauseBtn2 = document.getElementById('vn-pause-btn');
+    if (vnPauseBtn2) vnPauseBtn2.style.display = 'none';
     if (vnCircle) vnCircle.classList.remove('recording');
     if (vnTimerDisplay) {
       vnTimerDisplay.textContent = '0:00 / 0:30';
@@ -362,6 +391,29 @@
     }
   }
 
+  function _showVideoNoteFullscreen(url) {
+    var existing = document.getElementById('vn-fullscreen-overlay');
+    if (existing) existing.remove();
+    var html = '<div id="vn-fullscreen-overlay" class="fixed inset-0 z-50 bg-black flex items-center justify-center" style="cursor:pointer">' +
+      '<video id="vn-fullscreen-video" src="' + esc(url) + '" class="w-full h-full object-contain" playsinline controls></video>' +
+      '<button id="vn-fullscreen-close" class="absolute top-4 right-4 w-10 h-10 rounded-full bg-black/50 text-white flex items-center justify-center z-10"><span class="material-symbols-outlined">close</span></button>' +
+      '</div>';
+    document.body.insertAdjacentHTML('beforeend', html);
+    var overlay = document.getElementById('vn-fullscreen-overlay');
+    var video = document.getElementById('vn-fullscreen-video');
+    var closeBtn = document.getElementById('vn-fullscreen-close');
+    if (video) video.play().catch(function () {});
+    function closeFS() {
+      if (video) { video.pause(); video.src = ''; }
+      if (overlay) overlay.remove();
+    }
+    if (closeBtn) closeBtn.onclick = function (e) { e.stopPropagation(); closeFS(); };
+    if (overlay) overlay.onclick = function (e) { if (e.target === overlay) closeFS(); };
+    document.addEventListener('keydown', function handler(e) {
+      if (e.key === 'Escape') { closeFS(); document.removeEventListener('keydown', handler); }
+    });
+  }
+
   function renderVideoNote(msgId, url, container) {
     if (!url || !container) return;
 
@@ -421,6 +473,33 @@
 
     circle.addEventListener('click', function () {
       toggleVideoNotePlayback(msgId);
+    });
+
+    var longPressTimer = null;
+    circle.addEventListener('touchstart', function (e) {
+      longPressTimer = setTimeout(function () {
+        longPressTimer = null;
+        _showVideoNoteFullscreen(url);
+      }, 600);
+    }, { passive: true });
+    circle.addEventListener('touchend', function () {
+      if (longPressTimer) { clearTimeout(longPressTimer); longPressTimer = null; }
+    });
+    circle.addEventListener('touchmove', function () {
+      if (longPressTimer) { clearTimeout(longPressTimer); longPressTimer = null; }
+    });
+    circle.addEventListener('mousedown', function (e) {
+      if (e.button !== 0) return;
+      longPressTimer = setTimeout(function () {
+        longPressTimer = null;
+        _showVideoNoteFullscreen(url);
+      }, 600);
+    });
+    circle.addEventListener('mouseup', function () {
+      if (longPressTimer) { clearTimeout(longPressTimer); longPressTimer = null; }
+    });
+    circle.addEventListener('mouseleave', function () {
+      if (longPressTimer) { clearTimeout(longPressTimer); longPressTimer = null; }
     });
   }
 

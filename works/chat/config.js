@@ -10,17 +10,13 @@
 'use strict';
 
 /* ══════════════════════════════════════════════════════════════
-   FIREBASE CONFIGURATION
+   FIREBASE CONFIGURATION (single source of truth in firebase-config.js)
    ══════════════════════════════════════════════════════════════ */
 
-const FIREBASE_CONFIG = Object.freeze({
-  apiKey: "AIzaSyCdbut_FdscAjl-OVSlAUhb7TOTiRNkh34",
-  authDomain: "my-team-chat-2255.firebaseapp.com",
-  projectId: "my-team-chat-2255",
-  storageBucket: "my-team-chat-2255.firebasestorage.app",
-  messagingSenderId: "805016891521",
-  appId: "1:805016891521:web:ac9bc7a252bcf33686dd80",
-});
+// FIREBASE_CONFIG is defined in firebase-config.js (loaded before this file)
+if (typeof FIREBASE_CONFIG === 'undefined') {
+  console.error('[Config] firebase-config.js must be loaded before config.js');
+}
 
 /* ══════════════════════════════════════════════════════════════
    APP CONSTANTS
@@ -31,14 +27,14 @@ const APP_CONSTANTS = Object.freeze({
   TURN_CREDENTIALS_ENDPOINT: "https://us-central1-my-team-chat-2255.cloudfunctions.net/getTurnCredentials",
   VERIFIED_USER_LOOKUP_ENDPOINT: "https://asia-south1-my-team-chat-2255.cloudfunctions.net/lookupVerifiedUserByEmailV2",
   GROUP_ACCESS_REPAIR_ENDPOINT: "https://us-central1-my-team-chat-2255.cloudfunctions.net/repairGroupAccessMetadata",
-  CLOUDINARY_CLOUD_NAME: "du2dsimyz",
-  CLOUDINARY_UPLOAD_PRESET: "chat_app_uploads",
+  /* Cloudinary removed — all uploads use Firebase Storage (100% free) */
+  MEETING_SCHEDULER_ENDPOINT: "https://us-central1-my-team-chat-2255.cloudfunctions.net/scheduleMeeting",
   AVATAR_MAX_BYTES: 5 * 1024 * 1024,
   AVATAR_ALLOWED_EXTENSIONS: ["jpg", "jpeg", "png", "webp", "gif", "bmp", "heic", "heif"],
   AVATAR_ALLOWED_MIME_TYPES: ["image/jpeg", "image/png", "image/webp", "image/gif", "image/bmp", "image/heic", "image/heif"],
   AVATAR_FORMAT_HELP_TEXT: "Supported image formats: JPG, JPEG, PNG, WebP, GIF, BMP, HEIC, HEIF. Maximum size: 5 MB.",
   MESSAGE_PAGE_SIZE: 120,
-  GROUP_CALL_MAX_PARTICIPANTS: 4,
+  GROUP_CALL_MAX_PARTICIPANTS: 8,
   DEFAULT_RTC_CONFIG: {
     iceServers: [
       { urls: "stun:stun.l.google.com:19302" },
@@ -71,7 +67,7 @@ function initFirebase() {
     console.error('[Config] Firebase SDK not loaded');
     return;
   }
-  firebase.initializeApp(FirebaseConfig);
+  firebase.initializeApp(FIREBASE_CONFIG);
   _firebaseInitialized = true;
   document.dispatchEvent(new CustomEvent('nsl:firebase-ready'));
 }
@@ -131,14 +127,10 @@ const isNativeIOSApp =
 
 window.__DEBUG__ = window.__DEBUG__ || false;
 window.FIREBASE_CONFIG = FIREBASE_CONFIG;
-window.FIREBASE_CONFIG_KEYS = FIREBASE_CONFIG;
 window.FcmVapidKey = APP_CONSTANTS.FCM_VAPID_KEY;
 window.TURN_CREDENTIALS_ENDPOINT = APP_CONSTANTS.TURN_CREDENTIALS_ENDPOINT;
 window.VERIFIED_USER_LOOKUP_ENDPOINT = APP_CONSTANTS.VERIFIED_USER_LOOKUP_ENDPOINT;
 window.GROUP_ACCESS_REPAIR_ENDPOINT = APP_CONSTANTS.GROUP_ACCESS_REPAIR_ENDPOINT;
-window.CLOUDINARY_CLOUD_NAME = APP_CONSTANTS.CLOUDINARY_CLOUD_NAME;
-window.CLOUDINARY_UPLOAD_PRESET = APP_CONSTANTS.CLOUDINARY_UPLOAD_PRESET;
-window.TURN_CREDENTIALS_ENDPOINT = APP_CONSTANTS.TURN_CREDENTIALS_ENDPOINT;
 window.AVATAR_MAX_BYTES = APP_CONSTANTS.AVATAR_MAX_BYTES;
 window.AVATAR_ALLOWED_EXTENSIONS = APP_CONSTANTS.AVATAR_ALLOWED_EXTENSIONS;
 window.AVATAR_ALLOWED_MIME_TYPES = APP_CONSTANTS.AVATAR_ALLOWED_MIME_TYPES;

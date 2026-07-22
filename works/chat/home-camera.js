@@ -382,12 +382,15 @@
     try {
       _toast('Uploading to status...', 'info');
       var url;
-      if (typeof window.uploadToCloudinary === 'function') {
-        var ext = type === 'photo' ? 'jpg' : 'webm';
-        var file = new File([blob], 'status_' + Date.now() + '.' + ext, { type: blob.type });
-        url = await window.uploadToCloudinary(file);
+      var ext = type === 'photo' ? 'jpg' : 'webm';
+      var file = new File([blob], 'status_' + Date.now() + '.' + ext, { type: blob.type });
+      if (typeof window.uploadToFirebaseStorage === 'function') {
+        url = await window.uploadToFirebaseStorage(file, 'status_media');
+      } else if (typeof window.uploadToCloudinary === 'function') {
+        url = await window.uploadToCloudinary(file, 'status_media');
       } else {
-        url = URL.createObjectURL(blob);
+        _toast('Storage not available', 'error');
+        return;
       }
       var statusData = {
         userId: window.currentUser.uid,

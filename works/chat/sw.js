@@ -209,9 +209,19 @@ self.addEventListener('notificationclick', function(event) {
     return;
   }
 
-  var url = data.kind === 'call' && data.callId
-    ? './index.html?callId=' + encodeURIComponent(data.callId) + '&callAction=' + encodeURIComponent(action)
-    : (data.url || './index.html');
+  var url;
+  if (data.kind === 'call' && data.callId) {
+    url = './index.html?callId=' + encodeURIComponent(data.callId) + '&callAction=' + encodeURIComponent(action);
+  } else {
+    var base = data.url || './index.html';
+    var params = [];
+    if (data.chatId) params.push('chatId=' + encodeURIComponent(data.chatId));
+    if (data.messageId) params.push('messageId=' + encodeURIComponent(data.messageId));
+    if (data.kind) params.push('kind=' + encodeURIComponent(data.kind));
+    if (data.chatType) params.push('chatType=' + encodeURIComponent(data.chatType));
+    if (data.groupId) params.push('groupId=' + encodeURIComponent(data.groupId));
+    url = params.length ? base + '?' + params.join('&') : base;
+  }
 
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then(function(clientList) {
@@ -250,29 +260,17 @@ var CRITICAL_ASSETS = [
 
 // Tier 2: Important — cached on first fetch (stale-while-revalidate)
 var IMPORTANT_ASSETS = [
-  'config.js', 'app.js', 'app-extras.js', 'security.js',
-  'chat.css', 'chat-theme.css', 'chat-enhancements.css', 'chat-consolidated.css',
-  'redesign-base.css', 'chat-missing-features.css', 'accessibility.css',
-  'new-features.css', 'message-actions.css', 'scheduled-calendar.css',
-  'notification-prefs.css', 'url-preview.css', 'translation-ui.css',
-  'sync-audit.css', 'snooze-history.css', 'snooze-enhancements.css',
-  'auth-theme.css',
-  'notification-sounds.js', 'notification-reply.js', 'pwa-install.js',
-  'platform-detect.js', 'offline-queue.js', 'call-sync.js',
+  'config.js', 'firebase-config.js', 'app.js', 'security.js',
+  'chat.css', 'chat-theme.css', 'chat-enhancements.css',
+  'accessibility.css', 'message-actions.css',
+  'notification-prefs.css', 'url-preview.css',
   'presence.js', 'multi-device.js', 'error-boundary.js',
   'virtual-scroll.js', 'accessibility.js', 'keyboard-shortcuts.js',
-  'chat-missing-features.js', 'chat-enhancements.js', 'chat-fixes.js',
-  'threads.js', 'message-search.js', 'notification-prefs.js',
-  'notification-digest.js', 'notification-orchestrator.js',
-  'notification-telemetry.js', 'ios-callkit.js', 'desktop-notifications.js',
-  'permissions-manager.js', 'call-controller.js', 'group-call.js',
-  'call-history.js', 'archive-chat.js', 'forward-modal.js',
-  'block-user.js', 'message-reactions.js', 'delete-group.js',
-  'profile-edit.js', 'app-lock.js', 'video-notes.js',
-  'in-call-reactions.js', 'status.js', 'status-viewer.js',
-  'notification-nav.js', 'unread-polish.js', 'home-camera.js',
-  'group-features.js', 'lazy-modules.js',
-  'calculator.js', 'mini-games.js',
+  'threads.js', 'message-search.js',
+  'notification-orchestrator.js', 'notification-telemetry.js',
+  'call-controller.js', 'group-call.js', 'call-history.js',
+  'message-reactions.js', 'profile-edit.js', 'app-lock.js',
+  'status.js', 'status-viewer.js', 'lazy-modules.js',
 ];
 
 var HTML_PAGES = [
@@ -308,13 +306,21 @@ self.addEventListener('activate', function(event) {
         if (self.clients && self.clients.claim) return self.clients.claim();
       })
       .then(function() {
-        // Enforce cache size limit
+        // Enforce cache size limit — evict oldest entries
         return caches.open(CACHE_NAME).then(function(cache) {
           return cache.keys().then(function(keys) {
             if (keys.length > CACHE_MAX_ENTRIES) {
               var toDelete = keys.slice(0, keys.length - CACHE_MAX_ENTRIES);
               return Promise.all(toDelete.map(function(req) { return cache.delete(req); }));
             }
+          });
+        });
+      })
+      .then(function() {
+        // Notify all clients when a new SW is active
+        return self.clients.matchAll({ type: 'window' }).then(function(clients) {
+          clients.forEach(function(client) {
+            try { client.postMessage({ type: 'SW_UPDATED', version: CACHE_NAME }); } catch (_) {}
           });
         });
       })

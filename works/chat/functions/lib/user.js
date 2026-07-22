@@ -25,12 +25,40 @@ exports.leaveGroup = onCall(async (request) => {
     throw new HttpsError("failed-precondition", "You are not a member of this group");
   }
 
-  await groupRef.update({
-    memberIds: getAdmin().firestore.FieldValue.arrayRemove(uid)
-  });
+  const FieldValue = getAdmin().firestore.FieldValue;
+  const updates = {
+    memberIds: FieldValue.arrayRemove(uid)
+  };
+  // Also remove from 'members' array if present (used by groupChats rules)
+  if (groupData.members) {
+    updates.members = FieldValue.arrayRemove(uid);
+  }
+  // Decrement member count
+  if (typeof groupData.memberCount === 'number') {
+    updates.memberCount = Math.max(0, groupData.memberCount - 1);
+  }
+  await groupRef.update(updates);
 
   return { ok: true };
 });
+
+async function paginatedDelete(db, query, batchSize) {
+  let totalDeleted = 0;
+  let lastDoc = null;
+  while (true) {
+    let q = query.limit(batchSize);
+    if (lastDoc) q = q.startAfter(lastDoc);
+    const snap = await q.get();
+    if (snap.empty) break;
+    const batch = db.batch();
+    snap.forEach(doc => batch.delete(doc.ref));
+    await batch.commit();
+    totalDeleted += snap.size;
+    lastDoc = snap.docs[snap.docs.length - 1];
+    if (snap.size < batchSize) break;
+  }
+  return totalDeleted;
+}
 
 exports.adminDeleteUser = onCall(async (request) => {
   const uid = requireAuth(request);
@@ -48,66 +76,37 @@ exports.adminDeleteUser = onCall(async (request) => {
 
   const db = getDb();
   const FieldValue = getAdmin().firestore.FieldValue;
+  const BATCH_SIZE = 500;
 
-  const messagesSnap = await db.collection("messages")
-    .where("senderId", "==", targetUid).limit(500).get();
-  const batch1 = db.batch();
-  messagesSnap.forEach(doc => batch1.delete(doc.ref));
-  if (messagesSnap.size > 0) await batch1.commit();
+  const messagesDeleted = await paginatedDelete(db,
+    db.collection("messages").where("senderId", "==", targetUid), BATCH_SIZE);
 
-  const sessionsSnap = await db.collection("users").doc(targetUid)
-    .collection("sessions").limit(500).get();
-  const batch2 = db.batch();
-  sessionsSnap.forEach(doc => batch2.delete(doc.ref));
-  if (sessionsSnap.size > 0) await batch2.commit();
+  await paginatedDelete(db,
+    db.collection("users").doc(targetUid).collection("sessions"), BATCH_SIZE);
 
-  const callsSnap = await db.collection("users").doc(targetUid)
-    .collection("callEvents").limit(500).get();
-  const batch3 = db.batch();
-  callsSnap.forEach(doc => batch3.delete(doc.ref));
-  if (callsSnap.size > 0) await batch3.commit();
+  await paginatedDelete(db,
+    db.collection("users").doc(targetUid).collection("callEvents"), BATCH_SIZE);
 
-  const groupMembersSnap = await db.collection("groupMembers")
-    .where("userId", "==", targetUid).limit(500).get();
-  const batchGM = db.batch();
-  groupMembersSnap.forEach(doc => batchGM.delete(doc.ref));
-  if (groupMembersSnap.size > 0) await batchGM.commit();
+  await paginatedDelete(db,
+    db.collection("groupMembers").where("userId", "==", targetUid), BATCH_SIZE);
 
-  const statusSnap = await db.collection("statuses")
-    .where("userId", "==", targetUid).limit(500).get();
-  const batchStatus = db.batch();
-  statusSnap.forEach(doc => batchStatus.delete(doc.ref));
-  if (statusSnap.size > 0) await batchStatus.commit();
+  await paginatedDelete(db,
+    db.collection("statuses").where("userId", "==", targetUid), BATCH_SIZE);
 
-  const tasksSnap = await db.collection("tasks")
-    .where("userId", "==", targetUid).limit(500).get();
-  const batchTasks = db.batch();
-  tasksSnap.forEach(doc => batchTasks.delete(doc.ref));
-  if (tasksSnap.size > 0) await batchTasks.commit();
+  await paginatedDelete(db,
+    db.collection("tasks").where("userId", "==", targetUid), BATCH_SIZE);
 
-  const calendarSnap = await db.collection("calendarEvents")
-    .where("addedBy", "==", targetUid).limit(500).get();
-  const batchCal = db.batch();
-  calendarSnap.forEach(doc => batchCal.delete(doc.ref));
-  if (calendarSnap.size > 0) await batchCal.commit();
+  await paginatedDelete(db,
+    db.collection("calendarEvents").where("addedBy", "==", targetUid), BATCH_SIZE);
 
-  const expensesSnap = await db.collection("groupExpenses")
-    .where("addedBy", "==", targetUid).limit(500).get();
-  const batchExp = db.batch();
-  expensesSnap.forEach(doc => batchExp.delete(doc.ref));
-  if (expensesSnap.size > 0) await batchExp.commit();
+  await paginatedDelete(db,
+    db.collection("groupExpenses").where("addedBy", "==", targetUid), BATCH_SIZE);
 
-  const directChatsSnap = await db.collection("directChats")
-    .where("participants", "array-contains", targetUid).limit(500).get();
-  const batchDC = db.batch();
-  directChatsSnap.forEach(doc => batchDC.delete(doc.ref));
-  if (directChatsSnap.size > 0) await batchDC.commit();
+  await paginatedDelete(db,
+    db.collection("directChats").where("participants", "array-contains", targetUid), BATCH_SIZE);
 
-  const telemetrySnap = await db.collection("notificationTelemetry")
-    .where("userId", "==", targetUid).limit(500).get();
-  const batchTel = db.batch();
-  telemetrySnap.forEach(doc => batchTel.delete(doc.ref));
-  if (telemetrySnap.size > 0) await batchTel.commit();
+  await paginatedDelete(db,
+    db.collection("notificationTelemetry").where("userId", "==", targetUid), BATCH_SIZE);
 
   const groupsSnap = await db.collection("groups")
     .where("memberIds", "array-contains", targetUid).get();
@@ -122,7 +121,7 @@ exports.adminDeleteUser = onCall(async (request) => {
   await firebaseAuth.deleteUser(targetUid);
   await db.collection("users").doc(targetUid).delete();
 
-  return { ok: true, messagesDeleted: messagesSnap.size };
+  return { ok: true, messagesDeleted };
 });
 
 exports.adminBanUser = onCall(async (request) => {
@@ -181,18 +180,55 @@ exports.adminUnbanUser = onCall(async (request) => {
 exports.deleteUserAccount = onCall({ region: "us-central1" }, async (request) => {
   const uid = requireAuth(request);
   const db = getDb();
+  const FieldValue = getAdmin().firestore.FieldValue;
   const userDoc = await db.collection("users").doc(uid).get();
   if (!userDoc.exists) throw new HttpsError("not-found", "User not found");
   const userData = userDoc.data() || {};
 
+  // Step 1: If already scheduled, check 30-day grace period
   if (userData.deletionScheduledAt) {
     const scheduled = userData.deletionScheduledAt.toDate ? userData.deletionScheduledAt.toDate() : new Date(userData.deletionScheduledAt);
     const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
     if (scheduled < thirtyDaysAgo) {
+      // Perform full cleanup
+      const firebaseAuth = getAuth();
+
+      // Remove from all groups
+      const groupsSnap = await db.collection("groups").where("memberIds", "array-contains", uid).get();
+      const batchGroups = db.batch();
+      groupsSnap.forEach(doc => batchGroups.update(doc.ref, { memberIds: FieldValue.arrayRemove(uid) }));
+      if (groupsSnap.size > 0) await batchGroups.commit();
+
+      // Delete subcollection data
+      const subcollections = ["sessions", "callEvents"];
+      for (const sub of subcollections) {
+        const snap = await db.collection("users").doc(uid).collection(sub).limit(500).get();
+        const batch = db.batch();
+        snap.forEach(doc => batch.delete(doc.ref));
+        if (snap.size > 0) await batch.commit();
+      }
+
+      // Delete user doc
       await db.collection("users").doc(uid).delete();
+
+      // Delete Firebase Auth user
+      try { await firebaseAuth.deleteUser(uid); } catch (_) {}
+
       return { ok: true, deleted: true };
     }
+    return { ok: true, deleted: false, message: "Account pending deletion. Access revoked." };
   }
 
-  return { ok: true, deleted: false, message: "Account not yet eligible for permanent deletion" };
+  // Step 2: First call — schedule deletion and revoke access
+  await db.collection("users").doc(uid).update({
+    deletionScheduledAt: FieldValue.serverTimestamp(),
+    banned: true,
+    accessRevokedAt: Date.now()
+  });
+
+  try {
+    await getAuth().setCustomUserClaims(uid, { banned: true });
+  } catch (_) {}
+
+  return { ok: true, deleted: false, message: "Account scheduled for deletion in 30 days." };
 });

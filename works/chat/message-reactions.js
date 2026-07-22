@@ -283,16 +283,80 @@
     var senderName = 'Someone';
     if (window.currentUser) senderName = window.currentUser.displayName || window.currentUser.email || 'Someone';
 
+    var chatId = msgData.directId || msgData.chatId || msgData.groupId || '';
+    var chatType = msgData.groupId ? 'group' : 'direct';
+
+    var reactionPayload = {
+      msgId: msgId,
+      emoji: emoji,
+      senderName: senderName,
+      senderUid: uid,
+      chatId: chatId,
+      chatType: chatType,
+      msgText: msgData.text ? msgData.text.substring(0, 100) : '',
+      timestamp: Date.now()
+    };
+
+    try {
+      var history = JSON.parse(localStorage.getItem('tc_reaction_notifications') || '[]');
+      history.unshift(reactionPayload);
+      if (history.length > 50) history = history.slice(0, 50);
+      localStorage.setItem('tc_reaction_notifications', JSON.stringify(history));
+    } catch (_) {}
+
     try {
       if (typeof window.sendPushNotification === 'function') {
         window.sendPushNotification(msgData.senderId, {
           title: senderName + ' reacted ' + emoji,
           body: msgData.text ? msgData.text.substring(0, 100) : 'to your message',
           tag: 'reaction-' + msgId,
-          url: window.location.href
+          messageId: msgId,
+          chatId: chatId,
+          chatType: chatType,
+          kind: 'reaction',
+          url: window.location.origin + window.location.pathname + '#reaction:' + msgId
         });
       }
     } catch (_) {}
+
+    try {
+      var badgeCount = parseInt(localStorage.getItem('tc_reaction_badge_count') || '0', 10);
+      badgeCount++;
+      localStorage.setItem('tc_reaction_badge_count', String(badgeCount));
+      document.dispatchEvent(new CustomEvent('tc:reaction-badge-update', { detail: { count: badgeCount } }));
+    } catch (_) {}
+  }
+
+  function getUnreadReactionCount() {
+    try {
+      return parseInt(localStorage.getItem('tc_reaction_badge_count') || '0', 10);
+    } catch (_) { return 0; }
+  }
+
+  function clearUnreadReactions() {
+    try {
+      localStorage.setItem('tc_reaction_badge_count', '0');
+      document.dispatchEvent(new CustomEvent('tc:reaction-badge-update', { detail: { count: 0 } }));
+    } catch (_) {}
+  }
+
+  function scrollToReaction(msgId) {
+    if (!msgId) return;
+    clearUnreadReactions();
+    var msgEl = document.querySelector('[data-message-id="' + msgId + '"]');
+    if (msgEl) {
+      msgEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      msgEl.style.transition = 'box-shadow 0.3s ease, transform 0.3s ease';
+      msgEl.style.boxShadow = '0 0 0 3px var(--primary, #00a884)';
+      msgEl.style.borderRadius = '12px';
+      msgEl.style.transform = 'scale(1.02)';
+      setTimeout(function () {
+        msgEl.style.boxShadow = '';
+        msgEl.style.transform = '';
+      }, 2000);
+      return true;
+    }
+    return false;
   }
 
   function renderReactions(msgId, reactions) {
@@ -335,6 +399,26 @@
         if (msgId && emoji) toggleReaction(msgId, emoji);
         return;
       }
+      var reactionsContainer = e.target.closest('.nsl-reactions-container');
+      if (reactionsContainer) {
+        e.stopPropagation();
+        var msgEl = reactionsContainer.closest('[data-message-id]');
+        if (msgEl) {
+          var mid = msgEl.dataset.messageId;
+          var d = _db();
+          if (d && mid) {
+            d.collection('messages').doc(mid).get().then(function(snap) {
+              if (snap.exists) {
+                var reactions = snap.data().reactions || {};
+                if (Object.keys(reactions).length > 0) {
+                  _showReactionViewer(mid, reactions);
+                }
+              }
+            }).catch(function() {});
+          }
+        }
+        return;
+      }
     });
 
     container.addEventListener('dblclick', function (e) {
@@ -357,6 +441,30 @@
         }
       }
     });
+
+    container.addEventListener('touchstart', function (e) {
+      var badge = e.target.closest('.nsl-reaction-badge');
+      if (badge) {
+        var timer = setTimeout(function() {
+          e.preventDefault();
+          var msgId = badge.dataset.msgId;
+          var d = _db();
+          if (d && msgId) {
+            d.collection('messages').doc(msgId).get().then(function(snap) {
+              if (snap.exists) {
+                var reactions = snap.data().reactions || {};
+                if (Object.keys(reactions).length > 0) {
+                  _showReactionViewer(msgId, reactions);
+                }
+              }
+            }).catch(function() {});
+          }
+        }, 500);
+        var cancel = function() { clearTimeout(timer); };
+        badge.addEventListener('touchend', cancel, { once: true });
+        badge.addEventListener('touchmove', cancel, { once: true });
+      }
+    }, { passive: false });
   }
 
   function subscribeToReactions(msgId) {
@@ -449,9 +557,28 @@
 
   window.toggleReaction = toggleReaction;
   window.showReactionPicker = showReactionPicker;
+  window.showReactionViewer = _showReactionViewer;
   window.renderReactions = renderReactions;
   window.getQuickReactions = getQuickReactions;
   window.initReactionListeners = initReactionListeners;
   window.wireReactionPostRender = wireReactionPostRender;
   window.unsubscribeAllReactions = unsubscribeAllReactions;
+  window.getUnreadReactionCount = getUnreadReactionCount;
+  window.clearUnreadReactions = clearUnreadReactions;
+  window.scrollToReaction = scrollToReaction;
+
+  window.addEventListener('hashchange', function () {
+    var hash = window.location.hash;
+    if (hash && hash.indexOf('#reaction:') === 0) {
+      var msgId = hash.replace('#reaction:', '');
+      setTimeout(function () { scrollToReaction(msgId); }, 500);
+      history.replaceState(null, '', window.location.pathname + window.location.search);
+    }
+  });
+
+  if (window.location.hash && window.location.hash.indexOf('#reaction:') === 0) {
+    var _initMsgId = window.location.hash.replace('#reaction:', '');
+    setTimeout(function () { scrollToReaction(_initMsgId); }, 1500);
+    history.replaceState(null, '', window.location.pathname + window.location.search);
+  }
 })();

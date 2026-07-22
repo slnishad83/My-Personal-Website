@@ -117,7 +117,8 @@
       .map(d => ({ id: d.id, chatId, ...d.data() }))
       .filter(m => {
         const txt = (m.text || m.message || m.body || m.content || '').toLowerCase();
-        return txt.includes(qLower) && matchesFilters(m);
+        const sender = (m.senderName || m.displayName || m.name || '').toLowerCase();
+        return (txt.includes(qLower) || sender.includes(qLower)) && matchesFilters(m);
       });
   }
 
@@ -436,7 +437,7 @@
       btn.addEventListener('click', () => {
         _filterType = val;
         row.querySelectorAll('[data-filter-type]').forEach(b => { b.classList.toggle('active', b.dataset.filterType === val); b.setAttribute('aria-pressed', b.dataset.filterType === val ? 'true' : 'false'); });
-        resetSearch(); runSearch();
+        doSearch(true);
       });
       row.appendChild(btn);
     });
@@ -457,7 +458,7 @@
       btn.addEventListener('click', () => {
         _filterDate = val;
         row.querySelectorAll('[data-filter-date]').forEach(b => { b.classList.toggle('active', b.dataset.filterDate === val); b.setAttribute('aria-pressed', b.dataset.filterDate === val ? 'true' : 'false'); });
-        resetSearch(); runSearch();
+        doSearch(true);
       });
       row.appendChild(btn);
     });
@@ -572,10 +573,18 @@
     // Override doSearch to add AI mode
     doSearch = doSearchWithAI;
 
+    // Expose openChatSearch for header button and context menu
+    window.openChatSearch = function (scope) {
+      if (scope === 'current') _scope = 'current';
+      else _scope = 'all';
+      var modal = document.getElementById('globalSearchModal');
+      if (modal) { modal.style.display = 'flex'; setTimeout(function () { var inp = document.getElementById('globalSearchInput'); if (inp) inp.focus(); }, 80); }
+    };
+
     // expose API
-    window.messageSearch = { open: () => {
-      const modal = document.getElementById('globalSearchModal');
-      if (modal) { modal.style.display = 'flex'; setTimeout(() => document.getElementById('globalSearchInput')?.focus(), 80); }
+    window.messageSearch = { open: function () {
+      var modal = document.getElementById('globalSearchModal');
+      if (modal) { modal.style.display = 'flex'; setTimeout(function () { var inp = document.getElementById('globalSearchInput'); if (inp) inp.focus(); }, 80); }
     }};
   }
 

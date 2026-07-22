@@ -141,15 +141,30 @@ const DesktopNotifications = (() => {
       requireInteraction: false,
       silent: false,
       data: {
-        kind: 'message',
+        kind: options.kind || 'message',
         chatId: options.chatId || '',
         chatType: options.chatType || 'direct',
+        messageId: options.messageId || '',
+        groupId: options.groupId || '',
         url: options.url || './index.html'
       },
       onClick: () => {
         window.focus();
-        if (options.chatId && typeof window.openChat === 'function') {
-          window.openChat(options.chatId);
+        var payload = {
+          chatId: options.chatId,
+          messageId: options.messageId || '',
+          kind: options.kind || 'message',
+          chatType: options.chatType || 'direct',
+          groupId: options.groupId || ''
+        };
+        if (typeof window.handleNotificationClick === 'function') {
+          window.handleNotificationClick(payload);
+        } else if (options.chatId && typeof window.openChat === 'function') {
+          window.openChat(options.chatId).then(function() {
+            if (options.messageId && typeof window.highlightMessage === 'function') {
+              setTimeout(function() { window.highlightMessage(options.messageId); }, 300);
+            }
+          });
         }
       }
     });

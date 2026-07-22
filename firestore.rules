@@ -146,6 +146,22 @@ service cloud.firestore {
         allow update: if isOwner(userId);
         allow delete: if isOwner(userId);
       }
+
+      // Sessions subcollection (multi-device support)
+      match /sessions/{sessionId} {
+        allow read: if isOwner(userId);
+        allow create: if isOwner(userId);
+        allow update: if isOwner(userId);
+        allow delete: if isOwner(userId);
+      }
+
+      // Call Events subcollection
+      match /callEvents/{eventId} {
+        allow read: if isOwner(userId);
+        allow create: if isOwner(userId);
+        allow update: if isOwner(userId);
+        allow delete: if isOwner(userId);
+      }
     }
 
     match /directChats/{chatId} {
@@ -175,6 +191,25 @@ service cloud.firestore {
         || (resource.data.participantEmails is list && request.auth.token.email in resource.data.participantEmails)
       );
       allow delete: if signedIn() && resource.data.senderId == request.auth.uid;
+
+      // Thread Replies subcollection
+      match /threadReplies/{replyId} {
+        allow read: if signedIn() && (
+          (resource.data.directId is string && isExistingDirectParticipant(resource.data.directId))
+          || (resource.data.groupId is string && isGroupMember(resource.data.groupId))
+          || (resource.data.participants is list && request.auth.uid in resource.data.participants)
+          || resource.data.senderId == request.auth.uid
+        );
+        allow create: if signedIn()
+          && request.resource.data.senderId == request.auth.uid
+          && (
+            (request.resource.data.directId is string && isExistingDirectParticipant(request.resource.data.directId))
+            || (request.resource.data.groupId is string && isGroupMember(request.resource.data.groupId))
+            || (request.resource.data.participants is list && request.auth.uid in request.resource.data.participants)
+          );
+        allow update: if signedIn() && resource.data.senderId == request.auth.uid;
+        allow delete: if signedIn() && resource.data.senderId == request.auth.uid;
+      }
     }
 
 
@@ -299,7 +334,9 @@ service cloud.firestore {
     }
 
     match /communityGroups/{communityId}/groups/{groupId} {
-      allow read: if signedIn();
+      allow read: if signedIn()
+        && exists(/databases/$(database)/documents/communities/$(communityId))
+        && request.auth.uid in get(/databases/$(database)/documents/communities/$(communityId)).data.memberIds;
       allow create, update, delete: if signedIn()
         && exists(/databases/$(database)/documents/communities/$(communityId))
         && get(/databases/$(database)/documents/communities/$(communityId)).data.createdBy == request.auth.uid;
@@ -319,6 +356,22 @@ service cloud.firestore {
         && request.resource.data.adminIds is list
         && request.auth.uid in request.resource.data.adminIds;
       allow update, delete: if isGroupAdmin(groupId);
+
+      match /members/{memberId} {
+        allow read: if signedIn() && isGroupMember(groupId);
+        allow create: if signedIn() && (
+          request.auth.uid == memberId
+          || isGroupAdmin(groupId)
+        );
+        allow update: if signedIn() && (
+          request.auth.uid == memberId
+          || isGroupAdmin(groupId)
+        );
+        allow delete: if signedIn() && (
+          request.auth.uid == memberId
+          || isGroupAdmin(groupId)
+        );
+      }
     }
 
     match /groupMembers/{memberId} {
@@ -528,19 +581,35 @@ service cloud.firestore {
     }
 
     match /messageReactions/{docId} {
-      allow read: if signedIn();
-      allow create, update, delete: if signedIn() && (
-        request.resource.data.userId == request.auth.uid
+      allow read: if signedIn() && (
+        (resource.data.directId is string && isExistingDirectParticipant(resource.data.directId))
+        || (resource.data.groupId is string && isGroupMember(resource.data.groupId))
+        || (resource.data.participants is list && request.auth.uid in resource.data.participants)
         || resource.data.userId == request.auth.uid
       );
+      allow create: if signedIn()
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.chatId is string
+        && (
+          (request.resource.data.directId is string && isExistingDirectParticipant(request.resource.data.directId))
+          || (request.resource.data.groupId is string && isGroupMember(request.resource.data.groupId))
+          || request.resource.data.chatType == 'channel'
+        );
+      allow update, delete: if signedIn() && resource.data.userId == request.auth.uid;
     }
 
     match /typingIndicators/{docId} {
-      allow read: if signedIn();
-      allow create, update, delete: if signedIn() && (
-        request.resource.data.userId == request.auth.uid
-        || resource.data.userId == request.auth.uid
+      allow read: if signedIn() && (
+        resource.data.chatId is string
+        && (
+          (resource.data.directId is string && isExistingDirectParticipant(resource.data.directId))
+          || (resource.data.groupId is string && isGroupMember(resource.data.groupId))
+        )
       );
+      allow create, update: if signedIn()
+        && request.auth.uid == request.resource.data.userId;
+      allow delete: if signedIn()
+        && resource.data.userId == request.auth.uid;
     }
 
     match /statuses/{statusId} {
@@ -612,7 +681,7 @@ service cloud.firestore {
     }
     match /typingStatus/{chatKey} {
       allow read: if signedIn();
-      allow write: if signedIn();
+      allow write: if signedIn() && request.auth.uid == request.resource.data.userId;
     }
     match /meetings/{meetingId} {
       allow read: if signedIn() && request.auth.uid in resource.data.participants;
@@ -626,6 +695,65 @@ service cloud.firestore {
       allow update: if signedIn() && request.auth.uid in resource.data.members;
       allow delete: if false;
     }
+
+    match /groupChats/{chatId} {
+      allow read: if signedIn() && request.auth.uid in resource.data.members;
+      allow create: if signedIn() && request.auth.uid in request.resource.data.members;
+      allow update: if signedIn() && request.auth.uid in resource.data.members;
+      allow delete: if signedIn() && request.auth.uid == resource.data.createdBy;
+    }
+    match /chats/{chatId} {
+      allow read: if signedIn() && request.auth.uid in resource.data.participants;
+      allow create: if signedIn() && request.auth.uid in request.resource.data.participants;
+      allow update: if signedIn() && request.auth.uid in resource.data.participants;
+      allow delete: if false;
+    }
+    match /notificationTelemetry/{entryId} {
+      allow read: if signedIn() && resource.data.userId == request.auth.uid;
+      allow create: if signedIn() && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if signedIn() && resource.data.userId == request.auth.uid;
+    }
+    match /musicLibrary/{userId} {
+      allow read: if signedIn() && request.auth.uid == userId;
+      allow write: if signedIn() && request.auth.uid == userId;
+    }
+    match /playlists/{playlistId} {
+      allow read: if signedIn() && (
+        request.auth.uid == resource.data.ownerId
+        || (resource.data.collaborators is list && request.auth.uid in resource.data.collaborators)
+        || resource.data.isPublic == true
+      );
+      allow create: if signedIn() && request.resource.data.ownerId == request.auth.uid;
+      allow update: if signedIn() && resource.data.ownerId == request.auth.uid;
+      allow delete: if signedIn() && resource.data.ownerId == request.auth.uid;
+    }
+    match /listeningRooms/{roomId} {
+      allow read: if signedIn() && (
+        resource.data.hostId == request.auth.uid
+        || request.auth.uid in resource.data.participants
+        || resource.data.isPublic == true
+      );
+      allow create: if signedIn() && request.resource.data.hostId == request.auth.uid;
+      allow update: if signedIn() && resource.data.hostId == request.auth.uid;
+      allow delete: if signedIn() && resource.data.hostId == request.auth.uid;
+    }
+    match /whiteboards/{boardId} {
+      allow read: if signedIn() && request.auth.uid in resource.data.participants;
+      allow create: if signedIn() && request.auth.uid in request.resource.data.participants;
+      allow update: if signedIn() && request.auth.uid in resource.data.participants;
+      allow delete: if signedIn() && request.auth.uid == resource.data.createdBy;
+      match /strokes/{strokeId} {
+        allow read: if signedIn() && request.auth.uid in get(/databases/$(database)/documents/whiteboards/$(boardId)).data.participants;
+        allow create: if signedIn() && request.auth.uid in get(/databases/$(database)/documents/whiteboards/$(boardId)).data.participants;
+        allow update, delete: if signedIn() && request.resource.data.creatorId == request.auth.uid;
+      }
+    }
+    match /reminders/{reminderId} {
+      allow read: if signedIn() && resource.data.userId == request.auth.uid;
+      allow create: if signedIn() && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if signedIn() && resource.data.userId == request.auth.uid;
+    }
+
     match /{document=**} {
       allow read, write: if false;
     }

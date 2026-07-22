@@ -2018,6 +2018,23 @@ function renderChatListInner(filter = '') {
       ${archivedBadge}
     </div>`;
   }
+  // Locked Chats folder (WhatsApp signature feature)
+  if (typeof isChatLocked === 'function' && tab === 'chats') {
+    var lockedChats = items.filter(function(c) { return isChatLocked(c.id); });
+    if (lockedChats.length > 0) {
+      html += `
+      <div class="flex items-center justify-between px-5 py-3 hover:bg-surface-container-high/40 cursor-pointer transition-colors border-b border-outline-variant/10" onclick="if(typeof openChatLockSettings==='function') openChatLockSettings()">
+        <div class="flex items-center gap-3 text-on-surface">
+          <span class="material-symbols-outlined text-primary text-xl">lock</span>
+          <span class="text-sm font-semibold">Locked Chats</span>
+        </div>
+        <span class="text-[11px] font-bold text-primary px-2 py-0.5 rounded-full bg-primary/10">${lockedChats.length}</span>
+      </div>`;
+      items = items.filter(function(c) { return !isChatLocked(c.id); });
+      pinned = items.filter(function(c) { return c.pinned; });
+      unpinned = items.filter(function(c) { return !c.pinned; });
+    }
+  }
   if (pinned.length) {
     html += `<div class="px-4 py-2 flex items-center gap-2 text-[10px] font-bold text-primary uppercase tracking-widest bg-surface-container-low/20">
       <span class="material-symbols-outlined text-[12px]" style="font-variation-settings: 'FILL' 1;">push_pin</span> Pinned
@@ -3494,7 +3511,8 @@ function generateWaveform() {
 
 /** @param {string} text - User message text with markdown-like syntax @returns {string} Sanitized HTML string */
 function formatMsgText(text) {
-  const html = escHtml(text)
+  let html = escHtml(text)
+    .replace(/```([\s\S]*?)```/g, '<pre class="bg-surface-container px-3 py-2 rounded-lg font-mono text-xs overflow-x-auto my-1" style="white-space:pre-wrap"><code>$1</code></pre>')
     .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
     .replace(/\*(.*?)\*/g, '<em>$1</em>')
     .replace(/~~(.*?)~~/g, '<del>$1</del>')

@@ -15,16 +15,8 @@ import * as Security from './src/core/security.js';
 import { showToast, showModal, confirm, showBottomSheet, showLoading } from './src/ui/components.js';
 
 /* ── Firebase (loaded via compat for backward compat) ────── */
-const firebaseConfig = {
-  apiKey: "AIzaSyCdbut_FdscAjl-OVSlAUhb7TOTiRNkh34",
-  authDomain: "my-team-chat-2255.firebaseapp.com",
-  projectId: "my-team-chat-2255",
-  storageBucket: "my-team-chat-2255.firebasestorage.app",
-  messagingSenderId: "805016891521",
-  appId: "1:805016891521:web:ac9bc7a252bcf33686dd80",
-};
-
-firebase.initializeApp(firebaseConfig);
+import { FIREBASE_CONFIG } from './firebase-config.js';
+firebase.initializeApp(FIREBASE_CONFIG);
 const auth = firebase.auth();
 const db = firebase.firestore();
 const storage = firebase.storage();
@@ -105,6 +97,7 @@ export async function loadModule(name) {
 const CRITICAL_MODULES = [
   'messaging', 'calls', 'groups', 'notifications', 'presence'
 ];
+CRITICAL_MODULES.forEach(m => loadModule(m));
 
 /* ── Signal App Ready ───────────────────────────────────── */
 document.dispatchEvent(new CustomEvent('nsl:app-ready'));

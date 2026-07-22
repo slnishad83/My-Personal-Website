@@ -109,6 +109,39 @@
     _multiSelectBar.className = 'multi-select-bar hidden';
     _multiSelectBar.innerHTML = '<button class="flex flex-col items-center gap-1 p-2" id="ms-action-delete"><span class="material-symbols-outlined text-[20px]" style="color:var(--error,#dc3545)">delete</span><span class="text-[10px]" style="color:var(--error,#dc3545)">Delete</span></button><button class="flex flex-col items-center gap-1 p-2" id="ms-action-forward"><span class="material-symbols-outlined text-[20px]" style="color:var(--on-surface-variant)">forward</span><span class="text-[10px]" style="color:var(--on-surface-variant)">Forward</span></button><button class="flex flex-col items-center gap-1 p-2" id="ms-action-star"><span class="material-symbols-outlined text-[20px]" style="color:var(--on-surface-variant)">star</span><span class="text-[10px]" style="color:var(--on-surface-variant)">Star</span></button><button class="flex flex-col items-center gap-1 p-2" id="ms-action-reply"><span class="material-symbols-outlined text-[20px]" style="color:var(--on-surface-variant)">reply</span><span class="text-[10px]" style="color:var(--on-surface-variant)">Reply</span></button>';
     document.body.appendChild(_multiSelectBar);
+    var fwdBtn = _multiSelectBar.querySelector('#ms-action-forward');
+    if (fwdBtn) fwdBtn.addEventListener('click', function() {
+      var ids = Array.from(_selectedMessages);
+      if (ids.length === 0) return;
+      if (ids.length === 1 && typeof window.openForwardModal === 'function') {
+        exitMultiSelect();
+        window.openForwardModal(ids[0]);
+      } else if (ids.length > 1 && typeof window.openForwardModalMultiple === 'function') {
+        exitMultiSelect();
+        window.openForwardModalMultiple(ids);
+      }
+    });
+    var delBtn = _multiSelectBar.querySelector('#ms-action-delete');
+    if (delBtn) delBtn.addEventListener('click', function() {
+      var ids = Array.from(_selectedMessages);
+      if (ids.length === 0) return;
+      if (typeof window.deleteMessagesByIds === 'function') {
+        exitMultiSelect();
+        window.deleteMessagesByIds(ids);
+      } else if (typeof window.deleteMessageById === 'function') {
+        exitMultiSelect();
+        ids.forEach(function(id) { window.deleteMessageById(id); });
+      }
+    });
+    var starBtn = _multiSelectBar.querySelector('#ms-action-star');
+    if (starBtn) starBtn.addEventListener('click', function() {
+      var ids = Array.from(_selectedMessages);
+      ids.forEach(function(id) {
+        var el = document.querySelector('[data-msg-id="' + id + '"]');
+        if (el) starMsg(el);
+      });
+      exitMultiSelect();
+    });
     return _multiSelectBar;
   }
 

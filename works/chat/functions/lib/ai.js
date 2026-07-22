@@ -5,12 +5,51 @@ const { getDb } = require("./admin");
 const { requireAuth } = require("./helpers");
 const { GEMINI_API_KEY, callGemini, fetchRecentMessages, formatMessagesForPrompt } = require("./gemini");
 
+// Free tier rate limiter: 5 requests per minute per user, 30 per hour
+const _rateLimits = new Map();
+const RATE_LIMIT_PER_MIN = 5;
+const RATE_LIMIT_PER_HOUR = 30;
+const MINUTE_MS = 60000;
+const HOUR_MS = 3600000;
+
+function _checkRateLimit(uid) {
+  if (!uid) return true;
+  var now = Date.now();
+  var limits = _rateLimits.get(uid);
+  if (!limits) {
+    limits = { minute: [], hour: [] };
+    _rateLimits.set(uid, limits);
+  }
+  limits.minute = limits.minute.filter(function(t) { return now - t < MINUTE_MS; });
+  limits.hour = limits.hour.filter(function(t) { return now - t < HOUR_MS; });
+  if (limits.minute.length >= RATE_LIMIT_PER_MIN || limits.hour.length >= RATE_LIMIT_PER_HOUR) {
+    return false;
+  }
+  limits.minute.push(now);
+  limits.hour.push(now);
+  return true;
+}
+
+// Cleanup old entries every 10 minutes
+setInterval(function() {
+  var now = Date.now();
+  _rateLimits.forEach(function(limits, uid) {
+    limits.minute = limits.minute.filter(function(t) { return now - t < MINUTE_MS; });
+    limits.hour = limits.hour.filter(function(t) { return now - t < HOUR_MS; });
+    if (limits.minute.length === 0 && limits.hour.length === 0) _rateLimits.delete(uid);
+  });
+}, 600000);
+
 exports.catchMeUp = onCall({ secrets: [GEMINI_API_KEY] }, async (request) => {
   requireAuth(request);
+  const uid = request.auth.uid;
+  if (!_checkRateLimit(uid)) {
+    throw new HttpsError("resource-exhausted", "AI rate limit reached. Please try again later.");
+  }
   const { chatId, chatType, messageCount } = request.data;
 
-  if (!chatId) {
-    throw new HttpsError("invalid-argument", "Missing chatId");
+  if (!chatId || typeof chatId !== "string") {
+    throw new HttpsError("invalid-argument", "Missing or invalid chatId");
   }
 
   const apiKey = GEMINI_API_KEY.value();
@@ -18,42 +57,47 @@ exports.catchMeUp = onCall({ secrets: [GEMINI_API_KEY] }, async (request) => {
     return { summary: "AI not configured. Add Gemini API key: firebase functions:secrets:set GEMINI_API_KEY" };
   }
 
-  const count = Math.min(messageCount || 50, 100);
-  const messages = await fetchRecentMessages(chatId, count);
+  try {
+    const count = Math.min(Math.max(parseInt(messageCount) || 50, 1), 100);
+    const messages = await fetchRecentMessages(chatId, count);
 
-  if (!messages.length) {
-    return { summary: "No messages to summarize." };
-  }
+    if (!messages.length) {
+      return { summary: "No messages to summarize." };
+    }
 
-  const formatted = formatMessagesForPrompt(messages);
-  const prompt = `You are a helpful chat assistant. Summarize the following ${messages.length} messages from a ${chatType || "direct"} chat into a clear, concise summary. Use bullet points for key topics. Keep it under 200 words.
+    const formatted = formatMessagesForPrompt(messages);
+    const prompt = `You are a helpful chat assistant. Summarize the following ${messages.length} messages from a ${chatType || "direct"} chat into a clear, concise summary. Use bullet points for key topics. Keep it under 200 words.
 
 Messages:
 ${formatted}
 
 Summary:`;
 
-  const summary = await callGemini(prompt, apiKey);
-  return { summary, messageCount: messages.length };
+    const summary = await callGemini(prompt, apiKey);
+    return { summary, messageCount: messages.length };
+  } catch (e) {
+    return { summary: "Unable to generate summary right now.", messageCount: 0 };
+  }
 });
 
 exports.transcribeVoiceMessage = onCall(async (request) => {
   requireAuth(request);
-  const { messageId, audioUrl } = request.data;
-
-  if (!messageId || !audioUrl) {
-    throw new HttpsError("invalid-argument", "Missing messageId or audioUrl");
-  }
-
-  return { text: "Transcription unavailable" };
+  throw new HttpsError("unimplemented", "Voice transcription not yet available");
 });
 
 exports.aiChatBot = onCall({ secrets: [GEMINI_API_KEY] }, async (request) => {
   requireAuth(request);
+  const uid = request.auth.uid;
+  if (!_checkRateLimit(uid)) {
+    throw new HttpsError("resource-exhausted", "AI rate limit reached. Please try again later.");
+  }
   const { prompt, chatId, chatType, senderName } = request.data;
 
   if (!prompt || !chatId) {
     throw new HttpsError("invalid-argument", "Missing prompt or chatId");
+  }
+  if (typeof prompt !== "string" || prompt.length > 10000) {
+    throw new HttpsError("invalid-argument", "Prompt must be a string under 10000 characters");
   }
 
   const apiKey = GEMINI_API_KEY.value();
@@ -84,6 +128,18 @@ exports.aiChatBot = onCall({ secrets: [GEMINI_API_KEY] }, async (request) => {
 
   const replyText = await callGemini(systemPrompt, apiKey);
 
+  // Fetch participants so the message is visible under Firestore rules
+  let participants = [];
+  try {
+    if (chatType === 'group' && request.data.groupId) {
+      const groupDoc = await db.collection('groupChats').doc(request.data.groupId).get();
+      if (groupDoc.exists) participants = groupDoc.data().members || groupDoc.data().memberIds || [];
+    } else {
+      const chatDoc = await db.collection('directChats').doc(chatId).get();
+      if (chatDoc.exists) participants = chatDoc.data().members || chatDoc.data().participants || [];
+    }
+  } catch (_) {}
+
   await db.collection("messages").add({
     text: replyText,
     senderId: "ai-bot",
@@ -94,7 +150,7 @@ exports.aiChatBot = onCall({ secrets: [GEMINI_API_KEY] }, async (request) => {
     readBy: {},
     chatId,
     chatType: chatType || "direct",
-    participants: []
+    participants
   });
 
   return { ok: true };
@@ -102,26 +158,19 @@ exports.aiChatBot = onCall({ secrets: [GEMINI_API_KEY] }, async (request) => {
 
 exports.summarizeThread = onCall({ secrets: [GEMINI_API_KEY] }, async (request) => {
   requireAuth(request);
-  const { messageId } = request.data;
-
-  if (!messageId) {
-    throw new HttpsError("invalid-argument", "Missing messageId");
-  }
-
-  const apiKey = GEMINI_API_KEY.value();
-  if (!apiKey) {
-    return { summary: "AI not configured." };
-  }
-
-  return { summary: "Thread summary unavailable." };
+  throw new HttpsError("unimplemented", "Thread summarization not yet available");
 });
 
 exports.generateMeetingNotes = onCall({ secrets: [GEMINI_API_KEY] }, async (request) => {
   requireAuth(request);
+  const uid = request.auth.uid;
+  if (!_checkRateLimit(uid)) {
+    throw new HttpsError("resource-exhausted", "AI rate limit reached. Please try again later.");
+  }
   const { chatId, messageCount } = request.data;
 
-  if (!chatId) {
-    throw new HttpsError("invalid-argument", "Missing chatId");
+  if (!chatId || typeof chatId !== "string") {
+    throw new HttpsError("invalid-argument", "Missing or invalid chatId");
   }
 
   const apiKey = GEMINI_API_KEY.value();
@@ -129,15 +178,16 @@ exports.generateMeetingNotes = onCall({ secrets: [GEMINI_API_KEY] }, async (requ
     return { notes: "AI not configured. Add Gemini API key." };
   }
 
-  const count = Math.min(messageCount || 100, 200);
-  const messages = await fetchRecentMessages(chatId, count);
+  try {
+    const count = Math.min(Math.max(parseInt(messageCount) || 100, 1), 200);
+    const messages = await fetchRecentMessages(chatId, count);
 
-  if (!messages.length) {
-    return { notes: "No messages to analyze." };
-  }
+    if (!messages.length) {
+      return { notes: "No messages to analyze." };
+    }
 
-  const formatted = formatMessagesForPrompt(messages);
-  const prompt = `You are a professional meeting notes generator. Analyze the following group chat messages and generate structured meeting notes. Include:
+    const formatted = formatMessagesForPrompt(messages);
+    const prompt = `You are a professional meeting notes generator. Analyze the following group chat messages and generate structured meeting notes. Include:
 
 1. **Meeting Summary** - One paragraph overview
 2. **Key Discussion Points** - Bullet points of main topics discussed
@@ -150,16 +200,23 @@ ${formatted}
 
 Generate the meeting notes in clean markdown:`;
 
-  const notes = await callGemini(prompt, apiKey);
-  return { notes, messageCount: messages.length };
+    const notes = await callGemini(prompt, apiKey);
+    return { notes, messageCount: messages.length };
+  } catch (e) {
+    return { notes: "Unable to generate meeting notes right now.", messageCount: 0 };
+  }
 });
 
 exports.analyzeTone = onCall({ secrets: [GEMINI_API_KEY] }, async (request) => {
   requireAuth(request);
+  const uid = request.auth.uid;
+  if (!_checkRateLimit(uid)) {
+    throw new HttpsError("resource-exhausted", "AI rate limit reached. Please try again later.");
+  }
   const { text, chatType } = request.data;
 
-  if (!text || typeof text !== "string") {
-    throw new HttpsError("invalid-argument", "Missing text");
+  if (!text || typeof text !== "string" || text.length > 5000) {
+    throw new HttpsError("invalid-argument", "Missing or invalid text (max 5000 chars)");
   }
 
   const apiKey = GEMINI_API_KEY.value();
@@ -193,6 +250,10 @@ Rules:
 
 exports.autoTagChat = onCall({ secrets: [GEMINI_API_KEY] }, async (request) => {
   requireAuth(request);
+  const uid = request.auth.uid;
+  if (!_checkRateLimit(uid)) {
+    throw new HttpsError("resource-exhausted", "AI rate limit reached. Please try again later.");
+  }
   const { chatId, chatName, recentMessages } = request.data;
 
   if (!chatId) {
@@ -243,19 +304,27 @@ Rules:
 
 exports.aiSearchMessages = onCall({ secrets: [GEMINI_API_KEY] }, async (request) => {
   requireAuth(request);
+  const uid = request.auth.uid;
+  if (!_checkRateLimit(uid)) {
+    throw new HttpsError("resource-exhausted", "AI rate limit reached. Please try again later.");
+  }
   const { query, chatIds } = request.data;
 
-  if (!query || typeof query !== "string") {
-    throw new HttpsError("invalid-argument", "Missing query");
+  if (!query || typeof query !== "string" || query.length > 1000) {
+    throw new HttpsError("invalid-argument", "Missing or invalid query (max 1000 chars)");
+  }
+
+  if (!Array.isArray(chatIds) || chatIds.length === 0) {
+    throw new HttpsError("invalid-argument", "Missing or empty chatIds array");
   }
 
   const apiKey = GEMINI_API_KEY.value();
   const db = getDb();
   const qLower = query.toLowerCase();
-  const searchChats = Array.isArray(chatIds) && chatIds.length ? chatIds : [];
+  const searchChats = Array.isArray(chatIds) ? chatIds.slice(0, 10) : [];
   const results = [];
 
-  for (const cid of searchChats.slice(0, 10)) {
+  for (const cid of searchChats) {
     let snap;
     try {
       snap = await db.collection("messages")
@@ -325,41 +394,34 @@ exports.classifyNotification = onCall({ secrets: [GEMINI_API_KEY] }, async (requ
   requireAuth(request);
   const { senderName, text, chatType, chatName, isGroup, isMentioned, isReply, hasAttachment } = request.data;
 
-  const apiKey = GEMINI_API_KEY.value();
-  if (!apiKey) {
-    return { priority: "high", reason: "AI not configured — defaulting to show" };
+  if (text && typeof text === "string" && text.length > 2000) {
+    throw new HttpsError("invalid-argument", "Text exceeds 2000 characters");
   }
 
-  const prompt = `Classify this chat notification's priority. Be strict — only truly important messages should be "high".
+  // Rule-based classifier (no Gemini needed — saves free tier quota)
+  const lowerText = (text || "").toLowerCase();
+  const urgentWords = /\b(urgent|asap|emergency|important|critical|deadline|immediately|help)\b/i;
+  const mentionIndicators = /\b(@you|@everyone|hey)\b/i;
 
-Notification details:
-- From: ${senderName || "Unknown"}
-- Chat: ${chatName || "Direct message"} (${isGroup ? "group" : "direct"})
-- Mentioned you: ${isMentioned ? "yes" : "no"}
-- Is a reply: ${isReply ? "yes" : "no"}
-- Has attachment: ${hasAttachment ? "yes" : "no"}
-- Message: "${(text || "").slice(0, 300)}"
+  let priority = "medium";
+  let reason = "Normal message";
 
-Respond in this EXACT JSON format only:
-{"priority": "high" or "medium" or "low", "reason": "brief 1-sentence explanation"}
+  if (isMentioned || (mentionIndicators.test(lowerText) && isGroup)) {
+    priority = "high";
+    reason = "You were mentioned";
+  } else if (urgentWords.test(lowerText)) {
+    priority = "high";
+    reason = "Contains urgent keywords";
+  } else if (isReply) {
+    priority = "medium";
+    reason = "Reply to your message";
+  } else if (!isGroup) {
+    priority = "medium";
+    reason = "Direct message";
+  } else {
+    priority = "low";
+    reason = "Group message";
+  }
 
-Rules:
-- "high": Mentions your name, urgent/time-sensitive, from a boss/admin, contains "urgent"/"asap"/"emergency", or is a direct question to you
-- "medium": Normal conversation in a group you're in, reply to your message, relevant work discussion
-- "low": Group chatter not directed at you, generic updates, casual conversation, "thanks"/"ok"/emoji-only messages, broadcast announcements`;
-
-  try {
-    const result = await callGemini(prompt, apiKey);
-    const jsonMatch = result.match(/\{[\s\S]*\}/);
-    if (jsonMatch) {
-      const parsed = JSON.parse(jsonMatch[0]);
-      if (["high", "medium", "low"].includes(parsed.priority)) {
-        return parsed;
-      }
-    }
-  } catch (_) {}
-
-  if (isMentioned) return { priority: "high", reason: "You were mentioned" };
-  if (isGroup) return { priority: "medium", reason: "Group message" };
-  return { priority: "high", reason: "Direct message" };
+  return { priority, reason };
 });

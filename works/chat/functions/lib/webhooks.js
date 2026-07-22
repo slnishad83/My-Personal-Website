@@ -153,6 +153,7 @@ exports.generateUrlPreview = onRequest(async (req, res) => {
     const timeout = setTimeout(() => controller.abort(), 8000);
 
     let html = "";
+    let finalUrl = url;
     try {
       const resp = await fetch(url, {
         signal: controller.signal,
@@ -164,7 +165,24 @@ exports.generateUrlPreview = onRequest(async (req, res) => {
       });
       clearTimeout(timeout);
 
+      // Validate final URL after redirects didn't go to a blocked host
+      try {
+        const finalParsed = new URL(resp.url || url);
+        const finalHost = finalParsed.hostname.toLowerCase();
+        for (const b of blocked) {
+          if (finalHost === b || finalHost.startsWith(b)) {
+            return res.status(400).json({ error: "Redirect target blocked" });
+          }
+        }
+        finalUrl = resp.url || url;
+      } catch (_) {}
+
       if (!resp.ok) {
+        return res.json({ title: "", description: "", image: "", domain });
+      }
+
+      const contentType = resp.headers.get("content-type") || "";
+      if (!contentType.includes("text/html") && !contentType.includes("application/xhtml")) {
         return res.json({ title: "", description: "", image: "", domain });
       }
 
@@ -220,7 +238,10 @@ exports.generateUrlPreview = onRequest(async (req, res) => {
       return getMeta("twitter:image:src");
     };
 
-    res.json({ title: getTitle(), description: getDescription(), image: getImage(), domain });
+    // Use final URL domain (after redirects)
+    let finalDomain = domain;
+    try { finalDomain = new URL(finalUrl).hostname.replace("www.", ""); } catch (_) {}
+    res.json({ title: getTitle(), description: getDescription(), image: getImage(), domain: finalDomain });
   } catch (error) {
     console.error("generateUrlPreview error:", error);
     res.status(500).json({ error: "Failed to generate preview" });

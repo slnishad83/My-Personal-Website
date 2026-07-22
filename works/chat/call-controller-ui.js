@@ -200,11 +200,11 @@
     }
   }
 
-  function selectCallContact(targetUid, targetName, targetAvatar) {
+  function selectCallContact(targetUid, targetName, targetAvatar, callType) {
     CC.closeModalFn('call-picker-overlay');
     var c = { uid: targetUid, name: targetName, initials: (targetName || '?')[0].toUpperCase(), type: 'direct', photoURL: targetAvatar };
     if (CC.state !== CC.STATES.IDLE) { CC.toast('Already in a call', 'info'); return; }
-    window.initiateOutgoingCall('voice', c);
+    window.initiateOutgoingCall(callType || 'voice', c);
   }
 
   CC.showCallScreen = showCallScreen;

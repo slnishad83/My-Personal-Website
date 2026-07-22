@@ -22,7 +22,16 @@ const ErrorBoundary = {
 
   _installHandlers() {
     var self = this;
+
     window.addEventListener('error', function (event) {
+      if (event.target && event.target.tagName) {
+        self._captureError({
+          type: 'resource_error',
+          message: 'Failed to load: ' + (event.target.src || event.target.href || 'unknown'),
+          timestamp: Date.now()
+        });
+        return;
+      }
       self._captureError({
         type: 'uncaught_error',
         message: event.message || 'Unknown error',
@@ -33,7 +42,7 @@ const ErrorBoundary = {
         stack: event.error && event.error.stack || '',
         timestamp: Date.now()
       });
-    });
+    }, true);
 
     window.addEventListener('unhandledrejection', function (event) {
       var reason = event.reason || {};
@@ -46,15 +55,13 @@ const ErrorBoundary = {
       });
     });
 
-    window.addEventListener('error', function (event) {
-      if (event.target && event.target.tagName) {
-        self._captureError({
-          type: 'resource_error',
-          message: 'Failed to load: ' + (event.target.src || event.target.href || 'unknown'),
-          timestamp: Date.now()
-        });
-      }
-    }, true);
+    window.addEventListener('offline', function () {
+      self._captureError({
+        type: 'connection_lost',
+        message: 'Network connection lost',
+        timestamp: Date.now()
+      });
+    });
   },
 
   _captureError(errorData) {

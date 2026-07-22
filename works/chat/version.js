@@ -1,8 +1,8 @@
 /* NSL Chat — Single Source of Truth for App Version */
 (function() {
   'use strict';
-  var VERSION = '2.6.0';
-  var BUILD = '2026-07-20';
+  var VERSION = '4.0.0';
+  var BUILD = '2026-07-22';
   window.NSL_VERSION = VERSION;
   window.NSL_BUILD = BUILD;
   console.log('%c NSL Chat v' + VERSION + ' (built ' + BUILD + ') ', 'background:#008069;color:#fff;padding:2px 8px;border-radius:4px;font-weight:bold;');

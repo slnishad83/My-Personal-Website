@@ -841,22 +841,36 @@
   window.addEventListener("popstate", () => { const ov = document.getElementById("_fv"); if (ov && ov.style.display !== "none") _closeViewer(); });
 
   // ============================================================
-  // 13. FIREBASE STORAGE UPLOAD (replaces Cloudinary)
+  // 13. FIREBASE STORAGE UPLOAD (replaces Cloudinary — 100% free)
   // ============================================================
-  async function _uploadToStorage(file) {
-    const s = window.storage, user = window.currentUser;
-    if (!s || !user) throw new Error("Firebase Storage not ready");
-    const safe = (file.name || "file").replace(/[^a-zA-Z0-9._-]/g, "_");
-    const path = `chat_uploads/${user.uid}/${Date.now()}_${Math.random().toString(36).slice(2,8)}_${safe}`;
-    const ref = s.ref(path), task = ref.put(file);
-    task.on("state_changed", snap => _toast("Uploading\u2026 " + Math.round(snap.bytesTransferred / snap.totalBytes * 100) + "%", "info"));
+  async function _uploadToStorage(file, pathPrefix, onProgress) {
+    var s = window.storage || (typeof firebase !== 'undefined' && firebase.storage && firebase.storage());
+    var user = window.currentUser || (App && App.currentUser);
+    if (!s) throw new Error("Firebase Storage not initialized");
+    var uid = user ? user.uid : 'anonymous';
+    var prefix = pathPrefix || 'chat_uploads';
+    var safe = (file.name || "file").replace(/[^a-zA-Z0-9._-]/g, "_");
+    var path = prefix + "/" + uid + "/" + Date.now() + "_" + Math.random().toString(36).slice(2, 8) + "_" + safe;
+    var ref = s.ref(path);
+    var task = ref.put(file);
+    if (typeof onProgress === 'function') {
+      task.on("state_changed", function (snap) {
+        onProgress(Math.round(snap.bytesTransferred / snap.totalBytes * 100));
+      });
+    } else {
+      task.on("state_changed", function (snap) {
+        var pct = Math.round(snap.bytesTransferred / snap.totalBytes * 100);
+        if (typeof _toast === 'function') _toast("Uploading… " + pct + "%", "info");
+      });
+    }
     await task;
     return await ref.getDownloadURL();
   }
 
-  window.uploadToCloudinary  = window.uploadToCloudinary  || _uploadToStorage;
-  window.uploadDocument      = window.uploadDocument      || _uploadToStorage;
-  window.uploadRecordedMedia = window.uploadRecordedMedia || _uploadToStorage;
+  window.uploadToCloudinary  = _uploadToStorage;
+  window.uploadDocument      = _uploadToStorage;
+  window.uploadRecordedMedia = _uploadToStorage;
+  window.uploadToFirebaseStorage = _uploadToStorage;
 
   // ============================================================
   // 14. BUG FIX — Profile name truncated in sidebar header

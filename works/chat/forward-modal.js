@@ -6,6 +6,7 @@
   let _chatListEl = null;
   let _selectedChats = new Map();
   let _forwardingMsgId = null;
+  let _forwardingMsgIds = null;
   let _allChats = [];
   let _filteredChats = [];
   let _debounceTimer = null;
@@ -223,39 +224,62 @@
         });
       }
     }
-    _allChats = _allChats.slice(0, 20);
+    _allChats = _allChats.slice(0, 100);
   }
 
   async function _executeForward() {
-    if (_selectedChats.size === 0 || !_forwardingMsgId) return;
+    if (_selectedChats.size === 0 || (!_forwardingMsgId && !_forwardingMsgIds)) return;
     var uid = _uid();
     if (!uid) return;
     var targetIds = Array.from(_selectedChats.keys());
-    var sourceMsg = null;
+    var msgIds = _forwardingMsgIds && _forwardingMsgIds.length ? _forwardingMsgIds : [_forwardingMsgId];
+    var sourceMsgs = [];
     if (typeof currentChat !== 'undefined' && currentChat && typeof window.App !== 'undefined' && window.App.messages) {
       var msgs = window.App.messages[currentChat.id] || [];
-      for (var i = 0; i < msgs.length; i++) {
-        if (msgs[i].id === _forwardingMsgId) {
-          sourceMsg = msgs[i];
-          break;
+      for (var m = 0; m < msgIds.length; m++) {
+        var found = false;
+        for (var i = 0; i < msgs.length; i++) {
+          if (msgs[i].id === msgIds[m]) {
+            sourceMsgs.push(msgs[i]);
+            found = true;
+            break;
+          }
+        }
+        if (!found) {
+          sourceMsgs.push({ id: msgIds[m], text: '', type: 'forwarded', timestamp: Date.now(), senderId: uid, forwardedFrom: msgIds[m] });
         }
       }
+    } else {
+      for (var m2 = 0; m2 < msgIds.length; m2++) {
+        sourceMsgs.push({ id: msgIds[m2], text: '', type: 'forwarded', timestamp: Date.now(), senderId: uid, forwardedFrom: msgIds[m2] });
+      }
     }
-    if (!sourceMsg) {
-      sourceMsg = { id: _forwardingMsgId, text: '', type: 'forwarded', timestamp: Date.now(), senderId: uid, forwardedFrom: _forwardingMsgId };
+    var chatNames = targetIds.map(function(id) {
+      if (id === '__notes__') return 'My Notes';
+      var chat = _allChats.find(function(c) { return c.id === id; });
+      return chat ? chat.name : id;
+    });
+    var confirmMsg = 'Forward to ' + chatNames.join(', ') + '?';
+    if (targetIds.length > 3) confirmMsg = 'Forward to ' + targetIds.length + ' chats?';
+    var confirmed = true;
+    if (typeof window.confirm === 'function' && targetIds.length > 1) {
+      confirmed = window.confirm(confirmMsg);
     }
+    if (!confirmed) return;
     var promises = [];
     for (var j = 0; j < targetIds.length; j++) {
       var targetId = targetIds[j];
-      if (targetId === '__notes__') {
-        promises.push(_forwardToNotes(sourceMsg));
-      } else {
-        promises.push(_forwardToChat(targetId, sourceMsg));
+      for (var k = 0; k < sourceMsgs.length; k++) {
+        if (targetId === '__notes__') {
+          promises.push(_forwardToNotes(sourceMsgs[k]));
+        } else {
+          promises.push(_forwardToChat(targetId, sourceMsgs[k]));
+        }
       }
     }
     try {
       await Promise.all(promises);
-      if (typeof showToast === 'function') showToast('Message forwarded to ' + targetIds.length + ' chat' + (targetIds.length > 1 ? 's' : ''), 'success');
+      if (typeof showToast === 'function') showToast('Message' + (msgIds.length > 1 ? 's' : '') + ' forwarded to ' + targetIds.length + ' chat' + (targetIds.length > 1 ? 's' : ''), 'success');
     } catch (e) {
       console.error('[Forward] Error:', e);
       if (typeof showToast === 'function') showToast('Failed to forward message', 'error');
@@ -325,11 +349,31 @@
   window.openForwardModal = function(msgId) {
     if (!msgId) return;
     _forwardingMsgId = msgId;
+    _forwardingMsgIds = null;
     _selectedChats.clear();
     _isOpen = true;
     _buildModal();
     _loadChats();
     _renderChatList();
+    var titleEl = _modalEl && _modalEl.querySelector('.forward-modal-title');
+    if (titleEl) titleEl.textContent = 'Forward to';
+    requestAnimationFrame(function() {
+      _modalEl.classList.add('open');
+      _searchInput.focus();
+    });
+  };
+
+  window.openForwardModalMultiple = function(msgIds) {
+    if (!msgIds || !msgIds.length) return;
+    _forwardingMsgId = msgIds[0];
+    _forwardingMsgIds = msgIds.slice();
+    _selectedChats.clear();
+    _isOpen = true;
+    _buildModal();
+    _loadChats();
+    _renderChatList();
+    var titleEl = _modalEl && _modalEl.querySelector('.forward-modal-title');
+    if (titleEl) titleEl.textContent = 'Forward ' + msgIds.length + ' messages to';
     requestAnimationFrame(function() {
       _modalEl.classList.add('open');
       _searchInput.focus();
@@ -345,6 +389,7 @@
     if (_modalEl) _modalEl.classList.remove('open');
     _selectedChats.clear();
     _forwardingMsgId = null;
+    _forwardingMsgIds = null;
     if (_searchInput) _searchInput.value = '';
     var fab = document.getElementById('forward-fab');
     if (fab) fab.classList.remove('visible');

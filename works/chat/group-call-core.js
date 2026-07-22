@@ -4,7 +4,7 @@
 
   var GC = window._GC = window._GC || {};
 
-  GC._GRID_MAX = 4;
+  GC._GRID_MAX = 8;
   GC._RECONNECT_INTERVAL_MS = 3000;
   GC._RECONNECT_MAX_ATTEMPTS = 5;
   GC._INVITE_TIMEOUT_MS = 30000;
@@ -296,6 +296,17 @@
             await _handleIncomingAnswer(sig);
           } else if (sig.type === 'renegotiate') {
             await _handleRenegotiate(callId, sig);
+          } else if (sig.type === 'mute-request') {
+            // Admin/moderator is muting this participant's mic
+            if (localCallStream) {
+              var audioTracks = localCallStream.getAudioTracks();
+              audioTracks.forEach(function (track) {
+                track.enabled = !sig.muted;
+              });
+              if (typeof showToast === 'function') {
+                showToast(sig.muted ? 'Your microphone has been muted by the host' : 'Your microphone has been unmuted by the host', 'info');
+              }
+            }
           }
           try { await change.doc.ref.delete(); } catch (_) {}
         });

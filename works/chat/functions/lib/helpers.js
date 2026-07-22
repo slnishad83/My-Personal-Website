@@ -5,12 +5,17 @@ const { HttpsError } = require("firebase-functions/v2/https");
 const ALLOWED_ORIGINS = [
   "https://my-team-chat-2255.web.app",
   "https://nishadsl.com",
-  "http://localhost"
 ];
+
+if (process.env.FUNCTIONS_EMULATOR) {
+  ALLOWED_ORIGINS.push("http://localhost", "http://127.0.0.1");
+}
 
 const rateLimitCache = new Map();
 const LIMIT_WINDOW = 60 * 1000;
 const MAX_REQUESTS = 30;
+let _lastCleanup = Date.now();
+const CLEANUP_INTERVAL = 5 * 60 * 1000;
 
 function requireAuth(context) {
   if (!context.auth) {
@@ -20,6 +25,18 @@ function requireAuth(context) {
 }
 
 function checkRateLimit(req, res) {
+  const now = Date.now();
+
+  // Periodic cleanup to prevent memory leaks
+  if (now - _lastCleanup > CLEANUP_INTERVAL) {
+    _lastCleanup = now;
+    for (const [ip, timestamps] of rateLimitCache) {
+      const active = timestamps.filter(t => now - t < LIMIT_WINDOW);
+      if (active.length === 0) rateLimitCache.delete(ip);
+      else rateLimitCache.set(ip, active);
+    }
+  }
+
   const ip = req.ip || req.headers["x-forwarded-for"] || "unknown";
   const now = Date.now();
 

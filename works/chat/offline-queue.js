@@ -187,6 +187,12 @@ const OfflineQueue = {
   },
 
   async _uploadToCloudinary(file) {
+    if (typeof window.uploadToFirebaseStorage === 'function') {
+      return await window.uploadToFirebaseStorage(file, 'chat_uploads');
+    }
+    if (typeof window.uploadToCloudinary === 'function' && window.uploadToCloudinary !== this._uploadToCloudinary) {
+      return await window.uploadToCloudinary(file);
+    }
     const formData = new FormData();
     formData.append('file', file);
     formData.append('upload_preset', window.CHAT_UPLOAD_PRESET || 'chat_app_uploads');
@@ -200,7 +206,7 @@ const OfflineQueue = {
       method: 'POST',
       body: formData
     });
-    if (!res.ok) throw new Error(`Cloudinary upload failed: ${res.status}`);
+    if (!res.ok) throw new Error(`Upload failed: ${res.status}`);
     const data = await res.json();
     return data.secure_url;
   },

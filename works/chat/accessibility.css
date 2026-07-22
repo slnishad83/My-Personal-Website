@@ -175,14 +175,29 @@ button:focus:not(:focus-visible),
 }
 
 /* ── ARIA live region styling ──────────────────────────────────── */
-[role="alert"], [role="status"] {
+[role="alert"],
+[role="status"][aria-live] {
   clip: rect(0, 0, 0, 0);
   white-space: nowrap;
 }
 
 /* ── Visible live region for important announcements ───────────── */
 [role="alert"].visible-status,
-[role="status"].visible-status {
+[role="status"].visible-status,
+[aria-live="polite"].visible-status,
+[aria-live="assertive"].visible-status {
+  clip: auto;
+  white-space: normal;
+  position: relative;
+}
+
+/* ── Ensure live regions in toast/loading containers are visible ── */
+#toast-container [role="status"] {
+  clip: auto;
+  white-space: normal;
+  position: relative;
+}
+#loading-screen [role="status"] {
   clip: auto;
   white-space: normal;
   position: relative;

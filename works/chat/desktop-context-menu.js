@@ -14,6 +14,7 @@
     _menu.id = 'desktop-context-menu';
     _menu.setAttribute('role', 'menu');
     _menu.setAttribute('aria-label', 'Context menu');
+    _menu.setAttribute('aria-roledescription', 'context menu');
     _menu.style.display = 'none';
     document.body.appendChild(_menu);
     // Close on click outside
@@ -90,8 +91,19 @@
     e.stopPropagation();
     const msgId = msgEl?.dataset?.msgId;
     const isMyMsg = msgEl?.classList?.contains('my-message');
+    const chatId = App?.currentChat?.id || '';
+    const isGroup = App?.currentChat?.isGroup || false;
     const items = [
       { icon: '↩', label: 'Reply', shortcut: '', action: () => { if (typeof replyToMessage === 'function') replyToMessage(msgId); } },
+      { icon: '💬', label: 'Reply Privately', action: () => {
+        if (isGroup && typeof window.ReplyPrivate !== 'undefined') {
+          const msgs = (typeof App !== 'undefined' && App.messages && App.currentChat) ? (App.messages[App.currentChat.id] || []) : [];
+          const targetMsg = msgs.find(m => m.id === msgId);
+          if (targetMsg) window.ReplyPrivate.replyPrivately(targetMsg, App.currentChat.id);
+        } else if (typeof replyToMessage === 'function') {
+          replyToMessage(msgId);
+        }
+      }},
       { icon: '🌐', label: 'Translate', action: () => { if (typeof showTranslationPopup === 'function') showTranslationPopup(msgId); } },
       { icon: '⟳', label: 'Forward', action: () => { if (typeof openForwardModal === 'function') openForwardModal(msgId); } },
       { icon: '📋', label: 'Copy', shortcut: 'Ctrl+C', action: () => {
@@ -99,7 +111,12 @@
         if (text) navigator.clipboard?.writeText(text);
       }},
       { icon: '📌', label: 'Star', action: () => { if (typeof starMessage === 'function') starMessage(msgId); } },
+      { icon: '📍', label: 'Pin', action: () => { if (typeof pinMessage === 'function') pinMessage(msgId); else if (typeof starMessage === 'function') starMessage(msgId); } },
       { separator: true },
+      { icon: '☑', label: 'Select', action: () => {
+        if (typeof toggleChatSelectionMode === 'function') toggleChatSelectionMode();
+        else if (typeof showToast === 'function') showToast('Selection mode', 'info');
+      } },
       { icon: 'ℹ', label: 'Info', action: () => { if (typeof showMessageInfo === 'function') showMessageInfo(msgId); } },
       ...(isMyMsg ? [
         { separator: true },
@@ -124,9 +141,10 @@
       { icon: '📌', label: isPinned ? 'Unpin' : 'Pin', action: () => { if (typeof togglePinChat === 'function') togglePinChat(chatId); } },
       { icon: '🔇', label: isMuted ? 'Unmute' : 'Mute', action: () => { if (isMuted) { if (typeof toggleMuteChat === 'function') toggleMuteChat(chatId); } else { if (typeof showMuteChatOptions === 'function') showMuteChatOptions(chatId); } } },
       { icon: '📁', label: 'Archive', shortcut: 'Ctrl+Shift+A', action: () => { if (typeof archiveChat === 'function') archiveChat(chatId); } },
+      { icon: '🔒', label: (typeof isChatLocked === 'function' && isChatLocked(chatId)) ? 'Unlock Chat' : 'Lock Chat', action: () => { if (typeof toggleChatLock === 'function') toggleChatLock(chatId); } },
       { separator: true },
       { icon: '👤', label: 'View contact', action: () => { if (typeof viewContact === 'function') viewContact(chatId); } },
-      { icon: '🔍', label: 'Search', shortcut: 'Ctrl+Shift+F', action: () => { if (typeof openChatSearch === 'function') openChatSearch(); } },
+      { icon: '🔍', label: 'Search', shortcut: 'Ctrl+Shift+F', action: () => { if (typeof openChatSearch === 'function') openChatSearch('current'); else if (typeof window.messageSearch !== 'undefined') window.messageSearch.open(); } },
       { separator: true },
       { icon: '🗑', label: 'Delete chat', shortcut: 'Ctrl+Shift+D', danger: true, action: () => { if (typeof deleteChat === 'function') deleteChat(chatId); } },
     ];
@@ -159,9 +177,30 @@
       const mediaEl = e.target.closest('#media-viewer img, #media-viewer video, .bubble-media img, .bubble-media video');
       if (mediaEl) { showMediaContextMenu(e, mediaEl); return; }
     });
-    // Keyboard: Escape hides context menu
+    // Keyboard navigation
     document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape' && _visible) hide();
+      if (!_visible) return;
+      if (e.key === 'Escape') { hide(); return; }
+      const buttons = [..._menu.querySelectorAll('button[role="menuitem"]')];
+      const idx = buttons.indexOf(document.activeElement);
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        const next = idx < buttons.length - 1 ? idx + 1 : 0;
+        buttons[next].focus();
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        const prev = idx > 0 ? idx - 1 : buttons.length - 1;
+        buttons[prev].focus();
+      } else if (e.key === 'Home') {
+        e.preventDefault();
+        buttons[0]?.focus();
+      } else if (e.key === 'End') {
+        e.preventDefault();
+        buttons[buttons.length - 1]?.focus();
+      } else if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        document.activeElement?.click();
+      }
     });
   }
 

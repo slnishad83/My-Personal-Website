@@ -3,6 +3,7 @@
   'use strict';
 
   var GC = window._GC;
+  GC._speakerViewMode = false;
 
   function _renderAvatar(name, avatar, size) {
     var initials = (name || '?')[0].toUpperCase();
@@ -105,6 +106,23 @@
         stripHtml +
         '</div>';
       container.className = 'w-full h-full';
+    } else if (GC._speakerViewMode && count > 1 && GC._lastSpeakerUid) {
+      var speaker = participants.find(function (p) { return p.uid === GC._lastSpeakerUid; }) || participants[0];
+      var others = participants.filter(function (p) { return p.uid !== speaker.uid; });
+      var spkStream = GC._participantStreams.get(speaker.uid);
+      var spkMuted = GC._participantMuteState.get(speaker.uid);
+      var spkVidOff = GC._participantVideoState.get(speaker.uid);
+      var spkHtml = '<div class="flex-1 min-h-0 p-1">' + _getParticipantTile(speaker.uid, speaker.name, speaker.avatar, spkMuted, spkVidOff, true, !!GC._reconnectAttempts[speaker.uid], false, spkStream) + '</div>';
+      var stripHtml2 = '<div class="flex gap-1.5 p-1.5 overflow-x-auto" style="max-height:120px">' +
+        others.map(function (p) {
+          var s = GC._participantStreams.get(p.uid);
+          var m = GC._participantMuteState.get(p.uid);
+          var v = GC._participantVideoState.get(p.uid);
+          return '<div class="flex-shrink-0 w-20 h-28">' + _getParticipantTile(p.uid, p.name, p.avatar, m, v, false, !!GC._reconnectAttempts[p.uid], false, s) + '</div>';
+        }).join('') +
+        '</div>';
+      container.innerHTML = '<div class="flex flex-col h-full">' + spkHtml + stripHtml2 + '</div>';
+      container.className = 'w-full h-full';
     } else {
       var total = count;
       var gridHtml = participants.map(function (p) {
@@ -190,8 +208,11 @@
     var participant = (activeGroupCallParticipants || []).find(function (p) { return p.uid === targetUid; });
     if (!participant) return;
     var hasJoined = GC._participantJoinTime.has(targetUid);
+    var isMuted = GC._participantMuteState.get(targetUid) || false;
     var existing = GC._$('gc-participant-menu');
     if (existing) existing.remove();
+    var muteLabel = isMuted ? 'Unmute participant' : 'Mute participant';
+    var muteIcon = isMuted ? 'mic' : 'mic_off';
     var menuHtml = '<div id="gc-participant-menu" class="fixed inset-0 z-50 flex items-end justify-center" onclick="event.stopPropagation()">' +
       '<div class="absolute inset-0 bg-black/40" onclick="document.getElementById(\'gc-participant-menu\').remove()"></div>' +
       '<div class="relative bg-surface rounded-t-2xl w-full max-w-md p-4 pb-8 z-10 animate-slide-up">' +
@@ -200,6 +221,10 @@
       '<div><p class="font-semibold text-on-surface text-sm">' + GC._esc(participant.name) + '</p>' +
       '<p class="text-xs text-on-surface-variant">' + (hasJoined ? 'In call' : 'Invited — not joined') + '</p></div>' +
       '</div>' +
+      (hasJoined ? '<button class="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-surface-variant/50 transition-colors text-on-surface" onclick="window.muteParticipant(\'' + GC._esc(targetUid) + '\');document.getElementById(\'gc-participant-menu\').remove()">' +
+      '<span class="material-symbols-outlined">' + muteIcon + '</span>' +
+      '<span class="font-medium text-sm">' + muteLabel + '</span>' +
+      '</button>' : '') +
       '<button class="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-surface-variant/50 transition-colors text-red-500" onclick="window.removeFromCall(\'' + GC._esc(targetUid) + '\');document.getElementById(\'gc-participant-menu\').remove()">' +
       '<span class="material-symbols-outlined">person_remove</span>' +
       '<span class="font-medium text-sm">Remove from call</span>' +

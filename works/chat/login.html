@@ -7,7 +7,7 @@
       content="width=device-width, initial-scale=1.0, user-scalable=yes, maximum-scale=5, viewport-fit=cover, interactive-widget=resizes-content"
     />
     <meta name="theme-color" content="#11131c" />
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self' https: blob: data: 'unsafe-inline' 'unsafe-eval'; script-src 'self' https://www.gstatic.com 'unsafe-inline' 'unsafe-eval'; style-src 'self' https://fonts.googleapis.com 'unsafe-inline'; img-src 'self' https: blob: data:; font-src 'self' https://fonts.gstatic.com; connect-src 'self' https://*.googleapis.com https://*.firebaseio.com https://*.firebaseapp.com https://us-central1-*.cloudfunctions.net wss://*.firebaseio.com; frame-ancestors 'self'; form-action 'self';">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self' https: blob: data: 'unsafe-inline'; script-src 'self' https://www.gstatic.com 'unsafe-inline'; style-src 'self' https://fonts.googleapis.com 'unsafe-inline'; img-src 'self' https: blob: data:; font-src 'self' https://fonts.gstatic.com; connect-src 'self' https://*.googleapis.com https://*.firebaseio.com https://*.firebaseapp.com https://us-central1-*.cloudfunctions.net wss://*.firebaseio.com; frame-ancestors 'self'; form-action 'self';">
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta
@@ -20,8 +20,11 @@
     <link rel="apple-touch-icon" href="app-icon-192.png" />
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
-    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Manrope:wght@400;500;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+    <link rel="preconnect" href="https://www.gstatic.com" crossorigin>
+    <link rel="preload" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
+    <link rel="preload" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Manrope:wght@400;500;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
+    <noscript><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"></noscript>
+    <noscript><link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Manrope:wght@400;500;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet"></noscript>
     <link rel="stylesheet" href="chat-theme.css">
     <link rel="stylesheet" href="login-styles.css">
     <script>
@@ -472,18 +475,12 @@
     </footer>
 
     <!-- Firebase Script integrations -->
+    <script src="firebase-config.js"></script>
     <script src="https://www.gstatic.com/firebasejs/12.16.0/firebase-app-compat.js" crossorigin="anonymous"></script>
     <script src="https://www.gstatic.com/firebasejs/12.16.0/firebase-auth-compat.js" crossorigin="anonymous"></script>
     <script src="https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore-compat.js" crossorigin="anonymous"></script>
     <script>
-      const firebaseConfig = {
-        apiKey: "AIzaSyCdbut_FdscAjl-OVSlAUhb7TOTiRNkh34",
-        authDomain: "my-team-chat-2255.firebaseapp.com",
-        projectId: "my-team-chat-2255",
-        storageBucket: "my-team-chat-2255.firebasestorage.app",
-        messagingSenderId: "805016891521",
-        appId: "1:805016891521:web:ac9bc7a252bcf33686dd80",
-      };
+      const firebaseConfig = window.FIREBASE_CONFIG;
       firebase.initializeApp(firebaseConfig);
       const auth = firebase.auth();
       const db = firebase.firestore();

@@ -52,6 +52,34 @@
     }
   }
 
+  function muteParticipant(userId) {
+    if (!GC._isInGroupCall()) return;
+    if (!userId || userId === GC._myUid) return;
+    if (!GC._firestore() || !GC._currentCallId) return;
+    var currentMuted = GC._participantMuteState.get(userId) || false;
+    var newMuted = !currentMuted;
+    GC._participantMuteState.set(userId, newMuted);
+    var detailUpdate = {};
+    detailUpdate[userId] = { isMuted: newMuted };
+    GC._firestore().collection('groupCalls').doc(GC._currentCallId).update({
+      participantDetails: detailUpdate
+    }).catch(function () {});
+    // Send signaling message so the remote participant actually mutes their mic
+    GC._firestore().collection('groupCalls').doc(GC._currentCallId).collection('signaling').add({
+      type: 'mute-request',
+      from: GC._myUid,
+      to: userId,
+      muted: newMuted,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    }).catch(function () {});
+    var participant = (activeGroupCallParticipants || []).find(function (p) { return p.uid === userId; });
+    if (participant) {
+      participant.isMuted = newMuted;
+    }
+    GC._renderGrid();
+    GC._toast(newMuted ? (participant ? participant.name + ' muted' : 'Participant muted') : (participant ? participant.name + ' unmuted' : 'Participant unmuted'), 'info');
+  }
+
   function addToCallBeforeAnswer(userId) {
     if (!GC._isInGroupCall() || !GC._isInitiator) { GC._toast('Only the call initiator can add participants', 'error'); return; }
     if (!userId || userId === GC._myUid) return;
@@ -100,6 +128,7 @@
 
   window.addToCall = addToCall;
   window.removeFromCall = removeFromCall;
+  window.muteParticipant = muteParticipant;
   window.addToCallBeforeAnswer = addToCallBeforeAnswer;
   window.getGroupCallParticipants = getGroupCallParticipants;
   window.renderGroupCallGrid = renderGroupCallGrid;

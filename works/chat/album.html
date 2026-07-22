@@ -25,6 +25,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet"/>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=block" />
   <link rel="stylesheet" href="redesign-base.css" />
+  <script src="firebase-config.js"></script>
   <script src="https://www.gstatic.com/firebasejs/12.16.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/12.16.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore-compat.js"></script>
@@ -102,7 +103,7 @@
 </div>
 
 <script>
-const firebaseConfig={apiKey:"AIzaSyCdbut_FdscAjl-OVSlAUhb7TOTiRNkh34",authDomain:"my-team-chat-2255.firebaseapp.com",projectId:"my-team-chat-2255",storageBucket:"my-team-chat-2255.firebasestorage.app",messagingSenderId:"805016891521",appId:"1:805016891521:web:ac9bc7a252bcf33686dd80"};
+const firebaseConfig = window.FIREBASE_CONFIG;
 firebase.initializeApp(firebaseConfig);
 const auth=firebase.auth(),db=firebase.firestore();
 

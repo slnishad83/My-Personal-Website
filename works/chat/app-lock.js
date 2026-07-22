@@ -13,6 +13,7 @@
   var _activeOverlay = null;
   var _sessionTimer = null;
   var _inactivityTimer = null;
+  var _inactivityHandlers = [];
 
   var _esc = function(s) { return App && App.escHtml ? App.escHtml(s) : (s ? String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;') : ''); };
 
@@ -144,9 +145,34 @@
 
   async function _verifyAndUnlock(pin) {
     var settings = _getSettings();
-    if (!settings.pinHash) return false;
     var hash = await _hashPin(pin);
-    return hash === settings.pinHash;
+
+    // 1. Check local hash first (fast path)
+    if (settings.pinHash && hash === settings.pinHash) return true;
+
+    // 2. Check Firestore hash (handles localStorage cleared / cross-device)
+    var d = _db();
+    var uid = _uid();
+    if (d && uid) {
+      try {
+        var userDoc = await d.collection('users').doc(uid).get();
+        if (userDoc.exists) {
+          var data = userDoc.data();
+          if (data.appLockEnabled && data.appLockPinHash) {
+            if (hash === data.appLockPinHash) {
+              // Sync back to localStorage
+              settings.pinHash = data.appLockPinHash;
+              settings.pinSalt = settings.pinSalt || '';
+              settings.enabled = true;
+              _saveSettings(settings);
+              return true;
+            }
+          }
+        }
+      } catch (_) {}
+    }
+
+    return false;
   }
 
   function _startInactivityTimer() {
@@ -157,15 +183,23 @@
       }
     }, SESSION_TIMEOUT_MS);
 
+    // Remove old listeners first to prevent accumulation
+    _inactivityHandlers.forEach(function (h) {
+      try { document.removeEventListener(h.evt, h.fn, { passive: true }); } catch (_) {}
+    });
+    _inactivityHandlers = [];
+
     ['mousemove', 'keydown', 'click', 'touchstart', 'scroll'].forEach(function (evt) {
-      document.addEventListener(evt, function resetInactivity() {
+      var handler = function resetInactivity() {
         clearTimeout(_inactivityTimer);
         _inactivityTimer = setTimeout(function () {
           if (isAppLockEnabled() && !_activeOverlay) {
             showAppLock();
           }
         }, SESSION_TIMEOUT_MS);
-      }, { passive: true });
+      };
+      document.addEventListener(evt, handler, { passive: true });
+      _inactivityHandlers.push({ evt: evt, fn: handler });
     });
   }
 
@@ -174,6 +208,10 @@
       clearTimeout(_inactivityTimer);
       _inactivityTimer = null;
     }
+    _inactivityHandlers.forEach(function (h) {
+      try { document.removeEventListener(h.evt, h.fn, { passive: true }); } catch (_) {}
+    });
+    _inactivityHandlers = [];
   }
 
   function _skipLockForSession() {

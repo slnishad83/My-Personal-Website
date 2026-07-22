@@ -271,29 +271,41 @@
 
   function startQualityAdaptation() {
     clearInterval(CC.qualityInterval);
-    if (CC.callType !== 'video' || !peerConnection) return;
     CC.qualityInterval = setInterval(async function () {
       if (!peerConnection || CC.state !== CC.STATES.ACTIVE) return;
       try {
         var stats = await peerConnection.getStats();
         var rtt = null;
+        var packetsLost = 0;
+        var packetsReceived = 0;
         stats.forEach(function (report) {
           if (report.type === 'candidate-pair' && report.state === 'succeeded' && report.currentRoundTripTime != null) {
             rtt = report.currentRoundTripTime * 1000;
           }
+          if (report.type === 'inbound-rtp' && report.kind === 'video') {
+            packetsLost = (report.packetsLost || 0);
+            packetsReceived = (report.packetsReceived || 0);
+          }
         });
-        var sender = peerConnection.getSenders().find(function (s) { return s.track && s.track.kind === 'video'; });
-        if (sender && sender.getParameters) {
-          var params = sender.getParameters();
-          if (!params.encodings || !params.encodings.length) params.encodings = [{}];
-          var maxBr = 2500000;
-          if (rtt !== null && rtt > 300) maxBr = 500000;
-          else if (rtt !== null && rtt > 150) maxBr = 1000000;
-          params.encodings[0].maxBitrate = maxBr;
-          sender.setParameters(params).catch(function () {});
+        var totalPackets = packetsLost + packetsReceived;
+        var packetLoss = totalPackets > 0 ? (packetsLost / totalPackets * 100) : 0;
+        if (CC.callType === 'video') {
+          var sender = peerConnection.getSenders().find(function (s) { return s.track && s.track.kind === 'video'; });
+          if (sender && sender.getParameters) {
+            var params = sender.getParameters();
+            if (!params.encodings || !params.encodings.length) params.encodings = [{}];
+            var maxBr = 2500000;
+            if (rtt !== null && rtt > 300) maxBr = 500000;
+            else if (rtt !== null && rtt > 150) maxBr = 1000000;
+            params.encodings[0].maxBitrate = maxBr;
+            sender.setParameters(params).catch(function () {});
+          }
+        }
+        if (typeof CC.updateCallQuality === 'function') {
+          CC.updateCallQuality({ rtt: rtt || 0, packetLoss: packetLoss });
         }
       } catch (_) {}
-    }, 5000);
+    }, 3000);
   }
 
   function startHeartbeat(cId) {
@@ -308,12 +320,21 @@
   }
 
   async function getMedia(type) {
-    var constraints = { audio: true };
+    var constraints = {
+      audio: {
+        echoCancellation: true,
+        noiseSuppression: true,
+        autoGainControl: true,
+        channelCount: 1,
+        sampleRate: 48000
+      }
+    };
     if (type === 'video') {
       constraints.video = {
         facingMode: preferredCameraFacingMode,
         width: { ideal: window.isTablet ? 1920 : 1280 },
-        height: { ideal: window.isTablet ? 1080 : 720 }
+        height: { ideal: window.isTablet ? 1080 : 720 },
+        frameRate: { ideal: 30, max: 30 }
       };
     }
     var stream = await navigator.mediaDevices.getUserMedia(constraints);

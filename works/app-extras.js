@@ -2006,22 +2006,19 @@ async function _sendFileMessage(file, _unused, extraMeta) {
   renderChatList();
   showToast('Uploading…', 'info');
 
-  // Upload to Cloudinary if available, otherwise Firebase Storage
+  // Upload to Firebase Storage (free, no Cloudinary dependency)
   try {
     let uploadUrl = blobUrl;
-    if (typeof CLOUDINARY_CLOUD_NAME !== 'undefined' && CLOUDINARY_UPLOAD_PRESET) {
-      const fd = new FormData();
-      fd.append('file', file);
-      fd.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
-      const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/auto/upload`, { method: 'POST', body: fd });
-      if (res.ok) {
-        const data = await res.json();
-        uploadUrl = data.secure_url || blobUrl;
-      }
-    } else if (App.db && window.firebase && firebase.storage) {
-      const storageRef = firebase.storage().ref(`chat_uploads/${Date.now()}_${file.name}`);
+    if (App.db && window.firebase && firebase.storage) {
+      const user = App.auth && App.auth.currentUser;
+      const uid = user ? user.uid : 'anonymous';
+      const safe = (file.name || 'file').replace(/[^a-zA-Z0-9._-]/g, '_');
+      const path = 'chat_uploads/' + uid + '/' + Date.now() + '_' + Math.random().toString(36).slice(2, 8) + '_' + safe;
+      const storageRef = firebase.storage().ref(path);
       const snap = await storageRef.put(file);
       uploadUrl = await snap.ref.getDownloadURL();
+    } else if (typeof window.uploadToFirebaseStorage === 'function') {
+      uploadUrl = await window.uploadToFirebaseStorage(file, 'chat_uploads');
     }
 
     msg.url    = uploadUrl;
@@ -2343,17 +2340,13 @@ function changeAvatar() {
 
     try {
       let uploadUrl = blobUrl;
-      if (typeof CLOUDINARY_CLOUD_NAME !== 'undefined') {
-        const fd = new FormData();
-        fd.append('file', file);
-        fd.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
-        const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`, { method: 'POST', body: fd });
-        if (res.ok) { const d = await res.json(); uploadUrl = d.secure_url || blobUrl; }
-      } else if (App.db && window.firebase && firebase.storage) {
+      if (App.db && window.firebase && firebase.storage) {
         const uid = App.auth.currentUser.uid;
-        const ref = firebase.storage().ref(`avatars/${uid}`);
+        const ref = firebase.storage().ref('avatars/' + uid + '/' + Date.now() + '_' + (file.name || 'avatar').replace(/[^a-zA-Z0-9._-]/g, '_'));
         await ref.put(file);
         uploadUrl = await ref.getDownloadURL();
+      } else if (typeof window.uploadToFirebaseStorage === 'function') {
+        uploadUrl = await window.uploadToFirebaseStorage(file, 'avatars');
       }
 
       if (App.auth && App.auth.currentUser) {

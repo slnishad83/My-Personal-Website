@@ -18,9 +18,7 @@ exports.repairGroupAccessMetadata = webhooks.repairGroupAccessMetadata;
 
 // AI / Gemini functions
 exports.catchMeUp = ai.catchMeUp;
-exports.transcribeVoiceMessage = ai.transcribeVoiceMessage;
 exports.aiChatBot = ai.aiChatBot;
-exports.summarizeThread = ai.summarizeThread;
 exports.generateMeetingNotes = ai.generateMeetingNotes;
 exports.analyzeTone = ai.analyzeTone;
 exports.autoTagChat = ai.autoTagChat;
