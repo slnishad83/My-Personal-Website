@@ -4,7 +4,7 @@ const { onCall, HttpsError } = require("firebase-functions/v2/https");
 const { getDb, getAuth, getAdmin } = require("./admin");
 const { requireAuth } = require("./helpers");
 
-exports.leaveGroup = onCall(async (request) => {
+exports.leaveGroup = onCall({ memory: "128MiB" }, async (request) => {
   const uid = requireAuth(request);
   const { groupId } = request.data;
 
@@ -60,7 +60,7 @@ async function paginatedDelete(db, query, batchSize) {
   return totalDeleted;
 }
 
-exports.adminDeleteUser = onCall(async (request) => {
+exports.adminDeleteUser = onCall({ memory: "128MiB" }, async (request) => {
   const uid = requireAuth(request);
   const { targetUid } = request.data;
   const firebaseAuth = getAuth();
@@ -124,7 +124,7 @@ exports.adminDeleteUser = onCall(async (request) => {
   return { ok: true, messagesDeleted };
 });
 
-exports.adminBanUser = onCall(async (request) => {
+exports.adminBanUser = onCall({ memory: "128MiB" }, async (request) => {
   const uid = requireAuth(request);
   const { targetUid, reason } = request.data;
   const firebaseAuth = getAuth();
@@ -149,7 +149,7 @@ exports.adminBanUser = onCall(async (request) => {
   return { ok: true };
 });
 
-exports.adminUnbanUser = onCall(async (request) => {
+exports.adminUnbanUser = onCall({ memory: "128MiB" }, async (request) => {
   const uid = requireAuth(request);
   const { targetUid } = request.data;
   const firebaseAuth = getAuth();
@@ -177,7 +177,7 @@ exports.adminUnbanUser = onCall(async (request) => {
   return { ok: true };
 });
 
-exports.deleteUserAccount = onCall({ region: "us-central1" }, async (request) => {
+exports.deleteUserAccount = onCall({ region: "us-central1", memory: "128MiB" }, async (request) => {
   const uid = requireAuth(request);
   const db = getDb();
   const FieldValue = getAdmin().firestore.FieldValue;

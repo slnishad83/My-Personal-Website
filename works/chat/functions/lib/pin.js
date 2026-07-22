@@ -73,7 +73,7 @@ function clearPinFailures(uid) {
   _pinFailures.delete(`${uid}:failures`);
 }
 
-exports.setChatPin = onCall({ region: "us-central1" }, async (request) => {
+exports.setChatPin = onCall({ region: "us-central1", memory: "128MiB" }, async (request) => {
   const uid = requireAuth(request);
   if (!checkPinRateLimit(uid, "set")) throw new HttpsError("resource-exhausted", "Too many attempts. Wait a minute.");
   const { pin, oldPin } = request.data;
@@ -96,7 +96,7 @@ exports.setChatPin = onCall({ region: "us-central1" }, async (request) => {
   return { ok: true };
 });
 
-exports.verifyChatPin = onCall({ region: "us-central1" }, async (request) => {
+exports.verifyChatPin = onCall({ region: "us-central1", memory: "128MiB" }, async (request) => {
   const uid = requireAuth(request);
   if (!checkPinRateLimit(uid, "verify")) throw new HttpsError("resource-exhausted", "Too many attempts. Wait a minute.");
   const { pin } = request.data;
@@ -119,7 +119,7 @@ exports.verifyChatPin = onCall({ region: "us-central1" }, async (request) => {
   return { ok: true };
 });
 
-exports.resetChatPin = onCall({ region: "us-central1" }, async (request) => {
+exports.resetChatPin = onCall({ region: "us-central1", memory: "128MiB" }, async (request) => {
   const uid = requireAuth(request);
   if (!checkPinRateLimit(uid, "reset")) throw new HttpsError("resource-exhausted", "Too many attempts. Wait a minute.");
   const { oldPin } = request.data;
@@ -139,7 +139,7 @@ exports.resetChatPin = onCall({ region: "us-central1" }, async (request) => {
   return { ok: true };
 });
 
-exports.setTwoFactorPin = onCall({ region: "us-central1" }, async (request) => {
+exports.setTwoFactorPin = onCall({ region: "us-central1", memory: "128MiB" }, async (request) => {
   const uid = requireAuth(request);
   if (!checkPinRateLimit(uid, "2fa-set")) throw new HttpsError("resource-exhausted", "Too many attempts. Wait a minute.");
   const { pin, oldPin } = request.data;
@@ -162,7 +162,7 @@ exports.setTwoFactorPin = onCall({ region: "us-central1" }, async (request) => {
   return { ok: true };
 });
 
-exports.verifyTwoFactorPin = onCall({ region: "us-central1" }, async (request) => {
+exports.verifyTwoFactorPin = onCall({ region: "us-central1", memory: "128MiB" }, async (request) => {
   const uid = requireAuth(request);
   if (!checkPinRateLimit(uid, "2fa-verify")) throw new HttpsError("resource-exhausted", "Too many attempts. Wait a minute.");
   const { pin } = request.data;
@@ -185,7 +185,7 @@ exports.verifyTwoFactorPin = onCall({ region: "us-central1" }, async (request) =
   return { ok: true };
 });
 
-exports.resetTwoFactorPin = onCall({ region: "us-central1" }, async (request) => {
+exports.resetTwoFactorPin = onCall({ region: "us-central1", memory: "128MiB" }, async (request) => {
   const uid = requireAuth(request);
   if (!checkPinRateLimit(uid, "2fa-reset")) throw new HttpsError("resource-exhausted", "Too many attempts. Wait a minute.");
   const { oldPin } = request.data;

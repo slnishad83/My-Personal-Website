@@ -40,7 +40,7 @@ setInterval(function() {
   });
 }, 600000);
 
-exports.catchMeUp = onCall({ secrets: [GEMINI_API_KEY] }, async (request) => {
+exports.catchMeUp = onCall({ secrets: [GEMINI_API_KEY], memory: "128MiB" }, async (request) => {
   requireAuth(request);
   const uid = request.auth.uid;
   if (!_checkRateLimit(uid)) {
@@ -85,7 +85,7 @@ exports.transcribeVoiceMessage = onCall(async (request) => {
   throw new HttpsError("unimplemented", "Voice transcription not yet available");
 });
 
-exports.aiChatBot = onCall({ secrets: [GEMINI_API_KEY] }, async (request) => {
+exports.aiChatBot = onCall({ secrets: [GEMINI_API_KEY], memory: "128MiB" }, async (request) => {
   requireAuth(request);
   const uid = request.auth.uid;
   if (!_checkRateLimit(uid)) {
@@ -156,12 +156,12 @@ exports.aiChatBot = onCall({ secrets: [GEMINI_API_KEY] }, async (request) => {
   return { ok: true };
 });
 
-exports.summarizeThread = onCall({ secrets: [GEMINI_API_KEY] }, async (request) => {
+exports.summarizeThread = onCall({ secrets: [GEMINI_API_KEY], memory: "128MiB" }, async (request) => {
   requireAuth(request);
   throw new HttpsError("unimplemented", "Thread summarization not yet available");
 });
 
-exports.generateMeetingNotes = onCall({ secrets: [GEMINI_API_KEY] }, async (request) => {
+exports.generateMeetingNotes = onCall({ secrets: [GEMINI_API_KEY], memory: "128MiB" }, async (request) => {
   requireAuth(request);
   const uid = request.auth.uid;
   if (!_checkRateLimit(uid)) {
@@ -207,7 +207,7 @@ Generate the meeting notes in clean markdown:`;
   }
 });
 
-exports.analyzeTone = onCall({ secrets: [GEMINI_API_KEY] }, async (request) => {
+exports.analyzeTone = onCall({ secrets: [GEMINI_API_KEY], memory: "128MiB" }, async (request) => {
   requireAuth(request);
   const uid = request.auth.uid;
   if (!_checkRateLimit(uid)) {
@@ -248,7 +248,7 @@ Rules:
   return { safe: true, tone: "neutral", warning: null };
 });
 
-exports.autoTagChat = onCall({ secrets: [GEMINI_API_KEY] }, async (request) => {
+exports.autoTagChat = onCall({ secrets: [GEMINI_API_KEY], memory: "128MiB" }, async (request) => {
   requireAuth(request);
   const uid = request.auth.uid;
   if (!_checkRateLimit(uid)) {
@@ -302,7 +302,7 @@ Rules:
   return { tags: [] };
 });
 
-exports.aiSearchMessages = onCall({ secrets: [GEMINI_API_KEY] }, async (request) => {
+exports.aiSearchMessages = onCall({ secrets: [GEMINI_API_KEY], memory: "128MiB" }, async (request) => {
   requireAuth(request);
   const uid = request.auth.uid;
   if (!_checkRateLimit(uid)) {
@@ -390,7 +390,7 @@ Response format: [2, 0, 5, ...]`;
   return { results: results.slice(0, 20), aiRanked: false };
 });
 
-exports.classifyNotification = onCall({ secrets: [GEMINI_API_KEY] }, async (request) => {
+exports.classifyNotification = onCall({ secrets: [GEMINI_API_KEY], memory: "128MiB" }, async (request) => {
   requireAuth(request);
   const { senderName, text, chatType, chatName, isGroup, isMentioned, isReply, hasAttachment } = request.data;
 

@@ -38,7 +38,6 @@ function checkRateLimit(req, res) {
   }
 
   const ip = req.ip || req.headers["x-forwarded-for"] || "unknown";
-  const now = Date.now();
 
   if (!rateLimitCache.has(ip)) {
     rateLimitCache.set(ip, []);

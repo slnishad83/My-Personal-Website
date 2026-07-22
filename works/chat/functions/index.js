@@ -8,6 +8,7 @@ const webhooks = require("./lib/webhooks");
 const ai = require("./lib/ai");
 const user = require("./lib/user");
 const pin = require("./lib/pin");
+const { onSchedule } = require("firebase-functions/v2/scheduler");
 
 // HTTP functions
 exports.getTurnCredentials = webhooks.getTurnCredentials;
@@ -39,3 +40,24 @@ exports.resetChatPin = pin.resetChatPin;
 exports.setTwoFactorPin = pin.setTwoFactorPin;
 exports.verifyTwoFactorPin = pin.verifyTwoFactorPin;
 exports.resetTwoFactorPin = pin.resetTwoFactorPin;
+
+// Scheduled cleanup — removes orphaned uploads older than 7 days
+exports.weeklyOrphanedUploadCleanup = onSchedule(
+  { schedule: "every monday 03:00", region: "us-central1", memory: 128 },
+  async () => {
+    const admin = require("firebase-admin");
+    if (!admin.apps.length) admin.initializeApp();
+    const bucket = admin.storage().bucket();
+    const [files] = await bucket.getFiles({ prefix: "chat_uploads/" });
+    const cutoff = Date.now() - 7 * 24 * 60 * 60 * 1000;
+    let deleted = 0;
+    for (const file of files) {
+      const [meta] = await file.getMetadata();
+      const created = new Date(meta.timeCreated).getTime();
+      if (created < cutoff) {
+        try { await file.delete(); deleted++; } catch (_) {}
+      }
+    }
+    console.log(`Cleanup: deleted ${deleted} orphaned files`);
+  }
+);

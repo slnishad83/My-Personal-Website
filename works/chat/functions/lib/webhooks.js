@@ -4,7 +4,7 @@ const { onRequest } = require("firebase-functions/v2/https");
 const { getDb, getAuth } = require("./admin");
 const { checkRateLimit, validateCors } = require("./helpers");
 
-exports.getTurnCredentials = onRequest(async (req, res) => {
+exports.getTurnCredentials = onRequest({ memory: "128MiB" }, async (req, res) => {
   if (!checkRateLimit(req, res)) return;
   if (!validateCors(req, res)) return;
 
@@ -28,7 +28,7 @@ exports.getTurnCredentials = onRequest(async (req, res) => {
   }
 });
 
-exports.sendNotificationReply = onRequest(async (req, res) => {
+exports.sendNotificationReply = onRequest({ memory: "128MiB" }, async (req, res) => {
   if (!checkRateLimit(req, res)) return;
   if (!validateCors(req, res)) return;
 
@@ -116,7 +116,7 @@ exports.sendNotificationReply = onRequest(async (req, res) => {
   }
 });
 
-exports.generateUrlPreview = onRequest(async (req, res) => {
+exports.generateUrlPreview = onRequest({ memory: "128MiB" }, async (req, res) => {
   if (!checkRateLimit(req, res)) return;
   if (!validateCors(req, res)) return;
 
@@ -248,7 +248,7 @@ exports.generateUrlPreview = onRequest(async (req, res) => {
   }
 });
 
-exports.lookupVerifiedUserByEmailV2 = onRequest({ region: "asia-south1" }, async (req, res) => {
+exports.lookupVerifiedUserByEmailV2 = onRequest({ region: "asia-south1", memory: "128MiB" }, async (req, res) => {
   if (!checkRateLimit(req, res)) return;
   if (!validateCors(req, res)) return;
 
@@ -281,7 +281,7 @@ exports.lookupVerifiedUserByEmailV2 = onRequest({ region: "asia-south1" }, async
   }
 });
 
-exports.repairGroupAccessMetadata = onRequest(async (req, res) => {
+exports.repairGroupAccessMetadata = onRequest({ memory: "128MiB" }, async (req, res) => {
   if (!checkRateLimit(req, res)) return;
   if (!validateCors(req, res)) return;
 
