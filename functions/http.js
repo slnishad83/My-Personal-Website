@@ -912,7 +912,7 @@ exports.generateUrlPreview = onRequest({ region: 'us-central1', timeoutSeconds: 
 });
 
 exports.youtubeSearch = onRequest(
-  { region: 'us-central1', cors: false, timeoutSeconds: 30, memory: '256MB' },
+  { region: 'us-central1', cors: false, timeoutSeconds: 30, memory: '128MB' },
   async (req, res) => {
     if (req.method === 'OPTIONS') { res.status(204).send(''); return; }
     const origin = req.get('Origin') || req.get('Referer') || '';
