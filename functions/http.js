@@ -1,5 +1,4 @@
 const { onRequest, HttpsError } = require('firebase-functions/v2/https');
-const { defineSecret } = require('firebase-functions/params');
 
 const _adminModule = require('firebase-admin');
 const admin = new Proxy({}, {
@@ -11,8 +10,6 @@ const admin = new Proxy({}, {
   }
 });
 
-const meteredApiKey = defineSecret('METERED_API_KEY');
-const youtubeApiKey = defineSecret('YOUTUBE_API_KEY');
 const METERED_APP_URL = 'teamchatnishad.metered.live';
 const TURN_CREDENTIAL_LABEL = 'team-chat-secure-turn';
 const CHAT_APP_URL = 'https://nishadsl.com/works/chat/';
@@ -219,7 +216,7 @@ async function _youtubeSearch(query) {
     },
   };
 
-  const key = youtubeApiKey.value();
+  const key = process.env.YOUTUBE_API_KEY;
   const url = `https://www.youtube.com/youtubei/v1/search?key=${key}&prettyPrint=false`;
 
   const response = await fetch(url, {
@@ -283,7 +280,7 @@ async function _getYouTubeStreamUrl(videoId) {
       clientName: 'ANDROID',
       clientVersion: '19.09.37',
       androidSdkVersion: 30,
-      apiKey: youtubeApiKey.value(),
+      apiKey: process.env.YOUTUBE_API_KEY,
       ua: 'com.google.android.youtube/19.09.37 (Linux; U; Android 11) gzip',
     },
     {
@@ -598,7 +595,6 @@ exports.getTurnCredentials = onRequest(
   {
     region: 'us-central1',
     invoker: 'public',
-    secrets: [meteredApiKey]
   },
   async (request, response) => {
     setCorsHeaders(response, request.get('Origin'));
@@ -620,7 +616,7 @@ exports.getTurnCredentials = onRequest(
       assertValidOrigin(request);
       checkRateLimit(caller.uid, 'getTurnCredentials', 10);
 
-      const apiKey = meteredApiKey.value().trim();
+      const apiKey = (process.env.METERED_API_KEY || '').trim();
       if (!apiKey) {
         response.status(500).json({ error: 'TURN secret is not configured' });
         return;
@@ -916,7 +912,7 @@ exports.generateUrlPreview = onRequest({ region: 'us-central1', timeoutSeconds: 
 });
 
 exports.youtubeSearch = onRequest(
-  { region: 'us-central1', cors: false, timeoutSeconds: 30, memory: '256MB', secrets: [youtubeApiKey] },
+  { region: 'us-central1', cors: false, timeoutSeconds: 30, memory: '256MB' },
   async (req, res) => {
     if (req.method === 'OPTIONS') { res.status(204).send(''); return; }
     const origin = req.get('Origin') || req.get('Referer') || '';

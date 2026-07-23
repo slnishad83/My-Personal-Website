@@ -1,5 +1,4 @@
 const { onCall, HttpsError } = require('firebase-functions/v2/https');
-const { defineSecret } = require('firebase-functions/params');
 
 const _adminModule = require('firebase-admin');
 const admin = new Proxy({}, {
@@ -12,8 +11,6 @@ const admin = new Proxy({}, {
 });
 
 const CHAT_APP_URL = 'https://nishadsl.com/works/chat/';
-
-const geminiApiKey = defineSecret('GEMINI_API_KEY');
 
 // Simple in-memory rate limiter per user (5 requests/min, 30/hour for AI functions)
 const _aiRateBuckets = new Map();
@@ -44,7 +41,7 @@ function checkAiRateLimit(uid) {
 }
 
 exports.aiChatBot = onCall(
-  { region: 'us-central1', secrets: [geminiApiKey] },
+  { region: 'us-central1' },
   async (request) => {
     if (!request.auth) {
       throw new HttpsError('unauthenticated', 'Must be signed in to use the AI assistant.');
@@ -62,7 +59,7 @@ exports.aiChatBot = onCall(
       throw new HttpsError('invalid-argument', 'Prompt must be a string of 10,000 characters or fewer.');
     }
 
-    const apiKey = geminiApiKey.value();
+    const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
       throw new HttpsError('failed-precondition', 'GEMINI_API_KEY secret is not configured.');
     }
@@ -135,14 +132,14 @@ exports.aiChatBot = onCall(
 );
 
 exports.summarizeThread = onCall(
-  { region: 'us-central1', secrets: [geminiApiKey] },
+  { region: 'us-central1' },
   async (request) => {
     if (!request.auth) throw new HttpsError('unauthenticated', 'Must be signed in.');
     if (!checkAiRateLimit(request.auth.uid)) throw new HttpsError('resource-exhausted', 'Rate limit exceeded. Try again later.');
     const { messageId } = request.data || {};
     if (!messageId) throw new HttpsError('invalid-argument', 'Missing messageId.');
 
-    const apiKey = geminiApiKey.value();
+    const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) throw new HttpsError('failed-precondition', 'GEMINI_API_KEY not configured.');
 
     const snap = await admin.firestore()
@@ -183,7 +180,7 @@ exports.summarizeThread = onCall(
 );
 
 exports.explainMessage = onCall(
-  { region: 'us-central1', secrets: [geminiApiKey] },
+  { region: 'us-central1' },
   async (request) => {
     if (!request.auth) throw new HttpsError('unauthenticated', 'Must be signed in.');
     if (!checkAiRateLimit(request.auth.uid)) throw new HttpsError('resource-exhausted', 'Rate limit exceeded. Try again later.');
@@ -193,7 +190,7 @@ exports.explainMessage = onCall(
       throw new HttpsError('invalid-argument', 'Message text must be 5,000 characters or fewer.');
     }
 
-    const apiKey = geminiApiKey.value();
+    const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) throw new HttpsError('failed-precondition', 'GEMINI_API_KEY not configured.');
 
     const prompt = `A user received this chat message and wants it explained clearly and briefly (2-4 sentences). Explain what it means, any implied context, tone, or intent. Be concise and friendly.\n\nMessage: "${text}"`;
@@ -220,7 +217,7 @@ exports.explainMessage = onCall(
 );
 
 exports.transcribeVoiceMessage = onCall(
-  { region: 'us-central1', secrets: [geminiApiKey] },
+  { region: 'us-central1' },
   async (request) => {
     if (!request.auth) throw new HttpsError('unauthenticated', 'Must be signed in.');
     if (!checkAiRateLimit(request.auth.uid)) throw new HttpsError('resource-exhausted', 'Rate limit exceeded. Try again later.');
@@ -231,7 +228,7 @@ exports.transcribeVoiceMessage = onCall(
     if (!audioHost.endsWith('firebasestorage.googleapis.com') && !audioHost.endsWith('cloudinary.com')) {
       throw new HttpsError('invalid-argument', 'Audio URL must be from Firebase Storage or Cloudinary.');
     }
-    const apiKey = geminiApiKey.value();
+    const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) throw new HttpsError('failed-precondition', 'GEMINI_API_KEY not set.');
     try {
       const controller = new AbortController();
@@ -280,13 +277,13 @@ exports.transcribeVoiceMessage = onCall(
 );
 
 exports.catchMeUp = onCall(
-  { region: 'us-central1', secrets: [geminiApiKey] },
+  { region: 'us-central1' },
   async (request) => {
     if (!request.auth) throw new HttpsError('unauthenticated', 'Must be signed in.');
     if (!checkAiRateLimit(request.auth.uid)) throw new HttpsError('resource-exhausted', 'Rate limit exceeded. Try again later.');
     const { chatId, chatType } = request.data || {};
     if (!chatId || !chatType) throw new HttpsError('invalid-argument', 'Missing chatId or chatType.');
-    const apiKey = geminiApiKey.value();
+    const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) throw new HttpsError('failed-precondition', 'GEMINI_API_KEY not set.');
     try {
       const field = chatType === 'group' ? 'groupId' : 'directId';
@@ -326,13 +323,13 @@ exports.catchMeUp = onCall(
 );
 
 exports.detectCalendarEvent = onCall(
-  { region: 'us-central1', secrets: [geminiApiKey] },
+  { region: 'us-central1' },
   async (request) => {
     if (!request.auth) throw new HttpsError('unauthenticated', 'Must be signed in.');
     if (!checkAiRateLimit(request.auth.uid)) throw new HttpsError('resource-exhausted', 'Rate limit exceeded. Try again later.');
     const { text } = request.data || {};
     if (!text) throw new HttpsError('invalid-argument', 'Missing text.');
-    const apiKey = geminiApiKey.value();
+    const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) throw new HttpsError('failed-precondition', 'GEMINI_API_KEY not set.');
     const today = new Date().toISOString().split('T')[0];
     const prompt = `Today is ${today}. Analyze this message and extract any event or appointment details.\nMessage: "${text}"\n\nReturn ONLY valid JSON like: {"hasEvent":true,"title":"Dinner","date":"2026-06-25","time":"19:00","note":"at Taj Hotel"}\nIf no event, return: {"hasEvent":false}`;
