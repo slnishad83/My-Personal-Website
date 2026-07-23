@@ -1,0 +1,21 @@
+/* ═══ NSL Chat — Consolidated App Styles ═══ */
+/* Imports all chat-related CSS in dependency order */
+
+@import "tailwindcss";
+@import "../../chat.css";
+@import "../../accessibility.css";
+@import "../../chat-consolidated.css";
+@import "../../chat-theme.css";
+@import "../../chat-enhancements.css";
+@import "../../chat-missing-features.css";
+@import "../../message-actions.css";
+@import "../../micro-interactions.css";
+@import "../../new-features.css";
+@import "../../notification-prefs.css";
+@import "../../redesign-base.css";
+@import "../../scheduled-calendar.css";
+@import "../../snooze-enhancements.css";
+@import "../../snooze-history.css";
+@import "../../sync-audit.css";
+@import "../../translation-ui.css";
+@import "../../url-preview.css";

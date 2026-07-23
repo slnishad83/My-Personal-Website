@@ -7,6 +7,7 @@
   var _seenSet = new Set();
   var _privacySetting = 'everyone';
   var _loadAttempted = false;
+  var MAX_SEEN_SIZE = 500;
 
   var _db = function() { return App && App.db ? App.db : (typeof firebase !== 'undefined' ? firebase.firestore() : null); };
   var _uid = function() { return App && App.uid ? App.uid() : (window.currentUser ? window.currentUser.uid : null); };
@@ -23,6 +24,15 @@
   function _now() { return Date.now(); }
   function _expiresAt() { return _now() + STATUS_DURATION_MS; }
   function _isExpired(s) { return s && s.expiresAt && s.expiresAt < _now(); }
+
+  function _trimSeenSet() {
+    if (_seenSet.size <= MAX_SEEN_SIZE) return;
+    var arr = Array.from(_seenSet);
+    var excess = arr.length - MAX_SEEN_SIZE;
+    for (var i = 0; i < excess; i++) {
+      _seenSet.delete(arr[i]);
+    }
+  }
 
   function _sanitizeType(t) {
     if (t === 'text' || t === 'image' || t === 'video') return t;
@@ -257,17 +267,29 @@
       }, function (err) {
         console.warn('[Status] Listener error:', err);
       });
-    window.statusRefreshTimer = setInterval(function () {
-      var expired = [];
-      _statusCache.forEach(function (s, id) {
-        if (_isExpired(s)) expired.push(id);
-      });
-      expired.forEach(_removeStatus);
-      if (expired.length > 0) {
-        renderStatusRow();
-        renderStatusRings();
-      }
-    }, 60000);
+      if (window.statusRefreshTimer) clearInterval(window.statusRefreshTimer);
+      window.statusRefreshTimer = setInterval(function () {
+        var expired = [];
+        _statusCache.forEach(function (s, id) {
+          if (_isExpired(s)) expired.push(id);
+        });
+        expired.forEach(_removeStatus);
+        if (expired.length > 0) {
+          renderStatusRow();
+          renderStatusRings();
+        }
+      }, 60000);
+  }
+
+  function _clearStatusIntervals() {
+    if (window.statusRefreshTimer) {
+      clearInterval(window.statusRefreshTimer);
+      window.statusRefreshTimer = null;
+    }
+    if (window._statusReminderInterval) {
+      clearInterval(window._statusReminderInterval);
+      window._statusReminderInterval = null;
+    }
   }
 
   function _loadSeenFromStorage() {
@@ -276,7 +298,10 @@
       if (raw) {
         var arr = JSON.parse(raw);
         if (Array.isArray(arr)) {
-          arr.forEach(function (id) { _seenSet.add(id); });
+          var start = Math.max(0, arr.length - MAX_SEEN_SIZE);
+          for (var i = start; i < arr.length; i++) {
+            _seenSet.add(arr[i]);
+          }
         }
       }
     } catch (_) {}
@@ -292,6 +317,7 @@
     if (!statusId) return;
     var wasNew = !_seenSet.has(statusId);
     _seenSet.add(statusId);
+    _trimSeenSet();
     _saveSeenToStorage();
     if (!wasNew) return;
     var d = _db();
@@ -784,7 +810,9 @@
   }
 
   function createStatusReminder() {
-    if (window._statusReminderInterval) return;
+    if (window._statusReminderInterval) {
+      clearInterval(window._statusReminderInterval);
+    }
     window._statusReminderInterval = setInterval(function () {
       var now = _now();
       var expired = [];
@@ -835,9 +863,14 @@
   window.getUnseenStatusCount = getUnseenStatusCount;
   window.markStatusSeen = markStatusSeen;
   window.createStatusReminder = createStatusReminder;
+  window._clearStatusIntervals = _clearStatusIntervals;
   window._statusDataCache = _statusCache;
   window._statusUserMap = _userStatusMap;
   window._statusSeenSet = _seenSet;
+
+  window.addEventListener('beforeunload', function () {
+    _clearStatusIntervals();
+  });
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', _init);

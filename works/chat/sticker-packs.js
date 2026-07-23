@@ -185,7 +185,8 @@
     item.className = 'sticker-item';
     item.setAttribute('aria-label', 'Select sticker');
     if (isImage) {
-      item.innerHTML = '<img src="' + content + '" style="width:100%;height:100%;object-fit:contain;border-radius:8px;" alt="Sticker">';
+      var safeSrc = content.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/'/g, '&#39;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+      item.innerHTML = '<img src="' + safeSrc + '" style="width:100%;height:100%;object-fit:contain;border-radius:8px;" alt="Sticker">';
     } else {
       item.textContent = content;
     }

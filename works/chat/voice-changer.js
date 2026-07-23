@@ -428,7 +428,7 @@
 
         var effectBtn = document.createElement('button');
         effectBtn.id = 'vc-effect-btn';
-        effectBtn.className = 'w-8 h-8 rounded-full bg-purple-500/15 text-purple-500 flex items-center justify-center flex-shrink-0';
+        effectBtn.className = 'min-w-[44px] min-h-[44px] rounded-full bg-purple-500/15 text-purple-500 flex items-center justify-center flex-shrink-0';
         effectBtn.innerHTML = '<span class="material-symbols-outlined" style="font-size:18px">graphic_eq</span>';
         effectBtn.title = 'Voice Effect';
         effectBtn.setAttribute('aria-label', 'Select voice effect');

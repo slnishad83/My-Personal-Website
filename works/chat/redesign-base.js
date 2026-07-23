@@ -91,6 +91,88 @@
     ripple.addEventListener("animationend", function() { ripple.remove(); });
   });
 
+  /* ═══════════════════════════════════════
+     FOCUS TRAP + ESCAPE KEY FOR MODALS
+     ═══════════════════════════════════════ */
+  function getVisibleOverlays() {
+    return Array.from(document.querySelectorAll('.overlay:not(.hidden), [role="dialog"]:not(.hidden)')).filter(function(el) {
+      return el.offsetParent !== null;
+    });
+  }
+  function getFocusable(container) {
+    return Array.from(container.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])')).filter(function(el) {
+      return !el.disabled && el.offsetParent !== null;
+    });
+  }
+
+  /* Escape key closes topmost overlay */
+  document.addEventListener("keydown", function(e) {
+    if (e.key === "Escape") {
+      var overlays = getVisibleOverlays();
+      if (overlays.length > 0) {
+        var top = overlays[overlays.length - 1];
+        var closeBtn = top.querySelector('[data-action="closeModal"]');
+        if (closeBtn) { closeBtn.click(); e.preventDefault(); return; }
+        var dismissAction = top.dataset.action;
+        if (dismissAction === "dismissOnBackdrop") {
+          top.classList.add("hidden");
+          e.preventDefault();
+        }
+      }
+    }
+  });
+
+  /* Focus trap within topmost overlay */
+  document.addEventListener("keydown", function(e) {
+    if (e.key !== "Tab") return;
+    var overlays = getVisibleOverlays();
+    if (overlays.length === 0) return;
+    var top = overlays[overlays.length - 1];
+    var focusable = getFocusable(top);
+    if (focusable.length === 0) return;
+    var first = focusable[0];
+    var last = focusable[focusable.length - 1];
+    if (e.shiftKey) {
+      if (document.activeElement === first) { e.preventDefault(); last.focus(); }
+    } else {
+      if (document.activeElement === last) { e.preventDefault(); first.focus(); }
+    }
+  });
+
+  /* Auto-focus first focusable element when overlay opens */
+  var _modalObserver = new MutationObserver(function(mutations) {
+    mutations.forEach(function(m) {
+      if (m.type === "attributes" && m.attributeName === "class") {
+        var el = m.target;
+        if (el.classList.contains("overlay") && !el.classList.contains("hidden")) {
+          var focusable = getFocusable(el);
+          if (focusable.length > 0) {
+            setTimeout(function() { focusable[0].focus(); }, 50);
+          }
+        }
+      }
+    });
+  });
+  document.querySelectorAll('.overlay').forEach(function(el) {
+    _modalObserver.observe(el, { attributes: true, attributeFilter: ['class'] });
+  });
+
+  /* ═══════════════════════════════════════
+     SCROLL LOCK WHEN MODAL OPEN
+     ═══════════════════════════════════════ */
+  var _scrollLocked = false;
+  var _observer = new MutationObserver(function() {
+    var anyOpen = getVisibleOverlays().length > 0;
+    if (anyOpen && !_scrollLocked) {
+      document.body.style.overflow = 'hidden';
+      _scrollLocked = true;
+    } else if (!anyOpen && _scrollLocked) {
+      document.body.style.overflow = '';
+      _scrollLocked = false;
+    }
+  });
+  _observer.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['class'] });
+
   /* Auto-highlight active nav item in bottom nav */
   var bottomNav = document.getElementById("bottomNav");
   if (bottomNav) {

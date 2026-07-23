@@ -75,14 +75,14 @@
       '<div class="bg-surface rounded-2xl p-6 max-w-sm w-full mx-4 shadow-2xl">' +
       '<div class="flex items-center justify-between mb-4">' +
       '<h3 class="text-on-surface font-bold text-lg">Share ' + typeLabel + ' Call Link</h3>' +
-      '<button onclick="document.getElementById(\'call-link-modal\').remove()" class="w-8 h-8 rounded-full hover:bg-surface-variant/50 flex items-center justify-center"><span class="material-symbols-outlined text-on-surface-variant">close</span></button>' +
+      '<button onclick="document.getElementById(\'call-link-modal\').remove()" class="min-w-[44px] min-h-[44px] rounded-full hover:bg-surface-variant/50 flex items-center justify-center"><span class="material-symbols-outlined text-on-surface-variant">close</span></button>' +
       '</div>' +
       '<p class="text-on-surface-variant text-sm mb-4">Anyone with this link can join the ' + typeLabel.toLowerCase() + ' call.</p>' +
       '<div id="call-link-loading" class="flex items-center justify-center p-6"><div class="w-6 h-6 border-2 border-primary/30 border-t-primary rounded-full animate-spin"></div></div>' +
       '<div id="call-link-result" class="hidden">' +
       '<div class="bg-surface-variant rounded-xl p-3 mb-4 flex items-center gap-2">' +
       '<input id="call-link-url" type="text" readonly class="flex-1 bg-transparent text-on-surface text-sm outline-none truncate">' +
-      '<button onclick="navigator.clipboard.writeText(document.getElementById(\'call-link-url\').value);window._CC&&window._CC.toast(\'Link copied!\',\'success\')" class="w-9 h-9 rounded-full bg-primary/15 text-primary flex items-center justify-center hover:bg-primary/25 transition-colors"><span class="material-symbols-outlined text-lg">content_copy</span></button>' +
+      '<button onclick="navigator.clipboard.writeText(document.getElementById(\'call-link-url\').value);window._CC&&window._CC.toast(\'Link copied!\',\'success\')" class="min-w-[44px] min-h-[44px] rounded-full bg-primary/15 text-primary flex items-center justify-center hover:bg-primary/25 transition-colors"><span class="material-symbols-outlined text-lg">content_copy</span></button>' +
       '</div>' +
       '<div class="flex gap-3">' +
       '<button id="call-link-join" class="flex-1 py-2.5 bg-green-500 text-white rounded-full font-medium text-sm hover:bg-green-600 transition-colors">Join Now</button>' +

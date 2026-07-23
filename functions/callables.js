@@ -12,21 +12,51 @@ const admin = new Proxy({}, {
 });
 
 const CHAT_APP_URL = 'https://nishadsl.com/works/chat/';
-const ADMIN_EMAIL = 'sl.nishad@gmail.com';
 
 const geminiApiKey = defineSecret('GEMINI_API_KEY');
+
+// Simple in-memory rate limiter per user (5 requests/min, 30/hour for AI functions)
+const _aiRateBuckets = new Map();
+function checkAiRateLimit(uid) {
+  const now = Date.now();
+  const bucket = _aiRateBuckets.get(uid) || { minute: [], hour: [] };
+  bucket.minute = bucket.minute.filter(t => now - t < 60000);
+  bucket.hour = bucket.hour.filter(t => now - t < 3600000);
+  if (bucket.minute.length >= 5 || bucket.hour.length >= 30) {
+    return false;
+  }
+  bucket.minute.push(now);
+  bucket.hour.push(now);
+  _aiRateBuckets.set(uid, bucket);
+  return true;
+}
+// Periodic cleanup every 5 minutes
+setInterval(() => {
+  const now = Date.now();
+  for (const [uid, bucket] of _aiRateBuckets) {
+    bucket.minute = bucket.minute.filter(t => now - t < 60000);
+    bucket.hour = bucket.hour.filter(t => now - t < 3600000);
+    if (bucket.minute.length === 0 && bucket.hour.length === 0) _aiRateBuckets.delete(uid);
+  }
+}, 300000);
 
 exports.aiChatBot = onCall(
   { region: 'us-central1', secrets: [geminiApiKey] },
   async (request) => {
-    // onCall automatically verifies the Firebase auth token
     if (!request.auth) {
       throw new HttpsError('unauthenticated', 'Must be signed in to use the AI assistant.');
+    }
+
+    if (!checkAiRateLimit(request.auth.uid)) {
+      throw new HttpsError('resource-exhausted', 'Rate limit exceeded. Try again later.');
     }
 
     const { prompt, chatId, chatType, senderName } = request.data || {};
     if (!prompt || !chatId || !chatType) {
       throw new HttpsError('invalid-argument', 'Missing prompt, chatId, or chatType.');
+    }
+    if (typeof prompt !== 'string' || prompt.length > 10000) {
+      throw new HttpsError('invalid-argument', 'Prompt must be a string of 10,000 characters or fewer.');
     }
 
     const apiKey = geminiApiKey.value();
@@ -71,7 +101,7 @@ exports.aiChatBot = onCall(
       if (!geminiRes.ok) {
         const errBody = await geminiRes.text();
         console.error('[aiChatBot] Gemini error:', errBody);
-        throw new HttpsError('internal', `Gemini API error: ${errBody.substring(0, 200)}`);
+        throw new HttpsError('internal', 'AI service temporarily unavailable.');
       }
 
       const geminiData = await geminiRes.json();
@@ -80,7 +110,7 @@ exports.aiChatBot = onCall(
     } catch (err) {
       if (err instanceof HttpsError) throw err;
       console.error('[aiChatBot] Gemini fetch error:', err);
-      throw new HttpsError('internal', err.message);
+      throw new HttpsError('internal', 'AI service temporarily unavailable.');
     }
 
     // Post the AI reply as a chat message
@@ -105,6 +135,7 @@ exports.summarizeThread = onCall(
   { region: 'us-central1', secrets: [geminiApiKey] },
   async (request) => {
     if (!request.auth) throw new HttpsError('unauthenticated', 'Must be signed in.');
+    if (!checkAiRateLimit(request.auth.uid)) throw new HttpsError('resource-exhausted', 'Rate limit exceeded. Try again later.');
     const { messageId } = request.data || {};
     if (!messageId) throw new HttpsError('invalid-argument', 'Missing messageId.');
 
@@ -139,8 +170,8 @@ exports.summarizeThread = onCall(
       }
     );
     if (!geminiRes.ok) {
-      const errText = await geminiRes.text();
-      throw new HttpsError('internal', `Gemini error: ${errText.substring(0, 200)}`);
+      console.error('[summarizeThread] Gemini error:', await geminiRes.text());
+      throw new HttpsError('internal', 'AI service temporarily unavailable.');
     }
     const geminiData = await geminiRes.json();
     const summary = geminiData?.candidates?.[0]?.content?.parts?.[0]?.text || 'Could not generate summary.';
@@ -152,8 +183,12 @@ exports.explainMessage = onCall(
   { region: 'us-central1', secrets: [geminiApiKey] },
   async (request) => {
     if (!request.auth) throw new HttpsError('unauthenticated', 'Must be signed in.');
+    if (!checkAiRateLimit(request.auth.uid)) throw new HttpsError('resource-exhausted', 'Rate limit exceeded. Try again later.');
     const { text } = request.data || {};
     if (!text) throw new HttpsError('invalid-argument', 'Missing message text.');
+    if (typeof text !== 'string' || text.length > 5000) {
+      throw new HttpsError('invalid-argument', 'Message text must be 5,000 characters or fewer.');
+    }
 
     const apiKey = geminiApiKey.value();
     if (!apiKey) throw new HttpsError('failed-precondition', 'GEMINI_API_KEY not configured.');
@@ -172,8 +207,8 @@ exports.explainMessage = onCall(
       }
     );
     if (!geminiRes.ok) {
-      const errText = await geminiRes.text();
-      throw new HttpsError('internal', `Gemini error: ${errText.substring(0, 200)}`);
+      console.error('[explainMessage] Gemini error:', await geminiRes.text());
+      throw new HttpsError('internal', 'AI service temporarily unavailable.');
     }
     const geminiData = await geminiRes.json();
     const explanation = geminiData?.candidates?.[0]?.content?.parts?.[0]?.text || 'Could not explain this message.';
@@ -185,9 +220,9 @@ exports.transcribeVoiceMessage = onCall(
   { region: 'us-central1', secrets: [geminiApiKey] },
   async (request) => {
     if (!request.auth) throw new HttpsError('unauthenticated', 'Must be signed in.');
+    if (!checkAiRateLimit(request.auth.uid)) throw new HttpsError('resource-exhausted', 'Rate limit exceeded. Try again later.');
     const { messageId, audioUrl } = request.data || {};
-    if (!audioUrl) throw new HttpsError('invalid-argument', 'Missing audioUrl.');
-    // Validate URL — only allow Firebase Storage and Cloudinary
+    if (!audioUrl || typeof audioUrl !== 'string') throw new HttpsError('invalid-argument', 'Missing audioUrl.');
     const audioUrlObj = new URL(audioUrl);
     const audioHost = audioUrlObj.hostname.toLowerCase();
     if (!audioHost.endsWith('firebasestorage.googleapis.com') && !audioHost.endsWith('cloudinary.com')) {
@@ -196,13 +231,17 @@ exports.transcribeVoiceMessage = onCall(
     const apiKey = geminiApiKey.value();
     if (!apiKey) throw new HttpsError('failed-precondition', 'GEMINI_API_KEY not set.');
     try {
-      // Download the audio file and convert to base64
-      const audioRes = await fetch(audioUrl);
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 30000);
+      const audioRes = await fetch(audioUrl, { signal: controller.signal });
+      clearTimeout(timeout);
       if (!audioRes.ok) throw new Error('Could not fetch audio file.');
+      const contentLength = Number(audioRes.headers.get('content-length') || 0);
+      if (contentLength > 25 * 1024 * 1024) throw new Error('Audio file too large (max 25MB).');
       const buffer = await audioRes.arrayBuffer();
+      if (buffer.byteLength > 25 * 1024 * 1024) throw new Error('Audio file too large (max 25MB).');
       const base64 = Buffer.from(buffer).toString('base64');
       const mimeType = audioRes.headers.get('content-type') || 'audio/webm';
-      // Send to Gemini for transcription
       const gemRes = await fetch(
         `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
         {
@@ -220,16 +259,19 @@ exports.transcribeVoiceMessage = onCall(
           })
         }
       );
-      if (!gemRes.ok) throw new Error('Gemini error: ' + await gemRes.text());
+      if (!gemRes.ok) {
+        console.error('[transcribeVoiceMessage] Gemini error:', gemRes.status);
+        throw new Error('Transcription service error');
+      }
       const gemData = await gemRes.json();
       const text = gemData?.candidates?.[0]?.content?.parts?.[0]?.text || 'Could not transcribe.';
-      // Save transcription to the message
-      if (messageId) {
+      if (messageId && typeof messageId === 'string') {
         await admin.firestore().collection('messages').doc(messageId).update({ transcription: text.trim() }).catch(() => {});
       }
       return { text: text.trim() };
     } catch (err) {
-      throw new HttpsError('internal', err.message);
+      console.error('[transcribeVoiceMessage]', err.message);
+      throw new HttpsError('internal', 'Transcription failed. Please try again.');
     }
   }
 );
@@ -238,6 +280,7 @@ exports.catchMeUp = onCall(
   { region: 'us-central1', secrets: [geminiApiKey] },
   async (request) => {
     if (!request.auth) throw new HttpsError('unauthenticated', 'Must be signed in.');
+    if (!checkAiRateLimit(request.auth.uid)) throw new HttpsError('resource-exhausted', 'Rate limit exceeded. Try again later.');
     const { chatId, chatType } = request.data || {};
     if (!chatId || !chatType) throw new HttpsError('invalid-argument', 'Missing chatId or chatType.');
     const apiKey = geminiApiKey.value();
@@ -283,6 +326,7 @@ exports.detectCalendarEvent = onCall(
   { region: 'us-central1', secrets: [geminiApiKey] },
   async (request) => {
     if (!request.auth) throw new HttpsError('unauthenticated', 'Must be signed in.');
+    if (!checkAiRateLimit(request.auth.uid)) throw new HttpsError('resource-exhausted', 'Rate limit exceeded. Try again later.');
     const { text } = request.data || {};
     if (!text) throw new HttpsError('invalid-argument', 'Missing text.');
     const apiKey = geminiApiKey.value();
@@ -337,10 +381,15 @@ exports.muteChatNotification = onCall(
       return { muted: false };
     }
 
+    const durationNum = Number(duration);
+    if (!Number.isFinite(durationNum) || durationNum < -1) {
+      throw new HttpsError('invalid-argument', 'duration must be a non-negative number (ms) or -1 for forever.');
+    }
+
     // Mute for a duration (in milliseconds)
-    const muteUntil = duration === -1
+    const muteUntil = durationNum === -1
       ? null // Mute forever
-      : admin.firestore.Timestamp.fromMillis(Date.now() + Number(duration));
+      : admin.firestore.Timestamp.fromMillis(Date.now() + durationNum);
 
     await admin.firestore().collection('mutedChats').add({
       userId: uid,
@@ -358,6 +407,12 @@ exports.setDndSchedule = onCall(
   async (request) => {
     if (!request.auth) throw new HttpsError('unauthenticated', 'Must be signed in.');
     const { enabled, from, to, tzOffset } = request.data || {};
+    if (typeof from === 'number' && (from < 0 || from > 1440)) {
+      throw new HttpsError('invalid-argument', 'from must be 0–1440 minutes.');
+    }
+    if (typeof to === 'number' && (to < 0 || to > 1440)) {
+      throw new HttpsError('invalid-argument', 'to must be 0–1440 minutes.');
+    }
 
     await admin.firestore().collection('users').doc(request.auth.uid).set({
       dndSettings: {

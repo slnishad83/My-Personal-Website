@@ -217,7 +217,7 @@
       '<span class="material-symbols-outlined text-white" style="font-size:16px">visibility</span>' +
       '<span class="text-white text-xs font-semibold">' + viewCount + '</span>' +
       '</div>' +
-      '<button class="w-8 h-8 rounded-full bg-black/60 flex items-center justify-center text-red-400 hover:bg-red-500/30 transition-colors mt-1" onclick="window._svDelete()" aria-label="Delete status">' +
+      '<button class="min-w-[44px] min-h-[44px] rounded-full bg-black/60 flex items-center justify-center text-red-400 hover:bg-red-500/30 transition-colors mt-1" onclick="window._svDelete()" aria-label="Delete status">' +
       '<span class="material-symbols-outlined" style="font-size:16px">delete</span>' +
       '</button>' +
       '</div>';

@@ -1,0 +1,244 @@
+const { onCall, HttpsError } = require('firebase-functions/v2/https');
+
+const _adminModule = require('firebase-admin');
+const admin = new Proxy({}, {
+  get(_target, prop) {
+    if (!_adminModule.getApps().length) {
+      _adminModule.initializeApp();
+    }
+    return _adminModule[prop];
+  }
+});
+
+function db() { return admin.firestore(); }
+
+function validateAuth(request) {
+  if (!request.auth) {
+    throw new HttpsError('unauthenticated', 'Must be signed in.');
+  }
+  return request.auth.uid;
+}
+
+async function getGroupDoc(groupId) {
+  const snap = await db().collection('groups').doc(groupId).get();
+  if (!snap.exists) {
+    throw new HttpsError('not-found', 'Group not found.');
+  }
+  return { id: snap.id, ...snap.data() };
+}
+
+function requireAdmin(groupData, uid) {
+  const adminIds = groupData.adminIds || groupData.admins || [];
+  const isOwner = groupData.ownerId === uid || groupData.createdBy === uid;
+  const isAdmin = adminIds.includes(uid) || isOwner;
+  if (!isAdmin) {
+    throw new HttpsError('permission-denied', 'Only group admins can perform this action.');
+  }
+  return isOwner;
+}
+
+function requireCreator(groupData, uid) {
+  if (groupData.createdBy !== uid && groupData.ownerId !== uid) {
+    throw new HttpsError('permission-denied', 'Only the group creator can perform this action.');
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════
+   1. addGroupMembers — Admin-only
+   ══════════════════════════════════════════════════════════════ */
+exports.addGroupMembers = onCall(
+  { region: 'us-central1' },
+  async (request) => {
+    const uid = validateAuth(request);
+    const { groupId, userIds } = request.data || {};
+
+    if (!groupId || typeof groupId !== 'string') {
+      throw new HttpsError('invalid-argument', 'groupId is required.');
+    }
+    if (!Array.isArray(userIds) || userIds.length === 0 || userIds.length > 100) {
+      throw new HttpsError('invalid-argument', 'userIds must be a non-empty array (max 100).');
+    }
+
+    const group = await getGroupDoc(groupId);
+    requireAdmin(group, uid);
+
+    const batch = db().batch();
+    const membersRef = db().collection('groups').doc(groupId).collection('members');
+    const groupRef = db().collection('groups').doc(groupId);
+
+    for (const memberUid of userIds) {
+      if (typeof memberUid !== 'string') continue;
+      batch.set(membersRef.doc(memberUid), {
+        uid: memberUid,
+        displayName: 'Member',
+        photoURL: '',
+        role: 'member',
+        addedBy: uid,
+        addedAt: Date.now(),
+      });
+    }
+    batch.update(groupRef, {
+      memberCount: admin.firestore.FieldValue.increment(userIds.length),
+      updatedAt: Date.now(),
+    });
+
+    await batch.commit();
+    return { success: true, added: userIds.length };
+  }
+);
+
+/* ══════════════════════════════════════════════════════════════
+   2. removeGroupMember — Admin or self-removal
+   ══════════════════════════════════════════════════════════════ */
+exports.removeGroupMember = onCall(
+  { region: 'us-central1' },
+  async (request) => {
+    const uid = validateAuth(request);
+    const { groupId, userId } = request.data || {};
+
+    if (!groupId || typeof groupId !== 'string') {
+      throw new HttpsError('invalid-argument', 'groupId is required.');
+    }
+    if (!userId || typeof userId !== 'string') {
+      throw new HttpsError('invalid-argument', 'userId is required.');
+    }
+
+    const group = await getGroupDoc(groupId);
+    const isSelf = uid === userId;
+    if (!isSelf) {
+      requireAdmin(group, uid);
+    }
+
+    const batch = db().batch();
+    batch.delete(db().collection('groups').doc(groupId).collection('members').doc(userId));
+    batch.update(db().collection('groups').doc(groupId), {
+      memberCount: admin.firestore.FieldValue.increment(-1),
+      updatedAt: Date.now(),
+    });
+
+    await batch.commit();
+    return { success: true };
+  }
+);
+
+/* ══════════════════════════════════════════════════════════════
+   3. promoteGroupAdmin — Creator only
+   ══════════════════════════════════════════════════════════════ */
+exports.promoteGroupAdmin = onCall(
+  { region: 'us-central1' },
+  async (request) => {
+    const uid = validateAuth(request);
+    const { groupId, userId } = request.data || {};
+
+    if (!groupId || typeof groupId !== 'string') {
+      throw new HttpsError('invalid-argument', 'groupId is required.');
+    }
+    if (!userId || typeof userId !== 'string') {
+      throw new HttpsError('invalid-argument', 'userId is required.');
+    }
+
+    const group = await getGroupDoc(groupId);
+    requireCreator(group, uid);
+
+    await db().collection('groups').doc(groupId).update({
+      admins: admin.firestore.FieldValue.arrayUnion(userId),
+      adminIds: admin.firestore.FieldValue.arrayUnion(userId),
+      updatedAt: Date.now(),
+    });
+
+    await db().collection('groups').doc(groupId).collection('members').doc(userId).update({
+      role: 'admin',
+    }).catch(() => {});
+
+    return { success: true };
+  }
+);
+
+/* ══════════════════════════════════════════════════════════════
+   4. demoteGroupAdmin — Creator only
+   ══════════════════════════════════════════════════════════════ */
+exports.demoteGroupAdmin = onCall(
+  { region: 'us-central1' },
+  async (request) => {
+    const uid = validateAuth(request);
+    const { groupId, userId } = request.data || {};
+
+    if (!groupId || typeof groupId !== 'string') {
+      throw new HttpsError('invalid-argument', 'groupId is required.');
+    }
+    if (!userId || typeof userId !== 'string') {
+      throw new HttpsError('invalid-argument', 'userId is required.');
+    }
+
+    const group = await getGroupDoc(groupId);
+    requireCreator(group, uid);
+
+    await db().collection('groups').doc(groupId).update({
+      admins: admin.firestore.FieldValue.arrayRemove(userId),
+      adminIds: admin.firestore.FieldValue.arrayRemove(userId),
+      updatedAt: Date.now(),
+    });
+
+    await db().collection('groups').doc(groupId).collection('members').doc(userId).update({
+      role: 'member',
+    }).catch(() => {});
+
+    return { success: true };
+  }
+);
+
+/* ══════════════════════════════════════════════════════════════
+   5. exitGroup — Any member (creator cannot exit)
+   ══════════════════════════════════════════════════════════════ */
+exports.exitGroup = onCall(
+  { region: 'us-central1' },
+  async (request) => {
+    const uid = validateAuth(request);
+    const { groupId } = request.data || {};
+
+    if (!groupId || typeof groupId !== 'string') {
+      throw new HttpsError('invalid-argument', 'groupId is required.');
+    }
+
+    const group = await getGroupDoc(groupId);
+    if (group.createdBy === uid || group.ownerId === uid) {
+      throw new HttpsError('failed-precondition', 'Group creator cannot exit. Transfer ownership or delete the group.');
+    }
+
+    const batch = db().batch();
+    batch.delete(db().collection('groups').doc(groupId).collection('members').doc(uid));
+    batch.update(db().collection('groups').doc(groupId), {
+      memberCount: admin.firestore.FieldValue.increment(-1),
+      updatedAt: Date.now(),
+    });
+
+    await batch.commit();
+    return { success: true };
+  }
+);
+
+/* ══════════════════════════════════════════════════════════════
+   6. deleteGroup — Creator only
+   ══════════════════════════════════════════════════════════════ */
+exports.deleteGroup = onCall(
+  { region: 'us-central1' },
+  async (request) => {
+    const uid = validateAuth(request);
+    const { groupId } = request.data || {};
+
+    if (!groupId || typeof groupId !== 'string') {
+      throw new HttpsError('invalid-argument', 'groupId is required.');
+    }
+
+    const group = await getGroupDoc(groupId);
+    requireCreator(group, uid);
+
+    const membersSnap = await db().collection('groups').doc(groupId).collection('members').get();
+    const batch = db().batch();
+    membersSnap.forEach(doc => batch.delete(doc.ref));
+    await batch.commit();
+
+    await db().collection('groups').doc(groupId).delete();
+    return { success: true };
+  }
+);

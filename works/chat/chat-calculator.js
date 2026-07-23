@@ -74,11 +74,71 @@
       const powered = sanitized.replace(/\^/g, '**');
 
       try {
-        const fn = new Function('"use strict"; return (' + powered + ')');
-        return fn();
+        return this._parseExpr(powered, { pos: 0 });
       } catch (_) {
         return null;
       }
+    },
+
+    // Recursive descent math parser (no eval/new Function needed)
+    _parseExpr(s, st) {
+      let val = this._parseTerm(s, st);
+      while (st.pos < s.length) {
+        const ch = s[st.pos];
+        if (ch === '+') { st.pos++; val += this._parseTerm(s, st); }
+        else if (ch === '-') { st.pos++; val -= this._parseTerm(s, st); }
+        else break;
+      }
+      return val;
+    },
+
+    _parseTerm(s, st) {
+      let val = this._parsePower(s, st);
+      while (st.pos < s.length) {
+        const ch = s[st.pos];
+        if (ch === '*') { st.pos++; val *= this._parsePower(s, st); }
+        else if (ch === '/') { st.pos++; val /= this._parsePower(s, st); }
+        else if (ch === '%') { st.pos++; val %= this._parsePower(s, st); }
+        else break;
+      }
+      return val;
+    },
+
+    _parsePower(s, st) {
+      let val = this._parseUnary(s, st);
+      this._skipWS(s, st);
+      if (st.pos + 1 < s.length && s[st.pos] === '*' && s[st.pos + 1] === '*') {
+        st.pos += 2;
+        val = Math.pow(val, this._parseUnary(s, st));
+      }
+      return val;
+    },
+
+    _parseUnary(s, st) {
+      this._skipWS(s, st);
+      if (st.pos < s.length && s[st.pos] === '-') { st.pos++; return -this._parseAtom(s, st); }
+      if (st.pos < s.length && s[st.pos] === '+') { st.pos++; }
+      return this._parseAtom(s, st);
+    },
+
+    _parseAtom(s, st) {
+      this._skipWS(s, st);
+      if (st.pos < s.length && s[st.pos] === '(') {
+        st.pos++;
+        const val = this._parseExpr(s, st);
+        this._skipWS(s, st);
+        if (st.pos < s.length && s[st.pos] === ')') st.pos++;
+        return val;
+      }
+      let numStr = '';
+      while (st.pos < s.length && /[0-9.eE]/.test(s[st.pos])) {
+        numStr += s[st.pos++];
+      }
+      return numStr ? Number(numStr) : NaN;
+    },
+
+    _skipWS(s, st) {
+      while (st.pos < s.length && /\s/.test(s[st.pos])) st.pos++;
     },
 
     _formatNumber(num) {

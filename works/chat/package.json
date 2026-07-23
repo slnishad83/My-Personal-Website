@@ -4,9 +4,13 @@
   "description": "NSL Chat — Modern team messaging",
   "main": "electron/main.js",
   "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
     "test": "node tests/run-all.js",
-    "lint": "eslint app.js www/app.js",
-    "lint:fix": "eslint --fix app.js www/app.js",
+    "lint": "eslint . --ignore-pattern 'node_modules' --ignore-pattern 'dist' --ignore-pattern 'www' --ignore-pattern 'functions' --ignore-pattern 'tests' --ignore-pattern 'scripts' --ignore-pattern 'android' --ignore-pattern 'ios' --ignore-pattern 'electron' --ignore-pattern '*.min.js' --ignore-pattern 'twemoji'",
+    "lint:fix": "eslint --fix . --ignore-pattern 'node_modules' --ignore-pattern 'dist' --ignore-pattern 'www' --ignore-pattern 'functions' --ignore-pattern 'tests' --ignore-pattern 'scripts' --ignore-pattern 'android' --ignore-pattern 'ios' --ignore-pattern 'electron' --ignore-pattern '*.min.js' --ignore-pattern 'twemoji'",
+    "a11y": "pa11y http://localhost:3000/works/chat/dist/login.html http://localhost:3000/works/chat/dist/index.html",
     "sync:www": "node sync-www.js",
     "sync:android": "node sync-www.js && cap sync android",
     "sync:ios": "node sync-www.js && cap sync ios",
@@ -46,6 +50,7 @@
     "electron": "^43.1.1",
     "electron-builder": "^26.15.3",
     "eslint": "^10.7.0",
+    "pa11y": "^9.1.1",
     "tailwindcss": "^4.3.3",
     "vite": "^8.1.5"
   }

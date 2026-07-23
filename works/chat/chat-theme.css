@@ -46,8 +46,8 @@ html, body, #app {
   white-space: nowrap !important;
   transition: all 0.15s ease !important;
   line-height: 1.2 !important;
-  min-height: 32px !important;
-  height: 32px !important;
+  min-height: 44px !important;
+  height: 44px !important;
   display: inline-flex !important;
   align-items: center !important;
   justify-content: center !important;
@@ -74,9 +74,9 @@ html, body, #app {
   display: inline-flex !important;
   align-items: center !important;
   justify-content: center !important;
-  width: 32px !important;
-  height: 32px !important;
-  min-height: 32px !important;
+  width: 44px !important;
+  height: 44px !important;
+  min-height: 44px !important;
   cursor: pointer !important;
   transition: all 0.15s ease !important;
 }
@@ -146,13 +146,13 @@ html:not(.dark) .wa-chips-scroll::-webkit-scrollbar-thumb {
   border-radius: 999px !important;
 }
 #wa-filter-chips .wa-chip,
-#wa-filter-chips .wa-chip-add,
+#wi-filter-chips .wa-chip-add,
 .wa-filter-manage-btn {
   border: 0 !important;
   outline: none !important;
   flex: 0 0 auto !important;
-  min-height: 34px !important;
-  height: 34px !important;
+  min-height: 44px !important;
+  height: 44px !important;
   border-radius: 999px !important;
   display: inline-flex !important;
   align-items: center !important;
@@ -398,8 +398,8 @@ html:not(.dark) .wa-filter-overflow-menu {
 }
 .wa-filter-sheet-close,
 .wa-filter-row-actions button {
-  width: 34px;
-  height: 34px;
+  width: 44px;
+  height: 44px;
   border: 0;
   border-radius: 999px;
   display: inline-flex;
@@ -481,7 +481,7 @@ html:not(.dark) .wa-filter-overflow-menu {
   gap: 8px;
 }
 .wa-filter-add-pill {
-  min-height: 34px;
+  min-height: 44px;
   border: 0;
   border-radius: 999px;
   padding: 0 12px;
@@ -515,7 +515,7 @@ html:not(.dark) .wa-filter-overflow-menu {
 .wa-filter-custom button,
 .wa-filter-primary,
 .wa-filter-secondary {
-  min-height: 38px;
+  min-height: 44px;
   border: 0;
   border-radius: 999px;
   padding: 0 16px;
@@ -1059,7 +1059,7 @@ html.dark #call-screen {
 .voice-time {
   font-size: 11px;
   color: var(--on-surface-variant);
-  min-width: 30px;
+  min-width: 44px;
   text-align: right;
   flex-shrink: 0;
   font-variant-numeric: tabular-nums;
@@ -1753,7 +1753,8 @@ html.light #theme-color-meta { content: ""; }
 }
 
 #msg-input:focus-visible {
-  outline: none !important;
+  outline: 2px solid var(--primary) !important;
+  outline-offset: -2px !important;
   border-color: var(--primary) !important;
   box-shadow: 0 0 0 2px var(--primary-fixed) !important;
 }
@@ -2320,7 +2321,7 @@ html:not(.dark) #desktop-context-menu,
 
 /* ── Chat input bar: always rows, never wraps ─────────────────── */
 #input-bar .flex { flex-wrap: nowrap !important; }
-#input-bar button { flex-shrink: 0 !important; min-width: 36px; }
+#input-bar button { flex-shrink: 0 !important; min-width: 44px; }
 
 /* ── Prevent overflow on header actions ───────────────────────── */
 #chat-header { overflow: hidden !important; min-width: 0 !important; }

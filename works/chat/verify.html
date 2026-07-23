@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content" />
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self' https: blob: data: 'unsafe-inline' 'unsafe-eval'; script-src 'self' https://www.gstatic.com 'unsafe-inline' 'unsafe-eval'; style-src 'self' https://fonts.googleapis.com 'unsafe-inline'; img-src 'self' https: blob: data:; font-src 'self' https://fonts.gstatic.com; connect-src 'self' https://*.googleapis.com https://*.firebaseio.com https://*.firebaseapp.com wss://*.firebaseio.com; frame-ancestors 'self'; form-action 'self';">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self' https: blob: data: 'unsafe-inline'; script-src 'self' https://www.gstatic.com 'unsafe-inline'; style-src 'self' https://fonts.googleapis.com 'unsafe-inline'; img-src 'self' https: blob: data:; font-src 'self' https://fonts.gstatic.com; connect-src 'self' https://*.googleapis.com https://*.firebaseio.com https://*.firebaseapp.com wss://*.firebaseio.com; frame-ancestors 'self'; form-action 'self';">
     <title>Email Verification - NSL Chat</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -231,71 +231,6 @@
     <script src="firebase-config.js"></script>
     <script src="https://www.gstatic.com/firebasejs/12.16.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/12.16.0/firebase-auth-compat.js"></script>
-    <script>
-      (function() {
-        var dmBtn = document.getElementById('dmToggle');
-        dmBtn.addEventListener('click', function() {
-          var cur = document.documentElement.dataset.theme || 'light';
-          var next = cur === 'dark' ? 'light' : 'dark';
-          document.documentElement.className = next;
-          document.documentElement.dataset.theme = next;
-          document.documentElement.style.colorScheme = next === 'dark' ? 'dark' : 'light';
-          document.body.classList.toggle('dark', next === 'dark');
-          document.body.classList.toggle('light', next !== 'dark');
-          try { localStorage.setItem('themeMode', next); } catch(e) {}
-        });
-      })();
-    </script>
-    <script>
-      const firebaseConfig = window.FIREBASE_CONFIG;
-
-      firebase.initializeApp(firebaseConfig);
-
-      const params = new URLSearchParams(window.location.search);
-      const mode = params.get("mode");
-      const code = params.get("oobCode");
-      const title = document.getElementById("title");
-      const message = document.getElementById("message");
-      const statusMark = document.getElementById("statusMark");
-      const spinnerWrap = document.getElementById("spinnerWrap");
-      const actionBtn = document.getElementById("actionBtn");
-
-      function showResult(type, text) {
-        spinnerWrap.style.display = 'none';
-        statusMark.style.display = 'flex';
-        title.textContent = type === 'success' ? 'Email verified successfully' : 'Verification link could not be used';
-        message.textContent = text;
-        statusMark.innerHTML = type === 'success' ? '&#10003;' : '!';
-        statusMark.classList.toggle('error', type === 'error');
-        actionBtn.style.display = 'inline-flex';
-        actionBtn.textContent = '';
-        actionBtn.innerHTML = type === 'success'
-          ? 'Go to Login <span class="material-symbols-outlined">arrow_forward</span>'
-          : 'Back to Login <span class="material-symbols-outlined">arrow_back</span>';
-        actionBtn.href = 'login.html';
-        actionBtn.focus({ preventScroll: false });
-      }
-
-      async function verifyEmail() {
-        if (!code) {
-          showResult('success', 'You can now log in to use NSL Chat.');
-          return;
-        }
-
-        if (mode && mode !== "verifyEmail") {
-          showResult('error', 'This link is not an email verification link. Please use the latest verification email from NSL Chat.');
-          return;
-        }
-
-        try {
-          await firebase.auth().applyActionCode(code);
-          showResult('success', 'You can now log in to use NSL Chat.');
-        } catch (error) {
-          showResult('error', 'This verification link is invalid or already used. Try logging in, or request a new verification email.');
-        }
-      }
-
-      verifyEmail();
-    </script>
+    <script type="module" src="app-verify.js"></script>
   </body>
 </html>

@@ -115,8 +115,8 @@
       '<p class="text-on-surface-variant text-xs">' + typeLabel + ' Call · Waiting…</p>' +
       '</div>' +
       '<div class="flex items-center gap-2">' +
-      '<button id="cw-decline" class="w-9 h-9 rounded-full bg-red-500 flex items-center justify-center hover:bg-red-600 transition-colors" title="Decline"><span class="material-symbols-outlined text-white" style="font-size:18px">call_end</span></button>' +
-      '<button id="cw-switch" class="w-9 h-9 rounded-full bg-green-500 flex items-center justify-center hover:bg-green-600 transition-colors" title="Switch call"><span class="material-symbols-outlined text-white" style="font-size:18px">swap_horiz</span></button>' +
+      '<button id="cw-decline" class="min-w-[44px] min-h-[44px] rounded-full bg-red-500 flex items-center justify-center hover:bg-red-600 transition-colors" title="Decline"><span class="material-symbols-outlined text-white" style="font-size:18px">call_end</span></button>' +
+      '<button id="cw-switch" class="min-w-[44px] min-h-[44px] rounded-full bg-green-500 flex items-center justify-center hover:bg-green-600 transition-colors" title="Switch call"><span class="material-symbols-outlined text-white" style="font-size:18px">swap_horiz</span></button>' +
       '</div></div>';
     document.body.insertAdjacentHTML('beforeend', html);
     var declineBtn = CC.$('cw-decline');

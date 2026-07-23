@@ -12,7 +12,6 @@ const admin = new Proxy({}, {
 });
 
 const CHAT_APP_URL = 'https://nishadsl.com/works/chat/';
-const ADMIN_EMAIL = 'sl.nishad@gmail.com';
 
 async function syncGroupAccessMetadata(groupId) {
   if (!groupId) return;
@@ -117,51 +116,54 @@ exports.cleanupMessageAttachment = onDocumentDeleted(
 );
 
 exports.weeklyOrphanedUploadCleanup = onSchedule(
-  { schedule: '0 2 * * 0', timeZone: 'UTC', region: 'us-central1' },
+  { schedule: '0 2 * * 0', timeZone: 'UTC', region: 'us-central1', timeoutSeconds: 540 },
   async () => {
     const bucket = admin.storage().bucket();
     const db = admin.firestore();
-    const cutoffMs = Date.now() - 7 * 24 * 60 * 60 * 1000; // 7 days ago
+    const cutoffMs = Date.now() - 7 * 24 * 60 * 60 * 1000;
+    const MAX_FILES_PER_RUN = 500;
 
     const [files] = await bucket.getFiles({ prefix: 'chat_uploads/' });
 
     let deleted = 0;
     let skipped = 0;
+    let processed = 0;
 
     for (const file of files) {
+      if (processed >= MAX_FILES_PER_RUN) {
+        console.log(`[weeklyCleanup] Hit per-run limit of ${MAX_FILES_PER_RUN} files. Continuing next week.`);
+        break;
+      }
+
       const meta = file.metadata;
       const updatedMs = meta.updated ? new Date(meta.updated).getTime() : 0;
 
-      // Only consider files older than 7 days
-      if (updatedMs > cutoffMs) { skipped++; continue; }
+      if (updatedMs > cutoffMs) { skipped++; processed++; continue; }
 
-      // Build the public download URL to check against Firestore
       const encodedPath = encodeURIComponent(file.name).replace(/%2F/g, '%2F');
-      const bucketName = bucket.name;
-      const urlPattern = `https://firebasestorage.googleapis.com/v0/b/${bucketName}/o/${encodedPath}`;
+      const urlPattern = `https://firebasestorage.googleapis.com/v0/b/${bucket.name}/o/${encodedPath}`;
 
-      // Check if any message still references this file
       const refs = await db.collection('messages')
         .where('attachment.url', '>=', urlPattern)
         .where('attachment.url', '<', urlPattern + '\uf8ff')
         .limit(1)
         .get();
 
-      if (!refs.empty) { skipped++; continue; }
+      if (!refs.empty) { skipped++; processed++; continue; }
 
-      // Also check getDownloadURL style URLs (alt=media suffix)
       const refsAlt = await db.collection('messages')
-        .where('attachment.url', '>=', 'https://firebasestorage.googleapis.com')
-        .limit(1)
+        .where('attachment.url', '>=', 'https://firebasestorage.googleapis.com/v0/b/')
+        .where('attachment.url', '<', 'https://firebasestorage.googleapis.com/v0/b/\uf8ff')
+        .limit(20)
         .get();
 
-      // For safety, do a simple string search across results
+      const fileName = file.name;
       const stillUsed = refsAlt.docs.some((doc) => {
         const u = doc.data()?.attachment?.url || '';
-        return u.includes(encodeURIComponent(file.name));
+        return u.includes(fileName);
       });
 
-      if (stillUsed) { skipped++; continue; }
+      if (stillUsed) { skipped++; processed++; continue; }
 
       try {
         await file.delete();
@@ -170,9 +172,10 @@ exports.weeklyOrphanedUploadCleanup = onSchedule(
       } catch (err) {
         console.warn('[weeklyCleanup] Failed to delete:', file.name, err.message);
       }
+      processed++;
     }
 
-    console.log(`[weeklyCleanup] Done. Deleted: ${deleted}, Skipped/active: ${skipped}`);
+    console.log(`[weeklyCleanup] Done. Deleted: ${deleted}, Skipped/active: ${skipped}, Processed: ${processed}/${files.length}`);
     return null;
   }
 );
@@ -185,9 +188,8 @@ exports.runMigrationOnTrigger = onDocumentCreated(
     const createdBy = trigger.createdBy;
     if (!createdBy) { console.warn('Migration trigger missing createdBy — skipping'); return null; }
     try {
-      const creatorSnap = await admin.firestore().collection('users').doc(createdBy).get();
-      const creator = creatorSnap.data();
-      if (!creator || creator.email !== ADMIN_EMAIL) {
+      const creatorUser = await admin.auth().getUser(createdBy);
+      if (!creatorUser.customClaims || !creatorUser.customClaims.admin) {
         console.warn('Migration trigger by non-admin:', createdBy, '— skipping');
         return null;
       }

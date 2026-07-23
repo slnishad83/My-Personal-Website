@@ -2,8 +2,23 @@
 
 const crypto = require("crypto");
 const { onCall, HttpsError } = require("firebase-functions/v2/https");
-const { getDb, getAdmin } = require("./admin");
-const { requireAuth } = require("./helpers");
+
+const _adminModule = require("firebase-admin");
+const admin = new Proxy({}, {
+  get(_target, prop) {
+    if (!_adminModule.getApps().length) {
+      _adminModule.initializeApp();
+    }
+    return _adminModule[prop];
+  }
+});
+
+function requireAuth(request) {
+  if (!request.auth) {
+    throw new HttpsError("unauthenticated", "Must be signed in.");
+  }
+  return request.auth.uid;
+}
 
 function hashPinServer(pin, salt) {
   return new Promise((resolve, reject) => {
@@ -15,10 +30,10 @@ function hashPinServer(pin, salt) {
 }
 
 function timingSafeEqual(a, b) {
-  if (typeof a !== 'string' || typeof b !== 'string') return false;
+  if (typeof a !== "string" || typeof b !== "string") return false;
   if (a.length !== b.length) return false;
-  const bufA = Buffer.from(a, 'utf8');
-  const bufB = Buffer.from(b, 'utf8');
+  const bufA = Buffer.from(a, "utf8");
+  const bufB = Buffer.from(b, "utf8");
   return crypto.timingSafeEqual(bufA, bufB);
 }
 
@@ -26,8 +41,19 @@ const _pinRateLimit = new Map();
 const _pinFailures = new Map();
 const PIN_WINDOW = 60 * 1000;
 const PIN_MAX = 5;
-const LOCKOUT_BASE = 5 * 60 * 1000; // 5 minutes base
-const LOCKOUT_MAX = 60 * 60 * 1000; // 1 hour max
+const LOCKOUT_BASE = 5 * 60 * 1000;
+const LOCKOUT_MAX = 60 * 60 * 1000;
+
+// Cleanup expired entries every 5 minutes to prevent memory leaks
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, entry] of _pinRateLimit) {
+    if (now - entry.start > PIN_WINDOW * 2) _pinRateLimit.delete(key);
+  }
+  for (const [key, entry] of _pinFailures) {
+    if (now - entry.lastFail > LOCKOUT_MAX * 2) _pinFailures.delete(key);
+  }
+}, 300000);
 
 function getLockoutDuration(failures) {
   const level = Math.min(failures - PIN_MAX, 5);
@@ -37,8 +63,6 @@ function getLockoutDuration(failures) {
 function checkPinRateLimit(uid, action) {
   const key = `${uid}:${action}`;
   const now = Date.now();
-
-  // Check lockout
   const failKey = `${uid}:failures`;
   const failEntry = _pinFailures.get(failKey);
   if (failEntry && failEntry.count >= PIN_MAX) {
@@ -46,10 +70,8 @@ function checkPinRateLimit(uid, action) {
     if (now - failEntry.lastFail < lockoutDuration) {
       return false;
     }
-    // Lockout expired, reset
     _pinFailures.delete(failKey);
   }
-
   const entry = _pinRateLimit.get(key);
   if (entry && now - entry.start < PIN_WINDOW && entry.count >= 10) return false;
   if (!entry || now - entry.start >= PIN_WINDOW) _pinRateLimit.set(key, { start: now, count: 1 });
@@ -76,11 +98,11 @@ function clearPinFailures(uid) {
 exports.setChatPin = onCall({ region: "us-central1", memory: "128MiB" }, async (request) => {
   const uid = requireAuth(request);
   if (!checkPinRateLimit(uid, "set")) throw new HttpsError("resource-exhausted", "Too many attempts. Wait a minute.");
-  const { pin, oldPin } = request.data;
+  const { pin, oldPin } = request.data || {};
   if (!pin || typeof pin !== "string" || pin.length < 4 || pin.length > 8 || !/^\d+$/.test(pin))
     throw new HttpsError("invalid-argument", "PIN must be 4-8 digits");
 
-  const db = getDb();
+  const db = admin.firestore();
   const userDoc = await db.collection("users").doc(uid).get();
   const userData = userDoc.data() || {};
   if (userData.pinSalt && userData.pinHash) {
@@ -99,10 +121,10 @@ exports.setChatPin = onCall({ region: "us-central1", memory: "128MiB" }, async (
 exports.verifyChatPin = onCall({ region: "us-central1", memory: "128MiB" }, async (request) => {
   const uid = requireAuth(request);
   if (!checkPinRateLimit(uid, "verify")) throw new HttpsError("resource-exhausted", "Too many attempts. Wait a minute.");
-  const { pin } = request.data;
+  const { pin } = request.data || {};
   if (!pin || typeof pin !== "string") throw new HttpsError("invalid-argument", "Missing PIN");
 
-  const db = getDb();
+  const db = admin.firestore();
   const userDoc = await db.collection("users").doc(uid).get();
   const userData = userDoc.data() || {};
 
@@ -122,8 +144,8 @@ exports.verifyChatPin = onCall({ region: "us-central1", memory: "128MiB" }, asyn
 exports.resetChatPin = onCall({ region: "us-central1", memory: "128MiB" }, async (request) => {
   const uid = requireAuth(request);
   if (!checkPinRateLimit(uid, "reset")) throw new HttpsError("resource-exhausted", "Too many attempts. Wait a minute.");
-  const { oldPin } = request.data;
-  const db = getDb();
+  const { oldPin } = request.data || {};
+  const db = admin.firestore();
   const userDoc = await db.collection("users").doc(uid).get();
   const userData = userDoc.data() || {};
   if (userData.pinSalt && userData.pinHash) {
@@ -132,7 +154,7 @@ exports.resetChatPin = onCall({ region: "us-central1", memory: "128MiB" }, async
     if (!timingSafeEqual(oldHash, userData.pinHash)) throw new HttpsError("permission-denied", "Incorrect current PIN");
   }
   await db.collection("users").doc(uid).set(
-    { pinSalt: getAdmin().firestore.FieldValue.delete(), pinHash: getAdmin().firestore.FieldValue.delete(), pinResetAt: Date.now() },
+    { pinSalt: admin.firestore.FieldValue.delete(), pinHash: admin.firestore.FieldValue.delete(), pinResetAt: Date.now() },
     { merge: true }
   );
   clearPinFailures(uid);
@@ -142,11 +164,11 @@ exports.resetChatPin = onCall({ region: "us-central1", memory: "128MiB" }, async
 exports.setTwoFactorPin = onCall({ region: "us-central1", memory: "128MiB" }, async (request) => {
   const uid = requireAuth(request);
   if (!checkPinRateLimit(uid, "2fa-set")) throw new HttpsError("resource-exhausted", "Too many attempts. Wait a minute.");
-  const { pin, oldPin } = request.data;
+  const { pin, oldPin } = request.data || {};
   if (!pin || typeof pin !== "string" || pin.length < 4 || pin.length > 8 || !/^\d+$/.test(pin))
     throw new HttpsError("invalid-argument", "PIN must be 4-8 digits");
 
-  const db = getDb();
+  const db = admin.firestore();
   const userDoc = await db.collection("users").doc(uid).get();
   const userData = userDoc.data() || {};
   if (userData.twofaPinHash && userData.twofaPinSalt) {
@@ -165,10 +187,10 @@ exports.setTwoFactorPin = onCall({ region: "us-central1", memory: "128MiB" }, as
 exports.verifyTwoFactorPin = onCall({ region: "us-central1", memory: "128MiB" }, async (request) => {
   const uid = requireAuth(request);
   if (!checkPinRateLimit(uid, "2fa-verify")) throw new HttpsError("resource-exhausted", "Too many attempts. Wait a minute.");
-  const { pin } = request.data;
+  const { pin } = request.data || {};
   if (!pin || typeof pin !== "string") throw new HttpsError("invalid-argument", "Missing PIN");
 
-  const db = getDb();
+  const db = admin.firestore();
   const userDoc = await db.collection("users").doc(uid).get();
   const userData = userDoc.data() || {};
 
@@ -188,8 +210,8 @@ exports.verifyTwoFactorPin = onCall({ region: "us-central1", memory: "128MiB" },
 exports.resetTwoFactorPin = onCall({ region: "us-central1", memory: "128MiB" }, async (request) => {
   const uid = requireAuth(request);
   if (!checkPinRateLimit(uid, "2fa-reset")) throw new HttpsError("resource-exhausted", "Too many attempts. Wait a minute.");
-  const { oldPin } = request.data;
-  const db = getDb();
+  const { oldPin } = request.data || {};
+  const db = admin.firestore();
   const userDoc = await db.collection("users").doc(uid).get();
   const userData = userDoc.data() || {};
   if (userData.twofaPinHash && userData.twofaPinSalt) {
@@ -199,8 +221,8 @@ exports.resetTwoFactorPin = onCall({ region: "us-central1", memory: "128MiB" }, 
   }
   await db.collection("users").doc(uid).set(
     {
-      twofaPinSalt: getAdmin().firestore.FieldValue.delete(),
-      twofaPinHash: getAdmin().firestore.FieldValue.delete(),
+      twofaPinSalt: admin.firestore.FieldValue.delete(),
+      twofaPinHash: admin.firestore.FieldValue.delete(),
       twofaEnabled: false,
       twofaResetAt: Date.now()
     },

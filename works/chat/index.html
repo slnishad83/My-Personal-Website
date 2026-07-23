@@ -42,8 +42,7 @@
   <link rel="dns-prefetch" href="https://asia-south1-my-team-chat-2255.cloudfunctions.net">
   <link rel="dns-prefetch" href="https://my-team-chat-2255.firebaseio.com">
 
-  <!-- Tailwind CSS (Vite-compiled) -->
-  <link rel="stylesheet" href="dist/assets/app.css">
+  <!-- CSS is imported via app-index.js and processed by Vite -->
 
   <!-- Google Fonts (font-display: swap for performance) — loaded asynchronously -->
   <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
@@ -74,15 +73,9 @@
     .material-symbols-outlined, .material-symbols-rounded { font-display: swap; }
   </style>
 
-  <!-- Consolidated stylesheets (all loaded via src/styles/main.css → dist/assets/app.css) -->
-  <link rel="stylesheet" href="chat.css">
-  <link rel="stylesheet" href="accessibility.css">
+  <!-- CSS is imported via app-index.js and processed by Vite -->
 
-  <script src="notification-sounds.js" defer></script>
-  <script src="twemoji/twemoji.min.js" defer></script>
-  <script src="emoji-renderer.js" defer></script>
-  <!-- Tailwind config now lives in vite.config.js; kept as runtime fallback for non-Vite dev -->
-  <script src="tailwind-config.js" defer></script>
+  <!-- notification-sounds, twemoji, emoji-renderer, tailwind-config loaded via app-index.js -->
 
 </head>
 <body class="w-full h-full flex overflow-hidden antialiased bg-surface-container-low transition-colors duration-300">
@@ -104,14 +97,14 @@
   <div class="fixed top-6 right-6 z-[999] flex flex-col gap-2 max-sm:left-4 max-sm:right-4 max-sm:top-4 max-sm:items-center" id="toast-container" aria-live="polite" role="status" aria-atomic="false"></div>
 
   <!-- Skip to content link for keyboard users (created by A11y module) -->
-  <a href="#chat-list" id="skip-nav" class="sr-only" style="position:fixed;top:-100px;left:8px;z-index:99999;padding:12px 24px;background:var(--primary);color:var(--on-primary);border-radius:0 0 12px 12px;font-weight:700;font-size:14px;text-decoration:none;transition:top 0.2s;" onfocus="this.style.top='0'" onblur="this.style.top='-100px'" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();const t=document.getElementById('chat-list')||document.getElementById('msg-input');if(t){t.focus();t.scrollIntoView({behavior:'smooth',block:'start'});this.style.top='-100px';}}">Skip to chat list</a>
+  <a href="#chat-list" id="skip-nav" class="sr-only skip-nav-link" aria-label="Skip to chat list">Skip to chat list</a>
   <!-- ═══════════════════════════════════
        MAIN APP CONTAINER (Supports device framing simulation)
        ═══════════════════════════════════ -->
   <div id="app" class="hidden w-full h-full flex relative bg-background transition-all duration-300">
 
     <!-- 💡 COLUMN 1: SIDE NAVBAR NAVIGATION (Global desktop/tablet view) -->
-    <aside id="sidebar" role="navigation" aria-label="Primary navigation" class="hidden md:flex flex-col h-full w-20 xl:w-64 bg-surface-container-low border-r border-outline-variant/30 sticky left-0 top-0 z-40 transition-all duration-300">
+    <nav id="sidebar" aria-label="Primary navigation" class="hidden lg:flex flex-col h-full w-20 xl:w-64 bg-surface-container-low border-r border-outline-variant/30 sticky left-0 top-0 z-40 transition-all duration-300">
       <!-- Brand Info -->
       <div class="p-6 flex items-center gap-3">
         <div class="w-10 h-10 rounded-xl bg-primary-fixed flex items-center justify-center text-on-primary shadow-lg shadow-primary-fixed/20">
@@ -146,7 +139,7 @@
       <!-- Bottom Actions in Navigation -->
       <div class="p-4 mt-auto border-t border-outline-variant/30 space-y-4">
         <!-- H2: Sidebar expand toggle (shown on tablet only) -->
-        <button class="hidden md:flex xl:hidden w-full items-center gap-4 text-on-surface-variant hover:text-on-surface transition-colors duration-200 px-4 py-2 cursor-pointer min-h-[44px]" id="sidebar-toggle-btn" aria-label="Expand sidebar" aria-expanded="false" data-action="toggleSidebarExpand">
+        <button class="hidden lg:flex xl:hidden w-full items-center gap-4 text-on-surface-variant hover:text-on-surface transition-colors duration-200 px-4 py-2 cursor-pointer min-h-[44px]" id="sidebar-toggle-btn" aria-label="Expand sidebar" aria-expanded="false" data-action="toggleSidebarExpand">
           <span class="material-symbols-outlined" id="sidebar-toggle-icon">menu_open</span>
           <span class="hidden xl:block font-body-md text-body-md">Collapse</span>
         </button>
@@ -182,7 +175,7 @@
           </div>
         </div>
       </div>
-    </aside>
+    </nav>
 
     <!-- 💡 COLUMN 2: CONVERSATION LIST (Flexible pane) -->
     <aside id="chat-list-sidebar" role="complementary" aria-label="Conversations list" class="w-full md:w-80 lg:w-96 h-full flex flex-col bg-surface-container-lowest border-r border-outline-variant/30 flex-shrink-0 transition-all duration-300">
@@ -261,7 +254,7 @@
       <header id="chat-header" class="hidden flex justify-between items-center px-4 md:px-6 h-14 md:h-16 w-full sticky top-0 bg-background/80 backdrop-blur-xl border-b border-outline-variant/20 z-30">
         <div class="flex items-center gap-3 min-w-0 flex-1">
           <!-- Back button on mobile -->
-          <button class="md:hidden text-on-surface-variant hover:text-on-surface active:scale-90 transition-all p-1.5 -ml-1 rounded-full" data-action="backToList" aria-label="Back">
+          <button class="lg:hidden text-on-surface-variant hover:text-on-surface active:scale-90 transition-all p-1.5 -ml-1 rounded-full" data-action="backToList" aria-label="Back">
             <span class="material-symbols-outlined" style="font-size:22px">arrow_back</span>
           </button>
 
@@ -290,7 +283,7 @@
           <button class="text-on-surface-variant/70 hover:text-on-surface transition-all p-2.5 rounded-full hover:bg-surface-variant/50 active:scale-90 min-w-[44px] min-h-[44px] flex items-center justify-center" data-action="openChatSearch" title="Search chat" aria-label="Search messages">
             <span class="material-symbols-outlined" style="font-size:20px">search</span>
           </button>
-          <button class="text-on-surface-variant/70 hover:text-on-surface transition-all p-2.5 rounded-full hover:bg-surface-variant/50 active:scale-90 min-w-[44px] min-h-[44px] flex items-center justify-center" onclick="(App._mutedChats?.has(App.currentChat?.id) ? toggleMuteChat : showMuteChatOptions)(App.currentChat?.id)" id="btn-chat-mute" title="Toggle mute" aria-label="Toggle notification mute">
+          <button class="text-on-surface-variant/70 hover:text-on-surface transition-all p-2.5 rounded-full hover:bg-surface-variant/50 active:scale-90 min-w-[44px] min-h-[44px] flex items-center justify-center" data-action="toggleChatMute" id="btn-chat-mute" title="Toggle mute" aria-label="Toggle notification mute">
             <span class="material-symbols-outlined" style="font-size:20px" id="chat-mute-icon">notifications</span>
           </button>
           <button class="text-on-surface-variant/70 hover:text-on-surface transition-all p-2.5 rounded-full hover:bg-surface-variant/50 active:scale-90 min-w-[44px] min-h-[44px] flex items-center justify-center" data-action="openChatMenu" id="btn-chat-menu" title="More options" aria-label="More options">
@@ -309,13 +302,13 @@
           </div>
         </div>
         <div class="flex items-center gap-1.5 flex-shrink-0">
-          <button class="p-1 hover:bg-surface-variant/40 rounded-full text-on-surface-variant transition-colors flex items-center justify-center cursor-pointer" data-action="openPinnedMessagesPanel" title="View all pinned" aria-label="View all pinned messages">
+          <button class="min-w-[44px] min-h-[44px] flex items-center justify-center hover:bg-surface-variant/40 rounded-full text-on-surface-variant transition-colors cursor-pointer" data-action="openPinnedMessagesPanel" title="View all pinned" aria-label="View all pinned messages">
             <span class="material-symbols-outlined text-base">list</span>
           </button>
-          <button class="p-1 hover:bg-surface-variant/40 rounded-full text-on-surface-variant transition-colors flex items-center justify-center cursor-pointer" data-action="scrollToPinnedMessage" title="Go to Message" aria-label="Go to pinned message">
+          <button class="min-w-[44px] min-h-[44px] flex items-center justify-center hover:bg-surface-variant/40 rounded-full text-on-surface-variant transition-colors cursor-pointer" data-action="scrollToPinnedMessage" title="Go to Message" aria-label="Go to pinned message">
             <span class="material-symbols-outlined text-base">arrow_forward</span>
           </button>
-          <button class="p-1 hover:bg-red-500/10 hover:text-red-400 rounded-full text-on-surface-variant transition-colors flex items-center justify-center cursor-pointer" data-action="unpinCurrentMessage" title="Unpin message" aria-label="Unpin message">
+          <button class="min-w-[44px] min-h-[44px] flex items-center justify-center hover:bg-red-500/10 hover:text-red-400 rounded-full text-on-surface-variant transition-colors cursor-pointer" data-action="unpinCurrentMessage" title="Unpin message" aria-label="Unpin message">
             <span class="material-symbols-outlined text-base">close</span>
           </button>
         </div>
@@ -397,12 +390,12 @@
 
       <!-- Formatting panel -->
       <div class="bg-surface-container border-t border-outline-variant/20 px-6 py-2 flex items-center gap-3 hidden" id="format-bar">
-        <button class="text-xs font-bold px-2 py-1 rounded bg-surface-variant hover:bg-surface-container-highest text-on-surface" data-action="formatText" data-action-arg="bold" aria-label="Bold">B</button>
-        <button class="text-xs italic px-2 py-1 rounded bg-surface-variant hover:bg-surface-container-highest text-on-surface" data-action="formatText" data-action-arg="italic" aria-label="Italic">I</button>
-        <button class="text-xs line-through px-2 py-1 rounded bg-surface-variant hover:bg-surface-container-highest text-on-surface" data-action="formatText" data-action-arg="strike" aria-label="Strikethrough">S</button>
-        <button class="text-xs font-mono px-2 py-1 rounded bg-surface-variant hover:bg-surface-container-highest text-on-surface" data-action="formatText" data-action-arg="code" aria-label="Code">Code</button>
+        <button class="text-xs font-bold min-w-[44px] min-h-[44px] flex items-center justify-center rounded bg-surface-variant hover:bg-surface-container-highest text-on-surface" data-action="formatText" data-action-arg="bold" aria-label="Bold">B</button>
+        <button class="text-xs italic min-w-[44px] min-h-[44px] flex items-center justify-center rounded bg-surface-variant hover:bg-surface-container-highest text-on-surface" data-action="formatText" data-action-arg="italic" aria-label="Italic">I</button>
+        <button class="text-xs line-through min-w-[44px] min-h-[44px] flex items-center justify-center rounded bg-surface-variant hover:bg-surface-container-highest text-on-surface" data-action="formatText" data-action-arg="strike" aria-label="Strikethrough">S</button>
+        <button class="text-xs font-mono min-w-[44px] min-h-[44px] flex items-center justify-center rounded bg-surface-variant hover:bg-surface-container-highest text-on-surface" data-action="formatText" data-action-arg="code" aria-label="Code">Code</button>
         <div class="flex-1"></div>
-        <button class="text-on-surface-variant hover:text-on-surface" data-action="hideFormatBar" aria-label="Close formatting bar"><span class="material-symbols-outlined text-sm">close</span></button>
+        <button class="min-w-[44px] min-h-[44px] flex items-center justify-center text-on-surface-variant hover:text-on-surface" data-action="hideFormatBar" aria-label="Close formatting bar"><span class="material-symbols-outlined text-sm">close</span></button>
       </div>
 
       <!-- Voice recorder container panel -->
@@ -415,7 +408,7 @@
         <div class="flex-1 flex items-end gap-0.5 h-8 justify-center overflow-hidden max-w-sm" id="recording-waveform">
         </div>
         <div class="flex gap-2 items-center">
-          <button class="w-9 h-9 flex items-center justify-center rounded-full border border-outline-variant hover:bg-surface-variant transition-colors" id="rec-pause-btn" data-action="togglePauseRecording" title="Pause/Resume" aria-label="Pause or resume recording">
+          <button class="w-11 h-11 flex items-center justify-center rounded-full border border-outline-variant hover:bg-surface-variant transition-colors" id="rec-pause-btn" data-action="togglePauseRecording" title="Pause/Resume" aria-label="Pause or resume recording">
             <span class="material-symbols-outlined text-sm" id="rec-pause-icon">pause</span>
           </button>
           <button class="px-4 py-2 border border-outline-variant rounded-xl text-xs font-bold text-on-surface hover:bg-surface-variant transition-colors" data-action="cancelRecording">Cancel</button>
@@ -532,16 +525,16 @@
           </div>
         </div>
         <div class="flex items-center px-2 pb-1.5 border-b border-outline-variant/10 overflow-x-auto gap-0.5 scrollbar-hide">
-          <button class="emoji-cat-btn active flex-shrink-0 w-9 h-9 flex items-center justify-center rounded-full text-base bg-primary/10 transition-colors" data-action="setEmojiCat" data-action-arg="recent" title="Recent"><span class="material-symbols-outlined text-[18px] text-primary">schedule</span></button>
-          <button class="emoji-cat-btn flex-shrink-0 w-9 h-9 flex items-center justify-center rounded-full text-base transition-colors hover:bg-surface-variant/40" data-action="setEmojiCat" data-action-arg="smileys" title="Smileys & Emotion">😊</button>
-          <button class="emoji-cat-btn flex-shrink-0 w-9 h-9 flex items-center justify-center rounded-full text-base transition-colors hover:bg-surface-variant/40" data-action="setEmojiCat" data-action-arg="people" title="People & Body">👋</button>
-          <button class="emoji-cat-btn flex-shrink-0 w-9 h-9 flex items-center justify-center rounded-full text-base transition-colors hover:bg-surface-variant/40" data-action="setEmojiCat" data-action-arg="nature" title="Animals & Nature">🌿</button>
-          <button class="emoji-cat-btn flex-shrink-0 w-9 h-9 flex items-center justify-center rounded-full text-base transition-colors hover:bg-surface-variant/40" data-action="setEmojiCat" data-action-arg="food" title="Food & Drink">🍕</button>
-          <button class="emoji-cat-btn flex-shrink-0 w-9 h-9 flex items-center justify-center rounded-full text-base transition-colors hover:bg-surface-variant/40" data-action="setEmojiCat" data-action-arg="activities" title="Activities">⚽</button>
-          <button class="emoji-cat-btn flex-shrink-0 w-9 h-9 flex items-center justify-center rounded-full text-base transition-colors hover:bg-surface-variant/40" data-action="setEmojiCat" data-action-arg="travel" title="Travel & Places">✈️</button>
-          <button class="emoji-cat-btn flex-shrink-0 w-9 h-9 flex items-center justify-center rounded-full text-base transition-colors hover:bg-surface-variant/40" data-action="setEmojiCat" data-action-arg="objects" title="Objects">💡</button>
-          <button class="emoji-cat-btn flex-shrink-0 w-9 h-9 flex items-center justify-center rounded-full text-base transition-colors hover:bg-surface-variant/40" data-action="setEmojiCat" data-action-arg="symbols" title="Symbols">❤️</button>
-          <button class="emoji-cat-btn flex-shrink-0 w-9 h-9 flex items-center justify-center rounded-full text-base transition-colors hover:bg-surface-variant/40" data-action="setEmojiCat" data-action-arg="flags" title="Flags">🏁</button>
+          <button class="emoji-cat-btn active flex-shrink-0 w-11 h-11 flex items-center justify-center rounded-full text-base bg-primary/10 transition-colors" data-action="setEmojiCat" data-action-arg="recent" title="Recent"><span class="material-symbols-outlined text-[18px] text-primary">schedule</span></button>
+          <button class="emoji-cat-btn flex-shrink-0 w-11 h-11 flex items-center justify-center rounded-full text-base transition-colors hover:bg-surface-variant/40" data-action="setEmojiCat" data-action-arg="smileys" title="Smileys & Emotion">😊</button>
+          <button class="emoji-cat-btn flex-shrink-0 w-11 h-11 flex items-center justify-center rounded-full text-base transition-colors hover:bg-surface-variant/40" data-action="setEmojiCat" data-action-arg="people" title="People & Body">👋</button>
+          <button class="emoji-cat-btn flex-shrink-0 w-11 h-11 flex items-center justify-center rounded-full text-base transition-colors hover:bg-surface-variant/40" data-action="setEmojiCat" data-action-arg="nature" title="Animals & Nature">🌿</button>
+          <button class="emoji-cat-btn flex-shrink-0 w-11 h-11 flex items-center justify-center rounded-full text-base transition-colors hover:bg-surface-variant/40" data-action="setEmojiCat" data-action-arg="food" title="Food & Drink">🍕</button>
+          <button class="emoji-cat-btn flex-shrink-0 w-11 h-11 flex items-center justify-center rounded-full text-base transition-colors hover:bg-surface-variant/40" data-action="setEmojiCat" data-action-arg="activities" title="Activities">⚽</button>
+          <button class="emoji-cat-btn flex-shrink-0 w-11 h-11 flex items-center justify-center rounded-full text-base transition-colors hover:bg-surface-variant/40" data-action="setEmojiCat" data-action-arg="travel" title="Travel & Places">✈️</button>
+          <button class="emoji-cat-btn flex-shrink-0 w-11 h-11 flex items-center justify-center rounded-full text-base transition-colors hover:bg-surface-variant/40" data-action="setEmojiCat" data-action-arg="objects" title="Objects">💡</button>
+          <button class="emoji-cat-btn flex-shrink-0 w-11 h-11 flex items-center justify-center rounded-full text-base transition-colors hover:bg-surface-variant/40" data-action="setEmojiCat" data-action-arg="symbols" title="Symbols">❤️</button>
+          <button class="emoji-cat-btn flex-shrink-0 w-11 h-11 flex items-center justify-center rounded-full text-base transition-colors hover:bg-surface-variant/40" data-action="setEmojiCat" data-action-arg="flags" title="Flags">🏁</button>
         </div>
         <div class="flex-1 overflow-y-auto p-2 grid grid-cols-7 gap-0.5 text-center text-xl custom-scrollbar" id="emoji-grid">
         </div>
@@ -554,7 +547,7 @@
       <!-- Contact Picker Overlay -->
       <div class="absolute inset-0 bg-surface-container border border-outline-variant/30 rounded-2xl shadow-xl flex flex-col hidden z-40 overflow-hidden animate-in" id="contact-picker-overlay" role="dialog">
         <div class="flex items-center gap-3 p-3 border-b border-outline-variant/10">
-          <button data-action="hide" data-action-arg="contact-picker-overlay" class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-surface-variant/40 transition-all" aria-label="Close contact picker">
+          <button data-action="hide" data-action-arg="contact-picker-overlay" class="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-full hover:bg-surface-variant/40 transition-all" aria-label="Close contact picker">
             <span class="material-symbols-outlined text-on-surface-variant">arrow_back</span>
           </button>
           <h3 class="font-bold text-sm text-on-surface flex-1">Share Contact</h3>
@@ -606,7 +599,7 @@
           <span class="material-symbols-outlined">manage_accounts</span>
           <h2 class="font-headline-md text-headline-md font-bold text-on-surface">Profile & Settings</h2>
         </div>
-        <button class="text-on-surface-variant hover:text-on-surface p-1" data-action="closeModal" data-action-arg="profile-overlay" aria-label="Close profile">
+        <button class="text-on-surface-variant hover:text-on-surface min-w-[44px] min-h-[44px] flex items-center justify-center rounded-full" data-action="closeModal" data-action-arg="profile-overlay" aria-label="Close profile">
           <span class="material-symbols-outlined">close</span>
         </button>
       </div>
@@ -614,7 +607,7 @@
         <div class="flex flex-col items-center text-center">
           <div class="relative mb-3">
             <div class="w-24 h-24 rounded-full flex items-center justify-center font-bold text-3xl bg-surface-container-highest text-on-surface-variant cursor-pointer hover:brightness-110 animate-pulse" id="profile-avatar" data-action="changeAvatar">U</div>
-            <button class="absolute bottom-0 right-0 bg-primary text-on-primary w-8 h-8 rounded-full flex items-center justify-center shadow border-2 border-surface-container" data-action="changeAvatar" aria-label="Change profile photo">
+            <button class="absolute bottom-0 right-0 bg-primary text-on-primary min-w-[44px] min-h-[44px] rounded-full flex items-center justify-center shadow border-2 border-surface-container" data-action="changeAvatar" aria-label="Change profile photo">
               <span class="material-symbols-outlined text-[16px]">photo_camera</span>
             </button>
           </div>
@@ -695,7 +688,7 @@
                 </div>
                 <span class="material-symbols-outlined text-on-surface-variant">chevron_right</span>
               </div>
-              <div class="flex items-center justify-between p-4 cursor-pointer hover:bg-surface-container transition-colors" id="appPermissionsBtn" onclick="PermissionsManager.showScreen()">
+              <div class="flex items-center justify-between p-4 cursor-pointer hover:bg-surface-container transition-colors" id="appPermissionsBtn" data-action="showPermissions">
                 <div class="flex items-center gap-3">
                   <span class="material-symbols-outlined text-primary">shield</span>
                   <div>
@@ -705,7 +698,7 @@
                 </div>
                 <span class="material-symbols-outlined text-on-surface-variant">chevron_right</span>
               </div>
-              <div class="flex items-center justify-between p-4 cursor-pointer hover:bg-surface-container transition-colors" id="keyboardShortcutsBtn" onclick="closeModal('profile-overlay'); KeyboardShortcuts.showHelp()">
+              <div class="flex items-center justify-between p-4 cursor-pointer hover:bg-surface-container transition-colors" id="keyboardShortcutsBtn" data-action="showKeyboardShortcuts">
                 <div class="flex items-center gap-3">
                   <span class="material-symbols-outlined text-primary">keyboard</span>
                   <div>
@@ -715,7 +708,7 @@
                 </div>
                 <span class="material-symbols-outlined text-on-surface-variant">chevron_right</span>
               </div>
-              <div class="flex items-center justify-between p-4 cursor-pointer hover:bg-surface-container transition-colors" onclick="closeModal('profile-overlay'); TwoFactorAuth.openSettings()">
+              <div class="flex items-center justify-between p-4 cursor-pointer hover:bg-surface-container transition-colors" data-action="showTwoFactorAuth">
                 <div class="flex items-center gap-3">
                   <span class="material-symbols-outlined text-primary">security</span>
                   <div>
@@ -725,7 +718,7 @@
                 </div>
                 <span class="material-symbols-outlined text-on-surface-variant">chevron_right</span>
               </div>
-              <div class="flex items-center justify-between p-4 cursor-pointer hover:bg-surface-container transition-colors" onclick="closeModal('profile-overlay'); if(typeof toggleAppLock==='function'){if(isAppLockEnabled()){resetAppLockPin();showToast('App Lock disabled','success')}else{showAppLock()}}">
+              <div class="flex items-center justify-between p-4 cursor-pointer hover:bg-surface-container transition-colors" data-action="toggleAppLock">
                 <div class="flex items-center gap-3">
                   <span class="material-symbols-outlined text-primary">lock</span>
                   <div>
@@ -735,7 +728,7 @@
                 </div>
                 <span class="material-symbols-outlined text-on-surface-variant">chevron_right</span>
               </div>
-              <div class="flex items-center justify-between p-4 cursor-pointer hover:bg-surface-container transition-colors" onclick="closeModal('profile-overlay'); if(typeof openChatLockSettings==='function') openChatLockSettings()">
+              <div class="flex items-center justify-between p-4 cursor-pointer hover:bg-surface-container transition-colors" data-action="showChatLockSettings">
                 <div class="flex items-center gap-3">
                   <span class="material-symbols-outlined text-primary">chat_bubble_lock</span>
                   <div>
@@ -745,7 +738,7 @@
                 </div>
                 <span class="material-symbols-outlined text-on-surface-variant">chevron_right</span>
               </div>
-              <div class="flex items-center justify-between p-4 cursor-pointer hover:bg-surface-container transition-colors" onclick="closeModal('profile-overlay'); DataSaver.openSettings()">
+              <div class="flex items-center justify-between p-4 cursor-pointer hover:bg-surface-container transition-colors" data-action="showDataSaver">
                 <div class="flex items-center gap-3">
                   <span class="material-symbols-outlined text-primary">data_saver_on</span>
                   <div>
@@ -765,7 +758,7 @@
                 </div>
                 <span class="material-symbols-outlined text-on-surface-variant">chevron_right</span>
               </div>
-              <div class="flex items-center justify-between p-4 cursor-pointer hover:bg-surface-container transition-colors" onclick="closeModal('profile-overlay'); SelfDestruct.openGlobalDefaultSettings()">
+              <div class="flex items-center justify-between p-4 cursor-pointer hover:bg-surface-container transition-colors" data-action="showDisappearingMessages">
                 <div class="flex items-center gap-3">
                   <span class="material-symbols-outlined text-primary">timer</span>
                   <div>
@@ -775,7 +768,7 @@
                 </div>
                 <span class="material-symbols-outlined text-on-surface-variant">chevron_right</span>
               </div>
-              <div class="flex items-center justify-between p-4 cursor-pointer hover:bg-surface-container transition-colors" onclick="closeModal('profile-overlay'); MultiDevice.openLinkedDevices()">
+              <div class="flex items-center justify-between p-4 cursor-pointer hover:bg-surface-container transition-colors" data-action="showLinkedDevices">
                 <div class="flex items-center gap-3">
                   <span class="material-symbols-outlined text-primary">devices</span>
                   <div>
@@ -785,7 +778,7 @@
                 </div>
                 <span class="material-symbols-outlined text-on-surface-variant">chevron_right</span>
               </div>
-              <div class="flex items-center justify-between p-4 cursor-pointer hover:bg-surface-container transition-colors" onclick="closeModal('profile-overlay'); WallpaperGallery.openGallery(null)">
+              <div class="flex items-center justify-between p-4 cursor-pointer hover:bg-surface-container transition-colors" data-action="showWallpaperGallery">
                 <div class="flex items-center gap-3">
                   <span class="material-symbols-outlined text-primary">wallpaper</span>
                   <div>
@@ -795,7 +788,7 @@
                 </div>
                 <span class="material-symbols-outlined text-on-surface-variant">chevron_right</span>
               </div>
-              <div class="flex items-center justify-between p-4 cursor-pointer hover:bg-surface-container transition-colors" onclick="closeModal('profile-overlay'); if(typeof openFontSizeSettings==='function') openFontSizeSettings()">
+              <div class="flex items-center justify-between p-4 cursor-pointer hover:bg-surface-container transition-colors" data-action="showFontSizeSettings">
                 <div class="flex items-center gap-3">
                   <span class="material-symbols-outlined text-primary">text_fields</span>
                   <div>
@@ -805,7 +798,7 @@
                 </div>
                 <span class="material-symbols-outlined text-on-surface-variant">chevron_right</span>
               </div>
-              <div class="flex items-center justify-between p-4 cursor-pointer hover:bg-surface-container transition-colors" onclick="closeModal('profile-overlay'); if(typeof openChangeNumber==='function') openChangeNumber()">
+              <div class="flex items-center justify-between p-4 cursor-pointer hover:bg-surface-container transition-colors" data-action="showChangeNumber">
                 <div class="flex items-center gap-3">
                   <span class="material-symbols-outlined text-primary">phone</span>
                   <div>
@@ -815,7 +808,7 @@
                 </div>
                 <span class="material-symbols-outlined text-on-surface-variant">chevron_right</span>
               </div>
-              <div class="flex items-center justify-between p-4 cursor-pointer hover:bg-surface-container transition-colors" onclick="closeModal('profile-overlay'); ContactSync.openFindFriends()">
+              <div class="flex items-center justify-between p-4 cursor-pointer hover:bg-surface-container transition-colors" data-action="showFindFriends">
                 <div class="flex items-center gap-3">
                   <span class="material-symbols-outlined text-primary">contacts</span>
                   <div>
@@ -876,7 +869,7 @@
           <span class="material-symbols-outlined">edit_square</span>
           <h2 class="font-headline-md text-headline-md font-bold text-on-surface">New Chat</h2>
         </div>
-        <button class="text-on-surface-variant hover:text-on-surface p-1" data-action="closeModal" data-action-arg="new-chat-overlay" aria-label="Close new chat">
+        <button class="text-on-surface-variant hover:text-on-surface min-w-[44px] min-h-[44px] flex items-center justify-center rounded-full" data-action="closeModal" data-action-arg="new-chat-overlay" aria-label="Close new chat">
           <span class="material-symbols-outlined">close</span>
         </button>
       </div>
@@ -978,8 +971,8 @@
       <h3 class="font-bold text-lg mb-2" id="confirm-title">Confirm Action</h3>
       <p class="text-sm text-on-surface-variant mb-6 leading-relaxed" id="confirm-msg"></p>
       <div class="flex justify-end gap-3">
-        <button class="px-4 py-2 border border-outline-variant rounded-xl text-xs font-bold text-on-surface hover:bg-surface-variant/50 transition-colors" data-action="closeModal" data-action-arg="confirm-overlay">Cancel</button>
-        <button class="px-4 py-2 bg-error text-white rounded-xl text-xs font-bold hover:brightness-110 transition-colors" id="confirm-action-btn">Confirm</button>
+        <button class="px-4 py-3 min-h-[44px] border border-outline-variant rounded-xl text-xs font-bold text-on-surface hover:bg-surface-variant/50 transition-colors" data-action="closeModal" data-action-arg="confirm-overlay">Cancel</button>
+        <button class="px-4 py-3 min-h-[44px] bg-error text-white rounded-xl text-xs font-bold hover:brightness-110 transition-colors" id="confirm-action-btn">Confirm</button>
       </div>
     </div>
   </div>
@@ -989,7 +982,7 @@
     <div class="bg-surface-container border border-outline-variant/30 rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden max-h-[85vh] flex flex-col m-4">
       <div class="flex items-center justify-between p-6 border-b border-outline-variant/10">
         <h2 class="font-headline-md text-headline-md font-bold text-on-surface" id="group-info-title">Group info details</h2>
-        <button class="text-on-surface-variant hover:text-on-surface p-1" data-action="closeModal" data-action-arg="group-info-overlay" aria-label="Close group info">
+        <button class="text-on-surface-variant hover:text-on-surface min-w-[44px] min-h-[44px] flex items-center justify-center rounded-full" data-action="closeModal" data-action-arg="group-info-overlay" aria-label="Close group info">
           <span class="material-symbols-outlined">close</span>
         </button>
       </div>
@@ -1002,7 +995,7 @@
     <div class="bg-surface-container border border-outline-variant/30 rounded-2xl w-full max-w-md shadow-2xl p-6 m-4">
       <div class="flex items-center justify-between pb-4 border-b border-outline-variant/10 mb-4">
         <h3 class="font-bold text-lg text-on-surface">Message info</h3>
-        <button class="text-on-surface-variant hover:text-on-surface p-1" data-action="closeModal" data-action-arg="msg-info-overlay" aria-label="Close message info">
+        <button class="text-on-surface-variant hover:text-on-surface min-w-[44px] min-h-[44px] flex items-center justify-center rounded-full" data-action="closeModal" data-action-arg="msg-info-overlay" aria-label="Close message info">
           <span class="material-symbols-outlined">close</span>
         </button>
       </div>
@@ -1051,7 +1044,7 @@
           <span class="material-symbols-outlined">add_call</span>
           <h2 class="font-bold text-on-surface">Select a contact to call</h2>
         </div>
-        <button class="text-on-surface-variant hover:text-on-surface p-1" data-action="closeModal" data-action-arg="call-picker-overlay" aria-label="Close call picker">
+        <button class="text-on-surface-variant hover:text-on-surface min-w-[44px] min-h-[44px] flex items-center justify-center rounded-full" data-action="closeModal" data-action-arg="call-picker-overlay" aria-label="Close call picker">
           <span class="material-symbols-outlined">close</span>
         </button>
       </div>
@@ -1176,7 +1169,7 @@
           <span class="material-symbols-outlined text-primary" style="font-variation-settings: 'FILL' 1;">apps</span>
           NSL Chat Utilities
         </h3>
-        <button class="w-8 h-8 rounded-full flex items-center justify-center hover:bg-surface-container-highest transition-colors cursor-pointer text-on-surface-variant" data-action="closeOverlay" data-action-arg="nsl-utilities-overlay" aria-label="Close menu">
+        <button class="min-w-[44px] min-h-[44px] rounded-full flex items-center justify-center hover:bg-surface-container-highest transition-colors cursor-pointer text-on-surface-variant" data-action="closeOverlay" data-action-arg="nsl-utilities-overlay" aria-label="Close menu">
           <span class="material-symbols-outlined text-xl">close</span>
         </button>
       </div>
@@ -1320,197 +1313,8 @@
   <script src="https://www.gstatic.com/firebasejs/12.16.0/firebase-storage-compat.js" crossorigin="anonymous" defer></script>
   <script src="https://www.gstatic.com/firebasejs/12.16.0/firebase-messaging-compat.js" crossorigin="anonymous" defer></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js" integrity="sha384-+mbV2IY1Zk/X1p/nWllGySJSUN8uMs+gUAN10Or95UBH0fpj6GfKgPmgC5EXieXG" crossorigin="anonymous" defer></script>
-  <script src="firebase-config.js" defer></script>
-  <script src="config.js" defer></script>
-  <!-- Main App JS Core (shared logic) -->
-  <script src="../app.js" defer></script>
-  <script src="../app-extras.js" defer></script>
-  <script src="lazy-modules.js" defer></script>
-
-  <!-- Infrastructure Modules -->
-  <script src="platform-detect.js" defer></script>
-  <script src="smart-notifications.js" defer></script>
-  <script src="file-versioning.js" defer></script>
-  <script src="cloud-drive.js" defer></script>
-  <script src="collaborative-whiteboard.js" defer></script>
-  <script src="image-annotation.js" defer></script>
-  <script src="offline-queue.js" defer></script>
-  <script src="call-sync.js" defer></script>
-  <script src="presence.js" defer></script>
-  <script src="multi-device.js" defer></script>
-  <script src="qr-code-gen.js" defer></script>
-  <script src="qr-scanner.js" defer></script>
-  <script src="contact-sync.js" defer></script>
-  <script src="security.js" defer></script>
-  <script src="error-boundary.js" defer></script>
-  <script src="mutation-bus.js" defer></script>
-  <script src="virtual-scroll.js" defer></script>
-  <script src="accessibility.js" defer></script>
-  <script src="keyboard-shortcuts.js" defer></script>
-  <script src="permissions-manager.js" defer></script>
-  <script src="chat-missing-features.js" defer></script>
-  <script src="pull-to-refresh.js" defer></script>
-  <script src="pinch-zoom.js" defer></script>
-  <script src="swipe-delete.js" defer></script>
-  <script src="back-button.js" defer></script>
-  <script src="ios-keyboard-fix.js" defer></script>
-  <!-- Feature modules -->
-  <script src="chat-enhancements.js" defer></script>
-  <script src="chat-fixes.js" defer></script>
-  <!-- Feature scripts moved from head to enforce correct App loading order -->
-  <script src="smart-reply.js" defer></script>
-  <script src="streak.js" defer></script>
-  <script src="saved-messages.js" defer></script>
-  <script src="self-destruct.js" defer></script>
-  <script src="message-scheduler.js" defer></script>
-  <script src="translation.js" defer></script>
-  <script src="message-copy.js" defer></script>
-  <script src="screen-share.js" defer></script>
-  <script src="chat-lock.js" defer></script>
-  <script src="ghost-mode.js" defer></script>
-  <script src="screenshot-control.js" defer></script>
-  <script src="message-recall.js" defer></script>
-  <script src="sensitive-content.js" defer></script>
-  <script src="mini-games.js" defer></script>
-  <script src="mood-status.js" defer></script>
-  <script src="date-reminders.js" defer></script>
-  <script src="ai-features.js" defer></script>
-  <script src="chat-export.js" defer></script>
-  <script src="music-player.js" defer></script>
-  <script src="music-library.js" defer></script>
-  <script src="playlist-core.js" defer></script>
-  <script src="playlist-ui.js" defer></script>
-  <script src="playlist-sync.js" defer></script>
-  <script src="threads.js" defer></script>
-  <script src="message-search.js" defer></script>
-  <script src="notification-prefs.js" defer></script>
-  <script src="notification-digest.js" defer></script>
-  <script src="notification-reply.js" defer></script>
-  <script src="notification-orchestrator.js" defer></script>
-  <script src="notification-bell.js" defer></script>
-  <script src="notification-telemetry.js" defer></script>
-  <script src="ios-callkit.js" defer></script>
-  <script src="desktop-notifications.js" defer></script>
-  <script src="pwa-install.js" defer></script>
-  <script src="ui-compliance.js" defer></script>
-  <script src="audit-interactions.js" defer></script>
-  <script src="whatsapp-enhancements.js" defer></script>
-  <script src="jsQR.js?v=2" defer></script>
-  <script src="calculator.js" defer></script>
-  <script src="features-addon.js" defer></script>
-  <script src="scheduled-calendar.js" defer></script>
-  <script src="snooze-history.js" defer></script>
-  <script src="snooze-enhancements.js" defer></script>
-  <script src="ai-bot.js" defer></script>
-  <script src="group-message-info.js" defer></script>
-  <script src="fixes.js" defer></script>
-  <script src="feature-updates.js" defer></script>
-  <script src="sync-audit.js" defer></script>
-  <script src="url-preview.js" defer></script>
-  <script src="redesign-base.js" defer></script>
-  <script src="request-priority.js" defer></script>
-  <script src="sanitize.js" defer></script>
-  <script src="clipboard-paste.js" defer></script>
-  <script src="desktop-fullscreen.js" defer></script>
-  <script src="desktop-context-menu.js" defer></script>
-  <script src="window-title.js" defer></script>
-  <script src="whatsapp-share.js" defer></script>
-  <script src="swipe-nav.js" defer></script>
-  <script src="push-notifications.js" defer></script>
-  <script src="attachment-reliability.js" defer></script>
-  <script src="task-from-message.js" defer></script>
-  <script src="meeting-scheduler.js" defer></script>
-  <script src="chat-permissions.js" defer></script>
-  <script src="announcement-mode.js" defer></script>
-  <script src="channel-mode.js" defer></script>
-  <script src="two-factor-auth.js" defer></script>
-  <script src="account-deletion.js" defer></script>
-  <script src="view-once.js" defer></script>
-  <script src="live-location.js" defer></script>
-  <script src="data-saver.js" defer></script>
-  <script src="wallpaper-gallery.js" defer></script>
-  <script src="help-support.js" defer></script>
-  <script src="reply-private.js" defer></script>
-  <script src="group-meta.js" defer></script>
-  <!-- WhatsApp feature parity modules -->
-  <script src="call-controller.js" defer></script>
-  <script src="group-call.js" defer></script>
-  <script src="call-history.js" defer></script>
-  <script src="archive-chat.js" defer></script>
-  <script src="forward-modal.js" defer></script>
-  <script src="block-user.js" defer></script>
-  <script src="message-reactions.js" defer></script>
-  <script src="delete-group.js" defer></script>
-  <script src="profile-edit.js" defer></script>
-  <script src="app-lock.js" defer></script>
-  <script src="video-notes.js" defer></script>
-  <script src="voice-messages.js" defer></script>
-  <script src="voice-changer.js" defer></script>
-  <script src="mention-autocomplete.js" defer></script>
-  <script src="font-size-settings.js" defer></script>
-  <script src="change-number.js" defer></script>
-  <script src="message-actions.js" defer></script>
-  <script src="proximity-sensor.js" defer></script>
-  <script src="background-call-handler.js" defer></script>
-  <script src="call-link.js" defer></script>
-  <script src="in-call-reactions.js" defer></script>
-  <script src="status.js" defer></script>
-  <script src="status-viewer.js" defer></script>
-  <script src="notification-nav.js" defer></script>
-  <script src="unread-polish.js" defer></script>
-  <script src="home-camera.js" defer></script>
-  <script src="group-features.js" defer></script>
-  <script src="contact-popup.js" defer></script>
-  <!-- UI-UX enhancement modules -->
-  <script src="onboarding.js" defer></script>
-  <script src="empty-states.js" defer></script>
-  <script src="form-validation.js" defer></script>
-  <script src="toast-ux.js" defer></script>
-  <script src="a11y-enhancements.js" defer></script>
-  <script src="message-errors.js" defer></script>
-  <!-- Feature modules (v3.5) -->
-  <script src="report-user.js" defer></script>
-  <script src="gif-picker.js" defer></script>
-  <script src="sticker-packs.js" defer></script>
-  <script src="micro-interactions.js" defer></script>
-  <script src="profile-setup.js" defer></script>
-  <script src="lazy-images.js" defer></script>
-  <script src="biometric.js" defer></script>
-  <script src="screenshot-protection.js" defer></script>
-  <script src="in-app-update.js" defer></script>
-  <script src="app-shortcuts.js" defer></script>
-  <script src="haptic-feedback.js" defer></script>
-  <script src="src/core/bindEvents.js" defer></script>
-  <script src="app-init.js" defer></script>
-
-  <!-- PWA Service Worker Registration + App Bootstrap -->
-  <script src="app-bootstrap.js" defer></script>
-
-  <!-- D-C5: Multi-window support via BroadcastChannel -->
-  <script src="broadcast-sync.js" defer></script>
-  <!-- Delegated event handlers (replaces inline onclick) -->
-  <script src="delegated-actions.js" defer></script>
-
-  <!-- D-L7: App version display in console (version from version.js) -->
-  <script src="version.js" defer></script>
-
-  <!-- New feature modules (v4.1) -->
-  <script src="chat-mark-unread.js" defer></script>
-  <script src="chat-drafts.js" defer></script>
-  <script src="chat-scroll-unread.js" defer></script>
-  <script src="privacy-controls.js" defer></script>
-  <script src="voice-to-text.js" defer></script>
-  <script src="quick-replies.js" defer></script>
-  <script src="message-translation.js" defer></script>
-  <script src="chat-folders.js" defer></script>
-  <script src="search-contacts.js" defer></script>
-  <script src="message-reminders.js" defer></script>
-  <script src="chat-calculator.js" defer></script>
-  <script src="event-from-message.js" defer></script>
-  <script src="media-autoplay.js" defer></script>
-  <script src="pinned-header.js" defer></script>
-  <script src="payment-split.js" defer></script>
-  <script src="large-file-sharing.js" defer></script>
+  <!-- Vite ES Module Entry — replaces all local <script defer> tags above -->
+  <script type="module" src="app-index.js"></script>
 
   <!-- Pre-Permission Explanation Dialog -->
   <div id="prePermissionModal" class="overlay fixed inset-0 z-[110] bg-black/60 backdrop-blur-sm flex items-center justify-center hidden" role="dialog" aria-modal="true" aria-labelledby="prePermissionTitle">
@@ -1579,7 +1383,7 @@
       <div class="flex items-center gap-3 p-4 border-b border-outline-variant/10">
         <span class="material-symbols-outlined text-on-surface-variant">search</span>
         <input id="globalSearchInput" type="text" placeholder="Search messages..." class="flex-1 bg-transparent text-on-surface text-sm outline-none placeholder-on-surface-variant/50" autocomplete="off" spellcheck="false" role="combobox" aria-autocomplete="list" aria-controls="globalSearchResults">
-        <button class="p-1.5 rounded-full hover:bg-surface-variant/50 text-on-surface-variant transition-colors" onclick="document.getElementById('globalSearchModal').style.display='none'" aria-label="Close search">
+        <button class="p-1.5 rounded-full hover:bg-surface-variant/50 text-on-surface-variant transition-colors" data-action="closeSearchModal" aria-label="Close search">
           <span class="material-symbols-outlined text-xl">close</span>
         </button>
       </div>
@@ -1600,7 +1404,7 @@
       <span class="text-xs font-bold truncate max-w-[120px]" id="bubble-call-name">Call</span>
       <span class="text-[10px] font-mono opacity-80" id="bubble-call-timer">0:00</span>
     </div>
-    <button class="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center hover:bg-white/30 ml-1" onclick="event.stopPropagation();endCall()" aria-label="End call">
+    <button class="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center hover:bg-white/30 ml-1" data-action="endCallFromBubble" aria-label="End call">
       <span class="material-symbols-outlined text-sm">call_end</span>
     </button>
   </div>

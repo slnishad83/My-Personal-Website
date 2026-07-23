@@ -562,7 +562,15 @@
   window.getQuickReactions = getQuickReactions;
   window.initReactionListeners = initReactionListeners;
   window.wireReactionPostRender = wireReactionPostRender;
+  function cleanupReactionSubscriptions() {
+    Object.keys(_reactionUnsubscribes).forEach(function (msgId) {
+      try { _reactionUnsubscribes[msgId](); } catch (_) {}
+      delete _reactionUnsubscribes[msgId];
+    });
+  }
+
   window.unsubscribeAllReactions = unsubscribeAllReactions;
+  window.cleanupReactionSubscriptions = cleanupReactionSubscriptions;
   window.getUnreadReactionCount = getUnreadReactionCount;
   window.clearUnreadReactions = clearUnreadReactions;
   window.scrollToReaction = scrollToReaction;
@@ -581,4 +589,8 @@
     setTimeout(function () { scrollToReaction(_initMsgId); }, 1500);
     history.replaceState(null, '', window.location.pathname + window.location.search);
   }
+
+  window.addEventListener('beforeunload', function () {
+    cleanupReactionSubscriptions();
+  });
 })();

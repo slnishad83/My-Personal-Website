@@ -237,9 +237,9 @@
     var missedLabel = missed ? '<span class="text-red-500 text-xs font-medium">Missed</span>' : '';
     var durationLabel = duration ? '<span class="text-on-surface-variant text-xs">' + _esc(duration) + '</span>' : '';
     var timeLabel = '<span class="text-on-surface-variant text-xs">' + _esc(timeStr) + '</span>';
-    var infoBtn = '<button class="w-7 h-7 rounded-full flex items-center justify-center hover:bg-surface-variant/50 transition-colors flex-shrink-0" data-call-info="' + _esc(call.id) + '"><span class="material-symbols-outlined text-on-surface-variant" style="font-size:16px">info</span></button>';
-    var callBtn = '<button class="w-7 h-7 rounded-full flex items-center justify-center hover:bg-green-500/10 transition-colors flex-shrink-0" data-call-callback="' + _esc(contactUid) + '" data-call-type="' + _esc(call.callType || 'voice') + '"><span class="material-symbols-outlined text-green-500" style="font-size:16px">call</span></button>';
+var infoBtn = '<button class="min-w-[44px] min-h-[44px] rounded-full flex items-center justify-center hover:bg-surface-variant/50 transition-colors flex-shrink-0" data-call-info="' + _esc(call.id) + '"><span class="material-symbols-outlined text-on-surface-variant" style="font-size:16px">info</span></button>';
 
+    var callBtn = '<button class="min-w-[44px] min-h-[44px] rounded-full flex items-center justify-center hover:bg-green-500/10 transition-colors flex-shrink-0" data-call-callback="' + _esc(contactUid) + '" data-call-type="' + _esc(call.callType || 'voice') + '"><span class="material-symbols-outlined text-green-500" style="font-size:16px">call</span></button>';
     return '<div class="flex items-center gap-3 px-4 py-3 hover:bg-surface-variant/30 rounded-xl cursor-pointer transition-colors group ' + selectionClass + '" data-call-entry="' + _esc(call.id) + '" data-contact-uid="' + _esc(contactUid) + '">' +
       (_selectionMode ? selectedCheck : '') +
       '<div class="relative flex-shrink-0">' +
@@ -432,11 +432,11 @@
     }
     var count = _selectedIds.size;
     toolbar.innerHTML = '<div class="flex items-center gap-3 px-4 py-3 bg-surface border-b border-outline/10">' +
-      '<button class="w-8 h-8 rounded-full flex items-center justify-center hover:bg-surface-variant/50" onclick="window._exitCallHistorySelection()">' +
+      '<button class="min-w-[44px] min-h-[44px] rounded-full flex items-center justify-center hover:bg-surface-variant/50" onclick="window._exitCallHistorySelection()">' +
       '<span class="material-symbols-outlined text-on-surface">close</span></button>' +
       '<span class="text-on-surface font-medium text-sm">' + count + ' selected</span>' +
       '<div class="flex-1"></div>' +
-      '<button class="w-8 h-8 rounded-full flex items-center justify-center hover:bg-red-500/10 transition-colors" onclick="window.deleteSelectedCallHistory()">' +
+      '<button class="min-w-[44px] min-h-[44px] rounded-full flex items-center justify-center hover:bg-red-500/10 transition-colors" onclick="window.deleteSelectedCallHistory()">' +
       '<span class="material-symbols-outlined text-red-500" style="font-size:20px">delete</span></button>' +
       '</div>';
     toolbar.classList.remove('hidden');

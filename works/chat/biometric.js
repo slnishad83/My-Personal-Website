@@ -13,10 +13,10 @@
         enabled: false,
         isNative: false,
 
-        init() {
+        async init() {
             if (!window.Capacitor?.isNative?.()) return;
             this.isNative = true;
-            this.enabled = localStorage.getItem(STORAGE_KEY) === 'true';
+            this.enabled = await Security.getSecure(STORAGE_KEY) === true;
             this.setupListeners();
         },
 
@@ -67,7 +67,7 @@
 
         async toggle(enabled) {
             this.enabled = enabled;
-            localStorage.setItem(STORAGE_KEY, enabled);
+            await Security.setSecure(STORAGE_KEY, enabled);
         },
 
         isEnabled() {

@@ -40,6 +40,18 @@ const MODULES = {
   adminUnbanUser: 'admin',
   adminListUsers: 'admin',
   adminDeleteUser: 'admin',
+  setChatPin: 'pin',
+  verifyChatPin: 'pin',
+  resetChatPin: 'pin',
+  setTwoFactorPin: 'pin',
+  verifyTwoFactorPin: 'pin',
+  resetTwoFactorPin: 'pin',
+  addGroupMembers: 'groups',
+  removeGroupMember: 'groups',
+  promoteGroupAdmin: 'groups',
+  demoteGroupAdmin: 'groups',
+  exitGroup: 'groups',
+  deleteGroup: 'groups',
 };
 
 for (const [name, mod] of Object.entries(MODULES)) {

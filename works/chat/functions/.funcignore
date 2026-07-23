@@ -1,7 +1,0 @@
-.git
-.gitignore
-.firebase
-node_modules
-tests
-*.md
-*.log

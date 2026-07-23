@@ -1,0 +1,223 @@
+/**
+ * NSL Chat — Vite Entry Point (index.html)
+ * Imports all local modules as side-effect imports in correct load order.
+ * CDN scripts (Firebase, JSZip) remain as <script defer> in HTML.
+ */
+
+/* ── CSS (Vite processes Tailwind + extracts to bundle) ──── */
+import './src/styles/main.css';
+import './src/styles/app.css';
+import './chat.css';
+import './accessibility.css';
+
+/* ── Head-loaded scripts (loaded before body content) ───── */
+import './notification-sounds.js';
+import './twemoji/twemoji.min.js';
+import './emoji-renderer.js';
+import './tailwind-config.js';
+
+/* ══════════════════════════════════════════════════════════════
+   FOUNDATION — must load in this exact order
+   ══════════════════════════════════════════════════════════════ */
+import './firebase-config.js';
+import './config.js';
+import '../app.js';
+import '../app-extras.js';
+import './lazy-modules.js';
+
+/* ══════════════════════════════════════════════════════════════
+   INFRASTRUCTURE MODULES
+   ══════════════════════════════════════════════════════════════ */
+import './platform-detect.js';
+import './smart-notifications.js';
+import './file-versioning.js';
+import './cloud-drive.js';
+import './collaborative-whiteboard.js';
+import './image-annotation.js';
+import './offline-queue.js';
+import './call-sync.js';
+import './presence.js';
+import './multi-device.js';
+import './qr-code-gen.js';
+import './qr-scanner.js';
+import './contact-sync.js';
+import './security.js';
+import './error-boundary.js';
+import './mutation-bus.js';
+import './virtual-scroll.js';
+import './accessibility.js';
+import './keyboard-shortcuts.js';
+import './permissions-manager.js';
+import './chat-missing-features.js';
+import './pull-to-refresh.js';
+import './pinch-zoom.js';
+import './swipe-delete.js';
+import './back-button.js';
+import './ios-keyboard-fix.js';
+
+/* ══════════════════════════════════════════════════════════════
+   FEATURE MODULES
+   ══════════════════════════════════════════════════════════════ */
+import './chat-enhancements.js';
+import './chat-fixes.js';
+import './smart-reply.js';
+import './streak.js';
+import './saved-messages.js';
+import './self-destruct.js';
+import './message-scheduler.js';
+import './translation.js';
+import './message-copy.js';
+import './screen-share.js';
+import './chat-lock.js';
+import './ghost-mode.js';
+import './screenshot-control.js';
+import './message-recall.js';
+import './sensitive-content.js';
+import './mini-games.js';
+import './mood-status.js';
+import './date-reminders.js';
+import './ai-features.js';
+import './chat-export.js';
+import './music-player.js';
+import './music-library.js';
+import './playlist-core.js';
+import './playlist-ui.js';
+import './playlist-sync.js';
+import './threads.js';
+import './message-search.js';
+import './notification-prefs.js';
+import './notification-digest.js';
+import './notification-reply.js';
+import './notification-orchestrator.js';
+import './notification-bell.js';
+import './notification-telemetry.js';
+import './ios-callkit.js';
+import './desktop-notifications.js';
+import './pwa-install.js';
+import './ui-compliance.js';
+import './audit-interactions.js';
+import './whatsapp-enhancements.js';
+import './calculator.js';
+import './jsQR.js';
+import './features-addon.js';
+import './scheduled-calendar.js';
+import './snooze-history.js';
+import './snooze-enhancements.js';
+import './ai-bot.js';
+import './group-message-info.js';
+import './fixes.js';
+import './feature-updates.js';
+import './sync-audit.js';
+import './url-preview.js';
+import './redesign-base.js';
+import './request-priority.js';
+import './sanitize.js';
+import './clipboard-paste.js';
+import './desktop-fullscreen.js';
+import './desktop-context-menu.js';
+import './window-title.js';
+import './whatsapp-share.js';
+import './swipe-nav.js';
+import './push-notifications.js';
+import './attachment-reliability.js';
+import './task-from-message.js';
+import './meeting-scheduler.js';
+import './chat-permissions.js';
+import './announcement-mode.js';
+import './channel-mode.js';
+import './two-factor-auth.js';
+import './account-deletion.js';
+import './view-once.js';
+import './live-location.js';
+import './data-saver.js';
+import './wallpaper-gallery.js';
+import './help-support.js';
+import './reply-private.js';
+import './group-meta.js';
+
+/* ══════════════════════════════════════════════════════════════
+   WHATSAPP FEATURE PARITY
+   ══════════════════════════════════════════════════════════════ */
+import './call-controller.js';
+import './group-call.js';
+import './call-history.js';
+import './archive-chat.js';
+import './forward-modal.js';
+import './block-user.js';
+import './message-reactions.js';
+import './delete-group.js';
+import './profile-edit.js';
+import './app-lock.js';
+import './video-notes.js';
+import './voice-messages.js';
+import './voice-changer.js';
+import './mention-autocomplete.js';
+import './font-size-settings.js';
+import './change-number.js';
+import './message-actions.js';
+import './proximity-sensor.js';
+import './background-call-handler.js';
+import './call-link.js';
+import './in-call-reactions.js';
+import './status.js';
+import './status-viewer.js';
+import './notification-nav.js';
+import './unread-polish.js';
+import './home-camera.js';
+import './group-features.js';
+import './contact-popup.js';
+
+/* ══════════════════════════════════════════════════════════════
+   UI/UX ENHANCEMENTS
+   ══════════════════════════════════════════════════════════════ */
+import './onboarding.js';
+import './empty-states.js';
+import './form-validation.js';
+import './toast-ux.js';
+import './a11y-enhancements.js';
+import './message-errors.js';
+
+/* ══════════════════════════════════════════════════════════════
+   V3.5+ FEATURES
+   ══════════════════════════════════════════════════════════════ */
+import './report-user.js';
+import './gif-picker.js';
+import './sticker-packs.js';
+import './micro-interactions.js';
+import './profile-setup.js';
+import './lazy-images.js';
+import './biometric.js';
+import './screenshot-protection.js';
+import './in-app-update.js';
+import './app-shortcuts.js';
+import './haptic-feedback.js';
+import './src/core/bindEvents.js';
+import './app-init.js';
+
+/* ══════════════════════════════════════════════════════════════
+   BOOTSTRAP & LATE-BINDING
+   ══════════════════════════════════════════════════════════════ */
+import './app-bootstrap.js';
+import './broadcast-sync.js';
+import './delegated-actions.js';
+import './version.js';
+
+/* ══════════════════════════════════════════════════════════════
+   V4.1+ NEW FEATURES
+   ══════════════════════════════════════════════════════════════ */
+import './chat-mark-unread.js';
+import './chat-drafts.js';
+import './chat-scroll-unread.js';
+import './privacy-controls.js';
+import './voice-to-text.js';
+import './quick-replies.js';
+import './message-translation.js';
+import './chat-folders.js';
+import './search-contacts.js';
+import './message-reminders.js';
+import './chat-calculator.js';
+import './event-from-message.js';
+import './media-autoplay.js';
+import './pinned-header.js';
+import './payment-split.js';
+import './large-file-sharing.js';

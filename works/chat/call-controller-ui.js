@@ -185,8 +185,8 @@
           '<div class="text-xs text-on-surface-variant">' + CC.escHtml(u.email || '') + '</div>' +
           '</div>' +
           '<div class="flex items-center gap-2">' +
-          '<button class="w-9 h-9 rounded-full bg-green-500/10 text-green-500 hover:bg-green-500/20 flex items-center justify-center transition-all" title="Voice call"><span class="material-symbols-outlined text-lg">call</span></button>' +
-          '<button class="w-9 h-9 rounded-full bg-blue-500/10 text-blue-500 hover:bg-blue-500/20 flex items-center justify-center transition-all" title="Video call"><span class="material-symbols-outlined text-lg">videocam</span></button>' +
+          '<button class="min-w-[44px] min-h-[44px] rounded-full bg-green-500/10 text-green-500 hover:bg-green-500/20 flex items-center justify-center transition-all" title="Voice call"><span class="material-symbols-outlined text-lg">call</span></button>' +
+          '<button class="min-w-[44px] min-h-[44px] rounded-full bg-blue-500/10 text-blue-500 hover:bg-blue-500/20 flex items-center justify-center transition-all" title="Video call"><span class="material-symbols-outlined text-lg">videocam</span></button>' +
           '</div></div>';
       });
 

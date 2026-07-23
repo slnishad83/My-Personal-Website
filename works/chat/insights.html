@@ -4,6 +4,7 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover"/>
   <meta name="theme-color" content="#008069"/>
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' https: blob: data: 'unsafe-inline'; script-src 'self' https://www.gstatic.com 'unsafe-inline'; style-src 'self' https://fonts.googleapis.com 'unsafe-inline'; img-src 'self' https: blob: data:; font-src 'self' https://fonts.gstatic.com; connect-src 'self' https://*.googleapis.com https://*.firebaseio.com https://*.firebaseapp.com https://*.cloudfunctions.net wss://*.firebaseio.com; frame-ancestors 'self'; form-action 'self';">
   <title>Chat Insights — Team Chat</title>
   <script>
     (function() {
@@ -61,22 +62,24 @@
   </style>
 </head>
 <body>
+<main role="main" aria-label="Chat Insights">
 <div class="app-header">
-  <button class="back-btn" onclick="history.back()"><span class="mat-icon">arrow_back</span></button>
+  <button class="back-btn" onclick="history.back()" aria-label="Go back"><span class="mat-icon">arrow_back</span></button>
   <button class="header-action" id="darkToggleBtn" onclick="toggleDark()" title="Toggle dark mode" aria-label="Toggle dark mode"><span class="mat-icon">dark_mode</span></button>
   <h1><span class="mat-icon mat-icon--sm" style="margin-right:6px">insights</span> Your Chat Insights</h1>
 </div>
 <div class="content">
   <div id="loading" class="loading-txt">Analysing your chat history…</div>
-  <div id="stats" style="display:none;display:flex;flex-direction:column;gap:16px"></div>
+  <div id="stats" style="display:none"></div>
 </div>
+</main>
 
-<nav class="bottom-nav" id="bottomNav">
-  <a class="nav-item" href="index.html"><span class="mat-icon">chat</span><span>Chat</span></a>
-  <a class="nav-item" href="album.html"><span class="mat-icon">photo_library</span><span>Album</span></a>
-  <a class="nav-item" href="calendar.html"><span class="mat-icon">calendar_month</span><span>Calendar</span></a>
-  <a class="nav-item" href="expenses.html"><span class="mat-icon">receipt_long</span><span>Expenses</span></a>
-  <a class="nav-item active" href="insights.html"><span class="mat-icon">insights</span><span>Insights</span></a>
+<nav class="bottom-nav" id="bottomNav" aria-label="Main navigation">
+  <a class="nav-item" href="index.html" aria-label="Chat"><span class="mat-icon">chat</span><span>Chat</span></a>
+  <a class="nav-item" href="album.html" aria-label="Album"><span class="mat-icon">photo_library</span><span>Album</span></a>
+  <a class="nav-item" href="calendar.html" aria-label="Calendar"><span class="mat-icon">calendar_month</span><span>Calendar</span></a>
+  <a class="nav-item" href="expenses.html" aria-label="Expenses"><span class="mat-icon">receipt_long</span><span>Expenses</span></a>
+  <a class="nav-item active" href="insights.html" aria-current="page" aria-label="Insights"><span class="mat-icon">insights</span><span>Insights</span></a>
 </nav>
 
 <script>
@@ -159,7 +162,7 @@ async function loadInsights(){
       </div>`:''}
     `;
   }catch(e){
-    document.getElementById('loading').textContent='Could not load insights: '+e.message;
+    document.getElementById('loading').textContent='Could not load insights. Please try again.';
   }
 }
 </script>
@@ -176,6 +179,6 @@ async function loadInsights(){
   };
 })();
 </script>
-<script src="redesign-base.js" defer></script>
+<script type="module" src="app-subpage.js"></script>
 </body>
 </html>

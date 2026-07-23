@@ -11,7 +11,6 @@ const admin = new Proxy({}, {
 });
 
 const CHAT_APP_URL = 'https://nishadsl.com/works/chat/';
-const ADMIN_EMAIL = 'sl.nishad@gmail.com';
 
 async function getUserPushTokens(userId) {
   if (!userId) return { userSnap: null, user: {}, tokens: [] };
@@ -1069,26 +1068,27 @@ exports.sendReactionNotification = onDocumentUpdated(
 exports.busyAutoReply = onDocumentCreated(
   { document: 'messages/{messageId}', region: 'asia-south1' },
   async (event) => {
-    const msg = event.data.data();
+    const msg = event.data?.data();
     if (!msg || msg.senderId === 'busy-autoreply' || msg.isAutoReply) return;
-    // Only for direct messages
     if (!msg.directId || !msg.receiverId) return;
     try {
       const recipientSnap = await admin.firestore().collection('users').doc(msg.receiverId).get();
+      if (!recipientSnap.exists) return;
       const recipient = recipientSnap.data();
       if (!recipient?.busyStatus) return;
-      // Send auto-reply
       await admin.firestore().collection('messages').add({
         directId: msg.directId,
         senderId: msg.receiverId,
         senderName: (recipient.displayName || 'User') + ' (Auto-reply)',
         receiverId: msg.senderId,
-        text: `🔴 ${recipient.displayName || 'I'} is currently busy: "${recipient.busyStatus}". They will get back to you soon.`,
+        text: `${recipient.displayName || 'I'} is currently busy: "${recipient.busyStatus}". They will get back to you soon.`,
         timestamp: admin.firestore.FieldValue.serverTimestamp(),
         isAutoReply: true,
         readBy: {}
       });
-    } catch (_) {}
+    } catch (err) {
+      console.error('[busyAutoReply] Error:', err.message);
+    }
   }
 );
 

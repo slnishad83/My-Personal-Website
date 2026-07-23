@@ -6,14 +6,14 @@
   const GOOGLE_API_KEY = '';
   const ONEDRIVE_CLIENT_ID = '';
 
-  window.openGoogleDrivePicker = function() {
+  window.openGoogleDrivePicker = async function() {
     if (!GOOGLE_CLIENT_ID || !GOOGLE_API_KEY) {
       showToast('Google Drive integration requires API credentials. Add them to cloud-drive.js', 'info');
       _showManualDriveUpload('Google Drive');
       return;
     }
 
-    const token = localStorage.getItem('gdrive_access_token');
+    const token = await Security.getSecure('gdrive_access_token');
     if (token) {
       _showGoogleDrivePicker(token);
     } else {
@@ -33,6 +33,7 @@
     const popup = window.open(url, 'onedrive-auth', 'width=600,height=600');
 
     const handler = (e) => {
+      if (e.origin !== window.location.origin) return;
       if (e.data && e.data.type === 'onedrive_token') {
         window.removeEventListener('message', handler);
         if (popup) popup.close();
@@ -74,7 +75,8 @@
       _renderDriveFiles(content, data.files || [], 'gdrive', token);
     })
     .catch(e => {
-      content.innerHTML = `<div style="text-align:center;padding:20px"><p style="color:var(--error)">Failed to load files: ${e.message}</p><button onclick="openGoogleDrivePicker()" style="margin-top:8px;padding:8px 16px;background:var(--primary);color:var(--on-primary);border:none;border-radius:8px;cursor:pointer">Retry</button></div>`;
+      const errMsg = _escapeHtml(e.message || 'Unknown error');
+      content.innerHTML = `<div style="text-align:center;padding:20px"><p style="color:var(--error)">Failed to load files: ${errMsg}</p><button onclick="openGoogleDrivePicker()" style="margin-top:8px;padding:8px 16px;background:var(--primary);color:var(--on-primary);border:none;border-radius:8px;cursor:pointer">Retry</button></div>`;
     });
 
     document.body.appendChild(overlay);
@@ -96,7 +98,8 @@
       _renderDriveFiles(content, files, 'onedrive', token);
     })
     .catch(e => {
-      content.innerHTML = `<div style="text-align:center;padding:20px"><p style="color:var(--error)">Failed to load files: ${e.message}</p><button onclick="openOneDrivePicker()" style="margin-top:8px;padding:8px 16px;background:var(--primary);color:var(--on-primary);border:none;border-radius:8px;cursor:pointer">Retry</button></div>`;
+      const errMsg = _escapeHtml(e.message || 'Unknown error');
+      content.innerHTML = `<div style="text-align:center;padding:20px"><p style="color:var(--error)">Failed to load files: ${errMsg}</p><button onclick="openOneDrivePicker()" style="margin-top:8px;padding:8px 16px;background:var(--primary);color:var(--on-primary);border:none;border-radius:8px;cursor:pointer">Retry</button></div>`;
     });
 
     document.body.appendChild(overlay);
@@ -141,13 +144,15 @@
     try {
       let blob;
       if (source === 'gdrive') {
+        const token = await Security.getSecure('gdrive_access_token');
         const res = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`, {
-          headers: { 'Authorization': 'Bearer ' + localStorage.getItem('gdrive_access_token') }
+          headers: { 'Authorization': 'Bearer ' + token }
         });
         blob = await res.blob();
       } else {
+        const token = await Security.getSecure('onedrive_token');
         const res = await fetch(`https://graph.microsoft.com/v1.0/me/drive/items/${fileId}/content`, {
-          headers: { 'Authorization': 'Bearer ' + localStorage.getItem('onedrive_token') }
+          headers: { 'Authorization': 'Bearer ' + token }
         });
         blob = await res.blob();
       }
@@ -229,6 +234,6 @@
     return s.toFixed(i === 0 ? 0 : 1) + ' ' + units[i];
   }
 
-  function _escapeStr(s) { return s.replace(/'/g, "\\'").replace(/"/g, '\\"'); }
+  function _escapeStr(s) { return s.replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, '\\"').replace(/\n/g, '\\n').replace(/\r/g, '\\r'); }
   function _escapeHtml(s) { return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
 })();

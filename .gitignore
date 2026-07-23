@@ -73,3 +73,13 @@ works.zip
 fix_git.bat
 resolve_merge.bat
 deploy.bat
+Temp/
+
+# Security — never commit these
+google-services.json
+*.apk
+*.pem
+*.key
+.DS_Store
+Thumbs.db
+.env.*

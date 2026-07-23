@@ -14,6 +14,8 @@
   };
 
   let suggestionsContainer = null;
+  let _originalSelectChat = null;
+  let _selectChatHooked = false;
 
   function initSmartReply() {
     // Inject CSS for smart replies
@@ -72,13 +74,14 @@
       }
       
       // Also listen for chat selection change
-      const originalSelectChat = window.selectChat;
-      if (originalSelectChat) {
+      if (!_selectChatHooked && window.selectChat) {
+        _originalSelectChat = window.selectChat;
         window.selectChat = function(...args) {
-          const res = originalSelectChat.apply(this, args);
+          const res = _originalSelectChat.apply(this, args);
           setTimeout(analyzeCurrentChatContext, 100);
           return res;
         };
+        _selectChatHooked = true;
       }
     });
   }
@@ -153,6 +156,16 @@
       suggestionsContainer.style.display = 'none';
     }
   }
+
+  function unhookSelectChat() {
+    if (_selectChatHooked && _originalSelectChat) {
+      window.selectChat = _originalSelectChat;
+      _originalSelectChat = null;
+      _selectChatHooked = false;
+    }
+  }
+
+  window.unhookSmartReplySelectChat = unhookSelectChat;
 
   // Initialize when DOM is ready
   if (document.readyState === 'loading') {

@@ -13,8 +13,30 @@
   let _lastAnalyzedText = '';
   let _chatTags = {}; // { chatId: { tags: [], confidence: 0 } }
   let _summaryPanel = null;
+  let _chatListObserver = null;
+  const MAX_CHAT_TAGS = 200;
 
   /* ─── CSS Injection ──────────────────────────────────────────────── */
+
+  function _trimChatTags() {
+    const keys = Object.keys(_chatTags);
+    if (keys.length <= MAX_CHAT_TAGS) return;
+    const excess = keys.length - MAX_CHAT_TAGS;
+    for (let i = 0; i < excess; i++) {
+      delete _chatTags[keys[i]];
+    }
+    try {
+      localStorage.setItem('ai_chat_tags', JSON.stringify(_chatTags));
+    } catch (_) {}
+  }
+
+  function _cleanupAIFeatures() {
+    if (_chatListObserver) {
+      _chatListObserver.disconnect();
+      _chatListObserver = null;
+    }
+  }
+
   function injectStyles() {
     if (document.getElementById('ai-features-css')) return;
     const style = document.createElement('style');
@@ -204,6 +226,9 @@
   function mdToHtml(md) {
     if (!md) return '';
     return md
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
       .replace(/^### (.+)$/gm, '<h3>$1</h3>')
       .replace(/^## (.+)$/gm, '<h2>$1</h2>')
       .replace(/^# (.+)$/gm, '<h1>$1</h1>')
@@ -311,7 +336,7 @@
         const msg = err.message?.includes('API key')
           ? 'AI not configured. Admin: run <code>firebase functions:secrets:set GEMINI_API_KEY</code>'
           : 'Failed to generate summary. Please try again.';
-        body.innerHTML = `<p style="text-align:center;color:var(--error);padding:20px;">${msg}</p>`;
+        body.textContent = msg;
       }
     }
   }
@@ -399,11 +424,19 @@
     if (data.warning) {
       banner.classList.add(data.safe ? 'warning' : 'danger');
       icon.textContent = data.safe ? '⚠️' : '🚫';
-      text.innerHTML = `<strong>Tone advisory:</strong> ${data.warning}`;
+      text.textContent = '';
+      const strong = document.createElement('strong');
+      strong.textContent = 'Tone advisory: ';
+      text.appendChild(strong);
+      text.appendChild(document.createTextNode(data.warning));
     } else {
       banner.classList.add('safe');
       icon.textContent = '✅';
-      text.innerHTML = `<strong>Tone looks good</strong> — ${data.tone || 'neutral'}`;
+      text.textContent = '';
+      const strongGood = document.createElement('strong');
+      strongGood.textContent = 'Tone looks good — ';
+      text.appendChild(strongGood);
+      text.appendChild(document.createTextNode(data.tone || 'neutral'));
     }
 
     if (badge && data.tone) {
@@ -456,6 +489,7 @@
       const result = await autoTag({ chatId, chatName });
       if (result.data && result.data.tags) {
         _chatTags[chatId] = result.data;
+        _trimChatTags();
         // Persist to localStorage
         try {
           localStorage.setItem('ai_chat_tags', JSON.stringify(_chatTags));
@@ -490,6 +524,7 @@
     try {
       const cached = JSON.parse(localStorage.getItem('ai_chat_tags') || '{}');
       _chatTags = cached;
+      _trimChatTags();
     } catch (_) {}
   }
 
@@ -596,13 +631,17 @@
   function hookChatListRender() {
     // Watch for chat list mutations to tag chats
     const chatList = document.getElementById('chat-list');
-    if (!chatList || chatList._aiTagObserver) return;
+    if (!chatList) return;
 
-    chatList._aiTagObserver = new MutationObserver(() => {
+    if (_chatListObserver) {
+      _chatListObserver.disconnect();
+    }
+
+    _chatListObserver = new MutationObserver(() => {
       clearTimeout(chatList._aiTagTimer);
       chatList._aiTagTimer = setTimeout(tagVisibleChats, 800);
     });
-    chatList._aiTagObserver.observe(chatList, { childList: true, subtree: true });
+    _chatListObserver.observe(chatList, { childList: true, subtree: true });
   }
 
   /* ═══════════════════════════════════════════════════════════════════
@@ -644,8 +683,13 @@
     autoTagChat,
     getChatTags: (chatId) => _chatTags[chatId],
     isAiSearchActive: () => _aiSearchActive,
-    analyzeTone
+    analyzeTone,
+    cleanup: _cleanupAIFeatures
   };
+
+  window.addEventListener('beforeunload', function () {
+    _cleanupAIFeatures();
+  });
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);

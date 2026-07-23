@@ -507,14 +507,14 @@
   pointer-events: auto;
 }
 .reaction-bar-btn {
-  @apply w-9 h-9 flex items-center justify-center rounded-full border-none cursor-pointer text-lg;
+  @apply min-w-[44px] min-h-[44px] flex items-center justify-center rounded-full border-none cursor-pointer text-lg;
   background: transparent;
   transition: transform .15s, background .15s;
 }
 .reaction-bar-btn:hover { transform: scale(1.25); background: var(--surface-container-high); }
 .reaction-bar-btn:active { transform: scale(1.4); }
 .reaction-bar-more {
-  @apply w-8 h-8 flex items-center justify-center rounded-full border-none cursor-pointer;
+  @apply min-w-[44px] min-h-[44px] flex items-center justify-center rounded-full border-none cursor-pointer;
   background: transparent; color: var(--on-surface-variant); font-size: 16px;
   transition: background .15s;
 }

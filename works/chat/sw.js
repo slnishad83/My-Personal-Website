@@ -1,7 +1,7 @@
 importScripts('https://www.gstatic.com/firebasejs/12.16.0/firebase-app-compat.js');
 importScripts('https://www.gstatic.com/firebasejs/12.16.0/firebase-messaging-compat.js');
 
-const firebaseConfig = {
+var firebaseConfig = /* __FIREBASE_CONFIG__ */ {
   apiKey: "AIzaSyCdbut_FdscAjl-OVSlAUhb7TOTiRNkh34",
   authDomain: "my-team-chat-2255.firebaseapp.com",
   projectId: "my-team-chat-2255",
@@ -11,12 +11,12 @@ const firebaseConfig = {
 };
 
 firebase.initializeApp(firebaseConfig);
-const messaging = firebase.messaging();
+var messaging = firebase.messaging();
 
 function notifyWindowClients(message) {
   return clients.matchAll({ type: 'window', includeUncontrolled: true })
-    .then(clientList => {
-      clientList.forEach(client => {
+    .then(function(clientList) {
+      clientList.forEach(function(client) {
         try { client.postMessage(message); } catch (_) {}
       });
       return clientList;
@@ -27,12 +27,16 @@ function notifyWindowClients(message) {
    PUSH NOTIFICATION HANDLING
    ══════════════════════════════════════════════════════════════ */
 
-messaging.onBackgroundMessage(payload => {
-  const data = payload.data || {};
+messaging.onBackgroundMessage(function(payload) {
+  var data = payload.data || {};
   if (data.kind === 'call_ended' && data.callId) {
     return self.registration.getNotifications({ tag: 'call-' + data.callId })
-      .then(notifications => notifications.forEach(notification => notification.close()))
-      .then(() => notifyWindowClients({ type: 'TC_CALL_STOP', callId: data.callId }));
+      .then(function(notifications) {
+        notifications.forEach(function(n) { n.close(); });
+      })
+      .then(function() {
+        return notifyWindowClients({ type: 'TC_CALL_STOP', callId: data.callId });
+      });
   }
 
   if (data.kind === 'read_sync' && data.chatId) {
@@ -50,177 +54,91 @@ messaging.onBackgroundMessage(payload => {
   }
 
   var isCall = data.kind === 'call';
-  var title = payload.notification?.title || data.title ||
+  var title = (payload.notification && payload.notification.title) || data.title ||
     (isCall ? (data.type === 'video' ? 'Incoming video call' : 'Incoming voice call') : 'Team Chat');
-  var body = payload.notification?.body || data.body ||
+  var body = (payload.notification && payload.notification.body) || data.body ||
     (isCall ? (data.fromUserName || 'Team Chat') + ' is calling. Tap to open Team Chat.' : 'New notification');
-  var notificationUrl = data.url || payload.notification?.data?.url || './index.html';
+  var notificationUrl = data.url || (payload.notification && payload.notification.data && payload.notification.data.url) || './index.html';
   var chatKey2 = data.chatId && data.chatType ? data.chatType + '-' + data.chatId : '';
   var unreadCount = Number(data.unreadCount || 0);
   var chatTag = isCall && data.callId ? 'call-' + data.callId : (chatKey2 ? 'chat-' + chatKey2 : (data.kind || 'team-chat') + '-' + (data.messageId || data.callId || Date.now()));
 
-  self.registration.showNotification(title, {
+  var actions = [];
+  if (isCall) {
+    actions = [
+      { action: 'accept_call', title: 'Accept' },
+      { action: 'decline_call', title: 'Decline' }
+    ];
+  } else if (data.chatId) {
+    actions = [
+      { action: 'open_chat', title: 'Open' },
+      { action: 'mark_read', title: 'Mark read' }
+    ];
+  }
+
+  var notificationPromise = self.registration.showNotification(title, {
     body: body,
-    tag: chatTag,
-    renotify: Boolean(isCall),
-    requireInteraction: Boolean(isCall),
-    silent: data.soundEnabled === false || data.soundEnabled === 'false',
-    icon: data.senderAvatar || 'app-icon-192.png',
+    icon: 'app-icon-192.png',
     badge: 'app-icon-192.png',
-    image: data.senderAvatar || 'app-icon-512.png',
-    timestamp: Date.now(),
-    vibrate: data.vibrate === 'false' ? [] : (isCall ? [700, 250, 700, 250, 700, 250, 700, 250, 700] : [180, 80, 180]),
+    tag: chatTag,
+    renotify: true,
+    requireInteraction: isCall,
+    silent: false,
     data: {
       url: notificationUrl,
-      messageId: data.messageId || '',
-      callId: data.callId || '',
-      kind: data.kind || '',
       chatId: data.chatId || '',
       chatType: data.chatType || '',
-      unreadCount: unreadCount,
-      chatUserId: data.chatUserId || '',
-      groupId: data.groupId || '',
-      fromUserName: data.fromUserName || ''
+      messageId: data.messageId || '',
+      callId: data.callId || '',
+      kind: data.kind || 'message',
+      unreadCount: unreadCount
     },
-    actions: isCall ? [
-      { action: 'reject', title: 'Decline' },
-      { action: 'accept', title: 'Accept' }
-    ] : [
-      { action: 'reply', title: '↩ Reply', type: 'text', placeholder: 'Type a reply…' },
-      { action: 'mark_read', title: '✓ Mark read' },
-      { action: 'open',  title: 'Open' }
-    ]
+    actions: actions
   });
 
-  if (!isCall && chatKey2) {
-    notifyWindowClients({
-      type: 'TC_PUSH_MESSAGE',
-      payload: {
-        chatId: data.chatId || '',
+  return notificationPromise.then(function() {
+    if (unreadCount > 0 && data.chatId) {
+      return notifyWindowClients({
+        type: 'TC_UNREAD_COUNT',
+        chatId: data.chatId,
         chatType: data.chatType || 'direct',
-        chatUserId: data.chatUserId || '',
-        groupId: data.groupId || '',
-        unreadCount: unreadCount,
-        title: title,
-        body: body,
-        messageId: data.messageId || ''
-      }
-    });
-  }
-});
-
-/* ══════════════════════════════════════════════════════════════
-   NOTIFICATION REPLY — IndexedDB auth token helper
-   ══════════════════════════════════════════════════════════════ */
-
-function getStoredAuthToken() {
-  return new Promise(function(resolve) {
-    try {
-      var req = indexedDB.open('tcAuthStore', 1);
-      req.onsuccess = function(e) {
-        var db = e.target.result;
-        if (!db.objectStoreNames.contains('tokens')) { resolve(null); return; }
-        var get = db.transaction('tokens', 'readonly').objectStore('tokens').get('idToken');
-        get.onsuccess = function() { resolve(get.result?.token || null); };
-        get.onerror = function() { resolve(null); };
-      };
-      req.onerror = function() { resolve(null); };
-    } catch (_) { resolve(null); }
+        count: unreadCount
+      });
+    }
   });
-}
-
-async function handleNotificationReply(data, replyText) {
-  var chatId = data.chatId || '';
-  var chatType = data.chatType || 'direct';
-  var chatUserId = data.chatUserId || '';
-  var groupId = data.groupId || '';
-
-  var clientList = await clients.matchAll({ type: 'window', includeUncontrolled: true });
-  if (clientList.length > 0) {
-    clientList[0].postMessage({ type: 'TC_NOTIF_REPLY', chatId: chatId, chatType: chatType, chatUserId: chatUserId, groupId: groupId, replyText: replyText });
-    await self.registration.showNotification('Reply sent ✓', {
-      body: replyText.length > 80 ? replyText.slice(0, 80) + '…' : replyText,
-      icon: 'app-icon-192.png', badge: 'app-icon-192.png',
-      tag: 'tc-reply-sent-' + chatId, silent: true
-    });
-    return;
-  }
-
-  try {
-    var token = await getStoredAuthToken();
-    if (!token) throw new Error('no-token');
-    var resp = await fetch(
-      'https://us-central1-my-team-chat-2255.cloudfunctions.net/sendNotificationReply',
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-        body: JSON.stringify({ chatId: chatId, chatType: chatType, chatUserId: chatUserId, groupId: groupId, text: replyText })
-      }
-    );
-    if (!resp.ok) throw new Error('cf-' + resp.status);
-    await self.registration.showNotification('Reply sent ✓', {
-      body: replyText.length > 80 ? replyText.slice(0, 80) + '…' : replyText,
-      icon: 'app-icon-192.png', badge: 'app-icon-192.png',
-      tag: 'tc-reply-sent-' + chatId, silent: true
-    });
-  } catch (err) {
-    await self.registration.showNotification('Tap to open chat', {
-      body: 'Could not send reply automatically — tap to open chat',
-      icon: 'app-icon-192.png', badge: 'app-icon-192.png',
-      tag: 'tc-reply-failed', data: { url: data.url || './index.html' }
-    });
-    if (clients.openWindow) clients.openWindow(data.url || './index.html');
-  }
-}
-
-/* ══════════════════════════════════════════════════════════════
-   NOTIFICATION CLICK HANDLER
-   ══════════════════════════════════════════════════════════════ */
+});
 
 self.addEventListener('notificationclick', function(event) {
   event.notification.close();
   var data = event.notification.data || {};
-  var action = event.action || (data.kind === 'call' ? 'accept' : 'open');
+  var url = data.url || './index.html';
 
-  if (action === 'reply' && event.reply != null) {
-    var replyText = (event.reply || '').trim();
-    if (replyText) event.waitUntil(handleNotificationReply(data, replyText));
-    return;
+  // Validate URL is same-origin to prevent phishing
+  try {
+    var urlObj = new URL(url, self.location.origin);
+    if (urlObj.origin !== self.location.origin) {
+      url = './index.html';
+    }
+  } catch (_) {
+    url = './index.html';
   }
 
-  if (action === 'mark_read') {
-    event.waitUntil(
-      clients.matchAll({ type: 'window', includeUncontrolled: true }).then(function(clientList) {
-        clientList.forEach(function(client) {
-          try {
-            client.postMessage({
-              type: 'TC_MARK_READ',
-              scope: {
-                chatId: data.chatId || '',
-                chatType: data.chatType || 'direct',
-                chatUserId: data.chatUserId || '',
-                groupId: data.groupId || ''
-              }
-            });
-          } catch (_) {}
-        });
-      })
-    );
-    return;
+  if (event.action === 'decline_call' && data.callId) {
+    return notifyWindowClients({ type: 'TC_CALL_DECLINE', callId: data.callId });
   }
 
-  var url;
-  if (data.kind === 'call' && data.callId) {
-    url = './index.html?callId=' + encodeURIComponent(data.callId) + '&callAction=' + encodeURIComponent(action);
-  } else {
-    var base = data.url || './index.html';
-    var params = [];
-    if (data.chatId) params.push('chatId=' + encodeURIComponent(data.chatId));
-    if (data.messageId) params.push('messageId=' + encodeURIComponent(data.messageId));
-    if (data.kind) params.push('kind=' + encodeURIComponent(data.kind));
-    if (data.chatType) params.push('chatType=' + encodeURIComponent(data.chatType));
-    if (data.groupId) params.push('groupId=' + encodeURIComponent(data.groupId));
-    url = params.length ? base + '?' + params.join('&') : base;
+  if (event.action === 'accept_call' && data.callId) {
+    url = './index.html#call=' + data.callId;
+  }
+
+  if (event.action === 'mark_read' && data.chatId) {
+    notifyWindowClients({
+      type: 'TC_READ_SYNC',
+      chatId: data.chatId,
+      chatType: data.chatType || 'direct',
+      readBy: 'self'
+    });
+    return;
   }
 
   event.waitUntil(
@@ -228,63 +146,102 @@ self.addEventListener('notificationclick', function(event) {
       for (var i = 0; i < clientList.length; i++) {
         var client = clientList[i];
         if ('focus' in client) {
-          return ('navigate' in client)
-            ? client.navigate(url).then(function() { return client.focus(); }).catch(function() { return client.focus(); })
-            : client.focus();
+          client.focus();
+          if (data.chatId) {
+            client.postMessage({
+              type: 'TC_OPEN_CHAT',
+              chatId: data.chatId,
+              chatType: data.chatType || 'direct'
+            });
+          }
+          return;
         }
       }
-      if (clients.openWindow) return clients.openWindow(url);
+      if (clients.openWindow) {
+        return clients.openWindow(url);
+      }
     })
   );
 });
 
 /* ══════════════════════════════════════════════════════════════
-   CACHING STRATEGY — Versioned, resilient, non-blocking
-   
-   Tier 1: Critical assets (pre-cached on install — <10 items)
-   Tier 2: Important assets (cached on first fetch — stale-while-revalidate)
-   Tier 3: Dynamic assets (network-first with cache fallback)
+   VITE-OPTIMIZED CACHING STRATEGY
+   ══════════════════════════════════════════════════════════════
+   Vite produces hashed filenames: main-BGMyYqdm.js, main-DWtoic-G.css
+   Hashed assets → cache-forever (immutable — hash changes with content)
+   HTML pages → network-first (may reference new hashes)
+   Firebase CDN → stale-while-revalidate (versions rarely change)
+   Everything else → network-first with cache fallback
    ══════════════════════════════════════════════════════════════ */
 
-var CACHE_NAME = 'nsl-chat-v3.1.0';
+var CACHE_NAME = 'nsl-chat-v4.0.0';
 var CACHE_MAX_ENTRIES = 300;
 
-// Tier 1: Critical — pre-cached on install (<10 items to avoid timeout)
-var CRITICAL_ASSETS = [
+/* Pre-cached on install — minimal set for offline shell */
+var SHELL_ASSETS = [
+  './',
+  'index.html',
+  'login.html',
   'manifest.json',
   'app-icon-192.png',
   'app-icon-512.png',
-  'app-icon.svg',
-  'offline.html',
+  'offline.html'
 ];
 
-// Tier 2: Important — cached on first fetch (stale-while-revalidate)
-var IMPORTANT_ASSETS = [
-  'config.js', 'firebase-config.js', 'app.js', 'security.js',
-  'chat.css', 'chat-theme.css', 'chat-enhancements.css',
-  'accessibility.css', 'message-actions.css',
-  'notification-prefs.css', 'url-preview.css',
-  'presence.js', 'multi-device.js', 'error-boundary.js',
-  'virtual-scroll.js', 'accessibility.js', 'keyboard-shortcuts.js',
-  'threads.js', 'message-search.js',
-  'notification-orchestrator.js', 'notification-telemetry.js',
-  'call-controller.js', 'group-call.js', 'call-history.js',
-  'message-reactions.js', 'profile-edit.js', 'app-lock.js',
-  'status.js', 'status-viewer.js', 'lazy-modules.js',
+/* ══════════════════════════════════════════════════════════════
+   URL PATTERN HELPERS
+   ══════════════════════════════════════════════════════════════ */
+
+function isViteHashedAsset(pathname) {
+  // Matches /assets/*.js, /assets/*.css, /assets/*.png etc.
+  // Vite pattern: name-HASH.ext where HASH is 8 alphanumeric chars
+  return /^\/assets\/[^\s]+\.[a-f0-9]{8}\.[a-z]+$/.test(pathname);
+}
+
+function isFirebaseHost(hostname) {
+  return hostname.indexOf('firebase') !== -1 ||
+         hostname.indexOf('gstatic') !== -1 ||
+         hostname.indexOf('googleapis') !== -1;
+}
+
+function isFirestoreRequest(hostname) {
+  return hostname.indexOf('firestore') !== -1 ||
+         hostname.indexOf('firebaseio') !== -1;
+}
+
+function isFunctionRequest(hostname) {
+  return hostname.indexOf('cloudfunctions') !== -1;
+}
+
+var HTML_EXTENSIONS = ['.html'];
+var HTML_PAGE_NAMES = [
+  'index.html', 'login.html', 'verify.html', 'reset.html', 'turn.html',
+  'album.html', 'calendar.html', 'expenses.html', 'insights.html', 'offline.html'
 ];
 
-var HTML_PAGES = [
-  'offline.html', 'index.html', 'login.html', 'reset.html',
-  'verify.html', 'turn.html', 'album.html', 'insights.html',
-  'calendar.html', 'expenses.html'
-];
+function isHtmlPage(pathname) {
+  if (pathname === '/' || pathname === '') return true;
+  if (HTML_EXTENSIONS.some(function(ext) { return pathname.endsWith(ext); })) return true;
+  // Match bare names that would serve HTML (no extension)
+  var basename = pathname.split('/').pop();
+  if (basename && !basename.includes('.') && HTML_PAGE_NAMES.some(function(p) { return p.startsWith(basename); })) return true;
+  return false;
+}
 
-/* ── Install: Pre-cache only critical assets ───────────── */
+function isVersionJson(pathname) {
+  return pathname.endsWith('version.json');
+}
+
+function isApk(pathname) {
+  return pathname.toLowerCase().endsWith('.apk');
+}
+
+/* ── Install: Pre-cache shell assets ─────────────────── */
 self.addEventListener('install', function(event) {
   event.waitUntil(
     caches.open(CACHE_NAME).then(function(cache) {
       return Promise.all(
-        CRITICAL_ASSETS.map(function(url) {
+        SHELL_ASSETS.map(function(url) {
           return cache.add(url).catch(function() { /* non-fatal */ });
         })
       );
@@ -292,7 +249,7 @@ self.addEventListener('install', function(event) {
   );
 });
 
-/* ── Activate: Clean old caches + claim clients ────────── */
+/* ── Activate: Clean old caches + claim clients ──────── */
 self.addEventListener('activate', function(event) {
   event.waitUntil(
     caches.keys()
@@ -306,18 +263,19 @@ self.addEventListener('activate', function(event) {
         if (self.clients && self.clients.claim) return self.clients.claim();
       })
       .then(function() {
-        // Enforce cache size limit — evict oldest entries
         return caches.open(CACHE_NAME).then(function(cache) {
           return cache.keys().then(function(keys) {
-            if (keys.length > CACHE_MAX_ENTRIES) {
-              var toDelete = keys.slice(0, keys.length - CACHE_MAX_ENTRIES);
-              return Promise.all(toDelete.map(function(req) { return cache.delete(req); }));
-            }
+            if (keys.length <= CACHE_MAX_ENTRIES) return;
+            // Delete oldest entries
+            return Promise.all(
+              keys.slice(0, keys.length - CACHE_MAX_ENTRIES).map(function(req) {
+                return cache.delete(req);
+              })
+            );
           });
         });
       })
       .then(function() {
-        // Notify all clients when a new SW is active
         return self.clients.matchAll({ type: 'window' }).then(function(clients) {
           clients.forEach(function(client) {
             try { client.postMessage({ type: 'SW_UPDATED', version: CACHE_NAME }); } catch (_) {}
@@ -327,34 +285,149 @@ self.addEventListener('activate', function(event) {
   );
 });
 
-/* ── Fetch: Tiered caching strategy ───────────────────── */
+/* ══════════════════════════════════════════════════════════════
+   OFFLINE OPERATION QUEUE — IndexedDB fallback for Firestore/CF
+   ══════════════════════════════════════════════════════════════ */
+
+function openOperationQueue() {
+  return new Promise(function(resolve, reject) {
+    var req = indexedDB.open('tcOperationQueue', 1);
+    req.onupgradeneeded = function(e) {
+      var db = e.target.result;
+      if (!db.objectStoreNames.contains('pendingOps')) {
+        db.createObjectStore('pendingOps', { keyPath: 'id', autoIncrement: true });
+      }
+    };
+    req.onsuccess = function(e) { resolve(e.target.result); };
+    req.onerror = function(e) { reject(e.target.error); };
+  });
+}
+
+function storeFailedOperation(request, error) {
+  return openOperationQueue().then(function(db) {
+    var tx = db.transaction('pendingOps', 'readwrite');
+    var store = tx.objectStore('pendingOps');
+    var entry = {
+      url: request.url,
+      method: request.method,
+      headers: {},
+      body: null,
+      timestamp: Date.now(),
+      error: error ? error.message || String(error) : 'unknown'
+    };
+    // Capture request body for replay (clone first since body can only be read once)
+    if (request.method !== 'GET' && request.method !== 'HEAD') {
+      entry.bodyPromise = request.clone().text().then(function(body) {
+        entry.body = body || null;
+      }).catch(function() {});
+    }
+    store.add(entry);
+    return new Promise(function(resolve, reject) {
+      tx.oncomplete = function() { resolve(); };
+      tx.onerror = function(e) { reject(e.target.error); };
+    });
+  }).catch(function() { /* non-fatal */ });
+}
+
+function processOperationQueue() {
+  return openOperationQueue().then(function(db) {
+    var tx = db.transaction('pendingOps', 'readwrite');
+    var store = tx.objectStore('pendingOps');
+    var getAll = store.getAll();
+    return new Promise(function(resolve) {
+      getAll.onsuccess = function() {
+        var ops = getAll.result || [];
+        var clears = ops.map(function(op) {
+          var headers = {};
+          try { headers = JSON.parse(op.headers || '{}'); } catch (_) {}
+          return fetch(new Request(op.url, { method: op.method, headers: headers, body: op.body }))
+            .then(function() { return store.delete(op.id); })
+            .catch(function() { /* keep in queue for next retry */ });
+        });
+        Promise.all(clears).then(resolve);
+      };
+      getAll.onerror = function() { resolve(); };
+    });
+  }).catch(function() { /* non-fatal */ });
+}
+
+/* ── Fetch: Vite-aware tiered caching ────────────────── */
 self.addEventListener('fetch', function(event) {
   if (event.request.method !== 'GET') return;
 
   var requestUrl = new URL(event.request.url);
+  var hostname = requestUrl.hostname;
   var pathname = requestUrl.pathname;
 
-  // Skip non-same-origin requests (except fonts and Firebase)
-  var isFirebase = requestUrl.hostname.indexOf('firebase') !== -1 ||
-                   requestUrl.hostname.indexOf('gstatic') !== -1 ||
-                   requestUrl.hostname.indexOf('googleapis') !== -1;
-  var isApk = pathname.toLowerCase().endsWith('.apk');
-  var isFirestore = requestUrl.hostname.indexOf('firestore') !== -1 || requestUrl.hostname.indexOf('firebaseio') !== -1;
-  var isFunction = requestUrl.hostname.indexOf('cloudfunctions') !== -1;
+  // ── Tier A: Skip cross-origin (except Firebase/fonts) ──
+  var isFirebase = isFirebaseHost(hostname);
+  var isApkReq = isApk(pathname);
+  var isFirestore = isFirestoreRequest(hostname);
+  var isFunction = isFunctionRequest(hostname);
 
-  // Always network for APK, Firestore, Cloud Functions
-  if (isApk || isFirestore || isFunction) {
-    event.respondWith(fetch(event.request));
+  if (isApkReq || isFirestore || isFunction) {
+    event.respondWith(
+      fetch(event.request).catch(function(err) {
+        if (isFirestore || isFunction) {
+          return storeFailedOperation(event.request, err).then(function() {
+            return new Response(JSON.stringify({ error: 'offline', queued: true }), {
+              status: 503,
+              headers: { 'Content-Type': 'application/json' }
+            });
+          });
+        }
+        throw err;
+      })
+    );
     return;
   }
 
-  var isHtml = pathname.endsWith('.html') || pathname === '/' || pathname === '';
-  var isCritical = CRITICAL_ASSETS.some(function(a) { return pathname.endsWith(a); });
-  var isImportant = IMPORTANT_ASSETS.some(function(a) { return pathname.endsWith(a); });
-  var isVersionJson = pathname.endsWith('version.json');
+  var isViteAsset = isViteHashedAsset(pathname);
+  var isHtml = isHtmlPage(pathname);
+  var isVersion = isVersionJson(pathname);
 
-  // Version check: always network-first for version.json
-  if (isVersionJson) {
+  // ── Tier 1: Vite hashed assets → CACHE FOREVER ──────
+  // These files have content hashes (main-BGMyYqdm.js).
+  // When content changes, the hash changes → new URL.
+  // Old cached versions are harmless (will be evicted by max entries).
+  if (isViteAsset) {
+    event.respondWith(
+      caches.open(CACHE_NAME).then(function(cache) {
+        return cache.match(event.request).then(function(cached) {
+          if (cached) return cached;
+          return fetch(event.request).then(function(response) {
+            if (response.ok) {
+              cache.put(event.request, response.clone());
+            }
+            return response;
+          }).catch(function() {
+            return new Response('', { status: 504, statusText: 'Offline' });
+          });
+        });
+      })
+    );
+    return;
+  }
+
+  // ── Tier 2: Firebase CDN → stale-while-revalidate ───
+  // Firebase SDK versions change infrequently; safe to serve stale.
+  if (isFirebase) {
+    event.respondWith(
+      caches.open(CACHE_NAME).then(function(cache) {
+        return cache.match(event.request).then(function(cached) {
+          var fetchPromise = fetch(event.request).then(function(response) {
+            if (response.ok) cache.put(event.request, response.clone());
+            return response;
+          }).catch(function() { return cached; });
+          return cached || fetchPromise;
+        });
+      })
+    );
+    return;
+  }
+
+  // ── Tier 3: version.json → always network-first ─────
+  if (isVersion) {
     event.respondWith(
       fetch(event.request)
         .then(function(response) {
@@ -369,23 +442,7 @@ self.addEventListener('fetch', function(event) {
     return;
   }
 
-  // Critical assets: cache-first (already pre-cached)
-  if (isCritical) {
-    event.respondWith(
-      caches.match(event.request).then(function(cached) {
-        return cached || fetch(event.request).then(function(response) {
-          if (response.ok) {
-            var copy = response.clone();
-            caches.open(CACHE_NAME).then(function(cache) { cache.put(event.request, copy); });
-          }
-          return response;
-        });
-      })
-    );
-    return;
-  }
-
-  // HTML pages: network-first with cache fallback
+  // ── Tier 4: HTML pages → network-first + offline shell ──
   if (isHtml) {
     event.respondWith(
       fetch(event.request)
@@ -399,7 +456,10 @@ self.addEventListener('fetch', function(event) {
         .catch(function() {
           return caches.match(event.request).then(function(cached) {
             return cached || caches.match('offline.html').then(function(off) {
-              return off || new Response('<!DOCTYPE html><html><body style="background:#0d0d0f;color:#e2e4e9;font-family:sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;text-align:center"><div><h1 style="font-size:20px;margin-bottom:8px">You\'re offline</h1><p style="color:#8d92a0">Check your connection and try again.</p></div></body></html>', { headers: { 'Content-Type': 'text/html' } }));
+              return off || new Response(
+                '<!DOCTYPE html><html><body style="background:#0d0d0f;color:#e2e4e9;font-family:sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;text-align:center"><div><h1 style="font-size:20px;margin-bottom:8px">You\'re offline</h1><p style="color:#8d92a0">Check your connection and try again.</p></div></body></html>',
+                { headers: { 'Content-Type': 'text/html' } }
+              );
             });
           });
         })
@@ -407,29 +467,12 @@ self.addEventListener('fetch', function(event) {
     return;
   }
 
-  // Important JS/CSS: stale-while-revalidate
-  if (isImportant) {
-    event.respondWith(
-      caches.open(CACHE_NAME).then(function(cache) {
-        return cache.match(event.request).then(function(cached) {
-          var fetchPromise = fetch(event.request).then(function(response) {
-            if (response.ok) cache.put(event.request, response.clone());
-            return response;
-          }).catch(function() { return cached; });
-
-          return cached || fetchPromise;
-        });
-      })
-    );
-    return;
-  }
-
-  // Everything else: network-first with cache fallback
+  // ── Tier 5: Everything else (static assets, non-hashed) ──
+  // network-first with cache fallback
   event.respondWith(
     fetch(event.request)
       .then(function(response) {
-        var origin = self.location.origin;
-        if (response.ok && requestUrl.origin === origin && !isApk) {
+        if (response.ok && requestUrl.origin === self.location.origin) {
           var copy = response.clone();
           caches.open(CACHE_NAME).then(function(cache) { cache.put(event.request, copy); });
         }
@@ -440,11 +483,23 @@ self.addEventListener('fetch', function(event) {
 });
 
 /* ══════════════════════════════════════════════════════════════
+   ONLINE EVENT — Process queued failed operations
+   ══════════════════════════════════════════════════════════════ */
+
+self.addEventListener('online', function() {
+  processOperationQueue();
+});
+
+/* ══════════════════════════════════════════════════════════════
    BACKGROUND SYNC — Queue failed messages for retry
    ══════════════════════════════════════════════════════════════ */
 
 self.addEventListener('sync', function(event) {
   if (event.tag === 'tc-message-retry') {
-    event.waitUntil(notifyWindowClients({ type: 'TC_SYNC_RETRY' }));
+    event.waitUntil(
+      processOperationQueue().then(function() {
+        return notifyWindowClients({ type: 'TC_SYNC_RETRY' });
+      })
+    );
   }
 });

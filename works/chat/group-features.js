@@ -272,29 +272,13 @@
     if (!uid) { _toast('Not authenticated', 'error'); return; }
     var isAdmin = await _isGroupAdmin(groupId, uid);
     if (!isAdmin) { _toast('Only admins can add participants', 'error'); return; }
-    var membersRef = _getGroupMembersRef(groupId);
-    var groupRef = _getGroupRef(groupId);
-    if (!membersRef || !groupRef) { _toast('Group error', 'error'); return; }
-    var batch = _db().batch();
-    var users = window.allUsers || [];
-    for (var i = 0; i < userIds.length; i++) {
-      var u = users.find(function (us) { return us.uid === userIds[i]; });
-      batch.set(membersRef.doc(userIds[i]), {
-        uid: userIds[i],
-        displayName: u ? (u.displayName || 'Unknown') : 'Unknown',
-        photoURL: u ? (u.photoURL || '') : '',
-        role: 'member',
-        addedBy: uid,
-        addedAt: Date.now(),
-      });
-    }
-    batch.update(groupRef, { memberCount: firebase.firestore.FieldValue.increment(userIds.length), updatedAt: Date.now() });
     try {
-      await batch.commit();
+      var fn = firebase.functions().httpsCallable('addGroupMembers');
+      await fn({ groupId, userIds });
       _toast(userIds.length + ' participant' + (userIds.length > 1 ? 's' : '') + ' added', 'success');
     } catch (err) {
-      console.error('[GroupFeatures] addParticipantsToGroup write failed:', err);
-      _toast('Failed to add participants. Please try again.', 'error');
+      console.error('[GroupFeatures] addParticipantsToGroup failed:', err);
+      _toast(err.message || 'Failed to add participants. Please try again.', 'error');
     }
   }
 
@@ -305,18 +289,13 @@
     if (!isAdmin && uid !== userId) { _toast('Only admins can remove participants', 'error'); return; }
     var confirmed = await _confirm('Remove this participant from the group?');
     if (!confirmed) return;
-    var groupRef = _getGroupRef(groupId);
-    var membersRef = _getGroupMembersRef(groupId);
-    if (!groupRef || !membersRef) { _toast('Group error', 'error'); return; }
     try {
-      var batch = _db().batch();
-      batch.delete(membersRef.doc(userId));
-      batch.update(groupRef, { memberCount: firebase.firestore.FieldValue.increment(-1), updatedAt: Date.now() });
-      await batch.commit();
+      var fn = firebase.functions().httpsCallable('removeGroupMember');
+      await fn({ groupId, userId });
       _toast('Participant removed', 'success');
     } catch (err) {
-      console.error('[GroupFeatures] removeParticipantFromGroup write failed:', err);
-      _toast('Failed to remove participant. Please try again.', 'error');
+      console.error('[GroupFeatures] removeParticipantFromGroup failed:', err);
+      _toast(err.message || 'Failed to remove participant. Please try again.', 'error');
     }
   }
 
@@ -325,18 +304,13 @@
     if (!uid) { _toast('Not authenticated', 'error'); return; }
     var isCreator = await _isGroupCreator(groupId, uid);
     if (!isCreator) { _toast('Only the group creator can promote admins', 'error'); return; }
-    var groupRef = _getGroupRef(groupId);
-    if (!groupRef) { _toast('Group error', 'error'); return; }
     try {
-      await groupRef.update({ admins: firebase.firestore.FieldValue.arrayUnion(userId), updatedAt: Date.now() });
-      var membersRef = _getGroupMembersRef(groupId);
-      if (membersRef) {
-        await membersRef.doc(userId).update({ role: 'admin' }).catch(function () {});
-      }
+      var fn = firebase.functions().httpsCallable('promoteGroupAdmin');
+      await fn({ groupId, userId });
       _toast('Promoted to admin', 'success');
     } catch (err) {
-      console.error('[GroupFeatures] promoteToAdmin write failed:', err);
-      _toast('Failed to promote. Please try again.', 'error');
+      console.error('[GroupFeatures] promoteToAdmin failed:', err);
+      _toast(err.message || 'Failed to promote. Please try again.', 'error');
     }
   }
 
@@ -345,18 +319,13 @@
     if (!uid) { _toast('Not authenticated', 'error'); return; }
     var isCreator = await _isGroupCreator(groupId, uid);
     if (!isCreator) { _toast('Only the group creator can demote admins', 'error'); return; }
-    var groupRef = _getGroupRef(groupId);
-    if (!groupRef) { _toast('Group error', 'error'); return; }
     try {
-      await groupRef.update({ admins: firebase.firestore.FieldValue.arrayRemove(userId), updatedAt: Date.now() });
-      var membersRef = _getGroupMembersRef(groupId);
-      if (membersRef) {
-        await membersRef.doc(userId).update({ role: 'member' }).catch(function () {});
-      }
+      var fn = firebase.functions().httpsCallable('demoteGroupAdmin');
+      await fn({ groupId, userId });
       _toast('Removed admin status', 'success');
     } catch (err) {
-      console.error('[GroupFeatures] demoteFromAdmin write failed:', err);
-      _toast('Failed to demote. Please try again.', 'error');
+      console.error('[GroupFeatures] demoteFromAdmin failed:', err);
+      _toast(err.message || 'Failed to demote. Please try again.', 'error');
     }
   }
 
@@ -445,19 +414,14 @@
     if (isCreator) { _toast('Group creator cannot exit. Transfer ownership or delete.', 'error'); return; }
     var confirmed = await _confirm('Exit this group? You won\'t receive messages anymore.');
     if (!confirmed) return;
-    var groupRef = _getGroupRef(groupId);
-    var membersRef = _getGroupMembersRef(groupId);
-    if (!groupRef || !membersRef) { _toast('Group error', 'error'); return; }
     try {
-      var batch = _db().batch();
-      batch.delete(membersRef.doc(uid));
-      batch.update(groupRef, { memberCount: firebase.firestore.FieldValue.increment(-1), updatedAt: Date.now() });
-      await batch.commit();
+      var fn = firebase.functions().httpsCallable('exitGroup');
+      await fn({ groupId });
       _toast('You left the group', 'success');
       if (typeof window.backToList === 'function') window.backToList();
     } catch (err) {
-      console.error('[GroupFeatures] exitGroup write failed:', err);
-      _toast('Failed to leave group. Please try again.', 'error');
+      console.error('[GroupFeatures] exitGroup failed:', err);
+      _toast(err.message || 'Failed to leave group. Please try again.', 'error');
     }
   }
 
@@ -470,22 +434,14 @@
     if (!confirmed1) return;
     var confirmed2 = await _confirm('Are you absolutely sure? All messages will be lost.');
     if (!confirmed2) return;
-    var f = _db();
-    if (!f) { _toast('Firestore unavailable', 'error'); return; }
-    var membersRef = _getGroupMembersRef(groupId);
     try {
-      if (membersRef) {
-        var membersSnap = await membersRef.get();
-        var batch = f.batch();
-        membersSnap.forEach(function (doc) { batch.delete(doc.ref); });
-        await batch.commit();
-      }
-      await f.collection('groups').doc(groupId).delete();
+      var fn = firebase.functions().httpsCallable('deleteGroup');
+      await fn({ groupId });
       _toast('Group deleted for everyone', 'success');
       if (typeof window.backToList === 'function') window.backToList();
     } catch (err) {
-      console.error('[GroupFeatures] deleteGroupForEveryone write failed:', err);
-      _toast('Failed to delete group. Please try again.', 'error');
+      console.error('[GroupFeatures] deleteGroupForEveryone failed:', err);
+      _toast(err.message || 'Failed to delete group. Please try again.', 'error');
     }
   }
 
@@ -685,8 +641,9 @@
 
   function _generateCode(len) {
     var chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    var randomValues = crypto.getRandomValues(new Uint8Array(len));
     var code = '';
-    for (var i = 0; i < len; i++) code += chars.charAt(Math.floor(Math.random() * chars.length));
+    for (var i = 0; i < len; i++) code += chars.charAt(randomValues[i] % chars.length);
     return code;
   }
 

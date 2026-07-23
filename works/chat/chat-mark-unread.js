@@ -56,7 +56,7 @@
       document.dispatchEvent(new CustomEvent('chat-unread-change', { detail: { chatId, unread: false } }));
     },
 
-    markAllRead() {
+    async markAllRead() {
       const map = this.getUnreadMap();
       const chatIds = Object.keys(map);
       for (const id of chatIds) {

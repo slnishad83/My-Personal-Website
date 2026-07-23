@@ -628,6 +628,7 @@ function chatContextMenu(event, chatId) {
     box-shadow:0 8px 32px rgba(0,0,0,0.4);
     min-width:160px; font-size:13px; font-weight:600;
   `;
+  const actions = [
     { icon: '🔔', label: chat.muted ? 'Unmute Chat' : 'Mute Chat', fn: `showMuteChatOptions('${chatId}')` },
     { icon: '📂', label: 'Archive Chat', fn: `archiveChat('${chatId}')` },
     { icon: '📦', label: 'Export Chat', fn: `exportChatAsZip('${chatId}')` },

@@ -1,0 +1,5 @@
+/* ═══ NSL Chat — Auth/Login Page Styles ═══ */
+/* Imports non-chat CSS for login and auth pages */
+
+@import "../../login-styles.css";
+@import "../../auth-theme.css";

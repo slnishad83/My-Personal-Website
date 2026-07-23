@@ -4,6 +4,7 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover"/>
   <meta name="theme-color" content="#008069"/>
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' https: blob: data: 'unsafe-inline'; script-src 'self' https://www.gstatic.com 'unsafe-inline'; style-src 'self' https://fonts.googleapis.com 'unsafe-inline'; img-src 'self' https: blob: data:; font-src 'self' https://fonts.gstatic.com; connect-src 'self' https://*.googleapis.com https://*.firebaseio.com https://*.firebaseapp.com https://*.cloudfunctions.net wss://*.firebaseio.com; frame-ancestors 'self'; form-action 'self';">
   <title>Family Calendar — Team Chat</title>
   <script>
     (function() {
@@ -58,7 +59,7 @@
     .event-title{font-weight:700;font-size:14px}
     .event-meta{font-size:12px;color:var(--text-secondary);margin-top:2px}
     .event-actions{display:flex;gap:6px}
-    .btn-del-evt{background:none;border:none;color:var(--text-secondary);cursor:pointer;font-size:15px}
+    .btn-del-evt{background:none;border:none;color:var(--text-secondary);cursor:pointer;font-size:15px;min-width:44px;min-height:44px;display:inline-flex;align-items:center;justify-content:center}
     .empty-evt{text-align:center;padding:32px;color:var(--text-secondary);font-size:14px}
     /* Modal */
     .modal{position:fixed;inset:0;background:rgba(0,0,0,0.5);display:none;align-items:flex-end;justify-content:center;z-index:1000}
@@ -68,7 +69,7 @@
     .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--text);color:var(--card);padding:10px 20px;border-radius:24px;font-size:13px;font-weight:600;z-index:9999;opacity:0;transition:opacity 0.3s}
     .toast.show{opacity:1}
     .color-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}
-    .color-dot{width:28px;height:28px;border-radius:50%;cursor:pointer;border:3px solid transparent;transition:border-color 0.15s}
+    .color-dot{width:36px;height:36px;border-radius:50%;cursor:pointer;border:3px solid transparent;transition:border-color 0.15s}
     .color-dot.selected{border-color:var(--text)}
     @media(max-width:500px){.day-cell{min-height:50px}.event-dot{display:none}}
 
@@ -87,17 +88,18 @@
   </style>
 </head>
 <body>
+<main role="main" aria-label="Family Calendar">
 <div class="app-header">
-  <button class="back-btn" onclick="history.back()"><span class="mat-icon">arrow_back</span></button>
+  <button class="back-btn" onclick="history.back()" aria-label="Go back"><span class="mat-icon">arrow_back</span></button>
   <button class="header-action" id="darkToggleBtn" onclick="toggleDark()" title="Toggle dark mode" aria-label="Toggle dark mode"><span class="mat-icon">dark_mode</span></button>
   <h1><span class="mat-icon mat-icon--sm" style="margin-right:6px">calendar_month</span> Family Calendar</h1>
   <button class="header-action" onclick="openModal()" title="Add event" aria-label="Add event"><span class="mat-icon">add</span></button>
 </div>
 <div class="content">
   <div class="month-nav">
-    <button onclick="changeMonth(-1)">‹</button>
+    <button onclick="changeMonth(-1)" aria-label="Previous month">‹</button>
     <h2 id="monthTitle"></h2>
-    <button onclick="changeMonth(1)">›</button>
+    <button onclick="changeMonth(1)" aria-label="Next month">›</button>
   </div>
   <div class="cal-grid" id="calGrid">
     <div class="day-header">Sun</div><div class="day-header">Mon</div><div class="day-header">Tue</div>
@@ -113,19 +115,19 @@
 <div class="modal" id="addModal">
   <div class="modal-box">
     <h3>Add Event</h3>
-    <div class="form-group"><label>Title</label><input type="text" id="evtTitle" placeholder="e.g. Family dinner, Doctor appointment"/></div>
-    <div class="form-group"><label>Date</label><input type="date" id="evtDate"/></div>
-    <div class="form-group"><label>Time (optional)</label><input type="time" id="evtTime"/></div>
-    <div class="form-group"><label>Note (optional)</label><input type="text" id="evtNote" placeholder="Any details…"/></div>
+    <div class="form-group"><label for="evtTitle">Title</label><input type="text" id="evtTitle" placeholder="e.g. Family dinner, Doctor appointment"/></div>
+    <div class="form-group"><label for="evtDate">Date</label><input type="date" id="evtDate"/></div>
+    <div class="form-group"><label for="evtTime">Time (optional)</label><input type="time" id="evtTime"/></div>
+    <div class="form-group"><label for="evtNote">Note (optional)</label><input type="text" id="evtNote" placeholder="Any details…"/></div>
     <div class="form-group">
       <label>Colour</label>
       <div class="color-row" id="colorRow">
-        <div class="color-dot selected" style="background:#008069" data-color="#008069" onclick="selectColor(this)"></div>
-        <div class="color-dot" style="background:#0284c7" data-color="#0284c7" onclick="selectColor(this)"></div>
-        <div class="color-dot" style="background:#7c3aed" data-color="#7c3aed" onclick="selectColor(this)"></div>
-        <div class="color-dot" style="background:#db2777" data-color="#db2777" onclick="selectColor(this)"></div>
-        <div class="color-dot" style="background:#d97706" data-color="#d97706" onclick="selectColor(this)"></div>
-        <div class="color-dot" style="background:#dc2626" data-color="#dc2626" onclick="selectColor(this)"></div>
+        <div class="color-dot selected" style="background:#008069" data-color="#008069" onclick="selectColor(this)" role="button" tabindex="0" aria-label="Green"></div>
+        <div class="color-dot" style="background:#0284c7" data-color="#0284c7" onclick="selectColor(this)" role="button" tabindex="0" aria-label="Blue"></div>
+        <div class="color-dot" style="background:#7c3aed" data-color="#7c3aed" onclick="selectColor(this)" role="button" tabindex="0" aria-label="Purple"></div>
+        <div class="color-dot" style="background:#db2777" data-color="#db2777" onclick="selectColor(this)" role="button" tabindex="0" aria-label="Pink"></div>
+        <div class="color-dot" style="background:#d97706" data-color="#d97706" onclick="selectColor(this)" role="button" tabindex="0" aria-label="Orange"></div>
+        <div class="color-dot" style="background:#dc2626" data-color="#dc2626" onclick="selectColor(this)" role="button" tabindex="0" aria-label="Red"></div>
       </div>
     </div>
     <div class="modal-btns">
@@ -134,14 +136,15 @@
     </div>
   </div>
 </div>
+</main>
 <div class="toast" id="toast"></div>
 
-<nav class="bottom-nav" id="bottomNav">
-  <a class="nav-item" href="index.html"><span class="mat-icon">chat</span><span>Chat</span></a>
-  <a class="nav-item" href="album.html"><span class="mat-icon">photo_library</span><span>Album</span></a>
-  <a class="nav-item active" href="calendar.html"><span class="mat-icon">calendar_month</span><span>Calendar</span></a>
-  <a class="nav-item" href="expenses.html"><span class="mat-icon">receipt_long</span><span>Expenses</span></a>
-  <a class="nav-item" href="insights.html"><span class="mat-icon">insights</span><span>Insights</span></a>
+<nav class="bottom-nav" id="bottomNav" aria-label="Main navigation">
+  <a class="nav-item" href="index.html" aria-label="Chat"><span class="mat-icon">chat</span><span>Chat</span></a>
+  <a class="nav-item" href="album.html" aria-label="Album"><span class="mat-icon">photo_library</span><span>Album</span></a>
+  <a class="nav-item active" href="calendar.html" aria-current="page" aria-label="Calendar"><span class="mat-icon">calendar_month</span><span>Calendar</span></a>
+  <a class="nav-item" href="expenses.html" aria-label="Expenses"><span class="mat-icon">receipt_long</span><span>Expenses</span></a>
+  <a class="nav-item" href="insights.html" aria-label="Insights"><span class="mat-icon">insights</span><span>Insights</span></a>
 </nav>
 
 <script>
@@ -158,7 +161,7 @@ function loadEvents(){
     allEvents=snap.docs.map(d=>({id:d.id,...d.data()}));
     renderCalendar();renderUpcoming();
   }, err=>{
-    document.getElementById('upcomingList').innerHTML='<div class="empty-evt">Could not load events: '+err.message+'</div>';
+    document.getElementById('upcomingList').innerHTML='<div class="empty-evt">Could not load events: '+esc(err.message)+'</div>';
   });
 }
 
@@ -182,6 +185,10 @@ function renderCalendar(){
     const dayEvents=allEvents.filter(e=>e.date===`${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`);
     cell.innerHTML=`<div class="day-num">${d}</div>${dayEvents.slice(0,2).map(e=>{const c=(e.color||'#008069').replace(/[^#0-9a-fA-F]/g,'').slice(0,7);return`<div class="event-dot" style="background:${c}22;color:${c};--event-color:${c}">${esc(e.title)}</div>`}).join('')}${dayEvents.length>2?`<div class="event-dot" style="color:var(--text-secondary)">+${dayEvents.length-2} more</div>`:''}`;
     cell.onclick=()=>openModal(`${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`);
+    cell.setAttribute('role','button');
+    cell.setAttribute('tabindex','0');
+    cell.setAttribute('aria-label',`Day ${d}`);
+    cell.onkeydown=(e)=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();cell.click();}};
     grid.appendChild(cell);
   }
   // Fill end
@@ -202,7 +209,7 @@ function renderUpcoming(){
         <div class="event-title" style="color:${(e.color||'var(--brand)').replace(/[^#0-9a-fA-F()%,.\-]/g,'').slice(0,40)};--event-color:${(e.color||'#008069').replace(/[^#0-9a-fA-F]/g,'').slice(0,7)}">${esc(e.title)}</div>
         <div class="event-meta">${e.time?e.time+' · ':''}${esc(e.note||'')} · Added by ${esc(e.addedByName||'Someone')}</div>
       </div>
-      ${e.addedBy===currentUser.uid?`<div class="event-actions"><button class="btn-del-evt" onclick="deleteEvent('${e.id}')">🗑</button></div>`:''}
+      ${e.addedBy===currentUser.uid?`<div class="event-actions"><button class="btn-del-evt" onclick="deleteEvent('${e.id}')" aria-label="Delete event">🗑</button></div>`:''}
     </div>`;
   }).join('');
 }
@@ -248,6 +255,6 @@ function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').
   };
 })();
 </script>
-<script src="redesign-base.js" defer></script>
+<script type="module" src="app-subpage.js"></script>
 </body>
 </html>

@@ -11,6 +11,11 @@ const ErrorBoundary = {
   _enabled: true,
 
   _initialized: false,
+  _crashUIShown: false,
+  _frequencyWindow: [],
+  _frequencyLimit: 10,
+  _frequencyWindowMs: 60000,
+  _circuits: {},
 
   init(sentryDsn) {
     if (this._initialized) return;
@@ -72,6 +77,8 @@ const ErrorBoundary = {
       this._errors.shift();
     }
 
+    this._trackFrequency(errorData);
+
     console.error(`[ErrorBoundary] ${errorData.type}:`, errorData.message, errorData.stack || '');
 
     if (this._sentryDsn && window.Sentry) {
@@ -88,6 +95,18 @@ const ErrorBoundary = {
 
     if (errorData.type === 'uncaught_error' && errorData.message.includes('Loading chunk')) {
       this._showRecoveryToast();
+    }
+  },
+
+  _trackFrequency(errorData) {
+    var now = Date.now();
+    this._frequencyWindow.push({ timestamp: now, data: errorData });
+    while (this._frequencyWindow.length > 0 &&
+           this._frequencyWindow[0].timestamp < now - this._frequencyWindowMs) {
+      this._frequencyWindow.shift();
+    }
+    if (this._frequencyWindow.length > this._frequencyLimit && !this._crashUIShown) {
+      this.showCrashUI(errorData.error || new Error(errorData.message));
     }
   },
 
@@ -133,6 +152,369 @@ const ErrorBoundary = {
 
   clearErrors() {
     this._errors = [];
+  },
+
+  /* --------------------------------------------------------
+     WRAP / WRAPASYNC
+     Wrap functions in try-catch with automatic error reporting
+     -------------------------------------------------------- */
+  wrap(fn, context) {
+    var self = this;
+    return function () {
+      try {
+        return fn.apply(this, arguments);
+      } catch (err) {
+        self._captureError({
+          type: 'wrapped_sync_error',
+          message: err.message || String(err),
+          error: err,
+          stack: err.stack || '',
+          context: context || {},
+          timestamp: Date.now()
+        });
+        return undefined;
+      }
+    };
+  },
+
+  wrapAsync(fn, context) {
+    var self = this;
+    return function () {
+      var args = arguments;
+      var ctx = this;
+      return new Promise(function (resolve, reject) {
+        try {
+          var result = fn.apply(ctx, args);
+          if (result && typeof result.then === 'function') {
+            result.then(resolve)['catch'](function (err) {
+              self._captureError({
+                type: 'wrapped_async_error',
+                message: err.message || String(err),
+                error: err,
+                stack: err.stack || '',
+                context: context || {},
+                timestamp: Date.now()
+              });
+              reject(err);
+            });
+          } else {
+            resolve(result);
+          }
+        } catch (err) {
+          self._captureError({
+            type: 'wrapped_async_error',
+            message: err.message || String(err),
+            error: err,
+            stack: err.stack || '',
+            context: context || {},
+            timestamp: Date.now()
+          });
+          reject(err);
+        }
+      });
+    };
+  },
+
+  /* --------------------------------------------------------
+     COMPONENT-LEVEL ERROR RECOVERY
+     Retry with exponential backoff on failure
+     -------------------------------------------------------- */
+  retryWithBackoff(fn, context, opts) {
+    var self = this;
+    var maxRetries = (opts && opts.maxRetries) || 3;
+    var baseDelay = (opts && opts.baseDelay) || 1000;
+
+    function attempt(retryCount) {
+      try {
+        var result = fn();
+        if (result && typeof result.then === 'function') {
+          return result['catch'](function (err) {
+            if (retryCount >= maxRetries) {
+              self._captureError({
+                type: 'recovery_failed',
+                message: 'All ' + maxRetries + ' retries failed: ' + (err.message || String(err)),
+                error: err,
+                stack: err.stack || '',
+                context: context || {},
+                timestamp: Date.now()
+              });
+              self._showRecoveryToast();
+              throw err;
+            }
+            self._showRetryToast(retryCount + 1, maxRetries);
+            return new Promise(function (resolve) {
+              setTimeout(resolve, baseDelay * Math.pow(2, retryCount));
+            }).then(function () { return attempt(retryCount + 1); });
+          });
+        }
+        return result;
+      } catch (err) {
+        if (retryCount >= maxRetries) {
+          self._captureError({
+            type: 'recovery_failed',
+            message: 'All ' + maxRetries + ' retries failed: ' + (err.message || String(err)),
+            error: err,
+            stack: err.stack || '',
+            context: context || {},
+            timestamp: Date.now()
+          });
+          self._showRecoveryToast();
+          throw err;
+        }
+        self._showRetryToast(retryCount + 1, maxRetries);
+        return new Promise(function (resolve) {
+          setTimeout(resolve, baseDelay * Math.pow(2, retryCount));
+        }).then(function () { return attempt(retryCount + 1); });
+      }
+    }
+
+    return attempt(0);
+  },
+
+  _showRetryToast(attempt, max) {
+    var toast = document.createElement('div');
+    toast.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);z-index:99999;' +
+      'background:#555;color:#fff;padding:10px 20px;border-radius:10px;' +
+      'font-size:13px;font-weight:500;box-shadow:0 4px 16px rgba(0,0,0,0.25);max-width:90vw;text-align:center;';
+    toast.textContent = 'Retrying... (attempt ' + attempt + ' of ' + max + ')';
+    document.body.appendChild(toast);
+    setTimeout(function () { toast.remove(); }, 2500);
+  },
+
+  /* --------------------------------------------------------
+     CRASH UI
+     Full-screen recovery overlay with Reload and Report Bug
+     -------------------------------------------------------- */
+  showCrashUI(error) {
+    if (this._crashUIShown) return;
+    this._crashUIShown = true;
+
+    var overlay = document.createElement('div');
+    overlay.setAttribute('role', 'alertdialog');
+    overlay.setAttribute('aria-modal', 'true');
+    overlay.style.cssText = 'position:fixed;inset:0;z-index:999999;background:#1a1a2e;color:#e0e0e0;' +
+      'display:flex;flex-direction:column;align-items:center;justify-content:center;' +
+      'font-family:system-ui,-apple-system,sans-serif;padding:24px;';
+
+    var heading = document.createElement('h1');
+    heading.style.cssText = 'font-size:24px;margin:0 0 8px;color:#ff6b6b;';
+    heading.textContent = 'Something went wrong';
+    overlay.appendChild(heading);
+
+    var desc = document.createElement('p');
+    desc.style.cssText = 'font-size:14px;margin:0 0 24px;color:#aaa;max-width:420px;text-align:center;';
+    desc.textContent = 'The app encountered an unexpected error. You can try reloading or report the issue.';
+    overlay.appendChild(desc);
+
+    if (error) {
+      var errBox = document.createElement('pre');
+      errBox.style.cssText = 'background:#0d1117;color:#f85149;padding:12px 16px;border-radius:8px;' +
+        'font-size:12px;max-width:420px;width:100%;overflow:auto;max-height:120px;margin:0 0 24px;' +
+        'word-break:break-word;white-space:pre-wrap;';
+      errBox.textContent = (error.stack || error.message || String(error)).substring(0, 500);
+      overlay.appendChild(errBox);
+    }
+
+    var btnRow = document.createElement('div');
+    btnRow.style.cssText = 'display:flex;gap:12px;flex-wrap:wrap;justify-content:center;';
+
+    var reloadBtn = document.createElement('button');
+    reloadBtn.textContent = 'Reload App';
+    reloadBtn.style.cssText = 'padding:12px 28px;border:none;border-radius:10px;background:#4361ee;' +
+      'color:#fff;font-size:15px;font-weight:600;cursor:pointer;box-shadow:0 4px 12px rgba(67,97,238,0.4);';
+    reloadBtn.onclick = function () { location.reload(); };
+    btnRow.appendChild(reloadBtn);
+
+    var reportBtn = document.createElement('button');
+    reportBtn.textContent = 'Report Bug';
+    reportBtn.style.cssText = 'padding:12px 28px;border:2px solid #555;border-radius:10px;background:transparent;' +
+      'color:#ccc;font-size:15px;font-weight:600;cursor:pointer;';
+    reportBtn.onclick = function () {
+      var exported = ErrorBoundary.exportErrors();
+      var blob = new Blob([exported], { type: 'application/json' });
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = url;
+      a.download = 'error-report-' + Date.now() + '.json';
+      a.click();
+      URL.revokeObjectURL(url);
+    };
+    btnRow.appendChild(reportBtn);
+
+    overlay.appendChild(btnRow);
+    document.body.appendChild(overlay);
+  },
+
+  /* --------------------------------------------------------
+     ERROR FREQUENCY / RECENT ERRORS
+     -------------------------------------------------------- */
+  getRecentErrors(count) {
+    var n = count || 10;
+    return this._errors.slice(-n).map(function (e) {
+      return {
+        type: e.type,
+        message: e.message,
+        timestamp: e.timestamp,
+        context: e.context || null,
+        stack: e.stack || ''
+      };
+    });
+  },
+
+  /* --------------------------------------------------------
+     EXPORT ERRORS
+     Returns JSON string of all errors for support hand-off
+     -------------------------------------------------------- */
+  exportErrors() {
+    var payload = {
+      exportedAt: new Date().toISOString(),
+      userAgent: navigator.userAgent,
+      url: location.href,
+      errorCount: this._errors.length,
+      errors: this._errors.map(function (e) {
+        return {
+          type: e.type,
+          message: e.message,
+          filename: e.filename || '',
+          lineno: e.lineno || 0,
+          colno: e.colno || 0,
+          context: e.context || null,
+          stack: e.stack || '',
+          timestamp: e.timestamp,
+          timestampISO: new Date(e.timestamp).toISOString()
+        };
+      })
+    };
+    return JSON.stringify(payload, null, 2);
+  },
+
+  /* --------------------------------------------------------
+     CIRCUIT BREAKER
+     Prevents cascading failures by opening the circuit
+     after repeated failures.
+
+     States: CLOSED (normal) | OPEN (blocking) | HALF_OPEN (testing)
+
+     Options:
+       threshold    - failures before opening (default: 5)
+       resetTimeout - ms before OPEN -> HALF_OPEN (default: 30000)
+       timeout      - ms per call before considered failed (default: 10000)
+     -------------------------------------------------------- */
+  circuitBreak(name, fn, opts) {
+    var self = this;
+    var options = opts || {};
+    var threshold = options.threshold || 5;
+    var resetTimeout = options.resetTimeout || 30000;
+    var timeout = options.timeout || 10000;
+
+    if (!this._circuits[name]) {
+      this._circuits[name] = {
+        state: 'CLOSED',
+        failures: 0,
+        lastFailure: 0,
+        halfOpenPending: false
+      };
+    }
+
+    var circuit = this._circuits[name];
+
+    return function () {
+      if (circuit.state === 'OPEN') {
+        if (Date.now() - circuit.lastFailure >= resetTimeout) {
+          circuit.state = 'HALF_OPEN';
+          circuit.halfOpenPending = false;
+        } else {
+          self._captureError({
+            type: 'circuit_open',
+            message: 'Circuit "' + name + '" is OPEN, call rejected',
+            context: { circuit: name },
+            timestamp: Date.now()
+          });
+          return Promise.reject(new Error('Circuit "' + name + '" is open'));
+        }
+      }
+
+      if (circuit.state === 'HALF_OPEN' && circuit.halfOpenPending) {
+        return Promise.reject(new Error('Circuit "' + name + '" half-open test in progress'));
+      }
+
+      if (circuit.state === 'HALF_OPEN') {
+        circuit.halfOpenPending = true;
+      }
+
+      var timedOut = false;
+      var timer = setTimeout(function () {
+        timedOut = true;
+      }, timeout);
+
+      try {
+        var result = fn.apply(this, arguments);
+
+        if (result && typeof result.then === 'function') {
+          return new Promise(function (resolve, reject) {
+            result.then(function (val) {
+              if (timedOut) return;
+              clearTimeout(timer);
+              circuit.failures = 0;
+              circuit.state = 'CLOSED';
+              circuit.halfOpenPending = false;
+              resolve(val);
+            })['catch'](function (err) {
+              if (timedOut) {
+                reject(new Error('Circuit "' + name + '" call timed out'));
+                return;
+              }
+              clearTimeout(timer);
+              circuit.failures++;
+              circuit.lastFailure = Date.now();
+              if (circuit.failures >= threshold) {
+                circuit.state = 'OPEN';
+              }
+              circuit.halfOpenPending = false;
+              reject(err);
+            });
+
+            setTimeout(function () {
+              if (timedOut) {
+                circuit.failures++;
+                circuit.lastFailure = Date.now();
+                if (circuit.failures >= threshold) {
+                  circuit.state = 'OPEN';
+                }
+                circuit.halfOpenPending = false;
+                reject(new Error('Circuit "' + name + '" call timed out'));
+              }
+            }, timeout + 50);
+          });
+        }
+
+        clearTimeout(timer);
+        circuit.failures = 0;
+        circuit.state = 'CLOSED';
+        circuit.halfOpenPending = false;
+        return result;
+      } catch (err) {
+        clearTimeout(timer);
+        circuit.failures++;
+        circuit.lastFailure = Date.now();
+        if (circuit.failures >= threshold) {
+          circuit.state = 'OPEN';
+        }
+        circuit.halfOpenPending = false;
+        throw err;
+      }
+    };
+  },
+
+  getCircuitState(name) {
+    var c = this._circuits[name];
+    return c ? { state: c.state, failures: c.failures } : null;
+  },
+
+  resetCircuit(name) {
+    if (this._circuits[name]) {
+      this._circuits[name] = { state: 'CLOSED', failures: 0, lastFailure: 0, halfOpenPending: false };
+    }
   }
 };
 

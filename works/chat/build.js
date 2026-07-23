@@ -563,7 +563,7 @@ function processIndexHtml() {
   // Production CSP — nonce-based where possible, unsafe-inline for inline onclick handlers
   html = html.replace(
     /<meta http-equiv="Content-Security-Policy" content="[^"]*">/,
-    `<meta http-equiv="Content-Security-Policy" content="default-src 'self' https: blob: data:; script-src 'self' 'unsafe-eval' https://www.gstatic.com https://unpkg.com https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' https: blob: data:; font-src 'self' https://fonts.gstatic.com; connect-src 'self' https: wss://*.firebaseio.com; frame-src 'self' https:; worker-src 'self' blob:; frame-ancestors 'self'; form-action 'self'; base-uri 'self';">`
+    `<meta http-equiv="Content-Security-Policy" content="default-src 'self' https: blob: data:; script-src 'self' https://www.gstatic.com https://unpkg.com https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' https: blob: data:; font-src 'self' https://fonts.gstatic.com; connect-src 'self' https: wss://*.firebaseio.com; frame-src 'self' https://*.firebaseapp.com https://*.youtube.com https://youtube.com; worker-src 'self' blob:; frame-ancestors 'self'; form-action 'self'; base-uri 'self';">`
   );
 
   return html;
@@ -623,8 +623,8 @@ for (const f of extraJs) {
     if (f === 'sw.js') {
       let swContent = readFile('sw.js');
       swContent = swContent.replace(
-        "const CACHE_NAME = 'nsl-chat-v2.5.1';",
-        `const CACHE_NAME = 'nsl-chat-v2.5.1-${jsHash}';`
+        "const CACHE_NAME = 'nsl-chat-v4.0.0';",
+        `const CACHE_NAME = 'nsl-chat-v4.0.0-${jsHash}';`
       );
       const newStaticAssets = `const STATIC_ASSETS = [
   'app.css',

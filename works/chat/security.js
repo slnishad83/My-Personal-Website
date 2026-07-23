@@ -14,9 +14,14 @@ const Security = {
   _storageDBVersion: 1,
   _storageStoreName: 'secrets',
   _storageKey: null,
+  _e2ePrivateKey: null,
+  _e2ePublicKeyJwk: null,
 
   async init() {
     this._startTokenRefresh();
+    if (typeof window !== 'undefined') {
+      window.addEventListener('beforeunload', () => this.destroy());
+    }
     if (window.__DEBUG__) console.log('[Security] Initialized (WebCrypto storage + ECDH)');
   },
 
@@ -95,6 +100,77 @@ const Security = {
       const plain = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: ivBytes }, key, ct);
       return new TextDecoder().decode(plain);
     } catch (e) { return { error: true, message: 'Decryption failed' }; }
+  },
+
+  /* ── E2E Key Exchange ──────────────────────────────── */
+  async _ensureE2EKeys() {
+    if (this._e2ePrivateKey && this._e2ePublicKeyJwk) return;
+    const user = window.currentUser || App?.currentUser;
+    if (!user) return;
+    const uid = user.uid;
+    const stored = await this.getSecure('e2eKeypair_' + uid);
+    if (stored && stored.privateJwk && stored.publicJwk) {
+      this._e2ePrivateKey = await crypto.subtle.importKey(
+        'jwk', stored.privateJwk,
+        { name: 'ECDH', namedCurve: 'P-256' },
+        false, ['deriveKey', 'deriveBits']
+      );
+      this._e2ePublicKeyJwk = stored.publicJwk;
+    } else {
+      const kp = await this.generateKeyPair();
+      if (!kp) return;
+      this._e2ePrivateKey = kp.privateKey;
+      this._e2ePublicKeyJwk = kp.publicKeyJwk;
+      await this.storeSecure('e2eKeypair_' + uid, {
+        publicJwk: kp.publicKeyJwk,
+        privateJwk: kp.privateKey ? await crypto.subtle.exportKey('jwk', kp.privateKey) : null,
+      });
+    }
+  },
+
+  async publishPublicKey() {
+    await this._ensureE2EKeys();
+    if (!this._e2ePublicKeyJwk) return;
+    const user = window.currentUser || App?.currentUser;
+    if (!user) return;
+    const db = firebase.firestore();
+    await db.collection('userPublicKeys').doc(user.uid).set(
+      { publicKey: this._e2ePublicKeyJwk, publicKeyUpdatedAt: Date.now() },
+      { merge: true }
+    );
+  },
+
+  async getPeerPublicKey(peerUid) {
+    const db = firebase.firestore();
+    const snap = await db.collection('userPublicKeys').doc(peerUid).get();
+    if (!snap.exists) return null;
+    return snap.data().publicKey || null;
+  },
+
+  async getSharedKey(peerUid) {
+    const cacheKey = 'e2e_' + peerUid;
+    if (this._keyCache.has(cacheKey)) return this._keyCache.get(cacheKey);
+    await this._ensureE2EKeys();
+    if (!this._e2ePrivateKey) return null;
+    const theirPubJwk = await this.getPeerPublicKey(peerUid);
+    if (!theirPubJwk) return null;
+    const sharedKey = await this.deriveSharedKey(this._e2ePrivateKey, theirPubJwk);
+    if (sharedKey && this._keyCache.size < this._KEY_CACHE_MAX) {
+      this._keyCache.set(cacheKey, sharedKey);
+    }
+    return sharedKey;
+  },
+
+  async encryptMessage(text, peerUid) {
+    const key = await this.getSharedKey(peerUid);
+    if (!key) return null;
+    return await this.encrypt(text, key);
+  },
+
+  async decryptMessage(ciphertext, iv, peerUid) {
+    const key = await this.getSharedKey(peerUid);
+    if (!key) return { error: true, message: 'No shared key' };
+    return await this.decrypt(ciphertext, iv, key);
   },
 
   /* ── Room Key Management ────────────────────────────── */

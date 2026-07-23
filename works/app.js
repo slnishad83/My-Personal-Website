@@ -520,6 +520,26 @@ async function encryptMessageText(text, peerUid) {
   } catch (e) { return null; }
 }
 
+async function ensureE2EKeyPair() {
+  if (!App.auth?.currentUser || !App.db) return;
+  const uid = App.auth.currentUser.uid;
+  const existing = localStorage.getItem("wa_e2e_" + uid);
+  if (existing) return;
+  try {
+    const keyPair = await crypto.subtle.generateKey(
+      { name: "ECDH", namedCurve: "P-256" },
+      true, ["deriveBits"]
+    );
+    const privateJwk = await crypto.subtle.exportKey("jwk", keyPair.privateKey);
+    const publicJwk = await crypto.subtle.exportKey("jwk", keyPair.publicKey);
+    localStorage.setItem("wa_e2e_" + uid, JSON.stringify(privateJwk));
+    await App.db.collection("userPublicKeys").doc(uid).set({
+      publicKey: publicJwk,
+      createdAt: Date.now(),
+    }, { merge: true });
+  } catch (e) { console.warn("E2E key pair generation failed:", e); }
+}
+
 function subscribeToUsers() {
   if (!App.db || !App.auth?.currentUser) {
     loadDemoData();
@@ -1395,6 +1415,7 @@ function checkSession() {
           loadChatFolders();
           _loadMuteState();
           mergeOrphanedChats(App.currentUser.uid, App.currentUser.email);
+          ensureE2EKeyPair();
           setLoadingStatus('Ready');
           setTimeout(bootApp, 400);
         });
@@ -2000,8 +2021,8 @@ function renderChatListInner(filter = '') {
     return b.lastTime - a.lastTime;
   });
 
-  const pinned   = items.filter(c=>c.pinned);
-  const unpinned = items.filter(c=>!c.pinned);
+  let pinned   = items.filter(c=>c.pinned);
+  let unpinned = items.filter(c=>!c.pinned);
 
   let html = '';
   if (hasArchived) {
@@ -4651,7 +4672,7 @@ function playCallEndedSound() {
   playNotifSound('call_end');
 }
 
-function formatDuration(sec) {
+function formatDurationCall(sec) {
   const m = Math.floor(sec / 60);
   const s = sec % 60;
   return m + ':' + String(s).padStart(2, '0');

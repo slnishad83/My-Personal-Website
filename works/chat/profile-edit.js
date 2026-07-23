@@ -4,6 +4,13 @@
 
   var _esc = function(s) { return App && App.escHtml ? App.escHtml(s) : (s ? String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;') : ''); };
 
+  function _sanitizeUrl(url) {
+    if (!url) return '';
+    var trimmed = String(url).trim();
+    if (/^(javascript|data|vbscript):/i.test(trimmed)) return '';
+    return trimmed;
+  }
+
   var _db = function() { return App && App.db ? App.db : (typeof firebase !== 'undefined' ? firebase.firestore() : null); };
 
   function _auth() {
@@ -88,8 +95,10 @@
 
       try {
         var preview = document.querySelector('.nsl-pe-avatar');
+        var previewObjectUrl = null;
         if (preview) {
           var url = URL.createObjectURL(file);
+          previewObjectUrl = url;
           if (preview.tagName === 'IMG') {
             preview.src = url;
           } else {
@@ -125,6 +134,8 @@
       } catch (err) {
         console.error('Avatar upload error:', err);
         if (typeof showToast === 'function') showToast('Failed to upload avatar', 'error');
+      } finally {
+        if (previewObjectUrl) URL.revokeObjectURL(previewObjectUrl);
       }
     };
     input.click();
@@ -236,7 +247,12 @@
       }
 
       if (newPhone && newPhone !== (window.currentUser && window.currentUser.phoneNumber)) {
-        await changePhone(newPhone);
+        var phoneUpdated = await changePhone(newPhone);
+        if (!phoneUpdated && saveBtn) {
+          saveBtn.disabled = false;
+          saveBtn.textContent = 'Save Changes';
+          return;
+        }
       }
 
       if (Object.keys(updates).length > 0) {
@@ -270,7 +286,7 @@
     overlay.className = 'nsl-pe-overlay';
 
     var avatarContent = photoURL
-      ? '<img class="nsl-pe-avatar" src="' + _esc(photoURL) + '" alt="Avatar" style="width:96px;height:96px;border-radius:50%;object-fit:cover">'
+      ? '<img class="nsl-pe-avatar" src="' + _esc(_sanitizeUrl(photoURL)) + '" alt="Avatar" style="width:96px;height:96px;border-radius:50%;object-fit:cover">'
       : '<div class="nsl-pe-avatar">' + _esc((displayName || '?').charAt(0).toUpperCase()) + '</div>';
 
     var modal = document.createElement('div');

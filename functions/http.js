@@ -12,10 +12,10 @@ const admin = new Proxy({}, {
 });
 
 const meteredApiKey = defineSecret('METERED_API_KEY');
+const youtubeApiKey = defineSecret('YOUTUBE_API_KEY');
 const METERED_APP_URL = 'teamchatnishad.metered.live';
 const TURN_CREDENTIAL_LABEL = 'team-chat-secure-turn';
 const CHAT_APP_URL = 'https://nishadsl.com/works/chat/';
-const ADMIN_EMAIL = 'sl.nishad@gmail.com';
 
 const ALLOWED_ORIGINS = ['https://nishadsl.com', 'https://my-team-chat-2255.web.app', 'https://works.my-team-chat-2255.web.app'];
 function setCorsHeaders(response, origin) {
@@ -48,7 +48,7 @@ function assertValidOrigin(request) {
   }
 }
 
-// M9: Simple in-memory rate limiter (per-function, per-user)
+// M9: Simple in-memory rate limiter (per-function, per-user) with cleanup
 const _rateLimitBuckets = new Map();
 function checkRateLimit(userId, action, maxPerMinute) {
   if (!userId || !action) return;
@@ -65,6 +65,13 @@ function checkRateLimit(userId, action, maxPerMinute) {
     throw new Error(`Rate limit exceeded for ${action}. Try again later.`);
   }
 }
+// Cleanup expired buckets every 5 minutes
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, bucket] of _rateLimitBuckets) {
+    if (now - bucket.start > 120000) _rateLimitBuckets.delete(key);
+  }
+}, 300000);
 
 async function syncGroupAccessMetadata(groupId) {
   if (!groupId) return;
@@ -93,7 +100,7 @@ async function syncGroupAccessMetadata(groupId) {
 async function assertAdmin(auth) {
   if (!auth) throw new HttpsError('unauthenticated', 'Must be signed in.');
   const userRecord = await admin.auth().getUser(auth.uid);
-  if (userRecord.email !== ADMIN_EMAIL) {
+  if (!userRecord.customClaims || !userRecord.customClaims.admin) {
     throw new HttpsError('permission-denied', 'Admin access only.');
   }
 }
@@ -199,24 +206,6 @@ function _storagePathFromUrl(url) {
 
 const ALLOWED_URL_HOSTS = ['nishadsl.com', 'my-team-chat-2255.web.app', 'github.com', 'github.io'];
 
-const YOUTUBE_CLIENTS = {
-  WEB: { clientName: 'WEB', clientVersion: '2.20250101.00.00', apiKey: 'AIzaSyAO_FJ2SlqU8Q4STEHLGCilw_Y9_11qcW8' },
-  ANDROID: { clientName: 'ANDROID', clientVersion: '19.09.37', androidSdkVersion: 30, apiKey: 'AIzaSyAO_FJ2SlqU8Q4STEHLGCilw_Y9_11qcW8' },
-  IOS: { clientName: 'IOS', clientVersion: '19.09.3', deviceModel: 'iPhone14,3' },
-  TVHTML5_SIMPLY_EMBEDDED: { clientName: 'TVHTML5_SIMPLY_EMBEDDED_PLAYER', clientVersion: '2.0' },
-};
-
-function _detectLangPrefix(query) {
-  const q = query.toLowerCase();
-  if (/malayalam|mly|ml\b/.test(q)) return '';
-  if (/tamil|tl\b/.test(q)) return '';
-  if (/telugu|tlg\b/.test(q)) return '';
-  if (/hindi|hnd\b/.test(q)) return '';
-  if (/kannada|kn\b/.test(q)) return '';
-  if (/bengali|bn\b/.test(q)) return '';
-  return '';
-}
-
 async function _youtubeSearch(query) {
   const context = {
     client: {
@@ -227,7 +216,7 @@ async function _youtubeSearch(query) {
     },
   };
 
-  const key = YOUTUBE_CLIENTS.WEB.apiKey;
+  const key = youtubeApiKey.value();
   const url = `https://www.youtube.com/youtubei/v1/search?key=${key}&prettyPrint=false`;
 
   const response = await fetch(url, {
@@ -291,7 +280,7 @@ async function _getYouTubeStreamUrl(videoId) {
       clientName: 'ANDROID',
       clientVersion: '19.09.37',
       androidSdkVersion: 30,
-      apiKey: 'AIzaSyAO_FJ2SlqU8Q4STEHLGCilw_Y9_11qcW8',
+      apiKey: youtubeApiKey.value(),
       ua: 'com.google.android.youtube/19.09.37 (Linux; U; Android 11) gzip',
     },
     {
@@ -564,7 +553,7 @@ exports.lookupVerifiedUserByEmailV2 = onRequest(
 );
 
 exports.repairGroupAccessMetadata = onRequest(
-  { region: 'us-central1', invoker: 'public' },
+  { region: 'us-central1', invoker: 'private' },
   async (request, response) => {
     setCorsHeaders(response, request.get('Origin'));
     response.set('Cache-Control', 'private, no-store');
@@ -578,7 +567,6 @@ exports.repairGroupAccessMetadata = onRequest(
     }
     try {
       const auth = await verifyFirebaseUser(request);
-      // M10: Require admin access
       await assertAdmin(auth);
       const migrationRef = admin.firestore().collection('systemMigrations').doc('groupAccessMetadataV1');
       const migration = await migrationRef.get();
@@ -598,7 +586,7 @@ exports.repairGroupAccessMetadata = onRequest(
       response.status(200).json({ repaired: groupSnap.size, alreadyComplete: false });
     } catch (error) {
       console.error('[repairGroupAccessMetadata]', error);
-      response.status(500).json({ error: error.message || 'Internal error' });
+      response.status(500).json({ error: 'Internal error' });
     }
   }
 );
@@ -653,7 +641,7 @@ exports.getTurnCredentials = onRequest(
 );
 
 exports.migrateCallsToCallLogs = onRequest(
-  { region: 'us-central1', invoker: 'public', timeoutSeconds: 120 },
+  { region: 'us-central1', invoker: 'private', timeoutSeconds: 120 },
   async (request, response) => {
     setCorsHeaders(response, request.get('Origin'));
     if (request.method === 'OPTIONS') { response.status(204).send(''); return; }
@@ -682,13 +670,13 @@ exports.migrateCallsToCallLogs = onRequest(
       response.status(200).json({ migrated: created, total: callsSnap.size });
     } catch (error) {
       console.error('[migrateCallsToCallLogs]', error);
-      response.status(500).json({ error: error.message || 'Internal error' });
+      response.status(500).json({ error: 'Internal error' });
     }
   }
 );
 
 exports.backfillMessageEmails = onRequest(
-  { region: 'us-central1', invoker: 'public', timeoutSeconds: 300 },
+  { region: 'us-central1', invoker: 'private', timeoutSeconds: 300 },
   async (request, response) => {
     setCorsHeaders(response, request.get('Origin'));
     if (request.method === 'OPTIONS') { response.status(204).send(''); return; }
@@ -729,7 +717,8 @@ exports.backfillMessageEmails = onRequest(
       if (opCount > 0) await batch.commit();
       response.status(200).json({ updated, total: msgSnap.size });
     } catch (error) {
-      response.status(500).json({ error: error.message });
+      console.error('[backfillMessageEmails]', error);
+      response.status(500).json({ error: 'Internal error' });
     }
   }
 );
@@ -767,9 +756,13 @@ exports.sendNotificationReply = onRequest(
         res.status(400).json({ error: 'Invalid chatType' });
         return;
       }
-      // H7: Sanitize text — strip potential script tags
-      const sanitizedText = trimmedText.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
-        .replace(/javascript:/gi, '');
+      // H7: Sanitize text — encode HTML entities to prevent XSS
+      const sanitizedText = trimmedText
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#x27;');
 
       const userSnap = await admin.firestore().collection('users').doc(uid).get();
       const user = userSnap.data() || {};
@@ -798,12 +791,12 @@ exports.sendNotificationReply = onRequest(
       res.status(200).json({ ok: true, messageId: ref.id });
     } catch (err) {
       console.error('sendNotificationReply error:', err);
-      res.status(401).json({ error: err.message || 'Unauthorized' });
+      res.status(500).json({ error: 'Internal error' });
     }
   }
 );
 
-exports.generateUrlPreview = onRequest(async (req, res) => {
+exports.generateUrlPreview = onRequest({ region: 'us-central1', timeoutSeconds: 15 }, async (req, res) => {
   setCorsHeaders(res, req.get('Origin'));
   if (req.method === 'OPTIONS') { res.status(204).send(''); return; }
 
@@ -915,26 +908,31 @@ exports.generateUrlPreview = onRequest(async (req, res) => {
     res.json(data);
   } catch (e) {
     console.error('[generateUrlPreview] error:', e.message);
-    res.status(500).json({ error: e.message });
+    res.status(500).json({ error: 'Failed to generate preview' });
   }
 });
 
 exports.youtubeSearch = onRequest(
-  { cors: false, timeoutSeconds: 30, memory: '256MB' },
+  { region: 'us-central1', cors: false, timeoutSeconds: 30, memory: '256MB', secrets: [youtubeApiKey] },
   async (req, res) => {
     if (req.method === 'OPTIONS') { res.status(204).send(''); return; }
     const origin = req.get('Origin') || req.get('Referer') || '';
     setCorsHeaders(res, origin);
 
-    try { await verifyFirebaseUser(req); } catch (e) {
+    let caller;
+    try { caller = await verifyFirebaseUser(req); } catch (e) {
       res.status(401).json({ ok: false, error: 'Unauthorized' }); return;
     }
+    checkRateLimit(caller.uid, 'youtubeSearch', 15);
 
     const { q, videoId, lang } = req.query || {};
     const body = req.method === 'POST' ? req.body : {};
 
     try {
       if (videoId) {
+        if (!/^[a-zA-Z0-9_-]{11}$/.test(videoId)) {
+          res.status(400).json({ ok: false, error: 'Invalid videoId format' }); return;
+        }
         const streamUrl = await _getYouTubeStreamUrl(videoId);
         if (streamUrl) {
           res.json({ ok: true, url: streamUrl });
@@ -948,8 +946,7 @@ exports.youtubeSearch = onRequest(
         const query = (q || body.q || '').trim();
         if (!query) { res.json({ ok: true, results: [] }); return; }
 
-        const langPrefix = lang || _detectLangPrefix(query);
-        const searchQuery = langPrefix ? `${query} ${langPrefix}` : query;
+        const searchQuery = lang ? `${query} ${lang}` : query;
         const results = await _youtubeSearch(searchQuery);
         res.json({ ok: true, results });
         return;
@@ -958,7 +955,7 @@ exports.youtubeSearch = onRequest(
       res.status(400).json({ ok: false, error: 'Missing q or videoId parameter' });
     } catch (e) {
       console.error('[youtubeSearch] Error:', e.message);
-      res.status(500).json({ ok: false, error: e.message });
+      res.status(500).json({ ok: false, error: 'Search failed' });
     }
   }
 );
