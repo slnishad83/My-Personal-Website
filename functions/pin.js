@@ -39,21 +39,26 @@ function timingSafeEqual(a, b) {
 
 const _pinRateLimit = new Map();
 const _pinFailures = new Map();
+let _pinCleanupStarted = false;
 const PIN_WINDOW = 60 * 1000;
 const PIN_MAX = 5;
 const LOCKOUT_BASE = 5 * 60 * 1000;
 const LOCKOUT_MAX = 60 * 60 * 1000;
 
-// Cleanup expired entries every 5 minutes to prevent memory leaks
-setInterval(() => {
-  const now = Date.now();
-  for (const [key, entry] of _pinRateLimit) {
-    if (now - entry.start > PIN_WINDOW * 2) _pinRateLimit.delete(key);
-  }
-  for (const [key, entry] of _pinFailures) {
-    if (now - entry.lastFail > LOCKOUT_MAX * 2) _pinFailures.delete(key);
-  }
-}, 300000);
+// Cleanup expired entries lazily on first use (prevents event loop leak during deploy)
+function _startPinCleanup() {
+  if (_pinCleanupStarted) return;
+  _pinCleanupStarted = true;
+  setInterval(() => {
+    const now = Date.now();
+    for (const [key, entry] of _pinRateLimit) {
+      if (now - entry.start > PIN_WINDOW * 2) _pinRateLimit.delete(key);
+    }
+    for (const [key, entry] of _pinFailures) {
+      if (now - entry.lastFail > LOCKOUT_MAX * 2) _pinFailures.delete(key);
+    }
+  }, 300000);
+}
 
 function getLockoutDuration(failures) {
   const level = Math.min(failures - PIN_MAX, 5);
@@ -61,6 +66,7 @@ function getLockoutDuration(failures) {
 }
 
 function checkPinRateLimit(uid, action) {
+  _startPinCleanup();
   const key = `${uid}:${action}`;
   const now = Date.now();
   const failKey = `${uid}:failures`;

@@ -17,7 +17,19 @@ const geminiApiKey = defineSecret('GEMINI_API_KEY');
 
 // Simple in-memory rate limiter per user (5 requests/min, 30/hour for AI functions)
 const _aiRateBuckets = new Map();
+let _aiCleanupStarted = false;
 function checkAiRateLimit(uid) {
+  if (!_aiCleanupStarted) {
+    _aiCleanupStarted = true;
+    setInterval(() => {
+      const now = Date.now();
+      for (const [uid, bucket] of _aiRateBuckets) {
+        bucket.minute = bucket.minute.filter(t => now - t < 60000);
+        bucket.hour = bucket.hour.filter(t => now - t < 3600000);
+        if (bucket.minute.length === 0 && bucket.hour.length === 0) _aiRateBuckets.delete(uid);
+      }
+    }, 300000);
+  }
   const now = Date.now();
   const bucket = _aiRateBuckets.get(uid) || { minute: [], hour: [] };
   bucket.minute = bucket.minute.filter(t => now - t < 60000);
@@ -30,15 +42,6 @@ function checkAiRateLimit(uid) {
   _aiRateBuckets.set(uid, bucket);
   return true;
 }
-// Periodic cleanup every 5 minutes
-setInterval(() => {
-  const now = Date.now();
-  for (const [uid, bucket] of _aiRateBuckets) {
-    bucket.minute = bucket.minute.filter(t => now - t < 60000);
-    bucket.hour = bucket.hour.filter(t => now - t < 3600000);
-    if (bucket.minute.length === 0 && bucket.hour.length === 0) _aiRateBuckets.delete(uid);
-  }
-}, 300000);
 
 exports.aiChatBot = onCall(
   { region: 'us-central1', secrets: [geminiApiKey] },

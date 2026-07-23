@@ -50,8 +50,18 @@ function assertValidOrigin(request) {
 
 // M9: Simple in-memory rate limiter (per-function, per-user) with cleanup
 const _rateLimitBuckets = new Map();
+let _httpCleanupStarted = false;
 function checkRateLimit(userId, action, maxPerMinute) {
   if (!userId || !action) return;
+  if (!_httpCleanupStarted) {
+    _httpCleanupStarted = true;
+    setInterval(() => {
+      const now = Date.now();
+      for (const [key, bucket] of _rateLimitBuckets) {
+        if (now - bucket.start > 120000) _rateLimitBuckets.delete(key);
+      }
+    }, 300000);
+  }
   const key = `${userId}:${action}`;
   const now = Date.now();
   const windowMs = 60000;
@@ -65,13 +75,6 @@ function checkRateLimit(userId, action, maxPerMinute) {
     throw new Error(`Rate limit exceeded for ${action}. Try again later.`);
   }
 }
-// Cleanup expired buckets every 5 minutes
-setInterval(() => {
-  const now = Date.now();
-  for (const [key, bucket] of _rateLimitBuckets) {
-    if (now - bucket.start > 120000) _rateLimitBuckets.delete(key);
-  }
-}, 300000);
 
 async function syncGroupAccessMetadata(groupId) {
   if (!groupId) return;
