@@ -118,13 +118,13 @@
     if (!textarea || textarea.dataset.waTypingHooked) return;
     textarea.dataset.waTypingHooked = '1';
 
-    textarea.addEventListener('input', () => {
+    textarea.addEventListener('input', App.debounce(() => {
       if (textarea.value.trim().length > 0) {
         startTyping();
       } else {
         stopTyping();
       }
-    });
+    }, 300));
     textarea.addEventListener('keydown', (e) => {
       if (e.key === 'Enter' && !e.shiftKey) stopTyping();
     });

@@ -47,8 +47,9 @@
   }
 
   function _handleScreenShareEnd() {
-    if (!_screenShareStream) return;
-    const track = _screenShareStream.getVideoTracks()[0];
+    var stream = (typeof CC !== 'undefined' && CC.screenShareStream) || null;
+    if (!stream) return;
+    const track = stream.getVideoTracks()[0];
     if (track) {
       track.addEventListener('ended', () => {
         _notifyScreenShareEnd();

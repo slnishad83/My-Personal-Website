@@ -253,9 +253,7 @@
     peerConnection = new RTCPeerConnection(defaultRtcConfig);
     if (localCallStream) addLocalTracks(localCallStream);
     setupPeerConnection(peerConnection);
-    if (CC.callType === 'voice') {
-      createOfferAndSignal();
-    }
+    createOfferAndSignal();
   }
 
   async function createOfferAndSignal() {

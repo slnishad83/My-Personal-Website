@@ -370,6 +370,8 @@
 
       var callDoc = await CC.db().collection('calls').doc(CC.callId).get();
       var callSnapshot = callDoc.data();
+      CC.listenCandidates(CC.callId);
+      CC.listenStatus(CC.callId);
       if (callSnapshot && callSnapshot.offer) {
         await peerConnection.setRemoteDescription(new RTCSessionDescription(callSnapshot.offer));
         var answer = await peerConnection.createAnswer();
@@ -380,8 +382,6 @@
         });
       }
 
-      CC.listenCandidates(CC.callId);
-      CC.listenStatus(CC.callId);
       CC.requestWake();
       CC.startHeartbeat(CC.callId);
 
@@ -415,22 +415,24 @@
     var endDirection = CC.incomingData ? 'incoming' : 'outgoing';
     var remoteName = CC.$('call-name')?.textContent || 'Unknown';
     var remoteAvatar = CC._outgoingAvatar || '';
+    var savedCallId = CC.callId;
+    var savedRemoteUid = CC._remoteUid || CC._callPeerUid || '';
 
     CC.txt('call-status', dur > 0 ? 'Call ended' : 'Call ended');
     CC.cleanup();
     CC.setState(CC.STATES.ENDED);
 
-    if (CC.callId && CC.db()) {
+    if (savedCallId && CC.db()) {
       var payload = { status: 'ended', endedAt: firebase.firestore.FieldValue.serverTimestamp() };
       if (dur > 0) payload.duration = dur;
-      CC.db().collection('calls').doc(CC.callId).update(payload).catch(function () {});
+      CC.db().collection('calls').doc(savedCallId).update(payload).catch(function () {});
       CC.writeCallLog('outgoing', 'ended', dur > 0 ? dur * 1000 : null);
     }
 
     if (wasActive) {
       CC.playSound('callEnded');
       CC.showCallEndScreen(endDirection, dur, CC.callType, remoteName, remoteAvatar);
-    } else if (wasActive) {
+    } else {
       CC.playSound('callEnded');
     }
 
@@ -438,15 +440,15 @@
     CC.callStartTime = null;
     CC._outgoingAvatar = '';
     CC.releaseWake();
-    _sendMissedCallNotification(endDirection, dur, remoteName);
+    _sendMissedCallNotification(endDirection, dur, remoteName, savedRemoteUid, savedCallId);
     setTimeout(function () { CC.setState(CC.STATES.IDLE); }, 300);
   }
 
-  async function _sendMissedCallNotification(direction, duration, remoteName, remoteUid) {
+  async function _sendMissedCallNotification(direction, duration, remoteName, remoteUid, callIdForNotif) {
     if (direction !== 'incoming' || duration > 0) return;
     if (!CC.db()) return;
     try {
-      var targetUid = remoteUid || CC._remoteUid || CC._callPeerUid || '';
+      var targetUid = remoteUid || '';
       if (!targetUid) return;
       var tokenDoc = await CC.db().collection('users').doc(targetUid).get();
       var userData = tokenDoc.data();
@@ -457,7 +459,7 @@
           token: userData.fcmToken,
           title: 'Missed call',
           body: 'Missed call from ' + (remoteName || 'Unknown'),
-          data: { type: 'missed_call', callId: CC.callId || '' }
+          data: { type: 'missed_call', callId: callIdForNotif || '' }
         });
       }
     } catch (_) {}

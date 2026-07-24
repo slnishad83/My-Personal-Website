@@ -211,10 +211,10 @@
 
         <!-- WhatsApp Web filter chips -->
         <div class="flex items-center gap-2 pt-1 px-0 pb-2 overflow-x-auto select-none wa-chips-scroll" id="wa-filter-chips">
-          <button class="wa-chip active" data-action="setWaFilter" data-action-arg="all" data-filter="all">All</button>
-          <button class="wa-chip" data-action="setWaFilter" data-action-arg="unread" data-filter="unread">Unread</button>
-          <button class="wa-chip" data-action="setWaFilter" data-action-arg="favourites" data-filter="favourites">Favourites</button>
-          <button class="wa-chip" data-action="setWaFilter" data-action-arg="groups" data-filter="groups">Groups</button>
+          <button class="wa-chip active" data-action="setWaFilter" data-action-arg="all" data-filter="all" aria-pressed="true">All</button>
+          <button class="wa-chip" data-action="setWaFilter" data-action-arg="unread" data-filter="unread" aria-pressed="false">Unread</button>
+          <button class="wa-chip" data-action="setWaFilter" data-action-arg="favourites" data-filter="favourites" aria-pressed="false">Favourites</button>
+          <button class="wa-chip" data-action="setWaFilter" data-action-arg="groups" data-filter="groups" aria-pressed="false">Groups</button>
           <button class="wa-chip-add" data-action="addNewFilterChip" aria-label="Add filter"><span class="material-symbols-outlined text-[16px]">add</span></button>
         </div>
       </div>
@@ -525,16 +525,16 @@
           </div>
         </div>
         <div class="flex items-center px-2 pb-1.5 border-b border-outline-variant/10 overflow-x-auto gap-0.5 scrollbar-hide">
-          <button class="emoji-cat-btn active flex-shrink-0 w-11 h-11 flex items-center justify-center rounded-full text-base bg-primary/10 transition-colors" data-action="setEmojiCat" data-action-arg="recent" title="Recent"><span class="material-symbols-outlined text-[18px] text-primary">schedule</span></button>
-          <button class="emoji-cat-btn flex-shrink-0 w-11 h-11 flex items-center justify-center rounded-full text-base transition-colors hover:bg-surface-variant/40" data-action="setEmojiCat" data-action-arg="smileys" title="Smileys & Emotion">😊</button>
-          <button class="emoji-cat-btn flex-shrink-0 w-11 h-11 flex items-center justify-center rounded-full text-base transition-colors hover:bg-surface-variant/40" data-action="setEmojiCat" data-action-arg="people" title="People & Body">👋</button>
-          <button class="emoji-cat-btn flex-shrink-0 w-11 h-11 flex items-center justify-center rounded-full text-base transition-colors hover:bg-surface-variant/40" data-action="setEmojiCat" data-action-arg="nature" title="Animals & Nature">🌿</button>
-          <button class="emoji-cat-btn flex-shrink-0 w-11 h-11 flex items-center justify-center rounded-full text-base transition-colors hover:bg-surface-variant/40" data-action="setEmojiCat" data-action-arg="food" title="Food & Drink">🍕</button>
-          <button class="emoji-cat-btn flex-shrink-0 w-11 h-11 flex items-center justify-center rounded-full text-base transition-colors hover:bg-surface-variant/40" data-action="setEmojiCat" data-action-arg="activities" title="Activities">⚽</button>
-          <button class="emoji-cat-btn flex-shrink-0 w-11 h-11 flex items-center justify-center rounded-full text-base transition-colors hover:bg-surface-variant/40" data-action="setEmojiCat" data-action-arg="travel" title="Travel & Places">✈️</button>
-          <button class="emoji-cat-btn flex-shrink-0 w-11 h-11 flex items-center justify-center rounded-full text-base transition-colors hover:bg-surface-variant/40" data-action="setEmojiCat" data-action-arg="objects" title="Objects">💡</button>
-          <button class="emoji-cat-btn flex-shrink-0 w-11 h-11 flex items-center justify-center rounded-full text-base transition-colors hover:bg-surface-variant/40" data-action="setEmojiCat" data-action-arg="symbols" title="Symbols">❤️</button>
-          <button class="emoji-cat-btn flex-shrink-0 w-11 h-11 flex items-center justify-center rounded-full text-base transition-colors hover:bg-surface-variant/40" data-action="setEmojiCat" data-action-arg="flags" title="Flags">🏁</button>
+          <button class="emoji-cat-btn active flex-shrink-0 w-11 h-11 flex items-center justify-center rounded-full text-base bg-primary/10 transition-colors" data-action="setEmojiCat" data-action-arg="recent" aria-label="Recent" aria-pressed="true"><span class="material-symbols-outlined text-[18px] text-primary">schedule</span></button>
+          <button class="emoji-cat-btn flex-shrink-0 w-11 h-11 flex items-center justify-center rounded-full text-base transition-colors hover:bg-surface-variant/40" data-action="setEmojiCat" data-action-arg="smileys" aria-label="Smileys and Emotion" aria-pressed="false">😊</button>
+          <button class="emoji-cat-btn flex-shrink-0 w-11 h-11 flex items-center justify-center rounded-full text-base transition-colors hover:bg-surface-variant/40" data-action="setEmojiCat" data-action-arg="people" aria-label="People and Body" aria-pressed="false">👋</button>
+          <button class="emoji-cat-btn flex-shrink-0 w-11 h-11 flex items-center justify-center rounded-full text-base transition-colors hover:bg-surface-variant/40" data-action="setEmojiCat" data-action-arg="nature" aria-label="Animals and Nature" aria-pressed="false">🌿</button>
+          <button class="emoji-cat-btn flex-shrink-0 w-11 h-11 flex items-center justify-center rounded-full text-base transition-colors hover:bg-surface-variant/40" data-action="setEmojiCat" data-action-arg="food" aria-label="Food and Drink" aria-pressed="false">🍕</button>
+          <button class="emoji-cat-btn flex-shrink-0 w-11 h-11 flex items-center justify-center rounded-full text-base transition-colors hover:bg-surface-variant/40" data-action="setEmojiCat" data-action-arg="activities" aria-label="Activities" aria-pressed="false">⚽</button>
+          <button class="emoji-cat-btn flex-shrink-0 w-11 h-11 flex items-center justify-center rounded-full text-base transition-colors hover:bg-surface-variant/40" data-action="setEmojiCat" data-action-arg="travel" aria-label="Travel and Places" aria-pressed="false">✈️</button>
+          <button class="emoji-cat-btn flex-shrink-0 w-11 h-11 flex items-center justify-center rounded-full text-base transition-colors hover:bg-surface-variant/40" data-action="setEmojiCat" data-action-arg="objects" aria-label="Objects" aria-pressed="false">💡</button>
+          <button class="emoji-cat-btn flex-shrink-0 w-11 h-11 flex items-center justify-center rounded-full text-base transition-colors hover:bg-surface-variant/40" data-action="setEmojiCat" data-action-arg="symbols" aria-label="Symbols" aria-pressed="false">❤️</button>
+          <button class="emoji-cat-btn flex-shrink-0 w-11 h-11 flex items-center justify-center rounded-full text-base transition-colors hover:bg-surface-variant/40" data-action="setEmojiCat" data-action-arg="flags" aria-label="Flags" aria-pressed="false">🏁</button>
         </div>
         <div class="flex-1 overflow-y-auto p-2 grid grid-cols-7 gap-0.5 text-center text-xl custom-scrollbar" id="emoji-grid">
         </div>
@@ -1114,7 +1114,7 @@
       </div>
       <div class="flex-1 overflow-y-auto p-4 space-y-1 custom-scrollbar" id="folder-manager-list"></div>
       <div class="p-4 border-t border-outline-variant/10 flex gap-2">
-        <input id="folder-new-name" class="flex-1 bg-surface-container border border-outline-variant/30 rounded-xl px-4 py-2 text-sm text-on-surface focus:ring-1 focus:ring-primary" placeholder="New folder name...">
+        <input id="folder-new-name" class="flex-1 bg-surface-container border border-outline-variant/30 rounded-xl px-4 py-2 text-sm text-on-surface focus:ring-1 focus:ring-primary" placeholder="New folder name..." aria-label="New folder name">
         <button class="px-4 py-2 bg-primary text-on-primary text-sm font-bold rounded-xl hover:brightness-110 active:scale-95 transition-all" data-action="saveFolderFromInput">Create</button>
       </div>
     </div>
@@ -1127,8 +1127,8 @@
         <h3 class="font-bold text-lg text-on-surface">Chat Sound</h3>
         <button class="text-on-surface-variant hover:text-on-surface p-1" data-action="closeOverlay" data-action-arg="sound-picker-overlay" aria-label="Close sound picker"><span class="material-symbols-outlined">close</span></button>
       </div>
-      <label class="text-sm font-semibold text-on-surface-variant block mb-2">Choose a notification sound</label>
-      <select id="chat-sound-select" class="w-full bg-surface-container border border-outline-variant/30 rounded-xl px-4 py-3 text-sm text-on-surface mb-4">
+      <label for="chat-sound-select" class="text-sm font-semibold text-on-surface-variant block mb-2">Choose a notification sound</label>
+      <select id="chat-sound-select" aria-label="Notification sound" class="w-full bg-surface-container border border-outline-variant/30 rounded-xl px-4 py-3 text-sm text-on-surface mb-4">
         <option value="">Default</option>
         <option value="silent">Silent</option>
         <option value="notification_1">Notification 1</option>
@@ -1254,7 +1254,7 @@
         <button class="text-on-surface-variant hover:text-on-surface p-1" data-action="closeOverlay" data-action-arg="language-overlay" aria-label="Close language settings"><span class="material-symbols-outlined">close</span></button>
       </div>
       <p class="text-sm text-on-surface-variant mb-4">Select your preferred language for the app UI.</p>
-      <select id="language-select" class="w-full bg-surface-container border border-outline-variant/30 rounded-xl px-4 py-3 text-sm text-on-surface mb-4">
+      <select id="language-select" aria-label="App language" class="w-full bg-surface-container border border-outline-variant/30 rounded-xl px-4 py-3 text-sm text-on-surface mb-4">
         <option value="en">English</option>
         <option value="hi">हिन्दी (Hindi)</option>
         <option value="gu">ગુજરાતી (Gujarati)</option>
@@ -1382,7 +1382,7 @@
     <div class="bg-surface-container w-full max-w-lg mx-auto mt-auto mb-0 sm:mb-auto rounded-t-2xl sm:rounded-2xl shadow-2xl flex flex-col max-h-[85vh] overflow-hidden">
       <div class="flex items-center gap-3 p-4 border-b border-outline-variant/10">
         <span class="material-symbols-outlined text-on-surface-variant">search</span>
-        <input id="globalSearchInput" type="text" placeholder="Search messages..." class="flex-1 bg-transparent text-on-surface text-sm outline-none placeholder-on-surface-variant/50" autocomplete="off" spellcheck="false" role="combobox" aria-autocomplete="list" aria-controls="globalSearchResults">
+        <input id="globalSearchInput" type="text" placeholder="Search messages..." class="flex-1 bg-transparent text-on-surface text-sm outline-none placeholder-on-surface-variant/50" autocomplete="off" spellcheck="false" role="combobox" aria-autocomplete="list" aria-controls="globalSearchResults" aria-label="Search messages">
         <button class="p-1.5 rounded-full hover:bg-surface-variant/50 text-on-surface-variant transition-colors" data-action="closeSearchModal" aria-label="Close search">
           <span class="material-symbols-outlined text-xl">close</span>
         </button>

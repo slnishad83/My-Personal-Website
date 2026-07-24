@@ -654,7 +654,7 @@
       }
     };
 
-    input.addEventListener('input', _boundHandlers.inputHandler, { passive: true });
+    input.addEventListener('input', App.debounce(_boundHandlers.inputHandler, 200), { passive: true });
 
     _boundHandlers.inputFocus = function () {
       if (_scrollFab) _scrollFab.classList.remove('visible');

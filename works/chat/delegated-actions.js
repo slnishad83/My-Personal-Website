@@ -96,6 +96,42 @@
       e.preventDefault();
       var t = document.getElementById('chat-list') || document.getElementById('msg-input');
       if (t) { t.focus(); t.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+      return;
+    }
+    if (e.key === 'Enter' || e.key === ' ') {
+      var el = e.target;
+      if (el.getAttribute('role') === 'button' && !el.matches('button, input, select, textarea, a')) {
+        e.preventDefault();
+        el.click();
+      }
+    }
+  });
+
+  document.addEventListener('keydown', function(e) {
+    var menu = document.getElementById('attach-menu');
+    if (!menu || menu.classList.contains('hidden')) return;
+    var items = Array.from(menu.querySelectorAll('[role="menuitem"]'));
+    if (!items.length) return;
+    var idx = items.indexOf(document.activeElement);
+    if (e.key === 'ArrowDown' || e.key === 'ArrowRight') {
+      e.preventDefault();
+      var next = idx < 0 ? 0 : (idx + 1) % items.length;
+      items[next].focus();
+    } else if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') {
+      e.preventDefault();
+      var prev = idx <= 0 ? items.length - 1 : idx - 1;
+      items[prev].focus();
+    } else if (e.key === 'Home') {
+      e.preventDefault();
+      items[0].focus();
+    } else if (e.key === 'End') {
+      e.preventDefault();
+      items[items.length - 1].focus();
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      menu.classList.add('hidden');
+      var trigger = document.querySelector('[data-action="toggleAttachMenu"]');
+      if (trigger) trigger.focus();
     }
   });
 })();

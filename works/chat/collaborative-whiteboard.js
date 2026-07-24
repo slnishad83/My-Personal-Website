@@ -67,7 +67,7 @@
     _wbCanvas = document.getElementById('wb-canvas');
     _wbCtx = _wbCanvas.getContext('2d');
     _resizeWbCanvas();
-    window.addEventListener('resize', _resizeWbCanvas);
+    window.addEventListener('resize', App.throttle(_resizeWbCanvas, 200));
 
     _wbCanvas.addEventListener('pointerdown', _wbPointerDown);
     _wbCanvas.addEventListener('pointermove', _wbPointerMove);

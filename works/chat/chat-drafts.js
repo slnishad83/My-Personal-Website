@@ -78,7 +78,7 @@
   window.ChatDrafts = Drafts;
 
   let _draftSaveTimeout = null;
-  document.addEventListener('input', function (e) {
+  document.addEventListener('input', App.debounce(function (e) {
     if (e.target.id === 'message-input' || e.target.getAttribute('contenteditable') === 'true') {
       const chatId = window.App?.currentChat?.id;
       if (!chatId) return;
@@ -88,7 +88,7 @@
         Drafts.saveDraft(chatId, text);
       }, 500);
     }
-  });
+  }, 500));
 
   document.addEventListener('click', function (e) {
     if (e.target.closest('.send-btn, [data-action="send"]')) {

@@ -243,7 +243,7 @@
   }
 
   function _attachListeners() {
-    _inputEl.addEventListener('input', _onInput, { passive: true });
+    _inputEl.addEventListener('input', App.debounce(_onInput, 200), { passive: true });
     _inputEl.addEventListener('keydown', _onKeyDown);
     _inputEl.addEventListener('focus', _onFocus, { passive: true });
     document.addEventListener('click', function (e) {

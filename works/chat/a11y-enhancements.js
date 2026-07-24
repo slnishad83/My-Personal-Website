@@ -1,5 +1,6 @@
 (function() {
   'use strict';
+  window._a11yEnhancementsActive = true;
 
   var _activeTrap = null;
   var _previousFocus = null;

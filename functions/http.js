@@ -16,7 +16,8 @@ const CHAT_APP_URL = 'https://nishadsl.com/works/chat/';
 
 const ALLOWED_ORIGINS = ['https://nishadsl.com', 'https://my-team-chat-2255.web.app', 'https://works.my-team-chat-2255.web.app'];
 function setCorsHeaders(response, origin) {
-  const allowed = ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
+  const matched = ALLOWED_ORIGINS.find(o => origin === o);
+  const allowed = matched || ALLOWED_ORIGINS[0];
   response.set('Access-Control-Allow-Origin', allowed);
   response.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   response.set('Access-Control-Allow-Headers', 'Authorization, Content-Type');
@@ -36,11 +37,11 @@ async function verifyFirebaseUser(request) {
   return admin.auth().verifyIdToken(match[1]);
 }
 
-// H6: Origin validation helper
+// H6: Origin validation helper (exact-match, no prefix matching)
 function assertValidOrigin(request) {
-  const origin = request.get('Origin') || request.get('Referer') || '';
+  const origin = request.get('Origin') || '';
   if (!origin) throw new Error('Missing origin header');
-  if (!ALLOWED_ORIGINS.some(o => origin.startsWith(o))) {
+  if (!ALLOWED_ORIGINS.some(o => origin === o)) {
     throw new Error('Invalid origin');
   }
 }

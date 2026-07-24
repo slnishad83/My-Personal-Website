@@ -21,6 +21,7 @@ import './tailwind-config.js';
    ══════════════════════════════════════════════════════════════ */
 import './firebase-config.js';
 import './config.js';
+import './global-cleanup.js';
 import '../app.js';
 import '../app-extras.js';
 import './lazy-modules.js';
@@ -31,16 +32,10 @@ import './lazy-modules.js';
 import './platform-detect.js';
 import './smart-notifications.js';
 import './file-versioning.js';
-import './cloud-drive.js';
-import './collaborative-whiteboard.js';
-import './image-annotation.js';
 import './offline-queue.js';
 import './call-sync.js';
 import './presence.js';
 import './multi-device.js';
-import './qr-code-gen.js';
-import './qr-scanner.js';
-import './contact-sync.js';
 import './security.js';
 import './error-boundary.js';
 import './mutation-bus.js';
@@ -75,14 +70,6 @@ import './message-recall.js';
 import './sensitive-content.js';
 import './mini-games.js';
 import './mood-status.js';
-import './date-reminders.js';
-import './ai-features.js';
-import './chat-export.js';
-import './music-player.js';
-import './music-library.js';
-import './playlist-core.js';
-import './playlist-ui.js';
-import './playlist-sync.js';
 import './threads.js';
 import './message-search.js';
 import './notification-prefs.js';
@@ -97,8 +84,6 @@ import './pwa-install.js';
 import './ui-compliance.js';
 import './audit-interactions.js';
 import './whatsapp-enhancements.js';
-import './calculator.js';
-import './jsQR.js';
 import './features-addon.js';
 import './scheduled-calendar.js';
 import './snooze-history.js';
@@ -221,3 +206,36 @@ import './media-autoplay.js';
 import './pinned-header.js';
 import './payment-split.js';
 import './large-file-sharing.js';
+
+/* ══════════════════════════════════════════════════════════════
+   DYNAMICALLY LOADED MODULES (code-split chunks)
+   ══════════════════════════════════════════════════════════════ */
+const _lazyModules = [
+  () => import('./date-reminders.js'),
+  () => import('./ai-features.js'),
+  () => import('./chat-export.js'),
+  () => import('./music-player.js'),
+  () => import('./music-library.js'),
+  () => import('./playlist-core.js'),
+  () => import('./playlist-ui.js'),
+  () => import('./playlist-sync.js'),
+  () => import('./calculator.js'),
+  () => import('./jsQR.js'),
+  () => import('./cloud-drive.js'),
+  () => import('./collaborative-whiteboard.js'),
+  () => import('./image-annotation.js'),
+  () => import('./contact-sync.js'),
+  () => import('./qr-code-gen.js'),
+];
+
+async function _loadDeferredModules() {
+  for (const load of _lazyModules) {
+    try { await load(); } catch (e) { console.warn('[App] Deferred module load failed:', e.message); }
+  }
+}
+
+if (document.readyState === 'complete') {
+  _loadDeferredModules();
+} else {
+  window.addEventListener('load', () => setTimeout(_loadDeferredModules, 100));
+}

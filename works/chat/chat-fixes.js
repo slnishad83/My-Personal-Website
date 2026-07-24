@@ -210,7 +210,7 @@
       _cfRenderRequests(filtered, requestList);
     }
 
-    input.addEventListener('input', applyFilter);
+    input.addEventListener('input', App.debounce(applyFilter, 250));
     input.addEventListener('search', applyFilter); /* clear button on mobile */
 
     chips.forEach(function(chip){

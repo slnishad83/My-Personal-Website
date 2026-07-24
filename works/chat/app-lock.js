@@ -145,6 +145,28 @@
 
   async function _verifyAndUnlock(pin) {
     var settings = _getSettings();
+
+    // Server-side verification via Cloud Function (secure, rate-limited)
+    try {
+      if (typeof firebase !== 'undefined' && firebase.functions) {
+        var functions = firebase.functions('us-central1');
+        var verifyAppLockPin = functions.httpsCallable('verifyAppLockPin');
+        var result = await verifyAppLockPin({ pin: pin });
+        if (result && result.data && result.data.ok) {
+          // Sync hash to localStorage for fast path
+          var hash = await _hashPin(pin);
+          settings.pinHash = hash;
+          settings.enabled = true;
+          _saveSettings(settings);
+          return true;
+        }
+      }
+    } catch (err) {
+      // If Cloud Function not deployed or fails, fall back to client-side check
+      console.warn('App lock server verification failed, falling back to local:', err.message);
+    }
+
+    // Fallback: client-side hash comparison (for offline or if Cloud Function not deployed)
     var hash = await _hashPin(pin);
 
     // 1. Check local hash first (fast path)
@@ -417,6 +439,28 @@
     }
 
     try {
+      // Server-side PIN storage via Cloud Function (secure hashing)
+      try {
+        if (typeof firebase !== 'undefined' && firebase.functions) {
+          var functions = firebase.functions('us-central1');
+          var setAppLockPinFn = functions.httpsCallable('setAppLockPin');
+          var result = await setAppLockPinFn({ pin: pin });
+          if (result && result.data && result.data.ok) {
+            // Store local hash for fast path
+            var hash = await _hashPin(pin);
+            var settings = _getSettings();
+            settings.pinHash = hash;
+            settings.enabled = true;
+            _saveSettings(settings);
+            if (typeof showToast === 'function') showToast('App lock PIN set', 'success');
+            return true;
+          }
+        }
+      } catch (fnErr) {
+        console.warn('App lock server set failed, using local only:', fnErr.message);
+      }
+
+      // Fallback: client-side only (if Cloud Function not deployed)
       var hash = await _hashPin(pin);
       var settings = _getSettings();
       settings.pinHash = hash;

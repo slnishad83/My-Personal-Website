@@ -3135,19 +3135,9 @@ html:not(.dark) #playlist-detail-overlay > div {
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   10/10 AUDIT FIXES — Touch Targets, Reduced Motion, Overscroll,
-   Z-Index, Safe Areas, Accessibility
-   ═══════════════════════════════════════════════════════════════ */
-
-/* ── UNIVERSAL: prefers-reduced-motion ─────────────────────── */
-@media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-    scroll-behavior: auto !important;
-  }
-}
+    10/10 AUDIT FIXES — Touch Targets, Z-Index, Safe Areas,
+    Accessibility (reduced motion kept in accessibility.css)
+    ═══════════════════════════════════════════════════════════════ */
 
 /* ── TOUCH TARGETS: 44px minimum on all interactive elements ── */
 .wa-chip,

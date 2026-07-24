@@ -140,8 +140,8 @@
     if (!reporterId || !userId) return false;
     try {
       var cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000);
-      var snap = await db.collection('reports')
-        .where('reporterId', '==', reporterId)
+      var snap = await db.collection('userReports')
+        .where('reporterUserId', '==', reporterId)
         .where('reportedUserId', '==', userId)
         .where('timestamp', '>=', cutoff)
         .limit(1)
@@ -239,8 +239,8 @@
     if (reportDetails.length > 500) reportDetails = reportDetails.substring(0, 500);
 
     try {
-      await db.collection('reports').add({
-        reporterId: reporterId,
+      await db.collection('userReports').add({
+        reporterUserId: reporterId,
         reportedUserId: reportedUserId,
         reason: reason,
         details: reportDetails,

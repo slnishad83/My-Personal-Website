@@ -109,6 +109,24 @@ exports.removeGroupMember = onCall(
       requireAdmin(group, uid);
     }
 
+    // Prevent removing the last admin/owner
+    const groupData = group.data();
+    if (!isSelf && groupData) {
+      const isRemovingAdmin = (groupData.adminIds || []).includes(userId)
+        || groupData.ownerId === userId
+        || groupData.createdBy === userId;
+      if (isRemovingAdmin) {
+        const adminCount = (groupData.adminIds || []).length;
+        const isOwner = groupData.ownerId === userId || groupData.createdBy === userId;
+        if (adminCount <= 1 && !isOwner) {
+          throw new HttpsError('failed-precondition', 'Cannot remove the last admin. Promote another admin first or delete the group.');
+        }
+        if (isOwner) {
+          throw new HttpsError('failed-precondition', 'Cannot remove the group owner. Delete the group instead.');
+        }
+      }
+    }
+
     const batch = db().batch();
     batch.delete(db().collection('groups').doc(groupId).collection('members').doc(userId));
     batch.update(db().collection('groups').doc(groupId), {

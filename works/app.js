@@ -7795,8 +7795,16 @@ function saveLanguage() {
 }
 
 function signOut() {
+  // Phase 1: Global cleanup — kills all tracked intervals, timeouts, and Firestore listeners
+  if (typeof GlobalCleanup !== 'undefined' && GlobalCleanup.patch) GlobalCleanup.patch();
+  if (typeof GlobalCleanup !== 'undefined' && GlobalCleanup.destroy) GlobalCleanup.destroy();
   if (typeof _moduleCleanupAll === 'function') _moduleCleanupAll();
   if (typeof window.resetAppState === 'function') window.resetAppState();
+  if (typeof cleanupTypingSubscription === 'function') cleanupTypingSubscription();
+  if (_disappearCleanupInterval) { clearInterval(_disappearCleanupInterval); _disappearCleanupInterval = null; }
+  if (typeof window.statusRefreshTimer !== 'undefined' && window.statusRefreshTimer) { clearTimeout(window.statusRefreshTimer); window.statusRefreshTimer = null; }
+  if (typeof window._statusReminderInterval !== 'undefined' && window._statusReminderInterval) { clearInterval(window._statusReminderInterval); window._statusReminderInterval = null; }
+  // Phase 2: Unsubscribe core Firestore listeners
   if (App.usersUnsubscribe)        App.usersUnsubscribe();
   if (App.chatsUnsubscribe)        App.chatsUnsubscribe();
   if (App.groupsUnsubscribe)       App.groupsUnsubscribe();
@@ -7806,7 +7814,16 @@ function signOut() {
   if (App.callLogsUnsubscribe)     App.callLogsUnsubscribe();
   if (App.callsUnsubscriber)       App.callsUnsubscriber();
   if (App.callsUnsubscriber2)      App.callsUnsubscriber2();
-  // Clear E2E key cache to prevent stale keys for next user
+  if (App.reconnect && typeof App.reconnect.destroy === 'function') { try { App.reconnect.destroy(); } catch(_) {} }
+  // Phase 3: Stop active media streams
+  try { if (window.localCallStream) { localCallStream.getTracks().forEach(t => t.stop()); } } catch(_) {}
+  try { if (window.CC && CC.localStream) { CC.localStream.getTracks().forEach(t => t.stop()); } } catch(_) {}
+  // Phase 4: Close RTCPeerConnections
+  try { if (window.peerConnection) { peerConnection.close(); } } catch(_) {}
+  try { if (window.CC && CC.peerConnection) { CC.peerConnection.close(); } } catch(_) {}
+  // Phase 5: Close BroadcastChannel
+  try { if (window.NSLBroadcastChannel) { NSLBroadcastChannel.postMessage({ type: 'logout' }); NSLBroadcastChannel.close(); } } catch(_) {}
+  // Phase 6: Clear E2E key cache to prevent stale keys for next user
   Object.keys(_e2eSharedKeys).forEach(k => delete _e2eSharedKeys[k]);
   if (App.auth) App.auth.signOut().then(() => location.reload());
   else location.reload();

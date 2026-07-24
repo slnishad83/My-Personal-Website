@@ -5,7 +5,7 @@
   var _loading = {};
 
   var LAZY_MODULES = {
-    'qr-scanner': ['jsQR.js?v=2'],
+    'qr-scanner': ['jsQR.js'],
     'calculator': ['calculator.js'],
     'music': ['music-player.js', 'music-library.js', 'playlist-core.js', 'playlist-ui.js', 'playlist-sync.js'],
     'whiteboard': ['collaborative-whiteboard.js'],
@@ -15,29 +15,24 @@
     'contact-sync': ['contact-sync.js']
   };
 
-  function loadScript(src) {
-    return new Promise(function(resolve, reject) {
-      if (_loaded[src]) { resolve(); return; }
-      if (_loading[src]) { _loading[src].then(resolve, reject); return; }
-      var script = document.createElement('script');
-      script.src = src;
-      script.defer = true;
-      _loading[src] = new Promise(function(res, rej) {
-        script.onload = function() { _loaded[src] = true; delete _loading[src]; res(); };
-        script.onerror = function() { delete _loading[src]; rej(new Error('Failed to load ' + src)); };
-      });
-      document.head.appendChild(script);
-      _loading[src].then(resolve, reject);
-    });
-  }
-
   function loadModule(name) {
+    if (_loaded[name]) return Promise.resolve();
+    if (_loading[name]) return _loading[name];
     var files = LAZY_MODULES[name];
     if (!files) return Promise.resolve();
-    return Promise.all(files.map(loadScript)).then(function() {
-      if (typeof App !== 'undefined') App._lazyLoaded = App._lazyLoaded || {};
-      if (typeof App !== 'undefined') App._lazyLoaded[name] = true;
+    _loading[name] = Promise.all(files.map(function(src) {
+      return import('./' + src).catch(function(e) {
+        console.warn('[LazyModules] Failed to load ' + src + ':', e.message);
+      });
+    })).then(function() {
+      _loaded[name] = true;
+      delete _loading[name];
+      if (typeof App !== 'undefined') {
+        App._lazyLoaded = App._lazyLoaded || {};
+        App._lazyLoaded[name] = true;
+      }
     });
+    return _loading[name];
   }
 
   function isLoaded(name) {

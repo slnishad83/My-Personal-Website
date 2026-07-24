@@ -271,10 +271,3 @@
 .dark .ripple { background: rgba(255,255,255,0.1); }
 .dark .reply-indicator { background: #2a3942; color: #aebac1; }
 .dark .voice-dot { background: #ff6b6b; }
-
-@media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after {
-    animation-duration: 0.01ms !important;
-    transition-duration: 0.01ms !important;
-  }
-}

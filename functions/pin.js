@@ -237,3 +237,74 @@ exports.resetTwoFactorPin = onCall({ region: "us-central1", memory: "128MiB" }, 
   clearPinFailures(uid);
   return { ok: true };
 });
+
+exports.setAppLockPin = onCall({ region: "us-central1", memory: "128MiB" }, async (request) => {
+  const uid = requireAuth(request);
+  if (!checkPinRateLimit(uid, "applock-set")) throw new HttpsError("resource-exhausted", "Too many attempts. Wait a minute.");
+  const { pin, oldPin } = request.data || {};
+  if (!pin || typeof pin !== "string" || pin.length < 4 || pin.length > 6 || !/^\d+$/.test(pin))
+    throw new HttpsError("invalid-argument", "PIN must be 4-6 digits");
+
+  const db = admin.firestore();
+  const userDoc = await db.collection("users").doc(uid).get();
+  const userData = userDoc.data() || {};
+  if (userData.appLockPinHash && userData.appLockPinSalt) {
+    if (!oldPin) throw new HttpsError("invalid-argument", "Old PIN required");
+    const oldHash = await hashPinServer(oldPin, userData.appLockPinSalt);
+    if (!timingSafeEqual(oldHash, userData.appLockPinHash)) throw new HttpsError("permission-denied", "Incorrect current PIN");
+  }
+
+  const salt = crypto.randomBytes(32).toString("hex");
+  const hash = await hashPinServer(pin, salt);
+  await db.collection("users").doc(uid).set({ appLockPinSalt: salt, appLockPinHash: hash, appLockEnabled: true, appLockUpdatedAt: Date.now() }, { merge: true });
+  clearPinFailures(uid);
+  return { ok: true };
+});
+
+exports.verifyAppLockPin = onCall({ region: "us-central1", memory: "128MiB" }, async (request) => {
+  const uid = requireAuth(request);
+  if (!checkPinRateLimit(uid, "applock-verify")) throw new HttpsError("resource-exhausted", "Too many attempts. Wait a minute.");
+  const { pin } = request.data || {};
+  if (!pin || typeof pin !== "string") throw new HttpsError("invalid-argument", "Missing PIN");
+
+  const db = admin.firestore();
+  const userDoc = await db.collection("users").doc(uid).get();
+  const userData = userDoc.data() || {};
+
+  if (!userData.appLockPinHash || !userData.appLockPinSalt) {
+    throw new HttpsError("failed-precondition", "No app lock PIN set. Use setAppLockPin to create one.");
+  }
+
+  const hash = await hashPinServer(pin, userData.appLockPinSalt);
+  if (!timingSafeEqual(hash, userData.appLockPinHash)) {
+    recordPinFailure(uid);
+    throw new HttpsError("permission-denied", "Incorrect PIN");
+  }
+  clearPinFailures(uid);
+  return { ok: true };
+});
+
+exports.resetAppLockPin = onCall({ region: "us-central1", memory: "128MiB" }, async (request) => {
+  const uid = requireAuth(request);
+  if (!checkPinRateLimit(uid, "applock-reset")) throw new HttpsError("resource-exhausted", "Too many attempts. Wait a minute.");
+  const { oldPin } = request.data || {};
+  const db = admin.firestore();
+  const userDoc = await db.collection("users").doc(uid).get();
+  const userData = userDoc.data() || {};
+  if (userData.appLockPinHash && userData.appLockPinSalt) {
+    if (!oldPin || typeof oldPin !== "string") throw new HttpsError("invalid-argument", "Old PIN required to reset");
+    const oldHash = await hashPinServer(oldPin, userData.appLockPinSalt);
+    if (!timingSafeEqual(oldHash, userData.appLockPinHash)) throw new HttpsError("permission-denied", "Incorrect current PIN");
+  }
+  await db.collection("users").doc(uid).set(
+    {
+      appLockPinSalt: admin.firestore.FieldValue.delete(),
+      appLockPinHash: admin.firestore.FieldValue.delete(),
+      appLockEnabled: false,
+      appLockResetAt: Date.now()
+    },
+    { merge: true }
+  );
+  clearPinFailures(uid);
+  return { ok: true };
+});

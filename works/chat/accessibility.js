@@ -60,6 +60,7 @@ const A11y = {
   },
 
   _setupFocusTrap() {
+    if (window.A11yEnhancements || window._a11yEnhancementsActive) return;
     document.addEventListener('focusin', (e) => {
       const overlay = this._findTopOverlay();
       if (overlay && !this._lastFocused) {

@@ -840,6 +840,8 @@ html:not(.dark) .glass-panel {
   line-height: 1.45;
   font-size: 14px;
   position: relative;
+  unicode-bidi: plaintext;
+  direction: auto;
 }
 .msg-sent {
   align-self: flex-end;
@@ -1769,26 +1771,14 @@ html.light #theme-color-meta { content: ""; }
 
 /* ── D-H3: Consistent z-index system ─────────────────────────── */
 :root {
-  --z-base: 1;
-  --z-sidebar: 20;
-  --z-chatlist: 25;
-  --z-chatarea: 30;
-  --z-bottomnav: 40;
   --z-landscape-tabs: 41;
-  --z-detail-panel: 45;
   --z-chat-header: 46;
   --z-input-bar: 47;
   --z-scroll-fab: 48;
-  --z-overlay: 50;
   --z-attach-menu: 60;
   --z-emoji-picker: 65;
   --z-format-bar: 70;
   --z-recording-bar: 71;
-  --z-context-menu: 80;
-  --z-toast: 9000;
-  --z-modal-overlay: 100;
-  --z-modal: 101;
-  --z-fullscreen: 9999;
   --z-skip-nav: 99999;
 }
 

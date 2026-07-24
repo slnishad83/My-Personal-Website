@@ -213,6 +213,7 @@
       container.appendChild(div);
     });
 
+    _attachThreadReplyHandlers();
     if (wasAtBottom) container.scrollTop = container.scrollHeight;
   }
 
@@ -483,28 +484,32 @@
       card.querySelector(".thread-summary-close").addEventListener("click", () => card.remove());
 
       const repliesList = document.getElementById("threadRepliesList");
-    if (repliesList && !repliesList._threadHandlersAttached) {
-      repliesList._threadHandlersAttached = true;
-      repliesList.addEventListener('click', (e) => {
-        const btn = e.target.closest('.thread-reply-reaction[data-parent]');
-        if (!btn) return;
-        e.stopPropagation();
-        window._toggleThreadReaction(btn.dataset.parent, btn.dataset.reply, btn.dataset.emoji);
-      });
-      repliesList.addEventListener('dblclick', (e) => {
-        const bubble = e.target.closest('.thread-reply-bubble[data-parent]');
-        if (!bubble) return;
-        e.stopPropagation();
-        window._showThreadReactionPicker(e, bubble.dataset.parent, bubble.dataset.reply);
-      });
-    }
       if (repliesList) repliesList.parentNode.insertBefore(card, repliesList);
+      _attachThreadReplyHandlers();
     } catch (err) {
       console.error("[summarizeThread]", err);
       if (typeof showToast === "function") showToast("Could not summarize thread. Deploy the Cloud Function first.", "error");
     } finally {
       if (btn) { btn.disabled = false; btn.textContent = "✨ Summarize"; }
     }
+  }
+
+  function _attachThreadReplyHandlers() {
+    const repliesList = document.getElementById("threadRepliesList");
+    if (!repliesList || repliesList._threadHandlersAttached) return;
+    repliesList._threadHandlersAttached = true;
+    repliesList.addEventListener('click', (e) => {
+      const btn = e.target.closest('.thread-reply-reaction[data-parent]');
+      if (!btn) return;
+      e.stopPropagation();
+      window._toggleThreadReaction(btn.dataset.parent, btn.dataset.reply, btn.dataset.emoji);
+    });
+    repliesList.addEventListener('dblclick', (e) => {
+      const bubble = e.target.closest('.thread-reply-bubble[data-parent]');
+      if (!bubble) return;
+      e.stopPropagation();
+      window._showThreadReactionPicker(e, bubble.dataset.parent, bubble.dataset.reply);
+    });
   }
 
   function setupThreadPanel() {

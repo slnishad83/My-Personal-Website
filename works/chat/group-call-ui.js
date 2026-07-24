@@ -295,20 +295,29 @@
     if (ov) ov.remove();
   }
 
+  var _speakerAudioContext = null;
+  var _speakerAudioSource = null;
+
   function _startSpeakerDetection() {
     _stopSpeakerDetection();
+    // Reuse a single AudioContext to prevent resource leak
+    try {
+      _speakerAudioContext = new (window.AudioContext || window.webkitAudioContext)();
+    } catch (_) {}
     GC._speakerCheckInterval = setInterval(async function () {
       if (!GC._isInGroupCall()) return;
       var maxLevel = 0;
       var maxUid = null;
       var myStream = localCallStream;
-      if (myStream) {
+      if (myStream && _speakerAudioContext) {
         try {
           var audioTrack = myStream.getAudioTracks()[0];
           if (audioTrack && audioTrack.enabled) {
-            var ac = new AudioContext();
-            var src = ac.createMediaStreamSource(myStream);
-            var analyser = ac.createAnalyser();
+            if (_speakerAudioContext.state === 'suspended') {
+              await _speakerAudioContext.resume();
+            }
+            var src = _speakerAudioContext.createMediaStreamSource(myStream);
+            var analyser = _speakerAudioContext.createAnalyser();
             analyser.fftSize = 256;
             src.connect(analyser);
             var data = new Uint8Array(analyser.frequencyBinCount);
@@ -317,7 +326,6 @@
             GC._audioLevelCache.set(GC._myUid, level);
             if (level > maxLevel) { maxLevel = level; maxUid = GC._myUid; }
             src.disconnect();
-            ac.close();
           }
         } catch (_) {}
       }
@@ -351,6 +359,15 @@
     if (GC._speakerCheckInterval) {
       clearInterval(GC._speakerCheckInterval);
       GC._speakerCheckInterval = null;
+    }
+    // Close the shared AudioContext to free resources
+    if (_speakerAudioContext) {
+      try {
+        if (_speakerAudioContext.state !== 'closed') {
+          _speakerAudioContext.close();
+        }
+      } catch (_) {}
+      _speakerAudioContext = null;
     }
     GC._lastSpeakerUid = null;
     GC._audioLevelCache.clear();

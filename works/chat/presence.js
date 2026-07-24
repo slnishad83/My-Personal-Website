@@ -46,7 +46,7 @@ const Presence = {
         userAgent: navigator.userAgent.slice(0, 100),
         platform: window.Platform?.os || 'unknown'
       });
-    } catch (_) {}
+    } catch (err) { console.warn('[Presence] Failed to set away status:', err.message); }
     this._emit('status', { status: 'away' });
   },
 
@@ -62,7 +62,7 @@ const Presence = {
         userAgent: navigator.userAgent.slice(0, 100),
         platform: window.Platform?.os || 'unknown'
       }, { merge: true });
-    } catch (_) {}
+    } catch (err) { console.warn('[Presence] Failed to set online status:', err.message); }
     this._emit('status', { status: 'online' });
   },
 
@@ -76,7 +76,7 @@ const Presence = {
         onlineStatus: 'offline',
         lastSeen: Date.now()
       }, { merge: true });
-    } catch (_) {}
+    } catch (err) { console.warn('[Presence] Failed to set offline status:', err.message); }
     this._emit('status', { status: 'offline' });
   },
 
@@ -87,7 +87,7 @@ const Presence = {
         customStatus: status,
         lastSeen: Date.now()
       }, { merge: true });
-    } catch (_) {}
+    } catch (err) { console.warn('[Presence] Failed to set custom status:', err.message); }
   },
 
   _startHeartbeat() {
@@ -99,7 +99,7 @@ const Presence = {
           lastHeartbeat: Date.now(),
           onlineStatus: document.visibilityState === 'visible' ? 'online' : this._onlineStatus
         });
-      } catch (_) {}
+      } catch (err) { console.warn('[Presence] Heartbeat failed:', err.message); }
     }, this._heartbeatInterval);
   },
 

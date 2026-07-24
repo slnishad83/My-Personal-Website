@@ -51,7 +51,7 @@
       const results = modal.querySelector('#contact-search-results');
       const items = results.querySelectorAll('.contact-search-item');
 
-      input.addEventListener('input', () => {
+      input.addEventListener('input', App.debounce(() => {
         const query = input.value.toLowerCase().trim();
         let count = 0;
         items.forEach(item => {
@@ -75,7 +75,7 @@
           const noResult = results.querySelector('.no-results');
           if (noResult) noResult.remove();
         }
-      });
+      }, 250));
 
       items.forEach(item => {
         item.addEventListener('mouseenter', () => item.style.background = 'var(--surface-variant,#f0f2f5)');
