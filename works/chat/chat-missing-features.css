@@ -139,7 +139,7 @@ html.dark .message-hashtag {
   align-items: center;
   gap: 4px;
   padding: 8px 14px;
-  min-height: 36px;
+  min-height: 44px;
   border-radius: 999px;
   border: 1px solid var(--border, #e9edef);
   background: transparent;
@@ -164,7 +164,7 @@ html.dark .message-hashtag {
 }
 @media (max-width: 480px) {
   .ms-filter-row { padding: 5px 8px 2px; gap: 5px; }
-  .ms-filter-pill { font-size: 11px; padding: 6px 10px; min-height: 34px; }
+  .ms-filter-pill { font-size: 11px; padding: 6px 10px; min-height: 44px; }
 }
 
 /* ── Global Search Modal Results ──────────────────────────── */

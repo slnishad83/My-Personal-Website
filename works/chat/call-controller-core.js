@@ -80,7 +80,9 @@
   }
 
   function stopExistingRingtone() {
-    if (typeof window.stopRingtone === 'function') stopRingtone();
+    if (typeof window.Orchestrator !== 'undefined' && typeof window.Orchestrator.stopRingtone === 'function') {
+      window.Orchestrator.stopRingtone();
+    }
   }
 
   function playSound(name) {
@@ -89,11 +91,14 @@
     }
   }
 
+  var _wakeLock = null;
   function requestWake() {
-    if (typeof window.requestWakeLock === 'function') requestWakeLock();
+    if (navigator.wakeLock) {
+      navigator.wakeLock.request('screen').then(function(lock) { _wakeLock = lock; }).catch(function() {});
+    }
   }
   function releaseWake() {
-    if (typeof window.releaseWakeLock === 'function') releaseWakeLock();
+    if (_wakeLock) { try { _wakeLock.release(); } catch(_) {} _wakeLock = null; }
   }
 
   function broadcastToTabs(type, extra) {
@@ -246,11 +251,12 @@
     }, 2000);
   }
 
-  function attemptFullReconnect() {
+  async function attemptFullReconnect() {
     if (!peerConnection || CC.state === CC.STATES.ENDED) return;
     peerConnection.close();
     peerConnection = null;
-    peerConnection = new RTCPeerConnection(defaultRtcConfig);
+    var rtcConfig = await getRtcConfig();
+    peerConnection = new RTCPeerConnection(rtcConfig);
     if (localCallStream) addLocalTracks(localCallStream);
     setupPeerConnection(peerConnection);
     createOfferAndSignal();
@@ -346,6 +352,7 @@
 
   function listenAnswer(cId) {
     if (!db()) return;
+    if (CC.unsubAnswer) { try { CC.unsubAnswer(); } catch(_) {} }
     CC.unsubAnswer = db().collection('calls').doc(cId).onSnapshot(function (doc) {
       var data = doc.data();
       if (!data) return;
@@ -376,6 +383,7 @@
 
   function listenStatus(cId) {
     if (!db()) return;
+    if (CC.unsubStatus) { try { CC.unsubStatus(); } catch(_) {} }
     CC.unsubStatus = db().collection('calls').doc(cId).onSnapshot(function (doc) {
       var data = doc.data();
       if (!data) return;

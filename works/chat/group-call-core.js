@@ -21,6 +21,8 @@
   GC._inviteTimers = {};
   GC._unsubCallDoc = null;
   GC._unsubInvites = null;
+  GC._unsubCandidates = null;
+  GC._unsubSignaling = null;
   GC._unsubParticipantCandidates = {};
   GC._participantStreams = new Map();
   GC._participantMuteState = new Map();
@@ -262,8 +264,9 @@
 
   async function _listenToIncomingCandidates(callId) {
     if (!_firestore()) return;
+    if (GC._unsubCandidates) { try { GC._unsubCandidates(); } catch (_) {} }
     var myUid = GC._myUid;
-    _firestore().collection('groupCalls').doc(callId).collection('candidates')
+    GC._unsubCandidates = _firestore().collection('groupCalls').doc(callId).collection('candidates')
       .orderBy('createdAt')
       .onSnapshot(function (snap) {
         snap.docChanges().forEach(function (change) {
@@ -282,8 +285,9 @@
 
   function _listenToSignaling(callId) {
     if (!_firestore()) return;
+    if (GC._unsubSignaling) { try { GC._unsubSignaling(); } catch (_) {} }
     var myUid = GC._myUid;
-    _firestore().collection('groupCalls').doc(callId).collection('signaling')
+    GC._unsubSignaling = _firestore().collection('groupCalls').doc(callId).collection('signaling')
       .orderBy('createdAt')
       .onSnapshot(function (snap) {
         snap.docChanges().forEach(async function (change) {
@@ -471,6 +475,8 @@
   function _cleanupListeners() {
     if (GC._unsubCallDoc) { try { GC._unsubCallDoc(); } catch (_) {} GC._unsubCallDoc = null; }
     if (GC._unsubInvites) { try { GC._unsubInvites(); } catch (_) {} GC._unsubInvites = null; }
+    if (GC._unsubCandidates) { try { GC._unsubCandidates(); } catch (_) {} GC._unsubCandidates = null; }
+    if (GC._unsubSignaling) { try { GC._unsubSignaling(); } catch (_) {} GC._unsubSignaling = null; }
     if (GC._unsubParticipantCandidates) {
       Object.keys(GC._unsubParticipantCandidates).forEach(function (uid) {
         GC._unsubParticipantCandidates[uid].forEach(function (fn) { try { fn(); } catch (_) {} });

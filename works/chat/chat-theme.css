@@ -693,7 +693,7 @@ html:not(.dark) .wa-filter-custom input {
   /* H8: Larger touch targets on tablet (coarse pointer) */
   @media (pointer: coarse) {
     button, [role="button"], .tab-item, .bottom-nav-item, .chat-list-item { min-height: 48px !important; min-width: 48px !important; }
-    .emoji-cat-btn { min-width: 40px !important; min-height: 40px !important; }
+    .emoji-cat-btn { min-width: 44px !important; min-height: 44px !important; }
   }
   /* L1: Smooth transitions on orientation change */
   html, body, #app, #sidebar, #chat-list-sidebar, #chat-area, #detail-panel { transition: width 0.2s ease, transform 0.2s ease !important; }
@@ -1583,7 +1583,7 @@ html.light #theme-color-meta { content: ""; }
 /* ── AC5: Emoji picker keyboard focus ──────────────────────── */
 #emoji-grid span:focus-visible {
   outline: 2px solid var(--primary) !important;
-  outline-offset: 1px !important;
+  outline-offset: 2px !important;
   border-radius: 4px !important;
   background: var(--surface-variant) !important;
 }
@@ -1756,17 +1756,17 @@ html.light #theme-color-meta { content: ""; }
 
 #msg-input:focus-visible {
   outline: 2px solid var(--primary) !important;
-  outline-offset: -2px !important;
+  outline-offset: 2px !important;
   border-color: var(--primary) !important;
   box-shadow: 0 0 0 2px var(--primary-fixed) !important;
 }
 #sidebar-search:focus-visible {
   outline: 2px solid var(--primary) !important;
-  outline-offset: -2px !important;
+  outline-offset: 2px !important;
 }
 .message[data-msg-id]:focus-visible {
   outline: 2px solid var(--primary) !important;
-  outline-offset: -1px !important;
+  outline-offset: 2px !important;
 }
 
 /* ── D-H3: Consistent z-index system ─────────────────────────── */
@@ -2495,9 +2495,6 @@ html:not(.dark) #desktop-context-menu,
 
 /* Shared sub-page shell */
 .app-header {
-  position: sticky !important;
-  top: 0 !important;
-  z-index: 100 !important;
   padding-top: max(16px, env(safe-area-inset-top)) !important;
 }
 .bottom-nav.sub-page-nav {
@@ -2602,7 +2599,7 @@ html:not(.dark) #desktop-context-menu,
     min-width: 44px !important;
   }
   /* Chips can be narrower, just taller */
-  .wa-chip { min-width: 36px !important; }
+  .wa-chip { min-width: 44px !important; }
   .filter-btn { min-width: 44px !important; }
   /* Inline text links can be narrower */
   a.inline-link { min-height: unset !important; min-width: unset !important; }

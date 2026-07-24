@@ -6,6 +6,7 @@
 /* ── Design Tokens ── */
 :root {
   --brand: #008069;
+  --primary: var(--brand);
   --brand-dark: #006d58;
   --brand-light: #00a884;
   --brand-gradient: linear-gradient(135deg, #008069, #00a884);
@@ -658,3 +659,13 @@ html.dark .app-header { background: linear-gradient(135deg, #00574d, #008069); }
 :root[data-theme="dark"] .bottom-nav,
 body.dark .bottom-nav,
 html.dark .bottom-nav { border-top-color: var(--border); }
+
+/* ── Reduced Motion ── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

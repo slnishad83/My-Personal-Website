@@ -98,8 +98,8 @@
       var newTrack = newStream.getVideoTracks()[0];
       var sender = peerConnection?.getSenders().find(function (s) { return s.track && s.track.kind === 'video'; });
       if (sender) await sender.replaceTrack(newTrack);
-      localCallStream.getVideoTracks()[0].stop();
-      localCallStream.removeTrack(localCallStream.getVideoTracks()[0]);
+      var oldTrack = localCallStream.getVideoTracks()[0];
+      if (oldTrack) { oldTrack.stop(); localCallStream.removeTrack(oldTrack); }
       localCallStream.addTrack(newTrack);
       var lv = CC.$('local-video');
       if (lv) lv.srcObject = localCallStream;

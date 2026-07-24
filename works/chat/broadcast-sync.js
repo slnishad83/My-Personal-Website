@@ -2,13 +2,17 @@
 (function() {
   if (!('BroadcastChannel' in window)) return;
   var channel = new BroadcastChannel('nsl-chat-sync');
+  var _lastResync = 0;
   channel.onmessage = function(e) {
     if (!e.data || !e.data.type) return;
     switch (e.data.type) {
       case 'new-message':
       case 'chat-update':
-        if (typeof subscribeToChats === 'function') subscribeToChats();
-        if (typeof subscribeToGroups === 'function') subscribeToGroups();
+        if (Date.now() - _lastResync > 30000) {
+          _lastResync = Date.now();
+          if (typeof subscribeToChats === 'function') subscribeToChats();
+          if (typeof subscribeToGroups === 'function') subscribeToGroups();
+        }
         break;
       case 'message-deleted':
       case 'chat-deleted':

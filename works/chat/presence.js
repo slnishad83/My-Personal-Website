@@ -22,16 +22,20 @@ const Presence = {
   },
 
   _setupListeners() {
-    window.addEventListener('beforeunload', () => this.setOffline());
-    document.addEventListener('visibilitychange', () => {
+    this._boundBeforeUnload = () => this.setOffline();
+    this._boundVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
         this.setOnline();
       } else {
         this.setAway();
       }
-    });
-    window.addEventListener('online', () => this.setOnline());
-    window.addEventListener('offline', () => this.setOffline());
+    };
+    this._boundOnline = () => this.setOnline();
+    this._boundOffline = () => this.setOffline();
+    window.addEventListener('beforeunload', this._boundBeforeUnload);
+    document.addEventListener('visibilitychange', this._boundVisibilityChange);
+    window.addEventListener('online', this._boundOnline);
+    window.addEventListener('offline', this._boundOffline);
   },
 
   async setAway() {
@@ -174,6 +178,10 @@ const Presence = {
   destroy() {
     this._stopHeartbeat();
     this.setOffline();
+    if (this._boundBeforeUnload) window.removeEventListener('beforeunload', this._boundBeforeUnload);
+    if (this._boundVisibilityChange) document.removeEventListener('visibilitychange', this._boundVisibilityChange);
+    if (this._boundOnline) window.removeEventListener('online', this._boundOnline);
+    if (this._boundOffline) window.removeEventListener('offline', this._boundOffline);
     this._listeners = [];
   }
 };

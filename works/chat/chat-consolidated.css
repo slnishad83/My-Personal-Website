@@ -383,19 +383,19 @@ html.dark .busy-banner button { border-color: var(--on-warning-container, #ffd54
 .cf-unpin-btn{
   background:none;border:none;cursor:pointer;color:var(--text-secondary,#aaa);
   font-size:16px;padding:4px 6px;flex-shrink:0;line-height:1;
-  min-width:32px;min-height:32px;
+  min-width:44px;min-height:44px;
   display:flex;align-items:center;justify-content:center;
 }
 .cf-unpin-btn:hover{color:var(--error,#e53935)}
 
 @media(max-width:720px){
   .cf-req-actions{justify-content:flex-start}
-  .cf-req-actions .btn{font-size:11px;padding:0 8px;min-height:28px}
+  .cf-req-actions .btn{font-size:11px;padding:0 8px;min-height:44px}
 }
 @media(max-width:520px){
   .request-card{flex-wrap:wrap;padding:8px}
   .cf-req-actions{width:100%;justify-content:flex-start;margin-top:6px}
-  .cf-req-actions .btn{flex:1 1 auto;min-height:32px;font-size:11px;text-align:center}
+  .cf-req-actions .btn{flex:1 1 auto;min-height:44px;font-size:11px;text-align:center}
   .cf-pin-item{padding:6px 8px}
   .cf-pill{font-size:9px;padding:2px 5px}
   #pinnedSection{max-height:110px}
@@ -404,7 +404,7 @@ html.dark .busy-banner button { border-color: var(--on-warning-container, #ffd54
   .cf-chip{font-size:10px;padding:3px 9px}
 }
 @media(max-width:380px){
-  .cf-req-actions .btn{font-size:10px;padding:0 6px;min-height:30px}
+  .cf-req-actions .btn{font-size:10px;padding:0 6px;min-height:44px}
   .cf-chip{font-size:11px;padding:3px 7px}
   .cf-pin-sender,.cf-pin-text{font-size:11px}
 }

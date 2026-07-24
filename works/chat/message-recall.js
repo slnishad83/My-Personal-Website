@@ -60,7 +60,7 @@
   setTimeout(() => { clearInterval(_recallInterval); }, 10000);
 
   function _showRecallExpiredMenu(msgId, msg) {
-    _removeCtxMenu();
+    if (typeof window._removeCtxMenu === 'function') window._removeCtxMenu();
     const menu = document.createElement('div');
     menu.id = 'recall-expired-menu';
     menu.style.cssText = 'position:fixed;inset:0;z-index:9998;background:rgba(0,0,0,0.5);display:flex;align-items:flex-end;justify-content:center;padding-bottom:20px;animation:fadeIn 0.15s ease';
@@ -86,16 +86,16 @@
 
     menu.appendChild(sheet);
     menu.onclick = e => {
-      if (e.target === menu) { _removeCtxMenu(); return; }
+      if (e.target === menu) { if (typeof window._removeCtxMenu === 'function') window._removeCtxMenu(); return; }
       const actionBtn = e.target.closest('[data-action]');
       if (!actionBtn) return;
       const action = actionBtn.dataset.action;
       if (action === 'delete-me') {
         const mid = actionBtn.dataset.msgId;
-        _removeCtxMenu();
+        if (typeof window._removeCtxMenu === 'function') window._removeCtxMenu();
         if (typeof deleteMessage === 'function') deleteMessage(mid, 'me');
       } else if (action === 'cancel') {
-        _removeCtxMenu();
+        if (typeof window._removeCtxMenu === 'function') window._removeCtxMenu();
       }
     };
     document.body.appendChild(menu);

@@ -90,6 +90,7 @@
   function _sendHeartbeat() {
     _lastHeartbeat = Date.now();
     if (window._CC && window._CC.db() && window._CC.callId && window._CC.uid) {
+      if (window._CC.heartbeatHandle) return;
       window._CC.db().collection('calls').doc(window._CC.callId).update({
         heartbeat: firebase.firestore.FieldValue.serverTimestamp(),
         heartbeatUid: window._CC.uid()

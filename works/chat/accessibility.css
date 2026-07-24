@@ -65,7 +65,7 @@ button:focus-visible, a:focus-visible, [role="button"]:focus-visible {
 }
 input:focus-visible, textarea:focus-visible, select:focus-visible {
   outline: 2px solid var(--primary) !important;
-  outline-offset: 1px !important;
+  outline-offset: 2px !important;
 }
 
 /* ── High contrast mode (Windows) ─────────────────────── */
@@ -217,7 +217,7 @@ button:focus:not(:focus-visible),
 }
 #emoji-grid span:focus-visible {
   outline: 2px solid var(--primary) !important;
-  outline-offset: 1px !important;
+  outline-offset: 2px !important;
   background: var(--surface-variant) !important;
 }
 
@@ -225,14 +225,14 @@ button:focus:not(:focus-visible),
 #_msg-ctx-menu button:focus-visible,
 .context-menu-item:focus-visible {
   outline: 2px solid var(--primary) !important;
-  outline-offset: -2px !important;
+  outline-offset: 2px !important;
   background: var(--surface-container-high) !important;
 }
 
 /* ── Call controls accessibility ───────────────────────────────── */
 #call-controls button:focus-visible {
   outline: 2px solid white !important;
-  outline-offset: 3px !important;
+  outline-offset: 2px !important;
 }
 
 /* ── Modal focus trap visual indicator ─────────────────────────── */
@@ -259,7 +259,7 @@ button:focus:not(:focus-visible),
 }
 .message[data-msg-id]:focus-visible {
   outline: 2px solid var(--primary) !important;
-  outline-offset: -1px !important;
+  outline-offset: 2px !important;
   border-radius: 8px;
 }
 

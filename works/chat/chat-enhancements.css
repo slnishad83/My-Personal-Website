@@ -458,7 +458,7 @@ html.dark .ce-seen-label {
 
   width: auto !important;
   min-height: 44px !important;
-  min-width: 36px;
+  min-width: 44px;
   border-radius: 999px !important;
   padding: 0 14px 0 10px !important;
   font-size: 13px !important;
@@ -2184,9 +2184,9 @@ html:not(.dark) .wa-input-footer {
   display: inline-flex !important;
   align-items: center !important;
   justify-content: center !important;
-  width: 32px !important;
-  height: 32px !important;
-  min-height: 32px !important;
+  width: 44px !important;
+  height: 44px !important;
+  min-height: 44px !important;
   background: var(--wa-chip-bg) !important;
   color: var(--wa-chip-text) !important;
   border: none !important;
@@ -2281,17 +2281,17 @@ html:not(.dark) .wa-unread-empty-link {
   border-radius: 999px !important;
 }
 #wa-filter-chips .wa-chip {
-  height: 34px !important;
-  min-height: 34px !important;
+  height: 44px !important;
+  min-height: 44px !important;
   margin-right: 0 !important;
   padding: 0 13px !important;
   gap: 6px !important;
 }
 #wa-filter-chips .wa-chip-add,
 .wa-filter-manage-btn {
-  width: 34px !important;
-  height: 34px !important;
-  min-height: 34px !important;
+  width: 44px !important;
+  height: 44px !important;
+  min-height: 44px !important;
   padding: 0 !important;
   border-radius: 999px !important;
   flex-shrink: 0 !important;
@@ -2665,8 +2665,8 @@ html.dark .thread-typing-indicator {
 /* -- Mobile: reduce padding, ensure touch targets -- */
 @media (max-width: 480px) {
   #full-player-overlay button[style*="padding:4px"] {
-    min-width: 40px;
-    min-height: 40px;
+    min-width: 44px;
+    min-height: 44px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -2962,8 +2962,8 @@ html:not(.dark) #playlist-detail-overlay > div {
     padding: 0 8px !important;
   }
   #chat-header button {
-    min-width: 36px !important;
-    min-height: 36px !important;
+    min-width: 44px !important;
+    min-height: 44px !important;
     padding: 4px !important;
   }
 }
@@ -3411,8 +3411,8 @@ select, textarea {
   /* Color buttons: allow wrapping */
   [style*="width:24px"][style*="height:24px"],
   [style*="width: 24px"][style*="height: 24px"] {
-    min-width: 36px !important;
-    min-height: 36px !important;
+    min-width: 44px !important;
+    min-height: 44px !important;
   }
 }
 

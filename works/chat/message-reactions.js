@@ -519,6 +519,8 @@
   function initReactionListeners(container) {
     if (!container) container = document.getElementById('messagesContainer') || document.getElementById('messagesList');
     if (!container) return;
+    if (container.dataset.reactionsBound) return;
+    container.dataset.reactionsBound = '1';
     _attachReactionListeners(container);
   }
 

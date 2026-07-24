@@ -111,7 +111,7 @@
   padding: 2px;
 }
 .sc-cal-cell:hover:not(.sc-empty) { background: var(--hover, #f0f2f5); }
-.sc-cal-cell:focus-visible { outline: 2px solid var(--brand); }
+.sc-cal-cell:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
 .sc-cal-cell.sc-empty { cursor: default; }
 .sc-day-num {
   font-size: 12px;
@@ -284,7 +284,7 @@
   cursor: pointer;
   transition: background 0.13s, color 0.13s, border-color 0.13s;
   color: var(--text, #111b21);
-  min-height: 32px;
+  min-height: 44px;
 }
 .sc-send-now { border-color: var(--brand); color: var(--brand); }
 .sc-send-now:hover { background: var(--brand); color: #fff; }

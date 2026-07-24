@@ -271,6 +271,10 @@
     _isDuplicate(key) {
       const now = Date.now();
       this._seen.forEach((at, seenKey) => { if (now - at > DEDUPE_TTL_MS) this._seen.delete(seenKey); });
+      if (this._seen.size > 500) {
+        var keys = Array.from(this._seen.keys());
+        for (var i = 0; i < 100 && i < keys.length; i++) this._seen.delete(keys[i]);
+      }
       if (this._seen.has(key)) return true;
       this._seen.set(key, now);
       return false;

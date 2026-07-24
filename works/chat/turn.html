@@ -36,15 +36,15 @@
       place-items: center;
       padding: 20px;
       font-family: Arial, sans-serif;
-      background: #0b141a;
-      color: #e9edef;
+      background: var(--bg, #0b141a);
+      color: var(--text-primary, #e9edef);
     }
 
     main {
       width: min(720px, 100%);
       padding: 24px;
       border-radius: 14px;
-      background: #111b21;
+      background: var(--bg-card, #111b21);
       box-shadow: 0 18px 44px rgba(0, 0, 0, 0.28);
     }
 
@@ -59,27 +59,27 @@
     }
 
     p {
-      color: #aebac1;
+      color: var(--text-secondary, #aebac1);
       line-height: 1.5;
     }
 
     code {
-      color: #d1f4ee;
+      color: var(--accent, #d1f4ee);
       word-break: break-word;
     }
 
     .guide {
       margin: 18px 0;
       padding: 16px;
-      border: 1px solid #2a3942;
+      border: 1px solid var(--border, #2a3942);
       border-radius: 12px;
-      background: #17232b;
+      background: var(--bg-surface, #17232b);
     }
 
     .guide ol {
       margin: 10px 0 0;
       padding-left: 22px;
-      color: #d1d7db;
+      color: var(--text-secondary, #d1d7db);
       line-height: 1.6;
     }
 
@@ -88,10 +88,10 @@
       min-height: 150px;
       margin: 14px 0;
       padding: 14px;
-      border: 1px solid #2a3942;
+      border: 1px solid var(--border, #2a3942);
       border-radius: 10px;
-      background: #202c33;
-      color: #e9edef;
+      background: var(--bg-input, #202c33);
+      color: var(--text-primary, #e9edef);
       font: 14px Consolas, monospace;
       resize: vertical;
     }
@@ -104,14 +104,14 @@
 
     button,
     a {
-      min-height: 42px;
+      min-height: 44px;
       display: inline-flex;
       align-items: center;
       justify-content: center;
       padding: 0 16px;
       border: 0;
       border-radius: 999px;
-      background: #00a884;
+      background: var(--accent, #00a884);
       color: white;
       cursor: pointer;
       font-weight: 700;
@@ -124,15 +124,15 @@
     }
 
     .secondary {
-      background: #202c33;
-      color: #e9edef;
-      border: 1px solid #2a3942;
+      background: var(--bg-input, #202c33);
+      color: var(--text-primary, #e9edef);
+      border: 1px solid var(--border, #2a3942);
     }
 
     .message {
       min-height: 22px;
       margin-top: 12px;
-      color: #00a884;
+      color: var(--accent, #00a884);
       font-weight: 700;
     }
 

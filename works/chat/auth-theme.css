@@ -8,7 +8,7 @@
   --border: #e2e8f0;
   --text: #111b21;
   --muted: #667781;
-  --primary: #008069;
+  --primary: var(--brand, #008069);
   --primary-hover: #006b58;
   --success-bg: #d9fdd3;
   --success-text: #075e54;
@@ -34,7 +34,7 @@ body.dark {
   --bg: #0b141a;
   --text: #e9edef;
   --muted: #aebac1;
-  --primary: #00a884;
+  --primary: var(--brand, #00a884);
   --primary-hover: #06cf9c;
   --success-bg: #103b32;
   --success-text: #7ae3c3;
@@ -188,7 +188,7 @@ input:focus-visible,
 textarea:focus-visible,
 .close-modal:focus-visible {
   outline: 3px solid var(--focus);
-  outline-offset: 3px;
+  outline-offset: 2px;
 }
 
 @media (max-width: 520px) {

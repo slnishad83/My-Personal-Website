@@ -295,7 +295,7 @@
     GC._toast('You left the call', 'info');
   }
 
-  window.startGroupCall = startGroupCall;
+  if (typeof window.startGroupCall !== 'function') { window.startGroupCall = startGroupCall; }
   window.joinGroupCall = joinGroupCall;
   window.leaveGroupCall = leaveGroupCall;
   window.declineGroupCall = function (callId) {

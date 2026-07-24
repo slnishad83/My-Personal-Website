@@ -55,6 +55,8 @@ firebase.auth().onAuthStateChanged(function(user) {
       }
     }, 2000);
   } else {
+    if (typeof window.endCall === 'function') { try { window.endCall(); } catch(_) {} }
+    if (typeof window.CleanupGroupCall === 'function') { try { window.CleanupGroupCall(); } catch(_) {} }
     if (window.Presence) Presence.destroy();
     if (window.MultiDevice) MultiDevice.destroy();
     if (window.Security) Security.destroy();

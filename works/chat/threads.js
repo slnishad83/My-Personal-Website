@@ -463,6 +463,10 @@
     document.getElementById("threadSummaryCard")?.remove();
 
     try {
+      if (typeof firebase === 'undefined' || !firebase.functions) {
+        if (typeof showToast === "function") showToast('Cloud Functions SDK not loaded', 'error');
+        return;
+      }
       const summarizeFn = firebase.functions().httpsCallable("summarizeThread", { timeout: 30000 });
       const result = await summarizeFn({ messageId: currentThreadMessageId });
       const summaryText = result.data?.summary || "No summary generated.";

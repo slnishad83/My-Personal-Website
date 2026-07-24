@@ -238,8 +238,8 @@ html, body, #app {
   white-space: nowrap;
   transition: all 0.15s ease;
   line-height: 1.2;
-  min-height: 32px;
-  height: 32px;
+  min-height: 44px;
+  height: 44px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -262,9 +262,9 @@ html, body, #app {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
-  min-height: 32px;
+  width: 44px;
+  height: 44px;
+  min-height: 44px;
   cursor: pointer;
   transition: all 0.15s ease;
 }

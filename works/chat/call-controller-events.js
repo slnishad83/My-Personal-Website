@@ -416,9 +416,9 @@
     var remoteName = CC.$('call-name')?.textContent || 'Unknown';
     var remoteAvatar = CC._outgoingAvatar || '';
     var savedCallId = CC.callId;
-    var savedRemoteUid = CC._remoteUid || CC._callPeerUid || '';
+    var savedRemoteUid = CC.incomingData?.fromUserId || '';
 
-    CC.txt('call-status', dur > 0 ? 'Call ended' : 'Call ended');
+    CC.txt('call-status', dur > 0 ? 'Call ended' : 'No answer');
     CC.cleanup();
     CC.setState(CC.STATES.ENDED);
 
@@ -426,7 +426,7 @@
       var payload = { status: 'ended', endedAt: firebase.firestore.FieldValue.serverTimestamp() };
       if (dur > 0) payload.duration = dur;
       CC.db().collection('calls').doc(savedCallId).update(payload).catch(function () {});
-      CC.writeCallLog('outgoing', 'ended', dur > 0 ? dur * 1000 : null);
+      CC.writeCallLog(endDirection, 'ended', dur > 0 ? dur * 1000 : null);
     }
 
     if (wasActive) {
