@@ -78,7 +78,8 @@
 
   var _userCache     = Object.create(null);
   var _snapListeners = Object.create(null);
-  var _MAX_LISTENERS = 40;
+  var _snapVisibility = Object.create(null);
+  var _MAX_LISTENERS = (window.__nslConfig && window.__nslConfig.maxSeenByListeners) || 40;
   var _MAX_USER_CACHE = 200;
 
   function _evictUserCache() {
@@ -189,10 +190,26 @@
 
     var keys = Object.keys(_snapListeners);
     if (keys.length >= _MAX_LISTENERS) {
-      var oldest = keys[0];
-      try { _snapListeners[oldest](); } catch (e) {}
-      delete _snapListeners[oldest];
+      var leastVisible = null;
+      var leastScore = Infinity;
+      for (var i = 0; i < keys.length; i++) {
+        var vis = _snapVisibility[keys[i]] || 0;
+        if (vis < leastScore) { leastScore = vis; leastVisible = keys[i]; }
+      }
+      if (leastVisible) {
+        try { _snapListeners[leastVisible](); } catch (e) {}
+        delete _snapListeners[leastVisible];
+        delete _snapVisibility[leastVisible];
+      }
     }
+
+    if (!window._ceDetachFns) window._ceDetachFns = [];
+    window._ceDetachFns.push(function () {
+      if (_snapListeners[msgId]) {
+        try { _snapListeners[msgId](); } catch (e) {}
+        delete _snapListeners[msgId];
+      }
+    });
 
     var unsub = window.db.collection('messages').doc(chatId).collection('items').doc(msgId)
       .onSnapshot(
@@ -204,6 +221,7 @@
       );
 
     _snapListeners[msgId] = unsub;
+    _trackVisibility(msgEl, msgId);
   }
 
   function scanOutgoingMessages(root) {
@@ -549,6 +567,7 @@
     scanFileCards();          /* immediate pass */
     scheduleRetryScans();     /* delayed retries for Firestore-loaded messages */
     _observeScrollBtn();
+    document.addEventListener('vs:node-recycled', _onNodeRecycled);
 
     initReadReceipts();       /* waits for Firebase globals */
   }
@@ -563,12 +582,33 @@
       MutationBus.off('ce:scroll-btn');
     }
     if (_scrollBtnFallbackObs) { _scrollBtnFallbackObs.disconnect(); _scrollBtnFallbackObs = null; }
+    document.removeEventListener('vs:node-recycled', _onNodeRecycled);
     var keys = Object.keys(_snapListeners);
     for (var i = 0; i < keys.length; i++) {
       try { _snapListeners[keys[i]](); } catch (e) {}
     }
     _snapListeners = Object.create(null);
+    _snapVisibility = Object.create(null);
     _userCache = Object.create(null);
+  }
+
+  function _onNodeRecycled(e) {
+    var msgId = e.detail && e.detail.messageId;
+    if (msgId && _snapListeners[msgId]) {
+      try { _snapListeners[msgId](); } catch (err) {}
+      delete _snapListeners[msgId];
+      delete _snapVisibility[msgId];
+    }
+  }
+
+  function _trackVisibility(msgEl, msgId) {
+    if (!window.IntersectionObserver || !msgId) return;
+    var obs = new IntersectionObserver(function (entries) {
+      entries.forEach(function (entry) {
+        _snapVisibility[msgId] = entry.isIntersecting ? 1 : 0;
+      });
+    }, { threshold: 0.1 });
+    obs.observe(msgEl);
   }
 
   window.ChatEnhancements = { destroy: destroy };

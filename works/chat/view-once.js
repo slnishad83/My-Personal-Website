@@ -48,9 +48,16 @@
               const ref = _st.refFromURL(msgData.mediaUrl);
               await ref.delete();
             }
-          } catch (_) {}
+          } catch (e) {
+            console.warn('[ViewOnce] Storage delete failed (may already be gone):', e.message || e);
+          }
         }
-        await App.db.collection('messages').doc(msgId).delete();
+        const chatId = window.App?.currentChat?.id;
+        if (chatId) {
+          await App.db.collection('messages').doc(chatId).collection('items').doc(msgId).delete();
+        } else {
+          await App.db.collection('messages').doc(msgId).delete();
+        }
       } catch (e) {
         console.warn('[ViewOnce] deleteAfterView error:', e);
       }
@@ -87,7 +94,7 @@
       if (!mediaUrl) return;
 
       const overlay = document.createElement('div');
-      overlay.style.cssText = 'position:fixed;inset:0;z-index:10001;background:rgba(0,0,0,0.95);display:flex;align-items:center;justify-content:center;animation:fadeIn 0.2s ease';
+      overlay.style.cssText = 'position:fixed;inset:0;z-index:10001;background:rgba(0,0,0,0.95);display:flex;align-items:center;justify-content:center;animation:fadeIn 0.2s ease;-webkit-user-select:none;user-select:none;';
 
       const badge = document.createElement('div');
       badge.style.cssText = 'position:absolute;top:16px;left:16px;background:rgba(0,0,0,0.6);color:white;padding:6px 12px;border-radius:20px;font-size:11px;font-weight:600;display:flex;align-items:center;gap:6px;backdrop-filter:blur(8px)';
@@ -102,12 +109,12 @@
         video.src = mediaUrl;
         video.controls = true;
         video.autoplay = true;
-        video.style.cssText = 'max-width:95vw;max-height:85vh;border-radius:12px';
+        video.style.cssText = 'max-width:95vw;max-height:85vh;border-radius:12px;-webkit-user-select:none;user-select:none;';
         overlay.appendChild(video);
       } else {
         const img = document.createElement('img');
         img.src = mediaUrl;
-        img.style.cssText = 'max-width:95vw;max-height:85vh;border-radius:12px;object-fit:contain';
+        img.style.cssText = 'max-width:95vw;max-height:85vh;border-radius:12px;object-fit:contain;-webkit-user-select:none;user-select:none;';
         overlay.appendChild(img);
       }
 

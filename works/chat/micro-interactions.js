@@ -97,7 +97,8 @@
     _multiSelectHeader = document.createElement('div');
     _multiSelectHeader.className = 'multi-select-header hidden';
     _multiSelectHeader.innerHTML = '<div class="flex items-center gap-3"><span class="material-symbols-outlined cursor-pointer" id="ms-close">close</span><span id="ms-count">0 selected</span></div><div class="flex items-center gap-2"></div>';
-    document.body.appendChild(_multiSelectHeader);
+    var chatArea = document.getElementById('chat-area') || document.body;
+    chatArea.insertBefore(_multiSelectHeader, chatArea.firstChild);
     var closeBtn = _multiSelectHeader.querySelector('#ms-close');
     if (closeBtn) closeBtn.addEventListener('click', exitMultiSelect);
     return _multiSelectHeader;
@@ -107,8 +108,13 @@
     if (_multiSelectBar) return _multiSelectBar;
     _multiSelectBar = document.createElement('div');
     _multiSelectBar.className = 'multi-select-bar hidden';
-    _multiSelectBar.innerHTML = '<button class="flex flex-col items-center gap-1 p-2" id="ms-action-delete"><span class="material-symbols-outlined text-[20px]" style="color:var(--error,#dc3545)">delete</span><span class="text-[10px]" style="color:var(--error,#dc3545)">Delete</span></button><button class="flex flex-col items-center gap-1 p-2" id="ms-action-forward"><span class="material-symbols-outlined text-[20px]" style="color:var(--on-surface-variant)">forward</span><span class="text-[10px]" style="color:var(--on-surface-variant)">Forward</span></button><button class="flex flex-col items-center gap-1 p-2" id="ms-action-star"><span class="material-symbols-outlined text-[20px]" style="color:var(--on-surface-variant)">star</span><span class="text-[10px]" style="color:var(--on-surface-variant)">Star</span></button><button class="flex flex-col items-center gap-1 p-2" id="ms-action-reply"><span class="material-symbols-outlined text-[20px]" style="color:var(--on-surface-variant)">reply</span><span class="text-[10px]" style="color:var(--on-surface-variant)">Reply</span></button>';
-    document.body.appendChild(_multiSelectBar);
+    _multiSelectBar.innerHTML = '<button class="flex flex-col items-center gap-1 p-2" id="ms-action-reply"><span class="material-symbols-outlined text-[20px]" style="color:var(--on-surface-variant)">reply</span><span class="text-[10px]" style="color:var(--on-surface-variant)">Reply</span></button><button class="flex flex-col items-center gap-1 p-2" id="ms-action-star"><span class="material-symbols-outlined text-[20px]" style="color:var(--on-surface-variant)">star</span><span class="text-[10px]" style="color:var(--on-surface-variant)">Star</span></button><button class="flex flex-col items-center gap-1 p-2" id="ms-action-forward"><span class="material-symbols-outlined text-[20px]" style="color:var(--on-surface-variant)">forward</span><span class="text-[10px]" style="color:var(--on-surface-variant)">Forward</span></button><button class="flex flex-col items-center gap-1 p-2" id="ms-action-selectall"><span class="material-symbols-outlined text-[20px]" style="color:var(--on-surface-variant)">select_all</span><span class="text-[10px]" style="color:var(--on-surface-variant)">All</span></button><button class="flex flex-col items-center gap-1 p-2" id="ms-action-delete"><span class="material-symbols-outlined text-[20px]" style="color:var(--error,#dc3545)">delete</span><span class="text-[10px]" style="color:var(--error,#dc3545)">Delete</span></button>';
+    var inputBar = document.getElementById('input-bar');
+    if (inputBar && inputBar.parentElement) {
+      inputBar.parentElement.insertBefore(_multiSelectBar, inputBar);
+    } else {
+      document.body.appendChild(_multiSelectBar);
+    }
     var fwdBtn = _multiSelectBar.querySelector('#ms-action-forward');
     if (fwdBtn) fwdBtn.addEventListener('click', function() {
       var ids = Array.from(_selectedMessages);
@@ -142,6 +148,19 @@
       });
       exitMultiSelect();
     });
+    var selectAllBtn = _multiSelectBar.querySelector('#ms-action-selectall');
+    if (selectAllBtn) selectAllBtn.addEventListener('click', function() {
+      var msgEls = document.querySelectorAll('[data-msg-id], [data-message-id]');
+      msgEls.forEach(function(el) {
+        var id = el.getAttribute('data-msg-id') || el.getAttribute('data-message-id');
+        if (id && !_selectedMessages.has(id)) {
+          _selectedMessages.add(id);
+          el.classList.add('msg-selected');
+        }
+      });
+      var countEl = _multiSelectHeader && _multiSelectHeader.querySelector('#ms-count');
+      if (countEl) countEl.textContent = _selectedMessages.size + ' selected';
+    });
     return _multiSelectBar;
   }
 
@@ -165,8 +184,22 @@
 
   function getMsgText(msgEl) {
     if (!msgEl) return '';
+    var typeIcon = '';
+    var typeEl = msgEl.querySelector('.msg-type, [data-msg-type]');
+    if (typeEl) {
+      var t = typeEl.getAttribute('data-msg-type') || typeEl.textContent.trim();
+      if (t === 'image') typeIcon = '[Image] ';
+      else if (t === 'video') typeIcon = '[Video] ';
+      else if (t === 'voice' || t === 'audio') typeIcon = '[Audio] ';
+      else if (t === 'sticker') typeIcon = '[Sticker] ';
+      else if (t === 'document' || t === 'doc') typeIcon = '[Doc] ';
+      else if (t === 'location') typeIcon = '[Location] ';
+      else if (t === 'contact') typeIcon = '[Contact] ';
+      else if (t === 'videoNote') typeIcon = '[Video note] ';
+    }
     var textEl = msgEl.querySelector('.msg-text, .message-text, .message-bubble');
-    return textEl ? textEl.textContent.trim().substring(0, 80) : '';
+    var raw = textEl ? textEl.textContent.trim().substring(0, 80) : '';
+    return typeIcon + raw;
   }
 
   function getMsgId(msgEl) {
@@ -201,6 +234,13 @@
     if (_selectedMessages.size === 0) exitMultiSelect();
   }
 
+  function restoreMultiSelectState() {
+    _selectedMessages.forEach(function (id) {
+      var el = document.querySelector('[data-msg-id="' + id + '"], [data-message-id="' + id + '"]');
+      if (el) el.classList.add('msg-selected');
+    });
+  }
+
   function enterMultiSelect(msgEl) {
     _multiSelectMode = true;
     var wrap = getMsgWrap();
@@ -221,6 +261,10 @@
       setTimeout(function () { if (el.parentNode) el.remove(); }, 150);
       _menuEl = null;
     }
+    if (_boundHandlers.menuKeyHandler) {
+      document.removeEventListener('keydown', _boundHandlers.menuKeyHandler);
+      _boundHandlers.menuKeyHandler = null;
+    }
     _longPressTarget = null;
   }
 
@@ -236,6 +280,7 @@
       { icon: 'forward', label: 'Forward', action: 'forward' },
       { icon: 'content_copy', label: 'Copy', action: 'copy' },
       { icon: 'star', label: 'Star', action: 'star' },
+      { icon: 'push_pin', label: 'Pin', action: 'pin' },
       { icon: 'delete', label: 'Delete', action: 'delete', destructive: true },
       { icon: 'info', label: 'Info', action: 'info' }
     ];
@@ -269,10 +314,12 @@
     var vh = window.innerHeight;
     var menuW = menuRect.width;
     var menuH = menuRect.height;
+    var headerEl = document.getElementById('chat-header');
+    var headerH = headerEl ? headerEl.offsetHeight : 0;
     var posX = Math.min(x, vw - menuW - 8);
     var posY = Math.min(y, vh - menuH - 8);
     posX = Math.max(8, posX);
-    posY = Math.max(8, posY);
+    posY = Math.max(headerH + 8, posY);
 
     menu.style.left = posX + 'px';
     menu.style.top = posY + 'px';
@@ -289,6 +336,34 @@
     });
 
     msgEl.classList.add('msg-reply-active');
+
+    _boundHandlers.menuKeyHandler = function (e) {
+      if (!_menuEl) return;
+      var items = _menuEl.querySelectorAll('.menu-item');
+      if (!items.length) return;
+      var idx = Array.prototype.indexOf.call(items, document.activeElement);
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        var next = idx < items.length - 1 ? idx + 1 : 0;
+        items[next].focus();
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        var prev = idx > 0 ? idx - 1 : items.length - 1;
+        items[prev].focus();
+      } else if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        if (document.activeElement && document.activeElement.classList.contains('menu-item')) {
+          document.activeElement.click();
+        }
+      } else if (e.key === 'Escape') {
+        e.preventDefault();
+        dismissMenu();
+      }
+    };
+    document.addEventListener('keydown', _boundHandlers.menuKeyHandler);
+
+    var firstItem = menu.querySelector('.menu-item');
+    if (firstItem) firstItem.focus();
   }
 
   function getStarState(msgEl) {
@@ -311,6 +386,10 @@
         break;
       case 'star':
         starMsg(msgEl);
+        break;
+      case 'pin':
+        if (typeof window.pinMessage === 'function') window.pinMessage(getMsgId(msgEl));
+        else if (typeof window.starMessage === 'function') window.starMessage(getMsgId(msgEl));
         break;
       case 'delete':
         deleteMsg(msgEl);
@@ -340,6 +419,7 @@
 
   function starMsg(msgEl) {
     var id = getMsgId(msgEl);
+    var chatId = _currentChatId || (window.currentChat && window.currentChat.id) || (window.App && window.App.currentChat && window.App.currentChat.id);
     if (typeof window.starMessage === 'function') { window.starMessage(id); return; }
     if (typeof window.toggleStar === 'function') { window.toggleStar(id); return; }
     var starEl = msgEl.querySelector('.star-icon, [class*="star"]');
@@ -351,9 +431,33 @@
         starEl.classList.add('star-animate');
       }
     }
+    if (chatId && id && window.db) {
+      var isStarred = starEl && starEl.classList.contains('starred');
+      window.db.collection('messages').doc(chatId).collection('items').doc(id).update({ isStarred: isStarred }).catch(function () {});
+    }
   }
 
   function deleteMsg(msgEl) {
+    var id = getMsgId(msgEl);
+    var chatId = _currentChatId || (window.currentChat && window.currentChat.id) || (window.App && window.App.currentChat && window.App.currentChat.id);
+    if (typeof window._MsgActions === 'object' && id) {
+      window._MsgActions.delete(id);
+    } else if (chatId && id && window.db) {
+      var uid = window.currentUser && window.currentUser.uid;
+      window.db.collection('messages').doc(chatId).collection('items').doc(id).get().then(function (doc) {
+        if (!doc.exists) return;
+        var msg = doc.data();
+        if (msg.from === uid || msg.senderId === uid) {
+          window.db.collection('messages').doc(chatId).collection('items').doc(id).delete();
+        } else {
+          var upd = {};
+          upd['deletedFor'] = window.firebase && window.firebase.firestore && window.firebase.firestore.FieldValue
+            ? window.firebase.firestore.FieldValue.arrayUnion(uid)
+            : [uid];
+          window.db.collection('messages').doc(chatId).collection('items').doc(id).update(upd);
+        }
+      }).catch(function () {});
+    }
     if (prefersReducedMotion()) {
       msgEl.remove();
       return;
@@ -799,6 +903,7 @@
   window.animateStar = animateStar;
   window.animateMsgDelete = animateMsgDelete;
   window.exitMultiSelect = exitMultiSelect;
+  window.restoreMultiSelectState = restoreMultiSelectState;
   window.onChatSwitch = onChatSwitch;
   window.restoreScrollPosition = restoreScrollPosition;
 

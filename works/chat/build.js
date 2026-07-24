@@ -103,6 +103,7 @@ const BUNDLE_ORDER = [
   'mini-games.js',
   'mood-status.js',
   'date-reminders.js',
+  'jump-to-date.js',
   'ai-features.js',
   'chat-export.js',
   'music-player.js',

@@ -105,6 +105,17 @@
   `;
   document.head.appendChild(_sensitiveStyle);
 
+  document.addEventListener('click', function(e) {
+    var overlay = e.target.closest('.sensitive-overlay[data-sensitive-msg-id]');
+    if (!overlay) return;
+    e.stopPropagation();
+    var msgId = overlay.getAttribute('data-sensitive-msg-id');
+    var bubbleMedia = overlay.parentElement;
+    var img = bubbleMedia ? bubbleMedia.querySelector('img') : null;
+    revealSensitiveImage(msgId, img || overlay.previousElementSibling);
+    overlay.remove();
+  }, true);
+
   const origRenderSingleMessageHTML = window.renderSingleMessageHTML;
   if (typeof origRenderSingleMessageHTML === 'function') {
     window.renderSingleMessageHTML = function(msg, msgs, i, lastDate) {
@@ -113,8 +124,9 @@
       if (msg.type !== 'image' || !isImageSensitive(msg)) return html;
       if (_getSeenImages().includes(msg.id)) return html;
 
+      const safeId = String(msg.id || '').replace(/[^a-zA-Z0-9_-]/g, '');
       const blurOverlay = `
-        <div class="sensitive-overlay" onclick="event.stopPropagation();revealSensitiveImage('${msg.id}', this.previousElementSibling?.querySelector('img'));this.remove()">
+        <div class="sensitive-overlay" data-sensitive-msg-id="${safeId}">
           <span class="material-symbols-outlined" style="font-size:32px;color:white;opacity:0.8">visibility_off</span>
           <div class="sensitive-badge">
             <span class="material-symbols-outlined" style="font-size:12px">warning</span>

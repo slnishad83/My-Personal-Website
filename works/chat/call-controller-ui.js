@@ -47,6 +47,11 @@
     }
 
     try { history.pushState({ callActive: true }, ''); } catch (_) {}
+
+    _initLocalVideoDrag();
+    _initRemoteVideoPinchZoom();
+    var ssBtn = CC.$('btn-screenshare');
+    if (ssBtn) ssBtn.classList.toggle('hidden', type === 'voice' || !navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia);
   }
 
   function minimizeCall() {
@@ -205,6 +210,69 @@
     var c = { uid: targetUid, name: targetName, initials: (targetName || '?')[0].toUpperCase(), type: 'direct', photoURL: targetAvatar };
     if (CC.state !== CC.STATES.IDLE) { CC.toast('Already in a call', 'info'); return; }
     window.initiateOutgoingCall(callType || 'voice', c);
+  }
+
+  function _initLocalVideoDrag() {
+    var lvc = CC.$('local-video-container');
+    if (!lvc || lvc.dataset.lvcDragInit) return;
+    lvc.dataset.lvcDragInit = '1';
+    var dragging = false, startX = 0, startY = 0, origLeft = 0, origTop = 0;
+    function getPos(e) {
+      if (e.touches && e.touches.length) return { x: e.touches[0].clientX, y: e.touches[0].clientY };
+      return { x: e.clientX, y: e.clientY };
+    }
+    function onStart(e) {
+      if (e.target.closest('button')) return;
+      var rect = lvc.getBoundingClientRect();
+      origLeft = rect.left; origTop = rect.top;
+      var pos = getPos(e); startX = pos.x; startY = pos.y;
+      dragging = true; lvc.style.transition = 'none';
+      lvc.style.position = 'fixed'; lvc.style.left = origLeft + 'px'; lvc.style.top = origTop + 'px';
+      lvc.style.right = 'auto'; lvc.style.bottom = 'auto';
+    }
+    function onMove(e) {
+      if (!dragging) return; e.preventDefault();
+      var pos = getPos(e);
+      lvc.style.left = Math.max(0, Math.min(window.innerWidth - 80, origLeft + (pos.x - startX))) + 'px';
+      lvc.style.top = Math.max(0, Math.min(window.innerHeight - 80, origTop + (pos.y - startY))) + 'px';
+    }
+    function onEnd() {
+      if (!dragging) return; dragging = false; lvc.style.transition = '';
+    }
+    lvc.addEventListener('mousedown', onStart);
+    lvc.addEventListener('touchstart', onStart, { passive: true });
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('touchmove', onMove, { passive: false });
+    document.addEventListener('mouseup', onEnd);
+    document.addEventListener('touchend', onEnd);
+  }
+
+  function _initRemoteVideoPinchZoom() {
+    var rv = CC.$('remote-video');
+    if (!rv || rv.dataset.pinchInit) return;
+    rv.dataset.pinchInit = '1';
+    var initialDist = 0, currentScale = 1;
+    function getDist(e) {
+      var t = e.touches;
+      return Math.hypot(t[0].clientX - t[1].clientX, t[0].clientY - t[1].clientY);
+    }
+    rv.addEventListener('touchstart', function (e) {
+      if (e.touches.length === 2) { initialDist = getDist(e); }
+    }, { passive: true });
+    rv.addEventListener('touchmove', function (e) {
+      if (e.touches.length === 2 && initialDist > 0) {
+        e.preventDefault();
+        var scale = Math.max(1, Math.min(3, currentScale * (getDist(e) / initialDist)));
+        rv.style.transform = 'scale(' + scale + ')';
+      }
+    }, { passive: false });
+    rv.addEventListener('touchend', function (e) {
+      if (e.touches.length < 2) {
+        currentScale = parseFloat(rv.style.transform.replace('scale(', '').replace(')', '')) || 1;
+        if (currentScale < 1.1) { currentScale = 1; rv.style.transform = ''; }
+        initialDist = 0;
+      }
+    });
   }
 
   CC.showCallScreen = showCallScreen;

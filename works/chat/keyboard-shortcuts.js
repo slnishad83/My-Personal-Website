@@ -30,6 +30,17 @@ const KeyboardShortcuts = {
 
     /* ── Escape: Close overlays/modals/popovers ──────────── */
     if (e.key === 'Escape') {
+      if (window._CC && window._CC.state === window._CC.STATES.ACTIVE) {
+        e.preventDefault();
+        if (window._CC.callType === 'video') window._CC.minimizeCall();
+        else window.endCall();
+        return;
+      }
+      if (window._CC && window._CC.state === window._CC.STATES.RINGING) {
+        e.preventDefault();
+        if (typeof window.declineCall === 'function') window.declineCall();
+        return;
+      }
       // Priority order: fullscreen > picture-in-picture > overlays > emoji > attach > format > search > detail panel
       if (typeof document.fullscreenElement !== 'undefined' && document.fullscreenElement) {
         document.exitFullscreen().catch(() => {});
@@ -522,6 +533,16 @@ const KeyboardShortcuts = {
       if (window.innerWidth < 768 && typeof backToList === 'function') {
         backToList();
       }
+    }
+
+    /* ── Call shortcuts (only when a call is active) ─────────── */
+    if (window._CC && (window._CC.state === window._CC.STATES.ACTIVE || window._CC.state === window._CC.STATES.CONNECTING) && !isInput && !isMeta) {
+      if (e.key === 'm' || e.key === 'M') { e.preventDefault(); if (typeof window.toggleMute === 'function') window.toggleMute(); return; }
+      if (e.key === 'v' || e.key === 'V') { e.preventDefault(); if (typeof window.toggleCamera === 'function') window.toggleCamera(); return; }
+    }
+    if (window._CC && window._CC.state === window._CC.STATES.RINGING && !isInput) {
+      if (e.key === 'Enter') { e.preventDefault(); if (typeof window.acceptCall === 'function') window.acceptCall(); return; }
+      if (e.key === 'Backspace') { e.preventDefault(); if (typeof window.declineCall === 'function') window.declineCall(); return; }
     }
 
     /* ── ? key: Show keyboard shortcuts help ────────────────── */

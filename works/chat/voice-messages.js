@@ -264,7 +264,10 @@
         mimeType = 'audio/webm';
         if (!MediaRecorder.isTypeSupported(mimeType)) {
           mimeType = 'audio/ogg;codecs=opus';
-          if (!MediaRecorder.isTypeSupported(mimeType)) mimeType = '';
+          if (!MediaRecorder.isTypeSupported(mimeType)) {
+            mimeType = 'audio/mp4';
+            if (!MediaRecorder.isTypeSupported(mimeType)) mimeType = '';
+          }
         }
       }
       var opts = mimeType ? { mimeType: mimeType } : {};
@@ -509,6 +512,11 @@
         read: false
       };
       await db.collection('messages').doc(chat.id).collection('items').add(msgData);
+      await db.collection('messages').doc(chat.id).update({
+        lastMessage: '🎤 Voice message',
+        lastMessageTime: firebase.firestore.FieldValue.serverTimestamp(),
+        lastMessageFrom: user.uid
+      }).catch(function() {});
       _toast('Voice message sent', 'success');
     } catch (err) {
       console.error('Voice send error:', err);
@@ -546,8 +554,30 @@
       '<span class="vm-time" style="color:' + timeColor + '" id="vm-time-' + _esc(id) + '">' + durText + '</span>' +
       '<button class="vm-speed-btn" style="color:' + speedColor + ';border-color:' + speedColor + '33" data-vm-speed="' + _esc(id) + '">1x</button>' +
       '</div></div></div>';
+    var existingAudio = container.querySelector('.vm-player');
+    var savedTime = 0;
+    var wasPlaying = false;
+    if (existingAudio) {
+      var prevPlayerId = existingAudio.getAttribute('data-vm-id');
+      if (prevPlayerId && _currentlyPlaying === prevPlayerId) {
+        var prevAudio = existingAudio._vmAudio;
+        if (prevAudio && !prevAudio.paused) {
+          savedTime = prevAudio.currentTime;
+          wasPlaying = true;
+          prevAudio.pause();
+          _currentlyPlaying = null;
+        }
+      }
+    }
     container.innerHTML = html;
     _wireVoicePlayer(id, audioURL, duration || 0, barColor, barActiveColor);
+    if (wasPlaying && savedTime > 0) {
+      var newPlayer = container.querySelector('.vm-player');
+      if (newPlayer && newPlayer._vmAudio) {
+        newPlayer._vmAudio.currentTime = savedTime;
+        newPlayer._vmAudio.play().catch(function () {});
+      }
+    }
   }
 
   function _wireVoicePlayer(id, audioURL, totalDur, barColor, barActiveColor) {

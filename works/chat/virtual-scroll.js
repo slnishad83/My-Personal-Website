@@ -13,8 +13,10 @@ const VirtualScroll = {
   _enabled: false,
   _threshold: 150,
   _pool: new Map(),
+  _heightCache: new Map(),
   _startIdx: 0,
   _endIdx: 0,
+  _MAX_POOL: 100,
 
   init(container, renderFn, options) {
     this._container = container;
@@ -61,7 +63,44 @@ const VirtualScroll = {
         this._pool.set(i, el);
       }
     }
+    if (this._pool.size > this._MAX_POOL) {
+      const oldestKeys = Array.from(this._pool.keys()).slice(0, this._pool.size - this._MAX_POOL);
+      for (const k of oldestKeys) this._pool.delete(k);
+    }
     return this._pool.get(i) || null;
+  },
+
+  _measureHeight(el) {
+    if (!el || !this._container) return this._rowHeight;
+    const id = el.dataset && (el.dataset.msgId || el.dataset.messageId || el.getAttribute('data-vs-idx'));
+    if (id && this._heightCache.has(id)) return this._heightCache.get(id);
+    const temp = el.cloneNode(true);
+    temp.style.visibility = 'hidden';
+    temp.style.position = 'absolute';
+    temp.style.width = this._container.clientWidth + 'px';
+    this._container.appendChild(temp);
+    const h = temp.offsetHeight || this._rowHeight;
+    temp.remove();
+    if (id) this._heightCache.set(id, h);
+    return h;
+  },
+
+  _getOffset(idx) {
+    let total = 0;
+    for (let i = 0; i < idx; i++) {
+      const itemId = this._items[i] && (this._items[i].id || this._items[i].messageId || i);
+      total += (this._heightCache.get(itemId) || this._rowHeight);
+    }
+    return total;
+  },
+
+  _getTotalHeight() {
+    let total = 0;
+    for (let i = 0; i < this._items.length; i++) {
+      const itemId = this._items[i] && (this._items[i].id || this._items[i].messageId || i);
+      total += (this._heightCache.get(itemId) || this._rowHeight);
+    }
+    return total;
   },
 
   _recycle(prevStart, prevEnd, newStart, newEnd) {
@@ -89,6 +128,10 @@ const VirtualScroll = {
       el.remove();
       const idx = parseInt(el.getAttribute(idxAttr), 10);
       if (!isNaN(idx)) this._pool.delete(idx);
+      const msgId = el.dataset && (el.dataset.msgId || el.dataset.messageId);
+      if (msgId) {
+        document.dispatchEvent(new CustomEvent('vs:node-recycled', { detail: { messageId: msgId } }));
+      }
     }
   },
 
@@ -97,8 +140,25 @@ const VirtualScroll = {
 
     const scrollTop = this._container.scrollTop;
     const viewHeight = this._container.clientHeight || Math.max(document.documentElement.clientHeight, window.innerHeight || 600);
-    const newStart = Math.max(0, Math.floor(scrollTop / this._rowHeight) - this._bufferRows);
-    const newEnd = Math.min(this._items.length, Math.ceil((scrollTop + viewHeight) / this._rowHeight) + this._bufferRows);
+
+    let accH = 0;
+    let newStart = 0;
+    for (let i = 0; i < this._items.length; i++) {
+      const itemId = this._items[i] && (this._items[i].id || this._items[i].messageId || i);
+      const h = this._heightCache.get(itemId) || this._rowHeight;
+      if (accH + h > scrollTop - this._bufferRows * this._rowHeight) { newStart = i; break; }
+      accH += h;
+    }
+
+    let newEnd = newStart;
+    let visH = 0;
+    for (let i = newStart; i < this._items.length; i++) {
+      const itemId = this._items[i] && (this._items[i].id || this._items[i].messageId || i);
+      const h = this._heightCache.get(itemId) || this._rowHeight;
+      visH += h;
+      newEnd = i + 1;
+      if (visH > viewHeight + this._bufferRows * this._rowHeight) break;
+    }
 
     const prevStart = this._startIdx;
     const prevEnd = this._endIdx;
@@ -115,8 +175,9 @@ const VirtualScroll = {
     const fragment = document.createDocumentFragment();
 
     const topSpacer = document.createElement('div');
-    topSpacer.style.height = (newStart * this._rowHeight) + 'px';
-    topSpacer.style.minHeight = (newStart * this._rowHeight) + 'px';
+    const topH = this._getOffset(newStart);
+    topSpacer.style.height = topH + 'px';
+    topSpacer.style.minHeight = topH + 'px';
     fragment.appendChild(topSpacer);
 
     for (let i = newStart; i < newEnd; i++) {
@@ -127,11 +188,16 @@ const VirtualScroll = {
       if (el) {
         el.setAttribute('data-vs-idx', String(i));
         fragment.appendChild(el);
+        const itemId = this._items[i] && (this._items[i].id || this._items[i].messageId || i);
+        if (!this._heightCache.has(itemId)) {
+          const measured = this._measureHeight(el);
+          this._heightCache.set(itemId, measured);
+        }
       }
     }
 
     const bottomSpacer = document.createElement('div');
-    const bottomH = Math.max(0, (this._items.length - newEnd) * this._rowHeight);
+    const bottomH = Math.max(0, this._getTotalHeight() - this._getOffset(newEnd));
     bottomSpacer.style.height = bottomH + 'px';
     bottomSpacer.style.minHeight = bottomH + 'px';
     fragment.appendChild(bottomSpacer);
@@ -144,7 +210,7 @@ const VirtualScroll = {
 
   scrollToIndex(idx) {
     if (!this._container) return;
-    this._container.scrollTop = idx * this._rowHeight;
+    this._container.scrollTop = this._getOffset(idx);
     if (this._enabled) this._render();
   },
 

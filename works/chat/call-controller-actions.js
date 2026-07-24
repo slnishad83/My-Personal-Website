@@ -115,7 +115,7 @@
     if (rv) rv.classList.add('hidden');
     var infoSection = CC.$('call-info-section');
     if (infoSection) infoSection.classList.add('hidden');
-    var controls = cs.querySelector('.call-controls, [class*="fixed bottom"]');
+    var controls = CC.$('call-controls');
     if (controls) controls.style.display = 'none';
     var existing = CC.$('call-end-screen');
     if (existing) existing.remove();
@@ -126,11 +126,19 @@
     var avatarHtml = remoteAvatar
       ? '<img src="' + CC.escHtml(remoteAvatar) + '" class="w-20 h-20 rounded-full object-cover" alt="" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'flex\'"><div class="w-20 h-20 rounded-full bg-primary/15 text-primary flex items-center justify-center text-3xl font-bold" style="display:none">' + CC.escHtml(initials) + '</div>'
       : '<div class="w-20 h-20 rounded-full bg-primary/15 text-primary flex items-center justify-center text-3xl font-bold">' + CC.escHtml(initials) + '</div>';
+    var networkInfo = '';
+    if (navigator.connection && navigator.connection.effectiveType) {
+      networkInfo = '<div class="flex items-center gap-1 mb-1 text-white/40 text-xs"><span class="material-symbols-outlined" style="font-size:12px">wifi</span> ' + navigator.connection.effectiveType.toUpperCase() + '</div>';
+    }
+    var durationHtml = duration > 0
+      ? '<p class="text-white/70 text-2xl font-mono font-semibold mb-6">' + durText + '</p>'
+      : '<p class="text-white/50 text-sm mb-6">' + (duration === 0 ? 'No answer' : 'Missed call') + '</p>';
     var endHtml = '<div id="call-end-screen" class="absolute inset-0 bg-gradient-to-b from-gray-900 to-black flex flex-col items-center justify-center z-40 px-6 text-center">' +
       '<div class="mb-4">' + avatarHtml + '</div>' +
       '<h2 class="text-white text-xl font-bold mb-1">' + CC.escHtml(remoteName || 'Unknown') + '</h2>' +
       '<p class="text-white/50 text-sm mb-1">' + directionLabel + ' ' + typeLabel + ' Call</p>' +
-      '<p class="text-white/70 text-2xl font-mono font-semibold mb-6">' + durText + '</p>' +
+      durationHtml +
+      networkInfo +
       '<div class="flex items-center gap-2 mb-6 text-white/40 text-xs">' +
       '<span class="material-symbols-outlined" style="font-size:14px">wifi</span> Peer-to-peer connection' +
       '</div>' +
@@ -145,7 +153,10 @@
     var callbackBtn = CC.$('end-screen-callback');
     if (callbackBtn) callbackBtn.onclick = function () {
       dismissCallEndScreen();
-      if (remoteName) window.startVoiceCall();
+      if (remoteName) {
+        if (CC.callType === 'video') window.startVideoCall();
+        else window.startVoiceCall();
+      }
     };
     var infoBtn = CC.$('end-screen-info');
     if (infoBtn) infoBtn.onclick = function () {
@@ -157,11 +168,8 @@
   function dismissCallEndScreen() {
     var es = CC.$('call-end-screen');
     if (es) es.remove();
-    var cs = CC.$('call-screen');
-    if (cs) {
-      var controls = cs.querySelector('.call-controls, [class*="fixed bottom"]');
-      if (controls) controls.style.display = '';
-    }
+    var controls = CC.$('call-controls');
+    if (controls) controls.style.display = '';
   }
 
   function showCallQualityBadge(stats) {
@@ -185,6 +193,9 @@
     }
     badge.className = 'absolute top-4 right-4 z-20 flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-semibold backdrop-blur-sm ' + color;
     badge.innerHTML = '<span class="material-symbols-outlined" style="font-size:12px">signal_cellular_alt</span> ' + label;
+    var tipParts = [];
+    if (stats) { if (stats.rtt) tipParts.push('RTT: ' + Math.round(stats.rtt) + 'ms'); if (stats.packetLoss != null) tipParts.push('Loss: ' + stats.packetLoss.toFixed(1) + '%'); }
+    badge.title = level === 'good' ? 'Excellent connection' : (tipParts.length ? label + ' — ' + tipParts.join(', ') : label);
   }
 
   function updateCallQuality(stats) {

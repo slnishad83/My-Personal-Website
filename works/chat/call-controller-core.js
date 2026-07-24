@@ -148,6 +148,12 @@
         rv.classList.toggle('hidden', CC.callType === 'voice');
       }
       if (CC.callType === 'video') hide('call-info-section');
+      if (remoteCallStream) {
+        remoteCallStream.getVideoTracks().forEach(function (track) {
+          track.onmute = function () { show('call-info-section'); };
+          track.onunmute = function () { if (CC.callType === 'video') hide('call-info-section'); };
+        });
+      }
     };
 
     pc.onconnectionstatechange = function () {
@@ -182,6 +188,7 @@
     setState(CC.STATES.ACTIVE);
     txt('call-status', 'Active');
     stopExistingRingtone();
+    if (typeof window._stopOutgoingRingtone === 'function') window._stopOutgoingRingtone();
     show('call-timer');
     startTimer();
     hideReconnOverlay();
@@ -190,6 +197,7 @@
     var ssBtn = $('btn-screenshare');
     if (ssBtn) ssBtn.classList.toggle('hidden', CC.callType === 'voice');
     playSound('callConnected');
+    if (typeof window.Presence !== 'undefined' && typeof window.Presence.setInCall === 'function') window.Presence.setInCall(true);
     if (db() && CC.callId) {
       db().collection('calls').doc(CC.callId).update({
         status: 'active',
@@ -394,6 +402,7 @@
   }
 
   function cleanup() {
+    if (CC.state === CC.STATES.IDLE) return;
     cleanupListeners();
     clearAllTimers();
     if (CC.screenShareStream) { CC.screenShareStream.getTracks().forEach(function (t) { t.stop(); }); CC.screenShareStream = null; CC.screenShareSender = null; }
@@ -468,5 +477,15 @@
   CC.listenCandidates = listenCandidates;
   CC.listenStatus = listenStatus;
   CC.cleanup = cleanup;
+
+  document.addEventListener('visibilitychange', function () {
+    if (CC.state === CC.STATES.ACTIVE && CC.callType === 'video' && document.hidden) {
+      var rv = $('remote-video');
+      if (rv && !rv.srcObject) return;
+      if (rv && document.pictureInPictureEnabled && !document.pictureInPictureElement) {
+        rv.requestPictureInPicture().catch(function () {});
+      }
+    }
+  });
 
 })();

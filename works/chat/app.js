@@ -104,4 +104,15 @@
   /* ── Safe HTML Escape (also available via App namespace) ──────── */
   window.App.escHtml = escHtml;
 
+  /* ── Canonical esc alias — all modules should use this ──────── */
+  window.esc = escHtml;
+
+  /* ── renderMessages bridge — ensures the function is on window ─ */
+  if (!window.renderMessages) {
+    window.renderMessages = function (chatId) {
+      if (typeof window.loadMessages === 'function') window.loadMessages(chatId);
+      else if (window.App && typeof window.App.renderMessages === 'function') window.App.renderMessages(chatId);
+    };
+  }
+
 })();

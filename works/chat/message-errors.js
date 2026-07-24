@@ -181,6 +181,11 @@
     if (statusEl && STATUS_ICONS[status]) {
       statusEl.innerHTML = STATUS_ICONS[status];
     }
+
+    if (status === 'sent' || status === 'delivered' || status === 'read') {
+      clearAutoRetry(messageId);
+      clearMessageError(messageId);
+    }
   }
 
   function showUploadProgress(messageId, progress) {

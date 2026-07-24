@@ -65,6 +65,9 @@ const SwipeDelete = {
       this._swiping = true;
       this._closeAll();
       this._activeContainer.classList.add('swiping');
+      if (!this._activeContainer.querySelector('.chat-list-swipe-actions')) {
+        this._ensureSwipeActions(this._activeContainer);
+      }
     }
 
     if (this._swiping && dx > 0) {
@@ -107,6 +110,38 @@ const SwipeDelete = {
 
   close() {
     this._closeAll();
+  },
+
+  _ensureSwipeActions(item) {
+    const chatId = item.dataset?.chatId || '';
+    const actions = document.createElement('div');
+    actions.className = 'chat-list-swipe-actions';
+    actions.innerHTML =
+      '<button class="swipe-unread" data-action="mark-unread" data-chat-id="' + chatId + '">' +
+        '<span class="material-symbols-outlined" style="font-size:20px">mark_chat_unread</span>' +
+        '<span>Unread</span>' +
+      '</button>' +
+      '<button class="swipe-archive">' +
+        '<span class="material-symbols-outlined" style="font-size:20px">archive</span>' +
+        '<span>Archive</span>' +
+      '</button>' +
+      '<button class="swipe-delete">' +
+        '<span class="material-symbols-outlined" style="font-size:20px">delete</span>' +
+        '<span>Delete</span>' +
+      '</button>';
+    item.style.position = 'relative';
+    item.appendChild(actions);
+    const unreadBtn = actions.querySelector('[data-action="mark-unread"]');
+    if (unreadBtn) {
+      unreadBtn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        const cid = this.dataset.chatId;
+        if (cid && typeof window.MarkUnread === 'object') {
+          window.MarkUnread.markChatUnread(cid);
+          if (typeof showToast === 'function') showToast('Marked as unread', 'success');
+        }
+      });
+    }
   },
 
   destroy() {

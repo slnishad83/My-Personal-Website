@@ -94,6 +94,17 @@ const Presence = {
     } catch (err) { console.warn('[Presence] Failed to set custom status:', err.message); }
   },
 
+  async setInCall(inCall) {
+    if (!window.db || !window.currentUser) return;
+    try {
+      await window.db.collection('users').doc(window.currentUser.uid).set({
+        inCall: !!inCall,
+        onlineStatus: inCall ? 'in-call' : this._onlineStatus,
+        lastSeen: Date.now()
+      }, { merge: true });
+    } catch (err) { console.warn('[Presence] Failed to set in-call status:', err.message); }
+  },
+
   _startHeartbeat() {
     this._stopHeartbeat();
     this._heartbeatTimer = setInterval(async () => {

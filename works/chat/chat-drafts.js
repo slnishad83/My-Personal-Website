@@ -66,12 +66,14 @@
         badge = document.createElement('span');
         badge.className = 'draft-badge';
         badge.style.cssText = 'font-size:12px;font-style:italic;color:var(--primary,#00a884);max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:block;margin-top:2px;';
-        const previewEl = chatItem.querySelector('.chat-preview, .text-sm, .text-xs');
-        if (previewEl && previewEl.parentElement) {
-          previewEl.parentElement.insertBefore(badge, previewEl.nextSibling);
+        const previewEl = chatItem.querySelector('.chat-preview, .text-sm, .text-xs, .last-msg, .chat-item-subtitle, [class*="preview"], [class*="snippet"]');
+        const nameEl = chatItem.querySelector('.chat-name, .chat-item-name, [class*="name"]');
+        const insertTarget = previewEl || nameEl;
+        if (insertTarget && insertTarget.parentElement) {
+          insertTarget.parentElement.insertBefore(badge, insertTarget.nextSibling);
         }
       }
-      badge.textContent = '📝 ' + text.slice(0, 50);
+      badge.innerHTML = '<span class="material-symbols-outlined" style="font-size:14px;vertical-align:middle;margin-right:2px;">edit</span>' + window.escHtml(text.slice(0, 50));
     }
   };
 
@@ -96,4 +98,60 @@
       if (chatId) Drafts.deleteDraft(chatId);
     }
   });
+
+  function _restoreDraftForCurrentChat() {
+    const input = document.getElementById('message-input') || document.querySelector('[contenteditable="true"]');
+    const chatId = window.App?.currentChat?.id || input?.dataset?.chatId;
+    if (!chatId) return;
+    const draft = Drafts.getDraft(chatId);
+    if (!draft) return;
+    const text = input.value || input.textContent || '';
+    if (text.trim()) return;
+    if (input.tagName === 'TEXTAREA' || input.tagName === 'INPUT') {
+      input.value = draft;
+    } else {
+      input.textContent = draft;
+    }
+    input.dispatchEvent(new Event('input'));
+  }
+
+  let _draftCheckTimer = null;
+  function _pollForChatChange() {
+    clearTimeout(_draftCheckTimer);
+    _draftCheckTimer = setTimeout(function () {
+      const input = document.getElementById('message-input') || document.querySelector('[contenteditable="true"]');
+      const chatId = window.App?.currentChat?.id || input?.dataset?.chatId;
+      if (chatId) _restoreDraftForCurrentChat();
+    }, 300);
+  }
+
+  const origOpenChat = window.openChat;
+  if (typeof origOpenChat === 'function') {
+    window.openChat = function () {
+      const result = origOpenChat.apply(this, arguments);
+      if (result && typeof result.then === 'function') {
+        result.then(function () { _pollForChatChange(); }).catch(function () {});
+      } else {
+        _pollForChatChange();
+      }
+      return result;
+    };
+  }
+
+  if (typeof window.App !== 'undefined' && window.App) {
+    const origSwitch = window.App.switchChat;
+    if (typeof origSwitch === 'function') {
+      window.App.switchChat = function () {
+        const result = origSwitch.apply(this, arguments);
+        if (result && typeof result.then === 'function') {
+          result.then(function () { _pollForChatChange(); }).catch(function () {});
+        } else {
+          _pollForChatChange();
+        }
+        return result;
+      };
+    }
+  }
+
+  window.ChatDrafts = Drafts;
 })();

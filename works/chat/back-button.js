@@ -63,7 +63,9 @@ const BackButton = {
       }
     }
 
-    // Push state back to prevent exit
+    if (state && state.view === 'home') {
+      return;
+    }
     history.back();
   },
 
@@ -108,6 +110,9 @@ const BackButton = {
     }
 
     // 5. Default: prevent exit — push state back
+    if (!history.state || history.state.view === 'home') {
+      return;
+    }
     history.back();
   },
 

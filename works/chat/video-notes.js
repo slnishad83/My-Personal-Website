@@ -578,7 +578,8 @@
           });
         });
       });
-      mutObs.observe(document.getElementById('messages-wrap') || document.body, { childList: true, subtree: true });
+      var target = document.getElementById('messages-wrap') || document.body;
+      if (target) mutObs.observe(target, { childList: true, subtree: true });
     }
   }
 

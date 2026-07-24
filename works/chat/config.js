@@ -76,8 +76,14 @@ function initFirebase() {
    TURN SERVER CONFIGURATION
    ══════════════════════════════════════════════════════════════ */
 
+var _turnCache = { servers: null, timestamp: 0, TTL: 5 * 60 * 1000 };
+
 async function getBackendTurnServers() {
   if (!window.currentUser) return [];
+  var now = Date.now();
+  if (_turnCache.servers && (now - _turnCache.timestamp) < _turnCache.TTL) {
+    return _turnCache.servers;
+  }
   try {
     const token = await window.currentUser.getIdToken();
     const response = await fetch(APP_CONSTANTS.TURN_CREDENTIALS_ENDPOINT, {
@@ -87,9 +93,12 @@ async function getBackendTurnServers() {
     if (!response.ok) throw new Error('TURN backend returned ' + response.status);
     const iceServers = await response.json();
     if (!Array.isArray(iceServers) || !iceServers.length) throw new Error('TURN backend returned no servers');
+    _turnCache.servers = iceServers;
+    _turnCache.timestamp = now;
     return iceServers;
   } catch (error) {
     console.warn('[Config] Could not load TURN servers:', error);
+    if (_turnCache.servers) return _turnCache.servers;
     return [];
   }
 }

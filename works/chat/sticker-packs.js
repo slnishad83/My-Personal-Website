@@ -42,7 +42,7 @@
   function _saveRecent(url) {
     var recent = _getRecent().filter(function(u) { return u !== url; });
     recent.unshift(url);
-    if (recent.length > 10) recent = recent.slice(0, 10);
+    if (recent.length > 50) recent = recent.slice(0, 50);
     try { localStorage.setItem('sticker_recent', JSON.stringify(recent)); } catch (e) {}
     _recentStickers = recent;
   }

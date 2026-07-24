@@ -2,8 +2,11 @@
 (function() {
   'use strict';
 
+  function _getDb() { return (window._CC && typeof window._CC.db === 'function' && window._CC.db()) || App.db || null; }
+
   function _notifyScreenShareStart() {
-    if (!App.db || !App.currentChat || !App.auth?.currentUser) return;
+    var db = _getDb();
+    if (!db || !App.currentChat || !App.auth?.currentUser) return;
     const chatId = App.currentChat.id;
     const isGroup = App.currentChat.type === 'group';
 
@@ -19,14 +22,15 @@
       if (isGroup) data.groupId = chatId;
       else { data.directId = chatId; data.participants = [App.auth.currentUser.uid, App.currentChat.uid || '']; }
 
-      App.db.collection('messages').add(data).catch(() => {});
+      db.collection('messages').add(data).catch(() => {});
     } catch(_) {}
 
     showToast('Screen sharing active — others can see your screen', 'success');
   }
 
   function _notifyScreenShareEnd() {
-    if (!App.db || !App.currentChat || !App.auth?.currentUser) return;
+    var db = _getDb();
+    if (!db || !App.currentChat || !App.auth?.currentUser) return;
     const chatId = App.currentChat.id;
     const isGroup = App.currentChat.type === 'group';
 
@@ -42,12 +46,12 @@
       if (isGroup) data.groupId = chatId;
       else { data.directId = chatId; data.participants = [App.auth.currentUser.uid, App.currentChat.uid || '']; }
 
-      App.db.collection('messages').add(data).catch(() => {});
+      db.collection('messages').add(data).catch(() => {});
     } catch(_) {}
   }
 
   function _handleScreenShareEnd() {
-    var stream = (typeof CC !== 'undefined' && CC.screenShareStream) || null;
+    var stream = (window._CC && window._CC.screenShareStream) || (typeof CC !== 'undefined' && CC.screenShareStream) || null;
     if (!stream) return;
     const track = stream.getVideoTracks()[0];
     if (track) {
@@ -73,14 +77,16 @@
     if (typeof orig !== 'function') return;
 
     window.toggleScreenShare = async function() {
-      if (_screenShareStream) {
+      var ssStream = (window._CC && window._CC.screenShareStream) || null;
+      if (ssStream) {
         _notifyScreenShareEnd();
         return orig();
       }
 
       try {
         await orig();
-        if (_screenShareStream) {
+        ssStream = (window._CC && window._CC.screenShareStream) || null;
+        if (ssStream) {
           _notifyScreenShareStart();
           _handleScreenShareEnd();
         }

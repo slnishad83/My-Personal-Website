@@ -19,7 +19,9 @@
     ta.style.cssText = 'position:fixed;left:-9999px;top:-9999px;opacity:0';
     document.body.appendChild(ta);
     ta.select();
-    try { document.execCommand('copy'); } catch (_) {}
+    try { document.execCommand('copy'); } catch (_) {
+      console.warn('[MessageCopy] execCommand copy fallback failed; clipboard API may be required.');
+    }
     document.body.removeChild(ta);
   }
 

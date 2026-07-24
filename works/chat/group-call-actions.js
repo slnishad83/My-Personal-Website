@@ -64,14 +64,21 @@
     GC._firestore().collection('groupCalls').doc(GC._currentCallId).update({
       participantDetails: detailUpdate
     }).catch(function () {});
-    // Send signaling message so the remote participant actually mutes their mic
-    GC._firestore().collection('groupCalls').doc(GC._currentCallId).collection('signaling').add({
-      type: 'mute-request',
-      from: GC._myUid,
-      to: userId,
-      muted: newMuted,
-      createdAt: firebase.firestore.FieldValue.serverTimestamp()
-    }).catch(function () {});
+    var signalingRef = GC._firestore().collection('groupCalls').doc(GC._currentCallId).collection('signaling');
+    function sendMuteRequest() {
+      signalingRef.add({
+        type: 'mute-request',
+        from: GC._myUid,
+        to: userId,
+        muted: newMuted,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      }).catch(function () {});
+    }
+    sendMuteRequest();
+    var retryTimer = setTimeout(function () {
+      var stillMuted = GC._participantMuteState.get(userId);
+      if (stillMuted === newMuted) sendMuteRequest();
+    }, 3000);
     var participant = (activeGroupCallParticipants || []).find(function (p) { return p.uid === userId; });
     if (participant) {
       participant.isMuted = newMuted;

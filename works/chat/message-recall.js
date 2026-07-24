@@ -34,12 +34,12 @@
         const chatId = App.currentChat?.id;
         if (!chatId) return _origOpenDeleteMenu(e, msgId);
 
-        const msgs = App.messages[chatId] || [];
-        const msg = msgs.find(m => m.id === msgId);
-        if (!msg) return _origOpenDeleteMenu(e, msgId);
+      const msgs = App.messages[chatId] || [];
+      const msg = msgs.find(m => m.id === msgId);
+      if (!msg) return _origOpenDeleteMenu(e, msgId);
 
-        const isMyMsg = msg.from === 'me';
-        const canRecall = isMyMsg && canRecallMessage(msg);
+      const isMyMsg = msg.from === (window.App?.uid?.() || window.currentUser?.uid);
+      const canRecall = isMyMsg && canRecallMessage(msg);
 
         if (!canRecall && isMyMsg) {
           _showRecallExpiredMenu(msgId, msg);
@@ -54,10 +54,17 @@
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', _initRecallPatch);
   }
-  const _recallInterval = setInterval(() => {
+  const _recallObserver = new MutationObserver(() => {
     if (!_origOpenDeleteMenu && typeof window.openDeleteMenu === 'function') _initRecallPatch();
-  }, 500);
-  setTimeout(() => { clearInterval(_recallInterval); }, 10000);
+  });
+  if (document.body) {
+    _recallObserver.observe(document.body, { childList: true, subtree: true });
+  } else {
+    document.addEventListener('DOMContentLoaded', () => {
+      _recallObserver.observe(document.body, { childList: true, subtree: true });
+    });
+  }
+  setTimeout(() => { _recallObserver.disconnect(); }, 10000);
 
   function _showRecallExpiredMenu(msgId, msg) {
     if (typeof window._removeCtxMenu === 'function') window._removeCtxMenu();

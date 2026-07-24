@@ -101,6 +101,7 @@
     if (!db || !chat || !msgId) { _toast('Cannot delete message', 'error'); return; }
     var msgRef = db.collection('messages').doc(chat.id).collection('items').doc(msgId);
     if (scope === 'everyone') {
+      var mediaUrls = [msg.imageURL, msg.videoURL, msg.audioURL, msg.fileURL, msg.stickerURL].filter(function(u) { return u && typeof u === 'string' && u.startsWith('http'); });
       msgRef.update({
         text: 'This message was deleted',
         type: 'deleted',
@@ -113,6 +114,9 @@
         stickerURL: firebase.firestore.FieldValue.delete(),
         attachment: firebase.firestore.FieldValue.delete()
       }).then(function () {
+        mediaUrls.forEach(function(url) {
+          try { firebase.storage().refFromURL(url).delete(); } catch(_e) {}
+        });
         _toast('Message deleted', 'success');
       }).catch(function (err) {
         _toast('Delete failed: ' + err.message, 'error');
@@ -256,6 +260,27 @@
         }
       }).catch(function () { orig(msgId); });
     };
+  }
+
+  function _starMessage(msgId) {
+    var db = _db();
+    var chat = window.App && window.App.currentChat ? window.App.currentChat : null;
+    if (!db || !chat || !msgId) return;
+    var msgRef = db.collection('messages').doc(chat.id).collection('items').doc(msgId);
+    msgRef.get().then(function(doc) {
+      if (!doc.exists) return;
+      var data = doc.data();
+      var nowStarred = !data.starred;
+      return msgRef.update({
+        starred: nowStarred,
+        starredAt: nowStarred ? firebase.firestore.FieldValue.serverTimestamp() : firebase.firestore.FieldValue.delete(),
+        starredBy: nowStarred ? _uid() : firebase.firestore.FieldValue.delete()
+      }).then(function() {
+        _toast(nowStarred ? 'Message starred' : 'Message unstarred', 'success');
+      });
+    }).catch(function() {
+      _toast('Failed to update star', 'error');
+    });
   }
 
   function patchDeleteMenu() {
@@ -448,8 +473,45 @@
     star: function (msgId) {
       if (typeof window.starMessage === 'function') window.starMessage(msgId);
     },
+    pin: function (msgId) {
+      var chat = window.App && window.App.currentChat ? window.App.currentChat : null;
+      if (!chat || !_db()) return;
+      _db().collection('messages').doc(chat.id).collection('items').doc(msgId).get().then(function (doc) {
+        if (!doc.exists) return;
+        var msg = doc.data();
+        var isPinned = msg.isPinned;
+        _db().collection('messages').doc(chat.id).collection('items').doc(msgId).update({ isPinned: !isPinned }).then(function () {
+          _toast(isPinned ? 'Message unpinned' : 'Message pinned', 'success');
+          if (!isPinned && typeof window.PinnedHeader === 'object' && typeof window.PinnedHeader.show === 'function') {
+            window.PinnedHeader.show(chat.id);
+          }
+        });
+      });
+    },
     info: function (msgId) {
       if (typeof window.openMsgInfo === 'function') window.openMsgInfo(msgId);
+      else if (typeof window.showMessageInfo === 'function') window.showMessageInfo(msgId);
+      else {
+        var chat = window.App && window.App.currentChat ? window.App.currentChat : null;
+        if (!chat || !_db()) return;
+        _db().collection('messages').doc(chat.id).collection('items').doc(msgId).get().then(function (doc) {
+          if (!doc.exists) return;
+          var msg = doc.data();
+          var html = '<div id="msg-info-panel" class="fixed inset-0 z-50 flex items-end justify-center">' +
+            '<div class="absolute inset-0 bg-black/40" onclick="document.getElementById(\'msg-info-panel\').remove()"></div>' +
+            '<div class="relative bg-surface rounded-t-2xl w-full max-w-md p-4 pb-8 z-10 animate-slide-up">' +
+            '<h3 class="text-on-surface font-bold text-base mb-4">Message Info</h3>' +
+            '<div class="space-y-3 text-sm">' +
+            '<div class="flex justify-between"><span class="text-on-surface-variant">From</span><span class="text-on-surface">' + _esc(msg.fromName || msg.senderName || 'Unknown') + '</span></div>' +
+            '<div class="flex justify-between"><span class="text-on-surface-variant">Sent</span><span class="text-on-surface">' + (msg.timestamp ? new Date(msg.timestamp.toMillis ? msg.timestamp.toMillis() : msg.timestamp).toLocaleString() : 'Unknown') + '</span></div>' +
+            (msg.readBy ? '<div class="flex justify-between"><span class="text-on-surface-variant">Read by</span><span class="text-on-surface">' + Object.keys(msg.readBy).length + '</span></div>' : '') +
+            '</div>' +
+            '<button class="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl mt-4 bg-surface-variant text-on-surface" onclick="document.getElementById(\'msg-info-panel\').remove()">' +
+            '<span class="material-symbols-outlined">close</span><span class="font-medium text-sm">Close</span></button>' +
+            '</div></div>';
+          document.body.insertAdjacentHTML('beforeend', html);
+        });
+      }
     },
     shareLocation: function (msgId) {
       var chat = window.App && window.App.currentChat ? window.App.currentChat : null;

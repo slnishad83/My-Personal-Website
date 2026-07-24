@@ -14,7 +14,8 @@ var configs = {
   'no-filtered': { icon: 'filter_list_off', title: 'No chats match this filter', desc: 'Try a different filter' },
   'no-status': { icon: 'auto_stories', title: 'No status updates', desc: "Your contacts' status updates will appear here" },
   'no-starred': { icon: 'star', title: 'No starred messages', desc: 'Star important messages to find them easily' },
-  'no-saved': { icon: 'bookmark', title: 'No saved messages', desc: 'Save messages to revisit them later' }
+  'no-saved': { icon: 'bookmark', title: 'No saved messages', desc: 'Save messages to revisit them later' },
+  'no-messages': { icon: 'chat_bubble_outline', title: 'No messages yet', desc: 'Start the conversation by sending a message' }
 };
 
 function buildHTML(config) {

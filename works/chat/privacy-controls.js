@@ -62,8 +62,19 @@
       return this.getAll();
     },
 
-    shouldShowReadReceipts(forUserId) {
+    async shouldShowReadReceipts(forUserId) {
       if (!this.get('readReceipts')) return false;
+      if (!forUserId) return true;
+      try {
+        var db = window.App?.db;
+        if (!db) return true;
+        var snap = await db.collection('users').doc(forUserId).get();
+        if (snap && snap.exists) {
+          var data = snap.data();
+          var settings = data && data.privacySettings;
+          if (settings && settings.readReceipts === false) return false;
+        }
+      } catch (_) {}
       return true;
     },
 

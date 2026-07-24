@@ -59,21 +59,7 @@
     style.textContent =
       '@keyframes nslReactionBounce{0%{transform:scale(0);opacity:0}50%{transform:scale(1.3)}100%{transform:scale(1);opacity:1}}' +
       '@keyframes nslReactionPop{0%{transform:scale(1)}30%{transform:scale(1.4)}100%{transform:scale(1)}}' +
-      '@keyframes nslShake{0%,100%{transform:translateX(0)}25%{transform:translateX(-3px)}75%{transform:translateX(3px)}}' +
-      '.nsl-reaction-badge{display:inline-flex;align-items:center;gap:3px;padding:2px 7px;border-radius:12px;font-size:12px;border:1px solid var(--outline-variant,#ccc);background:var(--surface-container-high,#f0f0f0);cursor:pointer;transition:all .15s;animation:nslReactionBounce .3s ease}' +
-      '.nsl-reaction-badge:hover{background:var(--surface-variant,#e0e0e0)}' +
-      '.nsl-reaction-badge.active{background:var(--primary,#6750A4);color:var(--on-primary,#fff);border-color:var(--primary,#6750A4)}' +
-      '.nsl-reaction-badge .nsl-r-count{font-size:10px;font-weight:600}' +
-      '.nsl-reaction-bar{display:flex;align-items:center;gap:4px;padding:4px 8px;border-radius:20px;background:var(--surface-container,#fff);border:1px solid var(--outline-variant,#ddd);box-shadow:0 2px 12px rgba(0,0,0,0.15);animation:nslReactionBounce .2s ease}' +
-      '.nsl-reaction-bar button{background:none;border:none;font-size:20px;cursor:pointer;padding:4px 6px;border-radius:8px;transition:transform .12s;line-height:1}' +
-      '.nsl-reaction-bar button:hover{transform:scale(1.3)}' +
-      '.nsl-full-picker{position:fixed;z-index:99999;background:var(--surface-container,#fff);border:1px solid var(--outline-variant,#ddd);border-radius:16px;padding:12px;box-shadow:0 4px 24px rgba(0,0,0,0.25);animation:nslReactionBounce .2s ease}' +
-      '.nsl-full-picker-grid{display:grid;grid-template-columns:repeat(8,1fr);gap:4px;max-height:250px;overflow-y:auto}' +
-      '.nsl-full-picker-grid button{background:none;border:none;font-size:22px;cursor:pointer;padding:6px;border-radius:8px;transition:transform .12s;line-height:1}' +
-      '.nsl-full-picker-grid button:hover{transform:scale(1.3);background:var(--surface-variant,#e0e0e0)}' +
-      '.nsl-reaction-viewer{position:fixed;z-index:99999;background:var(--surface-container,#fff);border:1px solid var(--outline-variant,#ddd);border-radius:12px;padding:10px 14px;box-shadow:0 4px 20px rgba(0,0,0,0.2);max-width:250px;max-height:200px;overflow-y:auto}' +
-      '.nsl-reaction-viewer .nsl-rv-row{display:flex;align-items:center;gap:6px;padding:4px 0;font-size:13px;border-bottom:1px solid var(--outline-variant,#eee)}' +
-      '.nsl-reaction-viewer .nsl-rv-row:last-child{border-bottom:none}';
+      '@keyframes nslShake{0%,100%{transform:translateX(0)}25%{transform:translateX(-3px)}75%{transform:translateX(3px)}}';
     document.head.appendChild(style);
   }
 
@@ -152,10 +138,24 @@
     var grid = document.createElement('div');
     grid.className = 'nsl-full-picker-grid';
 
+    var EMOJI_NAMES = {
+      '👍':'thumbsup','👎':'thumbsdown','❤️':'heart','🔥':'fire','😂':'laughing','😮':'open_mouth',
+      '😢':'cry','🙏':'pray','💪':'muscle','👏':'clap','🎉':'party','💯':'100',
+      '❤️':'red_heart','🥰':'smiling_face_hearts','😍':'heart_eyes','😎':'sunglasses',
+      '🤔':'thinking','🤣':'rofl','😭':'sob','🥳':'partying','😴':'sleeping',
+      '🤔':'hmm','👀':'eyes','💀':'skull','😭':'crying','🤝':'handshake',
+      '✨':'sparkles','🙌':'raised_hands','💕':'two_hearts','⚡':'zap','✅':'check',
+      '😱':'scream','🤡':'clown','💜':'purple_heart','🖤':'black_heart','🧡':'orange_heart',
+      '💚':'green_heart','💙':'blue_heart','🤍':'white_heart','💗':'heartpulse',
+      '🫡':'salute','🫶':'heart_hands','🥺':'pleading','💀':'dead','🤡':'clown_face'
+    };
     function renderGrid(filter) {
       grid.innerHTML = '';
-      var list = filter
-        ? ALL_REACTION_EMOJIS.filter(function (e) { return e.indexOf(filter) !== -1; })
+      var lf = filter ? filter.toLowerCase() : '';
+      var list = lf
+        ? ALL_REACTION_EMOJIS.filter(function (e) {
+            return e.indexOf(lf) !== -1 || (EMOJI_NAMES[e] || '').indexOf(lf) !== -1;
+          })
         : ALL_REACTION_EMOJIS;
       list.forEach(function (emoji) {
         var btn = document.createElement('button');
@@ -244,7 +244,10 @@
     _recordUsage(emoji);
 
     try {
-      var msgRef = d.collection('messages').doc(msgId);
+      var chatId = (App && App.currentChat && App.currentChat.id) || '';
+      var msgRef = chatId
+        ? d.collection('messages').doc(chatId).collection('items').doc(msgId)
+        : d.collection('messages').doc(msgId);
       var snap = await msgRef.get();
       if (!snap.exists) return;
 
@@ -407,7 +410,11 @@
           var mid = msgEl.dataset.messageId;
           var d = _db();
           if (d && mid) {
-            d.collection('messages').doc(mid).get().then(function(snap) {
+            var chatId = (App && App.currentChat && App.currentChat.id) || '';
+            var msgRef = chatId
+              ? d.collection('messages').doc(chatId).collection('items').doc(mid)
+              : d.collection('messages').doc(mid);
+            msgRef.get().then(function(snap) {
               if (snap.exists) {
                 var reactions = snap.data().reactions || {};
                 if (Object.keys(reactions).length > 0) {
@@ -431,15 +438,7 @@
     });
 
     container.addEventListener('contextmenu', function (e) {
-      var msgEl = e.target.closest('[data-message-id]');
-      if (msgEl) {
-        var msgId = msgEl.dataset.messageId;
-        if (msgId) {
-          e.preventDefault();
-          e.stopPropagation();
-          showReactionPicker(msgId);
-        }
-      }
+      return;
     });
 
     container.addEventListener('touchstart', function (e) {

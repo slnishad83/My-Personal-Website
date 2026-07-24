@@ -24,7 +24,9 @@
       case 2: return { cols: 2, rows: 1, layout: 'split' };
       case 3: return { cols: 2, rows: 2, layout: 'speaker-plus-two' };
       case 4: return { cols: 2, rows: 2, layout: 'grid-2x2' };
-      default: return { cols: 2, rows: 2, layout: 'grid-2x2' };
+      case 5: case 6: return { cols: 3, rows: 2, layout: 'grid-3x2' };
+      case 7: case 8: case 9: return { cols: 3, rows: 3, layout: 'grid-3x3' };
+      default: return { cols: 3, rows: 3, layout: 'grid-3x3' };
     }
   }
 
@@ -203,15 +205,15 @@
   }
 
   function _showParticipantOptions(targetUid) {
-    if (!targetUid || targetUid === GC._myUid) return;
-    if (!GC._isInitiator) return;
+    if (!targetUid) return;
+    var isSelf = targetUid === GC._myUid;
     var participant = (activeGroupCallParticipants || []).find(function (p) { return p.uid === targetUid; });
     if (!participant) return;
     var hasJoined = GC._participantJoinTime.has(targetUid);
     var isMuted = GC._participantMuteState.get(targetUid) || false;
     var existing = GC._$('gc-participant-menu');
     if (existing) existing.remove();
-    var muteLabel = isMuted ? 'Unmute participant' : 'Mute participant';
+    var muteLabel = isMuted ? 'Unmute' : 'Mute';
     var muteIcon = isMuted ? 'mic' : 'mic_off';
     var menuHtml = '<div id="gc-participant-menu" class="fixed inset-0 z-50 flex items-end justify-center" onclick="event.stopPropagation()">' +
       '<div class="absolute inset-0 bg-black/40" onclick="document.getElementById(\'gc-participant-menu\').remove()"></div>' +
@@ -219,16 +221,21 @@
       '<div class="flex items-center gap-3 mb-4 pb-3 border-b border-outline/20">' +
       '<div class="w-10 h-10 rounded-full overflow-hidden">' + _renderAvatar(participant.name, participant.avatar) + '</div>' +
       '<div><p class="font-semibold text-on-surface text-sm">' + GC._esc(participant.name) + '</p>' +
-      '<p class="text-xs text-on-surface-variant">' + (hasJoined ? 'In call' : 'Invited — not joined') + '</p></div>' +
+      '<p class="text-xs text-on-surface-variant">' + (isSelf ? 'You' : (hasJoined ? 'In call' : 'Invited — not joined')) + '</p></div>' +
       '</div>' +
-      (hasJoined ? '<button class="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-surface-variant/50 transition-colors text-on-surface" onclick="window.muteParticipant(\'' + GC._esc(targetUid) + '\');document.getElementById(\'gc-participant-menu\').remove()">' +
-      '<span class="material-symbols-outlined">' + muteIcon + '</span>' +
-      '<span class="font-medium text-sm">' + muteLabel + '</span>' +
-      '</button>' : '') +
-      '<button class="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-surface-variant/50 transition-colors text-red-500" onclick="window.removeFromCall(\'' + GC._esc(targetUid) + '\');document.getElementById(\'gc-participant-menu\').remove()">' +
+      (isSelf
+        ? '<button class="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-surface-variant/50 transition-colors text-on-surface" onclick="window.toggleMute();document.getElementById(\'gc-participant-menu\').remove()">' +
+          '<span class="material-symbols-outlined">' + (micMuted ? 'mic' : 'mic_off') + '</span>' +
+          '<span class="font-medium text-sm">' + (micMuted ? 'Unmute yourself' : 'Mute yourself') + '</span>' +
+          '</button>'
+        : (hasJoined ? '<button class="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-surface-variant/50 transition-colors text-on-surface" onclick="window.muteParticipant(\'' + GC._esc(targetUid) + '\');document.getElementById(\'gc-participant-menu\').remove()">' +
+          '<span class="material-symbols-outlined">' + muteIcon + '</span>' +
+          '<span class="font-medium text-sm">' + muteLabel + ' participant</span>' +
+          '</button>' : '')) +
+      (!isSelf ? '<button class="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-surface-variant/50 transition-colors text-red-500" onclick="window.removeFromCall(\'' + GC._esc(targetUid) + '\');document.getElementById(\'gc-participant-menu\').remove()">' +
       '<span class="material-symbols-outlined">person_remove</span>' +
       '<span class="font-medium text-sm">Remove from call</span>' +
-      '</button>' +
+      '</button>' : '') +
       '</div></div>';
     document.body.insertAdjacentHTML('beforeend', menuHtml);
   }
@@ -265,9 +272,20 @@
     GC._show('call-info-section');
     var av = GC._$('call-avatar');
     if (av) {
-      av.className = 'w-32 h-32 rounded-full border-4 border-primary/30 flex items-center justify-center text-5xl bg-white/10 animate-pulse';
-      av.textContent = 'G';
+      var groupChat = typeof App !== 'undefined' && App.currentChat;
+      var groupName = groupChat?.name || 'Group';
+      var groupPhoto = groupChat?.photoURL || '';
+      var groupInitials = groupName[0]?.toUpperCase() || 'G';
+      if (groupPhoto) {
+        av.className = 'w-32 h-32 rounded-full border-4 border-primary/30 overflow-hidden bg-white/10 animate-pulse';
+        av.innerHTML = '<img src="' + GC._esc(groupPhoto) + '" class="w-full h-full object-cover" alt="" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'flex\'"><div class="w-full h-full flex items-center justify-center text-5xl" style="display:none">' + GC._esc(groupInitials) + '</div>';
+      } else {
+        av.className = 'w-32 h-32 rounded-full border-4 border-primary/30 flex items-center justify-center text-5xl bg-white/10 animate-pulse';
+        av.textContent = groupInitials;
+      }
     }
+    _addParticipantCountBadge();
+    _addInviteButton();
     try { history.pushState({ callActive: true }, ''); } catch (_) {}
   }
 
@@ -297,6 +315,7 @@
 
   var _speakerAudioContext = null;
   var _speakerAudioSource = null;
+  var _speakerCachedStream = null;
 
   function _startSpeakerDetection() {
     _stopSpeakerDetection();
@@ -316,16 +335,20 @@
             if (_speakerAudioContext.state === 'suspended') {
               await _speakerAudioContext.resume();
             }
-            var src = _speakerAudioContext.createMediaStreamSource(myStream);
+            if (!_speakerAudioSource || _speakerCachedStream !== myStream) {
+              if (_speakerAudioSource) { try { _speakerAudioSource.disconnect(); } catch (_) {} }
+              _speakerAudioSource = _speakerAudioContext.createMediaStreamSource(myStream);
+              _speakerCachedStream = myStream;
+            }
             var analyser = _speakerAudioContext.createAnalyser();
             analyser.fftSize = 256;
-            src.connect(analyser);
+            _speakerAudioSource.connect(analyser);
             var data = new Uint8Array(analyser.frequencyBinCount);
             analyser.getByteFrequencyData(data);
             var level = data.reduce(function (a, b) { return a + b; }, 0) / data.length;
             GC._audioLevelCache.set(GC._myUid, level);
             if (level > maxLevel) { maxLevel = level; maxUid = GC._myUid; }
-            src.disconnect();
+            _speakerAudioSource.disconnect();
           }
         } catch (_) {}
       }
@@ -360,7 +383,8 @@
       clearInterval(GC._speakerCheckInterval);
       GC._speakerCheckInterval = null;
     }
-    // Close the shared AudioContext to free resources
+    if (_speakerAudioSource) { try { _speakerAudioSource.disconnect(); } catch (_) {} _speakerAudioSource = null; }
+    _speakerCachedStream = null;
     if (_speakerAudioContext) {
       try {
         if (_speakerAudioContext.state !== 'closed') {
@@ -381,6 +405,39 @@
       _ensureGridContainer();
     }
     _renderGrid();
+    _updateParticipantCountBadge();
+  }
+
+  function _addParticipantCountBadge() {
+    var existing = GC._$('gc-participant-count');
+    if (existing) existing.remove();
+    var badge = document.createElement('div');
+    badge.id = 'gc-participant-count';
+    badge.className = 'absolute top-4 left-4 z-20 bg-white/10 backdrop-blur-sm rounded-full px-2.5 py-1 flex items-center gap-1 text-white text-xs font-semibold';
+    badge.innerHTML = '<span class="material-symbols-outlined" style="font-size:14px">group</span> <span id="gc-participant-count-text">0</span>';
+    var cs = GC._$('call-screen');
+    if (cs) cs.appendChild(badge);
+    _updateParticipantCountBadge();
+  }
+
+  function _updateParticipantCountBadge() {
+    var countEl = GC._$('gc-participant-count-text');
+    if (countEl) countEl.textContent = (activeGroupCallParticipants || []).length;
+  }
+
+  function _addInviteButton() {
+    var controls = GC._$('call-controls');
+    if (!controls || GC._$('btn-gc-invite')) return;
+    if (!GC._isInitiator) return;
+    var inviteBtn = document.createElement('button');
+    inviteBtn.id = 'btn-gc-invite';
+    inviteBtn.className = 'w-14 h-14 min-w-[48px] min-h-[48px] bg-white/10 rounded-full flex items-center justify-center hover:bg-white/20 transition-all text-white';
+    inviteBtn.setAttribute('aria-label', 'Invite participant');
+    inviteBtn.innerHTML = '<span class="material-symbols-outlined">person_add</span>';
+    inviteBtn.onclick = function () { if (typeof openCallPicker === 'function') openCallPicker(); };
+    var endBtn = controls.querySelector('[data-action="endCall"]');
+    if (endBtn) controls.insertBefore(inviteBtn, endBtn);
+    else controls.appendChild(inviteBtn);
   }
 
   GC._renderAvatar = _renderAvatar;

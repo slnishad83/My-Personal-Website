@@ -157,7 +157,12 @@
     var val = input.value;
     var before = val.substring(0, _atStart);
     var after = val.substring(input.selectionStart);
-    var mentionText = '@' + (member.name || member.uid) + ' ';
+    var displayName = member.name || member.uid;
+    var mentionText = '@' + displayName + ' ';
+    if (before.indexOf(mentionText) !== -1 || val.indexOf('@' + displayName) !== -1) {
+      _close();
+      return;
+    }
     input.value = before + mentionText + after;
     var newPos = before.length + mentionText.length;
     input.setSelectionRange(newPos, newPos);

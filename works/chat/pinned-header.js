@@ -95,7 +95,7 @@
               <div style="padding:12px;border-radius:12px;background:var(--surface-variant,#f8f9fa);margin-bottom:8px;cursor:pointer;" data-pin-msg-id="${pin.messageId || pin.id}">
                 <div style="font-size:12px;font-weight:600;color:var(--primary,#00a884);margin-bottom:4px;">${this._esc(pin.senderName || 'Unknown')}</div>
                 <div style="font-size:14px;color:var(--on-surface,#000);">${this._esc((pin.text || pin.content || '').slice(0, 200))}</div>
-                <div style="font-size:11px;color:var(--on-surface-variant,#666);margin-top:4px;">${pin.pinnedAt ? new Date(pin.pinnedAt).toLocaleString() : ''}</div>
+                <div style="font-size:11px;color:var(--on-surface-variant,#666);margin-top:4px;">${pin.pinnedAt ? (pin.pinnedAt.toDate ? pin.pinnedAt.toDate() : new Date(pin.pinnedAt)).toLocaleString() : ''}</div>
               </div>
             `).join('')}
           </div>

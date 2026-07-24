@@ -231,9 +231,11 @@
     if (typeof window.renderSingleMessageHTML !== 'function') return;
     var orig = window.renderSingleMessageHTML;
     window.renderSingleMessageHTML = function (msg, msgs, i, lastDate) {
-      var html = orig(msg, msgs, i, lastDate);
-      if (!App.currentChat || App.currentChat.type !== 'group') return html;
-      if (msg.from === 'me') return html;
+      try {
+        var html = orig(msg, msgs, i, lastDate);
+        if (!App.currentChat || App.currentChat.type !== 'group') return html;
+        if (msg.from === 'me') return html;
+        if (msg.type === 'call') return html;
 
       /* Find the sender name div and add click handler + cursor style */
       var senderPattern = /(<div class="text-\[10px\][^"]*font-bold mb-1 ml-2">)([^<]+)(<\/div>)/;
@@ -246,6 +248,9 @@
       html = html.replace(match[0], clickable);
 
       return html;
+      } catch (e) {
+        try { return orig(msg, msgs, i, lastDate); } catch (_) { return ''; }
+      }
     };
   }
 

@@ -147,6 +147,26 @@
       return tomorrow.getTime() - now.getTime();
     },
 
+    async _rescheduleFromFirestore() {
+      const uid = window.App?.uid?.() || window.currentUser?.uid;
+      const db = window.App?.db;
+      if (!uid || !db) return;
+      try {
+        const snap = await db.collection('reminders')
+          .where('userId', '==', uid)
+          .where('status', '==', 'pending')
+          .where('reminderTime', '>', Date.now())
+          .limit(50)
+          .get();
+        snap.forEach(doc => {
+          const reminder = { ...doc.data(), _docId: doc.id };
+          this._scheduleLocal(reminder);
+        });
+      } catch (e) {
+        console.warn('[MessageReminders] reschedule error:', e);
+      }
+    },
+
     _esc(s) {
       return s ? String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;') : '';
     },
@@ -180,8 +200,12 @@
   window.MessageReminders = MessageReminders;
 
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => MessageReminders.addToContextMenu());
+    document.addEventListener('DOMContentLoaded', () => {
+      MessageReminders.addToContextMenu();
+      MessageReminders._rescheduleFromFirestore();
+    });
   } else {
     MessageReminders.addToContextMenu();
+    MessageReminders._rescheduleFromFirestore();
   }
 })();

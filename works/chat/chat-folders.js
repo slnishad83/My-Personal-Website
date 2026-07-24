@@ -36,11 +36,17 @@
           await db.collection('users').doc(uid).set({
             chatFolders: customFolders
           }, { merge: true });
-        } catch (_) {}
+        } catch (err) {
+          console.error('[ChatFolders] Firestore save error:', err);
+          if (typeof showToast === 'function') showToast('Failed to save folders: ' + (err.message || 'Unknown error'), 'error');
+        }
       }
       try {
         localStorage.setItem('nsl_chat_folders', JSON.stringify(customFolders));
-      } catch (_) {}
+      } catch (err) {
+        console.error('[ChatFolders] localStorage save error:', err);
+        if (typeof showToast === 'function') showToast('Failed to save folders locally', 'error');
+      }
     },
 
     async init() {

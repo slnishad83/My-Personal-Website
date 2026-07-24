@@ -5,6 +5,17 @@
   var CC = window._CC;
   var _waitingIncoming = null;
   var _swipeState = null;
+  var _outgoingRingtoneInterval = null;
+  var _lastCallAttemptTime = 0;
+
+  function _startOutgoingRingtone() {
+    _stopOutgoingRingtone();
+    CC.playSound('outgoingCall');
+    _outgoingRingtoneInterval = setInterval(function () { CC.playSound('outgoingCall'); }, 3000);
+  }
+  function _stopOutgoingRingtone() {
+    if (_outgoingRingtoneInterval) { clearInterval(_outgoingRingtoneInterval); _outgoingRingtoneInterval = null; }
+  }
 
   function listenIncomingCalls() {
     if (!CC.db() || !CC.uid()) return;
@@ -33,6 +44,8 @@
               if (CC.state === CC.STATES.ACTIVE || CC.state === CC.STATES.CONNECTING) {
                 _waitingIncoming = incomingPayload;
                 _showCallWaitingUI(incomingPayload);
+              } else if (CC.state === CC.STATES.RINGING) {
+                CC.db().collection('calls').doc(change.doc.id).update({ status: 'busy' }).catch(function () {});
               } else {
                 CC.db().collection('calls').doc(change.doc.id).update({ status: 'missed' }).catch(function () {});
               }
@@ -89,7 +102,7 @@
     }
     CC.show('incoming-call-overlay');
     CC.playSound('callRing');
-    if (navigator.vibrate) navigator.vibrate([700, 250, 700, 250, 700, 250, 700, 250, 700]);
+    if (typeof window.AppHaptics !== 'undefined' && typeof window.AppHaptics.vibrate === 'function') { window.AppHaptics.vibrate([700, 250, 700, 250, 700, 250, 700, 250, 700]); } else if (navigator.vibrate) navigator.vibrate([700, 250, 700, 250, 700, 250, 700, 250, 700]);
     CC.requestWake();
     _setupSwipeToAnswer();
     CC.incomingTimeoutHandle = setTimeout(function () {
@@ -255,6 +268,8 @@
 
   async function startVoiceCall() {
     if (CC.state !== CC.STATES.IDLE) return;
+    if (Date.now() - _lastCallAttemptTime < 3000) { CC.toast('Please wait before trying again', 'info'); return; }
+    _lastCallAttemptTime = Date.now();
     if (!CC.uid() || !CC.db()) { CC.toast('Not signed in', 'error'); return; }
     var c = CC.chat();
     if (c && c.type === 'group') { startGroupCall('voice'); return; }
@@ -264,6 +279,8 @@
 
   async function startVideoCall() {
     if (CC.state !== CC.STATES.IDLE) return;
+    if (Date.now() - _lastCallAttemptTime < 3000) { CC.toast('Please wait before trying again', 'info'); return; }
+    _lastCallAttemptTime = Date.now();
     if (!CC.uid() || !CC.db()) { CC.toast('Not signed in', 'error'); return; }
     var c = CC.chat();
     if (c && c.type === 'group') { startGroupCall('video'); return; }
@@ -316,7 +333,7 @@
       CC.listenStatus(CC.callId);
       CC.requestWake();
       CC.startHeartbeat(CC.callId);
-      CC.playSound('outgoingCall');
+      _startOutgoingRingtone();
 
       CC.timeoutHandle = setTimeout(function () {
         if (CC.callId && CC.state !== CC.STATES.IDLE && CC.state !== CC.STATES.ACTIVE) {
@@ -419,6 +436,7 @@
     var savedRemoteUid = CC.incomingData?.fromUserId || '';
 
     CC.txt('call-status', dur > 0 ? 'Call ended' : 'No answer');
+    _stopOutgoingRingtone();
     CC.cleanup();
     CC.setState(CC.STATES.ENDED);
 
@@ -440,8 +458,9 @@
     CC.callStartTime = null;
     CC._outgoingAvatar = '';
     CC.releaseWake();
+    if (typeof window.Presence !== 'undefined' && typeof window.Presence.setInCall === 'function') window.Presence.setInCall(false);
     _sendMissedCallNotification(endDirection, dur, remoteName, savedRemoteUid, savedCallId);
-    setTimeout(function () { CC.setState(CC.STATES.IDLE); }, 300);
+    CC.setState(CC.STATES.IDLE);
   }
 
   async function _sendMissedCallNotification(direction, duration, remoteName, remoteUid, callIdForNotif) {
@@ -551,5 +570,7 @@
   if (typeof window.startGroupVideoCall !== 'function') {
     window.startGroupVideoCall = function () { startGroupCall('video'); };
   }
+
+  window._stopOutgoingRingtone = _stopOutgoingRingtone;
 
 })();

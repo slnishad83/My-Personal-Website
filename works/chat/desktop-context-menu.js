@@ -39,7 +39,12 @@
       const btn = document.createElement('button');
       btn.setAttribute('role', 'menuitem');
       const iconSpan = document.createElement('span');
-      iconSpan.textContent = item.icon || '';
+      iconSpan.className = 'ctx-icon';
+      if (item.icon && item.icon.includes('<')) {
+        iconSpan.innerHTML = item.icon;
+      } else {
+        iconSpan.textContent = item.icon || '';
+      }
       const labelSpan = document.createElement('span');
       labelSpan.textContent = item.label;
       btn.appendChild(iconSpan);
@@ -94,8 +99,8 @@
     const chatId = App?.currentChat?.id || '';
     const isGroup = App?.currentChat?.isGroup || false;
     const items = [
-      { icon: '↩', label: 'Reply', shortcut: '', action: () => { if (typeof replyToMessage === 'function') replyToMessage(msgId); } },
-      { icon: '💬', label: 'Reply Privately', action: () => {
+      { icon: '<span class="material-symbols-outlined" style="font-size:18px">reply</span>', label: 'Reply', shortcut: '', action: () => { if (typeof replyToMessage === 'function') replyToMessage(msgId); } },
+      { icon: '<span class="material-symbols-outlined" style="font-size:18px">reply</span>', label: 'Reply Privately', action: () => {
         if (isGroup && typeof window.ReplyPrivate !== 'undefined') {
           const msgs = (typeof App !== 'undefined' && App.messages && App.currentChat) ? (App.messages[App.currentChat.id] || []) : [];
           const targetMsg = msgs.find(m => m.id === msgId);
@@ -104,27 +109,31 @@
           replyToMessage(msgId);
         }
       }},
-      { icon: '🌐', label: 'Translate', action: () => { if (typeof showTranslationPopup === 'function') showTranslationPopup(msgId); } },
-      { icon: '⟳', label: 'Forward', action: () => { if (typeof openForwardModal === 'function') openForwardModal(msgId); } },
-      { icon: '📋', label: 'Copy', shortcut: 'Ctrl+C', action: () => {
+      { icon: '<span class="material-symbols-outlined" style="font-size:18px">translate</span>', label: 'Translate', action: () => { if (typeof showTranslationPopup === 'function') showTranslationPopup(msgId); } },
+      { icon: '<span class="material-symbols-outlined" style="font-size:18px">forward</span>', label: 'Forward', action: () => { if (typeof openForwardModal === 'function') openForwardModal(msgId); } },
+      { icon: '<span class="material-symbols-outlined" style="font-size:18px">content_copy</span>', label: 'Copy', shortcut: 'Ctrl+C', action: () => {
         const text = msgEl?.querySelector('.msg-text, .message-bubble')?.textContent;
         if (text) navigator.clipboard?.writeText(text);
       }},
-      { icon: '📌', label: 'Star', action: () => { if (typeof starMessage === 'function') starMessage(msgId); } },
-      { icon: '📍', label: 'Pin', action: () => { if (typeof pinMessage === 'function') pinMessage(msgId); else if (typeof starMessage === 'function') starMessage(msgId); } },
+      { icon: '<span class="material-symbols-outlined" style="font-size:18px">star</span>', label: 'Star', action: () => { if (typeof starMessage === 'function') starMessage(msgId); } },
+      { icon: '<span class="material-symbols-outlined" style="font-size:18px">push_pin</span>', label: 'Pin', action: () => { if (typeof window._MsgActions === 'object' && window._MsgActions.pin) window._MsgActions.pin(msgId); else if (typeof pinMessage === 'function') pinMessage(msgId); } },
       { separator: true },
-      { icon: '☑', label: 'Select', action: () => {
+      { icon: '<span class="material-symbols-outlined" style="font-size:18px">check_box</span>', label: 'Select', action: () => {
         if (typeof toggleChatSelectionMode === 'function') toggleChatSelectionMode();
         else if (typeof showToast === 'function') showToast('Selection mode', 'info');
       } },
-      { icon: 'ℹ', label: 'Info', action: () => { if (typeof showMessageInfo === 'function') showMessageInfo(msgId); } },
+      { icon: '<span class="material-symbols-outlined" style="font-size:18px">info</span>', label: 'Info', action: () => {
+        if (typeof window._MsgActions === 'object' && window._MsgActions.info) window._MsgActions.info(msgId);
+        else if (typeof showMessageInfo === 'function') showMessageInfo(msgId);
+        else if (typeof openMsgInfo === 'function') openMsgInfo(msgId);
+      } },
       ...(isMyMsg ? [
         { separator: true },
-        { icon: '✏', label: 'Edit', shortcut: 'F2', action: () => { if (typeof editMessage === 'function') editMessage(msgId); } },
-        { icon: '🗑', label: 'Delete', shortcut: 'Del', danger: true, action: () => { if (typeof deleteMessage === 'function') deleteMessage(msgId); } },
+        { icon: '<span class="material-symbols-outlined" style="font-size:18px">edit</span>', label: 'Edit', shortcut: 'F2', action: () => { if (typeof editMessage === 'function') editMessage(msgId); } },
+        { icon: '<span class="material-symbols-outlined" style="font-size:18px">delete</span>', label: 'Delete', shortcut: 'Del', danger: true, action: () => { if (typeof deleteMessage === 'function') deleteMessage(msgId); } },
       ] : [
         { separator: true },
-        { icon: '🗑', label: 'Delete', shortcut: 'Del', danger: true, action: () => { if (typeof deleteMessage === 'function') deleteMessage(msgId); } },
+        { icon: '<span class="material-symbols-outlined" style="font-size:18px">delete</span>', label: 'Delete', shortcut: 'Del', danger: true, action: () => { if (typeof deleteMessage === 'function') deleteMessage(msgId); } },
       ]),
     ];
     show(e.clientX, e.clientY, items);
@@ -138,15 +147,15 @@
     const isPinned = chatEl?.classList?.contains('pinned');
     const isMuted = chatEl?.classList?.contains('muted');
     const items = [
-      { icon: '📌', label: isPinned ? 'Unpin' : 'Pin', action: () => { if (typeof togglePinChat === 'function') togglePinChat(chatId); } },
-      { icon: '🔇', label: isMuted ? 'Unmute' : 'Mute', action: () => { if (isMuted) { if (typeof toggleMuteChat === 'function') toggleMuteChat(chatId); } else { if (typeof showMuteChatOptions === 'function') showMuteChatOptions(chatId); } } },
-      { icon: '📁', label: 'Archive', shortcut: 'Ctrl+Shift+A', action: () => { if (typeof archiveChat === 'function') archiveChat(chatId); } },
-      { icon: '🔒', label: (typeof isChatLocked === 'function' && isChatLocked(chatId)) ? 'Unlock Chat' : 'Lock Chat', action: () => { if (typeof toggleChatLock === 'function') toggleChatLock(chatId); } },
+      { icon: '<span class="material-symbols-outlined" style="font-size:18px">push_pin</span>', label: isPinned ? 'Unpin' : 'Pin', action: () => { if (typeof togglePinChat === 'function') togglePinChat(chatId); } },
+      { icon: '<span class="material-symbols-outlined" style="font-size:18px">' + (isMuted ? 'volume_up' : 'volume_off') + '</span>', label: isMuted ? 'Unmute' : 'Mute', action: () => { if (isMuted) { if (typeof toggleMuteChat === 'function') toggleMuteChat(chatId); } else { if (typeof showMuteChatOptions === 'function') showMuteChatOptions(chatId); } } },
+      { icon: '<span class="material-symbols-outlined" style="font-size:18px">archive</span>', label: 'Archive', shortcut: 'Ctrl+Shift+A', action: () => { if (typeof archiveChat === 'function') archiveChat(chatId); } },
+      { icon: '<span class="material-symbols-outlined" style="font-size:18px">lock</span>', label: (typeof isChatLocked === 'function' && isChatLocked(chatId)) ? 'Unlock Chat' : 'Lock Chat', action: () => { if (typeof toggleChatLock === 'function') toggleChatLock(chatId); } },
       { separator: true },
-      { icon: '👤', label: 'View contact', action: () => { if (typeof viewContact === 'function') viewContact(chatId); } },
-      { icon: '🔍', label: 'Search', shortcut: 'Ctrl+Shift+F', action: () => { if (typeof openChatSearch === 'function') openChatSearch('current'); else if (typeof window.messageSearch !== 'undefined') window.messageSearch.open(); } },
+      { icon: '<span class="material-symbols-outlined" style="font-size:18px">person</span>', label: 'View contact', action: () => { if (typeof viewContact === 'function') viewContact(chatId); } },
+      { icon: '<span class="material-symbols-outlined" style="font-size:18px">search</span>', label: 'Search', shortcut: 'Ctrl+Shift+F', action: () => { if (typeof openChatSearch === 'function') openChatSearch('current'); else if (typeof window.messageSearch !== 'undefined') window.messageSearch.open(); } },
       { separator: true },
-      { icon: '🗑', label: 'Delete chat', shortcut: 'Ctrl+Shift+D', danger: true, action: () => { if (typeof deleteChat === 'function') deleteChat(chatId); } },
+      { icon: '<span class="material-symbols-outlined" style="font-size:18px">delete</span>', label: 'Delete chat', shortcut: 'Ctrl+Shift+D', danger: true, action: () => { if (typeof deleteChat === 'function') deleteChat(chatId); } },
     ];
     show(e.clientX, e.clientY, items);
   }
@@ -157,11 +166,11 @@
     e.stopPropagation();
     const src = mediaEl?.src || mediaEl?.querySelector('img, video')?.src;
     const items = [
-      { icon: '🔍', label: 'Open in new tab', action: () => { if (src) window.open(src, '_blank'); } },
-      { icon: '📋', label: 'Copy image URL', action: () => { if (src) navigator.clipboard?.writeText(src); } },
-      { icon: '💾', label: 'Save as…', action: () => { if (src) { const a = document.createElement('a'); a.href = src; a.download = ''; a.click(); } } },
+      { icon: '<span class="material-symbols-outlined" style="font-size:18px">open_in_new</span>', label: 'Open in new tab', action: () => { if (src) window.open(src, '_blank'); } },
+      { icon: '<span class="material-symbols-outlined" style="font-size:18px">content_copy</span>', label: 'Copy image URL', action: () => { if (src) navigator.clipboard?.writeText(src); } },
+      { icon: '<span class="material-symbols-outlined" style="font-size:18px">download</span>', label: 'Save as…', action: () => { if (src) { const a = document.createElement('a'); a.href = src; a.download = ''; a.click(); } } },
       { separator: true },
-      { icon: '⛶', label: 'Fullscreen', shortcut: 'F11', action: () => { if (window.NSLDesktop?.toggleFullscreen) window.NSLDesktop.toggleFullscreen(); } },
+      { icon: '<span class="material-symbols-outlined" style="font-size:18px">fullscreen</span>', label: 'Fullscreen', shortcut: 'F11', action: () => { if (window.NSLDesktop?.toggleFullscreen) window.NSLDesktop.toggleFullscreen(); } },
     ];
     show(e.clientX, e.clientY, items);
   }

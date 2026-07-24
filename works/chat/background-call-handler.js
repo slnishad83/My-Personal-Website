@@ -7,6 +7,7 @@
   var _lastHeartbeat = 0;
   var _visibilityHandler = null;
   var _focusHandler = null;
+  var _bgNotification = null;
 
   function init() {
     _visibilityHandler = _onVisibilityChange;
@@ -18,7 +19,6 @@
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.addEventListener('message', _onSWMessage);
     }
-    _startBackgroundWatch();
   }
 
   function _onVisibilityChange() {
@@ -62,6 +62,7 @@
       _sendHeartbeat();
     }, 10000);
     _keepAlive();
+    _showPersistentNotification();
   }
 
   function _exitBackground() {
@@ -73,6 +74,30 @@
       clearTimeout(_bgTimer);
       _bgTimer = null;
     }
+    _dismissPersistentNotification();
+    if (window.App && window.App.callActive && window._CC && typeof window._CC.maximizeCall === 'function') {
+      window._CC.maximizeCall();
+    }
+  }
+
+  function _showPersistentNotification() {
+    if (_bgNotification) return;
+    try {
+      if (Notification.permission !== 'granted') return;
+      var callName = '';
+      if (window._CC && window._CC.$) callName = window._CC.$('call-name')?.textContent || '';
+      _bgNotification = new Notification('Call active' + (callName ? ' with ' + callName : ''), {
+        body: 'Tap to return to the call',
+        tag: 'nsl-call-bg',
+        requireInteraction: true,
+        silent: true
+      });
+      _bgNotification.onclick = function () { window.focus(); _bgNotification = null; };
+    } catch (_) {}
+  }
+
+  function _dismissPersistentNotification() {
+    if (_bgNotification) { try { _bgNotification.close(); } catch (_) {} _bgNotification = null; }
   }
 
   function _keepAlive() {
@@ -107,10 +132,6 @@
     }
   }
 
-  function _startBackgroundWatch() {
-    _bgCheckInterval = null;
-  }
-
   function destroy() {
     if (_visibilityHandler) {
       document.removeEventListener('visibilitychange', _visibilityHandler);
@@ -121,6 +142,7 @@
     window.removeEventListener('pagehide', _onPageHide);
     window.removeEventListener('pageshow', _onPageShow);
     _exitBackground();
+    _dismissPersistentNotification();
   }
 
   if (document.readyState === 'complete' || document.readyState === 'interactive') {

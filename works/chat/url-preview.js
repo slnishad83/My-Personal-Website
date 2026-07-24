@@ -51,25 +51,7 @@
             return json;
           }
         }
-      } catch (_) { /* fall through to proxy */ }
-
-      try {
-        const proxyUrl = 'https://api.allorigins.win/raw?url=' + encodeURIComponent(url);
-        const resp = await fetch(proxyUrl, { signal: AbortSignal.timeout(6000) });
-        const html = await resp.text();
-        const doc  = new DOMParser().parseFromString(html, 'text/html');
-        const meta = (p) => (doc.querySelector('meta[property="' + p + '"]') || doc.querySelector('meta[name="' + p + '"]'))?.getAttribute('content') || '';
-        const result = {
-          title       : meta('og:title')       || doc.title || '',
-          description : meta('og:description') || meta('description') || '',
-          image       : meta('og:image')       || '',
-          domain      : getDomain(url)
-        };
-        if (result.title || result.description) {
-          CACHE[url] = result;
-          return result;
-        }
-      } catch (_) { /* both failed */ }
+      } catch (_) { /* CF failed */ }
 
       return null;
     })();
@@ -82,7 +64,7 @@
 
   /* ─── render a preview card ────────────────────────────────────── */
   function buildCard(data, url) {
-    const hasImg  = data.image && /^https?:\/\//.test(data.image);
+    const hasImg  = data.image && /^https?:\/\//.test(data.image) && !/[\s"'<>]/.test(data.image);
     const title   = esc(data.title   || '');
     const desc    = esc(data.description ? data.description.slice(0, 120) + (data.description.length > 120 ? '…' : '') : '');
     const domain  = esc(data.domain  || getDomain(url));

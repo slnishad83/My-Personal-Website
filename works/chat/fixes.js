@@ -56,7 +56,7 @@
   z-index: 2147483647;
   display: none;
   flex-direction: column;
-  background: #0d0d0f;
+  background: var(--bg, #0d0d0f);
   touch-action: none;
 }
 
@@ -64,7 +64,7 @@
 #_fv_bar {
   display: flex; align-items: center; gap: 10px;
   padding: 12px 14px;
-  background: #1c1c28;
+  background: var(--bg-card, #1c1c28);
   border-bottom: 1px solid rgba(255,255,255,0.09);
   flex-shrink: 0;
 }
@@ -88,7 +88,7 @@
   flex: 1; min-height: 0;
   display: flex; align-items: center; justify-content: center;
   position: relative; overflow: hidden;
-  background: #0d0d0f;
+  background: var(--bg, #0d0d0f);
 }
 #_fv_img {
   max-width: 100%; max-height: 100%;
@@ -149,7 +149,7 @@
   display: flex; align-items: stretch; justify-content: center;
   gap: 6px; flex-wrap: nowrap; overflow-x: auto;
   flex-shrink: 0;
-  background: #1c1c28;
+  background: var(--bg-card, #1c1c28);
   border-top: 1px solid rgba(255,255,255,0.09);
   padding: 12px 10px 18px;
   scrollbar-width: none;
@@ -497,7 +497,7 @@
 
     ov.addEventListener("touchstart", e => { if (e.touches.length === 2) { _isPinching = true; _pinchStartDist = _tdist(e.touches); _pinchStartZoom = _zoom; } else if (e.touches.length === 1 && !_isPinching) { _swipeStartX = e.touches[0].clientX; _swipeStartY = e.touches[0].clientY; if (_zoom > 1) { _isDragging = true; _dragStartX = e.touches[0].clientX; _dragStartY = e.touches[0].clientY; _dragBasePanX = _panX; _dragBasePanY = _panY; } } }, { passive: true });
     ov.addEventListener("touchmove", e => { if (e.touches.length === 2 || _isPinching) { e.preventDefault(); _isPinching = true; _zoom = Math.max(1, Math.min(6, _pinchStartZoom * (_tdist(e.touches) / _pinchStartDist))); if (_zoom <= 1) { _panX = 0; _panY = 0; } _applyImgT(); } else if (e.touches.length === 1 && _isDragging && _zoom > 1) { _panX = _dragBasePanX + (e.touches[0].clientX - _dragStartX) / _zoom; _panY = _dragBasePanY + (e.touches[0].clientY - _dragStartY) / _zoom; _applyImgT(); } }, { passive: false });
-    ov.addEventListener("touchend", e => { if (_isPinching && e.touches.length < 2) { _isPinching = false; } _isDragging = false; if (!_isPinching && _zoom <= 1 && e.changedTouches.length === 1) { const dx = e.changedTouches[0].clientX - _swipeStartX, dy = e.changedTouches[0].clientY - _swipeStartY; if (Math.abs(dx) > 55 && Math.abs(dx) > Math.abs(dy) * 1.5) _navigate(dx < 0 ? 1 : -1); } }, { passive: true });
+    ov.addEventListener("touchend", e => { if (_isPinching && e.touches.length < 2) { _isPinching = false; } _isDragging = false; if (!_isPinching && _zoom <= 1 && e.changedTouches.length === 1) { const dx = e.changedTouches[0].clientX - _swipeStartX, dy = e.changedTouches[0].clientY - _swipeStartY; if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.2) _navigate(dx < 0 ? 1 : -1); } }, { passive: true });
   }
 
   function _applyImgT() { const img = document.getElementById("_fv_img"); if (!img) return; img.style.transform = `rotate(${_rotDeg}deg) scale(${_zoom}) translate(${_panX}px,${_panY}px)`; img.style.cursor = _zoom > 1 ? "grab" : "zoom-in"; }
