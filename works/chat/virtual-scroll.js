@@ -44,6 +44,8 @@ const VirtualScroll = {
     this._enabled = true;
     if (!this._container) return;
     if (window.__DEBUG__) console.log(`[VirtualScroll] Enabled for ${this._items.length} messages`);
+    this._onScroll = this._render.bind(this);
+    this._container.addEventListener('scroll', this._onScroll, { passive: true });
     this._render();
   },
 
@@ -147,6 +149,9 @@ const VirtualScroll = {
   },
 
   destroy() {
+    if (this._container && this._onScroll) {
+      this._container.removeEventListener('scroll', this._onScroll);
+    }
     this._pool.clear();
     this._enabled = false;
     this._items = [];
@@ -155,6 +160,7 @@ const VirtualScroll = {
     if (this._container) this._container.innerHTML = '';
     this._container = null;
     this._renderFn = null;
+    this._onScroll = null;
   }
 };
 

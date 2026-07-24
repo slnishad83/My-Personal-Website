@@ -16,7 +16,16 @@
         async init() {
             if (!window.Capacitor?.isNative?.()) return;
             this.isNative = true;
-            this.enabled = await Security.getSecure(STORAGE_KEY) === true;
+            try {
+                const sec = window.Security || (typeof Security !== 'undefined' ? Security : null);
+                if (sec && sec.getSecure) {
+                    this.enabled = await sec.getSecure(STORAGE_KEY) === true;
+                } else {
+                    this.enabled = localStorage.getItem(STORAGE_KEY) === 'true';
+                }
+            } catch (_) {
+                this.enabled = localStorage.getItem(STORAGE_KEY) === 'true';
+            }
             this.setupListeners();
         },
 
@@ -67,7 +76,16 @@
 
         async toggle(enabled) {
             this.enabled = enabled;
-            await Security.setSecure(STORAGE_KEY, enabled);
+            try {
+                const sec = window.Security || (typeof Security !== 'undefined' ? Security : null);
+                if (sec && sec.setSecure) {
+                    await sec.setSecure(STORAGE_KEY, enabled);
+                } else {
+                    localStorage.setItem(STORAGE_KEY, String(enabled));
+                }
+            } catch (_) {
+                localStorage.setItem(STORAGE_KEY, String(enabled));
+            }
         },
 
         isEnabled() {

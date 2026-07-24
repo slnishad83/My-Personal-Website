@@ -16,7 +16,7 @@
     return u ? (u.displayName || 'Me') : 'Me';
   }
   function _userPhoto() {
-    var u = (window.App && window.App.auth && window.App.auth.currentUser) ? window.auth.currentUser : window.currentUser;
+    var u = (window.App && window.App.auth && window.App.auth.currentUser) ? window.App.auth.currentUser : window.currentUser;
     return u ? (u.photoURL || '') : '';
   }
   function _toast(msg, t) { if (App && App.toast) App.toast(msg, t); else if (typeof window.showToast === 'function') window.showToast(msg, t); }

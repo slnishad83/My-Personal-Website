@@ -771,6 +771,7 @@ exports.sendNotificationReply = onRequest(
         senderId: uid,
         senderName: user.displayName || user.name || 'Team Chat',
         senderAvatar: user.avatar || user.photoURL || '',
+        type: 'text',
         timestamp: admin.firestore.FieldValue.serverTimestamp(),
         status: 'sent',
         readBy: { [uid]: admin.firestore.FieldValue.serverTimestamp() },
@@ -784,6 +785,7 @@ exports.sendNotificationReply = onRequest(
         msgData.directId     = chatId;
         msgData.receiverId   = chatUserId || '';
         msgData.participants = [uid, chatUserId].filter(Boolean);
+        msgData.participantEmails = [user.email || ''].filter(Boolean);
       }
 
       const ref = await admin.firestore().collection('messages').add(msgData);

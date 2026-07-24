@@ -106,7 +106,8 @@
       const chatItems = document.querySelectorAll('[data-chat-id]');
       chatItems.forEach(item => {
         const chatId = item.dataset.chatId;
-        const chat = (window.App?.chats || []).find(c => c.id === chatId);
+        const chats = window.App?.chats;
+        const chat = Array.isArray(chats) ? chats.find(c => c.id === chatId) : (chats && chats[chatId]) || null;
         if (!chat) return;
 
         let show = true;

@@ -719,7 +719,7 @@ service cloud.firestore {
       allow update, delete: if signedIn() && resource.data.addedBy == request.auth.uid;
     }
     match /typingStatus/{chatKey} {
-      allow read: if signedIn() && request.auth.uid == request.resource.data.userId;
+      allow read: if signedIn() && resource.data.userId == request.auth.uid;
       allow write: if signedIn() && request.auth.uid == request.resource.data.userId;
     }
     match /meetings/{meetingId} {

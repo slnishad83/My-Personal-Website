@@ -46,6 +46,8 @@
     target.addEventListener('pointerdown', (e) => {
       if (e.pointerType !== 'touch' && e.pointerType !== 'pen') return;
       longPressTarget = e.target;
+      longPressTarget._startX = e.clientX;
+      longPressTarget._startY = e.clientY;
       longPressTimer = setTimeout(() => {
         _showMessageContextMenu(e, longPressTarget);
         longPressTimer = null;

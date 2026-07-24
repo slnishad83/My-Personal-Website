@@ -19,9 +19,6 @@ const Security = {
 
   async init() {
     this._startTokenRefresh();
-    if (typeof window !== 'undefined') {
-      window.addEventListener('beforeunload', () => this.destroy());
-    }
     if (window.__DEBUG__) console.log('[Security] Initialized (WebCrypto storage + ECDH)');
   },
 

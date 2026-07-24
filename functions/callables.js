@@ -64,6 +64,19 @@ exports.aiChatBot = onCall(
       throw new HttpsError('failed-precondition', 'GEMINI_API_KEY secret is not configured.');
     }
 
+    // Verify user has access to this chat
+    if (chatType === 'direct') {
+      const chatSnap = await admin.firestore().collection('directChats').doc(chatId).get();
+      if (!chatSnap.exists || !(chatSnap.data()?.participants || []).includes(request.auth.uid)) {
+        throw new HttpsError('permission-denied', 'You do not have access to this chat.');
+      }
+    } else if (chatType === 'group') {
+      const groupSnap = await admin.firestore().collection('groups').doc(chatId).get();
+      if (!groupSnap.exists || !(groupSnap.data()?.memberIds || []).includes(request.auth.uid)) {
+        throw new HttpsError('permission-denied', 'You are not a member of this group.');
+      }
+    }
+
     // Fetch recent chat messages for context (last 10)
     let contextMessages = '';
     try {
@@ -138,6 +151,22 @@ exports.summarizeThread = onCall(
     if (!checkAiRateLimit(request.auth.uid)) throw new HttpsError('resource-exhausted', 'Rate limit exceeded. Try again later.');
     const { messageId } = request.data || {};
     if (!messageId) throw new HttpsError('invalid-argument', 'Missing messageId.');
+
+    // Verify user has access to the parent message's chat
+    const msgSnap = await admin.firestore().collection('messages').doc(messageId).get();
+    if (!msgSnap.exists) throw new HttpsError('not-found', 'Message not found.');
+    const msgData = msgSnap.data();
+    const uid = request.auth.uid;
+    let hasAccess = msgData.senderId === uid;
+    if (!hasAccess && msgData.directId) {
+      const chatSnap = await admin.firestore().collection('directChats').doc(msgData.directId).get();
+      hasAccess = chatSnap.exists && (chatSnap.data()?.participants || []).includes(uid);
+    }
+    if (!hasAccess && msgData.groupId) {
+      const groupSnap = await admin.firestore().collection('groups').doc(msgData.groupId).get();
+      hasAccess = groupSnap.exists && (groupSnap.data()?.memberIds || []).includes(uid);
+    }
+    if (!hasAccess) throw new HttpsError('permission-denied', 'You do not have access to this message.');
 
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) throw new HttpsError('failed-precondition', 'GEMINI_API_KEY not configured.');
@@ -283,6 +312,18 @@ exports.catchMeUp = onCall(
     if (!checkAiRateLimit(request.auth.uid)) throw new HttpsError('resource-exhausted', 'Rate limit exceeded. Try again later.');
     const { chatId, chatType } = request.data || {};
     if (!chatId || !chatType) throw new HttpsError('invalid-argument', 'Missing chatId or chatType.');
+    // Verify user has access to this chat
+    if (chatType === 'group') {
+      const groupSnap = await admin.firestore().collection('groups').doc(chatId).get();
+      if (!groupSnap.exists || !(groupSnap.data()?.memberIds || []).includes(request.auth.uid)) {
+        throw new HttpsError('permission-denied', 'You are not a member of this group.');
+      }
+    } else {
+      const chatSnap = await admin.firestore().collection('directChats').doc(chatId).get();
+      if (!chatSnap.exists || !(chatSnap.data()?.participants || []).includes(request.auth.uid)) {
+        throw new HttpsError('permission-denied', 'You do not have access to this chat.');
+      }
+    }
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) throw new HttpsError('failed-precondition', 'GEMINI_API_KEY not set.');
     try {

@@ -4,7 +4,7 @@
 
   var _db = function () { return window.App && window.App.db ? window.App.db : null; };
   var _uid = function () { return window.App && window.App.auth && window.App.auth.currentUser ? window.App.auth.currentUser.uid : null; };
-  var _esc = function (s) { return s ? String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;') : ''; };
+  var _esc = function (s) { return s ? String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;') : ''; };
   var _toast = function (msg, t) { if (typeof window.showToast === 'function') window.showToast(msg, t); };
 
   function _getMsgType(msg) {

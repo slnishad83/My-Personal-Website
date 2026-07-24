@@ -237,13 +237,16 @@
       var uid = window.currentUser.uid;
 
       try {
-        var results = await Promise.all([
+        var results = await Promise.allSettled([
           db.collection('chatRequests').where('toUserId',   '==', uid).where('status','==','pending').get(),
           db.collection('chatRequests').where('fromUserId', '==', uid).where('status','==','pending').get(),
           db.collection('groupInvites').where('toUserId',   '==', uid).where('status','==','pending').get(),
           db.collection('chatRequests').where('fromUserId', '==', uid).where('status','==','accepted').get(),
         ]);
-        var receivedSnap=results[0], sentSnap=results[1], groupSnap=results[2], acceptedSnap=results[3];
+        var receivedSnap=results[0].status==='fulfilled'?results[0].value:{docs:[],size:0};
+        var sentSnap=results[1].status==='fulfilled'?results[1].value:{docs:[],size:0};
+        var groupSnap=results[2].status==='fulfilled'?results[2].value:{docs:[],size:0};
+        var acceptedSnap=results[3].status==='fulfilled'?results[3].value:{docs:[],size:0};
 
         _cfAllRequests = [].concat(
           receivedSnap.docs.map(function(d){ return Object.assign({id:d.id,direction:'incoming',requestType:'chat',_kind:'received'},d.data()); }),

@@ -58,7 +58,7 @@
       const translateEl = document.createElement('div');
       translateEl.setAttribute('data-translate-id', msgId);
       translateEl.style.cssText = 'margin-top:4px;padding:6px 10px;border-radius:8px;background:var(--surface-variant,#f0f2f5);font-size:12px;color:var(--on-surface-variant,#666);border-left:2px solid var(--primary,#00a884);';
-      translateEl.innerHTML = `<span style="font-weight:600;color:var(--primary,#00a884);">Translated (${lang}):</span> ${this._esc(translated)}`;
+      translateEl.innerHTML = `<span style="font-weight:600;color:var(--primary,#00a884);">Translated (${this._esc(lang)}):</span> ${this._esc(translated)}`;
       msgEl.querySelector('.msg-text, .message-text, [data-text]')?.parentElement?.appendChild(translateEl);
     },
 

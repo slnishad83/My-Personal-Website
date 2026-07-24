@@ -146,17 +146,21 @@
     if (container) container.innerHTML = '';
   }
 
+  let _micListenersAttached = false;
   async function toggleRecording(e) {
     if (_isRecording) {
       _stopRecordingAndSend();
       return;
     }
-    var micBtn = document.getElementById('mic-btn');
-    if (micBtn) {
-      micBtn.addEventListener('touchstart', _onMicTouchStart, { passive: false });
-      micBtn.addEventListener('touchmove', _onMicTouchMove, { passive: false });
-      micBtn.addEventListener('touchend', _onMicTouchEnd);
-      micBtn.addEventListener('mousedown', _onMicMouseDown);
+    if (!_micListenersAttached) {
+      var micBtn = document.getElementById('mic-btn');
+      if (micBtn) {
+        micBtn.addEventListener('touchstart', _onMicTouchStart, { passive: false });
+        micBtn.addEventListener('touchmove', _onMicTouchMove, { passive: false });
+        micBtn.addEventListener('touchend', _onMicTouchEnd);
+        micBtn.addEventListener('mousedown', _onMicMouseDown);
+        _micListenersAttached = true;
+      }
     }
     _startRecording();
   }

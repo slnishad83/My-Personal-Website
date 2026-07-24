@@ -14,7 +14,7 @@
   }
 
   function _saveLockedChats(locks) {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(locks));
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(locks)); } catch (_) {}
     try {
       if (App.db && App.auth?.currentUser) {
         App.db.collection('users').doc(App.auth.currentUser.uid).update({ lockedChats: locks }).catch(() => {});

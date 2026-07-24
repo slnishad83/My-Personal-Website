@@ -126,7 +126,12 @@ exports.adminDeleteUser = onCall(
       'statuses', 'typingIndicators', 'typingStatus',
       'userReports', 'messageReports', 'blockedWords',
       'pinnedMessages', 'starredMessages', 'calendarEvents',
-      'tasks', 'scheduledMessages'
+      'tasks', 'scheduledMessages', 'userPublicKeys',
+      'quickReplies', 'reminders', 'chatLockSettings',
+      'appLockSettings', 'chatTranslationSettings',
+      'chatRequestsRead', 'chatRequestsSnooze', 'scheduledCalls',
+      'groupExpenses', 'whiteboards', 'playlists', 'musicLibrary',
+      'listeningRooms', 'stickerPacks', 'animatedStickerPacks'
     ];
 
     for (const col of collections) {

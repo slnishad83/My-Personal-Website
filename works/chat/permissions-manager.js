@@ -138,8 +138,7 @@ function _getPermInfo(id) {
 
 function _isNative() {
   return (
-    window.Capacitor?.isNativePlatform?.() === true &&
-    window.Capacitor?.getPlatform?.() === "android"
+    window.Capacitor?.isNativePlatform?.() === true
   );
 }
 

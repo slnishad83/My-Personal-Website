@@ -65,6 +65,7 @@
         });
       });
 
+      this._observer = observer;
       observer.observe(container, { childList: true, subtree: true });
     },
 
@@ -138,6 +139,7 @@
     },
 
     destroy() {
+      if (this._observer) { this._observer.disconnect(); this._observer = null; }
       if (this._container) {
         this._container.remove();
         this._container = null;

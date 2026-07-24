@@ -290,7 +290,9 @@
   async function _forwardToChat(chatId, msg) {
     var uid = _uid();
     if (!uid) return;
-    var chatRef = db.collection('chats').doc(chatId).collection('messages').doc();
+    var _firestore = (typeof App !== 'undefined' && App.db) ? App.db : (typeof firebase !== 'undefined' ? firebase.firestore() : null);
+    if (!_firestore) throw new Error('Firestore not available');
+    var chatRef = _firestore.collection('chats').doc(chatId).collection('messages').doc();
     await chatRef.set({
       text: msg.text || '',
       type: msg.type || 'text',
@@ -301,7 +303,8 @@
       forwardedFrom: msg.forwardedFrom || msg.id || null,
       isForwarded: true
     });
-    var chatDocRef = db.collection('chats').doc(chatId);
+    var _firestore2 = (typeof App !== 'undefined' && App.db) ? App.db : (typeof firebase !== 'undefined' ? firebase.firestore() : null);
+    var chatDocRef = _firestore2.collection('chats').doc(chatId);
     await chatDocRef.set({
       lastMessage: msg.text || '[Forwarded message]',
       lastMessageTime: firebase.firestore.FieldValue.serverTimestamp(),
@@ -312,7 +315,9 @@
   async function _forwardToNotes(msg) {
     var uid = _uid();
     if (!uid) return;
-    var savedRef = db.collection('users').doc(uid).collection('savedMessages').doc();
+    var _firestore3 = (typeof App !== 'undefined' && App.db) ? App.db : (typeof firebase !== 'undefined' ? firebase.firestore() : null);
+    if (!_firestore3) throw new Error('Firestore not available');
+    var savedRef = _firestore3.collection('users').doc(uid).collection('savedMessages').doc();
     await savedRef.set({
       text: msg.text || '',
       type: msg.type || 'text',

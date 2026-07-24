@@ -8,7 +8,7 @@ directories:
 
 files:
   - electron/**/*
-  - www/**/*
+  - dist/**/*
   - "!node_modules/**/{test,tests,__tests__}/**"
   - "!node_modules/**/*.{md,txt,ts}"
   - "!**/*.map"

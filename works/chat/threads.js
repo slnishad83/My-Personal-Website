@@ -483,18 +483,21 @@
       card.querySelector(".thread-summary-close").addEventListener("click", () => card.remove());
 
       const repliesList = document.getElementById("threadRepliesList");
-    if (repliesList) repliesList.addEventListener('click', (e) => {
-      const btn = e.target.closest('.thread-reply-reaction[data-parent]');
-      if (!btn) return;
-      e.stopPropagation();
-      window._toggleThreadReaction(btn.dataset.parent, btn.dataset.reply, btn.dataset.emoji);
-    });
-    if (repliesList) repliesList.addEventListener('dblclick', (e) => {
-      const bubble = e.target.closest('.thread-reply-bubble[data-parent]');
-      if (!bubble) return;
-      e.stopPropagation();
-      window._showThreadReactionPicker(e, bubble.dataset.parent, bubble.dataset.reply);
-    });
+    if (repliesList && !repliesList._threadHandlersAttached) {
+      repliesList._threadHandlersAttached = true;
+      repliesList.addEventListener('click', (e) => {
+        const btn = e.target.closest('.thread-reply-reaction[data-parent]');
+        if (!btn) return;
+        e.stopPropagation();
+        window._toggleThreadReaction(btn.dataset.parent, btn.dataset.reply, btn.dataset.emoji);
+      });
+      repliesList.addEventListener('dblclick', (e) => {
+        const bubble = e.target.closest('.thread-reply-bubble[data-parent]');
+        if (!bubble) return;
+        e.stopPropagation();
+        window._showThreadReactionPicker(e, bubble.dataset.parent, bubble.dataset.reply);
+      });
+    }
       if (repliesList) repliesList.parentNode.insertBefore(card, repliesList);
     } catch (err) {
       console.error("[summarizeThread]", err);

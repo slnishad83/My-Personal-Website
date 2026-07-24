@@ -117,6 +117,7 @@
   }
 
   function detectIntent(text) {
+    if (typeof text !== 'string') return 'default';
     const t = text.toLowerCase();
     if (t.match(/^(hi|hello|hey)/)) return 'greeting';
     if (t.match(/\?$/)) return 'question';

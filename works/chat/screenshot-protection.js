@@ -8,7 +8,7 @@
         isNative: false,
 
         init() {
-            if (!window.Capacitor?.isNative?.()) return;
+            if (!window.Capacitor?.isNativePlatform?.()) return;
             this.isNative = true;
         },
 

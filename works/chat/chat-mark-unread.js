@@ -115,9 +115,13 @@
     }
   });
 
+  let _markReadProcessing = false;
   document.addEventListener('chat-unread-change', function (e) {
+    if (_markReadProcessing) return;
     if (e.detail && !e.detail.unread && e.detail.chatId === window.App?.currentChat?.id) {
+      _markReadProcessing = true;
       MarkUnread.markChatRead(e.detail.chatId);
+      setTimeout(function () { _markReadProcessing = false; }, 100);
     }
   });
 })();

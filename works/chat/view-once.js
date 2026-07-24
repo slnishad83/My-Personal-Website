@@ -43,8 +43,11 @@
       try {
         if (msgData?.mediaUrl) {
           try {
-            const ref = storage.refFromURL(msgData.mediaUrl);
-            await ref.delete();
+            const _st = (window.firebase && window.firebase.storage) ? window.firebase.storage() : null;
+            if (_st) {
+              const ref = _st.refFromURL(msgData.mediaUrl);
+              await ref.delete();
+            }
           } catch (_) {}
         }
         await App.db.collection('messages').doc(msgId).delete();

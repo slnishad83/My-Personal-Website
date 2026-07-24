@@ -73,7 +73,14 @@
     var av = CC.$('incoming-call-avatar');
     if (av) {
       if (data.fromUserPhoto) {
-        av.innerHTML = '<img src="' + CC.escHtml(data.fromUserPhoto) + '" class="w-full h-full rounded-full object-cover" alt="" onerror="this.parentElement.textContent=\'' + CC.escHtml(name[0]?.toUpperCase() || '?') + '\'">';
+        av.innerHTML = '<img src="' + CC.escHtml(data.fromUserPhoto) + '" class="w-full h-full rounded-full object-cover" alt="">';
+        var _avImg = av.querySelector('img');
+        if (_avImg) {
+          _avImg.addEventListener('error', function () {
+            av.textContent = name[0]?.toUpperCase() || '?';
+            av.className = 'w-24 h-24 rounded-full border-4 border-green-500/30 flex items-center justify-center text-4xl bg-white/10';
+          }, { once: true });
+        }
         av.className = 'w-24 h-24 rounded-full border-4 border-green-500/30 overflow-hidden bg-white/10';
       } else {
         av.textContent = name[0]?.toUpperCase() || '?';

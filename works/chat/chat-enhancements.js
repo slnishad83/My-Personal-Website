@@ -183,7 +183,8 @@
 
   function attachSeenByListener(msgEl) {
     var msgId = msgEl.dataset.messageId;
-    if (!msgId || _snapListeners[msgId]) return;
+    var chatId = msgEl.dataset.chatId || (window.currentChat && window.currentChat.id);
+    if (!msgId || !chatId || _snapListeners[msgId]) return;
     if (!window.db) return;
 
     var keys = Object.keys(_snapListeners);
@@ -193,7 +194,7 @@
       delete _snapListeners[oldest];
     }
 
-    var unsub = window.db.collection('messages').doc(msgId)
+    var unsub = window.db.collection('messages').doc(chatId).collection('items').doc(msgId)
       .onSnapshot(
         function (snap) {
           if (!snap || !snap.exists) return;
@@ -225,8 +226,9 @@
 
     function markOneRead(msgId) {
       var uid = window.currentUser && window.currentUser.uid;
-      if (!msgId || !uid || !window.db || !window.firebase) return;
-      window.db.collection('messages').doc(msgId).get()
+      var chatId = window.currentChat && window.currentChat.id;
+      if (!msgId || !chatId || !uid || !window.db || !window.firebase) return;
+      window.db.collection('messages').doc(chatId).collection('items').doc(msgId).get()
         .then(function (doc) {
           if (!doc || !doc.exists) return;
           var d = doc.data() || {};
@@ -236,7 +238,7 @@
           var upd = {};
           upd['readBy.'   + uid] = window.firebase.firestore.FieldValue.serverTimestamp();
           upd['openedBy.' + uid] = window.firebase.firestore.FieldValue.serverTimestamp();
-          window.db.collection('messages').doc(msgId).update(upd).catch(function () {});
+          window.db.collection('messages').doc(chatId).collection('items').doc(msgId).update(upd).catch(function () {});
         })
         .catch(function () {});
     }

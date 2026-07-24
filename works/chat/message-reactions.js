@@ -473,6 +473,14 @@
 
     if (_reactionUnsubscribes[msgId]) return;
 
+    var _MAX_REACTION_LISTENERS = 30;
+    var keys = Object.keys(_reactionUnsubscribes);
+    if (keys.length >= _MAX_REACTION_LISTENERS) {
+      var oldest = keys[0];
+      try { _reactionUnsubscribes[oldest](); } catch (_) {}
+      delete _reactionUnsubscribes[oldest];
+    }
+
     _reactionUnsubscribes[msgId] = d.collection('messages').doc(msgId)
       .onSnapshot(function (snap) {
         if (!snap.exists) return;
@@ -514,6 +522,8 @@
     _attachReactionListeners(container);
   }
 
+  var _reactionObserver = null;
+
   function wireReactionPostRender() {
     if (typeof MutationObserver === 'undefined') return;
     var container = document.getElementById('messagesContainer') || document.getElementById('messagesList');
@@ -522,7 +532,9 @@
       return;
     }
 
-    var observer = new MutationObserver(function (mutations) {
+    if (_reactionObserver) { _reactionObserver.disconnect(); _reactionObserver = null; }
+
+    _reactionObserver = new MutationObserver(function (mutations) {
       mutations.forEach(function (m) {
         m.addedNodes.forEach(function (node) {
           if (node.nodeType !== 1) return;
@@ -535,7 +547,7 @@
       });
     });
 
-    observer.observe(container, { childList: true, subtree: true });
+    _reactionObserver.observe(container, { childList: true, subtree: true });
 
     container.querySelectorAll('[data-message-id]').forEach(function (el) {
       subscribeToReactions(el.dataset.messageId);
