@@ -101,7 +101,7 @@
 
     const chat = document.getElementById('wc-chat');
     if (chat) {
-      chat.innerHTML += `<div style="text-align:right;margin-bottom:8px"><span style="display:inline-block;padding:8px 16px;border-radius:12px;background:var(--primary);color:var(--on-primary);font-size:14px;font-weight:700">${word.toUpperCase()}</span></div>`;
+      chat.innerHTML += `<div style="text-align:right;margin-bottom:8px"><span style="display:inline-block;padding:8px 16px;border-radius:12px;background:var(--primary);color:var(--on-primary);font-size:14px;font-weight:700">${word.toUpperCase().replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</span></div>`;
       chat.scrollTop = chat.scrollHeight;
     }
 

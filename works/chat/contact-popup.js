@@ -54,7 +54,7 @@
               avatarHTML +
               '<div class="text-center">' +
                 '<h3 class="text-lg font-bold text-on-surface">' + escH(senderName) + '</h3>' +
-                '<p class="text-xs text-on-surface-variant">' + (email || 'No email') + '</p>' +
+                '<p class="text-xs text-on-surface-variant">' + escH(email || 'No email') + '</p>' +
               '</div>' +
             '</div>' +
             (infoRows ? '<div class="cp-info-section">' + infoRows + '</div>' : '') +

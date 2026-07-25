@@ -24,7 +24,10 @@
       }
     },
 
+    _inputObserverAttached: false,
     _observeInput() {
+      if (this._inputObserverAttached) return;
+      this._inputObserverAttached = true;
       document.addEventListener('input', (e) => {
         if (e.target.id === 'message-input' || e.target.getAttribute('contenteditable') === 'true') {
           const text = (e.target.value || e.target.textContent || '').trim();

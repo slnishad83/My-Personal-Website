@@ -181,7 +181,7 @@
         var name = u.displayName || u.email || 'Unknown';
         var initials = (name[0] || '?').toUpperCase();
         var avatarHtml = u.photoURL
-          ? '<img src="' + u.photoURL + '" class="w-11 h-11 rounded-full object-cover" alt="" loading="lazy" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'flex\'"><div class="w-11 h-11 rounded-full bg-primary/15 text-primary flex items-center justify-center font-bold text-sm" style="display:none">' + CC.escHtml(initials) + '</div>'
+          ? '<img src="' + CC.escHtml(u.photoURL) + '" class="w-11 h-11 rounded-full object-cover" alt="" loading="lazy" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'flex\'"><div class="w-11 h-11 rounded-full bg-primary/15 text-primary flex items-center justify-center font-bold text-sm" style="display:none">' + CC.escHtml(initials) + '</div>'
           : '<div class="w-11 h-11 rounded-full bg-primary/15 text-primary flex items-center justify-center font-bold text-sm">' + CC.escHtml(initials) + '</div>';
         html += '<div class="flex items-center gap-3 px-4 py-3 hover:bg-surface-variant/50 rounded-xl cursor-pointer transition-colors" onclick="selectCallContact(\'' + CC.escHtml(uId) + '\',\'' + CC.escHtml(name.replace(/'/g, "\\'")) + '\',\'' + CC.escHtml(u.photoURL || '') + '\')">' +
           avatarHtml +

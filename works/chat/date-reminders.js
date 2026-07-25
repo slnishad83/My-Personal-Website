@@ -176,7 +176,7 @@
       const hasDate = d.birthday || d.anniversary;
       html += `<div style="display:flex;align-items:center;gap:10px;padding:10px;border-radius:10px;background:var(--surface-container-low,rgba(0,0,0,0.03));margin-bottom:4px">
         <div style="width:32px;height:32px;border-radius:50%;overflow:hidden;flex-shrink:0">
-          ${c.photoURL ? `<img src="${c.photoURL}" style="width:100%;height:100%;object-fit:cover">` : `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:var(--outline-variant,rgba(0,0,0,0.1));font-size:12px;font-weight:700">${c.initials || '?'}</div>`}
+          ${c.photoURL ? `<img src="${(c.photoURL || '').replace(/&/g,'&amp;').replace(/"/g,'&quot;')}" style="width:100%;height:100%;object-fit:cover">` : `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:var(--outline-variant,rgba(0,0,0,0.1));font-size:12px;font-weight:700">${c.initials || '?'}</div>`}
         </div>
         <div style="flex:1;min-width:0">
           <div style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escHtml(c.name)}</div>

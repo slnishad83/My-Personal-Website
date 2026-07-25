@@ -175,7 +175,8 @@
     const btn = document.createElement('button');
     btn.style.cssText = 'display:flex;align-items:center;gap:8px;padding:12px 16px;border:none;background:transparent;color:var(--on-surface);font-size:14px;font-weight:600;cursor:pointer;width:100%;text-align:left;border-radius:0';
     const mood = _isMoodExpired() ? '' : _getMood();
-    btn.innerHTML = `<span class="material-symbols-outlined" style="font-size:20px">mood</span>Set Mood ${mood || ''}`;
+    const _s = window.escHtml || function(s) { return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); };
+    btn.innerHTML = `<span class="material-symbols-outlined" style="font-size:20px">mood</span>Set Mood ${_s(mood || '')}`;
     btn.onclick = () => { _removeCtxMenu(); openMoodPicker(); };
     const cancelBtn = menu.querySelector('[onclick*="_removeCtxMenu"]');
     if (cancelBtn) menu.insertBefore(btn, cancelBtn);

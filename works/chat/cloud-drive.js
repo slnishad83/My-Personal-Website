@@ -120,7 +120,7 @@
 
       html += `<div class="drive-file-item" style="display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:10px;cursor:pointer;transition:background 0.15s" onmouseover="this.style.background='var(--surface-container,rgba(0,0,0,0.06))'" onmouseout="this.style.background='transparent'" onclick="_downloadDriveFile('${source}','${file.id}','${_escapeStr(name)}',this)">`;
       if (thumb) {
-        html += `<img src="${thumb}" style="width:40px;height:40px;border-radius:6px;object-fit:cover">`;
+        html += `<img src="${_escapeHtml(thumb)}" style="width:40px;height:40px;border-radius:6px;object-fit:cover">`;
       } else {
         html += `<div style="width:40px;height:40px;border-radius:6px;background:var(--surface-container,rgba(0,0,0,0.06));display:flex;align-items:center;justify-content:center"><span class="material-symbols-outlined" style="font-size:20px;color:var(--primary)">${icon}</span></div>`;
       }
@@ -235,5 +235,5 @@
   }
 
   function _escapeStr(s) { return s.replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, '\\"').replace(/\n/g, '\\n').replace(/\r/g, '\\r'); }
-  function _escapeHtml(s) { return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+  function _escapeHtml(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
 })();

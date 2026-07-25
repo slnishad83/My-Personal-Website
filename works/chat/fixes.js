@@ -397,6 +397,9 @@
   // ============================================================
   function _closeViewer() {
     const ov = document.getElementById("_fv"); if (!ov) return;
+    if (_docKeyHandler) { document.removeEventListener("keydown", _docKeyHandler); _docKeyHandler = null; }
+    if (_docMouseMoveHandler) { document.removeEventListener("mousemove", _docMouseMoveHandler); _docMouseMoveHandler = null; }
+    if (_docMouseUpHandler) { document.removeEventListener("mouseup", _docMouseUpHandler); _docMouseUpHandler = null; }
     const vid = document.getElementById("_fv_video");
     if (vid) { try { vid.pause(); } catch(_){} vid.src = ""; }
     const doc = document.getElementById("_fv_doc"); if (doc) doc.src = "about:blank";
@@ -485,6 +488,7 @@
       if (e.key === "ArrowLeft")  _navigate(-1);
       if (e.key === "ArrowRight") _navigate(1);
     };
+    document.removeEventListener("keydown", _docKeyHandler);
     document.addEventListener("keydown", _docKeyHandler);
 
     img.addEventListener("wheel", function (e) { e.preventDefault(); _zoom = Math.max(1, Math.min(6, _zoom + (e.deltaY > 0 ? -0.2 : 0.2))); if (_zoom <= 1) { _panX = 0; _panY = 0; } _applyImgT(); }, { passive: false });
@@ -492,6 +496,8 @@
     img.addEventListener("mousedown", function (e) { if (_zoom <= 1) return; e.preventDefault(); _isDragging = true; _dragStartX = e.clientX; _dragStartY = e.clientY; _dragBasePanX = _panX; _dragBasePanY = _panY; img.style.cursor = "grabbing"; });
     _docMouseMoveHandler = function (e) { if (!_isDragging) return; _panX = _dragBasePanX + (e.clientX - _dragStartX) / _zoom; _panY = _dragBasePanY + (e.clientY - _dragStartY) / _zoom; _applyImgT(); };
     _docMouseUpHandler = function () { if (!_isDragging) return; _isDragging = false; img.style.cursor = _zoom > 1 ? "grab" : "zoom-in"; };
+    document.removeEventListener("mousemove", _docMouseMoveHandler);
+    document.removeEventListener("mouseup", _docMouseUpHandler);
     document.addEventListener("mousemove", _docMouseMoveHandler);
     document.addEventListener("mouseup", _docMouseUpHandler);
 

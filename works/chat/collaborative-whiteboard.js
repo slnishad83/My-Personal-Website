@@ -7,6 +7,7 @@
   let _wbHistory = [], _wbRedoStack = [];
   let _wbUnsubscribe = null;
   let _wbSessionId = null;
+  let _wbThrottledResize = null;
 
   window.openWhiteboard = function() {
     if (!App.currentChat) { showToast('Open a chat first', 'info'); return; }
@@ -67,7 +68,8 @@
     _wbCanvas = document.getElementById('wb-canvas');
     _wbCtx = _wbCanvas.getContext('2d');
     _resizeWbCanvas();
-    window.addEventListener('resize', App.throttle(_resizeWbCanvas, 200));
+    _wbThrottledResize = App.throttle(_resizeWbCanvas, 200);
+    window.addEventListener('resize', _wbThrottledResize);
 
     _wbCanvas.addEventListener('pointerdown', _wbPointerDown);
     _wbCanvas.addEventListener('pointermove', _wbPointerMove);
@@ -243,7 +245,7 @@
   window.closeWhiteboard = function() {
     const overlay = document.getElementById('whiteboard-overlay');
     if (overlay) overlay.remove();
-    window.removeEventListener('resize', _resizeWbCanvas);
+    if (_wbThrottledResize) { window.removeEventListener('resize', _wbThrottledResize); _wbThrottledResize = null; }
     _wbStopFirebaseSync();
     _wbCanvas = null;
     _wbCtx = null;

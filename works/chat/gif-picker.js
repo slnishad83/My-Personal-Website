@@ -197,7 +197,7 @@
     if (!append) container.innerHTML = '';
     if (!gifs || gifs.length === 0) {
       if (!append) {
-        container.innerHTML = '<div class="gif-empty">No GIFs found' + (_query ? ' for "' + _query + '"' : '') + '</div>';
+        container.innerHTML = '<div class="gif-empty">No GIFs found' + (_query ? ' for "' + (_query).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;') + '"' : '') + '</div>';
       }
       return;
     }
@@ -207,7 +207,7 @@
       item.setAttribute('tabindex', '0');
       item.setAttribute('role', 'button');
       item.setAttribute('aria-label', 'Select GIF');
-      item.innerHTML = '<img src="' + url + '" loading="lazy" alt="GIF"><div class="gif-check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>';
+      item.innerHTML = '<img src="' + (url).replace(/&/g,'&amp;').replace(/"/g,'&quot;') + '" loading="lazy" alt="GIF"><div class="gif-check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>';
       item.addEventListener('click', function() {
         _selectGif(url, item);
       });
@@ -237,7 +237,7 @@
     var overlay = document.createElement('div');
     overlay.className = 'gif-preview-overlay';
     overlay.id = 'gif-preview-overlay';
-    overlay.innerHTML = '<img src="' + url + '" alt="GIF Preview">';
+    overlay.innerHTML = '<img src="' + (url).replace(/&/g,'&amp;').replace(/"/g,'&quot;') + '" alt="GIF Preview">';
     overlay.onclick = function() { overlay.remove(); };
     document.body.appendChild(overlay);
     requestAnimationFrame(function() { overlay.classList.add('open'); });

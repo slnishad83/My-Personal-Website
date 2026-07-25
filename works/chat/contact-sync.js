@@ -132,7 +132,7 @@ const ContactSync = (() => {
           for (const m of matched) {
             const initial = (m.name || '?')[0].toUpperCase();
             html += `<div style="display:flex;align-items:center;gap:12px;padding:10px;border-radius:12px;background:var(--surface-container);margin-bottom:6px;cursor:pointer" onclick="document.getElementById('find-friends-overlay')?.remove(); if(window.App) { /* open chat */ }">
-              ${m.photoURL ? `<img src="${m.photoURL}" style="width:40px;height:40px;border-radius:50%;object-fit:cover">` : `<div style="width:40px;height:40px;border-radius:50%;background:var(--primary-container);color:var(--primary);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:16px">${initial}</div>`}
+              ${m.photoURL ? `<img src="${(m.photoURL || '').replace(/&/g,'&amp;').replace(/"/g,'&quot;')}" style="width:40px;height:40px;border-radius:50%;object-fit:cover">` : `<div style="width:40px;height:40px;border-radius:50%;background:var(--primary-container);color:var(--primary);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:16px">${initial}</div>`}
               <div style="flex:1"><p style="margin:0;font-size:14px;font-weight:600;color:var(--on-surface)">${_escHtml(m.name)}</p><p style="margin:2px 0 0;font-size:11px;color:var(--on-surface-variant)">${_escHtml(m.phone)}</p></div>
               <span class="material-symbols-outlined" style="color:var(--primary);font-size:20px">chat</span>
             </div>`;
