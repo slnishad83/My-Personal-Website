@@ -707,7 +707,6 @@ html:not(.dark) .wa-filter-custom input {
   #sidebar { width: 72px !important; }
   #sidebar [class~="xl:block"] { display: none !important; }
   #sidebar button { justify-content: center !important; padding-left: 0 !important; padding-right: 0 !important; }
-  #detail-panel { display: none !important; }
 }
 
 @media (min-width: 1280px) {
@@ -1462,7 +1461,7 @@ html #messages-wrap::-webkit-scrollbar-track { background: var(--surface-bright)
   #app { height: 100dvh !important; }
 }
 @media (max-width: 767px) {
-  #chat-list-sidebar { overflow: hidden !important; }
+  #chat-list-sidebar { overflow-x: hidden !important; overflow-y: auto !important; }
 }
 
 /* ── B3: Firefox backdrop-filter fallback ──────────────────── */
@@ -2170,12 +2169,13 @@ html:not(.dark) #desktop-context-menu,
 }
 
 /* Constrain message reading column inside chat area */
-#messages-wrap {
+.messages-visible #messages-wrap,
+#messages-wrap:not(.hidden) {
   display: flex !important;
   flex-direction: column !important;
 }
 #messages-wrap > * {
-  max-width: 850px !important;
+  max-width: min(850px, 100%) !important;
   width: 100% !important;
   margin-left: auto !important;
   margin-right: auto !important;
@@ -2482,7 +2482,7 @@ html:not(.dark) #desktop-context-menu,
   #bottom-nav { padding-bottom: env(safe-area-inset-bottom) !important; }
   #chat-list-sidebar > div:first-child { padding-top: max(16px, env(safe-area-inset-top)) !important; }
   /* Remove browser chrome accommodations not needed in standalone */
-  html { overflow: hidden !important; }
+  html { overflow: clip !important; }
 }
 
 /* ── Capacitor / Native wrapper ───────────────────────────────── */

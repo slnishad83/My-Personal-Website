@@ -622,6 +622,14 @@ html.dark {
   --brand-soft: rgba(0,168,132,0.12);
   --brand-soft-hover: rgba(0,168,132,0.2);
   --panel-soft: #111b21;
+  --surface: #111b21;
+  --on-error: #ff6b6b;
+  --on-tertiary: #ffffff;
+  --warning: #f5a623;
+  --red: #ff6b6b;
+  --green: #31a24c;
+  --blue: #53bdeb;
+  --yellow: #f5a623;
 }
 
 /* ── Focus Visible (WCAG 2.4.7) ── */

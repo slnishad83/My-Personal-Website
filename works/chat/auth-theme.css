@@ -57,7 +57,8 @@
 }
 
 :root[data-theme="dark"],
-body.dark {
+body.dark,
+html.dark {
   --page-bg: #0b141a;
   --page-accent: #111b21;
   --surface: #111b21;

@@ -3206,12 +3206,12 @@ html:not(.dark) #playlist-detail-overlay > div {
 }
 
 /* ── Z-INDEX FIXES: prevent layer conflicts ──────────────── */
-.wa-filter-overflow-menu { z-index: 8500 !important; }
-#jumpToBottomBtn { z-index: 8500 !important; }
-.feat-modal-overlay { z-index: 8800 !important; }
-#offline-pending-indicator { z-index: 8900 !important; }
-.push-prompt-banner { z-index: 8950 !important; }
-.tasks-panel { z-index: 8000 !important; }
+.wa-filter-overflow-menu { z-index: 85 !important; }
+#jumpToBottomBtn { z-index: 49 !important; }
+.feat-modal-overlay { z-index: 102 !important; }
+#offline-pending-indicator { z-index: 88 !important; }
+.push-prompt-banner { z-index: 89 !important; }
+.tasks-panel { z-index: 82 !important; }
 [data-tooltip]::after { z-index: 9500 !important; }
 
 /* ── SAFE AREAS: fixed-position elements ─────────────────── */
@@ -3306,23 +3306,7 @@ html.dark .cf-pill-accepted { color: #81c995; background: rgba(129,201,149,0.15)
   }
 }
 
-/* ── TABLET DETAIL PANEL: prevent conflict ───────────────── */
-@media (min-width: 1024px) and (max-width: 1279px) {
-  #detail-panel {
-    display: none !important;
-  }
-  #detail-panel.detail-panel-visible {
-    display: flex !important;
-    position: fixed;
-    right: 0;
-    top: 0;
-    bottom: 0;
-    z-index: 100;
-    width: min(380px, 50vw);
-    background: var(--background);
-    border-left: 1px solid var(--border);
-  }
-}
+/* ── TABLET DETAIL PANEL: handled in chat-theme.css D-C6 ──────── */
 
 /* ── LOADING STATES: respect reduced motion ───────────────── */
 .loading-spinner,
@@ -3366,12 +3350,10 @@ html.dark .cf-pill-accepted { color: #81c995; background: rgba(129,201,149,0.15)
    Ensures ALL features work on EVERY device and screen size
    ═══════════════════════════════════════════════════════════════ */
 
-/* ── Touch targets: minimum 44px everywhere ── */
-button, [role="button"], a, input[type="checkbox"], input[type="radio"],
-.feat-nav-btn, .bottom-nav-item, .calc-btn, .calc-share-btn,
-.wb-tool-btn, .ann-tool-btn, .trivia-opt,
-.chat-header-btn, .msg-action-btn,
-.material-symbols-outlined, .material-symbols-rounded {
+/* ── Touch targets: minimum 44px on primary interactive elements ── */
+.bottom-nav-item, .chat-header-btn, .msg-action-btn,
+.feat-nav-btn, .calc-btn, .calc-share-btn,
+.wb-tool-btn, .ann-tool-btn, .trivia-opt {
   min-height: 44px;
   min-width: 44px;
 }
