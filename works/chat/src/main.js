@@ -7,16 +7,21 @@
  */
 
 /* ── CSS Imports (Vite handles bundling + minification) ─── */
-import './src/styles/main.css';
+import '../app.css';
+import '../redesign-base.css';
 
 /* ── Core Modules ───────────────────────────────────────── */
 import { escHtml, throttle, debounce, on, emit, $, $$ } from './src/core/utils.js';
 import * as Security from './src/core/security.js';
-import { showToast, showModal, confirm, showBottomSheet, showLoading } from './src/ui/components.js';
+import { showToast, showModal, confirm as uiConfirm, showBottomSheet, showLoading } from './src/ui/components.js';
 
 /* ── Firebase (loaded via compat for backward compat) ────── */
 import { FIREBASE_CONFIG } from './firebase-config.js';
-firebase.initializeApp(FIREBASE_CONFIG);
+
+/* ── Firebase Init (guarded against double init) ─────────── */
+if (!firebase.apps.length) {
+  firebase.initializeApp(FIREBASE_CONFIG);
+}
 const auth = firebase.auth();
 const db = firebase.firestore();
 const storage = firebase.storage();
@@ -51,7 +56,7 @@ window.App = window.App || {};
 Object.assign(window.App, {
   db, auth, storage,
   escHtml, throttle, debounce, on, emit,
-  showToast, showModal, confirm,
+  showToast, showModal, confirm: uiConfirm,
   uid: () => window.currentUser?.uid || null,
 });
 
@@ -69,36 +74,6 @@ const isNativeIOSApp =
 if (isNativeAndroidApp) document.body.classList.add('native-android');
 if (isNativeIOSApp) document.body.classList.add('native-ios');
 
-/* ── Feature Module Lazy Loading ────────────────────────── */
-const _loadedModules = new Set();
-const _loadingModules = new Map();
-
-export async function loadModule(name) {
-  if (_loadedModules.has(name)) return true;
-  if (_loadingModules.has(name)) return _loadingModules.get(name);
-
-  const promise = import(`./src/features/${name}.js`)
-    .then(mod => {
-      _loadedModules.add(name);
-      _loadingModules.delete(name);
-      return mod;
-    })
-    .catch(e => {
-      console.warn(`[ModuleLoader] Failed to load "${name}":`, e);
-      _loadingModules.delete(name);
-      return null;
-    });
-
-  _loadingModules.set(name, promise);
-  return promise;
-}
-
-/* ── Eager-load critical modules ────────────────────────── */
-const CRITICAL_MODULES = [
-  'messaging', 'calls', 'groups', 'notifications', 'presence'
-];
-CRITICAL_MODULES.forEach(m => loadModule(m));
-
 /* ── Signal App Ready ───────────────────────────────────── */
 document.dispatchEvent(new CustomEvent('nsl:app-ready'));
 
@@ -109,4 +84,3 @@ if ('performance' in window) {
 
 /* ── Exports for backward compat ────────────────────────── */
 window.Security = Security;
-window.loadModule = loadModule;

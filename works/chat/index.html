@@ -9,7 +9,6 @@
   <meta name="theme-color" content="#11131c" id="theme-color-meta">
   <meta name="description" content="NSL Chat — Modern team messaging by Nishad SL">
   <meta name="robots" content="noindex, nofollow">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self' https: blob: data:; script-src 'self' https://www.gstatic.com 'unsafe-inline'; style-src 'self' https://fonts.googleapis.com 'unsafe-inline'; img-src 'self' https: blob: data:; font-src 'self' https://fonts.gstatic.com; connect-src 'self' https: wss://*.firebaseio.com https://*.googleapis.com https://*.firebaseio.com https://*.firebaseapp.com https://us-central1-*.cloudfunctions.net https://asia-south1-*.cloudfunctions.net; frame-src 'self' https://*.firebaseapp.com https://*.youtube.com https://youtube.com; worker-src 'self' blob:; frame-ancestors 'self'; form-action 'self'; base-uri 'self'; upgrade-insecure-requests;">
   <link rel="canonical" href="https://nishadsl.com/works/chat">
   <meta property="og:title" content="NSL Chat">
   <meta property="og:description" content="Modern team messaging by Nishad SL">
@@ -104,7 +103,7 @@
   <div id="app" class="hidden w-full h-full flex relative bg-background transition-all duration-300">
 
     <!-- 💡 COLUMN 1: SIDE NAVBAR NAVIGATION (Global desktop/tablet view) -->
-    <nav id="sidebar" aria-label="Primary navigation" class="hidden lg:flex flex-col h-full w-20 xl:w-64 bg-surface-container-low border-r border-outline-variant/30 sticky left-0 top-0 z-40 transition-all duration-300">
+    <nav id="sidebar" aria-label="Primary navigation" class="hidden md:flex flex-col h-full w-20 xl:w-64 bg-surface-container-low border-r border-outline-variant/30 sticky left-0 top-0 z-40 transition-all duration-300">
       <!-- Brand Info -->
       <div class="p-6 flex items-center gap-3">
         <div class="w-10 h-10 rounded-xl bg-primary-fixed flex items-center justify-center text-on-primary shadow-lg shadow-primary-fixed/20">
@@ -445,7 +444,7 @@
 
 
       <!-- Attachment popover popup menu — WhatsApp-style 3x2 grid -->
-      <div class="absolute bottom-20 left-6 bg-surface-container-low border border-outline-variant/40 p-4 rounded-2xl shadow-[0_8px_40px_rgba(0,0,0,0.35)] backdrop-blur-sm hidden z-30 w-[260px] transition-all duration-200 origin-bottom-left" id="attach-menu" role="menu" aria-label="Attach file" style="transform:scale(0.95);opacity:0;">
+      <div class="absolute bottom-20 left-6 bg-surface-container-low border border-outline-variant/40 p-4 rounded-2xl shadow-[0_8px_40px_rgba(0,0,0,0.35)] backdrop-blur-sm hidden z-30 w-[260px] transition-all duration-200 origin-bottom-left" id="attach-menu" role="menu" aria-label="Attach file">
         <div class="grid grid-cols-3 gap-3">
           <button class="flex flex-col items-center gap-1.5 group" data-action="attachPhoto" role="menuitem">
             <div class="w-12 h-12 rounded-2xl bg-[#7C4DFF] flex items-center justify-center transition-transform group-hover:scale-105 group-active:scale-95">
@@ -517,7 +516,7 @@
       </div>
 
       <!-- Emoji Picker — WhatsApp-style polished panel -->
-      <div class="absolute bottom-20 right-6 bg-surface-container-low border border-outline-variant/40 rounded-2xl shadow-[0_8px_40px_rgba(0,0,0,0.35)] backdrop-blur-sm flex flex-col hidden z-30 w-[320px] h-[400px] overflow-hidden transition-all duration-200 origin-bottom-right" id="emoji-picker" role="dialog" aria-modal="true" style="transform:scale(0.95);opacity:0;">
+      <div class="absolute bottom-20 right-6 bg-surface-container-low border border-outline-variant/40 rounded-2xl shadow-[0_8px_40px_rgba(0,0,0,0.35)] backdrop-blur-sm flex flex-col hidden z-30 w-[320px] h-[400px] overflow-hidden transition-all duration-200 origin-bottom-right" id="emoji-picker" role="dialog" aria-modal="true">
         <div class="px-3 pt-3 pb-2">
           <div class="relative">
             <span class="material-symbols-outlined absolute left-2.5 top-1/2 -translate-y-1/2 text-on-surface-variant/60 text-[18px]">search</span>
@@ -832,7 +831,7 @@
                     <p class="text-xs text-on-surface-variant" id="global-mute-label">All sounds on</p>
                   </div>
                 </div>
-                <button class="relative w-11 h-6 rounded-full transition-colors duration-200 cursor-pointer flex-shrink-0" id="global-mute-toggle" data-action="toggleGlobalMute" style="background:var(--primary)">
+                <button class="relative w-11 h-6 rounded-full transition-colors duration-200 cursor-pointer flex-shrink-0" id="global-mute-toggle" data-action="toggleGlobalMute" style="background:var(--primary)" aria-label="Notification sounds" aria-pressed="true">
                   <span class="absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform duration-200" id="global-mute-knob" style="transform:translateX(20px)"></span>
                 </button>
               </div>
@@ -1247,7 +1246,7 @@
   </div>
 
   <!-- Language Selector Overlay -->
-  <div class="overlay fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center hidden" id="language-overlay" data-action="dismissOnBackdrop" data-action-arg="language-overlay">
+  <div class="overlay fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center hidden" id="language-overlay" data-action="dismissOnBackdrop" data-action-arg="language-overlay" role="dialog" aria-modal="true" aria-label="Select language">
     <div class="bg-surface-container border border-outline-variant/30 rounded-2xl w-full max-w-sm shadow-2xl p-6 m-4">
       <div class="flex items-center justify-between mb-4">
         <h3 class="font-bold text-lg text-on-surface">App Language</h3>
@@ -1378,7 +1377,7 @@
   <!-- ═══ END PERMISSION MODALS ═══ -->
 
   <!-- Global Search Modal -->
-  <div id="globalSearchModal" class="overlay fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex flex-col hidden" style="display:none" role="dialog" aria-modal="true" aria-label="Search messages">
+  <div id="globalSearchModal" class="overlay fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex flex-col hidden" role="dialog" aria-modal="true" aria-label="Search messages">
     <div class="bg-surface-container w-full max-w-lg mx-auto mt-auto mb-0 sm:mb-auto rounded-t-2xl sm:rounded-2xl shadow-2xl flex flex-col max-h-[85vh] overflow-hidden">
       <div class="flex items-center gap-3 p-4 border-b border-outline-variant/10">
         <span class="material-symbols-outlined text-on-surface-variant">search</span>

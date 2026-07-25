@@ -367,6 +367,16 @@ function initFirebase() {
    3. BOOT SEQUENCE
    ══════════════════════════════════════════════════ */
 document.addEventListener('DOMContentLoaded', () => {
+  document.body.classList.remove('modal-open');
+  document.body.style.overflow = '';
+
+  setTimeout(function() {
+    if (!App._booted) {
+      console.warn('bootApp fallback: forcing UI reveal after 10s timeout');
+      bootApp();
+    }
+  }, 10000);
+
   applyTheme(App.theme);
   initFirebase();
   checkSession();
@@ -1417,6 +1427,10 @@ function checkSession() {
           mergeOrphanedChats(App.currentUser.uid, App.currentUser.email);
           ensureE2EKeyPair();
           setLoadingStatus('Ready');
+          setTimeout(bootApp, 400);
+        }).catch((err) => {
+          console.warn('loadUserProfile failed, booting in degraded mode:', err);
+          setLoadingStatus('Ready (degraded)');
           setTimeout(bootApp, 400);
         });
       } else {

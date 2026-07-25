@@ -71,7 +71,11 @@
     .color-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}
     .color-dot{width:36px;height:36px;border-radius:50%;cursor:pointer;border:3px solid transparent;transition:border-color 0.15s}
     .color-dot.selected{border-color:var(--text)}
-    @media(max-width:500px){.day-cell{min-height:50px}.event-dot{display:none}}
+    @media(max-width:500px){.day-cell{min-height:50px}.event-dot{width:4px;height:4px}}
+    .btn-cancel{padding:8px 16px;border-radius:8px;border:1px solid var(--outline,#5f6368);background:transparent;color:var(--on-surface,#e1e1e6);cursor:pointer;font-size:14px;transition:opacity 0.2s}
+    .btn-cancel:hover{opacity:0.8}
+    .btn-save{padding:8px 16px;border-radius:8px;border:none;background:var(--primary,#6750A4);color:var(--on-primary,#fff);cursor:pointer;font-size:14px;font-weight:500;transition:opacity 0.2s}
+    .btn-save:hover{opacity:0.85}
 
     /* Event styling fixes for dark mode */
     body.dark .event-dot {

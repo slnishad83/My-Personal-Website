@@ -104,7 +104,7 @@
     try { snap = await ref.get(); } catch (_) {
       // try alternate field names
       try {
-        ref = db.collection('messages').where('chatID','==', chatId).orderBy('timestamp','desc').limit(PAGE_SIZE);
+        ref = db.collection('messages').where('chatId','==', chatId).orderBy('createdAt','desc').limit(PAGE_SIZE);
         if (_lastDocs[chatId]) ref = ref.startAfter(_lastDocs[chatId]);
         snap = await ref.get();
       } catch (e2) { console.warn('[MsgSearch] firestore error', chatId, e2.message); return []; }

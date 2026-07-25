@@ -62,21 +62,28 @@
   }
 
   /* ─── Network recovery: nudge error bubbles on reconnect ────── */
+  var _onOnline = null;
+  var _onOffline = null;
+  var _onDownloadClick = null;
+  var _onFileChange = null;
+
   function initNetworkRecovery() {
     let wasOffline = !navigator.onLine;
-    window.addEventListener('online', () => {
+    _onOnline = function () {
       if (!wasOffline) return;
       wasOffline = false;
       document.querySelectorAll('.tc-attach-status--error').forEach(el => {
         el.textContent = 'Reconnected — please resend';
       });
-    });
-    window.addEventListener('offline', () => { wasOffline = true; });
+    };
+    _onOffline = function () { wasOffline = true; };
+    window.addEventListener('online', _onOnline);
+    window.addEventListener('offline', _onOffline);
   }
 
   /* ─── Download progress via XHR ────────────────────────────── */
   function initDownloadProgress() {
-    document.addEventListener('click', e => {
+    _onDownloadClick = function (e) {
       const link = e.target.closest('a.pdf-attachment-card, a.attachment-download, .tc-download-btn');
       if (!link || !link.href || !/^https?:\/\//.test(link.href)) return;
       e.preventDefault();
@@ -118,13 +125,14 @@
         if (bar) { bar.style.width = '100%'; bar.style.background = '#ef4444'; }
       };
       xhr.send();
-    });
+    };
+    document.addEventListener('click', _onDownloadClick);
   }
 
   /* ─── File size validation ──────────────────────────────────── */
   function initFileValidation() {
     const MAX_BYTES = 100 * 1024 * 1024; // 100 MB
-    document.addEventListener('change', e => {
+    _onFileChange = function (e) {
       if (e.target.type !== 'file') return;
       const over = Array.from(e.target.files || []).filter(f => f.size > MAX_BYTES);
         if (over.length) {
@@ -133,7 +141,8 @@
         else console.warn('[AttachmentReliability] ' + msg);
         e.target.value = '';
       }
-    });
+    };
+    document.addEventListener('change', _onFileChange);
   }
 
   function init() {
@@ -143,6 +152,15 @@
     initFileValidation();
   }
 
+  function destroy() {
+    if (_onOnline) { window.removeEventListener('online', _onOnline); _onOnline = null; }
+    if (_onOffline) { window.removeEventListener('offline', _onOffline); _onOffline = null; }
+    if (_onDownloadClick) { document.removeEventListener('click', _onDownloadClick); _onDownloadClick = null; }
+    if (_onFileChange) { document.removeEventListener('change', _onFileChange); _onFileChange = null; }
+  }
+
   if (document.readyState === 'complete') setTimeout(init, 0);
   else window.addEventListener('load', () => setTimeout(init, 0));
+
+  window.AttachmentReliability = { init, destroy };
 })();

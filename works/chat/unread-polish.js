@@ -8,6 +8,8 @@
   var _unreadState = {};
   var _badgeBatchTimer = null;
   var _audioCtx = null;
+  var _listeners = {};
+  var _initDone = false;
 
   var _db = function() { return App && App.db ? App.db : (typeof firebase !== 'undefined' ? firebase.firestore() : null); };
 
@@ -306,13 +308,13 @@
   }
 
   function _setupBadgeListener() {
-    document.addEventListener('tc:badge:update', function (e) {
+    _listeners.onBadgeUpdate = function (e) {
       var detail = e.detail || {};
       var total = Number(detail.unread || 0);
       updateTabBadge();
       if (total > 0) playUnreadSound(total);
-    });
-    document.addEventListener('tc:notification:message', function (e) {
+    };
+    _listeners.onNotificationMessage = function (e) {
       var detail = e.detail || {};
       if (detail.chatId) {
         var current = getUnreadCount(detail.chatId);
@@ -324,19 +326,23 @@
         updateUnreadBadges();
         playUnreadSound(getTotalUnread());
       }
-    });
-    document.addEventListener('tc:unread:clear-chat', function (e) {
+    };
+    _listeners.onClearChat = function (e) {
       var detail = e.detail || {};
       if (detail.chatId) clearUnread(detail.chatId);
-    });
-    document.addEventListener('tc:chat:read', function (e) {
+    };
+    _listeners.onChatRead = function (e) {
       var detail = e.detail || {};
       if (detail.chatId) clearUnread(detail.chatId);
-    });
+    };
+    document.addEventListener('tc:badge:update', _listeners.onBadgeUpdate);
+    document.addEventListener('tc:notification:message', _listeners.onNotificationMessage);
+    document.addEventListener('tc:unread:clear-chat', _listeners.onClearChat);
+    document.addEventListener('tc:chat:read', _listeners.onChatRead);
   }
 
   function _setupChatListFilter() {
-    document.addEventListener('click', function (e) {
+    _listeners.onClickFilter = function (e) {
       var chip = e.target.closest('[data-filter="unread"], [data-unread-filter]');
       if (!chip) return;
       var chatItems = document.querySelectorAll('.chat-item, [data-chat-id]');
@@ -349,8 +355,8 @@
           item.dataset._filteredByUnread = 'true';
         }
       }
-    });
-    document.addEventListener('click', function (e) {
+    };
+    _listeners.onClickAll = function (e) {
       var chip = e.target.closest('[data-filter="all"], [data-chat-filter]');
       if (!chip) return;
       var hidden = document.querySelectorAll('[data-_filtered-by-unread="true"]');
@@ -358,7 +364,9 @@
         hidden[i].style.display = '';
         delete hidden[i].dataset._filteredByUnread;
       }
-    });
+    };
+    document.addEventListener('click', _listeners.onClickFilter);
+    document.addEventListener('click', _listeners.onClickAll);
   }
 
   function _autoScrollToUnread() {
@@ -392,11 +400,11 @@
 
   function _setupVisibilityAutoRead() {
     var readTimer = null;
-    document.addEventListener('tc:chat:opened', function () {
+    _listeners.onChatOpened = function () {
       clearTimeout(readTimer);
       readTimer = setTimeout(_markVisibleMessagesRead, 1000);
-    });
-    window.addEventListener('scroll', App.throttle(function () {
+    };
+    _listeners.onScrollAutoRead = App.throttle(function () {
       var chatId = (window.currentChat && window.currentChat.id)
         || (window.App && window.App.currentChat && window.App.currentChat.id);
       if (!chatId) return;
@@ -404,7 +412,9 @@
       if (count <= 0) return;
       clearTimeout(readTimer);
       readTimer = setTimeout(_markVisibleMessagesRead, 1000);
-    }, 500));
+    }, 500);
+    document.addEventListener('tc:chat:opened', _listeners.onChatOpened);
+    window.addEventListener('scroll', _listeners.onScrollAutoRead);
   }
 
   function _setupMutationObserver() {
@@ -423,6 +433,9 @@
   }
 
   function init() {
+    if (_initDone) return;
+    _initDone = true;
+
     _ensureCss();
     _loadState();
     updateUnreadBadges();
@@ -441,12 +454,28 @@
         updateUnreadBadges();
       });
     }
-    document.addEventListener('visibilitychange', function () {
+    _listeners.onVisibilityChange = function () {
       if (document.visibilityState === 'visible') {
         _syncUnreadFromFirestore();
         updateUnreadBadges();
       }
-    });
+    };
+    document.addEventListener('visibilitychange', _listeners.onVisibilityChange);
+  }
+
+  function destroy() {
+    if (_listeners.onBadgeUpdate) document.removeEventListener('tc:badge:update', _listeners.onBadgeUpdate);
+    if (_listeners.onNotificationMessage) document.removeEventListener('tc:notification:message', _listeners.onNotificationMessage);
+    if (_listeners.onClearChat) document.removeEventListener('tc:unread:clear-chat', _listeners.onClearChat);
+    if (_listeners.onChatRead) document.removeEventListener('tc:chat:read', _listeners.onChatRead);
+    if (_listeners.onVisibilityChange) document.removeEventListener('visibilitychange', _listeners.onVisibilityChange);
+    if (_listeners.onClickFilter) document.removeEventListener('click', _listeners.onClickFilter);
+    if (_listeners.onClickAll) document.removeEventListener('click', _listeners.onClickAll);
+    if (_listeners.onChatOpened) document.removeEventListener('tc:chat:opened', _listeners.onChatOpened);
+    if (_listeners.onScrollAutoRead) window.removeEventListener('scroll', _listeners.onScrollAutoRead);
+    if (_observer) { _observer.disconnect(); _observer = null; }
+    _listeners = {};
+    _initDone = false;
   }
 
   window.updateUnreadBadges = updateUnreadBadges;
@@ -461,6 +490,7 @@
   window.formatUnreadCount = formatUnreadCount;
   window.updateTabBadge = updateTabBadge;
   window.playUnreadSound = playUnreadSound;
+  window.UnreadPolish = { init, destroy };
 
   if (document.readyState === 'complete') setTimeout(init, 0);
   else window.addEventListener('load', function () { setTimeout(init, 0); });

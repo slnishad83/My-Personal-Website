@@ -304,7 +304,9 @@
       if (window.MutationBus) {
         MutationBus.observe('uc:sidebar-card', sidebar, { childList: true }, fixInstallCardPlacement);
       } else {
-        new MutationObserver(fixInstallCardPlacement).observe(sidebar, { childList: true });
+        var sidebarObs = new MutationObserver(fixInstallCardPlacement);
+        sidebarObs.observe(sidebar, { childList: true });
+        _trackCleanup(function () { sidebarObs.disconnect(); });
       }
     }
   }

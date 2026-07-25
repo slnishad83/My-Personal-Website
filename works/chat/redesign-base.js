@@ -106,7 +106,6 @@
   }
 
   /* Escape key closes topmost overlay */
-  if (window.A11yEnhancements || window._a11yEnhancementsActive) return;
   document.addEventListener("keydown", function(e) {
     if (e.key === "Escape") {
       var overlays = getVisibleOverlays();

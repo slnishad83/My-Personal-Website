@@ -230,7 +230,7 @@ export async function setSecure(key, value) {
       req.onerror = () => reject(req.error);
     });
     const tx = db.transaction(_storageStoreName, 'readwrite');
-    tx.objectStore(_storageStoreName).store.put({
+    tx.objectStore(_storageStoreName).put({
       ciphertext: arrayBufferToBase64(ciphertext),
       iv: arrayBufferToBase64(iv),
       ts: Date.now()
@@ -253,7 +253,7 @@ export async function getSecure(key) {
     });
     const tx = db.transaction(_storageStoreName, 'readonly');
     const entry = await new Promise((resolve, reject) => {
-      const req = tx.objectStore(_storageStoreName).store.get(key);
+      const req = tx.objectStore(_storageStoreName).get(key);
       req.onsuccess = () => resolve(req.result);
       req.onerror = () => reject(req.error);
     });

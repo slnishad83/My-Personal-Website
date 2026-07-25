@@ -296,9 +296,15 @@
     startMemoryManagement();
     startMutationObserver();
 
-    window.addEventListener('scroll', function () {
-      preloadNearbyImages(document.getElementById('messages-wrap'));
-    }, { passive: true, capture: false });
+    if (!_scrollBound) {
+      window.addEventListener('scroll', _onScrollLazy, { passive: true, capture: false });
+      _scrollBound = true;
+    }
+  }
+
+  var _scrollBound = false;
+  function _onScrollLazy() {
+    preloadNearbyImages(document.getElementById('messages-wrap'));
   }
 
   /* ── Expose on window ── */

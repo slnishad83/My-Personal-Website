@@ -623,6 +623,10 @@ html:not(.dark) .wa-filter-custom input {
     #emoji-picker { max-height: calc(100dvh - 160px) !important; }
   }
   body { user-select: none; -webkit-tap-highlight-color: transparent; }
+  body input, body textarea, body [contenteditable], body .selectable, body .message-text, body .chat-bubble {
+    user-select: text;
+    -webkit-user-select: text;
+  }
   .overlay > div { margin: 8px !important; max-height: 90vh !important; }
   @supports (height: 100dvh) {
     .overlay > div { max-height: 90dvh !important; }
@@ -1829,7 +1833,7 @@ nav#bottom-nav { z-index: var(--z-bottomnav) !important; }
 #chat-header { z-index: var(--z-chat-header) !important; }
 #input-bar { z-index: var(--z-input-bar) !important; }
 #scroll-to-bottom { z-index: var(--z-scroll-fab) !important; }
-.overlay:not(.hidden) { z-index: var(--z-overlay) !important; }
+.overlay:not(.hidden):not(#media-viewer):not(#call-screen):not(#group-call-screen) { z-index: var(--z-overlay) !important; }
 #attach-menu { z-index: var(--z-attach-menu) !important; }
 #emoji-picker { z-index: var(--z-emoji-picker) !important; }
 #format-bar { z-index: var(--z-format-bar) !important; }
@@ -2482,12 +2486,12 @@ html:not(.dark) #desktop-context-menu,
 }
 
 /* ── Capacitor / Native wrapper ───────────────────────────────── */
-.capacitor-android #input-bar,
-.capacitor-ios #input-bar {
+.native-android #input-bar, .capacitor-android #input-bar,
+.native-ios #input-bar, .capacitor-ios #input-bar {
   padding-bottom: max(8px, env(safe-area-inset-bottom)) !important;
 }
-.capacitor-android #chat-header,
-.capacitor-ios #chat-header {
+.native-android #chat-header, .capacitor-android #chat-header,
+.native-ios #chat-header, .capacitor-ios #chat-header {
   padding-top: max(0px, env(safe-area-inset-top)) !important;
 }
 

@@ -468,3 +468,57 @@ exports.setDndSchedule = onCall(
     return { ok: true };
   }
 );
+
+const _chatLockRateBuckets = new Map();
+let _chatLockCleanupStarted = false;
+function checkChatLockRateLimit(uid) {
+  if (!_chatLockCleanupStarted) {
+    _chatLockCleanupStarted = true;
+    setInterval(() => {
+      const now = Date.now();
+      for (const [key, bucket] of _chatLockRateBuckets) {
+        bucket.t = bucket.t.filter(ts => now - ts < 60000);
+        if (bucket.t.length === 0) _chatLockRateBuckets.delete(key);
+      }
+    }, 300000);
+  }
+  const now = Date.now();
+  const bucket = _chatLockRateBuckets.get(uid) || { t: [] };
+  bucket.t = bucket.t.filter(ts => now - ts < 60000);
+  if (bucket.t.length >= 10) return false;
+  bucket.t.push(now);
+  _chatLockRateBuckets.set(uid, bucket);
+  return true;
+}
+
+exports.toggleChatLock = onCall(
+  { region: 'us-central1' },
+  async (request) => {
+    if (!request.auth) throw new HttpsError('unauthenticated', 'Must be signed in.');
+    if (!checkChatLockRateLimit(request.auth.uid)) {
+      throw new HttpsError('resource-exhausted', 'Too many lock/unlock requests. Wait a moment.');
+    }
+    const { chatId, locked } = request.data || {};
+    if (!chatId || typeof chatId !== 'string') {
+      throw new HttpsError('invalid-argument', 'chatId is required.');
+    }
+    if (typeof locked !== 'boolean') {
+      throw new HttpsError('invalid-argument', 'locked must be a boolean.');
+    }
+    const uid = request.auth.uid;
+    const userRef = admin.firestore().collection('users').doc(uid);
+    const userDoc = await userRef.get();
+    const currentLocks = (userDoc.data() && userDoc.data().lockedChats) || {};
+    if (locked) {
+      currentLocks[chatId] = {
+        locked: true,
+        method: 'biometric_or_pin',
+        lockedAt: admin.firestore.FieldValue.serverTimestamp()
+      };
+    } else {
+      delete currentLocks[chatId];
+    }
+    await userRef.set({ lockedChats: currentLocks }, { merge: true });
+    return { ok: true, lockedChats: currentLocks };
+  }
+);

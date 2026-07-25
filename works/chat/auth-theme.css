@@ -14,8 +14,42 @@
   --success-text: #075e54;
   --error-bg: #fee2e2;
   --error-text: #b42318;
+  --error: #ba1a1a;
   --focus: rgba(0, 168, 132, 0.28);
   --shadow: 0 16px 48px rgba(11, 20, 26, 0.16);
+
+  /* M3 token fallbacks for login page */
+  --on-primary: #ffffff;
+  --on-surface: #111b21;
+  --on-surface-variant: #667781;
+  --surface-container-lowest: #ffffff;
+  --surface-container-low: #f7f9fa;
+  --surface-container: #f0f2f5;
+  --surface-container-high: #e4e7eb;
+  --surface-container-highest: #d8dce0;
+  --surface-dim: #d8dce0;
+  --surface-bright: #ffffff;
+  --surface-variant: #e4e7eb;
+  --on-background: #111b21;
+  --outline: #8696a0;
+  --outline-variant: #c4c9cf;
+  --inverse-surface: #111b21;
+  --inverse-on-surface: #f0f2f5;
+  --inverse-primary: #00a884;
+  --primary-container: #d0f5ed;
+  --on-primary-container: #002018;
+  --primary-fixed: #6ee7c8;
+  --primary-fixed-dim: #00b894;
+  --secondary: #4a635a;
+  --on-secondary: #ffffff;
+  --secondary-container: #cce8dc;
+  --on-secondary-container: #062018;
+  --tertiary: #416278;
+  --background: #fcfcff;
+  --error-container: #ffdad6;
+  --on-error: #ffffff;
+  --on-error-container: #410002;
+  --surface-tint: var(--primary, #008069);
 }
 
 :root[data-theme="dark"] {
@@ -40,8 +74,42 @@ body.dark {
   --success-text: #7ae3c3;
   --error-bg: #421f24;
   --error-text: #ff9da4;
+  --error: #ff6b6b;
   --focus: rgba(0, 168, 132, 0.36);
   --shadow: 0 18px 48px rgba(0, 0, 0, 0.36);
+
+  /* M3 token fallbacks for login page (dark) */
+  --on-primary: #ffffff;
+  --on-surface: #e9edef;
+  --on-surface-variant: #aebac1;
+  --surface-container-lowest: #0b141a;
+  --surface-container-low: #111b21;
+  --surface-container: #17232b;
+  --surface-container-high: #202c33;
+  --surface-container-highest: #2a3942;
+  --surface-dim: #0b141a;
+  --surface-bright: #3b4a54;
+  --surface-variant: #2a3942;
+  --on-background: #e9edef;
+  --outline: #8696a0;
+  --outline-variant: #3a4a54;
+  --inverse-surface: #e9edef;
+  --inverse-on-surface: #111b21;
+  --inverse-primary: #008069;
+  --primary-container: #003d2e;
+  --on-primary-container: #6ee7c8;
+  --primary-fixed: #6ee7c8;
+  --primary-fixed-dim: #00b894;
+  --secondary: #b0ccc0;
+  --on-secondary: #1d352c;
+  --secondary-container: #334b42;
+  --on-secondary-container: #cce8dc;
+  --tertiary: #a8c6dc;
+  --background: #0b141a;
+  --error-container: #8c1d18;
+  --on-error: #690005;
+  --on-error-container: #ffb4ab;
+  --surface-tint: var(--primary, #00a884);
 }
 
 body {

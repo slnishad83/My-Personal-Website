@@ -111,7 +111,8 @@ export function createElement(tag, attrs = {}, children = []) {
 }
 
 /* ── Event Bus (decoupled module communication) ───────────── */
-const _listeners = new Map();
+const _listeners = window._nslEventBus || new Map();
+window._nslEventBus = _listeners;
 
 export function on(event, callback) {
   if (!_listeners.has(event)) _listeners.set(event, new Set());

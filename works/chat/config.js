@@ -67,7 +67,9 @@ function initFirebase() {
     console.error('[Config] Firebase SDK not loaded');
     return;
   }
-  firebase.initializeApp(FIREBASE_CONFIG);
+  if (!firebase.apps.length) {
+    firebase.initializeApp(FIREBASE_CONFIG);
+  }
   _firebaseInitialized = true;
   document.dispatchEvent(new CustomEvent('nsl:firebase-ready'));
 }

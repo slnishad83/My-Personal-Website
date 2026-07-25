@@ -13,11 +13,21 @@
     try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}'); } catch(_) { return {}; }
   }
 
-  function _saveLockedChats(locks) {
+  var _saveTimer = null;
+
+  function _saveLockedChats(locks, chatId, locked) {
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(locks)); } catch (_) {}
     try {
-      if (App.db && App.auth?.currentUser) {
-        App.db.collection('users').doc(App.auth.currentUser.uid).update({ lockedChats: locks }).catch(() => {});
+      if (App.auth && App.auth.currentUser && typeof firebase !== 'undefined' && firebase.functions) {
+        clearTimeout(_saveTimer);
+        _saveTimer = setTimeout(function() {
+          firebase.functions().httpsCallable('toggleChatLock')({ chatId: chatId, locked: locked }).catch(function() {});
+        }, 300);
+      } else if (App.db && App.auth?.currentUser) {
+        clearTimeout(_saveTimer);
+        _saveTimer = setTimeout(function() {
+          App.db.collection('users').doc(App.auth.currentUser.uid).update({ lockedChats: locks }).catch(() => {});
+        }, 500);
       }
     } catch(_) {}
   }
@@ -81,7 +91,7 @@
   window.lockChat = function(chatId) {
     const locks = _getLockedChats();
     locks[chatId] = { locked: true, method: 'biometric_or_pin', lockedAt: Date.now() };
-    _saveLockedChats(locks);
+    _saveLockedChats(locks, chatId, true);
     showToast('Chat locked', 'success');
     if (typeof renderChatList === 'function') renderChatList();
   };
@@ -89,7 +99,7 @@
   window.unlockChat = function(chatId) {
     const locks = _getLockedChats();
     delete locks[chatId];
-    _saveLockedChats(locks);
+    _saveLockedChats(locks, chatId, false);
     showToast('Chat unlocked', 'info');
     if (typeof renderChatList === 'function') renderChatList();
   };

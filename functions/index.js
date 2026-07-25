@@ -38,6 +38,7 @@ module.exports = {
   detectCalendarEvent: callables.detectCalendarEvent,
   muteChatNotification: callables.muteChatNotification,
   setDndSchedule: callables.setDndSchedule,
+  toggleChatLock: callables.toggleChatLock,
   syncGroupMemberCreated: triggers.syncGroupMemberCreated,
   syncGroupMemberUpdated: triggers.syncGroupMemberUpdated,
   syncGroupMemberDeleted: triggers.syncGroupMemberDeleted,

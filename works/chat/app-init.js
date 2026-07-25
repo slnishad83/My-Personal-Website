@@ -30,35 +30,38 @@ window.toggleSidebarExpand = function() {
   }
 };
 
-// Run framework initializes
+// Run framework initializers
 if (typeof init === 'function') {
   init().then(function() {
-    // Post-init: navigate to deep-link target (from notification click)
-    if (window.__deepLink) {
-      var dl = window.__deepLink;
-      window.__deepLink = null;
-      window.history.replaceState({}, '', window.location.pathname);
-
-      if (dl.callId && typeof window.handleCallAction === 'function') {
-        window.handleCallAction(dl.callId, dl.callAction || 'accept');
-      } else if (dl.messageId || dl.chatId) {
-        if (typeof window.handleNotificationClick === 'function') {
-          window.handleNotificationClick(dl);
-        } else if (dl.chatId && typeof window.openChat === 'function') {
-          window.openChat(dl.chatId).then(function() {
-            if (dl.messageId && typeof window.highlightMessage === 'function') {
-              setTimeout(function() { window.highlightMessage(dl.messageId); }, 500);
-            }
-          });
-        }
-      }
-    }
+    handleDeepLink();
   }).catch((error) => {
     console.error("Application startup failed:", error);
-    if (typeof window.showStartupRecovery === 'function') {
-      window.showStartupRecovery("Team Chat could not start. Please retry.");
-    } else {
-      document.body.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100vh;font-family:sans-serif;background:#111b21;color:#e9edef;text-align:center;padding:20px"><div><h2 style="margin-bottom:12px">Something went wrong</h2><p style="color:#8696a0;margin-bottom:20px">Team Chat could not start. Please retry.</p><button onclick="location.reload()" style="padding:10px 24px;background:#00a884;color:#fff;border:none;border-radius:8px;font-size:15px;cursor:pointer">Retry</button></div></div>';
-    }
+    handleDeepLink();
   });
+} else {
+  document.addEventListener('DOMContentLoaded', function() {
+    setTimeout(handleDeepLink, 1500);
+  });
+}
+
+function handleDeepLink() {
+  if (window.__deepLink) {
+    var dl = window.__deepLink;
+    window.__deepLink = null;
+    window.history.replaceState({}, '', window.location.pathname);
+
+    if (dl.callId && typeof window.handleCallAction === 'function') {
+      window.handleCallAction(dl.callId, dl.callAction || 'accept');
+    } else if (dl.messageId || dl.chatId) {
+      if (typeof window.handleNotificationClick === 'function') {
+        window.handleNotificationClick(dl);
+      } else if (dl.chatId && typeof window.openChat === 'function') {
+        window.openChat(dl.chatId).then(function() {
+          if (dl.messageId && typeof window.highlightMessage === 'function') {
+            setTimeout(function() { window.highlightMessage(dl.messageId); }, 500);
+          }
+        });
+      }
+    }
+  }
 }

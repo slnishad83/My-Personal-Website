@@ -92,8 +92,11 @@ export function showModal({ title, body, confirmText = 'Confirm', cancelText = '
   ]);
 
   const content = createElement('div', { className: 'px-6 py-4' });
-  if (typeof body === 'string') content.innerHTML = body;
-  else if (body instanceof HTMLElement) content.appendChild(body);
+  if (typeof body === 'string') {
+    const p = document.createElement('p');
+    p.textContent = body;
+    content.appendChild(p);
+  } else if (body instanceof HTMLElement) content.appendChild(body);
 
   const actions = createElement('div', { className: 'px-6 pb-6 pt-2 flex justify-end gap-3' }, [
     createElement('button', {
@@ -126,9 +129,12 @@ export function showModal({ title, body, confirmText = 'Confirm', cancelText = '
 
 export function confirm(message, title = 'Confirm') {
   return new Promise(resolve => {
+    const bodyEl = document.createElement('p');
+    bodyEl.className = 'text-sm text-on-surface-variant';
+    bodyEl.textContent = message;
     showModal({
       title,
-      body: `<p class="text-sm text-on-surface-variant">${escHtml(message)}</p>`,
+      body: bodyEl,
       confirmText: 'Yes',
       cancelText: 'No',
       onConfirm: () => resolve(true),
@@ -209,6 +215,6 @@ export function showLoading(message = 'Loading...') {
 
 window.showToast = showToast;
 window.showModal = showModal;
-window.confirm = confirm;
+window._nslUIConfirm = uiConfirm;
 window.showBottomSheet = showBottomSheet;
 window.showLoading = showLoading;

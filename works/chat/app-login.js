@@ -55,10 +55,15 @@ function cleanEmail(email) {
 }
 
 function setButtonLoading(btn, isLoading, label, loadingLabel) {
-  btn.disabled = isLoading;
-  btn.innerHTML = isLoading
-    ? `<span class="material-symbols-outlined animate-spin text-lg mr-2">sync</span> ${loadingLabel}`
-    : label;
+  if (isLoading) {
+    if (!btn.dataset.originalHtml) btn.dataset.originalHtml = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = `<span class="material-symbols-outlined animate-spin text-lg mr-2">sync</span> ${loadingLabel}`;
+  } else {
+    btn.disabled = false;
+    btn.innerHTML = btn.dataset.originalHtml || label;
+    delete btn.dataset.originalHtml;
+  }
 }
 
 function getEmailVerificationSettings() {
@@ -480,8 +485,9 @@ document.getElementById("registerForm").addEventListener("submit", async (e) => 
 
   if (hasError) return;
 
+  if (!btn.dataset.originalHtml) btn.dataset.originalHtml = btn.innerHTML;
   btn.disabled = true;
-  btn.textContent = "Creating account...";
+  btn.innerHTML = `<span class="material-symbols-outlined animate-spin text-lg mr-2">sync</span> Creating account...`;
 
   let createdUser = null;
   try {
@@ -514,7 +520,8 @@ document.getElementById("registerForm").addEventListener("submit", async (e) => 
     successDiv.style.display = "block";
     document.getElementById("registerForm").reset();
     btn.disabled = false;
-    btn.textContent = "Create Account";
+    btn.innerHTML = btn.dataset.originalHtml || "Create Account";
+    delete btn.dataset.originalHtml;
   } catch (error) {
     if (createdUser) {
       await createdUser.delete().catch(() => {});
@@ -523,7 +530,8 @@ document.getElementById("registerForm").addEventListener("submit", async (e) => 
     errorDiv.textContent = getFriendlyAuthError(error, "Registration failed. Please try again.");
     errorDiv.style.display = "block";
     btn.disabled = false;
-    btn.textContent = "Create Account";
+    btn.innerHTML = btn.dataset.originalHtml || "Create Account";
+    delete btn.dataset.originalHtml;
   }
 });
 
@@ -599,7 +607,11 @@ document.getElementById("sendResetBtn").addEventListener("click", async () => {
    PARALLAX AMBIENT LIGHT
    ══════════════════════════════════════════════════════════════ */
 
+let _lastParallaxFrame = 0;
 document.addEventListener('mousemove', (e) => {
+  const now = performance.now();
+  if (now - _lastParallaxFrame < 32) return;
+  _lastParallaxFrame = now;
   const x = e.clientX / window.innerWidth;
   const y = e.clientY / window.innerHeight;
   const spot1 = document.getElementById('ambient-spot-1');

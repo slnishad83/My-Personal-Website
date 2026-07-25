@@ -158,23 +158,6 @@
         { "fieldPath": "parentMessageId", "order": "ASCENDING" },
         { "fieldPath": "timestamp", "order": "ASCENDING" }
       ]
-    },
-    {
-      "collectionGroup": "groupActivityLog",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "groupId", "order": "ASCENDING" },
-        { "fieldPath": "type", "order": "ASCENDING" },
-        { "fieldPath": "timestamp", "order": "DESCENDING" }
-      ]
-    },
-    {
-      "collectionGroup": "threadReplies",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "parentMessageId", "order": "ASCENDING" },
-        { "fieldPath": "timestamp", "order": "ASCENDING" }
-      ]
     }
   ],
   "fieldOverrides": []

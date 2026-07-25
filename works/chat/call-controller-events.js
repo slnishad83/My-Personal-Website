@@ -384,6 +384,7 @@
       var callSnapshot = callDoc.data();
       CC.listenCandidates(CC.callId);
       CC.listenStatus(CC.callId);
+      CC.listenOffer(CC.callId);
       if (callSnapshot && callSnapshot.offer) {
         await peerConnection.setRemoteDescription(new RTCSessionDescription(callSnapshot.offer));
         var answer = await peerConnection.createAnswer();

@@ -19,6 +19,7 @@
   CC.MAX_RECONN_ATTEMPTS = 5;
   CC.CALL_TIMEOUT_MS = 45000;
   CC.unsubAnswer = null;
+  CC.unsubOffer = null;
   CC.unsubCandidates = null;
   CC.unsubStatus = null;
   CC.unsubIncoming = null;
@@ -74,6 +75,7 @@
 
   function cleanupListeners() {
     if (CC.unsubAnswer) { try { CC.unsubAnswer(); } catch (_) {} CC.unsubAnswer = null; }
+    if (CC.unsubOffer) { try { CC.unsubOffer(); } catch (_) {} CC.unsubOffer = null; }
     if (CC.unsubCandidates) { try { CC.unsubCandidates(); } catch (_) {} CC.unsubCandidates = null; }
     if (CC.unsubStatus) { try { CC.unsubStatus(); } catch (_) {} CC.unsubStatus = null; }
     if (CC.incomingTimeoutHandle) { clearTimeout(CC.incomingTimeoutHandle); CC.incomingTimeoutHandle = null; }
@@ -373,6 +375,28 @@
     });
   }
 
+  function listenOffer(cId) {
+    if (!db()) return;
+    if (CC.unsubOffer) { try { CC.unsubOffer(); } catch(_) {} }
+    var _lastOfferSdp = null;
+    try { _lastOfferSdp = peerConnection && peerConnection.remoteDescription ? peerConnection.remoteDescription.sdp : null; } catch(_) {}
+    CC.unsubOffer = db().collection('calls').doc(cId).onSnapshot(async function (doc) {
+      var data = doc.data();
+      if (!data || !data.offer) return;
+      if (data.offer.sdp === _lastOfferSdp) return;
+      if (CC.state !== CC.STATES.ACTIVE && CC.state !== CC.STATES.CONNECTING) return;
+      _lastOfferSdp = data.offer.sdp;
+      try {
+        await peerConnection.setRemoteDescription(new RTCSessionDescription(data.offer));
+        var answer = await peerConnection.createAnswer();
+        await peerConnection.setLocalDescription(answer);
+        await db().collection('calls').doc(cId).update({ answer: { sdp: answer.sdp, type: answer.type } });
+        CC.reconnAttempt = 0;
+        hideReconnOverlay();
+      } catch (_) {}
+    });
+  }
+
   function listenCandidates(cId) {
     if (!db()) return;
     var myUid = uid();
@@ -474,6 +498,7 @@
   CC.startHeartbeat = startHeartbeat;
   CC.getMedia = getMedia;
   CC.listenAnswer = listenAnswer;
+  CC.listenOffer = listenOffer;
   CC.listenCandidates = listenCandidates;
   CC.listenStatus = listenStatus;
   CC.cleanup = cleanup;

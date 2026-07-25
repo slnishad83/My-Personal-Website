@@ -1,31 +1,26 @@
 'use strict';
 if ('serviceWorker' in navigator) {
-  if (navigator.serviceWorker.controller) {
-    navigator.serviceWorker.ready.then(function(reg) {
-      if (reg && typeof reg.update === 'function') reg.update().catch(function() {});
-    }).catch(function() {});
-  } else {
-    window.addEventListener('load', function () {
-      navigator.serviceWorker.register('/works/chat/sw.js', { scope: '/works/chat/' })
-        .then(function (reg) {
-          console.log('[SW] Registered:', reg.scope);
-          reg.addEventListener('updatefound', function () {
-            var newWorker = reg.installing;
-            if (newWorker) {
-              newWorker.addEventListener('statechange', function () {
-                if (newWorker.state === 'activated' && navigator.serviceWorker.controller) {
-                  if (typeof showToast === 'function') showToast('App updated! Refresh for the latest version.', 'info');
-                }
-              });
-            }
-          });
-        })
-        .catch(function (err) { console.warn('[SW] Registration failed:', err); });
-    });
-  }
+  window.addEventListener('load', function () {
+    navigator.serviceWorker.register('/works/chat/dist/sw.js', { scope: '/works/chat/', updateViaCache: 'none' })
+      .then(function (reg) {
+        console.log('[SW] Registered:', reg.scope);
+        reg.update().catch(function() {});
+        reg.addEventListener('updatefound', function () {
+          var newWorker = reg.installing;
+          if (newWorker) {
+            newWorker.addEventListener('statechange', function () {
+              if (newWorker.state === 'activated' && navigator.serviceWorker.controller) {
+                if (typeof showToast === 'function') showToast('App updated! Refresh for the latest version.', 'info');
+              }
+            });
+          }
+        });
+      })
+      .catch(function (err) { console.warn('[SW] Registration failed:', err); });
+  });
 }
 
-window.addEventListener('load', function() {
+window.addEventListener('load', async function() {
   if (window.ErrorBoundary) ErrorBoundary.init();
   if (window.A11y) A11y.init();
   if (window.KeyboardShortcuts) KeyboardShortcuts.init();
@@ -38,9 +33,7 @@ window.addEventListener('load', function() {
   if (window.InitA11yEnhancements) InitA11yEnhancements();
   if (window.InitLazyImages) InitLazyImages();
 
-  setTimeout(async function() {
-    if (window.OfflineQueue) await OfflineQueue.init();
-  }, 3000);
+  if (window.OfflineQueue) await OfflineQueue.init();
 });
 
 firebase.auth().onAuthStateChanged(function(user) {
@@ -63,6 +56,8 @@ firebase.auth().onAuthStateChanged(function(user) {
     if (window.Presence) Presence.destroy();
     if (window.MultiDevice) MultiDevice.destroy();
     if (window.Security) Security.destroy();
-    window.location.replace('login.html');
+    if (!location.pathname.endsWith('login.html')) {
+      window.location.replace('login.html');
+    }
   }
 });

@@ -25,7 +25,8 @@
     <link rel="preload" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Manrope:wght@400;500;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
     <noscript><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"></noscript>
     <noscript><link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Manrope:wght@400;500;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet"></noscript>
-    <link rel="stylesheet" href="chat-theme.css">
+    <link rel="stylesheet" href="redesign-base.css">
+    <link rel="stylesheet" href="auth-theme.css">
     <link rel="stylesheet" href="login-styles.css">
     <script>
       (function() {
@@ -80,6 +81,9 @@
             text-shadow: 0 0 8px rgba(0, 255, 195, 0.3);
         }
         .pulse-mint {
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+        .pulse-dot {
             animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
         }
         @keyframes pulse {
@@ -475,10 +479,10 @@
     </footer>
 
     <!-- Firebase CDN scripts (loaded before app-login.js module) -->
-    <script src="firebase-config.js"></script>
     <script src="https://www.gstatic.com/firebasejs/12.16.0/firebase-app-compat.js" crossorigin="anonymous"></script>
     <script src="https://www.gstatic.com/firebasejs/12.16.0/firebase-auth-compat.js" crossorigin="anonymous"></script>
     <script src="https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore-compat.js" crossorigin="anonymous"></script>
+    <script src="https://www.gstatic.com/firebasejs/12.16.0/firebase-functions-compat.js" crossorigin="anonymous"></script>
     <!-- Auth logic extracted to app-login.js (Vite module) -->
     <script type="module" src="app-login.js"></script>
   </body>
