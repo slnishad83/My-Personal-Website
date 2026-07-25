@@ -418,7 +418,11 @@
       btn.textContent = 'Transcribing…';
       btn.disabled = true;
       try {
-        const msgDoc = await db.collection('messages').doc(msgId).get();
+        var tChatId = (App && App.currentChat && App.currentChat.id) || '';
+        var tMsgRef = tChatId
+          ? db.collection('messages').doc(tChatId).collection('items').doc(msgId)
+          : db.collection('messages').doc(msgId);
+        const msgDoc = await tMsgRef.get();
         const msgData = msgDoc.data();
         if (!msgData?.attachment?.url) { btn.textContent = '❌ No audio'; return; }
         // Check if already transcribed
@@ -437,7 +441,7 @@
         span.textContent = '📝 ' + (res.data.text || 'Could not transcribe');
         btn.replaceWith(span);
         // Save to Firestore
-        if (res.data.text) await db.collection('messages').doc(msgId).update({ transcription: res.data.text });
+        if (res.data.text) await tMsgRef.update({ transcription: res.data.text });
       } catch (e) {
         btn.textContent = '❌ Failed';
         btn.disabled = false;

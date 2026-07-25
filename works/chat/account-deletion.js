@@ -30,7 +30,7 @@
 
       try {
         await App.db.collection('users').doc(uid).update({
-          deletionScheduledAt: new Date(),
+          deletionScheduledAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
           isActive: false,
         });
 

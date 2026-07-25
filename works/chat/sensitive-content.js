@@ -164,7 +164,8 @@
     btn.onclick = () => {
       if (marked) unmarkContentSensitive(msgId);
       else markContentSensitive(msgId);
-      _removeCtxMenu();
+      if (typeof _removeCtxMenu === 'function') _removeCtxMenu();
+      else if (typeof window._removeCtxMenu === 'function') window._removeCtxMenu();
     };
     const cancelBtn = menu.querySelector('[onclick*="_removeCtxMenu"]');
     if (cancelBtn) menu.insertBefore(btn, cancelBtn);

@@ -228,7 +228,7 @@
 
   // ─── PLAYBACK ───
   Player.play = function(track, playlistId) {
-    console.log('[MusicPlayer] play() called:', track ? { id: track.id, title: track.title, url: track.url?.substring(0, 80) } : 'null track');
+    console.log('[MusicPlayer] play() called:', track ? { id: track.id, title: track.title } : 'null track');
     _haptic('light');
     if (!track || !track.url) { console.warn('[MusicPlayer] No track or URL'); showToast('No audio URL', 'error'); return; }
     if (playlistId) Player.playlistId = playlistId;
@@ -245,7 +245,6 @@
 
     Player.audio.src = track.url;
     Player.audio.load();
-    console.log('[MusicPlayer] Calling audio.play(), src:', track.url?.substring(0, 100));
     Player.audio.play().then(() => {
       console.log('[MusicPlayer] Audio playback started successfully');
     }).catch(e => {

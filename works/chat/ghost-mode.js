@@ -77,10 +77,11 @@
   function _freezePresence() {
     if (!App.db || !App.auth?.currentUser) return;
     try {
+      const frozenTime = _getGhostState().lastFrozenAt || Date.now();
       App.db.collection('users').doc(App.auth.currentUser.uid).update({
         onlineStatus: 'offline',
-        lastSeen: Date.now(),
-        lastHeartbeat: Date.now(),
+        lastSeen: frozenTime,
+        lastHeartbeat: frozenTime,
       }).catch(() => {});
     } catch(_) {}
   }
@@ -111,6 +112,11 @@
       state.specificContacts = state.specificContacts || [];
     } else if (!specificMode) {
       state.specificContacts = [];
+    }
+    if (state.enabled) {
+      state.lastFrozenAt = Date.now();
+    } else {
+      state.lastFrozenAt = null;
     }
     _saveGhostState(state);
 
@@ -233,9 +239,10 @@
 
     contacts.forEach(c => {
       const isSelected = selected.includes(c.uid);
-      html += `<div style="display:flex;align-items:center;gap:10px;padding:10px;border-radius:10px;cursor:pointer;margin-bottom:4px;background:${isSelected ? 'rgba(124,77,255,0.15)' : 'transparent'}" onclick="_toggleGhostContact('${c.uid}')">
+      const safeUid = escHtml(c.uid || '');
+      html += `<div style="display:flex;align-items:center;gap:10px;padding:10px;border-radius:10px;cursor:pointer;margin-bottom:4px;background:${isSelected ? 'rgba(124,77,255,0.15)' : 'transparent'}" data-ghost-uid="${safeUid}">
         <div style="width:36px;height:36px;border-radius:50%;overflow:hidden;flex-shrink:0">
-          ${c.photoURL ? `<img src="${c.photoURL}" style="width:100%;height:100%;object-fit:cover">` : `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:var(--outline-variant,rgba(0,0,0,0.1));font-size:14px;font-weight:700">${c.initials || '?'}</div>`}
+          ${c.photoURL ? `<img src="${escHtml(c.photoURL)}" style="width:100%;height:100%;object-fit:cover" alt="">` : `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:var(--outline-variant,rgba(0,0,0,0.1));font-size:14px;font-weight:700">${escHtml(c.initials || '?')}</div>`}
         </div>
         <div style="flex:1"><div style="font-size:13px;font-weight:600">${escHtml(c.name)}</div><div style="font-size:11px;color:var(--on-surface-variant)">${escHtml(c.email || '')}</div></div>
         <div style="width:22px;height:22px;border-radius:50%;border:2px solid ${isSelected ? 'var(--primary)' : 'var(--outline-variant,rgba(0,0,0,0.2))'};display:flex;align-items:center;justify-content:center;background:${isSelected ? 'var(--primary)' : 'transparent'}">
@@ -250,6 +257,12 @@
 
     panel.innerHTML = html;
     pickerOverlay.appendChild(panel);
+    panel.addEventListener('click', function(e) {
+      var item = e.target.closest('[data-ghost-uid]');
+      if (item) {
+        _toggleGhostContact(item.getAttribute('data-ghost-uid'));
+      }
+    });
     pickerOverlay.addEventListener('click', e => { if (e.target === pickerOverlay) { pickerOverlay.remove(); overlay?.style.removeProperty('display'); } });
     document.body.appendChild(pickerOverlay);
   };

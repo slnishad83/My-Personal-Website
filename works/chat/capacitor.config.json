@@ -30,7 +30,7 @@
       "resume": true,
       "silent": false,
       "hidden": false,
-      "keep awake": true
+      "keep awake": false
     },
     "Contacts": {
       "permissions": ["readContacts"]

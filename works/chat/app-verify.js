@@ -56,7 +56,7 @@ function showResult(type, text) {
 
 async function verifyEmail() {
   if (!code) {
-    showResult("success", "You can now log in to use NSL Chat.");
+    showResult("error", "No verification link found. Please use the link from your verification email.");
     return;
   }
 

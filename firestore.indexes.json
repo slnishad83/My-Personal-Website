@@ -1,6 +1,30 @@
 {
   "indexes": [
     {
+      "collectionGroup": "groupExpenses",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "groupId", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "tasks",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "userId", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "musicLibrary",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "addedBy", "order": "ASCENDING" },
+        { "fieldPath": "addedAt", "order": "DESCENDING" }
+      ]
+    },
+    {
       "collectionGroup": "inAppNotifications",
       "queryScope": "COLLECTION",
       "fields": [

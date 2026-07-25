@@ -10,8 +10,8 @@ const Platform = (() => {
   const maxTouch = navigator.maxTouchPoints || 0;
 
   /* ── Device Type ────────────────────────────────────────── */
-  const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(ua) || (maxTouch > 0 && /MacIntel/i.test(pf));
-  const isTablet = /iPad/i.test(ua) || (/MacIntel/i.test(pf) && maxTouch > 1) || (/Android/i.test(ua) && !/Mobile/i.test(ua));
+  const isMobile = /Android|webOS|iPhone|iPod|BlackBerry|IEMobile|Opera Mini/i.test(ua);
+  const isTablet = /iPad/i.test(ua) || (/MacIntel/i.test(pf) && maxTouch > 1) || (/Android/i.test(ua) && !/Mobile/i.test(ua)) || (maxTouch > 0 && /MacIntel/i.test(pf));
   const isDesktop = !isMobile && !isTablet;
   const isPhone = isMobile && !isTablet;
   const isFoldable = typeof window.matchMedia === 'function' && (

@@ -40,10 +40,13 @@
   }
 
   /* ── Store ID token whenever it changes ──────────────────────────── */
+  let _refreshTimer = null;
+
   function startTokenRefresh() {
     if (!window.firebase?.auth) { setTimeout(startTokenRefresh, 600); return; }
 
     firebase.auth().onAuthStateChanged(async user => {
+      if (_refreshTimer) { clearInterval(_refreshTimer); _refreshTimer = null; }
       if (!user) { await idbPut('idToken', null).catch(() => {}); return; }
 
       // Store immediately
@@ -53,8 +56,8 @@
       } catch (_) {}
 
       // Refresh every 50 minutes (tokens expire after 60 min)
-      const refreshTimer = setInterval(async () => {
-        if (!firebase.auth().currentUser) { clearInterval(refreshTimer); return; }
+      _refreshTimer = setInterval(async () => {
+        if (!firebase.auth().currentUser) { clearInterval(_refreshTimer); _refreshTimer = null; return; }
         try {
           const token = await firebase.auth().currentUser.getIdToken(true);
           await idbPut('idToken', token);
@@ -104,16 +107,7 @@
 
       if (chatType === 'group' && groupId) {
         msgData.groupId = groupId;
-      } else {
-        msgData.directId   = chatId;
-        msgData.receiverId = chatUserId;
-        msgData.participants = [user.uid, chatUserId].filter(Boolean);
-        msgData.participantEmails = [user.email || '', ''];
-      }
-
-      await db.collection('messages').add(msgData);
-
-      if (chatType === 'group' && groupId) {
+        await db.collection('messages').add(msgData);
         db.collection('groups').doc(groupId).update({
           lastMessage: text,
           lastMessageTime: firebase.firestore.FieldValue.serverTimestamp(),
@@ -121,6 +115,11 @@
           lastMessageSenderName: user.displayName || user.email || 'Me'
         }).catch(() => {});
       } else {
+        msgData.directId   = chatId;
+        msgData.receiverId = chatUserId;
+        msgData.participants = [user.uid, chatUserId].filter(Boolean);
+        msgData.participantEmails = [user.email || '', chatUserId ? (chatUserId + '@placeholder') : ''];
+        await db.collection('messages').add(msgData);
         db.collection('chats').doc(chatId).update({
           lastMessage: text,
           lastMessageTime: firebase.firestore.FieldValue.serverTimestamp(),

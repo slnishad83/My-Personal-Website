@@ -237,7 +237,7 @@
       .onSnapshot(function (snap) {
         snap.docChanges().forEach(function (change) {
           if (change.type !== 'added') return;
-          var data = change.data();
+          var data = change.doc.data();
           if (!data || !data.emoji) return;
           if (data.senderId === myUid) return;
           playPopSound();

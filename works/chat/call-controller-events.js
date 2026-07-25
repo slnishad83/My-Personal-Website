@@ -261,11 +261,6 @@
     }
   }
 
-  function setupIncomingAnswer(cId, type, fromUserName, groupCall, groupId, groupName) {
-    CC.setState(CC.STATES.CONNECTING);
-    CC.showCallScreen(type, fromUserName, (fromUserName || '?')[0].toUpperCase());
-  }
-
   async function startVoiceCall() {
     if (CC.state !== CC.STATES.IDLE) return;
     if (Date.now() - _lastCallAttemptTime < 3000) { CC.toast('Please wait before trying again', 'info'); return; }

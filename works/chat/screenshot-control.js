@@ -35,8 +35,12 @@
   };
 
   let _ssWarningShown = false;
+  let _ssListenersAttached = false;
 
   function _detectScreenshotAttempt() {
+    if (_ssListenersAttached) return;
+    _ssListenersAttached = true;
+
     document.addEventListener('keydown', (e) => {
       if (!App.currentChat) return;
       if (!isScreenshotRestricted(App.currentChat.id)) return;

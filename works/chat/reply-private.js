@@ -49,7 +49,7 @@
           text: quotedText,
           senderName: quotedSender,
           groupId: groupChatId,
-          groupName: currentGroup?.name || 'Group',
+          groupName: (typeof currentGroup !== 'undefined' && currentGroup) ? currentGroup.name : 'Group',
         };
 
         if (typeof openChat === 'function') {

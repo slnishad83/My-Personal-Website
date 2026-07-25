@@ -292,7 +292,7 @@
     if (!uid) return;
     var _firestore = (typeof App !== 'undefined' && App.db) ? App.db : (typeof firebase !== 'undefined' ? firebase.firestore() : null);
     if (!_firestore) throw new Error('Firestore not available');
-    var chatRef = _firestore.collection('chats').doc(chatId).collection('messages').doc();
+    var chatRef = _firestore.collection('messages').doc(chatId).collection('items').doc();
     await chatRef.set({
       text: msg.text || '',
       type: msg.type || 'text',

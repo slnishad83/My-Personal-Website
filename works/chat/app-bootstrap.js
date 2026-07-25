@@ -46,14 +46,17 @@ window.addEventListener('load', function() {
 firebase.auth().onAuthStateChanged(function(user) {
   window.currentUser = user || null;
   if (user) {
-    setTimeout(async function() {
-      if (window.Presence) await Presence.init();
-      if (window.MultiDevice) await MultiDevice.init();
-      if (window.Security) await Security.init();
-      if (window.ShouldShowOnboarding && ShouldShowOnboarding()) {
-        setTimeout(function() { if (window.ShowOnboarding) ShowOnboarding(); }, 1500);
-      }
-    }, 2000);
+    async function initAuthSubsystems() {
+      try {
+        if (window.Presence) await Presence.init();
+        if (window.MultiDevice) await MultiDevice.init();
+        if (window.Security) await Security.init();
+        if (window.ShouldShowOnboarding && ShouldShowOnboarding()) {
+          setTimeout(function() { if (window.ShowOnboarding) ShowOnboarding(); }, 1500);
+        }
+      } catch (e) { console.warn('[Bootstrap] Auth subsystem init error:', e); }
+    }
+    initAuthSubsystems();
   } else {
     if (typeof window.endCall === 'function') { try { window.endCall(); } catch(_) {} }
     if (typeof window.CleanupGroupCall === 'function') { try { window.CleanupGroupCall(); } catch(_) {} }

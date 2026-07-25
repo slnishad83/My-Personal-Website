@@ -316,15 +316,19 @@ function storeFailedOperation(request, error) {
       error: error ? error.message || String(error) : 'unknown'
     };
     // Capture request body for replay (clone first since body can only be read once)
+    var bodyReady = Promise.resolve(null);
     if (request.method !== 'GET' && request.method !== 'HEAD') {
-      entry.bodyPromise = request.clone().text().then(function(body) {
-        entry.body = body || null;
-      }).catch(function() {});
+      bodyReady = request.clone().text().then(function(body) {
+        return body || null;
+      }).catch(function() { return null; });
     }
-    store.add(entry);
-    return new Promise(function(resolve, reject) {
-      tx.oncomplete = function() { resolve(); };
-      tx.onerror = function(e) { reject(e.target.error); };
+    return bodyReady.then(function(body) {
+      entry.body = body;
+      store.add(entry);
+      return new Promise(function(resolve, reject) {
+        tx.oncomplete = function() { resolve(); };
+        tx.onerror = function(e) { reject(e.target.error); };
+      });
     });
   }).catch(function() { /* non-fatal */ });
 }

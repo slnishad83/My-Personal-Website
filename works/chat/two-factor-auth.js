@@ -42,6 +42,43 @@
       sessionStorage.removeItem(VERIFIED_KEY);
     },
 
+    _showPinEntryModal(title, subtitle, callback, showOldPin, singlePinOnly) {
+      const overlay = document.createElement('div');
+      overlay.style.cssText = 'position:fixed;inset:0;z-index:10002;background:rgba(0,0,0,0.92);display:flex;align-items:center;justify-content:center;animation:fadeIn 0.2s ease';
+      const panel = document.createElement('div');
+      panel.style.cssText = 'background:var(--surface-container,#1e1e2e);border-radius:24px;padding:32px;max-width:340px;width:90vw;text-align:center;color:var(--on-surface)';
+      const inputStyle = 'width:100%;padding:14px;border-radius:12px;border:2px solid var(--outline-variant,rgba(0,0,0,0.1));background:var(--surface-container-low,rgba(0,0,0,0.05));color:var(--on-surface);font-size:24px;text-align:center;letter-spacing:8px;margin-bottom:8px;outline:none;box-sizing:border-box';
+      panel.innerHTML = `
+        <h3 style="margin:0 0 4px;font-size:18px;font-weight:700">${title}</h3>
+        <p style="font-size:13px;color:var(--on-surface-variant);margin:0 0 16px">${subtitle}</p>
+        ${showOldPin ? '<input type="password" inputmode="numeric" id="pin-modal-old" placeholder="Current PIN" maxlength="8" style="' + inputStyle + '">' : ''}
+        <input type="password" inputmode="numeric" id="pin-modal-new" placeholder="${singlePinOnly ? 'Enter PIN' : 'New PIN'}" maxlength="8" style="${inputStyle}">
+        ${!singlePinOnly ? '<input type="password" inputmode="numeric" id="pin-modal-confirm" placeholder="Confirm PIN" maxlength="8" style="' + inputStyle + '">' : ''}
+        <p id="pin-modal-error" style="color:var(--error);font-size:12px;margin:0 0 12px;display:none"></p>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <button id="pin-modal-ok" style="padding:14px;border-radius:14px;border:none;background:var(--primary);color:var(--on-primary);font-size:14px;font-weight:700;cursor:pointer">Verify</button>
+          <button id="pin-modal-cancel" style="padding:10px;border-radius:10px;border:none;background:transparent;color:var(--on-surface-variant);font-size:13px;cursor:pointer">Cancel</button>
+        </div>`;
+      overlay.appendChild(panel);
+      document.body.appendChild(overlay);
+      const firstInput = panel.querySelector(showOldPin ? '#pin-modal-old' : '#pin-modal-new');
+      if (firstInput) firstInput.focus();
+      panel.querySelector('#pin-modal-cancel').addEventListener('click', () => overlay.remove());
+      overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
+      panel.querySelector('#pin-modal-ok').addEventListener('click', () => {
+        const oldPin = showOldPin ? panel.querySelector('#pin-modal-old').value.trim() : undefined;
+        const newPin = panel.querySelector('#pin-modal-new').value.trim();
+        const confirmPin = singlePinOnly ? newPin : (panel.querySelector('#pin-modal-confirm')?.value?.trim() || '');
+        const errorEl = panel.querySelector('#pin-modal-error');
+        if (showOldPin && !oldPin) { errorEl.textContent = 'Enter current PIN'; errorEl.style.display = 'block'; return; }
+        if (!newPin || !/^\d{4,8}$/.test(newPin)) { errorEl.textContent = 'PIN must be 4-8 digits'; errorEl.style.display = 'block'; return; }
+        if (!singlePinOnly && newPin !== confirmPin) { errorEl.textContent = 'PINs do not match'; errorEl.style.display = 'block'; return; }
+        overlay.remove();
+        if (singlePinOnly) callback(newPin);
+        else callback(newPin, confirmPin, oldPin);
+      });
+    },
+
     _checkRateLimit() {
       const lockoutUntil = parseInt(localStorage.getItem(LOCKOUT_KEY) || '0');
       if (Date.now() < lockoutUntil) {
@@ -190,7 +227,7 @@
       pinInput?.addEventListener('keydown', (e) => {
         if (e.key === 'Enter') handleVerify();
       });
-      overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
+      overlay.addEventListener('click', (e) => { if (e.target === overlay) { overlay.remove(); if (typeof firebase !== 'undefined') firebase.auth().signOut(); } });
     },
 
     openSettings() {
@@ -242,44 +279,33 @@
       document.body.appendChild(overlay);
 
       document.getElementById('twofa-enable-btn')?.addEventListener('click', () => {
-        const pin = prompt('Enter a 4-8 digit PIN for two-step verification:');
-        if (!pin || !/^\d{4,8}$/.test(pin)) {
-          if (pin !== null) showToast('PIN must be 4-8 digits', 'error');
-          return;
-        }
-        const confirmPin = prompt('Confirm your PIN:');
-        if (pin !== confirmPin) {
-          showToast('PINs do not match', 'error');
-          return;
-        }
-        this.setPin(pin).then(ok => {
-          if (ok) { overlay.remove(); this.openSettings(); }
+        this._showPinEntryModal('Set 2FA PIN', 'Enter a 4-8 digit PIN', (pin, confirmPin) => {
+          if (pin !== confirmPin) { showToast('PINs do not match', 'error'); return; }
+          this.setPin(pin).then(ok => {
+            if (ok) { overlay.remove(); this.openSettings(); }
+          });
         });
       });
 
       document.getElementById('twofa-change-pin-btn')?.addEventListener('click', () => {
-        const oldPin = prompt('Enter current PIN:');
-        if (!oldPin) return;
-        const newPin = prompt('Enter new 4-8 digit PIN:');
-        if (!newPin || !/^\d{4,8}$/.test(newPin)) {
-          if (newPin !== null) showToast('PIN must be 4-8 digits', 'error');
-          return;
-        }
-        this.setPin(newPin, oldPin).then(ok => {
-          if (ok) { overlay.remove(); this.openSettings(); }
-        });
+        this._showPinEntryModal('Change 2FA PIN', 'Enter new 4-8 digit PIN', (newPin, confirmPin, oldPin) => {
+          if (newPin !== confirmPin) { showToast('PINs do not match', 'error'); return; }
+          this.setPin(newPin, oldPin).then(ok => {
+            if (ok) { overlay.remove(); this.openSettings(); }
+          });
+        }, true);
       });
 
       document.getElementById('twofa-disable-btn')?.addEventListener('click', async () => {
         if (!confirm('Disable two-step verification? Your account will be less secure.')) return;
-        const pin = prompt('Enter your current PIN to disable:');
-        if (!pin) return;
-        const ok = await this.verifyPin(pin);
-        if (ok) {
-          await this.resetPin();
-          overlay.remove();
-          this.openSettings();
-        }
+        this._showPinEntryModal('Verify PIN', 'Enter your current PIN to disable', async (pin) => {
+          const ok = await this.verifyPin(pin);
+          if (ok) {
+            await this.resetPin();
+            overlay.remove();
+            this.openSettings();
+          }
+        }, false, true);
       });
     }
   };

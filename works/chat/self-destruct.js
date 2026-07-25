@@ -267,7 +267,7 @@
         const msgs = window.App.messages[chatId];
         msgs.forEach(msg => {
           if (msg.time && (now - msg.time > timer)) {
-            window.App.db.collection('messages').doc(msg.id).delete()
+            window.App.db.collection('messages').doc(chatId).collection('items').doc(msg.id).delete()
               .then(() => {
                 if (window.App.messages[chatId]) {
                   window.App.messages[chatId] = window.App.messages[chatId].filter(m => m.id !== msg.id);

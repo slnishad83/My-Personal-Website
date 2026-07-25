@@ -449,7 +449,11 @@
           var msgId = badge.dataset.msgId;
           var d = _db();
           if (d && msgId) {
-            d.collection('messages').doc(msgId).get().then(function(snap) {
+            var chatId2 = (App && App.currentChat && App.currentChat.id) || '';
+            var msgRef2 = chatId2
+              ? d.collection('messages').doc(chatId2).collection('items').doc(msgId)
+              : d.collection('messages').doc(msgId);
+            msgRef2.get().then(function(snap) {
               if (snap.exists) {
                 var reactions = snap.data().reactions || {};
                 if (Object.keys(reactions).length > 0) {
@@ -480,7 +484,11 @@
       delete _reactionUnsubscribes[oldest];
     }
 
-    _reactionUnsubscribes[msgId] = d.collection('messages').doc(msgId)
+    var chatId3 = (App && App.currentChat && App.currentChat.id) || '';
+    var reactionRef = chatId3
+      ? d.collection('messages').doc(chatId3).collection('items').doc(msgId)
+      : d.collection('messages').doc(msgId);
+    _reactionUnsubscribes[msgId] = reactionRef
       .onSnapshot(function (snap) {
         if (!snap.exists) return;
         var data = snap.data();

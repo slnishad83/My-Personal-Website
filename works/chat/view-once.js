@@ -29,7 +29,11 @@
     async markAsViewed(msgId) {
       if (!App.db) return;
       try {
-        await App.db.collection('messages').doc(msgId).update({
+        var chatId = (App && App.currentChat && App.currentChat.id) || '';
+        var docRef = chatId
+          ? App.db.collection('messages').doc(chatId).collection('items').doc(msgId)
+          : App.db.collection('messages').doc(msgId);
+        await docRef.update({
           viewedOnce: true,
           viewedAt: Date.now(),
         });

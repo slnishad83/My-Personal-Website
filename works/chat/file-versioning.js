@@ -50,7 +50,7 @@
         const messages = App.messages[chatId] || [];
         const latest = messages[messages.length - 1];
         if (latest && latest.firebaseId) {
-          await App.db.collection('messages').doc(latest.firebaseId).update({
+          await App.db.collection('messages').doc(chatId).collection('items').doc(latest.firebaseId).update({
             'attachment.version': version,
             'attachment.previousVersionId': previousVersionId,
           });

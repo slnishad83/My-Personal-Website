@@ -696,10 +696,8 @@
     showToast('🎵 Playing track...', 'info');
     console.log('[Music] _playSearchResult called:', trackId);
     const t = _trackCache[trackId];
-    console.log('[Music] cache lookup:', t ? { id: t.id, audioUrl: t.audioUrl, url: t.url, videoId: t.videoId, source: t.source } : 'NOT FOUND');
     if (!t) { console.warn('[Music] Track not in cache:', trackId); return; }
     if (t.audioUrl || t.url) {
-      console.log('[Music] Playing via MusicPlayer:', t.audioUrl || t.url);
       MusicPlayer.play({ id: t.id, title: t.title, artist: t.artist, url: t.audioUrl || t.url, thumbnail: t.thumbnail || null, duration: t.duration, source: t.source });
     } else if (t.videoId) {
       console.log('[Music] Playing YouTube:', t.videoId);

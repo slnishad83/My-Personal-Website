@@ -138,11 +138,12 @@
 
   function _renderSingle(n) {
     const icon   = _notifIcon(n);
-    const name   = window.sanitizeHTML(n.fromUserName || n.title || 'Notification');
-    const msg    = window.sanitizeHTML((n.message || n.body || '').substring(0, 100));
+    const _s = window.escHtml || function(s) { return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); };
+    const name   = _s(n.fromUserName || n.title || 'Notification');
+    const msg    = _s((n.message || n.body || '').substring(0, 100));
     const time   = _relTime(n.createdAt);
     const attrs  = n.chatId
-      ? `data-notif-chat-id="${window.sanitizeHTML(n.chatId)}" data-notif-chat-type="${window.sanitizeHTML(n.chatType || 'direct')}" data-notif-user-id="${window.sanitizeHTML(n.chatUserId || n.fromUserId || '')}"${n.messageId ? ` data-notif-msg-id="${window.sanitizeHTML(n.messageId)}"` : ''}`
+      ? `data-notif-chat-id="${_s(n.chatId)}" data-notif-chat-type="${_s(n.chatType || 'direct')}" data-notif-user-id="${_s(n.chatUserId || n.fromUserId || '')}"${n.messageId ? ` data-notif-msg-id="${_s(n.messageId)}"` : ''}`
       : '';
     return `<div class="nd-item nd-single" role="button" tabindex="0" ${attrs}>
       <div class="nd-icon">${icon}</div>
@@ -158,11 +159,12 @@
     const n     = item.latest;
     const count = item.notifs.length;
     const icon  = _notifIcon(n);
-    const name  = window.sanitizeHTML(n.fromUserName || n.title || 'Messages');
-    const preview = window.sanitizeHTML((n.message || '').substring(0, 80));
+    const _s = window.escHtml || function(s) { return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); };
+    const name  = _s(n.fromUserName || n.title || 'Messages');
+    const preview = _s((n.message || '').substring(0, 80));
     const time  = _relTime(n.createdAt);
     const attrs = n.chatId
-      ? `data-notif-chat-id="${window.sanitizeHTML(n.chatId)}" data-notif-chat-type="${window.sanitizeHTML(n.chatType || 'direct')}" data-notif-user-id="${window.sanitizeHTML(n.chatUserId || n.fromUserId || '')}"`
+      ? `data-notif-chat-id="${_s(n.chatId)}" data-notif-chat-type="${_s(n.chatType || 'direct')}" data-notif-user-id="${_s(n.chatUserId || n.fromUserId || '')}"`
       : '';
     return `<div class="nd-item nd-group" role="button" tabindex="0" ${attrs}>
       <div class="nd-icon">${icon}</div>

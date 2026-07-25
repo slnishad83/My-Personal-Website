@@ -60,10 +60,8 @@
     var newMuted = !currentMuted;
     GC._participantMuteState.set(userId, newMuted);
     var detailUpdate = {};
-    detailUpdate[userId] = { isMuted: newMuted };
-    GC._firestore().collection('groupCalls').doc(GC._currentCallId).update({
-      participantDetails: detailUpdate
-    }).catch(function () {});
+    detailUpdate['participantDetails.' + userId] = { isMuted: newMuted };
+    GC._firestore().collection('groupCalls').doc(GC._currentCallId).update(detailUpdate).catch(function () {});
     var signalingRef = GC._firestore().collection('groupCalls').doc(GC._currentCallId).collection('signaling');
     function sendMuteRequest() {
       signalingRef.add({
