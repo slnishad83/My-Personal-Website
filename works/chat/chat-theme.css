@@ -17,7 +17,6 @@ html, body, #app {
     padding: 0; 
     overscroll-behavior: none; 
   }
-  #chat-area { min-height: 100dvh; }
 }
 
 /* Prevent iOS Zoom on focus for inputs on mobile screens */
@@ -603,7 +602,6 @@ html:not(.dark) .wa-filter-custom input {
   #chat-area.hidden-mobile { display: none !important; }
   #chat-area.visible-mobile { display: flex !important; }
   #bottom-nav { display: flex !important; }
-  #app { padding-bottom: 64px; }
   .glass-panel { border-radius: 24px !important; }
   #detail-panel { display: none !important; }
   #attach-menu { left: 12px !important; bottom: 80px !important; max-height: calc(100vh - 160px); overflow-y: auto; }
@@ -700,7 +698,7 @@ html:not(.dark) .wa-filter-custom input {
     .emoji-cat-btn { min-width: 44px !important; min-height: 44px !important; }
   }
   /* L1: Smooth transitions on orientation change */
-  html, body, #app, #sidebar, #chat-list-sidebar, #chat-area, #detail-panel { transition: width 0.2s ease, transform 0.2s ease !important; }
+  #sidebar, #chat-list-sidebar, #chat-area, #detail-panel { transition: width 0.2s ease, transform 0.2s ease !important; }
 }
 
 @media (min-width: 1024px) and (max-width: 1279px) {
@@ -1190,7 +1188,7 @@ button, a, [role="button"], input, textarea, select {
   #bottom-nav .text-2xl { font-size: 20px !important; }
   .overlay > div { margin: 4px !important; border-radius: 16px !important; }
   #attach-menu { left: 4px !important; bottom: calc(64px + var(--safe-bottom, 0px)) !important; }
-  #emoji-picker { right: 4px !important; left: 4px !important; bottom: calc(64px + var(--safe-bottom, 0px)) !important; height: auto !important; max-height: 60vh !important; }
+  #emoji-picker { right: 4px !important; left: 4px !important; bottom: calc(64px + var(--safe-bottom, 0px)) !important; min-height: 200px !important; max-height: 60vh !important; }
   .emoji-cat-btn { padding: 4px 6px !important; font-size: 13px !important; }
   #pinned-message-bar { padding: 4px 8px !important; }
   #format-bar { padding: 4px 8px !important; }
@@ -1347,8 +1345,10 @@ html #messages-wrap::-webkit-scrollbar-track { background: var(--surface-bright)
   #chats-empty > div { flex-shrink: 0 !important; }
 }
 
-/* M15: Scroll-to-bottom dynamic bottom offset */
-#scroll-to-bottom { bottom: max(96px, calc(var(--input-bar-h, 72px) + 24px)) !important; }
+/* M15: Scroll-to-bottom dynamic bottom offset (desktop only — mobile uses inline calc) */
+@media (min-width: 768px) {
+  #scroll-to-bottom { bottom: max(96px, calc(var(--input-bar-h, 72px) + 24px)) !important; }
+}
 
 /* M14: Permission modals centered on tablet */
 @media (min-width: 768px) {
@@ -2356,7 +2356,7 @@ html:not(.dark) #desktop-context-menu,
 #input-bar button { flex-shrink: 0 !important; min-width: 44px; }
 
 /* ── Prevent overflow on header actions ───────────────────────── */
-#chat-header { overflow: hidden !important; min-width: 0 !important; }
+#chat-header { overflow: visible !important; min-width: 0 !important; }
 #header-actions-container { flex-shrink: 0 !important; flex-wrap: nowrap !important; }
 #chat-header .flex-1, #chat-header > div:nth-child(2) {
   min-width: 0 !important;
@@ -2498,7 +2498,6 @@ html:not(.dark) #desktop-context-menu,
 /* ── Mobile browser bottom bar aware (dynamic viewport) ──────── */
 @supports (height: 100dvh) {
   #app { height: 100dvh !important; }
-  #chat-area { min-height: 100dvh !important; max-height: 100dvh !important; }
   .overlay > div { max-height: 92dvh !important; }
 }
 

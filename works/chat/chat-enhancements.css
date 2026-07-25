@@ -454,7 +454,7 @@ html.dark .ce-seen-label {
   position: fixed !important;
   bottom: calc(68px + env(safe-area-inset-bottom, 0px)) !important;
   right: 14px !important;
-  z-index: 10000 !important;
+  z-index: 49 !important;
 
   width: auto !important;
   min-height: 44px !important;
@@ -1949,9 +1949,6 @@ html.dark .call-history-filters button:hover {
   z-index: 10;
   min-height: 56px;
 }
-.wa-input-footer:not(.hidden) {
-  display: flex;
-}
 
 /* ── Rounded input box (left part) ── */
 .wa-input-box {
@@ -2165,41 +2162,7 @@ html:not(.dark) .wa-input-footer {
   }
 }
 
-/* ── WhatsApp Filter Chips ── */
-#wa-filter-chips {
-  margin-top: 12px !important;
-  padding: 4px 0 !important;
-  display: flex !important;
-  align-items: center !important;
-  gap: 8px !important;
-  overflow-x: auto !important;
-  border-bottom: none !important;
-}
-.wa-chip-add {
-  --wa-chip-bg: #202c33;
-  --wa-chip-text: #aab4bd;
-  --wa-chip-hover: #2a3942;
-  --wa-chip-hover-text: #d1d7db;
-
-  display: inline-flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  width: 44px !important;
-  height: 44px !important;
-  min-height: 44px !important;
-  background: var(--wa-chip-bg) !important;
-  color: var(--wa-chip-text) !important;
-  border: none !important;
-  border-radius: 50% !important;
-  cursor: pointer !important;
-  flex-shrink: 0 !important;
-  transition: all 0.15s ease !important;
-  padding: 0 !important;
-}
-.wa-chip-add:hover {
-  background: var(--wa-chip-hover) !important;
-  color: var(--wa-chip-hover-text) !important;
-}
+/* ── Filter chips defined in chat-theme.css — only light-mode overrides below ── */
 
 /* Unread Empty State */
 .wa-unread-empty-container {
@@ -2264,15 +2227,7 @@ html:not(.dark) .wa-unread-empty-link {
   color: #00a884;
 }
 
-/* Final WhatsApp-style filter guard */
-#wa-filter-chips {
-  margin-top: 10px !important;
-  padding: 2px 0 9px !important;
-  gap: 8px !important;
-  overflow-x: auto !important;
-  scrollbar-width: thin !important;
-  scrollbar-color: rgba(134,150,160,.55) transparent !important;
-}
+/* ── Duplicate #wa-filter-chips removed — defined in chat-theme.css ── */
 #wa-filter-chips::-webkit-scrollbar {
   height: 5px !important;
 }
