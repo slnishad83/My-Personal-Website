@@ -1,6 +1,6 @@
 {
   "name": "nsl-chat",
-  "version": "4.0.0",
+  "version": "4.1.0",
   "description": "NSL Chat — Modern team messaging",
   "main": "electron/main.js",
   "scripts": {
@@ -20,7 +20,11 @@
     "electron:build:mac": "npx electron-builder --config electron-builder.yml --mac",
     "electron:build:linux": "npx electron-builder --config electron-builder.yml --linux",
     "ios:setup": "bash scripts/setup-ios.sh",
-    "ios:build": "npx cap sync ios && cd ios/App && xcodebuild -workspace App.xcworkspace -scheme App -configuration Release -archivePath build/App.xcarchive archive"
+    "ios:build": "npx cap sync ios && cd ios/App && xcodebuild -workspace App.xcworkspace -scheme App -configuration Release -archivePath build/App.xcarchive archive",
+    "deploy": "vite build && firebase deploy --only hosting"
+  },
+  "engines": {
+    "node": ">=18"
   },
   "keywords": [
     "chat",
@@ -35,15 +39,14 @@
     "@capacitor-community/contacts": "^7.2.0",
     "@capacitor/android": "^8.4.2",
     "@capacitor/app": "^8.1.1",
-    "@capacitor/cli": "^8.4.2",
     "@capacitor/core": "^8.4.2",
     "@capacitor/ios": "^8.4.2",
     "@capacitor/keyboard": "^8.0.5",
     "@capacitor/push-notifications": "^8.1.2",
-    "@capacitor/status-bar": "^8.0.3",
-    "acorn": "^8.17.0"
+    "@capacitor/status-bar": "^8.0.3"
   },
   "devDependencies": {
+    "@capacitor/cli": "^8.4.2",
     "@eslint/js": "^10.0.1",
     "@tailwindcss/cli": "^4.3.3",
     "@tailwindcss/vite": "^4.3.3",
@@ -52,6 +55,7 @@
     "eslint": "^10.7.0",
     "pa11y": "^9.1.1",
     "tailwindcss": "^4.3.3",
-    "vite": "^8.1.5"
+    "vite": "^8.1.5",
+    "acorn": "^8.17.0"
   }
 }

@@ -408,7 +408,7 @@ window.addEventListener('load', () => {
   if (window.KeyboardShortcuts) KeyboardShortcuts.init();
   if (window.SwipeDelete) SwipeDelete.init();
   if (window.BackButton) BackButton.init();
-  if (/iPhone|iPad|iPod/i.test(navigator.userAgent) && window.IOSKeyboardFix) IOSKeyboardFix.init();
+  if (window.VirtualKeyboardFix) VirtualKeyboardFix.init();
   const chatList = document.getElementById('chat-list');
   if (chatList && window.PullToRefresh) PullToRefresh.init(chatList);
   if (window.PinchZoom) PinchZoom.init(document.getElementById('messages-wrap'));

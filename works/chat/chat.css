@@ -56,7 +56,7 @@ html:not(.dark) .custom-scrollbar::-webkit-scrollbar-thumb:hover {
   transition: background 0.2s ease, border-color 0.2s ease;
 }
 
-html.light .glass-panel, .light .glass-panel {
+html:not(.dark) .glass-panel {
   background: color-mix(in srgb, var(--surface-container-lowest) 60%, transparent);
   border: 1px solid color-mix(in srgb, var(--primary) 8%, transparent);
 }

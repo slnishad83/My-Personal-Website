@@ -164,6 +164,10 @@ self.addEventListener('notificationclick', function(event) {
   );
 });
 
+self.addEventListener('notificationclose', function(event) {
+  // Analytics cleanup for dismissed notifications
+});
+
 /* ══════════════════════════════════════════════════════════════
    VITE-OPTIMIZED CACHING STRATEGY
    ══════════════════════════════════════════════════════════════
@@ -315,6 +319,12 @@ function storeFailedOperation(request, error) {
       timestamp: Date.now(),
       error: error ? error.message || String(error) : 'unknown'
     };
+    // Capture request headers
+    try {
+      request.headers.forEach(function(value, key) {
+        entry.headers[key] = value;
+      });
+    } catch (_) {}
     // Capture request body for replay (clone first since body can only be read once)
     var bodyReady = Promise.resolve(null);
     if (request.method !== 'GET' && request.method !== 'HEAD') {
@@ -441,7 +451,7 @@ self.addEventListener('fetch', function(event) {
           }
           return response;
         })
-        .catch(function() { return caches.match(event.request); })
+      .catch(function() { return caches.match(event.request); })
     );
     return;
   }
@@ -482,7 +492,11 @@ self.addEventListener('fetch', function(event) {
         }
         return response;
       })
-      .catch(function() { return caches.match(event.request); })
+      .catch(function() { 
+        return caches.match(event.request).then(function(cached) {
+          return cached || new Response('', { status: 504, statusText: 'Offline' });
+        });
+      })
   );
 });
 
@@ -490,8 +504,8 @@ self.addEventListener('fetch', function(event) {
    ONLINE EVENT — Process queued failed operations
    ══════════════════════════════════════════════════════════════ */
 
-self.addEventListener('online', function() {
-  processOperationQueue();
+self.addEventListener('online', function(event) {
+  event.waitUntil(processOperationQueue());
 });
 
 /* ══════════════════════════════════════════════════════════════

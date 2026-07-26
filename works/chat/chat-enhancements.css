@@ -26,8 +26,6 @@ html.dark ::-webkit-scrollbar-thumb      { background: var(--border); border-rad
 html.dark ::-webkit-scrollbar-thumb:hover{ background: var(--border-hover); }
 html.dark ::-webkit-scrollbar-corner     { background: var(--bg); }
 
-/* Firefox scrollbars */
-html.dark * { scrollbar-color: var(--border) var(--bg); scrollbar-width: thin; }
 
 /* ── Text selection ───────────────────────────────────── */
 html.dark ::selection { background: var(--primary); color: var(--text); }
@@ -52,8 +50,7 @@ html.dark :focus-visible { outline-color: color-mix(in srgb, var(--primary) 75%,
    STRUCTURAL BACKGROUNDS
    ══════════════════════════════════════════════════════════ */
 
-html.dark,
-html html.dark            { background-color: var(--bg) !important; }
+html.dark            { background-color: var(--bg) !important; }
 
 /* Main chat area (source hardcodes #efeae2) */
 html.dark .chat-main      { background: var(--bg) !important; }

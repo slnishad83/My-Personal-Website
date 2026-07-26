@@ -95,14 +95,12 @@
   50% { opacity: 0.3; }
 }
 
-html.dark #_wa_conn_banner.offline,
-.dark #_wa_conn_banner.offline {
+html.dark #_wa_conn_banner.offline {
   background: var(--warning-container, #44380a);
   color: var(--on-warning-container, #fcd34d);
   border-color: var(--warning-border, #6b4f0a);
 }
-html.dark #_wa_conn_banner.reconnecting,
-.dark #_wa_conn_banner.reconnecting {
+html.dark #_wa_conn_banner.reconnecting {
   background: var(--info-container, #0c2d48);
   color: var(--on-info-container, #7dd3fc);
   border-color: var(--info-border, #164e63);

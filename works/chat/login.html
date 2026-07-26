@@ -7,6 +7,8 @@
       content="width=device-width, initial-scale=1.0, user-scalable=yes, maximum-scale=5, viewport-fit=cover, interactive-widget=resizes-content"
     />
     <meta name="theme-color" content="#11131c" />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="robots" content="noindex, nofollow" />
     <meta http-equiv="Content-Security-Policy" content="default-src 'self' https: blob: data: 'unsafe-inline'; script-src 'self' https://www.gstatic.com 'unsafe-inline'; style-src 'self' https://fonts.googleapis.com 'unsafe-inline'; img-src 'self' https: blob: data:; font-src 'self' https://fonts.gstatic.com; connect-src 'self' https://*.googleapis.com https://*.firebaseio.com https://*.firebaseapp.com https://us-central1-*.cloudfunctions.net wss://*.firebaseio.com; frame-ancestors 'self'; form-action 'self';">
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -247,7 +249,7 @@
     </div>
 
     <!-- Theme Toggle Button -->
-    <button class="dm-toggle" id="dmToggle" aria-label="Toggle theme" title="Toggle theme">
+    <button class="dm-toggle" id="dmToggle" aria-label="Toggle theme" title="Toggle theme" aria-pressed="false">
       <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
     </button>
 
@@ -485,5 +487,6 @@
     <script src="https://www.gstatic.com/firebasejs/12.16.0/firebase-functions-compat.js" crossorigin="anonymous"></script>
     <!-- Auth logic extracted to app-login.js (Vite module) -->
     <script type="module" src="app-login.js"></script>
+    <noscript><div style="padding:40px;text-align:center"><h2>JavaScript Required</h2><p>NSL Chat requires JavaScript to run.</p></div></noscript>
   </body>
 </html>

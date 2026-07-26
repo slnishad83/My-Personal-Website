@@ -53,6 +53,29 @@
   html { scroll-behavior: auto !important; }
 }
 
+/* ── Reduced transparency ──────────────────────────── */
+@media (prefers-reduced-transparency: reduce) {
+  .glass-panel,
+  #chat-header,
+  #sidebar-header,
+  .backdrop-filter,
+  .modal-content,
+  .context-menu,
+  .status-viewer,
+  .profile-modal,
+  .attachment-menu,
+  .emoji-picker,
+  .call-picker,
+  .search-results-panel,
+  .detail-panel,
+  .chat-list-item,
+  .message {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    background-color: var(--surface-container) !important;
+  }
+}
+
 /* ── Focus indicators (enhanced) ──────────────────────── */
 *:focus-visible {
   outline: 2px solid var(--primary) !important;
@@ -103,6 +126,21 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
     border: 1px solid var(--outline-variant) !important;
   }
   /* Increase text contrast */
+  .text-on-surface-variant {
+    color: var(--on-surface) !important;
+  }
+}
+@media (prefers-contrast: more) and (prefers-color-scheme: dark) {
+  :root {
+    --outline-variant: rgba(255, 255, 255, 0.6);
+  }
+  html.dark .message-bubble {
+    border: 1px solid var(--border) !important;
+  }
+  html.dark .chat-header,
+  html.dark .sidebar-header {
+    border-bottom-width: 2px !important;
+  }
   .text-on-surface-variant {
     color: var(--on-surface) !important;
   }
@@ -231,13 +269,45 @@ button:focus:not(:focus-visible),
 
 /* ── Call controls accessibility ───────────────────────────────── */
 #call-controls button:focus-visible {
-  outline: 2px solid white !important;
+  outline: 2px solid var(--primary) !important;
   outline-offset: 2px !important;
+  border-radius: 50%;
 }
 
 /* ── Modal focus trap visual indicator ─────────────────────────── */
 .overlay[role="dialog"] > div:first-child {
   /* Ensure modal content is in the accessibility tree */
+}
+
+/* ── Enhanced ARIA live regions ────────────────────────────────── */
+[aria-live] {
+  contain: content;
+}
+
+[aria-live="polite"] {
+  animation: none;
+}
+
+[aria-live="assertive"] {
+  animation: none;
+  font-weight: bold;
+}
+
+/* ── Screen reader announcements for status changes ────────────── */
+.connection-banner[role="alert"],
+.toast[role="alert"],
+.status-change {
+  position: relative;
+}
+
+.connection-banner[role="alert"]::before,
+.toast[role="alert"]::before {
+  content: '';
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
 }
 
 /* ── Loading state announcements ───────────────────────────────── */

@@ -1,7 +1,7 @@
 import { defineConfig } from 'vite';
 import tailwindcss from '@tailwindcss/vite';
 import { resolve } from 'path';
-import { writeFileSync, readFileSync, copyFileSync, mkdirSync, readdirSync, statSync } from 'fs';
+import { writeFileSync, readFileSync, copyFileSync, mkdirSync, readdirSync, statSync, existsSync } from 'fs';
 import { join } from 'path';
 
 /* Read Firebase config once — single source of truth */
@@ -16,7 +16,7 @@ function copyStaticAssets() {
 
       // Copy sounds directory
       const soundsDir = join('.', 'sounds');
-      if (statSync(soundsDir, { throwIfNoEntry: false })) {
+      if (existsSync(soundsDir)) {
         const destSounds = resolve(distDir, 'sounds');
         mkdirSync(destSounds, { recursive: true });
         readdirSync(soundsDir).forEach(file => {
@@ -36,7 +36,7 @@ function copyStaticAssets() {
       });
 
       // Copy manifest.json
-      if (statSync('manifest.json', { throwIfNoEntry: false })) {
+      if (existsSync('manifest.json')) {
         copyFileSync('manifest.json', resolve(distDir, 'manifest.json'));
       }
 
@@ -73,7 +73,7 @@ function generateSwPlugin() {
       let sw = readFileSync('sw.js', 'utf-8');
       // Replace the placeholder with the actual config
       sw = sw.replace(
-        '/* __FIREBASE_CONFIG__ */ ' + sw.match(/\/\* __FIREBASE_CONFIG__ \*\/\s*\{[^}]+\}/)?.[0]?.replace(/\/\* __FIREBASE_CONFIG__ \*\/\s*/, '') || '{}',
+        /\/\* __FIREBASE_CONFIG__ \*\/\s*\{[^}]+\}/,
         JSON.stringify(firebaseConfig)
       );
       this.emitFile({
@@ -111,6 +111,7 @@ export default defineConfig({
         reset: resolve(__dirname, 'reset.html'),
         verify: resolve(__dirname, 'verify.html'),
         turn: resolve(__dirname, 'turn.html'),
+        offline: resolve(__dirname, 'offline.html'),
       },
       output: {
         entryFileNames: 'assets/[name]-[hash].js',

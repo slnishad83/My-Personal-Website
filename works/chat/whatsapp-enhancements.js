@@ -54,6 +54,8 @@
 
       const banner = document.createElement('div');
       banner.id = '_wa_conn_banner';
+      banner.setAttribute('role', 'alert');
+      banner.setAttribute('aria-live', 'assertive');
       banner.innerHTML = '<div class="conn-dot"></div><span>Checking connection…</span>';
       const chatPanel = findChatPanel();
       if (chatPanel) chatPanel.prepend(banner);
