@@ -278,7 +278,7 @@
       btn.title = 'Catch Me Up — AI summary of recent messages';
       btn.style.cssText = 'background:none;border:1px solid var(--border,#e2e8f0);border-radius:8px;padding:5px 10px;font-size:12px;cursor:pointer;color:var(--brand-dark,#008069);font-weight:600;font-family:inherit;margin-right:4px';
       btn.innerHTML = '🧠 Catch Me Up';
-      btn.onclick = catchMeUp;
+      btn.onclick = () => { if (typeof window.catchMeUp === 'function') window.catchMeUp(); };
       const actionsArea = chatHeader.querySelector('[class*="actions"], [class*="right"], [class*="icons"]');
       if (actionsArea) actionsArea.prepend(btn);
     }

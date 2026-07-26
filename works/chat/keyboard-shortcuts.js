@@ -530,8 +530,8 @@ const KeyboardShortcuts = {
 
     /* ── Backspace in empty input: Go back (mobile) ─────────── */
     if (e.key === 'Backspace' && isInput && target.id === 'msg-input' && !target.value.trim()) {
-      if (window.innerWidth < 768 && typeof backToList === 'function') {
-        backToList();
+      if (window.innerWidth < 768 && typeof window.backToList === 'function') {
+        window.backToList();
       }
     }
 

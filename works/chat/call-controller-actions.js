@@ -202,11 +202,73 @@
     showCallQualityBadge(stats);
   }
 
+  var _callOnHold = false;
+
+  function toggleCallHold() {
+    if (!localCallStream) return;
+    _callOnHold = !_callOnHold;
+    localCallStream.getTracks().forEach(function (t) { t.enabled = !_callOnHold; });
+    var btn = CC.$('btn-hold');
+    var icon = CC.$('hold-icon');
+    if (btn) btn.classList.toggle('bg-red-500', _callOnHold);
+    if (icon) icon.textContent = _callOnHold ? 'play_arrow' : 'pause';
+    var holdBanner = document.getElementById('callHoldBanner');
+    if (_callOnHold) {
+      if (!holdBanner) {
+        holdBanner = document.createElement('div');
+        holdBanner.id = 'callHoldBanner';
+        holdBanner.className = 'fixed top-4 left-1/2 -translate-x-1/2 z-[150] bg-surface-container text-on-surface px-4 py-2 rounded-full shadow-lg text-sm font-semibold';
+        holdBanner.textContent = 'Call on hold — tap Resume to continue';
+        document.body.appendChild(holdBanner);
+      }
+      holdBanner.style.display = 'flex';
+    } else {
+      if (holdBanner) holdBanner.style.display = 'none';
+    }
+    CC.toast(_callOnHold ? 'Call on hold' : 'Call resumed', 'info');
+  }
+
+  function toggleFullscreen() {
+    var cs = CC.$('call-screen');
+    if (!cs) return;
+    if (document.fullscreenElement || document.webkitFullscreenElement) {
+      if (document.exitFullscreen) document.exitFullscreen().catch(function () {});
+      else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+    } else {
+      var fs = cs.requestFullscreen || cs.webkitRequestFullscreen;
+      if (fs) fs.call(cs).catch(function () {});
+    }
+  }
+
+  function togglePIP() {
+    var rv = CC.$('remote-video');
+    if (!rv) return;
+    if (document.pictureInPictureElement) {
+      document.exitPictureInPicture().catch(function () {});
+    } else if (document.pictureInPictureEnabled && rv.srcObject) {
+      rv.requestPictureInPicture().catch(function () {});
+    }
+  }
+
+  function resetCallHoldState() {
+    _callOnHold = false;
+    var btn = CC.$('btn-hold');
+    if (btn) btn.classList.remove('bg-red-500');
+    var icon = CC.$('hold-icon');
+    if (icon) icon.textContent = 'pause';
+    var banner = document.getElementById('callHoldBanner');
+    if (banner) banner.style.display = 'none';
+  }
+
   CC.toggleMute = toggleMute;
   CC.toggleCamera = toggleCamera;
   CC.toggleSpeaker = toggleSpeaker;
   CC.toggleScreenShare = toggleScreenShare;
   CC.switchCamera = switchCamera;
+  CC.toggleCallHold = toggleCallHold;
+  CC.toggleFullscreen = toggleFullscreen;
+  CC.togglePIP = togglePIP;
+  CC.resetCallHoldState = resetCallHoldState;
   CC.showCallEndScreen = showCallEndScreen;
   CC.dismissCallEndScreen = dismissCallEndScreen;
   CC.showCallQualityBadge = showCallQualityBadge;
@@ -217,5 +279,8 @@
   window.toggleSpeaker = toggleSpeaker;
   window.toggleScreenShare = toggleScreenShare;
   window.switchCamera = switchCamera;
+  window.toggleCallHold = toggleCallHold;
+  window.toggleFullscreen = toggleFullscreen;
+  window.togglePIP = togglePIP;
 
 })();

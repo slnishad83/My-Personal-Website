@@ -304,7 +304,7 @@ async function _requestWeb(id) {
       input.addEventListener("change", cleanup, { once: true });
       document.body.appendChild(input);
       input.click();
-      window.addEventListener('focus', cleanup, { once: true, timeout: 3000 });
+      window.addEventListener('focus', cleanup, { once: true });
       return PERMISSION_STATES.ALLOWED;
     }
     if (id === "contacts") {

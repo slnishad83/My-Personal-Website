@@ -90,7 +90,7 @@
     triggerWrap.appendChild(picker);
     triggerWrap.appendChild(trigger);
 
-    var endBtn = callControls.querySelector('[onclick="endCall()"]') || callControls.lastElementChild;
+    var endBtn = callControls.querySelector('[data-action="endCall"]') || callControls.querySelector('button:last-child') || callControls.lastElementChild;
     if (endBtn && endBtn.parentNode === callControls) {
       callControls.insertBefore(triggerWrap, endBtn);
     } else {

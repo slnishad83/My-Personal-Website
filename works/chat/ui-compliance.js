@@ -52,9 +52,6 @@
     const rect = menu.getBoundingClientRect();
     const vpW  = window.innerWidth;
     const vpH  = window.innerHeight;
-    let { left, top } = menu.style;
-    left = parseFloat(left) || 0;
-    top  = parseFloat(top)  || 0;
     if (rect.right  > vpW - 8)  { menu.style.left = Math.max(8, vpW - rect.width  - 8) + 'px'; }
     if (rect.bottom > vpH - 8)  { menu.style.top  = Math.max(8, vpH - rect.height - 8) + 'px'; }
     if (rect.left   < 8)        { menu.style.left = '8px'; }

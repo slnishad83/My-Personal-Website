@@ -5,6 +5,7 @@
   const LANGUAGES = ['Malayalam','Tamil','Telugu','Hindi','Kannada','Bengali','Marathi','Punjabi','English','Other'];
   const _trackCache = {};
   window._trackCache = _trackCache;
+  const _TRACK_CACHE_MAX = 500;
 
   // ─── WORKING SEARCH BACKENDS ───
 
@@ -632,6 +633,11 @@
 
     // Cache all results
     results.forEach(t => { _trackCache[t.id] = t; });
+    var cacheKeys = Object.keys(_trackCache);
+    if (cacheKeys.length > _TRACK_CACHE_MAX) {
+      var toRemove = cacheKeys.slice(0, cacheKeys.length - _TRACK_CACHE_MAX);
+      toRemove.forEach(function(k) { delete _trackCache[k]; });
+    }
 
     // Group by source
     const ytResults = results.filter(t => t.source === 'youtube');

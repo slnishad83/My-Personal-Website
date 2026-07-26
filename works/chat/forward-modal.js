@@ -278,8 +278,15 @@
       }
     }
     try {
-      await Promise.all(promises);
-      if (typeof showToast === 'function') showToast('Message' + (msgIds.length > 1 ? 's' : '') + ' forwarded to ' + targetIds.length + ' chat' + (targetIds.length > 1 ? 's' : ''), 'success');
+      var results = await Promise.allSettled(promises);
+      var succeeded = results.filter(function(r) { return r.status === 'fulfilled'; }).length;
+      var failed = results.length - succeeded;
+      if (succeeded > 0 && typeof showToast === 'function') {
+        showToast('Message' + (msgIds.length > 1 ? 's' : '') + ' forwarded to ' + targetIds.length + ' chat' + (targetIds.length > 1 ? 's' : ''), 'success');
+      }
+      if (failed > 0 && typeof showToast === 'function') {
+        showToast(failed + ' forward' + (failed > 1 ? 's' : '') + ' failed', 'error');
+      }
     } catch (e) {
       console.error('[Forward] Error:', e);
       if (typeof showToast === 'function') showToast('Failed to forward message', 'error');

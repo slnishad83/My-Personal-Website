@@ -166,12 +166,15 @@
         // Listen for messages from SW to classify before showing
         navigator.serviceWorker.addEventListener('message', (event) => {
           if (event.data?.type === 'classify-notif') {
+            var source = event.source || (event.target && event.target.constructor && event.target);
             classify(event.data.payload).then(result => {
-              event.source?.postMessage({
-                type: 'notif-classified',
-                priority: result.priority,
-                suppress: result.priority === 'low'
-              });
+              if (source && typeof source.postMessage === 'function') {
+                source.postMessage({
+                  type: 'notif-classified',
+                  priority: result.priority,
+                  suppress: result.priority === 'low'
+                });
+              }
             });
           }
         });

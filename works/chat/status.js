@@ -723,7 +723,7 @@
     function _updatePostBtn() {
       var btn = document.getElementById('sc-post-btn');
       if (!btn) return;
-      var ready = false;
+      var ready;
       if (window._scSelectedType === 'text') {
         var inp = document.getElementById('sc-text-input');
         ready = inp && inp.value.trim().length > 0;
@@ -742,14 +742,14 @@
           await createTextStatus(inp ? inp.value : '', window._scCurrentBg);
         } else if (window._scSelectedType === 'image') {
           if (!window._scSelectedFile) { _toast('Select an image first', 'error'); return; }
-          var url = await uploadStatusMedia(window._scSelectedFile);
-          var cap = document.getElementById('sc-image-caption');
-          await createImageStatus(url, cap ? cap.value : '');
+          var urlImg = await uploadStatusMedia(window._scSelectedFile);
+          var capImg = document.getElementById('sc-image-caption');
+          await createImageStatus(urlImg, capImg ? capImg.value : '');
         } else if (window._scSelectedType === 'video') {
           if (!window._scSelectedFile) { _toast('Select a video first', 'error'); return; }
-          var url = await uploadStatusMedia(window._scSelectedFile);
-          var cap = document.getElementById('sc-video-caption');
-          await createVideoStatus(url, cap ? cap.value : '');
+          var urlVid = await uploadStatusMedia(window._scSelectedFile);
+          var capVid = document.getElementById('sc-video-caption');
+          await createVideoStatus(urlVid, capVid ? capVid.value : '');
         }
         closeStatusComposer();
       } catch (e) {

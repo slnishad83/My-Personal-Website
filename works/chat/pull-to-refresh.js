@@ -91,7 +91,16 @@ const PullToRefresh = {
 
   destroy() {
     this._enabled = false;
+    if (this._container) {
+      if (this._boundTouchStart) this._container.removeEventListener('touchstart', this._boundTouchStart);
+      if (this._boundTouchMove) this._container.removeEventListener('touchmove', this._boundTouchMove);
+      if (this._boundTouchEnd) this._container.removeEventListener('touchend', this._boundTouchEnd);
+    }
+    this._boundTouchStart = null;
+    this._boundTouchMove = null;
+    this._boundTouchEnd = null;
     this._container = null;
+    this._indicator = null;
   }
 };
 

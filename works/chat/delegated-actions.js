@@ -46,8 +46,8 @@
     'toggleAppLock': function() {
       if (typeof closeModal === 'function') closeModal('profile-overlay');
       if (typeof toggleAppLock === 'function') {
-        if (typeof isAppLockEnabled === 'function' && isAppLockEnabled()) {
-          if (typeof resetAppLockPin === 'function') resetAppLockPin();
+        if (typeof window.isAppLockEnabled === 'function' && window.isAppLockEnabled()) {
+          if (typeof window.resetAppLockPin === 'function') window.resetAppLockPin();
           if (typeof showToast === 'function') showToast('App Lock disabled', 'success');
         } else {
           if (typeof showAppLock === 'function') showAppLock();

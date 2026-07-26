@@ -42,15 +42,19 @@
   function handleClick(e) {
     var el = e.target.closest('[data-action]');
     if (!el) return;
-    e.preventDefault();
-    e.stopPropagation();
     var action = el.getAttribute('data-action');
     var url = el.getAttribute('data-action-url');
     if (action === 'navigate' && url) {
+      e.preventDefault();
+      e.stopPropagation();
       window.location.href = url;
       return;
     }
-    if (action) invokeAction(el, action);
+    if (action && resolve(action)) {
+      e.preventDefault();
+      e.stopPropagation();
+      invokeAction(el, action);
+    }
   }
 
   /* ── Keyboard delegation (data-action-keydown) ── */
@@ -69,9 +73,9 @@
     }
     if (e.key !== 'Enter' && e.key !== ' ') return;
     e.preventDefault();
-    var fn = resolve(fnName);
-    if (!fn) return;
-    try { fn(e); } catch (err) { console.error('[bindEvents] keydown error:', fnName, err); }
+    var fn2 = resolve(fnName);
+    if (!fn2) return;
+    try { fn2(e); } catch (err) { console.error('[bindEvents] keydown error:', fnName, err); }
   }
 
   /* ── Input delegation (data-action-input) ── */

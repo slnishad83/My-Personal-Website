@@ -80,7 +80,7 @@
   window.ChatDrafts = Drafts;
 
   let _draftSaveTimeout = null;
-  document.addEventListener('input', App.debounce(function (e) {
+  var _draftHandler = function (e) {
     if (e.target.id === 'message-input' || e.target.getAttribute('contenteditable') === 'true') {
       const chatId = window.App?.currentChat?.id;
       if (!chatId) return;
@@ -90,7 +90,12 @@
         Drafts.saveDraft(chatId, text);
       }, 500);
     }
-  }, 500));
+  };
+  if (typeof App !== 'undefined' && typeof App.debounce === 'function') {
+    document.addEventListener('input', App.debounce(_draftHandler, 500));
+  } else {
+    document.addEventListener('input', _draftHandler);
+  }
 
   document.addEventListener('click', function (e) {
     if (e.target.closest('.send-btn, [data-action="send"]')) {

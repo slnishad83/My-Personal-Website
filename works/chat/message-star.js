@@ -300,20 +300,7 @@
           if (existingStarBtn) {
             var icon = existingStarBtn.querySelector('.material-symbols-outlined');
             var label = existingStarBtn.querySelector('.text-sm, span:last-child');
-            if (icon) icon.textContent = starred ? 'star' : 'star';
-            if (icon) icon.style.color = starred ? '#f5a623' : '';
-            if (label) label.textContent = starred ? 'Unstar' : 'Star';
-            return;
-          }
-          var starHtml = '<button class="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl hover:bg-surface-variant/50 transition-colors text-on-surface" data-action="star-msg" data-msg-id="' + _esc(msgId) + '">' +
-            '<span class="material-symbols-outlined text-lg" style="' + (starred ? 'color:#f5a623' : '') + '">star</span>' +
-            '<span class="text-sm">' + (starred ? 'Unstar' : 'Star') + '</span></button>';
-          var deleteBtn = menu.querySelector('[data-action="delete"], button[onclick*="delete"]');
-          if (deleteBtn) {
-            deleteBtn.insertAdjacentHTML('beforebegin', starHtml);
-          } else {
-            var innerDiv = menu.querySelector('div');
-            if (innerDiv) innerDiv.insertAdjacentHTML('beforeend', starHtml);
+            if (icon) icon.textContent = starred ? 'star' : 'star_border';
           }
         });
       }, 50);
@@ -349,12 +336,12 @@
             if (existingStarBtn) {
               var icon = existingStarBtn.querySelector('.material-symbols-outlined');
               var label = existingStarBtn.querySelector('.text-sm, span:last-child');
-              if (icon) icon.style.color = starred ? '#f5a623' : '';
+              if (icon) icon.textContent = starred ? 'star' : 'star_border';
               if (label) label.textContent = starred ? 'Unstar' : 'Star';
               return;
             }
             var starHtml = '<button class="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl hover:bg-surface-variant/50 transition-colors text-on-surface" data-action="star-msg" data-msg-id="' + _esc(msgId) + '">' +
-              '<span class="material-symbols-outlined text-lg" style="' + (starred ? 'color:#f5a623' : '') + '">star</span>' +
+              '<span class="material-symbols-outlined text-lg" style="' + (starred ? 'color:#f5a623' : '') + '">' + (starred ? 'star' : 'star_border') + '</span>' +
               '<span class="text-sm">' + (starred ? 'Unstar' : 'Star') + '</span></button>';
             var deleteBtn = menu.querySelector('[data-action="delete"], button[onclick*="delete"]');
             if (deleteBtn) deleteBtn.insertAdjacentHTML('beforebegin', starHtml);

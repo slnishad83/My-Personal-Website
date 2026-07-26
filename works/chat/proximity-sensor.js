@@ -44,6 +44,10 @@
     _proximityActive = false;
     _dimScreen(false);
     _setAudioOutput('speaker');
+    if (_deviceChangeHandler && navigator.mediaDevices) {
+      try { navigator.mediaDevices.removeEventListener('devicechange', _deviceChangeHandler); } catch (_) {}
+      _deviceChangeHandler = null;
+    }
   }
 
   function _dimScreen(dim) {
@@ -94,9 +98,11 @@
     } catch (_) {}
   }
 
+  var _deviceChangeHandler = null;
+
   function _setupAudioOutputAutoSwitch() {
     if (typeof navigator.mediaDevices === 'undefined' || !navigator.mediaDevices.addEventListener) return;
-    navigator.mediaDevices.addEventListener('devicechange', async function () {
+    _deviceChangeHandler = async function () {
       if (!_audioOutputAutoSwitch || !_proximityActive) return;
       try {
         var devices = await navigator.mediaDevices.enumerateDevices();
@@ -112,7 +118,8 @@
           _setAudioOutput('speaker');
         }
       } catch (_) {}
-    });
+    };
+    navigator.mediaDevices.addEventListener('devicechange', _deviceChangeHandler);
   }
 
   function isActive() { return _proximityActive; }

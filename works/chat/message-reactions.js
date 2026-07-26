@@ -139,15 +139,15 @@
     grid.className = 'nsl-full-picker-grid';
 
     var EMOJI_NAMES = {
-      '👍':'thumbsup','👎':'thumbsdown','❤️':'heart','🔥':'fire','😂':'laughing','😮':'open_mouth',
+      '👍':'thumbsup','👎':'thumbsdown','❤️':'red_heart','🔥':'fire','😂':'laughing','😮':'open_mouth',
       '😢':'cry','🙏':'pray','💪':'muscle','👏':'clap','🎉':'party','💯':'100',
-      '❤️':'red_heart','🥰':'smiling_face_hearts','😍':'heart_eyes','😎':'sunglasses',
-      '🤔':'thinking','🤣':'rofl','😭':'sob','🥳':'partying','😴':'sleeping',
-      '🤔':'hmm','👀':'eyes','💀':'skull','😭':'crying','🤝':'handshake',
+      '🥰':'smiling_face_hearts','😍':'heart_eyes','😎':'sunglasses',
+      '🤔':'hmm','🤣':'rofl','😭':'crying','🥳':'partying','😴':'sleeping',
+      '👀':'eyes','💀':'dead','🤝':'handshake',
       '✨':'sparkles','🙌':'raised_hands','💕':'two_hearts','⚡':'zap','✅':'check',
-      '😱':'scream','🤡':'clown','💜':'purple_heart','🖤':'black_heart','🧡':'orange_heart',
+      '😱':'scream','🤡':'clown_face','💜':'purple_heart','🖤':'black_heart','🧡':'orange_heart',
       '💚':'green_heart','💙':'blue_heart','🤍':'white_heart','💗':'heartpulse',
-      '🫡':'salute','🫶':'heart_hands','🥺':'pleading','💀':'dead','🤡':'clown_face'
+      '🫡':'salute','🫶':'heart_hands','🥺':'pleading'
     };
     function renderGrid(filter) {
       grid.innerHTML = '';

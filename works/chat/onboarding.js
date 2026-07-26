@@ -176,8 +176,8 @@ function showProfilePrompt(callback) {
 
 function showGestureDiscovery() {
   try {
-    var seen = JSON.parse(localStorage.getItem(TOGGLE_KEY) || '[]');
-  } catch(e) { var seen = []; }
+    var seen = JSON.parse(localStorage.getItem(TOOLTIP_KEY) || '[]');
+  } catch(e) { seen = []; }
   gestureTooltips.forEach(function(gt) {
     if (seen.indexOf(gt.id) !== -1) return;
     var el = document.querySelector(gt.target);
@@ -185,10 +185,9 @@ function showGestureDiscovery() {
     showGestureTooltip(el, gt.text, gt.icon);
     seen.push(gt.id);
   });
-  try { localStorage.setItem(TOGGLE_KEY, JSON.stringify(seen)); } catch(e) {}
+  try { localStorage.setItem(TOOLTIP_KEY, JSON.stringify(seen)); } catch(e) {}
 }
 
-var TOGGLE_KEY = 'nsl_onboarding_tooltips';
 
 function showGestureTooltip(target, text, icon) {
   var tip = document.createElement('div');

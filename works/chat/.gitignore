@@ -8,3 +8,8 @@ electron/build-resources/*.icns
 electron/build-resources/icons/
 www/
 *.apk
+firebase-env.json
+google-services.json
+GoogleService-Info.plist
+*.jks
+*.keystore

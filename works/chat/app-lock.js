@@ -167,7 +167,7 @@
     }
 
     // Fallback: client-side hash comparison (for offline or if Cloud Function not deployed)
-    var hash = await _hashPin(pin);
+    hash = await _hashPin(pin);
 
     // 1. Check local hash first (fast path)
     if (settings.pinHash && hash === settings.pinHash) return true;
@@ -461,8 +461,8 @@
       }
 
       // Fallback: client-side only (if Cloud Function not deployed)
-      var hash = await _hashPin(pin);
-      var settings = _getSettings();
+      hash = await _hashPin(pin);
+      settings = _getSettings();
       settings.pinHash = hash;
       settings.pinSalt = settings.pinSalt || '';
       _saveSettings(settings);

@@ -207,7 +207,7 @@
 
     // Determine if this is a direct (personal) or group chat
     const isGroup = chatKey ? chatKey.startsWith('group:') : (typeof currentChatType !== 'undefined' && currentChatType === 'group');
-    let label = '';
+    let label;
 
     if (isGroup) {
       // Group: show names

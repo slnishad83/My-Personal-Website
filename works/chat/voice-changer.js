@@ -282,8 +282,8 @@
 
     var offset = 44;
     for (var i = 0; i < numSamples; i++) {
-      for (var ch = 0; ch < numChannels; ch++) {
-        var sample = Math.max(-1, Math.min(1, interleaved[ch][i]));
+      for (var ci = 0; ci < numChannels; ci++) {
+        var sample = Math.max(-1, Math.min(1, interleaved[ci][i]));
         view.setInt16(offset, sample < 0 ? sample * 0x8000 : sample * 0x7FFF, true);
         offset += 2;
       }

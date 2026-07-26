@@ -21,7 +21,10 @@
     "electron:build:linux": "npx electron-builder --config electron-builder.yml --linux",
     "ios:setup": "bash scripts/setup-ios.sh",
     "ios:build": "npx cap sync ios && cd ios/App && xcodebuild -workspace App.xcworkspace -scheme App -configuration Release -archivePath build/App.xcarchive archive",
-    "deploy": "vite build && firebase deploy --only hosting"
+    "deploy": "vite build && firebase deploy --only hosting",
+    "deploy:functions": "firebase deploy --only functions",
+    "deploy:rules": "firebase deploy --only firestore:rules,storage",
+    "deploy:all": "vite build && firebase deploy"
   },
   "engines": {
     "node": ">=18"

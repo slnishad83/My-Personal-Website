@@ -95,11 +95,12 @@
       }
     }
 
-    /* Check App.chats */
+    /* Check App.chats (object or array) */
     if (typeof App !== 'undefined' && App.chats) {
-      for (var j = 0; j < App.chats.length; j++) {
-        var ch = App.chats[j];
-        if (ch.uid === uid || ch.id === uid) return ch;
+      var chatEntries = Array.isArray(App.chats) ? App.chats : Object.values(App.chats);
+      for (var j = 0; j < chatEntries.length; j++) {
+        var ch = chatEntries[j];
+        if (ch && (ch.uid === uid || ch.id === uid)) return ch;
       }
     }
 

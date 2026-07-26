@@ -157,7 +157,7 @@
     panel.innerHTML = `
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
         <h3 style="margin:0;font-size:18px;font-weight:700">📸 Screenshot Settings</h3>
-        <button onclick="this.closest('[style*=\"fixed\"]')?.remove()" style="background:none;border:none;color:var(--on-surface-variant);cursor:pointer;font-size:20px">&times;</button>
+        <button onclick="this.closest('[style*=&quot;fixed&quot;']')?.remove()" style="background:none;border:none;color:var(--on-surface-variant);cursor:pointer;font-size:20px">&times;</button>
       </div>
       <p style="font-size:13px;color:var(--on-surface-variant);margin:0 0 16px">Control whether the other person can take screenshots in this chat. You can still take screenshots unless they restrict you too.</p>
 
@@ -168,7 +168,7 @@
             <div style="font-size:12px;color:var(--on-surface-variant);margin-top:2px">${restricted ? 'Currently restricted' : 'Currently allowed'}</div>
           </div>
           <label style="position:relative;width:48px;height:26px;cursor:pointer">
-            <input type="checkbox" ${restricted ? 'checked' : ''} onchange="toggleScreenshotRestriction('${chatId}');this.closest('[style*=\"fixed\"]')?.remove()" style="display:none">
+            <input type="checkbox" ${restricted ? 'checked' : ''} onchange="toggleScreenshotRestriction('${chatId}');this.closest('[style*=&quot;fixed&quot;']')?.remove()" style="display:none">
             <div style="position:absolute;inset:0;border-radius:13px;background:${restricted ? 'var(--primary)' : 'var(--outline-variant,rgba(0,0,0,0.15))'};transition:background 0.2s">
               <div style="position:absolute;top:3px;left:${restricted ? '25px' : '3px'};width:20px;height:20px;border-radius:50%;background:white;transition:left 0.2s;box-shadow:0 1px 3px rgba(0,0,0,0.3)"></div>
             </div>

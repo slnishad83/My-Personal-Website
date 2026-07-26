@@ -205,7 +205,7 @@
       if (changedTouch) {
         var dy = _swipeStartY - changedTouch.clientY;
         if (dy < -_lockThreshold) {
-          _cancelRecording();
+          cancelRecording();
           return;
         }
       }
@@ -257,6 +257,7 @@
   }
 
   async function _startRecording() {
+    if (_isRecording) return;
     try {
       _audioStream = await navigator.mediaDevices.getUserMedia(_getMediaConstraints());
       var mimeType = 'audio/webm;codecs=opus';
@@ -455,17 +456,20 @@
     previewAudio.onended = function () {
       isPlaying = false;
       if (playBtn) playBtn.innerHTML = '<span class="material-symbols-outlined text-xl">play_arrow</span>';
+      try { URL.revokeObjectURL(url); } catch (_) {}
     };
     var cancelBtn = document.getElementById('preview-cancel');
     if (cancelBtn) cancelBtn.onclick = function () {
       _recordedBlob = null;
       _hidePreview();
       _hideRecordingUI();
+      try { URL.revokeObjectURL(url); } catch (_) {}
     };
     var sendBtn = document.getElementById('preview-send');
     if (sendBtn) sendBtn.onclick = function () {
       _hidePreview();
       _sendVoiceMessage();
+      try { URL.revokeObjectURL(url); } catch (_) {}
     };
   }
 

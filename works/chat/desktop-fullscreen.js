@@ -163,6 +163,17 @@
     window.NSLDesktop.isFullscreenSupported = isFullscreenSupported;
     window.NSLDesktop.isPiPSupported = isPiPSupported;
 
+    if (typeof window.toggleFullscreen !== 'function') window.toggleFullscreen = toggleFullscreen;
+    if (typeof window.togglePIP !== 'function') {
+      window.togglePIP = function() {
+        if (document.pictureInPictureElement) exitPiP();
+        else {
+          var video = document.querySelector('#remote-video');
+          if (video && video.srcObject) requestPiP(video);
+        }
+      };
+    }
+
     if (window.MutationBus) {
       MutationBus.onBodyChildList('df:media-btns', function () {
         requestAnimationFrame(addFullscreenButtons);

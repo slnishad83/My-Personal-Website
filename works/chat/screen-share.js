@@ -7,23 +7,23 @@
   function _notifyScreenShareStart() {
     var db = _getDb();
     if (!db || !App.currentChat || !App.auth?.currentUser) return;
-    const chatId = App.currentChat.id;
-    const isGroup = App.currentChat.type === 'group';
+      const chatId = App.currentChat.id;
+      const isGroup = App.currentChat.type === 'group';
+      var chatRef = db.collection('messages').doc(chatId).collection('items');
+      try {
+        const data = {
+          senderId: App.auth.currentUser.uid,
+          senderName: App.currentUser?.displayName || App.auth.currentUser.email || 'User',
+          text: '🖥️ Started screen sharing',
+          type: 'system',
+          systemType: 'screen_share_start',
+          timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+        };
+        if (isGroup) data.groupId = chatId;
+        else { data.directId = chatId; data.participants = [App.auth.currentUser.uid, App.currentChat.uid || '']; }
 
-    try {
-      const data = {
-        senderId: App.auth.currentUser.uid,
-        senderName: App.currentUser?.displayName || App.auth.currentUser.email || 'User',
-        text: '🖥️ Started screen sharing',
-        type: 'system',
-        systemType: 'screen_share_start',
-        timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-      };
-      if (isGroup) data.groupId = chatId;
-      else { data.directId = chatId; data.participants = [App.auth.currentUser.uid, App.currentChat.uid || '']; }
-
-      db.collection('messages').add(data).catch(() => {});
-    } catch(_) {}
+        chatRef.add(data).catch(() => {});
+      } catch(_) {}
 
     showToast('Screen sharing active — others can see your screen', 'success');
   }
@@ -31,23 +31,23 @@
   function _notifyScreenShareEnd() {
     var db = _getDb();
     if (!db || !App.currentChat || !App.auth?.currentUser) return;
-    const chatId = App.currentChat.id;
-    const isGroup = App.currentChat.type === 'group';
+      const chatId = App.currentChat.id;
+      const isGroup = App.currentChat.type === 'group';
+      var chatRef = db.collection('messages').doc(chatId).collection('items');
+      try {
+        const data = {
+          senderId: App.auth.currentUser.uid,
+          senderName: App.currentUser?.displayName || App.auth.currentUser.email || 'User',
+          text: '🖥️ Stopped screen sharing',
+          type: 'system',
+          systemType: 'screen_share_end',
+          timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+        };
+        if (isGroup) data.groupId = chatId;
+        else { data.directId = chatId; data.participants = [App.auth.currentUser.uid, App.currentChat.uid || '']; }
 
-    try {
-      const data = {
-        senderId: App.auth.currentUser.uid,
-        senderName: App.currentUser?.displayName || App.auth.currentUser.email || 'User',
-        text: '🖥️ Stopped screen sharing',
-        type: 'system',
-        systemType: 'screen_share_end',
-        timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-      };
-      if (isGroup) data.groupId = chatId;
-      else { data.directId = chatId; data.participants = [App.auth.currentUser.uid, App.currentChat.uid || '']; }
-
-      db.collection('messages').add(data).catch(() => {});
-    } catch(_) {}
+        chatRef.add(data).catch(() => {});
+      } catch(_) {}
   }
 
   function _handleScreenShareEnd() {

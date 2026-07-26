@@ -4,6 +4,16 @@
 
   var CC = window._CC = window._CC || {};
 
+  var peerConnection = null;
+  var localCallStream = null;
+  var remoteCallStream = null;
+  var micMuted = false;
+  var cameraOff = false;
+  var speakerOn = false;
+  var isScreenSharing = false;
+  var activeCallMode = null;
+  var preferredCameraFacingMode = 'user';
+
   CC.STATES = { IDLE: 0, RINGING: 1, CONNECTING: 2, ACTIVE: 3, ENDED: 4 };
   CC.state = CC.STATES.IDLE;
   CC.callType = 'voice';
@@ -198,8 +208,17 @@
     startQualityAdaptation();
     var ssBtn = $('btn-screenshare');
     if (ssBtn) ssBtn.classList.toggle('hidden', CC.callType === 'voice');
+    var holdBtn = $('btn-hold');
+    if (holdBtn) holdBtn.classList.remove('hidden');
+    var fsBtn = $('btn-fullscreen');
+    if (fsBtn) fsBtn.classList.toggle('hidden', !document.fullscreenEnabled && !document.webkitFullscreenEnabled);
+    var pipBtn = $('btn-pip');
+    if (pipBtn) pipBtn.classList.toggle('hidden', !document.pictureInPictureEnabled || CC.callType === 'voice');
     playSound('callConnected');
     if (typeof window.Presence !== 'undefined' && typeof window.Presence.setInCall === 'function') window.Presence.setInCall(true);
+    if (window._ProximitySensor && typeof window._ProximitySensor.start === 'function') {
+      try { window._ProximitySensor.start(); } catch (_) {}
+    }
     if (db() && CC.callId) {
       db().collection('calls').doc(CC.callId).update({
         status: 'active',
@@ -449,10 +468,23 @@
     hideReconnOverlay();
     var cs = $('call-reconn-overlay');
     if (cs) cs.remove();
+    if (typeof CC.resetCallHoldState === 'function') CC.resetCallHoldState();
+    var holdBtn = $('btn-hold');
+    if (holdBtn) holdBtn.classList.add('hidden');
+    var fsBtn = $('btn-fullscreen');
+    if (fsBtn) fsBtn.classList.add('hidden');
+    var pipBtn = $('btn-pip');
+    if (pipBtn) pipBtn.classList.add('hidden');
+    if (document.pictureInPictureElement) { try { document.exitPictureInPicture(); } catch (_) {} }
+    if (window._ProximitySensor && typeof window._ProximitySensor.stop === 'function') {
+      try { window._ProximitySensor.stop(); } catch (_) {}
+    }
+    if (typeof window.stopInCallReactionListener === 'function') { try { window.stopInCallReactionListener(); } catch (_) {} }
     App.callActive = false;
     App._activeCallId = null;
     activeCallMode = null;
     CC.incomingData = null;
+    CC.callType = 'voice';
     CC.reconnAttempt = 0;
     speakerOn = false;
     micMuted = false;
@@ -502,6 +534,7 @@
   CC.listenCandidates = listenCandidates;
   CC.listenStatus = listenStatus;
   CC.cleanup = cleanup;
+  CC.getPeerConnection = function () { return peerConnection; };
 
   document.addEventListener('visibilitychange', function () {
     if (CC.state === CC.STATES.ACTIVE && CC.callType === 'video' && document.hidden) {

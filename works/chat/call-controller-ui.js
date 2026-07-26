@@ -50,7 +50,7 @@
 
     _initLocalVideoDrag();
     _initRemoteVideoPinchZoom();
-    var ssBtn = CC.$('btn-screenshare');
+    ssBtn = CC.$('btn-screenshare');
     if (ssBtn) ssBtn.classList.toggle('hidden', type === 'voice' || !navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia);
   }
 
@@ -245,6 +245,12 @@
     document.addEventListener('touchmove', onMove, { passive: false });
     document.addEventListener('mouseup', onEnd);
     document.addEventListener('touchend', onEnd);
+  }
+
+  var _dragCleanups = [];
+  function _cleanupDragListeners() {
+    _dragCleanups.forEach(function(fn) { try { fn(); } catch (_) {} });
+    _dragCleanups = [];
   }
 
   function _initRemoteVideoPinchZoom() {

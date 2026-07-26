@@ -116,8 +116,9 @@ const SwipeDelete = {
     const chatId = item.dataset?.chatId || '';
     const actions = document.createElement('div');
     actions.className = 'chat-list-swipe-actions';
+    const safeChatId = typeof CSS !== 'undefined' && CSS.escape ? CSS.escape(chatId) : chatId;
     actions.innerHTML =
-      '<button class="swipe-unread" data-action="mark-unread" data-chat-id="' + chatId + '">' +
+      '<button class="swipe-unread" data-action="mark-unread" data-chat-id="' + safeChatId + '">' +
         '<span class="material-symbols-outlined" style="font-size:20px">mark_chat_unread</span>' +
         '<span>Unread</span>' +
       '</button>' +

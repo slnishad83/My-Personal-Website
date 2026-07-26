@@ -65,7 +65,7 @@
       if (idx < 0) return;
 
       var cols = 8;
-      var next = -1;
+      var next;
 
       switch (e.key) {
         case 'ArrowRight':

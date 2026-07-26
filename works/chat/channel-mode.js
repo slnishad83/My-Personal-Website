@@ -284,7 +284,7 @@
     var showAvatar = !isMe && (i === msgs.length - 1 || (msgs[i + 1] && msgs[i + 1].from !== msg.from));
     var senderName = msg.senderName || 'Unknown';
 
-    var avatarHTML = '';
+    var avatarHTML;
     if (showAvatar) {
       avatarHTML = '<div class="w-10 h-10 rounded-full flex items-center justify-center bg-emerald-500/15 text-emerald-400 font-bold text-sm">' + _esc(senderName.charAt(0).toUpperCase()) + '</div>';
     } else {
@@ -316,7 +316,7 @@
         '<div class="truncate text-on-surface-variant">' + _esc(msg.replyTo.text) + '</div></div>';
     }
 
-    var contentHTML = '';
+    var contentHTML;
     if (msg.type === 'image') {
       contentHTML = '<div class="rounded-xl overflow-hidden max-w-full border border-outline-variant/20">' +
         '<img src="' + _esc(msg.url) + '" alt="Image" loading="lazy" class="w-full max-h-48 object-cover rounded-xl"></div>';

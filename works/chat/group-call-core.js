@@ -4,6 +4,8 @@
 
   var GC = window._GC = window._GC || {};
 
+  GC._GRID_MAX_VOICE = 32;
+  GC._GRID_MAX_VIDEO = 8;
   GC._GRID_MAX = 8;
   GC._RECONNECT_INTERVAL_MS = 3000;
   GC._RECONNECT_MAX_ATTEMPTS = 5;
@@ -128,10 +130,10 @@
 
   function _scheduleReconnect(targetUid) {
     if (GC._reconnectTimers[targetUid]) return;
+    var attempts = GC._reconnectAttempts[targetUid] || 0;
     GC._reconnectTimers[targetUid] = setTimeout(async function () {
       GC._reconnectTimers[targetUid] = null;
       if (!GC._currentCallId || !_firestore()) return;
-      var attempts = GC._reconnectAttempts[targetUid] || 0;
       if (attempts >= GC._RECONNECT_MAX_ATTEMPTS) {
         _removeParticipantFromGrid(targetUid);
         return;

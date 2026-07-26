@@ -100,6 +100,15 @@
         av.className = 'w-24 h-24 rounded-full border-4 border-green-500/30 flex items-center justify-center text-4xl bg-white/10';
       }
     }
+    var videoPreview = CC.$('incoming-call-video-preview');
+    if (videoPreview) {
+      if (data.type === 'video' && data.fromUserPhoto) {
+        videoPreview.src = data.fromUserPhoto;
+        videoPreview.classList.remove('hidden');
+      } else {
+        videoPreview.classList.add('hidden');
+      }
+    }
     CC.show('incoming-call-overlay');
     CC.playSound('callRing');
     if (typeof window.AppHaptics !== 'undefined' && typeof window.AppHaptics.vibrate === 'function') { window.AppHaptics.vibrate([700, 250, 700, 250, 700, 250, 700, 250, 700]); } else if (navigator.vibrate) navigator.vibrate([700, 250, 700, 250, 700, 250, 700, 250, 700]);

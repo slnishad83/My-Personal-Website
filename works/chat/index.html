@@ -966,6 +966,18 @@
         <button class="w-14 h-14 min-w-[48px] min-h-[48px] bg-white/10 rounded-full flex items-center justify-center hover:bg-white/20 transition-all text-white hidden" id="btn-screenshare" data-action="toggleScreenShare" aria-label="Toggle screen share">
           <span class="material-symbols-outlined" id="screenshare-icon">screen_share</span>
         </button>
+        <button class="w-14 h-14 min-w-[48px] min-h-[48px] bg-white/10 rounded-full flex items-center justify-center hover:bg-white/20 transition-all text-white hidden" id="btn-record" data-action="toggleCallRecording" aria-label="Record call">
+          <span class="material-symbols-outlined" id="record-icon">fiber_manual_record</span>
+        </button>
+        <button class="w-14 h-14 min-w-[48px] min-h-[48px] bg-white/10 rounded-full flex items-center justify-center hover:bg-white/20 transition-all text-white hidden" id="btn-hold" data-action="toggleCallHold" aria-label="Hold call">
+          <span class="material-symbols-outlined" id="hold-icon">pause</span>
+        </button>
+        <button class="w-14 h-14 min-w-[48px] min-h-[48px] bg-white/10 rounded-full flex items-center justify-center hover:bg-white/20 transition-all text-white hidden" id="btn-fullscreen" data-action="toggleFullscreen" aria-label="Toggle fullscreen">
+          <span class="material-symbols-outlined" id="fullscreen-icon">fullscreen</span>
+        </button>
+        <button class="w-14 h-14 min-w-[48px] min-h-[48px] bg-white/10 rounded-full flex items-center justify-center hover:bg-white/20 transition-all text-white hidden" id="btn-pip" data-action="togglePIP" aria-label="Picture in picture">
+          <span class="material-symbols-outlined">picture_in_picture_alt</span>
+        </button>
         <button class="w-14 h-14 min-w-[48px] min-h-[48px] bg-error rounded-full flex items-center justify-center hover:brightness-110 active:scale-95 transition-all text-white shadow-lg shadow-error/35" data-action="endCall" aria-label="End call">
           <span class="material-symbols-outlined">call_end</span>
         </button>
@@ -975,7 +987,9 @@
 
   <!-- Incoming Call banner dialog overlay -->
   <div class="overlay fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-center justify-center hidden" id="incoming-call-overlay" role="dialog" aria-modal="true" aria-live="assertive">
-    <div class="bg-surface-container border border-outline-variant/30 rounded-2xl w-full max-w-xs shadow-2xl p-6 text-center m-4 animate-in">
+    <div class="bg-surface-container border border-outline-variant/30 rounded-2xl w-full max-w-xs shadow-2xl p-6 text-center m-4 animate-in relative overflow-hidden">
+      <video id="incoming-call-video-preview" autoplay playsinline muted class="absolute inset-0 w-full h-full object-cover hidden z-0"></video>
+      <div class="relative z-10">
       <div class="w-20 h-20 rounded-full mx-auto mb-4 flex items-center justify-center font-bold text-2xl bg-surface-container-highest text-on-surface-variant" id="incoming-call-avatar">?</div>
       <h3 class="font-bold text-xl mb-1 text-on-surface" id="incoming-call-name">Unknown User</h3>
       <p class="text-xs text-on-surface-variant uppercase tracking-widest font-label-caps mb-6" id="incoming-call-type">Incoming Call Request</p>
@@ -986,6 +1000,7 @@
         <button class="w-12 h-12 bg-primary text-white rounded-full flex items-center justify-center hover:brightness-110 active:scale-95 transition-transform animate-pulse" data-action="acceptCall" aria-label="Accept call">
           <span class="material-symbols-outlined">call</span>
         </button>
+      </div>
       </div>
     </div>
   </div>

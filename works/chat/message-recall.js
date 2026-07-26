@@ -5,16 +5,26 @@
   const RECALL_WINDOW_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
   function _escRecall(s) { return window.escHtml ? window.escHtml(String(s ?? '')) : String(s ?? ''); }
 
+  function _getMsgTime(msg) {
+    if (!msg) return 0;
+    if (msg.timestamp && typeof msg.timestamp.toMillis === 'function') return msg.timestamp.toMillis();
+    if (msg.createdAt && typeof msg.createdAt.toMillis === 'function') return msg.createdAt.toMillis();
+    if (typeof msg.timestamp === 'number') return msg.timestamp;
+    if (typeof msg.createdAt === 'number') return msg.createdAt;
+    if (typeof msg.time === 'number') return msg.time;
+    return 0;
+  }
+
   window.canRecallMessage = function(msg) {
-    if (!msg || !msg.time) return false;
-    const msgTime = typeof msg.time === 'number' ? msg.time : (msg.time?.toMillis ? msg.time.toMillis() : 0);
+    if (!msg) return false;
+    const msgTime = _getMsgTime(msg);
     if (!msgTime) return false;
     return (Date.now() - msgTime) < RECALL_WINDOW_MS;
   };
 
   window.getRecallTimeRemaining = function(msg) {
-    if (!msg || !msg.time) return null;
-    const msgTime = typeof msg.time === 'number' ? msg.time : (msg.time?.toMillis ? msg.time.toMillis() : 0);
+    if (!msg) return null;
+    const msgTime = _getMsgTime(msg);
     if (!msgTime) return null;
     const remaining = RECALL_WINDOW_MS - (Date.now() - msgTime);
     if (remaining <= 0) return null;
@@ -31,6 +41,7 @@
     if (typeof window.openDeleteMenu === 'function') {
       _origOpenDeleteMenu = window.openDeleteMenu;
       window.openDeleteMenu = function(e, msgId) {
+        if (typeof e === 'string' && !msgId) { msgId = e; e = null; }
         const chatId = window.App?.currentChat?.id;
         if (!chatId) return _origOpenDeleteMenu(e, msgId);
 
@@ -115,7 +126,7 @@
 
     const msgs = (window.App?.messages || {})[chatId] || [];
     const msg = msgs.find(m => m.id === msgId);
-    if (!msg || msg.from !== 'me') return;
+    if (!msg || msg.from !== (window.App?.uid?.() || window.currentUser?.uid || '')) return;
 
     const remaining = getRecallTimeRemaining(msg);
     const info = document.createElement('div');

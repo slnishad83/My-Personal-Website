@@ -101,25 +101,45 @@
     if (!db || !chat || !msgId) { _toast('Cannot delete message', 'error'); return; }
     var msgRef = db.collection('messages').doc(chat.id).collection('items').doc(msgId);
     if (scope === 'everyone') {
-      var mediaUrls = [msg.imageURL, msg.videoURL, msg.audioURL, msg.fileURL, msg.stickerURL].filter(function(u) { return u && typeof u === 'string' && u.startsWith('http'); });
-      msgRef.update({
-        text: 'This message was deleted',
-        type: 'deleted',
-        deletedBy: 'everyone',
-        deletedAt: firebase.firestore.FieldValue.serverTimestamp(),
-        imageURL: firebase.firestore.FieldValue.delete(),
-        videoURL: firebase.firestore.FieldValue.delete(),
-        audioURL: firebase.firestore.FieldValue.delete(),
-        fileURL: firebase.firestore.FieldValue.delete(),
-        stickerURL: firebase.firestore.FieldValue.delete(),
-        attachment: firebase.firestore.FieldValue.delete()
-      }).then(function () {
-        mediaUrls.forEach(function(url) {
-          try { firebase.storage().refFromURL(url).delete(); } catch(_e) {}
+      msgRef.get().then(function(doc) {
+        var msgData = doc.exists ? doc.data() : {};
+        var mediaUrls = [msgData.imageURL, msgData.videoURL, msgData.audioURL, msgData.fileURL, msgData.stickerURL].filter(function(u) { return u && typeof u === 'string' && u.startsWith('http'); });
+        msgRef.update({
+          text: 'This message was deleted',
+          type: 'deleted',
+          deletedBy: 'everyone',
+          deletedAt: firebase.firestore.FieldValue.serverTimestamp(),
+          imageURL: firebase.firestore.FieldValue.delete(),
+          videoURL: firebase.firestore.FieldValue.delete(),
+          audioURL: firebase.firestore.FieldValue.delete(),
+          fileURL: firebase.firestore.FieldValue.delete(),
+          stickerURL: firebase.firestore.FieldValue.delete(),
+          attachment: firebase.firestore.FieldValue.delete()
+        }).then(function () {
+          mediaUrls.forEach(function(url) {
+            try { firebase.storage().refFromURL(url).delete(); } catch(_e) {}
+          });
+          _toast('Message deleted', 'success');
+        }).catch(function (err) {
+          _toast('Delete failed: ' + err.message, 'error');
         });
-        _toast('Message deleted', 'success');
-      }).catch(function (err) {
-        _toast('Delete failed: ' + err.message, 'error');
+      }).catch(function() {
+        msgRef.update({
+          text: 'This message was deleted',
+          type: 'deleted',
+          deletedBy: 'everyone',
+          deletedAt: firebase.firestore.FieldValue.serverTimestamp(),
+          imageURL: firebase.firestore.FieldValue.delete(),
+          videoURL: firebase.firestore.FieldValue.delete(),
+          audioURL: firebase.firestore.FieldValue.delete(),
+          fileURL: firebase.firestore.FieldValue.delete(),
+          stickerURL: firebase.firestore.FieldValue.delete(),
+          attachment: firebase.firestore.FieldValue.delete()
+        }).then(function () {
+          _toast('Message deleted', 'success');
+        }).catch(function (err) {
+          _toast('Delete failed: ' + err.message, 'error');
+        });
       });
     } else {
       msgRef.delete().then(function () {
@@ -147,7 +167,7 @@
     if (!msg) return '';
     var type = _getMsgType(msg);
     var name = msg.fromName || msg.senderName || msg.senderEmail || '';
-    var preview = '';
+    var preview;
     switch (type) {
       case 'text': preview = msg.text || ''; break;
       case 'image': preview = '📷 Image'; if (msg.text) preview += ' · ' + msg.text; break;
@@ -260,27 +280,6 @@
         }
       }).catch(function () { orig(msgId); });
     };
-  }
-
-  function _starMessage(msgId) {
-    var db = _db();
-    var chat = window.App && window.App.currentChat ? window.App.currentChat : null;
-    if (!db || !chat || !msgId) return;
-    var msgRef = db.collection('messages').doc(chat.id).collection('items').doc(msgId);
-    msgRef.get().then(function(doc) {
-      if (!doc.exists) return;
-      var data = doc.data();
-      var nowStarred = !data.starred;
-      return msgRef.update({
-        starred: nowStarred,
-        starredAt: nowStarred ? firebase.firestore.FieldValue.serverTimestamp() : firebase.firestore.FieldValue.delete(),
-        starredBy: nowStarred ? _uid() : firebase.firestore.FieldValue.delete()
-      }).then(function() {
-        _toast(nowStarred ? 'Message starred' : 'Message unstarred', 'success');
-      });
-    }).catch(function() {
-      _toast('Failed to update star', 'error');
-    });
   }
 
   function patchDeleteMenu() {
@@ -427,6 +426,11 @@
       if (!msgId) return;
       var video = vnEl.querySelector('video');
       if (!video || !video.src) return;
+      var a = document.createElement('a');
+      a.href = video.src;
+      a.download = 'video-note-' + Date.now() + '.webm';
+      a.click();
+      _toast('Downloading video note', 'success');
     }, true);
     window._vnDlPatched = true;
   }

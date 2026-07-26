@@ -574,7 +574,7 @@ document.getElementById("sendResetBtn").addEventListener("click", async () => {
   }
 
   if (!validateEmail(email)) {
-    var existing = document.getElementById('resetInlineError');
+    existing = document.getElementById('resetInlineError');
     if (existing) { existing.textContent = 'Please enter a valid email address'; }
     else { btn.insertAdjacentHTML('afterend', '<div id="resetInlineError" class="mt-xs p-xs text-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/20 rounded text-center">Please enter a valid email address</div>'); }
     setTimeout(() => { var el = document.getElementById('resetInlineError'); if (el) el.remove(); }, 3000);
@@ -594,7 +594,7 @@ document.getElementById("sendResetBtn").addEventListener("click", async () => {
     btn.textContent = "Send Reset Link";
   } catch (error) {
     var escapedMsg = (error.message || 'Failed to send reset email').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
-    var existing = document.getElementById('resetInlineError');
+    existing = document.getElementById('resetInlineError');
     if (existing) { existing.textContent = error.message || 'Failed to send reset email'; }
     else { btn.insertAdjacentHTML('afterend', '<div id="resetInlineError" class="mt-xs p-xs text-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/20 rounded text-center">' + escapedMsg + '</div>'); }
     setTimeout(() => { var el = document.getElementById('resetInlineError'); if (el) el.remove(); }, 5000);

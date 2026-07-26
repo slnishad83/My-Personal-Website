@@ -46,7 +46,7 @@
       if (!match || !match[1]) return;
       const msgId = match[1];
 
-      const msgEl = document.getElementById('msg-' + msgId);
+      var msgEl = document.querySelector('[data-message-id="' + msgId + '"]');
       if (!msgEl || !msgEl.textContent.trim()) return;
 
       const btn = document.createElement('button');
@@ -114,7 +114,7 @@
           _evictCache();
           var content = document.getElementById('translation-popup-content');
           if (content) {
-            content.innerHTML = '<div style="background:var(--surface-container,rgba(255,255,255,0.04));border-radius:10px;padding:12px;margin-bottom:10px"><div style="font-size:10px;font-weight:700;color:var(--on-surface-variant);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Original</div><div style="font-size:13px;color:var(--on-surface);line-height:1.4">' + escHtml(msg.text) + '</div></div><div style="background:var(--primary-container,rgba(124,77,255,0.1));border-radius:10px;padding:12px"><div style="font-size:10px;font-weight:700;color:var(--primary);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Translated</div><div style="font-size:13px;color:var(--on-surface);line-height:1.4">' + escHtml(data.responseData.translatedText) + '</div></div>';
+            content.innerHTML = '<div style="background:var(--surface-container,rgba(255,255,255,0.04));border-radius:10px;padding:12px;margin-bottom:10px"><div style="font-size:10px;font-weight:700;color:var(--on-surface-variant);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Original</div><div style="font-size:13px;color:var(--on-surface);line-height:1.4">' + (window.escHtml || function(x){return x;})(msg.text) + '</div></div><div style="background:var(--primary-container,rgba(124,77,255,0.1));border-radius:10px;padding:12px"><div style="font-size:10px;font-weight:700;color:var(--primary);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Translated</div><div style="font-size:13px;color:var(--on-surface);line-height:1.4">' + (window.escHtml || function(x){return x;})(data.responseData.translatedText) + '</div></div>';
           }
           // Also inject into the message bubble
           _injectTranslationIntoBubble(msgId, data.responseData.translatedText);
@@ -135,7 +135,7 @@
   }
 
   function _injectTranslationIntoBubble(msgId, translatedText) {
-    var msgEl = document.getElementById('msg-' + msgId);
+    var msgEl = document.querySelector('[data-message-id="' + msgId + '"]');
     if (!msgEl) return;
     var existing = msgEl.querySelector('.msg-translation');
     if (existing) return;
@@ -144,12 +144,12 @@
     var transDiv = document.createElement('div');
     transDiv.className = 'msg-translation';
     transDiv.style.cssText = 'margin-top:8px;padding-top:8px;border-top:1px solid rgba(255,255,255,0.08);font-size:12px;font-style:italic;opacity:0.85;';
-    transDiv.innerHTML = '<div style="display:flex;align-items:center;gap:4px;margin-bottom:2px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;opacity:0.6"><span class="material-symbols-outlined" style="font-size:12px">translate</span>Translated</div>' + escHtml(translatedText);
+    transDiv.innerHTML = '<div style="display:flex;align-items:center;gap:4px;margin-bottom:2px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;opacity:0.6"><span class="material-symbols-outlined" style="font-size:12px">translate</span>Translated</div>' + (window.escHtml || function(x){return x;})(translatedText);
     textContainer.parentNode.insertBefore(transDiv, textContainer.nextSibling);
   }
 
   function _toggleTranslationInBubble(msgId) {
-    var msgEl = document.getElementById('msg-' + msgId);
+    var msgEl = document.querySelector('[data-message-id="' + msgId + '"]');
     if (!msgEl) return;
     var transDiv = msgEl.querySelector('.msg-translation');
     if (transDiv) { transDiv.remove(); return; }
@@ -246,7 +246,7 @@
 
     // Wait for message to render
     setTimeout(function() {
-      var msgEl = document.getElementById('msg-' + detail.msgId);
+      var msgEl = document.querySelector('[data-message-id="' + detail.msgId + '"]');
       if (!msgEl) return;
       var text = encodeURIComponent(detail.text);
       var targetLang = setting.lang || 'en';

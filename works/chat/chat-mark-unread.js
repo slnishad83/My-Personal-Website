@@ -73,7 +73,8 @@
     },
 
     _updateBadge(chatId, count) {
-      const chatItem = document.querySelector(`[data-chat-id="${chatId}"]`);
+      var safeChatId = window.CSS && CSS.escape ? CSS.escape(chatId) : chatId;
+      const chatItem = document.querySelector('[data-chat-id="' + safeChatId + '"]');
       if (!chatItem) return;
       let badge = chatItem.querySelector('.unread-badge');
       if (count > 0) {

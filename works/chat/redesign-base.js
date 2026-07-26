@@ -22,7 +22,8 @@
     document.documentElement.dataset.theme = theme;
     var isDark = theme === "dark";
     var isSystem = (mode || getStoredMode()) === "system";
-    document.documentElement.className = isDark ? "dark" : "light";
+    document.documentElement.classList.remove("dark", "light");
+    document.documentElement.classList.add(isDark ? "dark" : "light");
     if (isSystem) {
       document.documentElement.classList.add("auto-theme");
     } else {
@@ -134,6 +135,25 @@
     }
   });
 
+  /* Backdrop click closes overlays with dismissOnBackdrop */
+  document.addEventListener("click", function(e) {
+    if (e.target.classList.contains("overlay") && !e.target.classList.contains("hidden")) {
+      var actionArg = e.target.dataset.actionArg;
+      if (actionArg) {
+        var targetEl = document.getElementById(actionArg);
+        if (targetEl) {
+          targetEl.classList.add("hidden");
+          e.preventDefault();
+          e.stopPropagation();
+        }
+      } else if (e.target.dataset.action === "dismissOnBackdrop") {
+        e.target.classList.add("hidden");
+        e.preventDefault();
+        e.stopPropagation();
+      }
+    }
+  }, true);
+
   /* Focus trap within topmost overlay */
   document.addEventListener("keydown", function(e) {
     if (e.key !== "Tab") return;
@@ -169,6 +189,24 @@
     _modalObserver.observe(el, { attributes: true, attributeFilter: ['class'] });
   });
 
+  /* Watch for dynamically added overlays */
+  var _bodyObserver = new MutationObserver(function(mutations) {
+    mutations.forEach(function(m) {
+      m.addedNodes.forEach(function(node) {
+        if (node.nodeType === 1) {
+          if (node.classList && node.classList.contains('overlay')) {
+            _modalObserver.observe(node, { attributes: true, attributeFilter: ['class'] });
+          }
+          var childOverlays = node.querySelectorAll ? node.querySelectorAll('.overlay') : [];
+          childOverlays.forEach(function(el) {
+            _modalObserver.observe(el, { attributes: true, attributeFilter: ['class'] });
+          });
+        }
+      });
+    });
+  });
+  _bodyObserver.observe(document.body, { childList: true, subtree: true });
+
   /* ═══════════════════════════════════════
      SCROLL LOCK WHEN MODAL OPEN
      ═══════════════════════════════════════ */
@@ -196,7 +234,7 @@
       var cleanPath = path.replace(/^\/?/, '').replace(/\/+$/, '');
 
       // Special case: works/chat maps to works/chat/index.html or root
-      var isActive = false;
+      var isActive;
       if (cleanHref === "works/chat" || cleanHref === "works/chat/index.html" || cleanHref === "index.html") {
         isActive = (cleanPath === "works/chat" || cleanPath.endsWith("index.html") || cleanPath === "");
       } else {

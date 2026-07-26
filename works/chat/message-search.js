@@ -93,18 +93,16 @@
     if (_exhausted[chatId]) return [];
     const qLower = q.toLowerCase();
 
-    let ref = db.collection('messages')
-                .where('chatId', '==', chatId)
-                .orderBy('createdAt', 'desc')
+    let ref = db.collection('messages').doc(chatId).collection('items')
+                .orderBy('timestamp', 'desc')
                 .limit(PAGE_SIZE);
 
     if (_lastDocs[chatId]) ref = ref.startAfter(_lastDocs[chatId]);
 
     let snap;
     try { snap = await ref.get(); } catch (_) {
-      // try alternate field names
       try {
-        ref = db.collection('messages').where('chatId','==', chatId).orderBy('createdAt','desc').limit(PAGE_SIZE);
+        ref = db.collection('messages').doc(chatId).collection('items').orderBy('createdAt','desc').limit(PAGE_SIZE);
         if (_lastDocs[chatId]) ref = ref.startAfter(_lastDocs[chatId]);
         snap = await ref.get();
       } catch (e2) { console.warn('[MsgSearch] firestore error', chatId, e2.message); return []; }

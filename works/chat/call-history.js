@@ -358,7 +358,7 @@ var infoBtn = '<button class="min-w-[44px] min-h-[44px] rounded-full flex items-
         if (!_selectionMode) {
           var call = _allCalls.find(function (c) { return c.id === callId; });
           if (call) {
-            var type = call.callType || 'voice';
+            type = call.callType || 'voice';
             window.callContact(contactUid, type);
           }
         }
@@ -647,10 +647,10 @@ var infoBtn = '<button class="min-w-[44px] min-h-[44px] rounded-full flex items-
       }
     }
     if (type === 'video' && typeof window.startVideoCall === 'function') {
-      var usersSnap = await _db().collection('users').doc(uid).get().catch(function () { return null; });
+      usersSnap = await _db().collection('users').doc(uid).get().catch(function () { return null; });
       if (usersSnap && usersSnap.exists) {
-        var userData = usersSnap.data();
-        var name = userData.displayName || userData.email || 'Unknown';
+        userData = usersSnap.data();
+        name = userData.displayName || userData.email || 'Unknown';
         if (typeof window.selectCallContact === 'function') {
           window.selectCallContact(uid, name, userData.photoURL || '');
         } else {

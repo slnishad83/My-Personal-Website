@@ -51,7 +51,7 @@
   /* ─── Find message object by ID ────────────────────────────── */
   function findMessage(msgId) {
     if (!msgId) return null;
-    const chatId = window.App?.currentChatId || window.currentChat?.id;
+    const chatId = window.App?.currentChat?.id || window.currentChat?.id;
     if (chatId && window.App?.messages?.[chatId]) {
       const msgs = window.App.messages[chatId];
       return msgs.find(m => m.id === msgId) || null;
@@ -71,9 +71,8 @@
     if (!msg) return '';
 
     const sender = msg.senderName || msg.displayName || '';
-    const time = msg.createdAt || msg.timestamp
-      ? new Date(msg.createdAt || msg.timestamp).toLocaleString()
-      : '';
+    var ts = msg.createdAt || msg.timestamp;
+    const time = ts ? (typeof ts.toDate === 'function' ? ts.toDate() : new Date(ts)).toLocaleString() : '';
 
     switch (msg.type) {
       case 'image': {
@@ -244,7 +243,7 @@
         copyBtn.addEventListener('click', (e) => {
           e.stopPropagation();
           // Find the message element that was right-clicked
-          const msgEl = document.querySelector('.message[data-msg-id]:hover, .message[data-msg-id]:has(.message-bubble:hover)');
+          const msgEl = e.target.closest('.message[data-msg-id]') || e.target.closest('[data-msg-id]');
           if (msgEl) {
             copyMessageContent(msgEl.dataset.msgId);
           }
@@ -294,11 +293,6 @@
             copyMessageContent(msgId);
           };
         }
-      }
-      // Also set msgId on the menu for reference
-      const activeMsg = document.querySelector('.message:has(.message-bubble:hover)[data-msg-id]');
-      if (activeMsg && !menu.dataset.msgId) {
-        menu.dataset.msgId = activeMsg.dataset.msgId;
       }
     });
     observer.observe(document.body, { childList: true, subtree: true });

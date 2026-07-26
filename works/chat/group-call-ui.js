@@ -316,6 +316,7 @@
   var _speakerAudioContext = null;
   var _speakerAudioSource = null;
   var _speakerCachedStream = null;
+  var _speakerAnalyser = null;
 
   function _startSpeakerDetection() {
     _stopSpeakerDetection();
@@ -339,9 +340,13 @@
               if (_speakerAudioSource) { try { _speakerAudioSource.disconnect(); } catch (_) {} }
               _speakerAudioSource = _speakerAudioContext.createMediaStreamSource(myStream);
               _speakerCachedStream = myStream;
+              _speakerAnalyser = null;
             }
-            var analyser = _speakerAudioContext.createAnalyser();
-            analyser.fftSize = 256;
+            if (!_speakerAnalyser) {
+              _speakerAnalyser = _speakerAudioContext.createAnalyser();
+              _speakerAnalyser.fftSize = 256;
+            }
+            var analyser = _speakerAnalyser;
             _speakerAudioSource.connect(analyser);
             var data = new Uint8Array(analyser.frequencyBinCount);
             analyser.getByteFrequencyData(data);
@@ -385,6 +390,7 @@
     }
     if (_speakerAudioSource) { try { _speakerAudioSource.disconnect(); } catch (_) {} _speakerAudioSource = null; }
     _speakerCachedStream = null;
+    _speakerAnalyser = null;
     if (_speakerAudioContext) {
       try {
         if (_speakerAudioContext.state !== 'closed') {

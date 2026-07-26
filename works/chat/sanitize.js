@@ -29,7 +29,7 @@
   var BLOCKED_PROTOCOLS = ['javascript:', 'data:', 'vbscript:', 'file:', 'blob:'];
 
   var ENTITY_MAP = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#x27;', '/': '&#x2F;' };
-  var ENTITY_REGEX = /[&<>"'\/]/g;
+  var ENTITY_REGEX = /[&<>"'/]/g;
 
   /** @param {string} str - Raw string to escape @returns {string} HTML-entity-safe string */
   function escapeHTML(str) {
@@ -72,7 +72,7 @@
   function sanitizeAttributes(tagName, attrStr) {
     if (!attrStr) return '';
     var result = [];
-    var attrRegex = /([a-zA-Z\-]+)\s*=\s*(?:"([^"]*)"|'([^']*)')/g;
+    var attrRegex = /([a-zA-Z-]+)\s*=\s*(?:"([^"]*)"|'([^']*)')/g;
     var match;
     while ((match = attrRegex.exec(attrStr))) {
       var name = match[1].toLowerCase();
@@ -110,7 +110,7 @@
 
         var tagName = '';
         var j = startIdx;
-        while (j < len && /[a-zA-Z0-9\-]/.test(html[j])) {
+        while (j < len && /[a-zA-Z0-9-]/.test(html[j])) {
           tagName += html[j];
           j++;
         }

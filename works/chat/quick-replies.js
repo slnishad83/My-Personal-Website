@@ -58,7 +58,7 @@
             if (node.nodeType === 1 && node.classList?.contains('message-bubble') && !node.classList?.contains('sent')) {
               const textEl = node.querySelector('.msg-text, .message-text, [data-text]');
               if (textEl) {
-                this._generateSuggestions(textEl.textContent || textEl.getAttribute('data-text') || '');
+                this.generateSuggestions(textEl.textContent || textEl.getAttribute('data-text') || '');
               }
             }
           });
@@ -154,4 +154,10 @@
       QuickReplies.hide();
     }
   });
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', function () { QuickReplies.init(); });
+  } else {
+    QuickReplies.init();
+  }
 })();

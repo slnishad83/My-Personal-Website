@@ -57,7 +57,7 @@
 
         showToast('Uploading group icon...', 'info');
 
-        const storageRef = storage.ref(`group_icons/${groupId}/${Date.now()}_${file.name}`);
+        const storageRef = firebase.storage().ref(`group_icons/${groupId}/${Date.now()}_${file.name}`);
         await storageRef.put(file);
         const iconUrl = await storageRef.getDownloadURL();
 
