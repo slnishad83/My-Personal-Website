@@ -67,6 +67,8 @@ import './chat-lock.js';
 import './ghost-mode.js';
 import './screenshot-control.js';
 import './message-recall.js';
+import './message-edit.js';
+import './message-star.js';
 import './sensitive-content.js';
 import './mini-games.js';
 import './mood-status.js';

@@ -228,6 +228,9 @@ html.dark [class*="emoji-search"] input { background: var(--surface) !important;
    PANELS, CARDS & SECTIONS
    ══════════════════════════════════════════════════════════ */
 
+#threadPanel {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
 #threadPanel.open                    { transform: translateX(0) !important; }
 .thread-panel-open #app              { margin-right: 0; }
 
@@ -248,12 +251,23 @@ html.dark [class*="emoji-search"] input { background: var(--surface) !important;
 .thread-reply-text                  { word-break: break-word; }
 .thread-reply-time                  { font-size: 10px; opacity: 0.6; margin-top: 3px; text-align: right; }
 .thread-loading, .thread-empty, .thread-error { text-align: center; padding: 24px 16px; font-size: 13px; color: var(--on-surface-variant, #888); }
+html.dark .thread-loading, html.dark .thread-empty, html.dark .thread-error {
+  color: var(--on-surface-variant, #8696a0);
+}
 
 .thread-summary-card                { background: var(--surface-container-high, #f5f5ff); border: 1px solid var(--primary, #6366f1); border-radius: 12px; padding: 12px; margin-bottom: 12px; }
 .thread-summary-header              { display: flex; align-items: center; gap: 6px; margin-bottom: 8px; }
 .thread-summary-title               { font-weight: 700; font-size: 13px; color: var(--primary, #6366f1); flex: 1; }
 .thread-summary-close               { background: none; border: none; cursor: pointer; color: var(--on-surface-variant, #888); font-size: 16px; padding: 2px; }
 .thread-summary-list                { margin: 0; padding-left: 18px; font-size: 12px; color: var(--on-surface, #1a1a1a); line-height: 1.6; }
+
+html.dark .thread-summary-card {
+  background: var(--surface-container-high, #1f2c34);
+  border-color: var(--outline-variant, rgba(255,255,255,0.12));
+}
+html.dark .thread-summary-title { color: var(--primary, #00a884); }
+html.dark .thread-summary-close { color: var(--on-surface-variant, #8696a0); }
+html.dark .thread-summary-list { color: var(--on-surface, #e9edef); }
 
 html.dark #threadPanel               { background: var(--card) !important; border-color: var(--border) !important; }
 html.dark .thread-panel-header       { background: var(--surface) !important; color: var(--text) !important; border-color: var(--border) !important; }
@@ -2121,6 +2135,19 @@ html:not(.dark) .wa-input-footer {
   --wa-send-icon-color: #ffffff;
 }
 
+html:not(.dark) #reply-preview {
+  background: var(--wa-footer-bg, #f0f2f5) !important;
+  border-top-color: rgba(0,0,0,0.08) !important;
+}
+html:not(.dark) #format-bar {
+  background: var(--wa-footer-bg, #f0f2f5) !important;
+  border-top-color: rgba(0,0,0,0.08) !important;
+}
+html:not(.dark) #recording-bar {
+  background: var(--wa-footer-bg, #f0f2f5) !important;
+  border-top-color: rgba(0,0,0,0.08) !important;
+}
+
 /* ── Mobile responsiveness ── */
 @media (max-width: 767px) {
   .wa-input-footer {
@@ -2220,6 +2247,8 @@ html:not(.dark) .wa-unread-empty-icon {
   background: rgba(0, 168, 132, 0.1);
   color: #00a884;
 }
+html:not(.dark) .wa-unread-empty-title { color: #111b21; }
+html:not(.dark) .wa-unread-empty-desc { color: #667781; }
 html:not(.dark) .wa-unread-empty-link {
   color: #00a884;
 }
@@ -2328,6 +2357,11 @@ html:not(.dark) .wa-unread-empty-link {
 .thread-skeleton-mine .thread-skeleton-line {
   background: rgba(255, 255, 255, 0.3);
 }
+
+html.dark .thread-skeleton-avatar { background: var(--outline-variant, rgba(255,255,255,0.12)); }
+html.dark .thread-skeleton-bubble { background: var(--surface-variant, rgba(255,255,255,0.08)); }
+html.dark .thread-skeleton-mine .thread-skeleton-bubble { background: var(--primary, #00a884); opacity: 0.5; }
+html.dark .thread-skeleton-line { background: var(--outline-variant, rgba(255,255,255,0.16)); }
 
 .thread-skeleton {
   animation: thread-skeleton-pulse 1.6s ease-in-out infinite;
@@ -2672,6 +2706,9 @@ html.dark .thread-typing-indicator {
 }
 
 /* -- Dark mode / Light mode toggle safe for music panels -- */
+html:not(.dark) .music-lib-panel {
+  background: var(--surface-container, #f0f2f5);
+}
 html:not(.dark) .music-lib-panel,
 html:not(.dark) #nsm-full > div,
 html:not(.dark) #nsm-lib,
@@ -2698,6 +2735,10 @@ html:not(.dark) #playlist-detail-overlay > div {
   #equalizer-overlay input[type="range"] {
     height: 180px !important;
   }
+}
+
+#landscape-tabs {
+  padding-top: env(safe-area-inset-top, 0px);
 }
 
 /* ═══════════════════════════════════════════════════════════════

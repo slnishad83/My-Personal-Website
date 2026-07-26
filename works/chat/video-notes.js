@@ -346,7 +346,9 @@
       } else {
         var safe = 'video-note-' + Date.now() + '.webm';
         var path = 'chat_uploads/' + user.uid + '/' + Date.now() + '_' + Math.random().toString(36).slice(2, 8) + '_' + safe;
-        var ref = window.storage.ref(path);
+        var _fireStorage = (typeof firebase !== 'undefined' && firebase.storage) ? firebase.storage() : null;
+        if (!_fireStorage) { throw new Error('Firebase storage not available'); }
+        var ref = _fireStorage.ref(path);
         var task = ref.put(blob);
         await task;
         url = await ref.getDownloadURL();

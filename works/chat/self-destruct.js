@@ -259,13 +259,14 @@
     const now = Date.now();
     let deletionsOccurred = false;
     
-    Object.keys(window.App.messages).forEach(chatId => {
-      const chat = window.App.chats.find(c => c.id === chatId);
+    const chatArray = Array.isArray(window.App?.chats) ? window.App.chats : Object.values(window.App?.chats || {});
+    Object.keys(window.App?.messages || {}).forEach(chatId => {
+      const chat = chatArray.find(c => c.id === chatId);
       const timer = chat ? chat.ephemeralTimer : 0;
       
       if (timer && timer > 0) {
         const msgs = window.App.messages[chatId];
-        msgs.forEach(msg => {
+        (Array.isArray(msgs) ? msgs : []).forEach(msg => {
           if (msg.time && (now - msg.time > timer)) {
             window.App.db.collection('messages').doc(chatId).collection('items').doc(msg.id).delete()
               .then(() => {

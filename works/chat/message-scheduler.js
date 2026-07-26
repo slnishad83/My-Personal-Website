@@ -172,7 +172,8 @@
   
   async function sendMsgToDb(chatId, text) {
     const uid = window.App.auth.currentUser.uid;
-    const isGroup = window.App.chats.find(c => c.id === chatId)?.type === 'group';
+    const chatArr = Array.isArray(window.App.chats) ? window.App.chats : Object.values(window.App.chats || {});
+    const isGroup = chatArr.find(c => c.id === chatId)?.type === 'group';
     
     const msg = {
       text: text,
@@ -193,7 +194,7 @@
       await chatRef.update({
         lastMessage: text,
         lastMessageTime: msg.time,
-        unread: window.firebase.firestore.FieldValue.increment(1) // Not accurate for the sender, but usually ignored on client sync
+        unread: (typeof firebase !== 'undefined' ? firebase : window.firebase).firestore.FieldValue.increment(1) // Not accurate for the sender, but usually ignored on client sync
       });
     } catch (err) {
       console.error('[MessageScheduler] sendMsgToDb write failed:', err);

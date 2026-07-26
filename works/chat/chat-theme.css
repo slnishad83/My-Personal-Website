@@ -92,10 +92,16 @@ html:not(.dark) .wa-chip {
   --wa-chip-active-bg: #e7f7f4;
   --wa-chip-active-text: #00a884;
 }
+html:not(.dark) .wa-chip:hover {
+  color: #3b4a54 !important;
+}
 html:not(.dark) .wa-chip-add {
   --wa-chip-bg: #f0f2f5;
   --wa-chip-text: #54656f;
   --wa-chip-hover: #e9edef;
+}
+html:not(.dark) .wa-chip-add:hover {
+  color: #3b4a54 !important;
 }
 
 /* ── Filter chips visible scrollbar ────────────────────── */
@@ -192,8 +198,8 @@ html:not(.dark) .wa-chips-scroll::-webkit-scrollbar-thumb {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: rgba(0,168,132,.16);
-  color: #00a884;
+  background: rgba(0,168,132,.22);
+  color: var(--primary, #00a884);
   font-size: 11px;
   font-weight: 800;
 }
@@ -355,6 +361,7 @@ html:not(.dark) .wa-filter-overflow-menu {
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
 }
+html:not(.dark) .wa-filter-sheet-overlay { background: rgba(0,0,0,0.45); }
 .wa-filter-sheet {
   width: min(100%, 460px);
   max-height: min(760px, 88vh);
@@ -454,6 +461,10 @@ html:not(.dark) .wa-filter-overflow-menu {
   background: rgba(0,168,132,.13);
   color: #00a884;
   flex: 0 0 auto;
+}
+html:not(.dark) .wa-filter-row-icon {
+  background: rgba(128,105,105,0.10);
+  color: #008069;
 }
 .wa-filter-row-main {
   min-width: 0;
@@ -892,6 +903,50 @@ html:not(.dark) .glass-panel {
 html.dark .msg-sent { background: var(--primary-fixed-dim); color: var(--on-primary-fixed); }
 html.dark .msg-received { background: var(--surface-container-highest); }
 
+/* ── Swipe-to-reply indicator ───────────────────────────── */
+.msg-swipe-reply {
+  position: absolute;
+  top: 0;
+  left: -50px;
+  width: 40px;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--primary, #00a884);
+  opacity: 0;
+  transition: opacity 0.2s;
+  pointer-events: none;
+}
+.message[data-msg-id].swiping .msg-swipe-reply {
+  opacity: 1;
+}
+.message[data-msg-id] {
+  position: relative;
+  overflow: visible;
+  touch-action: pan-y;
+}
+
+/* Message retry button */
+.msg-retry-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border-radius: 12px;
+  background: var(--error, #ea4335);
+  color: var(--on-error, #fff);
+  font-size: 11px;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  transition: opacity 0.15s, transform 0.1s;
+  margin-left: 6px;
+}
+.msg-retry-btn:hover { opacity: 0.85; }
+.msg-retry-btn:active { transform: scale(0.95); }
+.msg-retry-btn .material-symbols-outlined { font-size: 14px; }
+
 /* ── Message status indicators ─────────────────────────── */
 .msg-status-pending { opacity: 0.5; }
 .msg-status-sent { opacity: 1; }
@@ -900,6 +955,19 @@ html.dark .msg-received { background: var(--surface-container-highest); }
 .msg-status-failed { color: var(--error) !important; cursor: pointer; }
 .msg-status-failed:hover { opacity: 0.8; }
 .bg-error { background-color: var(--error, #ba1a1a) !important; }
+
+/* ── Message error state ──────────────────────────────── */
+.message-error-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--error, #ea4335);
+  font-size: 11px;
+  margin-left: 6px;
+}
+.message-error-indicator .material-symbols-outlined {
+  font-size: 14px;
+}
 
 /* ── Bottom nav active state ─────────────────────────── */
 .bottom-nav-item.active { color: var(--primary) !important; transition: background-color 0.2s ease, color 0.2s ease; }
@@ -938,6 +1006,13 @@ html.dark .chat-list-item.active { background: rgba(196, 192, 255, 0.08); border
   font-size: 56px;
   opacity: 0.35;
   margin-bottom: 12px;
+}
+@media (max-width: 480px) {
+  .empty-state { padding: 24px 16px; }
+}
+@media (max-width: 480px) {
+  .card-header { padding: 12px 14px; }
+  .card-body { padding: 12px 14px; }
 }
 
 /* ── Chat list: extra bottom padding so last item clears the fixed bottom-nav ── */
@@ -1015,6 +1090,30 @@ html.dark #call-screen {
   .wa-chip {
     padding: 6px 16px !important;
   }
+}
+
+/* Skin tone selector in emoji picker */
+.skin-tone-selector {
+  display: flex;
+  gap: 2px;
+  padding: 4px 8px;
+  border-top: 1px solid var(--border, rgba(0,0,0,0.08));
+}
+.skin-tone-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+  font-size: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: border-color 0.15s;
+}
+.skin-tone-btn.active,
+.skin-tone-btn:hover {
+  border-color: var(--primary, #00a884);
 }
 
 /* ── Emoji picker touch: show preview on tap ──────────── */
@@ -1102,6 +1201,68 @@ html.dark #call-screen {
   font-variant-numeric: tabular-nums;
 }
 
+/* ── Voice message waveform container ───────────────────── */
+.voice-waveform-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 200px;
+}
+.voice-play-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: none;
+  background: var(--primary, #00a884);
+  color: var(--on-primary, #fff);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: transform 0.1s, background 0.15s;
+}
+.voice-play-btn:hover { transform: scale(1.05); }
+.voice-play-btn:active { transform: scale(0.95); }
+.voice-waveform {
+  flex: 1;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  gap: 1.5px;
+}
+.voice-waveform-bar {
+  width: 3px;
+  border-radius: 2px;
+  background: var(--primary, #00a884);
+  opacity: 0.4;
+  transition: opacity 0.15s, height 0.15s;
+}
+.voice-waveform-bar.played {
+  opacity: 1;
+}
+.voice-waveform-bar.current {
+  opacity: 1;
+  transform: scaleY(1.3);
+}
+.voice-time {
+  font-size: 11px;
+  color: var(--text-secondary, #667781);
+  min-width: 32px;
+  text-align: right;
+}
+/* Voice speed indicator */
+.voice-speed-badge {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 5px;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--primary, #00a884) 15%, transparent);
+  color: var(--primary, #00a884);
+  cursor: pointer;
+  user-select: none;
+}
+
 /* ── File input visibility fix for iOS Safari ────────── */
 input[type="file"].hidden-input {
   position: absolute;
@@ -1132,6 +1293,25 @@ input[type="file"].hidden-input {
 @media (prefers-color-scheme: dark) {
   html:not([data-theme]) { color-scheme: dark; }
 }
+
+/* Edited message label */
+.msg-edited-label {
+  font-size: 11px;
+  font-style: italic;
+  opacity: 0.6;
+  margin-left: 4px;
+}
+html.dark .msg-edited-label { color: var(--text-secondary, #8696a0); }
+html:not(.dark) .msg-edited-label { color: var(--text-secondary, #667781); }
+
+/* Star icon on messages */
+.msg-star-icon {
+  font-size: 14px;
+  color: #f59e0b;
+  margin-left: 4px;
+  vertical-align: middle;
+}
+html.dark .msg-star-icon { color: #fbbf24; }
 
 /* ── Prevent double-tap zoom on iOS ──────────────────── */
 button, a, [role="button"], input, textarea, select {
@@ -1485,7 +1665,7 @@ html #messages-wrap::-webkit-scrollbar-track { background: var(--surface-bright)
 }
 
 /* ── D2: Dynamic theme-color (JS will update) ─────────────── */
-html.light #theme-color-meta { content: ""; }
+html:not(.dark) #theme-color-meta { content: ""; }
 
 /* ── UX1: Pull-to-refresh indicator ────────────────────────── */
 #pull-to-refresh {
@@ -2764,6 +2944,71 @@ html, body {
   font-size: 13px; border-bottom: 1px solid var(--outline-variant, #eee);
 }
 .nsl-reaction-viewer .nsl-rv-row:last-child { border-bottom: none; }
+
+/* ── Reaction light mode ─────────────────────── */
+html:not(.dark) .nsl-reaction-badge {
+  border-color: var(--outline-variant, #ccc);
+  background: var(--surface-container-high, #f0f0f0);
+}
+html:not(.dark) .nsl-reaction-badge:hover {
+  background: var(--surface-variant, #e0e0e0);
+}
+html:not(.dark) .nsl-reaction-bar {
+  background: var(--surface-container, #fff);
+  border-color: var(--outline-variant, #ddd);
+}
+html:not(.dark) .nsl-full-picker {
+  background: var(--surface-container, #fff);
+  border-color: var(--outline-variant, #ddd);
+}
+html:not(.dark) .nsl-full-picker-grid button:hover {
+  background: var(--surface-variant, #e0e0e0);
+}
+html:not(.dark) .nsl-reaction-viewer {
+  background: var(--surface-container, #fff);
+  border-color: var(--outline-variant, #ddd);
+}
+
+/* ── Reaction dark mode ──────────────────────── */
+html.dark .nsl-reaction-badge {
+  border-color: var(--outline-variant, rgba(255,255,255,0.12));
+  background: var(--surface-container-high, rgba(255,255,255,0.08));
+}
+html.dark .nsl-reaction-badge:hover {
+  background: var(--surface-variant, rgba(255,255,255,0.14));
+}
+html.dark .nsl-reaction-badge.active {
+  background: var(--primary, #00a884);
+  color: var(--on-primary, #06130f);
+}
+html.dark .nsl-reaction-bar {
+  background: var(--surface-container, #1f2c34);
+  border-color: var(--outline-variant, rgba(255,255,255,0.12));
+}
+html.dark .nsl-full-picker {
+  background: var(--surface-container, #1f2c34);
+  border-color: var(--outline-variant, rgba(255,255,255,0.12));
+}
+html.dark .nsl-full-picker-grid button:hover {
+  background: var(--surface-variant, rgba(255,255,255,0.14));
+}
+html.dark .nsl-reaction-viewer {
+  background: var(--surface-container, #1f2c34);
+  border-color: var(--outline-variant, rgba(255,255,255,0.12));
+}
+html.dark .nsl-reaction-viewer .nsl-rv-row {
+  border-bottom-color: var(--outline-variant, rgba(255,255,255,0.12));
+}
+
+/* ── Reaction responsive ──────────────────────── */
+@media (max-width: 480px) {
+  .nsl-reaction-badge { padding: 2px 5px; font-size: 11px; }
+  .nsl-reaction-bar { gap: 2px; padding: 4px 6px; }
+  .nsl-full-picker { left: 8px !important; right: 8px !important; width: auto !important; }
+  .nsl-full-picker-grid { grid-template-columns: repeat(6, 1fr); }
+  .nsl-reaction-viewer { max-width: calc(100vw - 32px); }
+  [data-tooltip]::after { white-space: normal; max-width: 200px; }
+}
 
 /* ══════════════════════════════════════════════════════════
    FINAL POLISH — 10/10 FIXES

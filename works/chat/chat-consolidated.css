@@ -52,6 +52,9 @@
   0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
   30% { transform: translateY(-4px); opacity: 1; }
 }
+@media (max-width: 480px) {
+  #_wa_typing { padding: 6px 10px; font-size: 12px; gap: 6px; }
+}
 
 [data-theme="dark"] #_wa_typing,
 .dark #_wa_typing {
@@ -93,6 +96,9 @@
 @keyframes _waPulse {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.3; }
+}
+@media (max-width: 480px) {
+  #_wa_conn_banner { padding: 6px 10px; font-size: 12px; }
 }
 
 html.dark #_wa_conn_banner.offline {
@@ -140,7 +146,7 @@ html.dark #_wa_conn_banner.reconnecting {
   width: min(90vw, 360px);
   border-radius: 12px;
   padding: 14px 16px;
-  z-index: 99990;
+  z-index: 9999;
   box-shadow: 0 6px 24px rgba(0, 0, 0, 0.4);
   display: flex;
   flex-direction: column;
@@ -167,7 +173,7 @@ html.dark #_wa_conn_banner.reconnecting {
   border-radius: 20px;
   font-size: 12px;
   font-weight: 600;
-  z-index: 99998;
+  z-index: 9998;
   display: flex;
   align-items: center;
   gap: 6px;
@@ -191,6 +197,7 @@ html.dark #_wa_conn_banner.reconnecting {
   font-weight: 600;
 }
 .feat-nav-btn:hover { background: rgba(0,128,105,0.06); color: var(--brand,#008069); }
+html.dark .feat-nav-btn:hover { background: rgba(0,168,132,0.12); }
 .feat-nav-btn .fn-icon { font-size: 18px; }
 
 @media (max-width: 768px) {
@@ -216,7 +223,7 @@ html.dark .busy-banner { background: var(--warning-container, #3d3200); border-b
 html.dark .busy-banner button { border-color: var(--on-warning-container, #ffd54f); color: var(--on-warning-container, #ffd54f); }
 
 .feat-modal-overlay {
-  position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 9000;
+  position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: var(--z-modal-overlay, 100);
   display: flex; align-items: center; justify-content: center;
   padding: 16px; box-sizing: border-box;
   opacity: 0; visibility: hidden; transition: opacity 0.2s, visibility 0.2s;
@@ -289,6 +296,10 @@ html.dark .busy-banner button { border-color: var(--on-warning-container, #ffd54
 .task-text.done { text-decoration: line-through; color: var(--text-secondary,#667781); }
 .task-del { background: none; border: none; color: var(--text-secondary,#667781); cursor: pointer; font-size: 15px; padding: 2px; }
 .tasks-empty { text-align: center; padding: 40px 20px; color: var(--text-secondary,#667781); font-size: 14px; }
+
+@media (max-width: 640px) {
+  .tasks-panel { width: 100% !important; right: 0 !important; top: 50% !important; transform: translateY(-50%) !important; border-radius: 12px; }
+}
 
 .transcription-text {
   font-size: 12px; color: var(--text-secondary,#667781); font-style: italic; padding: 4px 8px;

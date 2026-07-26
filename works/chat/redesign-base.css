@@ -165,7 +165,7 @@ body {
 .btn-ghost:hover { background: var(--brand-soft); color: var(--brand); }
 
 .btn-danger {
-  background: linear-gradient(135deg, #ef4444, #dc2626);
+  background: linear-gradient(135deg, var(--red, #ef4444), var(--red-dark, #dc2626));
   color: var(--on-primary);
   box-shadow: 0 4px 14px rgba(239,68,68,0.3);
 }
@@ -258,7 +258,7 @@ body {
   gap: 14px;
   position: sticky;
   top: 0;
-  z-index: 100;
+  z-index: var(--z-app-header, 45);
   box-shadow: 0 2px 12px rgba(0,0,0,0.15);
   min-height: calc(56px + var(--app-safe-top));
 }
@@ -495,6 +495,8 @@ body {
 .status-dot--online { background: #31a24c; box-shadow: 0 0 0 2px var(--card); }
 .status-dot--offline { background: var(--text-secondary); }
 .status-dot--away { background: #f5a623; }
+html.dark .status-dot--online { background: #4ade80; box-shadow: 0 0 6px rgba(74,222,128,0.5); }
+html.dark .status-dot--away { background: #fbbf24; box-shadow: 0 0 6px rgba(251,191,36,0.4); }
 
 /* ── Avatar ── */
 .avatar {
@@ -568,6 +570,10 @@ body {
   from { transform: translateY(100%); }
   to { transform: translateY(0); }
 }
+@media (max-width: 767px) {
+  .modal-overlay { align-items: flex-end !important; }
+  .modal-box { border-radius: 16px 16px 0 0 !important; max-height: 85vh; }
+}
 
 /* ── Dark Mode Variables ──
    Two triggers: (1) OS prefers-color-scheme when no explicit theme set,
@@ -584,6 +590,21 @@ body {
     --brand-soft: rgba(0,168,132,0.12);
     --brand-soft-hover: rgba(0,168,132,0.2);
     --panel-soft: #111b21;
+  }
+}
+
+/* Auto theme follow — applied when user selects "System" theme */
+html.auto-theme {
+  --theme-source: system;
+}
+@media (prefers-color-scheme: dark) {
+  html.auto-theme:not([data-manual-theme]) {
+    color-scheme: dark;
+  }
+}
+@media (prefers-color-scheme: light) {
+  html.auto-theme:not([data-manual-theme]) {
+    color-scheme: light;
   }
 }
 

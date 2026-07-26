@@ -122,8 +122,8 @@
     if (typeof origSend !== 'function') return;
 
     window.sendMessage = async function () {
-      const input = document.getElementById('messageInput');
-      const text  = (input?.value || '').trim();
+      const input = document.getElementById('messageInput') || document.getElementById('msg-input');
+      const text  = (input?.value || input?.textContent || input?.innerText || '').trim();
       if (text) {
         const url = extractUrl(text);
         if (url) {

@@ -248,7 +248,8 @@
   }
 
   function _attachListeners() {
-    _inputEl.addEventListener('input', App.debounce(_onInput, 200), { passive: true });
+    const _debounced = typeof window.App?.debounce === 'function' ? window.App.debounce(_onInput, 200) : (e) => { clearTimeout(_inputEl._mentionTimer); _inputEl._mentionTimer = setTimeout(_onInput, 200, e); };
+    _inputEl.addEventListener('input', _debounced, { passive: true });
     _inputEl.addEventListener('keydown', _onKeyDown);
     _inputEl.addEventListener('focus', _onFocus, { passive: true });
     document.addEventListener('click', function (e) {

@@ -18,10 +18,17 @@
     return getSystemTheme();
   }
 
-  function applyTheme(theme) {
+  function applyTheme(theme, mode) {
     document.documentElement.dataset.theme = theme;
     var isDark = theme === "dark";
+    var isSystem = (mode || getStoredMode()) === "system";
     document.documentElement.className = isDark ? "dark" : "light";
+    if (isSystem) {
+      document.documentElement.classList.add("auto-theme");
+    } else {
+      document.documentElement.classList.remove("auto-theme");
+      document.documentElement.setAttribute("data-manual-theme", "");
+    }
     document.body.classList.toggle("dark", isDark);
 
     // Sync theme-color meta tag for PWA and mobile address bar
@@ -48,7 +55,12 @@
     // Keep legacy darkMode item in sync for compatibility with any un-refactored scripts
     localStorage.setItem("darkMode", String(resolveTheme(mode) === "dark"));
     var theme = resolveTheme(mode);
-    applyTheme(theme);
+    applyTheme(theme, mode);
+    if (mode !== "system") {
+      document.documentElement.setAttribute("data-manual-theme", "");
+    } else {
+      document.documentElement.removeAttribute("data-manual-theme");
+    }
     window.dispatchEvent(new CustomEvent("themechange", { detail: { mode: mode, theme: theme } }));
   };
 
@@ -63,7 +75,7 @@
   };
 
   /* Apply initial theme */
-  applyTheme(resolveTheme(getStoredMode()));
+  applyTheme(resolveTheme(getStoredMode()), getStoredMode());
 
   /* Listen for OS theme changes in real-time */
   if (mq) {

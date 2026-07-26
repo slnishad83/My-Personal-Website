@@ -408,7 +408,7 @@
     const btn = document.createElement('button');
     btn.style.cssText = 'display:flex;align-items:center;gap:8px;padding:12px 16px;border:none;background:transparent;color:var(--on-surface);font-size:14px;font-weight:600;cursor:pointer;width:100%;text-align:left;border-radius:0';
     btn.innerHTML = `<span class="material-symbols-outlined" style="font-size:20px">${locked ? 'lock_open' : 'lock'}</span>${locked ? 'Unlock Chat' : 'Lock Chat'}`;
-    btn.onclick = () => { toggleChatLock(chatId); _removeCtxMenu(); };
+    btn.onclick = () => { toggleChatLock(chatId); if (typeof _removeCtxMenu === 'function') _removeCtxMenu(); };
     const cancelBtn = menu.querySelector('[onclick*="_removeCtxMenu"]');
     if (cancelBtn) menu.insertBefore(btn, cancelBtn);
     else menu.appendChild(btn);

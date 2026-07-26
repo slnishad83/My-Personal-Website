@@ -12,7 +12,9 @@
   function _docRef() {
     const uid = _uid();
     if (!uid) return null;
-    return db.collection('users').doc(uid);
+    const database = window.App?.db || (typeof firebase !== 'undefined' ? firebase.firestore() : null);
+    if (!database) return null;
+    return database.collection('users').doc(uid);
   }
 
   async function _persist() {

@@ -270,7 +270,8 @@
     _cleanupFns = [];
     _destroyPicker();
   }
-  window.SnoozeEnhancements = { openCustomPicker: openCustomPicker, refreshCountdowns: refreshCountdowns, destroy: destroy };
+  window.snoozeEnhancements = { openCustomPicker: openCustomPicker, refreshCountdowns: refreshCountdowns, destroy: destroy };
+  window.SnoozeEnhancements = window.snoozeEnhancements; // backward compat
 
 })();
 

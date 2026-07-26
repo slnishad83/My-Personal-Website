@@ -3,7 +3,7 @@
   'use strict';
 
   window.openChatExport = function() {
-    if (!App.currentChat) { showToast('Open a chat first', 'info'); return; }
+    if (!App.currentChat) { window.showToast?.('Open a chat first', 'info'); return; }
 
     const overlay = document.createElement('div');
     overlay.id = 'chat-export-overlay';
@@ -98,14 +98,15 @@
 
     _downloadFile(txt, `chat-${chatName.replace(/[^a-zA-Z0-9]/g, '_')}-${Date.now()}.txt`, 'text/plain');
     document.getElementById('chat-export-overlay')?.remove();
-    showToast('Exported as text', 'success');
+    window.showToast?.('Exported as text', 'success');
   };
 
   window.exportChatAsHTML = function() {
     const msgs = _getMessages();
     const chatName = App.currentChat.name || App.currentChat.displayName || 'Chat';
 
-    let html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Chat: ${escHtml(chatName)}</title>
+    const _eh = (typeof escHtml === 'function' ? escHtml : (s) => String(s ?? ''));
+    let html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Chat: ${_eh(chatName)}</title>
     <style>
       body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;max-width:800px;margin:0 auto;padding:20px;background:#0d1117;color:#e6edf3}
       h1{color:#58a6ff;border-bottom:1px solid #30363d;padding-bottom:10px}
@@ -117,7 +118,7 @@
       .system{text-align:center;color:#8b949e;font-style:italic;font-size:12px}
       .meta{color:#8b949e;font-size:11px;margin-top:10px;border-top:1px solid #30363d;padding-top:10px}
     </style></head><body>
-    <h1>💬 ${escHtml(chatName)}</h1>
+    <h1>💬 ${_eh(chatName)}</h1>
     <div class="meta">Exported: ${new Date().toLocaleString()} · ${msgs.length} messages</div>`;
 
     msgs.forEach(msg => {
@@ -128,11 +129,11 @@
       const isSystem = msg.type === 'system';
 
       if (isSystem) {
-        html += `<div class="msg system">${escHtml(text)}</div>`;
+        html += `<div class="msg system">${_eh(text)}</div>`;
       } else {
         html += `<div class="msg${isMe ? ' me' : ''}">
-          <span class="sender">${escHtml(sender)}</span><span class="time">${time}</span>
-          <div class="text">${escHtml(text)}</div>
+          <span class="sender">${_eh(sender)}</span><span class="time">${time}</span>
+          <div class="text">${_eh(text)}</div>
         </div>`;
       }
     });
@@ -140,7 +141,7 @@
     html += '</body></html>';
     _downloadFile(html, `chat-${chatName.replace(/[^a-zA-Z0-9]/g, '_')}-${Date.now()}.html`, 'text/html');
     document.getElementById('chat-export-overlay')?.remove();
-    showToast('Exported as HTML', 'success');
+    window.showToast?.('Exported as HTML', 'success');
   };
 
   window.exportChatAsJSON = function() {

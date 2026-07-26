@@ -53,7 +53,7 @@
 }
 
 .status-composer {
-  @apply fixed inset-0 z-[60] flex flex-col;
+  @apply fixed inset-0 z-[55] flex flex-col;
   background: var(--background);
   padding-top: env(safe-area-inset-top, 0px);
   padding-bottom: env(safe-area-inset-bottom, 0px);
@@ -99,9 +99,13 @@
 }
 .status-composer-send:active { transform: scale(.95); }
 .dark .status-composer { background: #0b141a; }
+@media (max-width: 480px) {
+  .status-composer { padding: 12px; gap: 8px; }
+  .status-viewer .sv-nav { padding: 8px; }
+}
 
 .status-viewer {
-  @apply fixed inset-0 z-[70] flex flex-col;
+  @apply fixed inset-0 z-[65] flex flex-col;
   background: rgba(0,0,0,.92);
   padding-top: env(safe-area-inset-top, 0px);
   padding-bottom: env(safe-area-inset-bottom, 0px);
@@ -495,7 +499,7 @@
   @apply absolute -top-10 left-1/2 -translate-x-1/2 flex items-center gap-1 px-2 py-1.5 rounded-full shadow-lg;
   background: var(--surface);
   border: 1px solid var(--outline-variant);
-  z-index: 10;
+  z-index: 15;
   opacity: 0;
   transform: translateX(-50%) translateY(4px) scale(.9);
   transition: opacity .15s ease, transform .15s ease;

@@ -31,10 +31,10 @@
     if (typeof window.openDeleteMenu === 'function') {
       _origOpenDeleteMenu = window.openDeleteMenu;
       window.openDeleteMenu = function(e, msgId) {
-        const chatId = App.currentChat?.id;
+        const chatId = window.App?.currentChat?.id;
         if (!chatId) return _origOpenDeleteMenu(e, msgId);
 
-      const msgs = App.messages[chatId] || [];
+      const msgs = (window.App?.messages || {})[chatId] || [];
       const msg = msgs.find(m => m.id === msgId);
       if (!msg) return _origOpenDeleteMenu(e, msgId);
 
@@ -110,10 +110,10 @@
   }
 
   window._addRecallInfoToMenu = function(menu, msgId) {
-    const chatId = App.currentChat?.id;
+    const chatId = window.App?.currentChat?.id;
     if (!chatId) return;
 
-    const msgs = App.messages[chatId] || [];
+    const msgs = (window.App?.messages || {})[chatId] || [];
     const msg = msgs.find(m => m.id === msgId);
     if (!msg || msg.from !== 'me') return;
 
@@ -138,12 +138,12 @@
     const _origDeleteMessage = window.deleteMessage;
     window.deleteMessage = async function(msgId, scope) {
       if (scope === 'everyone') {
-        const chatId = App.currentChat?.id;
+        const chatId = window.App?.currentChat?.id;
         if (chatId) {
-          const msgs = App.messages[chatId] || [];
+          const msgs = (window.App?.messages || {})[chatId] || [];
           const msg = msgs.find(m => m.id === msgId);
           if (msg && !canRecallMessage(msg)) {
-            showToast('Recall window expired — can only delete for yourself', 'error');
+            window.showToast?.('Recall window expired — can only delete for yourself', 'error');
             return;
           }
         }

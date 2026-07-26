@@ -161,6 +161,7 @@ export default defineConfig({
               id.includes('message-reactions') || id.includes('message-recall') ||
               id.includes('message-scheduler') || id.includes('message-copy') ||
               id.includes('message-translation') || id.includes('message-reminders') ||
+              id.includes('message-edit') || id.includes('message-star') ||
               id.includes('threads') || id.includes('mention-autocomplete') ||
               id.includes('quick-replies')) {
             return 'feature-messages';

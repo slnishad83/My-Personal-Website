@@ -151,6 +151,29 @@
 
     showMessageError(messageId, 'send-failure');
 
+    var existing = msgEl.querySelector('.msg-retry-btn');
+    if (existing) existing.remove();
+
+    var retryBtn = document.createElement('button');
+    retryBtn.className = 'msg-retry-btn';
+    retryBtn.setAttribute('aria-label', 'Retry sending message');
+    retryBtn.innerHTML =
+      '<span class="material-symbols-outlined">refresh</span> Retry';
+
+    retryBtn.addEventListener('click', function(e) {
+      e.stopPropagation();
+      clearMessageError(messageId);
+      showSendingStatus(messageId);
+      if (typeof retryFn === 'function') retryFn();
+    });
+
+    var bubble = msgEl.querySelector('.message-bubble');
+    if (bubble) {
+      bubble.appendChild(retryBtn);
+    } else {
+      msgEl.appendChild(retryBtn);
+    }
+
     var indicator = msgEl.querySelector('.msg-error-indicator');
     if (indicator && retryFn) {
       indicator.onclick = function() {
