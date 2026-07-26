@@ -7,8 +7,8 @@
   function showCallScreen(type, name, initials) {
     CC.callType = type;
     App.callActive = true;
-    micMuted = false;
-    cameraOff = (type === 'voice');
+    CC.setMicMuted(false);
+    CC.setCameraOff(type === 'voice');
     App._activeCallId = CC.callId;
 
     CC.txt('call-name', name || 'Unknown');
@@ -245,12 +245,6 @@
     document.addEventListener('touchmove', onMove, { passive: false });
     document.addEventListener('mouseup', onEnd);
     document.addEventListener('touchend', onEnd);
-  }
-
-  var _dragCleanups = [];
-  function _cleanupDragListeners() {
-    _dragCleanups.forEach(function(fn) { try { fn(); } catch (_) {} });
-    _dragCleanups = [];
   }
 
   function _initRemoteVideoPinchZoom() {

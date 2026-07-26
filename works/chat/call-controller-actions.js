@@ -5,31 +5,31 @@
   var CC = window._CC;
 
   function toggleMute() {
-    micMuted = !micMuted;
-    if (localCallStream) localCallStream.getAudioTracks().forEach(function (t) { t.enabled = !micMuted; });
+    CC.setMicMuted(!CC.isMicMuted());
+    if (CC.getLocalStream()) CC.getLocalStream().getAudioTracks().forEach(function (t) { t.enabled = !CC.isMicMuted(); });
     var btn = CC.$('btn-mute');
     var icon = CC.$('mute-icon');
-    if (btn) btn.classList.toggle('bg-red-500', micMuted);
-    if (icon) icon.textContent = micMuted ? 'mic_off' : 'mic';
+    if (btn) btn.classList.toggle('bg-red-500', CC.isMicMuted());
+    if (icon) icon.textContent = CC.isMicMuted() ? 'mic_off' : 'mic';
   }
 
   function toggleCamera() {
-    cameraOff = !cameraOff;
-    if (localCallStream) localCallStream.getVideoTracks().forEach(function (t) { t.enabled = !cameraOff; });
+    CC.setCameraOff(!CC.isCameraOff());
+    if (CC.getLocalStream()) CC.getLocalStream().getVideoTracks().forEach(function (t) { t.enabled = !CC.isCameraOff(); });
     var icon = CC.$('cam-icon');
-    if (icon) icon.textContent = cameraOff ? 'videocam_off' : 'videocam';
+    if (icon) icon.textContent = CC.isCameraOff() ? 'videocam_off' : 'videocam';
   }
 
   function toggleSpeaker() {
-    speakerOn = !speakerOn;
+    CC.setSpeakerOn(!CC.isSpeakerOn());
     var icon = CC.$('speaker-icon');
-    if (icon) icon.textContent = speakerOn ? 'volume_up' : 'volume_off';
+    if (icon) icon.textContent = CC.isSpeakerOn() ? 'volume_up' : 'volume_off';
     var btn = CC.$('btn-speaker');
-    if (btn) btn.classList.toggle('bg-primary/30', speakerOn);
+    if (btn) btn.classList.toggle('bg-primary/30', CC.isSpeakerOn());
     var rv = CC.$('remote-video');
     if (rv) {
-      rv.volume = speakerOn ? 1.0 : 0.7;
-      if (speakerOn && typeof rv.setSinkId === 'function') {
+      rv.volume = CC.isSpeakerOn() ? 1.0 : 0.7;
+      if (CC.isSpeakerOn() && typeof rv.setSinkId === 'function') {
         navigator.mediaDevices?.enumerateDevices?.().then(function (devices) {
           var speaker = devices.find(function (d) { return d.kind === 'audiooutput' && d.label.toLowerCase().includes('speaker'); });
           if (speaker) rv.setSinkId(speaker.deviceId).catch(function () {});
@@ -42,16 +42,16 @@
     if (CC.screenShareStream) {
       CC.screenShareStream.getTracks().forEach(function (t) { t.stop(); });
       CC.screenShareStream = null;
-      if (CC.screenShareSender && peerConnection && localCallStream) {
-        var camTrack = localCallStream.getVideoTracks()[0];
+      if (CC.screenShareSender && CC.getPeerConnection() && CC.getLocalStream()) {
+        var camTrack = CC.getLocalStream().getVideoTracks()[0];
         if (camTrack) await CC.screenShareSender.replaceTrack(camTrack).catch(function () {});
       }
       CC.screenShareSender = null;
       var lv1 = CC.$('local-video');
-      if (lv1 && localCallStream) lv1.srcObject = localCallStream;
+      if (lv1 && CC.getLocalStream()) lv1.srcObject = CC.getLocalStream();
       var si = CC.$('screenshare-icon');
       if (si) si.textContent = 'screen_share';
-      isScreenSharing = false;
+      CC.setScreenSharing(false);
       CC.toast('Screen share stopped', 'info');
       return;
     }
@@ -66,43 +66,43 @@
       }
       CC.screenShareStream = screenStream;
       var screenTrack = screenStream.getVideoTracks()[0];
-      CC.screenShareSender = peerConnection?.getSenders().find(function (s) { return s.track && s.track.kind === 'video'; });
+      CC.screenShareSender = CC.getPeerConnection()?.getSenders().find(function (s) { return s.track && s.track.kind === 'video'; });
       if (CC.screenShareSender) await CC.screenShareSender.replaceTrack(screenTrack);
       if (screenStream.getAudioTracks().length > 0) {
         var audioTrack = screenStream.getAudioTracks()[0];
-        if (peerConnection && localCallStream) {
-          peerConnection.addTrack(audioTrack, screenStream);
+        if (CC.getPeerConnection() && CC.getLocalStream()) {
+          CC.getPeerConnection().addTrack(audioTrack, screenStream);
         }
       }
       var lv2 = CC.$('local-video');
       if (lv2) lv2.srcObject = screenStream;
       var si2 = CC.$('screenshare-icon');
       if (si2) si2.textContent = 'stop_screen_share';
-      isScreenSharing = true;
+      CC.setScreenSharing(true);
       screenTrack.onended = function () { toggleScreenShare(); };
       CC.toast('Sharing your screen' + (screenStream.getAudioTracks().length > 0 ? ' with audio' : ''), 'info');
     } catch (_) { CC.toast('Screen share cancelled', 'info'); }
   }
 
   async function switchCamera() {
-    preferredCameraFacingMode = preferredCameraFacingMode === 'user' ? 'environment' : 'user';
-    if (!localCallStream || CC.callType !== 'video') return;
+    CC.setPreferredCameraFacingMode(CC.getPreferredCameraFacingMode() === 'user' ? 'environment' : 'user');
+    if (!CC.getLocalStream() || CC.callType !== 'video') return;
     try {
       var newStream = await navigator.mediaDevices.getUserMedia({
         video: {
-          facingMode: preferredCameraFacingMode,
+          facingMode: CC.getPreferredCameraFacingMode(),
           width: { ideal: window.isTablet ? 1920 : 1280 },
           height: { ideal: window.isTablet ? 1080 : 720 }
         }
       });
       var newTrack = newStream.getVideoTracks()[0];
-      var sender = peerConnection?.getSenders().find(function (s) { return s.track && s.track.kind === 'video'; });
+      var sender = CC.getPeerConnection()?.getSenders().find(function (s) { return s.track && s.track.kind === 'video'; });
       if (sender) await sender.replaceTrack(newTrack);
-      var oldTrack = localCallStream.getVideoTracks()[0];
-      if (oldTrack) { oldTrack.stop(); localCallStream.removeTrack(oldTrack); }
-      localCallStream.addTrack(newTrack);
+      var oldTrack = CC.getLocalStream().getVideoTracks()[0];
+      if (oldTrack) { oldTrack.stop(); CC.getLocalStream().removeTrack(oldTrack); }
+      CC.getLocalStream().addTrack(newTrack);
       var lv = CC.$('local-video');
-      if (lv) lv.srcObject = localCallStream;
+      if (lv) lv.srcObject = CC.getLocalStream();
     } catch (_) {}
   }
 
@@ -205,9 +205,9 @@
   var _callOnHold = false;
 
   function toggleCallHold() {
-    if (!localCallStream) return;
+    if (!CC.getLocalStream()) return;
     _callOnHold = !_callOnHold;
-    localCallStream.getTracks().forEach(function (t) { t.enabled = !_callOnHold; });
+    CC.getLocalStream().getTracks().forEach(function (t) { t.enabled = !_callOnHold; });
     var btn = CC.$('btn-hold');
     var icon = CC.$('hold-icon');
     if (btn) btn.classList.toggle('bg-red-500', _callOnHold);

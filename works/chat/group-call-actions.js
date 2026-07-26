@@ -3,12 +3,13 @@
   'use strict';
 
   var GC = window._GC;
+  var CC = window._CC;
 
   async function addToCall(userId) {
     if (!GC._isInGroupCall() || !GC._isInitiator) { GC._toast('Only the call initiator can add participants', 'error'); return; }
     if (!userId || userId === GC._myUid) return;
     if (!GC._canAddParticipant()) { GC._toast('Maximum ' + GC._GRID_MAX + ' participants allowed', 'error'); return; }
-    var alreadyIn = (activeGroupCallParticipants || []).some(function (p) { return p.uid === userId; });
+    var alreadyIn = (window.activeGroupCallParticipants || []).some(function (p) { return p.uid === userId; });
     if (alreadyIn) { GC._toast('Already in the call', 'info'); return; }
     if (!GC._firestore() || !GC._currentCallId) return;
 
@@ -31,13 +32,13 @@
     if (!GC._isInGroupCall()) return;
     if (!GC._isInitiator) { GC._toast('Only the call initiator can remove participants', 'error'); return; }
     if (!userId || userId === GC._myUid) return;
-    var participant = (activeGroupCallParticipants || []).find(function (p) { return p.uid === userId; });
+    var participant = (window.activeGroupCallParticipants || []).find(function (p) { return p.uid === userId; });
     if (!participant) return;
     var hasJoined = GC._participantJoinTime.has(userId);
     if (hasJoined) {
       GC._removeParticipantFromGrid(userId);
       if (GC._firestore() && GC._currentCallId) {
-        var remaining = (activeGroupCallParticipants || []).map(function (p) { return p.uid; });
+        var remaining = (window.activeGroupCallParticipants || []).map(function (p) { return p.uid; });
         remaining.push(GC._myUid);
         var updatePayload = { participantIds: remaining };
         var detailUpdate = {};
@@ -77,7 +78,7 @@
       var stillMuted = GC._participantMuteState.get(userId);
       if (stillMuted === newMuted) sendMuteRequest();
     }, 3000);
-    var participant = (activeGroupCallParticipants || []).find(function (p) { return p.uid === userId; });
+    var participant = (window.activeGroupCallParticipants || []).find(function (p) { return p.uid === userId; });
     if (participant) {
       participant.isMuted = newMuted;
     }
@@ -89,13 +90,13 @@
     if (!GC._isInGroupCall() || !GC._isInitiator) { GC._toast('Only the call initiator can add participants', 'error'); return; }
     if (!userId || userId === GC._myUid) return;
     if (!GC._canAddParticipant()) { GC._toast('Maximum ' + GC._GRID_MAX + ' participants allowed', 'error'); return; }
-    var alreadyIn = (activeGroupCallParticipants || []).some(function (p) { return p.uid === userId; });
+    var alreadyIn = (window.activeGroupCallParticipants || []).some(function (p) { return p.uid === userId; });
     if (alreadyIn) { GC._toast('Already in the call', 'info'); return; }
     addToCall(userId);
   }
 
   function getGroupCallParticipants() {
-    return (activeGroupCallParticipants || []).map(function (p) {
+    return (window.activeGroupCallParticipants || []).map(function (p) {
       return {
         uid: p.uid,
         name: p.name,
@@ -117,11 +118,11 @@
     GC._stopSpeakerDetection();
     GC._cleanupAllPeerConnections();
     GC._cleanupListeners();
-    if (localCallStream) {
-      localCallStream.getTracks().forEach(function (t) { t.stop(); });
-      localCallStream = null;
+    if (CC.getLocalStream()) {
+      CC.getLocalStream().getTracks().forEach(function (t) { t.stop(); });
+      CC.setLocalStream(null);
     }
-    activeGroupCallParticipants = [];
+    window.activeGroupCallParticipants = [];
     GC._currentCallId = null;
     GC._isInitiator = false;
     GC._myUid = null;

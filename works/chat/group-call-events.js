@@ -3,6 +3,7 @@
   'use strict';
 
   var GC = window._GC;
+  var CC = window._CC;
 
   async function startGroupCall(participantIds, type) {
     GC._myUid = GC._uid();
@@ -23,12 +24,12 @@
       var constraints = { audio: true };
       if (type === 'video') {
         constraints.video = {
-          facingMode: preferredCameraFacingMode || 'user',
+          facingMode: CC.getPreferredCameraFacingMode() || 'user',
           width: { ideal: window.isTablet ? 1920 : 1280 },
           height: { ideal: window.isTablet ? 1080 : 720 }
         };
       }
-      localCallStream = await navigator.mediaDevices.getUserMedia(constraints);
+      CC.setLocalStream(await navigator.mediaDevices.getUserMedia(constraints));
     } catch (err) {
       GC._toast('Could not access camera/mic: ' + (err.name === 'NotAllowedError' ? 'Permission denied' : err.message), 'error');
       return;
@@ -38,8 +39,8 @@
     participantDetails[GC._myUid] = {
       name: myDetails.name,
       avatar: myDetails.avatar,
-      isMuted: !!micMuted,
-      isVideoOff: !!cameraOff,
+      isMuted: !!CC.isMicMuted(),
+      isVideoOff: !!CC.isCameraOff(),
       joinedAt: Date.now()
     };
     GC._participantJoinTime.set(GC._myUid, Date.now());
@@ -58,13 +59,14 @@
       });
     } catch (err) {
       GC._toast('Failed to create group call: ' + err.message, 'error');
-      localCallStream.getTracks().forEach(function (t) { t.stop(); });
-      localCallStream = null;
+      var _fcs = CC.getLocalStream();
+      if (_fcs) { _fcs.getTracks().forEach(function (t) { t.stop(); }); }
+      CC.setLocalStream(null);
       return;
     }
 
     GC._currentCallId = callRef.id;
-    activeGroupCallParticipants = [{ uid: GC._myUid, name: myDetails.name, avatar: myDetails.avatar, isMuted: false, isVideoOff: false }];
+    window.activeGroupCallParticipants = [{ uid: GC._myUid, name: myDetails.name, avatar: myDetails.avatar, isMuted: false, isVideoOff: false }];
     App.callActive = true;
     App._activeCallId = GC._currentCallId;
 
@@ -134,12 +136,12 @@
       var constraints = { audio: true };
       if (GC._currentCallType === 'video') {
         constraints.video = {
-          facingMode: preferredCameraFacingMode || 'user',
+          facingMode: CC.getPreferredCameraFacingMode() || 'user',
           width: { ideal: window.isTablet ? 1920 : 1280 },
           height: { ideal: window.isTablet ? 1080 : 720 }
         };
       }
-      localCallStream = await navigator.mediaDevices.getUserMedia(constraints);
+      CC.setLocalStream(await navigator.mediaDevices.getUserMedia(constraints));
     } catch (err) {
       GC._toast('Could not access camera/mic', 'error');
       GC._currentCallId = null;
@@ -154,8 +156,8 @@
     participantDetailsUpdate[GC._myUid] = {
       name: myDetails.name,
       avatar: myDetails.avatar,
-      isMuted: !!micMuted,
-      isVideoOff: !!cameraOff,
+      isMuted: !!CC.isMicMuted(),
+      isVideoOff: !!CC.isCameraOff(),
       joinedAt: Date.now()
     };
 
@@ -167,17 +169,18 @@
       });
     } catch (err) {
       GC._toast('Failed to join: ' + err.message, 'error');
-      localCallStream.getTracks().forEach(function (t) { t.stop(); });
-      localCallStream = null;
+      var _jcs = CC.getLocalStream();
+      if (_jcs) { _jcs.getTracks().forEach(function (t) { t.stop(); }); }
+      CC.setLocalStream(null);
       GC._currentCallId = null;
       return;
     }
 
     var existingParticipants = (callData.participantIds || []).filter(function (p) { return p !== GC._myUid; });
-    activeGroupCallParticipants = [{ uid: GC._myUid, name: myDetails.name, avatar: myDetails.avatar, isMuted: false, isVideoOff: false }];
+    window.activeGroupCallParticipants = [{ uid: GC._myUid, name: myDetails.name, avatar: myDetails.avatar, isMuted: false, isVideoOff: false }];
     existingParticipants.forEach(function (pUid) {
       var det = callData.participantDetails && callData.participantDetails[pUid];
-      activeGroupCallParticipants.push({
+      window.activeGroupCallParticipants.push({
         uid: pUid,
         name: det ? det.name : 'Participant',
         avatar: det ? (det.avatar || '') : '',
@@ -234,13 +237,13 @@
     GC._cleanupAllPeerConnections();
     GC._cleanupListeners();
 
-    if (localCallStream) {
-      localCallStream.getTracks().forEach(function (t) { t.stop(); });
-      localCallStream = null;
+    if (CC.getLocalStream()) {
+      CC.getLocalStream().getTracks().forEach(function (t) { t.stop(); });
+      CC.setLocalStream(null);
     }
 
     if (callId && GC._firestore() && myUid) {
-      var remainingParticipants = (activeGroupCallParticipants || []).filter(function (p) { return p.uid !== myUid; });
+      var remainingParticipants = (window.activeGroupCallParticipants || []).filter(function (p) { return p.uid !== myUid; });
       if (remainingParticipants.length === 0 || wasInitiator) {
         GC._firestore().collection('groupCalls').doc(callId).update({
           status: 'ended',
@@ -277,7 +280,7 @@
       }
     }
 
-    activeGroupCallParticipants = [];
+    window.activeGroupCallParticipants = [];
     GC._currentCallId = null;
     GC._isInitiator = false;
     GC._myUid = null;

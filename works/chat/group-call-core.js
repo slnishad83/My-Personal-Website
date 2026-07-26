@@ -3,6 +3,7 @@
   'use strict';
 
   var GC = window._GC = window._GC || {};
+  var CC = window._CC;
 
   GC._GRID_MAX_VOICE = 32;
   GC._GRID_MAX_VIDEO = 8;
@@ -33,6 +34,10 @@
   GC._audioLevelCache = new Map();
   GC._lastSpeakerUid = null;
 
+  window.activeGroupCallParticipants = window.activeGroupCallParticipants || [];
+  window.groupCallPeerConnections = window.groupCallPeerConnections instanceof Map ? window.groupCallPeerConnections : new Map();
+  window.groupCallCandidateUnsubscribes = Array.isArray(window.groupCallCandidateUnsubscribes) ? window.groupCallCandidateUnsubscribes : [];
+
   function _db() { return App && App.db ? App.db : (typeof firebase !== 'undefined' ? firebase.firestore() : null); }
   function _uid() { return App && App.uid ? App.uid() : (window.currentUser ? window.currentUser.uid : null); }
   function _me() { return (window.App && window.App.currentUser) ? window.App.currentUser : null; }
@@ -48,7 +53,7 @@
   function _isCallActive() { return (window.App && App.callActive) ? true : false; }
 
   function _getParticipantCount() {
-    return activeGroupCallParticipants ? activeGroupCallParticipants.length : 0;
+    return window.activeGroupCallParticipants ? window.activeGroupCallParticipants.length : 0;
   }
 
   function _canAddParticipant() {
@@ -61,8 +66,8 @@
       uid: _uid(),
       name: m ? (m.displayName || m.email || 'User') : 'User',
       avatar: m ? (m.photoURL || '') : '',
-      isMuted: !!micMuted,
-      isVideoOff: !!cameraOff
+      isMuted: !!CC.isMicMuted(),
+      isVideoOff: !!CC.isCameraOff()
     };
   }
 
@@ -80,9 +85,10 @@
     var rtcConfig = await getRtcConfig();
     var pc = new RTCPeerConnection(rtcConfig);
 
-    if (localCallStream) {
-      localCallStream.getTracks().forEach(function (track) {
-        pc.addTrack(track, localCallStream);
+    var _ls = CC.getLocalStream();
+    if (_ls) {
+      _ls.getTracks().forEach(function (track) {
+        pc.addTrack(track, _ls);
       });
     }
 
@@ -124,7 +130,7 @@
       }
     };
 
-    groupCallPeerConnections.set(targetUid, pc);
+    window.groupCallPeerConnections.set(targetUid, pc);
     return pc;
   }
 
@@ -138,12 +144,12 @@
         _removeParticipantFromGrid(targetUid);
         return;
       }
-      var pc = groupCallPeerConnections.get(targetUid);
+      var pc = window.groupCallPeerConnections.get(targetUid);
       if (pc && pc.signalingState !== 'closed') {
         try { pc.restartIce(); } catch (_) {}
       } else {
         await _setupPeerConnectionForParticipant(targetUid);
-        var newPc = groupCallPeerConnections.get(targetUid);
+        var newPc = window.groupCallPeerConnections.get(targetUid);
         if (newPc) {
           try {
             var offer = await newPc.createOffer();
@@ -168,16 +174,16 @@
     GC._participantJoinTime.delete(targetUid);
     GC._audioLevelCache.delete(targetUid);
     if (GC._screenShareUserId === targetUid) GC._screenShareUserId = null;
-    activeGroupCallParticipants = (activeGroupCallParticipants || []).filter(function (p) { return p.uid !== targetUid; });
+    window.activeGroupCallParticipants = (window.activeGroupCallParticipants || []).filter(function (p) { return p.uid !== targetUid; });
     _closePeerConnection(targetUid);
     GC._renderGrid();
   }
 
   function _closePeerConnection(targetUid) {
-    var pc = groupCallPeerConnections.get(targetUid);
+    var pc = window.groupCallPeerConnections.get(targetUid);
     if (pc) {
       try { pc.close(); } catch (_) {}
-      groupCallPeerConnections.delete(targetUid);
+      window.groupCallPeerConnections.delete(targetUid);
     }
     var unsubs = GC._unsubParticipantCandidates[targetUid];
     if (unsubs) {
@@ -211,10 +217,10 @@
 
   async function _handleIncomingOffer(callId, sig) {
     var senderUid = sig.from;
-    var pc = groupCallPeerConnections.get(senderUid);
+    var pc = window.groupCallPeerConnections.get(senderUid);
     if (pc && pc.signalingState !== 'closed') {
       try { pc.close(); } catch (_) {}
-      groupCallPeerConnections.delete(senderUid);
+      window.groupCallPeerConnections.delete(senderUid);
     }
     pc = await _setupPeerConnectionForParticipant(senderUid);
     if (!pc) return;
@@ -234,7 +240,7 @@
 
   async function _handleIncomingAnswer(sig) {
     var senderUid = sig.from;
-    var pc = groupCallPeerConnections.get(senderUid);
+    var pc = window.groupCallPeerConnections.get(senderUid);
     if (!pc || pc.signalingState !== 'have-local-offer') return;
     try {
       await pc.setRemoteDescription(new RTCSessionDescription(sig.answer));
@@ -243,10 +249,10 @@
 
   async function _handleRenegotiate(callId, sig) {
     var senderUid = sig.from;
-    var pc = groupCallPeerConnections.get(senderUid);
+    var pc = window.groupCallPeerConnections.get(senderUid);
     if (pc && pc.signalingState !== 'closed') {
       try { pc.close(); } catch (_) {}
-      groupCallPeerConnections.delete(senderUid);
+      window.groupCallPeerConnections.delete(senderUid);
     }
     pc = await _setupPeerConnectionForParticipant(senderUid);
     if (!pc) return;
@@ -275,7 +281,7 @@
           if (change.type === 'added') {
             var c = change.doc.data();
             if (c.sender !== myUid && c.receiver === myUid) {
-              var pc = groupCallPeerConnections.get(c.sender);
+              var pc = window.groupCallPeerConnections.get(c.sender);
               if (pc) {
                 pc.addIceCandidate(new RTCIceCandidate(c.candidate)).catch(function () {});
               }
@@ -304,8 +310,9 @@
             await _handleRenegotiate(callId, sig);
           } else if (sig.type === 'mute-request') {
             // Admin/moderator is muting this participant's mic
-            if (localCallStream) {
-              var audioTracks = localCallStream.getAudioTracks();
+            var _ls2 = CC.getLocalStream();
+            if (_ls2) {
+              var audioTracks = _ls2.getAudioTracks();
               audioTracks.forEach(function (track) {
                 track.enabled = !sig.muted;
               });
@@ -341,7 +348,7 @@
       }
       incomingParticipants.forEach(function (pUid) {
         if (pUid === GC._myUid) return;
-        var existing = (activeGroupCallParticipants || []).find(function (p) { return p.uid === pUid; });
+        var existing = (window.activeGroupCallParticipants || []).find(function (p) { return p.uid === pUid; });
         if (!existing) {
           var details = data.participantDetails && data.participantDetails[pUid];
           var newParticipant = {
@@ -352,16 +359,16 @@
             isVideoOff: details ? !!details.isVideoOff : true,
             joinedAt: details ? details.joinedAt : null
           };
-          activeGroupCallParticipants.push(newParticipant);
+          window.activeGroupCallParticipants.push(newParticipant);
           if (details && details.isMuted !== undefined) GC._participantMuteState.set(pUid, details.isMuted);
           if (details && details.isVideoOff !== undefined) GC._participantVideoState.set(pUid, details.isVideoOff);
-          if (!groupCallPeerConnections.has(pUid)) {
+          if (!window.groupCallPeerConnections.has(pUid)) {
             _initiatePeerConnectionTo(pUid);
           }
         }
       });
       var toRemove = [];
-      (activeGroupCallParticipants || []).forEach(function (p) {
+      (window.activeGroupCallParticipants || []).forEach(function (p) {
         if (incomingParticipants.indexOf(p.uid) === -1 && p.uid !== GC._myUid) {
           toRemove.push(p.uid);
         }
@@ -443,12 +450,12 @@
   }
 
   function _cleanupAllPeerConnections() {
-    groupCallPeerConnections.forEach(function (pc, uid) {
+    window.groupCallPeerConnections.forEach(function (pc, uid) {
       try { pc.close(); } catch (_) {}
     });
-    groupCallPeerConnections.clear();
-    groupCallCandidateUnsubscribes.forEach(function (fn) { try { fn(); } catch (_) {} });
-    groupCallCandidateUnsubscribes = [];
+    window.groupCallPeerConnections.clear();
+    window.groupCallCandidateUnsubscribes.forEach(function (fn) { try { fn(); } catch (_) {} });
+    window.groupCallCandidateUnsubscribes = [];
     Object.keys(GC._unsubParticipantCandidates).forEach(function (uid) {
       GC._unsubParticipantCandidates[uid].forEach(function (fn) { try { fn(); } catch (_) {} });
     });

@@ -266,7 +266,8 @@
           if (timer && timer > 0) {
             const msgs = window.App.messages[chatId];
         (Array.isArray(msgs) ? msgs : []).forEach(msg => {
-          if (msg.time && (now - msg.time > timer)) {
+          var msgTs = msg.time || (msg.timestamp && msg.timestamp.toMillis ? msg.timestamp.toMillis() : (typeof msg.timestamp === 'number' ? msg.timestamp : 0));
+          if (msgTs && (now - msgTs > timer)) {
             window.App.db.collection('messages').doc(chatId).collection('items').doc(msg.id).delete()
               .then(() => {
                 if (window.App.messages[chatId]) {

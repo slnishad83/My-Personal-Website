@@ -3,6 +3,7 @@
   'use strict';
 
   var GC = window._GC;
+  var CC = window._CC;
   GC._speakerViewMode = false;
 
   function _renderAvatar(name, avatar, size) {
@@ -67,7 +68,7 @@
   function _doRenderGrid() {
     var container = GC._$('gc-grid');
     if (!container) return;
-    var participants = activeGroupCallParticipants || [];
+    var participants = window.activeGroupCallParticipants || [];
     var count = participants.length;
     var ssUserId = GC._screenShareUserId;
     var hasSS = !!ssUserId && participants.some(function (p) { return p.uid === ssUserId; });
@@ -207,7 +208,7 @@
   function _showParticipantOptions(targetUid) {
     if (!targetUid) return;
     var isSelf = targetUid === GC._myUid;
-    var participant = (activeGroupCallParticipants || []).find(function (p) { return p.uid === targetUid; });
+    var participant = (window.activeGroupCallParticipants || []).find(function (p) { return p.uid === targetUid; });
     if (!participant) return;
     var hasJoined = GC._participantJoinTime.has(targetUid);
     var isMuted = GC._participantMuteState.get(targetUid) || false;
@@ -225,8 +226,8 @@
       '</div>' +
       (isSelf
         ? '<button class="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-surface-variant/50 transition-colors text-on-surface" onclick="window.toggleMute();document.getElementById(\'gc-participant-menu\').remove()">' +
-          '<span class="material-symbols-outlined">' + (micMuted ? 'mic' : 'mic_off') + '</span>' +
-          '<span class="font-medium text-sm">' + (micMuted ? 'Unmute yourself' : 'Mute yourself') + '</span>' +
+          '<span class="material-symbols-outlined">' + (CC.isMicMuted() ? 'mic' : 'mic_off') + '</span>' +
+          '<span class="font-medium text-sm">' + (CC.isMicMuted() ? 'Unmute yourself' : 'Mute yourself') + '</span>' +
           '</button>'
         : (hasJoined ? '<button class="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-surface-variant/50 transition-colors text-on-surface" onclick="window.muteParticipant(\'' + GC._esc(targetUid) + '\');document.getElementById(\'gc-participant-menu\').remove()">' +
           '<span class="material-symbols-outlined">' + muteIcon + '</span>' +
@@ -328,7 +329,7 @@
       if (!GC._isInGroupCall()) return;
       var maxLevel = 0;
       var maxUid = null;
-      var myStream = localCallStream;
+      var myStream = CC.getLocalStream();
       if (myStream && _speakerAudioContext) {
         try {
           var audioTrack = myStream.getAudioTracks()[0];
@@ -357,8 +358,8 @@
           }
         } catch (_) {}
       }
-      for (var i = 0; i < groupCallPeerConnections.size; i++) {
-        var entry = Array.from(groupCallPeerConnections.entries())[i];
+      for (var i = 0; i < window.groupCallPeerConnections.size; i++) {
+        var entry = Array.from(window.groupCallPeerConnections.entries())[i];
         var pUid = entry[0];
         var pc = entry[1];
         try {
@@ -428,7 +429,7 @@
 
   function _updateParticipantCountBadge() {
     var countEl = GC._$('gc-participant-count-text');
-    if (countEl) countEl.textContent = (activeGroupCallParticipants || []).length;
+    if (countEl) countEl.textContent = (window.activeGroupCallParticipants || []).length;
   }
 
   function _addInviteButton() {

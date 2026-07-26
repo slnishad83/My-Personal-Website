@@ -14,6 +14,25 @@
   var activeCallMode = null;
   var preferredCameraFacingMode = 'user';
 
+  CC.getPeerConnection = function () { return peerConnection; };
+  CC.getLocalStream = function () { return localCallStream; };
+  CC.getRemoteStream = function () { return remoteCallStream; };
+  CC.isMicMuted = function () { return micMuted; };
+  CC.isCameraOff = function () { return cameraOff; };
+  CC.isSpeakerOn = function () { return speakerOn; };
+  CC.isScreenSharing = function () { return isScreenSharing; };
+  CC.getActiveCallMode = function () { return activeCallMode; };
+  CC.getPreferredCameraFacingMode = function () { return preferredCameraFacingMode; };
+  CC.setMicMuted = function (v) { micMuted = v; };
+  CC.setCameraOff = function (v) { cameraOff = v; };
+  CC.setSpeakerOn = function (v) { speakerOn = v; };
+  CC.setScreenSharing = function (v) { isScreenSharing = v; };
+  CC.setActiveCallMode = function (v) { activeCallMode = v; };
+  CC.setPreferredCameraFacingMode = function (v) { preferredCameraFacingMode = v; };
+  CC.setPeerConnection = function (v) { peerConnection = v; };
+  CC.setLocalStream = function (v) { localCallStream = v; };
+  CC.setRemoteStream = function (v) { remoteCallStream = v; };
+
   CC.STATES = { IDLE: 0, RINGING: 1, CONNECTING: 2, ACTIVE: 3, ENDED: 4 };
   CC.state = CC.STATES.IDLE;
   CC.callType = 'voice';
@@ -534,7 +553,6 @@
   CC.listenCandidates = listenCandidates;
   CC.listenStatus = listenStatus;
   CC.cleanup = cleanup;
-  CC.getPeerConnection = function () { return peerConnection; };
 
   document.addEventListener('visibilitychange', function () {
     if (CC.state === CC.STATES.ACTIVE && CC.callType === 'video' && document.hidden) {

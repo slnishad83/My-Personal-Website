@@ -311,12 +311,12 @@
     try {
       await CC.getMedia(type);
       var rtcConfig = await getRtcConfig();
-      peerConnection = new RTCPeerConnection(rtcConfig);
-      CC.addLocalTracks(localCallStream);
-      CC.setupPeerConnection(peerConnection);
+      CC.setPeerConnection(new RTCPeerConnection(rtcConfig));
+      CC.addLocalTracks(CC.getLocalStream());
+      CC.setupPeerConnection(CC.getPeerConnection());
 
-      var offer = await peerConnection.createOffer();
-      await peerConnection.setLocalDescription(offer);
+      var offer = await CC.getPeerConnection().createOffer();
+      await CC.getPeerConnection().setLocalDescription(offer);
 
       var callRef = await CC.db().collection('calls').add({
         fromUserId: myUid,
@@ -385,9 +385,9 @@
     try {
       await CC.getMedia(CC.incomingData.type);
       var rtcConfig = await getRtcConfig();
-      peerConnection = new RTCPeerConnection(rtcConfig);
-      CC.addLocalTracks(localCallStream);
-      CC.setupPeerConnection(peerConnection);
+      CC.setPeerConnection(new RTCPeerConnection(rtcConfig));
+      CC.addLocalTracks(CC.getLocalStream());
+      CC.setupPeerConnection(CC.getPeerConnection());
 
       var callDoc = await CC.db().collection('calls').doc(CC.callId).get();
       var callSnapshot = callDoc.data();
@@ -395,9 +395,9 @@
       CC.listenStatus(CC.callId);
       CC.listenOffer(CC.callId);
       if (callSnapshot && callSnapshot.offer) {
-        await peerConnection.setRemoteDescription(new RTCSessionDescription(callSnapshot.offer));
-        var answer = await peerConnection.createAnswer();
-        await peerConnection.setLocalDescription(answer);
+        await CC.getPeerConnection().setRemoteDescription(new RTCSessionDescription(callSnapshot.offer));
+        var answer = await CC.getPeerConnection().createAnswer();
+        await CC.getPeerConnection().setLocalDescription(answer);
         await CC.db().collection('calls').doc(CC.callId).update({
           answer: { sdp: answer.sdp, type: answer.type },
           status: 'active'
@@ -503,7 +503,7 @@
     }
 
     CC.callType = type;
-    activeCallMode = 'group';
+    CC.setActiveCallMode('group');
     CC.showCallScreen(type, c.name, c.initials || 'G');
     CC.txt('call-quality-text', type === 'video' ? 'HD Group Video' : 'HD Group Voice');
     CC.txt('call-status', 'Calling ' + memberIds.length + ' people…');

@@ -1,19 +1,195 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /messages/{chatId}/items/{messageId} {
-      allow read: if request.auth != null;
-      allow create: if request.auth != null;
-      allow update: if request.auth != null;
-      allow delete: if request.auth != null;
+    function isAuth() {
+      return request.auth != null;
     }
+
+    function isUid(uid) {
+      return isAuth() && request.auth.uid == uid;
+    }
+
+    function isChatMember(chatId) {
+      return isAuth() && request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.members;
+    }
+
+    function isGroupMember(groupId) {
+      return isAuth() && request.auth.uid in get(/databases/$(database)/documents/groups/$(groupId)).data.memberIds;
+    }
+
     match /users/{userId} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null && request.auth.uid == userId;
+      allow read: if isAuth();
+      allow create: if isUid(userId);
+      allow update: if isUid(userId);
+      allow delete: if false;
+
+      match /callEvents/{eventId} {
+        allow read: if isUid(userId);
+        allow write: if isUid(userId);
+      }
+
+      match /mutedChats/{docId} {
+        allow read: if isUid(userId);
+        allow write: if isUid(userId);
+      }
+
+      match /{subcollection=**} {
+        allow read: if isUid(userId);
+        allow write: if isUid(userId);
+      }
     }
+
     match /chats/{chatId} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null;
+      allow read: if isAuth() && request.auth.uid in resource.data.members;
+      allow create: if isAuth();
+      allow update: if isAuth();
+      allow delete: if false;
+
+      match /items/{messageId} {
+        allow read: if isChatMember(chatId);
+        allow create: if isChatMember(chatId);
+        allow update: if isChatMember(chatId);
+        allow delete: if isChatMember(chatId);
+      }
+
+      match /threadReplies/{replyId} {
+        allow read: if isChatMember(chatId);
+        allow create: if isChatMember(chatId);
+        allow update: if isChatMember(chatId);
+        allow delete: if isChatMember(chatId);
+      }
+    }
+
+    match /directChats/{chatId} {
+      allow read: if isAuth() && request.auth.uid in resource.data.members;
+      allow write: if isAuth();
+    }
+
+    match /groups/{groupId} {
+      allow read: if isAuth();
+      allow create: if isAuth();
+      allow update: if isAuth();
+      allow delete: if isAuth();
+
+      match /messages/{messageId} {
+        allow read: if isGroupMember(groupId);
+        allow create: if isGroupMember(groupId);
+        allow update: if isGroupMember(groupId);
+        allow delete: if isGroupMember(groupId);
+      }
+
+      match /{subcollection=**} {
+        allow read: if isGroupMember(groupId);
+        allow write: if isGroupMember(groupId);
+      }
+    }
+
+    match /messages/{messageId} {
+      allow read: if isAuth();
+      allow create: if isAuth();
+      allow update: if isAuth();
+      allow delete: if isAuth();
+
+      match /items/{itemId} {
+        allow read: if isAuth();
+        allow create: if isAuth();
+        allow update: if isAuth();
+        allow delete: if isAuth();
+      }
+
+      match /threadReplies/{replyId} {
+        allow read: if isAuth();
+        allow create: if isAuth();
+        allow update: if isAuth();
+        allow delete: if isAuth();
+      }
+    }
+
+    match /calls/{callId} {
+      allow read: if isAuth();
+      allow write: if isAuth();
+    }
+
+    match /groupCalls/{callId} {
+      allow read: if isAuth();
+      allow write: if isAuth();
+      allow delete: if false;
+
+      match /{subcollection=**} {
+        allow read: if isAuth();
+        allow write: if isAuth();
+      }
+    }
+
+    match /starredMessages/{docId} {
+      allow read: if isAuth();
+      allow write: if isAuth();
+    }
+
+    match /scheduledMessages/{docId} {
+      allow read: if isAuth();
+      allow create: if isAuth();
+      allow update: if isAuth();
+      allow delete: if isAuth();
+    }
+
+    match /tasks/{docId} {
+      allow read: if isAuth();
+      allow write: if isAuth();
+    }
+
+    match /reminders/{docId} {
+      allow read: if isAuth();
+      allow write: if isAuth();
+    }
+
+    match /calendarEvents/{docId} {
+      allow read: if isAuth();
+      allow write: if isAuth();
+    }
+
+    match /pinnedMessages/{docId} {
+      allow read: if isAuth();
+      allow write: if isAuth();
+    }
+
+    match /whiteboards/{docId} {
+      allow read: if isAuth();
+      allow write: if isAuth();
+    }
+
+    match /statuses/{docId} {
+      allow read: if isAuth();
+      allow write: if isAuth();
+    }
+
+    match /liveLocations/{docId} {
+      allow read: if isAuth();
+      allow write: if isAuth();
+    }
+
+    match /meetings/{docId} {
+      allow read: if isAuth();
+      allow write: if isAuth();
+    }
+
+    match /userReports/{docId} {
+      allow read: if isAuth();
+      allow write: if isAuth();
+    }
+
+    match /channels/{docId} {
+      allow read: if isAuth();
+      allow write: if isAuth();
+    }
+
+    match /userPublicKeys/{userId} {
+      allow read: if isAuth();
+      allow write: if isUid(userId);
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
     }
   }
 }

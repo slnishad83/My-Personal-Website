@@ -35,6 +35,15 @@ function copyStaticAssets() {
         copyFileSync(resolve('.', file), resolve(distDir, file));
       });
 
+      // Copy non-module JS files referenced by HTML pages
+      const staticJsFiles = ['firebase-config.js', 'dnd-quiet-hours.js', 'redesign-base.js'];
+      staticJsFiles.forEach(file => {
+        const src = resolve('.', file);
+        if (existsSync(src)) {
+          copyFileSync(src, resolve(distDir, file));
+        }
+      });
+
       // Copy manifest.json
       if (existsSync('manifest.json')) {
         copyFileSync('manifest.json', resolve(distDir, 'manifest.json'));

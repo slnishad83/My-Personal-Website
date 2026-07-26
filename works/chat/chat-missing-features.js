@@ -10,6 +10,7 @@
  */
 (function () {
   'use strict';
+  var CC = window._CC;
 
   /* ================================================================
      1. DRAG-AND-DROP FILE UPLOAD
@@ -87,7 +88,7 @@
       if (input && App.currentChat) {
         navigator.clipboard?.readText?.().then(text => {
           if (text && text.trim()) {
-            items.push({ icon: 'content_paste', label: 'Paste', action: () => { input.value = text; input.focus(); onInputChange(); } });
+            items.push({ icon: 'content_paste', label: 'Paste', action: () => { input.value = text; input.focus(); if (typeof window.onInputChange === 'function') window.onInputChange(); } });
           }
           _renderContextMenuItems(menu, items);
         }).catch(() => {});
@@ -351,7 +352,7 @@
     createNetworkQualityBar();
     if (_netQualityBar) _netQualityBar.style.display = 'flex';
     _netQualityInterval = setInterval(async () => {
-      const pc = window.peerConnection;
+      const pc = CC.getPeerConnection();
       if (!pc) { updateNetworkQuality('bad'); return; }
       const iceState = pc.iceConnectionState;
       if (iceState === 'failed' || iceState === 'disconnected') { updateNetworkQuality('bad'); return; }
@@ -453,100 +454,12 @@
   }
 
   /* ================================================================
-     6. CALL HOLD / RESUME
-     Suspends all local audio+video tracks to indicate hold
+     6. CALL HOLD / RESUME — canonical implementation in call-controller-actions.js
+     The duplicate here has been removed to prevent conflicts.
   ================================================================ */
-  let _callOnHold = false;
-
-  function addHoldButton() {
-    if (document.getElementById('holdCallBtn')) return;
-    const controls = document.getElementById('call-controls');
-    if (!controls) return;
-
-    const muteBtn = document.getElementById('btn-mute');
-    if (!muteBtn) return;
-
-    const btn = document.createElement('button');
-    btn.id = 'holdCallBtn';
-    btn.type = 'button';
-    btn.className = 'w-14 h-14 bg-white/10 rounded-full flex items-center justify-center hover:bg-white/20 transition-all text-white';
-    btn.setAttribute('aria-label', 'Hold call');
-    btn.setAttribute('aria-pressed', 'false');
-    btn.dataset.controlLabel = 'HOLD';
-    btn.innerHTML = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-      <rect x="6" y="4" width="4" height="16" rx="1"/>
-      <rect x="14" y="4" width="4" height="16" rx="1"/>
-    </svg>`;
-    btn.title = 'Hold call';
-
-    btn.addEventListener('click', toggleCallHold);
-    muteBtn.parentElement?.insertBefore(btn, muteBtn.nextSibling);
-  }
-
-  function toggleCallHold() {
-    _callOnHold = !_callOnHold;
-    const btn = document.getElementById('holdCallBtn');
-    const stream = window.localCallStream;
-
-    if (stream) {
-      stream.getTracks().forEach(track => {
-        track.enabled = !_callOnHold;
-      });
-    }
-
-    if (btn) {
-      btn.classList.toggle('active', _callOnHold);
-      btn.setAttribute('aria-pressed', String(_callOnHold));
-      btn.title = _callOnHold ? 'Resume call' : 'Hold call';
-      btn.dataset.controlLabel = _callOnHold ? 'RESUME' : 'HOLD';
-    }
-
-    // Show hold banner in call screen
-    let holdBanner = document.getElementById('callHoldBanner');
-    if (_callOnHold) {
-      if (!holdBanner) {
-        holdBanner = document.createElement('div');
-        holdBanner.id = 'callHoldBanner';
-        holdBanner.className = 'fixed top-4 left-1/2 -translate-x-1/2 z-[150] bg-surface-container text-on-surface px-4 py-2 rounded-full shadow-lg text-sm font-semibold';
-        holdBanner.textContent = 'Call on hold — tap Resume to continue';
-        document.body.appendChild(holdBanner);
-      }
-      holdBanner.style.display = 'flex';
-    } else {
-      if (holdBanner) holdBanner.style.display = 'none';
-    }
-
-    if (typeof window.showToast === 'function') {
-      window.showToast(_callOnHold ? 'Call placed on hold' : 'Call resumed');
-    }
-  }
-
-  // Reset hold state when call ends
-  function resetHoldState() {
-    _callOnHold = false;
-    const btn = document.getElementById('holdCallBtn');
-    if (btn) { btn.classList.remove('active'); btn.setAttribute('aria-pressed', 'false'); }
-    const banner = document.getElementById('callHoldBanner');
-    if (banner) banner.style.display = 'none';
-  }
 
   function watchCallEnd() {
-    const callScreen = document.getElementById('call-screen');
-    if (!callScreen) return;
-    if (window.MutationBus) {
-      MutationBus.observe('cmf:call-end', callScreen, { attributes: true, attributeFilter: ['class'] }, function () {
-        const hidden = callScreen.classList.contains('hidden');
-        if (hidden) resetHoldState();
-        else addHoldButton();
-      });
-    } else {
-      _callEndFallbackObs = new MutationObserver(function () {
-        const hidden = callScreen.classList.contains('hidden');
-        if (hidden) resetHoldState();
-        else addHoldButton();
-      });
-      _callEndFallbackObs.observe(callScreen, { attributes: true, attributeFilter: ['class'] });
-    }
+    /* No-op: hold state is managed by CC.toggleCallHold / CC.resetCallHoldState */
   }
 
   /* ================================================================
