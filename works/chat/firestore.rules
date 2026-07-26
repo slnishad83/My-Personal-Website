@@ -9,14 +9,6 @@ service cloud.firestore {
       return isAuth() && request.auth.uid == uid;
     }
 
-    function isChatMember(chatId) {
-      return isAuth() && request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.members;
-    }
-
-    function isGroupMember(groupId) {
-      return isAuth() && request.auth.uid in get(/databases/$(database)/documents/groups/$(groupId)).data.memberIds;
-    }
-
     match /users/{userId} {
       allow read: if isAuth();
       allow create: if isUid(userId);
@@ -40,28 +32,28 @@ service cloud.firestore {
     }
 
     match /chats/{chatId} {
-      allow read: if isAuth() && request.auth.uid in resource.data.members;
+      allow read: if isAuth();
       allow create: if isAuth();
       allow update: if isAuth();
       allow delete: if false;
 
       match /items/{messageId} {
-        allow read: if isChatMember(chatId);
-        allow create: if isChatMember(chatId);
-        allow update: if isChatMember(chatId);
-        allow delete: if isChatMember(chatId);
+        allow read: if isAuth();
+        allow create: if isAuth();
+        allow update: if isAuth();
+        allow delete: if isAuth();
       }
 
       match /threadReplies/{replyId} {
-        allow read: if isChatMember(chatId);
-        allow create: if isChatMember(chatId);
-        allow update: if isChatMember(chatId);
-        allow delete: if isChatMember(chatId);
+        allow read: if isAuth();
+        allow create: if isAuth();
+        allow update: if isAuth();
+        allow delete: if isAuth();
       }
     }
 
     match /directChats/{chatId} {
-      allow read: if isAuth() && request.auth.uid in resource.data.members;
+      allow read: if isAuth();
       allow write: if isAuth();
     }
 
@@ -72,15 +64,15 @@ service cloud.firestore {
       allow delete: if isAuth();
 
       match /messages/{messageId} {
-        allow read: if isGroupMember(groupId);
-        allow create: if isGroupMember(groupId);
-        allow update: if isGroupMember(groupId);
-        allow delete: if isGroupMember(groupId);
+        allow read: if isAuth();
+        allow create: if isAuth();
+        allow update: if isAuth();
+        allow delete: if isAuth();
       }
 
       match /{subcollection=**} {
-        allow read: if isGroupMember(groupId);
-        allow write: if isGroupMember(groupId);
+        allow read: if isAuth();
+        allow write: if isAuth();
       }
     }
 
@@ -128,9 +120,7 @@ service cloud.firestore {
 
     match /scheduledMessages/{docId} {
       allow read: if isAuth();
-      allow create: if isAuth();
-      allow update: if isAuth();
-      allow delete: if isAuth();
+      allow write: if isAuth();
     }
 
     match /tasks/{docId} {
@@ -186,6 +176,16 @@ service cloud.firestore {
     match /userPublicKeys/{userId} {
       allow read: if isAuth();
       allow write: if isUid(userId);
+    }
+
+    match /callEvents/{docId} {
+      allow read: if isAuth();
+      allow write: if isAuth();
+    }
+
+    match /groupMembers/{docId} {
+      allow read: if isAuth();
+      allow write: if isAuth();
     }
 
     match /{document=**} {

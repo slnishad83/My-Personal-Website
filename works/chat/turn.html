@@ -25,6 +25,7 @@
       style.appendChild(document.createTextNode(css));
       document.head.appendChild(style);
       document.addEventListener("DOMContentLoaded", function () {
+        document.documentElement.classList.toggle("dark", theme === "dark");
         document.body.classList.toggle("dark", theme === "dark");
         style.remove();
       });

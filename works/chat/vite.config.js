@@ -109,6 +109,9 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     emptyOutDir: true,
+    esbuild: {
+      pure: ['console.log', 'console.info'],
+    },
     rollupOptions: {
       input: {
         main: resolve(__dirname, 'index.html'),
