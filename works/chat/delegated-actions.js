@@ -73,12 +73,6 @@
     'endCallFromBubble': function(e) {
       e.stopPropagation();
       if (typeof endCall === 'function') endCall();
-    },
-    'maximizeCall': function() {
-      var bubble = document.getElementById('call-bubble');
-      if (bubble) bubble.style.display = 'none';
-      var overlay = document.getElementById('call-overlay');
-      if (overlay) overlay.classList.remove('hidden');
     }
   };
 
