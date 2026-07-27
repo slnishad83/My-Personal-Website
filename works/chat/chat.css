@@ -330,3 +330,24 @@ html:not(.dark) .cp-action-primary {
   from { opacity: 0; transform: translateY(20px) scale(0.95); }
   to { opacity: 1; transform: translateY(0) scale(1); }
 }
+
+/* ── 4K Display (50"+ Screen) Layout Guard ── */
+@media (min-width: 2560px) {
+  #app {
+    max-width: 2200px !important;
+    margin: 0 auto !important;
+    border-left: 1px solid var(--outline-variant);
+    border-right: 1px solid var(--outline-variant);
+    box-shadow: 0 0 60px rgba(0, 0, 0, 0.4);
+  }
+}
+
+/* ── Mobile Viewport Safe Area Inset ── */
+@media (max-width: 640px) {
+  #chat-input-bar {
+    padding-bottom: max(8px, env(safe-area-inset-bottom));
+  }
+  #sidebar {
+    padding-bottom: max(8px, env(safe-area-inset-bottom));
+  }
+}
