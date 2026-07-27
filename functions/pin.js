@@ -49,7 +49,7 @@ const LOCKOUT_MAX = 60 * 60 * 1000;
 function _startPinCleanup() {
   if (_pinCleanupStarted) return;
   _pinCleanupStarted = true;
-  setInterval(() => {
+  const t = setInterval(() => {
     const now = Date.now();
     for (const [key, entry] of _pinRateLimit) {
       if (now - entry.start > PIN_WINDOW * 2) _pinRateLimit.delete(key);
@@ -58,6 +58,7 @@ function _startPinCleanup() {
       if (now - entry.lastFail > LOCKOUT_MAX * 2) _pinFailures.delete(key);
     }
   }, 300000);
+  if (t && typeof t.unref === 'function') t.unref();
 }
 
 function getLockoutDuration(failures) {

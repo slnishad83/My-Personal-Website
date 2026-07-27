@@ -53,12 +53,13 @@ function checkRateLimit(userId, action, maxPerMinute) {
   if (!userId || !action) return;
   if (!_httpCleanupStarted) {
     _httpCleanupStarted = true;
-    setInterval(() => {
+    const t = setInterval(() => {
       const now = Date.now();
       for (const [key, bucket] of _rateLimitBuckets) {
         if (now - bucket.start > 120000) _rateLimitBuckets.delete(key);
       }
     }, 300000);
+    if (t && typeof t.unref === 'function') t.unref();
   }
   const key = `${userId}:${action}`;
   const now = Date.now();

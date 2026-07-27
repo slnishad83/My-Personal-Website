@@ -18,7 +18,7 @@ let _aiCleanupStarted = false;
 function checkAiRateLimit(uid) {
   if (!_aiCleanupStarted) {
     _aiCleanupStarted = true;
-    setInterval(() => {
+    const t = setInterval(() => {
       const now = Date.now();
       for (const [uid, bucket] of _aiRateBuckets) {
         bucket.minute = bucket.minute.filter(t => now - t < 60000);
@@ -26,6 +26,7 @@ function checkAiRateLimit(uid) {
         if (bucket.minute.length === 0 && bucket.hour.length === 0) _aiRateBuckets.delete(uid);
       }
     }, 300000);
+    if (t && typeof t.unref === 'function') t.unref();
   }
   const now = Date.now();
   const bucket = _aiRateBuckets.get(uid) || { minute: [], hour: [] };
@@ -474,13 +475,14 @@ let _chatLockCleanupStarted = false;
 function checkChatLockRateLimit(uid) {
   if (!_chatLockCleanupStarted) {
     _chatLockCleanupStarted = true;
-    setInterval(() => {
+    const t = setInterval(() => {
       const now = Date.now();
       for (const [key, bucket] of _chatLockRateBuckets) {
         bucket.t = bucket.t.filter(ts => now - ts < 60000);
         if (bucket.t.length === 0) _chatLockRateBuckets.delete(key);
       }
     }, 300000);
+    if (t && typeof t.unref === 'function') t.unref();
   }
   const now = Date.now();
   const bucket = _chatLockRateBuckets.get(uid) || { t: [] };
