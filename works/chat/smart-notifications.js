@@ -152,7 +152,7 @@
         return origNotify(payload);
       };
 
-      console.log('[SmartNotif] Hooked into NotificationOrchestrator');
+      if (window.__DEBUG__) console.log('[SmartNotif] Hooked into NotificationOrchestrator');
     }
 
     tryHook();
@@ -162,7 +162,7 @@
   function hookPushNotifications() {
     // Intercept service worker push events for background notifications
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.ready.then((reg) => {
+      navigator.serviceWorker.ready.then((_reg) => {
         // Listen for messages from SW to classify before showing
         navigator.serviceWorker.addEventListener('message', (event) => {
           if (event.data?.type === 'classify-notif') {

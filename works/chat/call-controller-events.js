@@ -171,8 +171,8 @@
 
   function _switchToWaitingCall() {
     if (!_waitingIncoming) return;
-    var currentCallId = CC.callId;
-    var currentDuration = CC.callStartTime ? Math.floor((Date.now() - CC.callStartTime) / 1000) : 0;
+    var _currentCallId = CC.callId;
+    var _currentDuration = CC.callStartTime ? Math.floor((Date.now() - CC.callStartTime) / 1000) : 0;
     window.endCall();
     _hideCallWaitingUI();
     CC.incomingData = _waitingIncoming;

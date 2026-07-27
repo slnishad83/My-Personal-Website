@@ -8,7 +8,7 @@
 
   function initMessageScheduler() {
     // 1. Inject "Schedule" option into the Attachment menu
-    var _scheduleBtnHtml = '<button class="flex flex-col items-center gap-1.5 group schedule-msg-btn" onclick="toggleAttachMenu();window.openMessageScheduler()" role="menuitem"><div class="w-12 h-12 rounded-2xl bg-[#E64A19] flex items-center justify-center transition-transform group-hover:scale-105 group-active:scale-95"><span class="material-symbols-outlined text-white text-[22px]" style="font-variation-settings:\'FILL\' 1;">schedule_send</span></div><span class="text-[11px] text-on-surface-variant font-medium">Schedule</span></button>';
+    var _scheduleBtnHtml = '<button class="flex flex-col items-center gap-1.5 group schedule-msg-btn" onclick="toggleAttachMenu();window.openMessageScheduler()" role="menuitem"><div class="w-12 h-12 rounded-2xl bg-[#E64A19] flex items-center justify-center transition-transform group-hover:scale-105 group-active:scale-95"><span class="material-symbols-outlined text-white text-[22px] mat-icon--filled">schedule_send</span></div><span class="text-[11px] text-on-surface-variant font-medium">Schedule</span></button>';
 
     function _tryInjectScheduleBtn() {
       var attachMenu = document.querySelector('#attach-menu .grid');

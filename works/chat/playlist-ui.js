@@ -301,7 +301,7 @@
         </label>
       </div>
       <div style="display:flex;gap:8px">
-        <button onclick="this.closest('[style*=\"fixed\"]')?.remove()" style="flex:1;padding:10px;border-radius:10px;border:none;background:var(--surface-container,rgba(0,0,0,0.06));color:var(--on-surface);font-size:13px;font-weight:600;cursor:pointer">Cancel</button>
+        <button onclick="this.closest('[style*="fixed"]')?.remove()" style="flex:1;padding:10px;border-radius:10px;border:none;background:var(--surface-container,rgba(0,0,0,0.06));color:var(--on-surface);font-size:13px;font-weight:600;cursor:pointer">Cancel</button>
         <button onclick="_submitCreatePlaylist('${chatId || ''}')" style="flex:1;padding:10px;border-radius:10px;border:none;background:var(--primary);color:var(--on-primary);font-size:13px;font-weight:700;cursor:pointer">Create</button>
       </div>`;
 
@@ -458,7 +458,7 @@
         <input type="text" id="create-folder-name" placeholder="My Folder" style="width:100%;padding:10px;border-radius:10px;border:1px solid var(--outline-variant,rgba(0,0,0,0.1));background:var(--surface-container-low,rgba(0,0,0,0.05));color:var(--on-surface);font-size:13px;box-sizing:border-box" autofocus>
       </div>
       <div style="display:flex;gap:8px">
-        <button onclick="this.closest('[style*=\"fixed\"]')?.remove()" style="flex:1;padding:10px;border-radius:10px;border:none;background:var(--surface-container,rgba(0,0,0,0.06));color:var(--on-surface);font-size:13px;font-weight:600;cursor:pointer">Cancel</button>
+        <button onclick="this.closest('[style*="fixed"]')?.remove()" style="flex:1;padding:10px;border-radius:10px;border:none;background:var(--surface-container,rgba(0,0,0,0.06));color:var(--on-surface);font-size:13px;font-weight:600;cursor:pointer">Cancel</button>
         <button onclick="_submitCreateFolder()" style="flex:1;padding:10px;border-radius:10px;border:none;background:var(--primary);color:var(--on-primary);font-size:13px;font-weight:700;cursor:pointer">Create</button>
       </div>`;
 

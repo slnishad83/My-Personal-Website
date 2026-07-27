@@ -367,7 +367,12 @@ module.exports = [
       },
     },
     rules: {
-      'no-unused-vars': ['warn', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
+      'no-unused-vars': ['warn', {
+        argsIgnorePattern: '^_',
+        varsIgnorePattern: '^_',
+        caughtErrorsIgnorePattern: '.*',
+        destructuredArrayIgnorePattern: '^_',
+      }],
       'no-console': 'off',
       'no-empty': ['error', { allowEmptyCatch: true }],
       'no-redeclare': 'error',

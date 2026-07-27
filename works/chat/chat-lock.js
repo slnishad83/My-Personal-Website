@@ -88,6 +88,115 @@
     return !!(locks[chatId] && locks[chatId].locked);
   };
 
+  window.getLockedChatsCount = function() {
+    const locks = _getLockedChats();
+    return Object.keys(locks).filter(k => locks[k].locked).length;
+  };
+
+  window.renderLockedChatsFolder = function(chatListContainer) {
+    const lockedCount = window.getLockedChatsCount();
+    if (lockedCount === 0) {
+      const existing = chatListContainer.querySelector('.locked-chats-folder');
+      if (existing) existing.remove();
+      return;
+    }
+
+    let folder = chatListContainer.querySelector('.locked-chats-folder');
+    if (folder) {
+      const countEl = folder.querySelector('.locked-chats-count');
+      if (countEl) countEl.textContent = lockedCount;
+      return;
+    }
+
+    folder = document.createElement('div');
+    folder.className = 'locked-chats-folder';
+    folder.innerHTML =
+      '<div class="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-surface-variant/50 rounded-xl">' +
+        '<span class="material-symbols-outlined text-primary">lock</span>' +
+        '<span class="font-medium text-on-surface">Locked Chats</span>' +
+        '<span class="ml-auto text-sm text-secondary locked-chats-count">' + lockedCount + '</span>' +
+      '</div>';
+    folder.addEventListener('click', handleLockedChatsAccess);
+    chatListContainer.prepend(folder);
+  };
+
+  let _lockedChatsUnlocked = false;
+
+  async function handleLockedChatsAccess() {
+    if (_lockedChatsUnlocked) {
+      window.showLockedChatsList();
+      return;
+    }
+    const authenticated = await new Promise(resolve => {
+      promptChatUnlock(null, () => resolve(true));
+      const overlay = document.getElementById('chat-lock-overlay');
+      if (overlay) {
+        overlay.addEventListener('click', (e) => {
+          if (e.target === overlay) resolve(false);
+        });
+      }
+    });
+    if (authenticated) {
+      _lockedChatsUnlocked = true;
+      window.showLockedChatsList();
+    }
+  }
+
+  window.showLockedChatsList = function() {
+    const locks = _getLockedChats();
+    const lockedIds = Object.keys(locks).filter(k => locks[k].locked);
+    const chats = (App.chats || []).filter(c => lockedIds.includes(c.id));
+
+    const overlay = document.createElement('div');
+    overlay.id = 'locked-chats-list-overlay';
+    overlay.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.85);display:flex;align-items:center;justify-content:center;animation:fadeIn 0.2s ease';
+
+    const panel = document.createElement('div');
+    panel.style.cssText = 'background:var(--surface-container,#1e1e2e);border-radius:20px;padding:24px;max-width:400px;width:92vw;max-height:80vh;overflow-y:auto;color:var(--on-surface)';
+
+    let html =
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">' +
+        '<h3 style="margin:0;font-size:18px;font-weight:700">Locked Chats</h3>' +
+        '<button onclick="document.getElementById(\'locked-chats-list-overlay\')?.remove()" style="background:none;border:none;color:var(--on-surface-variant);cursor:pointer;font-size:20px">&times;</button>' +
+      '</div>';
+
+    if (chats.length) {
+      chats.forEach(chat => {
+        html += '<div class="locked-chat-item" data-chat-id="' + chat.id + '" style="display:flex;align-items:center;justify-content:space-between;padding:12px;border-radius:12px;background:var(--surface-container-low,rgba(0,0,0,0.04));margin-bottom:8px;cursor:pointer">' +
+          '<div style="display:flex;align-items:center;gap:10px">' +
+            '<div style="width:36px;height:36px;border-radius:50%;background:rgba(124,77,255,0.15);display:flex;align-items:center;justify-content:center"><span class="material-symbols-outlined" style="font-size:18px;color:var(--primary)">lock</span></div>' +
+            '<span style="font-size:14px;font-weight:600">' + (typeof escHtml === 'function' ? escHtml(chat.name) : chat.name) + '</span>' +
+          '</div>' +
+          '<span class="material-symbols-outlined" style="font-size:18px;color:var(--on-surface-variant)">chevron_right</span>' +
+        '</div>';
+      });
+    } else {
+      html += '<p style="text-align:center;color:var(--on-surface-variant);font-size:13px;padding:16px 0">No locked chats.</p>';
+    }
+
+    panel.innerHTML = html;
+    overlay.appendChild(panel);
+    overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+    document.body.appendChild(overlay);
+
+    panel.querySelectorAll('.locked-chat-item').forEach(item => {
+      item.addEventListener('click', () => {
+        const chatId = item.dataset.chatId;
+        overlay.remove();
+        _lockedChatsUnlocked = false;
+        if (typeof openChat === 'function') openChat(chatId);
+      });
+    });
+  };
+
+  document.addEventListener('visibilitychange', function() {
+    if (document.hidden) {
+      _lockedChatsUnlocked = false;
+      const overlay = document.getElementById('locked-chats-list-overlay');
+      if (overlay) overlay.remove();
+    }
+  });
+
   window.lockChat = function(chatId) {
     const locks = _getLockedChats();
     locks[chatId] = { locked: true, method: 'biometric_or_pin', lockedAt: Date.now() };
@@ -147,7 +256,7 @@
   async function _verifyPin(inputPin) {
     if (!_checkRateLimit()) return false;
     try {
-      const result = await _callVerifyPin(inputPin);
+      const _result = await _callVerifyPin(inputPin);
       _clearAttempts();
       return true;
     } catch(e) {
@@ -301,7 +410,7 @@
       if (isChatLocked(chat.id)) {
         return html.replace(
           /(<span class="font-bold text-on-surface truncate[^"]*">)/,
-          '$1<span class="material-symbols-outlined text-[14px] align-middle mr-1 opacity-60" style="font-variation-settings:\'FILL\' 1;">lock</span>'
+          '$1<span class="material-symbols-outlined text-[14px] align-middle mr-1 opacity-60 mat-icon--filled">lock</span>'
         );
       }
       return html;

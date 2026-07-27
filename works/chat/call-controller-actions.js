@@ -250,6 +250,71 @@
     }
   }
 
+  // Audio output device picker
+  async function showAudioOutputPicker() {
+    try {
+      var devices = await navigator.mediaDevices.enumerateDevices();
+      var audioOutputs = devices.filter(function (d) { return d.kind === 'audiooutput'; });
+      if (audioOutputs.length <= 1) return;
+
+      var modal = document.createElement('div');
+      modal.className = 'modal-overlay';
+      modal.innerHTML =
+        '<div class="modal-content" style="max-width:320px">' +
+          '<h3 class="text-lg font-semibold mb-3">Audio Output</h3>' +
+          '<div class="audio-device-list">' +
+            audioOutputs.map(function (d) {
+              return '<button class="audio-device-option w-full text-left px-4 py-3 rounded-xl hover:bg-surface-variant/50 flex items-center gap-3" data-device-id="' + d.deviceId + '">' +
+                '<span class="material-symbols-outlined">' + (d.deviceId === 'default' ? 'volume_up' : 'speaker') + '</span>' +
+                '<span>' + (d.label || 'Speaker') + '</span>' +
+              '</button>';
+            }).join('') +
+          '</div>' +
+        '</div>';
+      document.body.appendChild(modal);
+      modal.addEventListener('click', function (e) {
+        if (e.target === modal) modal.remove();
+      });
+      modal.querySelectorAll('.audio-device-option').forEach(function (btn) {
+        btn.addEventListener('click', async function () {
+          var deviceId = btn.dataset.deviceId;
+          var rv = CC.$('remote-video');
+          if (rv && typeof rv.setSinkId === 'function') {
+            await rv.setSinkId(deviceId).catch(function () {});
+          }
+          modal.remove();
+          CC.toast('Audio output changed', 'info');
+        });
+      });
+    } catch (err) {
+      console.warn('Audio device enumeration failed:', err);
+    }
+  }
+
+  // Proactive network quality warning
+  var _lastQualityCheck = 0;
+  async function checkCallNetworkQuality() {
+    if (!CC.getPeerConnection()) return;
+    var now = Date.now();
+    if (now - _lastQualityCheck < 10000) return;
+    _lastQualityCheck = now;
+
+    try {
+      var stats = await CC.getPeerConnection().getStats();
+      stats.forEach(function (report) {
+        if (report.type === 'inbound-rtp' && report.kind === 'video') {
+          var packetsLost = report.packetsLost || 0;
+          var packetsReceived = report.packetsReceived || 1;
+          var lossRate = packetsLost / (packetsLost + packetsReceived);
+
+          if (lossRate > 0.1) {
+            CC.toast('⚠️ Poor network quality detected', 'warning');
+          }
+        }
+      });
+    } catch (_e) { /* stats not available */ }
+  }
+
   function resetCallHoldState() {
     _callOnHold = false;
     var btn = CC.$('btn-hold');
@@ -258,6 +323,42 @@
     if (icon) icon.textContent = 'pause';
     var banner = document.getElementById('callHoldBanner');
     if (banner) banner.style.display = 'none';
+  }
+
+  // Call recording
+  var _callRecorder = null;
+  var _callRecordingChunks = [];
+
+  function toggleCallRecording() {
+    if (_callRecorder && _callRecorder.state === 'recording') {
+      _callRecorder.stop();
+      CC.toast('Call recording saved', 'info');
+      return;
+    }
+
+    var stream = CC.getRemoteStream() || CC.getLocalStream();
+    if (!stream) return;
+
+    try {
+      _callRecordingChunks = [];
+      _callRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+      _callRecorder.ondataavailable = function (e) {
+        if (e.data.size > 0) _callRecordingChunks.push(e.data);
+      };
+      _callRecorder.onstop = function () {
+        var blob = new Blob(_callRecordingChunks, { type: 'audio/webm' });
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement('a');
+        a.href = url;
+        a.download = 'call-recording-' + Date.now() + '.webm';
+        a.click();
+        URL.revokeObjectURL(url);
+      };
+      _callRecorder.start();
+      CC.toast('Recording started', 'info');
+    } catch (err) {
+      CC.toast('Recording not supported', 'error');
+    }
   }
 
   CC.toggleMute = toggleMute;
@@ -273,6 +374,9 @@
   CC.dismissCallEndScreen = dismissCallEndScreen;
   CC.showCallQualityBadge = showCallQualityBadge;
   CC.updateCallQuality = updateCallQuality;
+  CC.showAudioOutputPicker = showAudioOutputPicker;
+  CC.checkCallNetworkQuality = checkCallNetworkQuality;
+  CC.toggleCallRecording = toggleCallRecording;
 
   window.toggleMute = toggleMute;
   window.toggleCamera = toggleCamera;
@@ -282,5 +386,7 @@
   window.toggleCallHold = toggleCallHold;
   window.toggleFullscreen = toggleFullscreen;
   window.togglePIP = togglePIP;
+  window.showAudioOutputPicker = showAudioOutputPicker;
+  window.toggleCallRecording = toggleCallRecording;
 
 })();

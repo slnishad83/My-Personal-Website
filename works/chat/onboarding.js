@@ -62,7 +62,7 @@ function renderStep() {
   }
   card.innerHTML =
     '<div style="width:80px;height:80px;border-radius:var(--radius-xl,20px);background:linear-gradient(135deg,var(--primary),var(--tertiary,#6750a4));display:flex;align-items:center;justify-content:center;margin-bottom:8px;box-shadow:0 8px 24px var(--primary,#6750a4)40;">' +
-      '<span class="material-symbols-outlined" style="font-size:40px;color:var(--on-primary,#fff);font-variation-settings:\'FILL\' 1;">' + s.icon + '</span>' +
+      '<span class="material-symbols-outlined mat-icon--filled" style="font-size:40px;color:var(--on-primary,#fff);">' + s.icon + '</span>' +
     '</div>' +
     '<h2 style="font-family:var(--font-headline,system-ui);font-size:22px;font-weight:700;color:var(--on-surface,#e6e1e5);text-align:center;margin:0;">' + s.title + '</h2>' +
     '<p style="font-size:14px;color:var(--on-surface-variant,#cac4d0);text-align:center;margin:0 0 16px;max-width:280px;">' + s.desc + '</p>' +

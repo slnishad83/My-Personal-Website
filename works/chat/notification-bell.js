@@ -197,7 +197,7 @@
   }
 
   // ── Toast helper (use app's if available) ────────────────────────────
-  function _showToast(msg, type) { if (App && App.toast) App.toast(msg, type); else if (typeof showToast === 'function') showToast(msg, type); else console.log(`[NotifBell] ${type}: ${msg}`); }
+  function _showToast(msg, type) { if (App && App.toast) App.toast(msg, type); else if (typeof showToast === 'function') showToast(msg, type); else if (window.__DEBUG__) console.log(`[NotifBell] ${type}: ${msg}`); }
 
   // ── Dropdown lifecycle ─────────────────────────────────────────────────
   function _openDropdown() {

@@ -167,7 +167,7 @@
     maxWidth = maxWidth || 1920;
     quality = quality || 0.8;
 
-    return new Promise(function (resolve, reject) {
+    return new Promise(function (resolve, _reject) {
       if (!file || !file.type || !file.type.startsWith('image/')) {
         resolve(file);
         return;

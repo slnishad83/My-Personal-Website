@@ -204,7 +204,7 @@
           if (bar) bar.style.width = pct + '%';
           if (txt) txt.textContent = `Uploading… ${pct}%`;
         },
-        err => {
+        _err => {
           if (txt) txt.textContent = 'Upload failed — tap Retry';
           if (bar) { bar.style.width = '100%'; bar.style.background = '#ef4444'; }
         },

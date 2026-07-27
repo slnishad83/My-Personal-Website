@@ -96,7 +96,7 @@
     }
   }
 
-  function clearTheme(chatId) {
+  function clearTheme(_chatId) {
     var container = document.getElementById('messages-wrap')
       || document.getElementById('messagesContainer')
       || document.querySelector('.messages-container');

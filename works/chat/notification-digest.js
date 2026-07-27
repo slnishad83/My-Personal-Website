@@ -58,7 +58,7 @@
         return;
       }
 
-      const groupKey = `${n.fromUserId}_${n.chatId || ''}`;
+      const _groupKey = `${n.fromUserId}_${n.chatId || ''}`;
       const first    = sorted.find(x => !used.has(x.id) && x.fromUserId === n.fromUserId && (x.chatId || '') === (n.chatId || '') && Math.abs((x.createdAt?.toMillis?.() || 0) - (n.createdAt?.toMillis?.() || 0)) < WINDOW_MS);
 
       if (!first || first.id !== n.id) return; // will be part of another group

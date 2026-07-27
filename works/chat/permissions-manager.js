@@ -816,34 +816,34 @@ if (document.readyState === "loading") {
 // ---- Backward-Compatible Wrappers ----
 // These maintain compatibility with existing code that references old function names.
 
-async function ensureNativePermission(kind) {
+async function _ensureNativePermission(kind) {
   return PermissionsManager._ensureNativeBackward(kind);
 }
 
-async function requestNativePermissionState(alias) {
+async function _requestNativePermissionState(alias) {
   if (!_isNative()) return null;
   const state = await PermissionsManager.request(alias, { showExplanation: false });
   return String(state).toLowerCase();
 }
 
-async function queryNativePermissionState(alias) {
+async function _queryNativePermissionState(alias) {
   if (!_isNative()) return null;
   return PermissionsManager.check(alias);
 }
 
-async function refreshPermissionsModal() {
+async function _refreshPermissionsModal() {
   return PermissionsManager.refreshUI();
 }
 
-async function requestAppPermission(kind) {
+async function _requestAppPermission(kind) {
   return PermissionsManager.request(kind, { showExplanation: true });
 }
 
-async function showPermissionsModal() {
+async function _showPermissionsModal() {
   return PermissionsManager.showScreen();
 }
 
-function showPermissionRevokeGuide(kind) {
+function _showPermissionRevokeGuide(kind) {
   if (kind) {
     PermissionsManager.showReEnablePrompt(kind);
   } else {
@@ -860,19 +860,19 @@ function showPermissionRevokeGuide(kind) {
   }
 }
 
-async function openNativeAppSettings() {
+async function _openNativeAppSettings() {
   return PermissionsManager.openSettings();
 }
 
-function normalizePermissionState(state) {
+function _normalizePermissionState(state) {
   return _getStateLabel(state);
 }
 
-function isPermissionAllowedStatus(status) {
+function _isPermissionAllowedStatus(status) {
   return _isAllowed(status);
 }
 
-function getPermissionButtonLabel(kind, status) {
+function _getPermissionButtonLabel(kind, status) {
   const state = _getStateLabel(status);
   if (state === PERMISSION_STATES.ALLOWED || state === PERMISSION_STATES.LIMITED) {
     return "Revoke / Change";
@@ -880,11 +880,11 @@ function getPermissionButtonLabel(kind, status) {
   return "Grant Permission";
 }
 
-function stopPermissionProbe(stream) {
+function _stopPermissionProbe(stream) {
   _stopMediaTracks(stream);
 }
 
-function openMediaPermissionPicker() {
+function _openMediaPermissionPicker() {
   const input = document.createElement("input");
   input.type = "file";
   input.accept = "image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.txt";
@@ -894,7 +894,7 @@ function openMediaPermissionPicker() {
   input.click();
 }
 
-async function queryPermissionState(name) {
+async function _queryPermissionState(name) {
   const mapping = {
     camera: "camera",
     microphone: "microphone",

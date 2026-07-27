@@ -45,7 +45,7 @@
     return document.getElementById('send-btn') || document.querySelector('.send-btn, [onclick*="send"], button[aria-label="Send"]');
   }
 
-  function getChatArea() {
+  function _getChatArea() {
     return document.getElementById('chat-area');
   }
 
@@ -61,7 +61,7 @@
     return document.getElementById('scroll-to-bottom');
   }
 
-  function getScrollBadge() {
+  function _getScrollBadge() {
     return document.getElementById('scroll-badge');
   }
 
@@ -241,7 +241,7 @@
     });
   }
 
-  function enterMultiSelect(msgEl) {
+  function _enterMultiSelect(msgEl) {
     _multiSelectMode = true;
     var wrap = getMsgWrap();
     if (wrap) wrap.classList.add('message-selecting');
@@ -288,7 +288,7 @@
     var starIcon = getStarState(msgEl);
     if (starIcon) items[3].icon = 'star_off';
 
-    items.forEach(function (item, i) {
+    items.forEach(function (item, _i) {
       var div = document.createElement('div');
       div.className = 'menu-item' + (item.destructive ? ' destructive' : '');
       div.innerHTML = '<span class="material-symbols-outlined">' + item.icon + '</span><span>' + item.label + '</span>';
@@ -860,6 +860,16 @@
       }
     };
     document.addEventListener('click', _boundHandlers.sendClick, { passive: true });
+
+    _boundHandlers.cancelReplyClick = function (e) {
+      var cancelBtn = e.target.closest('[data-action="cancelReply"], .reply-preview-close, #reply-preview .close-btn');
+      if (cancelBtn) {
+        e.preventDefault();
+        e.stopPropagation();
+        cancelReplyMode();
+      }
+    };
+    document.addEventListener('click', _boundHandlers.cancelReplyClick, { passive: true });
   }
 
   function onChatSwitch(chatId) {

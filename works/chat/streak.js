@@ -138,7 +138,7 @@
     const chat = window.App.currentChat;
     if (chat.type === 'group') return;
 
-    const { count, maxStreak } = _calculateStreak(chat.id);
+    const { count, maxStreak: _maxStreak } = _calculateStreak(chat.id);
     const headerName = document.querySelector('#chat-header h2, #chat-header .chat-name');
 
     if (headerName) {

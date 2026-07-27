@@ -101,6 +101,15 @@ function getFriendlyAuthError(error, fallback) {
   if (code === "auth/weak-password") {
     return "Password is too weak. Use at least 6 characters.";
   }
+  if (code === "auth/popup-closed-by-user") {
+    return "Sign-in cancelled.";
+  }
+  if (code === "auth/popup-blocked") {
+    return "Popup was blocked. Please allow popups for this site.";
+  }
+  if (code === "auth/operation-not-allowed") {
+    return "This sign-in method is not enabled. Contact support.";
+  }
   if (
     code === "auth/unauthorized-continue-uri" ||
     code === "auth/invalid-continue-uri"
@@ -124,7 +133,7 @@ function validatePassword(password) {
   if (password.length < 8) return false;
   if (!/[A-Z]/.test(password)) return false;
   if (!/[a-z]/.test(password)) return false;
-  if (!/[0-9!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?`~]/.test(password)) return false;
+  if (!/[0-9!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?`~]/.test(password)) return false;
   return true;
 }
 
@@ -221,33 +230,77 @@ document.querySelectorAll("[data-password-toggle]").forEach((toggleBtn) => {
 });
 
 /* ══════════════════════════════════════════════════════════════
-   GOOGLE AUTH
+   TRUST WORKSTATION — Wire checkbox to auth persistence
    ══════════════════════════════════════════════════════════════ */
 
-document.getElementById("googleAuthBtn").addEventListener("click", async (event) => {
-  const btn = event.currentTarget;
-  const errorDiv = document.getElementById("authError");
-  errorDiv.style.display = "none";
-  setButtonLoading(btn, true, "Continue with Google", "Opening Google...");
-  try {
-    await authPersistenceReady;
-    const provider = new firebase.auth.GoogleAuthProvider();
-    provider.setCustomParameters({ prompt: "select_account" });
-    await auth.signInWithPopup(provider);
-  } catch (error) {
-    if (error.code === 'auth/popup-blocked') {
-      if (typeof showToast === 'function') showToast('Popup blocked. Redirecting to Google...', 'info');
-      setTimeout(() => { setButtonLoading(btn, false, "Continue with Google", "Opening Google..."); }, 3000);
-      return auth.signInWithRedirect(provider);
-    }
-    errorDiv.textContent = getFriendlyAuthError(
-      error,
-      "Google sign-in failed. Please try again.",
-    );
-    errorDiv.style.display = "block";
-    setButtonLoading(btn, false, "Continue with Google", "Opening Google...");
+document.getElementById("persist").addEventListener("change", async (e) => {
+  if (e.target.checked) {
+    await auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(() => {});
+  } else {
+    await auth.setPersistence(firebase.auth.Auth.Persistence.SESSION).catch(() => {});
   }
 });
+
+/* ══════════════════════════════════════════════════════════════
+   GOOGLE AUTH — Platform-aware (native vs web)
+   ══════════════════════════════════════════════════════════════ */
+
+async function signInWithGoogle() {
+  const errorDiv = document.getElementById("authError");
+  const btn = document.getElementById("googleAuthBtn");
+  errorDiv.style.display = "none";
+
+  if (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) {
+    setButtonLoading(btn, true, "Continue with Google", "Opening Google...");
+    try {
+      const result = await Capacitor.Plugins.GoogleAuth.signIn();
+      const credential = firebase.auth.GoogleAuthProvider.credential(result.authentication.idToken);
+      await authPersistenceReady;
+      await auth.signInWithCredential(credential);
+    } catch (err) {
+      errorDiv.textContent = getFriendlyAuthError(err, "Google sign-in failed. Please try again.");
+      errorDiv.style.display = "block";
+      setButtonLoading(btn, false, "Continue with Google", "Opening Google...");
+    }
+  } else {
+    const provider = new firebase.auth.GoogleAuthProvider();
+    provider.addScope("email");
+    provider.addScope("profile");
+    provider.setCustomParameters({ prompt: "select_account" });
+    setButtonLoading(btn, true, "Continue with Google", "Opening Google...");
+    try {
+      await authPersistenceReady;
+      await auth.signInWithPopup(provider);
+    } catch (err) {
+      if (err.code === "auth/account-exists-with-different-credential") {
+        const _pendingCred = err.credential;
+        const email = err.email;
+        try {
+          const methods = await auth.fetchSignInMethodsForEmail(email);
+          if (methods.includes("password")) {
+            errorDiv.textContent = "An account exists with this email using email/password. Sign in with email/password, then link Google from Settings.";
+          } else {
+            errorDiv.textContent = getFriendlyAuthError(err, "Google sign-in failed. Please try again.");
+          }
+        } catch (_) {
+          errorDiv.textContent = getFriendlyAuthError(err, "Google sign-in failed. Please try again.");
+        }
+        errorDiv.style.display = "block";
+        setButtonLoading(btn, false, "Continue with Google", "Opening Google...");
+      } else if (err.code === "auth/popup-blocked") {
+        if (typeof showToast === "function") showToast("Popup blocked. Redirecting to Google...", "info");
+        setTimeout(() => { setButtonLoading(btn, false, "Continue with Google", "Opening Google..."); }, 3000);
+        return auth.signInWithRedirect(provider);
+      } else {
+        errorDiv.textContent = getFriendlyAuthError(err, "Google sign-in failed. Please try again.");
+        errorDiv.style.display = "block";
+        setButtonLoading(btn, false, "Continue with Google", "Opening Google...");
+      }
+    }
+  }
+}
+
+document.getElementById("googleAuthBtn").addEventListener("click", () => signInWithGoogle());
 
 auth.getRedirectResult().catch(() => {
   var googleBtn = document.getElementById("googleAuthBtn");
@@ -539,6 +592,8 @@ document.getElementById("registerForm").addEventListener("submit", async (e) => 
    PASSWORD RESET MODAL
    ══════════════════════════════════════════════════════════════ */
 
+let _resetLastSent = 0;
+
 const resetModal = document.getElementById("resetModal");
 document.getElementById("forgotPasswordBtn").addEventListener("click", () => {
   const loginEmail = document.getElementById('loginEmail')?.value || '';
@@ -565,8 +620,18 @@ document.getElementById("sendResetBtn").addEventListener("click", async () => {
   const btn = document.getElementById("sendResetBtn");
   const resetModalEl = document.getElementById("resetModal");
 
-  if (!email) {
+  const now = Date.now();
+  if (now - _resetLastSent < 60000) {
+    const remaining = Math.ceil((60000 - (now - _resetLastSent)) / 1000);
     var existing = document.getElementById('resetInlineError');
+    if (existing) { existing.textContent = 'Please wait ' + remaining + ' seconds before trying again.'; }
+    else { btn.insertAdjacentHTML('afterend', '<div id="resetInlineError" class="mt-xs p-xs text-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/20 rounded text-center">Please wait ' + remaining + ' seconds before trying again.</div>'); }
+    setTimeout(() => { var el = document.getElementById('resetInlineError'); if (el) el.remove(); }, 3000);
+    return;
+  }
+
+  if (!email) {
+    existing = document.getElementById('resetInlineError');
     if (existing) { existing.textContent = 'Please enter your email'; }
     else { btn.insertAdjacentHTML('afterend', '<div id="resetInlineError" class="mt-xs p-xs text-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/20 rounded text-center">Please enter your email</div>'); }
     setTimeout(() => { var el = document.getElementById('resetInlineError'); if (el) el.remove(); }, 3000);
@@ -584,8 +649,14 @@ document.getElementById("sendResetBtn").addEventListener("click", async () => {
   btn.disabled = true;
   btn.textContent = "Sending...";
 
+  const resetActionCodeSettings = {
+    url: window.location.origin + "/works/chat/reset.html",
+    handleCodeInApp: true,
+  };
+
   try {
-    await auth.sendPasswordResetEmail(email);
+    await auth.sendPasswordResetEmail(email, resetActionCodeSettings);
+    _resetLastSent = Date.now();
     resetModalEl.classList.remove("show");
     const successDiv = document.getElementById("authSuccess");
     successDiv.textContent = "Password reset email sent! Check your inbox.";
@@ -593,9 +664,9 @@ document.getElementById("sendResetBtn").addEventListener("click", async () => {
     btn.disabled = false;
     btn.textContent = "Send Reset Link";
   } catch (error) {
-    var escapedMsg = (error.message || 'Failed to send reset email').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    var escapedMsg = getFriendlyAuthError(error, error.message || 'Failed to send reset email').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
     existing = document.getElementById('resetInlineError');
-    if (existing) { existing.textContent = error.message || 'Failed to send reset email'; }
+    if (existing) { existing.textContent = getFriendlyAuthError(error, error.message || 'Failed to send reset email'); }
     else { btn.insertAdjacentHTML('afterend', '<div id="resetInlineError" class="mt-xs p-xs text-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/20 rounded text-center">' + escapedMsg + '</div>'); }
     setTimeout(() => { var el = document.getElementById('resetInlineError'); if (el) el.remove(); }, 5000);
     btn.disabled = false;

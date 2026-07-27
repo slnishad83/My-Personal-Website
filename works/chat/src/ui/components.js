@@ -8,7 +8,7 @@
  */
 'use strict';
 
-import { escHtml, createElement, on, emit } from '../core/utils.js';
+import { escHtml, createElement, on as _on, emit as _emit } from '../core/utils.js';
 
 /* ══════════════════════════════════════════════════════════════
    TOAST NOTIFICATIONS

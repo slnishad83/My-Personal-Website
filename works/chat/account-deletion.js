@@ -17,7 +17,7 @@
           const deadline = data.deletionScheduledAt.toDate ? data.deletionScheduledAt.toDate() : new Date(data.deletionScheduledAt);
           const daysLeft = Math.max(0, Math.ceil((deadline - Date.now()) / (1000 * 60 * 60 * 24)));
           if (daysLeft > 0) {
-            console.log(`[AccountDeletion] Account scheduled for deletion in ${daysLeft} days`);
+            if (window.__DEBUG__) console.log(`[AccountDeletion] Account scheduled for deletion in ${daysLeft} days`);
           }
         }
       } catch (_) {}

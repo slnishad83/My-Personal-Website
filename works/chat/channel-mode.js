@@ -272,7 +272,7 @@
     return html;
   }
 
-  function _renderChannelMsgHTML(msg, msgs, i, lastDate, chat) {
+  function _renderChannelMsgHTML(msg, msgs, i, lastDate, _chat) {
     var msgDate = new Date(msg.time);
     var dateKey = msgDate.toDateString();
     var sep = '';
@@ -299,9 +299,9 @@
     var tickIcon = '';
     if (isMe) {
       if (msg.status === 'read') {
-        tickIcon = '<span class="material-symbols-outlined text-[14px] text-primary" style="font-variation-settings: \'FILL\' 1;">done_all</span>';
+        tickIcon = '<span class="material-symbols-outlined text-[14px] text-primary mat-icon--filled">done_all</span>';
       } else if (msg.status === 'delivered') {
-        tickIcon = '<span class="material-symbols-outlined text-[14px] text-on-surface-variant" style="font-variation-settings: \'FILL\' 1;">done_all</span>';
+        tickIcon = '<span class="material-symbols-outlined text-[14px] text-on-surface-variant mat-icon--filled">done_all</span>';
       } else if (msg.status === 'sending') {
         tickIcon = '<span class="material-symbols-outlined text-[14px] text-on-surface-variant sync-badge pending" style="animation: syncRotate 2s infinite linear; display: inline-block;">schedule</span>';
       } else {

@@ -6,7 +6,7 @@
 (function () {
   const EventFromMessage = {
     _datePatterns: [
-      /\b(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})\b/,
+      /\b(\d{1,2}[/-]\d{1,2}[/-]\d{2,4})\b/,
       /\b(january|february|march|april|may|june|july|august|september|october|november|december)\s+\d{1,2}(?:st|nd|rd|th)?(?:\s*,?\s*\d{4})?/gi,
       /\b(today|tomorrow|next\s+(?:monday|tuesday|wednesday|thursday|friday|saturday|sunday))\b/gi,
       /\bat\s+(\d{1,2}:\d{2}\s*(?:am|pm)?)\b/gi
@@ -91,7 +91,7 @@
       modal.id = 'create-event-modal';
       modal.style.cssText = 'position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;';
 
-      const dateStr = detectedDate ? detectedDate.toLocaleString() : '';
+      const _dateStr = detectedDate ? detectedDate.toLocaleString() : '';
       modal.innerHTML = `
         <div style="background:var(--surface-container,#fff);border-radius:20px;width:min(400px,92vw);padding:24px;">
           <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">
@@ -147,7 +147,7 @@
             btn.onmouseenter = () => btn.style.background = 'var(--surface-container-highest)';
             btn.onmouseleave = () => btn.style.background = 'transparent';
             btn.addEventListener('click', () => {
-              const msgId = menu.dataset.msgId;
+              const _msgId = menu.dataset.msgId;
               const text = menu.dataset.msgText;
               const chat = window.App?.currentChat;
               if (text && chat) {

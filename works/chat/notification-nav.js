@@ -100,7 +100,7 @@
 
   function _handleThreadReply(data) {
     var chatId = data.chatId || _getChatId();
-    var parentId = data.parentMessageId || data.parentId;
+    var _parentId = data.parentMessageId || data.parentId;
     if (!chatId) return;
     var currentId = _getChatId();
     if (currentId !== chatId) {
@@ -216,7 +216,7 @@
     if ('Notification' in window && Notification.permission === 'granted') {
       navigator.serviceWorker.ready.then(function (reg) {
         if (reg && reg.showNotification) {
-          var original = reg.showNotification;
+          var _original = reg.showNotification;
         }
       }).catch(function () {});
     }

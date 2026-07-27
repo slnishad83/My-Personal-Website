@@ -299,7 +299,6 @@
           var existingStarBtn = menu.querySelector('[data-action="star-msg"]');
           if (existingStarBtn) {
             var icon = existingStarBtn.querySelector('.material-symbols-outlined');
-            var label = existingStarBtn.querySelector('.text-sm, span:last-child');
             if (icon) icon.textContent = starred ? 'star' : 'star_border';
           }
         });
@@ -335,7 +334,7 @@
             var existingStarBtn = menu.querySelector('[data-action="star-msg"]');
             if (existingStarBtn) {
               var icon = existingStarBtn.querySelector('.material-symbols-outlined');
-              var label = existingStarBtn.querySelector('.text-sm, span:last-child');
+            var label = existingStarBtn.querySelector('.text-sm, span:last-child');
               if (icon) icon.textContent = starred ? 'star' : 'star_border';
               if (label) label.textContent = starred ? 'Unstar' : 'Star';
               return;

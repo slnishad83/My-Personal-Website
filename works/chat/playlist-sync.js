@@ -274,7 +274,7 @@
   }
 
   // ─── ROOM PANEL ───
-  window.openListeningRoomPanel = function(chatId) {
+  window.openListeningRoomPanel = function(_chatId) {
     const room = App._listeningRoom;
     if (!room) { showToast('No active room', 'info'); return; }
 
@@ -519,7 +519,7 @@
     return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   }
 
-  function _updateRoomChatListeners(roomId) {
+  function _updateRoomChatListeners(_roomId) {
     const el = document.getElementById('room-listener-count');
     if (!el) return;
     const room = App._listeningRoom;

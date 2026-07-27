@@ -377,7 +377,7 @@
     }
   }
 
-  function muteGroupNotifications(groupId, duration) {
+  function muteGroupNotifications(groupId, _duration) {
     var options = [
       { label: '8 hours', value: 8 * 60 * 60 * 1000, icon: 'schedule' },
       { label: '1 week', value: 7 * 24 * 60 * 60 * 1000, icon: 'date_range' },

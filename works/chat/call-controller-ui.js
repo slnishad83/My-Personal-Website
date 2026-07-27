@@ -134,7 +134,7 @@
       bubble.style.transition = '';
       var rect = bubble.getBoundingClientRect();
       var nearRight = rect.left > window.innerWidth / 2;
-      var nearBottom = rect.top > window.innerHeight / 2;
+      var _nearBottom = rect.top > window.innerHeight / 2;
       bubble.style.right = 'auto';
       bubble.style.left = 'auto';
       bubble.style.bottom = 'auto';

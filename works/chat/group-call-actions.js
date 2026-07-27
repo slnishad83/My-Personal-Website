@@ -74,7 +74,7 @@
       }).catch(function () {});
     }
     sendMuteRequest();
-    var retryTimer = setTimeout(function () {
+    var _retryTimer = setTimeout(function () {
       var stillMuted = GC._participantMuteState.get(userId);
       if (stillMuted === newMuted) sendMuteRequest();
     }, 3000);

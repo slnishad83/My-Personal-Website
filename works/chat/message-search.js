@@ -242,7 +242,7 @@
   }
 
   /* ─── main search ────────────────────────────────────────────────── */
-  async function doSearch(reset) {
+  let doSearch = async function(reset) {
     const q   = _query.trim();
     const container = document.getElementById('globalSearchResults');
     if (!container) return;

@@ -39,7 +39,7 @@
     };
   }
   if (typeof window.showToast !== 'function') {
-    window.showToast = function(msg) { console.log('[Music]', msg); };
+    window.showToast = function(msg) { if (window.__DEBUG__) console.log('[Music]', msg); };
   }
   if (typeof window.escHtml !== 'function') {
     window.escHtml = function(s) { return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); };
@@ -176,7 +176,7 @@
     panel.innerHTML = `
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
         <h3 style="margin:0;font-size:16px;font-weight:700">Equalizer</h3>
-        <button onclick="document.getElementById(\'equalizer-overlay\')?.remove()" style="background:none;border:none;color:var(--on-surface-variant);cursor:pointer;font-size:18px">&times;</button>
+        <button onclick="document.getElementById('equalizer-overlay')?.remove()" style="background:none;border:none;color:var(--on-surface-variant);cursor:pointer;font-size:18px">&times;</button>
       </div>
       <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;justify-content:center">
         ${Object.keys(_EQ_PRESETS).map(name => `<button onclick="MusicPlayer.applyEqPreset('${name}')" style="padding:6px 12px;border-radius:8px;border:1px solid var(--outline-variant,rgba(0,0,0,0.1));background:var(--surface-container-low,rgba(0,0,0,0.04));color:var(--on-surface-variant);font-size:11px;font-weight:600;cursor:pointer;min-height:32px">${name}</button>`).join('')}
@@ -228,7 +228,7 @@
 
   // ─── PLAYBACK ───
   Player.play = function(track, playlistId) {
-    console.log('[MusicPlayer] play() called:', track ? { id: track.id, title: track.title } : 'null track');
+    if (window.__DEBUG__) console.log('[MusicPlayer] play() called:', track ? { id: track.id, title: track.title } : 'null track');
     _haptic('light');
     if (!track || !track.url) { console.warn('[MusicPlayer] No track or URL'); showToast('No audio URL', 'error'); return; }
     if (playlistId) Player.playlistId = playlistId;
@@ -246,7 +246,7 @@
     Player.audio.src = track.url;
     Player.audio.load();
     Player.audio.play().then(() => {
-      console.log('[MusicPlayer] Audio playback started successfully');
+      if (window.__DEBUG__) console.log('[MusicPlayer] Audio playback started successfully');
     }).catch(e => {
       console.error('[MusicPlayer] Playback failed:', e.name, e.message);
       showToast('Playback failed — tap to retry', 'error');
@@ -708,7 +708,7 @@
   Player.showAudioInfo = function() {
     const info = Player.getAudioInfo();
     if (!info) return;
-    const track = Player._currentTrack;
+    const _track = Player._currentTrack;
     showToast(`Speed: ${info.speed}x | Volume: ${info.volume} | Network: ${info.networkType} | ${info.downlink}`, 'info');
   };
 
@@ -1257,10 +1257,10 @@
   }, 5000);
 
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => { _init(); _restoreSession(); console.log('[MusicPlayer] Initialized via DOMContentLoaded'); });
+    document.addEventListener('DOMContentLoaded', () => { _init(); _restoreSession(); if (window.__DEBUG__) console.log('[MusicPlayer] Initialized via DOMContentLoaded'); });
   } else {
     _init();
     _restoreSession();
-    console.log('[MusicPlayer] Initialized immediately. Player.play exists:', typeof Player.play);
+    if (window.__DEBUG__) console.log('[MusicPlayer] Initialized immediately. Player.play exists:', typeof Player.play);
   }
 })();

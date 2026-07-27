@@ -439,7 +439,7 @@
       console.group('%c[A11y Audit] ' + issues.length + ' issues found', 'color: #e91e63; font-weight: bold;');
       issues.forEach(function(issue) {
         var style = issue.type === 'warning' ? 'color: orange;' : 'color: #2196f3;';
-        console.log('%c' + issue.type.toUpperCase() + ': ' + issue.msg, style, issue.el);
+        if (window.__DEBUG__) console.log('%c' + issue.type.toUpperCase() + ': ' + issue.msg, style, issue.el);
       });
       console.groupEnd();
     }

@@ -86,7 +86,7 @@
     const sheet = document.createElement('div');
     sheet.style.cssText = 'background:var(--surface-container-high);border-radius:24px 24px 0 0;padding:24px;width:100%;max-width:480px;display:flex;flex-direction:column;gap:8px;animation:slideUp 0.2s ease';
 
-    const timeRemaining = getRecallTimeRemaining(msg);
+    const _timeRemaining = getRecallTimeRemaining(msg);
 
     sheet.innerHTML = `
       <div style="font-size:16px;font-weight:700;margin-bottom:8px;color:var(--on-surface)">Delete Message</div>

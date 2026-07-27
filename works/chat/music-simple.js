@@ -242,7 +242,7 @@
       S.queue = [cur, ...rest];
       S.idx = 0;
     } else {
-      const cur = S.queue[S.idx];
+      const _cur = S.queue[S.idx];
       // restore original order if available
     }
     _updateFullUI();

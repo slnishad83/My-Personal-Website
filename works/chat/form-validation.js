@@ -71,7 +71,7 @@
   }
 
   function _validatePhone(value) {
-    return /^\+?\d{10,}$/.test(value.replace(/[\s\-\(\)]/g, ''));
+    return /^\+?\d{10,}$/.test(value.replace(/[\s\-()]/g, ''));
   }
 
   function _validatePassword(value) {
@@ -79,7 +79,7 @@
     var hasLower = /[a-z]/.test(value);
     var hasUpper = /[A-Z]/.test(value);
     var hasDigit = /\d/.test(value);
-    var hasSpecial = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(value);
+    var hasSpecial = /[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/.test(value);
     return (hasLower || hasUpper) && (hasDigit || hasSpecial);
   }
 
@@ -89,7 +89,7 @@
     if (value.length >= 8) score++;
     if (/[a-z]/.test(value) && /[A-Z]/.test(value)) score++;
     if (/\d/.test(value)) score++;
-    if (/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(value)) score++;
+    if (/[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/.test(value)) score++;
     if (score <= 1) return 0;
     if (score <= 2) return 1;
     if (score <= 3) return 2;

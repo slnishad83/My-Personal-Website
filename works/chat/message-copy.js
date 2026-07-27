@@ -70,9 +70,9 @@
   function formatCopyText(msg) {
     if (!msg) return '';
 
-    const sender = msg.senderName || msg.displayName || '';
+    const _sender = msg.senderName || msg.displayName || '';
     var ts = msg.createdAt || msg.timestamp;
-    const time = ts ? (typeof ts.toDate === 'function' ? ts.toDate() : new Date(ts)).toLocaleString() : '';
+    const _time = ts ? (typeof ts.toDate === 'function' ? ts.toDate() : new Date(ts)).toLocaleString() : '';
 
     switch (msg.type) {
       case 'image': {

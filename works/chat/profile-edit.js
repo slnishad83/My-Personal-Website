@@ -177,7 +177,7 @@
 
     try {
       var verifier = new firebase.auth.RecaptchaVerifier('nsl-pe-recaptcha', { size: 'invisible' });
-      var confirmation = await a.currentUser.updatePhoneNumber(
+      var _confirmation = await a.currentUser.updatePhoneNumber(
         firebase.auth.PhoneAuthProvider.credential(await a.currentUser.verifyPhoneNumber(newPhone, verifier), '')
       );
 

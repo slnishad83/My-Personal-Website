@@ -11,9 +11,9 @@ import '../app.css';
 import '../redesign-base.css';
 
 /* ── Core Modules ───────────────────────────────────────── */
-import { escHtml, throttle, debounce, on, emit, $, $$ } from './src/core/utils.js';
+import { escHtml, throttle, debounce, on, emit } from './src/core/utils.js';
 import * as Security from './src/core/security.js';
-import { showToast, showModal, confirm as uiConfirm, showBottomSheet, showLoading } from './src/ui/components.js';
+import { showToast, showModal, confirm as uiConfirm, showBottomSheet as _showBottomSheet, showLoading as _showLoading } from './src/ui/components.js';
 
 /* ── Firebase (loaded via compat for backward compat) ────── */
 import { FIREBASE_CONFIG } from './firebase-config.js';

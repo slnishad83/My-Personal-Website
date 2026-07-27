@@ -1,5 +1,5 @@
 'use strict';
-function renderEmojis(el) {
+function _renderEmojis(el) {
   if (typeof twemoji === 'undefined' || !el) return;
   twemoji.parse(el, { folder: 'svg', ext: '.svg', base: './twemoji/svg/' });
   el.querySelectorAll('img.emoji').forEach(img => {

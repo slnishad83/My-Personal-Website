@@ -249,7 +249,7 @@
       const bubble = el.closest('[data-msg-id], .message-bubble-wrap, .message-row');
       const id = bubble ? (bubble.dataset.msgId || bubble.dataset.id || '') : '';
       const cls = el.className;
-      const key = id + cls;
+      const _key = id + cls;
       if (seenReceipts.get(id) === cls) return;
       seenReceipts.set(id, cls);
 

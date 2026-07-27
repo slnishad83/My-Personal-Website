@@ -50,7 +50,7 @@
       }
     };
 
-    window.setTimeout = function (fn, ms) {
+    window.setTimeout = function (_fn, _ms) {
       var realId = _originalSetTimeout.apply(window, arguments);
       _trackTimeout(realId);
       return realId;

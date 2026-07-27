@@ -105,7 +105,7 @@
     document.body.appendChild(overlay);
   }
 
-  function _renderDriveFiles(content, files, source, token) {
+  function _renderDriveFiles(content, files, source, _token) {
     if (!files.length) {
       content.innerHTML = '<div style="text-align:center;padding:20px;color:var(--on-surface-variant)">No files found</div>';
       return;

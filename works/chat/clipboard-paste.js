@@ -89,7 +89,7 @@
     if (!items || items.length === 0) return;
 
     const files = [];
-    let hasImage = false;
+    let _hasImage = false;
 
     for (let i = 0; i < items.length; i++) {
       const item = items[i];
@@ -97,7 +97,7 @@
         const file = item.getAsFile();
         if (file) {
           files.push(file);
-          if (classifyMIME(file.type) === 'image') hasImage = true;
+          if (classifyMIME(file.type) === 'image') _hasImage = true;
         }
       }
     }

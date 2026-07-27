@@ -3,7 +3,7 @@ if ('serviceWorker' in navigator) {
   window.addEventListener('load', function () {
     navigator.serviceWorker.register('/works/chat/dist/sw.js', { scope: '/works/chat/', updateViaCache: 'none' })
       .then(function (reg) {
-        console.log('[SW] Registered:', reg.scope);
+        if (window.__DEBUG__) console.log('[SW] Registered:', reg.scope);
         reg.update().catch(function() {});
         reg.addEventListener('updatefound', function () {
           var newWorker = reg.installing;
@@ -61,3 +61,21 @@ firebase.auth().onAuthStateChanged(function(user) {
     }
   }
 });
+
+/* ══════════════════════════════════════════════════════════════
+   IDLE TIMEOUT — Lock after 30 minutes of inactivity
+   ══════════════════════════════════════════════════════════════ */
+
+var _idleTimer;
+function resetIdleTimer() {
+  clearTimeout(_idleTimer);
+  _idleTimer = setTimeout(function() {
+    if (window.App && window.App.lockEnabled) {
+      if (typeof showAppLock === 'function') showAppLock();
+    }
+  }, 30 * 60 * 1000);
+}
+['mousedown', 'keydown', 'touchstart', 'scroll'].forEach(function(evt) {
+  document.addEventListener(evt, resetIdleTimer, { passive: true });
+});
+resetIdleTimer();

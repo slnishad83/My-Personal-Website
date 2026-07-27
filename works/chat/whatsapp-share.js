@@ -159,7 +159,7 @@
           if (!node.classList.contains('message-context-menu')) continue;
           // Retrieve message data from the currently selected message element
           // The app stores messageId in the long-press handler; we read dataset
-          const msgId = node.dataset?.messageId || '';
+          const _msgId = node.dataset?.messageId || '';
           // Read messageData from the closest .message element that has focus
           let messageData = null;
           try {

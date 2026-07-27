@@ -88,7 +88,7 @@
   }
 
   function injectSaveButton(menu, msgId) {
-    const isDark = document.documentElement.classList.contains('dark') || document.body.classList.contains('dark') || document.documentElement.getAttribute('data-theme') === 'dark';
+    const _isDark = document.documentElement.classList.contains('dark') || document.body.classList.contains('dark') || document.documentElement.getAttribute('data-theme') === 'dark';
     const btn = document.createElement('button');
     btn.className = 'save-msg-injected';
     btn.style.cssText = `

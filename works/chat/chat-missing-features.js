@@ -64,13 +64,13 @@
     target.addEventListener('pointerup', () => { clearTimeout(longPressTimer); longPressTimer = null; });
     target.addEventListener('pointercancel', () => { clearTimeout(longPressTimer); longPressTimer = null; });
 
-    function _showMessageContextMenu(e, targetEl) {
+    async function _showMessageContextMenu(e, _targetEl) {
       const existing = document.getElementById('msg-context-menu');
       if (existing) existing.remove();
 
-      const clipboardHasText = navigator.clipboard && navigator.clipboard.readText;
-      let clipText = '';
-      navigator.clipboard?.readText?.().then(t => { clipText = t; }).catch(() => {});
+      const _clipboardHasText = navigator.clipboard && navigator.clipboard.readText;
+      let _clipText = '';
+      navigator.clipboard?.readText?.().then(t => { _clipText = t; }).catch(() => {});
 
       const menu = document.createElement('div');
       menu.id = 'msg-context-menu';
@@ -83,6 +83,35 @@
 
       let items = [];
 
+      // Determine if we're in a group chat and find the message data
+      const chat = window.App && window.App.currentChat ? window.App.currentChat : null;
+      const isGroup = chat && (chat.type === 'group' || chat.isGroup);
+      let msgData = null;
+      let msgSenderId = null;
+      let msgSenderName = null;
+      if (isGroup && _targetEl) {
+        const msgRow = _targetEl.closest('.message, [data-msg-id], .message-row');
+        if (msgRow) {
+          msgSenderId = msgRow.dataset.sender || msgRow.dataset.senderId || null;
+          msgSenderName = msgRow.dataset.senderName || null;
+          const senderEl = msgRow.querySelector('.sender-name, .msg-sender, .message-sender');
+          if (!msgSenderName && senderEl) msgSenderName = senderEl.textContent.trim();
+          const msgId = msgRow.getAttribute('data-msg-id') || msgRow.dataset.msgId;
+          if (msgId && window.App && window.App.db && chat) {
+            try {
+              const doc = await window.App.db.collection('messages').doc(chat.id).collection('items').doc(msgId).get();
+              if (doc.exists) {
+                msgData = doc.data();
+                msgData.id = doc.id;
+                if (!msgSenderId) msgSenderId = msgData.from || msgData.senderId;
+                if (!msgSenderName) msgSenderName = msgData.fromName || msgData.senderName || 'Someone';
+              }
+            } catch (_) {}
+          }
+          if (!msgSenderName) msgSenderName = 'Someone';
+        }
+      }
+
       // Always show paste if input is focused
       const input = document.getElementById('msg-input');
       if (input && App.currentChat) {
@@ -92,6 +121,38 @@
           }
           _renderContextMenuItems(menu, items);
         }).catch(() => {});
+      }
+
+      // Reply (always available on messages)
+      if (App.currentChat && _targetEl) {
+        const msgRow = _targetEl.closest('.message, [data-msg-id], .message-row');
+        if (msgRow) {
+          const msgId = msgRow.getAttribute('data-msg-id') || msgRow.dataset.msgId;
+          if (msgId) {
+            items.push({ icon: 'reply', label: 'Reply', action: () => {
+              if (typeof window.triggerReply === 'function') window.triggerReply(msgRow);
+              else if (typeof window.replyToMsg === 'function') window.replyToMsg(msgId);
+              else if (typeof window.startReply === 'function') {
+                const bubble = msgRow.querySelector('.message-bubble');
+                window.startReply(msgId, msgSenderId || '', (bubble?.textContent || '').substring(0, 80));
+              }
+            }});
+          }
+        }
+      }
+
+      // Reply Privately + Message [Name] — group chats only
+      if (isGroup && msgData && msgSenderId && msgSenderId !== (window.App?.auth?.currentUser?.uid)) {
+        items.push({ icon: 'forward', label: 'Reply Privately', action: () => {
+          if (typeof window.ReplyPrivate !== 'undefined') {
+            window.ReplyPrivate.replyPrivately(msgData, chat.id);
+          }
+        }});
+        items.push({ icon: 'chat', label: 'Message ' + (msgSenderName || 'user'), action: () => {
+          if (typeof window.ReplyPrivate !== 'undefined') {
+            window.ReplyPrivate.messagePerson(msgData, chat.id);
+          }
+        }});
       }
 
       // Also add a file drop option for drag

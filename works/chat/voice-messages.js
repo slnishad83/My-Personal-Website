@@ -147,7 +147,7 @@
   }
 
   let _micListenersAttached = false;
-  async function toggleRecording(e) {
+  async function toggleRecording(_e) {
     if (_isRecording) {
       _stopRecordingAndSend();
       return;
@@ -224,7 +224,7 @@
     document.addEventListener('mouseup', _onMicMouseUp);
   }
 
-  function _onMicMouseUp(e) {
+  function _onMicMouseUp(_e) {
     _swipeActive = false;
     if (_holdTimer) { clearTimeout(_holdTimer); _holdTimer = null; }
     if (_isRecording && !_isLocked) {

@@ -6,10 +6,10 @@
   var MAX_AUTO_RETRIES = 3;
 
   var STATUS_ICONS = {
-    sending: '<span class="msg-status-icon material-symbols-outlined text-[14px] text-on-surface-variant" style="animation:syncRotate 2s infinite linear;display:inline-block;font-variation-settings:\'FILL\' 1;">schedule</span>',
-    sent: '<span class="msg-status-icon material-symbols-outlined text-[14px] text-on-surface-variant" style="font-variation-settings:\'FILL\' 1;">done</span>',
-    delivered: '<span class="msg-status-icon material-symbols-outlined text-[14px] text-on-surface-variant" style="font-variation-settings:\'FILL\' 1;">done_all</span>',
-    read: '<span class="msg-status-icon material-symbols-outlined text-[14px] text-primary" style="font-variation-settings:\'FILL\' 1;">done_all</span>',
+    sending: '<span class="msg-status-icon material-symbols-outlined text-[14px] text-on-surface-variant mat-icon--filled" style="animation:syncRotate 2s infinite linear;display:inline-block;">schedule</span>',
+    sent: '<span class="msg-status-icon material-symbols-outlined text-[14px] text-on-surface-variant mat-icon--filled">done</span>',
+    delivered: '<span class="msg-status-icon material-symbols-outlined text-[14px] text-on-surface-variant mat-icon--filled">done_all</span>',
+    read: '<span class="msg-status-icon material-symbols-outlined text-[14px] text-primary mat-icon--filled">done_all</span>',
     failed: '<span class="msg-status-icon material-symbols-outlined text-[14px] text-error" role="img" aria-label="Failed to send" style="cursor:pointer;" title="Tap to retry sending">error</span>'
   };
 

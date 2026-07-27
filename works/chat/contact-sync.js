@@ -7,7 +7,7 @@
 const ContactSync = (() => {
   const _normalizePhone = (raw) => {
     if (!raw) return '';
-    let p = raw.replace(/[\s\-\(\)\.]/g, '');
+    let p = raw.replace(/[\s\-().]/g, '');
     if (p.startsWith('+')) return p;
     if (p.startsWith('00')) return '+' + p.slice(2);
     if (p.length === 10) return '+91' + p;

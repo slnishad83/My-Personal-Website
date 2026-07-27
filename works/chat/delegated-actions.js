@@ -73,6 +73,9 @@
     'endCallFromBubble': function(e) {
       e.stopPropagation();
       if (typeof endCall === 'function') endCall();
+    },
+    'cancelReply': function() {
+      if (typeof window.cancelReplyMode === 'function') window.cancelReplyMode();
     }
   };
 

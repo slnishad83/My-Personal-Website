@@ -2,7 +2,7 @@
   'use strict';
 
   var MAX_DURATION = 30;
-  var VID_NOTE_SIZE = 200;
+  var _VID_NOTE_SIZE = 200;
 
   var vnStream = null;
   var vnRecorder = null;
@@ -21,12 +21,12 @@
   var vnCancelBtn = null;
   var vnFlipBtn = null;
   var vnTimerDisplay = null;
-  var vnProgressRing = null;
+  var _vnProgressRing = null;
   var vnRecording = false;
   var vnRecordComplete = false;
   var vnBlob = null;
   var vnActiveVideo = null;
-  var vnIntersectionObserver = null;
+  var _vnIntersectionObserver = null;
   var vnPlaybackObserver = null;
 
   function getDb() { return window.db || (window.App && window.App.db) || null; }
@@ -226,7 +226,7 @@
     if (vnPaused) return;
     var elapsed = (Date.now() - vnStartTime - vnPausedDuration) / 1000;
     var secs = Math.floor(elapsed);
-    var ms = Math.floor((elapsed - secs) * 10);
+    var _ms = Math.floor((elapsed - secs) * 10);
     if (secs >= MAX_DURATION) {
       secs = MAX_DURATION;
       stopRecording();
@@ -478,7 +478,7 @@
     });
 
     var longPressTimer = null;
-    circle.addEventListener('touchstart', function (e) {
+    circle.addEventListener('touchstart', function (_e) {
       longPressTimer = setTimeout(function () {
         longPressTimer = null;
         _showVideoNoteFullscreen(url);

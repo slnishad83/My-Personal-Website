@@ -238,7 +238,7 @@
     }
 
     // Prefer custom events from the app (tc:chat:opened, nsl:chat-opened)
-    function _onCustomEvent(e) {
+    function _onCustomEvent(_e) {
       var key = getChatKey();
       if (key !== _lastChatKey) { _lastChatKey = key; _onChatSwitch(key); }
     }
@@ -304,7 +304,7 @@
   // ── 7. CONNECTION STATUS MONITOR ─────────────────────────────────
   function setupConnectionMonitor() {
     let offlineTimer = null;
-    let isOnline = navigator.onLine;
+    let _isOnline = navigator.onLine;
 
     function updateBanner(state) {
       const banner = document.getElementById('_wa_conn_banner');
@@ -320,13 +320,13 @@
     }
 
     function _onOnline() {
-      isOnline = true;
+      _isOnline = true;
       clearTimeout(offlineTimer);
       updateBanner('reconnecting');
       setTimeout(() => updateBanner(''), 2000);
     }
     function _onOffline() {
-      isOnline = false;
+      _isOnline = false;
       offlineTimer = setTimeout(() => updateBanner('offline'), 500);
     }
 

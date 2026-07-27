@@ -351,7 +351,7 @@
     _keyHandler = function (e) {
       if (!calcEl || calcEl.style.display !== 'flex') return;
       const key = e.key;
-      if (/[0-9\.\+\-\*\/\(\)]/.test(key)) {
+      if (/[0-9.+\-*/()]/.test(key)) {
         e.preventDefault();
         handleInput(key);
       } else if (key === 'Enter' || key === '=') {
@@ -406,7 +406,7 @@
 
   function evaluateExpression(expr) {
     let cleanExpr = expr.replace(/x/g, '*').replace(/÷/g, '/');
-    if (!/^[0-9\+\-\*\/\(\)\.\s]+$/.test(cleanExpr)) {
+    if (!/^[0-9+\-*/().\s]+$/.test(cleanExpr)) {
       throw new Error('Invalid characters');
     }
     var val = _safeEval(cleanExpr);

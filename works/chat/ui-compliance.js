@@ -93,7 +93,7 @@
   }
 
   /* ─── #12 Fix button double-fire on iOS (click + touchend) ──── */
-  function fixDoubleFire() {
+  function _fixDoubleFire() {
     if (!('ontouchstart' in window)) return;
     var lastTouchEnd = 0;
     function _onTouchEnd(e) {

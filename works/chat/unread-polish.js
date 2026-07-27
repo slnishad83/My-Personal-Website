@@ -197,7 +197,7 @@
     document.dispatchEvent(new CustomEvent('tc:tab:badge', { detail: { total: total } }));
   }
 
-  function playUnreadSound(count) {
+  function playUnreadSound(_count) {
     var now = Date.now();
     if (now - _lastSoundTime < SOUND_THROTTLE_MS) return;
     _lastSoundTime = now;

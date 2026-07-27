@@ -455,7 +455,7 @@
     hideToneBanner();
   }
 
-  function checkBeforeSend(text) {
+  function checkBeforeSend(_text) {
     if (_toneCheckResult && !_toneCheckResult.safe) {
       return new Promise((resolve) => {
         if (typeof showModal === 'function') {

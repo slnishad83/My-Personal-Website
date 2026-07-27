@@ -117,7 +117,7 @@
           return navigator.serviceWorker.ready;
         })
         .catch((error) => {
-          console.log("Service Worker registration failed:", error);
+          if (window.__DEBUG__) console.log("Service Worker registration failed:", error);
           return null;
         });
     }

@@ -3,6 +3,21 @@
    Load AFTER tailwind, BEFORE app.js
    ════════════════════════════════════════════════════════════ */
 
+/* ── Icon size utilities ──────────────────────────────── */
+.mat-icon--filled {
+  font-variation-settings: 'FILL' 1;
+}
+.mat-icon--xs {
+  font-size: 16px;
+  width: 16px;
+  height: 16px;
+}
+.mat-icon--md {
+  font-size: 20px;
+  width: 20px;
+  height: 20px;
+}
+
 /* ── Viewport height and overscroll behavior ────────── */
 html, body, #app { 
   height: 100%; 
@@ -3103,6 +3118,20 @@ input[type="hidden"], input[type="color"] {
 #format-bar { z-index: var(--z-format-bar) !important; }
 #recording-bar { z-index: var(--z-recording-bar) !important; }
 
+/* ── Locked Chats Folder (WhatsApp parity) ──────────────── */
+.locked-chats-folder {
+  border-bottom: 1px solid var(--border, rgba(134,150,160,0.18));
+  margin-bottom: 4px;
+  border-radius: 12px;
+  transition: background 0.15s ease;
+}
+.locked-chats-folder:hover {
+  background: var(--surface-container-high);
+}
+html:not(.dark) .locked-chats-folder {
+  border-bottom-color: rgba(0,0,0,0.08);
+}
+
 /* ── Print styles: clean output ───────────────────────────────────── */
 @media print {
   @page { margin: 1.5cm; }
@@ -3138,4 +3167,73 @@ input[type="hidden"], input[type="color"] {
 html.dark ::selection {
   background: color-mix(in srgb, var(--primary) 50%, transparent);
   color: var(--on-surface);
+}
+
+/* ══════════════════════════════════════════════════════════════
+   PHASE 10 — Full-screen incoming call card
+   ══════════════════════════════════════════════════════════════ */
+
+/* Full-screen incoming call card */
+.incoming-call-fullscreen {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(180deg, #1a1b2e 0%, #0d1117 100%);
+  color: white;
+  text-align: center;
+  padding: 2rem;
+}
+.incoming-call-fullscreen .caller-avatar {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 3px solid rgba(255,255,255,0.2);
+  margin-bottom: 1.5rem;
+}
+.incoming-call-fullscreen .caller-name {
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+.incoming-call-fullscreen .call-type-label {
+  font-size: 0.875rem;
+  opacity: 0.7;
+  margin-bottom: 3rem;
+}
+.incoming-call-fullscreen .call-actions {
+  display: flex;
+  gap: 3rem;
+  align-items: center;
+}
+.incoming-call-fullscreen .call-action-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+}
+.incoming-call-fullscreen .call-action-btn .icon-circle {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.75rem;
+}
+.incoming-call-fullscreen .decline-btn .icon-circle {
+  background: #ef4444;
+}
+.incoming-call-fullscreen .accept-btn .icon-circle {
+  background: #10b981;
+  animation: pulse-ring 1.5s infinite;
+}
+@keyframes pulse-ring {
+  0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4); }
+  70% { box-shadow: 0 0 0 15px rgba(16, 185, 129, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
 }

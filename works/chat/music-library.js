@@ -658,10 +658,10 @@
     }
 
     el.innerHTML = html;
-    console.log('[Music] Search results rendered:', results.length, 'tracks. Cache size:', Object.keys(_trackCache).length);
-    console.log('[Music] MusicPlayer available:', typeof MusicPlayer, 'play:', typeof MusicPlayer?.play);
-    console.log('[Music] _playSearchResult available:', typeof window._playSearchResult);
-    console.log('[Music] First track in cache:', Object.values(_trackCache)[0]?.id);
+    if (window.__DEBUG__) console.log('[Music] Search results rendered:', results.length, 'tracks. Cache size:', Object.keys(_trackCache).length);
+    if (window.__DEBUG__) console.log('[Music] MusicPlayer available:', typeof MusicPlayer, 'play:', typeof MusicPlayer?.play);
+    if (window.__DEBUG__) console.log('[Music] _playSearchResult available:', typeof window._playSearchResult);
+    if (window.__DEBUG__) console.log('[Music] First track in cache:', Object.values(_trackCache)[0]?.id);
   };
 
   // Backward compat
@@ -700,13 +700,13 @@
 
   window._playSearchResult = async function(trackId) {
     showToast('🎵 Playing track...', 'info');
-    console.log('[Music] _playSearchResult called:', trackId);
+    if (window.__DEBUG__) console.log('[Music] _playSearchResult called:', trackId);
     const t = _trackCache[trackId];
     if (!t) { console.warn('[Music] Track not in cache:', trackId); return; }
     if (t.audioUrl || t.url) {
       MusicPlayer.play({ id: t.id, title: t.title, artist: t.artist, url: t.audioUrl || t.url, thumbnail: t.thumbnail || null, duration: t.duration, source: t.source });
     } else if (t.videoId) {
-      console.log('[Music] Playing YouTube:', t.videoId);
+      if (window.__DEBUG__) console.log('[Music] Playing YouTube:', t.videoId);
       playYouTubeTrack(t.videoId, t.title, t.artist, t.thumbnail, t.duration);
     } else {
       console.warn('[Music] Track has no audio URL and no videoId:', t);
@@ -918,7 +918,7 @@
   window.browseLanguageMusic = function(lang) { browseLanguageYT(lang); };
 
   // ─── ARCHIVE.ORG SEARCH (public domain) ───
-  window.searchJamendo = async function(query, page) {
+  window.searchJamendo = async function(query, _page) {
     if (!query || query.length < 2) return [];
     try {
       const ctrl = new AbortController();

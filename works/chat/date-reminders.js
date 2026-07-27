@@ -36,8 +36,8 @@
   function _getUpcomingReminders() {
     const dates = _getContactDates();
     const now = new Date();
-    const currentMonth = now.getMonth();
-    const currentDate = now.getDate();
+    const _currentMonth = now.getMonth();
+    const _currentDate = now.getDate();
     const upcoming = [];
 
     Object.entries(dates).forEach(([uid, d]) => {
@@ -154,7 +154,7 @@
     if (upcoming.length) {
       html += `<div style="margin-bottom:16px"><div style="font-size:12px;font-weight:700;color:var(--on-surface-variant);margin-bottom:8px">UPCOMING</div>`;
       upcoming.forEach(r => {
-        const urgencyColor = r.daysUntil === 0 ? '#00E676' : r.daysUntil <= 3 ? '#FF9800' : 'var(--primary)';
+        const _urgencyColor = r.daysUntil === 0 ? '#00E676' : r.daysUntil <= 3 ? '#FF9800' : 'var(--primary)';
         html += `<div style="display:flex;align-items:center;gap:10px;padding:12px;border-radius:12px;background:var(--surface-container-low,rgba(0,0,0,0.04));margin-bottom:6px">
           <span style="font-size:24px">${r.emoji}</span>
           <div style="flex:1">
@@ -213,7 +213,7 @@
         <input type="date" id="edit-anniversary" value="${d.anniversary || ''}" style="width:100%;padding:10px;border-radius:10px;border:1px solid var(--outline-variant,rgba(0,0,0,0.1));background:var(--surface-container-low,rgba(0,0,0,0.05));color:var(--on-surface);font-size:13px">
       </div>
       <div style="display:flex;gap:8px">
-        <button onclick="this.closest('[style*=\"fixed\"]')?.remove()" style="flex:1;padding:10px;border-radius:10px;border:none;background:var(--surface-container,rgba(0,0,0,0.06));color:var(--on-surface);font-size:13px;font-weight:600;cursor:pointer">Cancel</button>
+        <button onclick="this.closest('[style*="fixed"]')?.remove()" style="flex:1;padding:10px;border-radius:10px;border:none;background:var(--surface-container,rgba(0,0,0,0.06));color:var(--on-surface);font-size:13px;font-weight:600;cursor:pointer">Cancel</button>
         <button onclick="_saveContactDateEdit('${uid}')" style="flex:1;padding:10px;border-radius:10px;border:none;background:var(--primary);color:var(--on-primary);font-size:13px;font-weight:600;cursor:pointer">Save</button>
       </div>`;
 

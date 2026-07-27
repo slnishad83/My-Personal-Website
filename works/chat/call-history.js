@@ -216,7 +216,7 @@
   }
 
   function _renderCallHistoryItem(call) {
-    var myUid = _uid();
+    var _myUid = _uid();
     var name = _getContactName(call);
     var contactUid = _getContactUid(call);
     var avatar = _getContactAvatar(call);
@@ -305,7 +305,7 @@ var infoBtn = '<button class="min-w-[44px] min-h-[44px] rounded-full flex items-
       var callId = entry.getAttribute('data-call-entry');
       var contactUid = entry.getAttribute('data-contact-uid');
 
-      entry.addEventListener('touchstart', function (e) {
+      entry.addEventListener('touchstart', function (_e) {
         if (_selectionMode) return;
         _longPressTimer = setTimeout(function () {
           _longPressTimer = null;
@@ -637,7 +637,7 @@ var infoBtn = '<button class="min-w-[44px] min-h-[44px] rounded-full flex items-
       if (usersSnap && usersSnap.exists) {
         var userData = usersSnap.data();
         var name = userData.displayName || userData.email || 'Unknown';
-        var c = { uid: uid, name: name, initials: (name[0] || '?').toUpperCase(), type: 'direct', photoURL: userData.photoURL || '' };
+        var _c = { uid: uid, name: name, initials: (name[0] || '?').toUpperCase(), type: 'direct', photoURL: userData.photoURL || '' };
         if (typeof window.selectCallContact === 'function') {
           window.selectCallContact(uid, name, userData.photoURL || '');
         } else {

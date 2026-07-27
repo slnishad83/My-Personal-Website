@@ -241,7 +241,7 @@
     return impulse;
   }
 
-  function _bufferToBlob(buffer, mime) {
+  function _bufferToBlob(buffer, _mime) {
     var numChannels = buffer.numberOfChannels;
     var sampleRate = buffer.sampleRate;
     var format = 1;
@@ -417,8 +417,8 @@
   /* ── Wire into voice-messages.js preview ────────────────── */
   function _addEffectButtonToPreview() {
     var observer = new MutationObserver(function () {
-      var previewSend = document.getElementById('preview-send');
-      var previewCancel = document.getElementById('preview-cancel');
+      var _previewSend = document.getElementById('preview-send');
+      var _previewCancel = document.getElementById('preview-cancel');
       var previewPlay = document.getElementById('preview-play');
       var existingBtn = document.getElementById('vc-effect-btn');
 

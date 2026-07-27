@@ -69,17 +69,8 @@
         <div class="snz-pref-title" style="margin-bottom:12px;">Do Not Disturb</div>
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
           <span style="font-size:13px;color:var(--on-surface,#fff);">Quiet hours</span>
-          <button id="dnd-toggle" style="
-            width:44px;height:24px;border-radius:12px;border:none;cursor:pointer;
-            background:${enabled ? 'var(--primary,#6750a4)' : 'var(--outline-variant,rgba(255,255,255,0.15))'};
-            position:relative;transition:background 0.2s;
-          ">
-            <span style="
-              position:absolute;top:2px;
-              left:${enabled ? '22px' : '2px'};
-              width:20px;height:20px;border-radius:50%;
-              background:white;transition:left 0.2s;
-            "></span>
+          <button id="dnd-toggle" class="toggle-track${enabled ? ' active' : ''}">
+            <div class="toggle-knob"></div>
           </button>
         </div>
         <div id="dnd-time-settings" style="display:${enabled ? 'block' : 'none'};">
@@ -128,8 +119,7 @@
       const s = getDndSettings();
       s.enabled = !s.enabled;
       saveDndSettings(s);
-      toggle.style.background = s.enabled ? 'var(--primary,#6750a4)' : 'var(--outline-variant,rgba(255,255,255,0.15))';
-      toggle.querySelector('span').style.left = s.enabled ? '22px' : '2px';
+      toggle.classList.toggle('active', s.enabled);
       timeSection.style.display = s.enabled ? 'block' : 'none';
     });
 

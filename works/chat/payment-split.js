@@ -150,7 +150,7 @@
     },
 
     _openAddExpense(chatId, members) {
-      const uid = window.App?.uid?.() || window.currentUser?.uid;
+      const _uid = window.App?.uid?.() || window.currentUser?.uid;
       const modal = document.createElement('div');
       modal.id = 'add-expense-modal';
       modal.style.cssText = 'position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;';

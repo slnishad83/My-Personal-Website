@@ -12,7 +12,7 @@
 //   3. That's it — the bot will start responding in any chat.
 
 const AI_BOT_TRIGGER_RE = /@aibot\b|@ai\b/i;
-const AI_BOT_UID = "ai-bot";
+const _AI_BOT_UID = "ai-bot";
 const AI_BOT_NAME = "AI Assistant";
 
 function isAiBotTrigger(text) {
@@ -92,7 +92,7 @@ async function triggerAiBotIfMentioned(text, chatId, chatType) {
 }
 
 // Show AI Bot status badge in the chat header when active
-function renderAiBotPresenceBadge() {
+function _renderAiBotPresenceBadge() {
   const header = document.getElementById("chatHeaderName");
   if (!header || header.querySelector(".ai-bot-badge")) return;
   const badge = document.createElement("span");

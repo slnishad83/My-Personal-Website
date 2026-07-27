@@ -437,7 +437,7 @@
       }
     });
 
-    container.addEventListener('contextmenu', function (e) {
+    container.addEventListener('contextmenu', function (_e) {
       return;
     });
 

@@ -459,7 +459,7 @@
     card.classList.add('has-image-preview');
   }
 
-  function addVideoPreview(card, href, filename) {
+  function addVideoPreview(card, href, _filename) {
     if (card.querySelector('.ce-preview')) return;
     var wrap = document.createElement('div');
     wrap.className = 'ce-preview';

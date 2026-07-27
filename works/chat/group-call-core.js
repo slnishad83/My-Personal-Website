@@ -450,7 +450,7 @@
   }
 
   function _cleanupAllPeerConnections() {
-    window.groupCallPeerConnections.forEach(function (pc, uid) {
+    window.groupCallPeerConnections.forEach(function (pc, _uid) {
       try { pc.close(); } catch (_) {}
     });
     window.groupCallPeerConnections.clear();

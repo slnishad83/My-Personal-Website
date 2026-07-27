@@ -6,7 +6,7 @@
   var CC = window._CC;
   GC._speakerViewMode = false;
 
-  function _renderAvatar(name, avatar, size) {
+  function _renderAvatar(name, avatar, _size) {
     var initials = (name || '?')[0].toUpperCase();
     if (avatar) {
       return '<img src="' + GC._esc(avatar) + '" class="w-full h-full object-cover rounded-lg" alt="" loading="lazy" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'flex\'">' +
@@ -127,7 +127,7 @@
       container.innerHTML = '<div class="flex flex-col h-full">' + spkHtml + stripHtml2 + '</div>';
       container.className = 'w-full h-full';
     } else {
-      var total = count;
+      var _total = count;
       var gridHtml = participants.map(function (p) {
         var s = GC._participantStreams.get(p.uid);
         var m = GC._participantMuteState.get(p.uid);
@@ -176,7 +176,7 @@
       var uid = tile.getAttribute('data-gc-uid');
       var longPressTimer = null;
 
-      tile.addEventListener('touchstart', function (e) {
+      tile.addEventListener('touchstart', function (_e) {
         longPressTimer = setTimeout(function () {
           longPressTimer = null;
           _showParticipantOptions(uid);

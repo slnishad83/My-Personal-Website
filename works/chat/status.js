@@ -209,7 +209,7 @@
     var uid = _uid();
     if (!d) return;
     var now = _now();
-    var cutoff = now - STATUS_DURATION_MS;
+    var _cutoff = now - STATUS_DURATION_MS;
     try {
       var snap = await d.collection('statuses')
         .where('expiresAt', '>', now)
@@ -313,7 +313,7 @@
     } catch (_) {}
   }
 
-  async function markStatusSeen(statusId, userId) {
+  async function markStatusSeen(statusId, _userId) {
     if (!statusId) return;
     var wasNew = !_seenSet.has(statusId);
     _seenSet.add(statusId);
@@ -537,7 +537,7 @@
     var scrollHtml = '<div class="flex gap-3 overflow-x-auto scrollbar-hide px-2 pb-1" style="scroll-snap-type: x mandatory;">';
     if (hasMyStatus) {
       var myStatuses = _userStatusMap.get(uid) || [];
-      var myLatest = myStatuses[myStatuses.length - 1];
+      var _myLatest = myStatuses[myStatuses.length - 1];
       var myViewCount = 0;
       myStatuses.forEach(function (s) {
         if (Array.isArray(s.seenBy)) myViewCount += s.seenBy.length;
@@ -690,7 +690,7 @@
     };
 
     window._scUpdateTextBg = function (inp) {
-      var v = inp.value.trim();
+      var _v = inp.value.trim();
       _updatePostBtn();
     };
 
@@ -814,7 +814,7 @@
       clearInterval(window._statusReminderInterval);
     }
     window._statusReminderInterval = setInterval(function () {
-      var now = _now();
+      _now();
       var expired = [];
       _statusCache.forEach(function (s, id) {
         if (_isExpired(s)) expired.push(id);

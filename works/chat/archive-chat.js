@@ -73,7 +73,7 @@
   function _showToast(msg, type) { if (App && App.toast) App.toast(msg, type); else if (typeof showToast === 'function') showToast(msg, type); }
 
   function _showUndoToast(chatId, action) {
-    const toastId = 'archive-toast-' + Date.now();
+    const _toastId = 'archive-toast-' + Date.now();
     let toastEl = document.getElementById('archive-undo-toast');
     if (toastEl) toastEl.remove();
     toastEl = document.createElement('div');

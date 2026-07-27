@@ -60,7 +60,7 @@ const QRScanner = (() => {
       ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
       const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
 
-      let decoded = null;
+      let _decoded = null;
       if (typeof BarcodeDetector !== 'undefined') {
         BarcodeDetector.detect(imageData).then(detections => {
           if (detections.length > 0) _handleScan(detections[0].rawValue);

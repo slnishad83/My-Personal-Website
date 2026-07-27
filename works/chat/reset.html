@@ -2,18 +2,232 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <meta name="robots" content="noindex,nofollow" />
-  <meta http-equiv="refresh" content="0;url=login.html" />
-  <title>Reset Redirect</title>
-  <script>
-    (function () {
-      var parentPath = location.pathname.replace(/\/reset(?:\.html)?\/?$/, "") || "/";
-      var target = location.origin + "/login.html";
-      location.replace(target);
-    })();
-  </script>
+  <title>Reset Password — NSL Chat</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Inter', sans-serif;
+      background: #0d1117;
+      color: #e6edf3;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      -webkit-font-smoothing: antialiased;
+    }
+    .reset-card {
+      background: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 16px;
+      padding: 32px 28px;
+      max-width: 420px;
+      width: 100%;
+      text-align: center;
+    }
+    .reset-card .icon-wrap {
+      width: 64px; height: 64px;
+      border-radius: 50%;
+      background: rgba(0, 191, 165, 0.12);
+      display: flex; align-items: center; justify-content: center;
+      margin: 0 auto 16px;
+    }
+    .reset-card .icon-wrap .material-symbols-outlined { font-size: 32px; color: #00bfa5; }
+    .reset-card h1 { font-size: 20px; font-weight: 700; margin-bottom: 6px; color: #fff; }
+    .reset-card .subtitle { font-size: 13px; color: #8b949e; margin-bottom: 24px; }
+    .form-group { margin-bottom: 16px; text-align: left; }
+    .form-group label { display: block; font-size: 12px; font-weight: 600; color: #8b949e; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
+    .form-group input {
+      width: 100%; padding: 12px 14px; border-radius: 10px;
+      border: 1.5px solid #30363d; background: #0d1117; color: #e6edf3;
+      font-size: 14px; outline: none; transition: border-color 0.2s;
+    }
+    .form-group input:focus { border-color: #00bfa5; }
+    .form-group input.error { border-color: #f85149; }
+    .pw-strength { display: flex; gap: 4px; margin-top: 6px; }
+    .pw-strength .bar { height: 3px; flex: 1; border-radius: 2px; background: #30363d; transition: background 0.2s; }
+    .pw-strength .bar.weak { background: #f85149; }
+    .pw-strength .bar.medium { background: #d29922; }
+    .pw-strength .bar.strong { background: #00bfa5; }
+    .submit-btn {
+      width: 100%; padding: 14px; border-radius: 12px; border: none;
+      background: #00bfa5; color: #0d1117; font-size: 14px; font-weight: 700;
+      cursor: pointer; transition: opacity 0.2s; margin-top: 8px;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+    }
+    .submit-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .submit-btn .material-symbols-outlined.animate-spin { animation: spin 1s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .message { padding: 12px; border-radius: 10px; font-size: 13px; margin-top: 12px; display: none; }
+    .message.success { display: block; background: rgba(0,191,165,0.1); color: #00bfa5; border: 1px solid rgba(0,191,165,0.25); }
+    .message.error { display: block; background: rgba(248,81,73,0.1); color: #f85149; border: 1px solid rgba(248,81,73,0.25); }
+    .loading-state { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 40px 0; color: #8b949e; font-size: 14px; }
+    .loading-state .material-symbols-outlined.animate-spin { animation: spin 1s linear infinite; color: #00bfa5; }
+    .back-link { display: inline-block; margin-top: 20px; font-size: 13px; color: #8b949e; text-decoration: none; }
+    .back-link:hover { color: #00bfa5; }
+  </style>
 </head>
 <body>
-  <p>Redirecting to <a href="login.html">login page</a>...</p>
+  <div class="reset-card">
+    <!-- Loading state: validating link -->
+    <div id="loadingState" class="loading-state">
+      <span class="material-symbols-outlined animate-spin">progress_activity</span>
+      <span>Validating reset link...</span>
+    </div>
+
+    <!-- Reset form (hidden until oobCode validated) -->
+    <div id="resetFormWrap" style="display:none">
+      <div class="icon-wrap">
+        <span class="material-symbols-outlined">lock_reset</span>
+      </div>
+      <h1>Set New Password</h1>
+      <p class="subtitle" id="emailDisplay"></p>
+
+      <form id="resetPwForm" novalidate>
+        <div class="form-group">
+          <label for="newPassword">New Password</label>
+          <input id="newPassword" type="password" placeholder="Enter new password" autocomplete="new-password" minlength="8" required />
+          <div class="pw-strength" id="pwStrength">
+            <div class="bar" id="bar1"></div>
+            <div class="bar" id="bar2"></div>
+            <div class="bar" id="bar3"></div>
+            <div class="bar" id="bar4"></div>
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="confirmPassword">Confirm Password</label>
+          <input id="confirmPassword" type="password" placeholder="Re-enter new password" autocomplete="new-password" minlength="8" required />
+        </div>
+        <button type="submit" class="submit-btn" id="resetSubmitBtn">
+          <span class="material-symbols-outlined" style="font-size:20px">verified_user</span>
+          Reset Password
+        </button>
+      </form>
+
+      <div id="resetMessage" class="message"></div>
+    </div>
+
+    <!-- Error state: invalid/expired link -->
+    <div id="errorState" style="display:none">
+      <div class="icon-wrap" style="background:rgba(248,81,73,0.12)">
+        <span class="material-symbols-outlined" style="color:#f85149">error</span>
+      </div>
+      <h1>Link Expired or Invalid</h1>
+      <p class="subtitle" id="errorMessage">This password reset link has expired or is invalid. Please request a new one.</p>
+      <a href="login.html" class="back-link">Back to Login</a>
+    </div>
+  </div>
+
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+  <script>
+    (function() {
+      var firebaseConfig = window.FIREBASE_CONFIG || {};
+      if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+      var auth = firebase.auth();
+
+      var params = new URLSearchParams(window.location.search);
+      var mode = params.get('mode');
+      var oobCode = params.get('oobCode');
+
+      if (mode !== 'resetPassword' || !oobCode) {
+        showState('error');
+        document.getElementById('errorMessage').textContent = 'Invalid reset link. Please request a new one from the login page.';
+        return;
+      }
+
+      auth.verifyPasswordResetCode(oobCode).then(function(email) {
+        document.getElementById('emailDisplay').textContent = 'Resetting password for ' + email;
+        showState('form');
+      }).catch(function() {
+        showState('error');
+      });
+
+      function showState(state) {
+        document.getElementById('loadingState').style.display = state === 'loading' ? 'flex' : 'none';
+        document.getElementById('resetFormWrap').style.display = state === 'form' ? 'block' : 'none';
+        document.getElementById('errorState').style.display = state === 'error' ? 'block' : 'none';
+      }
+
+      var pwInput = document.getElementById('newPassword');
+      pwInput.addEventListener('input', function() {
+        var val = pwInput.value;
+        var score = 0;
+        if (val.length >= 8) score++;
+        if (/[A-Z]/.test(val)) score++;
+        if (/[a-z]/.test(val)) score++;
+        if (/[0-9!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?`~]/.test(val)) score++;
+        var level = score <= 1 ? 'weak' : score <= 2 ? 'medium' : score <= 3 ? 'medium' : 'strong';
+        for (var i = 1; i <= 4; i++) {
+          var bar = document.getElementById('bar' + i);
+          bar.className = 'bar';
+          if (level === 'weak' && i <= 1) bar.classList.add('weak');
+          else if (level === 'medium' && i <= 2) bar.classList.add('medium');
+          else if (level === 'strong' && i <= 4) bar.classList.add('strong');
+        }
+      });
+
+      document.getElementById('resetPwForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        var newPw = pwInput.value;
+        var confirmPw = document.getElementById('confirmPassword').value;
+        var msgEl = document.getElementById('resetMessage');
+        var btn = document.getElementById('resetSubmitBtn');
+
+        msgEl.className = 'message';
+
+        if (newPw.length < 8) {
+          msgEl.textContent = 'Password must be at least 8 characters.';
+          msgEl.className = 'message error';
+          return;
+        }
+        if (!/[A-Z]/.test(newPw)) {
+          msgEl.textContent = 'Password must include at least one uppercase letter.';
+          msgEl.className = 'message error';
+          return;
+        }
+        if (!/[a-z]/.test(newPw)) {
+          msgEl.textContent = 'Password must include at least one lowercase letter.';
+          msgEl.className = 'message error';
+          return;
+        }
+        if (!/[0-9!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?`~]/.test(newPw)) {
+          msgEl.textContent = 'Password must include at least one number or special character.';
+          msgEl.className = 'message error';
+          return;
+        }
+        if (newPw !== confirmPw) {
+          msgEl.textContent = 'Passwords do not match.';
+          msgEl.className = 'message error';
+          return;
+        }
+
+        btn.disabled = true;
+        btn.innerHTML = '<span class="material-symbols-outlined animate-spin" style="font-size:20px">progress_activity</span> Resetting...';
+
+        auth.confirmPasswordReset(oobCode, newPw).then(function() {
+          msgEl.textContent = 'Password reset successful! Redirecting to login...';
+          msgEl.className = 'message success';
+          btn.style.display = 'none';
+          setTimeout(function() { window.location.href = 'login.html'; }, 3000);
+        }).catch(function(err) {
+          var msg = 'Failed to reset password. The link may have expired.';
+          if (err.code === 'auth/weak-password') msg = 'Password is too weak. Use at least 8 characters.';
+          if (err.code === 'auth/expired-action-code') msg = 'This reset link has expired. Please request a new one.';
+          if (err.code === 'auth/invalid-action-code') msg = 'This reset link is invalid. Please request a new one.';
+          msgEl.textContent = msg;
+          msgEl.className = 'message error';
+          btn.disabled = false;
+          btn.innerHTML = '<span class="material-symbols-outlined" style="font-size:20px">verified_user</span> Reset Password';
+        });
+      });
+    })();
+  </script>
 </body>
 </html>

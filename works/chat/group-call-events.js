@@ -319,7 +319,7 @@
       joinGroupCall(data.callId);
     }
   };
-  window.listenForGroupCallParticipants = function (callId, type) {
+  window.listenForGroupCallParticipants = function (callId, _type) {
     GC._listenToCallDoc(callId);
     GC._listenToSignaling(callId);
     GC._listenToIncomingCandidates(callId);

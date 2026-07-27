@@ -7,7 +7,7 @@
  */
 
 const { readFileSync, writeFileSync, mkdirSync, readdirSync, copyFileSync, statSync, rmSync, existsSync } = require('fs');
-const { join, resolve, dirname } = require('path');
+const { join, resolve, dirname: _dirname } = require('path');
 const { createHash } = require('crypto');
 
 const ROOT = __dirname;
@@ -166,7 +166,7 @@ const HTML_PAGES = [
 ];
 
 // Inline script files to extract from index.html
-const INLINE_SCRIPTS = [
+const _INLINE_SCRIPTS = [
   'inline-sw-register.js',
   'inline-broadcast-channel.js',
   'inline-version.js',
@@ -306,7 +306,7 @@ try {
 
 // ── Step 3: Extract inline scripts from index.html ──
 console.log('[build] Extracting inline scripts...');
-const indexHtml = readFile('index.html');
+const _indexHtml = readFile('index.html');
 
 // Inline SW registration script
 const swScript = `/* PWA Service Worker Registration & Version Control */

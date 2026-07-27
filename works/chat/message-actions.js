@@ -79,7 +79,7 @@
         reader.onload = async function () {
           var base64 = reader.result.split(',')[1];
           var fileName = _getFileName(msg);
-          var result = await window.Capacitor.Plugins.Filesystem.writeFile({
+          var _result = await window.Capacitor.Plugins.Filesystem.writeFile({
             path: fileName,
             data: base64,
             directory: window.Capacitor.Plugins.Filesystem.Directory.Downloads
@@ -166,7 +166,7 @@
   function _getReplyPreview(msg) {
     if (!msg) return '';
     var type = _getMsgType(msg);
-    var name = msg.fromName || msg.senderName || msg.senderEmail || '';
+    var _name = msg.fromName || msg.senderName || msg.senderEmail || '';
     var preview;
     switch (type) {
       case 'text': preview = msg.text || ''; break;
@@ -189,7 +189,7 @@
     return preview;
   }
 
-  function _getDeleteMenuHtml(msgId, msg, isOwn) {
+  function _getDeleteMenuHtml(msgId, msg, _isOwn) {
     var canRecall = _canRecall(msg);
     var html = '<div id="msg-delete-menu" class="fixed inset-0 z-50 flex items-end justify-center">' +
       '<div class="absolute inset-0 bg-black/40" onclick="document.getElementById(\'msg-delete-menu\').remove()"></div>' +
@@ -272,8 +272,8 @@
         var bar = document.getElementById('reply-preview');
         if (bar) {
           bar.classList.remove('hidden');
-          var rpName = document.getElementById('reply-preview-name');
-          var rpText = document.getElementById('reply-preview-text');
+          var rpName = document.getElementById('reply-name');
+          var rpText = document.getElementById('reply-text');
           if (rpName) rpName.textContent = name || 'Reply';
           if (rpText) rpText.textContent = preview;
           bar.dataset.replyTo = msgId;
@@ -321,13 +321,22 @@
         msg.id = doc.id;
         var type = _getMsgType(msg);
         var myUid = _uid();
-        var isOwn = msg.from === myUid || msg.senderId === myUid;
+        var _isOwn = msg.from === myUid || msg.senderId === myUid;
         var hasMedia = !!_getMediaUrl(msg);
-        var canRecall = _canRecall(msg);
+        var __canRecall = _canRecall(msg);
         var html = '<div id="msg-ctx-menu" class="fixed inset-0 z-50 flex items-center justify-center">' +
           '<div class="absolute inset-0 bg-black/40" onclick="document.getElementById(\'msg-ctx-menu\').remove()"></div>' +
           '<div class="relative bg-surface rounded-2xl w-full max-w-xs p-2 shadow-2xl z-10">';
         html += '<button class="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl hover:bg-surface-variant/50 transition-colors text-on-surface" onclick="window._MsgActions.reply(\'' + _esc(msgId) + '\');document.getElementById(\'msg-ctx-menu\').remove()"><span class="material-symbols-outlined text-lg">reply</span><span class="text-sm">Reply</span></button>';
+        var _chat = window.App && window.App.currentChat ? window.App.currentChat : null;
+        var _isGroup = _chat && (_chat.type === 'group' || _chat.isGroup);
+        var _senderName = msg.fromName || msg.senderName || 'Someone';
+        var _senderId = msg.from || msg.senderId;
+        var _myUid = _uid();
+        if (_isGroup && _senderId && _senderId !== _myUid) {
+          html += '<button class="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl hover:bg-surface-variant/50 transition-colors text-on-surface" onclick="window._MsgActions.replyPrivately(\'' + _esc(msgId) + '\');document.getElementById(\'msg-ctx-menu\').remove()"><span class="material-symbols-outlined text-lg">forward</span><span class="text-sm">Reply Privately</span></button>';
+          html += '<button class="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl hover:bg-surface-variant/50 transition-colors text-on-surface" onclick="window._MsgActions.messagePerson(\'' + _esc(msgId) + '\');document.getElementById(\'msg-ctx-menu\').remove()"><span class="material-symbols-outlined text-lg">chat</span><span class="text-sm">Message ' + _esc(_senderName) + '</span></button>';
+        }
         if (hasMedia) {
           html += '<button class="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl hover:bg-surface-variant/50 transition-colors text-on-surface" onclick="window._MsgActions.forward(\'' + _esc(msgId) + '\');document.getElementById(\'msg-ctx-menu\').remove()"><span class="material-symbols-outlined text-lg">forward</span><span class="text-sm">Forward</span></button>';
         } else {
@@ -467,8 +476,32 @@
     reply: function (msgId) {
       if (typeof window.replyToMsg === 'function') window.replyToMsg(msgId);
     },
+    replyPrivately: function (msgId) {
+      var chat = window.App && window.App.currentChat ? window.App.currentChat : null;
+      if (!chat || !_db()) return;
+      _db().collection('messages').doc(chat.id).collection('items').doc(msgId).get().then(function (doc) {
+        if (!doc.exists) return;
+        var msg = doc.data();
+        msg.id = doc.id;
+        if (typeof window.ReplyPrivate !== 'undefined') {
+          window.ReplyPrivate.replyPrivately(msg, chat.id);
+        }
+      });
+    },
+    messagePerson: function (msgId) {
+      var chat = window.App && window.App.currentChat ? window.App.currentChat : null;
+      if (!chat || !_db()) return;
+      _db().collection('messages').doc(chat.id).collection('items').doc(msgId).get().then(function (doc) {
+        if (!doc.exists) return;
+        var msg = doc.data();
+        msg.id = doc.id;
+        if (typeof window.ReplyPrivate !== 'undefined') {
+          window.ReplyPrivate.messagePerson(msg, chat.id);
+        }
+      });
+    },
     copy: function (msgId) {
-      if (typeof window.MessageCopy && typeof window.MessageCopy.copy === 'function') {
+      if (window.MessageCopy && typeof window.MessageCopy.copy === 'function') {
         window.MessageCopy.copy(msgId);
       } else if (typeof window.copyMsgText === 'function') {
         window.copyMsgText(msgId);

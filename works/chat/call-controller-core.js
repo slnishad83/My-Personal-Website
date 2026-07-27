@@ -356,6 +356,9 @@
         if (typeof CC.updateCallQuality === 'function') {
           CC.updateCallQuality({ rtt: rtt || 0, packetLoss: packetLoss });
         }
+        if (typeof CC.checkCallNetworkQuality === 'function') {
+          CC.checkCallNetworkQuality();
+        }
       } catch (_) {}
     }, 3000);
   }

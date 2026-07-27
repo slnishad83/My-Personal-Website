@@ -54,7 +54,7 @@
         const name = contact ? (contact.name || contact.displayName || 'Unknown') : 'Unknown';
         const role = roles[mid] || 'member';
         const isMe = mid === uid;
-        const roleColor = role === 'admin' ? 'text-red-400' : role === 'moderator' ? 'text-amber-400' : 'text-on-surface-variant';
+        const _roleColor = role === 'admin' ? 'text-red-400' : role === 'moderator' ? 'text-amber-400' : 'text-on-surface-variant';
 
         return `
           <div class="flex items-center gap-3 p-3 rounded-xl hover:bg-surface-variant/30 transition-colors">
@@ -71,7 +71,7 @@
         `;
       }).join('');
 
-      const permsHtml = ROLE_PERMISSIONS.admin.map(p => `<span class="inline-block bg-primary/10 text-primary px-2 py-0.5 rounded text-[10px] font-bold">${p}</span>`).join(' ');
+      const _permsHtml = ROLE_PERMISSIONS.admin.map(p => `<span class="inline-block bg-primary/10 text-primary px-2 py-0.5 rounded text-[10px] font-bold">${p}</span>`).join(' ');
 
       const modalHtml = `
         <div id="role-manager-modal" class="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-sm flex items-center justify-center animate-fade-in" style="display:flex;">

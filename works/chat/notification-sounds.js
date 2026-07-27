@@ -50,7 +50,7 @@ const NotificationSounds = (() => {
     gain.connect(ctx.destination);
     const now = ctx.currentTime;
     const atk = attackTime || 0.01;
-    const dec = decayTime || duration * 0.3;
+    const _dec = decayTime || duration * 0.3;
     gain.gain.setValueAtTime(0, now);
     gain.gain.linearRampToValueAtTime(volume || 0.15, now + atk);
     gain.gain.exponentialRampToValueAtTime(0.001, now + duration);

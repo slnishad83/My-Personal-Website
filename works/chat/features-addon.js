@@ -413,7 +413,7 @@
       observer.observe(document.body, { childList: true, subtree: true });
     }
 
-    window.transcribeVoice = async (msgId, btn, bubble) => {
+    window.transcribeVoice = async (msgId, btn, _bubble) => {
       if (!msgId) return;
       btn.textContent = 'Transcribing…';
       btn.disabled = true;

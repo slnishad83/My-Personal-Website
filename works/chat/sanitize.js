@@ -52,7 +52,7 @@
     for (var i = 0; i < BLOCKED_PROTOCOLS.length; i++) {
       if (trimmed.startsWith(BLOCKED_PROTOCOLS[i])) return '';
     }
-    var stripped = trimmed.replace(/[\s\x00-\x1f]+/g, '');
+    var stripped = trimmed.replace(/[\s\x00-\x1f]+/g, ''); // eslint-disable-line no-control-regex
     for (var j = 0; j < BLOCKED_PROTOCOLS.length; j++) {
       if (stripped.startsWith(BLOCKED_PROTOCOLS[j])) return '';
     }

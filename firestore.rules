@@ -104,6 +104,10 @@ service cloud.firestore {
         );
     }
 
+    function isChatMember(chatId) {
+      return signedIn() && request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participants;
+    }
+
     function isCommunityCreator(data) {
       return signedIn() && data.createdBy == request.auth.uid;
     }
@@ -869,6 +873,19 @@ service cloud.firestore {
           'status', 'name', 'photoURL', 'participants'
         ]);
       allow delete: if false;
+
+      match /items/{itemId} {
+        allow read: if isChatMember(chatId);
+        allow create: if isChatMember(chatId)
+          && request.resource.data.senderId == request.auth.uid;
+        allow update: if isChatMember(chatId);
+        allow delete: if false;
+      }
+      match /readStatus/{userId} {
+        allow read: if signedIn() && (request.auth.uid == userId
+          || isChatMember(chatId));
+        allow write: if signedIn() && request.auth.uid == userId;
+      }
     }
     match /notificationTelemetry/{entryId} {
       allow read: if signedIn() && resource.data.userId == request.auth.uid;

@@ -9,6 +9,7 @@
   var LOCKOUT_MS = 30000;
   var SESSION_TIMEOUT_MS = 300000;
   var SKIP_DURATION_MS = 900000;
+  var APP_LOCK_TIMEOUT_KEY = 'appLockTimeout';
 
   var _activeOverlay = null;
   var _sessionTimer = null;
@@ -361,7 +362,7 @@
         window.appUnlockedForSession = true;
         if (typeof showToast === 'function') showToast('App unlocked', 'success');
       } else {
-        var attempts = _recordFailedAttempt();
+        _recordFailedAttempt();
         errorEl.textContent = 'Incorrect PIN';
         _shakeElement(dotsContainer);
         _renderDots(dotsContainer, 0, 4, true);
@@ -546,6 +547,40 @@
     }
   }
 
+  function scheduleAutoLock() {
+    clearTimeout(window._appLockTimer);
+    var timeout = parseInt(localStorage.getItem(APP_LOCK_TIMEOUT_KEY) || '0', 10);
+    if (timeout > 0) {
+      window._appLockTimer = setTimeout(function () {
+        lockApp();
+      }, timeout * 60 * 1000);
+    } else {
+      lockApp();
+    }
+  }
+
+  function lockApp() {
+    if (isAppLockEnabled() && !_activeOverlay) {
+      showAppLock();
+    }
+  }
+
+  function getAppLockTimeout() {
+    return parseInt(localStorage.getItem(APP_LOCK_TIMEOUT_KEY) || '0', 10);
+  }
+
+  function setAppLockTimeout(minutes) {
+    localStorage.setItem(APP_LOCK_TIMEOUT_KEY, minutes.toString());
+  }
+
+  document.addEventListener('visibilitychange', function () {
+    if (document.hidden && isAppLockEnabled()) {
+      scheduleAutoLock();
+    } else {
+      clearTimeout(window._appLockTimer);
+    }
+  });
+
   function _initOnLoad() {
     if (isAppLockEnabled()) {
       if (!_isInSkipWindow() && !_isWithinSession()) {
@@ -570,4 +605,7 @@
   window.resetAppLockPin = resetAppLockPin;
   window.isAppLockEnabled = isAppLockEnabled;
   window.toggleAppLock = toggleAppLock;
+  window.scheduleAutoLock = scheduleAutoLock;
+  window.getAppLockTimeout = getAppLockTimeout;
+  window.setAppLockTimeout = setAppLockTimeout;
 })();

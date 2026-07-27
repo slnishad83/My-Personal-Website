@@ -96,19 +96,30 @@
     e.stopPropagation();
     const msgId = msgEl?.dataset?.msgId;
     const isMyMsg = msgEl?.classList?.contains('my-message');
-    const chatId = App?.currentChat?.id || '';
+    const _chatId = App?.currentChat?.id || '';
     const isGroup = App?.currentChat?.isGroup || false;
     const items = [
       { icon: '<span class="material-symbols-outlined" style="font-size:18px">reply</span>', label: 'Reply', shortcut: '', action: () => { if (typeof replyToMessage === 'function') replyToMessage(msgId); } },
-      { icon: '<span class="material-symbols-outlined" style="font-size:18px">reply</span>', label: 'Reply Privately', action: () => {
-        if (isGroup && typeof window.ReplyPrivate !== 'undefined') {
+      ...(isGroup && !isMyMsg ? [
+        { icon: '<span class="material-symbols-outlined" style="font-size:18px">forward</span>', label: 'Reply Privately', action: () => {
           const msgs = (typeof App !== 'undefined' && App.messages && App.currentChat) ? (App.messages[App.currentChat.id] || []) : [];
           const targetMsg = msgs.find(m => m.id === msgId);
-          if (targetMsg) window.ReplyPrivate.replyPrivately(targetMsg, App.currentChat.id);
-        } else if (typeof replyToMessage === 'function') {
-          replyToMessage(msgId);
-        }
-      }},
+          if (targetMsg && typeof window.ReplyPrivate !== 'undefined') {
+            window.ReplyPrivate.replyPrivately(targetMsg, App.currentChat.id);
+          } else if (typeof window._MsgActions === 'object' && window._MsgActions.replyPrivately) {
+            window._MsgActions.replyPrivately(msgId);
+          }
+        }},
+        { icon: '<span class="material-symbols-outlined" style="font-size:18px">chat</span>', label: 'Message ' + (msgEl?.dataset?.senderName || msgEl?.querySelector('.sender-name, .msg-sender')?.textContent?.trim() || 'user'), action: () => {
+          const msgs = (typeof App !== 'undefined' && App.messages && App.currentChat) ? (App.messages[App.currentChat.id] || []) : [];
+          const targetMsg = msgs.find(m => m.id === msgId);
+          if (targetMsg && typeof window.ReplyPrivate !== 'undefined') {
+            window.ReplyPrivate.messagePerson(targetMsg, App.currentChat.id);
+          } else if (typeof window._MsgActions === 'object' && window._MsgActions.messagePerson) {
+            window._MsgActions.messagePerson(msgId);
+          }
+        }},
+      ] : []),
       { icon: '<span class="material-symbols-outlined" style="font-size:18px">translate</span>', label: 'Translate', action: () => { if (typeof showTranslationPopup === 'function') showTranslationPopup(msgId); } },
       { icon: '<span class="material-symbols-outlined" style="font-size:18px">forward</span>', label: 'Forward', action: () => { if (typeof openForwardModal === 'function') openForwardModal(msgId); } },
       { icon: '<span class="material-symbols-outlined" style="font-size:18px">content_copy</span>', label: 'Copy', shortcut: 'Ctrl+C', action: () => {

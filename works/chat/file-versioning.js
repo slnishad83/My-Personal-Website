@@ -15,7 +15,7 @@
 
     let version = 1;
     let previousVersionId = null;
-    let previousVersionUrl = null;
+
 
     try {
       let query = App.db.collection('messages')
@@ -33,7 +33,7 @@
         const prevData = prev.data();
         version = (prevData.attachment?.version || 0) + 1;
         previousVersionId = prev.id;
-        previousVersionUrl = prevData.attachment?.url || null;
+        // previousVersionUrl reserved for future restore feature
       }
     } catch (e) {
       console.warn('File versioning: query failed (index may be building)', e);

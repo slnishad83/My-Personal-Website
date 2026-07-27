@@ -166,11 +166,11 @@
     var body = document.getElementById('nsl-ps-body');
     if (!body) return;
     var user = window.currentUser || {};
-    var initial = (_displayName || user.displayName || '?').charAt(0).toUpperCase();
+    var _initial = (_displayName || user.displayName || '?').charAt(0).toUpperCase();
 
     var avatarHtml = _uploadedPhotoURL
       ? '<img src="' + _esc(_uploadedPhotoURL) + '" alt="Avatar preview">'
-      : '<span class="material-symbols-outlined" style="font-variation-settings:\'FILL\' 1">person</span>';
+      : '<span class="material-symbols-outlined mat-icon--filled">person</span>';
 
     body.innerHTML =
       '<div class="nsl-ps-step" id="nsl-ps-step-content">' +
@@ -358,7 +358,7 @@
     if (body) {
       body.innerHTML =
         '<div class="nsl-ps-step nsl-ps-complete" id="nsl-ps-step-content">' +
-          '<div class="nsl-ps-complete-check"><span class="material-symbols-outlined" style="font-size:36px" style="font-variation-settings:\'FILL\' 1">check</span></div>' +
+          '<div class="nsl-ps-complete-check"><span class="material-symbols-outlined mat-icon--filled" style="font-size:36px">check</span></div>' +
           '<h2>Profile setup complete!</h2>' +
           '<p>Your profile is ready to go.</p>' +
         '</div>';

@@ -144,7 +144,7 @@ const MultiDevice = {
 
     let devicesHtml = '';
     for (const s of sessions) {
-      const statusColor = s.isCurrent ? 'var(--primary)' : (s.isOnline ? '#4caf50' : 'var(--on-surface-variant)');
+      const _statusColor = s.isCurrent ? 'var(--primary)' : (s.isOnline ? '#4caf50' : 'var(--on-surface-variant)');
       const statusText = s.isCurrent ? 'This device' : (s.isOnline ? 'Online' : 'Offline');
       const deviceIcon = s.deviceType === 'mobile' ? 'smartphone' : s.deviceType === 'tablet' ? 'tablet' : 'computer';
       const lastActiveText = s.isOnline ? 'Active now' : `Last active ${this._timeAgo(s.lastActive)}`;

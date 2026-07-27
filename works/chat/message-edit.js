@@ -221,9 +221,9 @@
 
   function _patchDesktopContextMenu() {
     if (window._editDesktopCtxPatched) return;
-    var origCtxHandler = null;
+    var _origCtxHandler = null;
     if (window._MsgActions && typeof window._MsgActions === 'object') {
-      origCtxHandler = window._MsgActions;
+      _origCtxHandler = window._MsgActions;
     }
 
     document.addEventListener('contextmenu', function(e) {
@@ -288,7 +288,7 @@
     if (window._editSendPatched) return;
     var origSend = window.sendMessage || window.sendMsg;
     if (typeof origSend !== 'function') return;
-    var wrapped = false;
+    var _wrapped = false;
     var patchedFn = function() {
       if (_editingMsgId) {
         submitEdit();

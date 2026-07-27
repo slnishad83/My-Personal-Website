@@ -132,7 +132,7 @@
     var duration = options.duration || _getDefaultDuration(type);
     var dismissible = options.dismissible !== false;
     var showProgress = options.progress !== false;
-    var position = options.position || 'bottom-center';
+    var _position = options.position || 'bottom-center';
     var icon = options.icon || _getIcon(type);
     var colors = _getColors(type);
 

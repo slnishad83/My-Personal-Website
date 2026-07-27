@@ -127,7 +127,7 @@
   }
 
   /* ── Show the popup ── */
-  function showContactPopup(uid, senderName, anchorEl) {
+  function showContactPopup(uid, senderName, _anchorEl) {
     closeContactPopup();
 
     var contact = resolveContact(uid);
@@ -153,7 +153,7 @@
 
       var action = actionBtn.getAttribute('data-action-cp');
       var actionUid = actionBtn.getAttribute('data-uid');
-      var actionName = actionBtn.getAttribute('data-name');
+      var _actionName = actionBtn.getAttribute('data-name');
 
       e.preventDefault();
       e.stopPropagation();
