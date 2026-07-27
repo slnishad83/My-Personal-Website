@@ -1,3 +1,13 @@
+const { setGlobalOptions } = require('firebase-functions/v2');
+
+setGlobalOptions({
+  maxInstances: 10,
+  memory: '256MiB',
+  cpu: 0.08,
+  concurrency: 80,
+  region: 'asia-south1'
+});
+
 const notifications = require('./notifications');
 const http = require('./http');
 const callables = require('./callables');
