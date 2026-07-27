@@ -18,8 +18,8 @@
     />
     <title>NSL Chat | Sign In & Sign Up</title>
     <link rel="canonical" href="https://nishadsl.com/works/chat" />
-    <link rel="manifest" href="manifest.json?v=98" />
-    <link rel="apple-touch-icon" href="app-icon-192.png" />
+    <link rel="manifest" href="./assets/manifest-BbZuLBcT.json?v=98" />
+    <link rel="apple-touch-icon" href="./assets/app-icon-192-vvhPsVPK.png" />
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="preconnect" href="https://www.gstatic.com" crossorigin>
@@ -27,9 +27,6 @@
     <link rel="preload" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Manrope:wght@400;500;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
     <noscript><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"></noscript>
     <noscript><link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Manrope:wght@400;500;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet"></noscript>
-    <link rel="stylesheet" href="redesign-base.css">
-    <link rel="stylesheet" href="auth-theme.css">
-    <link rel="stylesheet" href="login-styles.css">
     <script>
       (function() {
         var mode = localStorage.getItem("themeMode") || "system";
@@ -238,6 +235,12 @@
           }
         }
     </style>
+    <script type="module" crossorigin src="./assets/login-DgeAkS_F.js"></script>
+    <link rel="modulepreload" crossorigin href="./assets/firebase-config-B1gHZycV.js">
+    <link rel="modulepreload" crossorigin href="./assets/feature-ux-CRv84mEm.js">
+    <link rel="modulepreload" crossorigin href="./assets/pwa-install-kFyaCo__.js">
+    <link rel="stylesheet" crossorigin href="./assets/feature-ux-DHZpM9Ny.css">
+    <link rel="stylesheet" crossorigin href="./assets/login-DAPzRVLk.css">
   </head>
   <body class="shimmer-bg font-body-md text-on-surface min-h-screen flex flex-col relative overflow-y-auto transition-colors duration-300">
     
@@ -486,7 +489,6 @@
     <script src="https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore-compat.js" crossorigin="anonymous"></script>
     <script src="https://www.gstatic.com/firebasejs/12.16.0/firebase-functions-compat.js" crossorigin="anonymous"></script>
     <!-- Auth logic extracted to app-login.js (Vite module) -->
-    <script type="module" src="app-login.js"></script>
     <noscript><div style="padding:40px;text-align:center"><h2>JavaScript Required</h2><p>NSL Chat requires JavaScript to run.</p></div></noscript>
   </body>
 </html>

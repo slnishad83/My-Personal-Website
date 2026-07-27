@@ -1,10 +1,10 @@
 /**
- * sync-www.js — Build & sync web assets to www/ for Capacitor
+ * sync-www.js — Build & sync web assets to dist/, www/ and root works/chat/
  * 
  * With Vite, this script:
  * 1. Runs `vite build` to produce dist/
- * 2. Copies dist/ contents to www/
- * 3. Copies static assets that Vite doesn't handle (sounds/, sw.js, etc.)
+ * 2. Copies dist/ contents to www/ (for Capacitor) and ROOT (for GitHub Pages / web hosting)
+ * 3. Copies static assets (sounds/, sw.js, etc.)
  */
 const fs = require('fs');
 const path = require('path');
@@ -41,19 +41,32 @@ try {
   process.exit(1);
 }
 
-// ── Step 2: Copy dist/ to www/ ──────────────────────────
-console.log('\nSyncing dist/ to www/...');
+// ── Step 2: Copy dist/ to www/ and ROOT ──────────────────
+console.log('\nSyncing dist/ to www/ and root workspace...');
 ensureDir(WWW);
 
-// Clear old www contents (preserve node_modules if any)
+// Clear old www contents
 for (const entry of fs.readdirSync(WWW)) {
   const entryPath = path.join(WWW, entry);
   fs.rmSync(entryPath, { recursive: true, force: true });
 }
 
-// Copy dist contents
+// Copy dist contents to www/
 copyDirRecursive(DIST, WWW);
 console.log('  Copied dist/ -> www/');
+
+// Copy dist assets/ and HTML files to ROOT (works/chat/) for web hosting
+const distAssets = path.join(DIST, 'assets');
+if (fs.existsSync(distAssets)) {
+  copyDirRecursive(distAssets, path.join(ROOT, 'assets'));
+  console.log('  Copied dist/assets -> works/chat/assets/');
+}
+
+const htmlFiles = fs.readdirSync(DIST).filter(f => f.endsWith('.html') || f === 'version.json' || f === 'sw.js');
+for (const htmlFile of htmlFiles) {
+  fs.copyFileSync(path.join(DIST, htmlFile), path.join(ROOT, htmlFile));
+}
+console.log('  Copied compiled HTML and assets -> works/chat/ root');
 
 // ── Step 3: Copy additional static assets not in dist ───
 const EXTRA_FILES = [
@@ -70,7 +83,6 @@ for (const file of EXTRA_FILES) {
   if (fs.existsSync(src)) {
     ensureDir(path.dirname(dest));
     fs.copyFileSync(src, dest);
-    console.log(`  Copied ${file}`);
   }
 }
 
@@ -78,7 +90,6 @@ for (const file of EXTRA_FILES) {
 const soundsDir = path.join(ROOT, 'sounds');
 if (fs.existsSync(soundsDir)) {
   copyDirRecursive(soundsDir, path.join(WWW, 'sounds'));
-  console.log('  Copied sounds/');
 }
 
 // Copy static images and APK
@@ -89,4 +100,4 @@ for (const file of staticRoot) {
   fs.copyFileSync(path.join(ROOT, file), path.join(WWW, file));
 }
 
-console.log(`\nDone! www/ is ready for Capacitor sync.`);
+console.log(`\nDone! All compiled assets synced to www/ and root works/chat/.`);

@@ -1,14 +1,7 @@
 importScripts('https://www.gstatic.com/firebasejs/12.16.0/firebase-app-compat.js');
 importScripts('https://www.gstatic.com/firebasejs/12.16.0/firebase-messaging-compat.js');
 
-var firebaseConfig = /* __FIREBASE_CONFIG__ */ {
-  apiKey: "AIzaSyCdbut_FdscAjl-OVSlAUhb7TOTiRNkh34",
-  authDomain: "my-team-chat-2255.firebaseapp.com",
-  projectId: "my-team-chat-2255",
-  storageBucket: "my-team-chat-2255.firebasestorage.app",
-  messagingSenderId: "805016891521",
-  appId: "1:805016891521:web:ac9bc7a252bcf33686dd80"
-};
+var firebaseConfig = {"apiKey":"AIzaSyCdbut_FdscAjl-OVSlAUhb7TOTiRNkh34","authDomain":"my-team-chat-2255.firebaseapp.com","projectId":"my-team-chat-2255","storageBucket":"my-team-chat-2255.firebasestorage.app","messagingSenderId":"805016891521","appId":"1:805016891521:web:ac9bc7a252bcf33686dd80"};
 
 firebase.initializeApp(firebaseConfig);
 var messaging = firebase.messaging();

@@ -13,9 +13,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="chat-theme.css" />
-    <link rel="stylesheet" href="auth-theme.css?v=1" />
-    <link rel="manifest" href="manifest.json" />
+    <link rel="manifest" href="./assets/manifest-BbZuLBcT.json" />
     <script>
       (function() {
         var mode = localStorage.getItem("themeMode") || (localStorage.getItem("darkMode") === "true" ? "dark" : "system");
@@ -211,6 +209,10 @@
         .verify-card { padding: 32px 24px 24px; }
       }
     </style>
+    <script type="module" crossorigin src="./assets/verify-DAaTgjrG.js"></script>
+    <link rel="modulepreload" crossorigin href="./assets/firebase-config-B1gHZycV.js">
+    <link rel="stylesheet" crossorigin href="./assets/verify-DS7VfN2z.css">
+    <link rel="stylesheet" crossorigin href="./assets/auth-theme-Bm3XXPqH.css">
   </head>
   <body class="shimmer-bg">
     <div class="verify-ambient">
@@ -236,7 +238,6 @@
     <script src="firebase-config.js"></script>
     <script src="https://www.gstatic.com/firebasejs/12.16.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/12.16.0/firebase-auth-compat.js"></script>
-    <script type="module" src="app-verify.js"></script>
     <script>
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('sw.js').catch(function() {});
