@@ -1,4 +1,4 @@
-﻿'use strict';
+'use strict';
 (function () {
   var STORAGE_KEY = 'nsl_app_lock';
   var ATTEMPTS_KEY = 'nsl_app_lock_attempts';
@@ -312,16 +312,16 @@
 
     _renderDots(dotsContainer, 0, 4, false);
 
-    var keys = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '', '0', 'âŒ«'];
+    var keys = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '', '0', '\u232B'];
     keys.forEach(function (key) {
       var btn = document.createElement('button');
       btn.className = 'nsl-al-key';
       if (key === '') {
         btn.classList.add('special');
         btn.style.visibility = 'hidden';
-      } else if (key === 'âŒ«') {
+      } else if (key === '\u232B') {
         btn.classList.add('special');
-        btn.textContent = 'âŒ«';
+        btn.textContent = '\u232B';
         btn.onclick = function () {
           entered = entered.slice(0, -1);
           _renderDots(dotsContainer, entered.length, 4, false);
@@ -581,13 +581,26 @@
     }
   });
 
+  function _removeLockOverlay() {
+    if (_activeOverlay) {
+      try { _activeOverlay.remove(); } catch (_) {}
+      _activeOverlay = null;
+    }
+    document.querySelectorAll('.nsl-al-overlay').forEach(function (el) {
+      try { el.remove(); } catch (_) {}
+    });
+  }
+
   function _initOnLoad() {
-    if (isAppLockEnabled()) {
-      if (!_isInSkipWindow() && !_isWithinSession()) {
-        showAppLock();
-      } else {
-        _startInactivityTimer();
-      }
+    _updateSession();
+    if (typeof firebase !== 'undefined' && firebase.auth) {
+      firebase.auth().onAuthStateChanged(function (user) {
+        if (user) {
+          _updateSession();
+          _removeLockOverlay();
+          _startInactivityTimer();
+        }
+      });
     }
   }
 

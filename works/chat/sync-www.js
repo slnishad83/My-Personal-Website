@@ -73,6 +73,7 @@ const EXTRA_FILES = [
   'sw.js',
   'manifest.json',
   'firebase-messaging-sw.js',
+  'CNAME',
   'twemoji/twemoji.min.js',
   'twemoji/twemoji-config.js',
 ];
