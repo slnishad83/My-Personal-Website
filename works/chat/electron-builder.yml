@@ -13,19 +13,16 @@ files:
   - "!node_modules/**/*.{md,txt,ts}"
   - "!**/*.map"
 
-extraResources:
-  - from: sounds/
-    to: sounds/
-
 asar: true
 
 win:
   target:
     - target: nsis
-      arch: [x64]
+      arch:
+        - x64
     - target: portable
-      arch: [x64]
-  publisherName: Nishad SL
+      arch:
+        - x64
 
 nsis:
   oneClick: false
@@ -41,42 +38,27 @@ portable:
 mac:
   target:
     - target: dmg
-      arch: [x64, arm64]
+      arch:
+        - x64
+        - arm64
     - target: zip
-      arch: [x64, arm64]
+      arch:
+        - x64
+        - arm64
   category: public.app-category.social-networking
-  hardenedRuntime: true
-  entitlements: electron/build-resources/entitlements.mac.plist
-  entitlementsInherit: electron/build-resources/entitlements.mac.plist
-
-dmg:
-  contents:
-    - x: 130
-      y: 220
-    - x: 410
-      y: 220
-      type: link
-      path: /Applications
 
 linux:
   target:
     - target: AppImage
-      arch: [x64]
+      arch:
+        - x64
     - target: deb
-      arch: [x64]
-    - target: rpm
-      arch: [x64]
+      arch:
+        - x64
   category: Chat
-  desktop:
-    Name: NSL Chat
-    Comment: Modern team messaging
-    Keywords: chat;message;messaging;team;
 
 appImage:
   artifactName: "${productName}-${version}.${ext}"
 
 deb:
-  artifactName: "${productName}-${version}.${ext}"
-
-rpm:
   artifactName: "${productName}-${version}.${ext}"

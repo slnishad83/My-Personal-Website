@@ -1,0 +1,1 @@
+import{n as e,t}from"./firebase-config-B1gHZycV.js";import{f as n}from"./feature-ux-CRv84mEm.js";var r=e((()=>{t(),n()}));export{r as t};
