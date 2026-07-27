@@ -1,4 +1,4 @@
-﻿// Music Player â€” full playback engine with controls, Media Session, background play
+// Music Player â€” full playback engine with controls, Media Session, background play
 (function() {
   'use strict';
 
@@ -226,11 +226,74 @@
     draw();
   }
 
-  // â”€â”€â”€ PLAYBACK â”€â”€â”€
-  Player.play = function(track, playlistId) {
+  // --- OFFLINE MUSIC STORAGE (IndexedDB) ---
+  const MusicOfflineStorage = {
+    _dbName: 'nsl_music_offline_db',
+    _storeName: 'audio_blobs',
+    _db: null,
+    async init() {
+      if (this._db) return this._db;
+      return new Promise((resolve, reject) => {
+        try {
+          const req = indexedDB.open(this._dbName, 1);
+          req.onupgradeneeded = (e) => {
+            const db = e.target.result;
+            if (!db.objectStoreNames.contains(this._storeName)) {
+              db.createObjectStore(this._storeName, { keyPath: 'id' });
+            }
+          };
+          req.onsuccess = (e) => { this._db = e.target.result; resolve(this._db); };
+          req.onerror = () => reject(req.error);
+        } catch(err) { reject(err); }
+      });
+    },
+    async saveTrackBlob(id, blob, metadata = {}) {
+      try {
+        const db = await this.init();
+        return new Promise((resolve, reject) => {
+          const tx = db.transaction(this._storeName, 'readwrite');
+          const store = tx.objectStore(this._storeName);
+          store.put({ id, blob, metadata, cachedAt: Date.now() });
+          tx.oncomplete = () => resolve(true);
+          tx.onerror = () => reject(tx.error);
+        });
+      } catch(e) { return false; }
+    },
+    async getTrackBlob(id) {
+      try {
+        const db = await this.init();
+        return new Promise((resolve) => {
+          const tx = db.transaction(this._storeName, 'readonly');
+          const store = tx.objectStore(this._storeName);
+          const req = store.get(id);
+          req.onsuccess = () => resolve(req.result ? req.result.blob : null);
+          req.onerror = () => resolve(null);
+        });
+      } catch(e) { return null; }
+    },
+    async isTrackCached(id) {
+      const blob = await this.getTrackBlob(id);
+      return !!blob;
+    },
+    async removeTrack(id) {
+      try {
+        const db = await this.init();
+        return new Promise((resolve) => {
+          const tx = db.transaction(this._storeName, 'readwrite');
+          const store = tx.objectStore(this._storeName);
+          store.delete(id);
+          tx.oncomplete = () => resolve(true);
+        });
+      } catch(_) { return false; }
+    }
+  };
+  window.MusicOfflineStorage = MusicOfflineStorage;
+
+  // ─── PLAYBACK ───
+  Player.play = async function(track, playlistId) {
     if (window.__DEBUG__) console.log('[MusicPlayer] play() called:', track ? { id: track.id, title: track.title } : 'null track');
     _haptic('light');
-    if (!track || !track.url) { if (window.__DEBUG__) console.warn('[MusicPlayer] No track or URL'); showToast('No audio URL', 'error'); return; }
+    if (!track || (!track.url && !track.id)) { if (window.__DEBUG__) console.warn('[MusicPlayer] No track or URL'); showToast('No audio URL', 'error'); return; }
     if (playlistId) Player.playlistId = playlistId;
 
     // Resume AudioContext if suspended (mobile autoplay policy)
@@ -238,18 +301,41 @@
       _audioCtx.resume().catch(()=>{});
     }
 
-    if (Player.audio.src === track.url) {
+    let playbackUrl = track.url;
+    let isOfflineSource = false;
+
+    // Check IndexedDB offline cache first
+    try {
+      const offlineBlob = await MusicOfflineStorage.getTrackBlob(track.id);
+      if (offlineBlob) {
+        playbackUrl = URL.createObjectURL(offlineBlob);
+        isOfflineSource = true;
+      }
+    } catch(_) {}
+
+    if (!playbackUrl && navigator.onLine === false) {
+      showToast('Track not cached for offline play ⚡', 'error');
+      return;
+    }
+
+    if (Player.audio.src === playbackUrl) {
       Player.audio.play().catch(() => {});
       return;
     }
 
-    Player.audio.src = track.url;
+    Player.audio.src = playbackUrl;
     Player.audio.load();
     Player.audio.play().then(() => {
-      if (window.__DEBUG__) console.log('[MusicPlayer] Audio playback started successfully');
+      if (window.__DEBUG__) console.log('[MusicPlayer] Audio playback started successfully', isOfflineSource ? '(Offline Cache)' : '(Network)');
+      // If played from network successfully, auto-cache to IndexedDB in background
+      if (!isOfflineSource && track.url && (track.source === 'upload' || track.source === 'library')) {
+        fetch(track.url).then(res => res.blob()).then(blob => {
+          MusicOfflineStorage.saveTrackBlob(track.id, blob, { title: track.title, artist: track.artist });
+        }).catch(()=>{});
+      }
     }).catch(e => {
       if (window.__DEBUG__) console.error('[MusicPlayer] Playback failed:', e.name, e.message);
-      showToast('Playback failed â€” tap to retry', 'error');
+      showToast('Playback failed — tap to retry', 'error');
     });
 
     Player._currentTrack = track;

@@ -1,4 +1,4 @@
-﻿// Music Library â€” working search (iTunes, Deezer, Jamendo, YouTube Cloud Function), upload, play, all inside chat
+// Music Library â€” working search (iTunes, Deezer, Jamendo, YouTube Cloud Function), upload, play, all inside chat
 (function() {
   'use strict';
 
@@ -394,7 +394,10 @@
 
       await App.db.collection('musicLibrary').doc(track.id).set(track);
       App.musicLibrary.unshift(track);
-      showToast('Uploaded: ' + track.title, 'success');
+      if (window.MusicOfflineStorage && file) {
+        window.MusicOfflineStorage.saveTrackBlob(track.id, file, { title: track.title, artist: track.artist });
+      }
+      showToast('Uploaded: ' + track.title + ' ⚡ (Offline Cached)', 'success');
       return track;
     } catch(e) {
       if (window.__DEBUG__) console.error('Upload error:', e);
@@ -544,10 +547,11 @@
 
   // â”€â”€â”€ SEARCH TAB (default â€” shows results inside chat overlay) â”€â”€â”€
   const _LANG_QUERIES = [
-    { lang: 'Malayalam', color: '#FF6B35', queries: ['Malayalam songs', 'Malayalam hits', 'Mollywood songs', 'Malayalam romantic', 'Malayalam new'] },
-    { lang: 'Hindi', color: '#FF9800', queries: ['Hindi songs', 'Bollywood songs', 'Hindi old hits', 'Hindi romantic'] },
-    { lang: 'Tamil', color: '#E91E63', queries: ['Tamil songs', 'Tamil hits', 'Kollywood songs', 'Tamil romantic'] },
-    { lang: 'Telugu', color: '#9C27B0', queries: ['Telugu songs', 'Telugu hits', 'Tollywood songs', 'Telugu romantic'] },
+    { lang: 'Malayalam', color: '#FF6B35', queries: ['Malayalam songs', 'Malayalam hits', 'Mollywood songs', 'Malayalam romantic', 'Malayalam new', 'Malayalam 80s 90s retro'] },
+    { lang: 'Hindi', color: '#FF9800', queries: ['Hindi songs', 'Bollywood songs', 'Hindi old hits', 'Hindi romantic', 'Hindi 90s classics', 'Hindi latest 2026'] },
+    { lang: 'Tamil', color: '#E91E63', queries: ['Tamil songs', 'Tamil hits', 'Kollywood songs', 'Tamil romantic', 'Tamil 80s 90s hits', 'Tamil latest 2026'] },
+    { lang: 'Telugu', color: '#9C27B0', queries: ['Telugu songs', 'Telugu hits', 'Tollywood songs', 'Telugu romantic', 'Telugu retro classics'] },
+    { lang: 'English', color: '#00BCD4', queries: ['Top 40 Hits', 'Classic Rock 80s', '90s Pop Melodies', 'Acoustic Chill', 'Lofi Beats'] },
   ];
 
   const _SEARCH_HIST_KEY = 'nsl_yt_search_history';

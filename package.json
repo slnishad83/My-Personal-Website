@@ -5,6 +5,10 @@
   "main": "contact.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
+    "sync:android": "cd works/chat && npm run sync:android",
+    "sync:ios": "cd works/chat && npm run sync:ios",
+    "electron:build": "cd works/chat && npm run electron:build",
+    "deploy:chat": "cd works/chat && npm run deploy",
     "prepare": "husky"
   },
   "devDependencies": {
