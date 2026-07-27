@@ -1,5 +1,5 @@
-/**
- * in-app-update.js — Play Store in-app update prompts
+﻿/**
+ * in-app-update.js â€” Play Store in-app update prompts
  */
 (function() {
     'use strict';
@@ -32,7 +32,7 @@
                 }
                 return result;
             } catch (e) {
-                console.warn('Update check failed:', e);
+                if (window.__DEBUG__) console.warn('Update check failed:', e);
                 return null;
             }
         },
@@ -60,7 +60,7 @@
                     await InAppUpdate.startImmediateUpdate();
                 }
             } catch (e) {
-                console.warn('Update start failed:', e);
+                if (window.__DEBUG__) console.warn('Update start failed:', e);
             }
         },
 
@@ -70,7 +70,7 @@
                 const { InAppUpdate } = Capacitor.Plugins;
                 await InAppUpdate.completeUpdate();
             } catch (e) {
-                console.warn('Update complete failed:', e);
+                if (window.__DEBUG__) console.warn('Update complete failed:', e);
             }
         }
     };

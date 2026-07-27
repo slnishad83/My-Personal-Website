@@ -9,9 +9,12 @@ android {
 
 apply from: "../capacitor-cordova-android-plugins/cordova.variables.gradle"
 dependencies {
-    implementation project(':capacitor-app')
-    implementation project(':capacitor-push-notifications')
     implementation project(':anuradev-capacitor-background-mode')
+    implementation project(':capacitor-community-contacts')
+    implementation project(':capacitor-app')
+    implementation project(':capacitor-keyboard')
+    implementation project(':capacitor-push-notifications')
+    implementation project(':capacitor-status-bar')
 
 }
 

@@ -1,8 +1,8 @@
-// ========================================================
+﻿// ========================================================
 // whatsapp-share.js  v1
 // Adds two options to every message long-press menu:
-//   1. "Share to WhatsApp"  — opens wa.me link with message text
-//   2. "Save to My Notes"   — forwards message to Saved Messages
+//   1. "Share to WhatsApp"  â€” opens wa.me link with message text
+//   2. "Save to My Notes"   â€” forwards message to Saved Messages
 //
 // Works in browser AND Android Capacitor app.
 // Place in works/chat/ and add before </body> in index.html:
@@ -12,7 +12,7 @@
 (function () {
   'use strict';
 
-  // ── Wait until the core app globals are ready ───────────────
+  // â”€â”€ Wait until the core app globals are ready â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   let _tries = 0;
   function waitForApp(cb) {
     if (typeof showContextMenu === 'function' && typeof db !== 'undefined') {
@@ -20,11 +20,11 @@
     } else if (_tries++ < 120) {
       setTimeout(() => waitForApp(cb), 250);
     } else {
-      console.warn('[wa-share] Core app not found after 30s, giving up.');
+      if (window.__DEBUG__) console.warn('[wa-share] Core app not found after 30s, giving up.');
     }
   }
 
-  // ── Share to WhatsApp ────────────────────────────────────────
+  // â”€â”€ Share to WhatsApp â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   function shareToWhatsApp(messageData) {
     const text = (messageData.text || '').trim();
     const caption = messageData.attachment?.caption || '';
@@ -46,7 +46,7 @@
     }
   }
 
-  // ── Save to My Notes (Saved Messages) ───────────────────────
+  // â”€â”€ Save to My Notes (Saved Messages) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   async function saveToMyNotes(messageData) {
     if (typeof currentUser === 'undefined' || !currentUser) {
       if (typeof showToast === 'function') showToast('Please sign in first', 'error');
@@ -72,7 +72,7 @@
         });
       }
     } catch (e) {
-      console.warn('[wa-share] Could not ensure saved-messages doc:', e);
+      if (window.__DEBUG__) console.warn('[wa-share] Could not ensure saved-messages doc:', e);
     }
 
     const senderName = messageData.senderName || currentUser.displayName || 'Me';
@@ -105,16 +105,16 @@
 
     try {
       await db.collection('messages').add(msgDoc);
-      if (typeof showToast === 'function') showToast('Saved to My Notes ⭐', 'success');
+      if (typeof showToast === 'function') showToast('Saved to My Notes â­', 'success');
     } catch (e) {
-      console.error('[wa-share] Save to notes failed:', e);
+      if (window.__DEBUG__) console.error('[wa-share] Save to notes failed:', e);
       if (typeof showToast === 'function') showToast('Could not save to notes', 'error');
     }
   }
 
-  // ── Inject extra buttons via DOM MutationObserver ───────────
+  // â”€â”€ Inject extra buttons via DOM MutationObserver â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   // We watch for .message-context-menu being added, then append our buttons.
-  // This is non-invasive — no patching of existing functions needed.
+  // This is non-invasive â€” no patching of existing functions needed.
   function injectMenuItems(menu, messageData) {
     // Avoid double-injection
     if (menu.dataset.waShareInjected) return;
@@ -123,7 +123,7 @@
     const text = (messageData?.text || '').trim();
     const hasText = Boolean(text || messageData?.attachment?.caption);
 
-    // "Share to WhatsApp" — only when there is text/caption to share
+    // "Share to WhatsApp" â€” only when there is text/caption to share
     if (hasText) {
       const waBtn = document.createElement('button');
       waBtn.type = 'button';
@@ -136,7 +136,7 @@
       menu.appendChild(waBtn);
     }
 
-    // "Save to My Notes" — always available (forwards text + attachments)
+    // "Save to My Notes" â€” always available (forwards text + attachments)
     const notesBtn = document.createElement('button');
     notesBtn.type = 'button';
     notesBtn.className = 'context-menu-item wa-notes-btn';
@@ -148,7 +148,7 @@
     menu.appendChild(notesBtn);
   }
 
-  // ── MutationObserver: watch for context menu appearing ──────
+  // â”€â”€ MutationObserver: watch for context menu appearing â”€â”€â”€â”€â”€â”€
   function observeContextMenus() {
     var observer = new MutationObserver(function(mutations) {
       for (var m = 0; m < mutations.length; m++) {
@@ -175,7 +175,7 @@
     observer.observe(document.body, { childList: true, subtree: false });
   }
 
-  // ── Patch showContextMenu to capture messageData ─────────────
+  // â”€â”€ Patch showContextMenu to capture messageData â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   // We wrap the existing function once to record the messageData
   // so the MutationObserver can access it.
   function patchShowContextMenu() {
@@ -187,7 +187,7 @@
     };
   }
 
-  // ── Boot ────────────────────────────────────────────────────
+  // â”€â”€ Boot â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   function boot() {
     patchShowContextMenu();
     observeContextMenus();

@@ -1,4 +1,4 @@
-// File Versioning — track file versions, link new uploads to previous versions
+﻿// File Versioning â€” track file versions, link new uploads to previous versions
 (function() {
   'use strict';
 
@@ -36,7 +36,7 @@
         // previousVersionUrl reserved for future restore feature
       }
     } catch (e) {
-      console.warn('File versioning: query failed (index may be building)', e);
+      if (window.__DEBUG__) console.warn('File versioning: query failed (index may be building)', e);
     }
 
     if (!extraMeta) extraMeta = {};
@@ -56,7 +56,7 @@
           });
         }
       } catch (e) {
-        console.warn('File versioning: failed to update version metadata', e);
+        if (window.__DEBUG__) console.warn('File versioning: failed to update version metadata', e);
       }
     }
 

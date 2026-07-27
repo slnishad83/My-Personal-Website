@@ -1,4 +1,4 @@
-/* voice-messages.js — WhatsApp-exact voice message recording + playback */
+﻿/* voice-messages.js â€” WhatsApp-exact voice message recording + playback */
 (function () {
   'use strict';
 
@@ -489,7 +489,7 @@
     var db = _db();
     var user = window.App && window.App.auth ? window.App.auth.currentUser : null;
     if (!chat || !db || !user) { _toast('Not ready', 'error'); return; }
-    _toast('Sending voice message…', 'info');
+    _toast('Sending voice messageâ€¦', 'info');
     try {
       var blobToSend = _recordedBlob;
       var vc = window.VoiceChanger;
@@ -517,13 +517,13 @@
       };
       await db.collection('messages').doc(chat.id).collection('items').add(msgData);
       await db.collection('messages').doc(chat.id).update({
-        lastMessage: '🎤 Voice message',
+        lastMessage: 'ðŸŽ¤ Voice message',
         lastMessageTime: firebase.firestore.FieldValue.serverTimestamp(),
         lastMessageFrom: user.uid
       }).catch(function() {});
       _toast('Voice message sent', 'success');
     } catch (err) {
-      console.error('Voice send error:', err);
+      if (window.__DEBUG__) console.error('Voice send error:', err);
       _toast('Failed to send voice message', 'error');
     }
     _recordedBlob = null;

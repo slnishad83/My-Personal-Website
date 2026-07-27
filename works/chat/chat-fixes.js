@@ -1,15 +1,15 @@
-// chat-fixes.js — Chat system enhancements v3
+﻿// chat-fixes.js â€” Chat system enhancements v3
 // Patches: Myself chat, Chat Requests + Search, Chat Pinning, Message Pinning
 // Fully responsive for web + Capacitor Android
 
 (function () {
   'use strict';
 
-  /* ── helpers ─────────────────────────────────────────────── */
+  /* â”€â”€ helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   function waitForFn(name, cb, tries) {
     tries = tries || 0;
     if (typeof window[name] === 'function') { cb(); return; }
-    if (tries > 180) { console.warn('[chat-fixes] timeout:', name); return; }
+    if (tries > 180) { if (window.__DEBUG__) console.warn('[chat-fixes] timeout:', name); return; }
     setTimeout(function () { waitForFn(name, cb, tries + 1); }, 80);
   }
   function esc(s) {
@@ -23,9 +23,9 @@
       : String(name || '?').charAt(0).toUpperCase();
   }
 
-  /* ════════════════════════════════════════════════════════════
-     1. "MYSELF" CHAT — rename + force-pinned + 👤 avatar
-     ════════════════════════════════════════════════════════════ */
+  /* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+     1. "MYSELF" CHAT â€” rename + force-pinned + ðŸ‘¤ avatar
+     â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
   waitForFn('getSavedMessagesItem', function () {
     var _o = window.getSavedMessagesItem;
     window.getSavedMessagesItem = function () {
@@ -54,18 +54,18 @@
     };
   });
 
-  /* ════════════════════════════════════════════════════════════
-     2. CHAT REQUESTS — Sent + Received + Accepted
+  /* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+     2. CHAT REQUESTS â€” Sent + Received + Accepted
         + real-time search/filter bar
-     ════════════════════════════════════════════════════════════ */
+     â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 
   /* store fetched requests so search can re-filter without re-fetching */
   var _cfAllRequests = [];
 
   var _cfKindMeta = {
-    received: { emoji: '🔵', label: 'Received', cls: 'cf-pill-received' },
-    sent:     { emoji: '🟡', label: 'Sent',     cls: 'cf-pill-sent'     },
-    accepted: { emoji: '✅', label: 'Accepted', cls: 'cf-pill-accepted' },
+    received: { emoji: 'ðŸ”µ', label: 'Received', cls: 'cf-pill-received' },
+    sent:     { emoji: 'ðŸŸ¡', label: 'Sent',     cls: 'cf-pill-sent'     },
+    accepted: { emoji: 'âœ…', label: 'Accepted', cls: 'cf-pill-accepted' },
   };
 
   function _cfRenderRequests(list, requestList) {
@@ -98,7 +98,7 @@
       var previewText = isGroup    ? 'Group invite'
         : isAccepted              ? 'Chat accepted'
         : isOutgoing              ? 'Pending request'
-        : 'Wants to chat' + (req.fromUserEmail ? ' · ' + esc(req.fromUserEmail) : '');
+        : 'Wants to chat' + (req.fromUserEmail ? ' Â· ' + esc(req.fromUserEmail) : '');
 
       var actionsHtml = isAccepted
         ? '<button class="btn btn-success cf-open-btn"    data-to="'+esc(req.toUserId||'')+'">Open Chat</button>'
@@ -185,15 +185,15 @@
     wrap.className = 'cf-search-wrap';
     wrap.innerHTML =
         '<div class="cf-search-inner">'
-      +   '<span class="cf-search-icon">🔍</span>'
-      +   '<input class="cf-search-input" type="search" placeholder="Search by name, email or type…" autocomplete="off" />'
+      +   '<span class="cf-search-icon">ðŸ”</span>'
+      +   '<input class="cf-search-input" type="search" placeholder="Search by name, email or typeâ€¦" autocomplete="off" />'
       +   '<span class="cf-search-count cf-pill cf-pill-count">'+totalCount+'</span>'
       + '</div>'
       + '<div class="cf-filter-chips">'
       +   '<button class="cf-chip cf-chip-active" data-kind="">All</button>'
-      +   '<button class="cf-chip" data-kind="received">🔵 Received</button>'
-      +   '<button class="cf-chip" data-kind="sent">🟡 Sent</button>'
-      +   '<button class="cf-chip" data-kind="accepted">✅ Accepted</button>'
+      +   '<button class="cf-chip" data-kind="received">ðŸ”µ Received</button>'
+      +   '<button class="cf-chip" data-kind="sent">ðŸŸ¡ Sent</button>'
+      +   '<button class="cf-chip" data-kind="accepted">âœ… Accepted</button>'
       + '</div>';
 
     /* insert before anything else */
@@ -273,12 +273,12 @@
         }
 
         if (requestToggle)
-          requestToggle.textContent = requestSection && requestSection.classList.contains('expanded') ? '▲' : '▼';
+          requestToggle.textContent = requestSection && requestSection.classList.contains('expanded') ? 'â–²' : 'â–¼';
 
         if (!_cfAllRequests.length) {
           requestList.innerHTML = '<div class="empty-state">No requests</div>';
           if (requestSection) requestSection.classList.remove('expanded');
-          if (requestToggle)  requestToggle.textContent = '▼';
+          if (requestToggle)  requestToggle.textContent = 'â–¼';
           if (requestSection) requestSection.style.display = 'none';
           return;
         }
@@ -289,15 +289,15 @@
         _cfRenderRequests(_cfAllRequests, requestList);
 
       } catch (err) {
-        console.warn('[chat-fixes] loadReceivedRequests:', err);
+        if (window.__DEBUG__) console.warn('[chat-fixes] loadReceivedRequests:', err);
         if (badge) { badge.textContent=''; badge.classList.remove('show'); badge.style.display='none'; }
       }
     };
   });
 
-  /* ════════════════════════════════════════════════════════════
-     3. CHAT PINNING — single consolidated implementation
-     ════════════════════════════════════════════════════════════ */
+  /* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+     3. CHAT PINNING â€” single consolidated implementation
+     â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
   waitForFn('togglePinChat', function () {
     window.togglePinChat = async function (chatId) {
       if (!window.currentUser || !chatId) return;
@@ -305,14 +305,20 @@
       var userRef = db.collection('users').doc(window.currentUser.uid);
       var ids     = window.pinnedChatIds || [];
       var pinned  = ids.includes(chatId);
-      if (pinned) {
-        await userRef.update({ pinnedChatIds: firebase.firestore.FieldValue.arrayRemove(chatId) });
-        window.pinnedChatIds = ids.filter(function(id){ return id!==chatId; });
-        window.showToast('Chat unpinned');
-      } else {
-        await userRef.update({ pinnedChatIds: firebase.firestore.FieldValue.arrayUnion(chatId) });
-        window.pinnedChatIds = ids.concat([chatId]);
-        window.showToast('Chat pinned to top');
+      try {
+        if (pinned) {
+          await userRef.update({ pinnedChatIds: firebase.firestore.FieldValue.arrayRemove(chatId) });
+          window.pinnedChatIds = ids.filter(function(id){ return id!==chatId; });
+          window.showToast('Chat unpinned');
+        } else {
+          await userRef.update({ pinnedChatIds: firebase.firestore.FieldValue.arrayUnion(chatId) });
+          window.pinnedChatIds = ids.concat([chatId]);
+          window.showToast('Chat pinned to top');
+        }
+      } catch (err) {
+        if (window.__DEBUG__) console.error('[chat-fixes] togglePinChat error:', err);
+        if (typeof window.showToast === 'function') window.showToast('Failed to update pin: ' + (err.message || 'Unknown error'), 'error');
+        return;
       }
       if (typeof window.loadCurrentChatList==='function') window.loadCurrentChatList();
       else {
@@ -322,9 +328,9 @@
     };
   });
 
-  /* ════════════════════════════════════════════════════════════
-     4. MESSAGE PINNING — groups shared, direct personal, limit 20
-     ════════════════════════════════════════════════════════════ */
+  /* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+     4. MESSAGE PINNING â€” groups shared, direct personal, limit 20
+     â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
   waitForFn('pinMessage', function () {
     window.pinMessage = async function (messageId, messageData) {
       if (!window.currentChat || !window.currentUser) return;
@@ -332,23 +338,28 @@
       var isGroup = window.currentChatType === 'group';
       var q = db.collection('pinnedMessages').where('chatId','==',window.currentChat.id);
       if (!isGroup) q = q.where('userId','==',window.currentUser.uid);
-      var existing = await q.get();
-      if (existing.size >= 20) { window.showToast('Max 20 pinned messages','error'); return; }
-      var pin = {
-        chatId:       window.currentChat.id,
-        messageId:    messageId,
-        text:         messageData.text        || '',
-        senderName:   messageData.senderName  || '',
-        timestamp:    messageData.timestamp   || null,
-        pinnedAt:     firebase.firestore.FieldValue.serverTimestamp(),
-        pinnedBy:     window.currentUser.uid,
-        pinnedByName: window.currentUser.displayName || window.currentUser.email || '',
-        isGroupPin:   isGroup,
-      };
-      if (!isGroup) pin.userId = window.currentUser.uid;
-      await db.collection('pinnedMessages').add(pin);
-      window.showToast('Message pinned');
-      window.loadPinnedMessages();
+      try {
+        var existing = await q.get();
+        if (existing.size >= 20) { window.showToast('Max 20 pinned messages','error'); return; }
+        var pin = {
+          chatId:       window.currentChat.id,
+          messageId:    messageId,
+          text:         messageData.text        || '',
+          senderName:   messageData.senderName  || '',
+          timestamp:    messageData.timestamp   || null,
+          pinnedAt:     firebase.firestore.FieldValue.serverTimestamp(),
+          pinnedBy:     window.currentUser.uid,
+          pinnedByName: window.currentUser.displayName || window.currentUser.email || '',
+          isGroupPin:   isGroup,
+        };
+        if (!isGroup) pin.userId = window.currentUser.uid;
+        await db.collection('pinnedMessages').add(pin);
+        window.showToast('Message pinned');
+        window.loadPinnedMessages();
+      } catch (err) {
+        if (window.__DEBUG__) console.error('[chat-fixes] pinMessage error:', err);
+        if (typeof window.showToast === 'function') window.showToast('Failed to pin message: ' + (err.message || 'Unknown error'), 'error');
+      }
     };
   });
 
@@ -359,40 +370,45 @@
       var isGroup = window.currentChatType === 'group';
       var q = db.collection('pinnedMessages').where('chatId','==',window.currentChat.id);
       if (!isGroup) q = q.where('userId','==',window.currentUser.uid);
-      var snap;
-      try { snap = await q.orderBy('pinnedAt','desc').get(); }
-      catch (_) {
-        snap = await q.get();
-        var sorted = snap.docs.slice().sort(function(a,b){
-          var tA = a.data().pinnedAt&&a.data().pinnedAt.toDate ? a.data().pinnedAt.toDate() : new Date(0);
-          var tB = b.data().pinnedAt&&b.data().pinnedAt.toDate ? b.data().pinnedAt.toDate() : new Date(0);
-          return tB - tA;
-        });
-        snap = { docs: sorted };
+      try {
+        var snap;
+        try { snap = await q.orderBy('pinnedAt','desc').get(); }
+        catch (_) {
+          snap = await q.get();
+          var sorted = snap.docs.slice().sort(function(a,b){
+            var tA = a.data().pinnedAt&&a.data().pinnedAt.toDate ? a.data().pinnedAt.toDate() : new Date(0);
+            var tB = b.data().pinnedAt&&b.data().pinnedAt.toDate ? b.data().pinnedAt.toDate() : new Date(0);
+            return tB - tA;
+          });
+          snap = { docs: sorted };
+        }
+        window.pinnedMessages = snap.docs.map(function(d){ return Object.assign({id:d.id},d.data()); });
+      } catch (err) {
+        if (window.__DEBUG__) console.error('[chat-fixes] loadPinnedMessages error:', err);
+        window.pinnedMessages = [];
       }
-      window.pinnedMessages = snap.docs.map(function(d){ return Object.assign({id:d.id},d.data()); });
       var pinnedSection = document.getElementById('pinnedSection');
       var pinnedList    = document.getElementById('pinnedMessagesList');
       var pinnedCount   = document.getElementById('pinnedCount');
       if (!pinnedSection) return;
       if (!window.pinnedMessages.length) { pinnedSection.style.display='none'; return; }
       pinnedSection.style.display = 'block';
-      if (pinnedCount) pinnedCount.textContent = '📌 ' + window.pinnedMessages.length;
+      if (pinnedCount) pinnedCount.textContent = 'ðŸ“Œ ' + window.pinnedMessages.length;
       if (pinnedList) {
         pinnedList.innerHTML = '';
         window.pinnedMessages.forEach(function (p) {
-          var byLine = isGroup && p.pinnedByName ? ' · by '+esc(p.pinnedByName) : '';
+          var byLine = isGroup && p.pinnedByName ? ' Â· by '+esc(p.pinnedByName) : '';
           var div = document.createElement('div');
           div.className = 'pinned-message-item cf-pin-item';
           div.setAttribute('role', 'button');
           div.setAttribute('tabindex', '0');
           div.innerHTML =
-              '<span class="cf-pin-icon">📌</span>'
+              '<span class="cf-pin-icon">ðŸ“Œ</span>'
             + '<div class="cf-pin-body">'
             +   '<div class="cf-pin-sender">'+esc(p.senderName||'')+byLine+'</div>'
-            +   '<div class="cf-pin-text">'+esc((p.text||'').substring(0,60)||'📎 Media')+'</div>'
+            +   '<div class="cf-pin-text">'+esc((p.text||'').substring(0,60)||'ðŸ“Ž Media')+'</div>'
             + '</div>'
-            + '<button class="unpin-btn cf-unpin-btn" data-id="'+esc(p.id)+'" title="Unpin" aria-label="Unpin message">✖</button>';
+            + '<button class="unpin-btn cf-unpin-btn" data-id="'+esc(p.id)+'" title="Unpin" aria-label="Unpin message">âœ–</button>';
           div.addEventListener('click', function(e){
             if (e.target.classList.contains('cf-unpin-btn')) return;
             var el = document.querySelector('[data-message-id="'+p.messageId+'"]');
@@ -422,7 +438,7 @@
 
 
 
-  /* ── 9. Cyber Navigation & Status Bar Interceptors ── */
+  /* â”€â”€ 9. Cyber Navigation & Status Bar Interceptors â”€â”€ */
   function updateDockThemeIcon() {
     var icon = document.querySelector('#dockThemeBtn span');
     if (!icon) return;
@@ -502,5 +518,5 @@
     document.addEventListener('DOMContentLoaded', initCyberDock);
   }
 
-  if (window.__DEBUG__) console.log('[chat-fixes] v3 applied ✓');
+  if (window.__DEBUG__) console.log('[chat-fixes] v3 applied âœ“');
 })();

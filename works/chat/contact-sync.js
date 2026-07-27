@@ -1,5 +1,5 @@
-/**
- * Contact Sync — native address book integration
+﻿/**
+ * Contact Sync â€” native address book integration
  * Reads device contacts and matches them against app users
  * Only works on native platforms (iOS/Android) via @capacitor-community/contacts
  */
@@ -36,7 +36,7 @@ const ContactSync = (() => {
         avatar: c.image?.dataUrl || null,
       }));
     } catch (e) {
-      console.warn('[ContactSync] getDeviceContacts error:', e);
+      if (window.__DEBUG__) console.warn('[ContactSync] getDeviceContacts error:', e);
       return [];
     }
   };
@@ -156,7 +156,7 @@ const ContactSync = (() => {
         btn.disabled = false;
         btn.innerHTML = '<span class="material-symbols-outlined" style="font-size:18px">sync</span> Scan Again';
       } catch (e) {
-        console.warn('[ContactSync] Scan error:', e);
+        if (window.__DEBUG__) console.warn('[ContactSync] Scan error:', e);
         content.innerHTML = '<div style="text-align:center;color:var(--error);padding:40px"><p>Failed to scan contacts. Please try again.</p></div>';
         btn.disabled = false;
         btn.innerHTML = '<span class="material-symbols-outlined" style="font-size:18px">sync</span> Retry';

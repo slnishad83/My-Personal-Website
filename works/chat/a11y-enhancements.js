@@ -532,6 +532,92 @@
     observer.observe(msgWrap, { childList: true, subtree: true });
   }
 
+  function _setupGlobalKeyboardShortcuts() {
+    document.addEventListener('keydown', function(e) {
+      if (e.key !== 'Escape') return;
+
+      var openModals = document.querySelectorAll(
+        '.overlay:not(.hidden), .modal:not(.hidden), .long-press-menu, .nsl-full-picker, .nsl-reaction-viewer'
+      );
+      for (var i = openModals.length - 1; i >= 0; i--) {
+        var modal = openModals[i];
+        var closeBtn = modal.querySelector(
+          '[data-action*="close"], [data-action*="Close"], .close-btn, button[aria-label*="close" i], button[aria-label*="Close"]'
+        );
+        if (closeBtn) {
+          closeBtn.click();
+          e.stopPropagation();
+          return;
+        }
+      }
+    });
+
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter' && e.target.classList.contains('menu-item')) {
+        e.preventDefault();
+        e.target.click();
+      }
+    });
+  }
+
+  function _ensureInteractiveTabindex() {
+    var interactiveSelectors = [
+      'span.material-symbols-outlined[data-action]',
+      'div[data-action][role="button"]:not([tabindex])',
+      'span[data-action][role="button"]:not([tabindex])'
+    ];
+    interactiveSelectors.forEach(function(sel) {
+      document.querySelectorAll(sel).forEach(function(el) {
+        if (!el.hasAttribute('tabindex')) {
+          el.setAttribute('tabindex', '0');
+        }
+      });
+    });
+
+    var observer = new MutationObserver(function(mutations) {
+      mutations.forEach(function(m) {
+        m.addedNodes.forEach(function(node) {
+          if (node.nodeType !== 1) return;
+          var targets = node.matches && node.matches(interactiveSelectors.join(',')) ? [node] : [];
+          if (node.querySelectorAll) {
+            targets = targets.concat(Array.from(node.querySelectorAll(interactiveSelectors.join(','))));
+          }
+          targets.forEach(function(el) {
+            if (!el.hasAttribute('tabindex')) {
+              el.setAttribute('tabindex', '0');
+            }
+          });
+        });
+      });
+    });
+    observer.observe(document.body, { childList: true, subtree: true });
+  }
+
+  function _addTypingAriaLabels() {
+    var typingIndicator = document.getElementById('typing-indicator');
+    if (!typingIndicator) return;
+
+    var statusText = typingIndicator.querySelector('.typing-status-text');
+    if (!statusText) {
+      statusText = document.createElement('span');
+      statusText.className = 'sr-only';
+      statusText.id = 'a11y-typing-status';
+      typingIndicator.appendChild(statusText);
+    }
+
+    var observer = new MutationObserver(function() {
+      var nameEl = typingIndicator.querySelector('.typing-user-name');
+      var name = nameEl ? nameEl.textContent.trim() : 'Someone';
+      var isHidden = typingIndicator.classList.contains('hidden') || typingIndicator.style.display === 'none';
+      if (!isHidden) {
+        statusText.textContent = name + ' is typing';
+      } else {
+        statusText.textContent = '';
+      }
+    });
+    observer.observe(typingIndicator, { attributes: true, attributeFilter: ['class', 'style'], subtree: true });
+  }
+
   function initA11yEnhancements() {
     setupEmojiPickerNav();
     setupMessageNav();
@@ -543,6 +629,9 @@
     _setupNewMessageAnnouncements();
     addSkipLink('#messages-wrap', 'Skip to main content');
     addSkipLink('#chat-list', 'Skip to chat list');
+    _setupGlobalKeyboardShortcuts();
+    _ensureInteractiveTabindex();
+    _addTypingAriaLabels();
   }
 
   window.initA11yEnhancements = initA11yEnhancements;

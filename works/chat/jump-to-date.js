@@ -1,6 +1,6 @@
-'use strict';
+﻿'use strict';
 /**
- * JUMP TO DATE — Open a date picker and scroll to messages from that date
+ * JUMP TO DATE â€” Open a date picker and scroll to messages from that date
  * Queries Firestore for messages near the selected date in the current chat.
  */
 (function () {
@@ -107,7 +107,7 @@
         const dateLabel = start.toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
         if (typeof showToast === 'function') showToast('Jumped to ' + dateLabel, 'success');
       } catch (err) {
-        console.error('[JumpToDate] Error:', err);
+        if (window.__DEBUG__) console.error('[JumpToDate] Error:', err);
         if (loading) loading.style.display = 'none';
         if (resultEl) {
           resultEl.style.display = 'block';

@@ -1,6 +1,6 @@
-'use strict';
+﻿'use strict';
 /**
- * CHAT FOLDERS — Organize chats into folders (Work, Family, Friends, etc.)
+ * CHAT FOLDERS â€” Organize chats into folders (Work, Family, Friends, etc.)
  * Stored in Firestore user doc.
  */
 (function () {
@@ -37,14 +37,14 @@
             chatFolders: customFolders
           }, { merge: true });
         } catch (err) {
-          console.error('[ChatFolders] Firestore save error:', err);
+          if (window.__DEBUG__) console.error('[ChatFolders] Firestore save error:', err);
           if (typeof showToast === 'function') showToast('Failed to save folders: ' + (err.message || 'Unknown error'), 'error');
         }
       }
       try {
         localStorage.setItem('nsl_chat_folders', JSON.stringify(customFolders));
       } catch (err) {
-        console.error('[ChatFolders] localStorage save error:', err);
+        if (window.__DEBUG__) console.error('[ChatFolders] localStorage save error:', err);
         if (typeof showToast === 'function') showToast('Failed to save folders locally', 'error');
       }
     },
@@ -82,7 +82,7 @@
         tab.innerHTML = `<span class="material-symbols-outlined" style="font-size:16px">${folder.icon || 'folder'}</span>${this._esc(folder.name)}`;
 
         if (folder.id !== 'all' && folder.id !== 'unread' && folder.id !== 'groups') {
-          tab.innerHTML += `<button data-remove-folder="${folder.id}" style="background:none;border:none;cursor:pointer;color:inherit;opacity:0.5;padding:0 2px;font-size:12px;" aria-label="Remove folder">✕</button>`;
+          tab.innerHTML += `<button data-remove-folder="${folder.id}" style="background:none;border:none;cursor:pointer;color:inherit;opacity:0.5;padding:0 2px;font-size:12px;" aria-label="Remove folder">âœ•</button>`;
         }
 
         tab.addEventListener('click', (e) => {

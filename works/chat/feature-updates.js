@@ -1,4 +1,4 @@
-/* =============================================
+﻿/* =============================================
    FEATURE UPDATES v1.0
    #23 Typing indicators with name + animated dots
    #25 Enhanced doc/file thumbnails
@@ -33,7 +33,7 @@
   }
 
   /* ================================================
-     #23 — TYPING INDICATOR
+     #23 â€” TYPING INDICATOR
      Show name in personal chat + animated dots
      ================================================ */
   function patchTypingIndicator() {
@@ -81,16 +81,16 @@
                 .filter(d => d.userId !== user.uid && d.isTyping);
               renderTyping(typing);
             },
-            err => console.warn('[TC] typing indicator error', err)
+            err => { if (window.__DEBUG__) console.warn('[TC] typing indicator error', err); }
           );
       } catch (e) {
-        console.warn('[TC] could not set up typing indicator', e);
+        if (window.__DEBUG__) console.warn('[TC] could not set up typing indicator', e);
       }
     };
   }
 
   /* ================================================
-     #25 — ENHANCED DOC / FILE THUMBNAILS
+     #25 â€” ENHANCED DOC / FILE THUMBNAILS
      ================================================ */
   function docTypeClass(ext) {
     const e = (ext || '').toLowerCase();
@@ -125,7 +125,7 @@
       const extUp    = ext.toUpperCase();
       const cls      = docTypeClass(ext);
       const size     = attachment.size ? _bytes(attachment.size) : '';
-      const meta     = _esc([extUp + ' file', size].filter(Boolean).join(' · '));
+      const meta     = _esc([extUp + ' file', size].filter(Boolean).join(' Â· '));
 
       return `<div class="message-attachment">
   <a class="pdf-attachment-card"
@@ -143,7 +143,7 @@
   }
 
   /* ================================================
-     #27 / #28 — MESSAGE INFO full date+time
+     #27 / #28 â€” MESSAGE INFO full date+time
      Temporarily swap formatWhen during showMessageInfo
      ================================================ */
   function patchMessageInfo() {
@@ -166,7 +166,7 @@
   }
 
   /* ================================================
-     #26 — UPLOAD PROGRESS VISIBILITY
+     #26 â€” UPLOAD PROGRESS VISIBILITY
      Intercept Firebase Storage upload tasks and
      inject a slim progress bar into the sending bubble
      ================================================ */
@@ -191,7 +191,7 @@
         wrap.innerHTML = '<div class="tc-upload-progress-bar"></div>';
         const statusText = document.createElement('span');
         statusText.className = 'tc-upload-status-text';
-        statusText.textContent = 'Uploading…';
+        statusText.textContent = 'Uploadingâ€¦';
         bubble.appendChild(wrap);
         bubble.appendChild(statusText);
       }
@@ -202,10 +202,10 @@
         snap => {
           const pct = Math.round((snap.bytesTransferred / snap.totalBytes) * 100) || 0;
           if (bar) bar.style.width = pct + '%';
-          if (txt) txt.textContent = `Uploading… ${pct}%`;
+          if (txt) txt.textContent = `Uploadingâ€¦ ${pct}%`;
         },
         _err => {
-          if (txt) txt.textContent = 'Upload failed — tap Retry';
+          if (txt) txt.textContent = 'Upload failed â€” tap Retry';
           if (bar) { bar.style.width = '100%'; bar.style.background = '#ef4444'; }
         },
         () => {

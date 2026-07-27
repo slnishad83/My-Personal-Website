@@ -1,4 +1,4 @@
-(function() {
+﻿(function() {
   'use strict';
 
   var _uid = function() { return App && App.uid ? App.uid() : (window.currentUser ? window.currentUser.uid : null); };
@@ -24,7 +24,7 @@
     try {
       await ref.set({ blockedUsers: window.blockedUsers || [] }, { merge: true });
     } catch (e) {
-      console.error('[Block] persist failed', e);
+      if (window.__DEBUG__) console.error('[Block] persist failed', e);
     }
   }
 
@@ -40,7 +40,7 @@
         }
       }
     } catch (e) {
-      console.error('[Block] load failed', e);
+      if (window.__DEBUG__) console.error('[Block] load failed', e);
     }
   }
 
@@ -105,7 +105,7 @@
     var avatarSrc = avatar || '';
     var avatarHtml = avatarSrc
       ? '<img class="block-dialog-avatar" src="' + _esc(avatarSrc) + '" alt="" onerror="this.style.display=\'none\'">'
-      : '<div class="block-dialog-avatar" style="display:flex;align-items:center;justify-content:center;font-size:28px;">👤</div>';
+      : '<div class="block-dialog-avatar" style="display:flex;align-items:center;justify-content:center;font-size:28px;">ðŸ‘¤</div>';
     overlay.innerHTML = '\n' +
       '<div class="block-dialog" role="alertdialog">\n' +
       avatarHtml +
@@ -218,7 +218,7 @@
         item.className = 'blocked-user-item';
         var itemAvatar = uavatar
           ? '<img class="blocked-user-avatar" src="' + _esc(uavatar) + '" alt="" onerror="this.style.display=\'none\'">'
-          : '<div class="blocked-user-avatar" style="display:flex;align-items:center;justify-content:center;font-size:18px;">👤</div>';
+          : '<div class="blocked-user-avatar" style="display:flex;align-items:center;justify-content:center;font-size:18px;">ðŸ‘¤</div>';
         item.innerHTML = '\n' +
           itemAvatar +
           '<div class="blocked-user-info">\n' +
@@ -262,7 +262,7 @@
     if (typeof currentChat !== 'undefined' && currentChat && currentChat.id && window.isUserBlocked(currentChat.id)) {
       var indicator = document.createElement('div');
       indicator.className = 'blocked-indicator';
-      indicator.textContent = '🚫 Blocked';
+      indicator.textContent = 'ðŸš« Blocked';
       headerName.parentElement.appendChild(indicator);
     }
   }

@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Saved Messages (Bookmarks) - Feature 11
  * Allows bookmarking any message and viewing them in the "Saved" tab.
  */
@@ -97,7 +97,7 @@
       background:transparent; cursor:pointer; text-align:left;
       color:inherit; transition:background 0.15s;
     `;
-    btn.innerHTML = `<span style="font-size:16px">🔖</span> Save Message`;
+    btn.innerHTML = `<span style="font-size:16px">ðŸ”–</span> Save Message`;
     btn.onmouseenter = () => btn.style.background = 'var(--surface-container-highest)';
     btn.onmouseleave = () => btn.style.background = 'transparent';
     btn.onclick = () => { 
@@ -134,7 +134,7 @@
       });
       if (window.showToast) window.showToast('Message saved to Bookmarks', 'success');
     } catch (e) {
-      console.error('Error saving message:', e);
+      if (window.__DEBUG__) console.error('Error saving message:', e);
       if (window.showToast) window.showToast('Failed to save message', 'error');
     }
   }
@@ -179,9 +179,9 @@
       const timeStr = d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
       
       let preview = msg.text || '';
-      if (msg.type === 'image' || msg.attachment?.type === 'image') preview = '📷 Image ' + preview;
-      if (msg.type === 'video' || msg.attachment?.type === 'video') preview = '🎥 Video ' + preview;
-      if (msg.type === 'voice' || msg.attachment?.type === 'voice') preview = '🎤 Voice message';
+      if (msg.type === 'image' || msg.attachment?.type === 'image') preview = 'ðŸ“· Image ' + preview;
+      if (msg.type === 'video' || msg.attachment?.type === 'video') preview = 'ðŸŽ¥ Video ' + preview;
+      if (msg.type === 'voice' || msg.attachment?.type === 'voice') preview = 'ðŸŽ¤ Voice message';
 
       html += `
         <div class="saved-msg-item" onclick="openSavedMessage('${msg.originalChatId}', '${msg.id}')">

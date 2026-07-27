@@ -1,5 +1,5 @@
-/* ============================================================
-   PRESENCE SYSTEM — Online status, heartbeat, lastSeen
+﻿/* ============================================================
+   PRESENCE SYSTEM â€” Online status, heartbeat, lastSeen
    Detects zombie sessions, multi-device awareness
    ============================================================ */
 'use strict';
@@ -50,7 +50,7 @@ const Presence = {
         userAgent: navigator.userAgent.slice(0, 100),
         platform: window.Platform?.os || 'unknown'
       });
-    } catch (err) { console.warn('[Presence] Failed to set away status:', err.message); }
+    } catch (err) { if (window.__DEBUG__) console.warn('[Presence] Failed to set away status:', err.message); }
     this._emit('status', { status: 'away' });
   },
 
@@ -66,7 +66,7 @@ const Presence = {
         userAgent: navigator.userAgent.slice(0, 100),
         platform: window.Platform?.os || 'unknown'
       }, { merge: true });
-    } catch (err) { console.warn('[Presence] Failed to set online status:', err.message); }
+    } catch (err) { if (window.__DEBUG__) console.warn('[Presence] Failed to set online status:', err.message); }
     this._emit('status', { status: 'online' });
   },
 
@@ -80,7 +80,7 @@ const Presence = {
         onlineStatus: 'offline',
         lastSeen: Date.now()
       }, { merge: true });
-    } catch (err) { console.warn('[Presence] Failed to set offline status:', err.message); }
+    } catch (err) { if (window.__DEBUG__) console.warn('[Presence] Failed to set offline status:', err.message); }
     this._emit('status', { status: 'offline' });
   },
 
@@ -91,7 +91,7 @@ const Presence = {
         customStatus: status,
         lastSeen: Date.now()
       }, { merge: true });
-    } catch (err) { console.warn('[Presence] Failed to set custom status:', err.message); }
+    } catch (err) { if (window.__DEBUG__) console.warn('[Presence] Failed to set custom status:', err.message); }
   },
 
   async setInCall(inCall) {
@@ -102,7 +102,7 @@ const Presence = {
         onlineStatus: inCall ? 'in-call' : this._onlineStatus,
         lastSeen: Date.now()
       }, { merge: true });
-    } catch (err) { console.warn('[Presence] Failed to set in-call status:', err.message); }
+    } catch (err) { if (window.__DEBUG__) console.warn('[Presence] Failed to set in-call status:', err.message); }
   },
 
   _startHeartbeat() {
@@ -114,7 +114,7 @@ const Presence = {
           lastHeartbeat: Date.now(),
           onlineStatus: document.visibilityState === 'visible' ? 'online' : this._onlineStatus
         });
-      } catch (err) { console.warn('[Presence] Heartbeat failed:', err.message); }
+      } catch (err) { if (window.__DEBUG__) console.warn('[Presence] Heartbeat failed:', err.message); }
     }, this._heartbeatInterval);
   },
 

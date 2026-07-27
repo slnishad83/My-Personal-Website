@@ -1,4 +1,4 @@
-(function () {
+﻿(function () {
   'use strict';
 
   var _viewer = null;
@@ -17,7 +17,7 @@
   var _longPressTimer = null;
   var _isLongPress = false;
 
-  var REACTION_EMOJIS = ['👍', '❤️', '😂', '😮', '😢', '🙏'];
+  var REACTION_EMOJIS = ['ðŸ‘', 'â¤ï¸', 'ðŸ˜‚', 'ðŸ˜®', 'ðŸ˜¢', 'ðŸ™'];
 
   var _esc = function(s) { return App && App.escHtml ? App.escHtml(s) : (s ? String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;') : ''); };
   function _toast(msg, t) { if (App && App.toast) App.toast(msg, t); else if (typeof window.showToast === 'function') window.showToast(msg, t); }
@@ -539,7 +539,7 @@
     }).then(function () {
       _toast('Reacted!', 'success');
     }).catch(function (e) {
-      console.warn('[StatusViewer] React error:', e);
+      if (window.__DEBUG__) console.warn('[StatusViewer] React error:', e);
     });
   };
 
@@ -620,7 +620,7 @@
     }).then(function () {
       _toast('Status reported. Thank you.', 'success');
     }).catch(function (e) {
-      console.warn('[StatusViewer] Report error:', e);
+      if (window.__DEBUG__) console.warn('[StatusViewer] Report error:', e);
       _toast('Failed to report', 'error');
     });
   };

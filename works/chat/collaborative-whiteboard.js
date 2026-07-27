@@ -1,4 +1,4 @@
-// Collaborative Whiteboard — shared drawing canvas inside a chat
+﻿// Collaborative Whiteboard â€” shared drawing canvas inside a chat
 (function() {
   'use strict';
 
@@ -279,7 +279,7 @@
         });
       });
     } catch (e) {
-      console.warn('Whiteboard sync init failed:', e);
+      if (window.__DEBUG__) console.warn('Whiteboard sync init failed:', e);
     }
   }
 

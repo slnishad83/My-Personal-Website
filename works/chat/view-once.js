@@ -1,4 +1,4 @@
-/**
+﻿/**
  * View-Once Media
  * Allows sending photos/videos that disappear after being opened once.
  * Media is deleted when the viewer closes the overlay (not on a timer).
@@ -38,7 +38,7 @@
           viewedAt: Date.now(),
         });
       } catch (e) {
-        console.warn('[ViewOnce] markAsViewed error:', e);
+        if (window.__DEBUG__) console.warn('[ViewOnce] markAsViewed error:', e);
       }
     },
 
@@ -53,7 +53,7 @@
               await ref.delete();
             }
           } catch (e) {
-            console.warn('[ViewOnce] Storage delete failed (may already be gone):', e.message || e);
+            if (window.__DEBUG__) console.warn('[ViewOnce] Storage delete failed (may already be gone):', e.message || e);
           }
         }
         const chatId = window.App?.currentChat?.id;
@@ -63,7 +63,7 @@
           await App.db.collection('messages').doc(msgId).delete();
         }
       } catch (e) {
-        console.warn('[ViewOnce] deleteAfterView error:', e);
+        if (window.__DEBUG__) console.warn('[ViewOnce] deleteAfterView error:', e);
       }
     },
 

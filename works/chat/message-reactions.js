@@ -1,12 +1,12 @@
-'use strict';
+﻿'use strict';
 (function () {
-  var QUICK_EMOJIS = ['👍', '❤️', '😂', '😮', '😢', '🙏'];
+  var QUICK_EMOJIS = ['ðŸ‘', 'â¤ï¸', 'ðŸ˜‚', 'ðŸ˜®', 'ðŸ˜¢', 'ðŸ™'];
   var ALL_REACTION_EMOJIS = [
-    '👍', '👎', '❤️', '🧡', '💛', '💚', '💙', '💜', '🖤', '🤍',
-    '😂', '🤣', '😭', '😤', '🤯', '🥺', '😴', '🤔', '😏', '🙄',
-    '😮', '😱', '🤮', '🤧', '😇', '😈', '🤡', '💀', '👻', '👽',
-    '🙏', '👏', '🤝', '💪', '🫶', '✋', '👋', '🤙', '👆', '👇',
-    '❤️‍🔥', '💔', '💯', '🔥', '⭐', '🎉', '🎊', '✅', '❌', '⚠️'
+    'ðŸ‘', 'ðŸ‘Ž', 'â¤ï¸', 'ðŸ§¡', 'ðŸ’›', 'ðŸ’š', 'ðŸ’™', 'ðŸ’œ', 'ðŸ–¤', 'ðŸ¤',
+    'ðŸ˜‚', 'ðŸ¤£', 'ðŸ˜­', 'ðŸ˜¤', 'ðŸ¤¯', 'ðŸ¥º', 'ðŸ˜´', 'ðŸ¤”', 'ðŸ˜', 'ðŸ™„',
+    'ðŸ˜®', 'ðŸ˜±', 'ðŸ¤®', 'ðŸ¤§', 'ðŸ˜‡', 'ðŸ˜ˆ', 'ðŸ¤¡', 'ðŸ’€', 'ðŸ‘»', 'ðŸ‘½',
+    'ðŸ™', 'ðŸ‘', 'ðŸ¤', 'ðŸ’ª', 'ðŸ«¶', 'âœ‹', 'ðŸ‘‹', 'ðŸ¤™', 'ðŸ‘†', 'ðŸ‘‡',
+    'â¤ï¸â€ðŸ”¥', 'ðŸ’”', 'ðŸ’¯', 'ðŸ”¥', 'â­', 'ðŸŽ‰', 'ðŸŽŠ', 'âœ…', 'âŒ', 'âš ï¸'
   ];
 
   var _usageCounts = {};
@@ -91,7 +91,7 @@
     });
 
     var moreBtn = document.createElement('button');
-    moreBtn.textContent = '➕';
+    moreBtn.textContent = 'âž•';
     moreBtn.style.fontSize = '16px';
     moreBtn.onclick = function (e) {
       e.stopPropagation();
@@ -139,15 +139,15 @@
     grid.className = 'nsl-full-picker-grid';
 
     var EMOJI_NAMES = {
-      '👍':'thumbsup','👎':'thumbsdown','❤️':'red_heart','🔥':'fire','😂':'laughing','😮':'open_mouth',
-      '😢':'cry','🙏':'pray','💪':'muscle','👏':'clap','🎉':'party','💯':'100',
-      '🥰':'smiling_face_hearts','😍':'heart_eyes','😎':'sunglasses',
-      '🤔':'hmm','🤣':'rofl','😭':'crying','🥳':'partying','😴':'sleeping',
-      '👀':'eyes','💀':'dead','🤝':'handshake',
-      '✨':'sparkles','🙌':'raised_hands','💕':'two_hearts','⚡':'zap','✅':'check',
-      '😱':'scream','🤡':'clown_face','💜':'purple_heart','🖤':'black_heart','🧡':'orange_heart',
-      '💚':'green_heart','💙':'blue_heart','🤍':'white_heart','💗':'heartpulse',
-      '🫡':'salute','🫶':'heart_hands','🥺':'pleading'
+      'ðŸ‘':'thumbsup','ðŸ‘Ž':'thumbsdown','â¤ï¸':'red_heart','ðŸ”¥':'fire','ðŸ˜‚':'laughing','ðŸ˜®':'open_mouth',
+      'ðŸ˜¢':'cry','ðŸ™':'pray','ðŸ’ª':'muscle','ðŸ‘':'clap','ðŸŽ‰':'party','ðŸ’¯':'100',
+      'ðŸ¥°':'smiling_face_hearts','ðŸ˜':'heart_eyes','ðŸ˜Ž':'sunglasses',
+      'ðŸ¤”':'hmm','ðŸ¤£':'rofl','ðŸ˜­':'crying','ðŸ¥³':'partying','ðŸ˜´':'sleeping',
+      'ðŸ‘€':'eyes','ðŸ’€':'dead','ðŸ¤':'handshake',
+      'âœ¨':'sparkles','ðŸ™Œ':'raised_hands','ðŸ’•':'two_hearts','âš¡':'zap','âœ…':'check',
+      'ðŸ˜±':'scream','ðŸ¤¡':'clown_face','ðŸ’œ':'purple_heart','ðŸ–¤':'black_heart','ðŸ§¡':'orange_heart',
+      'ðŸ’š':'green_heart','ðŸ’™':'blue_heart','ðŸ¤':'white_heart','ðŸ’—':'heartpulse',
+      'ðŸ«¡':'salute','ðŸ«¶':'heart_hands','ðŸ¥º':'pleading'
     };
     function renderGrid(filter) {
       grid.innerHTML = '';
@@ -273,7 +273,7 @@
         _sendReactionNotification(msgId, emoji, data);
       }
     } catch (err) {
-      console.error('Reaction error:', err);
+      if (window.__DEBUG__) console.error('Reaction error:', err);
       if (typeof showToast === 'function') showToast('Failed to react', 'error');
     }
   }

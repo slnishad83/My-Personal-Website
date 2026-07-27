@@ -29,6 +29,9 @@
     // Create drop overlay
     const overlay = document.createElement('div');
     overlay.id = 'dropZoneOverlay';
+    overlay.setAttribute('role', 'status');
+    overlay.setAttribute('aria-live', 'polite');
+    overlay.setAttribute('aria-label', 'File drop zone');
     overlay.innerHTML = `
       <div class="drop-zone-inner">
         <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
@@ -74,6 +77,8 @@
 
       const menu = document.createElement('div');
       menu.id = 'msg-context-menu';
+      menu.setAttribute('role', 'menu');
+      menu.setAttribute('aria-label', 'Message actions');
       menu.style.cssText = 'position:fixed;z-index:99999;background:var(--surface-container-high,#1e2a34);border:1px solid var(--outline-variant,rgba(0,0,0,0.12));border-radius:14px;padding:6px;box-shadow:0 8px 32px rgba(0,0,0,0.4);min-width:180px;animation:fadeIn 0.15s ease;';
 
       const x = Math.min(e.clientX, window.innerWidth - 200);
@@ -175,8 +180,8 @@
         return;
       }
       menu.innerHTML = items.map(item => `
-        <button class="ctx-menu-item" style="display:flex;align-items:center;gap:10px;width:100%;padding:10px 14px;border:none;background:none;color:var(--on-surface);font-size:13px;font-weight:500;cursor:pointer;border-radius:10px;transition:background 0.15s;text-align:left" onpointerenter="this.style.background='var(--surface-container,rgba(0,0,0,0.06))'" onpointerleave="this.style.background='none'">
-          <span class="material-symbols-outlined" style="font-size:18px;color:var(--on-surface-variant)">${item.icon}</span>
+        <button class="ctx-menu-item" role="menuitem" style="display:flex;align-items:center;gap:10px;width:100%;padding:10px 14px;border:none;background:none;color:var(--on-surface);font-size:13px;font-weight:500;cursor:pointer;border-radius:10px;transition:background 0.15s;text-align:left" onpointerenter="this.style.background='var(--surface-container,rgba(0,0,0,0.06))'" onpointerleave="this.style.background='none'">
+          <span class="material-symbols-outlined" aria-hidden="true" style="font-size:18px;color:var(--on-surface-variant)">${item.icon}</span>
           ${item.label}
         </button>
       `).join('');

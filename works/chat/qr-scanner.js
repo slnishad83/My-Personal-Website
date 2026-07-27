@@ -1,5 +1,5 @@
-/**
- * QR Scanner — camera-based QR code reader with NSL Chat pairing protocol
+﻿/**
+ * QR Scanner â€” camera-based QR code reader with NSL Chat pairing protocol
  * Overrides the default openScanner/closeScanner to handle device pairing
  */
 'use strict';
@@ -44,7 +44,7 @@ const QRScanner = (() => {
       if (statusEl) statusEl.textContent = 'Point camera at a QR code';
     } catch (e) {
       if (statusEl) statusEl.textContent = 'Camera access denied. Please allow camera permission.';
-      console.warn('[QRScanner] Camera error:', e);
+      if (window.__DEBUG__) console.warn('[QRScanner] Camera error:', e);
       return;
     }
 
@@ -85,7 +85,7 @@ const QRScanner = (() => {
         if (typeof MultiDevice !== 'undefined') {
           MultiDevice._completePairing(parsed).then(ok => {
             if (ok) {
-              if (statusEl) statusEl.innerHTML = '<span style="color:var(--primary)">✓ Device linked!</span>';
+              if (statusEl) statusEl.innerHTML = '<span style="color:var(--primary)">âœ“ Device linked!</span>';
               setTimeout(_closeScanner, 2000);
             } else {
               if (statusEl) statusEl.textContent = 'Pairing failed. Try again.';

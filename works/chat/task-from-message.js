@@ -1,6 +1,6 @@
-/**
- * Task/To-Do from Message — Create assignable tasks from any chat message.
- * Long-press / context menu → "Create Task" → modal with title, assignee, priority, due date.
+﻿/**
+ * Task/To-Do from Message â€” Create assignable tasks from any chat message.
+ * Long-press / context menu â†’ "Create Task" â†’ modal with title, assignee, priority, due date.
  * Tasks are stored in Firestore `tasks` collection with a `messageId` link.
  */
 (function () {
@@ -44,7 +44,7 @@
       background:transparent; cursor:pointer; text-align:left;
       color:inherit; transition:background 0.15s;
     `;
-    btn.innerHTML = `<span style="font-size:16px">✅</span> Create Task`;
+    btn.innerHTML = `<span style="font-size:16px">âœ…</span> Create Task`;
     btn.onmouseenter = () => btn.style.background = 'var(--surface-container-highest)';
     btn.onmouseleave = () => btn.style.background = 'transparent';
     btn.onclick = () => {
@@ -195,7 +195,7 @@
 
       if (window.openTasksPanel) window.openTasksPanel();
     } catch (e) {
-      console.error('Error creating task:', e);
+      if (window.__DEBUG__) console.error('Error creating task:', e);
       if (window.showToast) window.showToast('Failed to create task', 'error');
     }
   };

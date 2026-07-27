@@ -1,5 +1,5 @@
-/* ============================================================
-   SECURITY — E2E encryption helpers, token refresh, session
+﻿/* ============================================================
+   SECURITY â€” E2E encryption helpers, token refresh, session
    Provides WebCrypto-based message encryption
    UPGRADED: ECDH key exchange, PBKDF2 PIN hashing, WebCrypto storage
    ============================================================ */
@@ -26,12 +26,12 @@ const Security = {
     this._tokenRefreshTimer = setInterval(async () => {
       const user = window.currentUser || App?.currentUser;
       if (user) {
-        try { await user.getIdToken(true); } catch (e) { console.error('[Security] Token refresh failed:', e?.message || e); }
+        try { await user.getIdToken(true); } catch (e) { if (window.__DEBUG__) console.error('[Security] Token refresh failed:', e?.message || e); }
       }
     }, this._tokenRefreshInterval);
   },
 
-  /* ── ECDH Key Exchange (P-256) ──────────────────────── */
+  /* â”€â”€ ECDH Key Exchange (P-256) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   async generateKeyPair() {
     try {
       const keyPair = await crypto.subtle.generateKey(
@@ -41,7 +41,7 @@ const Security = {
       );
       const publicKeyJwk = await crypto.subtle.exportKey('jwk', keyPair.publicKey);
       return { publicKeyJwk, privateKey: keyPair.privateKey };
-    } catch (e) { console.error('[Security] ECDH key pair generation failed:', e); return null; }
+    } catch (e) { if (window.__DEBUG__) console.error('[Security] ECDH key pair generation failed:', e); return null; }
   },
 
   async deriveSharedKey(privateKey, theirPublicKeyJwk) {
@@ -58,24 +58,24 @@ const Security = {
         false,
         ['encrypt', 'decrypt']
       );
-    } catch (e) { console.error('[Security] Shared key derivation failed:', e); return null; }
+    } catch (e) { if (window.__DEBUG__) console.error('[Security] Shared key derivation failed:', e); return null; }
   },
 
   async exportKey(key) {
     try {
       const raw = await crypto.subtle.exportKey('raw', key);
       return btoa(String.fromCharCode(...new Uint8Array(raw)));
-    } catch (e) { console.error('[Security] Key export failed:', e); return null; }
+    } catch (e) { if (window.__DEBUG__) console.error('[Security] Key export failed:', e); return null; }
   },
 
   async importKey(b64) {
     try {
       const bytes = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
       return await crypto.subtle.importKey('raw', bytes, { name: 'AES-GCM' }, true, ['encrypt', 'decrypt']);
-    } catch (e) { console.error('[Security] Key import failed:', e); return null; }
+    } catch (e) { if (window.__DEBUG__) console.error('[Security] Key import failed:', e); return null; }
   },
 
-  /* ── AES-GCM Encryption ─────────────────────────────── */
+  /* â”€â”€ AES-GCM Encryption â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   async encrypt(text, key) {
     if (!key) throw new Error('[Security] encrypt() requires an encryption key');
     try {
@@ -86,7 +86,7 @@ const Security = {
         ciphertext: this._arrayBufferToBase64(ciphertext),
         iv: this._arrayBufferToBase64(iv)
       };
-    } catch (e) { console.error('[Security] encrypt failed:', e); throw e; }
+    } catch (e) { if (window.__DEBUG__) console.error('[Security] encrypt failed:', e); throw e; }
   },
 
   async decrypt(ciphertext, iv, key) {
@@ -99,7 +99,7 @@ const Security = {
     } catch (e) { return { error: true, message: 'Decryption failed' }; }
   },
 
-  /* ── E2E Key Exchange ──────────────────────────────── */
+  /* â”€â”€ E2E Key Exchange â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   async _ensureE2EKeys() {
     if (this._e2ePrivateKey && this._e2ePublicKeyJwk) return;
     const user = window.currentUser || App?.currentUser;
@@ -170,7 +170,7 @@ const Security = {
     return await this.decrypt(ciphertext, iv, key);
   },
 
-  /* ── Room Key Management ────────────────────────────── */
+  /* â”€â”€ Room Key Management â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   async getOrCreateRoomKey(chatId) {
     if (this._keyCache.has(chatId)) return this._keyCache.get(chatId);
     const key = await crypto.subtle.generateKey(
@@ -185,7 +185,7 @@ const Security = {
     return key;
   },
 
-  /* ── Encrypted Storage (WebCrypto + IndexedDB) ──────── */
+  /* â”€â”€ Encrypted Storage (WebCrypto + IndexedDB) â”€â”€â”€â”€â”€â”€â”€â”€ */
   async _initStorageKey() {
     if (this._storageKey) return this._storageKey;
     return new Promise((resolve, reject) => {
@@ -239,7 +239,7 @@ const Security = {
         iv: this._arrayBufferToBase64(iv),
         ts: Date.now()
       }, key);
-    } catch (e) { console.error('[Security] setSecure failed:', e); }
+    } catch (e) { if (window.__DEBUG__) console.error('[Security] setSecure failed:', e); }
   },
 
   async getSecure(key) {
@@ -262,7 +262,7 @@ const Security = {
       const plain = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, deviceKey, ct);
       const decoded = JSON.parse(new TextDecoder().decode(plain));
       return decoded.v;
-    } catch (e) { console.error('[Security] getSecure failed:', e); return null; }
+    } catch (e) { if (window.__DEBUG__) console.error('[Security] getSecure failed:', e); return null; }
   },
 
   async clearSecure() {
@@ -275,10 +275,10 @@ const Security = {
       const tx = db.transaction(this._storageStoreName, 'readwrite');
       tx.objectStore(this._storageStoreName).clear();
       this._storageKey = null;
-    } catch (e) { console.error('[Security] clearSecure failed:', e); }
+    } catch (e) { if (window.__DEBUG__) console.error('[Security] clearSecure failed:', e); }
   },
 
-  /* ── Token Management ────────────────────────────────── */
+  /* â”€â”€ Token Management â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   async getIdToken() {
     const user = window.currentUser || App?.currentUser;
     if (!user) return null;
@@ -291,7 +291,7 @@ const Security = {
     try { await user.getIdToken(true); return true; } catch (e) { return false; }
   },
 
-  /* ── Device Fingerprinting ───────────────────────────── */
+  /* â”€â”€ Device Fingerprinting â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   getDeviceInfo() {
     return {
       platform: navigator.platform || 'unknown',
@@ -310,7 +310,7 @@ const Security = {
     this.clearSecure();
   },
 
-  /* ── Helpers ─────────────────────────────────────────── */
+  /* â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   _arrayBufferToBase64(buffer) {
     const bytes = new Uint8Array(buffer);
     let binary = '';

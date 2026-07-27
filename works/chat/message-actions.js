@@ -1,4 +1,4 @@
-/* message-actions.js — Universal message actions: download, delete, forward, share for ALL message types */
+﻿/* message-actions.js â€” Universal message actions: download, delete, forward, share for ALL message types */
 (function () {
   'use strict';
 
@@ -45,7 +45,7 @@
     var url = _getMediaUrl(msg);
     if (!url) { _toast('No media to download', 'error'); return; }
     var fileName = _getFileName(msg);
-    _toast('Downloading…', 'info');
+    _toast('Downloadingâ€¦', 'info');
     try {
       var response = await fetch(url);
       var blob = await response.blob();
@@ -62,7 +62,7 @@
       }, 100);
       _toast('Downloaded', 'success');
     } catch (err) {
-      console.error('Download error:', err);
+      if (window.__DEBUG__) console.error('Download error:', err);
       window.open(url, '_blank');
       _toast('Opening in new tab', 'info');
     }
@@ -170,22 +170,22 @@
     var preview;
     switch (type) {
       case 'text': preview = msg.text || ''; break;
-      case 'image': preview = '📷 Image'; if (msg.text) preview += ' · ' + msg.text; break;
-      case 'video': preview = '🎬 Video'; if (msg.text) preview += ' · ' + msg.text; break;
-      case 'voice': preview = '🎤 Voice message (' + (msg.audioDuration || '?') + 's)'; break;
-      case 'audio': preview = '🎵 Audio'; break;
-      case 'doc': preview = '📄 ' + (msg.fileName || 'Document'); break;
-      case 'sticker': preview = '🖼️ Sticker'; break;
-      case 'videoNote': preview = '🎥 Video note'; break;
+      case 'image': preview = 'ðŸ“· Image'; if (msg.text) preview += ' Â· ' + msg.text; break;
+      case 'video': preview = 'ðŸŽ¬ Video'; if (msg.text) preview += ' Â· ' + msg.text; break;
+      case 'voice': preview = 'ðŸŽ¤ Voice message (' + (msg.audioDuration || '?') + 's)'; break;
+      case 'audio': preview = 'ðŸŽµ Audio'; break;
+      case 'doc': preview = 'ðŸ“„ ' + (msg.fileName || 'Document'); break;
+      case 'sticker': preview = 'ðŸ–¼ï¸ Sticker'; break;
+      case 'videoNote': preview = 'ðŸŽ¥ Video note'; break;
       case 'location':
         var loc = msg.location || msg;
-        preview = '📍 Location' + (loc.latitude ? ' (' + loc.latitude.toFixed(4) + ', ' + loc.longitude.toFixed(4) + ')' : '');
+        preview = 'ðŸ“ Location' + (loc.latitude ? ' (' + loc.latitude.toFixed(4) + ', ' + loc.longitude.toFixed(4) + ')' : '');
         break;
-      case 'contact': preview = '👤 ' + (msg.contactName || msg.contact?.name || 'Contact'); break;
-      case 'poll': preview = '📊 ' + (msg.pollQuestion || msg.question || 'Poll'); break;
+      case 'contact': preview = 'ðŸ‘¤ ' + (msg.contactName || msg.contact?.name || 'Contact'); break;
+      case 'poll': preview = 'ðŸ“Š ' + (msg.pollQuestion || msg.question || 'Poll'); break;
       default: preview = msg.text || 'Message'; break;
     }
-    if (preview.length > 80) preview = preview.substring(0, 77) + '…';
+    if (preview.length > 80) preview = preview.substring(0, 77) + 'â€¦';
     return preview;
   }
 
@@ -278,7 +278,7 @@
           if (rpText) rpText.textContent = preview;
           bar.dataset.replyTo = msgId;
         }
-      }).catch(function () { orig(msgId); });
+      })['catch'](function () { orig(msgId); });
     };
   }
 
@@ -298,7 +298,7 @@
         var isOwn = msg.from === myUid || msg.senderId === myUid;
         var html = _getDeleteMenuHtml(msgId, msg, isOwn);
         document.body.insertAdjacentHTML('beforeend', html);
-      }).catch(function () { if (orig) orig(msgId); });
+      })['catch'](function () { if (orig) orig(msgId); });
     };
   }
 
@@ -357,6 +357,8 @@
         html += '<button class="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl hover:bg-surface-variant/50 transition-colors text-red-500" onclick="window._MsgActions.delete(\'' + _esc(msgId) + '\');document.getElementById(\'msg-ctx-menu\').remove()"><span class="material-symbols-outlined text-lg">delete</span><span class="text-sm">Delete</span></button>';
         html += '</div></div>';
         document.body.insertAdjacentHTML('beforeend', html);
+      })['catch'](function (err) {
+        if (window.__DEBUG__) console.error('[MsgActions] context menu fetch error:', err);
       });
     }, true);
     window._ctxMenuPatched = true;
@@ -453,6 +455,8 @@
         var msg = doc.data();
         msg.id = doc.id;
         downloadMediaNative(msg);
+      })['catch'](function (err) {
+        if (window.__DEBUG__) console.error('[MsgActions] download fetch error:', err);
       });
     },
     delete: function (msgId) {
@@ -466,6 +470,8 @@
         var isOwn = msg.from === myUid || msg.senderId === myUid;
         var html = _getDeleteMenuHtml(msgId, msg, isOwn);
         document.body.insertAdjacentHTML('beforeend', html);
+      })['catch'](function (err) {
+        if (window.__DEBUG__) console.error('[MsgActions] delete fetch error:', err);
       });
     },
     deleteForMe: function (msgId) { _deleteMessage(msgId, 'me'); },
@@ -486,6 +492,8 @@
         if (typeof window.ReplyPrivate !== 'undefined') {
           window.ReplyPrivate.replyPrivately(msg, chat.id);
         }
+      })['catch'](function (err) {
+        if (window.__DEBUG__) console.error('[MsgActions] replyPrivately fetch error:', err);
       });
     },
     messagePerson: function (msgId) {
@@ -498,6 +506,8 @@
         if (typeof window.ReplyPrivate !== 'undefined') {
           window.ReplyPrivate.messagePerson(msg, chat.id);
         }
+      })['catch'](function (err) {
+        if (window.__DEBUG__) console.error('[MsgActions] messagePerson fetch error:', err);
       });
     },
     copy: function (msgId) {
@@ -522,7 +532,12 @@
           if (!isPinned && typeof window.PinnedHeader === 'object' && typeof window.PinnedHeader.show === 'function') {
             window.PinnedHeader.show(chat.id);
           }
+        })['catch'](function (err) {
+          if (window.__DEBUG__) console.error('[MsgActions] pin update error:', err);
+          _toast('Failed to pin message', 'error');
         });
+      })['catch'](function (err) {
+        if (window.__DEBUG__) console.error('[MsgActions] pin fetch error:', err);
       });
     },
     info: function (msgId) {
@@ -547,6 +562,8 @@
             '<span class="material-symbols-outlined">close</span><span class="font-medium text-sm">Close</span></button>' +
             '</div></div>';
           document.body.insertAdjacentHTML('beforeend', html);
+        })['catch'](function (err) {
+          if (window.__DEBUG__) console.error('[MsgActions] info fetch error:', err);
         });
       }
     },
@@ -556,6 +573,8 @@
       _db().collection('messages').doc(chat.id).collection('items').doc(msgId).get().then(function (doc) {
         if (!doc.exists) return;
         _showShareLocation(doc.data());
+      })['catch'](function (err) {
+        if (window.__DEBUG__) console.error('[MsgActions] shareLocation fetch error:', err);
       });
     },
     addContact: function (msgId) {
@@ -564,6 +583,8 @@
       _db().collection('messages').doc(chat.id).collection('items').doc(msgId).get().then(function (doc) {
         if (!doc.exists) return;
         _addContact(doc.data());
+      })['catch'](function (err) {
+        if (window.__DEBUG__) console.error('[MsgActions] addContact fetch error:', err);
       });
     }
   };

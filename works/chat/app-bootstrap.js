@@ -1,4 +1,4 @@
-'use strict';
+﻿'use strict';
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', function () {
     navigator.serviceWorker.register('/works/chat/dist/sw.js', { scope: '/works/chat/', updateViaCache: 'none' })
@@ -16,7 +16,7 @@ if ('serviceWorker' in navigator) {
           }
         });
       })
-      .catch(function (err) { console.warn('[SW] Registration failed:', err); });
+      .catch(function (err) { if (window.__DEBUG__) console.warn('[SW] Registration failed:', err); });
   });
 }
 
@@ -34,10 +34,17 @@ window.addEventListener('load', async function() {
   if (window.InitLazyImages) InitLazyImages();
 
   if (window.OfflineQueue) await OfflineQueue.init();
+  if (window.Monitoring) Monitoring.init();
 });
 
-firebase.auth().onAuthStateChanged(function(user) {
+var _authRetryCount = 0;
+var _authMaxRetries = 3;
+function _authStateChanged(user) {
+  _authRetryCount = 0;
   window.currentUser = user || null;
+  if (window.Monitoring) {
+    if (user) { Monitoring.setUser(user); } else { Monitoring.clearUser(); }
+  }
   if (user) {
     async function initAuthSubsystems() {
       try {
@@ -47,7 +54,7 @@ firebase.auth().onAuthStateChanged(function(user) {
         if (window.ShouldShowOnboarding && ShouldShowOnboarding()) {
           setTimeout(function() { if (window.ShowOnboarding) ShowOnboarding(); }, 1500);
         }
-      } catch (e) { console.warn('[Bootstrap] Auth subsystem init error:', e); }
+      } catch (e) { if (window.__DEBUG__) console.warn('[Bootstrap] Auth subsystem init error:', e); }
     }
     initAuthSubsystems();
   } else {
@@ -60,11 +67,56 @@ firebase.auth().onAuthStateChanged(function(user) {
       window.location.replace('login.html');
     }
   }
-});
+}
 
-/* ══════════════════════════════════════════════════════════════
-   IDLE TIMEOUT — Lock after 30 minutes of inactivity
-   ══════════════════════════════════════════════════════════════ */
+function _authStateChangedWithRetry(user) {
+  _authRetryCount = 0;
+  _authStateChanged(user);
+}
+
+try {
+  firebase.auth().onAuthStateChanged(_authStateChangedWithRetry, function (err) {
+    _authRetryCount++;
+    if (window.__DEBUG__) console.error('[Bootstrap] Auth state listener error:', err?.message || err);
+    if (_authRetryCount < _authMaxRetries) {
+      setTimeout(function () {
+        try {
+          firebase.auth().onAuthStateChanged(_authStateChanged, function (_retryErr) {
+            _authRetryCount++;
+            if (_authRetryCount >= _authMaxRetries) {
+              if (typeof window.showToast === 'function') {
+                window.showToast('Connection issue. Please refresh the page.', 'error');
+              }
+            }
+          });
+        } catch (_) {}
+      }, 2000 * Math.pow(2, _authRetryCount - 1));
+    } else {
+      if (typeof window.showToast === 'function') {
+        window.showToast('Connection issue. Please refresh the page.', 'error');
+      }
+    }
+  });
+} catch (e) {
+  if (window.__DEBUG__) console.error('[Bootstrap] Failed to register auth listener:', e);
+}
+
+if (window.App) {
+  window.App._firebaseUnsubscribers = [];
+  window.App.registerUnsubscriber = function (fn) {
+    if (typeof fn === 'function') window.App._firebaseUnsubscribers.push(fn);
+  };
+  window.App.destroyAllSubscriptions = function () {
+    window.App._firebaseUnsubscribers.forEach(function (fn) {
+      try { fn(); } catch (_) {}
+    });
+    window.App._firebaseUnsubscribers = [];
+  };
+}
+
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+   IDLE TIMEOUT â€” Lock after 30 minutes of inactivity
+   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 
 var _idleTimer;
 function resetIdleTimer() {

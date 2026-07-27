@@ -1,8 +1,8 @@
-// Music Player — full playback engine with controls, Media Session, background play
+﻿// Music Player â€” full playback engine with controls, Media Session, background play
 (function() {
   'use strict';
 
-  // ─── STATE ───
+  // â”€â”€â”€ STATE â”€â”€â”€
   const Player = {
     audio: null,
     queue: [],           // [{id, title, artist, url, thumbnail, duration, addedBy, addedByName}]
@@ -29,7 +29,7 @@
   };
   window.MusicPlayer = Player;
 
-  // Safety fallback — playlist-core.js defines the real version, but this prevents crashes if load order changes
+  // Safety fallback â€” playlist-core.js defines the real version, but this prevents crashes if load order changes
   if (typeof window.formatTrackDuration !== 'function') {
     window.formatTrackDuration = function(seconds) {
       if (!seconds || seconds <= 0) return '0:00';
@@ -56,7 +56,7 @@
     } catch(_) {}
   }
 
-  // ─── INIT ───
+  // â”€â”€â”€ INIT â”€â”€â”€
   function _init() {
     Player.audio = new Audio();
     Player.audio.preload = 'auto';
@@ -80,7 +80,7 @@
     try { _eqGains = JSON.parse(localStorage.getItem('nsl_eq_gains') || '[0,0,0,0,0,0,0,0,0,0]'); } catch(_) {}
   }
 
-  // ─── EQUALIZER ───
+  // â”€â”€â”€ EQUALIZER â”€â”€â”€
   let _audioCtx = null;
   let _analyser = null;
   let _eqBands = null;
@@ -125,7 +125,7 @@
       lastNode.connect(_audioCtx.destination);
       _eqEnabled = true;
     } catch (e) {
-      console.warn('Equalizer init failed:', e);
+      if (window.__DEBUG__) console.warn('Equalizer init failed:', e);
     }
   };
 
@@ -226,11 +226,11 @@
     draw();
   }
 
-  // ─── PLAYBACK ───
+  // â”€â”€â”€ PLAYBACK â”€â”€â”€
   Player.play = function(track, playlistId) {
     if (window.__DEBUG__) console.log('[MusicPlayer] play() called:', track ? { id: track.id, title: track.title } : 'null track');
     _haptic('light');
-    if (!track || !track.url) { console.warn('[MusicPlayer] No track or URL'); showToast('No audio URL', 'error'); return; }
+    if (!track || !track.url) { if (window.__DEBUG__) console.warn('[MusicPlayer] No track or URL'); showToast('No audio URL', 'error'); return; }
     if (playlistId) Player.playlistId = playlistId;
 
     // Resume AudioContext if suspended (mobile autoplay policy)
@@ -248,8 +248,8 @@
     Player.audio.play().then(() => {
       if (window.__DEBUG__) console.log('[MusicPlayer] Audio playback started successfully');
     }).catch(e => {
-      console.error('[MusicPlayer] Playback failed:', e.name, e.message);
-      showToast('Playback failed — tap to retry', 'error');
+      if (window.__DEBUG__) console.error('[MusicPlayer] Playback failed:', e.name, e.message);
+      showToast('Playback failed â€” tap to retry', 'error');
     });
 
     Player._currentTrack = track;
@@ -284,7 +284,7 @@
     _hideMiniPlayer();
   };
 
-  // ─── QUEUE ───
+  // â”€â”€â”€ QUEUE â”€â”€â”€
   Player.setQueue = function(tracks, startIndex) {
     Player._originalOrder = [...tracks];
     if (Player.isShuffle) {
@@ -359,7 +359,7 @@
     Player.playTrack(prev);
   };
 
-  // ─── CONTROLS ───
+  // â”€â”€â”€ CONTROLS â”€â”€â”€
   Player.seek = function(time) {
     if (Player.audio) Player.audio.currentTime = time;
   };
@@ -411,7 +411,7 @@
     _updatePlayerUI();
   };
 
-  // ─── EVENTS ───
+  // â”€â”€â”€ EVENTS â”€â”€â”€
   function _onTimeUpdate() {
     if (!Player.audio || Player._seeking) return;
     Player.currentTime = Player.audio.currentTime;
@@ -458,7 +458,7 @@
   }
 
   function _onError(e) {
-    console.warn('Audio error:', e);
+    if (window.__DEBUG__) console.warn('Audio error:', e);
     if (Player._retryCount < Player._maxRetries && Player._isOnline) {
       Player._retryCount++;
       showToast(`Retrying... (${Player._retryCount}/${Player._maxRetries})`, 'info');
@@ -470,13 +470,13 @@
         }
       }, 2000 * Player._retryCount);
     } else {
-      showToast('Track unavailable — skipping', 'error');
+      showToast('Track unavailable â€” skipping', 'error');
       Player._retryCount = 0;
       setTimeout(() => Player.next(), 1500);
     }
   }
 
-  // ─── PLAYBACK SPEED ───
+  // â”€â”€â”€ PLAYBACK SPEED â”€â”€â”€
   Player.setPlaybackSpeed = function(speed) {
     Player.playbackSpeed = speed;
     if (Player.audio) Player.audio.playbackRate = speed;
@@ -504,7 +504,7 @@
     }
   }
 
-  // ─── CROSSFADE ───
+  // â”€â”€â”€ CROSSFADE â”€â”€â”€
   Player.setCrossfade = function(seconds) {
     Player.crossfadeDuration = Math.max(0, Math.min(10, seconds));
     localStorage.setItem('nsl_music_crossfade', String(Player.crossfadeDuration));
@@ -555,7 +555,7 @@
     }
   }
 
-  // ─── SLEEP TIMER ───
+  // â”€â”€â”€ SLEEP TIMER â”€â”€â”€
   Player.setSleepTimer = function(minutes) {
     Player.cancelSleepTimer();
     if (minutes <= 0) return;
@@ -607,7 +607,7 @@
 
     panel.innerHTML = `
       <h3 style="margin:0 0 16px;font-size:16px;font-weight:700;text-align:center">Sleep Timer</h3>
-      ${Player._sleepTimerEnd ? `<p style="text-align:center;color:var(--primary);font-size:13px;margin:0 0 12px">Active — auto-stop in <span id="sleep-timer-countdown"></span></p>` : ''}
+      ${Player._sleepTimerEnd ? `<p style="text-align:center;color:var(--primary);font-size:13px;margin:0 0 12px">Active â€” auto-stop in <span id="sleep-timer-countdown"></span></p>` : ''}
       <div style="display:flex;flex-direction:column;gap:8px">
         ${presets.map(p => `<button onclick="MusicPlayer.setSleepTimer(${p.minutes});document.getElementById('sleep-timer-menu')?.remove()" style="padding:12px;border-radius:12px;border:1px solid ${Player._sleepTimerEnd ? 'var(--outline-variant,rgba(0,0,0,0.08))' : 'rgba(124,77,255,0.3)'};background:rgba(124,77,255,0.08);color:var(--on-surface);font-size:14px;font-weight:600;cursor:pointer;text-align:center">${p.label}</button>`).join('')}
       </div>
@@ -629,18 +629,18 @@
     el.textContent = `${m}:${String(s).padStart(2, '0')}`;
   }
 
-  // ─── SHARE TRACK ───
+  // â”€â”€â”€ SHARE TRACK â”€â”€â”€
   Player.shareTrack = function(track) {
     const t = track || Player._currentTrack;
     if (!t) return;
     if (navigator.share) {
-      navigator.share({ title: t.title || 'Song', text: `${t.title || 'Song'} — ${t.artist || 'Unknown'}`, url: window.location.href }).catch(() => {});
+      navigator.share({ title: t.title || 'Song', text: `${t.title || 'Song'} â€” ${t.artist || 'Unknown'}`, url: window.location.href }).catch(() => {});
     } else if (navigator.clipboard) {
-      navigator.clipboard.writeText(`${t.title || 'Song'} — ${t.artist || 'Unknown'}`).then(() => showToast('Copied to clipboard', 'success'));
+      navigator.clipboard.writeText(`${t.title || 'Song'} â€” ${t.artist || 'Unknown'}`).then(() => showToast('Copied to clipboard', 'success'));
     }
   };
 
-  // ─── QUEUE REORDER ───
+  // â”€â”€â”€ QUEUE REORDER â”€â”€â”€
   Player.moveInQueue = function(fromIdx, toIdx) {
     if (fromIdx < 0 || fromIdx >= Player.queue.length) return;
     if (toIdx < 0 || toIdx >= Player.queue.length) return;
@@ -652,7 +652,7 @@
     _updateQueueUI();
   };
 
-  // ─── BACKGROUND MODE (Capacitor) ───
+  // â”€â”€â”€ BACKGROUND MODE (Capacitor) â”€â”€â”€
   let _bgModeActive = false;
 
   function _activateBackgroundMode() {
@@ -677,12 +677,12 @@
     } catch(_) {}
   }
 
-  // ─── NETWORK HANDLING ───
+  // â”€â”€â”€ NETWORK HANDLING â”€â”€â”€
   function _setupNetworkListener() {
     window.addEventListener('online', () => {
       Player._isOnline = true;
       if (Player._currentTrack && !Player.isPlaying) {
-        showToast('Back online — resuming', 'success');
+        showToast('Back online â€” resuming', 'success');
         Player.audio.play().catch(() => {});
       }
     });
@@ -692,7 +692,7 @@
     });
   }
 
-  // ─── QUALITY DISPLAY ───
+  // â”€â”€â”€ QUALITY DISPLAY â”€â”€â”€
   Player.getAudioInfo = function() {
     if (!Player.audio) return null;
     return {
@@ -712,7 +712,7 @@
     showToast(`Speed: ${info.speed}x | Volume: ${info.volume} | Network: ${info.networkType} | ${info.downlink}`, 'info');
   };
 
-  // ─── MEDIA SESSION ───
+  // â”€â”€â”€ MEDIA SESSION â”€â”€â”€
   function _setupMediaSession() {
     if (!('mediaSession' in navigator)) return;
     navigator.mediaSession.setActionHandler('play', () => Player.togglePlay());
@@ -740,7 +740,7 @@
     });
   }
 
-  // ─── SHUFFLE ───
+  // â”€â”€â”€ SHUFFLE â”€â”€â”€
   function _shuffleArray(arr) {
     const a = [...arr];
     for (let i = a.length - 1; i > 0; i--) {
@@ -750,7 +750,7 @@
     return a;
   }
 
-  // ─── UI UPDATE ───
+  // â”€â”€â”€ UI UPDATE â”€â”€â”€
   function _updatePlayButtons() {
     document.querySelectorAll('.music-play-btn').forEach(btn => {
       const icon = btn.querySelector('.material-symbols-outlined');
@@ -849,7 +849,7 @@
     document.querySelectorAll('.queue-item').forEach(el => el.style.opacity = '');
   };
 
-  // ─── MINI PLAYER (Floating, draggable) ───
+  // â”€â”€â”€ MINI PLAYER (Floating, draggable) â”€â”€â”€
   const _MINI_POS_KEY = 'nsl_mini_player_pos';
   let _miniDragging = false;
   let _miniDragStartX = 0;
@@ -979,7 +979,7 @@
     if (bar && Player.duration) bar.style.width = ((Player.currentTime / Player.duration) * 100) + '%';
   }
 
-  // ─── NOW PLAYING BADGE ───
+  // â”€â”€â”€ NOW PLAYING BADGE â”€â”€â”€
   Player.getNowPlayingInfo = function() {
     if (!Player._currentTrack || !Player.isPlaying) return null;
     return { title: Player._currentTrack.title, artist: Player._currentTrack.artist, thumbnail: Player._currentTrack.thumbnail };
@@ -1007,7 +1007,7 @@
     return '<style>@keyframes eqBar{0%{height:4px}100%{height:16px}}</style>';
   };
 
-  // ─── FULL PLAYER ───
+  // â”€â”€â”€ FULL PLAYER â”€â”€â”€
   window.openFullPlayer = function() {
     const track = Player._currentTrack;
     if (!track) { showToast('No track playing', 'info'); return; }
@@ -1124,7 +1124,7 @@
     document.body.appendChild(overlay);
   };
 
-  // ─── QUEUE PANEL ───
+  // â”€â”€â”€ QUEUE PANEL â”€â”€â”€
   window.openPlaylistQueue = function() {
     const existing = document.getElementById('playlist-queue-overlay');
     if (existing) { existing.remove(); return; }
@@ -1153,7 +1153,7 @@
     _updateQueueUI();
   };
 
-  // ─── SCREEN WAKE LOCK ───
+  // â”€â”€â”€ SCREEN WAKE LOCK â”€â”€â”€
   let _wakeLockSentinel = null;
   Player._wakeLockActive = false;
 
@@ -1176,7 +1176,7 @@
         showToast('Screen lock not supported on this device', 'error');
       }
     } catch(e) {
-      console.warn('Wake lock failed:', e);
+      if (window.__DEBUG__) console.warn('Wake lock failed:', e);
       showToast('Could not lock screen', 'error');
     }
   };
@@ -1198,7 +1198,7 @@
     }
   }
 
-  // ─── MINIMIZE PLAYER (Picture-in-Picture style) ───
+  // â”€â”€â”€ MINIMIZE PLAYER (Picture-in-Picture style) â”€â”€â”€
   Player.minimizePlayer = function() {
     const overlay = document.getElementById('full-player-overlay');
     if (overlay) overlay.remove();
@@ -1207,7 +1207,7 @@
     _updateMiniPlayer(Player._currentTrack);
   };
 
-  // ─── RESTORE ───
+  // â”€â”€â”€ RESTORE â”€â”€â”€
   function _restoreSession() {
     try {
       const last = JSON.parse(localStorage.getItem('nsl_last_track') || 'null');
@@ -1227,7 +1227,7 @@
                 if (last._savedPosition > 0) Player.audio.currentTime = last._savedPosition;
                 _updateMiniPlayer(last);
               } else {
-                showToast('Audio expired — search to play again', 'error');
+                showToast('Audio expired â€” search to play again', 'error');
               }
             });
             return;

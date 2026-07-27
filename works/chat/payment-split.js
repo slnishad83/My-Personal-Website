@@ -1,6 +1,6 @@
-'use strict';
+﻿'use strict';
 /**
- * PAYMENT SPLITTING — Split expenses in group chats
+ * PAYMENT SPLITTING â€” Split expenses in group chats
  * Add expenses, calculate who owes whom, show settlement summary.
  */
 (function () {
@@ -28,7 +28,7 @@
         if (typeof showToast === 'function') showToast('Expense added', 'success');
         return record;
       } catch (e) {
-        console.error('[PaymentSplit] Error:', e);
+        if (window.__DEBUG__) console.error('[PaymentSplit] Error:', e);
         if (typeof showToast === 'function') showToast('Failed to add expense', 'error');
       }
     },
@@ -106,7 +106,7 @@
             <span class="material-symbols-outlined" style="font-size:20px;color:var(--primary,#00a884);">receipt_long</span>
             <h3 style="margin:0;flex:1;font-size:16px;font-weight:700;">Expenses</h3>
             <button id="add-expense-btn" style="padding:6px 14px;border-radius:10px;border:none;background:var(--primary,#00a884);color:var(--on-primary,#fff);font-size:12px;font-weight:600;cursor:pointer;">+ Add</button>
-            <button id="close-expense-panel" style="background:none;border:none;cursor:pointer;color:var(--on-surface-variant,#666);font-size:18px;">✕</button>
+            <button id="close-expense-panel" style="background:none;border:none;cursor:pointer;color:var(--on-surface-variant,#666);font-size:18px;">âœ•</button>
           </div>
 
           ${settlements.length > 0 ? `
@@ -132,7 +132,7 @@
                     <span style="font-size:14px;font-weight:600;color:var(--on-surface,#000);">${this._esc(exp.description)}</span>
                     <span style="font-size:14px;font-weight:700;color:var(--primary,#00a884);">$${exp.amount.toFixed(2)}</span>
                   </div>
-                  <div style="font-size:12px;color:var(--on-surface-variant,#666);margin-top:4px;">Paid by ${this._esc(exp.paidByName)} • $${exp.perPerson?.toFixed(2)} each</div>
+                  <div style="font-size:12px;color:var(--on-surface-variant,#666);margin-top:4px;">Paid by ${this._esc(exp.paidByName)} â€¢ $${exp.perPerson?.toFixed(2)} each</div>
                 </div>
               `).join('')}
           </div>

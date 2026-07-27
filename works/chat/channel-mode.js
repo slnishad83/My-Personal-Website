@@ -1,5 +1,5 @@
-/**
- * Channel Mode — Persistent one-to-many broadcast channels.
+﻿/**
+ * Channel Mode â€” Persistent one-to-many broadcast channels.
  * Admins create channels within groups; channels have their own chat space.
  * Channels stored in `channels` collection; messages use existing `messages` subcollection.
  * Admin-only posting by default (toggled per channel).
@@ -175,7 +175,7 @@
         window.App.messages[key] = msgs;
         _renderChannelMessages(key, channelId);
       }, function (error) {
-        console.warn('Channel messages subscription error:', error);
+        if (window.__DEBUG__) console.warn('Channel messages subscription error:', error);
       });
   }
 
@@ -419,7 +419,7 @@
       window.App.db.collection('messages').add(messageData).then(function () {
         msg.status = 'delivered';
         _renderChannelMessages(key, channelId);
-      }).catch(function (e) { console.error('Channel send error:', e); });
+      }).catch(function (e) { if (window.__DEBUG__) console.error('Channel send error:', e); });
 
       window.App.db.collection('groups').doc(chat.id).update({
         lastMessage: '#' + (window._activeChannelName || 'channel') + ': ' + text,
@@ -603,7 +603,7 @@
       if (window.showToast) window.showToast('#' + name + ' channel created!', 'success');
       if (window.openChannelPanel) window.openChannelPanel();
     } catch (e) {
-      console.error('Create channel error:', e);
+      if (window.__DEBUG__) console.error('Create channel error:', e);
       if (window.showToast) window.showToast('Failed to create channel', 'error');
     }
   };

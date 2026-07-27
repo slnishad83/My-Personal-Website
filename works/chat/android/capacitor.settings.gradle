@@ -2,14 +2,20 @@
 include ':capacitor-android'
 project(':capacitor-android').projectDir = new File('../node_modules/@capacitor/android/capacitor')
 
+include ':anuradev-capacitor-background-mode'
+project(':anuradev-capacitor-background-mode').projectDir = new File('../node_modules/@anuradev/capacitor-background-mode/android')
+
+include ':capacitor-community-contacts'
+project(':capacitor-community-contacts').projectDir = new File('../node_modules/@capacitor-community/contacts/android')
+
 include ':capacitor-app'
 project(':capacitor-app').projectDir = new File('../node_modules/@capacitor/app/android')
+
+include ':capacitor-keyboard'
+project(':capacitor-keyboard').projectDir = new File('../node_modules/@capacitor/keyboard/android')
 
 include ':capacitor-push-notifications'
 project(':capacitor-push-notifications').projectDir = new File('../node_modules/@capacitor/push-notifications/android')
 
-include ':capacitor-background-mode'
-project(':capacitor-background-mode').projectDir = new File('../node_modules/@anuradev/capacitor-background-mode/android')
-
-include ':capacitor-community-contacts'
-project(':capacitor-community-contacts').projectDir = new File('../node_modules/@capacitor-community/contacts/android')
+include ':capacitor-status-bar'
+project(':capacitor-status-bar').projectDir = new File('../node_modules/@capacitor/status-bar/android')

@@ -1,4 +1,4 @@
-(function() {
+﻿(function() {
   'use strict';
 
   var _uid = function() { return App && App.uid ? App.uid() : (window.currentUser ? window.currentUser.uid : null); };
@@ -251,7 +251,7 @@
       _showConfirmation();
       _showToast('Report submitted', 'success');
     } catch (e) {
-      console.error('[Report] submit failed', e);
+      if (window.__DEBUG__) console.error('[Report] submit failed', e);
       _showToast('Failed to submit report', 'error');
     }
   }

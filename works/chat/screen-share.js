@@ -1,4 +1,4 @@
-// Screen Share in Call — enhanced screen sharing with remote notification
+﻿// Screen Share in Call â€” enhanced screen sharing with remote notification
 (function() {
   'use strict';
 
@@ -14,7 +14,7 @@
         const data = {
           senderId: App.auth.currentUser.uid,
           senderName: App.currentUser?.displayName || App.auth.currentUser.email || 'User',
-          text: '🖥️ Started screen sharing',
+          text: 'ðŸ–¥ï¸ Started screen sharing',
           type: 'system',
           systemType: 'screen_share_start',
           timestamp: firebase.firestore.FieldValue.serverTimestamp(),
@@ -25,7 +25,7 @@
         chatRef.add(data).catch(() => {});
       } catch(_) {}
 
-    showToast('Screen sharing active — others can see your screen', 'success');
+    showToast('Screen sharing active â€” others can see your screen', 'success');
   }
 
   function _notifyScreenShareEnd() {
@@ -38,7 +38,7 @@
         const data = {
           senderId: App.auth.currentUser.uid,
           senderName: App.currentUser?.displayName || App.auth.currentUser.email || 'User',
-          text: '🖥️ Stopped screen sharing',
+          text: 'ðŸ–¥ï¸ Stopped screen sharing',
           type: 'system',
           systemType: 'screen_share_end',
           timestamp: firebase.firestore.FieldValue.serverTimestamp(),
@@ -91,7 +91,7 @@
           _handleScreenShareEnd();
         }
       } catch(e) {
-        console.warn('Screen share error:', e);
+        if (window.__DEBUG__) console.warn('Screen share error:', e);
       }
     };
   }

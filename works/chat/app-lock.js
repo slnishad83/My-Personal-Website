@@ -1,4 +1,4 @@
-'use strict';
+﻿'use strict';
 (function () {
   var STORAGE_KEY = 'nsl_app_lock';
   var ATTEMPTS_KEY = 'nsl_app_lock_attempts';
@@ -164,7 +164,7 @@
       }
     } catch (err) {
       // If Cloud Function not deployed or fails, fall back to client-side check
-      console.warn('App lock server verification failed, falling back to local:', err.message);
+      if (window.__DEBUG__) console.warn('App lock server verification failed, falling back to local:', err.message);
     }
 
     // Fallback: client-side hash comparison (for offline or if Cloud Function not deployed)
@@ -295,7 +295,7 @@
     } catch (_) {}
 
     overlay.innerHTML =
-      '<div class="nsl-al-icon">🔒</div>' +
+      '<div class="nsl-al-icon">ðŸ”’</div>' +
       '<div class="nsl-al-title">App Locked</div>' +
       '<div class="nsl-al-subtitle">Enter your PIN to unlock</div>' +
       '<div class="nsl-al-dots" id="nsl-al-dots"></div>' +
@@ -312,16 +312,16 @@
 
     _renderDots(dotsContainer, 0, 4, false);
 
-    var keys = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '', '0', '⌫'];
+    var keys = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '', '0', 'âŒ«'];
     keys.forEach(function (key) {
       var btn = document.createElement('button');
       btn.className = 'nsl-al-key';
       if (key === '') {
         btn.classList.add('special');
         btn.style.visibility = 'hidden';
-      } else if (key === '⌫') {
+      } else if (key === 'âŒ«') {
         btn.classList.add('special');
-        btn.textContent = '⌫';
+        btn.textContent = 'âŒ«';
         btn.onclick = function () {
           entered = entered.slice(0, -1);
           _renderDots(dotsContainer, entered.length, 4, false);
@@ -458,7 +458,7 @@
           }
         }
       } catch (fnErr) {
-        console.warn('App lock server set failed, using local only:', fnErr.message);
+        if (window.__DEBUG__) console.warn('App lock server set failed, using local only:', fnErr.message);
       }
 
       // Fallback: client-side only (if Cloud Function not deployed)
@@ -480,7 +480,7 @@
       if (typeof showToast === 'function') showToast('App lock PIN set', 'success');
       return true;
     } catch (err) {
-      console.error('Set app lock PIN error:', err);
+      if (window.__DEBUG__) console.error('Set app lock PIN error:', err);
       if (typeof showToast === 'function') showToast('Failed to set PIN', 'error');
       return false;
     }

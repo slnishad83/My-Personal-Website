@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Group Description & Icon
  * Full group metadata management: description, icon upload, admin controls.
  */
@@ -30,7 +30,7 @@
 
         showToast('Group description updated', 'success');
       } catch (e) {
-        console.error('[GroupMeta] Update description error:', e);
+        if (window.__DEBUG__) console.error('[GroupMeta] Update description error:', e);
         showToast('Failed to update description', 'error');
       }
     },
@@ -70,7 +70,7 @@
         showToast('Group icon updated', 'success');
         return iconUrl;
       } catch (e) {
-        console.error('[GroupMeta] Update icon error:', e);
+        if (window.__DEBUG__) console.error('[GroupMeta] Update icon error:', e);
         showToast('Failed to upload icon', 'error');
         return null;
       }
@@ -97,7 +97,7 @@
 
         showToast(value ? 'Only admins can edit group info' : 'All members can edit group info', 'success');
       } catch (e) {
-        console.error('[GroupMeta] Set admin edit error:', e);
+        if (window.__DEBUG__) console.error('[GroupMeta] Set admin edit error:', e);
       }
     },
 
@@ -122,7 +122,7 @@
 
         showToast(value ? 'Only admins can send messages' : 'All members can send messages', 'success');
       } catch (e) {
-        console.error('[GroupMeta] Set admin send error:', e);
+        if (window.__DEBUG__) console.error('[GroupMeta] Set admin send error:', e);
       }
     },
 
@@ -152,7 +152,7 @@
 
         showToast('Member removed', 'success');
       } catch (e) {
-        console.error('[GroupMeta] Remove member error:', e);
+        if (window.__DEBUG__) console.error('[GroupMeta] Remove member error:', e);
         showToast('Failed to remove member', 'error');
       }
     },

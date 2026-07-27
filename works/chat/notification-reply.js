@@ -1,4 +1,4 @@
-/* =============================================
+﻿/* =============================================
    NOTIFICATION REPLY v1.0
    - Stores Firebase ID token in IndexedDB so
      the service worker can send replies when
@@ -13,7 +13,7 @@
   const IDB_VERSION = 1;
   const STORE_NAME  = 'tokens';
 
-  /* ── IndexedDB helpers ────────────────────────────────────────────── */
+  /* â”€â”€ IndexedDB helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   let _idbConn = null;
 
   function openIdb() {
@@ -39,7 +39,7 @@
     } catch (e) { /* non-critical */ }
   }
 
-  /* ── Store ID token whenever it changes ──────────────────────────── */
+  /* â”€â”€ Store ID token whenever it changes â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   let _refreshTimer = null;
 
   function startTokenRefresh() {
@@ -66,7 +66,7 @@
     });
   }
 
-  /* ── Listen for relay message from service worker ────────────────── */
+  /* â”€â”€ Listen for relay message from service worker â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   function listenForSwRelay() {
     if (!navigator.serviceWorker) return;
 
@@ -81,7 +81,7 @@
     });
   }
 
-  /* ── Auto-send the reply through the existing app send path ─────── */
+  /* â”€â”€ Auto-send the reply through the existing app send path â”€â”€â”€â”€â”€â”€â”€ */
   async function autoSendReply({ chatId, chatType, chatUserId, groupId, replyText }) {
     const user = window.currentUser;
     const db   = window.db;
@@ -130,17 +130,17 @@
 
       // Show brief toast if the app is visible
       if (typeof window.showToast === 'function' && document.visibilityState === 'visible') {
-        window.showToast('Reply sent ✓');
+        window.showToast('Reply sent âœ“');
       }
     } catch (e) {
-      console.warn('[TC Reply] Auto-send failed:', e);
+      if (window.__DEBUG__) console.warn('[TC Reply] Auto-send failed:', e);
       if (typeof window.showToast === 'function') {
-        window.showToast('Could not send reply — open the chat to retry', 'error');
+        window.showToast('Could not send reply â€” open the chat to retry', 'error');
       }
     }
   }
 
-  /* ── Init ─────────────────────────────────────────────────────────── */
+  /* â”€â”€ Init â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   function init() {
     startTokenRefresh();
     listenForSwRelay();

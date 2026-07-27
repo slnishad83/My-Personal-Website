@@ -1,4 +1,4 @@
-/**
+﻿/**
  * ListenerManager - Centralized Firestore onSnapshot listener cleanup utility
  * IIFE pattern, zero dependencies
  */
@@ -37,7 +37,7 @@
       try { _listeners[key].unsub(); } catch (e) { /* ignore */ }
     }
     if (Object.keys(_listeners).length >= _maxListeners) {
-      console.warn(
+      if (window.__DEBUG__) console.warn(
         "[ListenerManager] Max listener limit (" + _maxListeners + ") reached! " +
         "Consider calling cleanupStale() or cleanupByPrefix(). " +
         "Active keys: " + Object.keys(_listeners).join(", ")
@@ -140,7 +140,7 @@
       var used = performance.memory.usedJSHeapSize;
       var limit = performance.memory.jsHeapSizeLimit;
       if (used && limit && used / limit > 0.85) {
-        console.warn(
+        if (window.__DEBUG__) console.warn(
           "[ListenerManager] Memory pressure detected (" +
           Math.round((used / limit) * 100) + "% of limit). Cleaning stale listeners."
         );

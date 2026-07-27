@@ -1,4 +1,4 @@
-'use strict';
+﻿'use strict';
 (function () {
   var _activeOverlay = null;
 
@@ -132,7 +132,7 @@
 
         if (typeof showToast === 'function') showToast('Avatar updated', 'success');
       } catch (err) {
-        console.error('Avatar upload error:', err);
+        if (window.__DEBUG__) console.error('Avatar upload error:', err);
         if (typeof showToast === 'function') showToast('Failed to upload avatar', 'error');
       } finally {
         if (previewObjectUrl) URL.revokeObjectURL(previewObjectUrl);
@@ -148,7 +148,7 @@
       await a.currentUser.verifyBeforeUpdateEmail(newEmail);
       return true;
     } catch (err) {
-      console.error('Email verification error:', err);
+      if (window.__DEBUG__) console.error('Email verification error:', err);
       if (typeof showToast === 'function') showToast(err.message || 'Failed to send verification', 'error');
       return false;
     }
@@ -191,7 +191,7 @@
       if (typeof showToast === 'function') showToast('Phone number updated', 'success');
       return true;
     } catch (err) {
-      console.error('Phone update error:', err);
+      if (window.__DEBUG__) console.error('Phone update error:', err);
       if (typeof showToast === 'function') showToast(err.message || 'Failed to update phone', 'error');
       return false;
     }
@@ -262,7 +262,7 @@
       if (typeof showToast === 'function') showToast('Profile updated', 'success');
       _removeOverlay();
     } catch (err) {
-      console.error('Save profile error:', err);
+      if (window.__DEBUG__) console.error('Save profile error:', err);
       if (typeof showToast === 'function') showToast('Failed to save profile', 'error');
     } finally {
       if (saveBtn) {
@@ -294,12 +294,12 @@
     modal.innerHTML =
       '<div class="nsl-pe-header">' +
         '<h2>Edit Profile</h2>' +
-        '<button class="nsl-pe-close" id="nsl-pe-close">✕</button>' +
+        '<button class="nsl-pe-close" id="nsl-pe-close">âœ•</button>' +
       '</div>' +
       '<div class="nsl-pe-avatar-section">' +
         '<div class="nsl-pe-avatar-wrap" id="nsl-pe-avatar-wrap">' +
           avatarContent +
-          '<div class="nsl-pe-avatar-cam">📷</div>' +
+          '<div class="nsl-pe-avatar-cam">ðŸ“·</div>' +
         '</div>' +
         '<div class="nsl-pe-avatar-hint">Tap to change photo</div>' +
       '</div>' +

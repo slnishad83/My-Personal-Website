@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Message Scheduling (Feature 2)
  * Allows scheduling a message to be sent at a later date/time.
  */
@@ -131,7 +131,7 @@
       if (window.showToast) window.showToast('Message scheduled successfully', 'success');
       document.getElementById('schedule-modal')?.remove();
     } catch (e) {
-      console.error(e);
+      if (window.__DEBUG__) console.error(e);
       if (window.showToast) window.showToast('Failed to schedule message', 'error');
     }
   };
@@ -164,7 +164,7 @@
         }
       }
     } catch (e) {
-      console.error('Error checking scheduled messages:', e);
+      if (window.__DEBUG__) console.error('Error checking scheduled messages:', e);
     }
     
     isCheckingScheduled = false;
@@ -197,7 +197,7 @@
         unread: (typeof firebase !== 'undefined' ? firebase : window.firebase).firestore.FieldValue.increment(1) // Not accurate for the sender, but usually ignored on client sync
       });
     } catch (err) {
-      console.error('[MessageScheduler] sendMsgToDb write failed:', err);
+      if (window.__DEBUG__) console.error('[MessageScheduler] sendMsgToDb write failed:', err);
       if (typeof window.showToast === 'function') window.showToast('Failed to send scheduled message.', 'error');
     }
   }

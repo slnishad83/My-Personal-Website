@@ -1,4 +1,4 @@
-// ========================================
+﻿// ========================================
 // APPLICATION INITIALIZATION
 // ========================================
 
@@ -30,12 +30,26 @@ window.toggleSidebarExpand = function() {
   }
 };
 
+// Firestore offline persistence
+(function() {
+  var db = window.db || (window.App && window.App.db);
+  if (db && db.enablePersistence) {
+    db.enablePersistence({ synchronizeTabs: true }).catch(function(err) {
+      if (err.code === 'failed-precondition') {
+        console.warn('[Offline] Persistence unavailable: multiple tabs');
+      } else if (err.code === 'unimplemented') {
+        console.warn('[Offline] Persistence not supported by browser');
+      }
+    });
+  }
+})();
+
 // Run framework initializers
 if (typeof init === 'function') {
   init().then(function() {
     handleDeepLink();
   }).catch((error) => {
-    console.error("Application startup failed:", error);
+    if (window.__DEBUG__) console.error("Application startup failed:", error);
     handleDeepLink();
   });
 } else {

@@ -1,4 +1,4 @@
-'use strict';
+﻿'use strict';
 (function () {
   var _activeDialog = null;
 
@@ -91,7 +91,7 @@
       }
       return true;
     } catch (err) {
-      console.error('Leave group error:', err);
+      if (window.__DEBUG__) console.error('Leave group error:', err);
       if (typeof showToast === 'function') showToast('Failed to leave group', 'error');
       return false;
     }
@@ -139,7 +139,7 @@
         window.blockedUsers = newBlocked;
       }
     } catch (err) {
-      console.error('Block members error:', err);
+      if (window.__DEBUG__) console.error('Block members error:', err);
     }
   }
 
@@ -191,13 +191,13 @@
       : _esc(avatarText);
 
     var options = [
-      { id: 'exit', icon: '🚪', title: 'Exit Group', desc: 'Leave this group. You will no longer receive messages.', bg: 'var(--error-container,#FDECEA)' },
-      { id: 'exit-delete', icon: '🗑️', title: 'Exit and Delete', desc: 'Leave and remove all group messages from your device.', bg: 'var(--error-container,#FDECEA)' },
-      { id: 'block-delete', icon: '🚫', title: 'Block and Delete', desc: 'Block all members, leave, and delete all messages.', bg: 'var(--error-container,#FDECEA)' }
+      { id: 'exit', icon: 'ðŸšª', title: 'Exit Group', desc: 'Leave this group. You will no longer receive messages.', bg: 'var(--error-container,#FDECEA)' },
+      { id: 'exit-delete', icon: 'ðŸ—‘ï¸', title: 'Exit and Delete', desc: 'Leave and remove all group messages from your device.', bg: 'var(--error-container,#FDECEA)' },
+      { id: 'block-delete', icon: 'ðŸš«', title: 'Block and Delete', desc: 'Block all members, leave, and delete all messages.', bg: 'var(--error-container,#FDECEA)' }
     ];
 
     if (isAdmin) {
-      options.push({ id: 'admin-delete', icon: '⚠️', title: 'Delete Group for Everyone', desc: 'Permanently delete this group for all members.', bg: 'var(--error-container,#FDECEA)' });
+      options.push({ id: 'admin-delete', icon: 'âš ï¸', title: 'Delete Group for Everyone', desc: 'Permanently delete this group for all members.', bg: 'var(--error-container,#FDECEA)' });
     }
 
     var optionsHtml = options.map(function (opt) {
@@ -312,7 +312,7 @@
             break;
         }
       } catch (err) {
-        console.error('Delete group action error:', err);
+        if (window.__DEBUG__) console.error('Delete group action error:', err);
         if (typeof showToast === 'function') showToast('Action failed. Please try again.', 'error');
       }
 

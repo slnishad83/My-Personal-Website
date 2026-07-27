@@ -1,5 +1,5 @@
-// ============================================================
-// NOTIFICATION DIGEST — groups in-app notifications by sender
+﻿// ============================================================
+// NOTIFICATION DIGEST â€” groups in-app notifications by sender
 // and deduplicates browser push notifications.
 //
 // Drop into works/chat/ and add to index.html:
@@ -15,7 +15,7 @@
   let _unsubNotifs  = null;
   let _rawNotifs    = [];              // all fetched notifications
 
-  // ── Helpers ───────────────────────────────────────────────────────────────
+  // â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   var _uid = function() { return App && App.uid ? App.uid() : (window.currentUser ? window.currentUser.uid : null); };
   var _db = function() { return App && App.db ? App.db : (typeof firebase !== 'undefined' ? firebase.firestore() : null); };
@@ -33,8 +33,8 @@
     return 'just now';
   }
 
-  // ── Group notifications ───────────────────────────────────────────────────
-  // Returns an array of display items — some are individual, some are groups
+  // â”€â”€ Group notifications â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // Returns an array of display items â€” some are individual, some are groups
 
   function _groupNotifs(notifs) {
     // Sort newest-first
@@ -83,7 +83,7 @@
     return result;
   }
 
-  // ── Render the notifications panel ───────────────────────────────────────
+  // â”€â”€ Render the notifications panel â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   function _renderPanel(items) {
     const panel = document.getElementById('notificationsPanel');
@@ -178,11 +178,11 @@
 
   function _notifIcon(n) {
     const kind = n.kind || n.type || '';
-    if (kind === 'call')         return '📞';
-    if (kind === 'chat_request') return '🤝';
-    if (kind === 'group_invite') return '👥';
-    if (kind === 'message')      return '💬';
-    return '🔔';
+    if (kind === 'call')         return 'ðŸ“ž';
+    if (kind === 'chat_request') return 'ðŸ¤';
+    if (kind === 'group_invite') return 'ðŸ‘¥';
+    if (kind === 'message')      return 'ðŸ’¬';
+    return 'ðŸ””';
   }
 
   function _updateBadge(count) {
@@ -197,7 +197,7 @@
     }
   }
 
-  // ── Subscribe to Firestore inAppNotifications ─────────────────────────────
+  // â”€â”€ Subscribe to Firestore inAppNotifications â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   function _subscribe() {
     const uid = _uid(); const database = _db();
@@ -212,10 +212,10 @@
         _rawNotifs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
         const grouped = _groupNotifs(_rawNotifs);
         _renderPanel(grouped);
-      }, err => { console.warn('[NotifDigest] Snapshot error:', err?.message); });
+      }, err => { if (window.__DEBUG__) console.warn('[NotifDigest] Snapshot error:', err?.message); });
   }
 
-  // ── Deduplicate browser push notifications ────────────────────────────────
+  // â”€â”€ Deduplicate browser push notifications â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   // Uses Notification.tag so that a new notification from the same sender
   // replaces the old one rather than stacking.
 
@@ -231,7 +231,7 @@
     });
   }
 
-  // ── Boot ─────────────────────────────────────────────────────────────────
+  // â”€â”€ Boot â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   function _boot() {
     _patchServiceWorkerNotifs();
@@ -244,7 +244,7 @@
     }
   }
 
-  // ── Public API ──────────────────────────────────────────────────────────
+  // â”€â”€ Public API â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   const digest = {
     markAllRead() {

@@ -1,5 +1,5 @@
-/**
- * screenshot-protection.js — Prevent screenshots on sensitive screens
+﻿/**
+ * screenshot-protection.js â€” Prevent screenshots on sensitive screens
  */
 (function() {
     'use strict';
@@ -18,7 +18,7 @@
                 const { ScreenshotProtection } = Capacitor.Plugins;
                 await ScreenshotProtection.enable();
             } catch (e) {
-                console.warn('Screenshot protection enable failed:', e);
+                if (window.__DEBUG__) console.warn('Screenshot protection enable failed:', e);
             }
         },
 
@@ -28,7 +28,7 @@
                 const { ScreenshotProtection } = Capacitor.Plugins;
                 await ScreenshotProtection.disable();
             } catch (e) {
-                console.warn('Screenshot protection disable failed:', e);
+                if (window.__DEBUG__) console.warn('Screenshot protection disable failed:', e);
             }
         },
 

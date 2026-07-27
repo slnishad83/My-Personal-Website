@@ -1,6 +1,6 @@
-'use strict';
+﻿'use strict';
 /**
- * MESSAGE REMINDERS — Set a reminder from any message context menu
+ * MESSAGE REMINDERS â€” Set a reminder from any message context menu
  * Stores reminder in Firestore and shows notification at the scheduled time.
  */
 (function () {
@@ -28,7 +28,7 @@
         this._scheduleLocal(reminder);
         if (typeof showToast === 'function') showToast('Reminder set', 'success');
       } catch (e) {
-        console.error('[MessageReminders] Error:', e);
+        if (window.__DEBUG__) console.error('[MessageReminders] Error:', e);
         if (typeof showToast === 'function') showToast('Failed to set reminder', 'error');
       }
     },
@@ -53,13 +53,13 @@
       }
 
       if (typeof showToast === 'function') {
-        showToast('⏰ Reminder: ' + (reminder.text || 'Check your reminder'), 'info');
+        showToast('â° Reminder: ' + (reminder.text || 'Check your reminder'), 'info');
       }
 
       if (reminder.chatId && typeof window.selectChat === 'function') {
         const banner = document.createElement('div');
         banner.style.cssText = 'position:fixed;top:20px;left:50%;transform:translateX(-50%);z-index:99999;padding:12px 24px;border-radius:12px;background:var(--primary,#00a884);color:var(--on-primary,#fff);font-size:14px;cursor:pointer;box-shadow:0 4px 20px rgba(0,0,0,0.3);max-width:90vw;text-align:center;';
-        banner.textContent = '⏰ Reminder: ' + (reminder.text || 'Tap to view');
+        banner.textContent = 'â° Reminder: ' + (reminder.text || 'Tap to view');
         banner.addEventListener('click', () => {
           window.selectChat(reminder.chatId);
           banner.remove();
@@ -163,7 +163,7 @@
           this._scheduleLocal(reminder);
         });
       } catch (e) {
-        console.warn('[MessageReminders] reschedule error:', e);
+        if (window.__DEBUG__) console.warn('[MessageReminders] reschedule error:', e);
       }
     },
 

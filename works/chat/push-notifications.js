@@ -1,4 +1,4 @@
-/* =============================================
+﻿/* =============================================
    PUSH NOTIFICATIONS v1.1
    - Proactive chat notification permission prompt
    - Registers FCM token for BOTH calls AND messages
@@ -58,7 +58,7 @@
       try {
         await window.registerFcmTokenForCurrentUser({ force: Boolean(force) });
       } catch (e) {
-        console.warn('[TC Push] registerFcmTokenForCurrentUser failed:', e);
+        if (window.__DEBUG__) console.warn('[TC Push] registerFcmTokenForCurrentUser failed:', e);
       }
       return;
     }
@@ -94,7 +94,7 @@
 
       setRegisteredAt();
     } catch (e) {
-      console.warn('[TC Push] Manual FCM registration failed:', e);
+      if (window.__DEBUG__) console.warn('[TC Push] Manual FCM registration failed:', e);
     }
   }
 
@@ -114,13 +114,13 @@
 
     const iosHint = isIOSSafari() && !isStandalone()
       ? `<div style="font-size:11px;color:${muted};margin-top:4px;line-height:1.4;">
-           iOS Safari: tap <b>Share → Add to Home Screen</b> first for full push support.
+           iOS Safari: tap <b>Share â†’ Add to Home Screen</b> first for full push support.
          </div>`
       : '';
 
     banner.innerHTML = `
       <div style="display:flex;align-items:flex-start;gap:12px;">
-        <div style="font-size:22px;flex-shrink:0;margin-top:2px;">🔔</div>
+        <div style="font-size:22px;flex-shrink:0;margin-top:2px;">ðŸ””</div>
         <div style="flex:1;min-width:0;">
           <div style="font-weight:700;font-size:14px;margin-bottom:3px;">Stay notified</div>
           <div style="font-size:12.5px;color:${muted};line-height:1.45;">
@@ -129,7 +129,7 @@
           ${iosHint}
         </div>
         <button id="tcPushPromptClose" aria-label="Dismiss"
-          style="background:none;border:none;color:${muted};font-size:18px;cursor:pointer;padding:0 2px;line-height:1;flex-shrink:0;">✕</button>
+          style="background:none;border:none;color:${muted};font-size:18px;cursor:pointer;padding:0 2px;line-height:1;flex-shrink:0;">âœ•</button>
       </div>
       <div style="display:flex;gap:8px;justify-content:flex-end;">
         <button id="tcPushPromptNo"
@@ -160,11 +160,11 @@
         if (permission === 'granted') {
           await registerToken(true);
           if (typeof window.showToast === 'function') {
-            window.showToast('Notifications enabled ✓');
+            window.showToast('Notifications enabled âœ“');
           }
         }
       } catch (e) {
-        console.warn('[TC Push] Permission request failed:', e);
+        if (window.__DEBUG__) console.warn('[TC Push] Permission request failed:', e);
       }
     });
 
@@ -172,7 +172,7 @@
     setTimeout(dismiss, 15000);
   }
 
-  /* ── Main init — runs after Firebase auth resolves ────────────────── */
+  /* â”€â”€ Main init â€” runs after Firebase auth resolves â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   function initPush() {
     if (!notifSupported()) return;
     if (!window.firebase?.auth) {

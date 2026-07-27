@@ -1,7 +1,7 @@
-'use strict';
+﻿'use strict';
 (function () {
   // ========================================
-  // THREADS — SUB-CONVERSATIONS
+  // THREADS â€” SUB-CONVERSATIONS
   // ========================================
   // Each message can have a thread stored in a subcollection:
   //   messages/{messageId}/threadReplies/{replyId}
@@ -37,11 +37,11 @@
 
   function _attLabel(att) {
     if (!att) return 'Attachment';
-    if (att.type === 'image') return '📷 Image';
-    if (att.type === 'video') return '🎬 Video';
-    if (att.type === 'audio') return '🎵 Audio';
-    if (att.type === 'file') return '📄 ' + (att.name || 'File');
-    return '📎 ' + (att.name || 'Attachment');
+    if (att.type === 'image') return 'ðŸ“· Image';
+    if (att.type === 'video') return 'ðŸŽ¬ Video';
+    if (att.type === 'audio') return 'ðŸŽµ Audio';
+    if (att.type === 'file') return 'ðŸ“„ ' + (att.name || 'File');
+    return 'ðŸ“Ž ' + (att.name || 'Attachment');
   }
 
   var _db = function() { return App && App.db ? App.db : (typeof firebase !== 'undefined' ? firebase.firestore() : null); };
@@ -161,7 +161,7 @@
           renderThreadReplies(snapshot.docs, container);
         },
         (err) => {
-          console.error("Thread replies error:", err);
+          if (window.__DEBUG__) console.error("Thread replies error:", err);
           container.innerHTML = '<div class="thread-error">Could not load replies.</div>';
         }
       );
@@ -217,8 +217,8 @@
     if (wasAtBottom) container.scrollTop = container.scrollHeight;
   }
 
-  // ── Thread Reply Reactions ────────────────────────────────────────────────
-  const THREAD_REACTION_EMOJIS = ['👍', '❤️', '😂', '😮', '😢', '🙏'];
+  // â”€â”€ Thread Reply Reactions â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  const THREAD_REACTION_EMOJIS = ['ðŸ‘', 'â¤ï¸', 'ðŸ˜‚', 'ðŸ˜®', 'ðŸ˜¢', 'ðŸ™'];
 
   window._showThreadReactionPicker = function (event, parentMsgId, replyId) {
     // Remove any existing picker
@@ -279,7 +279,7 @@
 
       await replyRef.update({ reactions });
     } catch (err) {
-      console.error("Thread reaction error:", err);
+      if (window.__DEBUG__) console.error("Thread reaction error:", err);
     }
   };
 
@@ -332,7 +332,7 @@
       }
       updateThreadTypingStatus(false);
     } catch (err) {
-      console.error("Thread send error:", err);
+      if (window.__DEBUG__) console.error("Thread send error:", err);
       if (typeof showToast === "function") showToast("Could not send reply", "error");
     } finally {
       if (sendBtn) sendBtn.disabled = false;
@@ -341,7 +341,7 @@
     }
   }
 
-  // ── Thread Typing Indicator ───────────────────────────────────────────────
+  // â”€â”€ Thread Typing Indicator â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   function _getTypingDocId(uid, messageId) {
     return uid + '_' + messageId;
@@ -380,7 +380,7 @@
         await ref.delete().catch(function () {});
       }
     } catch (err) {
-      console.error('[threadTyping] write error', err);
+      if (window.__DEBUG__) console.error('[threadTyping] write error', err);
     }
   }
 
@@ -433,7 +433,7 @@
           el.style.display = '';
         }
       }, function (err) {
-        console.error('[threadTyping] listener error', err);
+        if (window.__DEBUG__) console.error('[threadTyping] listener error', err);
       });
   }
 
@@ -453,12 +453,12 @@
     }
   }
 
-  // ── Thread Summary ────────────────────────────────────────────────────────
+  // â”€â”€ Thread Summary â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   async function summarizeCurrentThread() {
     if (!currentThreadMessageId) return;
 
     const btn = document.getElementById("threadSummarizeBtn");
-    if (btn) { btn.disabled = true; btn.textContent = "Summarizing…"; }
+    if (btn) { btn.disabled = true; btn.textContent = "Summarizingâ€¦"; }
 
     document.getElementById("threadSummaryCard")?.remove();
 
@@ -471,7 +471,7 @@
       const result = await summarizeFn({ messageId: currentThreadMessageId });
       const summaryText = result.data?.summary || "No summary generated.";
 
-      const lines = summaryText.split("\n").map(l => l.trim().replace(/^[-•*]\s*/, "")).filter(Boolean);
+      const lines = summaryText.split("\n").map(l => l.trim().replace(/^[-â€¢*]\s*/, "")).filter(Boolean);
       const listHtml = lines.map(l => `<li>${_esc(l)}</li>`).join("");
 
       const card = document.createElement("div");
@@ -479,7 +479,7 @@
       card.className = "thread-summary-card";
       card.innerHTML = `
         <div class="thread-summary-header">
-          <span class="thread-summary-icon">✨</span>
+          <span class="thread-summary-icon">âœ¨</span>
           <span class="thread-summary-title">AI Summary</span>
           <button class="thread-summary-close" type="button" aria-label="Close summary">&#x2715;</button>
         </div>
@@ -491,10 +491,10 @@
       if (repliesList) repliesList.parentNode.insertBefore(card, repliesList);
       _attachThreadReplyHandlers();
     } catch (err) {
-      console.error("[summarizeThread]", err);
+      if (window.__DEBUG__) console.error("[summarizeThread]", err);
       if (typeof showToast === "function") showToast("Could not summarize thread. Deploy the Cloud Function first.", "error");
     } finally {
-      if (btn) { btn.disabled = false; btn.textContent = "✨ Summarize"; }
+      if (btn) { btn.disabled = false; btn.textContent = "âœ¨ Summarize"; }
     }
   }
 
@@ -585,7 +585,7 @@
   window.closeThreadPanel = closeThreadPanel;
   window.summarizeCurrentThread = summarizeCurrentThread;
 
-  // Helper for context menu — looks up message data from App.messages
+  // Helper for context menu â€” looks up message data from App.messages
   window._openThreadForMsg = function (msgId) {
     try {
       const chatId = window.App && window.App.currentChat && window.App.currentChat.id;

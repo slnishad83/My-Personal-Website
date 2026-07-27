@@ -1,5 +1,5 @@
-// ========================================
-// AI ASSISTANT BOT — Powered by Google Gemini
+﻿// ========================================
+// AI ASSISTANT BOT â€” Powered by Google Gemini
 // ========================================
 // Trigger: Any message containing @AI or @AIBot (case-insensitive)
 // Example: "@AI summarise today's messages" or "@AIBot explain this error"
@@ -9,7 +9,7 @@
 //        firebase functions:secrets:set GEMINI_API_KEY
 //   2. Deploy the Cloud Function:
 //        firebase deploy --only functions:aiChatBot
-//   3. That's it — the bot will start responding in any chat.
+//   3. That's it â€” the bot will start responding in any chat.
 
 const AI_BOT_TRIGGER_RE = /@aibot\b|@ai\b/i;
 const _AI_BOT_UID = "ai-bot";
@@ -55,7 +55,7 @@ function removeAiBotThinkingBubble(id) {
 }
 
 // Call the Firebase Cloud Function which calls Gemini and posts the reply
-// Uses httpsCallable — auth is handled automatically by the Firebase SDK
+// Uses httpsCallable â€” auth is handled automatically by the Firebase SDK
 async function callAiBotFunction(prompt, chatId, chatType) {
   const functions = firebase.functions();
   // If you deployed to a non-default region, set it here:
@@ -69,13 +69,13 @@ async function callAiBotFunction(prompt, chatId, chatType) {
   });
 }
 
-// Main entry — called from sendMessage after the user's message is saved
+// Main entry â€” called from sendMessage after the user's message is saved
 async function triggerAiBotIfMentioned(text, chatId, chatType) {
   if (!isAiBotTrigger(text)) return;
 
   const prompt = extractAiBotPrompt(text);
   if (!prompt) {
-    showToast('Add a question after @AI — e.g. "@AI summarise the last 10 messages"');
+    showToast('Add a question after @AI â€” e.g. "@AI summarise the last 10 messages"');
     return;
   }
 
@@ -84,7 +84,7 @@ async function triggerAiBotIfMentioned(text, chatId, chatType) {
   try {
     await callAiBotFunction(prompt, chatId, chatType);
   } catch (err) {
-    console.error("AI bot error:", err);
+    if (window.__DEBUG__) console.error("AI bot error:", err);
     showToast("AI Assistant is unavailable. Make sure the Cloud Function is deployed.", "error");
   } finally {
     removeAiBotThinkingBubble(thinkingId);

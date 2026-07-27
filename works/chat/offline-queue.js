@@ -1,5 +1,5 @@
-/* ============================================================
-   OFFLINE QUEUE — IndexedDB-backed message retry queue
+﻿/* ============================================================
+   OFFLINE QUEUE â€” IndexedDB-backed message retry queue
    Stores failed messages, retries on reconnect, shows status
    v1.1: Added attachment blob upload before retry, pending
           message count indicator in UI
@@ -23,7 +23,7 @@ const OfflineQueue = {
       this._emitStatus();
       setTimeout(() => this.processQueue(), 5000);
     } catch (e) {
-      console.warn('[OfflineQueue] Init failed:', e);
+      if (window.__DEBUG__) console.warn('[OfflineQueue] Init failed:', e);
     }
   },
 
@@ -92,7 +92,7 @@ const OfflineQueue = {
       this._emitStatus();
       return record;
     } catch (e) {
-      console.warn('[OfflineQueue] Enqueue failed:', e);
+      if (window.__DEBUG__) console.warn('[OfflineQueue] Enqueue failed:', e);
       return null;
     }
   },
@@ -121,14 +121,14 @@ const OfflineQueue = {
           msg.lastRetryAt = Date.now();
           msg.error = e.message || String(e);
           await this._updateRecord(msg);
-          console.warn(`[OfflineQueue] Retry ${msg.retries}/${this._maxRetries} failed:`, e.message);
+          if (window.__DEBUG__) console.warn(`[OfflineQueue] Retry ${msg.retries}/${this._maxRetries} failed:`, e.message);
           if (msg.retries < this._maxRetries) {
             await new Promise(r => setTimeout(r, this._retryDelay * msg.retries));
           }
         }
       }
     } catch (e) {
-      console.warn('[OfflineQueue] Process queue error:', e);
+      if (window.__DEBUG__) console.warn('[OfflineQueue] Process queue error:', e);
     } finally {
       this._processing = false;
       this._emitStatus();
@@ -147,7 +147,7 @@ const OfflineQueue = {
             const uploadedUrl = await this._uploadToCloudinary(file);
             processedAttachments.push({ url: uploadedUrl, name: att.name, type: att.type, size: att.size });
           } catch (e) {
-            console.warn('[OfflineQueue] Attachment upload failed:', e);
+            if (window.__DEBUG__) console.warn('[OfflineQueue] Attachment upload failed:', e);
             throw new Error(`Failed to upload attachment: ${att.name}`);
           }
         } else if (att.url) {

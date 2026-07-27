@@ -1,4 +1,4 @@
-/* call-controller-ui.js — Call UI management (show/hide call screen, minimize, maximize, bubble) */
+﻿/* call-controller-ui.js â€” Call UI management (show/hide call screen, minimize, maximize, bubble) */
 (function () {
   'use strict';
 
@@ -12,7 +12,7 @@
     App._activeCallId = CC.callId;
 
     CC.txt('call-name', name || 'Unknown');
-    CC.txt('call-status', type === 'video' ? 'Connecting…' : 'Calling…');
+    CC.txt('call-status', type === 'video' ? 'Connectingâ€¦' : 'Callingâ€¦');
     CC.hide('call-timer');
     CC.show('call-screen');
     CC.txt('call-quality-text', type === 'video' ? 'HD Video call' : 'HD Voice call');
@@ -164,7 +164,7 @@
     if (CC.state !== CC.STATES.IDLE) { CC.toast('Already in a call', 'info'); return; }
     var list = CC.$('call-picker-list');
     if (!list) return;
-    list.innerHTML = '<div class="flex items-center justify-center p-8 text-on-surface-variant text-sm"><div class="w-6 h-6 border-2 border-primary/30 border-t-primary rounded-full animate-spin mr-3"></div>Loading contacts…</div>';
+    list.innerHTML = '<div class="flex items-center justify-center p-8 text-on-surface-variant text-sm"><div class="w-6 h-6 border-2 border-primary/30 border-t-primary rounded-full animate-spin mr-3"></div>Loading contactsâ€¦</div>';
     CC.show('call-picker-overlay');
 
     try {
@@ -200,7 +200,7 @@
       }
       list.innerHTML = html;
     } catch (err) {
-      console.warn('Call picker load error:', err);
+      if (window.__DEBUG__) console.warn('Call picker load error:', err);
       list.innerHTML = '<p class="text-on-surface-variant text-sm text-center p-8">Failed to load contacts</p>';
     }
   }

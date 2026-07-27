@@ -1,4 +1,4 @@
-// ========================================
+﻿// ========================================
 // PERMISSIONS MANAGEMENT SYSTEM v2.0
 // WhatsApp-style permission handling
 // Cross-platform: Android (Capacitor), iOS, Web
@@ -10,7 +10,7 @@ const PERMISSION_ENTRIES = [
     id: "camera",
     name: "Camera",
     description: "Take photos, record videos, and make video calls.",
-    icon: "📷",
+    icon: "ðŸ“·",
     features: ["Take Photo", "Record Video", "Video Call"],
     nativeAlias: "camera",
     webPermissionName: "camera",
@@ -21,7 +21,7 @@ const PERMISSION_ENTRIES = [
     id: "microphone",
     name: "Microphone",
     description: "Record voice messages, make audio and video calls.",
-    icon: "🎤",
+    icon: "ðŸŽ¤",
     features: ["Record Voice Message", "Audio Call", "Video Call"],
     nativeAlias: "microphone",
     webPermissionName: "microphone",
@@ -32,7 +32,7 @@ const PERMISSION_ENTRIES = [
     id: "notifications",
     name: "Notifications",
     description: "Receive message alerts, call notifications, and updates.",
-    icon: "🔔",
+    icon: "ðŸ””",
     features: ["Push Alerts", "Call Notifications", "Message Notifications"],
     nativeAlias: "notifications",
     webPermissionName: "notifications",
@@ -43,7 +43,7 @@ const PERMISSION_ENTRIES = [
     id: "location",
     name: "Location",
     description: "Share your location in chats and find nearby places.",
-    icon: "📍",
+    icon: "ðŸ“",
     features: ["Share Location", "Find Nearby Places"],
     nativeAlias: "location",
     webPermissionName: "geolocation",
@@ -54,7 +54,7 @@ const PERMISSION_ENTRIES = [
     id: "media",
     name: "Photos & Media",
     description: "Access photos, videos, and files to share in chats.",
-    icon: "🖼️",
+    icon: "ðŸ–¼ï¸",
     features: ["Send Images", "Send Videos", "Send Documents"],
     nativeAlias: "media",
     webPermissionName: null,
@@ -65,7 +65,7 @@ const PERMISSION_ENTRIES = [
     id: "contacts",
     name: "Contacts",
     description: "Find friends and share contacts from your address book.",
-    icon: "👤",
+    icon: "ðŸ‘¤",
     features: ["Find Friends", "Share Contact"],
     nativeAlias: "contacts",
     webPermissionName: null,
@@ -76,7 +76,7 @@ const PERMISSION_ENTRIES = [
     id: "storage",
     name: "Storage",
     description: "Download and save files, images, and videos to your device.",
-    icon: "💾",
+    icon: "ðŸ’¾",
     features: ["Download Files", "Save Media"],
     nativeAlias: "storage",
     webPermissionName: "persistent-storage",
@@ -197,7 +197,7 @@ async function _checkNative(id) {
     const result = await plugin.checkPermission({ alias: info.nativeAlias });
     return _getStateLabel(String(result.status || ""));
   } catch (err) {
-    console.error("Native permission check failed:", id, err);
+    if (window.__DEBUG__) console.error("Native permission check failed:", id, err);
     return null;
   }
 }
@@ -212,7 +212,7 @@ async function _requestNative(id) {
     const result = await plugin.requestPermission({ alias: info.nativeAlias });
     return _getStateLabel(String(result.status || ""));
   } catch (err) {
-    console.error("Native permission request failed:", id, err);
+    if (window.__DEBUG__) console.error("Native permission request failed:", id, err);
     return PERMISSION_STATES.DENIED;
   }
 }
@@ -334,7 +334,7 @@ async function _requestWeb(id) {
     ) {
       return PERMISSION_STATES.NOT_AVAILABLE;
     }
-    console.error("Web permission request failed:", id, err);
+    if (window.__DEBUG__) console.error("Web permission request failed:", id, err);
     return PERMISSION_STATES.DENIED;
   }
   return PERMISSION_STATES.UNKNOWN;
@@ -459,7 +459,7 @@ window.PermissionsManager = {
           await plugin.openSettings();
           return;
         } catch (err) {
-          console.error("Error opening native settings:", err);
+          if (window.__DEBUG__) console.error("Error opening native settings:", err);
         }
       }
     }
@@ -482,7 +482,7 @@ window.PermissionsManager = {
 
   getIcon(id) {
     const info = _getPermInfo(id);
-    return info?.icon || "🔒";
+    return info?.icon || "ðŸ”’";
   },
 
   getLastStatus(id) {
@@ -674,7 +674,7 @@ function _renderPermissionsScreen() {
     </div>`;
     }).join("") +
     '<hr class="perm-divider">' +
-    '<button id="permRevokeGuideBtn" class="setting-item danger" style="margin:0;border-radius:8px;">📖 How to Manage Permissions</button>';
+    '<button id="permRevokeGuideBtn" class="setting-item danger" style="margin:0;border-radius:8px;">ðŸ“– How to Manage Permissions</button>';
 
   PermissionsManager.refreshUI();
 }

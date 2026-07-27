@@ -1,6 +1,6 @@
-'use strict';
+﻿'use strict';
 /**
- * EVENT CREATION FROM MESSAGE — Create calendar/meeting event from a message
+ * EVENT CREATION FROM MESSAGE â€” Create calendar/meeting event from a message
  * Detects date/time in messages and adds a "Create event" button.
  */
 (function () {
@@ -81,7 +81,7 @@
         await db.collection('calendarEvents').add(event);
         if (typeof showToast === 'function') showToast('Event created', 'success');
       } catch (e) {
-        console.error('[EventFromMessage] Error:', e);
+        if (window.__DEBUG__) console.error('[EventFromMessage] Error:', e);
         if (typeof showToast === 'function') showToast('Failed to create event', 'error');
       }
     },

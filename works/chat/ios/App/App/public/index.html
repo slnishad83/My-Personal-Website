@@ -1,0 +1,1465 @@
+﻿<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, viewport-fit=cover, maximum-scale=5, interactive-widget=resizes-content">
+  <meta name="color-scheme" content="light dark">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="theme-color" content="#11131c" id="theme-color-meta">
+  <meta name="description" content="NSL Chat — Modern team messaging by Nishad SL">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://www.googleapis.com https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https:; media-src 'self' blob:; connect-src 'self' https://*.firebaseio.com https://*.cloudfunctions.net https://firebasestorage.googleapis.com https://www.googleapis.com wss://*.firebaseio.com; base-uri 'self'; object-src 'self'; frame-ancestors 'self'; form-action 'self'; upgrade-insecure-requests;">
+  <meta name="robots" content="noindex, nofollow">
+  <link rel="canonical" href="https://nishadsl.com/works/chat">
+  <meta property="og:title" content="NSL Chat">
+  <meta property="og:description" content="Modern team messaging by Nishad SL">
+  <meta property="og:url" content="https://nishadsl.com/works/chat">
+  <meta property="og:type" content="website">
+  <meta property="og:image" content="https://nishadsl.com/works/chat/app-icon-512.png">
+  <meta property="og:image:width" content="512">
+  <meta property="og:image:height" content="512">
+  <meta property="og:site_name" content="NSL Chat">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="NSL Chat">
+  <meta name="twitter:description" content="Modern team messaging by Nishad SL">
+  <meta name="twitter:image" content="https://nishadsl.com/works/chat/app-icon-512.png">
+  <title>NSL Chat</title>
+
+  <noscript>
+    <div style="display:flex;align-items:center;justify-content:center;min-height:100vh;background:#11131c;color:#e1e1ef;font-family:system-ui,sans-serif;padding:24px;text-align:center;" class="dark">
+      <div>
+        <h1 style="font-size:24px;margin-bottom:12px;">NSL Chat requires JavaScript</h1>
+        <p style="color:#918fa0;font-size:14px;">Please enable JavaScript in your browser settings to use NSL Chat.</p>
+      </div>
+    </div>
+  </noscript>
+
+  <!-- PWA Manifest & Icons -->
+  <link rel="manifest" href="/works/chat/dist/assets/manifest-BbZuLBcT.json">
+  <link rel="icon" href="/works/chat/dist/assets/app-icon-DfRnTJEv.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="/works/chat/dist/assets/app-icon-192-vvhPsVPK.png">
+
+  <!-- Preconnect for faster external resource loading -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="preconnect" href="https://cdnjs.cloudflare.com">
+  <link rel="preconnect" href="https://www.gstatic.com" crossorigin>
+  <link rel="preconnect" href="https://firebasestorage.googleapis.com">
+  <link rel="preconnect" href="https://www.googleapis.com">
+  <link rel="dns-prefetch" href="https://us-central1-my-team-chat-2255.cloudfunctions.net">
+  <link rel="dns-prefetch" href="https://asia-south1-my-team-chat-2255.cloudfunctions.net">
+  <link rel="dns-prefetch" href="https://my-team-chat-2255.firebaseio.com">
+
+  <!-- CSS is imported via app-index.js and processed by Vite -->
+
+  <!-- Google Fonts (font-display: swap for performance) — loaded asynchronously -->
+  <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
+  <link rel="preload" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=block" as="style" onload="this.onload=null;this.rel='stylesheet'">
+  <noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet"></noscript>
+  <noscript><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=block" rel="stylesheet"></noscript>
+  <style>
+    :root {
+      --wa-empty-icon-bg: rgba(0, 191, 165, 0.1);
+      --wa-empty-icon-color: #00bfa5;
+      --wa-empty-title-color: #e9edef;
+      --wa-empty-desc-color: #8696a0;
+      --wa-empty-link-color: #53bdeb;
+      --wa-empty-border-color: #222e35;
+      --wa-empty-promo-bg: #00bfa5;
+    }
+
+    html:not(.dark) {
+      --wa-empty-icon-bg: rgba(0, 168, 132, 0.1);
+      --wa-empty-icon-color: #00a884;
+      --wa-empty-title-color: #111b21;
+      --wa-empty-desc-color: #667781;
+      --wa-empty-link-color: #008069;
+      --wa-empty-border-color: #e9edef;
+      --wa-empty-promo-bg: #00a884;
+    }
+
+    .material-symbols-outlined, .material-symbols-rounded { font-display: swap; }
+  </style>
+
+  <!-- CSS is imported via app-index.js and processed by Vite -->
+
+  <!-- notification-sounds, twemoji, emoji-renderer, tailwind-config loaded via app-index.js -->
+
+  <script type="module" crossorigin src="/works/chat/dist/assets/main-BOdNyp8J.js"></script>
+  <link rel="modulepreload" crossorigin href="/works/chat/dist/assets/firebase-config-B1gHZycV.js">
+  <link rel="modulepreload" crossorigin href="/works/chat/dist/assets/feature-notifications-C5r5DeUJ.js">
+  <link rel="modulepreload" crossorigin href="/works/chat/dist/assets/feature-calls-CSrM5Ca1.js">
+  <link rel="modulepreload" crossorigin href="/works/chat/dist/assets/feature-security-CLIWQWZW.js">
+  <link rel="modulepreload" crossorigin href="/works/chat/dist/assets/feature-ux-qj99KXbN.js">
+  <link rel="modulepreload" crossorigin href="/works/chat/dist/assets/feature-chat-CJ8lnVEP.js">
+  <link rel="modulepreload" crossorigin href="/works/chat/dist/assets/feature-messages-CZ3jsISF.js">
+  <link rel="modulepreload" crossorigin href="/works/chat/dist/assets/feature-desktop-CtnGxzXC.js">
+  <link rel="modulepreload" crossorigin href="/works/chat/dist/assets/pwa-install-kFyaCo__.js">
+  <link rel="stylesheet" crossorigin href="/works/chat/dist/assets/feature-ux-DHZpM9Ny.css">
+  <link rel="stylesheet" crossorigin href="/works/chat/dist/assets/main-C-P_IKLz.css">
+</head>
+<body class="w-full h-full flex overflow-hidden antialiased bg-surface-container-low transition-colors duration-300">
+
+  <!-- ═══════════════════════════════════
+       LOADING SCREEN
+       ═══════════════════════════════════ -->
+  <div id="loading-screen" class="fixed inset-0 z-[99999] bg-background flex flex-col items-center justify-center gap-4 transition-all duration-300" role="status" aria-live="polite" aria-label="Loading application">
+    <div class="w-16 h-16 rounded-2xl bg-primary flex items-center justify-center shadow-lg shadow-primary/30">
+      <span class="material-symbols-outlined text-on-primary text-3xl" style="font-variation-settings: 'FILL' 1;">bolt</span>
+    </div>
+    <div class="w-10 h-10 border-3 border-primary/30 border-t-primary rounded-full animate-spin" style="border-width: 3px;"></div>
+    <p class="text-on-surface-variant font-headline-md tracking-tight text-sm" id="loading-status" aria-live="polite">Connecting securely…</p>
+  </div>
+
+  <!-- ═══════════════════════════════════
+       TOAST CONTAINER
+       ═══════════════════════════════════ -->
+  <div class="fixed top-6 right-6 z-[999] flex flex-col gap-2 max-sm:left-4 max-sm:right-4 max-sm:top-4 max-sm:items-center" id="toast-container" aria-live="polite" role="status" aria-atomic="false"></div>
+
+  <!-- Skip to content link for keyboard users (created by A11y module) -->
+  <a href="#chat-list" id="skip-nav" class="sr-only skip-nav-link" aria-label="Skip to chat list">Skip to chat list</a>
+  <!-- ═══════════════════════════════════
+       MAIN APP CONTAINER (Supports device framing simulation)
+       ═══════════════════════════════════ -->
+  <div id="app" class="hidden w-full h-full flex relative bg-background transition-all duration-300">
+
+    <!-- 💡 COLUMN 1: SIDE NAVBAR NAVIGATION (Global desktop/tablet view) -->
+    <nav id="sidebar" aria-label="Primary navigation" class="hidden md:flex flex-col h-full w-20 xl:w-64 bg-surface-container-low border-r border-outline-variant/30 sticky left-0 top-0 z-40 transition-all duration-300">
+      <!-- Brand Info -->
+      <div class="p-6 flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-primary-fixed flex items-center justify-center text-on-primary shadow-lg shadow-primary-fixed/20">
+          <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">bolt</span>
+        </div>
+        <div class="hidden xl:block">
+          <h1 class="font-headline-md text-headline-md font-bold text-on-background tracking-tight" id="sidebar-app-title">NSL Chat</h1>
+          <p class="text-xs text-on-surface-variant font-medium mt-0.5" id="sidebar-app-subtitle">Secure messaging</p>
+        </div>
+      </div>
+
+      <!-- Navigation links mapping switchTab -->
+      <div class="mt-4 flex-1 space-y-1 px-3" id="sidebar-nav-container">
+        <button class="tab-item active w-full flex items-center gap-4 bg-primary-fixed/10 text-primary-fixed border-l-4 border-primary px-4 py-3 cursor-pointer active:scale-95 transition-all duration-200" data-tab="chats" data-action="switchTab" data-action-arg="chats" aria-label="Chats" aria-current="page">
+          <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">chat</span>
+          <span class="hidden xl:block font-body-md text-body-md font-semibold">Chats</span>
+        </button>
+        <button class="tab-item w-full flex items-center gap-4 text-on-surface-variant hover:text-on-surface hover:bg-surface-container-highest transition-colors duration-200 px-4 py-3 cursor-pointer active:scale-95" data-tab="groups" data-action="switchTab" data-action-arg="groups" aria-label="Groups">
+          <span class="material-symbols-outlined">group</span>
+          <span class="hidden xl:block font-body-md text-body-md">Groups</span>
+        </button>
+        <button class="tab-item w-full flex items-center gap-4 text-on-surface-variant hover:text-on-surface hover:bg-surface-container-highest transition-colors duration-200 px-4 py-3 cursor-pointer active:scale-95" data-tab="calls" data-action="switchTab" data-action-arg="calls" aria-label="Calls">
+          <span class="material-symbols-outlined">call</span>
+          <span class="hidden xl:block font-body-md text-body-md">Calls</span>
+        </button>
+        <button class="tab-item w-full flex items-center gap-4 text-on-surface-variant hover:text-on-surface hover:bg-surface-container-highest transition-colors duration-200 px-4 py-3 cursor-pointer active:scale-95" data-tab="more" data-action="switchTab" data-action-arg="more" aria-label="Saved Items">
+          <span class="material-symbols-outlined">bookmark</span>
+          <span class="hidden xl:block font-body-md text-body-md">Saved Items</span>
+        </button>
+      </div>
+
+      <!-- Bottom Actions in Navigation -->
+      <div class="p-4 mt-auto border-t border-outline-variant/30 space-y-4">
+        <!-- H2: Sidebar expand toggle (shown on tablet only) -->
+        <button class="hidden lg:flex xl:hidden w-full items-center gap-4 text-on-surface-variant hover:text-on-surface transition-colors duration-200 px-4 py-2 cursor-pointer min-h-[44px]" id="sidebar-toggle-btn" aria-label="Expand sidebar" aria-expanded="false" data-action="toggleSidebarExpand">
+          <span class="material-symbols-outlined" id="sidebar-toggle-icon">menu_open</span>
+          <span class="hidden xl:block font-body-md text-body-md">Collapse</span>
+        </button>
+        <!-- Scanner Sidebar Row -->
+        <button class="w-full flex items-center gap-4 text-on-surface-variant hover:text-on-surface transition-colors duration-200 px-4 py-2 cursor-pointer" data-action="openScanner" aria-label="Scan QR code">
+          <span class="material-symbols-outlined">qr_code_scanner</span>
+          <span class="hidden xl:block font-body-md text-body-md">Scan QR</span>
+        </button>
+        <!-- Calculator Sidebar Row -->
+        <button class="w-full flex items-center gap-4 text-on-surface-variant hover:text-on-surface transition-colors duration-200 px-4 py-2 cursor-pointer" data-action="toggleCalculator" aria-label="Calculator">
+          <span class="material-symbols-outlined">calculate</span>
+          <span class="hidden xl:block font-body-md text-body-md">Calculator</span>
+        </button>
+        <!-- Music Player Sidebar Row -->
+        <button class="w-full flex items-center gap-4 text-on-surface-variant hover:text-on-surface transition-colors duration-200 px-4 py-2 cursor-pointer" data-action="openMusicLibrary" aria-label="Music Player">
+          <span class="material-symbols-outlined">queue_music</span>
+          <span class="hidden xl:block font-body-md text-body-md">Music Player</span>
+        </button>
+        <button class="w-full flex items-center gap-4 text-on-surface-variant hover:text-on-surface transition-colors duration-200 px-4 py-2 cursor-pointer" data-action="cycleTheme" aria-label="Toggle theme">
+          <span class="material-symbols-outlined" id="theme-icon-sidebar">light_mode</span>
+          <span class="hidden xl:block font-body-md text-body-md">Theme Toggle</span>
+        </button>
+
+        <!-- Profile Section -->
+        <div class="flex items-center gap-3 px-2 py-1 bg-surface-container-high rounded-xl cursor-pointer hover:brightness-110 active:scale-95 transition-all" data-action="openProfile" role="button" tabindex="0" aria-label="Open profile and settings" data-action-keydown="openProfile">
+          <div class="relative">
+            <div class="w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm bg-surface-container-highest text-on-surface-variant" id="sidebar-avatar">U</div>
+            <div class="absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-surface-container-low hidden" id="sidebar-presence-dot"></div>
+          </div>
+          <div class="hidden xl:block overflow-hidden">
+            <p class="text-sm font-bold truncate text-on-surface" id="profile-name-sidebar">User</p>
+            <p class="text-xs text-on-surface-variant font-medium">Profile & settings</p>
+          </div>
+        </div>
+      </div>
+    </nav>
+
+    <!-- 💡 COLUMN 2: CONVERSATION LIST (Flexible pane) -->
+    <aside id="chat-list-sidebar" role="complementary" aria-label="Conversations list" class="w-full md:w-80 lg:w-96 h-full flex flex-col bg-surface-container-lowest border-r border-outline-variant/30 flex-shrink-0 transition-all duration-300">
+      <div class="p-6 border-b border-outline-variant/10">
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="font-headline-md text-headline-md font-bold tracking-tight" id="chats-sidebar-title">Messages</h2>
+          <div class="flex items-center gap-1">
+            <!-- Chat Multi-select buttons -->
+            <span class="material-symbols-outlined text-on-surface-variant cursor-pointer hover:bg-surface-variant/30 p-2 rounded-full transition-all hidden" id="btn-select-all" data-action="toggleSelectAllChats" title="Select all" role="button" tabindex="0" aria-label="Select all">select_all</span>
+            <span class="material-symbols-outlined text-on-surface-variant cursor-pointer hover:bg-surface-variant/30 p-2 rounded-full transition-all" id="btn-multi-select" data-action="toggleChatSelectionMode" title="Multi-select" role="button" tabindex="0" aria-label="Multi-select">library_add_check</span>
+            <span class="material-symbols-outlined text-on-surface-variant cursor-pointer hover:bg-surface-variant/30 p-2 rounded-full transition-all hidden" id="btn-delete-selected" data-action="deleteSelectedChats" title="Delete selected" role="button" tabindex="0" aria-label="Delete selected">delete</span>
+            <!-- Call Multi-select buttons -->
+            <span class="material-symbols-outlined text-on-surface-variant cursor-pointer hover:bg-surface-variant/30 p-2 rounded-full transition-all hidden" id="btn-call-select-all" data-action="toggleSelectAllCalls" title="Select all calls" role="button" tabindex="0" aria-label="Select all calls">select_all</span>
+            <span class="material-symbols-outlined text-on-surface-variant cursor-pointer hover:bg-surface-variant/30 p-2 rounded-full transition-all hidden" id="btn-call-multi-select" data-action="toggleCallSelectionMode" title="Multi-select calls" role="button" tabindex="0" aria-label="Multi-select calls">library_add_check</span>
+            <span class="material-symbols-outlined text-on-surface-variant cursor-pointer hover:bg-surface-variant/30 p-2 rounded-full transition-all hidden" id="btn-call-delete-selected" data-action="deleteSelectedCalls" title="Delete selected calls" role="button" tabindex="0" aria-label="Delete selected calls">delete</span>
+            <span class="material-symbols-outlined text-on-surface-variant cursor-pointer hover:bg-surface-variant/30 p-2 rounded-full transition-all hidden" id="btn-new-call" data-action="openCallPicker" title="New Call" role="button" tabindex="0" aria-label="New Call">add_call</span>
+            <span class="material-symbols-outlined text-on-surface-variant cursor-pointer hover:bg-surface-variant/30 p-2 rounded-full transition-all" data-action="importChatFromZip" title="Import Chat" role="button" tabindex="0" aria-label="Import Chat">unarchive</span>
+            <span class="material-symbols-outlined text-on-surface-variant cursor-pointer hover:bg-surface-variant/30 p-2 rounded-full transition-all" data-action="openNewChat" role="button" tabindex="0" aria-label="New chat">edit_square</span>
+          </div>
+        </div>
+
+        <!-- Search conversations and filter -->
+        <div class="flex items-center gap-2 mb-3">
+          <div class="relative flex-1">
+            <input class="w-full bg-surface-container border-none rounded-xl py-2.5 pl-12 pr-10 text-on-surface focus:ring-1 focus:ring-primary font-body-md placeholder-on-surface-variant/50" placeholder="Search conversations..." id="sidebar-search" data-action-input="filterChats" data-action-keydown="handleSidebarSearch" type="text" autocomplete="off" aria-label="Search conversations"/>
+            <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant cursor-pointer text-[20px]" data-action="triggerSidebarSearch" role="button" tabindex="0" aria-label="Search">search</span>
+            <span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant cursor-pointer hover:text-primary hidden text-[20px]" id="sidebar-search-clear" data-action="clearSidebarSearch" role="button" tabindex="0" aria-label="Clear search">close</span>
+          </div>
+          <button class="wa-filter-manage-btn" id="btn-filter-unread" data-action="addNewFilterChip" type="button" title="Manage chat filters" aria-label="Manage chat filters" aria-pressed="false">
+            <span class="material-symbols-outlined text-[20px]">tune</span>
+          </button>
+        </div>
+
+        <!-- WhatsApp Web filter chips -->
+        <div class="flex items-center gap-2 pt-1 px-0 pb-2 overflow-x-auto select-none wa-chips-scroll" id="wa-filter-chips">
+          <button class="wa-chip active" data-action="setWaFilter" data-action-arg="all" data-filter="all" aria-pressed="true">All</button>
+          <button class="wa-chip" data-action="setWaFilter" data-action-arg="unread" data-filter="unread" aria-pressed="false">Unread</button>
+          <button class="wa-chip" data-action="setWaFilter" data-action-arg="favourites" data-filter="favourites" aria-pressed="false">Favourites</button>
+          <button class="wa-chip" data-action="setWaFilter" data-action-arg="groups" data-filter="groups" aria-pressed="false">Groups</button>
+          <button class="wa-chip-add" data-action="addNewFilterChip" aria-label="Add filter"><span class="material-symbols-outlined text-[16px]">add</span></button>
+        </div>
+      </div>
+
+      <!-- Folder Tabs -->
+      <div class="px-3 pt-2 pb-1 flex gap-1 overflow-x-auto scrollbar-hide hidden" id="folder-tabs"></div>
+
+      <!-- Active List Container -->
+      <div class="flex-1 overflow-y-scroll custom-scrollbar p-2 space-y-1" id="chat-list" role="list" aria-label="Conversations">
+        <!-- WhatsApp Status row (horizontal scroll above chats) -->
+        <div id="status-row" class="flex items-center gap-3 px-3 py-2 overflow-x-auto scrollbar-hide border-b border-outline-variant/10 mb-2 hidden" role="list" aria-label="Status updates"></div>
+        <!-- H9: Loading skeleton shown while chats load -->
+        <div id="chat-list-skeleton" class="space-y-2 p-2" aria-hidden="true">
+          <div class="flex items-center gap-3 p-3 animate-pulse"><div class="w-12 h-12 rounded-full bg-surface-container-highest"></div><div class="flex-1 space-y-2"><div class="h-3 bg-surface-container-highest rounded w-1/3"></div><div class="h-2 bg-surface-container-highest rounded w-2/3"></div></div></div>
+          <div class="flex items-center gap-3 p-3 animate-pulse"><div class="w-12 h-12 rounded-full bg-surface-container-highest"></div><div class="flex-1 space-y-2"><div class="h-3 bg-surface-container-highest rounded w-1/4"></div><div class="h-2 bg-surface-container-highest rounded w-1/2"></div></div></div>
+          <div class="flex items-center gap-3 p-3 animate-pulse"><div class="w-12 h-12 rounded-full bg-surface-container-highest"></div><div class="flex-1 space-y-2"><div class="h-3 bg-surface-container-highest rounded w-2/5"></div><div class="h-2 bg-surface-container-highest rounded w-3/5"></div></div></div>
+          <div class="flex items-center gap-3 p-3 animate-pulse"><div class="w-12 h-12 rounded-full bg-surface-container-highest"></div><div class="flex-1 space-y-2"><div class="h-3 bg-surface-container-highest rounded w-1/5"></div><div class="h-2 bg-surface-container-highest rounded w-1/2"></div></div></div>
+          <div class="flex items-center gap-3 p-3 animate-pulse"><div class="w-12 h-12 rounded-full bg-surface-container-highest"></div><div class="flex-1 space-y-2"><div class="h-3 bg-surface-container-highest rounded w-1/3"></div><div class="h-2 bg-surface-container-highest rounded w-2/5"></div></div></div>
+        </div>
+        <!-- Rendered dynamically -->
+      </div>
+      <!-- Empty state shown when no chats -->
+      <div id="chats-empty" class="hidden flex-col items-center py-12 text-center px-4">
+        <div class="w-16 h-16 rounded-2xl bg-surface-container-high flex items-center justify-center mb-4 border border-outline-variant/20">
+          <span class="material-symbols-outlined text-on-surface-variant/60 text-3xl">chat</span>
+        </div>
+        <p class="text-sm font-bold text-on-surface mb-1">No conversations yet</p>
+        <p class="text-[11px] text-on-surface-variant mb-4">Tap the + button to start messaging</p>
+        <button class="px-4 py-2 bg-primary text-on-primary rounded-xl text-xs font-bold hover:brightness-110 active:scale-95 transition-all" data-action="openNewChat" aria-label="Start a new conversation">New Conversation</button>
+      </div>
+    </aside>
+
+    <!-- 💡 COLUMN 3: MAIN CHAT DISPLAY CANVAS -->
+    <main id="chat-area" role="main" aria-label="Chat area" class="flex-1 flex flex-col relative bg-background min-w-0 h-full">
+
+      <!-- Top Chat Navigation Header Bar -->
+      <header id="chat-header" class="hidden flex justify-between items-center px-4 md:px-6 h-14 md:h-16 w-full sticky top-0 bg-background/80 backdrop-blur-xl border-b border-outline-variant/20 z-30">
+        <div class="flex items-center gap-3 min-w-0 flex-1">
+          <!-- Back button on mobile -->
+          <button class="lg:hidden text-on-surface-variant hover:text-on-surface active:scale-90 transition-all p-1.5 -ml-1 rounded-full" data-action="backToList" aria-label="Back">
+            <span class="material-symbols-outlined" style="font-size:22px">arrow_back</span>
+          </button>
+
+          <div class="flex items-center gap-3 cursor-pointer min-w-0 flex-1 py-1 rounded-xl hover:bg-surface-variant/30 active:bg-surface-variant/50 transition-colors px-2 -ml-2" id="chat-header-info" data-action="openChatInfo">
+            <div class="relative flex-shrink-0">
+              <div class="w-11 h-11 rounded-full flex items-center justify-center font-bold text-base bg-gradient-to-br from-primary/20 to-primary/5 border border-primary/10 text-on-surface-variant overflow-hidden" id="header-avatar">?</div>
+              <div class="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-green-500 border-[2.5px] border-background rounded-full z-10 hidden" id="header-status-dot"></div>
+            </div>
+            <div class="flex flex-col justify-center min-w-0 gap-0.5">
+              <h2 class="font-bold text-on-surface text-[15px] md:text-[16px] truncate leading-tight" id="header-name">Select a chat</h2>
+              <div class="flex items-center gap-1.5 min-w-0">
+                <span class="text-[11px] text-on-surface-variant/70 truncate whitespace-nowrap max-w-[120px] sm:max-w-[180px] md:max-w-[240px]" id="header-status">—</span>
+                <span class="text-[11px] text-on-surface-variant/60 flex items-center gap-1" id="encryption-indicator">
+                  <span class="material-symbols-outlined text-[11px]" style="font-variation-settings: 'FILL' 1;">lock</span>
+                  <span class="hidden sm:inline">End-to-end encrypted</span>
+                </span>
+              </div>
+            </div>
+            <span class="material-symbols-outlined text-on-surface-variant/40 text-lg flex-shrink-0 hidden sm:block">chevron_right</span>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-0.5 md:gap-1 flex-shrink-0" id="header-actions-container">
+          <button class="text-on-surface-variant/70 hover:text-primary transition-all p-2.5 rounded-full hover:bg-primary/10 active:scale-90 min-w-[44px] min-h-[44px] flex items-center justify-center" data-action="startVoiceCall" id="btn-voice-call" title="Voice Call" aria-label="Voice call">
+            <span class="material-symbols-outlined" style="font-size:20px">call</span>
+          </button>
+          <button class="text-on-surface-variant/70 hover:text-primary transition-all p-2.5 rounded-full hover:bg-primary/10 active:scale-90 min-w-[44px] min-h-[44px] flex items-center justify-center" data-action="startVideoCall" id="btn-video-call" title="Video Call" aria-label="Video call">
+            <span class="material-symbols-outlined" style="font-size:20px">videocam</span>
+          </button>
+          <button class="text-on-surface-variant/70 hover:text-on-surface transition-all p-2.5 rounded-full hover:bg-surface-variant/50 active:scale-90 min-w-[44px] min-h-[44px] flex items-center justify-center" data-action="openChatSearch" title="Search chat" aria-label="Search messages">
+            <span class="material-symbols-outlined" style="font-size:20px">search</span>
+          </button>
+          <button class="text-on-surface-variant/70 hover:text-on-surface transition-all p-2.5 rounded-full hover:bg-surface-variant/50 active:scale-90 min-w-[44px] min-h-[44px] flex items-center justify-center" data-action="toggleChatMute" id="btn-chat-mute" title="Toggle mute" aria-label="Toggle notification mute">
+            <span class="material-symbols-outlined" style="font-size:20px" id="chat-mute-icon">notifications</span>
+          </button>
+          <button class="text-on-surface-variant/70 hover:text-on-surface transition-all p-2.5 rounded-full hover:bg-surface-variant/50 active:scale-90 min-w-[44px] min-h-[44px] flex items-center justify-center" data-action="openChatMenu" id="btn-chat-menu" title="More options" aria-label="More options">
+            <span class="material-symbols-outlined" style="font-size:20px">more_vert</span>
+          </button>
+        </div>
+      </header>
+
+      <!-- Pinned Message Bar -->
+      <div id="pinned-message-bar" class="bg-surface-container-high border-b border-outline-variant/10 px-6 py-2.5 flex items-center justify-between gap-3 hidden relative z-10 animate-fade-in">
+        <div class="flex items-center gap-2 min-w-0">
+          <span class="material-symbols-outlined text-primary text-[18px]">push_pin</span>
+          <div class="text-xs min-w-0">
+            <span class="font-bold text-primary block" id="pinned-msg-sender">System</span>
+            <span class="text-on-surface-variant truncate block" id="pinned-msg-text">No pinned messages</span>
+          </div>
+        </div>
+        <div class="flex items-center gap-1.5 flex-shrink-0">
+          <button class="min-w-[44px] min-h-[44px] flex items-center justify-center hover:bg-surface-variant/40 rounded-full text-on-surface-variant transition-colors cursor-pointer" data-action="openPinnedMessagesPanel" title="View all pinned" aria-label="View all pinned messages">
+            <span class="material-symbols-outlined text-base">list</span>
+          </button>
+          <button class="min-w-[44px] min-h-[44px] flex items-center justify-center hover:bg-surface-variant/40 rounded-full text-on-surface-variant transition-colors cursor-pointer" data-action="scrollToPinnedMessage" title="Go to Message" aria-label="Go to pinned message">
+            <span class="material-symbols-outlined text-base">arrow_forward</span>
+          </button>
+          <button class="min-w-[44px] min-h-[44px] flex items-center justify-center hover:bg-red-500/10 hover:text-red-400 rounded-full text-on-surface-variant transition-colors cursor-pointer" data-action="unpinCurrentMessage" title="Unpin message" aria-label="Unpin message">
+            <span class="material-symbols-outlined text-base">close</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Offline alerts -->
+      <div class="bg-error/10 border-b border-error/20 px-6 py-2 flex items-center gap-2 text-xs text-error font-medium hidden" id="offline-banner" role="alert">
+        <span class="material-symbols-outlined text-[16px]">wifi_off</span>
+        No internet connection — waiting to sync messages...
+      </div>
+
+      <!-- 🏠 Welcome Lobby / Empty view (No chat selected) -->
+      <div class="@container flex-1 flex flex-col p-6 overflow-y-auto scrollbar-hide" id="welcome-screen" role="region" aria-label="Welcome">
+        <div class="max-w-4xl w-full mx-auto space-y-6 my-auto py-8">
+          <!-- Hero Banner Header -->
+          <div class="flex flex-col @md:flex-row items-center gap-6 bg-surface-container-high rounded-3xl p-4 sm:p-6 md:p-8 border border-outline-variant/20 shadow-xl neon-glow">
+            <div class="w-20 h-20 rounded-3xl bg-primary flex items-center justify-center shadow-lg shadow-primary/30 flex-shrink-0">
+              <span class="material-symbols-outlined text-on-primary text-4xl" style="font-variation-settings: 'FILL' 1;">bolt</span>
+            </div>
+            <div class="text-center md:text-left flex-1 space-y-1">
+              <h3 class="font-headline-lg text-headline-lg font-bold text-on-surface">Welcome to NSL Chat Workspace</h3>
+              <p class="text-on-surface-variant text-sm max-w-xl">A modern collaboration suite blending the premium Midnight theme with high-performance direct chat, channels, and developer-friendly notebook spaces.</p>
+            </div>
+            <button class="bg-primary text-on-primary px-6 py-3 rounded-2xl text-sm font-bold shadow-lg hover:scale-105 active:scale-95 transition-transform" data-action="openNewChat" aria-label="Start a new message">Start Message</button>
+          </div>
+
+
+
+
+        </div>
+      </div>
+
+      <!-- Messages Container Wrap -->
+      <div class="flex-1 overflow-y-scroll overflow-x-hidden p-gutter space-y-6 custom-scrollbar bg-surface-dim/40 flex flex-col hidden" id="messages-wrap" role="log" aria-live="polite" aria-relevant="additions" aria-atomic="false" aria-label="Messages">
+        <!-- Loading skeleton shown while messages load -->
+        <div id="messages-skeleton" class="space-y-4 p-4" aria-hidden="true">
+          <div class="flex justify-start"><div class="w-3/5 h-10 bg-surface-container-highest/50 rounded-2xl rounded-tl-sm animate-pulse"></div></div>
+          <div class="flex justify-end"><div class="w-2/5 h-12 bg-primary-container/30 rounded-2xl rounded-tr-sm animate-pulse"></div></div>
+          <div class="flex justify-start"><div class="w-1/2 h-8 bg-surface-container-highest/50 rounded-2xl rounded-tl-sm animate-pulse"></div></div>
+          <div class="flex justify-end"><div class="w-3/5 h-14 bg-primary-container/30 rounded-2xl rounded-tr-sm animate-pulse"></div></div>
+          <div class="flex justify-start"><div class="w-2/5 h-10 bg-surface-container-highest/50 rounded-2xl rounded-tl-sm animate-pulse"></div></div>
+        </div>
+        <!-- Dynamically rendered messages -->
+      </div>
+
+      <!-- Scroll Bottom Fab button -->
+      <button class="absolute bottom-24 right-6 w-10 h-10 bg-primary text-on-primary rounded-full flex items-center justify-center shadow-lg hover:scale-105 active:scale-95 transition-transform z-20 hidden" id="scroll-to-bottom" data-action="scrollToBottom" aria-label="Scroll to bottom">
+        <span class="material-symbols-outlined">expand_more</span>
+        <div class="absolute -top-1.5 -right-1.5 bg-secondary text-white text-[9px] w-5 h-5 rounded-full flex items-center justify-center font-bold hidden" id="scroll-badge" aria-label="0 unread messages">0</div>
+      </button>
+
+      <!-- Typing indicators -->
+      <div class="px-6 py-2 flex items-center gap-2 hidden" id="typing-indicator" aria-live="polite">
+        <div class="flex items-center gap-2 bg-surface-container-high px-3 py-2 rounded-full border border-outline-variant/30">
+          <span class="text-xs text-on-surface-variant font-medium typing-user-name">Someone</span>
+          <div class="flex gap-1">
+            <div class="w-1.5 h-1.5 bg-primary rounded-full" style="animation: typing-dot 1.2s ease-in-out infinite; animation-delay: 0ms;"></div>
+            <div class="w-1.5 h-1.5 bg-primary rounded-full" style="animation: typing-dot 1.2s ease-in-out infinite; animation-delay: 0.2s;"></div>
+            <div class="w-1.5 h-1.5 bg-primary rounded-full" style="animation: typing-dot 1.2s ease-in-out infinite; animation-delay: 0.4s;"></div>
+          </div>
+          <span class="text-[11px] text-on-surface-variant/60">typing...</span>
+        </div>
+      </div>
+
+      <!-- Reply previews -->
+      <div class="bg-surface-container border-t border-outline-variant/30 px-4 py-2 flex items-center justify-between hidden" id="reply-preview" role="region" aria-label="Reply to message">
+        <div class="flex-1 flex items-stretch bg-surface-variant/50 rounded-lg overflow-hidden relative min-w-0">
+          <div class="w-1.5 bg-primary flex-shrink-0"></div>
+          <div class="flex-1 flex flex-col justify-center px-3 py-2 min-w-0">
+            <div class="font-bold text-sm text-primary truncate" id="reply-name">Name</div>
+            <div class="text-xs text-on-surface-variant truncate mt-0.5 flex items-center gap-1" id="reply-text">Message</div>
+          </div>
+          <img id="reply-image" class="hidden w-14 h-14 object-cover bg-surface-variant flex-shrink-0" alt="Reply thumbnail" />
+        </div>
+        <button class="text-on-surface-variant hover:text-on-surface p-3 ml-1 flex-shrink-0" data-action="cancelReply" aria-label="Cancel reply">
+          <span class="material-symbols-outlined text-[20px]">close</span>
+        </button>
+      </div>
+
+      <!-- Formatting panel -->
+      <div class="bg-surface-container border-t border-outline-variant/20 px-6 py-2 flex items-center gap-3 hidden" id="format-bar" role="toolbar" aria-label="Text formatting">
+        <button class="text-xs font-bold min-w-[44px] min-h-[44px] flex items-center justify-center rounded bg-surface-variant hover:bg-surface-container-highest text-on-surface" data-action="formatText" data-action-arg="bold" aria-label="Bold">B</button>
+        <button class="text-xs italic min-w-[44px] min-h-[44px] flex items-center justify-center rounded bg-surface-variant hover:bg-surface-container-highest text-on-surface" data-action="formatText" data-action-arg="italic" aria-label="Italic">I</button>
+        <button class="text-xs line-through min-w-[44px] min-h-[44px] flex items-center justify-center rounded bg-surface-variant hover:bg-surface-container-highest text-on-surface" data-action="formatText" data-action-arg="strike" aria-label="Strikethrough">S</button>
+        <button class="text-xs font-mono min-w-[44px] min-h-[44px] flex items-center justify-center rounded bg-surface-variant hover:bg-surface-container-highest text-on-surface" data-action="formatText" data-action-arg="code" aria-label="Code">Code</button>
+        <div class="flex-1"></div>
+        <button class="min-w-[44px] min-h-[44px] flex items-center justify-center text-on-surface-variant hover:text-on-surface" data-action="hideFormatBar" aria-label="Close formatting bar"><span class="material-symbols-outlined text-sm">close</span></button>
+      </div>
+
+      <!-- Voice recorder container panel -->
+      <div class="bg-surface-container border-t border-outline-variant/30 px-6 py-4 flex items-center justify-between gap-4 hidden" id="recording-bar" role="region" aria-label="Voice recording controls">
+        <div class="flex items-center gap-3">
+          <span class="w-2.5 h-2.5 bg-error rounded-full animate-ping" id="rec-dot"></span>
+          <span class="font-bold text-sm text-error" id="rec-timer">0:00</span>
+          <span class="text-[11px] text-on-surface-variant" id="rec-limit"></span>
+        </div>
+        <div class="flex-1 flex items-end gap-0.5 h-8 justify-center overflow-hidden max-w-sm" id="recording-waveform">
+        </div>
+        <div class="flex gap-2 items-center">
+          <button class="w-11 h-11 flex items-center justify-center rounded-full border border-outline-variant hover:bg-surface-variant transition-colors" id="rec-pause-btn" data-action="togglePauseRecording" title="Pause/Resume" aria-label="Pause or resume recording">
+            <span class="material-symbols-outlined text-sm" id="rec-pause-icon">pause</span>
+          </button>
+          <button class="px-4 py-2 border border-outline-variant rounded-xl text-xs font-bold text-on-surface hover:bg-surface-variant transition-colors" data-action="cancelRecording">Cancel</button>
+          <button class="px-4 py-2 bg-primary text-on-primary rounded-xl text-xs font-bold hover:brightness-110 flex items-center gap-1.5 transition-all" data-action="sendVoiceMessage">
+            <span class="material-symbols-outlined text-[14px]">send</span> Send
+          </button>
+        </div>
+      </div>
+
+      <!-- Input Footer Bar — WhatsApp-exact layout -->
+      <footer class="wa-input-footer hidden" id="input-bar" role="form" aria-label="Message input">
+        <!-- Emoji button (outside input, left) -->
+        <button class="wa-input-icon" data-action="toggleEmojiPicker" aria-label="Emoji" id="wa-emoji-btn">
+          <span class="material-symbols-outlined">mood</span>
+        </button>
+        <!-- Attach button (paperclip, outside input) -->
+        <button class="wa-input-icon" id="attach-btn" data-action="toggleAttachMenu" aria-label="Attach file">
+          <span class="material-symbols-outlined">attach_file</span>
+        </button>
+        
+        <!-- Center: rounded input box with textarea -->
+        <div class="wa-input-box" id="wa-input-box">
+          <!-- Dynamic text input -->
+          <textarea class="wa-textarea" id="msg-input" placeholder="Type a message" rows="1" data-action-input="onInputChange" data-action-keydown="onInputKeyDown" aria-label="Message input"></textarea>
+        </div>
+        <!-- Right: circular mic/send button -->
+        <button class="wa-send-mic-btn" id="mic-btn" data-action="toggleRecording" aria-label="Record voice message">
+          <span class="material-symbols-outlined">mic</span>
+        </button>
+        <button class="wa-send-mic-btn hidden" id="send-btn" data-action="sendMessage" aria-label="Send message">
+          <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">send</span>
+        </button>
+      </footer>
+
+
+      <!-- Attachment popover popup menu — WhatsApp-style 3x2 grid -->
+      <div class="absolute bottom-20 left-6 bg-surface-container-low border border-outline-variant/40 p-4 rounded-2xl shadow-[0_8px_40px_rgba(0,0,0,0.35)] backdrop-blur-sm hidden z-30 w-[260px] transition-all duration-200 origin-bottom-left" id="attach-menu" role="menu" aria-label="Attach file">
+        <div class="grid grid-cols-3 gap-3">
+          <button class="flex flex-col items-center gap-1.5 group" data-action="attachPhoto" role="menuitem">
+            <div class="w-12 h-12 rounded-2xl bg-[#7C4DFF] flex items-center justify-center transition-transform group-hover:scale-105 group-active:scale-95">
+              <span class="material-symbols-outlined text-white text-[22px]" style="font-variation-settings:'FILL' 1;">photo_library</span>
+            </div>
+            <span class="text-[11px] text-on-surface-variant font-medium">Gallery</span>
+          </button>
+          <button class="flex flex-col items-center gap-1.5 group" data-action="attachCamera" role="menuitem">
+            <div class="w-12 h-12 rounded-2xl bg-[#00A884] flex items-center justify-center transition-transform group-hover:scale-105 group-active:scale-95">
+              <span class="material-symbols-outlined text-white text-[22px]" style="font-variation-settings:'FILL' 1;">photo_camera</span>
+            </div>
+            <span class="text-[11px] text-on-surface-variant font-medium">Camera</span>
+          </button>
+          <button class="flex flex-col items-center gap-1.5 group" data-action="attachDocument" role="menuitem">
+            <div class="w-12 h-12 rounded-2xl bg-[#5157AE] flex items-center justify-center transition-transform group-hover:scale-105 group-active:scale-95">
+              <span class="material-symbols-outlined text-white text-[22px]" style="font-variation-settings:'FILL' 1;">description</span>
+            </div>
+            <span class="text-[11px] text-on-surface-variant font-medium">Files</span>
+          </button>
+          <button class="flex flex-col items-center gap-1.5 group" data-action="shareContact" role="menuitem">
+            <div class="w-12 h-12 rounded-2xl bg-[#00A0B0] flex items-center justify-center transition-transform group-hover:scale-105 group-active:scale-95">
+              <span class="material-symbols-outlined text-white text-[22px]" style="font-variation-settings:'FILL' 1;">person</span>
+            </div>
+            <span class="text-[11px] text-on-surface-variant font-medium">Contact</span>
+          </button>
+          <button class="flex flex-col items-center gap-1.5 group" data-action="shareLocation" role="menuitem">
+            <div class="w-12 h-12 rounded-2xl bg-[#1FA855] flex items-center justify-center transition-transform group-hover:scale-105 group-active:scale-95">
+              <span class="material-symbols-outlined text-white text-[22px]" style="font-variation-settings:'FILL' 1;">location_on</span>
+            </div>
+            <span class="text-[11px] text-on-surface-variant font-medium">Location</span>
+          </button>
+          <button class="flex flex-col items-center gap-1.5 group" data-action="attachAndOpenPoll" role="menuitem">
+            <div class="w-12 h-12 rounded-2xl bg-[#53BDEB] flex items-center justify-center transition-transform group-hover:scale-105 group-active:scale-95">
+              <span class="material-symbols-outlined text-white text-[22px]" style="font-variation-settings:'FILL' 1;">poll</span>
+            </div>
+            <span class="text-[11px] text-on-surface-variant font-medium">Poll</span>
+          </button>
+          <button class="flex flex-col items-center gap-1.5 group" data-action="attachAndOpenDrive" role="menuitem">
+            <div class="w-12 h-12 rounded-2xl bg-[#4285F4] flex items-center justify-center transition-transform group-hover:scale-105 group-active:scale-95">
+              <span class="material-symbols-outlined text-white text-[22px]" style="font-variation-settings:'FILL' 1;">cloud</span>
+            </div>
+            <span class="text-[11px] text-on-surface-variant font-medium">Drive</span>
+          </button>
+          <button class="flex flex-col items-center gap-1.5 group" data-action="attachAndOpenOneDrive" role="menuitem">
+            <div class="w-12 h-12 rounded-2xl bg-[#0078D4] flex items-center justify-center transition-transform group-hover:scale-105 group-active:scale-95">
+              <span class="material-symbols-outlined text-white text-[22px]" style="font-variation-settings:'FILL' 1;">cloud_upload</span>
+            </div>
+            <span class="text-[11px] text-on-surface-variant font-medium">OneDrive</span>
+          </button>
+          <button class="flex flex-col items-center gap-1.5 group" data-action="attachAndOpenWhiteboard" role="menuitem">
+            <div class="w-12 h-12 rounded-2xl bg-[#E91E63] flex items-center justify-center transition-transform group-hover:scale-105 group-active:scale-95">
+              <span class="material-symbols-outlined text-white text-[22px]" style="font-variation-settings:'FILL' 1;">draw</span>
+            </div>
+            <span class="text-[11px] text-on-surface-variant font-medium">Draw</span>
+          </button>
+          <button class="flex flex-col items-center gap-1.5 group" data-action="attachAndOpenGames" role="menuitem">
+            <div class="w-12 h-12 rounded-2xl bg-[#FF9800] flex items-center justify-center transition-transform group-hover:scale-105 group-active:scale-95">
+              <span class="material-symbols-outlined text-white text-[22px]" style="font-variation-settings:'FILL' 1;">sports_esports</span>
+            </div>
+            <span class="text-[11px] text-on-surface-variant font-medium">Games</span>
+          </button>
+          <button class="flex flex-col items-center gap-1.5 group" data-action="attachAndOpenMusic" role="menuitem">
+            <div class="w-12 h-12 rounded-2xl bg-[#9C27B0] flex items-center justify-center transition-transform group-hover:scale-105 group-active:scale-95">
+              <span class="material-symbols-outlined text-white text-[22px]" style="font-variation-settings:'FILL' 1;">queue_music</span>
+            </div>
+            <span class="text-[11px] text-on-surface-variant font-medium">Music</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Emoji Picker — WhatsApp-style polished panel -->
+      <div class="absolute bottom-20 right-6 bg-surface-container-low border border-outline-variant/40 rounded-2xl shadow-[0_8px_40px_rgba(0,0,0,0.35)] backdrop-blur-sm flex flex-col hidden z-30 w-[320px] h-[400px] overflow-hidden transition-all duration-200 origin-bottom-right" id="emoji-picker" role="dialog" aria-modal="true" aria-label="Emoji picker">
+        <div class="px-3 pt-3 pb-2">
+          <div class="relative">
+            <span class="material-symbols-outlined absolute left-2.5 top-1/2 -translate-y-1/2 text-on-surface-variant/60 text-[18px]">search</span>
+            <input type="search" inputmode="search" id="emoji-search" placeholder="Search emoji" class="w-full pl-9 pr-3 py-2 text-sm bg-surface-variant/50 rounded-full focus:outline-none focus:ring-1 focus:ring-primary/40 text-on-surface placeholder:text-on-surface-variant/50" data-action-input="searchEmoji" aria-label="Search emoji">
+          </div>
+        </div>
+        <div class="flex items-center px-2 pb-1.5 border-b border-outline-variant/10 overflow-x-auto gap-0.5 scrollbar-hide">
+          <button class="emoji-cat-btn active flex-shrink-0 w-11 h-11 flex items-center justify-center rounded-full text-base bg-primary/10 transition-colors" data-action="setEmojiCat" data-action-arg="recent" aria-label="Recent" aria-pressed="true"><span class="material-symbols-outlined text-[18px] text-primary">schedule</span></button>
+          <button class="emoji-cat-btn flex-shrink-0 w-11 h-11 flex items-center justify-center rounded-full text-base transition-colors hover:bg-surface-variant/40" data-action="setEmojiCat" data-action-arg="smileys" aria-label="Smileys and Emotion" aria-pressed="false">😊</button>
+          <button class="emoji-cat-btn flex-shrink-0 w-11 h-11 flex items-center justify-center rounded-full text-base transition-colors hover:bg-surface-variant/40" data-action="setEmojiCat" data-action-arg="people" aria-label="People and Body" aria-pressed="false">👋</button>
+          <button class="emoji-cat-btn flex-shrink-0 w-11 h-11 flex items-center justify-center rounded-full text-base transition-colors hover:bg-surface-variant/40" data-action="setEmojiCat" data-action-arg="nature" aria-label="Animals and Nature" aria-pressed="false">🌿</button>
+          <button class="emoji-cat-btn flex-shrink-0 w-11 h-11 flex items-center justify-center rounded-full text-base transition-colors hover:bg-surface-variant/40" data-action="setEmojiCat" data-action-arg="food" aria-label="Food and Drink" aria-pressed="false">🍕</button>
+          <button class="emoji-cat-btn flex-shrink-0 w-11 h-11 flex items-center justify-center rounded-full text-base transition-colors hover:bg-surface-variant/40" data-action="setEmojiCat" data-action-arg="activities" aria-label="Activities" aria-pressed="false">⚽</button>
+          <button class="emoji-cat-btn flex-shrink-0 w-11 h-11 flex items-center justify-center rounded-full text-base transition-colors hover:bg-surface-variant/40" data-action="setEmojiCat" data-action-arg="travel" aria-label="Travel and Places" aria-pressed="false">✈️</button>
+          <button class="emoji-cat-btn flex-shrink-0 w-11 h-11 flex items-center justify-center rounded-full text-base transition-colors hover:bg-surface-variant/40" data-action="setEmojiCat" data-action-arg="objects" aria-label="Objects" aria-pressed="false">💡</button>
+          <button class="emoji-cat-btn flex-shrink-0 w-11 h-11 flex items-center justify-center rounded-full text-base transition-colors hover:bg-surface-variant/40" data-action="setEmojiCat" data-action-arg="symbols" aria-label="Symbols" aria-pressed="false">❤️</button>
+          <button class="emoji-cat-btn flex-shrink-0 w-11 h-11 flex items-center justify-center rounded-full text-base transition-colors hover:bg-surface-variant/40" data-action="setEmojiCat" data-action-arg="flags" aria-label="Flags" aria-pressed="false">🏁</button>
+        </div>
+        <div class="flex-1 overflow-y-auto p-2 grid grid-cols-7 gap-0.5 text-center text-xl custom-scrollbar" id="emoji-grid">
+        </div>
+        <div class="skin-tone-selector" id="skin-tone-selector">
+          <button class="skin-tone-btn active" data-skin-tone="none" data-action="setSkinTone" data-action-arg="none" title="Default">👋</button>
+          <button class="skin-tone-btn" data-skin-tone="light" data-action="setSkinTone" data-action-arg="light" title="Light" style="background:#FFDBB4;">&nbsp;</button>
+          <button class="skin-tone-btn" data-skin-tone="medium-light" data-action="setSkinTone" data-action-arg="medium-light" title="Medium-Light" style="background:#EDB98A;">&nbsp;</button>
+          <button class="skin-tone-btn" data-skin-tone="medium" data-action="setSkinTone" data-action-arg="medium" title="Medium" style="background:#C88B68;">&nbsp;</button>
+          <button class="skin-tone-btn" data-skin-tone="medium-dark" data-action="setSkinTone" data-action-arg="medium-dark" title="Medium-Dark" style="background:#A37148;">&nbsp;</button>
+          <button class="skin-tone-btn" data-skin-tone="dark" data-action="setSkinTone" data-action-arg="dark" title="Dark" style="background:#6B3E1E;">&nbsp;</button>
+        </div>
+        <div class="flex items-center gap-3 border-t border-outline-variant/10 px-4 py-2 min-h-[40px]" id="emoji-preview">
+          <span class="text-2xl" id="emoji-preview-icon"></span>
+          <span class="text-xs font-medium text-on-surface-variant truncate" id="emoji-preview-name"></span>
+        </div>
+      </div>
+
+      <!-- Contact Picker Overlay -->
+      <div class="absolute inset-0 bg-surface-container border border-outline-variant/30 rounded-2xl shadow-xl flex flex-col hidden z-40 overflow-hidden animate-in" id="contact-picker-overlay" role="dialog" aria-label="Share contact">
+        <div class="flex items-center gap-3 p-3 border-b border-outline-variant/10">
+          <button data-action="hide" data-action-arg="contact-picker-overlay" class="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-full hover:bg-surface-variant/40 transition-all" aria-label="Close contact picker">
+            <span class="material-symbols-outlined text-on-surface-variant">arrow_back</span>
+          </button>
+          <h3 class="font-bold text-sm text-on-surface flex-1">Share Contact</h3>
+        </div>
+        <div class="px-3 pt-2 pb-1">
+          <button data-action="shareMyProfile" class="w-full flex items-center gap-3 p-2.5 rounded-xl bg-primary/10 hover:bg-primary/20 transition-colors text-left">
+            <div class="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-on-primary font-bold text-sm" id="contact-picker-my-avatar">Me</div>
+            <div class="flex-1 min-w-0">
+              <div class="text-xs font-bold text-primary">Share My Profile</div>
+              <div class="text-[11px] text-on-surface-variant truncate" id="contact-picker-my-email">Your name, email & phone</div>
+            </div>
+            <span class="material-symbols-outlined text-primary text-sm">person</span>
+          </button>
+        </div>
+        <div class="px-3 pb-2">
+          <input type="text" id="contact-search" placeholder="Search contacts..." class="w-full px-3 py-1.5 text-xs bg-surface-variant/40 border border-outline-variant/20 rounded-lg focus:outline-none focus:ring-1 focus:ring-primary/50 text-on-surface placeholder:text-on-surface-variant/60" data-action-input="filterContactPicker" aria-label="Search contacts">
+        </div>
+        <div class="flex-1 overflow-y-auto p-3 space-y-1 custom-scrollbar" id="contact-picker-list">
+        </div>
+      </div>
+
+      <!-- Atmospheric Glow Highlights for Void depth style -->
+      <div class="absolute -top-40 -right-40 w-80 h-80 bg-primary/5 rounded-full blur-[100px] pointer-events-none" id="atmosphere-glow-1"></div>
+      <div class="absolute -bottom-40 -left-40 w-80 h-80 bg-secondary/5 rounded-full blur-[100px] pointer-events-none" id="atmosphere-glow-2"></div>
+    </main>
+
+    <!-- 💡 COLUMN 4: RIGHT-SIDE DETAIL INFO PANEL -->
+    <aside id="detail-panel" class="hidden flex-col h-full w-80 bg-surface-container border-l border-outline-variant/30 flex-shrink-0 z-20 overflow-hidden" aria-label="Chat details">
+      <!-- H10: Close button for tablet overlay mode -->
+      <div class="flex items-center justify-between p-3 border-b border-outline-variant/10 tablet-panel-header" style="display:none;">
+        <span class="font-semibold text-sm text-on-surface">Details</span>
+        <button class="p-1.5 rounded-full hover:bg-surface-variant/30 text-on-surface-variant" data-action="closeDetailPanel" aria-label="Close details">
+          <span class="material-symbols-outlined text-xl">close</span>
+        </button>
+      </div>
+      <!-- Populated dynamically -->
+    </aside>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════
+       OVERLAYS & MODALS
+       ═══════════════════════════════════════════════════════ -->
+
+  <!-- Settings / Profile overlay dialog -->
+  <div class="overlay fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center hidden" id="profile-overlay" data-action="dismissOnBackdrop" data-action-arg="profile-overlay" role="dialog" aria-modal="true" aria-label="Profile and Settings">
+    <div class="bg-surface-container border border-outline-variant/30 rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden max-h-[85vh] flex flex-col m-4 animate-in fade-in zoom-in-95 duration-200">
+      <div class="flex items-center justify-between p-6 border-b border-outline-variant/10">
+        <div class="flex items-center gap-3 text-primary">
+          <span class="material-symbols-outlined">manage_accounts</span>
+          <h2 class="font-headline-md text-headline-md font-bold text-on-surface">Profile & Settings</h2>
+        </div>
+        <button class="text-on-surface-variant hover:text-on-surface min-w-[44px] min-h-[44px] flex items-center justify-center rounded-full" data-action="closeModal" data-action-arg="profile-overlay" aria-label="Close profile">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+      <div class="modal-body overflow-y-auto p-6 space-y-6 custom-scrollbar">
+        <div class="flex flex-col items-center text-center">
+          <div class="relative mb-3">
+            <div class="w-24 h-24 rounded-full flex items-center justify-center font-bold text-3xl bg-surface-container-highest text-on-surface-variant cursor-pointer hover:brightness-110 animate-pulse" id="profile-avatar" data-action="changeAvatar">U</div>
+            <button class="absolute bottom-0 right-0 bg-primary text-on-primary min-w-[44px] min-h-[44px] rounded-full flex items-center justify-center shadow border-2 border-surface-container" data-action="changeAvatar" aria-label="Change profile photo">
+              <span class="material-symbols-outlined text-[16px]">photo_camera</span>
+            </button>
+          </div>
+          <h3 class="font-bold text-lg text-on-surface" id="profile-name">User</h3>
+          <p class="text-xs text-on-surface-variant" id="profile-email">Loading…</p>
+          <span class="inline-flex items-center gap-1.5 px-3 py-1 bg-primary/10 border border-primary/20 rounded-full text-xs font-semibold text-primary mt-3" id="profile-status-badge">
+            <span class="w-2 h-2 bg-primary-fixed rounded-full animate-pulse"></span> Available
+          </span>
+        </div>
+
+        <div class="space-y-4">
+          <div class="space-y-2">
+            <h4 class="text-xs font-bold text-on-surface-variant uppercase tracking-wider pl-1">Account details</h4>
+            <div class="bg-surface-container-low border border-outline-variant/20 rounded-xl overflow-hidden divide-y divide-outline-variant/10">
+              <div class="flex items-center justify-between p-4 cursor-pointer hover:bg-surface-container transition-colors" data-action="editName">
+                <div class="flex items-center gap-3">
+                  <span class="material-symbols-outlined text-primary">badge</span>
+                  <div>
+                    <p class="text-sm font-bold">Display Name</p>
+                    <p class="text-xs text-on-surface-variant" id="settings-name">—</p>
+                  </div>
+                </div>
+                <span class="material-symbols-outlined text-on-surface-variant">chevron_right</span>
+              </div>
+              <div class="flex items-center justify-between p-4 cursor-pointer hover:bg-surface-container transition-colors" data-action="editStatus">
+                <div class="flex items-center gap-3">
+                  <span class="material-symbols-outlined text-primary">mood</span>
+                  <div>
+                    <p class="text-sm font-bold">Custom Status</p>
+                    <p class="text-xs text-on-surface-variant" id="settings-status">Available</p>
+                  </div>
+                </div>
+                <span class="material-symbols-outlined text-on-surface-variant">chevron_right</span>
+              </div>
+              <div class="flex items-center justify-between p-4 cursor-pointer hover:bg-surface-container transition-colors" data-action="editPhone">
+                <div class="flex items-center gap-3">
+                  <span class="material-symbols-outlined text-primary">phone</span>
+                  <div>
+                    <p class="text-sm font-bold">Phone Number</p>
+                    <p class="text-xs text-on-surface-variant" id="settings-phone">Not provided</p>
+                  </div>
+                </div>
+                <span class="material-symbols-outlined text-on-surface-variant">chevron_right</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="space-y-2">
+            <h4 class="text-xs font-bold text-on-surface-variant uppercase tracking-wider pl-1">Configuration</h4>
+            <div class="bg-surface-container-low border border-outline-variant/20 rounded-xl overflow-hidden divide-y divide-outline-variant/10">
+              <div class="flex items-center justify-between p-4 cursor-pointer hover:bg-surface-container transition-colors" data-action="cycleTheme">
+                <div class="flex items-center gap-3">
+                  <span class="material-symbols-outlined text-primary" id="theme-icon">light_mode</span>
+                  <div>
+                    <p class="text-sm font-bold">App Theme</p>
+                    <p class="text-xs text-on-surface-variant" id="theme-label">Light</p>
+                  </div>
+                </div>
+                <span class="material-symbols-outlined text-on-surface-variant">chevron_right</span>
+              </div>
+              <div class="flex items-center justify-between p-4 cursor-pointer hover:bg-surface-container transition-colors" data-action="openLanguagePicker">
+                <div class="flex items-center gap-3">
+                  <span class="material-symbols-outlined text-primary">language</span>
+                  <div>
+                    <p class="text-sm font-bold">App Language</p>
+                    <p class="text-xs text-on-surface-variant">English / हिन्दी / ગુજરાતી</p>
+                  </div>
+                </div>
+                <span class="material-symbols-outlined text-on-surface-variant">chevron_right</span>
+              </div>
+              <div class="flex items-center justify-between p-4 cursor-pointer hover:bg-surface-container transition-colors" data-action="openFolderManager">
+                <div class="flex items-center gap-3">
+                  <span class="material-symbols-outlined text-primary">folder</span>
+                  <div>
+                    <p class="text-sm font-bold">Manage Folders</p>
+                    <p class="text-xs text-on-surface-variant" id="folder-count">Organize your chats</p>
+                  </div>
+                </div>
+                <span class="material-symbols-outlined text-on-surface-variant">chevron_right</span>
+              </div>
+              <div class="flex items-center justify-between p-4 cursor-pointer hover:bg-surface-container transition-colors" id="appPermissionsBtn" data-action="showPermissions">
+                <div class="flex items-center gap-3">
+                  <span class="material-symbols-outlined text-primary">shield</span>
+                  <div>
+                    <p class="text-sm font-bold">App Permissions</p>
+                    <p class="text-xs text-on-surface-variant">Camera, mic, notifications & more</p>
+                  </div>
+                </div>
+                <span class="material-symbols-outlined text-on-surface-variant">chevron_right</span>
+              </div>
+              <div class="flex items-center justify-between p-4 cursor-pointer hover:bg-surface-container transition-colors" id="keyboardShortcutsBtn" data-action="showKeyboardShortcuts">
+                <div class="flex items-center gap-3">
+                  <span class="material-symbols-outlined text-primary">keyboard</span>
+                  <div>
+                    <p class="text-sm font-bold">Keyboard Shortcuts</p>
+                    <p class="text-xs text-on-surface-variant">View all keyboard shortcuts and hotkeys</p>
+                  </div>
+                </div>
+                <span class="material-symbols-outlined text-on-surface-variant">chevron_right</span>
+              </div>
+              <div class="flex items-center justify-between p-4 cursor-pointer hover:bg-surface-container transition-colors" data-action="showTwoFactorAuth">
+                <div class="flex items-center gap-3">
+                  <span class="material-symbols-outlined text-primary">security</span>
+                  <div>
+                    <p class="text-sm font-bold">Two-Step Verification</p>
+                    <p class="text-xs text-on-surface-variant">Extra PIN security for your account</p>
+                  </div>
+                </div>
+                <span class="material-symbols-outlined text-on-surface-variant">chevron_right</span>
+              </div>
+              <div class="flex items-center justify-between p-4 cursor-pointer hover:bg-surface-container transition-colors" data-action="toggleAppLock">
+                <div class="flex items-center gap-3">
+                  <span class="material-symbols-outlined text-primary">lock</span>
+                  <div>
+                    <p class="text-sm font-bold">App Lock</p>
+                    <p class="text-xs text-on-surface-variant">Require PIN to open the app</p>
+                  </div>
+                </div>
+                <span class="material-symbols-outlined text-on-surface-variant">chevron_right</span>
+              </div>
+              <div class="flex items-center justify-between p-4 cursor-pointer hover:bg-surface-container transition-colors" data-action="showChatLockSettings">
+                <div class="flex items-center gap-3">
+                  <span class="material-symbols-outlined text-primary">chat_bubble_lock</span>
+                  <div>
+                    <p class="text-sm font-bold">Locked Chats</p>
+                    <p class="text-xs text-on-surface-variant">Manage individually locked conversations</p>
+                  </div>
+                </div>
+                <span class="material-symbols-outlined text-on-surface-variant">chevron_right</span>
+              </div>
+              <div class="flex items-center justify-between p-4 cursor-pointer hover:bg-surface-container transition-colors" data-action="showDataSaver">
+                <div class="flex items-center gap-3">
+                  <span class="material-symbols-outlined text-primary">data_saver_on</span>
+                  <div>
+                    <p class="text-sm font-bold">Data Saver</p>
+                    <p class="text-xs text-on-surface-variant">Control media auto-download settings</p>
+                  </div>
+                </div>
+                <span class="material-symbols-outlined text-on-surface-variant">chevron_right</span>
+              </div>
+              <div class="flex items-center justify-between p-4 cursor-pointer hover:bg-surface-container transition-colors" data-action="closeProfileAndHelp">
+                <div class="flex items-center gap-3">
+                  <span class="material-symbols-outlined text-primary">help</span>
+                  <div>
+                    <p class="text-sm font-bold">Help & Support</p>
+                    <p class="text-xs text-on-surface-variant">FAQs, report bugs, contact support</p>
+                  </div>
+                </div>
+                <span class="material-symbols-outlined text-on-surface-variant">chevron_right</span>
+              </div>
+              <div class="flex items-center justify-between p-4 cursor-pointer hover:bg-surface-container transition-colors" data-action="showDisappearingMessages">
+                <div class="flex items-center gap-3">
+                  <span class="material-symbols-outlined text-primary">timer</span>
+                  <div>
+                    <p class="text-sm font-bold">Disappearing Messages Default</p>
+                    <p class="text-xs text-on-surface-variant">Set default timer for new chats</p>
+                  </div>
+                </div>
+                <span class="material-symbols-outlined text-on-surface-variant">chevron_right</span>
+              </div>
+              <div class="flex items-center justify-between p-4 cursor-pointer hover:bg-surface-container transition-colors" data-action="showLinkedDevices">
+                <div class="flex items-center gap-3">
+                  <span class="material-symbols-outlined text-primary">devices</span>
+                  <div>
+                    <p class="text-sm font-bold">Linked Devices</p>
+                    <p class="text-xs text-on-surface-variant">Manage your connected devices</p>
+                  </div>
+                </div>
+                <span class="material-symbols-outlined text-on-surface-variant">chevron_right</span>
+              </div>
+              <div class="flex items-center justify-between p-4 cursor-pointer hover:bg-surface-container transition-colors" data-action="showWallpaperGallery">
+                <div class="flex items-center gap-3">
+                  <span class="material-symbols-outlined text-primary">wallpaper</span>
+                  <div>
+                    <p class="text-sm font-bold">Chat Wallpaper</p>
+                    <p class="text-xs text-on-surface-variant">Customize chat background</p>
+                  </div>
+                </div>
+                <span class="material-symbols-outlined text-on-surface-variant">chevron_right</span>
+              </div>
+              <div class="flex items-center justify-between p-4 cursor-pointer hover:bg-surface-container transition-colors" data-action="showFontSizeSettings">
+                <div class="flex items-center gap-3">
+                  <span class="material-symbols-outlined text-primary">text_fields</span>
+                  <div>
+                    <p class="text-sm font-bold">Font Size</p>
+                    <p class="text-xs text-on-surface-variant" id="font-size-label">Medium</p>
+                  </div>
+                </div>
+                <span class="material-symbols-outlined text-on-surface-variant">chevron_right</span>
+              </div>
+              <div class="flex items-center justify-between p-4 cursor-pointer hover:bg-surface-container transition-colors" data-action="showChangeNumber">
+                <div class="flex items-center gap-3">
+                  <span class="material-symbols-outlined text-primary">phone</span>
+                  <div>
+                    <p class="text-sm font-bold">Change Number</p>
+                    <p class="text-xs text-on-surface-variant">Change your phone number</p>
+                  </div>
+                </div>
+                <span class="material-symbols-outlined text-on-surface-variant">chevron_right</span>
+              </div>
+              <div class="flex items-center justify-between p-4 cursor-pointer hover:bg-surface-container transition-colors" data-action="showFindFriends">
+                <div class="flex items-center gap-3">
+                  <span class="material-symbols-outlined text-primary">contacts</span>
+                  <div>
+                    <p class="text-sm font-bold">Find Friends</p>
+                    <p class="text-xs text-on-surface-variant">Sync your phone contacts</p>
+                  </div>
+                </div>
+                <span class="material-symbols-outlined text-on-surface-variant">chevron_right</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="space-y-2">
+            <h4 class="text-xs font-bold text-on-surface-variant uppercase tracking-wider pl-1">Notifications & Sounds</h4>
+            <div class="bg-surface-container-low border border-outline-variant/20 rounded-xl overflow-hidden divide-y divide-outline-variant/10">
+              <div class="flex items-center justify-between p-4" id="global-mute-row">
+                <div class="flex items-center gap-3">
+                  <span class="material-symbols-outlined text-primary" id="global-mute-icon">notifications_active</span>
+                  <div>
+                    <p class="text-sm font-bold">Notification Sounds</p>
+                    <p class="text-xs text-on-surface-variant" id="global-mute-label">All sounds on</p>
+                  </div>
+                </div>
+                <button class="relative w-11 h-6 rounded-full transition-colors duration-200 cursor-pointer flex-shrink-0" id="global-mute-toggle" data-action="toggleGlobalMute" style="background:var(--primary)" aria-label="Notification sounds" aria-pressed="true">
+                  <span class="absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform duration-200" id="global-mute-knob" style="transform:translateX(20px)"></span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div class="space-y-2">
+            <h4 class="text-xs font-bold text-error uppercase tracking-wider pl-1">Danger Zone</h4>
+            <div class="bg-surface-container-low border border-error/10 rounded-xl overflow-hidden divide-y divide-outline-variant/10">
+              <div class="flex items-center justify-between p-4 cursor-pointer hover:bg-error/5 transition-colors text-error" role="button" tabindex="0" data-action="confirmClearAllChats">
+                <span class="text-sm font-bold">Clear All Conversation History</span>
+                <span class="material-symbols-outlined" aria-hidden="true">delete_sweep</span>
+              </div>
+              <div class="flex items-center justify-between p-4 cursor-pointer hover:bg-error/5 transition-colors text-error" role="button" tabindex="0" data-action="signOut">
+                <span class="text-sm font-bold">Log out of Account</span>
+                <span class="material-symbols-outlined" aria-hidden="true">logout</span>
+              </div>
+              <div class="flex items-center justify-between p-4 cursor-pointer hover:bg-error/5 transition-colors text-error border-t border-error/10" role="button" tabindex="0" data-action="confirmDeleteAccount">
+                <span class="text-sm font-bold">Delete Account</span>
+                <span class="material-symbols-outlined" aria-hidden="true">delete_forever</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- New Chat modal dialog -->
+  <div class="overlay fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center hidden" id="new-chat-overlay" data-action="dismissOnBackdrop" data-action-arg="new-chat-overlay" role="dialog" aria-modal="true" aria-label="Start new chat">
+    <div class="bg-surface-container border border-outline-variant/30 rounded-2xl w-full max-w-md shadow-2xl overflow-hidden max-h-[80vh] flex flex-col m-4 animate-in fade-in zoom-in-95 duration-200">
+      <div class="flex items-center justify-between p-6 border-b border-outline-variant/10">
+        <div class="flex items-center gap-3 text-primary">
+          <span class="material-symbols-outlined">edit_square</span>
+          <h2 class="font-headline-md text-headline-md font-bold text-on-surface">New Chat</h2>
+        </div>
+        <button class="text-on-surface-variant hover:text-on-surface min-w-[44px] min-h-[44px] flex items-center justify-center rounded-full" data-action="closeModal" data-action-arg="new-chat-overlay" aria-label="Close new chat">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+      <div class="p-4 border-b border-outline-variant/10">
+        <div class="relative">
+          <input class="w-full bg-surface-container border-none rounded-xl py-3 pl-12 pr-4 text-on-surface focus:ring-1 focus:ring-primary font-body-md" placeholder="Search team members…" id="new-chat-search" type="text" data-action-input="filterNewChatList" aria-label="Search team members"/>
+          <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant">search</span>
+        </div>
+      </div>
+      <div class="flex flex-col sm:flex-row gap-2 p-4 border-b border-outline-variant/10">
+        <button class="flex-1 flex items-center gap-3 bg-surface-container-high hover:brightness-110 p-3 rounded-xl transition-all" data-action="openNewGroup">
+          <span class="text-xl">👥</span>
+          <div class="text-left"><p class="text-sm font-bold leading-none">New Group</p><p class="text-[11px] text-on-surface-variant mt-0.5">Start group channel</p></div>
+        </button>
+        <button class="flex-1 flex items-center gap-3 bg-surface-container-high hover:brightness-110 p-3 rounded-xl transition-all" data-action="closeNewChatAndBroadcast">
+          <span class="text-xl">📢</span>
+          <div class="text-left"><p class="text-sm font-bold leading-none">Broadcast</p><p class="text-[11px] text-on-surface-variant mt-0.5">Message multiple contacts</p></div>
+        </button>
+      </div>
+      <div class="modal-body overflow-y-auto flex-1 p-2 space-y-1 custom-scrollbar" id="contact-list">
+        <div class="empty-state p-8 text-center text-on-surface-variant">
+          <div class="text-4xl mb-2">👥</div>
+          <p class="text-xs">Your workspace directory will load here</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Active Call View Overlay -->
+  <div class="overlay fixed inset-0 z-[100] bg-gradient-to-b from-[#0a1628] dark:from-[#0a1628] to-[#f0f2f5] dark:to-[#0d1f2d] flex flex-col hidden" id="call-screen" role="dialog" aria-modal="true" aria-label="Active call">
+    <div class="absolute top-4 left-1/2 -translate-x-1/2 text-[11px] text-white/60 flex items-center gap-1 z-10">
+      <span class="material-symbols-outlined text-[11px]" style="font-variation-settings: 'FILL' 1;">lock</span>
+      End-to-end encrypted
+    </div>
+    <div class="absolute inset-0 bg-cover bg-center opacity-30 blur-2xl transition-all duration-1000" id="call-blur-bg" style="background-image:none"></div>
+    <!-- Remote video (fills entire screen during video call) -->
+    <video id="remote-video" autoplay playsinline class="absolute inset-0 w-full h-full object-cover hidden z-0"></video>
+    <!-- Local video PiP (bottom-right corner) -->
+    <div class="absolute bottom-28 right-4 w-32 h-44 rounded-xl overflow-hidden border-2 border-white/30 shadow-xl z-20 hidden" id="local-video-container">
+      <video id="local-video" autoplay playsinline muted class="w-full h-full object-cover"></video>
+      <button class="absolute top-1 right-1 w-5 h-5 min-w-[44px] min-h-[44px] flex items-center justify-center bg-black/50 rounded-full text-white" data-action="switchCamera" title="Switch camera" aria-label="Switch camera">
+        <span class="material-symbols-outlined text-xs">flip_camera_ios</span>
+      </button>
+    </div>
+    <div class="flex-1 flex flex-col justify-between p-8 relative z-10 text-white">
+      <div class="flex justify-between items-center">
+        <div class="flex items-center gap-2 bg-white/10 px-3 py-1 rounded-full text-xs backdrop-blur-md" id="call-quality-badge">
+          <span class="material-symbols-outlined text-sm text-primary" id="call-quality-icon">signal_cellular_alt</span>
+          <span id="call-quality-text">HD Voice call</span>
+        </div>
+        <button class="min-w-[44px] min-h-[44px] bg-white/10 rounded-full flex items-center justify-center hover:bg-white/20 transition-colors" data-action="minimizeCall" aria-label="Minimize call">
+          <span class="material-symbols-outlined">expand_more</span>
+        </button>
+      </div>
+      <div class="flex flex-col items-center text-center my-auto" id="call-info-section">
+        <div class="relative mb-6">
+          <div class="w-32 h-32 rounded-full border-4 border-primary/30 flex items-center justify-center text-5xl bg-white/10 animate-pulse" id="call-avatar">?</div>
+        </div>
+        <h3 class="font-headline-lg text-xl sm:text-2xl md:text-3xl font-bold tracking-tight mb-2" id="call-name">Calling…</h3>
+        <p class="text-white/60 font-semibold uppercase tracking-wider text-xs" id="call-status">Connecting securely</p>
+        <div class="text-lg font-mono mt-4 hidden" id="call-timer">0:00</div>
+      </div>
+      <div class="flex justify-center gap-4 flex-wrap" id="call-controls">
+        <button class="w-14 h-14 min-w-[48px] min-h-[48px] bg-white/10 rounded-full flex items-center justify-center hover:bg-white/20 transition-all text-white" id="btn-mute" data-action="toggleMute" aria-label="Toggle microphone">
+          <span class="material-symbols-outlined" id="mute-icon">mic</span>
+        </button>
+        <button class="w-14 h-14 min-w-[48px] min-h-[48px] bg-white/10 rounded-full flex items-center justify-center hover:bg-white/20 transition-all text-white hidden" id="btn-cam" data-action="toggleCamera" aria-label="Toggle camera">
+          <span class="material-symbols-outlined" id="cam-icon">videocam</span>
+        </button>
+        <button class="w-14 h-14 min-w-[48px] min-h-[48px] bg-white/10 rounded-full flex items-center justify-center hover:bg-white/20 transition-all text-white" id="btn-speaker" data-action="toggleSpeaker" aria-label="Toggle speaker">
+          <span class="material-symbols-outlined" id="speaker-icon">volume_up</span>
+        </button>
+        <button class="w-14 h-14 min-w-[48px] min-h-[48px] bg-white/10 rounded-full flex items-center justify-center hover:bg-white/20 transition-all text-white hidden" id="btn-screenshare" data-action="toggleScreenShare" aria-label="Toggle screen share">
+          <span class="material-symbols-outlined" id="screenshare-icon">screen_share</span>
+        </button>
+        <button class="w-14 h-14 min-w-[48px] min-h-[48px] bg-white/10 rounded-full flex items-center justify-center hover:bg-white/20 transition-all text-white hidden" id="btn-record" data-action="toggleCallRecording" aria-label="Record call">
+          <span class="material-symbols-outlined" id="record-icon">fiber_manual_record</span>
+        </button>
+        <button class="w-14 h-14 min-w-[48px] min-h-[48px] bg-white/10 rounded-full flex items-center justify-center hover:bg-white/20 transition-all text-white hidden" id="btn-hold" data-action="toggleCallHold" aria-label="Hold call">
+          <span class="material-symbols-outlined" id="hold-icon">pause</span>
+        </button>
+        <button class="w-14 h-14 min-w-[48px] min-h-[48px] bg-white/10 rounded-full flex items-center justify-center hover:bg-white/20 transition-all text-white hidden" id="btn-fullscreen" data-action="toggleFullscreen" aria-label="Toggle fullscreen">
+          <span class="material-symbols-outlined" id="fullscreen-icon">fullscreen</span>
+        </button>
+        <button class="w-14 h-14 min-w-[48px] min-h-[48px] bg-white/10 rounded-full flex items-center justify-center hover:bg-white/20 transition-all text-white hidden" id="btn-pip" data-action="togglePIP" aria-label="Picture in picture">
+          <span class="material-symbols-outlined">picture_in_picture_alt</span>
+        </button>
+        <button class="w-14 h-14 min-w-[48px] min-h-[48px] bg-error rounded-full flex items-center justify-center hover:brightness-110 active:scale-95 transition-all text-white shadow-lg shadow-error/35" data-action="endCall" aria-label="End call">
+          <span class="material-symbols-outlined">call_end</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Incoming Call banner dialog overlay -->
+  <div class="overlay fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-center justify-center hidden" id="incoming-call-overlay" role="dialog" aria-modal="true" aria-live="assertive">
+    <div class="bg-surface-container border border-outline-variant/30 rounded-2xl w-full max-w-xs shadow-2xl p-6 text-center m-4 animate-in relative overflow-hidden">
+      <video id="incoming-call-video-preview" autoplay playsinline muted class="absolute inset-0 w-full h-full object-cover hidden z-0"></video>
+      <div class="relative z-10">
+      <div class="w-20 h-20 rounded-full mx-auto mb-4 flex items-center justify-center font-bold text-2xl bg-surface-container-highest text-on-surface-variant" id="incoming-call-avatar">?</div>
+      <h3 class="font-bold text-xl mb-1 text-on-surface" id="incoming-call-name">Unknown User</h3>
+      <p class="text-xs text-on-surface-variant uppercase tracking-widest font-label-caps mb-6" id="incoming-call-type">Incoming Call Request</p>
+      <div class="flex justify-center gap-4">
+        <button class="w-12 h-12 bg-error text-white rounded-full flex items-center justify-center hover:brightness-110 active:scale-95 transition-transform" data-action="declineCall" aria-label="Decline call">
+          <span class="material-symbols-outlined">call_end</span>
+        </button>
+        <button class="w-12 h-12 bg-primary text-white rounded-full flex items-center justify-center hover:brightness-110 active:scale-95 transition-transform animate-pulse" data-action="acceptCall" aria-label="Accept call">
+          <span class="material-symbols-outlined">call</span>
+        </button>
+      </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Simple Confirmation Alert Dialog -->
+  <div class="overlay fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center hidden" id="confirm-overlay" data-action="dismissOnBackdrop" data-action-arg="confirm-overlay" role="alertdialog" aria-modal="true" aria-labelledby="confirm-title" aria-describedby="confirm-msg">
+    <div class="bg-surface-container border border-outline-variant/30 rounded-2xl w-full max-w-sm shadow-2xl p-6 m-4">
+      <h3 class="font-bold text-lg mb-2" id="confirm-title">Confirm Action</h3>
+      <p class="text-sm text-on-surface-variant mb-6 leading-relaxed" id="confirm-msg"></p>
+      <div class="flex justify-end gap-3">
+        <button class="px-4 py-3 min-h-[44px] border border-outline-variant rounded-xl text-xs font-bold text-on-surface hover:bg-surface-variant/50 transition-colors" data-action="closeModal" data-action-arg="confirm-overlay">Cancel</button>
+        <button class="px-4 py-3 min-h-[44px] bg-error text-white rounded-xl text-xs font-bold hover:brightness-110 transition-colors" id="confirm-action-btn">Confirm</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Group Info / settings dialog overlay -->
+  <div class="overlay fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center hidden" id="group-info-overlay" data-action="dismissOnBackdrop" data-action-arg="group-info-overlay" role="dialog" aria-modal="true" aria-labelledby="group-info-title">
+    <div class="bg-surface-container border border-outline-variant/30 rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden max-h-[85vh] flex flex-col m-4">
+      <div class="flex items-center justify-between p-6 border-b border-outline-variant/10">
+        <h2 class="font-headline-md text-headline-md font-bold text-on-surface" id="group-info-title">Group info details</h2>
+        <button class="text-on-surface-variant hover:text-on-surface min-w-[44px] min-h-[44px] flex items-center justify-center rounded-full" data-action="closeModal" data-action-arg="group-info-overlay" aria-label="Close group info">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+      <div class="modal-body overflow-y-auto p-6 custom-scrollbar" id="group-info-body"></div>
+    </div>
+  </div>
+
+  <!-- Message info detail modal overlay -->
+  <div class="overlay fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center hidden" id="msg-info-overlay" data-action="dismissOnBackdrop" data-action-arg="msg-info-overlay" role="dialog" aria-modal="true">
+    <div class="bg-surface-container border border-outline-variant/30 rounded-2xl w-full max-w-md shadow-2xl p-6 m-4">
+      <div class="flex items-center justify-between pb-4 border-b border-outline-variant/10 mb-4">
+        <h3 class="font-bold text-lg text-on-surface">Message info</h3>
+        <button class="text-on-surface-variant hover:text-on-surface min-w-[44px] min-h-[44px] flex items-center justify-center rounded-full" data-action="closeModal" data-action-arg="msg-info-overlay" aria-label="Close message info">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+      <div id="msg-info-body" class="space-y-4"></div>
+    </div>
+  </div>
+
+  <!-- Global Media Viewer Slide Overlay -->
+  <div class="overlay fixed inset-0 z-[110] bg-black flex flex-col hidden" id="media-viewer" role="dialog" aria-modal="true" aria-label="Media viewer">
+    <div class="flex justify-between items-center p-6 text-white bg-gradient-to-b from-black/80 to-transparent relative z-10">
+      <button class="min-w-[44px] min-h-[44px] bg-white/10 rounded-full flex items-center justify-center hover:bg-white/20 transition-colors" data-action="closeMediaViewer" aria-label="Close media viewer">
+        <span class="material-symbols-outlined">close</span>
+      </button>
+      <div class="flex flex-col items-center min-w-0 mx-4">
+        <div class="text-sm font-semibold truncate max-w-md" id="media-viewer-caption"></div>
+        <div class="text-xs text-white/60 truncate max-w-md" id="media-viewer-caption-sub"></div>
+      </div>
+      <div class="flex items-center gap-2">
+        <button class="min-w-[44px] min-h-[44px] bg-white/10 rounded-full flex items-center justify-center hover:bg-white/20 transition-colors" data-action="forwardCurrentMedia" title="Forward" aria-label="Forward media">
+          <span class="material-symbols-outlined">share</span>
+        </button>
+        <button id="media-viewer-delete-btn" class="min-w-[44px] min-h-[44px] bg-white/10 rounded-full flex items-center justify-center hover:bg-red-500/20 text-white hover:text-red-400 transition-colors" data-action="deleteCurrentMedia" title="Delete" aria-label="Delete media">
+          <span class="material-symbols-outlined">delete</span>
+        </button>
+        <button class="min-w-[44px] min-h-[44px] bg-white/10 rounded-full flex items-center justify-center hover:bg-white/20 transition-colors" data-action="downloadMedia" title="Download" aria-label="Download media">
+          <span class="material-symbols-outlined">download</span>
+        </button>
+      </div>
+    </div>
+    <div class="flex-1 flex items-center justify-between p-6 relative">
+      <button class="w-12 h-12 bg-white/10 rounded-full flex items-center justify-center hover:bg-white/20 transition-all text-white border border-white/10" data-action="prevMedia" aria-label="Previous media">
+        <span class="material-symbols-outlined">chevron_left</span>
+      </button>
+      <div id="media-viewer-content" class="max-w-[85vw] max-h-[75vh] flex items-center justify-center"></div>
+      <button class="w-12 h-12 bg-white/10 rounded-full flex items-center justify-center hover:bg-white/20 transition-all text-white border border-white/10" data-action="nextMedia" aria-label="Next media">
+        <span class="material-symbols-outlined">chevron_right</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Call Picker Overlay -->
+  <div class="overlay fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center hidden" id="call-picker-overlay" data-action="dismissOnBackdrop" data-action-arg="call-picker-overlay" role="dialog" aria-modal="true">
+    <div class="bg-surface-container border border-outline-variant/30 rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden max-h-[85vh] flex flex-col m-4 animate-in fade-in zoom-in-95 duration-200">
+      <div class="flex items-center justify-between p-6 border-b border-outline-variant/10">
+        <div class="flex items-center gap-3 text-primary">
+          <span class="material-symbols-outlined">add_call</span>
+          <h2 class="font-bold text-on-surface">Select a contact to call</h2>
+        </div>
+        <button class="text-on-surface-variant hover:text-on-surface min-w-[44px] min-h-[44px] flex items-center justify-center rounded-full" data-action="closeModal" data-action-arg="call-picker-overlay" aria-label="Close call picker">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+      <div class="overflow-y-auto p-2 space-y-1 custom-scrollbar" id="call-picker-list"></div>
+    </div>
+  </div>
+
+  <!-- Landscape compact tab bar (shown on phone landscape when bottom nav is hidden) -->
+  <nav id="landscape-tabs" aria-label="Navigation (landscape)">
+    <button class="active" data-tab="chats" data-action="switchTab" data-action-arg="chats" aria-label="Chats">
+      <span class="material-symbols-outlined" style="font-size:16px;">chat</span> Chats
+    </button>
+    <button data-tab="groups" data-action="switchTab" data-action-arg="groups" aria-label="Groups">
+      <span class="material-symbols-outlined" style="font-size:16px;">group</span> Groups
+    </button>
+    <button data-tab="calls" data-action="switchTab" data-action-arg="calls" aria-label="Calls">
+      <span class="material-symbols-outlined" style="font-size:16px;">call</span> Calls
+    </button>
+    <button data-tab="more" data-action="switchTab" data-action-arg="more" aria-label="Saved">
+      <span class="material-symbols-outlined" style="font-size:16px;">bookmark</span> Saved
+    </button>
+  </nav>
+
+  <!-- Mobile Bottom Navigation Tab Bar (mobile only) -->
+  <nav class="md:hidden fixed bottom-0 left-0 right-0 h-16 bg-surface-container border-t border-outline-variant/30 flex items-center justify-around z-40" id="bottom-nav" aria-label="Main navigation">
+    <button class="bottom-nav-item active flex flex-col items-center justify-center gap-1 text-primary-fixed min-h-[44px] min-w-[44px]" data-tab="chats" data-action="switchTab" data-action-arg="chats" aria-label="Chats" aria-current="page">
+      <div class="relative">
+        <span class="material-symbols-outlined text-2xl" style="font-variation-settings: 'FILL' 1;">chat</span>
+        <div class="absolute -top-1.5 -right-2 bg-secondary text-white text-[9px] w-4 h-4 rounded-full flex items-center justify-center font-bold hidden" id="chats-badge" aria-hidden="true">0</div>
+      </div>
+      <span class="text-[11px] font-semibold">Chats</span>
+    </button>
+    <button class="bottom-nav-item flex flex-col items-center justify-center gap-1 text-on-surface-variant min-h-[44px] min-w-[44px]" data-tab="groups" data-action="switchTab" data-action-arg="groups" aria-label="Groups">
+      <div class="relative">
+        <span class="material-symbols-outlined text-2xl">group</span>
+        <div class="absolute -top-1.5 -right-2 bg-secondary text-white text-[9px] w-4 h-4 rounded-full flex items-center justify-center font-bold hidden" id="groups-badge" aria-hidden="true">0</div>
+      </div>
+      <span class="text-[11px] font-semibold">Groups</span>
+    </button>
+    <button class="bottom-nav-item flex flex-col items-center justify-center gap-1 text-on-surface-variant min-h-[44px] min-w-[44px]" data-tab="calls" data-action="switchTab" data-action-arg="calls" aria-label="Calls">
+      <span class="material-symbols-outlined text-2xl">call</span>
+      <span class="text-[11px] font-semibold">Calls</span>
+    </button>
+    <button class="bottom-nav-item flex flex-col items-center justify-center gap-1 text-on-surface-variant min-h-[44px] min-w-[44px]" data-tab="requests" data-action="switchTab" data-action-arg="requests" aria-label="Chat requests">
+      <div class="relative">
+        <span class="material-symbols-outlined text-2xl">handshake</span>
+        <div class="absolute -top-1.5 -right-2 bg-secondary text-white text-[9px] w-4 h-4 rounded-full flex items-center justify-center font-bold hidden" id="requests-badge" aria-hidden="true">0</div>
+      </div>
+      <span class="text-[11px] font-semibold">Requests</span>
+    </button>
+    <button class="bottom-nav-item flex flex-col items-center justify-center gap-1 text-on-surface-variant min-h-[44px] min-w-[44px]" data-tab="more" data-action="switchTab" data-action-arg="more" aria-label="Saved Items">
+      <span class="material-symbols-outlined text-2xl">bookmark</span>
+      <span class="text-[11px] font-semibold">Saved</span>
+    </button>
+    <button class="bottom-nav-item flex flex-col items-center justify-center gap-1 text-on-surface-variant min-h-[44px] min-w-[44px]" data-action="openProfile" aria-label="Profile">
+      <span class="material-symbols-outlined text-2xl">person</span>
+      <span class="text-[11px] font-semibold">Profile</span>
+    </button>
+  </nav>
+
+  <!-- Folder Manager Overlay -->
+  <div class="overlay fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center hidden" id="folder-manager-overlay" data-action="dismissOnBackdrop" data-action-arg="folder-manager-overlay" role="dialog" aria-modal="true">
+    <div class="bg-surface-container border border-outline-variant/30 rounded-2xl w-full max-w-md shadow-2xl overflow-hidden max-h-[80vh] flex flex-col m-4">
+      <div class="flex items-center justify-between p-6 border-b border-outline-variant/10">
+        <div class="flex items-center gap-3 text-primary"><span class="material-symbols-outlined">folder</span><h2 class="font-headline-md font-bold text-on-surface">Manage Folders</h2></div>
+        <button class="text-on-surface-variant hover:text-on-surface p-2 min-w-[44px] min-h-[44px]" data-action="closeOverlay" data-action-arg="folder-manager-overlay" aria-label="Close folder manager"><span class="material-symbols-outlined">close</span></button>
+      </div>
+      <div class="flex-1 overflow-y-auto p-4 space-y-1 custom-scrollbar" id="folder-manager-list"></div>
+      <div class="p-4 border-t border-outline-variant/10 flex gap-2">
+        <input id="folder-new-name" class="flex-1 bg-surface-container border border-outline-variant/30 rounded-xl px-4 py-2 text-sm text-on-surface focus:ring-1 focus:ring-primary" placeholder="New folder name..." aria-label="New folder name">
+        <button class="px-4 py-2 bg-primary text-on-primary text-sm font-bold rounded-xl hover:brightness-110 active:scale-95 transition-all" data-action="saveFolderFromInput">Create</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Notification Sound Picker Overlay -->
+  <div class="overlay fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center hidden" id="sound-picker-overlay" data-action="dismissOnBackdrop" data-action-arg="sound-picker-overlay" role="dialog" aria-modal="true">
+    <div class="bg-surface-container border border-outline-variant/30 rounded-2xl w-full max-w-sm shadow-2xl p-6 m-4">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="font-bold text-lg text-on-surface">Chat Sound</h3>
+        <button class="text-on-surface-variant hover:text-on-surface p-2 min-w-[44px] min-h-[44px]" data-action="closeOverlay" data-action-arg="sound-picker-overlay" aria-label="Close sound picker"><span class="material-symbols-outlined">close</span></button>
+      </div>
+      <label for="chat-sound-select" class="text-sm font-semibold text-on-surface-variant block mb-2">Choose a notification sound</label>
+      <select id="chat-sound-select" aria-label="Notification sound" class="w-full bg-surface-container border border-outline-variant/30 rounded-xl px-4 py-3 text-sm text-on-surface mb-4">
+        <option value="">Default</option>
+        <option value="silent">Silent</option>
+        <option value="notification_1">Notification 1</option>
+        <option value="notification_2">Notification 2</option>
+        <option value="notification_3">Notification 3</option>
+        <option value="chime">Chime</option>
+        <option value="bell">Bell</option>
+      </select>
+      <button class="w-full py-3 bg-primary text-on-primary text-sm font-bold rounded-xl hover:brightness-110 active:scale-95 transition-all" data-action="saveChatSound">Save</button>
+    </div>
+  </div>
+
+  <!-- QR/Barcode Scanner Overlay -->
+  <div class="overlay fixed inset-0 z-50 bg-black/80 flex items-center justify-center hidden" id="scanner-overlay" role="dialog" aria-modal="true" aria-label="QR code scanner">
+    <div class="bg-surface-container border border-outline-variant/30 rounded-2xl w-full max-w-md shadow-2xl overflow-hidden m-4">
+      <div class="flex items-center justify-between p-4 border-b border-outline-variant/10">
+        <h3 class="font-bold text-on-surface">Scan QR Code</h3>
+        <button class="text-on-surface-variant hover:text-on-surface p-2 min-w-[44px] min-h-[44px]" data-action="closeScanner" aria-label="Close scanner"><span class="material-symbols-outlined">close</span></button>
+      </div>
+      <div class="relative bg-black flex items-center justify-center" style="min-height:300px">
+        <video id="scanner-video" class="w-full h-full object-cover" playsinline muted style="max-height:400px"></video>
+        <div class="absolute inset-0 border-2 border-primary/30 rounded-lg m-12 pointer-events-none"></div>
+      </div>
+      <div class="p-4 text-center">
+        <p id="scanner-status" class="text-sm text-on-surface-variant">Initializing camera…</p>
+        <div id="scanner-result" class="hidden mt-2 text-xs text-primary font-mono break-all"></div>
+        <button class="mt-3 px-4 py-2 bg-surface-container-high text-sm font-bold rounded-xl hover:bg-surface-container-higher transition-all" data-action="closeScanner">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- NSL Utilities Choice Overlay -->
+  <div id="nsl-utilities-overlay" class="overlay hidden fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" role="dialog" aria-modal="true">
+    <div class="bg-surface-container border border-outline-variant/30 rounded-2xl w-full max-w-sm shadow-2xl overflow-hidden m-4">
+      <!-- Header -->
+      <div class="px-6 py-4 border-b border-outline-variant/10 flex items-center justify-between">
+        <h3 class="text-lg font-bold flex items-center gap-2 text-on-surface">
+          <span class="material-symbols-outlined text-primary" style="font-variation-settings: 'FILL' 1;">apps</span>
+          NSL Chat Utilities
+        </h3>
+        <button class="min-w-[44px] min-h-[44px] rounded-full flex items-center justify-center hover:bg-surface-container-highest transition-colors cursor-pointer text-on-surface-variant" data-action="closeOverlay" data-action-arg="nsl-utilities-overlay" aria-label="Close menu">
+          <span class="material-symbols-outlined text-xl">close</span>
+        </button>
+      </div>
+      <!-- List of Utilities -->
+      <div class="p-4 space-y-2 max-h-[70vh] overflow-y-auto">
+        <p class="text-xs text-on-surface-variant px-2 pb-2 font-medium">Select a utility tool to launch:</p>
+        
+        <!-- Expense Splitter -->
+        <div class="flex items-center gap-4 p-3 rounded-xl hover:bg-surface-container-highest cursor-pointer active:scale-98 transition-all" data-action="navigate" data-action-url="expenses.html" role="button" tabindex="0">
+          <div class="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary flex-shrink-0">
+            <span class="material-symbols-outlined text-[24px]">receipt_long</span>
+          </div>
+          <div class="text-left flex-1">
+            <div class="text-sm font-semibold text-on-surface">Expense Splitter</div>
+            <div class="text-xs text-on-surface-variant mt-0.5">Calculate and split group bills.</div>
+          </div>
+          <span class="material-symbols-outlined text-on-surface-variant text-base">chevron_right</span>
+        </div>
+        
+        <!-- Shared Album -->
+        <div class="flex items-center gap-4 p-3 rounded-xl hover:bg-surface-container-highest cursor-pointer active:scale-98 transition-all" data-action="navigate" data-action-url="album.html" role="button" tabindex="0">
+          <div class="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary flex-shrink-0">
+            <span class="material-symbols-outlined text-[24px]">photo_library</span>
+          </div>
+          <div class="text-left flex-1">
+            <div class="text-sm font-semibold text-on-surface">Shared Album</div>
+            <div class="text-xs text-on-surface-variant mt-0.5">View and upload group media/images.</div>
+          </div>
+          <span class="material-symbols-outlined text-on-surface-variant text-base">chevron_right</span>
+        </div>
+        
+        <!-- Music Player -->
+        <div class="flex items-center gap-4 p-3 rounded-xl hover:bg-surface-container-highest cursor-pointer active:scale-98 transition-all" data-action="closeUtilitiesAndMusic" role="button" tabindex="0">
+          <div class="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary flex-shrink-0">
+            <span class="material-symbols-outlined text-[24px]">queue_music</span>
+          </div>
+          <div class="text-left flex-1">
+            <div class="text-sm font-semibold text-on-surface">Music Player</div>
+            <div class="text-xs text-on-surface-variant mt-0.5">Upload, discover and play music.</div>
+          </div>
+          <span class="material-symbols-outlined text-on-surface-variant text-base">chevron_right</span>
+        </div>
+        
+        <!-- Team Calendar -->
+        <div class="flex items-center gap-4 p-3 rounded-xl hover:bg-surface-container-highest cursor-pointer active:scale-98 transition-all" data-action="navigate" data-action-url="calendar.html" role="button" tabindex="0">
+          <div class="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary flex-shrink-0">
+            <span class="material-symbols-outlined text-[24px]">calendar_month</span>
+          </div>
+          <div class="text-left flex-1">
+            <div class="text-sm font-semibold text-on-surface">Team Calendar</div>
+            <div class="text-xs text-on-surface-variant mt-0.5">Schedule and coordinate group tasks.</div>
+          </div>
+          <span class="material-symbols-outlined text-on-surface-variant text-base">chevron_right</span>
+        </div>
+        
+        <!-- Chat Insights -->
+        <div class="flex items-center gap-4 p-3 rounded-xl hover:bg-surface-container-highest cursor-pointer active:scale-98 transition-all" data-action="navigate" data-action-url="insights.html" role="button" tabindex="0">
+          <div class="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary flex-shrink-0">
+            <span class="material-symbols-outlined text-[24px]">monitoring</span>
+          </div>
+          <div class="text-left flex-1">
+            <div class="text-sm font-semibold text-on-surface">Chat Insights</div>
+            <div class="text-xs text-on-surface-variant mt-0.5">View analytics and chat traffic patterns.</div>
+          </div>
+          <span class="material-symbols-outlined text-on-surface-variant text-base">chevron_right</span>
+        </div>
+      </div>
+      <!-- Footer -->
+      <div class="px-6 py-4 bg-surface-container border-t border-outline-variant/10 text-center">
+        <button class="w-full py-2.5 rounded-xl bg-primary text-on-primary font-bold text-sm hover:brightness-110 active:scale-95 transition-all cursor-pointer" data-action="closeOverlay" data-action-arg="nsl-utilities-overlay">
+          Close Menu
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Language Selector Overlay -->
+  <div class="overlay fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center hidden" id="language-overlay" data-action="dismissOnBackdrop" data-action-arg="language-overlay" role="dialog" aria-modal="true" aria-label="Select language">
+    <div class="bg-surface-container border border-outline-variant/30 rounded-2xl w-full max-w-sm shadow-2xl p-6 m-4">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="font-bold text-lg text-on-surface">App Language</h3>
+        <button class="text-on-surface-variant hover:text-on-surface p-2 min-w-[44px] min-h-[44px]" data-action="closeOverlay" data-action-arg="language-overlay" aria-label="Close language settings"><span class="material-symbols-outlined">close</span></button>
+      </div>
+      <p class="text-sm text-on-surface-variant mb-4">Select your preferred language for the app UI.</p>
+      <select id="language-select" aria-label="App language" class="w-full bg-surface-container border border-outline-variant/30 rounded-xl px-4 py-3 text-sm text-on-surface mb-4">
+        <option value="en">English</option>
+        <option value="hi">हिन्दी (Hindi)</option>
+        <option value="gu">ગુજરાતી (Gujarati)</option>
+      </select>
+      <button class="w-full py-3 bg-primary text-on-primary text-sm font-bold rounded-xl hover:brightness-110 active:scale-95 transition-all" data-action="saveLanguage">Save</button>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════
+       THREAD PANEL (slide-in)
+       ═══════════════════════════════════ -->
+  <div id="threadPanel" class="fixed inset-y-0 right-0 w-full sm:w-96 z-[9000] bg-surface-container-low border-l border-outline-variant/30 shadow-2xl transform translate-x-full transition-transform duration-300" aria-label="Thread" role="dialog" aria-modal="true">
+    <div class="flex flex-col h-full">
+      <!-- Thread Header -->
+      <div class="flex items-center justify-between px-4 py-3 border-b border-outline-variant/20 bg-surface-container">
+        <div class="flex items-center gap-3">
+          <span class="material-symbols-outlined text-primary text-[20px]">forum</span>
+          <div>
+            <h3 class="text-sm font-bold text-on-surface">Thread</h3>
+            <span id="threadHeaderCount" class="text-xs text-on-surface-variant"></span>
+          </div>
+        </div>
+        <div class="flex items-center gap-1">
+          <button id="threadSummarizeBtn" class="px-3 py-1.5 text-xs font-bold text-primary bg-primary/10 rounded-lg hover:bg-primary/20 transition-all" aria-label="Summarize thread">✨ Summarize</button>
+          <button id="threadPanelCloseBtn" class="p-2 min-w-[44px] min-h-[44px] rounded-full hover:bg-surface-variant/50 text-on-surface-variant transition-all" aria-label="Close thread panel">
+            <span class="material-symbols-outlined text-[20px]">close</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Parent Message -->
+      <div id="threadParentMessage" class="px-4 py-3 border-b border-outline-variant/10 bg-surface-container-low/50"></div>
+
+      <!-- Replies List -->
+      <div id="threadRepliesList" class="flex-1 overflow-y-auto px-4 py-3 space-y-3" aria-live="polite"></div>
+
+      <!-- Composer -->
+      <div class="px-4 py-3 border-t border-outline-variant/20 bg-surface-container">
+        <div class="flex items-end gap-2">
+          <textarea id="threadComposer" class="flex-1 bg-surface-container-high border border-outline-variant/30 rounded-xl px-4 py-2.5 text-sm text-on-surface resize-none focus:outline-none focus:border-primary transition-colors" rows="1" placeholder="Reply to thread…" aria-label="Thread reply"></textarea>
+          <button id="threadSendBtn" class="w-11 h-11 rounded-full bg-primary flex items-center justify-center text-on-primary shadow-md hover:brightness-110 active:scale-95 transition-all" aria-label="Send reply">
+            <span class="material-symbols-outlined text-[18px]">send</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- File Input for avatar updates -->
+  <input type="file" id="file-input-avatar" class="hidden-input" accept="image/*">
+
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/12.16.0/firebase-app-compat.js" crossorigin="anonymous" defer></script>
+  <script src="https://www.gstatic.com/firebasejs/12.16.0/firebase-auth-compat.js" crossorigin="anonymous" defer></script>
+  <script src="https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore-compat.js" crossorigin="anonymous" defer></script>
+  <script src="https://www.gstatic.com/firebasejs/12.16.0/firebase-storage-compat.js" crossorigin="anonymous" defer></script>
+  <script src="https://www.gstatic.com/firebasejs/12.16.0/firebase-messaging-compat.js" crossorigin="anonymous" defer></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js" integrity="sha384-+mbV2IY1Zk/X1p/nWllGySJSUN8uMs+gUAN10Or95UBH0fpj6GfKgPmgC5EXieXG" crossorigin="anonymous" defer></script>
+  <!-- DND / Quiet Hours -->
+  <script src="dnd-quiet-hours.js" defer></script>
+  <!-- Vite ES Module Entry — replaces all local <script defer> tags above -->
+
+  <!-- Pre-Permission Explanation Dialog -->
+  <div id="prePermissionModal" class="overlay fixed inset-0 z-[110] bg-black/60 backdrop-blur-sm flex items-center justify-center hidden" role="dialog" aria-modal="true" aria-labelledby="prePermissionTitle">
+    <div class="bg-surface-container border border-outline-variant/30 rounded-2xl w-full max-w-sm shadow-2xl p-6 m-4 text-center">
+      <div id="prePermissionIcon" class="text-5xl mb-3" aria-hidden="true">📷</div>
+      <h3 id="prePermissionTitle" class="font-bold text-lg mb-2 text-on-surface">Camera Access Required</h3>
+      <p id="prePermissionDescription" class="text-sm text-on-surface-variant mb-4 leading-relaxed"></p>
+      <div id="prePermissionFeatures" class="flex flex-wrap gap-1.5 justify-center mb-5"></div>
+      <div class="flex gap-3 justify-end">
+        <button id="prePermissionNotNow" class="px-4 py-2 border border-outline-variant rounded-xl text-xs font-bold text-on-surface hover:bg-surface-variant/50 transition-colors">Not Now</button>
+        <button id="prePermissionAllow" class="px-4 py-2 bg-primary text-on-primary rounded-xl text-xs font-bold hover:brightness-110 transition-colors">Allow</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Re-Enable Permission Dialog (for revoked permissions) -->
+  <div id="reEnablePermissionModal" class="overlay fixed inset-0 z-[110] bg-black/60 backdrop-blur-sm flex items-center justify-center hidden" role="dialog" aria-modal="true" aria-labelledby="reEnableTitle">
+    <div class="bg-surface-container border border-outline-variant/30 rounded-2xl w-full max-w-sm shadow-2xl p-6 m-4 text-center">
+      <div id="reEnableIcon" class="text-5xl mb-3" aria-hidden="true">📷</div>
+      <h3 id="reEnableTitle" class="font-bold text-lg mb-2 text-on-surface">Permission Required</h3>
+      <p id="reEnableDescription" class="text-sm text-on-surface-variant mb-4 leading-relaxed"></p>
+      <div id="reEnableFeatures" class="flex flex-wrap gap-1.5 justify-center mb-5"></div>
+      <div class="flex gap-2 justify-center flex-wrap">
+        <button id="reEnableGrant" class="px-4 py-2 bg-primary text-on-primary rounded-xl text-xs font-bold hover:brightness-110 transition-colors">Try Again</button>
+        <button id="reEnableSettings" class="px-4 py-2 border border-outline-variant rounded-xl text-xs font-bold text-on-surface hover:bg-surface-variant/50 transition-colors">Open Settings</button>
+        <button id="reEnableCancel" class="px-4 py-2 border border-outline-variant rounded-xl text-xs font-bold text-on-surface-variant hover:bg-surface-variant/50 transition-colors">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Permissions Management Screen -->
+  <div id="permissionsModal" class="overlay fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-center justify-center hidden" role="dialog" aria-modal="true" aria-label="App Permissions">
+    <div class="bg-surface-container border border-outline-variant/30 rounded-2xl w-full max-w-md shadow-2xl overflow-hidden max-h-[85vh] flex flex-col m-4">
+      <div class="flex items-center justify-between p-5 border-b border-outline-variant/10">
+        <h2 class="font-bold text-on-surface">App Permissions</h2>
+        <button class="closePermissionsModal text-on-surface-variant hover:text-on-surface p-2 min-w-[44px] min-h-[44px]" aria-label="Close permissions"><span class="material-symbols-outlined" aria-hidden="true">close</span></button>
+      </div>
+      <div id="permissionsModalBody" class="overflow-y-auto flex-1 p-4 space-y-3 custom-scrollbar" role="status"></div>
+    </div>
+  </div>
+
+  <!-- Revoke Permissions Guide Modal -->
+  <div id="revokePermissionsGuideModal" class="overlay fixed inset-0 z-[110] bg-black/60 backdrop-blur-sm flex items-center justify-center hidden" role="dialog" aria-modal="true" aria-label="How to manage permissions">
+    <div class="bg-surface-container border border-outline-variant/30 rounded-2xl w-full max-w-sm shadow-2xl p-6 m-4">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="font-bold text-lg text-on-surface modal-header">How to Manage Permissions</h3>
+        <button class="closeRevokePermissionsModal text-on-surface-variant hover:text-on-surface p-2 min-w-[44px] min-h-[44px]" aria-label="Close permission guide"><span class="material-symbols-outlined">close</span></button>
+      </div>
+      <div class="text-sm text-on-surface-variant space-y-3 leading-relaxed mb-5">
+        <p><strong>Browser:</strong> Click the lock/tune icon in the address bar to manage site permissions.</p>
+        <p><strong>Android App:</strong> Go to Settings → Apps → NSL Chat → Permissions.</p>
+        <p><strong>iOS App:</strong> Go to Settings → Privacy & Security → find the permission type.</p>
+      </div>
+      <div class="flex gap-3 justify-end">
+        <button id="nativeSettingsBtn" class="px-4 py-2 bg-primary text-on-primary rounded-xl text-xs font-bold hover:brightness-110 transition-colors" style="display:none;">Open App Settings</button>
+        <button class="closeRevokePermissionsModal px-4 py-2 border border-outline-variant rounded-xl text-xs font-bold text-on-surface hover:bg-surface-variant/50 transition-colors">Got it</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ END PERMISSION MODALS ═══ -->
+
+  <!-- Global Search Modal -->
+  <div id="globalSearchModal" class="overlay fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex flex-col hidden" role="dialog" aria-modal="true" aria-label="Search messages">
+    <div class="bg-surface-container w-full max-w-lg mx-auto mt-auto mb-0 sm:mb-auto rounded-t-2xl sm:rounded-2xl shadow-2xl flex flex-col max-h-[85vh] overflow-hidden">
+      <div class="flex items-center gap-3 p-4 border-b border-outline-variant/10">
+        <span class="material-symbols-outlined text-on-surface-variant">search</span>
+        <input id="globalSearchInput" type="text" placeholder="Search messages..." class="flex-1 bg-transparent text-on-surface text-sm outline-none placeholder-on-surface-variant/50" autocomplete="off" spellcheck="false" role="combobox" aria-autocomplete="list" aria-controls="globalSearchResults" aria-label="Search messages">
+        <button class="p-2 min-w-[44px] min-h-[44px] rounded-full hover:bg-surface-variant/50 text-on-surface-variant transition-colors" data-action="closeSearchModal" aria-label="Close search">
+          <span class="material-symbols-outlined text-xl">close</span>
+        </button>
+      </div>
+      <div id="globalSearchResults" class="flex-1 overflow-y-auto p-3 ms-results-container" role="listbox" aria-label="Search results" aria-live="polite">
+        <div class="ms-empty-state text-on-surface-variant/60 text-sm text-center py-8">Enter a keyword to search across all chats</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Idle Timeout (Removed to enforce permanent sessions across devices) -->
+
+  <!-- Floating Active Call Bubble (WhatsApp-style minimized PiP) -->
+  <div id="call-bubble" class="fixed z-[200] flex items-center gap-3 bg-primary text-on-primary rounded-full px-4 py-2.5 shadow-2xl cursor-pointer transition-all duration-300 select-none" style="display:none;bottom:max(24px,calc(env(safe-area-inset-bottom,0px) + 12px));right:max(24px,env(safe-area-inset-right,0px))" data-action="maximizeCall" role="button" aria-label="Return to active call" tabindex="0">
+    <div class="w-9 h-9 rounded-full bg-white/20 flex items-center justify-center animate-pulse">
+      <span class="material-symbols-outlined text-lg">call</span>
+    </div>
+    <div class="flex flex-col min-w-0">
+      <span class="text-xs font-bold truncate max-w-[120px]" id="bubble-call-name">Call</span>
+      <span class="text-[11px] font-mono opacity-80" id="bubble-call-timer">0:00</span>
+    </div>
+    <button class="w-11 h-11 rounded-full bg-white/20 flex items-center justify-center hover:bg-white/30 ml-1" data-action="endCallFromBubble" aria-label="End call">
+      <span class="material-symbols-outlined text-sm">call_end</span>
+    </button>
+  </div>
+</body>
+</html>

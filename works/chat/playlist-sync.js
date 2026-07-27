@@ -1,14 +1,14 @@
-// Playlist Sync — group listening rooms, real-time sync, host controls
+﻿// Playlist Sync â€” group listening rooms, real-time sync, host controls
 (function() {
   'use strict';
 
-  // ─── STATE ───
+  // â”€â”€â”€ STATE â”€â”€â”€
   App._listeningRoom = null;
   App._listeningRoomUnsub = null;
   App._listeningRoomListeners = [];
   let _roomChatUnsub = null;
 
-  // ─── Firestore schema: listeningRooms/{chatId}
+  // â”€â”€â”€ Firestore schema: listeningRooms/{chatId}
   // {
   //   chatId: string,
   //   playlistId: string,
@@ -28,7 +28,7 @@
   //   createdAt: timestamp,
   // }
 
-  // ─── CREATE / JOIN ROOM ───
+  // â”€â”€â”€ CREATE / JOIN ROOM â”€â”€â”€
   window.startListeningRoom = async function(playlistId) {
     if (!App.db || !App.auth?.currentUser || !App.currentChat) return;
     const uid = App.auth.currentUser.uid;
@@ -68,7 +68,7 @@
       await App.db.collection('messages').add({
         senderId: uid,
         senderName: App.currentUser?.displayName || 'User',
-        text: `🎵 Started a listening session with "${pl.name}"`,
+        text: `ðŸŽµ Started a listening session with "${pl.name}"`,
         type: 'system',
         systemType: 'listening_room_start',
         timestamp: firebase.firestore.FieldValue.serverTimestamp(),
@@ -76,7 +76,7 @@
       }).catch(() => {});
 
     } catch(e) {
-      console.error('Start room failed:', e);
+      if (window.__DEBUG__) console.error('Start room failed:', e);
       showToast('Failed to start room', 'error');
     }
   };
@@ -117,7 +117,7 @@
     _updateRoomListeners();
   }
 
-  // ─── LISTEN TO ROOM UPDATES ───
+  // â”€â”€â”€ LISTEN TO ROOM UPDATES â”€â”€â”€
   function _listenToRoom(chatId) {
     if (App._listeningRoomUnsub) App._listeningRoomUnsub();
 
@@ -147,7 +147,7 @@
           _updateListenerCount(data.listeners?.length || 0);
         });
     } catch(e) {
-      console.warn('Room listener failed:', e);
+      if (window.__DEBUG__) console.warn('Room listener failed:', e);
     }
   }
 
@@ -172,7 +172,7 @@
     }
   }
 
-  // ─── HOST CONTROLS ───
+  // â”€â”€â”€ HOST CONTROLS â”€â”€â”€
   window.syncRoomState = async function(updates) {
     const room = App._listeningRoom;
     if (!room || room.hostUid !== App.auth?.currentUser?.uid || !App.db) return;
@@ -193,7 +193,7 @@
         await App.db.collection('messages').add({
           senderId: App.auth.currentUser.uid,
           senderName: App.currentUser?.displayName || 'User',
-          text: '🎵 Listening session ended',
+          text: 'ðŸŽµ Listening session ended',
           type: 'system',
           systemType: 'listening_room_end',
           timestamp: firebase.firestore.FieldValue.serverTimestamp(),
@@ -215,7 +215,7 @@
     showToast('Left listening room', 'info');
   };
 
-  // ─── REAL-TIME TRACK ADD/REMOVE ───
+  // â”€â”€â”€ REAL-TIME TRACK ADD/REMOVE â”€â”€â”€
   const origAddTrack = window.addTrackToPlaylist;
   window.addTrackToPlaylist = async function(playlistId, track) {
     const result = await origAddTrack(playlistId, track);
@@ -225,7 +225,7 @@
         await App.db.collection('messages').add({
           senderId: App.auth?.currentUser?.uid,
           senderName: App.currentUser?.displayName || 'User',
-          text: `🎵 Added "${track.title}" to the shared playlist`,
+          text: `ðŸŽµ Added "${track.title}" to the shared playlist`,
           type: 'system',
           systemType: 'playlist_track_added',
           timestamp: firebase.firestore.FieldValue.serverTimestamp(),
@@ -236,7 +236,7 @@
     return result;
   };
 
-  // ─── UI INDICATORS ───
+  // â”€â”€â”€ UI INDICATORS â”€â”€â”€
   function _showListeningIndicator(room) {
     let indicator = document.getElementById('listening-room-indicator');
     if (!indicator) {
@@ -253,7 +253,7 @@
         <span class="material-symbols-outlined" style="font-size:18px;color:white">headphones</span>
       </div>
       <div style="flex:1">
-        <div style="font-size:12px;font-weight:700;color:var(--on-surface)">🎵 Listening Room ${isHost ? '(Host)' : ''}</div>
+        <div style="font-size:12px;font-weight:700;color:var(--on-surface)">ðŸŽµ Listening Room ${isHost ? '(Host)' : ''}</div>
         <div style="font-size:11px;color:var(--on-surface-variant)">${room.listeners?.length || 1} listener${(room.listeners?.length || 1) > 1 ? 's' : ''}</div>
       </div>
       <button onclick="event.stopPropagation();openListeningRoomPanel('${room.chatId}')" style="background:none;border:none;color:var(--on-surface-variant);cursor:pointer;padding:4px;min-width:44px;min-height:44px;display:inline-flex;align-items:center;justify-content:center">
@@ -273,7 +273,7 @@
     }
   }
 
-  // ─── ROOM PANEL ───
+  // â”€â”€â”€ ROOM PANEL â”€â”€â”€
   window.openListeningRoomPanel = function(_chatId) {
     const room = App._listeningRoom;
     if (!room) { showToast('No active room', 'info'); return; }
@@ -289,7 +289,7 @@
 
     let html = `
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
-        <h3 style="margin:0;font-size:16px;font-weight:700">🎵 Listening Room</h3>
+        <h3 style="margin:0;font-size:16px;font-weight:700">ðŸŽµ Listening Room</h3>
         <button onclick="document.getElementById('listening-room-overlay')?.remove()" style="background:none;border:none;color:var(--on-surface-variant);cursor:pointer;font-size:18px">&times;</button>
       </div>
       <div style="display:flex;gap:8px;margin-bottom:16px">
@@ -298,7 +298,7 @@
           <div style="font-size:11px;color:var(--on-surface-variant)">Listeners</div>
         </div>
         <div style="flex:1;padding:10px;border-radius:10px;background:var(--surface-container-low,rgba(0,0,0,0.04));text-align:center">
-          <div style="font-size:20px;font-weight:700;color:var(--on-surface)">${room.isPlaying ? '▶' : '⏸'}</div>
+          <div style="font-size:20px;font-weight:700;color:var(--on-surface)">${room.isPlaying ? 'â–¶' : 'â¸'}</div>
           <div style="font-size:11px;color:var(--on-surface-variant)">${room.isPlaying ? 'Playing' : 'Paused'}</div>
         </div>
       </div>
@@ -365,7 +365,7 @@
     } catch(_) {}
   };
 
-  // ─── HELPER ───
+  // â”€â”€â”€ HELPER â”€â”€â”€
   async function _getRoom(chatId) {
     if (!App.db || !chatId) return null;
     try {
@@ -374,7 +374,7 @@
     } catch(_) { return null; }
   }
 
-  // ─── ROOM LISTENERS TRACKING ───
+  // â”€â”€â”€ ROOM LISTENERS TRACKING â”€â”€â”€
   async function _updateRoomListeners() {
     const room = App._listeningRoom;
     if (!room || !App.db) return;
@@ -412,11 +412,11 @@
         }
       }, 60000);
     } catch(e) {
-      console.warn('Failed to update room listeners:', e);
+      if (window.__DEBUG__) console.warn('Failed to update room listeners:', e);
     }
   }
 
-  // ─── VOTE FOR NEXT TRACK ───
+  // â”€â”€â”€ VOTE FOR NEXT TRACK â”€â”€â”€
   window.voteNextTrack = async function(roomId, trackId) {
     if (!App.db) return;
     const uid = App.auth?.currentUser?.uid;
@@ -430,10 +430,10 @@
       } else {
         await voteRef.set({ voters: [...voters, uid], count: voters.length + 1, trackId });
       }
-    } catch(e) { console.warn('Vote failed:', e); }
+    } catch(e) { if (window.__DEBUG__) console.warn('Vote failed:', e); }
   };
 
-  // ─── ROOM CHAT ───
+  // â”€â”€â”€ ROOM CHAT â”€â”€â”€
   window.sendRoomChat = async function(roomId, message) {
     if (!message?.trim() || !App.db || !App.auth?.currentUser) return;
     try {
@@ -448,7 +448,7 @@
     } catch(e) {}
   };
 
-  // ─── ROOM CHAT UI ───
+  // â”€â”€â”€ ROOM CHAT UI â”€â”€â”€
   window.openRoomChat = async function(roomId) {
     const existing = document.getElementById('room-chat-overlay');
     if (existing) { existing.remove(); return; }
@@ -527,7 +527,7 @@
     el.textContent = count ? `${count} listening now` : '';
   }
 
-  // ─── HOOK INTO PLAYER ───
+  // â”€â”€â”€ HOOK INTO PLAYER â”€â”€â”€
   const origPlay = MusicPlayer?.play;
   if (origPlay) {
     MusicPlayer.play = function(track, playlistId) {

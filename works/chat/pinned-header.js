@@ -1,6 +1,6 @@
-'use strict';
+﻿'use strict';
 /**
- * PINNED MESSAGES IN GROUP HEADER — Show pinned messages bar at top of group chats
+ * PINNED MESSAGES IN GROUP HEADER â€” Show pinned messages bar at top of group chats
  * Displays latest pinned message with tap to expand.
  */
 (function () {
@@ -67,7 +67,7 @@
           chatHeader.parentElement.insertBefore(this._container, chatHeader.nextSibling);
         }
       } catch (e) {
-        console.warn('[PinnedHeader] Error:', e);
+        if (window.__DEBUG__) console.warn('[PinnedHeader] Error:', e);
       }
     },
 
@@ -88,7 +88,7 @@
           <div style="padding:16px 20px;border-bottom:1px solid var(--outline-variant,#eee);display:flex;align-items:center;gap:10px;">
             <span class="material-symbols-outlined" style="font-size:20px;color:var(--primary,#00a884);">push_pin</span>
             <h3 style="margin:0;flex:1;font-size:16px;font-weight:700;">Pinned Messages</h3>
-            <button id="close-pinned-panel" style="background:none;border:none;cursor:pointer;color:var(--on-surface-variant,#666);font-size:18px;">✕</button>
+            <button id="close-pinned-panel" style="background:none;border:none;cursor:pointer;color:var(--on-surface-variant,#666);font-size:18px;">âœ•</button>
           </div>
           <div style="overflow-y:auto;flex:1;padding:12px;">
             ${pins.map(pin => `

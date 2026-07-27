@@ -1,4 +1,4 @@
-(function () {
+﻿(function () {
   'use strict';
 
   var MAX_DURATION = 30;
@@ -88,11 +88,11 @@
       <div class="vn-timer" id="vn-timer">0:00 / 0:30</div>\
       <div class="vn-hint" id="vn-hint">Tap to record</div>\
       <div class="vn-controls">\
-        <button class="vn-cancel-btn" id="vn-cancel-btn" aria-label="Cancel">✕</button>\
-        <button class="vn-flip-btn" id="vn-flip-btn" aria-label="Flip camera">↻</button>\
+        <button class="vn-cancel-btn" id="vn-cancel-btn" aria-label="Cancel">âœ•</button>\
+        <button class="vn-flip-btn" id="vn-flip-btn" aria-label="Flip camera">â†»</button>\
         <button class="vn-record-btn" id="vn-record-btn" aria-label="Record"><div class="vn-inner"></div></button>\
         <button class="vn-pause-btn" id="vn-pause-btn" aria-label="Pause" style="display:none"><span class="material-symbols-outlined">pause</span></button>\
-        <button class="vn-send-btn" id="vn-send-btn" aria-label="Send" style="display:none">➤</button>\
+        <button class="vn-send-btn" id="vn-send-btn" aria-label="Send" style="display:none">âž¤</button>\
       </div>';
     document.body.appendChild(vnOverlay);
 
@@ -377,7 +377,7 @@
 
       if (chat.lastMessageTime !== undefined) {
         var updateData = {
-          lastMessage: '🎥 Video Note',
+          lastMessage: 'ðŸŽ¥ Video Note',
           lastMessageTime: firebase.firestore.FieldValue.serverTimestamp(),
           lastMessageSenderId: user.uid,
           lastMessageSenderName: user.displayName || 'Me'
@@ -388,7 +388,7 @@
       toast('Video note sent', 'success');
       cancelVideoNoteRecording();
     } catch (e) {
-      console.error('[VideoNote] Send error:', e);
+      if (window.__DEBUG__) console.error('[VideoNote] Send error:', e);
       toast('Failed to send video note', 'error');
     }
   }

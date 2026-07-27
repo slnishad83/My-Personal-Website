@@ -1,5 +1,5 @@
-/**
- * app-shortcuts.js — Dynamic app shortcuts (Android 7.1+)
+﻿/**
+ * app-shortcuts.js â€” Dynamic app shortcuts (Android 7.1+)
  */
 (function() {
     'use strict';
@@ -18,7 +18,7 @@
                 const { AppShortcuts } = Capacitor.Plugins;
                 await AppShortcuts.setShortcuts();
             } catch (e) {
-                console.warn('Set shortcuts failed:', e);
+                if (window.__DEBUG__) console.warn('Set shortcuts failed:', e);
             }
         },
 
@@ -33,7 +33,7 @@
                     url
                 });
             } catch (e) {
-                console.warn('Add shortcut failed:', e);
+                if (window.__DEBUG__) console.warn('Add shortcut failed:', e);
             }
         },
 
@@ -43,7 +43,7 @@
                 const { AppShortcuts } = Capacitor.Plugins;
                 await AppShortcuts.removeAllDynamicShortcuts();
             } catch (e) {
-                console.warn('Remove shortcuts failed:', e);
+                if (window.__DEBUG__) console.warn('Remove shortcuts failed:', e);
             }
         },
 

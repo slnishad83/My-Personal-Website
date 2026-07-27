@@ -1,26 +1,26 @@
-/* ============================================================
-   MutationBus v1.0 — Centralized MutationObserver service
+﻿/* ============================================================
+   MutationBus v1.0 â€” Centralized MutationObserver service
    Replaces 19+ individual document.body observers with a
    managed bus.  Modules register by ID; bus handles lifecycle.
 
    API:
-     MutationBus.onBodyChildList(id, cb)  — body childList+subtree
-     MutationBus.onBodyAttribute(id, cb)  — body class/style changes
-     MutationBus.observe(id, el, cfg, cb) — element-specific
-     MutationBus.off(id)                  — unregister one
-     MutationBus.destroyAll()             — disconnect everything
-     MutationBus.count()                  — active subscriber count
+     MutationBus.onBodyChildList(id, cb)  â€” body childList+subtree
+     MutationBus.onBodyAttribute(id, cb)  â€” body class/style changes
+     MutationBus.observe(id, el, cfg, cb) â€” element-specific
+     MutationBus.off(id)                  â€” unregister one
+     MutationBus.destroyAll()             â€” disconnect everything
+     MutationBus.count()                  â€” active subscriber count
    ============================================================ */
 (function () {
   'use strict';
 
-  var _subs  = Object.create(null);  // id → { cb, active, type, obs? }
+  var _subs  = Object.create(null);  // id â†’ { cb, active, type, obs? }
   var _bodyChildObs   = null;
   var _bodyAttrObs    = null;
   var _pendingBody    = [];          // queued until body is ready
   var _pendingAttr    = [];
 
-  /* ── body childList+subtree observer (single) ──────────────── */
+  /* â”€â”€ body childList+subtree observer (single) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   function _ensureBodyChild() {
     if (_bodyChildObs) return;
     _bodyChildObs = new MutationObserver(function (muts) {
@@ -36,14 +36,14 @@
       for (var k = 0; k < keys.length; k++) {
         var s = _subs[keys[k]];
         if (s && s.active && s.type === 'body-child') {
-          try { s.cb(added, muts); } catch (e) { console.error('[MutationBus] ' + keys[k], e); }
+          try { s.cb(added, muts); } catch (e) { if (window.__DEBUG__) console.error('[MutationBus] ' + keys[k], e); }
         }
       }
     });
     _bodyChildObs.observe(document.body, { childList: true, subtree: true });
   }
 
-  /* ── body attribute observer (single) ──────────────────────── */
+  /* â”€â”€ body attribute observer (single) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   function _ensureBodyAttr() {
     if (_bodyAttrObs) return;
     _bodyAttrObs = new MutationObserver(function (muts) {
@@ -51,14 +51,14 @@
       for (var k = 0; k < keys.length; k++) {
         var s = _subs[keys[k]];
         if (s && s.active && s.type === 'body-attr') {
-          try { s.cb(muts); } catch (e) { console.error('[MutationBus] attr ' + keys[k], e); }
+          try { s.cb(muts); } catch (e) { if (window.__DEBUG__) console.error('[MutationBus] attr ' + keys[k], e); }
         }
       }
     });
     _bodyAttrObs.observe(document.body, { attributes: true, attributeFilter: ['class', 'style'] });
   }
 
-  /* ── public API ────────────────────────────────────────────── */
+  /* â”€â”€ public API â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 
   /**
    * Subscribe to body childList+subtree mutations.
@@ -131,7 +131,7 @@
     return Object.keys(_subs).length;
   }
 
-  /* ── expose ─────────────────────────────────────────────────── */
+  /* â”€â”€ expose â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   window.MutationBus = {
     onBodyChildList: onBodyChildList,
     onBodyAttribute: onBodyAttribute,

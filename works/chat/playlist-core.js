@@ -1,15 +1,15 @@
-// Playlist Core — Firestore schema, CRUD, ownership, permissions, search
+﻿// Playlist Core â€” Firestore schema, CRUD, ownership, permissions, search
 (function() {
   'use strict';
 
   const COLLECTION = 'playlists';
 
-  // ─── STATE ───
+  // â”€â”€â”€ STATE â”€â”€â”€
   App.playlists = {};
   App.currentPlaylist = null;
   App._playlistUnsubs = {};
 
-  // ─── SCHEMA ───
+  // â”€â”€â”€ SCHEMA â”€â”€â”€
   // Firestore: playlists/{playlistId}
   // {
   //   id: string,
@@ -53,7 +53,7 @@
     return 'tr_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 8);
   }
 
-  // ─── CREATE ───
+  // â”€â”€â”€ CREATE â”€â”€â”€
   window.createPlaylist = async function(opts = {}) {
     if (!App.db || !App.auth?.currentUser) return null;
     const uid = App.auth.currentUser.uid;
@@ -88,13 +88,13 @@
       showToast('Playlist created', 'success');
       return playlist;
     } catch(e) {
-      console.error('Create playlist failed:', e);
+      if (window.__DEBUG__) console.error('Create playlist failed:', e);
       showToast('Failed to create playlist', 'error');
       return null;
     }
   };
 
-  // ─── READ ───
+  // â”€â”€â”€ READ â”€â”€â”€
   window.loadPlaylists = async function(chatId) {
     if (!App.db) return [];
     try {
@@ -120,7 +120,7 @@
       results.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
       return results.slice(0, 50);
     } catch(e) {
-      console.warn('Load playlists failed:', e);
+      if (window.__DEBUG__) console.warn('Load playlists failed:', e);
       return [];
     }
   };
@@ -161,12 +161,12 @@
       results.sort((a, b) => (b.playCount || 0) - (a.playCount || 0));
       return results.slice(0, 30);
     } catch(e) {
-      console.warn('Search playlists failed:', e);
+      if (window.__DEBUG__) console.warn('Search playlists failed:', e);
       return [];
     }
   };
 
-  // ─── UPDATE ───
+  // â”€â”€â”€ UPDATE â”€â”€â”€
   async function _updatePlaylist(playlistId, updates) {
     if (!App.db) return;
     updates.updatedAt = firebase.firestore.FieldValue.serverTimestamp();
@@ -174,7 +174,7 @@
       await App.db.collection(COLLECTION).doc(playlistId).update(updates);
       if (App.playlists[playlistId]) Object.assign(App.playlists[playlistId], updates);
     } catch(e) {
-      console.error('Update playlist failed:', e);
+      if (window.__DEBUG__) console.error('Update playlist failed:', e);
     }
   }
 
@@ -187,7 +187,7 @@
     await _updatePlaylist(playlistId, { coverUrl });
   };
 
-  // ─── TRACKS ───
+  // â”€â”€â”€ TRACKS â”€â”€â”€
   window.addTrackToPlaylist = async function(playlistId, track) {
     const pl = App.playlists[playlistId];
     if (!pl) return;
@@ -255,7 +255,7 @@
     await _updatePlaylist(playlistId, { order: pl.order });
   };
 
-  // ─── LIKE / FAVORITE ───
+  // â”€â”€â”€ LIKE / FAVORITE â”€â”€â”€
   window.togglePlaylistLike = async function(playlistId) {
     const pl = App.playlists[playlistId];
     if (!pl) return;
@@ -267,7 +267,7 @@
     await _updatePlaylist(playlistId, { likedBy: pl.likedBy });
   };
 
-  // ─── COLLABORATORS ───
+  // â”€â”€â”€ COLLABORATORS â”€â”€â”€
   window.addCollaborator = async function(playlistId, uid) {
     const pl = App.playlists[playlistId];
     if (!pl || pl.ownerUid !== App.auth?.currentUser?.uid) return;
@@ -289,7 +289,7 @@
     return playlist.ownerUid === uid || (playlist.collaborators || []).includes(uid);
   };
 
-  // ─── DELETE ───
+  // â”€â”€â”€ DELETE â”€â”€â”€
   window.deletePlaylist = async function(playlistId) {
     if (!App.db) return;
     try {
@@ -297,11 +297,11 @@
       delete App.playlists[playlistId];
       showToast('Playlist deleted', 'info');
     } catch(e) {
-      console.error('Delete playlist failed:', e);
+      if (window.__DEBUG__) console.error('Delete playlist failed:', e);
     }
   };
 
-  // ─── RECENTLY PLAYED ───
+  // â”€â”€â”€ RECENTLY PLAYED â”€â”€â”€
   const RECENT_KEY = 'nsl_recent_tracks';
 
   window.addRecentlyPlayed = function(track) {
@@ -318,7 +318,7 @@
     try { return JSON.parse(localStorage.getItem(RECENT_KEY) || '[]'); } catch(_) { return []; }
   };
 
-  // ─── FAVORITES ───
+  // â”€â”€â”€ FAVORITES â”€â”€â”€
   const FAV_KEY = 'nsl_fav_tracks';
 
   window.toggleTrackFavorite = function(track) {
@@ -343,7 +343,7 @@
     try { return JSON.parse(localStorage.getItem(FAV_KEY) || '[]'); } catch(_) { return []; }
   };
 
-  // ─── SHARING ───
+  // â”€â”€â”€ SHARING â”€â”€â”€
   window.sharePlaylist = function(playlistId) {
     const playlist = App._playlists?.find(p => p.id === playlistId) || App.playlists?.[playlistId];
     if (!playlist) return;
@@ -384,12 +384,12 @@
       await App.db.collection('playlists').doc(newPlaylist.id).set(newPlaylist);
       showToast('Playlist imported!', 'success');
     } catch(e) {
-      console.error('Import failed:', e);
+      if (window.__DEBUG__) console.error('Import failed:', e);
       showToast('Import failed', 'error');
     }
   };
 
-  // ─── FOLDERS ───
+  // â”€â”€â”€ FOLDERS â”€â”€â”€
   window.createPlaylistFolder = async function(name) {
     if (!App.db || !App.auth?.currentUser) return null;
     if (!name || !name.trim()) return null;
@@ -438,7 +438,7 @@
     } catch(_) { return []; }
   };
 
-  // ─── UTILITY ───
+  // â”€â”€â”€ UTILITY â”€â”€â”€
   window.formatPlaylistDuration = function(seconds) {
     if (!seconds) return '0:00';
     const h = Math.floor(seconds / 3600);

@@ -1,5 +1,5 @@
-/**
- * Chat Roles & Permissions — Granular permission system for group chats.
+﻿/**
+ * Chat Roles & Permissions â€” Granular permission system for group chats.
  * Roles stored on chat doc: { roles: { uid: 'admin' | 'moderator' | 'member' } }
  * Permissions: send, pin, manage-members, manage-settings
  * Admin can promote/demote; moderators can pin and manage members.
@@ -126,7 +126,7 @@
 
         if (window.showToast) window.showToast(`Role updated to ${newRole}`, 'success');
       } catch (e) {
-        console.error('Role update error:', e);
+        if (window.__DEBUG__) console.error('Role update error:', e);
         if (window.showToast) window.showToast(e.message || 'Failed to update role', 'error');
       }
     }

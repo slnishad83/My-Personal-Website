@@ -1,5 +1,5 @@
-/* ============================================================
-   CHANGE NUMBER — WhatsApp-style phone number migration
+﻿/* ============================================================
+   CHANGE NUMBER â€” WhatsApp-style phone number migration
    ============================================================ */
 (function () {
   'use strict';
@@ -81,11 +81,11 @@
           var phoneEl = document.getElementById('user-phone');
           if (phoneEl) phoneEl.textContent = newNum;
         }).catch(function (err) {
-          console.error('[ChangeNumber]', err);
+          if (window.__DEBUG__) console.error('[ChangeNumber]', err);
           if (typeof showToast === 'function') showToast('Failed to update number: ' + (err.message || err), 'error');
         });
       } else {
-        if (typeof showToast === 'function') showToast('Phone number updated (offline — will sync)', 'success');
+        if (typeof showToast === 'function') showToast('Phone number updated (offline â€” will sync)', 'success');
         overlay.style.display = 'none';
       }
     });

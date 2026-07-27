@@ -1304,6 +1304,28 @@ input[type="file"].hidden-input {
   padding: 10px 20px;
 }
 
+/* ── Offline banner (fixed top) ─────────────────────── */
+.offline-banner {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 10000;
+  background: var(--error, #ba1a1a);
+  color: white;
+  text-align: center;
+  padding: 8px 16px;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+#offline-banner.offline-banner {
+  position: static;
+  z-index: auto;
+}
+
 /* ── System dark mode preference fallback ────────────── */
 @media (prefers-color-scheme: dark) {
   html:not([data-theme]) { color-scheme: dark; }
@@ -3167,6 +3189,123 @@ html:not(.dark) .locked-chats-folder {
 html.dark ::selection {
   background: color-mix(in srgb, var(--primary) 50%, transparent);
   color: var(--on-surface);
+}
+
+/* ══════════════════════════════════════════════════════════════
+   WCAG 2.1 AA ACCESSIBILITY
+   ══════════════════════════════════════════════════════════════ */
+
+/* ── Screen-reader-only utility class ─────────────────────── */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+.sr-only-focusable:focus,
+.sr-only-focusable:active {
+  position: static;
+  width: auto;
+  height: auto;
+  padding: inherit;
+  margin: inherit;
+  overflow: visible;
+  clip: auto;
+  white-space: normal;
+}
+
+/* ── Skip-to-content link ─────────────────────────────────── */
+.skip-nav-link {
+  position: fixed;
+  top: -100px;
+  left: 8px;
+  z-index: 99999;
+  padding: 12px 24px;
+  background: var(--primary);
+  color: var(--on-primary);
+  border-radius: 0 0 12px 12px;
+  font-weight: 700;
+  font-size: 14px;
+  text-decoration: none;
+  transition: top 0.2s;
+}
+.skip-nav-link:focus {
+  top: 0;
+  outline: 3px solid var(--on-primary);
+  outline-offset: 2px;
+}
+
+/* ── Global focus-visible styles ──────────────────────────── */
+*:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+button:focus-visible,
+[role="button"]:focus-visible,
+a:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--primary) 25%, transparent);
+}
+input:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 1px;
+  border-color: var(--primary) !important;
+}
+button:active:focus-visible {
+  outline-offset: 0;
+}
+
+/* ── Touch targets: enforce 44x44px minimum (WCAG 2.5.8) ─── */
+button,
+[role="button"],
+a[href],
+input:not([type="hidden"]):not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+textarea,
+select,
+[tabindex]:not([tabindex="-1"]) {
+  min-height: 44px;
+  min-width: 44px;
+}
+input[type="checkbox"],
+input[type="radio"],
+input[type="range"] {
+  min-width: 44px;
+  min-height: 44px;
+}
+
+/* ── High-contrast mode support ───────────────────────────── */
+@media (forced-colors: active) {
+  *:focus-visible {
+    outline: 2px solid Highlight !important;
+    outline-offset: 2px !important;
+  }
+  .skip-nav-link:focus {
+    outline: 2px solid Highlight !important;
+  }
+}
+
+/* ── Screen reader status region for typing indicator ──────── */
+#a11y-typing-status {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
 }
 
 /* ══════════════════════════════════════════════════════════════

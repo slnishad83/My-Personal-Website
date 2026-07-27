@@ -9,7 +9,7 @@
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="theme-color" content="#11131c" id="theme-color-meta">
   <meta name="description" content="NSL Chat — Modern team messaging by Nishad SL">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://www.googleapis.com https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https:; media-src 'self' blob:; connect-src 'self' https://*.firebaseio.com https://*.cloudfunctions.net https://firebasestorage.googleapis.com https://www.googleapis.com wss://*.firebaseio.com; base-uri 'self'; object-src 'self'; frame-ancestors 'self'; form-action 'self'; upgrade-insecure-requests;">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://www.googleapis.com https://cdnjs.cloudflare.com https://browser.sentry-cdn.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https:; media-src 'self' blob:; connect-src 'self' https://*.firebaseio.com https://*.cloudfunctions.net https://firebasestorage.googleapis.com https://www.googleapis.com https://*.sentry.io wss://*.firebaseio.com; base-uri 'self'; object-src 'self'; frame-ancestors 'self'; form-action 'self'; upgrade-insecure-requests;">
   <meta name="robots" content="noindex, nofollow">
   <link rel="canonical" href="https://nishadsl.com/works/chat">
   <meta property="og:title" content="NSL Chat">
@@ -94,9 +94,9 @@
        ═══════════════════════════════════ -->
   <div id="loading-screen" class="fixed inset-0 z-[99999] bg-background flex flex-col items-center justify-center gap-4 transition-all duration-300" role="status" aria-live="polite" aria-label="Loading application">
     <div class="w-16 h-16 rounded-2xl bg-primary flex items-center justify-center shadow-lg shadow-primary/30">
-      <span class="material-symbols-outlined text-on-primary text-3xl" style="font-variation-settings: 'FILL' 1;">bolt</span>
+          <span class="material-symbols-outlined text-on-primary text-3xl" style="font-variation-settings: 'FILL' 1;" aria-hidden="true">bolt</span>
     </div>
-    <div class="w-10 h-10 border-3 border-primary/30 border-t-primary rounded-full animate-spin" style="border-width: 3px;"></div>
+    <div class="w-10 h-10 border-3 border-primary/30 border-t-primary rounded-full animate-spin" style="border-width: 3px;" role="presentation"></div>
     <p class="text-on-surface-variant font-headline-md tracking-tight text-sm" id="loading-status" aria-live="polite">Connecting securely…</p>
   </div>
 
@@ -105,8 +105,9 @@
        ═══════════════════════════════════ -->
   <div class="fixed top-6 right-6 z-[999] flex flex-col gap-2 max-sm:left-4 max-sm:right-4 max-sm:top-4 max-sm:items-center" id="toast-container" aria-live="polite" role="status" aria-atomic="false"></div>
 
-  <!-- Skip to content link for keyboard users (created by A11y module) -->
-  <a href="#chat-list" id="skip-nav" class="sr-only skip-nav-link" aria-label="Skip to chat list">Skip to chat list</a>
+  <!-- Skip to content links for keyboard users -->
+  <a href="#chat-list" id="skip-nav" class="sr-only skip-nav-link sr-only-focusable" aria-label="Skip to chat list">Skip to chat list</a>
+  <a href="#messages-wrap" id="skip-to-main" class="sr-only skip-nav-link sr-only-focusable" aria-label="Skip to main content" style="left:200px;">Skip to main content</a>
   <!-- ═══════════════════════════════════
        MAIN APP CONTAINER (Supports device framing simulation)
        ═══════════════════════════════════ -->
@@ -117,7 +118,7 @@
       <!-- Brand Info -->
       <div class="p-6 flex items-center gap-3">
         <div class="w-10 h-10 rounded-xl bg-primary-fixed flex items-center justify-center text-on-primary shadow-lg shadow-primary-fixed/20">
-          <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">bolt</span>
+          <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;" aria-hidden="true">bolt</span>
         </div>
         <div class="hidden xl:block">
           <h1 class="font-headline-md text-headline-md font-bold text-on-background tracking-tight" id="sidebar-app-title">NSL Chat</h1>
@@ -176,7 +177,7 @@
         <div class="flex items-center gap-3 px-2 py-1 bg-surface-container-high rounded-xl cursor-pointer hover:brightness-110 active:scale-95 transition-all" data-action="openProfile" role="button" tabindex="0" aria-label="Open profile and settings" data-action-keydown="openProfile">
           <div class="relative">
             <div class="w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm bg-surface-container-highest text-on-surface-variant" id="sidebar-avatar">U</div>
-            <div class="absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-surface-container-low hidden" id="sidebar-presence-dot"></div>
+            <div class="absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-surface-container-low hidden" id="sidebar-presence-dot" role="img" aria-label="Online"></div>
           </div>
           <div class="hidden xl:block overflow-hidden">
             <p class="text-sm font-bold truncate text-on-surface" id="profile-name-sidebar">User</p>
@@ -270,19 +271,19 @@
           <div class="flex items-center gap-3 cursor-pointer min-w-0 flex-1 py-1 rounded-xl hover:bg-surface-variant/30 active:bg-surface-variant/50 transition-colors px-2 -ml-2" id="chat-header-info" data-action="openChatInfo">
             <div class="relative flex-shrink-0">
               <div class="w-11 h-11 rounded-full flex items-center justify-center font-bold text-base bg-gradient-to-br from-primary/20 to-primary/5 border border-primary/10 text-on-surface-variant overflow-hidden" id="header-avatar">?</div>
-              <div class="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-green-500 border-[2.5px] border-background rounded-full z-10 hidden" id="header-status-dot"></div>
+              <div class="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-green-500 border-[2.5px] border-background rounded-full z-10 hidden" id="header-status-dot" role="img" aria-label="Online"></div>
             </div>
             <div class="flex flex-col justify-center min-w-0 gap-0.5">
               <h2 class="font-bold text-on-surface text-[15px] md:text-[16px] truncate leading-tight" id="header-name">Select a chat</h2>
               <div class="flex items-center gap-1.5 min-w-0">
                 <span class="text-[11px] text-on-surface-variant/70 truncate whitespace-nowrap max-w-[120px] sm:max-w-[180px] md:max-w-[240px]" id="header-status">—</span>
                 <span class="text-[11px] text-on-surface-variant/60 flex items-center gap-1" id="encryption-indicator">
-                  <span class="material-symbols-outlined text-[11px]" style="font-variation-settings: 'FILL' 1;">lock</span>
+                  <span class="material-symbols-outlined text-[11px]" style="font-variation-settings: 'FILL' 1;" aria-hidden="true">lock</span>
                   <span class="hidden sm:inline">End-to-end encrypted</span>
                 </span>
               </div>
             </div>
-            <span class="material-symbols-outlined text-on-surface-variant/40 text-lg flex-shrink-0 hidden sm:block">chevron_right</span>
+            <span class="material-symbols-outlined text-on-surface-variant/40 text-lg flex-shrink-0 hidden sm:block" aria-hidden="true">chevron_right</span>
           </div>
         </div>
 
@@ -339,7 +340,7 @@
           <!-- Hero Banner Header -->
           <div class="flex flex-col @md:flex-row items-center gap-6 bg-surface-container-high rounded-3xl p-4 sm:p-6 md:p-8 border border-outline-variant/20 shadow-xl neon-glow">
             <div class="w-20 h-20 rounded-3xl bg-primary flex items-center justify-center shadow-lg shadow-primary/30 flex-shrink-0">
-              <span class="material-symbols-outlined text-on-primary text-4xl" style="font-variation-settings: 'FILL' 1;">bolt</span>
+              <span class="material-symbols-outlined text-on-primary text-4xl" style="font-variation-settings: 'FILL' 1;" aria-hidden="true">bolt</span>
             </div>
             <div class="text-center md:text-left flex-1 space-y-1">
               <h3 class="font-headline-lg text-headline-lg font-bold text-on-surface">Welcome to NSL Chat Workspace</h3>
@@ -374,15 +375,16 @@
       </button>
 
       <!-- Typing indicators -->
-      <div class="px-6 py-2 flex items-center gap-2 hidden" id="typing-indicator" aria-live="polite">
+      <div class="px-6 py-2 flex items-center gap-2 hidden" id="typing-indicator" aria-live="polite" aria-atomic="true">
         <div class="flex items-center gap-2 bg-surface-container-high px-3 py-2 rounded-full border border-outline-variant/30">
           <span class="text-xs text-on-surface-variant font-medium typing-user-name">Someone</span>
-          <div class="flex gap-1">
+          <div class="flex gap-1" aria-hidden="true">
             <div class="w-1.5 h-1.5 bg-primary rounded-full" style="animation: typing-dot 1.2s ease-in-out infinite; animation-delay: 0ms;"></div>
             <div class="w-1.5 h-1.5 bg-primary rounded-full" style="animation: typing-dot 1.2s ease-in-out infinite; animation-delay: 0.2s;"></div>
             <div class="w-1.5 h-1.5 bg-primary rounded-full" style="animation: typing-dot 1.2s ease-in-out infinite; animation-delay: 0.4s;"></div>
           </div>
-          <span class="text-[11px] text-on-surface-variant/60">typing...</span>
+          <span class="sr-only typing-status-text">is typing</span>
+          <span class="text-[11px] text-on-surface-variant/60" aria-hidden="true">typing...</span>
         </div>
       </div>
 
@@ -651,7 +653,7 @@
                     <p class="text-xs text-on-surface-variant" id="settings-name">—</p>
                   </div>
                 </div>
-                <span class="material-symbols-outlined text-on-surface-variant">chevron_right</span>
+                <span class="material-symbols-outlined text-on-surface-variant" aria-hidden="true">chevron_right</span>
               </div>
               <div class="flex items-center justify-between p-4 cursor-pointer hover:bg-surface-container transition-colors" data-action="editStatus">
                 <div class="flex items-center gap-3">
@@ -661,7 +663,7 @@
                     <p class="text-xs text-on-surface-variant" id="settings-status">Available</p>
                   </div>
                 </div>
-                <span class="material-symbols-outlined text-on-surface-variant">chevron_right</span>
+                <span class="material-symbols-outlined text-on-surface-variant" aria-hidden="true">chevron_right</span>
               </div>
               <div class="flex items-center justify-between p-4 cursor-pointer hover:bg-surface-container transition-colors" data-action="editPhone">
                 <div class="flex items-center gap-3">
@@ -671,7 +673,7 @@
                     <p class="text-xs text-on-surface-variant" id="settings-phone">Not provided</p>
                   </div>
                 </div>
-                <span class="material-symbols-outlined text-on-surface-variant">chevron_right</span>
+                <span class="material-symbols-outlined text-on-surface-variant" aria-hidden="true">chevron_right</span>
               </div>
             </div>
           </div>
@@ -687,7 +689,7 @@
                     <p class="text-xs text-on-surface-variant" id="theme-label">Light</p>
                   </div>
                 </div>
-                <span class="material-symbols-outlined text-on-surface-variant">chevron_right</span>
+                <span class="material-symbols-outlined text-on-surface-variant" aria-hidden="true">chevron_right</span>
               </div>
               <div class="flex items-center justify-between p-4 cursor-pointer hover:bg-surface-container transition-colors" data-action="openLanguagePicker">
                 <div class="flex items-center gap-3">
@@ -697,7 +699,7 @@
                     <p class="text-xs text-on-surface-variant">English / हिन्दी / ગુજરાતી</p>
                   </div>
                 </div>
-                <span class="material-symbols-outlined text-on-surface-variant">chevron_right</span>
+                <span class="material-symbols-outlined text-on-surface-variant" aria-hidden="true">chevron_right</span>
               </div>
               <div class="flex items-center justify-between p-4 cursor-pointer hover:bg-surface-container transition-colors" data-action="openFolderManager">
                 <div class="flex items-center gap-3">
@@ -707,7 +709,7 @@
                     <p class="text-xs text-on-surface-variant" id="folder-count">Organize your chats</p>
                   </div>
                 </div>
-                <span class="material-symbols-outlined text-on-surface-variant">chevron_right</span>
+                <span class="material-symbols-outlined text-on-surface-variant" aria-hidden="true">chevron_right</span>
               </div>
               <div class="flex items-center justify-between p-4 cursor-pointer hover:bg-surface-container transition-colors" id="appPermissionsBtn" data-action="showPermissions">
                 <div class="flex items-center gap-3">
@@ -717,7 +719,7 @@
                     <p class="text-xs text-on-surface-variant">Camera, mic, notifications & more</p>
                   </div>
                 </div>
-                <span class="material-symbols-outlined text-on-surface-variant">chevron_right</span>
+                <span class="material-symbols-outlined text-on-surface-variant" aria-hidden="true">chevron_right</span>
               </div>
               <div class="flex items-center justify-between p-4 cursor-pointer hover:bg-surface-container transition-colors" id="keyboardShortcutsBtn" data-action="showKeyboardShortcuts">
                 <div class="flex items-center gap-3">
@@ -727,7 +729,7 @@
                     <p class="text-xs text-on-surface-variant">View all keyboard shortcuts and hotkeys</p>
                   </div>
                 </div>
-                <span class="material-symbols-outlined text-on-surface-variant">chevron_right</span>
+                <span class="material-symbols-outlined text-on-surface-variant" aria-hidden="true">chevron_right</span>
               </div>
               <div class="flex items-center justify-between p-4 cursor-pointer hover:bg-surface-container transition-colors" data-action="showTwoFactorAuth">
                 <div class="flex items-center gap-3">
@@ -737,7 +739,7 @@
                     <p class="text-xs text-on-surface-variant">Extra PIN security for your account</p>
                   </div>
                 </div>
-                <span class="material-symbols-outlined text-on-surface-variant">chevron_right</span>
+                <span class="material-symbols-outlined text-on-surface-variant" aria-hidden="true">chevron_right</span>
               </div>
               <div class="flex items-center justify-between p-4 cursor-pointer hover:bg-surface-container transition-colors" data-action="toggleAppLock">
                 <div class="flex items-center gap-3">
@@ -747,7 +749,7 @@
                     <p class="text-xs text-on-surface-variant">Require PIN to open the app</p>
                   </div>
                 </div>
-                <span class="material-symbols-outlined text-on-surface-variant">chevron_right</span>
+                <span class="material-symbols-outlined text-on-surface-variant" aria-hidden="true">chevron_right</span>
               </div>
               <div class="flex items-center justify-between p-4 cursor-pointer hover:bg-surface-container transition-colors" data-action="showChatLockSettings">
                 <div class="flex items-center gap-3">
@@ -757,7 +759,7 @@
                     <p class="text-xs text-on-surface-variant">Manage individually locked conversations</p>
                   </div>
                 </div>
-                <span class="material-symbols-outlined text-on-surface-variant">chevron_right</span>
+                <span class="material-symbols-outlined text-on-surface-variant" aria-hidden="true">chevron_right</span>
               </div>
               <div class="flex items-center justify-between p-4 cursor-pointer hover:bg-surface-container transition-colors" data-action="showDataSaver">
                 <div class="flex items-center gap-3">
@@ -767,7 +769,7 @@
                     <p class="text-xs text-on-surface-variant">Control media auto-download settings</p>
                   </div>
                 </div>
-                <span class="material-symbols-outlined text-on-surface-variant">chevron_right</span>
+                <span class="material-symbols-outlined text-on-surface-variant" aria-hidden="true">chevron_right</span>
               </div>
               <div class="flex items-center justify-between p-4 cursor-pointer hover:bg-surface-container transition-colors" data-action="closeProfileAndHelp">
                 <div class="flex items-center gap-3">
@@ -777,7 +779,7 @@
                     <p class="text-xs text-on-surface-variant">FAQs, report bugs, contact support</p>
                   </div>
                 </div>
-                <span class="material-symbols-outlined text-on-surface-variant">chevron_right</span>
+                <span class="material-symbols-outlined text-on-surface-variant" aria-hidden="true">chevron_right</span>
               </div>
               <div class="flex items-center justify-between p-4 cursor-pointer hover:bg-surface-container transition-colors" data-action="showDisappearingMessages">
                 <div class="flex items-center gap-3">
@@ -787,7 +789,7 @@
                     <p class="text-xs text-on-surface-variant">Set default timer for new chats</p>
                   </div>
                 </div>
-                <span class="material-symbols-outlined text-on-surface-variant">chevron_right</span>
+                <span class="material-symbols-outlined text-on-surface-variant" aria-hidden="true">chevron_right</span>
               </div>
               <div class="flex items-center justify-between p-4 cursor-pointer hover:bg-surface-container transition-colors" data-action="showLinkedDevices">
                 <div class="flex items-center gap-3">
@@ -797,7 +799,7 @@
                     <p class="text-xs text-on-surface-variant">Manage your connected devices</p>
                   </div>
                 </div>
-                <span class="material-symbols-outlined text-on-surface-variant">chevron_right</span>
+                <span class="material-symbols-outlined text-on-surface-variant" aria-hidden="true">chevron_right</span>
               </div>
               <div class="flex items-center justify-between p-4 cursor-pointer hover:bg-surface-container transition-colors" data-action="showWallpaperGallery">
                 <div class="flex items-center gap-3">
@@ -807,7 +809,7 @@
                     <p class="text-xs text-on-surface-variant">Customize chat background</p>
                   </div>
                 </div>
-                <span class="material-symbols-outlined text-on-surface-variant">chevron_right</span>
+                <span class="material-symbols-outlined text-on-surface-variant" aria-hidden="true">chevron_right</span>
               </div>
               <div class="flex items-center justify-between p-4 cursor-pointer hover:bg-surface-container transition-colors" data-action="showFontSizeSettings">
                 <div class="flex items-center gap-3">
@@ -817,7 +819,7 @@
                     <p class="text-xs text-on-surface-variant" id="font-size-label">Medium</p>
                   </div>
                 </div>
-                <span class="material-symbols-outlined text-on-surface-variant">chevron_right</span>
+                <span class="material-symbols-outlined text-on-surface-variant" aria-hidden="true">chevron_right</span>
               </div>
               <div class="flex items-center justify-between p-4 cursor-pointer hover:bg-surface-container transition-colors" data-action="showChangeNumber">
                 <div class="flex items-center gap-3">
@@ -827,7 +829,7 @@
                     <p class="text-xs text-on-surface-variant">Change your phone number</p>
                   </div>
                 </div>
-                <span class="material-symbols-outlined text-on-surface-variant">chevron_right</span>
+                <span class="material-symbols-outlined text-on-surface-variant" aria-hidden="true">chevron_right</span>
               </div>
               <div class="flex items-center justify-between p-4 cursor-pointer hover:bg-surface-container transition-colors" data-action="showFindFriends">
                 <div class="flex items-center gap-3">
@@ -837,7 +839,7 @@
                     <p class="text-xs text-on-surface-variant">Sync your phone contacts</p>
                   </div>
                 </div>
-                <span class="material-symbols-outlined text-on-surface-variant">chevron_right</span>
+                <span class="material-symbols-outlined text-on-surface-variant" aria-hidden="true">chevron_right</span>
               </div>
             </div>
           </div>
@@ -1031,10 +1033,10 @@
   </div>
 
   <!-- Message info detail modal overlay -->
-  <div class="overlay fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center hidden" id="msg-info-overlay" data-action="dismissOnBackdrop" data-action-arg="msg-info-overlay" role="dialog" aria-modal="true">
+  <div class="overlay fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center hidden" id="msg-info-overlay" data-action="dismissOnBackdrop" data-action-arg="msg-info-overlay" role="dialog" aria-modal="true" aria-labelledby="msg-info-title">
     <div class="bg-surface-container border border-outline-variant/30 rounded-2xl w-full max-w-md shadow-2xl p-6 m-4">
       <div class="flex items-center justify-between pb-4 border-b border-outline-variant/10 mb-4">
-        <h3 class="font-bold text-lg text-on-surface">Message info</h3>
+        <h3 class="font-bold text-lg text-on-surface" id="msg-info-title">Message info</h3>
         <button class="text-on-surface-variant hover:text-on-surface min-w-[44px] min-h-[44px] flex items-center justify-center rounded-full" data-action="closeModal" data-action-arg="msg-info-overlay" aria-label="Close message info">
           <span class="material-symbols-outlined">close</span>
         </button>
@@ -1077,12 +1079,12 @@
   </div>
 
   <!-- Call Picker Overlay -->
-  <div class="overlay fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center hidden" id="call-picker-overlay" data-action="dismissOnBackdrop" data-action-arg="call-picker-overlay" role="dialog" aria-modal="true">
+  <div class="overlay fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center hidden" id="call-picker-overlay" data-action="dismissOnBackdrop" data-action-arg="call-picker-overlay" role="dialog" aria-modal="true" aria-labelledby="call-picker-title">
     <div class="bg-surface-container border border-outline-variant/30 rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden max-h-[85vh] flex flex-col m-4 animate-in fade-in zoom-in-95 duration-200">
       <div class="flex items-center justify-between p-6 border-b border-outline-variant/10">
         <div class="flex items-center gap-3 text-primary">
-          <span class="material-symbols-outlined">add_call</span>
-          <h2 class="font-bold text-on-surface">Select a contact to call</h2>
+          <span class="material-symbols-outlined" aria-hidden="true">add_call</span>
+          <h2 class="font-bold text-on-surface" id="call-picker-title">Select a contact to call</h2>
         </div>
         <button class="text-on-surface-variant hover:text-on-surface min-w-[44px] min-h-[44px] flex items-center justify-center rounded-full" data-action="closeModal" data-action-arg="call-picker-overlay" aria-label="Close call picker">
           <span class="material-symbols-outlined">close</span>
@@ -1353,10 +1355,15 @@
   <script src="https://www.gstatic.com/firebasejs/12.16.0/firebase-storage-compat.js" crossorigin="anonymous" defer></script>
   <script src="https://www.gstatic.com/firebasejs/12.16.0/firebase-messaging-compat.js" crossorigin="anonymous" defer></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js" integrity="sha384-+mbV2IY1Zk/X1p/nWllGySJSUN8uMs+gUAN10Or95UBH0fpj6GfKgPmgC5EXieXG" crossorigin="anonymous" defer></script>
+  <!-- Monitoring (Sentry + Crashlytics bridge) -->
+  <script src="monitoring.js" defer></script>
   <!-- DND / Quiet Hours -->
   <script src="dnd-quiet-hours.js" defer></script>
   <!-- Vite ES Module Entry — replaces all local <script defer> tags above -->
   <script type="module" src="app-index.js"></script>
+  <link rel="modulepreload" href="app-index.js">
+  <link rel="preload" href="src/styles/main.css" as="style">
+  <link rel="preload" href="src/styles/app.css" as="style">
 
   <!-- Pre-Permission Explanation Dialog -->
   <div id="prePermissionModal" class="overlay fixed inset-0 z-[110] bg-black/60 backdrop-blur-sm flex items-center justify-center hidden" role="dialog" aria-modal="true" aria-labelledby="prePermissionTitle">

@@ -1,5 +1,5 @@
-/* ============================================================
-   iOS CALLKIT BRIDGE — Capacitor plugin bridge for native
+﻿/* ============================================================
+   iOS CALLKIT BRIDGE â€” Capacitor plugin bridge for native
    iOS CallKit incoming call UI. Falls back gracefully on
    Android and Web platforms.
    ============================================================ */
@@ -53,7 +53,7 @@ const IOSCallKit = (() => {
         callType: callType || 'voice'
       });
     } catch (e) {
-      console.warn('[IOSCallKit] reportIncomingCall failed:', e);
+      if (window.__DEBUG__) console.warn('[IOSCallKit] reportIncomingCall failed:', e);
       return false;
     }
   }
@@ -63,7 +63,7 @@ const IOSCallKit = (() => {
     try {
       return await _plugin.endCall();
     } catch (e) {
-      console.warn('[IOSCallKit] endCall failed:', e);
+      if (window.__DEBUG__) console.warn('[IOSCallKit] endCall failed:', e);
       return false;
     }
   }
@@ -73,7 +73,7 @@ const IOSCallKit = (() => {
     try {
       return await _plugin.answerCall();
     } catch (e) {
-      console.warn('[IOSCallKit] answerCall failed:', e);
+      if (window.__DEBUG__) console.warn('[IOSCallKit] answerCall failed:', e);
       return false;
     }
   }
@@ -83,7 +83,7 @@ const IOSCallKit = (() => {
     try {
       return await _plugin.setAudioOutput({ output });
     } catch (e) {
-      console.warn('[IOSCallKit] setAudioOutput failed:', e);
+      if (window.__DEBUG__) console.warn('[IOSCallKit] setAudioOutput failed:', e);
       return false;
     }
   }

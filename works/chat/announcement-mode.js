@@ -1,5 +1,5 @@
-/**
- * Announcement-Only Mode — Admin toggle for group chats.
+﻿/**
+ * Announcement-Only Mode â€” Admin toggle for group chats.
  * When enabled, only admins/moderators can post messages.
  * Stored as `announcementOnly: true/false` on the chat document.
  */
@@ -83,14 +83,14 @@
 
       if (window.showToast) {
         window.showToast(
-          newVal ? 'Announcement mode enabled — only admins can post' : 'Announcement mode disabled — everyone can post',
+          newVal ? 'Announcement mode enabled â€” only admins can post' : 'Announcement mode disabled â€” everyone can post',
           'success'
         );
       }
 
       updateAnnouncementBanner(newVal);
     } catch (e) {
-      console.error('Toggle announcement mode error:', e);
+      if (window.__DEBUG__) console.error('Toggle announcement mode error:', e);
       if (window.showToast) window.showToast('Failed to update setting', 'error');
     }
   };
@@ -121,7 +121,7 @@
       margin: 8px auto;
       max-width: 90%;
     `;
-    banner.innerHTML = `<span class="material-symbols-outlined text-[16px]">campaign</span> Announcement Mode — Only admins can post`;
+    banner.innerHTML = `<span class="material-symbols-outlined text-[16px]">campaign</span> Announcement Mode â€” Only admins can post`;
 
     msgBox.parentElement?.insertBefore(banner, msgBox);
   }

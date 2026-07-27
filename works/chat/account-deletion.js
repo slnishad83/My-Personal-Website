@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Account Deletion
  * Allows users to permanently delete their account and all associated data.
  * Includes a 30-day grace period before permanent deletion.
@@ -36,7 +36,7 @@
 
         showToast('Account scheduled for deletion. You have 30 days to reactivate by logging in.', 'info');
       } catch (e) {
-        console.error('[AccountDeletion] Schedule error:', e);
+        if (window.__DEBUG__) console.error('[AccountDeletion] Schedule error:', e);
         showToast('Failed to schedule deletion', 'error');
       }
     },
@@ -55,7 +55,7 @@
         });
         showToast('Account deletion cancelled. Welcome back!', 'success');
       } catch (e) {
-        console.error('[AccountDeletion] Cancel error:', e);
+        if (window.__DEBUG__) console.error('[AccountDeletion] Cancel error:', e);
         showToast('Failed to cancel deletion', 'error');
       }
     },
@@ -84,7 +84,7 @@
           window.location.href = 'login.html';
         }
       } catch (e) {
-        console.error('[AccountDeletion] Permanent delete error:', e);
+        if (window.__DEBUG__) console.error('[AccountDeletion] Permanent delete error:', e);
         showToast('Failed to delete account', 'error');
       }
     },

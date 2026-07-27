@@ -1,6 +1,6 @@
-'use strict';
+﻿'use strict';
 /**
- * MESSAGE TRANSLATION — Translate any message with a single tap
+ * MESSAGE TRANSLATION â€” Translate any message with a single tap
  * Uses free Google Translate API (no key needed for short texts).
  */
 (function () {
@@ -27,7 +27,7 @@
         this._translations[cacheKey] = result;
         return result;
       } catch (e) {
-        console.warn('[MessageTranslation] Error:', e);
+        if (window.__DEBUG__) console.warn('[MessageTranslation] Error:', e);
         return text;
       }
     },

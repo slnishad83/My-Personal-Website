@@ -1,5 +1,5 @@
-/**
- * NSL Chat — Configuration Module
+﻿/**
+ * NSL Chat â€” Configuration Module
  * 
  * Separation of concerns:
  * - firebase.config.js: Firebase configuration constants only
@@ -9,25 +9,25 @@
  */
 'use strict';
 
-/* ══════════════════════════════════════════════════════════════
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
    FIREBASE CONFIGURATION (single source of truth in firebase-config.js)
-   ══════════════════════════════════════════════════════════════ */
+   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 
 // FIREBASE_CONFIG is defined in firebase-config.js (loaded before this file)
 if (typeof FIREBASE_CONFIG === 'undefined') {
-  console.error('[Config] firebase-config.js must be loaded before config.js');
+  if (window.__DEBUG__) console.error('[Config] firebase-config.js must be loaded before config.js');
 }
 
-/* ══════════════════════════════════════════════════════════════
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
    APP CONSTANTS
-   ══════════════════════════════════════════════════════════════ */
+   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 
 const APP_CONSTANTS = Object.freeze({
   FCM_VAPID_KEY: "BDVoTx6AbM3T_AdVKV6IYFt3bbXiWRF5I7c5s-4w5AuUvYIzYPQYiODmJxnjH0DOLj-NhL83jiKMQ6RjkCvUALQ",
   TURN_CREDENTIALS_ENDPOINT: "https://us-central1-my-team-chat-2255.cloudfunctions.net/getTurnCredentials",
   VERIFIED_USER_LOOKUP_ENDPOINT: "https://asia-south1-my-team-chat-2255.cloudfunctions.net/lookupVerifiedUserByEmailV2",
   GROUP_ACCESS_REPAIR_ENDPOINT: "https://us-central1-my-team-chat-2255.cloudfunctions.net/repairGroupAccessMetadata",
-  /* Cloudinary removed — all uploads use Firebase Storage (100% free) */
+  /* Cloudinary removed â€” all uploads use Firebase Storage (100% free) */
   MEETING_SCHEDULER_ENDPOINT: "https://us-central1-my-team-chat-2255.cloudfunctions.net/scheduleMeeting",
   AVATAR_MAX_BYTES: 5 * 1024 * 1024,
   AVATAR_ALLOWED_EXTENSIONS: ["jpg", "jpeg", "png", "webp", "gif", "bmp", "heic", "heif"],
@@ -43,9 +43,9 @@ const APP_CONSTANTS = Object.freeze({
   },
 });
 
-/* ══════════════════════════════════════════════════════════════
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
    PRIVACY SETTINGS (user-configurable)
-   ══════════════════════════════════════════════════════════════ */
+   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 
 let privacySettings = {
   hideReadReceipts: false,
@@ -55,16 +55,16 @@ let privacySettings = {
 
 let chatWallpapers = {};
 
-/* ══════════════════════════════════════════════════════════════
-   FIREBASE INITIALIZATION (lazy — called once)
-   ══════════════════════════════════════════════════════════════ */
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+   FIREBASE INITIALIZATION (lazy â€” called once)
+   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 
 let _firebaseInitialized = false;
 
 function initFirebase() {
   if (_firebaseInitialized) return;
   if (typeof firebase === 'undefined') {
-    console.error('[Config] Firebase SDK not loaded');
+    if (window.__DEBUG__) console.error('[Config] Firebase SDK not loaded');
     return;
   }
   if (!firebase.apps.length) {
@@ -74,9 +74,9 @@ function initFirebase() {
   document.dispatchEvent(new CustomEvent('nsl:firebase-ready'));
 }
 
-/* ══════════════════════════════════════════════════════════════
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
    TURN SERVER CONFIGURATION
-   ══════════════════════════════════════════════════════════════ */
+   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 
 var _turnCache = { servers: null, timestamp: 0, TTL: 5 * 60 * 1000 };
 
@@ -99,7 +99,7 @@ async function getBackendTurnServers() {
     _turnCache.timestamp = now;
     return iceServers;
   } catch (error) {
-    console.warn('[Config] Could not load TURN servers:', error);
+    if (window.__DEBUG__) console.warn('[Config] Could not load TURN servers:', error);
     if (_turnCache.servers) return _turnCache.servers;
     return [];
   }
@@ -115,14 +115,14 @@ async function getRtcConfig() {
       return { iceServers: [...APP_CONSTANTS.DEFAULT_RTC_CONFIG.iceServers, ...configuredServers] };
     }
   } catch (error) {
-    console.warn('[Config] Invalid TURN server config:', error);
+    if (window.__DEBUG__) console.warn('[Config] Invalid TURN server config:', error);
   }
   return APP_CONSTANTS.DEFAULT_RTC_CONFIG;
 }
 
-/* ══════════════════════════════════════════════════════════════
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
    PLATFORM DETECTION
-   ══════════════════════════════════════════════════════════════ */
+   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 
 const isNativeAndroidApp =
   window.Capacitor?.isNativePlatform?.() === true &&
@@ -132,9 +132,9 @@ const isNativeIOSApp =
   window.Capacitor?.isNativePlatform?.() === true &&
   window.Capacitor?.getPlatform?.() === 'ios';
 
-/* ══════════════════════════════════════════════════════════════
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
    GLOBAL STATE (backward compatibility)
-   ══════════════════════════════════════════════════════════════ */
+   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 
 window.__DEBUG__ = window.__DEBUG__ || false;
 window.FIREBASE_CONFIG = FIREBASE_CONFIG;

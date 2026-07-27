@@ -1,4 +1,4 @@
-'use strict';
+﻿'use strict';
 (function () {
   var _loadToken = 0;
   var _allCalls = [];
@@ -525,7 +525,7 @@ var infoBtn = '<button class="min-w-[44px] min-h-[44px] rounded-full flex items-
         _renderCallHistory();
         _setupFirestoreListener();
       }).catch(function (err) {
-        console.warn('[CallHistory] Firestore load error:', err);
+        if (window.__DEBUG__) console.warn('[CallHistory] Firestore load error:', err);
         var cached = [];
         try {
           var raw = localStorage.getItem('tcCallHistory');
@@ -560,7 +560,7 @@ var infoBtn = '<button class="min-w-[44px] min-h-[44px] rounded-full flex items-
         _allCalls = calls;
         _renderCallHistory();
       }, function (err) {
-        console.warn('[CallHistory] Listener error:', err);
+        if (window.__DEBUG__) console.warn('[CallHistory] Listener error:', err);
       });
   }
 

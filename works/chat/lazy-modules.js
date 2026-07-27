@@ -1,4 +1,4 @@
-(function() {
+﻿(function() {
   'use strict';
 
   var _loaded = {};
@@ -22,7 +22,7 @@
     if (!files) return Promise.resolve();
     _loading[name] = Promise.all(files.map(function(src) {
       return import('./' + src).catch(function(e) {
-        console.warn('[LazyModules] Failed to load ' + src + ':', e.message);
+        if (window.__DEBUG__) console.warn('[LazyModules] Failed to load ' + src + ':', e.message);
       });
     })).then(function() {
       _loaded[name] = true;

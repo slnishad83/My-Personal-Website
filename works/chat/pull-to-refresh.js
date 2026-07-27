@@ -1,5 +1,5 @@
-/* ============================================================
-   PULL-TO-REFRESH — Touch gesture to reload chat list
+﻿/* ============================================================
+   PULL-TO-REFRESH â€” Touch gesture to reload chat list
    Shows a spinner at the top of the chat list while refreshing
    ============================================================ */
 'use strict';
@@ -71,14 +71,14 @@ const PullToRefresh = {
 
     if (this._indicator?.classList?.contains('visible') && !this._indicator?.classList?.contains('pulling')) {
       this._refreshing = true;
-      this._indicator.querySelector('span').textContent = 'Refreshing…';
+      this._indicator.querySelector('span').textContent = 'Refreshingâ€¦';
 
       try {
         if (typeof window.loadChats === 'function') await window.loadChats();
         if (typeof window.loadGroups === 'function') await window.loadGroups();
         if (typeof window.showToast === 'function') window.showToast('Refreshed', 'success');
       } catch (e) {
-        console.warn('[PullToRefresh] Refresh failed:', e);
+        if (window.__DEBUG__) console.warn('[PullToRefresh] Refresh failed:', e);
         if (typeof window.showToast === 'function') window.showToast('Refresh failed', 'error');
       }
 

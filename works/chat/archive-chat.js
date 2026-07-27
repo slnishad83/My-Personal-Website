@@ -1,4 +1,4 @@
-(function() {
+﻿(function() {
   'use strict';
 
   let _archivedChatIds = new Set();
@@ -23,7 +23,7 @@
     try {
       await ref.set({ archivedChats: Array.from(_archivedChatIds) }, { merge: true });
     } catch (e) {
-      console.error('[Archive] persist failed', e);
+      if (window.__DEBUG__) console.error('[Archive] persist failed', e);
     }
   }
 
@@ -39,7 +39,7 @@
         }
       }
     } catch (e) {
-      console.error('[Archive] load failed', e);
+      if (window.__DEBUG__) console.error('[Archive] load failed', e);
     }
     _updateBadge();
     _renderArchiveSection();
@@ -153,7 +153,7 @@
 
     const chevron = document.createElement('span');
     chevron.className = 'archive-section-chevron' + (_archivedSectionExpanded ? '' : ' collapsed');
-    chevron.textContent = '▾';
+    chevron.textContent = 'â–¾';
 
     const title = document.createElement('span');
     title.className = 'archive-section-title';

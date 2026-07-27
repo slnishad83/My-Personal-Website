@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Self-Destructing Messages (Feature 10)
  * Adds disappearing messages functionality to any chat.
  * Includes global default timer setting.
@@ -134,7 +134,7 @@
       background:transparent; cursor:pointer; text-align:left;
       color:inherit; transition:background 0.15s; justify-content:space-between;
     `;
-    btn.innerHTML = `<div style="display:flex; align-items:center; gap:10px;"><span style="font-size:16px">⏳</span> Disappearing Messages</div> <span style="font-size:11px; opacity:0.7;">${timerLabel}</span>`;
+    btn.innerHTML = `<div style="display:flex; align-items:center; gap:10px;"><span style="font-size:16px">â³</span> Disappearing Messages</div> <span style="font-size:11px; opacity:0.7;">${timerLabel}</span>`;
     btn.onmouseenter = () => btn.style.background = 'var(--surface-container-highest)';
     btn.onmouseleave = () => btn.style.background = 'transparent';
     btn.onclick = () => { 
@@ -225,7 +225,7 @@
         // We'll let the user know, this is optional
       }
     } catch (e) {
-      console.error(e);
+      if (window.__DEBUG__) console.error(e);
       if (window.showToast) window.showToast('Failed to update timer', 'error');
     }
   };
@@ -276,9 +276,9 @@
               })
               .catch(e => {
                 if (e.code === 7 || e.message?.includes('PERMISSION_DENIED')) {
-                  console.warn('[SelfDestruct] Delete blocked by rules, server will handle');
+                  if (window.__DEBUG__) console.warn('[SelfDestruct] Delete blocked by rules, server will handle');
                 } else {
-                  console.error('[SelfDestruct] Delete failed:', e);
+                  if (window.__DEBUG__) console.error('[SelfDestruct] Delete failed:', e);
                 }
               });
           }

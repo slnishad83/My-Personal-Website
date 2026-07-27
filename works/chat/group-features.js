@@ -1,4 +1,4 @@
-(function () {
+﻿(function () {
   'use strict';
 
   var _db = function() { return App && App.db ? App.db : (typeof firebase !== 'undefined' ? firebase.firestore() : null); };
@@ -277,7 +277,7 @@
       await fn({ groupId, userIds });
       _toast(userIds.length + ' participant' + (userIds.length > 1 ? 's' : '') + ' added', 'success');
     } catch (err) {
-      console.error('[GroupFeatures] addParticipantsToGroup failed:', err);
+      if (window.__DEBUG__) console.error('[GroupFeatures] addParticipantsToGroup failed:', err);
       _toast(err.message || 'Failed to add participants. Please try again.', 'error');
     }
   }
@@ -294,7 +294,7 @@
       await fn({ groupId, userId });
       _toast('Participant removed', 'success');
     } catch (err) {
-      console.error('[GroupFeatures] removeParticipantFromGroup failed:', err);
+      if (window.__DEBUG__) console.error('[GroupFeatures] removeParticipantFromGroup failed:', err);
       _toast(err.message || 'Failed to remove participant. Please try again.', 'error');
     }
   }
@@ -309,7 +309,7 @@
       await fn({ groupId, userId });
       _toast('Promoted to admin', 'success');
     } catch (err) {
-      console.error('[GroupFeatures] promoteToAdmin failed:', err);
+      if (window.__DEBUG__) console.error('[GroupFeatures] promoteToAdmin failed:', err);
       _toast(err.message || 'Failed to promote. Please try again.', 'error');
     }
   }
@@ -324,7 +324,7 @@
       await fn({ groupId, userId });
       _toast('Removed admin status', 'success');
     } catch (err) {
-      console.error('[GroupFeatures] demoteFromAdmin failed:', err);
+      if (window.__DEBUG__) console.error('[GroupFeatures] demoteFromAdmin failed:', err);
       _toast(err.message || 'Failed to demote. Please try again.', 'error');
     }
   }
@@ -343,7 +343,7 @@
       await groupRef.update({ description: trimmed, updatedAt: Date.now() });
       _toast('Description updated', 'success');
     } catch (err) {
-      console.error('[GroupFeatures] setGroupDescription write failed:', err);
+      if (window.__DEBUG__) console.error('[GroupFeatures] setGroupDescription write failed:', err);
       _toast('Failed to update description. Please try again.', 'error');
     }
   }
@@ -372,7 +372,7 @@
       await groupRef.update({ photoURL: url, updatedAt: Date.now() });
       _toast('Group photo updated', 'success');
     } catch (err) {
-      console.error('[GroupFeatures] setGroupPhoto write failed:', err);
+      if (window.__DEBUG__) console.error('[GroupFeatures] setGroupPhoto write failed:', err);
       _toast('Failed to update group photo. Please try again.', 'error');
     }
   }
@@ -399,7 +399,7 @@
             }
             _toast('Muted for ' + o.label, 'success');
           } catch (err) {
-            console.error('[GroupFeatures] muteGroupNotifications write failed:', err);
+            if (window.__DEBUG__) console.error('[GroupFeatures] muteGroupNotifications write failed:', err);
             _toast('Failed to mute. Please try again.', 'error');
           }
         }
@@ -420,7 +420,7 @@
       _toast('You left the group', 'success');
       if (typeof window.backToList === 'function') window.backToList();
     } catch (err) {
-      console.error('[GroupFeatures] exitGroup failed:', err);
+      if (window.__DEBUG__) console.error('[GroupFeatures] exitGroup failed:', err);
       _toast(err.message || 'Failed to leave group. Please try again.', 'error');
     }
   }
@@ -440,7 +440,7 @@
       _toast('Group deleted for everyone', 'success');
       if (typeof window.backToList === 'function') window.backToList();
     } catch (err) {
-      console.error('[GroupFeatures] deleteGroupForEveryone failed:', err);
+      if (window.__DEBUG__) console.error('[GroupFeatures] deleteGroupForEveryone failed:', err);
       _toast(err.message || 'Failed to delete group. Please try again.', 'error');
     }
   }
@@ -457,7 +457,7 @@
       await groupRef.update({ name: name.trim(), updatedAt: Date.now() });
       _toast('Group renamed', 'success');
     } catch (err) {
-      console.error('[GroupFeatures] changeGroupSubject write failed:', err);
+      if (window.__DEBUG__) console.error('[GroupFeatures] changeGroupSubject write failed:', err);
       _toast('Failed to rename group. Please try again.', 'error');
     }
   }
@@ -553,7 +553,7 @@
       try {
         await groupRef.update({ inviteCode: inviteCode, updatedAt: Date.now() });
       } catch (err) {
-        console.error('[GroupFeatures] openGroupInviteLink write failed:', err);
+        if (window.__DEBUG__) console.error('[GroupFeatures] openGroupInviteLink write failed:', err);
         _toast('Failed to generate invite link. Please try again.', 'error');
         return;
       }
@@ -634,7 +634,7 @@
       await groupRef.update({ inviteCode: newCode, inviteRevokedAt: Date.now(), updatedAt: Date.now() });
       _toast('Invite link revoked. A new link has been generated.', 'success');
     } catch (err) {
-      console.error('[GroupFeatures] revokeGroupInviteLink write failed:', err);
+      if (window.__DEBUG__) console.error('[GroupFeatures] revokeGroupInviteLink write failed:', err);
       _toast('Failed to revoke invite link. Please try again.', 'error');
     }
   }

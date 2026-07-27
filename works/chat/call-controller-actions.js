@@ -1,4 +1,4 @@
-/* call-controller-actions.js — Mute, camera, speaker, screen share, hold, end screen, quality badge */
+﻿/* call-controller-actions.js â€” Mute, camera, speaker, screen share, hold, end screen, quality badge */
 (function () {
   'use strict';
 
@@ -161,7 +161,7 @@
     var infoBtn = CC.$('end-screen-info');
     if (infoBtn) infoBtn.onclick = function () {
       dismissCallEndScreen();
-      CC.toast(typeLabel + ' call with ' + (remoteName || 'Unknown') + ' · Duration: ' + durText, 'info');
+      CC.toast(typeLabel + ' call with ' + (remoteName || 'Unknown') + ' Â· Duration: ' + durText, 'info');
     };
   }
 
@@ -195,7 +195,7 @@
     badge.innerHTML = '<span class="material-symbols-outlined" style="font-size:12px">signal_cellular_alt</span> ' + label;
     var tipParts = [];
     if (stats) { if (stats.rtt) tipParts.push('RTT: ' + Math.round(stats.rtt) + 'ms'); if (stats.packetLoss != null) tipParts.push('Loss: ' + stats.packetLoss.toFixed(1) + '%'); }
-    badge.title = level === 'good' ? 'Excellent connection' : (tipParts.length ? label + ' — ' + tipParts.join(', ') : label);
+    badge.title = level === 'good' ? 'Excellent connection' : (tipParts.length ? label + ' â€” ' + tipParts.join(', ') : label);
   }
 
   function updateCallQuality(stats) {
@@ -218,7 +218,7 @@
         holdBanner = document.createElement('div');
         holdBanner.id = 'callHoldBanner';
         holdBanner.className = 'fixed top-4 left-1/2 -translate-x-1/2 z-[150] bg-surface-container text-on-surface px-4 py-2 rounded-full shadow-lg text-sm font-semibold';
-        holdBanner.textContent = 'Call on hold — tap Resume to continue';
+        holdBanner.textContent = 'Call on hold â€” tap Resume to continue';
         document.body.appendChild(holdBanner);
       }
       holdBanner.style.display = 'flex';
@@ -287,7 +287,7 @@
         });
       });
     } catch (err) {
-      console.warn('Audio device enumeration failed:', err);
+      if (window.__DEBUG__) console.warn('Audio device enumeration failed:', err);
     }
   }
 
@@ -308,7 +308,7 @@
           var lossRate = packetsLost / (packetsLost + packetsReceived);
 
           if (lossRate > 0.1) {
-            CC.toast('⚠️ Poor network quality detected', 'warning');
+            CC.toast('âš ï¸ Poor network quality detected', 'warning');
           }
         }
       });

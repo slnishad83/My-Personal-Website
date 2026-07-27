@@ -96,7 +96,7 @@
     if (_multiSelectHeader) return _multiSelectHeader;
     _multiSelectHeader = document.createElement('div');
     _multiSelectHeader.className = 'multi-select-header hidden';
-    _multiSelectHeader.innerHTML = '<div class="flex items-center gap-3"><span class="material-symbols-outlined cursor-pointer" id="ms-close">close</span><span id="ms-count">0 selected</span></div><div class="flex items-center gap-2"></div>';
+    _multiSelectHeader.innerHTML = '<div class="flex items-center gap-3"><span class="material-symbols-outlined cursor-pointer" id="ms-close" role="button" tabindex="0" aria-label="Close selection">close</span><span id="ms-count" aria-live="polite">0 selected</span></div><div class="flex items-center gap-2"></div>';
     var chatArea = document.getElementById('chat-area') || document.body;
     chatArea.insertBefore(_multiSelectHeader, chatArea.firstChild);
     var closeBtn = _multiSelectHeader.querySelector('#ms-close');
@@ -108,7 +108,7 @@
     if (_multiSelectBar) return _multiSelectBar;
     _multiSelectBar = document.createElement('div');
     _multiSelectBar.className = 'multi-select-bar hidden';
-    _multiSelectBar.innerHTML = '<button class="flex flex-col items-center gap-1 p-2" id="ms-action-reply"><span class="material-symbols-outlined text-[20px]" style="color:var(--on-surface-variant)">reply</span><span class="text-[10px]" style="color:var(--on-surface-variant)">Reply</span></button><button class="flex flex-col items-center gap-1 p-2" id="ms-action-star"><span class="material-symbols-outlined text-[20px]" style="color:var(--on-surface-variant)">star</span><span class="text-[10px]" style="color:var(--on-surface-variant)">Star</span></button><button class="flex flex-col items-center gap-1 p-2" id="ms-action-forward"><span class="material-symbols-outlined text-[20px]" style="color:var(--on-surface-variant)">forward</span><span class="text-[10px]" style="color:var(--on-surface-variant)">Forward</span></button><button class="flex flex-col items-center gap-1 p-2" id="ms-action-selectall"><span class="material-symbols-outlined text-[20px]" style="color:var(--on-surface-variant)">select_all</span><span class="text-[10px]" style="color:var(--on-surface-variant)">All</span></button><button class="flex flex-col items-center gap-1 p-2" id="ms-action-delete"><span class="material-symbols-outlined text-[20px]" style="color:var(--error,#dc3545)">delete</span><span class="text-[10px]" style="color:var(--error,#dc3545)">Delete</span></button>';
+    _multiSelectBar.innerHTML = '<button class="flex flex-col items-center gap-1 p-2" id="ms-action-reply" aria-label="Reply to selected"><span class="material-symbols-outlined text-[20px]" style="color:var(--on-surface-variant)" aria-hidden="true">reply</span><span class="text-[10px]" style="color:var(--on-surface-variant)">Reply</span></button><button class="flex flex-col items-center gap-1 p-2" id="ms-action-star" aria-label="Star selected"><span class="material-symbols-outlined text-[20px]" style="color:var(--on-surface-variant)" aria-hidden="true">star</span><span class="text-[10px]" style="color:var(--on-surface-variant)">Star</span></button><button class="flex flex-col items-center gap-1 p-2" id="ms-action-forward" aria-label="Forward selected"><span class="material-symbols-outlined text-[20px]" style="color:var(--on-surface-variant)" aria-hidden="true">forward</span><span class="text-[10px]" style="color:var(--on-surface-variant)">Forward</span></button><button class="flex flex-col items-center gap-1 p-2" id="ms-action-selectall" aria-label="Select all messages"><span class="material-symbols-outlined text-[20px]" style="color:var(--on-surface-variant)" aria-hidden="true">select_all</span><span class="text-[10px]" style="color:var(--on-surface-variant)">All</span></button><button class="flex flex-col items-center gap-1 p-2" id="ms-action-delete" aria-label="Delete selected"><span class="material-symbols-outlined text-[20px]" style="color:var(--error,#dc3545)" aria-hidden="true">delete</span><span class="text-[10px]" style="color:var(--error,#dc3545)">Delete</span></button>';
     var inputBar = document.getElementById('input-bar');
     if (inputBar && inputBar.parentElement) {
       inputBar.parentElement.insertBefore(_multiSelectBar, inputBar);
@@ -274,6 +274,8 @@
 
     var menu = document.createElement('div');
     menu.className = 'long-press-menu';
+    menu.setAttribute('role', 'menu');
+    menu.setAttribute('aria-label', 'Message actions');
 
     var items = [
       { icon: 'reply', label: 'Reply', action: 'reply' },
@@ -291,7 +293,9 @@
     items.forEach(function (item, _i) {
       var div = document.createElement('div');
       div.className = 'menu-item' + (item.destructive ? ' destructive' : '');
-      div.innerHTML = '<span class="material-symbols-outlined">' + item.icon + '</span><span>' + item.label + '</span>';
+      div.setAttribute('role', 'menuitem');
+      div.setAttribute('tabindex', '-1');
+      div.innerHTML = '<span class="material-symbols-outlined" aria-hidden="true">' + item.icon + '</span><span>' + item.label + '</span>';
       div.style.opacity = '0';
       div.style.transform = 'translateY(8px)';
       div.setAttribute('data-action', item.action);

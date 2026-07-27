@@ -1,4 +1,4 @@
-(function() {
+﻿(function() {
   'use strict';
 
   let _modalEl = null;
@@ -43,7 +43,7 @@
       '.forward-chat-sub{font-size:12px;color:var(--on-surface-variant,#8696a0);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}\n' +
       '.forward-chat-check{width:22px;height:22px;border-radius:50%;border:2px solid var(--outline-variant,#313d45);display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all 0.15s;}\n' +
       '.forward-chat-item.selected .forward-chat-check{background:var(--primary,#00a884);border-color:var(--primary,#00a884);}\n' +
-      '.forward-chat-item.selected .forward-chat-check::after{content:"✓";color:white;font-size:13px;font-weight:700;}\n' +
+      '.forward-chat-item.selected .forward-chat-check::after{content:"âœ“";color:white;font-size:13px;font-weight:700;}\n' +
       '.forward-status-btn{display:flex;align-items:center;gap:12px;padding:10px 16px;cursor:pointer;transition:background 0.15s;border-top:1px solid var(--outline-variant,#313d45);min-height:56px;}\n' +
       '.forward-status-btn:hover,.forward-status-btn:active{background:var(--surface-container-high,#2a3942);}\n' +
       '.forward-status-icon{width:44px;height:44px;border-radius:50%;background:var(--primary,#00a884);display:flex;align-items:center;justify-content:center;color:white;font-size:20px;flex-shrink:0;}\n' +
@@ -97,7 +97,7 @@
     el.setAttribute('role', 'option');
     el.dataset.chatId = '__notes__';
     el.innerHTML = '\n' +
-      '<div class="forward-chat-avatar" style="display:flex;align-items:center;justify-content:center;background:var(--primary,#00a884);color:white;font-size:20px;">📝</div>\n' +
+      '<div class="forward-chat-avatar" style="display:flex;align-items:center;justify-content:center;background:var(--primary,#00a884);color:white;font-size:20px;">ðŸ“</div>\n' +
       '<div class="forward-chat-info">\n' +
       '  <div class="forward-chat-name">' + _esc(NOTES_CHAT_NAME) + '</div>\n' +
       '  <div class="forward-chat-sub">Save for yourself</div>\n' +
@@ -113,7 +113,7 @@
     var el = document.createElement('div');
     el.className = 'forward-status-btn';
     el.innerHTML = '\n' +
-      '<div class="forward-status-icon">⊙</div>\n' +
+      '<div class="forward-status-icon">âŠ™</div>\n' +
       '<div class="forward-chat-info">\n' +
       '  <div class="forward-chat-name">Share as Status</div>\n' +
       '  <div class="forward-chat-sub">Set as your status update</div>\n' +
@@ -165,7 +165,7 @@
       fab = document.createElement('button');
       fab.id = 'forward-fab';
       fab.className = 'forward-fab';
-      fab.innerHTML = '➤<span class="forward-fab-count"></span>';
+      fab.innerHTML = 'âž¤<span class="forward-fab-count"></span>';
       fab.addEventListener('click', function() {
         _executeForward();
       });
@@ -288,7 +288,7 @@
         showToast(failed + ' forward' + (failed > 1 ? 's' : '') + ' failed', 'error');
       }
     } catch (e) {
-      console.error('[Forward] Error:', e);
+      if (window.__DEBUG__) console.error('[Forward] Error:', e);
       if (typeof showToast === 'function') showToast('Failed to forward message', 'error');
     }
     window.closeForwardModal();

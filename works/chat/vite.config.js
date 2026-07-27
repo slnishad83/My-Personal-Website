@@ -130,7 +130,19 @@ export default defineConfig({
         chunkFileNames: 'assets/[name]-[hash].js',
         assetFileNames: 'assets/[name]-[hash].[ext]',
         manualChunks(id) {
-          // Calls & real-time (loaded only when calls are used)
+          // Vendor: all node_modules into a single chunk
+          if (id.includes('node_modules')) {
+            return 'vendor';
+          }
+          // jsQR is 251KB — put in its own chunk (only loaded on QR scan)
+          if (id.includes('jsQR')) {
+            return 'lib-qr';
+          }
+          // twemoji (~17KB) — separate chunk for cache efficiency
+          if (id.includes('twemoji')) {
+            return 'lib-twemoji';
+          }
+          // Calls & real-time
           if (id.includes('call-controller') || id.includes('group-call') || id.includes('call-history') ||
               id.includes('call-sync') || id.includes('background-call-handler') || id.includes('call-link') ||
               id.includes('in-call-reactions') || id.includes('ios-callkit')) {
@@ -153,7 +165,7 @@ export default defineConfig({
               id.includes('form-validation') || id.includes('redesign-base')) {
             return 'feature-ux';
           }
-          // Music & media features (heavy — 160KB+)
+          // Music & media features
           if (id.includes('music-player') || id.includes('music-library') ||
               id.includes('playlist-core') || id.includes('playlist-ui') ||
               id.includes('playlist-sync') || id.includes('music-simple')) {
@@ -190,10 +202,6 @@ export default defineConfig({
               id.includes('desktop-fullscreen') || id.includes('electron')) {
             return 'feature-desktop';
           }
-          // jsQR is 251KB — put in its own chunk (only loaded on QR scan)
-          if (id.includes('jsQR')) {
-            return 'lib-qr';
-          }
         }
       },
     },
@@ -201,7 +209,7 @@ export default defineConfig({
     sourcemap: false,
     target: 'es2020',
     reportCompressedSize: true,
-    chunkSizeWarningLimit: 500,
+    chunkSizeWarningLimit: 1000,
   },
   resolve: {
     alias: {

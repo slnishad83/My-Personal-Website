@@ -1,4 +1,4 @@
-/* ============================================================
+﻿/* ============================================================
    ERROR BOUNDARY & CRASH REPORTING
    Lightweight global error handler + optional Sentry integration
    ============================================================ */
@@ -27,6 +27,37 @@ const ErrorBoundary = {
 
   _installHandlers() {
     var self = this;
+
+    window.onerror = function (message, source, lineno, colno, error) {
+      self._captureError({
+        type: 'uncaught_error',
+        message: message || 'Unknown error',
+        filename: source || '',
+        lineno: lineno || 0,
+        colno: colno || 0,
+        error: error || null,
+        stack: error && error.stack || '',
+        timestamp: Date.now()
+      });
+      if (typeof window.showToast === 'function') {
+        window.showToast('An unexpected error occurred. Please try again.', 'error');
+      }
+      return false;
+    };
+
+    window.onunhandledrejection = function (event) {
+      var reason = event.reason || {};
+      self._captureError({
+        type: 'unhandled_rejection',
+        message: typeof reason === 'string' ? reason : (reason.message || 'Unhandled promise rejection'),
+        error: reason,
+        stack: reason && reason.stack || '',
+        timestamp: Date.now()
+      });
+      if (typeof window.showToast === 'function') {
+        window.showToast('A background task failed. Some features may not work correctly.', 'error');
+      }
+    };
 
     window.addEventListener('error', function (event) {
       if (event.target && event.target.tagName) {
@@ -79,7 +110,7 @@ const ErrorBoundary = {
 
     this._trackFrequency(errorData);
 
-    console.error(`[ErrorBoundary] ${errorData.type}:`, errorData.message, errorData.stack || '');
+    if (window.__DEBUG__) console.error(`[ErrorBoundary] ${errorData.type}:`, errorData.message, errorData.stack || '');
 
     if (this._sentryDsn && window.Sentry) {
       try {
@@ -515,6 +546,150 @@ const ErrorBoundary = {
     if (this._circuits[name]) {
       this._circuits[name] = { state: 'CLOSED', failures: 0, lastFailure: 0, halfOpenPending: false };
     }
+  },
+
+  /* --------------------------------------------------------
+     FIREBASE ERROR RECOVERY
+     Retry Firestore reads on network errors, graceful offline
+     -------------------------------------------------------- */
+  _isNetworkError(err) {
+    if (!err) return false;
+    var code = err.code || '';
+    return code === 'unavailable' || code === 'deadline-exceeded' ||
+           code === 'resource-exhausted' || code === 'internal' ||
+           (err.message && (err.message.includes('network') || err.message.includes('offline') ||
+            err.message.includes('failed') || err.message.includes('unavailable')));
+  },
+
+  _isOfflineError(err) {
+    if (!err) return false;
+    var code = err.code || '';
+    return code === 'unavailable' ||
+           (err.message && err.message.includes('offline'));
+  },
+
+  firebaseReadWithRetry(ref, context, opts) {
+    var self = this;
+    var maxRetries = (opts && opts.maxRetries) || 3;
+    var baseDelay = (opts && opts.baseDelay) || 1000;
+
+    function attempt(retryCount) {
+      return ref.get().then(function (snap) {
+        return snap;
+      })['catch'](function (err) {
+        if (self._isOfflineError(err) && !navigator.onLine) {
+          self._captureError({
+            type: 'firebase_offline',
+            message: 'Firestore read skipped â€” offline',
+            context: { collection: context || 'unknown' },
+            timestamp: Date.now()
+          });
+          return { docs: [], exists: false, empty: true, size: 0, data: function () { return null; } };
+        }
+        if (retryCount >= maxRetries || !self._isNetworkError(err)) {
+          self._captureError({
+            type: 'firebase_read_error',
+            message: 'Firestore read failed after ' + (retryCount + 1) + ' attempts: ' + (err.message || String(err)),
+            error: err,
+            stack: err.stack || '',
+            context: { collection: context || 'unknown' },
+            timestamp: Date.now()
+          });
+          throw err;
+        }
+        if (typeof window.showToast === 'function') {
+          window.showToast('Connection issue. Retrying...', 'info');
+        }
+        return new Promise(function (resolve) {
+          setTimeout(resolve, baseDelay * Math.pow(2, retryCount));
+        }).then(function () { return attempt(retryCount + 1); });
+      });
+    }
+
+    return attempt(0);
+  },
+
+  firebaseWriteWithRetry(writeFn, context) {
+    var self = this;
+    return writeFn()['catch'](function (err) {
+      if (self._isOfflineError(err) && !navigator.onLine) {
+        self._captureError({
+          type: 'firebase_write_offline',
+          message: 'Firestore write queued â€” offline',
+          context: { collection: context || 'unknown' },
+          timestamp: Date.now()
+        });
+        if (typeof window.OfflineQueue !== 'undefined' && typeof window.OfflineQueue.enqueue === 'function') {
+          window.OfflineQueue.enqueue(writeFn);
+          return;
+        }
+        return;
+      }
+      self._captureError({
+        type: 'firebase_write_error',
+        message: 'Firestore write failed: ' + (err.message || String(err)),
+        error: err,
+        stack: err.stack || '',
+        context: { collection: context || 'unknown' },
+        timestamp: Date.now()
+      });
+      throw err;
+    });
+  },
+
+  safeOnSnapshot(ref, onNext, context, opts) {
+    var self = this;
+    var maxRetries = (opts && opts.maxRetries) || 5;
+    var baseDelay = (opts && opts.baseDelay) || 2000;
+
+    function subscribe(retryCount) {
+      var unsub = ref.onSnapshot(
+        function (snap) {
+          onNext(snap);
+        },
+        function (err) {
+          if (self._isOfflineError(err) && !navigator.onLine) {
+            if (typeof window.showToast === 'function') {
+              window.showToast('You are offline. Waiting for connection...', 'info');
+            }
+            self._captureError({
+              type: 'onsnapshot_offline',
+              message: 'onSnapshot paused â€” offline',
+              context: { collection: context || 'unknown' },
+              timestamp: Date.now()
+            });
+            var reconnectHandler = function () {
+              window.removeEventListener('online', reconnectHandler);
+              setTimeout(function () { subscribe(0); }, 1500);
+            };
+            window.addEventListener('online', reconnectHandler);
+            return;
+          }
+          self._captureError({
+            type: 'onsnapshot_error',
+            message: 'onSnapshot error: ' + (err.message || String(err)),
+            error: err,
+            stack: err.stack || '',
+            context: { collection: context || 'unknown', attempt: retryCount + 1 },
+            timestamp: Date.now()
+          });
+          if (retryCount < maxRetries) {
+            var delay = baseDelay * Math.pow(2, retryCount);
+            if (typeof window.showToast === 'function') {
+              window.showToast('Reconnecting to updates...', 'info');
+            }
+            setTimeout(function () { subscribe(retryCount + 1); }, delay);
+          } else {
+            if (typeof window.showToast === 'function') {
+              window.showToast('Lost connection to updates. Please refresh.', 'error');
+            }
+          }
+        }
+      );
+      return unsub;
+    }
+
+    return subscribe(0);
   }
 };
 

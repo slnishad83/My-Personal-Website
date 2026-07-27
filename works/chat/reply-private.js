@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Reply Privately in Groups
  * Allows replying to a group message privately via DM.
  */
@@ -75,7 +75,7 @@
 
         showToast(`Reply privately to ${quotedSender}`, 'info');
       } catch (e) {
-        console.error('[ReplyPrivate] Error:', e);
+        if (window.__DEBUG__) console.error('[ReplyPrivate] Error:', e);
         showToast('Failed to start private reply', 'error');
       }
     },
@@ -119,7 +119,7 @@
 
         showToast(`Opening chat with ${msg.senderName || 'user'}`, 'info');
       } catch (e) {
-        console.error('[ReplyPrivate] Error:', e);
+        if (window.__DEBUG__) console.error('[ReplyPrivate] Error:', e);
         showToast('Failed to open chat', 'error');
       }
     },

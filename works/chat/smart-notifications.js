@@ -1,4 +1,4 @@
-/* ============================================================
+﻿/* ============================================================
    SMART NOTIFICATIONS (SN-1)
    AI decides which notifications are important vs low priority.
    - Intercepts incoming message notifications
@@ -17,7 +17,7 @@
   let _enabled = true;
   let _stats = { high: 0, medium: 0, low: 0, suppressed: 0 };
 
-  /* ─── Load preferences & stats ─────────────────────────────── */
+  /* â”€â”€â”€ Load preferences & stats â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   function loadPrefs() {
     try {
       const prefs = JSON.parse(localStorage.getItem('nsl_smart_notif_prefs') || '{}');
@@ -35,7 +35,7 @@
     } catch (_) {}
   }
 
-  /* ─── Cache for classification results ─────────────────────── */
+  /* â”€â”€â”€ Cache for classification results â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   function getCached(text, chatId) {
     try {
       const cache = JSON.parse(localStorage.getItem(CACHE_KEY) || '{}');
@@ -60,7 +60,7 @@
     } catch (_) {}
   }
 
-  /* ─── Classify notification via Cloud Function ──────────────── */
+  /* â”€â”€â”€ Classify notification via Cloud Function â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   async function classify(payload) {
     if (!_enabled) return { priority: 'high', reason: 'Smart notifications disabled' };
 
@@ -90,7 +90,7 @@
         return result.data;
       }
     } catch (err) {
-      console.warn('[SmartNotif] Classification failed:', err.message);
+      if (window.__DEBUG__) console.warn('[SmartNotif] Classification failed:', err.message);
     }
 
     // Fallback rules (no AI needed)
@@ -99,7 +99,7 @@
     return { priority: 'high', reason: 'Direct message' };
   }
 
-  /* ─── Should suppress notification? ────────────────────────── */
+  /* â”€â”€â”€ Should suppress notification? â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   function shouldSuppress(priority) {
     if (priority === 'low') {
       _stats.suppressed++;
@@ -113,7 +113,7 @@
     return false;
   }
 
-  /* ─── Hook into NotificationOrchestrator ───────────────────── */
+  /* â”€â”€â”€ Hook into NotificationOrchestrator â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   function hookOrchestrator() {
     // Wait for Orchestrator to be ready
     function tryHook() {
@@ -148,7 +148,7 @@
           return false; // Don't show full notification
         }
 
-        // Normal/high priority — pass through to original handler
+        // Normal/high priority â€” pass through to original handler
         return origNotify(payload);
       };
 
@@ -158,7 +158,7 @@
     tryHook();
   }
 
-  /* ─── Hook into push notifications (FCM) ───────────────────── */
+  /* â”€â”€â”€ Hook into push notifications (FCM) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   function hookPushNotifications() {
     // Intercept service worker push events for background notifications
     if ('serviceWorker' in navigator) {
@@ -182,7 +182,7 @@
     }
   }
 
-  /* ─── Settings UI ──────────────────────────────────────────── */
+  /* â”€â”€â”€ Settings UI â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   function renderSmartNotifSettings(container) {
     if (!container) return;
     const section = document.createElement('div');
@@ -221,7 +221,7 @@
     }
   }
 
-  /* ─── Expose stats for notification settings page ──────────── */
+  /* â”€â”€â”€ Expose stats for notification settings page â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   function getStats() {
     return { ..._stats, enabled: _enabled };
   }
@@ -231,7 +231,7 @@
     savePrefs();
   }
 
-  /* ─── Init ─────────────────────────────────────────────────── */
+  /* â”€â”€â”€ Init â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   function init() {
     loadPrefs();
     hookOrchestrator();

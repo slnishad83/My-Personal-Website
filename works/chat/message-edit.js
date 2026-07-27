@@ -1,4 +1,4 @@
-// message-edit.js — WhatsApp-style message editing (15-minute window)
+﻿// message-edit.js â€” WhatsApp-style message editing (15-minute window)
 (function() {
   'use strict';
 
@@ -97,7 +97,7 @@
         cancelEdit();
       });
     }).catch(function(err) {
-      console.error('Edit error:', err);
+      if (window.__DEBUG__) console.error('Edit error:', err);
       _toast('Failed to edit message', 'error');
     });
   }

@@ -1,5 +1,5 @@
-/* =============================================
-   GROUP MESSAGE INFO v1.0 — #28
+﻿/* =============================================
+   GROUP MESSAGE INFO v1.0 â€” #28
    Per-member delivered + read status with avatars,
    timestamps, real-time updates via Firestore.
    ============================================= */
@@ -45,8 +45,8 @@
   <div class="gmi-info">
     <div class="gmi-name">${window.sanitizeHTML(name)}</div>
     <div class="gmi-statuses">
-      <span class="gmi-status gmi-delivered${delTime?'':' gmi-pending'}"><span class="gmi-check" aria-hidden="true">✓✓</span>${delTime?'Delivered: '+delTime:'Not yet delivered'}</span>
-      <span class="gmi-status gmi-read${readTime?' gmi-seen':' gmi-pending'}"><span class="gmi-check" aria-hidden="true">✓✓</span>${readTime?'Read: '+readTime:'Not yet read'}</span>
+      <span class="gmi-status gmi-delivered${delTime?'':' gmi-pending'}"><span class="gmi-check" aria-hidden="true">âœ“âœ“</span>${delTime?'Delivered: '+delTime:'Not yet delivered'}</span>
+      <span class="gmi-status gmi-read${readTime?' gmi-seen':' gmi-pending'}"><span class="gmi-check" aria-hidden="true">âœ“âœ“</span>${readTime?'Read: '+readTime:'Not yet read'}</span>
     </div>
   </div>
 </div>`;
@@ -69,7 +69,7 @@
           .catch(() => db.collection('groups').doc(chat.id).collection('members').get())
           .catch(() => ({ docs: [] }))
       ]);
-    } catch(e) { console.warn('[GMI] fetch error', e); return; }
+    } catch(e) { if (window.__DEBUG__) console.warn('[GMI] fetch error', e); return; }
 
     if (!msgSnap.exists) return;
     const msgData = msgSnap.data();
@@ -85,7 +85,7 @@
     modal.style.display = 'flex';
     modal.innerHTML = `<div class="modal-content gmi-modal-content">
   <div class="gmi-header">
-    <button class="gmi-close-btn" aria-label="Close" id="gmiCloseBtn">✕</button>
+    <button class="gmi-close-btn" aria-label="Close" id="gmiCloseBtn">âœ•</button>
     <span class="gmi-title">Message Info</span>
   </div>
   <div class="gmi-body">
@@ -105,6 +105,8 @@
       if (!snap.exists) return;
       const list = modal.querySelector('.gmi-list');
       if (list) list.innerHTML = buildRows(snap.data(), members) || '<div class="gmi-empty">No other members</div>';
+    }, function (err) {
+      if (window.__DEBUG__) console.error('[GMI] Snapshot error:', err?.message || err);
     });
   }
 

@@ -1,4 +1,4 @@
-(function () {
+﻿(function () {
   'use strict';
 
   var STATUS_DURATION_MS = 24 * 60 * 60 * 1000;
@@ -119,7 +119,7 @@
       renderStatusRow();
       return statusData;
     } catch (e) {
-      console.error('[Status] Create text error:', e);
+      if (window.__DEBUG__) console.error('[Status] Create text error:', e);
       _toast('Failed to post status', 'error');
       return null;
     }
@@ -150,7 +150,7 @@
       renderStatusRow();
       return statusData;
     } catch (e) {
-      console.error('[Status] Create image error:', e);
+      if (window.__DEBUG__) console.error('[Status] Create image error:', e);
       _toast('Failed to post status', 'error');
       return null;
     }
@@ -181,7 +181,7 @@
       renderStatusRow();
       return statusData;
     } catch (e) {
-      console.error('[Status] Create video error:', e);
+      if (window.__DEBUG__) console.error('[Status] Create video error:', e);
       _toast('Failed to post status', 'error');
       return null;
     }
@@ -199,7 +199,7 @@
       _toast('Status deleted', 'success');
       renderStatusRow();
     } catch (e) {
-      console.error('[Status] Delete error:', e);
+      if (window.__DEBUG__) console.error('[Status] Delete error:', e);
       _toast('Failed to delete', 'error');
     }
   }
@@ -238,7 +238,7 @@
       renderStatusRings();
       return loaded;
     } catch (e) {
-      console.error('[Status] Load error:', e);
+      if (window.__DEBUG__) console.error('[Status] Load error:', e);
       return [];
     }
   }
@@ -265,7 +265,7 @@
         renderStatusRow();
         renderStatusRings();
       }, function (err) {
-        console.warn('[Status] Listener error:', err);
+        if (window.__DEBUG__) console.warn('[Status] Listener error:', err);
       });
       if (window.statusRefreshTimer) clearInterval(window.statusRefreshTimer);
       window.statusRefreshTimer = setInterval(function () {
@@ -333,7 +333,7 @@
         data.seenBy.push(uid);
       }
     } catch (e) {
-      console.warn('[Status] Mark seen error:', e);
+      if (window.__DEBUG__) console.warn('[Status] Mark seen error:', e);
     }
   }
 
@@ -404,7 +404,7 @@
       }
       _toast('Reply sent!', 'success');
     } catch (e) {
-      console.error('[Status] Reply error:', e);
+      if (window.__DEBUG__) console.error('[Status] Reply error:', e);
       _toast('Failed to send reply', 'error');
     }
   }
@@ -438,7 +438,7 @@
       _privacySetting = setting;
       _toast('Status privacy updated to ' + setting, 'success');
     } catch (e) {
-      console.error('[Status] Privacy error:', e);
+      if (window.__DEBUG__) console.error('[Status] Privacy error:', e);
       _toast('Failed to update privacy', 'error');
     }
   }
@@ -753,7 +753,7 @@
         }
         closeStatusComposer();
       } catch (e) {
-        console.error('[Status] Post error:', e);
+        if (window.__DEBUG__) console.error('[Status] Post error:', e);
         _toast('Failed to post status', 'error');
         if (btn) { btn.disabled = false; btn.textContent = 'Post Status'; }
       }

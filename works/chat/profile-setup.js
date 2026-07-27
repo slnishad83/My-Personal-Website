@@ -1,4 +1,4 @@
-'use strict';
+﻿'use strict';
 (function () {
   var STORAGE_KEY = 'nsl_profile_setup_complete';
 
@@ -227,7 +227,7 @@
         _uploadedPhotoURL = uploadUrl;
         if (typeof showToast === 'function') showToast('Photo uploaded', 'success');
       } catch (err) {
-        console.error('Profile photo upload error:', err);
+        if (window.__DEBUG__) console.error('Profile photo upload error:', err);
         if (typeof showToast === 'function') showToast('Failed to upload photo', 'error');
       }
     };
@@ -390,7 +390,7 @@
     try {
       await d.collection('users').doc(uid).set(updates, { merge: true });
     } catch (err) {
-      console.error('Profile setup save error:', err);
+      if (window.__DEBUG__) console.error('Profile setup save error:', err);
       if (typeof showToast === 'function') showToast('Failed to save profile data', 'error');
     }
 

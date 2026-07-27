@@ -73,11 +73,23 @@
       'chatMoreBtn'   : 'More options',
       'mobileMenuBtn' : 'Back to chats',
       'installAppBtn' : 'Install app',
-      'msGlobalSearchBtn' : 'Search all messages'
+      'msGlobalSearchBtn' : 'Search all messages',
+      'btn-select-all' : 'Select all chats',
+      'btn-multi-select' : 'Multi-select chats',
+      'btn-delete-selected' : 'Delete selected chats',
+      'btn-call-select-all' : 'Select all calls',
+      'btn-call-multi-select' : 'Multi-select calls',
+      'btn-call-delete-selected' : 'Delete selected calls',
+      'btn-new-call' : 'Start new call',
+      'sidebar-toggle-btn' : 'Toggle sidebar'
     };
     Object.entries(map).forEach(([id, label]) => {
       const el = document.getElementById(id);
       if (el && !el.getAttribute('aria-label')) el.setAttribute('aria-label', label);
+    });
+
+    document.querySelectorAll('.material-symbols-outlined[aria-hidden]').forEach(function(el) {
+      el.setAttribute('aria-hidden', 'true');
     });
   }
 

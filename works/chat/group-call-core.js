@@ -1,4 +1,4 @@
-/* group-call-core.js — Multi-peer connection management, SFU/MCU signaling */
+﻿/* group-call-core.js â€” Multi-peer connection management, SFU/MCU signaling */
 (function () {
   'use strict';
 
@@ -385,7 +385,7 @@
         GC._renderGrid();
       }
     }, function (err) {
-      console.warn('[GroupCall] Call doc listener error:', err);
+      if (window.__DEBUG__) console.warn('[GroupCall] Call doc listener error:', err);
     });
   }
 
@@ -410,7 +410,7 @@
           }
         });
       }, function (err) {
-        console.warn('[GroupCall] Invites listener error:', err);
+        if (window.__DEBUG__) console.warn('[GroupCall] Invites listener error:', err);
       });
   }
 

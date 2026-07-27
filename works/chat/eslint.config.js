@@ -160,6 +160,8 @@ module.exports = [
         Sentry: 'readonly',
         jsQR: 'readonly',
         Capacitor: 'readonly',
+        Monitoring: 'writable',
+        requestIdleCallback: 'readonly',
 
         App: 'writable',
         CC: 'writable',

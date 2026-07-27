@@ -1,6 +1,6 @@
-'use strict';
+﻿'use strict';
 /**
- * VOICE TO TEXT — Web Speech API speech recognition for message input
+ * VOICE TO TEXT â€” Web Speech API speech recognition for message input
  * Adds a microphone button to the chat input bar for dictation.
  */
 (function () {
@@ -37,7 +37,7 @@
       };
 
       this._recognition.onerror = (event) => {
-        console.warn('[SpeechToText] Error:', event.error);
+        if (window.__DEBUG__) console.warn('[SpeechToText] Error:', event.error);
         if (event.error === 'not-allowed') {
           if (typeof showToast === 'function') showToast('Microphone permission denied', 'error');
         } else if (event.error === 'no-speech') {
@@ -102,7 +102,7 @@
         this._updateButtonState();
         if (typeof showToast === 'function') showToast('Listening... speak now', 'info');
       } catch (e) {
-        console.warn('[SpeechToText] Start error:', e);
+        if (window.__DEBUG__) console.warn('[SpeechToText] Start error:', e);
       }
     },
 

@@ -1,4 +1,4 @@
-/* ============================================================
+﻿/* ============================================================
    CALL SYNC - Cross-device call history and status persistence
    Keeps incoming, outgoing, missed, recently dialled, and status
    events synced through Firestore with an IndexedDB retry queue.
@@ -23,7 +23,7 @@
         this._startForCurrentUser();
         setTimeout(() => this.processQueue(), 1500);
       } catch (e) {
-        console.warn('[CallSync] Init failed:', e);
+        if (window.__DEBUG__) console.warn('[CallSync] Init failed:', e);
       }
     },
 
@@ -82,11 +82,11 @@
             this._cacheCallHistory(calls);
             document.dispatchEvent(new CustomEvent('tc:call-history:sync', { detail: { calls } }));
           }, (err) => {
-            console.warn('[CallSync] Listener failed:', err);
+            if (window.__DEBUG__) console.warn('[CallSync] Listener failed:', err);
             this._unsubscribe = null;
           });
       } catch (e) {
-        console.warn('[CallSync] Could not start listener:', e);
+        if (window.__DEBUG__) console.warn('[CallSync] Could not start listener:', e);
       }
     },
 
