@@ -74,10 +74,12 @@
   </style>
 </head>
 <body>
+  <a href="#resetPwForm" class="sr-only" id="skip-nav" style="position:fixed;top:-100px;left:8px;z-index:99999;padding:12px 24px;background:#00bfa5;color:#0d1117;border-radius:0 0 12px 12px;font-weight:700;font-size:14px;text-decoration:none;" onfocus="this.style.top='0'" onblur="this.style.top='-100px'">Skip to form</a>
+  <main role="main" aria-label="Password reset">
   <div class="reset-card">
     <!-- Loading state: validating link -->
-    <div id="loadingState" class="loading-state">
-      <span class="material-symbols-outlined animate-spin">progress_activity</span>
+    <div id="loadingState" class="loading-state" role="status" aria-live="polite">
+      <span class="material-symbols-outlined animate-spin" aria-hidden="true">progress_activity</span>
       <span>Validating reset link...</span>
     </div>
 
@@ -105,24 +107,30 @@
           <input id="confirmPassword" type="password" placeholder="Re-enter new password" autocomplete="new-password" minlength="8" required />
         </div>
         <button type="submit" class="submit-btn" id="resetSubmitBtn">
-          <span class="material-symbols-outlined" style="font-size:20px">verified_user</span>
+          <span class="material-symbols-outlined" style="font-size:20px" aria-hidden="true">verified_user</span>
           Reset Password
         </button>
       </form>
 
-      <div id="resetMessage" class="message"></div>
+      <div id="resetMessage" class="message" role="alert" aria-live="assertive"></div>
     </div>
 
     <!-- Error state: invalid/expired link -->
-    <div id="errorState" style="display:none">
+    <div id="errorState" style="display:none" role="alert" aria-live="assertive">
       <div class="icon-wrap" style="background:rgba(248,81,73,0.12)">
-        <span class="material-symbols-outlined" style="color:#f85149">error</span>
+        <span class="material-symbols-outlined" style="color:#f85149" aria-hidden="true">error</span>
       </div>
       <h1>Link Expired or Invalid</h1>
       <p class="subtitle" id="errorMessage">This password reset link has expired or is invalid. Please request a new one.</p>
       <a href="login.html" class="back-link">Back to Login</a>
     </div>
   </div>
+  </main>
+
+  <style>
+    .sr-only { position: absolute !important; width: 1px !important; height: 1px !important; padding: 0 !important; margin: -1px !important; overflow: hidden !important; clip: rect(0, 0, 0, 0) !important; white-space: nowrap !important; border: 0 !important; }
+    *:focus-visible { outline: 2px solid #00bfa5 !important; outline-offset: 2px !important; }
+  </style>
 
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
