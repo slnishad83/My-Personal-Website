@@ -1,4 +1,4 @@
-﻿// Playlist Core â€” Firestore schema, CRUD, ownership, permissions, search
+// Playlist Core â€” Firestore schema, CRUD, ownership, permissions, search
 (function() {
   'use strict';
 
@@ -216,7 +216,14 @@
       totalDuration: pl.totalDuration,
     });
 
-    showToast(`Added "${trackData.title}"`, 'success');
+    if (window.MusicOfflineStorage && (trackData.url || track.audioUrl)) {
+      const audioTargetUrl = trackData.url || track.audioUrl;
+      fetch(audioTargetUrl).then(res => res.blob()).then(blob => {
+        window.MusicOfflineStorage.saveTrackBlob(trackData.id, blob, { title: trackData.title, artist: trackData.artist });
+      }).catch(()=>{});
+    }
+
+    showToast(`Added "${trackData.title}" ⚡ (Offline Cached)`, 'success');
     return trackData;
   };
 
