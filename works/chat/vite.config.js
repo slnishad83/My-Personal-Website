@@ -95,7 +95,7 @@ function generateSwPlugin() {
 }
 
 export default defineConfig({
-  base: '/works/chat/dist/',
+  base: './',
   root: '.',
   plugins: [
     tailwindcss(),
