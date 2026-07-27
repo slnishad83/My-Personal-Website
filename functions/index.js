@@ -1,10 +1,9 @@
 const { setGlobalOptions } = require('firebase-functions/v2');
 
 setGlobalOptions({
-  maxInstances: 10,
+  maxInstances: 5,
   memory: '256MiB',
-  cpu: 0.08,
-  concurrency: 80,
+  concurrency: 1,
   region: 'asia-south1'
 });
 
