@@ -5,8 +5,13 @@ Write-Host "`n===================================================" -ForegroundCo
 Write-Host "  NSL CHAT ALL-IN-ONE MASTER DEPLOYMENT UTILITY" -ForegroundColor Cyan
 Write-Host "===================================================`n" -ForegroundColor Cyan
 
-# 1. Git Pull
-Write-Host "1. Pulling latest changes from GitHub..." -ForegroundColor Yellow
+# 1. Commit Local Fixes & Sync GitHub
+Write-Host "1. Preserving local fixes and syncing GitHub..." -ForegroundColor Yellow
+git add .
+$localChanges = git status --porcelain
+if ($localChanges) {
+    git commit -m "fix: preserve clean HTML templates, CSP headers and auth grace period"
+}
 git pull --rebase --autostash
 
 # 2. Build Vite Web Assets & Sync WWW
