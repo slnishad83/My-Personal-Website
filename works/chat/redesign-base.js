@@ -9,7 +9,11 @@
   }
 
   function getStoredMode() {
-    return localStorage.getItem("themeMode") || "system";
+    try {
+      return localStorage.getItem("themeMode") || "system";
+    } catch (_) {
+      return "system";
+    }
   }
 
   function resolveTheme(mode) {
@@ -30,7 +34,7 @@
       document.documentElement.classList.remove("auto-theme");
       document.documentElement.setAttribute("data-manual-theme", "");
     }
-    document.body.classList.toggle("dark", isDark);
+    if (document.body) document.body.classList.toggle("dark", isDark);
 
     // Sync theme-color meta tag for PWA and mobile address bar
     var tm = document.querySelector('meta[name="theme-color"]');
@@ -52,9 +56,10 @@
   }
 
   window.setThemeMode = function(mode) {
-    localStorage.setItem("themeMode", mode);
-    // Keep legacy darkMode item in sync for compatibility with any un-refactored scripts
-    localStorage.setItem("darkMode", String(resolveTheme(mode) === "dark"));
+    try {
+      localStorage.setItem("themeMode", mode);
+      localStorage.setItem("darkMode", String(resolveTheme(mode) === "dark"));
+    } catch (_) {}
     var theme = resolveTheme(mode);
     applyTheme(theme, mode);
     if (mode !== "system") {

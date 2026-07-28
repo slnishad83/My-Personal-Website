@@ -1,7 +1,8 @@
 'use strict';
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', function () {
-    navigator.serviceWorker.register('/works/chat/dist/sw.js', { scope: '/works/chat/', updateViaCache: 'none' })
+    var swUrl = location.hostname.includes('chat.nishadsl.com') ? '/sw.js' : '/works/chat/dist/sw.js';
+    navigator.serviceWorker.register(swUrl, { updateViaCache: 'none' })
       .then(function (reg) {
         if (window.__DEBUG__) console.log('[SW] Registered:', reg.scope);
         reg.update().catch(function() {});
