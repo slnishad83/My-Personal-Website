@@ -26,7 +26,7 @@ try {
 # 4. Build Desktop Executables
 Write-Host "`n4. Building Windows Desktop Executables..." -ForegroundColor Yellow
 if (Test-Path works/chat/dist-electron) {
-    Remove-Item -Recurse -Force works/chat/dist-electron
+    Remove-Item -Recurse -Force works/chat/dist-electron -ErrorAction SilentlyContinue
 }
 Push-Location works/chat
 try {

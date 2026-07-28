@@ -231,11 +231,16 @@
   }
 
   // ── Inject button + panel into request-header ────────────────────────────
+  var _injectRetries = 0;
   function inject() {
     if (document.getElementById(BTN_ID)) return; // already injected
 
     const requestToggleSpan = document.getElementById('requestToggle');
-    if (!requestToggleSpan) { setTimeout(inject, 300); return; }
+    if (!requestToggleSpan) {
+      _injectRetries++;
+      if (_injectRetries < 20) setTimeout(inject, 300);
+      return;
+    }
 
     const wrapper = document.createElement('span');
     wrapper.className = 'snz-pref-wrapper';

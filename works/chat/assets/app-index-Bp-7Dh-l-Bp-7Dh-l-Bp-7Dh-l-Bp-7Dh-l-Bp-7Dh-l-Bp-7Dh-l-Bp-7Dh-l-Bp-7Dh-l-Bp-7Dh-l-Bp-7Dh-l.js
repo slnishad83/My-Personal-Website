@@ -1,0 +1,258 @@
+﻿/**
+ * NSL Chat â€” Vite Entry Point (index.html)
+ *
+ * CRITICAL PATH: Only essential foundation + bootstrap modules loaded synchronously.
+ * FEATURE MODULES: Deferred to after first paint via requestIdleCallback.
+ * ON-DEMAND: Lazy-loaded when user triggers specific features via LazyModules.load().
+ */
+
+/* â”€â”€ CSS (Vite processes Tailwind + extracts to bundle) â”€â”€â”€â”€ */
+import './src/styles/main.css';
+import './src/styles/app.css';
+import './chat.css';
+import './accessibility.css';
+
+/* â”€â”€ Head-loaded scripts (loaded before body content) â”€â”€â”€â”€â”€ */
+import './notification-sounds.js';
+import './twemoji/twemoji.min.js';
+import './emoji-renderer.js';
+import './tailwind-config.js';
+
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+   FOUNDATION â€” must load in this exact order
+   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+import './firebase-config.js';
+import './config.js';
+import './global-cleanup.js';
+import './app.js';
+import './lazy-modules.js';
+
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+   CORE INFRASTRUCTURE (needed for first paint & event delegation)
+   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+import './platform-detect.js';
+import './error-boundary.js';
+import './mutation-bus.js';
+import './virtual-scroll.js';
+import './accessibility.js';
+import './src/core/bindEvents.js';
+
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+   BOOTSTRAP & LATE-BINDING
+   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+import './delegated-actions.js';
+import './app-bootstrap.js';
+import './app-init.js';
+import './version.js';
+import './broadcast-sync.js';
+
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+   DEFERRED MODULES â€” loaded after first paint via requestIdleCallback
+   These were previously static imports bloating the main chunk.
+   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+const _deferredModules = [
+  // --- Infrastructure & utilities ---
+  () => import('./smart-notifications.js'),
+  () => import('./file-versioning.js'),
+  () => import('./offline-queue.js'),
+  () => import('./call-sync.js'),
+  () => import('./presence.js'),
+  () => import('./multi-device.js'),
+  () => import('./security.js'),
+  () => import('./keyboard-shortcuts.js'),
+  () => import('./permissions-manager.js'),
+  () => import('./chat-missing-features.js'),
+  () => import('./pull-to-refresh.js'),
+  () => import('./pinch-zoom.js'),
+  () => import('./swipe-delete.js'),
+  () => import('./back-button.js'),
+  () => import('./ios-keyboard-fix.js'),
+
+  // --- Chat & message features ---
+  () => import('./chat-enhancements.js'),
+  () => import('./chat-fixes.js'),
+  () => import('./smart-reply.js'),
+  () => import('./streak.js'),
+  () => import('./saved-messages.js'),
+  () => import('./self-destruct.js'),
+  () => import('./message-scheduler.js'),
+  () => import('./translation.js'),
+  () => import('./message-copy.js'),
+  () => import('./screen-share.js'),
+  () => import('./chat-lock.js'),
+  () => import('./ghost-mode.js'),
+  () => import('./screenshot-control.js'),
+  () => import('./message-recall.js'),
+  () => import('./message-edit.js'),
+  () => import('./message-star.js'),
+  () => import('./sensitive-content.js'),
+  () => import('./mini-games.js'),
+  () => import('./mood-status.js'),
+  () => import('./threads.js'),
+  () => import('./message-search.js'),
+
+  // --- Notification & communication ---
+  () => import('./notification-prefs.js'),
+  () => import('./notification-digest.js'),
+  () => import('./notification-reply.js'),
+  () => import('./notification-orchestrator.js'),
+  () => import('./notification-bell.js'),
+  () => import('./notification-telemetry.js'),
+  () => import('./notification-nav.js'),
+  () => import('./ios-callkit.js'),
+  () => import('./desktop-notifications.js'),
+  () => import('./pwa-install.js'),
+  () => import('./push-notifications.js'),
+
+  // --- Call & real-time features ---
+  () => import('./call-controller.js'),
+  () => import('./group-call.js'),
+  () => import('./call-history.js'),
+  () => import('./background-call-handler.js'),
+  () => import('./call-link.js'),
+  () => import('./in-call-reactions.js'),
+
+  // --- WhatsApp parity & messaging ---
+  () => import('./ui-compliance.js'),
+  () => import('./audit-interactions.js'),
+  () => import('./whatsapp-enhancements.js'),
+  () => import('./features-addon.js'),
+  () => import('./archive-chat.js'),
+  () => import('./forward-modal.js'),
+  () => import('./block-user.js'),
+  () => import('./message-reactions.js'),
+  () => import('./delete-group.js'),
+  () => import('./profile-edit.js'),
+  () => import('./app-lock.js'),
+  () => import('./video-notes.js'),
+  () => import('./voice-messages.js'),
+  () => import('./voice-changer.js'),
+  () => import('./mention-autocomplete.js'),
+  () => import('./font-size-settings.js'),
+  () => import('./change-number.js'),
+  () => import('./message-actions.js'),
+  () => import('./proximity-sensor.js'),
+  () => import('./status.js'),
+  () => import('./status-viewer.js'),
+  () => import('./unread-polish.js'),
+  () => import('./home-camera.js'),
+  () => import('./group-features.js'),
+  () => import('./contact-popup.js'),
+  () => import('./group-message-info.js'),
+
+  // --- UI/UX enhancements ---
+  () => import('./onboarding.js'),
+  () => import('./empty-states.js'),
+  () => import('./form-validation.js'),
+  () => import('./toast-ux.js'),
+  () => import('./a11y-enhancements.js'),
+  () => import('./message-errors.js'),
+  () => import('./report-user.js'),
+  () => import('./gif-picker.js'),
+  () => import('./sticker-packs.js'),
+  () => import('./micro-interactions.js'),
+  () => import('./profile-setup.js'),
+  () => import('./lazy-images.js'),
+  () => import('./biometric.js'),
+  () => import('./screenshot-protection.js'),
+  () => import('./in-app-update.js'),
+  () => import('./app-shortcuts.js'),
+  () => import('./haptic-feedback.js'),
+
+  // --- V3.5+ features ---
+  () => import('./scheduled-calendar.js'),
+  () => import('./snooze-history.js'),
+  () => import('./snooze-enhancements.js'),
+  () => import('./ai-bot.js'),
+  () => import('./fixes.js'),
+  () => import('./feature-updates.js'),
+  () => import('./sync-audit.js'),
+  () => import('./url-preview.js'),
+  () => import('./redesign-base.js'),
+  () => import('./request-priority.js'),
+  () => import('./sanitize.js'),
+  () => import('./clipboard-paste.js'),
+  () => import('./desktop-fullscreen.js'),
+  () => import('./desktop-context-menu.js'),
+  () => import('./window-title.js'),
+  () => import('./whatsapp-share.js'),
+  () => import('./swipe-nav.js'),
+  () => import('./attachment-reliability.js'),
+  () => import('./task-from-message.js'),
+  () => import('./meeting-scheduler.js'),
+  () => import('./chat-permissions.js'),
+  () => import('./announcement-mode.js'),
+  () => import('./channel-mode.js'),
+  () => import('./two-factor-auth.js'),
+  () => import('./account-deletion.js'),
+  () => import('./view-once.js'),
+  () => import('./live-location.js'),
+  () => import('./data-saver.js'),
+  () => import('./wallpaper-gallery.js'),
+  () => import('./help-support.js'),
+  () => import('./reply-private.js'),
+  () => import('./group-meta.js'),
+
+  // --- V4.1+ features ---
+  () => import('./chat-mark-unread.js'),
+  () => import('./chat-drafts.js'),
+  () => import('./chat-scroll-unread.js'),
+  () => import('./privacy-controls.js'),
+  () => import('./voice-to-text.js'),
+  () => import('./quick-replies.js'),
+  () => import('./message-translation.js'),
+  () => import('./chat-folders.js'),
+  () => import('./search-contacts.js'),
+  () => import('./message-reminders.js'),
+  () => import('./chat-calculator.js'),
+  () => import('./event-from-message.js'),
+  () => import('./media-autoplay.js'),
+  () => import('./pinned-header.js'),
+  () => import('./payment-split.js'),
+  () => import('./large-file-sharing.js'),
+];
+
+async function _loadDeferredModules() {
+  for (const load of _deferredModules) {
+    try { await load(); } catch (e) { /* continue loading next module */ }
+  }
+}
+
+if (typeof requestIdleCallback === 'function') {
+  requestIdleCallback(_loadDeferredModules, { timeout: 10000 });
+} else {
+  window.addEventListener('load', () => setTimeout(_loadDeferredModules, 200));
+}
+
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+   ON-DEMAND MODULES (loaded via LazyModules.load('name'))
+   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+const _lazyModules = [
+  () => import('./date-reminders.js'),
+  () => import('./ai-features.js'),
+  () => import('./chat-export.js'),
+  () => import('./music-player.js'),
+  () => import('./music-library.js'),
+  () => import('./playlist-core.js'),
+  () => import('./playlist-ui.js'),
+  () => import('./playlist-sync.js'),
+  () => import('./calculator.js'),
+  () => import('./jsQR.js'),
+  () => import('./cloud-drive.js'),
+  () => import('./collaborative-whiteboard.js'),
+  () => import('./image-annotation.js'),
+  () => import('./contact-sync.js'),
+  () => import('./qr-code-gen.js'),
+];
+
+async function _loadLazyModules() {
+  for (const load of _lazyModules) {
+    try { await load(); } catch (e) { if (window.__DEBUG__) console.warn('[App] Lazy module load failed:', e.message); }
+  }
+}
+
+if (document.readyState === 'complete') {
+  _loadLazyModules();
+} else {
+  window.addEventListener('load', () => setTimeout(_loadLazyModules, 100));
+}

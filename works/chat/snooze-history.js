@@ -253,10 +253,15 @@
 
   // ── DOM injection ─────────────────────────────────────────────────────────
 
+  var _snoozeInjectRetries = 0;
   function _inject() {
     if (document.getElementById(BTN_ID)) return;
     const requestToggle = document.getElementById('requestToggle');
-    if (!requestToggle) { setTimeout(_inject, 300); return; }
+    if (!requestToggle) {
+      _snoozeInjectRetries++;
+      if (_snoozeInjectRetries < 20) setTimeout(_inject, 300);
+      return;
+    }
 
     const wrapper = document.createElement('span');
     wrapper.className = 'sh-wrapper';

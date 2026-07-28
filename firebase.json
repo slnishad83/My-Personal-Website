@@ -17,67 +17,51 @@
     "public": ".",
     "cleanUrls": true,
     "trailingSlash": false,
-    "redirects": [
+    "redirects": [],
+    "rewrites": [
       {
         "source": "/works/chat",
-        "type": 301,
-        "destination": "/works/chat/dist/"
+        "destination": "/works/chat/dist/index.html"
       },
       {
         "source": "/works/chat/",
-        "type": 301,
-        "destination": "/works/chat/dist/"
+        "destination": "/works/chat/dist/index.html"
       },
       {
         "source": "/works/chat/index.html",
-        "type": 301,
         "destination": "/works/chat/dist/index.html"
       },
       {
         "source": "/works/chat/login.html",
-        "type": 301,
         "destination": "/works/chat/dist/login.html"
       },
       {
         "source": "/works/chat/reset.html",
-        "type": 301,
         "destination": "/works/chat/dist/reset.html"
       },
       {
         "source": "/works/chat/verify.html",
-        "type": 301,
         "destination": "/works/chat/dist/verify.html"
       },
       {
         "source": "/works/chat/turn.html",
-        "type": 301,
         "destination": "/works/chat/dist/turn.html"
       },
       {
         "source": "/works/chat/album.html",
-        "type": 301,
         "destination": "/works/chat/dist/album.html"
       },
       {
         "source": "/works/chat/calendar.html",
-        "type": 301,
         "destination": "/works/chat/dist/calendar.html"
       },
       {
         "source": "/works/chat/expenses.html",
-        "type": 301,
         "destination": "/works/chat/dist/expenses.html"
       },
       {
         "source": "/works/chat/insights.html",
-        "type": 301,
         "destination": "/works/chat/dist/insights.html"
-      }
-    ],
-    "rewrites": [
-      {
-        "source": "/works/chat/dist",
-        "destination": "/works/chat/dist/index.html"
       },
       {
         "source": "**/reset",
