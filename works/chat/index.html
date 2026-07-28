@@ -130,7 +130,12 @@
       function revealApp() {
         var app = document.getElementById('app');
         var ls = document.getElementById('loading-screen');
-        if (app) app.classList.remove('hidden');
+        if (app) {
+          app.classList.remove('hidden');
+          app.style.display = 'flex';
+          app.style.visibility = 'visible';
+          app.style.opacity = '1';
+        }
         if (ls) {
           ls.style.opacity = '0';
           ls.style.pointerEvents = 'none';
@@ -139,11 +144,11 @@
       }
       window.hideLoadingScreen = revealApp;
       if (document.readyState === 'complete' || document.readyState === 'interactive') {
-        setTimeout(revealApp, 400);
+        setTimeout(revealApp, 300);
       } else {
-        document.addEventListener('DOMContentLoaded', function() { setTimeout(revealApp, 400); });
+        document.addEventListener('DOMContentLoaded', function() { setTimeout(revealApp, 300); });
       }
-      setTimeout(revealApp, 1800);
+      setTimeout(revealApp, 1000);
     })();
   </script>
 

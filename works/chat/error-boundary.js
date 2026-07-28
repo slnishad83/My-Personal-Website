@@ -1,4 +1,4 @@
-﻿/* ============================================================
+/* ============================================================
    ERROR BOUNDARY & CRASH REPORTING
    Lightweight global error handler + optional Sentry integration
    ============================================================ */
@@ -136,7 +136,7 @@ const ErrorBoundary = {
            this._frequencyWindow[0].timestamp < now - this._frequencyWindowMs) {
       this._frequencyWindow.shift();
     }
-    if (this._frequencyWindow.length > this._frequencyLimit && !this._crashUIShown) {
+    if (errorData.type === 'uncaught_error' && this._frequencyWindow.length > this._frequencyLimit && !this._crashUIShown) {
       this.showCrashUI(errorData.error || new Error(errorData.message));
     }
   },
