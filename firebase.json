@@ -17,7 +17,13 @@
     "public": ".",
     "cleanUrls": true,
     "trailingSlash": false,
-    "redirects": [],
+    "redirects": [
+      {
+        "source": "/works/chat/dist/**",
+        "type": 302,
+        "destination": "/works/chat"
+      }
+    ],
     "rewrites": [
       {
         "source": "/works/chat",

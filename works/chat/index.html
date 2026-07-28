@@ -38,11 +38,7 @@
           return;
         }
 
-        if (cleanHost === 'chat.nishadsl.com') {
-          if (path !== '/' && path !== '') {
-            window.history.replaceState({}, '', '/' + (location.search || '') + (location.hash || ''));
-          }
-        } else if (cleanHost === 'nishadsl.com' && path.startsWith('/works/chat')) {
+        if (cleanHost === 'nishadsl.com' && path.startsWith('/works/chat')) {
           if (path !== '/works/chat' && path !== '/works/chat/') {
             window.history.replaceState({}, '', '/works/chat' + (location.search || '') + (location.hash || ''));
           }

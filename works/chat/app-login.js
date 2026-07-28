@@ -450,7 +450,7 @@ document.getElementById("loginForm").addEventListener("submit", async (e) => {
       if (window.__DEBUG__) console.warn("Profile update skipped:", firestoreError);
     }
 
-    window.location.href = "index.html";
+    window.location.href = new URL("index.html", window.location.href).href;
   } catch (error) {
     errorDiv.textContent = getFriendlyAuthError(error, "Login failed. Please try again.");
     errorDiv.style.display = "block";
