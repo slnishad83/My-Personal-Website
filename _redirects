@@ -1,0 +1,3 @@
+/works/chat /works/chat/dist/index.html 200
+/works/chat/ /works/chat/dist/index.html 200
+/works/chat/* /works/chat/dist/:splat 200
