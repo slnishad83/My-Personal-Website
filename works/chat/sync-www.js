@@ -34,7 +34,8 @@ function copyDirRecursive(src, dest) {
 // ── Step 1: Run Vite build ──────────────────────────────
 console.log('Building with Vite...');
 try {
-  execSync('node node_modules/vite/bin/vite.js build', { cwd: ROOT, stdio: 'inherit' });
+  const output = execSync('node node_modules/vite/bin/vite.js build', { cwd: ROOT, stdio: 'pipe' });
+  console.log(output.toString());
   console.log('Vite build complete.');
 } catch (e) {
   console.error('Vite build failed:', e.message);

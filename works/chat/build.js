@@ -430,7 +430,11 @@ firebase.auth().onAuthStateChanged((user) => {
     if (window.Presence) Presence.destroy();
     if (window.MultiDevice) MultiDevice.destroy();
     if (window.Security) Security.destroy();
-    window.location.replace('login.html');
+    var currentPath = location.pathname.toLowerCase();
+    if (!currentPath.includes('login')) {
+      var loginUrl = new URL('login.html', window.location.href).href;
+      window.location.replace(loginUrl);
+    }
   }
 });`;
 

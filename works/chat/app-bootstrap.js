@@ -1,4 +1,4 @@
-﻿'use strict';
+'use strict';
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', function () {
     navigator.serviceWorker.register('/works/chat/dist/sw.js', { scope: '/works/chat/', updateViaCache: 'none' })
@@ -63,8 +63,10 @@ function _authStateChanged(user) {
     if (window.Presence) Presence.destroy();
     if (window.MultiDevice) MultiDevice.destroy();
     if (window.Security) Security.destroy();
-    if (!location.pathname.endsWith('login.html')) {
-      window.location.replace('login.html');
+    var currentPath = location.pathname.toLowerCase();
+    if (!currentPath.includes('login')) {
+      var loginUrl = new URL('login.html', window.location.href).href;
+      window.location.replace(loginUrl);
     }
   }
 }

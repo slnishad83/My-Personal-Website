@@ -1,4 +1,4 @@
-﻿/**
+/**
  * NSL Chat â€” Vite Entry Point (login.html)
  * Login page: Firebase auth + PWA install + redesign-base.
  * CDN scripts (firebase-app, firebase-auth, firebase-firestore) load before this module.
@@ -163,7 +163,7 @@ auth.onAuthStateChanged(async (user) => {
       },
       { merge: true },
     );
-    window.location.href = "index.html";
+    window.location.href = new URL("index.html", window.location.href).href;
   }
 });
 

@@ -16,7 +16,7 @@
   "hosting": {
     "public": ".",
     "cleanUrls": true,
-    "trailingSlash": true,
+    "trailingSlash": false,
     "redirects": [
       {
         "source": "/works/chat",
