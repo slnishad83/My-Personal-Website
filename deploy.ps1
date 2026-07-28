@@ -25,14 +25,18 @@ try {
 
 # 4. Build Desktop Executables
 Write-Host "`n4. Building Windows Desktop Executables..." -ForegroundColor Yellow
-if (Test-Path works/chat/dist-electron) {
-    Remove-Item -Recurse -Force works/chat/dist-electron -ErrorAction SilentlyContinue
-}
-Push-Location works/chat
 try {
-    npm run electron:build
-} finally {
-    Pop-Location
+    if (Test-Path works/chat/dist-electron) {
+        Remove-Item -Recurse -Force works/chat/dist-electron -ErrorAction SilentlyContinue
+    }
+    Push-Location works/chat
+    try {
+        npm run electron:build
+    } finally {
+        Pop-Location
+    }
+} catch {
+    Write-Host "Desktop build warning: $_" -ForegroundColor DarkYellow
 }
 
 # 5. Git Commit & Push
