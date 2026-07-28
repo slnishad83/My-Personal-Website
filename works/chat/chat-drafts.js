@@ -158,5 +158,30 @@
     }
   }
 
+  const origRenderChatList = window.renderChatList;
+  let _draftOrigRenderChatList = null;
+  if (typeof origRenderChatList === 'function') {
+    window.renderChatList = function() {
+      origRenderChatList.apply(this, arguments);
+      setTimeout(_injectDraftBadges, 120);
+    };
+    _draftOrigRenderChatList = origRenderChatList;
+  }
+
+  function _injectDraftBadges() {
+    document.querySelectorAll('.chat-item, [data-chat-id]').forEach(function(el) {
+      let chatId = null;
+      const onclick = el.getAttribute('onclick') || '';
+      const match = onclick.match(/openChat\(['"]([^'"]+)['"]\)/);
+      if (match) chatId = match[1];
+      if (!chatId) chatId = el.dataset.chatId;
+      if (chatId) Drafts.injectDraftBadge(el, chatId);
+    });
+  }
+
+  window._draftCleanup = function() {
+    if (_draftOrigRenderChatList) window.renderChatList = _draftOrigRenderChatList;
+  };
+
   window.ChatDrafts = Drafts;
 })();

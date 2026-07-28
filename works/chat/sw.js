@@ -144,14 +144,20 @@ self.addEventListener('notificationclick', function(event) {
             client.postMessage({
               type: 'TC_OPEN_CHAT',
               chatId: data.chatId,
-              chatType: data.chatType || 'direct'
+              chatType: data.chatType || 'direct',
+              messageId: data.messageId || '',
+              kind: data.kind || 'message'
             });
           }
           return;
         }
       }
       if (clients.openWindow) {
-        return clients.openWindow(url);
+        var openUrl = url;
+        if (data.kind === 'reaction' && data.messageId) {
+          openUrl = './index.html#reaction:' + data.messageId;
+        }
+        return clients.openWindow(openUrl);
       }
     })
   );

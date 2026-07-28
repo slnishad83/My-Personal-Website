@@ -212,6 +212,15 @@
       if (msg.type === 'TC_NAVIGATE') {
         handleNotificationClick(msg.payload || msg);
       }
+      if (msg.type === 'TC_OPEN_CHAT') {
+        var payload = {
+          chatId: msg.chatId || '',
+          chatType: msg.chatType || 'direct',
+          messageId: msg.messageId || '',
+          kind: msg.kind || 'message'
+        };
+        handleNotificationClick(payload);
+      }
     });
     if ('Notification' in window && Notification.permission === 'granted') {
       navigator.serviceWorker.ready.then(function (reg) {

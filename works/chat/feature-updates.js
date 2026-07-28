@@ -72,7 +72,7 @@
 
       try {
         window.typingUnsubscribe = window.db
-          .collection('typingIndicators')
+          .collection('typingStatus')
           .where('chatId', '==', chat.id)
           .onSnapshot(
             snap => {
