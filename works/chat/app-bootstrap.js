@@ -40,9 +40,20 @@ window.addEventListener('load', async function() {
 
 var _authRetryCount = 0;
 var _authMaxRetries = 3;
+var _authReadyDispatched = false;
 function _authStateChanged(user) {
   _authRetryCount = 0;
   window.currentUser = user || null;
+  if (user) {
+    try { sessionStorage.removeItem('nslLoginTransition'); } catch (_) {}
+  }
+  if (!_authReadyDispatched) {
+    _authReadyDispatched = true;
+    document.dispatchEvent(new CustomEvent('nsl:auth-ready', { detail: { user: !!user } }));
+    if (typeof window.hideLoadingScreen === 'function') {
+      window.hideLoadingScreen();
+    }
+  }
   if (window.Monitoring) {
     if (user) { Monitoring.setUser(user); } else { Monitoring.clearUser(); }
   }
@@ -71,7 +82,7 @@ function _authStateChanged(user) {
           var loginUrl = new URL('login.html', window.location.href).href;
           window.location.replace(loginUrl);
         }
-      }, 1500);
+      }, 5000);
     }
   }
 }

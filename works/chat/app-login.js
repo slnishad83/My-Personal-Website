@@ -163,7 +163,8 @@ auth.onAuthStateChanged(async (user) => {
       },
       { merge: true },
     );
-    window.location.href = new URL("index.html", window.location.href).href;
+    try { sessionStorage.setItem('nslLoginTransition', '1'); } catch (_) {}
+    window.location.replace(new URL("index.html", window.location.href).href);
   }
 });
 

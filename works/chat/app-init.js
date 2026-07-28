@@ -47,13 +47,19 @@ window.toggleSidebarExpand = function() {
 // Run framework initializers
 if (typeof init === 'function') {
   init().then(function() {
+    document.dispatchEvent(new CustomEvent('nsl:app-ready'));
+    if (typeof window.hideLoadingScreen === 'function') window.hideLoadingScreen();
     handleDeepLink();
   }).catch((error) => {
     if (window.__DEBUG__) console.error("Application startup failed:", error);
+    document.dispatchEvent(new CustomEvent('nsl:app-ready'));
+    if (typeof window.hideLoadingScreen === 'function') window.hideLoadingScreen();
     handleDeepLink();
   });
 } else {
   document.addEventListener('DOMContentLoaded', function() {
+    document.dispatchEvent(new CustomEvent('nsl:app-ready'));
+    if (typeof window.hideLoadingScreen === 'function') window.hideLoadingScreen();
     setTimeout(handleDeepLink, 1500);
   });
 }

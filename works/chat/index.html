@@ -123,7 +123,18 @@
 
   <script>
     (function() {
+      var authReady = false;
+      var appReady = false;
+      var revealed = false;
+
+      function canReveal() {
+        return authReady && appReady && !revealed;
+      }
+
       function revealApp() {
+        if (revealed) return;
+        if (!canReveal()) return;
+        revealed = true;
         var app = document.getElementById('app');
         var ls = document.getElementById('loading-screen');
         if (app) {
@@ -139,12 +150,18 @@
         }
       }
       window.hideLoadingScreen = revealApp;
-      if (document.readyState === 'complete' || document.readyState === 'interactive') {
-        setTimeout(revealApp, 300);
-      } else {
-        document.addEventListener('DOMContentLoaded', function() { setTimeout(revealApp, 300); });
-      }
-      setTimeout(revealApp, 1000);
+      window.addEventListener('nsl:auth-ready', function () {
+        authReady = true;
+        revealApp();
+      });
+      window.addEventListener('nsl:app-ready', function () {
+        appReady = true;
+        revealApp();
+      });
+      setTimeout(function () {
+        appReady = true;
+        revealApp();
+      }, 12000);
     })();
   </script>
 
