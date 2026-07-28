@@ -1,0 +1,156 @@
+name: Build & Release Electron Desktop App
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    tags:
+      - 'v*'
+    paths:
+      - 'works/chat/electron/**'
+      - 'works/chat/electron-builder.yml'
+      - 'works/chat/package.json'
+      - 'works/chat/package-lock.json'
+
+permissions:
+  contents: write
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: works/chat/package-lock.json
+
+      - name: Install dependencies
+        working-directory: works/chat
+        run: npm ci
+
+      - name: Build web assets
+        working-directory: works/chat
+        run: npm run build
+
+      - name: Build Electron Windows installer
+        working-directory: works/chat
+        run: npx electron-builder --config electron-builder.yml --win
+
+      - name: Upload Windows artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: electron-windows
+          path: |
+            works/chat/dist-electron/*.exe
+          retention-days: 90
+
+  build-macos:
+    runs-on: macos-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: works/chat/package-lock.json
+
+      - name: Install dependencies
+        working-directory: works/chat
+        run: npm ci
+
+      - name: Build web assets
+        working-directory: works/chat
+        run: npm run build
+
+      - name: Build Electron macOS app
+        working-directory: works/chat
+        run: npx electron-builder --config electron-builder.yml --mac
+
+      - name: Upload macOS artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: electron-macos
+          path: |
+            works/chat/dist-electron/*.dmg
+            works/chat/dist-electron/*.zip
+          retention-days: 90
+
+  build-linux:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: works/chat/package-lock.json
+
+      - name: Install dependencies
+        working-directory: works/chat
+        run: npm ci
+
+      - name: Build web assets
+        working-directory: works/chat
+        run: npm run build
+
+      - name: Build Electron Linux app
+        working-directory: works/chat
+        run: npx electron-builder --config electron-builder.yml --linux
+
+      - name: Upload Linux artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: electron-linux
+          path: |
+            works/chat/dist-electron/*.AppImage
+            works/chat/dist-electron/*.deb
+          retention-days: 90
+
+  release:
+    needs: [build-windows, build-macos, build-linux]
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            artifacts/electron-windows/*.exe
+            artifacts/electron-macos/*.dmg
+            artifacts/electron-macos/*.zip
+            artifacts/electron-linux/*.AppImage
+            artifacts/electron-linux/*.deb
+          generate_release_notes: true
+
+      - name: Summary
+        run: |
+          echo "## Electron Desktop Build Complete" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Platform | Outputs |" >> $GITHUB_STEP_SUMMARY
+          echo "|---|---|" >> $GITHUB_STEP_SUMMARY
+          echo "| Windows | NSIS installer + Portable .exe |" >> $GITHUB_STEP_SUMMARY
+          echo "| macOS | DMG + ZIP (x64 + arm64) |" >> $GITHUB_STEP_SUMMARY
+          echo "| Linux | AppImage + .deb |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "All installers attached to this GitHub Release." >> $GITHUB_STEP_SUMMARY
