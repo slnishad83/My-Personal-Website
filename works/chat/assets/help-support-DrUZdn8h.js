@@ -1,0 +1,60 @@
+import{t as e}from"./modulepreload-polyfill-1QPZNIo4.js";var t=e((()=>{(function(){let e={_faqs:[{q:`How do I create a group?`,a:`Tap the "+" button on the chat list, select "New Group", add members, set a group name, and tap Create.`},{q:`How do I lock a chat?`,a:`Long-press any chat in the chat list and select "Lock Chat". You can set a PIN or use biometric authentication.`},{q:`How do disappearing messages work?`,a:`Open a chat, tap the chat name at the top, and enable "Disappearing Messages". Messages will auto-delete after the selected timer.`},{q:`Can I use NSL Chat on multiple devices?`,a:`Yes! NSL Chat works on Web (PWA), Android, iOS, and Desktop (Electron). Your chats sync across all devices in real-time.`},{q:`How do I share my location?`,a:`Open a chat, tap the attachment icon (📎), and select "Location". You can share a static pin or start live location sharing.`},{q:`How do I make a voice or video call?`,a:`Open a chat and tap the phone or video icon in the chat header. Group calls support up to 4 participants.`},{q:`How do I backup my chats?`,a:`Go to Profile & Settings > chat settings > Export Chat. You can export as text, HTML, or JSON format.`},{q:`How do I mute notifications?`,a:`Long-press a chat and select "Mute", or open chat info and toggle mute. You can mute for 8 hours, 1 week, or always.`},{q:`What is two-step verification?`,a:`Two-step verification adds a PIN after your password for extra security. Enable it in Profile & Settings > Two-Step Verification.`},{q:`How do I change my theme?`,a:`Go to Profile & Settings > App Theme to switch between Light, Dark, and System themes.`},{q:`How do view-once media work?`,a:`When sending a photo or video, toggle "View Once" before sending. The recipient can only view it once before it disappears.`},{q:`How do I search for messages?`,a:`Tap the search icon in any chat or use Ctrl+F / Cmd+F to search across all messages with filters.`}],init(){},open(){let e=document.createElement(`div`);e.id=`help-support-overlay`,e.style.cssText=`position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.85);display:flex;align-items:center;justify-content:center;animation:fadeIn 0.2s ease`;let t=document.createElement(`div`);t.style.cssText=`background:var(--surface-container,#1e1e2e);border-radius:20px;max-width:480px;width:92vw;max-height:85vh;overflow-y:auto;color:var(--on-surface;display:flex;flex-direction:column)`,t.innerHTML=`
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:20px 24px;border-bottom:1px solid var(--outline-variant,rgba(0,0,0,0.06))">
+          <div style="display:flex;align-items:center;gap:10px">
+            <span class="material-symbols-outlined" style="font-size:22px;color:var(--primary)">help</span>
+            <h3 style="margin:0;font-size:18px;font-weight:700">Help & Support</h3>
+          </div>
+          <button onclick="document.getElementById('help-support-overlay')?.remove()" style="background:none;border:none;color:var(--on-surface-variant);cursor:pointer;font-size:20px">&times;</button>
+        </div>
+        <div style="padding:16px 24px;border-bottom:1px solid var(--outline-variant,rgba(0,0,0,0.06))">
+          <div style="display:flex;align-items:center;gap:12px;padding:12px;border-radius:12px;background:var(--surface-container-low)">
+            <div style="width:40px;height:40px;border-radius:12px;background:var(--primary);display:flex;align-items:center;justify-content:center">
+              <span class="material-symbols-outlined" style="font-size:20px;color:var(--on-primary)">forum</span>
+            </div>
+            <div>
+              <p style="margin:0;font-size:14px;font-weight:700">NSL Chat</p>
+              <p style="margin:2px 0 0;font-size:11px;color:var(--on-surface-variant)">v2.5.0 · Modern Team Messaging</p>
+            </div>
+          </div>
+        </div>
+        <div style="padding:0">
+          <p style="font-size:11px;font-weight:600;color:var(--on-surface-variant);text-transform:uppercase;padding:12px 24px 4px;letter-spacing:0.05em">Frequently Asked Questions</p>
+          ${this._faqs.map((e,t)=>`
+        <div class="faq-item" style="border-bottom:1px solid var(--outline-variant,rgba(0,0,0,0.06))">
+          <button class="faq-toggle" data-idx="${t}" style="width:100%;padding:14px 16px;border:none;background:transparent;color:var(--on-surface);text-align:left;font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:space-between">
+            <span>${e.q}</span>
+            <span class="material-symbols-outlined faq-chevron" style="font-size:18px;color:var(--on-surface-variant);transition:transform 0.2s">expand_more</span>
+          </button>
+          <div class="faq-answer" data-idx="${t}" style="display:none;padding:0 16px 14px;font-size:12px;color:var(--on-surface-variant);line-height:1.6">${e.a}</div>
+        </div>`).join(``)}
+        </div>
+        <div style="padding:16px 24px;border-top:1px solid var(--outline-variant,rgba(0,0,0,0.06))">
+          <p style="font-size:11px;font-weight:600;color:var(--on-surface-variant);text-transform:uppercase;margin:0 0 8px;letter-spacing:0.05em">Contact Support</p>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <button id="help-report-bug" style="width:100%;padding:12px;border-radius:10px;border:1px solid var(--outline-variant);background:transparent;color:var(--on-surface);font-size:13px;font-weight:600;cursor:pointer;text-align:left;display:flex;align-items:center;gap:8px">
+              <span class="material-symbols-outlined" style="font-size:18px;color:var(--primary)">bug_report</span> Report a Bug
+            </button>
+            <button id="help-contact-support" style="width:100%;padding:12px;border-radius:10px;border:1px solid var(--outline-variant);background:transparent;color:var(--on-surface);font-size:13px;font-weight:600;cursor:pointer;text-align:left;display:flex;align-items:center;gap:8px">
+              <span class="material-symbols-outlined" style="font-size:18px;color:var(--primary)">support_agent</span> Contact Support
+            </button>
+            <button id="help-shortcuts" style="width:100%;padding:12px;border-radius:10px;border:1px solid var(--outline-variant);background:transparent;color:var(--on-surface);font-size:13px;font-weight:600;cursor:pointer;text-align:left;display:flex;align-items:center;gap:8px">
+              <span class="material-symbols-outlined" style="font-size:18px;color:var(--primary)">keyboard</span> Keyboard Shortcuts
+            </button>
+          </div>
+        </div>
+        <div style="padding:12px 24px;text-align:center;border-top:1px solid var(--outline-variant,rgba(0,0,0,0.06))">
+          <p style="font-size:10px;color:var(--on-surface-variant);margin:0">&copy; 2026 NSL Chat Systems. Built with passion.</p>
+        </div>`,e.appendChild(t),e.addEventListener(`click`,t=>{t.target===e&&e.remove()}),document.body.appendChild(e),t.querySelectorAll(`.faq-toggle`).forEach(e=>{e.addEventListener(`click`,()=>{let n=e.dataset.idx,r=t.querySelector(`.faq-answer[data-idx="${n}"]`),i=e.querySelector(`.faq-chevron`);if(r){let e=r.style.display!==`none`;r.style.display=e?`none`:`block`,i&&(i.style.transform=e?``:`rotate(180deg)`)}})}),document.getElementById(`help-report-bug`)?.addEventListener(`click`,()=>{e.remove(),this._openBugReport()}),document.getElementById(`help-contact-support`)?.addEventListener(`click`,()=>{e.remove(),this._openContactSupport()}),document.getElementById(`help-shortcuts`)?.addEventListener(`click`,()=>{e.remove(),typeof KeyboardShortcuts<`u`&&KeyboardShortcuts.showHelp&&KeyboardShortcuts.showHelp()})},_openBugReport(){let e=document.createElement(`div`);e.style.cssText=`position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,0.85);display:flex;align-items:center;justify-content:center;animation:fadeIn 0.2s ease`;let t=document.createElement(`div`);t.style.cssText=`background:var(--surface-container,#1e1e2e);border-radius:20px;padding:24px;max-width:400px;width:92vw;color:var(--on-surface)`,t.innerHTML=`
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+          <h3 style="margin:0;font-size:16px;font-weight:700">Report a Bug</h3>
+          <button onclick="this.closest('.fixed')?.remove()" style="background:none;border:none;color:var(--on-surface-variant);cursor:pointer;font-size:20px">&times;</button>
+        </div>
+        <textarea id="bug-desc" placeholder="Describe the bug..." style="width:100%;min-height:100px;padding:12px;border-radius:10px;border:1px solid var(--outline-variant);background:var(--surface-container-low);color:var(--on-surface);font-size:13px;font-family:inherit;resize:vertical;box-sizing:border-box"></textarea>
+        <input id="bug-email" placeholder="Your email (optional)" type="email" style="width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--outline-variant);background:var(--surface-container-low);color:var(--on-surface);font-size:13px;box-sizing:border-box;margin-top:8px">
+        <button id="bug-submit" style="width:100%;padding:12px;border-radius:10px;border:none;background:var(--primary);color:var(--on-primary);font-size:13px;font-weight:600;cursor:pointer;margin-top:12px">Submit Report</button>`,e.appendChild(t),e.addEventListener(`click`,t=>{t.target===e&&e.remove()}),document.body.appendChild(e),document.getElementById(`bug-submit`)?.addEventListener(`click`,async()=>{let t=document.getElementById(`bug-desc`)?.value?.trim(),n=document.getElementById(`bug-email`)?.value?.trim();if(!t){showToast(`Please describe the bug`,`error`);return}try{await App.db.collection(`userReports`).add({type:`bug`,description:t,email:n||``,userId:App.auth?.currentUser?.uid||``,userAgent:navigator.userAgent,timestamp:new Date}),showToast(`Bug report submitted. Thank you!`,`success`),e.remove()}catch{showToast(`Failed to submit report`,`error`)}})},_openContactSupport(){let e=document.createElement(`div`);e.style.cssText=`position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,0.85);display:flex;align-items:center;justify-content:center;animation:fadeIn 0.2s ease`;let t=document.createElement(`div`);t.style.cssText=`background:var(--surface-container,#1e1e2e);border-radius:20px;padding:24px;max-width:400px;width:92vw;color:var(--on-surface)`,t.innerHTML=`
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+          <h3 style="margin:0;font-size:16px;font-weight:700">Contact Support</h3>
+          <button onclick="this.closest('.fixed')?.remove()" style="background:none;border:none;color:var(--on-surface-variant);cursor:pointer;font-size:20px">&times;</button>
+        </div>
+        <textarea id="support-msg" placeholder="How can we help you?" style="width:100%;min-height:100px;padding:12px;border-radius:10px;border:1px solid var(--outline-variant);background:var(--surface-container-low);color:var(--on-surface);font-size:13px;font-family:inherit;resize:vertical;box-sizing:border-box"></textarea>
+        <button id="support-submit" style="width:100%;padding:12px;border-radius:10px;border:none;background:var(--primary);color:var(--on-primary);font-size:13px;font-weight:600;cursor:pointer;margin-top:12px">Send Message</button>`,e.appendChild(t),e.addEventListener(`click`,t=>{t.target===e&&e.remove()}),document.body.appendChild(e),document.getElementById(`support-submit`)?.addEventListener(`click`,async()=>{let t=document.getElementById(`support-msg`)?.value?.trim();if(!t){showToast(`Please enter a message`,`error`);return}try{await App.db.collection(`userReports`).add({type:`support`,description:t,userId:App.auth?.currentUser?.uid||``,timestamp:new Date}),showToast(`Message sent. We'll get back to you soon!`,`success`),e.remove()}catch{showToast(`Failed to send message`,`error`)}})}};window.HelpSupport=e,window.openHelp=function(){e.open()},document.addEventListener(`nsl:app-ready`,()=>{e.init()})})()}));export default t();
