@@ -72,6 +72,10 @@
       {
         "source": "**/reset",
         "destination": "/reset.html"
+      },
+      {
+        "source": "/works/chat/:path+",
+        "destination": "/works/chat/dist/:path+"
       }
     ],
     "headers": [
