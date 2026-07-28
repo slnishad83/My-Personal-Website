@@ -171,7 +171,7 @@ self.addEventListener('notificationclose', function(event) {
    Everything else → network-first with cache fallback
    ══════════════════════════════════════════════════════════════ */
 
-var CACHE_NAME = 'nsl-chat-v5.0.0';
+var CACHE_NAME = 'nsl-chat-v6.0.0';
 var CACHE_MAX_ENTRIES = 300;
 
 /* Pre-cached on install — minimal set for offline shell */
@@ -191,8 +191,8 @@ var SHELL_ASSETS = [
 
 function isViteHashedAsset(pathname) {
   // Matches /assets/*.js, /assets/*.css, /assets/*.png etc.
-  // Vite pattern: name-HASH.ext where HASH is 8 alphanumeric chars
-  return /^\/assets\/[^\s]+\.[a-f0-9]{8}\.[a-z]+$/.test(pathname);
+  // Vite pattern: name-HASH.ext (e.g., main-08Q2jOX6.js)
+  return /^\/assets\/[^\s]+-[a-zA-Z0-9_-]{8,}\.(js|css|png|jpg|jpeg|svg|webp|woff2?)$/i.test(pathname);
 }
 
 function isFirebaseHost(hostname) {
