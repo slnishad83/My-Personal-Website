@@ -651,7 +651,7 @@ document.getElementById("sendResetBtn").addEventListener("click", async () => {
   btn.textContent = "Sending...";
 
   const resetActionCodeSettings = {
-    url: window.location.origin + "/works/chat/reset.html",
+    url: new URL("reset.html", window.location.href).href,
     handleCodeInApp: true,
   };
 

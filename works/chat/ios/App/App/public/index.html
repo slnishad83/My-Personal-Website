@@ -11,7 +11,6 @@
   <meta name="description" content="NSL Chat — Modern team messaging by Nishad SL">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' data: https://www.gstatic.com https://www.googleapis.com https://cdnjs.cloudflare.com https://browser.sentry-cdn.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https:; media-src 'self' blob:; connect-src 'self' https://*.firebaseio.com https://*.cloudfunctions.net https://firebasestorage.googleapis.com https://www.googleapis.com https://*.sentry.io wss://*.firebaseio.com; base-uri 'self'; object-src 'self'; frame-ancestors 'self'; form-action 'self'; upgrade-insecure-requests;">
   <meta name="robots" content="noindex, nofollow">
-  <link rel="canonical" href="https://chat.nishadsl.com">
   <meta property="og:title" content="NSL Chat">
   <meta property="og:description" content="Modern team messaging by Nishad SL">
   <meta property="og:url" content="https://chat.nishadsl.com">
@@ -107,9 +106,9 @@
 
   <!-- notification-sounds, twemoji, emoji-renderer, tailwind-config loaded via app-index.js -->
 
-  <script type="module" crossorigin src="./assets/main-DBrwyp8S.js"></script>
+  <script type="module" crossorigin src="./assets/main-DM7_XyXV.js"></script>
   <link rel="modulepreload" crossorigin href="./assets/modulepreload-polyfill-1QPZNIo4.js">
-  <link rel="modulepreload" crossorigin href="./assets/feature-notifications-BgK8XrAh.js">
+  <link rel="modulepreload" crossorigin href="./assets/feature-notifications-CCDQgu3X.js">
   <link rel="modulepreload" crossorigin href="./assets/lib-twemoji-CQdtB0LS.js">
   <link rel="modulepreload" crossorigin href="./assets/firebase-config-B74n5FL5.js">
   <link rel="stylesheet" crossorigin href="./assets/main-DJX7eEOy.css">
@@ -128,7 +127,18 @@
 
   <script>
     (function() {
+      var authReady = false;
+      var appReady = false;
+      var revealed = false;
+
+      function canReveal() {
+        return authReady && appReady && !revealed;
+      }
+
       function revealApp() {
+        if (revealed) return;
+        if (!canReveal()) return;
+        revealed = true;
         var app = document.getElementById('app');
         var ls = document.getElementById('loading-screen');
         if (app) {
@@ -144,12 +154,18 @@
         }
       }
       window.hideLoadingScreen = revealApp;
-      if (document.readyState === 'complete' || document.readyState === 'interactive') {
-        setTimeout(revealApp, 300);
-      } else {
-        document.addEventListener('DOMContentLoaded', function() { setTimeout(revealApp, 300); });
-      }
-      setTimeout(revealApp, 1000);
+      window.addEventListener('nsl:auth-ready', function () {
+        authReady = true;
+        revealApp();
+      });
+      window.addEventListener('nsl:app-ready', function () {
+        appReady = true;
+        revealApp();
+      });
+      setTimeout(function () {
+        appReady = true;
+        revealApp();
+      }, 12000);
     })();
   </script>
 
