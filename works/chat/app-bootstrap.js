@@ -65,8 +65,12 @@ function _authStateChanged(user) {
     if (window.Security) Security.destroy();
     var currentPath = location.pathname.toLowerCase();
     if (!currentPath.includes('login')) {
-      var loginUrl = new URL('login.html', window.location.href).href;
-      window.location.replace(loginUrl);
+      setTimeout(function() {
+        if (!firebase.auth().currentUser && !location.pathname.toLowerCase().includes('login')) {
+          var loginUrl = new URL('login.html', window.location.href).href;
+          window.location.replace(loginUrl);
+        }
+      }, 1500);
     }
   }
 }
