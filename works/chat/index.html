@@ -27,20 +27,27 @@
   <title>NSL Chat</title>
   <script>
     (function() {
-      var host = location.hostname.toLowerCase();
-      var path = location.pathname.toLowerCase();
-      var proto = location.protocol;
-      var cleanHost = host.replace(/^www\./, '');
+      try {
+        var host = location.hostname.toLowerCase();
+        var path = location.pathname.toLowerCase();
+        var proto = location.protocol;
+        var cleanHost = host.replace(/^www\./, '');
 
-      if (cleanHost === 'chat.nishadsl.com') {
-        if (proto !== 'https:' || host !== 'chat.nishadsl.com' || (path !== '/' && path !== '')) {
-          location.replace('https://chat.nishadsl.com' + (location.search || '') + (location.hash || ''));
+        if (proto !== 'https:' && location.hostname !== 'localhost' && !location.hostname.includes('127.0.0.1')) {
+          location.replace('https://' + location.host + location.pathname + location.search + location.hash);
+          return;
         }
-      } else if (cleanHost === 'nishadsl.com' && path.startsWith('/works/chat')) {
-        if (proto !== 'https:' || host !== 'nishadsl.com' || (path !== '/works/chat' && path !== '/works/chat/')) {
-          location.replace('https://nishadsl.com/works/chat' + (location.search || '') + (location.hash || ''));
+
+        if (cleanHost === 'chat.nishadsl.com') {
+          if (path !== '/' && path !== '') {
+            window.history.replaceState({}, '', '/' + (location.search || '') + (location.hash || ''));
+          }
+        } else if (cleanHost === 'nishadsl.com' && path.startsWith('/works/chat')) {
+          if (path !== '/works/chat' && path !== '/works/chat/') {
+            window.history.replaceState({}, '', '/works/chat' + (location.search || '') + (location.hash || ''));
+          }
         }
-      }
+      } catch (_) {}
     })();
   </script>
 

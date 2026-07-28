@@ -171,7 +171,7 @@ self.addEventListener('notificationclose', function(event) {
    Everything else → network-first with cache fallback
    ══════════════════════════════════════════════════════════════ */
 
-var CACHE_NAME = 'nsl-chat-v6.0.0';
+var CACHE_NAME = 'nsl-chat-v7.0.0';
 var CACHE_MAX_ENTRIES = 300;
 
 /* Pre-cached on install — minimal set for offline shell */
