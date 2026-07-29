@@ -5,6 +5,8 @@
     <script>
       if (window.location.hostname === 'chat.nishadsl.com' && (window.location.pathname === '/' || window.location.pathname === '/index.html')) {
         window.location.replace('/works/chat/');
+      } else if (window.location.hostname === 'nishadsl.com' && window.location.pathname.toLowerCase().startsWith('/works/chat')) {
+        window.location.replace('https://chat.nishadsl.com' + window.location.pathname + window.location.search + window.location.hash);
       }
     </script>
     <link rel="icon" type="image/x-icon" href="https://raw.githubusercontent.com/nishadsl/Fav-Icon/main/favicon.ico" />

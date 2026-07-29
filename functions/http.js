@@ -12,9 +12,9 @@ const admin = new Proxy({}, {
 
 const METERED_APP_URL = 'teamchatnishad.metered.live';
 const TURN_CREDENTIAL_LABEL = 'team-chat-secure-turn';
-const CHAT_APP_URL = 'https://nishadsl.com/works/chat/';
+const CHAT_APP_URL = 'https://chat.nishadsl.com/works/chat/';
 
-const ALLOWED_ORIGINS = ['https://nishadsl.com', 'https://my-team-chat-2255.web.app', 'https://works.my-team-chat-2255.web.app'];
+const ALLOWED_ORIGINS = ['https://nishadsl.com', 'https://chat.nishadsl.com', 'https://my-team-chat-2255.web.app', 'https://works.my-team-chat-2255.web.app'];
 function setCorsHeaders(response, origin) {
   const matched = ALLOWED_ORIGINS.find(o => origin === o);
   const allowed = matched || ALLOWED_ORIGINS[0];

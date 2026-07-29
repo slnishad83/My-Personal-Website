@@ -11,7 +11,7 @@ const admin = new Proxy({}, {
   }
 });
 
-const CHAT_APP_URL = 'https://nishadsl.com/works/chat/';
+const CHAT_APP_URL = 'https://chat.nishadsl.com/works/chat/';
 
 async function syncGroupAccessMetadata(groupId) {
   if (!groupId) return;

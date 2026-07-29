@@ -10,7 +10,7 @@ const admin = new Proxy({}, {
   }
 });
 
-const CHAT_APP_URL = 'https://nishadsl.com/works/chat/';
+const CHAT_APP_URL = 'https://chat.nishadsl.com/works/chat/';
 
 async function getUserPushTokens(userId) {
   if (!userId) return { userSnap: null, user: {}, tokens: [] };
@@ -392,14 +392,14 @@ exports.sendIncomingCallNotification = onDocumentCreated(
           timestamp: Date.now(),
           vibrate: [700, 250, 700, 250, 700, 250, 700, 250, 700],
           data: {
-            url: 'https://nishadsl.com/works/chat/',
+            url: 'https://chat.nishadsl.com/works/chat/',
             callId,
             kind: 'call'
           },
           actions: [{ action: 'open', title: 'Open' }]
         },
         fcmOptions: {
-          link: 'https://nishadsl.com/works/chat/'
+          link: 'https://chat.nishadsl.com/works/chat/'
         }
       }
     };
@@ -501,7 +501,7 @@ exports.sendIncomingGroupCallNotification = onDocumentCreated(
             silent: false,
             vibrate: [700, 250, 700, 250, 700, 250, 700],
             data: {
-              url: 'https://nishadsl.com/works/chat/',
+              url: 'https://chat.nishadsl.com/works/chat/',
               callId,
               kind: 'call'
             },
@@ -510,7 +510,7 @@ exports.sendIncomingGroupCallNotification = onDocumentCreated(
               { action: 'accept', title: 'Accept' }
             ]
           },
-          fcmOptions: { link: 'https://nishadsl.com/works/chat/' }
+          fcmOptions: { link: 'https://chat.nishadsl.com/works/chat/' }
         }
       });
     }));

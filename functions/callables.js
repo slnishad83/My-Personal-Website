@@ -10,7 +10,7 @@ const admin = new Proxy({}, {
   }
 });
 
-const CHAT_APP_URL = 'https://nishadsl.com/works/chat/';
+const CHAT_APP_URL = 'https://chat.nishadsl.com/works/chat/';
 
 // Simple in-memory rate limiter per user (5 requests/min, 30/hour for AI functions)
 const _aiRateBuckets = new Map();
