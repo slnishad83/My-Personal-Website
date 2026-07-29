@@ -46,6 +46,11 @@ function _authStateChanged(user) {
   window.currentUser = user || null;
   if (user) {
     try { sessionStorage.removeItem('nslLoginTransition'); } catch (_) {}
+    try {
+      if (location.search && (location.search.indexOf('fresh=') !== -1 || location.search.indexOf('nslLoginTransition') !== -1)) {
+        history.replaceState({}, '', location.pathname + location.hash);
+      }
+    } catch (_) {}
   }
   if (!_authReadyDispatched) {
     _authReadyDispatched = true;

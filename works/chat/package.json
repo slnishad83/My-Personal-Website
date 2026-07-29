@@ -1,6 +1,6 @@
 {
   "name": "nsl-chat",
-  "version": "5.0.0",
+  "version": "5.0.1",
   "description": "NSL Chat — Modern team messaging",
   "main": "electron/main.js",
   "scripts": {

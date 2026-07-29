@@ -632,8 +632,8 @@ for (const f of extraJs) {
     if (f === 'sw.js') {
       let swContent = readFile('sw.js');
       swContent = swContent.replace(
-        "const CACHE_NAME = 'nsl-chat-v4.0.0';",
-        `const CACHE_NAME = 'nsl-chat-v4.0.0-${jsHash}';`
+        "const CACHE_NAME = 'nsl-chat-v5.0.1';",
+        `const CACHE_NAME = 'nsl-chat-v5.0.1-${jsHash}';`
       );
       const newStaticAssets = `const STATIC_ASSETS = [
   'app.css',

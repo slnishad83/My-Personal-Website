@@ -1,8 +1,0 @@
-/works/chat https://chat.nishadsl.com/works/chat/ 302!
-/works/chat/ https://chat.nishadsl.com/works/chat/ 302!
-/works/chat/* https://chat.nishadsl.com/works/chat/:splat 302!
-/works/chat /works/chat/dist/index.html 200
-/works/chat/ /works/chat/dist/index.html 200
-/works/chat/* /works/chat/dist/:splat 200
-
-

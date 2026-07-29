@@ -77,6 +77,22 @@ async function sendVerificationEmail(user) {
   await user.sendEmailVerification(getEmailVerificationSettings());
 }
 
+async function prepareFreshAppLaunch() {
+  try {
+    if ('serviceWorker' in navigator) {
+      const registrations = await navigator.serviceWorker.getRegistrations();
+      for (const reg of registrations) {
+        try {
+          const swUrl = new URL(reg.scope);
+          if (swUrl.pathname.includes('/works/chat/') || swUrl.pathname.includes('/dist/')) {
+            await reg.unregister();
+          }
+        } catch (_) { await reg.unregister().catch(() => {}); }
+      }
+    }
+  } catch (_) {}
+}
+
 function getFriendlyAuthError(error, fallback) {
   const code = error && error.code;
   if (
@@ -164,7 +180,10 @@ auth.onAuthStateChanged(async (user) => {
       { merge: true },
     );
     try { sessionStorage.setItem('nslLoginTransition', '1'); } catch (_) {}
-    window.location.replace(new URL("index.html", window.location.href).href);
+    await prepareFreshAppLaunch();
+    const nextUrl = new URL("index.html", window.location.href);
+    nextUrl.searchParams.set("fresh", Date.now().toString(36));
+    window.location.replace(nextUrl.href);
   }
 });
 
