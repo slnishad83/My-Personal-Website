@@ -1,7 +1,7 @@
 import { defineConfig } from 'vite';
 import tailwindcss from '@tailwindcss/vite';
 import { resolve } from 'path';
-import { writeFileSync, readFileSync, copyFileSync, mkdirSync, readdirSync, statSync, existsSync } from 'fs';
+import { writeFileSync, readFileSync, copyFileSync, mkdirSync, readdirSync, statSync, existsSync, unlinkSync } from 'fs';
 import { join } from 'path';
 
 /* Read Firebase config once — single source of truth */
@@ -47,6 +47,14 @@ function copyStaticAssets() {
       // Copy manifest.json
       if (existsSync('manifest.json')) {
         copyFileSync('manifest.json', resolve(distDir, 'manifest.json'));
+      }
+
+      // Remove login.html — it uses CSS variables without fallbacks
+      // (unlike other standalone pages). SPA fallback handles login route.
+      const loginHtml = resolve(distDir, 'login.html');
+      if (existsSync(loginHtml)) {
+        unlinkSync(loginHtml);
+        console.log('[build] Removed login.html (SPA fallback serves login route)');
       }
 
       console.log('[build] Static assets copied to dist/');
