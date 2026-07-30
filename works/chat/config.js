@@ -1,4 +1,4 @@
-﻿/**
+/**
  * NSL Chat â€” Configuration Module
  * 
  * Separation of concerns:
@@ -154,6 +154,7 @@ window.chatWallpapers = chatWallpapers;
 window.getRtcConfig = getRtcConfig;
 window.getBackendTurnServers = getBackendTurnServers;
 window.initFirebase = initFirebase;
+initFirebase();
 
 if (isNativeAndroidApp) document.body.classList.add('native-android');
 if (isNativeIOSApp) document.body.classList.add('native-ios');
