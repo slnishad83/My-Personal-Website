@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=yes, maximum-scale=5"/>
+  <meta name="theme-color" content="#11131c"/>
+  <meta name="color-scheme" content="light dark"/>
+  <meta name="description" content="NSL Chat — You are currently offline"/>
+  <meta name="robots" content="noindex, nofollow"/>
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:;">
+  <title>NSL Chat — Offline</title>
+  <link rel="manifest" href="/works/chat/assets/manifest-BbZuLBcT.json">
+
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#0d0d0f;color:#e2e4e9;display:flex;align-items:center;justify-content:center;min-height:100vh;min-height:100dvh;padding:20px;text-align:center}
+    .offline-card{max-width:360px;width:100%}
+    .offline-icon{width:64px;height:64px;border-radius:16px;margin-bottom:16px}
+    .offline-icon-fallback{font-size:64px;margin-bottom:16px;opacity:.7}
+    h1{font-size:20px;font-weight:700;margin-bottom:8px;color:#fff}
+    p{font-size:14px;color:#8d92a0;line-height:1.5;margin-bottom:24px}
+    .retry-btn{display:inline-block;padding:12px 32px;border-radius:12px;background:linear-gradient(135deg,#008069,#00a884);color:#fff;font-size:15px;font-weight:600;border:none;cursor:pointer;text-decoration:none;transition:transform .15s}
+    .retry-btn:active{transform:scale(.97)}
+    .retry-btn:focus-visible{outline:2px solid #00a884;outline-offset:2px}
+    .countdown{font-size:13px;color:#575b66;margin-top:12px}
+    .cached-note{font-size:12px;color:#575b66;margin-top:16px}
+    .noscript{padding:40px 20px;text-align:center}
+    .noscript h2{font-size:18px;margin-bottom:8px;color:#fff}
+    .noscript p{font-size:14px;color:#8d92a0}
+    @media (prefers-color-scheme: light) {
+      body{background:#f0f2f5;color:#1b1b1f}
+      h1,h2{color:#111}
+      p{color:#667781}
+      .countdown,.cached-note{color:#8696a0}
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+    }
+  </style>
+</head>
+<body>
+  <noscript>
+    <div class="noscript">
+      <h2>JavaScript Required</h2>
+      <p>NSL Chat requires JavaScript to run. Please enable it in your browser settings.</p>
+    </div>
+  </noscript>
+  <div class="offline-card" role="status" aria-live="polite">
+    <img class="offline-icon" src="data:image/png;base64,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" alt="NSL Chat" width="64" height="64" onerror="this.style.display='none';this.nextElementSibling.style.display='block'"/>
+    <div class="offline-icon-fallback" style="display:none" aria-hidden="true">📡</div>
+    <h1>You're offline</h1>
+    <p>NSL Chat needs an internet connection to load. Check your connection and try again.</p>
+    <button class="retry-btn" id="retryBtn" aria-label="Retry connection">Try again</button>
+    <div class="countdown" id="countdown" aria-live="polite"></div>
+    <p class="cached-note">If you were already using the app, cached messages may still be available.</p>
+  </div>
+  <script>
+    (function() {
+      var seconds = 30;
+      var countdownEl = document.getElementById('countdown');
+      var retryBtn = document.getElementById('retryBtn');
+      var timer = setInterval(function() {
+        seconds--;
+        if (seconds <= 0) {
+          clearInterval(timer);
+          if (navigator.onLine) {
+            location.reload();
+          } else {
+            countdownEl.textContent = 'Still offline. Tap to retry.';
+          }
+          return;
+        }
+        countdownEl.textContent = 'Retrying in ' + seconds + 's...';
+      }, 1000);
+      retryBtn.addEventListener('click', function() {
+        clearInterval(timer);
+        if (navigator.onLine) {
+          location.reload();
+        } else {
+          countdownEl.textContent = 'Still offline. Retrying...';
+          seconds = 0;
+          setTimeout(function() { location.reload(); }, 1000);
+        }
+      });
+      window.addEventListener('online', function() {
+        clearInterval(timer);
+        countdownEl.textContent = 'Connection restored! Reloading...';
+        setTimeout(function() { location.reload(); }, 1500);
+      });
+    })();
+  </script>
+</body>
+</html>

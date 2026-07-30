@@ -1,0 +1,26 @@
+# HTML pages (extensionless URLs → dist/ built files)
+/works/chat /works/chat/dist/index.html 200
+/works/chat/ /works/chat/dist/index.html 200
+/works/chat/album /works/chat/dist/album.html 200
+/works/chat/calendar /works/chat/dist/calendar.html 200
+/works/chat/expenses /works/chat/dist/expenses.html 200
+/works/chat/index /works/chat/dist/index.html 200
+/works/chat/insights /works/chat/dist/insights.html 200
+/works/chat/login /works/chat/dist/login.html 200
+/works/chat/offline /works/chat/dist/offline.html 200
+/works/chat/register /works/chat/dist/register.html 200
+/works/chat/reset /works/chat/dist/reset.html 200
+/works/chat/turn /works/chat/dist/turn.html 200
+/works/chat/verify /works/chat/dist/verify.html 200
+
+# Assets (hashed files)
+/works/chat/assets/* /works/chat/dist/assets/:splat 200
+
+# Root-level dist files
+/works/chat/sw.js /works/chat/dist/sw.js 200
+/works/chat/*.js /works/chat/dist/:splat 200
+/works/chat/*.css /works/chat/dist/:splat 200
+/works/chat/*.png /works/chat/dist/:splat 200
+/works/chat/*.svg /works/chat/dist/:splat 200
+/works/chat/*.json /works/chat/dist/:splat 200
+/works/chat/*.apk /works/chat/dist/:splat 200
