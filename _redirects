@@ -1,4 +1,4 @@
-# HTML pages (extensionless → dist/ without .html — Cloudflare clean URLs resolves .html internally)
+# Page rewrites (extensionless → dist/ without .html — Cloudflare clean URLs resolves .html internally)
 /works/chat /works/chat/dist/index 200
 /works/chat/ /works/chat/dist/index 200
 /works/chat/album /works/chat/dist/album 200
@@ -16,7 +16,7 @@
 # Hashed assets (referenced as /works/chat/assets/xxx in built HTML)
 /works/chat/assets/* /works/chat/dist/assets/:splat 200
 
-# Root-level files in dist/ (sw.js, firebase-config.js, manifest.json, icons, etc.)
+# Root-level files (service worker, config, icons)
 /works/chat/dnd-quiet-hours.js /works/chat/dist/dnd-quiet-hours.js 200
 /works/chat/firebase-config.js /works/chat/dist/firebase-config.js 200
 /works/chat/monitoring.js /works/chat/dist/monitoring.js 200
@@ -29,6 +29,3 @@
 /works/chat/app-icon-512.png /works/chat/dist/app-icon-512.png 200
 /works/chat/app-icon.svg /works/chat/dist/app-icon.svg 200
 /works/chat/my-team-chat.apk /works/chat/dist/my-team-chat.apk 200
-
-# Catch-all fallback for anything else under /works/chat/
-/works/chat/* /works/chat/dist/:splat 200
