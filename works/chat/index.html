@@ -104,10 +104,6 @@
     .material-symbols-outlined, .material-symbols-rounded { font-display: swap; }
   </style>
 
-  <!-- CSS is imported via app-index.js and processed by Vite -->
-
-  <!-- notification-sounds, twemoji, emoji-renderer, tailwind-config loaded via app-index.js -->
-
   <script type="module" src="./app-index.js"></script>
 </head>
 <body class="w-full h-full flex overflow-hidden antialiased bg-surface-container-low transition-colors duration-300">
@@ -1415,16 +1411,16 @@
   <input type="file" id="file-input-avatar" class="hidden-input" accept="image/*">
 
   <!-- Firebase SDKs -->
-  <script src="https://www.gstatic.com/firebasejs/12.16.0/firebase-app-compat.js" crossorigin="anonymous" defer></script>
-  <script src="https://www.gstatic.com/firebasejs/12.16.0/firebase-auth-compat.js" crossorigin="anonymous" defer></script>
-  <script src="https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore-compat.js" crossorigin="anonymous" defer></script>
-  <script src="https://www.gstatic.com/firebasejs/12.16.0/firebase-storage-compat.js" crossorigin="anonymous" defer></script>
-  <script src="https://www.gstatic.com/firebasejs/12.16.0/firebase-messaging-compat.js" crossorigin="anonymous" defer></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js" integrity="sha384-+mbV2IY1Zk/X1p/nWllGySJSUN8uMs+gUAN10Or95UBH0fpj6GfKgPmgC5EXieXG" crossorigin="anonymous" defer></script>
+  <script src="https://www.gstatic.com/firebasejs/12.16.0/firebase-app-compat.js" crossorigin="anonymous"></script>
+  <script src="https://www.gstatic.com/firebasejs/12.16.0/firebase-auth-compat.js" crossorigin="anonymous"></script>
+  <script src="https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore-compat.js" crossorigin="anonymous"></script>
+  <script src="https://www.gstatic.com/firebasejs/12.16.0/firebase-storage-compat.js" crossorigin="anonymous"></script>
+  <script src="https://www.gstatic.com/firebasejs/12.16.0/firebase-messaging-compat.js" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js" integrity="sha384-+mbV2IY1Zk/X1p/nWllGySJSUN8uMs+gUAN10Or95UBH0fpj6GfKgPmgC5EXieXG" crossorigin="anonymous"></script>
   <!-- Monitoring (Sentry + Crashlytics bridge) -->
-  <script src="monitoring.js" defer></script>
+  <script src="/works/chat/dist/monitoring.js"></script>
   <!-- DND / Quiet Hours -->
-  <script src="dnd-quiet-hours.js" defer></script>
+  <script src="/works/chat/dist/dnd-quiet-hours.js"></script>
   <!-- Pre-Permission Explanation Dialog -->
   <div id="prePermissionModal" class="overlay fixed inset-0 z-[110] bg-black/60 backdrop-blur-sm flex items-center justify-center hidden" role="dialog" aria-modal="true" aria-labelledby="prePermissionTitle">
     <div class="bg-surface-container border border-outline-variant/30 rounded-2xl w-full max-w-sm shadow-2xl p-6 m-4 text-center">

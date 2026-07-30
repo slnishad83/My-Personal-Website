@@ -36,7 +36,7 @@ function copyStaticAssets() {
       });
 
       // Copy non-module JS files referenced by HTML pages
-      const staticJsFiles = ['firebase-config.js', 'dnd-quiet-hours.js', 'redesign-base.js'];
+      const staticJsFiles = ['firebase-config.js', 'dnd-quiet-hours.js', 'redesign-base.js', 'monitoring.js'];
       staticJsFiles.forEach(file => {
         const src = resolve('.', file);
         if (existsSync(src)) {

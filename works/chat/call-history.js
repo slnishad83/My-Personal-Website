@@ -1,10 +1,11 @@
-﻿'use strict';
+'use strict';
 (function () {
   var _loadToken = 0;
   var _allCalls = [];
   var _filteredCalls = [];
   var _searchQuery = '';
   var _activeFilter = 'all';
+  var callHistoryFilter = 'all';
   var _selectionMode = false;
   var _selectedIds = new Set();
   var _longPressTimer = null;
