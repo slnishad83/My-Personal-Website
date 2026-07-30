@@ -22,18 +22,10 @@ jobs:
           cache: npm
           cache-dependency-path: functions/package-lock.json
 
-      - name: Install Functions dependencies
-        working-directory: functions
-        run: npm ci
-
-      - name: Validate functions/index.js
-        working-directory: functions
-        run: node --check index.js
-
       - name: Install Firebase CLI
         run: npm install -g firebase-tools
 
-      # Step 1: Deploy Hosting (always reliable)
+      # Step 1: Deploy Hosting (always reliable — independent of Functions)
       - name: Deploy Firebase Hosting
         env:
           FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
@@ -44,10 +36,22 @@ jobs:
             --token "$FIREBASE_TOKEN" \
             --non-interactive
 
-      # Step 2: Deploy Functions (best-effort — pre-existing busyAutoReply
+      # Step 2: Functions dependencies (best-effort — hosting already deployed)
+      - name: Install Functions dependencies
+        continue-on-error: true
+        working-directory: functions
+        run: npm ci
+
+      - name: Validate functions/index.js
+        if: success()
+        working-directory: functions
+        run: node --check index.js
+
+      # Step 3: Deploy Functions (best-effort — pre-existing busyAutoReply
       # trigger-type conflict must be resolved in Firebase Console first.
       # This step will not block Hosting deployment.)
       - name: Deploy Firebase Functions (best-effort)
+        if: success()
         env:
           FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
         continue-on-error: true
