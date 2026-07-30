@@ -143,7 +143,7 @@
         if (ls) {
           ls.style.opacity = '0';
           ls.style.pointerEvents = 'none';
-          setTimeout(function() { if (ls && ls.parentNode) ls.parentNode.remove(); }, 300);
+          setTimeout(function() { if (ls && ls.parentNode) ls.remove(); }, 300);
         }
       }
       window.hideLoadingScreen = revealApp;
@@ -691,7 +691,7 @@
       <div class="modal-body overflow-y-auto p-6 space-y-6 custom-scrollbar">
         <div class="flex flex-col items-center text-center">
           <div class="relative mb-3">
-            <div class="w-24 h-24 rounded-full flex items-center justify-center font-bold text-3xl bg-surface-container-highest text-on-surface-variant cursor-pointer hover:brightness-110 animate-pulse" id="profile-avatar" data-action="changeAvatar">U</div>
+            <div class="w-24 h-24 rounded-full flex items-center justify-center font-bold text-3xl bg-surface-container-highest text-on-surface-variant cursor-pointer hover:brightness-110" id="profile-avatar" data-action="changeAvatar">U</div>
             <button class="absolute bottom-0 right-0 bg-primary text-on-primary min-w-[44px] min-h-[44px] rounded-full flex items-center justify-center shadow border-2 border-surface-container" data-action="changeAvatar" aria-label="Change profile photo">
               <span class="material-symbols-outlined text-[16px]">photo_camera</span>
             </button>
@@ -748,7 +748,7 @@
                   <span class="material-symbols-outlined text-primary" id="theme-icon">light_mode</span>
                   <div>
                     <p class="text-sm font-bold">App Theme</p>
-                    <p class="text-xs text-on-surface-variant" id="theme-label">Light</p>
+                    <p class="text-xs text-on-surface-variant" id="theme-label">System</p>
                   </div>
                 </div>
                 <span class="material-symbols-outlined text-on-surface-variant" aria-hidden="true">chevron_right</span>
@@ -995,8 +995,8 @@
     <!-- Local video PiP (bottom-right corner) -->
     <div class="absolute bottom-28 right-4 w-32 h-44 rounded-xl overflow-hidden border-2 border-white/30 shadow-xl z-20 hidden" id="local-video-container">
       <video id="local-video" autoplay playsinline muted class="w-full h-full object-cover"></video>
-      <button class="absolute top-1 right-1 w-5 h-5 min-w-[44px] min-h-[44px] flex items-center justify-center bg-black/50 rounded-full text-white" data-action="switchCamera" title="Switch camera" aria-label="Switch camera">
-        <span class="material-symbols-outlined text-xs">flip_camera_ios</span>
+      <button class="absolute top-1 right-1 w-7 h-7 flex items-center justify-center bg-black/50 rounded-full text-white hover:bg-black/70 transition-colors" data-action="switchCamera" title="Switch camera" aria-label="Switch camera">
+        <span class="material-symbols-outlined text-sm">flip_camera_ios</span>
       </button>
     </div>
     <div class="flex-1 flex flex-col justify-between p-8 relative z-10 text-white">

@@ -1,4 +1,4 @@
-﻿// ========================================
+// ========================================
 // APPLICATION INITIALIZATION
 // ========================================
 
@@ -85,3 +85,86 @@ function handleDeepLink() {
     }
   }
 }
+
+// ========================================
+// PROFILE OVERLAY — THEME LABEL & STATUS BADGE SYNC
+// ========================================
+(function() {
+  function _getThemeLabel() {
+    var mode = (typeof window.getThemeMode === 'function' ? window.getThemeMode() : null)
+      || localStorage.getItem('themeMode') || 'system';
+    var map = { dark: 'Dark', light: 'Light', system: 'System' };
+    return map[mode] || 'System';
+  }
+
+  function _getThemeIcon() {
+    var mode = (typeof window.getThemeMode === 'function' ? window.getThemeMode() : null)
+      || localStorage.getItem('themeMode') || 'system';
+    var map = { dark: 'dark_mode', light: 'light_mode', system: 'brightness_auto' };
+    return map[mode] || 'brightness_auto';
+  }
+
+  function syncThemeLabel() {
+    var label = document.getElementById('theme-label');
+    var icon  = document.getElementById('theme-icon');
+    if (label) label.textContent = _getThemeLabel();
+    if (icon)  icon.textContent  = _getThemeIcon();
+  }
+
+  function syncProfileStatusBadge() {
+    var badge = document.getElementById('profile-status-badge');
+    if (!badge) return;
+    var status = (window.currentUser && window.currentUser.status)
+      || (window.currentUserProfile && window.currentUserProfile.status)
+      || localStorage.getItem('nsl_user_status')
+      || 'Available';
+    badge.textContent = status;
+  }
+
+  function syncProfileAvatar() {
+    var avatar = document.getElementById('profile-avatar');
+    if (!avatar) return;
+    avatar.classList.remove('animate-pulse');
+    var u = window.currentUser;
+    if (!u) return;
+    if (u.photoURL) {
+      avatar.style.backgroundImage = 'url(' + u.photoURL + ')';
+      avatar.style.backgroundSize = 'cover';
+      avatar.style.backgroundPosition = 'center';
+      avatar.textContent = '';
+    } else if (u.displayName) {
+      avatar.textContent = (u.displayName || 'U').charAt(0).toUpperCase();
+    } else if (u.email) {
+      avatar.textContent = u.email.charAt(0).toUpperCase();
+    }
+  }
+
+  window.addEventListener('themechange', syncThemeLabel);
+
+  var profileOverlay = document.getElementById('profile-overlay');
+  if (profileOverlay) {
+    new MutationObserver(function(mutations) {
+      mutations.forEach(function(m) {
+        if (m.type === 'attributes' && m.attributeName === 'class') {
+          if (!profileOverlay.classList.contains('hidden')) {
+            syncThemeLabel();
+            syncProfileStatusBadge();
+            syncProfileAvatar();
+          }
+        }
+      });
+    }).observe(profileOverlay, { attributes: true, attributeFilter: ['class'] });
+  }
+
+  document.addEventListener('nsl:auth-ready', function() {
+    syncProfileAvatar();
+    syncProfileStatusBadge();
+    syncThemeLabel();
+  });
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', syncThemeLabel);
+  } else {
+    syncThemeLabel();
+  }
+})();
