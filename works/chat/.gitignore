@@ -6,9 +6,7 @@ electron/build-resources/*.ico
 electron/build-resources/*.icns
 electron/build-resources/icons/
 www/
-*.apk
-firebase-env.json
-google-services.json
+*.apkgoogle-services.json
 GoogleService-Info.plist
 *.jks
 *.keystore
