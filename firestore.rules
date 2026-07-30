@@ -113,30 +113,42 @@ service cloud.firestore {
     }
 
     function validMessageUpdate() {
-      let diff = request.resource.data.diff(resource.data);
-      let affected = diff.affectedKeys();
-      let isParticipant = (resource.data.directId is string && isExistingDirectParticipant(resource.data.directId))
-        || (resource.data.groupId is string && isGroupMember(resource.data.groupId))
-        || (resource.data.participants is list && request.auth.uid in resource.data.participants)
-        || (resource.data.participantEmails is list && request.auth.token.email in resource.data.participantEmails);
-      let isSender = resource.data.senderId == request.auth.uid;
-      // Sender can edit text
-      if (isSender && affected.hasOnly(['text', 'edited'])) return true;
-      // Sender can delete for everyone
-      if (isSender && affected.hasOnly(['deletedForEveryone', 'deletedForEveryoneBy'])
-        && request.resource.data.deletedForEveryone == true) return true;
-      // Participant can mark as deleted for themselves
-      if (isParticipant && affected.hasOnly(['deletedFor'])) return true;
-      // Participant can add read receipts
-      if (isParticipant && affected.hasOnly(['readBy'])) return true;
-      // Participant can add delivery receipts  
-      if (isParticipant && affected.hasOnly(['deliveredTo'])) return true;
-      // Participant can add reactions
-      if (isParticipant && affected.hasOnly(['reactions'])) return true;
-      // Any user can update their own delivery/read status
-      if (affected.hasOnly(['deliveredTo']) && request.resource.data.deliveredTo[request.auth.uid] != null) return true;
-      if (affected.hasOnly(['readBy']) && request.resource.data.readBy[request.auth.uid] != null) return true;
-      return false;
+      return (
+        // Sender can edit text
+        (resource.data.senderId == request.auth.uid && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['text', 'edited']))
+        ||
+        // Sender can delete for everyone
+        (resource.data.senderId == request.auth.uid && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['deletedForEveryone', 'deletedForEveryoneBy']) && request.resource.data.deletedForEveryone == true)
+        ||
+        // Participant check
+        (
+          (
+            (resource.data.directId is string && isExistingDirectParticipant(resource.data.directId))
+            || (resource.data.groupId is string && isGroupMember(resource.data.groupId))
+            || (resource.data.participants is list && request.auth.uid in resource.data.participants)
+            || (resource.data.participantEmails is list && request.auth.token.email in resource.data.participantEmails)
+          )
+          &&
+          (
+            request.resource.data.diff(resource.data).affectedKeys().hasOnly(['deletedFor'])
+            || request.resource.data.diff(resource.data).affectedKeys().hasOnly(['readBy'])
+            || request.resource.data.diff(resource.data).affectedKeys().hasOnly(['deliveredTo'])
+            || request.resource.data.diff(resource.data).affectedKeys().hasOnly(['reactions'])
+          )
+        )
+        ||
+        // Any user can update their own delivery status
+        (
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['deliveredTo'])
+          && request.auth.uid in request.resource.data.deliveredTo
+        )
+        ||
+        // Any user can update their own read status
+        (
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['readBy'])
+          && request.auth.uid in request.resource.data.readBy
+        )
+      );
     }
 
     match /users/{userId} {
