@@ -1,0 +1,31 @@
+# Main SPA entry points
+/works/chat /works/chat/dist/index 200
+/works/chat/ /works/chat/dist/index 200
+
+# Hashed assets (referenced as /works/chat/assets/xxx in built HTML)
+/works/chat/assets/* /works/chat/dist/assets/:splat 200
+
+# Sounds directory
+/works/chat/sounds/* /works/chat/dist/sounds/:splat 200
+
+# Direct /works/chat/dist/ references from built HTML
+/works/chat/dist/monitoring.js /works/chat/dist/monitoring.js 200
+/works/chat/dist/dnd-quiet-hours.js /works/chat/dist/dnd-quiet-hours.js 200
+
+# Root-level files needed by the app
+/works/chat/dnd-quiet-hours.js /works/chat/dist/dnd-quiet-hours.js 200
+/works/chat/firebase-config.js /works/chat/dist/firebase-config.js 200
+/works/chat/monitoring.js /works/chat/dist/monitoring.js 200
+/works/chat/redesign-base.js /works/chat/dist/redesign-base.js 200
+/works/chat/sw.js /works/chat/dist/sw.js 200
+/works/chat/manifest.json /works/chat/dist/manifest.json 200
+/works/chat/version.json /works/chat/dist/version.json 200
+/works/chat/nsl-logo.png /works/chat/dist/nsl-logo.png 200
+/works/chat/app-icon-192.png /works/chat/dist/app-icon-192.png 200
+/works/chat/app-icon-512.png /works/chat/dist/app-icon-512.png 200
+/works/chat/app-icon.svg /works/chat/dist/app-icon.svg 200
+/works/chat/my-team-chat.apk /works/chat/dist/my-team-chat.apk 200
+
+# SPA fallback — serve main app for any unmatched path under /works/chat/
+# This lets the app's client-side router handle login, register, etc.
+/works/chat/* /works/chat/dist/index 200
