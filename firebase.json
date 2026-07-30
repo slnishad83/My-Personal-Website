@@ -28,48 +28,48 @@
         "destination": "/works/chat/dist/index.html"
       },
       {
-        "source": "/works/chat/index.html",
-        "destination": "/works/chat/dist/index.html"
-      },
-      {
-        "source": "/works/chat/login.html",
-        "destination": "/works/chat/dist/login.html"
-      },
-      {
-        "source": "/works/chat/reset.html",
-        "destination": "/works/chat/dist/reset.html"
-      },
-      {
-        "source": "/works/chat/verify.html",
-        "destination": "/works/chat/dist/verify.html"
-      },
-      {
-        "source": "/works/chat/turn.html",
-        "destination": "/works/chat/dist/turn.html"
-      },
-      {
-        "source": "/works/chat/album.html",
-        "destination": "/works/chat/dist/album.html"
-      },
-      {
-        "source": "/works/chat/calendar.html",
-        "destination": "/works/chat/dist/calendar.html"
-      },
-      {
-        "source": "/works/chat/expenses.html",
-        "destination": "/works/chat/dist/expenses.html"
-      },
-      {
-        "source": "/works/chat/insights.html",
-        "destination": "/works/chat/dist/insights.html"
-      },
-      {
         "source": "**/reset",
         "destination": "/reset.html"
       },
       {
-        "source": "/works/chat/:path+",
-        "destination": "/works/chat/dist/:path+"
+        "source": "/works/chat/assets/**",
+        "destination": "/works/chat/dist/assets/**"
+      },
+      {
+        "source": "/works/chat/sounds/**",
+        "destination": "/works/chat/dist/sounds/**"
+      },
+      {
+        "source": "/works/chat/dist/**",
+        "destination": "/works/chat/dist/**"
+      },
+      {
+        "source": "/works/chat/*.js",
+        "destination": "/works/chat/dist/*.js"
+      },
+      {
+        "source": "/works/chat/*.json",
+        "destination": "/works/chat/dist/*.json"
+      },
+      {
+        "source": "/works/chat/*.css",
+        "destination": "/works/chat/dist/*.css"
+      },
+      {
+        "source": "/works/chat/*.png",
+        "destination": "/works/chat/dist/*.png"
+      },
+      {
+        "source": "/works/chat/*.svg",
+        "destination": "/works/chat/dist/*.svg"
+      },
+      {
+        "source": "/works/chat/*.apk",
+        "destination": "/works/chat/dist/*.apk"
+      },
+      {
+        "source": "/works/chat/**",
+        "destination": "/works/chat/dist/index.html"
       }
     ],
     "headers": [
