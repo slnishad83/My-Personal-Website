@@ -5,7 +5,7 @@
   "main": "electron/main.js",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "node sync-www.js",
     "preview": "vite preview",
     "test": "node tests/run-all.js",
     "lint": "eslint . --ignore-pattern 'node_modules' --ignore-pattern 'dist' --ignore-pattern 'www' --ignore-pattern 'functions' --ignore-pattern 'tests' --ignore-pattern 'scripts' --ignore-pattern 'android' --ignore-pattern 'ios' --ignore-pattern 'electron' --ignore-pattern '*.min.js' --ignore-pattern 'twemoji'",
@@ -21,10 +21,10 @@
     "electron:build:linux": "electron-builder --config electron-builder.yml --linux",
     "ios:setup": "bash scripts/setup-ios.sh",
     "ios:build": "cap sync ios && cd ios/App && xcodebuild -workspace App.xcworkspace -scheme App -configuration Release -archivePath build/App.xcarchive archive",
-    "deploy": "vite build && firebase deploy --only hosting",
+    "deploy": "npm run build && firebase deploy --only hosting",
     "deploy:functions": "firebase deploy --only functions",
     "deploy:rules": "firebase deploy --only firestore:rules,storage",
-    "deploy:all": "vite build && firebase deploy",
+    "deploy:all": "npm run build && firebase deploy",
     "prepare": "husky",
     "lint-staged": "eslint --fix"
   },
