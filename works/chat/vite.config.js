@@ -44,17 +44,18 @@ function copyStaticAssets() {
         }
       });
 
+      // Copy CSS files for login.html (not processed by Vite bundler)
+      const staticCssFiles = ['auth-theme.css', 'login-styles.css'];
+      staticCssFiles.forEach(file => {
+        const src = resolve('.', file);
+        if (existsSync(src)) {
+          copyFileSync(src, resolve(distDir, file));
+        }
+      });
+
       // Copy manifest.json
       if (existsSync('manifest.json')) {
         copyFileSync('manifest.json', resolve(distDir, 'manifest.json'));
-      }
-
-      // Remove login.html — it uses CSS variables without fallbacks
-      // (unlike other standalone pages). SPA fallback handles login route.
-      const loginHtml = resolve(distDir, 'login.html');
-      if (existsSync(loginHtml)) {
-        unlinkSync(loginHtml);
-        console.log('[build] Removed login.html (SPA fallback serves login route)');
       }
 
       console.log('[build] Static assets copied to dist/');
