@@ -1,22 +1,18 @@
-# Page rewrites (extensionless → dist/ without .html — Cloudflare clean URLs resolves .html internally)
+# Main SPA entry points
 /works/chat /works/chat/dist/index 200
 /works/chat/ /works/chat/dist/index 200
-/works/chat/album /works/chat/dist/album 200
-/works/chat/calendar /works/chat/dist/calendar 200
-/works/chat/expenses /works/chat/dist/expenses 200
-/works/chat/index /works/chat/dist/index 200
-/works/chat/insights /works/chat/dist/insights 200
-/works/chat/login /works/chat/dist/login 200
-/works/chat/offline /works/chat/dist/offline 200
-/works/chat/register /works/chat/dist/register 200
-/works/chat/reset /works/chat/dist/reset 200
-/works/chat/turn /works/chat/dist/turn 200
-/works/chat/verify /works/chat/dist/verify 200
 
 # Hashed assets (referenced as /works/chat/assets/xxx in built HTML)
 /works/chat/assets/* /works/chat/dist/assets/:splat 200
 
-# Root-level files (service worker, config, icons)
+# Sounds directory
+/works/chat/sounds/* /works/chat/dist/sounds/:splat 200
+
+# Direct /works/chat/dist/ references from built HTML
+/works/chat/dist/monitoring.js /works/chat/dist/monitoring.js 200
+/works/chat/dist/dnd-quiet-hours.js /works/chat/dist/dnd-quiet-hours.js 200
+
+# Root-level files needed by the app
 /works/chat/dnd-quiet-hours.js /works/chat/dist/dnd-quiet-hours.js 200
 /works/chat/firebase-config.js /works/chat/dist/firebase-config.js 200
 /works/chat/monitoring.js /works/chat/dist/monitoring.js 200
@@ -29,3 +25,7 @@
 /works/chat/app-icon-512.png /works/chat/dist/app-icon-512.png 200
 /works/chat/app-icon.svg /works/chat/dist/app-icon.svg 200
 /works/chat/my-team-chat.apk /works/chat/dist/my-team-chat.apk 200
+
+# SPA fallback — serve main app for any unmatched path under /works/chat/
+# This lets the app's client-side router handle login, register, etc.
+/works/chat/* /works/chat/dist/index 200
