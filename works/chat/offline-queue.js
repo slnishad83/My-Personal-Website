@@ -13,6 +13,9 @@ const OfflineQueue = {
   _maxRetries: 5,
   _retryDelay: 2000,
   _processing: false,
+  _pendingProcess: false,
+  _processTimeout: null,
+  _lockTimeout: 30000,
 
   /** Initialize the IndexedDB-backed queue and begin processing on reconnect. */
   async init() {
@@ -99,8 +102,21 @@ const OfflineQueue = {
 
   /** Retry all pending messages that are within the retry limit. */
   async processQueue() {
-    if (this._processing || !this._db || !navigator.onLine) return;
+    if (this._processing) {
+      this._pendingProcess = true;
+      return;
+    }
+    if (!this._db || !navigator.onLine) return;
     this._processing = true;
+    this._pendingProcess = false;
+    clearTimeout(this._processTimeout);
+    this._processTimeout = setTimeout(() => {
+      if (this._processing) {
+        if (window.__DEBUG__) console.warn('[OfflineQueue] Lock timeout - force releasing');
+        this._processing = false;
+        if (this._pendingProcess) this.processQueue();
+      }
+    }, this._lockTimeout);
     try {
       const pending = await this._getByStatus('pending');
       for (const msg of pending) {
@@ -130,8 +146,14 @@ const OfflineQueue = {
     } catch (e) {
       if (window.__DEBUG__) console.warn('[OfflineQueue] Process queue error:', e);
     } finally {
+      clearTimeout(this._processTimeout);
+      this._processTimeout = null;
       this._processing = false;
       this._emitStatus();
+      if (this._pendingProcess) {
+        this._pendingProcess = false;
+        setTimeout(() => this.processQueue(), 500);
+      }
     }
   },
 

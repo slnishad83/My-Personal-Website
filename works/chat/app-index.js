@@ -40,6 +40,8 @@ import './src/core/bindEvents.js';
 /* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
    BOOTSTRAP & LATE-BINDING
    â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+import './presence.js';
+import './multi-device.js';
 import './delegated-actions.js';
 import './app-bootstrap.js';
 import './app-init.js';
@@ -56,8 +58,6 @@ const _deferredModules = [
   () => import('./file-versioning.js'),
   () => import('./offline-queue.js'),
   () => import('./call-sync.js'),
-  () => import('./presence.js'),
-  () => import('./multi-device.js'),
   () => import('./security.js'),
   () => import('./keyboard-shortcuts.js'),
   () => import('./permissions-manager.js'),

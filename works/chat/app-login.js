@@ -165,20 +165,26 @@ auth.onAuthStateChanged(async (user) => {
     new Promise((resolve) => setTimeout(resolve, 2500)),
   ]).catch(() => {});
   if (user.emailVerified) {
-    await db.collection("users").doc(user.uid).set(
-      {
-        uid: user.uid,
-        email: user.email || "",
-        displayName: user.displayName || user.email || "User",
-        avatar: user.photoURL || "",
-        emailVerified: true,
-        pendingVerification: false,
-        isActive: true,
-        onlineStatus: "online",
-        lastSeen: new Date(),
-      },
-      { merge: true },
-    );
+    await db.collection("users").doc(user.uid).update({
+      emailVerified: true,
+      pendingVerification: false,
+      onlineStatus: "online",
+      lastSeen: new Date(),
+    }).catch(async (err) => {
+      if (err.code === 'not-found') {
+        await db.collection("users").doc(user.uid).set({
+          uid: user.uid,
+          email: user.email || "",
+          displayName: user.displayName || user.email || "User",
+          avatar: user.photoURL || "",
+          emailVerified: true,
+          pendingVerification: false,
+          isActive: true,
+          onlineStatus: "online",
+          lastSeen: new Date(),
+        });
+      }
+    });
     try { sessionStorage.setItem('nslLoginTransition', '1'); } catch (_) {}
     await prepareFreshAppLaunch();
     const nextUrl = new URL("index.html", window.location.href);
@@ -457,15 +463,25 @@ document.getElementById("loginForm").addEventListener("submit", async (e) => {
       if (userDoc.exists && userDoc.data().isActive === false) {
         await userRef.update({ isActive: true, deactivatedAt: null });
       }
-      await userRef.set(
-        {
-          onlineStatus: "online",
-          lastSeen: new Date(),
-          emailVerified: true,
-          pendingVerification: false,
-        },
-        { merge: true },
-      );
+      await userRef.update({
+        onlineStatus: "online",
+        lastSeen: new Date(),
+        emailVerified: true,
+        pendingVerification: false,
+      }).catch(async (updateErr) => {
+        if (updateErr.code === 'not-found') {
+          await userRef.set({
+            uid: userCred.user.uid,
+            email: email,
+            displayName: userCred.user.displayName || email || "User",
+            onlineStatus: "online",
+            lastSeen: new Date(),
+            emailVerified: true,
+            pendingVerification: false,
+            isActive: true,
+          });
+        }
+      });
     } catch (firestoreError) {
       if (window.__DEBUG__) console.warn("Profile update skipped:", firestoreError);
     }

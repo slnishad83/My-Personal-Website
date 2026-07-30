@@ -139,10 +139,12 @@
     return attempt(0);
   };
 
+  var _safeSnapCounter = 0;
   window.App.safeOnSnapshot = function (ref, onNext, onError, context) {
     var _retryTimers = {};
     var _maxRetries = 5;
     var _baseDelay = 2000;
+    var _id = _safeSnapCounter++;
 
     function subscribe(attempt) {
       var unsub = ref.onSnapshot(
@@ -162,7 +164,8 @@
           if (typeof onError === 'function') onError(err);
           if (attempt < _maxRetries) {
             var delay = _baseDelay * Math.pow(2, attempt);
-            _retryTimers[context || 'default'] = setTimeout(function () {
+            var timerKey = (context || 'default') + '_' + _id;
+            _retryTimers[timerKey] = setTimeout(function () {
               subscribe(attempt + 1);
             }, delay);
           } else {

@@ -114,10 +114,8 @@
     for (var i = 0; i < keys.length; i++) {
       if (keys[i].indexOf("critical:") !== 0) {
         if (!_paused[keys[i]]) {
-          try { _listeners[keys[i]].unsub(); } catch (e) { /* ignore */ }
           _paused[keys[i]] = _listeners[keys[i]];
-          delete _listeners[keys[i]];
-          _log("Paused: " + keys[i]);
+          _log("Paused (callback): " + keys[i]);
         }
       }
     }
@@ -126,10 +124,9 @@
   function _resumePaused() {
     var keys = Object.keys(_paused);
     for (var i = 0; i < keys.length; i++) {
-      if (_listeners[keys[i]]) {
-        try { _paused[keys[i]].unsub(); } catch (e) { /* ignore */ }
+      if (!_listeners[keys[i]]) {
+        _listeners[keys[i]] = _paused[keys[i]];
       }
-      _listeners[keys[i]] = _paused[keys[i]];
       delete _paused[keys[i]];
       _log("Resumed: " + keys[i]);
     }

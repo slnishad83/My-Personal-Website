@@ -22,7 +22,21 @@
         ghostContacts: state.specificContacts || [],
         ghostUpdatedAt: firebase.firestore.FieldValue.serverTimestamp(),
       });
-    } catch(_) {}
+    } catch(err) {
+      if (err.code === 'not-found') {
+        try {
+          await App.db.collection('users').doc(App.auth.currentUser.uid).set({
+            uid: App.auth.currentUser.uid,
+            email: App.auth.currentUser.email || '',
+            ghostMode: state.enabled || false,
+            ghostContacts: state.specificContacts || [],
+            ghostUpdatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+          });
+        } catch(_) {}
+      } else if (window.__DEBUG__) {
+        console.warn('[GhostMode] Firestore sync error:', err.message);
+      }
+    }
   }
 
   function _getGhostContacts() {
@@ -76,14 +90,24 @@
 
   function _freezePresence() {
     if (!App.db || !App.auth?.currentUser) return;
-    try {
-      const frozenTime = _getGhostState().lastFrozenAt || Date.now();
-      App.db.collection('users').doc(App.auth.currentUser.uid).update({
-        onlineStatus: 'offline',
-        lastSeen: frozenTime,
-        lastHeartbeat: frozenTime,
-      }).catch(() => {});
-    } catch(_) {}
+    const frozenTime = _getGhostState().lastFrozenAt || Date.now();
+    App.db.collection('users').doc(App.auth.currentUser.uid).update({
+      onlineStatus: 'offline',
+      lastSeen: frozenTime,
+      lastHeartbeat: frozenTime,
+    }).catch((err) => {
+      if (err.code === 'not-found') {
+        App.db.collection('users').doc(App.auth.currentUser.uid).set({
+          uid: App.auth.currentUser.uid,
+          email: App.auth.currentUser.email || '',
+          onlineStatus: 'offline',
+          lastSeen: frozenTime,
+          lastHeartbeat: frozenTime,
+        }).catch(() => {});
+      } else if (window.__DEBUG__) {
+        console.warn('[GhostMode] Freeze presence error:', err.message);
+      }
+    });
   }
 
   function _restorePresence() {

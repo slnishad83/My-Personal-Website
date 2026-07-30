@@ -58,15 +58,18 @@ const Presence = {
     if (!window.db || !window.currentUser) return;
     this._onlineStatus = 'online';
     try {
-      await window.db.collection('users').doc(window.currentUser.uid).set({
+      await window.db.collection('users').doc(window.currentUser.uid).update({
         onlineStatus: 'online',
         lastSeen: Date.now(),
         lastHeartbeat: Date.now(),
         sessionId: this._getSessionId(),
-        userAgent: navigator.userAgent.slice(0, 100),
         platform: window.Platform?.os || 'unknown'
-      }, { merge: true });
-    } catch (err) { if (window.__DEBUG__) console.warn('[Presence] Failed to set online status:', err.message); }
+      });
+    } catch (err) {
+      if (err.code === 'not-found') {
+        try { await window.db.collection('users').doc(window.currentUser.uid).set({ uid: window.currentUser.uid, email: window.currentUser.email || '', onlineStatus: 'online', lastSeen: Date.now(), lastHeartbeat: Date.now(), sessionId: this._getSessionId(), platform: window.Platform?.os || 'unknown' }); } catch (_) {}
+      } else if (window.__DEBUG__) console.warn('[Presence] Failed to set online status:', err.message);
+    }
     this._emit('status', { status: 'online' });
   },
 
@@ -76,32 +79,34 @@ const Presence = {
     this._lastSeen = Date.now();
     this._stopHeartbeat();
     try {
-      await window.db.collection('users').doc(window.currentUser.uid).set({
+      await window.db.collection('users').doc(window.currentUser.uid).update({
         onlineStatus: 'offline',
         lastSeen: Date.now()
-      }, { merge: true });
-    } catch (err) { if (window.__DEBUG__) console.warn('[Presence] Failed to set offline status:', err.message); }
+      });
+    } catch (err) {
+      if (window.__DEBUG__) console.warn('[Presence] Failed to set offline status:', err.message);
+    }
     this._emit('status', { status: 'offline' });
   },
 
   async setCustomStatus(status) {
     if (!window.db || !window.currentUser) return;
     try {
-      await window.db.collection('users').doc(window.currentUser.uid).set({
+      await window.db.collection('users').doc(window.currentUser.uid).update({
         customStatus: status,
         lastSeen: Date.now()
-      }, { merge: true });
+      });
     } catch (err) { if (window.__DEBUG__) console.warn('[Presence] Failed to set custom status:', err.message); }
   },
 
   async setInCall(inCall) {
     if (!window.db || !window.currentUser) return;
     try {
-      await window.db.collection('users').doc(window.currentUser.uid).set({
+      await window.db.collection('users').doc(window.currentUser.uid).update({
         inCall: !!inCall,
         onlineStatus: inCall ? 'in-call' : this._onlineStatus,
         lastSeen: Date.now()
-      }, { merge: true });
+      });
     } catch (err) { if (window.__DEBUG__) console.warn('[Presence] Failed to set in-call status:', err.message); }
   },
 

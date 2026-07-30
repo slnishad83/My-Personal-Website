@@ -3,8 +3,18 @@
   if (!('BroadcastChannel' in window)) return;
   var channel = new BroadcastChannel('nsl-chat-sync');
   var _lastResync = 0;
+  function _validOrigin() {
+    try {
+      return window.location.origin === 'https://nishadsl.com' ||
+             window.location.origin === 'https://web.nishadsl.com' ||
+             window.location.origin === 'http://localhost:5173' ||
+             window.location.origin === 'http://localhost:3000';
+    } catch(_) { return true; }
+  }
+
   channel.onmessage = function(e) {
     if (!e.data || !e.data.type) return;
+    if (!_validOrigin()) return;
     switch (e.data.type) {
       case 'new-message':
       case 'chat-update':
@@ -27,13 +37,15 @@
         }
         break;
       case 'typing':
-        if (e.data.chatId && e.data.userId !== (App && App.currentUser && App.currentUser.uid)) {
+        if (e.data.chatId && e.data.userId && e.data.userId !== (App && App.currentUser && App.currentUser.uid)) {
           if (typeof showTypingIndicator === 'function') showTypingIndicator(e.data.userId, e.data.chatId);
         }
         break;
       case 'theme-change':
-        document.documentElement.classList.toggle('dark', e.data.dark);
-        localStorage.setItem('themeMode', e.data.dark ? 'dark' : 'light');
+        if (typeof e.data.dark === 'boolean') {
+          document.documentElement.classList.toggle('dark', e.data.dark);
+          localStorage.setItem('themeMode', e.data.dark ? 'dark' : 'light');
+        }
         break;
       case 'logout':
         window.location.reload();

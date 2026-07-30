@@ -71,83 +71,63 @@
     _deliveryRanOnce = true;
     _lastDeliveryTime = Date.now();
 
+    const MAX_MSGS_PER_BATCH = 500;
+
+    async function _markDelivered(chatIds, idField, user) {
+      for (let i = 0; i < chatIds.length; i += 10) {
+        const batchIds = chatIds.slice(i, i + 10);
+        let lastDoc = null;
+        let hasMore = true;
+        while (hasMore) {
+          try {
+            let query = db.collection('messages')
+              .where(idField, 'in', batchIds)
+              .where('senderId', '!=', user.uid)
+              .orderBy('timestamp', 'desc')
+              .limit(MAX_MSGS_PER_BATCH);
+            if (lastDoc) query = query.startAfter(lastDoc);
+            const msgsSnap = await query.get();
+            hasMore = msgsSnap.docs.length >= MAX_MSGS_PER_BATCH;
+            if (msgsSnap.docs.length === 0) break;
+            lastDoc = msgsSnap.docs[msgsSnap.docs.length - 1];
+
+            const writeBatch = db.batch();
+            let count = 0;
+
+            msgsSnap.docs.forEach(doc => {
+              const data = doc.data() || {};
+              if (data.deliveredTo?.[user.uid]) return;
+              if (data.deletedForEveryone) return;
+              if (data.deletedFor?.[user.uid]) return;
+              writeBatch.update(doc.ref, {
+                [`deliveredTo.${user.uid}`]: firebase.firestore.FieldValue.serverTimestamp()
+              });
+              count++;
+            });
+
+            if (count > 0) await writeBatch.commit();
+          } catch (e) {
+            if (window.__DEBUG__) console.warn('[TC Sync] Batch delivery error:', e.message);
+            break;
+          }
+        }
+      }
+    }
+
     try {
-      // Get all direct chats this user is part of
       const chatsSnap = await db.collection('directChats')
-        .where('members', 'array-contains', user.uid)
-        .limit(50)
+        .where('participants', 'array-contains', user.uid)
+        .limit(200)
         .get();
 
       const chatIds = chatsSnap.docs.map(d => d.id);
-      if (!chatIds.length) return;
-
-      // Process chats in batches of 10 (Firestore 'in' limit)
-      for (let i = 0; i < chatIds.length; i += 10) {
-        const batchIds = chatIds.slice(i, i + 10);
-        try {
-          const msgsSnap = await db.collection('messages')
-            .where('directId', 'in', batchIds)
-            .where('senderId', '!=', user.uid)
-            .limit(300)
-            .get();
-
-          const writeBatch = db.batch();
-          let count = 0;
-
-          msgsSnap.docs.forEach(doc => {
-            const data = doc.data() || {};
-            if (data.deliveredTo?.[user.uid]) return;
-            if (data.deletedForEveryone) return;
-            if (data.deletedFor?.[user.uid]) return;
-
-            writeBatch.update(doc.ref, {
-              [`deliveredTo.${user.uid}`]: firebase.firestore.FieldValue.serverTimestamp()
-            });
-            count++;
-          });
-
-          if (count > 0) await writeBatch.commit();
-        } catch (e) {
-          // Non-critical â€” skip this batch
-        }
-      }
-
-      // Same for group chats
+      if (chatIds.length) { await _markDelivered(chatIds, 'directId', user); }
       const groupSnap = await db.collection('groupChats')
         .where('members', 'array-contains', user.uid)
-        .limit(30)
+        .limit(200)
         .get();
-
       const groupIds = groupSnap.docs.map(d => d.id);
-      for (let i = 0; i < groupIds.length; i += 10) {
-        const batchIds = groupIds.slice(i, i + 10);
-        try {
-          const msgsSnap = await db.collection('messages')
-            .where('groupId', 'in', batchIds)
-            .where('senderId', '!=', user.uid)
-            .limit(200)
-            .get();
-
-          const writeBatch = db.batch();
-          let count = 0;
-
-          msgsSnap.docs.forEach(doc => {
-            const data = doc.data() || {};
-            if (data.deliveredTo?.[user.uid]) return;
-            if (data.deletedForEveryone) return;
-            if (data.deletedFor?.[user.uid]) return;
-
-            writeBatch.update(doc.ref, {
-              [`deliveredTo.${user.uid}`]: firebase.firestore.FieldValue.serverTimestamp()
-            });
-            count++;
-          });
-
-          if (count > 0) await writeBatch.commit();
-        } catch (e) {
-          // Non-critical
-        }
-      }
+      if (groupIds.length) { await _markDelivered(groupIds, 'groupId', user); }
     } catch (e) {
       if (window.__DEBUG__) console.warn('[TC Sync] Startup delivery error:', e);
     }
