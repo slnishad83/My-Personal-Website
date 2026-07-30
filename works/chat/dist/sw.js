@@ -198,7 +198,7 @@ var SHELL_ASSETS = [
 function isViteHashedAsset(pathname) {
   // Matches /assets/*.js, /assets/*.css, /assets/*.png etc.
   // Vite pattern: name-HASH.ext (e.g., main-08Q2jOX6.js)
-  return /^\/assets\/[^\s]+-[a-zA-Z0-9_-]{8,}\.(js|css|png|jpg|jpeg|svg|webp|woff2?)$/i.test(pathname);
+  return /\/assets\/[^\s]+-[a-zA-Z0-9_-]{8,}\.(js|css|png|jpg|jpeg|svg|webp|woff2?)$/i.test(pathname);
 }
 
 function isFirebaseHost(hostname) {
