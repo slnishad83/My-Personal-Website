@@ -46,6 +46,7 @@ import './delegated-actions.js';
 import './app-bootstrap.js';
 import './app-init.js';
 import './chat-core.js';
+import './tab-engine.js';
 import './version.js';
 import './broadcast-sync.js';
 
