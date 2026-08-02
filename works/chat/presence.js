@@ -1,4 +1,4 @@
-﻿/* ============================================================
+/* ============================================================
    PRESENCE SYSTEM â€” Online status, heartbeat, lastSeen
    Detects zombie sessions, multi-device awareness
    ============================================================ */
@@ -73,16 +73,42 @@ const Presence = {
     this._emit('status', { status: 'online' });
   },
 
+  async _hasOtherActiveSessions() {
+    if (!window.db || !window.currentUser) return false;
+    try {
+      const mySid = this._getSessionId();
+      const snap = await window.db.collection('users').doc(window.currentUser.uid)
+        .collection('sessions').get();
+      const now = Date.now();
+      let otherActive = false;
+      snap.forEach(doc => {
+        const data = doc.data();
+        if (data.sessionId !== mySid) {
+          const lastActive = data.lastActive || 0;
+          if ((now - lastActive) < 120000) {
+            otherActive = true;
+          }
+        }
+      });
+      return otherActive;
+    } catch (_) {
+      return false;
+    }
+  },
+
   async setOffline() {
     if (!window.db || !window.currentUser) return;
     this._onlineStatus = 'offline';
     this._lastSeen = Date.now();
     this._stopHeartbeat();
     try {
-      await window.db.collection('users').doc(window.currentUser.uid).update({
-        onlineStatus: 'offline',
-        lastSeen: Date.now()
-      });
+      const otherActive = await this._hasOtherActiveSessions();
+      if (!otherActive) {
+        await window.db.collection('users').doc(window.currentUser.uid).update({
+          onlineStatus: 'offline',
+          lastSeen: Date.now()
+        });
+      }
     } catch (err) {
       if (window.__DEBUG__) console.warn('[Presence] Failed to set offline status:', err.message);
     }

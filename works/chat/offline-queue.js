@@ -1,4 +1,4 @@
-﻿/* ============================================================
+/* ============================================================
    OFFLINE QUEUE â€” IndexedDB-backed message retry queue
    Stores failed messages, retries on reconnect, shows status
    v1.1: Added attachment blob upload before retry, pending
@@ -200,6 +200,7 @@ const OfflineQueue = {
         senderId: user.uid,
         senderName: user.displayName || '',
         time: Date.now(),
+        timestamp: firebase.firestore.FieldValue.serverTimestamp(),
         replyTo: msg.replyTo,
         status: 'sent'
       });
