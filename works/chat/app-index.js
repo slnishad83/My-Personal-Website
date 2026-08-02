@@ -1,4 +1,4 @@
-﻿/**
+/**
  * NSL Chat â€” Vite Entry Point (index.html)
  *
  * CRITICAL PATH: Only essential foundation + bootstrap modules loaded synchronously.
@@ -45,6 +45,7 @@ import './multi-device.js';
 import './delegated-actions.js';
 import './app-bootstrap.js';
 import './app-init.js';
+import './chat-core.js';
 import './version.js';
 import './broadcast-sync.js';
 
