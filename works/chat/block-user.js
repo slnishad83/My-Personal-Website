@@ -1,7 +1,8 @@
-﻿(function() {
+(function() {
   'use strict';
 
   var _uid = function() { return App && App.uid ? App.uid() : (window.currentUser ? window.currentUser.uid : null); };
+  var _db = function() { return App && App.db ? App.db : (typeof firebase !== 'undefined' ? firebase.firestore() : null); };
 
   function _esc(str) {
     if (typeof window.escHtml === 'function') return window.escHtml(str);
@@ -13,7 +14,8 @@
   function _docRef() {
     var uid = _uid();
     if (!uid) return null;
-    return db.collection('users').doc(uid);
+    var firestore = _db();
+    return firestore ? firestore.collection('users').doc(uid) : null;
   }
 
   function _showToast(msg, type) { if (App && App.toast) App.toast(msg, type); else if (typeof showToast === 'function') showToast(msg, type); }

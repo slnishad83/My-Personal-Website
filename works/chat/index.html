@@ -37,6 +37,13 @@
           return;
         }
 
+        if (location.hostname !== 'localhost' && !location.hostname.includes('127.0.0.1')) {
+          if (!path.startsWith('/works/chat/dist')) {
+            location.replace('https://' + location.host + '/works/chat/dist/' + location.search + location.hash);
+            return;
+          }
+        }
+
         if (path.startsWith('/works/chat') && path !== '/works/chat/' && path !== '/works/chat') {
           var normalized = '/works/chat/' + (location.search || '') + (location.hash || '');
           if (location.pathname !== normalized) {
