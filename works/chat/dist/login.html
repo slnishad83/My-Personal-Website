@@ -1,6 +1,19 @@
 <!doctype html>
 <html class="" lang="en">
   <head>
+    <script>
+      (function() {
+        try {
+          var host = location.hostname.toLowerCase();
+          var path = location.pathname.toLowerCase();
+          if (host !== 'localhost' && !host.includes('127.0.0.1')) {
+            if (!path.startsWith('/works/chat/dist')) {
+              location.replace('https://' + location.host + '/works/chat/dist/login.html' + location.search + location.hash);
+            }
+          }
+        } catch (_) {}
+      })();
+    </script>
     <meta charset="UTF-8" />
     <meta
       name="viewport"
@@ -174,7 +187,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 .max-w-md { max-width: 28rem; } .max-w-sm { max-width: 24rem; }
 .p-1 { padding: 0.25rem; } .p-4 { padding: 1rem; } .p-xs { padding: 8px; } .p-sm { padding: 16px; } .p-md { padding: 24px; } .px-1 { padding-left: 0.25rem; padding-right: 0.25rem; } .px-md { padding-left: 24px; padding-right: 24px; } .px-margin-mobile { padding-left: 16px; padding-right: 16px; } .py-sm { padding-top: 16px; padding-bottom: 16px; } .py-md { padding-top: 24px; padding-bottom: 24px; } .py-lg { padding-top: 40px; padding-bottom: 40px; } .py-2\.5 { padding-top: 0.625rem; padding-bottom: 0.625rem; } .pt-xs { padding-top: 8px; } .pb-sm { padding-bottom: 16px; } .pl-8 { padding-left: 2rem; } .pl-11 { padding-left: 2.75rem; } .pr-10 { padding-right: 2.5rem; }
 .mb-xs { margin-bottom: 8px; } .mb-sm { margin-bottom: 16px; } .mb-md { margin-bottom: 24px; } .mb-lg { margin-bottom: 40px; } .mt-xs { margin-top: 8px; } .mt-sm { margin-top: 16px; } .mt-md { margin-top: 24px; } .mt-lg { margin-top: 40px; } .mt-auto { margin-top: auto; } .ml-xs { margin-left: 8px; } .mx-margin-mobile { margin-left: 16px; margin-right: 16px; }
-.gap-1 { gap: 0.25rem; } .gap-1\.5 { gap: 0.375rem; } .gap-2 { gap: 0.5rem; } .gap-sm { gap: 16px; } .gap-md { gap: 24px; }
+.gap-1 { gap: 0.25rem; } .gap-1\.5 { gap: 0.375rem; } .gap-2 { gap: 0.5rem; } .gap-3 { gap: 0.75rem; } .gap-sm { gap: 16px; } .gap-md { gap: 24px; }
 .space-y-1 > :not([hidden]) ~ :not([hidden]) { margin-top: 0.25rem; } .space-y-xs > :not([hidden]) ~ :not([hidden]) { margin-top: 8px; } .space-y-sm > :not([hidden]) ~ :not([hidden]) { margin-top: 16px; } .space-y-md > :not([hidden]) ~ :not([hidden]) { margin-top: 24px; } .space-x-xs > :not([hidden]) ~ :not([hidden]) { margin-left: 8px; } .space-x-sm > :not([hidden]) ~ :not([hidden]) { margin-left: 16px; }
 .font-body-md { font-family: 'Inter', sans-serif; } .font-body-sm { font-family: 'Inter', sans-serif; } .font-label-mono { font-family: 'JetBrains Mono', monospace; } .font-data-mono { font-family: 'JetBrains Mono', monospace; } .font-display-lg { font-family: 'Manrope', sans-serif; } .font-headline-lg-mobile { font-family: 'Manrope', sans-serif; }
 .font-light { font-weight: 300; } .font-medium { font-weight: 500; } .font-semibold { font-weight: 600; } .font-extrabold { font-weight: 800; }

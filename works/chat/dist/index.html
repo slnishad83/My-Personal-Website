@@ -37,6 +37,13 @@
           return;
         }
 
+        if (location.hostname !== 'localhost' && !location.hostname.includes('127.0.0.1')) {
+          if (!path.startsWith('/works/chat/dist')) {
+            location.replace('https://' + location.host + '/works/chat/dist/' + location.search + location.hash);
+            return;
+          }
+        }
+
         if (path.startsWith('/works/chat') && path !== '/works/chat/' && path !== '/works/chat') {
           var normalized = '/works/chat/' + (location.search || '') + (location.hash || '');
           if (location.pathname !== normalized) {
@@ -104,7 +111,7 @@
     .material-symbols-outlined, .material-symbols-rounded { font-display: swap; }
   </style>
 
-  <script type="module" crossorigin src="/works/chat/assets/main-StmghiX7.js"></script>
+  <script type="module" crossorigin src="/works/chat/assets/main-4GJCW-YI.js"></script>
   <link rel="modulepreload" crossorigin href="/works/chat/assets/firebase-config-B1gHZycV.js">
   <link rel="modulepreload" crossorigin href="/works/chat/assets/feature-notifications-CyReC0hX.js">
   <link rel="modulepreload" crossorigin href="/works/chat/assets/lib-twemoji-Bf-HUuBj.js">
