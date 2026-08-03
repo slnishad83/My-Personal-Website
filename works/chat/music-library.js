@@ -1,4 +1,5 @@
-// Music Library â€” 100% free & legal search (Jamendo CC-BY full tracks + Internet Archive public domain), upload, play, all inside chat
+// Music Library — free search (JioSaavn + YouTube + Jamendo + Internet Archive), upload, play, all inside chat
+/* global playArchiveTrack, playYouTubeTrack, deletePlaylist, removeTrackFromPlaylist, MusicOfflineStorage */
 (function() {
   'use strict';
 
@@ -10,6 +11,68 @@
   // â”€â”€â”€ WORKING SEARCH BACKENDS (100% FREE + LEGAL ONLY) â”€â”€â”€
 
   // 1. Jamendo API (CC-BY licensed full tracks â€” free to stream & download)
+  // 0. YouTube (via youtubeSearch cloud function -- covers ALL old/new songs in every Indian language)
+  const YT_SEARCH_ENDPOINT = window.YOUTUBE_SEARCH_ENDPOINT || 'https://us-central1-my-team-chat-2255.cloudfunctions.net/youtubeSearch';
+
+  async function _getYoutubeToken() {
+    const u = window.currentUser || (window.App && window.App.currentUser);
+    if (u && typeof u.getIdToken === 'function') {
+      try { return await u.getIdToken(); } catch (_) {}
+    }
+    return null;
+  }
+
+  async function _searchYouTube(query) {
+    try {
+      const token = await _getYoutubeToken();
+      if (!token) return [];
+      const ctrl = new AbortController();
+      const tid = setTimeout(() => ctrl.abort(), 15000);
+      const res = await fetch(YT_SEARCH_ENDPOINT + '?q=' + encodeURIComponent(query), {
+        headers: { Authorization: 'Bearer ' + token },
+        signal: ctrl.signal,
+      });
+      clearTimeout(tid);
+      if (!res.ok) return [];
+      const data = await res.json();
+      if (!data.ok || !Array.isArray(data.results)) return [];
+      return data.results.map(r => ({
+        id: r.id,
+        videoId: r.videoId || null,
+        saavnId: r.saavnId || null,
+        title: r.title || 'Untitled',
+        artist: r.artist || 'Unknown',
+        duration: r.duration || 0,
+        thumbnail: r.thumbnail || null,
+        audioUrl: r.audioUrl || null,
+        source: r.source || 'youtube',
+      }));
+    } catch (e) {
+      if (window.__DEBUG__) console.warn('[YouTube] Search failed:', e.message);
+      return [];
+    }
+  }
+
+  async function _resolveYouTubeStream(videoId) {
+    try {
+      const token = await _getYoutubeToken();
+      if (!token) return null;
+      const ctrl = new AbortController();
+      const tid = setTimeout(() => ctrl.abort(), 20000);
+      const res = await fetch(YT_SEARCH_ENDPOINT + '?videoId=' + encodeURIComponent(videoId), {
+        headers: { Authorization: 'Bearer ' + token },
+        signal: ctrl.signal,
+      });
+      clearTimeout(tid);
+      if (!res.ok) return null;
+      const data = await res.json();
+      return data.ok ? (data.url || null) : null;
+    } catch (e) {
+      if (window.__DEBUG__) console.warn('[YouTube] Stream resolve failed:', e.message);
+      return null;
+    }
+  }
+
   const JAMENDO_CLIENT_ID = 'b2301a74';
   async function _searchJamendoAPI(query, limit) {
     try {
@@ -70,7 +133,8 @@
     if (!query || query.length < 2) return [];
 
     // Search all free backends in parallel
-    const [jamendoResults, archiveResults] = await Promise.allSettled([
+    const [youtubeResults, jamendoResults, archiveResults] = await Promise.allSettled([
+      _searchYouTube(query),
       _searchJamendoAPI(query, limit || 20),
       _searchArchiveOrg(query, limit || 15),
     ]);
@@ -88,7 +152,8 @@
       }
     }
 
-    // Jamendo first (best free catalog), then Internet Archive
+    // YouTube first (biggest catalog), then Jamendo, then Internet Archive
+    _addResults(youtubeResults);
     _addResults(jamendoResults);
     _addResults(archiveResults);
 
@@ -138,6 +203,23 @@
     });
   };
 
+  window.playYouTubeTrack = async function(track) {
+    if (!track || !track.videoId) { showToast('No track to play', 'error'); return; }
+    showToast('Loading audio...', 'info');
+    const url = await _resolveYouTubeStream(track.videoId);
+    if (!url) { showToast('Audio unavailable - try again later', 'error'); return; }
+    MusicPlayer.play({
+      id: track.id,
+      title: track.title,
+      artist: track.artist,
+      url: url,
+      thumbnail: track.thumbnail,
+      duration: track.duration,
+      source: 'youtube',
+      videoId: track.videoId,
+    });
+  };
+
   window.playLibraryTrack = function(trackId) {
     const track = (App.musicLibrary || []).find(t => t.id === trackId);
     if (!track) { showToast('Track not found', 'error'); return; }
@@ -160,6 +242,11 @@
     // Internet Archive track â€” resolve MP3 URL
     if (t.source === 'archive' && t.identifier) {
       playArchiveTrack(t.identifier, t.title, t.artist, t.thumbnail);
+      return;
+    }
+    // YouTube track â€” resolve stream URL
+    if (t.source === 'youtube' && t.videoId) {
+      playYouTubeTrack(t);
       return;
     }
     // Track with direct URL
@@ -522,6 +609,8 @@
         <span class="material-symbols-outlined animate-spin" style="color:var(--primary);font-size:28px">progress_activity</span>
         <p style="color:var(--on-surface-variant);font-size:12px;margin-top:8px">Searching "${escHtml(q)}"...</p>
         <div style="display:flex;gap:6px;justify-content:center;margin-top:8px;flex-wrap:wrap">
+          <span style="font-size:10px;color:var(--on-surface-variant);opacity:0.6">JioSaavn</span>
+          <span style="font-size:10px;color:var(--on-surface-variant);opacity:0.6">YouTube</span>
           <span style="font-size:10px;color:var(--on-surface-variant);opacity:0.6">Jamendo</span>
           <span style="font-size:10px;color:var(--on-surface-variant);opacity:0.6">Internet Archive</span>
         </div>
@@ -549,7 +638,7 @@
 
     let html = `<div style="font-size:11px;font-weight:700;color:var(--primary);margin-bottom:8px">${results.length} free results for "${escHtml(q)}"</div>`;
 
-    // All results (Jamendo + Internet Archive â€” 100% free & legal, direct playback)
+    // All results (JioSaavn + YouTube + Jamendo + Internet Archive -- free, direct playback)
     html += results.map(t => _searchResultRow(t)).join('');
 
     el.innerHTML = html;
@@ -569,6 +658,8 @@
 
   function _searchResultRow(t) {
     const sourceBadge = {
+      'saavn': '<span style="background:rgba(124,77,255,0.15);color:#a08bff;font-size:9px;padding:1px 5px;border-radius:4px;font-weight:700">JioSaavn</span>',
+      'youtube': '<span style="background:rgba(255,0,0,0.15);color:#ff0000;font-size:9px;padding:1px 5px;border-radius:4px;font-weight:700">YouTube</span>',
       'jamendo': '<span style="background:rgba(255,165,0,0.15);color:#ffa500;font-size:9px;padding:1px 5px;border-radius:4px;font-weight:700">Jamendo</span>',
       'archive': '<span style="background:rgba(74,222,128,0.15);color:#4ade80;font-size:9px;padding:1px 5px;border-radius:4px;font-weight:700">Archive</span>',
     };
@@ -596,6 +687,9 @@
     if (!t) { if (window.__DEBUG__) console.warn('[Music] Track not in cache:', trackId); return; }
     if (t.audioUrl || t.url) {
       MusicPlayer.play({ id: t.id, title: t.title, artist: t.artist, url: t.audioUrl || t.url, thumbnail: t.thumbnail || null, duration: t.duration, source: t.source });
+    } else if (t.source === 'youtube' && t.videoId) {
+      if (window.__DEBUG__) console.log('[Music] Playing YouTube:', t.videoId);
+      playYouTubeTrack(t);
     } else if (t.source === 'archive' && t.identifier) {
       if (window.__DEBUG__) console.log('[Music] Playing Internet Archive:', t.identifier);
       playArchiveTrack(t.identifier, t.title, t.artist, t.thumbnail);
@@ -612,6 +706,11 @@
       const resolved = await window.resolveArchiveTrackUrl(t.identifier);
       if (!resolved || !resolved.url) { showToast('Audio unavailable', 'error'); return; }
       MusicPlayer.addToQueue({ id: t.id, title: t.title, artist: t.artist, url: resolved.url, thumbnail: t.thumbnail, duration: resolved.duration || 0, source: 'archive' });
+    } else if (t.source === 'youtube' && t.videoId) {
+      showToast('Resolving audio...', 'info');
+      const url = await _resolveYouTubeStream(t.videoId);
+      if (!url) { showToast('Audio unavailable', 'error'); return; }
+      MusicPlayer.addToQueue({ id: t.id, title: t.title, artist: t.artist, url: url, thumbnail: t.thumbnail, duration: t.duration, source: 'youtube' });
     } else if (t.audioUrl || t.url) {
       MusicPlayer.addToQueue({ id: t.id, title: t.title, artist: t.artist, url: t.audioUrl || t.url, thumbnail: t.thumbnail, duration: t.duration, source: t.source });
     }

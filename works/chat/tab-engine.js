@@ -15,7 +15,7 @@
 
   /* ── Helpers ─────────────────────────────────────────────────── */
   function esc(s) { return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
-  function getDB()   { return window.db || (window.App && window.App.db); }
+  function getDB()   { return window.db || (window.App && window.App.db) || (typeof firebase !== 'undefined' ? firebase.firestore() : null); }
   function getUID()  { var u = window.currentUser || (window.App && window.App.currentUser); return u && u.uid; }
   function timeAgo(ts) {
     if (!ts) return '';
@@ -150,17 +150,16 @@
     if (newCallBtn) newCallBtn.classList.remove('hidden');
 
     try {
-      _callsUnsub = db.collection('calls')
-        .where('participants', 'array-contains', uid)
+      _callsUnsub = db.collection('users').doc(uid).collection('callEvents')
         .orderBy('startedAt', 'desc')
         .limit(50)
         .onSnapshot(function(snap) {
-          _renderCalls(panel, snap, uid);
+          _renderCallEvents(panel, snap, uid);
         }, function() {
           // fallback without orderBy
           try {
-            db.collection('calls').where('participants', 'array-contains', uid).limit(50).get()
-              .then(function(snap) { _renderCalls(panel, snap, uid); })
+            db.collection('users').doc(uid).collection('callEvents').limit(50).get()
+              .then(function(snap) { _renderCallEvents(panel, snap, uid); })
               .catch(function() {
                 panel.innerHTML = _emptyState('call', 'No Calls Yet', 'Make your first call by opening a chat.');
               });
@@ -171,6 +170,62 @@
     } catch(e) {
       panel.innerHTML = _emptyState('call', 'No Calls Yet', 'Make your first call by opening a chat.');
     }
+  }
+
+  function _renderCallEvents(panel, snap, uid) {
+    if (!snap.docs || !snap.docs.length) {
+      panel.innerHTML = _emptyState('call', 'No Calls Yet', 'Make your first call by opening a chat.');
+      return;
+    }
+    var frag = document.createDocumentFragment();
+    snap.docs.forEach(function(doc) {
+      var d = doc.data() || {};
+      var isIncoming = d.direction === 'incoming' || (d.fromUserId && d.fromUserId !== uid);
+      var missed = d.status === 'missed' || d.status === 'declined';
+      var otherName  = isIncoming ? (d.fromUserName || 'Unknown') : (d.toUserName || 'Unknown');
+      var otherPhoto = '';
+      var otherId   = isIncoming ? (d.fromUserId || '') : (d.toUserId || '');
+      var callType  = d.callType === 'video' ? 'video' : 'voice';
+      var callIcon  = callType === 'video' ? 'videocam' : 'call';
+      var dirIcon   = isIncoming ? 'call_received' : 'call_made';
+      var color     = missed ? '#ef4444' : (isIncoming ? '#22c55e' : 'var(--primary,#00a884)');
+      var ts        = d.startedAt || d.endedAt || d.createdAt;
+
+      var row = document.createElement('div');
+      row.style.cssText = 'display:flex;align-items:center;gap:12px;padding:10px 14px;border-radius:12px;cursor:pointer;transition:background 0.15s;';
+      row.innerHTML =
+        avatarEl(otherName, otherPhoto, '44px') +
+        '<div style="flex:1;min-width:0;">' +
+          '<div style="display:flex;justify-content:space-between;align-items:baseline;">' +
+            '<span style="font-weight:600;font-size:14px;color:var(--on-surface,#1c1c1e);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:160px;">' + esc(otherName) + '</span>' +
+            '<span style="font-size:11px;color:var(--on-surface-variant,#8696a0);">' + timeAgo(ts) + '</span>' +
+          '</div>' +
+          '<div style="display:flex;align-items:center;gap:4px;margin-top:2px;">' +
+            '<span class="material-symbols-outlined" style="font-size:14px;color:'+color+';">'+esc(dirIcon)+'</span>' +
+            '<span class="material-symbols-outlined" style="font-size:13px;color:var(--on-surface-variant,#8696a0);">'+esc(callIcon)+'</span>' +
+            '<span style="font-size:12px;color:'+(missed?'#ef4444':'var(--on-surface-variant,#8696a0)')+';">' +
+              (missed ? 'Missed' : (isIncoming ? 'Incoming' : 'Outgoing')) + ' ' + callType +
+            '</span>' +
+          '</div>' +
+        '</div>' +
+        '<button class="call-back-btn" data-other-id="'+esc(otherId)+'" data-call-type="'+esc(callType)+'" ' +
+          'style="background:none;border:none;cursor:pointer;padding:8px;color:var(--primary,#00a884);display:flex;align-items:center;justify-content:center;" title="Call back" aria-label="Call back">' +
+          '<span class="material-symbols-outlined" style="font-size:20px;">'+esc(callIcon)+'</span>' +
+        '</button>';
+
+      row.querySelector('.call-back-btn').addEventListener('click', function(e) {
+        e.stopPropagation();
+        var otherId = this.dataset.otherId;
+        var cType   = this.dataset.callType;
+        if (typeof window.startCall === 'function') window.startCall(otherId, cType);
+        else if (typeof window.initiateCall === 'function') window.initiateCall(otherId, cType);
+      });
+      row.addEventListener('mouseenter', function() { row.style.background = 'var(--surface-container,#f0f2f5)'; });
+      row.addEventListener('mouseleave', function() { row.style.background = ''; });
+      frag.appendChild(row);
+    });
+    panel.innerHTML = '';
+    panel.appendChild(frag);
   }
 
   function _renderCalls(panel, snap, uid) {

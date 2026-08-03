@@ -32,7 +32,7 @@ window.toggleSidebarExpand = function() {
 
 // Firestore offline persistence
 (function() {
-  var db = window.db || (window.App && window.App.db);
+  var db = window.db || (window.App && window.App.db) || (typeof firebase !== 'undefined' ? firebase.firestore() : null);
   if (db && db.enablePersistence) {
     db.enablePersistence({ synchronizeTabs: true }).catch(function(err) {
       if (err.code === 'failed-precondition') {

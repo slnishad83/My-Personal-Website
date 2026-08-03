@@ -61,7 +61,7 @@
     return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   }
 
-  function getDB() { return window.db || (window.App && window.App.db); }
+  function getDB() { return window.db || (window.App && window.App.db) || (typeof firebase !== 'undefined' ? firebase.firestore() : null); }
   function getUID() {
     const u = window.currentUser || (window.App && window.App.currentUser);
     return u && u.uid;

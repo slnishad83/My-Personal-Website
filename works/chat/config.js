@@ -29,6 +29,7 @@ const APP_CONSTANTS = Object.freeze({
   GROUP_ACCESS_REPAIR_ENDPOINT: "https://us-central1-my-team-chat-2255.cloudfunctions.net/repairGroupAccessMetadata",
   /* Cloudinary removed â€” all uploads use Firebase Storage (100% free) */
   MEETING_SCHEDULER_ENDPOINT: "https://us-central1-my-team-chat-2255.cloudfunctions.net/scheduleMeeting",
+  YOUTUBE_SEARCH_ENDPOINT: "https://us-central1-my-team-chat-2255.cloudfunctions.net/youtubeSearch",
   AVATAR_MAX_BYTES: 5 * 1024 * 1024,
   AVATAR_ALLOWED_EXTENSIONS: ["jpg", "jpeg", "png", "webp", "gif", "bmp", "heic", "heif"],
   AVATAR_ALLOWED_MIME_TYPES: ["image/jpeg", "image/png", "image/webp", "image/gif", "image/bmp", "image/heic", "image/heif"],
@@ -70,6 +71,9 @@ function initFirebase() {
   if (!firebase.apps.length) {
     firebase.initializeApp(FIREBASE_CONFIG);
   }
+  window.App = window.App || {};
+  window.db = window.App.db = firebase.firestore();
+  window.firestore = window.db;
   _firebaseInitialized = true;
   document.dispatchEvent(new CustomEvent('nsl:firebase-ready'));
 }
@@ -147,6 +151,7 @@ window.AVATAR_ALLOWED_EXTENSIONS = APP_CONSTANTS.AVATAR_ALLOWED_EXTENSIONS;
 window.AVATAR_ALLOWED_MIME_TYPES = APP_CONSTANTS.AVATAR_ALLOWED_MIME_TYPES;
 window.AVATAR_FORMAT_HELP_TEXT = APP_CONSTANTS.AVATAR_FORMAT_HELP_TEXT;
 window.MEETING_SCHEDULER_ENDPOINT = APP_CONSTANTS.MEETING_SCHEDULER_ENDPOINT;
+window.YOUTUBE_SEARCH_ENDPOINT = APP_CONSTANTS.YOUTUBE_SEARCH_ENDPOINT;
 window.GROUP_CALL_MAX_PARTICIPANTS = APP_CONSTANTS.GROUP_CALL_MAX_PARTICIPANTS;
 window.MESSAGE_PAGE_SIZE = APP_CONSTANTS.MESSAGE_PAGE_SIZE;
 window.privacySettings = privacySettings;
