@@ -79,16 +79,20 @@ describe('Firestore Rules — Security Analysis', function () {
     describe('isRequestParticipant()', function () {
       it('checks fromUserId and toUserId', function () {
         var isRequestParticipant = function (auth, data) {
-          return auth != null && (
-            data.fromUserId === auth.uid || data.toUserId === auth.uid
-            || data.fromEmail === (auth.token && auth.token.email)
-            || data.toEmail === (auth.token && auth.token.email)
-          );
+          if (!auth) return false;
+          if (data.fromUserId === auth.uid || data.toUserId === auth.uid) return true;
+          var email = auth.token && auth.token.email;
+          if (!email) return false;
+          return data.fromEmail === email || data.toEmail === email;
         };
         expect(isRequestParticipant({ uid: 'u1' }, { fromUserId: 'u1' })).toBeTruthy();
         expect(isRequestParticipant({ uid: 'u2' }, { toUserId: 'u2' })).toBeTruthy();
         expect(isRequestParticipant({ uid: 'u1', token: { email: 'a@b.com' } }, { fromEmail: 'a@b.com' })).toBeTruthy();
+        expect(isRequestParticipant({ uid: 'u1', token: { email: 'a@b.com' } }, { toEmail: 'a@b.com' })).toBeTruthy();
         expect(isRequestParticipant({ uid: 'u3' }, { fromUserId: 'u1', toUserId: 'u2' })).toBeFalsy();
+        expect(isRequestParticipant({ uid: 'u3' }, { fromUserId: 'u1', toUserId: 'u2', fromEmail: 'a@b.com' })).toBeFalsy();
+        expect(isRequestParticipant({ uid: 'u1', token: { email: 'a@b.com' } }, { fromUserId: 'u1' })).toBeTruthy();
+        expect(isRequestParticipant({ uid: 'u1' }, { fromEmail: 'a@b.com' })).toBeFalsy();
       });
     });
 
@@ -184,7 +188,7 @@ describe('Firestore Rules — Security Analysis', function () {
         return auth != null
           && resource.status === 'pending'
           && resource.toUserId === auth.uid
-          && newData.status in ['accepted', 'declined'];
+          && ['accepted', 'declined'].indexOf(newData.status) !== -1;
       };
       expect(allowAccept({ uid: 'u2' }, { status: 'pending', toUserId: 'u2' }, { status: 'accepted' })).toBeTruthy();
       expect(allowAccept({ uid: 'u1' }, { status: 'pending', toUserId: 'u2' }, { status: 'accepted' })).toBeFalsy();

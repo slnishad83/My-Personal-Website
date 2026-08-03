@@ -641,13 +641,19 @@ const ErrorBoundary = {
     var self = this;
     var maxRetries = (opts && opts.maxRetries) || 5;
     var baseDelay = (opts && opts.baseDelay) || 2000;
+    var currentUnsub = null;
+    var cancelled = false;
+    var retryToken = 0;
 
     function subscribe(retryCount) {
+      if (cancelled) return function () {};
       var unsub = ref.onSnapshot(
         function (snap) {
+          if (cancelled) return;
           onNext(snap);
         },
         function (err) {
+          if (cancelled) return;
           if (self._isOfflineError(err) && !navigator.onLine) {
             if (typeof window.showToast === 'function') {
               window.showToast('You are offline. Waiting for connection...', 'info');
@@ -658,9 +664,15 @@ const ErrorBoundary = {
               context: { collection: context || 'unknown' },
               timestamp: Date.now()
             });
+            var token = ++retryToken;
             var reconnectHandler = function () {
               window.removeEventListener('online', reconnectHandler);
-              setTimeout(function () { subscribe(0); }, 1500);
+              if (cancelled || token !== retryToken) return;
+              if (currentUnsub) { currentUnsub(); currentUnsub = null; }
+              setTimeout(function () {
+                if (cancelled || token !== retryToken) return;
+                subscribe(0);
+              }, 1500);
             };
             window.addEventListener('online', reconnectHandler);
             return;
@@ -678,7 +690,12 @@ const ErrorBoundary = {
             if (typeof window.showToast === 'function') {
               window.showToast('Reconnecting to updates...', 'info');
             }
-            setTimeout(function () { subscribe(retryCount + 1); }, delay);
+            var token = ++retryToken;
+            if (currentUnsub) { currentUnsub(); currentUnsub = null; }
+            setTimeout(function () {
+              if (cancelled || token !== retryToken) return;
+              subscribe(retryCount + 1);
+            }, delay);
           } else {
             if (typeof window.showToast === 'function') {
               window.showToast('Lost connection to updates. Please refresh.', 'error');
@@ -686,10 +703,17 @@ const ErrorBoundary = {
           }
         }
       );
+      currentUnsub = unsub;
       return unsub;
     }
 
-    return subscribe(0);
+    var initialUnsub = subscribe(0);
+    return function () {
+      cancelled = true;
+      retryToken++;
+      if (currentUnsub) { currentUnsub(); currentUnsub = null; }
+      initialUnsub();
+    };
   }
 };
 

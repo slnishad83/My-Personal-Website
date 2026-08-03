@@ -526,7 +526,14 @@
     }
   };
 
-  // â”€â”€â”€ TAB SWITCHING â”€â”€â”€
+  // ── Attach menu handler: close menu + open the music library ──
+  window.attachAndOpenMusic = function() {
+    const menu = document.getElementById('attach-menu');
+    if (menu) menu.classList.add('hidden');
+    openMusicLibrary();
+  };
+
+  // ── TAB SWITCHING ──
   window.switchMusicLibTab = async function(tab) {
     document.querySelectorAll('.ml-tab').forEach(b => {
       b.style.background = 'var(--surface-container,rgba(0,0,0,0.06))';

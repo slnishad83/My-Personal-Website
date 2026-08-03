@@ -487,8 +487,8 @@
       if (inp) inp.blur();
     }
     if (e.key === 'Enter') {
-      var inp = document.getElementById('sidebar-search');
-      _filterChats(inp ? inp.value : '');
+      var enterInp = document.getElementById('sidebar-search');
+      _filterChats(enterInp ? enterInp.value : '');
     }
   };
 

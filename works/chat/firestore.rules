@@ -108,6 +108,26 @@ service cloud.firestore {
       return signedIn() && request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participants;
     }
 
+    function isChatOrGroupParticipant(chatId) {
+      return signedIn() && (
+        (
+          exists(/databases/$(database)/documents/chats/$(chatId))
+          && request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participants
+        )
+        || (
+          exists(/databases/$(database)/documents/groups/$(chatId))
+          && (
+            (
+              get(/databases/$(database)/documents/groups/$(chatId)).data.memberIds is list
+              && request.auth.uid in get(/databases/$(database)/documents/groups/$(chatId)).data.memberIds
+            )
+            || get(/databases/$(database)/documents/groups/$(chatId)).data.ownerId == request.auth.uid
+            || get(/databases/$(database)/documents/groups/$(chatId)).data.createdBy == request.auth.uid
+          )
+        )
+      );
+    }
+
     function isCommunityCreator(data) {
       return signedIn() && data.createdBy == request.auth.uid;
     }
@@ -115,7 +135,7 @@ service cloud.firestore {
     function validMessageUpdate() {
       return (
         // Sender can edit text
-        (resource.data.senderId == request.auth.uid && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['text', 'edited']))
+        (resource.data.senderId == request.auth.uid && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['text', 'edited', 'editedAt']))
         ||
         // Sender can delete for everyone
         (resource.data.senderId == request.auth.uid && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['deletedForEveryone', 'deletedForEveryoneBy']) && request.resource.data.deletedForEveryone == true)
@@ -224,6 +244,11 @@ service cloud.firestore {
       match /unreadCounts/{docId} {
         allow read, write: if isOwner(userId);
       }
+
+      // Muted chats per user
+      match /mutedChats/{chatId} {
+        allow read, create, update, delete: if isOwner(userId);
+      }
     }
 
     // E2E public keys — any signed-in user can read, owner can write
@@ -259,23 +284,31 @@ service cloud.firestore {
         || resource.data.senderId == request.auth.uid
       );
       allow create: if signedIn() && request.resource.data.senderId == request.auth.uid
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-          'senderId', 'senderName', 'senderPhoto', 'senderAvatar', 'text', 'type', 'chatType',
-          'directId', 'groupId', 'channelId', 'participants', 'participantEmails',
-          'timestamp', 'edited', 'readBy', 'reactions', 'attachments', 'sticker',
-          'gif', 'replyTo', 'replyToText', 'replyToSender', 'threadId',
-          'deletedFor', 'deletedForEveryone', 'deletedForEveryoneBy',
-          'isForwarded', 'location', 'contact', 'forwardedFrom',
-          'status', 'deliveredTo', 'sentViaNotification', 'receiverId'
-        ])
         && (
         (request.resource.data.directId is string && isExistingDirectParticipant(request.resource.data.directId))
         || (request.resource.data.groupId is string && isGroupMember(request.resource.data.groupId))
+        || (request.resource.data.receiverId is string && request.resource.data.receiverId == request.auth.uid)
+        || (request.resource.data.chatId is string && isChatOrGroupParticipant(request.resource.data.chatId))
       );
-      allow update: if signedIn() && validMessageUpdate() && (
-        isDirectMessageParticipant(resource.data)
-        || (resource.data.groupId is string && isGroupMember(resource.data.groupId))
-        || (resource.data.participantEmails is list && request.auth.token.email in resource.data.participantEmails)
+      allow update: if signedIn() && (
+        (
+          validMessageUpdate()
+          && (
+            isDirectMessageParticipant(resource.data)
+            || (resource.data.groupId is string && isGroupMember(resource.data.groupId))
+            || (resource.data.participantEmails is list && request.auth.token.email in resource.data.participantEmails)
+            || isChatOrGroupParticipant(messageId)
+          )
+        )
+        ||
+        // Chat-preview fields on the parent chat doc (Schema B voice/forward writers)
+        (
+          isChatOrGroupParticipant(messageId)
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'lastMessage', 'lastMessageTime', 'lastMessageFrom', 'lastMessageSenderId',
+            'lastMessageSenderName', 'unread', 'readStatus'
+          ])
+        )
       );
       allow delete: if signedIn() && resource.data.senderId == request.auth.uid;
 
@@ -304,6 +337,29 @@ service cloud.firestore {
             'text', 'edited', 'deletedFor', 'deletedForEveryone', 'deletedForEveryoneBy'
           ]);
         allow delete: if signedIn() && resource.data.senderId == request.auth.uid;
+      }
+
+      // Legacy per-chat messages subcollection (Schema B: voice-messages, forward-modal, screen-share, reactions, edit, star, seen-by)
+      match /items/{itemId} {
+        allow read: if signedIn() && isChatOrGroupParticipant(messageId);
+        allow create: if signedIn()
+          && isChatOrGroupParticipant(messageId)
+          && request.resource.data.senderId == request.auth.uid;
+        allow update: if signedIn()
+          && isChatOrGroupParticipant(messageId)
+          && (
+            (
+              resource.data.senderId == request.auth.uid
+              && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+                'text', 'edited', 'editedAt', 'attachment', 'reactions', 'status',
+                'deletedFor', 'deletedForEveryone', 'deletedForEveryoneBy'
+              ])
+            )
+            || request.resource.data.diff(resource.data).affectedKeys().hasOnly(['reactions'])
+            || (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['readBy']) && request.auth.uid in request.resource.data.readBy)
+            || request.resource.data.diff(resource.data).affectedKeys().hasOnly(['deliveredTo', 'status'])
+          );
+        allow delete: if false;
       }
     }
 
@@ -461,7 +517,16 @@ service cloud.firestore {
         && request.auth.uid in request.resource.data.memberIds
         && request.resource.data.adminIds is list
         && request.auth.uid in request.resource.data.adminIds;
-      allow update, delete: if isGroupAdmin(groupId);
+      allow update: if isGroupAdmin(groupId)
+        || (
+          isGroupMember(groupId)
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'unreadCounts', 'unreadCount', 'lastMessage', 'lastMessageText', 'lastMessageAt',
+            'lastMessageTime', 'lastMessageSenderId', 'lastMessageSenderName', 'lastMessageFrom',
+            'unread', 'updatedAt'
+          ])
+        );
+      allow delete: if isGroupAdmin(groupId);
 
       match /members/{memberId} {
         allow read: if signedIn() && isGroupMember(groupId);
@@ -477,6 +542,17 @@ service cloud.firestore {
           request.auth.uid == memberId
           || isGroupAdmin(groupId)
         );
+      }
+
+      match /messages/{messageId} {
+        allow read: if isGroupMember(groupId);
+        allow create: if isGroupMember(groupId) && request.resource.data.senderId == request.auth.uid;
+        allow update: if isGroupMember(groupId) && (
+          validMessageUpdate()
+          || request.resource.data.diff(resource.data).affectedKeys().hasOnly(['reactions'])
+          || (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['readBy']) && request.auth.uid in request.resource.data.readBy)
+        );
+        allow delete: if resource.data.senderId == request.auth.uid || isGroupAdmin(groupId);
       }
     }
 
@@ -902,7 +978,10 @@ service cloud.firestore {
         ]);
       allow update: if signedIn() && request.auth.uid in resource.data.participants
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-          'status', 'name', 'photoURL', 'participants'
+          'status', 'name', 'photoURL', 'participants', 'unreadCounts', 'unreadCount', 'unread',
+          'lastMessage', 'lastMessageText', 'lastMessageAt', 'lastMessageTime',
+          'lastMessageSenderId', 'lastMessageSenderName', 'lastMessageFrom',
+          'updatedAt', 'saved', 'muted', 'mutedUntil'
         ]);
       allow delete: if false;
 
@@ -917,6 +996,17 @@ service cloud.firestore {
         allow read: if signedIn() && (request.auth.uid == userId
           || isChatMember(chatId));
         allow write: if signedIn() && request.auth.uid == userId;
+      }
+
+      match /messages/{messageId} {
+        allow read: if isChatMember(chatId);
+        allow create: if isChatMember(chatId) && request.resource.data.senderId == request.auth.uid;
+        allow update: if isChatMember(chatId) && (
+          validMessageUpdate()
+          || request.resource.data.diff(resource.data).affectedKeys().hasOnly(['reactions'])
+          || (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['readBy']) && request.auth.uid in request.resource.data.readBy)
+        );
+        allow delete: if resource.data.senderId == request.auth.uid;
       }
     }
     match /notificationTelemetry/{entryId} {

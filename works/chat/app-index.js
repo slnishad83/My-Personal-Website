@@ -36,6 +36,7 @@ import './mutation-bus.js';
 import './virtual-scroll.js';
 import './accessibility.js';
 import './src/core/bindEvents.js';
+import './ui-glue.js';
 
 /* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
    BOOTSTRAP & LATE-BINDING
@@ -88,7 +89,6 @@ const _deferredModules = [
   () => import('./message-edit.js'),
   () => import('./message-star.js'),
   () => import('./sensitive-content.js'),
-  () => import('./mini-games.js'),
   () => import('./mood-status.js'),
   () => import('./threads.js'),
   () => import('./message-search.js'),
@@ -118,6 +118,7 @@ const _deferredModules = [
   () => import('./ui-compliance.js'),
   () => import('./audit-interactions.js'),
   () => import('./whatsapp-enhancements.js'),
+  () => import('./broadcast.js'),
   () => import('./features-addon.js'),
   () => import('./archive-chat.js'),
   () => import('./forward-modal.js'),

@@ -100,7 +100,6 @@ const BUNDLE_ORDER = [
   'screenshot-control.js',
   'message-recall.js',
   'sensitive-content.js',
-  'mini-games.js',
   'mood-status.js',
   'date-reminders.js',
   'jump-to-date.js',

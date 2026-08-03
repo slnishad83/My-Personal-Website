@@ -16,6 +16,8 @@ const OfflineQueue = {
   _pendingProcess: false,
   _processTimeout: null,
   _lockTimeout: 30000,
+  _runId: 0,
+  _activeRunId: null,
 
   /** Initialize the IndexedDB-backed queue and begin processing on reconnect. */
   async init() {
@@ -107,25 +109,34 @@ const OfflineQueue = {
       return;
     }
     if (!this._db || !navigator.onLine) return;
+    const runId = ++this._runId;
+    this._activeRunId = runId;
     this._processing = true;
     this._pendingProcess = false;
     clearTimeout(this._processTimeout);
     this._processTimeout = setTimeout(() => {
-      if (this._processing) {
+      if (this._processing && this._activeRunId === runId) {
         if (window.__DEBUG__) console.warn('[OfflineQueue] Lock timeout - force releasing');
+        this._runId++;
+        this._activeRunId = null;
         this._processing = false;
         if (this._pendingProcess) this.processQueue();
       }
     }, this._lockTimeout);
     try {
-      const pending = await this._getByStatus('pending');
+      const now = Date.now();
+      const pendingRaw = await this._getByStatus('pending');
+      const pending = pendingRaw.filter(m => !m.processingAt || (now - m.processingAt > this._lockTimeout * 2));
       for (const msg of pending) {
+        if (this._activeRunId !== runId) break;
         if (!navigator.onLine) break;
         if (msg.retries >= this._maxRetries) {
           await this.updateStatus(msg.id, 'failed');
           this._showFailedToast(msg);
           continue;
         }
+        msg.processingAt = Date.now();
+        await this._updateRecord(msg);
         try {
           await this._retrySend(msg);
           await this.updateStatus(msg.id, 'sent');
@@ -136,6 +147,7 @@ const OfflineQueue = {
           msg.retries++;
           msg.lastRetryAt = Date.now();
           msg.error = e.message || String(e);
+          delete msg.processingAt;
           await this._updateRecord(msg);
           if (window.__DEBUG__) console.warn(`[OfflineQueue] Retry ${msg.retries}/${this._maxRetries} failed:`, e.message);
           if (msg.retries < this._maxRetries) {
@@ -148,7 +160,10 @@ const OfflineQueue = {
     } finally {
       clearTimeout(this._processTimeout);
       this._processTimeout = null;
-      this._processing = false;
+      if (this._activeRunId === runId) {
+        this._processing = false;
+        this._activeRunId = null;
+      }
       this._emitStatus();
       if (this._pendingProcess) {
         this._pendingProcess = false;
@@ -218,21 +233,31 @@ const OfflineQueue = {
 
   async updateStatus(id, status) {
     if (!this._db) return;
-    try {
-      const tx = this._db.transaction(this._storeName, 'readwrite');
-      const store = tx.objectStore(this._storeName);
-      const req = store.get(id);
-      req.onsuccess = () => {
-        const rec = req.result;
-        if (rec) { rec.status = status; store.put(rec); }
-      };
-    } catch (_) {}
+    return new Promise((resolve) => {
+      try {
+        const tx = this._db.transaction(this._storeName, 'readwrite');
+        const store = tx.objectStore(this._storeName);
+        const req = store.get(id);
+        req.onsuccess = () => {
+          const rec = req.result;
+          if (rec) { rec.status = status; store.put(rec); }
+          resolve();
+        };
+        req.onerror = () => resolve();
+      } catch (_) { resolve(); }
+    });
   },
 
   async _updateRecord(record) {
     if (!this._db) return;
-    const tx = this._db.transaction(this._storeName, 'readwrite');
-    tx.objectStore(this._storeName).put(record);
+    return new Promise((resolve) => {
+      try {
+        const tx = this._db.transaction(this._storeName, 'readwrite');
+        const req = tx.objectStore(this._storeName).put(record);
+        req.onsuccess = () => resolve();
+        req.onerror = () => resolve();
+      } catch (_) { resolve(); }
+    });
   },
 
   async _getByStatus(status) {

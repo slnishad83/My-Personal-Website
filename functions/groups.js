@@ -66,8 +66,13 @@ exports.addGroupMembers = onCall(
     const membersRef = db().collection('groups').doc(groupId).collection('members');
     const groupRef = db().collection('groups').doc(groupId);
 
+    // Enforce "Who can add me to groups" privacy for each target user.
+    let added = 0;
+    let skipped = [];
     for (const memberUid of userIds) {
       if (typeof memberUid !== 'string') continue;
+      const allow = await canAddToGroup(uid, memberUid);
+      if (!allow) { skipped.push(memberUid); continue; }
       batch.set(membersRef.doc(memberUid), {
         uid: memberUid,
         displayName: 'Member',
@@ -76,16 +81,48 @@ exports.addGroupMembers = onCall(
         addedBy: uid,
         addedAt: Date.now(),
       });
+      added++;
     }
     batch.update(groupRef, {
-      memberCount: admin.firestore.FieldValue.increment(userIds.length),
+      memberCount: admin.firestore.FieldValue.increment(added),
       updatedAt: Date.now(),
     });
 
     await batch.commit();
-    return { success: true, added: userIds.length };
+    return { success: true, added, skipped };
   }
 );
+
+/**
+ * Respect a user's groupInvites privacy setting:
+ *   'everyone' (default)  → anyone can add them
+ *   'contacts'            → only mutual direct chats can add them
+ *   'nobody'              → never
+ */
+async function canAddToGroup(adderUid, targetUid) {
+  try {
+    const target = await db().collection('users').doc(targetUid).get();
+    const settings = target.exists ? (target.data().privacySettings || {}) : {};
+    const setting = settings.groupInvites || 'everyone';
+    if (setting === 'nobody') return false;
+    if (setting !== 'contacts') return true;
+    const chats = await db().collection('chats')
+      .where('participants', 'array-contains', targetUid)
+      .limit(200)
+      .get();
+    let found = false;
+    chats.forEach(doc => {
+      const parts = doc.data().participants || [];
+      if (parts.includes(adderUid)) found = true;
+    });
+    if (found) return true;
+    const targetUser = target.exists ? target.data() : {};
+    const contacts = Array.isArray(targetUser.contacts) ? targetUser.contacts : [];
+    return contacts.includes(adderUid);
+  } catch (_) {
+    return true;
+  }
+}
 
 /* ══════════════════════════════════════════════════════════════
    2. removeGroupMember — Admin or self-removal

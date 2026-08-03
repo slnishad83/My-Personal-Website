@@ -9,7 +9,10 @@
       readReceipts: true,      // true = show blue ticks to others
       lastSeen: 'everyone',    // 'everyone', 'contacts', 'nobody'
       profilePhoto: 'everyone', // 'everyone', 'contacts', 'nobody'
-      about: 'everyone'        // 'everyone', 'contacts', 'nobody'
+      about: 'everyone',        // 'everyone', 'contacts', 'nobody'
+      status: 'everyone',       // 'everyone', 'contacts', 'nobody' (who can see my status)
+      typingIndicator: true,    // true = others see when I'm typing
+      groupInvites: 'everyone'  // 'everyone', 'contacts', 'nobody' (who can add me to groups)
     },
 
     get(key) {
@@ -99,6 +102,17 @@
       return true;
     },
 
+    shouldShowTyping() {
+      return this.get('typingIndicator') !== false;
+    },
+
+    canAddToGroup(adderUid) {
+      const setting = this.get('groupInvites');
+      if (setting === 'nobody') return false;
+      if (setting === 'contacts') return this._getContacts().includes(adderUid);
+      return true;
+    },
+
     _getContacts() {
       try {
         const chats = window.App?.chats || [];
@@ -151,12 +165,44 @@
               </select>
             </div>
 
-            <div style="padding:12px 0;">
+            <div style="padding:12px 0;border-bottom:1px solid var(--outline-variant,#eee);">
               <div style="font-size:14px;font-weight:600;color:var(--on-surface,#000);margin-bottom:8px;">About</div>
               <select id="privacy-about" style="width:100%;padding:10px;border:1px solid var(--outline-variant,#ccc);border-radius:10px;font-size:14px;background:var(--surface,#fff);color:var(--on-surface,#000);">
                 <option value="everyone" ${current.about === 'everyone' ? 'selected' : ''}>Everyone</option>
                 <option value="contacts" ${current.about === 'contacts' ? 'selected' : ''}>My contacts</option>
                 <option value="nobody" ${current.about === 'nobody' ? 'selected' : ''}>Nobody</option>
+              </select>
+            </div>
+
+            <div style="padding:12px 0;border-bottom:1px solid var(--outline-variant,#eee);">
+              <div style="font-size:14px;font-weight:600;color:var(--on-surface,#000);margin-bottom:8px;">Status</div>
+              <div style="font-size:12px;color:var(--on-surface-variant,#666);margin-bottom:8px;">Who can see my status updates</div>
+              <select id="privacy-status" style="width:100%;padding:10px;border:1px solid var(--outline-variant,#ccc);border-radius:10px;font-size:14px;background:var(--surface,#fff);color:var(--on-surface,#000);">
+                <option value="everyone" ${current.status === 'everyone' ? 'selected' : ''}>Everyone</option>
+                <option value="contacts" ${current.status === 'contacts' ? 'selected' : ''}>My contacts</option>
+                <option value="nobody" ${current.status === 'nobody' ? 'selected' : ''}>Nobody</option>
+              </select>
+            </div>
+
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--outline-variant,#eee);">
+              <div>
+                <div style="font-size:14px;font-weight:600;color:var(--on-surface,#000);">Typing indicator</div>
+                <div style="font-size:12px;color:var(--on-surface-variant,#666);">Let others see when you are typing</div>
+              </div>
+              <label style="position:relative;display:inline-block;width:44px;height:24px;">
+                <input type="checkbox" id="privacy-typing" ${current.typingIndicator !== false ? 'checked' : ''} style="opacity:0;width:0;height:0;">
+                <span style="position:absolute;cursor:pointer;inset:0;background:${current.typingIndicator !== false ? 'var(--primary,#00a884)' : '#ccc'};border-radius:12px;transition:0.3s;">
+                  <span style="position:absolute;content:'';height:18px;width:18px;left:${current.typingIndicator !== false ? '22px' : '3px'};bottom:3px;background:#fff;border-radius:50%;transition:0.3s;"></span>
+                </span>
+              </label>
+            </div>
+
+            <div style="padding:12px 0;">
+              <div style="font-size:14px;font-weight:600;color:var(--on-surface,#000);margin-bottom:8px;">Who can add me to groups</div>
+              <select id="privacy-group-invites" style="width:100%;padding:10px;border:1px solid var(--outline-variant,#ccc);border-radius:10px;font-size:14px;background:var(--surface,#fff);color:var(--on-surface,#000);">
+                <option value="everyone" ${current.groupInvites === 'everyone' ? 'selected' : ''}>Everyone</option>
+                <option value="contacts" ${current.groupInvites === 'contacts' ? 'selected' : ''}>My contacts</option>
+                <option value="nobody" ${current.groupInvites === 'nobody' ? 'selected' : ''}>Nobody</option>
               </select>
             </div>
           </div>
@@ -185,6 +231,35 @@
         Privacy.set('about', e.target.value);
         if (typeof showToast === 'function') showToast('About visibility updated', 'success');
       });
+
+      const statusSel = document.getElementById('privacy-status');
+      if (statusSel) {
+        statusSel.addEventListener('change', (e) => {
+          Privacy.set('status', e.target.value);
+          if (window.Status && typeof window.Status.setStatusPrivacy === 'function') {
+            window.Status.setStatusPrivacy(e.target.value);
+          } else if (window._scOpenPrivacy) {
+            // status module handles its own persistence
+          }
+          if (typeof showToast === 'function') showToast('Status visibility updated', 'success');
+        });
+      }
+
+      const typingToggle = document.getElementById('privacy-typing');
+      if (typingToggle) {
+        typingToggle.addEventListener('change', (e) => {
+          Privacy.set('typingIndicator', e.target.checked);
+          if (typeof showToast === 'function') showToast('Typing indicator ' + (e.target.checked ? 'enabled' : 'disabled'), 'success');
+        });
+      }
+
+      const groupInvitesSel = document.getElementById('privacy-group-invites');
+      if (groupInvitesSel) {
+        groupInvitesSel.addEventListener('change', (e) => {
+          Privacy.set('groupInvites', e.target.value);
+          if (typeof showToast === 'function') showToast('Group invite privacy updated', 'success');
+        });
+      }
     }
   };
 

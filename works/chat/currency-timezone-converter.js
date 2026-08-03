@@ -28,8 +28,6 @@
     { name: 'Sydney (AEST)', offset: 10.0 }
   ];
 
-  function toast(msg, t) { if (typeof window.showToast === 'function') window.showToast(msg, t || 'info'); }
-
   Converter.showModal = function () {
     var existing = document.getElementById('converter-modal');
     if (existing) { existing.remove(); return; }

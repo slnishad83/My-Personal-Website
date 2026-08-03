@@ -77,7 +77,10 @@
         const startTs = firebase.firestore.Timestamp.fromDate(start);
         const endTs = firebase.firestore.Timestamp.fromDate(end);
 
-        const snap = await db.collection('messages').doc(chatId).collection('items')
+        const isGroup = !!(window.App?.currentChat && (window.App.currentChat.type === 'group' || window.App.currentChat.isGroup));
+        const coll = isGroup ? 'groups' : 'chats';
+
+        const snap = await db.collection(coll).doc(chatId).collection('messages')
           .where('timestamp', '>=', startTs)
           .where('timestamp', '<=', endTs)
           .orderBy('timestamp', 'asc')

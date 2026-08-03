@@ -127,8 +127,14 @@
         window.openForwardModalMultiple(ids);
       }
     });
-    var delBtn = _multiSelectBar.querySelector('#ms-action-delete');
-    if (delBtn) delBtn.addEventListener('click', function() {
+    var replyBtn = _multiSelectBar.querySelector('#ms-action-reply');
+    if (replyBtn) replyBtn.addEventListener('click', function() {
+      var ids = Array.from(_selectedMessages);
+      if (ids.length === 0) return;
+      exitMultiSelect();
+      if (typeof window.replyToMsg === 'function') window.replyToMsg(ids[0]);
+    });
+    var delBtn = _multiSelectBar.querySelector('#ms-action-delete');    if (delBtn) delBtn.addEventListener('click', function() {
       var ids = Array.from(_selectedMessages);
       if (ids.length === 0) return;
       if (typeof window.deleteMessagesByIds === 'function') {
@@ -251,6 +257,83 @@
     _multiSelectBar.classList.remove('hidden');
     toggleMsgSelect(msgEl);
   }
+
+  /* Resolve a message doc across both storage models (new subcollections + legacy). */
+  function _activeChatInfo() {
+    var chat = (window.App && window.App.currentChat) || window.currentChat || null;
+    if (!chat) return null;
+    var type = (window.App && window.App.currentChatType) || chat.type;
+    var isGroup = type === 'group' || !!(chat.type === 'group' || chat.isGroup);
+    var isBroadcast = type === 'broadcast' || chat.type === 'broadcast';
+    return { id: chat.id, isGroup: isGroup, coll: isBroadcast ? 'broadcasts' : (isGroup ? 'groups' : 'chats') };
+  }
+
+  function _resolveMsgRef(msgId) {
+    var info = _activeChatInfo();
+    var db = window.db || (window.App && window.App.db) || (typeof firebase !== 'undefined' ? firebase.firestore() : null);
+    if (!info || !db || !msgId) return Promise.reject(new Error('No chat or db'));
+    var newRef = db.collection(info.coll).doc(info.id).collection('messages').doc(msgId);
+    var legacyRef = db.collection('messages').doc(info.id).collection('items').doc(msgId);
+    if (info.coll === 'broadcasts') {
+      return newRef.get().then(function (snap) {
+        if (snap.exists) return { ref: newRef, data: snap.data() };
+        throw new Error('not found');
+      });
+    }
+    return newRef.get().then(function (snap) {
+      if (snap.exists) return { ref: newRef, data: snap.data() };
+      return legacyRef.get().then(function (legacySnap) {
+        return { ref: legacyRef, data: legacySnap.data() };
+      });
+    });
+  }
+
+  window._resolveMessageRef = _resolveMsgRef;
+
+  function _deleteForEveryoneRef(msgRef, msgData) {
+    var db = window.db || (window.App && window.App.db) || (typeof firebase !== 'undefined' ? firebase.firestore() : null);
+    var fv = db && db.FieldValue
+      ? db.FieldValue
+      : (typeof firebase !== 'undefined' && firebase.firestore && firebase.firestore.FieldValue);
+    var upd = {
+      text: 'This message was deleted',
+      type: 'deleted',
+      deletedBy: 'everyone',
+      deletedAt: fv ? fv.serverTimestamp() : new Date(),
+      attachment: fv ? fv.delete() : null
+    };
+    if (msgData && msgData.attachment && msgData.attachment.url && typeof firebase !== 'undefined' && firebase.storage) {
+      try { firebase.storage().refFromURL(msgData.attachment.url).delete(); } catch (_) {}
+    }
+    return msgRef.update(upd);
+  }
+
+  window.deleteMessagesByIds = function (ids) {
+    var list = Array.isArray(ids) ? ids : [ids];
+    if (!list.length) return;
+    var info = _activeChatInfo();
+    if (!info) { if (typeof window.showToast === 'function') window.showToast('Open a chat first', 'error'); return; }
+    var uid = (window.App && window.App.uid && window.App.uid()) || (window.currentUser && window.currentUser.uid);
+    Promise.all(list.map(function (id) {
+      return _resolveMsgRef(id).then(function (res) {
+        var isOwn = !!(uid && (res.data && (res.data.senderId === uid || res.data.from === uid)));
+        if (isOwn) return _deleteForEveryoneRef(res.ref, res.data);
+        var fv = (typeof firebase !== 'undefined' && firebase.firestore) ? firebase.firestore.FieldValue : null;
+        var upd = { deletedBy: 'me' };
+        if (fv) upd.deletedFor = fv.arrayUnion(uid);
+        return res.ref.update(upd);
+      }).catch(function () {});
+    })).then(function () {
+      if (typeof window.renderMessages === 'function' && info.id) window.renderMessages(info.id);
+      if (typeof window.showToast === 'function') window.showToast('Messages deleted', 'success');
+    });
+  };
+
+  window.enterMessageMultiSelect = function () {
+    var wrap = getMsgWrap();
+    var msgEl = wrap && wrap.querySelector('.message, [data-msg-id], .message-row');
+    _enterMultiSelect(msgEl || {});
+  };
 
   function dismissMenu() {
     if (_menuEl) {

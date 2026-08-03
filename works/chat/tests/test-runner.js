@@ -95,6 +95,11 @@ function expect(val) {
         throw new Error('toBeLessThan expects numbers');
       if (val >= expected) throw new Error('Expected ' + val + ' < ' + expected);
     },
+    toBeLessThanOrEqual: function (expected) {
+      if (typeof val !== 'number' || typeof expected !== 'number')
+        throw new Error('toBeLessThanOrEqual expects numbers');
+      if (val > expected) throw new Error('Expected ' + val + ' <= ' + expected);
+    },
     toHaveLength: function (expected) {
       if (!val || typeof val.length !== 'number')
         throw new Error('toHaveLength expects an object with .length');

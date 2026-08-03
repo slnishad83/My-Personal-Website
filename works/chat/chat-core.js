@@ -204,13 +204,42 @@
 
   let _chatsData = [];
   let _groupsData = [];
+  let _broadcastsData = [];
 
   function mergeAndRender() {
-    // Merge direct chats and groups into one unified list
-    State.chats = [..._chatsData, ..._groupsData];
+    // Merge direct chats, groups and broadcast lists into one unified list
+    State.chats = [..._chatsData, ..._groupsData, ..._broadcastsData];
     renderChatList();
     // Dispatch for other modules
     document.dispatchEvent(new CustomEvent('nsl:chats-loaded', { detail: { chats: State.chats } }));
+    _refreshOnlineUsers();
+  }
+
+  let _onlineTimer = null;
+  const _PRESENCE_WINDOW = 60000;
+
+  function _refreshOnlineUsers() {
+    const db = getDB();
+    const uid = getUID();
+    if (!db || !uid) return;
+    const others = [];
+    _chatsData.forEach(c => { if (c.otherUserId && c.otherUserId !== uid) others.push(c.otherUserId); });
+    if (!others.length) return;
+    window._onlineUsers = window._onlineUsers || {};
+    const unique = Array.from(new Set(others)).slice(0, 50);
+    unique.forEach(id => {
+      db.collection('users').doc(id).get().then(snap => {
+        if (!snap.exists) return;
+        const d = snap.data();
+        const now = Date.now();
+        const hb = d.lastHeartbeat || 0;
+        const online = d.onlineStatus === 'online' && (now - hb) < _PRESENCE_WINDOW;
+        if (window._onlineUsers[id] !== online) {
+          window._onlineUsers[id] = online;
+          renderChatList();
+        }
+      }).catch(() => {});
+    });
   }
 
   function subscribeToChats() {
@@ -226,7 +255,6 @@
         .orderBy('lastMessageAt', 'desc')
         .limit(200)
         .onSnapshot(snap => {
-          const user = getCurrentUser();
           _chatsData = snap.docs.map(doc => {
             const d = doc.data();
             // For direct chats, use the OTHER user's name
@@ -357,6 +385,44 @@
     }
   }
 
+  function subscribeToBroadcasts() {
+    const db = getDB();
+    const uid = getUID();
+    if (!db || !uid) return;
+
+    if (State.broadcastsUnsub) { State.broadcastsUnsub(); State.broadcastsUnsub = null; }
+
+    try {
+      State.broadcastsUnsub = db.collection('broadcasts')
+        .where('ownerId', '==', uid)
+        .limit(100)
+        .onSnapshot(snap => {
+          _broadcastsData = snap.docs.map(doc => {
+            const d = doc.data();
+            return {
+              id: doc.id,
+              type: 'broadcast',
+              name: d.name || 'Broadcast list',
+              photoURL: d.photoURL || d.avatar || '',
+              lastMessage: d.lastMessage || d.lastMessageText || '',
+              lastMessageAt: d.lastMessageAt,
+              updatedAt: d.updatedAt,
+              unreadCount: (d.unreadCounts && d.unreadCounts[uid]) || 0,
+              recipients: d.recipients || [],
+              recipientCount: (d.recipients || []).length,
+              ownerId: d.ownerId,
+              members: d.members || [],
+            };
+          });
+          mergeAndRender();
+        }, err => {
+          if (window.__DEBUG__) console.warn('[chat-core] broadcasts subscription error:', err);
+        });
+    } catch (e) {
+      if (window.__DEBUG__) console.warn('[chat-core] subscribeToBroadcasts failed:', e);
+    }
+  }
+
   /* ── Opening a chat / loading messages ─────────────────────── */
 
   function openChat(chatId, chatType) {
@@ -412,9 +478,11 @@
 
     if (nameEl) nameEl.textContent = chat.name || 'Chat';
     if (statusEl) {
-      statusEl.textContent = chat.type === 'group'
-        ? `${chat.memberCount || ''} members`
-        : (chat.isOnline ? 'Online' : 'Tap for info');
+      if (chat.type === 'broadcast') statusEl.textContent = `${chat.recipientCount || 0} recipients`;
+      else if (chat.type === 'group')
+        statusEl.textContent = `${chat.memberCount || ''} members`;
+      else
+        statusEl.textContent = (chat.isOnline ? 'Online' : 'Tap for info');
     }
     if (avatarEl2) {
       if (chat.photoURL) {
@@ -427,6 +495,12 @@
         avatarEl2.textContent = initials(chat.name || '?');
       }
     }
+  }
+
+  function _messagesCollection(chatType) {
+    if (chatType === 'group') return 'groups';
+    if (chatType === 'broadcast') return 'broadcasts';
+    return 'chats';
   }
 
   /* ── Message Rendering ──────────────────────────────────────── */
@@ -456,7 +530,7 @@
       <style>@keyframes spin{to{transform:rotate(360deg)}}</style>
     `;
 
-    const collection = chatType === 'group' ? 'groups' : 'chats';
+    const collection = _messagesCollection(chatType);
 
     try {
       State.messagesUnsub = db.collection(collection)
@@ -482,6 +556,26 @@
       if (window.__DEBUG__) console.warn('[chat-core] renderMessages failed:', e);
     }
   }
+
+  /* ── WhatsApp-style text formatting ────────────────────────── */
+
+  function _formatMsgText(text) {
+    if (!text) return '';
+    const s = esc(text);
+    const codeSpans = [];
+    let out = s.replace(/```([\s\S]+?)```/g, (m, inner) => {
+      codeSpans.push(inner);
+      return '\u0001CODE' + (codeSpans.length - 1) + '\u0001';
+    });
+    out = out.replace(/~([^~\n]+)~/g, '<del>$1</del>');
+    out = out.replace(/\*([^*\n]+)\*/g, '<strong>$1</strong>');
+    out = out.replace(/_([^_\n]+)_/g, '<em>$1</em>');
+    out = out.replace(/\u0001CODE(\d+)\u0001/g, (m, i) => {
+      return '<code style="font-family:Consolas,Menlo,monospace;background:rgba(0,0,0,0.06);padding:1px 5px;border-radius:4px;font-size:12px;white-space:pre-wrap;">' + codeSpans[Number(i)] + '</code>';
+    });
+    return out;
+  }
+  window._formatMsgText = _formatMsgText;
 
   function _renderMessagesList(msgWrap, uid) {
     msgWrap.innerHTML = '';
@@ -549,6 +643,18 @@
       } else if (msgType === 'audio' || msgType === 'voice') {
         content = `<audio src="${esc(msg.attachment && (msg.attachment.url || msg.attachment))}" controls 
           style="max-width:220px;"></audio>`;
+      } else if (msgType === 'sticker') {
+        const _sUrl = msg.attachment && (msg.attachment.url || msg.attachment);
+        content = `<img src="${esc(_sUrl)}" alt="Sticker" draggable="false"
+          style="max-width:150px;max-height:150px;display:block;cursor:pointer;"
+          onclick="window.openMediaViewer && window.openMediaViewer('${esc(_sUrl)}','image')">`;
+      } else if (msgType === 'gif') {
+        const _gUrl = msg.attachment && (msg.attachment.url || msg.attachment);
+        content = `<img src="${esc(_gUrl)}" alt="GIF" 
+          style="max-width:260px;max-height:220px;border-radius:8px;display:block;cursor:pointer;"
+          onclick="window.openMediaViewer && window.openMediaViewer('${esc(_gUrl)}','image')">`;
+      } else if (msgType === 'poll' && msg.poll) {
+        content = _renderPollContent(msg, uid);
       } else if (msg.attachment) {
         content = `<div style="display:flex;align-items:center;gap:8px;padding:4px 0;">
           <span class="material-symbols-outlined" style="font-size:20px;">attach_file</span>
@@ -559,7 +665,7 @@
         </div>`;
       }
 
-      if (text) content += `<div class="msg-text message-text" style="font-size:14px;line-height:1.5;">${esc(text)}</div>`;
+      if (text) content += `<div class="msg-text message-text" style="font-size:14px;line-height:1.5;">${_formatMsgText(text)}</div>`;
 
       // Reply preview
       let replyHTML = '';
@@ -608,7 +714,7 @@
     const db = getDB();
     if (!db || !uid || !chatId) return;
     try {
-      const collection = chatType === 'group' ? 'groups' : 'chats';
+      const collection = _messagesCollection(chatType);
       db.collection(collection).doc(chatId).update({
         [`unreadCounts.${uid}`]: 0
       }).catch(() => {});
@@ -633,6 +739,16 @@
     if (inputEl.value !== undefined) inputEl.value = '';
     else inputEl.textContent = '';
     inputEl.focus();
+
+    // Broadcast lists route through the broadcast sender (delivers per-recipient copies)
+    if (State.activeType === 'broadcast') {
+      if (typeof window.sendBroadcastMessage === 'function') {
+        window.sendBroadcastMessage(text, null, 'text');
+      } else {
+        _toast('Broadcast is not available', 'error');
+      }
+      return;
+    }
 
     const collection = State.activeType === 'group' ? 'groups' : 'chats';
     const msgData = {
@@ -672,6 +788,154 @@
       if (typeof window.showToast === 'function') window.showToast('Failed to send message', 'error');
     });
   }
+
+  /* ── Polls ──────────────────────────────────────────────────── */
+
+  function _pollTotalVotes(poll) {
+    const votes = (poll && poll.votes) || {};
+    let total = 0;
+    Object.keys(votes).forEach(k => {
+      if (Array.isArray(votes[k])) total += votes[k].length;
+    });
+    return total;
+  }
+
+  function _pollHasVoted(poll, uid) {
+    const votes = (poll && poll.votes) || {};
+    return Object.keys(votes).some(k => Array.isArray(votes[k]) && votes[k].indexOf(uid) !== -1);
+  }
+
+  function _renderPollContent(msg, uid) {
+    const poll = msg.poll || {};
+    const options = Array.isArray(poll.options) ? poll.options : [];
+    const totalVotes = _pollTotalVotes(poll);
+    const hasVoted = _pollHasVoted(poll, uid);
+    const closed = !!poll.closed;
+    const showResults = closed || hasVoted || totalVotes > 0;
+
+    const rows = options.map(o => {
+      const optId = o.id || '';
+      const optText = o.text || '';
+      const count = (poll.votes && Array.isArray(poll.votes[optId])) ? poll.votes[optId].length : 0;
+      const pct = totalVotes ? Math.round((count / totalVotes) * 100) : 0;
+      const mine = Array.isArray(poll.votes && poll.votes[optId]) && poll.votes[optId].indexOf(uid) !== -1;
+      const barColor = mine ? '#00a884' : '#d7dbdc';
+      return `
+        <button class="poll-opt ${mine ? 'poll-opt-checked' : ''}"
+          style="display:block;position:relative;width:100%;text-align:left;border:1px solid #e0e0e0;
+            border-radius:8px;padding:8px 10px;margin-bottom:6px;background:#fff;cursor:pointer;overflow:hidden;
+            ${closed ? 'cursor:default;' : ''}"
+          ${closed ? 'disabled' : `onclick="window.votePoll('${msg.id}','${optId}')"`}>
+          <span class="poll-bar" style="position:absolute;left:0;top:0;bottom:0;width:${pct}%;background:${barColor};opacity:0.18;border-radius:8px;"></span>
+          <span style="position:relative;display:flex;align-items:center;gap:6px;">
+            <span class="material-symbols-outlined" style="font-size:14px;color:${mine ? '#00a884' : '#8696a0'};">${mine ? 'check_circle' : 'circle'}</span>
+            <span class="poll-opt-text" style="font-size:13px;font-weight:500;">${esc(optText)}</span>
+            ${showResults ? `<span class="poll-opt-count" style="margin-left:auto;font-size:12px;opacity:0.75;">${count} (${pct}%)</span>` : ''}
+          </span>
+        </button>`;
+    }).join('');
+
+    const footer = closed
+      ? '<div style="font-size:11px;opacity:0.7;text-align:center;">Poll closed</div>'
+      : (hasVoted ? '' : '<div style="font-size:11px;opacity:0.7;text-align:center;">Tap an option to vote</div>');
+
+    return `
+      <div class="poll-card" style="min-width:230px;max-width:280px;">
+        <div style="display:flex;align-items:flex-start;gap:6px;margin-bottom:8px;">
+          <span class="material-symbols-outlined" style="font-size:18px;color:#53BDEB;">poll</span>
+          <div style="font-size:14px;font-weight:600;line-height:1.4;">${esc(poll.question || 'Poll')}</div>
+        </div>
+        <div style="display:flex;flex-direction:column;">
+          ${rows}
+          <div style="font-size:11px;opacity:0.7;margin-top:2px;">${totalVotes} vote${totalVotes === 1 ? '' : 's'}</div>
+          ${footer}
+        </div>
+      </div>`;
+  }
+
+  window.votePoll = function (msgId, optionId) {
+    const db = getDB();
+    const uid = getUID();
+    if (!db || !uid || !State.activeId || !msgId || !optionId) return;
+    const collection = _messagesCollection(State.activeType);
+    const ref = db.collection(collection).doc(State.activeId).collection('messages').doc(msgId);
+
+    db.runTransaction(tx => {
+      return tx.get(ref).then(snap => {
+        if (!snap.exists) return;
+        const data = snap.data() || {};
+        const poll = data.poll || {};
+        const votes = Object.assign({}, poll.votes || {});
+        const multi = !!poll.allowMultiple;
+        if (poll.closed) return;
+
+        if (multi) {
+          const arr = Array.isArray(votes[optionId]) ? votes[optionId].slice() : [];
+          const idx = arr.indexOf(uid);
+          if (idx !== -1) arr.splice(idx, 1);
+          else arr.push(uid);
+          votes[optionId] = arr;
+        } else {
+          Object.keys(votes).forEach(k => {
+            votes[k] = (Array.isArray(votes[k]) ? votes[k].slice() : []).filter(id => id !== uid);
+          });
+          votes[optionId] = votes[optionId] || [];
+          if (votes[optionId].indexOf(uid) === -1) votes[optionId].push(uid);
+        }
+        tx.update(ref, { 'poll.votes': votes });
+      });
+    }).then(() => {
+      const msgWrap = document.getElementById('messages-wrap');
+      if (msgWrap) renderMessages(State.activeId);
+    }).catch(err => {
+      if (window.__DEBUG__) console.warn('[chat-core] votePoll error:', err);
+      if (typeof window.showToast === 'function') window.showToast('Vote failed', 'error');
+    });
+  };
+
+  window.sendPollMessage = function (question, options, allowMultiple) {
+    const db = getDB();
+    const uid = getUID();
+    const user = getCurrentUser();
+    if (!db || !uid || !State.activeId || !question || !options || !options.length) {
+      if (typeof window.showToast === 'function') window.showToast('Cannot create poll', 'error');
+      return;
+    }
+    const collection = _messagesCollection(State.activeType);
+    const batch = db.batch();
+    const msgRef = db.collection(collection).doc(State.activeId).collection('messages').doc();
+    const pollMsg = {
+      type: 'poll',
+      text: question,
+      poll: {
+        question,
+        options: options.map((text, i) => ({ id: 'opt_' + i, text })),
+        allowMultiple: !!allowMultiple,
+        votes: {},
+        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+      },
+      senderId: uid,
+      senderName: user.displayName || user.email || 'Me',
+      senderPhotoURL: user.photoURL || '',
+      timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+      readBy: { [uid]: true },
+      id: msgRef.id,
+    };
+    batch.set(msgRef, pollMsg);
+    batch.update(db.collection(collection).doc(State.activeId), {
+      lastMessage: '📊 ' + question,
+      lastMessageText: '📊 ' + question,
+      lastMessageAt: firebase.firestore.FieldValue.serverTimestamp(),
+      lastSenderId: uid,
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+    });
+    batch.commit().then(() => {
+      if (typeof window.renderMessages === 'function') renderMessages(State.activeId);
+    }).catch(err => {
+      if (window.__DEBUG__) console.warn('[chat-core] sendPollMessage error:', err);
+      if (typeof window.showToast === 'function') window.showToast('Failed to send poll', 'error');
+    });
+  };
 
   /* ── Send button & Enter key wiring ─────────────────────────── */
 
@@ -746,6 +1010,7 @@
   // Core functions
   window.subscribeToChats = subscribeToChats;
   window.subscribeToGroups = subscribeToGroups;
+  window.subscribeToBroadcasts = subscribeToBroadcasts;
   window.openChat = openChat;
   window.renderMessages = renderMessages;
   window.sendMessage = sendMessage;
@@ -755,6 +1020,7 @@
   // Reload helpers expected by other modules
   window.loadCurrentChatList = function () {
     if (State.activeType === 'group') subscribeToGroups();
+    else if (State.activeType === 'broadcast') subscribeToBroadcasts();
     else { subscribeToChats(); subscribeToGroups(); }
   };
   window.loadChatsList = subscribeToChats;
@@ -803,6 +1069,9 @@
     if (uid) {
       subscribeToChats();
       subscribeToGroups();
+      subscribeToBroadcasts();
+      if (_onlineTimer) clearInterval(_onlineTimer);
+      _onlineTimer = setInterval(_refreshOnlineUsers, 20000);
     }
     _wireInputArea();
   }

@@ -3,17 +3,36 @@
   if (!('BroadcastChannel' in window)) return;
   var channel = new BroadcastChannel('nsl-chat-sync');
   var _lastResync = 0;
+  var _allowedOrigins = [
+    'https://nishadsl.com',
+    'https://www.nishadsl.com',
+    'https://web.nishadsl.com',
+    'https://chat.nishadsl.com'
+  ];
+  function _isLocalhost(origin) {
+    try {
+      var u = new URL(origin);
+      return u.protocol === 'http:' && (u.hostname === 'localhost' || u.hostname === '127.0.0.1');
+    } catch (_) { return false; }
+  }
+  function _originAllowed(origin) {
+    return _allowedOrigins.indexOf(origin) !== -1 || _isLocalhost(origin);
+  }
   function _validOrigin() {
     try {
-      return window.location.origin === 'https://nishadsl.com' ||
-             window.location.origin === 'https://web.nishadsl.com' ||
-             window.location.origin === 'http://localhost:5173' ||
-             window.location.origin === 'http://localhost:3000';
-    } catch(_) { return true; }
+      return _originAllowed(window.location.origin);
+    } catch(_) { return false; }
+  }
+  function _messageOriginAllowed(e) {
+    if (typeof e.origin === 'string' && e.origin !== '' && e.origin !== 'null') {
+      return _originAllowed(e.origin);
+    }
+    return true;
   }
 
   channel.onmessage = function(e) {
     if (!e.data || !e.data.type) return;
+    if (!_messageOriginAllowed(e)) return;
     if (!_validOrigin()) return;
     switch (e.data.type) {
       case 'new-message':

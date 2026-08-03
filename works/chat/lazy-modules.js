@@ -10,7 +10,6 @@
     'music': ['music-player.js', 'music-library.js', 'playlist-core.js', 'playlist-ui.js', 'playlist-sync.js'],
     'whiteboard': ['collaborative-whiteboard.js'],
     'annotation': ['image-annotation.js'],
-    'minigames': ['mini-games.js'],
     'cloud-drive': ['cloud-drive.js'],
     'contact-sync': ['contact-sync.js']
   };

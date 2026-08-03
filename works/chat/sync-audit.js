@@ -71,18 +71,17 @@
     _deliveryRanOnce = true;
     _lastDeliveryTime = Date.now();
 
-    const MAX_MSGS_PER_BATCH = 500;
+    const MAX_MSGS_PER_BATCH = 400;
+    const MAX_CHATS = 60;
 
-    async function _markDelivered(chatIds, idField, user) {
-      for (let i = 0; i < chatIds.length; i += 10) {
-        const batchIds = chatIds.slice(i, i + 10);
+    async function _markDeliveredIn(collection, chatIds, user) {
+      let total = 0;
+      for (const chatId of chatIds) {
         let lastDoc = null;
         let hasMore = true;
         while (hasMore) {
           try {
-            let query = db.collection('messages')
-              .where(idField, 'in', batchIds)
-              .where('senderId', '!=', user.uid)
+            let query = db.collection(collection).doc(chatId).collection('messages')
               .orderBy('timestamp', 'desc')
               .limit(MAX_MSGS_PER_BATCH);
             if (lastDoc) query = query.startAfter(lastDoc);
@@ -96,9 +95,10 @@
 
             msgsSnap.docs.forEach(doc => {
               const data = doc.data() || {};
-              if (data.deliveredTo?.[user.uid]) return;
+              if (data.senderId === user.uid) return;
+              if (data.deliveredTo && data.deliveredTo[user.uid]) return;
               if (data.deletedForEveryone) return;
-              if (data.deletedFor?.[user.uid]) return;
+              if (data.deletedFor && data.deletedFor[user.uid]) return;
               writeBatch.update(doc.ref, {
                 [`deliveredTo.${user.uid}`]: firebase.firestore.FieldValue.serverTimestamp()
               });
@@ -106,28 +106,31 @@
             });
 
             if (count > 0) await writeBatch.commit();
+            total += count;
           } catch (e) {
             if (window.__DEBUG__) console.warn('[TC Sync] Batch delivery error:', e.message);
             break;
           }
         }
       }
+      return total;
     }
 
     try {
-      const chatsSnap = await db.collection('directChats')
+      const chatsSnap = await db.collection('chats')
         .where('participants', 'array-contains', user.uid)
-        .limit(200)
+        .limit(MAX_CHATS)
         .get();
 
       const chatIds = chatsSnap.docs.map(d => d.id);
-      if (chatIds.length) { await _markDelivered(chatIds, 'directId', user); }
-      const groupSnap = await db.collection('groupChats')
+      if (chatIds.length) { await _markDeliveredIn('chats', chatIds, user); }
+
+      const groupSnap = await db.collection('groups')
         .where('members', 'array-contains', user.uid)
-        .limit(200)
+        .limit(MAX_CHATS)
         .get();
       const groupIds = groupSnap.docs.map(d => d.id);
-      if (groupIds.length) { await _markDelivered(groupIds, 'groupId', user); }
+      if (groupIds.length) { await _markDeliveredIn('groups', groupIds, user); }
     } catch (e) {
       if (window.__DEBUG__) console.warn('[TC Sync] Startup delivery error:', e);
     }
@@ -146,7 +149,7 @@
       if (!chat || !user) return;
 
       // Only mark read if chat area is actually visible on screen
-      const messagesArea = document.getElementById('messagesArea');
+      const messagesArea = document.getElementById('messages-wrap');
       if (!messagesArea) return;
 
       if (typeof window.markMessagesAsRead === 'function') {
@@ -162,7 +165,7 @@
     });
 
     // Also mark read on scroll to bottom
-    const area = document.getElementById('messagesArea');
+    const area = document.getElementById('messages-wrap');
     if (area) {
       let scrollTimer = null;
       function _onAreaScroll() {
@@ -194,7 +197,7 @@
      animation so the user sees the receipt change live.
      ================================================ */
   function setupLiveReceiptAnimation() {
-    const area = document.getElementById('messagesArea');
+    const area = document.getElementById('messages-wrap');
     if (!area) return;
 
     const seenReceipts = new Map(); // msgId â†’ last class
@@ -400,7 +403,7 @@
     setupListenerHealthCheck();
 
     // Visibility-based mark-read needs DOM ready
-    if (document.getElementById('messagesArea')) {
+    if (document.getElementById('messages-wrap')) {
       setupVisibilityMarkRead();
     } else {
       document.addEventListener('DOMContentLoaded', setupVisibilityMarkRead);

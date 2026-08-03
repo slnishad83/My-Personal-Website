@@ -138,6 +138,10 @@
     const key = getChatKey();
     if (!key || !auth.currentUser) return;
 
+    // Respect the user's "typing indicator" privacy setting
+    const privacy = window.PrivacyControls || window.PrivacySettings;
+    if (privacy && privacy.get && !privacy.get('typingIndicator')) return;
+
     // Debounce: reset 5-second auto-stop timer
     clearTimeout(_typingTimer);
     _typingTimer = setTimeout(stopTyping, 5000);

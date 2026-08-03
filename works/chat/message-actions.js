@@ -99,53 +99,43 @@
     var db = _db();
     var chat = window.App && window.App.currentChat ? window.App.currentChat : null;
     if (!db || !chat || !msgId) { _toast('Cannot delete message', 'error'); return; }
-    var msgRef = db.collection('messages').doc(chat.id).collection('items').doc(msgId);
+    var useNewModel = typeof window._resolveMessageRef === 'function';
+    var resolve = function (fn) {
+      if (useNewModel) {
+        return window._resolveMessageRef(msgId).then(function (res) { return fn(res.ref, res.data); });
+      }
+      return fn(db.collection('messages').doc(chat.id).collection('items').doc(msgId), {});
+    };
     if (scope === 'everyone') {
-      msgRef.get().then(function(doc) {
-        var msgData = doc.exists ? doc.data() : {};
-        var mediaUrls = [msgData.imageURL, msgData.videoURL, msgData.audioURL, msgData.fileURL, msgData.stickerURL].filter(function(u) { return u && typeof u === 'string' && u.startsWith('http'); });
-        msgRef.update({
+      resolve(function (msgRef, msgData) {
+        var legacyFields = ['imageURL', 'videoURL', 'audioURL', 'fileURL', 'stickerURL'];
+        var mediaUrls = [msgData.imageURL, msgData.videoURL, msgData.audioURL, msgData.fileURL, msgData.stickerURL].filter(function (u) { return u && typeof u === 'string' && u.startsWith('http'); });
+        var att = msgData.attachment && msgData.attachment.url;
+        if (att && typeof att === 'string' && att.startsWith('http')) mediaUrls.push(att);
+        var upd = {
           text: 'This message was deleted',
           type: 'deleted',
           deletedBy: 'everyone',
-          deletedAt: firebase.firestore.FieldValue.serverTimestamp(),
-          imageURL: firebase.firestore.FieldValue.delete(),
-          videoURL: firebase.firestore.FieldValue.delete(),
-          audioURL: firebase.firestore.FieldValue.delete(),
-          fileURL: firebase.firestore.FieldValue.delete(),
-          stickerURL: firebase.firestore.FieldValue.delete(),
-          attachment: firebase.firestore.FieldValue.delete()
-        }).then(function () {
-          mediaUrls.forEach(function(url) {
-            try { firebase.storage().refFromURL(url).delete(); } catch(_e) {}
+          deletedAt: firebase.firestore.FieldValue.serverTimestamp()
+        };
+        legacyFields.forEach(function (k) { upd[k] = firebase.firestore.FieldValue.delete(); });
+        upd.attachment = firebase.firestore.FieldValue.delete();
+        msgRef.update(upd).then(function () {
+          mediaUrls.forEach(function (url) {
+            try { firebase.storage().refFromURL(url).delete(); } catch (_e) {}
           });
-          _toast('Message deleted', 'success');
-        }).catch(function (err) {
-          _toast('Delete failed: ' + err.message, 'error');
-        });
-      }).catch(function() {
-        msgRef.update({
-          text: 'This message was deleted',
-          type: 'deleted',
-          deletedBy: 'everyone',
-          deletedAt: firebase.firestore.FieldValue.serverTimestamp(),
-          imageURL: firebase.firestore.FieldValue.delete(),
-          videoURL: firebase.firestore.FieldValue.delete(),
-          audioURL: firebase.firestore.FieldValue.delete(),
-          fileURL: firebase.firestore.FieldValue.delete(),
-          stickerURL: firebase.firestore.FieldValue.delete(),
-          attachment: firebase.firestore.FieldValue.delete()
-        }).then(function () {
           _toast('Message deleted', 'success');
         }).catch(function (err) {
           _toast('Delete failed: ' + err.message, 'error');
         });
       });
     } else {
-      msgRef.delete().then(function () {
-        _toast('Message deleted', 'success');
-      }).catch(function (err) {
-        _toast('Delete failed: ' + err.message, 'error');
+      resolve(function (msgRef) {
+        msgRef.delete().then(function () {
+          _toast('Message deleted', 'success');
+        }).catch(function (err) {
+          _toast('Delete failed: ' + err.message, 'error');
+        });
       });
     }
   }
@@ -462,10 +452,12 @@
     delete: function (msgId) {
       var chat = window.App && window.App.currentChat ? window.App.currentChat : null;
       if (!chat || !_db()) return;
-      _db().collection('messages').doc(chat.id).collection('items').doc(msgId).get().then(function (doc) {
-        if (!doc.exists) return;
-        var msg = doc.data();
-        msg.id = doc.id;
+      var fetchMsg = typeof window._resolveMessageRef === 'function'
+        ? window._resolveMessageRef(msgId).then(function (res) { return res.data; })
+        : _db().collection('messages').doc(chat.id).collection('items').doc(msgId).get().then(function (doc) { return doc.data(); });
+      fetchMsg.then(function (data) {
+        var msg = data || {};
+        msg.id = msgId;
         var myUid = _uid();
         var isOwn = msg.from === myUid || msg.senderId === myUid;
         var html = _getDeleteMenuHtml(msgId, msg, isOwn);

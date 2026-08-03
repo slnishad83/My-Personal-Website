@@ -1,5 +1,7 @@
 ﻿/**
  * ListenerManager - Centralized Firestore onSnapshot listener cleanup utility
+ * register(key, unsub, resubscribeFn): resubscribeFn re-creates the listener
+ * (returning a fresh unsubscribe) and enables true pause/resume on tab hide.
  * IIFE pattern, zero dependencies
  */
 (function () {
@@ -23,7 +25,7 @@
     }
   }
 
-  function register(key, unsubscribeFn) {
+  function register(key, unsubscribeFn, resubscribeFn) {
     if (typeof key !== "string" || !key) {
       _warn("register: invalid key");
       return false;
@@ -45,6 +47,7 @@
     }
     _listeners[key] = {
       unsub: unsubscribeFn,
+      resubscribe: (typeof resubscribeFn === "function") ? resubscribeFn : null,
       registeredAt: Date.now()
     };
     _log("Registered: " + key);
@@ -52,6 +55,11 @@
   }
 
   function unregister(key) {
+    if (_paused[key]) {
+      delete _paused[key];
+      _log("Unregistered (paused): " + key);
+      return true;
+    }
     if (!_listeners[key]) return false;
     try { _listeners[key].unsub(); } catch (e) { /* ignore */ }
     delete _listeners[key];
@@ -112,10 +120,14 @@
   function _pauseNonCritical() {
     var keys = Object.keys(_listeners);
     for (var i = 0; i < keys.length; i++) {
-      if (keys[i].indexOf("critical:") !== 0) {
-        if (!_paused[keys[i]]) {
-          _paused[keys[i]] = _listeners[keys[i]];
-          _log("Paused (callback): " + keys[i]);
+      var key = keys[i];
+      if (key.indexOf("critical:") !== 0 && !_paused[key]) {
+        var entry = _listeners[key];
+        if (entry && typeof entry.resubscribe === "function") {
+          try { entry.unsub(); } catch (e) { /* ignore */ }
+          delete _listeners[key];
+          _paused[key] = entry;
+          _log("Paused: " + key);
         }
       }
     }
@@ -124,11 +136,24 @@
   function _resumePaused() {
     var keys = Object.keys(_paused);
     for (var i = 0; i < keys.length; i++) {
-      if (!_listeners[keys[i]]) {
-        _listeners[keys[i]] = _paused[keys[i]];
+      var key = keys[i];
+      var entry = _paused[key];
+      delete _paused[key];
+      if (entry && typeof entry.resubscribe === "function") {
+        try {
+          var freshUnsub = entry.resubscribe();
+          if (typeof freshUnsub === "function") {
+            _listeners[key] = {
+              unsub: freshUnsub,
+              resubscribe: entry.resubscribe,
+              registeredAt: Date.now()
+            };
+            _log("Resumed: " + key);
+            continue;
+          }
+        } catch (e) { /* ignore */ }
+        _warn("Resume failed for: " + key);
       }
-      delete _paused[keys[i]];
-      _log("Resumed: " + keys[i]);
     }
   }
 

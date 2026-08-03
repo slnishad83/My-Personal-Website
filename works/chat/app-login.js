@@ -602,7 +602,7 @@ document.getElementById("registerForm").addEventListener("submit", async (e) => 
         hideTypingIndicator: false,
         hideLastSeen: false,
       },
-    });
+    }, { merge: true });
 
     await auth.signOut();
     successDiv.textContent = "Account created! Check your inbox for the verification email. Please verify before logging in.";

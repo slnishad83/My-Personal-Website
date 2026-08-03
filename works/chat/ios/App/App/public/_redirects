@@ -1,0 +1,3 @@
+# SPA fallback — serve main app for any unmatched path under /works/chat/
+# This lets the app's client-side router handle login, register, etc.
+/works/chat/* /works/chat/index.html 200
