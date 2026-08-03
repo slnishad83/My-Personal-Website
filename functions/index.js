@@ -38,7 +38,6 @@ module.exports = {
   backfillMessageEmails: http.backfillMessageEmails,
   sendNotificationReply: http.sendNotificationReply,
   generateUrlPreview: http.generateUrlPreview,
-  youtubeSearch: http.youtubeSearch,
   aiChatBot: callables.aiChatBot,
   summarizeThread: callables.summarizeThread,
   explainMessage: callables.explainMessage,

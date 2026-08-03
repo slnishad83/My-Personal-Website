@@ -1298,27 +1298,6 @@
     try {
       const last = JSON.parse(localStorage.getItem('nsl_last_track') || 'null');
       if (last && last.url) {
-        // Check if YouTube URL is stale (>4 hours old)
-        const isYouTube = last.source === 'youtube' || (last.url && last.url.includes('googlevideo'));
-        const isStale = isYouTube && last._savedTs && (Date.now() - last._savedTs > 4 * 60 * 60 * 1000);
-        if (isStale) {
-          // Re-fetch audio URL for expired YouTube tracks
-          if (last.videoId && typeof getYouTubeAudioUrl === 'function') {
-            showToast('Refreshing audio link...', 'info');
-            getYouTubeAudioUrl(last.videoId).then(freshUrl => {
-              if (freshUrl) {
-                last.url = freshUrl;
-                Player._currentTrack = last;
-                Player.audio.src = freshUrl;
-                if (last._savedPosition > 0) Player.audio.currentTime = last._savedPosition;
-                _updateMiniPlayer(last);
-              } else {
-                showToast('Audio expired â€” search to play again', 'error');
-              }
-            });
-            return;
-          }
-        }
         Player._currentTrack = last;
         Player.audio.src = last.url;
         if (last._savedPosition && last._savedPosition > 0) {

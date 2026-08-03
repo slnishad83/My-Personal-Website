@@ -135,7 +135,10 @@
 
     li.innerHTML = `
       <div style="position:relative;flex-shrink:0;">
-        ${avatarEl(chat.name || '?', photo, '44px')}
+        ${chat.isSaved
+          ? `<div style="width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+              background:var(--primary,#00a884);color:#fff;font-size:22px;flex-shrink:0;">👤</div>`
+          : avatarEl(chat.name || '?', photo, '44px')}
         ${chat.isOnline ? `<div style="position:absolute;bottom:1px;right:1px;width:11px;height:11px;border-radius:50%;
           background:#22c55e;border:2px solid var(--background,#fff);"></div>` : ''}
       </div>
@@ -155,9 +158,16 @@
       </div>
     `;
 
-    li.addEventListener('click', () => openChat(chat.id, chat.type || 'direct'));
+    li.addEventListener('click', () => {
+      if (chat.isSaved && typeof window.startSavedMessages === 'function') window.startSavedMessages();
+      else openChat(chat.id, chat.type || 'direct');
+    });
     li.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openChat(chat.id, chat.type || 'direct'); }
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        if (chat.isSaved && typeof window.startSavedMessages === 'function') window.startSavedMessages();
+        else openChat(chat.id, chat.type || 'direct');
+      }
     });
 
     // hover
@@ -196,7 +206,15 @@
     });
 
     const frag = document.createDocumentFragment();
-    sorted.forEach(chat => frag.appendChild(buildChatItem(chat)));
+
+    // Myself (Saved Messages) chat pinned at the top of the list
+    const myself = getUID() ? window.getSavedMessagesItem() : null;
+    if (myself) frag.appendChild(buildChatItem(myself));
+
+    sorted.forEach(chat => {
+      if (myself && chat.id === myself.id) return;
+      frag.appendChild(buildChatItem(chat));
+    });
     container.appendChild(frag);
   }
 
@@ -431,7 +449,9 @@
     State.activeId = chatId;
     State.activeType = chatType;
 
-    const chatData = State.chats.find(c => c.id === chatId) || { id: chatId, type: chatType };
+    const chatData = State.chats.find(c => c.id === chatId)
+      || (savedChatId() === chatId ? window.getSavedMessagesItem() : null)
+      || { id: chatId, type: chatType };
     State.activeChatData = chatData;
 
     // Expose globally
@@ -502,6 +522,84 @@
     if (chatType === 'broadcast') return 'broadcasts';
     return 'chats';
   }
+
+  /* ── Myself (Saved Messages) chat ───────────────────────────── */
+  function savedChatId() {
+    const uid = getUID();
+    return uid ? 'saved_' + uid : null;
+  }
+  window.savedChatId = savedChatId;
+
+  window.getSavedMessagesItem = function () {
+    const id = savedChatId();
+    if (!id) return null;
+    return {
+      id: id,
+      type: 'direct',
+      name: 'Myself',
+      displayName: 'Myself',
+      photoURL: '',
+      avatar: '👤',
+      preview: 'Your personal notes, files & reminders',
+      lastMessage: '',
+      isSaved: true,
+      isPinned: true,
+      pinned: true,
+      isOnline: false,
+    };
+  };
+
+  window.startSavedMessages = async function () {
+    const db = getDB();
+    const uid = getUID();
+    const id = savedChatId();
+    if (!db || !uid || !id) return;
+
+    // Ensure the chat document exists so sendMessage can update it
+    try {
+      await db.collection('chats').doc(id).set({
+        participants: [uid],
+        name: 'Myself',
+        displayName: 'Myself',
+        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+      }, { merge: true });
+    } catch (err) {
+      if (window.__DEBUG__) console.warn('[chat-core] ensure saved chat failed:', err);
+    }
+
+    // Make sure the chat is in state so openChat finds proper data
+    const existing = State.chats.find(c => c.id === id);
+    if (existing) {
+      existing.name = 'Myself';
+      existing.displayName = 'Myself';
+      existing.isSaved = true;
+      existing.pinned = true;
+      existing.otherUserId = uid;
+    } else {
+      State.chats.unshift(window.getSavedMessagesItem() || { id: id, type: 'direct', name: 'Myself', isSaved: true });
+    }
+
+    openChat(id, 'direct');
+
+    // Set header to Myself
+    const nameEl = document.getElementById('header-name');
+    const statusEl = document.getElementById('header-status');
+    const avatarEl = document.getElementById('header-avatar');
+    if (nameEl) nameEl.textContent = 'Myself';
+    if (statusEl) statusEl.textContent = 'Your personal notes, files & reminders';
+    if (avatarEl) {
+      avatarEl.style.backgroundImage = '';
+      avatarEl.style.backgroundSize = '';
+      avatarEl.style.backgroundPosition = '';
+      avatarEl.textContent = '👤';
+    }
+    if (window.currentChat) {
+      window.currentChat.name = 'Myself';
+      window.currentChat.otherUserName = 'Myself';
+      window.currentChat.isSaved = true;
+      window.currentChat.pinned = true;
+    }
+  };
 
   /* ── Message Rendering ──────────────────────────────────────── */
 

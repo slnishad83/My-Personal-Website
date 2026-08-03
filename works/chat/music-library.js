@@ -1,4 +1,4 @@
-// Music Library â€” working search (iTunes, Deezer, Jamendo, YouTube Cloud Function), upload, play, all inside chat
+// Music Library â€” 100% free & legal search (Jamendo CC-BY full tracks + Internet Archive public domain), upload, play, all inside chat
 (function() {
   'use strict';
 
@@ -7,66 +7,9 @@
   window._trackCache = _trackCache;
   const _TRACK_CACHE_MAX = 500;
 
-  // â”€â”€â”€ WORKING SEARCH BACKENDS â”€â”€â”€
+  // â”€â”€â”€ WORKING SEARCH BACKENDS (100% FREE + LEGAL ONLY) â”€â”€â”€
 
-  // 1. iTunes Search API (free, no auth, excellent Indian music catalog)
-  async function _searchiTunes(query, limit) {
-    try {
-      const ctrl = new AbortController();
-      const tid = setTimeout(() => ctrl.abort(), 10000);
-      const url = `https://itunes.apple.com/search?term=${encodeURIComponent(query)}&media=music&limit=${limit || 30}&entity=song`;
-      const res = await fetch(url, { signal: ctrl.signal });
-      clearTimeout(tid);
-      if (!res.ok) return [];
-      const data = await res.json();
-      if (!data.results) return [];
-      return data.results.map(t => ({
-        id: 'itunes_' + t.trackId,
-        trackId: t.trackId,
-        title: t.trackName || 'Untitled',
-        artist: t.artistName || 'Unknown',
-        duration: Math.round((t.trackTimeMillis || 0) / 1000),
-        thumbnail: (t.artworkUrl100 || '').replace('100x100', '300x300'),
-        audioUrl: t.previewUrl,
-        source: 'itunes',
-        collection: t.collectionName || '',
-        releaseDate: t.releaseDate || '',
-      }));
-    } catch (e) {
-      if (window.__DEBUG__) console.warn('[iTunes] Search failed:', e.message);
-      return [];
-    }
-  }
-
-  // 2. Deezer Search API (free, no auth for search, huge catalog)
-  async function _searchDeezer(query, limit) {
-    try {
-      const ctrl = new AbortController();
-      const tid = setTimeout(() => ctrl.abort(), 10000);
-      const url = `https://api.deezer.com/search?q=${encodeURIComponent(query)}&limit=${limit || 30}`;
-      const res = await fetch(url, { signal: ctrl.signal });
-      clearTimeout(tid);
-      if (!res.ok) return [];
-      const data = await res.json();
-      if (!data.data) return [];
-      return data.data.map(t => ({
-        id: 'deezer_' + t.id,
-        trackId: t.id,
-        title: t.title || 'Untitled',
-        artist: t.artist?.name || 'Unknown',
-        duration: t.duration || 0,
-        thumbnail: (t.album?.cover_medium || t.album?.cover_small || '').replace('200x200', '500x500') || null,
-        audioUrl: t.preview,
-        source: 'deezer',
-        album: t.album?.title || '',
-      }));
-    } catch (e) {
-      if (window.__DEBUG__) console.warn('[Deezer] Search failed:', e.message);
-      return [];
-    }
-  }
-
-  // 3. Jamendo API (CC-licensed, full tracks, free)
+  // 1. Jamendo API (CC-BY licensed full tracks â€” free to stream & download)
   const JAMENDO_CLIENT_ID = 'b2301a74';
   async function _searchJamendoAPI(query, limit) {
     try {
@@ -96,80 +39,40 @@
     }
   }
 
-  // 4. YouTube via Cloud Function (InnerTube server-side, full YT catalog)
-  async function _searchYouTubeViaCloud(query) {
+  // 2. Internet Archive (public domain / CC audio â€” 100% free & legal, full MP3s)
+  async function _searchArchiveOrg(query, limit) {
     try {
       const ctrl = new AbortController();
-      const tid = setTimeout(() => ctrl.abort(), 15000);
-      const fnUrl = `https://us-central1-my-team-chat-2255.cloudfunctions.net/youtubeSearch?q=${encodeURIComponent(query)}`;
-      const res = await fetch(fnUrl, { signal: ctrl.signal });
+      const tid = setTimeout(() => ctrl.abort(), 10000);
+      const url = `https://archive.org/advancedsearch.php?q=(title:(${encodeURIComponent(query)}) OR creator:(${encodeURIComponent(query)})) AND format:(MP3 OR "VBR MP3")&fl[]=identifier,title,creator,downloads&rows=${limit || 20}&output=json`;
+      const res = await fetch(url, { signal: ctrl.signal });
       clearTimeout(tid);
       if (!res.ok) return [];
       const data = await res.json();
-      if (!data.ok || !data.results) return [];
-      return data.results.map(t => ({
-        id: t.id,
-        videoId: t.videoId,
-        title: t.title,
-        artist: t.artist,
-        duration: t.duration,
-        thumbnail: t.thumbnail,
-        viewCount: t.viewCount || 0,
-        publishedText: t.publishedText || '',
-        source: 'youtube',
+      return (data.response?.docs || []).map(t => ({
+        id: 'arc_' + t.identifier,
+        identifier: t.identifier,
+        title: t.title || 'Unknown',
+        artist: t.creator || 'Unknown',
+        url: null,
+        thumbnail: `https://archive.org/services/img/${t.identifier}`,
+        duration: 0,
+        source: 'archive',
       }));
     } catch (e) {
-      if (window.__DEBUG__) console.warn('[YouTube Cloud] Search failed:', e.message);
+      if (window.__DEBUG__) console.warn('[Archive.org] Search failed:', e.message);
       return [];
     }
   }
 
-  // â”€â”€â”€ YOUTUBE AUDIO EXTRACTION (via Cloud Function) â”€â”€â”€
-  async function _getYouTubeAudioUrl(videoId) {
-    if (!videoId) return null;
-    // Check cache
-    try {
-      const cache = JSON.parse(localStorage.getItem('nsl_yt_audio_cache') || '{}');
-      const entry = cache[videoId];
-      if (entry && (Date.now() - entry.ts < 4 * 3600000)) return entry.url;
-    } catch(_) {}
-    // Try Cloud Function
-    try {
-      const ctrl = new AbortController();
-      const tid = setTimeout(() => ctrl.abort(), 15000);
-      const fnUrl = `https://us-central1-my-team-chat-2255.cloudfunctions.net/youtubeSearch?videoId=${videoId}`;
-      const res = await fetch(fnUrl, { signal: ctrl.signal });
-      clearTimeout(tid);
-      if (!res.ok) return null;
-      const data = await res.json();
-      if (data.ok && data.url) {
-        // Cache it
-        try {
-          const cache = JSON.parse(localStorage.getItem('nsl_yt_audio_cache') || '{}');
-          cache[videoId] = { url: data.url, ts: Date.now() };
-          const keys = Object.keys(cache);
-          if (keys.length > 50) { keys.sort((a, b) => (cache[a].ts || 0) - (cache[b].ts || 0)); keys.slice(0, keys.length - 50).forEach(k => delete cache[k]); }
-          localStorage.setItem('nsl_yt_audio_cache', JSON.stringify(cache));
-        } catch(_) {}
-        return data.url;
-      }
-    } catch (e) {
-      if (window.__DEBUG__) console.warn('[YouTube Audio] Cloud function failed:', e.message);
-    }
-    return null;
-  }
-  window.getYouTubeAudioUrl = _getYouTubeAudioUrl;
-
-  // â”€â”€â”€ UNIFIED SEARCH (tries all backends, returns combined results) â”€â”€â”€
+  // â”€â”€â”€ UNIFIED SEARCH (tries all free backends, returns combined results) â”€â”€â”€
   async function _searchAll(query, limit) {
     if (!query || query.length < 2) return [];
 
-    // Search all backends in parallel
-    const [itunesResults, deezerResults, jamendoResults, ytResults] = await Promise.allSettled([
-      _searchiTunes(query, limit || 15),
-      _searchDeezer(query, limit || 15),
-      _searchJamendoAPI(query, limit || 15),
-      _searchYouTubeViaCloud(query),
+    // Search all free backends in parallel
+    const [jamendoResults, archiveResults] = await Promise.allSettled([
+      _searchJamendoAPI(query, limit || 20),
+      _searchArchiveOrg(query, limit || 15),
     ]);
 
     const all = [];
@@ -185,11 +88,9 @@
       }
     }
 
-    // YouTube first (best catalog), then iTunes/Deezer, then Jamendo
-    _addResults(ytResults);
-    _addResults(itunesResults);
-    _addResults(deezerResults);
+    // Jamendo first (best free catalog), then Internet Archive
     _addResults(jamendoResults);
+    _addResults(archiveResults);
 
     return all;
   }
@@ -205,27 +106,23 @@
 
   // â”€â”€â”€ PLAY FUNCTIONS â”€â”€â”€
 
-  window.playYouTubeTrack = async function(videoId, title, artist, thumbnail, duration) {
-    if (!videoId) { showToast('No track to play', 'error'); return; }
+  window.playArchiveTrack = async function(identifier, title, artist, thumbnail) {
+    if (!identifier) { showToast('No track to play', 'error'); return; }
     showToast('Loading audio...', 'info');
-    const audioUrl = await _getYouTubeAudioUrl(videoId);
-    if (!audioUrl) {
+    const resolved = await window.resolveArchiveTrackUrl(identifier);
+    if (!resolved || !resolved.url) {
       showToast('Audio unavailable â€” try again later', 'error');
       return;
     }
     MusicPlayer.play({
-      id: 'yt_' + videoId,
-      title: title || 'YouTube',
-      artist: artist || 'YouTube',
-      url: audioUrl,
+      id: 'arc_' + identifier,
+      title: title || 'Archive',
+      artist: artist || 'Internet Archive',
+      url: resolved.url,
       thumbnail: thumbnail || null,
-      duration: duration || 0,
-      source: 'youtube',
+      duration: resolved.duration || 0,
+      source: 'archive',
     });
-  };
-
-  window.playYouTubeVideo = function(videoId, title) {
-    playYouTubeTrack(videoId, title, '', '', 0);
   };
 
   window.playJamendoTrack = function(track) {
@@ -260,9 +157,9 @@
   window.playCachedTrack = async function(trackId) {
     const t = _trackCache[trackId];
     if (!t) return;
-    // YouTube track â€” resolve audio
-    if (t.source === 'youtube' && t.videoId) {
-      playYouTubeTrack(t.videoId, t.title, t.artist, t.thumbnail, t.duration);
+    // Internet Archive track â€” resolve MP3 URL
+    if (t.source === 'archive' && t.identifier) {
+      playArchiveTrack(t.identifier, t.title, t.artist, t.thumbnail);
       return;
     }
     // Track with direct URL
@@ -495,6 +392,7 @@
             <button class="ml-tab" data-action="switchMusicLibTab" data-action-arg="my" style="min-height:36px;flex-shrink:0;padding:6px 14px;border-radius:20px;border:none;font-size:12px;font-weight:600;cursor:pointer;background:var(--surface-container,rgba(0,0,0,0.06));color:var(--on-surface-variant)">My Music</button>
             <button class="ml-tab" data-action="switchMusicLibTab" data-action-arg="upload" style="min-height:36px;flex-shrink:0;padding:6px 14px;border-radius:20px;border:none;font-size:12px;font-weight:600;cursor:pointer;background:var(--surface-container,rgba(0,0,0,0.06));color:var(--on-surface-variant)">Upload</button>
             <button class="ml-tab" data-action="switchMusicLibTab" data-action-arg="languages" style="min-height:36px;flex-shrink:0;padding:6px 14px;border-radius:20px;border:none;font-size:12px;font-weight:600;cursor:pointer;background:var(--surface-container,rgba(0,0,0,0.06));color:var(--on-surface-variant)">Languages</button>
+            <button class="ml-tab" data-action="switchMusicLibTab" data-action-arg="playlists" style="min-height:36px;flex-shrink:0;padding:6px 14px;border-radius:20px;border:none;font-size:12px;font-weight:600;cursor:pointer;background:var(--surface-container,rgba(0,0,0,0.06));color:var(--on-surface-variant)">Playlists</button>
           </div>
         </div>
         <div id="music-lib-content" style="flex:1;overflow-y:auto;padding:8px 16px 20px"></div>`;
@@ -550,6 +448,7 @@
     else if (tab === 'my') await _renderMyMusic(content);
     else if (tab === 'upload') _renderUploadTab(content);
     else if (tab === 'languages') _renderLanguagesTab(content);
+    else if (tab === 'playlists') await _renderPlaylistsTab(content);
   };
 
   // â”€â”€â”€ SEARCH TAB (default â€” shows results inside chat overlay) â”€â”€â”€
@@ -623,10 +522,8 @@
         <span class="material-symbols-outlined animate-spin" style="color:var(--primary);font-size:28px">progress_activity</span>
         <p style="color:var(--on-surface-variant);font-size:12px;margin-top:8px">Searching "${escHtml(q)}"...</p>
         <div style="display:flex;gap:6px;justify-content:center;margin-top:8px;flex-wrap:wrap">
-          <span style="font-size:10px;color:var(--on-surface-variant);opacity:0.6">iTunes</span>
-          <span style="font-size:10px;color:var(--on-surface-variant);opacity:0.6">Deezer</span>
           <span style="font-size:10px;color:var(--on-surface-variant);opacity:0.6">Jamendo</span>
-          <span style="font-size:10px;color:var(--on-surface-variant);opacity:0.6">YouTube</span>
+          <span style="font-size:10px;color:var(--on-surface-variant);opacity:0.6">Internet Archive</span>
         </div>
       </div>`;
 
@@ -650,23 +547,10 @@
       toRemove.forEach(function(k) { delete _trackCache[k]; });
     }
 
-    // Group by source
-    const ytResults = results.filter(t => t.source === 'youtube');
-    const otherResults = results.filter(t => t.source !== 'youtube');
+    let html = `<div style="font-size:11px;font-weight:700;color:var(--primary);margin-bottom:8px">${results.length} free results for "${escHtml(q)}"</div>`;
 
-    let html = `<div style="font-size:11px;font-weight:700;color:var(--primary);margin-bottom:8px">${results.length} results for "${escHtml(q)}"</div>`;
-
-    // YouTube results (with play via Cloud Function)
-    if (ytResults.length) {
-      html += `<div style="font-size:10px;font-weight:700;color:var(--on-surface-variant);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;margin-top:8px">YouTube (${ytResults.length})</div>`;
-      html += ytResults.map(t => _searchResultRow(t, true)).join('');
-    }
-
-    // Other results (iTunes, Deezer, Jamendo â€” direct playback)
-    if (otherResults.length) {
-      html += `<div style="font-size:10px;font-weight:700;color:var(--on-surface-variant);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;margin-top:12px">Other Sources (${otherResults.length})</div>`;
-      html += otherResults.map(t => _searchResultRow(t, false)).join('');
-    }
+    // All results (Jamendo + Internet Archive â€” 100% free & legal, direct playback)
+    html += results.map(t => _searchResultRow(t)).join('');
 
     el.innerHTML = html;
     if (window.__DEBUG__) console.log('[Music] Search results rendered:', results.length, 'tracks. Cache size:', Object.keys(_trackCache).length);
@@ -683,18 +567,14 @@
     doMusicSearch();
   };
 
-  function _searchResultRow(t, isYouTube) {
+  function _searchResultRow(t) {
     const sourceBadge = {
-      'youtube': '<span style="background:rgba(255,0,0,0.15);color:#ff4444;font-size:9px;padding:1px 5px;border-radius:4px;font-weight:700">YT</span>',
-      'itunes': '<span style="background:rgba(252,60,68,0.15);color:#fc3c44;font-size:9px;padding:1px 5px;border-radius:4px;font-weight:700">iTunes</span>',
-      'deezer': '<span style="background:rgba(168,78,255,0.15);color:#a84eff;font-size:9px;padding:1px 5px;border-radius:4px;font-weight:700">Deezer</span>',
       'jamendo': '<span style="background:rgba(255,165,0,0.15);color:#ffa500;font-size:9px;padding:1px 5px;border-radius:4px;font-weight:700">Jamendo</span>',
+      'archive': '<span style="background:rgba(74,222,128,0.15);color:#4ade80;font-size:9px;padding:1px 5px;border-radius:4px;font-weight:700">Archive</span>',
     };
 
     const _safeAttr = s => escHtml(s).replace(/'/g, "\\'").replace(/&#x27;/g, "\\'").replace(/&#39;/g, "\\'");
-    const playAction = isYouTube
-      ? `playYouTubeTrack('${t.videoId}','${_safeAttr(t.title)}','${_safeAttr(t.artist)}','${_safeAttr(t.thumbnail || '')}',${t.duration || 0})`
-      : `_playSearchResult('${t.id}')`;
+    const playAction = `_playSearchResult('${t.id}')`;
 
     return `
       <div style="display:flex;align-items:center;gap:10px;padding:8px;border-radius:10px;background:var(--surface-container-low,rgba(0,0,0,0.03));margin-bottom:4px;cursor:pointer" onclick="${playAction}">
@@ -716,22 +596,22 @@
     if (!t) { if (window.__DEBUG__) console.warn('[Music] Track not in cache:', trackId); return; }
     if (t.audioUrl || t.url) {
       MusicPlayer.play({ id: t.id, title: t.title, artist: t.artist, url: t.audioUrl || t.url, thumbnail: t.thumbnail || null, duration: t.duration, source: t.source });
-    } else if (t.videoId) {
-      if (window.__DEBUG__) console.log('[Music] Playing YouTube:', t.videoId);
-      playYouTubeTrack(t.videoId, t.title, t.artist, t.thumbnail, t.duration);
+    } else if (t.source === 'archive' && t.identifier) {
+      if (window.__DEBUG__) console.log('[Music] Playing Internet Archive:', t.identifier);
+      playArchiveTrack(t.identifier, t.title, t.artist, t.thumbnail);
     } else {
-      if (window.__DEBUG__) console.warn('[Music] Track has no audio URL and no videoId:', t);
+      if (window.__DEBUG__) console.warn('[Music] Track has no audio URL:', t);
     }
   };
 
   window._addSearchToQueue = async function(trackId) {
     const t = _trackCache[trackId];
     if (!t) return;
-    if (t.source === 'youtube' && t.videoId) {
+    if (t.source === 'archive' && t.identifier) {
       showToast('Resolving audio...', 'info');
-      const url = await _getYouTubeAudioUrl(t.videoId);
-      if (!url) { showToast('Audio unavailable', 'error'); return; }
-      MusicPlayer.addToQueue({ id: t.id, title: t.title, artist: t.artist, url, thumbnail: t.thumbnail, duration: t.duration, source: 'youtube' });
+      const resolved = await window.resolveArchiveTrackUrl(t.identifier);
+      if (!resolved || !resolved.url) { showToast('Audio unavailable', 'error'); return; }
+      MusicPlayer.addToQueue({ id: t.id, title: t.title, artist: t.artist, url: resolved.url, thumbnail: t.thumbnail, duration: resolved.duration || 0, source: 'archive' });
     } else if (t.audioUrl || t.url) {
       MusicPlayer.addToQueue({ id: t.id, title: t.title, artist: t.artist, url: t.audioUrl || t.url, thumbnail: t.thumbnail, duration: t.duration, source: t.source });
     }
@@ -901,7 +781,7 @@
       'Hindi': '#FF9800', 'Kannada': '#4CAF50', 'Bengali': '#2196F3',
       'Marathi': '#00BCD4', 'Punjabi': '#FF5722', 'English': '#607D8B', 'Other': '#78909C',
     };
-    let html = '<p style="font-size:12px;color:var(--on-surface-variant);margin-bottom:12px">Browse music by language â€” searches iTunes, Deezer, Jamendo & YouTube</p>';
+    let html = '<p style="font-size:12px;color:var(--on-surface-variant);margin-bottom:12px">Browse music by language â€” searches Jamendo & Internet Archive (100% free & legal)</p>';
     LANGUAGES.forEach(lang => {
       html += `
         <div style="display:flex;align-items:center;gap:12px;padding:12px;border-radius:12px;background:var(--surface-container-low,rgba(0,0,0,0.03));margin-bottom:6px;cursor:pointer" data-action="browseLanguageYT" data-action-arg="${lang}">
@@ -978,19 +858,6 @@
     if (q && searchInput) { searchInput.value = q; doMusicSearch(); }
   };
 
-  // â”€â”€â”€ YOUTUBE PLAYLIST IMPORT â”€â”€â”€
-  window.fetchYouTubePlaylist = async function(url) {
-    const m = (url || '').match(/[?&]list=([a-zA-Z0-9_-]+)/);
-    if (!m) { showToast('Invalid playlist URL', 'error'); return []; }
-    // For now, search instead of importing
-    showToast('Playlist import via search', 'info');
-    return [];
-  };
-
-  window.doYouTubePlaylistImport = function() {
-    showToast('Use search to find playlist tracks', 'info');
-  };
-
   // â”€â”€â”€ ONBOARDING â”€â”€â”€
   window.checkMusicOnboarding = function() {
     if (localStorage.getItem('nsl_music_onboarded')) return;
@@ -1000,8 +867,8 @@
   window.showMusicOnboarding = function() {
     if (document.getElementById('onboarding-overlay')) return;
     const steps = [
-      { icon: 'music_note', title: 'Welcome to Music!', desc: 'Search any song from multiple sources, upload your music, and listen while you chat.' },
-      { icon: 'search', title: 'Search Any Song', desc: 'Find songs from iTunes, Deezer, Jamendo, and YouTube â€” all in one search!' },
+      { icon: 'music_note', title: 'Welcome to Music!', desc: 'Search free & legal songs, upload your music, and listen while you chat.' },
+      { icon: 'search', title: 'Search Any Song', desc: 'Find songs from Jamendo and the Internet Archive â€” 100% free, no policy issues!' },
       { icon: 'library_music', title: 'Your Library', desc: 'Upload your own MP3s and organize them by language.' },
       { icon: 'download', title: 'Background Play', desc: 'Music keeps playing in a floating mini player even when you switch chats or lock your phone.' },
     ];
@@ -1041,5 +908,231 @@
     };
     renderStep();
   };
+
+  /* ═══════════════ PLAYLISTS TAB ═══════════════ */
+  async function _renderPlaylistsTab(el) {
+    const playlists = await loadPlaylists();
+    el.innerHTML = `
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <span style="font-size:11px;font-weight:700;color:var(--on-surface-variant);text-transform:uppercase;letter-spacing:1px">${playlists.length} Playlist${playlists.length === 1 ? '' : 's'}</span>
+        <button data-action="createPlaylistUI" style="display:flex;align-items:center;gap:4px;background:var(--primary);border:none;color:var(--on-primary);font-size:11px;font-weight:700;border-radius:20px;padding:7px 14px;cursor:pointer;min-height:36px"><span class="material-symbols-outlined" style="font-size:14px">add</span> New Playlist</button>
+      </div>
+      <div id="playlists-list">
+        ${playlists.length ? playlists.map(p => _playlistRow(p)).join('') : _playlistEmptyHTML()}
+      </div>`;
+  }
+
+  function _playlistEmptyHTML() {
+    return `<div style="text-align:center;padding:36px 20px;color:var(--on-surface-variant)">
+      <span class="material-symbols-outlined" style="font-size:48px;opacity:0.3">queue_music</span>
+      <p style="font-size:13px;font-weight:600;margin:10px 0 4px">No playlists yet</p>
+      <p style="font-size:11px;margin:0">Create a playlist, then add songs from Search or My Music.</p>
+    </div>`;
+  }
+
+  function _playlistRow(p) {
+    const count = (p.tracks && p.tracks.length) || 0;
+    const cover = p.coverUrl || (p.tracks && p.tracks[0] && p.tracks[0].thumbnail);
+    return `
+      <div style="display:flex;align-items:center;gap:10px;padding:9px;border-radius:12px;background:var(--surface-container-low,rgba(0,0,0,0.03));margin-bottom:6px;cursor:pointer" onclick="window.openPlaylistDetail('${p.id}')">
+        <div style="width:44px;height:44px;border-radius:10px;background:linear-gradient(135deg,rgba(124,77,255,0.25),rgba(74,0,224,0.1));display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden">
+          ${cover ? `<img src="${escHtml(cover)}" style="width:100%;height:100%;object-fit:cover" onerror="this.style.display='none'" loading="lazy">` : '<span class="material-symbols-outlined" style="font-size:18px;color:var(--primary)">queue_music</span>'}
+        </div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:13px;font-weight:600;color:var(--on-surface);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escHtml(p.name)}</div>
+          <div style="font-size:11px;color:var(--on-surface-variant)">${count} track${count === 1 ? '' : 's'}</div>
+        </div>
+        <div style="display:flex;gap:4px">
+          <button onclick="event.stopPropagation();playPlaylist('${p.id}')" title="Play playlist" style="background:rgba(124,77,255,0.15);border:none;color:var(--primary);width:34px;height:34px;min-width:34px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;cursor:pointer"><span class="material-symbols-outlined" style="font-size:16px">play_arrow</span></button>
+          <button onclick="event.stopPropagation();deletePlaylistUI('${p.id}')" title="Delete playlist" style="background:none;border:none;color:var(--on-surface-variant);width:34px;height:34px;min-width:34px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;cursor:pointer"><span class="material-symbols-outlined" style="font-size:16px">delete</span></button>
+        </div>
+      </div>`;
+  }
+
+  window.createPlaylistUI = async function() {
+    const name = prompt('New playlist name', 'My Playlist');
+    if (!name || !name.trim()) return;
+    const p = await createPlaylist({ name: name.trim() });
+    if (p) switchMusicLibTab('playlists');
+  };
+
+  window.deletePlaylistUI = async function(playlistId) {
+    if (!confirm('Delete this playlist?')) return;
+    await deletePlaylist(playlistId);
+    switchMusicLibTab('playlists');
+  };
+
+  window.playPlaylist = async function(playlistId) {
+    const p = await getPlaylist(playlistId);
+    if (!p || !p.tracks || !p.tracks.length) { showToast('Playlist is empty', 'info'); return; }
+    const tracks = p.order && p.order.length
+      ? p.order.map(id => p.tracks.find(t => t.id === id)).filter(Boolean)
+      : p.tracks;
+    if (!tracks.length) { showToast('Playlist is empty', 'info'); return; }
+    MusicPlayer.setQueue(tracks, 0);
+  };
+
+  window.openPlaylistDetail = async function(playlistId) {
+    const p = await getPlaylist(playlistId);
+    if (!p) { showToast('Playlist not found', 'error'); return; }
+    const tracks = p.order && p.order.length
+      ? p.order.map(id => p.tracks.find(t => t.id === id)).filter(Boolean)
+      : (p.tracks || []);
+    const content = document.getElementById('music-lib-content');
+    if (!content) return;
+    content.innerHTML = `
+      <button data-action="backToPlaylists" style="display:flex;align-items:center;gap:4px;background:none;border:none;color:var(--on-surface-variant);font-size:12px;font-weight:600;cursor:pointer;padding:4px 0;margin-bottom:6px"><span class="material-symbols-outlined" style="font-size:16px">arrow_back</span> All playlists</button>
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px">
+        <div style="width:52px;height:52px;border-radius:12px;background:linear-gradient(135deg,rgba(124,77,255,0.25),rgba(74,0,224,0.1));display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden">
+          ${p.coverUrl ? `<img src="${escHtml(p.coverUrl)}" style="width:100%;height:100%;object-fit:cover" loading="lazy">` : '<span class="material-symbols-outlined" style="font-size:24px;color:var(--primary)">queue_music</span>'}
+        </div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:15px;font-weight:700;color:var(--on-surface);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escHtml(p.name)}</div>
+          <div style="font-size:11px;color:var(--on-surface-variant)">${tracks.length} track${tracks.length === 1 ? '' : 's'}</div>
+        </div>
+        <button onclick="playPlaylist('${p.id}')" style="display:flex;align-items:center;gap:4px;background:var(--primary);border:none;color:var(--on-primary);font-size:12px;font-weight:700;border-radius:20px;padding:8px 16px;cursor:pointer"><span class="material-symbols-outlined" style="font-size:16px">play_arrow</span> Play</button>
+      </div>
+      ${tracks.length ? tracks.map(t => _playlistTrackRow(p.id, t)).join('') : '<div style="text-align:center;padding:24px;color:var(--on-surface-variant);font-size:12px">No tracks yet — add songs from Search or My Music.</div>'}`;
+  };
+
+  function _playlistTrackRow(playlistId, t) {
+    return `
+      <div style="display:flex;align-items:center;gap:10px;padding:8px;border-radius:10px;background:var(--surface-container-low,rgba(0,0,0,0.03));margin-bottom:4px;cursor:pointer" onclick="playPlaylistTrack('${playlistId}','${t.id}')">
+        <div style="width:40px;height:40px;border-radius:8px;background:rgba(124,77,255,0.15);display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden">
+          ${t.thumbnail ? `<img src="${escHtml(t.thumbnail)}" style="width:100%;height:100%;object-fit:cover" onerror="this.style.display='none'" loading="lazy">` : '<span class="material-symbols-outlined" style="font-size:16px;color:var(--primary)">music_note</span>'}
+        </div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:12px;font-weight:600;color:var(--on-surface);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escHtml(t.title)}</div>
+          <div style="font-size:10px;color:var(--on-surface-variant)">${escHtml(t.artist || 'Unknown')}${t.duration ? ' · ' + formatTrackDuration(t.duration) : ''}</div>
+        </div>
+        <button onclick="event.stopPropagation();removePlaylistTrack('${playlistId}','${t.id}')" title="Remove from playlist" style="background:none;border:none;color:var(--on-surface-variant);width:34px;height:34px;min-width:34px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;cursor:pointer"><span class="material-symbols-outlined" style="font-size:16px">remove_circle</span></button>
+      </div>`;
+  }
+
+  window.playPlaylistTrack = async function(playlistId, trackId) {
+    const p = await getPlaylist(playlistId);
+    if (!p || !p.tracks) return;
+    const idx = p.tracks.findIndex(t => t.id === trackId);
+    if (idx < 0) return;
+    MusicPlayer.setQueue(p.tracks, idx);
+  };
+
+  window.removePlaylistTrack = async function(playlistId, trackId) {
+    await removeTrackFromPlaylist(playlistId, trackId);
+    openPlaylistDetail(playlistId);
+  };
+
+  /* ═══════════════ ADD TRACK TO PLAYLIST ═══════════════ */
+  window.addTrackToPlaylistPrompt = async function(trackId) {
+    const t = _trackCache[trackId] || App.musicLibrary.find(x => x.id === trackId);
+    if (!t) { showToast('Track not found', 'error'); return; }
+    await _showPlaylistPicker(t);
+  };
+  window._addToPlaylistPrompt = window.addTrackToPlaylistPrompt;
+
+  async function _showPlaylistPicker(track) {
+    const playlists = await loadPlaylists();
+    const existing = document.getElementById('pl-picker-overlay');
+    if (existing) existing.remove();
+
+    const overlay = document.createElement('div');
+    overlay.id = 'pl-picker-overlay';
+    overlay.style.cssText = 'position:fixed;inset:0;z-index:10002;background:rgba(0,0,0,0.75);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);display:flex;align-items:flex-end;justify-content:center;animation:fadeIn 0.2s ease';
+    const panel = document.createElement('div');
+    panel.style.cssText = 'background:var(--surface-container,#1e1e2e);border-radius:20px 20px 0 0;padding:18px 18px calc(18px + env(safe-area-inset-bottom,0px));width:100%;max-width:460px;max-height:70vh;overflow:hidden;display:flex;flex-direction:column;color:var(--on-surface)';
+
+    panel.innerHTML = `
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <h3 style="margin:0;font-size:15px;font-weight:700">Add to playlist</h3>
+        <button onclick="document.getElementById('pl-picker-overlay')?.remove()" style="background:none;border:none;color:var(--on-surface-variant);cursor:pointer;font-size:18px">&times;</button>
+      </div>
+      <div style="font-size:12px;color:var(--on-surface-variant);margin-bottom:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escHtml(track.title || 'Track')} — ${escHtml(track.artist || 'Unknown')}</div>
+      <div style="flex:1;overflow-y:auto">
+        ${playlists.length ? playlists.map(p => `
+          <button onclick="window._pickPlaylist('${p.id}','${track.id}')" style="display:flex;align-items:center;gap:10px;width:100%;text-align:left;padding:10px;border-radius:10px;border:none;background:var(--surface-container-low,rgba(0,0,0,0.03));color:var(--on-surface);cursor:pointer;margin-bottom:4px;min-height:44px">
+            <span class="material-symbols-outlined" style="color:var(--primary);font-size:18px">queue_music</span>
+            <span style="flex:1;font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escHtml(p.name)}</span>
+            <span style="font-size:10px;color:var(--on-surface-variant)">${(p.tracks && p.tracks.length) || 0}</span>
+          </button>`).join('') : '<div style="text-align:center;padding:16px;color:var(--on-surface-variant);font-size:12px">No playlists yet.</div>'}
+      </div>
+      <button data-action="createPlaylistFromPicker" style="margin-top:12px;width:100%;padding:12px;border-radius:12px;border:none;background:var(--primary);color:var(--on-primary);font-size:13px;font-weight:700;cursor:pointer">+ New playlist</button>`;
+
+    overlay.appendChild(panel);
+    overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+    document.body.appendChild(overlay);
+  }
+
+  window._pickPlaylist = async function(playlistId, trackId) {
+    const t = _trackCache[trackId] || App.musicLibrary.find(x => x.id === trackId);
+    if (!t) return;
+    const clean = { id: t.id, title: t.title || 'Unknown', artist: t.artist || 'Unknown', duration: t.duration || 0, url: t.audioUrl || t.url || null, thumbnail: t.thumbnail || null, source: t.source || 'url', addedBy: App.auth?.currentUser?.uid || '', addedByName: App.currentUser?.displayName || 'User' };
+    if (!clean.url && t.source === 'archive' && t.identifier) {
+      showToast('Resolving audio...', 'info');
+      const resolved = await window.resolveArchiveTrackUrl(t.identifier);
+      if (resolved && resolved.url) clean.url = resolved.url;
+    }
+    if (!clean.url) { showToast('Audio not available for this track', 'error'); return; }
+    const ok = await addTrackToPlaylist(playlistId, clean);
+    if (ok !== false) {
+      showToast('Added to playlist', 'success');
+      document.getElementById('pl-picker-overlay')?.remove();
+    }
+  };
+
+  window.createPlaylistFromPicker = async function() {
+    const name = prompt('New playlist name', 'My Playlist');
+    if (!name || !name.trim()) return;
+    const p = await createPlaylist({ name: name.trim() });
+    if (p) {
+      document.getElementById('pl-picker-overlay')?.remove();
+      showToast('Playlist created', 'success');
+      switchMusicLibTab('playlists');
+    }
+  };
+
+  /* ═══════════════ OFFLINE CACHE (one tap) ═══════════════ */
+  window.cacheTrackOffline = async function(trackId) {
+    const t = _trackCache[trackId] || App.musicLibrary.find(x => x.id === trackId);
+    if (!t) { showToast('Track not found', 'error'); return; }
+    if (window.MusicOfflineStorage && await window.MusicOfflineStorage.isTrackCached(t.id)) { showToast('Already saved offline', 'info'); return; }
+    let url = t.audioUrl || t.url;
+    if (!url && t.source === 'archive' && t.identifier) {
+      showToast('Resolving audio...', 'info');
+      const resolved = await window.resolveArchiveTrackUrl(t.identifier);
+      if (resolved && resolved.url) url = resolved.url;
+    }
+    if (!url) { showToast('Audio not available', 'error'); return; }
+    showToast('Saving for offline...', 'info');
+    try {
+      const res = await fetch(url);
+      const blob = await res.blob();
+      await MusicOfflineStorage.saveTrackBlob(t.id, blob, { title: t.title, artist: t.artist });
+      showToast('Saved for offline play', 'success');
+    } catch (err) {
+      showToast('Could not save offline', 'error');
+    }
+  };
+
+  /* ═══════════════ DATA-ACTION WIRING (music) ═══════════════ */
+  document.addEventListener('click', function (e) {
+    var el = e.target.closest('[data-action]');
+    if (!el || el._tcMusicHandled) return;
+    var action = el.getAttribute('data-action');
+    var arg = el.getAttribute('data-action-arg');
+    var handled = true;
+    if (action === 'openMusicLibrary') { e.preventDefault(); window.openMusicLibrary(); }
+    else if (action === 'attachAndOpenMusic') { e.preventDefault(); window.attachAndOpenMusic(); }
+    else if (action === 'switchMusicLibTab') { e.preventDefault(); window.switchMusicLibTab(arg || 'search'); }
+    else if (action === 'doMusicSearch') { e.preventDefault(); window.doMusicSearch(); }
+    else if (action === '_clearSearchHistory') { e.preventDefault(); window._clearSearchHistory(); }
+    else if (action === 'submitMusicUpload') { e.preventDefault(); window.submitMusicUpload(); }
+    else if (action === 'showRecentlyPlayed') { e.preventDefault(); window.showRecentlyPlayed(); }
+    else if (action === 'playLibraryTrack') { e.preventDefault(); window.playLibraryTrack(arg); }
+    else if (action === 'createPlaylistUI') { e.preventDefault(); window.createPlaylistUI(); }
+    else if (action === 'createPlaylistFromPicker') { e.preventDefault(); window.createPlaylistFromPicker(); }
+    else if (action === 'backToPlaylists') { e.preventDefault(); window.switchMusicLibTab('playlists'); }
+    else handled = false;
+    if (handled) el._tcMusicHandled = true;
+  });
 
 })();
