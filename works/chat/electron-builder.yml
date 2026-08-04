@@ -16,6 +16,7 @@ files:
 asar: true
 
 win:
+  icon: dist/app-icon-512.png
   target:
     - target: nsis
       arch:
@@ -36,6 +37,7 @@ portable:
   artifactName: "${productName}-${version}-Portable.${ext}"
 
 mac:
+  icon: dist/app-icon-512.png
   target:
     - target: dmg
       arch:
@@ -48,6 +50,7 @@ mac:
   category: public.app-category.social-networking
 
 linux:
+  icon: dist/app-icon-512.png
   target:
     - target: AppImage
       arch:

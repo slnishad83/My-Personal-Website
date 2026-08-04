@@ -9,7 +9,7 @@
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="theme-color" content="#11131c" id="theme-color-meta">
   <meta name="description" content="NSL Chat — Modern team messaging by Nishad SL">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' data: https://www.gstatic.com https://www.googleapis.com https://cdnjs.cloudflare.com https://browser.sentry-cdn.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https:; media-src 'self' blob:; connect-src 'self' https://*.firebaseio.com https://*.cloudfunctions.net https://firebasestorage.googleapis.com https://www.googleapis.com https://tenor.googleapis.com https://*.sentry.io wss://*.firebaseio.com; base-uri 'self'; object-src 'self'; frame-ancestors 'self'; form-action 'self'; upgrade-insecure-requests;">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' data: https://www.gstatic.com https://www.googleapis.com https://cdnjs.cloudflare.com https://browser.sentry-cdn.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https:; media-src 'self' blob: https://*.googlevideo.com https://aac.saavncdn.com https://preview.saavncdn.com; connect-src 'self' https://*.firebaseio.com https://*.cloudfunctions.net https://firebasestorage.googleapis.com https://www.googleapis.com https://tenor.googleapis.com https://*.sentry.io https://api.jamendo.com https://archive.org wss://*.firebaseio.com; base-uri 'self'; object-src 'self'; frame-ancestors 'self'; form-action 'self'; upgrade-insecure-requests;">
   <meta name="robots" content="noindex, nofollow">
   <meta property="og:title" content="NSL Chat">
   <meta property="og:description" content="Modern team messaging by Nishad SL">
@@ -111,7 +111,7 @@
     .material-symbols-outlined, .material-symbols-rounded { font-display: swap; }
   </style>
 
-  <script type="module" crossorigin src="/works/chat/assets/main-F5DS2JsT.js"></script>
+  <script type="module" crossorigin src="/works/chat/assets/main-tm45Tpg7.js"></script>
   <link rel="modulepreload" crossorigin href="/works/chat/assets/firebase-config-B1gHZycV.js">
   <link rel="modulepreload" crossorigin href="/works/chat/assets/feature-notifications-CyReC0hX.js">
   <link rel="modulepreload" crossorigin href="/works/chat/assets/lib-twemoji-Bf-HUuBj.js">
@@ -287,18 +287,15 @@
             <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant cursor-pointer text-[20px]" data-action="triggerSidebarSearch" role="button" tabindex="0" aria-label="Search">search</span>
             <span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant cursor-pointer hover:text-primary hidden text-[20px]" id="sidebar-search-clear" data-action="clearSidebarSearch" role="button" tabindex="0" aria-label="Clear search">close</span>
           </div>
-          <button class="wa-filter-manage-btn" id="btn-filter-unread" data-action="addNewFilterChip" type="button" title="Manage chat filters" aria-label="Manage chat filters" aria-pressed="false">
-            <span class="material-symbols-outlined text-[20px]">tune</span>
-          </button>
         </div>
 
         <!-- WhatsApp Web filter chips -->
         <div class="flex items-center gap-2 pt-1 px-0 pb-2 overflow-x-auto select-none wa-chips-scroll" id="wa-filter-chips">
           <button class="wa-chip active" data-action="setWaFilter" data-action-arg="all" data-filter="all" aria-pressed="true">All</button>
           <button class="wa-chip" data-action="setWaFilter" data-action-arg="unread" data-filter="unread" aria-pressed="false">Unread</button>
-          <button class="wa-chip" data-action="setWaFilter" data-action-arg="favourites" data-filter="favourites" aria-pressed="false">Favourites</button>
           <button class="wa-chip" data-action="setWaFilter" data-action-arg="groups" data-filter="groups" aria-pressed="false">Groups</button>
-          <button class="wa-chip-add" data-action="addNewFilterChip" aria-label="Add filter"><span class="material-symbols-outlined text-[16px]">add</span></button>
+          <button class="wa-chip" data-action="openMusicLibrary" aria-label="Open music player" aria-pressed="false"><span class="material-symbols-outlined text-[16px]">music_note</span> Music</button>
+          <button class="wa-chip-add" data-action="openNewChat" aria-label="Start new chat"><span class="material-symbols-outlined text-[16px]">add</span></button>
         </div>
       </div>
 

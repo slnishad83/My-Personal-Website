@@ -1,10 +1,12 @@
 const { onRequest, HttpsError } = require('firebase-functions/v2/https');
 
 const _adminModule = require('firebase-admin');
+let _adminInitialized = false;
 const admin = new Proxy({}, {
   get(_target, prop) {
-    if (!_adminModule.getApps().length) {
+    if (!_adminInitialized) {
       _adminModule.initializeApp();
+      _adminInitialized = true;
     }
     return _adminModule[prop];
   }
@@ -1035,7 +1037,8 @@ exports.youtubeSearch = onRequest({ region: 'us-central1', timeoutSeconds: 30, m
   try {
     caller = await verifyFirebaseUser(req);
     checkRateLimit(caller.uid, 'youtubeSearch', 60);
-  } catch (_) {
+  } catch (err) {
+    console.error('youtubeSearch auth failure:', (err && err.code) || (err && err.message) || String(err));
     res.status(401).json({ ok: false, error: 'Unauthorized' });
     return;
   }

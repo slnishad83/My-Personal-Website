@@ -2,10 +2,12 @@ const { onDocumentCreated, onDocumentUpdated, onDocumentDeleted } = require('fir
 const { onSchedule } = require('firebase-functions/v2/scheduler');
 
 const _adminModule = require('firebase-admin');
+let _adminInitialized = false;
 const admin = new Proxy({}, {
   get(_target, prop) {
-    if (!_adminModule.getApps().length) {
+    if (!_adminInitialized) {
       _adminModule.initializeApp();
+      _adminInitialized = true;
     }
     return _adminModule[prop];
   }

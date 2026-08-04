@@ -76,6 +76,10 @@
         "destination": "/reset.html"
       },
       {
+        "source": "/works/chat/sw.js",
+        "destination": "/works/chat/dist/sw.js"
+      },
+      {
         "source": "/works/chat",
         "destination": "/works/chat/dist/index.html"
       },
@@ -288,7 +292,7 @@
           },
           {
             "key": "Content-Security-Policy",
-            "value": "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob: https://www.gstatic.com https://www.googleapis.com https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; media-src 'self' blob:; connect-src 'self' https://*.firebaseio.com https://*.cloudfunctions.net https://firebasestorage.googleapis.com https://www.googleapis.com wss://*.firebaseio.com https://tenor.googleapis.com https://chat.nishadsl.com https://nishadsl.com; frame-src 'self' https://*.google.com https://*.youtube.com; worker-src 'self' blob:; base-uri 'self'; object-src 'self'; frame-ancestors 'self'; form-action 'self';"
+            "value": "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob: https://www.gstatic.com https://www.googleapis.com https://cdnjs.cloudflare.com https://browser.sentry-cdn.com https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; media-src 'self' blob:; connect-src 'self' https://*.googleapis.com https://*.firebaseio.com https://*.cloudfunctions.net https://firebasestorage.googleapis.com https://www.googleapis.com wss://*.firebaseio.com https://tenor.googleapis.com https://chat.nishadsl.com https://nishadsl.com https://*.sentry.io https://static.cloudflareinsights.com https://api.jamendo.com https://archive.org; frame-src 'self' https://*.google.com https://*.youtube.com; worker-src 'self' blob:; base-uri 'self'; object-src 'self'; frame-ancestors 'self'; form-action 'self';"
           }
         ]
       },
@@ -352,7 +356,6 @@
       "works/chat/my-team-chat.apk",
       "works/chat/*.html",
       "works/chat/*.js",
-      "!works/chat/sw.js",
       "works/chat/*.css",
       "works/chat/src/**",
       "works/chat/tests/**",

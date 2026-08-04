@@ -770,7 +770,7 @@ document.addEventListener('mousemove', (e) => {
    VERSION FETCHER
    â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 
-fetch('dist/version.json').then(r => r.json()).then(v => {
+fetch('/works/chat/version.json?t=' + Date.now()).then(r => r.json()).then(v => {
   var el = document.getElementById('app-version');
   if (el) el.textContent = v.version || 'v4.0.0';
 }).catch(() => {});
