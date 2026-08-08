@@ -126,6 +126,11 @@
     var params = new URLSearchParams(window.location.search);
     var callId = params.get('call');
     var callType = params.get('type');
+    if (!callId && window.location.hash && window.location.hash.indexOf('#call=') === 0) {
+      callId = decodeURIComponent(window.location.hash.slice('#call='.length));
+      callType = callType || 'video';
+      window.history.replaceState({}, '', window.location.pathname);
+    }
     if (callId) {
       setTimeout(function () {
         joinCallLink(callId, callType || 'video');

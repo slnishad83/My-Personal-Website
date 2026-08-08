@@ -2,6 +2,9 @@
 /* Delegated event handlers — replaces all inline onclick attributes in index.html */
 (function() {
   var ACTIONS = {
+    'openProfile': function() {
+      if (typeof window.openProfile === 'function') window.openProfile();
+    },
     'toggleChatMute': function(el) {
       var chatId = el.dataset.chatId || (App && App.currentChat && App.currentChat.id);
       if (!chatId) return;
@@ -76,6 +79,12 @@
     },
     'cancelReply': function() {
       if (typeof window.cancelReplyMode === 'function') window.cancelReplyMode();
+    },
+    'openScanner': function() {
+      if (typeof window.openScanner === 'function') window.openScanner();
+    },
+    'closeScanner': function() {
+      if (typeof window.closeScanner === 'function') window.closeScanner();
     }
   };
 

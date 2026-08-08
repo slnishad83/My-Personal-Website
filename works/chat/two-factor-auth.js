@@ -107,7 +107,7 @@
         if (!App.db || !App.auth?.currentUser) return false;
         const doc = await App.db.collection('users').doc(App.auth.currentUser.uid).get();
         const d = doc.data() || {};
-        return !!(d.twofaPinHash && d.twofaPinSalt);
+        return !!(d.twofaEnabled);
       } catch (_) {
         return false;
       }

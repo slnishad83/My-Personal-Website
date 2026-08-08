@@ -7,6 +7,22 @@
   var _esc = function(s) { return s ? String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;') : ''; };
   var _toast = function(msg, t) { if (typeof window.showToast === 'function') window.showToast(msg, t); };
 
+  function _chatColl(chatId) {
+    var chat = window.App && window.App.chats ? (window.App.chats[chatId] || null) : null;
+    if (chat) return (chat.type === 'group' || chat.isGroup) ? 'groups' : 'chats';
+    if (window.App && window.App.currentChat && window.App.currentChat.id === chatId) {
+      return (window.App.currentChatType === 'group' || window.App.currentChat.type === 'group') ? 'groups' : 'chats';
+    }
+    return 'chats';
+  }
+
+  function _messageRef(msgId, chatId) {
+    var db = _db();
+    var cid = chatId || (window.App && window.App.currentChat ? window.App.currentChat.id : null);
+    if (!db || !cid || !msgId) return null;
+    return db.collection(_chatColl(cid)).doc(cid).collection('messages').doc(msgId);
+  }
+
   function _msgTime(msg) {
     if (!msg) return 0;
     if (msg.timestamp && typeof msg.timestamp === 'object' && msg.timestamp.toMillis) return msg.timestamp.toMillis();
@@ -28,10 +44,8 @@
   }
 
   function starMessage(msgId, chatId) {
-    var db = _db();
-    var cid = chatId || (window.App && window.App.currentChat ? window.App.currentChat.id : null);
-    if (!db || !cid || !msgId) return;
-    var msgRef = db.collection('messages').doc(cid).collection('items').doc(msgId);
+    var msgRef = _messageRef(msgId, chatId);
+    if (!msgRef) return;
     msgRef.get().then(function(doc) {
       if (!doc.exists) return;
       var data = doc.data();
@@ -50,10 +64,8 @@
   }
 
   function unstarMessage(msgId, chatId) {
-    var db = _db();
-    var cid = chatId || (window.App && window.App.currentChat ? window.App.currentChat.id : null);
-    if (!db || !cid || !msgId) return;
-    var msgRef = db.collection('messages').doc(cid).collection('items').doc(msgId);
+    var msgRef = _messageRef(msgId, chatId);
+    if (!msgRef) return;
     msgRef.update({
       starred: false,
       starredAt: firebase.firestore.FieldValue.delete(),
@@ -76,7 +88,7 @@
     if (!db || !uid) return Promise.resolve([]);
     var allChats = window.App && window.App.chats ? Object.keys(window.App.chats) : [];
     var promises = allChats.map(function(chatId) {
-      return db.collection('messages').doc(chatId).collection('items')
+      return db.collection(_chatColl(chatId)).doc(chatId).collection('messages')
         .where('starred', '==', true)
         .orderBy('starredAt', 'desc')
         .limit(50)
@@ -232,10 +244,9 @@
     container.querySelectorAll('[data-message-id]').forEach(function(el) {
       var msgId = el.getAttribute('data-message-id');
       if (!msgId || el.dataset.starIconAdded === '1') return;
-      var db = _db();
-      var chatId = window.App && window.App.currentChat ? window.App.currentChat.id : null;
-      if (!db || !chatId) return;
-      db.collection('messages').doc(chatId).collection('items').doc(msgId).get().then(function(doc) {
+      var msgRef = _messageRef(msgId);
+      if (!msgRef) return;
+      msgRef.get().then(function(doc) {
         if (!doc.exists) return;
         var data = doc.data();
         el.dataset.starIconAdded = '1';
@@ -288,11 +299,11 @@
       setTimeout(function() {
         var menu = document.getElementById('msg-ctx-menu');
         if (!menu) return;
-        var chatId = window.App && window.App.currentChat ? window.App.currentChat.id : null;
-        if (!chatId) return;
         var db = _db();
         if (!db) return;
-        db.collection('messages').doc(chatId).collection('items').doc(msgId).get().then(function(doc) {
+        var msgRef = _messageRef(msgId);
+        if (!msgRef) return;
+        msgRef.get().then(function(doc) {
           if (!doc.exists) return;
           var data = doc.data();
           var starred = data.starred;
@@ -320,11 +331,11 @@
       if (!msgEl) return;
       var msgId = msgEl.getAttribute('data-message-id');
       touchTimer = setTimeout(function() {
-        var chatId = window.App && window.App.currentChat ? window.App.currentChat.id : null;
-        if (!chatId) return;
         var db = _db();
         if (!db) return;
-        db.collection('messages').doc(chatId).collection('items').doc(msgId).get().then(function(doc) {
+        var msgRef = _messageRef(msgId);
+        if (!msgRef) return;
+        msgRef.get().then(function(doc) {
           if (!doc.exists) return;
           var data = doc.data();
           var starred = data.starred;
@@ -423,4 +434,7 @@
     renderStarredPanel: renderStarredPanel,
     addStarIcon: addStarIcon
   };
+  window.starMessage = function (msgId, chatId) { starMessage(msgId, chatId); };
+  window.unstarMessage = function (msgId, chatId) { unstarMessage(msgId, chatId); };
+  window.toggleStar = function (msgId, chatId) { toggleStar(msgId, chatId); };
 })();

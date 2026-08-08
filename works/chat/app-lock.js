@@ -179,12 +179,16 @@
     if (d && uid) {
       try {
         var userDoc = await d.collection('users').doc(uid).get();
+        var secretDoc = await d.collection('userSecrets').doc(uid).get();
         if (userDoc.exists) {
           var data = userDoc.data();
-          if (data.appLockEnabled && data.appLockPinHash) {
-            if (hash === data.appLockPinHash) {
+          var serverHash = secretDoc.exists && secretDoc.data() && secretDoc.data().appLockPinHash
+            ? secretDoc.data().appLockPinHash
+            : data.appLockPinHash;
+          if (data.appLockEnabled && serverHash) {
+            if (hash === serverHash) {
               // Sync back to localStorage
-              settings.pinHash = data.appLockPinHash;
+              settings.pinHash = serverHash;
               settings.pinSalt = settings.pinSalt || '';
               settings.enabled = true;
               _saveSettings(settings);
@@ -472,9 +476,11 @@
       var uid = _uid();
       if (d && uid) {
         await d.collection('users').doc(uid).update({
-          appLockEnabled: true,
-          appLockPinHash: hash
+          appLockEnabled: true
         }).catch(function () {});
+        await d.collection('userSecrets').doc(uid).set({
+          appLockPinHash: hash
+        }, { merge: true }).catch(function () {});
       }
 
       if (typeof showToast === 'function') showToast('App lock PIN set', 'success');
@@ -500,7 +506,9 @@
     var uid = _uid();
     if (d && uid) {
       await d.collection('users').doc(uid).update({
-        appLockEnabled: false,
+        appLockEnabled: false
+      }).catch(function () {});
+      await d.collection('userSecrets').doc(uid).update({
         appLockPinHash: firebase.firestore.FieldValue.delete()
       }).catch(function () {});
     }

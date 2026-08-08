@@ -79,6 +79,7 @@
     var input = document.createElement('input');
     input.type = 'file';
     input.accept = 'image/*';
+    input.capture = 'user';
     input.onchange = async function (e) {
       var file = e.target.files[0];
       if (!file) return;
@@ -176,10 +177,26 @@
     if (!a || !a.currentUser) return false;
 
     try {
+      // Ensure reCAPTCHA container exists
+      var recaptchaEl = document.getElementById('nsl-pe-recaptcha');
+      if (!recaptchaEl) {
+        recaptchaEl = document.createElement('div');
+        recaptchaEl.id = 'nsl-pe-recaptcha';
+        document.body.appendChild(recaptchaEl);
+      }
       var verifier = new firebase.auth.RecaptchaVerifier('nsl-pe-recaptcha', { size: 'invisible' });
-      var _confirmation = await a.currentUser.updatePhoneNumber(
-        firebase.auth.PhoneAuthProvider.credential(await a.currentUser.verifyPhoneNumber(newPhone, verifier), '')
-      );
+
+      var confirmation = await a.currentUser.verifyPhoneNumber(newPhone, verifier);
+      var code = typeof window.prompt === 'function'
+        ? window.prompt('Enter the verification code sent to ' + newPhone)
+        : null;
+      if (!code) {
+        if (typeof showToast === 'function') showToast('Phone update cancelled', 'info');
+        return false;
+      }
+
+      var credential = firebase.auth.PhoneAuthProvider.credential(confirmation, code.trim());
+      await a.currentUser.updatePhoneNumber(credential);
 
       var d = _db();
       var uid = _uid();
@@ -208,11 +225,13 @@
     var nameInput = document.getElementById('nsl-pe-name');
     var emailInput = document.getElementById('nsl-pe-email');
     var phoneInput = document.getElementById('nsl-pe-phone');
+    var statusInput = document.getElementById('nsl-pe-status');
     var saveBtn = document.getElementById('nsl-pe-save');
 
     var newName = nameInput ? nameInput.value.trim() : '';
     var newEmail = emailInput ? emailInput.value.trim() : '';
     var newPhone = phoneInput ? phoneInput.value.trim() : '';
+    var newStatus = statusInput ? statusInput.value.trim() : '';
 
     if (!_validateName(newName)) {
       if (typeof showToast === 'function') showToast('Name must be at least 2 characters', 'error');
@@ -235,6 +254,11 @@
           try { await a.currentUser.updateProfile({ displayName: newName }); } catch (_) {}
         }
         if (window.currentUser) window.currentUser.displayName = newName;
+      }
+
+      if (newStatus !== ((window.currentUser && window.currentUser.status) || '')) {
+        updates.status = newStatus;
+        if (window.currentUser) window.currentUser.status = newStatus;
       }
 
       if (newEmail && newEmail !== (window.currentUser && window.currentUser.email)) {
@@ -281,6 +305,7 @@
     var displayName = user.displayName || '';
     var email = user.email || '';
     var phone = user.phoneNumber || '';
+    var about = user.status || user.about || '';
 
     var overlay = document.createElement('div');
     overlay.className = 'nsl-pe-overlay';
@@ -304,6 +329,10 @@
         '<div class="nsl-pe-avatar-hint">Tap to change photo</div>' +
       '</div>' +
       '<div class="nsl-pe-section">' +
+        '<div class="nsl-pe-field">' +
+          '<label>Status / About</label>' +
+          '<textarea id="nsl-pe-status" rows="2" maxlength="139" placeholder="Hey there! I am using NSL Chat.">' + _esc(about) + '</textarea>' +
+        '</div>' +
         '<div class="nsl-pe-field">' +
           '<label>Display Name</label>' +
           '<input type="text" id="nsl-pe-name" value="' + _esc(displayName) + '" placeholder="Your name">' +

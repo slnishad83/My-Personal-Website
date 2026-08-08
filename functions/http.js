@@ -576,7 +576,33 @@ exports.sendNotificationReply = onRequest(
         .replace(/"/g, '&quot;')
         .replace(/'/g, '&#x27;');
 
-      const userSnap = await admin.firestore().collection('users').doc(uid).get();
+      // M10: Authorization — sender must be a member of the target chat
+      const db = admin.firestore();
+      if (chatType === 'group' && groupId) {
+        const memberSnap = await db.collection('groupMembers')
+          .where('groupId', '==', groupId)
+          .where('userId', '==', uid)
+          .limit(1)
+          .get();
+        if (memberSnap.empty) {
+          res.status(403).json({ error: 'Not a group member' });
+          return;
+        }
+      } else {
+        const chatSnap = await db.collection('directChats').doc(chatId).get();
+        let isParticipant = false;
+        if (chatSnap.exists) {
+          const chat = chatSnap.data() || {};
+          const participants = chat.participants || chat.members || [];
+          if (Array.isArray(participants) && participants.includes(uid)) isParticipant = true;
+        }
+        if (!isParticipant) {
+          res.status(403).json({ error: 'Not a chat participant' });
+          return;
+        }
+      }
+
+      const userSnap = await db.collection('users').doc(uid).get();
       const user = userSnap.data() || {};
 
       const msgData = {

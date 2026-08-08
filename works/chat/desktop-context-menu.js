@@ -19,10 +19,6 @@
     document.body.appendChild(_menu);
     // Close on click outside
     document.addEventListener('click', () => hide());
-    document.addEventListener('contextmenu', (e) => {
-      // Only hide if clicking outside the menu
-      if (_menu && !_menu.contains(e.target)) hide();
-    });
     return _menu;
   }
 
@@ -95,7 +91,7 @@
     e.preventDefault();
     e.stopPropagation();
     const msgId = msgEl?.dataset?.msgId;
-    const isMyMsg = msgEl?.classList?.contains('my-message');
+    const isMyMsg = msgEl?.classList?.contains('msg-out') || msgEl?.classList?.contains('my-message');
     const _chatId = App?.currentChat?.id || '';
     const isGroup = App?.currentChat?.isGroup || false;
     const items = [
@@ -190,12 +186,13 @@
   function init() {
     // Message right-click
     document.addEventListener('contextmenu', (e) => {
-      const msgEl = e.target.closest('.message[data-msg-id]');
+      const msgEl = e.target.closest('.message-row[data-msg-id], .message[data-msg-id]');
       if (msgEl) { showMsgContextMenu(e, msgEl); return; }
-      const chatEl = e.target.closest('.chat-list-item');
+      const chatEl = e.target.closest('.chat-list-item, [data-chat-id]');
       if (chatEl) { showChatContextMenu(e, chatEl); return; }
       const mediaEl = e.target.closest('#media-viewer img, #media-viewer video, .bubble-media img, .bubble-media video');
       if (mediaEl) { showMediaContextMenu(e, mediaEl); return; }
+      if (_visible) hide();
     });
     // Keyboard navigation
     document.addEventListener('keydown', (e) => {

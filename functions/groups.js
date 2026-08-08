@@ -299,3 +299,78 @@ exports.deleteGroup = onCall(
     return { success: true };
   }
 );
+
+/* ══════════════════════════════════════════════════════════════
+   7. respondToGroupInvite — Recipient accepts/declines a group invite
+   ══════════════════════════════════════════════════════════════ */
+exports.respondToGroupInvite = onCall(
+  { region: 'us-central1' },
+  async (request) => {
+    const uid = validateAuth(request);
+    const { inviteId, action } = request.data || {};
+
+    if (!inviteId || typeof inviteId !== 'string') {
+      throw new HttpsError('invalid-argument', 'inviteId is required.');
+    }
+    if (action !== 'accept' && action !== 'decline') {
+      throw new HttpsError('invalid-argument', 'action must be "accept" or "decline".');
+    }
+
+    const inviteRef = db().collection('groupInvites').doc(inviteId);
+    const inviteSnap = await inviteRef.get();
+    if (!inviteSnap.exists) {
+      throw new HttpsError('not-found', 'Group invite not found.');
+    }
+    const invite = inviteSnap.data() || {};
+
+    if (invite.status !== 'pending') {
+      throw new HttpsError('failed-precondition', 'This invite has already been responded to.');
+    }
+    if (invite.toUserId !== uid) {
+      throw new HttpsError('permission-denied', 'This invite is not addressed to you.');
+    }
+
+    const newStatus = action === 'accept' ? 'accepted' : 'declined';
+
+    if (action === 'accept') {
+      const groupId = invite.groupId;
+      const group = await getGroupDoc(groupId);
+
+      const batch = db().batch();
+      batch.update(inviteRef, {
+        status: newStatus,
+        respondedAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+      // Client-facing members subcollection model (group-features.js)
+      batch.set(groupRef(groupId).collection('members').doc(uid), {
+        uid,
+        displayName: 'Member',
+        photoURL: '',
+        role: 'member',
+        addedBy: invite.fromUserId,
+        addedAt: Date.now(),
+      });
+      await batch.commit();
+
+      // Flat groupMembers doc — triggers syncGroupMemberCreated which
+      // recomputes memberIds/adminIds/memberCount on the group doc.
+      await db().collection('groupMembers').add({
+        groupId,
+        userId: uid,
+        role: 'member',
+        joinedAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+      return { success: true, status: newStatus, groupId, groupName: group.name };
+    }
+
+    await inviteRef.update({
+      status: newStatus,
+      respondedAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+    return { success: true, status: newStatus };
+  }
+);
+
+function groupRef(groupId) {
+  return db().collection('groups').doc(groupId);
+}

@@ -19,6 +19,20 @@
 
   var _uid = function() { return window.App && window.App.uid ? window.App.uid() : (window.currentUser ? window.currentUser.uid : null); };
 
+  function _currentChatId() {
+    return (App && App.currentChat && App.currentChat.id) || (window.App && window.App.currentChat && window.App.currentChat.id) || '';
+  }
+
+  function _chatIsGroup() {
+    return !!(App && (App.currentChatType === 'group' || (App.currentChat && App.currentChat.type === 'group')));
+  }
+
+  function _messageRef(db, msgId) {
+    var cid = _currentChatId();
+    if (!cid || !db || !msgId) return null;
+    return db.collection(_chatIsGroup() ? 'groups' : 'chats').doc(cid).collection('messages').doc(msgId);
+  }
+
   function _loadUsageCounts() {
     try {
       _usageCounts = JSON.parse(localStorage.getItem('nsl_reaction_usage') || '{}');
@@ -244,10 +258,7 @@
     _recordUsage(emoji);
 
     try {
-      var chatId = (App && App.currentChat && App.currentChat.id) || '';
-      var msgRef = chatId
-        ? d.collection('messages').doc(chatId).collection('items').doc(msgId)
-        : d.collection('messages').doc(msgId);
+      var msgRef = _messageRef(d, msgId) || d.collection('messages').doc(msgId);
       var snap = await msgRef.get();
       if (!snap.exists) return;
 
@@ -410,10 +421,7 @@
           var mid = msgEl.dataset.messageId;
           var d = _db();
           if (d && mid) {
-            var chatId = (App && App.currentChat && App.currentChat.id) || '';
-            var msgRef = chatId
-              ? d.collection('messages').doc(chatId).collection('items').doc(mid)
-              : d.collection('messages').doc(mid);
+            var msgRef = _messageRef(d, mid) || d.collection('messages').doc(mid);
             msgRef.get().then(function(snap) {
               if (snap.exists) {
                 var reactions = snap.data().reactions || {};
@@ -449,10 +457,7 @@
           var msgId = badge.dataset.msgId;
           var d = _db();
           if (d && msgId) {
-            var chatId2 = (App && App.currentChat && App.currentChat.id) || '';
-            var msgRef2 = chatId2
-              ? d.collection('messages').doc(chatId2).collection('items').doc(msgId)
-              : d.collection('messages').doc(msgId);
+            var msgRef2 = _messageRef(d, msgId) || d.collection('messages').doc(msgId);
             msgRef2.get().then(function(snap) {
               if (snap.exists) {
                 var reactions = snap.data().reactions || {};
@@ -484,10 +489,7 @@
       delete _reactionUnsubscribes[oldest];
     }
 
-    var chatId3 = (App && App.currentChat && App.currentChat.id) || '';
-    var reactionRef = chatId3
-      ? d.collection('messages').doc(chatId3).collection('items').doc(msgId)
-      : d.collection('messages').doc(msgId);
+    var reactionRef = _messageRef(d, msgId) || d.collection('messages').doc(msgId);
     _reactionUnsubscribes[msgId] = reactionRef
       .onSnapshot(function (snap) {
         if (!snap.exists) return;

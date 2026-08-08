@@ -246,15 +246,16 @@
 
   function patchReplyToMsg() {
     if (window._originalReplyToMsg) return;
-    var orig = window.replyToMsg;
-    if (typeof orig !== 'function') return;
+    var orig = typeof window.replyToMsg === 'function' ? window.replyToMsg : null;
     window._originalReplyToMsg = orig;
     window.replyToMsg = function (msgId) {
       var db = _db();
       var chat = window.App && window.App.currentChat ? window.App.currentChat : null;
-      if (!db || !chat || !msgId) return orig(msgId);
-      db.collection('messages').doc(chat.id).collection('items').doc(msgId).get().then(function (doc) {
-        if (!doc.exists) return orig(msgId);
+      if (!db || !chat || !msgId) { if (orig) return orig(msgId); return; }
+      var coll = (window.App.currentChatType === 'group' || chat.type === 'group') ? 'groups' : 'chats';
+      var ref = db.collection(coll).doc(chat.id).collection('messages').doc(msgId);
+      ref.get().then(function (doc) {
+        if (!doc.exists) { if (orig) return orig(msgId); return; }
         var msg = doc.data();
         msg.id = doc.id;
         var preview = _getReplyPreview(msg);
@@ -268,7 +269,7 @@
           if (rpText) rpText.textContent = preview;
           bar.dataset.replyTo = msgId;
         }
-      })['catch'](function () { orig(msgId); });
+      })['catch'](function () { if (orig) orig(msgId); });
     };
   }
 

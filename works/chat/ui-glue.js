@@ -246,6 +246,14 @@
           '<button class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-surface-variant/60 transition-colors text-left" data-action="openChatSearchMenu"><span class="material-symbols-outlined text-[18px] text-on-surface-variant">search</span><span class="text-sm font-medium text-on-surface">Search in chat</span></button>' +
           '<button class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-surface-variant/60 transition-colors text-left" data-action="jumpToDateMenu"><span class="material-symbols-outlined text-[18px] text-on-surface-variant">calendar_month</span><span class="text-sm font-medium text-on-surface">Jump to date</span></button>' +
           '<button class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-surface-variant/60 transition-colors text-left" data-action="enterMessageMultiSelect"><span class="material-symbols-outlined text-[18px] text-on-surface-variant">checklist</span><span class="text-sm font-medium text-on-surface">Select messages</span></button>' +
+          '<button class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-surface-variant/60 transition-colors text-left" data-action="openChatExportMenu"><span class="material-symbols-outlined text-[18px] text-on-surface-variant">ios_share</span><span class="text-sm font-medium text-on-surface">Export chat</span></button>' +
+          '<button class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-surface-variant/60 transition-colors text-left" data-action="shareLiveLocationMenu"><span class="material-symbols-outlined text-[18px] text-on-surface-variant">share_location</span><span class="text-sm font-medium text-on-surface">Share live location</span></button>' +
+          '<button class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-surface-variant/60 transition-colors text-left" data-action="openGhostModeMenu"><span class="material-symbols-outlined text-[18px] text-on-surface-variant">visibility_off</span><span class="text-sm font-medium text-on-surface">Ghost mode</span></button>' +
+          '<button class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-surface-variant/60 transition-colors text-left" data-action="openPrivacySettingsMenu"><span class="material-symbols-outlined text-[18px] text-on-surface-variant">lock</span><span class="text-sm font-medium text-on-surface">Privacy settings</span></button>' +
+          '<button class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-surface-variant/60 transition-colors text-left" data-action="openCloudDriveMenu"><span class="material-symbols-outlined text-[18px] text-on-surface-variant">cloud</span><span class="text-sm font-medium text-on-surface">Cloud drive</span></button>' +
+          (isGroup
+            ? '<button class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-surface-variant/60 transition-colors text-left" data-action="openGroupChatMenu"><span class="material-symbols-outlined text-[18px] text-on-surface-variant">campaign</span><span class="text-sm font-medium text-on-surface">Announcement mode</span></button>'
+            : '') +
         '</div>' +
         '<div class="mt-4">' +
           '<div class="flex gap-1 rounded-xl bg-surface-container-low p-1 mb-3">' +
@@ -385,6 +393,35 @@
   window.jumpToDateMenu = function () {
     if (typeof window.JumpToDate !== 'undefined' && typeof window.JumpToDate.open === 'function') window.JumpToDate.open();
     else _toast('Jump to date is not available', 'error');
+  };
+  window.openChatExportMenu = function () {
+    if (typeof window.openChatExport === 'function') window.openChatExport();
+    else _toast('Export chat is not available', 'error');
+  };
+  window.shareLiveLocationMenu = function () {
+    var chat = _activeChat();
+    if (!chat) { _toast('Open a chat first', 'error'); return; }
+    if (window.LiveLocation && typeof window.LiveLocation.openSharePicker === 'function') {
+      window.LiveLocation.openSharePicker(chat.id, _activeType());
+    } else {
+      _toast('Live location is not available', 'error');
+    }
+  };
+  window.openGhostModeMenu = function () {
+    if (typeof window.openGhostModeSettings === 'function') window.openGhostModeSettings();
+    else _toast('Ghost mode is not available', 'error');
+  };
+  window.openPrivacySettingsMenu = function () {
+    if (window.PrivacySettings && typeof window.PrivacySettings.openSettings === 'function') window.PrivacySettings.openSettings();
+    else _toast('Privacy settings are not available', 'error');
+  };
+  window.openCloudDriveMenu = function () {
+    if (typeof window.openGoogleDrivePicker === 'function') window.openGoogleDrivePicker();
+    else _toast('Cloud drive is not available', 'error');
+  };
+  window.openGroupChatMenu = function () {
+    if (typeof window.openAnnouncementSettings === 'function') window.openAnnouncementSettings();
+    else _toast('Group chat settings are not available', 'error');
   };
   window.openNewGroup = function () {
     _toast('New group creation is not available yet');

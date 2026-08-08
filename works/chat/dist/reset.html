@@ -72,6 +72,8 @@
     .back-link { display: inline-block; margin-top: 20px; font-size: 13px; color: #8b949e; text-decoration: none; }
     .back-link:hover { color: #00bfa5; }
   </style>
+  <script type="module" crossorigin src="/works/chat/assets/reset-5gorHPOn.js"></script>
+  <link rel="modulepreload" crossorigin href="/works/chat/assets/firebase-config-B1gHZycV.js">
 </head>
 <body>
   <a href="#resetPwForm" class="sr-only" id="skip-nav" style="position:fixed;top:-100px;left:8px;z-index:99999;padding:12px 24px;background:#00bfa5;color:#0d1117;border-radius:0 0 12px 12px;font-weight:700;font-size:14px;text-decoration:none;" onfocus="this.style.top='0'" onblur="this.style.top='-100px'">Skip to form</a>
@@ -132,110 +134,7 @@
     *:focus-visible { outline: 2px solid #00bfa5 !important; outline-offset: 2px !important; }
   </style>
 
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
-  <script>
-    (function() {
-      var firebaseConfig = window.FIREBASE_CONFIG || {};
-      if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
-      var auth = firebase.auth();
-
-      var params = new URLSearchParams(window.location.search);
-      var mode = params.get('mode');
-      var oobCode = params.get('oobCode');
-
-      if (mode !== 'resetPassword' || !oobCode) {
-        showState('error');
-        document.getElementById('errorMessage').textContent = 'Invalid reset link. Please request a new one from the login page.';
-        return;
-      }
-
-      auth.verifyPasswordResetCode(oobCode).then(function(email) {
-        document.getElementById('emailDisplay').textContent = 'Resetting password for ' + email;
-        showState('form');
-      }).catch(function() {
-        showState('error');
-      });
-
-      function showState(state) {
-        document.getElementById('loadingState').style.display = state === 'loading' ? 'flex' : 'none';
-        document.getElementById('resetFormWrap').style.display = state === 'form' ? 'block' : 'none';
-        document.getElementById('errorState').style.display = state === 'error' ? 'block' : 'none';
-      }
-
-      var pwInput = document.getElementById('newPassword');
-      pwInput.addEventListener('input', function() {
-        var val = pwInput.value;
-        var score = 0;
-        if (val.length >= 8) score++;
-        if (/[A-Z]/.test(val)) score++;
-        if (/[a-z]/.test(val)) score++;
-        if (/[0-9!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?`~]/.test(val)) score++;
-        var level = score <= 1 ? 'weak' : score <= 2 ? 'medium' : score <= 3 ? 'medium' : 'strong';
-        for (var i = 1; i <= 4; i++) {
-          var bar = document.getElementById('bar' + i);
-          bar.className = 'bar';
-          if (level === 'weak' && i <= 1) bar.classList.add('weak');
-          else if (level === 'medium' && i <= 2) bar.classList.add('medium');
-          else if (level === 'strong' && i <= 4) bar.classList.add('strong');
-        }
-      });
-
-      document.getElementById('resetPwForm').addEventListener('submit', function(e) {
-        e.preventDefault();
-        var newPw = pwInput.value;
-        var confirmPw = document.getElementById('confirmPassword').value;
-        var msgEl = document.getElementById('resetMessage');
-        var btn = document.getElementById('resetSubmitBtn');
-
-        msgEl.className = 'message';
-
-        if (newPw.length < 8) {
-          msgEl.textContent = 'Password must be at least 8 characters.';
-          msgEl.className = 'message error';
-          return;
-        }
-        if (!/[A-Z]/.test(newPw)) {
-          msgEl.textContent = 'Password must include at least one uppercase letter.';
-          msgEl.className = 'message error';
-          return;
-        }
-        if (!/[a-z]/.test(newPw)) {
-          msgEl.textContent = 'Password must include at least one lowercase letter.';
-          msgEl.className = 'message error';
-          return;
-        }
-        if (!/[0-9!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?`~]/.test(newPw)) {
-          msgEl.textContent = 'Password must include at least one number or special character.';
-          msgEl.className = 'message error';
-          return;
-        }
-        if (newPw !== confirmPw) {
-          msgEl.textContent = 'Passwords do not match.';
-          msgEl.className = 'message error';
-          return;
-        }
-
-        btn.disabled = true;
-        btn.innerHTML = '<span class="material-symbols-outlined animate-spin" style="font-size:20px">progress_activity</span> Resetting...';
-
-        auth.confirmPasswordReset(oobCode, newPw).then(function() {
-          msgEl.textContent = 'Password reset successful! Redirecting to login...';
-          msgEl.className = 'message success';
-          btn.style.display = 'none';
-          setTimeout(function() { window.location.href = 'login.html'; }, 3000);
-        }).catch(function(err) {
-          var msg = 'Failed to reset password. The link may have expired.';
-          if (err.code === 'auth/weak-password') msg = 'Password is too weak. Use at least 8 characters.';
-          if (err.code === 'auth/expired-action-code') msg = 'This reset link has expired. Please request a new one.';
-          if (err.code === 'auth/invalid-action-code') msg = 'This reset link is invalid. Please request a new one.';
-          msgEl.textContent = msg;
-          msgEl.className = 'message error';
-          btn.disabled = false;
-          btn.innerHTML = '<span class="material-symbols-outlined" style="font-size:20px">verified_user</span> Reset Password';
-        });
-      });
-    })();
-  </script>
+  <script src="https://www.gstatic.com/firebasejs/12.16.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/12.16.0/firebase-auth-compat.js"></script>
 </body>
 </html>

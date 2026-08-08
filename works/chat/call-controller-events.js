@@ -497,6 +497,17 @@
     var memberIds = (c.members || []).filter(function (m) { return m && m !== myUid; });
     if (!memberIds.length) { CC.toast('No other members to call', 'info'); return; }
 
+    // Prefer the group-call engine (writes to groupCalls/ and keeps signaling
+    // path consistent). It takes participant ids (self excluded) + call type.
+    if (typeof window.startGroupCall === 'function' && window.startGroupCall !== startGroupCall) {
+      try {
+        await window.startGroupCall(memberIds, type === 'video' ? 'video' : 'voice');
+      } catch (e) {
+        if (window.__DEBUG__) console.warn('[calls] startGroupCall delegate:', e);
+      }
+      return;
+    }
+
     if (typeof PermissionsManager !== 'undefined') {
       var granted = await PermissionsManager.ensureForFeature(type === 'video' ? 'Video Call' : 'Audio Call');
       if (!granted) return;

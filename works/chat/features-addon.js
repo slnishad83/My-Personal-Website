@@ -234,10 +234,13 @@
           // Saved messages
           chats.push({ value: `saved_${user.uid}`, label: 'ðŸ“Œ Saved Messages (to yourself)' });
           // Groups
-          const gSnap = await db.collection('groups').get();
+          const gSnap = await db.collection('groups')
+            .where('memberIds', 'array-contains', user.uid)
+            .limit(200)
+            .get();
           gSnap.docs.forEach(d => {
             const g = d.data();
-            if (g.memberIds && g.memberIds.includes(user.uid)) chats.push({ value: `group_${d.id}`, label: `ðŸ‘¥ ${g.name || 'Group'}` });
+            chats.push({ value: `group_${d.id}`, label: `👥 ${g.name || 'Group'}` });
           });
           document.getElementById('capsuleTarget').innerHTML = chats.map(c => `<option value="${c.value}">${window.sanitizeHTML(c.label)}</option>`).join('');
         } catch (_) {}

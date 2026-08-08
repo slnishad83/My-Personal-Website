@@ -12,7 +12,7 @@ const admin = new Proxy({}, {
   }
 });
 
-const SENSITIVE_FIELDS = ['fcmTokens', 'pinHash', 'pinSalt', 'twofaPinHash', 'twofaPinSalt'];
+const SENSITIVE_FIELDS = ['fcmTokens', 'pinHash', 'pinSalt', 'twofaPinHash', 'twofaPinSalt', 'appLockPinHash', 'appLockPinSalt', 'chatPinHash', 'chatPinSalt'];
 
 async function assertAdmin(auth) {
   if (!auth) throw new HttpsError('unauthenticated', 'Must be signed in.');

@@ -26,7 +26,7 @@
       if (defaultTimer > 0 && App.db && App.auth?.currentUser) {
         const chat = (App.chats || []).find(c => c.id === chatId);
         if (chat && !chat.ephemeralTimer) {
-          const collection = chat.type === 'group' ? 'groups' : 'directChats';
+          const collection = chat.type === 'group' ? 'groups' : 'chats';
           App.db.collection(collection).doc(chatId).update({ ephemeralTimer: defaultTimer }).catch(() => {});
         }
       }

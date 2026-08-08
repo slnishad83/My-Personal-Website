@@ -13,12 +13,12 @@
     setTimeout(function () { waitForFn(name, cb, tries + 1); }, 80);
   }
   function esc(s) {
-    return typeof window.escapeHtml === 'function'
+    return typeof window.escapeHtml === 'function' && window.escapeHtml !== esc
       ? window.escapeHtml(s)
       : String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   }
   function initials(name) {
-    return typeof window.getInitials === 'function'
+    return typeof window.getInitials === 'function' && window.getInitials !== initials
       ? window.getInitials(name, '')
       : String(name || '?').charAt(0).toUpperCase();
   }
@@ -295,10 +295,129 @@
     };
   });
 
+
+  /* ── Chat request actions (Accept / Decline / Cancel / Block) ── */
+  async function _cfReloadRequests() {
+    if (typeof window.loadReceivedRequests === 'function') {
+      try { await window.loadReceivedRequests(); } catch (e) {}
+    }
+  }
+
+  window.acceptChatRequest = async function (reqId, fromUid) {
+    var db = window.db;
+    var uid = window.currentUser && window.currentUser.uid;
+    if (!db || !uid || !reqId) return;
+    try {
+      await db.collection('chatRequests').doc(reqId).update({
+        status: 'accepted',
+        respondedAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      if (fromUid && fromUid !== uid && typeof window.startDirectChat === 'function') {
+        await window.startDirectChat({ id: fromUid });
+      }
+      if (typeof window.showToast === 'function') window.showToast('Request accepted', 'success');
+    } catch (e) {
+      if (window.__DEBUG__) console.warn('[chat-fixes] acceptChatRequest:', e);
+      if (typeof window.showToast === 'function') window.showToast('Failed to accept request', 'error');
+    }
+    await _cfReloadRequests();
+  };
+
+  window.declineChatRequest = async function (reqId) {
+    var db = window.db;
+    if (!db || !reqId) return;
+    try {
+      await db.collection('chatRequests').doc(reqId).update({
+        status: 'declined',
+        respondedAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      if (typeof window.showToast === 'function') window.showToast('Request declined');
+    } catch (e) {
+      if (window.__DEBUG__) console.warn('[chat-fixes] declineChatRequest:', e);
+    }
+    await _cfReloadRequests();
+  };
+
+  window.cancelChatRequest = async function (reqId) {
+    var db = window.db;
+    if (!db || !reqId) return;
+    try {
+      await db.collection('chatRequests').doc(reqId).update({
+        status: 'cancelled',
+        respondedAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      if (typeof window.showToast === 'function') window.showToast('Request cancelled');
+    } catch (e) {
+      if (window.__DEBUG__) console.warn('[chat-fixes] cancelChatRequest:', e);
+    }
+    await _cfReloadRequests();
+  };
+
+  window.blockRequestSender = async function (fromUid, fromName) {
+    var db = window.db;
+    var uid = window.currentUser && window.currentUser.uid;
+    if (!db || !uid || !fromUid) return;
+    try {
+      if (typeof window.blockUser === 'function') {
+        window.blockUser(fromUid, fromName);
+      } else {
+        var meRef = db.collection('users').doc(uid);
+        var meSnap = await meRef.get();
+        var blocked = (meSnap.exists && Array.isArray(meSnap.data().blockedUsers)) ? meSnap.data().blockedUsers : [];
+        if (blocked.indexOf(fromUid) === -1) {
+          blocked.push(fromUid);
+          await meRef.set({ blockedUsers: blocked }, { merge: true });
+        }
+      }
+      var q1 = await db.collection('chatRequests').where('fromUserId', '==', fromUid).where('toUserId', '==', uid).where('status', '==', 'pending').get();
+      var q2 = await db.collection('chatRequests').where('fromUserId', '==', uid).where('toUserId', '==', fromUid).where('status', '==', 'pending').get();
+      var batch = db.batch();
+      q1.docs.concat(q2.docs).forEach(function (d) { batch.update(d.ref, { status: 'declined' }); });
+      try { await batch.commit(); } catch (e) {}
+    } catch (e) {
+      if (window.__DEBUG__) console.warn('[chat-fixes] blockRequestSender:', e);
+    }
+    await _cfReloadRequests();
+  };
+
+  window.acceptGroupInvite = async function (inviteId) {
+    var uid = window.currentUser && window.currentUser.uid;
+    if (!uid || !inviteId) return;
+    try {
+      var fn = typeof firebase !== 'undefined' ? firebase.functions() : null;
+      if (fn && typeof fn.httpsCallable === 'function') {
+        await fn.httpsCallable('respondToGroupInvite')({ inviteId: inviteId, action: 'accept' });
+        if (typeof window.showToast === 'function') window.showToast('You joined the group', 'success');
+        if (typeof window.loadGroupsList === 'function') window.loadGroupsList();
+        if (typeof window.loadCurrentChatList === 'function') window.loadCurrentChatList();
+      } else {
+        if (typeof window.showToast === 'function') window.showToast('Unable to accept invite', 'error');
+      }
+    } catch (e) {
+      if (window.__DEBUG__) console.warn('[chat-fixes] acceptGroupInvite:', e);
+      if (typeof window.showToast === 'function') window.showToast((e && e.message) || 'Could not accept invite', 'error');
+    }
+    await _cfReloadRequests();
+  };
+
+  window.declineGroupInvite = async function (inviteId) {
+    if (!inviteId) return;
+    try {
+      var fn = typeof firebase !== 'undefined' ? firebase.functions() : null;
+      if (fn && typeof fn.httpsCallable === 'function') {
+        await fn.httpsCallable('respondToGroupInvite')({ inviteId: inviteId, action: 'decline' });
+        if (typeof window.showToast === 'function') window.showToast('Group invite declined');
+      }
+    } catch (e) {
+      if (window.__DEBUG__) console.warn('[chat-fixes] declineGroupInvite:', e);
+    }
+    await _cfReloadRequests();
+  };
+
   /* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
      3. CHAT PINNING â€” single consolidated implementation
      â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
-  waitForFn('togglePinChat', function () {
+  (function defineTogglePinChat() {
     window.togglePinChat = async function (chatId) {
       if (!window.currentUser || !chatId) return;
       var db      = window.db;
@@ -326,7 +445,7 @@
         if (typeof window.loadGroupsList  ==='function') window.loadGroupsList();
       }
     };
-  });
+  })();
 
   /* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
      4. MESSAGE PINNING â€” groups shared, direct personal, limit 20
@@ -361,9 +480,9 @@
         if (typeof window.showToast === 'function') window.showToast('Failed to pin message: ' + (err.message || 'Unknown error'), 'error');
       }
     };
-  });
+  })();
 
-  waitForFn('loadPinnedMessages', function () {
+  (function defineLoadPinnedMessages() {
     window.loadPinnedMessages = async function () {
       if (!window.currentChat || !window.currentUser) return;
       var db      = window.db;
@@ -434,7 +553,7 @@
         });
       }
     };
-  });
+  })();
 
 
 

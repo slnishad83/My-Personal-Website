@@ -369,6 +369,8 @@
     window.addEventListener('load', function() { setTimeout(_init, 0); });
   }
 
+  window.editMessage = startEdit;
+
   window.MessageEdit = {
     canEdit: canEdit,
     startEdit: startEdit,

@@ -180,8 +180,7 @@ service cloud.firestore {
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
           'displayName', 'photoURL', 'avatar', 'email', 'phone', 'busyStatus', 'busyMessage',
           'blockedUsers', 'onlineStatus', 'lastSeen', 'typingIn', 'twofaEnabled',
-          'twofaPinHash', 'twofaPinSalt', 'chatPinHash', 'chatPinSalt', 'chatPinEnabled',
-          'appLockPinHash', 'appLockPinSalt', 'appLockEnabled', 'emailVerified',
+          'appLockEnabled', 'emailVerified',
           'fcmTokens', 'messagingToken', 'isFirstTime', 'isActive', 'pendingVerification',
           'privacySettings', 'userAgent',
           'wallpaper', 'fontSize', 'themeMode', 'notificationSettings', 'language',
@@ -249,6 +248,11 @@ service cloud.firestore {
       match /mutedChats/{chatId} {
         allow read, create, update, delete: if isOwner(userId);
       }
+    }
+
+    // PIN secrets — private per-user, owner only (accessed by Cloud Functions via server SDK)
+    match /userSecrets/{uid} {
+      allow read, write: if isOwner(uid);
     }
 
     // E2E public keys — any signed-in user can read, owner can write

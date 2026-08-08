@@ -87,7 +87,7 @@
 
     try {
       _groupsUnsub = db.collection('groups')
-        .where('members', 'array-contains', uid)
+        .where('memberIds', 'array-contains', uid)
         .limit(100)
         .onSnapshot(function(snap) {
           if (!snap.docs.length) {
@@ -109,7 +109,7 @@
                 preview: d.lastMessage || d.lastMessageText || (d.description ? d.description.substring(0,40) : ''),
                 time: d.lastMessageAt || d.updatedAt,
                 unread: (d.unreadCounts && d.unreadCounts[uid]) || 0,
-                memberCount: (d.members || []).length,
+                memberCount: (d.memberIds || d.members || []).length,
               }));
             });
           panel.innerHTML = '';
@@ -142,12 +142,23 @@
       panel.innerHTML = '<div style="padding:24px;text-align:center;color:var(--on-surface-variant,#8696a0);font-size:13px;">Sign in to see call history</div>';
       return;
     }
-    panel.innerHTML = '<div style="padding:24px;text-align:center;color:var(--on-surface-variant,#8696a0);font-size:13px;">Loading calls...</div>';
-
-    if (_callsUnsub) { _callsUnsub(); _callsUnsub = null; }
 
     var newCallBtn = document.getElementById('btn-new-call');
     if (newCallBtn) newCallBtn.classList.remove('hidden');
+
+    // Prefer the richer call-history enhancer when it is loaded.
+    if (typeof window.loadCallHistory === 'function' && !document.getElementById('call-history-list')) {
+      var listEl = document.createElement('div');
+      listEl.id = 'call-history-list';
+      panel.innerHTML = '';
+      panel.appendChild(listEl);
+      window.loadCallHistory();
+      return;
+    }
+
+    panel.innerHTML = '<div style="padding:24px;text-align:center;color:var(--on-surface-variant,#8696a0);font-size:13px;">Loading calls...</div>';
+
+    if (_callsUnsub) { _callsUnsub(); _callsUnsub = null; }
 
     try {
       _callsUnsub = db.collection('users').doc(uid).collection('callEvents')
@@ -282,6 +293,32 @@
     panel.innerHTML = '';
     panel.appendChild(frag);
   }
+
+  /* ── startCall / initiateCall (call-back buttons) ────────────── */
+  window.startCall = window.initiateCall = function (otherId, callType) {
+    if (!otherId) return;
+    callType = callType === 'video' ? 'video' : 'voice';
+    var db = getDB(), uid = getUID();
+    if (!db || !uid) return;
+    db.collection('users').doc(otherId).get().then(function (snap) {
+      if (!snap.exists) return;
+      var d = snap.data() || {};
+      var name = d.displayName || d.email || 'Unknown';
+      var c = { uid: otherId, name: name, initials: initials(name), type: 'direct', photoURL: d.photoURL || '' };
+      if (typeof window.initiateOutgoingCall === 'function') {
+        window.initiateOutgoingCall(callType, c);
+      } else {
+        var pending = function () {
+          if (typeof window.initiateOutgoingCall === 'function') {
+            window.initiateOutgoingCall(callType, c);
+          } else {
+            setTimeout(pending, 250);
+          }
+        };
+        pending();
+      }
+    }).catch(function () {});
+  };
 
   /* ── Panel: Saved Messages ───────────────────────────────────── */
   function _ensureSavedPanel() {

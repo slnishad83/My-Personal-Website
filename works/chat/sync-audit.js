@@ -126,7 +126,7 @@
       if (chatIds.length) { await _markDeliveredIn('chats', chatIds, user); }
 
       const groupSnap = await db.collection('groups')
-        .where('members', 'array-contains', user.uid)
+        .where('memberIds', 'array-contains', user.uid)
         .limit(MAX_CHATS)
         .get();
       const groupIds = groupSnap.docs.map(d => d.id);

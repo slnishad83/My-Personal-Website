@@ -137,8 +137,18 @@ service cloud.firestore {
         // Sender can edit text
         (resource.data.senderId == request.auth.uid && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['text', 'edited', 'editedAt']))
         ||
-        // Sender can delete for everyone
+        // Sender can delete for everyone (legacy boolean fields)
         (resource.data.senderId == request.auth.uid && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['deletedForEveryone', 'deletedForEveryoneBy']) && request.resource.data.deletedForEveryone == true)
+        ||
+        // Sender can delete for everyone (app writes type:'deleted' + media field removal)
+        (resource.data.senderId == request.auth.uid
+          && request.resource.data.type == 'deleted'
+          && request.resource.data.deletedBy is string
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'text', 'type', 'deletedBy', 'deletedAt',
+            'imageURL', 'videoURL', 'audioURL', 'fileURL', 'stickerURL', 'attachment'
+          ])
+        )
         ||
         // Participant check
         (
@@ -172,7 +182,7 @@ service cloud.firestore {
     }
 
     match /users/{userId} {
-      allow read: if isOwner(userId);
+      allow read: if signedIn();
       allow create: if isOwner(userId)
         && request.resource.data.uid == request.auth.uid
         && request.resource.data.email == request.auth.token.email;
@@ -180,13 +190,13 @@ service cloud.firestore {
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
           'displayName', 'photoURL', 'avatar', 'email', 'phone', 'busyStatus', 'busyMessage',
           'blockedUsers', 'onlineStatus', 'lastSeen', 'typingIn', 'twofaEnabled',
-          'twofaPinHash', 'twofaPinSalt', 'chatPinHash', 'chatPinSalt', 'chatPinEnabled',
-          'appLockPinHash', 'appLockPinSalt', 'appLockEnabled', 'emailVerified',
+          'appLockEnabled', 'emailVerified',
           'fcmTokens', 'messagingToken', 'isFirstTime', 'isActive', 'pendingVerification',
           'privacySettings', 'userAgent',
           'wallpaper', 'fontSize', 'themeMode', 'notificationSettings', 'language',
           'lastHeartbeat', 'sessionId', 'platform', 'inCall', 'customStatus',
           'ghostMode', 'ghostContacts', 'ghostUpdatedAt',
+          'pinnedChatIds', 'archivedChats',
           'createdAt', 'deactivatedAt'
         ]);
       allow delete: if false;
@@ -249,6 +259,11 @@ service cloud.firestore {
       match /mutedChats/{chatId} {
         allow read, create, update, delete: if isOwner(userId);
       }
+    }
+
+    // PIN secrets — private per-user, owner only (accessed by Cloud Functions via server SDK)
+    match /userSecrets/{uid} {
+      allow read, write: if isOwner(uid);
     }
 
     // E2E public keys — any signed-in user can read, owner can write
@@ -352,10 +367,14 @@ service cloud.firestore {
               resource.data.senderId == request.auth.uid
               && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
                 'text', 'edited', 'editedAt', 'attachment', 'reactions', 'status',
-                'deletedFor', 'deletedForEveryone', 'deletedForEveryoneBy'
+                'deletedFor', 'deletedForEveryone', 'deletedForEveryoneBy',
+                'type', 'deletedBy', 'deletedAt',
+                'imageURL', 'videoURL', 'audioURL', 'fileURL', 'stickerURL',
+                'starred', 'starredAt', 'starredBy'
               ])
             )
             || request.resource.data.diff(resource.data).affectedKeys().hasOnly(['reactions'])
+            || request.resource.data.diff(resource.data).affectedKeys().hasOnly(['starred', 'starredAt', 'starredBy'])
             || (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['readBy']) && request.auth.uid in request.resource.data.readBy)
             || request.resource.data.diff(resource.data).affectedKeys().hasOnly(['deliveredTo', 'status'])
           );
@@ -505,11 +524,7 @@ service cloud.firestore {
     }
 
     match /groups/{groupId} {
-      allow read: if signedIn() && (
-        resource.data.memberIds is list && request.auth.uid in resource.data.memberIds
-        || resource.data.ownerId == request.auth.uid
-        || resource.data.createdBy == request.auth.uid
-      );
+      allow read: if signedIn() && request.auth.uid in resource.data.memberIds;
       allow create: if signedIn()
         && request.resource.data.createdBy == request.auth.uid
         && request.resource.data.ownerId == request.auth.uid
@@ -522,8 +537,8 @@ service cloud.firestore {
           isGroupMember(groupId)
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
             'unreadCounts', 'unreadCount', 'lastMessage', 'lastMessageText', 'lastMessageAt',
-            'lastMessageTime', 'lastMessageSenderId', 'lastMessageSenderName', 'lastMessageFrom',
-            'unread', 'updatedAt'
+            'lastMessageTime', 'lastSenderId', 'lastMessageSenderId', 'lastMessageSenderName', 'lastMessageFrom',
+            'unread', 'updatedAt', 'ephemeralTimer'
           ])
         );
       allow delete: if isGroupAdmin(groupId);
@@ -550,6 +565,8 @@ service cloud.firestore {
         allow update: if isGroupMember(groupId) && (
           validMessageUpdate()
           || request.resource.data.diff(resource.data).affectedKeys().hasOnly(['reactions'])
+          || request.resource.data.diff(resource.data).affectedKeys().hasOnly(['starred', 'starredAt', 'starredBy'])
+          || request.resource.data.diff(resource.data).affectedKeys().hasOnly(['deletedFor'])
           || (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['readBy']) && request.auth.uid in request.resource.data.readBy)
         );
         allow delete: if resource.data.senderId == request.auth.uid || isGroupAdmin(groupId);
@@ -854,11 +871,14 @@ service cloud.firestore {
     }
 
     match /statuses/{statusId} {
-      allow read: if signedIn()
-        && (resource.data.userId == request.auth.uid
-            || (resource.data.participants is list && request.auth.uid in resource.data.participants));
+      allow read: if signedIn();
       allow create: if signedIn() && request.resource.data.userId == request.auth.uid;
-      allow update, delete: if signedIn() && resource.data.userId == request.auth.uid;
+      allow update: if signedIn() && (
+        resource.data.userId == request.auth.uid
+        || (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['seenBy'])
+            && request.auth.uid in request.resource.data.seenBy)
+      );
+      allow delete: if signedIn() && resource.data.userId == request.auth.uid;
 
       match /reactions/{reactionId} {
         allow read: if signedIn();
@@ -980,8 +1000,8 @@ service cloud.firestore {
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
           'status', 'name', 'photoURL', 'participants', 'unreadCounts', 'unreadCount', 'unread',
           'lastMessage', 'lastMessageText', 'lastMessageAt', 'lastMessageTime',
-          'lastMessageSenderId', 'lastMessageSenderName', 'lastMessageFrom',
-          'updatedAt', 'saved', 'muted', 'mutedUntil'
+          'lastSenderId', 'lastMessageSenderId', 'lastMessageSenderName', 'lastMessageFrom',
+          'updatedAt', 'saved', 'muted', 'mutedUntil', 'ephemeralTimer'
         ]);
       allow delete: if false;
 
@@ -1004,6 +1024,8 @@ service cloud.firestore {
         allow update: if isChatMember(chatId) && (
           validMessageUpdate()
           || request.resource.data.diff(resource.data).affectedKeys().hasOnly(['reactions'])
+          || request.resource.data.diff(resource.data).affectedKeys().hasOnly(['starred', 'starredAt', 'starredBy'])
+          || request.resource.data.diff(resource.data).affectedKeys().hasOnly(['deletedFor'])
           || (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['readBy']) && request.auth.uid in request.resource.data.readBy)
         );
         allow delete: if resource.data.senderId == request.auth.uid;

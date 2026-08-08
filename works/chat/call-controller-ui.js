@@ -183,15 +183,15 @@
         var avatarHtml = u.photoURL
           ? '<img src="' + CC.escHtml(u.photoURL) + '" class="w-11 h-11 rounded-full object-cover" alt="" loading="lazy" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'flex\'"><div class="w-11 h-11 rounded-full bg-primary/15 text-primary flex items-center justify-center font-bold text-sm" style="display:none">' + CC.escHtml(initials) + '</div>'
           : '<div class="w-11 h-11 rounded-full bg-primary/15 text-primary flex items-center justify-center font-bold text-sm">' + CC.escHtml(initials) + '</div>';
-        html += '<div class="flex items-center gap-3 px-4 py-3 hover:bg-surface-variant/50 rounded-xl cursor-pointer transition-colors" onclick="selectCallContact(\'' + CC.escHtml(uId) + '\',\'' + CC.escHtml(name.replace(/'/g, "\\'")) + '\',\'' + CC.escHtml(u.photoURL || '') + '\')">' +
+        html += '<div class="flex items-center gap-3 px-4 py-3 hover:bg-surface-variant/50 rounded-xl cursor-pointer transition-colors" onclick="selectCallContact(\'' + CC.escHtml(uId) + '\',\'' + CC.escHtml(name.replace(/'/g, "\\'")) + '\',\'' + CC.escHtml(u.photoURL || '') + '\',\'voice\')">' +
           avatarHtml +
           '<div class="flex-1 min-w-0">' +
           '<div class="font-semibold text-sm text-on-surface truncate">' + CC.escHtml(name) + '</div>' +
           '<div class="text-xs text-on-surface-variant">' + CC.escHtml(u.email || '') + '</div>' +
           '</div>' +
           '<div class="flex items-center gap-2">' +
-          '<button class="min-w-[44px] min-h-[44px] rounded-full bg-green-500/10 text-green-500 hover:bg-green-500/20 flex items-center justify-center transition-all" title="Voice call"><span class="material-symbols-outlined text-lg">call</span></button>' +
-          '<button class="min-w-[44px] min-h-[44px] rounded-full bg-blue-500/10 text-blue-500 hover:bg-blue-500/20 flex items-center justify-center transition-all" title="Video call"><span class="material-symbols-outlined text-lg">videocam</span></button>' +
+          '<button class="min-w-[44px] min-h-[44px] rounded-full bg-green-500/10 text-green-500 hover:bg-green-500/20 flex items-center justify-center transition-all" title="Voice call" onclick="event.stopPropagation();selectCallContact(\'' + CC.escHtml(uId) + '\',\'' + CC.escHtml(name.replace(/'/g, "\\'")) + '\',\'' + CC.escHtml(u.photoURL || '') + '\',\'voice\')"><span class="material-symbols-outlined text-lg">call</span></button>' +
+          '<button class="min-w-[44px] min-h-[44px] rounded-full bg-blue-500/10 text-blue-500 hover:bg-blue-500/20 flex items-center justify-center transition-all" title="Video call" onclick="event.stopPropagation();selectCallContact(\'' + CC.escHtml(uId) + '\',\'' + CC.escHtml(name.replace(/'/g, "\\'")) + '\',\'' + CC.escHtml(u.photoURL || '') + '\',\'video\')"><span class="material-symbols-outlined text-lg">videocam</span></button>' +
           '</div></div>';
       });
 

@@ -21,56 +21,56 @@
       "short_name": "Chat",
       "description": "Start a new conversation",
       "url": "/works/chat/?action=new-chat",
-      "icons": [{ "src": "app-icon-192.png", "sizes": "192x192", "type": "image/png" }]
+      "icons": [{ "src": "/works/chat/app-icon-192.png", "sizes": "192x192", "type": "image/png" }]
     },
     {
       "name": "New Group",
       "short_name": "Group",
       "description": "Create a new group",
       "url": "/works/chat/?action=new-group",
-      "icons": [{ "src": "app-icon-192.png", "sizes": "192x192", "type": "image/png" }]
+      "icons": [{ "src": "/works/chat/app-icon-192.png", "sizes": "192x192", "type": "image/png" }]
     },
     {
       "name": "Calls",
       "short_name": "Calls",
       "description": "View call history",
       "url": "/works/chat/?action=calls",
-      "icons": [{ "src": "app-icon-192.png", "sizes": "192x192", "type": "image/png" }]
+      "icons": [{ "src": "/works/chat/app-icon-192.png", "sizes": "192x192", "type": "image/png" }]
     }
   ],
   "icons": [
     {
-      "src": "app-icon.svg",
+      "src": "/works/chat/app-icon.svg",
       "sizes": "any",
       "type": "image/svg+xml",
       "purpose": "any"
     },
     {
-      "src": "app-icon-192.png",
+      "src": "/works/chat/app-icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "app-icon-512.png",
+      "src": "/works/chat/app-icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "app-icon-192.png",
+      "src": "/works/chat/app-icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "maskable"
     },
     {
-      "src": "app-icon-512.png",
+      "src": "/works/chat/app-icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
     },
     {
-      "src": "app-icon.svg",
+      "src": "/works/chat/app-icon.svg",
       "sizes": "any",
       "type": "image/svg+xml",
       "purpose": "monochrome"

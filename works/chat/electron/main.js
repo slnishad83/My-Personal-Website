@@ -10,7 +10,7 @@ let deepLinkUrl = null;
 
 function getWebDir() {
   if (isDev) return path.join(__dirname, '..');
-  return path.join(process.resourcesPath, 'www');
+  return path.join(__dirname, '..', 'dist');
 }
 
 function isAllowedUrl(url) {

@@ -290,6 +290,14 @@
       ]
     },
     {
+      "collectionGroup": "statuses",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "userId", "order": "ASCENDING" },
+        { "fieldPath": "expiresAt", "order": "ASCENDING" }
+      ]
+    },
+    {
       "collectionGroup": "callLogs",
       "queryScope": "COLLECTION",
       "fields": [
@@ -345,6 +353,14 @@
       "fields": [
         { "fieldPath": "userId", "order": "ASCENDING" },
         { "fieldPath": "blockedUserId", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "messages",
+      "queryScope": "COLLECTION_GROUP",
+      "fields": [
+        { "fieldPath": "starred", "order": "ASCENDING" },
+        { "fieldPath": "starredAt", "order": "DESCENDING" }
       ]
     }
   ],

@@ -39,6 +39,46 @@ function timingSafeEqual(a, b) {
   return crypto.timingSafeEqual(bufA, bufB);
 }
 
+// All PIN secrets live in the private userSecrets/<uid> collection so that
+// Firestore rules can keep them owner-only. Fields are lazily migrated out of
+// users/<uid> (legacy storage) on first access.
+const _SECRET_KEYS = [
+  "pinHash", "pinSalt", "pinUpdatedAt", "pinResetAt",
+  "twofaPinHash", "twofaPinSalt", "twofaUpdatedAt", "twofaResetAt",
+  "appLockPinHash", "appLockPinSalt", "appLockUpdatedAt", "appLockResetAt",
+];
+
+async function _getSecret(db, uid) {
+  const secretRef = db.collection("userSecrets").doc(uid);
+  const secretDoc = await secretRef.get();
+  const data = secretDoc.data() || {};
+  if (!data.pinHash && !data.twofaPinHash && !data.appLockPinHash) {
+    const userSnap = await db.collection("users").doc(uid).get();
+    const userData = userSnap.data() || {};
+    const legacy = {};
+    for (const key of _SECRET_KEYS) {
+      if (userData[key] !== undefined) legacy[key] = userData[key];
+    }
+    if (Object.keys(legacy).length > 0) {
+      await secretRef.set(legacy, { merge: true });
+      const deletes = {};
+      for (const key of Object.keys(legacy)) deletes[key] = admin.firestore.FieldValue.delete();
+      await db.collection("users").doc(uid).update(deletes).catch(() => {});
+    }
+  }
+  return data;
+}
+
+async function _setSecretField(db, uid, fields) {
+  await db.collection("userSecrets").doc(uid).set(fields, { merge: true });
+}
+
+async function _deleteSecretFields(db, uid, keys) {
+  const deletes = {};
+  for (const key of keys) deletes[key] = admin.firestore.FieldValue.delete();
+  await db.collection("userSecrets").doc(uid).update(deletes);
+}
+
 const _pinRateLimit = new Map();
 const _pinFailures = new Map();
 let _pinCleanupStarted = false;
@@ -112,17 +152,16 @@ exports.setChatPin = onCall({ region: "us-central1", memory: "128MiB" }, async (
     throw new HttpsError("invalid-argument", "PIN must be 4-8 digits");
 
   const db = admin.firestore();
-  const userDoc = await db.collection("users").doc(uid).get();
-  const userData = userDoc.data() || {};
-  if (userData.pinSalt && userData.pinHash) {
+  const secretData = await _getSecret(db, uid);
+  if (secretData.pinSalt && secretData.pinHash) {
     if (!oldPin) throw new HttpsError("invalid-argument", "Old PIN required");
-    const oldHash = await hashPinServer(oldPin, userData.pinSalt);
-    if (!timingSafeEqual(oldHash, userData.pinHash)) throw new HttpsError("permission-denied", "Incorrect current PIN");
+    const oldHash = await hashPinServer(oldPin, secretData.pinSalt);
+    if (!timingSafeEqual(oldHash, secretData.pinHash)) throw new HttpsError("permission-denied", "Incorrect current PIN");
   }
 
   const salt = crypto.randomBytes(32).toString("hex");
   const hash = await hashPinServer(pin, salt);
-  await db.collection("users").doc(uid).set({ pinSalt: salt, pinHash: hash, pinUpdatedAt: Date.now() }, { merge: true });
+  await _setSecretField(db, uid, { pinSalt: salt, pinHash: hash, pinUpdatedAt: Date.now() });
   clearPinFailures(uid);
   return { ok: true };
 });
@@ -134,15 +173,14 @@ exports.verifyChatPin = onCall({ region: "us-central1", memory: "128MiB" }, asyn
   if (!pin || typeof pin !== "string") throw new HttpsError("invalid-argument", "Missing PIN");
 
   const db = admin.firestore();
-  const userDoc = await db.collection("users").doc(uid).get();
-  const userData = userDoc.data() || {};
+  const secretData = await _getSecret(db, uid);
 
-  if (!userData.pinHash || !userData.pinSalt) {
+  if (!secretData.pinHash || !secretData.pinSalt) {
     throw new HttpsError("failed-precondition", "No chat PIN set. Use setChatPin to create one.");
   }
 
-  const hash = await hashPinServer(pin, userData.pinSalt);
-  if (!timingSafeEqual(hash, userData.pinHash)) {
+  const hash = await hashPinServer(pin, secretData.pinSalt);
+  if (!timingSafeEqual(hash, secretData.pinHash)) {
     recordPinFailure(uid);
     throw new HttpsError("permission-denied", "Incorrect PIN");
   }
@@ -155,17 +193,14 @@ exports.resetChatPin = onCall({ region: "us-central1", memory: "128MiB" }, async
   if (!checkPinRateLimit(uid, "reset")) throw new HttpsError("resource-exhausted", "Too many attempts. Wait a minute.");
   const { oldPin } = request.data || {};
   const db = admin.firestore();
-  const userDoc = await db.collection("users").doc(uid).get();
-  const userData = userDoc.data() || {};
-  if (userData.pinSalt && userData.pinHash) {
+  const secretData = await _getSecret(db, uid);
+  if (secretData.pinSalt && secretData.pinHash) {
     if (!oldPin || typeof oldPin !== "string") throw new HttpsError("invalid-argument", "Old PIN required to reset");
-    const oldHash = await hashPinServer(oldPin, userData.pinSalt);
-    if (!timingSafeEqual(oldHash, userData.pinHash)) throw new HttpsError("permission-denied", "Incorrect current PIN");
+    const oldHash = await hashPinServer(oldPin, secretData.pinSalt);
+    if (!timingSafeEqual(oldHash, secretData.pinHash)) throw new HttpsError("permission-denied", "Incorrect current PIN");
   }
-  await db.collection("users").doc(uid).set(
-    { pinSalt: admin.firestore.FieldValue.delete(), pinHash: admin.firestore.FieldValue.delete(), pinResetAt: Date.now() },
-    { merge: true }
-  );
+  await _deleteSecretFields(db, uid, ["pinSalt", "pinHash"]);
+  await _setSecretField(db, uid, { pinResetAt: Date.now() });
   clearPinFailures(uid);
   return { ok: true };
 });
@@ -178,17 +213,17 @@ exports.setTwoFactorPin = onCall({ region: "us-central1", memory: "128MiB" }, as
     throw new HttpsError("invalid-argument", "PIN must be 4-8 digits");
 
   const db = admin.firestore();
-  const userDoc = await db.collection("users").doc(uid).get();
-  const userData = userDoc.data() || {};
-  if (userData.twofaPinHash && userData.twofaPinSalt) {
+  const secretData = await _getSecret(db, uid);
+  if (secretData.twofaPinHash && secretData.twofaPinSalt) {
     if (!oldPin) throw new HttpsError("invalid-argument", "Old PIN required");
-    const oldHash = await hashPinServer(oldPin, userData.twofaPinSalt);
-    if (!timingSafeEqual(oldHash, userData.twofaPinHash)) throw new HttpsError("permission-denied", "Incorrect current PIN");
+    const oldHash = await hashPinServer(oldPin, secretData.twofaPinSalt);
+    if (!timingSafeEqual(oldHash, secretData.twofaPinHash)) throw new HttpsError("permission-denied", "Incorrect current PIN");
   }
 
   const salt = crypto.randomBytes(32).toString("hex");
   const hash = await hashPinServer(pin, salt);
-  await db.collection("users").doc(uid).set({ twofaPinSalt: salt, twofaPinHash: hash, twofaEnabled: true, twofaUpdatedAt: Date.now() }, { merge: true });
+  await _setSecretField(db, uid, { twofaPinSalt: salt, twofaPinHash: hash, twofaUpdatedAt: Date.now() });
+  await db.collection("users").doc(uid).set({ twofaEnabled: true }, { merge: true });
   clearPinFailures(uid);
   return { ok: true };
 });
@@ -200,15 +235,14 @@ exports.verifyTwoFactorPin = onCall({ region: "us-central1", memory: "128MiB" },
   if (!pin || typeof pin !== "string") throw new HttpsError("invalid-argument", "Missing PIN");
 
   const db = admin.firestore();
-  const userDoc = await db.collection("users").doc(uid).get();
-  const userData = userDoc.data() || {};
+  const secretData = await _getSecret(db, uid);
 
-  if (!userData.twofaPinHash || !userData.twofaPinSalt) {
+  if (!secretData.twofaPinHash || !secretData.twofaPinSalt) {
     throw new HttpsError("failed-precondition", "No 2FA PIN set. Use setTwoFactorPin to create one.");
   }
 
-  const hash = await hashPinServer(pin, userData.twofaPinSalt);
-  if (!timingSafeEqual(hash, userData.twofaPinHash)) {
+  const hash = await hashPinServer(pin, secretData.twofaPinSalt);
+  if (!timingSafeEqual(hash, secretData.twofaPinHash)) {
     recordPinFailure(uid);
     throw new HttpsError("permission-denied", "Incorrect PIN");
   }
@@ -221,22 +255,15 @@ exports.resetTwoFactorPin = onCall({ region: "us-central1", memory: "128MiB" }, 
   if (!checkPinRateLimit(uid, "2fa-reset")) throw new HttpsError("resource-exhausted", "Too many attempts. Wait a minute.");
   const { oldPin } = request.data || {};
   const db = admin.firestore();
-  const userDoc = await db.collection("users").doc(uid).get();
-  const userData = userDoc.data() || {};
-  if (userData.twofaPinHash && userData.twofaPinSalt) {
+  const secretData = await _getSecret(db, uid);
+  if (secretData.twofaPinHash && secretData.twofaPinSalt) {
     if (!oldPin || typeof oldPin !== "string") throw new HttpsError("invalid-argument", "Old PIN required to reset 2FA");
-    const oldHash = await hashPinServer(oldPin, userData.twofaPinSalt);
-    if (!timingSafeEqual(oldHash, userData.twofaPinHash)) throw new HttpsError("permission-denied", "Incorrect current PIN");
+    const oldHash = await hashPinServer(oldPin, secretData.twofaPinSalt);
+    if (!timingSafeEqual(oldHash, secretData.twofaPinHash)) throw new HttpsError("permission-denied", "Incorrect current PIN");
   }
-  await db.collection("users").doc(uid).set(
-    {
-      twofaPinSalt: admin.firestore.FieldValue.delete(),
-      twofaPinHash: admin.firestore.FieldValue.delete(),
-      twofaEnabled: false,
-      twofaResetAt: Date.now()
-    },
-    { merge: true }
-  );
+  await _deleteSecretFields(db, uid, ["twofaPinSalt", "twofaPinHash"]);
+  await _setSecretField(db, uid, { twofaResetAt: Date.now() });
+  await db.collection("users").doc(uid).set({ twofaEnabled: false }, { merge: true });
   clearPinFailures(uid);
   return { ok: true };
 });
@@ -249,17 +276,17 @@ exports.setAppLockPin = onCall({ region: "us-central1", memory: "128MiB" }, asyn
     throw new HttpsError("invalid-argument", "PIN must be 4-6 digits");
 
   const db = admin.firestore();
-  const userDoc = await db.collection("users").doc(uid).get();
-  const userData = userDoc.data() || {};
-  if (userData.appLockPinHash && userData.appLockPinSalt) {
+  const secretData = await _getSecret(db, uid);
+  if (secretData.appLockPinHash && secretData.appLockPinSalt) {
     if (!oldPin) throw new HttpsError("invalid-argument", "Old PIN required");
-    const oldHash = await hashPinServer(oldPin, userData.appLockPinSalt);
-    if (!timingSafeEqual(oldHash, userData.appLockPinHash)) throw new HttpsError("permission-denied", "Incorrect current PIN");
+    const oldHash = await hashPinServer(oldPin, secretData.appLockPinSalt);
+    if (!timingSafeEqual(oldHash, secretData.appLockPinHash)) throw new HttpsError("permission-denied", "Incorrect current PIN");
   }
 
   const salt = crypto.randomBytes(32).toString("hex");
   const hash = await hashPinServer(pin, salt);
-  await db.collection("users").doc(uid).set({ appLockPinSalt: salt, appLockPinHash: hash, appLockEnabled: true, appLockUpdatedAt: Date.now() }, { merge: true });
+  await _setSecretField(db, uid, { appLockPinSalt: salt, appLockPinHash: hash, appLockUpdatedAt: Date.now() });
+  await db.collection("users").doc(uid).set({ appLockEnabled: true }, { merge: true });
   clearPinFailures(uid);
   return { ok: true };
 });
@@ -271,15 +298,14 @@ exports.verifyAppLockPin = onCall({ region: "us-central1", memory: "128MiB" }, a
   if (!pin || typeof pin !== "string") throw new HttpsError("invalid-argument", "Missing PIN");
 
   const db = admin.firestore();
-  const userDoc = await db.collection("users").doc(uid).get();
-  const userData = userDoc.data() || {};
+  const secretData = await _getSecret(db, uid);
 
-  if (!userData.appLockPinHash || !userData.appLockPinSalt) {
+  if (!secretData.appLockPinHash || !secretData.appLockPinSalt) {
     throw new HttpsError("failed-precondition", "No app lock PIN set. Use setAppLockPin to create one.");
   }
 
-  const hash = await hashPinServer(pin, userData.appLockPinSalt);
-  if (!timingSafeEqual(hash, userData.appLockPinHash)) {
+  const hash = await hashPinServer(pin, secretData.appLockPinSalt);
+  if (!timingSafeEqual(hash, secretData.appLockPinHash)) {
     recordPinFailure(uid);
     throw new HttpsError("permission-denied", "Incorrect PIN");
   }
@@ -292,22 +318,15 @@ exports.resetAppLockPin = onCall({ region: "us-central1", memory: "128MiB" }, as
   if (!checkPinRateLimit(uid, "applock-reset")) throw new HttpsError("resource-exhausted", "Too many attempts. Wait a minute.");
   const { oldPin } = request.data || {};
   const db = admin.firestore();
-  const userDoc = await db.collection("users").doc(uid).get();
-  const userData = userDoc.data() || {};
-  if (userData.appLockPinHash && userData.appLockPinSalt) {
+  const secretData = await _getSecret(db, uid);
+  if (secretData.appLockPinHash && secretData.appLockPinSalt) {
     if (!oldPin || typeof oldPin !== "string") throw new HttpsError("invalid-argument", "Old PIN required to reset");
-    const oldHash = await hashPinServer(oldPin, userData.appLockPinSalt);
-    if (!timingSafeEqual(oldHash, userData.appLockPinHash)) throw new HttpsError("permission-denied", "Incorrect current PIN");
+    const oldHash = await hashPinServer(oldPin, secretData.appLockPinSalt);
+    if (!timingSafeEqual(oldHash, secretData.appLockPinHash)) throw new HttpsError("permission-denied", "Incorrect current PIN");
   }
-  await db.collection("users").doc(uid).set(
-    {
-      appLockPinSalt: admin.firestore.FieldValue.delete(),
-      appLockPinHash: admin.firestore.FieldValue.delete(),
-      appLockEnabled: false,
-      appLockResetAt: Date.now()
-    },
-    { merge: true }
-  );
+  await _deleteSecretFields(db, uid, ["appLockPinSalt", "appLockPinHash"]);
+  await _setSecretField(db, uid, { appLockResetAt: Date.now() });
+  await db.collection("users").doc(uid).set({ appLockEnabled: false }, { merge: true });
   clearPinFailures(uid);
   return { ok: true };
 });

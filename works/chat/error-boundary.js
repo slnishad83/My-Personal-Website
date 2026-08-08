@@ -690,7 +690,7 @@ const ErrorBoundary = {
             if (typeof window.showToast === 'function') {
               window.showToast('Reconnecting to updates...', 'info');
             }
-            var token = ++retryToken;
+            token = ++retryToken;
             if (currentUnsub) { currentUnsub(); currentUnsub = null; }
             setTimeout(function () {
               if (cancelled || token !== retryToken) return;

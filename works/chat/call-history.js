@@ -424,7 +424,7 @@ var infoBtn = '<button class="min-w-[44px] min-h-[44px] rounded-full flex items-
   function _renderSelectionToolbar() {
     var toolbar = _$('call-history-toolbar');
     if (!toolbar) {
-      var cs = _$('calls-section') || _$('calls-tab');
+      var cs = _$('calls-section') || _$('calls-tab') || _$('_te_calls_panel');
       if (!cs) return;
       toolbar = document.createElement('div');
       toolbar.id = 'call-history-toolbar';
@@ -653,7 +653,7 @@ var infoBtn = '<button class="min-w-[44px] min-h-[44px] rounded-full flex items-
         userData = usersSnap.data();
         name = userData.displayName || userData.email || 'Unknown';
         if (typeof window.selectCallContact === 'function') {
-          window.selectCallContact(uid, name, userData.photoURL || '');
+          window.selectCallContact(uid, name, userData.photoURL || '', 'video');
         } else {
           window.startVideoCall();
         }

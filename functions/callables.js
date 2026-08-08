@@ -526,3 +526,365 @@ exports.toggleChatLock = onCall(
     return { ok: true, lockedChats: currentLocks };
   }
 );
+
+/* ══════════════════════════════════════════════════════════════
+   Missing callables wired by the web client (gap-fix)
+   ══════════════════════════════════════════════════════════════ */
+
+exports.sendPushNotification = onCall(
+  { region: 'asia-south1' },
+  async (request) => {
+    if (!request.auth) throw new HttpsError('unauthenticated', 'Must be signed in.');
+    const { token, title, body, data } = request.data || {};
+    if (!token || typeof token !== 'string') {
+      throw new HttpsError('invalid-argument', 'token is required.');
+    }
+    const message = {
+      token,
+      notification: {
+        title: String(title || 'NSL Chat'),
+        body: String(body || ''),
+      },
+      data: {
+        ...(data || {}),
+        click_action: 'FLUTTER_NOTIFICATION_CLICK',
+      },
+    };
+    try {
+      await admin.messaging().send(message);
+      return { ok: true };
+    } catch (err) {
+      if (err && (err.code === 'messaging/registration-token-not-registered' || err.code === 'messaging/invalid-registration-token')) {
+        // Clean up stale token
+        const users = await admin.firestore().collection('users')
+          .where('fcmToken', '==', token)
+          .limit(1)
+          .get();
+        users.forEach((doc) => {
+          doc.ref.update({ fcmToken: admin.firestore.FieldValue.delete() }).catch(() => {});
+        });
+        return { ok: false, reason: 'token-unregistered' };
+      }
+      throw new HttpsError('internal', 'Failed to send notification.');
+    }
+  }
+);
+
+exports.analyzeTone = onCall(
+  { region: 'us-central1' },
+  async (request) => {
+    if (!request.auth) throw new HttpsError('unauthenticated', 'Must be signed in.');
+    if (!checkAiRateLimit(request.auth.uid)) throw new HttpsError('resource-exhausted', 'Rate limit exceeded. Try again later.');
+    const { text } = request.data || {};
+    if (!text || typeof text !== 'string' || text.length > 5000) {
+      throw new HttpsError('invalid-argument', 'text must be a string of 5,000 characters or fewer.');
+    }
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) throw new HttpsError('failed-precondition', 'GEMINI_API_KEY not configured.');
+    try {
+      const gemRes = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{
+              role: 'user',
+              parts: [{ text: `Analyze the tone of this message and return ONLY valid JSON like: {"safe":true,"tone":"neutral","warning":""} or {"safe":false,"tone":"aggressive","warning":"This may come across as aggressive."}.\nMessage: "${text}"` }]
+            }],
+            generationConfig: { maxOutputTokens: 120, temperature: 0 }
+          })
+        }
+      );
+      if (!gemRes.ok) return { safe: true, tone: 'neutral', warning: '' };
+      const gemData = await gemRes.json();
+      const raw = gemData?.candidates?.[0]?.content?.parts?.[0]?.text || '{"safe":true,"tone":"neutral","warning":""}';
+      const jsonMatch = raw.match(/\{[\s\S]*\}/);
+      const result = jsonMatch ? JSON.parse(jsonMatch[0]) : { safe: true, tone: 'neutral', warning: '' };
+      return { safe: !!result.safe, tone: result.tone || 'neutral', warning: result.warning || '' };
+    } catch (_) {
+      return { safe: true, tone: 'neutral', warning: '' };
+    }
+  }
+);
+
+exports.autoTagChat = onCall(
+  { region: 'us-central1' },
+  async (request) => {
+    if (!request.auth) throw new HttpsError('unauthenticated', 'Must be signed in.');
+    if (!checkAiRateLimit(request.auth.uid)) throw new HttpsError('resource-exhausted', 'Rate limit exceeded. Try again later.');
+    const { chatId, chatName } = request.data || {};
+    if (!chatId) throw new HttpsError('invalid-argument', 'chatId is required.');
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) throw new HttpsError('failed-precondition', 'GEMINI_API_KEY not configured.');
+    try {
+      const gemRes = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{
+              role: 'user',
+              parts: [{ text: `Suggest 2-4 short tags (single words, lowercase) for a chat named "${chatName || 'Unknown'}" based on typical WhatsApp chat topics. Return ONLY valid JSON like {"tags":["work","family"]}.` }]
+            }],
+            generationConfig: { maxOutputTokens: 80, temperature: 0.4 }
+          })
+        }
+      );
+      if (!gemRes.ok) return { tags: [] };
+      const gemData = await gemRes.json();
+      const raw = gemData?.candidates?.[0]?.content?.parts?.[0]?.text || '{"tags":[]}';
+      const jsonMatch = raw.match(/\{[\s\S]*\}/);
+      const result = jsonMatch ? JSON.parse(jsonMatch[0]) : { tags: [] };
+      return { tags: Array.isArray(result.tags) ? result.tags.slice(0, 4) : [] };
+    } catch (_) {
+      return { tags: [] };
+    }
+  }
+);
+
+exports.classifyNotification = onCall(
+  { region: 'us-central1' },
+  async (request) => {
+    if (!request.auth) throw new HttpsError('unauthenticated', 'Must be signed in.');
+    if (!checkAiRateLimit(request.auth.uid)) throw new HttpsError('resource-exhausted', 'Rate limit exceeded. Try again later.');
+    const { senderName, text, chatType, chatName, isGroup, isMentioned, isReply, hasAttachment } = request.data || {};
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (apiKey) {
+      try {
+        const gemRes = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              contents: [{
+                role: 'user',
+                parts: [{ text: `Classify the importance of this chat notification. Return ONLY valid JSON like {"priority":"high"|"medium"|"low","reason":"short reason"}.\nContext: sender=${senderName || 'unknown'}, group=${!!isGroup}, chatName=${chatName || ''}, mentioned=${!!isMentioned}, reply=${!!isReply}, hasAttachment=${!!hasAttachment}.\nMessage: "${String(text || '').slice(0, 300)}"` }]
+              }],
+              generationConfig: { maxOutputTokens: 60, temperature: 0 }
+            })
+          }
+        );
+        if (gemRes.ok) {
+          const gemData = await gemRes.json();
+          const raw = gemData?.candidates?.[0]?.content?.parts?.[0]?.text || '{"priority":"high","reason":"Message"}';
+          const jsonMatch = raw.match(/\{[\s\S]*\}/);
+          const result = jsonMatch ? JSON.parse(jsonMatch[0]) : { priority: 'high' };
+          const priority = ['high', 'medium', 'low'].includes(result.priority) ? result.priority : 'high';
+          return { priority, reason: result.reason || '' };
+        }
+      } catch (_) {}
+    }
+    // Deterministic fallback (matches client fallback)
+    if (isMentioned) return { priority: 'high', reason: 'Mentioned' };
+    if (isGroup) return { priority: 'medium', reason: 'Group message' };
+    return { priority: 'high', reason: 'Direct message' };
+  }
+);
+
+exports.flagSensitiveContent = onCall(
+  { region: 'us-central1' },
+  async (request) => {
+    if (!request.auth) throw new HttpsError('unauthenticated', 'Must be signed in.');
+    const { messageId, chatId } = request.data || {};
+    if (!messageId || typeof messageId !== 'string') {
+      throw new HttpsError('invalid-argument', 'messageId is required.');
+    }
+    const msgRef = admin.firestore().collection('messages').doc(messageId);
+    const msgSnap = await msgRef.get();
+    if (!msgSnap.exists) throw new HttpsError('not-found', 'Message not found.');
+    const msg = msgSnap.data() || {};
+    const uid = request.auth.uid;
+    const isSender = msg.senderId === uid;
+    let isParticipant = isSender;
+    if (!isParticipant && msg.directId) {
+      const chatSnap = await admin.firestore().collection('directChats').doc(msg.directId).get();
+      isParticipant = chatSnap.exists && (chatSnap.data()?.participants || []).includes(uid);
+    }
+    if (!isParticipant && msg.groupId) {
+      const groupSnap = await admin.firestore().collection('groups').doc(msg.groupId).get();
+      isParticipant = groupSnap.exists && (groupSnap.data()?.memberIds || []).includes(uid);
+    }
+    if (!isParticipant) throw new HttpsError('permission-denied', 'You do not have access to this message.');
+    await msgRef.update({
+      sensitive: true,
+      flaggedBy: uid,
+      flaggedAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+    return { ok: true, messageId };
+  }
+);
+
+exports.unflagSensitiveContent = onCall(
+  { region: 'us-central1' },
+  async (request) => {
+    if (!request.auth) throw new HttpsError('unauthenticated', 'Must be signed in.');
+    const { messageId } = request.data || {};
+    if (!messageId || typeof messageId !== 'string') {
+      throw new HttpsError('invalid-argument', 'messageId is required.');
+    }
+    const msgRef = admin.firestore().collection('messages').doc(messageId);
+    const msgSnap = await msgRef.get();
+    if (!msgSnap.exists) throw new HttpsError('not-found', 'Message not found.');
+    const msg = msgSnap.data() || {};
+    const uid = request.auth.uid;
+    const isSender = msg.senderId === uid;
+    const isFlogger = msg.flaggedBy === uid;
+    let isParticipant = isSender || isFlogger;
+    if (!isParticipant && msg.directId) {
+      const chatSnap = await admin.firestore().collection('directChats').doc(msg.directId).get();
+      isParticipant = chatSnap.exists && (chatSnap.data()?.participants || []).includes(uid);
+    }
+    if (!isParticipant && msg.groupId) {
+      const groupSnap = await admin.firestore().collection('groups').doc(msg.groupId).get();
+      isParticipant = groupSnap.exists && (groupSnap.data()?.memberIds || []).includes(uid);
+    }
+    if (!isParticipant) throw new HttpsError('permission-denied', 'You do not have access to this message.');
+    await msgRef.update({
+      sensitive: false,
+      unflagBy: uid,
+      unflagAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+    return { ok: true, messageId };
+  }
+);
+
+exports.updateChatRole = onCall(
+  { region: 'us-central1' },
+  async (request) => {
+    const uid = request.auth?.uid;
+    if (!uid) throw new HttpsError('unauthenticated', 'Must be signed in.');
+    const { chatId, targetUid, newRole } = request.data || {};
+    if (!chatId || typeof chatId !== 'string') {
+      throw new HttpsError('invalid-argument', 'chatId is required.');
+    }
+    if (!targetUid || typeof targetUid !== 'string') {
+      throw new HttpsError('invalid-argument', 'targetUid is required.');
+    }
+    if (!['admin', 'moderator', 'member'].includes(newRole)) {
+      throw new HttpsError('invalid-argument', 'newRole must be admin, moderator, or member.');
+    }
+    if (uid === targetUid) {
+      throw new HttpsError('invalid-argument', 'You cannot change your own role.');
+    }
+
+    const chatRef = admin.firestore().collection('groups').doc(chatId);
+    const chatSnap = await chatRef.get();
+    if (!chatSnap.exists) {
+      // Try direct chat doc roles (chats collection)
+      const altRef = admin.firestore().collection('chats').doc(chatId);
+      const altSnap = await altRef.get();
+      if (!altSnap.exists) throw new HttpsError('not-found', 'Chat not found.');
+      const alt = altSnap.data() || {};
+      const adminIds = alt.adminIds || alt.admins || [];
+      const isOwner = alt.createdBy === uid || alt.ownerId === uid;
+      if (!adminIds.includes(uid) && !isOwner) {
+        throw new HttpsError('permission-denied', 'Only admins can manage roles.');
+      }
+      await altRef.update({ [`roles.${targetUid}`]: newRole, updatedAt: Date.now() });
+      return { ok: true };
+    }
+
+    const chat = chatSnap.data() || {};
+    const adminIds = chat.adminIds || chat.admins || [];
+    const isOwner = chat.createdBy === uid || chat.ownerId === uid;
+    if (!adminIds.includes(uid) && !isOwner) {
+      throw new HttpsError('permission-denied', 'Only admins can manage roles.');
+    }
+    await chatRef.update({ [`roles.${targetUid}`]: newRole, updatedAt: Date.now() });
+    return { ok: true };
+  }
+);
+
+exports.aiSearchMessages = onCall(
+  { region: 'us-central1' },
+  async (request) => {
+    if (!request.auth) throw new HttpsError('unauthenticated', 'Must be signed in.');
+    if (!checkAiRateLimit(request.auth.uid)) throw new HttpsError('resource-exhausted', 'Rate limit exceeded. Try again later.');
+    const { query, chatIds } = request.data || {};
+    if (!query || typeof query !== 'string' || query.length > 200) {
+      throw new HttpsError('invalid-argument', 'query is required (max 200 chars).');
+    }
+    const ids = Array.isArray(chatIds) ? chatIds.slice(0, 50) : [];
+    if (!ids.length) return { results: [], aiRanked: true };
+
+    // Keyword match first so results are grounded in real data
+    const keyword = query.toLowerCase();
+    const candidates = [];
+    for (const chatId of ids) {
+      try {
+        const snap = await admin.firestore().collection('messages')
+          .where('directId', '==', chatId)
+          .orderBy('timestamp', 'desc')
+          .limit(30)
+          .get();
+        snap.docs.forEach((d) => {
+          const m = d.data() || {};
+          const text = String(m.text || '');
+          if (text && text.toLowerCase().includes(keyword)) {
+            candidates.push({ id: d.id, chatId, text: text.slice(0, 300), senderName: m.senderName || 'Unknown' });
+          }
+        });
+      } catch (_) {}
+      try {
+        const snap2 = await admin.firestore().collection('messages')
+          .where('groupId', '==', chatId)
+          .orderBy('timestamp', 'desc')
+          .limit(30)
+          .get();
+        snap2.docs.forEach((d) => {
+          const m = d.data() || {};
+          const text = String(m.text || '');
+          if (text && text.toLowerCase().includes(keyword)) {
+            candidates.push({ id: d.id, chatId, text: text.slice(0, 300), senderName: m.senderName || 'Unknown' });
+          }
+        });
+      } catch (_) {}
+    }
+
+    // Dedup by id
+    const seen = new Set();
+    const unique = candidates.filter((c) => (seen.has(c.id) ? false : (seen.add(c.id), true)));
+
+    if (!unique.length) return { results: [], aiRanked: true };
+
+    // AI ranking (fall back to keyword order if Gemini fails)
+    const apiKey = process.env.GEMINI_API_KEY;
+    let ranked = unique;
+    if (apiKey) {
+      try {
+        const snippet = unique.slice(0, 20).map((m) => `- ${m.senderName}: ${m.text}`).join('\n');
+        const gemRes = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              contents: [{
+                role: 'user',
+                parts: [{ text: `Rank these chat search results by relevance to the query "${query}". Return ONLY a JSON array of indices (numbers) in best-to-worst order, like [2,0,1].\nResults:\n${snippet}` }]
+              }],
+              generationConfig: { maxOutputTokens: 100, temperature: 0 }
+            })
+          }
+        );
+        if (gemRes.ok) {
+          const gemData = await gemRes.json();
+          const raw = gemData?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+          const jsonMatch = raw.match(/\[[\s\S]*\]/);
+          if (jsonMatch) {
+            const order = JSON.parse(jsonMatch[0]);
+            if (Array.isArray(order) && order.length) {
+              const valid = order.filter((i) => typeof i === 'number' && i >= 0 && i < unique.length);
+              const sorted = valid.map((i) => unique[i]).concat(unique.filter((_, i) => !valid.includes(i)));
+              ranked = sorted;
+            }
+          }
+        }
+      } catch (_) {}
+    }
+    return { results: ranked, aiRanked: true };
+  }
+);

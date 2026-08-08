@@ -376,7 +376,7 @@ document.getElementById("loginForm").addEventListener("submit", async (e) => {
     try {
       const userDoc = await db.collection("users").doc(userCred.user.uid).get();
       const userData = userDoc.data() || {};
-      if (userData.twofaEnabled && userData.twofaPinHash && userData.twofaPinSalt) {
+      if (userData.twofaEnabled) {
         const twofaVerified = await new Promise((resolve) => {
           const twofaOverlay = document.createElement('div');
           twofaOverlay.id = 'twofa-login-overlay';

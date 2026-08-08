@@ -77,7 +77,7 @@
   async function _hasServerPin() {
     if (!App.db || !App.auth?.currentUser) return false;
     try {
-      const doc = await App.db.collection('users').doc(App.auth.currentUser.uid).get();
+      const doc = await App.db.collection('userSecrets').doc(App.auth.currentUser.uid).get();
       const d = doc.data() || {};
       return !!(d.pinHash && d.pinSalt);
     } catch(_) { return false; }

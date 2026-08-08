@@ -17,12 +17,12 @@
   /* ── Utilities ──────────────────────────────────────────────── */
 
   function esc(str) {
-    if (typeof window.escapeHtml === 'function') return window.escapeHtml(str);
+    if (typeof window.escapeHtml === 'function' && window.escapeHtml !== esc) return window.escapeHtml(str);
     return String(str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   }
 
   function initials(name) {
-    if (typeof window.getInitials === 'function') return window.getInitials(name, '');
+    if (typeof window.getInitials === 'function' && window.getInitials !== initials) return window.getInitials(name, '');
     if (!name) return '?';
     const parts = String(name).trim().split(/\s+/);
     return (parts[0][0] + (parts[1] ? parts[1][0] : '')).toUpperCase();
@@ -372,7 +372,7 @@
 
     try {
       State.groupsUnsub = db.collection('groups')
-        .where('members', 'array-contains', uid)
+        .where('memberIds', 'array-contains', uid)
         .limit(200)
         .onSnapshot(snap => {
           _groupsData = snap.docs.map(doc => {
@@ -386,8 +386,8 @@
               lastMessageAt: d.lastMessageAt,
               updatedAt: d.updatedAt,
               unreadCount: (d.unreadCounts && d.unreadCounts[uid]) || 0,
-              members: d.members || [],
-              memberCount: (d.members || []).length,
+              members: d.memberIds || d.members || [],
+              memberCount: (d.memberIds || d.members || []).length,
               description: d.description || '',
             };
           });
