@@ -252,7 +252,9 @@
           '<button class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-surface-variant/60 transition-colors text-left" data-action="openPrivacySettingsMenu"><span class="material-symbols-outlined text-[18px] text-on-surface-variant">lock</span><span class="text-sm font-medium text-on-surface">Privacy settings</span></button>' +
           '<button class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-surface-variant/60 transition-colors text-left" data-action="openCloudDriveMenu"><span class="material-symbols-outlined text-[18px] text-on-surface-variant">cloud</span><span class="text-sm font-medium text-on-surface">Cloud drive</span></button>' +
           (isGroup
-            ? '<button class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-surface-variant/60 transition-colors text-left" data-action="openGroupChatMenu"><span class="material-symbols-outlined text-[18px] text-on-surface-variant">campaign</span><span class="text-sm font-medium text-on-surface">Announcement mode</span></button>'
+            ? '<button class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-surface-variant/60 transition-colors text-left" data-action="openGroupChatMenu"><span class="material-symbols-outlined text-[18px] text-on-surface-variant">campaign</span><span class="text-sm font-medium text-on-surface">Announcement mode</span></button>' +
+              '<button class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-surface-variant/60 transition-colors text-left" data-action="exitGroup" data-action-arg="' + _esc(chat.id || '') + '"><span class="material-symbols-outlined text-[18px] text-red-500">logout</span><span class="text-sm font-medium text-red-500">Exit group</span></button>' +
+              '<button class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-surface-variant/60 transition-colors text-left" data-action="deleteGroupForEveryone" data-action-arg="' + _esc(chat.id || '') + '"><span class="material-symbols-outlined text-[18px] text-red-500">delete_forever</span><span class="text-sm font-medium text-red-500">Delete group for everyone</span></button>'
             : '') +
         '</div>' +
         '<div class="mt-4">' +
@@ -1063,7 +1065,7 @@
   }
 
   /* ── File → storage → chat message ────────────────────────── */
-  function _sendFileMessage(file) {
+  function _sendFileMessage(file, _unused, extraMeta) {
     var db = _db();
     var uid = _uid();
     var user = _me();
@@ -1100,6 +1102,10 @@
           readBy: {}
         };
         msg.readBy[uid] = true;
+        if (extraMeta && typeof extraMeta === 'object') {
+          if (extraMeta.version != null) msg.attachment.version = extraMeta.version;
+          if (extraMeta.previousVersionId != null) msg.attachment.previousVersionId = extraMeta.previousVersionId;
+        }
         batch.set(msgRef, msg);
         batch.update(db.collection(coll).doc(chat.id), {
           lastMessage: name,

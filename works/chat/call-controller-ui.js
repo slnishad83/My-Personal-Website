@@ -41,7 +41,7 @@
         var badge = document.createElement('p');
         badge.id = 'call-encryption-badge';
         badge.className = 'text-white/40 text-[10px] mt-2 flex items-center gap-1';
-        badge.innerHTML = '<span class="material-symbols-outlined" style="font-size:12px">wifi</span> Peer-to-peer connection';
+        badge.innerHTML = '<span class="material-symbols-outlined" style="font-size:12px">lock</span> End-to-end encrypted';
         info.appendChild(badge);
       }
     }

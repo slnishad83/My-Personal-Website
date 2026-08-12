@@ -104,7 +104,7 @@
     }
 
     try {
-      await db.collection('messages').add(msgDoc);
+      await db.collection('chats').doc(chatId).collection('messages').add(msgDoc);
       if (typeof showToast === 'function') showToast('Saved to My Notes â­', 'success');
     } catch (e) {
       if (window.__DEBUG__) console.error('[wa-share] Save to notes failed:', e);

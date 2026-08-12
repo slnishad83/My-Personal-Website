@@ -10,7 +10,7 @@
         CHECK_INTERVAL: 4 * 60 * 60 * 1000, // 4 hours
 
         init() {
-            if (!window.Capacitor?.isNative?.()) return;
+            if (window.Capacitor?.isNativePlatform?.() !== true) return;
             this.isNative = true;
             this.maybeCheck();
         },

@@ -268,7 +268,10 @@
         (Array.isArray(msgs) ? msgs : []).forEach(msg => {
           var msgTs = msg.time || (msg.timestamp && msg.timestamp.toMillis ? msg.timestamp.toMillis() : (typeof msg.timestamp === 'number' ? msg.timestamp : 0));
           if (msgTs && (now - msgTs > timer)) {
-            window.App.db.collection('messages').doc(chatId).collection('items').doc(msg.id).delete()
+            const isGroup = chat.type === 'group' || chat.isGroup === true;
+            const coll = isGroup ? 'groups' : 'chats';
+            const msgRef = window.App.db.collection(coll).doc(chatId).collection('messages').doc(msg.id);
+            msgRef.delete()
               .then(() => {
                 if (window.App.messages[chatId]) {
                   window.App.messages[chatId] = window.App.messages[chatId].filter(m => m.id !== msg.id);

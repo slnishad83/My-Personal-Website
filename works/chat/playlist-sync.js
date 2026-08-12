@@ -65,14 +65,15 @@
       _listenToRoom(chatId);
       showToast('Listening room started!', 'success');
 
-      await App.db.collection('messages').add({
+      const coll = App.currentChat?.type === 'group' ? 'groups' : 'chats';
+      await App.db.collection(coll).doc(chatId).collection('messages').add({
         senderId: uid,
         senderName: App.currentUser?.displayName || 'User',
         text: `ðŸŽµ Started a listening session with "${pl.name}"`,
         type: 'system',
         systemType: 'listening_room_start',
         timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-        ...(App.currentChat.type === 'group' ? { groupId: chatId } : { directId: chatId, participants: [uid, App.currentChat.uid || ''] }),
+        readBy: [uid],
       }).catch(() => {});
 
     } catch(e) {
@@ -190,14 +191,15 @@
     if (room.hostUid === App.auth?.currentUser?.uid) {
       try {
         await App.db.collection('listeningRooms').doc(room.chatId).delete();
-        await App.db.collection('messages').add({
+        const coll = App.currentChat?.type === 'group' ? 'groups' : 'chats';
+        await App.db.collection(coll).doc(room.chatId).collection('messages').add({
           senderId: App.auth.currentUser.uid,
           senderName: App.currentUser?.displayName || 'User',
           text: 'ðŸŽµ Listening session ended',
           type: 'system',
           systemType: 'listening_room_end',
           timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-          ...(App.currentChat.type === 'group' ? { groupId: room.chatId } : { directId: room.chatId, participants: [App.auth.currentUser.uid, App.currentChat.uid || ''] }),
+          readBy: [App.auth.currentUser.uid],
         }).catch(() => {});
       } catch(_) {}
     } else {
@@ -222,14 +224,15 @@
     const room = App._listeningRoom;
     if (room && room.playlistId === playlistId && App.db) {
       try {
-        await App.db.collection('messages').add({
+        const coll = App.currentChat?.type === 'group' ? 'groups' : 'chats';
+        await App.db.collection(coll).doc(room.chatId).collection('messages').add({
           senderId: App.auth?.currentUser?.uid,
           senderName: App.currentUser?.displayName || 'User',
           text: `ðŸŽµ Added "${track.title}" to the shared playlist`,
           type: 'system',
           systemType: 'playlist_track_added',
           timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-          ...(App.currentChat.type === 'group' ? { groupId: room.chatId } : { directId: room.chatId, participants: [App.auth?.currentUser?.uid, App.currentChat?.uid || ''] }),
+          readBy: App.auth?.currentUser?.uid ? [App.auth.currentUser.uid] : [],
         }).catch(() => {});
       } catch(_) {}
     }

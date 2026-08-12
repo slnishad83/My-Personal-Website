@@ -14,7 +14,7 @@
         isNative: false,
 
         async init() {
-            if (!window.Capacitor?.isNative?.()) return;
+            if (window.Capacitor?.isNativePlatform?.() !== true) return;
             this.isNative = true;
             try {
                 const sec = window.Security || (typeof Security !== 'undefined' ? Security : null);

@@ -134,6 +134,15 @@
         '</button>' +
         (status.caption ? '<div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-4 pb-6"><p class="text-white text-sm text-center">' + _esc(status.caption) + '</p></div>' : '') +
         '</div>';
+    } else if (status.type === 'link') {
+      content = '<div class="w-full h-full flex items-center justify-center p-8" style="background:' + _esc(status.bgColor || 'linear-gradient(135deg, #0f2027 0%, #203a43 50%, #2c5364 100%)') + ';">' +
+        '<div class="w-full max-w-md rounded-2xl bg-white/10 backdrop-blur-sm p-6 text-center border border-white/20">' +
+        '<span class="material-symbols-outlined text-white/70" style="font-size:40px">link</span>' +
+        '<p class="text-white text-lg font-semibold break-words mt-3">' + _esc(status.content || '') + '</p>' +
+        (status.caption ? '<p class="text-white/70 text-sm mt-2">' + _esc(status.caption) + '</p>' : '') +
+        '<a href="' + _esc(status.content || '') + '" target="_blank" rel="noopener noreferrer" class="inline-block mt-4 px-6 py-2.5 rounded-full bg-primary text-on-primary font-bold text-sm hover:brightness-110 transition-all">Open Link</a>' +
+        '</div>' +
+        '</div>';
     }
     return content;
   }
@@ -559,6 +568,7 @@
     if (typeof window.openForwardModal === 'function') {
       var msgText = '';
       if (status.type === 'text') msgText = status.content;
+      else if (status.type === 'link') msgText = status.content + (status.caption ? ' ' + status.caption : '');
       else if (status.type === 'image') msgText = (status.caption || '') + ' ' + (status.mediaUrl || status.content);
       else if (status.type === 'video') msgText = (status.caption || '') + ' ' + (status.mediaUrl || status.content);
       window.openForwardModal({ text: msgText.trim(), type: status.type, mediaUrl: status.mediaUrl || status.content });

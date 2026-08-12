@@ -501,7 +501,11 @@
     // path consistent). It takes participant ids (self excluded) + call type.
     if (typeof window.startGroupCall === 'function' && window.startGroupCall !== startGroupCall) {
       try {
-        await window.startGroupCall(memberIds, type === 'video' ? 'video' : 'voice');
+        await window.startGroupCall(memberIds, type === 'video' ? 'video' : 'voice', {
+          groupId: c.id,
+          groupName: c.name,
+          groupAvatar: c.photoURL || c.avatar || ''
+        });
       } catch (e) {
         if (window.__DEBUG__) console.warn('[calls] startGroupCall delegate:', e);
       }

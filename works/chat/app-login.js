@@ -157,6 +157,60 @@ function validatePassword(password) {
    AUTH STATE LISTENER
    â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 
+/* Two-Step Verification gate -- enforces 2FA PIN before entering the app. */
+function _promptTwoFaGate(_user) {
+  return new Promise(function (resolve) {
+    try { sessionStorage.setItem('nsl_2fa_pending', '1'); } catch (_) {}
+    var overlay = document.createElement('div');
+    overlay.id = 'twofa-gate-overlay';
+    overlay.style.cssText = 'position:fixed;inset:0;z-index:10002;background:rgba(0,0,0,0.92);display:flex;align-items:center;justify-content:center;animation:fadeIn 0.2s ease';
+    var panel = document.createElement('div');
+    panel.style.cssText = 'background:var(--surface-container,#1e1e2e);border-radius:24px;padding:32px;max-width:340px;width:90vw;text-align:center;color:var(--on-surface)';
+    panel.innerHTML = [
+      '<div style="width:64px;height:64px;border-radius:50%;background:rgba(0,191,165,0.15);display:flex;align-items:center;justify-content:center;margin:0 auto 16px">',
+      '  <span class="material-symbols-outlined" style="font-size:32px;color:var(--primary,#00a884)">security</span>',
+      '</div>',
+      '<h3 style="margin:0 0 4px;font-size:18px;font-weight:700">Two-Step Verification</h3>',
+      '<p style="font-size:13px;color:var(--on-surface-variant,#8696a0);margin:0 0 20px">Enter your 2FA PIN to continue</p>',
+      '<input type="password" inputmode="numeric" id="twofa-gate-pin" placeholder="Enter PIN" maxlength="8" style="width:100%;padding:14px;border-radius:12px;border:2px solid rgba(0,0,0,0.1);background:#fff;font-size:16px;text-align:center;box-sizing:border-box;outline:none;">',
+      '<p id="twofa-gate-error" style="color:#ff5555;font-size:12px;min-height:14px;margin:4px 0 8px"></p>',
+      '<button id="twofa-gate-submit" style="width:100%;padding:13px;border:none;border-radius:12px;background:var(--primary,#00a884);color:#fff;font-size:15px;font-weight:600;cursor:pointer;margin-bottom:8px;">Verify</button>',
+      '<button id="twofa-gate-cancel" style="width:100%;padding:13px;border:none;border-radius:12px;background:#2a2a3a;color:var(--on-surface,#fff);font-size:14px;cursor:pointer;">Cancel</button>'
+    ].join('');
+    overlay.appendChild(panel);
+    document.body.appendChild(overlay);
+
+    var pinInput = overlay.querySelector('#twofa-gate-pin');
+    var errEl = overlay.querySelector('#twofa-gate-error');
+    var submitBtn = overlay.querySelector('#twofa-gate-submit');
+    var cancelBtn = overlay.querySelector('#twofa-gate-cancel');
+    pinInput.focus();
+
+    function finish(ok) {
+      try { sessionStorage.removeItem('nsl_2fa_pending'); } catch (_) {}
+      overlay.remove();
+      resolve(ok);
+    }
+
+    cancelBtn.addEventListener('click', function () { finish(false); });
+    var doVerify = async function () {
+      var pin = pinInput.value.trim();
+      if (!pin) { errEl.textContent = 'Please enter your 2FA PIN.'; return; }
+      try {
+        var fn = firebase.functions().httpsCallable('verifyTwoFactorPin');
+        await fn({ pin: pin });
+        try { sessionStorage.setItem('nsl_2fa_ok', '1'); } catch (_) {}
+        finish(true);
+      } catch (e) {
+        errEl.textContent = 'Incorrect PIN';
+        pinInput.value = '';
+      }
+    };
+    submitBtn.addEventListener('click', doVerify);
+    pinInput.addEventListener('keydown', function (e) { if (e.key === 'Enter') doVerify(); });
+  });
+}
+
 auth.onAuthStateChanged(async (user) => {
   await authPersistenceReady.catch(() => {});
   if (!user) return;
@@ -165,6 +219,26 @@ auth.onAuthStateChanged(async (user) => {
     new Promise((resolve) => setTimeout(resolve, 2500)),
   ]).catch(() => {});
   if (user.emailVerified) {
+    // Two-Step Verification gate -- never bypass 2FA into the app.
+    try {
+      const uDoc = await db.collection("users").doc(user.uid).get();
+      if (uDoc.exists && uDoc.data().twofaEnabled) {
+        let okFlag = false, pending = false;
+        try { okFlag = sessionStorage.getItem('nsl_2fa_ok') === '1'; } catch (_) {}
+        try { pending = sessionStorage.getItem('nsl_2fa_pending') === '1'; } catch (_) {}
+        if (okFlag) {
+          try { sessionStorage.removeItem('nsl_2fa_ok'); } catch (_) {}
+        } else if (pending) {
+          return; // login form owns the overlay and will navigate after verify
+        } else {
+          if (document.getElementById('twofa-login-overlay') || document.getElementById('twofa-gate-overlay')) {
+            return; // a 2FA overlay is already showing
+          }
+          const passed = await _promptTwoFaGate(user);
+          if (!passed) { try { auth.signOut(); } catch (_) {} return; }
+        }
+      }
+    } catch (_) {}
     await db.collection("users").doc(user.uid).update({
       emailVerified: true,
       pendingVerification: false,
@@ -377,6 +451,7 @@ document.getElementById("loginForm").addEventListener("submit", async (e) => {
       const userDoc = await db.collection("users").doc(userCred.user.uid).get();
       const userData = userDoc.data() || {};
       if (userData.twofaEnabled) {
+        try { sessionStorage.setItem('nsl_2fa_pending', '1'); } catch (_) {}
         const twofaVerified = await new Promise((resolve) => {
           const twofaOverlay = document.createElement('div');
           twofaOverlay.id = 'twofa-login-overlay';
@@ -417,6 +492,7 @@ document.getElementById("loginForm").addEventListener("submit", async (e) => {
             try {
               const fn = firebase.functions().httpsCallable('verifyTwoFactorPin');
               await fn({ pin: val });
+              try { sessionStorage.setItem('nsl_2fa_ok', '1'); sessionStorage.removeItem('nsl_2fa_pending'); } catch (_) {}
               twofaOverlay.remove();
               resolve(true);
             } catch (e) {
@@ -435,12 +511,13 @@ document.getElementById("loginForm").addEventListener("submit", async (e) => {
             if (ev.key === 'Enter') handleVerify();
           });
           document.getElementById('twofa-login-cancel')?.addEventListener('click', () => {
+            try { sessionStorage.removeItem('nsl_2fa_pending'); } catch (_) {}
             twofaOverlay.remove();
             auth.signOut();
             resolve(false);
           });
           twofaOverlay.addEventListener('click', (ev) => {
-            if (ev.target === twofaOverlay) { twofaOverlay.remove(); auth.signOut(); resolve(false); }
+            if (ev.target === twofaOverlay) { try { sessionStorage.removeItem('nsl_2fa_pending'); } catch (_) {} twofaOverlay.remove(); auth.signOut(); resolve(false); }
           });
         });
 

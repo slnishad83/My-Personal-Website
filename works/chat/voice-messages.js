@@ -507,19 +507,24 @@
       var msgData = {
         text: '',
         type: 'voice',
+        attachment: { url: downloadURL, name: fileName, type: 'voice' },
         audioURL: downloadURL,
         audioDuration: _recordedDuration,
+        senderId: user.uid,
+        senderName: user.displayName || 'User',
         from: user.uid,
         fromName: user.displayName || 'User',
         chatId: chat.id,
         timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+        readBy: { [user.uid]: true },
         read: false
       };
-      await db.collection('messages').doc(chat.id).collection('items').add(msgData);
-      await db.collection('messages').doc(chat.id).update({
+      var coll = chat.type === 'group' ? 'groups' : 'chats';
+      await db.collection(coll).doc(chat.id).collection('messages').add(msgData);
+      await db.collection(coll).doc(chat.id).update({
         lastMessage: 'ðŸŽ¤ Voice message',
-        lastMessageTime: firebase.firestore.FieldValue.serverTimestamp(),
-        lastMessageFrom: user.uid
+        lastMessageAt: firebase.firestore.FieldValue.serverTimestamp(),
+        lastSenderId: user.uid
       }).catch(function() {});
       _toast('Voice message sent', 'success');
     } catch (err) {

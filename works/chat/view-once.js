@@ -30,8 +30,9 @@
       if (!App.db) return;
       try {
         var chatId = (App && App.currentChat && App.currentChat.id) || '';
+        var coll = (App && App.currentChatType === 'group') ? 'groups' : 'chats';
         var docRef = chatId
-          ? App.db.collection('messages').doc(chatId).collection('items').doc(msgId)
+          ? App.db.collection(coll).doc(chatId).collection('messages').doc(msgId)
           : App.db.collection('messages').doc(msgId);
         await docRef.update({
           viewedOnce: true,
@@ -57,8 +58,9 @@
           }
         }
         const chatId = window.App?.currentChat?.id;
+        const coll = window.App?.currentChatType === 'group' ? 'groups' : 'chats';
         if (chatId) {
-          await App.db.collection('messages').doc(chatId).collection('items').doc(msgId).delete();
+          await App.db.collection(coll).doc(chatId).collection('messages').doc(msgId).delete();
         } else {
           await App.db.collection('messages').doc(msgId).delete();
         }

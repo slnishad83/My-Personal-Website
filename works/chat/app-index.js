@@ -62,6 +62,7 @@ const _deferredModules = [
   () => import('./offline-queue.js'),
   () => import('./call-sync.js'),
   () => import('./security.js'),
+  () => import('./e2e.js'),
   () => import('./keyboard-shortcuts.js'),
   () => import('./permissions-manager.js'),
   () => import('./chat-missing-features.js'),
@@ -73,6 +74,7 @@ const _deferredModules = [
 
   // --- Chat & message features ---
   () => import('./chat-enhancements.js'),
+  () => import('./message-effects.js'),
   () => import('./chat-fixes.js'),
   () => import('./smart-reply.js'),
   () => import('./streak.js'),
@@ -153,6 +155,8 @@ const _deferredModules = [
   () => import('./report-user.js'),
   () => import('./gif-picker.js'),
   () => import('./sticker-packs.js'),
+  () => import('./communities.js'),
+  () => import('./backup.js'),
   () => import('./micro-interactions.js'),
   () => import('./profile-setup.js'),
   () => import('./lazy-images.js'),

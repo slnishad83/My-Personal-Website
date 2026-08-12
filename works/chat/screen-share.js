@@ -9,7 +9,7 @@
     if (!db || !App.currentChat || !App.auth?.currentUser) return;
       const chatId = App.currentChat.id;
       const isGroup = App.currentChat.type === 'group';
-      var chatRef = db.collection('messages').doc(chatId).collection('items');
+      var chatRef = db.collection(isGroup ? 'groups' : 'chats').doc(chatId).collection('messages');
       try {
         const data = {
           senderId: App.auth.currentUser.uid,
@@ -33,7 +33,7 @@
     if (!db || !App.currentChat || !App.auth?.currentUser) return;
       const chatId = App.currentChat.id;
       const isGroup = App.currentChat.type === 'group';
-      var chatRef = db.collection('messages').doc(chatId).collection('items');
+      var chatRef = db.collection(isGroup ? 'groups' : 'chats').doc(chatId).collection('messages');
       try {
         const data = {
           senderId: App.auth.currentUser.uid,

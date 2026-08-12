@@ -107,7 +107,7 @@
 
       if (chatType === 'group' && groupId) {
         msgData.groupId = groupId;
-        await db.collection('messages').add(msgData);
+        await db.collection('groups').doc(groupId).collection('messages').add(msgData);
         db.collection('groups').doc(groupId).update({
           lastMessage: text,
           lastMessageTime: firebase.firestore.FieldValue.serverTimestamp(),
@@ -119,7 +119,7 @@
         msgData.receiverId = chatUserId;
         msgData.participants = [user.uid, chatUserId].filter(Boolean);
         msgData.participantEmails = [user.email || '', chatUserId ? (chatUserId + '@placeholder') : ''];
-        await db.collection('messages').add(msgData);
+        await db.collection('chats').doc(chatId).collection('messages').add(msgData);
         db.collection('chats').doc(chatId).update({
           lastMessage: text,
           lastMessageTime: firebase.firestore.FieldValue.serverTimestamp(),

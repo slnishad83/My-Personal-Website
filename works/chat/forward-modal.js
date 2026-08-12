@@ -208,7 +208,8 @@
         var name = nameEl ? nameEl.textContent.trim() : cid;
         var avatarEl = items[i].querySelector('img');
         var avatar = avatarEl ? avatarEl.src : '';
-        _allChats.push({ id: cid, name: name, avatar: avatar, lastMessage: '' });
+        var ctype = items[i].getAttribute('data-chat-type') || 'direct';
+        _allChats.push({ id: cid, name: name, avatar: avatar, lastMessage: '', type: ctype });
       }
     }
     if (_allChats.length === 0 && typeof allUsers !== 'undefined' && Array.isArray(allUsers)) {
@@ -294,14 +295,30 @@
     window.closeForwardModal();
   }
 
+  async function _encryptForward(chatId, coll, msg) {
+    if (coll === 'broadcasts') return null;
+    if (!window.E2E || !window.Security) return null;
+    if (msg && msg.decryptFailed) return null;
+    var text = (msg && (msg.text || msg.message || msg.content)) || '';
+    if (!text) return null;
+    var chatType = coll === 'groups' ? 'group' : 'direct';
+    try {
+      var e2e = await E2E.encryptForChat(chatId, chatType, text);
+      return (e2e && e2e.enc) ? e2e.enc : null;
+    } catch (e) { return null; }
+  }
+
   async function _forwardToChat(chatId, msg) {
     var uid = _uid();
     if (!uid) return;
     var _firestore = (typeof App !== 'undefined' && App.db) ? App.db : (typeof firebase !== 'undefined' ? firebase.firestore() : null);
     if (!_firestore) throw new Error('Firestore not available');
-    var chatRef = _firestore.collection('messages').doc(chatId).collection('items').doc();
-    await chatRef.set({
-      text: msg.text || '',
+    var target = _allChats.find(function (c) { return c.id === chatId; });
+    var coll = (target && (target.type === 'group' || target.type === 'broadcast')) ? (target.type === 'broadcast' ? 'broadcasts' : 'groups') : 'chats';
+    var chatRef = _firestore.collection(coll).doc(chatId).collection('messages').doc();
+    var encPayload = await _encryptForward(chatId, coll, msg);
+    var text = (msg && (msg.text || msg.message || msg.content)) || '';
+    var payload = {
       type: msg.type || 'text',
       attachment: msg.attachment || null,
       senderId: uid,
@@ -309,14 +326,21 @@
       clientId: 'fwd-' + Date.now() + '-' + Math.random().toString(36).substr(2, 6),
       forwardedFrom: msg.forwardedFrom || msg.id || null,
       isForwarded: true
-    });
+    };
+    if (encPayload) {
+      payload.enc = encPayload;
+      payload.e2e = true;
+    } else {
+      payload.text = text;
+    }
+    await chatRef.set(payload);
     var _firestore2 = (typeof App !== 'undefined' && App.db) ? App.db : (typeof firebase !== 'undefined' ? firebase.firestore() : null);
-    var chatDocRef = _firestore2.collection('chats').doc(chatId);
-    await chatDocRef.set({
-      lastMessage: msg.text || '[Forwarded message]',
-      lastMessageTime: firebase.firestore.FieldValue.serverTimestamp(),
+    var chatDocRef = _firestore2.collection(coll).doc(chatId);
+    await chatDocRef.update({
+      lastMessage: encPayload && window.E2E ? E2E.securePreview() : (text || '[Forwarded message]'),
+      lastMessageAt: firebase.firestore.FieldValue.serverTimestamp(),
       lastMessageSenderId: uid
-    }, { merge: true });
+    }).catch(function () {});
   }
 
   async function _forwardToNotes(msg) {

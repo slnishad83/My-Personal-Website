@@ -17,21 +17,30 @@ const CHAT_APP_URL = 'https://chat.nishadsl.com/works/chat/';
 
 async function syncGroupAccessMetadata(groupId) {
   if (!groupId) return;
-  const memberSnap = await admin.firestore()
-    .collection('groupMembers')
-    .where('groupId', '==', groupId)
-    .get();
+  const db = admin.firestore();
+  const groupRef = db.collection('groups').doc(groupId);
+  const groupSnap = await groupRef.get();
+  if (!groupSnap.exists) return;
+  const groupData = groupSnap.data() || {};
+  const memberSnap = await groupRef.collection('members').get();
   const memberIds = [];
   const adminIds = [];
   memberSnap.docs.forEach((doc) => {
     const member = doc.data() || {};
-    if (!member.userId || memberIds.includes(member.userId)) return;
-    memberIds.push(member.userId);
+    const uid = member.uid || member.userId;
+    if (!uid || memberIds.includes(uid)) return;
+    memberIds.push(uid);
     if (member.role === 'admin' || member.role === 'owner') {
-      adminIds.push(member.userId);
+      adminIds.push(uid);
     }
   });
-  await admin.firestore().collection('groups').doc(groupId).set({
+  if (groupData.ownerId && adminIds.indexOf(groupData.ownerId) === -1) {
+    adminIds.push(groupData.ownerId);
+  }
+  if (groupData.createdBy && adminIds.indexOf(groupData.createdBy) === -1) {
+    adminIds.push(groupData.createdBy);
+  }
+  await groupRef.set({
     memberIds,
     adminIds,
     memberCount: memberIds.length,
@@ -52,25 +61,18 @@ function _storagePathFromUrl(url) {
 }
 
 exports.syncGroupMemberCreated = onDocumentCreated(
-  { document: 'groupMembers/{memberId}', region: 'asia-south1' },
-  async (event) => syncGroupAccessMetadata(event.data?.data()?.groupId)
+  { document: 'groups/{groupId}/members/{memberId}', region: 'us-central1' },
+  async (event) => syncGroupAccessMetadata(event.params.groupId)
 );
 
 exports.syncGroupMemberUpdated = onDocumentUpdated(
-  { document: 'groupMembers/{memberId}', region: 'asia-south1' },
-  async (event) => {
-    const beforeGroupId = event.data?.before.data()?.groupId;
-    const afterGroupId = event.data?.after.data()?.groupId;
-    await syncGroupAccessMetadata(afterGroupId);
-    if (beforeGroupId && beforeGroupId !== afterGroupId) {
-      await syncGroupAccessMetadata(beforeGroupId);
-    }
-  }
+  { document: 'groups/{groupId}/members/{memberId}', region: 'us-central1' },
+  async (event) => syncGroupAccessMetadata(event.params.groupId)
 );
 
 exports.syncGroupMemberDeleted = onDocumentDeleted(
-  { document: 'groupMembers/{memberId}', region: 'asia-south1' },
-  async (event) => syncGroupAccessMetadata(event.data?.data()?.groupId)
+  { document: 'groups/{groupId}/members/{memberId}', region: 'us-central1' },
+  async (event) => syncGroupAccessMetadata(event.params.groupId)
 );
 
 exports.cleanupMessageAttachment = onDocumentDeleted(

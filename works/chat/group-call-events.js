@@ -5,7 +5,7 @@
   var GC = window._GC;
   var CC = window._CC;
 
-  async function startGroupCall(participantIds, type) {
+  async function startGroupCall(participantIds, type, opts) {
     GC._myUid = GC._uid();
     if (!GC._myUid || !GC._firestore()) { GC._toast('Not signed in', 'error'); return; }
     if (GC._isInGroupCall()) { GC._toast('Already in a call', 'info'); return; }
@@ -14,6 +14,12 @@
     if (type !== 'voice' && type !== 'video') type = 'voice';
     GC._currentCallType = type;
     GC._isInitiator = true;
+    opts = opts || {};
+    GC._groupCallMeta = {
+      groupId: opts.groupId || '',
+      groupName: opts.groupName || '',
+      groupAvatar: opts.groupAvatar || ''
+    };
 
     if (typeof PermissionsManager !== 'undefined') {
       var granted = await PermissionsManager.ensureForFeature(type === 'video' ? 'Video Call' : 'Audio Call');
@@ -55,7 +61,10 @@
         participantIds: allParticipantIds,
         participantDetails: participantDetails,
         createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-        screenShareUid: null
+        screenShareUid: null,
+        groupId: GC._groupCallMeta.groupId,
+        groupName: GC._groupCallMeta.groupName,
+        groupAvatar: GC._groupCallMeta.groupAvatar
       });
     } catch (err) {
       GC._toast('Failed to create group call: ' + err.message, 'error');
@@ -92,7 +101,11 @@
         fromUserId: GC._myUid,
         fromUserName: myDetails.name,
         participantIds: allParticipantIds,
-        metadata: { groupCall: true }
+        groupId: GC._groupCallMeta.groupId,
+        groupName: GC._groupCallMeta.groupName,
+        groupAvatar: GC._groupCallMeta.groupAvatar,
+        isGroupCall: true,
+        metadata: { groupCall: true, groupId: GC._groupCallMeta.groupId, groupName: GC._groupCallMeta.groupName, groupAvatar: GC._groupCallMeta.groupAvatar }
       });
     }
 
@@ -126,6 +139,11 @@
 
     GC._currentCallType = callData.type || 'voice';
     var myDetails = GC._getMyDetails();
+    GC._groupCallMeta = {
+      groupId: callData.groupId || '',
+      groupName: callData.groupName || '',
+      groupAvatar: callData.groupAvatar || ''
+    };
 
     if (typeof PermissionsManager !== 'undefined') {
       var granted = await PermissionsManager.ensureForFeature(GC._currentCallType === 'video' ? 'Video Call' : 'Audio Call');
@@ -220,7 +238,11 @@
         toUserId: GC._myUid,
         toUserName: myDetails.name,
         participantIds: newParticipantIds,
-        metadata: { groupCall: true }
+        groupId: GC._groupCallMeta.groupId,
+        groupName: GC._groupCallMeta.groupName,
+        groupAvatar: GC._groupCallMeta.groupAvatar,
+        isGroupCall: true,
+        metadata: { groupCall: true, groupId: GC._groupCallMeta.groupId, groupName: GC._groupCallMeta.groupName, groupAvatar: GC._groupCallMeta.groupAvatar }
       });
     }
 
@@ -266,6 +288,7 @@
       }
 
       if (typeof window.recordCallSyncEvent === 'function') {
+        var _gm = GC._groupCallMeta || {};
         window.recordCallSyncEvent({
           callId: callId,
           direction: wasInitiator ? 'outgoing' : 'incoming',
@@ -275,7 +298,11 @@
           toUserId: '',
           participantIds: remainingParticipants.map(function (p) { return p.uid; }),
           durationMs: null,
-          metadata: { groupCall: true, leftCall: true }
+          groupId: _gm.groupId || '',
+          groupName: _gm.groupName || '',
+          groupAvatar: _gm.groupAvatar || '',
+          isGroupCall: true,
+          metadata: { groupCall: true, leftCall: true, groupId: _gm.groupId || '', groupName: _gm.groupName || '', groupAvatar: _gm.groupAvatar || '' }
         });
       }
     }
@@ -284,6 +311,7 @@
     GC._currentCallId = null;
     GC._isInitiator = false;
     GC._myUid = null;
+    GC._groupCallMeta = null;
     App.callActive = false;
     App._activeCallId = null;
 

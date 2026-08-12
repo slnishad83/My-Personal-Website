@@ -86,7 +86,6 @@ exports.addGroupMembers = onCall(
       added++;
     }
     batch.update(groupRef, {
-      memberCount: admin.firestore.FieldValue.increment(added),
       updatedAt: Date.now(),
     });
 
@@ -149,7 +148,7 @@ exports.removeGroupMember = onCall(
     }
 
     // Prevent removing the last admin/owner
-    const groupData = group.data();
+    const groupData = group;
     if (!isSelf && groupData) {
       const isRemovingAdmin = (groupData.adminIds || []).includes(userId)
         || groupData.ownerId === userId
@@ -169,7 +168,6 @@ exports.removeGroupMember = onCall(
     const batch = db().batch();
     batch.delete(db().collection('groups').doc(groupId).collection('members').doc(userId));
     batch.update(db().collection('groups').doc(groupId), {
-      memberCount: admin.firestore.FieldValue.increment(-1),
       updatedAt: Date.now(),
     });
 
@@ -265,7 +263,6 @@ exports.exitGroup = onCall(
     const batch = db().batch();
     batch.delete(db().collection('groups').doc(groupId).collection('members').doc(uid));
     batch.update(db().collection('groups').doc(groupId), {
-      memberCount: admin.firestore.FieldValue.increment(-1),
       updatedAt: Date.now(),
     });
 
@@ -329,6 +326,9 @@ exports.respondToGroupInvite = onCall(
     if (invite.toUserId !== uid) {
       throw new HttpsError('permission-denied', 'This invite is not addressed to you.');
     }
+    if (invite.fromUserId === uid) {
+      throw new HttpsError('permission-denied', 'You cannot accept an invite you created.');
+    }
 
     const newStatus = action === 'accept' ? 'accepted' : 'declined';
 
@@ -336,12 +336,24 @@ exports.respondToGroupInvite = onCall(
       const groupId = invite.groupId;
       const group = await getGroupDoc(groupId);
 
+      // Self/duplicate protection: skip if already a member.
+      const existing = await groupRef(groupId).collection('members').doc(uid).get();
+      if (existing.exists) {
+        await inviteRef.update({
+          status: 'accepted',
+          respondedAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+        return { success: true, status: 'accepted', alreadyMember: true, groupId, groupName: group.name };
+      }
+
       const batch = db().batch();
       batch.update(inviteRef, {
         status: newStatus,
         respondedAt: admin.firestore.FieldValue.serverTimestamp(),
       });
-      // Client-facing members subcollection model (group-features.js)
+      // Client-facing members subcollection model (group-features.js).
+      // syncGroupMemberCreated fires on this doc and recomputes
+      // memberIds/adminIds/memberCount on the group doc.
       batch.set(groupRef(groupId).collection('members').doc(uid), {
         uid,
         displayName: 'Member',
@@ -352,14 +364,6 @@ exports.respondToGroupInvite = onCall(
       });
       await batch.commit();
 
-      // Flat groupMembers doc — triggers syncGroupMemberCreated which
-      // recomputes memberIds/adminIds/memberCount on the group doc.
-      await db().collection('groupMembers').add({
-        groupId,
-        userId: uid,
-        role: 'member',
-        joinedAt: admin.firestore.FieldValue.serverTimestamp(),
-      });
       return { success: true, status: newStatus, groupId, groupName: group.name };
     }
 

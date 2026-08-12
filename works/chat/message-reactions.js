@@ -526,7 +526,7 @@
   }
 
   function initReactionListeners(container) {
-    if (!container) container = document.getElementById('messagesContainer') || document.getElementById('messagesList');
+    if (!container) container = document.getElementById('messagesContainer') || document.getElementById('messagesList') || document.getElementById('messages-wrap');
     if (!container) return;
     if (container.dataset.reactionsBound) return;
     container.dataset.reactionsBound = '1';
@@ -537,7 +537,7 @@
 
   function wireReactionPostRender() {
     if (typeof MutationObserver === 'undefined') return;
-    var container = document.getElementById('messagesContainer') || document.getElementById('messagesList');
+    var container = document.getElementById('messagesContainer') || document.getElementById('messagesList') || document.getElementById('messages-wrap');
     if (!container) {
       setTimeout(wireReactionPostRender, 1000);
       return;

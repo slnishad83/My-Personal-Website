@@ -95,7 +95,7 @@
     const _chatId = App?.currentChat?.id || '';
     const isGroup = App?.currentChat?.isGroup || false;
     const items = [
-      { icon: '<span class="material-symbols-outlined" style="font-size:18px">reply</span>', label: 'Reply', shortcut: '', action: () => { if (typeof replyToMessage === 'function') replyToMessage(msgId); } },
+      { icon: '<span class="material-symbols-outlined" style="font-size:18px">reply</span>', label: 'Reply', shortcut: '', action: () => { if (window._MsgActions && typeof window._MsgActions.reply === 'function') window._MsgActions.reply(msgId); else if (typeof replyToMessage === 'function') replyToMessage(msgId); } },
       ...(isGroup && !isMyMsg ? [
         { icon: '<span class="material-symbols-outlined" style="font-size:18px">forward</span>', label: 'Reply Privately', action: () => {
           const msgs = (typeof App !== 'undefined' && App.messages && App.currentChat) ? (App.messages[App.currentChat.id] || []) : [];
@@ -159,7 +159,7 @@
       { icon: '<span class="material-symbols-outlined" style="font-size:18px">archive</span>', label: 'Archive', shortcut: 'Ctrl+Shift+A', action: () => { if (typeof archiveChat === 'function') archiveChat(chatId); } },
       { icon: '<span class="material-symbols-outlined" style="font-size:18px">lock</span>', label: (typeof isChatLocked === 'function' && isChatLocked(chatId)) ? 'Unlock Chat' : 'Lock Chat', action: () => { if (typeof toggleChatLock === 'function') toggleChatLock(chatId); } },
       { separator: true },
-      { icon: '<span class="material-symbols-outlined" style="font-size:18px">person</span>', label: 'View contact', action: () => { if (typeof viewContact === 'function') viewContact(chatId); } },
+      { icon: '<span class="material-symbols-outlined" style="font-size:18px">person</span>', label: 'View contact', action: () => { if (typeof window.openChatInfo === 'function') window.openChatInfo(); else if (typeof viewContact === 'function') viewContact(chatId); } },
       { icon: '<span class="material-symbols-outlined" style="font-size:18px">search</span>', label: 'Search', shortcut: 'Ctrl+Shift+F', action: () => { if (typeof openChatSearch === 'function') openChatSearch('current'); else if (typeof window.messageSearch !== 'undefined') window.messageSearch.open(); } },
       { separator: true },
       { icon: '<span class="material-symbols-outlined" style="font-size:18px">delete</span>', label: 'Delete chat', shortcut: 'Ctrl+Shift+D', danger: true, action: () => { if (typeof deleteChat === 'function') deleteChat(chatId); } },
@@ -186,8 +186,11 @@
   function init() {
     // Message right-click
     document.addEventListener('contextmenu', (e) => {
+      const coarse = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
       const msgEl = e.target.closest('.message-row[data-msg-id], .message[data-msg-id]');
-      if (msgEl) { showMsgContextMenu(e, msgEl); return; }
+      if (msgEl && !coarse) { showMsgContextMenu(e, msgEl); return; }
+      if (msgEl) return; // touch: message-actions owns the message context menu
+      if (coarse) return; // touch: keep native/overlay menus for chats & media
       const chatEl = e.target.closest('.chat-list-item, [data-chat-id]');
       if (chatEl) { showChatContextMenu(e, chatEl); return; }
       const mediaEl = e.target.closest('#media-viewer img, #media-viewer video, .bubble-media img, .bubble-media video');

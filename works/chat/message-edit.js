@@ -41,24 +41,39 @@
     var db = _db();
     if (!db) return;
 
-    db.collection('messages').doc(cid).collection('items').doc(msgId).get().then(function(doc) {
-      if (!doc.exists) return;
-      var msg = doc.data();
-      msg.id = doc.id;
+    var resolver = typeof window._resolveMessageRef === 'function'
+      ? window._resolveMessageRef(msgId)
+      : db.collection('messages').doc(cid).collection('items').doc(msgId).get().then(function (d) { return { ref: db.collection('messages').doc(cid).collection('items').doc(msgId), data: d.data() }; });
+    resolver.then(function (res) {
+      if (!res || !res.data) return;
+      var msg = res.data;
+      msg.id = msgId;
       if (!canEdit(msg)) { _toast('Cannot edit this message', 'error'); return; }
 
       _editingMsgId = msgId;
       _editingChatId = cid;
 
       var input = document.getElementById('messageInput') || document.querySelector('textarea[placeholder*="Message"], input[placeholder*="Message"], #chatInput');
-      if (input) {
-        input.value = msg.text || '';
-        input.focus();
-        input.setSelectionRange(input.value.length, input.value.length);
+      var fill = function (text) {
+        if (input) {
+          input.value = text || '';
+          input.focus();
+          input.setSelectionRange(input.value.length, input.value.length);
+        }
+        _showEditBanner();
+        _attachInputListeners();
+      };
+      if (msg.enc && window.E2E && window.Security) {
+        var _path = (res.ref && res.ref.path) || '';
+        var _ctype = _path.indexOf('/groups/') !== -1 ? 'group' : 'direct';
+        E2E.decryptMessageFor(cid, _ctype, msg).then(function (t) {
+          fill(t);
+        }).catch(function () {
+          fill('');
+        });
+      } else {
+        fill(msg.text || '');
       }
-
-      _showEditBanner();
-      _attachInputListeners();
     }).catch(function() {
       _toast('Failed to load message', 'error');
     });
@@ -82,19 +97,36 @@
     var newText = input ? input.value.trim() : '';
     if (!newText) { _toast('Message cannot be empty', 'error'); cancelEdit(); return; }
 
-    var msgRef = db.collection('messages').doc(_editingChatId).collection('items').doc(_editingMsgId);
-    msgRef.get().then(function(doc) {
-      if (!doc.exists) { _toast('Message no longer exists', 'error'); cancelEdit(); return; }
-      var oldText = doc.data().text || '';
-      if (oldText === newText) { cancelEdit(); return; }
+    var resolveMsg = typeof window._resolveMessageRef === 'function'
+      ? window._resolveMessageRef(_editingMsgId)
+      : Promise.resolve({ ref: db.collection('messages').doc(_editingChatId).collection('items').doc(_editingMsgId), data: null });
+    resolveMsg.then(function (res) {
+      if (!res || !res.ref) { _toast('Message no longer exists', 'error'); cancelEdit(); return; }
+      return res.ref.get().then(function (doc) {
+        if (!doc.exists) { _toast('Message no longer exists', 'error'); cancelEdit(); return; }
+        var oldText = doc.data().text || '';
+        if (!doc.data().enc && oldText === newText) { cancelEdit(); return; }
 
-      return msgRef.update({
-        text: newText,
-        edited: true,
-        editedAt: firebase.firestore.FieldValue.serverTimestamp()
-      }).then(function() {
-        _toast('Message edited', 'success');
-        cancelEdit();
+        var updateData = {
+          edited: true,
+          editedAt: firebase.firestore.FieldValue.serverTimestamp()
+        };
+
+        if (doc.data().enc && window.E2E && window.Security) {
+          var _path = (res.ref.path || '');
+          var _ctype = _path.indexOf('/groups/') !== -1 ? 'group' : 'direct';
+          return E2E.encryptForChat(_editingChatId, _ctype, newText).then(function (e2e) {
+            if (e2e && e2e.enc) { updateData.enc = e2e.enc; }
+            else { updateData.text = newText; }
+            return res.ref.update(updateData);
+          });
+        }
+
+        updateData.text = newText;
+        return res.ref.update(updateData).then(function() {
+          _toast('Message edited', 'success');
+          cancelEdit();
+        });
       });
     }).catch(function(err) {
       if (window.__DEBUG__) console.error('Edit error:', err);
@@ -173,9 +205,12 @@
       var db = _db();
       var chatId = window.App && window.App.currentChat ? window.App.currentChat.id : null;
       if (!db || !chatId) return;
-      db.collection('messages').doc(chatId).collection('items').doc(msgId).get().then(function(doc) {
+      var fetchDoc = typeof window._resolveMessageRef === 'function'
+        ? window._resolveMessageRef(msgId).then(function (res) { return { exists: !!res.data, data: res.data }; })
+        : db.collection('messages').doc(chatId).collection('items').doc(msgId).get().then(function (doc) { return { exists: doc.exists, data: doc.data() }; });
+      fetchDoc.then(function (doc) {
         if (!doc.exists) return;
-        var data = doc.data();
+        var data = doc.data || {};
         if (!data.edited) return;
         el.dataset.editLabeled = '1';
         var timeEl = el.querySelector('.msg-time, .message-time, [class*="time"], [class*="timestamp"]');
@@ -238,10 +273,13 @@
         if (!chatId) return;
         var db = _db();
         if (!db) return;
-        db.collection('messages').doc(chatId).collection('items').doc(msgId).get().then(function(doc) {
-          if (!doc.exists) return;
-          var msg = doc.data();
-          msg.id = doc.id;
+        var fetchMsg = typeof window._resolveMessageRef === 'function'
+          ? window._resolveMessageRef(msgId)
+          : db.collection('messages').doc(chatId).collection('items').doc(msgId).get().then(function (d) { return { ref: db.collection('messages').doc(chatId).collection('items').doc(msgId), data: d.data() }; });
+        fetchMsg.then(function(res) {
+          if (!res || !res.data) return;
+          var msg = res.data;
+          msg.id = msgId;
           if (!canEdit(msg)) return;
           var existingEditBtn = menu.querySelector('[data-action="edit-msg"]');
           if (existingEditBtn) return;

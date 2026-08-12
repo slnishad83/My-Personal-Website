@@ -185,15 +185,18 @@
     };
     
     try {
-      const chatRef = window.App.db.collection(isGroup ? 'groups' : 'chats').doc(chatId);
-      await window.App.db.collection('messages').add({
+      const coll = isGroup ? 'groups' : 'chats';
+      const chatRef = window.App.db.collection(coll).doc(chatId);
+      await window.App.db.collection(coll).doc(chatId).collection('messages').add({
         ...msg,
-        chatId: chatId
+        chatId: chatId,
+        timestamp: (typeof firebase !== 'undefined' ? firebase : window.firebase).firestore.FieldValue.serverTimestamp()
       });
       
       await chatRef.update({
         lastMessage: text,
-        lastMessageTime: msg.time,
+        lastMessageAt: (typeof firebase !== 'undefined' ? firebase : window.firebase).firestore.FieldValue.serverTimestamp(),
+        lastSenderId: uid,
         unread: (typeof firebase !== 'undefined' ? firebase : window.firebase).firestore.FieldValue.increment(1) // Not accurate for the sender, but usually ignored on client sync
       });
     } catch (err) {

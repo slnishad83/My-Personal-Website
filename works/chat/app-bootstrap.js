@@ -67,7 +67,10 @@ function _authStateChanged(user) {
       try {
         if (window.Presence) await Presence.init();
         if (window.MultiDevice) await MultiDevice.init();
-        if (window.Security) await Security.init();
+        if (window.Security) {
+          await Security.init();
+          try { await Security.publishPublicKey(); } catch (e) { if (window.__DEBUG__) console.warn('[Bootstrap] publishPublicKey failed:', e); }
+        }
         if (window.ShouldShowOnboarding && ShouldShowOnboarding()) {
           setTimeout(function() { if (window.ShowOnboarding) ShowOnboarding(); }, 1500);
         }

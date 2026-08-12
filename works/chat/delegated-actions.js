@@ -85,6 +85,14 @@
     },
     'closeScanner': function() {
       if (typeof window.closeScanner === 'function') window.closeScanner();
+    },
+    'showCommunities': function() {
+      if (typeof closeModal === 'function') closeModal('profile-overlay');
+      if (window.Communities) Communities.open();
+    },
+    'openBackup': function() {
+      if (typeof closeModal === 'function') closeModal('profile-overlay');
+      if (window.BackupManager) BackupManager.openSettings();
     }
   };
 

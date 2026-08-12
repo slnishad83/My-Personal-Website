@@ -211,7 +211,8 @@
       }
     });
 
-    var unsub = window.db.collection('messages').doc(chatId).collection('items').doc(msgId)
+    var coll = (window.currentChatType === 'group' || (window.currentChat && window.currentChat.type === 'group')) ? 'groups' : 'chats';
+    var unsub = window.db.collection(coll).doc(chatId).collection('messages').doc(msgId)
       .onSnapshot(
         function (snap) {
           if (!snap || !snap.exists) return;
@@ -246,7 +247,8 @@
       var uid = window.currentUser && window.currentUser.uid;
       var chatId = window.currentChat && window.currentChat.id;
       if (!msgId || !chatId || !uid || !window.db || !window.firebase) return;
-      window.db.collection('messages').doc(chatId).collection('items').doc(msgId).get()
+      var coll = (window.currentChatType === 'group' || (window.currentChat && window.currentChat.type === 'group')) ? 'groups' : 'chats';
+      window.db.collection(coll).doc(chatId).collection('messages').doc(msgId).get()
         .then(function (doc) {
           if (!doc || !doc.exists) return;
           var d = doc.data() || {};
@@ -256,7 +258,7 @@
           var upd = {};
           upd['readBy.'   + uid] = window.firebase.firestore.FieldValue.serverTimestamp();
           upd['openedBy.' + uid] = window.firebase.firestore.FieldValue.serverTimestamp();
-          window.db.collection('messages').doc(chatId).collection('items').doc(msgId).update(upd).catch(function () {});
+          window.db.collection(coll).doc(chatId).collection('messages').doc(msgId).update(upd).catch(function () {});
         })
         .catch(function () {});
     }

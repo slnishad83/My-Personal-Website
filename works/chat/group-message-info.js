@@ -64,7 +64,7 @@
     let msgSnap, membersSnap;
     try {
       [msgSnap, membersSnap] = await Promise.all([
-        db.collection('messages').doc(chat.id).collection('items').doc(messageId).get(),
+        db.collection('groups').doc(chat.id).collection('messages').doc(messageId).get(),
         db.collection('groupMembers').where('groupId','==',chat.id).get()
           .catch(() => db.collection('groups').doc(chat.id).collection('members').get())
           .catch(() => ({ docs: [] }))
@@ -101,7 +101,7 @@
     });
 
     // Real-time updates
-    window._gmiUnsub = db.collection('messages').doc(chat.id).collection('items').doc(messageId).onSnapshot(snap => {
+    window._gmiUnsub = db.collection('groups').doc(chat.id).collection('messages').doc(messageId).onSnapshot(snap => {
       if (!snap.exists) return;
       const list = modal.querySelector('.gmi-list');
       if (list) list.innerHTML = buildRows(snap.data(), members) || '<div class="gmi-empty">No other members</div>';

@@ -26,6 +26,7 @@ const BUNDLE_ORDER = [
   'presence.js',
   'multi-device.js',
   'security.js',
+  'e2e.js',
   'error-boundary.js',
   'mutation-bus.js',
   'virtual-scroll.js',
@@ -39,6 +40,7 @@ const BUNDLE_ORDER = [
   'back-button.js',
   'ios-keyboard-fix.js',
   'chat-enhancements.js',
+  'message-effects.js',
   'chat-fixes.js',
   'threads.js',
   'message-search.js',
@@ -140,6 +142,8 @@ const BUNDLE_ORDER = [
   'report-user.js',
   'gif-picker.js',
   'sticker-packs.js',
+  'communities.js',
+  'backup.js',
   'micro-interactions.js',
   'profile-setup.js',
   'lazy-images.js',
@@ -424,7 +428,10 @@ firebase.auth().onAuthStateChanged((user) => {
     setTimeout(async () => {
       if (window.Presence) await Presence.init();
       if (window.MultiDevice) await MultiDevice.init();
-      if (window.Security) await Security.init();
+      if (window.Security) {
+        await Security.init();
+        try { await Security.publishPublicKey(); } catch (e) { if (window.__DEBUG__) console.warn('[Bootstrap] publishPublicKey failed:', e); }
+      }
     }, 2000);
   } else {
     if (window.Presence) Presence.destroy();

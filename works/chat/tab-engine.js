@@ -147,11 +147,8 @@
     if (newCallBtn) newCallBtn.classList.remove('hidden');
 
     // Prefer the richer call-history enhancer when it is loaded.
-    if (typeof window.loadCallHistory === 'function' && !document.getElementById('call-history-list')) {
-      var listEl = document.createElement('div');
-      listEl.id = 'call-history-list';
-      panel.innerHTML = '';
-      panel.appendChild(listEl);
+    // It builds the WhatsApp-style header (search + All/Missed chips) and list.
+    if (typeof window.loadCallHistory === 'function') {
       window.loadCallHistory();
       return;
     }
@@ -333,6 +330,28 @@
     return el;
   }
 
+  /* ── Panel: Status ───────────────────────────────────────────── */
+  function _ensureStatusPanel() {
+    var el = document.getElementById('_te_status_panel');
+    if (!el) {
+      el = document.createElement('div');
+      el.id = '_te_status_panel';
+      el.style.cssText = 'display:none;flex:1;overflow-y:auto;padding:8px;';
+      var sidebar = getSidebarEl();
+      if (sidebar) sidebar.appendChild(el);
+    }
+    return el;
+  }
+
+  function _loadStatus() {
+    var panel = _ensureStatusPanel();
+    if (typeof window.renderStatusPanel === 'function') {
+      window.renderStatusPanel(panel);
+    } else {
+      panel.innerHTML = '<div style="padding:24px;text-align:center;color:var(--on-surface-variant,#8696a0);font-size:13px;">Loading statuses...</div>';
+    }
+  }
+
   function _loadSaved() {
     var panel = _ensureSavedPanel();
     var db = getDB(), uid = getUID();
@@ -450,11 +469,12 @@
     var gpanel    = document.getElementById('_te_groups_panel');
     var cpanel    = document.getElementById('_te_calls_panel');
     var spanel    = document.getElementById('_te_saved_panel');
+    var stpanel   = document.getElementById('_te_status_panel');
     var callBtns  = ['btn-call-select-all','btn-call-multi-select','btn-call-delete-selected','btn-new-call'];
     var chatBtns  = ['btn-multi-select'];
 
     // Reset all
-    [gpanel, cpanel, spanel].forEach(function(p) { if (p) p.style.display = 'none'; });
+    [gpanel, cpanel, spanel, stpanel].forEach(function(p) { if (p) p.style.display = 'none'; });
 
     if (tab === 'chats') {
       if (chatList)  chatList.style.display  = '';
@@ -485,8 +505,16 @@
       callBtns.forEach(function(id) { var el = document.getElementById(id); if (el) el.classList.add('hidden'); });
       chatBtns.forEach(function(id) { var el = document.getElementById(id); if (el) el.classList.add('hidden'); });
       _loadSaved();
+    } else if (tab === 'status') {
+      if (chatList)  chatList.style.display  = 'none';
+      if (filterRow) filterRow.style.display = 'none';
+      _ensureStatusPanel().style.display = 'flex';
+      _ensureStatusPanel().style.flexDirection = 'column';
+      callBtns.forEach(function(id) { var el = document.getElementById(id); if (el) el.classList.add('hidden'); });
+      chatBtns.forEach(function(id) { var el = document.getElementById(id); if (el) el.classList.add('hidden'); });
+      _loadStatus();
     } else {
-      // requests, status etc — show chats as fallback
+      // requests etc — show chats as fallback
       if (chatList)  chatList.style.display  = '';
       if (filterRow) filterRow.style.display = '';
     }

@@ -104,7 +104,7 @@
           const msgId = msgRow.getAttribute('data-msg-id') || msgRow.dataset.msgId;
           if (msgId && window.App && window.App.db && chat) {
             try {
-              const doc = await window.App.db.collection('messages').doc(chat.id).collection('items').doc(msgId).get();
+              const doc = await window.App.db.collection(isGroup ? 'groups' : 'chats').doc(chat.id).collection('messages').doc(msgId).get();
               if (doc.exists) {
                 msgData = doc.data();
                 msgData.id = doc.id;

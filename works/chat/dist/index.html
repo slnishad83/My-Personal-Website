@@ -111,11 +111,11 @@
     .material-symbols-outlined, .material-symbols-rounded { font-display: swap; }
   </style>
 
-  <script type="module" crossorigin src="/works/chat/assets/main-Doo9cCvs.js"></script>
+  <script type="module" crossorigin src="/works/chat/assets/main-m8v0VfLb.js"></script>
   <link rel="modulepreload" crossorigin href="/works/chat/assets/firebase-config-B1gHZycV.js">
-  <link rel="modulepreload" crossorigin href="/works/chat/assets/feature-notifications-CyReC0hX.js">
+  <link rel="modulepreload" crossorigin href="/works/chat/assets/feature-notifications-Bq50j5LX.js">
   <link rel="modulepreload" crossorigin href="/works/chat/assets/lib-twemoji-Bf-HUuBj.js">
-  <link rel="stylesheet" crossorigin href="/works/chat/assets/main-BqS6d-T6.css">
+  <link rel="stylesheet" crossorigin href="/works/chat/assets/main-TpQQKC7v.css">
 </head>
 <body class="w-full h-full flex overflow-hidden antialiased bg-surface-container-low transition-colors duration-300">
   <!-- ═══════════════════════════════════
@@ -213,9 +213,17 @@
           <span class="material-symbols-outlined">call</span>
           <span class="hidden xl:block font-body-md text-body-md">Calls</span>
         </button>
+        <button class="tab-item w-full flex items-center gap-4 text-on-surface-variant hover:text-on-surface hover:bg-surface-container-highest transition-colors duration-200 px-4 py-3 cursor-pointer active:scale-95" data-tab="status" data-action="switchTab" data-action-arg="status" aria-label="Status">
+          <span class="material-symbols-outlined">radio_button_checked</span>
+          <span class="hidden xl:block font-body-md text-body-md">Status</span>
+        </button>
         <button class="tab-item w-full flex items-center gap-4 text-on-surface-variant hover:text-on-surface hover:bg-surface-container-highest transition-colors duration-200 px-4 py-3 cursor-pointer active:scale-95" data-tab="more" data-action="switchTab" data-action-arg="more" aria-label="Saved Items">
           <span class="material-symbols-outlined">bookmark</span>
           <span class="hidden xl:block font-body-md text-body-md">Saved Items</span>
+        </button>
+        <button class="w-full flex items-center gap-4 text-on-surface-variant hover:text-on-surface hover:bg-surface-container-highest transition-colors duration-200 px-4 py-3 cursor-pointer active:scale-95" data-action="showCommunities" aria-label="Communities">
+          <span class="material-symbols-outlined">groups</span>
+          <span class="hidden xl:block font-body-md text-body-md">Communities</span>
         </button>
       </div>
 
@@ -244,6 +252,10 @@
         <button class="w-full flex items-center gap-4 text-on-surface-variant hover:text-on-surface transition-colors duration-200 px-4 py-2 cursor-pointer" data-action="cycleTheme" aria-label="Toggle theme">
           <span class="material-symbols-outlined" id="theme-icon-sidebar">light_mode</span>
           <span class="hidden xl:block font-body-md text-body-md">Theme Toggle</span>
+        </button>
+        <button class="w-full flex items-center gap-4 text-on-surface-variant hover:text-on-surface transition-colors duration-200 px-4 py-2 cursor-pointer" data-action="openBackup" aria-label="Backup and restore">
+          <span class="material-symbols-outlined">backup</span>
+          <span class="hidden xl:block font-body-md text-body-md">Backup</span>
         </button>
 
         <!-- Profile Section -->
@@ -1181,6 +1193,9 @@
     <button data-tab="calls" data-action="switchTab" data-action-arg="calls" aria-label="Calls">
       <span class="material-symbols-outlined" style="font-size:16px;">call</span> Calls
     </button>
+    <button data-tab="status" data-action="switchTab" data-action-arg="status" aria-label="Status">
+      <span class="material-symbols-outlined" style="font-size:16px;">radio_button_checked</span> Status
+    </button>
     <button data-tab="more" data-action="switchTab" data-action-arg="more" aria-label="Saved">
       <span class="material-symbols-outlined" style="font-size:16px;">bookmark</span> Saved
     </button>
@@ -1205,6 +1220,10 @@
     <button class="bottom-nav-item flex flex-col items-center justify-center gap-1 text-on-surface-variant min-h-[44px] min-w-[44px]" data-tab="calls" data-action="switchTab" data-action-arg="calls" aria-label="Calls">
       <span class="material-symbols-outlined text-2xl">call</span>
       <span class="text-[11px] font-semibold">Calls</span>
+    </button>
+    <button class="bottom-nav-item flex flex-col items-center justify-center gap-1 text-on-surface-variant min-h-[44px] min-w-[44px]" data-tab="status" data-action="switchTab" data-action-arg="status" aria-label="Status">
+      <span class="material-symbols-outlined text-2xl">radio_button_checked</span>
+      <span class="text-[11px] font-semibold">Status</span>
     </button>
     <button class="bottom-nav-item flex flex-col items-center justify-center gap-1 text-on-surface-variant min-h-[44px] min-w-[44px]" data-tab="requests" data-action="switchTab" data-action-arg="requests" aria-label="Chat requests">
       <div class="relative">

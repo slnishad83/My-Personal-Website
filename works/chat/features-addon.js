@@ -434,8 +434,9 @@
       btn.disabled = true;
       try {
         var tChatId = (App && App.currentChat && App.currentChat.id) || '';
+        var tIsGroup = (App && App.currentChatType === 'group') || (App && App.currentChat && App.currentChat.type === 'group');
         var tMsgRef = tChatId
-          ? db.collection('messages').doc(tChatId).collection('items').doc(msgId)
+          ? db.collection(tIsGroup ? 'groups' : 'chats').doc(tChatId).collection('messages').doc(msgId)
           : db.collection('messages').doc(msgId);
         const msgDoc = await tMsgRef.get();
         const msgData = msgDoc.data();

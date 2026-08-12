@@ -1,0 +1,19 @@
+import{n as e}from"./firebase-config-B1gHZycV.js";var t=e((()=>{(function(){function e(e){return String(e??``).replace(/&/g,`&amp;`).replace(/</g,`&lt;`).replace(/>/g,`&gt;`).replace(/"/g,`&quot;`).replace(/'/g,`&#x27;`)}function t(e){return(e||`?`).trim().split(/\s+/).map(e=>e[0]||``).join(``).toUpperCase().slice(0,2)||`?`}function n(e){if(!e)return null;let t;try{t=typeof e.toDate==`function`?e.toDate():new Date(e)}catch{return null}if(isNaN(t.getTime()))return null;let n=[`Jan`,`Feb`,`Mar`,`Apr`,`May`,`Jun`,`Jul`,`Aug`,`Sep`,`Oct`,`Nov`,`Dec`],r=t.getHours(),i=r>=12?`PM`:`AM`;r=r%12||12;let a=String(t.getMinutes()).padStart(2,`0`);return t.getDate()+` `+n[t.getMonth()]+` `+t.getFullYear()+` - `+r+`:`+a+` `+i}function r(r,i){let a=r.readBy||{},o=r.deliveredTo||{},s=r.senderId||``;return i.filter(e=>(e.userId||e.uid||``)!==s).map(r=>{let i=r.userId||r.uid||``,s=e(r.displayName||r.name||`Member`),c=r.photoURL||r.avatar||``,l=a[i]?n(a[i]):null,u=o[i]?n(o[i]):null,d=c?`<img src="${e(c)}" alt="${s}" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">`:``;return`<div class="gmi-row" role="listitem">
+  <div class="gmi-avatar" aria-hidden="true">${d}<span class="gmi-initials"${d?` style="display:none"`:``}>${e(t(r.displayName||r.name))}</span></div>
+  <div class="gmi-info">
+    <div class="gmi-name">${window.sanitizeHTML(s)}</div>
+    <div class="gmi-statuses">
+      <span class="gmi-status gmi-delivered${u?``:` gmi-pending`}"><span class="gmi-check" aria-hidden="true">âœ“âœ“</span>${u?`Delivered: `+u:`Not yet delivered`}</span>
+      <span class="gmi-status gmi-read${l?` gmi-seen`:` gmi-pending`}"><span class="gmi-check" aria-hidden="true">âœ“âœ“</span>${l?`Read: `+l:`Not yet read`}</span>
+    </div>
+  </div>
+</div>`}).join(``)}async function i(e){let t=window.db,n=window.currentChat;if(!t||!n)return;document.getElementById(`groupMsgInfoModal`)?.remove(),window._gmiUnsub&&(window._gmiUnsub(),window._gmiUnsub=null);let i,a;try{[i,a]=await Promise.all([t.collection(`groups`).doc(n.id).collection(`messages`).doc(e).get(),t.collection(`groupMembers`).where(`groupId`,`==`,n.id).get().catch(()=>t.collection(`groups`).doc(n.id).collection(`members`).get()).catch(()=>({docs:[]}))])}catch(e){window.__DEBUG__&&console.warn(`[GMI] fetch error`,e);return}if(!i.exists)return;let o=i.data(),s=a.docs.map(e=>({userId:e.id,...e.data()})),c=r(o,s),l=document.createElement(`div`);l.id=`groupMsgInfoModal`,l.className=`modal`,l.setAttribute(`role`,`dialog`),l.setAttribute(`aria-label`,`Message Info`),l.setAttribute(`aria-modal`,`true`),l.style.display=`flex`,l.innerHTML=`<div class="modal-content gmi-modal-content">
+  <div class="gmi-header">
+    <button class="gmi-close-btn" aria-label="Close" id="gmiCloseBtn">âœ•</button>
+    <span class="gmi-title">Message Info</span>
+  </div>
+  <div class="gmi-body">
+    <div class="gmi-section-label">RECIPIENTS (${s.filter(e=>(e.userId||e.uid||``)!==o.senderId).length})</div>
+    <div class="gmi-list" role="list">${c||`<div class="gmi-empty">No other members</div>`}</div>
+  </div>
+</div>`,document.body.appendChild(l),l.querySelector(`#gmiCloseBtn`).addEventListener(`click`,()=>{l.remove(),window._gmiUnsub&&(window._gmiUnsub(),window._gmiUnsub=null)}),window._gmiUnsub=t.collection(`groups`).doc(n.id).collection(`messages`).doc(e).onSnapshot(e=>{if(!e.exists)return;let t=l.querySelector(`.gmi-list`);t&&(t.innerHTML=r(e.data(),s)||`<div class="gmi-empty">No other members</div>`)},function(e){window.__DEBUG__&&console.error(`[GMI] Snapshot error:`,e?.message||e)})}function a(){let e=window.showMessageInfo;if(typeof e!=`function`){setTimeout(a,500);return}window.showMessageInfo=async function(t){(window.currentChatType||``)===`group`?await i(t):await e.apply(this,arguments)},window.showGroupMessageInfo=i}document.readyState===`complete`?setTimeout(a,0):window.addEventListener(`load`,()=>setTimeout(a,0))})()}));export default t();

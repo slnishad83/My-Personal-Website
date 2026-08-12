@@ -80,8 +80,11 @@
     if (!d || !uid) return false;
 
     try {
-      if (typeof window.leaveGroup === 'function') {
-        await window.leaveGroup(groupId);
+      if (typeof firebase !== 'undefined' && firebase.functions) {
+        var fn = firebase.functions().httpsCallable('exitGroup');
+        await fn({ groupId: groupId });
+      } else if (typeof window.exitGroup === 'function') {
+        await window.exitGroup(groupId);
       } else {
         await d.collection('groups').doc(groupId).update({
           memberIds: firebase.firestore.FieldValue.arrayRemove(uid),
@@ -191,13 +194,13 @@
       : _esc(avatarText);
 
     var options = [
-      { id: 'exit', icon: 'ðŸšª', title: 'Exit Group', desc: 'Leave this group. You will no longer receive messages.', bg: 'var(--error-container,#FDECEA)' },
-      { id: 'exit-delete', icon: 'ðŸ—‘ï¸', title: 'Exit and Delete', desc: 'Leave and remove all group messages from your device.', bg: 'var(--error-container,#FDECEA)' },
-      { id: 'block-delete', icon: 'ðŸš«', title: 'Block and Delete', desc: 'Block all members, leave, and delete all messages.', bg: 'var(--error-container,#FDECEA)' }
+      { id: 'exit', icon: '🚪', title: 'Exit Group', desc: 'Leave this group. You will no longer receive messages.', bg: 'var(--error-container,#FDECEA)' },
+      { id: 'exit-delete', icon: '🗑️', title: 'Exit and Delete', desc: 'Leave and remove all group messages from your device.', bg: 'var(--error-container,#FDECEA)' },
+      { id: 'block-delete', icon: '🚫', title: 'Block and Delete', desc: 'Block all members, leave, and delete all messages.', bg: 'var(--error-container,#FDECEA)' }
     ];
 
     if (isAdmin) {
-      options.push({ id: 'admin-delete', icon: 'âš ï¸', title: 'Delete Group for Everyone', desc: 'Permanently delete this group for all members.', bg: 'var(--error-container,#FDECEA)' });
+      options.push({ id: 'admin-delete', icon: '⚠️', title: 'Delete Group for Everyone', desc: 'Permanently delete this group for all members.', bg: 'var(--error-container,#FDECEA)' });
     }
 
     var optionsHtml = options.map(function (opt) {

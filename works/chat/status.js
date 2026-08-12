@@ -35,7 +35,7 @@
   }
 
   function _sanitizeType(t) {
-    if (t === 'text' || t === 'image' || t === 'video') return t;
+    if (t === 'text' || t === 'image' || t === 'video' || t === 'link') return t;
     return 'text';
   }
 
@@ -182,6 +182,39 @@
       return statusData;
     } catch (e) {
       if (window.__DEBUG__) console.error('[Status] Create video error:', e);
+      _toast('Failed to post status', 'error');
+      return null;
+    }
+  }
+
+  async function createLinkStatus(link, caption) {
+    var url = (link || '').trim();
+    if (!url) { _toast('Enter a link', 'error'); return null; }
+    if (!/^(https?:\/\/)/i.test(url)) url = 'https://' + url;
+    var d = _db();
+    var uid = _uid();
+    if (!d || !uid) { _toast('Not authenticated', 'error'); return null; }
+    var statusData = {
+      userId: uid,
+      type: 'link',
+      content: url,
+      caption: caption || '',
+      bgColor: '',
+      mediaUrl: '',
+      createdAt: _now(),
+      expiresAt: _expiresAt(),
+      seenBy: [],
+      replies: []
+    };
+    try {
+      var ref = await d.collection('statuses').add(statusData);
+      statusData.id = ref.id;
+      _storeStatus(statusData);
+      _toast('Status posted!', 'success');
+      renderStatusRow();
+      return statusData;
+    } catch (e) {
+      if (window.__DEBUG__) console.error('[Status] Create link error:', e);
       _toast('Failed to post status', 'error');
       return null;
     }
@@ -475,10 +508,10 @@
     });
   }
 
-  function renderStatusRow() {
-    var chatList = document.getElementById('chat-list');
-    if (!chatList) return;
-    var existingRow = document.getElementById('status-row-container');
+  function renderStatusRow(container) {
+    container = container || document.getElementById('chat-list');
+    if (!container) return;
+    var existingRow = container.querySelector('.status-row-container');
     if (existingRow) existingRow.remove();
     var uid = _uid();
     var hasMyStatus = _userStatusMap.has(uid) && _userStatusMap.get(uid).length > 0;
@@ -515,8 +548,7 @@
     });
     if (!hasMyStatus && otherUsers.length === 0) {
       var emptyRow = document.createElement('div');
-      emptyRow.id = 'status-row-container';
-      emptyRow.className = 'px-3 py-2 border-b border-outline-variant/10';
+      emptyRow.className = 'status-row-container px-3 py-2 border-b border-outline-variant/10';
       emptyRow.innerHTML = '<div class="flex items-center gap-3 cursor-pointer py-2 px-2 rounded-xl hover:bg-surface-variant/20 transition-colors" data-action="openStatusComposer">' +
         '<div class="relative flex-shrink-0">' +
         '<div class="w-12 h-12 rounded-full bg-surface-container-highest flex items-center justify-center overflow-hidden border-2 border-dashed border-primary/40">' +
@@ -528,12 +560,11 @@
         '<p class="text-xs text-on-surface-variant/60">Tap to add status update</p>' +
         '</div>' +
         '</div>';
-      chatList.insertBefore(emptyRow, chatList.firstChild);
+      container.insertBefore(emptyRow, container.firstChild);
       return;
     }
     var row = document.createElement('div');
-    row.id = 'status-row-container';
-    row.className = 'px-1 py-2 border-b border-outline-variant/10';
+    row.className = 'status-row-container px-1 py-2 border-b border-outline-variant/10';
     var scrollHtml = '<div class="flex gap-3 overflow-x-auto scrollbar-hide px-2 pb-1" style="scroll-snap-type: x mandatory;">';
     if (hasMyStatus) {
       var myStatuses = _userStatusMap.get(uid) || [];
@@ -578,7 +609,35 @@
     });
     scrollHtml += '</div>';
     row.innerHTML = scrollHtml;
-    chatList.insertBefore(row, chatList.firstChild);
+    container.insertBefore(row, container.firstChild);
+    if (container === document.getElementById('chat-list')) {
+      var panel = document.getElementById('_te_status_panel');
+      if (panel && panel.style.display !== 'none' && !panel._rendering) {
+        panel._rendering = true;
+        try { renderStatusPanel(panel); } finally { panel._rendering = false; }
+      }
+    }
+  }
+
+  function renderStatusPanel(container) {
+    if (!container) return;
+    container.innerHTML = '';
+    var header = document.createElement('button');
+    header.className = 'w-full flex items-center gap-3 px-3 py-3 cursor-pointer hover:bg-surface-variant/20 transition-colors border-b border-outline-variant/10';
+    header.setAttribute('data-action', 'openStatusComposer');
+    header.setAttribute('aria-label', 'Add status update');
+    header.innerHTML = '<div class="w-12 h-12 rounded-full bg-surface-container-highest flex items-center justify-center overflow-hidden border-2 border-dashed border-primary/40 flex-shrink-0">' +
+      '<span class="material-symbols-outlined text-primary/60 text-xl">add</span>' +
+      '</div>' +
+      '<div class="flex-1 min-w-0 text-left">' +
+      '<p class="text-sm font-semibold text-on-surface truncate">My Status</p>' +
+      '<p class="text-xs text-on-surface-variant/60">Tap to add status update</p>' +
+      '</div>';
+    container.appendChild(header);
+    var rowContainer = document.createElement('div');
+    rowContainer.id = '_te_status_row';
+    container.appendChild(rowContainer);
+    renderStatusRow(rowContainer);
   }
 
   function openStatusComposer() {
@@ -610,6 +669,7 @@
       '<button class="flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all bg-primary text-on-primary" id="sc-tab-text" onclick="window._scSwitchTab(\'text\')" aria-label="Text status">Text</button>' +
       '<button class="flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all bg-surface-container-highest text-on-surface-variant hover:text-on-surface" id="sc-tab-image" onclick="window._scSwitchTab(\'image\')" aria-label="Image status">Image</button>' +
       '<button class="flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all bg-surface-container-highest text-on-surface-variant hover:text-on-surface" id="sc-tab-video" onclick="window._scSwitchTab(\'video\')" aria-label="Video status">Video</button>' +
+      '<button class="flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all bg-surface-container-highest text-on-surface-variant hover:text-on-surface" id="sc-tab-link" onclick="window._scSwitchTab(\'link\')" aria-label="Link status">Link</button>' +
       '</div>' +
       '<div id="sc-panel-text">' +
       '<textarea id="sc-text-input" class="w-full h-40 rounded-2xl p-4 text-on-surface text-base resize-none focus:ring-2 focus:ring-primary border-none outline-none" placeholder="What\'s on your mind?" maxlength="700" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #fff;" oninput="window._scUpdateTextBg(this)"></textarea>' +
@@ -632,6 +692,14 @@
       '</div>' +
       '<div id="sc-video-preview" class="hidden mt-3"><video class="w-full max-h-60 rounded-2xl" id="sc-preview-vid" controls muted playsinline></video></div>' +
       '<input id="sc-video-caption" class="w-full mt-3 bg-surface-container-highest rounded-xl py-2.5 px-4 text-on-surface text-sm border-none outline-none focus:ring-1 focus:ring-primary" placeholder="Add a caption..." maxlength="200">' +
+      '</div>' +
+      '<div id="sc-panel-link" class="hidden">' +
+      '<div class="border-2 border-dashed border-outline-variant/30 rounded-2xl p-8 text-center cursor-pointer hover:border-primary/50 transition-colors" onclick="document.getElementById(\'sc-link-input\').focus()">' +
+      '<span class="material-symbols-outlined text-on-surface-variant/40 text-4xl block mb-2">link</span>' +
+      '<p class="text-sm text-on-surface-variant/60">Share a link</p>' +
+      '</div>' +
+      '<input id="sc-link-input" type="url" class="w-full mt-3 bg-surface-container-highest rounded-xl py-2.5 px-4 text-on-surface text-sm border-none outline-none focus:ring-1 focus:ring-primary" placeholder="https://example.com" maxlength="500" oninput="window._scUpdateLink(this)">' +
+      '<input id="sc-link-caption" class="w-full mt-3 bg-surface-container-highest rounded-xl py-2.5 px-4 text-on-surface text-sm border-none outline-none focus:ring-1 focus:ring-primary" placeholder="Add a caption..." maxlength="200">' +
       '</div>' +
       '</div>' +
       '<div class="px-5 py-4 border-t border-outline-variant/10">' +
@@ -675,7 +743,7 @@
 
     window._scSwitchTab = function (tab) {
       window._scSelectedType = tab;
-      ['text', 'image', 'video'].forEach(function (t) {
+      ['text', 'image', 'video', 'link'].forEach(function (t) {
         var panel = document.getElementById('sc-panel-' + t);
         var tabBtn = document.getElementById('sc-tab-' + t);
         if (panel) panel.classList.toggle('hidden', t !== tab);
@@ -691,6 +759,10 @@
 
     window._scUpdateTextBg = function (inp) {
       var _v = inp.value.trim();
+      _updatePostBtn();
+    };
+
+    window._scUpdateLink = function (inp) {
       _updatePostBtn();
     };
 
@@ -727,6 +799,9 @@
       if (window._scSelectedType === 'text') {
         var inp = document.getElementById('sc-text-input');
         ready = inp && inp.value.trim().length > 0;
+      } else if (window._scSelectedType === 'link') {
+        var linkInp = document.getElementById('sc-link-input');
+        ready = linkInp && linkInp.value.trim().length > 0;
       } else {
         ready = !!window._scSelectedFile;
       }
@@ -750,6 +825,11 @@
           var urlVid = await uploadStatusMedia(window._scSelectedFile);
           var capVid = document.getElementById('sc-video-caption');
           await createVideoStatus(urlVid, capVid ? capVid.value : '');
+        } else if (window._scSelectedType === 'link') {
+          var linkInp = document.getElementById('sc-link-input');
+          if (!linkInp || !linkInp.value.trim()) { _toast('Enter a link first', 'error'); return; }
+          var capLink = document.getElementById('sc-link-caption');
+          await createLinkStatus(linkInp.value, capLink ? capLink.value : '');
         }
         closeStatusComposer();
       } catch (e) {
@@ -799,6 +879,7 @@
     if (overlay) overlay.remove();
     delete window._scSwitchTab;
     delete window._scUpdateTextBg;
+    delete window._scUpdateLink;
     delete window._scPreviewImage;
     delete window._scPreviewVideo;
     delete window._scPostStatus;
@@ -850,6 +931,7 @@
   window.createTextStatus = createTextStatus;
   window.createImageStatus = createImageStatus;
   window.createVideoStatus = createVideoStatus;
+  window.createLinkStatus = createLinkStatus;
   window.uploadStatusMedia = uploadStatusMedia;
   window.viewStatus = viewStatus;
   window.viewUserStatuses = viewUserStatuses;
@@ -860,6 +942,7 @@
   window.loadStatuses = loadStatuses;
   window.renderStatusRings = renderStatusRings;
   window.renderStatusRow = renderStatusRow;
+  window.renderStatusPanel = renderStatusPanel;
   window.getUnseenStatusCount = getUnseenStatusCount;
   window.markStatusSeen = markStatusSeen;
   window.createStatusReminder = createStatusReminder;

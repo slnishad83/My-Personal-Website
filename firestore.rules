@@ -128,6 +128,33 @@ service cloud.firestore {
       );
     }
 
+    // typingStatus docs are keyed by "<type>:<chatId>" (e.g. "direct:uid1_uid2" or "group:<groupId>")
+    // or by "<uid>_<messageId>" for thread typing. Reads/writes are scoped to chat participants.
+    function isTypingStatusParticipant(chatKey) {
+      let parts = chatKey.split(':');
+      let type = parts[0];
+      let cid = parts[1];
+      return signedIn() && (
+        (type == 'group' && cid is string && isGroupMember(cid))
+        || (type == 'direct' && cid is string && (
+            exists(/databases/$(database)/documents/chats/$(cid))
+            && request.auth.uid in get(/databases/$(database)/documents/chats/$(cid)).data.participants
+        ))
+        || isChatOrGroupParticipant(chatKey)
+      );
+    }
+
+    // Disappearing messages: any chat participant may delete a message once the chat's
+    // ephemeralTimer has elapsed since the message timestamp (self-destruct delete path).
+    function isEphemeralMessageExpired(chatColl, chatId, messageData) {
+      return signedIn()
+        && exists(/databases/$(database)/documents/$(chatColl)/$(chatId))
+        && get(/databases/$(database)/documents/$(chatColl)/$(chatId)).data.ephemeralTimer is int
+        && get(/databases/$(database)/documents/$(chatColl)/$(chatId)).data.ephemeralTimer > 0
+        && messageData.timestamp is timestamp
+        && messageData.timestamp.toMillis() + get(/databases/$(database)/documents/$(chatColl)/$(chatId)).data.ephemeralTimer < request.time.toMillis();
+    }
+
     function isCommunityCreator(data) {
       return signedIn() && data.createdBy == request.auth.uid;
     }
@@ -164,6 +191,11 @@ service cloud.firestore {
             || request.resource.data.diff(resource.data).affectedKeys().hasOnly(['readBy'])
             || request.resource.data.diff(resource.data).affectedKeys().hasOnly(['deliveredTo'])
             || request.resource.data.diff(resource.data).affectedKeys().hasOnly(['reactions'])
+            || request.resource.data.diff(resource.data).affectedKeys().hasOnly(['poll.votes'])
+            || request.resource.data.diff(resource.data).affectedKeys().hasOnly(['poll.closed'])
+            || request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isPinned', 'pinnedBy', 'pinnedAt'])
+            || request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isStarred'])
+            || request.resource.data.diff(resource.data).affectedKeys().hasOnly(['expiresAt'])
           )
         )
         ||
@@ -188,15 +220,18 @@ service cloud.firestore {
         && request.resource.data.email == request.auth.token.email;
       allow update: if isOwner(userId)
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-          'displayName', 'photoURL', 'avatar', 'email', 'phone', 'busyStatus', 'busyMessage',
+          'displayName', 'photoURL', 'avatar', 'email', 'phone', 'phoneNumber', 'busyStatus', 'busyMessage', 'busySetAt',
           'blockedUsers', 'onlineStatus', 'lastSeen', 'typingIn', 'twofaEnabled',
           'appLockEnabled', 'emailVerified',
           'fcmTokens', 'messagingToken', 'isFirstTime', 'isActive', 'pendingVerification',
           'privacySettings', 'userAgent',
-          'wallpaper', 'fontSize', 'themeMode', 'notificationSettings', 'language',
+          'wallpaper', 'fontSize', 'themeMode', 'notificationSettings', 'language', 'notificationsEnabled',
           'lastHeartbeat', 'sessionId', 'platform', 'inCall', 'customStatus',
           'ghostMode', 'ghostContacts', 'ghostUpdatedAt',
-          'pinnedChatIds', 'archivedChats',
+          'pinnedChatIds', 'archivedChats', 'lockedChats', 'unreadChats',
+          'chatFolders', 'contactDates', 'moodEmoji', 'moodUpdatedAt', 'screenshotRestrictions',
+          'previousPhone', 'numberChangedAt', 'bio', 'chats',
+          'deletionScheduledAt', 'deletedAt',
           'createdAt', 'deactivatedAt'
         ]);
       allow delete: if false;
@@ -276,8 +311,10 @@ service cloud.firestore {
       allow read: if signedIn() && (resource == null || request.auth.uid in resource.data.participants);
       allow update: if isExistingDirectParticipant(chatId)
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-          'status', 'name', 'photoURL', 'participants', 'saved', 'lastMessage',
-          'lastMessageTime', 'unreadCount', 'typing', 'muted'
+          'status', 'name', 'photoURL', 'participants', 'participantNames', 'participantPhotos', 'type',
+          'saved', 'lastMessage', 'lastMessageText', 'lastMessageTime', 'lastMessageAt',
+          'unreadCount', 'typing', 'muted', 'mutedUntil', 'updatedAt', 'ephemeralTimer',
+          'lastSenderId', 'lastMessageSenderId', 'lastMessageSenderName', 'lastMessageFrom', 'unread'
         ]);
       allow delete: if isExistingDirectParticipant(chatId);
       allow create: if isDirectParticipantData(request.resource.data)
@@ -325,7 +362,13 @@ service cloud.firestore {
           ])
         )
       );
-      allow delete: if signedIn() && resource.data.senderId == request.auth.uid;
+      allow delete: if signedIn() && (
+        resource.data.senderId == request.auth.uid
+        || (resource.data.directId is string && isExistingDirectParticipant(resource.data.directId)
+            && isEphemeralMessageExpired('directChats', resource.data.directId, resource.data))
+        || (resource.data.groupId is string && isGroupMember(resource.data.groupId)
+            && isEphemeralMessageExpired('groups', resource.data.groupId, resource.data))
+      );
 
       // Thread Replies subcollection
       match /threadReplies/{replyId} {
@@ -565,11 +608,17 @@ service cloud.firestore {
         allow update: if isGroupMember(groupId) && (
           validMessageUpdate()
           || request.resource.data.diff(resource.data).affectedKeys().hasOnly(['reactions'])
+          || request.resource.data.diff(resource.data).affectedKeys().hasOnly(['poll.votes'])
+          || request.resource.data.diff(resource.data).affectedKeys().hasOnly(['poll.closed'])
           || request.resource.data.diff(resource.data).affectedKeys().hasOnly(['starred', 'starredAt', 'starredBy'])
+          || request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isPinned', 'pinnedBy', 'pinnedAt'])
+          || request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isStarred'])
+          || request.resource.data.diff(resource.data).affectedKeys().hasOnly(['expiresAt'])
           || request.resource.data.diff(resource.data).affectedKeys().hasOnly(['deletedFor'])
           || (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['readBy']) && request.auth.uid in request.resource.data.readBy)
         );
-        allow delete: if resource.data.senderId == request.auth.uid || isGroupAdmin(groupId);
+        allow delete: if resource.data.senderId == request.auth.uid
+          || (isGroupMember(groupId) && isEphemeralMessageExpired('groups', groupId, resource.data));
       }
     }
 
@@ -723,17 +772,32 @@ service cloud.firestore {
       allow read, update, delete: if false;
     }
 
+    function isGroupCallParticipant(data) {
+      return signedIn()
+        && data.participantIds is list
+        && request.auth.uid in data.participantIds;
+    }
+
+    function isGroupCallHost(data) {
+      return signedIn() && (
+        data.hostUserId == request.auth.uid
+        || data.initiatorId == request.auth.uid
+      );
+    }
+
     match /groupCalls/{callId} {
       allow read: if signedIn() && (
-        request.auth.uid in resource.data.participantIds
-        || resource.data.hostUserId == request.auth.uid
+        isGroupCallParticipant(resource.data)
+        || isGroupCallHost(resource.data)
       );
-      allow create: if signedIn() && request.resource.data.hostUserId == request.auth.uid;
+      allow create: if signedIn()
+        && (request.resource.data.hostUserId == request.auth.uid
+            || request.resource.data.initiatorId == request.auth.uid);
       allow update: if signedIn() && (
-        request.auth.uid in resource.data.participantIds
-        || resource.data.hostUserId == request.auth.uid
+        isGroupCallParticipant(resource.data)
+        || isGroupCallHost(resource.data)
       );
-      allow delete: if signedIn() && resource.data.hostUserId == request.auth.uid;
+      allow delete: if signedIn() && isGroupCallHost(resource.data);
 
       match /signaling/{docId} {
         allow read: if signedIn()
@@ -829,8 +893,14 @@ service cloud.firestore {
     }
 
     match /pinnedMessages/{docId} {
-      allow read, update, delete: if isPersonalOwner(resource.data);
-      allow create: if isPersonalOwner(request.resource.data);
+      allow read, update, delete: if signedIn() && (
+        isPersonalOwner(resource.data)
+        || (resource.data.isGroupPin == true && resource.data.chatId is string && isGroupMember(resource.data.chatId))
+      );
+      allow create: if signedIn() && (
+        isPersonalOwner(request.resource.data)
+        || (request.resource.data.isGroupPin == true && request.resource.data.chatId is string && isGroupMember(request.resource.data.chatId))
+      );
     }
 
     match /starredMessages/{docId} {
@@ -952,8 +1022,18 @@ service cloud.firestore {
       allow update, delete: if signedIn() && resource.data.addedBy == request.auth.uid;
     }
     match /typingStatus/{chatKey} {
-      allow read: if signedIn() && resource.data.userId == request.auth.uid;
-      allow write: if signedIn() && request.auth.uid == request.resource.data.userId;
+      allow read: if signedIn() && (
+        (resource.data.userId is string && resource.data.userId == request.auth.uid)
+        || isTypingStatusParticipant(chatKey)
+      );
+      allow create, update: if signedIn() && (
+        (request.resource.data.userId is string && request.resource.data.userId == request.auth.uid)
+        || isTypingStatusParticipant(chatKey)
+      );
+      allow delete: if signedIn() && (
+        (resource.data.userId is string && resource.data.userId == request.auth.uid)
+        || isTypingStatusParticipant(chatKey)
+      );
     }
     match /meetings/{meetingId} {
       allow read: if signedIn() && request.auth.uid in resource.data.participants;
@@ -994,14 +1074,18 @@ service cloud.firestore {
       allow read: if signedIn() && request.auth.uid in resource.data.participants;
       allow create: if signedIn() && request.auth.uid in request.resource.data.participants
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-          'participants', 'participantEmails', 'createdBy', 'createdAt', 'saved', 'status'
+          'participants', 'participantEmails', 'participantNames', 'participantPhotos',
+          'createdBy', 'createdAt', 'updatedAt', 'lastMessageAt', 'type', 'saved', 'status',
+          'muted', 'mutedUntil', 'ephemeralTimer'
         ]);
       allow update: if signedIn() && request.auth.uid in resource.data.participants
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-          'status', 'name', 'photoURL', 'participants', 'unreadCounts', 'unreadCount', 'unread',
+          'status', 'name', 'photoURL', 'participants', 'participantNames', 'participantPhotos',
+          'unreadCounts', 'unreadCount', 'unread',
           'lastMessage', 'lastMessageText', 'lastMessageAt', 'lastMessageTime',
           'lastSenderId', 'lastMessageSenderId', 'lastMessageSenderName', 'lastMessageFrom',
-          'updatedAt', 'saved', 'muted', 'mutedUntil', 'ephemeralTimer'
+          'updatedAt', 'saved', 'muted', 'mutedUntil', 'ephemeralTimer', 'type',
+          'lastReadMessageId', 'archived', 'pinned', 'pinnedAt'
         ]);
       allow delete: if false;
 
@@ -1024,11 +1108,17 @@ service cloud.firestore {
         allow update: if isChatMember(chatId) && (
           validMessageUpdate()
           || request.resource.data.diff(resource.data).affectedKeys().hasOnly(['reactions'])
+          || request.resource.data.diff(resource.data).affectedKeys().hasOnly(['poll.votes'])
+          || request.resource.data.diff(resource.data).affectedKeys().hasOnly(['poll.closed'])
           || request.resource.data.diff(resource.data).affectedKeys().hasOnly(['starred', 'starredAt', 'starredBy'])
+          || request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isPinned', 'pinnedBy', 'pinnedAt'])
+          || request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isStarred'])
+          || request.resource.data.diff(resource.data).affectedKeys().hasOnly(['expiresAt'])
           || request.resource.data.diff(resource.data).affectedKeys().hasOnly(['deletedFor'])
           || (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['readBy']) && request.auth.uid in request.resource.data.readBy)
         );
-        allow delete: if resource.data.senderId == request.auth.uid;
+        allow delete: if resource.data.senderId == request.auth.uid
+          || (isChatMember(chatId) && isEphemeralMessageExpired('chats', chatId, resource.data));
       }
     }
     match /notificationTelemetry/{entryId} {

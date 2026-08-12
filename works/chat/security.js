@@ -7,6 +7,7 @@
 
 const Security = {
   _keyCache: new Map(),
+  _roomKeyCache: new Map(),
   _KEY_CACHE_MAX: 100,
   _tokenRefreshTimer: null,
   _tokenRefreshInterval: 30 * 60 * 1000,
@@ -99,6 +100,28 @@ const Security = {
     } catch (e) { return { error: true, message: 'Decryption failed' }; }
   },
 
+  /* AES-GCM on raw bytes (used for wrapping room keys) */
+  async encryptBytes(bytes, key) {
+    if (!key) throw new Error('[Security] encryptBytes() requires an encryption key');
+    try {
+      const iv = crypto.getRandomValues(new Uint8Array(12));
+      const ciphertext = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, bytes);
+      return {
+        ciphertext: this._arrayBufferToBase64(ciphertext),
+        iv: this._arrayBufferToBase64(iv)
+      };
+    } catch (e) { if (window.__DEBUG__) console.error('[Security] encryptBytes failed:', e); throw e; }
+  },
+
+  async decryptBytes(ciphertext, iv, key) {
+    if (!key || !iv) return null;
+    try {
+      const ct = this._base64ToArrayBuffer(ciphertext);
+      const ivBytes = this._base64ToArrayBuffer(iv);
+      return await crypto.subtle.decrypt({ name: 'AES-GCM', iv: ivBytes }, key, ct);
+    } catch (e) { if (window.__DEBUG__) console.error('[Security] decryptBytes failed:', e); return null; }
+  },
+
   /* â”€â”€ E2E Key Exchange â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   async _ensureE2EKeys() {
     if (this._e2ePrivateKey && this._e2ePublicKeyJwk) return;
@@ -172,17 +195,99 @@ const Security = {
 
   /* â”€â”€ Room Key Management â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   async getOrCreateRoomKey(chatId) {
+    if (this._roomKeyCache.has(chatId)) return this._roomKeyCache.get(chatId);
     if (this._keyCache.has(chatId)) return this._keyCache.get(chatId);
     const key = await crypto.subtle.generateKey(
       { name: 'AES-GCM', length: 256 }, true, ['encrypt', 'decrypt']
     );
     if (key) {
-      if (this._keyCache.size >= this._KEY_CACHE_MAX) {
-        this._keyCache.delete(this._keyCache.keys().next().value);
+      if (this._roomKeyCache.size >= this._KEY_CACHE_MAX) {
+        this._roomKeyCache.delete(this._roomKeyCache.keys().next().value);
       }
-      this._keyCache.set(chatId, key);
+      this._roomKeyCache.set(chatId, key);
     }
     return key;
+  },
+
+  /* Wrap the group room key for every member and persist it to groupKeys/{chatId}.
+     Each member's entry is encrypted with ECDH(wrapper's private key, member's public key),
+     so only that member can unwrap it. Returns the room key. */
+  async wrapRoomKey(chatId, memberUids) {
+    const roomKey = await this.getOrCreateRoomKey(chatId);
+    if (!roomKey) return null;
+    await this._ensureE2EKeys();
+    if (!this._e2ePrivateKey || !this._e2ePublicKeyJwk) return null;
+    const user = window.currentUser || App?.currentUser;
+    if (!user) return null;
+    const myUid = user.uid;
+    const raw = await crypto.subtle.exportKey('raw', roomKey);
+    const wrapped = {};
+    for (const memberUid of (memberUids || [])) {
+      try {
+        const pub = memberUid === myUid ? this._e2ePublicKeyJwk : await this.getPeerPublicKey(memberUid);
+        if (!pub) continue;
+        const shared = await this.deriveSharedKey(this._e2ePrivateKey, pub);
+        if (!shared) continue;
+        const w = await this.encryptBytes(raw, shared);
+        wrapped[memberUid] = { by: myUid, ct: w.ciphertext, iv: w.iv };
+      } catch (e) { if (window.__DEBUG__) console.warn('[Security] wrapRoomKey member skip:', memberUid, e); }
+    }
+    if (!Object.keys(wrapped).length) return null;
+    try {
+      const db = firebase.firestore();
+      await db.collection('groupKeys').doc(chatId).set({
+        wrapped,
+        createdBy: myUid,
+        createdAt: Date.now(),
+        updatedAt: Date.now()
+      }, { merge: true });
+    } catch (e) { if (window.__DEBUG__) console.warn('[Security] wrapRoomKey persist failed:', e); return null; }
+    return roomKey;
+  },
+
+  /* Fetch this device's own wrapped entry and recover the group room key. */
+  async getRoomKey(chatId) {
+    if (this._roomKeyCache.has(chatId)) return this._roomKeyCache.get(chatId);
+    await this._ensureE2EKeys();
+    if (!this._e2ePrivateKey) return null;
+    const user = window.currentUser || App?.currentUser;
+    if (!user) return null;
+    const myUid = user.uid;
+    try {
+      const db = firebase.firestore();
+      const snap = await db.collection('groupKeys').doc(chatId).get();
+      if (!snap.exists) return null;
+      const data = snap.data() || {};
+      const wrapped = data.wrapped || {};
+      const entry = wrapped[myUid];
+      if (!entry || !entry.by) return null;
+      const wrapperPub = await this.getPeerPublicKey(entry.by);
+      if (!wrapperPub) return null;
+      const shared = await this.deriveSharedKey(this._e2ePrivateKey, wrapperPub);
+      if (!shared) return null;
+      const raw = await this.decryptBytes(entry.ct, entry.iv, shared);
+      if (!raw) return null;
+      const roomKey = await crypto.subtle.importKey(
+        'raw', raw, { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']
+      );
+      if (this._roomKeyCache.size >= this._KEY_CACHE_MAX) {
+        this._roomKeyCache.delete(this._roomKeyCache.keys().next().value);
+      }
+      this._roomKeyCache.set(chatId, roomKey);
+      return roomKey;
+    } catch (e) { if (window.__DEBUG__) console.warn('[Security] getRoomKey failed:', e); return null; }
+  },
+
+  async encryptRoomMessage(text, chatId) {
+    const roomKey = await this.getOrCreateRoomKey(chatId);
+    if (!roomKey) return null;
+    return await this.encrypt(text, roomKey);
+  },
+
+  async decryptRoomMessage(ciphertext, iv, chatId) {
+    const roomKey = await this.getRoomKey(chatId);
+    if (!roomKey) return { error: true, message: 'No room key' };
+    return await this.decrypt(ciphertext, iv, roomKey);
   },
 
   /* â”€â”€ Encrypted Storage (WebCrypto + IndexedDB) â”€â”€â”€â”€â”€â”€â”€â”€ */

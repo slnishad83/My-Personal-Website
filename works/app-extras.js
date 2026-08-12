@@ -2549,19 +2549,28 @@ async function createGroupNow() {
       }
       openChat(ref.id);
 
-      // Send invites to members
-      for (const memberId of _newGroupMembers.map(m => m.uid)) {
-        await App.db.collection('groupMembers').add({
-          groupId: ref.id, userId: memberId,
+      // Send invites to members — write to members subcollection (single source
+      // of truth; syncGroupMemberCreated trigger recomputes memberIds/adminIds).
+      for (const m of _newGroupMembers) {
+        const memberId = m.uid;
+        if (!memberId || memberId === uid) continue;
+        await App.db.collection('groups').doc(ref.id).collection('members').doc(memberId).set({
+          uid: memberId,
+          displayName: m.displayName || m.name || 'Member',
+          photoURL: m.photoURL || '',
           role: 'member',
-          joinedAt: firebase.firestore.FieldValue.serverTimestamp(),
+          addedBy: uid,
+          addedAt: Date.now(),
         }).catch(() => {});
       }
       // Add creator as admin
-      await App.db.collection('groupMembers').add({
-        groupId: ref.id, userId: uid,
+      await App.db.collection('groups').doc(ref.id).collection('members').doc(uid).set({
+        uid: uid,
+        displayName: App.currentUser?.displayName || 'Admin',
+        photoURL: App.currentUser?.photoURL || '',
         role: 'admin',
-        joinedAt: firebase.firestore.FieldValue.serverTimestamp(),
+        addedBy: uid,
+        addedAt: Date.now(),
       }).catch(() => {});
     } catch (e) {
       console.error('Group create error:', e);

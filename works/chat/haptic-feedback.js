@@ -15,7 +15,7 @@
         enabled: true,
 
         init() {
-            this.isNative = window.Capacitor?.isNative?.() || false;
+            this.isNative = window.Capacitor?.isNativePlatform?.() === true;
             const saved = localStorage.getItem('nsl_haptics_enabled');
             if (saved !== null) this.enabled = saved !== 'false';
         },

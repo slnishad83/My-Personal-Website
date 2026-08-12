@@ -150,6 +150,10 @@
         durationMs: input.durationMs == null ? null : Number(input.durationMs),
         readBy: input.readBy && typeof input.readBy === 'object' ? input.readBy : {},
         metadata: input.metadata && typeof input.metadata === 'object' ? input.metadata : {},
+        groupId: this._clean(input.groupId || (input.metadata && input.metadata.groupId) || ''),
+        groupName: this._clean(input.groupName || (input.metadata && input.metadata.groupName) || ''),
+        groupAvatar: this._clean(input.groupAvatar || (input.metadata && input.metadata.groupAvatar) || ''),
+        isGroupCall: !!input.isGroupCall || !!(input.metadata && input.metadata.groupCall),
         createdAt: now,
         updatedAt: now
       };

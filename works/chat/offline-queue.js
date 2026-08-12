@@ -207,7 +207,8 @@ const OfflineQueue = {
     const db = window.db || App?.db;
     const user = window.currentUser || App?.currentUser;
     if (db && user) {
-      await db.collection('messages').add({
+      const coll = msg.chatType === 'group' ? 'groups' : 'chats';
+      await db.collection(coll).doc(msg.chatId).collection('messages').add({
         chatId: msg.chatId,
         chatType: msg.chatType,
         text: msg.text,

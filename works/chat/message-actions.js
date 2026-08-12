@@ -281,10 +281,9 @@
       var db = _db();
       var chat = window.App && window.App.currentChat ? window.App.currentChat : null;
       if (!db || !chat || !msgId) { if (orig) orig(msgId); return; }
-      db.collection('messages').doc(chat.id).collection('items').doc(msgId).get().then(function (doc) {
-        if (!doc.exists) { if (orig) orig(msgId); return; }
-        var msg = doc.data();
-        msg.id = doc.id;
+      _fetchMsg(msgId).then(function (msg) {
+        if (!msg) { if (orig) orig(msgId); return; }
+        msg.id = msgId;
         var myUid = _uid();
         var isOwn = msg.from === myUid || msg.senderId === myUid;
         var html = _getDeleteMenuHtml(msgId, msg, isOwn);
@@ -296,6 +295,8 @@
   function patchDesktopContextMenu() {
     if (window._ctxMenuPatched) return;
     document.addEventListener('contextmenu', function (e) {
+      if (e.defaultPrevented) return;
+      if (window.matchMedia && !window.matchMedia('(pointer: coarse)').matches) return;
       var msgEl = e.target.closest('[data-message-id]');
       if (!msgEl) return;
       var msgId = msgEl.getAttribute('data-message-id');
@@ -306,10 +307,9 @@
       if (!chat) return;
       var db = _db();
       if (!db) return;
-      db.collection('messages').doc(chat.id).collection('items').doc(msgId).get().then(function (doc) {
-        if (!doc.exists) return;
-        var msg = doc.data();
-        msg.id = doc.id;
+      _fetchMsg(msgId).then(function (msg) {
+        if (!msg) return;
+        msg.id = msgId;
         var type = _getMsgType(msg);
         var myUid = _uid();
         var _isOwn = msg.from === myUid || msg.senderId === myUid;
@@ -437,14 +437,35 @@
     window._vnDlPatched = true;
   }
 
+  function _fetchMsg(msgId) {
+    var chat = window.App && window.App.currentChat ? window.App.currentChat : null;
+    if (!chat) return Promise.resolve(null);
+    if (typeof window._resolveMessageRef === 'function') {
+      return window._resolveMessageRef(msgId).then(function (res) {
+        return res && res.data ? res.data : null;
+      })['catch'](function () { return null; });
+    }
+    return _db().collection('messages').doc(chat.id).collection('items').doc(msgId).get().then(function (doc) {
+      return doc.exists ? doc.data() : null;
+    })['catch'](function () { return null; });
+  }
+
+  function _resolveRef(msgId) {
+    var chat = window.App && window.App.currentChat ? window.App.currentChat : null;
+    if (typeof window._resolveMessageRef === 'function') {
+      return window._resolveMessageRef(msgId);
+    }
+    return Promise.resolve({
+      ref: _db().collection('messages').doc(chat.id).collection('items').doc(msgId)
+    });
+  }
+
   window._MsgActions = {
     download: function (msgId) {
       var chat = window.App && window.App.currentChat ? window.App.currentChat : null;
       if (!chat || !_db()) return;
-      _db().collection('messages').doc(chat.id).collection('items').doc(msgId).get().then(function (doc) {
-        if (!doc.exists) return;
-        var msg = doc.data();
-        msg.id = doc.id;
+      _fetchMsg(msgId).then(function (msg) {
+        if (!msg) return;
         downloadMediaNative(msg);
       })['catch'](function (err) {
         if (window.__DEBUG__) console.error('[MsgActions] download fetch error:', err);
@@ -478,10 +499,9 @@
     replyPrivately: function (msgId) {
       var chat = window.App && window.App.currentChat ? window.App.currentChat : null;
       if (!chat || !_db()) return;
-      _db().collection('messages').doc(chat.id).collection('items').doc(msgId).get().then(function (doc) {
-        if (!doc.exists) return;
-        var msg = doc.data();
-        msg.id = doc.id;
+      _fetchMsg(msgId).then(function (msg) {
+        if (!msg) return;
+        msg.id = msgId;
         if (typeof window.ReplyPrivate !== 'undefined') {
           window.ReplyPrivate.replyPrivately(msg, chat.id);
         }
@@ -492,10 +512,9 @@
     messagePerson: function (msgId) {
       var chat = window.App && window.App.currentChat ? window.App.currentChat : null;
       if (!chat || !_db()) return;
-      _db().collection('messages').doc(chat.id).collection('items').doc(msgId).get().then(function (doc) {
-        if (!doc.exists) return;
-        var msg = doc.data();
-        msg.id = doc.id;
+      _fetchMsg(msgId).then(function (msg) {
+        if (!msg) return;
+        msg.id = msgId;
         if (typeof window.ReplyPrivate !== 'undefined') {
           window.ReplyPrivate.messagePerson(msg, chat.id);
         }
@@ -516,11 +535,12 @@
     pin: function (msgId) {
       var chat = window.App && window.App.currentChat ? window.App.currentChat : null;
       if (!chat || !_db()) return;
-      _db().collection('messages').doc(chat.id).collection('items').doc(msgId).get().then(function (doc) {
-        if (!doc.exists) return;
-        var msg = doc.data();
+      _fetchMsg(msgId).then(function (msg) {
+        if (!msg) return;
         var isPinned = msg.isPinned;
-        _db().collection('messages').doc(chat.id).collection('items').doc(msgId).update({ isPinned: !isPinned }).then(function () {
+        return _resolveRef(msgId).then(function (res) {
+          return res.ref.update({ isPinned: !isPinned });
+        }).then(function () {
           _toast(isPinned ? 'Message unpinned' : 'Message pinned', 'success');
           if (!isPinned && typeof window.PinnedHeader === 'object' && typeof window.PinnedHeader.show === 'function') {
             window.PinnedHeader.show(chat.id);
@@ -539,9 +559,8 @@
       else {
         var chat = window.App && window.App.currentChat ? window.App.currentChat : null;
         if (!chat || !_db()) return;
-        _db().collection('messages').doc(chat.id).collection('items').doc(msgId).get().then(function (doc) {
-          if (!doc.exists) return;
-          var msg = doc.data();
+        _fetchMsg(msgId).then(function (msg) {
+          if (!msg) return;
           var html = '<div id="msg-info-panel" class="fixed inset-0 z-50 flex items-end justify-center">' +
             '<div class="absolute inset-0 bg-black/40" onclick="document.getElementById(\'msg-info-panel\').remove()"></div>' +
             '<div class="relative bg-surface rounded-t-2xl w-full max-w-md p-4 pb-8 z-10 animate-slide-up">' +
@@ -563,9 +582,9 @@
     shareLocation: function (msgId) {
       var chat = window.App && window.App.currentChat ? window.App.currentChat : null;
       if (!chat || !_db()) return;
-      _db().collection('messages').doc(chat.id).collection('items').doc(msgId).get().then(function (doc) {
-        if (!doc.exists) return;
-        _showShareLocation(doc.data());
+      _fetchMsg(msgId).then(function (msg) {
+        if (!msg) return;
+        _showShareLocation(msg);
       })['catch'](function (err) {
         if (window.__DEBUG__) console.error('[MsgActions] shareLocation fetch error:', err);
       });
@@ -573,9 +592,9 @@
     addContact: function (msgId) {
       var chat = window.App && window.App.currentChat ? window.App.currentChat : null;
       if (!chat || !_db()) return;
-      _db().collection('messages').doc(chat.id).collection('items').doc(msgId).get().then(function (doc) {
-        if (!doc.exists) return;
-        _addContact(doc.data());
+      _fetchMsg(msgId).then(function (msg) {
+        if (!msg) return;
+        _addContact(msg);
       })['catch'](function (err) {
         if (window.__DEBUG__) console.error('[MsgActions] addContact fetch error:', err);
       });

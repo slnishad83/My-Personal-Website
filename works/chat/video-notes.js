@@ -373,7 +373,8 @@
         read: false
       };
 
-      await db.collection('messages').add(msgData);
+      var coll = (chat.type === 'group' || chat.isGroup === true) ? 'groups' : 'chats';
+      await db.collection(coll).doc(chat.id).collection('messages').add(msgData);
 
       if (chat.lastMessageTime !== undefined) {
         var updateData = {
@@ -382,7 +383,7 @@
           lastMessageSenderId: user.uid,
           lastMessageSenderName: user.displayName || 'Me'
         };
-        db.collection('chats').doc(chat.id).update(updateData).catch(function () {});
+        db.collection(coll).doc(chat.id).update(updateData).catch(function () {});
       }
 
       toast('Video note sent', 'success');

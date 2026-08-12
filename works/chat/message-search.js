@@ -93,31 +93,52 @@
     if (_exhausted[chatId]) return [];
     const qLower = q.toLowerCase();
 
-    let ref = db.collection('messages').doc(chatId).collection('items')
-                .orderBy('timestamp', 'desc')
-                .limit(PAGE_SIZE);
+    const chatColls = chatCollFor(chatId);
+    let found = [];
+    for (let i = 0; i < chatColls.length; i++) {
+      const coll = chatColls[i];
+      let ref = db.collection(coll).doc(chatId).collection('messages')
+                  .orderBy('timestamp', 'desc')
+                  .limit(PAGE_SIZE);
 
-    if (_lastDocs[chatId]) ref = ref.startAfter(_lastDocs[chatId]);
+      if (_lastDocs[chatId]) ref = ref.startAfter(_lastDocs[chatId]);
 
-    let snap;
-    try { snap = await ref.get(); } catch (_) {
-      try {
-        ref = db.collection('messages').doc(chatId).collection('items').orderBy('createdAt','desc').limit(PAGE_SIZE);
-        if (_lastDocs[chatId]) ref = ref.startAfter(_lastDocs[chatId]);
-        snap = await ref.get();
-      } catch (e2) { if (window.__DEBUG__) console.warn('[MsgSearch] firestore error', chatId, e2.message); return []; }
+      let snap;
+      try { snap = await ref.get(); } catch (_) {
+        try {
+          ref = db.collection(coll).doc(chatId).collection('messages').orderBy('createdAt','desc').limit(PAGE_SIZE);
+          if (_lastDocs[chatId]) ref = ref.startAfter(_lastDocs[chatId]);
+          snap = await ref.get();
+        } catch (e2) { if (window.__DEBUG__) console.warn('[MsgSearch] firestore error', chatId, e2.message); snap = null; }
+      }
+      if (!snap) continue;
+      if (snap.empty || snap.docs.length < PAGE_SIZE) _exhausted[chatId] = true;
+      if (snap.docs.length) _lastDocs[chatId] = snap.docs[snap.docs.length - 1];
+
+      found = found.concat(snap.docs
+        .map(d => ({ id: d.id, chatId, ...d.data() }))
+        .filter(m => {
+          const txt = (m.text || m.message || m.body || m.content || '').toLowerCase();
+          const sender = (m.senderName || m.displayName || m.name || '').toLowerCase();
+          return (txt.includes(qLower) || sender.includes(qLower)) && matchesFilters(m);
+        }));
+      if (chatColls.length > 1) break;
     }
+    return found;
+  }
 
-    if (snap.empty || snap.docs.length < PAGE_SIZE) _exhausted[chatId] = true;
-    if (snap.docs.length) _lastDocs[chatId] = snap.docs[snap.docs.length - 1];
-
-    return snap.docs
-      .map(d => ({ id: d.id, chatId, ...d.data() }))
-      .filter(m => {
-        const txt = (m.text || m.message || m.body || m.content || '').toLowerCase();
-        const sender = (m.senderName || m.displayName || m.name || '').toLowerCase();
-        return (txt.includes(qLower) || sender.includes(qLower)) && matchesFilters(m);
-      });
+  function chatCollFor(chatId) {
+    if (window.currentChat && window.currentChat.id === chatId) {
+      return window.currentChatType === 'group' ? ['groups'] : (window.currentChatType === 'broadcast' ? ['broadcasts'] : ['chats']);
+    }
+    const el = document.querySelector('[data-chat-id="' + String(chatId).replace(/"/g, '\\"') + '"]');
+    if (el) {
+      const t = el.getAttribute('data-chat-type') || el.getAttribute('data-type') || 'direct';
+      if (t === 'group') return ['groups'];
+      if (t === 'broadcast') return ['broadcasts'];
+      return ['chats'];
+    }
+    return ['chats', 'groups'];
   }
 
   /* â”€â”€â”€ build result card HTML â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */

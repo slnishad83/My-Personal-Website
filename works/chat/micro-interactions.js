@@ -520,7 +520,13 @@
     }
     if (chatId && id && window.db) {
       var isStarred = starEl && starEl.classList.contains('starred');
-      window.db.collection('messages').doc(chatId).collection('items').doc(id).update({ isStarred: isStarred }).catch(function () {});
+      if (typeof window._resolveMessageRef === 'function') {
+        window._resolveMessageRef(id).then(function (res) {
+          if (res && res.ref) return res.ref.update({ isStarred: isStarred });
+        }).catch(function () {});
+      } else {
+        window.db.collection('messages').doc(chatId).collection('items').doc(id).update({ isStarred: isStarred }).catch(function () {});
+      }
     }
   }
 
@@ -531,18 +537,24 @@
       window._MsgActions.delete(id);
     } else if (chatId && id && window.db) {
       var uid = window.currentUser && window.currentUser.uid;
-      window.db.collection('messages').doc(chatId).collection('items').doc(id).get().then(function (doc) {
-        if (!doc.exists) return;
-        var msg = doc.data();
-        if (msg.from === uid || msg.senderId === uid) {
-          window.db.collection('messages').doc(chatId).collection('items').doc(id).delete();
-        } else {
-          var upd = {};
-          upd['deletedFor'] = window.firebase && window.firebase.firestore && window.firebase.firestore.FieldValue
-            ? window.firebase.firestore.FieldValue.arrayUnion(uid)
-            : [uid];
-          window.db.collection('messages').doc(chatId).collection('items').doc(id).update(upd);
-        }
+      var fetchMsg = typeof window._resolveMessageRef === 'function'
+        ? window._resolveMessageRef(id)
+        : window.db.collection('messages').doc(chatId).collection('items').doc(id).get().then(function (d) { return { ref: window.db.collection('messages').doc(chatId).collection('items').doc(id), data: d.data() }; });
+      fetchMsg.then(function (res) {
+        if (!res || !res.ref) return;
+        return res.ref.get().then(function (doc) {
+          if (!doc.exists) return;
+          var msg = doc.data();
+          if (msg.from === uid || msg.senderId === uid) {
+            return res.ref.delete();
+          } else {
+            var upd = {};
+            upd['deletedFor'] = window.firebase && window.firebase.firestore && window.firebase.firestore.FieldValue
+              ? window.firebase.firestore.FieldValue.arrayUnion(uid)
+              : [uid];
+            return res.ref.update(upd);
+          }
+        });
       }).catch(function () {});
     }
     if (prefersReducedMotion()) {

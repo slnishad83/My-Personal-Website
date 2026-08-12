@@ -1,5 +1,5 @@
-/**
- * chat-core.js — NSL Chat Core Engine v1.0
+﻿/**
+ * chat-core.js ΓÇö NSL Chat Core Engine v1.0
  *
  * This module is the MISSING CORE of the chat application.
  * It provides all fundamental chat operations:
@@ -14,7 +14,7 @@
 'use strict';
 
 (function () {
-  /* ── Utilities ──────────────────────────────────────────────── */
+  /* ΓöÇΓöÇ Utilities ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ */
 
   function esc(str) {
     if (typeof window.escapeHtml === 'function' && window.escapeHtml !== esc) return window.escapeHtml(str);
@@ -68,7 +68,7 @@
   }
   function getCurrentUser() { return window.currentUser || (window.App && window.App.currentUser); }
 
-  /* ── State ─────────────────────────────────────────────────── */
+  /* ΓöÇΓöÇ State ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ */
   const State = {
     chats: [],           // combined direct + group chats
     activeId: null,      // currently open chat/group id
@@ -80,7 +80,7 @@
     groupsUnsub: null,
   };
 
-  /* ── Chat List Rendering ────────────────────────────────────── */
+  /* ΓöÇΓöÇ Chat List Rendering ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ */
 
   function hideSkeleton() {
     const skel = document.getElementById('chat-list-skeleton');
@@ -137,7 +137,7 @@
       <div style="position:relative;flex-shrink:0;">
         ${chat.isSaved
           ? `<div style="width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;
-              background:var(--primary,#00a884);color:#fff;font-size:22px;flex-shrink:0;">👤</div>`
+              background:var(--primary,#00a884);color:#fff;font-size:22px;flex-shrink:0;">≡ƒæñ</div>`
           : avatarEl(chat.name || '?', photo, '44px')}
         ${chat.isOnline ? `<div style="position:absolute;bottom:1px;right:1px;width:11px;height:11px;border-radius:50%;
           background:#22c55e;border:2px solid var(--background,#fff);"></div>` : ''}
@@ -218,7 +218,7 @@
     container.appendChild(frag);
   }
 
-  /* ── Firestore subscriptions ────────────────────────────────── */
+  /* ΓöÇΓöÇ Firestore subscriptions ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ */
 
   let _chatsData = [];
   let _groupsData = [];
@@ -441,7 +441,7 @@
     }
   }
 
-  /* ── Opening a chat / loading messages ─────────────────────── */
+  /* ΓöÇΓöÇ Opening a chat / loading messages ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ */
 
   function openChat(chatId, chatType) {
     if (!chatId) return Promise.resolve();
@@ -467,12 +467,17 @@
     const welcome = document.getElementById('welcome-screen') || document.getElementById('empty-chat-placeholder');
     const chatHeader = document.getElementById('chat-header');
     const inputBar = document.getElementById('message-input-bar') || document.getElementById('chat-input-area') || document.querySelector('.message-input-wrap');
+    const msgWrap = document.getElementById('messages-wrap');
     if (chatHeader) chatHeader.classList.remove('hidden');
     if (inputBar) inputBar.classList.remove('hidden');
     if (welcome) welcome.classList.add('hidden');
     if (chatArea) chatArea.classList.remove('hidden');
+    if (msgWrap) {
+      msgWrap.classList.remove('hidden');
+      msgWrap.style.display = 'flex';
+    }
 
-    // On mobile — hide sidebar, show chat area
+    // On mobile ΓÇö hide sidebar, show chat area
     const sidebar = document.getElementById('chat-list-sidebar');
     if (sidebar && window.innerWidth < 768) {
       sidebar.style.display = 'none';
@@ -523,7 +528,7 @@
     return 'chats';
   }
 
-  /* ── Myself (Saved Messages) chat ───────────────────────────── */
+  /* ΓöÇΓöÇ Myself (Saved Messages) chat ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ */
   function savedChatId() {
     const uid = getUID();
     return uid ? 'saved_' + uid : null;
@@ -539,7 +544,7 @@
       name: 'Myself',
       displayName: 'Myself',
       photoURL: '',
-      avatar: '👤',
+      avatar: '≡ƒæñ',
       preview: 'Your personal notes, files & reminders',
       lastMessage: '',
       isSaved: true,
@@ -591,7 +596,7 @@
       avatarEl.style.backgroundImage = '';
       avatarEl.style.backgroundSize = '';
       avatarEl.style.backgroundPosition = '';
-      avatarEl.textContent = '👤';
+      avatarEl.textContent = '≡ƒæñ';
     }
     if (window.currentChat) {
       window.currentChat.name = 'Myself';
@@ -601,7 +606,7 @@
     }
   };
 
-  /* ── Message Rendering ──────────────────────────────────────── */
+  /* ΓöÇΓöÇ Message Rendering ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ */
 
   function renderMessages(chatId, chatType) {
     const db = getDB();
@@ -622,7 +627,7 @@
         <div style="text-align:center;">
           <div style="width:32px;height:32px;border:3px solid var(--primary,#00a884);border-top-color:transparent;
             border-radius:50%;animation:spin 0.8s linear infinite;margin:0 auto 12px;"></div>
-          <p style="font-size:13px;">Loading messages…</p>
+          <p style="font-size:13px;">Loading messagesΓÇª</p>
         </div>
       </div>
       <style>@keyframes spin{to{transform:rotate(360deg)}}</style>
@@ -636,8 +641,16 @@
         .collection('messages')
         .orderBy('timestamp', 'asc')
         .limitToLast(100)
-        .onSnapshot(snap => {
-          State.messages = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        .onSnapshot(async snap => {
+          const docs = snap.docs;
+          if (window.E2E) {
+            const decrypted = await Promise.all(docs.map(doc =>
+              E2E.decryptMessageData(chatId, chatType, doc.id, doc.data())
+            ));
+            State.messages = decrypted;
+          } else {
+            State.messages = docs.map(doc => ({ id: doc.id, ...doc.data() }));
+          }
           _renderMessagesList(msgWrap, uid);
 
           // Mark as read
@@ -655,7 +668,7 @@
     }
   }
 
-  /* ── WhatsApp-style text formatting ────────────────────────── */
+  /* ΓöÇΓöÇ WhatsApp-style text formatting ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ */
 
   function _formatMsgText(text) {
     if (!text) return '';
@@ -683,7 +696,7 @@
         <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;
           gap:12px;color:var(--on-surface-variant,#8696a0);padding:20px;">
           <span class="material-symbols-outlined" style="font-size:48px;opacity:0.3;">chat_bubble_outline</span>
-          <p style="font-size:14px;text-align:center;">No messages yet. Say hello! 👋</p>
+          <p style="font-size:14px;text-align:center;">No messages yet. Say hello! ≡ƒæï</p>
         </div>
       `;
       return;
@@ -738,6 +751,11 @@
       } else if (msgType === 'video' && msg.attachment) {
         content = `<video src="${esc(msg.attachment.url || msg.attachment)}" controls 
           style="max-width:260px;max-height:200px;border-radius:8px;display:block;"></video>`;
+      } else if (msgType === 'videoNote' && (msg.attachment || msg.videoURL || msg.url)) {
+        const _vnUrl = msg.attachment ? (msg.attachment.url || msg.attachment) : (msg.videoURL || msg.url);
+        content = `<video src="${esc(_vnUrl)}" controls playsinline 
+          style="width:220px;height:240px;border-radius:12px;display:block;object-fit:cover;background:#000;"
+          preload="metadata"></video>`;
       } else if (msgType === 'audio' || msgType === 'voice') {
         content = `<audio src="${esc(msg.attachment && (msg.attachment.url || msg.attachment))}" controls 
           style="max-width:220px;"></audio>`;
@@ -782,6 +800,16 @@
         ? 'var(--on-primary-container,#0a1628)'
         : 'var(--on-surface,#1c1c1e)';
 
+      const reactHTML = (window.renderReactions && msg.reactions)
+        ? window.renderReactions(msg.id, msg.reactions)
+        : '';
+      const starHTML = msg.starred || msg.isStarred
+        ? '<span class="nsl-star-icon" style="color:#f5a623;margin-left:4px;vertical-align:middle;display:inline-flex;align-items:center;"><span class="material-symbols-outlined" style="font-size:14px">star</span></span>'
+        : '';
+      const editedHTML = msg.edited
+        ? '<span class="nsl-edited-label" style="font-size:11px;font-weight:400;opacity:0.7;font-style:italic;margin-left:2px;"> (edited)</span>'
+        : '';
+
       row.innerHTML = `
         <div class="message-bubble msg-bubble ${isMe ? 'my-message' : ''}" 
           style="max-width:70%;background:${bubbleColor};color:${textColor};
@@ -790,8 +818,12 @@
           ${State.activeType === 'group' && !isMe ? `<div style="font-size:12px;font-weight:600;color:var(--primary,#00a884);margin-bottom:2px;">${esc(senderName)}</div>` : ''}
           ${replyHTML}
           ${content}
+          ${reactHTML}
+          ${window.MessageEffects && msg.effect ? window.MessageEffects.chipHTML(msg.effect) : ''}
           <div style="display:flex;justify-content:flex-end;align-items:center;gap:3px;margin-top:3px;">
-            <span style="font-size:10px;opacity:0.6;">${timeStr}</span>
+            <span style="font-size:10px;opacity:0.6;" class="msg-time message-time">${timeStr}</span>
+            ${editedHTML}
+            ${starHTML}
             ${isMe ? `<span class="material-symbols-outlined" style="font-size:12px;opacity:0.7;color:${msg.readBy && Object.keys(msg.readBy).length > 1 ? '#00a884' : 'inherit'};">
               ${msg.readBy && Object.keys(msg.readBy).length > 1 ? 'done_all' : (msg.delivered ? 'done_all' : 'done')}
             </span>` : ''}
@@ -800,6 +832,7 @@
       `;
 
       msgWrap.appendChild(row);
+      if (window.MessageEffects && msg.effect) window.MessageEffects.playOnRow(row, msg);
     });
 
     // Scroll to bottom
@@ -819,9 +852,9 @@
     } catch (_) {}
   }
 
-  /* ── Send Message ───────────────────────────────────────────── */
+  /* ΓöÇΓöÇ Send Message ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ */
 
-  function sendMessage() {
+  async function sendMessage() {
     const db = getDB();
     const uid = getUID();
     const user = getCurrentUser();
@@ -848,21 +881,45 @@
       return;
     }
 
+    // Encrypt text messages end-to-end (direct / group)
+    let e2e = null;
+    if (window.E2E && E2E.supports(State.activeType)) {
+      e2e = await E2E.encryptForChat(State.activeId, State.activeType, text).catch(() => null);
+    }
+    const encrypted = !!(e2e && e2e.enc);
+    const preview = encrypted ? E2E.securePreview() : text;
+
+    const fx = (window.MessageEffects && window.MessageEffects.takePending()) || null;
+
     const collection = State.activeType === 'group' ? 'groups' : 'chats';
-    const msgData = {
-      text,
-      senderId: uid,
-      senderName: user.displayName || user.email || 'Me',
-      senderPhotoURL: user.photoURL || '',
-      timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-      type: 'text',
-      readBy: { [uid]: true },
-    };
+    const msgData = encrypted
+      ? {
+          enc: e2e.enc,
+          e2e: true,
+          senderId: uid,
+          senderName: user.displayName || user.email || 'Me',
+          senderPhotoURL: user.photoURL || '',
+          timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+          type: 'text',
+          readBy: { [uid]: true },
+          effect: fx,
+        }
+      : {
+          text,
+          senderId: uid,
+          senderName: user.displayName || user.email || 'Me',
+          senderPhotoURL: user.photoURL || '',
+          timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+          type: 'text',
+          readBy: { [uid]: true },
+          effect: fx,
+        };
 
     // Optimistic render
     const optimistic = {
       id: `_opt_${Date.now()}`,
       ...msgData,
+      text: encrypted ? preview : text,
       timestamp: { toMillis: () => Date.now(), seconds: Date.now() / 1000 },
     };
     State.messages.push(optimistic);
@@ -874,8 +931,8 @@
     const msgRef = db.collection(collection).doc(State.activeId).collection('messages').doc();
     batch.set(msgRef, { ...msgData, id: msgRef.id });
     batch.update(db.collection(collection).doc(State.activeId), {
-      lastMessage: text,
-      lastMessageText: text,
+      lastMessage: preview,
+      lastMessageText: preview,
       lastMessageAt: firebase.firestore.FieldValue.serverTimestamp(),
       lastSenderId: uid,
       updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
@@ -887,7 +944,7 @@
     });
   }
 
-  /* ── Polls ──────────────────────────────────────────────────── */
+  /* ΓöÇΓöÇ Polls ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ */
 
   function _pollTotalVotes(poll) {
     const votes = (poll && poll.votes) || {};
@@ -1021,8 +1078,8 @@
     };
     batch.set(msgRef, pollMsg);
     batch.update(db.collection(collection).doc(State.activeId), {
-      lastMessage: '📊 ' + question,
-      lastMessageText: '📊 ' + question,
+      lastMessage: '≡ƒôè ' + question,
+      lastMessageText: '≡ƒôè ' + question,
       lastMessageAt: firebase.firestore.FieldValue.serverTimestamp(),
       lastSenderId: uid,
       updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
@@ -1035,7 +1092,7 @@
     });
   };
 
-  /* ── Send button & Enter key wiring ─────────────────────────── */
+  /* ΓöÇΓöÇ Send button & Enter key wiring ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ */
 
   function _wireInputArea() {
     const sendBtn = document.getElementById('send-btn') || document.querySelector('[data-action="sendMessage"], .send-btn');
@@ -1057,7 +1114,7 @@
     }
   }
 
-  /* ── Start a direct chat ────────────────────────────────────── */
+  /* ΓöÇΓöÇ Start a direct chat ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ */
 
   function startDirectChat(user) {
     if (!user || (!user.id && !user.uid)) return Promise.resolve();
@@ -1089,7 +1146,33 @@
       .catch(e => { if (window.__DEBUG__) console.warn('[chat-core] startDirectChat:', e); });
   }
 
-  /* ── Back to list (mobile) ──────────────────────────────────── */
+  /* ── Select/open a chat by id or user uid ─────────────────────────────
+     Central entry used by New Chat, contact pickers, notifications,
+     reminders and saved-messages. Accepts a chat doc id (direct/group/
+     broadcast) or a raw user uid, and opens the matching conversation. */
+  function selectChat(chatId, chatType) {
+    if (!chatId) return Promise.resolve();
+    if (chatType === 'group') return openChat(chatId, 'group');
+    if (chatType === 'broadcast') return openChat(chatId, 'broadcast');
+
+    const known = State.chats.find(c => c.id === chatId);
+    if (known) return openChat(known.id, known.type || 'direct');
+
+    const myUid = getUID();
+    if (typeof chatId === 'string' && myUid) {
+      const canonical = [myUid, chatId].sort().join('_');
+      const existing = State.chats.find(c => c.id === canonical);
+      if (existing) return openChat(canonical, existing.type || 'direct');
+    }
+
+    if (typeof chatId === 'string' && chatId.indexOf('_') === -1) {
+      return startDirectChat({ uid: chatId });
+    }
+
+    return openChat(chatId, 'direct');
+  }
+
+  /* ΓöÇΓöÇ Back to list (mobile) ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ */
 
   function backToList() {
     State.activeId = null;
@@ -1103,7 +1186,7 @@
     hideSkeleton();
   }
 
-  /* ── Global function exports ────────────────────────────────── */
+  /* ΓöÇΓöÇ Global function exports ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ */
 
   // Core functions
   window.subscribeToChats = subscribeToChats;
@@ -1113,6 +1196,7 @@
   window.renderMessages = renderMessages;
   window.sendMessage = sendMessage;
   window.startDirectChat = startDirectChat;
+  window.selectChat = selectChat;
   window.backToList = backToList;
 
   // Reload helpers expected by other modules
@@ -1144,7 +1228,7 @@
   window.getCurrentMessages = function () { return State.messages; };
   window.getCurrentChatState = function () { return State; };
 
-  /* ── Action delegation (data-action) ───────────────────────── */
+  /* ΓöÇΓöÇ Action delegation (data-action) ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ */
 
   document.addEventListener('click', function (e) {
     const el = e.target.closest('[data-action]');
@@ -1160,7 +1244,7 @@
     }
   });
 
-  /* ── Bootstrap ──────────────────────────────────────────────── */
+  /* ΓöÇΓöÇ Bootstrap ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ */
 
   function _bootstrap() {
     const uid = getUID();
@@ -1180,7 +1264,7 @@
       // Wait a tick for window.currentUser to be set
       setTimeout(_bootstrap, 100);
     } else {
-      // Not logged in — hide skeleton, show nothing
+      // Not logged in ΓÇö hide skeleton, show nothing
       hideSkeleton();
     }
   });
@@ -1196,5 +1280,5 @@
     }, 8000);
   }
 
-  if (window.__DEBUG__) console.log('[chat-core] v1.0 loaded ✓');
+  if (window.__DEBUG__) console.log('[chat-core] v1.0 loaded Γ£ô');
 })();
