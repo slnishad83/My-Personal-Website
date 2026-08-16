@@ -51,6 +51,7 @@ mac:
 
 linux:
   icon: dist/app-icon-512.png
+  maintainer: Nishad SL
   target:
     - target: AppImage
       arch:
