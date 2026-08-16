@@ -490,7 +490,7 @@
 
     if (_detailOverlay) _detailOverlay.remove();
     var html = '<div id="gc-detail-overlay" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">' +
-      '<div class="bg-surface rounded-2xl max-w-sm w-full mx-4 shadow-2xl overflow-hidden">' +
+      '<div class="bg-surface rounded-2xl max-w-sm w-full mx-4 shadow-2xl overflow-hidden" style="max-height:calc(100dvh - 2rem);max-height:calc(100vh - 2rem);overflow-y:auto;overflow-x:hidden">' +
       '<div class="p-6 text-center border-b border-outline/10">' +
       '<div class="w-16 h-16 rounded-full overflow-hidden mx-auto mb-3">' + _renderAvatar(name, avatar) + '</div>' +
       '<h3 class="text-on-surface font-bold text-lg">' + _esc(name) + '</h3>' +

@@ -56,6 +56,7 @@
   CC.screenShareStream = null;
   CC.screenShareSender = null;
   CC.incomingData = null;
+  CC.callMeta = null;
   CC.bcChannel = null;
   try { CC.bcChannel = new BroadcastChannel('tc-calls'); } catch (_) {}
   CC.incomingBcHandler = null;
@@ -138,17 +139,24 @@
     }
   }
 
-  function writeCallLog(direction, status, durationMs) {
+  function writeCallLog(direction, status, durationMs, metaOverride) {
     if (typeof window.recordCallSyncEvent === 'function') {
+      var meta = metaOverride || CC.callMeta || {};
+      var inc = CC.incomingData || {};
+      var toUid = meta.toUserId || inc.toUserId || '';
+      var toName = meta.toUserName || inc.toUserName || '';
+      var toAvatar = meta.toUserAvatar || inc.fromUserPhoto || '';
       window.recordCallSyncEvent({
-        callId: CC.callId,
+        callId: (metaOverride && metaOverride.callId) || CC.callId || inc.callId || '',
         direction: direction,
         status: status,
         callType: CC.callType,
-        fromUserId: uid(),
-        fromUserName: me()?.displayName || 'User',
-        toUserId: CC.incomingData?.fromUserId || CC.incomingData?.toUserId || '',
-        toUserName: CC.incomingData?.fromUserName || CC.incomingData?.toUserName || '',
+        fromUserId: meta.fromUserId || uid() || inc.fromUserId || '',
+        fromUserName: meta.fromUserName || me()?.displayName || 'User',
+        fromUserAvatar: meta.fromUserAvatar || '',
+        toUserId: toUid,
+        toUserName: toName,
+        toUserAvatar: toAvatar,
         durationMs: durationMs || null,
         participantIds: uid() ? [uid()] : []
       });
@@ -460,8 +468,8 @@
     CC.unsubStatus = db().collection('calls').doc(cId).onSnapshot(function (doc) {
       var data = doc.data();
       if (!data) return;
-      if (data.status === 'ended' || data.status === 'missed' || data.status === 'rejected' || data.status === 'cancelled') {
-        window.endCall();
+      if (data.status === 'ended' || data.status === 'missed' || data.status === 'rejected' || data.status === 'cancelled' || data.status === 'busy') {
+        window.endCall(data.status);
       }
     });
   }
@@ -506,6 +514,7 @@
     App._activeCallId = null;
     activeCallMode = null;
     CC.incomingData = null;
+    CC.callMeta = null;
     CC.callType = 'voice';
     CC.reconnAttempt = 0;
     speakerOn = false;

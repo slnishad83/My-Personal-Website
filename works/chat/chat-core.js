@@ -466,7 +466,7 @@
     const chatArea = document.getElementById('chat-area');
     const welcome = document.getElementById('welcome-screen') || document.getElementById('empty-chat-placeholder');
     const chatHeader = document.getElementById('chat-header');
-    const inputBar = document.getElementById('message-input-bar') || document.getElementById('chat-input-area') || document.querySelector('.message-input-wrap');
+    const inputBar = document.getElementById('message-input-bar') || document.getElementById('chat-input-area') || document.querySelector('.message-input-wrap') || document.getElementById('input-bar');
     const msgWrap = document.getElementById('messages-wrap');
     if (chatHeader) chatHeader.classList.remove('hidden');
     if (inputBar) inputBar.classList.remove('hidden');
@@ -806,6 +806,9 @@
       const starHTML = msg.starred || msg.isStarred
         ? '<span class="nsl-star-icon" style="color:#f5a623;margin-left:4px;vertical-align:middle;display:inline-flex;align-items:center;"><span class="material-symbols-outlined" style="font-size:14px">star</span></span>'
         : '';
+      const keptHTML = (msg.kept === true || msg.keepInChat === true)
+        ? '<span class="nsl-kept-icon" title="Kept in chat" style="margin-left:2px;vertical-align:middle;display:inline-flex;align-items:center;"><span class="material-symbols-outlined" style="font-size:12px">bookmark</span></span>'
+        : '';
       const editedHTML = msg.edited
         ? '<span class="nsl-edited-label" style="font-size:11px;font-weight:400;opacity:0.7;font-style:italic;margin-left:2px;"> (edited)</span>'
         : '';
@@ -824,6 +827,7 @@
             <span style="font-size:10px;opacity:0.6;" class="msg-time message-time">${timeStr}</span>
             ${editedHTML}
             ${starHTML}
+            ${keptHTML}
             ${isMe ? `<span class="material-symbols-outlined" style="font-size:12px;opacity:0.7;color:${msg.readBy && Object.keys(msg.readBy).length > 1 ? '#00a884' : 'inherit'};">
               ${msg.readBy && Object.keys(msg.readBy).length > 1 ? 'done_all' : (msg.delivered ? 'done_all' : 'done')}
             </span>` : ''}

@@ -76,6 +76,7 @@ module.exports = {
   verifyAppLockPin: pin.verifyAppLockPin,
   resetAppLockPin: pin.resetAppLockPin,
   addGroupMembers: groups.addGroupMembers,
+  createGroup: groups.createGroup,
   removeGroupMember: groups.removeGroupMember,
   promoteGroupAdmin: groups.promoteGroupAdmin,
   demoteGroupAdmin: groups.demoteGroupAdmin,

@@ -8,7 +8,7 @@
   async function addToCall(userId) {
     if (!GC._isInGroupCall() || !GC._isInitiator) { GC._toast('Only the call initiator can add participants', 'error'); return; }
     if (!userId || userId === GC._myUid) return;
-    if (!GC._canAddParticipant()) { GC._toast('Maximum ' + GC._GRID_MAX + ' participants allowed', 'error'); return; }
+    if (!GC._canAddParticipant()) { GC._toast('Maximum ' + GC._getMaxParticipants() + ' participants allowed', 'error'); return; }
     var alreadyIn = (window.activeGroupCallParticipants || []).some(function (p) { return p.uid === userId; });
     if (alreadyIn) { GC._toast('Already in the call', 'info'); return; }
     if (!GC._firestore() || !GC._currentCallId) return;
@@ -89,7 +89,7 @@
   function addToCallBeforeAnswer(userId) {
     if (!GC._isInGroupCall() || !GC._isInitiator) { GC._toast('Only the call initiator can add participants', 'error'); return; }
     if (!userId || userId === GC._myUid) return;
-    if (!GC._canAddParticipant()) { GC._toast('Maximum ' + GC._GRID_MAX + ' participants allowed', 'error'); return; }
+    if (!GC._canAddParticipant()) { GC._toast('Maximum ' + GC._getMaxParticipants() + ' participants allowed', 'error'); return; }
     var alreadyIn = (window.activeGroupCallParticipants || []).some(function (p) { return p.uid === userId; });
     if (alreadyIn) { GC._toast('Already in the call', 'info'); return; }
     addToCall(userId);

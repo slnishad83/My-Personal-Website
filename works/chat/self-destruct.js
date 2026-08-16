@@ -232,7 +232,7 @@
 
   function updateHeaderIndicator() {
     if (!window.App || !window.App.currentChat) return;
-    
+
     const chat = window.App.currentChat;
     const existingIcon = document.getElementById('header-ephemeral-icon');
     
@@ -266,6 +266,7 @@
           if (timer && timer > 0) {
             const msgs = window.App.messages[chatId];
         (Array.isArray(msgs) ? msgs : []).forEach(msg => {
+          if (!msg || msg.kept === true || msg.keepInChat === true) return;
           var msgTs = msg.time || (msg.timestamp && msg.timestamp.toMillis ? msg.timestamp.toMillis() : (typeof msg.timestamp === 'number' ? msg.timestamp : 0));
           if (msgTs && (now - msgTs > timer)) {
             const isGroup = chat.type === 'group' || chat.isGroup === true;
@@ -295,4 +296,44 @@
   } else {
     initSelfDestruct();
   }
+
+  /* ── Keep in chat (exempt from disappearing messages) ──────────── */
+  window.isMessageKept = function (msg) {
+    return !!msg && (msg.kept === true || msg.keepInChat === true);
+  };
+
+  window.toggleKeepInChat = async function (chatId, msgId, keep) {
+    if (!window.App || !window.App.db || !window.App.currentChat) return false;
+    try {
+      const chat = window.App.currentChat;
+      const isGroup = chat.type === 'group' || chat.isGroup === true;
+      const coll = isGroup ? 'groups' : 'chats';
+      const uid = (window.App.auth && window.App.auth.currentUser && window.App.auth.currentUser.uid) || (window.currentUser && window.currentUser.uid) || '';
+      const FV = (window.App.db.FieldValue) || (window.firebase && window.firebase.firestore && window.firebase.firestore.FieldValue);
+      const update = {};
+      if (keep) {
+        update.kept = true;
+        update.keptAt = new Date();
+        if (uid) update.keptBy = FV ? FV.arrayUnion(uid) : [uid];
+      } else {
+        update.kept = false;
+        if (FV) {
+          update.keptAt = FV.delete();
+          update.keptBy = FV.delete();
+        }
+      }
+      await window.App.db.collection(coll).doc(chatId).collection('messages').doc(msgId).update(update);
+      const msgs = window.App.messages[chatId];
+      if (Array.isArray(msgs)) {
+        const m = msgs.find(x => x.id === msgId);
+        if (m) { m.kept = keep; m.keepInChat = keep; }
+      }
+      if (window.showToast) window.showToast(keep ? 'Message kept in chat' : 'Message no longer kept', 'success');
+      return true;
+    } catch (e) {
+      if (window.__DEBUG__) console.error('[SelfDestruct] toggleKeepInChat failed:', e);
+      if (window.showToast) window.showToast('Failed to update keep status', 'error');
+      return false;
+    }
+  };
 })();

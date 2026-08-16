@@ -426,7 +426,219 @@
     else _toast('Group chat settings are not available', 'error');
   };
   window.openNewGroup = function () {
-    _toast('New group creation is not available yet');
+    var existing = document.getElementById('nsl-create-group');
+    if (existing) existing.remove();
+
+    var uid = _uid();
+    if (!uid) { _toast('Sign in to create a group', 'error'); return; }
+
+    var overlay = document.createElement('div');
+    overlay.id = 'nsl-create-group';
+    overlay.style.cssText = 'position:fixed;inset:0;z-index:9990;display:flex;align-items:flex-end;justify-content:center;background:rgba(0,0,0,0.5);backdrop-filter:blur(2px);';
+    var backdrop = document.createElement('div');
+    backdrop.style.cssText = 'position:absolute;inset:0;';
+    backdrop.addEventListener('click', function () { overlay.remove(); });
+    overlay.appendChild(backdrop);
+
+    var panel = document.createElement('div');
+    panel.style.cssText = 'position:relative;width:100%;max-width:520px;max-height:92vh;background:var(--surface,#fff);border-radius:20px 20px 0 0;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 -8px 40px rgba(0,0,0,0.22);';
+    overlay.appendChild(panel);
+    document.body.appendChild(overlay);
+    panel.style.transform = 'translateY(100%)';
+    requestAnimationFrame(function () { panel.style.transition = 'transform .28s ease'; panel.style.transform = 'translateY(0)'; });
+
+    var header = document.createElement('div');
+    header.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--outline-variant,rgba(0,0,0,0.08));flex-shrink:0;';
+    var hTitle = document.createElement('h3');
+    hTitle.style.cssText = 'margin:0;font-size:17px;font-weight:700;color:var(--on-surface,#1a1a1a);';
+    hTitle.textContent = 'New group';
+    header.appendChild(hTitle);
+    var closeBtn = document.createElement('button');
+    closeBtn.style.cssText = 'border:none;background:none;cursor:pointer;color:var(--on-surface-variant,#666);padding:4px;min-width:44px;min-height:44px;';
+    closeBtn.innerHTML = '<span class="material-symbols-outlined" style="font-size:24px">close</span>';
+    closeBtn.addEventListener('click', function () { overlay.remove(); });
+    header.appendChild(closeBtn);
+    panel.appendChild(header);
+
+    var body = document.createElement('div');
+    body.style.cssText = 'flex:1;overflow-y:auto;padding:16px 18px;';
+
+    var photoWrap = document.createElement('div');
+    photoWrap.style.cssText = 'display:flex;justify-content:center;margin-bottom:14px;';
+    var photoBtn = document.createElement('button');
+    photoBtn.style.cssText = 'width:84px;height:84px;border-radius:50%;background:var(--primary,#128C7E);color:#fff;border:none;cursor:pointer;font-size:32px;display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0;';
+    photoBtn.innerHTML = '<span class="material-symbols-outlined">photo_camera</span>';
+    var _photoFile = null;
+    photoBtn.addEventListener('click', function () {
+      var fi = document.createElement('input');
+      fi.type = 'file'; fi.accept = 'image/*';
+      fi.onchange = function () {
+        var f = fi.files && fi.files[0];
+        if (!f) return;
+        _photoFile = f;
+        var r = new FileReader();
+        r.onload = function (e) { photoBtn.innerHTML = '<img src="' + e.target.result + '" style="width:100%;height:100%;object-fit:cover;" />'; };
+        r.readAsDataURL(f);
+      };
+      fi.click();
+    });
+    photoWrap.appendChild(photoBtn);
+    body.appendChild(photoWrap);
+
+    function _field(placeholder) {
+      var input = document.createElement('input');
+      input.type = 'text';
+      input.placeholder = placeholder;
+      input.style.cssText = 'width:100%;padding:12px 14px;border:1px solid var(--outline-variant,rgba(0,0,0,0.12));border-radius:12px;font-size:15px;background:var(--surface-variant,rgba(0,0,0,0.03));color:var(--on-surface,#1a1a1a);outline:none;margin-bottom:12px;box-sizing:border-box;';
+      return input;
+    }
+    var nameInput = _field('Group name');
+    nameInput.maxLength = 100;
+    var descInput = _field('Group description (optional)');
+    descInput.maxLength = 250;
+    body.appendChild(nameInput);
+    body.appendChild(descInput);
+
+    var searchInput = _field('Search people to add');
+    searchInput.id = 'nsl-cg-search';
+    body.appendChild(searchInput);
+
+    var listWrap = document.createElement('div');
+    listWrap.style.cssText = 'margin-top:4px;';
+    body.appendChild(listWrap);
+    panel.appendChild(body);
+
+    var footer = document.createElement('div');
+    footer.style.cssText = 'padding:12px 18px;border-top:1px solid var(--outline-variant,rgba(0,0,0,0.08));flex-shrink:0;';
+    var createBtn = document.createElement('button');
+    createBtn.style.cssText = 'width:100%;padding:13px;border:none;border-radius:12px;background:var(--primary,#128C7E);color:#fff;font-size:15px;font-weight:700;cursor:pointer;opacity:.5;pointer-events:none;transition:opacity .15s;';
+    createBtn.textContent = 'Create group';
+    footer.appendChild(createBtn);
+    panel.appendChild(footer);
+
+    var selected = new Set();
+
+    function _renderContacts(q) {
+      var ql = String(q || '').trim().toLowerCase();
+      var items = _usersCache.filter(function (u) {
+        if (u.uid === uid) return false;
+        if (!ql) return true;
+        return ((u.displayName || '') + ' ' + (u.name || '') + ' ' + (u.email || '')).toLowerCase().indexOf(ql) !== -1;
+      });
+      if (!_usersCache.length) {
+        listWrap.innerHTML = '<div style="padding:20px;text-align:center;color:var(--on-surface-variant,#999);font-size:13px;">Loading people…</div>';
+        _loadUsers().then(function () { if (overlay.isConnected) _renderContacts(searchInput.value); });
+        return;
+      }
+      if (!items.length) {
+        listWrap.innerHTML = '<div style="padding:20px;text-align:center;color:var(--on-surface-variant,#999);font-size:13px;">No contacts found</div>';
+        return;
+      }
+      listWrap.innerHTML = '';
+      items.forEach(function (u) {
+        var label = u.displayName || u.name || u.email || u.uid;
+        var item = document.createElement('div');
+        item.style.cssText = 'display:flex;align-items:center;gap:12px;padding:9px 6px;border-radius:12px;cursor:pointer;transition:background .15s;';
+        var avatar = document.createElement('div');
+        avatar.style.cssText = 'width:42px;height:42px;border-radius:50%;background:var(--surface-container-highest,#eef2f3);color:var(--on-surface-variant,#555);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:16px;flex-shrink:0;overflow:hidden;';
+        if (u.photoURL) avatar.innerHTML = '<img src="' + _esc(u.photoURL) + '" style="width:100%;height:100%;object-fit:cover;" />';
+        else avatar.textContent = (label || '?').charAt(0).toUpperCase();
+        item.appendChild(avatar);
+        var info = document.createElement('div');
+        info.style.cssText = 'flex:1;min-width:0;';
+        var nm = document.createElement('div');
+        nm.style.cssText = 'font-weight:600;font-size:14px;color:var(--on-surface,#1a1a1a);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;';
+        nm.textContent = label;
+        info.appendChild(nm);
+        if (u.email) {
+          var em = document.createElement('div');
+          em.style.cssText = 'font-size:12px;color:var(--on-surface-variant,#999);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;';
+          em.textContent = u.email;
+          info.appendChild(em);
+        }
+        item.appendChild(info);
+        var check = document.createElement('div');
+        check.style.cssText = 'width:22px;height:22px;border-radius:50%;border:2px solid var(--outline-variant,rgba(0,0,0,0.25));flex-shrink:0;transition:all .15s;display:flex;align-items:center;justify-content:center;';
+        item.appendChild(check);
+        item.addEventListener('click', function () {
+          if (selected.has(u.uid)) {
+            selected.delete(u.uid);
+            check.style.background = 'none'; check.style.borderColor = 'var(--outline-variant,rgba(0,0,0,0.25))'; check.innerHTML = '';
+          } else {
+            selected.add(u.uid);
+            check.style.background = 'var(--primary,#128C7E)'; check.style.borderColor = 'var(--primary,#128C7E)';
+            check.innerHTML = '<span class="material-symbols-outlined" style="font-size:16px;color:#fff">check</span>';
+          }
+          _syncCreate();
+        });
+        item.addEventListener('mouseenter', function () { item.style.background = 'var(--surface-variant,rgba(0,0,0,0.03))'; });
+        item.addEventListener('mouseleave', function () { item.style.background = 'transparent'; });
+        listWrap.appendChild(item);
+      });
+    }
+
+    function _syncCreate() {
+      var ready = nameInput.value.trim().length > 0 && selected.size > 0;
+      createBtn.style.opacity = ready ? '1' : '.5';
+      createBtn.style.pointerEvents = ready ? 'auto' : 'none';
+      createBtn.textContent = selected.size ? 'Create group (' + selected.size + ')' : 'Create group';
+    }
+
+    nameInput.addEventListener('input', _syncCreate);
+    searchInput.addEventListener('input', function () { _renderContacts(searchInput.value); });
+
+    createBtn.addEventListener('click', async function () {
+      var name = nameInput.value.trim();
+      if (!name || !selected.size) return;
+      createBtn.disabled = true;
+      createBtn.textContent = 'Creating…';
+      try {
+        var result;
+        if (typeof firebase !== 'undefined' && firebase.functions) {
+          var fn = firebase.functions('us-central1').httpsCallable('createGroup');
+          result = await fn({ name: name, description: descInput.value.trim(), memberIds: Array.from(selected) });
+        }
+        var groupId = (result && result.data && result.data.groupId) || _fallbackCreateGroup(name, descInput.value.trim());
+        overlay.remove();
+        _toast('Group created', 'success');
+        if (typeof window.openChat === 'function') window.openChat(groupId, 'group');
+        else if (typeof window.startDirectChat === 'function') window.startDirectChat({ id: groupId, type: 'group', name: name });
+      } catch (err) {
+        if (window.__DEBUG__) console.error('[ui-glue] createGroup failed:', err);
+        createBtn.disabled = false;
+        _syncCreate();
+        _toast((err && err.message) || 'Failed to create group', 'error');
+      }
+    });
+
+    // Direct Firestore fallback if the Cloud Function is not deployed yet
+    async function _fallbackCreateGroup(name, desc) {
+      var db = _db();
+      var me = _me();
+      if (!db) throw new Error('Database unavailable');
+      var groupRef = db.collection('groups').doc();
+      var allIds = [uid].concat(Array.from(selected));
+      await groupRef.set({
+        id: groupRef.id, name: name, description: desc, type: 'group',
+        createdBy: uid, ownerId: uid, adminIds: [uid], admins: [uid],
+        memberIds: allIds, members: allIds, memberCount: allIds.length,
+        photoURL: '', avatar: '', isPublic: false, announcementOnly: false,
+        ephemeralTimer: null, lastMessage: '', lastMessageText: '', lastMessageAt: null,
+        createdAt: Date.now(), updatedAt: Date.now(),
+        createdByName: (me && (me.displayName || me.name)) || 'Admin',
+        createdByPhotoURL: (me && me.photoURL) || '', unreadCounts: {}
+      });
+      var batch = db.batch();
+      batch.set(groupRef.collection('members').doc(uid), { uid: uid, displayName: (me && (me.displayName || me.name)) || 'Admin', photoURL: (me && me.photoURL) || '', role: 'admin', addedBy: uid, addedAt: Date.now() });
+      Array.from(selected).forEach(function (mUid) {
+        var u = _usersCache.find(function (x) { return x.uid === mUid; });
+        batch.set(groupRef.collection('members').doc(mUid), { uid: mUid, displayName: (u && (u.displayName || u.name)) || 'Member', photoURL: (u && u.photoURL) || '', role: 'member', addedBy: uid, addedAt: Date.now() });
+      });
+      await batch.commit();
+      return groupRef.id;
+    }
+
+    _renderContacts('');
   };
 
   /* ════════════════════════════════════════════════════════════

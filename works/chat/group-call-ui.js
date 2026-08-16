@@ -27,8 +27,35 @@
       case 4: return { cols: 2, rows: 2, layout: 'grid-2x2' };
       case 5: case 6: return { cols: 3, rows: 2, layout: 'grid-3x2' };
       case 7: case 8: case 9: return { cols: 3, rows: 3, layout: 'grid-3x3' };
-      default: return { cols: 3, rows: 3, layout: 'grid-3x3' };
+      case 10: case 11: case 12: return { cols: 4, rows: 3, layout: 'grid-4x3' };
+      case 13: case 14: case 15: case 16: return { cols: 4, rows: 4, layout: 'grid-4x4' };
+      case 17: case 18: case 19: case 20: return { cols: 5, rows: 4, layout: 'grid-5x4' };
+      case 21: case 22: case 23: case 24: case 25: return { cols: 5, rows: 5, layout: 'grid-5x5' };
+      default: return { cols: 6, rows: 6, layout: 'grid-6x6' };
     }
+  }
+
+  function _getVideoBudgetUids(participants) {
+    var budget = (window.isMobile || (typeof window.innerWidth === 'number' && window.innerWidth < 768))
+      ? (window.GROUP_CALL_VIDEO_RENDER_BUDGET_MOBILE || 6)
+      : (window.GROUP_CALL_VIDEO_RENDER_BUDGET || 9);
+    if (!participants || participants.length <= budget) {
+      return new Set(participants.map(function (p) { return p.uid; }));
+    }
+    var myUid = GC._myUid;
+    var result = [myUid];
+    var withVideo = participants
+      .filter(function (p) { return p.uid !== myUid && GC._participantVideoState.get(p.uid) !== true && GC._participantStreams.has(p.uid); })
+      .sort(function (a, b) {
+        var la = GC._audioLevelCache.get(a.uid) || 0;
+        var lb = GC._audioLevelCache.get(b.uid) || 0;
+        return lb - la;
+      });
+    withVideo.forEach(function (p) {
+      if (result.length < budget) result.push(p.uid);
+    });
+    if (GC._screenShareUserId && result.indexOf(GC._screenShareUserId) === -1) result.push(GC._screenShareUserId);
+    return new Set(result);
   }
 
   function _getParticipantTile(uid, name, avatar, isMuted, isVideoOff, isSpeaking, isReconnecting, isScreenSharing, stream) {
@@ -73,13 +100,18 @@
     var ssUserId = GC._screenShareUserId;
     var hasSS = !!ssUserId && participants.some(function (p) { return p.uid === ssUserId; });
     var grid = _getGridLayout(count, hasSS);
+    var videoBudget = _getVideoBudgetUids(participants);
+    var budgetedStream = function (p) {
+      var s = GC._participantStreams.get(p.uid);
+      return videoBudget.has(p.uid) ? s : null;
+    };
 
     if (count === 0) {
       container.innerHTML = '<div class="w-full h-full flex flex-col items-center justify-center text-white/50">' +
         '<span class="material-symbols-outlined text-5xl mb-3">group</span>' +
         '<p class="text-sm font-medium">Waiting for participants…</p>' +
         '</div>';
-      container.className = 'w-full h-full';
+      container.className = 'w-full flex-1 min-h-0';
       return;
     }
 
@@ -96,7 +128,7 @@
 
       var stripHtml = '<div class="flex gap-1.5 p-1.5 overflow-x-auto">' +
         stripParticipants.map(function (p) {
-          var s = GC._participantStreams.get(p.uid);
+          var s = budgetedStream(p);
           var m = GC._participantMuteState.get(p.uid);
           var v = GC._participantVideoState.get(p.uid);
           var spk = GC._lastSpeakerUid === p.uid;
@@ -118,7 +150,7 @@
       var spkHtml = '<div class="flex-1 min-h-0 p-1">' + _getParticipantTile(speaker.uid, speaker.name, speaker.avatar, spkMuted, spkVidOff, true, !!GC._reconnectAttempts[speaker.uid], false, spkStream) + '</div>';
       var stripHtml2 = '<div class="flex gap-1.5 p-1.5 overflow-x-auto" style="max-height:120px">' +
         others.map(function (p) {
-          var s = GC._participantStreams.get(p.uid);
+          var s = budgetedStream(p);
           var m = GC._participantMuteState.get(p.uid);
           var v = GC._participantVideoState.get(p.uid);
           return '<div class="flex-shrink-0 w-20 h-28">' + _getParticipantTile(p.uid, p.name, p.avatar, m, v, false, !!GC._reconnectAttempts[p.uid], false, s) + '</div>';
@@ -129,7 +161,7 @@
     } else {
       var _total = count;
       var gridHtml = participants.map(function (p) {
-        var s = GC._participantStreams.get(p.uid);
+        var s = budgetedStream(p);
         var m = GC._participantMuteState.get(p.uid);
         var v = GC._participantVideoState.get(p.uid);
         var spk = GC._lastSpeakerUid === p.uid;
@@ -138,7 +170,7 @@
 
       if (grid.layout === 'speaker-plus-two' && count === 3) {
         var tiles = participants.map(function (p, i) {
-          var s = GC._participantStreams.get(p.uid);
+          var s = budgetedStream(p);
           var m = GC._participantMuteState.get(p.uid);
           var v = GC._participantVideoState.get(p.uid);
           var spk = GC._lastSpeakerUid === p.uid;
@@ -150,7 +182,7 @@
         var gridCols = 'grid-cols-' + grid.cols;
         container.innerHTML = '<div class="grid ' + gridCols + ' gap-1 h-full p-1">' + gridHtml + '</div>';
       }
-      container.className = 'w-full h-full';
+      container.className = 'w-full flex-1 min-h-0';
     }
 
     _bindTileInteractions();
@@ -159,8 +191,10 @@
 
   function _attachParticipantStreams() {
     var vids = document.querySelectorAll('[data-gc-video]');
+    var budget = _getVideoBudgetUids(window.activeGroupCallParticipants || []);
     vids.forEach(function (vidEl) {
       var uid = vidEl.getAttribute('data-gc-video');
+      if (budget && !budget.has(uid)) return;
       var stream = GC._participantStreams.get(uid);
       if (stream && vidEl.srcObject !== stream) {
         vidEl.srcObject = stream;
@@ -249,7 +283,7 @@
     if (existing) { GC._gridContainer = existing; return GC._gridContainer; }
     var div = document.createElement('div');
     div.id = 'gc-grid';
-    div.className = 'w-full h-full';
+    div.className = 'w-full flex-1 min-h-0';
     var callContent = cs.querySelector('.relative') || cs;
     callContent.appendChild(div);
     GC._gridContainer = div;
@@ -325,7 +359,7 @@
     try {
       _speakerAudioContext = new (window.AudioContext || window.webkitAudioContext)();
     } catch (_) {}
-    GC._speakerCheckInterval = setInterval(async function () {
+    var _speakerTick = async function () {
       if (!GC._isInGroupCall()) return;
       var maxLevel = 0;
       var maxUid = null;
@@ -381,7 +415,10 @@
         GC._lastSpeakerUid = null;
         _renderGrid();
       }
-    }, 500);
+      if (!GC._isInGroupCall()) return;
+      GC._speakerCheckInterval = setTimeout(_speakerTick, Math.max(500, Math.min(1500, 300 * ((window.activeGroupCallParticipants || []).length || 1))));
+    };
+    GC._speakerCheckInterval = setTimeout(_speakerTick, 500);
   }
 
   function _stopSpeakerDetection() {
@@ -413,6 +450,10 @@
     }
     _renderGrid();
     _updateParticipantCountBadge();
+    var gridEl = GC._$('gc-grid');
+    var hasTiles = gridEl && gridEl.querySelector('[data-gc-uid]');
+    var infoSec = GC._$('call-info-section');
+    if (infoSec) infoSec.classList.toggle('hidden', !!hasTiles);
   }
 
   function _addParticipantCountBadge() {

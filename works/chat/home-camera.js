@@ -392,6 +392,9 @@
         _toast('Storage not available', 'error');
         return;
       }
+      var visibility = (typeof window.computeStatusVisibleTo === 'function')
+        ? window.computeStatusVisibleTo()
+        : { visibleTo: ['*'], privacyMode: 'everyone' };
       var statusData = {
         userId: window.currentUser.uid,
         userName: window.currentUser.displayName || 'Me',
@@ -400,9 +403,14 @@
         content: url,
         createdAt: Date.now(),
         expiresAt: Date.now() + 86400000,
+        visibleTo: visibility.visibleTo || ['*'],
+        privacyMode: visibility.privacyMode || 'everyone'
       };
       var firestore = (window.App && window.App.db) ? window.App.db : (typeof firebase !== 'undefined' ? firebase.firestore() : null);
       if (firestore) {
+        if (window.Status && typeof window.Status.syncContacts === 'function') {
+          try { await window.Status.syncContacts(); } catch (_) {}
+        }
         await firestore.collection('statuses').add(statusData);
       }
       _toast('Added to status!', 'success');

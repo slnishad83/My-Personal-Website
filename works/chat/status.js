@@ -5,7 +5,7 @@
   var _statusCache = new Map();
   var _userStatusMap = new Map();
   var _seenSet = new Set();
-  var _privacySetting = 'everyone';
+  var _privacySetting = { mode: 'everyone', exceptUids: [], shareWithUids: [] };
   var _loadAttempted = false;
   var MAX_SEEN_SIZE = 500;
 
@@ -24,6 +24,102 @@
   function _now() { return Date.now(); }
   function _expiresAt() { return _now() + STATUS_DURATION_MS; }
   function _isExpired(s) { return s && s.expiresAt && s.expiresAt < _now(); }
+
+  function _getChatContacts() {
+    var uid = _uid();
+    var out = [];
+    try {
+      var State = (typeof window.getCurrentChatState === 'function') ? window.getCurrentChatState() : null;
+      var chats = (State && Array.isArray(State.chats)) ? State.chats : (window.App && Array.isArray(window.App.chats) ? window.App.chats : []);
+      chats.forEach(function (c) {
+        if (!c || c.type !== 'direct') return;
+        var other = c.otherUserId || c.uid;
+        if (!other || other === uid) return;
+        if (out.some(function (o) { return o.uid === other; })) return;
+        out.push({
+          uid: other,
+          name: c.name || c.displayName || 'User',
+          photoURL: c.photoURL || c.avatar || ''
+        });
+      });
+    } catch (_) {}
+    return out;
+  }
+
+  function _getContactUids() {
+    return _getChatContacts().map(function (c) { return c.uid; });
+  }
+
+  async function _syncUserContacts() {
+    var d = _db();
+    var uid = _uid();
+    if (!d || !uid) return;
+    var contacts = {};
+    _getContactUids().forEach(function (u) { contacts[u] = _now(); });
+    try {
+      await d.collection('userContacts').doc(uid).set({
+        contacts: contacts,
+        syncedAt: _now()
+      }, { merge: true });
+    } catch (e) {
+      if (window.__DEBUG__) console.warn('[Status] Sync contacts error:', e);
+    }
+  }
+
+  function _normalizePrivacy(p) {
+    if (!p || typeof p === 'string') {
+      var str = p || 'everyone';
+      var mode = 'everyone';
+      if (str === 'nobody') mode = 'only_share';
+      else if (str === 'contacts' || str === 'everyone' || str === 'contacts_except' || str === 'only_share') mode = str;
+      return { mode: mode, exceptUids: [], shareWithUids: [] };
+    }
+    var m = p.mode || 'everyone';
+    if (m !== 'contacts_except' && m !== 'only_share' && m !== 'contacts' && m !== 'everyone') m = 'everyone';
+    return {
+      mode: m,
+      exceptUids: Array.isArray(p.exceptUids) ? p.exceptUids.slice(0, 2000) : [],
+      shareWithUids: Array.isArray(p.shareWithUids) ? p.shareWithUids.slice(0, 2000) : []
+    };
+  }
+
+  function _privacyLabel(p) {
+    var n = _normalizePrivacy(p);
+    if (n.mode === 'contacts') return 'My Contacts';
+    if (n.mode === 'contacts_except') return n.exceptUids.length ? 'My Contacts Except ' + n.exceptUids.length : 'My Contacts Except...';
+    if (n.mode === 'only_share') return n.shareWithUids.length ? 'Only Share With ' + n.shareWithUids.length : 'Only Share With...';
+    return 'Everyone';
+  }
+
+  function _computeVisibleTo() {
+    var uid = _uid();
+    var priv = _normalizePrivacy(_privacySetting);
+    var mine = uid ? [uid] : [];
+    var all, vis;
+    if (priv.mode === 'everyone') {
+      vis = ['*'].concat(mine);
+    } else if (priv.mode === 'contacts') {
+      all = mine.concat(_getContactUids());
+      vis = all;
+    } else if (priv.mode === 'contacts_except') {
+      var excluded = priv.exceptUids || [];
+      vis = mine.concat(_getContactUids().filter(function (c) { return excluded.indexOf(c) < 0; }));
+    } else if (priv.mode === 'only_share') {
+      vis = mine.concat((priv.shareWithUids || []).filter(function (c) { return c !== uid; }));
+    } else {
+      vis = ['*'].concat(mine);
+    }
+    var unique = Array.from(new Set(vis.filter(Boolean)));
+    return { visibleTo: unique, privacyMode: priv.mode };
+  }
+
+  function _isVisibleToMe(s) {
+    if (!s) return false;
+    var uid = _uid();
+    if (s.userId === uid) return true;
+    if (!Array.isArray(s.visibleTo)) return false;
+    return s.visibleTo.indexOf('*') >= 0 || (uid != null && s.visibleTo.indexOf(uid) >= 0);
+  }
 
   function _trimSeenSet() {
     if (_seenSet.size <= MAX_SEEN_SIZE) return;
@@ -99,6 +195,7 @@
     var d = _db();
     var uid = _uid();
     if (!d || !uid) { _toast('Not authenticated', 'error'); return null; }
+    var visibility = _computeVisibleTo();
     var statusData = {
       userId: uid,
       type: 'text',
@@ -109,9 +206,12 @@
       createdAt: _now(),
       expiresAt: _expiresAt(),
       seenBy: [],
-      replies: []
+      replies: [],
+      visibleTo: visibility.visibleTo,
+      privacyMode: visibility.privacyMode
     };
     try {
+      await _syncUserContacts();
       var ref = await d.collection('statuses').add(statusData);
       statusData.id = ref.id;
       _storeStatus(statusData);
@@ -130,6 +230,7 @@
     var d = _db();
     var uid = _uid();
     if (!d || !uid) { _toast('Not authenticated', 'error'); return null; }
+    var visibility = _computeVisibleTo();
     var statusData = {
       userId: uid,
       type: 'image',
@@ -140,9 +241,12 @@
       createdAt: _now(),
       expiresAt: _expiresAt(),
       seenBy: [],
-      replies: []
+      replies: [],
+      visibleTo: visibility.visibleTo,
+      privacyMode: visibility.privacyMode
     };
     try {
+      await _syncUserContacts();
       var ref = await d.collection('statuses').add(statusData);
       statusData.id = ref.id;
       _storeStatus(statusData);
@@ -161,6 +265,7 @@
     var d = _db();
     var uid = _uid();
     if (!d || !uid) { _toast('Not authenticated', 'error'); return null; }
+    var visibility = _computeVisibleTo();
     var statusData = {
       userId: uid,
       type: 'video',
@@ -171,9 +276,12 @@
       createdAt: _now(),
       expiresAt: _expiresAt(),
       seenBy: [],
-      replies: []
+      replies: [],
+      visibleTo: visibility.visibleTo,
+      privacyMode: visibility.privacyMode
     };
     try {
+      await _syncUserContacts();
       var ref = await d.collection('statuses').add(statusData);
       statusData.id = ref.id;
       _storeStatus(statusData);
@@ -194,6 +302,7 @@
     var d = _db();
     var uid = _uid();
     if (!d || !uid) { _toast('Not authenticated', 'error'); return null; }
+    var visibility = _computeVisibleTo();
     var statusData = {
       userId: uid,
       type: 'link',
@@ -204,9 +313,12 @@
       createdAt: _now(),
       expiresAt: _expiresAt(),
       seenBy: [],
-      replies: []
+      replies: [],
+      visibleTo: visibility.visibleTo,
+      privacyMode: visibility.privacyMode
     };
     try {
+      await _syncUserContacts();
       var ref = await d.collection('statuses').add(statusData);
       statusData.id = ref.id;
       _storeStatus(statusData);
@@ -240,11 +352,12 @@
   async function loadStatuses() {
     var d = _db();
     var uid = _uid();
-    if (!d) return;
+    if (!d || !uid) return [];
     var now = _now();
     var _cutoff = now - STATUS_DURATION_MS;
     try {
       var snap = await d.collection('statuses')
+        .where('visibleTo', 'array-contains-any', [uid, '*'])
         .where('expiresAt', '>', now)
         .orderBy('expiresAt', 'asc')
         .limit(200)
@@ -285,6 +398,7 @@
     }
     var now = _now();
     window.statusesUnsubscribe = d.collection('statuses')
+      .where('visibleTo', 'array-contains-any', [uid, '*'])
       .where('expiresAt', '>', now)
       .orderBy('expiresAt', 'asc')
       .onSnapshot(function (snap) {
@@ -445,18 +559,35 @@
   async function getStatusPrivacy() {
     var d = _db();
     var uid = _uid();
-    if (!d || !uid) return 'everyone';
+    if (!d || !uid) return _normalizePrivacy(_privacySetting);
     try {
-      var doc = await d.collection('users').doc(uid).collection('settings').doc('statusPrivacy').get();
-      if (doc.exists) {
-        _privacySetting = doc.data().value || 'everyone';
+      var doc = await d.collection('userSettings').doc(uid).get();
+      if (doc.exists && doc.data().statusPrivacy) {
+        _privacySetting = _normalizePrivacy(doc.data().statusPrivacy);
+        return _privacySetting;
       }
     } catch (_) {}
-    return _privacySetting;
+    try {
+      var legacy = await d.collection('users').doc(uid).collection('settings').doc('statusPrivacy').get();
+      if (legacy.exists && legacy.data().value) {
+        _privacySetting = _normalizePrivacy(legacy.data().value);
+        return _privacySetting;
+      }
+    } catch (_) {}
+    return _normalizePrivacy(_privacySetting);
   }
 
-  async function setStatusPrivacy(setting) {
-    if (setting !== 'everyone' && setting !== 'contacts' && setting !== 'nobody') {
+  async function setStatusPrivacy(setting, uids) {
+    var normalized;
+    if (setting && typeof setting === 'object' && typeof setting.mode === 'string') {
+      normalized = _normalizePrivacy(setting);
+    } else if (typeof setting === 'string') {
+      normalized = _normalizePrivacy(setting);
+      if (Array.isArray(uids)) {
+        if (normalized.mode === 'contacts_except') normalized.exceptUids = uids.slice(0, 2000);
+        else if (normalized.mode === 'only_share') normalized.shareWithUids = uids.slice(0, 2000);
+      }
+    } else {
       _toast('Invalid privacy setting', 'error');
       return;
     }
@@ -464,12 +595,16 @@
     var uid = _uid();
     if (!d || !uid) { _toast('Not authenticated', 'error'); return; }
     try {
-      await d.collection('users').doc(uid).collection('settings').doc('statusPrivacy').set({
-        value: setting,
+      await d.collection('userSettings').doc(uid).set({
+        statusPrivacy: normalized,
         updatedAt: _now()
-      });
-      _privacySetting = setting;
-      _toast('Status privacy updated to ' + setting, 'success');
+      }, { merge: true });
+      _privacySetting = normalized;
+      if (window.PrivacyControls && typeof window.PrivacyControls.set === 'function') {
+        try { window.PrivacyControls.set('status', normalized.mode); } catch (_) {}
+      }
+      _toast('Status privacy updated', 'success');
+      renderStatusRow();
     } catch (e) {
       if (window.__DEBUG__) console.error('[Status] Privacy error:', e);
       _toast('Failed to update privacy', 'error');
@@ -518,7 +653,7 @@
     var otherUsers = [];
     _userStatusMap.forEach(function (statuses, userId) {
       if (userId === uid) return;
-      var valid = statuses.filter(function (s) { return !_isExpired(s); });
+      var valid = statuses.filter(function (s) { return !_isExpired(s) && _isVisibleToMe(s); });
       if (valid.length > 0) {
         var latest = valid[valid.length - 1];
         var hasUnseen = valid.some(function (s) { return !_seenSet.has(s.id); });
@@ -734,7 +869,7 @@
 
     getStatusPrivacy().then(function (p) {
       var label = document.getElementById('sc-privacy-label');
-      if (label) label.textContent = p === 'everyone' ? 'Everyone' : p === 'contacts' ? 'Contacts Only' : 'Nobody';
+      if (label) label.textContent = _privacyLabel(p);
     });
 
     window._scCurrentBg = bgPresets[0];
@@ -840,20 +975,22 @@
     };
 
     window._scOpenPrivacy = function () {
-      var current = _privacySetting;
+      var current = _normalizePrivacy(_privacySetting);
       var options = [
-        { value: 'everyone', label: 'Everyone', icon: 'public' },
-        { value: 'contacts', label: 'My Contacts', icon: 'contacts' },
-        { value: 'nobody', label: 'Nobody', icon: 'lock' }
+        { value: 'everyone', label: 'Everyone', icon: 'public', picker: false },
+        { value: 'contacts', label: 'My Contacts', icon: 'contacts', picker: false },
+        { value: 'contacts_except', label: 'My Contacts Except...', icon: 'person_off', picker: true },
+        { value: 'only_share', label: 'Only Share With...', icon: 'lock_person', picker: true }
       ];
       var popup = document.createElement('div');
+      popup.id = 'status-privacy-popup';
       popup.className = 'fixed inset-0 z-[9001] bg-black/60 flex items-center justify-center';
-      popup.onclick = function (e) { if (e.target === popup) popup.remove(); };
-      var inner = '<div class="bg-surface-container rounded-2xl w-72 p-1 shadow-xl">';
+      popup.onclick = function (e) { if (e.target === popup) { popup.remove(); window._scPrivacyPopup = null; } };
+      var inner = '<div class="bg-surface-container rounded-2xl w-80 p-1 shadow-xl">';
       inner += '<p class="px-4 py-3 text-sm font-bold text-on-surface border-b border-outline-variant/10">Who can see my status?</p>';
       options.forEach(function (opt) {
-        var checked = current === opt.value;
-        inner += '<button class="w-full flex items-center gap-3 px-4 py-3 hover:bg-surface-variant/20 transition-colors ' + (checked ? 'text-primary' : 'text-on-surface') + '" onclick="window._scSetPrivacy(\'' + opt.value + '\');this.closest(\'.fixed\').remove()">' +
+        var checked = current.mode === opt.value;
+        inner += '<button class="w-full flex items-center gap-3 px-4 py-3 hover:bg-surface-variant/20 transition-colors ' + (checked ? 'text-primary' : 'text-on-surface') + '" onclick="window._scSetPrivacy(this, \'' + opt.value + '\', ' + (opt.picker ? 'true' : 'false') + ')">' +
           '<span class="material-symbols-outlined" style="font-size:20px">' + opt.icon + '</span>' +
           '<span class="text-sm font-medium">' + opt.label + '</span>' +
           (checked ? '<span class="material-symbols-outlined ml-auto" style="font-size:18px">check</span>' : '') +
@@ -862,12 +999,25 @@
       inner += '</div>';
       popup.innerHTML = inner;
       document.body.appendChild(popup);
+      window._scPrivacyPopup = popup;
     };
 
-    window._scSetPrivacy = async function (val) {
-      await setStatusPrivacy(val);
+    window._scSetPrivacy = async function (el, val, isPicker) {
+      var popup = window._scPrivacyPopup;
+      if (isPicker) {
+        var current = _normalizePrivacy(_privacySetting);
+        var preselected = val === 'contacts_except' ? current.exceptUids : current.shareWithUids;
+        if (popup) { popup.remove(); window._scPrivacyPopup = null; }
+        var picked = await _statusPickContacts(val, preselected);
+        if (picked && picked.uids) {
+          await setStatusPrivacy(val, picked.uids);
+        }
+      } else {
+        if (popup) { popup.remove(); window._scPrivacyPopup = null; }
+        await setStatusPrivacy(val);
+      }
       var label = document.getElementById('sc-privacy-label');
-      if (label) label.textContent = val === 'everyone' ? 'Everyone' : val === 'contacts' ? 'Contacts Only' : 'Nobody';
+      if (label) label.textContent = _privacyLabel(_privacySetting);
     };
 
     var textInput = document.getElementById('sc-text-input');
@@ -877,6 +1027,10 @@
   function closeStatusComposer() {
     var overlay = document.getElementById('status-composer-overlay');
     if (overlay) overlay.remove();
+    var popup = document.getElementById('status-privacy-popup');
+    if (popup) popup.remove();
+    var pickOverlay = document.getElementById('status-contacts-overlay');
+    if (pickOverlay) pickOverlay.remove();
     delete window._scSwitchTab;
     delete window._scUpdateTextBg;
     delete window._scUpdateLink;
@@ -888,6 +1042,91 @@
     delete window._scCurrentBg;
     delete window._scSelectedFile;
     delete window._scSelectedType;
+    delete window._scPrivacyPopup;
+  }
+
+  function _statusPickContacts(mode, preselected) {
+    var contacts = _getChatContacts();
+    var selected = new Set(Array.isArray(preselected) ? preselected : []);
+    return new Promise(function (resolve) {
+      var overlay = document.createElement('div');
+      overlay.id = 'status-contacts-overlay';
+      overlay.className = 'fixed inset-0 z-[9002] bg-black/80 flex items-end md:items-center justify-center animate-fade-in';
+      overlay.onclick = function (e) { if (e.target === overlay) { overlay.remove(); resolve(null); } };
+
+      var title = mode === 'contacts_except' ? 'Choose contacts to EXCLUDE' : 'Choose who can see your status';
+      var html = '<div class="bg-surface-container rounded-t-3xl md:rounded-3xl w-full max-w-lg max-h-[90vh] overflow-hidden flex flex-col animate-slide-up" onclick="event.stopPropagation()">' +
+        '<div class="flex items-center justify-between px-5 py-4 border-b border-outline-variant/10">' +
+        '<h3 class="font-bold text-on-surface text-base">' + title + '</h3>' +
+        '<button class="p-1.5 rounded-full hover:bg-surface-variant/30 text-on-surface-variant transition-colors" data-sc-pick-cancel aria-label="Close"><span class="material-symbols-outlined" style="font-size:22px">close</span></button>' +
+        '</div>' +
+        '<div class="px-5 pt-3">' +
+        '<input id="sc-contact-search" class="w-full bg-surface-container-highest rounded-xl py-2.5 px-4 text-on-surface text-sm border-none outline-none focus:ring-1 focus:ring-primary" placeholder="Search contacts..." maxlength="100">' +
+        '</div>' +
+        '<div class="flex-1 overflow-y-auto p-3 space-y-1" id="sc-contact-list"></div>' +
+        '<div class="px-5 py-4 border-t border-outline-variant/10">' +
+        '<div class="flex items-center justify-between mb-3">' +
+        '<span class="text-xs text-on-surface-variant" id="sc-contact-count"></span>' +
+        '</div>' +
+        '<button id="sc-contact-done" class="w-full py-3 rounded-2xl bg-primary text-on-primary font-bold text-sm hover:brightness-110 transition-all">Done</button>' +
+        '</div>' +
+        '</div>';
+      overlay.innerHTML = html;
+      document.body.appendChild(overlay);
+
+      var listEl = overlay.querySelector('#sc-contact-list');
+      var searchEl = overlay.querySelector('#sc-contact-search');
+      var countEl = overlay.querySelector('#sc-contact-count');
+      var doneBtn = overlay.querySelector('#sc-contact-done');
+
+      function updateCount() {
+        if (countEl) countEl.textContent = selected.size + ' selected';
+      }
+
+      function renderList() {
+        var q = (searchEl.value || '').trim().toLowerCase();
+        listEl.innerHTML = '';
+        var shown = 0;
+        contacts.forEach(function (c) {
+          if (q && (c.name || '').toLowerCase().indexOf(q) < 0 && c.uid.toLowerCase().indexOf(q) < 0) return;
+          shown++;
+          var isSel = selected.has(c.uid);
+          var row = document.createElement('button');
+          row.type = 'button';
+          row.className = 'w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-surface-variant/20 transition-colors text-left';
+          row.innerHTML =
+            '<div class="w-10 h-10 rounded-full bg-surface-container-highest flex items-center justify-center overflow-hidden flex-shrink-0">' +
+            (c.photoURL ? '<img src="' + _esc(c.photoURL) + '" class="w-full h-full object-cover" alt="">' : '<span class="material-symbols-outlined text-on-surface-variant text-lg">person</span>') +
+            '</div>' +
+            '<div class="flex-1 min-w-0">' +
+            '<p class="text-sm text-on-surface font-medium truncate">' + _esc(c.name || 'User') + '</p>' +
+            '</div>' +
+            '<div class="w-6 h-6 rounded-full border-2 flex-shrink-0 flex items-center justify-center ' + (isSel ? 'bg-primary border-primary' : 'border-outline-variant') + '">' +
+            (isSel ? '<span class="material-symbols-outlined text-on-primary" style="font-size:14px">check</span>' : '') +
+            '</div>';
+          row.onclick = function () {
+            if (selected.has(c.uid)) selected.delete(c.uid); else selected.add(c.uid);
+            renderList();
+            updateCount();
+          };
+          listEl.appendChild(row);
+        });
+        if (shown === 0) {
+          listEl.innerHTML = '<p class="text-sm text-on-surface-variant/60 text-center py-8">No contacts found' + (contacts.length === 0 ? '. Start a chat to add contacts.' : '') + '</p>';
+        }
+      }
+
+      searchEl.addEventListener('input', renderList);
+      overlay.querySelector('[data-sc-pick-cancel]').onclick = function () { overlay.remove(); resolve(null); };
+      doneBtn.onclick = function () {
+        overlay.remove();
+        resolve({ mode: mode, uids: Array.from(selected) });
+      };
+
+      renderList();
+      updateCount();
+      setTimeout(function () { searchEl.focus(); }, 200);
+    });
   }
 
   function createStatusReminder() {
@@ -913,6 +1152,9 @@
     _loadAttempted = true;
     _loadSeenFromStorage();
     createStatusReminder();
+    window.addEventListener('nsl:chats-loaded', function () {
+      _syncUserContacts();
+    });
     if (typeof window._statusInitStarted !== 'undefined') return;
     window._statusInitStarted = true;
     var checkAuth = setInterval(function () {
@@ -921,6 +1163,7 @@
         clearInterval(checkAuth);
         loadStatuses().then(function () {
           _startStatusListener();
+          _syncUserContacts();
         });
       }
     }, 1000);
@@ -950,6 +1193,25 @@
   window._statusDataCache = _statusCache;
   window._statusUserMap = _userStatusMap;
   window._statusSeenSet = _seenSet;
+  window.computeStatusVisibleTo = _computeVisibleTo;
+  window._statusPickContacts = _statusPickContacts;
+  window.Status = {
+    getStatusPrivacy: getStatusPrivacy,
+    setStatusPrivacy: setStatusPrivacy,
+    syncContacts: _syncUserContacts,
+    createTextStatus: createTextStatus,
+    createImageStatus: createImageStatus,
+    createVideoStatus: createVideoStatus,
+    createLinkStatus: createLinkStatus,
+    uploadStatusMedia: uploadStatusMedia,
+    deleteStatus: deleteStatus,
+    replyToStatus: replyToStatus,
+    viewStatus: viewStatus,
+    viewUserStatuses: viewUserStatuses,
+    loadStatuses: loadStatuses,
+    getUnseenStatusCount: getUnseenStatusCount,
+    markStatusSeen: markStatusSeen
+  };
 
   window.addEventListener('beforeunload', function () {
     _clearStatusIntervals();

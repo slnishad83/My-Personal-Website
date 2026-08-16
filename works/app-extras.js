@@ -467,13 +467,21 @@ let _ctxMenu = null;
 
 function _execAction(actionStr) {
   try {
-    const match = actionStr.match(/^(\w+)\((?:'([^']*)'|"([^"]*)")?\)$/);
+    const match = actionStr.match(/^(\w+)\(([^)]*)\)$/);
     if (match) {
       const fnName = match[1];
-      const rawArg = match[2] || match[3] || '';
-      const arg = rawArg.replace(/\\'/g, "'").replace(/\\"/g, '"');
+      const argStr = (match[2] || '').trim();
+      const args = [];
+      if (argStr) {
+        const re = /'((?:[^'\\]|\\.)*)'|"((?:[^"\\]|\\.)*)"|(\d+)|true|false/g;
+        let m;
+        while ((m = re.exec(argStr))) {
+          const val = m[1] || m[2] || m[3] || m[0];
+          args.push(/^true$/.test(val) ? true : /^false$/.test(val) ? false : val.replace(/\\'/g, "'").replace(/\\"/g, '"'));
+        }
+      }
       if (typeof window[fnName] === 'function') {
-        window[fnName](arg);
+        window[fnName].apply(null, args);
         return;
       }
     }
@@ -542,6 +550,8 @@ function showMsgContextMenu(event, msgId) {
 
   const isPinned = (App.currentChatPinnedMessages || []).some(p => p.messageId === msgId);
   const canEdit = isMyMsg && (Date.now() - (msg.time || 0)) < 15 * 60 * 1000;
+  const isEphemeralChat = !!((App.currentChat && App.currentChat.ephemeralTimer) || 0);
+  const isKept = msg.kept === true || msg.keepInChat === true;
   const actions = [
     { icon: '↩️', label: 'Reply',   fn: `replyToMsg('${msgId}')` },
     { icon: '🧵', label: 'Thread',  fn: `_openThreadForMsg('${msgId}')` },
@@ -550,6 +560,7 @@ function showMsgContextMenu(event, msgId) {
     { icon: '📋', label: 'Copy',    fn: `copyMsgText('${msgId}')` },
     { icon: '📌', label: isPinned ? 'Unpin message' : 'Pin message', fn: isPinned ? `unpinMessageByMsgId('${msgId}')` : `pinMessage('${msgId}')` },
     { icon: '⭐', label: 'Star',    fn: `starMessage('${msgId}')` },
+    { icon: '📌', label: isKept ? 'Keep in chat (on)' : 'Keep in chat', fn: `toggleKeepInChat('${chatId}','${msgId}',${isKept ? 'false' : 'true'})`, show: isEphemeralChat },
     { icon: 'ℹ️', label: 'Info',    fn: `openMsgInfo('${msgId}')` },
     { icon: '🗑️', label: 'Delete',  fn: `openDeleteMenu('${msgId}')`, danger: true },
   ];

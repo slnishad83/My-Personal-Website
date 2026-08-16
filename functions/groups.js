@@ -126,6 +126,121 @@ async function canAddToGroup(adderUid, targetUid) {
 }
 
 /* ══════════════════════════════════════════════════════════════
+   1b. createGroup — WhatsApp-style group creation
+   Creates the groups/{id} doc + member subdocs, respecting each
+   target user's "who can add me to groups" privacy setting.
+   ══════════════════════════════════════════════════════════════ */
+exports.createGroup = onCall(
+  { region: 'us-central1' },
+  async (request) => {
+    const uid = validateAuth(request);
+    const { name, description, memberIds } = request.data || {};
+
+    if (!name || typeof name !== 'string' || !name.trim()) {
+      throw new HttpsError('invalid-argument', 'Group name is required.');
+    }
+    const cleanName = name.trim().slice(0, 100);
+    const cleanDesc = typeof description === 'string' ? description.trim().slice(0, 250) : '';
+
+    const userIds = Array.isArray(memberIds) ? memberIds : [];
+    const memberSet = new Set(userIds.filter((u) => typeof u === 'string' && u !== uid && u.length > 0));
+    if (memberSet.size === 0) {
+      throw new HttpsError('invalid-argument', 'Select at least one participant.');
+    }
+
+    // Fetch creator + target profiles in one pass
+    const profilePromises = [uid, ...memberSet].map((id) =>
+      db().collection('users').doc(id).get().catch(() => null)
+    );
+    const snaps = await Promise.all(profilePromises);
+    const profiles = new Map();
+    snaps.forEach((snap, i) => {
+      const id = [uid, ...memberSet][i];
+      if (snap && snap.exists) {
+        const d = snap.data();
+        profiles.set(id, {
+          name: d.displayName || d.name || (id === uid ? 'Admin' : 'Member'),
+          photo: d.photoURL || '',
+        });
+      }
+    });
+    const creator = profiles.get(uid) || { name: 'Admin', photo: '' };
+
+    const groupId = db().collection('groups').doc().id;
+    const groupRef = db().collection('groups').doc(groupId);
+    const membersRef = db().collection('groups').doc(groupId).collection('members');
+    const batch = db().batch();
+
+    const allMemberIds = [uid, ...memberSet];
+    batch.set(groupRef, {
+      id: groupId,
+      name: cleanName,
+      description: cleanDesc,
+      type: 'group',
+      createdBy: uid,
+      ownerId: uid,
+      adminIds: [uid],
+      admins: [uid],
+      memberIds: allMemberIds,
+      members: allMemberIds,
+      memberCount: allMemberIds.length,
+      photoURL: '',
+      avatar: '',
+      isPublic: false,
+      announcementOnly: false,
+      ephemeralTimer: null,
+      lastMessage: '',
+      lastMessageText: '',
+      lastMessageAt: null,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+      createdByName: creator.name,
+      createdByPhotoURL: creator.photo,
+      unreadCounts: {},
+    });
+
+    batch.set(membersRef.doc(uid), {
+      uid,
+      displayName: creator.name,
+      photoURL: creator.photo,
+      role: 'admin',
+      addedBy: uid,
+      addedAt: Date.now(),
+    });
+
+    // Respect "who can add me to groups" for each invitee
+    let added = 0;
+    let skipped = [];
+    for (const mUid of memberSet) {
+      const allow = await canAddToGroup(uid, mUid);
+      if (!allow) { skipped.push(mUid); continue; }
+      const p = profiles.get(mUid) || { name: 'Member', photo: '' };
+      batch.set(membersRef.doc(mUid), {
+        uid: mUid,
+        displayName: p.name,
+        photoURL: p.photo,
+        role: 'member',
+        addedBy: uid,
+        addedAt: Date.now(),
+      });
+      added++;
+    }
+
+    if (skipped.length) {
+      const finalIds = allMemberIds.filter((id) => !skipped.includes(id));
+      batch.update(groupRef, {
+        memberIds: finalIds,
+        members: finalIds,
+        memberCount: finalIds.length,
+      });
+    }
+
+    await batch.commit();
+    return { success: true, groupId, added, skipped };
+  }
+);
+
+/* ══════════════════════════════════════════════════════════════
    2. removeGroupMember — Admin or self-removal
    ══════════════════════════════════════════════════════════════ */
 exports.removeGroupMember = onCall(

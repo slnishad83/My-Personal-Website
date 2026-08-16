@@ -134,6 +134,15 @@
         '</button>' +
         (status.caption ? '<div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-4 pb-6"><p class="text-white text-sm text-center">' + _esc(status.caption) + '</p></div>' : '') +
         '</div>';
+    } else if (status.type === 'audio') {
+      content = '<div class="w-full h-full flex items-center justify-center bg-black relative">' +
+        '<div class="w-full max-w-sm rounded-3xl bg-white/10 backdrop-blur-md p-6 text-center border border-white/20">' +
+        '<span class="material-symbols-outlined text-white/80" style="font-size:44px">music_note</span>' +
+        '<p class="text-white text-sm font-medium mt-2">Voice status</p>' +
+        '<audio id="sv-audio" class="w-full mt-4 rounded-xl" src="' + _esc(status.mediaUrl || status.content) + '" controls></audio>' +
+        (status.caption ? '<p class="text-white/70 text-sm mt-3">' + _esc(status.caption) + '</p>' : '') +
+        '</div>' +
+        '</div>';
     } else if (status.type === 'link') {
       content = '<div class="w-full h-full flex items-center justify-center p-8" style="background:' + _esc(status.bgColor || 'linear-gradient(135deg, #0f2027 0%, #203a43 50%, #2c5364 100%)') + ';">' +
         '<div class="w-full max-w-md rounded-2xl bg-white/10 backdrop-blur-sm p-6 text-center border border-white/20">' +
@@ -247,6 +256,22 @@
           _startProgressLoop();
         };
         vid.onerror = function () {
+          _totalDuration = 5000;
+          _startProgressLoop();
+        };
+        return;
+      }
+    }
+    if (status && status.type === 'audio') {
+      var aud = document.getElementById('sv-audio');
+      if (aud) {
+        aud.onloadedmetadata = function () {
+          _totalDuration = (aud.duration || 15) * 1000;
+          _totalDuration = Math.max(_totalDuration, 3000);
+          _totalDuration = Math.min(_totalDuration, 120000);
+          _startProgressLoop();
+        };
+        aud.onerror = function () {
           _totalDuration = 5000;
           _startProgressLoop();
         };

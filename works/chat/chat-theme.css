@@ -738,7 +738,7 @@ html:not(.dark) .wa-filter-custom input {
 }
 
 /* ── Landscape mode on mobile ───────────────────────── */
-@media (max-width: 767px) and (orientation: landscape) {
+@media (orientation: landscape) and (max-height: 500px) and (hover: none) and (pointer: coarse) {
   #chat-area { height: 100vh !important; overflow-x: hidden !important; }
   @supports (height: 100dvh) {
     #chat-area { height: 100dvh !important; }
@@ -1598,8 +1598,9 @@ html #messages-wrap::-webkit-scrollbar-track { background: var(--surface-bright)
    ══════════════════════════════════════════════════════════════ */
 
 /* ── R1: Call bubble safe area ─────────────────────────────── */
+#call-bubble { --bubble-bottom: 24px; }
 @supports (padding-bottom: env(safe-area-inset-bottom)) {
-  #call-bubble { bottom: calc(24px + env(safe-area-inset-bottom)) !important; }
+  #call-bubble { bottom: calc(var(--bubble-bottom, 24px) + env(safe-area-inset-bottom)) !important; }
 }
 
 /* ── R2: Landscape compact tab bar (shown when bottom nav hidden) ── */
@@ -1673,7 +1674,7 @@ html #messages-wrap::-webkit-scrollbar-track { background: var(--surface-bright)
 }
 
 /* ── C1: Call screen landscape on phone ────────────────────── */
-@media (max-width: 767px) and (orientation: landscape) {
+@media (orientation: landscape) and (max-height: 500px) and (hover: none) and (pointer: coarse) {
   #call-screen .flex-1 { padding: 16px 32px !important; }
   #call-screen .w-32 { width: 80px !important; height: 80px !important; font-size: 2rem !important; }
   #call-screen .text-3xl { font-size: 1.5rem !important; }

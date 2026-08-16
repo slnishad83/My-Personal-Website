@@ -7,7 +7,7 @@
 
   GC._GRID_MAX_VOICE = 32;
   GC._GRID_MAX_VIDEO = 8;
-  GC._GRID_MAX = 8;
+  GC._GRID_MAX = 32;
   GC._RECONNECT_INTERVAL_MS = 3000;
   GC._RECONNECT_MAX_ATTEMPTS = 5;
   GC._INVITE_TIMEOUT_MS = 30000;
@@ -56,8 +56,13 @@
     return window.activeGroupCallParticipants ? window.activeGroupCallParticipants.length : 0;
   }
 
+  function _getMaxParticipants() {
+    var cfg = window.GROUP_CALL_MAX_PARTICIPANTS;
+    return (typeof cfg === 'number' && cfg > 0) ? cfg : GC._GRID_MAX;
+  }
+
   function _canAddParticipant() {
-    return _getParticipantCount() < GC._GRID_MAX;
+    return _getParticipantCount() < _getMaxParticipants();
   }
 
   function _getMyDetails() {
@@ -346,8 +351,10 @@
         GC._screenShareUserId = null;
         GC._renderGrid();
       }
+      var maxP = GC._getMaxParticipants();
       incomingParticipants.forEach(function (pUid) {
         if (pUid === GC._myUid) return;
+        if ((window.activeGroupCallParticipants || []).length >= maxP) return;
         var existing = (window.activeGroupCallParticipants || []).find(function (p) { return p.uid === pUid; });
         if (!existing) {
           var details = data.participantDetails && data.participantDetails[pUid];
@@ -507,6 +514,7 @@
   GC._isInGroupCall = _isInGroupCall;
   GC._isCallActive = _isCallActive;
   GC._getParticipantCount = _getParticipantCount;
+  GC._getMaxParticipants = _getMaxParticipants;
   GC._canAddParticipant = _canAddParticipant;
   GC._getMyDetails = _getMyDetails;
   GC._updateFirestoreParticipantState = _updateFirestoreParticipantState;

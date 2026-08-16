@@ -116,14 +116,16 @@
       var dx = pos.x - startX;
       var dy = pos.y - startY;
       if (Math.abs(dx) > 5 || Math.abs(dy) > 5) moved = true;
-      var newTop = Math.max(0, Math.min(window.innerHeight - 50, origTop + dy));
+      var bw = bubble.offsetWidth || 250;
+      var bh = bubble.offsetHeight || 56;
+      var newTop = Math.max(0, Math.min(window.innerHeight - bh, origTop + dy));
       var newSide = origLeft + dx;
       bubble.style.top = newTop + 'px';
       if (isRight) {
-        bubble.style.right = Math.max(0, Math.min(window.innerWidth - 60, newSide)) + 'px';
+        bubble.style.right = Math.max(0, Math.min(window.innerWidth - bw, newSide)) + 'px';
         bubble.style.left = 'auto';
       } else {
-        bubble.style.left = Math.max(0, Math.min(window.innerWidth - 60, newSide)) + 'px';
+        bubble.style.left = Math.max(0, Math.min(window.innerWidth - bw, newSide)) + 'px';
         bubble.style.right = 'auto';
       }
     }
@@ -145,6 +147,7 @@
         bubble.style.left = Math.max(24, rect.left) + 'px';
       }
       bubble.style.bottom = Math.max(24, window.innerHeight - rect.bottom) + 'px';
+      bubble.style.setProperty('--bubble-bottom', Math.max(24, window.innerHeight - rect.bottom) + 'px');
     }
 
     bubble.addEventListener('mousedown', function (e) { if (e.target.closest('button')) return; onStart(e); });
@@ -233,8 +236,10 @@
     function onMove(e) {
       if (!dragging) return; e.preventDefault();
       var pos = getPos(e);
-      lvc.style.left = Math.max(0, Math.min(window.innerWidth - 80, origLeft + (pos.x - startX))) + 'px';
-      lvc.style.top = Math.max(0, Math.min(window.innerHeight - 80, origTop + (pos.y - startY))) + 'px';
+      var lvcW = lvc.offsetWidth || 128;
+      var lvcH = lvc.offsetHeight || 176;
+      lvc.style.left = Math.max(0, Math.min(window.innerWidth - lvcW, origLeft + (pos.x - startX))) + 'px';
+      lvc.style.top = Math.max(0, Math.min(window.innerHeight - lvcH, origTop + (pos.y - startY))) + 'px';
     }
     function onEnd() {
       if (!dragging) return; dragging = false; lvc.style.transition = '';

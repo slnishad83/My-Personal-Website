@@ -1952,6 +1952,7 @@ html.dark .call-history-filters button:hover {
 
 /* ── Footer container ── */
 .wa-input-footer {
+  display: flex;
   align-items: flex-end;
   gap: 8px;
   padding: 6px 10px;
@@ -1960,6 +1961,7 @@ html.dark .call-history-filters button:hover {
   z-index: 10;
   min-height: 56px;
 }
+.wa-input-footer.hidden { display: none !important; }
 
 /* ── Rounded input box (left part) ── */
 .wa-input-box {

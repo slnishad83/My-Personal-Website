@@ -137,6 +137,13 @@
     var callData = callDoc.data();
     if (callData.status === 'ended' || callData.status === 'cancelled') { GC._toast('Call has ended', 'info'); GC._currentCallId = null; return; }
 
+    var existingIds = callData.participantIds || [];
+    if (existingIds.indexOf(GC._myUid) === -1 && existingIds.length >= GC._getMaxParticipants()) {
+      GC._toast('Call is full (' + GC._getMaxParticipants() + ' participants)', 'error');
+      GC._currentCallId = null;
+      return;
+    }
+
     GC._currentCallType = callData.type || 'voice';
     var myDetails = GC._getMyDetails();
     GC._groupCallMeta = {

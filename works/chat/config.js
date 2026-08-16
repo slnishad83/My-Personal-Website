@@ -35,7 +35,9 @@ const APP_CONSTANTS = Object.freeze({
   AVATAR_ALLOWED_MIME_TYPES: ["image/jpeg", "image/png", "image/webp", "image/gif", "image/bmp", "image/heic", "image/heif"],
   AVATAR_FORMAT_HELP_TEXT: "Supported image formats: JPG, JPEG, PNG, WebP, GIF, BMP, HEIC, HEIF. Maximum size: 5 MB.",
   MESSAGE_PAGE_SIZE: 120,
-  GROUP_CALL_MAX_PARTICIPANTS: 8,
+  GROUP_CALL_MAX_PARTICIPANTS: 32,
+  GROUP_CALL_VIDEO_RENDER_BUDGET: 9,
+  GROUP_CALL_VIDEO_RENDER_BUDGET_MOBILE: 6,
   DEFAULT_RTC_CONFIG: {
     iceServers: [
       { urls: "stun:stun.l.google.com:19302" },

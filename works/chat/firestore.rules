@@ -39,6 +39,55 @@ service cloud.firestore {
         && data.participants[0] == request.auth.uid;
     }
 
+    function statusSettingsData(uid) {
+      return exists(/databases/$(database)/documents/userSettings/$(uid))
+        ? get(/databases/$(database)/documents/userSettings/$(uid)).data
+        : {};
+    }
+
+    function statusContactsMap(uid) {
+      let data = exists(/databases/$(database)/documents/userContacts/$(uid))
+        ? get(/databases/$(database)/documents/userContacts/$(uid)).data.contacts
+        : null;
+      return data is map ? data : {};
+    }
+
+    function statusPrivacyData(uid) {
+      let settings = statusSettingsData(uid).statusPrivacy;
+      return settings is map ? settings : {};
+    }
+
+    function statusExceptUids(uid) {
+      let list = statusPrivacyData(uid).exceptUids;
+      return list is list ? list : [];
+    }
+
+    function statusShareUids(uid) {
+      let list = statusPrivacyData(uid).shareWithUids;
+      return list is list ? list : [];
+    }
+
+    function setsEqual(a, b) {
+      return a.size() == b.size() && a.intersection(b).size() == a.size();
+    }
+
+    function isStatusVisibleToValid(uid, visibleTo, privacyMode) {
+      return (visibleTo is list)
+        && (uid in visibleTo)
+        && (
+          privacyMode == 'everyone'
+            ? '*' in visibleTo && visibleTo.toSet().difference([uid].toSet()).size() <= 1
+            : privacyMode == 'contacts'
+              ? statusContactsMap(uid).keys().intersection(visibleTo.toSet().difference([uid].toSet())).size()
+                  == visibleTo.toSet().difference([uid].toSet()).size()
+              : privacyMode == 'contacts_except'
+                ? setsEqual(statusContactsMap(uid).keys().difference(statusExceptUids(uid).toSet()), visibleTo.toSet().difference([uid].toSet()))
+                : privacyMode == 'only_share'
+                  ? setsEqual(statusShareUids(uid).toSet(), visibleTo.toSet().difference([uid].toSet()))
+                  : false
+        );
+    }
+
     function isDirectMessageParticipant(data) {
       return signedIn() && (
         (data.directId is string && isExistingDirectParticipant(data.directId))
@@ -148,6 +197,7 @@ service cloud.firestore {
     // ephemeralTimer has elapsed since the message timestamp (self-destruct delete path).
     function isEphemeralMessageExpired(chatColl, chatId, messageData) {
       return signedIn()
+        && !(messageData.kept == true)
         && exists(/databases/$(database)/documents/$(chatColl)/$(chatId))
         && get(/databases/$(database)/documents/$(chatColl)/$(chatId)).data.ephemeralTimer is int
         && get(/databases/$(database)/documents/$(chatColl)/$(chatId)).data.ephemeralTimer > 0
@@ -196,6 +246,7 @@ service cloud.firestore {
             || request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isPinned', 'pinnedBy', 'pinnedAt'])
             || request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isStarred'])
             || request.resource.data.diff(resource.data).affectedKeys().hasOnly(['expiresAt'])
+            || request.resource.data.diff(resource.data).affectedKeys().hasOnly(['kept', 'keptBy', 'keptAt'])
           )
         )
         ||
@@ -299,6 +350,16 @@ service cloud.firestore {
       match /mutedChats/{chatId} {
         allow read, create, update, delete: if isOwner(userId);
       }
+    }
+
+    // Per-user status privacy settings (statusPrivacy: {mode, exceptUids, shareWithUids})
+    match /userSettings/{uid} {
+      allow read, write: if isOwner(uid);
+    }
+
+    // Per-user contact map (direct chat partners, synced client-side)
+    match /userContacts/{uid} {
+      allow read, write: if isOwner(uid);
     }
 
     // PIN secrets — private per-user, owner only (accessed by Cloud Functions via server SDK)
@@ -791,12 +852,12 @@ service cloud.firestore {
       allow create: if signedIn() && (
         request.resource.data.hostUserId == request.auth.uid
         || request.resource.data.initiatorId == request.auth.uid
-      );
+      ) && (!('participantIds' in request.resource.data) || (request.resource.data.participantIds is list && request.resource.data.participantIds.size() <= 32));
       allow update: if signedIn() && (
         (resource.data.participantIds is list && request.auth.uid in resource.data.participantIds)
         || resource.data.hostUserId == request.auth.uid
         || resource.data.initiatorId == request.auth.uid
-      );
+      ) && (!('participantIds' in request.resource.data) || (request.resource.data.participantIds is list && request.resource.data.participantIds.size() <= 32));
       allow delete: if signedIn() && (
         resource.data.hostUserId == request.auth.uid
         || resource.data.initiatorId == request.auth.uid
@@ -938,8 +999,18 @@ service cloud.firestore {
     }
 
     match /statuses/{statusId} {
-      allow read: if signedIn();
-      allow create: if signedIn() && request.resource.data.userId == request.auth.uid;
+      allow read: if signedIn() && (
+        resource.data.userId == request.auth.uid
+        || (
+          resource.data.visibleTo is list
+          && (request.auth.uid in resource.data.visibleTo || '*' in resource.data.visibleTo)
+        )
+      );
+      allow create: if signedIn()
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.visibleTo is list
+        && request.resource.data.visibleTo.size() <= 2001
+        && isStatusVisibleToValid(request.auth.uid, request.resource.data.visibleTo, request.resource.data.privacyMode);
       allow update: if signedIn() && (
         resource.data.userId == request.auth.uid
         || (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['seenBy'])

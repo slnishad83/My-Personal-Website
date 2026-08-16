@@ -83,3 +83,8 @@ google-services.json
 .DS_Store
 Thumbs.db
 .env.*
+
+# Debug scratch (grep output) files
+g5.txt
+works/chat/g*.txt
+works/chat/_s*.txt

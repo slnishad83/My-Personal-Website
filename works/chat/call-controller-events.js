@@ -119,6 +119,7 @@
         hideIncomingCall();
         if (CC.db()) {
           CC.db().collection('calls').doc(data.callId).update({ status: 'missed' }).catch(function () {});
+          CC.writeCallLog('incoming', 'missed', null);
         }
         CC.incomingData = null;
       }
@@ -137,7 +138,7 @@
     if (existing) existing.remove();
     var name = data.fromUserName || 'Unknown';
     var typeLabel = data.type === 'video' ? 'Video' : 'Voice';
-    var html = '<div id="call-waiting-bar" class="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-surface border border-outline/20 rounded-2xl shadow-2xl px-4 py-3 flex items-center gap-3 max-w-sm w-[calc(100%-2rem)] cursor-pointer hover:bg-surface-variant/50 transition-colors">' +
+    var html = '<div id="call-waiting-bar" class="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-surface border border-outline/20 rounded-2xl shadow-2xl px-4 py-3 flex items-center gap-3 max-w-sm w-[calc(100%-2rem)] cursor-pointer hover:bg-surface-variant/50 transition-colors" style="top:calc(16px + env(safe-area-inset-top, 0px))">' +
       '<div class="w-10 h-10 rounded-full bg-yellow-500/15 text-yellow-500 flex items-center justify-center flex-shrink-0"><span class="material-symbols-outlined text-xl">phone_in_talk</span></div>' +
       '<div class="flex-1 min-w-0">' +
       '<p class="text-on-surface font-semibold text-sm truncate">' + CC.escHtml(name) + '</p>' +
@@ -151,7 +152,17 @@
     var declineBtn = CC.$('cw-decline');
     if (declineBtn) declineBtn.onclick = function (e) {
       e.stopPropagation();
-      if (data.callId && CC.db()) CC.db().collection('calls').doc(data.callId).update({ status: 'rejected' }).catch(function () {});
+      if (data.callId && CC.db()) {
+        CC.db().collection('calls').doc(data.callId).update({ status: 'rejected' }).catch(function () {});
+        CC.writeCallLog('incoming', 'rejected', null, {
+          callId: data.callId,
+          fromUserId: data.fromUserId || '',
+          fromUserName: data.fromUserName || 'Unknown',
+          fromUserAvatar: data.fromUserPhoto || '',
+          toUserId: '',
+          toUserName: ''
+        });
+      }
       _hideCallWaitingUI();
       _waitingIncoming = null;
     };
@@ -195,6 +206,7 @@
     var swipeIndicator = document.createElement('div');
     swipeIndicator.id = 'swipe-indicator';
     swipeIndicator.className = 'absolute bottom-20 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 text-white/40 text-xs pointer-events-none transition-opacity';
+    swipeIndicator.style.bottom = 'calc(80px + env(safe-area-inset-bottom, 0px))';
     swipeIndicator.innerHTML = '<span class="material-symbols-outlined text-2xl animate-bounce">swipe_up</span><span>Swipe right to answer Â· left to decline</span>';
     swipeIndicator.style.opacity = '0';
     swipeIndicator.style.transition = 'opacity 0.3s';
@@ -306,6 +318,15 @@
     CC.callId = null;
     CC.callType = type;
     CC._outgoingAvatar = targetChat.photoURL || '';
+    CC.callMeta = {
+      direction: 'outgoing',
+      fromUserId: myUid,
+      fromUserName: CC.me()?.displayName || 'User',
+      fromUserAvatar: CC.me()?.photoURL || '',
+      toUserId: otherUid,
+      toUserName: targetChat.name || 'Unknown',
+      toUserAvatar: targetChat.photoURL || ''
+    };
     CC.showCallScreen(type, targetChat.name, targetChat.initials);
 
     try {
@@ -378,6 +399,14 @@
     CC.callType = CC.incomingData.type;
     CC._outgoingAvatar = CC.incomingData.fromUserPhoto || '';
     var fromName = CC.incomingData.fromUserName;
+    CC.callMeta = {
+      direction: 'incoming',
+      fromUserId: CC.incomingData.fromUserId || '',
+      fromUserName: fromName || 'Unknown',
+      fromUserAvatar: CC.incomingData.fromUserPhoto || '',
+      toUserId: myUid,
+      toUserName: CC.me()?.displayName || 'User'
+    };
 
     CC.setState(CC.STATES.CONNECTING);
     CC.showCallScreen(CC.incomingData.type, fromName, (fromName || '?')[0].toUpperCase());
@@ -425,20 +454,25 @@
       CC.broadcastToTabs('call-ended', { callId: CC.incomingData.callId });
       if (CC.db() && CC.incomingData.callId) {
         CC.db().collection('calls').doc(CC.incomingData.callId).update({ status: 'rejected' }).catch(function () {});
+        CC.writeCallLog('incoming', 'rejected', null);
       }
       CC.playSound('callDeclined');
       CC.incomingData = null;
     }
   }
 
-  function endCall() {
+  function endCall(finalStatus) {
     var wasActive = CC.state === CC.STATES.ACTIVE;
     var dur = CC.callStartTime ? Math.floor((Date.now() - CC.callStartTime) / 1000) : 0;
-    var endDirection = CC.incomingData ? 'incoming' : 'outgoing';
+    var endDirection = (CC.callMeta && CC.callMeta.direction) || (CC.incomingData ? 'incoming' : 'outgoing');
     var remoteName = CC.$('call-name')?.textContent || 'Unknown';
     var remoteAvatar = CC._outgoingAvatar || '';
     var savedCallId = CC.callId;
-    var savedRemoteUid = CC.incomingData?.fromUserId || '';
+    var savedRemoteUid = (CC.callMeta && CC.callMeta.fromUserId) || CC.incomingData?.fromUserId || '';
+    var logStatus = finalStatus === 'missed' || finalStatus === 'rejected' || finalStatus === 'cancelled' || finalStatus === 'busy'
+      ? 'missed'
+      : (wasActive ? 'ended' : 'cancelled');
+    var logMeta = CC.callMeta || {};
 
     CC.txt('call-status', dur > 0 ? 'Call ended' : 'No answer');
     _stopOutgoingRingtone();
@@ -449,7 +483,7 @@
       var payload = { status: 'ended', endedAt: firebase.firestore.FieldValue.serverTimestamp() };
       if (dur > 0) payload.duration = dur;
       CC.db().collection('calls').doc(savedCallId).update(payload).catch(function () {});
-      CC.writeCallLog(endDirection, 'ended', dur > 0 ? dur * 1000 : null);
+      CC.writeCallLog(endDirection, logStatus, dur > 0 ? dur * 1000 : null, logMeta);
     }
 
     if (wasActive) {

@@ -48,7 +48,7 @@
       }
       CC.screenShareSender = null;
       var lv1 = CC.$('local-video');
-      if (lv1 && CC.getLocalStream()) lv1.srcObject = CC.getLocalStream();
+      if (lv1) { lv1.srcObject = CC.getLocalStream(); lv1.style.objectFit = ''; }
       var si = CC.$('screenshare-icon');
       if (si) si.textContent = 'screen_share';
       CC.setScreenSharing(false);
@@ -75,7 +75,7 @@
         }
       }
       var lv2 = CC.$('local-video');
-      if (lv2) lv2.srcObject = screenStream;
+      if (lv2) { lv2.srcObject = screenStream; lv2.style.objectFit = 'contain'; }
       var si2 = CC.$('screenshare-icon');
       if (si2) si2.textContent = 'stop_screen_share';
       CC.setScreenSharing(true);

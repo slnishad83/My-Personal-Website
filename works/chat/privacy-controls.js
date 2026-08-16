@@ -122,6 +122,7 @@
 
     openSettings() {
       const current = this.getAll();
+      const curStatus = current.status === 'nobody' ? 'only_share' : current.status;
       const modal = document.createElement('div');
       modal.id = 'privacy-settings-modal';
       modal.style.cssText = 'position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,0.5);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;';
@@ -178,9 +179,10 @@
               <div style="font-size:14px;font-weight:600;color:var(--on-surface,#000);margin-bottom:8px;">Status</div>
               <div style="font-size:12px;color:var(--on-surface-variant,#666);margin-bottom:8px;">Who can see my status updates</div>
               <select id="privacy-status" style="width:100%;padding:10px;border:1px solid var(--outline-variant,#ccc);border-radius:10px;font-size:14px;background:var(--surface,#fff);color:var(--on-surface,#000);">
-                <option value="everyone" ${current.status === 'everyone' ? 'selected' : ''}>Everyone</option>
-                <option value="contacts" ${current.status === 'contacts' ? 'selected' : ''}>My contacts</option>
-                <option value="nobody" ${current.status === 'nobody' ? 'selected' : ''}>Nobody</option>
+                <option value="everyone" ${curStatus === 'everyone' ? 'selected' : ''}>Everyone</option>
+                <option value="contacts" ${curStatus === 'contacts' ? 'selected' : ''}>My contacts</option>
+                <option value="contacts_except" ${curStatus === 'contacts_except' ? 'selected' : ''}>My contacts except...</option>
+                <option value="only_share" ${curStatus === 'only_share' ? 'selected' : ''}>Only share with...</option>
               </select>
             </div>
 
@@ -234,14 +236,29 @@
 
       const statusSel = document.getElementById('privacy-status');
       if (statusSel) {
-        statusSel.addEventListener('change', (e) => {
-          Privacy.set('status', e.target.value);
-          if (window.Status && typeof window.Status.setStatusPrivacy === 'function') {
-            window.Status.setStatusPrivacy(e.target.value);
-          } else if (window._scOpenPrivacy) {
-            // status module handles its own persistence
+        statusSel.addEventListener('change', async (e) => {
+          const val = e.target.value;
+          if (val === 'contacts_except' || val === 'only_share') {
+            let picked = null;
+            if (window._statusPickContacts && typeof window._statusPickContacts === 'function') {
+              picked = await window._statusPickContacts(val, []);
+            }
+            if (picked && picked.uids) {
+              Privacy.set('status', val);
+              if (window.Status && typeof window.Status.setStatusPrivacy === 'function') {
+                await window.Status.setStatusPrivacy(val, picked.uids);
+              }
+              if (typeof showToast === 'function') showToast('Status visibility updated', 'success');
+            } else {
+              statusSel.value = curStatus;
+            }
+          } else {
+            Privacy.set('status', val);
+            if (window.Status && typeof window.Status.setStatusPrivacy === 'function') {
+              window.Status.setStatusPrivacy(val);
+            }
+            if (typeof showToast === 'function') showToast('Status visibility updated', 'success');
           }
-          if (typeof showToast === 'function') showToast('Status visibility updated', 'success');
         });
       }
 

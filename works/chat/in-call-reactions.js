@@ -36,6 +36,7 @@
       .icr-floating-emoji{position:absolute;font-size:36px;animation:icrFloatUp var(--icr-duration) ease-out forwards;pointer-events:none;will-change:transform,opacity}\
       @keyframes icrFloatUp{0%{opacity:1;transform:translateY(0) scale(1)}20%{opacity:1;transform:translateY(calc(var(--icr-float) * 0.2)) scale(1.15)}60%{opacity:0.8;transform:translateY(calc(var(--icr-float) * 0.7)) scale(1.3)}100%{opacity:0;transform:translateY(var(--icr-float)) scale(1.5)}}\
       .icr-sender-label{position:absolute;font-size:10px;color:rgba(255,255,255,0.8);white-space:nowrap;font-weight:600;text-shadow:0 1px 3px rgba(0,0,0,0.5);animation:icrFloatUp var(--icr-duration) ease-out forwards;pointer-events:none;will-change:transform,opacity}\
+      @media (max-width:400px){.icr-picker{left:auto!important;right:0!important;transform:translateX(0) scale(.85)!important;max-width:calc(100vw - 16px);padding:8px 6px}.icr-picker.visible{transform:translateX(0) scale(1)!important}.icr-picker-btn{width:40px;height:40px;font-size:24px}}\
     ';
     document.head.appendChild(s);
   }

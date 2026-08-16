@@ -290,6 +290,14 @@
       ]
     },
     {
+      "collectionGroup": "statuses",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "visibleTo", "arrayConfig": "CONTAINS" },
+        { "fieldPath": "expiresAt", "order": "ASCENDING" }
+      ]
+    },
+    {
       "collectionGroup": "callLogs",
       "queryScope": "COLLECTION",
       "fields": [
