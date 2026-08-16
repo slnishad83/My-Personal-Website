@@ -1,10 +1,16 @@
 {
+  "android": {
+    "allowMixedContent": false,
+    "useLegacyBridge": false
+  },
+  "androidScheme": "https",
   "appId": "com.nishad.myteamchat",
   "appName": "NSL Chat",
-  "webDir": "dist",
-  "androidScheme": "https",
-  "server": {
-    "cleartext": false
+  "ios": {
+    "contentInset": "always",
+    "backgroundColor": "#11131c",
+    "preferredContentMode": "mobile",
+    "scheme": "app"
   },
   "plugins": {
     "StatusBar": {
@@ -40,14 +46,8 @@
       "iOSBiometry": "FaceID"
     }
   },
-  "android": {
-    "allowMixedContent": false,
-    "useLegacyBridge": false
+  "server": {
+    "cleartext": false
   },
-  "ios": {
-    "contentInset": "always",
-    "backgroundColor": "#11131c",
-    "preferredContentMode": "mobile",
-    "scheme": "app"
-  }
+  "webDir": "dist"
 }
