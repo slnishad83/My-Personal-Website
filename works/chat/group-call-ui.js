@@ -1,4 +1,4 @@
-/* group-call-ui.js — Grid layout, participant tiles, speaker view */
+/* group-call-ui.js � Grid layout, participant tiles, speaker view */
 (function () {
   'use strict';
 
@@ -66,7 +66,7 @@
     var videoStyle = (!isVideoOff && stream) ? '' : 'display:none;';
     var avatarStyle = (isVideoOff || !stream) ? '' : 'display:none;';
     var muteIndicator = isMuted ? '<div class="absolute top-2 right-2 bg-red-500 rounded-full w-5 h-5 flex items-center justify-center"><span class="material-symbols-outlined text-white" style="font-size:12px">mic_off</span></div>' : '';
-    var reconnectOverlay = isReconnecting ? '<div class="absolute inset-0 bg-black/50 flex flex-col items-center justify-center rounded-lg z-10"><div class="w-8 h-8 border-3 border-white/30 border-t-white rounded-full animate-spin mb-2"></div><span class="text-white text-xs font-medium">Reconnecting…</span></div>' : '';
+    var reconnectOverlay = isReconnecting ? '<div class="absolute inset-0 bg-black/50 flex flex-col items-center justify-center rounded-lg z-10"><div class="w-8 h-8 border-3 border-white/30 border-t-white rounded-full animate-spin mb-2"></div><span class="text-white text-xs font-medium">Reconnecting�</span></div>' : '';
     var screenShareBadge = isScreenSharing ? '<div class="absolute top-2 left-2 bg-blue-500 rounded px-1.5 py-0.5 flex items-center gap-1 z-10"><span class="material-symbols-outlined text-white" style="font-size:10px">screen_share</span><span class="text-white text-[10px] font-medium">Sharing</span></div>' : '';
 
     return '<div class="relative overflow-hidden rounded-lg bg-gray-900 ' + speakingClass + ' ' + reconnectClass + ' ' + screenShareClass + ' transition-all duration-200" data-gc-uid="' + GC._esc(uid) + '">' +
@@ -110,7 +110,7 @@
     if (count === 0) {
       container.innerHTML = '<div class="w-full h-full flex flex-col items-center justify-center text-white/50">' +
         '<span class="material-symbols-outlined text-5xl mb-3">group</span>' +
-        '<p class="text-sm font-medium">Waiting for participants…</p>' +
+        '<p class="text-sm font-medium">Waiting for participants�</p>' +
         '</div>';
       container.className = 'w-full flex-1 min-h-0';
       return;
@@ -170,12 +170,14 @@
       }).join('');
 
       if (grid.layout === 'speaker-plus-two' && count === 3) {
+        var speakerIdx = participants.findIndex(function (p) { return GC._lastSpeakerUid === p.uid; });
+        if (speakerIdx < 0) speakerIdx = 0;
         var tiles = participants.map(function (p, i) {
           var s = budgetedStream(p);
           var m = GC._participantMuteState.get(p.uid);
           var v = GC._participantVideoState.get(p.uid);
           var spk = GC._lastSpeakerUid === p.uid;
-          var sizeClass = (i === 0) ? 'col-span-2 row-span-1' : 'col-span-1 row-span-1';
+          var sizeClass = (i === speakerIdx) ? 'col-span-2 row-span-1' : 'col-span-1 row-span-1';
           return '<div class="' + sizeClass + '">' + _getParticipantTile(p.uid, p.name, p.avatar, m, v, spk, !!GC._reconnectAttempts[p.uid], false, s) + '</div>';
         });
         container.innerHTML = '<div class="grid grid-cols-2 grid-rows-2 gap-1 h-full p-1">' + tiles.join('') + '</div>';
@@ -257,7 +259,7 @@
       '<div class="flex items-center gap-3 mb-4 pb-3 border-b border-outline/20">' +
       '<div class="w-10 h-10 rounded-full overflow-hidden">' + _renderAvatar(participant.name, participant.avatar) + '</div>' +
       '<div><p class="font-semibold text-on-surface text-sm">' + GC._esc(participant.name) + '</p>' +
-      '<p class="text-xs text-on-surface-variant">' + (isSelf ? 'You' : (hasJoined ? 'In call' : 'Invited — not joined')) + '</p></div>' +
+      '<p class="text-xs text-on-surface-variant">' + (isSelf ? 'You' : (hasJoined ? 'In call' : 'Invited � not joined')) + '</p></div>' +
       '</div>' +
       (isSelf
         ? '<button class="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-surface-variant/50 transition-colors text-on-surface" onclick="window.toggleMute();document.getElementById(\'gc-participant-menu\').remove()">' +

@@ -1,4 +1,4 @@
-/* call-background-blur.js — Virtual background blur for video calls
+/* call-background-blur.js � Virtual background blur for video calls
  * Uses MediaPipe Selfie Segmentation (loaded on demand from CDN).
  * Graceful fallback: if the CDN/model cannot be loaded, we disable blur
  * and notify the user instead of breaking the call.

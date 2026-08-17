@@ -170,7 +170,7 @@
       panel.innerHTML = `
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
           <h3 style="margin:0;font-size:16px;font-weight:700">Group Description</h3>
-          <button onclick="this.closest('.fixed')?.remove()" style="background:none;border:none;color:var(--on-surface-variant);cursor:pointer;font-size:20px">&times;</button>
+          <button onclick="this.closest('[style*=\"position:fixed\"]')?.remove()" style="background:none;border:none;color:var(--on-surface-variant);cursor:pointer;font-size:20px">&times;</button>
         </div>
         <textarea id="group-desc-input" placeholder="Add a group description..." style="width:100%;min-height:100px;padding:12px;border-radius:10px;border:1px solid var(--outline-variant);background:var(--surface-container-low);color:var(--on-surface);font-size:13px;font-family:inherit;resize:vertical;box-sizing:border-box">${escHtml(currentDesc)}</textarea>
         <div style="display:flex;gap:8px;margin-top:12px">

@@ -1,5 +1,5 @@
 ﻿/* ============================================================
-   SECURITY â€” E2E encryption helpers, token refresh, session
+   SECURITY — E2E encryption helpers, token refresh, session
    Provides WebCrypto-based message encryption
    UPGRADED: ECDH key exchange, PBKDF2 PIN hashing, WebCrypto storage
    ============================================================ */
@@ -32,7 +32,7 @@ const Security = {
     }, this._tokenRefreshInterval);
   },
 
-  /* â”€â”€ ECDH Key Exchange (P-256) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* ── ECDH Key Exchange (P-256) ──────────────────────── */
   async generateKeyPair() {
     try {
       const keyPair = await crypto.subtle.generateKey(
@@ -76,7 +76,7 @@ const Security = {
     } catch (e) { if (window.__DEBUG__) console.error('[Security] Key import failed:', e); return null; }
   },
 
-  /* â”€â”€ AES-GCM Encryption â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* ── AES-GCM Encryption ─────────────────────────────── */
   async encrypt(text, key) {
     if (!key) throw new Error('[Security] encrypt() requires an encryption key');
     try {
@@ -122,7 +122,7 @@ const Security = {
     } catch (e) { if (window.__DEBUG__) console.error('[Security] decryptBytes failed:', e); return null; }
   },
 
-  /* â”€â”€ E2E Key Exchange â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* ── E2E Key Exchange ──────────────────────────────── */
   async _ensureE2EKeys() {
     if (this._e2ePrivateKey && this._e2ePublicKeyJwk) return;
     const user = window.currentUser || App?.currentUser;
@@ -193,7 +193,7 @@ const Security = {
     return await this.decrypt(ciphertext, iv, key);
   },
 
-  /* â”€â”€ Room Key Management â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* ── Room Key Management ────────────────────────────── */
   async getOrCreateRoomKey(chatId) {
     if (this._roomKeyCache.has(chatId)) return this._roomKeyCache.get(chatId);
     if (this._keyCache.has(chatId)) return this._keyCache.get(chatId);
@@ -290,7 +290,7 @@ const Security = {
     return await this.decrypt(ciphertext, iv, roomKey);
   },
 
-  /* â”€â”€ Encrypted Storage (WebCrypto + IndexedDB) â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* ── Encrypted Storage (WebCrypto + IndexedDB) ──────── */
   async _initStorageKey() {
     if (this._storageKey) return this._storageKey;
     return new Promise((resolve, reject) => {
@@ -383,7 +383,7 @@ const Security = {
     } catch (e) { if (window.__DEBUG__) console.error('[Security] clearSecure failed:', e); }
   },
 
-  /* â”€â”€ Token Management â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* ── Token Management ────────────────────────────────── */
   async getIdToken() {
     const user = window.currentUser || App?.currentUser;
     if (!user) return null;
@@ -396,7 +396,7 @@ const Security = {
     try { await user.getIdToken(true); return true; } catch (e) { return false; }
   },
 
-  /* â”€â”€ Device Fingerprinting â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* ── Device Fingerprinting ───────────────────────────── */
   getDeviceInfo() {
     return {
       platform: navigator.platform || 'unknown',
@@ -415,7 +415,7 @@ const Security = {
     this.clearSecure();
   },
 
-  /* â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* ── Helpers ─────────────────────────────────────────── */
   _arrayBufferToBase64(buffer) {
     const bytes = new Uint8Array(buffer);
     let binary = '';

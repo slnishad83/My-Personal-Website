@@ -1,6 +1,6 @@
 'use strict';
 /**
- * MEDIA AUTO-PLAY TOGGLE — Control GIF/video auto-play in chats
+ * MEDIA AUTO-PLAY TOGGLE � Control GIF/video auto-play in chats
  * User can disable auto-play for GIFs and videos to save data.
  */
 (function () {

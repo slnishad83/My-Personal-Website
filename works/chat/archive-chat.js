@@ -153,7 +153,7 @@
 
     const chevron = document.createElement('span');
     chevron.className = 'archive-section-chevron' + (_archivedSectionExpanded ? '' : ' collapsed');
-    chevron.textContent = 'â–¾';
+    chevron.textContent = '▾';
 
     const title = document.createElement('span');
     title.className = 'archive-section-title';

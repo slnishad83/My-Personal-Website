@@ -1353,7 +1353,7 @@
     else if (/^audio\//i.test(file.type)) type = 'audio';
 
     var ext = name.split('.').pop() || 'bin';
-    var path = 'media/' + uid + '/' + Date.now() + '_' + String(name).replace(/[^\w.-]+/g, '_').slice(0, 80) || ('file.' + ext);
+    var path = 'media/' + uid + '/' + Date.now() + '_' + (String(name).replace(/[^\w.-]+/g, '_').slice(0, 80) || ('file.' + ext));
     var ref = storage.ref(path);
 
     ref.put(file)
@@ -1921,10 +1921,6 @@
       e.preventDefault();
       _insertAtCursor(el, '\n');
       return;
-    }
-    if (e.key === ' ') {
-      e.preventDefault();
-      _insertAtCursor(el, ' ');
     }
   };
 

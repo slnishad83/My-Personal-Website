@@ -1,6 +1,6 @@
 ﻿'use strict';
 /**
- * MESSAGE TRANSLATION â€” Translate any message with a single tap
+ * MESSAGE TRANSLATION — Translate any message with a single tap
  * Uses free Google Translate API (no key needed for short texts).
  */
 (function () {

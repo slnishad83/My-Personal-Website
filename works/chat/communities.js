@@ -1,5 +1,5 @@
 /* ============================================================
-   COMMUNITIES — community hubs that bundle groups together.
+   COMMUNITIES � community hubs that bundle groups together.
    Firestore model (see firestore.rules):
    - communities/{id}: { name, createdBy, memberIds[], createdAt }
    - communityMembers/{id}: { communityId, userId, role }
@@ -94,7 +94,7 @@
       '<div class="com-body"><div style="display:flex;gap:8px;margin-bottom:14px;">' +
       '<button class="com-btn com-btn-primary" onclick="window.Communities && Communities.showCreate()"><span class="material-symbols-outlined" style="font-size:16px">add</span>New community</button>' +
       '<button class="com-btn com-btn-ghost" onclick="window.Communities && Communities.showJoin()"><span class="material-symbols-outlined" style="font-size:16px">person_add</span>Join</button>' +
-      '</div><div id="com-list"><div class="com-empty">Loading communities…</div></div></div>';
+      '</div><div id="com-list"><div class="com-empty">Loading communities�</div></div></div>';
 
     var list = _modal.querySelector('#com-list');
     var results = [];
@@ -115,7 +115,7 @@
           '<div style="flex:1;min-width:0;">' +
           '<div style="font-weight:700;font-size:14px;color:var(--on-surface,#1c1c1e);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + _esc(c.name || 'Untitled') + '</div>' +
           '<div style="font-size:12px;color:var(--on-surface-variant,#8696a0);">' + (c.memberIds ? c.memberIds.length : 1) + ' members' +
-          (isCreator ? ' • You are the admin' : '') + '</div></div>' +
+          (isCreator ? ' � You are the admin' : '') + '</div></div>' +
           '<span class="material-symbols-outlined" style="color:var(--on-surface-variant,#8696a0)">chevron_right</span></div>';
       }).join('');
 
@@ -240,7 +240,7 @@
       '<div style="display:flex;align-items:center;gap:12px;padding:12px;border-radius:14px;background:var(--surface-container,#f0f2f5);margin-bottom:14px;">' +
       '<div class="com-avatar">' + _esc((c.name || 'C')[0].toUpperCase()) + '</div>' +
       '<div><div style="font-weight:700;font-size:15px;color:var(--on-surface,#1c1c1e);">' + _esc(c.name || 'Untitled') + '</div>' +
-      '<div style="font-size:12px;color:var(--on-surface-variant,#8696a0);">' + (c.memberIds ? c.memberIds.length : 1) + ' members' + (isCreator ? ' • Admin' : '') + '</div></div>' +
+      '<div style="font-size:12px;color:var(--on-surface-variant,#8696a0);">' + (c.memberIds ? c.memberIds.length : 1) + ' members' + (isCreator ? ' � Admin' : '') + '</div></div>' +
       (isCreator ? '<span class="material-symbols-outlined" style="margin-left:auto;color:var(--on-surface-variant,#8696a0);cursor:pointer" onclick="window.Communities && Communities.copyId()">content_copy</span>' : '') +
       '</div>' +
       (isCreator
@@ -250,10 +250,10 @@
           '</div>'
         : '') +
       '<h3 style="font-size:13px;font-weight:700;color:var(--on-surface-variant,#8696a0);margin:6px 0 10px;">GROUPS</h3>' +
-      '<div id="com-groups"><div class="com-empty">Loading groups…</div></div></div>';
+      '<div id="com-groups"><div class="com-empty">Loading groups�</div></div></div>';
 
     var list = _modal.querySelector('#com-groups');
-    db().collection('communityGroups').doc(c.id).collection('groups').get().then(function (snap) {
+    _db().collection('communityGroups').doc(c.id).collection('groups').get().then(function (snap) {
       var groups = [];
       snap.forEach(function (d) { groups.push(Object.assign({ id: d.id }, d.data())); });
       if (!groups.length) {

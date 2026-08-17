@@ -1,7 +1,7 @@
 ﻿/* ============================================================
    Clipboard Paste Handler (D-C1)
    Handles paste of images, files, and text from clipboard on
-   the main chat area â€” desktop & mobile.
+   the main chat area — desktop & mobile.
    ============================================================ */
 (function () {
   'use strict';
@@ -110,7 +110,7 @@
       return;
     }
 
-    // For text paste â€” let it flow normally into the input
+    // For text paste — let it flow normally into the input
     // (no interception needed, default behavior handles it)
   }
 

@@ -5,7 +5,7 @@
 (function () {
   'use strict';
 
-  /* â”€â”€ helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* ── helpers ─────────────────────────────────────────────── */
   function waitForFn(name, cb, tries) {
     tries = tries || 0;
     if (typeof window[name] === 'function') { cb(); return; }
@@ -23,9 +23,9 @@
       : String(name || '?').charAt(0).toUpperCase();
   }
 
-  /* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-     1. "MYSELF" CHAT â€” rename + force-pinned + ðŸ‘¤ avatar
-     â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+  /* ════════════════════════════════════════════════════════════
+     1. "MYSELF" CHAT — rename + force-pinned + 👤 avatar
+     ════════════════════════════════════════════════════════════ */
   waitForFn('getSavedMessagesItem', function () {
     var _o = window.getSavedMessagesItem;
     window.getSavedMessagesItem = function () {
@@ -54,18 +54,18 @@
     };
   });
 
-  /* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-     2. CHAT REQUESTS â€” Sent + Received + Accepted
+  /* ════════════════════════════════════════════════════════════
+     2. CHAT REQUESTS — Sent + Received + Accepted
         + real-time search/filter bar
-     â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+     ════════════════════════════════════════════════════════════ */
 
   /* store fetched requests so search can re-filter without re-fetching */
   var _cfAllRequests = [];
 
   var _cfKindMeta = {
-    received: { emoji: 'ðŸ”µ', label: 'Received', cls: 'cf-pill-received' },
-    sent:     { emoji: 'ðŸŸ¡', label: 'Sent',     cls: 'cf-pill-sent'     },
-    accepted: { emoji: 'âœ…', label: 'Accepted', cls: 'cf-pill-accepted' },
+    received: { emoji: '🔵', label: 'Received', cls: 'cf-pill-received' },
+    sent:     { emoji: '🟡', label: 'Sent',     cls: 'cf-pill-sent'     },
+    accepted: { emoji: '✅', label: 'Accepted', cls: 'cf-pill-accepted' },
   };
 
   function _cfRenderRequests(list, requestList) {
@@ -98,7 +98,7 @@
       var previewText = isGroup    ? 'Group invite'
         : isAccepted              ? 'Chat accepted'
         : isOutgoing              ? 'Pending request'
-        : 'Wants to chat' + (req.fromUserEmail ? ' Â· ' + esc(req.fromUserEmail) : '');
+        : 'Wants to chat' + (req.fromUserEmail ? ' · ' + esc(req.fromUserEmail) : '');
 
       var actionsHtml = isAccepted
         ? '<button class="btn btn-success cf-open-btn"    data-to="'+esc(req.toUserId||'')+'">Open Chat</button>'
@@ -185,15 +185,15 @@
     wrap.className = 'cf-search-wrap';
     wrap.innerHTML =
         '<div class="cf-search-inner">'
-      +   '<span class="cf-search-icon">ðŸ”</span>'
-      +   '<input class="cf-search-input" type="search" placeholder="Search by name, email or typeâ€¦" autocomplete="off" />'
+      +   '<span class="cf-search-icon">🔍</span>'
+      +   '<input class="cf-search-input" type="search" placeholder="Search by name, email or type…" autocomplete="off" />'
       +   '<span class="cf-search-count cf-pill cf-pill-count">'+totalCount+'</span>'
       + '</div>'
       + '<div class="cf-filter-chips">'
       +   '<button class="cf-chip cf-chip-active" data-kind="">All</button>'
-      +   '<button class="cf-chip" data-kind="received">ðŸ”µ Received</button>'
-      +   '<button class="cf-chip" data-kind="sent">ðŸŸ¡ Sent</button>'
-      +   '<button class="cf-chip" data-kind="accepted">âœ… Accepted</button>'
+      +   '<button class="cf-chip" data-kind="received">🔵 Received</button>'
+      +   '<button class="cf-chip" data-kind="sent">🟡 Sent</button>'
+      +   '<button class="cf-chip" data-kind="accepted">✅ Accepted</button>'
       + '</div>';
 
     /* insert before anything else */
@@ -273,12 +273,12 @@
         }
 
         if (requestToggle)
-          requestToggle.textContent = requestSection && requestSection.classList.contains('expanded') ? 'â–²' : 'â–¼';
+          requestToggle.textContent = requestSection && requestSection.classList.contains('expanded') ? '▲' : '▼';
 
         if (!_cfAllRequests.length) {
           requestList.innerHTML = '<div class="empty-state">No requests</div>';
           if (requestSection) requestSection.classList.remove('expanded');
-          if (requestToggle)  requestToggle.textContent = 'â–¼';
+          if (requestToggle)  requestToggle.textContent = '▼';
           if (requestSection) requestSection.style.display = 'none';
           return;
         }
@@ -414,9 +414,9 @@
     await _cfReloadRequests();
   };
 
-  /* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-     3. CHAT PINNING â€” single consolidated implementation
-     â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+  /* ════════════════════════════════════════════════════════════
+     3. CHAT PINNING — single consolidated implementation
+     ════════════════════════════════════════════════════════════ */
   (function defineTogglePinChat() {
     window.togglePinChat = async function (chatId) {
       if (!window.currentUser || !chatId) return;
@@ -447,9 +447,9 @@
     };
   })();
 
-  /* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-     4. MESSAGE PINNING â€” groups shared, direct personal, limit 20
-     â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+  /* ════════════════════════════════════════════════════════════
+     4. MESSAGE PINNING — groups shared, direct personal, limit 20
+     ════════════════════════════════════════════════════════════ */
   waitForFn('pinMessage', function () {
     window.pinMessage = async function (messageId, messageData) {
       if (!window.currentChat || !window.currentUser) return;
@@ -512,22 +512,22 @@
       if (!pinnedSection) return;
       if (!window.pinnedMessages.length) { pinnedSection.style.display='none'; return; }
       pinnedSection.style.display = 'block';
-      if (pinnedCount) pinnedCount.textContent = 'ðŸ“Œ ' + window.pinnedMessages.length;
+      if (pinnedCount) pinnedCount.textContent = '📌 ' + window.pinnedMessages.length;
       if (pinnedList) {
         pinnedList.innerHTML = '';
         window.pinnedMessages.forEach(function (p) {
-          var byLine = isGroup && p.pinnedByName ? ' Â· by '+esc(p.pinnedByName) : '';
+          var byLine = isGroup && p.pinnedByName ? ' · by '+esc(p.pinnedByName) : '';
           var div = document.createElement('div');
           div.className = 'pinned-message-item cf-pin-item';
           div.setAttribute('role', 'button');
           div.setAttribute('tabindex', '0');
           div.innerHTML =
-              '<span class="cf-pin-icon">ðŸ“Œ</span>'
+              '<span class="cf-pin-icon">📌</span>'
             + '<div class="cf-pin-body">'
             +   '<div class="cf-pin-sender">'+esc(p.senderName||'')+byLine+'</div>'
-            +   '<div class="cf-pin-text">'+esc((p.text||'').substring(0,60)||'ðŸ“Ž Media')+'</div>'
+            +   '<div class="cf-pin-text">'+esc((p.text||'').substring(0,60)||'📎 Media')+'</div>'
             + '</div>'
-            + '<button class="unpin-btn cf-unpin-btn" data-id="'+esc(p.id)+'" title="Unpin" aria-label="Unpin message">âœ–</button>';
+            + '<button class="unpin-btn cf-unpin-btn" data-id="'+esc(p.id)+'" title="Unpin" aria-label="Unpin message">✖</button>';
           div.addEventListener('click', function(e){
             if (e.target.classList.contains('cf-unpin-btn')) return;
             var el = document.querySelector('[data-message-id="'+p.messageId+'"]');
@@ -557,7 +557,7 @@
 
 
 
-  /* â”€â”€ 9. Cyber Navigation & Status Bar Interceptors â”€â”€ */
+  /* ── 9. Cyber Navigation & Status Bar Interceptors ── */
   function updateDockThemeIcon() {
     var icon = document.querySelector('#dockThemeBtn span');
     if (!icon) return;
@@ -637,5 +637,5 @@
     document.addEventListener('DOMContentLoaded', initCyberDock);
   }
 
-  if (window.__DEBUG__) console.log('[chat-fixes] v3 applied âœ“');
+  if (window.__DEBUG__) console.log('[chat-fixes] v3 applied ✓');
 })();

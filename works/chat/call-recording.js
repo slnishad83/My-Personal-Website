@@ -1,4 +1,4 @@
-/* call-recording.js — Record voice/video calls with local MediaRecorder */
+/* call-recording.js � Record voice/video calls with local MediaRecorder */
 (function () {
   'use strict';
 

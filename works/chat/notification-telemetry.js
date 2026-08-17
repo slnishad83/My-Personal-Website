@@ -1,5 +1,5 @@
 /* ============================================================
-   NOTIFICATION TELEMETRY — Observability for missed
+   NOTIFICATION TELEMETRY � Observability for missed
    notifications, delayed pushes, and call failures.
    Logs events to Firestore for analytics.
    ============================================================ */

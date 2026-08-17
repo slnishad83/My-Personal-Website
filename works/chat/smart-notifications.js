@@ -17,7 +17,7 @@
   let _enabled = true;
   let _stats = { high: 0, medium: 0, low: 0, suppressed: 0 };
 
-  /* â”€â”€â”€ Load preferences & stats â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* ─── Load preferences & stats ─────────────────────────────── */
   function loadPrefs() {
     try {
       const prefs = JSON.parse(localStorage.getItem('nsl_smart_notif_prefs') || '{}');
@@ -35,7 +35,7 @@
     } catch (_) {}
   }
 
-  /* â”€â”€â”€ Cache for classification results â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* ─── Cache for classification results ─────────────────────── */
   function getCached(text, chatId) {
     try {
       const cache = JSON.parse(localStorage.getItem(CACHE_KEY) || '{}');
@@ -60,7 +60,7 @@
     } catch (_) {}
   }
 
-  /* â”€â”€â”€ Classify notification via Cloud Function â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* ─── Classify notification via Cloud Function ──────────────── */
   async function classify(payload) {
     if (!_enabled) return { priority: 'high', reason: 'Smart notifications disabled' };
 
@@ -99,7 +99,7 @@
     return { priority: 'high', reason: 'Direct message' };
   }
 
-  /* â”€â”€â”€ Should suppress notification? â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* ─── Should suppress notification? ────────────────────────── */
   function shouldSuppress(priority) {
     if (priority === 'low') {
       _stats.suppressed++;
@@ -113,7 +113,7 @@
     return false;
   }
 
-  /* â”€â”€â”€ Hook into NotificationOrchestrator â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* ─── Hook into NotificationOrchestrator ───────────────────── */
   function hookOrchestrator() {
     // Wait for Orchestrator to be ready
     function tryHook() {
@@ -148,7 +148,7 @@
           return false; // Don't show full notification
         }
 
-        // Normal/high priority â€” pass through to original handler
+        // Normal/high priority — pass through to original handler
         return origNotify(payload);
       };
 
@@ -158,7 +158,7 @@
     tryHook();
   }
 
-  /* â”€â”€â”€ Hook into push notifications (FCM) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* ─── Hook into push notifications (FCM) ───────────────────── */
   function hookPushNotifications() {
     // Intercept service worker push events for background notifications
     if ('serviceWorker' in navigator) {
@@ -182,7 +182,7 @@
     }
   }
 
-  /* â”€â”€â”€ Settings UI â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* ─── Settings UI ──────────────────────────────────────────── */
   function renderSmartNotifSettings(container) {
     if (!container) return;
     const section = document.createElement('div');
@@ -221,7 +221,7 @@
     }
   }
 
-  /* â”€â”€â”€ Expose stats for notification settings page â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* ─── Expose stats for notification settings page ──────────── */
   function getStats() {
     return { ..._stats, enabled: _enabled };
   }
@@ -231,7 +231,7 @@
     savePrefs();
   }
 
-  /* â”€â”€â”€ Init â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* ─── Init ─────────────────────────────────────────────────── */
   function init() {
     loadPrefs();
     hookOrchestrator();

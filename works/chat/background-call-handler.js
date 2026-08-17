@@ -1,4 +1,4 @@
-/* background-call-handler.js — Keep calls alive when tab loses focus or goes to background */
+/* background-call-handler.js � Keep calls alive when tab loses focus or goes to background */
 (function () {
   'use strict';
 

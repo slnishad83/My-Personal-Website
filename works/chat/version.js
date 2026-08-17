@@ -1,4 +1,4 @@
-/* NSL Chat — Single Source of Truth for App Version */
+/* NSL Chat � Single Source of Truth for App Version */
 (function() {
   'use strict';
   var VERSION = '5.0.2';

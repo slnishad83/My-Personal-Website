@@ -6,7 +6,7 @@
 (function () {
   'use strict';
 
-  /* â”€â”€â”€ State â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* ─── State ─────────────────────────────────────────────────────── */
   let _toneCheckPending = false;
   let _toneCheckResult = null;
   let _toneDebounce = null;
@@ -16,7 +16,7 @@
   let _chatListObserver = null;
   const MAX_CHAT_TAGS = 200;
 
-  /* â”€â”€â”€ CSS Injection â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* ─── CSS Injection ──────────────────────────────────────────────── */
 
   function _trimChatTags() {
     const keys = Object.keys(_chatTags);
@@ -42,7 +42,7 @@
     const style = document.createElement('style');
     style.id = 'ai-features-css';
     style.textContent = `
-      /* â”€â”€ Tone Analyzer Banner â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+      /* ── Tone Analyzer Banner ──────────────────────────── */
       .tone-banner {
         display: none;
         align-items: center;
@@ -85,7 +85,7 @@
         to { opacity: 1; transform: translateY(0); }
       }
 
-      /* â”€â”€ Summary Panel â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+      /* ── Summary Panel ─────────────────────────────────── */
       .ai-summary-panel {
         position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
         width: min(520px, 92vw); max-height: 80vh;
@@ -166,7 +166,7 @@
       .ai-summary-backdrop.visible { display: block; }
       @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
-      /* â”€â”€ Chat Tags â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+      /* ── Chat Tags ─────────────────────────────────────── */
       .chat-tag {
         display: inline-flex; align-items: center; gap: 3px;
         padding: 2px 7px; border-radius: 8px; font-size: 10px;
@@ -192,7 +192,7 @@
         display: flex; gap: 4px; flex-wrap: wrap; margin-top: 2px;
       }
 
-      /* â”€â”€ AI Search Toggle â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+      /* ── AI Search Toggle ───────────────────────────────── */
       .ai-search-toggle {
         display: flex; align-items: center; gap: 6px;
         padding: 6px 12px; border-radius: 20px; font-size: 12px;
@@ -206,7 +206,7 @@
       }
       .ai-search-toggle .material-symbols-outlined { font-size: 14px; }
 
-      /* â”€â”€ Summary Button in Header â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+      /* ── Summary Button in Header ────────────────────────── */
       .ai-header-btn {
         position: relative;
       }
@@ -222,7 +222,7 @@
     document.head.appendChild(style);
   }
 
-  /* â”€â”€â”€ Simple Markdown â†’ HTML â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* ─── Simple Markdown → HTML ────────────────────────────────────── */
   function mdToHtml(md) {
     if (!md) return '';
     return md
@@ -241,9 +241,9 @@
       .replace(/^(.+)$/gm, (m) => m.startsWith('<') ? m : `<p>${m}</p>`);
   }
 
-  /* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+  /* ═══════════════════════════════════════════════════════════════════
      FEATURE 1: CHAT SUMMARIZER
-     â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+     ═══════════════════════════════════════════════════════════════════ */
 
   function addSummarizeButton() {
     const header = document.getElementById('header-actions-container');
@@ -355,9 +355,9 @@
     }).catch(() => {});
   }
 
-  /* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+  /* ═══════════════════════════════════════════════════════════════════
      FEATURE 2: TONE ANALYZER
-     â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+     ═══════════════════════════════════════════════════════════════════ */
 
   function addToneBanner() {
     const inputBar = document.getElementById('input-bar');
@@ -400,7 +400,7 @@
         _toneCheckResult = result.data;
         showToneBanner(result.data);
       } catch (err) {
-        // Silently fail â€” don't annoy user
+        // Silently fail — don't annoy user
         if (window.__DEBUG__) console.warn('[AIFeatures] Tone check failed:', err.message);
       }
     }, 1500); // 1.5s debounce
@@ -423,7 +423,7 @@
 
     if (data.warning) {
       banner.classList.add(data.safe ? 'warning' : 'danger');
-      icon.textContent = data.safe ? 'âš ï¸' : 'ðŸš«';
+      icon.textContent = data.safe ? '⚠️' : '🚫';
       text.textContent = '';
       const strong = document.createElement('strong');
       strong.textContent = 'Tone advisory: ';
@@ -431,10 +431,10 @@
       text.appendChild(document.createTextNode(data.warning));
     } else {
       banner.classList.add('safe');
-      icon.textContent = 'âœ…';
+      icon.textContent = '✅';
       text.textContent = '';
       const strongGood = document.createElement('strong');
-      strongGood.textContent = 'Tone looks good â€” ';
+      strongGood.textContent = 'Tone looks good — ';
       text.appendChild(strongGood);
       text.appendChild(document.createTextNode(data.tone || 'neutral'));
     }
@@ -460,7 +460,7 @@
       return new Promise((resolve) => {
         if (typeof showModal === 'function') {
           showModal(
-            'âš ï¸ Tone Warning',
+            '⚠️ Tone Warning',
             `This message may come across as <strong>${_toneCheckResult.tone}</strong>.${_toneCheckResult.warning ? '<br><br>' + _toneCheckResult.warning : ''}<br><br>Send anyway?`,
             [
               { text: 'Edit', class: 'secondary', action: () => resolve(false) },
@@ -476,9 +476,9 @@
     return Promise.resolve(true);
   }
 
-  /* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+  /* ═══════════════════════════════════════════════════════════════════
      FEATURE 3: AUTO TAGGING
-     â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+     ═══════════════════════════════════════════════════════════════════ */
 
   async function autoTagChat(chatId, chatName) {
     if (!chatId || _chatTags[chatId]) return _chatTags[chatId];
@@ -551,9 +551,9 @@
     });
   }
 
-  /* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+  /* ═══════════════════════════════════════════════════════════════════
      FEATURE 4: AI-ASSISTED SEARCH
-     â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+     ═══════════════════════════════════════════════════════════════════ */
 
   let _aiSearchActive = false;
 
@@ -582,16 +582,16 @@
     wrapper.appendChild(toggle);
   }
 
-  /* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+  /* ═══════════════════════════════════════════════════════════════════
      FEATURE 5: MEETING NOTES (uses summary panel)
-     â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
-  // Meeting notes are handled by the summary panel â€”
+     ═══════════════════════════════════════════════════════════════════ */
+  // Meeting notes are handled by the summary panel —
   // when a group chat is open, the summarize button
   // automatically calls generateMeetingNotes instead of catchMeUp.
 
-  /* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+  /* ═══════════════════════════════════════════════════════════════════
      INTEGRATION: Hook into existing sendMessage flow
-     â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+     ═══════════════════════════════════════════════════════════════════ */
 
   function hookSendMessage() {
     const origSend = window.sendMessage;
@@ -644,9 +644,9 @@
     _chatListObserver.observe(chatList, { childList: true, subtree: true });
   }
 
-  /* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+  /* ═══════════════════════════════════════════════════════════════════
      INITIALIZATION
-     â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+     ═══════════════════════════════════════════════════════════════════ */
 
   function init() {
     injectStyles();

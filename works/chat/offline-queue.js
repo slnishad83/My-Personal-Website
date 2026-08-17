@@ -1,5 +1,5 @@
 /* ============================================================
-   OFFLINE QUEUE â€” IndexedDB-backed message retry queue
+   OFFLINE QUEUE — IndexedDB-backed message retry queue
    Stores failed messages, retries on reconnect, shows status
    v1.1: Added attachment blob upload before retry, pending
           message count indicator in UI

@@ -1,5 +1,5 @@
 /* ============================================================
-   HTML Sanitizer (D-C7 — XSS Prevention)
+   HTML Sanitizer (D-C7 � XSS Prevention)
    Wraps user-generated content before innerHTML injection.
    Whitelist-based: only allows safe tags/attributes.
    ============================================================ */

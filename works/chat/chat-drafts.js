@@ -1,6 +1,6 @@
 'use strict';
 /**
- * DRAFT MESSAGES — Auto-save and restore message drafts per chat
+ * DRAFT MESSAGES � Auto-save and restore message drafts per chat
  * Stores drafts in localStorage keyed by chatId.
  */
 (function () {

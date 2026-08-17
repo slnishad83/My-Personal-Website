@@ -1,5 +1,5 @@
 ﻿/* ============================================================
-   CHANGE NUMBER â€” WhatsApp-style phone number migration
+   CHANGE NUMBER — WhatsApp-style phone number migration
    ============================================================ */
 (function () {
   'use strict';
@@ -85,7 +85,7 @@
           if (typeof showToast === 'function') showToast('Failed to update number: ' + (err.message || err), 'error');
         });
       } else {
-        if (typeof showToast === 'function') showToast('Phone number updated (offline â€” will sync)', 'success');
+        if (typeof showToast === 'function') showToast('Phone number updated (offline — will sync)', 'success');
         overlay.style.display = 'none';
       }
     });

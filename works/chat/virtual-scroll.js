@@ -1,5 +1,5 @@
 /* ============================================================
-   VIRTUAL SCROLL — DOM-recycling windowed message renderer
+   VIRTUAL SCROLL � DOM-recycling windowed message renderer
    Renders only visible messages + buffer, reuses DOM nodes
    ============================================================ */
 'use strict';

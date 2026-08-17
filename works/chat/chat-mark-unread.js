@@ -1,6 +1,6 @@
 'use strict';
 /**
- * MARK AS UNREAD — Mark any chat as unread from context menu or long-press
+ * MARK AS UNREAD � Mark any chat as unread from context menu or long-press
  * Stores unread counts in Firestore user doc, shows badge on chat list.
  */
 (function () {

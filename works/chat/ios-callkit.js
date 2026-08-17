@@ -1,5 +1,5 @@
 ﻿/* ============================================================
-   iOS CALLKIT BRIDGE â€” Capacitor plugin bridge for native
+   iOS CALLKIT BRIDGE — Capacitor plugin bridge for native
    iOS CallKit incoming call UI. Falls back gracefully on
    Android and Web platforms.
    ============================================================ */

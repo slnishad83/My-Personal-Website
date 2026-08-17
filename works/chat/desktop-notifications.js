@@ -1,5 +1,5 @@
 ﻿/* ============================================================
-   DESKTOP NOTIFICATIONS â€” Native notification support for
+   DESKTOP NOTIFICATIONS — Native notification support for
    Electron-based desktop apps on Windows/macOS/Linux.
    Uses Electron's Notification API when available, falls
    back to Web Notifications API.
@@ -108,7 +108,7 @@ const DesktopNotifications = (() => {
 
   function showCallNotification(options) {
     return show({
-      title: options.title || 'ðŸ“ž Incoming Call',
+      title: options.title || '📞 Incoming Call',
       body: options.body || `${options.callerName || 'Someone'} is calling`,
       icon: options.avatar || 'app-icon-192.png',
       tag: `call-${options.callId || ''}`,

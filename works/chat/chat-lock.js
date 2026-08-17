@@ -1,4 +1,4 @@
-// Chat Lock — fingerprint/PIN lock for specific chats
+// Chat Lock � fingerprint/PIN lock for specific chats
 // PIN verification is server-side (PBKDF2 via Cloud Functions)
 (function() {
   'use strict';

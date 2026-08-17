@@ -1,5 +1,5 @@
 /**
- * haptic-feedback.js — Native haptic feedback for key actions
+ * haptic-feedback.js � Native haptic feedback for key actions
  * Bridges to MainActivity.performHapticFeedback() on Android
  * Uses Vibration API as fallback on web/iOS
  */
@@ -39,7 +39,7 @@
 
             if (this.isNative && window.Capacitor?.Plugins?.HapticFeedback) {
                 // Android: use native Vibrator via Capacitor
-                // (no direct bridge needed — use navigator.vibrate fallback)
+                // (no direct bridge needed � use navigator.vibrate fallback)
             }
 
             // Web / iOS fallback via Vibration API

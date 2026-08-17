@@ -1,5 +1,5 @@
 /* ============================================================
-   BACKUP & RESTORE — export/import chat settings.
+   BACKUP & RESTORE � export/import chat settings.
    - File backup: downloads a JSON file of non-sensitive
      localStorage entries + manifest.
    - File restore: imports a previously exported file.
@@ -85,7 +85,7 @@
       '<input type="file" id="bk-file-input" accept=".json,application/json" style="display:none" />' +
       '<button class="bk-btn bk-btn-ghost" style="width:100%;margin-top:4px" onclick="window.BackupManager && BackupManager.cloudBackup()">' +
       '<span class="material-symbols-outlined" style="font-size:16px">cloud_upload</span>Back up to cloud</button>' +
-      '<div id="bk-cloud-list"><div class="bk-meta" style="text-align:center;padding:8px;">Loading cloud backups…</div></div>' +
+      '<div id="bk-cloud-list"><div class="bk-meta" style="text-align:center;padding:8px;">Loading cloud backups�</div></div>' +
       '</div>';
     document.body.appendChild(_modal);
 
@@ -189,7 +189,7 @@
       container.innerHTML = '<div class="bk-meta" style="text-align:center;padding:8px;">Sign in to use cloud backup</div>';
       return;
     }
-    container.innerHTML = '<div class="bk-meta" style="text-align:center;padding:8px;">Loading cloud backups…</div>';
+    container.innerHTML = '<div class="bk-meta" style="text-align:center;padding:8px;">Loading cloud backups�</div>';
     try {
       var snap = await db.collection('users').doc(uid).collection('backups').orderBy('createdAt', 'desc').limit(3).get();
       if (snap.empty) {

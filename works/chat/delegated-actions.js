@@ -1,5 +1,5 @@
 'use strict';
-/* Delegated event handlers — replaces all inline onclick attributes in index.html */
+/* Delegated event handlers � replaces all inline onclick attributes in index.html */
 (function() {
   var ACTIONS = {
     'openProfile': function() {

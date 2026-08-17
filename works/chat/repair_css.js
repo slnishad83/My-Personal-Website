@@ -5,15 +5,15 @@ try {
   let css = fs.readFileSync(filePath, 'utf8');
 
   // Let's locate the corrupted section
-  const targetPattern = /\/\* â”€â”€ Recording bar adaptation â”€â”€ \*\/\r?\n\s+font-size: 22px;\r?\n\s+}\r?\n\s+\.wa-send-mic-btn {[\s\S]*?\.wa-input-footer:not\(\.hidden\) {\r?\n\s+display: flex;\r?\n}/;
+  const targetPattern = /\/\* ── Recording bar adaptation ── \*\/\r?\n\s+font-size: 22px;\r?\n\s+}\r?\n\s+\.wa-send-mic-btn {[\s\S]*?\.wa-input-footer:not\(\.hidden\) {\r?\n\s+display: flex;\r?\n}/;
 
-  const replacement = `/* â”€â”€ Recording bar adaptation â”€â”€ */
+  const replacement = `/* ── Recording bar adaptation ── */
 #recording-bar {
   background: var(--wa-footer-bg, #202c33) !important;
   border-top-color: rgba(134, 150, 160, 0.15) !important;
 }
 
-/* â”€â”€ Light mode overrides â”€â”€ */
+/* ── Light mode overrides ── */
 html:not(.dark) .wa-input-footer {
   --wa-footer-bg: #f0f2f5;
   --wa-input-bg: #ffffff;
@@ -26,7 +26,7 @@ html:not(.dark) .wa-input-footer {
   --wa-send-icon-color: #ffffff;
 }
 
-/* â”€â”€ Mobile responsiveness â”€â”€ */
+/* ── Mobile responsiveness ── */
 @media (max-width: 767px) {
   .wa-input-footer {
     padding: 5px 6px;
@@ -66,14 +66,14 @@ html:not(.dark) .wa-input-footer {
     console.log('Successfully repaired corrupted block.');
   } else {
     // If exact regex fails, do a simpler string replacement
-    const simpleTarget = '/* â”€â”€ Recording bar adaptation â”€â”€ */';
+    const simpleTarget = '/* ── Recording bar adaptation ── */';
     const index = css.indexOf(simpleTarget);
     if (index !== -1) {
       // Find end of the corrupted block (the next main section is .wa-input-box)
       const endMarker = '.wa-input-box {';
       const endIndex = css.indexOf(endMarker, index);
       if (endIndex !== -1) {
-        css = css.substring(0, index) + replacement + '\n\n/* â”€â”€ Rounded input box (left part) â”€â”€ */\n' + css.substring(endIndex);
+        css = css.substring(0, index) + replacement + '\n\n/* ── Rounded input box (left part) ── */\n' + css.substring(endIndex);
         console.log('Successfully repaired block using simple index matching.');
       } else {
         throw new Error('Could not locate end marker');

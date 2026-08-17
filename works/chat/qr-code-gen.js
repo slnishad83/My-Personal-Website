@@ -1,5 +1,5 @@
 /**
- * QR Code Generator — compact byte-mode encoder (versions 1-10, EC level M)
+ * QR Code Generator � compact byte-mode encoder (versions 1-10, EC level M)
  * Used for device pairing QR codes in MultiDevice
  */
 'use strict';

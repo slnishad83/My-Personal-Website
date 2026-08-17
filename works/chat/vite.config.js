@@ -4,7 +4,7 @@ import { resolve } from 'path';
 import { writeFileSync, readFileSync, copyFileSync, mkdirSync, readdirSync, statSync, existsSync, unlinkSync } from 'fs';
 import { join } from 'path';
 
-/* Read Firebase config once — single source of truth */
+/* Read Firebase config once � single source of truth */
 const firebaseConfig = JSON.parse(readFileSync('firebase-env.json', 'utf-8'));
 
 // Custom plugin: copy static assets (sounds, images, APK, HTML pages) to dist
@@ -143,11 +143,11 @@ export default defineConfig({
           if (id.includes('node_modules')) {
             return 'vendor';
           }
-          // jsQR is 251KB — put in its own chunk (only loaded on QR scan)
+          // jsQR is 251KB � put in its own chunk (only loaded on QR scan)
           if (id.includes('jsQR')) {
             return 'lib-qr';
           }
-          // twemoji (~17KB) — separate chunk for cache efficiency
+          // twemoji (~17KB) � separate chunk for cache efficiency
           if (id.includes('twemoji')) {
             return 'lib-twemoji';
           }

@@ -1,5 +1,5 @@
 /* ============================================================
-   MENTION AUTOCOMPLETE — @mention in group chats
+   MENTION AUTOCOMPLETE � @mention in group chats
    Detects @ in input, shows member picker dropdown, inserts mention.
    ============================================================ */
 (function () {

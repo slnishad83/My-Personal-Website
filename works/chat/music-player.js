@@ -1,8 +1,8 @@
-// Music Player â€” full playback engine with controls, Media Session, background play
+// Music Player — full playback engine with controls, Media Session, background play
 (function() {
   'use strict';
 
-  // â”€â”€â”€ STATE â”€â”€â”€
+  // ─── STATE ───
   const Player = {
     audio: null,
     queue: [],           // [{id, title, artist, url, thumbnail, duration, addedBy, addedByName}]
@@ -29,7 +29,7 @@
   };
   window.MusicPlayer = Player;
 
-  // Safety fallback â€” playlist-core.js defines the real version, but this prevents crashes if load order changes
+  // Safety fallback — playlist-core.js defines the real version, but this prevents crashes if load order changes
   if (typeof window.formatTrackDuration !== 'function') {
     window.formatTrackDuration = function(seconds) {
       if (!seconds || seconds <= 0) return '0:00';
@@ -56,7 +56,7 @@
     } catch(_) {}
   }
 
-  // â”€â”€â”€ INIT â”€â”€â”€
+  // ─── INIT ───
   function _init() {
     Player.audio = new Audio();
     Player.audio.preload = 'auto';
@@ -80,7 +80,7 @@
     try { _eqGains = JSON.parse(localStorage.getItem('nsl_eq_gains') || '[0,0,0,0,0,0,0,0,0,0]'); } catch(_) {}
   }
 
-  // â”€â”€â”€ EQUALIZER â”€â”€â”€
+  // ─── EQUALIZER ───
   let _audioCtx = null;
   let _analyser = null;
   let _eqBands = null;
@@ -370,7 +370,7 @@
     _hideMiniPlayer();
   };
 
-  // â”€â”€â”€ QUEUE â”€â”€â”€
+  // ─── QUEUE ───
   Player.setQueue = function(tracks, startIndex) {
     Player._originalOrder = [...tracks];
     if (Player.isShuffle) {
@@ -445,7 +445,7 @@
     Player.playTrack(prev);
   };
 
-  // â”€â”€â”€ CONTROLS â”€â”€â”€
+  // ─── CONTROLS ───
   Player.seek = function(time) {
     if (Player.audio) Player.audio.currentTime = time;
   };
@@ -497,7 +497,7 @@
     _updatePlayerUI();
   };
 
-  // â”€â”€â”€ EVENTS â”€â”€â”€
+  // ─── EVENTS ───
   function _onTimeUpdate() {
     if (!Player.audio || Player._seeking) return;
     Player.currentTime = Player.audio.currentTime;
@@ -556,13 +556,13 @@
         }
       }, 2000 * Player._retryCount);
     } else {
-      showToast('Track unavailable â€” skipping', 'error');
+      showToast('Track unavailable — skipping', 'error');
       Player._retryCount = 0;
       setTimeout(() => Player.next(), 1500);
     }
   }
 
-  // â”€â”€â”€ PLAYBACK SPEED â”€â”€â”€
+  // ─── PLAYBACK SPEED ───
   Player.setPlaybackSpeed = function(speed) {
     Player.playbackSpeed = speed;
     if (Player.audio) Player.audio.playbackRate = speed;
@@ -590,7 +590,7 @@
     }
   }
 
-  // â”€â”€â”€ CROSSFADE â”€â”€â”€
+  // ─── CROSSFADE ───
   Player.setCrossfade = function(seconds) {
     Player.crossfadeDuration = Math.max(0, Math.min(10, seconds));
     localStorage.setItem('nsl_music_crossfade', String(Player.crossfadeDuration));
@@ -641,7 +641,7 @@
     }
   }
 
-  // â”€â”€â”€ SLEEP TIMER â”€â”€â”€
+  // ─── SLEEP TIMER ───
   Player.setSleepTimer = function(minutes) {
     Player.cancelSleepTimer();
     if (minutes <= 0) return;
@@ -693,7 +693,7 @@
 
     panel.innerHTML = `
       <h3 style="margin:0 0 16px;font-size:16px;font-weight:700;text-align:center">Sleep Timer</h3>
-      ${Player._sleepTimerEnd ? `<p style="text-align:center;color:var(--primary);font-size:13px;margin:0 0 12px">Active â€” auto-stop in <span id="sleep-timer-countdown"></span></p>` : ''}
+      ${Player._sleepTimerEnd ? `<p style="text-align:center;color:var(--primary);font-size:13px;margin:0 0 12px">Active — auto-stop in <span id="sleep-timer-countdown"></span></p>` : ''}
       <div style="display:flex;flex-direction:column;gap:8px">
         ${presets.map(p => `<button onclick="MusicPlayer.setSleepTimer(${p.minutes});document.getElementById('sleep-timer-menu')?.remove()" style="padding:12px;border-radius:12px;border:1px solid ${Player._sleepTimerEnd ? 'var(--outline-variant,rgba(0,0,0,0.08))' : 'rgba(124,77,255,0.3)'};background:rgba(124,77,255,0.08);color:var(--on-surface);font-size:14px;font-weight:600;cursor:pointer;text-align:center">${p.label}</button>`).join('')}
       </div>
@@ -715,18 +715,18 @@
     el.textContent = `${m}:${String(s).padStart(2, '0')}`;
   }
 
-  // â”€â”€â”€ SHARE TRACK â”€â”€â”€
+  // ─── SHARE TRACK ───
   Player.shareTrack = function(track) {
     const t = track || Player._currentTrack;
     if (!t) return;
     if (navigator.share) {
-      navigator.share({ title: t.title || 'Song', text: `${t.title || 'Song'} â€” ${t.artist || 'Unknown'}`, url: window.location.href }).catch(() => {});
+      navigator.share({ title: t.title || 'Song', text: `${t.title || 'Song'} — ${t.artist || 'Unknown'}`, url: window.location.href }).catch(() => {});
     } else if (navigator.clipboard) {
-      navigator.clipboard.writeText(`${t.title || 'Song'} â€” ${t.artist || 'Unknown'}`).then(() => showToast('Copied to clipboard', 'success'));
+      navigator.clipboard.writeText(`${t.title || 'Song'} — ${t.artist || 'Unknown'}`).then(() => showToast('Copied to clipboard', 'success'));
     }
   };
 
-  // â”€â”€â”€ QUEUE REORDER â”€â”€â”€
+  // ─── QUEUE REORDER ───
   Player.moveInQueue = function(fromIdx, toIdx) {
     if (fromIdx < 0 || fromIdx >= Player.queue.length) return;
     if (toIdx < 0 || toIdx >= Player.queue.length) return;
@@ -738,7 +738,7 @@
     _updateQueueUI();
   };
 
-  // â”€â”€â”€ BACKGROUND MODE (Capacitor) â”€â”€â”€
+  // ─── BACKGROUND MODE (Capacitor) ───
   let _bgModeActive = false;
 
   function _activateBackgroundMode() {
@@ -763,12 +763,12 @@
     } catch(_) {}
   }
 
-  // â”€â”€â”€ NETWORK HANDLING â”€â”€â”€
+  // ─── NETWORK HANDLING ───
   function _setupNetworkListener() {
     window.addEventListener('online', () => {
       Player._isOnline = true;
       if (Player._currentTrack && !Player.isPlaying) {
-        showToast('Back online â€” resuming', 'success');
+        showToast('Back online — resuming', 'success');
         Player.audio.play().catch(() => {});
       }
     });
@@ -778,7 +778,7 @@
     });
   }
 
-  // â”€â”€â”€ QUALITY DISPLAY â”€â”€â”€
+  // ─── QUALITY DISPLAY ───
   Player.getAudioInfo = function() {
     if (!Player.audio) return null;
     return {
@@ -798,7 +798,7 @@
     showToast(`Speed: ${info.speed}x | Volume: ${info.volume} | Network: ${info.networkType} | ${info.downlink}`, 'info');
   };
 
-  // â”€â”€â”€ MEDIA SESSION â”€â”€â”€
+  // ─── MEDIA SESSION ───
   function _setupMediaSession() {
     if (!('mediaSession' in navigator)) return;
     navigator.mediaSession.setActionHandler('play', () => Player.togglePlay());
@@ -826,7 +826,7 @@
     });
   }
 
-  // â”€â”€â”€ SHUFFLE â”€â”€â”€
+  // ─── SHUFFLE ───
   function _shuffleArray(arr) {
     const a = [...arr];
     for (let i = a.length - 1; i > 0; i--) {
@@ -836,7 +836,7 @@
     return a;
   }
 
-  // â”€â”€â”€ UI UPDATE â”€â”€â”€
+  // ─── UI UPDATE ───
   function _updatePlayButtons() {
     document.querySelectorAll('.music-play-btn').forEach(btn => {
       const icon = btn.querySelector('.material-symbols-outlined');
@@ -935,7 +935,7 @@
     document.querySelectorAll('.queue-item').forEach(el => el.style.opacity = '');
   };
 
-  // â”€â”€â”€ MINI PLAYER (Floating, draggable) â”€â”€â”€
+  // ─── MINI PLAYER (Floating, draggable) ───
   const _MINI_POS_KEY = 'nsl_mini_player_pos';
   let _miniDragging = false;
   let _miniDragStartX = 0;
@@ -1065,7 +1065,7 @@
     if (bar && Player.duration) bar.style.width = ((Player.currentTime / Player.duration) * 100) + '%';
   }
 
-  // â”€â”€â”€ NOW PLAYING BADGE â”€â”€â”€
+  // ─── NOW PLAYING BADGE ───
   Player.getNowPlayingInfo = function() {
     if (!Player._currentTrack || !Player.isPlaying) return null;
     return { title: Player._currentTrack.title, artist: Player._currentTrack.artist, thumbnail: Player._currentTrack.thumbnail };
@@ -1093,7 +1093,7 @@
     return '<style>@keyframes eqBar{0%{height:4px}100%{height:16px}}</style>';
   };
 
-  // â”€â”€â”€ FULL PLAYER â”€â”€â”€
+  // ─── FULL PLAYER ───
   window.openFullPlayer = function() {
     const track = Player._currentTrack;
     if (!track) { showToast('No track playing', 'info'); return; }
@@ -1210,7 +1210,7 @@
     document.body.appendChild(overlay);
   };
 
-  // â”€â”€â”€ QUEUE PANEL â”€â”€â”€
+  // ─── QUEUE PANEL ───
   window.openPlaylistQueue = function() {
     const existing = document.getElementById('playlist-queue-overlay');
     if (existing) { existing.remove(); return; }
@@ -1239,7 +1239,7 @@
     _updateQueueUI();
   };
 
-  // â”€â”€â”€ SCREEN WAKE LOCK â”€â”€â”€
+  // ─── SCREEN WAKE LOCK ───
   let _wakeLockSentinel = null;
   Player._wakeLockActive = false;
 
@@ -1284,7 +1284,7 @@
     }
   }
 
-  // â”€â”€â”€ MINIMIZE PLAYER (Picture-in-Picture style) â”€â”€â”€
+  // ─── MINIMIZE PLAYER (Picture-in-Picture style) ───
   Player.minimizePlayer = function() {
     const overlay = document.getElementById('full-player-overlay');
     if (overlay) overlay.remove();
@@ -1293,7 +1293,7 @@
     _updateMiniPlayer(Player._currentTrack);
   };
 
-  // â”€â”€â”€ RESTORE â”€â”€â”€
+  // ─── RESTORE ───
   function _restoreSession() {
     try {
       const last = JSON.parse(localStorage.getItem('nsl_last_track') || 'null');

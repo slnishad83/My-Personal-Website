@@ -737,7 +737,7 @@
         if (dateStr !== lastDateStr) {
           lastDateStr = dateStr;
           const sep = document.createElement('div');
-          sep.style.cssText = 'display:flex;align-items:center;justify-content:center;my:8px;padding:8px 0;';
+          sep.style.cssText = 'display:flex;align-items:center;justify-content:center;margin:8px 0;padding:8px 0;';
           sep.innerHTML = `<span style="background:var(--surface-container,#f0f2f5);color:var(--on-surface-variant,#8696a0);
             font-size:11px;padding:4px 12px;border-radius:12px;">${esc(dateStr)}</span>`;
           msgWrap.appendChild(sep);

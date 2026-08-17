@@ -1,4 +1,4 @@
-/* call-link.js — Shareable call links (create, join, manage) */
+/* call-link.js � Shareable call links (create, join, manage) */
 (function () {
   'use strict';
 
@@ -49,7 +49,7 @@
         return;
       }
       if (callData.fromUserId === window._CC.uid()) {
-        window._CC.toast('Waiting for others to join…', 'info');
+        window._CC.toast('Waiting for others to join�', 'info');
         return;
       }
       var targetUser = {

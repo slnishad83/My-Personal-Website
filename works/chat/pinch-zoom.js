@@ -1,5 +1,5 @@
 /* ============================================================
-   PINCH-TO-ZOOM — Image/video pinch zoom in media viewer
+   PINCH-TO-ZOOM � Image/video pinch zoom in media viewer
    Supports touch pinch, double-tap zoom, and scroll-wheel zoom
    ============================================================ */
 'use strict';

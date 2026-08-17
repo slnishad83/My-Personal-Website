@@ -299,7 +299,7 @@
     } catch (_) {}
 
     overlay.innerHTML =
-      '<div class="nsl-al-icon">ðŸ”’</div>' +
+      '<div class="nsl-al-icon">🔒</div>' +
       '<div class="nsl-al-title">App Locked</div>' +
       '<div class="nsl-al-subtitle">Enter your PIN to unlock</div>' +
       '<div class="nsl-al-dots" id="nsl-al-dots"></div>' +

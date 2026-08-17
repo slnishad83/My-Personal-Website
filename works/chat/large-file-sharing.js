@@ -1,6 +1,6 @@
 'use strict';
 /**
- * LARGE FILE SHARING — Support for files up to 100MB
+ * LARGE FILE SHARING � Support for files up to 100MB
  * Chunked upload for large files using Firebase Storage.
  */
 (function () {

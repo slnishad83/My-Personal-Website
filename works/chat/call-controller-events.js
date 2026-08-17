@@ -82,7 +82,7 @@
     var name = data.fromUserName || 'Unknown';
     CC.txt('incoming-call-name', name);
     var isGroup = data.groupCall === true;
-    CC.txt('incoming-call-type', (isGroup ? 'ðŸ‘¥ ' : '') + (data.type === 'video' ? 'Incoming Video Call' : 'Incoming Voice Call'));
+    CC.txt('incoming-call-type', (isGroup ? '👥 ' : '') + (data.type === 'video' ? 'Incoming Video Call' : 'Incoming Voice Call'));
     var av = CC.$('incoming-call-avatar');
     if (av) {
       if (data.fromUserPhoto) {
@@ -142,7 +142,7 @@
       '<div class="w-10 h-10 rounded-full bg-yellow-500/15 text-yellow-500 flex items-center justify-center flex-shrink-0"><span class="material-symbols-outlined text-xl">phone_in_talk</span></div>' +
       '<div class="flex-1 min-w-0">' +
       '<p class="text-on-surface font-semibold text-sm truncate">' + CC.escHtml(name) + '</p>' +
-      '<p class="text-on-surface-variant text-xs">' + typeLabel + ' Call Â· Waitingâ€¦</p>' +
+      '<p class="text-on-surface-variant text-xs">' + typeLabel + ' Call · Waiting…</p>' +
       '</div>' +
       '<div class="flex items-center gap-2">' +
       '<button id="cw-decline" class="min-w-[44px] min-h-[44px] rounded-full bg-red-500 flex items-center justify-center hover:bg-red-600 transition-colors" title="Decline"><span class="material-symbols-outlined text-white" style="font-size:18px">call_end</span></button>' +
@@ -207,7 +207,7 @@
     swipeIndicator.id = 'swipe-indicator';
     swipeIndicator.className = 'absolute bottom-20 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 text-white/40 text-xs pointer-events-none transition-opacity';
     swipeIndicator.style.bottom = 'calc(80px + env(safe-area-inset-bottom, 0px))';
-    swipeIndicator.innerHTML = '<span class="material-symbols-outlined text-2xl animate-bounce">swipe_up</span><span>Swipe right to answer Â· left to decline</span>';
+    swipeIndicator.innerHTML = '<span class="material-symbols-outlined text-2xl animate-bounce">swipe_up</span><span>Swipe right to answer · left to decline</span>';
     swipeIndicator.style.opacity = '0';
     swipeIndicator.style.transition = 'opacity 0.3s';
     overlay.appendChild(swipeIndicator);
@@ -564,7 +564,7 @@
     CC.setActiveCallMode('group');
     CC.showCallScreen(type, c.name, c.initials || 'G');
     CC.txt('call-quality-text', type === 'video' ? 'HD Group Video' : 'HD Group Voice');
-    CC.txt('call-status', 'Calling ' + memberIds.length + ' peopleâ€¦');
+    CC.txt('call-status', 'Calling ' + memberIds.length + ' people…');
 
     try {
       await CC.getMedia(type);

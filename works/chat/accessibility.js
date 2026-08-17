@@ -1,5 +1,5 @@
 /* ============================================================
-   ACCESSIBILITY — Focus traps, skip-nav, ARIA enhancements
+   ACCESSIBILITY � Focus traps, skip-nav, ARIA enhancements
    ============================================================ */
 'use strict';
 

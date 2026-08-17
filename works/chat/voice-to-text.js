@@ -1,6 +1,6 @@
 ﻿'use strict';
 /**
- * VOICE TO TEXT â€” Web Speech API speech recognition for message input
+ * VOICE TO TEXT — Web Speech API speech recognition for message input
  * Adds a microphone button to the chat input bar for dictation.
  */
 (function () {

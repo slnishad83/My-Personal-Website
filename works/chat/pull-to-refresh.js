@@ -1,5 +1,5 @@
 ﻿/* ============================================================
-   PULL-TO-REFRESH â€” Touch gesture to reload chat list
+   PULL-TO-REFRESH — Touch gesture to reload chat list
    Shows a spinner at the top of the chat list while refreshing
    ============================================================ */
 'use strict';
@@ -71,7 +71,7 @@ const PullToRefresh = {
 
     if (this._indicator?.classList?.contains('visible') && !this._indicator?.classList?.contains('pulling')) {
       this._refreshing = true;
-      this._indicator.querySelector('span').textContent = 'Refreshingâ€¦';
+      this._indicator.querySelector('span').textContent = 'Refreshing…';
 
       try {
         if (typeof window.loadChats === 'function') await window.loadChats();

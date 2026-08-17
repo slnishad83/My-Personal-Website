@@ -87,7 +87,7 @@ function handleDeepLink() {
 }
 
 // ========================================
-// PROFILE OVERLAY — THEME LABEL & STATUS BADGE SYNC
+// PROFILE OVERLAY � THEME LABEL & STATUS BADGE SYNC
 // ========================================
 (function() {
   function _getThemeLabel() {

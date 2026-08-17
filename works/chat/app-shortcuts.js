@@ -1,5 +1,5 @@
 ﻿/**
- * app-shortcuts.js â€” Dynamic app shortcuts (Android 7.1+)
+ * app-shortcuts.js — Dynamic app shortcuts (Android 7.1+)
  */
 (function() {
     'use strict';

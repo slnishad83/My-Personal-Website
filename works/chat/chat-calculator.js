@@ -1,6 +1,6 @@
 'use strict';
 /**
- * CHAT CALCULATOR — Inline calculator in chat input
+ * CHAT CALCULATOR � Inline calculator in chat input
  * Type "=100*5+20" and get the result displayed before sending.
  */
 (function () {

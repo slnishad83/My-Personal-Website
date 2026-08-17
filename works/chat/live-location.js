@@ -1,5 +1,5 @@
 ﻿/**
- * Live Location Sharing â€” Leaflet + OpenStreetMap
+ * Live Location Sharing — Leaflet + OpenStreetMap
  * Real-time GPS location broadcast with full interactive map UI.
  * Uses navigator.geolocation, Firestore for real-time sync,
  * and Leaflet (free, no API key) for mapping.
@@ -60,14 +60,14 @@
     });
   }
 
-  /* â”€â”€ Leaflet tile URLs (free, no key) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* ── Leaflet tile URLs (free, no key) ─────────────────── */
   var TILE_URL = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
   var TILE_ATTR = '&copy; <a href="https://openstreetmap.org/copyright">OpenStreetMap</a>';
 
   var DARK_TILE_URL = 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
   var DARK_TILE_ATTR = '&copy; <a href="https://carto.com/">CARTO</a> &copy; <a href="https://openstreetmap.org/copyright">OpenStreetMap</a>';
 
-  /* â”€â”€ CSS injection â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* ── CSS injection ─────────────────────────────────────── */
   function _injectStyles() {
     if (document.getElementById('ll-styles')) return;
     var s = document.createElement('style');
@@ -99,7 +99,7 @@
     document.head.appendChild(s);
   }
 
-  /* â”€â”€ Public API â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* ── Public API ────────────────────────────────────────── */
   var LiveLocation = {
 
     init: function () {
@@ -231,7 +231,7 @@
 
       panel.innerHTML =
         '<div id="ll-map-header">' +
-          '<h3>ðŸ“ Live Location</h3>' +
+          '<h3>📍 Live Location</h3>' +
           '<div id="ll-map-header-actions">' +
             '<button id="ll-stop-btn">Stop Sharing</button>' +
             '<button id="ll-close-btn">&times;</button>' +
@@ -283,7 +283,7 @@
 
       var pinIcon = L.divIcon({
         className: '',
-        html: '<div style="width:36px;height:36px;border-radius:50%;background:#ef4444;border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.3);display:flex;align-items:center;justify-content:center"><span style="color:white;font-size:16px">ðŸ“</span></div>',
+        html: '<div style="width:36px;height:36px;border-radius:50%;background:#ef4444;border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.3);display:flex;align-items:center;justify-content:center"><span style="color:white;font-size:16px">📍</span></div>',
         iconSize: [36, 36],
         iconAnchor: [18, 18]
       });
@@ -319,7 +319,7 @@
           if (_mapMarker) {
             var endedIcon = L.divIcon({
               className: '',
-              html: '<div style="width:36px;height:36px;border-radius:50%;background:#6b7280;border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.3);display:flex;align-items:center;justify-content:center"><span style="color:white;font-size:16px">â¹ï¸</span></div>',
+              html: '<div style="width:36px;height:36px;border-radius:50%;background:#6b7280;border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.3);display:flex;align-items:center;justify-content:center"><span style="color:white;font-size:16px">⏹️</span></div>',
               iconSize: [36, 36],
               iconAnchor: [18, 18]
             });

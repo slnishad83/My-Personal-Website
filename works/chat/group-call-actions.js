@@ -1,4 +1,4 @@
-/* group-call-actions.js — Mute, camera, screen share for group calls; participant management */
+/* group-call-actions.js � Mute, camera, screen share for group calls; participant management */
 (function () {
   'use strict';
 

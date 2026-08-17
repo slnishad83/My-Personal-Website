@@ -1,5 +1,5 @@
 ﻿/**
- * in-app-update.js â€” Play Store in-app update prompts
+ * in-app-update.js — Play Store in-app update prompts
  */
 (function() {
     'use strict';

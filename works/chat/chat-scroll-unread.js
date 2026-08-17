@@ -1,6 +1,6 @@
 'use strict';
 /**
- * SCROLL TO FIRST UNREAD — Floating button to jump to first unread message
+ * SCROLL TO FIRST UNREAD � Floating button to jump to first unread message
  * Shows a downward arrow button when scrolled up in a chat with unread messages.
  */
 (function () {

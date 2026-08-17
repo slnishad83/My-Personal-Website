@@ -13,7 +13,7 @@
   const IDB_VERSION = 1;
   const STORE_NAME  = 'tokens';
 
-  /* â”€â”€ IndexedDB helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* ── IndexedDB helpers ────────────────────────────────────────────── */
   let _idbConn = null;
 
   function openIdb() {
@@ -39,7 +39,7 @@
     } catch (e) { /* non-critical */ }
   }
 
-  /* â”€â”€ Store ID token whenever it changes â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* ── Store ID token whenever it changes ──────────────────────────── */
   let _refreshTimer = null;
 
   function startTokenRefresh() {
@@ -66,7 +66,7 @@
     });
   }
 
-  /* â”€â”€ Listen for relay message from service worker â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* ── Listen for relay message from service worker ────────────────── */
   function listenForSwRelay() {
     if (!navigator.serviceWorker) return;
 
@@ -81,7 +81,7 @@
     });
   }
 
-  /* â”€â”€ Auto-send the reply through the existing app send path â”€â”€â”€â”€â”€â”€â”€ */
+  /* ── Auto-send the reply through the existing app send path ─────── */
   async function autoSendReply({ chatId, chatType, chatUserId, groupId, replyText }) {
     const user = window.currentUser;
     const db   = window.db;
@@ -130,17 +130,17 @@
 
       // Show brief toast if the app is visible
       if (typeof window.showToast === 'function' && document.visibilityState === 'visible') {
-        window.showToast('Reply sent âœ“');
+        window.showToast('Reply sent ✓');
       }
     } catch (e) {
       if (window.__DEBUG__) console.warn('[TC Reply] Auto-send failed:', e);
       if (typeof window.showToast === 'function') {
-        window.showToast('Could not send reply â€” open the chat to retry', 'error');
+        window.showToast('Could not send reply — open the chat to retry', 'error');
       }
     }
   }
 
-  /* â”€â”€ Init â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* ── Init ─────────────────────────────────────────────────────────── */
   function init() {
     startTokenRefresh();
     listenForSwRelay();

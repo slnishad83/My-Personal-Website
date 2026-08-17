@@ -1,6 +1,6 @@
 ﻿'use strict';
 /**
- * CHAT FOLDERS â€” Organize chats into folders (Work, Family, Friends, etc.)
+ * CHAT FOLDERS — Organize chats into folders (Work, Family, Friends, etc.)
  * Stored in Firestore user doc.
  */
 (function () {
@@ -82,7 +82,7 @@
         tab.innerHTML = `<span class="material-symbols-outlined" style="font-size:16px">${folder.icon || 'folder'}</span>${this._esc(folder.name)}`;
 
         if (folder.id !== 'all' && folder.id !== 'unread' && folder.id !== 'groups') {
-          tab.innerHTML += `<button data-remove-folder="${folder.id}" style="background:none;border:none;cursor:pointer;color:inherit;opacity:0.5;padding:0 2px;font-size:12px;" aria-label="Remove folder">âœ•</button>`;
+          tab.innerHTML += `<button data-remove-folder="${folder.id}" style="background:none;border:none;cursor:pointer;color:inherit;opacity:0.5;padding:0 2px;font-size:12px;" aria-label="Remove folder">✕</button>`;
         }
 
         tab.addEventListener('click', (e) => {

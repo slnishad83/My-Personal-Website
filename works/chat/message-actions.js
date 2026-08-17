@@ -45,7 +45,7 @@
     var url = _getMediaUrl(msg);
     if (!url) { _toast('No media to download', 'error'); return; }
     var fileName = _getFileName(msg);
-    _toast('Downloadingâ€¦', 'info');
+    _toast('Downloading…', 'info');
     try {
       var response = await fetch(url);
       var blob = await response.blob();
@@ -160,22 +160,22 @@
     var preview;
     switch (type) {
       case 'text': preview = msg.text || ''; break;
-      case 'image': preview = 'ðŸ“· Image'; if (msg.text) preview += ' Â· ' + msg.text; break;
-      case 'video': preview = 'ðŸŽ¬ Video'; if (msg.text) preview += ' Â· ' + msg.text; break;
-      case 'voice': preview = 'ðŸŽ¤ Voice message (' + (msg.audioDuration || '?') + 's)'; break;
-      case 'audio': preview = 'ðŸŽµ Audio'; break;
-      case 'doc': preview = 'ðŸ“„ ' + (msg.fileName || 'Document'); break;
-      case 'sticker': preview = 'ðŸ–¼ï¸ Sticker'; break;
-      case 'videoNote': preview = 'ðŸŽ¥ Video note'; break;
+      case 'image': preview = '📷 Image'; if (msg.text) preview += ' · ' + msg.text; break;
+      case 'video': preview = '🎬 Video'; if (msg.text) preview += ' · ' + msg.text; break;
+      case 'voice': preview = '🎤 Voice message (' + (msg.audioDuration || '?') + 's)'; break;
+      case 'audio': preview = '🎵 Audio'; break;
+      case 'doc': preview = '📄 ' + (msg.fileName || 'Document'); break;
+      case 'sticker': preview = '🖼️ Sticker'; break;
+      case 'videoNote': preview = '🎥 Video note'; break;
       case 'location':
         var loc = msg.location || msg;
-        preview = 'ðŸ“ Location' + (loc.latitude ? ' (' + loc.latitude.toFixed(4) + ', ' + loc.longitude.toFixed(4) + ')' : '');
+        preview = '📍 Location' + (loc.latitude ? ' (' + loc.latitude.toFixed(4) + ', ' + loc.longitude.toFixed(4) + ')' : '');
         break;
-      case 'contact': preview = 'ðŸ‘¤ ' + (msg.contactName || msg.contact?.name || 'Contact'); break;
-      case 'poll': preview = 'ðŸ“Š ' + (msg.pollQuestion || msg.question || 'Poll'); break;
+      case 'contact': preview = '👤 ' + (msg.contactName || msg.contact?.name || 'Contact'); break;
+      case 'poll': preview = '📊 ' + (msg.pollQuestion || msg.question || 'Poll'); break;
       default: preview = msg.text || 'Message'; break;
     }
-    if (preview.length > 80) preview = preview.substring(0, 77) + 'â€¦';
+    if (preview.length > 80) preview = preview.substring(0, 77) + '…';
     return preview;
   }
 

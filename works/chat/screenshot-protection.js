@@ -1,5 +1,5 @@
 ﻿/**
- * screenshot-protection.js â€” Prevent screenshots on sensitive screens
+ * screenshot-protection.js — Prevent screenshots on sensitive screens
  */
 (function() {
     'use strict';

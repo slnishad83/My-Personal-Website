@@ -580,7 +580,7 @@ const ErrorBoundary = {
         if (self._isOfflineError(err) && !navigator.onLine) {
           self._captureError({
             type: 'firebase_offline',
-            message: 'Firestore read skipped â€” offline',
+            message: 'Firestore read skipped — offline',
             context: { collection: context || 'unknown' },
             timestamp: Date.now()
           });
@@ -615,7 +615,7 @@ const ErrorBoundary = {
       if (self._isOfflineError(err) && !navigator.onLine) {
         self._captureError({
           type: 'firebase_write_offline',
-          message: 'Firestore write queued â€” offline',
+          message: 'Firestore write queued — offline',
           context: { collection: context || 'unknown' },
           timestamp: Date.now()
         });
@@ -660,7 +660,7 @@ const ErrorBoundary = {
             }
             self._captureError({
               type: 'onsnapshot_offline',
-              message: 'onSnapshot paused â€” offline',
+              message: 'onSnapshot paused — offline',
               context: { collection: context || 'unknown' },
               timestamp: Date.now()
             });

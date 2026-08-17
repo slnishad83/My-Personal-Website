@@ -10,7 +10,7 @@ const PERMISSION_ENTRIES = [
     id: "camera",
     name: "Camera",
     description: "Take photos, record videos, and make video calls.",
-    icon: "ðŸ“·",
+    icon: "📷",
     features: ["Take Photo", "Record Video", "Video Call"],
     nativeAlias: "camera",
     webPermissionName: "camera",
@@ -21,7 +21,7 @@ const PERMISSION_ENTRIES = [
     id: "microphone",
     name: "Microphone",
     description: "Record voice messages, make audio and video calls.",
-    icon: "ðŸŽ¤",
+    icon: "🎤",
     features: ["Record Voice Message", "Audio Call", "Video Call"],
     nativeAlias: "microphone",
     webPermissionName: "microphone",
@@ -32,7 +32,7 @@ const PERMISSION_ENTRIES = [
     id: "notifications",
     name: "Notifications",
     description: "Receive message alerts, call notifications, and updates.",
-    icon: "ðŸ””",
+    icon: "🔔",
     features: ["Push Alerts", "Call Notifications", "Message Notifications"],
     nativeAlias: "notifications",
     webPermissionName: "notifications",
@@ -43,7 +43,7 @@ const PERMISSION_ENTRIES = [
     id: "location",
     name: "Location",
     description: "Share your location in chats and find nearby places.",
-    icon: "ðŸ“",
+    icon: "📍",
     features: ["Share Location", "Find Nearby Places"],
     nativeAlias: "location",
     webPermissionName: "geolocation",
@@ -54,7 +54,7 @@ const PERMISSION_ENTRIES = [
     id: "media",
     name: "Photos & Media",
     description: "Access photos, videos, and files to share in chats.",
-    icon: "ðŸ–¼ï¸",
+    icon: "🖼️",
     features: ["Send Images", "Send Videos", "Send Documents"],
     nativeAlias: "media",
     webPermissionName: null,
@@ -65,7 +65,7 @@ const PERMISSION_ENTRIES = [
     id: "contacts",
     name: "Contacts",
     description: "Find friends and share contacts from your address book.",
-    icon: "ðŸ‘¤",
+    icon: "👤",
     features: ["Find Friends", "Share Contact"],
     nativeAlias: "contacts",
     webPermissionName: null,
@@ -76,7 +76,7 @@ const PERMISSION_ENTRIES = [
     id: "storage",
     name: "Storage",
     description: "Download and save files, images, and videos to your device.",
-    icon: "ðŸ’¾",
+    icon: "💾",
     features: ["Download Files", "Save Media"],
     nativeAlias: "storage",
     webPermissionName: "persistent-storage",
@@ -482,7 +482,7 @@ window.PermissionsManager = {
 
   getIcon(id) {
     const info = _getPermInfo(id);
-    return info?.icon || "ðŸ”’";
+    return info?.icon || "🔒";
   },
 
   getLastStatus(id) {
@@ -674,7 +674,7 @@ function _renderPermissionsScreen() {
     </div>`;
     }).join("") +
     '<hr class="perm-divider">' +
-    '<button id="permRevokeGuideBtn" class="setting-item danger" style="margin:0;border-radius:8px;">ðŸ“– How to Manage Permissions</button>';
+    '<button id="permRevokeGuideBtn" class="setting-item danger" style="margin:0;border-radius:8px;">📖 How to Manage Permissions</button>';
 
   PermissionsManager.refreshUI();
 }

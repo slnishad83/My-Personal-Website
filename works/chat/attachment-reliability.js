@@ -1,6 +1,6 @@
 ﻿/* =============================================
-   ATTACHMENT RELIABILITY v1.0 â€” #26
-   Upload retry (3Ã— exponential backoff),
+   ATTACHMENT RELIABILITY v1.0 — #26
+   Upload retry (3× exponential backoff),
    download progress tracking, network recovery,
    file size validation.
    ============================================= */
@@ -10,7 +10,7 @@
   const MAX_RETRIES  = 3;
   const RETRY_BASE   = 1500;
 
-  /* â”€â”€â”€ Status badge in message bubble â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* ─── Status badge in message bubble ───────────────────────── */
   function showBubbleStatus(localId, text, type) {
     if (!localId) return;
     const bubble = document.querySelector('[data-local-id="' + CSS.escape(String(localId)) + '"]');
@@ -26,42 +26,42 @@
     if (type === 'done') setTimeout(() => el.remove(), 2000);
   }
 
-  /* â”€â”€â”€ Retry wrapper â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* ─── Retry wrapper ─────────────────────────────────────────── */
   async function withRetry(fn, localId, attempt) {
     attempt = attempt || 0;
     try { return await fn(); } catch (err) {
       if (attempt >= MAX_RETRIES) throw err;
       const delay = RETRY_BASE * Math.pow(2, attempt);
-      showBubbleStatus(localId, 'Retrying (' + (attempt+1) + '/' + MAX_RETRIES + ')â€¦', 'warn');
+      showBubbleStatus(localId, 'Retrying (' + (attempt+1) + '/' + MAX_RETRIES + ')…', 'warn');
       await new Promise(r => setTimeout(r, delay));
       return withRetry(fn, localId, attempt + 1);
     }
   }
 
-  /* â”€â”€â”€ Patch upload functions â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* ─── Patch upload functions ────────────────────────────────── */
   function patchUploaders() {
     ['uploadFile','uploadAttachment','uploadMedia','sendFileMessage'].forEach(function(name) {
       var orig = window[name];
       if (typeof orig !== 'function') {
-        if (window.__DEBUG__) console.warn('[AttachmentReliability] ' + name + ' not found â€” retry patch deferred');
+        if (window.__DEBUG__) console.warn('[AttachmentReliability] ' + name + ' not found — retry patch deferred');
         return;
       }
       window[name] = async function() {
         const localId = (arguments[arguments.length-1]||{}).localId || null;
         try {
-          showBubbleStatus(localId, 'Uploadingâ€¦', 'info');
+          showBubbleStatus(localId, 'Uploading…', 'info');
           const result = await withRetry(() => orig.apply(this, arguments), localId);
-          showBubbleStatus(localId, 'Sent âœ“', 'done');
+          showBubbleStatus(localId, 'Sent ✓', 'done');
           return result;
         } catch (err) {
-          showBubbleStatus(localId, 'Upload failed â€” tap to retry', 'error');
+          showBubbleStatus(localId, 'Upload failed — tap to retry', 'error');
           throw err;
         }
       };
     });
   }
 
-  /* â”€â”€â”€ Network recovery: nudge error bubbles on reconnect â”€â”€â”€â”€â”€â”€ */
+  /* ─── Network recovery: nudge error bubbles on reconnect ────── */
   var _onOnline = null;
   var _onOffline = null;
   var _onDownloadClick = null;
@@ -73,7 +73,7 @@
       if (!wasOffline) return;
       wasOffline = false;
       document.querySelectorAll('.tc-attach-status--error').forEach(el => {
-        el.textContent = 'Reconnected â€” please resend';
+        el.textContent = 'Reconnected — please resend';
       });
     };
     _onOffline = function () { wasOffline = true; };
@@ -81,7 +81,7 @@
     window.addEventListener('offline', _onOffline);
   }
 
-  /* â”€â”€â”€ Download progress via XHR â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* ─── Download progress via XHR ────────────────────────────── */
   function initDownloadProgress() {
     _onDownloadClick = function (e) {
       const link = e.target.closest('a.pdf-attachment-card, a.attachment-download, .tc-download-btn');
@@ -93,7 +93,7 @@
       if (!prog) {
         prog = document.createElement('div');
         prog.className = 'tc-dl-progress';
-        prog.innerHTML = '<div class="tc-dl-bar"></div><span class="tc-dl-text">Downloadingâ€¦</span>';
+        prog.innerHTML = '<div class="tc-dl-bar"></div><span class="tc-dl-text">Downloading…</span>';
         link.appendChild(prog);
       }
       const bar  = prog.querySelector('.tc-dl-bar');
@@ -106,7 +106,7 @@
         if (e.lengthComputable) {
           const pct = Math.round((e.loaded/e.total)*100);
           if (bar) bar.style.width = pct + '%';
-          if (txt) txt.textContent = 'Downloadingâ€¦ ' + pct + '%';
+          if (txt) txt.textContent = 'Downloading… ' + pct + '%';
         }
       };
       xhr.onload = () => {
@@ -121,7 +121,7 @@
         if (typeof showToast === 'function') showToast('File saved to Downloads', 'success');
       };
       xhr.onerror = () => {
-        if (txt) txt.textContent = 'Download failed â€” tap to retry';
+        if (txt) txt.textContent = 'Download failed — tap to retry';
         if (bar) { bar.style.width = '100%'; bar.style.background = '#ef4444'; }
       };
       xhr.send();
@@ -129,7 +129,7 @@
     document.addEventListener('click', _onDownloadClick);
   }
 
-  /* â”€â”€â”€ File size validation â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* ─── File size validation ──────────────────────────────────── */
   function initFileValidation() {
     const MAX_BYTES = 100 * 1024 * 1024; // 100 MB
     _onFileChange = function (e) {

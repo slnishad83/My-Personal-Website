@@ -1,5 +1,5 @@
 /* ============================================================
-   NOTIFICATION SOUNDS — High-quality synthesized notification
+   NOTIFICATION SOUNDS � High-quality synthesized notification
    tones using Web Audio API. No external audio files needed.
    Provides message, group message, call ringtone, call ended,
    missed call, and custom sound support.
@@ -65,20 +65,20 @@ const NotificationSounds = (() => {
   }
 
   const sounds = {
-    /* WhatsApp-style message "ding" — bright, short, pleasant */
+    /* WhatsApp-style message "ding" � bright, short, pleasant */
     message() {
       _playTone(880, 0.08, 0.12, 'sine', 0.005, 0.04);
       setTimeout(() => _playTone(1175, 0.07, 0.10, 'sine', 0.005, 0.035), 70);
     },
 
-    /* Group message — slightly different tone to distinguish */
+    /* Group message � slightly different tone to distinguish */
     groupMessage() {
       _playTone(784, 0.08, 0.12, 'sine', 0.005, 0.04);
       setTimeout(() => _playTone(1047, 0.07, 0.10, 'sine', 0.005, 0.035), 70);
       setTimeout(() => _playTone(1319, 0.06, 0.08, 'sine', 0.005, 0.03), 140);
     },
 
-    /* Incoming call ringtone — dual-tone pattern like WhatsApp */
+    /* Incoming call ringtone � dual-tone pattern like WhatsApp */
     callRing() {
       _playTone(440, 0.4, 0.12, 'sine', 0.01, 0.15);
       setTimeout(() => _playTone(480, 0.4, 0.12, 'sine', 0.01, 0.15), 50);
@@ -86,34 +86,34 @@ const NotificationSounds = (() => {
       setTimeout(() => _playTone(587, 0.35, 0.10, 'sine', 0.01, 0.12), 550);
     },
 
-    /* Outgoing call — gentle connecting tone */
+    /* Outgoing call � gentle connecting tone */
     outgoingCall() {
       _playTone(440, 0.25, 0.08, 'sine', 0.02, 0.1);
       setTimeout(() => _playTone(523, 0.25, 0.08, 'sine', 0.02, 0.1), 300);
       setTimeout(() => _playTone(659, 0.25, 0.08, 'sine', 0.02, 0.1), 600);
     },
 
-    /* Call connected — positive confirmation tone */
+    /* Call connected � positive confirmation tone */
     callConnected() {
       _playTone(523, 0.15, 0.10, 'sine', 0.005, 0.08);
       setTimeout(() => _playTone(659, 0.15, 0.10, 'sine', 0.005, 0.08), 100);
       setTimeout(() => _playTone(784, 0.2, 0.12, 'sine', 0.005, 0.1), 200);
     },
 
-    /* Call ended — descending tone */
+    /* Call ended � descending tone */
     callEnded() {
       _playTone(659, 0.15, 0.08, 'sine', 0.005, 0.08);
       setTimeout(() => _playTone(523, 0.15, 0.08, 'sine', 0.005, 0.08), 100);
       setTimeout(() => _playTone(440, 0.2, 0.08, 'sine', 0.005, 0.1), 200);
     },
 
-    /* Call declined — short negative tone */
+    /* Call declined � short negative tone */
     callDeclined() {
       _playTone(440, 0.15, 0.08, 'sine', 0.005, 0.08);
       setTimeout(() => _playTone(370, 0.2, 0.08, 'sine', 0.005, 0.1), 100);
     },
 
-    /* Missed call — alert pattern */
+    /* Missed call � alert pattern */
     missedCall() {
       _playTone(698, 0.12, 0.12, 'sine', 0.005, 0.06);
       setTimeout(() => _playTone(880, 0.12, 0.12, 'sine', 0.005, 0.06), 120);
@@ -121,7 +121,7 @@ const NotificationSounds = (() => {
       setTimeout(() => _playTone(880, 0.15, 0.12, 'sine', 0.005, 0.08), 360);
     },
 
-    /* Sent message — subtle outgoing confirmation */
+    /* Sent message � subtle outgoing confirmation */
     sent() {
       _playTone(1047, 0.05, 0.06, 'sine', 0.003, 0.025);
     },
@@ -132,7 +132,7 @@ const NotificationSounds = (() => {
       setTimeout(() => _playTone(1568, 0.08, 0.08, 'sine', 0.003, 0.04), 60);
     },
 
-    /* Mention notification — attention-getting */
+    /* Mention notification � attention-getting */
     mention() {
       _playTone(1047, 0.08, 0.12, 'sine', 0.005, 0.04);
       setTimeout(() => _playTone(1319, 0.08, 0.12, 'sine', 0.005, 0.04), 80);
@@ -145,54 +145,54 @@ const NotificationSounds = (() => {
       setTimeout(() => _playTone(277, 0.2, 0.08, 'sawtooth', 0.005, 0.1), 120);
     },
 
-    /* WhatsApp "Silent" tone — for previewing silent setting */
+    /* WhatsApp "Silent" tone � for previewing silent setting */
     silent() {
       // No-op: plays nothing
     },
 
-    /* WhatsApp-style "Ding" — classic notification */
+    /* WhatsApp-style "Ding" � classic notification */
     ding() {
       _playTone(1047, 0.06, 0.10, 'sine', 0.003, 0.03);
     },
 
-    /* WhatsApp-style "Note" — musical two-tone */
+    /* WhatsApp-style "Note" � musical two-tone */
     note() {
       _playTone(659, 0.10, 0.10, 'sine', 0.005, 0.05);
       setTimeout(() => _playTone(880, 0.12, 0.10, 'sine', 0.005, 0.06), 100);
     },
 
-    /* WhatsApp-style "Chime" — bright ascending */
+    /* WhatsApp-style "Chime" � bright ascending */
     chime() {
       _playTone(784, 0.08, 0.10, 'sine', 0.003, 0.04);
       setTimeout(() => _playTone(1047, 0.08, 0.10, 'sine', 0.003, 0.04), 60);
       setTimeout(() => _playTone(1319, 0.10, 0.10, 'sine', 0.003, 0.05), 120);
     },
 
-    /* WhatsApp-style "Bell" — resonant */
+    /* WhatsApp-style "Bell" � resonant */
     bell() {
       _playTone(1319, 0.15, 0.10, 'sine', 0.005, 0.08);
       setTimeout(() => _playTone(1568, 0.2, 0.10, 'sine', 0.005, 0.1), 50);
     },
 
-    /* WhatsApp-style "Digital" — electronic */
+    /* WhatsApp-style "Digital" � electronic */
     digital() {
       _playTone(880, 0.04, 0.08, 'square', 0.003, 0.02);
       setTimeout(() => _playTone(880, 0.04, 0.08, 'square', 0.003, 0.02), 80);
     },
 
-    /* WhatsApp-style "Soft" — gentle warm tone */
+    /* WhatsApp-style "Soft" � gentle warm tone */
     soft() {
       _playTone(440, 0.12, 0.08, 'sine', 0.02, 0.06);
       setTimeout(() => _playTone(554, 0.12, 0.08, 'sine', 0.02, 0.06), 80);
     },
 
-    /* WhatsApp-style "Alert" — attention-getting two-tone */
+    /* WhatsApp-style "Alert" � attention-getting two-tone */
     alert() {
       _playTone(1047, 0.06, 0.12, 'sine', 0.005, 0.03);
       setTimeout(() => _playTone(1319, 0.08, 0.12, 'sine', 0.005, 0.04), 80);
     },
 
-    /* WhatsApp-style "Whistle" — ascending three-tone */
+    /* WhatsApp-style "Whistle" � ascending three-tone */
     whistle() {
       _playTone(1175, 0.10, 0.10, 'sine', 0.005, 0.05);
       setTimeout(() => _playTone(1397, 0.10, 0.10, 'sine', 0.005, 0.05), 100);

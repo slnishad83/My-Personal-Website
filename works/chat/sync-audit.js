@@ -1,8 +1,8 @@
 ﻿/* =============================================
    SYNC AUDIT v1.0  (#29 & #30)
    - Delivery marking on app startup
-   - Tab / window visibility â†’ mark as read
-   - Network recovery â†’ refresh listeners
+   - Tab / window visibility → mark as read
+   - Network recovery → refresh listeners
    - Live receipt DOM update (no full re-render)
    - File download progress
    - Real-time stale-data prevention
@@ -29,12 +29,12 @@
 
     function showOffline() {
       clearTimeout(hideTimer);
-      banner.textContent = 'âš  No internet connection â€” messages may not send or receive';
+      banner.textContent = '⚠ No internet connection — messages may not send or receive';
       banner.className = 'visible';
     }
 
     function showReconnected() {
-      banner.textContent = 'âœ“ Back online â€” syncing messagesâ€¦';
+      banner.textContent = '✓ Back online — syncing messages…';
       banner.className = 'visible reconnecting';
       hideTimer = setTimeout(() => {
         banner.className = '';
@@ -55,7 +55,7 @@
   }
 
   /* ================================================
-     #29 â€” STARTUP DELIVERY
+     #29 — STARTUP DELIVERY
      When the app loads, mark all undelivered messages
      (sent to this user) as delivered across ALL chats
      ================================================ */
@@ -137,7 +137,7 @@
   }
 
   /* ================================================
-     #29 â€” TAB / WINDOW VISIBILITY â†’ MARK AS READ
+     #29 — TAB / WINDOW VISIBILITY → MARK AS READ
      When the user returns to the tab with a chat open,
      mark visible messages as read immediately
      ================================================ */
@@ -190,7 +190,7 @@
   }
 
   /* ================================================
-     #30 â€” LIVE RECEIPT DOM UPDATE
+     #30 — LIVE RECEIPT DOM UPDATE
      Watch the messages area for receipt elements.
      When Firestore updates a message's readBy/deliveredTo,
      the onSnapshot re-renders the bubble. We add a pop
@@ -200,7 +200,7 @@
     const area = document.getElementById('messages-wrap');
     if (!area) return;
 
-    const seenReceipts = new Map(); // msgId â†’ last class
+    const seenReceipts = new Map(); // msgId → last class
 
     if (window.MutationBus) {
       MutationBus.observe('sync:receipts', area, { childList: true, subtree: true }, function (mutations) {
@@ -242,7 +242,7 @@
   }
 
   /* ================================================
-     #30 â€” NETWORK RECOVERY: REFRESH ON RECONNECT
+     #30 — NETWORK RECOVERY: REFRESH ON RECONNECT
      When the browser comes back online after being
      offline, re-subscribe to Firestore listeners so
      stale data is cleared
@@ -271,7 +271,7 @@
   }
 
   /* ================================================
-     #30 â€” DOWNLOAD PROGRESS INDICATOR
+     #30 — DOWNLOAD PROGRESS INDICATOR
      Intercepts download link clicks and shows a slim
      progress bar below the file card using fetch + streams
      ================================================ */
@@ -348,7 +348,7 @@
   }
 
   /* ================================================
-     #30 â€” STALE DATA PREVENTION
+     #30 — STALE DATA PREVENTION
      If a Firestore listener silently errors or stalls,
      refresh the messages listener every 5 minutes when
      the app is visible and a chat is open
@@ -378,7 +378,7 @@
   }
 
   /* ================================================
-     WAIT FOR AUTH â€” run after Firebase auth resolves
+     WAIT FOR AUTH — run after Firebase auth resolves
      ================================================ */
   function waitForAuthAndRun() {
     if (!window.firebase || !window.firebase.auth) {
@@ -418,7 +418,7 @@
     window.addEventListener('load', function () { setTimeout(init, 0); });
   }
 
-  /* â”€â”€â”€ destroy (logout cleanup) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* ─── destroy (logout cleanup) ──────────────────────────────── */
   function destroy() {
     if (window.MutationBus) MutationBus.off('sync:receipts');
     _cleanupFns.forEach(function (fn) { try { fn(); } catch (e) {} });

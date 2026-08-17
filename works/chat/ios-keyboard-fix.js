@@ -1,5 +1,5 @@
 /* ============================================================
-   VIRTUAL KEYBOARD FIX — Handles keyboard viewport issues
+   VIRTUAL KEYBOARD FIX � Handles keyboard viewport issues
    Works on iOS Safari and Android Chrome/Firefox.
    - Uses visualViewport API to track keyboard state
    - Adjusts input bar positioning

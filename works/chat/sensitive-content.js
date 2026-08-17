@@ -1,4 +1,4 @@
-// Sensitive Content Blur — auto-blur images flagged as sensitive
+// Sensitive Content Blur � auto-blur images flagged as sensitive
 (function() {
   'use strict';
 

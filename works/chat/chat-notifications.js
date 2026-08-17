@@ -485,9 +485,11 @@
       if (this.isMuted(chatId)) return;
       const settings = this.getSettings(chatId);
 
-      if (settings.tone && settings.tone !== 'none') {
+      if (settings.tone === 'none') {
+        // Tone explicitly set to silent — skip sound
+      } else if (settings.tone && settings.tone !== 'default') {
         this.playTone(settings.tone);
-      } else if (settings.tone === 'default') {
+      } else {
         if (window.NotificationSounds) {
           window.NotificationSounds.play(chatType === 'group' ? 'groupMessage' : 'message');
         }

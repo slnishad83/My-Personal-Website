@@ -1,5 +1,5 @@
 /**
- * GlobalCleanup — auto-tracks setInterval/setTimeout handles and
+ * GlobalCleanup � auto-tracks setInterval/setTimeout handles and
  * patches Firestore onSnapshot to auto-register with ListenerManager.
  * Call GlobalCleanup.destroy() on logout to kill everything.
  */

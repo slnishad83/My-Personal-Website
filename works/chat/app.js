@@ -1,5 +1,5 @@
 /**
- * NSL Chat â€” Core Application Module
+ * NSL Chat — Core Application Module
  * Provides the shared App namespace, safe HTML escaping, and
  * a centralised online/offline reconnect coordinator so that
  * multiple feature modules do not each register redundant
@@ -8,7 +8,7 @@
 (function () {
   'use strict';
 
-  /* â”€â”€ Safe HTML Escaping (XSS prevention) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* ── Safe HTML Escaping (XSS prevention) ──────────────────────── */
   var _escDiv = document.createElement('div');
   function escHtml(str) {
     if (str == null) return '';
@@ -17,10 +17,10 @@
   }
   window.escHtml = escHtml;
 
-  /* â”€â”€ App Namespace â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* ── App Namespace ────────────────────────────────────────────── */
   window.App = window.App || {};
 
-  /* â”€â”€ Unified Online/Offline Coordinator â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* ── Unified Online/Offline Coordinator ───────────────────────── */
   var _reconnectCallbacks = [];
   var _reconnectTimer = null;
   var _wasOffline = false;
@@ -64,7 +64,7 @@
     }
   };
 
-  /* â”€â”€ Utility: Throttle â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* ── Utility: Throttle ────────────────────────────────────────── */
   function throttle(fn, delay) {
     var last = 0;
     var timer = null;
@@ -89,7 +89,7 @@
   }
   window.App.throttle = throttle;
 
-  /* â”€â”€ Utility: Debounce â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* ── Utility: Debounce ────────────────────────────────────────── */
   function debounce(fn, delay) {
     var timer = null;
     return function () {
@@ -101,13 +101,13 @@
   }
   window.App.debounce = debounce;
 
-  /* â”€â”€ Safe HTML Escape (also available via App namespace) â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* ── Safe HTML Escape (also available via App namespace) ──────── */
   window.App.escHtml = escHtml;
 
-  /* â”€â”€ Canonical esc alias â€” all modules should use this â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* ── Canonical esc alias — all modules should use this ──────── */
   window.esc = escHtml;
 
-  /* â”€â”€ Firebase Error Recovery Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* ── Firebase Error Recovery Helpers ────────────────────────── */
   var _isNetworkError = function (err) {
     if (!err) return false;
     var code = err.code || '';

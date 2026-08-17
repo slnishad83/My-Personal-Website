@@ -1,12 +1,12 @@
 ﻿'use strict';
 (function () {
-  var QUICK_EMOJIS = ['ðŸ‘', 'â¤ï¸', 'ðŸ˜‚', 'ðŸ˜®', 'ðŸ˜¢', 'ðŸ™'];
-  var ALL_REACTION_EMOJIS = [
-    'ðŸ‘', 'ðŸ‘Ž', 'â¤ï¸', 'ðŸ§¡', 'ðŸ’›', 'ðŸ’š', 'ðŸ’™', 'ðŸ’œ', 'ðŸ–¤', 'ðŸ¤',
-    'ðŸ˜‚', 'ðŸ¤£', 'ðŸ˜­', 'ðŸ˜¤', 'ðŸ¤¯', 'ðŸ¥º', 'ðŸ˜´', 'ðŸ¤”', 'ðŸ˜', 'ðŸ™„',
-    'ðŸ˜®', 'ðŸ˜±', 'ðŸ¤®', 'ðŸ¤§', 'ðŸ˜‡', 'ðŸ˜ˆ', 'ðŸ¤¡', 'ðŸ’€', 'ðŸ‘»', 'ðŸ‘½',
-    'ðŸ™', 'ðŸ‘', 'ðŸ¤', 'ðŸ’ª', 'ðŸ«¶', 'âœ‹', 'ðŸ‘‹', 'ðŸ¤™', 'ðŸ‘†', 'ðŸ‘‡',
-    'â¤ï¸â€ðŸ”¥', 'ðŸ’”', 'ðŸ’¯', 'ðŸ”¥', 'â­', 'ðŸŽ‰', 'ðŸŽŠ', 'âœ…', 'âŒ', 'âš ï¸'
+    var QUICK_EMOJIS = ['\uD83D\uDC4D', '\u2764\uFE0F', '\uD83D\uDE02', '\uD83D\uDE2E', '\uD83D\uDE22', '\uD83D\uDE4F'];
+    var ALL_REACTION_EMOJIS = [
+    '\uD83D\uDC4D', '\uD83D\uDC4E', '\u2764\uFE0F', '\uD83E\uDDE1', '\uD83D\uDC9B', '\uD83D\uDC9A', '\uD83D\uDC99', '\uD83D\uDC9C', '\uD83D\uDC94', '\uD83D\uDE0D',
+    '\uD83D\uDE02', '\uD83D\uDE23', '\uD83D\uDE2D', '\uD83D\uDE21', '\uD83D\uDE2F', '\uD83D\uDE3A', '\uD83D\uDE34', '\uD83D\uDE14', '\uD83D\uDE10', '\uD83D\uDE0C',
+    '\uD83D\uDE2E', '\uD83D\uDE31', '\uD83D\uDE25', '\uD83D\uDE24', '\uD83D\uDE07', '\uD83D\uDE08', '\uD83D\uDE11', '\uD83D\uDC80', '\uD83D\uDC7B', '\uD83D\uDC7D',
+    '\uD83D\uDE4F', '\uD83D\uDC4F', '\uD83D\uDD1D', '\uD83D\uDCAA', '\uD83E\uDD1A', '\u270B', '\uD83D\uDC4B', '\uD83D\uDE4C', '\uD83D\uDC49', '\uD83D\uDC47',
+    '\u2764\uFE0F\u200D\uD83D\uDD25', '\uD83D\uDC94', '\uD83D\uDCAB', '\uD83D\uDD25', '\u2B50', '\uD83C\uDF89', '\uD83C\uDF8A', '\u2705', '\u274C', '\u26A0\uFE0F'
   ];
 
   var _usageCounts = {};
@@ -105,7 +105,7 @@
     });
 
     var moreBtn = document.createElement('button');
-    moreBtn.textContent = 'âž•';
+    moreBtn.textContent = '➕';
     moreBtn.style.fontSize = '16px';
     moreBtn.onclick = function (e) {
       e.stopPropagation();
@@ -153,15 +153,15 @@
     grid.className = 'nsl-full-picker-grid';
 
     var EMOJI_NAMES = {
-      'ðŸ‘':'thumbsup','ðŸ‘Ž':'thumbsdown','â¤ï¸':'red_heart','ðŸ”¥':'fire','ðŸ˜‚':'laughing','ðŸ˜®':'open_mouth',
-      'ðŸ˜¢':'cry','ðŸ™':'pray','ðŸ’ª':'muscle','ðŸ‘':'clap','ðŸŽ‰':'party','ðŸ’¯':'100',
-      'ðŸ¥°':'smiling_face_hearts','ðŸ˜':'heart_eyes','ðŸ˜Ž':'sunglasses',
-      'ðŸ¤”':'hmm','ðŸ¤£':'rofl','ðŸ˜­':'crying','ðŸ¥³':'partying','ðŸ˜´':'sleeping',
-      'ðŸ‘€':'eyes','ðŸ’€':'dead','ðŸ¤':'handshake',
-      'âœ¨':'sparkles','ðŸ™Œ':'raised_hands','ðŸ’•':'two_hearts','âš¡':'zap','âœ…':'check',
-      'ðŸ˜±':'scream','ðŸ¤¡':'clown_face','ðŸ’œ':'purple_heart','ðŸ–¤':'black_heart','ðŸ§¡':'orange_heart',
-      'ðŸ’š':'green_heart','ðŸ’™':'blue_heart','ðŸ¤':'white_heart','ðŸ’—':'heartpulse',
-      'ðŸ«¡':'salute','ðŸ«¶':'heart_hands','ðŸ¥º':'pleading'
+      '\uD83D\uDE1C':'thumbsup','\uD83D\uDC4E':'thumbsdown','\u2764\uFE0F':'red_heart','\uD83D\uDCAB':'fire','\uD83D\uDE01':'laughing','\uD83D\uDE00':'open_mouth',
+      '\uD83D\uDE22':'cry','\uD83D\uDE4F':'pray','\uD83D\uDE1D':'muscle','\uD83D\uDC4F':'clap','\uD83C\uDF89':'party','\uD83D\uDE36':'100',
+      '\uD83D\uDE0A':'smiling_face_hearts','\uD83D\uDE0D':'heart_eyes','\uD83D\uDE0E':'sunglasses',
+      '\uD83D\uDE14':'hmm','\uD83D\uDE02':'rofl','\uD83D\uDE2D':'crying','\uD83D\uDF83':'partying','\uD83D\uDE34':'sleeping',
+      '\uD83D\uDC40':'eyes','\uD83D\uDC80':'dead','\uD83D\uDCAC':'handshake',
+      '\u2728':'sparkles','\uD83D\uDE4C':'raised_hands','\uD83D\uDC95':'two_hearts','\u26A1':'zap','\u2705':'check',
+      '\uD83D\uDE03':'scream','\uD83E\uDD21':'clown_face','\uD83D\uDE11':'purple_heart','\uD83D\uDC94':'black_heart','\uD83D\uDDE1':'orange_heart',
+      '\uD83D\uDE10':'green_heart','\uD83D\uDC99':'blue_heart','\uD83D\uDC9A':'white_heart','\uD83D\uDC93':'heartpulse',
+      '\uD83D\uDDA4':'salute','\uD83D\uDCCC':'heart_hands','\uD83D\uDE2F':'pleading'
     };
     function renderGrid(filter) {
       grid.innerHTML = '';

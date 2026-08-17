@@ -8,9 +8,9 @@
   window._trackCache = _trackCache;
   const _TRACK_CACHE_MAX = 500;
 
-  // â”€â”€â”€ WORKING SEARCH BACKENDS (100% FREE + LEGAL ONLY) â”€â”€â”€
+  // ─── WORKING SEARCH BACKENDS (100% FREE + LEGAL ONLY) ───
 
-  // 1. Jamendo API (CC-BY licensed full tracks â€” free to stream & download)
+  // 1. Jamendo API (CC-BY licensed full tracks — free to stream & download)
   // 0. YouTube (via youtubeSearch cloud function -- covers ALL old/new songs in every Indian language)
   const YT_SEARCH_ENDPOINT = window.YOUTUBE_SEARCH_ENDPOINT || 'https://us-central1-my-team-chat-2255.cloudfunctions.net/youtubeSearch';
 
@@ -102,7 +102,7 @@
     }
   }
 
-  // 2. Internet Archive (public domain / CC audio â€” 100% free & legal, full MP3s)
+  // 2. Internet Archive (public domain / CC audio — 100% free & legal, full MP3s)
   async function _searchArchiveOrg(query, limit) {
     try {
       const ctrl = new AbortController();
@@ -128,7 +128,7 @@
     }
   }
 
-  // â”€â”€â”€ UNIFIED SEARCH (tries all free backends, returns combined results) â”€â”€â”€
+  // ─── UNIFIED SEARCH (tries all free backends, returns combined results) ───
   async function _searchAll(query, limit) {
     if (!query || query.length < 2) return [];
 
@@ -169,14 +169,14 @@
     return _searchAll(query);
   };
 
-  // â”€â”€â”€ PLAY FUNCTIONS â”€â”€â”€
+  // ─── PLAY FUNCTIONS ───
 
   window.playArchiveTrack = async function(identifier, title, artist, thumbnail) {
     if (!identifier) { showToast('No track to play', 'error'); return; }
     showToast('Loading audio...', 'info');
     const resolved = await window.resolveArchiveTrackUrl(identifier);
     if (!resolved || !resolved.url) {
-      showToast('Audio unavailable â€” try again later', 'error');
+      showToast('Audio unavailable — try again later', 'error');
       return;
     }
     MusicPlayer.play({
@@ -239,12 +239,12 @@
   window.playCachedTrack = async function(trackId) {
     const t = _trackCache[trackId];
     if (!t) return;
-    // Internet Archive track â€” resolve MP3 URL
+    // Internet Archive track — resolve MP3 URL
     if (t.source === 'archive' && t.identifier) {
       playArchiveTrack(t.identifier, t.title, t.artist, t.thumbnail);
       return;
     }
-    // YouTube track â€” resolve stream URL
+    // YouTube track — resolve stream URL
     if (t.source === 'youtube' && t.videoId) {
       playYouTubeTrack(t);
       return;
@@ -257,7 +257,7 @@
     showToast('Cannot play this track', 'error');
   };
 
-  // â”€â”€â”€ RECENTLY PLAYED â”€â”€â”€
+  // ─── RECENTLY PLAYED ───
   const RECENT_KEY = 'nsl_recent_tracks';
   window.addRecentlyPlayed = window.addRecentlyPlayed || function(track) {
     try {
@@ -319,11 +319,11 @@
     } catch(_) {}
   };
 
-  // â”€â”€â”€ UPLOAD â”€â”€â”€
+  // ─── UPLOAD ───
   window.uploadMusicFile = async function(file, meta = {}) {
     if (!App.auth?.currentUser || !App.db) { showToast('Sign in required', 'error'); return null; }
     if (!file || !file.type.startsWith('audio/')) { showToast('Please select an audio file', 'error'); return null; }
-    if (file.size > 50 * 1024 * 1024) { showToast('File too large â€” max 50MB', 'error'); return null; }
+    if (file.size > 50 * 1024 * 1024) { showToast('File too large — max 50MB', 'error'); return null; }
 
     const uid = App.auth.currentUser.uid;
     const path = `music/${uid}/${Date.now()}_${file.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
@@ -429,7 +429,7 @@
     try { await App.db.collection('musicLibrary').doc(trackId).update({ favorite: track.favorite }); } catch(_) {}
   };
 
-  // â”€â”€â”€ LOAD LIBRARY â”€â”€â”€
+  // ─── LOAD LIBRARY ───
   window.loadMusicLibrary = async function() {
     if (!App.db || !App.auth?.currentUser) return [];
     try {
@@ -441,7 +441,7 @@
     } catch(e) { if (window.__DEBUG__) console.warn('Load library failed:', e); return []; }
   };
 
-  // â”€â”€â”€ MUSIC LIBRARY OVERLAY (everything inside chat, no navigation) â”€â”€â”€
+  // ─── MUSIC LIBRARY OVERLAY (everything inside chat, no navigation) ───
   window.openMusicLibrary = function() {
     try {
       const existing = document.getElementById('music-library-overlay');
@@ -538,7 +538,7 @@
     else if (tab === 'playlists') await _renderPlaylistsTab(content);
   };
 
-  // â”€â”€â”€ SEARCH TAB (default â€” shows results inside chat overlay) â”€â”€â”€
+  // ─── SEARCH TAB (default — shows results inside chat overlay) ───
   const _LANG_QUERIES = [
     { lang: 'Malayalam', color: '#FF6B35', queries: ['Malayalam songs', 'Malayalam hits', 'Mollywood songs', 'Malayalam romantic', 'Malayalam new', 'Malayalam 80s 90s retro'] },
     { lang: 'Hindi', color: '#FF9800', queries: ['Hindi songs', 'Bollywood songs', 'Hindi old hits', 'Hindi romantic', 'Hindi 90s classics', 'Hindi latest 2026'] },
@@ -674,14 +674,14 @@
         </div>
         <div style="flex:1;min-width:0">
           <div style="font-size:12px;font-weight:600;color:var(--on-surface);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:flex;align-items:center;gap:4px">${escHtml(t.title)} ${sourceBadge[t.source] || ''}</div>
-          <div style="font-size:10px;color:var(--on-surface-variant)">${escHtml(t.artist)}${t.duration ? ' Â· ' + formatTrackDuration(t.duration) : ''}</div>
+          <div style="font-size:10px;color:var(--on-surface-variant)">${escHtml(t.artist)}${t.duration ? ' · ' + formatTrackDuration(t.duration) : ''}</div>
         </div>
         <button onclick="event.stopPropagation();_addSearchToQueue('${t.id}')" style="background:rgba(124,77,255,0.15);border:none;border-radius:6px;padding:4px 8px;color:var(--primary);font-size:10px;font-weight:600;cursor:pointer;flex-shrink:0;min-height:32px" title="Add to queue">+ Q</button>
       </div>`;
   }
 
   window._playSearchResult = async function(trackId) {
-    showToast('ðŸŽµ Playing track...', 'info');
+    showToast('🎵 Playing track...', 'info');
     if (window.__DEBUG__) console.log('[Music] _playSearchResult called:', trackId);
     const t = _trackCache[trackId];
     if (!t) { if (window.__DEBUG__) console.warn('[Music] Track not in cache:', trackId); return; }
@@ -716,7 +716,7 @@
     }
   };
 
-  // â”€â”€â”€ MY MUSIC TAB â”€â”€â”€
+  // ─── MY MUSIC TAB ───
   async function _renderMyMusic(el) {
     await loadMusicLibrary();
     const tracks = App.musicLibrary;
@@ -767,7 +767,7 @@
       </div>
       <div style="flex:1;min-width:0">
         <div style="font-size:13px;font-weight:600;color:var(--on-surface);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escHtml(t.title)}</div>
-        <div style="font-size:11px;color:var(--on-surface-variant);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escHtml(t.artist)}${t.language ? ' Â· ' + t.language : ''}</div>
+        <div style="font-size:11px;color:var(--on-surface-variant);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escHtml(t.artist)}${t.language ? ' · ' + t.language : ''}</div>
       </div>
       <div style="display:flex;gap:4px">
         ${t.addedBy === App.auth?.currentUser?.uid ? `<button onclick="event.stopPropagation();editMusicTrack('${t.id}')" style="background:none;border:none;cursor:pointer;padding:8px;min-width:36px;min-height:36px;display:inline-flex;align-items:center;justify-content:center;color:var(--on-surface-variant)" title="Edit"><span class="material-symbols-outlined" style="font-size:16px">edit</span></button>` : ''}
@@ -776,14 +776,14 @@
     </div>`;
   }
 
-  // â”€â”€â”€ UPLOAD TAB â”€â”€â”€
+  // ─── UPLOAD TAB ───
   function _renderUploadTab(el) {
     el.innerHTML = `
       <div style="text-align:center;padding:20px 0">
         <div style="border:2px dashed var(--outline-variant,rgba(0,0,0,0.15));border-radius:16px;padding:32px 20px;margin-bottom:16px;cursor:pointer;transition:all 0.2s" id="upload-drop-zone" onclick="document.getElementById('music-file-input').click()" ondragover="event.preventDefault();this.style.borderColor='var(--primary)'" ondragleave="this.style.borderColor='var(--outline-variant,rgba(0,0,0,0.15))'" ondrop="event.preventDefault();this.style.borderColor='var(--outline-variant,rgba(0,0,0,0.15))';handleMusicFileDrop(event)">
           <span class="material-symbols-outlined" style="font-size:40px;color:var(--on-surface-variant);opacity:0.4">upload_file</span>
           <p style="font-size:13px;font-weight:600;color:var(--on-surface);margin:8px 0 4px">Tap to select audio files</p>
-          <p style="font-size:11px;color:var(--on-surface-variant);margin:0">MP3, WAV, OGG, M4A â€” up to 50MB</p>
+          <p style="font-size:11px;color:var(--on-surface-variant);margin:0">MP3, WAV, OGG, M4A — up to 50MB</p>
           <input type="file" id="music-file-input" accept="audio/*" multiple style="display:none" onchange="handleMusicFileSelect(event)">
         </div>
         <div id="upload-progress-container" style="display:none;margin-bottom:16px">
@@ -873,14 +873,14 @@
     if (track) switchMusicLibTab('my');
   };
 
-  // â”€â”€â”€ LANGUAGES TAB â”€â”€â”€
+  // ─── LANGUAGES TAB ───
   function _renderLanguagesTab(el) {
     const colors = {
       'Malayalam': '#FF6B35', 'Tamil': '#E91E63', 'Telugu': '#9C27B0',
       'Hindi': '#FF9800', 'Kannada': '#4CAF50', 'Bengali': '#2196F3',
       'Marathi': '#00BCD4', 'Punjabi': '#FF5722', 'English': '#607D8B', 'Other': '#78909C',
     };
-    let html = '<p style="font-size:12px;color:var(--on-surface-variant);margin-bottom:12px">Browse music by language â€” searches Jamendo & Internet Archive (100% free & legal)</p>';
+    let html = '<p style="font-size:12px;color:var(--on-surface-variant);margin-bottom:12px">Browse music by language — searches Jamendo & Internet Archive (100% free & legal)</p>';
     LANGUAGES.forEach(lang => {
       html += `
         <div style="display:flex;align-items:center;gap:12px;padding:12px;border-radius:12px;background:var(--surface-container-low,rgba(0,0,0,0.03));margin-bottom:6px;cursor:pointer" data-action="browseLanguageYT" data-action-arg="${lang}">
@@ -907,7 +907,7 @@
 
   window.browseLanguageMusic = function(lang) { browseLanguageYT(lang); };
 
-  // â”€â”€â”€ ARCHIVE.ORG SEARCH (public domain) â”€â”€â”€
+  // ─── ARCHIVE.ORG SEARCH (public domain) ───
   window.searchJamendo = async function(query, _page) {
     if (!query || query.length < 2) return [];
     try {
@@ -957,7 +957,7 @@
     if (q && searchInput) { searchInput.value = q; doMusicSearch(); }
   };
 
-  // â”€â”€â”€ ONBOARDING â”€â”€â”€
+  // ─── ONBOARDING ───
   window.checkMusicOnboarding = function() {
     if (localStorage.getItem('nsl_music_onboarded')) return;
     setTimeout(() => showMusicOnboarding(), 2000);
@@ -967,7 +967,7 @@
     if (document.getElementById('onboarding-overlay')) return;
     const steps = [
       { icon: 'music_note', title: 'Welcome to Music!', desc: 'Search free & legal songs, upload your music, and listen while you chat.' },
-      { icon: 'search', title: 'Search Any Song', desc: 'Find songs from Jamendo and the Internet Archive â€” 100% free, no policy issues!' },
+      { icon: 'search', title: 'Search Any Song', desc: 'Find songs from Jamendo and the Internet Archive — 100% free, no policy issues!' },
       { icon: 'library_music', title: 'Your Library', desc: 'Upload your own MP3s and organize them by language.' },
       { icon: 'download', title: 'Background Play', desc: 'Music keeps playing in a floating mini player even when you switch chats or lock your phone.' },
     ];

@@ -1,6 +1,6 @@
 ﻿'use strict';
 /**
- * JUMP TO DATE â€” Open a date picker and scroll to messages from that date
+ * JUMP TO DATE — Open a date picker and scroll to messages from that date
  * Queries Firestore for messages near the selected date in the current chat.
  */
 (function () {

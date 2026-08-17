@@ -1,5 +1,5 @@
 ﻿/**
- * Contact Sync â€” native address book integration
+ * Contact Sync — native address book integration
  * Reads device contacts and matches them against app users
  * Only works on native platforms (iOS/Android) via @capacitor-community/contacts
  */

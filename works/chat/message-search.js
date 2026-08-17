@@ -5,13 +5,13 @@
    - Highlighted match snippets
    - Infinite scroll with Firestore cursor pagination
    - Scope toggle: All Chats vs Current Chat
-   - Click result â†’ jumps to that chat + message
+   - Click result → jumps to that chat + message
    - Keyboard shortcut: Ctrl+F / Cmd+F
    ============================================= */
 (function () {
   'use strict';
 
-  /* â”€â”€â”€ state â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* ─── state ─────────────────────────────────────────────────────── */
   let _query       = '';
   let _scope       = 'all';           // 'all' | 'current'
   let _filterType  = 'all';           // 'all'|'text'|'image'|'video'|'audio'|'voice'|'doc'|'link'
@@ -23,19 +23,19 @@
   let _observer    = null;
   const PAGE_SIZE  = 20;             // messages per chat per page
 
-  /* â”€â”€â”€ escape html â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* ─── escape html ───────────────────────────────────────────────── */
   function esc(s) {
     return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   }
 
-  /* â”€â”€â”€ highlight match in text â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* ─── highlight match in text ───────────────────────────────────── */
   function highlight(text, query) {
     if (!query) return esc(text);
     const re = new RegExp('(' + query.replace(/[.*+?^${}()|[\]\\]/g,'\\$&') + ')', 'gi');
     return esc(text).replace(re, '<mark class="ms-highlight">$1</mark>');
   }
 
-  /* â”€â”€â”€ snippet around match â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* ─── snippet around match ──────────────────────────────────────── */
   function snippet(text, query, radius) {
     radius = radius || 60;
     if (!query) return esc(text.slice(0, 140));
@@ -43,12 +43,12 @@
     if (idx === -1) return esc(text.slice(0, 140));
     const start = Math.max(0, idx - radius);
     const end   = Math.min(text.length, idx + query.length + radius);
-    const pre   = start > 0 ? 'â€¦' : '';
-    const post  = end < text.length ? 'â€¦' : '';
+    const pre   = start > 0 ? '…' : '';
+    const post  = end < text.length ? '…' : '';
     return pre + highlight(text.slice(start, end), query) + post;
   }
 
-  /* â”€â”€â”€ format timestamp â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* ─── format timestamp ──────────────────────────────────────────── */
   function fmtTs(ts) {
     if (!ts) return '';
     let d;
@@ -68,7 +68,7 @@
     return d.getDate() + ' ' + mo + ' ' + d.getFullYear() + ', ' + time;
   }
 
-  /* â”€â”€â”€ get chats to search â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* ─── get chats to search ───────────────────────────────────────── */
   function getChatIds() {
     if (_scope === 'current' && window.currentChat?.id) {
       return [window.currentChat.id];
@@ -88,7 +88,7 @@
     return Array.from(ids);
   }
 
-  /* â”€â”€â”€ search one chat in Firestore â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* ─── search one chat in Firestore ──────────────────────────────── */
   async function searchChat(db, chatId, q) {
     if (_exhausted[chatId]) return [];
     const qLower = q.toLowerCase();
@@ -141,7 +141,7 @@
     return ['chats', 'groups'];
   }
 
-  /* â”€â”€â”€ build result card HTML â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* ─── build result card HTML ─────────────────────────────────────── */
   function buildCard(msg, q) {
     const text       = msg.text || msg.message || msg.body || msg.content || '';
     const senderName = esc(msg.senderName || msg.displayName || msg.name || 'Unknown');
@@ -160,7 +160,7 @@
 </div>`;
   }
 
-  /* â”€â”€â”€ render results into the container â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* ─── render results into the container ──────────────────────────── */
   function renderResults(results, q, append) {
     const container = document.getElementById('globalSearchResults');
     if (!container) return;
@@ -208,7 +208,7 @@
     if (!sentinel) {
       sentinel = document.createElement('div');
       sentinel.className = 'ms-sentinel';
-      sentinel.innerHTML = '<div class="ms-loader" aria-label="Loading more resultsâ€¦"></div>';
+      sentinel.innerHTML = '<div class="ms-loader" aria-label="Loading more results…"></div>';
       container.appendChild(sentinel);
       if (_observer) _observer.disconnect();
       _observer = new IntersectionObserver(entries => {
@@ -217,7 +217,7 @@
       _observer.observe(sentinel);
     }
 
-    // attach click/enter â†’ jump to message
+    // attach click/enter → jump to message
     container.querySelectorAll('.ms-card:not([data-ms-bound])').forEach(card => {
       card.dataset.msBound = '1';
       const jump = () => jumpToMessage(card.dataset.chatId, card.dataset.msgId);
@@ -226,7 +226,7 @@
     });
   }
 
-  /* â”€â”€â”€ load more (infinite scroll) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* ─── load more (infinite scroll) ───────────────────────────────── */
   async function loadMore(q) {
     const db = window.db || window.firestore;
     if (!db || _loading) return;
@@ -262,7 +262,7 @@
     renderResults(results, q, true);
   }
 
-  /* â”€â”€â”€ main search â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* ─── main search ────────────────────────────────────────────────── */
   let doSearch = async function(reset) {
     const q   = _query.trim();
     const container = document.getElementById('globalSearchResults');
@@ -278,7 +278,7 @@
       _lastDocs  = {};
       _exhausted = {};
       if (_observer) { _observer.disconnect(); _observer = null; }
-      container.innerHTML = '<div class="ms-spinner" aria-label="Searchingâ€¦"></div>';
+      container.innerHTML = '<div class="ms-spinner" aria-label="Searching…"></div>';
     }
 
     const db = window.db || window.firestore;
@@ -300,7 +300,7 @@
     renderResults(results, q, false);
   }
 
-  /* â”€â”€â”€ jump to message â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* ─── jump to message ────────────────────────────────────────────── */
   async function jumpToMessage(chatId, msgId) {
     // close search modal
     const modal = document.getElementById('globalSearchModal');
@@ -332,7 +332,7 @@
     findAndScroll();
   }
 
-  /* â”€â”€â”€ wire up the existing modal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* ─── wire up the existing modal ────────────────────────────────── */
   function initModal() {
     const input = document.getElementById('globalSearchInput');
     if (!input) { setTimeout(initModal, 500); return; }
@@ -351,7 +351,7 @@
     input.setAttribute('role',         'combobox');
     input.setAttribute('aria-autocomplete', 'list');
     input.setAttribute('aria-controls',     'globalSearchResults');
-    input.placeholder = 'Search messagesâ€¦';
+    input.placeholder = 'Search messages…';
 
     // add clear button if not present
     if (!document.getElementById('msInputClear')) {
@@ -360,7 +360,7 @@
       clear.className = 'ms-input-clear';
       clear.type = 'button';
       clear.setAttribute('aria-label', 'Clear search');
-      clear.textContent = 'âœ•';
+      clear.textContent = '✕';
       clear.style.display = 'none';
       input.parentNode.style.position = 'relative';
       input.after(clear);
@@ -408,7 +408,7 @@
     if (modal) observer.observe(modal, { attributes: true, attributeFilter: ['style'] });
   }
 
-  /* â”€â”€â”€ filter helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* ─── filter helpers ────────────────────────────────────────────── */
   function matchesFilters(msg) {
     // Type filter
     if (_filterType !== 'all') {
@@ -485,7 +485,7 @@
     container.appendChild(row);
   }
 
-  /* â”€â”€â”€ keyboard shortcut Ctrl+Shift+F / Cmd+Shift+F â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* ─── keyboard shortcut Ctrl+Shift+F / Cmd+Shift+F ──────────────── */
   function initShortcut() {
     document.addEventListener('keydown', e => {
       if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'F') {
@@ -505,7 +505,7 @@
     });
   }
 
-  /* â”€â”€â”€ add search button to header â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* ─── add search button to header ───────────────────────────────── */
   function initHeaderBtn() {
     if (document.getElementById('msGlobalSearchBtn')) return;
     const header = document.querySelector('.chat-header .chat-header-actions, .chat-header-buttons, #chatHeaderActions');
@@ -527,7 +527,7 @@
     header.prepend(btn);
   }
 
-  /* â”€â”€â”€ AI-Assisted Search â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* ─── AI-Assisted Search ───────────────────────────────────────── */
   async function aiRerankSearch(query, existingResults) {
     if (!query || !existingResults.length) return existingResults;
 
@@ -545,7 +545,7 @@
     return existingResults;
   }
 
-  /* â”€â”€â”€ Enhanced doSearch with AI mode â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* ─── Enhanced doSearch with AI mode ──────────────────────────── */
   const _origDoSearch = doSearch;
   async function doSearchWithAI(reset) {
     await _origDoSearch.call(this, reset);
@@ -569,7 +569,7 @@
         // Show reranking indicator
         const indicator = document.createElement('div');
         indicator.className = 'ms-ai-rerank-indicator';
-        indicator.innerHTML = '<span style="font-size:12px;color:var(--primary);font-weight:600;">âœ¨ AI reranking results...</span>';
+        indicator.innerHTML = '<span style="font-size:12px;color:var(--primary);font-weight:600;">✨ AI reranking results...</span>';
         container.insertBefore(indicator, container.firstChild);
 
         const reranked = await aiRerankSearch(_query, results);
@@ -582,7 +582,7 @@
     }
   }
 
-  /* â”€â”€â”€ init â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* ─── init ──────────────────────────────────────────────────────── */
   function init() {
     initModal();
     initShortcut();

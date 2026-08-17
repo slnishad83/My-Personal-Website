@@ -175,7 +175,7 @@
     const items = [
       { icon: '<span class="material-symbols-outlined" style="font-size:18px">open_in_new</span>', label: 'Open in new tab', action: () => { if (src) window.open(src, '_blank'); } },
       { icon: '<span class="material-symbols-outlined" style="font-size:18px">content_copy</span>', label: 'Copy image URL', action: () => { if (src) navigator.clipboard?.writeText(src); } },
-      { icon: '<span class="material-symbols-outlined" style="font-size:18px">download</span>', label: 'Save as…', action: () => { if (src) { const a = document.createElement('a'); a.href = src; a.download = ''; a.click(); } } },
+      { icon: '<span class="material-symbols-outlined" style="font-size:18px">download</span>', label: 'Save as�', action: () => { if (src) { const a = document.createElement('a'); a.href = src; a.download = ''; a.click(); } } },
       { separator: true },
       { icon: '<span class="material-symbols-outlined" style="font-size:18px">fullscreen</span>', label: 'Fullscreen', shortcut: 'F11', action: () => { if (window.NSLDesktop?.toggleFullscreen) window.NSLDesktop.toggleFullscreen(); } },
     ];

@@ -1,6 +1,6 @@
 ﻿'use strict';
 /**
- * EVENT CREATION FROM MESSAGE â€” Create calendar/meeting event from a message
+ * EVENT CREATION FROM MESSAGE — Create calendar/meeting event from a message
  * Detects date/time in messages and adds a "Create event" button.
  */
 (function () {

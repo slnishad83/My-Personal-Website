@@ -1,6 +1,6 @@
 ﻿/**
- * Meeting Scheduler â€” Create meetings from chat with availability slots.
- * Attachment menu â†’ "Meeting" â†’ modal to pick date/time/title/duration.
+ * Meeting Scheduler — Create meetings from chat with availability slots.
+ * Attachment menu → "Meeting" → modal to pick date/time/title/duration.
  * Slots shared in chat; participants accept/decline; meetings tracked in Firestore.
  */
 (function () {
@@ -185,7 +185,7 @@
       const dateFormatted = dateTime.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
       const timeFormatted = dateTime.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
 
-      const meetingMsg = `ðŸ“… Meeting: ${title}\nðŸ“† ${dateFormatted} at ${timeFormatted} (${duration}m)\n\nâœ… Accept | âŒ Decline`;
+      const meetingMsg = `📅 Meeting: ${title}\n📆 ${dateFormatted} at ${timeFormatted} (${duration}m)\n\n✅ Accept | ❌ Decline`;
       if (window.App.sendMessage) {
         await window.App.sendMessage({
           text: meetingMsg,
@@ -213,7 +213,7 @@
     // 15-minute reminder
     if (reminder15m > now) {
       setTimeout(() => {
-        if (typeof showToast === 'function') showToast(`â° Reminder: "${title}" starts in 15 minutes!`, 'success');
+        if (typeof showToast === 'function') showToast(`⏰ Reminder: "${title}" starts in 15 minutes!`, 'success');
         _sendMeetingReminderNotification(title, 'starts in 15 minutes');
       }, reminder15m - now);
     }
@@ -221,7 +221,7 @@
     // Meeting start reminder
     if (reminderStart > now) {
       setTimeout(() => {
-        if (typeof showToast === 'function') showToast(`ðŸ“… Meeting "${title}" is starting now!`, 'success');
+        if (typeof showToast === 'function') showToast(`📅 Meeting "${title}" is starting now!`, 'success');
         _sendMeetingReminderNotification(title, 'is starting now');
       }, reminderStart - now);
     }
@@ -230,7 +230,7 @@
     const endTime = meetingTime + duration * 60 * 1000;
     if (endTime > now) {
       setTimeout(() => {
-        if (typeof showToast === 'function') showToast(`ðŸ• Meeting "${title}" should be ending now`, 'info');
+        if (typeof showToast === 'function') showToast(`🕐 Meeting "${title}" should be ending now`, 'info');
       }, endTime - now);
     }
   }
@@ -238,7 +238,7 @@
   function _sendMeetingReminderNotification(title, message) {
     try {
       if ('Notification' in window && Notification.permission === 'granted') {
-        new Notification('NSL Chat â€” Meeting', {
+        new Notification('NSL Chat — Meeting', {
           body: `"${title}" ${message}`,
           icon: '/icon-192.png',
           tag: 'meeting-reminder',

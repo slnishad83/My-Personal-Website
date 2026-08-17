@@ -1,5 +1,5 @@
 /**
- * biometric.js — Biometric authentication bridge
+ * biometric.js � Biometric authentication bridge
  * Fingerprint / Face Unlock for app lock
  */
 (function() {

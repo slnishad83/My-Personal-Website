@@ -489,7 +489,7 @@
     var db = _db();
     var user = window.App && window.App.auth ? window.App.auth.currentUser : null;
     if (!chat || !db || !user) { _toast('Not ready', 'error'); return; }
-    _toast('Sending voice messageâ€¦', 'info');
+    _toast('Sending voice message…', 'info');
     try {
       var blobToSend = _recordedBlob;
       var vc = window.VoiceChanger;
@@ -522,7 +522,7 @@
       var coll = chat.type === 'group' ? 'groups' : 'chats';
       await db.collection(coll).doc(chat.id).collection('messages').add(msgData);
       await db.collection(coll).doc(chat.id).update({
-        lastMessage: 'ðŸŽ¤ Voice message',
+        lastMessage: '🎤 Voice message',
         lastMessageAt: firebase.firestore.FieldValue.serverTimestamp(),
         lastSenderId: user.uid
       }).catch(function() {});

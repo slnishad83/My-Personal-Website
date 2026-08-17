@@ -1,5 +1,5 @@
 /**
- * NSL Chat — Vite Entry Point (album, calendar, expenses, insights)
+ * NSL Chat � Vite Entry Point (album, calendar, expenses, insights)
  * Sub-pages only need Firebase config + redesign-base.
  */
 

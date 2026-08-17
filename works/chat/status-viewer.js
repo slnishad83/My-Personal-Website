@@ -17,7 +17,7 @@
   var _longPressTimer = null;
   var _isLongPress = false;
 
-  var REACTION_EMOJIS = ['ðŸ‘', 'â¤ï¸', 'ðŸ˜‚', 'ðŸ˜®', 'ðŸ˜¢', 'ðŸ™'];
+  var REACTION_EMOJIS = ['\uD83D\uDE1C', '\u2764\uFE0F', '\uD83D\uDE01', '\uD83D\uDE00', '\uD83D\uDE22', '\uD83D\uDE4F'];
 
   var _esc = function(s) { return App && App.escHtml ? App.escHtml(s) : (s ? String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;') : ''); };
   function _toast(msg, t) { if (App && App.toast) App.toast(msg, t); else if (typeof window.showToast === 'function') window.showToast(msg, t); }

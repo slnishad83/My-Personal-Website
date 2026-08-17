@@ -107,7 +107,7 @@
     var avatarSrc = avatar || '';
     var avatarHtml = avatarSrc
       ? '<img class="block-dialog-avatar" src="' + _esc(avatarSrc) + '" alt="" onerror="this.style.display=\'none\'">'
-      : '<div class="block-dialog-avatar" style="display:flex;align-items:center;justify-content:center;font-size:28px;">ðŸ‘¤</div>';
+      : '<div class="block-dialog-avatar" style="display:flex;align-items:center;justify-content:center;font-size:28px;">👤</div>';
     overlay.innerHTML = '\n' +
       '<div class="block-dialog" role="alertdialog">\n' +
       avatarHtml +
@@ -220,7 +220,7 @@
         item.className = 'blocked-user-item';
         var itemAvatar = uavatar
           ? '<img class="blocked-user-avatar" src="' + _esc(uavatar) + '" alt="" onerror="this.style.display=\'none\'">'
-          : '<div class="blocked-user-avatar" style="display:flex;align-items:center;justify-content:center;font-size:18px;">ðŸ‘¤</div>';
+          : '<div class="blocked-user-avatar" style="display:flex;align-items:center;justify-content:center;font-size:18px;">👤</div>';
         item.innerHTML = '\n' +
           itemAvatar +
           '<div class="blocked-user-info">\n' +
@@ -264,7 +264,7 @@
     if (typeof currentChat !== 'undefined' && currentChat && currentChat.id && window.isUserBlocked(currentChat.id)) {
       var indicator = document.createElement('div');
       indicator.className = 'blocked-indicator';
-      indicator.textContent = 'ðŸš« Blocked';
+      indicator.textContent = '🚫 Blocked';
       headerName.parentElement.appendChild(indicator);
     }
   }

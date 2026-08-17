@@ -1,35 +1,35 @@
 /**
- * NSL Chat â€” Vite Entry Point (index.html)
+ * NSL Chat — Vite Entry Point (index.html)
  *
  * CRITICAL PATH: Only essential foundation + bootstrap modules loaded synchronously.
  * FEATURE MODULES: Deferred to after first paint via requestIdleCallback.
  * ON-DEMAND: Lazy-loaded when user triggers specific features via LazyModules.load().
  */
 
-/* â”€â”€ CSS (Vite processes Tailwind + extracts to bundle) â”€â”€â”€â”€ */
+/* ── CSS (Vite processes Tailwind + extracts to bundle) ──── */
 import './src/styles/main.css';
 import './src/styles/app.css';
 import './chat.css';
 import './accessibility.css';
 
-/* â”€â”€ Head-loaded scripts (loaded before body content) â”€â”€â”€â”€â”€ */
+/* ── Head-loaded scripts (loaded before body content) ───── */
 import './notification-sounds.js';
 import './twemoji/twemoji.min.js';
 import './emoji-renderer.js';
 import './tailwind-config.js';
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-   FOUNDATION â€” must load in this exact order
-   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+/* ══════════════════════════════════════════════════════════════
+   FOUNDATION — must load in this exact order
+   ══════════════════════════════════════════════════════════════ */
 import './firebase-config.js';
 import './config.js';
 import './global-cleanup.js';
 import './app.js';
 import './lazy-modules.js';
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+/* ══════════════════════════════════════════════════════════════
    CORE INFRASTRUCTURE (needed for first paint & event delegation)
-   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+   ══════════════════════════════════════════════════════════════ */
 import './platform-detect.js';
 import './error-boundary.js';
 import './mutation-bus.js';
@@ -38,9 +38,9 @@ import './accessibility.js';
 import './src/core/bindEvents.js';
 import './ui-glue.js';
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+/* ══════════════════════════════════════════════════════════════
    BOOTSTRAP & LATE-BINDING
-   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+   ══════════════════════════════════════════════════════════════ */
 import './presence.js';
 import './multi-device.js';
 import './delegated-actions.js';
@@ -51,10 +51,10 @@ import './tab-engine.js';
 import './version.js';
 import './broadcast-sync.js';
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-   DEFERRED MODULES â€” loaded after first paint via requestIdleCallback
+/* ══════════════════════════════════════════════════════════════
+   DEFERRED MODULES — loaded after first paint via requestIdleCallback
    These were previously static imports bloating the main chunk.
-   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+   ══════════════════════════════════════════════════════════════ */
 const _deferredModules = [
   // --- Infrastructure & utilities ---
   () => import('./smart-notifications.js'),
@@ -233,9 +233,9 @@ if (typeof requestIdleCallback === 'function') {
   window.addEventListener('load', () => setTimeout(_loadDeferredModules, 200));
 }
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+/* ══════════════════════════════════════════════════════════════
    ON-DEMAND MODULES (loaded via LazyModules.load('name'))
-   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+   ══════════════════════════════════════════════════════════════ */
 const _lazyModules = [
   () => import('./date-reminders.js'),
   () => import('./ai-features.js'),

@@ -1,5 +1,5 @@
 /* ============================================================
-   MONITORING — Sentry + Firebase Crashlytics integration
+   MONITORING � Sentry + Firebase Crashlytics integration
    Bridges ErrorBoundary errors to external monitoring services.
    ============================================================ */
 'use strict';

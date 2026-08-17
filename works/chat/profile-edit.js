@@ -319,12 +319,12 @@
     modal.innerHTML =
       '<div class="nsl-pe-header">' +
         '<h2>Edit Profile</h2>' +
-        '<button class="nsl-pe-close" id="nsl-pe-close">âœ•</button>' +
+        '<button class="nsl-pe-close" id="nsl-pe-close">✕</button>' +
       '</div>' +
       '<div class="nsl-pe-avatar-section">' +
         '<div class="nsl-pe-avatar-wrap" id="nsl-pe-avatar-wrap">' +
           avatarContent +
-          '<div class="nsl-pe-avatar-cam">ðŸ“·</div>' +
+          '<div class="nsl-pe-avatar-cam">📷</div>' +
         '</div>' +
         '<div class="nsl-pe-avatar-hint">Tap to change photo</div>' +
       '</div>' +

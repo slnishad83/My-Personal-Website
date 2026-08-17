@@ -1,4 +1,4 @@
-// message-star.js — WhatsApp-style message starring with starred messages panel
+// message-star.js � WhatsApp-style message starring with starred messages panel
 (function() {
   'use strict';
 

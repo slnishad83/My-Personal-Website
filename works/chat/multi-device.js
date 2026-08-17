@@ -1,5 +1,5 @@
 ﻿/* ============================================================
-   MULTI-DEVICE â€” Session tracking, device management
+   MULTI-DEVICE — Session tracking, device management
    Tracks active sessions, allows device revocation
    ============================================================ */
 'use strict';
@@ -155,7 +155,7 @@ const MultiDevice = {
             <span class="material-symbols-outlined" style="font-size:22px;color:var(--primary)">${deviceIcon}</span>
             <div>
               <p style="margin:0;font-size:13px;font-weight:600">${escHtml(s.platform || 'Unknown')} / ${escHtml(s.browser || 'Unknown')}</p>
-              <p style="margin:2px 0 0;font-size:10px;color:var(--on-surface-variant)">${statusText} Â· ${lastActiveText}</p>
+              <p style="margin:2px 0 0;font-size:10px;color:var(--on-surface-variant)">${statusText} · ${lastActiveText}</p>
             </div>
           </div>
           ${!s.isCurrent ? `<button class="revoke-device-btn" data-sid="${s.sessionId}" style="padding:4px 10px;border-radius:6px;border:1px solid var(--error);background:transparent;color:var(--error);font-size:11px;font-weight:600;cursor:pointer">Log out</button>` : ''}
@@ -246,7 +246,7 @@ const MultiDevice = {
       <p style="font-size:11px;color:var(--on-surface-variant);margin:0 0 8px">Or enter this code manually:</p>
       <p style="font-size:16px;font-weight:700;color:var(--primary);font-family:monospace;letter-spacing:2px;margin:0 0 16px" id="pairing-code">${pairingToken.substring(0, 8).toUpperCase()}</p>
       <div style="display:flex;flex-direction:column;gap:8px">
-        <p id="pairing-status" style="font-size:12px;color:var(--on-surface-variant);margin:0">Waiting for scan... <span class="animate-pulse">â—</span></p>
+        <p id="pairing-status" style="font-size:12px;color:var(--on-surface-variant);margin:0">Waiting for scan... <span class="animate-pulse">●</span></p>
         <button onclick="document.getElementById('link-device-overlay')?.remove()" style="padding:10px;border-radius:10px;border:none;background:transparent;color:var(--on-surface-variant);font-size:13px;cursor:pointer">Cancel</button>
       </div>`;
 
@@ -262,7 +262,7 @@ const MultiDevice = {
         const data = doc.data();
         if (data?.used) {
           const statusEl = document.getElementById('pairing-status');
-          if (statusEl) statusEl.innerHTML = '<span style="color:var(--primary)">âœ“ Device linked successfully!</span>';
+          if (statusEl) statusEl.innerHTML = '<span style="color:var(--primary)">✓ Device linked successfully!</span>';
           setTimeout(() => {
             overlay.remove();
             unsub();

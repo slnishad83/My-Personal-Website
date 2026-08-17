@@ -1,5 +1,5 @@
 ﻿/**
- * Voice Changer â€” Real-time voice effects using Web Audio API
+ * Voice Changer — Real-time voice effects using Web Audio API
  * Provides pitch shifting, reverb, echo, robot, and chipmunk effects.
  * Integrates with voice-messages.js via the preview UI.
  */
@@ -11,16 +11,16 @@
   var _currentEffect = 'none';
 
   var EFFECTS = [
-    { id: 'none',       name: 'Normal',     emoji: 'ðŸŽ™ï¸' },
-    { id: 'chipmunk',   name: 'Chipmunk',   emoji: 'ðŸ¿ï¸' },
-    { id: 'deep',       name: 'Deep Voice',  emoji: 'ðŸªˆ' },
-    { id: 'robot',      name: 'Robot',       emoji: 'ðŸ¤–' },
-    { id: 'echo',       name: 'Echo',        emoji: 'ðŸ”Š' },
-    { id: 'reverb',     name: 'Reverb',      emoji: 'ðŸ›ï¸' },
-    { id: 'telephone',  name: 'Telephone',   emoji: 'ðŸ“ž' },
-    { id: 'alien',      name: 'Alien',       emoji: 'ðŸ‘½' },
-    { id: 'muffled',    name: 'Muffled',     emoji: 'ðŸ§£' },
-    { id: 'underwater', name: 'Underwater',  emoji: 'ðŸŒŠ' }
+    { id: 'none',       name: 'Normal',     emoji: '🎙️' },
+    { id: 'chipmunk',   name: 'Chipmunk',   emoji: '🐿️' },
+    { id: 'deep',       name: 'Deep Voice',  emoji: '🪎' },
+    { id: 'robot',      name: 'Robot',       emoji: '🤖' },
+    { id: 'echo',       name: 'Echo',        emoji: '🔊' },
+    { id: 'reverb',     name: 'Reverb',      emoji: '🏛️' },
+    { id: 'telephone',  name: 'Telephone',   emoji: '📞' },
+    { id: 'alien',      name: 'Alien',       emoji: '😍' },
+    { id: 'muffled',    name: 'Muffled',     emoji: '🧣' },
+    { id: 'underwater', name: 'Underwater',  emoji: '🌊' }
   ];
 
   var _pickerOverlay = null;
@@ -327,7 +327,7 @@
     _currentEffect = id || 'none';
   }
 
-  /* â”€â”€ UI: Effect Picker â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* ── UI: Effect Picker ─────────────────────────────────── */
   function _injectStyles() {
     if (document.getElementById('vc-styles')) return;
     var s = document.createElement('style');
@@ -414,7 +414,7 @@
     }
   }
 
-  /* â”€â”€ Wire into voice-messages.js preview â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* ── Wire into voice-messages.js preview ────────────────── */
   function _addEffectButtonToPreview() {
     var observer = new MutationObserver(function () {
       var _previewSend = document.getElementById('preview-send');

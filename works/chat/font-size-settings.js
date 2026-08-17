@@ -1,5 +1,5 @@
 /* ============================================================
-   FONT SIZE SETTINGS — WhatsApp-style S/M/L/XL text sizing
+   FONT SIZE SETTINGS � WhatsApp-style S/M/L/XL text sizing
    ============================================================ */
 (function () {
   'use strict';

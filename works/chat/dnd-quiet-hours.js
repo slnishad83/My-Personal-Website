@@ -1,6 +1,6 @@
 (function() {
   'use strict';
-  /* DND (Do Not Disturb) / Quiet Hours — global scheduling */
+  /* DND (Do Not Disturb) / Quiet Hours � global scheduling */
   
   let _enabled = false;
   let _startHour = 22; // 10 PM
@@ -45,7 +45,7 @@
     _enabled = enabled;
     save();
     if (typeof showToast === 'function') {
-      showToast(enabled ? `Quiet hours: ${fmt(_startHour)} – ${fmt(_endHour)}` : 'Quiet hours disabled', 'info');
+      showToast(enabled ? `Quiet hours: ${fmt(_startHour)} � ${fmt(_endHour)}` : 'Quiet hours disabled', 'info');
     }
   }
   

@@ -12,7 +12,7 @@
 (function () {
   'use strict';
 
-  /* â”€â”€â”€ Fallback copy for older browsers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* ─── Fallback copy for older browsers ─────────────────────── */
   function fallbackCopy(text) {
     const ta = document.createElement('textarea');
     ta.value = text;
@@ -25,7 +25,7 @@
     document.body.removeChild(ta);
   }
 
-  /* â”€â”€â”€ Copy text to clipboard with toast â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* ─── Copy text to clipboard with toast ────────────────────── */
   function copyToClipboard(text, label) {
     if (!text) {
       if (typeof showToast === 'function') showToast('Nothing to copy', 'info');
@@ -48,7 +48,7 @@
     }
   }
 
-  /* â”€â”€â”€ Find message object by ID â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* ─── Find message object by ID ────────────────────────────── */
   function findMessage(msgId) {
     if (!msgId) return null;
     const chatId = window.App?.currentChat?.id || window.currentChat?.id;
@@ -66,7 +66,7 @@
     return null;
   }
 
-  /* â”€â”€â”€ Format message content by type â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* ─── Format message content by type ───────────────────────── */
   function formatCopyText(msg) {
     if (!msg) return '';
 
@@ -177,7 +177,7 @@
     }
   }
 
-  /* â”€â”€â”€ Format bytes helper â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* ─── Format bytes helper ──────────────────────────────────── */
   function formatBytes(bytes) {
     if (!bytes) return '';
     bytes = Number(bytes);
@@ -186,7 +186,7 @@
     return (bytes / 1048576).toFixed(1) + ' MB';
   }
 
-  /* â”€â”€â”€ Get type-specific label for toast â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* ─── Get type-specific label for toast ────────────────────── */
   function getCopyLabel(msg) {
     if (!msg) return '';
     const type = msg.type || 'text';
@@ -206,7 +206,7 @@
     return labels[type] || 'message';
   }
 
-  /* â”€â”€â”€ Universal copy function â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* ─── Universal copy function ──────────────────────────────── */
   function copyMessageContent(msgId) {
     const msg = findMessage(msgId);
     if (!msg) {
@@ -218,7 +218,7 @@
     copyToClipboard(text, label);
   }
 
-  /* â”€â”€â”€ Hook into existing copyMsgText â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* ─── Hook into existing copyMsgText ───────────────────────── */
   function hookCopyMsgText() {
     const orig = window.copyMsgText;
     window.copyMsgText = function (msgId) {
@@ -228,7 +228,7 @@
     window._origCopyMsgText = orig;
   }
 
-  /* â”€â”€â”€ Hook into desktop context menu copy â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* ─── Hook into desktop context menu copy ──────────────────── */
   function hookDesktopContextMenu() {
     // The desktop context menu creates its own copy action.
     // We intercept by watching for context menu creation and replacing the copy action.
@@ -253,7 +253,7 @@
     observer.observe(document.body, { childList: true, subtree: true });
   }
 
-  /* â”€â”€â”€ Hook into keyboard Ctrl+C â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* ─── Hook into keyboard Ctrl+C ────────────────────────────── */
   function hookKeyboardCopy() {
     document.addEventListener('keydown', (e) => {
       // Only intercept Ctrl+C when not in an input/textarea and when a message is "active"
@@ -271,7 +271,7 @@
     });
   }
 
-  /* â”€â”€â”€ Hook long-press copy option â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* ─── Hook long-press copy option ──────────────────────────── */
   function hookLongPressCopy() {
     // Watch for the quick reaction bar and enhance its copy button
     const observer = new MutationObserver(() => {
@@ -298,14 +298,14 @@
     observer.observe(document.body, { childList: true, subtree: true });
   }
 
-  /* â”€â”€â”€ Add "Copy" option to ALL message type context menus â”€â”€â”€â”€ */
+  /* ─── Add "Copy" option to ALL message type context menus ──── */
   function addCopyToAllMenus() {
     // For messages that previously had no copy option (non-text),
     // we now ensure copy is always available via the existing copyMsgText hook
     // which we've already overridden above.
   }
 
-  /* â”€â”€â”€ Init â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* ─── Init ─────────────────────────────────────────────────── */
   function init() {
     hookCopyMsgText();
     hookDesktopContextMenu();

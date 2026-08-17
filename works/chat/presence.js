@@ -1,5 +1,5 @@
 /* ============================================================
-   PRESENCE SYSTEM â€” Online status, heartbeat, lastSeen
+   PRESENCE SYSTEM — Online status, heartbeat, lastSeen
    Detects zombie sessions, multi-device awareness
    ============================================================ */
 'use strict';

@@ -1,5 +1,5 @@
 /* ============================================================
-   BACK BUTTON — Android/Capacitor system back button handling
+   BACK BUTTON � Android/Capacitor system back button handling
    Handles back navigation: close overlays, go back in chat,
    prevent exit from chat system on web browsers
    ============================================================ */
@@ -26,7 +26,7 @@ const BackButton = {
       }
     }
 
-    // Web browser back button — intercept via popstate
+    // Web browser back button � intercept via popstate
     window.addEventListener('popstate', this._boundOnWebBack);
 
     // Push initial state so first back doesn't exit
@@ -109,7 +109,7 @@ const BackButton = {
       }
     }
 
-    // 5. Default: prevent exit — push state back
+    // 5. Default: prevent exit � push state back
     if (!history.state || history.state.view === 'home') {
       return;
     }

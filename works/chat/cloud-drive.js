@@ -1,4 +1,4 @@
-// Cloud Drive Integration — Google Drive & OneDrive file picker
+// Cloud Drive Integration � Google Drive & OneDrive file picker
 (function() {
   'use strict';
 

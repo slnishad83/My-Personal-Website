@@ -1,4 +1,4 @@
-/* group-call-events.js — Participant join/leave, call events, state */
+/* group-call-events.js � Participant join/leave, call events, state */
 (function () {
   'use strict';
 
@@ -110,9 +110,9 @@
     }
 
     if (pid.length > 0) {
-      GC._txt('call-status', 'Calling ' + pid.length + ' participant' + (pid.length > 1 ? 's' : '') + '…');
+      GC._txt('call-status', 'Calling ' + pid.length + ' participant' + (pid.length > 1 ? 's' : '') + '�');
     } else {
-      GC._txt('call-status', 'Waiting for participants…');
+      GC._txt('call-status', 'Waiting for participants�');
     }
   }
 
@@ -274,7 +274,7 @@
 
     if (callId && GC._firestore() && myUid) {
       var remainingParticipants = (window.activeGroupCallParticipants || []).filter(function (p) { return p.uid !== myUid; });
-      if (remainingParticipants.length === 0 || wasInitiator) {
+      if (remainingParticipants.length === 0) {
         GC._firestore().collection('groupCalls').doc(callId).update({
           status: 'ended',
           endedAt: firebase.firestore.FieldValue.serverTimestamp()

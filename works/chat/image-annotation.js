@@ -1,4 +1,4 @@
-// Image Annotation — draw/annotate on images before sending
+// Image Annotation � draw/annotate on images before sending
 (function() {
   'use strict';
 

@@ -1,5 +1,5 @@
 /* ============================================================
-   SWIPE-TO-DELETE — Swipe left on chat list items to reveal
+   SWIPE-TO-DELETE � Swipe left on chat list items to reveal
    delete/archive action buttons (WhatsApp-style)
    ============================================================ */
 'use strict';

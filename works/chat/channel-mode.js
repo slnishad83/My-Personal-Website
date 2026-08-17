@@ -1,5 +1,5 @@
 ﻿/**
- * Channel Mode â€” Persistent one-to-many broadcast channels.
+ * Channel Mode — Persistent one-to-many broadcast channels.
  * Admins create channels within groups; channels have their own chat space.
  * Channels stored in `channels` collection; messages use existing `messages` subcollection.
  * Admin-only posting by default (toggled per channel).

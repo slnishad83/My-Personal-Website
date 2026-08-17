@@ -1,4 +1,4 @@
-/* proximity-sensor.js — Proximity sensor detection + auto earpiece/speaker switching */
+/* proximity-sensor.js � Proximity sensor detection + auto earpiece/speaker switching */
 (function () {
   'use strict';
 

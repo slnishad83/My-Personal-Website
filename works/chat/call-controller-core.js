@@ -1,4 +1,4 @@
-/* call-controller-core.js — WebRTC setup, peer connection, ICE candidates, SDP offer/answer */
+/* call-controller-core.js � WebRTC setup, peer connection, ICE candidates, SDP offer/answer */
 (function () {
   'use strict';
 
@@ -279,7 +279,7 @@
 
   function onConnectionDisconnected() {
     if (CC.state !== CC.STATES.ACTIVE) return;
-    txt('call-status', 'Reconnecting…');
+    txt('call-status', 'Reconnecting�');
     showReconnOverlay();
     tryReconnect();
   }
@@ -293,7 +293,7 @@
     div.id = 'call-reconn-overlay';
     div.className = 'absolute inset-0 bg-black/50 backdrop-blur-sm flex flex-col items-center justify-center z-30';
     div.innerHTML = '<div class="w-12 h-12 border-4 border-white/30 border-t-white rounded-full animate-spin mb-4"></div>' +
-      '<p class="text-white font-semibold text-sm">Reconnecting…</p>' +
+      '<p class="text-white font-semibold text-sm">Reconnecting�</p>' +
       '<p class="text-white/50 text-xs mt-1" id="reconn-attempt-text"></p>';
     cs.appendChild(div);
   }
@@ -456,7 +456,7 @@
       } catch (_) {}
       _lastOfferSdp = data.offer.sdp;
       try {
-        // Peer upgraded a voice call to video — enable local video before answering
+        // Peer upgraded a voice call to video � enable local video before answering
         // so the answer carries our own video direction (bidirectional upgrade).
         if (data.type === 'video' && CC.callType === 'voice' && typeof CC.handleRemoteVideoUpgrade === 'function') {
           await CC.handleRemoteVideoUpgrade();
