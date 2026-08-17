@@ -2,6 +2,7 @@ node_modules/
 android/.gradle/
 android/local.properties
 dist-electron/
+dist-electron-new/
 electron/build-resources/*.ico
 electron/build-resources/*.icns
 electron/build-resources/icons/
