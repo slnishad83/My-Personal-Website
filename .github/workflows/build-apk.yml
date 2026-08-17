@@ -1,19 +1,7 @@
-name: Build & Release Android APK
+name: Build Android APK
 
 on:
   workflow_dispatch:
-  push:
-    branches: [main]
-    paths:
-      - 'works/chat/android/**'
-      - 'works/chat/capacitor.config.json'
-      - 'works/chat/package.json'
-      - 'works/chat/package-lock.json'
-      - '!works/chat/android/app/build.gradle'
-
-# Write access so the version-bump commit can be pushed back to main
-permissions:
-  contents: write
 
 jobs:
   build-apk:

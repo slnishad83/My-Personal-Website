@@ -1,10 +1,5 @@
 name: Build iOS IPA
 
-# Trigger manually from the Actions tab.
-# macOS runners cost 10x more than Linux, so this workflow is on-demand only.
-# Web-only changes (HTML/CSS/JS) update all installed iPhones automatically via
-# the normal App Store update flow — a new IPA is only needed for native changes
-# (new plugins, permissions, entitlements, or a major new release).
 on:
   workflow_dispatch:
     inputs:
@@ -12,9 +7,6 @@ on:
         description: 'Upload to TestFlight after build?'
         type: boolean
         default: false
-
-permissions:
-  contents: read
 
 jobs:
   build-ios:

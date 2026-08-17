@@ -1,19 +1,7 @@
-name: Build & Release Electron Desktop App
+name: Build Electron Desktop App
 
 on:
   workflow_dispatch:
-  push:
-    branches: [main]
-    tags:
-      - 'v*'
-    paths:
-      - 'works/chat/electron/**'
-      - 'works/chat/electron-builder.yml'
-      - 'works/chat/package.json'
-      - 'works/chat/package-lock.json'
-
-permissions:
-  contents: write
 
 jobs:
   build-windows:
