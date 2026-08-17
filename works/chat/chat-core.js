@@ -670,6 +670,23 @@
 
   /* ΓöÇΓöÇ WhatsApp-style text formatting ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ */
 
+  function _renderLocationCard(lat, lng, label) {
+    const q = encodeURIComponent(String(lat) + ',' + String(lng));
+    const embedSrc = 'https://maps.google.com/maps?q=' + q + '&z=15&output=embed';
+    const viewHref = 'https://www.google.com/maps?q=' + q;
+    const safeLabel = esc((label || 'Location').toString().replace(/\n/g, ' ').substring(0, 40));
+    return '<div class="nsl-location-card" style="width:240px;max-width:100%;border-radius:12px;overflow:hidden;border:1px solid rgba(0,0,0,0.1);background:#fff;display:flex;flex-direction:column;">' +
+      '<iframe src="' + esc(embedSrc) + '" style="width:100%;height:150px;border:0;display:block;pointer-events:none;" loading="lazy" allowfullscreen referrerpolicy="no-referrer-when-downgrade" title="Map preview"></iframe>' +
+      '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 10px;background:#fff;">' +
+        '<div style="font-size:12px;font-weight:600;color:#1c1c1e;display:flex;align-items:center;gap:6px;min-width:0;">' +
+          '<span class="material-symbols-outlined" style="font-size:16px;color:#00a884;flex-shrink:0;">location_on</span>' +
+          '<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + safeLabel + '</span>' +
+        '</div>' +
+        '<a href="' + esc(viewHref) + '" target="_blank" rel="noopener" style="font-size:11px;color:#00a884;text-decoration:none;white-space:nowrap;flex-shrink:0;" onclick="event.stopPropagation()">Open map</a>' +
+      '</div>' +
+    '</div>';
+  }
+
   function _formatMsgText(text) {
     if (!text) return '';
     const s = esc(text);
@@ -769,6 +786,13 @@
         content = `<img src="${esc(_gUrl)}" alt="GIF" 
           style="max-width:260px;max-height:220px;border-radius:8px;display:block;cursor:pointer;"
           onclick="window.openMediaViewer && window.openMediaViewer('${esc(_gUrl)}','image')">`;
+      } else if (msgType === 'location' || (msgType === 'text' && /maps\.google(?:usercontent)?\.com\/(?:maps\/)?\?q=/.test(text))) {
+        const _locMatch = text.match(/q=(-?[\d.]+),(-?[\d.]+)/);
+        const _lat = msg.latitude || (_locMatch && _locMatch[1]);
+        const _lng = msg.longitude || (_locMatch && _locMatch[2]);
+        if (_lat && _lng) {
+          content = _renderLocationCard(_lat, _lng, msg.text || text);
+        }
       } else if (msgType === 'poll' && msg.poll) {
         content = _renderPollContent(msg, uid);
       } else if (msg.attachment) {

@@ -89,8 +89,10 @@
     }, 1000);
   }
   function fmtDur(sec) {
-    var m = Math.floor(sec / 60);
+    var h = Math.floor(sec / 3600);
+    var m = Math.floor((sec % 3600) / 60);
     var s = sec % 60;
+    if (h > 0) return h + ':' + (m < 10 ? '0' : '') + m + ':' + (s < 10 ? '0' : '') + s;
     return m + ':' + (s < 10 ? '0' : '') + s;
   }
 
@@ -221,6 +223,12 @@
         CC.reconnAttempt = 0;
       }
     };
+
+    pc.onnegotiationneeded = function () {
+      if (CC.state !== CC.STATES.ACTIVE) return;
+      if (pc.signalingState !== 'stable') return;
+      createOfferAndSignal();
+    };
   }
 
   function onCallConnected() {
@@ -241,6 +249,14 @@
     if (fsBtn) fsBtn.classList.toggle('hidden', !document.fullscreenEnabled && !document.webkitFullscreenEnabled);
     var pipBtn = $('btn-pip');
     if (pipBtn) pipBtn.classList.toggle('hidden', !document.pictureInPictureEnabled || CC.callType === 'voice');
+    var swBtn = $('btn-switch-video');
+    if (swBtn) swBtn.classList.toggle('hidden', CC.callType !== 'voice');
+    var kpBtn = $('btn-keypad');
+    if (kpBtn) kpBtn.classList.toggle('hidden', CC.callType !== 'voice');
+    var blurBtn = $('btn-blur');
+    if (blurBtn) blurBtn.classList.toggle('hidden', CC.callType !== 'video');
+    var addBtn = $('btn-add-participant');
+    if (addBtn) addBtn.classList.toggle('hidden', CC.getActiveCallMode() === 'group');
     playSound('callConnected');
     if (typeof window.Presence !== 'undefined' && typeof window.Presence.setInCall === 'function') window.Presence.setInCall(true);
     if (window._ProximitySensor && typeof window._ProximitySensor.start === 'function') {
@@ -320,6 +336,7 @@
 
   async function createOfferAndSignal() {
     if (!peerConnection || !db() || !CC.callId) return;
+    if (peerConnection.signalingState !== 'stable') return;
     try {
       var offer = await peerConnection.createOffer();
       await peerConnection.setLocalDescription(offer);
@@ -434,8 +451,21 @@
       if (!data || !data.offer) return;
       if (data.offer.sdp === _lastOfferSdp) return;
       if (CC.state !== CC.STATES.ACTIVE && CC.state !== CC.STATES.CONNECTING) return;
+      try {
+        if (peerConnection.localDescription && peerConnection.localDescription.sdp === data.offer.sdp) return;
+      } catch (_) {}
       _lastOfferSdp = data.offer.sdp;
       try {
+        // Peer upgraded a voice call to video — enable local video before answering
+        // so the answer carries our own video direction (bidirectional upgrade).
+        if (data.type === 'video' && CC.callType === 'voice' && typeof CC.handleRemoteVideoUpgrade === 'function') {
+          await CC.handleRemoteVideoUpgrade();
+        }
+        // Glare: if we have a pending local offer (we renegotiated at the same
+        // time), roll it back before applying the remote offer.
+        if (peerConnection.signalingState === 'have-local-offer') {
+          try { await peerConnection.setLocalDescription({ type: 'rollback' }); } catch (_) {}
+        }
         await peerConnection.setRemoteDescription(new RTCSessionDescription(data.offer));
         var answer = await peerConnection.createAnswer();
         await peerConnection.setLocalDescription(answer);
@@ -471,6 +501,11 @@
       if (data.status === 'ended' || data.status === 'missed' || data.status === 'rejected' || data.status === 'cancelled' || data.status === 'busy') {
         window.endCall(data.status);
       }
+      if (data.type === 'video' && CC.callType === 'voice' && (CC.state === CC.STATES.ACTIVE || CC.state === CC.STATES.CONNECTING)) {
+        if (typeof CC.handleRemoteVideoUpgrade === 'function') {
+          CC.handleRemoteVideoUpgrade();
+        }
+      }
     });
   }
 
@@ -505,6 +540,19 @@
     if (fsBtn) fsBtn.classList.add('hidden');
     var pipBtn = $('btn-pip');
     if (pipBtn) pipBtn.classList.add('hidden');
+    var swBtn = $('btn-switch-video');
+    if (swBtn) swBtn.classList.add('hidden');
+    var kpBtn = $('btn-keypad');
+    if (kpBtn) kpBtn.classList.add('hidden');
+    var blurBtn = $('btn-blur');
+    if (blurBtn) blurBtn.classList.add('hidden');
+    var addBtn = $('btn-add-participant');
+    if (addBtn) addBtn.classList.add('hidden');
+    var kpOv = $('call-keypad-overlay');
+    if (kpOv) kpOv.classList.add('hidden');
+    CC._keypadBuffer = '';
+    CC._addParticipantMode = false;
+    if (typeof window.stopBackgroundBlur === 'function') { try { window.stopBackgroundBlur(); } catch (_) {} }
     if (document.pictureInPictureElement) { try { document.exitPictureInPicture(); } catch (_) {} }
     if (window._ProximitySensor && typeof window._ProximitySensor.stop === 'function') {
       try { window._ProximitySensor.stop(); } catch (_) {}

@@ -227,6 +227,7 @@
     GC._listenToCallDoc(GC._currentCallId);
     GC._listenToSignaling(GC._currentCallId);
     GC._listenToIncomingCandidates(GC._currentCallId);
+    GC._acceptInvite(GC._currentCallId);
     GC._listenToInvites(GC._currentCallId);
     GC._startSpeakerDetection();
 
@@ -282,7 +283,9 @@
           .where('status', '==', 'pending')
           .get().then(function (snap) {
             snap.forEach(function (doc) {
+              var d = doc.data();
               doc.ref.update({ status: 'cancelled' }).catch(function () {});
+              if (d && d.toUserId) GC._setInviteMirrorStatus(callId, d.toUserId, 'cancelled');
             });
           }).catch(function () {});
       } else {
@@ -337,14 +340,18 @@
   window.joinGroupCall = joinGroupCall;
   window.leaveGroupCall = leaveGroupCall;
   window.declineGroupCall = function (callId) {
-    GC._hideGroupCallInvite();
-    if (GC._firestore() && callId) {
+    GC._hideGroupCallInvite(callId);
+    var myUid = GC._uid();
+    if (GC._firestore() && callId && myUid) {
+      GC._setInviteMirrorStatus(callId, myUid, 'declined');
       GC._firestore().collection('groupCalls').doc(callId).collection('invites')
-        .where('toUserId', '==', GC._uid())
-        .where('status', '==', 'pending')
+        .where('toUserId', '==', myUid)
         .get().then(function (snap) {
           snap.forEach(function (doc) {
-            doc.ref.update({ status: 'declined' }).catch(function () {});
+            var d = doc.data();
+            if (d && d.status === 'pending') {
+              doc.ref.update({ status: 'declined' }).catch(function () {});
+            }
           });
         }).catch(function () {});
     }
@@ -360,5 +367,15 @@
     GC._listenToIncomingCandidates(callId);
     GC._listenToInvites(callId);
   };
+
+  function init() {
+    GC.listenForInvites();
+  }
+
+  if (document.readyState === 'complete' || document.readyState === 'interactive') {
+    setTimeout(init, 0);
+  } else {
+    window.addEventListener('load', function () { setTimeout(init, 0); });
+  }
 
 })();

@@ -354,6 +354,7 @@
       CC.callId = callRef.id;
       App._activeCallId = callRef.id;
       CC.listenAnswer(CC.callId);
+      CC.listenOffer(CC.callId);
       CC.listenCandidates(CC.callId);
       CC.listenStatus(CC.callId);
       CC.requestWake();
@@ -423,6 +424,7 @@
       CC.listenCandidates(CC.callId);
       CC.listenStatus(CC.callId);
       CC.listenOffer(CC.callId);
+      CC.listenAnswer(CC.callId);
       if (callSnapshot && callSnapshot.offer) {
         await CC.getPeerConnection().setRemoteDescription(new RTCSessionDescription(callSnapshot.offer));
         var answer = await CC.getPeerConnection().createAnswer();
@@ -488,7 +490,11 @@
 
     if (wasActive) {
       CC.playSound('callEnded');
-      CC.showCallEndScreen(endDirection, dur, CC.callType, remoteName, remoteAvatar);
+      if (CC._suppressEndScreen) {
+        CC._suppressEndScreen = false;
+      } else {
+        CC.showCallEndScreen(endDirection, dur, CC.callType, remoteName, remoteAvatar);
+      }
     } else {
       CC.playSound('callEnded');
     }
@@ -500,6 +506,9 @@
     if (typeof window.Presence !== 'undefined' && typeof window.Presence.setInCall === 'function') window.Presence.setInCall(false);
     _sendMissedCallNotification(endDirection, dur, remoteName, savedRemoteUid, savedCallId);
     CC.setState(CC.STATES.IDLE);
+    if (window._GC && typeof window._GC.refreshInviteFeed === 'function') {
+      window._GC.refreshInviteFeed();
+    }
   }
 
   async function _sendMissedCallNotification(direction, duration, remoteName, remoteUid, callIdForNotif) {

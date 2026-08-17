@@ -5,6 +5,7 @@
   var _statusCache = new Map();
   var _userStatusMap = new Map();
   var _seenSet = new Set();
+  var _mutedUsers = new Set();
   var _privacySetting = { mode: 'everyone', exceptUids: [], shareWithUids: [] };
   var _loadAttempted = false;
   var MAX_SEEN_SIZE = 500;
@@ -355,6 +356,7 @@
     if (!d || !uid) return [];
     var now = _now();
     var _cutoff = now - STATUS_DURATION_MS;
+    await loadMutedStatusUsers();
     try {
       var snap = await d.collection('statuses')
         .where('visibleTo', 'array-contains-any', [uid, '*'])
@@ -460,6 +462,80 @@
     } catch (_) {}
   }
 
+  function _loadMutedFromStorage() {
+    try {
+      var raw = localStorage.getItem('status_muted_' + _uid());
+      if (raw) {
+        var arr = JSON.parse(raw);
+        if (Array.isArray(arr)) {
+          arr.forEach(function (u) { if (u) _mutedUsers.add(String(u)); });
+        }
+      }
+    } catch (_) {}
+  }
+
+  function _saveMutedToStorage() {
+    try {
+      localStorage.setItem('status_muted_' + _uid(), JSON.stringify(Array.from(_mutedUsers)));
+    } catch (_) {}
+  }
+
+  function isStatusMuted(userId) {
+    return !!userId && _mutedUsers.has(String(userId));
+  }
+
+  function getMutedStatusUsers() {
+    return Array.from(_mutedUsers);
+  }
+
+  /* Load the muted-status list for the signed-in user (Firestore first, localStorage fallback). */
+  async function loadMutedStatusUsers() {
+    var d = _db();
+    var uid = _uid();
+    _loadMutedFromStorage();
+    if (!d || !uid) return Array.from(_mutedUsers);
+    try {
+      var doc = await d.collection('userSettings').doc(uid).get();
+      if (doc.exists && Array.isArray(doc.data().statusMutedUsers)) {
+        _mutedUsers = new Set(doc.data().statusMutedUsers.map(String).filter(Boolean));
+        _saveMutedToStorage();
+      }
+    } catch (_) {}
+    return Array.from(_mutedUsers);
+  }
+
+  async function _persistMutedUsers() {
+    var d = _db();
+    var uid = _uid();
+    if (!d || !uid) return;
+    try {
+      await d.collection('userSettings').doc(uid).set({
+        statusMutedUsers: Array.from(_mutedUsers),
+        updatedAt: _now()
+      }, { merge: true });
+    } catch (e) {
+      if (window.__DEBUG__) console.warn('[Status] Persist muted list error:', e);
+    }
+  }
+
+  async function muteStatusUser(userId) {
+    if (!userId || userId === _uid()) { _toast('Cannot mute yourself', 'error'); return; }
+    _mutedUsers.add(String(userId));
+    _saveMutedToStorage();
+    await _persistMutedUsers();
+    renderStatusRow();
+    renderStatusRings();
+  }
+
+  async function unmuteStatusUser(userId) {
+    if (!userId) return;
+    _mutedUsers.delete(String(userId));
+    _saveMutedToStorage();
+    await _persistMutedUsers();
+    renderStatusRow();
+    renderStatusRings();
+  }
+
   async function markStatusSeen(statusId, _userId) {
     if (!statusId) return;
     var wasNew = !_seenSet.has(statusId);
@@ -489,6 +565,7 @@
     var uid = _uid();
     _userStatusMap.forEach(function (statuses, userId) {
       if (userId === uid) return;
+      if (_mutedUsers.has(String(userId))) return;
       statuses.forEach(function (s) {
         if (!_seenSet.has(s.id)) count++;
       });
@@ -623,6 +700,7 @@
       var existingRing = ring.querySelector('.status-ring-indicator');
       if (existingRing) existingRing.remove();
       if (userId === uid) return;
+      if (_mutedUsers.has(String(userId))) return;
       var userStatuses = _userStatusMap.get(userId);
       if (!userStatuses || userStatuses.length === 0) return;
       var hasUnseen = userStatuses.some(function (s) { return !_seenSet.has(s.id); });
@@ -653,6 +731,7 @@
     var otherUsers = [];
     _userStatusMap.forEach(function (statuses, userId) {
       if (userId === uid) return;
+      if (_mutedUsers.has(String(userId))) return;
       var valid = statuses.filter(function (s) { return !_isExpired(s) && _isVisibleToMe(s); });
       if (valid.length > 0) {
         var latest = valid[valid.length - 1];
@@ -1188,6 +1267,11 @@
   window.renderStatusPanel = renderStatusPanel;
   window.getUnseenStatusCount = getUnseenStatusCount;
   window.markStatusSeen = markStatusSeen;
+  window.muteStatusUser = muteStatusUser;
+  window.unmuteStatusUser = unmuteStatusUser;
+  window.isStatusMuted = isStatusMuted;
+  window.getMutedStatusUsers = getMutedStatusUsers;
+  window.loadMutedStatusUsers = loadMutedStatusUsers;
   window.createStatusReminder = createStatusReminder;
   window._clearStatusIntervals = _clearStatusIntervals;
   window._statusDataCache = _statusCache;
@@ -1210,7 +1294,11 @@
     viewUserStatuses: viewUserStatuses,
     loadStatuses: loadStatuses,
     getUnseenStatusCount: getUnseenStatusCount,
-    markStatusSeen: markStatusSeen
+    markStatusSeen: markStatusSeen,
+    muteStatusUser: muteStatusUser,
+    unmuteStatusUser: unmuteStatusUser,
+    isStatusMuted: isStatusMuted,
+    getMutedStatusUsers: getMutedStatusUsers
   };
 
   window.addEventListener('beforeunload', function () {

@@ -177,7 +177,16 @@
   }
 
   function _renderActionButtons() {
+    var group = _userGroups[_userIndex];
+    var status = group ? group.statuses[_getLocalIndex()] : null;
+    var isMyStatus = status ? status.userId === _uid() : true;
+    var muted = status && typeof window.isStatusMuted === 'function' && window.isStatusMuted(status.userId);
+    var muteBtn = isMyStatus ? '' :
+      '<button class="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/10 hover:bg-white/20 text-white/70 text-xs transition-colors" onclick="window._svMute()" aria-label="' + (muted ? 'Unmute statuses' : 'Mute statuses') + '">' +
+      '<span class="material-symbols-outlined" style="font-size:16px">' + (muted ? 'notifications' : 'notifications_off') + '</span>' + (muted ? 'Unmute' : 'Mute') +
+      '</button>';
     return '<div class="flex items-center justify-center gap-4 px-4 py-2">' +
+      muteBtn +
       '<button class="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/10 hover:bg-white/20 text-white/70 text-xs transition-colors" onclick="window._svForward()" aria-label="Forward status">' +
       '<span class="material-symbols-outlined" style="font-size:16px">forward</span>Forward' +
       '</button>' +
@@ -510,6 +519,7 @@
     delete window._svReport;
     delete window._svDelete;
     delete window._svToggleMute;
+    delete window._svMute;
   }
 
   window._svTapLeft = function () {
@@ -708,6 +718,34 @@
     vid.muted = !vid.muted;
     if (btn) {
       btn.innerHTML = '<span class="material-symbols-outlined" style="font-size:20px">' + (vid.muted ? 'volume_off' : 'volume_up') + '</span>';
+    }
+  };
+
+  /* Mute / unmute statuses from the currently-viewed contact.
+     Muted contacts are hidden from the status list until unmuted. */
+  window._svMute = async function () {
+    var group = _userGroups[_userIndex];
+    if (!group) return;
+    var userId = group.userId;
+    if (userId === _uid()) { _toast('Cannot mute yourself', 'error'); return; }
+    var muted = typeof window.isStatusMuted === 'function' && window.isStatusMuted(userId);
+    try {
+      if (muted) {
+        if (typeof window.unmuteStatusUser === 'function') await window.unmuteStatusUser(userId);
+        _toast('Statuses from ' + (group.userName || 'this contact') + ' unmuted', 'success');
+      } else {
+        if (typeof window.muteStatusUser === 'function') await window.muteStatusUser(userId);
+        _toast('Statuses from ' + (group.userName || 'this contact') + ' muted', 'success');
+        _userGroups.splice(_userIndex, 1);
+        if (_userGroups.length === 0) { closeStatusViewer(); return; }
+        if (_userIndex >= _userGroups.length) _userIndex = _userGroups.length - 1;
+        _currentIndex = 0;
+        _render();
+        return;
+      }
+      _render();
+    } catch (e) {
+      if (window.__DEBUG__) console.warn('[StatusViewer] Mute error:', e);
     }
   };
 

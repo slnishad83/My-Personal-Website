@@ -5,6 +5,7 @@
   var GC = window._GC;
   var CC = window._CC;
   GC._speakerViewMode = false;
+  var _shownInviteCallId = null;
 
   function _renderAvatar(name, avatar, _size) {
     var initials = (name || '?')[0].toUpperCase();
@@ -299,11 +300,31 @@
     var camBtn = GC._$('btn-cam');
     var ssBtn = GC._$('btn-screenshare');
     if (camBtn) camBtn.classList.toggle('hidden', GC._currentCallType === 'voice');
-    if (ssBtn) ssBtn.classList.remove('hidden');
+    if (ssBtn) {
+      ssBtn.classList.remove('hidden');
+      ssBtn.onclick = function () { if (typeof toggleGroupScreenShare === 'function') toggleGroupScreenShare(); };
+    }
+    var swBtn = GC._$('btn-switch-video');
+    if (swBtn) swBtn.classList.toggle('hidden', GC._currentCallType !== 'video');
+    var kpBtn = GC._$('btn-keypad');
+    if (kpBtn) kpBtn.classList.toggle('hidden', GC._currentCallType !== 'voice');
+    var blurBtn = GC._$('btn-blur');
+    if (blurBtn) blurBtn.classList.toggle('hidden', GC._currentCallType !== 'video');
+    var addBtn = GC._$('btn-add-participant');
+    if (addBtn) addBtn.classList.add('hidden');
     var rv = GC._$('remote-video');
     var lvc = GC._$('local-video-container');
     if (rv) rv.classList.add('hidden');
-    if (lvc) lvc.classList.add('hidden');
+    if (lvc) {
+      lvc.classList.remove('hidden');
+      lvc.style.cssText = 'position:absolute;bottom:120px;right:16px;width:120px;height:160px;z-20;';
+      var lv = GC._$('local-video');
+      if (lv && CC.getLocalStream()) {
+        lv.srcObject = CC.getLocalStream();
+        lv.style.objectFit = 'cover';
+      }
+      if (GC._currentCallType === 'voice') lvc.classList.add('hidden');
+    }
     GC._show('call-info-section');
     var av = GC._$('call-avatar');
     if (av) {
@@ -325,6 +346,8 @@
   }
 
   function _showGroupCallInvite(callId, invite) {
+    if (!callId || !invite) return;
+    if (GC._isBusyInCall()) return;
     var existing = GC._$('gc-incoming-overlay');
     if (existing) return;
     var inviterName = invite.fromUserName || 'Someone';
@@ -339,13 +362,20 @@
       '<button onclick="window.declineGroupCall(\'' + GC._esc(callId) + '\')" class="px-6 py-2.5 bg-red-500/15 text-red-500 rounded-full font-medium text-sm hover:bg-red-500/25 transition-colors">Decline</button>' +
       '<button onclick="window.joinGroupCall(\'' + GC._esc(callId) + '\')" class="px-6 py-2.5 bg-green-500 text-white rounded-full font-medium text-sm hover:bg-green-600 transition-colors">Join</button>' +
       '</div></div></div>';
+    _shownInviteCallId = callId;
     document.body.insertAdjacentHTML('beforeend', overlayHtml);
+    if (typeof CC.playSound === 'function') { try { CC.playSound('callRing'); } catch (_) {} }
     if (navigator.vibrate) navigator.vibrate([700, 250, 700]);
   }
 
-  function _hideGroupCallInvite() {
+  function _hideGroupCallInvite(callId) {
+    if (callId && _shownInviteCallId && _shownInviteCallId !== callId) return;
     var ov = GC._$('gc-incoming-overlay');
-    if (ov) ov.remove();
+    var wasShown = false;
+    if (ov) { ov.remove(); wasShown = true; }
+    if (_shownInviteCallId) wasShown = true;
+    _shownInviteCallId = null;
+    if (wasShown && typeof CC.stopExistingRingtone === 'function') { try { CC.stopExistingRingtone(); } catch (_) {} }
   }
 
   var _speakerAudioContext = null;
@@ -375,20 +405,17 @@
               if (_speakerAudioSource) { try { _speakerAudioSource.disconnect(); } catch (_) {} }
               _speakerAudioSource = _speakerAudioContext.createMediaStreamSource(myStream);
               _speakerCachedStream = myStream;
-              _speakerAnalyser = null;
-            }
-            if (!_speakerAnalyser) {
               _speakerAnalyser = _speakerAudioContext.createAnalyser();
               _speakerAnalyser.fftSize = 256;
+              try { _speakerAudioSource.connect(_speakerAnalyser); } catch (_) {}
             }
-            var analyser = _speakerAnalyser;
-            _speakerAudioSource.connect(analyser);
-            var data = new Uint8Array(analyser.frequencyBinCount);
-            analyser.getByteFrequencyData(data);
-            var level = data.reduce(function (a, b) { return a + b; }, 0) / data.length;
-            GC._audioLevelCache.set(GC._myUid, level);
-            if (level > maxLevel) { maxLevel = level; maxUid = GC._myUid; }
-            _speakerAudioSource.disconnect();
+            if (_speakerAnalyser) {
+              var data = new Uint8Array(_speakerAnalyser.frequencyBinCount);
+              _speakerAnalyser.getByteFrequencyData(data);
+              var level = data.reduce(function (a, b) { return a + b; }, 0) / data.length;
+              GC._audioLevelCache.set(GC._myUid, level);
+              if (level > maxLevel) { maxLevel = level; maxUid = GC._myUid; }
+            }
           }
         } catch (_) {}
       }
@@ -423,7 +450,7 @@
 
   function _stopSpeakerDetection() {
     if (GC._speakerCheckInterval) {
-      clearInterval(GC._speakerCheckInterval);
+      clearTimeout(GC._speakerCheckInterval);
       GC._speakerCheckInterval = null;
     }
     if (_speakerAudioSource) { try { _speakerAudioSource.disconnect(); } catch (_) {} _speakerAudioSource = null; }

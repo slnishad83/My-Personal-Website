@@ -1,6 +1,6 @@
 {
   "name": "nsl-chat",
-  "version": "5.0.1",
+  "version": "5.0.3",
   "description": "NSL Chat — Modern team messaging",
   "main": "electron/main.js",
   "scripts": {
@@ -8,6 +8,7 @@
     "build": "node sync-www.js",
     "preview": "vite preview",
     "test": "node tests/run-all.js",
+    "e2e": "playwright test",
     "lint": "eslint . --ignore-pattern 'node_modules' --ignore-pattern 'dist' --ignore-pattern 'www' --ignore-pattern 'assets' --ignore-pattern 'functions' --ignore-pattern 'tests' --ignore-pattern 'scripts' --ignore-pattern 'android' --ignore-pattern 'ios' --ignore-pattern 'electron' --ignore-pattern '*.min.js' --ignore-pattern 'twemoji'",
     "lint:fix": "eslint --fix . --ignore-pattern 'node_modules' --ignore-pattern 'dist' --ignore-pattern 'www' --ignore-pattern 'assets' --ignore-pattern 'functions' --ignore-pattern 'tests' --ignore-pattern 'scripts' --ignore-pattern 'android' --ignore-pattern 'ios' --ignore-pattern 'electron' --ignore-pattern '*.min.js' --ignore-pattern 'twemoji'",
     "a11y": "pa11y http://localhost:3000/works/chat/dist/login.html http://localhost:3000/works/chat/dist/index.html",
@@ -58,6 +59,7 @@
   "devDependencies": {
     "@capacitor/cli": "^8.4.2",
     "@eslint/js": "^10.0.1",
+    "@playwright/test": "^1.54.1",
     "@tailwindcss/cli": "^4.3.3",
     "@tailwindcss/vite": "^4.3.3",
     "electron": "^43.1.1",

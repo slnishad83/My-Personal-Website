@@ -1040,11 +1040,23 @@
         <div class="text-lg font-mono mt-4 hidden" id="call-timer">0:00</div>
       </div>
       <div class="flex justify-center gap-4 flex-wrap" id="call-controls">
+        <button class="w-14 h-14 min-w-[48px] min-h-[48px] bg-white/10 rounded-full flex items-center justify-center hover:bg-white/20 transition-all text-white hidden" id="btn-switch-video" data-action="switchToVideo" aria-label="Switch to video call">
+          <span class="material-symbols-outlined">videocam</span>
+        </button>
         <button class="w-14 h-14 min-w-[48px] min-h-[48px] bg-white/10 rounded-full flex items-center justify-center hover:bg-white/20 transition-all text-white" id="btn-mute" data-action="toggleMute" aria-label="Toggle microphone">
           <span class="material-symbols-outlined" id="mute-icon">mic</span>
         </button>
         <button class="w-14 h-14 min-w-[48px] min-h-[48px] bg-white/10 rounded-full flex items-center justify-center hover:bg-white/20 transition-all text-white hidden" id="btn-cam" data-action="toggleCamera" aria-label="Toggle camera">
           <span class="material-symbols-outlined" id="cam-icon">videocam</span>
+        </button>
+        <button class="w-14 h-14 min-w-[48px] min-h-[48px] bg-white/10 rounded-full flex items-center justify-center hover:bg-white/20 transition-all text-white hidden" id="btn-keypad" data-action="toggleKeypad" aria-label="Open keypad">
+          <span class="material-symbols-outlined">dialpad</span>
+        </button>
+        <button class="w-14 h-14 min-w-[48px] min-h-[48px] bg-white/10 rounded-full flex items-center justify-center hover:bg-white/20 transition-all text-white hidden" id="btn-blur" data-action="toggleBackgroundBlur" aria-label="Background blur">
+          <span class="material-symbols-outlined">blur_on</span>
+        </button>
+        <button class="w-14 h-14 min-w-[48px] min-h-[48px] bg-white/10 rounded-full flex items-center justify-center hover:bg-white/20 transition-all text-white hidden" id="btn-add-participant" data-action="addParticipantToCall" aria-label="Add participant">
+          <span class="material-symbols-outlined">person_add</span>
         </button>
         <button class="w-14 h-14 min-w-[48px] min-h-[48px] bg-white/10 rounded-full flex items-center justify-center hover:bg-white/20 transition-all text-white" id="btn-speaker" data-action="toggleSpeaker" aria-label="Toggle speaker">
           <span class="material-symbols-outlined" id="speaker-icon">volume_up</span>
@@ -1068,6 +1080,36 @@
           <span class="material-symbols-outlined">call_end</span>
         </button>
       </div>
+    </div>
+  </div>
+
+  <!-- Call keypad overlay (DTMF dial pad) -->
+  <div class="overlay fixed inset-0 z-[120] bg-black/60 backdrop-blur-sm flex items-center justify-center hidden" id="call-keypad-overlay" role="dialog" aria-modal="true" aria-label="Call keypad">
+    <div class="bg-surface-container border border-outline-variant/30 rounded-2xl w-full max-w-xs shadow-2xl p-6 m-4 text-center">
+      <div class="flex justify-between items-center mb-4">
+        <h3 class="font-bold text-on-surface">Keypad</h3>
+        <button class="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-full hover:bg-surface-variant/50 text-on-surface-variant transition-colors" data-action="hideKeypad" aria-label="Close keypad">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+      <div class="text-2xl font-mono text-on-surface mb-4 h-8 tracking-widest" id="keypad-display">&nbsp;</div>
+      <div class="grid grid-cols-3 gap-2">
+        <button class="keypad-key h-14 rounded-xl bg-surface-container-highest text-on-surface text-lg font-semibold hover:bg-surface-variant transition-colors" data-action="sendDTMF" data-action-arg="1"><span>1</span></button>
+        <button class="keypad-key h-14 rounded-xl bg-surface-container-highest text-on-surface text-lg font-semibold hover:bg-surface-variant transition-colors" data-action="sendDTMF" data-action-arg="2"><span>2</span><span class="block text-[10px] text-on-surface-variant">ABC</span></button>
+        <button class="keypad-key h-14 rounded-xl bg-surface-container-highest text-on-surface text-lg font-semibold hover:bg-surface-variant transition-colors" data-action="sendDTMF" data-action-arg="3"><span>3</span><span class="block text-[10px] text-on-surface-variant">DEF</span></button>
+        <button class="keypad-key h-14 rounded-xl bg-surface-container-highest text-on-surface text-lg font-semibold hover:bg-surface-variant transition-colors" data-action="sendDTMF" data-action-arg="4"><span>4</span><span class="block text-[10px] text-on-surface-variant">GHI</span></button>
+        <button class="keypad-key h-14 rounded-xl bg-surface-container-highest text-on-surface text-lg font-semibold hover:bg-surface-variant transition-colors" data-action="sendDTMF" data-action-arg="5"><span>5</span><span class="block text-[10px] text-on-surface-variant">JKL</span></button>
+        <button class="keypad-key h-14 rounded-xl bg-surface-container-highest text-on-surface text-lg font-semibold hover:bg-surface-variant transition-colors" data-action="sendDTMF" data-action-arg="6"><span>6</span><span class="block text-[10px] text-on-surface-variant">MNO</span></button>
+        <button class="keypad-key h-14 rounded-xl bg-surface-container-highest text-on-surface text-lg font-semibold hover:bg-surface-variant transition-colors" data-action="sendDTMF" data-action-arg="7"><span>7</span><span class="block text-[10px] text-on-surface-variant">PQRS</span></button>
+        <button class="keypad-key h-14 rounded-xl bg-surface-container-highest text-on-surface text-lg font-semibold hover:bg-surface-variant transition-colors" data-action="sendDTMF" data-action-arg="8"><span>8</span><span class="block text-[10px] text-on-surface-variant">TUV</span></button>
+        <button class="keypad-key h-14 rounded-xl bg-surface-container-highest text-on-surface text-lg font-semibold hover:bg-surface-variant transition-colors" data-action="sendDTMF" data-action-arg="9"><span>9</span><span class="block text-[10px] text-on-surface-variant">WXYZ</span></button>
+        <button class="keypad-key h-14 rounded-xl bg-surface-container-highest text-on-surface text-lg font-semibold hover:bg-surface-variant transition-colors" data-action="sendDTMF" data-action-arg="*"><span>*</span></button>
+        <button class="keypad-key h-14 rounded-xl bg-surface-container-highest text-on-surface text-lg font-semibold hover:bg-surface-variant transition-colors" data-action="sendDTMF" data-action-arg="0"><span>0</span><span class="block text-[10px] text-on-surface-variant">+</span></button>
+        <button class="keypad-key h-14 rounded-xl bg-surface-container-highest text-on-surface text-lg font-semibold hover:bg-surface-variant transition-colors" data-action="sendDTMF" data-action-arg="#"><span>#</span></button>
+      </div>
+      <button class="mt-4 w-full min-h-[44px] rounded-full bg-red-500/15 text-red-500 font-semibold hover:bg-red-500/25 transition-colors" data-action="hideKeypad" aria-label="Close keypad">
+        Close keypad
+      </button>
     </div>
   </div>
 
@@ -1170,6 +1212,7 @@
           <span class="material-symbols-outlined" aria-hidden="true">add_call</span>
           <h2 class="font-bold text-on-surface" id="call-picker-title">Select a contact to call</h2>
         </div>
+        <p class="text-xs text-on-surface-variant px-6 pb-2 -mt-3 hidden" id="call-picker-subtitle">This will turn your call into a group call</p>
         <button class="text-on-surface-variant hover:text-on-surface min-w-[44px] min-h-[44px] flex items-center justify-center rounded-full" data-action="closeModal" data-action-arg="call-picker-overlay" aria-label="Close call picker">
           <span class="material-symbols-outlined">close</span>
         </button>

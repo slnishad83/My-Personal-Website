@@ -20,6 +20,14 @@
     var ssBtn = CC.$('btn-screenshare');
     if (camBtn) camBtn.classList.toggle('hidden', type === 'voice');
     if (ssBtn) ssBtn.classList.add('hidden');
+    var swBtn = CC.$('btn-switch-video');
+    if (swBtn) swBtn.classList.toggle('hidden', type !== 'voice');
+    var kpBtn = CC.$('btn-keypad');
+    if (kpBtn) kpBtn.classList.add('hidden');
+    var blurBtn = CC.$('btn-blur');
+    if (blurBtn) blurBtn.classList.toggle('hidden', type !== 'video');
+    var addBtn = CC.$('btn-add-participant');
+    if (addBtn) addBtn.classList.add('hidden');
     var rv = CC.$('remote-video');
     var lvc = CC.$('local-video-container');
     if (rv) rv.classList.add('hidden');
@@ -164,7 +172,18 @@
   }
 
   async function openCallPicker() {
-    if (CC.state !== CC.STATES.IDLE) { CC.toast('Already in a call', 'info'); return; }
+    if (CC._addParticipantMode) {
+      var pl = CC.$('call-picker-title');
+      if (pl) pl.textContent = 'Add participant';
+      var sub = CC.$('call-picker-subtitle');
+      if (sub) sub.classList.remove('hidden');
+    } else {
+      if (CC.state !== CC.STATES.IDLE) { CC.toast('Already in a call', 'info'); return; }
+      var sub2 = CC.$('call-picker-subtitle');
+      if (sub2) sub2.classList.add('hidden');
+      var pl2 = CC.$('call-picker-title');
+      if (pl2) pl2.textContent = 'Select a contact to call';
+    }
     var list = CC.$('call-picker-list');
     if (!list) return;
     list.innerHTML = '<div class="flex items-center justify-center p-8 text-on-surface-variant text-sm"><div class="w-6 h-6 border-2 border-primary/30 border-t-primary rounded-full animate-spin mr-3"></div>Loading contactsâ€¦</div>';
@@ -209,6 +228,16 @@
   }
 
   function selectCallContact(targetUid, targetName, targetAvatar, callType) {
+    if (CC._addParticipantMode) {
+      CC._addParticipantMode = false;
+      CC.closeModalFn('call-picker-overlay');
+      var sub = CC.$('call-picker-subtitle');
+      if (sub) sub.classList.add('hidden');
+      if (typeof CC.convertCallToGroup === 'function') {
+        CC.convertCallToGroup(targetUid, targetName);
+      }
+      return;
+    }
     CC.closeModalFn('call-picker-overlay');
     var c = { uid: targetUid, name: targetName, initials: (targetName || '?')[0].toUpperCase(), type: 'direct', photoURL: targetAvatar };
     if (CC.state !== CC.STATES.IDLE) { CC.toast('Already in a call', 'info'); return; }

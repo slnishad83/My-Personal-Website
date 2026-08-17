@@ -61,7 +61,7 @@
     var newMuted = !currentMuted;
     GC._participantMuteState.set(userId, newMuted);
     var detailUpdate = {};
-    detailUpdate['participantDetails.' + userId] = { isMuted: newMuted };
+    detailUpdate['participantDetails.' + userId + '.isMuted'] = newMuted;
     GC._firestore().collection('groupCalls').doc(GC._currentCallId).update(detailUpdate).catch(function () {});
     var signalingRef = GC._firestore().collection('groupCalls').doc(GC._currentCallId).collection('signaling');
     function sendMuteRequest() {
@@ -118,6 +118,11 @@
     GC._stopSpeakerDetection();
     GC._cleanupAllPeerConnections();
     GC._cleanupListeners();
+    if (GC._groupScreenShareStream) {
+      GC._groupScreenShareStream.getTracks().forEach(function (t) { t.stop(); });
+      GC._groupScreenShareStream = null;
+    }
+    GC._groupScreenShareSenders = [];
     if (CC.getLocalStream()) {
       CC.getLocalStream().getTracks().forEach(function (t) { t.stop(); });
       CC.setLocalStream(null);
@@ -127,9 +132,81 @@
     GC._isInitiator = false;
     GC._myUid = null;
     GC._gridContainer = null;
+    GC._screenShareUserId = null;
     var gcGrid = GC._$('gc-grid');
     if (gcGrid) gcGrid.remove();
     GC._hideGroupCallInvite();
+  }
+
+  GC._groupScreenShareStream = null;
+  GC._groupScreenShareSenders = [];
+
+  async function toggleGroupScreenShare() {
+    if (!GC._isInGroupCall()) return;
+    if (GC._screenShareUserId && GC._screenShareUserId !== GC._myUid) {
+      GC._toast('Someone else is sharing their screen', 'info');
+      return;
+    }
+    if (GC._groupScreenShareStream) {
+      GC._groupScreenShareStream.getTracks().forEach(function (t) { t.stop(); });
+      GC._groupScreenShareStream = null;
+      var localStream = CC.getLocalStream();
+      if (localStream) {
+        var camTrack = localStream.getVideoTracks()[0];
+        GC._groupScreenShareSenders.forEach(function (sender) {
+          if (camTrack) sender.replaceTrack(camTrack).catch(function () {});
+        });
+      }
+      GC._groupScreenShareSenders = [];
+      if (GC._firestore() && GC._currentCallId) {
+        GC._firestore().collection('groupCalls').doc(GC._currentCallId).update({
+          screenShareUid: null
+        }).catch(function () {});
+      }
+      GC._screenShareUserId = null;
+      GC._renderGrid();
+      var si = GC._$('screenshare-icon');
+      if (si) si.textContent = 'screen_share';
+      GC._toast('Screen share stopped', 'info');
+      return;
+    }
+    try {
+      var screenStream;
+      try {
+        screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
+      } catch (_) {
+        screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: false });
+      }
+      GC._groupScreenShareStream = screenStream;
+      var screenTrack = screenStream.getVideoTracks()[0];
+      GC._groupScreenShareSenders = [];
+      window.groupCallPeerConnections.forEach(function (pc) {
+        var sender = pc.getSenders().find(function (s) { return s.track && s.track.kind === 'video'; });
+        if (sender) {
+          sender.replaceTrack(screenTrack).catch(function () {});
+          GC._groupScreenShareSenders.push(sender);
+        }
+      });
+      if (screenStream.getAudioTracks().length > 0) {
+        var audioTrack = screenStream.getAudioTracks()[0];
+        window.groupCallPeerConnections.forEach(function (pc) {
+          try { pc.addTrack(audioTrack, screenStream); } catch (_) {}
+        });
+      }
+      GC._screenShareUserId = GC._myUid;
+      if (GC._firestore() && GC._currentCallId) {
+        GC._firestore().collection('groupCalls').doc(GC._currentCallId).update({
+          screenShareUid: GC._myUid
+        }).catch(function () {});
+      }
+      GC._renderGrid();
+      var si2 = GC._$('screenshare-icon');
+      if (si2) si2.textContent = 'stop_screen_share';
+      GC._toast('Sharing your screen', 'info');
+      screenTrack.onended = function () { toggleGroupScreenShare(); };
+    } catch (_) {
+      GC._toast('Screen share cancelled', 'info');
+    }
   }
 
   window.addToCall = addToCall;
@@ -139,5 +216,6 @@
   window.getGroupCallParticipants = getGroupCallParticipants;
   window.renderGroupCallGrid = renderGroupCallGrid;
   window.cleanupGroupCalls = cleanupGroupCalls;
+  window.toggleGroupScreenShare = toggleGroupScreenShare;
 
 })();

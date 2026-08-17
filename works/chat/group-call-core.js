@@ -26,6 +26,7 @@
   GC._unsubInvites = null;
   GC._unsubCandidates = null;
   GC._unsubSignaling = null;
+  GC._unsubInviteFeed = null;
   GC._unsubParticipantCandidates = {};
   GC._participantStreams = new Map();
   GC._participantMuteState = new Map();
@@ -51,6 +52,13 @@
   function _firestore() { return _db(); }
   function _isInGroupCall() { return !!GC._currentCallId; }
   function _isCallActive() { return (window.App && App.callActive) ? true : false; }
+  function _isBusyInCall() {
+    if (GC._isInGroupCall()) return true;
+    if (CC && CC.state && CC.STATES) {
+      return CC.state !== CC.STATES.IDLE;
+    }
+    return _isCallActive();
+  }
 
   function _getParticipantCount() {
     return window.activeGroupCallParticipants ? window.activeGroupCallParticipants.length : 0;
@@ -424,16 +432,19 @@
   async function _sendInvite(callId, targetUid, callType) {
     if (!_firestore()) return;
     var myDetails = _getMyDetails();
+    var inviteData = {
+      callId: callId,
+      fromUserId: GC._myUid,
+      fromUserName: myDetails.name,
+      fromUserAvatar: myDetails.avatar,
+      toUserId: targetUid,
+      callType: callType,
+      status: 'pending',
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    };
     try {
-      await _firestore().collection('groupCalls').doc(callId).collection('invites').add({
-        callId: callId,
-        fromUserId: GC._myUid,
-        fromUserName: myDetails.name,
-        toUserId: targetUid,
-        callType: callType,
-        status: 'pending',
-        createdAt: firebase.firestore.FieldValue.serverTimestamp()
-      });
+      await _firestore().collection('groupCalls').doc(callId).collection('invites').add(inviteData);
+      _writeInviteMirror(inviteData);
       GC._inviteTimers[targetUid] = setTimeout(function () {
         _cancelInvite(callId, targetUid);
       }, GC._INVITE_TIMEOUT_MS);
@@ -446,12 +457,87 @@
       delete GC._inviteTimers[targetUid];
     }
     if (!_firestore() || !GC._isInitiator) return;
+    _setInviteMirrorStatus(callId, targetUid, 'cancelled');
+    if (!_firestore() || !callId || !targetUid) return;
     _firestore().collection('groupCalls').doc(callId).collection('invites')
       .where('toUserId', '==', targetUid)
-      .where('status', '==', 'pending')
       .get().then(function (snap) {
         snap.forEach(function (doc) {
-          doc.ref.update({ status: 'cancelled' }).catch(function () {});
+          var d = doc.data();
+          if (d && d.status === 'pending') {
+            doc.ref.update({ status: 'cancelled' }).catch(function () {});
+          }
+        });
+      }).catch(function () {});
+  }
+
+  function _inviteMirrorDocId(callId, targetUid) {
+    return String(callId) + '_' + String(targetUid);
+  }
+
+  function _writeInviteMirror(inviteData) {
+    if (!_firestore() || !inviteData || !inviteData.callId || !inviteData.toUserId) return;
+    _firestore().collection('groupCallInvites').doc(_inviteMirrorDocId(inviteData.callId, inviteData.toUserId))
+      .set(inviteData)
+      .catch(function () {});
+  }
+
+  function _setInviteMirrorStatus(callId, targetUid, status) {
+    if (!_firestore() || !callId || !targetUid) return;
+    _firestore().collection('groupCallInvites').doc(_inviteMirrorDocId(callId, targetUid))
+      .get().then(function (doc) {
+        if (!doc.exists) return;
+        var d = doc.data();
+        if (d && d.status === 'pending') {
+          return doc.ref.update({ status: status }).catch(function () {});
+        }
+      }).catch(function () {});
+  }
+
+  function _acceptInvite(callId) {
+    var myUid = _uid();
+    if (!myUid || !callId) return;
+    _setInviteMirrorStatus(callId, myUid, 'accepted');
+  }
+
+  function listenForInvites() {
+    if (GC._unsubInviteFeed) { try { GC._unsubInviteFeed(); } catch (_) {} GC._unsubInviteFeed = null; }
+    if (!_firestore() || !_uid()) return;
+    var myUid = _uid();
+    GC._unsubInviteFeed = _firestore().collection('groupCallInvites')
+      .where('toUserId', '==', myUid)
+      .onSnapshot(function (snap) {
+        snap.docChanges().forEach(function (change) {
+          if (change.type === 'added' || change.type === 'modified') {
+            var invite = change.doc.data();
+            if (!invite || !invite.callId) return;
+            if (invite.status === 'pending') {
+              GC._showGroupCallInvite(invite.callId, invite);
+            } else {
+              GC._hideGroupCallInvite(invite.callId);
+            }
+          }
+        });
+      }, function (err) {
+        if (window.__DEBUG__) console.warn('[GroupCall] Invite feed error:', err);
+      });
+  }
+
+  function stopListeningForInvites() {
+    if (GC._unsubInviteFeed) { try { GC._unsubInviteFeed(); } catch (_) {} GC._unsubInviteFeed = null; }
+  }
+
+  function refreshInviteFeed() {
+    if (!_firestore() || !_uid()) return;
+    if (GC._isBusyInCall()) return;
+    _firestore().collection('groupCallInvites')
+      .where('toUserId', '==', _uid())
+      .get().then(function (snap) {
+        snap.forEach(function (doc) {
+          var invite = doc.data();
+          if (invite && invite.callId && invite.status === 'pending') {
+            GC._showGroupCallInvite(invite.callId, invite);
+          }
         });
       }).catch(function () {});
   }
@@ -532,6 +618,14 @@
   GC._listenToInvites = _listenToInvites;
   GC._sendInvite = _sendInvite;
   GC._cancelInvite = _cancelInvite;
+  GC._inviteMirrorDocId = _inviteMirrorDocId;
+  GC._writeInviteMirror = _writeInviteMirror;
+  GC._setInviteMirrorStatus = _setInviteMirrorStatus;
+  GC._acceptInvite = _acceptInvite;
+  GC.listenForInvites = listenForInvites;
+  GC.stopListeningForInvites = stopListeningForInvites;
+  GC.refreshInviteFeed = refreshInviteFeed;
+  GC._isBusyInCall = _isBusyInCall;
   GC._cleanupAllPeerConnections = _cleanupAllPeerConnections;
   GC._cleanupListeners = _cleanupListeners;
 

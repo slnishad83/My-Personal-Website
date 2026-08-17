@@ -263,7 +263,7 @@
             '<button type="button" class="media-tab-btn flex-1 py-2 rounded-lg text-xs font-semibold transition-colors" data-media-tab="links">Links</button>' +
             '<button type="button" class="media-tab-btn flex-1 py-2 rounded-lg text-xs font-semibold transition-colors" data-media-tab="docs">Docs</button>' +
           '</div>' +
-          '<div id="detail-media-content" class="custom-scrollbar" style="max-height:280px;overflow-y:auto;"></div>' +
+          '<div id="detail-media-content" class="custom-scrollbar" style="max-height:min(48vh,480px);overflow-y:auto;"></div>' +
         '</div>' +
       '</div>';
     _wireMediaTabs(panel);
@@ -290,6 +290,61 @@
     });
   }
 
+  function _chatMediaCollection(chatType) {
+    if (chatType === 'group') return 'groups';
+    if (chatType === 'broadcast') return 'broadcasts';
+    return 'chats';
+  }
+
+  /* Query the full media history for the active chat (direct / group / broadcast)
+     so the Media tab is a real gallery, not just the messages in memory. */
+  function _queryChatMedia(chatId, chatType) {
+    var db = _db();
+    if (!db || !chatId) return Promise.resolve(null);
+    var types = ['image', 'video', 'gif', 'sticker'];
+    return db.collection(_chatMediaCollection(chatType)).doc(chatId).collection('messages')
+      .where('type', 'in', types)
+      .limit(400)
+      .get()
+      .then(function (snap) {
+        var items = [];
+        snap.forEach(function (doc) {
+          var d = doc.data() || {};
+          if (!d || d.type === 'deleted') return;
+          var att = d.attachment;
+          var url = att && (att.url || (typeof att === 'string' ? att : null));
+          if (!url) return;
+          var created = d.createdAt
+            ? (d.createdAt.toDate ? d.createdAt.toDate().getTime() : (d.createdAt.seconds ? d.createdAt.seconds * 1000 : (typeof d.createdAt === 'number' ? d.createdAt : 0)))
+            : 0;
+          items.push({
+            id: doc.id,
+            type: d.type,
+            url: url,
+            caption: d.text || (att && att.caption) || '',
+            senderName: d.senderName || d.senderId || 'User',
+            createdAt: created
+          });
+        });
+        items.sort(function (a, b) { return (b.createdAt || 0) - (a.createdAt || 0); });
+        return items;
+      })
+      .catch(function () { return null; });
+  }
+
+  function _galleryGridHtml(items) {
+    return '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:4px;">' +
+      items.map(function (m) {
+        var url = m.url || (m.attachment && (m.attachment.url || m.attachment));
+        var isVideo = /^video/i.test(m.type || '') || String(m.attachment && m.attachment.type || '').indexOf('video') === 0 || /\.(mp4|webm|mov)$/i.test(String(url || ''));
+        return '<button type="button" style="position:relative;aspect-ratio:1;border:none;padding:0;cursor:pointer;border-radius:8px;overflow:hidden;background:var(--surface-container-low,rgba(0,0,0,0.05));" data-media-open="' + _esc(url) + '" data-media-kind="' + (isVideo ? 'video' : 'image') + '" aria-label="Open media">' +
+          '<img src="' + _esc(url) + '" alt="" loading="lazy" style="width:100%;height:100%;object-fit:cover;display:block;" onerror="this.style.display=\'none\'">' +
+          (isVideo ? '<span class="material-symbols-outlined" style="position:absolute;inset:0;margin:auto;width:28px;height:28px;font-size:28px;color:#fff;text-shadow:0 1px 4px rgba(0,0,0,0.5);">play_circle</span>' : '') +
+        '</button>';
+      }).join('') +
+    '</div>';
+  }
+
   function _renderMediaTabContent(tab) {
     _activeMediaTab = tab || 'media';
     _mediaTabBtn(_activeMediaTab);
@@ -310,17 +365,22 @@
         return false;
       }).reverse();
       content.innerHTML = media.length
-        ? '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:4px;">' +
-            media.map(function (m) {
-              var url = m.attachment && (m.attachment.url || m.attachment);
-              var isVideo = m.type === 'video' || String(m.attachment.type || '').indexOf('video') === 0;
-              return '<button type="button" style="position:relative;aspect-ratio:1;border:none;padding:0;cursor:pointer;border-radius:8px;overflow:hidden;background:var(--surface-container-low,rgba(0,0,0,0.05));" data-media-open="' + _esc(url) + '" data-media-kind="' + (isVideo ? 'video' : 'image') + '" aria-label="Open media">' +
-                '<img src="' + _esc(url) + '" alt="" loading="lazy" style="width:100%;height:100%;object-fit:cover;display:block;" onerror="this.style.display=\'none\'">' +
-                (isVideo ? '<span class="material-symbols-outlined" style="position:absolute;inset:0;margin:auto;width:28px;height:28px;font-size:28px;color:#fff;text-shadow:0 1px 4px rgba(0,0,0,0.5);">play_circle</span>' : '') +
-              '</button>';
-            }).join('') +
-          '</div>'
+        ? _galleryGridHtml(media)
         : '<div style="padding:24px;text-align:center;font-size:12px;color:var(--on-surface-variant,#8696a0);">No media shared yet</div>';
+      var gChat = _activeChat();
+      var gType = _activeType();
+      if (gChat && gChat.id) {
+        _queryChatMedia(gChat.id, gType).then(function (gallery) {
+          if (!gallery) return;
+          var contentEl = _$('detail-media-content');
+          if (!contentEl) return;
+          if (gallery.length > 0) {
+            contentEl.innerHTML = '<div style="font-size:11px;font-weight:600;color:var(--on-surface-variant,#8696a0);margin-bottom:6px;">' + gallery.length + ' media in this ' + (gType === 'group' ? 'group' : 'chat') + '</div>' + _galleryGridHtml(gallery);
+          } else if (media.length === 0) {
+            contentEl.innerHTML = '<div style="padding:24px;text-align:center;font-size:12px;color:var(--on-surface-variant,#8696a0);">No media shared yet</div>';
+          }
+        });
+      }
     } else if (_activeMediaTab === 'links') {
       var links = [];
       msgs.forEach(function (m) {
@@ -1374,13 +1434,48 @@
     if (typeof window.loadMessages === 'function') window.loadMessages(chat.id);
   }
 
+  function _sendLocationMessage(lat, lng, label) {
+    var db = _db();
+    var uid = _uid();
+    var user = _me();
+    var chat = _activeChat();
+    if (!db || !uid || !chat) { _toast('No active chat', 'error'); return; }
+    var coll = _activeType() === 'group' ? 'groups' : 'chats';
+    var batch = db.batch();
+    var ref = db.collection(coll).doc(chat.id).collection('messages').doc();
+    var text = label || 'My current location';
+    var msg = {
+      id: ref.id,
+      type: 'location',
+      latitude: lat,
+      longitude: lng,
+      text: text,
+      senderId: uid,
+      senderName: (user && (user.displayName || user.email)) || 'Me',
+      senderPhotoURL: (user && user.photoURL) || '',
+      timestamp: _ts(),
+      readBy: {}
+    };
+    msg.readBy[uid] = true;
+    batch.set(ref, msg);
+    batch.update(db.collection(coll).doc(chat.id), {
+      lastMessage: '📍 ' + text,
+      lastMessageText: '📍 ' + text,
+      lastMessageAt: _ts(),
+      lastSenderId: uid,
+      updatedAt: _ts()
+    });
+    batch.commit().catch(function (err) { _debug('send location failed:', err); _toast('Failed to send', 'error'); });
+    if (typeof window.loadMessages === 'function') window.loadMessages(chat.id);
+  }
+
+  window.sendLocationMessage = _sendLocationMessage;
+
   window.shareLocation = function () {
     if (!navigator.geolocation) { _toast('Geolocation not supported', 'error'); return; }
     navigator.geolocation.getCurrentPosition(function (pos) {
-      var lat = pos.coords.latitude;
-      var lng = pos.coords.longitude;
-      _sendTextMessage('📍 My current location\nhttps://maps.google.com/?q=' + lat + ',' + lng);
-    }, function () { _toast('Unable to get your location', 'error'); });
+      _sendLocationMessage(pos.coords.latitude, pos.coords.longitude);
+    }, function () { _toast('Unable to get your location', 'error'); }, { maximumAge: 60000, timeout: 15000, enableHighAccuracy: true });
   };
 
   /* ── Share contact ─────────────────────────────────────────── */
@@ -1425,10 +1520,42 @@
     return lines.filter(Boolean).join('\n');
   }
 
+  function _vcardEscape(s) {
+    return String(s == null ? '' : s).replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\n/g, '\\n').replace(/\r/g, '');
+  }
+
+  function _vcardString(u) {
+    var name = u.displayName || u.name || u.email || 'Contact';
+    var out = ['BEGIN:VCARD', 'VERSION:3.0', 'N:' + _vcardEscape(name) + ';;;;', 'FN:' + _vcardEscape(name)];
+    if (u.phoneNumber) out.push('TEL;TYPE=CELL:' + _vcardEscape(String(u.phoneNumber)));
+    if (u.email) out.push('EMAIL;TYPE=INTERNET:' + _vcardEscape(String(u.email)));
+    if (u.photoURL) out.push('PHOTO;VALUE=URL:' + _vcardEscape(String(u.photoURL)));
+    out.push('END:VCARD');
+    return out.join('\r\n') + '\r\n';
+  }
+
+  function _sendContactVCard(u) {
+    if (!u) return;
+    var vcf = _vcardString(u);
+    var name = String(u.displayName || u.name || 'contact').replace(/[^\w .-]+/g, '').trim() || 'contact';
+    var file;
+    try {
+      file = new File([vcf], name + '.vcf', { type: 'text/vcard' });
+    } catch (_) {
+      file = new Blob([vcf], { type: 'text/vcard' });
+      file.name = name + '.vcf';
+    }
+    if (typeof window._sendFileMessage === 'function') {
+      window._sendFileMessage(file);
+    } else {
+      _sendTextMessage(_contactCard(u));
+    }
+  }
+
   window.shareMyProfile = function () {
     var user = _me();
     if (!user) return;
-    _sendTextMessage(_contactCard(user));
+    _sendContactVCard(user);
     _closeOverlay('contact-picker-overlay');
   };
 
@@ -1454,7 +1581,7 @@
 
   function _sendContactAndClose(u) {
     if (!u) return;
-    _sendTextMessage(_contactCard(u));
+    _sendContactVCard(u);
     _closeOverlay('contact-picker-overlay');
   }
 

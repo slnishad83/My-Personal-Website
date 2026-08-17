@@ -38,9 +38,28 @@
     }
   }
 
+  function _showScreenShareBanner(show) {
+    var existing = CC.$('screenshare-banner');
+    if (existing) existing.remove();
+    if (!show) return;
+    var cs = CC.$('call-screen');
+    if (!cs) return;
+    var banner = document.createElement('div');
+    banner.id = 'screenshare-banner';
+    banner.className = 'absolute top-14 left-1/2 -translate-x-1/2 z-20 flex items-center gap-1.5 px-3 py-1.5 bg-blue-500/20 text-blue-400 rounded-full text-xs font-semibold backdrop-blur-sm';
+    banner.innerHTML = '<span class="material-symbols-outlined" style="font-size:14px">screen_share</span> You are sharing your screen';
+    cs.appendChild(banner);
+  }
+
   async function toggleScreenShare() {
     if (CC.screenShareStream) {
       CC.screenShareStream.getTracks().forEach(function (t) { t.stop(); });
+      if (CC.getPeerConnection() && CC.screenShareStream.getAudioTracks().length > 0) {
+        var pc = CC.getPeerConnection();
+        var saTrack = CC.screenShareStream.getAudioTracks()[0];
+        var saSender = pc.getSenders().find(function (s) { return s.track === saTrack; });
+        if (saSender) { try { pc.removeTrack(saSender); } catch (_) {} }
+      }
       CC.screenShareStream = null;
       if (CC.screenShareSender && CC.getPeerConnection() && CC.getLocalStream()) {
         var camTrack = CC.getLocalStream().getVideoTracks()[0];
@@ -52,6 +71,7 @@
       var si = CC.$('screenshare-icon');
       if (si) si.textContent = 'screen_share';
       CC.setScreenSharing(false);
+      _showScreenShareBanner(false);
       CC.toast('Screen share stopped', 'info');
       return;
     }
@@ -80,6 +100,7 @@
       if (si2) si2.textContent = 'stop_screen_share';
       CC.setScreenSharing(true);
       screenTrack.onended = function () { toggleScreenShare(); };
+      _showScreenShareBanner(true);
       CC.toast('Sharing your screen' + (screenStream.getAudioTracks().length > 0 ? ' with audio' : ''), 'info');
     } catch (_) { CC.toast('Screen share cancelled', 'info'); }
   }
@@ -87,6 +108,7 @@
   async function switchCamera() {
     CC.setPreferredCameraFacingMode(CC.getPreferredCameraFacingMode() === 'user' ? 'environment' : 'user');
     if (!CC.getLocalStream() || CC.callType !== 'video') return;
+    if (CC.isScreenSharing()) { CC.toast('Stop screen share before switching camera', 'info'); return; }
     try {
       var newStream = await navigator.mediaDevices.getUserMedia({
         video: {
@@ -325,42 +347,208 @@
     if (banner) banner.style.display = 'none';
   }
 
-  // Call recording
-  var _callRecorder = null;
-  var _callRecordingChunks = [];
-
   function toggleCallRecording() {
-    if (_callRecorder && _callRecorder.state === 'recording') {
-      _callRecorder.stop();
-      CC.toast('Call recording saved', 'info');
+    if (typeof window.toggleCallRecording === 'function' && window.toggleCallRecording !== toggleCallRecording) {
+      window.toggleCallRecording();
       return;
     }
+    CC.toast('Call recording not available', 'info');
+  }
 
-    var stream = CC.getRemoteStream() || CC.getLocalStream();
-    if (!stream) return;
-
+  // ── Switch voice call to video call ──
+  async function switchToVideo() {
+    if (CC.callType === 'video') return;
+    if (CC.isScreenSharing()) { CC.toast('Stop screen share before switching to video', 'info'); return; }
+    var localStream = CC.getLocalStream();
+    var pc = CC.getPeerConnection();
+    if (!localStream || !pc) return;
+    if (CC.state !== CC.STATES.ACTIVE && CC.state !== CC.STATES.CONNECTING) return;
     try {
-      _callRecordingChunks = [];
-      _callRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
-      _callRecorder.ondataavailable = function (e) {
-        if (e.data.size > 0) _callRecordingChunks.push(e.data);
-      };
-      _callRecorder.onstop = function () {
-        var blob = new Blob(_callRecordingChunks, { type: 'audio/webm' });
-        var url = URL.createObjectURL(blob);
-        var a = document.createElement('a');
-        a.href = url;
-        a.download = 'call-recording-' + Date.now() + '.webm';
-        a.click();
-        URL.revokeObjectURL(url);
-      };
-      _callRecorder.start();
-      CC.toast('Recording started', 'info');
+      var videoStream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          facingMode: CC.getPreferredCameraFacingMode() || 'user',
+          width: { ideal: window.isTablet ? 1920 : 1280 },
+          height: { ideal: window.isTablet ? 1080 : 720 },
+          frameRate: { ideal: 30, max: 30 }
+        }
+      });
+      var vTrack = videoStream.getVideoTracks()[0];
+      localStream.addTrack(vTrack);
+      var sender = pc.getSenders().find(function (s) { return s.track && s.track.kind === 'video'; });
+      if (sender) await sender.replaceTrack(vTrack);
+      else pc.addTrack(vTrack, localStream);
+      CC.callType = 'video';
+      CC.setCameraOff(false);
+      var lv = CC.$('local-video');
+      if (lv) { lv.srcObject = localStream; }
+      CC.show('local-video-container');
+      var camBtn = CC.$('btn-cam');
+      if (camBtn) { camBtn.classList.remove('hidden'); camBtn.classList.remove('bg-red-500'); }
+      var camIcon = CC.$('cam-icon');
+      if (camIcon) camIcon.textContent = 'videocam';
+      var swBtn = CC.$('btn-switch-video');
+      if (swBtn) swBtn.classList.add('hidden');
+      var ssBtn = CC.$('btn-screenshare');
+      if (ssBtn) ssBtn.classList.remove('hidden');
+      var kpBtn = CC.$('btn-keypad');
+      if (kpBtn) kpBtn.classList.add('hidden');
+      var blurBtn = CC.$('btn-blur');
+      if (blurBtn) blurBtn.classList.remove('hidden');
+      CC.txt('call-quality-text', 'HD Video call');
+      CC.toast('Switched to video call', 'info');
+      if (CC.db() && CC.callId) {
+        await CC.db().collection('calls').doc(CC.callId).update({ type: 'video' }).catch(function () {});
+      }
+      if (typeof CC.createOfferAndSignal === 'function') await CC.createOfferAndSignal();
     } catch (err) {
-      CC.toast('Recording not supported', 'error');
+      if (window.__DEBUG__) console.error('switchToVideo error:', err);
+      CC.toast('Could not switch to video', 'error');
     }
   }
 
+  // Remote side: a peer upgraded the call to video — enable video here too.
+  async function handleRemoteVideoUpgrade() {
+    if (CC.callType === 'video') return;
+    CC.callType = 'video';
+    CC.setCameraOff(false);
+    var camBtn = CC.$('btn-cam');
+    if (camBtn) { camBtn.classList.remove('hidden'); camBtn.classList.remove('bg-red-500'); }
+    var camIcon = CC.$('cam-icon');
+    if (camIcon) camIcon.textContent = 'videocam';
+    var swBtn = CC.$('btn-switch-video');
+    if (swBtn) swBtn.classList.add('hidden');
+    var ssBtn = CC.$('btn-screenshare');
+    if (ssBtn) ssBtn.classList.remove('hidden');
+    var kpBtn = CC.$('btn-keypad');
+    if (kpBtn) kpBtn.classList.add('hidden');
+    var blurBtn = CC.$('btn-blur');
+    if (blurBtn) blurBtn.classList.remove('hidden');
+    CC.txt('call-quality-text', 'HD Video call');
+    var localStream = CC.getLocalStream();
+    var pc = CC.getPeerConnection();
+    if (!localStream || !pc) return;
+    if (localStream.getVideoTracks().length === 0) {
+      try {
+        var videoStream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            facingMode: CC.getPreferredCameraFacingMode() || 'user',
+            width: { ideal: window.isTablet ? 1920 : 1280 },
+            height: { ideal: window.isTablet ? 1080 : 720 },
+            frameRate: { ideal: 30, max: 30 }
+          }
+        });
+        var vTrack = videoStream.getVideoTracks()[0];
+        localStream.addTrack(vTrack);
+        var sender = pc.getSenders().find(function (s) { return s.track && s.track.kind === 'video'; });
+        if (sender) await sender.replaceTrack(vTrack);
+        else pc.addTrack(vTrack, localStream);
+        var lv = CC.$('local-video');
+        if (lv) lv.srcObject = localStream;
+        CC.show('local-video-container');
+      } catch (err) {
+        if (window.__DEBUG__) console.warn('Remote video upgrade camera error:', err);
+      }
+    }
+  }
+
+  // ── Call keypad / DTMF dialpad ──
+  function toggleKeypad() {
+    var ov = CC.$('call-keypad-overlay');
+    if (!ov) return;
+    ov.classList.toggle('hidden');
+    if (!ov.classList.contains('hidden')) {
+      CC._keypadBuffer = '';
+      var disp = CC.$('keypad-display');
+      if (disp) disp.innerHTML = '&nbsp;';
+    }
+  }
+
+  function hideKeypad() {
+    var ov = CC.$('call-keypad-overlay');
+    if (ov) ov.classList.add('hidden');
+  }
+
+  var _dtmfCtx = null;
+  function playDtmfTone(digit) {
+    try {
+      if (!_dtmfCtx) _dtmfCtx = new (window.AudioContext || window.webkitAudioContext)();
+      var freqs = { '1': [697,1209], '2': [697,1336], '3': [697,1477], '4': [770,1209], '5': [770,1336], '6': [770,1477], '7': [852,1209], '8': [852,1336], '9': [852,1477], '*': [941,1209], '0': [941,1336], '#': [941,1477] };
+      var f = freqs[digit];
+      if (!f) return;
+      var now = _dtmfCtx.currentTime;
+      f.forEach(function (freq) {
+        var osc = _dtmfCtx.createOscillator();
+        var gain = _dtmfCtx.createGain();
+        osc.type = 'sine';
+        osc.frequency.value = freq;
+        gain.gain.setValueAtTime(0.12, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+        osc.connect(gain);
+        gain.connect(_dtmfCtx.destination);
+        osc.start(now);
+        osc.stop(now + 0.12);
+      });
+    } catch (_) {}
+  }
+
+  function sendDTMF(digit) {
+    var sent = false;
+    var pcs = [];
+    if (CC.getPeerConnection()) pcs.push(CC.getPeerConnection());
+    if (window.groupCallPeerConnections && window.groupCallPeerConnections instanceof Map) {
+      window.groupCallPeerConnections.forEach(function (pc) { pcs.push(pc); });
+    }
+    pcs.forEach(function (pc) {
+      if (!pc) return;
+      var audioSender = pc.getSenders().find(function (s) { return s.track && s.track.kind === 'audio'; });
+      if (audioSender && typeof audioSender.dtmf === 'object' && audioSender.dtmf) {
+        try { audioSender.dtmf.insertDTMF(String(digit), 100, 60); sent = true; } catch (_) {}
+      }
+    });
+    if (!sent) playDtmfTone(digit);
+    CC._keypadBuffer = ((CC._keypadBuffer || '') + digit).slice(-24);
+    var disp = CC.$('keypad-display');
+    if (disp) disp.textContent = CC._keypadBuffer;
+  }
+
+  // ── Add participant to an active 1:1 call (convert to group call) ──
+  function addParticipantToCall() {
+    if (!App.callActive) return;
+    if (typeof window.openCallPicker === 'function') {
+      CC._addParticipantMode = true;
+      window.openCallPicker();
+    }
+  }
+
+  async function convertCallToGroup(newUid, newName) {
+    CC._addParticipantMode = false;
+    CC.closeModalFn('call-picker-overlay');
+    var myUid = CC.uid();
+    var currentRemoteUid = (CC.callMeta && CC.callMeta.toUserId) || (CC.callMeta && CC.callMeta.fromUserId) || '';
+    var callType = CC.callType || 'voice';
+    var currentName = CC.$('call-name')?.textContent || 'Call';
+    var memberIds = [currentRemoteUid, newUid].filter(function (x) { return x && x !== myUid; });
+    if (!memberIds.length) { CC.toast('No participant to add', 'error'); return; }
+    CC._suppressEndScreen = true;
+    window.endCall();
+    CC._suppressEndScreen = false;
+    if (typeof window.startGroupCall === 'function') {
+      try {
+        await window.startGroupCall(memberIds, callType, { groupId: '', groupName: currentName, groupAvatar: '' });
+      } catch (e) {
+        if (window.__DEBUG__) console.warn('convertCallToGroup error:', e);
+        CC.toast('Could not start group call', 'error');
+      }
+    }
+  }
+
+  CC.switchToVideo = switchToVideo;
+  CC.handleRemoteVideoUpgrade = handleRemoteVideoUpgrade;
+  CC.toggleKeypad = toggleKeypad;
+  CC.hideKeypad = hideKeypad;
+  CC.sendDTMF = sendDTMF;
+  CC.addParticipantToCall = addParticipantToCall;
+  CC.convertCallToGroup = convertCallToGroup;
   CC.toggleMute = toggleMute;
   CC.toggleCamera = toggleCamera;
   CC.toggleSpeaker = toggleSpeaker;
@@ -378,6 +566,11 @@
   CC.checkCallNetworkQuality = checkCallNetworkQuality;
   CC.toggleCallRecording = toggleCallRecording;
 
+  window.switchToVideo = switchToVideo;
+  window.toggleKeypad = toggleKeypad;
+  window.hideKeypad = hideKeypad;
+  window.sendDTMF = sendDTMF;
+  window.addParticipantToCall = addParticipantToCall;
   window.toggleMute = toggleMute;
   window.toggleCamera = toggleCamera;
   window.toggleSpeaker = toggleSpeaker;

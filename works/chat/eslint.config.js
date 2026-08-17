@@ -157,6 +157,7 @@ module.exports = [
         define: 'readonly',
         twemoji: 'readonly',
         L: 'readonly',
+        SelfieSegmentation: 'readonly',
         Sentry: 'readonly',
         jsQR: 'readonly',
         Capacitor: 'readonly',

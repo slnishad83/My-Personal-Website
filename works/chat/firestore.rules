@@ -886,6 +886,22 @@ service cloud.firestore {
       }
     }
 
+    match /groupCallInvites/{inviteId} {
+      allow read: if signedIn() && (
+        resource.data.toUserId == request.auth.uid
+        || resource.data.fromUserId == request.auth.uid
+      );
+      allow create: if signedIn() && request.resource.data.fromUserId == request.auth.uid;
+      allow update: if signedIn() && (
+        resource.data.toUserId == request.auth.uid
+        || resource.data.fromUserId == request.auth.uid
+      );
+      allow delete: if signedIn() && (
+        resource.data.toUserId == request.auth.uid
+        || resource.data.fromUserId == request.auth.uid
+      );
+    }
+
     match /stickerPacks/{packId} {
       allow read: if signedIn() && resource.data.creatorId == request.auth.uid;
       allow create: if signedIn()
