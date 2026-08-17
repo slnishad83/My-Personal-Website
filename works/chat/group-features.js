@@ -302,8 +302,8 @@
   async function promoteToAdmin(groupId, userId) {
     var uid = _uid();
     if (!uid) { _toast('Not authenticated', 'error'); return; }
-    var isCreator = await _isGroupCreator(groupId, uid);
-    if (!isCreator) { _toast('Only the group creator can promote admins', 'error'); return; }
+    var isAdmin = await _isGroupAdmin(groupId, uid);
+    if (!isAdmin) { _toast('Only admins can promote members', 'error'); return; }
     try {
       var fn = firebase.functions().httpsCallable('promoteGroupAdmin');
       await fn({ groupId, userId });
@@ -317,8 +317,8 @@
   async function demoteFromAdmin(groupId, userId) {
     var uid = _uid();
     if (!uid) { _toast('Not authenticated', 'error'); return; }
-    var isCreator = await _isGroupCreator(groupId, uid);
-    if (!isCreator) { _toast('Only the group creator can demote admins', 'error'); return; }
+    var isAdmin = await _isGroupAdmin(groupId, uid);
+    if (!isAdmin) { _toast('Only admins can demote members', 'error'); return; }
     try {
       var fn = firebase.functions().httpsCallable('demoteGroupAdmin');
       await fn({ groupId, userId });
@@ -379,6 +379,7 @@
 
   function muteGroupNotifications(groupId, _duration) {
     var options = [
+      { label: '1 hour', value: 1 * 60 * 60 * 1000, icon: 'schedule' },
       { label: '8 hours', value: 8 * 60 * 60 * 1000, icon: 'schedule' },
       { label: '1 week', value: 7 * 24 * 60 * 60 * 1000, icon: 'date_range' },
       { label: 'Always', value: -1, icon: 'notifications_off' },
@@ -417,6 +418,11 @@
     try {
       var fn = firebase.functions().httpsCallable('exitGroup');
       await fn({ groupId });
+      if (window.App && window.App.messages) delete window.App.messages[groupId];
+      if (window.App && window.App.groups && window.App.groups[groupId]) delete window.App.groups[groupId];
+      if (window.App && window.App.currentChat && window.App.currentChat.id === groupId) {
+        window.App.currentChat = null;
+      }
       _toast('You left the group', 'success');
       if (typeof window.backToList === 'function') window.backToList();
     } catch (err) {
@@ -528,6 +534,18 @@
         item.appendChild(text);
         item.addEventListener('mouseenter', function () { item.style.background = 'var(--surface-variant,rgba(0,0,0,0.03))'; });
         item.addEventListener('mouseleave', function () { item.style.background = 'none'; });
+        item.addEventListener('click', function () {
+          overlay.remove();
+          var msgEl = document.querySelector('[data-msg-id="' + r.id + '"]');
+          if (msgEl) {
+            msgEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            msgEl.style.transition = 'background 0.3s';
+            msgEl.style.background = 'rgba(0,168,132,0.15)';
+            setTimeout(function () { msgEl.style.background = ''; }, 2000);
+          } else {
+            _toast('Message not visible in current view', 'info');
+          }
+        });
         list.appendChild(item);
       });
     }

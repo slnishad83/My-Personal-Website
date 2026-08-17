@@ -303,12 +303,20 @@
 
           case 'admin-delete':
             if (d) {
-              await d.collection('groups').doc(groupId).update({
-                deleted: true,
-                deletedBy: _uid(),
-                deletedAt: firebase.firestore.FieldValue.serverTimestamp(),
-                memberIds: []
-              });
+              var msgsSnap = await d.collection('groups').doc(groupId).collection('messages').get();
+              var batch1 = d.batch();
+              msgsSnap.forEach(function(doc) { batch1.delete(doc.ref); });
+              await batch1.commit();
+
+              var membersSnap = await d.collection('groups').doc(groupId).collection('members').get();
+              var batch2 = d.batch();
+              membersSnap.forEach(function(doc) { batch2.delete(doc.ref); });
+              await batch2.commit();
+
+              await d.collection('groups').doc(groupId).delete();
+
+              if (window.App && window.App.messages) delete window.App.messages[groupId];
+              if (window.App && window.App.groups && window.App.groups[groupId]) delete window.App.groups[groupId];
               _removeFromChatList(groupId);
               if (typeof showToast === 'function') showToast('Group deleted for everyone', 'success');
             }

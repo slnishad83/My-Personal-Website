@@ -143,6 +143,29 @@ const SwipeDelete = {
         }
       });
     }
+    const archiveBtn = actions.querySelector('.swipe-archive');
+    if (archiveBtn) {
+      archiveBtn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        if (typeof window.archiveChat === 'function') {
+          window.archiveChat(chatId);
+        } else if (typeof window.archiveChat === 'function') {
+          window.archiveChat();
+        }
+        if (typeof showToast === 'function') showToast('Chat archived', 'success');
+        SwipeDelete._closeAll();
+      });
+    }
+    const deleteBtn = actions.querySelector('.swipe-delete');
+    if (deleteBtn) {
+      deleteBtn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        if (typeof window.deleteChat === 'function') {
+          window.deleteChat(chatId);
+        }
+        SwipeDelete._closeAll();
+      });
+    }
   },
 
   destroy() {

@@ -418,7 +418,27 @@ const KeyboardShortcuts = {
     /* ── Ctrl+Shift+Backspace: Clear chat ──────────────────── */
     if (isMeta && isShift && e.key === 'Backspace') {
       e.preventDefault();
-      if (typeof clearChatHistory === 'function') clearChatHistory();
+      if (typeof window.clearChatHistory === 'function') {
+        window.clearChatHistory();
+      } else {
+        var db = window.App && window.App.db ? window.App.db : null;
+        var chat = window.App && window.App.currentChat ? window.App.currentChat : null;
+        if (!db || !chat) return;
+        var confirmed = confirm('Clear all messages in this chat? This cannot be undone.');
+        if (!confirmed) return;
+        var coll = (window.App.currentChatType === 'group' || chat.type === 'group') ? 'groups' : 'chats';
+        db.collection(coll).doc(chat.id).collection('messages').get().then(function(snap) {
+          var batch = db.batch();
+          snap.forEach(function(doc) { batch.delete(doc.ref); });
+          return batch.commit();
+        }).then(function() {
+          if (window.App && window.App.messages) delete window.App.messages[chat.id];
+          if (typeof window.renderMessages === 'function') window.renderMessages(chat.id);
+          if (typeof showToast === 'function') showToast('Chat cleared', 'success');
+        }).catch(function(err) {
+          if (typeof showToast === 'function') showToast('Failed to clear chat', 'error');
+        });
+      }
       return;
     }
 

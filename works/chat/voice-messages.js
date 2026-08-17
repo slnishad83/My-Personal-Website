@@ -214,6 +214,7 @@
   }
 
   function _onMicMouseDown(e) {
+    e.preventDefault();
     _swipeStartY = e.clientY;
     _swipeActive = true;
     _holdTimer = setTimeout(function () {
@@ -296,6 +297,7 @@
       _startTime = Date.now();
       _totalPaused = 0;
       _recordedBlob = null;
+      try { if (navigator.vibrate) navigator.vibrate(50); } catch (_) {}
       _showRecordingUI();
       _startWaveform(_audioStream);
       _timerInterval = setInterval(_updateTimer, 200);
@@ -389,6 +391,8 @@
   function _stopRecordingAndSend() {
     _isRecording = false;
     _isPaused = false;
+    _isLocked = false;
+    _audioChunks = [];
     if (_recorder && _recorder.state !== 'inactive') {
       try { _recorder.stop(); } catch (_) {}
     }
@@ -397,6 +401,7 @@
       _audioStream = null;
     }
     _recorder = null;
+    try { if (navigator.vibrate) navigator.vibrate(30); } catch (_) {}
     _hideRecordingUI();
   }
 

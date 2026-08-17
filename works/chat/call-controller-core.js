@@ -160,7 +160,14 @@
         toUserName: toName,
         toUserAvatar: toAvatar,
         durationMs: durationMs || null,
-        participantIds: uid() ? [uid()] : []
+        participantIds: (function () {
+          var ids = [];
+          var fromId = meta.fromUserId || uid() || inc.fromUserId || '';
+          var toId = toUid || '';
+          if (fromId) ids.push(fromId);
+          if (toId && toId !== fromId) ids.push(toId);
+          return ids;
+        })()
       });
     }
   }

@@ -92,6 +92,11 @@
       return;
     }
 
+    if (!window.App.messages || !Array.isArray(window.App.messages)) {
+      hideSuggestions();
+      return;
+    }
+
     // Get the last message from the UI or App.messages
     const messages = window.App.messages.filter(m => m.chatId === window.App.currentChatId);
     if (!messages.length) {
@@ -101,6 +106,11 @@
 
     const lastMsg = messages[messages.length - 1];
     
+    if (!window.App.currentUser) {
+      hideSuggestions();
+      return;
+    }
+
     // Don't suggest replies to our own messages
     if (lastMsg.senderId === window.App.currentUser.uid) {
       hideSuggestions();

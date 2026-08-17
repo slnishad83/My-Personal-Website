@@ -263,12 +263,40 @@
     var coll = _chatColl(_chatId);
     var db = _db();
     if (!db) return;
-    var batch = db.batch();
+    var myUid = _uid();
+    var msgs = _messages();
+    var BATCH_LIMIT = 500;
+    var batches = [];
+    var currentBatch = db.batch();
+    var opCount = 0;
     ids.forEach(function(msgId) {
       var ref = db.collection(coll).doc(_chatId).collection('messages').doc(msgId);
-      batch.update(ref, { type: 'deleted', text: '', deleted: true, deletedAt: firebase.firestore.FieldValue.serverTimestamp() });
+      var msg = msgs.find(function(m) { return m.id === msgId; });
+      var isOwn = msg && (msg.from === myUid || msg.senderId === myUid);
+      if (isOwn) {
+        currentBatch.delete(ref);
+      } else {
+        currentBatch.update(ref, {
+          type: 'deleted',
+          text: '',
+          deleted: true,
+          deletedBy: 'everyone',
+          deletedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+      }
+      opCount++;
+      if (opCount >= BATCH_LIMIT) {
+        batches.push(currentBatch.commit());
+        currentBatch = db.batch();
+        opCount = 0;
+      }
     });
-    batch.commit().then(function() {
+    if (opCount > 0) batches.push(currentBatch.commit());
+    Promise.all(batches).then(function() {
+      ids.forEach(function(msgId) {
+        var el = document.querySelector('[data-message-id="' + msgId + '"]');
+        if (el) el.remove();
+      });
       _toast(ids.length + ' message' + (ids.length > 1 ? 's' : '') + ' deleted', 'success');
       exitSelection();
     }).catch(function() {

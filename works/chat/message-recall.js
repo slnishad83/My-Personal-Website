@@ -19,6 +19,9 @@
     if (!msg) return false;
     const msgTime = _getMsgTime(msg);
     if (!msgTime) return false;
+    const myUid = window.App?.auth?.currentUser?.uid || window.currentUser?.uid || '';
+    const isOwn = msg.from === myUid || msg.senderId === myUid;
+    if (!isOwn) return false;
     return (Date.now() - msgTime) < RECALL_WINDOW_MS;
   };
 
@@ -111,7 +114,11 @@
       if (action === 'delete-me') {
         const mid = actionBtn.dataset.msgId;
         if (typeof window._removeCtxMenu === 'function') window._removeCtxMenu();
-        if (typeof deleteMessage === 'function') deleteMessage(mid, 'me');
+        if (typeof window._MsgActions && typeof window._MsgActions.deleteForMe === 'function') {
+          window._MsgActions.deleteForMe(mid);
+        } else if (typeof window.deleteMessage === 'function') {
+          window.deleteMessage(mid, 'me');
+        }
       } else if (action === 'cancel') {
         if (typeof window._removeCtxMenu === 'function') window._removeCtxMenu();
       }

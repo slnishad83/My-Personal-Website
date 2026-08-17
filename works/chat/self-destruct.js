@@ -211,7 +211,7 @@
       if (window.App.currentChat.type === 'group') {
         await window.App.db.collection('groups').doc(chatId).update({ ephemeralTimer: timerVal });
       } else {
-        await window.App.db.collection('directChats').doc(chatId).update({ ephemeralTimer: timerVal });
+        await window.App.db.collection('chats').doc(chatId).update({ ephemeralTimer: timerVal });
       }
       
       window.App.currentChat.ephemeralTimer = timerVal;

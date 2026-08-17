@@ -38,6 +38,7 @@
   };
 
   const MUTE_PRESETS = [
+    { label: '1 Hour',     ms: 1 * 60 * 60 * 1000 },
     { label: '8 Hours',    ms: 8 * 60 * 60 * 1000 },
     { label: '1 Week',     ms: 7 * 24 * 60 * 60 * 1000 },
     { label: 'Always',     ms: Infinity }

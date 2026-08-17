@@ -804,15 +804,42 @@
     var db = _db();
     if (!db || !chatId) return;
     var type = 'direct';
-    var item = _qs('[data-chat-id="' + String(chatId).replace(/"/g, '\\"') + '"]');
-    if (item) type = item.getAttribute('data-chat-type') || 'direct';
+    if (window.App && window.App.chats && window.App.chats[chatId]) {
+      var c = window.App.chats[chatId];
+      type = (c.type === 'group' || c.isGroup) ? 'group' : 'direct';
+    } else if (window.App && window.App.groups && window.App.groups[chatId]) {
+      type = 'group';
+    } else {
+      var item = _qs('[data-chat-id="' + String(chatId).replace(/"/g, '\\"') + '"]');
+      if (item) type = item.getAttribute('data-chat-type') || 'direct';
+    }
     var coll = type === 'group' ? 'groups' : 'chats';
-    db.collection(coll).doc(chatId).delete()
-      .then(function () {
-        if (typeof window.loadChats === 'function') window.loadChats();
-        else if (typeof window.switchTab === 'function') window.switchTab('chats');
-      })
-      .catch(function (err) { _debug('delete chat failed:', err); });
+
+    var msgsRef = db.collection(coll).doc(chatId).collection('messages');
+    msgsRef.get().then(function (snap) {
+      var batch = db.batch();
+      snap.forEach(function (doc) { batch.delete(doc.ref); });
+      return batch.commit();
+    }).then(function () {
+      var membersRef = db.collection(coll).doc(chatId).collection('members');
+      return membersRef.get().then(function (snap2) {
+        var batch2 = db.batch();
+        snap2.forEach(function (doc) { batch2.delete(doc.ref); });
+        return batch2.commit();
+      });
+    }).then(function () {
+      return db.collection(coll).doc(chatId).delete();
+    }).then(function () {
+      if (window.App && window.App.messages) delete window.App.messages[chatId];
+      if (window.App && window.App.chats && window.App.chats[chatId]) delete window.App.chats[chatId];
+      if (window.App && window.App.groups && window.App.groups[chatId]) delete window.App.groups[chatId];
+      if (window.App && window.App.currentChat && window.App.currentChat.id === chatId) {
+        window.App.currentChat = null;
+      }
+      if (typeof window.loadChats === 'function') window.loadChats();
+      else if (typeof window.switchTab === 'function') window.switchTab('chats');
+      _toast('Chat deleted', 'success');
+    }).catch(function (err) { _debug('delete chat failed:', err); });
   }
 
   window.deleteChat = function (chatId) {

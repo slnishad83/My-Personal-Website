@@ -99,12 +99,12 @@
     var db = _db();
     var chat = window.App && window.App.currentChat ? window.App.currentChat : null;
     if (!db || !chat || !msgId) { _toast('Cannot delete message', 'error'); return; }
-    var useNewModel = typeof window._resolveMessageRef === 'function';
+    var coll = (window.App.currentChatType === 'group' || chat.type === 'group') ? 'groups' : 'chats';
     var resolve = function (fn) {
-      if (useNewModel) {
+      if (typeof window._resolveMessageRef === 'function') {
         return window._resolveMessageRef(msgId).then(function (res) { return fn(res.ref, res.data); });
       }
-      return fn(db.collection('messages').doc(chat.id).collection('items').doc(msgId), {});
+      return fn(db.collection(coll).doc(chat.id).collection('messages').doc(msgId), {});
     };
     if (scope === 'everyone') {
       resolve(function (msgRef, msgData) {
@@ -124,6 +124,11 @@
           mediaUrls.forEach(function (url) {
             try { firebase.storage().refFromURL(url).delete(); } catch (_e) {}
           });
+          var el = document.querySelector('[data-message-id="' + msgId + '"]');
+          if (el) {
+            el.innerHTML = '<div style="padding:8px 12px;color:var(--on-surface-variant);font-style:italic;font-size:13px">This message was deleted</div>';
+            el.style.opacity = '0.6';
+          }
           _toast('Message deleted', 'success');
         }).catch(function (err) {
           _toast('Delete failed: ' + err.message, 'error');
@@ -132,6 +137,8 @@
     } else {
       resolve(function (msgRef) {
         msgRef.delete().then(function () {
+          var el = document.querySelector('[data-message-id="' + msgId + '"]');
+          if (el) el.remove();
           _toast('Message deleted', 'success');
         }).catch(function (err) {
           _toast('Delete failed: ' + err.message, 'error');
@@ -444,23 +451,25 @@
   function _fetchMsg(msgId) {
     var chat = window.App && window.App.currentChat ? window.App.currentChat : null;
     if (!chat) return Promise.resolve(null);
+    var coll = (window.App.currentChatType === 'group' || chat.type === 'group') ? 'groups' : 'chats';
     if (typeof window._resolveMessageRef === 'function') {
       return window._resolveMessageRef(msgId).then(function (res) {
         return res && res.data ? res.data : null;
       })['catch'](function () { return null; });
     }
-    return _db().collection('messages').doc(chat.id).collection('items').doc(msgId).get().then(function (doc) {
+    return _db().collection(coll).doc(chat.id).collection('messages').doc(msgId).get().then(function (doc) {
       return doc.exists ? doc.data() : null;
     })['catch'](function () { return null; });
   }
 
   function _resolveRef(msgId) {
     var chat = window.App && window.App.currentChat ? window.App.currentChat : null;
+    var coll = (window.App.currentChatType === 'group' || chat.type === 'group') ? 'groups' : 'chats';
     if (typeof window._resolveMessageRef === 'function') {
       return window._resolveMessageRef(msgId);
     }
     return Promise.resolve({
-      ref: _db().collection('messages').doc(chat.id).collection('items').doc(msgId)
+      ref: _db().collection(coll).doc(chat.id).collection('messages').doc(msgId)
     });
   }
 
@@ -478,9 +487,10 @@
     delete: function (msgId) {
       var chat = window.App && window.App.currentChat ? window.App.currentChat : null;
       if (!chat || !_db()) return;
+      var coll = (window.App.currentChatType === 'group' || chat.type === 'group') ? 'groups' : 'chats';
       var fetchMsg = typeof window._resolveMessageRef === 'function'
         ? window._resolveMessageRef(msgId).then(function (res) { return res.data; })
-        : _db().collection('messages').doc(chat.id).collection('items').doc(msgId).get().then(function (doc) { return doc.data(); });
+        : _db().collection(coll).doc(chat.id).collection('messages').doc(msgId).get().then(function (doc) { return doc.data(); });
       fetchMsg.then(function (data) {
         var msg = data || {};
         msg.id = msgId;
