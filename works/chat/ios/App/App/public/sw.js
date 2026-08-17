@@ -134,6 +134,21 @@ self.addEventListener('notificationclick', function(event) {
     return;
   }
 
+  if (event.action === 'reply' && data.chatId) {
+    var replyText = event.notification.data && event.notification.data.reply;
+    if (replyText) {
+      notifyWindowClients({
+        type: 'TC_NOTIF_REPLY',
+        chatId: data.chatId,
+        chatType: data.chatType || 'direct',
+        chatUserId: data.chatUserId || '',
+        groupId: data.groupId || '',
+        replyText: replyText
+      });
+    }
+    return;
+  }
+
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then(function(clientList) {
       for (var i = 0; i < clientList.length; i++) {
@@ -177,7 +192,7 @@ self.addEventListener('notificationclose', function(event) {
    Everything else → network-first with cache fallback
    ══════════════════════════════════════════════════════════════ */
 
-var CACHE_NAME = 'nsl-chat-v5.0.1';
+var CACHE_NAME = 'nsl-chat-v5.1.0';
 var CACHE_MAX_ENTRIES = 300;
 
 /* Pre-cached on install — minimal set for offline shell */
@@ -476,6 +491,30 @@ self.addEventListener('fetch', function(event) {
             });
           });
         })
+    );
+    return;
+  }
+
+  // ── Tier 4.5: Media (images, video, audio) → cache-first with network fallback ──
+  var isMedia = /\.(png|jpe?g|gif|webp|svg|ico|mp4|webm|mp3|ogg|wav|opus|m4a|aac)(\?|$)/i.test(pathname) ||
+    /firebasestorage\.googleapis\.com|res\.cloudinary\.com/.test(hostname);
+  if (isMedia) {
+    var MEDIA_CACHE = 'nsl-chat-media-v1';
+    event.respondWith(
+      caches.open(MEDIA_CACHE).then(function(cache) {
+        return cache.match(event.request).then(function(cached) {
+          if (cached) return cached;
+          return fetch(event.request).then(function(response) {
+            if (response.ok && response.type === 'basic') {
+              var copy = response.clone();
+              cache.put(event.request, copy);
+            }
+            return response;
+          }).catch(function() {
+            return new Response('', { status: 504, statusText: 'Offline' });
+          });
+        });
+      })
     );
     return;
   }
