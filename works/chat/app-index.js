@@ -104,6 +104,7 @@ const _deferredModules = [
   () => import('./notification-bell.js'),
   () => import('./notification-telemetry.js'),
   () => import('./notification-nav.js'),
+  () => import('./chat-notifications.js'),
   () => import('./ios-callkit.js'),
   () => import('./desktop-notifications.js'),
   () => import('./pwa-install.js'),

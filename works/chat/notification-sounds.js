@@ -143,6 +143,60 @@ const NotificationSounds = (() => {
     error() {
       _playTone(330, 0.15, 0.08, 'sawtooth', 0.005, 0.08);
       setTimeout(() => _playTone(277, 0.2, 0.08, 'sawtooth', 0.005, 0.1), 120);
+    },
+
+    /* WhatsApp "Silent" tone — for previewing silent setting */
+    silent() {
+      // No-op: plays nothing
+    },
+
+    /* WhatsApp-style "Ding" — classic notification */
+    ding() {
+      _playTone(1047, 0.06, 0.10, 'sine', 0.003, 0.03);
+    },
+
+    /* WhatsApp-style "Note" — musical two-tone */
+    note() {
+      _playTone(659, 0.10, 0.10, 'sine', 0.005, 0.05);
+      setTimeout(() => _playTone(880, 0.12, 0.10, 'sine', 0.005, 0.06), 100);
+    },
+
+    /* WhatsApp-style "Chime" — bright ascending */
+    chime() {
+      _playTone(784, 0.08, 0.10, 'sine', 0.003, 0.04);
+      setTimeout(() => _playTone(1047, 0.08, 0.10, 'sine', 0.003, 0.04), 60);
+      setTimeout(() => _playTone(1319, 0.10, 0.10, 'sine', 0.003, 0.05), 120);
+    },
+
+    /* WhatsApp-style "Bell" — resonant */
+    bell() {
+      _playTone(1319, 0.15, 0.10, 'sine', 0.005, 0.08);
+      setTimeout(() => _playTone(1568, 0.2, 0.10, 'sine', 0.005, 0.1), 50);
+    },
+
+    /* WhatsApp-style "Digital" — electronic */
+    digital() {
+      _playTone(880, 0.04, 0.08, 'square', 0.003, 0.02);
+      setTimeout(() => _playTone(880, 0.04, 0.08, 'square', 0.003, 0.02), 80);
+    },
+
+    /* WhatsApp-style "Soft" — gentle warm tone */
+    soft() {
+      _playTone(440, 0.12, 0.08, 'sine', 0.02, 0.06);
+      setTimeout(() => _playTone(554, 0.12, 0.08, 'sine', 0.02, 0.06), 80);
+    },
+
+    /* WhatsApp-style "Alert" — attention-getting two-tone */
+    alert() {
+      _playTone(1047, 0.06, 0.12, 'sine', 0.005, 0.03);
+      setTimeout(() => _playTone(1319, 0.08, 0.12, 'sine', 0.005, 0.04), 80);
+    },
+
+    /* WhatsApp-style "Whistle" — ascending three-tone */
+    whistle() {
+      _playTone(1175, 0.10, 0.10, 'sine', 0.005, 0.05);
+      setTimeout(() => _playTone(1397, 0.10, 0.10, 'sine', 0.005, 0.05), 100);
+      setTimeout(() => _playTone(1568, 0.15, 0.10, 'sine', 0.005, 0.08), 200);
     }
   };
 

@@ -10,7 +10,7 @@
   const PREF_KEY = 'tcNotificationPrefs';
   const DEDUPE_TTL_MS = 45000;
   const HISTORY_LIMIT = 250;
-  const CALL_RING_LIMIT_MS = 45000;
+  const CALL_RING_LIMIT_MS = 90000;
 
   const defaults = {
     messageSound: true,
@@ -56,11 +56,16 @@
       this._recordHistory(item);
       this._setBadge(item.unreadCount);
       document.dispatchEvent(new CustomEvent('tc:notification:message', { detail: item }));
-      // Check if chat is muted
+      // Check if chat is muted (respect per-chat settings)
       const isMuted = this._isChatMuted(item.chatId);
       if (!isMuted && !this._isSilent(item)) {
         this._messageTone(item);
-        this._vibrate(item.priority === 'high' ? [220, 90, 220] : [140]);
+        // WhatsApp-style vibration patterns per type
+        const vibratePattern = item.kind === 'mention' ? [220, 90, 220, 90, 220]
+          : item.kind === 'reaction' ? [100]
+          : item.chatType === 'group' ? [140, 50, 140]
+          : [140];
+        this._vibrate(vibratePattern);
       }
       if (document.visibilityState !== 'visible') this._showBrowserNotification(item);
       return true;
@@ -163,8 +168,10 @@
       this._activeCallId = call.callId || '';
       this._ringPattern();
       this._ringInterval = setInterval(() => this._ringPattern(), 2400);
+      // WhatsApp-style call vibration: continuous pulse while ringing
       this._vibrate([700, 250, 700, 700]);
       this._vibrateInterval = setInterval(() => this._vibrate([700, 250, 700, 700]), 2400);
+      // Auto-miss after 90 seconds (WhatsApp behavior)
       this._ringLimitTimer = setTimeout(() => this.callMissed(this._activeCallId, call), CALL_RING_LIMIT_MS);
     },
 
@@ -298,23 +305,40 @@
 
     _showBrowserNotification(item) {
       if (!('Notification' in window) || Notification.permission !== 'granted') return;
-      navigator.serviceWorker?.ready.then((reg) => reg.showNotification(item.title, {
+      // Build WhatsApp-style rich notification
+      const notifOptions = {
         body: item.body,
         tag: item.tag,
         renotify: item.priority === 'high',
         requireInteraction: Boolean(item.requireInteraction),
         icon: item.senderAvatar || item.fromUserAvatar || 'app-icon-192.png',
         badge: 'app-icon-192.png',
+        image: item.kind === 'image' || item.kind === 'sticker' ? (item.attachmentUrl || item.image || '') : '',
         timestamp: item.timestamp || Date.now(),
+        silent: false,
         data: item,
-        actions: item.kind === 'call' ? [
-          { action: 'reject', title: 'Decline' },
-          { action: 'accept', title: 'Accept' }
-        ] : [
-          { action: 'reply', title: 'Reply', type: 'text', placeholder: 'Type a reply...' },
+        vibrate: item.kind === 'call' ? [700, 250, 700, 700] : [140]
+      };
+
+      // WhatsApp-style action buttons
+      if (item.kind === 'call') {
+        notifOptions.actions = [
+          { action: 'reject', title: 'Decline', icon: 'app-icon-192.png' },
+          { action: 'accept', title: 'Accept', icon: 'app-icon-192.png' }
+        ];
+      } else {
+        notifOptions.actions = [
+          { action: 'reply', title: 'Reply' },
           { action: 'mark_read', title: 'Mark as read' }
-        ]
-      })).catch(() => {});
+        ];
+      }
+
+      // Android-specific: set channel based on notification type
+      if (item.kind === 'call') notifOptions.tag = 'call-' + (item.callId || '');
+      else if (item.chatType === 'group') notifOptions.tag = 'group-' + (item.chatId || '');
+      else notifOptions.tag = 'chat-' + (item.chatId || '');
+
+      navigator.serviceWorker?.ready.then((reg) => reg.showNotification(item.title, notifOptions)).catch(() => {});
     },
 
     _messageTone(item) {

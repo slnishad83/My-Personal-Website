@@ -134,6 +134,21 @@ self.addEventListener('notificationclick', function(event) {
     return;
   }
 
+  if (event.action === 'reply' && data.chatId) {
+    var replyText = event.notification.data && event.notification.data.reply;
+    if (replyText) {
+      notifyWindowClients({
+        type: 'TC_NOTIF_REPLY',
+        chatId: data.chatId,
+        chatType: data.chatType || 'direct',
+        chatUserId: data.chatUserId || '',
+        groupId: data.groupId || '',
+        replyText: replyText
+      });
+    }
+    return;
+  }
+
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then(function(clientList) {
       for (var i = 0; i < clientList.length; i++) {
@@ -177,7 +192,7 @@ self.addEventListener('notificationclose', function(event) {
    Everything else → network-first with cache fallback
    ══════════════════════════════════════════════════════════════ */
 
-var CACHE_NAME = 'nsl-chat-v5.0.1';
+var CACHE_NAME = 'nsl-chat-v5.1.0';
 var CACHE_MAX_ENTRIES = 300;
 
 /* Pre-cached on install — minimal set for offline shell */
