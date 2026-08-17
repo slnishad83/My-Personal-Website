@@ -522,6 +522,58 @@
     }
   }
 
+  /* ── Network status / Connecting... banner ── */
+  const _netState = { online: navigator.onLine, reconnecting: false, _timer: null };
+
+  function _showConnectingBanner(show) {
+    const statusEl = document.getElementById('header-status');
+    if (!statusEl) return;
+    if (show) {
+      statusEl.dataset._origText = statusEl.textContent;
+      statusEl.textContent = 'Connecting...';
+      statusEl.style.color = '#f59e0b';
+    } else {
+      statusEl.style.color = '';
+      if (statusEl.dataset._origText) {
+        statusEl.textContent = statusEl.dataset._origText;
+        delete statusEl.dataset._origText;
+      }
+    }
+  }
+
+  function _onOffline() {
+    _netState.online = false;
+    _showConnectingBanner(true);
+    document.dispatchEvent(new CustomEvent('tc:network:status', { detail: { online: false } }));
+  }
+
+  function _onOnline() {
+    _netState.online = true;
+    _netState.reconnecting = true;
+    _showConnectingBanner(true);
+    document.dispatchEvent(new CustomEvent('tc:network:status', { detail: { online: true } }));
+    clearTimeout(_netState._timer);
+    _netState._timer = setTimeout(() => { _netState.reconnecting = false; _showConnectingBanner(false); }, 3000);
+  }
+
+  window.addEventListener('online', _onOnline);
+  window.addEventListener('offline', _onOffline);
+
+  document.addEventListener('tc:snapshot:metadata', (e) => {
+    const { fromCache, hasPendingWrites } = e.detail || {};
+    if (!navigator.onLine) {
+      _showConnectingBanner(true);
+    } else if (hasPendingWrites) {
+      const statusEl = document.getElementById('header-status');
+      if (statusEl && !statusEl.dataset._origText) {
+        statusEl.textContent = 'Sending...';
+        statusEl.style.color = '#f59e0b';
+      }
+    } else if (_netState.online && !_netState.reconnecting) {
+      _showConnectingBanner(false);
+    }
+  });
+
   function _messagesCollection(chatType) {
     if (chatType === 'group') return 'groups';
     if (chatType === 'broadcast') return 'broadcasts';
@@ -643,6 +695,13 @@
         .limitToLast(100)
         .onSnapshot(async snap => {
           const docs = snap.docs;
+          const fromCache = snap.metadata.fromCache;
+          const hasPendingWrites = snap.metadata.hasPendingWrites;
+
+          if (fromCache || hasPendingWrites) {
+            document.dispatchEvent(new CustomEvent('tc:snapshot:metadata', { detail: { fromCache, hasPendingWrites } }));
+          }
+
           if (window.E2E) {
             const decrypted = await Promise.all(docs.map(doc =>
               E2E.decryptMessageData(chatId, chatType, doc.id, doc.data())
@@ -966,9 +1025,40 @@
       updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
     });
 
-    batch.commit().catch(err => {
+    batch.commit().then(() => {
+      const optIdx = State.messages.findIndex(m => m.id === optimistic.id);
+      if (optIdx !== -1) State.messages.splice(optIdx, 1);
+      const msgWrap = document.getElementById('messages-wrap');
+      if (msgWrap) _renderMessagesList(msgWrap, uid);
+    }).catch(err => {
       if (window.__DEBUG__) console.warn('[chat-core] sendMessage error:', err);
-      if (typeof window.showToast === 'function') window.showToast('Failed to send message', 'error');
+      const optIdx = State.messages.findIndex(m => m.id === optimistic.id);
+      if (optIdx !== -1) {
+        State.messages[optIdx]._failed = true;
+        State.messages[optIdx]._queued = false;
+      }
+      if (typeof window.OfflineQueue !== 'undefined' && typeof window.OfflineQueue.enqueue === 'function') {
+        window.OfflineQueue.enqueue({
+          chatId: State.activeId,
+          chatType: State.activeType,
+          text: encrypted ? undefined : text,
+          enc: encrypted ? e2e : undefined,
+          e2e: encrypted,
+          attachments: [],
+          replyTo: null,
+          tempId: optimistic.id,
+        }).then(() => {
+          const qi = State.messages.findIndex(m => m.id === optimistic.id);
+          if (qi !== -1) { State.messages[qi]._queued = true; State.messages[qi]._failed = false; }
+          const mw = document.getElementById('messages-wrap');
+          if (mw) _renderMessagesList(mw, uid);
+          if (typeof window.showToast === 'function') window.showToast('Message queued for retry', 'info');
+        }).catch(() => {
+          if (typeof window.showToast === 'function') window.showToast('Failed to send message', 'error');
+        });
+      } else {
+        if (typeof window.showToast === 'function') window.showToast('Failed to send message', 'error');
+      }
     });
   }
 

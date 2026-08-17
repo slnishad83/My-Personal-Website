@@ -619,10 +619,22 @@ const ErrorBoundary = {
           context: { collection: context || 'unknown' },
           timestamp: Date.now()
         });
-        if (typeof window.OfflineQueue !== 'undefined' && typeof window.OfflineQueue.enqueue === 'function') {
-          window.OfflineQueue.enqueue(writeFn);
-          return;
-        }
+        if (!self._pendingWrites) self._pendingWrites = [];
+        self._pendingWrites.push({ writeFn: writeFn, context: context, timestamp: Date.now() });
+        document.dispatchEvent(new CustomEvent('offline-queue-change', { detail: { count: self._pendingWrites.length } }));
+        if (typeof window.showToast === 'function') window.showToast('Write queued — will retry when online', 'info');
+        var onOnline = function onlineHandler() {
+          window.removeEventListener('online', onOnline);
+          if (!self._pendingWrites || self._pendingWrites.length === 0) return;
+          var pending = self._pendingWrites.slice();
+          self._pendingWrites = [];
+          pending.forEach(function(entry) {
+            entry.writeFn()['catch'](function(retryErr) {
+              if (window.__DEBUG__) console.warn('[ErrorBoundary] Retry write failed:', retryErr);
+            });
+          });
+        };
+        window.addEventListener('online', onOnline);
         return;
       }
       self._captureError({

@@ -198,6 +198,8 @@ const OfflineQueue = {
         chatId: msg.chatId,
         chatType: msg.chatType,
         text: msg.text,
+        enc: msg.enc,
+        e2e: msg.e2e,
         attachments: processedAttachments.length > 0 ? processedAttachments : msg.attachments,
         replyTo: msg.replyTo,
         tempId: msg.tempId
@@ -208,18 +210,20 @@ const OfflineQueue = {
     const user = window.currentUser || App?.currentUser;
     if (db && user) {
       const coll = msg.chatType === 'group' ? 'groups' : 'chats';
-      await db.collection(coll).doc(msg.chatId).collection('messages').add({
-        chatId: msg.chatId,
-        chatType: msg.chatType,
-        text: msg.text,
-        attachments: processedAttachments.length > 0 ? processedAttachments : undefined,
-        senderId: user.uid,
-        senderName: user.displayName || '',
-        time: Date.now(),
-        timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-        replyTo: msg.replyTo,
-        status: 'sent'
+      const msgRef = db.collection(coll).doc(msg.chatId).collection('messages').doc();
+      const msgData = msg.e2e && msg.enc
+        ? { enc: msg.enc, e2e: true, senderId: user.uid, senderName: user.displayName || user.email || 'Me', senderPhotoURL: user.photoURL || '', timestamp: firebase.firestore.FieldValue.serverTimestamp(), type: 'text', readBy: { [user.uid]: true }, status: 'sent' }
+        : { text: msg.text, senderId: user.uid, senderName: user.displayName || user.email || 'Me', senderPhotoURL: user.photoURL || '', timestamp: firebase.firestore.FieldValue.serverTimestamp(), type: 'text', readBy: { [user.uid]: true }, attachments: processedAttachments.length > 0 ? processedAttachments : undefined, replyTo: msg.replyTo || undefined, status: 'sent' };
+      const batch = db.batch();
+      batch.set(msgRef, { ...msgData, id: msgRef.id });
+      batch.update(db.collection(coll).doc(msg.chatId), {
+        lastMessage: msg.e2e ? 'Encrypted message' : (msg.text || '').substring(0, 100),
+        lastMessageText: msg.e2e ? 'Encrypted message' : (msg.text || '').substring(0, 100),
+        lastMessageAt: firebase.firestore.FieldValue.serverTimestamp(),
+        lastSenderId: user.uid,
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
       });
+      await batch.commit();
       return;
     }
     throw new Error('No send mechanism available');
@@ -341,3 +345,31 @@ const OfflineQueue = {
 };
 
 window.OfflineQueue = OfflineQueue;
+
+/**
+ * Global retry-send function used by OfflineQueue._retrySend.
+ * Dispatches to chat-core's sendMessage internals or falls back to direct Firestore write.
+ */
+window._sendMessageToChat = async function _sendMessageToChat(opts) {
+  const db = window.db || (typeof App !== 'undefined' && App?.db);
+  const user = window.currentUser || (typeof App !== 'undefined' && App?.currentUser);
+  if (!db || !user) throw new Error('No database or user available');
+
+  const coll = opts.chatType === 'group' ? 'groups' : 'chats';
+  const msgRef = db.collection(coll).doc(opts.chatId).collection('messages').doc();
+
+  const msgData = opts.e2e && opts.enc
+    ? { enc: opts.enc, e2e: true, senderId: user.uid, senderName: user.displayName || user.email || 'Me', senderPhotoURL: user.photoURL || '', timestamp: firebase.firestore.FieldValue.serverTimestamp(), type: 'text', readBy: { [user.uid]: true }, status: 'sent' }
+    : { text: opts.text, senderId: user.uid, senderName: user.displayName || user.email || 'Me', senderPhotoURL: user.photoURL || '', timestamp: firebase.firestore.FieldValue.serverTimestamp(), type: 'text', readBy: { [user.uid]: true }, attachments: (opts.attachments && opts.attachments.length > 0) ? opts.attachments : undefined, replyTo: opts.replyTo || undefined, status: 'sent' };
+
+  const batch = db.batch();
+  batch.set(msgRef, { ...msgData, id: msgRef.id });
+  batch.update(db.collection(coll).doc(opts.chatId), {
+    lastMessage: opts.e2e ? 'Encrypted message' : (opts.text || '').substring(0, 100),
+    lastMessageText: opts.e2e ? 'Encrypted message' : (opts.text || '').substring(0, 100),
+    lastMessageAt: firebase.firestore.FieldValue.serverTimestamp(),
+    lastSenderId: user.uid,
+    updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+  });
+  await batch.commit();
+};

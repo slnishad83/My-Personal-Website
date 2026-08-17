@@ -132,6 +132,12 @@ function getFriendlyAuthError(error, fallback) {
   ) {
     return "Verification link setup needs Firebase authorized domain access. A standard verification email can still be sent.";
   }
+  if (code === "auth/invalid-verification-code" || code === "auth/invalid-otp") {
+    return "Incorrect verification code. Please try again.";
+  }
+  if (code === "auth/code-expired") {
+    return "Verification code expired. Please request a new one.";
+  }
   return fallback || "Something went wrong. Please try again.";
 }
 
@@ -406,6 +412,176 @@ auth.getRedirectResult().catch(() => {
   var googleBtn = document.getElementById("googleAuthBtn");
   if (googleBtn) setButtonLoading(googleBtn, false, "Continue with Google", "Opening Google...");
 });
+
+/* ══════════════════════════════════════════════════════════════
+   PHONE AUTH — Firebase Phone Authentication with OTP
+   ══════════════════════════════════════════════════════════════ */
+
+(function () {
+  const phoneModal = document.getElementById('phoneOtpModal');
+  const phoneBtn = document.getElementById('phoneAuthBtn');
+  const closeBtn = document.getElementById('phoneOtpClose');
+  const sendOtpBtn = document.getElementById('sendOtpBtn');
+  const verifyOtpBtn = document.getElementById('verifyOtpBtn');
+  const resendOtpBtn = document.getElementById('resendOtpBtn');
+  const step1 = document.getElementById('phoneStep1');
+  const step2 = document.getElementById('phoneStep2');
+  const phoneInput = document.getElementById('phoneInput');
+  const otpInput = document.getElementById('otpInput');
+  const phoneDisplay = document.getElementById('phoneDisplay');
+  const phoneOtpError = document.getElementById('phoneOtpError');
+  const otpVerifyError = document.getElementById('otpVerifyError');
+  const recaptchaContainer = document.getElementById('recaptcha-container');
+
+  let confirmationResult = null;
+  let recaptchaVerifier = null;
+  let fullPhone = '';
+
+  function openModal() {
+    phoneModal.style.display = 'flex';
+    step1.style.display = '';
+    step2.style.display = 'none';
+    phoneInput.value = '';
+    otpInput.value = '';
+    phoneOtpError.textContent = '';
+    otpVerifyError.textContent = '';
+    phoneOtpError.style.display = 'none';
+    otpVerifyError.style.display = 'none';
+    confirmationResult = null;
+    if (recaptchaContainer) recaptchaContainer.innerHTML = '';
+    recaptchaVerifier = null;
+  }
+
+  function closeModal() {
+    phoneModal.style.display = 'none';
+    confirmationResult = null;
+    if (recaptchaContainer) recaptchaContainer.innerHTML = '';
+    recaptchaVerifier = null;
+  }
+
+  if (phoneBtn) phoneBtn.addEventListener('click', openModal);
+  if (closeBtn) closeBtn.addEventListener('click', closeModal);
+  if (phoneModal) phoneModal.addEventListener('click', (e) => { if (e.target === phoneModal) closeModal(); });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && phoneModal && phoneModal.style.display === 'flex') closeModal(); });
+
+  function normalizePhone(raw) {
+    const digits = raw.replace(/[^\d+]/g, '');
+    if (digits.startsWith('+')) return digits;
+    if (digits.length === 10) return '+91' + digits;
+    if (digits.length > 10) return '+' + digits;
+    return digits;
+  }
+
+  function showError(el, msg) {
+    el.textContent = msg;
+    el.style.display = 'block';
+  }
+
+  function hideError(el) {
+    el.textContent = '';
+    el.style.display = 'none';
+  }
+
+  if (sendOtpBtn) sendOtpBtn.addEventListener('click', async () => {
+    hideError(phoneOtpError);
+    const raw = phoneInput.value.trim();
+    if (!raw) { showError(phoneOtpError, 'Please enter your phone number.'); return; }
+
+    fullPhone = normalizePhone(raw);
+    if (!/^\+[1-9]\d{6,14}$/.test(fullPhone)) {
+      showError(phoneOtpError, 'Enter a valid phone number with country code (e.g. +919876543210).');
+      return;
+    }
+
+    setButtonLoading(sendOtpBtn, true, 'Send OTP', 'Sending...');
+    try {
+      if (!recaptchaVerifier) {
+        recaptchaVerifier = new firebase.auth.RecaptchaVerifier(recaptchaContainer, {
+          size: 'normal',
+          callback: () => {},
+          'expired-callback': () => { recaptchaVerifier = null; }
+        });
+      }
+      confirmationResult = await auth.signInWithPhoneNumber(fullPhone, recaptchaVerifier);
+      phoneDisplay.textContent = fullPhone;
+      step1.style.display = 'none';
+      step2.style.display = '';
+      otpInput.focus();
+    } catch (err) {
+      if (window.__DEBUG__) console.warn('[PhoneAuth] Send OTP error:', err);
+      showError(phoneOtpError, getFriendlyAuthError(err, 'Failed to send OTP. Please check the number and try again.'));
+      if (recaptchaContainer) recaptchaContainer.innerHTML = '';
+      recaptchaVerifier = null;
+    } finally {
+      setButtonLoading(sendOtpBtn, false, 'Send OTP', 'Sending...');
+    }
+  });
+
+  if (verifyOtpBtn) verifyOtpBtn.addEventListener('click', async () => {
+    hideError(otpVerifyError);
+    const code = otpInput.value.trim();
+    if (!code || code.length < 4) { showError(otpVerifyError, 'Enter the full verification code.'); return; }
+    if (!confirmationResult) { showError(otpVerifyError, 'Session expired. Please resend OTP.'); return; }
+
+    setButtonLoading(verifyOtpBtn, true, 'Verify & Sign In', 'Verifying...');
+    try {
+      const userCred = await confirmationResult.confirm(code);
+      const user = userCred.user;
+
+      const userRef = db.collection('users').doc(user.uid);
+      const userDoc = await userRef.get();
+      if (!userDoc.exists) {
+        await userRef.set({
+          uid: user.uid,
+          phone: fullPhone,
+          displayName: user.displayName || fullPhone,
+          email: user.email || '',
+          avatar: user.photoURL || '',
+          createdAt: new Date(),
+          isActive: true,
+          isFirstTime: true,
+          phoneVerified: true,
+          emailVerified: !!user.emailVerified,
+          pendingVerification: false,
+          onlineStatus: 'online',
+          lastSeen: new Date(),
+          privacySettings: { hideReadReceipts: false, hideTypingIndicator: false, hideLastSeen: false },
+        }, { merge: true });
+      } else {
+        await userRef.update({
+          phoneVerified: true,
+          onlineStatus: 'online',
+          lastSeen: new Date(),
+        }).catch(() => {});
+      }
+
+      closeModal();
+      try { sessionStorage.setItem('nslLoginTransition', '1'); } catch (_) {}
+      await prepareFreshAppLaunch();
+      window.location.href = new URL('index.html', window.location.href).href;
+    } catch (err) {
+      if (window.__DEBUG__) console.warn('[PhoneAuth] Verify error:', err);
+      if (err.code === 'auth/invalid-verification-code') {
+        showError(otpVerifyError, 'Incorrect code. Please try again.');
+      } else {
+        showError(otpVerifyError, getFriendlyAuthError(err, 'Verification failed. Please try again.'));
+      }
+    } finally {
+      setButtonLoading(verifyOtpBtn, false, 'Verify & Sign In', 'Verifying...');
+    }
+  });
+
+  if (resendOtpBtn) resendOtpBtn.addEventListener('click', async () => {
+    hideError(otpVerifyError);
+    step2.style.display = 'none';
+    step1.style.display = '';
+    otpInput.value = '';
+    confirmationResult = null;
+    if (recaptchaContainer) recaptchaContainer.innerHTML = '';
+    recaptchaVerifier = null;
+    sendOtpBtn.click();
+  });
+})();
 
 /* ══════════════════════════════════════════════════════════════
    LOGIN FORM
