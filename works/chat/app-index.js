@@ -90,6 +90,7 @@ const _deferredModules = [
   () => import('./message-recall.js'),
   () => import('./message-edit.js'),
   () => import('./message-star.js'),
+  () => import('./message-multi-select.js'),
   () => import('./sensitive-content.js'),
   () => import('./mood-status.js'),
   () => import('./threads.js'),

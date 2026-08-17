@@ -169,6 +169,24 @@
     input.focus();
     _close();
     input.dispatchEvent(new Event('input', { bubbles: true }));
+    _notifyMentionedUser(member);
+  }
+
+  function _notifyMentionedUser(member) {
+    var db = typeof App !== 'undefined' && App.db ? App.db : (window.db || null);
+    var uid = typeof App !== 'undefined' && App.uid ? App.uid() : (window.currentUser ? window.currentUser.uid : null);
+    if (!db || !uid || !member || !member.uid) return;
+    var chatId = typeof App !== 'undefined' && App.currentChat ? App.currentChat.id : null;
+    if (!chatId) return;
+    try {
+      db.collection('users').doc(member.uid).collection('mentions').add({
+        chatId: chatId,
+        mentionedBy: uid,
+        mentionedByName: (typeof App !== 'undefined' && App.currentUser && App.currentUser.displayName) || '',
+        timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+        read: false
+      }).catch(function() {});
+    } catch (_) {}
   }
 
   function _close() {

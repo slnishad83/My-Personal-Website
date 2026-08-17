@@ -105,10 +105,12 @@
   function _renderPackTabs() {
     var container = document.getElementById('sticker-pack-tabs');
     if (!container) return;
+    var allPacks = _loadAllPacks();
     var html = '<button class="sticker-pack-tab active" data-pack="recent" title="Recent">🕐</button>';
-    _defaultPacks.forEach(function(pack, i) {
+    allPacks.forEach(function(pack, i) {
       html += '<button class="sticker-pack-tab" data-pack="' + i + '" title="' + pack.name + '">' + pack.icon + '</button>';
     });
+    html += '<button class="sticker-pack-tab" data-pack="upload" title="Add sticker" style="font-size:18px;color:var(--primary,#00a884)">+</button>';
     html += '<div class="sticker-pack-tab-indicator" id="sticker-tab-indicator"></div>';
     container.innerHTML = html;
     container.querySelectorAll('.sticker-pack-tab').forEach(function(tab) {
@@ -116,6 +118,10 @@
         container.querySelectorAll('.sticker-pack-tab').forEach(function(t) { t.classList.remove('active'); });
         this.classList.add('active');
         var packIdx = this.getAttribute('data-pack');
+        if (packIdx === 'upload') {
+          _showUploadSticker();
+          return;
+        }
         if (packIdx === 'recent') {
           _activePack = -1;
         } else {
@@ -164,7 +170,8 @@
         grid.appendChild(item);
       });
     } else {
-      var pack = _defaultPacks[_activePack];
+      var allPacks = _loadAllPacks();
+      var pack = allPacks[_activePack];
       if (!pack) return;
       var packHeader = document.createElement('div');
       packHeader.className = 'sticker-pack-header';
@@ -233,12 +240,61 @@
     _callback = null;
   }
 
+  function _showUploadSticker() {
+    var input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.multiple = true;
+    input.style.display = 'none';
+    input.addEventListener('change', function() {
+      var files = Array.from(input.files || []);
+      if (!files.length) return;
+      var customPacks = _getCustomPacks();
+      var maxPerPack = 20;
+      files.forEach(function(file) {
+        if (file.size > 2 * 1024 * 1024) { _showToast('Sticker too large (max 2MB)', 'error'); return; }
+        var reader = new FileReader();
+        reader.onload = function(e) {
+          var dataUrl = e.target.result;
+          if (customPacks.length === 0) {
+            customPacks.push({ name: 'My Stickers', icon: '⭐', stickers: [] });
+          }
+          if (customPacks[0].stickers.length >= maxPerPack) {
+            _showToast('Sticker pack full (max 20)', 'error');
+            return;
+          }
+          customPacks[0].stickers.push(dataUrl);
+          _saveCustomPacks(customPacks);
+          _renderPackContent();
+          _showToast('Sticker added!', 'success');
+        };
+        reader.readAsDataURL(file);
+      });
+      input.remove();
+    });
+    document.body.appendChild(input);
+    input.click();
+  }
+
+  function _getCustomPacks() {
+    try { return JSON.parse(localStorage.getItem('sticker_custom_packs') || '[]'); } catch (_) { return []; }
+  }
+
+  function _saveCustomPacks(packs) {
+    try { localStorage.setItem('sticker_custom_packs', JSON.stringify(packs)); } catch (_) {}
+  }
+
+  function _loadAllPacks() {
+    var custom = _getCustomPacks();
+    return custom.concat(_defaultPacks);
+  }
+
   function loadStickerPacks() {
-    return _defaultPacks;
+    return _loadAllPacks();
   }
 
   function getStickerPacks() {
-    return _defaultPacks;
+    return _loadAllPacks();
   }
 
   function sendSticker(stickerUrl, packName) {

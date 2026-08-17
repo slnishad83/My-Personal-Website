@@ -37,6 +37,7 @@
     if (PENDING[url]) return PENDING[url];
 
     const promise = (async () => {
+      /* 1. Try Cloud Function first */
       try {
         const resp = await fetch(CF_URL, {
           method: 'POST',
@@ -53,13 +54,70 @@
         }
       } catch (_) { /* CF failed */ }
 
-      return null;
+      /* 2. Fallback: allorigins proxy */
+      try {
+        const proxyUrl = 'https://api.allorigins.win/raw?url=' + encodeURIComponent(url);
+        const resp = await fetch(proxyUrl, { signal: AbortSignal.timeout(10000) });
+        if (resp.ok) {
+          const html = await resp.text();
+          const data = _parseMetaFromHTML(html, url);
+          if (data && (data.title || data.description)) {
+            CACHE[url] = data;
+            return data;
+          }
+        }
+      } catch (_) { /* proxy failed */ }
+
+      /* 3. Final fallback: domain + guessed title from URL */
+      const fallback = _guessPreviewFromURL(url);
+      if (fallback) CACHE[url] = fallback;
+      return fallback;
     })();
 
     PENDING[url] = promise;
     const result = await promise;
     delete PENDING[url];
     return result;
+  }
+
+  function _parseMetaFromHTML(html, url) {
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const getMeta = (name) => {
+      const el = doc.querySelector(`meta[property="${name}"], meta[name="${name}"]`);
+      return el ? el.getAttribute('content') : '';
+    };
+    const ogTitle = getMeta('og:title');
+    const ogDesc  = getMeta('og:description');
+    const ogImage = getMeta('og:image');
+    const twTitle = getMeta('twitter:title');
+    const twDesc  = getMeta('twitter:description');
+    const twImage = getMeta('twitter:image');
+    const docTitle = doc.querySelector('title')?.textContent || '';
+    return {
+      title: ogTitle || twTitle || docTitle || '',
+      description: ogDesc || twDesc || '',
+      image: ogImage || twImage || '',
+      domain: getDomain(url)
+    };
+  }
+
+  function _guessPreviewFromURL(url) {
+    try {
+      const u = new URL(url);
+      const domain = u.hostname.replace(/^www\./, '');
+      const path = u.pathname.replace(/\/$/, '');
+      const lastSegment = path.split('/').pop() || '';
+      const title = lastSegment
+        .replace(/[-_]/g, ' ')
+        .replace(/\.\w+$/, '')
+        .replace(/\b\w/g, c => c.toUpperCase());
+      return {
+        title: title || domain,
+        description: domain,
+        image: '',
+        domain: domain
+      };
+    } catch (_) { return null; }
   }
 
   /* ─── render a preview card ────────────────────────────────────── */
