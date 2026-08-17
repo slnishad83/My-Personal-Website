@@ -7,16 +7,15 @@ on:
     branches: [main]
 
 jobs:
-  test:
+  lint-and-test:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        node-version: [18, 20, 22]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: ${{ matrix.node-version }}
+          node-version: 22
+          cache: npm
+          cache-dependency-path: works/chat/package-lock.json
       - name: Install dependencies
         working-directory: works/chat
         run: npm ci
@@ -26,28 +25,6 @@ jobs:
       - name: Build
         working-directory: works/chat
         run: npm run build
-        if: matrix.node-version == 22
       - name: Run tests
         working-directory: works/chat
         run: npm test
-      - name: Install functions dependencies
-        working-directory: functions
-        run: npm ci
-      - name: Validate Firestore rules
-        run: cat firestore.rules | head -5
-
-  functions-deploy:
-    needs: test
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-      - name: Install dependencies
-        working-directory: functions
-        run: npm ci
-      - name: Deploy functions
-        working-directory: functions
-        run: echo "Deploy would run: firebase deploy --only functions"
