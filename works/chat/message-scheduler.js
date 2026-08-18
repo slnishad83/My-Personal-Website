@@ -174,8 +174,9 @@
     const uid = window.App.auth.currentUser.uid;
     const chatArr = Array.isArray(window.App.chats) ? window.App.chats : Object.values(window.App.chats || {});
     const isGroup = chatArr.find(c => c.id === chatId)?.type === 'group';
+    const chatType = isGroup ? 'group' : 'direct';
     
-    const msg = {
+    var msg = {
       text: text,
       from: isGroup ? uid : 'me',
       senderId: uid,
@@ -185,6 +186,9 @@
     };
     
     try {
+      if (window.E2E && window.E2E.encryptPayload) {
+        msg = await window.E2E.encryptPayload(msg, chatId, chatType);
+      }
       const coll = isGroup ? 'groups' : 'chats';
       const chatRef = window.App.db.collection(coll).doc(chatId);
       await window.App.db.collection(coll).doc(chatId).collection('messages').add({
@@ -194,10 +198,10 @@
       });
       
       await chatRef.update({
-        lastMessage: text,
+        lastMessage: msg.e2e ? '🔒' : text,
         lastMessageAt: (typeof firebase !== 'undefined' ? firebase : window.firebase).firestore.FieldValue.serverTimestamp(),
         lastSenderId: uid,
-        unread: (typeof firebase !== 'undefined' ? firebase : window.firebase).firestore.FieldValue.increment(1) // Not accurate for the sender, but usually ignored on client sync
+        unread: (typeof firebase !== 'undefined' ? firebase : window.firebase).firestore.FieldValue.increment(1)
       });
     } catch (err) {
       if (window.__DEBUG__) console.error('[MessageScheduler] sendMsgToDb write failed:', err);

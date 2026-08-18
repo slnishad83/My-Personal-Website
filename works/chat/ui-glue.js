@@ -433,7 +433,11 @@
     if (!btn) return;
     var url = btn.getAttribute('data-media-open');
     var kind = btn.getAttribute('data-media-kind') || 'image';
-    if (typeof window.openMediaViewer === 'function') window.openMediaViewer(url, kind);
+    if (typeof window.openMediaViewer === 'function') {
+      window.openMediaViewer(url, kind, {
+        onDelete: function() { if (typeof window.showChatMediaTab === 'function') window.showChatMediaTab('media'); }
+      });
+    }
   }
   document.addEventListener('click', _handleMediaTabOpen);
 
@@ -968,6 +972,7 @@
      ════════════════════════════════════════════════════════════ */
   var _mediaItems = [];
   var _mediaIndex = -1;
+  var _mediaViewerOnDelete = null;
 
   function _collectMedia(url) {
     var items = [];
@@ -1006,6 +1011,7 @@
   }
 
   window.openMediaViewer = function (url, _type, _opts) {
+    _mediaViewerOnDelete = (_opts && _opts.onDelete) || null;
     _mediaItems = _collectMedia(url);
     _mediaIndex = -1;
     for (var i = 0; i < _mediaItems.length; i++) {
@@ -1040,9 +1046,29 @@
   window.deleteCurrentMedia = function () {
     var item = _mediaItems[_mediaIndex];
     if (!item || !item.id) { _toast('Cannot delete this media'); return; }
+    var deletedType = item.type;
+    var deletedIndex = _mediaIndex;
     window.showConfirmDialog('Delete this media message?', function () {
       if (typeof window.deleteMessage === 'function') window.deleteMessage(item.id);
-      window.closeMediaViewer();
+      _mediaItems.splice(deletedIndex, 1);
+      var nextIdx = -1;
+      for (var i = deletedIndex; i < _mediaItems.length; i++) {
+        if (_mediaItems[i].type === deletedType) { nextIdx = i; break; }
+      }
+      if (nextIdx === -1) {
+        for (var j = deletedIndex - 1; j >= 0; j--) {
+          if (_mediaItems[j].type === deletedType) { nextIdx = j; break; }
+        }
+      }
+      if (nextIdx !== -1) {
+        _mediaIndex = nextIdx;
+        _renderMediaViewer();
+        _toast('Media deleted', 'success');
+      } else {
+        window.closeMediaViewer();
+        _toast('Media deleted', 'success');
+      }
+      if (_mediaViewerOnDelete) { try { _mediaViewerOnDelete(); } catch(_){} }
       var chat = _activeChat();
       if (chat && typeof window.loadMessages === 'function') window.loadMessages(chat.id);
     });
@@ -1178,6 +1204,7 @@
     }
 
     var coll = _activeType() === 'group' ? 'groups' : 'chats';
+    var chatType = _activeType();
     var batch = db.batch();
     var msgRef = db.collection(coll).doc(chat.id).collection('messages').doc();
     var msg = {
@@ -1192,24 +1219,32 @@
       readBy: {}
     };
     msg.readBy[uid] = true;
-    batch.set(msgRef, msg);
     var preview = (text && text.trim()) || (attachment && attachment.name) || (type === 'sticker' ? 'Sticker' : 'GIF');
-    batch.update(db.collection(coll).doc(chat.id), {
-      lastMessage: preview,
-      lastMessageText: preview,
-      lastMessageAt: _ts(),
-      lastSenderId: uid,
-      updatedAt: _ts()
-    });
-    return batch.commit()
-      .then(function () {
-        if (typeof window.loadMessages === 'function') window.loadMessages(chat.id);
-        else if (typeof window.renderMessages === 'function') window.renderMessages(chat.id);
-      })
-      .catch(function (e) {
+    var _writeMsg = function(m) {
+      batch.set(msgRef, m);
+      batch.update(db.collection(coll).doc(chat.id), {
+        lastMessage: m.e2e ? ('🔒 ' + type.charAt(0).toUpperCase() + type.slice(1)) : preview,
+        lastMessageText: m.e2e ? ('🔒 ' + type.charAt(0).toUpperCase() + type.slice(1)) : preview,
+        lastMessageAt: _ts(),
+        lastSenderId: uid,
+        updatedAt: _ts()
+      });
+      return batch.commit();
+    };
+    var _done = function() {
+      if (typeof window.loadMessages === 'function') window.loadMessages(chat.id);
+      else if (typeof window.renderMessages === 'function') window.renderMessages(chat.id);
+    };
+    if (window.E2E && window.E2E.encryptPayload) {
+      return window.E2E.encryptPayload(msg, chat.id, chatType).then(_writeMsg).then(_done).catch(function (e) {
         if (window.__DEBUG__) console.warn('[ui-glue] send url message error:', e);
         _toast('Failed to send', 'error');
       });
+    }
+    return _writeMsg(msg).then(_done).catch(function (e) {
+      if (window.__DEBUG__) console.warn('[ui-glue] send url message error:', e);
+      _toast('Failed to send', 'error');
+    });
   }
   window._sendUrlMessage = _sendUrlMessage;
 
@@ -1387,6 +1422,7 @@
       .then(function (snap) { return snap.ref.getDownloadURL(); })
       .then(function (url) {
         var coll = _activeType() === 'group' ? 'groups' : 'chats';
+        var chatType = _activeType();
         var batch = db.batch();
         var msgRef = db.collection(coll).doc(chat.id).collection('messages').doc();
         var msg = {
@@ -1405,18 +1441,23 @@
           if (extraMeta.version != null) msg.attachment.version = extraMeta.version;
           if (extraMeta.previousVersionId != null) msg.attachment.previousVersionId = extraMeta.previousVersionId;
         }
-        batch.set(msgRef, msg);
-        batch.update(db.collection(coll).doc(chat.id), {
-          lastMessage: name,
-          lastMessageText: name,
-          lastMessageAt: _ts(),
-          lastSenderId: uid,
-          updatedAt: _ts()
-        });
-        return batch.commit();
-      })
-      .then(function () {
-        if (typeof window.loadMessages === 'function') window.loadMessages(chat.id);
+        var _writeMsg = function(m) {
+          batch.set(msgRef, m);
+          batch.update(db.collection(coll).doc(chat.id), {
+            lastMessage: m.e2e ? '🔒 File' : name,
+            lastMessageText: m.e2e ? '🔒 File' : name,
+            lastMessageAt: _ts(),
+            lastSenderId: uid,
+            updatedAt: _ts()
+          });
+          return batch.commit();
+        };
+        var _done = function() { if (typeof window.loadMessages === 'function') window.loadMessages(chat.id); };
+        if (window.E2E && window.E2E.encryptPayload) {
+          window.E2E.encryptPayload(msg, chat.id, chatType).then(_writeMsg).then(_done).catch(function(err) { _debug('send file failed:', err); _toast('Failed to send file', 'error'); });
+        } else {
+          _writeMsg(msg).then(_done).catch(function(err) { _debug('send file failed:', err); _toast('Failed to send file', 'error'); });
+        }
       })
       .catch(function (err) { _debug('send file failed:', err); _toast('Failed to send file', 'error'); });
   }
@@ -1436,6 +1477,7 @@
     var chat = _activeChat();
     if (!db || !uid || !chat) { _toast('No active chat', 'error'); return; }
     var coll = _activeType() === 'group' ? 'groups' : 'chats';
+    var chatType = _activeType();
     var batch = db.batch();
     var ref = db.collection(coll).doc(chat.id).collection('messages').doc();
     var msg = {
@@ -1449,16 +1491,23 @@
       readBy: {}
     };
     msg.readBy[uid] = true;
-    batch.set(ref, msg);
-    batch.update(db.collection(coll).doc(chat.id), {
-      lastMessage: text,
-      lastMessageText: text,
-      lastMessageAt: _ts(),
-      lastSenderId: uid,
-      updatedAt: _ts()
-    });
-    batch.commit().catch(function (err) { _debug('send text failed:', err); _toast('Failed to send', 'error'); });
-    if (typeof window.loadMessages === 'function') window.loadMessages(chat.id);
+    var sendMsg = function(m) {
+      batch.set(ref, m);
+      batch.update(db.collection(coll).doc(chat.id), {
+        lastMessage: (m.e2e ? '🔒' : text),
+        lastMessageText: (m.e2e ? '🔒' : text),
+        lastMessageAt: _ts(),
+        lastSenderId: uid,
+        updatedAt: _ts()
+      });
+      batch.commit().catch(function (err) { _debug('send text failed:', err); _toast('Failed to send', 'error'); });
+      if (typeof window.loadMessages === 'function') window.loadMessages(chat.id);
+    };
+    if (window.E2E && window.E2E.encryptPayload) {
+      window.E2E.encryptPayload(msg, chat.id, chatType).then(sendMsg);
+    } else {
+      sendMsg(msg);
+    }
   }
 
   function _sendLocationMessage(lat, lng, label) {
@@ -1468,6 +1517,7 @@
     var chat = _activeChat();
     if (!db || !uid || !chat) { _toast('No active chat', 'error'); return; }
     var coll = _activeType() === 'group' ? 'groups' : 'chats';
+    var chatType = _activeType();
     var batch = db.batch();
     var ref = db.collection(coll).doc(chat.id).collection('messages').doc();
     var text = label || 'My current location';
@@ -1484,16 +1534,23 @@
       readBy: {}
     };
     msg.readBy[uid] = true;
-    batch.set(ref, msg);
-    batch.update(db.collection(coll).doc(chat.id), {
-      lastMessage: '📍 ' + text,
-      lastMessageText: '📍 ' + text,
-      lastMessageAt: _ts(),
-      lastSenderId: uid,
-      updatedAt: _ts()
-    });
-    batch.commit().catch(function (err) { _debug('send location failed:', err); _toast('Failed to send', 'error'); });
-    if (typeof window.loadMessages === 'function') window.loadMessages(chat.id);
+    var _writeMsg = function(m) {
+      batch.set(ref, m);
+      batch.update(db.collection(coll).doc(chat.id), {
+        lastMessage: m.e2e ? '🔒 Location' : ('📍 ' + text),
+        lastMessageText: m.e2e ? '🔒 Location' : ('📍 ' + text),
+        lastMessageAt: _ts(),
+        lastSenderId: uid,
+        updatedAt: _ts()
+      });
+      return batch.commit();
+    };
+    var _done = function() { if (typeof window.loadMessages === 'function') window.loadMessages(chat.id); };
+    if (window.E2E && window.E2E.encryptPayload) {
+      window.E2E.encryptPayload(msg, chat.id, chatType).then(_writeMsg).then(_done).catch(function(err) { _debug('send location failed:', err); _toast('Failed to send location', 'error'); });
+    } else {
+      _writeMsg(msg).then(_done).catch(function(err) { _debug('send location failed:', err); _toast('Failed to send location', 'error'); });
+    }
   }
 
   window.sendLocationMessage = _sendLocationMessage;

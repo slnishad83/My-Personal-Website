@@ -780,7 +780,104 @@
 
     let lastDateStr = '';
 
-    State.messages.forEach(msg => {
+    const _albumGapMs = 2 * 60 * 1000;
+    const _isImageType = t => t === 'image' || t === 'gif' || t === 'sticker';
+    const _getMsgTs = msg => {
+      const ts = msg.timestamp || msg.time;
+      if (!ts) return 0;
+      if (ts.toMillis) return ts.toMillis();
+      if (ts.seconds) return ts.seconds * 1000;
+      if (ts instanceof Date) return ts.getTime();
+      return ts;
+    };
+    const _renderableMsgs = [];
+    let i = 0;
+    while (i < State.messages.length) {
+      const m = State.messages[i];
+      const mType = m.type || 'text';
+      const mSender = m.senderId || m.userId || '';
+      if (_isImageType(mType) && m.attachment) {
+        const group = [m];
+        let j = i + 1;
+        while (j < State.messages.length) {
+          const next = State.messages[j];
+          const nType = next.type || 'text';
+          if (!_isImageType(nType) || !next.attachment) break;
+          if ((next.senderId || next.userId || '') !== mSender) break;
+          if (Math.abs(_getMsgTs(next) - _getMsgTs(group[group.length - 1])) > _albumGapMs) break;
+          group.push(next);
+          j++;
+        }
+        if (group.length >= 2) {
+          _renderableMsgs.push({ _album: true, items: group });
+          i = j;
+          continue;
+        }
+      }
+      _renderableMsgs.push(m);
+      i++;
+    }
+
+    _renderableMsgs.forEach(renderItem => {
+      if (renderItem._album) {
+        const albumItems = renderItem.items;
+        const firstMsg = albumItems[0];
+        const isMe = firstMsg.senderId === uid || firstMsg.userId === uid;
+        const ts = firstMsg.timestamp || firstMsg.time;
+        const timeStr = formatTime(ts);
+        const senderName = firstMsg.senderName || firstMsg.displayName || 'User';
+
+        if (ts) {
+          let ms;
+          if (ts.toMillis) ms = ts.toMillis();
+          else if (ts.seconds) ms = ts.seconds * 1000;
+          else if (ts instanceof Date) ms = ts.getTime();
+          else ms = ts;
+          const dateStr = new Date(ms).toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' });
+          if (dateStr !== lastDateStr) {
+            lastDateStr = dateStr;
+            const sep = document.createElement('div');
+            sep.style.cssText = 'display:flex;align-items:center;justify-content:center;margin:8px 0;padding:8px 0;';
+            sep.innerHTML = `<span style="background:var(--surface-container,#f0f2f5);color:var(--on-surface-variant,#8696a0);font-size:11px;padding:4px 12px;border-radius:12px;">${esc(dateStr)}</span>`;
+            msgWrap.appendChild(sep);
+          }
+        }
+
+        const count = Math.min(albumItems.length, 9);
+        const cols = count <= 1 ? 1 : count <= 4 ? 2 : 3;
+        const gridHTML = albumItems.slice(0, 9).map((item, idx) => {
+          const url = item.attachment ? (item.attachment.url || item.attachment) : '';
+          const cellSize = cols === 1 ? 'width:260px;height:260px' : cols === 2 ? 'width:130px;height:130px' : 'width:88px;height:88px';
+          return `<div style="${cellSize};overflow:hidden;border-radius:${idx === 0 ? '8px 0 0 0' : idx === 1 && cols === 2 ? '0 8px 0 0' : idx === cols - 1 ? '0 8px 0 0' : '0'};cursor:pointer;position:relative" onclick="window.openMediaViewer && window.openMediaViewer('${esc(url)}','image')"><img src="${esc(url)}" style="width:100%;height:100%;object-fit:cover;display:block"></div>`;
+        }).join('');
+
+        const row = document.createElement('div');
+        row.className = `message-row ${isMe ? 'msg-out' : 'msg-in'}`;
+        row.style.cssText = `display:flex;justify-content:${isMe ? 'flex-end' : 'flex-start'};padding:2px 12px;margin:1px 0;`;
+
+        const bubbleColor = isMe ? 'var(--primary-container,#d9fdd3)' : 'var(--surface-container,#fff)';
+        const textColor = isMe ? 'var(--on-primary-container,#0a1628)' : 'var(--on-surface,#1c1c1e)';
+
+        row.innerHTML = `
+          <div class="message-bubble msg-bubble album-bubble ${isMe ? 'my-message' : ''}"
+            style="max-width:70%;background:${bubbleColor};color:${textColor};padding:4px;border-radius:${isMe ? '18px 4px 18px 18px' : '4px 18px 18px 18px'};box-shadow:0 1px 2px rgba(0,0,0,0.08);position:relative;">
+            ${State.activeType === 'group' && !isMe ? `<div style="font-size:12px;font-weight:600;color:var(--primary,#00a884);margin-bottom:2px;padding:4px 8px 0">${esc(senderName)}</div>` : ''}
+            <div style="display:grid;grid-template-columns:repeat(${cols},1fr);gap:2px;padding:2px">
+              ${gridHTML}
+            </div>
+            ${count > 9 ? `<div style="text-align:center;font-size:11px;padding:4px;opacity:0.7">+${count - 9} more</div>` : ''}
+            <div style="display:flex;justify-content:flex-end;align-items:center;gap:3px;padding:2px 8px 4px;">
+              <span style="font-size:10px;opacity:0.6;" class="msg-time message-time">${timeStr}</span>
+              ${isMe ? `<span class="material-symbols-outlined" style="font-size:12px;opacity:0.7;color:${firstMsg.readBy && Object.keys(firstMsg.readBy).length > 1 ? '#00a884' : 'inherit'};">
+                ${firstMsg.readBy && Object.keys(firstMsg.readBy).length > 1 ? 'done_all' : (firstMsg.delivered ? 'done_all' : 'done')}
+              </span>` : ''}
+            </div>
+          </div>`;
+        msgWrap.appendChild(row);
+        return;
+      }
+
+      const msg = renderItem;
       const isMe = msg.senderId === uid || msg.userId === uid;
       const ts = msg.timestamp || msg.time;
       const timeStr = formatTime(ts);
@@ -1194,20 +1291,32 @@
       readBy: { [uid]: true },
       id: msgRef.id,
     };
-    batch.set(msgRef, pollMsg);
-    batch.update(db.collection(collection).doc(State.activeId), {
-      lastMessage: '≡ƒôè ' + question,
-      lastMessageText: '≡ƒôè ' + question,
-      lastMessageAt: firebase.firestore.FieldValue.serverTimestamp(),
-      lastSenderId: uid,
-      updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
-    });
-    batch.commit().then(() => {
-      if (typeof window.renderMessages === 'function') renderMessages(State.activeId);
-    }).catch(err => {
-      if (window.__DEBUG__) console.warn('[chat-core] sendPollMessage error:', err);
-      if (typeof window.showToast === 'function') window.showToast('Failed to send poll', 'error');
-    });
+    var _writePoll = function(m) {
+      batch.set(msgRef, m);
+      batch.update(db.collection(collection).doc(State.activeId), {
+        lastMessage: m.e2e ? '🔒 Poll' : ('📊 ' + question),
+        lastMessageText: m.e2e ? '🔒 Poll' : ('📊 ' + question),
+        lastMessageAt: firebase.firestore.FieldValue.serverTimestamp(),
+        lastSenderId: uid,
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+      });
+      return batch.commit();
+    };
+    if (window.E2E && window.E2E.encryptPayload) {
+      window.E2E.encryptPayload(pollMsg, State.activeId, State.activeType).then(_writePoll).then(() => {
+        if (typeof window.renderMessages === 'function') renderMessages(State.activeId);
+      }).catch(err => {
+        if (window.__DEBUG__) console.warn('[chat-core] sendPollMessage error:', err);
+        if (typeof window.showToast === 'function') window.showToast('Failed to send poll', 'error');
+      });
+    } else {
+      _writePoll(pollMsg).then(() => {
+        if (typeof window.renderMessages === 'function') renderMessages(State.activeId);
+      }).catch(err => {
+        if (window.__DEBUG__) console.warn('[chat-core] sendPollMessage error:', err);
+        if (typeof window.showToast === 'function') window.showToast('Failed to send poll', 'error');
+      });
+    }
   };
 
   /* ΓöÇΓöÇ Send button & Enter key wiring ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ */

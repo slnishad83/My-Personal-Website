@@ -7,6 +7,7 @@
   let _annHistory = [], _annRedoStack = [];
   let _annDrawing = false, _annStartX, _annStartY, _annSnapshot;
   let _annOrigFile = null;
+  let _annCropActive = false, _annCropRect = null, _annCropDrag = false, _annCropHandle = null;
 
   const _origAttachPhoto = window.attachPhoto;
   const _origShowMediaPreview = window._showMediaPreview;
@@ -66,6 +67,18 @@
       </div>
       <div style="flex:1;position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center;background:#0a0a0a">
         <canvas id="ann-canvas" style="max-width:100%;max-height:100%;touch-action:none;cursor:crosshair"></canvas>
+        <div id="ann-crop-overlay" style="display:none;position:absolute;inset:0;pointer-events:none">
+          <div id="ann-crop-box" style="position:absolute;border:2px dashed rgba(255,255,255,0.9);box-shadow:0 0 0 9999px rgba(0,0,0,0.55);cursor:move;pointer-events:all">
+            <div class="ann-crop-handle ann-crop-tl" style="position:absolute;top:-6px;left:-6px;width:14px;height:14px;background:#fff;border-radius:50%;cursor:nw-resize;pointer-events:all"></div>
+            <div class="ann-crop-handle ann-crop-tr" style="position:absolute;top:-6px;right:-6px;width:14px;height:14px;background:#fff;border-radius:50%;cursor:ne-resize;pointer-events:all"></div>
+            <div class="ann-crop-handle ann-crop-bl" style="position:absolute;bottom:-6px;left:-6px;width:14px;height:14px;background:#fff;border-radius:50%;cursor:sw-resize;pointer-events:all"></div>
+            <div class="ann-crop-handle ann-crop-br" style="position:absolute;bottom:-6px;right:-6px;width:14px;height:14px;background:#fff;border-radius:50%;cursor:se-resize;pointer-events:all"></div>
+          </div>
+        </div>
+      </div>
+      <div id="ann-crop-actions" style="display:none;align-items:center;justify-content:center;gap:12px;padding:10px 16px;background:rgba(0,0,0,0.6)">
+        <button onclick="annCropApply()" style="padding:10px 20px;border-radius:8px;border:none;background:var(--primary,#7C4DFF);color:white;font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:4px"><span class="material-symbols-outlined" style="font-size:16px">check</span>Apply Crop</button>
+        <button onclick="annCropCancel()" style="padding:10px 20px;border-radius:8px;border:none;background:rgba(255,255,255,0.1);color:white;font-size:13px;font-weight:600;cursor:pointer">Cancel</button>
       </div>
       <div style="display:flex;align-items:center;justify-content:center;gap:8px;padding:10px 16px;background:rgba(0,0,0,0.5);flex-wrap:wrap">
         <div style="display:flex;gap:4px">
@@ -76,6 +89,7 @@
           <button onclick="annSetTool('circle')" class="ann-tool-btn" data-tool="circle" style="width:44px;height:44px;border-radius:8px;border:2px solid transparent;background:rgba(255,255,255,0.06);color:white;cursor:pointer;display:flex;align-items:center;justify-content:center"><span class="material-symbols-outlined" style="font-size:16px">circle</span></button>
           <button onclick="annSetTool('text')" class="ann-tool-btn" data-tool="text" style="width:44px;height:44px;border-radius:8px;border:2px solid transparent;background:rgba(255,255,255,0.06);color:white;cursor:pointer;display:flex;align-items:center;justify-content:center"><span class="material-symbols-outlined" style="font-size:16px">text_fields</span></button>
           <button onclick="annSetTool('eraser')" class="ann-tool-btn" data-tool="eraser" style="width:44px;height:44px;border-radius:8px;border:2px solid transparent;background:rgba(255,255,255,0.06);color:white;cursor:pointer;display:flex;align-items:center;justify-content:center"><span class="material-symbols-outlined" style="font-size:16px">ink_eraser</span></button>
+          <button onclick="annSetTool('crop')" class="ann-tool-btn" data-tool="crop" style="width:44px;height:44px;border-radius:8px;border:2px solid transparent;background:rgba(255,255,255,0.06);color:white;cursor:pointer;display:flex;align-items:center;justify-content:center"><span class="material-symbols-outlined" style="font-size:16px">crop</span></button>
         </div>
         <div style="width:1px;height:22px;background:rgba(255,255,255,0.15)"></div>
         <div style="display:flex;gap:3px">
@@ -127,6 +141,7 @@
   };
 
   function _annPointerDown(e) {
+    if (_annTool === 'crop') return;
     _annDrawing = true;
     const rect = _annCanvas.getBoundingClientRect();
     _annStartX = e.clientX - rect.left;
@@ -252,7 +267,151 @@
       b.style.borderColor = b.dataset.tool === tool ? 'var(--primary)' : 'transparent';
       b.style.background = b.dataset.tool === tool ? 'rgba(124,77,255,0.2)' : 'rgba(255,255,255,0.06)';
     });
-    _annCanvas.style.cursor = tool === 'eraser' ? 'cell' : tool === 'text' ? 'text' : 'crosshair';
+    _annCanvas.style.cursor = tool === 'eraser' ? 'cell' : tool === 'text' ? 'text' : tool === 'crop' ? 'default' : 'crosshair';
+    if (tool === 'crop') {
+      _annInitCrop();
+    } else {
+      _annHideCrop();
+    }
+  };
+
+  function _annInitCrop() {
+    const overlay = document.getElementById('ann-crop-overlay');
+    const actions = document.getElementById('ann-crop-actions');
+    const box = document.getElementById('ann-crop-box');
+    if (!overlay || !box || !_annCanvas) return;
+    overlay.style.display = 'block';
+    actions.style.display = 'flex';
+    _annCropActive = true;
+    const cw = _annCanvas.width, ch = _annCanvas.height;
+    const margin = 0.1;
+    _annCropRect = {
+      x: Math.round(cw * margin),
+      y: Math.round(ch * margin),
+      w: Math.round(cw * (1 - 2 * margin)),
+      h: Math.round(ch * (1 - 2 * margin))
+    };
+    _annUpdateCropBox();
+    box.addEventListener('pointerdown', _annCropPointerDown);
+    document.addEventListener('pointermove', _annCropPointerMove);
+    document.addEventListener('pointerup', _annCropPointerUp);
+  }
+
+  function _annHideCrop() {
+    const overlay = document.getElementById('ann-crop-overlay');
+    const actions = document.getElementById('ann-crop-actions');
+    const box = document.getElementById('ann-crop-box');
+    if (overlay) overlay.style.display = 'none';
+    if (actions) actions.style.display = 'none';
+    _annCropActive = false;
+    _annCropDrag = false;
+    _annCropHandle = null;
+    if (box) {
+      box.removeEventListener('pointerdown', _annCropPointerDown);
+    }
+    document.removeEventListener('pointermove', _annCropPointerMove);
+    document.removeEventListener('pointerup', _annCropPointerUp);
+  }
+
+  function _annUpdateCropBox() {
+    if (!_annCropRect || !_annCanvas) return;
+    const box = document.getElementById('ann-crop-box');
+    if (!box) return;
+    const canvasRect = _annCanvas.getBoundingClientRect();
+    const scaleX = canvasRect.width / _annCanvas.width;
+    const scaleY = canvasRect.height / _annCanvas.height;
+    box.style.left = (_annCropRect.x * scaleX) + 'px';
+    box.style.top = (_annCropRect.y * scaleY) + 'px';
+    box.style.width = (_annCropRect.w * scaleX) + 'px';
+    box.style.height = (_annCropRect.h * scaleY) + 'px';
+  }
+
+  function _annCanvasCoords(e) {
+    if (!_annCanvas) return { x: 0, y: 0 };
+    const rect = _annCanvas.getBoundingClientRect();
+    return {
+      x: Math.max(0, Math.min(_annCanvas.width, (e.clientX - rect.left) * (_annCanvas.width / rect.width))),
+      y: Math.max(0, Math.min(_annCanvas.height, (e.clientY - rect.top) * (_annCanvas.height / rect.height)))
+    };
+  }
+
+  function _annCropPointerDown(e) {
+    if (!_annCropActive) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const cls = e.target.className || '';
+    if (cls.includes('ann-crop-')) {
+      _annCropHandle = cls.includes('tl') ? 'tl' : cls.includes('tr') ? 'tr' : cls.includes('bl') ? 'bl' : 'br';
+    } else {
+      _annCropHandle = 'move';
+    }
+    _annCropDrag = true;
+    _annCropStartX = e.clientX;
+    _annCropStartY = e.clientY;
+    _annCropStartRect = Object.assign({}, _annCropRect);
+  }
+
+  function _annCropPointerMove(e) {
+    if (!_annCropDrag || !_annCropActive) return;
+    e.preventDefault();
+    const dx = e.clientX - _annCropStartX;
+    const dy = e.clientY - _annCropStartY;
+    const canvasRect = _annCanvas.getBoundingClientRect();
+    const scaleX = _annCanvas.width / canvasRect.width;
+    const scaleY = _annCanvas.height / canvasRect.height;
+    const r = _annCropStartRect;
+    const minSize = 30;
+    if (_annCropHandle === 'move') {
+      _annCropRect.x = Math.max(0, Math.min(_annCanvas.width - r.w, r.x + dx * scaleX));
+      _annCropRect.y = Math.max(0, Math.min(_annCanvas.height - r.h, r.y + dy * scaleY));
+    } else if (_annCropHandle === 'tl') {
+      const newX = Math.max(0, r.x + dx * scaleX);
+      const newY = Math.max(0, r.y + dy * scaleY);
+      _annCropRect.w = Math.max(minSize, r.w - (newX - r.x));
+      _annCropRect.h = Math.max(minSize, r.h - (newY - r.y));
+      _annCropRect.x = r.x + r.w - _annCropRect.w;
+      _annCropRect.y = r.y + r.h - _annCropRect.h;
+    } else if (_annCropHandle === 'tr') {
+      _annCropRect.w = Math.max(minSize, Math.min(_annCanvas.width - r.x, r.w + dx * scaleX));
+      const newY = Math.max(0, r.y + dy * scaleY);
+      _annCropRect.h = Math.max(minSize, r.h - (newY - r.y));
+      _annCropRect.y = r.y + r.h - _annCropRect.h;
+    } else if (_annCropHandle === 'bl') {
+      const newX = Math.max(0, r.x + dx * scaleX);
+      _annCropRect.w = Math.max(minSize, r.w - (newX - r.x));
+      _annCropRect.x = r.x + r.w - _annCropRect.w;
+      _annCropRect.h = Math.max(minSize, Math.min(_annCanvas.height - r.y, r.h + dy * scaleY));
+    } else if (_annCropHandle === 'br') {
+      _annCropRect.w = Math.max(minSize, Math.min(_annCanvas.width - r.x, r.w + dx * scaleX));
+      _annCropRect.h = Math.max(minSize, Math.min(_annCanvas.height - r.y, r.h + dy * scaleY));
+    }
+    _annUpdateCropBox();
+  }
+
+  function _annCropPointerUp() {
+    _annCropDrag = false;
+    _annCropHandle = null;
+  }
+
+  window.annCropApply = function() {
+    if (!_annCropRect || !_annCanvas || !_annCtx) return;
+    const r = _annCropRect;
+    const imageData = _annCtx.getImageData(Math.round(r.x), Math.round(r.y), Math.round(r.w), Math.round(r.h));
+    const tmpCanvas = document.createElement('canvas');
+    tmpCanvas.width = Math.round(r.w);
+    tmpCanvas.height = Math.round(r.h);
+    const tmpCtx = tmpCanvas.getContext('2d');
+    tmpCtx.putImageData(imageData, 0, 0);
+    _annCanvas.width = tmpCanvas.width;
+    _annCanvas.height = tmpCanvas.height;
+    _annCtx.drawImage(tmpCanvas, 0, 0);
+    _annHideCrop();
+    _annSaveState();
+    showToast('Image cropped', 'success');
+  };
+
+  window.annCropCancel = function() {
+    _annHideCrop();
   };
 
   window.annSetColor = function(color) {

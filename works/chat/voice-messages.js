@@ -525,9 +525,13 @@
         read: false
       };
       var coll = chat.type === 'group' ? 'groups' : 'chats';
+      var chatType = chat.type === 'group' ? 'group' : 'direct';
+      if (window.E2E && window.E2E.encryptPayload) {
+        msgData = await window.E2E.encryptPayload(msgData, chat.id, chatType);
+      }
       await db.collection(coll).doc(chat.id).collection('messages').add(msgData);
       await db.collection(coll).doc(chat.id).update({
-        lastMessage: '🎤 Voice message',
+        lastMessage: msgData.e2e ? '🔒 Voice message' : '🎤 Voice message',
         lastMessageAt: firebase.firestore.FieldValue.serverTimestamp(),
         lastSenderId: user.uid
       }).catch(function() {});

@@ -64,10 +64,13 @@ window.E2E = {
     return key || null;
   },
 
-  /* Encrypt text for the active chat. Returns { enc } or null (plaintext). */
-  async encryptForChat(chatId, chatType, text) {
+  /* Encrypt text for the active chat. Returns { enc } or null (plaintext).
+     Accepts a string or a plain object (will be JSON-stringified). */
+  async encryptForChat(chatId, chatType, data) {
     const Security = window.Security;
     if (!Security || !this.supports(chatType)) return null;
+    const text = (typeof data === 'object' && data !== null) ? JSON.stringify(data) : String(data || '');
+    if (!text) return null;
     try {
       if (chatType === 'direct') {
         const peer = this._peerUid(chatId);
@@ -108,6 +111,7 @@ window.E2E = {
       }
       if (plain && !plain.error) {
         out.text = plain;
+        try { const parsed = JSON.parse(plain); if (parsed && typeof parsed === 'object') { Object.assign(out, parsed); out._e2eJson = true; } } catch(_) {}
         out.decrypted = true;
         return out;
       }
@@ -130,5 +134,34 @@ window.E2E = {
     out.text = this.securePreview();
     out.decryptFailed = true;
     return out;
+  },
+
+  /* Encrypt a message payload's text-sensitive fields for the active chat.
+     Mutates msg in place: sets enc/e2e fields and clears plaintext.
+     Returns the mutated msg for convenience. */
+  async encryptPayload(msg, chatId, chatType) {
+    if (!chatId || !chatType || !this.supports(chatType)) return msg;
+    const textFields = {};
+    if (msg.text) textFields.text = msg.text;
+    if (msg.type === 'poll' && msg.poll) {
+      textFields.pollQ = msg.poll.question;
+      textFields.pollOpts = (msg.poll.options || []).map(o => o.text);
+    }
+    if (msg.type === 'location' && msg.text) {
+      textFields.locLabel = msg.text;
+    }
+    const hasText = Object.keys(textFields).length > 0;
+    if (hasText) {
+      const enc = await this.encryptForChat(chatId, chatType, textFields);
+      if (enc) {
+        msg.enc = enc.enc;
+        msg.e2e = true;
+        if (msg.text) delete msg.text;
+        if (msg.poll && textFields.pollQ) {
+          msg.poll = Object.assign({}, msg.poll, { question: '🔒', options: (msg.poll.options || []).map((o,i) => ({ id: o.id, text: '🔒' })) });
+        }
+      }
+    }
+    return msg;
   }
 };

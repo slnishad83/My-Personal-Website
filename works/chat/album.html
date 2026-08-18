@@ -145,8 +145,22 @@
 <div class="lightbox" id="lightbox">
   <div class="lb-header">
     <button class="lb-close" onclick="closeLb()" aria-label="Close lightbox">✕</button>
-}
+    <div class="lb-info">
+      <div class="lb-sender" id="lbSender"></div>
+      <div class="lb-date" id="lbDate" style="font-size:12px;opacity:0.8"></div>
+    </div>
+    <span id="lbCounter" style="font-size:13px;opacity:0.8"></span>
+    <button id="lbDeleteBtn" onclick="deleteLbItem()" title="Delete" style="background:none;border:none;color:white;font-size:18px;cursor:pointer;padding:6px" aria-label="Delete media"><span class="material-symbols-outlined" style="font-size:22px">delete</span></button>
+    <a id="lbDownload" href="#" download target="_blank" style="color:white;text-decoration:none;padding:6px" aria-label="Download"><span class="material-symbols-outlined" style="font-size:22px">download</span></a>
+  </div>
+  <div style="flex:1;display:flex;align-items:center;justify-content:center;position:relative">
+    <button class="lb-nav" onclick="navLb(-1)" style="position:absolute;left:12px;background:rgba(0,0,0,0.4);border:none;color:white;width:44px;height:44px;border-radius:50%;cursor:pointer;z-index:10;display:flex;align-items:center;justify-content:center" aria-label="Previous"><span class="material-symbols-outlined">chevron_left</span></button>
+    <img id="lbImg" src="" style="max-width:90vw;max-height:80vh;object-fit:contain;border-radius:4px" alt="Album photo"/>
+    <button class="lb-nav" onclick="navLb(1)" style="position:absolute;right:12px;background:rgba(0,0,0,0.4);border:none;color:white;width:44px;height:44px;border-radius:50%;cursor:pointer;z-index:10;display:flex;align-items:center;justify-content:center" aria-label="Next"><span class="material-symbols-outlined">chevron_right</span></button>
+  </div>
+</div>
 
+<script>
 function renderAlbum(){
   const q=(document.getElementById('searchInput').value||'').toLowerCase();
   filtered=allPhotos.filter(m=>{
@@ -205,6 +219,38 @@ function showLb(){
   document.getElementById('lbCounter').textContent=(lbIndex+1)+' of '+filtered.length;
 }
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#x27;');}
+function deleteLbItem(){
+  const m=filtered[lbIndex];
+  if(!m||!m.id){return;}
+  const mediaType=m.attachment&&m.attachment.type||'image';
+  if(!confirm('Delete this media message?'))return;
+  const uid=window.currentUser&&window.currentUser.uid;
+  if(!uid)return;
+  const coll=(m.chatType==='group')?'groups':'chats';
+  const chatId=m.chatId;
+  if(!chatId){return;}
+  firebase.firestore().collection(coll).doc(chatId).collection('messages').doc(m.id).delete().catch(function(){});
+  filtered.splice(lbIndex,1);
+  allPhotos=allPhotos.filter(function(p){return p.id!==m.id;});
+  var nextIdx=-1;
+  for(var i=lbIndex;i<filtered.length;i++){
+    var t=filtered[i].attachment&&filtered[i].attachment.type;
+    if(t===mediaType){nextIdx=i;break;}
+  }
+  if(nextIdx===-1){
+    for(var j=lbIndex-1;j>=0;j--){
+      var t2=filtered[j].attachment&&filtered[j].attachment.type;
+      if(t2===mediaType){nextIdx=j;break;}
+    }
+  }
+  if(nextIdx!==-1){
+    lbIndex=nextIdx;
+    showLb();
+  }else{
+    closeLb();
+  }
+  renderAlbum();
+}
 </script>
 <nav class="bottom-nav" id="bottomNav" aria-label="Main navigation">
   <a class="nav-item" href="index.html" aria-label="Chat"><span class="mat-icon">chat</span><span>Chat</span></a>
@@ -222,6 +268,65 @@ function toggleDark() {
   localStorage.setItem('themeMode', isDark ? 'dark' : 'light');
   document.querySelector('meta[name="theme-color"]').content = isDark ? '#11131c' : '#f8f9fa';
 }
+var allPhotos=[];
+var filtered=[];
+var currentFilter='all';
+var lbIndex=0;
+function setFilter(f,btn){
+  currentFilter=f;
+  document.querySelectorAll('.filter-btn').forEach(function(b){b.classList.remove('active');});
+  if(btn)btn.classList.add('active');
+  renderAlbum();
+}
+function loadAlbumMedia(){
+  var user=window.currentUser||(window.firebase&&window.firebase.auth&&window.firebase.auth().currentUser);
+  if(!user)return;
+  var uid=user.uid;
+  var db=firebase.firestore();
+  allPhotos=[];
+  var colls=['chats','groups'];
+  var done=0;
+  colls.forEach(function(coll){
+    db.collection(coll).where('memberIds','array-contains',uid).get().then(function(snap){
+      snap.forEach(function(chatDoc){
+        var chatId=chatDoc.id;
+        var chatData=chatDoc.data()||{};
+        var chatType=chatData.type||((coll==='groups')?'group':'direct');
+        db.collection(coll).doc(chatId).collection('messages')
+          .where('type','in',['image','video','gif','sticker'])
+          .limit(400).get().then(function(msgSnap){
+            msgSnap.forEach(function(doc){
+              var d=doc.data();
+              if(d.attachment&&d.attachment.url){
+                allPhotos.push({
+                  id:doc.id,
+                  chatId:chatId,
+                  chatType:chatType,
+                  attachment:d.attachment,
+                  senderName:d.senderName||'User',
+                  timestamp:d.timestamp
+                });
+              }
+            });
+            done++;
+            if(done>=snap.size*colls.length){renderAlbum();}
+          }).catch(function(){done++;if(done>=snap.size*colls.length){renderAlbum();}});
+      });
+      if(!snap.size){done++;if(done>=colls.length){renderAlbum();}}
+    }).catch(function(){done++;if(done>=colls.length){renderAlbum();}});
+  });
+}
+document.addEventListener('DOMContentLoaded',function(){
+  var mode=localStorage.getItem('themeMode')||(localStorage.getItem('darkMode')==='true'?'dark':'light');
+  document.documentElement.dataset.theme=mode==='dark'?'dark':'light';
+  if(mode==='dark'){document.documentElement.classList.add('dark');document.body.classList.add('dark');}
+  if(typeof firebase!=='undefined'){
+    firebase.auth().onAuthStateChanged(function(u){
+      window.currentUser=u;
+      if(u)loadAlbumMedia();
+    });
+  }
+});
 </script>
 </body>
 </html>

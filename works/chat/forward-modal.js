@@ -299,12 +299,18 @@
     if (coll === 'broadcasts') return null;
     if (!window.E2E || !window.Security) return null;
     if (msg && msg.decryptFailed) return null;
-    var text = (msg && (msg.text || msg.message || msg.content)) || '';
-    if (!text) return null;
     var chatType = coll === 'groups' ? 'group' : 'direct';
+    var tmpMsg = {
+      type: msg.type || 'text',
+      text: (msg && (msg.text || msg.message || msg.content)) || '',
+      attachment: msg.attachment || null
+    };
     try {
-      var e2e = await E2E.encryptForChat(chatId, chatType, text);
-      return (e2e && e2e.enc) ? e2e.enc : null;
+      var encrypted = await E2E.encryptPayload(tmpMsg, chatId, chatType);
+      if (encrypted && encrypted.enc) {
+        return { enc: encrypted.enc, hasText: !!(msg.text || msg.message || msg.content) };
+      }
+      return null;
     } catch (e) { return null; }
   }
 
@@ -316,7 +322,7 @@
     var target = _allChats.find(function (c) { return c.id === chatId; });
     var coll = (target && (target.type === 'group' || target.type === 'broadcast')) ? (target.type === 'broadcast' ? 'broadcasts' : 'groups') : 'chats';
     var chatRef = _firestore.collection(coll).doc(chatId).collection('messages').doc();
-    var encPayload = await _encryptForward(chatId, coll, msg);
+    var encResult = await _encryptForward(chatId, coll, msg);
     var text = (msg && (msg.text || msg.message || msg.content)) || '';
     var payload = {
       type: msg.type || 'text',
@@ -327,8 +333,8 @@
       forwardedFrom: msg.forwardedFrom || msg.id || null,
       isForwarded: true
     };
-    if (encPayload) {
-      payload.enc = encPayload;
+    if (encResult && encResult.enc) {
+      payload.enc = encResult.enc;
       payload.e2e = true;
     } else {
       payload.text = text;
@@ -337,7 +343,7 @@
     var _firestore2 = (typeof App !== 'undefined' && App.db) ? App.db : (typeof firebase !== 'undefined' ? firebase.firestore() : null);
     var chatDocRef = _firestore2.collection(coll).doc(chatId);
     await chatDocRef.update({
-      lastMessage: encPayload && window.E2E ? E2E.securePreview() : (text || '[Forwarded message]'),
+      lastMessage: encResult && window.E2E ? E2E.securePreview() : (text || '[Forwarded message]'),
       lastMessageAt: firebase.firestore.FieldValue.serverTimestamp(),
       lastMessageSenderId: uid
     }).catch(function () {});

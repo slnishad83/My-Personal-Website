@@ -374,11 +374,15 @@
       };
 
       var coll = (chat.type === 'group' || chat.isGroup === true) ? 'groups' : 'chats';
+      var chatType = (chat.type === 'group' || chat.isGroup === true) ? 'group' : 'direct';
+      if (window.E2E && window.E2E.encryptPayload) {
+        msgData = await window.E2E.encryptPayload(msgData, chat.id, chatType);
+      }
       await db.collection(coll).doc(chat.id).collection('messages').add(msgData);
 
       if (chat.lastMessageTime !== undefined) {
         var updateData = {
-          lastMessage: '🎥 Video Note',
+          lastMessage: msgData.e2e ? '🔒 Video Note' : '🎥 Video Note',
           lastMessageTime: firebase.firestore.FieldValue.serverTimestamp(),
           lastMessageSenderId: user.uid,
           lastMessageSenderName: user.displayName || 'Me'
