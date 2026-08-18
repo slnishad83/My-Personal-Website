@@ -41,7 +41,7 @@
   }
 
   function _showSecurityChangeNotification(userId) {
-    const chat = (window.State && window.State.chats || []).find(function(c) {
+    const chat = ((window.currentChat && [window.currentChat]) || []).find(function(c) {
       return c.otherUserId === userId;
     });
     const name = chat ? chat.name : 'A contact';

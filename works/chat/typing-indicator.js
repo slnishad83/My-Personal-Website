@@ -15,19 +15,24 @@
       (window.App && window.App.auth && window.App.auth.currentUser && window.App.auth.currentUser.uid) || null;
   }
 
-  function _chat() {
-    return window.State && window.State.activeId ? window.State : null;
+  function _chatId() {
+    return window.currentChat && window.currentChat.id
+      ? window.currentChat.id
+      : (window.currentChat || null);
+  }
+
+  function _chatType() {
+    return window.currentChatType || 'direct';
   }
 
   function _isGroup() {
-    const s = _chat();
-    return s && (s.activeType === 'group');
+    return _chatType() === 'group';
   }
 
   function _peerUid() {
-    const s = _chat();
-    if (!s || !s.activeId || _isGroup()) return null;
-    const parts = String(s.activeId).split('_');
+    const chatId = _chatId();
+    if (!chatId || _isGroup()) return null;
+    const parts = String(chatId).split('_');
     const me = _uid();
     if (!me || parts.length < 2) return null;
     return parts[0] === me ? parts[1] : parts[0];
@@ -35,12 +40,12 @@
 
   function startTyping() {
     const me = _uid();
-    const s = _chat();
-    if (!me || !s || !s.activeId) return;
+    const chatId = _chatId();
+    if (!me || !chatId) return;
     const db = (typeof firebase !== 'undefined' && firebase.firestore) ? firebase.firestore() : null;
     if (!db) return;
     const coll = _isGroup() ? 'groups' : 'chats';
-    db.collection(coll).doc(s.activeId).collection('presence').doc(me).set({
+    db.collection(coll).doc(chatId).collection('presence').doc(me).set({
       typing: true,
       timestamp: firebase.firestore.FieldValue.serverTimestamp()
     }, { merge: true }).catch(function() {});
@@ -49,12 +54,12 @@
 
   function stopTyping() {
     const me = _uid();
-    const s = _chat();
-    if (!me || !s || !s.activeId) return;
+    const chatId = _chatId();
+    if (!me || !chatId) return;
     const db = (typeof firebase !== 'undefined' && firebase.firestore) ? firebase.firestore() : null;
     if (!db) return;
     const coll = _isGroup() ? 'groups' : 'chats';
-    db.collection(coll).doc(s.activeId).collection('presence').doc(me).set({
+    db.collection(coll).doc(chatId).collection('presence').doc(me).set({
       typing: false,
       timestamp: firebase.firestore.FieldValue.serverTimestamp()
     }, { merge: true }).catch(function() {});
@@ -67,12 +72,12 @@
 
   function listenForTyping() {
     const me = _uid();
-    const s = _chat();
-    if (!me || !s || !s.activeId) return;
+    const chatId = _chatId();
+    if (!me || !chatId) return;
     const db = (typeof firebase !== 'undefined' && firebase.firestore) ? firebase.firestore() : null;
     if (!db) return;
     const coll = _isGroup() ? 'groups' : 'chats';
-    const ref = db.collection(coll).doc(s.activeId).collection('presence');
+    const ref = db.collection(coll).doc(chatId).collection('presence');
     ref.onSnapshot(function(snap) {
       const typers = [];
       snap.forEach(function(doc) {

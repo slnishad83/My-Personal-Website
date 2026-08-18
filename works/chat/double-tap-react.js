@@ -39,8 +39,10 @@
       if (!uid) return;
       const db = (typeof firebase !== 'undefined' && firebase.firestore) ? firebase.firestore() : null;
       if (!db) return;
-      const chatId = window.State && window.State.activeId;
-      const chatType = window.State && window.State.activeType;
+      const chatId = window.currentChat && window.currentChat.id
+        ? window.currentChat.id
+        : (window.currentChat || null);
+      const chatType = window.currentChatType || 'direct';
       if (!chatId || !msgId) return;
       const coll = chatType === 'group' ? 'groups' : 'chats';
       db.collection(coll).doc(chatId).collection('messages').doc(msgId).update({
