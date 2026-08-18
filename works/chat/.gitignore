@@ -6,6 +6,7 @@ dist-electron-new/
 electron/build-resources/*.ico
 electron/build-resources/*.icns
 electron/build-resources/icons/
+electron/prebuilt/
 www/
 *.apkgoogle-services.json
 GoogleService-Info.plist
