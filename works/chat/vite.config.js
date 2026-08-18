@@ -27,9 +27,9 @@ function copyStaticAssets() {
         });
       }
 
-      // Copy images and APK
+      // Copy images (no executables — APKs break Firebase Spark plan)
       const staticFiles = readdirSync('.').filter(f =>
-        /\.(png|jpg|jpeg|gif|svg|ico|webp|apk)$/i.test(f)
+        /\.(png|jpg|jpeg|gif|svg|ico|webp)$/i.test(f)
       );
       staticFiles.forEach(file => {
         copyFileSync(resolve('.', file), resolve(distDir, file));

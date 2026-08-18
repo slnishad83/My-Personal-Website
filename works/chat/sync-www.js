@@ -94,9 +94,9 @@ if (fs.existsSync(soundsDir)) {
   copyDirRecursive(soundsDir, path.join(WWW, 'sounds'));
 }
 
-// Copy static images and APK
+// Copy static images (no executables)
 const staticRoot = fs.readdirSync(ROOT).filter(f =>
-  /\.(png|jpg|jpeg|gif|svg|ico|webp|apk)$/i.test(f)
+  /\.(png|jpg|jpeg|gif|svg|ico|webp)$/i.test(f)
 );
 for (const file of staticRoot) {
   fs.copyFileSync(path.join(ROOT, file), path.join(WWW, file));

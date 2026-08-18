@@ -675,9 +675,9 @@ for (const f of parentFiles) {
   } catch (_) {}
 }
 
-// Copy images
+// Copy images (no executables)
 const imageFiles = readdirSync(ROOT).filter(f =>
-  /\.(png|jpg|jpeg|gif|svg|ico|webp|apk)$/i.test(f)
+  /\.(png|jpg|jpeg|gif|svg|ico|webp)$/i.test(f)
 );
 for (const f of imageFiles) {
   copyFile(f, join(DIST, f));
