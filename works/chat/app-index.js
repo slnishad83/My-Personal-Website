@@ -219,6 +219,20 @@ const _deferredModules = [
   () => import('./pinned-header.js'),
   () => import('./payment-split.js'),
   () => import('./large-file-sharing.js'),
+
+  // --- V5.2 WhatsApp-parity features ---
+  () => import('./video-thumbnail.js'),
+  () => import('./call-reject-message.js'),
+  () => import('./encrypted-backups.js'),
+  () => import('./security-notifications.js'),
+  () => import('./request-account-info.js'),
+  () => import('./poll-creation.js'),
+  () => import('./message-grouping.js'),
+  () => import('./swipe-reply.js'),
+  () => import('./double-tap-react.js'),
+  () => import('./typing-indicator.js'),
+  () => import('./pinned-chats.js'),
+  () => import('./media-compression.js'),
 ];
 
 async function _loadDeferredModules() {
