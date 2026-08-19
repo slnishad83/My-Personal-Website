@@ -36,20 +36,6 @@
           location.replace('https://' + location.host + location.pathname + location.search + location.hash);
           return;
         }
-
-        if (location.hostname !== 'localhost' && !location.hostname.includes('127.0.0.1')) {
-          if (!path.startsWith('/works/chat/dist')) {
-            location.replace('https://' + location.host + '/works/chat/dist/' + location.search + location.hash);
-            return;
-          }
-        }
-
-        if (path.startsWith('/works/chat') && path !== '/works/chat/' && path !== '/works/chat') {
-          var normalized = '/works/chat/' + (location.search || '') + (location.hash || '');
-          if (location.pathname !== normalized) {
-            window.history.replaceState({}, '', normalized);
-          }
-        }
       } catch (_) {}
     })();
   </script>
@@ -64,10 +50,10 @@
   </noscript>
 
   <!-- PWA Manifest & Icons -->
-  <link rel="manifest" href="/works/chat/assets/manifest-DR-IU16e.json">
-  <link rel="icon" href="/works/chat/assets/app-icon-DfRnTJEv.svg" type="image/svg+xml">
+  <link rel="manifest" href="/assets/manifest-DR-IU16e.json">
+  <link rel="icon" href="/assets/app-icon-DfRnTJEv.svg" type="image/svg+xml">
 
-  <link rel="apple-touch-icon" href="/works/chat/assets/app-icon-192-vvhPsVPK.png">
+  <link rel="apple-touch-icon" href="/assets/app-icon-192-vvhPsVPK.png">
 
   <!-- Preconnect for faster external resource loading -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -111,11 +97,11 @@
     .material-symbols-outlined, .material-symbols-rounded { font-display: swap; }
   </style>
 
-  <script type="module" crossorigin src="/works/chat/assets/main-DcSvsKIv.js"></script>
-  <link rel="modulepreload" crossorigin href="/works/chat/assets/firebase-config-B1gHZycV.js">
-  <link rel="modulepreload" crossorigin href="/works/chat/assets/feature-notifications-Di028G_y.js">
-  <link rel="modulepreload" crossorigin href="/works/chat/assets/lib-twemoji-Bf-HUuBj.js">
-  <link rel="stylesheet" crossorigin href="/works/chat/assets/main-BknplQyZ.css">
+  <script type="module" crossorigin src="/assets/main-C_Xl_nCk.js"></script>
+  <link rel="modulepreload" crossorigin href="/assets/firebase-config-B1gHZycV.js">
+  <link rel="modulepreload" crossorigin href="/assets/feature-notifications-Di028G_y.js">
+  <link rel="modulepreload" crossorigin href="/assets/lib-twemoji-Bf-HUuBj.js">
+  <link rel="stylesheet" crossorigin href="/assets/main-BknplQyZ.css">
 </head>
 <body class="w-full h-full flex overflow-hidden antialiased bg-surface-container-low transition-colors duration-300">
   <!-- ═══════════════════════════════════
@@ -1494,9 +1480,9 @@
   <script src="https://www.gstatic.com/firebasejs/12.16.0/firebase-messaging-compat.js" crossorigin="anonymous"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js" integrity="sha384-+mbV2IY1Zk/X1p/nWllGySJSUN8uMs+gUAN10Or95UBH0fpj6GfKgPmgC5EXieXG" crossorigin="anonymous"></script>
   <!-- Monitoring (Sentry + Crashlytics bridge) -->
-  <script src="/works/chat/dist/monitoring.js"></script>
+  <script src="/monitoring.js"></script>
   <!-- DND / Quiet Hours -->
-  <script src="/works/chat/dist/dnd-quiet-hours.js"></script>
+  <script src="/dnd-quiet-hours.js"></script>
   <!-- Pre-Permission Explanation Dialog -->
   <div id="prePermissionModal" class="overlay fixed inset-0 z-[110] bg-black/60 backdrop-blur-sm flex items-center justify-center hidden" role="dialog" aria-modal="true" aria-labelledby="prePermissionTitle">
     <div class="bg-surface-container border border-outline-variant/30 rounded-2xl w-full max-w-sm shadow-2xl p-6 m-4 text-center">

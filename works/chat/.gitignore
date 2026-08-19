@@ -8,7 +8,10 @@ electron/build-resources/*.icns
 electron/build-resources/icons/
 electron/prebuilt/
 www/
-*.apkgoogle-services.json
+*.apk
+google-services.json
 GoogleService-Info.plist
 *.jks
 *.keystore
+test-results/
+tests/e2e/.auth/

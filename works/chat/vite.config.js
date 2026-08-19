@@ -103,8 +103,8 @@ function generateSwPlugin() {
   };
 }
 
-export default defineConfig({
-  base: '/works/chat/',
+export default defineConfig(({ command }) => ({
+  base: command === 'serve' ? '/works/chat/' : '/',
   root: '.',
   plugins: [
     tailwindcss(),
@@ -238,4 +238,4 @@ export default defineConfig({
   css: {
     devSourcemap: true,
   },
-});
+}));
