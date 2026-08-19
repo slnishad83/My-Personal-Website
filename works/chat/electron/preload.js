@@ -18,7 +18,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   },
 
   notification: {
-    show: (opts) => ipcRenderer.invoke('notification:show', opts)
+    show: (opts) => ipcRenderer.invoke('notification:show', opts),
+    showCall: (opts) => ipcRenderer.invoke('notification:show-call', opts)
   },
 
   shell: {

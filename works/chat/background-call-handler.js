@@ -8,6 +8,7 @@
   var _visibilityHandler = null;
   var _focusHandler = null;
   var _bgNotification = null;
+  var _beforeUnloadHandler = null;
 
   function init() {
     _visibilityHandler = _onVisibilityChange;
@@ -16,6 +17,14 @@
     window.addEventListener('focus', _onFocus);
     window.addEventListener('pagehide', _onPageHide);
     window.addEventListener('pageshow', _onPageShow);
+    _beforeUnloadHandler = function(e) {
+      if (window.App && window.App.callActive) {
+        e.preventDefault();
+        e.returnValue = 'You have an active call. Are you sure you want to leave?';
+        return e.returnValue;
+      }
+    };
+    window.addEventListener('beforeunload', _beforeUnloadHandler);
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.addEventListener('message', _onSWMessage);
     }
@@ -63,6 +72,21 @@
     }, 10000);
     _keepAlive();
     _showPersistentNotification();
+    if (window.electronAPI?.call?.keepAlive) {
+      try {
+        var callInfo = {};
+        if (window._CC && window._CC.callId) {
+          callInfo.callId = window._CC.callId;
+          callInfo.uid = window._CC.uid ? window._CC.uid() : '';
+        }
+        if (window._GC && window._GC._currentCallId) {
+          callInfo.callId = window._GC._currentCallId;
+          callInfo.uid = window._GC._uid ? window._GC._uid() : '';
+          callInfo.isGroupCall = true;
+        }
+        window.electronAPI.call.keepAlive(callInfo);
+      } catch (_) {}
+    }
   }
 
   function _exitBackground() {
@@ -75,6 +99,9 @@
       _bgTimer = null;
     }
     _dismissPersistentNotification();
+    if (window.electronAPI?.call?.release) {
+      try { window.electronAPI.call.release(); } catch (_) {}
+    }
     if (window.App && window.App.callActive && window._CC && typeof window._CC.maximizeCall === 'function') {
       window._CC.maximizeCall();
     }
@@ -141,6 +168,10 @@
     window.removeEventListener('focus', _onFocus);
     window.removeEventListener('pagehide', _onPageHide);
     window.removeEventListener('pageshow', _onPageShow);
+    if (_beforeUnloadHandler) {
+      window.removeEventListener('beforeunload', _beforeUnloadHandler);
+      _beforeUnloadHandler = null;
+    }
     _exitBackground();
     _dismissPersistentNotification();
   }

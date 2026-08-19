@@ -6,13 +6,22 @@
 (function () {
   const MarkUnread = {
     _key: 'nsl_unread_chats',
+    _reactionKey: 'nsl_reaction_unread_chats',
 
     getUnreadMap() {
       try { return JSON.parse(localStorage.getItem(this._key) || '{}'); } catch (_) { return {}; }
     },
 
+    getReactionUnreadMap() {
+      try { return JSON.parse(localStorage.getItem(this._reactionKey) || '{}'); } catch (_) { return {}; }
+    },
+
     _save(map) {
       try { localStorage.setItem(this._key, JSON.stringify(map)); } catch (_) {}
+    },
+
+    _saveReaction(map) {
+      try { localStorage.setItem(this._reactionKey, JSON.stringify(map)); } catch (_) {}
     },
 
     async markChatUnread(chatId) {
@@ -37,11 +46,42 @@
       document.dispatchEvent(new CustomEvent('chat-unread-change', { detail: { chatId, unread: true } }));
     },
 
+    markChatReactionUnread(chatId, messageId, emoji) {
+      if (!chatId || !messageId) return;
+      const map = this.getReactionUnreadMap();
+      if (!map[chatId]) {
+        map[chatId] = { entries: [], timestamp: Date.now() };
+      }
+      map[chatId].entries.push({ messageId, emoji, timestamp: Date.now() });
+      map[chatId].timestamp = Date.now();
+      this._saveReaction(map);
+
+      const unreadMap = this.getUnreadMap();
+      unreadMap[chatId] = {
+        count: (unreadMap[chatId]?.count || 0) + 1,
+        timestamp: Date.now()
+      };
+      this._save(unreadMap);
+      this._updateBadge(chatId, unreadMap[chatId].count);
+
+      document.dispatchEvent(new CustomEvent('chat-unread-change', { detail: { chatId, unread: true } }));
+    },
+
+    clearReactionUnread(chatId) {
+      if (!chatId) return;
+      const map = this.getReactionUnreadMap();
+      if (map[chatId]) {
+        delete map[chatId];
+        this._saveReaction(map);
+      }
+    },
+
     async markChatRead(chatId) {
       const map = this.getUnreadMap();
       delete map[chatId];
       this._save(map);
       this._updateBadge(chatId, 0);
+      this.clearReactionUnread(chatId);
 
       const uid = window.App?.uid?.() || window.currentUser?.uid;
       const db = window.App?.db;
@@ -103,6 +143,9 @@
   };
 
   window.MarkUnread = MarkUnread;
+  window.markChatReactionUnread = function(chatId, messageId, emoji) {
+    MarkUnread.markChatReactionUnread(chatId, messageId, emoji);
+  };
 
   document.addEventListener('click', function (e) {
     const btn = e.target.closest('[data-action="mark-unread"]');

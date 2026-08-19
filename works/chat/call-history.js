@@ -242,7 +242,7 @@
     if (filter === 'missed') {
       calls = calls.filter(function (c) { return _isMissedCall(c); });
     } else if (filter === 'incoming') {
-      calls = calls.filter(function (c) { return _getDirection(c) === 'incoming' && !_isMissedCall(c); });
+      calls = calls.filter(function (c) { return _getDirection(c) === 'incoming'; });
     } else if (filter === 'outgoing') {
       calls = calls.filter(function (c) { return _getDirection(c) === 'outgoing'; });
     }
@@ -318,6 +318,19 @@
       '</div>';
   }
 
+  function _getCallDateGroup(timestampMs) {
+    if (!timestampMs) return 'Earlier';
+    var now = new Date();
+    var date = new Date(timestampMs);
+    var today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    var msgDay = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+    var diffDays = Math.round((today - msgDay) / 86400000);
+    if (diffDays === 0) return 'Today';
+    if (diffDays === 1) return 'Yesterday';
+    if (diffDays <= 7) return 'This Week';
+    return 'Earlier';
+  }
+
   function _renderCallHistory() {
     var container = _$('call-history-list');
     if (!container) return;
@@ -328,7 +341,7 @@
     });
 
     if (!calls.length) {
-      var emptyMsg = _searchQuery ? 'No calls found for "' + _esc(_searchQuery) + '"' : (_activeFilter !== 'all' ? 'No missed calls' : 'No calls yet');
+      var emptyMsg = _searchQuery ? 'No calls found for "' + _esc(_searchQuery) + '"' : (_activeFilter !== 'all' ? 'No ' + _activeFilter + ' calls' : 'No calls yet');
       container.innerHTML = '<div class="flex flex-col items-center justify-center py-16 px-8">' +
         '<span class="material-symbols-outlined text-5xl text-on-surface-variant/30 mb-3">call</span>' +
         '<p class="text-on-surface-variant text-sm text-center">' + _esc(emptyMsg) + '</p>' +
@@ -336,7 +349,24 @@
       return;
     }
 
-    container.innerHTML = calls.map(function (c) { return _renderCallHistoryItem(c); }).join('');
+    // Date-group the calls
+    var groups = {};
+    var groupOrder = ['Today', 'Yesterday', 'This Week', 'Earlier'];
+    calls.forEach(function (c) {
+      var ts = _formatTimestamp(c.startedAt || c.createdAt || c.endedAt);
+      var group = _getCallDateGroup(ts);
+      if (!groups[group]) groups[group] = [];
+      groups[group].push(c);
+    });
+
+    var html = '';
+    groupOrder.forEach(function (groupName) {
+      if (!groups[groupName] || !groups[groupName].length) return;
+      html += '<div class="px-4 pt-3 pb-1 text-xs font-semibold text-on-surface-variant/70 uppercase tracking-wider">' + _esc(groupName) + '</div>';
+      html += groups[groupName].map(function (c) { return _renderCallHistoryItem(c); }).join('');
+    });
+
+    container.innerHTML = html;
     _bindCallHistoryEvents();
   }
 
@@ -566,6 +596,8 @@
         '<div class="px-3 pt-2 pb-1 flex gap-1 overflow-x-auto select-none wa-chips-scroll">' +
           '<button class="wa-chip active" data-call-filter="all" aria-pressed="true">All</button>' +
           '<button class="wa-chip" data-call-filter="missed" aria-pressed="false">Missed</button>' +
+          '<button class="wa-chip" data-call-filter="incoming" aria-pressed="false">Incoming</button>' +
+          '<button class="wa-chip" data-call-filter="outgoing" aria-pressed="false">Outgoing</button>' +
         '</div>' +
         '<div class="relative px-4 mb-1">' +
           '<span class="material-symbols-outlined absolute left-7 top-1/2 -translate-y-1/2 text-on-surface-variant text-[20px] pointer-events-none" style="font-size:20px">search</span>' +

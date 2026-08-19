@@ -56,8 +56,8 @@
       this._recordHistory(item);
       this._setBadge(item.unreadCount);
       document.dispatchEvent(new CustomEvent('tc:notification:message', { detail: item }));
-      // Check if chat is muted (respect per-chat settings)
-      const isMuted = this._isChatMuted(item.chatId);
+      // Check if chat is muted (bypass for reactions - user should always see them)
+      const isMuted = item.kind !== 'reaction' && this._isChatMuted(item.chatId);
       if (!isMuted && !this._isSilent(item)) {
         this._messageTone(item);
         // WhatsApp-style vibration patterns per type
@@ -305,38 +305,42 @@
 
     _showBrowserNotification(item) {
       if (!('Notification' in window) || Notification.permission !== 'granted') return;
-      // Build WhatsApp-style rich notification
+      const isReaction = item.kind === 'reaction';
       const notifOptions = {
         body: item.body,
-        tag: item.tag,
-        renotify: item.priority === 'high',
+        tag: isReaction ? 'reaction-' + (item.messageId || item.id || '') : item.tag,
+        renotify: isReaction || item.priority === 'high',
         requireInteraction: Boolean(item.requireInteraction),
         icon: item.senderAvatar || item.fromUserAvatar || 'app-icon-192.png',
         badge: 'app-icon-192.png',
         image: item.kind === 'image' || item.kind === 'sticker' ? (item.attachmentUrl || item.image || '') : '',
         timestamp: item.timestamp || Date.now(),
         silent: false,
-        data: item,
-        vibrate: item.kind === 'call' ? [700, 250, 700, 700] : [140]
+        data: isReaction
+          ? { chatId: item.chatId, messageId: item.messageId || item.id, chatType: item.chatType, kind: 'reaction' }
+          : item,
+        vibrate: item.kind === 'call' ? [700, 250, 700, 700]
+          : isReaction ? [100]
+          : [140]
       };
 
-      // WhatsApp-style action buttons
       if (item.kind === 'call') {
         notifOptions.actions = [
           { action: 'reject', title: 'Decline', icon: 'app-icon-192.png' },
           { action: 'accept', title: 'Accept', icon: 'app-icon-192.png' }
         ];
-      } else {
+      } else if (!isReaction) {
         notifOptions.actions = [
           { action: 'reply', title: 'Reply' },
           { action: 'mark_read', title: 'Mark as read' }
         ];
       }
 
-      // Android-specific: set channel based on notification type
       if (item.kind === 'call') notifOptions.tag = 'call-' + (item.callId || '');
-      else if (item.chatType === 'group') notifOptions.tag = 'group-' + (item.chatId || '');
-      else notifOptions.tag = 'chat-' + (item.chatId || '');
+      else if (!isReaction) {
+        if (item.chatType === 'group') notifOptions.tag = 'group-' + (item.chatId || '');
+        else notifOptions.tag = 'chat-' + (item.chatId || '');
+      }
 
       navigator.serviceWorker?.ready.then((reg) => reg.showNotification(item.title, notifOptions)).catch(() => {});
     },
@@ -344,6 +348,14 @@
     _messageTone(item) {
       const prefs = this.getPrefs();
       if (!prefs.messageSound) return;
+      if (item?.kind === 'reaction') {
+        if (window.NotificationSounds) {
+          window.NotificationSounds.play('reaction');
+        } else {
+          this._beep(1200, 0.03, 0.03);
+        }
+        return;
+      }
       if (item?.chatType === 'group' && !prefs.groupSound) return;
       if (window.NotificationSounds) {
         window.NotificationSounds.play(item?.chatType === 'group' ? 'groupMessage' : 'message');

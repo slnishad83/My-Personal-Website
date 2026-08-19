@@ -22,16 +22,6 @@ service cloud.firestore {
         && request.auth.uid in data.participants;
     }
 
-    function isAcceptedDirectChatRequest(chatId) {
-      return signedIn()
-        && exists(/databases/$(database)/documents/chatRequests/$(chatId))
-        && get(/databases/$(database)/documents/chatRequests/$(chatId)).data.status == 'accepted'
-        && get(/databases/$(database)/documents/chatRequests/$(chatId)).data.fromUserId
-          in request.resource.data.participants
-        && get(/databases/$(database)/documents/chatRequests/$(chatId)).data.toUserId
-          in request.resource.data.participants;
-    }
-
     function isOwnSavedMessagesChat(data) {
       return data.saved == true
         && data.participants is list
@@ -386,7 +376,6 @@ service cloud.firestore {
       allow create: if isDirectParticipantData(request.resource.data)
         && (
           isOwnSavedMessagesChat(request.resource.data)
-          || isAcceptedDirectChatRequest(chatId)
           || (signedIn() && request.resource.data.participants.size() == 2
             && request.auth.uid in request.resource.data.participants
             && exists(/databases/$(database)/documents/users/$(request.resource.data.participants[0]))
@@ -491,83 +480,6 @@ service cloud.firestore {
       }
     }
 
-
-    match /chatRequests/{requestId} {
-      allow read: if resource == null || isRequestParticipant(resource.data);
-      allow create: if isRequestParticipant(request.resource.data)
-        && request.resource.data.fromUserId == request.auth.uid
-        && request.resource.data.toUserId != request.auth.uid
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-          'fromUserId', 'fromUserName', 'fromUserEmail', 'toUserId', 'toUserName', 'toUserEmail',
-          'status', 'createdAt', 'respondedAt'
-        ])
-        && (
-          !exists(/databases/$(database)/documents/directChats/$(requestId))
-          || (
-            exists(/databases/$(database)/documents/directChats/$(requestId))
-            && get(/databases/$(database)/documents/directChats/$(requestId)).data.status == 'deleted'
-          )
-        )
-        && request.resource.data.status == 'pending';
-      allow update: if isRequestParticipant(resource.data)
-        && (
-          (
-            resource.data.status == 'pending'
-            && resource.data.toUserId == request.auth.uid
-            && request.resource.data.status in ['accepted', 'declined']
-            && request.resource.data.fromUserId == resource.data.fromUserId
-            && request.resource.data.toUserId == resource.data.toUserId
-            && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-              'status',
-              'respondedAt'
-            ])
-          )
-          || (
-            resource.data.status == 'pending'
-            && resource.data.fromUserId == request.auth.uid
-            && request.resource.data.status == 'cancelled'
-            && request.resource.data.fromUserId == resource.data.fromUserId
-            && request.resource.data.toUserId == resource.data.toUserId
-            && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-              'status',
-              'respondedAt'
-            ])
-          )
-          || (
-            resource.data.status in ['declined', 'cancelled']
-            && request.resource.data.status == 'pending'
-            && request.resource.data.fromUserId == request.auth.uid
-            && request.resource.data.toUserId != request.auth.uid
-            && (
-              !exists(/databases/$(database)/documents/directChats/$(requestId))
-              || (
-                exists(/databases/$(database)/documents/directChats/$(requestId))
-                && get(/databases/$(database)/documents/directChats/$(requestId)).data.status == 'deleted'
-              )
-            )
-            && request.resource.data.fromUserId in [
-              resource.data.fromUserId,
-              resource.data.toUserId
-            ]
-            && request.resource.data.toUserId in [
-              resource.data.fromUserId,
-              resource.data.toUserId
-            ]
-            && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-              'fromUserId',
-              'fromUserName',
-              'fromUserEmail',
-              'toUserId',
-              'toUserName',
-              'toUserEmail',
-              'status',
-              'createdAt',
-              'respondedAt'
-            ])
-          )
-        );
-      allow delete: if false;
-    }
 
     match /inAppNotifications/{notificationId} {
       allow read: if signedIn() && resource.data.toUserId == request.auth.uid;
@@ -798,14 +710,6 @@ service cloud.firestore {
     }
 
     match /blockedWords/{userId} {
-      allow read, create, update, delete: if isOwner(userId);
-    }
-
-    match /chatRequestsRead/{userId} {
-      allow read, create, update, delete: if isOwner(userId);
-    }
-
-    match /chatRequestsSnooze/{userId} {
       allow read, create, update, delete: if isOwner(userId);
     }
 

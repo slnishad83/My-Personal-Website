@@ -13,7 +13,9 @@ const DesktopNotifications = (() => {
   function init() {
     _isElectron = !!(window.process?.versions?.electron || window.electronAPI);
 
-    if (_isElectron && window.require) {
+    if (_isElectron && window.electronAPI?.notification) {
+      _electronNotif = 'electronAPI';
+    } else if (_isElectron && window.require) {
       try {
         const { Notification } = window.require('electron');
         _electronNotif = Notification;
@@ -42,6 +44,39 @@ const DesktopNotifications = (() => {
   }
 
   function _showElectron(options) {
+    if (_electronNotif === 'electronAPI' && window.electronAPI?.notification?.show) {
+      try {
+        const payload = {
+          title: options.title,
+          body: options.body || '',
+          icon: options.icon || 'app-icon-192.png',
+          silent: Boolean(options.silent),
+          requireInteraction: options.requireInteraction || false,
+          priority: options.priority === 'high' ? 'high' : 'normal',
+          chatId: options.data?.chatId || '',
+          messageId: options.data?.messageId || '',
+          kind: options.data?.kind || 'message',
+          actions: options.actions || []
+        };
+        if (options.tag) payload.tag = options.tag;
+        if (options.data) payload.data = options.data;
+        window.electronAPI.notification.show(payload);
+        if (options.onClick) {
+          const channel = `notif-click-${options.tag || Date.now()}`;
+          const handler = function(_e, data) {
+            window.electronAPI?.removeNotificationListener?.(channel);
+            if (options.onClick) options.onClick();
+          };
+          if (window.electronAPI?.onNotificationClick) {
+            window.electronAPI.onNotificationClick(channel, handler);
+          }
+        }
+        return { close: function() {} };
+      } catch (e) {
+        if (window.__DEBUG__) console.warn('[DesktopNotif] electronAPI notification failed:', e);
+        return _showWeb(options);
+      }
+    }
     try {
       const notif = new _electronNotif({
         title: options.title,
@@ -67,7 +102,7 @@ const DesktopNotifications = (() => {
     if (!('Notification' in window) || Notification.permission !== 'granted') return null;
 
     try {
-      const notif = new Notification(options.title, {
+      var notifOptions = {
         body: options.body || '',
         icon: options.icon || 'app-icon-192.png',
         badge: options.badge || 'app-icon-192.png',
@@ -77,7 +112,17 @@ const DesktopNotifications = (() => {
         silent: options.silent || false,
         vibrate: options.vibrate || undefined,
         data: options.data || {}
-      });
+      };
+
+      if (Notification.maxActions > 0) {
+        var acts = options.actions || [
+          { action: 'reply', title: 'Reply' },
+          { action: 'mark_read', title: 'Mark read' }
+        ];
+        notifOptions.actions = acts.slice(0, Notification.maxActions);
+      }
+
+      var notif = new Notification(options.title, notifOptions);
 
       if (options.onClick) notif.onclick = options.onClick;
       if (options.onClose) notif.onclose = options.onClose;
@@ -107,6 +152,28 @@ const DesktopNotifications = (() => {
   }
 
   function showCallNotification(options) {
+    if (_electronNotif === 'electronAPI' && window.electronAPI?.notification?.showCall) {
+      try {
+        var callPayload = {
+          title: options.title || 'Incoming Call',
+          body: options.body || (options.callerName || 'Someone') + ' is calling',
+          icon: options.avatar || 'app-icon-192.png',
+          callId: options.callId || '',
+          chatId: options.chatId || '',
+          messageId: options.messageId || '',
+          url: options.url || './index.html',
+          requireInteraction: true,
+          actions: [
+            { action: 'accept', title: 'Accept' },
+            { action: 'decline', title: 'Decline' }
+          ]
+        };
+        window.electronAPI.notification.showCall(callPayload);
+        return { close: function() {} };
+      } catch (e) {
+        if (window.__DEBUG__) console.warn('[DesktopNotif] electronAPI.showCall failed:', e);
+      }
+    }
     return show({
       title: options.title || '📞 Incoming Call',
       body: options.body || `${options.callerName || 'Someone'} is calling`,
@@ -120,8 +187,14 @@ const DesktopNotifications = (() => {
       data: {
         kind: 'call',
         callId: options.callId || '',
+        chatId: options.chatId || '',
+        messageId: options.messageId || '',
         url: options.url || './index.html'
       },
+      actions: [
+        { action: 'accept', title: 'Accept' },
+        { action: 'decline', title: 'Decline' }
+      ],
       onClick: () => {
         window.focus();
         if (options.callId) {

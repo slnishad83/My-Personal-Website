@@ -110,13 +110,54 @@ function setupIPC() {
 
   ipcMain.handle('notification:show', (_, opts) => {
     if (!Notification.isSupported()) return false;
-    const notif = new Notification({
+    const notifOpts = {
       title: opts.title || APP_TITLE,
       body: opts.body || '',
       icon: opts.icon || path.join(getWebDir(), 'app-icon-192.png'),
-      silent: opts.silent || false
+      silent: opts.silent || false,
+    };
+    if (opts.urgency) notifOpts.urgency = opts.urgency;
+    
+    const notif = new Notification(notifOpts);
+    notif.on('click', () => {
+      if (mainWindow) {
+        mainWindow.show();
+        mainWindow.focus();
+        const payload = {
+          chatId: opts.chatId || '',
+          messageId: opts.messageId || '',
+          chatType: opts.chatType || 'direct',
+          kind: opts.kind || 'message'
+        };
+        mainWindow.webContents.send('deep-link', JSON.stringify(payload));
+      }
     });
-    notif.on('click', () => { mainWindow && mainWindow.show(); });
+    notif.on('close', () => {});
+    notif.show();
+    return true;
+  });
+
+  ipcMain.handle('notification:show-call', (_, opts) => {
+    if (!Notification.isSupported()) return false;
+    const notifOpts = {
+      title: opts.title || 'Incoming Call',
+      body: opts.body || '',
+      icon: opts.icon || path.join(getWebDir(), 'app-icon-192.png'),
+      silent: false,
+    };
+    if (process.platform === 'darwin') {
+      notifOpts.sound = 'default';
+    }
+    
+    const notif = new Notification(notifOpts);
+    notif.on('click', () => {
+      if (mainWindow) {
+        mainWindow.show();
+        mainWindow.focus();
+        mainWindow.webContents.send('deep-link', 
+          JSON.stringify({ callId: opts.callId || '', action: 'accept' }));
+      }
+    });
     notif.show();
     return true;
   });

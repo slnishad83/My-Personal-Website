@@ -200,6 +200,48 @@ const NotificationSounds = (() => {
     }
   };
 
+  let _ringtoneAudio = null;
+  let _ringtoneLoopTimer = null;
+
+  function playRingtoneFile(url) {
+    stopRingtone();
+    if (!url) { sounds.callRing(); return; }
+    try {
+      _ringtoneAudio = new Audio(url);
+      _ringtoneAudio.loop = false;
+      _ringtoneAudio.volume = 1;
+      _ringtoneAudio.addEventListener('ended', function _loopHandler() {
+        if (_ringtoneAudio) {
+          _ringtoneAudio.currentTime = 0;
+          _ringtoneAudio.play().catch(function() {});
+        }
+      });
+      _ringtoneAudio.addEventListener('error', function _errHandler() {
+        _ringtoneAudio.removeEventListener('error', _errHandler);
+        stopRingtone();
+        sounds.callRing();
+      });
+      _ringtoneAudio.play().catch(function() {
+        stopRingtone();
+        sounds.callRing();
+      });
+    } catch (_) {
+      stopRingtone();
+      sounds.callRing();
+    }
+  }
+
+  function stopRingtone() {
+    if (_ringtoneAudio) {
+      try { _ringtoneAudio.pause(); _ringtoneAudio.src = ''; } catch (_) {}
+      _ringtoneAudio = null;
+    }
+    if (_ringtoneLoopTimer) {
+      clearTimeout(_ringtoneLoopTimer);
+      _ringtoneLoopTimer = null;
+    }
+  }
+
   return {
     unlock,
     getCtx,
@@ -211,6 +253,8 @@ const NotificationSounds = (() => {
         sounds.message();
       }
     },
+    playRingtoneFile,
+    stopRingtone,
     sounds,
     get isUnlocked() { return _unlocked; },
     suspend() { if (_ctx && _ctx.state === 'running') _ctx.suspend().catch(() => {}); },
@@ -219,6 +263,8 @@ const NotificationSounds = (() => {
 })();
 
 window.NotificationSounds = NotificationSounds;
+window.NotificationSounds.playRingtoneFile = NotificationSounds.playRingtoneFile;
+window.NotificationSounds.stopRingtone = NotificationSounds.stopRingtone;
 
 /* Auto-unlock on first user interaction */
 ['click', 'touchstart', 'keydown'].forEach(evt => {

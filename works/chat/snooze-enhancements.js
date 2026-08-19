@@ -142,7 +142,7 @@
           : (typeof auth !== 'undefined' ? auth.currentUser : null);
         if (!_db || !_user) throw new Error('Firebase not ready');
 
-        await _db.collection('chatRequestsSnooze').doc(_user.uid).set(
+        await _db.collection('snoozeSettings').doc(_user.uid).set(
           { snoozes: { [reqId]: expiryMs } },
           { merge: true },
         );
@@ -299,12 +299,12 @@
 //
 // PATCH 3 — snooze-option click handler (skip hours === -1)
 // Find:
-//         const snoozeDocRef = db.collection("chatRequestsSnooze").doc(currentUser.uid);
+//         const snoozeDocRef = db.collection("snoozeSettings").doc(currentUser.uid);
 //         try {
 //           if (hours === 0) {
 // Replace with:
 //         if (hours === -1) { if (typeof window.snoozeEnhancements?.openCustomPicker === 'function') window.snoozeEnhancements.openCustomPicker(reqId); return; }
-//         const snoozeDocRef = db.collection("chatRequestsSnooze").doc(currentUser.uid);
+//         const snoozeDocRef = db.collection("snoozeSettings").doc(currentUser.uid);
 //         try {
 //           if (hours === 0) {
 // ============================================================

@@ -8,7 +8,27 @@
   let _timer = null;
   
   function isQuietNow() {
-    if (!_enabled) return false;
+    if (!_enabled) {
+      try {
+        const dnd = JSON.parse(localStorage.getItem('nsl_dnd_settings') || '{}');
+        if (dnd.enabled && dnd.from && dnd.to) {
+          const now = new Date();
+          const tzOffset = dnd.tzOffset || -now.getTimezoneOffset();
+          const serverUtcMinutes = now.getUTCHours() * 60 + now.getUTCMinutes();
+          const userLocalMinutes = (serverUtcMinutes - tzOffset + 1440) % 1440;
+          const [fromH, fromM] = dnd.from.split(':').map(Number);
+          const [toH, toM] = dnd.to.split(':').map(Number);
+          const fromMinutes = fromH * 60 + fromM;
+          const toMinutes = toH * 60 + toM;
+          if (fromMinutes <= toMinutes) {
+            return userLocalMinutes >= fromMinutes && userLocalMinutes <= toMinutes;
+          } else {
+            return userLocalMinutes >= fromMinutes || userLocalMinutes <= toMinutes;
+          }
+        }
+      } catch(_) {}
+      return false;
+    }
     const now = new Date();
     const h = now.getHours();
     if (_startHour < _endHour) {

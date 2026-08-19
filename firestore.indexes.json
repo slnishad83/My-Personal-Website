@@ -140,38 +140,6 @@
       ]
     },
     {
-      "collectionGroup": "chatRequests",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "fromUserId", "order": "ASCENDING" },
-        { "fieldPath": "status", "order": "ASCENDING" }
-      ]
-    },
-    {
-      "collectionGroup": "chatRequests",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "toEmail", "order": "ASCENDING" },
-        { "fieldPath": "status", "order": "ASCENDING" }
-      ]
-    },
-    {
-      "collectionGroup": "chatRequests",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "toUserId", "order": "ASCENDING" },
-        { "fieldPath": "status", "order": "ASCENDING" }
-      ]
-    },
-    {
-      "collectionGroup": "chatRequests",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "fromEmail", "order": "ASCENDING" },
-        { "fieldPath": "status", "order": "ASCENDING" }
-      ]
-    },
-    {
       "collectionGroup": "broadcasts",
       "queryScope": "COLLECTION",
       "fields": [
@@ -319,24 +287,6 @@
       "fields": [
         { "fieldPath": "chatId", "order": "ASCENDING" },
         { "fieldPath": "timestamp", "order": "ASCENDING" }
-      ]
-    },
-    {
-      "collectionGroup": "chatRequests",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "toUserId", "order": "ASCENDING" },
-        { "fieldPath": "status", "order": "ASCENDING" },
-        { "fieldPath": "createdAt", "order": "DESCENDING" }
-      ]
-    },
-    {
-      "collectionGroup": "chatRequests",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "fromUserId", "order": "ASCENDING" },
-        { "fieldPath": "status", "order": "ASCENDING" },
-        { "fieldPath": "createdAt", "order": "DESCENDING" }
       ]
     },
     {

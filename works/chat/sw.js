@@ -47,14 +47,27 @@ messaging.onBackgroundMessage(function(payload) {
   }
 
   var isCall = data.kind === 'call';
+  var isReaction = data.kind === 'reaction';
   var title = (payload.notification && payload.notification.title) || data.title ||
-    (isCall ? (data.type === 'video' ? 'Incoming video call' : 'Incoming voice call') : 'Team Chat');
+    (isCall ? (data.type === 'video' ? 'Incoming video call' : 'Incoming voice call') :
+    (isReaction ? (data.fromUserName || 'Someone') + ' reacted ' + (data.emoji || '') : 'Team Chat'));
   var body = (payload.notification && payload.notification.body) || data.body ||
-    (isCall ? (data.fromUserName || 'Team Chat') + ' is calling. Tap to open Team Chat.' : 'New notification');
+    (isCall ? (data.fromUserName || 'Team Chat') + ' is calling. Tap to open Team Chat.' :
+    (isReaction ? data.message || 'Reacted to your message' : 'New notification'));
   var notificationUrl = data.url || (payload.notification && payload.notification.data && payload.notification.data.url) || './index.html';
   var chatKey2 = data.chatId && data.chatType ? data.chatType + '-' + data.chatId : '';
   var unreadCount = Number(data.unreadCount || 0);
-  var chatTag = isCall && data.callId ? 'call-' + data.callId : (chatKey2 ? 'chat-' + chatKey2 : (data.kind || 'team-chat') + '-' + (data.messageId || data.callId || Date.now()));
+
+  var chatTag;
+  if (isCall && data.callId) {
+    chatTag = 'call-' + data.callId;
+  } else if (isReaction && data.messageId) {
+    chatTag = 'reaction-' + data.messageId;
+  } else if (chatKey2) {
+    chatTag = 'chat-' + chatKey2;
+  } else {
+    chatTag = (data.kind || 'team-chat') + '-' + (data.messageId || data.callId || Date.now());
+  }
 
   var actions = [];
   if (isCall) {
@@ -62,11 +75,31 @@ messaging.onBackgroundMessage(function(payload) {
       { action: 'accept_call', title: 'Accept' },
       { action: 'decline_call', title: 'Decline' }
     ];
+  } else if (isReaction) {
+    actions = [
+      { action: 'open_chat', title: 'View' }
+    ];
   } else if (data.chatId) {
     actions = [
       { action: 'open_chat', title: 'Open' },
       { action: 'mark_read', title: 'Mark read' }
     ];
+  }
+
+  var notifData = {
+    url: notificationUrl,
+    chatId: data.chatId || '',
+    chatType: data.chatType || '',
+    messageId: data.messageId || '',
+    callId: data.callId || '',
+    kind: data.kind || 'message',
+    emoji: data.emoji || '',
+    fromUserName: data.fromUserName || '',
+    unreadCount: unreadCount
+  };
+
+  if (isReaction && data.messageId) {
+    notifData.url = './index.html#reaction:' + data.messageId;
   }
 
   var notificationPromise = self.registration.showNotification(title, {
@@ -77,19 +110,21 @@ messaging.onBackgroundMessage(function(payload) {
     renotify: true,
     requireInteraction: isCall,
     silent: false,
-    data: {
-      url: notificationUrl,
-      chatId: data.chatId || '',
-      chatType: data.chatType || '',
-      messageId: data.messageId || '',
-      callId: data.callId || '',
-      kind: data.kind || 'message',
-      unreadCount: unreadCount
-    },
+    data: notifData,
     actions: actions
   });
 
   return notificationPromise.then(function() {
+    if (isReaction && data.chatId) {
+      return notifyWindowClients({
+        type: 'TC_OPEN_CHAT',
+        chatId: data.chatId,
+        chatType: data.chatType || 'direct',
+        messageId: data.messageId || '',
+        kind: 'reaction',
+        emoji: data.emoji || ''
+      });
+    }
     if (unreadCount > 0 && data.chatId) {
       return notifyWindowClients({
         type: 'TC_UNREAD_COUNT',
@@ -161,7 +196,8 @@ self.addEventListener('notificationclick', function(event) {
               chatId: data.chatId,
               chatType: data.chatType || 'direct',
               messageId: data.messageId || '',
-              kind: data.kind || 'message'
+              kind: data.kind || 'message',
+              emoji: data.emoji || ''
             });
           }
           return;

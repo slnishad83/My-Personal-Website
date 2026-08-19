@@ -75,22 +75,53 @@
   }
 
   function navigateToReaction(chatId, messageId) {
+    if (!chatId && !messageId) return;
+    if (!chatId && messageId) {
+      try {
+        var hist = JSON.parse(localStorage.getItem('tc_reaction_notifications') || '[]');
+        for (var i = 0; i < hist.length; i++) {
+          if (hist[i].msgId === messageId) {
+            chatId = hist[i].chatId;
+            break;
+          }
+        }
+      } catch (_) {}
+    }
     if (!chatId) return;
     var currentId = _getChatId();
     if (currentId !== chatId) {
       if (currentId && window.App && typeof window.App.backToChatList === 'function') {
         window.App.backToChatList();
       }
+      var _openAndHighlight = function() {
+        setTimeout(function () {
+          if (messageId) {
+            highlightMessage(messageId);
+          } else {
+            scrollToUnread(chatId);
+          }
+        }, 400);
+      };
       if (typeof window.openChat === 'function') {
-        window.openChat(chatId).then(function () {
-          setTimeout(function () { highlightMessage(messageId); }, 300);
-        }).catch(function () {});
+        window.openChat(chatId).then(_openAndHighlight).catch(function () {
+          if (typeof window.selectChat === 'function') {
+            window.selectChat(chatId);
+            _openAndHighlight();
+          }
+        });
       } else if (typeof window.selectChat === 'function') {
         window.selectChat(chatId);
-        setTimeout(function () { highlightMessage(messageId); }, 300);
+        _openAndHighlight();
       }
     } else {
-      highlightMessage(messageId);
+      if (messageId) {
+        highlightMessage(messageId);
+      } else {
+        scrollToUnread(chatId);
+      }
+    }
+    if (messageId) {
+      markAsReadUpTo(chatId, messageId);
     }
   }
 
@@ -135,7 +166,23 @@
     var messageId = data.messageId || data.id;
     var kind = data.kind || data.type || 'message';
     if (kind === 'reaction' || data.kind === 'reaction') {
-      navigateToReaction(chatId, messageId);
+      if (!chatId && messageId) {
+        try {
+          var hist = JSON.parse(localStorage.getItem('tc_reaction_notifications') || '[]');
+          for (var i = 0; i < hist.length; i++) {
+            if (hist[i].msgId === messageId) {
+              chatId = hist[i].chatId;
+              break;
+            }
+          }
+        } catch (_) {}
+      }
+      if (chatId) {
+        navigateToReaction(chatId, messageId);
+      }
+      if (window.MarkUnread && typeof window.MarkUnread.clearReactionUnread === 'function' && chatId) {
+        window.MarkUnread.clearReactionUnread(chatId);
+      }
     } else if (kind === 'mention' || data.mentioned) {
       navigateToMention(chatId, messageId);
     } else if (kind === 'thread_reply' || kind === 'threadReply') {
@@ -217,7 +264,8 @@
           chatId: msg.chatId || '',
           chatType: msg.chatType || 'direct',
           messageId: msg.messageId || '',
-          kind: msg.kind || 'message'
+          kind: msg.kind || 'message',
+          emoji: msg.emoji || ''
         };
         handleNotificationClick(payload);
       }

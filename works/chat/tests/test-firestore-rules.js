@@ -173,25 +173,20 @@ describe('Firestore Rules — Security Analysis', function () {
     });
   });
 
-  describe('Chat request rules', function () {
-    it('chatRequests — create requires fromUserId matches auth', function () {
-      var allowCreate = function (auth, data) {
-        return auth != null && data.fromUserId === auth.uid && data.toUserId !== auth.uid;
-      };
-      expect(allowCreate({ uid: 'u1' }, { fromUserId: 'u1', toUserId: 'u2' })).toBeTruthy();
-      expect(allowCreate({ uid: 'u1' }, { fromUserId: 'u2', toUserId: 'u1' })).toBeFalsy();
-      expect(allowCreate({ uid: 'u1' }, { fromUserId: 'u1', toUserId: 'u1' })).toBeFalsy();
+  describe('Chat requests collection removed', function () {
+    it('chatRequests — collection no longer exists (read denied)', function () {
+      var allowRead = function () { return false; };
+      expect(allowRead()).toBeFalsy();
     });
 
-    it('chatRequests — accept requires toUserId', function () {
-      var allowAccept = function (auth, resource, newData) {
-        return auth != null
-          && resource.status === 'pending'
-          && resource.toUserId === auth.uid
-          && ['accepted', 'declined'].indexOf(newData.status) !== -1;
-      };
-      expect(allowAccept({ uid: 'u2' }, { status: 'pending', toUserId: 'u2' }, { status: 'accepted' })).toBeTruthy();
-      expect(allowAccept({ uid: 'u1' }, { status: 'pending', toUserId: 'u2' }, { status: 'accepted' })).toBeFalsy();
+    it('chatRequests — collection no longer exists (write denied)', function () {
+      var allowWrite = function () { return false; };
+      expect(allowWrite()).toBeFalsy();
+    });
+
+    it('chatRequests — collection no longer exists (create denied)', function () {
+      var allowCreate = function () { return false; };
+      expect(allowCreate()).toBeFalsy();
     });
   });
 

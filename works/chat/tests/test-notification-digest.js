@@ -44,10 +44,9 @@ module.exports = function () {
 
     describe('Notification icons', function () {
       it('should return correct icons for each kind', function () {
-        const icons = { call: '📞', chat_request: '🤝', group_invite: '👥', message: '💬' };
+        const icons = { call: '📞', group_invite: '👥', message: '💬' };
         expect(icons.call).toBe('📞');
         expect(icons.message).toBe('💬');
-        expect(icons.chat_request).toBe('🤝');
         expect(icons.group_invite).toBe('👥');
       });
 

@@ -84,7 +84,7 @@
 html.dark, html[data-theme="dark"], body.dark {
   color-scheme: dark;
   --page-bg: #0b141a;
-  --page-accent: #111b21;
+  --page-accent: #00a884;
   --surface: #111b21;
   --surface-raised: #17232b;
   --surface-muted: #202c33;
@@ -146,7 +146,7 @@ p, .auth-header p, .auth-note, .install-note { color: var(--muted); }
 .guide { border-color: var(--border); background: var(--surface-raised); }
 .guide ol { color: var(--text); }
 code { color: var(--primary); }
-.auth-tabs { border-color: var(--border); }
+.auth-tabs { border-color: var(--border); background: var(--surface-muted, #f0f2f5); }
 .auth-tab { color: var(--muted); }
 .auth-tab.active, .btn-link { color: var(--primary); border-color: var(--primary); }
 .form-group input, textarea { border-color: var(--border); background: var(--surface-muted); color: var(--text); }
@@ -457,6 +457,245 @@ html.dark .dark\:placeholder\:text-white\/20::placeholder { color: color-mix(in 
             animation: none !important;
           }
         }
+
+        /* ── WhatsApp-style Overrides ───────────────────────── */
+        .whatsapp-header-icon {
+          width: 64px;
+          height: 64px;
+          border-radius: 50%;
+          background: var(--primary, #008069);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          margin-bottom: 12px;
+          box-shadow: 0 4px 12px rgba(0, 128, 105, 0.3);
+        }
+        .whatsapp-header-icon .material-symbols-outlined {
+          color: #fff;
+          font-size: 32px;
+          font-variation-settings: 'FILL' 1;
+        }
+        .whatsapp-title {
+          font-family: 'Manrope', sans-serif;
+          font-weight: 700;
+          font-size: 24px;
+          color: var(--text);
+          text-align: center;
+          margin: 0;
+          letter-spacing: -0.02em;
+        }
+        .whatsapp-subtitle {
+          font-family: 'Inter', sans-serif;
+          font-size: 13px;
+          color: var(--muted);
+          text-align: center;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 4px;
+          margin-top: 4px;
+        }
+        .whatsapp-subtitle .material-symbols-outlined {
+          font-size: 14px;
+        }
+        .whatsapp-divider {
+          display: flex;
+          align-items: center;
+          gap: 16px;
+          margin: 20px 0;
+        }
+        .whatsapp-divider::before,
+        .whatsapp-divider::after {
+          content: '';
+          flex: 1;
+          height: 1px;
+          background: var(--border, #e2e8f0);
+        }
+        .whatsapp-divider span {
+          font-family: 'Inter', sans-serif;
+          font-size: 12px;
+          font-weight: 600;
+          color: var(--muted);
+          text-transform: uppercase;
+          letter-spacing: 0.08em;
+        }
+        .whatsapp-input-wrapper {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          padding: 12px 16px;
+          border-radius: 8px;
+          border: 1px solid transparent;
+          background: #f0f2f5;
+          transition: all 0.2s ease;
+        }
+        html.dark .whatsapp-input-wrapper {
+          background: #2a3942;
+          border-color: transparent;
+        }
+        .whatsapp-input-wrapper:focus-within {
+          border-color: var(--primary, #008069);
+          box-shadow: 0 0 0 2px rgba(0, 128, 105, 0.15);
+        }
+        html.dark .whatsapp-input-wrapper:focus-within {
+          border-color: var(--primary, #00a884);
+          box-shadow: 0 0 0 2px rgba(0, 168, 132, 0.2);
+        }
+        .whatsapp-input-wrapper .material-symbols-outlined {
+          color: var(--muted);
+          font-size: 20px;
+          flex-shrink: 0;
+        }
+        .whatsapp-input-wrapper input {
+          width: 100%;
+          background: transparent;
+          border: none;
+          outline: none;
+          font-family: 'Inter', sans-serif;
+          font-size: 15px;
+          color: var(--text);
+          padding: 2px 0;
+        }
+        .whatsapp-input-wrapper input::placeholder {
+          color: #8696a0;
+        }
+        html.dark .whatsapp-input-wrapper input::placeholder {
+          color: #8696a0;
+        }
+        .whatsapp-btn-primary {
+          width: 100%;
+          padding: 12px 24px;
+          background: #008069;
+          color: #fff;
+          border: none;
+          border-radius: 8px;
+          font-family: 'Inter', sans-serif;
+          font-size: 15px;
+          font-weight: 600;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
+          transition: all 0.2s ease;
+          -webkit-tap-highlight-color: transparent;
+        }
+        html.dark .whatsapp-btn-primary {
+          background: #00a884;
+        }
+        .whatsapp-btn-primary:hover {
+          background: #006c58;
+        }
+        html.dark .whatsapp-btn-primary:hover {
+          background: #008f70;
+        }
+        .whatsapp-btn-primary:active {
+          transform: scale(0.98);
+        }
+        .whatsapp-card {
+          background: #fff;
+          border-radius: 12px;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+          border: none;
+        }
+        html.dark .whatsapp-card {
+          background: #111b21;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+        }
+        .whatsapp-google-btn {
+          width: 100%;
+          padding: 12px 24px;
+          background: #fff;
+          color: #3c4043;
+          border: 1px solid #dadce0;
+          border-radius: 8px;
+          font-family: 'Inter', sans-serif;
+          font-size: 14px;
+          font-weight: 500;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 12px;
+          transition: all 0.2s ease;
+          -webkit-tap-highlight-color: transparent;
+        }
+        html.dark .whatsapp-google-btn {
+          background: #202c33;
+          color: #e9edef;
+          border-color: #2a3942;
+        }
+        .whatsapp-google-btn:hover {
+          background: #f8f9fa;
+          border-color: #c6c9cc;
+        }
+        html.dark .whatsapp-google-btn:hover {
+          background: #2a3942;
+        }
+        .whatsapp-google-btn:active {
+          transform: scale(0.98);
+        }
+        .whatsapp-forgot-link {
+          font-family: 'Inter', sans-serif;
+          font-size: 13px;
+          font-weight: 500;
+          color: var(--primary, #008069);
+          text-decoration: none;
+          cursor: pointer;
+          background: none;
+          border: none;
+          padding: 0;
+        }
+        .whatsapp-forgot-link:hover {
+          text-decoration: underline;
+        }
+        .whatsapp-footer-link {
+          font-family: 'Inter', sans-serif;
+          font-size: 14px;
+          color: var(--muted);
+          text-align: center;
+        }
+        .whatsapp-footer-link a,
+        .whatsapp-footer-link button {
+          color: var(--primary, #008069);
+          font-weight: 600;
+          text-decoration: none;
+          background: none;
+          border: none;
+          cursor: pointer;
+          font-size: 14px;
+          font-family: 'Inter', sans-serif;
+          padding: 0;
+        }
+        .whatsapp-footer-link a:hover,
+        .whatsapp-footer-link button:hover {
+          text-decoration: underline;
+        }
+        .whatsapp-top-bar {
+          background: #008069;
+          width: 100%;
+          padding: 20px 16px 32px;
+          text-align: center;
+          position: relative;
+        }
+        html.dark .whatsapp-top-bar {
+          background: #1f2c34;
+        }
+        .whatsapp-top-bar h2 {
+          color: #fff;
+          font-family: 'Manrope', sans-serif;
+          font-weight: 700;
+          font-size: 20px;
+          margin: 0;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
+        }
+        .whatsapp-top-bar h2 .material-symbols-outlined {
+          font-size: 24px;
+          font-variation-settings: 'FILL' 1;
+        }
     </style>
     <link rel="modulepreload" crossorigin href="data:text/javascript;base64,dmFyIGU9T2JqZWN0LmNyZWF0ZSx0PU9iamVjdC5kZWZpbmVQcm9wZXJ0eSxuPU9iamVjdC5nZXRPd25Qcm9wZXJ0eURlc2NyaXB0b3Iscj1PYmplY3QuZ2V0T3duUHJvcGVydHlOYW1lcyxpPU9iamVjdC5nZXRQcm90b3R5cGVPZixhPU9iamVjdC5wcm90b3R5cGUuaGFzT3duUHJvcGVydHksbz0oZSx0LG4pPT4oKT0+e2lmKG4pdGhyb3cgblswXTt0cnl7cmV0dXJuIGUmJih0PWUoZT0wKSksdH1jYXRjaChlKXt0aHJvdyBuPVtlXSxlfX0scz0oZSx0KT0+KCk9Pih0fHwoZSgodD17ZXhwb3J0czp7fX0pLmV4cG9ydHMsdCksZT1udWxsKSx0LmV4cG9ydHMpLGM9KGUsaSxvLHMpPT57aWYoaSYmdHlwZW9mIGk9PWBvYmplY3RgfHx0eXBlb2YgaT09YGZ1bmN0aW9uYClmb3IodmFyIGM9cihpKSxsPTAsdT1jLmxlbmd0aCxkO2w8dTtsKyspZD1jW2xdLCFhLmNhbGwoZSxkKSYmZCE9PW8mJnQoZSxkLHtnZXQ6KGU9PmlbZV0pLmJpbmQobnVsbCxkKSxlbnVtZXJhYmxlOiEocz1uKGksZCkpfHxzLmVudW1lcmFibGV9KTtyZXR1cm4gZX0sbD0obixyLGEpPT4oYT1uPT1udWxsP3t9OmUoaShuKSksYyhyfHwhbnx8IW4uX19lc01vZHVsZT90KGEsYGRlZmF1bHRgLHt2YWx1ZTpuLGVudW1lcmFibGU6ITB9KTphLG4pKTsoZnVuY3Rpb24oKXtsZXQgZT1kb2N1bWVudC5jcmVhdGVFbGVtZW50KGBsaW5rYCkucmVsTGlzdDtpZihlJiZlLnN1cHBvcnRzJiZlLnN1cHBvcnRzKGBtb2R1bGVwcmVsb2FkYCkpcmV0dXJuO2ZvcihsZXQgZSBvZiBkb2N1bWVudC5xdWVyeVNlbGVjdG9yQWxsKGBsaW5rW3JlbD0ibW9kdWxlcHJlbG9hZCJdYCkpbihlKTtuZXcgTXV0YXRpb25PYnNlcnZlcihlPT57Zm9yKGxldCB0IG9mIGUpaWYodC50eXBlPT09YGNoaWxkTGlzdGApZm9yKGxldCBlIG9mIHQuYWRkZWROb2RlcyllLnRhZ05hbWU9PT1gTElOS2AmJmUucmVsPT09YG1vZHVsZXByZWxvYWRgJiZuKGUpfSkub2JzZXJ2ZShkb2N1bWVudCx7Y2hpbGRMaXN0OiEwLHN1YnRyZWU6ITB9KTtmdW5jdGlvbiB0KGUpe2xldCB0PXt9O3JldHVybiBlLmludGVncml0eSYmKHQuaW50ZWdyaXR5PWUuaW50ZWdyaXR5KSxlLnJlZmVycmVyUG9saWN5JiYodC5yZWZlcnJlclBvbGljeT1lLnJlZmVycmVyUG9saWN5KSxlLmNyb3NzT3JpZ2luPT09YHVzZS1jcmVkZW50aWFsc2A/dC5jcmVkZW50aWFscz1gaW5jbHVkZWA6ZS5jcm9zc09yaWdpbj09PWBhbm9ueW1vdXNgP3QuY3JlZGVudGlhbHM9YG9taXRgOnQuY3JlZGVudGlhbHM9YHNhbWUtb3JpZ2luYCx0fWZ1bmN0aW9uIG4oZSl7aWYoZS5lcClyZXR1cm47ZS5lcD0hMDtsZXQgbj10KGUpO2ZldGNoKGUuaHJlZixuKX19KSgpO3ZhciB1PXMoKCgpPT57d2luZG93LkZJUkVCQVNFX0NPTkZJRz09PXZvaWQgMCYmKHdpbmRvdy5GSVJFQkFTRV9DT05GSUc9T2JqZWN0LmZyZWV6ZSh7YXBpS2V5OmBBSXphU3lDZGJ1dF9GZHNjQWpsLU9WU2xBVWhiN1RPVGlSTmtoMzRgLGF1dGhEb21haW46YG15LXRlYW0tY2hhdC0yMjU1LmZpcmViYXNlYXBwLmNvbWAscHJvamVjdElkOmBteS10ZWFtLWNoYXQtMjI1NWAsc3RvcmFnZUJ1Y2tldDpgbXktdGVhbS1jaGF0LTIyNTUuZmlyZWJhc2VzdG9yYWdlLmFwcGAsbWVzc2FnaW5nU2VuZGVySWQ6YDgwNTAxNjg5MTUyMWAsYXBwSWQ6YDE6ODA1MDE2ODkxNTIxOndlYjphYzliYzdhMjUyYmNmMzM2ODZkZDgwYH0pKX0pKTtleHBvcnR7bCBhcyBpLHMgYXMgbixvIGFzIHIsdSBhcyB0fTs=">
 
@@ -541,54 +780,48 @@ html.dark .dark\:placeholder\:text-white\/20::placeholder { color: color-mix(in 
       <!-- Login Container -->
       <div class="w-full max-w-md py-md">
         
-        <!-- Logo/Identity Anchor: NSL Chat Style -->
-        <div class="flex flex-col items-center mb-lg space-y-sm">
-          <div class="w-14 h-14 flex items-center justify-center bg-primary/10 dark:bg-[#00ffc3]/10 border border-[#006c51]/20 dark:border-[#00ffc3]/30 rounded-2xl mb-xs shadow-inner">
-            <span class="material-symbols-outlined text-[#006c51] dark:text-[#34ffc5] text-[36px]" style="font-variation-settings: 'FILL' 1;">forum</span>
+        <!-- WhatsApp-style Header -->
+        <div class="flex flex-col items-center mb-md">
+          <div class="whatsapp-header-icon">
+            <span class="material-symbols-outlined">lock</span>
           </div>
-          <h1 class="font-display-lg font-extrabold tracking-tighter text-on-surface dark:text-[#34ffc5] dark:terminal-glow text-center leading-none" style="font-size:clamp(24px,6vw,32px)">
-            NSL <span class="text-[#006c51] dark:text-[#34ffc5] font-light">Chat</span>
-          </h1>
-          <div class="flex items-center space-y-1">
-            <span class="font-data-mono text-[11px] text-slate-500 dark:text-[#b9cbc1] tracking-wider flex items-center gap-1.5 font-medium">
-              <span class="w-1.5 h-1.5 bg-[#006c51] dark:bg-[#34ffc5] rounded-full pulse-dot"></span>
-              Let's Connect...
-            </span>
-          </div>
+          <h1 class="whatsapp-title">NSL Chat</h1>
+          <p class="whatsapp-subtitle">
+            <span class="material-symbols-outlined">lock</span>
+            End-to-end encrypted
+          </p>
         </div>
 
-        <!-- Glassmorphism Auth Card -->
-        <div class="glass-panel rounded-xl p-4 sm:p-md md:p-lg border border-white/40 dark:border-white/8 overflow-hidden relative">
-          <!-- Inner Edge Light Effect -->
-          <div class="absolute inset-0 border border-white/20 dark:border-white/5 rounded-xl pointer-events-none"></div>
+        <!-- WhatsApp-style Auth Card -->
+        <div class="whatsapp-card p-4 sm:p-md md:p-lg overflow-hidden relative">
           
           <div class="relative z-10">
             <!-- Sleek Switch Tabs (Login vs Register) -->
-            <div class="auth-tabs flex gap-1 mb-lg p-1 bg-slate-100 dark:bg-[#1d2026] rounded-lg" role="tablist" aria-label="Authentication method">
-              <button class="auth-tab flex-grow active text-center py-2.5 rounded-md font-semibold text-[10px] min-[360px]:text-xs transition-all uppercase tracking-normal min-[360px]:tracking-wider px-1 text-slate-500 hover:text-primary dark:text-[#b9cbc1] dark:hover:text-[#34ffc5]" role="tab" aria-selected="true" aria-controls="loginForm" id="tab-login" data-tab="login">Sign In</button>
-              <button class="auth-tab flex-grow text-center py-2.5 rounded-md font-semibold text-[10px] min-[360px]:text-xs transition-all uppercase tracking-normal min-[360px]:tracking-wider px-1 text-slate-500 hover:text-primary dark:text-[#b9cbc1] dark:hover:text-[#34ffc5]" role="tab" aria-selected="false" aria-controls="registerForm" id="tab-register" data-tab="register">Sign Up</button>
+            <div class="auth-tabs flex gap-1 mb-lg p-1 rounded-lg" role="tablist" aria-label="Authentication method">
+              <button class="auth-tab flex-grow active text-center py-2.5 rounded-md font-semibold text-sm transition-all px-1 text-slate-500 hover:text-primary dark:text-[#b9cbc1] dark:hover:text-[#34ffc5]" role="tab" aria-selected="true" aria-controls="loginForm" id="tab-login" data-tab="login">Sign In</button>
+              <button class="auth-tab flex-grow text-center py-2.5 rounded-md font-semibold text-sm transition-all px-1 text-slate-500 hover:text-primary dark:text-[#b9cbc1] dark:hover:text-[#34ffc5]" role="tab" aria-selected="false" aria-controls="registerForm" id="tab-register" data-tab="register">Sign Up</button>
             </div>
 
             <!-- Login Form -->
             <form id="loginForm" class="auth-form active space-y-md" aria-labelledby="tab-login" role="tabpanel">
-              <h2 class="font-headline-lg-mobile text-headline-lg-mobile text-on-surface dark:text-white mb-xs">Sign In</h2>
-              <p class="font-body-sm text-body-sm text-on-surface-variant dark:text-[#b9cbc1] mb-lg">Welcome back! Please enter your details.</p>
+              <h2 class="font-headline-lg-mobile text-headline-lg-mobile text-on-surface dark:text-white mb-xs">Welcome back</h2>
+              <p class="font-body-sm text-body-sm text-on-surface-variant dark:text-[#b9cbc1] mb-lg">Sign in to continue to NSL Chat</p>
 
               <!-- Email Input -->
               <div class="form-group space-y-xs">
-                <label class="font-label-mono text-xs font-semibold text-secondary dark:text-[#b9cbc1] uppercase tracking-wider px-1" for="loginEmail">Email ID</label>
-                <div class="flex items-center gap-2 px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/5 focus-within:border-primary dark:focus-within:border-[#34ffc5] transition-all">
-                  <span class="material-symbols-outlined text-slate-400 dark:text-slate-500 text-xl flex-shrink-0">mail</span>
-                  <input class="w-full bg-transparent border-none outline-none focus:outline-none focus:ring-0 text-on-surface dark:text-white text-sm placeholder:text-slate-400 dark:placeholder:text-white/30" id="loginEmail" placeholder="Enter your email" type="email" required autocomplete="email"/>
+                <label class="font-label-mono text-xs font-semibold text-secondary dark:text-[#b9cbc1] uppercase tracking-wider px-1" for="loginEmail">Email</label>
+                <div class="whatsapp-input-wrapper">
+                  <span class="material-symbols-outlined">mail</span>
+                  <input id="loginEmail" placeholder="Enter your email" type="email" required autocomplete="email"/>
                 </div>
               </div>
 
               <!-- Password Input -->
               <div class="form-group space-y-xs">
                 <label class="font-label-mono text-xs font-semibold text-secondary dark:text-[#b9cbc1] uppercase tracking-wider px-1" for="loginPassword">Password</label>
-                <div class="flex items-center gap-2 px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/5 focus-within:border-primary dark:focus-within:border-[#34ffc5] transition-all password-field">
-                  <span class="material-symbols-outlined text-slate-400 dark:text-slate-500 text-xl flex-shrink-0">lock</span>
-                  <input class="w-full bg-transparent border-none outline-none focus:outline-none focus:ring-0 text-on-surface dark:text-white text-sm placeholder:text-slate-400 dark:placeholder:text-white/30" id="loginPassword" placeholder="Enter your password" type="password" required autocomplete="current-password"/>
+                <div class="whatsapp-input-wrapper password-field">
+                  <span class="material-symbols-outlined">lock</span>
+                  <input id="loginPassword" placeholder="Enter your password" type="password" required autocomplete="current-password"/>
                   <button type="button" class="password-toggle flex-shrink-0 text-slate-400 dark:text-slate-500 hover:text-primary dark:hover:text-[#34ffc5] bg-transparent border-none cursor-pointer flex items-center justify-center p-1" data-password-toggle="loginPassword" aria-label="Show password" title="Show password">
                     <span class="material-symbols-outlined text-lg">visibility</span>
                   </button>
@@ -601,11 +834,11 @@ html.dark .dark\:placeholder\:text-white\/20::placeholder { color: color-mix(in 
                   <input class="w-4 h-4 rounded-sm border-outline-variant text-primary focus:ring-primary-fixed bg-surface-container-low dark:bg-[#111c23] dark:border-white/10" id="persist" type="checkbox"/>
                   <label class="font-body-sm text-body-sm text-on-surface-variant dark:text-[#b9cbc1] group-hover:text-on-surface dark:group-hover:text-white transition-colors" for="persist">Remember me</label>
                 </div>
-                <button type="button" id="forgotPasswordBtn" class="font-label-mono text-xs text-primary dark:text-[#34ffc5] hover:text-on-primary-container dark:hover:underline transition-colors bg-transparent border-none cursor-pointer font-semibold">Forgot password?</button>
+                <button type="button" id="forgotPasswordBtn" class="whatsapp-forgot-link">Forgot password?</button>
               </div>
 
               <!-- Sign In Button -->
-              <button type="submit" class="w-full h-11 bg-[#008069] hover:bg-[#006c58] dark:bg-[#00a884] dark:hover:bg-[#008f70] text-white rounded-xl font-semibold text-sm shadow-md active:scale-[0.98] transition-all flex items-center justify-center gap-2 cursor-pointer border-none mt-2">
+              <button type="submit" class="whatsapp-btn-primary mt-2">
                 <span>Sign In</span>
                 <span class="material-symbols-outlined text-lg">arrow_forward</span>
               </button>
@@ -617,24 +850,24 @@ html.dark .dark\:placeholder\:text-white\/20::placeholder { color: color-mix(in 
 
             <!-- Registration Form -->
             <form id="registerForm" class="auth-form space-y-md" aria-labelledby="tab-register" role="tabpanel">
-              <h2 class="font-headline-lg-mobile text-headline-lg-mobile text-on-surface dark:text-white mb-xs">Sign Up</h2>
-              <p class="font-body-sm text-body-sm text-on-surface-variant dark:text-[#b9cbc1] mb-lg">Create your account to get started.</p>
+              <h2 class="font-headline-lg-mobile text-headline-lg-mobile text-on-surface dark:text-white mb-xs">Create your account</h2>
+              <p class="font-body-sm text-body-sm text-on-surface-variant dark:text-[#b9cbc1] mb-lg">Join NSL Chat and start messaging</p>
 
               <!-- Full Name Input -->
               <div class="form-group space-y-xs">
                 <label class="font-label-mono text-xs font-semibold text-secondary dark:text-[#b9cbc1] uppercase tracking-wider px-1" for="registerName">Full Name</label>
-                <div class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/5 focus-within:border-primary dark:focus-within:border-[#34ffc5] transition-all">
-                  <span class="material-symbols-outlined text-slate-400 dark:text-slate-500 text-xl flex-shrink-0">person</span>
-                  <input class="w-full bg-transparent border-none outline-none focus:outline-none focus:ring-0 text-on-surface dark:text-white text-sm placeholder:text-slate-400 dark:placeholder:text-white/30" id="registerName" placeholder="Enter your full name" type="text" required autocomplete="name"/>
+                <div class="whatsapp-input-wrapper">
+                  <span class="material-symbols-outlined">person</span>
+                  <input id="registerName" placeholder="Enter your full name" type="text" required autocomplete="name"/>
                 </div>
               </div>
 
               <!-- Email Input -->
               <div class="form-group space-y-xs">
-                <label class="font-label-mono text-xs font-semibold text-secondary dark:text-[#b9cbc1] uppercase tracking-wider px-1" for="registerEmail">Email ID</label>
-                <div class="flex items-center gap-2 px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/5 focus-within:border-primary dark:focus-within:border-[#34ffc5] transition-all">
-                  <span class="material-symbols-outlined text-slate-400 dark:text-slate-500 text-xl flex-shrink-0">mail</span>
-                  <input class="w-full bg-transparent border-none outline-none focus:outline-none focus:ring-0 text-on-surface dark:text-white text-sm placeholder:text-slate-400 dark:placeholder:text-white/30" id="registerEmail" placeholder="Enter your email" type="email" required autocomplete="email"/>
+                <label class="font-label-mono text-xs font-semibold text-secondary dark:text-[#b9cbc1] uppercase tracking-wider px-1" for="registerEmail">Email</label>
+                <div class="whatsapp-input-wrapper">
+                  <span class="material-symbols-outlined">mail</span>
+                  <input id="registerEmail" placeholder="Enter your email" type="email" required autocomplete="email"/>
                 </div>
                 <div id="emailError" class="field-error"></div>
               </div>
@@ -642,9 +875,9 @@ html.dark .dark\:placeholder\:text-white\/20::placeholder { color: color-mix(in 
               <!-- Phone Input (Optional) -->
               <div class="form-group space-y-xs">
                 <label class="font-label-mono text-xs font-semibold text-secondary dark:text-[#b9cbc1] uppercase tracking-wider px-1" for="registerPhone">Phone Number (Optional)</label>
-                <div class="flex items-center gap-2 px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/5 focus-within:border-primary dark:focus-within:border-[#34ffc5] transition-all">
-                  <span class="material-symbols-outlined text-slate-400 dark:text-slate-500 text-xl flex-shrink-0">phone</span>
-                  <input class="w-full bg-transparent border-none outline-none focus:outline-none focus:ring-0 text-on-surface dark:text-white text-sm placeholder:text-slate-400 dark:placeholder:text-white/30" id="registerPhone" placeholder="Enter 10-digit number" type="tel" autocomplete="tel"/>
+                <div class="whatsapp-input-wrapper">
+                  <span class="material-symbols-outlined">phone</span>
+                  <input id="registerPhone" placeholder="Enter 10-digit number" type="tel" autocomplete="tel"/>
                 </div>
                 <div id="phoneError" class="field-error"></div>
               </div>
@@ -652,9 +885,9 @@ html.dark .dark\:placeholder\:text-white\/20::placeholder { color: color-mix(in 
               <!-- Password Input -->
               <div class="form-group space-y-xs">
                 <label class="font-label-mono text-xs font-semibold text-secondary dark:text-[#b9cbc1] uppercase tracking-wider px-1" for="registerPassword">Password</label>
-                <div class="flex items-center gap-2 px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/5 focus-within:border-primary dark:focus-within:border-[#34ffc5] transition-all password-field">
-                  <span class="material-symbols-outlined text-slate-400 dark:text-slate-500 text-xl flex-shrink-0">lock</span>
-                  <input class="w-full bg-transparent border-none outline-none focus:outline-none focus:ring-0 text-on-surface dark:text-white text-sm placeholder:text-slate-400 dark:placeholder:text-white/30" id="registerPassword" placeholder="Create a password (min 8 chars)" type="password" required autocomplete="new-password"/>
+                <div class="whatsapp-input-wrapper password-field">
+                  <span class="material-symbols-outlined">lock</span>
+                  <input id="registerPassword" placeholder="Create a password (min 8 chars)" type="password" required autocomplete="new-password"/>
                   <button type="button" class="password-toggle flex-shrink-0 text-slate-400 dark:text-slate-500 hover:text-primary dark:hover:text-[#34ffc5] bg-transparent border-none cursor-pointer flex items-center justify-center p-1" data-password-toggle="registerPassword" aria-label="Show password" title="Show password">
                     <span class="material-symbols-outlined text-lg">visibility</span>
                   </button>
@@ -663,8 +896,8 @@ html.dark .dark\:placeholder\:text-white\/20::placeholder { color: color-mix(in 
               </div>
 
               <!-- Create Account Button -->
-              <button type="submit" id="registerBtn" class="w-full h-11 bg-[#008069] hover:bg-[#006c58] dark:bg-[#00a884] dark:hover:bg-[#008f70] text-white rounded-xl font-semibold text-sm shadow-md active:scale-[0.98] transition-all flex items-center justify-center gap-2 cursor-pointer border-none mt-2">
-                <span>Sign Up</span>
+              <button type="submit" id="registerBtn" class="whatsapp-btn-primary mt-2">
+                <span>Create Account</span>
                 <span class="material-symbols-outlined text-lg">arrow_forward</span>
               </button>
 
@@ -674,29 +907,34 @@ html.dark .dark\:placeholder\:text-white\/20::placeholder { color: color-mix(in 
             </form>
 
             <!-- Alternate Auth Options -->
-            <div class="mt-lg pt-lg border-t border-slate-100 dark:border-white/10 text-center">
+            <div class="mt-lg pt-lg text-center">
               
+              <!-- OR Divider -->
+              <div class="whatsapp-divider">
+                <span>OR</span>
+              </div>
+
               <!-- Google login button -->
-              <button id="googleAuthBtn" class="w-full py-2.5 mb-md border border-slate-200 dark:border-white/10 rounded-lg bg-white/40 hover:bg-white dark:bg-[#161d28]/40 dark:hover:bg-[#1d2634] transition-all active:scale-[0.98] flex items-center justify-center gap-sm font-semibold text-sm text-on-surface dark:text-[#edf3f6]" aria-label="Sign in with Google">
+              <button id="googleAuthBtn" class="whatsapp-google-btn mb-md" aria-label="Sign in with Google">
                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                   <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/>
                   <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
                   <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
                   <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
                 </svg>
-                Continue with Google
+                Sign in with Google
               </button>
 
               <!-- Phone/OTP login button -->
-              <button id="phoneAuthBtn" class="w-full py-2.5 mb-md border border-slate-200 dark:border-white/10 rounded-lg bg-white/40 hover:bg-white dark:bg-[#161d28]/40 dark:hover:bg-[#1d2634] transition-all active:scale-[0.98] flex items-center justify-center gap-sm font-semibold text-sm text-on-surface dark:text-[#edf3f6]" aria-label="Sign in with phone number">
+              <button id="phoneAuthBtn" class="whatsapp-google-btn mb-md" aria-label="Sign in with phone number">
                 <span class="material-symbols-outlined text-lg">phone</span>
-                Continue with Phone
+                Sign in with Phone
               </button>
 
               <!-- App Download option -->
               <button
                 id="installAppBtn"
-                class="w-full py-2.5 border border-dashed border-primary dark:border-[#34ffc5] rounded-lg text-primary dark:text-[#34ffc5] bg-transparent hover:bg-slate-50 dark:hover:bg-[#1d2634]/30 transition-all active:scale-[0.98] flex items-center justify-center gap-sm font-semibold text-sm"
+                class="whatsapp-google-btn mt-sm"
                 type="button"
                 style="display: none"
                 aria-label="Download NSL Chat app"
@@ -727,6 +965,16 @@ html.dark .dark\:placeholder\:text-white\/20::placeholder { color: color-mix(in 
             <!-- Error and Success Messages -->
             <div id="authError" class="mt-md p-sm text-sm text-[#ba1a1a] dark:text-[#ffb4ab] bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-950/50 rounded-lg text-center font-semibold" style="display: none" role="alert" aria-live="assertive"></div>
             <div id="authSuccess" class="mt-md p-sm text-sm text-[#006c51] dark:text-[#34ffc5] bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-950/50 rounded-lg text-center font-semibold" style="display: none" role="status" aria-live="polite"></div>
+
+            <!-- Footer Link -->
+            <div class="mt-lg text-center">
+              <p class="whatsapp-footer-link">
+                Don't have an account? <button type="button" id="footerSignUpBtn" onclick="document.getElementById('tab-register').click()">Sign Up</button>
+              </p>
+              <p class="whatsapp-footer-link" style="display:none" id="footerSignInLink">
+                Already have an account? <button type="button" id="footerSignInBtn" onclick="document.getElementById('tab-login').click()">Sign In</button>
+              </p>
+            </div>
 
           </div>
         </div>

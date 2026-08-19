@@ -37,6 +37,19 @@
     sent:         [50]
   };
 
+  const VIBRATION_PRESETS = [
+    { id: 'short',    name: 'Short',     pattern: [100] },
+    { id: 'medium',   name: 'Medium',    pattern: [200] },
+    { id: 'long',     name: 'Long',      pattern: [400] },
+    { id: 'double',   name: 'Double',    pattern: [150, 80, 150] },
+    { id: 'triple',   name: 'Triple',    pattern: [120, 60, 120, 60, 120] },
+    { id: 'staccato', name: 'Staccato',  pattern: [80, 40, 80, 40, 80, 40, 80] },
+    { id: 'gentle',   name: 'Gentle',    pattern: [100, 150, 100] },
+    { id: 'urgent',   name: 'Urgent',    pattern: [300, 100, 300, 100, 300] },
+    { id: 'whatsapp', name: 'WhatsApp',  pattern: [140, 50, 140] },
+    { id: 'none',     name: 'None',      pattern: [] }
+  ];
+
   const MUTE_PRESETS = [
     { label: '1 Hour',     ms: 1 * 60 * 60 * 1000 },
     { label: '8 Hours',    ms: 8 * 60 * 60 * 1000 },
@@ -92,7 +105,8 @@
       const defaults = {
         tone: DEFAULT_TONE,
         vibration: true,
-        override: false,
+        vibrationPattern: 'medium',
+        overrideDnd: false,
         customTone: null,
         highPriority: false
       };
@@ -104,6 +118,7 @@
       const all = _loadAll();
       all[chatId] = { ...(all[chatId] || {}), ...settings };
       _saveAll(all);
+      this.updateChannelForChat(chatId);
       document.dispatchEvent(new CustomEvent('chat-notif-settings-changed', { detail: { chatId, settings: all[chatId] } }));
     },
 
@@ -189,10 +204,27 @@
       return VIBRATION_PATTERNS[type] || VIBRATION_PATTERNS.message;
     },
 
-    /* Vibrate with pattern */
-    vibrate(type) {
-      const pattern = this.getVibration(type);
-      if (navigator.vibrate) navigator.vibrate(pattern);
+    /* Get vibration presets list */
+    getVibrationPresets() { return VIBRATION_PRESETS; },
+
+    /* Get a vibration pattern by preset id */
+    getVibrationPreset(id) {
+      return VIBRATION_PRESETS.find(function(v) { return v.id === id; }) || VIBRATION_PRESETS.find(function(v) { return v.id === 'medium'; });
+    },
+
+    /* Vibrate with pattern (respects per-chat vibrationPattern setting) */
+    vibrate(type, chatId) {
+      var pattern = null;
+      if (chatId) {
+        var settings = this.getSettings(chatId);
+        if (settings.vibration === false) return;
+        if (settings.vibrationPattern && settings.vibrationPattern !== 'default') {
+          var preset = this.getVibrationPreset(settings.vibrationPattern);
+          if (preset) pattern = preset.pattern;
+        }
+      }
+      if (!pattern) pattern = this.getVibration(type);
+      if (pattern && pattern.length && navigator.vibrate) navigator.vibrate(pattern);
     },
 
     /* ════════════════════════════════════════════════════════════
@@ -304,7 +336,7 @@
 
       html += '</div></div>';
 
-      /* Vibration toggle */
+      /* Vibration toggle + pattern selector */
       html += '<div style="padding:14px 16px;border-bottom:1px solid var(--outline-variant,rgba(0,0,0,0.06))">' +
         '<div style="display:flex;align-items:center;justify-content:space-between">' +
           '<span style="font-size:15px;font-weight:500;color:var(--on-surface,#000)">Vibration</span>' +
@@ -314,17 +346,27 @@
             '<span style="position:absolute;top:2px;left:' + (settings.vibration !== false ? '22px' : '2px') + ';width:20px;height:20px;border-radius:50%;background:#fff;transition:0.3s;box-shadow:0 1px 3px rgba(0,0,0,0.2)"></span>' +
           '</label>' +
         '</div>' +
-      '</div>';
+        '<div id="nsl-ns-vib-patterns" style="margin-top:10px;display:' + (settings.vibration !== false ? 'block' : 'none') + '">' +
+        VIBRATION_PRESETS.map(function(v) {
+          var isSelected = (settings.vibrationPattern || 'medium') === v.id;
+          return '<label style="display:flex;align-items:center;gap:10px;padding:6px 0;cursor:pointer">' +
+            '<input type="radio" name="nsl-vib-pattern" value="' + v.id + '" ' + (isSelected ? 'checked' : '') + ' style="width:16px;height:16px;accent-color:var(--primary,#00a884)">' +
+            '<span style="font-size:14px;color:var(--on-surface,#000)">' + _esc(v.name) + '</span>' +
+            '<button class="nsl-vib-preview" data-pattern="' + v.id + '" style="margin-left:auto;background:none;border:none;cursor:pointer;padding:4px;color:var(--on-surface-variant,#667781)">' +
+              '<span class="material-symbols-outlined" style="font-size:18px">vibration</span></button>' +
+          '</label>';
+        }).join('') +
+        '</div></div>';
 
-      /* High priority */
+      /* Override DND */
       html += '<div style="padding:14px 16px;border-bottom:1px solid var(--outline-variant,rgba(0,0,0,0.06))">' +
         '<div style="display:flex;align-items:center;justify-content:space-between">' +
-          '<div><span style="font-size:15px;font-weight:500;color:var(--on-surface,#000)">High priority messages</span>' +
-          '<div style="font-size:12px;color:var(--on-surface-variant,#667781);margin-top:2px">Always notify, even during DND</div></div>' +
+          '<div><span style="font-size:15px;font-weight:500;color:var(--on-surface,#000)">Override DND</span>' +
+          '<div style="font-size:12px;color:var(--on-surface-variant,#667781);margin-top:2px">Notify even when Do Not Disturb is on</div></div>' +
           '<label style="position:relative;display:inline-block;width:44px;height:24px;cursor:pointer">' +
-            '<input type="checkbox" id="nsl-ns-highpriority" ' + (settings.highPriority ? 'checked' : '') + ' style="opacity:0;width:0;height:0">' +
-            '<span style="position:absolute;inset:0;border-radius:12px;background:' + (settings.highPriority ? 'var(--primary,#00a884)' : '#ccc') + ';transition:0.3s"></span>' +
-            '<span style="position:absolute;top:2px;left:' + (settings.highPriority ? '22px' : '2px') + ';width:20px;height:20px;border-radius:50%;background:#fff;transition:0.3s;box-shadow:0 1px 3px rgba(0,0,0,0.2)"></span>' +
+            '<input type="checkbox" id="nsl-ns-overridednd" ' + ((settings.overrideDnd || settings.highPriority) ? 'checked' : '') + ' style="opacity:0;width:0;height:0">' +
+            '<span style="position:absolute;inset:0;border-radius:12px;background:' + ((settings.overrideDnd || settings.highPriority) ? 'var(--primary,#00a884)' : '#ccc') + ';transition:0.3s"></span>' +
+            '<span style="position:absolute;top:2px;left:' + ((settings.overrideDnd || settings.highPriority) ? '22px' : '2px') + ';width:20px;height:20px;border-radius:50%;background:#fff;transition:0.3s;box-shadow:0 1px 3px rgba(0,0,0,0.2)"></span>' +
           '</label>' +
         '</div>' +
       '</div>';
@@ -386,11 +428,32 @@
       /* Vibration toggle */
       document.getElementById('nsl-ns-vibration').addEventListener('change', function() {
         self.setSettings(chatId, { vibration: this.checked });
+        var patternList = document.getElementById('nsl-ns-vib-patterns');
+        if (patternList) patternList.style.display = this.checked ? 'block' : 'none';
       });
 
-      /* High priority toggle */
-      document.getElementById('nsl-ns-highpriority').addEventListener('change', function() {
-        self.setSettings(chatId, { highPriority: this.checked });
+      /* Vibration pattern selection */
+      panel.querySelectorAll('input[name="nsl-vib-pattern"]').forEach(function(radio) {
+        radio.addEventListener('change', function() {
+          self.setSettings(chatId, { vibrationPattern: this.value });
+        });
+      });
+
+      /* Vibration pattern preview */
+      panel.querySelectorAll('.nsl-vib-preview').forEach(function(btn) {
+        btn.addEventListener('click', function(e) {
+          e.preventDefault();
+          e.stopPropagation();
+          var preset = self.getVibrationPreset(btn.getAttribute('data-pattern'));
+          if (preset && preset.pattern.length && navigator.vibrate) {
+            navigator.vibrate(preset.pattern);
+          }
+        });
+      });
+
+      /* Override DND toggle */
+      document.getElementById('nsl-ns-overridednd').addEventListener('change', function() {
+        self.setSettings(chatId, { overrideDnd: this.checked, highPriority: this.checked });
       });
     },
 
@@ -478,6 +541,30 @@
       }
     },
 
+    /* Update a Capacitor/Android notification channel with user's chat preferences */
+    async updateChannelForChat(chatId, channelType) {
+      if (!window.Capacitor?.Plugins?.Notifications) return;
+      const settings = this.getSettings(chatId);
+      const channelId = channelType || 'messages';
+      try {
+        const Notifications = window.Capacitor.Plugins.Notifications;
+        var channelUpdate = { id: channelId };
+        if (settings.tone && settings.tone !== 'default' && settings.tone !== 'none') {
+          channelUpdate.sound = settings.tone;
+        }
+        if (settings.vibration === false) {
+          channelUpdate.vibration = false;
+        } else if (settings.vibrationPattern && settings.vibrationPattern !== 'default') {
+          var preset = this.getVibrationPreset(settings.vibrationPattern);
+          if (preset) channelUpdate.vibrationPattern = preset.pattern;
+        }
+        if (settings.overrideDnd || settings.highPriority) {
+          channelUpdate.importance = 5;
+        }
+        await Notifications.updateChannel(channelUpdate);
+      } catch (_) {}
+    },
+
     /* ════════════════════════════════════════════════════════════
        ENHANCED NOTIFICATION DISPATCHER
        Overrides orchestrator to add per-chat settings
@@ -496,18 +583,16 @@
         }
       }
 
-      if (settings.vibration !== false) {
-        this.vibrate(chatType === 'group' ? 'groupMessage' : 'message');
-      }
+      this.vibrate(chatType === 'group' ? 'groupMessage' : 'message', chatId);
     },
 
     playMentionSound(chatId) {
       if (this.isMuted(chatId)) {
         const settings = this.getSettings(chatId);
-        if (!settings.highPriority) return;
+        if (!settings.overrideDnd && !settings.highPriority) return;
       }
       this.playTone('alert');
-      this.vibrate('mention');
+      this.vibrate('mention', chatId);
     }
   };
 

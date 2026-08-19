@@ -319,6 +319,26 @@
     } catch (_) {}
 
     try {
+      var d = _db();
+      if (d && msgData.senderId) {
+        d.collection('inAppNotifications').add({
+          toUserId: msgData.senderId,
+          fromUserId: uid,
+          fromUserName: senderName,
+          type: 'reaction',
+          kind: 'reaction',
+          emoji: emoji,
+          messageId: msgId,
+          chatId: chatId,
+          chatType: chatType,
+          message: senderName + ' reacted ' + emoji + ' to your message',
+          read: false,
+          createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        }).catch(function (_) {});
+      }
+    } catch (_) {}
+
+    try {
       if (typeof window.sendPushNotification === 'function') {
         window.sendPushNotification(msgData.senderId, {
           title: senderName + ' reacted ' + emoji,
@@ -337,7 +357,13 @@
       var badgeCount = parseInt(localStorage.getItem('tc_reaction_badge_count') || '0', 10);
       badgeCount++;
       localStorage.setItem('tc_reaction_badge_count', String(badgeCount));
-      document.dispatchEvent(new CustomEvent('tc:reaction-badge-update', { detail: { count: badgeCount } }));
+      document.dispatchEvent(new CustomEvent('tc:reaction-badge-update', { detail: { count: badgeCount, chatId: chatId, emoji: emoji, messageId: msgId } }));
+    } catch (_) {}
+
+    try {
+      if (typeof window.markChatReactionUnread === 'function') {
+        window.markChatReactionUnread(chatId, msgId, emoji);
+      }
     } catch (_) {}
   }
 

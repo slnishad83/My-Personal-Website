@@ -14,10 +14,9 @@ const triggers = require('./triggers');
 const admin = require('./admin');
 const pin = require('./pin');
 const groups = require('./groups');
+const deleteUser = require('./delete-user');
 
 module.exports = {
-  sendNewChatRequestNotification: notifications.sendNewChatRequestNotification,
-  sendChatRequestStatusNotification: notifications.sendChatRequestStatusNotification,
   sendGroupJoinRequestNotification: notifications.sendGroupJoinRequestNotification,
   sendIncomingCallNotification: notifications.sendIncomingCallNotification,
   sendIncomingGroupCallNotification: notifications.sendIncomingGroupCallNotification,
@@ -83,4 +82,5 @@ module.exports = {
   exitGroup: groups.exitGroup,
   deleteGroup: groups.deleteGroup,
   respondToGroupInvite: groups.respondToGroupInvite,
+  deleteUserData: deleteUser.deleteUserData,
 };

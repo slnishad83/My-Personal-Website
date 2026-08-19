@@ -327,16 +327,42 @@
         playUnreadSound(getTotalUnread());
       }
     };
+    _listeners.onReactionBadgeUpdate = function (e) {
+      var detail = e.detail || {};
+      var count = Number(detail.count || 0);
+      var chatId = detail.chatId || '';
+      if (chatId && count > 0) {
+        var current = getUnreadCount(chatId);
+        _unreadState[chatId] = {
+          count: current + 1,
+          lastRead: _unreadState[chatId] ? _unreadState[chatId].lastRead : 0,
+          reactionUnread: true,
+          reactionMessageId: detail.messageId || '',
+          reactionEmoji: detail.emoji || ''
+        };
+        _saveState();
+        updateUnreadBadges();
+      }
+      updateTabBadge();
+    };
     _listeners.onClearChat = function (e) {
       var detail = e.detail || {};
       if (detail.chatId) clearUnread(detail.chatId);
     };
     _listeners.onChatRead = function (e) {
       var detail = e.detail || {};
-      if (detail.chatId) clearUnread(detail.chatId);
+      if (detail.chatId) {
+        clearUnread(detail.chatId);
+        if (_unreadState[detail.chatId]) {
+          delete _unreadState[detail.chatId].reactionUnread;
+          delete _unreadState[detail.chatId].reactionMessageId;
+          delete _unreadState[detail.chatId].reactionEmoji;
+        }
+      }
     };
     document.addEventListener('tc:badge:update', _listeners.onBadgeUpdate);
     document.addEventListener('tc:notification:message', _listeners.onNotificationMessage);
+    document.addEventListener('tc:reaction-badge-update', _listeners.onReactionBadgeUpdate);
     document.addEventListener('tc:unread:clear-chat', _listeners.onClearChat);
     document.addEventListener('tc:chat:read', _listeners.onChatRead);
   }
@@ -466,6 +492,7 @@
   function destroy() {
     if (_listeners.onBadgeUpdate) document.removeEventListener('tc:badge:update', _listeners.onBadgeUpdate);
     if (_listeners.onNotificationMessage) document.removeEventListener('tc:notification:message', _listeners.onNotificationMessage);
+    if (_listeners.onReactionBadgeUpdate) document.removeEventListener('tc:reaction-badge-update', _listeners.onReactionBadgeUpdate);
     if (_listeners.onClearChat) document.removeEventListener('tc:unread:clear-chat', _listeners.onClearChat);
     if (_listeners.onChatRead) document.removeEventListener('tc:chat:read', _listeners.onChatRead);
     if (_listeners.onVisibilityChange) document.removeEventListener('visibilitychange', _listeners.onVisibilityChange);
