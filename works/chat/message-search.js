@@ -833,13 +833,6 @@
 
   function navigateInChatSearch(dir) {
     if (!_icsResults.length) return;
-    // Remove highlight text restoration for old match
-    if (_icsIndex >= 0 && _icsIndex < _icsResults.length) {
-      const old = _icsResults[_icsIndex];
-      if (old && old.textEl) {
-        old.textEl.textContent = old.textEl.textContent;
-      }
-    }
     _icsIndex = (_icsIndex + dir + _icsResults.length) % _icsResults.length;
     highlightCurrentInChatMatch();
     updateInChatCounter();

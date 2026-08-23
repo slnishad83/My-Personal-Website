@@ -221,7 +221,7 @@ window.E2E = {
       }
     } catch (_) {}
     if (!myKey) { if (typeof showToast === 'function') showToast('Could not load encryption keys', 'error'); return; }
-    var fingerprint = '';
+    var fingerprint;
     try {
       var raw = JSON.stringify({ a: myUid, b: peerUid || 'group', ka: myKey, kb: peerKey || {} });
       var hashBuffer = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(raw));

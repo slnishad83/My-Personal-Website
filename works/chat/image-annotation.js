@@ -8,6 +8,7 @@
   let _annDrawing = false, _annStartX, _annStartY, _annSnapshot;
   let _annOrigFile = null;
   let _annCropActive = false, _annCropRect = null, _annCropDrag = false, _annCropHandle = null;
+  let _annCropStartX = 0, _annCropStartY = 0, _annCropStartRect = null;
 
   const _origAttachPhoto = window.attachPhoto;
   const _origShowMediaPreview = window._showMediaPreview;

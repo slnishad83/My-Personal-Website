@@ -6,8 +6,6 @@ directories:
   output: dist-electron
   buildResources: electron/build-resources
 
-electronDist: electron/prebuilt
-
 files:
   - electron/**/*
   - dist/**/*

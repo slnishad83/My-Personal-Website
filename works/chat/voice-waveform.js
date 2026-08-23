@@ -29,7 +29,7 @@ window.VoiceWaveform = (function () {
     var cacheKey = null;
     try {
       var ab = await audioBlob.arrayBuffer();
-      var cacheKey = _hashBuffer(ab);
+      cacheKey = _hashBuffer(ab);
       if (_waveformCache[cacheKey]) {
         if (window.__DEBUG__) console.log('[VoiceWaveform] Cache hit');
         return _waveformCache[cacheKey];

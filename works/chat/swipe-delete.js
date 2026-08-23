@@ -149,8 +149,6 @@ const SwipeDelete = {
         e.stopPropagation();
         if (typeof window.archiveChat === 'function') {
           window.archiveChat(chatId);
-        } else if (typeof window.archiveChat === 'function') {
-          window.archiveChat();
         }
         if (typeof showToast === 'function') showToast('Chat archived', 'success');
         SwipeDelete._closeAll();

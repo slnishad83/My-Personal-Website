@@ -48,7 +48,7 @@
           .limit(100)
           .get();
 
-        if (chatsSnap.empty) { hasMoreChats = false; break; }
+        if (chatsSnap.empty) break;
 
         for (const chatDoc of chatsSnap.docs) {
           const chatData = chatDoc.data();
@@ -63,7 +63,7 @@
               .limit(BATCH_LIMIT)
               .get();
 
-            if (msgsSnap.empty) { hasMoreMsgs = false; break; }
+            if (msgsSnap.empty) break;
             msgCount += await _deleteBatch(msgsSnap.docs);
           }
 
@@ -75,7 +75,7 @@
               .limit(BATCH_LIMIT)
               .get();
 
-            if (otherSnap.empty) { hasMoreOtherMsgs = false; break; }
+            if (otherSnap.empty) break;
             otherMsgsCount += await _deleteBatch(otherSnap.docs);
           }
 
