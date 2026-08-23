@@ -705,9 +705,12 @@ try {
   const { execSync } = require('child_process');
   const fs = require('fs');
   const localCli = join(ROOT, 'node_modules', '@tailwindcss', 'cli', 'dist', 'index.mjs');
-  let cmd = 'npx tailwindcss -i app.css -o dist/app.css --minify';
-  if (fs.existsSync(localCli)) {
-    cmd = `node "${localCli}" -i app.css -o dist/app.css --minify`;
+  let cmd = `node "${localCli}" -i app.css -o dist/app.css --minify`;
+  if (!fs.existsSync(localCli)) {
+    const fallback = join(ROOT, 'node_modules', '.bin', 'tailwindcss');
+    if (fs.existsSync(fallback) || fs.existsSync(fallback + '.cmd')) {
+      cmd = `"${fallback}" -i app.css -o dist/app.css --minify`;
+    }
   }
   execSync(cmd, { cwd: ROOT, stdio: 'inherit' });
   console.log('[build] Tailwind CSS compiled successfully to dist/app.css');

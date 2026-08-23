@@ -220,6 +220,14 @@ const _deferredModules = [
   () => import('./payment-split.js'),
   () => import('./large-file-sharing.js'),
 
+  // --- Signal Protocol & E2EE ---
+  () => import('./signal-protocol.js'),
+  () => import('./media-encryption.js'),
+  () => import('./disappearing-messages.js'),
+  () => import('./lock-chat.js'),
+  () => import('./screen-lock.js'),
+  () => import('./voice-waveform.js'),
+
   // --- V5.2 WhatsApp-parity features ---
   () => import('./video-thumbnail.js'),
   () => import('./call-reject-message.js'),

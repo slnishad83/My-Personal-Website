@@ -17,10 +17,17 @@ const Security = {
   _storageKey: null,
   _e2ePrivateKey: null,
   _e2ePublicKeyJwk: null,
+  _prevPrivateKey: null,
+  _prevPublicKeyJwk: null,
+  _keyVersion: 1,
+  _KEY_ROTATION_INTERVAL: 24 * 60 * 60 * 1000,
+  _keyRotationTimer: null,
 
   async init() {
     this._startTokenRefresh();
-    if (window.__DEBUG__) console.log('[Security] Initialized (WebCrypto storage + ECDH)');
+    this._startKeyRotation();
+    try { await this.rotateE2EKeys(); } catch (_) {}
+    if (window.__DEBUG__) console.log('[Security] Initialized (WebCrypto + ECDH + key rotation)');
   },
 
   _startTokenRefresh() {
@@ -136,16 +143,87 @@ const Security = {
         false, ['deriveKey', 'deriveBits']
       );
       this._e2ePublicKeyJwk = stored.publicJwk;
+      this._keyVersion = stored.keyVersion || 1;
+      const prev = await this.getSecure('e2eKeypair_prev_' + uid);
+      if (prev && prev.privateJwk && prev.publicJwk) {
+        try {
+          this._prevPrivateKey = await crypto.subtle.importKey(
+            'jwk', prev.privateJwk,
+            { name: 'ECDH', namedCurve: 'P-256' },
+            false, ['deriveKey', 'deriveBits']
+          );
+          this._prevPublicKeyJwk = prev.publicJwk;
+        } catch (_) {}
+      }
     } else {
       const kp = await this.generateKeyPair();
       if (!kp) return;
       this._e2ePrivateKey = kp.privateKey;
       this._e2ePublicKeyJwk = kp.publicKeyJwk;
+      this._keyVersion = 1;
       await this.storeSecure('e2eKeypair_' + uid, {
         publicJwk: kp.publicKeyJwk,
         privateJwk: kp.privateKey ? await crypto.subtle.exportKey('jwk', kp.privateKey) : null,
+        keyVersion: 1,
       });
     }
+  },
+
+  async rotateE2EKeys() {
+    const user = window.currentUser || App?.currentUser;
+    if (!user) return false;
+    const uid = user.uid;
+    const lastRotation = await this.getSecure('keyRotation_' + uid);
+    if (lastRotation && (Date.now() - lastRotation) < this._KEY_ROTATION_INTERVAL) return false;
+    await this._ensureE2EKeys();
+    if (!this._e2ePrivateKey || !this._e2ePublicKeyJwk) return false;
+    try {
+      const currentPrivateJwk = await crypto.subtle.exportKey('jwk', this._e2ePrivateKey);
+      await this.storeSecure('e2eKeypair_prev_' + uid, {
+        publicJwk: this._e2ePublicKeyJwk,
+        privateJwk: currentPrivateJwk,
+      });
+      this._prevPrivateKey = this._e2ePrivateKey;
+      this._prevPublicKeyJwk = this._e2ePublicKeyJwk;
+    } catch (_) { return false; }
+    const kp = await this.generateKeyPair();
+    if (!kp) return false;
+    this._e2ePrivateKey = kp.privateKey;
+    this._e2ePublicKeyJwk = kp.publicKeyJwk;
+    this._keyVersion++;
+    await this.storeSecure('e2eKeypair_' + uid, {
+      publicJwk: kp.publicKeyJwk,
+      privateJwk: kp.privateKey ? await crypto.subtle.exportKey('jwk', kp.privateKey) : null,
+      keyVersion: this._keyVersion,
+    });
+    await this.publishPublicKey();
+    await this.storeSecure('keyRotation_' + uid, Date.now());
+    this._keyCache.clear();
+    this._roomKeyCache.clear();
+    if (window.__DEBUG__) console.log('[Security] E2E keys rotated to version', this._keyVersion);
+    return true;
+  },
+
+  async decryptMessageWithFallback(ciphertext, iv, peerUid) {
+    let result = await this.decryptMessage(ciphertext, iv, peerUid);
+    if (!result || !result.error) return result;
+    if (this._prevPrivateKey) {
+      try {
+        const theirPubJwk = await this.getPeerPublicKey(peerUid);
+        if (!theirPubJwk) return result;
+        const sharedKey = await this.deriveSharedKey(this._prevPrivateKey, theirPubJwk);
+        if (!sharedKey) return result;
+        return await this.decrypt(ciphertext, iv, sharedKey);
+      } catch (_) {}
+    }
+    return result;
+  },
+
+  _startKeyRotation() {
+    if (this._keyRotationTimer) return;
+    this._keyRotationTimer = setInterval(async () => {
+      try { await this.rotateE2EKeys(); } catch (_) {}
+    }, 60 * 60 * 1000);
   },
 
   async publishPublicKey() {
@@ -155,7 +233,7 @@ const Security = {
     if (!user) return;
     const db = firebase.firestore();
     await db.collection('userPublicKeys').doc(user.uid).set(
-      { publicKey: this._e2ePublicKeyJwk, publicKeyUpdatedAt: Date.now() },
+      { publicKey: this._e2ePublicKeyJwk, publicKeyUpdatedAt: Date.now(), keyVersion: this._keyVersion },
       { merge: true }
     );
   },
@@ -411,6 +489,7 @@ const Security = {
 
   destroy() {
     if (this._tokenRefreshTimer) { clearInterval(this._tokenRefreshTimer); this._tokenRefreshTimer = null; }
+    if (this._keyRotationTimer) { clearInterval(this._keyRotationTimer); this._keyRotationTimer = null; }
     this._keyCache.clear();
     this.clearSecure();
   },

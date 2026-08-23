@@ -460,7 +460,9 @@
     if (window.App) { window.App.currentChat = chatData; window.App.currentChatType = chatType; }
 
     // Update header UI
+    if (window.E2E) E2E.removeLockBanner();
     _updateChatHeader(chatData);
+    if (window.E2E && E2E.supports(chatType)) E2E.showLockBanner(chatId, chatType);
 
     // Show chat area, hide welcome screen
     const chatArea = document.getElementById('chat-area');

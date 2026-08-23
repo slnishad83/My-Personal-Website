@@ -8,7 +8,7 @@ echo [2/3] Syncing Capacitor...
 call node node_modules\@capacitor\cli\bin\capacitor sync android
 call node node_modules\@capacitor\cli\bin\capacitor sync ios
 echo [3/3] Deploying to Firebase...
-call npx.cmd firebase deploy --only hosting,firestore:rules,firestore:indexes
+call "%AppData%\npm\firebase.cmd" deploy --only hosting,firestore:rules,firestore:indexes
 echo.
 echo === DONE ===
 pause

@@ -71,6 +71,15 @@ function _authStateChanged(user) {
           await Security.init();
           try { await Security.publishPublicKey(); } catch (e) { if (window.__DEBUG__) console.warn('[Bootstrap] publishPublicKey failed:', e); }
         }
+        if (window.SignalProtocol) {
+          try { await SignalProtocol.init(); await SignalProtocol.publishKeys(user.uid); } catch (e) { if (window.__DEBUG__) console.warn('[Bootstrap] SignalProtocol init failed:', e); }
+        }
+        if (window.ScreenLock) {
+          try { await ScreenLock.init(); } catch (e) { if (window.__DEBUG__) console.warn('[Bootstrap] ScreenLock init failed:', e); }
+        }
+        if (window.DisappearingMessages) {
+          try { await DisappearingMessages.startAutoCleanup(() => []); } catch (e) { if (window.__DEBUG__) console.warn('[Bootstrap] DisappearingMessages init failed:', e); }
+        }
         if (window.ShouldShowOnboarding && ShouldShowOnboarding()) {
           setTimeout(function() { if (window.ShowOnboarding) ShowOnboarding(); }, 1500);
         }
@@ -83,6 +92,9 @@ function _authStateChanged(user) {
     if (window.Presence) Presence.destroy();
     if (window.MultiDevice) MultiDevice.destroy();
     if (window.Security) Security.destroy();
+    if (window.SignalProtocol) try { SignalProtocol.reset(); } catch (_) {}
+    if (window.DisappearingMessages) try { DisappearingMessages.stopAutoCleanup(); } catch (_) {}
+    if (window.ScreenLock) try { ScreenLock.stopAutoLock(); } catch (_) {}
     var currentPath = location.pathname.toLowerCase();
     if (!currentPath.includes('login')) {
       setTimeout(function() {
