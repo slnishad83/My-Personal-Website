@@ -4,7 +4,7 @@ const EMAIL = process.env.MUSIC_TEST_EMAIL || '';
 const PASSWORD = process.env.MUSIC_TEST_PASSWORD || '';
 
 async function waitForApp(page: Page) {
-  await page.goto('/index.html', { waitUntil: 'domcontentloaded', timeout: 60000 });
+  await page.goto('/works/chat/index.html', { waitUntil: 'domcontentloaded', timeout: 60000 });
   await page.waitForFunction(() => {
     return typeof firebase !== 'undefined' && firebase.auth && firebase.auth();
   }, { timeout: 30000 });

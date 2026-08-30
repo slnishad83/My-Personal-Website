@@ -15,7 +15,7 @@ setup('login and save auth state', async ({ page }) => {
   fs.mkdirSync(AUTH_DIR, { recursive: true });
 
   // Navigate to login page to load Firebase SDK
-  await page.goto('/login.html', { waitUntil: 'networkidle', timeout: 60000 });
+  await page.goto('/works/chat/login.html', { waitUntil: 'networkidle', timeout: 60000 });
 
   // Wait for Firebase to initialize
   await page.waitForFunction(() => {
@@ -37,7 +37,7 @@ setup('login and save auth state', async ({ page }) => {
   }
 
   // Navigate to main app — use 'load' instead of 'networkidle' (chat app has persistent connections)
-  await page.goto('/index.html', { waitUntil: 'load', timeout: 60000 });
+  await page.goto('/works/chat/index.html', { waitUntil: 'load', timeout: 60000 });
 
   // Wait for the app to initialize
   await page.waitForTimeout(5000);

@@ -32,7 +32,7 @@ export default defineConfig({
     },
     {
       name: 'whatsapp-core',
-      testMatch: /whatsapp-core\.spec\.ts/,
+      testMatch: /whatsapp-core|whatsapp-hosting\.spec\.ts/,
       use: {
         ...devices['Chromium'],
         storageState: 'tests/e2e/.auth/user.json',
