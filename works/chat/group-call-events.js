@@ -56,6 +56,8 @@
     try {
       callRef = await GC._firestore().collection('groupCalls').add({
         initiatorId: GC._myUid,
+        initiatorName: myDetails.name,
+        initiatorAvatar: myDetails.avatar,
         type: type,
         status: 'ringing',
         participantIds: allParticipantIds,
@@ -299,15 +301,18 @@
 
       if (typeof window.recordCallSyncEvent === 'function') {
         var _gm = GC._groupCallMeta || {};
+        var _joinTime = GC._participantJoinTime.get(myUid);
+        var _durMs = _joinTime ? Math.max(0, Date.now() - _joinTime) : null;
         window.recordCallSyncEvent({
           callId: callId,
           direction: wasInitiator ? 'outgoing' : 'incoming',
           status: 'ended',
           callType: GC._currentCallType,
           fromUserId: myUid,
+          fromUserName: (GC._getMyDetails() || {}).name || 'User',
           toUserId: '',
-          participantIds: remainingParticipants.map(function (p) { return p.uid; }),
-          durationMs: null,
+          participantIds: [myUid],
+          durationMs: _durMs,
           groupId: _gm.groupId || '',
           groupName: _gm.groupName || '',
           groupAvatar: _gm.groupAvatar || '',
@@ -343,19 +348,50 @@
     GC._hideGroupCallInvite(callId);
     var myUid = GC._uid();
     if (GC._firestore() && callId && myUid) {
-      GC._setInviteMirrorStatus(callId, myUid, 'declined');
-      GC._firestore().collection('groupCalls').doc(callId).collection('invites')
-        .where('toUserId', '==', myUid)
-        .get().then(function (snap) {
-          snap.forEach(function (doc) {
-            var d = doc.data();
-            if (d && d.status === 'pending') {
-              doc.ref.update({ status: 'declined' }).catch(function () {});
-            }
+      GC._firestore().collection('groupCalls').doc(callId).get().then(function (doc) {
+        var d = doc.exists ? doc.data() : null;
+        if (d && typeof window.recordCallSyncEvent === 'function') {
+          window.recordCallSyncEvent({
+            callId: callId,
+            direction: 'incoming',
+            status: 'declined',
+            callType: d.type || 'voice',
+            fromUserId: d.initiatorId || d.fromUserId || '',
+            fromUserName: d.initiatorName || '',
+            toUserId: myUid,
+            toUserName: (GC._getMyDetails() || {}).name || 'User',
+            participantIds: (d.participantIds || []).concat([myUid]),
+            groupId: d.groupId || '',
+            groupName: d.groupName || '',
+            groupAvatar: d.groupAvatar || '',
+            isGroupCall: true,
+            metadata: { groupCall: true, declined: true, groupId: d.groupId || '', groupName: d.groupName || '', groupAvatar: d.groupAvatar || '' }
           });
-        }).catch(function () {});
+        }
+        return GC._firestore().collection('groupCalls').doc(callId).collection('invites')
+          .where('toUserId', '==', myUid)
+          .get().then(function (snap) {
+            snap.forEach(function (doc) {
+              var d = doc.data();
+              if (d && d.status === 'pending') {
+                doc.ref.update({ status: 'declined' }).catch(function () {});
+              }
+            });
+          }).catch(function () {});
+      }).catch(function () {});
+      GC._setInviteMirrorStatus(callId, myUid, 'declined');
     }
   };
+  window.addGroupCallParticipant = function (targetUid, targetName) {
+    if (!GC._isInGroupCall() || !GC._firestore() || !GC._currentCallId || !targetUid) return;
+    if (targetUid === GC._myUid) return;
+    var existingIds = (window.activeGroupCallParticipants || []).map(function (p) { return p.uid; });
+    if (existingIds.indexOf(targetUid) !== -1) { GC._toast('Already in the call', 'info'); return; }
+    if (!GC._canAddParticipant()) { GC._toast('Call is full (' + GC._getMaxParticipants() + ' participants)', 'error'); return; }
+    GC._sendInvite(GC._currentCallId, targetUid, GC._currentCallType || 'voice');
+    GC._toast('Invite sent to ' + (targetName || 'participant'), 'info');
+  };
+
   window._handleAcceptedGroupCall = function (data) {
     if (data && data.callId) {
       joinGroupCall(data.callId);

@@ -22,8 +22,8 @@ node works/chat/sync-www.js
 Write-Host "`n3. Syncing Mobile Apps (Android & iOS)..." -ForegroundColor Yellow
 Push-Location works/chat
 try {
-    npx cap sync android
-    npx cap sync ios
+    node node_modules/@capacitor/cli/bin/capacitor sync android
+    node node_modules/@capacitor/cli/bin/capacitor sync ios
 } finally {
     Pop-Location
 }
@@ -57,10 +57,10 @@ if ($status) {
 
 # 6. Deploy to Firebase
 Write-Host "`n6. Deploying to Firebase Hosting & Rules..." -ForegroundColor Yellow
-firebase deploy --only hosting,firestore:rules,storage
+node works/chat/node_modules/firebase-tools/lib/bin/firebase.js deploy --only hosting,firestore:rules,storage
 
 Write-Host "`n7. Deploying Cloud Functions..." -ForegroundColor Yellow
-firebase deploy --only functions
+node works/chat/node_modules/firebase-tools/lib/bin/firebase.js deploy --only functions
 
 Write-Host "`n===================================================" -ForegroundColor Green
 Write-Host "  ALL PLATFORMS SUCCESSFULLY UPDATED AND DEPLOYED!" -ForegroundColor Green

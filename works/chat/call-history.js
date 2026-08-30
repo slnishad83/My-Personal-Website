@@ -166,15 +166,24 @@
   }
 
   function _isMissedCall(call) {
-    if (_isGroupCall(call)) {
-      return call.status === 'missed' || call.status === 'rejected' || call.status === 'cancelled';
+    if (!call) return false;
+    if (call.status === 'declined') return false;
+    if (call.status === 'missed' || call.status === 'no-answer' || call.status === 'busy') {
+      return true;
     }
-    return call.status === 'missed' || call.status === 'rejected' || call.status === 'cancelled';
+    if (call.status === 'cancelled' || call.status === 'rejected') {
+      return _getDirection(call) === 'incoming';
+    }
+    return false;
   }
 
   function _getStatusLabel(call, info, direction, missed) {
     if (missed) return 'Missed';
-    if (info.isGroup) return direction === 'incoming' ? 'Incoming group call' : 'Outgoing group call';
+    var status = call && call.status ? call.status : '';
+    if (status === 'declined' || status === 'rejected') return 'Declined';
+    if (status === 'cancelled') return 'Cancelled';
+    if (status === 'busy') return 'Busy';
+    if (info && info.isGroup) return direction === 'incoming' ? 'Incoming group call' : 'Outgoing group call';
     return direction === 'incoming' ? 'Incoming' : 'Outgoing';
   }
 
@@ -514,7 +523,7 @@
     var typeLabel = ((call.callType === 'video' ? 'Video' : 'Voice')) + ' Call';
     if (info.isGroup) typeLabel = 'Group ' + typeLabel;
     var dirLabel = direction === 'incoming' ? 'Incoming' : 'Outgoing';
-    var statusLabel = missed ? 'Missed' : (call.status === 'ended' ? 'Ended' : (call.status || 'Ended'));
+    var statusLabel = missed ? 'Missed' : (call.status === 'ended' ? 'Ended' : _getStatusLabel(call, info, direction, false));
     var statusColor = missed ? 'text-red-500' : 'text-green-500';
     var participantCount = info.isGroup ? (info.participants || []).length : 0;
 

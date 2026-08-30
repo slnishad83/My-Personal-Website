@@ -37,6 +37,17 @@ try {
   const output = execSync('node node_modules/vite/bin/vite.js build', { cwd: ROOT, stdio: 'pipe' });
   console.log(output.toString());
   console.log('Vite build complete.');
+
+// Copy standalone scripts (loaded via plain <script> tags, not bundled by Vite)
+// into dist so they deploy with the hosting payload.
+const LEGACY_SCRIPTS = ['monitoring.js', 'dnd-quiet-hours.js'];
+for (const legacy of LEGACY_SCRIPTS) {
+  const src = path.join(ROOT, legacy);
+  if (fs.existsSync(src)) {
+    fs.copyFileSync(src, path.join(DIST, legacy));
+    console.log('  Copied ' + legacy + ' -> dist/');
+  }
+}
 } catch (e) {
   console.error('Vite build failed:', e.message);
   process.exit(1);

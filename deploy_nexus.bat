@@ -13,7 +13,7 @@ echo 3. Pushing changes to GitHub...
 git push
 echo.
 echo 4. Deploying to Firebase (Hosting Only)...
-firebase deploy --only hosting
+node works\chat\node_modules\firebase-tools\lib\bin\firebase.js deploy --only hosting
 echo.
 echo ===================================================
 echo   Deployment completed! Press any key to exit.

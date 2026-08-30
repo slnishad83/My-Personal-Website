@@ -111,9 +111,10 @@
             </div>`;
   }
 
-  function buildChatItem(chat) {
+  function buildChatItem(chat, isPinned) {
     const isActive = chat.id === State.activeId;
     const name = esc(chat.name || chat.displayName || 'Chat');
+    const pinIcon = isPinned ? '<span title="Pinned chat" style="font-size:12px;opacity:0.6;margin-left:4px;">📌</span>' : '';
     const preview = esc(chat.lastMessage || chat.preview || '');
     const time = timeAgo(chat.lastMessageAt || chat.updatedAt);
     const unread = chat.unreadCount || 0;
@@ -145,7 +146,7 @@
       <div style="flex:1;min-width:0;">
         <div style="display:flex;justify-content:space-between;align-items:baseline;gap:4px;">
           <span style="font-weight:600;font-size:14px;color:var(--on-surface,#1c1c1e);
-            white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:180px;">${name}</span>
+            white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:180px;">${name}${pinIcon}</span>
           <span style="font-size:11px;color:var(--on-surface-variant,#8696a0);flex-shrink:0;">${time}</span>
         </div>
         <div style="display:flex;justify-content:space-between;align-items:center;gap:4px;margin-top:2px;">
@@ -198,14 +199,16 @@
     }
     showEmpty(false);
 
-    // Sort by lastMessageAt desc
+    // Sort by lastMessageAt desc, with pinned chats first (WhatsApp-style)
     const sorted = [...State.chats].sort((a, b) => {
       const ta = (a.lastMessageAt && a.lastMessageAt.toMillis) ? a.lastMessageAt.toMillis() : (a.lastMessageAt || 0);
       const tb = (b.lastMessageAt && b.lastMessageAt.toMillis) ? b.lastMessageAt.toMillis() : (b.lastMessageAt || 0);
+      if (_isChatPinned(a.id) !== _isChatPinned(b.id)) return _isChatPinned(a.id) ? -1 : 1;
       return tb - ta;
     });
 
     const frag = document.createDocumentFragment();
+    const isArchived = (id) => window.isChatArchived && window.isChatArchived(id);
 
     // Myself (Saved Messages) chat pinned at the top of the list
     const myself = getUID() ? window.getSavedMessagesItem() : null;
@@ -213,9 +216,12 @@
 
     sorted.forEach(chat => {
       if (myself && chat.id === myself.id) return;
-      frag.appendChild(buildChatItem(chat));
+      if (isArchived(chat.id)) return;
+      frag.appendChild(buildChatItem(chat, _isChatPinned(chat.id)));
     });
     container.appendChild(frag);
+
+    if (window._te_renderArchives) window._te_renderArchives();
   }
 
   /* ΓöÇΓöÇ Firestore subscriptions ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ */
@@ -223,6 +229,27 @@
   let _chatsData = [];
   let _groupsData = [];
   let _broadcastsData = [];
+  let _pinnedMap = {};
+  let _pinnedChatIds = [];
+
+  const _isChatPinned = (chatId) => !!chatId && (!!_pinnedMap[chatId] || (_pinnedChatIds && _pinnedChatIds.indexOf(chatId) !== -1));
+
+  function subscribeToPins() {
+    const db = getDB();
+    const uid = getUID();
+    if (!db || !uid) return;
+    db.collection('userPins').doc(uid).onSnapshot(snap => {
+      _pinnedMap = snap.exists ? (snap.data() || {}) : {};
+      renderChatList();
+    }, () => {});
+    db.collection('users').doc(uid).onSnapshot(snap => {
+      if (!snap.exists) return;
+      const d = snap.data();
+      _pinnedChatIds = Array.isArray(d.pinnedChatIds) ? d.pinnedChatIds : [];
+      window.pinnedChatIds = _pinnedChatIds;
+      renderChatList();
+    }, () => {});
+  }
 
   // Only registered + verified users ever appear in the chat list.
   // Unknown/unverified peers are filtered out so no stale or fake contacts surface.
@@ -1449,6 +1476,7 @@
   window.subscribeToChats = subscribeToChats;
   window.subscribeToGroups = subscribeToGroups;
   window.subscribeToBroadcasts = subscribeToBroadcasts;
+  window.subscribeToPins = subscribeToPins;
   window.openChat = openChat;
   window.renderMessages = renderMessages;
   window.sendMessage = sendMessage;
@@ -1509,6 +1537,7 @@
       subscribeToChats();
       subscribeToGroups();
       subscribeToBroadcasts();
+      subscribeToPins();
       if (_onlineTimer) clearInterval(_onlineTimer);
       _onlineTimer = setInterval(_refreshOnlineUsers, 20000);
     }

@@ -9,6 +9,8 @@
 
   var _uid = function() { return App && App.uid ? App.uid() : (window.currentUser ? window.currentUser.uid : null); };
 
+  var _esc = function(s) { return App && App.escHtml ? App.escHtml(s) : (s ? String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;') : ''); };
+
   function _docRef() {
     const uid = _uid();
     if (!uid) return null;
@@ -34,8 +36,9 @@
       const snap = await ref.get();
       if (snap.exists) {
         const data = snap.data();
-        if (Array.isArray(data.archivedChats)) {
-          _archivedChatIds = new Set(data.archivedChatIds || data.archivedChats);
+        const arr = Array.isArray(data.archivedChatIds) ? data.archivedChatIds : (Array.isArray(data.archivedChats) ? data.archivedChats : []);
+        if (arr.length) {
+          _archivedChatIds = new Set(arr);
         }
       }
     } catch (e) {
@@ -131,6 +134,41 @@
     document.head.appendChild(style);
   }
 
+  function _chatStateChats() {
+    if (typeof window.getCurrentChatState !== 'function') return [];
+    const s = window.getCurrentChatState();
+    return (s && s.chats) || [];
+  }
+
+  function _chatRow(chat) {
+    const uid = _uid();
+    const name = chat.name || chat.displayName || (chat.type === 'direct' && chat.otherUserId ? chat.otherUserId : 'Chat');
+    const photo = chat.photoURL || chat.avatar || '';
+    const type = chat.type || 'direct';
+    const initials = (name || '?')[0].toUpperCase();
+    const avatar = photo
+      ? '<img src="' + (window.App && App.escHtml ? App.escHtml(photo) : String(photo)) + '" class="w-11 h-11 rounded-full object-cover flex-shrink-0" alt="" loading="lazy" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'flex\'"><div class="w-11 h-11 rounded-full bg-primary/15 text-primary flex items-center justify-center font-bold text-sm flex-shrink-0" style="display:none">' + _esc(initials) + '</div>'
+      : '<div class="w-11 h-11 rounded-full bg-primary/15 text-primary flex items-center justify-center font-bold text-sm flex-shrink-0">' + _esc(initials) + '</div>';
+    const row = document.createElement('div');
+    row.setAttribute('data-chat-id', chat.id);
+    row.setAttribute('data-chat-type', type);
+    row.className = 'archive-chat-row';
+    row.style.cssText = 'display:flex;align-items:center;gap:12px;padding:10px 16px;cursor:pointer;border-radius:12px;transition:background 0.15s;user-select:none;';
+    row.innerHTML = avatar +
+      '<div style="flex:1;min-width:0;">' +
+      '<div style="font-weight:600;font-size:14px;color:var(--on-surface,#e9edef);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + _esc(name) + '</div>' +
+      '<div style="font-size:12px;color:var(--on-surface-variant,#8696a0);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + _esc(chat.lastMessage || '') + '</div>' +
+      '</div>';
+    row.addEventListener('click', function () {
+      if (chat.id === uid && typeof window.startSavedMessages === 'function') return window.startSavedMessages();
+      if (typeof window.openChat === 'function') window.openChat(chat.id, type);
+      else if (typeof window.selectChat === 'function') window.selectChat(chat.id, type);
+    });
+    row.addEventListener('mouseenter', function () { row.style.background = 'var(--surface-container,#2a3942)'; });
+    row.addEventListener('mouseleave', function () { row.style.background = 'transparent'; });
+    return row;
+  }
+
   function _renderArchiveSection() {
     const chatList = document.getElementById('chat-list');
     if (!chatList) return;
@@ -145,6 +183,7 @@
 
     const wrapper = document.createElement('div');
     wrapper.id = 'archive-section-wrapper';
+    wrapper.style.flexShrink = '0';
 
     const header = document.createElement('div');
     header.className = 'archive-section-header';
@@ -173,6 +212,21 @@
     list.className = 'archive-section-list' + (_archivedSectionExpanded ? '' : ' collapsed');
     list.style.maxHeight = _archivedSectionExpanded ? '2000px' : '0';
 
+    const stateChats = _chatStateChats();
+    let rowsRendered = 0;
+    Array.from(_archivedChatIds).forEach(function (cid) {
+      const chat = stateChats.find(function (c) { return c.id === cid; });
+      if (!chat) return;
+      list.appendChild(_chatRow(chat));
+      rowsRendered++;
+    });
+    if (rowsRendered === 0) {
+      const empty = document.createElement('div');
+      empty.style.cssText = 'padding:8px 16px;font-size:12px;color:var(--on-surface-variant,#8696a0);';
+      empty.textContent = 'Archived chats not in your list yet';
+      list.appendChild(empty);
+    }
+
     header.addEventListener('click', function() {
       _archivedSectionExpanded = !_archivedSectionExpanded;
       chevron.classList.toggle('collapsed', !_archivedSectionExpanded);
@@ -193,6 +247,8 @@
 
     _updateBadge();
   }
+
+  window._te_renderArchives = _renderArchiveSection;
 
   window.archiveChat = function(chatId) {
     if (!chatId) {
@@ -237,13 +293,21 @@
     _injectStyles();
     _loadArchived();
 
+    document.addEventListener('nsl:chats-loaded', function () {
+      _renderArchiveSection();
+    });
+    document.addEventListener('nsl:chats-list-rendered', function () {
+      _renderArchiveSection();
+    });
+
     if (typeof MutationObserver !== 'undefined') {
       const observer = new MutationObserver(function(mutations) {
         for (const m of mutations) {
           for (const node of m.addedNodes) {
             if (node.nodeType === 1) {
-              const items = node.matches && node.matches('.chat-list-item') ? [node] : (node.querySelectorAll ? Array.from(node.querySelectorAll('.chat-list-item')) : []);
+              const items = node.matches && node.matches('[data-chat-id]') ? [node] : (node.querySelectorAll ? Array.from(node.querySelectorAll('[data-chat-id]')) : []);
               items.forEach(function(el) {
+                if (el.closest && el.closest('#archive-section-wrapper')) return;
                 const cid = el.dataset && el.dataset.chatId;
                 if (cid && _archivedChatIds.has(cid)) {
                   el.style.display = 'none';

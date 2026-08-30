@@ -176,6 +176,8 @@
     // Prefer the richer call-history enhancer when it is loaded.
     // It builds the WhatsApp-style header (search + All/Missed chips) and list.
     if (typeof window.loadCallHistory === 'function') {
+      // Ensure no stale fallback listener overwrites the richer call-history UI.
+      if (_callsUnsub) { _callsUnsub(); _callsUnsub = null; }
       window.loadCallHistory();
       return;
     }

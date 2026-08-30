@@ -511,7 +511,11 @@
     inviteBtn.className = 'w-14 h-14 min-w-[48px] min-h-[48px] bg-white/10 rounded-full flex items-center justify-center hover:bg-white/20 transition-all text-white';
     inviteBtn.setAttribute('aria-label', 'Invite participant');
     inviteBtn.innerHTML = '<span class="material-symbols-outlined">person_add</span>';
-    inviteBtn.onclick = function () { if (typeof openCallPicker === 'function') openCallPicker(); };
+    inviteBtn.onclick = function () {
+      var CCr = window._CC;
+      if (CCr) CCr._addParticipantMode = true;
+      if (typeof openCallPicker === 'function') openCallPicker();
+    };
     var endBtn = controls.querySelector('[data-action="endCall"]');
     if (endBtn) controls.insertBefore(inviteBtn, endBtn);
     else controls.appendChild(inviteBtn);

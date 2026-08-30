@@ -289,7 +289,7 @@
     if (!CC.uid() || !CC.db()) { CC.toast('Not signed in', 'error'); return; }
     var c = CC.chat();
     if (c && c.type === 'group') { startGroupCall('voice'); return; }
-    if (c && c.uid) { await initiateOutgoingCall('voice', c); return; }
+    if (c && (c.uid || c.otherUserId)) { await initiateOutgoingCall('voice', c); return; }
     CC.openCallPicker();
   }
 
@@ -300,13 +300,13 @@
     if (!CC.uid() || !CC.db()) { CC.toast('Not signed in', 'error'); return; }
     var c = CC.chat();
     if (c && c.type === 'group') { startGroupCall('video'); return; }
-    if (c && c.uid) { await initiateOutgoingCall('video', c); return; }
+    if (c && (c.uid || c.otherUserId)) { await initiateOutgoingCall('video', c); return; }
     CC.openCallPicker();
   }
 
   async function initiateOutgoingCall(type, targetChat) {
     var myUid = CC.uid();
-    var otherUid = targetChat.uid;
+    var otherUid = (targetChat && (targetChat.uid || targetChat.otherUserId)) || '';
     if (!otherUid) return;
 
     if (typeof PermissionsManager !== 'undefined') {
@@ -471,9 +471,9 @@
     var remoteAvatar = CC._outgoingAvatar || '';
     var savedCallId = CC.callId;
     var savedRemoteUid = (CC.callMeta && CC.callMeta.fromUserId) || CC.incomingData?.fromUserId || '';
-    var logStatus = finalStatus === 'missed' || finalStatus === 'rejected' || finalStatus === 'cancelled' || finalStatus === 'busy'
-      ? 'missed'
-      : (wasActive ? 'ended' : 'cancelled');
+    var logStatus = wasActive
+      ? 'ended'
+      : (endDirection === 'incoming' ? 'missed' : 'cancelled');
     var logMeta = CC.callMeta || {};
 
     CC.txt('call-status', dur > 0 ? 'Call ended' : 'No answer');

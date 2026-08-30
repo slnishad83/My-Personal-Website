@@ -515,6 +515,9 @@
               GC._showGroupCallInvite(invite.callId, invite);
             } else {
               GC._hideGroupCallInvite(invite.callId);
+              if (invite.status === 'cancelled') {
+                _recordMissedGroupCallForInvitee(invite);
+              }
             }
           }
         });
@@ -525,6 +528,39 @@
 
   function stopListeningForInvites() {
     if (GC._unsubInviteFeed) { try { GC._unsubInviteFeed(); } catch (_) {} GC._unsubInviteFeed = null; }
+  }
+
+  var _missedGroupCallsRecorded = {};
+  function _recordMissedGroupCallForInvitee(invite) {
+    var myUid = _uid();
+    if (!myUid || !invite || !invite.callId) return;
+    if (_missedGroupCallsRecorded[invite.callId]) return;
+    _firestore().collection('groupCalls').doc(invite.callId).get().then(function (doc) {
+      if (!doc.exists) return;
+      var d = doc.data();
+      if (!d) return;
+      var pids = d.participantIds || [];
+      if (pids.indexOf(myUid) !== -1) return;
+      if (d.status === 'declined') return;
+      _missedGroupCallsRecorded[invite.callId] = true;
+      if (typeof window.recordCallSyncEvent === 'function') {
+        window.recordCallSyncEvent({
+          callId: invite.callId,
+          direction: 'incoming',
+          status: 'missed',
+          callType: invite.callType || d.type || 'voice',
+          fromUserId: d.initiatorId || invite.fromUserId || '',
+          fromUserName: d.initiatorName || invite.fromUserName || '',
+          toUserId: myUid,
+          participantIds: pids.concat([myUid]),
+          groupId: d.groupId || invite.groupId || '',
+          groupName: d.groupName || invite.groupName || '',
+          groupAvatar: d.groupAvatar || invite.groupAvatar || '',
+          isGroupCall: true,
+          metadata: { groupCall: true, missed: true, groupId: d.groupId || '', groupName: d.groupName || '', groupAvatar: d.groupAvatar || '' }
+        });
+      }
+    }).catch(function () {});
   }
 
   function refreshInviteFeed() {

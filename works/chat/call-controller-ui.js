@@ -233,6 +233,12 @@
       CC.closeModalFn('call-picker-overlay');
       var sub = CC.$('call-picker-subtitle');
       if (sub) sub.classList.add('hidden');
+      if (window._GC && typeof window._GC._isInGroupCall === 'function' && window._GC._isInGroupCall()) {
+        if (typeof window.addGroupCallParticipant === 'function') {
+          window.addGroupCallParticipant(targetUid, targetName);
+        }
+        return;
+      }
       if (typeof CC.convertCallToGroup === 'function') {
         CC.convertCallToGroup(targetUid, targetName);
       }

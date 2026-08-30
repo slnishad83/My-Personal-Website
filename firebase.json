@@ -86,10 +86,6 @@
       {
         "source": "/works/chat/",
         "destination": "/works/chat/dist/index.html"
-      },
-      {
-        "source": "/works/chat/**",
-        "destination": "/works/chat/dist/index.html"
       }
     ],
     "headers": [

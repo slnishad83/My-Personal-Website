@@ -42,8 +42,8 @@
     var _o = window.startSavedMessages;
     window.startSavedMessages = async function () {
       await _o();
-      var nameEl   = document.getElementById('currentChatName');
-      var statusEl = document.getElementById('chatStatus');
+      var nameEl   = document.getElementById('header-name') || document.getElementById('currentChatName');
+      var statusEl = document.getElementById('header-status') || document.getElementById('chatStatus');
       if (nameEl)   nameEl.textContent   = 'Myself';
       if (statusEl) statusEl.textContent = 'Your personal notes, files & reminders';
       if (typeof window.setChatHeaderAvatar === 'function') window.setChatHeaderAvatar('&#128100;');
@@ -62,7 +62,13 @@
       if (!window.currentUser || !chatId) return;
       var db      = window.db;
       var userRef = db.collection('users').doc(window.currentUser.uid);
-      var ids     = window.pinnedChatIds || [];
+      try {
+        var docSnap = await userRef.get();
+        var ids = (docSnap.exists && docSnap.data() && Array.isArray(docSnap.data().pinnedChatIds)) ? docSnap.data().pinnedChatIds.slice() : [];
+      } catch (e) {
+        ids = (window.pinnedChatIds || []).slice();
+      }
+      window.pinnedChatIds = ids;
       var pinned  = ids.includes(chatId);
       try {
         if (pinned) {
