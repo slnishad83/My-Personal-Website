@@ -30,6 +30,14 @@ export default defineConfig({
       testMatch: /app\.spec\.ts/,
       use: { ...devices['Chromium'] },
     },
+    {
+      name: 'whatsapp-core',
+      testMatch: /whatsapp-core\.spec\.ts/,
+      use: {
+        ...devices['Chromium'],
+        storageState: 'tests/e2e/.auth/user.json',
+      },
+    },
   ],
   reporter: 'list',
 });
