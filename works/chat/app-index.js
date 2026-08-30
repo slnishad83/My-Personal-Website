@@ -266,6 +266,7 @@ const _lazyModules = [
   () => import('./playlist-sync.js'),
   () => import('./calculator.js'),
   () => import('./jsQR.js'),
+  () => import('./qr-scanner.js'),
   () => import('./cloud-drive.js'),
   () => import('./collaborative-whiteboard.js'),
   () => import('./image-annotation.js'),

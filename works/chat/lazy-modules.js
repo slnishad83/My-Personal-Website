@@ -5,7 +5,7 @@
   var _loading = {};
 
   var LAZY_MODULES = {
-    'qr-scanner': ['jsQR.js'],
+    'qr-scanner': ['jsQR.js', 'qr-scanner.js'],
     'calculator': ['calculator.js'],
     'music': ['music-player.js', 'music-library.js', 'playlist-core.js', 'playlist-ui.js', 'playlist-sync.js'],
     'whiteboard': ['collaborative-whiteboard.js'],

@@ -494,6 +494,7 @@
 
     // Load messages
     renderMessages(chatId, chatType);
+    document.dispatchEvent(new CustomEvent('nsl:chat-opened', { detail: { chatId: chatId, chatType: chatType } }));
 
     return Promise.resolve();
   }
@@ -1413,6 +1414,7 @@
     if (chatArea) chatArea.style.display = 'none';
     // Re-hide skeleton only if chats already loaded
     hideSkeleton();
+    document.dispatchEvent(new CustomEvent('nsl:chat-closed'));
   }
 
   /* ΓöÇΓöÇ Global function exports ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ */

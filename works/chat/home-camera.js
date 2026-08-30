@@ -452,4 +452,37 @@
   window.captureQuickPhoto = captureQuickPhoto;
   window.captureQuickVideo = captureQuickVideo;
   window.flipHomeCamera = flipHomeCamera;
+
+  /* ── Auto visibility: show on the chats/home tab, hide when a chat opens ── */
+  var _homeTab = 'chats';
+
+  function _chatIsOpen() {
+    return !!(window.currentChat || (window.App && window.App.currentChat));
+  }
+
+  function _syncFab() {
+    if (_homeTab === 'chats' && !_chatIsOpen()) {
+      showHomeCamera();
+    } else {
+      hideHomeCamera();
+    }
+  }
+
+  function _initHomeCamera() {
+    document.addEventListener('nsl:tab-change', function (e) {
+      _homeTab = (e.detail && e.detail.tab) || 'chats';
+      _syncFab();
+    });
+    document.addEventListener('nsl:chat-opened', function () { hideHomeCamera(); });
+    document.addEventListener('nsl:chat-closed', function () { _syncFab(); });
+    setTimeout(function () {
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', _syncFab);
+      } else {
+        _syncFab();
+      }
+    }, 300);
+  }
+
+  _initHomeCamera();
 })();
