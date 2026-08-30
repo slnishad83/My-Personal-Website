@@ -635,6 +635,22 @@
     return true;
   }
 
+  function _setAllCalls(calls) {
+    var myUid = _uid();
+    var ids = [];
+    (calls || []).forEach(function (c) {
+      if (window.callPeerIdsToCheck) window.callPeerIdsToCheck(c, myUid).forEach(function (id) { if (id) ids.push(id); });
+    });
+    var apply = function () {
+      _allCalls = (calls || []).filter(function (c) {
+        return window.callIsEligible ? window.callIsEligible(c, myUid) : true;
+      });
+      _renderCallHistory();
+    };
+    if (!window.verifyUsers || !ids.length) { apply(); return; }
+    window.verifyUsers(Array.from(new Set(ids))).then(apply, apply);
+  }
+
   function _loadFromFirestore() {
     var myUid = _uid();
     if (!myUid || !_db()) return;
@@ -650,9 +666,8 @@
         var calls = snap.docs.map(function (doc) {
           return { id: doc.id, ...doc.data() };
         });
-        _allCalls = calls;
+        _setAllCalls(calls);
         _listenerActive = true;
-        _renderCallHistory();
         _setupFirestoreListener();
       }).catch(function (err) {
         if (window.__DEBUG__) console.warn('[CallHistory] Firestore load error:', err);
@@ -665,8 +680,7 @@
           }
         } catch (_) {}
         if (cached.length) {
-          _allCalls = cached;
-          _renderCallHistory();
+          _setAllCalls(cached);
         }
       });
   }
@@ -687,8 +701,7 @@
         var calls = snap.docs.map(function (doc) {
           return { id: doc.id, ...doc.data() };
         });
-        _allCalls = calls;
-        _renderCallHistory();
+        _setAllCalls(calls);
       }, function (err) {
         if (window.__DEBUG__) console.warn('[CallHistory] Listener error:', err);
       });
@@ -796,8 +809,7 @@
     document.addEventListener('tc:call-history:sync', function (e) {
       var calls = e.detail && e.detail.calls;
       if (Array.isArray(calls) && calls.length) {
-        _allCalls = calls;
-        _renderCallHistory();
+        _setAllCalls(calls);
       }
     });
 

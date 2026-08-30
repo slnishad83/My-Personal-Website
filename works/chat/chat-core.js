@@ -224,9 +224,35 @@
   let _groupsData = [];
   let _broadcastsData = [];
 
+  // Only registered + verified users ever appear in the chat list.
+  // Unknown/unverified peers are filtered out so no stale or fake contacts surface.
+  const _verifiedOk = (id, uid) => !id || id === uid || (window.isVerifiedUser && window.isVerifiedUser(id));
+  const _listPeerIds = () => {
+    const uid = getUID();
+    const ids = [];
+    _chatsData.forEach(c => { if (c.otherUserId && c.otherUserId !== uid) ids.push(c.otherUserId); });
+    _groupsData.forEach(g => (g.members || []).forEach(m => { if (m && m !== uid) ids.push(m); }));
+    _broadcastsData.forEach(b => (b.recipients || []).forEach(r => { if (r && r !== uid) ids.push(r); }));
+    return ids;
+  };
+
+  function refreshVerifiedAndRender() {
+    const ids = Array.from(new Set(_listPeerIds()));
+    if (window.verifyUsers && ids.length) {
+      window.verifyUsers(ids).then(() => mergeAndRender(), () => mergeAndRender());
+    } else {
+      mergeAndRender();
+    }
+  }
+
   function mergeAndRender() {
-    // Merge direct chats, groups and broadcast lists into one unified list
-    State.chats = [..._chatsData, ..._groupsData, ..._broadcastsData];
+    const uid = getUID();
+    // Merge direct chats, groups and broadcast lists into one unified list,
+    // keeping only conversations that reached a registered + verified user.
+    const chats = _chatsData.filter(c => _verifiedOk(c.otherUserId, uid));
+    const groups = _groupsData.filter(g => (g.members || []).every(m => _verifiedOk(m, uid)));
+    const broadcasts = _broadcastsData.filter(b => (b.recipients || []).every(r => _verifiedOk(r, uid)));
+    State.chats = [...chats, ...groups, ...broadcasts];
     renderChatList();
     // Dispatch for other modules
     document.dispatchEvent(new CustomEvent('nsl:chats-loaded', { detail: { chats: State.chats } }));
@@ -307,7 +333,7 @@
               isOnline: !!(window._onlineUsers && window._onlineUsers[otherId]),
             };
           });
-          mergeAndRender();
+          refreshVerifiedAndRender();
         }, err => {
           if (window.__DEBUG__) console.warn('[chat-core] chats subscription error:', err);
           // Try without orderBy (index might not exist)
@@ -348,7 +374,7 @@
                     isOnline: !!(window._onlineUsers && window._onlineUsers[otherId]),
                   };
                 });
-                mergeAndRender();
+                refreshVerifiedAndRender();
               }, () => {
                 hideSkeleton();
                 if (!State.chats.length && !_groupsData.length) showEmpty(true);
@@ -391,7 +417,7 @@
               description: d.description || '',
             };
           });
-          mergeAndRender();
+          refreshVerifiedAndRender();
         }, err => {
           if (window.__DEBUG__) console.warn('[chat-core] groups subscription error:', err);
           hideSkeleton();
@@ -432,7 +458,7 @@
               members: d.members || [],
             };
           });
-          mergeAndRender();
+          refreshVerifiedAndRender();
         }, err => {
           if (window.__DEBUG__) console.warn('[chat-core] broadcasts subscription error:', err);
         });

@@ -94,32 +94,59 @@
             panel.innerHTML = _emptyState('group', 'No Groups Yet', 'Create a group to message multiple people at once.');
             return;
           }
-          var frag = document.createDocumentFragment();
-          snap.docs
-            .sort(function(a, b) {
-              var tms = function(t) { return t && t.toMillis ? t.toMillis() : (t && t.seconds ? t.seconds*1000 : 0); };
-              return tms(b.data().lastMessageAt) - tms(a.data().lastMessageAt);
-            })
-            .forEach(function(doc) {
-              var d = doc.data();
-              frag.appendChild(_buildListItem({
-                id: doc.id, type: 'group',
-                name: d.name || 'Group',
-                photo: d.photoURL || d.avatar || '',
-                preview: d.lastMessage || d.lastMessageText || (d.description ? d.description.substring(0,40) : ''),
-                time: d.lastMessageAt || d.updatedAt,
-                unread: (d.unreadCounts && d.unreadCounts[uid]) || 0,
-                memberCount: (d.memberIds || d.members || []).length,
-              }));
-            });
-          panel.innerHTML = '';
-          panel.appendChild(frag);
+          _deliverGroups(panel, snap.docs, uid);
         }, function() {
           panel.innerHTML = _emptyState('group', 'Could not load groups', 'Check your connection and try again.');
         });
     } catch(e) {
       panel.innerHTML = _emptyState('group', 'Could not load groups', 'Check your connection and try again.');
     }
+  }
+
+  // Only registered + verified members may appear in a group.
+  function _groupMemberIds(docs, uid) {
+    var ids = [];
+    docs.forEach(function(doc) {
+      var d = doc.data ? (doc.data() || {}) : (doc || {});
+      (d.memberIds || d.members || []).forEach(function(m) { if (m && m !== uid) ids.push(m); });
+    });
+    return ids;
+  }
+
+  function _deliverGroups(panel, docs, uid) {
+    var ids = _groupMemberIds(docs, uid);
+    var finish = function() { _renderGroupsPanel(panel, docs, uid); };
+    if (!window.verifyUsers || !ids.length) { finish(); return; }
+    window.verifyUsers(Array.from(new Set(ids))).then(finish, finish);
+  }
+
+  function _renderGroupsPanel(panel, docs, uid) {
+    var frag = document.createDocumentFragment();
+    docs
+      .sort(function(a, b) {
+        var da = a.data ? a.data() : a, db2 = b.data ? b.data() : b;
+        var tms = function(t) { return t && t.toMillis ? t.toMillis() : (t && t.seconds ? t.seconds*1000 : 0); };
+        return tms(db2.lastMessageAt) - tms(da.lastMessageAt);
+      })
+      .forEach(function(doc) {
+        var d = doc.data ? doc.data() : doc;
+        if (window.isGroupOfRegisteredVerified && !window.isGroupOfRegisteredVerified(d.memberIds || d.members || [], uid)) return;
+        frag.appendChild(_buildListItem({
+          id: doc.id, type: 'group',
+          name: d.name || 'Group',
+          photo: d.photoURL || d.avatar || '',
+          preview: d.lastMessage || d.lastMessageText || (d.description ? d.description.substring(0,40) : ''),
+          time: d.lastMessageAt || d.updatedAt,
+          unread: (d.unreadCounts && d.unreadCounts[uid]) || 0,
+          memberCount: (d.memberIds || d.members || []).length,
+        }));
+      });
+    if (!frag.childNodes.length) {
+      panel.innerHTML = _emptyState('group', 'No Groups Yet', 'Create a group to message multiple people at once.');
+      return;
+    }
+    panel.innerHTML = '';
+    panel.appendChild(frag);
   }
 
   /* ── Panel: Calls ───────────────────────────────────────────── */
@@ -162,12 +189,12 @@
         .orderBy('startedAt', 'desc')
         .limit(50)
         .onSnapshot(function(snap) {
-          _renderCallEvents(panel, snap, uid);
+          _deliverCalls(panel, snap.docs, uid);
         }, function() {
           // fallback without orderBy
           try {
             db.collection('users').doc(uid).collection('callEvents').limit(50).get()
-              .then(function(snap) { _renderCallEvents(panel, snap, uid); })
+              .then(function(snap) { _deliverCalls(panel, snap.docs, uid); })
               .catch(function() {
                 panel.innerHTML = _emptyState('call', 'No Calls Yet', 'Make your first call by opening a chat.');
               });
@@ -180,14 +207,30 @@
     }
   }
 
-  function _renderCallEvents(panel, snap, uid) {
-    if (!snap.docs || !snap.docs.length) {
+  // Only registered + verified peers appear in call history.
+  function _callData(doc) { return doc && doc.data ? (doc.data() || {}) : (doc || {}); }
+  function _deliverCalls(panel, docs, uid) {
+    var ids = [];
+    docs.forEach(function(doc) {
+      if (window.callPeerIdsToCheck) window.callPeerIdsToCheck(_callData(doc), uid).forEach(function(id) { ids.push(id); });
+    });
+    var finish = function() {
+      var eligible = docs;
+      if (window.callIsEligible) eligible = docs.filter(function(doc) { return window.callIsEligible(_callData(doc), uid); });
+      _renderCallEvents(panel, eligible, uid);
+    };
+    if (!window.verifyUsers || !ids.length) { finish(); return; }
+    window.verifyUsers(Array.from(new Set(ids))).then(finish, finish);
+  }
+
+  function _renderCallEvents(panel, docs, uid) {
+    if (!docs || !docs.length) {
       panel.innerHTML = _emptyState('call', 'No Calls Yet', 'Make your first call by opening a chat.');
       return;
     }
     var frag = document.createDocumentFragment();
-    snap.docs.forEach(function(doc) {
-      var d = doc.data() || {};
+    docs.forEach(function(doc) {
+      var d = _callData(doc);
       var isIncoming = d.direction === 'incoming' || (d.fromUserId && d.fromUserId !== uid);
       var missed = d.status === 'missed' || d.status === 'declined';
       var otherName  = isIncoming ? (d.fromUserName || 'Unknown') : (d.toUserName || 'Unknown');
@@ -236,14 +279,14 @@
     panel.appendChild(frag);
   }
 
-  function _renderCalls(panel, snap, uid) {
-    if (!snap.docs || !snap.docs.length) {
+  function _renderCalls(panel, docs, uid) {
+    if (!docs || !docs.length) {
       panel.innerHTML = _emptyState('call', 'No Calls Yet', 'Make your first call by opening a chat.');
       return;
     }
     var frag = document.createDocumentFragment();
-    snap.docs.forEach(function(doc) {
-      var d = doc.data();
+    docs.forEach(function(doc) {
+      var d = _callData(doc);
       var isIncoming = d.callerId !== uid;
       var missed = d.status === 'missed' || d.status === 'declined';
       var otherName  = isIncoming ? (d.callerName || 'Unknown') : (d.receiverName || 'Unknown');
