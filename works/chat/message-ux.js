@@ -32,8 +32,14 @@
       var el = document.querySelector('[data-msg-id="' + msgId + '"],[data-message-id="' + msgId + '"]');
       if (el) {
         if (typeof el.scrollIntoView === 'function') el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        el.classList.add('cf-highlight');
-        setTimeout(function () { el.classList.remove('cf-highlight'); }, 2000);
+        el.style.transition = 'background-color .4s ease, box-shadow .4s ease';
+        el.style.backgroundColor = 'rgba(0,168,132,0.18)';
+        el.style.boxShadow = '0 0 0 2px rgba(0,168,132,0.45)';
+        el.style.borderRadius = '10px';
+        setTimeout(function () {
+          el.style.backgroundColor = '';
+          el.style.boxShadow = '';
+        }, 2200);
       } else if (typeof window.highlightMessage === 'function') {
         window.highlightMessage(msgId);
       }
