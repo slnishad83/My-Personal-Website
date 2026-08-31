@@ -219,7 +219,7 @@ html:not(.dark) .wa-chips-scroll::-webkit-scrollbar-thumb {
   font-weight: 800;
 }
 #wa-filter-chips .wa-chip.active .wa-chip-count {
-  background: #00a884;
+  background: var(--primary);
   color: #06130f;
 }
 #wa-filter-chips .wa-chip-add,
@@ -253,7 +253,7 @@ html:not(.dark) .wa-chips-scroll::-webkit-scrollbar-thumb {
 }
 .wa-filter-manage-btn.wa-filter-manage-active {
   background: #0a332c !important;
-  color: #00a884 !important;
+  color: var(--primary) !important;
 }
 html:not(.dark) #wa-filter-chips .wa-chip,
 html:not(.dark) #wa-filter-chips .wa-chip-add,
@@ -474,7 +474,7 @@ html:not(.dark) .wa-filter-sheet-overlay { background: rgba(0,0,0,0.45); }
   align-items: center;
   justify-content: center;
   background: rgba(0,168,132,.13);
-  color: #00a884;
+  color: var(--primary);
   flex: 0 0 auto;
 }
 html:not(.dark) .wa-filter-row-icon {
@@ -550,7 +550,7 @@ html:not(.dark) .wa-filter-row-icon {
 }
 .wa-filter-custom button,
 .wa-filter-primary {
-  background: #00a884;
+  background: var(--primary);
   color: #06130f;
 }
 .wa-filter-secondary {

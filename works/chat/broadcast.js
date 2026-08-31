@@ -90,7 +90,7 @@
         '<div id="nsl-bc-list" style="flex:1;overflow-y:auto;padding:8px;"></div>' +
         '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 18px;border-top:1px solid var(--outline-variant,rgba(0,0,0,0.08));">' +
           '<span id="nsl-bc-count" style="font-size:12px;color:var(--on-surface-variant,#8696a0);">0 recipients selected</span>' +
-          '<button id="nsl-bc-create" type="button" disabled style="padding:10px 18px;border:none;border-radius:10px;background:#00a884;color:#fff;font-size:13px;font-weight:700;cursor:pointer;opacity:0.45;">Create broadcast</button>' +
+          '<button id="nsl-bc-create" type="button" disabled style="padding:10px 18px;border:none;border-radius:10px;background:var(--primary);color:#fff;font-size:13px;font-weight:700;cursor:pointer;opacity:0.45;">Create broadcast</button>' +
         '</div>' +
       '</div>';
 
@@ -122,7 +122,7 @@
             var sub = [u.email, u.phoneNumber].filter(Boolean).join(' · ');
             var checked = !!selected[u.uid];
             return '<button type="button" data-nsl-bc-uid="' + _esc(u.uid) + '" style="display:flex;align-items:center;gap:10px;width:100%;padding:8px 10px;border:none;border-radius:10px;background:none;cursor:pointer;text-align:left;">' +
-              '<span style="width:20px;height:20px;flex-shrink:0;border-radius:5px;border:2px solid ' + (checked ? '#00a884' : 'var(--outline-variant,#d0d5db)') + ';background:' + (checked ? '#00a884' : 'transparent') + ';display:flex;align-items:center;justify-content:center;color:#fff;font-size:13px;line-height:1;">' + (checked ? '✓' : '') + '</span>' +
+              '<span style="width:20px;height:20px;flex-shrink:0;border-radius:5px;border:2px solid ' + (checked ? 'var(--primary)' : 'var(--outline-variant,#d0d5db)') + ';background:' + (checked ? 'var(--primary)' : 'transparent') + ';display:flex;align-items:center;justify-content:center;color:#fff;font-size:13px;line-height:1;">' + (checked ? '✓' : '') + '</span>' +
               '<span style="width:38px;height:38px;flex-shrink:0;border-radius:50%;background:var(--primary,#00a884);color:#fff;font-weight:700;font-size:14px;display:flex;align-items:center;justify-content:center;">' + _esc((label || '?').charAt(0).toUpperCase()) + '</span>' +
               '<span style="flex:1;min-width:0;">' +
                 '<span style="display:block;font-size:13px;font-weight:600;color:var(--on-surface,#1c1c1e);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + _esc(label) + '</span>' +

@@ -542,7 +542,7 @@
                 '<div style="font-size:12px;color:var(--on-surface-variant,#8696a0)">Locked</div>' +
               '</div>' +
             '</div>' +
-            '<button class="locked-chat-unlock-btn" data-chat-id="' + _esc(chat.id) + '" style="padding:6px 14px;border-radius:8px;border:none;background:rgba(0,128,105,0.15);color:#00a884;font-size:12px;font-weight:600;cursor:pointer;flex-shrink:0">Unlock</button>' +
+            '<button class="locked-chat-unlock-btn" data-chat-id="' + _esc(chat.id) + '" style="padding:6px 14px;border-radius:8px;border:none;background:rgba(0,128,105,0.15);color:var(--primary);font-size:12px;font-weight:600;cursor:pointer;flex-shrink:0">Unlock</button>' +
           '</div>';
       });
     } else {
@@ -692,7 +692,7 @@
       '.lock-chat-btn-primary:hover { opacity:0.9; }\n' +
       '.lock-chat-btn-secondary { background:var(--surface-container,#2a3942);color:var(--on-surface,#e9edef);font-weight:600; }\n' +
       '.lock-chat-btn-secondary:hover { opacity:0.85; }\n' +
-      '.lock-chat-btn-text { padding:10px;border-radius:10px;border:none;background:transparent;color:#00a884;font-size:13px;font-weight:600;cursor:pointer; }\n' +
+      '.lock-chat-btn-text { padding:10px;border-radius:10px;border:none;background:transparent;color:var(--primary);font-size:13px;font-weight:600;cursor:pointer; }\n' +
       '.lock-chat-btn-text:hover { opacity:0.8; }\n' +
       '.lock-chat-close-x { background:none;border:none;color:var(--on-surface-variant,#8696a0);cursor:pointer;font-size:22px;width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;transition:background 0.15s; }\n' +
       '.lock-chat-close-x:hover { background:var(--surface-container-high,#2a3942); }\n' +

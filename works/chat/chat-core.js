@@ -103,8 +103,8 @@
                 ${esc(initials(name))}
               </div>`;
     }
-    const colors = ['#00a884','#3b82f6','#8b5cf6','#ec4899','#f59e0b','#10b981','#ef4444','#6366f1'];
-    const color = colors[(name || '').charCodeAt(0) % colors.length] || '#00a884';
+    const colors = ['var(--primary)','#3b82f6','#8b5cf6','#ec4899','#f59e0b','#10b981','#ef4444','#6366f1'];
+    const color = colors[(name || '').charCodeAt(0) % colors.length] || 'var(--primary)';
     return `<div style="width:${size};height:${size};border-radius:50%;display:flex;align-items:center;justify-content:center;
             background:${color};color:#fff;font-weight:700;font-size:16px;flex-shrink:0;">
               ${esc(initials(name))}
@@ -794,10 +794,10 @@
       '<iframe src="' + esc(embedSrc) + '" style="width:100%;height:150px;border:0;display:block;pointer-events:none;" loading="lazy" allowfullscreen referrerpolicy="no-referrer-when-downgrade" title="Map preview"></iframe>' +
       '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 10px;background:#fff;">' +
         '<div style="font-size:12px;font-weight:600;color:#1c1c1e;display:flex;align-items:center;gap:6px;min-width:0;">' +
-          '<span class="material-symbols-outlined" style="font-size:16px;color:#00a884;flex-shrink:0;">location_on</span>' +
+          '<span class="material-symbols-outlined" style="font-size:16px;color:var(--primary);flex-shrink:0;">location_on</span>' +
           '<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + safeLabel + '</span>' +
         '</div>' +
-        '<a href="' + esc(viewHref) + '" target="_blank" rel="noopener" style="font-size:11px;color:#00a884;text-decoration:none;white-space:nowrap;flex-shrink:0;" onclick="event.stopPropagation()">Open map</a>' +
+        '<a href="' + esc(viewHref) + '" target="_blank" rel="noopener" style="font-size:11px;color:var(--primary);text-decoration:none;white-space:nowrap;flex-shrink:0;" onclick="event.stopPropagation()">Open map</a>' +
       '</div>' +
     '</div>';
   }
@@ -924,7 +924,7 @@
             ${count > 9 ? `<div style="text-align:center;font-size:11px;padding:4px;opacity:0.7">+${count - 9} more</div>` : ''}
             <div style="display:flex;justify-content:flex-end;align-items:center;gap:3px;padding:2px 8px 4px;">
               <span style="font-size:10px;opacity:0.6;" class="msg-time message-time">${timeStr}</span>
-              ${isMe ? `<span class="material-symbols-outlined" style="font-size:12px;opacity:0.7;color:${firstMsg.readBy && Object.keys(firstMsg.readBy).length > 1 ? '#00a884' : 'inherit'};">
+              ${isMe ? `<span class="material-symbols-outlined" style="font-size:12px;opacity:0.7;color:${firstMsg.readBy && Object.keys(firstMsg.readBy).length > 1 ? 'var(--primary)' : 'inherit'};">
                 ${firstMsg.readBy && Object.keys(firstMsg.readBy).length > 1 ? 'done_all' : (firstMsg.delivered ? 'done_all' : 'done')}
               </span>` : ''}
             </div>
@@ -1064,7 +1064,7 @@
             ${editedHTML}
             ${starHTML}
             ${keptHTML}
-            ${isMe ? `<span class="material-symbols-outlined" style="font-size:12px;opacity:0.7;color:${msg.readBy && Object.keys(msg.readBy).length > 1 ? '#00a884' : 'inherit'};">
+            ${isMe ? `<span class="material-symbols-outlined" style="font-size:12px;opacity:0.7;color:${msg.readBy && Object.keys(msg.readBy).length > 1 ? 'var(--primary)' : 'inherit'};">
               ${msg.readBy && Object.keys(msg.readBy).length > 1 ? 'done_all' : (msg.delivered ? 'done_all' : 'done')}
             </span>` : ''}
           </div>
@@ -1245,7 +1245,7 @@
       const count = (poll.votes && Array.isArray(poll.votes[optId])) ? poll.votes[optId].length : 0;
       const pct = totalVotes ? Math.round((count / totalVotes) * 100) : 0;
       const mine = Array.isArray(poll.votes && poll.votes[optId]) && poll.votes[optId].indexOf(uid) !== -1;
-      const barColor = mine ? '#00a884' : '#d7dbdc';
+      const barColor = mine ? 'var(--primary)' : '#d7dbdc';
       return `
         <button class="poll-opt ${mine ? 'poll-opt-checked' : ''}"
           style="display:block;position:relative;width:100%;text-align:left;border:1px solid #e0e0e0;
@@ -1254,7 +1254,7 @@
           ${closed ? 'disabled' : `onclick="window.votePoll('${msg.id}','${optId}')"`}>
           <span class="poll-bar" style="position:absolute;left:0;top:0;bottom:0;width:${pct}%;background:${barColor};opacity:0.18;border-radius:8px;"></span>
           <span style="position:relative;display:flex;align-items:center;gap:6px;">
-            <span class="material-symbols-outlined" style="font-size:14px;color:${mine ? '#00a884' : '#8696a0'};">${mine ? 'check_circle' : 'circle'}</span>
+            <span class="material-symbols-outlined" style="font-size:14px;color:${mine ? 'var(--primary)' : '#8696a0'};">${mine ? 'check_circle' : 'circle'}</span>
             <span class="poll-opt-text" style="font-size:13px;font-weight:500;">${esc(optText)}</span>
             ${showResults ? `<span class="poll-opt-count" style="margin-left:auto;font-size:12px;opacity:0.75;">${count} (${pct}%)</span>` : ''}
           </span>

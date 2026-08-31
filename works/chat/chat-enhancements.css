@@ -2247,12 +2247,12 @@ html:not(.dark) .wa-chip-add {
 }
 html:not(.dark) .wa-unread-empty-icon {
   background: rgba(0, 168, 132, 0.1);
-  color: #00a884;
+  color: var(--primary);
 }
 html:not(.dark) .wa-unread-empty-title { color: #111b21; }
 html:not(.dark) .wa-unread-empty-desc { color: #667781; }
 html:not(.dark) .wa-unread-empty-link {
-  color: #00a884;
+  color: var(--primary);
 }
 
 /* ── Duplicate #wa-filter-chips removed — defined in chat-theme.css ── */

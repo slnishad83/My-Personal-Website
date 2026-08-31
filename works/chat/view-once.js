@@ -326,7 +326,7 @@
     // Already opened by receiver
     if (msg.viewOnceOpened || msg.viewed) {
       return '<div class="view-once-msg view-once-opened" style="padding:12px 16px;border-radius:12px;background:var(--surface-container-highest,#2a3942);text-align:center;display:flex;align-items:center;justify-content:center;gap:8px">' +
-        '<span class="material-symbols-outlined" style="font-size:20px;color:#00a884">check_circle</span>' +
+        '<span class="material-symbols-outlined" style="font-size:20px;color:var(--primary)">check_circle</span>' +
         '<span style="font-size:13px;color:var(--on-surface-variant,#8696a0);font-weight:500">Opened</span>' +
       '</div>';
     }
@@ -340,7 +340,7 @@
       const label = isVideo ? 'Video' : (isAudio ? 'Audio' : 'Photo');
 
       return '<div class="view-once-msg view-once-sender" style="padding:12px 16px;border-radius:12px;background:rgba(0,128,105,0.15);text-align:center">' +
-        '<span class="material-symbols-outlined" style="font-size:24px;color:#00a884;display:block;margin-bottom:4px">' + iconName + '</span>' +
+        '<span class="material-symbols-outlined" style="font-size:24px;color:var(--primary);display:block;margin-bottom:4px">' + iconName + '</span>' +
         '<p style="font-size:13px;color:var(--on-surface-variant,#8696a0);margin:0;font-weight:500">View once \u00b7 ' + label + '</p>' +
       '</div>';
     }
@@ -348,7 +348,7 @@
     // Receiver: tap to view
     const mediaType = (msg.attachment && msg.attachment.type) || 'image';
     return '<div class="view-once-msg view-once-unopened" data-msg-id="' + _esc(msg.id) + '" data-media-url="' + _esc(msg.attachment && msg.attachment.url || '') + '" data-media-type="' + _esc(mediaType) + '" style="padding:12px 16px;border-radius:12px;background:var(--surface-container-highest,#2a3942);text-align:center;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px">' +
-      '<span class="material-symbols-outlined" style="font-size:20px;color:#00a884">visibility</span>' +
+      '<span class="material-symbols-outlined" style="font-size:20px;color:var(--primary)">visibility</span>' +
       '<span style="font-size:13px;color:var(--on-surface-variant,#8696a0);font-weight:500">Tap to view once</span>' +
     '</div>';
   }

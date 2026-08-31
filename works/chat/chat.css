@@ -299,7 +299,7 @@ html:not(.dark) .cp-action-btn {
   color: var(--on-primary, #fff);
 }
 html:not(.dark) .cp-action-primary {
-  background: #00a884;
+  background: var(--primary);
   color: #fff;
 }
 .cp-action-voice:hover {

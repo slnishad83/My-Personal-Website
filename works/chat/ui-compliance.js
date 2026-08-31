@@ -266,7 +266,7 @@
     if (!document.querySelector('meta[name="theme-color"]')) {
       const tc = document.createElement('meta');
       tc.name = 'theme-color';
-      tc.content = '#00a884';
+      tc.content = 'var(--primary)';
       document.head.appendChild(tc);
     }
   }

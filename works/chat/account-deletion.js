@@ -32,7 +32,7 @@
       if (userDoc.exists) {
         const _subs = [
           'fcmTokens', 'notificationSettings', 'dndSettings', 'snoozeSettings',
-          'callHistory', 'personalChats', 'groupMemberships', 'status'
+          'callHistory', 'callEvents', 'personalChats', 'groupMemberships', 'status'
         ];
         for (const sub of _subs) {
           const docs = await _collectSubcollection(db.collection('users').doc(uid).collection(sub));

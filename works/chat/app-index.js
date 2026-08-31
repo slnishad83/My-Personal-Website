@@ -258,6 +258,8 @@ if (typeof requestIdleCallback === 'function') {
    ══════════════════════════════════════════════════════════════ */
 const _lazyModules = [
   () => import('./date-reminders.js'),
+  () => import('./jump-to-date.js'),
+  () => import('./chat-themes.js'),
   () => import('./ai-features.js'),
   () => import('./chat-export.js'),
   () => import('./music-player.js'),

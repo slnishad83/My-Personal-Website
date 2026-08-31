@@ -70,16 +70,28 @@
           '<span class="tc-typing-dots" aria-hidden="true"><span></span><span></span><span></span></span>';
       }
 
-      try {
+try {
+        const type = window.currentChatType || chat.type || 'direct';
+        const key = type + ':' + chat.id;
         window.typingUnsubscribe = window.db
           .collection('typingStatus')
-          .where('chatId', '==', chat.id)
+          .doc(key)
           .onSnapshot(
             snap => {
-              const typing = snap.docs
-                .map(d => d.data())
-                .filter(d => d.userId !== user.uid && d.isTyping);
-              renderTyping(typing);
+              if (!snap.exists) { renderTyping([]); return; }
+              const data = snap.data() || {};
+              const myUid = user.uid;
+              const now = Date.now();
+              const typers = Object.keys(data)
+                .filter(uid2 => uid2 !== myUid && data[uid2] && typeof data[uid2] === 'object')
+                .map(uid2 => data[uid2])
+                .filter(v => {
+                  if (!v.at) return true;
+                  const ms = v.at.toMillis ? v.at.toMillis() : (v.at.seconds * 1000);
+                  return (now - ms) < 8000;
+                })
+                .map(v => ({ userName: v.name || 'Someone' }));
+              renderTyping(typers);
             },
             err => { if (window.__DEBUG__) console.warn('[TC] typing indicator error', err); }
           );

@@ -375,20 +375,32 @@
       if (!doc.exists) { showToast('Playlist not found', 'error'); return; }
       const source = doc.data();
       const uid = App.auth.currentUser.uid;
+      const tracks = source.tracks || [];
       const newPlaylist = {
-        id: 'pl_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 8),
-        name: source.name + ' (imported)',
+        name: (source.name || 'Playlist') + ' (imported)',
         description: source.description || '',
-        tracks: source.tracks || [],
-        coverImage: source.coverImage || null,
-        createdBy: uid,
-        createdByName: App.currentUser?.displayName || 'User',
-        createdAt: Date.now(),
-        updatedAt: Date.now(),
+        coverUrl: source.coverUrl || source.coverImage || null,
+        ownerUid: uid,
+        ownerName: App.currentUser?.displayName || 'User',
+        chatId: null,
+        groupId: null,
+        type: 'personal',
+        folderId: null,
+        tracks,
+        order: (source.order || []).length ? source.order : tracks.map(t => t.id),
+        likedBy: [],
+        collaborators: [],
         isPublic: false,
+        tags: source.tags || [],
+        playCount: 0,
+        totalDuration: tracks.reduce((s, t) => s + (Number(t.duration) || 0), 0),
         importedFrom: playlistId,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
       };
-      await App.db.collection('playlists').doc(newPlaylist.id).set(newPlaylist);
+      const ref = await App.db.collection(COLLECTION).add(newPlaylist);
+      newPlaylist.id = ref.id;
+      App.playlists[ref.id] = newPlaylist;
       showToast('Playlist imported!', 'success');
     } catch(e) {
       if (window.__DEBUG__) console.error('Import failed:', e);

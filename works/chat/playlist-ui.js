@@ -144,7 +144,7 @@
         <div style="font-size:11px;color:var(--on-surface-variant);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escHtml(track.artist)}${track.addedByName ? ' · ' + escHtml(track.addedByName) : ''}</div>
       </div>
       <span style="font-size:10px;color:var(--on-surface-variant)">${formatTrackDuration(track.duration)}</span>
-      <button onclick="event.stopPropagation();toggleTrackFavorite(window._plTrackCache['${trackRef}']);openPlaylistDetail('${playlistId}')" style="background:none;border:none;color:${isFav ? 'var(--error)' : 'var(--on-surface-variant)'};cursor:pointer;padding:8px;min-width:40px;min-height:40px;display:inline-flex;align-items:center;justify-content:center">
+      <button onclick="event.stopPropagation();toggleTrackFavorite(window._plTrackCache['${trackRef}']);${playlistId ? `openPlaylistDetail('${playlistId}')` : ''}" style="background:none;border:none;color:${isFav ? 'var(--error)' : 'var(--on-surface-variant)'};cursor:pointer;padding:8px;min-width:40px;min-height:40px;display:inline-flex;align-items:center;justify-content:center">
         <span class="material-symbols-outlined" style="font-size:16px">${isFav ? 'favorite' : 'favorite_border'}</span>
       </button>
       ${playlistId && canEditPlaylist(App.playlists[playlistId]) ? `

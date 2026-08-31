@@ -341,7 +341,7 @@ window.ScreenLock = (function () {
             </svg>
           </div>
           <p style="color:rgba(255,255,255,0.6);font-size:14px;text-align:center;">Touch the fingerprint sensor</p>
-          <button class="sl-use-pin-btn" style="background:none;border:none;color:#00a884;font-size:13px;margin-top:16px;cursor:pointer;padding:8px 16px;">Use PIN instead</button>
+          <button class="sl-use-pin-btn" style="background:none;border:none;color:var(--primary);font-size:13px;margin-top:16px;cursor:pointer;padding:8px 16px;">Use PIN instead</button>
         </div>`;
     }
 
@@ -358,7 +358,7 @@ window.ScreenLock = (function () {
         <div class="sl-pin-display" style="display:flex;justify-content:center;gap:12px;margin-bottom:24px;"></div>
         <p class="sl-pin-error" style="color:#ff4444;font-size:13px;text-align:center;margin-bottom:16px;min-height:18px;"></p>
         <div class="sl-keypad" style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;"></div>
-        <button class="sl-cancel-btn" style="background:none;border:none;color:#00a884;font-size:14px;margin-top:20px;cursor:pointer;padding:8px;width:100%;display:none;">Cancel</button>
+        <button class="sl-cancel-btn" style="background:none;border:none;color:var(--primary);font-size:14px;margin-top:20px;cursor:pointer;padding:8px;width:100%;display:none;">Cancel</button>
       </div>
     `;
   }
@@ -530,9 +530,9 @@ window.ScreenLock = (function () {
 
     var autoLockOptionsHtml = AUTO_LOCK_OPTIONS.map(function (opt) {
       var selected = settings.autoLockTime === opt.value;
-      return '<div class="sl-opt" data-val="' + opt.value + '" style="padding:12px 16px;cursor:pointer;border-radius:8px;background:' + (selected ? 'rgba(0,128,105,0.15)' : 'transparent') + ';color:' + (selected ? '#00a884' : 'rgba(255,255,255,0.8)') + ';font-size:14px;display:flex;align-items:center;gap:12px;">' +
-        '<div style="width:18px;height:18px;border-radius:50%;border:2px solid ' + (selected ? '#00a884' : 'rgba(255,255,255,0.3)') + ';display:flex;align-items:center;justify-content:center;">' +
-        (selected ? '<div style="width:10px;height:10px;border-radius:50%;background:#00a884;"></div>' : '') +
+      return '<div class="sl-opt" data-val="' + opt.value + '" style="padding:12px 16px;cursor:pointer;border-radius:8px;background:' + (selected ? 'rgba(0,128,105,0.15)' : 'transparent') + ';color:' + (selected ? 'var(--primary)' : 'rgba(255,255,255,0.8)') + ';font-size:14px;display:flex;align-items:center;gap:12px;">' +
+        '<div style="width:18px;height:18px;border-radius:50%;border:2px solid ' + (selected ? 'var(--primary)' : 'rgba(255,255,255,0.3)') + ';display:flex;align-items:center;justify-content:center;">' +
+        (selected ? '<div style="width:10px;height:10px;border-radius:50%;background:var(--primary);"></div>' : '') +
         '</div>' + opt.label + '</div>';
     }).join('');
 
@@ -542,9 +542,9 @@ window.ScreenLock = (function () {
       { val: 'both', label: 'Both', avail: biometricAvail }
     ].filter(function (m) { return m.avail; }).map(function (m) {
       var selected = settings.method === m.val;
-      return '<div class="sl-method-opt" data-val="' + m.val + '" style="padding:12px 16px;cursor:pointer;border-radius:8px;background:' + (selected ? 'rgba(0,128,105,0.15)' : 'transparent') + ';color:' + (selected ? '#00a884' : 'rgba(255,255,255,0.8)') + ';font-size:14px;display:flex;align-items:center;gap:12px;">' +
-        '<div style="width:18px;height:18px;border-radius:50%;border:2px solid ' + (selected ? '#00a884' : 'rgba(255,255,255,0.3)') + ';display:flex;align-items:center;justify-content:center;">' +
-        (selected ? '<div style="width:10px;height:10px;border-radius:50%;background:#00a884;"></div>' : '') +
+      return '<div class="sl-method-opt" data-val="' + m.val + '" style="padding:12px 16px;cursor:pointer;border-radius:8px;background:' + (selected ? 'rgba(0,128,105,0.15)' : 'transparent') + ';color:' + (selected ? 'var(--primary)' : 'rgba(255,255,255,0.8)') + ';font-size:14px;display:flex;align-items:center;gap:12px;">' +
+        '<div style="width:18px;height:18px;border-radius:50%;border:2px solid ' + (selected ? 'var(--primary)' : 'rgba(255,255,255,0.3)') + ';display:flex;align-items:center;justify-content:center;">' +
+        (selected ? '<div style="width:10px;height:10px;border-radius:50%;background:var(--primary);"></div>' : '') +
         '</div>' + m.label + '</div>';
     }).join('');
 
@@ -563,7 +563,7 @@ window.ScreenLock = (function () {
               <p style="color:white;font-size:14px;margin:0;">Require authentication</p>
               <p style="color:rgba(255,255,255,0.5);font-size:12px;margin:4px 0 0;">Lock app when closed or in background</p>
             </div>
-            <button id="sl-toggle-enabled" style="width:44px;height:24px;border-radius:12px;border:none;cursor:pointer;position:relative;transition:background 0.2s;background:${settings.enabled ? '#00a884' : 'rgba(255,255,255,0.15)'};">
+            <button id="sl-toggle-enabled" style="width:44px;height:24px;border-radius:12px;border:none;cursor:pointer;position:relative;transition:background 0.2s;background:${settings.enabled ? 'var(--primary)' : 'rgba(255,255,255,0.15)'};">
               <div style="width:20px;height:20px;border-radius:50%;background:white;position:absolute;top:2px;transition:left 0.2s;box-shadow:0 1px 3px rgba(0,0,0,0.3);left:${settings.enabled ? '22px' : '2px'};"></div>
             </button>
           </div>
@@ -575,7 +575,7 @@ window.ScreenLock = (function () {
             <p style="color:rgba(255,255,255,0.5);font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;padding:16px 0 8px;">Auto-lock</p>
             <div id="sl-autolock-options">${autoLockOptionsHtml}</div>
 
-            ${hasPinSet ? '<button id="sl-change-pin" style="background:none;border:none;color:#00a884;font-size:14px;padding:12px 0;cursor:pointer;width:100%;text-align:left;">Change PIN</button>' : '<button id="sl-set-pin" style="background:none;border:none;color:#00a884;font-size:14px;padding:12px 0;cursor:pointer;width:100%;text-align:left;">Set PIN</button>'}
+            ${hasPinSet ? '<button id="sl-change-pin" style="background:none;border:none;color:var(--primary);font-size:14px;padding:12px 0;cursor:pointer;width:100%;text-align:left;">Change PIN</button>' : '<button id="sl-set-pin" style="background:none;border:none;color:var(--primary);font-size:14px;padding:12px 0;cursor:pointer;width:100%;text-align:left;">Set PIN</button>'}
           </div>
         </div>
       </div>
@@ -593,7 +593,7 @@ window.ScreenLock = (function () {
 
     modal.querySelector('#sl-toggle-enabled').addEventListener('click', async function () {
       enabled = !enabled;
-      this.style.background = enabled ? '#00a884' : 'rgba(255,255,255,0.15)';
+      this.style.background = enabled ? 'var(--primary)' : 'rgba(255,255,255,0.15)';
       this.querySelector('div').style.left = enabled ? '22px' : '2px';
       modal.querySelector('#sl-method-section').style.display = enabled ? 'block' : 'none';
       await updateSettings({ enabled: enabled });
@@ -605,9 +605,9 @@ window.ScreenLock = (function () {
         modal.querySelectorAll('.sl-method-opt').forEach(function (m) {
           var sel = m.dataset.val === method;
           m.style.background = sel ? 'rgba(0,128,105,0.15)' : 'transparent';
-          m.style.color = sel ? '#00a884' : 'rgba(255,255,255,0.8)';
-          m.querySelector('div').style.borderColor = sel ? '#00a884' : 'rgba(255,255,255,0.3)';
-          m.querySelector('div').innerHTML = sel ? '<div style="width:10px;height:10px;border-radius:50%;background:#00a884;"></div>' : '';
+          m.style.color = sel ? 'var(--primary)' : 'rgba(255,255,255,0.8)';
+          m.querySelector('div').style.borderColor = sel ? 'var(--primary)' : 'rgba(255,255,255,0.3)';
+          m.querySelector('div').innerHTML = sel ? '<div style="width:10px;height:10px;border-radius:50%;background:var(--primary);"></div>' : '';
         });
         await updateSettings({ method: method });
       });
@@ -619,9 +619,9 @@ window.ScreenLock = (function () {
         modal.querySelectorAll('.sl-opt').forEach(function (o) {
           var sel = parseInt(o.dataset.val, 10) === autoLockTime;
           o.style.background = sel ? 'rgba(0,128,105,0.15)' : 'transparent';
-          o.style.color = sel ? '#00a884' : 'rgba(255,255,255,0.8)';
-          o.querySelector('div').style.borderColor = sel ? '#00a884' : 'rgba(255,255,255,0.3)';
-          o.querySelector('div').innerHTML = sel ? '<div style="width:10px;height:10px;border-radius:50%;background:#00a884;"></div>' : '';
+          o.style.color = sel ? 'var(--primary)' : 'rgba(255,255,255,0.8)';
+          o.querySelector('div').style.borderColor = sel ? 'var(--primary)' : 'rgba(255,255,255,0.3)';
+          o.querySelector('div').innerHTML = sel ? '<div style="width:10px;height:10px;border-radius:50%;background:var(--primary);"></div>' : '';
         });
         await updateSettings({ autoLockTime: autoLockTime });
       });
@@ -655,7 +655,7 @@ window.ScreenLock = (function () {
           <div style="display:flex;justify-content:center;gap:12px;margin-bottom:8px;" class="sl-setup-dots">${dots}</div>
           <p class="sl-setup-error" style="color:#ff4444;font-size:13px;min-height:18px;margin-bottom:16px;"></p>
           <div class="sl-setup-keypad" style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;"></div>
-          <button class="sl-setup-cancel" style="background:none;border:none;color:#00a884;font-size:14px;margin-top:16px;cursor:pointer;width:100%;">Cancel</button>
+          <button class="sl-setup-cancel" style="background:none;border:none;color:var(--primary);font-size:14px;margin-top:16px;cursor:pointer;width:100%;">Cancel</button>
         </div>
       `;
 

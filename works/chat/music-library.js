@@ -1,5 +1,5 @@
 // Music Library — free search (JioSaavn + YouTube + Jamendo + Internet Archive), upload, play, all inside chat
-/* global playArchiveTrack, playYouTubeTrack, deletePlaylist, removeTrackFromPlaylist, MusicOfflineStorage */
+/* global playArchiveTrack, playYouTubeTrack, deletePlaylist, removeTrackFromPlaylist, showCreatePlaylistDialog, MusicOfflineStorage */
 (function() {
   'use strict';
 
@@ -1004,6 +1004,7 @@
     window._finishOnboarding = function() {
       localStorage.setItem('nsl_music_onboarded', 'true');
       document.getElementById('onboarding-overlay')?.remove();
+      openMusicLibrary();
     };
     renderStep();
   };
@@ -1048,11 +1049,8 @@
       </div>`;
   }
 
-  window.createPlaylistUI = async function() {
-    const name = prompt('New playlist name', 'My Playlist');
-    if (!name || !name.trim()) return;
-    const p = await createPlaylist({ name: name.trim() });
-    if (p) switchMusicLibTab('playlists');
+  window.createPlaylistUI = function() {
+    showCreatePlaylistDialog(null);
   };
 
   window.deletePlaylistUI = async function(playlistId) {

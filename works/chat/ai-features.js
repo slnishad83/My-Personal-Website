@@ -55,7 +55,7 @@
         animation: toneSlideIn 0.25s ease;
       }
       .tone-banner.visible { display: flex; }
-      .tone-banner.safe { border-top-color: #00a884; }
+      .tone-banner.safe { border-top-color: var(--primary); }
       .tone-banner.warning { border-top-color: #f59e0b; background: #f59e0b10; }
       .tone-banner.danger { border-top-color: #ef4444; background: #ef444410; }
       .tone-banner-icon { font-size: 18px; flex-shrink: 0; }
@@ -72,7 +72,7 @@
         padding: 2px 8px; border-radius: 12px; font-size: 11px;
         font-weight: 600; text-transform: uppercase; letter-spacing: 0.03em;
       }
-      .tone-badge.friendly { background: #00a88420; color: #00a884; }
+      .tone-badge.friendly { background: #00a88420; color: var(--primary); }
       .tone-badge.neutral { background: #8696a020; color: #8696a0; }
       .tone-badge.formal { background: #53bdeb20; color: #53bdeb; }
       .tone-badge.rude { background: #f59e0b20; color: #f59e0b; }

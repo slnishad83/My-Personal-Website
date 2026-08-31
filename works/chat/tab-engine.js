@@ -40,8 +40,8 @@
   }
   function avatarEl(name, photo, sz) {
     sz = sz || '44px';
-    var colors = ['#00a884','#3b82f6','#8b5cf6','#ec4899','#f59e0b','#10b981','#ef4444','#6366f1'];
-    var col = colors[(name||'').charCodeAt(0) % colors.length] || '#00a884';
+    var colors = ['var(--primary)','#3b82f6','#8b5cf6','#ec4899','#f59e0b','#10b981','#ef4444','#6366f1'];
+    var col = colors[(name||'').charCodeAt(0) % colors.length] || 'var(--primary)';
     if (photo) {
       return '<div style="position:relative;flex-shrink:0;width:'+sz+';height:'+sz+';">' +
         '<img src="'+esc(photo)+'" alt="'+esc(name)+'" style="width:'+sz+';height:'+sz+';border-radius:50%;object-fit:cover;" ' +
@@ -289,15 +289,16 @@
     var frag = document.createDocumentFragment();
     docs.forEach(function(doc) {
       var d = _callData(doc);
-      var isIncoming = d.callerId !== uid;
+      var isIncoming = d.direction === 'incoming' || (d.fromUserId && d.fromUserId !== uid);
       var missed = d.status === 'missed' || d.status === 'declined';
-      var otherName  = isIncoming ? (d.callerName || 'Unknown') : (d.receiverName || 'Unknown');
-      var otherPhoto = isIncoming ? (d.callerPhoto || '') : (d.receiverPhoto || '');
-      var callType   = d.type === 'video' ? 'video' : 'voice';
+      var otherName  = isIncoming ? (d.fromUserName || 'Unknown') : (d.toUserName || 'Unknown');
+      var otherPhoto = isIncoming ? (d.fromUserPhoto || '') : (d.toUserPhoto || '');
+      var otherId   = isIncoming ? (d.fromUserId || '') : (d.toUserId || '');
+      var callType   = d.callType === 'video' ? 'video' : 'voice';
       var callIcon   = callType === 'video' ? 'videocam' : 'call';
       var dirIcon    = isIncoming ? 'call_received' : 'call_made';
       var color      = missed ? '#ef4444' : (isIncoming ? '#22c55e' : 'var(--primary,#00a884)');
-      var ts         = d.startedAt || d.createdAt;
+      var ts         = d.startedAt || d.endedAt || d.createdAt;
 
       var row = document.createElement('div');
       row.style.cssText = 'display:flex;align-items:center;gap:12px;padding:10px 14px;border-radius:12px;cursor:pointer;transition:background 0.15s;';
@@ -316,7 +317,7 @@
             '</span>' +
           '</div>' +
         '</div>' +
-        '<button class="call-back-btn" data-other-id="'+esc(isIncoming ? (d.callerId||'') : (d.receiverId||''))+'" data-call-type="'+esc(callType)+'" ' +
+        '<button class="call-back-btn" data-other-id="'+esc(otherId)+'" data-call-type="'+esc(callType)+'" ' +
           'style="background:none;border:none;cursor:pointer;padding:8px;color:var(--primary,#00a884);display:flex;align-items:center;justify-content:center;" title="Call back" aria-label="Call back">' +
           '<span class="material-symbols-outlined" style="font-size:20px;">'+esc(callIcon)+'</span>' +
         '</button>';

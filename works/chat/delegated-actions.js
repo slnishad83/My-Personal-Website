@@ -93,6 +93,45 @@
     'openBackup': function() {
       if (typeof closeModal === 'function') closeModal('profile-overlay');
       if (window.BackupManager) BackupManager.openSettings();
+    },
+    'closeDetailPanel': function() {
+      if (typeof window.closeDetailPanel === 'function') window.closeDetailPanel();
+    },
+    'openChatSearchMenu': function() {
+      if (typeof window.openChatSearchMenu === 'function') window.openChatSearchMenu();
+    },
+    'jumpToDateMenu': function() {
+      if (typeof window.jumpToDateMenu === 'function') window.jumpToDateMenu();
+    },
+    'chatThemeMenu': function() {
+      if (typeof window.chatThemeMenu === 'function') window.chatThemeMenu();
+    },
+    'enterMessageMultiSelect': function() {
+      if (typeof window.enterMessageMultiSelect === 'function') window.enterMessageMultiSelect();
+    },
+    'openChatExportMenu': function() {
+      if (typeof window.openChatExportMenu === 'function') window.openChatExportMenu();
+    },
+    'shareLiveLocationMenu': function() {
+      if (typeof window.shareLiveLocationMenu === 'function') window.shareLiveLocationMenu();
+    },
+    'openGhostModeMenu': function() {
+      if (typeof window.openGhostModeMenu === 'function') window.openGhostModeMenu();
+    },
+    'openPrivacySettingsMenu': function() {
+      if (typeof window.openPrivacySettingsMenu === 'function') window.openPrivacySettingsMenu();
+    },
+    'openCloudDriveMenu': function() {
+      if (typeof window.openCloudDriveMenu === 'function') window.openCloudDriveMenu();
+    },
+    'openGroupChatMenu': function() {
+      if (typeof window.openGroupChatMenu === 'function') window.openGroupChatMenu();
+    },
+    'exitGroup': function(el) {
+      if (typeof window.exitGroup === 'function') window.exitGroup(el.dataset.actionArg || el.dataset.chatId);
+    },
+    'deleteGroupForEveryone': function(el) {
+      if (typeof window.deleteGroupForEveryone === 'function') window.deleteGroupForEveryone(el.dataset.actionArg || el.dataset.chatId);
     }
   };
 

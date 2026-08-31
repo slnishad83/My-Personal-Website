@@ -245,6 +245,7 @@
         '<div class="mt-3 flex flex-col gap-1">' +
           '<button class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-surface-variant/60 transition-colors text-left" data-action="openChatSearchMenu"><span class="material-symbols-outlined text-[18px] text-on-surface-variant">search</span><span class="text-sm font-medium text-on-surface">Search in chat</span></button>' +
           '<button class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-surface-variant/60 transition-colors text-left" data-action="jumpToDateMenu"><span class="material-symbols-outlined text-[18px] text-on-surface-variant">calendar_month</span><span class="text-sm font-medium text-on-surface">Jump to date</span></button>' +
+          '<button class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-surface-variant/60 transition-colors text-left" data-action="chatThemeMenu"><span class="material-symbols-outlined text-[18px] text-on-surface-variant">palette</span><span class="text-sm font-medium text-on-surface">Chat theme</span></button>' +
           '<button class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-surface-variant/60 transition-colors text-left" data-action="enterMessageMultiSelect"><span class="material-symbols-outlined text-[18px] text-on-surface-variant">checklist</span><span class="text-sm font-medium text-on-surface">Select messages</span></button>' +
           '<button class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-surface-variant/60 transition-colors text-left" data-action="openChatExportMenu"><span class="material-symbols-outlined text-[18px] text-on-surface-variant">ios_share</span><span class="text-sm font-medium text-on-surface">Export chat</span></button>' +
           '<button class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-surface-variant/60 transition-colors text-left" data-action="shareLiveLocationMenu"><span class="material-symbols-outlined text-[18px] text-on-surface-variant">share_location</span><span class="text-sm font-medium text-on-surface">Share live location</span></button>' +
@@ -459,6 +460,12 @@
   window.jumpToDateMenu = function () {
     if (typeof window.JumpToDate !== 'undefined' && typeof window.JumpToDate.open === 'function') window.JumpToDate.open();
     else _toast('Jump to date is not available', 'error');
+  };
+  window.chatThemeMenu = function () {
+    var chat = _activeChat();
+    if (!chat) { _toast('Open a chat first', 'error'); return; }
+    if (typeof window.ChatThemes !== 'undefined' && typeof window.ChatThemes.openThemePicker === 'function') window.ChatThemes.openThemePicker(chat.id);
+    else _toast('Chat themes are not available', 'error');
   };
   window.openChatExportMenu = function () {
     if (typeof window.openChatExport === 'function') window.openChatExport();
@@ -1328,7 +1335,7 @@
     var addOptBtn = document.createElement('button');
     addOptBtn.type = 'button';
     addOptBtn.textContent = '+ Add option';
-    addOptBtn.style.cssText = 'align-self:flex-start;font-size:12px;color:#00a884;font-weight:600;background:none;border:none;cursor:pointer;padding:4px 0;';
+    addOptBtn.style.cssText = 'align-self:flex-start;font-size:12px;color:var(--primary);font-weight:600;background:none;border:none;cursor:pointer;padding:4px 0;';
     addOptBtn.addEventListener('click', function () {
       if (optionInputs.length >= 8) { _toast('Maximum 8 options', 'error'); return; }
       optsWrap.insertBefore(makeOptionRow(), addOptBtn);
@@ -1358,7 +1365,7 @@
     sendBtn.type = 'button';
     sendBtn.textContent = 'Send';
     sendBtn.style.cssText = 'padding:9px 22px;border-radius:10px;font-size:14px;font-weight:700;color:#fff;'
-      + 'background:#00a884;border:none;cursor:pointer;';
+      + 'background:var(--primary);border:none;cursor:pointer;';
     sendBtn.addEventListener('click', function () {
       var q = (qInput.value || '').trim();
       var opts = optionInputs.map(function (o) { return (o.value || '').trim(); }).filter(function (v) { return v; });
@@ -1393,7 +1400,7 @@
     input.placeholder = placeholder;
     input.style.cssText = 'flex:1;min-width:0;padding:10px 12px;border:1px solid #e0e0e0;border-radius:10px;'
       + 'font-size:14px;color:#111b21;background:#fafafa;outline:none;';
-    input.addEventListener('focus', function () { input.style.borderColor = '#00a884'; });
+    input.addEventListener('focus', function () { input.style.borderColor = 'var(--primary)'; });
     input.addEventListener('blur', function () { input.style.borderColor = '#e0e0e0'; });
     return input;
   }

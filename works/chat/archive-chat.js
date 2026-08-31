@@ -87,7 +87,7 @@
     msgSpan.style.flex = '1';
     const undoBtn = document.createElement('button');
     undoBtn.textContent = 'UNDO';
-    undoBtn.style.cssText = 'background:none;border:none;color:#00a884;font-weight:700;cursor:pointer;font-size:14px;padding:4px 8px;text-transform:uppercase;';
+    undoBtn.style.cssText = 'background:none;border:none;color:var(--primary);font-weight:700;cursor:pointer;font-size:14px;padding:4px 8px;text-transform:uppercase;';
     toastEl.appendChild(msgSpan);
     toastEl.appendChild(undoBtn);
     document.body.appendChild(toastEl);

@@ -3,6 +3,11 @@
   var _loadToken = 0;
   var _allCalls = [];
   var _filteredCalls = [];
+  var _olderCalls = [];
+  var _lastVisible = null;
+  var _hasMore = false;
+  var _loadingMore = false;
+  var _PAGE_SIZE = 60;
   var _searchQuery = '';
   var _activeFilter = 'all';
   var callHistoryFilter = 'all';
@@ -375,6 +380,12 @@
       html += groups[groupName].map(function (c) { return _renderCallHistoryItem(c); }).join('');
     });
 
+    if (_hasMore) {
+      html += '<div class="flex justify-center py-3">' +
+        '<button class="px-5 py-2 rounded-full bg-surface-variant text-on-surface text-sm font-semibold hover:bg-surface-container-highest transition-colors" data-call-load-more role="button"' + (_loadingMore ? ' disabled' : '') + '>' + (_loadingMore ? 'Loading...' : 'Show more') + '</button>' +
+        '</div>';
+    }
+
     container.innerHTML = html;
     _bindCallHistoryEvents();
   }
@@ -644,6 +655,17 @@
     return true;
   }
 
+  function _mergeCalls(listA, listB) {
+    var seen = {};
+    var out = [];
+    (listA || []).concat(listB || []).forEach(function (c) {
+      if (!c || seen[c.id]) return;
+      seen[c.id] = true;
+      out.push(c);
+    });
+    return out;
+  }
+
   function _setAllCalls(calls) {
     var myUid = _uid();
     var ids = [];
@@ -651,9 +673,8 @@
       if (window.callPeerIdsToCheck) window.callPeerIdsToCheck(c, myUid).forEach(function (id) { if (id) ids.push(id); });
     });
     var apply = function () {
-      _allCalls = (calls || []).filter(function (c) {
-        return window.callIsEligible ? window.callIsEligible(c, myUid) : true;
-      });
+      var eligible = function (c) { return window.callIsEligible ? window.callIsEligible(c, myUid) : true; };
+      _allCalls = _mergeCalls((calls || []).filter(eligible), _olderCalls.filter(eligible));
       _renderCallHistory();
     };
     if (!window.verifyUsers || !ids.length) { apply(); return; }
@@ -669,9 +690,12 @@
 
     _db().collection('users').doc(myUid).collection('callEvents')
       .orderBy('startedAt', 'desc')
-      .limit(150)
+      .limit(_PAGE_SIZE)
       .get().then(function (snap) {
         if (token !== _loadToken) return;
+        _olderCalls = [];
+        _lastVisible = snap.docs.length ? snap.docs[snap.docs.length - 1] : null;
+        _hasMore = snap.docs.length === _PAGE_SIZE;
         var calls = snap.docs.map(function (doc) {
           return { id: doc.id, ...doc.data() };
         });
@@ -705,8 +729,10 @@
     }
     window.outgoingCallsListUnsubscribe = _db().collection('users').doc(myUid).collection('callEvents')
       .orderBy('startedAt', 'desc')
-      .limit(150)
+      .limit(_PAGE_SIZE)
       .onSnapshot(function (snap) {
+        _lastVisible = snap.docs.length ? snap.docs[snap.docs.length - 1] : null;
+        _hasMore = snap.docs.length === _PAGE_SIZE;
         var calls = snap.docs.map(function (doc) {
           return { id: doc.id, ...doc.data() };
         });
@@ -719,6 +745,36 @@
   function loadCallHistory() {
     if (!_ensureHeader()) return;
     _loadFromFirestore();
+  }
+
+  function loadMoreCalls() {
+    if (_loadingMore || !_hasMore) return;
+    var myUid = _uid();
+    if (!myUid || !_db()) return;
+    _loadingMore = true;
+    _renderCallHistory();
+    _db().collection('users').doc(myUid).collection('callEvents')
+      .orderBy('startedAt', 'desc')
+      .startAfter(_lastVisible)
+      .limit(_PAGE_SIZE)
+      .get().then(function (snap) {
+        _loadingMore = false;
+        if (snap.empty) {
+          _hasMore = false;
+        } else {
+          var docs = snap.docs.map(function (doc) {
+            return { id: doc.id, ...doc.data() };
+          });
+          _olderCalls = _olderCalls.concat(docs);
+          _hasMore = snap.docs.length === _PAGE_SIZE;
+        }
+        _renderCallHistory();
+      }).catch(function (err) {
+        _loadingMore = false;
+        if (window.__DEBUG__) console.warn('[CallHistory] Load more error:', err);
+        _toast('Failed to load older calls', 'error');
+        _renderCallHistory();
+      });
   }
 
   function searchCalls(query) {
@@ -752,6 +808,7 @@
     _db().collection('users').doc(myUid).collection('callEvents').doc(callId).delete()
       .then(function () {
         _allCalls = _allCalls.filter(function (c) { return c.id !== callId; });
+        _olderCalls = _olderCalls.filter(function (c) { return c.id !== callId; });
         _renderCallHistory();
         _toast('Call deleted', 'info');
       }).catch(function (err) {
@@ -771,6 +828,7 @@
     });
     batch.commit().then(function () {
       _allCalls = _allCalls.filter(function (c) { return ids.indexOf(c.id) === -1; });
+      _olderCalls = _olderCalls.filter(function (c) { return ids.indexOf(c.id) === -1; });
       _exitSelectionMode();
       _renderCallHistory();
       _toast(ids.length + ' call' + (ids.length > 1 ? 's' : '') + ' deleted', 'info');
@@ -829,6 +887,12 @@
       }
     });
 
+    document.addEventListener('click', function (e) {
+      if (e.target.closest('[data-call-load-more]')) {
+        loadMoreCalls();
+      }
+    });
+
     callHistoryFilter = callHistoryFilter || 'all';
     _activeFilter = callHistoryFilter;
   }
@@ -840,6 +904,7 @@
   }
 
   window.loadCallHistory = loadCallHistory;
+  window.loadMoreCalls = loadMoreCalls;
   window.searchCalls = searchCalls;
   window.filterCalls = filterCalls;
   window.deleteCallHistory = deleteCallHistory;

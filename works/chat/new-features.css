@@ -41,8 +41,8 @@
 .dark .status-ring-label { color: #aebac1; }
 .dark .status-ring-avatar { background: conic-gradient(var(--primary) 0deg 120deg, #2a3942 120deg 360deg); }
 .dark .status-ring-placeholder { background: #2a3942; color: #aebac1; }
-.dark .status-ring-add { background: #202c33; border-color: #374045; color: #00a884; }
-.dark .status-ring-add:hover { background: #2a3942; border-color: #00a884; }
+.dark .status-ring-add { background: #202c33; border-color: #374045; color: var(--primary); }
+.dark .status-ring-add:hover { background: #2a3942; border-color: var(--primary); }
 @supports (padding-left: env(safe-area-inset-left)) {
   .status-row { padding-left: calc(16px + env(safe-area-inset-left)); padding-right: env(safe-area-inset-right); }
 }
@@ -223,9 +223,9 @@
 .dark .call-picker-search input { background: #202c33; color: #e9edef; }
 .dark .call-picker-search input::placeholder { color: #8696a0; }
 .dark .call-picker-item:hover { background: #202c33; }
-.dark .call-picker-avatar { background: #0a332c; color: #00a884; }
+.dark .call-picker-avatar { background: #0a332c; color: var(--primary); }
 .dark .call-picker-status { color: #8696a0; }
-.dark .call-picker-action-audio { background: #202c33; color: #00a884; }
+.dark .call-picker-action-audio { background: #202c33; color: var(--primary); }
 
 .group-call-grid {
   @apply relative w-full overflow-hidden;
@@ -543,7 +543,7 @@
 .dark .reaction-bar { background: #1f2c33; border-color: #374045; }
 .dark .reaction-bar-btn:hover { background: #2a3942; }
 .dark .reaction-badge { background: #202c33; color: #aebac1; }
-.dark .reaction-badge:hover, .dark .reaction-badge.active { background: #0a332c; color: #00a884; border-color: #00a884; }
+.dark .reaction-badge:hover, .dark .reaction-badge.active { background: #0a332c; color: var(--primary); border-color: var(--primary); }
 
 .delete-group-dialog-overlay {
   @apply fixed inset-0 z-[55] flex items-center justify-center;
@@ -672,7 +672,7 @@
 .dark .profile-edit-input, .dark .profile-edit-textarea {
   background: #202c33; color: #e9edef; border-color: #374045;
 }
-.dark .profile-edit-input:focus, .dark .profile-edit-textarea:focus { border-color: #00a884; }
+.dark .profile-edit-input:focus, .dark .profile-edit-textarea:focus { border-color: var(--primary); }
 .dark .profile-edit-label { color: #8696a0; }
 .dark .profile-edit-char-count { color: #8696a0; }
 .dark .profile-edit-avatar-overlay { background: #2a3942; }
@@ -733,7 +733,7 @@
 }
 .app-lock-error.visible { opacity: 1; }
 .dark .app-lock-overlay { background: #0b141a; }
-.dark .app-lock-icon { background: #0a332c; color: #00a884; }
+.dark .app-lock-icon { background: #0a332c; color: var(--primary); }
 .dark .app-lock-subtitle { color: #8696a0; }
 .dark .app-lock-pin-digit { background: #202c33; border-color: #374045; color: #e9edef; }
 .dark .app-lock-key { background: #202c33; color: #e9edef; }
