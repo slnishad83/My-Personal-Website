@@ -297,6 +297,7 @@
     _chatsData.forEach(c => { if (c.otherUserId && c.otherUserId !== uid) others.push(c.otherUserId); });
     if (!others.length) return;
     window._onlineUsers = window._onlineUsers || {};
+    window._onlineInfo = window._onlineInfo || {};
     const unique = Array.from(new Set(others)).slice(0, 50);
     unique.forEach(id => {
       db.collection('users').doc(id).get().then(snap => {
@@ -305,9 +306,14 @@
         const now = Date.now();
         const hb = d.lastHeartbeat || 0;
         const online = d.onlineStatus === 'online' && (now - hb) < _PRESENCE_WINDOW;
+        window._onlineInfo[id] = { online: online, lastSeen: d.lastSeen || null, customStatus: d.customStatus || '' };
         if (window._onlineUsers[id] !== online) {
           window._onlineUsers[id] = online;
           renderChatList();
+        }
+        const cur = window.currentChat;
+        if (cur && cur.type === 'direct' && cur.otherUserId === id) {
+          _updateChatHeader(cur);
         }
       }).catch(() => {});
     });
@@ -557,13 +563,29 @@
     const statusEl = document.getElementById('header-status');
     const avatarEl2 = document.getElementById('header-avatar');
 
-    if (nameEl) nameEl.textContent = chat.name || 'Chat';
+    let statusText;
+    let statusColor = '';
+    if (chat.type === 'broadcast') statusText = `${chat.recipientCount || 0} recipients`;
+    else if (chat.type === 'group') statusText = `${chat.memberCount || ''} members`;
+    else {
+      const info = chat.otherUserId && window._onlineInfo && window._onlineInfo[chat.otherUserId];
+      const online = info ? !!info.online : !!chat.isOnline;
+      if (online) {
+        statusText = 'Online';
+        statusColor = '#25D366';
+      } else if (info && info.lastSeen) {
+        const fmt = (typeof window.formatLastSeen === 'function')
+          ? window.formatLastSeen(info.lastSeen)
+          : '';
+        statusText = fmt || 'Tap for info';
+      } else {
+        statusText = 'Tap for info';
+      }
+    }
     if (statusEl) {
-      if (chat.type === 'broadcast') statusEl.textContent = `${chat.recipientCount || 0} recipients`;
-      else if (chat.type === 'group')
-        statusEl.textContent = `${chat.memberCount || ''} members`;
-      else
-        statusEl.textContent = (chat.isOnline ? 'Online' : 'Tap for info');
+      statusEl.textContent = statusText;
+      statusEl.style.color = statusColor || '';
+      if (statusColor) statusEl.style.fontWeight = '500';
     }
     if (avatarEl2) {
       if (chat.photoURL) {

@@ -356,6 +356,7 @@
         if (type === 'contact') {
           html += '<button class="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl hover:bg-surface-variant/50 transition-colors text-on-surface" onclick="window._MsgActions.addContact(\'' + _esc(msgId) + '\');document.getElementById(\'msg-ctx-menu\').remove()"><span class="material-symbols-outlined text-lg">person_add</span><span class="text-sm">Add contact</span></button>';
         }
+        html += '<button class="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl hover:bg-surface-variant/50 transition-colors text-on-surface" onclick="window._MsgActions.report(\'' + _esc(msgId) + '\');document.getElementById(\'msg-ctx-menu\').remove()"><span class="material-symbols-outlined text-lg">flag</span><span class="text-sm">Report</span></button>';
         html += '<button class="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl hover:bg-surface-variant/50 transition-colors text-red-500" onclick="window._MsgActions.delete(\'' + _esc(msgId) + '\');document.getElementById(\'msg-ctx-menu\').remove()"><span class="material-symbols-outlined text-lg">delete</span><span class="text-sm">Delete</span></button>';
         html += '</div></div>';
         document.body.insertAdjacentHTML('beforeend', html);
@@ -611,6 +612,23 @@
         _addContact(msg);
       })['catch'](function (err) {
         if (window.__DEBUG__) console.error('[MsgActions] addContact fetch error:', err);
+      });
+    },
+    report: function (msgId) {
+      var chat = window.App && window.App.currentChat ? window.App.currentChat : null;
+      var getMsg = _fetchMsg(msgId).then(function (msg) {
+        msg = msg || {};
+        return msg;
+      })['catch'](function () { return {}; });
+      getMsg.then(function (msg) {
+        var senderName = msg.fromName || msg.senderName || (chat ? chat.name : null) || 'Someone';
+        var senderId = msg.from || msg.senderId || null;
+        var text = msg.text || msg.message || msg.content || '';
+        if (window.MessageUX && typeof window.MessageUX.openReportMessage === 'function') {
+          window.MessageUX.openReportMessage(msgId, senderName, senderId, text);
+        } else if (typeof window.openReportUser === 'function') {
+          window.openReportUser(senderId || chat.otherUserId, senderName);
+        }
       });
     }
   };

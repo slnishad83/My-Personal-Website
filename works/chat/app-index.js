@@ -235,6 +235,7 @@ const _deferredModules = [
   () => import('./request-account-info.js'),
   () => import('./poll-creation.js'),
   () => import('./message-grouping.js'),
+  () => import('./message-ux.js'),
   () => import('./swipe-reply.js'),
   () => import('./double-tap-react.js'),
   () => import('./typing-indicator.js'),

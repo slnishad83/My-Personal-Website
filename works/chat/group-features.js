@@ -199,6 +199,25 @@
     async function _loadContacts(query) {
       listWrap.innerHTML = '';
       var users = window.allUsers || [];
+      if (!users.length) {
+        try {
+          var db = _db();
+          if (db) {
+            var uid = _uid();
+            var snap = await db.collection('users').get();
+            users = snap.docs.map(function (d) {
+              var data = d.data() || {};
+              data.uid = data.uid || d.id;
+              return data;
+            }).filter(function (u) {
+              return !uid || u.uid !== uid;
+            }).sort(function (a, b) {
+              return String(a.displayName || a.name || a.email || '').localeCompare(String(b.displayName || b.name || b.email || ''));
+            });
+            window.allUsers = users;
+          }
+        } catch (e) { if (window.__DEBUG__) console.warn('[GroupFeatures] load users fallback failed:', e); }
+      }
       var filtered = users.filter(function (u) {
         if (existingMemberIds.has(u.uid)) return false;
         if (!query) return true;
