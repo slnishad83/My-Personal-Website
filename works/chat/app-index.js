@@ -117,6 +117,7 @@ const _deferredModules = [
   () => import('./background-call-handler.js'),
   () => import('./call-link.js'),
   () => import('./in-call-reactions.js'),
+  () => import('./call-recording.js'),
 
   // --- WhatsApp parity & messaging ---
   () => import('./ui-compliance.js'),

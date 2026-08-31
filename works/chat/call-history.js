@@ -311,7 +311,7 @@
     var subline = subParts.join(' \u00b7 ');
 
     var infoBtn = '<button class="min-w-[44px] min-h-[44px] rounded-full flex items-center justify-center hover:bg-surface-variant/50 transition-colors flex-shrink-0" data-call-info="' + _esc(call.id) + '" title="Call details" aria-label="Call details"><span class="material-symbols-outlined text-on-surface-variant" style="font-size:16px">info</span></button>';
-    var callBtn = '<button class="min-w-[44px] min-h-[44px] rounded-full flex items-center justify-center hover:bg-green-500/10 transition-colors flex-shrink-0" data-call-callback="' + _esc(call.id) + '" data-call-type="' + _esc(call.callType || 'voice') + '" title="' + (callIcon === 'videocam' ? 'Video call' : 'Call back') + '" aria-label="' + (callIcon === 'videocam' ? 'Video call' : 'Call back') + '"><span class="material-symbols-outlined text-green-500" style="font-size:16px">' + callIcon + '</span></button>';
+    var callBtn = '<button class="call-back-btn min-w-[44px] min-h-[44px] rounded-full flex items-center justify-center hover:bg-green-500/10 transition-colors flex-shrink-0" data-call-callback="' + _esc(call.id) + '" data-call-type="' + _esc(call.callType || 'voice') + '" title="' + (callIcon === 'videocam' ? 'Video call' : 'Call back') + '" aria-label="' + (callIcon === 'videocam' ? 'Video call' : 'Call back') + '"><span class="material-symbols-outlined text-green-500" style="font-size:16px">' + callIcon + '</span></button>';
 
     return '<div class="flex items-center gap-3 px-4 py-3 hover:bg-surface-variant/30 rounded-xl cursor-pointer transition-colors group ' + selectionClass + '" data-call-entry="' + _esc(call.id) + '" role="button" tabindex="0">' +
       (_selectionMode ? selectedCheck : '') +

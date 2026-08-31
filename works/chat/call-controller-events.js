@@ -7,6 +7,7 @@
   var _swipeState = null;
   var _outgoingRingtoneInterval = null;
   var _lastCallAttemptTime = 0;
+  var _esc = function (s) { return App && App.escHtml ? App.escHtml(s) : (s ? String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;') : ''); };
 
   function _startOutgoingRingtone() {
     _stopOutgoingRingtone();
@@ -288,7 +289,7 @@
     _lastCallAttemptTime = Date.now();
     if (!CC.uid() || !CC.db()) { CC.toast('Not signed in', 'error'); return; }
     var c = CC.chat();
-    if (c && c.type === 'group') { startGroupCall('voice'); return; }
+    if (c && c.type === 'group') { _openGroupParticipantPicker('voice'); return; }
     if (c && (c.uid || c.otherUserId)) { await initiateOutgoingCall('voice', c); return; }
     CC.openCallPicker();
   }
@@ -299,7 +300,7 @@
     _lastCallAttemptTime = Date.now();
     if (!CC.uid() || !CC.db()) { CC.toast('Not signed in', 'error'); return; }
     var c = CC.chat();
-    if (c && c.type === 'group') { startGroupCall('video'); return; }
+    if (c && c.type === 'group') { _openGroupParticipantPicker('video'); return; }
     if (c && (c.uid || c.otherUserId)) { await initiateOutgoingCall('video', c); return; }
     CC.openCallPicker();
   }
@@ -532,45 +533,192 @@
     } catch (_) {}
   }
 
-  async function startGroupCall(type) {
+  function _openGroupParticipantPicker(type) {
     var c = CC.chat();
     if (!c || !CC.db() || !CC.uid()) return;
-    if (c.type !== 'group') return;
     var myUid = CC.uid();
-    var memberIds = (c.members || []).filter(function (m) { return m && m !== myUid; });
+    var memberIds = (c.members || c.participants || []).filter(function (m) { return m && m !== myUid; });
     if (!memberIds.length) { CC.toast('No other members to call', 'info'); return; }
 
-    // Prefer the group-call engine (writes to groupCalls/ and keeps signaling
-    // path consistent). It takes participant ids (self excluded) + call type.
-    if (typeof window.startGroupCall === 'function' && window.startGroupCall !== startGroupCall) {
-      try {
-        await window.startGroupCall(memberIds, type === 'video' ? 'video' : 'voice', {
-          groupId: c.id,
-          groupName: c.name,
-          groupAvatar: c.photoURL || c.avatar || ''
-        });
-      } catch (e) {
-        if (window.__DEBUG__) console.warn('[calls] startGroupCall delegate:', e);
-      }
-      return;
+    var existing = document.getElementById('cc-group-participant-picker');
+    if (existing) existing.remove();
+    var overlay = document.createElement('div');
+    overlay.id = 'cc-group-participant-picker';
+    overlay.style.cssText = 'position:fixed;inset:0;z-index:10010;display:flex;align-items:flex-end;justify-content:center;';
+    var backdrop = document.createElement('div');
+    backdrop.style.cssText = 'position:absolute;inset:0;background:rgba(0,0,0,0.5);';
+    backdrop.addEventListener('click', function () { overlay.remove(); });
+    overlay.appendChild(backdrop);
+    var panel = document.createElement('div');
+    panel.style.cssText = 'position:relative;width:100%;max-width:480px;max-height:80vh;background:var(--surface,#fff);border-radius:16px 16px 0 0;display:flex;flex-direction:column;overflow:hidden;';
+
+    var header = document.createElement('div');
+    header.style.cssText = 'padding:16px 20px;border-bottom:1px solid var(--outline-variant,rgba(0,0,0,0.08));display:flex;align-items:center;justify-content:space-between;';
+    var hTitle = document.createElement('h3');
+    hTitle.style.cssText = 'margin:0;font-size:16px;font-weight:700;color:var(--on-surface,#1a1a1a);';
+    hTitle.textContent = (type === 'video' ? 'Select contacts for video call' : 'Select contacts for voice call');
+    header.appendChild(hTitle);
+    var closeBtn = document.createElement('button');
+    closeBtn.style.cssText = 'border:none;background:none;cursor:pointer;color:var(--on-surface-variant,#666);padding:4px;';
+    closeBtn.innerHTML = '<span class="material-symbols-outlined" style="font-size:24px">close</span>';
+    closeBtn.addEventListener('click', function () { overlay.remove(); });
+    header.appendChild(closeBtn);
+    panel.appendChild(header);
+
+    var countBar = document.createElement('div');
+    countBar.style.cssText = 'padding:8px 20px;font-size:13px;color:var(--on-surface-variant,#666);border-bottom:1px solid var(--outline-variant,rgba(0,0,0,0.06));';
+    panel.appendChild(countBar);
+
+    var searchWrap = document.createElement('div');
+    searchWrap.style.cssText = 'padding:12px 20px;';
+    var searchInput = document.createElement('input');
+    searchInput.type = 'text';
+    searchInput.placeholder = 'Search contacts...';
+    searchInput.style.cssText = 'width:100%;padding:10px 14px;border:1px solid var(--outline-variant,rgba(0,0,0,0.12));border-radius:10px;font-size:14px;background:var(--surface-variant,rgba(0,0,0,0.03));color:var(--on-surface,#1a1a1a);outline:none;box-sizing:border-box;';
+    searchWrap.appendChild(searchInput);
+    panel.appendChild(searchWrap);
+
+    var listWrap = document.createElement('div');
+    listWrap.style.cssText = 'flex:1;overflow-y:auto;padding:0 12px;max-height:45vh;';
+    panel.appendChild(listWrap);
+
+    var selectedIds = new Set();
+    var selectedMap = {};
+
+    function _updateCount() {
+      var n = selectedIds.size;
+      countBar.textContent = n === 0 ? 'Select contacts to start the call' : n + (n === 1 ? ' contact selected' : ' contacts selected');
+      startBtn.disabled = n === 0;
+      startBtn.style.opacity = n === 0 ? '0.5' : '1';
     }
 
+    var addBar = document.createElement('div');
+    addBar.style.cssText = 'padding:12px 20px;border-top:1px solid var(--outline-variant,rgba(0,0,0,0.08));';
+    var startBtn = document.createElement('button');
+    startBtn.style.cssText = 'width:100%;padding:12px;border:none;border-radius:10px;background:var(--primary,#00A884);color:#fff;font-size:14px;font-weight:600;cursor:pointer;';
+    startBtn.textContent = type === 'video' ? 'Start video call' : 'Start voice call';
+    startBtn.disabled = true;
+    startBtn.style.opacity = '0.5';
+    startBtn.addEventListener('click', async function () {
+      if (selectedIds.size === 0) return;
+      overlay.remove();
+      if (typeof window.startGroupCall === 'function' && window.startGroupCall !== startGroupCall) {
+        try {
+          await window.startGroupCall(Array.from(selectedIds), type === 'video' ? 'video' : 'voice', {
+            groupId: c.id,
+            groupName: c.name,
+            groupAvatar: c.photoURL || c.avatar || ''
+          });
+        } catch (e) {
+          if (window.__DEBUG__) console.warn('[calls] startGroupCall delegate:', e);
+        }
+        return;
+      }
+      // Fallback: start the group call directly with the chosen members
+      _startGroupCallWithMembers(type, c, Array.from(selectedIds));
+    });
+    addBar.appendChild(startBtn);
+    panel.appendChild(addBar);
+
+    overlay.appendChild(panel);
+    document.body.appendChild(overlay);
+    panel.style.transform = 'translateY(100%)';
+    requestAnimationFrame(function () { panel.style.transition = 'transform .3s ease'; panel.style.transform = 'translateY(0)'; });
+
+    function _render(query) {
+      listWrap.innerHTML = '';
+      var users = (window.allUsers || []).filter(function (u) {
+        return u && (u.uid || u.id) && memberIds.indexOf(u.uid || u.id) !== -1;
+      });
+      if (query) {
+        var q = query.toLowerCase();
+        users = users.filter(function (u) {
+          var name = (u.displayName || u.name || '').toLowerCase();
+          var email = (u.email || '').toLowerCase();
+          return name.indexOf(q) !== -1 || email.indexOf(q) !== -1;
+        });
+      }
+      // Include any member ids missing from allUsers as raw rows so the list is never incomplete.
+      var known = {};
+      users.forEach(function (u) { known[u.uid || u.id] = true; });
+      var missing = memberIds.filter(function (m) { return !known[m] && !selectedMap[m]; });
+      missing.forEach(function (m) {
+        users.push({ uid: m, displayName: selectedMap[m] ? selectedMap[m].name : 'Contact', email: '' });
+      });
+      users.sort(function (a, b) { return (a.displayName || a.name || '?').localeCompare(b.displayName || b.name || '?'); });
+      if (users.length === 0) {
+        listWrap.innerHTML = '<div style="padding:24px;text-align:center;color:var(--on-surface-variant,#999);font-size:14px;">No contacts found</div>';
+        return;
+      }
+      users.forEach(function (u) {
+        var id = u.uid || u.id;
+        var name = u.displayName || u.name || 'Contact';
+        var isSel = selectedIds.has(id);
+        var item = document.createElement('div');
+        item.style.cssText = 'display:flex;align-items:center;gap:12px;padding:10px 8px;border-radius:10px;cursor:pointer;transition:background .15s;';
+        var checkbox = document.createElement('span');
+        checkbox.className = 'material-symbols-outlined';
+        checkbox.style.cssText = 'width:22px;height:22px;border-radius:50%;border:2px solid var(--primary,#00A884);display:flex;align-items:center;justify-content:center;font-size:14px;color:#fff;flex-shrink:0;';
+        checkbox.textContent = isSel ? 'check' : '';
+        if (isSel) checkbox.style.background = 'var(--primary,#00A884)';
+        item.appendChild(checkbox);
+        var avatar = document.createElement('div');
+        avatar.style.cssText = 'width:40px;height:40px;border-radius:50%;background:var(--primary,#00A884);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:15px;flex-shrink:0;overflow:hidden;';
+        if (u.photoURL) {
+          avatar.innerHTML = '<img src="' + _esc(u.photoURL) + '" style="width:100%;height:100%;object-fit:cover;" />';
+        } else {
+          avatar.textContent = (name || '?')[0].toUpperCase();
+        }
+        item.appendChild(avatar);
+        var info = document.createElement('div');
+        info.style.cssText = 'flex:1;min-width:0;';
+        var nameEl = document.createElement('div');
+        nameEl.style.cssText = 'font-size:15px;font-weight:600;color:var(--on-surface,#1a1a1a);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;';
+        nameEl.textContent = name;
+        info.appendChild(nameEl);
+        item.appendChild(info);
+        item.addEventListener('click', function () {
+          if (selectedIds.has(id)) {
+            selectedIds.delete(id);
+            selectedMap[id] = null;
+          } else {
+            selectedIds.add(id);
+            selectedMap[id] = { name: name, photoURL: u.photoURL || '' };
+          }
+          _render(query);
+          _updateCount();
+        });
+        listWrap.appendChild(item);
+      });
+    }
+
+    searchInput.addEventListener('input', function () { _render(searchInput.value); });
+    _render('');
+    _updateCount();
+    searchInput.focus();
+  }
+
+  async function _startGroupCallWithMembers(type, c, memberIds) {
+    if (!CC.uid() || !CC.db()) return;
+    if (await _delegateGroupCall(type, c, memberIds)) return;
     if (typeof PermissionsManager !== 'undefined') {
       var granted = await PermissionsManager.ensureForFeature(type === 'video' ? 'Video Call' : 'Audio Call');
       if (!granted) return;
     }
+    _doStartGroupCall(type, c, memberIds);
+  }
 
+  function _doStartGroupCall(type, c, memberIds) {
     CC.callType = type;
     CC.setActiveCallMode('group');
     CC.showCallScreen(type, c.name, c.initials || 'G');
     CC.txt('call-quality-text', type === 'video' ? 'HD Group Video' : 'HD Group Voice');
     CC.txt('call-status', 'Calling ' + memberIds.length + ' people…');
 
-    try {
-      await CC.getMedia(type);
-      var allParticipants = [myUid].concat(memberIds);
+    CC.getMedia(type).then(async function () {
+      var allParticipants = [CC.uid()].concat(memberIds);
       var callRef = await CC.db().collection('calls').add({
-        fromUserId: myUid,
+        fromUserId: CC.uid(),
         fromUserName: CC.me()?.displayName || 'User',
         fromUserPhoto: CC.me()?.photoURL || '',
         type: type,
@@ -582,7 +730,14 @@
         offer: null,
         participants: allParticipants,
         createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      }).catch(function (err) {
+        if (window.__DEBUG__) console.error('Group call error:', err);
+        CC.toast('Could not start group call: ' + err.message, 'error');
+        CC.cleanup();
+        CC.setState(CC.STATES.IDLE);
+        return null;
       });
+      if (!callRef) return;
       CC.callId = callRef.id;
       App._activeCallId = callRef.id;
       if (typeof listenForGroupCallParticipants === 'function') listenForGroupCallParticipants(CC.callId, type);
@@ -595,12 +750,45 @@
           endCall();
         }
       }, CC.CALL_TIMEOUT_MS);
-    } catch (err) {
+    }).catch(function (err) {
       if (window.__DEBUG__) console.error('Group call error:', err);
       CC.toast('Could not start group call: ' + err.message, 'error');
       CC.cleanup();
       CC.setState(CC.STATES.IDLE);
+    });
+  }
+
+  async function _delegateGroupCall(type, c, memberIds) {
+    if (typeof window.startGroupCall === 'function' && window.startGroupCall !== _delegateGroupCall) {
+      try {
+        await window.startGroupCall(memberIds, type === 'video' ? 'video' : 'voice', {
+          groupId: c.id,
+          groupName: c.name,
+          groupAvatar: c.photoURL || c.avatar || ''
+        });
+      } catch (e) {
+        if (window.__DEBUG__) console.warn('[calls] startGroupCall delegate:', e);
+      }
+      return true;
     }
+    return false;
+  }
+
+  async function startGroupCall(type) {
+    var c = CC.chat();
+    if (!c || !CC.db() || !CC.uid()) return;
+    if (c.type !== 'group') return;
+    var myUid = CC.uid();
+    var memberIds = (c.members || c.participants || []).filter(function (m) { return m && m !== myUid; });
+    if (!memberIds.length) { CC.toast('No other members to call', 'info'); return; }
+
+    if (await _delegateGroupCall(type, c, memberIds)) return;
+
+    if (typeof PermissionsManager !== 'undefined') {
+      var granted = await PermissionsManager.ensureForFeature(type === 'video' ? 'Video Call' : 'Audio Call');
+      if (!granted) return;
+    }
+    _doStartGroupCall(type, c, memberIds);
   }
 
   function acceptGroupCall(data) {

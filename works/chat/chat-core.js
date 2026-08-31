@@ -960,6 +960,17 @@
       const senderName = msg.senderName || msg.displayName || 'User';
       const msgType = msg.type || 'text';
 
+      if (msgType === 'call-reject') {
+        const chipRow = document.createElement('div');
+        chipRow.style.cssText = 'display:flex;justify-content:center;margin:6px 0;padding:0 12px;';
+        chipRow.innerHTML = `
+          <span style="display:inline-flex;align-items:center;gap:6px;background:var(--surface-container,#f0f2f5);color:var(--on-surface-variant,#8696a0);font-size:12px;padding:5px 12px;border-radius:14px;">
+            <span class="material-symbols-outlined" style="font-size:14px;">call_end</span>
+            ${esc('Rejected the call with a message')}
+          </span>`;
+        msgWrap.appendChild(chipRow);
+      }
+
       // Build message bubble
       const row = document.createElement('div');
       row.className = `message-row ${isMe ? 'msg-out' : 'msg-in'}`;
