@@ -85,6 +85,7 @@ function generateVersionJson() {
 
 // Custom plugin: generate sw.js with Firebase config injected from firebase-env.json
 function generateSwPlugin() {
+  const pkgVersion = JSON.parse(readFileSync('package.json', 'utf-8')).version;
   return {
     name: 'generate-sw',
     generateBundle() {
@@ -94,6 +95,8 @@ function generateSwPlugin() {
         /\/\* __FIREBASE_CONFIG__ \*\/\s*\{[^}]+\}/,
         JSON.stringify(firebaseConfig)
       );
+      // Version-derived cache name so each release busts stale SW caches
+      sw = sw.replace(/var CACHE_NAME = __CACHE_NAME__;/, `var CACHE_NAME = 'nsl-chat-v${pkgVersion}';`);
       this.emitFile({
         type: 'asset',
         fileName: 'sw.js',

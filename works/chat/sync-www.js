@@ -74,11 +74,11 @@ if (fs.existsSync(distAssets)) {
   console.log('  Copied dist/assets -> works/chat/assets/');
 }
 
-const htmlFiles = fs.readdirSync(DIST).filter(f => f === 'version.json' || f === 'sw.js');
+const htmlFiles = fs.readdirSync(DIST).filter(f => f === 'version.json');
 for (const htmlFile of htmlFiles) {
   fs.copyFileSync(path.join(DIST, htmlFile), path.join(ROOT, htmlFile));
 }
-console.log('  Copied version.json and sw.js -> works/chat/ root');
+console.log('  Copied version.json -> works/chat/ root (source sw.js template preserved)');
 
 // ── Step 3: Copy additional static assets not in dist ───
 const EXTRA_FILES = [
