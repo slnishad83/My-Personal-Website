@@ -16,9 +16,15 @@
   </script>
   <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet"/>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=block" />
-  <script src="firebase-config.js"></script>
+<script src="firebase-config.js"></script>
   <script src="https://www.gstatic.com/firebasejs/12.16.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/12.16.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore-compat.js"></script>
+  <script>
+    if (window.firebase && window.FIREBASE_CONFIG && window.firebase.apps.length === 0) {
+      try { window.firebase.initializeApp(window.FIREBASE_CONFIG); } catch (e) { console.error('Album Firebase init failed:', e); }
+    }
+  </script>
   <style>
     :root{--green:#008069}
     body{background:var(--bg)}
@@ -323,7 +329,8 @@ document.addEventListener('DOMContentLoaded',function(){
   if(typeof firebase!=='undefined'){
     firebase.auth().onAuthStateChanged(function(u){
       window.currentUser=u;
-      if(u)loadAlbumMedia();
+      if(u){loadAlbumMedia();}
+      else if(!location.hash){location.href='login.html';}
     });
   }
 });
