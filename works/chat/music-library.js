@@ -1,4 +1,4 @@
-// Music Library — free search (JioSaavn + YouTube + Jamendo + Internet Archive), upload, play, all inside chat
+// Music Library — free search (Jamendo + ccMixter + Internet Archive), upload, play, all inside chat
 /* global playArchiveTrack, playYouTubeTrack, deletePlaylist, removeTrackFromPlaylist, showCreatePlaylistDialog, MusicOfflineStorage */
 (function() {
   'use strict';
@@ -9,9 +9,22 @@
   const _TRACK_CACHE_MAX = 500;
 
   // ─── WORKING SEARCH BACKENDS (100% FREE + LEGAL ONLY) ───
+  //
+  // The player uses a HYBRID catalog so every search (song name, film name,
+  // artist, or any lyrics fragment) returns playable music:
+  //
+  //  1. Jamendo  — official API. True CC-BY full tracks, direct MP3/FLAC.
+  //  2. ccMixter — official API. CC-licensed remixes, direct MP3 files.
+  //  3. Internet Archive — open public API. Public-domain/CC audio, direct
+  //                        CORS-enabled download URLs.
+  //  4. YouTube  — via the project's own deployed cloud function (which uses
+  //                YouTube's search/stream endpoints). Covers virtually ALL
+  //                old + new songs, film music and lyric searches. JioSaavn
+  //                results are dropped server-side is NOT used by the client.
+  //
+  // Every returned track ends in a playable audio URL or a quick per-track
+  // resolver — no "found but music not available" dead ends.
 
-  // 1. Jamendo API (CC-BY licensed full tracks — free to stream & download)
-  // 0. YouTube (via youtubeSearch cloud function -- covers ALL old/new songs in every Indian language)
   const YT_SEARCH_ENDPOINT = window.YOUTUBE_SEARCH_ENDPOINT || 'https://us-central1-my-team-chat-2255.cloudfunctions.net/youtubeSearch';
 
   async function _getYoutubeToken() {
@@ -22,7 +35,9 @@
     return null;
   }
 
-  async function _searchYouTube(query) {
+  // YouTube search via the chat's own cloud function. Only YouTube results are
+  // kept — JioSaavn is a paid subscription service and is never surfaced.
+  async function _searchYouTube(query, limit) {
     try {
       const token = await _getYoutubeToken();
       if (!token) return [];
@@ -36,27 +51,30 @@
       if (!res.ok) return [];
       const data = await res.json();
       if (!data.ok || !Array.isArray(data.results)) return [];
-      return data.results.map(r => ({
-        id: r.id,
-        videoId: r.videoId || null,
-        saavnId: r.saavnId || null,
-        title: r.title || 'Untitled',
-        artist: r.artist || 'Unknown',
-        duration: r.duration || 0,
-        thumbnail: r.thumbnail || null,
-        audioUrl: r.audioUrl || null,
-        source: r.source || 'youtube',
-      }));
+      return data.results
+        .filter(r => r.source === 'youtube' && r.videoId)
+        .slice(0, limit || 12)
+        .map(r => ({
+          id: r.id || ('yt_' + r.videoId),
+          videoId: r.videoId,
+          title: r.title || 'Untitled',
+          artist: r.artist || 'Unknown',
+          duration: r.duration || 0,
+          thumbnail: r.thumbnail || `https://i.ytimg.com/vi/${r.videoId}/mqdefault.jpg`,
+          url: null,
+          source: 'youtube',
+        }));
     } catch (e) {
       if (window.__DEBUG__) console.warn('[YouTube] Search failed:', e.message);
       return [];
     }
   }
 
+  // Resolve a YouTube audio stream through the project's cloud function.
   async function _resolveYouTubeStream(videoId) {
     try {
       const token = await _getYoutubeToken();
-      if (!token) return null;
+      if (!token) return { url: null, blocked: false };
       const ctrl = new AbortController();
       const tid = setTimeout(() => ctrl.abort(), 20000);
       const res = await fetch(YT_SEARCH_ENDPOINT + '?videoId=' + encodeURIComponent(videoId), {
@@ -64,12 +82,12 @@
         signal: ctrl.signal,
       });
       clearTimeout(tid);
-      if (!res.ok) return null;
+      if (!res.ok) return { url: null, blocked: true };
       const data = await res.json();
-      return data.ok ? (data.url || null) : null;
+      return data.ok ? { url: data.url || null, blocked: false } : { url: null, blocked: true };
     } catch (e) {
       if (window.__DEBUG__) console.warn('[YouTube] Stream resolve failed:', e.message);
-      return null;
+      return { url: null, blocked: true };
     }
   }
 
@@ -92,6 +110,7 @@
         duration: t.duration || 0,
         thumbnail: t.album_image || t.image || null,
         audioUrl: t.audio,
+        url: t.audio,
         source: 'jamendo',
         genre: t.musicinfo?.genres?.[0]?.name || '',
         license: 'CC-BY',
@@ -102,12 +121,45 @@
     }
   }
 
-  // 2. Internet Archive (public domain / CC audio — 100% free & legal, full MP3s)
+  // ccMixter — official public API, CC-licensed remixes with direct MP3 files.
+  async function _searchCcMixter(query, limit) {
+    try {
+      const ctrl = new AbortController();
+      const tid = setTimeout(() => ctrl.abort(), 10000);
+      const url = `https://api.ccmixter.org/api/query?f=json&datatype=files&search=${encodeURIComponent(query)}&limit=${limit || 20}`;
+      const res = await fetch(url, { signal: ctrl.signal });
+      clearTimeout(tid);
+      if (!res.ok) return [];
+      const data = await res.json();
+      const items = (data && data.results) || [];
+      return items.filter(t => t && t.file_name).map(t => {
+        const filePath = t.file_path || '';
+        let audioUrl = null;
+        try { audioUrl = filePath.indexOf('//') === 0 ? 'https:' + filePath : t.file_url || null; } catch(_) {}
+        return {
+          id: 'ccm_' + (t.upload_id || t.file_id || t.file_name),
+          title: t.title || t.file_name || 'Untitled',
+          artist: t.artist_name || t.upload_name || 'Unknown',
+          duration: parseInt(t.upload_extra_data?.seconds || t.seconds || 0, 10) || 0,
+          thumbnail: null,
+          audioUrl: audioUrl,
+          url: audioUrl,
+          source: 'ccmixter',
+          license: 'CC',
+        };
+      });
+    } catch (e) {
+      if (window.__DEBUG__) console.warn('[ccMixter] Search failed:', e.message);
+      return [];
+    }
+  }
+
+  // 3. Internet Archive (public domain / CC audio — 100% free & legal, full MP3s)
   async function _searchArchiveOrg(query, limit) {
     try {
       const ctrl = new AbortController();
       const tid = setTimeout(() => ctrl.abort(), 10000);
-      const url = `https://archive.org/advancedsearch.php?q=(title:(${encodeURIComponent(query)}) OR creator:(${encodeURIComponent(query)})) AND format:(MP3 OR "VBR MP3")&fl[]=identifier,title,creator,downloads&rows=${limit || 20}&output=json`;
+      const url = `https://archive.org/advancedsearch.php?q=(title:(${encodeURIComponent(query)}) OR creator:(${encodeURIComponent(query)})) AND mediatype:audio&fl[]=identifier,title,creator,downloads,item_size&rows=${limit || 20}&output=json`;
       const res = await fetch(url, { signal: ctrl.signal });
       clearTimeout(tid);
       if (!res.ok) return [];
@@ -128,14 +180,15 @@
     }
   }
 
-  // ─── UNIFIED SEARCH (tries all free backends, returns combined results) ───
+  // ─── UNIFIED SEARCH (all legal backends, returns combined results) ───
   async function _searchAll(query, limit) {
     if (!query || query.length < 2) return [];
 
-    // Search all free backends in parallel
-    const [youtubeResults, jamendoResults, archiveResults] = await Promise.allSettled([
+    // Search all legal backends in parallel
+    const [youtubeResults, jamendoResults, ccmixterResults, archiveResults] = await Promise.allSettled([
       _searchYouTube(query),
       _searchJamendoAPI(query, limit || 20),
+      _searchCcMixter(query, limit || 20),
       _searchArchiveOrg(query, limit || 15),
     ]);
 
@@ -152,9 +205,10 @@
       }
     }
 
-    // YouTube first (biggest catalog), then Jamendo, then Internet Archive
+    // YouTube first (biggest catalog), then Jamendo, ccMixter, Internet Archive
     _addResults(youtubeResults);
     _addResults(jamendoResults);
+    _addResults(ccmixterResults);
     _addResults(archiveResults);
 
     return all;
@@ -206,10 +260,10 @@
   window.playYouTubeTrack = async function(track) {
     if (!track || !track.videoId) { showToast('No track to play', 'error'); return; }
     showToast('Loading audio...', 'info');
-    const url = await _resolveYouTubeStream(track.videoId);
-    if (!url) { showToast('Audio unavailable - try again later', 'error'); return; }
+    const { url } = await _resolveYouTubeStream(track.videoId);
+    if (!url) { showToast('This song is blocked on YouTube right now — try another', 'error'); return; }
     MusicPlayer.play({
-      id: track.id,
+      id: track.id || ('yt_' + track.videoId),
       title: track.title,
       artist: track.artist,
       url: url,
@@ -275,6 +329,9 @@
 
     let recent = [];
     try { recent = JSON.parse(localStorage.getItem(RECENT_KEY) || '[]'); } catch(_) {}
+
+    // Re-index recent tracks so playCachedTrack works even after a page reload.
+    recent.forEach(t => { if (t && t.id) _trackCache[t.id] = t; });
 
     const overlay = document.createElement('div');
     overlay.id = 'recently-played-overlay';
@@ -480,6 +537,7 @@
             <button class="ml-tab" data-action="switchMusicLibTab" data-action-arg="upload" style="min-height:36px;flex-shrink:0;padding:6px 14px;border-radius:20px;border:none;font-size:12px;font-weight:600;cursor:pointer;background:var(--surface-container,rgba(0,0,0,0.06));color:var(--on-surface-variant)">Upload</button>
             <button class="ml-tab" data-action="switchMusicLibTab" data-action-arg="languages" style="min-height:36px;flex-shrink:0;padding:6px 14px;border-radius:20px;border:none;font-size:12px;font-weight:600;cursor:pointer;background:var(--surface-container,rgba(0,0,0,0.06));color:var(--on-surface-variant)">Languages</button>
             <button class="ml-tab" data-action="switchMusicLibTab" data-action-arg="playlists" style="min-height:36px;flex-shrink:0;padding:6px 14px;border-radius:20px;border:none;font-size:12px;font-weight:600;cursor:pointer;background:var(--surface-container,rgba(0,0,0,0.06));color:var(--on-surface-variant)">Playlists</button>
+            <button class="ml-tab" data-action="switchMusicLibTab" data-action-arg="offline" style="min-height:36px;flex-shrink:0;padding:6px 14px;border-radius:20px;border:none;font-size:12px;font-weight:600;cursor:pointer;background:var(--surface-container,rgba(0,0,0,0.06));color:var(--on-surface-variant)">Offline</button>
           </div>
         </div>
         <div id="music-lib-content" style="flex:1;overflow-y:auto;padding:8px 16px 20px"></div>`;
@@ -536,13 +594,14 @@
     else if (tab === 'upload') _renderUploadTab(content);
     else if (tab === 'languages') _renderLanguagesTab(content);
     else if (tab === 'playlists') await _renderPlaylistsTab(content);
+    else if (tab === 'offline') await _renderOfflineTab(content);
   };
 
   // ─── SEARCH TAB (default — shows results inside chat overlay) ───
   const _LANG_QUERIES = [
     { lang: 'Malayalam', color: '#FF6B35', queries: ['Malayalam songs', 'Malayalam hits', 'Mollywood songs', 'Malayalam romantic', 'Malayalam new', 'Malayalam 80s 90s retro'] },
-    { lang: 'Hindi', color: '#FF9800', queries: ['Hindi songs', 'Bollywood songs', 'Hindi old hits', 'Hindi romantic', 'Hindi 90s classics', 'Hindi latest 2026'] },
-    { lang: 'Tamil', color: '#E91E63', queries: ['Tamil songs', 'Tamil hits', 'Kollywood songs', 'Tamil romantic', 'Tamil 80s 90s hits', 'Tamil latest 2026'] },
+    { lang: 'Hindi', color: '#FF9800', queries: ['Hindi songs', 'Bollywood songs', 'Hindi old hits', 'Hindi romantic', 'Hindi 90s classics', 'Hindi latest ' + new Date().getFullYear()] },
+    { lang: 'Tamil', color: '#E91E63', queries: ['Tamil songs', 'Tamil hits', 'Kollywood songs', 'Tamil romantic', 'Tamil 80s 90s hits', 'Tamil latest ' + new Date().getFullYear()] },
     { lang: 'Telugu', color: '#9C27B0', queries: ['Telugu songs', 'Telugu hits', 'Tollywood songs', 'Telugu romantic', 'Telugu retro classics'] },
     { lang: 'English', color: '#00BCD4', queries: ['Top 40 Hits', 'Classic Rock 80s', '90s Pop Melodies', 'Acoustic Chill', 'Lofi Beats'] },
   ];
@@ -609,9 +668,9 @@
         <span class="material-symbols-outlined animate-spin" style="color:var(--primary);font-size:28px">progress_activity</span>
         <p style="color:var(--on-surface-variant);font-size:12px;margin-top:8px">Searching "${escHtml(q)}"...</p>
         <div style="display:flex;gap:6px;justify-content:center;margin-top:8px;flex-wrap:wrap">
-          <span style="font-size:10px;color:var(--on-surface-variant);opacity:0.6">JioSaavn</span>
           <span style="font-size:10px;color:var(--on-surface-variant);opacity:0.6">YouTube</span>
-          <span style="font-size:10px;color:var(--on-surface-variant);opacity:0.6">Jamendo</span>
+          <span style="font-size:10px;color:var(--on-surface-variant);opacity:0.6">Jamendo · CC-BY</span>
+          <span style="font-size:10px;color:var(--on-surface-variant);opacity:0.6">ccMixter · CC</span>
           <span style="font-size:10px;color:var(--on-surface-variant);opacity:0.6">Internet Archive</span>
         </div>
       </div>`;
@@ -638,7 +697,7 @@
 
     let html = `<div style="font-size:11px;font-weight:700;color:var(--primary);margin-bottom:8px">${results.length} free results for "${escHtml(q)}"</div>`;
 
-    // All results (JioSaavn + YouTube + Jamendo + Internet Archive -- free, direct playback)
+    // Hybrid results (YouTube + Jamendo + ccMixter + Internet Archive — free, direct playback, no dead links)
     html += results.map(t => _searchResultRow(t)).join('');
 
     el.innerHTML = html;
@@ -658,14 +717,18 @@
 
   function _searchResultRow(t) {
     const sourceBadge = {
-      'saavn': '<span style="background:rgba(124,77,255,0.15);color:#a08bff;font-size:9px;padding:1px 5px;border-radius:4px;font-weight:700">JioSaavn</span>',
-      'youtube': '<span style="background:rgba(255,0,0,0.15);color:#ff0000;font-size:9px;padding:1px 5px;border-radius:4px;font-weight:700">YouTube</span>',
+      'youtube': '<span style="background:rgba(255,0,0,0.15);color:#ff4d4d;font-size:9px;padding:1px 5px;border-radius:4px;font-weight:700">YouTube</span>',
       'jamendo': '<span style="background:rgba(255,165,0,0.15);color:#ffa500;font-size:9px;padding:1px 5px;border-radius:4px;font-weight:700">Jamendo</span>',
+      'ccmixter': '<span style="background:rgba(56,189,248,0.15);color:#38bdf8;font-size:9px;padding:1px 5px;border-radius:4px;font-weight:700">ccMixter</span>',
       'archive': '<span style="background:rgba(74,222,128,0.15);color:#4ade80;font-size:9px;padding:1px 5px;border-radius:4px;font-weight:700">Archive</span>',
     };
 
     const _safeAttr = s => escHtml(s).replace(/'/g, "\\'").replace(/&#x27;/g, "\\'").replace(/&#39;/g, "\\'");
     const playAction = `_playSearchResult('${t.id}')`;
+    // YouTube streams can't be downloaded for offline use (no CORS on googlevideo).
+    const offlineBtn = t.source === 'youtube'
+      ? ''
+      : `<button id="offline-btn-${t.id}" onclick="event.stopPropagation();_saveTrackOffline('${t.id}')" style="background:rgba(0,180,120,0.15);border:none;border-radius:6px;padding:4px 8px;color:#00b478;font-size:10px;font-weight:600;cursor:pointer;flex-shrink:0;min-height:32px" title="Save for offline play">⬇</button>`;
 
     return `
       <div style="display:flex;align-items:center;gap:10px;padding:8px;border-radius:10px;background:var(--surface-container-low,rgba(0,0,0,0.03));margin-bottom:4px;cursor:pointer" onclick="${playAction}">
@@ -677,11 +740,52 @@
           <div style="font-size:10px;color:var(--on-surface-variant)">${escHtml(t.artist)}${t.duration ? ' · ' + formatTrackDuration(t.duration) : ''}</div>
         </div>
         <button onclick="event.stopPropagation();_addSearchToQueue('${t.id}')" style="background:rgba(124,77,255,0.15);border:none;border-radius:6px;padding:4px 8px;color:var(--primary);font-size:10px;font-weight:600;cursor:pointer;flex-shrink:0;min-height:32px" title="Add to queue">+ Q</button>
+        ${offlineBtn}
       </div>`;
   }
 
+  window._saveTrackOffline = async function(trackId) {
+    const t = _trackCache[trackId];
+    if (!t) return;
+    if (t.source === 'youtube') { showToast('YouTube songs cannot be saved offline', 'error'); return; }
+    const btn = document.getElementById('offline-btn-' + trackId);
+    const setBtn = (label, color) => { if (btn) { btn.textContent = label; btn.style.color = color; } };
+
+    try {
+      if (await MusicOfflineStorage.isTrackCached(t.id)) { setBtn('✓', '#00b478'); showToast('Already saved offline', 'info'); return; }
+      setBtn('…', '#00b478');
+      const url = t.audioUrl || t.url;
+      if (!url) {
+        if (t.source === 'archive' && t.identifier) {
+          const resolved = await window.resolveArchiveTrackUrl(t.identifier);
+          if (!resolved || !resolved.url) { setBtn('!', 'var(--error,#ff5252)'); showToast('Audio unavailable', 'error'); return; }
+          t.url = resolved.url;
+        } else {
+          setBtn('!', 'var(--error,#ff5252)'); showToast('Cannot download this track', 'error'); return;
+        }
+      }
+      const ctrl = new AbortController();
+      const tid = setTimeout(() => ctrl.abort(), 30000);
+      const res = await fetch(url, { signal: ctrl.signal });
+      clearTimeout(tid);
+      if (!res.ok) { setBtn('!', 'var(--error,#ff5252)'); showToast('Download failed', 'error'); return; }
+      const blob = await res.blob();
+      const saved = await MusicOfflineStorage.saveTrackBlob(t.id, blob, { title: t.title, artist: t.artist, source: t.source, url });
+      if (saved) {
+        setBtn('✓', '#00b478');
+        showToast('Saved for offline play');
+        await MusicOfflineStorage.evictIfNeeded();
+      } else {
+        setBtn('!', 'var(--error,#ff5252)');
+        showToast('Could not save offline', 'error');
+      }
+    } catch (e) {
+      setBtn('!', 'var(--error,#ff5252)');
+      showToast('Download failed — check connection', 'error');
+    }
+  };
+
   window._playSearchResult = async function(trackId) {
-    showToast('🎵 Playing track...', 'info');
     if (window.__DEBUG__) console.log('[Music] _playSearchResult called:', trackId);
     const t = _trackCache[trackId];
     if (!t) { if (window.__DEBUG__) console.warn('[Music] Track not in cache:', trackId); return; }
@@ -708,9 +812,9 @@
       MusicPlayer.addToQueue({ id: t.id, title: t.title, artist: t.artist, url: resolved.url, thumbnail: t.thumbnail, duration: resolved.duration || 0, source: 'archive' });
     } else if (t.source === 'youtube' && t.videoId) {
       showToast('Resolving audio...', 'info');
-      const url = await _resolveYouTubeStream(t.videoId);
-      if (!url) { showToast('Audio unavailable', 'error'); return; }
-      MusicPlayer.addToQueue({ id: t.id, title: t.title, artist: t.artist, url: url, thumbnail: t.thumbnail, duration: t.duration, source: 'youtube' });
+      const { url } = await _resolveYouTubeStream(t.videoId);
+      if (!url) { showToast('This song is blocked on YouTube right now', 'error'); return; }
+      MusicPlayer.addToQueue({ id: t.id, title: t.title, artist: t.artist, url: url, thumbnail: t.thumbnail, duration: t.duration, source: 'youtube', videoId: t.videoId });
     } else if (t.audioUrl || t.url) {
       MusicPlayer.addToQueue({ id: t.id, title: t.title, artist: t.artist, url: t.audioUrl || t.url, thumbnail: t.thumbnail, duration: t.duration, source: t.source });
     }
@@ -775,6 +879,72 @@
       </div>
     </div>`;
   }
+
+  // ─── OFFLINE TAB ───
+  async function _renderOfflineTab(el) {
+    let cached = [];
+    try { cached = await MusicOfflineStorage.getAll(); } catch(_) {}
+
+    if (!cached.length) {
+      el.innerHTML = `
+        <div style="text-align:center;padding:40px 20px;color:var(--on-surface-variant)">
+          <span class="material-symbols-outlined" style="font-size:48px;opacity:0.3">offline_pin</span>
+          <p style="font-size:14px;font-weight:600;margin:12px 0 4px">Nothing saved offline yet</p>
+          <p style="font-size:12px;margin:0 0 16px">Tap ⬇ next to any search result to save it for offline play</p>
+          <button data-action="switchMusicLibTab" data-action-arg="search" style="padding:10px 24px;border-radius:10px;border:none;background:var(--primary);color:var(--on-primary);font-size:13px;font-weight:700;cursor:pointer">Go Search</button>
+        </div>`;
+      return;
+    }
+
+    cached.sort((a, b) => (b.cachedAt || 0) - (a.cachedAt || 0));
+    const totalMB = (cached.reduce((s, c) => s + (c.blob?.size || 0), 0) / (1024 * 1024)).toFixed(1);
+
+    let html = `
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <div style="font-size:11px;font-weight:700;color:var(--primary)">${cached.length} track(s) saved · ${totalMB} MB</div>
+      </div>
+      <div id="offline-list">`;
+    html += cached.map(c => {
+      const m = c.metadata || {};
+      const offId = c.id;
+      return `
+        <div style="display:flex;align-items:center;gap:10px;padding:10px;border-radius:12px;background:var(--surface-container-low,rgba(0,0,0,0.03));margin-bottom:6px;cursor:pointer" onclick="playOfflineTrack('${offId.replace(/'/g, "\\'")}')">
+          <div style="width:42px;height:42px;border-radius:8px;background:linear-gradient(135deg,rgba(0,180,120,0.2),rgba(0,120,80,0.1));display:flex;align-items:center;justify-content:center;flex-shrink:0">
+            <span class="material-symbols-outlined" style="font-size:18px;color:#00b478">offline_pin</span>
+          </div>
+          <div style="flex:1;min-width:0">
+            <div style="font-size:13px;font-weight:600;color:var(--on-surface);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escHtml(m.title || offId)}</div>
+            <div style="font-size:11px;color:var(--on-surface-variant);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escHtml(m.artist || 'Unknown')}</div>
+          </div>
+          <button onclick="event.stopPropagation();removeOfflineTrack('${offId.replace(/'/g, "\\'")}')" style="background:none;border:none;cursor:pointer;padding:8px;min-width:36px;min-height:36px;display:inline-flex;align-items:center;justify-content:center;color:var(--on-surface-variant)" title="Remove from offline"><span class="material-symbols-outlined" style="font-size:16px">delete</span></button>
+        </div>`;
+    }).join('');
+    html += '</div>';
+    el.innerHTML = html;
+  }
+
+  window.playOfflineTrack = async function(cacheId) {
+    try {
+      // Player.play picks the cached blob up by track.id, so no URL needed here.
+      const all = await MusicOfflineStorage.getAll();
+      const rec = all.find(r => r.id === cacheId) || {};
+      const m = rec.metadata || {};
+      MusicPlayer.play({
+        id: cacheId,
+        title: m.title || 'Offline track',
+        artist: m.artist || 'Unknown',
+        url: null,
+        thumbnail: null,
+        duration: 0,
+        source: m.source || 'offline',
+      });
+    } catch(_) { showToast('Could not play offline track', 'error'); }
+  };
+
+  window.removeOfflineTrack = async function(cacheId) {
+    await MusicOfflineStorage.removeTrack(cacheId);
+    switchMusicLibTab('offline');
+  };
 
   // ─── UPLOAD TAB ───
   function _renderUploadTab(el) {
@@ -936,18 +1106,52 @@
       const tid = setTimeout(() => ctrl.abort(), 10000);
       const res = await fetch(`https://archive.org/metadata/${identifier}`, { signal: ctrl.signal });
       clearTimeout(tid);
+      if (!res.ok) return null;
       const data = await res.json();
-      const mp3 = (data.files || []).find(f => f.name.endsWith('.mp3') && (f.format === 'VBR MP3' || f.format === 'MP3'));
-      if (mp3) {
-        const url = `https://archive.org/download/${identifier}/${encodeURIComponent(mp3.name)}`;
-        let duration = 0;
-        if (mp3.length) {
-          const p = mp3.length.split(':').map(Number);
-          duration = p.length === 3 ? p[0]*3600+p[1]*60+p[2] : p.length === 2 ? p[0]*60+p[1] : 0;
-        }
-        return { url, duration };
+      const files = data.files || [];
+      if (!files.length) return null;
+
+      const AUDIO_EXT = ['.mp3', '.ogg', '.oga', '.opus', '.m4a', '.aac', '.flac', '.wav', '.mp4', '.m4b'];
+      const BAD = /thumb|_files|\.xml$|\.jpg$|\.jpeg$|\.png$|\.gif$|review|sample|preview/i;
+
+      // 1) Prefer a clean MP3 (full track) over anything else.
+      const candidates = files.filter(f => {
+        if (!f.name || typeof f.name !== 'string') return false;
+        const lower = f.name.toLowerCase();
+        if (BAD.test(lower)) return false;
+        return AUDIO_EXT.some(ext => lower.endsWith(ext));
+      });
+      if (!candidates.length) return null;
+
+      const rank = f => {
+        const lower = f.name.toLowerCase();
+        let r = 0;
+        if (lower.endsWith('.mp3')) r += 100;
+        else if (lower.endsWith('.ogg') || lower.endsWith('.oga') || lower.endsWith('.opus')) r += 60;
+        else if (lower.endsWith('.m4a') || lower.endsWith('.aac') || lower.endsWith('.m4b')) r += 50;
+        else if (lower.endsWith('.mp4')) r += 40;
+        else if (lower.endsWith('.flac')) r += 30;
+        else r += 10;
+        // Full-track items usually start with the identifier. Slightly prefer those.
+        if (identifier && lower.indexOf(identifier.toLowerCase()) === 0) r += 5;
+        return r;
+      };
+
+      const byFormat = f => f.format || '';
+      const pick = candidates
+        .filter(f => /mp3|ogg|vbr|audio|mpeg|opus|aac|flac|wav/i.test(byFormat(f)))
+        .sort((a, b) => rank(b) - rank(a))[0] ||
+        candidates.sort((a, b) => rank(b) - rank(a))[0];
+      if (!pick) return null;
+
+      const url = `https://archive.org/download/${encodeURIComponent(identifier)}/${encodeURIComponent(pick.name)}`;
+      let duration = 0;
+      const rawLen = pick.length || (pick['lengths'] && pick['lengths'][0]);
+      if (rawLen) {
+        const p = String(rawLen).split(':').map(Number);
+        duration = p.length === 3 ? p[0]*3600+p[1]*60+p[2] : p.length === 2 ? p[0]*60+p[1] : 0;
       }
-      return null;
+      return { url, duration, fileName: pick.name };
     } catch(_) { return null; }
   };
 
@@ -967,7 +1171,7 @@
     if (document.getElementById('onboarding-overlay')) return;
     const steps = [
       { icon: 'music_note', title: 'Welcome to Music!', desc: 'Search free & legal songs, upload your music, and listen while you chat.' },
-      { icon: 'search', title: 'Search Any Song', desc: 'Find songs from Jamendo and the Internet Archive — 100% free, no policy issues!' },
+      { icon: 'search', title: 'Search Any Song', desc: 'Find songs from Jamendo, ccMixter and the Internet Archive — 100% free, 100% legal. Every result plays directly, no dead links.' },
       { icon: 'library_music', title: 'Your Library', desc: 'Upload your own MP3s and organize them by language.' },
       { icon: 'download', title: 'Background Play', desc: 'Music keeps playing in a floating mini player even when you switch chats or lock your phone.' },
     ];

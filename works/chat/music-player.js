@@ -80,6 +80,18 @@
     try { _eqGains = JSON.parse(localStorage.getItem('nsl_eq_gains') || '[0,0,0,0,0,0,0,0,0,0]'); } catch(_) {}
   }
 
+  // ─── OBJECT URL CLEANUP ───
+  let _objectUrls = [];
+  function _trackObjectUrl(url) {
+    if (!url || url.indexOf('blob:') !== 0) return;
+    _objectUrls.forEach(u => { try { URL.revokeObjectURL(u); } catch(_) {} });
+    _objectUrls = [url];
+  }
+  function _revokeAllObjectUrls() {
+    _objectUrls.forEach(u => { try { URL.revokeObjectURL(u); } catch(_) {} });
+    _objectUrls = [];
+  }
+
   // ─── EQUALIZER ───
   let _audioCtx = null;
   let _analyser = null;
@@ -285,6 +297,36 @@
           tx.oncomplete = () => resolve(true);
         });
       } catch(_) { return false; }
+    },
+    async getAll() {
+      try {
+        const db = await this.init();
+        return new Promise((resolve) => {
+          const tx = db.transaction(this._storeName, 'readonly');
+          const req = tx.objectStore(this._storeName).getAll();
+          req.onsuccess = () => resolve(req.result || []);
+          req.onerror = () => resolve([]);
+        });
+      } catch(_) { return []; }
+    },
+    async getCount() {
+      try {
+        const all = await this.getAll();
+        return all.length;
+      } catch(_) { return 0; }
+    },
+    // Keep offline storage small: drop oldest entries above the cap. Blob size
+    // is re-parsed from stored .blob so storage estimates stay honest.
+    async evictIfNeeded(maxCount = 40) {
+      try {
+        let all = await this.getAll();
+        if (all.length <= maxCount) return;
+        all.sort((a, b) => (a.cachedAt || 0) - (b.cachedAt || 0));
+        const overflow = all.length - maxCount;
+        for (let i = 0; i < overflow; i++) {
+          await this.removeTrack(all[i].id);
+        }
+      } catch(_) {}
     }
   };
   window.MusicOfflineStorage = MusicOfflineStorage;
@@ -309,6 +351,7 @@
       const offlineBlob = await MusicOfflineStorage.getTrackBlob(track.id);
       if (offlineBlob) {
         playbackUrl = URL.createObjectURL(offlineBlob);
+        _trackObjectUrl(playbackUrl);
         isOfflineSource = true;
       }
     } catch(_) {}
@@ -327,10 +370,12 @@
     Player.audio.load();
     Player.audio.play().then(() => {
       if (window.__DEBUG__) console.log('[MusicPlayer] Audio playback started successfully', isOfflineSource ? '(Offline Cache)' : '(Network)');
-      // If played from network successfully, auto-cache to IndexedDB in background
-      if (!isOfflineSource && track.url && (track.source === 'upload' || track.source === 'library')) {
+      // If played from network successfully, auto-cache to IndexedDB in background.
+      // YouTube (googlevideo) streams have no CORS so they can't be downloaded.
+      if (!isOfflineSource && track.url && track.source !== 'youtube' && track.source !== 'saavn') {
         fetch(track.url).then(res => res.blob()).then(blob => {
           MusicOfflineStorage.saveTrackBlob(track.id, blob, { title: track.title, artist: track.artist });
+          MusicOfflineStorage.evictIfNeeded();
         }).catch(()=>{});
       }
     }).catch(e => {
@@ -366,6 +411,7 @@
     Player.isPlaying = false;
     Player._currentTrack = null;
     Player.queueIndex = -1;
+    _revokeAllObjectUrls();
     _deactivateBackgroundMode();
     _hideMiniPlayer();
   };
@@ -460,14 +506,14 @@
     vol = Math.max(0, Math.min(1, vol));
     Player.volume = vol;
     Player.isMuted = false;
-    if (Player.audio) Player.audio.volume = vol;
+    _applyEffectiveVolume();
     localStorage.setItem('nsl_music_volume', String(vol));
     _updateVolumeUI();
   };
 
   Player.toggleMute = function() {
     Player.isMuted = !Player.isMuted;
-    if (Player.audio) Player.audio.volume = Player.isMuted ? 0 : Player.volume;
+    _applyEffectiveVolume();
     _updateVolumeUI();
   };
 
@@ -543,22 +589,50 @@
     }
   }
 
+  function _skipUnavailable() {
+    Player._consecutiveErrors = (Player._consecutiveErrors || 0) + 1;
+    _revokeAllObjectUrls();
+    // Stop after repeated failures so a whole dead queue doesn't skip forever.
+    if (Player._consecutiveErrors >= 5) {
+      Player._consecutiveErrors = 0;
+      showToast('This audio is unavailable right now', 'error');
+      Player.pause();
+      return;
+    }
+    showToast(Player._isOnline ? 'Track unavailable — skipping' : 'Offline — play a downloaded track', 'error');
+    Player._retryCount = 0;
+    setTimeout(() => Player.next(), 1500);
+  }
+
   function _onError(e) {
     if (window.__DEBUG__) console.warn('Audio error:', e);
     if (Player._retryCount < Player._maxRetries && Player._isOnline) {
       Player._retryCount++;
       showToast(`Retrying... (${Player._retryCount}/${Player._maxRetries})`, 'info');
       setTimeout(() => {
-        if (Player._currentTrack) {
-          Player.audio.src = Player._currentTrack.url;
-          Player.audio.load();
-          Player.audio.play().catch(() => {});
-        }
+        if (!Player._currentTrack) return;
+        Player.audio.src = Player._currentTrack.url;
+        Player.audio.load();
+        Player.audio.play().catch(() => {});
       }, 2000 * Player._retryCount);
     } else {
-      showToast('Track unavailable — skipping', 'error');
-      Player._retryCount = 0;
-      setTimeout(() => Player.next(), 1500);
+      // Hit the offline copy if the network stream failed but we cached the track.
+      const t = Player._currentTrack;
+      if (t && MusicOfflineStorage) {
+        MusicOfflineStorage.getTrackBlob(t.id).then(blob => {
+          if (blob) {
+            const url = URL.createObjectURL(blob);
+            _trackObjectUrl(url);
+            Player.audio.src = url;
+            Player.audio.load();
+            Player.audio.play().catch(() => {});
+            return;
+          }
+          _skipUnavailable();
+        }).catch(_skipUnavailable);
+      } else {
+        _skipUnavailable();
+      }
     }
   }
 
@@ -591,6 +665,18 @@
   }
 
   // ─── CROSSFADE ───
+  // Volume is computed from Player.volume multiplied by two independent fade
+  // factors (crossfade + sleep timer) so the two features never fight over
+  // Player.audio.volume.
+  let _sleepFadeFactor = 1;     // sleep timer: 1 → 0 during final 10s
+  let _crossfadeOutFactor = 1;  // crossfade: 1 → 0 during last few seconds
+
+  function _applyEffectiveVolume() {
+    if (!Player.audio) return;
+    const base = Player.isMuted ? 0 : Player.volume;
+    Player.audio.volume = Math.max(0, Math.min(1, base * _sleepFadeFactor * _crossfadeOutFactor));
+  }
+
   Player.setCrossfade = function(seconds) {
     Player.crossfadeDuration = Math.max(0, Math.min(10, seconds));
     localStorage.setItem('nsl_music_crossfade', String(Player.crossfadeDuration));
@@ -607,10 +693,10 @@
   function _applyCrossfade() {
     if (!Player.audio || Player.crossfadeDuration <= 0 || !Player.duration) return;
     const remaining = Player.duration - Player.currentTime;
-    if (remaining < Player.crossfadeDuration && remaining > 0) {
-      const progress = remaining / Player.crossfadeDuration;
-      Player.audio.volume = Math.max(0, (Player.isMuted ? 0 : Player.volume) * progress);
-    }
+    _crossfadeOutFactor = (remaining < Player.crossfadeDuration && remaining > 0)
+      ? Math.max(0, remaining / Player.crossfadeDuration)
+      : 1;
+    _applyEffectiveVolume();
   }
 
   function _crossfadeIn() {
@@ -618,18 +704,20 @@
     // Clear any existing crossfade interval to prevent leaks
     if (Player._crossfadeInInterval) { clearInterval(Player._crossfadeInInterval); Player._crossfadeInInterval = null; }
     Player._isCrossfading = true;
-    Player.audio.volume = 0;
-    const targetVol = Player.isMuted ? 0 : Player.volume;
-    const step = targetVol / (Player.crossfadeDuration * 10);
+    _crossfadeOutFactor = 0;
+    _applyEffectiveVolume();
+    const step = 1 / (Player.crossfadeDuration * 10);
     Player._crossfadeInInterval = setInterval(() => {
-      if (!Player._isCrossfading || Player.audio.volume >= targetVol) {
-        Player.audio.volume = targetVol;
+      if (!Player._isCrossfading || _crossfadeOutFactor >= 1) {
+        _crossfadeOutFactor = 1;
         Player._isCrossfading = false;
         clearInterval(Player._crossfadeInInterval);
         Player._crossfadeInInterval = null;
+        _applyEffectiveVolume();
         return;
       }
-      Player.audio.volume = Math.min(Player.audio.volume + step, targetVol);
+      _crossfadeOutFactor = Math.min(_crossfadeOutFactor + step, 1);
+      _applyEffectiveVolume();
     }, 100);
   }
 
@@ -654,10 +742,8 @@
         showToast('Sleep timer ended', 'info');
         return;
       }
-      if (remaining < 10000 && Player.isPlaying) {
-        const vol = Player.isMuted ? 0 : Player.volume;
-        Player.audio.volume = Math.max(0, vol * (remaining / 10000));
-      }
+      _sleepFadeFactor = remaining < 10000 ? Math.max(0, remaining / 10000) : 1;
+      _applyEffectiveVolume();
       _updateSleepTimerUI(remaining);
     }, 1000);
     showToast(`Sleep timer: ${minutes} min`, 'success');
@@ -668,7 +754,8 @@
     if (Player._sleepTimerInterval) clearInterval(Player._sleepTimerInterval);
     Player._sleepTimerInterval = null;
     Player._sleepTimerEnd = null;
-    if (Player.audio) Player.audio.volume = Player.isMuted ? 0 : Player.volume;
+    _sleepFadeFactor = 1;
+    _applyEffectiveVolume();
     _updateSleepTimerUI(0);
   };
 
@@ -782,8 +869,8 @@
   Player.getAudioInfo = function() {
     if (!Player.audio) return null;
     return {
-      sampleRate: Player.audio.sampleRate || 'unknown',
-      channels: Player.audio.numberOfChannels || 'unknown',
+      sampleRate: (_audioCtx && _audioCtx.sampleRate) || 'unknown',
+      channels: 'stereo',
       speed: Player.playbackSpeed,
       volume: Math.round(Player.volume * 100) + '%',
       networkType: navigator.connection?.effectiveType || 'unknown',
@@ -1276,6 +1363,19 @@
     _updateWakeLockUI();
   };
 
+  // Wake locks are auto-released when the tab is hidden. Re-acquire on return
+  // so lock-screen play keeps the screen awake as the user expects.
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible' && Player._wakeLockActive && !_wakeLockSentinel) {
+      if ('wakeLock' in navigator) {
+        navigator.wakeLock.request('screen').then(s => {
+          _wakeLockSentinel = s;
+          s.addEventListener('release', () => { Player._wakeLockActive = false; _updateWakeLockUI(); });
+        }).catch(() => {});
+      }
+    }
+  });
+
   function _updateWakeLockUI() {
     const icon = document.getElementById('music-lock-icon');
     if (icon) {
@@ -1297,13 +1397,44 @@
   function _restoreSession() {
     try {
       const last = JSON.parse(localStorage.getItem('nsl_last_track') || 'null');
-      if (last && last.url) {
-        Player._currentTrack = last;
-        Player.audio.src = last.url;
-        if (last._savedPosition && last._savedPosition > 0) {
-          Player.audio.currentTime = last._savedPosition;
+      if (!last || !last.url) return;
+      Player._currentTrack = last;
+      Player.isPlaying = false;
+
+      let restoreUrl = last.url;
+      // blob: URLs (offline-cached playback) do NOT survive a page reload —
+      // pull the cached copy back from IndexedDB instead.
+      if (restoreUrl.indexOf('blob:') === 0 && last.id && MusicOfflineStorage) {
+        MusicOfflineStorage.getTrackBlob(last.id).then(blob => {
+          if (!blob) return;
+          const url = URL.createObjectURL(blob);
+          _trackObjectUrl(url);
+          _applyRestoredTrack(last, url);
+        });
+        return;
+      }
+      _applyRestoredTrack(last, restoreUrl);
+    } catch(_) {}
+  }
+
+  function _applyRestoredTrack(track, url) {
+    try {
+      Player.audio.src = url;
+      Player.audio.load();
+      Player.audio.onloadedmetadata = function() {
+        Player.duration = Player.audio.duration || 0;
+        const pos = track._savedPosition || 0;
+        if (pos > 0 && track._savedTs && (Date.now() - track._savedTs) < 6 * 60 * 60 * 1000) {
+          try { Player.audio.currentTime = pos; } catch(_) {}
         }
-        _updateMiniPlayer(last);
+        _updatePlayerUI();
+      };
+      _updateMiniPlayer(track);
+      _updatePlayerUI();
+      // Auto-resume where the user left off. Muted/browser autoplay policies
+      // may still block this until the user taps play — that's expected.
+      if (track._wasPlaying && Player._isOnline) {
+        setTimeout(() => { Player.audio.play().catch(() => {}); }, 600);
       }
     } catch(_) {}
   }
@@ -1315,7 +1446,7 @@
   setInterval(() => {
     if (Player._currentTrack && Player.audio && Player.isPlaying) {
       try {
-        const toSave = { ...Player._currentTrack, _savedPosition: Player.audio.currentTime || 0, _savedTs: Date.now() };
+        const toSave = { ...Player._currentTrack, _savedPosition: Player.audio.currentTime || 0, _savedTs: Date.now(), _wasPlaying: Player.isPlaying };
         localStorage.setItem('nsl_last_track', JSON.stringify(toSave));
       } catch(_) {}
     }

@@ -548,7 +548,7 @@ exports.sendNotificationReply = onRequest(
       const decoded = await admin.auth().verifyIdToken(idToken);
       const uid = decoded.uid;
 
-      // M9: Rate limit — 30 replies per minute per user
+      // M9: Rate limit â€” 30 replies per minute per user
       checkRateLimit(uid, 'sendNotificationReply', 30);
 
       const { chatId, chatType, chatUserId, groupId, text } = req.body || {};
@@ -556,7 +556,7 @@ exports.sendNotificationReply = onRequest(
       if (!trimmedText)  { res.status(400).json({ error: 'Empty reply text' }); return; }
       if (!chatId)       { res.status(400).json({ error: 'Missing chatId' });   return; }
 
-      // H7: Input validation — enforce length limit and sanitize
+      // H7: Input validation â€” enforce length limit and sanitize
       const MAX_REPLY_LENGTH = 4000;
       if (trimmedText.length > MAX_REPLY_LENGTH) {
         res.status(400).json({ error: `Message too long (max ${MAX_REPLY_LENGTH} characters)` });
@@ -568,7 +568,7 @@ exports.sendNotificationReply = onRequest(
         res.status(400).json({ error: 'Invalid chatType' });
         return;
       }
-      // H7: Sanitize text — encode HTML entities to prevent XSS
+      // H7: Sanitize text â€” encode HTML entities to prevent XSS
       const sanitizedText = trimmedText
         .replace(/&/g, '&amp;')
         .replace(/</g, '&lt;')
@@ -576,7 +576,7 @@ exports.sendNotificationReply = onRequest(
         .replace(/"/g, '&quot;')
         .replace(/'/g, '&#x27;');
 
-      // M10: Authorization — sender must be a member of the target chat
+      // M10: Authorization â€” sender must be a member of the target chat
       const db = admin.firestore();
       if (chatType === 'group' && groupId) {
         const memberSnap = await db.collection('groupMembers')
@@ -658,7 +658,7 @@ exports.generateUrlPreview = onRequest({ region: 'us-central1', timeoutSeconds: 
     res.status(400).json({ error: 'Missing or invalid url parameter' }); return;
   }
 
-  // Validate URL — block private IPs and localhost
+  // Validate URL â€” block private IPs and localhost
   const { URL } = require('url');
   let parsedUrl;
   try { parsedUrl = new URL(url); } catch (_) {
@@ -752,10 +752,10 @@ exports.generateUrlPreview = onRequest({ region: 'us-central1', timeoutSeconds: 
   }
 });
 
-/* ─────────────────────────────────────────────────────────────
+/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
    YOUTUBE MUSIC SEARCH + STREAM (innertube API, no API key)
    Powers the in-chat Music Library search/playback.
-   ───────────────────────────────────────────────────────────── */
+   â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 const _YT_BASE = 'https://www.youtube.com';
 
 function _youtubeParseDuration(text) {
@@ -909,152 +909,6 @@ async function _getYouTubeStreamUrl(videoId) {
   return null;
 }
 
-// ---------- JioSaavn (free full Indian film audio; works from datacenter IPs, no bot-guard) ----------
-
-const SAAVN_API = 'https://www.jiosaavn.com/api.php';
-const SAAVN_HEADERS = {
-  'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-  'Referer': 'https://www.jiosaavn.com/',
-};
-
-async function _saavnFetch(call, params) {
-  const qs = new URLSearchParams({ __call: call, _format: 'json', _marker: '0', cc: 'in', ...params });
-  const response = await fetch(`${SAAVN_API}?${qs.toString()}`, { headers: SAAVN_HEADERS, signal: AbortSignal.timeout(15000) });
-  if (!response.ok) throw new Error(`Saavn ${call} HTTP ${response.status}`);
-  return response.json();
-}
-
-// DES-ECB (key 38346591) pure-JS decrypt — works on any Node runtime (OpenSSL 3 disables native DES).
-const _DES_IP = [58,50,42,34,26,18,10,2,60,52,44,36,28,20,12,4,62,54,46,38,30,22,14,6,64,56,48,40,32,24,16,8,57,49,41,33,25,17,9,1,59,51,43,35,27,19,11,3,61,53,45,37,29,21,13,5,63,55,47,39,31,23,15,7];
-const _DES_FP = [40,8,48,16,56,24,64,32,39,7,47,15,55,23,63,31,38,6,46,14,54,22,62,30,37,5,45,13,53,21,61,29,36,4,44,12,52,20,60,28,35,3,43,11,51,19,59,27,34,2,42,10,50,18,58,26,33,1,41,9,49,17,57,25];
-const _DES_E = [32,1,2,3,4,5,4,5,6,7,8,9,8,9,10,11,12,13,12,13,14,15,16,17,16,17,18,19,20,21,20,21,22,23,24,25,24,25,26,27,28,29,28,29,30,31,32,1];
-const _DES_P = [16,7,20,21,29,12,28,17,1,15,23,26,5,18,31,10,2,8,24,14,32,27,3,9,19,13,30,6,22,11,4,25];
-const _DES_PC1 = [57,49,41,33,25,17,9,1,58,50,42,34,26,18,10,2,59,51,43,35,27,19,11,3,60,52,44,36,63,55,47,39,31,23,15,7,62,54,46,38,30,22,14,6,61,53,45,37,29,21,13,5,28,20,12,4];
-const _DES_PC2 = [14,17,11,24,1,5,3,28,15,6,21,10,23,19,12,4,26,8,16,7,27,20,13,2,41,52,31,37,47,55,30,40,51,45,33,48,44,49,39,56,34,53,46,42,50,36,29,32];
-const _DES_SHIFTS = [1,1,2,2,2,2,2,2,1,2,2,2,2,2,2,1];
-const _DES_S = [
-[14,4,13,1,2,15,11,8,3,10,6,12,5,9,0,7,0,15,7,4,14,2,13,1,10,6,12,11,9,5,3,8,4,1,14,8,13,6,2,11,15,12,9,7,3,10,5,0,15,12,8,2,4,9,1,7,5,11,3,14,10,0,6,13],
-[15,1,8,14,6,11,3,4,9,7,2,13,12,0,5,10,3,13,4,7,15,2,8,14,12,0,1,10,6,9,11,5,0,14,7,11,10,4,13,1,5,8,12,6,9,3,2,15,13,8,10,1,3,15,4,2,11,6,7,12,0,5,14,9],
-[10,0,9,14,6,3,15,5,1,13,12,7,11,4,2,8,13,7,0,9,3,4,6,10,2,8,5,14,12,11,15,1,13,6,4,9,8,15,3,0,11,1,2,12,5,10,14,7,1,10,13,0,6,9,8,7,4,15,14,3,11,5,2,12],
-[7,13,14,3,0,6,9,10,1,2,8,5,11,12,4,15,13,8,11,5,6,15,0,3,4,7,2,12,1,10,14,9,10,6,9,0,12,11,7,13,15,1,3,14,5,2,8,4,3,15,0,6,10,1,13,8,9,4,5,11,12,7,2,14],
-[2,12,4,1,7,10,11,6,8,5,3,15,13,0,14,9,14,11,2,12,4,7,13,1,5,0,15,10,3,9,8,6,4,2,1,11,10,13,7,8,15,9,12,5,6,3,0,14,11,8,12,7,1,14,2,13,6,15,0,9,10,4,5,3],
-[12,1,10,15,9,2,6,8,0,13,3,4,14,7,5,11,10,15,4,2,7,12,9,5,6,1,13,14,0,11,3,8,9,14,15,5,2,8,12,3,7,0,4,10,1,13,11,6,4,3,2,12,9,5,15,10,11,14,1,7,6,0,8,13],
-[4,11,2,14,15,0,8,13,3,12,9,7,5,10,6,1,13,0,11,7,4,9,1,10,14,3,5,12,2,15,8,6,1,4,11,13,12,3,7,14,10,15,6,8,0,5,9,2,6,11,13,8,1,4,10,7,9,5,0,15,14,2,3,12],
-[13,2,8,4,6,15,11,1,10,9,3,14,5,0,12,7,1,15,13,8,10,3,7,4,12,5,6,11,0,14,9,2,7,11,4,1,9,12,14,2,0,6,10,13,15,3,5,8,2,1,14,7,4,10,8,13,15,12,9,0,3,5,6,11]
-];
-
-function _desPermute(bits, table) { return table.map(i => bits[i - 1]); }
-function _desRotateLeft(bits, n) { return bits.slice(n).concat(bits.slice(0, n)); }
-function _desSubkeys(keyBits) {
-  const permuted = _desPermute(keyBits, _DES_PC1);
-  let C = permuted.slice(0, 28);
-  let D = permuted.slice(28);
-  const subkeys = [];
-  for (let i = 0; i < 16; i++) {
-    C = _desRotateLeft(C, _DES_SHIFTS[i]);
-    D = _desRotateLeft(D, _DES_SHIFTS[i]);
-    subkeys.push(_desPermute(C.concat(D), _DES_PC2));
-  }
-  return subkeys;
-}
-function _desBlock(input, subkeys, decrypt) {
-  let bits = _desPermute(input, _DES_IP);
-  let L = bits.slice(0, 32);
-  let R = bits.slice(32);
-  const keys = decrypt ? subkeys.slice().reverse() : subkeys;
-  for (let i = 0; i < 16; i++) {
-    const xored = _desPermute(R, _DES_E).map((b, j) => b ^ keys[i][j]);
-    let sOut = [];
-    for (let k = 0; k < 8; k++) {
-      const chunk = xored.slice(k * 6, k * 6 + 6);
-      const row = (chunk[0] << 1) | chunk[5];
-      const col = (chunk[1] << 3) | (chunk[2] << 2) | (chunk[3] << 1) | chunk[4];
-      let v = _DES_S[k][row * 16 + col];
-      for (let b = 3; b >= 0; b--) sOut.push((v >> b) & 1);
-    }
-    const fOut = _desPermute(sOut, _DES_P).map((b, j) => L[j] ^ b);
-    L = R;
-    R = fOut;
-  }
-  return _desPermute(R.concat(L), _DES_FP);
-}
-function _desDecryptEcb(cipherB64, keyStr) {
-  try {
-    const buf = Buffer.from(cipherB64, 'base64');
-    const keyBits = [...keyStr].flatMap(ch => {
-      let c = ch.charCodeAt(0);
-      const bits = [];
-      for (let b = 7; b >= 0; b--) bits.push((c >> b) & 1);
-      return bits;
-    });
-    const subkeys = _desSubkeys(keyBits);
-    let out = '';
-    for (let o = 0; o < buf.length; o += 8) {
-      const block = buf.slice(o, o + 8);
-      const bits = [];
-      for (const b of block) for (let i = 7; i >= 0; i--) bits.push((b >> i) & 1);
-      const dec = _desBlock(bits, subkeys, true);
-      for (let i = 0; i < dec.length; i += 8) {
-        let v = 0;
-        for (let j = 0; j < 8; j++) v = (v << 1) | dec[i + j];
-        out += String.fromCharCode(v);
-      }
-    }
-    return out.replace(/[\x00-\x08]/g, '');
-  } catch (_) {
-    return null;
-  }
-}
-
-async function _saavnSearch(query, limit) {
-  const data = await _saavnFetch('autocomplete.get', { query, limit: String(limit || 20) });
-  const items = (data && data.songs && Array.isArray(data.songs.data)) ? data.songs.data : [];
-  const results = [];
-  const seen = new Set();
-  for (const s of items) {
-    const id = s.id || s.song_id;
-    if (!id || seen.has(id)) continue;
-    seen.add(id);
-    const mi = s.more_info || {};
-    results.push({
-      id: 'saavn_' + id,
-      saavnId: id,
-      title: s.title || 'Untitled',
-      artist: mi.primary_artists || mi.singers || s.subtitle || 'Unknown',
-      album: s.album || '',
-      language: mi.language || '',
-      duration: parseInt(mi.duration || 0, 10) || 0,
-      thumbnail: (s.image || '').replace('-50x50', '-500x500'),
-      audioUrl: null,
-      source: 'saavn',
-    });
-    if (results.length >= (limit || 20)) break;
-  }
-  return results;
-}
-
-async function _saavnFillStreams(tracks) {
-  const ids = tracks.filter(t => t.saavnId).map(t => t.saavnId);
-  if (!ids.length) return;
-  const data = await _saavnFetch('song.getDetails', { pids: ids.join(',') });
-  const songs = Array.isArray(data)
-    ? data
-    : (data && Array.isArray(data.songs) ? data.songs : Object.values(data || {}));
-  for (const s of songs) {
-    const track = tracks.find(t => t.saavnId === s.id);
-    if (!track) continue;
-    if (s.duration) track.duration = parseInt(s.duration, 10) || track.duration;
-    if (s.more_info && s.more_info.duration) track.duration = parseInt(s.more_info.duration, 10) || track.duration;
-    const encrypted = s.encrypted_media_url || s.media_url;
-    if (encrypted) {
-      const decrypted = _desDecryptEcb(encrypted, '38346591');
-      if (decrypted && decrypted.startsWith('http')) {
-        track.audioUrl = decrypted.replace(/_96\.mp4/, '_320.mp4').replace(/\x04+$/, '');
-      }
-    }
-  }
-}
-
 exports.youtubeSearch = onRequest({ region: 'us-central1', timeoutSeconds: 30, memory: '256MiB' }, async (req, res) => {
   setCorsHeaders(res, req.get('Origin') || req.get('Referer') || '');
   if (req.method === 'OPTIONS') { res.status(204).send(''); return; }
@@ -1092,20 +946,13 @@ exports.youtubeSearch = onRequest({ region: 'us-central1', timeoutSeconds: 30, m
 
     const searchQuery = lang ? `${query} ${lang}` : query;
 
-    const [saavn, youtube] = await Promise.allSettled([
-      _saavnSearch(searchQuery, 20),
-      _youtubeSearch(searchQuery),
-    ]);
+    // YouTube only. JioSaavn (a paid subscription service) is intentionally
+    // NOT scraped â€” the music player streams exclusively from free, legal
+    // sources (YouTube search/stream, Jamendo, ccMixter, Internet Archive).
+    const searchResult = await _youtubeSearch(searchQuery);
+    const results = ((searchResult && Array.isArray(searchResult)) ? searchResult : []).slice(0, 20);
 
-    const saavnTracks = (saavn.status === 'fulfilled' && Array.isArray(saavn.value)) ? saavn.value : [];
-    try {
-      await _saavnFillStreams(saavnTracks);
-    } catch (e) {
-      console.warn('[Saavn] stream fill failed:', e.message);
-    }
-    const youtubeTracks = ((youtube.status === 'fulfilled' && Array.isArray(youtube.value)) ? youtube.value : []).slice(0, 10);
-
-    res.json({ ok: true, results: [...saavnTracks, ...youtubeTracks] });
+    res.json({ ok: true, results });
   } catch (e) {
     console.error('[youtubeSearch] Error:', e.message);
     res.status(500).json({ ok: false, error: 'Search failed' });

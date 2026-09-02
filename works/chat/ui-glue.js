@@ -204,7 +204,11 @@
   window.closeUtilitiesAndMusic = function () {
     _closeOverlay('nsl-utilities-overlay');
     if (typeof window.openMusicLibrary === 'function') window.openMusicLibrary();
-    else if (window.MusicPlayer && typeof window.MusicPlayer.open === 'function') window.MusicPlayer.open();
+    else if (window.LazyModules && typeof window.LazyModules.load === 'function') {
+      window.LazyModules.load('music').then(function () {
+        if (typeof window.openMusicLibrary === 'function') window.openMusicLibrary();
+      });
+    }
   };
 
   window.closeNewChatAndBroadcast = function () {

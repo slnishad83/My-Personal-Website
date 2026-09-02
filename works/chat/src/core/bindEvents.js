@@ -17,11 +17,53 @@
   var _registry = {};
   var _initialized = false;
 
+  /* ── Pending action queue ──
+     Some feature modules (music player, calculator, ...) are lazy-loaded a
+     tick after first paint. A user click that lands before the module registers
+     its window.* handler used to be dropped with "Unknown action". We now queue
+     such clicks and retry for a short window so they fire once the module loads.
+  */
+  var _pendingActions = [];
+  var _pendingTimer = null;
+
   function resolve(fnName) {
     if (_registry[fnName]) return _registry[fnName];
     var fn = typeof window[fnName] === 'function' ? window[fnName] : null;
     if (fn) _registry[fnName] = fn;
     return fn;
+  }
+
+  function flushPending(force) {
+    if (!_pendingActions.length) return true;
+    var remaining = [];
+    var now = Date.now();
+    for (var i = 0; i < _pendingActions.length; i++) {
+      var pending = _pendingActions[i];
+      var fn = resolve(pending.fnName);
+      if (fn) {
+        try { pending.arg ? fn(pending.arg, pending.el) : fn(pending.el); } catch (e) { console.error('[bindEvents] Error flushing pending action', pending.fnName, e); }
+      } else if (!force && pending.el && pending.el.isConnected && now - pending.ts < pending.ttl) {
+        remaining.push(pending);
+      }
+    }
+    _pendingActions = remaining;
+    if (_pendingActions.length) {
+      _pendingTimer = setTimeout(flushPending, 350);
+      return false;
+    }
+    _pendingTimer = null;
+    return true;
+  }
+
+  function queueAction(el, fnName, arg) {
+    _pendingActions.push({
+      el: el,
+      fnName: fnName,
+      arg: arg || el.getAttribute('data-action-arg') || null,
+      ts: Date.now(),
+      ttl: 6000 // give lazy modules up to ~6s to register
+    });
+    if (!_pendingTimer) _pendingTimer = setTimeout(flushPending, 350);
   }
 
   function invokeAction(el, fnName, extraArg) {
@@ -54,6 +96,10 @@
       e.preventDefault();
       e.stopPropagation();
       invokeAction(el, action);
+    } else if (action) {
+      // Action not registered yet (lazy module still loading). Queue it so a
+      // fast click right after load is not silently dropped.
+      queueAction(el, action);
     }
   }
 
@@ -122,6 +168,8 @@
   window.BindEvents = {
     register: function (name, fn) { _registry[name] = fn; },
     invoke: invokeAction,
+    flush: function () { flushPending(true); },
+    hasPending: function () { return _pendingActions.length > 0; },
     init: init
   };
 

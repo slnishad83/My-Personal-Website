@@ -283,6 +283,10 @@ async function _loadLazyModules() {
   for (const load of _lazyModules) {
     try { await load(); } catch (e) { if (window.__DEBUG__) console.warn('[App] Lazy module load failed:', e.message); }
   }
+  // Fire any data-action clicks that were queued before lazy modules registered.
+  if (typeof window.BindEvents !== 'undefined' && typeof window.BindEvents.flush === 'function') {
+    try { window.BindEvents.flush(); } catch (_) {}
+  }
 }
 
 if (document.readyState === 'complete') {

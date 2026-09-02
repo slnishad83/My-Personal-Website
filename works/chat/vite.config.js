@@ -180,7 +180,7 @@ export default defineConfig(({ command }) => ({
           // Music & media features
           if (id.includes('music-player') || id.includes('music-library') ||
               id.includes('playlist-core') || id.includes('playlist-ui') ||
-              id.includes('playlist-sync') || id.includes('music-simple')) {
+              id.includes('playlist-sync')) {
             return 'feature-music';
           }
           // Chat-specific features
