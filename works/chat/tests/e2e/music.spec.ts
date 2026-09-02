@@ -33,11 +33,13 @@ test.describe('Music Player — Library Overlay', () => {
     await expect(overlay).toHaveAttribute('aria-modal', 'true');
   });
 
-  test('has 5 tabs', async ({ page }) => {
+  test('has 6 tabs', async ({ page }) => {
     await waitForApp(page);
     await openMusicLibrary(page);
     const tabs = page.locator('.ml-tab');
-    await expect(tabs).toHaveCount(5);
+    await expect(tabs).toHaveCount(6);
+    const labels = await tabs.allTextContents();
+    expect(labels.map(l => l.trim().toLowerCase())).toContain('offline');
   });
 
   test('Search tab is active by default', async ({ page }) => {
@@ -236,6 +238,24 @@ test.describe('Music Player — Player Core', () => {
       expect(exists).toBeTruthy();
     });
   }
+});
+
+test.describe('Music Player — Offline Tab', () => {
+  test.beforeEach(async ({ page }) => {
+    await waitForApp(page);
+    await openMusicLibrary(page);
+    await page.locator('[data-action="switchMusicLibTab"][data-action-arg="offline"]').click();
+    await page.waitForTimeout(500);
+  });
+
+  test('can switch to Offline tab', async ({ page }) => {
+    await expect(page.locator('.ml-tab.active')).toHaveText(/Offline/i);
+    await expect(page.locator('#offline-list')).toBeAttached();
+  });
+
+  test('shows empty state when nothing saved', async ({ page }) => {
+    await expect(page.locator('#offline-list')).toBeAttached();
+  });
 });
 
 test.describe('Music Player — Recently Played', () => {
