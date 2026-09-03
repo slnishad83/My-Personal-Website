@@ -2460,12 +2460,23 @@
     var app = window.App || {};
     if (app.chats) {
       var list = Array.isArray(app.chats) ? app.chats : Object.keys(app.chats).map(function (k) { return app.chats[k]; });
+      var local = {};
+      try { local = JSON.parse(localStorage.getItem('nsl_muted_chats') || '{}'); } catch (_) {}
+      var wrote = false;
       list.forEach(function (chat) {
         if (!chat || !chat.id || !chat.mutedUntil) return;
         if (chat.mutedUntil > 0 && chat.mutedUntil <= Date.now()) return;
         app._mutedChats.add(chat.id);
         app._mutedUntil[chat.id] = chat.mutedUntil;
+        // Mirror server 'mutedUntil' into the local number schema so the
+        // notif-settings panel (chat-notifications.js) stays consistent and the
+        // muted state follows the user across devices.
+        if (local[chat.id] !== chat.mutedUntil) {
+          local[chat.id] = chat.mutedUntil;
+          wrote = true;
+        }
       });
+      if (wrote) { try { localStorage.setItem('nsl_muted_chats', JSON.stringify(local)); } catch (_) {} }
     }
   };
   window.showPermissions = function () { _closeProfileFirst(); if (window.PermissionsManager) window.PermissionsManager.showScreen(); };

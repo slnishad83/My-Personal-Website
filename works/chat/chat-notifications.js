@@ -76,22 +76,28 @@
   }
 
   /* ── Muted chats store ──────────────────────────────────────── */
+  /* Mute state is stored as { chatId: until } where until is the
+     epoch-ms the mute expires (no expiry when 0 or -1) and is mirrored to
+     Firestore 'mutedUntil' so it follows the user across devices/locations.
+     This number schema matches ui-glue.js (window.isChatMuted) exactly, so the
+     two modules share one consistent key instead of corrupting each other. */
   function _loadMuted() {
     try { return JSON.parse(localStorage.getItem(MUTED_KEY) || '{}'); } catch (_) { return {}; }
   }
   function _saveMuted(data) {
     try { localStorage.setItem(MUTED_KEY, JSON.stringify(data)); } catch (_) {}
-    if (window.App?._mutedChats) {
-      Object.keys(data).forEach(k => {
-        if (data[k].muted) window.App._mutedChats.add(k);
-        else window.App._mutedChats.delete(k);
-      });
-    }
-    if (window.App?._mutedUntil) {
-      Object.keys(data).forEach(k => {
-        if (data[k].muted && data[k].until) window.App._mutedUntil[k] = data[k].until;
-        else delete window.App._mutedUntil[k];
-      });
+    if (window.App?.uid && typeof window.App.uid === 'function') {
+      const uid = window.App.uid();
+      const db = window.App?.db;
+      if (uid && db) {
+        Object.keys(data).forEach(chatId => {
+          const until = data[chatId];
+          if (until && typeof until === 'number' && !Number.isNaN(until)) {
+            const col = window.App?.chats?.some?.(c => c.id === chatId && (c.type === 'group' || c.isGroup)) ? 'groups' : 'chats';
+            if (db.collection) db.collection(col).doc(chatId).update({ mutedUntil: until === -1 ? -1 : until }).catch(() => {});
+          }
+        });
+      }
     }
   }
 
@@ -125,13 +131,10 @@
     /* Mute a chat with duration preset or custom ms */
     muteChat(chatId, durationMs) {
       const muted = _loadMuted();
-      muted[chatId] = {
-        muted: true,
-        until: durationMs === Infinity ? 0 : Date.now() + durationMs,
-        mutedAt: Date.now(),
-        durationMs: durationMs
-      };
+      muted[chatId] = durationMs === Infinity ? -1 : (Date.now() + durationMs);
       _saveMuted(muted);
+      if (window.App?._mutedChats) window.App._mutedChats.add(chatId);
+      if (window.App?._mutedUntil) window.App._mutedUntil[chatId] = muted[chatId];
       if (window.showToast) window.showToast('Chat muted', 'success');
     },
 
@@ -140,15 +143,17 @@
       const muted = _loadMuted();
       delete muted[chatId];
       _saveMuted(muted);
+      if (window.App?._mutedChats) window.App._mutedChats.delete(chatId);
+      if (window.App?._mutedUntil) delete window.App._mutedUntil[chatId];
       if (window.showToast) window.showToast('Chat unmuted', 'success');
     },
 
     /* Check if a chat is currently muted */
     isMuted(chatId) {
       const muted = _loadMuted();
-      const entry = muted[chatId];
-      if (!entry || !entry.muted) return false;
-      if (entry.until > 0 && entry.until <= Date.now()) {
+      const until = muted[chatId];
+      if (typeof until !== 'number' || Number.isNaN(until)) return false;
+      if (until > 0 && until <= Date.now()) {
         delete muted[chatId];
         _saveMuted(muted);
         return false;
@@ -159,11 +164,11 @@
     /* Get mute remaining time display */
     getMuteDisplay(chatId) {
       const muted = _loadMuted();
-      const entry = muted[chatId];
-      if (!entry || !entry.muted) return null;
-      if (entry.durationMs === Infinity) return 'Muted forever';
-      if (entry.until <= Date.now()) return null;
-      const remaining = entry.until - Date.now();
+      const until = muted[chatId];
+      if (typeof until !== 'number' || Number.isNaN(until)) return null;
+      if (until <= 0) return 'Muted forever';
+      if (until <= Date.now()) return null;
+      const remaining = until - Date.now();
       if (remaining > 86400000) return 'Muted for ' + Math.ceil(remaining / 86400000) + ' days';
       if (remaining > 3600000) return 'Muted for ' + Math.ceil(remaining / 3600000) + ' hours';
       return 'Muted for ' + Math.ceil(remaining / 60000) + ' min';

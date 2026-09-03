@@ -599,6 +599,39 @@
     });
   }
 
+  function _hydrateFromFirestore(user) {
+    var db = _db();
+    if (!db || !user) return;
+    var uid = user.uid;
+    // Server is the source of truth for whether app lock is enabled, so a user's
+    // lock settings follow them to any device/location (not device-local).
+    db.collection('users').doc(uid).onSnapshot(function (snap) {
+      if (!snap.exists) return;
+      var data = snap.data() || {};
+      db.collection('userSecrets').doc(uid).get().then(function (secSnap) {
+        var sec = secSnap.exists ? (secSnap.data() || {}) : {};
+        var serverHash = sec.appLockPinHash || data.appLockPinHash;
+        var settings = _getSettings();
+        var remoteEnabled = !!data.appLockEnabled;
+        var changed = false;
+        if (remoteEnabled && serverHash && !settings.enabled) {
+          settings.enabled = true;
+          settings.pinHash = serverHash;
+          settings.pinSalt = settings.pinSalt || '';
+          changed = true;
+        } else if (!remoteEnabled && settings.enabled) {
+          settings.enabled = false;
+          changed = true;
+        }
+        if (changed) {
+          _saveSettings(settings);
+          if (settings.enabled) _removeLockOverlay();
+          if (window.__DEBUG__) console.warn('[AppLock] Hydrated from Firestore enabled=' + remoteEnabled + ' changed=' + changed);
+        }
+      }).catch(function () {});
+    }, function () {});
+  }
+
   function _initOnLoad() {
     _updateSession();
     if (typeof firebase !== 'undefined' && firebase.auth) {
@@ -607,6 +640,7 @@
           _updateSession();
           _removeLockOverlay();
           _startInactivityTimer();
+          _hydrateFromFirestore(user);
         }
       });
     }

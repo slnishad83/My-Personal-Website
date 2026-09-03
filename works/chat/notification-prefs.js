@@ -271,10 +271,43 @@
     document.addEventListener('click', onDocClick, true);
   }
 
+  // Hydrate DND settings from Firestore so quiet-hours follow the user across
+  // devices/locations (server is source of truth, local is a cache).
+  function hydrateDndFromFirestore() {
+    try {
+      if (typeof firebase === 'undefined' || !firebase.firestore || !firebase.auth) return;
+      const user = firebase.auth().currentUser;
+      if (!user) return;
+      firebase.firestore().collection('users').doc(user.uid).get().then((snap) => {
+        if (!snap.exists) return;
+        const data = snap.data() || {};
+        if (data.dndSettings) {
+          const local = getDndSettings();
+          const remote = data.dndSettings;
+          const changed =
+            Boolean(local.enabled) !== Boolean(remote.enabled) ||
+            local.from !== remote.from ||
+            local.to !== remote.to;
+          if (changed) {
+            try { localStorage.setItem(DND_STORAGE_KEY, JSON.stringify({
+              enabled: Boolean(remote.enabled),
+              from: remote.from || '22:00',
+              to: remote.to || '07:00',
+              tzOffset: remote.tzOffset != null ? remote.tzOffset : new Date().getTimezoneOffset()
+            })); } catch (_) {}
+            document.dispatchEvent(new CustomEvent('dndSettingsChanged', { detail: remote }));
+          }
+        }
+      }).catch(() => {});
+    } catch (_) {}
+  }
+
   // ── Bootstrap ─────────────────────────────────────────────────────────────
   function boot() {
     inject();
     initDndSettings();
+    hydrateDndFromFirestore();
+    setTimeout(hydrateDndFromFirestore, 1500);
     // Also watch for the auth gate closing (sidebar hidden until login)
     const authGate = document.getElementById('authGate');
     if (authGate) {

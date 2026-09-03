@@ -300,11 +300,42 @@
     _showGhostContactPicker();
   };
 
+  // Hydrate ghost mode from Firestore so it follows the user across
+  // devices/locations (server is source of truth, local is a cache).
+  function _hydrateGhostFromFirestore(retries) {
+    retries = retries || 0;
+    try {
+      if (!App.db || !App.auth?.currentUser) {
+        if (retries < 30) setTimeout(function() { _hydrateGhostFromFirestore(retries + 1); }, 500);
+        return;
+      }
+      App.db.collection('users').doc(App.auth.currentUser.uid).get().then(function(snap) {
+        if (!snap.exists) return;
+        var data = snap.data() || {};
+        var remoteEnabled = !!data.ghostMode;
+        var remoteContacts = Array.isArray(data.ghostContacts) ? data.ghostContacts : [];
+        var local = _getGhostState();
+        if (Boolean(local.enabled) !== remoteEnabled) {
+          local.enabled = remoteEnabled;
+          try { localStorage.setItem(GHOST_KEY, JSON.stringify(local)); } catch(_) {}
+          if (window.__DEBUG__) console.warn('[GhostMode] Hydrated enabled=' + remoteEnabled);
+        }
+        try {
+          var cur = _getGhostContacts();
+          if (JSON.stringify(cur) !== JSON.stringify(remoteContacts)) {
+            localStorage.setItem(GHOST_CONTACTS_KEY, JSON.stringify(remoteContacts));
+          }
+        } catch(_) {}
+      }).catch(function() {});
+    } catch(_) {}
+  }
+
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => { _interceptPresence(); _patchOfflineForGhost(); });
+    document.addEventListener('DOMContentLoaded', () => { _interceptPresence(); _patchOfflineForGhost(); _hydrateGhostFromFirestore(); });
   } else {
     _interceptPresence();
     _patchOfflineForGhost();
+    _hydrateGhostFromFirestore();
   }
 
   const origShowMsgContextMenu = window.showMsgContextMenu;

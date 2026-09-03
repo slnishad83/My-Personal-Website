@@ -780,18 +780,30 @@
   async function init() {
     _injectStyles();
 
-    // Load from Firestore if needed
-    const locks = _getLockedChats();
-    if (Object.keys(locks).length === 0) {
-      const remote = await _loadFromFirestore();
-      if (remote) _saveLockedChats(remote);
-    }
-
     // Patch rendering
     _patchChatListRendering();
     _patchOpenChat();
     _patchChatItemHTML();
     _setupVisibilityHandler();
+
+    // Keep local lock state in sync with Firestore (server source of truth) so
+    // locks/unlocks made on any device/location reflect across all devices.
+    const db = _db();
+    const uid = _uid();
+    if (db && uid) {
+      db.collection('users').doc(uid).onSnapshot(snap => {
+        if (!snap.exists) return;
+        const data = snap.data();
+        const remote = data && data.lockedChats && typeof data.lockedChats === 'object' ? data.lockedChats : null;
+        if (!remote) return;
+        const local = _getLockedChats();
+        if (JSON.stringify(local) !== JSON.stringify(remote)) {
+          _saveLockedChats(remote);
+          if (typeof window.renderChatList === 'function') window.renderChatList();
+          _renderLockedFolder();
+        }
+      }, err => { _debug('Lock sync error:', err && err.message); });
+    }
 
     _debug('Initialized, locked chats:', _getLockedCount());
   }
