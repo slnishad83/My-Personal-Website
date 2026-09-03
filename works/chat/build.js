@@ -70,7 +70,6 @@ const BUNDLE_ORDER = [
   'sync-audit.js',
   'url-preview.js',
   'redesign-base.js',
-  'request-priority.js',
   'sanitize.js',
   'clipboard-paste.js',
   'desktop-fullscreen.js',

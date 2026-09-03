@@ -1,1 +1,0 @@
-import{n as e}from"./firebase-config-B1gHZycV.js";var t=e((()=>{}));export default t();

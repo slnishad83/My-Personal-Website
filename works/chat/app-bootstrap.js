@@ -154,14 +154,19 @@ if (window.App) {
 
 /* ══════════════════════════════════════════════════════════════
    IDLE TIMEOUT — Lock after 30 minutes of inactivity
+   Uses the loaded ScreenLock (window.ScreenLock). The legacy
+   showAppLock/App.lockEnabled globals from app-lock.js are not
+   loaded, so auto-lock previously never fired.
    ══════════════════════════════════════════════════════════════ */
 
 var _idleTimer;
 function resetIdleTimer() {
   clearTimeout(_idleTimer);
   _idleTimer = setTimeout(function() {
-    if (window.App && window.App.lockEnabled) {
-      if (typeof showAppLock === 'function') showAppLock();
+    if (window.ScreenLock) {
+      ScreenLock.getSettings().then(function(s) {
+        if (s && s.enabled) ScreenLock.lock();
+      }).catch(function() {});
     }
   }, 30 * 60 * 1000);
 }

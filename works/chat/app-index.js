@@ -177,7 +177,6 @@ const _deferredModules = [
   () => import('./sync-audit.js'),
   () => import('./url-preview.js'),
   () => import('./redesign-base.js'),
-  () => import('./request-priority.js'),
   () => import('./sanitize.js'),
   () => import('./clipboard-paste.js'),
   () => import('./desktop-fullscreen.js'),

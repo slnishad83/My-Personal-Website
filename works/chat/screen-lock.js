@@ -114,6 +114,55 @@ window.ScreenLock = (function () {
     { label: 'After 1 hour', value: 60 * 60 * 1000 }
   ];
 
+  /* ─── Firestore sync (server source of truth for "enabled") ────── */
+  function _fsDb() {
+    return (window.App && window.App.db) ||
+      (typeof firebase !== 'undefined' && firebase.firestore ? firebase.firestore() : null);
+  }
+  function _fsUid() {
+    var user = window.App && typeof window.App.uid === 'function' ? window.App.uid() : null;
+    if (!user && window.currentUser) user = window.currentUser.uid;
+    return user;
+  }
+
+  async function _syncEnabledToFirestore() {
+    if (!_settings) return;
+    var db = _fsDb();
+    var uid = _fsUid();
+    if (!db || !uid) return;
+    try {
+      await db.collection('users').doc(uid).update({ appLockEnabled: !!_settings.enabled });
+    } catch (e) {
+      if (window.__DEBUG__) console.warn('[ScreenLock] Firestore sync failed:', e.message);
+    }
+  }
+
+  async function _hydrateEnabledFromFirestore() {
+    var db = _fsDb();
+    var uid = _fsUid();
+    if (!db || !uid) return;
+    try {
+      var snap = await db.collection('users').doc(uid).get();
+      var remoteEnabled = !!(snap.exists && snap.data() && snap.data().appLockEnabled);
+      if (remoteEnabled && !_settings.enabled) {
+        var pinExists = await hasPin();
+        if (pinExists) {
+          _settings = Object.assign({}, _settings, { enabled: true });
+          await _dbPut('settings', _settings);
+          if (window.__DEBUG__) console.log('[ScreenLock] Hydrated enabled from Firestore');
+        } else if (typeof showToast === 'function') {
+          showToast('Screen lock is enabled for your account. Set a PIN on this device to enable it here.', 'info');
+        }
+      } else if (!remoteEnabled && _settings.enabled) {
+        _settings = Object.assign({}, _settings, { enabled: false });
+        await _dbPut('settings', _settings);
+        stopAutoLock();
+      }
+    } catch (e) {
+      if (window.__DEBUG__) console.warn('[ScreenLock] Hydrate enabled failed:', e.message);
+    }
+  }
+
   /* ─── Settings ──────────────────────────────────────────────────── */
   async function getSettings() {
     try {
@@ -132,6 +181,7 @@ window.ScreenLock = (function () {
       await _dbPut('settings', _settings);
       if (window.__DEBUG__) console.log('[ScreenLock] Settings updated:', _settings);
       if (_settings.enabled) { startAutoLock(); } else { stopAutoLock(); }
+      _syncEnabledToFirestore();
     } catch (e) {
       if (window.__DEBUG__) console.error('[ScreenLock] updateSettings error:', e);
       throw e;
@@ -709,6 +759,7 @@ window.ScreenLock = (function () {
   /* ─── Init ──────────────────────────────────────────────────────── */
   async function init() {
     await getSettings();
+    await _hydrateEnabledFromFirestore();
     _visibilityHandler = _onVisibilityChange;
     document.addEventListener('visibilitychange', _visibilityHandler);
 

@@ -16,6 +16,42 @@
     return f ? f.collection('groups').doc(groupId).collection('members') : null;
   }
 
+  /* Direct-Firestore fallbacks. The project runs on the free Spark plan where
+     Cloud Functions are not deployed, so group admin operations must write to
+     Firestore directly. The rules already permit admins to update group-doc
+     fields and manage the members subcollection. */
+  function _gfFsValue() {
+    return (typeof firebase !== 'undefined' && firebase.firestore && firebase.firestore.FieldValue)
+      ? firebase.firestore.FieldValue
+      : null;
+  }
+  function _gfCurrentUser() {
+    return (window.App && App.currentUser) || window.currentUser || null;
+  }
+  function _gfMemberData(uid, role) {
+    var me = _gfCurrentUser();
+    var data = { uid: uid, role: role || 'member', addedBy: _uid(), addedAt: Date.now() };
+    if (me) {
+      if (me.displayName || me.name) data.displayName = me.displayName || me.name;
+      if (me.photoURL) data.photoURL = me.photoURL;
+    }
+    return data;
+  }
+  function _callOrFallback(fnName, args, fallback) {
+    return new Promise(function (resolve, reject) {
+      var fns;
+      try {
+        fns = (typeof firebase !== 'undefined' && firebase.functions) ? firebase.functions() : null;
+        if (!fns) { throw new Error('functions-not-available'); }
+        fns.httpsCallable(fnName)(args).then(function () { resolve(); }).catch(function () {
+          fallback().then(resolve).catch(reject);
+        });
+      } catch (_) {
+        fallback().then(resolve).catch(reject);
+      }
+    });
+  }
+
   async function _isGroupAdmin(groupId, userId) {
     var ref = _getGroupRef(groupId);
     if (!ref) return false;
@@ -292,8 +328,25 @@
     var isAdmin = await _isGroupAdmin(groupId, uid);
     if (!isAdmin) { _toast('Only admins can add participants', 'error'); return; }
     try {
-      var fn = firebase.functions().httpsCallable('addGroupMembers');
-      await fn({ groupId, userIds });
+      await _callOrFallback('addGroupMembers', { groupId, userIds }, function () {
+        var db = _db();
+        var FV = _gfFsValue();
+        var batch = db.batch();
+        userIds.forEach(function (mUid) {
+          batch.set(db.collection('groups').doc(groupId).collection('members').doc(mUid), _gfMemberData(mUid, 'member'), { merge: true });
+        });
+        return batch.commit().then(function () {
+          if (FV) {
+            return db.collection('groups').doc(groupId).update({
+              memberIds: FV.arrayUnion.apply(FV, userIds),
+              members: FV.arrayUnion.apply(FV, userIds),
+              memberCount: FV.increment(userIds.length),
+              updatedAt: Date.now()
+            });
+          }
+          return db.collection('groups').doc(groupId).update({ updatedAt: Date.now() });
+        });
+      });
       _toast(userIds.length + ' participant' + (userIds.length > 1 ? 's' : '') + ' added', 'success');
     } catch (err) {
       if (window.__DEBUG__) console.error('[GroupFeatures] addParticipantsToGroup failed:', err);
@@ -309,8 +362,29 @@
     var confirmed = await _confirm('Remove this participant from the group?');
     if (!confirmed) return;
     try {
-      var fn = firebase.functions().httpsCallable('removeGroupMember');
-      await fn({ groupId, userId });
+      await _callOrFallback('removeGroupMember', { groupId, userId }, function () {
+        var db = _db();
+        var FV = _gfFsValue();
+        var memberRef = db.collection('groups').doc(groupId).collection('members').doc(userId);
+        return memberRef.get().then(function (snap) {
+          var wasAdmin = snap.exists && snap.data().role === 'admin';
+          var updates = {};
+          if (FV) {
+            updates.memberIds = FV.arrayRemove(userId);
+            updates.members = FV.arrayRemove(userId);
+            updates.leftBy = FV.arrayUnion(userId);
+            updates.memberCount = FV.increment(-1);
+            if (wasAdmin) {
+              updates.adminIds = FV.arrayRemove(userId);
+              updates.admins = FV.arrayRemove(userId);
+            }
+          }
+          updates.updatedAt = Date.now();
+          return memberRef.delete().then(function () {
+            return db.collection('groups').doc(groupId).update(updates);
+          });
+        });
+      });
       _toast('Participant removed', 'success');
     } catch (err) {
       if (window.__DEBUG__) console.error('[GroupFeatures] removeParticipantFromGroup failed:', err);
@@ -324,8 +398,21 @@
     var isAdmin = await _isGroupAdmin(groupId, uid);
     if (!isAdmin) { _toast('Only admins can promote members', 'error'); return; }
     try {
-      var fn = firebase.functions().httpsCallable('promoteGroupAdmin');
-      await fn({ groupId, userId });
+      await _callOrFallback('promoteGroupAdmin', { groupId, userId }, function () {
+        var db = _db();
+        var FV = _gfFsValue();
+        return db.collection('groups').doc(groupId).update({
+          adminIds: FV ? FV.arrayUnion(userId) : [userId],
+          admins: FV ? FV.arrayUnion(userId) : [userId],
+          updatedAt: Date.now()
+        }).then(function () {
+          var ref = db.collection('groups').doc(groupId).collection('members').doc(userId);
+          return ref.get().then(function (snap) {
+            if (snap.exists) return ref.update({ role: 'admin' });
+            return ref.set(_gfMemberData(userId, 'admin'), { merge: true });
+          });
+        });
+      });
       _toast('Promoted to admin', 'success');
     } catch (err) {
       if (window.__DEBUG__) console.error('[GroupFeatures] promoteToAdmin failed:', err);
@@ -339,8 +426,23 @@
     var isAdmin = await _isGroupAdmin(groupId, uid);
     if (!isAdmin) { _toast('Only admins can demote members', 'error'); return; }
     try {
-      var fn = firebase.functions().httpsCallable('demoteGroupAdmin');
-      await fn({ groupId, userId });
+      await _callOrFallback('demoteGroupAdmin', { groupId, userId }, function () {
+        var db = _db();
+        var FV = _gfFsValue();
+        var updates = {};
+        if (FV) {
+          updates.adminIds = FV.arrayRemove(userId);
+          updates.admins = FV.arrayRemove(userId);
+        }
+        updates.updatedAt = Date.now();
+        return db.collection('groups').doc(groupId).update(updates).then(function () {
+          var ref = db.collection('groups').doc(groupId).collection('members').doc(userId);
+          return ref.get().then(function (snap) {
+            if (snap.exists) return ref.update({ role: 'member' });
+            return Promise.resolve();
+          });
+        });
+      });
       _toast('Removed admin status', 'success');
     } catch (err) {
       if (window.__DEBUG__) console.error('[GroupFeatures] demoteFromAdmin failed:', err);
@@ -435,8 +537,21 @@
     var confirmed = await _confirm('Exit this group? You won\'t receive messages anymore.');
     if (!confirmed) return;
     try {
-      var fn = firebase.functions().httpsCallable('exitGroup');
-      await fn({ groupId });
+      await _callOrFallback('exitGroup', { groupId }, function () {
+        var db = _db();
+        var FV = _gfFsValue();
+        var updates = {};
+        if (FV) {
+          updates.memberIds = FV.arrayRemove(uid);
+          updates.members = FV.arrayRemove(uid);
+          updates.leftBy = FV.arrayUnion(uid);
+          updates.memberCount = FV.increment(-1);
+        }
+        updates.updatedAt = Date.now();
+        return db.collection('groups').doc(groupId).update(updates).then(function () {
+          return db.collection('groups').doc(groupId).collection('members').doc(uid).delete().catch(function () {});
+        });
+      });
       if (window.App && window.App.messages) delete window.App.messages[groupId];
       if (window.App && window.App.groups && window.App.groups[groupId]) delete window.App.groups[groupId];
       if (window.App && window.App.currentChat && window.App.currentChat.id === groupId) {
@@ -460,8 +575,25 @@
     var confirmed2 = await _confirm('Are you absolutely sure? All messages will be lost.');
     if (!confirmed2) return;
     try {
-      var fn = firebase.functions().httpsCallable('deleteGroup');
-      await fn({ groupId });
+      await _callOrFallback('deleteGroup', { groupId }, function () {
+        var db = _db();
+        return db.collection('groups').doc(groupId).collection('messages').get().then(function (msgs) {
+          var batch = db.batch();
+          msgs.forEach(function (doc) { batch.delete(doc.ref); });
+          return batch.commit();
+        }).then(function () {
+          return db.collection('groups').doc(groupId).collection('members').get();
+        }).then(function (members) {
+          var batch2 = db.batch();
+          members.forEach(function (doc) { batch2.delete(doc.ref); });
+          return batch2.commit();
+        }).then(function () {
+          return db.collection('groups').doc(groupId).delete();
+        });
+      });
+      if (window.App && window.App.messages) delete window.App.messages[groupId];
+      if (window.App && window.App.groups && window.App.groups[groupId]) delete window.App.groups[groupId];
+      if (window.App && window.App.groupsUnsub) { try { window.App.groupsUnsub(); } catch (_) {} window.App.groupsUnsub = null; }
       _toast('Group deleted for everyone', 'success');
       if (typeof window.backToList === 'function') window.backToList();
     } catch (err) {

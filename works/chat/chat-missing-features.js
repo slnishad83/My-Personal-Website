@@ -174,19 +174,35 @@
       setTimeout(() => document.addEventListener('pointerdown', closeMenu), 50);
     }
 
+    function _escContext(s) {
+      if (s === null || s === undefined) return '';
+      return String(s)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
     function _renderContextMenuItems(menu, items) {
       if (!items.length) {
         menu.innerHTML = '<div style="padding:12px 16px;color:var(--on-surface-variant);font-size:12px;text-align:center">No actions available</div>';
         return;
       }
       menu.innerHTML = items.map(item => `
-        <button class="ctx-menu-item" role="menuitem" style="display:flex;align-items:center;gap:10px;width:100%;padding:10px 14px;border:none;background:none;color:var(--on-surface);font-size:13px;font-weight:500;cursor:pointer;border-radius:10px;transition:background 0.15s;text-align:left" onpointerenter="this.style.background='var(--surface-container,rgba(0,0,0,0.06))'" onpointerleave="this.style.background='none'">
-          <span class="material-symbols-outlined" aria-hidden="true" style="font-size:18px;color:var(--on-surface-variant)">${item.icon}</span>
-          ${item.label}
+        <button class="ctx-menu-item" role="menuitem" data-ctx-idx="${items.indexOf(item)}" style="display:flex;align-items:center;gap:10px;width:100%;padding:10px 14px;border:none;background:none;color:var(--on-surface);font-size:13px;font-weight:500;cursor:pointer;border-radius:10px;transition:background 0.15s;text-align:left">
+          <span class="material-symbols-outlined" aria-hidden="true" style="font-size:18px;color:var(--on-surface-variant)">${_escContext(item.icon)}</span>
+          ${_escContext(item.label)}
         </button>
       `).join('');
-      menu.querySelectorAll('.ctx-menu-item').forEach((btn, i) => {
-        btn.addEventListener('click', () => { items[i].action(); menu.remove(); });
+      menu.querySelectorAll('.ctx-menu-item').forEach((btn) => {
+        var idx = parseInt(btn.getAttribute('data-ctx-idx'), 10);
+        btn.addEventListener('pointerenter', function () { this.style.background = 'var(--surface-container,rgba(0,0,0,0.06))'; });
+        btn.addEventListener('pointerleave', function () { this.style.background = 'none'; });
+        btn.addEventListener('click', function () {
+          if (items[idx] && typeof items[idx].action === 'function') items[idx].action();
+          menu.remove();
+        });
       });
     }
 
