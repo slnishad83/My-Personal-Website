@@ -124,6 +124,18 @@
     'openCloudDriveMenu': function() {
       if (typeof window.openCloudDriveMenu === 'function') window.openCloudDriveMenu();
     },
+    'toggleChatLock': function() {
+      var id = null;
+      if (window.App && window.App.currentChat && window.App.currentChat.id) {
+        id = window.App.currentChat.id;
+      } else if (this && this.dataset) {
+        id = this.dataset.chatId || this.dataset.actionArg || null;
+      }
+      if (id && typeof window.toggleChatLock === 'function') window.toggleChatLock(id);
+    },
+    'clearChatHistory': function() {
+      if (typeof window.clearChatHistory === 'function') { window.clearChatHistory(); return; }
+    },
     'openGroupChatMenu': function() {
       if (typeof window.openGroupChatMenu === 'function') window.openGroupChatMenu();
     },
@@ -136,7 +148,8 @@
   };
 
   document.addEventListener('click', function(e) {
-    var target = e.target.closest('[data-action]');
+    var t = e.target;
+    var target = (typeof t.closest === 'function') ? t.closest('[data-action]') : null;
     if (!target) return;
     var action = target.dataset.action;
     if (action && ACTIONS[action]) {

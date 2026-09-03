@@ -283,10 +283,10 @@
     }
 
     const lockedIds = Object.keys(locks).filter(k => locks[k] && locks[k].locked);
-    const allChats = (App && App.chats) ? App.chats : [];
+    const allChats = (window.App && Array.isArray(window.App.chats)) ? window.App.chats : [];
 
     return lockedIds.map(id => {
-      const chat = allChats.find(c => c.id === id);
+      const chat = allChats.find(c => c && c.id === id);
       return chat || { id: id, name: 'Locked Chat', locked: true };
     }).filter(Boolean);
   }
@@ -511,8 +511,8 @@
   function _showLockedChatsList() {
     const locks = _getLockedChats();
     const lockedIds = Object.keys(locks).filter(k => locks[k] && locks[k].locked);
-    const allChats = (App && App.chats) ? App.chats : [];
-    const chats = lockedIds.map(id => allChats.find(c => c.id === id)).filter(Boolean);
+    const allChats = (window.App && Array.isArray(window.App.chats)) ? window.App.chats : [];
+    const chats = lockedIds.map(id => allChats.find(c => c && c.id === id)).filter(Boolean);
 
     _injectStyles();
 
@@ -796,6 +796,81 @@
     _debug('Initialized, locked chats:', _getLockedCount());
   }
 
+  /* ── Settings overlay (Settings → Chat Lock) ── */
+
+  function openChatLockSettings() {
+    const lockedIds = Object.keys(_getLockedChats()).filter(k => _getLockedChats()[k] && _getLockedChats()[k].locked);
+    _injectStyles();
+
+    const existing = document.getElementById('chat-lock-settings-overlay');
+    if (existing) existing.remove();
+
+    const overlay = document.createElement('div');
+    overlay.id = 'chat-lock-settings-overlay';
+    overlay.className = 'lock-chat-overlay';
+
+    const panel = document.createElement('div');
+    panel.className = 'lock-chat-settings-panel';
+    panel.style.cssText = 'max-width:400px;width:95%;';
+
+    let html =
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">' +
+        '<h3 style="margin:0;font-size:18px;font-weight:700;color:var(--on-surface,#e9edef)">Chat Lock Settings</h3>' +
+        '<button id="lock-settings-close-btn" class="lock-chat-close-x">&times;</button>' +
+      '</div>' +
+      '<p style="margin:0 0 16px;font-size:13px;color:var(--on-surface-variant,#8696a0)">Manage locked chats and PIN settings.</p>';
+
+    if (lockedIds.length) {
+      html += '<div style="margin-bottom:16px">';
+      html += '<p style="margin:0 0 8px;font-size:12px;font-weight:600;color:var(--on-surface-variant,#8696a0);text-transform:uppercase;letter-spacing:.5px">Locked Chats (' + lockedIds.length + ')</p>';
+      lockedIds.forEach(id => {
+        const found = (window.App && Array.isArray(window.App.chats)) ? window.App.chats.find(c => c && c.id === id) : null;
+        const name = (found && (found.name || found.displayName)) ? found.name || found.displayName : (id.slice(0, 20) + '…');
+        html += '<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--outline-variant,#2a3942)">' +
+          '<span style="font-size:13px;color:var(--on-surface,#e9edef);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1">' + _esc(name) + '</span>' +
+          '<button class="lock-settings-unlock-btn" data-chat-id="' + _esc(id) + '" style="padding:4px 10px;border-radius:6px;border:none;background:rgba(0,128,105,0.15);color:var(--primary,#00a884);font-size:12px;font-weight:600;cursor:pointer;margin-left:8px">Unlock</button>' +
+        '</div>';
+      });
+      html += '</div>';
+    } else {
+      html += '<p style="text-align:center;color:var(--on-surface-variant,#8696a0);font-size:13px;padding:16px 0">No locked chats</p>';
+    }
+
+    html += '<div style="display:flex;flex-direction:column;gap:8px">' +
+      '<button id="lock-settings-change-pin" style="padding:10px;border-radius:8px;border:1px solid var(--outline-variant,#2a3942);background:transparent;color:var(--on-surface,#e9edef);font-size:13px;font-weight:600;cursor:pointer;text-align:left">Change PIN</button>' +
+      '<button id="lock-settings-reset-pin" style="padding:10px;border-radius:8px;border:1px solid var(--outline-variant,#2a3942);background:transparent;color:var(--red-500,#ea4335);font-size:13px;font-weight:600;cursor:pointer;text-align:left">Reset PIN</button>' +
+    '</div>';
+
+    panel.innerHTML = html;
+    overlay.appendChild(panel);
+    document.body.appendChild(overlay);
+
+    // Event handlers
+    document.getElementById('lock-settings-close-btn').addEventListener('click', () => overlay.remove());
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
+
+    panel.querySelectorAll('.lock-settings-unlock-btn').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const chatId = btn.dataset.chatId;
+        await unlockChat(chatId);
+        overlay.remove();
+        if (_getLockedCount() > 0) openChatLockSettings();
+      });
+    });
+
+    document.getElementById('lock-settings-change-pin').addEventListener('click', async () => {
+      overlay.remove();
+      await authenticate('Enter current PIN to change it');
+    });
+
+    document.getElementById('lock-settings-reset-pin').addEventListener('click', async () => {
+      if (!confirm('Reset your chat lock PIN? You will need to set a new PIN.')) return;
+      try { await _callResetPin(); if (typeof showToast === 'function') showToast('PIN reset. Set a new PIN when you next unlock a chat.', 'success'); }
+      catch (err) { if (typeof showToast === 'function') showToast('Reset failed: ' + (err.message || 'Unknown error'), 'error'); }
+    });
+  }
+
   /* ── Expose on window ── */
 
   window.LockChat = {
@@ -810,16 +885,26 @@
     filterSearchResults: filterSearchResults,
     shouldShowInGallery: shouldShowInGallery,
     addLockOption: addLockOption,
-    getLockedCount: _getLockedCount
+    getLockedCount: _getLockedCount,
+    openChatLockSettings: openChatLockSettings
   };
 
   // Legacy compatibility: expose on window directly
   window.lockChat = lockChat;
   window.unlockChat = unlockChat;
   window.isChatLocked = isLockedChat;
+  window.openChatLockSettings = openChatLockSettings;
   window.toggleChatLock = function (chatId) {
-    if (isLockedChat(chatId)) unlockChat(chatId);
-    else lockChat(chatId);
+    if (chatId && typeof chatId === 'object' && chatId.getAttribute) {
+      chatId = chatId.getAttribute('data-chat-id') || chatId.dataset && chatId.dataset.chatId || null;
+    }
+    if (!chatId || typeof chatId !== 'string') return false;
+    const chat = (window.App && Array.isArray(window.App.chats))
+      ? window.App.chats.find(c => c && c.id === chatId)
+      : null;
+    const chatType = (chat && (chat.type || (chat.isGroup ? 'group' : 'direct'))) || 'direct';
+    if (isLockedChat(chatId)) unlockChat(chatId, chatType);
+    else lockChat(chatId, chatType);
   };
 
   document.addEventListener('nsl:app-ready', init);

@@ -280,6 +280,9 @@
     const groups = _groupsData.filter(g => (g.members || []).every(m => _verifiedOk(m, uid)));
     const broadcasts = _broadcastsData.filter(b => (b.recipients || []).every(r => _verifiedOk(r, uid)));
     State.chats = [...chats, ...groups, ...broadcasts];
+    // Expose the unified chat list (direct + group + broadcast) on window.App so
+    // modules like lock-chat can resolve real chat/group names and types.
+    if (window.App) { window.App.chats = State.chats; }
     renderChatList();
     // Dispatch for other modules
     document.dispatchEvent(new CustomEvent('nsl:chats-loaded', { detail: { chats: State.chats } }));

@@ -162,6 +162,7 @@
       { icon: '<span class="material-symbols-outlined" style="font-size:18px">person</span>', label: 'View contact', action: () => { if (typeof window.openChatInfo === 'function') window.openChatInfo(); else if (typeof viewContact === 'function') viewContact(chatId); } },
       { icon: '<span class="material-symbols-outlined" style="font-size:18px">search</span>', label: 'Search', shortcut: 'Ctrl+Shift+F', action: () => { if (typeof openChatSearch === 'function') openChatSearch('current'); else if (typeof window.messageSearch !== 'undefined') window.messageSearch.open(); } },
       { separator: true },
+      { icon: '<span class="material-symbols-outlined" style="font-size:18px">delete_sweep</span>', label: 'Clear chat', shortcut: 'Ctrl+Shift+Backspace', danger: true, action: () => { if (typeof window.clearChatHistory === 'function') window.clearChatHistory(chatId); else if (typeof window.confirmClearChat === 'function') window.confirmClearChat(chatId); } },
       { icon: '<span class="material-symbols-outlined" style="font-size:18px">delete</span>', label: 'Delete chat', shortcut: 'Ctrl+Shift+D', danger: true, action: () => { if (typeof deleteChat === 'function') deleteChat(chatId); } },
     ];
     show(e.clientX, e.clientY, items);

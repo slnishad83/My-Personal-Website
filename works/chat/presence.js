@@ -201,12 +201,20 @@ const Presence = {
 
   formatLastSeen(ts) {
     if (!ts) return '';
+    let tsMs;
+    if (typeof ts === 'number') tsMs = ts;
+    else if (ts instanceof Date) tsMs = ts.getTime();
+    else if (typeof ts === 'string') tsMs = Date.parse(ts);
+    else if (typeof ts === 'object' && typeof ts.toDate === 'function') tsMs = ts.toDate().getTime();
+    else if (typeof ts === 'object' && 'seconds' in ts) tsMs = Number(ts.seconds) * 1000;
+    if (typeof tsMs !== 'number' || !isFinite(tsMs)) return '';
     const now = Date.now();
-    const diff = now - ts;
+    const diff = now - tsMs;
+    if (diff < 0) return 'last seen just now';
     if (diff < 60000) return 'last seen just now';
-    if (diff < 3600000) return `last seen ${Math.floor(diff / 60000)} min ago`;
-    if (diff < 86400000) return `last seen ${Math.floor(diff / 3600000)} hr ago`;
-    const d = new Date(ts);
+    if (diff < 3600000) return `last seen ${(diff / 60000).toFixed(0)} min ago`;
+    if (diff < 86400000) return `last seen ${(diff / 3600000).toFixed(0)} hr ago`;
+    const d = new Date(tsMs);
     return `last seen ${d.toLocaleDateString()} ${d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
   },
 

@@ -408,7 +408,7 @@ const KeyboardShortcuts = {
     }
 
     /* ── Ctrl+Backspace: Clear selected messages ────────────── */
-    if (isMeta && e.key === 'Backspace' && !isInput) {
+    if (isMeta && !isShift && e.key === 'Backspace' && !isInput) {
       e.preventDefault();
       const selected = document.querySelectorAll('.message.selected');
       selected.forEach(m => m.classList.remove('selected'));
@@ -775,3 +775,9 @@ const KeyboardShortcuts = {
 };
 
 window.KeyboardShortcuts = KeyboardShortcuts;
+
+/* Auto-init so shortcuts work even if app-bootstrap ran before this lazy
+   module loaded (app-bootstrap's init() call may be a no-op in that case). */
+if (!KeyboardShortcuts._keydownBound) {
+  KeyboardShortcuts.init();
+}

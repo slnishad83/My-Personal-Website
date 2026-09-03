@@ -256,6 +256,8 @@
           '<button class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-surface-variant/60 transition-colors text-left" data-action="openGhostModeMenu"><span class="material-symbols-outlined text-[18px] text-on-surface-variant">visibility_off</span><span class="text-sm font-medium text-on-surface">Ghost mode</span></button>' +
           '<button class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-surface-variant/60 transition-colors text-left" data-action="openPrivacySettingsMenu"><span class="material-symbols-outlined text-[18px] text-on-surface-variant">lock</span><span class="text-sm font-medium text-on-surface">Privacy settings</span></button>' +
           '<button class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-surface-variant/60 transition-colors text-left" data-action="openCloudDriveMenu"><span class="material-symbols-outlined text-[18px] text-on-surface-variant">cloud</span><span class="text-sm font-medium text-on-surface">Cloud drive</span></button>' +
+          '<button class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-surface-variant/60 transition-colors text-left" data-action="toggleChatLock" data-chat-id="' + _esc(chat.id || '') + '"><span class="material-symbols-outlined text-[18px] text-on-surface-variant">' + (typeof window.isChatLocked === 'function' && window.isChatLocked(chat.id) ? 'lock_open' : 'lock') + '</span><span class="text-sm font-medium text-on-surface">' + (typeof window.isChatLocked === 'function' && window.isChatLocked(chat.id) ? 'Unlock chat' : 'Lock chat') + '</span></button>' +
+          '<button class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-surface-variant/60 transition-colors text-left" data-action="clearChatHistory"><span class="material-symbols-outlined text-[18px] text-red-500">delete_sweep</span><span class="text-sm font-medium text-red-500">Clear chat</span></button>' +
           (isGroup
             ? '<button class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-surface-variant/60 transition-colors text-left" data-action="openGroupChatMenu"><span class="material-symbols-outlined text-[18px] text-on-surface-variant">campaign</span><span class="text-sm font-medium text-on-surface">Announcement mode</span></button>' +
               '<button class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-surface-variant/60 transition-colors text-left" data-action="exitGroup" data-action-arg="' + _esc(chat.id || '') + '"><span class="material-symbols-outlined text-[18px] text-red-500">logout</span><span class="text-sm font-medium text-red-500">Exit group</span></button>' +
@@ -2094,6 +2096,43 @@
     window.showConfirmDialog('Delete ALL chats and messages? This cannot be undone.', function () {
       items.forEach(function (it) { _deleteChat(it.getAttribute('data-chat-id')); });
       _toast('All chats cleared');
+    });
+  };
+
+  /* Shared "Clear chat" for the current (or given) chat: used by the detail-panel
+     Clear chat button, the chat context menu, and the Ctrl+Shift+Backspace shortcut. */
+  window.clearChatHistory = function (chatId) {
+    if (chatId && typeof chatId === 'object' && chatId.getAttribute) {
+      chatId = chatId.getAttribute('data-chat-id') || (chatId.dataset && chatId.dataset.chatId) || null;
+    }
+    var db = _db();
+    var chat = null;
+    var active = _activeChat ? _activeChat() : (window.App && window.App.currentChat);
+    if (chatId) {
+      if (window.App && Array.isArray(window.App.chats)) {
+        chat = window.App.chats.find(function (c) { return c && c.id === chatId; });
+      }
+      if (!chat && active && active.id === chatId) chat = active;
+    } else {
+      chat = active;
+      chatId = chat && chat.id;
+    }
+    if (!db || !chatId) return;
+    window.showConfirmDialog('Clear all messages in this chat? This cannot be undone.', function () {
+      var isGroup = !!(chat && (chat.type === 'group' || chat.kind === 'group')) ||
+        (window.App && window.App.currentChatType === 'group' && chatId === (window.App.currentChat && window.App.currentChat.id));
+      var coll = isGroup ? 'groups' : 'chats';
+      db.collection(coll).doc(chatId).collection('messages').get().then(function (snap) {
+        var batch = db.batch();
+        snap.forEach(function (doc) { batch.delete(doc.ref); });
+        return batch.commit();
+      }).then(function () {
+        if (window.App && window.App.messages) delete window.App.messages[chatId];
+        if (typeof window.renderMessages === 'function') window.renderMessages(chatId);
+        if (typeof showToast === 'function') showToast('Chat cleared', 'success');
+      }).catch(function(_err) {
+        if (typeof showToast === 'function') showToast('Failed to clear chat', 'error');
+      });
     });
   };
 
