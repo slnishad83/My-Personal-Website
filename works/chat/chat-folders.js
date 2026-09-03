@@ -123,7 +123,6 @@
         } else if (folderId === 'groups') {
           show = chat.type === 'group';
         } else if (folderId !== 'all') {
-          const folders = JSON.parse(localStorage.getItem('nsl_chat_folders') || '[]');
           const folder = folders.find(f => f.id === folderId);
           show = folder ? folder.chatIds?.includes(chatId) : true;
         }

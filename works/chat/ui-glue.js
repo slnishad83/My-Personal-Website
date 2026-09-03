@@ -862,7 +862,11 @@
   window.deleteChat = function (chatId) {
     var id = chatId || (_activeChat() && _activeChat().id);
     if (!id) { _toast('No chat to delete', 'error'); return; }
-    window.showConfirmDialog('Delete this chat? All messages will be removed.', function () { _deleteChat(id); });
+    window.showConfirmDialog('Delete this chat? All messages will be removed.', function () {
+      _requireTypeConfirm('Type "DELETE" to permanently delete this chat and all of its messages.', 'DELETE', function () {
+        _deleteChat(id);
+      });
+    });
   };
 
   /* ════════════════════════════════════════════════════════════
@@ -2090,12 +2094,28 @@
     document.addEventListener('keydown', esc);
   };
 
+  // Hardening for destructive actions: requires the user to type the exact word
+  // ("DELETE") as a deliberate second confirmation before the action runs.
+  function _requireTypeConfirm(message, typeWord, onDone) {
+    var typed = window.prompt(message);
+    if (typeof typed === 'string' && typed.trim().toUpperCase() === String(typeWord).toUpperCase()) {
+      if (onDone) onDone();
+      return true;
+    }
+    if (typed !== null && typeof showToast === 'function') {
+      showToast('Cancelled: confirmation did not match "' + typeWord + '"', 'error');
+    }
+    return false;
+  }
+
   window.confirmClearAllChats = function () {
     var items = _qsa('#chat-list [data-chat-id], .chat-list-item[data-chat-id], .chat-item[data-chat-id]');
     if (!items.length) { _toast('No chats to clear'); return; }
     window.showConfirmDialog('Delete ALL chats and messages? This cannot be undone.', function () {
-      items.forEach(function (it) { _deleteChat(it.getAttribute('data-chat-id')); });
-      _toast('All chats cleared');
+      _requireTypeConfirm('Type "DELETE" to permanently delete all chats and messages.', 'DELETE', function () {
+        items.forEach(function (it) { _deleteChat(it.getAttribute('data-chat-id')); });
+        _toast('All chats cleared');
+      });
     });
   };
 
@@ -2119,19 +2139,21 @@
     }
     if (!db || !chatId) return;
     window.showConfirmDialog('Clear all messages in this chat? This cannot be undone.', function () {
-      var isGroup = !!(chat && (chat.type === 'group' || chat.kind === 'group')) ||
-        (window.App && window.App.currentChatType === 'group' && chatId === (window.App.currentChat && window.App.currentChat.id));
-      var coll = isGroup ? 'groups' : 'chats';
-      db.collection(coll).doc(chatId).collection('messages').get().then(function (snap) {
-        var batch = db.batch();
-        snap.forEach(function (doc) { batch.delete(doc.ref); });
-        return batch.commit();
-      }).then(function () {
-        if (window.App && window.App.messages) delete window.App.messages[chatId];
-        if (typeof window.renderMessages === 'function') window.renderMessages(chatId);
-        if (typeof showToast === 'function') showToast('Chat cleared', 'success');
-      }).catch(function(_err) {
-        if (typeof showToast === 'function') showToast('Failed to clear chat', 'error');
+      _requireTypeConfirm('Type "DELETE" to permanently clear all messages in this chat.', 'DELETE', function () {
+        var isGroup = !!(chat && (chat.type === 'group' || chat.kind === 'group')) ||
+          (window.App && window.App.currentChatType === 'group' && chatId === (window.App.currentChat && window.App.currentChat.id));
+        var coll = isGroup ? 'groups' : 'chats';
+        db.collection(coll).doc(chatId).collection('messages').get().then(function (snap) {
+          var batch = db.batch();
+          snap.forEach(function (doc) { batch.delete(doc.ref); });
+          return batch.commit();
+        }).then(function () {
+          if (window.App && window.App.messages) delete window.App.messages[chatId];
+          if (typeof window.renderMessages === 'function') window.renderMessages(chatId);
+          if (typeof showToast === 'function') showToast('Chat cleared', 'success');
+        }).catch(function(_err) {
+          if (typeof showToast === 'function') showToast('Failed to clear chat', 'error');
+        });
       });
     });
   };
