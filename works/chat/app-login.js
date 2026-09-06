@@ -427,6 +427,7 @@ auth.getRedirectResult().catch(() => {
   const step1 = document.getElementById('phoneStep1');
   const step2 = document.getElementById('phoneStep2');
   const phoneInput = document.getElementById('phoneInput');
+  const phoneCountryCode = document.getElementById('phoneCountryCode');
   const otpInput = document.getElementById('otpInput');
   const phoneDisplay = document.getElementById('phoneDisplay');
   const phoneOtpError = document.getElementById('phoneOtpError');
@@ -436,18 +437,48 @@ auth.getRedirectResult().catch(() => {
   let confirmationResult = null;
   let recaptchaVerifier = null;
   let fullPhone = '';
+  let verifying = false;
+  let resendTimer = null;
+  let resendCountdown = 0;
+
+  const RESEND_SECONDS = 60;
+
+  function clearResendTimer() {
+    if (resendTimer) { clearInterval(resendTimer); resendTimer = null; }
+    resendCountdown = 0;
+  }
+
+  function startResendCountdown() {
+    clearResendTimer();
+    if (!resendOtpBtn) return;
+    resendCountdown = RESEND_SECONDS;
+    resendOtpBtn.disabled = true;
+    resendOtpBtn.textContent = 'Resend OTP in ' + resendCountdown + 's';
+    resendTimer = setInterval(function () {
+      resendCountdown--;
+      if (resendCountdown <= 0) {
+        clearResendTimer();
+        resendOtpBtn.disabled = false;
+        resendOtpBtn.textContent = 'Resend OTP';
+      } else {
+        resendOtpBtn.textContent = 'Resend OTP in ' + resendCountdown + 's';
+      }
+    }, 1000);
+  }
 
   function openModal() {
     phoneModal.style.display = 'flex';
     step1.style.display = '';
     step2.style.display = 'none';
-    phoneInput.value = '';
-    otpInput.value = '';
-    phoneOtpError.textContent = '';
-    otpVerifyError.textContent = '';
-    phoneOtpError.style.display = 'none';
-    otpVerifyError.style.display = 'none';
+    if (phoneInput) phoneInput.value = '';
+    if (otpInput) otpInput.value = '';
+    if (phoneOtpError) { phoneOtpError.textContent = ''; phoneOtpError.style.display = 'none'; }
+    if (otpVerifyError) { otpVerifyError.textContent = ''; otpVerifyError.style.display = 'none'; }
     confirmationResult = null;
+    fullPhone = '';
+    verifying = false;
+    clearResendTimer();
+    if (resendOtpBtn) { resendOtpBtn.disabled = false; resendOtpBtn.textContent = 'Resend OTP'; }
     if (recaptchaContainer) recaptchaContainer.innerHTML = '';
     recaptchaVerifier = null;
   }
@@ -455,6 +486,9 @@ auth.getRedirectResult().catch(() => {
   function closeModal() {
     phoneModal.style.display = 'none';
     confirmationResult = null;
+    verifying = false;
+    clearResendTimer();
+    if (resendOtpBtn) { resendOtpBtn.disabled = false; resendOtpBtn.textContent = 'Resend OTP'; }
     if (recaptchaContainer) recaptchaContainer.innerHTML = '';
     recaptchaVerifier = null;
   }
@@ -464,12 +498,16 @@ auth.getRedirectResult().catch(() => {
   if (phoneModal) phoneModal.addEventListener('click', (e) => { if (e.target === phoneModal) closeModal(); });
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && phoneModal && phoneModal.style.display === 'flex') closeModal(); });
 
+  function getSelectedCountryCode() {
+    return (phoneCountryCode && phoneCountryCode.value) ? phoneCountryCode.value : '+91';
+  }
+
   function normalizePhone(raw) {
     const digits = raw.replace(/[^\d+]/g, '');
     if (digits.startsWith('+')) return digits;
-    if (digits.length === 10) return '+91' + digits;
-    if (digits.length > 10) return '+' + digits;
-    return digits;
+    const national = digits.replace(/^0+/, '');
+    if (!national) return '';
+    return getSelectedCountryCode() + national;
   }
 
   function showError(el, msg) {
@@ -482,14 +520,14 @@ auth.getRedirectResult().catch(() => {
     el.style.display = 'none';
   }
 
-  if (sendOtpBtn) sendOtpBtn.addEventListener('click', async () => {
+  async function doSendOtp() {
     hideError(phoneOtpError);
-    const raw = phoneInput.value.trim();
+    const raw = (phoneInput.value || '').trim();
     if (!raw) { showError(phoneOtpError, 'Please enter your phone number.'); return; }
 
     fullPhone = normalizePhone(raw);
     if (!/^\+[1-9]\d{6,14}$/.test(fullPhone)) {
-      showError(phoneOtpError, 'Enter a valid phone number with country code (e.g. +919876543210).');
+      showError(phoneOtpError, 'Enter a valid phone number for ' + getSelectedCountryCode() + ' (e.g. ' + getSelectedCountryCode().replace('+', '') + ' 98765 43210).');
       return;
     }
 
@@ -506,7 +544,8 @@ auth.getRedirectResult().catch(() => {
       phoneDisplay.textContent = fullPhone;
       step1.style.display = 'none';
       step2.style.display = '';
-      otpInput.focus();
+      startResendCountdown();
+      if (otpInput) otpInput.focus();
     } catch (err) {
       if (window.__DEBUG__) console.warn('[PhoneAuth] Send OTP error:', err);
       showError(phoneOtpError, getFriendlyAuthError(err, 'Failed to send OTP. Please check the number and try again.'));
@@ -515,14 +554,16 @@ auth.getRedirectResult().catch(() => {
     } finally {
       setButtonLoading(sendOtpBtn, false, 'Send OTP', 'Sending...');
     }
-  });
+  }
 
-  if (verifyOtpBtn) verifyOtpBtn.addEventListener('click', async () => {
+  async function doVerifyOtp() {
+    if (verifying) return;
     hideError(otpVerifyError);
-    const code = otpInput.value.trim();
+    const code = (otpInput.value || '').trim();
     if (!code || code.length < 4) { showError(otpVerifyError, 'Enter the full verification code.'); return; }
     if (!confirmationResult) { showError(otpVerifyError, 'Session expired. Please resend OTP.'); return; }
 
+    verifying = true;
     setButtonLoading(verifyOtpBtn, true, 'Verify & Sign In', 'Verifying...');
     try {
       const userCred = await confirmationResult.confirm(code);
@@ -567,20 +608,38 @@ auth.getRedirectResult().catch(() => {
         showError(otpVerifyError, getFriendlyAuthError(err, 'Verification failed. Please try again.'));
       }
     } finally {
+      verifying = false;
       setButtonLoading(verifyOtpBtn, false, 'Verify & Sign In', 'Verifying...');
     }
-  });
+  }
 
-  if (resendOtpBtn) resendOtpBtn.addEventListener('click', async () => {
+  function doResendOtp() {
     hideError(otpVerifyError);
     step2.style.display = 'none';
     step1.style.display = '';
-    otpInput.value = '';
     confirmationResult = null;
+    clearResendTimer();
+    if (resendOtpBtn) { resendOtpBtn.disabled = false; resendOtpBtn.textContent = 'Resend OTP'; }
+    if (otpInput) otpInput.value = '';
     if (recaptchaContainer) recaptchaContainer.innerHTML = '';
     recaptchaVerifier = null;
-    sendOtpBtn.click();
-  });
+    doSendOtp();
+  }
+
+  if (sendOtpBtn) sendOtpBtn.addEventListener('click', doSendOtp);
+  if (verifyOtpBtn) verifyOtpBtn.addEventListener('click', doVerifyOtp);
+  if (resendOtpBtn) resendOtpBtn.addEventListener('click', doResendOtp);
+
+  if (otpInput) {
+    otpInput.addEventListener('input', function () {
+      const code = otpInput.value.replace(/\D/g, '');
+      otpInput.value = code;
+      if (!verifying && confirmationResult && code.length >= 6) doVerifyOtp();
+    });
+    otpInput.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') { e.preventDefault(); doVerifyOtp(); }
+    });
+  }
 })();
 
 /* ══════════════════════════════════════════════════════════════

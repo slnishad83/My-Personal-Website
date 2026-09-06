@@ -403,12 +403,12 @@
           await _callVerifyPin(val);
           _clearAttempts();
           _setSessionActive();
-          _close(true);
+          _close(val);
         } else {
           if (val.length >= 4) {
             await _callSetPin(val);
             _setSessionActive();
-            _close(true);
+            _close(val);
             if (typeof showToast === 'function') showToast('PIN set successfully', 'success');
           }
         }
@@ -873,7 +873,8 @@
 
     document.getElementById('lock-settings-change-pin').addEventListener('click', async () => {
       overlay.remove();
-      await authenticate('Enter current PIN to change it');
+      const oldPin = await authenticate('Enter current PIN to change it');
+      if (oldPin && typeof oldPin === 'string') _showChangePinModal(oldPin);
     });
 
     document.getElementById('lock-settings-reset-pin').addEventListener('click', async () => {
@@ -881,6 +882,78 @@
       try { await _callResetPin(); if (typeof showToast === 'function') showToast('PIN reset. Set a new PIN when you next unlock a chat.', 'success'); }
       catch (err) { if (typeof showToast === 'function') showToast('Reset failed: ' + (err.message || 'Unknown error'), 'error'); }
     });
+  }
+
+  /* ── UI: Change PIN modal ── */
+
+  function _showChangePinModal(oldPin) {
+    const overlay = document.createElement('div');
+    overlay.className = 'lock-chat-overlay';
+
+    const panel = document.createElement('div');
+    panel.className = 'lock-chat-auth-panel';
+
+    panel.innerHTML =
+      '<div class="lock-chat-auth-icon">' +
+        '<span class="material-symbols-outlined" style="font-size:36px;color:#008069">lock_reset</span>' +
+      '</div>' +
+      '<h3 style="margin:0 0 4px;font-size:18px;font-weight:700;color:var(--on-surface,#e9edef)">Change PIN</h3>' +
+      '<p style="font-size:13px;color:var(--on-surface-variant,#8696a0);margin:0 0 24px">Set a new PIN (4-8 digits)</p>' +
+      '<div style="display:flex;flex-direction:column;gap:12px;margin-bottom:16px">' +
+        '<input type="password" inputmode="numeric" id="lock-change-pin-input" placeholder="New PIN" maxlength="8" class="lock-chat-pin-input" autocomplete="new-password">' +
+        '<input type="password" inputmode="numeric" id="lock-change-pin-confirm" placeholder="Confirm PIN" maxlength="8" class="lock-chat-pin-input" autocomplete="new-password">' +
+        '<p id="lock-change-pin-error" class="lock-chat-pin-error" style="display:none"></p>' +
+      '</div>' +
+      '<div class="lock-chat-auth-actions">' +
+        '<button id="lock-change-pin-save" class="lock-chat-btn lock-chat-btn-primary">Save</button>' +
+        '<button id="lock-change-pin-cancel" class="lock-chat-btn lock-chat-btn-text">Cancel</button>' +
+      '</div>';
+
+    overlay.appendChild(panel);
+    document.body.appendChild(overlay);
+
+    const input = document.getElementById('lock-change-pin-input');
+    const confirmInput = document.getElementById('lock-change-pin-confirm');
+    const errEl = document.getElementById('lock-change-pin-error');
+    const saveBtn = document.getElementById('lock-change-pin-save');
+    const cancelBtn = document.getElementById('lock-change-pin-cancel');
+
+    function _close() { overlay.remove(); }
+
+    async function _save() {
+      const p = input.value;
+      const c = confirmInput.value;
+      if (!/^\d{4,8}$/.test(p)) {
+        errEl.textContent = 'PIN must be 4-8 digits';
+        errEl.style.display = 'block';
+        input.focus();
+        return;
+      }
+      if (p !== c) {
+        errEl.textContent = 'PINs do not match';
+        errEl.style.display = 'block';
+        input.focus();
+        return;
+      }
+      saveBtn.disabled = true;
+      try {
+        await _callSetPin(p, oldPin);
+        errEl.style.display = 'none';
+        if (typeof showToast === 'function') showToast('PIN changed successfully', 'success');
+        _close();
+      } catch (err) {
+        errEl.textContent = err.message || 'Failed to change PIN';
+        errEl.style.display = 'block';
+        saveBtn.disabled = false;
+      }
+    }
+
+    saveBtn.addEventListener('click', _save);
+    cancelBtn.addEventListener('click', _close);
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) _close(); });
+    input.addEventListener('keydown', (e) => { if (e.key === 'Enter') confirmInput.focus(); });
+    confirmInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') _save(); });
+    input.focus();
   }
 
   /* ── Expose on window ── */

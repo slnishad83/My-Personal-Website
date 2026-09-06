@@ -70,6 +70,22 @@ window.ScreenLock = (function () {
     return 'nsl_default_device_key';
   }
 
+  function _bufToB64url(buf) {
+    var bytes = new Uint8Array(buf);
+    var bin = '';
+    for (var i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+    return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  }
+
+  function _b64urlToBuf(b64) {
+    var normalized = b64.replace(/-/g, '+').replace(/_/g, '/');
+    while (normalized.length % 4) normalized += '=';
+    var bin = atob(normalized);
+    var bytes = new Uint8Array(bin.length);
+    for (var i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    return bytes;
+  }
+
   async function _encryptPin(pin) {
     var salt = crypto.getRandomValues(new Uint8Array(16));
     var saltHex = Array.from(salt).map(function (b) { return b.toString(16).padStart(2, '0'); }).join('');
@@ -200,19 +216,72 @@ window.ScreenLock = (function () {
     }
   }
 
+  async function _getStoredCredential() {
+    try { return await _dbGet('biometric_credential'); } catch (_) { return null; }
+  }
+
+  async function _registerBiometric() {
+    try {
+      if (!await checkBiometricSupport()) return false;
+      var stored = await _getStoredCredential();
+      if (stored && stored.credentialId) return true;
+
+      var challenge = crypto.getRandomValues(new Uint8Array(32));
+      var userId = crypto.getRandomValues(new Uint8Array(16));
+      var credential = await navigator.credentials.create({
+        publicKey: {
+          challenge: challenge,
+          rp: { name: 'NSL Chat' },
+          user: { id: userId, name: 'nsl-chat-app', displayName: 'NSL Chat' },
+          pubKeyCredParams: [
+            { type: 'public-key', alg: -7 },
+            { type: 'public-key', alg: -257 }
+          ],
+          timeout: 60000,
+          authenticatorSelection: {
+            authenticatorAttachment: 'platform',
+            userVerification: 'required',
+            residentKey: 'discouraged'
+          },
+          attestation: 'none'
+        }
+      });
+      if (!credential) return false;
+
+      var rawIdB64 = '';
+      try { rawIdB64 = _bufToB64url(credential.rawId); } catch (_) {}
+      await _dbPut('biometric_credential', {
+        credentialId: credential.id || rawIdB64,
+        rawId: rawIdB64,
+        createdAt: Date.now()
+      });
+      if (window.__DEBUG__) console.log('[ScreenLock] Biometric registered');
+      return true;
+    } catch (e) {
+      if (window.__DEBUG__) console.warn('[ScreenLock] Biometric registration failed:', e);
+      return false;
+    }
+  }
+
   async function authenticateWithBiometric(reason) {
     try {
       if (!await checkBiometricSupport()) throw new Error('Biometric not available');
 
+      var stored = await _getStoredCredential();
+      var allowCredentials = [];
+      if (stored && stored.rawId) {
+        allowCredentials = [{ type: 'public-key', id: _b64urlToBuf(stored.rawId) }];
+      }
+
       var challenge = crypto.getRandomValues(new Uint8Array(32));
-      var userId = crypto.getRandomValues(new Uint8Array(16));
 
       var credential = await navigator.credentials.get({
         publicKey: {
           challenge: challenge,
+          rpId: window.location.hostname,
           timeout: 60000,
           userVerification: 'required',
-          allowCredentials: []
+          allowCredentials: allowCredentials
         }
       });
 
@@ -371,7 +440,7 @@ window.ScreenLock = (function () {
     _attachLockScreenEvents(overlay, showBiometric);
 
     if (showBiometric) {
-      setTimeout(function () { _tryBiometric(overlay, showBiometric); }, 500);
+      setTimeout(function () { _tryBiometric(overlay); }, 500);
     }
   }
 
@@ -409,6 +478,7 @@ window.ScreenLock = (function () {
         <p class="sl-pin-error" style="color:#ff4444;font-size:13px;text-align:center;margin-bottom:16px;min-height:18px;"></p>
         <div class="sl-keypad" style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;"></div>
         <button class="sl-cancel-btn" style="background:none;border:none;color:var(--primary);font-size:14px;margin-top:20px;cursor:pointer;padding:8px;width:100%;display:none;">Cancel</button>
+        <button class="sl-forgot-btn" style="background:none;border:none;color:var(--on-surface-variant,#8696a0);font-size:12px;margin-top:4px;cursor:pointer;padding:8px;width:100%;">Forgot PIN?</button>
       </div>
     `;
   }
@@ -420,10 +490,9 @@ window.ScreenLock = (function () {
     var errorEl = overlay.querySelector('.sl-pin-error');
     var cancelBtn = overlay.querySelector('.sl-cancel-btn');
     var usePinBtn = overlay.querySelector('.sl-use-pin-btn');
+    var forgotBtn = overlay.querySelector('.sl-forgot-btn');
 
     var pinLength = 4;
-    if (_settings && _settings.method === 'both') pinLength = 6;
-
     _renderPinDots(pinDisplay, pinLength);
     _renderKeypad(keypad);
 
@@ -447,6 +516,12 @@ window.ScreenLock = (function () {
       });
     }
 
+    if (forgotBtn) {
+      forgotBtn.addEventListener('click', function () {
+        _handleForgotPin(overlay);
+      });
+    }
+
     keypad.addEventListener('click', function (e) {
       var btn = e.target.closest('.sl-key-btn');
       if (!btn) return;
@@ -455,7 +530,7 @@ window.ScreenLock = (function () {
       if (val === 'del') {
         _currentPinEntry = _currentPinEntry.slice(0, -1);
       } else if (val === 'biometric') {
-        _tryBiometric(overlay, true);
+        _tryBiometric(overlay);
         return;
       } else {
         if (_currentPinEntry.length >= pinLength) return;
@@ -551,10 +626,20 @@ window.ScreenLock = (function () {
     }, 1000);
   }
 
-  async function _tryBiometric(overlay, showBiometric) {
-    if (!showBiometric) return;
+  async function _tryBiometric(overlay) {
     var result = await authenticateWithBiometric('Unlock NSL Chat');
-    if (result) unlock();
+    if (result) { unlock(); return; }
+
+    var pinBox = overlay.querySelector('.sl-pin-section');
+    if (!pinBox) return;
+    var hasP = await hasPin().catch(function () { return false; });
+    if (hasP) {
+      var bioArea = overlay.querySelector('.sl-biometric-area');
+      if (bioArea) bioArea.style.display = 'none';
+      pinBox.style.display = 'block';
+      var cancelBtn = overlay.querySelector('.sl-cancel-btn');
+      if (cancelBtn) cancelBtn.style.display = 'block';
+    }
   }
 
   function _hideLockScreen() {
@@ -566,6 +651,42 @@ window.ScreenLock = (function () {
     }
     if (_cooldownTimer) { clearInterval(_cooldownTimer); _cooldownTimer = null; }
     _cooldownEnd = 0;
+  }
+
+  /* ─── Forgot PIN (reset + sign out + re-login) ─────────────────── */
+  async function _handleForgotPin(overlay) {
+    if (!window.confirm('Reset your app lock PIN?\n\nThis will disable App Lock and sign you out. You can set a new PIN after logging back in.')) return;
+    try {
+      await clearPin();
+      await _dbDelete('biometric_credential');
+      _settings = Object.assign({}, DEFAULT_SETTINGS);
+      await _dbPut('settings', _settings);
+
+      var db = _fsDb();
+      var uid = _fsUid();
+      if (db && uid) {
+        try { await db.collection('users').doc(uid).update({ appLockEnabled: false }); } catch (e) {
+          if (window.__DEBUG__) console.warn('[ScreenLock] Firestore disable failed:', e.message);
+        }
+      }
+
+      stopAutoLock();
+      _hideLockScreen();
+      if (typeof showToast === 'function') showToast('App lock reset. Signing you out...', 'info');
+
+      try {
+        if (window.firebase && firebase.auth) { await firebase.auth().signOut(); }
+      } catch (e) {
+        if (window.App && typeof window.App.signOut === 'function') { try { window.App.signOut(); } catch (e2) {} }
+      }
+      setTimeout(function () {
+        var loginUrl = new URL('login.html', window.location.href).href;
+        window.location.replace(loginUrl);
+      }, 600);
+    } catch (e) {
+      if (window.__DEBUG__) console.warn('[ScreenLock] Forgot PIN reset failed:', e);
+      if (typeof showToast === 'function') showToast('Reset failed. Please try again.', 'error');
+    }
   }
 
   /* ─── Settings UI (WhatsApp-style) ──────────────────────────────── */
@@ -651,7 +772,25 @@ window.ScreenLock = (function () {
 
     modal.querySelectorAll('.sl-method-opt').forEach(function (el) {
       el.addEventListener('click', async function () {
-        method = this.dataset.val;
+        var chosen = this.dataset.val;
+        var effective = chosen;
+
+        if (chosen === 'biometric' || chosen === 'both') {
+          var registered = await _registerBiometric();
+          if (!registered) {
+            effective = 'pin';
+            if (typeof showToast === 'function') {
+              showToast(chosen === 'both' ? 'Biometric unavailable. Method set to PIN.' : 'Biometric unavailable. Method set to PIN.');
+            }
+          }
+        }
+        if (effective === 'biometric' && !(await hasPin())) {
+          if (typeof showToast === 'function') showToast('A PIN is required as a fallback for biometric lock.');
+          _showPinSetupModal(modal);
+          effective = 'both';
+        }
+
+        method = effective;
         modal.querySelectorAll('.sl-method-opt').forEach(function (m) {
           var sel = m.dataset.val === method;
           m.style.background = sel ? 'rgba(0,128,105,0.15)' : 'transparent';

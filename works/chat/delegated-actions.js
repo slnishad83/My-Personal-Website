@@ -47,15 +47,10 @@
       if (window.ContactSync) ContactSync.openFindFriends();
     },
     'toggleAppLock': function() {
-      if (typeof closeModal === 'function') closeModal('profile-overlay');
-      if (typeof toggleAppLock === 'function') {
-        if (typeof window.isAppLockEnabled === 'function' && window.isAppLockEnabled()) {
-          if (typeof window.resetAppLockPin === 'function') window.resetAppLockPin();
-          if (typeof showToast === 'function') showToast('App Lock disabled', 'success');
-        } else {
-          if (typeof showAppLock === 'function') showAppLock();
-        }
-      }
+      _openAppLockSettings();
+    },
+    'openAppLockSettings': function() {
+      _openAppLockSettings();
     },
     'showChatLockSettings': function() {
       if (typeof closeModal === 'function') closeModal('profile-overlay');
@@ -146,6 +141,16 @@
       if (typeof window.deleteGroupForEveryone === 'function') window.deleteGroupForEveryone(el.dataset.actionArg || el.dataset.chatId);
     }
   };
+
+  function _openAppLockSettings() {
+    if (typeof closeModal === 'function') closeModal('profile-overlay');
+    if (window.ScreenLock && typeof window.ScreenLock.openLockSettings === 'function') {
+      window.ScreenLock.openLockSettings();
+      return;
+    }
+    if (typeof window.openAppLockSettings === 'function') window.openAppLockSettings();
+    else if (typeof window.showAppLock === 'function') window.showAppLock();
+  }
 
   document.addEventListener('click', function(e) {
     var t = e.target;

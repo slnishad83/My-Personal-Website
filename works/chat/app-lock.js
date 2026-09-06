@@ -3,12 +3,10 @@
   var STORAGE_KEY = 'nsl_app_lock';
   var ATTEMPTS_KEY = 'nsl_app_lock_attempts';
   var LOCKOUT_KEY = 'nsl_app_lock_lockout';
-  var SKIP_KEY = 'nsl_app_lock_skip_until';
   var SESSION_KEY = 'nsl_app_lock_session';
   var MAX_ATTEMPTS = 5;
   var LOCKOUT_MS = 30000;
   var SESSION_TIMEOUT_MS = 300000;
-  var SKIP_DURATION_MS = 900000;
   var APP_LOCK_TIMEOUT_KEY = 'appLockTimeout';
 
   var _activeOverlay = null;
@@ -241,20 +239,6 @@
     _inactivityHandlers = [];
   }
 
-  function _skipLockForSession() {
-    try {
-      localStorage.setItem(SKIP_KEY, (Date.now() + SKIP_DURATION_MS).toString());
-    } catch (_) {}
-  }
-
-  function _isInSkipWindow() {
-    try {
-      var until = parseInt(localStorage.getItem(SKIP_KEY) || '0');
-      return Date.now() < until;
-    } catch (_) {
-      return false;
-    }
-  }
 
   function _isWithinSession() {
     try {
@@ -274,15 +258,8 @@
   async function showAppLock() {
     if (!isAppLockEnabled()) return;
     if (_activeOverlay) return;
-    if (_isInSkipWindow()) return;
-    if (_isWithinSession()) {
-      _updateSession();
-      _startInactivityTimer();
-      return;
-    }
 
     _ensureStyles();
-    _updateSession();
 
     var overlay = document.createElement('div');
     overlay.className = 'nsl-al-overlay';
@@ -305,7 +282,8 @@
       '<div class="nsl-al-dots" id="nsl-al-dots"></div>' +
       '<div class="nsl-al-keypad" id="nsl-al-keypad"></div>' +
       '<div class="nsl-al-error" id="nsl-al-error"></div>' +
-      (hasBio ? '<button class="nsl-al-bio" id="nsl-al-bio">Use Fingerprint</button>' : '');
+      (hasBio ? '<button class="nsl-al-bio" id="nsl-al-bio">Use Fingerprint</button>' : '') +
+      '<button class="nsl-al-bio" id="nsl-al-forgot" style="border:0;background:transparent;margin-top:8px">Forgot PIN?</button>';
 
     document.body.appendChild(overlay);
     _activeOverlay = overlay;
@@ -313,6 +291,7 @@
     var dotsContainer = overlay.querySelector('#nsl-al-dots');
     var keypad = overlay.querySelector('#nsl-al-keypad');
     var errorEl = overlay.querySelector('#nsl-al-error');
+    var forgotBtn = overlay.querySelector('#nsl-al-forgot');
 
     _renderDots(dotsContainer, 0, 4, false);
 
@@ -359,7 +338,6 @@
       var valid = await _verifyAndUnlock(pin);
       if (valid) {
         _clearAttempts();
-        _skipLockForSession();
         _updateSession();
         _removeOverlay();
         _startInactivityTimer();
@@ -379,6 +357,14 @@
       }
     }
 
+    if (forgotBtn) {
+      forgotBtn.onclick = async function () {
+        if (!confirm('Reset App Lock? You will need to sign in again to protect your chats.')) return;
+        await resetAppLockPin();
+        try { if (firebase && firebase.auth) await firebase.auth().signOut(); } catch (_) {}
+        window.location.href = new URL('login.html', window.location.href).href;
+      };
+    }
     var bioBtn = overlay.querySelector('#nsl-al-bio');
     if (bioBtn) {
       bioBtn.onclick = async function () {
@@ -396,7 +382,6 @@
 
           if (cred) {
             _clearAttempts();
-            _skipLockForSession();
             _updateSession();
             _removeOverlay();
             _startInactivityTimer();
@@ -500,7 +485,7 @@
     _saveSettings(settings);
 
     _clearAttempts();
-    localStorage.removeItem(SKIP_KEY);
+    localStorage.removeItem(SESSION_KEY);
 
     var d = _db();
     var uid = _uid();
@@ -555,6 +540,115 @@
     }
   }
 
+  function _showPinDialog(options) {
+    options = options || {};
+    _ensureStyles();
+    return new Promise(function (resolve) {
+      var overlay = document.createElement('div');
+      overlay.className = 'nsl-al-overlay';
+      overlay.style.background = 'rgba(11,20,26,.88)';
+      overlay.innerHTML =
+        '<div style="width:92vw;max-width:320px;background:var(--surface-container,#17232b);color:var(--on-surface,#e9edef);border-radius:16px;padding:22px;text-align:center;box-shadow:0 18px 48px rgba(0,0,0,.32)">' +
+          '<div class="nsl-al-title">' + _esc(options.title || 'App Lock') + '</div>' +
+          '<div class="nsl-al-subtitle" style="margin-bottom:18px">' + _esc(options.subtitle || 'Enter your PIN') + '</div>' +
+          '<input id="nsl-al-dialog-pin" type="password" inputmode="numeric" maxlength="6" autocomplete="off" style="width:100%;padding:14px;border-radius:12px;border:1px solid var(--outline-variant,#444);background:var(--surface-container-low,#111b21);color:var(--on-surface,#fff);font-size:22px;text-align:center;letter-spacing:6px;outline:none;margin-bottom:10px">' +
+          '<div class="nsl-al-error" id="nsl-al-dialog-error"></div>' +
+          '<button class="nsl-al-bio" id="nsl-al-dialog-ok" style="width:100%;margin-top:4px">' + _esc(options.okLabel || 'Continue') + '</button>' +
+          '<button class="nsl-al-bio" id="nsl-al-dialog-cancel" style="width:100%;margin-top:8px;border:0;background:transparent">Cancel</button>' +
+        '</div>';
+      document.body.appendChild(overlay);
+      var input = overlay.querySelector('#nsl-al-dialog-pin');
+      var ok = overlay.querySelector('#nsl-al-dialog-ok');
+      var cancel = overlay.querySelector('#nsl-al-dialog-cancel');
+      var error = overlay.querySelector('#nsl-al-dialog-error');
+      function close(value) { overlay.remove(); resolve(value); }
+      function submit() {
+        var pin = input.value.trim();
+        if (!pin || pin.length < 4 || pin.length > 6) {
+          error.textContent = 'Enter a 4 to 6 digit PIN';
+          return;
+        }
+        close(pin);
+      }
+      ok.addEventListener('click', submit);
+      cancel.addEventListener('click', function () { close(null); });
+      input.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') submit();
+        if (e.key === 'Escape') close(null);
+      });
+      setTimeout(function () { input.focus(); }, 30);
+    });
+  }
+
+  function openAppLockSettings() {
+    _ensureStyles();
+    var existing = document.getElementById('nsl-app-lock-settings');
+    if (existing) existing.remove();
+    var enabled = isAppLockEnabled();
+    var timeout = getAppLockTimeout();
+    var choices = [[0, 'Immediately'], [1, 'After 1 minute'], [15, 'After 15 minutes'], [60, 'After 1 hour']];
+    var overlay = document.createElement('div');
+    overlay.id = 'nsl-app-lock-settings';
+    overlay.className = 'nsl-al-overlay';
+    overlay.style.background = 'rgba(11,20,26,.88)';
+    overlay.innerHTML =
+      '<div style="width:92vw;max-width:380px;background:var(--surface-container,#17232b);color:var(--on-surface,#e9edef);border-radius:16px;padding:20px;box-shadow:0 18px 48px rgba(0,0,0,.32)">' +
+        '<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px">' +
+          '<div><div style="font-size:18px;font-weight:700">App Lock</div><div style="font-size:13px;color:var(--on-surface-variant,#8696a0)">Require PIN or device authentication.</div></div>' +
+          '<button id="nsl-app-lock-close" aria-label="Close" style="width:36px;height:36px;border:0;border-radius:50%;background:transparent;color:inherit;cursor:pointer;font-size:22px">&times;</button>' +
+        '</div>' +
+        '<button id="nsl-app-lock-toggle" style="width:100%;padding:13px;border:0;border-radius:12px;background:' + (enabled ? 'var(--surface-container-high,#2a3942)' : 'var(--primary,#00a884)') + ';color:' + (enabled ? 'var(--on-surface,#e9edef)' : '#fff') + ';font-weight:700;cursor:pointer;margin-bottom:10px">' + (enabled ? 'Turn off App Lock' : 'Turn on App Lock') + '</button>' +
+        '<button id="nsl-app-lock-change" style="width:100%;padding:13px;border:1px solid var(--outline-variant,#3a4a54);border-radius:12px;background:transparent;color:var(--on-surface,#e9edef);font-weight:700;cursor:pointer;margin-bottom:14px">' + (enabled ? 'Change PIN' : 'Set PIN') + '</button>' +
+        '<div style="font-size:13px;font-weight:700;margin-bottom:8px">Automatically lock</div>' +
+        '<div id="nsl-app-lock-times" style="display:grid;grid-template-columns:1fr 1fr;gap:8px">' + choices.map(function (item) {
+          var active = timeout === item[0];
+          return '<button data-minutes="' + item[0] + '" style="padding:10px;border-radius:10px;border:1px solid ' + (active ? 'var(--primary,#00a884)' : 'var(--outline-variant,#3a4a54)') + ';background:' + (active ? 'rgba(0,168,132,.14)' : 'transparent') + ';color:var(--on-surface,#e9edef);cursor:pointer;font-size:13px">' + item[1] + '</button>';
+        }).join('') + '</div>' +
+        '<button id="nsl-app-lock-forgot" style="width:100%;padding:11px;border:0;border-radius:10px;background:transparent;color:var(--error,#ff6b6b);font-weight:700;cursor:pointer;margin-top:12px">Forgot App Lock PIN?</button>' +
+      '</div>';
+    document.body.appendChild(overlay);
+    function close() { overlay.remove(); }
+    overlay.querySelector('#nsl-app-lock-close').addEventListener('click', close);
+    overlay.addEventListener('click', function (e) { if (e.target === overlay) close(); });
+    overlay.querySelector('#nsl-app-lock-times').addEventListener('click', function (e) {
+      var btn = e.target.closest('[data-minutes]');
+      if (!btn) return;
+      setAppLockTimeout(parseInt(btn.getAttribute('data-minutes'), 10));
+      if (typeof showToast === 'function') showToast('App lock timing updated', 'success');
+      close();
+      openAppLockSettings();
+    });
+    overlay.querySelector('#nsl-app-lock-change').addEventListener('click', async function () {
+      var current = _getSettings();
+      if (current.pinHash) {
+        var oldPin = await _showPinDialog({ title: 'Enter current PIN', subtitle: 'Confirm your current App Lock PIN' });
+        if (!oldPin) return;
+        if (!(await verifyAppLockPin(oldPin))) { if (typeof showToast === 'function') showToast('Incorrect PIN', 'error'); return; }
+      }
+      var pin = await _showPinDialog({ title: current.pinHash ? 'Set new PIN' : 'Set App Lock PIN', subtitle: 'Use a 4 to 6 digit PIN' });
+      if (!pin) return;
+      if (await setAppLockPin(pin)) { await toggleAppLock(true); close(); }
+    });
+    overlay.querySelector('#nsl-app-lock-toggle').addEventListener('click', async function () {
+      if (isAppLockEnabled()) {
+        var pin = await _showPinDialog({ title: 'Turn off App Lock', subtitle: 'Enter your App Lock PIN' });
+        if (!pin) return;
+        if (!(await verifyAppLockPin(pin))) { if (typeof showToast === 'function') showToast('Incorrect PIN', 'error'); return; }
+        await toggleAppLock(false);
+      } else {
+        var newPin = await _showPinDialog({ title: 'Set App Lock PIN', subtitle: 'Use a 4 to 6 digit PIN' });
+        if (!newPin) return;
+        if (await setAppLockPin(newPin)) await toggleAppLock(true);
+      }
+      close();
+    });
+    overlay.querySelector('#nsl-app-lock-forgot').addEventListener('click', async function () {
+      if (!confirm('Reset App Lock? You will need to sign in again to protect your chats.')) return;
+      await resetAppLockPin();
+      try { if (firebase && firebase.auth) await firebase.auth().signOut(); } catch (_) {}
+      window.location.href = new URL('login.html', window.location.href).href;
+    });
+  }
   function scheduleAutoLock() {
     clearTimeout(window._appLockTimer);
     var timeout = parseInt(localStorage.getItem(APP_LOCK_TIMEOUT_KEY) || '0', 10);
@@ -633,14 +727,13 @@
   }
 
   function _initOnLoad() {
-    _updateSession();
     if (typeof firebase !== 'undefined' && firebase.auth) {
       firebase.auth().onAuthStateChanged(function (user) {
         if (user) {
-          _updateSession();
           _removeLockOverlay();
           _startInactivityTimer();
           _hydrateFromFirestore(user);
+          if (isAppLockEnabled()) setTimeout(showAppLock, 250);
         }
       });
     }
@@ -663,4 +756,5 @@
   window.scheduleAutoLock = scheduleAutoLock;
   window.getAppLockTimeout = getAppLockTimeout;
   window.setAppLockTimeout = setAppLockTimeout;
+  window.openAppLockSettings = openAppLockSettings;
 })();
