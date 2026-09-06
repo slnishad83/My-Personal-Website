@@ -7,6 +7,9 @@ jobs:
   build-windows:
     runs-on: windows-latest
     timeout-minutes: 30
+    env:
+      PUPPETEER_SKIP_DOWNLOAD: "1"
+      ELECTRON_SKIP_BINARY_DOWNLOAD: "1"
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -41,6 +44,9 @@ jobs:
   build-macos:
     runs-on: macos-latest
     timeout-minutes: 30
+    env:
+      PUPPETEER_SKIP_DOWNLOAD: "1"
+      ELECTRON_SKIP_BINARY_DOWNLOAD: "1"
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -76,6 +82,9 @@ jobs:
   build-linux:
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    env:
+      PUPPETEER_SKIP_DOWNLOAD: "1"
+      ELECTRON_SKIP_BINARY_DOWNLOAD: "1"
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
