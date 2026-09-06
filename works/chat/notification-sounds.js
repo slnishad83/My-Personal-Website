@@ -86,6 +86,22 @@ const NotificationSounds = (() => {
       setTimeout(() => _playTone(587, 0.35, 0.10, 'sine', 0.01, 0.12), 550);
     },
 
+    /* Alternative call ringtone — warm ascending pattern */
+    callRing2() {
+      _playTone(392, 0.30, 0.11, 'sine', 0.01, 0.12);
+      setTimeout(() => _playTone(494, 0.30, 0.11, 'sine', 0.01, 0.12), 60);
+      setTimeout(() => _playTone(587, 0.30, 0.10, 'sine', 0.01, 0.12), 120);
+      setTimeout(() => _playTone(494, 0.35, 0.10, 'sine', 0.01, 0.13), 190);
+    },
+
+    /* Alternative call ringtone — classic soft double-buzz */
+    callRing3() {
+      _playTone(330, 0.18, 0.10, 'sine', 0.01, 0.09);
+      setTimeout(() => _playTone(330, 0.18, 0.10, 'sine', 0.01, 0.09), 140);
+      setTimeout(() => _playTone(440, 0.35, 0.11, 'sine', 0.01, 0.12), 420);
+      setTimeout(() => _playTone(440, 0.30, 0.11, 'sine', 0.01, 0.11), 620);
+    },
+
     /* Outgoing call � gentle connecting tone */
     outgoingCall() {
       _playTone(440, 0.25, 0.08, 'sine', 0.02, 0.1);

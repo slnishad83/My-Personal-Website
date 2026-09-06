@@ -1,7 +1,7 @@
 /* NSL Chat � Single Source of Truth for App Version */
 (function() {
   'use strict';
-  var VERSION = '7.3.0';
+  var VERSION = '7.4.0';
   var BUILD = '2026-09-06';
   window.NSL_VERSION = VERSION;
   window.NSL_BUILD = BUILD;

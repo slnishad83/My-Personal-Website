@@ -2197,16 +2197,118 @@
     _toast(on ? 'All sounds on' : 'All sounds muted');
   };
 
-  window.saveChatSound = function () {
-    var sel = _$('chat-sound-select');
-    if (!sel) return;
+  window.pickChatSound = function () {
     var orch = _orchestrator();
-    var value = sel.value;
-    var next = (value === '') ? true : (value === 'silent' ? false : value);
-    if (orch && typeof orch.setPrefs === 'function') orch.setPrefs({ messageSound: next });
-    else localStorage.setItem('nsl_chat_sound', value);
-    _toast('Chat sound saved');
+    var p = (orch && typeof orch.getPrefs === 'function') ? orch.getPrefs() : {};
+    var sel = _$('chat-sound-select');
+    if (sel) {
+      var msgSound = p.messageSound != null ? p.messageSound : true;
+      sel.value = (msgSound === false || msgSound === 'silent') ? 'silent'
+        : (typeof msgSound === 'string' && msgSound !== 'true') ? msgSound : '';
+    }
+    _setSoundPickerMode('chat');
+    _openOverlay('sound-picker-overlay');
+  };
+
+  window.pickCallRingtone = function () {
+    var orch = _orchestrator();
+    var p = (orch && typeof orch.getPrefs === 'function') ? orch.getPrefs() : {};
+    var sel = _$('call-sound-select');
+    if (sel) {
+      var cs = p.callSound != null ? p.callSound : true;
+      sel.value = (typeof cs === 'string' && cs !== 'true') ? cs : (cs === false || cs === 'silent' ? 'silent' : '');
+    }
+    _setSoundPickerMode('call');
+    _openOverlay('sound-picker-overlay');
+  };
+
+  function _setSoundPickerMode(mode) {
+    window._soundPickerMode = mode;
+    var chatField = _$('chat-sound-field');
+    var callField = _$('call-sound-field');
+    var title = _$('sound-picker-title');
+    if (chatField) chatField.hidden = mode !== 'chat';
+    if (callField) callField.hidden = mode !== 'call';
+    if (title) title.textContent = mode === 'call' ? 'Call Ringtone' : 'Chat Sound';
+  }
+
+  window.saveChatSound = function () {
+    var orch = _orchestrator();
+    if (window._soundPickerMode === 'call') {
+      var csel = _$('call-sound-select');
+      if (!csel) return;
+      var cvalue = csel.value;
+      var cnext = (cvalue === '') ? true : (cvalue === 'silent' ? false : cvalue);
+      if (orch && typeof orch.setPrefs === 'function') orch.setPrefs({ callSound: cnext });
+      else localStorage.setItem('nsl_call_sound', cvalue);
+      _toast('Call ringtone saved');
+    } else {
+      var sel = _$('chat-sound-select');
+      if (!sel) return;
+      var value = sel.value;
+      var next = (value === '') ? true : (value === 'silent' ? false : value);
+      if (orch && typeof orch.setPrefs === 'function') orch.setPrefs({ messageSound: next });
+      else localStorage.setItem('nsl_chat_sound', value);
+      _toast('Chat sound saved');
+    }
+    _syncGlobalMuteUI(!_muted());
+    _syncCallNotifUI();
     _closeOverlay('sound-picker-overlay');
+  };
+
+  function _callVibratePref() {
+    var orch = _orchestrator();
+    if (orch && typeof orch.getPrefs === 'function') {
+      var p = orch.getPrefs();
+      return p.callVibration !== false;
+    }
+    return localStorage.getItem('nsl_call_vibrate') !== '0';
+  }
+
+  function _ringtoneName(v) {
+    if (v === 'callRing2') return 'Ringtone 2';
+    if (v === 'callRing3') return 'Ringtone 3';
+    return 'Default ringtone';
+  }
+
+  function _syncCallNotifUI() {
+    var knob = _$('call-vibrate-knob');
+    var toggle = _$('call-vibrate-toggle');
+    var label = _$('call-ringtone-label');
+    var msgLabel = _$('message-sound-label');
+    var on = _callVibratePref();
+    if (knob) knob.style.transform = on ? 'translateX(20px)' : 'translateX(0px)';
+    if (toggle) {
+      toggle.style.background = on ? 'var(--primary)' : 'var(--surface-variant,#9ea7b0)';
+      toggle.setAttribute('aria-pressed', on ? 'true' : 'false');
+    }
+    var orch = _orchestrator();
+    if (orch && typeof orch.getPrefs === 'function') {
+      var p = orch.getPrefs();
+      if (label) {
+        label.textContent = (p.callSound === false || p.callSound === 'silent' || p.callSound === 'none') ? 'Silent'
+          : (typeof p.callSound === 'string' && p.callSound !== 'true') ? _ringtoneName(p.callSound)
+          : 'Default ringtone';
+      }
+      if (msgLabel) {
+        msgLabel.textContent = (p.messageSound === false || p.messageSound === 'silent') ? 'Silent'
+          : (typeof p.messageSound === 'string' && p.messageSound !== 'true') ? _capFirst(p.messageSound)
+          : 'Default';
+      }
+    }
+  }
+
+  function _capFirst(s) {
+    return s ? s.charAt(0).toUpperCase() + s.slice(1) : s;
+  }
+
+  window.toggleCallVibrate = function () {
+    var next = !_callVibratePref();
+    var orch = _orchestrator();
+    if (orch && typeof orch.setPrefs === 'function') orch.setPrefs({ callVibration: next });
+    localStorage.setItem('nsl_call_vibrate', next ? '1' : '0');
+    _syncCallNotifUI();
+    _toast(next ? 'Vibrate for calls on' : 'Vibrate for calls off');
   };
 
   window.openLanguagePicker = function () {
@@ -2549,6 +2651,7 @@
     _bindFolderManager();
     _syncThemeUI(_currentTheme());
     _syncGlobalMuteUI(!_muted());
+    _syncCallNotifUI();
     if (document.readyState === 'complete' || document.readyState === 'interactive') {
       setTimeout(function () { _loadUsers(); }, 500);
     } else {

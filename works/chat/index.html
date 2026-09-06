@@ -917,6 +917,16 @@
           <div class="space-y-2">
             <h4 class="text-xs font-bold text-on-surface-variant uppercase tracking-wider pl-1">Notifications & Sounds</h4>
             <div class="bg-surface-container-low border border-outline-variant/20 rounded-xl overflow-hidden divide-y divide-outline-variant/10">
+              <div class="flex items-center justify-between p-4 cursor-pointer hover:bg-surface-container transition-colors" role="button" tabindex="0" data-action="pickChatSound" aria-label="Message notification sound">
+                <div class="flex items-center gap-3">
+                  <span class="material-symbols-outlined text-primary">music_note</span>
+                  <div>
+                    <p class="text-sm font-bold">Message Sound</p>
+                    <p class="text-xs text-on-surface-variant" id="message-sound-label">Default</p>
+                  </div>
+                </div>
+                <span class="material-symbols-outlined text-on-surface-variant" aria-hidden="true">chevron_right</span>
+              </div>
               <div class="flex items-center justify-between p-4" id="global-mute-row">
                 <div class="flex items-center gap-3">
                   <span class="material-symbols-outlined text-primary" id="global-mute-icon">notifications_active</span>
@@ -927,6 +937,34 @@
                 </div>
                 <button class="relative w-11 h-6 rounded-full transition-colors duration-200 cursor-pointer flex-shrink-0" id="global-mute-toggle" data-action="toggleGlobalMute" style="background:var(--primary)" aria-label="Notification sounds" aria-pressed="true">
                   <span class="absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform duration-200" id="global-mute-knob" style="transform:translateX(20px)"></span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div class="space-y-2">
+            <h4 class="text-xs font-bold text-on-surface-variant uppercase tracking-wider pl-1">Calls</h4>
+            <div class="bg-surface-container-low border border-outline-variant/20 rounded-xl overflow-hidden divide-y divide-outline-variant/10">
+              <div class="flex items-center justify-between p-4 cursor-pointer hover:bg-surface-container transition-colors" role="button" tabindex="0" data-action="pickCallRingtone" aria-label="Call ringtone">
+                <div class="flex items-center gap-3">
+                  <span class="material-symbols-outlined text-primary">ring_volume</span>
+                  <div>
+                    <p class="text-sm font-bold">Call Ringtone</p>
+                    <p class="text-xs text-on-surface-variant" id="call-ringtone-label">Default ringtone</p>
+                  </div>
+                </div>
+                <span class="material-symbols-outlined text-on-surface-variant" aria-hidden="true">chevron_right</span>
+              </div>
+              <div class="flex items-center justify-between p-4" id="call-vibrate-row">
+                <div class="flex items-center gap-3">
+                  <span class="material-symbols-outlined text-primary">vibration</span>
+                  <div>
+                    <p class="text-sm font-bold">Vibrate for Calls</p>
+                    <p class="text-xs text-on-surface-variant">Pulse while ringing</p>
+                  </div>
+                </div>
+                <button class="relative w-11 h-6 rounded-full transition-colors duration-200 cursor-pointer flex-shrink-0" id="call-vibrate-toggle" data-action="toggleCallVibrate" style="background:var(--primary)" aria-label="Vibrate for calls" aria-pressed="true">
+                  <span class="absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform duration-200" id="call-vibrate-knob" style="transform:translateX(20px)"></span>
                 </button>
               </div>
             </div>
@@ -1286,19 +1324,30 @@
   <div class="overlay fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center hidden" id="sound-picker-overlay" data-action="dismissOnBackdrop" data-action-arg="sound-picker-overlay" role="dialog" aria-modal="true">
     <div class="bg-surface-container border border-outline-variant/30 rounded-2xl w-full max-w-sm shadow-2xl p-6 m-4">
       <div class="flex items-center justify-between mb-4">
-        <h3 class="font-bold text-lg text-on-surface">Chat Sound</h3>
+        <h3 class="font-bold text-lg text-on-surface" id="sound-picker-title">Chat Sound</h3>
         <button class="text-on-surface-variant hover:text-on-surface p-2 min-w-[44px] min-h-[44px]" data-action="closeOverlay" data-action-arg="sound-picker-overlay" aria-label="Close sound picker"><span class="material-symbols-outlined">close</span></button>
       </div>
-      <label for="chat-sound-select" class="text-sm font-semibold text-on-surface-variant block mb-2">Choose a notification sound</label>
-      <select id="chat-sound-select" aria-label="Notification sound" class="w-full bg-surface-container border border-outline-variant/30 rounded-xl px-4 py-3 text-sm text-on-surface mb-4">
-        <option value="">Default</option>
-        <option value="silent">Silent</option>
-        <option value="notification_1">Notification 1</option>
-        <option value="notification_2">Notification 2</option>
-        <option value="notification_3">Notification 3</option>
-        <option value="chime">Chime</option>
-        <option value="bell">Bell</option>
-      </select>
+      <div id="chat-sound-field">
+        <label for="chat-sound-select" class="text-sm font-semibold text-on-surface-variant block mb-2">Choose a notification sound</label>
+        <select id="chat-sound-select" aria-label="Notification sound" class="w-full bg-surface-container border border-outline-variant/30 rounded-xl px-4 py-3 text-sm text-on-surface mb-4">
+          <option value="">Default</option>
+          <option value="silent">Silent</option>
+          <option value="chime">Chime</option>
+          <option value="bell">Bell</option>
+          <option value="note">Note</option>
+          <option value="digital">Digital</option>
+          <option value="soft">Soft</option>
+        </select>
+      </div>
+      <div id="call-sound-field" hidden>
+        <label for="call-sound-select" class="text-sm font-semibold text-on-surface-variant block mb-2">Choose a call ringtone</label>
+        <select id="call-sound-select" aria-label="Call ringtone" class="w-full bg-surface-container border border-outline-variant/30 rounded-xl px-4 py-3 text-sm text-on-surface mb-4">
+          <option value="">Default (Ringtone 1)</option>
+          <option value="callRing2">Ringtone 2</option>
+          <option value="callRing3">Ringtone 3</option>
+          <option value="silent">Silent</option>
+        </select>
+      </div>
       <button class="w-full py-3 bg-primary text-on-primary text-sm font-bold rounded-xl hover:brightness-110 active:scale-95 transition-all" data-action="saveChatSound">Save</button>
     </div>
   </div>

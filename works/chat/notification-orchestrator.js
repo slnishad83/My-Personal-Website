@@ -16,6 +16,7 @@
     messageSound: true,
     groupSound: true,
     callSound: true,
+    callVibration: true,
     vibration: true,
     previews: true,
     silentUntil: 0
@@ -168,9 +169,13 @@
       this._activeCallId = call.callId || '';
       this._ringPattern();
       this._ringInterval = setInterval(() => this._ringPattern(), 2400);
-      // WhatsApp-style call vibration: continuous pulse while ringing
-      this._vibrate([700, 250, 700, 700]);
-      this._vibrateInterval = setInterval(() => this._vibrate([700, 250, 700, 700]), 2400);
+      // WhatsApp-style call vibration: continuous pulse while ringing.
+      // Controlled by the "Vibrate for calls" setting (independent of message vibration).
+      const ringPrefs = this.getPrefs();
+      if (ringPrefs.callVibration !== false) {
+        this._vibrate([700, 250, 700, 700]);
+        this._vibrateInterval = setInterval(() => this._vibrate([700, 250, 700, 700]), 2400);
+      }
       // Auto-miss after 90 seconds (WhatsApp behavior)
       this._ringLimitTimer = setTimeout(() => this.callMissed(this._activeCallId, call), CALL_RING_LIMIT_MS);
     },
@@ -366,9 +371,11 @@
     },
 
     _ringPattern() {
-      if (!this.getPrefs().callSound) return;
+      const cs = this.getPrefs().callSound;
+      if (!cs || cs === 'silent' || cs === 'none') return;
       if (window.NotificationSounds) {
-        window.NotificationSounds.play('callRing');
+        const name = (typeof cs === 'string') ? cs : 'callRing';
+        window.NotificationSounds.play(name);
       } else {
         this._beep(740, 0.45, 0.06);
         setTimeout(() => this._beep(880, 0.45, 0.055), 520);
